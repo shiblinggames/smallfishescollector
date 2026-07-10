@@ -2057,6 +2057,7 @@ function ActionButton({ label, chip, onClick, disabled }: {
       type="button"
       disabled={disabled}
       onClick={onClick}
+      onPointerDown={!disabled ? () => vibrate(6) : undefined}
       whileHover={!disabled ? { y: -1.5 } : undefined}
       whileTap={!disabled ? { y: 3, scale: 0.94, borderColor: 'rgba(240,214,149,1)' } : undefined}
       transition={{ type: 'spring', stiffness: 600, damping: 22 }}

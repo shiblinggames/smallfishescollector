@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useMemo } from 'react'
+import { motion } from 'framer-motion'
 import { spinSlots } from './actions'
 import type { SlotSpinResult, SlotStats, SlotsJackpotState } from './actions'
 import { buyInCasino, cashOutCasino } from './casino/actions'
@@ -1000,7 +1001,7 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
                       return (
                         <button
                           key={amt}
-                          onClick={() => !disabled && setWager(amt)}
+                          onClick={() => { if (!disabled) { haptic(6); setWager(amt) } }}
                           disabled={disabled}
                           className="font-karla font-700 transition-all active:scale-95"
                           style={{
@@ -1021,11 +1022,15 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
                     })}
                   </div>
 
-                  {/* Spin button */}
-                  <button
+                  {/* Spin button — real press-down squish + a tap tick the instant
+                      the finger lands (the old active:scale-[0.98] read as limp). */}
+                  <motion.button
+                    whileTap={canSpin ? { scale: 0.94 } : undefined}
+                    transition={{ type: 'spring', stiffness: 600, damping: 20 }}
+                    onPointerDown={canSpin ? () => haptic(6) : undefined}
                     onClick={handleSpin}
                     disabled={!canSpin}
-                    className="w-full font-cinzel font-700 uppercase active:scale-[0.98]"
+                    className="w-full font-cinzel font-700 uppercase"
                     style={{
                       padding: '0.9rem 1rem',
                       borderRadius: 14,
@@ -1037,14 +1042,13 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
                       border: `2px solid ${canSpin ? BRASS : 'rgba(255,255,255,0.10)'}`,
                       color: canSpin ? '#f0d696' : '#4a463f',
                       boxShadow: canSpin ? '0 0 22px rgba(240,192,64,0.18), inset 0 1px 0 rgba(255,255,255,0.10)' : 'none',
-                      transition: 'transform 0.1s, box-shadow 0.3s',
                       cursor: canSpin ? 'pointer' : 'default',
                     }}
                   >
                     {spinning
                       ? (showBonus ? 'Bonus Spin…' : 'Spinning…')
                       : `Spin · ${wager} ⟡`}
-                  </button>
+                  </motion.button>
                 </>
               )}
 

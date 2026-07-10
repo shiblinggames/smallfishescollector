@@ -17,7 +17,7 @@ import { getLevelFromXP } from '@/lib/fishingLevel'
 import { fishingGearLevelReq } from '@/lib/gearGating'
 import ShopHeader from '@/components/ShopHeader'
 import ShopStatusPill from '@/components/ShopStatusPill'
-import { vibrate } from '@/lib/haptics'
+import { vibrate, hapticTap, hapticCommit } from '@/lib/haptics'
 import { playChestSfx } from '@/lib/fishingMusic'
 
 const HookViewer3D = dynamic(() => import('./HookViewer3D'), { ssr: false })
@@ -84,23 +84,28 @@ export default function TackleShopClient({
     window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: amount }))
   }
 
+  // Handler-level haptics so every buy/equip surface in the shop speaks the
+  // same language: tap tick on the press, commit bump when the purchase lands.
   function handleBuyHook() {
     setError(null)
+    hapticTap()
     startTransition(async () => {
       const result = await buyHook()
       if ('error' in result) { setError(result.error) }
-      else { setHookTier(result.hookTier); setDoubloons(result.doubloons); broadcastDoubloons(result.doubloons) }
+      else { hapticCommit(); setHookTier(result.hookTier); setDoubloons(result.doubloons); broadcastDoubloons(result.doubloons) }
     })
   }
 
   function handlePurchaseRod(rodTier: number) {
     setError(null)
+    hapticTap()
     setBuyingRod(rodTier)
     startTransition(async () => {
       const result = await purchaseRod(rodTier)
       setBuyingRod(null)
       if ('error' in result) { setError(result.error) }
       else {
+        hapticCommit()
         setOwnedRods(result.ownedRods)
         setDoubloons(result.doubloons)
         broadcastDoubloons(result.doubloons)
@@ -111,21 +116,23 @@ export default function TackleShopClient({
 
   function handleEquipRod(rodTier: number) {
     setError(null)
+    hapticTap()
     setEquippingRod(rodTier)
     startTransition(async () => {
       const result = await equipRod(rodTier)
       setEquippingRod(null)
       if ('error' in result) { setError(result.error) }
-      else { setEquippedRod(result.rodTier) }
+      else { hapticCommit(); setEquippedRod(result.rodTier) }
     })
   }
 
   function handleBuyReel() {
     setError(null)
+    hapticTap()
     startTransition(async () => {
       const result = await buyReel()
       if ('error' in result) { setError(result.error) }
-      else { setReelTier(result.reelTier); setDoubloons(result.doubloons); broadcastDoubloons(result.doubloons) }
+      else { hapticCommit(); setReelTier(result.reelTier); setDoubloons(result.doubloons); broadcastDoubloons(result.doubloons) }
     })
   }
 
@@ -148,12 +155,14 @@ export default function TackleShopClient({
 
   function handleBuyBait(baitType: string, qty: number) {
     setError(null)
+    hapticTap()
     setBuyingBait(`${baitType}-${qty}`)
     startTransition(async () => {
       const result = await buyBait(baitType, qty)
       setBuyingBait(null)
       if ('error' in result) { setError(result.error) }
       else {
+        hapticCommit()
         setDoubloons(result.doubloons)
         broadcastDoubloons(result.doubloons)
         setBaitInventory(prev => {

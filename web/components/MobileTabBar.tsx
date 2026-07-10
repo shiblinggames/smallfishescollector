@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
+import { hapticTap } from '@/lib/haptics'
 
 const PAGE_TINTS: [string, string][] = [
   ['/tavern',      'rgba(180,120,30,0.10)'],
@@ -187,6 +188,9 @@ export default function MobileTabBar() {
           <Link
             key={href}
             href={href}
+            // Tap tick on the pointer landing — nav should feel tactile, and the
+            // tick masks the route-transition beat.
+            onPointerDown={() => hapticTap()}
             className="flex-1 flex flex-col items-center justify-center gap-1 py-3 relative select-none"
             style={{ color: active ? '#f0ede8' : '#a0a09a', transition: 'color 0.2s' }}
           >

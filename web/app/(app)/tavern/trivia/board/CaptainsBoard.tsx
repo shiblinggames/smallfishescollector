@@ -260,9 +260,17 @@ export default function CaptainsBoard({ initial, doubloons }: { initial: Captain
             <motion.div initial={{ y: 18, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 18, opacity: 0 }}
               transition={{ type: 'spring', stiffness: 380, damping: 30 }}
               onClick={e => e.stopPropagation()}
-              style={{ width: '100%', maxWidth: 420, maxHeight: '82vh', overflowY: 'auto', background: 'linear-gradient(180deg, #1a1830 0%, #0d0c1c 100%)', border: `1px solid ${categoryMeta(openTile.category).color}66`, borderRadius: 18, padding: '1.2rem 1.1rem 1.1rem', boxShadow: '0 18px 50px rgba(0,0,0,0.6)' }}
+              style={{ position: 'relative', width: '100%', maxWidth: 420, maxHeight: '82vh', overflowY: 'auto', background: 'linear-gradient(180deg, #1a1830 0%, #0d0c1c 100%)', border: `1px solid ${categoryMeta(openTile.category).color}66`, borderRadius: 18, padding: '1.2rem 1.1rem 1.1rem', boxShadow: '0 18px 50px rgba(0,0,0,0.6)' }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              {/* Close — X top-right once resolved (replaces the old full-width
+                  "Back to the Board" bottom button; scrim-tap also dismisses). */}
+              {resolved && (
+                <button type="button" onClick={closeModal} aria-label="Close"
+                  style={{ position: 'absolute', top: 10, right: 10, zIndex: 2, width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '50%', color: 'rgba(240,237,232,0.7)', cursor: 'pointer' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                </button>
+              )}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, paddingRight: resolved ? 34 : 0 }}>
                 <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.14em', color: categoryMeta(openTile.category).color }}>
                   {categoryMeta(openTile.category).label} · tier {openTile.tier}
                 </p>
@@ -309,10 +317,6 @@ export default function CaptainsBoard({ initial, doubloons }: { initial: Captain
                       {shownExplanation}
                     </p>
                   )}
-                  <button type="button" onClick={closeModal} className="font-karla font-700 uppercase tracking-[0.1em]"
-                    style={{ width: '100%', marginTop: 12, padding: '0.7rem 0', borderRadius: 12, background: 'rgba(122,142,196,0.12)', border: '1px solid rgba(122,142,196,0.45)', color: '#aebde0', fontSize: '0.68rem', cursor: 'pointer' }}>
-                    Back to the Board
-                  </button>
                 </div>
               )}
             </motion.div>

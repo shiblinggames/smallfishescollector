@@ -9,6 +9,7 @@
 
 import { useMemo, useState, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { hapticTap } from '@/lib/haptics'
 import { useRouter } from 'next/navigation'
 import {
   POCKETS, colorOf,
@@ -141,6 +142,7 @@ export default function RouletteClient({ initial }: { initial: RouletteState }) 
       return
     }
     setError(null)
+    hapticTap() // chip lands on the felt — tick the drop
     setPlaced({ ...placed, [zone]: current + selectedDenom })
   }
 
@@ -309,6 +311,10 @@ export default function RouletteClient({ initial }: { initial: RouletteState }) 
             <motion.button
               onClick={handleSpin}
               disabled={totalPlaced === 0 || isPending}
+              // Press-down squish + tap tick — the breathe pulse alone is
+              // affordance, not press feedback; the tap itself should land.
+              whileTap={totalPlaced > 0 && !isPending ? { scale: 0.9 } : undefined}
+              onPointerDown={totalPlaced > 0 && !isPending ? () => hapticTap() : undefined}
               className="font-cinzel font-700 uppercase"
               // Once a bet is down, the hub breathes — slow glow + scale
               // pulse so it reads as THE button to press, not wheel

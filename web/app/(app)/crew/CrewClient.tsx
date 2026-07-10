@@ -21,7 +21,7 @@ import { useReveal, BoardReveal, RevealFlash, RevealBanner } from './boardReveal
 import { ROUTE_CONFIGS, type VoyageRoute } from '@/lib/voyageRoutes'
 import { crewLevelFromXP, crewXPProgress, levelStatBonuses, CREW_MAX_LEVEL } from '@/lib/crewLevel'
 import { classForSlug, CLASSES, currentMilestone, nextMilestone, CLASS_UNLOCK_LEVEL, type AnyClassDef } from '@/lib/crewClasses'
-import { vibrate } from '@/lib/haptics'
+import { vibrate, hapticTap } from '@/lib/haptics'
 import SwipeAction from '@/components/SwipeAction'
 import { playChestSfx } from '@/lib/fishingMusic'
 // TickingNumber + the local Stat helper were used by the removed
@@ -147,9 +147,13 @@ function AssignToggleBtn({
   onClick: (e: React.MouseEvent) => void
 }) {
   const fg = active ? '#0a0a0a' : accent
+  const canPress = !disabled && !active
   return (
-    <button
+    <motion.button
       title={active ? `${label} (current)` : `Assign to ${label}`}
+      whileTap={canPress ? { scale: 0.82 } : undefined}
+      transition={{ type: 'spring', stiffness: 600, damping: 20 }}
+      onPointerDown={canPress ? () => hapticTap() : undefined}
       onClick={onClick}
       disabled={disabled || active}
       style={{
@@ -161,12 +165,11 @@ function AssignToggleBtn({
         boxShadow: active
           ? `0 2px 8px ${accent}44, inset 0 1px 0 rgba(255,255,255,0.25)`
           : 'inset 0 1px 0 rgba(255,255,255,0.05)',
-        transition: 'all 0.18s',
         opacity: disabled ? 0.5 : 1,
       }}
     >
       <Icon size={15} color={fg} />
-    </button>
+    </motion.button>
   )
 }
 

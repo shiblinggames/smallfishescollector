@@ -4,7 +4,7 @@ import { useState, useTransition, useEffect, useRef, useMemo, Fragment, type CSS
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { vibrate } from '@/lib/haptics'
+import { vibrate, hapticTap } from '@/lib/haptics'
 import { RARITY_COLOR as ITEM_RARITY_COLOR } from '@/lib/bossRaids'
 import { repairShip } from '@/app/(app)/raids/actions'
 import { motion, AnimatePresence, useDragControls, type DragControls } from 'framer-motion'
@@ -712,6 +712,7 @@ export default function ShipHero({
   // grey out once the hull is full. Server caps + validates ownership.
   function toggleItem(itemId: string) {
     const equipped = equippedItems.includes(itemId)
+    hapticTap() // equip/unequip is already optimistic — give the tap a tick too
     let next: string[]
     if (equipped) {
       next = equippedItems.filter(id => id !== itemId)

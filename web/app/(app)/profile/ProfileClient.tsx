@@ -15,6 +15,7 @@ import { StatTile } from '@/components/ProfileStats'
 import type { CareerStats } from '@/lib/careerStats'
 import { AVATAR_PALETTE, AVATAR_BORDER_EXTRAS, AVATAR_SPECIALS, DEFAULT_AVATAR_BG_COLOR, DEFAULT_AVATAR_BORDER_COLOR, NONE_VALUE } from '@/lib/avatarColors'
 import { equipBadge, unequipBadge } from '@/app/(app)/achievements/badgeActions'
+import { hapticTap } from '@/lib/haptics'
 import BecomeCaptainButton from '@/components/BecomeCaptainButton'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import CharacterAvatar from '@/components/CharacterAvatar'
@@ -333,6 +334,7 @@ export default function ProfileClient({
 
   async function handleBadgeClick(badgeId: string) {
     if (badgeSaving || !unlockedBadges.includes(badgeId)) return
+    hapticTap()
     const padded = [...equippedBadges]
     while (padded.length < 3) padded.push('')
     const currentSlot = padded.indexOf(badgeId)
