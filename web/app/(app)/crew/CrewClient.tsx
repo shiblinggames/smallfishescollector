@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useTransition, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useSearchParams } from 'next/navigation'
-import { motion, AnimatePresence, useAnimationControls } from 'framer-motion'
+import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion'
 import {
   rerollBoard, recruitCrew, dismissCrew, getCrewGraveyard,
   assignToVoyage, assignToRaid, benchCrew, promoteToCaptain, renameCrew,
@@ -354,56 +354,56 @@ function StatIcon({ k, color }: { k: 'power' | 'dodge' | 'fortune'; color: strin
 // A single recruit/roster entry, styled like a Darkest Dungeon stagecoach
 // manifest line: arched portrait in a carved frame, name + class + quirks
 // laid out beside it on aged wood.
-// Swipe-left-to-dismiss wrapper for roster cards. The card drags left to reveal
-// a red Dismiss action; tapping it fires onDismiss (the swipe reveals, the tap
-// confirms — two deliberate gestures, no accidental fire). A plain tap opens the
-// card (passes through); a tap on an OPEN card just closes it. `enabled` is false
-// for locked crew (at sea / on a trawl) — they render bare, no swipe at all.
+// Swipe-left-to-dismiss wrapper for roster cards. The card follows the finger 1:1
+// (a single bound motion value — no state churn during the drag, so it stays
+// smooth), snapping open/closed on release. The red action's opacity is tied to
+// the swipe distance, so it fades in with the card and CAN'T persist once closed.
+// Tapping the revealed Dismiss fires onDismiss (swipe reveals, tap confirms). A
+// plain tap opens the card; a tap on an OPEN card just closes it. `enabled` is
+// false for locked crew (at sea / on a trawl) — they render bare, no swipe.
+const SWIPE_SPRING = { type: 'spring' as const, stiffness: 700, damping: 46, restDelta: 0.4 }
 function SwipeToDismiss({ enabled, onDismiss, children }: { enabled: boolean; onDismiss: () => void; children: ReactNode }) {
-  const [open, setOpen] = useState(false)
+  const x = useMotionValue(0)
+  const REVEAL = 92
+  // Red fades in as you swipe; 0 at rest so it never lingers behind a closed card.
+  const redOpacity = useTransform(x, [-REVEAL, -6, 0], [1, 1, 0])
   const draggedRef = useRef(false)
-  const controls = useAnimationControls()
-  const REVEAL = 94
-  const SPRING = { type: 'spring' as const, stiffness: 520, damping: 42 }
-  const snap = (o: boolean) => { setOpen(o); controls.start({ x: o ? -REVEAL : 0, transition: SPRING }) }
+  const openRef = useRef(false)
   if (!enabled) return <>{children}</>
+  const snapTo = (target: number) => { openRef.current = target !== 0; animate(x, target, SWIPE_SPRING) }
   return (
-    // overflow:hidden clips the sliding card to the cell; the wrapper carries the
-    // card's drop shadow so depth survives the clip.
     <div style={{ position: 'relative', borderRadius: 7, overflow: 'hidden', boxShadow: '0 6px 16px rgba(0,0,0,0.55)' }}>
-      {/* Dismiss action, revealed behind the card as it slides left. */}
-      <div style={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'flex-end', background: 'rgba(150,40,40,0.18)' }}>
+      {/* Dismiss action behind the card; opacity tracks the swipe. */}
+      <motion.div style={{
+        position: 'absolute', inset: 0, opacity: redOpacity,
+        display: 'flex', justifyContent: 'flex-end',
+        background: 'linear-gradient(180deg, #c6484a 0%, #a5383a 100%)',
+      }}>
         <button type="button" aria-label="Dismiss crew"
-          onClick={(e) => { e.stopPropagation(); snap(false); onDismiss() }}
+          onPointerDownCapture={(e) => e.stopPropagation()}
+          onClick={(e) => { e.stopPropagation(); x.set(0); openRef.current = false; onDismiss() }}
           className="font-karla font-700 uppercase"
           style={{
             width: REVEAL, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
-            border: 'none', background: 'linear-gradient(180deg, #c6484a 0%, #a5383a 100%)',
-            color: '#fbe4e4', fontSize: '0.6rem', letterSpacing: '0.09em', cursor: 'pointer',
+            border: 'none', background: 'transparent', color: '#fbe4e4', fontSize: '0.6rem', letterSpacing: '0.09em', cursor: 'pointer',
           }}>
           <XIcon /><span>Dismiss</span>
         </button>
-      </div>
-      {/* The draggable card. */}
+      </motion.div>
+      {/* The draggable card — bound to `x` so drag + snap share one value. */}
       <motion.div
         drag="x"
         dragConstraints={{ left: -REVEAL, right: 0 }}
-        dragElastic={0.05}
+        dragElastic={0.04}
         dragDirectionLock
-        initial={{ x: 0 }}
-        animate={controls}
-        onDrag={(_, info) => { if (Math.abs(info.offset.x) > 6) draggedRef.current = true }}
-        // Always snap on release (open past threshold/flick, else back to closed)
-        // — driving via controls so a partial drag can't strand the card mid-slide.
-        onDragEnd={(_, info) => { snap(info.offset.x < -REVEAL * 0.4 || info.velocity.x < -320) }}
+        onDragStart={() => { draggedRef.current = false }}
+        onDrag={(_, info) => { if (Math.abs(info.offset.x) > 5) draggedRef.current = true }}
+        onDragEnd={(_, info) => { snapTo(info.offset.x < -REVEAL * 0.42 || info.velocity.x < -350 ? -REVEAL : 0) }}
         onClickCapture={(e) => {
-          // A click synthesized right after a drag — swallow it, keep the drag's
-          // open/closed result. A genuine tap on an OPEN card closes it (don't
-          // open detail). A tap on a CLOSED card passes through to the card.
           if (draggedRef.current) { e.stopPropagation(); draggedRef.current = false; return }
-          if (open) { e.stopPropagation(); snap(false) }
+          if (openRef.current) { e.stopPropagation(); snapTo(0) }
         }}
-        style={{ position: 'relative', zIndex: 1, touchAction: 'pan-y', borderRadius: 7 }}
+        style={{ x, position: 'relative', zIndex: 1, touchAction: 'pan-y', borderRadius: 7, willChange: 'transform' }}
       >
         {children}
       </motion.div>
@@ -1137,6 +1137,22 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
       setBusyId(null)
       setConfirmDismiss(null)
       onDone?.()
+    })
+  }
+
+  // Optimistic dismiss for the swipe gesture — pull the card the instant the
+  // player taps (the swipe already confirmed), then reconcile with the server in
+  // the background instead of waiting on the guard queries + state reload. Locked
+  // crew are gated out before this, so it effectively always succeeds; restore
+  // the snapshot on the rare error.
+  function dismissRoster(id: number) {
+    const snapshot = state.roster
+    setErr(null)
+    setState(s => ({ ...s, roster: s.roster.filter(c => c.id !== id) }))
+    startTransition(async () => {
+      const res = await dismissCrew(id)
+      if ('error' in res) { setErr(res.error); setState(s => ({ ...s, roster: snapshot })) }
+      else setState(res.state)
     })
   }
 
@@ -2024,7 +2040,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   const isLocked = voyageLockSet.has(m.id) || trawlSet.has(m.id)
                   return (
                     // Swipe-left to dismiss — disabled for locked crew (at sea / trawling).
-                    <SwipeToDismiss key={m.id} enabled={!isLocked} onDismiss={() => run(() => dismissCrew(m.id), m.id)}>
+                    <SwipeToDismiss key={m.id} enabled={!isLocked} onDismiss={() => dismissRoster(m.id)}>
                       <CrewPanel name={m.name} filename={m.filename} rarity={m.rarity}
                         bg={ROSTER_PANEL_BG} border={ROSTER_PANEL_BORDER}
                         base={{ power: m.power, dodge: m.dodge, fortune: m.fortune }} effects={m.effects} xp={m.xp} slug={m.slug}
