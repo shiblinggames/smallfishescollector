@@ -382,20 +382,27 @@ function SwipeAction({ enabled, side, label, icon, gradient, textColor, onAction
   const snapTo = (target: number) => { openRef.current = target !== 0; animate(x, target, SWIPE_SPRING) }
   return (
     <div style={{ position: 'relative', borderRadius: 7, overflow: 'hidden', boxShadow: '0 6px 16px rgba(0,0,0,0.55)' }}>
-      {/* Circle action button, centered in the strip the card uncovers. */}
+      {/* Circle action button, centered in the strip the card uncovers. The
+          reveal (opacity/scale from the swipe) lives on the outer wrapper; the
+          inner button owns the press-down squish + haptic so the two don't
+          fight over `scale`. */}
       <div style={{ position: 'absolute', top: 0, bottom: 0, [right ? 'left' : 'right']: 0, width: REVEAL, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <motion.button type="button" aria-label={label}
-          onPointerDownCapture={(e) => e.stopPropagation()}
-          onClick={(e) => { e.stopPropagation(); x.set(0); openRef.current = false; onAction() }}
-          style={{
-            opacity: circleOpacity, scale: circleScale,
-            width: 46, height: 46, borderRadius: '50%',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            border: 'none', background: gradient, color: textColor, cursor: 'pointer',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,255,255,0.22)',
-          }}>
-          {icon}
-        </motion.button>
+        <motion.div style={{ opacity: circleOpacity, scale: circleScale }}>
+          <motion.button type="button" aria-label={label}
+            onPointerDownCapture={(e) => e.stopPropagation()}
+            onTapStart={() => vibrate(11)}
+            whileTap={{ scale: 0.8 }}
+            transition={{ type: 'spring', stiffness: 720, damping: 15 }}
+            onClick={(e) => { e.stopPropagation(); vibrate([0, 15, 25, 22]); x.set(0); openRef.current = false; onAction() }}
+            style={{
+              width: 46, height: 46, borderRadius: '50%',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              border: 'none', background: gradient, color: textColor, cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,255,255,0.22)',
+            }}>
+            {icon}
+          </motion.button>
+        </motion.div>
       </div>
       {/* The draggable card — bound to `x` so drag + snap share one value. */}
       <motion.div
@@ -1569,7 +1576,8 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
               // card has settled (not mid-reveal) and it's actually recruitable.
               const recruitable = !c.recruited && !rosterFull && !phase && !reveal.climaxActive
               const swipeCard = (
-                <SwipeAction enabled={recruitable} side="left" label="Recruit" icon={<CheckIcon />}
+                <SwipeAction enabled={recruitable} side="left" label="Recruit"
+                  icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>}
                   gradient="linear-gradient(180deg, #4cc483 0%, #2e9a5c 100%)" textColor="#06341a"
                   onAction={() => recruitBoard(c.id)}>
                   {panel}
