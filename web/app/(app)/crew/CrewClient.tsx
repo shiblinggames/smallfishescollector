@@ -356,47 +356,47 @@ function StatIcon({ k, color }: { k: 'power' | 'dodge' | 'fortune'; color: strin
 // laid out beside it on aged wood.
 // Swipe-to-act wrapper for crew cards. The card follows the finger 1:1 (a single
 // bound motion value — no state churn during the drag, so it stays smooth) and
-// snaps open/closed on release. The action panel's opacity is tied to the swipe
-// distance, so it fades in with the card and CAN'T persist once closed. Tapping
-// the revealed action fires onAction (swipe reveals, tap confirms). A plain tap
-// opens the card; a tap on an OPEN card just closes it.
-//   side 'left'  → swipe LEFT, action revealed on the right (e.g. Dismiss)
-//   side 'right' → swipe RIGHT, action revealed on the left  (e.g. Recruit)
+// snaps open/closed on release. The card slides over to reveal a floating CIRCLE
+// button in the uncovered strip (scales + fades in with the swipe, so it can't
+// persist once closed). Tapping it fires onAction (swipe reveals, tap confirms).
+// A plain tap opens the card; a tap on an OPEN card just closes it.
+//   side 'left'  → swipe LEFT, circle revealed on the right
+//   side 'right' → swipe RIGHT, circle revealed on the left
 // `enabled` false renders the card bare (no swipe at all).
 const SWIPE_SPRING = { type: 'spring' as const, stiffness: 700, damping: 46, restDelta: 0.4 }
 function SwipeAction({ enabled, side, label, icon, gradient, textColor, onAction, children }: {
-  enabled: boolean; side: 'left' | 'right'; label: string; icon?: ReactNode
+  enabled: boolean; side: 'left' | 'right'; label: string; icon: ReactNode
   gradient: string; textColor: string; onAction: () => void; children: ReactNode
 }) {
   const x = useMotionValue(0)
-  const REVEAL = 92
+  const REVEAL = 84
   const right = side === 'right'
   const openX = right ? REVEAL : -REVEAL
-  // Action fades in as you swipe; 0 at rest so it never lingers behind a card.
-  const actOpacity = useTransform(x, right ? [0, 6, REVEAL] : [-REVEAL, -6, 0], right ? [0, 1, 1] : [1, 1, 0])
+  // How far open, 0→1, regardless of side. Drives the circle's pop-in.
+  const prog = useTransform(x, right ? [0, REVEAL] : [-REVEAL, 0], right ? [0, 1] : [1, 0])
+  const circleOpacity = useTransform(prog, [0, 0.3, 1], [0, 1, 1])
+  const circleScale = useTransform(prog, [0, 1], [0.4, 1])
   const draggedRef = useRef(false)
   const openRef = useRef(false)
   if (!enabled) return <>{children}</>
   const snapTo = (target: number) => { openRef.current = target !== 0; animate(x, target, SWIPE_SPRING) }
   return (
     <div style={{ position: 'relative', borderRadius: 7, overflow: 'hidden', boxShadow: '0 6px 16px rgba(0,0,0,0.55)' }}>
-      {/* Action behind the card; opacity tracks the swipe. */}
-      <motion.div style={{
-        position: 'absolute', inset: 0, opacity: actOpacity,
-        display: 'flex', justifyContent: right ? 'flex-start' : 'flex-end',
-        background: gradient,
-      }}>
-        <button type="button" aria-label={label}
+      {/* Circle action button, centered in the strip the card uncovers. */}
+      <div style={{ position: 'absolute', top: 0, bottom: 0, [right ? 'left' : 'right']: 0, width: REVEAL, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <motion.button type="button" aria-label={label}
           onPointerDownCapture={(e) => e.stopPropagation()}
           onClick={(e) => { e.stopPropagation(); x.set(0); openRef.current = false; onAction() }}
-          className="font-karla font-700 uppercase"
           style={{
-            width: REVEAL, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
-            border: 'none', background: 'transparent', color: textColor, fontSize: icon ? '0.6rem' : '0.82rem', letterSpacing: '0.08em', cursor: 'pointer',
+            opacity: circleOpacity, scale: circleScale,
+            width: 46, height: 46, borderRadius: '50%',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            border: 'none', background: gradient, color: textColor, cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,255,255,0.22)',
           }}>
-          {icon}<span>{label}</span>
-        </button>
-      </motion.div>
+          {icon}
+        </motion.button>
+      </div>
       {/* The draggable card — bound to `x` so drag + snap share one value. */}
       <motion.div
         drag="x"
@@ -1569,8 +1569,8 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
               // card has settled (not mid-reveal) and it's actually recruitable.
               const recruitable = !c.recruited && !rosterFull && !phase && !reveal.climaxActive
               const swipeCard = (
-                <SwipeAction enabled={recruitable} side="left" label="Recruit"
-                  gradient="linear-gradient(180deg, #4cc483 0%, #2e9a5c 100%)" textColor="#04160d"
+                <SwipeAction enabled={recruitable} side="left" label="Recruit" icon={<CheckIcon />}
+                  gradient="linear-gradient(180deg, #4cc483 0%, #2e9a5c 100%)" textColor="#06341a"
                   onAction={() => recruitBoard(c.id)}>
                   {panel}
                 </SwipeAction>
