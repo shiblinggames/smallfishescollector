@@ -892,6 +892,10 @@ export default function RaidCombat({
   const [enemyCharges, setEnemyCharges]   = useState(() =>
     Math.max(0, Math.min(MAX_CHARGES, (enemy.startCharges ?? 0) + tide.enemyChargesDelta))
   )
+  // Live mirror so the (delayed) Foresight prediction reads the CURRENT charge
+  // count — a curse's pre-loaded magazine, an accumulated charge, etc.
+  const enemyChargesRef = useRef(enemyCharges)
+  enemyChargesRef.current = enemyCharges
   const [subPhase, setSubPhase]       = useState<SubPhase>('await_input')
   const [playerAction, setPlayerAction] = useState<EnemyAction | null>(null)
   const [enemyAction, setEnemyAction]   = useState<EnemyAction | null>(null)
@@ -899,8 +903,11 @@ export default function RaidCombat({
   // Used to block back-to-back dodges so dodge-camping isn't viable.
   const [lastPlayerAction, setLastPlayerAction] = useState<EnemyAction | null>(null)
   // Oracle (Foresight) — the enemy's revealed upcoming moves. First element is
-  // the enemy's NEXT action; one is consumed (shifted) each new player turn.
+  // the enemy's NEXT action. Rather than shift a stale snapshot, the reveal is
+  // RE-PREDICTED from live state each turn (so it tracks charges as the enemy
+  // acts) and expires after this many more enemy actions.
   const [foreseenMoves, setForeseenMoves] = useState<EnemyAction[] | null>(null)
+  const foresightMovesLeftRef = useRef(0)
   const [aimResult, setAimResult]     = useState<ShotResult | null>(null)
   const [firstActor, setFirstActor]   = useState<Actor | null>(null)
   // Nameplate one-shot effects — combine speed-roll-win and
@@ -1281,25 +1288,23 @@ export default function RaidCombat({
     if (turnInitRef.current) { turnInitRef.current = false; return }
     setOneAbilityUsedThisTurn(false)
     setSnareDodgeTurns(prev => (prev > 0 ? prev - 1 : prev))
-    // Consume one foreseen move — but ONLY if the enemy actually spent its
-    // pattern slot this turn. A stalled slot (e.g. a no-charge reload
-    // substitution that retries the same move) leaves that move imminent, so
-    // the pill stays lit until the enemy really performs it, then falls off —
-    // instead of dropping a cycle early. This runs after the enemy's action has
-    // animated (turn increments at the end of resolution), so the pill always
-    // outlives the move it predicts.
-    if (enemyAdvancedThisTurnRef.current) {
-      setForeseenMoves(prev => {
-        if (!prev || prev.length <= 1) return null
-        return prev.slice(1)
-      })
+    // Foresight upkeep: RE-PREDICT from the enemy's live state each turn so the
+    // reveal never drifts (charges change as the enemy acts, a curse pre-loads
+    // the magazine, etc.). Burn one move from the budget only when the enemy
+    // actually SPENT a pattern slot — a no-charge reload retry (or a frozen skip)
+    // leaves the slotted move still coming, so re-predict but keep the budget.
+    if (foresightMovesLeftRef.current > 0) {
+      if (enemyAdvancedThisTurnRef.current) foresightMovesLeftRef.current -= 1
+      if (foresightMovesLeftRef.current <= 0) setForeseenMoves(null)
+      else setForeseenMoves(predictEnemyMoves(foresightMovesLeftRef.current))
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [turn])
 
   // Clear stale foreseen moves whenever the enemy or its phase changes: the
   // pattern and pattern-index both reset at those points, so a prior Foresight
   // reading no longer lines up. The next cast re-reads the fresh pattern.
-  useEffect(() => { setForeseenMoves(null) }, [enemy.id, enemyPhase])
+  useEffect(() => { foresightMovesLeftRef.current = 0; setForeseenMoves(null) }, [enemy.id, enemyPhase])
 
   // Ship shake / recoil controls — match the existing real-time raid keyframes
   const enemyShakeCtrl  = useAnimation()
@@ -1758,6 +1763,41 @@ export default function RaidCombat({
     return action
   }, [enemy.pattern, phaseList, enemyCharges])
 
+  // Foresight prediction — the enemy's next N moves as they'll ACTUALLY resolve,
+  // by simulating pickEnemyAction's substitutions forward from the CURRENT charge
+  // count + pattern slot (tracking a simulated magazine as each predicted action
+  // spends/loads charges). This is the fix for the old raw-pattern read, which
+  // showed the slotted move and lied whenever a substitution fired — e.g. a curse
+  // pre-loads the enemy, so a slotted reload it no longer needs becomes a shot.
+  // Two knowingly-approximate cases (foresight shows INTENT, not a guarantee):
+  // the random reload-at-MAX feint is shown as its Fire intent, and the random
+  // snare-jam is ignored.
+  const predictEnemyMoves = useCallback((count: number): EnemyAction[] => {
+    const activePhase = enemyPhaseRef.current >= 2 ? phaseList[enemyPhaseRef.current - 2] : undefined
+    const pattern = activePhase ? activePhase.pattern : enemy.pattern
+    if (pattern.length === 0) return []
+    let idx = enemyPatternIdxRef.current
+    let charges = enemyChargesRef.current
+    const out: EnemyAction[] = []
+    for (let k = 0; k < Math.max(1, count); k++) {
+      const raw = pattern[idx % pattern.length]
+      let action: EnemyAction = raw
+      if ((raw === 'fire' && charges < 1) || (raw === 'volley' && charges < MAX_CHARGES)) {
+        action = 'reload'            // impossible action → reload, slot re-attempted (no advance)
+      } else if (raw === 'reload' && charges >= MAX_CHARGES) {
+        action = 'fire'; idx++       // wasted reload → fire (or a feint we can't foresee)
+      } else {
+        idx++
+      }
+      // Fold the predicted action's charge change in so later steps read right.
+      if (action === 'reload') charges = Math.min(MAX_CHARGES, charges + 1)
+      else if (action === 'fire') charges = Math.max(0, charges - 1)
+      else if (action === 'volley') charges = Math.max(0, charges - MAX_CHARGES)
+      out.push(action)
+    }
+    return out
+  }, [enemy.pattern, phaseList])
+
   // ─── The Quartermaster raid — "Flare Barrage" (per-tier ladder) ────────────
   // Every FLARE_EVERY turns the keeper throws up false flares the player must
   // swat (reactive whack-a-mole) before they can act. Flares spawn
@@ -2098,14 +2138,14 @@ export default function RaidCombat({
       }
       case 'foresight': {
         const fm = m as import('@/lib/crewClasses').ForesightMilestone
-        // Read the enemy's upcoming intent straight off their pattern (phase-
-        // aware, mirroring pickEnemyAction). Feints/situational reloads can still
-        // surprise — foresight shows intent, not a guarantee.
-        const activePhase = enemyPhaseRef.current >= 2 ? phaseList[enemyPhaseRef.current - 2] : undefined
-        const pat = activePhase ? activePhase.pattern : enemy.pattern
-        const start = enemyPatternIdxRef.current
-        const moves: EnemyAction[] = []
-        for (let k = 0; k < Math.max(1, fm.revealMoves) && pat.length > 0; k++) moves.push(pat[(start + k) % pat.length])
+        // Predict the enemy's ACTUAL upcoming moves — simulate the substitution
+        // rules forward from the live charge count, not the raw pattern slot, so
+        // a pre-loaded magazine (curse), an accumulated charge, etc. don't make
+        // the reveal lie. Feints/snare-jams can still surprise (intent, not a
+        // guarantee), but the common "you drafted a curse and it's all wrong now"
+        // case is fixed.
+        foresightMovesLeftRef.current = Math.max(1, fm.revealMoves)
+        const moves = predictEnemyMoves(fm.revealMoves)
         setForeseenMoves(moves)
         // Dodge refresh — clear the one-turn dodge cooldown so a player who
         // dodged last turn can slip the shot they just foresaw.
