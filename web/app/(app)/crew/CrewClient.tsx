@@ -365,9 +365,10 @@ function StatIcon({ k, color }: { k: 'power' | 'dodge' | 'fortune'; color: strin
 // `enabled` false renders the card bare (no swipe at all).
 const SWIPE_SPRING = { type: 'spring' as const, stiffness: 700, damping: 46, restDelta: 0.4 }
 const CIRCLE_SHADOW = '0 4px 12px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,255,255,0.24)'
-function SwipeAction({ enabled, side, label, icon, gradient, textColor, glow, onAction, children }: {
+function SwipeAction({ enabled, side, label, icon, gradient, textColor, glow, hintPeek, onPeeked, onAction, children }: {
   enabled: boolean; side: 'left' | 'right'; label: string; icon: ReactNode
-  gradient: string; textColor: string; glow: string; onAction: () => void; children: ReactNode
+  gradient: string; textColor: string; glow: string
+  hintPeek?: boolean; onPeeked?: () => void; onAction: () => void; children: ReactNode
 }) {
   const x = useMotionValue(0)
   const REVEAL = 84
@@ -380,6 +381,20 @@ function SwipeAction({ enabled, side, label, icon, gradient, textColor, glow, on
   const draggedRef = useRef(false)
   const openRef = useRef(false)
   const press = useAnimationControls()
+  // One-time teaser: slide the card open a bit to reveal the circle, then spring
+  // back — demonstrates the swipe without any text. Runs once per mount when the
+  // parent flags this as the hint card.
+  const peekedRef = useRef(false)
+  useEffect(() => {
+    if (!enabled || !hintPeek || peekedRef.current) return
+    peekedRef.current = true
+    onPeeked?.()
+    const t = setTimeout(() => {
+      animate(x, side === 'right' ? [0, 52, 0] : [0, -52, 0], { duration: 1.15, times: [0, 0.42, 1], ease: [0.4, 0, 0.2, 1] })
+    }, 600)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   if (!enabled) return <>{children}</>
   const snapTo = (target: number) => { openRef.current = target !== 0; animate(x, target, SWIPE_SPRING) }
   const pressDown = () => { vibrate(13); press.start({ scale: 0.82, transition: { type: 'spring', stiffness: 800, damping: 26 } }) }
@@ -1132,6 +1147,13 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
   }, [activeTab, graveyard, graveyardLoading])
 
   const rosterFull = state.roster.length >= state.capacity
+  // Swipe-to-recruit teaser: auto-peek the first recruitable card ONCE per visit
+  // to show the gesture, then rely on the persistent arrow. Ref (not state) so
+  // flipping it never re-renders; firstRecruitHintId re-reads it each render.
+  const recruitHintedRef = useRef(false)
+  const firstRecruitHintId = (!recruitHintedRef.current && !rosterFull)
+    ? (state.board.find(c => !c.recruited)?.id ?? null)
+    : null
 
   /** Pick the lowest empty slot on the target track. Returns 0 (captain
    *  slot — server will bench the previous occupant) if all slots are
@@ -1284,10 +1306,11 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
         // the detail modal still works.
         return (
           <motion.span aria-hidden title="Swipe left to recruit"
-            animate={{ x: [0, -5, 0], opacity: [0.5, 1, 0.5] }}
-            transition={{ duration: 1.25, repeat: Infinity, ease: 'easeInOut' }}
-            style={{ display: 'inline-flex', alignItems: 'center', color: '#ffcc33', filter: 'drop-shadow(0 0 5px rgba(255,204,51,0.5))' }}>
-            <svg width="30" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M13 5l-7 7 7 7" /><path d="M19 12H6" /></svg>
+            animate={{ x: [0, -9, 0], opacity: [0.45, 1, 0.45] }}
+            transition={{ duration: 1.15, repeat: Infinity, ease: 'easeInOut' }}
+            style={{ display: 'inline-flex', alignItems: 'center', color: '#ffcc33', filter: 'drop-shadow(0 0 7px rgba(255,204,51,0.6))' }}>
+            {/* double chevron reads as "swipe this way" more than a lone arrow */}
+            <svg width="40" height="26" viewBox="0 0 34 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><path d="M16 5l-7 7 7 7" /><path d="M25 5l-7 7 7 7" /></svg>
           </motion.span>
         )
       }
@@ -1598,6 +1621,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                 <SwipeAction enabled={recruitable} side="left" label="Recruit"
                   icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>}
                   gradient="linear-gradient(180deg, #4cc483 0%, #2e9a5c 100%)" textColor="#06341a" glow="rgba(76,196,131,0.9)"
+                  hintPeek={c.id === firstRecruitHintId} onPeeked={() => { recruitHintedRef.current = true }}
                   onAction={() => recruitBoard(c.id)}>
                   {panel}
                 </SwipeAction>
