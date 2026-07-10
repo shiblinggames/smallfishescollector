@@ -4263,7 +4263,12 @@ function DepthBar({ depth, pot, isBoss, isElite, affixName, curses, isHardcore }
   const tagColor = isBoss ? '#f87171' : '#c084fc'
   return (
     <div className="flex items-center justify-between"
-      style={{ background: 'rgba(4,10,18,0.94)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', border: isHardcore ? '1px solid rgba(220,38,38,0.55)' : `1px solid ${GOLD}28`, borderRadius: 14, padding: '0.4rem 0.8rem', boxShadow: isHardcore ? '0 0 16px rgba(200,20,32,0.32), inset 0 0 10px rgba(120,10,18,0.3)' : undefined }}>
+      // FULLY OPAQUE, no backdrop-filter. This bar is position:sticky inside the
+      // PWA's -webkit-overflow-scrolling:touch combat scroller; backdrop-filter on
+      // a sticky element there is an iOS repaint bug — during the aim-bar swap it
+      // failed to repaint (the bar "disappeared") AND mis-composited the hit-test
+      // layer below, so the Lock button's tap target drifted off its paint spot.
+      style={{ background: '#050b13', border: isHardcore ? '1px solid rgba(220,38,38,0.55)' : `1px solid ${GOLD}28`, borderRadius: 14, padding: '0.4rem 0.8rem', boxShadow: isHardcore ? '0 0 16px rgba(200,20,32,0.32), inset 0 0 10px rgba(120,10,18,0.3)' : undefined }}>
       <div className="flex items-baseline gap-1.5">
         <span className="font-karla font-600" style={{ fontSize: '0.46rem', color: GOLD + 'bb', letterSpacing: '0.1em' }}>DEPTH</span>
         <span className="font-cinzel font-800" style={{ fontSize: '1rem', color: GOLD, lineHeight: 1 }}>{depth}</span>
