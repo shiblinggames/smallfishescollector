@@ -4,7 +4,7 @@
 //
 // Model (all locked with design): send ONE crew to passively fish a zone for a
 // 1h hard-locked cycle; collect, then redeploy. Savvy → fishing XP, Fortune →
-// doubloons. Per-slot maxed = 40% of that zone's active xp/hr and 15% of its
+// doubloons. Per-slot maxed = 35% of that zone's active xp/hr and 15% of its
 // active doubloons/hr; scaled by the crew's stat (floor 0.2, ref 40); each haul
 // rolls a tight ±15%. One trawl per zone; up to 4 concurrent slots gated by
 // BOTH fishing + Nav level.
@@ -85,7 +85,7 @@ export function nextTrawlSlot(fishingLevel: number, navLevel: number): { slot: n
 }
 
 // ── Reward math ──────────────────────────────────────────────────────────────
-export const TRAWL_XP_PCT = 0.40   // maxed crew = 40% of the zone's active xp/hr
+export const TRAWL_XP_PCT = 0.35   // maxed crew = 35% of the zone's active xp/hr
 export const TRAWL_DBL_PCT = 0.15  // maxed crew = 15% of the zone's active doubloons/hr
 export const TRAWL_STAT_REF = 40   // a maxed affinity-skewed Legendary's Savvy/Fortune
 export const TRAWL_FACTOR_FLOOR = 0.2
