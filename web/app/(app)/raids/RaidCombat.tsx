@@ -5554,6 +5554,7 @@ export default function RaidCombat({
             shipClasses={shipClasses}
             damagePct={mods.damagePct}
             tideEffects={tideEffects}
+            effectLabels={runDepth > 0 ? { good: 'Boons', bad: 'Curses' } : { good: 'Buffs', bad: 'Penalties' }}
             onClose={() => setShowStats(false)}
           />
         )}
@@ -5677,6 +5678,7 @@ function PlayerStatsPopup({
   shipMinDamage, shipSpeed, totalPower, totalNavigation, totalFortune,
   isBoss, equippedRaidItems, shipClasses = {}, damagePct = 0,
   tideEffects = [],
+  effectLabels = { good: 'Buffs', bad: 'Penalties' },
   onClose,
 }: {
   shipName: string
@@ -5699,6 +5701,9 @@ function PlayerStatsPopup({
    *  as friendly one-liners (see lib/tides.describeEffect) so the
    *  player can see what their picks are doing. Hidden when empty. */
   tideEffects?: TideEffect[]
+  /** Headings for the good/bad run-effect groups — "Boons"/"Curses" in the
+   *  Gauntlet, "Buffs"/"Penalties" for raid Tides. */
+  effectLabels?: { good: string; bad: string }
   onClose: () => void
 }) {
   // Single source of truth — mirrors rollShotDamage, incl. crew damage effects.
@@ -5812,16 +5817,33 @@ function PlayerStatsPopup({
         exit={{ opacity: 0, scale: 0.98, y: 4 }}
         transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
         style={{
+          position: 'relative',
           width: '100%', maxWidth: 380,
           background: 'linear-gradient(180deg, #0c1626 0%, #06101c 100%)',
           border: '1px solid rgba(96,165,250,0.18)',
           borderRadius: 20,
-          padding: '1.1rem 1rem 1rem',
+          padding: '1.1rem 1rem 1.2rem',
           boxShadow: '0 18px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.04) inset',
         }}
       >
-        {/* Header — ship art + name. */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+        {/* Close — X top-right, replacing the old full-width bottom button. */}
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          style={{
+            position: 'absolute', top: 12, right: 12, zIndex: 2,
+            width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(255,255,255,0.06)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: '50%', color: 'rgba(240,237,232,0.7)', cursor: 'pointer',
+          }}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+
+        {/* Header — ship art + name. Right-padded so the name never runs under the X. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, paddingRight: 32 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={shipImageUrl} alt="" style={{ width: 60, height: 60, objectFit: 'contain', flexShrink: 0, filter: `drop-shadow(0 3px 8px rgba(0,0,0,0.5))${shipFilter && shipFilter !== 'none' ? ` ${shipFilter}` : ''}` }} />
           <div style={{ minWidth: 0, flex: 1 }}>
@@ -5830,7 +5852,9 @@ function PlayerStatsPopup({
           </div>
         </div>
 
+        {/* ── Build (permanent): combat stats → classes → equipped gear ── */}
         {/* Stat cards — 2-column grid feels less list-y and more dashboard-y. */}
+        {sectionHeading('Combat', '#8fb4e0')}
         <div style={{
           display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8,
         }}>
@@ -5849,15 +5873,6 @@ function PlayerStatsPopup({
             </div>
           ))}
         </div>
-
-        {/* Run effects — split by tone so boons/positive picks (Buffs) read
-            apart from curses/costs (Penalties). */}
-        {(buffs.length > 0 || penalties.length > 0) && (
-          <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {effectGroup('Buffs', buffs, '#5eead4')}
-            {effectGroup('Penalties', penalties, '#f08a8a')}
-          </div>
-        )}
 
         {/* Classes — one consolidated card: combined stat chips + which picks
             are stacked, instead of a tall row per class. */}
@@ -5893,7 +5908,7 @@ function PlayerStatsPopup({
         {/* Equipped Items — scales with however many raid items are on. */}
         {equippedItems.length > 0 && (
           <div style={{ marginTop: 16 }}>
-            {sectionHeading('Equipped Items', '#fbbf24')}
+            {sectionHeading(equippedItems.length > 1 ? `Equipped Items · ${equippedItems.length}` : 'Equipped Item', '#fbbf24')}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {equippedItems.map(item => (
                 <div key={item.id} style={{
@@ -5928,20 +5943,14 @@ function PlayerStatsPopup({
           </div>
         )}
 
-        <button
-          type="button"
-          onClick={onClose}
-          className="font-karla font-700"
-          style={{
-            width: '100%', padding: '0.85rem', marginTop: 16,
-            background: 'rgba(96,165,250,0.14)',
-            border: '1px solid rgba(96,165,250,0.45)',
-            color: '#90c0ff', borderRadius: 12,
-            fontSize: '0.85rem', letterSpacing: '0.04em', cursor: 'pointer',
-          }}
-        >
-          Close
-        </button>
+        {/* ── This run (temporary): boons then curses, under one divider so
+            they read apart from the permanent build above. ── */}
+        {(buffs.length > 0 || penalties.length > 0) && (
+          <div style={{ marginTop: 18, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {effectGroup(buffs.length > 1 ? `${effectLabels.good} · ${buffs.length}` : effectLabels.good, buffs, '#5eead4')}
+            {effectGroup(penalties.length > 1 ? `${effectLabels.bad} · ${penalties.length}` : effectLabels.bad, penalties, '#f08a8a')}
+          </div>
+        )}
       </motion.div>
       </div>
     </motion.div>,
@@ -6054,16 +6063,33 @@ function EnemyStatsPopup({
         exit={{ opacity: 0, scale: 0.98, y: 4 }}
         transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
         style={{
+          position: 'relative',
           width: '100%', maxWidth: 380,
           background: 'linear-gradient(180deg, #1a0c0c 0%, #0c0606 100%)',
           border: `1px solid ${isBoss ? 'rgba(251,191,36,0.34)' : 'rgba(239,68,68,0.22)'}`,
           borderRadius: 20,
-          padding: '1.1rem 1rem 1rem',
+          padding: '1.1rem 1rem 1.2rem',
           boxShadow: '0 18px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.04) inset',
         }}
       >
-        {/* Header — portrait + name */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+        {/* Close — X top-right, matching PlayerStatsPopup. */}
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          style={{
+            position: 'absolute', top: 12, right: 12, zIndex: 2,
+            width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(255,255,255,0.06)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: '50%', color: 'rgba(240,237,232,0.7)', cursor: 'pointer',
+          }}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+
+        {/* Header — portrait + name. Right-padded so the name clears the X. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14, paddingRight: 32 }}>
           {enemy.portrait && (
             <div style={{
               flexShrink: 0, width: 60, height: 60, borderRadius: '50%',
@@ -6343,20 +6369,6 @@ function EnemyStatsPopup({
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={onClose}
-          className="font-karla font-700"
-          style={{
-            width: '100%', padding: '0.85rem',
-            background: 'rgba(239,68,68,0.12)',
-            border: '1px solid rgba(239,68,68,0.4)',
-            color: '#fca5a5', borderRadius: 12,
-            fontSize: '0.85rem', letterSpacing: '0.04em', cursor: 'pointer',
-          }}
-        >
-          Close
-        </button>
       </motion.div>
       </div>
     </motion.div>,
