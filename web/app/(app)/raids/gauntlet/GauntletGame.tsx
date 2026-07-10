@@ -38,7 +38,7 @@ import { getSpecialItem } from '@/lib/specialItems'
 import { buySpecialItem } from '@/app/(app)/fishing/actions'
 import { getRaidItem, getActiveEffects } from '@/lib/raidItems'
 import LeaderboardModal from '@/components/LeaderboardModal'
-import { vibrate } from '@/lib/haptics'
+import { vibrate, hapticTap, hapticCommit } from '@/lib/haptics'
 import { getXPProgress, MAX_LEVEL } from '@/lib/expeditionLevel'
 import { renownLevel } from '@/lib/renown'
 import RenownUpOverlay, { type RenownUpInfo } from '@/components/RenownUpOverlay'
@@ -953,6 +953,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   // RaidCombat each fight, so they persist for free without piling into the tide
   // channel (where an upgrade would otherwise double-apply the old tier).
   function applyBoon(offer: BoonOffer) {
+    hapticCommit() // a run-defining pick locks in — give it weight
     // Opportunity-cost model: completing a boon PAIR no longer auto-grants the
     // confluence — it just makes it eligible to be OFFERED as a draft card
     // (handled at the next draw). So taking a boon only bumps its own tier.
@@ -968,6 +969,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   // cost). It applies from now on, scaling with its two boon tiers, and lands as
   // a full "synergy unlocked" beat — codex reveal + banner.
   function applyConfluence(offer: ConfluenceOffer) {
+    hapticCommit() // same weight as a boon pick
     const c = CONFLUENCES.find(x => x.id === offer.id)
     setConfluencesTaken(prev => (prev.includes(offer.id) ? prev : [...prev, offer.id]))
     setPendingBoons(null)
@@ -2343,8 +2345,13 @@ export default function GauntletGame(props: GauntletGameProps) {
                 >
                 <motion.button
                   initial={false}
-                  whileTap={flipped ? { scale: 0.945 } : undefined}
+                  // Press-and-hold weight: the card sinks under the finger with a
+                  // tick on contact, then applyBoon's commit buzz fires on release
+                  // — the pick should feel heavier than a menu tap.
+                  whileTap={flipped ? { scale: 0.93 } : undefined}
                   whileHover={flipped ? { scale: 1.015 } : undefined}
+                  transition={{ type: 'spring', stiffness: 480, damping: 26 }}
+                  onPointerDown={flipped ? () => hapticTap() : undefined}
                   onClick={() => { if (flipped) applyBoon(b) }}
                   className="tap"
                   style={{
@@ -2478,8 +2485,9 @@ export default function GauntletGame(props: GauntletGameProps) {
                   initial={{ opacity: 0, y: 22, scale: 0.94 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   transition={{ delay: 0.12 + shownBoons * 0.13, type: 'spring', stiffness: 300, damping: 19 }}
-                  whileTap={{ scale: 0.945 }}
+                  whileTap={{ scale: 0.93 }}
                   whileHover={{ scale: 1.015 }}
+                  onPointerDown={() => hapticTap()}
                   onClick={() => applyConfluence(pendingConfluence)}
                   className="tap reveal-glow-legendary"
                   style={{

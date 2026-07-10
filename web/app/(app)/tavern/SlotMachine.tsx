@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { motion } from 'framer-motion'
+import DetentSlider from '@/components/DetentSlider'
 import { spinSlots } from './actions'
 import type { SlotSpinResult, SlotStats, SlotsJackpotState } from './actions'
 import { buyInCasino, cashOutCasino } from './casino/actions'
@@ -994,32 +995,16 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
                 </>
               ) : (
                 <>
-                  {/* Bet chips */}
-                  <div className="flex gap-1.5 justify-center flex-wrap" style={{ marginBottom: '0.8rem' }}>
-                    {BET_PRESETS.map((amt) => {
-                      const disabled = amt > chips
-                      return (
-                        <button
-                          key={amt}
-                          onClick={() => { if (!disabled) { haptic(6); setWager(amt) } }}
-                          disabled={disabled}
-                          className="font-karla font-700 transition-all active:scale-95"
-                          style={{
-                            minWidth: 50,
-                            padding: '0.45rem 0.5rem',
-                            borderRadius: 999,
-                            fontSize: '0.68rem',
-                            letterSpacing: '0.05em',
-                            background: wager === amt ? 'rgba(240,192,64,0.18)' : 'rgba(8,8,6,0.72)',
-                            border: `1.5px solid ${wager === amt ? '#f0c040' : 'rgba(255,255,255,0.14)'}`,
-                            color: disabled ? '#3a3835' : wager === amt ? '#f0c040' : '#a0a09a',
-                            cursor: disabled ? 'default' : 'pointer',
-                          }}
-                        >
-                          {amt}
-                        </button>
-                      )
-                    })}
+                  {/* Bet picker — a detent slider (one thumb-flick to any preset,
+                      haptic tick per detent) instead of the old row of six tap
+                      chips. Unaffordable presets dim + the snap skips them. */}
+                  <div style={{ marginBottom: '0.8rem' }}>
+                    <DetentSlider
+                      values={BET_PRESETS}
+                      value={wager}
+                      onChange={setWager}
+                      disabledFrom={chips}
+                    />
                   </div>
 
                   {/* Spin button — real press-down squish + a tap tick the instant

@@ -302,11 +302,13 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
     }
   }
 
+  // Tap-tap swap (the safe path beside drag): first tap selects with a tick,
+  // tap an adjacent tile to swap, tap elsewhere to move the selection.
   function tapCell(i: number) {
-    if (selected === null) { setSelected(i); setMessage(null); return }
+    if (selected === null) { haptic(6); setSelected(i); setMessage(null); return }
     if (selected === i) { setSelected(null); return }
     if (areAdjacent(selected, i, cols)) { void attemptSwap(selected, i) }
-    else { setSelected(i) }
+    else { haptic(6); setSelected(i) }
   }
 
   function cellFromPoint(clientX: number, clientY: number): number | null {

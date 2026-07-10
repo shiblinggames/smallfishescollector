@@ -66,7 +66,7 @@ import { formatFishLength, type FishSizeTier } from '@/lib/fishSize'
 import { SHINY_FISH_FILTER, SHINY_THEME, SHINY_SELL_MULT, pickShinyMessage } from '@/lib/shiny'
 import { getHook, HOOKS, hookGlowClass } from '@/lib/hooks'
 import { getRod, getEffectiveRod, RODS, rodGlowClass, jackpotChanceForZone, type RodDef } from '@/lib/rods'
-import { vibrate } from '@/lib/haptics'
+import { vibrate, hapticTap } from '@/lib/haptics'
 import { getReel, REELS } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
 import { BAITS, getBait } from '@/lib/bait'
@@ -3238,6 +3238,11 @@ export default function FishingGame({
     return first?.bait_type ?? 'worm'
   })
   const [baitInventory, setBaitInventory] = useState<BaitItem[]>(initialBait)
+  // Bait quick-swap carousel (the idle-screen bait tile): the direction of the
+  // last swipe (drives which side the new bait slides in from) + a dragged flag
+  // so the post-swipe synthetic click doesn't also open the bait drawer.
+  const [baitSwapDir, setBaitSwapDir] = useState<1 | -1>(1)
+  const baitDraggedRef = useRef(false)
   const [inventory, setInventory]   = useState<InventoryItem[]>(initialInventory)
   const [doubloons, setDoubloons]   = useState(initialDoubloons)
   // Perfected Sigil payout — gold coins arc from the catch result area
@@ -7417,33 +7422,75 @@ export default function FishingGame({
                   </div>
                 </button>
 
-                {/* Bait — image + readable count */}
+                {/* Bait — image + readable count. QUICK-SWAP CAROUSEL: swipe the
+                    tile left/right to cycle through owned baits (haptic detent
+                    per step, content slides in from the swipe direction) — no
+                    drawer needed for the every-cast bait swap. Tap still opens
+                    the drawer for details/buying. */}
+                {(() => {
+                  const cycle = BAITS.filter(b => (baitInventory.find(i => i.bait_type === b.type)?.quantity ?? 0) > 0).map(b => b.type)
+                  const canCycle = cycle.length > 1
+                  const step = (dir: 1 | -1) => {
+                    const at = cycle.indexOf(selectedBait)
+                    const next = cycle[( (at === -1 ? 0 : at) + dir + cycle.length) % cycle.length]
+                    if (!next || next === selectedBait) return
+                    hapticTap()
+                    setBaitSwapDir(dir)
+                    setSelectedBait(next)
+                  }
+                  return (
                 <button
-                  onClick={() => { setBaitOpen(o => !o); setGearOpen(false); setHoldOpen(false) }}
+                  onClick={() => { if (baitDraggedRef.current) { baitDraggedRef.current = false; return } setBaitOpen(o => !o); setGearOpen(false); setHoldOpen(false) }}
                   style={{
                     ...tile,
                     flexDirection: 'row',
                     alignItems: 'center', justifyContent: 'center',
                     gap: 8, padding: '0 0.5rem',
+                    overflow: 'hidden',
                     background: baitOpen ? `${baitAccent}10` : 'rgba(4,10,18,0.72)',
                     border: `1px solid ${baitOpen ? baitAccent + '38' : outOfBait ? 'rgba(248,113,113,0.35)' : 'rgba(255,255,255,0.12)'}`,
                   }}
                 >
-                  {selectedBaitDef?.imageUrl ? (
-                    <img src={selectedBaitDef.imageUrl} alt={selectedBaitDef.name} style={{
-                      width: 36, height: 36, objectFit: 'contain', flexShrink: 0,
-                      filter: outOfBait ? 'grayscale(1) brightness(0.45)' : `drop-shadow(0 2px 6px ${baitAccent}55)`,
-                    }} />
-                  ) : (
-                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: baitAccent + '33', border: `1px solid ${baitAccent}66`, flexShrink: 0 }} />
-                  )}
-                  <p className="font-cinzel font-700" style={{
-                    fontSize: '1.05rem', lineHeight: 1,
-                    color: outOfBait ? '#f87171' : '#f0ede8',
-                  }}>
-                    {outOfBait ? '0' : `×${selectedBaitQty.toLocaleString()}`}
-                  </p>
+                  <motion.div
+                    drag={canCycle ? 'x' : false}
+                    dragConstraints={{ left: 0, right: 0 }}
+                    dragElastic={0.18}
+                    dragDirectionLock
+                    onDrag={(_, info) => { if (Math.abs(info.offset.x) > 5) baitDraggedRef.current = true }}
+                    onDragEnd={(_, info) => {
+                      if (info.offset.x < -28 || info.velocity.x < -300) step(1)
+                      else if (info.offset.x > 28 || info.velocity.x > 300) step(-1)
+                    }}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, touchAction: 'pan-y', width: '100%' }}
+                  >
+                    <AnimatePresence mode="popLayout" initial={false}>
+                      <motion.div key={selectedBait}
+                        initial={{ x: baitSwapDir * 34, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        exit={{ x: -baitSwapDir * 34, opacity: 0 }}
+                        transition={{ type: 'spring', stiffness: 520, damping: 34 }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+                      >
+                        {selectedBaitDef?.imageUrl ? (
+                          <img src={selectedBaitDef.imageUrl} alt={selectedBaitDef.name} style={{
+                            width: 36, height: 36, objectFit: 'contain', flexShrink: 0,
+                            filter: outOfBait ? 'grayscale(1) brightness(0.45)' : `drop-shadow(0 2px 6px ${baitAccent}55)`,
+                          }} />
+                        ) : (
+                          <div style={{ width: 36, height: 36, borderRadius: '50%', background: baitAccent + '33', border: `1px solid ${baitAccent}66`, flexShrink: 0 }} />
+                        )}
+                        <p className="font-cinzel font-700" style={{
+                          fontSize: '1.05rem', lineHeight: 1,
+                          color: outOfBait ? '#f87171' : '#f0ede8',
+                        }}>
+                          {outOfBait ? '0' : `×${selectedBaitQty.toLocaleString()}`}
+                        </p>
+                      </motion.div>
+                    </AnimatePresence>
+                  </motion.div>
                 </button>
+                  )
+                })()}
 
                 {/* Hold — fish icon + count */}
                 <button
