@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useTransition, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useSearchParams } from 'next/navigation'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useAnimationControls } from 'framer-motion'
 import {
   rerollBoard, recruitCrew, dismissCrew, getCrewGraveyard,
   assignToVoyage, assignToRaid, benchCrew, promoteToCaptain, renameCrew,
@@ -354,6 +354,63 @@ function StatIcon({ k, color }: { k: 'power' | 'dodge' | 'fortune'; color: strin
 // A single recruit/roster entry, styled like a Darkest Dungeon stagecoach
 // manifest line: arched portrait in a carved frame, name + class + quirks
 // laid out beside it on aged wood.
+// Swipe-left-to-dismiss wrapper for roster cards. The card drags left to reveal
+// a red Dismiss action; tapping it fires onDismiss (the swipe reveals, the tap
+// confirms — two deliberate gestures, no accidental fire). A plain tap opens the
+// card (passes through); a tap on an OPEN card just closes it. `enabled` is false
+// for locked crew (at sea / on a trawl) — they render bare, no swipe at all.
+function SwipeToDismiss({ enabled, onDismiss, children }: { enabled: boolean; onDismiss: () => void; children: ReactNode }) {
+  const [open, setOpen] = useState(false)
+  const draggedRef = useRef(false)
+  const controls = useAnimationControls()
+  const REVEAL = 94
+  const SPRING = { type: 'spring' as const, stiffness: 520, damping: 42 }
+  const snap = (o: boolean) => { setOpen(o); controls.start({ x: o ? -REVEAL : 0, transition: SPRING }) }
+  if (!enabled) return <>{children}</>
+  return (
+    // overflow:hidden clips the sliding card to the cell; the wrapper carries the
+    // card's drop shadow so depth survives the clip.
+    <div style={{ position: 'relative', borderRadius: 7, overflow: 'hidden', boxShadow: '0 6px 16px rgba(0,0,0,0.55)' }}>
+      {/* Dismiss action, revealed behind the card as it slides left. */}
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'flex-end', background: 'rgba(150,40,40,0.18)' }}>
+        <button type="button" aria-label="Dismiss crew"
+          onClick={(e) => { e.stopPropagation(); snap(false); onDismiss() }}
+          className="font-karla font-700 uppercase"
+          style={{
+            width: REVEAL, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+            border: 'none', background: 'linear-gradient(180deg, #c6484a 0%, #a5383a 100%)',
+            color: '#fbe4e4', fontSize: '0.6rem', letterSpacing: '0.09em', cursor: 'pointer',
+          }}>
+          <XIcon /><span>Dismiss</span>
+        </button>
+      </div>
+      {/* The draggable card. */}
+      <motion.div
+        drag="x"
+        dragConstraints={{ left: -REVEAL, right: 0 }}
+        dragElastic={0.05}
+        dragDirectionLock
+        initial={{ x: 0 }}
+        animate={controls}
+        onDrag={(_, info) => { if (Math.abs(info.offset.x) > 6) draggedRef.current = true }}
+        // Always snap on release (open past threshold/flick, else back to closed)
+        // — driving via controls so a partial drag can't strand the card mid-slide.
+        onDragEnd={(_, info) => { snap(info.offset.x < -REVEAL * 0.4 || info.velocity.x < -320) }}
+        onClickCapture={(e) => {
+          // A click synthesized right after a drag — swallow it, keep the drag's
+          // open/closed result. A genuine tap on an OPEN card closes it (don't
+          // open detail). A tap on a CLOSED card passes through to the card.
+          if (draggedRef.current) { e.stopPropagation(); draggedRef.current = false; return }
+          if (open) { e.stopPropagation(); snap(false) }
+        }}
+        style={{ position: 'relative', zIndex: 1, touchAction: 'pan-y', borderRadius: 7 }}
+      >
+        {children}
+      </motion.div>
+    </div>
+  )
+}
+
 function CrewPanel({
   name, filename, rarity, base, effects, xp = 0, slug = '', assignment, isCaptain = false, locked = false, lockKind = 'voyage', lockLabel = 'This crew is currently at sea on a voyage.', hasLevelUp = false, dimmed, hint, frameAccent = '#5c5c63',
   bg = RECRUIT_PANEL_BG, border = RECRUIT_PANEL_BORDER, onClick, children,
@@ -1963,21 +2020,27 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                 const available   = state.roster.filter(c => c.raidSlot == null && c.voyageSlot == null && !trawlSet.has(c.id))
                 const voyageAtSea = voyageParty.some(c => voyageLockSet.has(c.id))
 
-                const card = (m: CrewMember) => (
-                  <CrewPanel key={m.id} name={m.name} filename={m.filename} rarity={m.rarity}
-                    bg={ROSTER_PANEL_BG} border={ROSTER_PANEL_BORDER}
-                    base={{ power: m.power, dodge: m.dodge, fortune: m.fortune }} effects={m.effects} xp={m.xp} slug={m.slug}
-                    assignment={crewAssignment(m)}
-                    isCaptain={m.voyageSlot === 0 || m.raidSlot === 0}
-                    locked={voyageLockSet.has(m.id) || trawlSet.has(m.id)}
-                    lockKind={trawlSet.has(m.id) ? 'trawl' : 'voyage'}
-                    lockLabel={trawlSet.has(m.id) ? 'This crew is out on a trawl. Collect it to free them up.' : 'This crew is currently at sea on a voyage.'}
-                    hasLevelUp={(seenLevels[m.id] ?? crewLevelFromXP(m.xp)) < crewLevelFromXP(m.xp)}
-                    hint={m.effects.length > 0 && !viewed.has(`roster:${m.id}`)}
-                    onClick={() => openDetail('roster', m)}>
-                    {renderAction('roster', m, { round: true })}
-                  </CrewPanel>
-                )
+                const card = (m: CrewMember) => {
+                  const isLocked = voyageLockSet.has(m.id) || trawlSet.has(m.id)
+                  return (
+                    // Swipe-left to dismiss — disabled for locked crew (at sea / trawling).
+                    <SwipeToDismiss key={m.id} enabled={!isLocked} onDismiss={() => run(() => dismissCrew(m.id), m.id)}>
+                      <CrewPanel name={m.name} filename={m.filename} rarity={m.rarity}
+                        bg={ROSTER_PANEL_BG} border={ROSTER_PANEL_BORDER}
+                        base={{ power: m.power, dodge: m.dodge, fortune: m.fortune }} effects={m.effects} xp={m.xp} slug={m.slug}
+                        assignment={crewAssignment(m)}
+                        isCaptain={m.voyageSlot === 0 || m.raidSlot === 0}
+                        locked={isLocked}
+                        lockKind={trawlSet.has(m.id) ? 'trawl' : 'voyage'}
+                        lockLabel={trawlSet.has(m.id) ? 'This crew is out on a trawl. Collect it to free them up.' : 'This crew is currently at sea on a voyage.'}
+                        hasLevelUp={(seenLevels[m.id] ?? crewLevelFromXP(m.xp)) < crewLevelFromXP(m.xp)}
+                        hint={m.effects.length > 0 && !viewed.has(`roster:${m.id}`)}
+                        onClick={() => openDetail('roster', m)}>
+                        {renderAction('roster', m, { round: true })}
+                      </CrewPanel>
+                    </SwipeToDismiss>
+                  )
+                }
                 const grid = (members: CrewMember[], empties: number, accent: string, onEmpty?: () => void) => (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '0.7rem' }}>
                     {members.map(card)}
@@ -2708,7 +2771,9 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   const isCap = m.voyageSlot === 0 || m.raidSlot === 0
                   const canPromote = !isCap && (m.voyageSlot !== null || m.raidSlot !== null)
                   const accent = m.voyageSlot !== null ? ASSIGN_VOYAGE : ASSIGN_RAID
-                  const armed = confirmDismiss === m.id
+                  // Locked crew (at sea / on a trawl) can't be dismissed in any way.
+                  const isLockedM = state.lockedCrewIds.includes(m.id) || state.trawlingCrewIds.includes(m.id)
+                  const armed = confirmDismiss === m.id && !isLockedM
                   if (armed) {
                     return (
                       <div className="flex items-center" style={{ gap: 8 }}>
@@ -2730,11 +2795,18 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                           Make Captain
                         </button>
                       )}
-                      <button type="button" disabled={pending} onClick={() => setConfirmDismiss(m.id)}
-                        className="font-karla font-700 uppercase"
-                        style={{ marginLeft: canPromote ? undefined : 'auto', display: 'flex', alignItems: 'center', gap: 5, padding: '0.52rem 0.7rem', borderRadius: 9, fontSize: '0.68rem', letterSpacing: '0.04em', background: 'transparent', border: '1px solid rgba(228,114,114,0.26)', color: 'rgba(232,150,150,0.82)', cursor: pending ? 'not-allowed' : 'pointer' }}>
-                        <XIcon /> Dismiss
-                      </button>
+                      {isLockedM ? (
+                        <span className="font-karla font-600 italic" title="At sea — collect them first to dismiss"
+                          style={{ marginLeft: canPromote ? undefined : 'auto', display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.64rem', color: 'rgba(255,255,255,0.38)', whiteSpace: 'nowrap' }}>
+                          {state.trawlingCrewIds.includes(m.id) ? 'On a trawl' : 'At sea'} — can’t dismiss
+                        </span>
+                      ) : (
+                        <button type="button" disabled={pending} onClick={() => setConfirmDismiss(m.id)}
+                          className="font-karla font-700 uppercase"
+                          style={{ marginLeft: canPromote ? undefined : 'auto', display: 'flex', alignItems: 'center', gap: 5, padding: '0.52rem 0.7rem', borderRadius: 9, fontSize: '0.68rem', letterSpacing: '0.04em', background: 'transparent', border: '1px solid rgba(228,114,114,0.26)', color: 'rgba(232,150,150,0.82)', cursor: pending ? 'not-allowed' : 'pointer' }}>
+                          <XIcon /> Dismiss
+                        </button>
+                      )}
                     </div>
                   )
                 })()}</div>

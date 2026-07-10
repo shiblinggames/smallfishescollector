@@ -512,6 +512,11 @@ export async function dismissCrew(crewId: number): Promise<CrewActionResult> {
   if (!user) return { error: 'Not signed in' }
   const admin = createAdminClient()
 
+  // Locked crew (at sea on a voyage / out on a trawl) can't be dismissed in any
+  // way — same guard as reassignment, server-side backstop for the UI gating.
+  const guard = await assertCanReassign(admin, user.id, crewId)
+  if ('error' in guard) return { error: guard.error }
+
   // Dismiss only applies to live crew. Fallen crew live in the
   // graveyard permanently — no "dismiss" affordance there.
   await admin.from('user_crew').delete().eq('id', crewId).eq('user_id', user.id).is('died_at', null)
