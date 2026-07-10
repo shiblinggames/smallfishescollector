@@ -354,51 +354,63 @@ function StatIcon({ k, color }: { k: 'power' | 'dodge' | 'fortune'; color: strin
 // A single recruit/roster entry, styled like a Darkest Dungeon stagecoach
 // manifest line: arched portrait in a carved frame, name + class + quirks
 // laid out beside it on aged wood.
-// Swipe-left-to-dismiss wrapper for roster cards. The card follows the finger 1:1
-// (a single bound motion value — no state churn during the drag, so it stays
-// smooth), snapping open/closed on release. The red action's opacity is tied to
-// the swipe distance, so it fades in with the card and CAN'T persist once closed.
-// Tapping the revealed Dismiss fires onDismiss (swipe reveals, tap confirms). A
-// plain tap opens the card; a tap on an OPEN card just closes it. `enabled` is
-// false for locked crew (at sea / on a trawl) — they render bare, no swipe.
+// Swipe-to-act wrapper for crew cards. The card follows the finger 1:1 (a single
+// bound motion value — no state churn during the drag, so it stays smooth) and
+// snaps open/closed on release. The action panel's opacity is tied to the swipe
+// distance, so it fades in with the card and CAN'T persist once closed. Tapping
+// the revealed action fires onAction (swipe reveals, tap confirms). A plain tap
+// opens the card; a tap on an OPEN card just closes it.
+//   side 'left'  → swipe LEFT, action revealed on the right (e.g. Dismiss)
+//   side 'right' → swipe RIGHT, action revealed on the left  (e.g. Recruit)
+// `enabled` false renders the card bare (no swipe at all).
 const SWIPE_SPRING = { type: 'spring' as const, stiffness: 700, damping: 46, restDelta: 0.4 }
-function SwipeToDismiss({ enabled, onDismiss, children }: { enabled: boolean; onDismiss: () => void; children: ReactNode }) {
+function SwipeAction({ enabled, side, label, icon, gradient, textColor, onAction, children }: {
+  enabled: boolean; side: 'left' | 'right'; label: string; icon: ReactNode
+  gradient: string; textColor: string; onAction: () => void; children: ReactNode
+}) {
   const x = useMotionValue(0)
   const REVEAL = 92
-  // Red fades in as you swipe; 0 at rest so it never lingers behind a closed card.
-  const redOpacity = useTransform(x, [-REVEAL, -6, 0], [1, 1, 0])
+  const right = side === 'right'
+  const openX = right ? REVEAL : -REVEAL
+  // Action fades in as you swipe; 0 at rest so it never lingers behind a card.
+  const actOpacity = useTransform(x, right ? [0, 6, REVEAL] : [-REVEAL, -6, 0], right ? [0, 1, 1] : [1, 1, 0])
   const draggedRef = useRef(false)
   const openRef = useRef(false)
   if (!enabled) return <>{children}</>
   const snapTo = (target: number) => { openRef.current = target !== 0; animate(x, target, SWIPE_SPRING) }
   return (
     <div style={{ position: 'relative', borderRadius: 7, overflow: 'hidden', boxShadow: '0 6px 16px rgba(0,0,0,0.55)' }}>
-      {/* Dismiss action behind the card; opacity tracks the swipe. */}
+      {/* Action behind the card; opacity tracks the swipe. */}
       <motion.div style={{
-        position: 'absolute', inset: 0, opacity: redOpacity,
-        display: 'flex', justifyContent: 'flex-end',
-        background: 'linear-gradient(180deg, #c6484a 0%, #a5383a 100%)',
+        position: 'absolute', inset: 0, opacity: actOpacity,
+        display: 'flex', justifyContent: right ? 'flex-start' : 'flex-end',
+        background: gradient,
       }}>
-        <button type="button" aria-label="Dismiss crew"
+        <button type="button" aria-label={label}
           onPointerDownCapture={(e) => e.stopPropagation()}
-          onClick={(e) => { e.stopPropagation(); x.set(0); openRef.current = false; onDismiss() }}
+          onClick={(e) => { e.stopPropagation(); x.set(0); openRef.current = false; onAction() }}
           className="font-karla font-700 uppercase"
           style={{
             width: REVEAL, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
-            border: 'none', background: 'transparent', color: '#fbe4e4', fontSize: '0.6rem', letterSpacing: '0.09em', cursor: 'pointer',
+            border: 'none', background: 'transparent', color: textColor, fontSize: '0.6rem', letterSpacing: '0.09em', cursor: 'pointer',
           }}>
-          <XIcon /><span>Dismiss</span>
+          {icon}<span>{label}</span>
         </button>
       </motion.div>
       {/* The draggable card — bound to `x` so drag + snap share one value. */}
       <motion.div
         drag="x"
-        dragConstraints={{ left: -REVEAL, right: 0 }}
+        dragConstraints={right ? { left: 0, right: REVEAL } : { left: -REVEAL, right: 0 }}
         dragElastic={0.04}
         dragDirectionLock
         onDragStart={() => { draggedRef.current = false }}
         onDrag={(_, info) => { if (Math.abs(info.offset.x) > 5) draggedRef.current = true }}
-        onDragEnd={(_, info) => { snapTo(info.offset.x < -REVEAL * 0.42 || info.velocity.x < -350 ? -REVEAL : 0) }}
+        onDragEnd={(_, info) => {
+          const opened = right
+            ? (info.offset.x > REVEAL * 0.42 || info.velocity.x > 350)
+            : (info.offset.x < -REVEAL * 0.42 || info.velocity.x < -350)
+          snapTo(opened ? openX : 0)
+        }}
         onClickCapture={(e) => {
           if (draggedRef.current) { e.stopPropagation(); draggedRef.current = false; return }
           if (openRef.current) { e.stopPropagation(); snapTo(0) }
@@ -1156,6 +1168,21 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
     })
   }
 
+  // Optimistic recruit for the swipe gesture — mark the board candidate aboard
+  // the instant they tap (dims the card, disables the swipe) so it feels
+  // immediate, then let the server add the crew + return the real roster.
+  function recruitBoard(id: number) {
+    const snapshot = state.board
+    setErr(null)
+    vibrate(14)
+    setState(s => ({ ...s, board: s.board.map(c => c.id === id ? { ...c, recruited: true } : c) }))
+    startTransition(async () => {
+      const res = await recruitCrew(id)
+      if ('error' in res) { setErr(res.error); setState(s => ({ ...s, board: snapshot })) }
+      else setState(res.state)
+    })
+  }
+
   // Reroll runs the action, swaps the board underneath, then plays the reveal
   // over the top so the new recruits flip in with pack-opening flair.
   // bloodTierId set = a blood-charged reroll (spends Blood Gems for boosted odds).
@@ -1225,23 +1252,13 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
         }
         if (c.recruited) return <span className="font-karla font-700" style={{ ...STATIC_PILL, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', color: 'rgba(220,248,231,0.72)' }}><CheckIcon /> Aboard</span>
         if (rosterFull) return <span className="font-karla font-700" style={{ ...STATIC_PILL, background: 'rgba(220,90,90,0.1)', border: '1px solid rgba(220,90,90,0.32)', color: '#f2b0b0' }}>Roster Full</span>
+        // The on-card Recruit BUTTON is replaced by swipe-right-to-recruit (the
+        // SwipeAction wrapper on the board card). Leave a quiet cue so the
+        // gesture stays discoverable; recruiting from the detail modal still works.
         return (
-          <motion.button
-            title="Recruit" onClick={recruit} disabled={pending}
-            whileTap={{ scale: 0.88 }}
-            transition={{ type: 'spring', stiffness: 520, damping: 18 }}
-            className="font-karla font-700"
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '0.45rem 1rem', borderRadius: 999, fontSize: '0.78rem', letterSpacing: '0.07em', textTransform: 'uppercase', whiteSpace: 'nowrap',
-              background: 'linear-gradient(180deg, #4cc483 0%, #2e9a5c 100%)',
-              border: '1px solid rgba(150,235,185,0.85)', color: '#04160d',
-              boxShadow: '0 2px 10px rgba(46,170,100,0.5), inset 0 1px 0 rgba(255,255,255,0.35)',
-              cursor: pending ? 'not-allowed' : 'pointer', opacity: pending && busyId === c.id ? 0.6 : 1,
-            }}
-          >
-            <AnchorIcon /><span>{busyId === c.id ? '…' : 'Recruit'}</span>
-          </motion.button>
+          <span className="font-karla font-700" style={{ ...STATIC_PILL, background: 'rgba(76,196,131,0.1)', border: '1px solid rgba(76,196,131,0.34)', color: 'rgba(150,235,185,0.9)' }}>
+            <AnchorIcon /> Swipe to recruit
+          </span>
         )
       }
       if (c.recruited) return <div className="font-karla font-700" style={{ ...BTN_STATIC, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.55)' }}>Recruited ✓</div>
@@ -1544,6 +1561,16 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
               // finale (rarest) card so the best pull lands as an event.
               const dim = reveal.climaxActive && c.id !== reveal.climaxId
               const spotlight = reveal.climaxActive && c.id === reveal.climaxId
+              // Swipe-right to recruit — only once the card has settled (not
+              // mid-reveal) and it's actually recruitable.
+              const recruitable = !c.recruited && !rosterFull && !phase && !reveal.climaxActive
+              const swipeCard = (
+                <SwipeAction enabled={recruitable} side="right" label="Recruit" icon={<AnchorIcon />}
+                  gradient="linear-gradient(180deg, #4cc483 0%, #2e9a5c 100%)" textColor="#04160d"
+                  onAction={() => recruitBoard(c.id)}>
+                  {panel}
+                </SwipeAction>
+              )
               return (
                 <div key={c.id} style={{
                   position: 'relative', borderRadius: 8,
@@ -1556,7 +1583,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                 }}>
                   {phase
                     ? <BoardReveal card={c} phase={phase} onTap={() => reveal.tapCard(c)} bloodied={reveal.bloodied}>{panel}</BoardReveal>
-                    : panel}
+                    : swipeCard}
                 </div>
               )
             })}
@@ -2040,7 +2067,9 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   const isLocked = voyageLockSet.has(m.id) || trawlSet.has(m.id)
                   return (
                     // Swipe-left to dismiss — disabled for locked crew (at sea / trawling).
-                    <SwipeToDismiss key={m.id} enabled={!isLocked} onDismiss={() => dismissRoster(m.id)}>
+                    <SwipeAction key={m.id} enabled={!isLocked} side="left" label="Dismiss" icon={<XIcon />}
+                      gradient="linear-gradient(180deg, #c6484a 0%, #a5383a 100%)" textColor="#fbe4e4"
+                      onAction={() => dismissRoster(m.id)}>
                       <CrewPanel name={m.name} filename={m.filename} rarity={m.rarity}
                         bg={ROSTER_PANEL_BG} border={ROSTER_PANEL_BORDER}
                         base={{ power: m.power, dodge: m.dodge, fortune: m.fortune }} effects={m.effects} xp={m.xp} slug={m.slug}
@@ -2054,7 +2083,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                         onClick={() => openDetail('roster', m)}>
                         {renderAction('roster', m, { round: true })}
                       </CrewPanel>
-                    </SwipeToDismiss>
+                    </SwipeAction>
                   )
                 }
                 const grid = (members: CrewMember[], empties: number, accent: string, onEmpty?: () => void) => (
