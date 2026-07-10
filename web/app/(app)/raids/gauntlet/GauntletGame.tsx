@@ -1128,13 +1128,24 @@ export default function GauntletGame(props: GauntletGameProps) {
     }).finally(() => setResuming(false))
   }
   // Let the crashed run go: close it out (banks Fathoms for the depth reached,
-  // clears the checkpoint) and return to the normal intro.
+  // clears the checkpoint) and show the death recap — same end-of-dive screen as
+  // dying in combat, seeded from the checkpoint. A disconnect you come back to
+  // and abandon still gets its recap, instead of a silent refresh to the intro.
   function abandonResume() {
     if (resuming || !props.resumeState) return
     setResuming(true)
-    const cleared = props.resumeState.cleared
+    const s = props.resumeState
+    const cleared = s.cleared
+    rollStateRef.current = { cleared: s.cleared, prevWasBoss: s.prevWasBoss, roundsSinceBoss: s.roundsSinceBoss }
+    potRef.current = s.pot
+    runMaxHitRef.current = s.runMaxHit
+    runStatsRef.current = coerceRunStats(s.stats)
+    setBoonTiers(s.boonTiers)
+    setCurseTiers(s.curseTiers); curseTiersRef.current = s.curseTiers
+    setConfluencesTaken(s.confluencesTaken ?? [])
     resolveGauntletDeath(cleared, cleared > 0 ? cleared + skipOffset : 0)
-      .finally(() => router.refresh())
+      .then(res => { if (res?.ok) setDeathFathoms(res.earnedFathoms) })
+      .finally(() => { setResuming(false); setPhase('dead') })
   }
 
   function handlePlayerDefeated() {
