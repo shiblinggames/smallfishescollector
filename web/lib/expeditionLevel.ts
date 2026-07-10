@@ -93,6 +93,14 @@ const EVENT_XP: Record<string, Record<string, number>> = {
   peaceful:  { success: 4,  failure: 4,  neutral: 4  },
 }
 
+// Voyages are Nav's passive leveler, the parallel to trawls for Fishing — but
+// paid an order of magnitude less per stream, so they weren't a meaningful way
+// to level Nav. Lift the whole payout ~2.75× to make them a worthwhile passive
+// trickle. Deliberately NOT pushed to trawl-per-slot parity: Nav also has big
+// active sources (raids + the Gauntlet), and trawls run 4 slots to a voyage's 1.
+// One knob so it's easy to retune.
+export const VOYAGE_XP_MULT = 2.75
+
 export function voyageXP(
   route: string,
   crewCount: number,
@@ -106,5 +114,5 @@ export function voyageXP(
     const outcome = e.crewVariantLost != null ? 'failure' : (e.outcome ?? 'neutral')
     return sum + (row[outcome] ?? row.neutral ?? 20)
   }, 0)
-  return base + crewBonus + eventXP
+  return Math.round((base + crewBonus + eventXP) * VOYAGE_XP_MULT)
 }
