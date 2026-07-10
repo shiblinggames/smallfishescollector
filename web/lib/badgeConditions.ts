@@ -46,7 +46,7 @@ export const LEGENDARY_SLUGS_ALL = new Set(['catfish', 'doby_mick', 'mako', 'dol
 export const BASE_LEGENDARY_SLUGS = new Set(['catfish', 'doby_mick', 'mako', 'dole', 'coelacanth'])
 // Number of confluences in the Gauntlet (lib/gauntlet.ts CONFLUENCES). Kept as a
 // constant to avoid importing the heavy gauntlet module here — bump if more ship.
-export const CONFLUENCE_COUNT = 16
+export const CONFLUENCE_COUNT = 19
 
 export interface BadgeProfileFields {
   fishing_xp?: number | null

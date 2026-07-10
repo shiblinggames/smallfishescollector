@@ -22,7 +22,7 @@ import { crewLevelFromXP } from '@/lib/crewLevel'
 import {
   generateFight, advanceRollState, chestForDepth, gauntletXpForDepth,
   isCurseDepth, drawCurse, curseEffects, curseHpDrain, curseSilenceCount, curseTierLabel, GAUNTLET_CURSES,
-  isBoonDepth, drawBoons, boonEffects, boonTierLabel, GAUNTLET_BOONS, BOON_RARITY_META, boonRarity,
+  isBoonDepth, drawBoons, boonEffects, hpBoonMult, boonTierLabel, GAUNTLET_BOONS, BOON_RARITY_META, boonRarity,
   confluenceEffects, activeConfluences, eligibleConfluences, drawConfluenceOffer, confluenceLevel, confluenceDescAt, CONFLUENCES, type Confluence, type ConfluenceOffer,
   REPRIEVE_MIN_DEPTH, REPRIEVE_CHANCE, drawReprieve, type Reprieve,
   DROWNED_FILTER, bandForDepth, davyTaunt,
@@ -158,9 +158,10 @@ export default function GauntletGame(props: GauntletGameProps) {
   // server later sends a new prop. See [[feedback-usestate-prop-sync]].
   const [upgrades, setUpgrades] = useState(props.gauntletUpgrades)
   useEffect(() => { setUpgrades(props.gauntletUpgrades) }, [props.gauntletUpgrades])
-  // Diving Bell (Run Upgrade) lifts the player's max HP for the whole run; every
-  // HP reference below uses this boosted ceiling rather than the raw stat.
-  const hpMax = Math.round(props.playerHPMax * gauntletRunHpMult(upgrades))
+  // Diving Bell (Run Upgrade) lifts the player's max HP for the whole run. This
+  // is the BASE ceiling (stat × upgrade); the LIVE ceiling `hpMax` (computed
+  // below, once boons/depth exist) folds the HP-scaling boons on top.
+  const baseHpMax = Math.round(props.playerHPMax * gauntletRunHpMult(upgrades))
   // Veteran's Start: combat depth = cleared + 1 + skipOffset (enemies, boon/curse
   // cadence, displayed depth). Rewards stay on the cleared count, so the head
   // start never inflates pot / chests / Fathoms / record.
@@ -196,7 +197,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   }, [phase])
 
   // Run state
-  const [playerHP, setPlayerHP] = useState(hpMax)
+  const [playerHP, setPlayerHP] = useState(baseHpMax)
   const [pot, setPot] = useState(0)
   const [bossesDefeated, setBossesDefeated] = useState(0)
   const [fight, setFight] = useState<GauntletFight | null>(null)
@@ -351,7 +352,7 @@ export default function GauntletGame(props: GauntletGameProps) {
 
   // Guardrail counters live in refs (read inside combat callbacks).
   const rollStateRef = useRef<GauntletRollState>({ cleared: 0, prevWasBoss: false, roundsSinceBoss: 0 })
-  const playerHPRef = useRef(hpMax)
+  const playerHPRef = useRef(baseHpMax)
   const potRef = useRef(0)
   // Powder Hoard carryover: cannonballs to seed the next fight with (set at each
   // kill from the leftover charges, capped by the boon tier). Reset each run.
@@ -373,6 +374,29 @@ export default function GauntletGame(props: GauntletGameProps) {
   // Extra cannonball slots from claimed Locker Upgrades. Seeded from the server
   // prop but kept in state so a purchase mid-session applies without a refresh.
   const [bonusSlots, setBonusSlots] = useState(props.bonusChargeSlots)
+
+  // ── Live max HP ────────────────────────────────────────────────────────────
+  // The run's effect list (boons + confluences + curses), shared by the combat
+  // props and the max-HP calc so both read one source.
+  const runEffects = [
+    ...boonEffects(boonTiers),
+    ...confluenceEffects(boonTiers, confluencesTaken),
+    ...curseEffects(curseTiers),
+  ]
+  // Base ceiling × the HP-scaling boons (Deep / Salvage / Reinforced Hull), read
+  // off the current depth + hulls sunk. Grows across the run; the effect below
+  // heals the player by any increase, so a gained hull is a gained ceiling AND HP.
+  const curDepthForHp = fight?.depth ?? (rollStateRef.current.cleared + skipOffset + 1)
+  const hpMax = Math.round(baseHpMax * hpBoonMult(runEffects, curDepthForHp, rollStateRef.current.cleared))
+  const prevHpMaxRef = useRef(hpMax)
+  useEffect(() => {
+    const delta = hpMax - prevHpMaxRef.current
+    if (delta > 0) {
+      playerHPRef.current = Math.min(hpMax, playerHPRef.current + delta)
+      setPlayerHP(playerHPRef.current)
+    }
+    prevHpMaxRef.current = hpMax
+  }, [hpMax])
 
   // ── Mid-run exit guard ─────────────────────────────────────────────────────
   // Same shape as RaidGame's: any attempt to leave a live descent (tab bar, nav
@@ -471,12 +495,13 @@ export default function GauntletGame(props: GauntletGameProps) {
       setHardcoreRun(hardcore)
       // Fresh run.
       rollStateRef.current = { cleared: 0, prevWasBoss: false, roundsSinceBoss: 0 }
-      playerHPRef.current = hpMax
+      playerHPRef.current = baseHpMax
+      prevHpMaxRef.current = baseHpMax
       potRef.current = 0
       carriedChargesRef.current = 0
       runMaxHitRef.current = 0
       runStatsRef.current = emptyRunStats()
-      setPlayerHP(hpMax)
+      setPlayerHP(baseHpMax)
       setPot(0)
       setBossesDefeated(0)
       setUsedAbilityIds(new Set())
@@ -768,9 +793,12 @@ export default function GauntletGame(props: GauntletGameProps) {
     carriedChargesRef.current = carryEffect && carryEffect.kind === 'chargeCarryover'
       ? Math.max(0, Math.min(leftoverCharges, carryEffect.cap))
       : 0
+    // Clamp to max FIRST — Field Repairs / Engorge overheal is temporary and
+    // shed here, so it never carries into the next fight.
+    const carriedHp = Math.min(hpMax, remainingHp)
     // Vigor (Run Upgrade): patch up a slice of max HP for every ship you sink.
     const vigorHeal = Math.round(hpMax * gauntletKillHealPct(upgrades))
-    const healedHp = vigorHeal > 0 ? Math.min(hpMax, remainingHp + vigorHeal) : remainingHp
+    const healedHp = vigorHeal > 0 ? Math.min(hpMax, carriedHp + vigorHeal) : carriedHp
     playerHPRef.current = healedHp
     setPlayerHP(healedHp)
     potRef.current += f.potContribution
@@ -1061,6 +1089,12 @@ export default function GauntletGame(props: GauntletGameProps) {
   function applyCheckpoint(s: GauntletRunState) {
     rollStateRef.current = { cleared: s.cleared, prevWasBoss: s.prevWasBoss, roundsSinceBoss: s.roundsSinceBoss }
     playerHPRef.current = s.hp; setPlayerHP(s.hp)
+    // Sync the max-HP baseline to the RESTORED ceiling so the heal-on-growth
+    // effect sees no delta (s.hp was already saved against that max).
+    {
+      const restoredEffects = [...boonEffects(s.boonTiers), ...confluenceEffects(s.boonTiers, s.confluencesTaken ?? []), ...curseEffects(s.curseTiers)]
+      prevHpMaxRef.current = Math.round(baseHpMax * hpBoonMult(restoredEffects, s.cleared + skipOffset + 1, s.cleared))
+    }
     potRef.current = s.pot; setPot(s.pot)
     setBossesDefeated(s.bossesDefeated)
     setBoonTiers(s.boonTiers)
@@ -2653,7 +2687,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             // leave button is withheld entirely (undefined onLeave → no button).
             onLeave={hardcoreRun ? undefined : () => setConfirmLeave(true)}
             raidMods={runRaidMods}
-            tideEffects={[...boonEffects(boonTiers), ...confluenceEffects(boonTiers, confluencesTaken), ...curseEffects(curseTiers)]}
+            tideEffects={runEffects}
             crewMembers={props.crewMembers}
             usedAbilityIds={usedAbilityIds}
             megaAugment={props.manowarAugment}

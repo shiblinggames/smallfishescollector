@@ -522,6 +522,11 @@ export default function RaidCombat({
     let chargeCarryover = 0
     let fightShieldPct  = 0
     let enemyShieldPct  = 0
+    // Field Repairs / Engorge (overheal past max, shed at fight end) + Field
+    // Repairs repair-kit heal boost. Max HP itself is host-owned, so the
+    // maxHp* effects are no-ops here (see the switch).
+    let overhealPct     = 0
+    let repairHealMult  = 1
     // Momentum boons: Cannonade (crit-streak ramp — the live streak is a ref,
     // this just carries the per-stack/cap tuning), Counter-Battery (chance to
     // negate an enemy shot you fire into). Rising Tide / Abyssal Bounty resolve
@@ -563,6 +568,10 @@ export default function RaidCombat({
         case 'fightShield':           fightShieldPct = Math.max(fightShieldPct, e.pctMax); break
         case 'enemyShield':           enemyShieldPct = Math.max(enemyShieldPct, e.pctMax); break
         case 'incomingDmgMult':       inDmgMult *= e.mult; break
+        case 'overhealPct':           overhealPct = Math.max(overhealPct, e.pct); break
+        case 'repairHealMult':        repairHealMult *= e.mult; break
+        // Max HP is resolved by the Gauntlet host into playerHpMax, not here.
+        case 'maxHpMult': case 'maxHpPerDepth': case 'maxHpPerKill': break
         case 'incomingCritReduction': inCritReduce += e.chance; break
         case 'dodgeBonus':            dodgeBonus += e.chance; break
         case 'speedDelta':            speedDelta += e.n; break
@@ -651,6 +660,7 @@ export default function RaidCombat({
       executeHealPct, burnTickHealPct, dodgeRefundCharges, retaliateBoostMult,
       critDmgMult, executeThreshold, lifestealPct,
       retaliatePct, retaliateDodgePct, lowHpDamage, chargeCarryover, fightShieldPct, enemyShieldPct,
+      overhealPct, repairHealMult,
       critStreakPerStack, critStreakMaxStacks, counterFireChance,
       counterBonusRefund, counterBonusStack, counterBonusChance, counterReflectPct,
     }
@@ -660,6 +670,10 @@ export default function RaidCombat({
   // real HP + charges; only the player's readout is fogged over.
   const [enemyHpHidden] = useState(() => Math.random() < tide.hideEnemyHpChance)
   const [enemyChargesHidden] = useState(() => Math.random() < tide.hideEnemyChargesChance)
+  // Field Repairs / Engorge overheal ceiling: heals may fill to this instead of
+  // playerHpMax. The excess is temporary — the Gauntlet host clamps carried HP
+  // back to max at the next fight, so overheal never persists.
+  const healCap = Math.round(playerHpMax * (1 + tide.overhealPct))
   // Mirror the per-enemy tide one-shots (next-fight HP scale + enemy start
   // charges) so the enemy-RESET effect below — which has intentionally tight
   // deps so it doesn't refire mid-fight — reads the CURRENT values. Without
@@ -826,7 +840,7 @@ export default function RaidCombat({
   // Upgrade slots. Enemies always cap at MAX_CHARGES.
   const playerMaxCharges = MAX_CHARGES + Math.max(0, bonusChargeSlots)
   const [playerHp, setPlayerHp]       = useState(() =>
-    Math.max(0, Math.min(playerHpMax, initialPlayerHp + tide.hpStartDelta + tide.everyFightHeal + Math.round(tide.everyFightHealPct * playerHpMax)))
+    Math.max(0, Math.min(healCap, initialPlayerHp + tide.hpStartDelta + tide.everyFightHeal + Math.round(tide.everyFightHealPct * playerHpMax)))
   )
   // ── Achievement telemetry ──────────────────────────────────────────────
   // Shots the player has locked in THIS fight + whether any crew ability fired
@@ -1911,8 +1925,8 @@ export default function RaidCombat({
         const mm = m as import('@/lib/crewClasses').MenderMilestone
         const heal = Math.round(playerHpMax * mm.pctMaxHp)
         onStat?.({ dmgHealed: Math.max(0, Math.min(heal, playerHpMax - playerHpRef.current)) })
-        setPlayerHp(prev => Math.min(playerHpMax, prev + heal))
-        playerHpRef.current = Math.min(playerHpMax, playerHpRef.current + heal)
+        setPlayerHp(prev => Math.min(healCap, prev + heal))
+        playerHpRef.current = Math.min(healCap, playerHpRef.current + heal)
         if (mm.cleanseDebuff) setCleanseDebuffPending(true)
         noteCheckResponse('heal'); dousePlayerBurnFromHeal()
         setPHitsplat({ key: ak + 1, text: `+${heal}`, color: '#4ade80', big: true })
@@ -1966,8 +1980,8 @@ export default function RaidCombat({
       case 'abyssal_tide': {
         const at = m as import('@/lib/crewClasses').AbyssalTideMilestone
         const heal = Math.round(playerHpMax * at.pctMaxHp)
-        setPlayerHp(prev => Math.min(playerHpMax, prev + heal))
-        playerHpRef.current = Math.min(playerHpMax, playerHpRef.current + heal)
+        setPlayerHp(prev => Math.min(healCap, prev + heal))
+        playerHpRef.current = Math.min(healCap, playerHpRef.current + heal)
         // Shield buffer — soaks incoming damage before HP (resolver reads the
         // ref + decrements; state mirror drives the hull glint).
         const shield = Math.round(playerHpMax * at.shieldPctMaxHp)
@@ -2638,7 +2652,7 @@ export default function RaidCombat({
       // Feed the Fire confluence: the burn ticks also heal you a slice of itself.
       let feedHeal = 0
       if (tide.burnTickHealPct > 0 && pHp > 0) {
-        feedHeal = Math.min(playerHpMax - pHp, Math.round(total * tide.burnTickHealPct))
+        feedHeal = Math.min(healCap - pHp, Math.round(total * tide.burnTickHealPct))
         if (feedHeal > 0) { pHp += feedHeal; onStat?.({ dmgHealed: feedHeal }) }
       }
       pushStep({ who: 'player', action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: `-${total}`, splatColor: BURN_COLOR, logLines: [`${flare > 0 ? `The ${enemy.name} burns for ${tick}, then the flames backdraft for ${flare} more.` : `The ${enemy.name} is ablaze, burning for ${tick}.`}${feedHeal > 0 ? ` The fire feeds you ${feedHeal}.` : ''}`], burnTurnsLeft: enemyBurnRef.current.turns, lifestealHeal: feedHeal || undefined })
@@ -2800,10 +2814,11 @@ export default function RaidCombat({
         // half of this turn. Roll uses the kit's [min, max+Fortune*scale].
         // Enemy actions never include 'repair' so the else branch is dead.
         if (who === 'player' && repairKit) {
-          // Seasoned Timbers (Gauntlet upgrade) boosts every repair heal.
-          const roll = Math.round(rollRepairKitHeal(repairKit, totalFortune) * (mods.repairHealMult ?? 1))
+          // Seasoned Timbers (Gauntlet upgrade) + Field Repairs (confluence) both
+          // boost repair heals; the latter also lets them overfill past max.
+          const roll = Math.round(rollRepairKitHeal(repairKit, totalFortune) * (mods.repairHealMult ?? 1) * tide.repairHealMult)
           const before = pHp
-          pHp = Math.min(playerHpMax, pHp + roll)
+          pHp = Math.min(healCap, pHp + roll)
           const healed = pHp - before
           if (healed > 0) onStat?.({ dmgHealed: healed })
           // A repair kit does NOT answer boss mechanic checks — only crew
@@ -3163,7 +3178,7 @@ export default function RaidCombat({
           if (dmg > 0 && totalLifesteal > 0 && pHp > 0) {
             const healed = Math.max(1, Math.round(dmg * totalLifesteal))
             const before = pHp
-            pHp = Math.min(playerHpMax, pHp + healed)
+            pHp = Math.min(healCap, pHp + healed)
             lifestealHealedOut = pHp - before
             if (lifestealHealedOut > 0) onStat?.({ dmgHealed: lifestealHealedOut })
           }

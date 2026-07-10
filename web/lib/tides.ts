@@ -174,6 +174,21 @@ export type TideEffect =
   /** Start every fight with a damage-absorbing shield worth `pctMax` of max HP;
    *  it soaks incoming hits before the hull does and reforms each fight. */
   | { kind: 'fightShield'; pctMax: number }
+  // ── HP scaling (Gauntlet defensive boons) — resolved by the Gauntlet HOST
+  //    into the run's LIVE max HP (base × these). RaidCombat just receives the
+  //    boosted ceiling as playerHpMax; it does not read these itself. ──
+  /** "Reinforced Hull": flat ×mult to max HP for the run. */
+  | { kind: 'maxHpMult'; mult: number }
+  /** "Deep Hull": +perDepth max HP scaled by current run depth, capped at max. */
+  | { kind: 'maxHpPerDepth'; perDepth: number; max: number }
+  /** "Salvage Hull": +perKill max HP for every hull sunk this run, capped at max. */
+  | { kind: 'maxHpPerKill'; perKill: number; max: number }
+  /** "Field Repairs" / "Engorge" confluences: heals may exceed max HP into
+   *  temporary overhealth worth up to `pct` of max, shed at fight end (never
+   *  carries to the next fight — the host clamps carried HP to max). */
+  | { kind: 'overhealPct'; pct: number }
+  /** "Field Repairs": repair-kit healing ×mult. */
+  | { kind: 'repairHealMult'; mult: number }
   // ── Momentum / conditional damage (Gauntlet boons) ──────────────
   /** "Rising Tide": +perKill outgoing damage for EVERY enemy sunk this run
    *  (retroactive; bosses count), capped at maxBonus. Run-scoped snowball —
@@ -278,6 +293,8 @@ export function effectTone(e: TideEffect): 'good' | 'bad' | 'neutral' {
     case 'critStreakDamage': case 'counterFireChance':
     case 'counterBonus': case 'counterReflect': case 'lifestealKillScale':
     case 'depthScaleMitigation':
+    case 'maxHpMult': case 'maxHpPerDepth': case 'maxHpPerKill':
+    case 'overhealPct': case 'repairHealMult':
       return 'good'
     default:
       return 'neutral'
@@ -890,6 +907,11 @@ export function describeEffect(e: TideEffect): string {
     case 'counterReflect':        return `A countered shot flings back ${Math.round(e.pct * 100)}% of their damage`
     case 'lifestealKillScale':    return `+${pct(e.perKill)} lifesteal per hull sunk (max ${pct(e.max)})`
     case 'depthScaleMitigation':  return `Take ${pct(e.perDepth)} less damage per depth (max ${pct(e.max)})`
+    case 'maxHpMult':             return `+${Math.round((e.mult - 1) * 100)}% max HP`
+    case 'maxHpPerDepth':         return `+${pct(e.perDepth)} max HP per depth (max ${pct(e.max)})`
+    case 'maxHpPerKill':          return `+${pct(e.perKill)} max HP per hull sunk (max ${pct(e.max)})`
+    case 'overhealPct':           return `Heals can overfill to +${Math.round(e.pct * 100)}% over max (this fight only)`
+    case 'repairHealMult':        return `Repair kits heal +${Math.round((e.mult - 1) * 100)}% more`
   }
 }
 

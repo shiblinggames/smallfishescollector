@@ -1028,6 +1028,28 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
     { desc: '15% burn, ticks 16%, Reignite', detail: 'Burn chance 15%, ticks deal 16% of the hit. REIGNITE: hitting an already-burning enemy refreshes the burn back to full duration, so you can keep the fire going as long as you keep landing shots.', effect: { kind: 'fireAffinity', burnChance: 0.15, burnTurnsBonus: 1, burnTickMult: 1.6, reignite: true } },
     { desc: '20% burn, 4 turns, ticks 20% (max), Reignite + Backdraft', detail: 'Burn chance 20%, burns last 4 turns and each tick deals 20% of the hit (the burn ceiling), with Reignite. BACKDRAFT: while a hull burns, the flames keep flaring — each burn tick has a chance to erupt for a bonus burst, so the longer you keep it cooking (with Reignite) the more it goes off.', effect: { kind: 'fireAffinity', burnChance: 0.20, burnTurnsBonus: 2, burnTickMult: 2.0, reignite: true, backdraft: true } },
   ] },
+  // ── Defensive HP scaling — the answer to enemy damage climbing with depth
+  //    while a flat HP pool falls behind (DR is already covered by Ironhide /
+  //    Pressure Hull; this grows the POOL). Back-loaded tiers so a damage build
+  //    can't splash one point for cheap insurance — the payoff needs commitment.
+  //    Resolved by the Gauntlet HOST into the run's live max HP; each increase
+  //    is healed to the player, so a deep-tank build gets a bigger bar AND
+  //    passive sustain to survive the trades (which is what thorns needs).
+  { id: 'deep_hull', name: 'Deep Hull', flavor: 'The pressure of the deep packs your timbers tighter the further you fall.', rarity: 'rare', tiers: [
+    { desc: '+0.8% max HP per depth (max +14%)', detail: 'Your maximum HP grows with how deep you are — 0.8% for every depth reached, up to +14%. It scales live as you descend, and each increase is healed to you.', effect: { kind: 'maxHpPerDepth', perDepth: 0.008, max: 0.14 } },
+    { desc: '+1.6% max HP per depth (max +30%)', detail: 'Your maximum HP grows 1.6% for every depth reached, up to +30%. Scales live as you descend; each increase heals you by that much.', effect: { kind: 'maxHpPerDepth', perDepth: 0.016, max: 0.30 } },
+    { desc: '+2.4% max HP per depth (max +48%)', detail: 'Your maximum HP grows 2.4% for every depth reached, up to +48%. Scales live as you descend; each increase heals you by that much.', effect: { kind: 'maxHpPerDepth', perDepth: 0.024, max: 0.48 } },
+  ] },
+  { id: 'salvage_hull', name: 'Salvage Hull', flavor: 'Every wreck you leave, your crew strips for plating.', rarity: 'rare', tiers: [
+    { desc: '+0.6% max HP per hull sunk (max +12%)', detail: 'Every enemy you sink this run permanently raises your maximum HP by 0.6%, up to +12%. Bosses count, it never resets, and each gain is healed to you.', effect: { kind: 'maxHpPerKill', perKill: 0.006, max: 0.12 } },
+    { desc: '+1.2% max HP per hull sunk (max +26%)', detail: 'Every hull sunk raises your maximum HP by 1.2%, up to +26%. Never resets; each gain heals you by that much.', effect: { kind: 'maxHpPerKill', perKill: 0.012, max: 0.26 } },
+    { desc: '+1.8% max HP per hull sunk (max +42%)', detail: 'Every hull sunk raises your maximum HP by 1.8%, up to +42%. Never resets; each gain heals you by that much.', effect: { kind: 'maxHpPerKill', perKill: 0.018, max: 0.42 } },
+  ] },
+  { id: 'reinforced_hull', name: 'Reinforced Hull', flavor: 'Double plate along the keel. More ship to sink.', rarity: 'rare', tiers: [
+    { desc: '+8% max HP', detail: 'Your maximum HP is 8% higher for the rest of the run. It also makes every heal and shield that scales off your max HP bigger.', effect: { kind: 'maxHpMult', mult: 1.08 } },
+    { desc: '+20% max HP', detail: 'Your maximum HP is 20% higher for the rest of the run.', effect: { kind: 'maxHpMult', mult: 1.20 } },
+    { desc: '+36% max HP', detail: 'Your maximum HP is 36% higher for the rest of the run.', effect: { kind: 'maxHpMult', mult: 1.36 } },
+  ] },
   // ── LEGENDARY (rare; bigger, one-of-a-kind effects, fewer tiers) ────────────
   { id: 'executioner', name: 'Executioner', flavor: "Below a certain mark, a hull is already gone — it just doesn't know it yet.", rarity: 'legendary', tiers: [
     { desc: 'Sink enemies below 5% HP', detail: 'The instant any hit drops an enemy to 5% of its health or lower, it is sunk outright — no need to chip out the last sliver.', effect: { kind: 'executeThreshold', pct: 0.05 } },
@@ -1131,6 +1153,20 @@ export function boonEffects(owned: Record<string, number>): TideEffect[] {
 /** Roman numeral for a boon tier (1→I, 2→II, 3→III). '' for 0/invalid. */
 export function boonTierLabel(tier: number): string {
   return ['', 'I', 'II', 'III'][tier] ?? ''
+}
+
+/** The run's live max-HP MULTIPLIER from the HP-scaling boons (Reinforced /
+ *  Deep / Salvage Hull), given the current depth + hulls sunk. Max HP is owned
+ *  by the Gauntlet host, so it reads this off the active effect list and folds
+ *  it onto the base ceiling. 1.0 when no HP boon is held. */
+export function hpBoonMult(effects: TideEffect[], depth: number, kills: number): number {
+  let mult = 1
+  for (const e of effects) {
+    if (e.kind === 'maxHpMult')            mult *= e.mult
+    else if (e.kind === 'maxHpPerDepth')   mult *= 1 + Math.min(e.max, e.perDepth * Math.max(0, depth))
+    else if (e.kind === 'maxHpPerKill')    mult *= 1 + Math.min(e.max, e.perKill * Math.max(0, kills))
+  }
+  return mult
 }
 
 // ── Confluences — boon SYNERGIES ──────────────────────────────────────────────
@@ -1336,6 +1372,41 @@ export const CONFLUENCES: Confluence[] = [
       { desc: 'Incoming damage cut, scaling with depth (up to -12%)', effects: [{ kind: 'depthScaleMitigation', perDepth: 0.006, max: 0.12 }] },
       { desc: 'Incoming damage cut, scaling with depth (up to -20%)', effects: [{ kind: 'depthScaleMitigation', perDepth: 0.009, max: 0.20 }] },
       { desc: 'Incoming damage cut, scaling with depth (up to -28%)', effects: [{ kind: 'depthScaleMitigation', perDepth: 0.012, max: 0.28 }] },
+    ],
+  },
+  {
+    id: 'field_repairs',
+    name: 'Field Repairs',
+    requires: [{ boonId: 'reinforced_hull' }, { boonId: 'bilge_pump' }],
+    flavor: 'A bigger hull and a crew who patch it like the deep is at their heels — and the seams hold water above the waterline.',
+    levels: [
+      { desc: 'Repair kits heal +30% more; heals can overfill to +15% over max (this fight)', effects: [{ kind: 'repairHealMult', mult: 1.30 }, { kind: 'overhealPct', pct: 0.15 }] },
+      { desc: 'Repair kits heal +45% more; heals overfill to +25% over max', effects: [{ kind: 'repairHealMult', mult: 1.45 }, { kind: 'overhealPct', pct: 0.25 }] },
+      { desc: 'Repair kits heal +60% more; heals overfill to +40% over max', effects: [{ kind: 'repairHealMult', mult: 1.60 }, { kind: 'overhealPct', pct: 0.40 }] },
+    ],
+  },
+  {
+    id: 'engorge',
+    name: 'Engorge',
+    requires: [{ boonId: 'salvage_hull' }, { boonId: 'leviathans_hunger' }],
+    flavor: 'The deep drinks through every wound you open, and your hull swells past its own lines with the surfeit.',
+    levels: [
+      { desc: 'Lifesteal can overfill to +18% over max HP (this fight)', effects: [{ kind: 'overhealPct', pct: 0.18 }] },
+      { desc: 'Lifesteal can overfill to +30% over max HP', effects: [{ kind: 'overhealPct', pct: 0.30 }] },
+      { desc: 'Lifesteal can overfill to +45% over max HP', effects: [{ kind: 'overhealPct', pct: 0.45 }] },
+    ],
+  },
+  {
+    id: 'deep_fortress',
+    name: 'Deep Fortress',
+    requires: [{ boonId: 'deep_hull' }, { boonId: 'ironhide' }],
+    flavor: 'The deeper hull and the doubled plate become one thing: a fortress the drowned break themselves on.',
+    // fightShield is % of MAX HP — and Deep Hull grows max HP — so the ward
+    // gets bigger the deeper you fall, without any new plumbing.
+    levels: [
+      { desc: 'Start each fight with a shield worth 8% of max HP', effects: [{ kind: 'fightShield', pctMax: 0.08 }] },
+      { desc: 'Start each fight with a shield worth 12% of max HP', effects: [{ kind: 'fightShield', pctMax: 0.12 }] },
+      { desc: 'Start each fight with a shield worth 16% of max HP', effects: [{ kind: 'fightShield', pctMax: 0.16 }] },
     ],
   },
 ]
