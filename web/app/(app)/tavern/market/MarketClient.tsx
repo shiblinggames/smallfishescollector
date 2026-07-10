@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { marketSellFish, liquidateAllFish } from './actions'
 import type { MarketFishEntry, MarketState } from './page'
+import SwipeAction from '@/components/SwipeAction'
+import { hapticReward } from '@/lib/haptics'
 
 // ── Palette ──────────────────────────────────────────────────────────────
 const UP = '#4ade80'
@@ -444,18 +446,23 @@ export default function MarketClient({
   function handleSell(fishId: number, qty: number) {
     if (selling !== null) return
     setSelling(fishId)
+    // Optimistic: the stack shrinks/leaves the instant you commit (snapshot
+    // restored on error); the payout toast + purse tick wait for the server's
+    // real number (market price is authoritative there).
+    const snapshot = portfolio
+    setTradeFish(null)
+    setPortfolio(prev =>
+      prev.map(e => e.fish_id === fishId ? { ...e, quantity: e.quantity - qty } : e)
+          .filter(e => e.quantity > 0)
+    )
     startTransition(async () => {
       const res = await marketSellFish(fishId, qty)
       setSelling(null)
-      if ('error' in res) { showToast(res.error); return }
+      if ('error' in res) { showToast(res.error); setPortfolio(snapshot); return }
       setDoubloons(res.doubloons)
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+      hapticReward()
       showToast(`+${res.earned.toLocaleString()} ⟡`)
-      setTradeFish(null)
-      setPortfolio(prev =>
-        prev.map(e => e.fish_id === fishId ? { ...e, quantity: e.quantity - qty } : e)
-            .filter(e => e.quantity > 0)
-      )
     })
   }
 
@@ -626,14 +633,24 @@ export default function MarketClient({
           ) : (
             <div style={{ background: 'rgba(11,13,18,0.96)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 12, padding: '0 0.85rem' }}>
               {portfolio.map(entry => (
-                <HoldingRow
-                  key={entry.fish_id}
-                  entry={entry}
-                  fee={fee}
-                  onOpen={setTradeFish}
-                  onQuickSell={(e) => handleSell(e.fish_id, e.quantity)}
-                  selling={selling !== null}
-                />
+                // Swipe-left to sell the whole stack at market price — the shared
+                // crew-card gesture. Coexists with the inline Sell button and the
+                // trade sheet (tap the row) for custom quantities. The sliding row
+                // gets an opaque bg so the gold circle never bleeds through at rest.
+                <SwipeAction key={entry.fish_id} enabled={selling === null} side="left" label={`Sell all ${entry.name}`}
+                  icon={<span className="font-cinzel font-800" style={{ fontSize: '1.15rem', lineHeight: 1 }}>⟡</span>}
+                  gradient="linear-gradient(180deg, #f0c95c 0%, #cf9a2c 100%)" textColor="#2a1d04" glow="rgba(240,192,64,0.9)"
+                  onAction={() => handleSell(entry.fish_id, entry.quantity)}>
+                  <div style={{ background: '#0b0d12' }}>
+                    <HoldingRow
+                      entry={entry}
+                      fee={fee}
+                      onOpen={setTradeFish}
+                      onQuickSell={(e) => handleSell(e.fish_id, e.quantity)}
+                      selling={selling !== null}
+                    />
+                  </div>
+                </SwipeAction>
               ))}
             </div>
           )}

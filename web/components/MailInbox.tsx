@@ -23,6 +23,9 @@ import {
   claimMailAttachment,
 } from '@/app/actions/mail'
 import type { MailMessage } from '@/lib/mailTypes'
+import SwipeAction from '@/components/SwipeAction'
+import { flyCoinsToPurse } from '@/lib/coinFly'
+import { hapticReward } from '@/lib/haptics'
 
 const ACCENT = '#f0c040'         // gold, parchment-y "letter from the captain"
 const ACCENT_DIM = '#caa540'
@@ -132,18 +135,31 @@ export default function MailInbox({ initialUnreadCount }: { initialUnreadCount: 
     }
   }
 
-  async function handleClaim(msg: MailMessage) {
+  async function handleClaim(msg: MailMessage, from?: { x: number; y: number }) {
     if (claimingId) return
     setClaimingId(msg.id)
+    // Optimistic: the attachment chips strike through immediately; restored on
+    // error. The purse tick waits for the server's real balances.
+    setInbox(prev => prev?.map(m =>
+      m.id === msg.id ? { ...m, claimedAt: new Date().toISOString() } : m
+    ) ?? null)
     const result = await claimMailAttachment(msg.id)
     setClaimingId(null)
-    if (result.ok) {
+    if (!result.ok) {
       setInbox(prev => prev?.map(m =>
-        m.id === msg.id ? { ...m, claimedAt: new Date().toISOString() } : m
+        m.id === msg.id ? { ...m, claimedAt: null } : m
       ) ?? null)
-      // Patch the Nav currency widgets — same pattern other claim paths use.
-      window.dispatchEvent(new CustomEvent('gems-changed', { detail: result.newGems }))
-      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.newDoubloons }))
+      return
+    }
+    // Gems tick right away; doubloons ride the coin flight so the purse rolls
+    // up in sync with the coins landing (falls back to instant if no pill).
+    window.dispatchEvent(new CustomEvent('gems-changed', { detail: result.newGems }))
+    const tickDoubloons = () => window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.newDoubloons }))
+    if (from && msg.attachmentDoubloons > 0) {
+      flyCoinsToPurse(from, msg.attachmentDoubloons, tickDoubloons)
+    } else {
+      hapticReward()
+      tickDoubloons()
     }
   }
 
@@ -361,10 +377,22 @@ export default function MailInbox({ initialUnreadCount }: { initialUnreadCount: 
                   const hasAttach = msg.attachmentGems > 0 || msg.attachmentDoubloons > 0
                   const canClaim = hasAttach && !msg.claimedAt
                   return (
+                    // Swipe-left to claim (rows with an unclaimed attachment only) —
+                    // the shared crew-card gesture; the expanded Claim button still
+                    // works. Opaque bg on the sliding row (composited against the
+                    // panel's dark parchment) so the circle never bleeds through.
+                    <SwipeAction key={msg.id} enabled={canClaim && !claimingId} side="left" label="Claim reward"
+                      icon={<span className="font-cinzel font-800" style={{ fontSize: '1.15rem', lineHeight: 1 }}>⟡</span>}
+                      gradient="linear-gradient(180deg, #f0c95c 0%, #cf9a2c 100%)" textColor="#2a1d04" glow="rgba(240,192,64,0.9)"
+                      onAction={() => {
+                        // Coins launch from the revealed circle (right edge of this row).
+                        const r = (document.querySelector(`[data-mail-row="${msg.id}"]`) as HTMLElement | null)?.getBoundingClientRect()
+                        handleClaim(msg, r ? { x: r.right - 42, y: r.top + r.height / 2 } : undefined)
+                      }}>
                     <div
-                      key={msg.id}
+                      data-mail-row={msg.id}
                       style={{
-                        background: isUnread ? 'rgba(240,192,64,0.06)' : 'rgba(255,255,255,0.025)',
+                        background: isUnread ? '#231c0d' : '#151310',
                         border: `1px solid ${isUnread ? ACCENT + '33' : 'rgba(255,255,255,0.08)'}`,
                         borderRadius: 9,
                         overflow: 'hidden',
@@ -499,7 +527,10 @@ export default function MailInbox({ initialUnreadCount }: { initialUnreadCount: 
                               </p>
                               {hasAttach && (
                                 <button
-                                  onClick={() => handleClaim(msg)}
+                                  onClick={(e) => {
+                                    const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                                    handleClaim(msg, { x: r.left + r.width / 2, y: r.top + r.height / 2 })
+                                  }}
                                   disabled={!canClaim || claimingId === msg.id}
                                   className="font-cinzel font-700 uppercase"
                                   style={{
@@ -530,6 +561,7 @@ export default function MailInbox({ initialUnreadCount }: { initialUnreadCount: 
                         )}
                       </AnimatePresence>
                     </div>
+                    </SwipeAction>
                   )
                 })}
               </div>

@@ -4764,6 +4764,10 @@ export default function FishingGame({
       playPerfectSfx()
       vibrate([40, 60, 80])
       paintNeedleGlow()
+    } else {
+      // Non-perfect reels still get an "input registered" tick in the same
+      // JS tick as the tap — the perfect buzz stays its own distinct signal.
+      vibrate(6)
     }
 
     // The hop matters: it lets the freeze + glow COMMIT before the heavy
@@ -7122,7 +7126,7 @@ export default function FishingGame({
                   // (~50–100 ms earlier than click on touch devices), so
                   // the cast SFX lands in sync with the player's tap
                   // instead of trailing it. Mirrors the Reel In button.
-                  onPointerDown={(e) => { e.preventDefault(); handleCast() }}
+                  onPointerDown={(e) => { e.preventDefault(); vibrate(6); handleCast() }}
                   className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
                   style={{
                     width: 88, height: 88, borderRadius: '50%',

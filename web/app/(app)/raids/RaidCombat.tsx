@@ -2320,6 +2320,10 @@ export default function RaidCombat({
     // commits after this render, which let the tick run 1–2 more frames and
     // drift the painted needle past the spot being judged.
     critFreezeRef.current = true
+    // The lock ITSELF gets a tick, synchronous with the freeze — the single
+    // most important input in combat should be felt the instant it lands,
+    // distinct from the bigger result haptics that follow the judgment.
+    vibrate(6)
     // False Colours: locked onto a drifting decoy → the shot's a dud. Flag the
     // fumble (resolveTurn turns the player's turn into chip damage + no shot),
     // flash the bar red, and skip the normal aim judgment entirely.
@@ -7416,6 +7420,10 @@ function CircleBtn({ icon, label, color, enabled, highlighted, onClick, readyPul
           whileTap={enabled ? { scale: 0.84 } : {}}
           transition={{ type: 'spring', stiffness: 600, damping: 18 }}
           disabled={!enabled}
+          // "Input registered" tick the instant the finger lands — combat is
+          // split-second decisions, and the buzz kills tap-uncertainty before
+          // the resolution animation takes over.
+          onPointerDown={enabled ? () => vibrate(6) : undefined}
           onClick={onClick}
           aria-label={label}
           style={{

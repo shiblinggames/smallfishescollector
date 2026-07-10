@@ -22,3 +22,17 @@ export function vibrate(pattern: number | number[]): void {
     /* some browsers throw if called outside a user gesture — ignore */
   }
 }
+
+// ── Haptic tiers ─────────────────────────────────────────────────────────────
+// Use these instead of ad-hoc vibrate() numbers so the whole game speaks one
+// tactile language. Pick by MEANING, not by surface:
+//   hapticTap    — "input registered": button press-down, toggle, tab switch,
+//                  card select. Light and instant; safe to fire often.
+//   hapticCommit — "action locked in": firing a shot, confirming a swipe
+//                  action, submitting, spending. One deliberate bump.
+//   hapticReward — "you got something": currency landing, claim, level-up,
+//                  loot. The celebratory double-buzz (matches the coin-fly
+//                  pattern in AchievementsClient).
+export function hapticTap(): void    { vibrate(6) }
+export function hapticCommit(): void { vibrate(15) }
+export function hapticReward(): void { vibrate([0, 18, 40, 22]) }
