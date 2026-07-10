@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useTransition, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useSearchParams } from 'next/navigation'
-import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion'
+import { motion, AnimatePresence, useMotionValue, useTransform, animate, useAnimationControls } from 'framer-motion'
 import {
   rerollBoard, recruitCrew, dismissCrew, getCrewGraveyard,
   assignToVoyage, assignToRaid, benchCrew, promoteToCaptain, renameCrew,
@@ -364,9 +364,10 @@ function StatIcon({ k, color }: { k: 'power' | 'dodge' | 'fortune'; color: strin
 //   side 'right' → swipe RIGHT, circle revealed on the left
 // `enabled` false renders the card bare (no swipe at all).
 const SWIPE_SPRING = { type: 'spring' as const, stiffness: 700, damping: 46, restDelta: 0.4 }
-function SwipeAction({ enabled, side, label, icon, gradient, textColor, onAction, children }: {
+const CIRCLE_SHADOW = '0 4px 12px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,255,255,0.24)'
+function SwipeAction({ enabled, side, label, icon, gradient, textColor, glow, onAction, children }: {
   enabled: boolean; side: 'left' | 'right'; label: string; icon: ReactNode
-  gradient: string; textColor: string; onAction: () => void; children: ReactNode
+  gradient: string; textColor: string; glow: string; onAction: () => void; children: ReactNode
 }) {
   const x = useMotionValue(0)
   const REVEAL = 84
@@ -378,27 +379,45 @@ function SwipeAction({ enabled, side, label, icon, gradient, textColor, onAction
   const circleScale = useTransform(prog, [0, 1], [0.4, 1])
   const draggedRef = useRef(false)
   const openRef = useRef(false)
+  const press = useAnimationControls()
   if (!enabled) return <>{children}</>
   const snapTo = (target: number) => { openRef.current = target !== 0; animate(x, target, SWIPE_SPRING) }
+  const pressDown = () => { vibrate(13); press.start({ scale: 0.82, transition: { type: 'spring', stiffness: 800, damping: 26 } }) }
+  const pressUp = () => { press.start({ scale: 1, transition: { type: 'spring', stiffness: 480, damping: 12 } }) }
+  const confirm = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (openRef.current === false) return
+    openRef.current = false
+    vibrate([0, 28, 46, 40])
+    // A deliberate, fixed-duration squish → overshoot pop + a glow burst that
+    // plays out fully (the card holds open ~300ms so you actually see it).
+    press.start({
+      scale: [0.62, 1.26, 1],
+      boxShadow: [CIRCLE_SHADOW, `0 0 26px ${glow}, ${CIRCLE_SHADOW}`, CIRCLE_SHADOW],
+      transition: { duration: 0.42, times: [0, 0.5, 1], ease: [0.3, 1.5, 0.5, 1] },
+    })
+    setTimeout(onAction, 300)
+  }
   return (
     <div style={{ position: 'relative', borderRadius: 7, overflow: 'hidden', boxShadow: '0 6px 16px rgba(0,0,0,0.55)' }}>
       {/* Circle action button, centered in the strip the card uncovers. The
           reveal (opacity/scale from the swipe) lives on the outer wrapper; the
-          inner button owns the press-down squish + haptic so the two don't
+          inner button owns the press-down squish + confirm pop so the two don't
           fight over `scale`. */}
       <div style={{ position: 'absolute', top: 0, bottom: 0, [right ? 'left' : 'right']: 0, width: REVEAL, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <motion.div style={{ opacity: circleOpacity, scale: circleScale }}>
           <motion.button type="button" aria-label={label}
+            animate={press}
             onPointerDownCapture={(e) => e.stopPropagation()}
-            onTapStart={() => vibrate(11)}
-            whileTap={{ scale: 0.8 }}
-            transition={{ type: 'spring', stiffness: 720, damping: 15 }}
-            onClick={(e) => { e.stopPropagation(); vibrate([0, 15, 25, 22]); x.set(0); openRef.current = false; onAction() }}
+            onPointerDown={pressDown}
+            onPointerUp={pressUp}
+            onPointerLeave={pressUp}
+            onClick={confirm}
             style={{
-              width: 46, height: 46, borderRadius: '50%',
+              width: 48, height: 48, borderRadius: '50%',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               border: 'none', background: gradient, color: textColor, cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,255,255,0.22)',
+              boxShadow: CIRCLE_SHADOW,
             }}>
             {icon}
           </motion.button>
@@ -1577,8 +1596,8 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
               const recruitable = !c.recruited && !rosterFull && !phase && !reveal.climaxActive
               const swipeCard = (
                 <SwipeAction enabled={recruitable} side="left" label="Recruit"
-                  icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>}
-                  gradient="linear-gradient(180deg, #4cc483 0%, #2e9a5c 100%)" textColor="#06341a"
+                  icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>}
+                  gradient="linear-gradient(180deg, #4cc483 0%, #2e9a5c 100%)" textColor="#06341a" glow="rgba(76,196,131,0.9)"
                   onAction={() => recruitBoard(c.id)}>
                   {panel}
                 </SwipeAction>
@@ -2080,7 +2099,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   return (
                     // Swipe-left to dismiss — disabled for locked crew (at sea / trawling).
                     <SwipeAction key={m.id} enabled={!isLocked} side="left" label="Dismiss" icon={<XIcon />}
-                      gradient="linear-gradient(180deg, #c6484a 0%, #a5383a 100%)" textColor="#fbe4e4"
+                      gradient="linear-gradient(180deg, #c6484a 0%, #a5383a 100%)" textColor="#fbe4e4" glow="rgba(224,85,90,0.9)"
                       onAction={() => dismissRoster(m.id)}>
                       <CrewPanel name={m.name} filename={m.filename} rarity={m.rarity}
                         bg={ROSTER_PANEL_BG} border={ROSTER_PANEL_BORDER}
