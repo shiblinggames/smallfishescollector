@@ -2649,7 +2649,9 @@ export default function GauntletGame(props: GauntletGameProps) {
             onPlayerDefeated={handlePlayerDefeated}
             onPlayerHit={(d) => { if (d > runMaxHitRef.current) { runMaxHitRef.current = d; recordGauntletHit(d).catch(() => {}) } }}
             onStat={(d) => addRunStats(runStatsRef.current, d)}
-            onLeave={() => setConfirmLeave(true)}
+            // No escape mid-fight in Hardcore — abandoning is death, so the ←
+            // leave button is withheld entirely (undefined onLeave → no button).
+            onLeave={hardcoreRun ? undefined : () => setConfirmLeave(true)}
             raidMods={runRaidMods}
             tideEffects={[...boonEffects(boonTiers), ...confluenceEffects(boonTiers, confluencesTaken), ...curseEffects(curseTiers)]}
             crewMembers={props.crewMembers}
