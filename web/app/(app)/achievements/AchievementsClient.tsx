@@ -28,6 +28,9 @@ export interface JourneyGoal {
 export interface JourneyGroup {
   title: string
   accent: string
+  /** One line of ship's-voice flavor under the section title — the character
+   *  layer. Optional so non-badge journey surfaces can skip it. */
+  flavor?: string
   goals: JourneyGoal[]
 }
 
@@ -67,6 +70,16 @@ export default function AchievementsClient({ groups }: Props) {
 
   const badgeGoals = allGoals.filter(g => (g.reward ?? 0) > 0)
   const earnedBadges = badgeGoals.filter(g => g.done).length
+  // The proudest colour: the hardest-tier badge earned (ties broken by reward
+  // size) — the medallion that anchors the honour-board plaque.
+  const proudest = useMemo(() => {
+    const earned = badgeGoals.filter(g => g.done && g.badgeImage && g.difficulty)
+    if (earned.length === 0) return null
+    return [...earned].sort((a, b) =>
+      TIER_ORDER.indexOf(b.difficulty!) - TIER_ORDER.indexOf(a.difficulty!) || (b.reward ?? 0) - (a.reward ?? 0),
+    )[0]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allGoals])
   const pointsOf = (g: JourneyGoal) => (g.difficulty ? BADGE_POINTS[g.difficulty] : 0)
   const earnedPoints = badgeGoals.filter(g => g.done).reduce((s, g) => s + pointsOf(g), 0)
   const totalPoints = badgeGoals.reduce((s, g) => s + pointsOf(g), 0)
@@ -143,22 +156,37 @@ export default function AchievementsClient({ groups }: Props) {
 
   return (
     <div>
-      {/* ── Hero: achievement-point score + claim banner ─────────────────── */}
+      {/* ── Hero: the honour board plaque — score + proudest colour ───────── */}
       <div style={{
-        borderRadius: 16, padding: '0.8rem 1rem', marginBottom: 14,
+        borderRadius: 16, padding: '0.85rem 1rem', marginBottom: 14,
         background: ['radial-gradient(ellipse 90% 80% at 0% 0%, rgba(240,192,64,0.16) 0%, transparent 62%)', 'linear-gradient(180deg, rgba(44,34,14,0.62) 0%, rgba(20,15,8,0.78) 100%)'].join(', '),
         border: '1px solid rgba(196,169,106,0.34)', boxShadow: 'inset 0 0 26px rgba(0,0,0,0.35)',
       }}>
-        {/* Score line — label + points + badges tally. No claim button here, so
-            nothing competes for width and this never wraps awkwardly. */}
-        <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.62rem', color: GOLD }}>Achievement Points</p>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginTop: 2 }}>
-          <span className="font-cinzel font-800" style={{ fontSize: '2.1rem', color: '#f4ecd8', lineHeight: 1, fontVariantNumeric: 'tabular-nums', textShadow: `0 0 18px ${GOLD}33` }}>
-            {earnedPoints}<span style={{ color: 'rgba(240,237,232,0.42)', fontSize: '1.05rem' }}> / {totalPoints}</span>
-          </span>
-          <span className="font-karla font-600" style={{ fontSize: '0.78rem', color: 'rgba(240,237,232,0.62)' }}>
-            {earnedBadges} of {badgeGoals.length} badges earned
-          </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          {/* Proudest colour — the hardest-won medallion anchors the plaque so
+              the board opens on YOUR badge, not a number. */}
+          {proudest?.badgeImage && (
+            <img src={proudest.badgeImage} alt="" title={proudest.label}
+              style={{ width: 56, height: 56, flexShrink: 0, objectFit: 'contain', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.55))' }} />
+          )}
+          <div style={{ minWidth: 0 }}>
+            <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.62rem', color: GOLD }}>Achievement Points</p>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginTop: 2 }}>
+              <span className="font-cinzel font-800" style={{ fontSize: '2.1rem', color: '#f4ecd8', lineHeight: 1, fontVariantNumeric: 'tabular-nums', textShadow: `0 0 18px ${GOLD}33` }}>
+                {earnedPoints}<span style={{ color: 'rgba(240,237,232,0.42)', fontSize: '1.05rem' }}> / {totalPoints}</span>
+              </span>
+              <span className="font-karla font-600" style={{ fontSize: '0.78rem', color: 'rgba(240,237,232,0.62)' }}>
+                {earnedBadges} of {badgeGoals.length} colours flown
+              </span>
+            </div>
+            <p className="font-karla" style={{ fontSize: '0.74rem', color: 'rgba(230,215,180,0.55)', fontStyle: 'italic', marginTop: 4 }}>
+              {earnedBadges === 0
+                ? 'A bare mast, for now. The sea keeps a list.'
+                : earnedBadges >= badgeGoals.length
+                ? 'Every colour the sea has, flying from one mast. Absurd. Magnificent.'
+                : proudest ? `Proudest of the lot: ${proudest.label}.` : 'The sea keeps the list. You fly the proof.'}
+            </p>
+          </div>
         </div>
 
         {/* Thin points progress bar */}
@@ -193,10 +221,7 @@ export default function AchievementsClient({ groups }: Props) {
             get claimed. ─────────────────────────────────────────────────────── */}
       {claimableSorted.length > 0 && (
         <section style={{ marginBottom: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 11 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: GOLD, flexShrink: 0, boxShadow: `0 0 8px ${GOLD}` }} />
-            <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.82rem', color: GOLD }}>Ready to Claim · {claimableSorted.length}</p>
-          </div>
+          <SectionHeader accent={GOLD} title={`Ready to Claim · ${claimableSorted.length}`} flavor="Earned and owed. The purser is waiting." />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {claimableSorted.map(g => (
               <GoalRow key={`ready-${g.id}`} g={g} groupAccent={GOLD} claimed={false} busy={busy === g.id}
@@ -218,10 +243,10 @@ export default function AchievementsClient({ groups }: Props) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
         {visibleGroups.map(group => (
           <section key={group.title}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 11 }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: group.accent, flexShrink: 0, boxShadow: `0 0 8px ${group.accent}` }} />
-              <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.82rem', color: group.accent }}>{group.title}</p>
-            </div>
+            <SectionHeader
+              accent={group.accent} title={group.title} flavor={group.flavor}
+              count={`${group.goals.filter(g => g.done).length} / ${group.goals.length}`}
+            />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {group.goals.map(g => (
                 <GoalRow key={g.id} g={g} groupAccent={group.accent} claimed={claimedIds.has(g.id)} busy={busy === g.id}
@@ -231,8 +256,8 @@ export default function AchievementsClient({ groups }: Props) {
           </section>
         ))}
         {visibleGroups.length === 0 && (
-          <p className="font-karla" style={{ fontSize: '0.9rem', color: 'rgba(240,237,232,0.5)', textAlign: 'center', padding: '2rem 0' }}>
-            No badges match these filters.
+          <p className="font-karla" style={{ fontSize: '0.9rem', color: 'rgba(240,237,232,0.5)', textAlign: 'center', padding: '2rem 0', fontStyle: 'italic' }}>
+            No colours match that tack. Ease off the filters and look again.
           </p>
         )}
       </div>
@@ -253,7 +278,7 @@ export default function AchievementsClient({ groups }: Props) {
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.16 }} onClick={() => setDetailGoal(null)}
                 style={{ position: 'fixed', inset: 0, zIndex: 9200, background: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem' }}>
                 <motion.div onClick={e => e.stopPropagation()} initial={{ opacity: 0, scale: 0.94, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97 }} transition={{ type: 'spring', stiffness: 360, damping: 26 }}
-                  style={{ position: 'relative', width: '100%', maxWidth: 360, textAlign: 'center', background: 'linear-gradient(180deg, #16202e 0%, #0a121c 100%)', border: `1px solid ${g.done ? accent + '88' : 'rgba(255,255,255,0.1)'}`, borderRadius: 20, padding: '1.5rem 1.25rem', boxShadow: '0 18px 60px rgba(0,0,0,0.6)' }}>
+                  style={{ position: 'relative', width: '100%', maxWidth: 360, textAlign: 'center', background: 'linear-gradient(180deg, #241a10 0%, #140d07 100%)', border: `1px solid ${g.done ? accent + '88' : 'rgba(196,169,106,0.3)'}`, borderRadius: 20, padding: '1.5rem 1.25rem', boxShadow: '0 18px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(240,192,64,0.08)' }}>
                   {/* Close */}
                   <button onClick={() => setDetailGoal(null)} aria-label="Close"
                     style={{ position: 'absolute', top: 10, right: 10, width: 30, height: 30, borderRadius: 9, display: 'grid', placeItems: 'center', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', color: '#cdd3db', cursor: 'pointer', padding: 0 }}>
@@ -263,8 +288,8 @@ export default function AchievementsClient({ groups }: Props) {
                   <div style={{ width: 96, height: 96, margin: '0 auto', display: 'grid', placeItems: 'center' }}>
                     {g.badgeImage ? (
                       <img src={g.badgeImage} alt="" style={{ width: 92, height: 92, objectFit: 'contain', filter: g.done ? 'drop-shadow(0 2px 5px rgba(0,0,0,0.5))' : 'grayscale(1)', opacity: g.done ? 1 : 0.3 }}
-                        onError={e => { const el = e.target as HTMLImageElement; el.style.display = 'none'; const p = el.parentElement; if (p) p.innerHTML = `<span style="font-size:3rem;opacity:${g.done ? 0.9 : 0.3}">🏅</span>` }} />
-                    ) : <span style={{ fontSize: '3rem', opacity: g.done ? 0.9 : 0.3 }}>🏅</span>}
+                        onError={e => { const el = e.target as HTMLImageElement; el.style.display = 'none'; const p = el.parentElement; if (p) p.innerHTML = `<span style="display:block;width:76px;height:76px;border-radius:50%;border:3px solid rgba(196,169,106,${g.done ? 0.8 : 0.3});box-shadow:inset 0 0 18px rgba(196,169,106,0.2)"></span>` }} />
+                    ) : <span style={{ display: 'block', width: 76, height: 76, borderRadius: '50%', border: `3px solid rgba(196,169,106,${g.done ? 0.8 : 0.3})`, boxShadow: 'inset 0 0 18px rgba(196,169,106,0.2)' }} />}
                   </div>
 
                   <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#f4ecd8', marginTop: 12 }}>{g.label}</p>
@@ -348,6 +373,28 @@ export default function AchievementsClient({ groups }: Props) {
   )
 }
 
+// ── Section header — a nautical rule instead of a dot-and-label. The accent
+//    title sits on a line that fades out to the right (a drawn chart rule),
+//    with the group's earned tally at the far end and one line of ship's-voice
+//    flavor beneath. This is most of the page's "warmth" — copy + craft, not
+//    chrome. ──────────────────────────────────────────────────────────────────
+function SectionHeader({ accent, title, flavor, count }: { accent: string; title: string; flavor?: string; count?: string }) {
+  return (
+    <div style={{ marginBottom: 11 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: accent, letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>{title}</p>
+        <span aria-hidden style={{ flex: 1, height: 1, background: `linear-gradient(90deg, ${accent}66, transparent)` }} />
+        {count && (
+          <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: 'rgba(240,237,232,0.5)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{count}</span>
+        )}
+      </div>
+      {flavor && (
+        <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(230,215,180,0.48)', fontStyle: 'italic', marginTop: 3 }}>{flavor}</p>
+      )}
+    </div>
+  )
+}
+
 // ── Filter dropdown (category / tier) ───────────────────────────────────────
 function FilterSelect({ value, onChange, options }: {
   value: string; onChange: (v: string) => void; options: { value: string; label: string }[]
@@ -400,7 +447,7 @@ function GoalRow({ g, groupAccent, claimed, busy, onClaim, onOpen }: {
     state === 'ready'   ? 'rgba(240,192,64,0.06)'
     : state === 'claimed' || state === 'done'
         ? 'linear-gradient(90deg, rgba(123,191,123,0.16) 0%, rgba(123,191,123,0.06) 58%, rgba(123,191,123,0.035) 100%)'
-    : 'rgba(255,255,255,0.022)'
+    : 'rgba(210,180,120,0.035)'   // warm timber, not app-gray — in-progress rows
 
   return (
     <div
@@ -408,7 +455,7 @@ function GoalRow({ g, groupAccent, claimed, busy, onClaim, onOpen }: {
       style={{
         position: 'relative', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', overflow: 'hidden',
         background: rowBackground,
-        border: `1px solid ${state === 'ready' ? 'transparent' : state === 'claimed' || state === 'done' ? 'rgba(123,191,123,0.25)' : 'rgba(255,255,255,0.07)'}`,
+        border: `1px solid ${state === 'ready' ? 'transparent' : state === 'claimed' || state === 'done' ? 'rgba(123,191,123,0.25)' : 'rgba(196,169,106,0.16)'}`,
         borderRadius: 14, padding: '0.75rem 0.85rem 0.75rem 0.95rem',
         animation: state === 'ready' ? 'badgeReadyPulse 2.1s ease-in-out infinite' : undefined,
       }}
@@ -424,10 +471,11 @@ function GoalRow({ g, groupAccent, claimed, busy, onClaim, onOpen }: {
           <img src={g.badgeImage} alt="" loading="lazy" decoding="async"
             style={{ width: 48, height: 48, objectFit: 'contain', filter: g.done ? 'drop-shadow(0 1px 2px rgba(0,0,0,0.45))' : 'grayscale(1)', opacity: g.done ? 1 : 0.3 }}
             onError={e => {
+              // No-emoji rule: a plain brass ring stands in for missing art.
               const el = e.target as HTMLImageElement
               el.style.display = 'none'
               const p = el.parentElement
-              if (p) p.innerHTML = `<span style="font-size:1.7rem;opacity:${g.done ? 0.9 : 0.3}">🏅</span>`
+              if (p) p.innerHTML = `<span style="display:block;width:40px;height:40px;border-radius:50%;border:2.5px solid rgba(196,169,106,${g.done ? 0.8 : 0.3});box-shadow:inset 0 0 10px rgba(196,169,106,0.2)"></span>`
             }} />
         ) : (
           <span style={{ width: 16, height: 16, borderRadius: '50%', background: g.done ? groupAccent : 'transparent', border: `2px solid ${groupAccent}`, opacity: g.done ? 1 : 0.5 }} />
@@ -442,7 +490,7 @@ function GoalRow({ g, groupAccent, claimed, busy, onClaim, onOpen }: {
 
       {/* Body */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p className="font-karla font-700" style={{ fontSize: '1.02rem', color: g.done ? '#f4ecd8' : 'rgba(240,237,232,0.85)' }}>{g.label}</p>
+        <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: g.done ? '#f4ecd8' : 'rgba(240,237,232,0.85)', letterSpacing: '0.01em' }}>{g.label}</p>
         <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(240,237,232,0.62)', lineHeight: 1.4, marginTop: 2 }}>{g.desc}</p>
 
         {/* Meta: tier · points · reward — always shown for badges. */}

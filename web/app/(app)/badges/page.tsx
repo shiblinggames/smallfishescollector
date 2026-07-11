@@ -149,6 +149,7 @@ export default async function BadgesPage() {
   const groups: JourneyGroup[] = [
     {
       title: 'Fishing Mastery',
+      flavor: 'The dial, the streaks, and the long road to a hundred.',
       accent: '#4ade80',
       goals: [
         badgeGoal('prestige_i', 'Prestige I', 'Reach Prestige in any fishing zone', totalStars > 0 ? 1 : 0, 1, '/fishing', { binary: true }),
@@ -168,6 +169,7 @@ export default async function BadgesPage() {
     },
     {
       title: 'Fishing Feats',
+      flavor: 'The strange and stubborn things that happen out on the water.',
       accent: '#34d399',
       goals: [
         badgeGoal('got_away', 'The One That Got Away', 'Lose 50 fish to snapped lines', snags, 50, '/fishing'),
@@ -182,6 +184,7 @@ export default async function BadgesPage() {
     },
     {
       title: 'The Collection',
+      flavor: 'Every fin the sea keeps, catalogued in your logbook.',
       accent: '#60a5fa',
       goals: [
         badgeGoal('half_the_sea', 'Half the Sea', 'Catch 50 fish species', collectionCount, 50, '/fishing'),
@@ -193,6 +196,7 @@ export default async function BadgesPage() {
     },
     {
       title: 'Crew',
+      flavor: 'The souls who sail with you, and the colours they fly.',
       accent: '#5ec8e8',
       goals: [
         badgeGoal('growing_crew', 'Growing Crew', 'Recruit 25 crew', recruits, 25, '/crew'),
@@ -212,6 +216,7 @@ export default async function BadgesPage() {
     },
     {
       title: 'Expeditions & Combat',
+      flavor: 'Voyages logged, broadsides answered.',
       accent: '#c8704a',
       goals: [
         badgeGoal('navigator', 'Wayfinder', 'Reach Navigation Level 50', navLevel, 50, '/expeditions'),
@@ -248,6 +253,7 @@ export default async function BadgesPage() {
     },
     {
       title: 'The Gauntlet',
+      flavor: 'How deep you dared, and what you carried back up.',
       accent: '#a06ff2',
       goals: [
         badgeGoal('first_descent', 'First Descent', 'Cash out a Gauntlet run', gauntletDeepest >= 1 ? 1 : 0, 1, '/raids/gauntlet', { binary: true }),
@@ -272,6 +278,7 @@ export default async function BadgesPage() {
     },
     {
       title: 'Hardcore Gauntlet',
+      flavor: 'The Drowned Ledger keeps its own accounts. In ink you cannot buy back.',
       accent: '#e0555a',
       goals: [
         badgeGoal('drowned_ledger', 'The Drowned Ledger', 'Cash out a Hardcore Gauntlet run', gauntletHcDeepest >= 1 ? 1 : 0, 1, '/raids/gauntlet', { binary: true }),
@@ -287,6 +294,7 @@ export default async function BadgesPage() {
     },
     {
       title: 'Broadsides',
+      flavor: 'Captain against captain, gun against gun.',
       accent: '#f87171',
       goals: [
         badgeGoal('first_blood', 'First Blood', 'Win a ship duel', pvpWins, 1, '/expeditions'),
@@ -296,6 +304,7 @@ export default async function BadgesPage() {
     },
     {
       title: 'The Chart Room',
+      flavor: 'For the thinkers among the deckhands.',
       accent: '#c4a96a',
       goals: [
         badgeGoal('quartermaster', 'Quartermaster', 'Bank 40 charting points', puzzlePoints, 40, '/tavern/chart-room'),
@@ -304,6 +313,7 @@ export default async function BadgesPage() {
     },
     {
       title: 'The Parlor',
+      flavor: 'Wit, wagers, and a ladder to the Pirate King.',
       accent: '#d98ae0',
       goals: [
         badgeGoal('throne_in_sight', 'Throne in Sight', 'Reach rung 7 of the Pirate King ladder', has('throne_in_sight') ? 1 : 0, 1, '/tavern/trivia/king', { binary: true }),
@@ -313,6 +323,7 @@ export default async function BadgesPage() {
     },
     {
       title: 'Trawling',
+      flavor: 'Nets down, patience up.',
       accent: '#4fb8a0',
       goals: [
         badgeGoal('first_haul', 'First Haul', 'Collect your first trawl', trawlsCollected, 1, '/fishing', { binary: true }),
@@ -322,6 +333,7 @@ export default async function BadgesPage() {
     },
     {
       title: 'The Den & Records',
+      flavor: 'Luck, chips, and the tide at your back.',
       accent: '#f0c040',
       goals: [
         badgeGoal('catfish_jackpot', 'Catfish Jackpot', 'Win the slots Catfish Jackpot', has('catfish_jackpot') ? 1 : 0, 1, '/tavern', { binary: true }),
@@ -338,6 +350,7 @@ export default async function BadgesPage() {
     },
     {
       title: 'Wealth',
+      flavor: 'A hold heavy enough to make the ship sit low.',
       accent: '#a78bfa',
       goals: [
         badgeGoal('baby_steps', 'Baby Steps', 'Hold 100,000 doubloons at once', doubloons, 100_000, '/fishing'),
@@ -347,6 +360,7 @@ export default async function BadgesPage() {
     },
     {
       title: 'Captain',
+      flavor: 'For those who keep this whole ship afloat.',
       accent: '#e6b94a',
       goals: [
         badgeGoal('captains_colors', "Captain's Colors", 'Become a Captain', isPremium ? 1 : 0, 1, '/profile', { binary: true }),
@@ -361,12 +375,17 @@ export default async function BadgesPage() {
     <>
       <main className="min-h-screen pt-8">
         <div className="px-6 max-w-2xl mx-auto pb-16">
-          <div className="mb-6 flex items-baseline justify-between gap-3">
-            <h1 className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.5rem' }}>Badges</h1>
-            {/* Story moved out of here — a quiet link back to the Captain's Log. */}
-            <Link href="/achievements" className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#b6a98c', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-              Captain&apos;s Log →
-            </Link>
+          <div className="mb-6">
+            <div className="flex items-baseline justify-between gap-3">
+              <h1 className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.5rem' }}>Badges</h1>
+              {/* Story moved out of here — a quiet link back to the Captain's Log. */}
+              <Link href="/achievements" className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#b6a98c', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                Captain&apos;s Log →
+              </Link>
+            </div>
+            <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(230,215,180,0.55)', fontStyle: 'italic', marginTop: 3 }}>
+              Every colour you have earned, and every one the sea still owes you.
+            </p>
           </div>
 
           <AchievementsClient groups={groups} doneCount={doneCount} totalCount={allGoals.length} />
