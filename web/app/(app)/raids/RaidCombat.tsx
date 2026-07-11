@@ -5325,8 +5325,14 @@ export default function RaidCombat({
                   animate={subPhase === 'aiming' ? { opacity: 0.5 } : { opacity: [0.32, 0.62, 0.32] }}
                   transition={subPhase === 'aiming' ? { duration: 0.2 } : { duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
                   style={{
+                    // NO mixBlendMode here: this dome PERSISTS for the life of
+                    // the shield (many turns on a Tidecaller cast), and a
+                    // blend layer forces the whole stage to re-composite every
+                    // frame of the infinite pulse — reported as "everything
+                    // lags after Abyssal Tide". A plain translucent gradient
+                    // pulsing opacity stays on the GPU for free.
                     position: 'absolute', inset: '-7%', borderRadius: '50%',
-                    pointerEvents: 'none', zIndex: 2, mixBlendMode: 'screen',
+                    pointerEvents: 'none', zIndex: 2,
                     background: 'radial-gradient(ellipse 72% 104% at 74% 50%, rgba(125,211,252,0.55) 0%, rgba(94,234,212,0.22) 46%, transparent 72%)',
                   }}
                 />
@@ -7395,7 +7401,8 @@ function ShipStatusAura({ burning, frozen, paused }: { burning: boolean; frozen:
             aria-hidden
             animate={paused ? { opacity: 0.4 } : { opacity: [0.22, 0.46, 0.22] }}
             transition={paused ? { duration: 0.2 } : { duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
-            style={{ position: 'absolute', inset: '-10% -4% -2%', borderRadius: '46%', mixBlendMode: 'screen', background: 'radial-gradient(ellipse at 50% 82%, rgba(251,146,60,0.6) 0%, rgba(251,146,60,0.2) 46%, transparent 72%)' }}
+            // No blend mode — this glow persists while burning; see the shield dome note.
+            style={{ position: 'absolute', inset: '-10% -4% -2%', borderRadius: '46%', background: 'radial-gradient(ellipse at 50% 82%, rgba(251,146,60,0.6) 0%, rgba(251,146,60,0.2) 46%, transparent 72%)' }}
           />
           {[0, 1, 2].map(n => (
             <span key={n} className="rc-ember" style={{ left: `${36 + n * 13}%`, animationDelay: `${n * 0.55}s`, background: '#ffd27a' }} />
@@ -7407,7 +7414,8 @@ function ShipStatusAura({ burning, frozen, paused }: { burning: boolean; frozen:
           aria-hidden
           animate={paused ? { opacity: 0.55 } : { opacity: [0.4, 0.62, 0.4] }}
           transition={paused ? { duration: 0.2 } : { duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-          style={{ position: 'absolute', inset: '-6%', borderRadius: '46%', mixBlendMode: 'screen', zIndex: 3, pointerEvents: 'none', background: 'radial-gradient(ellipse at center, rgba(125,211,252,0.5) 0%, rgba(186,230,253,0.22) 45%, transparent 72%)' }}
+          // No blend mode — this glow persists while frozen; see the shield dome note.
+          style={{ position: 'absolute', inset: '-6%', borderRadius: '46%', zIndex: 3, pointerEvents: 'none', background: 'radial-gradient(ellipse at center, rgba(125,211,252,0.5) 0%, rgba(186,230,253,0.22) 45%, transparent 72%)' }}
         />
       )}
     </>
