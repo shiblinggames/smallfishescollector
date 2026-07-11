@@ -59,6 +59,7 @@ import { motion, AnimatePresence, useAnimation } from 'framer-motion'
 import { BroadsideEnemy, EnemyAction, type BossMechanicCheck, type MechanicResponse } from '@/lib/bossRaids'
 import { raidDamageProfile, type RaidMods } from '@/lib/expeditions'
 import { MEGA_CHARGE_COST, RAILGUN_GRAZE_PCT, type ShipAugment } from '@/lib/shipAugments'
+import { applyStatus, statusMods, tickStatuses, cleanseStatuses, STATUS_DEFS, type ActiveStatus, type StatusId } from '@/lib/statuses'
 import { CannonShotBurst, ImpactBurst, RailgunBeam, NukeMissile, NukeBlast } from './megaFx'
 import { getActiveEffects, getRaidItem, getActivatableItem } from '@/lib/raidItems'
 import { describeEffect, effectTone, type TideEffect } from '@/lib/tides'
@@ -694,6 +695,36 @@ export default function RaidCombat({
   // playerHpMax. The excess is temporary — the Gauntlet host clamps carried HP
   // back to max at the next fight, so overheal never persists.
   const healCap = Math.round(playerHpMax * (1 + tide.overhealPct))
+
+  // ── Statuses (Ch4 pipeline, lib/statuses) ──────────────────────────────────
+  // Timed buffs/debuffs on EITHER side. Refs are the combat-read source of
+  // truth (appliers can fire mid-resolution); state mirrors drive the badge
+  // row. Per-fight: reset alongside the enemy in the reset effect below.
+  // Dormant until something calls the appliers — no existing fight applies one.
+  const [playerStatuses, setPlayerStatuses] = useState<ActiveStatus[]>([])
+  const [enemyStatuses, setEnemyStatuses] = useState<ActiveStatus[]>([])
+  const playerStatusesRef = useRef<ActiveStatus[]>([])
+  const enemyStatusesRef = useRef<ActiveStatus[]>([])
+  const applyPlayerStatus = (id: StatusId, magnitude: number, turns: number) => {
+    playerStatusesRef.current = applyStatus(playerStatusesRef.current, id, magnitude, turns)
+    setPlayerStatuses(playerStatusesRef.current)
+  }
+  const applyEnemyStatus = (id: StatusId, magnitude: number, turns: number) => {
+    enemyStatusesRef.current = applyStatus(enemyStatusesRef.current, id, magnitude, turns)
+    setEnemyStatuses(enemyStatusesRef.current)
+  }
+  // Cleanse (Mender / Abyssal Tide / Laz's ward): strip every player DEBUFF
+  // status, keep buffs. Logs what lifted so the cleanse is felt.
+  const cleansePlayerStatuses = () => {
+    const { next, removed } = cleanseStatuses(playerStatusesRef.current)
+    if (removed.length === 0) return
+    playerStatusesRef.current = next
+    setPlayerStatuses(next)
+    setResolveLog(prev => [...prev, `Cleansed: ${removed.map(s => STATUS_DEFS[s.id].name).join(', ')} lifted.`])
+  }
+  // Aggregated numbers for the CURRENT render (badges, button gating). Combat
+  // resolution re-aggregates from the refs at read time.
+  const playerStatusMods = useMemo(() => statusMods(playerStatuses), [playerStatuses])
   // Mirror the per-enemy tide one-shots (next-fight HP scale + enemy start
   // charges) so the enemy-RESET effect below — which has intentionally tight
   // deps so it doesn't refire mid-fight — reads the CURRENT values. Without
@@ -817,6 +848,7 @@ export default function RaidCombat({
       playerFreezePendingRef.current = false
       setPlayerBurning(false)
       setPlayerFrozen(false)
+      cleansePlayerStatuses() // Ch4 statuses lift with the ward too
     }
     return { hp: reviveHp, buffPct }
   }
@@ -1319,6 +1351,40 @@ export default function RaidCombat({
       if (foresightMovesLeftRef.current <= 0) setForeseenMoves(null)
       else setForeseenMoves(predictEnemyMoves(foresightMovesLeftRef.current))
     }
+    // Status upkeep (Ch4 pipeline): the round just resolved, so every timed
+    // status ticks down (expiring at 0, with a log line so the player sees the
+    // window close), and Regen pays out its round-end heal.
+    {
+      const lines: string[] = []
+      const pRegen = statusMods(playerStatusesRef.current).regenPerRound
+      if (pRegen > 0 && playerHpRef.current > 0) {
+        const healed = Math.min(healCap - playerHpRef.current, pRegen)
+        if (healed > 0) {
+          playerHpRef.current += healed
+          setPlayerHp(playerHpRef.current)
+          lines.push(`Mending knits the hull — +${healed} HP.`)
+          onStat?.({ dmgHealed: healed })
+        }
+      }
+      const eRegen = statusMods(enemyStatusesRef.current).regenPerRound
+      if (eRegen > 0 && enemyHpRef.current > 0) {
+        const healed = Math.min(enemyHpMaxRef.current - enemyHpRef.current, eRegen)
+        if (healed > 0) {
+          enemyHpRef.current += healed
+          setEnemyHp(enemyHpRef.current)
+          lines.push(`The ${enemy.name} mends itself — ${healed} HP restored.`)
+        }
+      }
+      const pTick = tickStatuses(playerStatusesRef.current)
+      playerStatusesRef.current = pTick.next
+      setPlayerStatuses(pTick.next)
+      for (const s of pTick.expired) lines.push(`${STATUS_DEFS[s.id].name} wears off you.`)
+      const eTick = tickStatuses(enemyStatusesRef.current)
+      enemyStatusesRef.current = eTick.next
+      setEnemyStatuses(eTick.next)
+      for (const s of eTick.expired) lines.push(`${STATUS_DEFS[s.id].name} wears off the ${enemy.name}.`)
+      if (lines.length > 0) setResolveLog(prev => [...prev, ...lines])
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [turn])
 
@@ -1580,6 +1646,9 @@ export default function RaidCombat({
     setSubPhase('await_input')
     setPlayerAction(null); setEnemyAction(null); setAimResult(null); setFirstActor(null)
     setLastPlayerAction(null); setForeseenMoves(null)
+    // Statuses are per-FIGHT: both sides start every encounter clean.
+    playerStatusesRef.current = []; setPlayerStatuses([])
+    enemyStatusesRef.current = []; setEnemyStatuses([])
     const intro = isBoss
       ? `${enemy.name} heaves into view!`
       : `A ${enemy.name} draws alongside!`
@@ -1917,6 +1986,9 @@ export default function RaidCombat({
     if (subPhase !== 'await_input') return
     if (oneAbilityUsedThisTurn) return
     if (usedAbilityIds?.has(crew.id)) return
+    // Silenced (Ch4 status) — abilities are locked while it lasts (the chooser
+    // card is already disabled; this is the belt-and-braces guard).
+    if (statusMods(playerStatusesRef.current).silenced) return
 
     // Lock the ability the instant it's chosen — BEFORE the summon plays — so
     // nothing double-fires while the crew is being called on.
@@ -1988,7 +2060,7 @@ export default function RaidCombat({
         onStat?.({ dmgHealed: Math.max(0, Math.min(heal, playerHpMax - playerHpRef.current)) })
         setPlayerHp(prev => Math.min(healCap, prev + heal))
         playerHpRef.current = Math.min(healCap, playerHpRef.current + heal)
-        if (mm.cleanseDebuff) setCleanseDebuffPending(true)
+        if (mm.cleanseDebuff) { setCleanseDebuffPending(true); cleansePlayerStatuses() }
         noteCheckResponse('heal'); dousePlayerBurnFromHeal()
         setPHitsplat({ key: ak + 1, text: `+${heal}`, color: '#4ade80', big: true })
         setTimeout(() => setPHitsplat(null), 900)
@@ -2048,7 +2120,7 @@ export default function RaidCombat({
         const shield = Math.round(playerHpMax * at.shieldPctMaxHp)
         setAbyssalShieldHp(prev => prev + shield)
         abyssalShieldRef.current += shield
-        if (at.cleanseDebuff) setCleanseDebuffPending(true)
+        if (at.cleanseDebuff) { setCleanseDebuffPending(true); cleansePlayerStatuses() }
         noteCheckResponse('heal'); noteCheckResponse('shield'); dousePlayerBurnFromHeal()   // a shield+heal ability answers both
         setPHitsplat({ key: ak + 1, text: `+${heal}`, color: chaseColor ?? '#5eead4', big: true })
         setTimeout(() => setPHitsplat(null), 900)
@@ -2523,14 +2595,16 @@ export default function RaidCombat({
     const compassNavPct = getActiveEffects(equippedRaidItems)
       .filter(e => e.type === 'speed_roll_nav_pct')
       .reduce((a, e) => a + e.value, 0)
-    // Tide speedDelta folds straight into the player's effective ship
-    // speed for the turn-order roll. Floored at 1 so a tide drop can't
-    // make the player un-act-able.
-    const tideAdjustedSpeed = Math.max(1, shipSpeed + tide.speedDelta)
+    // Tide speedDelta + the Slowed status fold straight into the player's
+    // effective ship speed for the turn-order roll. Floored at 1 so a drop
+    // can't make the player un-act-able. (Statuses read from the refs — this
+    // runs at action-pick time, outside resolveTurn's snapshot.)
+    const tideAdjustedSpeed = Math.max(1, shipSpeed + tide.speedDelta + statusMods(playerStatusesRef.current).speedDelta)
     const pSpeedRoll = rollSpeed(tideAdjustedSpeed, totalNavigation) + Math.floor(totalNavigation * compassNavPct)
     // Fleet affix on the enemy: flat bonus to its speed roll. Not a
     // guarantee like before — just much better odds of going first.
-    const eSpeedRoll = rollSpeed(enemy.shipSpeed, 0) + (affix?.speedBonus ?? 0)
+    // Slowed on the enemy drags its roll the same way.
+    const eSpeedRoll = rollSpeed(Math.max(1, enemy.shipSpeed + statusMods(enemyStatusesRef.current).speedDelta), 0) + (affix?.speedBonus ?? 0)
     // First Strike crew effect always wins (player effect overrides any
     // enemy speed bonus, no matter how high).
     const first: Actor = mods.firstStrike
@@ -2668,16 +2742,30 @@ export default function RaidCombat({
     let eCharges = enemyCharges
     const steps: Step[] = []
 
+    // Statuses (Ch4 pipeline) — aggregate each side's timed buffs/debuffs once
+    // for this round. Read from the refs so mid-resolution appliers (future
+    // enemy specials) land next round, not half-way through this one.
+    const pStatus = statusMods(playerStatusesRef.current)
+    const eStatus = statusMods(enemyStatusesRef.current)
+
     // Enemy barrier (Warded affix / The Warding curse): route DIRECT player
     // damage through the enemy's shield pool before its hull. Burn/DoT ticks
     // bypass it (they hit eHp directly). The Railgun's piercing Mega passes
     // `pierce` and ignores it. Returns the damage that reached the hull.
+    // Corrode (status): the shield takes AMPLIFIED damage — the pool loses
+    // more than the hit carried, so the same shot strips plating faster
+    // (the hull never takes more than the hit; corrode only eats shield).
     const soakEnemyShield = (amount: number, pierce = false): number => {
       if (amount <= 0 || pierce || enemyShieldRef.current <= 0) return amount
-      const absorbed = Math.min(enemyShieldRef.current, amount)
+      const mult = eStatus.shieldDmgTakenMult
+      const bite = Math.round(amount * mult)          // what the shield stands to lose
+      const absorbed = Math.min(enemyShieldRef.current, bite)
       enemyShieldRef.current -= absorbed
       eShieldChanged = true
-      return amount - absorbed
+      // The raw damage the soak consumed (amplified soak eats the shield faster
+      // per point of hit); the remainder of the RAW hit reaches the hull.
+      const rawConsumed = Math.ceil(absorbed / mult)
+      return Math.max(0, amount - rawConsumed)
     }
     // Snapshot both shield pools onto every step as it's pushed, so the display
     // can deplete them in lockstep with the animation (see syncPHp/syncEHp)
@@ -2918,14 +3006,15 @@ export default function RaidCombat({
         const isMega  = action === 'mega'
         const megaAug = isMega ? megaAugment : null
         // The player's effective ship speed folds in tide.speedDelta (Following
-        // Sea boon, Becalmed curse, etc.) so a speed boost makes you nimbler in
-        // the dodge contest too — slipping more shots when you defend and
-        // landing more when you attack — not just winning turn order. Floored at
-        // 1 so a heavy speed drop can't invert the roll. Enemy speed is raw.
-        const playerDodgeSpeed = Math.max(1, shipSpeed + tide.speedDelta)
-        const attackerSpeed  = isAttackerPlayer ? playerDodgeSpeed : enemy.shipSpeed
+        // Sea boon, Becalmed curse, etc.) AND the Slowed status, so speed
+        // swings make you nimbler/clumsier in the dodge contest too — not just
+        // turn order. Floored at 1 so a heavy drop can't invert the roll.
+        // Enemy speed folds its own Slowed the same way.
+        const playerDodgeSpeed = Math.max(1, shipSpeed + tide.speedDelta + pStatus.speedDelta)
+        const enemyDodgeSpeed  = Math.max(1, enemy.shipSpeed + eStatus.speedDelta)
+        const attackerSpeed  = isAttackerPlayer ? playerDodgeSpeed : enemyDodgeSpeed
         const defenderAction = isAttackerPlayer ? eAction          : pAction
-        const defenderSpeed  = isAttackerPlayer ? enemy.shipSpeed  : playerDodgeSpeed
+        const defenderSpeed  = isAttackerPlayer ? enemyDodgeSpeed  : playerDodgeSpeed
         const defenderNav    = isAttackerPlayer ? 0                : totalNavigation
         // Repossession: drop the reclaimed item from the per-shot effect reads
         // for this fight (null ref = unchanged list, so every other raid is
@@ -2997,8 +3086,11 @@ export default function RaidCombat({
           // Vengeance rage — after Laz's ward cheats a killing blow, every shot
           // for the rest of the fight hits harder (capped +35% at the def level).
           const vengeanceMult = vengeanceDmgBuffRef.current > 0 ? 1 + vengeanceDmgBuffRef.current : 1
+          // Statuses: what YOU deal (weaken ↓ / enrage ↑) × what the ENEMY
+          // takes (feeble ↑ / fortify ↓) — the Ch4 pipeline's damage hooks.
+          const statusOutMult = pStatus.dmgDealtMult * eStatus.dmgTakenMult
           const mult = actionBaseMult * bossMult * nonbossMult * rampMult * aimItemMult * classDamageMult
-                       * tide.dmgMult * tideActionMult * tideBossMult * critTideMult * lowHpMult * noncritTideMult * frozenMult * volleyRampMult * critStreakMult * vengeanceMult
+                       * tide.dmgMult * tideActionMult * tideBossMult * critTideMult * lowHpMult * noncritTideMult * frozenMult * volleyRampMult * critStreakMult * vengeanceMult * statusOutMult
           dmg = Math.floor(rollShotDamage(lockedAimResult ?? 'miss', shipMinDamage, totalPower, mods.damagePct) * mult)
           if (isVolley) volleyCountRef.current += 1   // this volley is now "fired" — the next ramps further
           // Enemy themed defense: crustacean carapace soaks a flat % off every
@@ -3053,6 +3145,8 @@ export default function RaidCombat({
         } else {
           const base = Math.floor(Math.random() * (enemy.maxDmg - enemy.minDmg + 1)) + enemy.minDmg
           dmg = base * (action === 'volley' ? 2 : 1)
+          // Statuses on the ENEMY's output: weaken ↓ / enrage ↑ (Ch4 pipeline).
+          if (eStatus.dmgDealtMult !== 1) dmg = Math.max(1, Math.floor(dmg * eStatus.dmgDealtMult))
           // Phase 2 boss damage bump (challenge-mode Pete) — multiplies the
           // raw rolled damage before crit + dodge math so a phase-2 volley
           // hits the player's hull math at the new, scarier rate. No-op for
@@ -3189,7 +3283,7 @@ export default function RaidCombat({
             if (isAttackerPlayer && enemy.parryChance && enemy.parryDamagePct && Math.random() < enemy.parryChance) {
               const parryBase = Math.floor(Math.random() * (enemy.maxDmg - enemy.minDmg + 1)) + enemy.minDmg
               let parryDmg = Math.max(1, Math.floor(parryBase * enemy.parryDamagePct))
-              const takenMult = incomingDmgMult * (1 + mods.damageTakenPct / 100) * tide.inDmgMult
+              const takenMult = incomingDmgMult * (1 + mods.damageTakenPct / 100) * tide.inDmgMult * pStatus.dmgTakenMult
               if (takenMult !== 1) parryDmg = Math.max(1, Math.floor(parryDmg * takenMult))
               pHp = Math.max(0, pHp - parryDmg)
               stepLines.push(`${enemy.parryName ?? 'Riposte'}! ${enemy.name} counters your strike for ${parryDmg}.`)
@@ -3198,7 +3292,7 @@ export default function RaidCombat({
               // (so it scales with the player's own damage and punishes heavy
               // hitters), through the same incoming-mitigation chain as a hit.
               let riposteDmg = Math.max(1, Math.round(dmg * affix.riposteReflectPct))
-              const takenMult = incomingDmgMult * (1 + mods.damageTakenPct / 100) * tide.inDmgMult
+              const takenMult = incomingDmgMult * (1 + mods.damageTakenPct / 100) * tide.inDmgMult * pStatus.dmgTakenMult
               if (takenMult !== 1) riposteDmg = Math.max(1, Math.floor(riposteDmg * takenMult))
               pHp = Math.max(0, pHp - riposteDmg)
               riposteDmgOut = riposteDmg
@@ -3424,7 +3518,8 @@ export default function RaidCombat({
           // cuts, Soft Shell adds) both scale incoming damage here.
           // Tide layer: tide.inDmgMult folds in incomingDmgMult tide
           // effects (Drop sea anchor: ×0.85 next fight, etc.).
-          const takenMult = incomingDmgMult * (1 + mods.damageTakenPct / 100) * tide.inDmgMult
+          // Status layer: feeble ↑ / fortify ↓ on the player (Ch4 pipeline).
+          const takenMult = incomingDmgMult * (1 + mods.damageTakenPct / 100) * tide.inDmgMult * pStatus.dmgTakenMult
           if (takenMult !== 1 && dmg > 0) dmg = Math.max(1, Math.floor(dmg * takenMult))
           // Quartermaster's Anchor — cut the next incoming hit. Crits punch
           // through unless the milestone absorbs them. Consumed only when it
@@ -3609,6 +3704,8 @@ export default function RaidCombat({
       ) {
         const base2 = Math.floor(Math.random() * (enemy.maxDmg - enemy.minDmg + 1)) + enemy.minDmg
         let dmg2 = base2 // frenzy follow-up is always a single shot (not volley)
+        // Statuses mirror the primary fire branch (weaken/enrage on the enemy).
+        if (eStatus.dmgDealtMult !== 1) dmg2 = Math.max(1, Math.floor(dmg2 * eStatus.dmgDealtMult))
         // Phase 2 boss damage bump also covers the Frenzied bonus shot,
         // mirroring the primary fire branch above. Otherwise the headline
         // attack scales but the affix follow-up under-hits in phase 2.
@@ -3619,7 +3716,7 @@ export default function RaidCombat({
         const effCrit2  = affix?.critMult ? Math.min(1, baseCrit2 * affix.critMult) : baseCrit2
         let frenziedCrit = false
         if (Math.random() < effCrit2) { frenziedCrit = true; dmg2 = Math.floor(dmg2 * 1.5) }
-        const takenMult2 = incomingDmgMult * (1 + mods.damageTakenPct / 100)
+        const takenMult2 = incomingDmgMult * (1 + mods.damageTakenPct / 100) * pStatus.dmgTakenMult
         if (takenMult2 !== 1 && dmg2 > 0) dmg2 = Math.max(1, Math.floor(dmg2 * takenMult2))
         pHp = Math.max(0, pHp - dmg2)
         // Vampiric carry-through on the Frenzied second shot — same chance
@@ -4846,6 +4943,12 @@ export default function RaidCombat({
                 cyan shield. */}
             <HPBar current={enemyHp} max={enemyHpMax} accent={ENEMY_COLOR} compact shield={enemyShieldHp} shieldColor="#c084fc" shieldGradTo="#a855f7" hidden={enemyHpHidden} />
             <ChargesRow charges={enemyCharges} max={MAX_CHARGES} small hidden={enemyChargesHidden} />
+            {/* Ch4 statuses + bespoke effect chips (burn/freeze/snare) — one row. */}
+            <StatusBadgesRow statuses={enemyStatuses} bespoke={[
+              ...(enemyBurning ? [{ key: 'burn', glyph: '🔥', color: '#fb923c', title: 'Ablaze — burning each turn' }] : []),
+              ...(enemyFrozen ? [{ key: 'freeze', glyph: '❄', color: '#7dd3fc', title: 'Frozen — its turn is skipped' }] : []),
+              ...(snareDodgeTurns > 0 ? [{ key: 'snare', glyph: '⚓', color: '#d9b066', turns: snareDodgeTurns, title: 'Snared — dodges can be fouled' }] : []),
+            ]} />
           </div>
         </motion.button>
 
@@ -5463,6 +5566,11 @@ export default function RaidCombat({
                 as a cyan segment — one row, no stacked bar. */}
             <HPBar current={playerHp} max={playerHpMax} accent={PLAYER_COLOR} compact shield={abyssalShieldHp} />
             <ChargesRow charges={playerCharges} max={playerMaxCharges} small readyGlow={canMega ? (megaAugment?.color ?? null) : null} />
+            {/* Ch4 statuses + bespoke effect chips on YOUR hull. */}
+            <StatusBadgesRow statuses={playerStatuses} bespoke={[
+              ...(playerBurning ? [{ key: 'burn', glyph: '🔥', color: '#fb923c', title: 'Ablaze — burning each turn (a crew heal puts it out)' }] : []),
+              ...(playerFrozen ? [{ key: 'freeze', glyph: '❄', color: '#7dd3fc', title: 'Frozen — your turn is skipped' }] : []),
+            ]} />
           </div>
         </motion.button>
 
@@ -5564,14 +5672,17 @@ export default function RaidCombat({
                 const m = currentMilestone(def, lv)
                 const usedRaid = usedAbilityIds?.has(crew.id) ?? false
                 const locked = !m
-                const disabled = locked || usedRaid || oneAbilityUsedThisTurn
+                // Silenced (Ch4 status): every crew ability is locked while it lasts.
+                const disabled = locked || usedRaid || oneAbilityUsedThisTurn || playerStatusMods.silenced
                 const sub = locked
                   ? `Unlocks at Lv 10.`
-                  : usedRaid
-                    ? usedAbilitySub
-                    : oneAbilityUsedThisTurn
-                      ? 'Wait until next turn.'
-                      : m.desc
+                  : playerStatusMods.silenced
+                    ? 'Silenced — abilities locked.'
+                    : usedRaid
+                      ? usedAbilitySub
+                      : oneAbilityUsedThisTurn
+                        ? 'Wait until next turn.'
+                        : m.desc
                 items.push({
                   id: `crew-${crew.id}`,
                   label: `${crew.name} · ${def.name}`,
@@ -6790,6 +6901,39 @@ function HPBar({ current, max, accent, compact, shield = 0, shieldColor = '#7dd3
           <p className="font-karla font-700" style={{ fontSize: '0.8rem', color: hidden ? '#8a95aa' : accent }}>{hidden ? '???' : `${current}/${max}`}</p>
         </div>
       )}
+    </div>
+  )
+}
+
+// ── Status badges (Ch4 pipeline) ─────────────────────────────────────────────
+// One tiny chip per active status: glyph + turns-left, green-family for buffs
+// and red/purple-family for debuffs. Renders under each side's HP bar. The
+// bespoke effects (burn / freeze / snare) pass in as extra chips so the player
+// reads ONE coherent status row, even though their mechanics stay bespoke.
+interface BespokeChip { key: string; glyph: string; color: string; turns?: number; title: string }
+function StatusBadgesRow({ statuses, bespoke = [] }: { statuses: ActiveStatus[]; bespoke?: BespokeChip[] }) {
+  if (statuses.length === 0 && bespoke.length === 0) return null
+  const chip = (key: string, glyph: string, color: string, tone: 'buff' | 'debuff', turns: number | undefined, title: string) => (
+    <motion.span key={key} title={title}
+      initial={{ scale: 0.3, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+      transition={{ type: 'spring', stiffness: 520, damping: 22 }}
+      className="font-karla font-800"
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 2,
+        padding: '0 5px', height: 16, borderRadius: 999, fontSize: '0.56rem', lineHeight: 1,
+        color, background: `${color}1c`, border: `1px solid ${color}${tone === 'buff' ? '66' : '88'}`,
+      }}>
+      <span aria-hidden style={{ fontSize: '0.62rem' }}>{glyph}</span>
+      {turns != null && <span>{turns}</span>}
+    </motion.span>
+  )
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 5 }}>
+      {statuses.map(s => {
+        const def = STATUS_DEFS[s.id]
+        return chip(s.id, def.glyph, def.color, def.tone, s.turnsLeft, `${def.name} — ${def.describe(s.magnitude)} (${s.turnsLeft} turn${s.turnsLeft === 1 ? '' : 's'})`)
+      })}
+      {bespoke.map(b => chip(b.key, b.glyph, b.color, 'debuff', b.turns, b.title))}
     </div>
   )
 }
