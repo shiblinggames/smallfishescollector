@@ -27,7 +27,7 @@ import {
   CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE,
   THE_CARTOGRAPHER_CHALLENGE, THE_TOLLMASTER_CHALLENGE,
 } from './raidChallenge'
-import { AFFIXES, ELITE_HP_MULT, ELITE_DMG_MULT, rollAffix, rollSecondAffix, mergeAffixes, type AffixDef } from './raidAffixes'
+import { AFFIXES, ALL_AFFIX_IDS, ELITE_HP_MULT, ELITE_DMG_MULT, rollAffix, rollSecondAffix, mergeAffixes, type AffixDef } from './raidAffixes'
 import { type TideEffect } from './tides'
 
 // ── Economy ────────────────────────────────────────────────────────────────
@@ -252,9 +252,23 @@ export const GAUNTLET_REWARD_DEPTH_CAP = 70
 // The depth term (slope) is the ramp; the constant (intercept) is the opening
 // floor. Raised the intercepts so depths 1-3 aren't pushovers — the slope is
 // unchanged so the deep end ramps exactly as before.
-function mobHp(depth: number)    { return Math.round(34 + depth * 10) }
-function mobMinDmg(depth: number){ return Math.round(5 + depth * 0.9) }
-function mobMaxDmg(depth: number){ return Math.round(9 + depth * 1.7) }
+// ── The Crush band (depth 60+) ───────────────────────────────────────────────
+// Past DEEP_BEND_START the linear curve gently COMPOUNDS (2026-07-11): player
+// power is multiplicative (boons draft every ~2.5 depths forever) while the
+// base curve is linear, so past ~45 deep runs became victory laps — 60 fell
+// same-day once the old depth cap lifted. A slight 1.03/depth bend puts a real
+// wall back without touching the tuned 1-60 game: ×1.34 @ 70, ×1.81 @ 80,
+// ×2.43 @ 90, ×3.26 @ 100. Rewards already cap at 70, so past there the bend
+// only guards the record. Companion pressure: The Crush curse + always-paired
+// elite affixes below.
+export const DEEP_BEND_START = 60
+const DEEP_BEND_RATE = 1.03
+function deepBend(depth: number): number {
+  return depth > DEEP_BEND_START ? Math.pow(DEEP_BEND_RATE, depth - DEEP_BEND_START) : 1
+}
+function mobHp(depth: number)    { return Math.round((34 + depth * 10) * deepBend(depth)) }
+function mobMinDmg(depth: number){ return Math.round((5 + depth * 0.9) * deepBend(depth)) }
+function mobMaxDmg(depth: number){ return Math.round((9 + depth * 1.7) * deepBend(depth)) }
 const BOSS_HP_MULT  = 2.8
 const BOSS_DMG_MULT = 1.5
 
@@ -274,6 +288,9 @@ const ELITE_CHANCE_GROWTH = 0.05 // per depth
 const ELITE_CHANCE_CAP    = 0.6
 const DUAL_AFFIX_MIN_DEPTH = 30  // from here, elites can roll a SECOND affix
 const DUAL_AFFIX_CHANCE    = 0.3 // chance an elite past that depth carries two
+// The Crush band: past DEEP_BEND_START every elite carries TWO affixes
+// (guaranteed) and can roll a third.
+const TRIPLE_AFFIX_CHANCE  = 0.25
 
 
 // ── Enemy pools ──────────────────────────────────────────────────────────────
@@ -496,9 +513,18 @@ export function generateFight(state: GauntletRollState, skipOffset = 0): Gauntle
     isElite = true
     const firstId = rollAffix()
     affix = AFFIXES[firstId]
-    // The abyss gets crueller: from DUAL_AFFIX_MIN_DEPTH, an elite can carry a
-    // SECOND affix (merged into one — combined effects + name).
-    if (depth >= DUAL_AFFIX_MIN_DEPTH && Math.random() < DUAL_AFFIX_CHANCE) {
+    if (depth > DEEP_BEND_START) {
+      // The Crush band: elites this deep ALWAYS pair affixes, and one in four
+      // carries a third (all merged into one — combined effects + name).
+      const secondId = rollSecondAffix(firstId)
+      affix = mergeAffixes(affix, AFFIXES[secondId])
+      if (Math.random() < TRIPLE_AFFIX_CHANCE) {
+        const pool = ALL_AFFIX_IDS.filter(id => id !== firstId && id !== secondId)
+        affix = mergeAffixes(affix, AFFIXES[pool[Math.floor(Math.random() * pool.length)]])
+      }
+    } else if (depth >= DUAL_AFFIX_MIN_DEPTH && Math.random() < DUAL_AFFIX_CHANCE) {
+      // The abyss gets crueller: from DUAL_AFFIX_MIN_DEPTH, an elite can carry
+      // a SECOND affix.
       affix = mergeAffixes(affix, AFFIXES[rollSecondAffix(firstId)])
     }
     enemy = {
@@ -832,6 +858,27 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
       { desc: 'Two crew can no longer refresh their abilities', detail: 'The cold spreads. A second crew falls silent too, so two of your special abilities no longer refresh for the rest of the run.', silenceCrew: 2 },
     ],
   },
+  {
+    // ── THE CRUSH — the deep's endless pressure (depth 60+ only) ─────────────
+    // NOT part of the normal draw pool: drawCurse turns to it only once every
+    // named curse is spent, past DEEP_BEND_START. Each stack is one more
+    // "fathom" of pressure — the damage you take compounds +8% per stack — so
+    // curse milestones never dry up no matter how deep the run goes. The tier
+    // ladder is generated: 15 stacks covers the every-3-depths cadence from
+    // ~61 well past depth 100.
+    id: 'the_crush',
+    name: 'The Crush',
+    flavor: 'Past sixty fathoms there are no tricks left in the dark. There is only the weight.',
+    tiers: Array.from({ length: 15 }, (_, i) => {
+      const stacks = i + 1
+      const pct = Math.round((Math.pow(1.08, stacks) - 1) * 100)
+      return {
+        desc: `Take ${pct}% more damage (${stacks} fathom${stacks === 1 ? '' : 's'} of pressure)`,
+        detail: `The deep itself leans on your hull, and it never stops leaning. Every enemy hit now lands ${pct}% harder. Every few depths the Crush adds another fathom of pressure on top, and it compounds without end.`,
+        effects: [{ kind: 'incomingDmgMult', mult: Math.pow(1.08, stacks), scope: 'allRemaining' }] as TideEffect[],
+      }
+    }),
+  },
 ]
 
 // Depths at which the Locker imposes its next curse. One per milestone, drawn at
@@ -856,13 +903,28 @@ export function isCurseDepth(depth: number): boolean {
  *  don't have, OR (from CURSE_TIER2_DEPTH on) a tier-2 deepening of one you do.
  *  Uniform random among eligible; null if none remain. */
 export function drawCurse(curseTiers: Record<string, number>, depth: number): CurseOffer | null {
+  // The Crush never enters the normal pool — it's the fallback pressure once
+  // every named curse is spent (and only in the deep band).
   const eligible = GAUNTLET_CURSES
+    .filter(c => c.id !== 'the_crush')
     .map(c => ({ c, next: (curseTiers[c.id] ?? 0) + 1 }))
     .filter(x => x.next <= x.c.tiers.length && (x.next === 1 || depth >= CURSE_TIER2_DEPTH))
-  if (eligible.length === 0) return null
-  const { c, next } = eligible[Math.floor(Math.random() * eligible.length)]
-  const t = c.tiers[next - 1]
-  return { id: c.id, name: c.name, flavor: c.flavor, tier: next, desc: t.desc, detail: t.detail, effects: t.effects, hpDrainPct: t.hpDrainPct, silenceCrew: t.silenceCrew, isUpgrade: next > 1 }
+  if (eligible.length > 0) {
+    const { c, next } = eligible[Math.floor(Math.random() * eligible.length)]
+    const t = c.tiers[next - 1]
+    return { id: c.id, name: c.name, flavor: c.flavor, tier: next, desc: t.desc, detail: t.detail, effects: t.effects, hpDrainPct: t.hpDrainPct, silenceCrew: t.silenceCrew, isUpgrade: next > 1 }
+  }
+  // Pool spent: past the bend the Locker turns to raw pressure — The Crush,
+  // one more fathom per curse milestone, effectively forever.
+  if (depth > DEEP_BEND_START) {
+    const crush = GAUNTLET_CURSES.find(c => c.id === 'the_crush')
+    const next = (curseTiers['the_crush'] ?? 0) + 1
+    if (crush && next <= crush.tiers.length) {
+      const t = crush.tiers[next - 1]
+      return { id: crush.id, name: crush.name, flavor: crush.flavor, tier: next, desc: t.desc, detail: t.detail, effects: t.effects, hpDrainPct: t.hpDrainPct, silenceCrew: t.silenceCrew, isUpgrade: next > 1 }
+    }
+  }
+  return null
 }
 
 /** Run-wide combat effects from every curse currently on the player, at its
@@ -885,8 +947,13 @@ export function curseSilenceCount(curseTiers: Record<string, number>): number {
     a + (GAUNTLET_CURSES.find(c => c.id === id)?.tiers[tier - 1]?.silenceCrew ?? 0), 0)
 }
 
-/** Roman tier marker for curse chips ('' for tier 1, 'II' for tier 2). */
-export function curseTierLabel(tier: number): string { return tier >= 2 ? 'II' : '' }
+/** Roman tier marker for curse chips ('' for tier 1, 'II'+ beyond — The Crush
+ *  stacks past II, so the ladder runs as far as its 15 fathoms). */
+const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV']
+export function curseTierLabel(tier: number): string {
+  if (tier < 2) return ''
+  return ROMAN[Math.min(tier, ROMAN.length - 1)]
+}
 
 // ── Boons — the descent's gifts ───────────────────────────────────────────────
 // The flip side of Curses: at each BOON_DEPTH the player DRAFTS one of three

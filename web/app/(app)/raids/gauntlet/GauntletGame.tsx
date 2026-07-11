@@ -2232,7 +2232,7 @@ export default function GauntletGame(props: GauntletGameProps) {
 
           <motion.h1 initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2, type: 'spring', stiffness: 220, damping: 18 }}
             className="font-cinzel font-800" style={{ fontSize: '2.2rem', color: '#fdecec', lineHeight: 1.06, marginTop: 8, textShadow: `0 0 30px ${CRIM}55` }}>
-            {c.name}{c.isUpgrade ? ' II' : ''}
+            {c.name}{c.isUpgrade ? ` ${curseTierLabel(c.tier)}` : ''}
           </motion.h1>
           {c.isUpgrade && (
             <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.56rem', color: `${CRIM}cc`, marginTop: 6 }}>
