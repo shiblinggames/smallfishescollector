@@ -117,6 +117,20 @@ const BACKDRAFT_FLARE_MULT   = 0.7
 // did Y" log line + the on-screen flash.
 const ACTION_NOUN: Record<EnemyAction, string> = { fire: 'a Shot', volley: 'a Volley', mega: 'a Mega', reload: 'a Reload', dodge: 'a Dodge', repair: 'a Repair' }
 const ACTION_PAST: Record<EnemyAction, string> = { fire: 'opened fire', volley: 'loosed a volley', mega: 'unleashed a Mega', reload: 'reloaded', dodge: 'dodged', repair: 'patched the hull' }
+// Mechanic checks are answered by CREW ABILITIES. The cue names the KIND of
+// answer (category-vague on purpose — working out which crew ability is still
+// the player's job) but is explicit that a crew ability is what clears it.
+const RESPONSE_CATEGORY: Record<MechanicResponse, string> = {
+  brace:  'a defensive one',
+  shield: 'a defensive one',
+  snare:  'a disrupting one',
+  heal:   'a recovery one',
+  burst:  'a heavy-hitting one',
+}
+function crewCounterCue(responses: MechanicResponse[]): string {
+  const cats = [...new Set(responses.map(r => RESPONSE_CATEGORY[r]))]
+  return `Fire a crew ability to counter it — ${cats.join(' or ')}.`
+}
 // HP-relative per-tick cap. Now only guards the player from INCOMING burns
 // (Scorching affix) — outgoing Incendiary / Wildfire / Fallout are uncapped and
 // just scale with the hit. Keeps a deep-run enemy crit from burning you for an
@@ -1143,7 +1157,7 @@ export default function RaidCombat({
   // eaten by the boss's own attacks still answered the check). brace/shield/snare
   // ALSO fall back to their live refs (a defense that was already up counts too).
   const checkFlagsRef    = useRef<Record<'heal' | 'burst' | 'brace' | 'shield' | 'snare', boolean>>({ heal: false, burst: false, brace: false, shield: false, snare: false })
-  const [pendingCheck, setPendingCheck] = useState<{ name: string; telegraph: string; turnsLeft: number } | null>(null)
+  const [pendingCheck, setPendingCheck] = useState<{ name: string; telegraph: string; turnsLeft: number; responses: MechanicResponse[] } | null>(null)
   // Centre-screen result callout the instant a check resolves — green "Countered!"
   // or red "<name> hits!" so success/failure is unmistakable.
   const [checkResultFlash, setCheckResultFlash] = useState<{ ok: boolean; label: string; key: number } | null>(null)
@@ -1163,7 +1177,7 @@ export default function RaidCombat({
     // Telegraph into the action log so the fight NARRATES what's coming (vague on
     // purpose — the player figures out the answer by trial and error).
     setResolveLog(prev => [...prev, `⚠ ${check.telegraph}`])
-    setPendingCheck({ name: check.name, telegraph: check.telegraph, turnsLeft: check.chargeTurns })
+    setPendingCheck({ name: check.name, telegraph: check.telegraph, turnsLeft: check.chargeTurns, responses: check.responses })
   }
   // Flag an ability answer if a check is live. brace/shield/snare are flagged
   // HERE (produced during the window) as well as read live at resolve, so a
@@ -5077,6 +5091,9 @@ export default function RaidCombat({
                 <span className="font-karla font-800" style={{ fontSize: '0.58rem', color: '#2a0a0a', background: '#fca5a5', borderRadius: 999, minWidth: 15, textAlign: 'center', padding: '0 0.28rem' }}>{pendingCheck.turnsLeft}</span>
               </div>
               <p className="font-karla font-500" style={{ fontSize: '0.6rem', color: '#ffd7d7', lineHeight: 1.3, textAlign: 'center' }}>{pendingCheck.telegraph}</p>
+              {/* Explicit "this is a crew-ability check" cue — the telegraph is
+                  flavor; players need to know the ANSWER is a crew ability. */}
+              <p className="font-karla font-700" style={{ fontSize: '0.56rem', color: '#ffe9b0', lineHeight: 1.3, textAlign: 'center', marginTop: 1 }}>{crewCounterCue(pendingCheck.responses)}</p>
             </div>
           </div>
         )}
@@ -6082,18 +6099,10 @@ function EnemyStatsPopup({
   // only findable by trial and error, so the popup now spells out what each
   // phase does and how to answer its check.
   const popupPhases = enemy.phases ?? (enemy.phase2 ? [enemy.phase2] : [])
-  // HINT at the KIND of answer, not the exact crew ability — working out the
-  // play is still on the player. A per-check authored `hint` wins; otherwise
-  // fall back to the broad category of the valid responses.
-  const RESPONSE_CATEGORY: Record<MechanicResponse, string> = {
-    brace:  'a defensive play',
-    shield: 'a defensive play',
-    snare:  'a disrupting play',
-    heal:   'a recovery play',
-    burst:  'a heavy hit',
-  }
-  const checkHint = (chk: BossMechanicCheck): string =>
-    chk.hint ?? `Meet it with ${[...new Set(chk.responses.map(r => RESPONSE_CATEGORY[r]))].join(' or ')}.`
+  // Authored `hint` wins (it already names crew abilities as the answer);
+  // otherwise fall back to the shared crew-ability cue — category-vague, but
+  // explicit that a crew ability is what clears the check.
+  const checkHint = (chk: BossMechanicCheck): string => chk.hint ?? crewCounterCue(chk.responses)
   const describeConsequence = (c: BossMechanicCheck['consequence']): string =>
     c.kind === 'damagePctMaxHp'
       ? `hits you for ${Math.round(c.value * 100)}% of your max hull`

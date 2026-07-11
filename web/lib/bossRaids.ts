@@ -1042,7 +1042,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
           check: {
             id: 'big_gun', name: 'The Big Gun', chargeTurns: 2,
             telegraph: 'The Quartermaster hauls the reserve cannon onto the rail and swings the muzzle toward you.',
-            hint: 'A shot this heavy rewards a hard defensive answer. Get something between you and the muzzle before it fires.',
+            hint: 'A shot this heavy has to be met with a crew ability — a defensive one that gets something between you and the muzzle before it fires. Your own brace/dodge won’t turn it aside.',
             responses: ['brace', 'shield'],
             counteredLine: 'The big shot slams into your cover and glances wide.',
             failLine: 'The reserve cannon speaks, and nothing turned it aside.',
@@ -1055,7 +1055,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
           check: {
             id: 'cooking_books', name: 'Cooking the Books', chargeTurns: 2,
             telegraph: 'The Quartermaster ducks low behind the counter and starts working the ledger, fast.',
-            hint: "Don't let him finish the tally. Break his concentration or overpower him before the count closes, or he balances it in his favour.",
+            hint: "Don't let him finish the tally — fire a crew ability to break it. Something disrupting to foul his concentration, or a heavy-hitting one to overpower him before the count closes, or he balances the ledger in his favour.",
             responses: ['snare', 'burst'],
             counteredLine: 'You break his tally before it can close.',
             failLine: 'The ledger balances in his favour.',
@@ -1068,7 +1068,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
           check: {
             id: 'fire_sale', name: 'Fire Sale', chargeTurns: 2,
             telegraph: 'The Quartermaster touches a torch to the stock and the whole Cache goes up in flame.',
-            hint: 'The whole stock goes up at once and sets your hull ablaze. Get a heal or a shield up before it catches — and if it does catch, a crew heal is the only thing that puts the fire out.',
+            hint: 'The whole stock goes up at once and sets your hull ablaze. Fire a crew ability before it catches — a recovery one or a defensive one — and if it does catch, only a crew heal puts the fire out.',
             responses: ['heal', 'shield'],
             counteredLine: 'You smother the blaze before it can spread.',
             failLine: 'The fire sale catches, and your hull goes up in flame.',
