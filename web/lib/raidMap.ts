@@ -21,7 +21,7 @@ import { getRaidItem } from '@/lib/raidItems'
 //  - milestone : a "collect / hold X" goal (no fight)
 //  - shop      : a contraband stall (future)
 //  - story     : an overarching-story beat (future)
-export type RaidNodeType = 'skirmish' | 'raid' | 'milestone' | 'shop' | 'story' | 'puzzle' | 'class_pick' | 'event' | 'dice' | 'gauntlet' | 'fork' | 'dps_check'
+export type RaidNodeType = 'skirmish' | 'raid' | 'milestone' | 'shop' | 'story' | 'puzzle' | 'class_pick' | 'event' | 'dice' | 'gauntlet' | 'fork' | 'dps_check' | 'reclaim'
 
 // Branching event nodes (lib/raidMap RaidNode.event). One-time, the
 // player picks ONE option which fires its outcome and clears the node;
@@ -304,6 +304,12 @@ export interface RaidNode {
    *  raid-item ids (lib/raidItems). Choosing one adds it to the
    *  player's raid_items permanently and clears the node. */
   choice?: { items: string[] }
+  /** reclaim: The Reclamation (Ch4) — the Quartermaster's seized stock
+   *  re-offers the MISSED side of every either/or Cache pair
+   *  (EXCLUSIVE_CHOICE_PAIRS in lib/raidItems) for `price` doubloons each.
+   *  Only pairs where the player owns exactly one side are offered;
+   *  purchases stay available on revisit (clearing the node = reading it). */
+  reclaim?: { price: number }
   /** Event nodes: branching decision beats with N outcomes (loot /
    *  release / take logs etc). The chosen choice id is persisted in
    *  raid_node_progress.choices so the sheet can mark it on revisit. */
@@ -497,6 +503,19 @@ export const RAID_CHAPTERS: RaidChapter[] = [
     // finleone_named (names Don Finleone) → chapter_3_class.
     // LIVE since 2026-07-04 (adminOnly + route is_admin guards dropped).
     lastNodeId: 'chapter_3_class',
+  },
+  {
+    id:         'the_last_fathom',
+    number:     4,
+    romanNumeral: 'IV',
+    title:      'The Last Fathom',
+    subtitle:   'The deepest water there is, and the don who owns it. Nothing waits past this.',
+    // UNDER CONSTRUCTION (all nodes adminOnly) — full locked chain:
+    // throne_heading → the_reclamation → Cargo Shuffle puzzle → Raid 7
+    // (The Hammerhead) → crooked_ledger → Tumbler Lock puzzle → Raid 8
+    // (Don Finleone) → dons_fall → chapter_4_augment.
+    // lastNodeId GROWS as nodes are built; final = chapter_4_augment.
+    lastNodeId: 'the_reclamation',
   },
 ]
 
@@ -1624,27 +1643,27 @@ export const RAID_MAP: RaidNode[] = [
   {
     id: 'finleone_named',    type: 'story',
     label: 'The Name Above the Counter',
-    flavor: "The Quartermaster's strongbox spills its ledgers, and every page settles a debt up to one signature. A hammerhead don who runs the Coffers and everything that feeds them: Don Finleone.",
+    flavor: "The Quartermaster's strongbox spills its ledgers, and every page settles a debt up to one signature. A megalodon don who runs the Coffers and everything that feeds them: Don Finleone.",
     bridge: "You have the don's name now. Finleone runs the Coffers, the Caches, the whole drowned market. Chapter's end, and the deepest water is the last that's left.",
     requiresNode: 'the_quartermaster',
     image: '/raidlog.png',
     scene: [
       { text: "The Quartermaster's strongbox cracks, and the ledgers spill across the deck." },
       { text: "Every page settles the same way, every debt running up to one signature." },
-      { text: "A hammerhead don who runs the Coffers and every Cache that feeds them." },
+      { text: "A megalodon don who runs the Coffers and every Cache that feeds them." },
       { text: "Don Finleone. The head of the Finndicate, as far as any ledger knows." },
       { text: "Three captains under the water, a market in ruins, and now a name at the top of it." },
       { text: "Whatever waits past the Coffers answers to him. And so, soon, will you." },
     ],
     detail: {
       description:
-        "The Quartermaster's strongbox spills its ledgers, and every page runs up to one signature: Don Finleone, a hammerhead crime-don who runs the Coffers and every Cache that feeds them. As far as any ledger in the market knows, he is the head of the Finndicate. You have the name at the top now, and the only water left to chase him into is the deepest there is.",
+        "The Quartermaster's strongbox spills its ledgers, and every page runs up to one signature: Don Finleone, a megalodon crime-don — vast, ancient — who runs the Coffers and every Cache that feeds them. As far as any ledger in the market knows, he is the head of the Finndicate. You have the name at the top now, and the only water left to chase him into is the deepest there is.",
       drops: [
         { emoji: '📜', label: "Captain's Logbook, Fragment XI", sublabel: "\"Every debt in the market runs up to one name: Finleone. The head of the whole Finndicate.\"", rarity: 'rare' },
       ],
       dropsNote: 'The don at the top of the Coffers, named at last. The chapter closes on his shadow.',
       ctaLabel: 'Read the Ledgers →',
-      summary: "The Quartermaster's ledgers all ran up to one name: Don Finleone, the hammerhead don who runs the Coffers and the whole Finndicate. The chapter closes with the don named and the deep water ahead.",
+      summary: "The Quartermaster's ledgers all ran up to one name: Don Finleone, the megalodon don who runs the Coffers and the whole Finndicate. The chapter closes with the don named and the deep water ahead.",
     },
   },
   {
@@ -1660,6 +1679,54 @@ export const RAID_MAP: RaidNode[] = [
         "You ran the harbor wall, faced the market's fleet, and put the Quartermaster under his own counter. Pick a class for the deep water where Finleone waits. It stays with you for every raid from here on, stacking with the captain you already are.",
       dropsNote: 'Deepen the class you already sail or branch into a fresh one. Permanent, and the other options are gone for good.',
       ctaLabel: 'Pick a class',
+    },
+  },
+  // ── Chapter IV — The Last Fathom (UNDER CONSTRUCTION, all adminOnly) ──────
+  {
+    id: 'throne_heading',   type: 'story',
+    label: 'The Deepest Water',
+    flavor: "The Coffers burn behind you and every ledger points one way: down, past the last sounding on any chart, to the seat Don Finleone rules from. The deepest water there is — and nothing waits past it.",
+    bridge: "The heading is set for the don's own water. And the Quartermaster's seized stock sails with you — a vault of everything he never sold you.",
+    requiresNode: 'chapter_3_class',
+    adminOnly: true,
+    image: '/raidlog.png',
+    scene: [
+      { text: 'The Coffers burn low behind you, and the sea ahead runs out of chart.' },
+      { text: 'Past the last sounding, past the last named reef, the water only goes down.' },
+      { text: 'Every ledger, every debt, every drowned captain pointed the same way.' },
+      { text: 'Don Finleone. The seat he rules from sits in the deepest water there is.' },
+      { text: 'The crew call it the last fathom — the depth past which nothing comes back up.' },
+      { text: 'You set the heading anyway. Nothing waits past this. That is rather the point.' },
+    ],
+    detail: {
+      description:
+        "Past the Coffers there is no more market, no more middlemen, no more names between you and the don. The chase runs out of chart here: Don Finleone's seat lies in the deepest water there is, and the crew have taken to calling it the last fathom — the depth past which nothing comes back up. Set the heading.",
+      drops: [
+        { emoji: '📜', label: "Captain's Logbook, Fragment XII", sublabel: '"Past the last sounding the water only goes down. So that\'s where we go."', rarity: 'rare' },
+      ],
+      dropsNote: 'The final chapter opens. The heading is set for the deepest water.',
+      ctaLabel: 'Set the Heading →',
+      summary: 'The heading is set past the last sounding on any chart — for the deepest water there is, and the don who rules it. The final chapter has begun.',
+    },
+  },
+  {
+    // The Reclamation — the Quartermaster's seized stock. Every either/or
+    // Cache choice from chapters 1-2 (EXCLUSIVE_CHOICE_PAIRS) is re-offered:
+    // the road not taken, for a steep price. Purchases stay available on
+    // revisit; the node clears on first read so it never gates progression.
+    id: 'the_reclamation',   type: 'reclaim',
+    label: 'The Reclamation',
+    flavor: "The Quartermaster's vault, masterless and cracked open. Everything he ever held back from you — every Cache's other half — waits inside, and dead men don't set prices. His executors do.",
+    bridge: "The vault is cracked and the roads not taken are for sale. Whatever you left behind in the Caches can come aboard at last — for a price.",
+    requiresNode: 'throne_heading',
+    adminOnly: true,
+    reclaim: { price: 125_000 },
+    detail: {
+      description:
+        "Every Cache the Quartermaster ever ran made you choose — one item aboard, the other gone for good. Or so he said. His seized stock says otherwise: everything you passed over is here, crated and waiting. His executors will part with each piece for 125,000 doubloons — the road not taken was always for sale, it just cost you.",
+      dropsNote: 'Buy back any Cache item you passed over. Steep, permanent, and it unlocks the forge recipes that needed the road not taken.',
+      ctaLabel: 'Crack the Vault →',
+      summary: "The Quartermaster's seized vault re-offers every Cache choice you passed over, at 125,000 doubloons apiece. The roads not taken are open again.",
     },
   },
   // The Davy Jones Gauntlet used to sit here as a chapter-2 side branch.

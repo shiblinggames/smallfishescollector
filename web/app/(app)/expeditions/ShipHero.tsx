@@ -1679,7 +1679,7 @@ export default function ShipHero({
                                     <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: c.owned ? '#e0dccc' : blockedById.has(c.id) ? '#caa05a' : '#8a8480' }}>{c.def?.name}</span>
                                     {/* Either "out of reach" (took the other Cache option) or where to find it. */}
                                     {!c.owned && blockedById.has(c.id) ? (
-                                      <p className="font-karla" style={{ fontSize: '0.58rem', color: '#caa05a', lineHeight: 1.3, marginTop: 1 }}>Out of reach — you took {getRaidItem(blockedById.get(c.id)!.sibling)?.name ?? 'the other item'} at {blockedById.get(c.id)!.source}.</p>
+                                      <p className="font-karla" style={{ fontSize: '0.58rem', color: '#caa05a', lineHeight: 1.3, marginTop: 1 }}>You took {getRaidItem(blockedById.get(c.id)!.sibling)?.name ?? 'the other item'} at {blockedById.get(c.id)!.source} — reclaimable in Chapter IV.</p>
                                     ) : !c.owned && c.def?.source ? (
                                       <p className="font-karla" style={{ fontSize: '0.58rem', color: '#7a9ec4', lineHeight: 1.3, marginTop: 1 }}>Find it: {c.def.source}</p>
                                     ) : null}
@@ -1694,7 +1694,7 @@ export default function ShipHero({
                             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '0.6rem 0.7rem', borderRadius: 11, background: 'rgba(202,160,90,0.08)', border: '1px solid rgba(202,160,90,0.35)' }}>
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#caa05a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
                               <p className="font-karla" style={{ fontSize: '0.66rem', color: '#d8c39a', lineHeight: 1.4 }}>
-                                Can&rsquo;t be forged — {getRaidItem(blocked[0].id)?.name ?? 'a component'} was a one-time Cache choice and you took {getRaidItem(blocked[0].sibling)?.name ?? 'the other item'} instead. This recipe may open up another way down the road.
+                                Can&rsquo;t be forged yet — {getRaidItem(blocked[0].id)?.name ?? 'a component'} was a one-time Cache choice and you took {getRaidItem(blocked[0].sibling)?.name ?? 'the other item'} instead. The Reclamation (Chapter IV) sells back the roads not taken — reclaim it there to unlock this recipe.
                               </p>
                             </div>
                           ) : !learned ? (

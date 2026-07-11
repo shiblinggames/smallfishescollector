@@ -7,9 +7,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { isCombatNode, chapterForNode, RAID_CHAPTERS, type RaidChapter, type RaidNodeDrop, type RaidNodeView } from '@/lib/raidMap'
 import type { RaidRecords } from './raidMapActions'
 import { RARITY_COLOR, GEM_GLYPH, GEM_COLOR } from '@/lib/bossRaids'
-import { getRaidItem } from '@/lib/raidItems'
+import { getRaidItem, EXCLUSIVE_CHOICE_PAIRS } from '@/lib/raidItems'
 import { getShipSkin } from '@/lib/shipSkins'
-import { claimMilestoneNode, markStoryNodeRead, claimScoutDebt, claimQuartermasterChoice, solvePuzzleNode, pickShipClass, markChapterUnlockSeen, pickRaidEventChoice, pickForkRoute } from './raidMapActions'
+import { claimMilestoneNode, markStoryNodeRead, claimScoutDebt, claimQuartermasterChoice, buyReclaimedItem, solvePuzzleNode, pickShipClass, markChapterUnlockSeen, pickRaidEventChoice, pickForkRoute } from './raidMapActions'
 import { repairShip } from '@/app/(app)/raids/actions'
 import { markUltimateUnlockSeen } from './actions'
 import { ULTIMATE_STORY } from '@/lib/shipAugments'
@@ -38,6 +38,7 @@ const MAIN_ACCENT = '#c4a96a'
 const TYPE_IMAGE: Record<string, string | undefined> = {
   shop:   '/raidshop.png',
   puzzle: '/puzzle.png',
+  reclaim: '/raidshop.png',
 }
 
 /** elapsed_ms → "M:SS" for the Boss Records block. */
@@ -103,6 +104,8 @@ function NodeGlyph({ type, color, size = 22 }: { type: string; color: string; si
   if (type === 'gauntlet') return <svg {...common}><path d="M12 12a2.5 2.5 0 1 0 2.5 2.5M14.5 14.5A4.7 4.7 0 0 1 7 14a6.8 6.8 0 0 1 9.4-6.2A9 9 0 0 1 4.5 18.5" /></svg>
   // shop: market stall
   if (type === 'shop') return <svg {...common}><path d="M3 9l1.5-5h15L21 9M4 9v10a1 1 0 001 1h14a1 1 0 001-1V9M4 9h16M9 13h6" /></svg>
+  // reclaim: a strongbox (the seized vault)
+  if (type === 'reclaim') return <svg {...common}><rect x="3" y="8" width="18" height="12" rx="2" /><path d="M3 12h18M7 8V6a5 5 0 0 1 10 0v2" /><circle cx="12" cy="16" r="1.4" fill={color} stroke="none" /></svg>
   // story: open book
   if (type === 'story') return <svg {...common}><path d="M12 6.5C10.5 5 8 4.5 4 5v13c4-.5 6.5 0 8 1.5 1.5-1.5 4-2 8-1.5V5c-4-.5-6.5 0-8 1.5zM12 6.5V19" /></svg>
   // puzzle: a signal beacon flame (light the chain)
@@ -138,6 +141,7 @@ function nodeTypeLabel(type: string): string {
     case 'event':      return 'Event'
     case 'gauntlet':   return 'Gauntlet'
     case 'fork':       return 'Crossroads'
+    case 'reclaim':    return 'Vault'
     default:           return type
   }
 }
@@ -702,6 +706,7 @@ function NodeDetailSheet({
     ? 'Possible Loot'
     : node.type === 'shop' ? 'Planned Stock'
     : node.type === 'story' ? 'What You Uncover'
+    : node.type === 'reclaim' ? 'Seized Stock'
     : 'Reward'
 
   function claim() {
@@ -765,6 +770,28 @@ function NodeDetailSheet({
       if ('error' in res) { setErr(res.error); return }
       router.refresh()
       onClose()
+    })
+  }
+
+  function buyReclaim(itemId: string) {
+    setErr(null)
+    startTransition(async () => {
+      const res = await buyReclaimedItem(node.id, itemId)
+      if ('error' in res) { setErr(res.error); return }
+      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+      // Stay open — the refreshed ownedRaidItems flips the card to Reclaimed ✓.
+      router.refresh()
+    })
+  }
+
+  // Reclaim's clear — same persistence as a story read, but the sheet STAYS
+  // OPEN so the freshly-cracked vault's stock is right there to browse.
+  function crackVault() {
+    setErr(null)
+    startTransition(async () => {
+      const res = await markStoryNodeRead(node.id)
+      if ('error' in res) { setErr(res.error); return }
+      router.refresh()
     })
   }
 
@@ -905,6 +932,25 @@ function NodeDetailSheet({
           style={{ width: '100%', padding: '0.85rem', borderRadius: 12, fontSize: '1rem', background: `${accent}26`, border: `1px solid ${accent}66`, color: accent, cursor: pending ? 'wait' : 'pointer' }}
         >
           {pending ? '…' : (detail.ctaLabel ?? 'Continue the Story →')}
+        </button>
+      )
+    }
+  } else if (node.type === 'reclaim') {
+    // The purchase cards live in the body (available before AND after the
+    // clear); the CTA only handles the one-time "read" that clears the node.
+    if (cleared) {
+      cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: `${accent}1a`, border: `1px solid ${accent}40`, color: accent }}>Vault Cracked ✓</div>
+    } else if (locked) {
+      cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: 'rgba(255,255,255,0.06)', color: '#5a5856' }}>Locked</div>
+    } else {
+      cta = (
+        <button
+          onClick={crackVault}
+          disabled={pending}
+          className="font-cinzel font-700 uppercase tracking-[0.06em]"
+          style={{ width: '100%', padding: '0.85rem', borderRadius: 12, fontSize: '1rem', background: `${accent}26`, border: `1px solid ${accent}66`, color: accent, cursor: pending ? 'wait' : 'pointer' }}
+        >
+          {pending ? '…' : (detail.ctaLabel ?? 'Crack the Vault →')}
         </button>
       )
     }
@@ -1317,6 +1363,82 @@ function NodeDetailSheet({
             })()}
           </div>
         )}
+
+        {/* The Reclamation: the Quartermaster's seized stock. One card per
+            either/or Cache pair where the player took exactly one side —
+            offering the MISSED sibling for the node's price. Revealed once
+            the vault is cracked (cleared) and stays buyable on every revisit. */}
+        {node.reclaim && cleared && (() => {
+          const price = node.reclaim.price
+          const entries = EXCLUSIVE_CHOICE_PAIRS.map(pair => {
+            const [a, b] = pair.items
+            const ownsA = ownedRaidItems.includes(a)
+            const ownsB = ownedRaidItems.includes(b)
+            if (!ownsA && !ownsB) return null            // choice never made — no debt here
+            const missing = ownsA && ownsB ? null : (ownsA ? b : a)
+            return { source: pair.source, missing, kept: ownsA ? a : b }
+          }).filter((e): e is { source: string; missing: string | null; kept: string } => e !== null)
+          return (
+            <div style={{ marginTop: '1.1rem' }}>
+              <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#7a7875', marginBottom: '0.55rem' }}>
+                The Roads Not Taken
+              </p>
+              {entries.length === 0 ? (
+                <p className="font-karla" style={{ fontSize: '0.74rem', color: 'rgba(240,237,232,0.55)', lineHeight: 1.5 }}>
+                  The vault holds nothing you passed over — you haven&apos;t made a Cache choice yet. Come back once you have.
+                </p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {entries.map(e => {
+                    if (!e.missing) {
+                      return (
+                        <div key={e.source} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.6rem 0.75rem', borderRadius: 10, background: 'rgba(127,212,154,0.06)', border: '1px solid rgba(127,212,154,0.3)' }}>
+                          <span className="font-karla" style={{ flex: 1, minWidth: 0, fontSize: '0.72rem', color: 'rgba(240,237,232,0.7)' }}>Both halves of {e.source} are aboard.</span>
+                          <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.55rem', color: '#7fd49a', flexShrink: 0 }}>Reclaimed ✓</span>
+                        </div>
+                      )
+                    }
+                    const item = getRaidItem(e.missing)
+                    if (!item) return null
+                    const rc = RARITY_COLOR[item.rarity] ?? '#9ca3af'
+                    const canAfford = doubloons >= price
+                    return (
+                      <div key={e.missing} style={{ display: 'flex', flexDirection: 'column', gap: 8, background: 'rgba(255,255,255,0.03)', border: `1px solid ${rc}30`, borderRadius: 10, padding: '0.7rem 0.75rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                          <div style={{ width: 30, height: 30, borderRadius: 7, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${rc}1a`, fontSize: '1rem', overflow: 'hidden' }}>
+                            {item.image
+                              // eslint-disable-next-line @next/next/no-img-element
+                              ? <img src={item.image} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                              : <span>{item.emoji}</span>}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <span className="font-cinzel font-700" style={{ display: 'block', fontSize: '0.84rem', color: '#f0ede8' }}>{item.name}</span>
+                            <span className="font-karla" style={{ fontSize: '0.58rem', color: '#8a8480' }}>Passed over at {e.source}</span>
+                          </div>
+                        </div>
+                        <span className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.62)', lineHeight: 1.45 }}>{item.description}</span>
+                        <button
+                          onClick={() => buyReclaim(e.missing!)}
+                          disabled={pending || !canAfford}
+                          className="font-cinzel font-700 uppercase tracking-[0.06em]"
+                          style={{
+                            marginTop: 2, padding: '0.6rem', borderRadius: 9, fontSize: '0.8rem',
+                            background: canAfford ? `${rc}26` : 'rgba(255,255,255,0.05)',
+                            border: `1px solid ${canAfford ? `${rc}66` : 'rgba(255,255,255,0.12)'}`,
+                            color: canAfford ? rc : '#7a7470',
+                            cursor: pending ? 'wait' : canAfford ? 'pointer' : 'default',
+                          }}
+                        >
+                          {pending ? '…' : canAfford ? `Reclaim · ${price.toLocaleString()} ⟡` : `Need ${(price - doubloons).toLocaleString()} more ⟡`}
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )
+        })()}
 
         {/* Event nodes: branching one-time decision. Renders one card
             per choice with its outcome chip ("+1,200 ⟡" / "+750 Nav
