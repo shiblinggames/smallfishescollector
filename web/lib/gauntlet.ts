@@ -100,11 +100,22 @@ export const HC_SURVIVOR_XP_MULT = 1
 // rerolls + a random-skin gamble. Shown only in the Gauntlet + Recruit Hall.
 export const BLOOD_GEM_MIN_PER_DEPTH = 0.5
 export const BLOOD_GEM_MAX_PER_DEPTH = 0.7
+// Deep-run ramp (2026-07-12): the per-depth rate CLIMBS with depth so a deep
+// Hardcore run pays close to 1 Blood Gem per depth — shallow triple-dipping
+// (3 runs/day) stays at the old ~0.5–0.7 rate, real dives get rewarded.
+// Ramps linearly from BLOOD_GEM_RAMP_START to _END: at 60+ the roll band is
+// ~0.95–1.0/depth (a depth-60 cash-out ≈ 57–60 gems vs the old ~30–42).
+const BLOOD_GEM_RAMP_START = 20
+const BLOOD_GEM_RAMP_END   = 60
+const BLOOD_GEM_DEEP_MIN   = 0.95
+const BLOOD_GEM_DEEP_MAX   = 1.0
 /** Blood Gems earned on a Hardcore cash-out at `depth`. `rand` ∈ [0,1) — pass
- *  Math.random() at the callsite so the amount is a live server roll (~0.5–0.7
- *  per depth). */
+ *  Math.random() at the callsite so the amount is a live server roll. */
 export function bloodGemsForDepth(depth: number, rand: number): number {
-  const per = BLOOD_GEM_MIN_PER_DEPTH + (BLOOD_GEM_MAX_PER_DEPTH - BLOOD_GEM_MIN_PER_DEPTH) * rand
+  const t = Math.max(0, Math.min(1, (depth - BLOOD_GEM_RAMP_START) / (BLOOD_GEM_RAMP_END - BLOOD_GEM_RAMP_START)))
+  const min = BLOOD_GEM_MIN_PER_DEPTH + (BLOOD_GEM_DEEP_MIN - BLOOD_GEM_MIN_PER_DEPTH) * t
+  const max = BLOOD_GEM_MAX_PER_DEPTH + (BLOOD_GEM_DEEP_MAX - BLOOD_GEM_MAX_PER_DEPTH) * t
+  const per = min + (max - min) * rand
   return Math.max(0, Math.round(Math.max(0, depth) * per))
 }
 /** Skin gamble: this many Blood Gems → one random UNOWNED non-legendary skin. */
