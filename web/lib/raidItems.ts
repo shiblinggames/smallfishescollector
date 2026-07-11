@@ -17,6 +17,7 @@ export type RaidEffectType =
   | 'crit_upgrade_chance'   // value = 0-1 chance for a normal HIT to upgrade to a CRITICAL. Stacks with the Keen Cutlass crew effect + any tide crit bonus.
   | 'reload_charge_chance'  // value = 0-1 chance, on each RELOAD, to load a SECOND cannonball (catch the wind). Folds on top of any tide reload proc.
   | 'lifesteal_pct'         // value = 0-1 fraction of the damage you deal that heals your hull (Davy's Blood Cannon). Stacks additively with the Leviathan's Hunger boon's lifesteal.
+  | 'weaken_on_hit'         // value = 0-1 chance, each landed player hit, to WEAKEN the enemy (Ch4 status pipeline: -20% damage dealt for 2 rounds; reapply refreshes).
 
 export interface RaidEffect {
   type: RaidEffectType
@@ -231,6 +232,18 @@ export const RAID_ITEMS: RaidItemDef[] = [
     ],
     source: "The Cartographer's Survey",
     family: 'astrolabe',
+  },
+  {
+    id: 'chain_shot',
+    name: 'Chain-Shot Rack',
+    description: "Landed hits have a 25% chance to tear the enemy's rigging — WEAKENED: it deals 20% less damage for 2 rounds. The Hammerhead's own answer, turned back on the Finndicate.",
+    image: null,  // TODO: /chainshot.png at the art pass
+    emoji: '⛓️',
+    rarity: 'epic',
+    effects: [
+      { type: 'weaken_on_hit', value: 0.25 },
+    ],
+    source: 'The Blockade — The Hammerhead',
   },
   // ── Davy Jones Gauntlet chest cannons ──────────────────────────────────────
   // Two rare chest-only drops + the forged combination. Odds climb up the

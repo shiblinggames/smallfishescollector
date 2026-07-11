@@ -10,8 +10,8 @@
 // gated by `requiresNode` (+ optional Nav level); a cleared combat node
 // stays farmable.
 
-import { CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER, THE_COFFERS_FLEET, THE_QUARTERMASTER, GEM_GLYPH, raidCompletionBonusXp, type RaidLootItem, type BossRaidConfig } from '@/lib/bossRaids'
-import { CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE, THE_CARTOGRAPHER_CHALLENGE, THE_TOLLMASTER_CHALLENGE, THE_COFFERS_FLEET_CHALLENGE, THE_QUARTERMASTER_CHALLENGE } from '@/lib/raidChallenge'
+import { CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER, THE_COFFERS_FLEET, THE_QUARTERMASTER, THE_HAMMERHEAD, GEM_GLYPH, raidCompletionBonusXp, type RaidLootItem, type BossRaidConfig } from '@/lib/bossRaids'
+import { CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE, THE_CARTOGRAPHER_CHALLENGE, THE_TOLLMASTER_CHALLENGE, THE_COFFERS_FLEET_CHALLENGE, THE_QUARTERMASTER_CHALLENGE, THE_HAMMERHEAD_CHALLENGE } from '@/lib/raidChallenge'
 import { getShipSkin } from '@/lib/shipSkins'
 import { getRaidItem } from '@/lib/raidItems'
 
@@ -531,7 +531,7 @@ export const RAID_CHAPTERS: RaidChapter[] = [
     // (The Hammerhead) → crooked_ledger → Tumbler Lock puzzle → Raid 8
     // (Don Finleone) → dons_fall → chapter_4_augment.
     // lastNodeId GROWS as nodes are built; final = chapter_4_augment.
-    lastNodeId: 'throne_locks',
+    lastNodeId: 'the_hammerhead_challenge',
   },
 ]
 
@@ -1796,6 +1796,47 @@ export const RAID_MAP: RaidNode[] = [
         'Three holds of powder crates, and every crate has a marked square it must sit on before the blockade. Crates shove — they never pull — so a crate pushed into a corner stays there. Stow all three holds within the move budget; run out of moves and the hold resets.',
       dropsNote: 'Solving the hold pays Nav XP. The budget resets the room, never the run — read the hold before you shove.',
       ctaLabel: 'Stow the Hold →',
+    },
+  },
+  {
+    // RAID 7 — The Blockade. Introduces the Ch4 suite: baseline enemy shields,
+    // 4-cannonball magazines, and enemy SPECIALS (statuses thrown at you).
+    id: 'the_hammerhead',    type: 'raid',
+    label: 'The Hammerhead',
+    flavor: "Don Finleone's blockade line, and the enforcer who holds it: the Hammerhead. Every hull rides behind a cold-light barrier, every magazine runs four deep, and his crews fight dirtier than any market ever did.",
+    bridge: "The blockade breaks and the Hammerhead goes under it. The way to the don's own water lies open — and his books ride in your hold.",
+    requiresNode: 'throne_locks',
+    requiresNavLevel: 56,
+    adminOnly: true,
+    route: '/raids/hammerhead',
+    raidId: THE_HAMMERHEAD.raidId,
+    image: THE_HAMMERHEAD.enemies.hammerhead.portrait,
+    detail: {
+      description:
+        "The don's escort armada fights like nothing before it. Every hull opens behind a barrier your shots must chew through first; every magazine runs FOUR cannonballs deep, so their fire never falls into a rhythm you can bank on. And his crews throw more than iron: nets that foul your wheel, chain-shot that softens your guns, cracker rounds that spring your seams, and a gag order that silences your crew. The Hammerhead himself rises angrier as he swings — meet the Full Swing with a crew ability, or fold under it.",
+      enemies: ['The Picket', 'The Netter', 'The Chainman', 'The Cracksman', 'The Muzzle', 'The Hammerhead'],
+      drops: lootDrops(THE_HAMMERHEAD.loot),
+      clearReward: clearPayout(THE_HAMMERHEAD),
+      dropsNote: 'One crate per clear, rolled once and scaled by your Fortune. The Chain-Shot Rack is the signature chase — turn their own Weaken back on them. Two stronger Tide events between fights.',
+    },
+  },
+  {
+    id: 'the_hammerhead_challenge',    type: 'raid',
+    label: 'Challenge: The Hammerhead',
+    flavor: "The blockade re-forms, heavier at every post. The Hammerhead does not hold a line twice — he buries it.",
+    requiresNode: 'the_hammerhead',
+    adminOnly: true,
+    route: '/raids/hammerhead/challenge',
+    raidId: THE_HAMMERHEAD_CHALLENGE.raidId,
+    sideBranch: { parentId: 'the_hammerhead' },
+    image: THE_HAMMERHEAD.enemies.hammerhead.portrait,
+    detail: {
+      description:
+        "The blockade again, harder for the breaking. Thicker barriers, deeper clips, the same dirty specials and the same Full Swing — all of it meaner. The chase rewards roll richer.",
+      enemies: ['The Picket', 'The Netter', 'The Chainman', 'The Cracksman', 'The Muzzle', 'The Hammerhead'],
+      drops: lootDrops(THE_HAMMERHEAD_CHALLENGE.loot),
+      clearReward: clearPayout(THE_HAMMERHEAD_CHALLENGE),
+      dropsNote: 'Every kill pays more and the clear bonus is steeper than the normal run.',
     },
   },
   // The Davy Jones Gauntlet used to sit here as a chapter-2 side branch.

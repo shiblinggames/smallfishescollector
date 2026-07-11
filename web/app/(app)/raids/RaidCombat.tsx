@@ -89,6 +89,10 @@ const VOLLEY_COST = MAX_CHARGES
 // magazine (see pickEnemyAction) — holds the shot and braces, so "enemy at MAX
 // charges" stops being a guaranteed incoming fire the player can pre-dodge.
 const FEINT_CHANCE = 0.3
+// Chain-Shot Rack (Ch4 item, weaken_on_hit): the proc's fixed payload — the
+// item's `value` carries only the chance; magnitude/duration are tuned here.
+const CHAIN_SHOT_WEAKEN_PCT = 0.20
+const CHAIN_SHOT_WEAKEN_TURNS = 2
 // Confluence guard-rails: Reaper's Tithe heal per kill is capped to this slice
 // of the PLAYER's max HP (so a big boss doesn't near-full-heal you); Hull
 // Render's per-fight volley ramp bonus caps here (so a long fight can't runaway).
@@ -123,8 +127,8 @@ const BACKDRAFT_FLARE_CHANCE = 0.35
 const BACKDRAFT_FLARE_MULT   = 0.7
 // Drowned Whispers (confuse curse) — action words for the "you called for X but
 // did Y" log line + the on-screen flash.
-const ACTION_NOUN: Record<EnemyAction, string> = { fire: 'a Shot', volley: 'a Volley', mega: 'a Mega', reload: 'a Reload', dodge: 'a Dodge', repair: 'a Repair' }
-const ACTION_PAST: Record<EnemyAction, string> = { fire: 'opened fire', volley: 'loosed a volley', mega: 'unleashed a Mega', reload: 'reloaded', dodge: 'dodged', repair: 'patched the hull' }
+const ACTION_NOUN: Record<EnemyAction, string> = { fire: 'a Shot', volley: 'a Volley', mega: 'a Mega', reload: 'a Reload', dodge: 'a Dodge', repair: 'a Repair', special: 'a Special' }
+const ACTION_PAST: Record<EnemyAction, string> = { fire: 'opened fire', volley: 'loosed a volley', mega: 'unleashed a Mega', reload: 'reloaded', dodge: 'dodged', repair: 'patched the hull', special: 'worked something strange' }
 // Mechanic checks are answered by CREW ABILITIES. The cue names the KIND of
 // answer (category-vague on purpose — working out which crew ability is still
 // the player's job) but is explicit that a crew ability is what clears it.
@@ -163,7 +167,7 @@ const d20 = () => Math.floor(Math.random() * 20) + 1
 // branches if a new pattern shape needs its own tell.
 function enemyBehaviorHint(pattern: EnemyAction[]): string {
   const n = pattern.length || 1
-  const c = { reload: 0, fire: 0, volley: 0, dodge: 0, repair: 0, mega: 0 }
+  const c = { reload: 0, fire: 0, volley: 0, dodge: 0, repair: 0, mega: 0, special: 0 }
   for (const a of pattern) c[a]++
   const aggR    = (c.fire + c.volley) / n
   const dodgeR  = c.dodge / n
@@ -1831,7 +1835,12 @@ export default function RaidCombat({
     //     instead — hold the shot and brace (dodge) — baiting that wasted
     //     dodge. Capped to one feint in a row so a full magazine can't stall
     //     forever; the next max-reload then fires for sure.
-    if ((action === 'fire'   && enemyCharges < 1) ||
+    if (action === 'special' && !enemy.special) {
+      // Pattern slots a special the enemy doesn't carry (authoring slip /
+      // scaled variant without one) — degrade to a reload and advance.
+      action = 'reload'
+      enemyPatternIdxRef.current++
+    } else if ((action === 'fire'   && enemyCharges < 1) ||
         (action === 'volley' && enemyCharges < VOLLEY_COST)) {
       action = 'reload'
     } else if (action === 'reload' && enemyCharges >= enemyMagazine) {
@@ -1876,7 +1885,9 @@ export default function RaidCombat({
     for (let k = 0; k < Math.max(1, count); k++) {
       const raw = pattern[idx % pattern.length]
       let action: EnemyAction = raw
-      if ((raw === 'fire' && charges < 1) || (raw === 'volley' && charges < VOLLEY_COST)) {
+      if (raw === 'special' && !enemy.special) {
+        action = 'reload'; idx++    // mirrors pickEnemyAction's degrade
+      } else if ((raw === 'fire' && charges < 1) || (raw === 'volley' && charges < VOLLEY_COST)) {
         action = 'reload'            // impossible action → reload, slot re-attempted (no advance)
       } else if (raw === 'reload' && charges >= enemyMagazine) {
         action = 'fire'; idx++       // wasted reload → fire (or a feint we can't foresee)
@@ -2251,7 +2262,7 @@ export default function RaidCombat({
           setLastPlayerAction(null)
           refreshed = true
         }
-        const nice = (a: EnemyAction) => a === 'fire' ? 'Fire' : a === 'volley' ? 'Volley' : a === 'reload' ? 'Reload' : a === 'mega' ? 'Mega' : a === 'repair' ? 'Repair' : 'Dodge'
+        const nice = (a: EnemyAction) => a === 'fire' ? 'Fire' : a === 'volley' ? 'Volley' : a === 'reload' ? 'Reload' : a === 'mega' ? 'Mega' : a === 'repair' ? 'Repair' : a === 'special' ? (enemy.special?.name ?? 'Special') : 'Dodge'
         setResolveLog(prev => [...prev, `${crew.name} reads the tide — the enemy will ${moves.map(nice).join(', then ')}.${refreshed ? ' Your dodge is ready again.' : ''}`])
         break
       }
@@ -2988,6 +2999,27 @@ export default function RaidCombat({
           splatText = `+${healed}`
           splatColor = '#4ade80'
         }
+      } else if (action === 'special' && who === 'enemy' && enemy.special) {
+        // Ch4 enemy special — the crew-ability analog. Applies its authored
+        // status (shared pipeline, lib/statuses) to the player or to itself.
+        // Reapplying refreshes duration / keeps the stronger magnitude, per
+        // the pipeline's no-stacking rule.
+        const sp = enemy.special
+        const sid = sp.status as StatusId
+        const def = STATUS_DEFS[sid]
+        if (sp.target === 'player') applyPlayerStatus(sid, sp.magnitude, sp.turns)
+        else applyEnemyStatus(sid, sp.magnitude, sp.turns)
+        const targetWord = sp.target === 'player' ? 'You are' : `The ${enemy.name} is`
+        pushStep({
+          who, action, pHp, eHp, pCharges, eCharges,
+          splatTarget: sp.target === 'player' ? 'player' : 'enemy',
+          splatText: def?.name ?? sp.name,
+          splatColor: def?.color ?? '#c084fc',
+          logLines: [
+            `${sp.name}! ${sp.line}`,
+            `${targetWord} ${def?.name ?? sp.status}${def ? ` — ${def.describe(sp.magnitude)}` : ''} (${sp.turns} turn${sp.turns === 1 ? '' : 's'}).`,
+          ],
+        })
       } else if (action === 'dodge') {
         // Skip the brace line when the dodger went SECOND in the order and
         // the other actor is firing this turn — the dodge outcome is
@@ -3419,6 +3451,13 @@ export default function RaidCombat({
               enemyFreezePendingRef.current = tide.deepFreeze ? 2 : 1
               stepLines.push(tide.deepFreeze ? `Frozen shot! The ${enemy.name} locks in deep ice — its next two turns are frozen.` : `Frozen shot! The ${enemy.name} ices over — its next turn is frozen.`)
               procStatus = 'freeze'
+            }
+            // Chain-Shot Rack (Ch4 status item) — a landed hit can WEAKEN the
+            // enemy through the shared status pipeline. Reapply refreshes.
+            const weakenChance = onHitEffects.filter(e => e.type === 'weaken_on_hit').reduce((a, e) => Math.max(a, e.value), 0)
+            if (weakenChance > 0 && procRoll(weakenChance)) {
+              applyEnemyStatus('weaken', CHAIN_SHOT_WEAKEN_PCT, CHAIN_SHOT_WEAKEN_TURNS)
+              stepLines.push(`Chain-shot! The ${enemy.name}'s rigging tears — Weakened (−${Math.round(CHAIN_SHOT_WEAKEN_PCT * 100)}% damage, ${CHAIN_SHOT_WEAKEN_TURNS} rounds).`)
             }
           }
           // Confluence "Thermal Shock" (Permafrost + Wildfire) — placed AFTER the
@@ -4937,7 +4976,7 @@ export default function RaidCombat({
                 {foreseenMoves.map((a, i) => (
                   <span key={i} style={{ display: 'inline-flex', alignItems: 'center', opacity: i === 0 ? 1 : 0.5 }}>
                     {i > 0 && <span style={{ opacity: 0.6, margin: '0 2px' }}>→</span>}
-                    {a === 'fire' ? 'Fire' : a === 'volley' ? 'Volley' : a === 'reload' ? 'Reload' : a === 'mega' ? 'Mega' : a === 'repair' ? 'Repair' : 'Dodge'}
+                    {a === 'fire' ? 'Fire' : a === 'volley' ? 'Volley' : a === 'reload' ? 'Reload' : a === 'mega' ? 'Mega' : a === 'repair' ? 'Repair' : a === 'special' ? 'Special' : 'Dodge'}
                   </span>
                 ))}
               </span>
@@ -8264,7 +8303,7 @@ function ActionTilesRow({ playerAction, enemyAction, aimResult, firstActor }: {
   firstActor: Actor | null
 }) {
   const labelFor = (a: EnemyAction | null) =>
-    a === 'fire' ? 'Fire' : a === 'volley' ? 'Volley' : a === 'mega' ? 'Mega' : a === 'reload' ? 'Reload' : a === 'dodge' ? 'Dodge' : '—'
+    a === 'fire' ? 'Fire' : a === 'volley' ? 'Volley' : a === 'mega' ? 'Mega' : a === 'reload' ? 'Reload' : a === 'dodge' ? 'Dodge' : a === 'special' ? 'Special' : '—'
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
       <ActionTile label="YOU" action={labelFor(playerAction)} aim={aimResult} first={firstActor === 'player'} color="#4ade80" />

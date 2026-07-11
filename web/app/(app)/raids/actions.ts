@@ -249,7 +249,9 @@ export async function repairShip(): Promise<
 const ITEM_GRANTS: Record<string, { doubloons?: number; gems?: number; shipSkin?: string; raidItem?: string }> = {
   doubloons_300:   { doubloons: 300 },
   doubloons_600:   { doubloons: 600 },
+  doubloons_800:   { doubloons: 800 },
   doubloons_1200:  { doubloons: 1200 },
+  doubloons_1500:  { doubloons: 1500 },
   gems_25:         { gems: 25 },
   gems_50:         { gems: 50 },
   // Legacy "pack" loot ids now pay gems (packs are retired): 100 gems per pack.
@@ -265,6 +267,7 @@ const ITEM_GRANTS: Record<string, { doubloons?: number; gems?: number; shipSkin?
   tollmasters_primer:      { raidItem: 'tollmasters_primer' },
   tell_tale_glass:         { raidItem: 'tell_tale_glass' },
   admirals_eye:            { raidItem: 'admirals_eye' },
+  chain_shot:              { raidItem: 'chain_shot' },
   war_drum:                { raidItem: 'war_drum' },
   thunder_drum:            { raidItem: 'thunder_drum' },
   finndicate_hull:         { shipSkin:  'finndicate_hull' },

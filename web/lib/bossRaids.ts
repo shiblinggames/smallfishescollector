@@ -9,7 +9,24 @@ export const ENEMY_IMG_BASE = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/s
 // 'mega' is a PLAYER-only Man-o-War augment attack (a 4-charge super-volley).
 // Enemy patterns / pickEnemyAction never produce it; it lives in the union so
 // the same resolveTurn handles it for the player.
-export type EnemyAction = 'reload' | 'fire' | 'volley' | 'dodge' | 'repair' | 'mega'
+// 'special' (Ch4): the enemy casts its authored special ability this turn
+// (BroadsideEnemy.special) — the crew-ability analog, applying a STATUS from
+// the shared pipeline (lib/statuses) to the player or to itself. Slot it into
+// the pattern like any other action; enemies without a `special` config treat
+// the slot as a reload (defensive fallback, see pickEnemyAction).
+export type EnemyAction = 'reload' | 'fire' | 'volley' | 'dodge' | 'repair' | 'mega' | 'special'
+
+/** Ch4 enemy special — one authored cast per enemy, slotted into its pattern.
+ *  `status` is a lib/statuses id; `target` 'player' = a debuff thrown at you,
+ *  'self' = a buff it gives itself. `line` is the log/telegraph sentence. */
+export interface EnemySpecial {
+  name: string
+  status: string
+  magnitude: number
+  turns: number
+  target: 'player' | 'self'
+  line: string
+}
 
 /** One boss phase transition (a "false defeat" → rise-again beat). Used by both
  *  `phase2` (single transition) and `phases[]` (multi-phase / final-boss style).
@@ -107,6 +124,8 @@ export interface BroadsideEnemy {
    *  fight shielded for (the Warded-affix machinery, made a first-class stat).
    *  Combines with the Warded affix / Warding curse by MAX, not sum. */
   shieldPct?: number
+  /** Chapter-4 special ability, cast when the pattern hits a 'special' slot. */
+  special?: EnemySpecial
   /** Legacy: real-time action interval. Kept for backwards-compat readouts; no longer drives combat. */
   actionMs: number
   /** Scripted action loop. Cycles in order every turn. */
@@ -1120,6 +1139,146 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
     { speaker: 'player', text: "Then I'll sink you with your own goods. Hold still." },
     { speaker: 'boss', text: "Your goods? Everything you carry was a loan, captain. And I am calling one back." },
     { speaker: 'boss', text: "Let's see how bold you sail once I reach across the counter and take back the piece you leaned on most." },
+  ],
+}
+
+// ─── Raid 7 — "The Blockade" (Chapter IV: The Last Fathom) ───────────────────
+// Don Finleone's escort armada, run by his chief enforcer THE HAMMERHEAD.
+// This raid INTRODUCES the whole Ch4 suite:
+//   · baseline SHIELDS on every enemy (shieldPct, scaling 15%→25% up the roster)
+//   · 4-cannonball MAGAZINES (deeper clips — meaner, less predictable cadences;
+//     volley still costs 3, so they can volley and keep a shot in hand)
+//   · enemy SPECIALS via the shared status pipeline (lib/statuses): each crew
+//     member throws ONE debuff at you; the boss buffs HIMSELF.
+// Audience: post-Ch3, Nav ~55-70. Art = Ch3 hulls as placeholders (bespoke Ch4
+// hulls + portraits land at the polish pass, per the Ch3 playbook).
+export const THE_HAMMERHEAD: BossRaidConfig = {
+  raidId: 'the_hammerhead',
+  enemyAccuracy: 34,
+  raidTitle: 'The Blockade',
+  bossDefeatedText: 'The Hammerhead Defeated',
+  atmosphere: 'overcast',   // placeholder — bespoke Last-Fathom palette at polish
+  enemies: {
+    picket: {
+      // The shield TEACHER: light and fast, nothing but the new barrier to
+      // learn on. Break the plating, then the hull — burn bleeds through,
+      // volleys chew it fastest.
+      id: 'picket', name: 'The Picket', hpBase: 300, minDmg: 20, maxDmg: 34,
+      shipSpeed: 9, actionMs: 3400,
+      magazineSize: 4, shieldPct: 0.15,
+      pattern: ['fire', 'reload', 'dodge', 'fire', 'reload', 'fire', 'dodge', 'reload'],
+      critChance: 0.12,
+      zoneSpeedMult: 2.2,
+      image: '/enemychapter3brigantine.png',
+      portrait: '/enemychapter3brigantine.png',
+    },
+    netter: {
+      // SLOWED debut — weighted nets across your rigging cut your speed, so
+      // you lose turn-order rolls and slip fewer shots while it lasts.
+      id: 'netter', name: 'The Netter', hpBase: 360, minDmg: 22, maxDmg: 36,
+      shipSpeed: 6, actionMs: 3800,
+      magazineSize: 4, shieldPct: 0.18,
+      special: { name: 'Weighted Nets', status: 'slowed', magnitude: 3, turns: 2, target: 'player', line: 'Weighted nets whip across your rigging and drag the wheel dead.' },
+      pattern: ['reload', 'special', 'fire', 'reload', 'volley', 'dodge', 'reload', 'fire'],
+      critChance: 0.10,
+      zoneSpeedMult: 2.4,
+      image: '/enemychapter3brigantine.png',
+      portrait: '/enemychapter3brigantine.png',
+    },
+    chainman: {
+      // WEAKEN debut — chain-shot rips your powder line; your shots hit soft
+      // while it lasts. Drops the Chain-Shot Rack so you can turn it around.
+      id: 'chainman', name: 'The Chainman', hpBase: 380, minDmg: 24, maxDmg: 38,
+      shipSpeed: 7, actionMs: 3600,
+      magazineSize: 4, shieldPct: 0.20,
+      special: { name: 'Chain-Shot', status: 'weaken', magnitude: 0.20, turns: 2, target: 'player', line: 'Chain-shot screams through your powder line and your guns cough where they roared.' },
+      pattern: ['reload', 'fire', 'special', 'reload', 'fire', 'volley', 'dodge', 'reload'],
+      critChance: 0.12,
+      zoneSpeedMult: 2.5,
+      image: '/enemychapter3galleon.png',
+      portrait: '/enemychapter3galleon.png',
+    },
+    cracksman: {
+      // FEEBLE debut — a hull-cracker round springs your seams; everything
+      // hits you harder while it lasts. The kill-window status, used ON you.
+      id: 'cracksman', name: 'The Cracksman', hpBase: 400, minDmg: 24, maxDmg: 40,
+      shipSpeed: 5, actionMs: 4200,
+      magazineSize: 4, shieldPct: 0.20,
+      special: { name: 'Hull-Cracker', status: 'feeble', magnitude: 0.22, turns: 2, target: 'player', line: 'A cracker round springs your seams wide — every blow will find them.' },
+      pattern: ['reload', 'reload', 'special', 'volley', 'reload', 'fire', 'volley', 'dodge'],
+      critChance: 0.10,
+      zoneSpeedMult: 2.6,
+      image: '/enemychapter3galleon.png',
+      portrait: '/enemychapter3galleon.png',
+    },
+    muzzle: {
+      // SILENCE debut — the don's gag order. Your crew abilities lock for two
+      // rounds: the enforcer who makes sure nobody talks.
+      id: 'muzzle', name: 'The Muzzle', hpBase: 420, minDmg: 26, maxDmg: 40,
+      shipSpeed: 8, actionMs: 3600,
+      magazineSize: 4, shieldPct: 0.22,
+      special: { name: 'Gag Order', status: 'silence', magnitude: 1, turns: 2, target: 'player', line: 'The gag order comes down, and your crew go quiet mid-shout.' },
+      pattern: ['reload', 'special', 'fire', 'reload', 'fire', 'volley', 'reload', 'dodge'],
+      critChance: 0.14,
+      zoneSpeedMult: 2.7,
+      image: '/enemychapter3galleon.png',
+      portrait: '/enemychapter3galleon.png',
+    },
+    hammerhead: {
+      // THE HAMMERHEAD — Don's chief enforcer, the muscle at the gate. Fully
+      // shielded, deep clip, and he ENRAGES himself before his heavy swings.
+      // Phase 2 brings the Full Swing mechanic check (answer with a crew
+      // ability or eat 70% of your hull).
+      id: 'hammerhead', name: 'The Hammerhead', hpBase: 700, minDmg: 28, maxDmg: 46,
+      shipSpeed: 8, actionMs: 4000,
+      magazineSize: 4, shieldPct: 0.25,
+      special: { name: 'The Hammer Rises', status: 'enrage', magnitude: 0.25, turns: 2, target: 'self', line: 'The Hammerhead rears back, and the whole line holds its breath.' },
+      pattern: ['reload', 'special', 'fire', 'reload', 'volley', 'dodge', 'fire', 'reload', 'fire'],
+      critChance: 0.14,
+      phases: [
+        { revivePct: 0.80, damageMult: 1.35, badge: 'The Hammer Falls',
+          pattern: ['special', 'fire', 'reload', 'volley', 'fire', 'dodge', 'reload', 'volley'],
+          dialogueLine: "The don said bring him your colours. He never said in one piece.",
+          check: {
+            id: 'full_swing', name: 'The Full Swing', chargeTurns: 2,
+            telegraph: 'The Hammerhead heaves the great maul off his deck and swings it high over your hull.',
+            hint: 'A blow this heavy has to be met with a crew ability — a defensive one that gets something between you and the maul. Your own brace/dodge won’t stop it.',
+            responses: ['brace', 'shield'],
+            counteredLine: 'The maul comes down on your cover and the shock goes wide.',
+            failLine: 'The maul falls true, and your deck folds under it.',
+            consequence: { kind: 'damagePctMaxHp', value: 0.70 },
+          } },
+      ],
+      zoneSpeedMult: 2.1,
+      image: '/enemychapter3man-o-war.png',
+      portrait: '/enemychapter3man-o-war.png',
+    },
+  },
+  sequence: ['picket', 'netter', 'chainman', 'cracksman', 'muzzle'],
+  bossId: 'hammerhead',
+  tides: { slots: [3, 6], maxTier: 2 },
+  loot: [
+    // Signature: the Chain-Shot Rack — the first player-applied STATUS item.
+    { id: 'chain_shot',     label: 'Chain-Shot Rack', image: null, emoji: '⛓️', rarity: 'epic', weight: 16 },
+    { id: 'doubloons_800',  label: '+800 ⟡',   image: '/smallpile.png',  emoji: '🪙',      rarity: 'common',   weight: 30 },
+    { id: 'doubloons_1500', label: '+1,500 ⟡', image: '/dailybonus.png', emoji: '💰',      rarity: 'uncommon', weight: 22 },
+    { id: 'gems_50',        label: '50 Gems',  image: null,              emoji: GEM_GLYPH, rarity: 'rare',     weight: 20 },
+    { id: 'pack_2',         label: '200 Gems', image: null,              emoji: GEM_GLYPH, rarity: 'epic',     weight: 12 },
+  ],
+  killRewards: {
+    picket:     { gold: 170,  xp: 190  },
+    netter:     { gold: 190,  xp: 210  },
+    chainman:   { gold: 210,  xp: 230  },
+    cracksman:  { gold: 230,  xp: 250  },
+    muzzle:     { gold: 260,  xp: 280  },
+    hammerhead: { gold: 1700, xp: 2000 },
+  },
+  preFightDialogue: [
+    { speaker: 'narrator', text: "The blockade line rides the swell ahead — the don's own escort armada, lanterns doused, gunports open. At its centre, a silhouette with a head like a smith's anvil." },
+    { speaker: 'boss', text: "Far enough, captain. The don's water starts where your charts stop." },
+    { speaker: 'player', text: "Then I'm exactly where I mean to be. Move your line." },
+    { speaker: 'boss', text: "The Quartermaster talked too much and kept too little. I keep everything. Including you, when this is done." },
+    { speaker: 'boss', text: "They call me the Hammerhead. You'll work out why the hard way." },
   ],
 }
 
