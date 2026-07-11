@@ -1765,10 +1765,11 @@ export const RAID_MAP: RaidNode[] = [
   {
     // Cargo Shuffle #1 — Sokoban in the powder hold before the Hammerhead's
     // blockade. Three escalating rooms; every grid is validated by
-    // web/verify-cargo.mjs (min moves 26 / 44 / 69 vs budgets 36 / 58 / 90;
-    // hardened 2026-07-11 after playtest read the first set as too easy).
-    // PORTRAIT boards only (cols ≤ 7, grow ROWS) — wider overflows phones.
-    // KEEP THE SCRIPT IN SYNC when editing rooms.
+    // web/verify-cargo.mjs (min moves 22 / 44 / 69 vs budgets 30 / 58 / 90).
+    // Room 1 is additionally ORDER-FREE (either crate can seat first —
+    // solver-proven): the opener must never carry a seal-the-room order trap,
+    // that bite belongs to rooms 2-3. PORTRAIT boards only (cols ≤ 7, grow
+    // ROWS) — wider overflows phones. KEEP THE SCRIPT IN SYNC when editing.
     id: 'throne_locks',      type: 'puzzle',
     label: 'The Powder Hold',
     flavor: "The don's water doesn't forgive a loose hold. Every powder crate stows on its mark before the blockade, or the first broadside does the stowing for you.",
@@ -1781,13 +1782,13 @@ export const RAID_MAP: RaidNode[] = [
       reveal: 'The hold sits trim and the powder is dry.\nPast the next swell: the blockade line, and the Hammerhead who holds it.',
       cargo: {
         rooms: [
-          { moveBudget: 36, grid: [
+          { moveBudget: 30, grid: [
             '######',
-            '#@.  #',
-            '#  # #',
+            '#   @#',
+            '# $. #',
             '#    #',
-            '# $$##',
-            '# .  #',
+            '##$  #',
+            '#  . #',
             '######',
           ]},
           { moveBudget: 58, grid: [

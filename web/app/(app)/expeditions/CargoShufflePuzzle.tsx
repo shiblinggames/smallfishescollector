@@ -55,6 +55,10 @@ export default function CargoShufflePuzzle({ puzzle, onSolved }: { puzzle: RaidC
   // Blocked step (wall / immovable crate) — a rejected swipe used to do
   // NOTHING, which read as dead input. Now the sailor jabs toward the block.
   const [bump, setBump] = useState<{ dr: number; dc: number; key: number } | null>(null)
+  // Deadlock warning — a crate shoved into a corner (off its mark) can never
+  // move again, and without this the room just FEELS unsolvable. Detected on
+  // every push; sticks until Undo/Reset frees it.
+  const [stuck, setStuck] = useState(false)
   const [roomClearFx, setRoomClearFx] = useState(false)
   const solvedRef = useRef(false)
   const swipeRef = useRef<{ x: number; y: number } | null>(null)
@@ -64,10 +68,20 @@ export default function CargoShufflePuzzle({ puzzle, onSolved }: { puzzle: RaidC
   if (roomRef.current !== room) {
     roomRef.current = room
     solvedRef.current = false
+    setStuck(false)
     setSt({ player: parsed.player, crates: parsed.crates, moves: 0, history: [] })
   }
 
   const isSolved = (crates: number[]) => crates.every(k => parsed.plates.has(k))
+
+  // Corner deadlock: a crate off its mark with a wall on a vertical AND a
+  // horizontal side can never be pushed again — the room is dead.
+  const isDeadlocked = (k: number) => {
+    if (parsed.plates.has(k)) return false
+    const r = Math.floor(k / 100), c = k % 100
+    const w = (rr: number, cc: number) => parsed.walls.has(keyOf(rr, cc))
+    return (w(r - 1, c) || w(r + 1, c)) && (w(r, c - 1) || w(r, c + 1))
+  }
 
   function step(dr: number, dc: number) {
     if (solvedRef.current || roomClearFx) return
@@ -88,7 +102,14 @@ export default function CargoShufflePuzzle({ puzzle, onSolved }: { puzzle: RaidC
           return prev
         }
         crates = prev.crates.map(k => (k === nk ? bk : k))
-        vibrate(12)          // crate shoved — a heavier thud than a step
+        if (isDeadlocked(bk)) {
+          // Jammed a crate into a corner — say so, loudly, instead of letting
+          // the player conclude the room is unsolvable.
+          vibrate([0, 30, 40, 30])
+          setStuck(true)
+        } else {
+          vibrate(12)        // crate shoved — a heavier thud than a step
+        }
       } else {
         hapticTap()
       }
@@ -113,7 +134,7 @@ export default function CargoShufflePuzzle({ puzzle, onSolved }: { puzzle: RaidC
         // teaching as Mirror Run: read the room, then commit.
         vibrate([0, 40, 30, 60])
         setBustKey(k => k + 1)
-        setTimeout(() => setSt({ player: parsed.player, crates: parsed.crates, moves: 0, history: [] }), 420)
+        setTimeout(() => { setStuck(false); setSt({ player: parsed.player, crates: parsed.crates, moves: 0, history: [] }) }, 420)
         return next
       }
       return next
@@ -126,6 +147,7 @@ export default function CargoShufflePuzzle({ puzzle, onSolved }: { puzzle: RaidC
     setSt(prev => {
       const last = prev.history[prev.history.length - 1]
       if (!last) return prev
+      setStuck(last.crates.some(isDeadlocked))
       return { player: last.player, crates: last.crates, moves: prev.moves - 1, history: prev.history.slice(0, -1) }
     })
   }
@@ -133,6 +155,7 @@ export default function CargoShufflePuzzle({ puzzle, onSolved }: { puzzle: RaidC
   function reset() {
     if (solvedRef.current || roomClearFx) return
     vibrate(10)
+    setStuck(false)
     setSt({ player: parsed.player, crates: parsed.crates, moves: 0, history: [] })
   }
 
@@ -168,6 +191,18 @@ export default function CargoShufflePuzzle({ puzzle, onSolved }: { puzzle: RaidC
           {movesLeft} move{movesLeft === 1 ? '' : 's'} left
         </p>
       </div>
+
+      {/* Deadlock callout — without this, a cornered crate reads as "the
+          puzzle is unsolvable" instead of "I need to Undo". */}
+      <AnimatePresence>
+        {stuck && (
+          <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            className="font-karla font-700"
+            style={{ fontSize: '0.64rem', color: '#f08a8a', textAlign: 'center', marginBottom: 8 }}>
+            A crate is jammed in a corner — Undo or Reset to free it.
+          </motion.p>
+        )}
+      </AnimatePresence>
 
       {/* The hold. Swipe anywhere on it to step. */}
       <motion.div

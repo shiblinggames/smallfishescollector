@@ -11,13 +11,15 @@
 // PORTRAIT boards only (cols ≤ 7, grow ROWS) — wider boards overflow phone
 // edges; hardened 2026-07-11 after playtest read the first set as too easy.
 const ROOMS = [
-  { name: 'Room 1 — The Manifest', moveBudget: 36, grid: [
+  // Room 1 is the ORDER-FREE opener (either crate can seat first) — never
+  // give the first room a seal-the-room order trap.
+  { name: 'Room 1 — The Manifest', moveBudget: 30, grid: [
     '######',
-    '#@.  #',
-    '#  # #',
+    '#   @#',
+    '# $. #',
     '#    #',
-    '# $$##',
-    '# .  #',
+    '##$  #',
+    '#  . #',
     '######',
   ]},
   { name: 'Room 2 — The Lower Hold', moveBudget: 58, grid: [
