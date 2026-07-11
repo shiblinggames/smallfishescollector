@@ -30,11 +30,20 @@ const GOLD_HULL_DROP_CHANCE = 0.04
 // Hardcore-only drops. Bad Blood Hull (Man-o-War skin) + Davy's Blood Cannon
 // (the first lifesteal raid item) both come ONLY from Hardcore Gauntlet chests.
 const BLOOD_HULL_SKIN_ID = 'bad_blood_hull'
-const BLOOD_HULL_CHEST_TIER = 4        // from the deeper hardcore chests up
-const BLOOD_HULL_DROP_CHANCE = 0.05
+const BLOOD_HULL_CHEST_TIER = 4        // from the deeper hardcore chests up (depth 14+)
 const BLOOD_CANNON_ITEM_ID = 'davys_blood_cannon'
-const BLOOD_CANNON_CHEST_TIER = 3
-const BLOOD_CANNON_DROP_CHANCE = 0.06  // per-chest; a rare chase from the deep-hardcore chests
+const BLOOD_CANNON_CHEST_TIER = 3      // depth 10+
+// Hardcore chase drops SCALE with cash-out depth (2026-07-11, was flat 6%/5%):
+// the deeper you bank, the better the roll. Linear from the anchor points,
+// clamped — cannon 3% @ depth 20 → 15% @ 50+; hull rarer, 2% @ 20 → 10% @ 50+.
+// Below the anchors the floor keeps a shallow qualifying cash-out a lottery
+// ticket, not a farm.
+function bloodCannonDropChance(depth: number): number {
+  return Math.min(0.15, Math.max(0.01, 0.03 + (depth - 20) * 0.004))
+}
+function bloodHullDropChance(depth: number): number {
+  return Math.min(0.10, Math.max(0.005, 0.02 + (depth - 20) * (0.08 / 30)))
+}
 
 /** Record a single gauntlet hit; persists the all-time biggest via greatest()
  *  (bump_gauntlet_hit). Fired per new run-best from GauntletGame (win OR loss),
@@ -485,7 +494,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   // the deeper hardcore chests. Stops dropping once you own it OR have forged it
   // into one of its fusions (mirrors the Grand Cannon).
   const bloodForged = ['bloodletter', 'reavers_cannon'].some(id => ownedItems.includes(id))
-  if (hc && chest.tier >= BLOOD_CANNON_CHEST_TIER && !ownedItems.includes(BLOOD_CANNON_ITEM_ID) && !bloodForged && Math.random() < BLOOD_CANNON_DROP_CHANCE) {
+  if (hc && chest.tier >= BLOOD_CANNON_CHEST_TIER && !ownedItems.includes(BLOOD_CANNON_ITEM_ID) && !bloodForged && Math.random() < bloodCannonDropChance(cd)) {
     droppedItems.push(BLOOD_CANNON_ITEM_ID)
   }
   const newRaidItems = droppedItems.length > 0 ? [...new Set([...ownedItems, ...droppedItems])] : ownedItems
@@ -501,7 +510,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   // Bad Blood Hull — the HARDCORE-only Man-o-War skin, from the deeper hardcore
   // chests. Owned to ship_skins even before the player has the Man-o-War to wear it.
   let droppedHcSkinId: string | null = null
-  if (hc && chest.tier >= BLOOD_HULL_CHEST_TIER && !ownedSkins.includes(BLOOD_HULL_SKIN_ID) && Math.random() < BLOOD_HULL_DROP_CHANCE) {
+  if (hc && chest.tier >= BLOOD_HULL_CHEST_TIER && !ownedSkins.includes(BLOOD_HULL_SKIN_ID) && Math.random() < bloodHullDropChance(cd)) {
     droppedHcSkinId = BLOOD_HULL_SKIN_ID
   }
   // Hardcore Drowned Fleet skins — granted the first time you cash out past a
