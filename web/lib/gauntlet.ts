@@ -570,11 +570,11 @@ export function chestForDepth(depth: number): ChestTier {
 // tier at 0.5–5%). One curve for every chase CANNON (Davy's Hand/Heavy + the
 // hardcore Blood Cannon) and a rarer one for every chase SKIN (Golden Gauntlet
 // Hull + Bad Blood Hull). Each item rolls independently, only while unowned.
-// Cannons: 3% @ depth 20 → 15% @ 50+ (floor 1%). Skins: 2% @ 20 → 10% @ 50+
+// Both cap at 10% @ depth 50+: cannons 3% @ 20 (floor 1%), skins 2% @ 20
 // (floor 0.5%). Shallow cash-outs stay lottery tickets; genuinely deep dives
 // are the real chase.
 export function chestCannonDropChance(depth: number): number {
-  return Math.min(0.15, Math.max(0.01, 0.03 + (depth - 20) * 0.004))
+  return Math.min(0.10, Math.max(0.01, 0.03 + (depth - 20) * (0.07 / 30)))
 }
 export function chestSkinDropChance(depth: number): number {
   return Math.min(0.10, Math.max(0.005, 0.02 + (depth - 20) * (0.08 / 30)))
