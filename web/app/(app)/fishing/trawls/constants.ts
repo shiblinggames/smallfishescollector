@@ -3,8 +3,8 @@
 // can feed both the server actions and the client panel/preview.
 //
 // Model (all locked with design): send ONE crew to passively fish a zone for a
-// 1h hard-locked cycle; collect, then redeploy. Savvy → fishing XP, Fortune →
-// doubloons. Per-slot maxed = 35% of that zone's active xp/hr and 15% of its
+// hard-locked cycle (~1-3h by zone); collect, then redeploy. Savvy → fishing XP,
+// Fortune → doubloons. Per-slot maxed = 35% of that zone's active xp/hr and 15% of its
 // active doubloons/hr; scaled by the crew's stat (floor 0.2, ref 40); each haul
 // rolls a tight ±15%. One trawl per zone; up to 4 concurrent slots gated by
 // BOTH fishing + Nav level.
@@ -32,12 +32,15 @@ export interface TrawlZone {
 // zone's active-fishing unlock (1/15/30/50/75) PLUS a +3 trawl offset — you fish
 // a fresh zone yourself before you can automate it. (The +3 only bites on Deep/
 // Abyss/Ancient; shallows/open are moot since trawl slot 1 needs Fishing 25.)
+// Durations +50% across the board (2026-07-11): the haul is per-cycle, so the
+// longer cycle is a ~33% cut to the effective xp+doubloon RATE without touching
+// the haul size — the second trawl nerf after TRAWL_XP_PCT 40%→35%.
 export const TRAWL_ZONES: TrawlZone[] = [
-  { key: 'shallows',     label: 'Shallows',     minLevel: 4,  activeXpHr: 2_000,  activeDblHr: 1_300, durationMin: 45 },
-  { key: 'open_waters',  label: 'Open Waters',  minLevel: 18, activeXpHr: 5_000,  activeDblHr: 2_100, durationMin: 55 },
-  { key: 'deep',         label: 'Deep',         minLevel: 33, activeXpHr: 11_000, activeDblHr: 2_850, durationMin: 65 },
-  { key: 'abyss',        label: 'Abyss',        minLevel: 53, activeXpHr: 19_000, activeDblHr: 5_800, durationMin: 78 },
-  { key: 'ancient_deep', label: 'Ancient Deep', minLevel: 78, activeXpHr: 42_000, activeDblHr: 5_400, durationMin: 120 },
+  { key: 'shallows',     label: 'Shallows',     minLevel: 4,  activeXpHr: 2_000,  activeDblHr: 1_300, durationMin: 68 },
+  { key: 'open_waters',  label: 'Open Waters',  minLevel: 18, activeXpHr: 5_000,  activeDblHr: 2_100, durationMin: 83 },
+  { key: 'deep',         label: 'Deep',         minLevel: 33, activeXpHr: 11_000, activeDblHr: 2_850, durationMin: 98 },
+  { key: 'abyss',        label: 'Abyss',        minLevel: 53, activeXpHr: 19_000, activeDblHr: 5_800, durationMin: 117 },
+  { key: 'ancient_deep', label: 'Ancient Deep', minLevel: 78, activeXpHr: 42_000, activeDblHr: 5_400, durationMin: 180 },
 ]
 
 export const TRAWL_ZONE_BY_KEY: Record<TrawlZoneKey, TrawlZone> =
@@ -204,7 +207,7 @@ export function pickTrawlEvent(tier: BumperTier, rng: () => number = Math.random
   return pool[Math.floor(rng() * pool.length)] ?? ''
 }
 
-/** Expected (mean) haul for a 1h cycle — used for the panel preview (no bumper). */
+/** Expected (mean) haul for one cycle — used for the panel preview (no bumper). */
 export function expectedTrawlHaul(zoneKey: TrawlZoneKey, savvy: number, fortune: number): { xp: number; doubloons: number } {
   const z = TRAWL_ZONE_BY_KEY[zoneKey]
   return {
