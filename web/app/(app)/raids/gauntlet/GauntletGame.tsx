@@ -2296,9 +2296,25 @@ export default function GauntletGame(props: GauntletGameProps) {
         <AnimatePresence>
           {boonFlash > 0 && boonBanner && (
             <motion.div key={boonFlash} aria-hidden initial={{ opacity: 0.5 }} animate={{ opacity: 0 }} transition={{ duration: 0.6, ease: 'easeOut' }}
-              style={{ position: 'fixed', inset: 0, zIndex: 58, pointerEvents: 'none', background: 'radial-gradient(circle at 50% 46%, rgba(245,185,74,0.4) 0%, rgba(245,185,74,0.12) 40%, transparent 72%)' }} />
+              style={{ position: 'fixed', inset: 0, zIndex: 58, pointerEvents: 'none', background: boonFromShrine
+                ? 'radial-gradient(circle at 50% 46%, rgba(220,50,60,0.4) 0%, rgba(220,50,60,0.12) 40%, transparent 72%)'
+                : 'radial-gradient(circle at 50% 46%, rgba(245,185,74,0.4) 0%, rgba(245,185,74,0.12) 40%, transparent 72%)' }} />
           )}
         </AnimatePresence>
+        {/* Blood Price draft — the whole room goes crimson: a shrine draft was
+            PAID FOR in hull, and it should never read like a free depth gift.
+            Static plain-gradient wash (no blend modes — perf audit rule). */}
+        {boonFromShrine && (
+          <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none',
+              background: [
+                'radial-gradient(ellipse 120% 46% at 50% -6%, rgba(170,24,34,0.34) 0%, transparent 62%)',
+                'radial-gradient(ellipse 130% 60% at 50% 108%, rgba(120,12,22,0.4) 0%, transparent 60%)',
+                'linear-gradient(180deg, rgba(60,8,14,0.18), rgba(30,4,8,0.22))',
+              ].join(', '),
+            }} />
+        )}
         {/* Legendary banner — the only "stop the room" beat left, reserved for the
             rarest pull (mirrors the Crew Hall legendary reveal). */}
         <AnimatePresence>
@@ -2318,18 +2334,30 @@ export default function GauntletGame(props: GauntletGameProps) {
           paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
         }}>
           <motion.p initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
-            className="font-karla font-800 uppercase" style={{ fontSize: '0.72rem', letterSpacing: '0.36em', color: TEAL, marginTop: 10, textShadow: `0 0 16px ${TEAL}66` }}>
+            className="font-karla font-800 uppercase" style={{ fontSize: '0.72rem', letterSpacing: '0.36em', color: boonFromShrine ? '#f87171' : TEAL, marginTop: 10, textShadow: boonFromShrine ? '0 0 16px rgba(239,68,68,0.5)' : `0 0 16px ${TEAL}66` }}>
             {boonFromShrine ? 'Paid in Blood' : 'Plunder of the Deep'}
           </motion.p>
           <motion.h1 initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: 'spring', stiffness: 240, damping: 17 }}
-            className="font-cinzel font-800" style={{ fontSize: 'clamp(1.6rem, 8vw, 2.2rem)', whiteSpace: 'nowrap', color: '#eafffb', lineHeight: 1.04, marginTop: 9, textShadow: `0 0 32px ${TEAL}55` }}>
+            className="font-cinzel font-800" style={{ fontSize: 'clamp(1.6rem, 8vw, 2.2rem)', whiteSpace: 'nowrap', color: boonFromShrine ? '#ffe9e9' : '#eafffb', lineHeight: 1.04, marginTop: 9, textShadow: boonFromShrine ? '0 0 32px rgba(220,50,60,0.55)' : `0 0 32px ${TEAL}55` }}>
             {boonFromShrine ? 'A Power Surfaces' : 'Choose a Power'}
           </motion.h1>
-          <p className="font-karla font-600" style={{ fontSize: '0.95rem', color: '#b6c7c2', marginTop: 9, marginBottom: 20, lineHeight: 1.4 }}>
+          <p className="font-karla font-600" style={{ fontSize: '0.95rem', color: boonFromShrine ? '#d3b0b0' : '#b6c7c2', marginTop: 9, marginBottom: boonFromShrine ? 10 : 20, lineHeight: 1.4 }}>
             {boonFromShrine
               ? 'The stone drank your blood and gave this up in return. Take one.'
               : 'Three powers surface. One is yours for the rest of the dive.'}
           </p>
+          {/* Blood-drop divider — the offering mark under the header (drawn, no
+              emoji), so the shrine draft reads as a rite even at a glance. */}
+          {boonFromShrine && (
+            <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 18 }}>
+              <span style={{ width: 54, height: 1, background: 'linear-gradient(90deg, transparent, rgba(239,68,68,0.55))' }} />
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="rgba(239,68,68,0.85)" aria-hidden>
+                <path d="M12 2.5s5.6 6.3 5.6 10.4a5.6 5.6 0 0 1-11.2 0C6.4 8.8 12 2.5 12 2.5z" />
+              </svg>
+              <span style={{ width: 54, height: 1, background: 'linear-gradient(90deg, rgba(239,68,68,0.55), transparent)' }} />
+            </motion.div>
+          )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {pendingBoons.slice(0, pendingConfluence ? 2 : 3).map((b, idx) => {
