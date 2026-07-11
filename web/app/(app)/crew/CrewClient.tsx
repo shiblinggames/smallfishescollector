@@ -58,14 +58,14 @@ const SECTION_ROSTER = '#6fa8c9'  // cool steel "your manifest"
 
 // Panel tones: warm brown wood for the board, cool slate for your own crew, so
 // the two are obviously different at a glance.
-// Card panels were tinted warm-brown (recruits) and cool-slate (roster) to
-// distinguish the two regions, but with class chips, assignment pips, and
-// rarity-bordered portraits all carrying color now, the panel tints were
-// adding noise without adding signal. Both panels go neutral charcoal so
-// the colored elements pop against a calm backdrop. Same gradient shape so
-// the card silhouette doesn't change.
-const PANEL_BG     = 'linear-gradient(157deg, #1c1c1e 0%, #0d0d0f 100%)'
-const PANEL_BORDER = '#2e2e32'
+// Card panels were tinted warm-brown (recruits) and cool-slate (roster),
+// then flattened to neutral charcoal so the colored elements could pop.
+// 2026-07 warmth pass: the charcoal read as an app dashboard, so the panels
+// shift to a QUIET dark timber — same calm-backdrop property (colored chips
+// still pop; this is far more muted than the badges-page brown), but the
+// temperature is the ship's, not a settings screen's.
+const PANEL_BG     = 'linear-gradient(157deg, #201a10 0%, #100c07 100%)'
+const PANEL_BORDER = '#3a3122'
 // Aliases kept so existing prop default + detail-modal references compile
 // unchanged. Both point at the same neutral now.
 const RECRUIT_PANEL_BG = PANEL_BG

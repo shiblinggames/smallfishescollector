@@ -68,7 +68,7 @@ function rodTagline(r: typeof RODS[number]): string {
 
 function Pill({ label, color, muted }: { label: string; color?: string; muted?: boolean }) {
   if (muted) return (
-    <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#4a4845', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', padding: '0.12rem 0.45rem', borderRadius: '2rem' }}>{label}</span>
+    <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#4a4845', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(196,169,106,0.2)', padding: '0.12rem 0.45rem', borderRadius: '2rem' }}>{label}</span>
   )
   return (
     <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: `${color}cc`, background: `${color}14`, border: `1px solid ${color}30`, padding: '0.12rem 0.45rem', borderRadius: '2rem' }}>{label}</span>
@@ -241,13 +241,21 @@ function rodStatDeltas(current: typeof RODS[number], next: typeof RODS[number]):
 // laid out on a single line so 5-6 changing stats fit without scrolling.
 function StatDeltaRow({ row, color }: { row: RodStatDelta; color: string }) {
   const deltaColor = row.delta === 'up' ? '#4ade80' : row.delta === 'down' ? '#f87171' : '#a8a39a'
-  const arrow      = row.delta === 'up' ? '▲' : row.delta === 'down' ? '▼' : '·'
+  // Drawn chevron, not ▲▼ text glyphs — the old arrows read as a spreadsheet
+  // diff; a small stroked chevron reads as the needle of a gauge moving.
+  const arrow = row.delta === 'same'
+    ? <span aria-hidden style={{ width: 11, textAlign: 'center', color: deltaColor }}>·</span>
+    : (
+      <svg aria-hidden width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={deltaColor} strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+        {row.delta === 'up' ? <path d="M5 15l7-7 7 7" /> : <path d="M5 9l7 7 7-7" />}
+      </svg>
+    )
   return (
     <div style={{
       display: 'grid', gridTemplateColumns: '1fr auto 1fr auto',
       alignItems: 'center', gap: 10,
       padding: '0.55rem 0.7rem',
-      background: 'rgba(0,0,0,0.32)',
+      background: 'rgba(24,17,8,0.55)',
       border: `1px solid ${color}1f`,
       borderRadius: 9,
     }}>
@@ -268,9 +276,7 @@ function StatDeltaRow({ row, color }: { row: RodStatDelta; color: string }) {
           {row.nextLabel}
         </p>
       </div>
-      <span aria-hidden style={{ color: deltaColor, fontSize: '0.75rem', fontWeight: 700, lineHeight: 1 }}>
-        {arrow}
-      </span>
+      {arrow}
     </div>
   )
 }
@@ -485,7 +491,7 @@ function GearSlot({
         position: 'relative',
         width: '100%',
         border: `1px solid ${color}40`,
-        background: 'rgba(4,10,20,0.75)',
+        background: 'linear-gradient(180deg, rgba(34,26,12,0.68), rgba(18,13,7,0.8))',
         borderRadius: 20,
         padding: small ? '0.55rem 0.4rem' : '0.65rem 0.5rem',
         cursor: 'pointer',
@@ -566,7 +572,7 @@ function AppearanceSlot({
         position: 'relative',
         width: '100%', height: '100%',
         border: `1px solid ${accent}40`,
-        background: 'rgba(4,10,20,0.75)',
+        background: 'linear-gradient(180deg, rgba(34,26,12,0.68), rgba(18,13,7,0.8))',
         borderRadius: 20,
         padding: '0.6rem 0.5rem 0.55rem',
         cursor: 'pointer',
@@ -1021,10 +1027,15 @@ export default function GearScreen({
       <ShopLink href="/marketplace/tackle-shop" label="Tackle Shop" sub="Bait · hooks · rods · reels · line" color="#f0c040" onClick={onClose} />
 
       {/* ── Loadout stats ── */}
-      <div style={{ background: 'rgba(4,10,20,0.75)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '0.9rem' }}>
-        <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.5)', marginBottom: 8 }}>
-          Loadout Stats
-        </p>
+      <div style={{ background: 'linear-gradient(180deg, rgba(34,26,12,0.68), rgba(18,13,7,0.8))', border: '1px solid rgba(196,169,106,0.2)', borderRadius: 20, padding: '0.9rem' }}>
+        <div style={{ marginBottom: 8 }}>
+          <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#c4a96a', letterSpacing: '0.04em' }}>
+            Loadout Stats
+          </p>
+          <p className="font-karla" style={{ fontSize: '0.7rem', color: 'rgba(230,215,180,0.48)', fontStyle: 'italic', marginTop: 2 }}>
+            What your rig adds up to, piece by piece.
+          </p>
+        </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
           <StatCell
             label="Catch Zone"
@@ -1071,8 +1082,8 @@ export default function GearScreen({
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
           width: '100%',
-          background: 'rgba(4,10,20,0.75)',
-          border: '1px solid rgba(255,255,255,0.08)',
+          background: 'linear-gradient(180deg, rgba(34,26,12,0.68), rgba(18,13,7,0.8))',
+          border: '1px solid rgba(196,169,106,0.2)',
           borderRadius: 20,
           padding: '0.85rem 0.95rem',
           cursor: 'pointer', textAlign: 'left',
@@ -1330,7 +1341,7 @@ export default function GearScreen({
                                     padding: '0.5rem 0.6rem', borderRadius: 9,
                                     textAlign: 'left', width: '100%',
                                     cursor: full ? 'default' : 'pointer',
-                                    border: '1px solid rgba(255,255,255,0.08)',
+                                    border: '1px solid rgba(196,169,106,0.2)',
                                     boxShadow: selected ? `0 0 12px ${fr.color}33` : 'none',
                                   }}
                                 >

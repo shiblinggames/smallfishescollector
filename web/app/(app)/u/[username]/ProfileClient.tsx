@@ -84,13 +84,20 @@ interface Props {
 // SectionLabel, and the identity LevelChip so the public page reads identically.
 const CARD_RADIUS = 18
 
-function SectionLabel({ children, color = '#f0c040' }: { children: React.ReactNode; color?: string }) {
+// Chart-rule section header (badges-page treatment, 2026-07 warmth pass):
+// a Cinzel title on a fading rule + optional ship's-voice flavor line.
+function SectionLabel({ children, color = '#f0c040', flavor }: { children: React.ReactNode; color?: string; flavor?: string }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-      <span aria-hidden style={{ width: 3, height: 13, borderRadius: 2, flexShrink: 0, background: `linear-gradient(180deg, ${color} 0%, ${color}26 100%)` }} />
-      <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.72rem', color: '#d8d4cd' }}>
-        {children}
-      </p>
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color, letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>
+          {children}
+        </p>
+        <span aria-hidden style={{ flex: 1, height: 1, background: `linear-gradient(90deg, ${color}55, transparent)` }} />
+      </div>
+      {flavor && (
+        <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(230,215,180,0.48)', fontStyle: 'italic', marginTop: 3 }}>{flavor}</p>
+      )}
     </div>
   )
 }
@@ -227,7 +234,7 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
       </div>
 
       {/* ── Fishing / Navigation tabs — pill segmented control ── */}
-      <div style={{ display: 'flex', gap: 5, padding: 5, margin: '0 auto 22px', maxWidth: 540, width: '100%', background: 'rgba(8,14,24,0.6)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 999 }}>
+      <div style={{ display: 'flex', gap: 5, padding: 5, margin: '0 auto 22px', maxWidth: 540, width: '100%', background: 'rgba(8,14,24,0.6)', border: '1px solid rgba(196,169,106,0.2)', borderRadius: 999 }}>
         {([['fishing', 'Fishing'], ['navigation', 'Navigation']] as const).map(([id, label]) => {
           const on = profileTab === id
           return (
@@ -258,7 +265,7 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
 
           {/* Headline career stats */}
           <div>
-            <SectionLabel color="#60a5fa">Career</SectionLabel>
+            <SectionLabel color="#60a5fa" flavor="What the logbook keeps on this captain, cast for cast.">Career</SectionLabel>
             <div style={{ display: 'flex', gap: 8 }}>
               <StatTile label="Lines Cast" value={career.fishingCasts.toLocaleString()} color="#60a5fa" />
               <StatTile label="Perfects" value={career.perfects.toLocaleString()} color="#fde68a" />
@@ -435,7 +442,7 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
 
           {/* Headline career stats */}
           <div>
-            <SectionLabel color="#c084fc">Career</SectionLabel>
+            <SectionLabel color="#c084fc" flavor="Broadsides answered, holds hauled home.">Career</SectionLabel>
             <div style={{ display: 'flex', gap: 8 }}>
               <StatTile label="Raids Won" value={career.raidsCompleted.toLocaleString()} color="#f87171" />
               <StatTile label="Voyage Loot" value={`${career.voyageLoot.toLocaleString()} ⟡`} color="#f0c040" />
@@ -526,8 +533,8 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
                     <div
                       key={v.id}
                       style={{
-                        background: 'rgba(4,10,20,0.7)',
-                        border: '1px solid rgba(255,255,255,0.08)',
+                        background: 'linear-gradient(180deg, rgba(34,26,12,0.6), rgba(18,13,7,0.72))',
+                        border: '1px solid rgba(196,169,106,0.2)',
                         borderRadius: 12, overflow: 'hidden',
                       }}
                     >
@@ -583,7 +590,7 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
 
                       {isExpanded && !v.captains_log && (
                         <div style={{ padding: '0.5rem 1rem 1rem', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
-                          <p className="font-karla" style={{ fontSize: '0.7rem', fontStyle: 'italic', color: '#bbb5ad' }}>Log not yet written.</p>
+                          <p className="font-karla" style={{ fontSize: '0.7rem', fontStyle: 'italic', color: '#bbb5ad' }}>This voyage's log went unwritten. Some crossings a captain keeps to himself.</p>
                         </div>
                       )}
                     </div>

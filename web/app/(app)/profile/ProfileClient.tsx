@@ -98,13 +98,21 @@ function cardTransform(off: number): { tx: number; tz: number; ry: number; scale
 // instead of a stack of ad-hoc boxes (radii used to jump 12/14/16/20).
 const CARD_RADIUS = 18
 
-function SectionLabel({ children, color = '#f0c040' }: { children: React.ReactNode; color?: string }) {
+// Chart-rule section header (badges-page treatment, 2026-07 warmth pass):
+// a Cinzel title sitting on a rule that fades out, with an optional line of
+// ship's-voice flavor beneath — replaces the old stripe + uppercase sans.
+function SectionLabel({ children, color = '#f0c040', flavor }: { children: React.ReactNode; color?: string; flavor?: string }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-      <span aria-hidden style={{ width: 3, height: 13, borderRadius: 2, flexShrink: 0, background: `linear-gradient(180deg, ${color} 0%, ${color}26 100%)` }} />
-      <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.72rem', color: '#d8d4cd' }}>
-        {children}
-      </p>
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color, letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>
+          {children}
+        </p>
+        <span aria-hidden style={{ flex: 1, height: 1, background: `linear-gradient(90deg, ${color}55, transparent)` }} />
+      </div>
+      {flavor && (
+        <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(230,215,180,0.48)', fontStyle: 'italic', marginTop: 3 }}>{flavor}</p>
+      )}
     </div>
   )
 }
@@ -565,7 +573,7 @@ export default function ProfileClient({
 
           {/* Headline career stats */}
           <div>
-            <SectionLabel color="#60a5fa">Career</SectionLabel>
+            <SectionLabel color="#60a5fa" flavor="What the logbook keeps on you, cast for cast.">Career</SectionLabel>
             <div style={{ display: 'flex', gap: 8 }}>
               <StatTile label="Lines Cast" value={career.fishingCasts.toLocaleString()} color="#60a5fa" />
               <StatTile label="Perfects" value={career.perfects.toLocaleString()} color="#fde68a" />
@@ -966,7 +974,7 @@ export default function ProfileClient({
 
           {/* Headline career stats */}
           <div>
-            <SectionLabel color="#c084fc">Career</SectionLabel>
+            <SectionLabel color="#c084fc" flavor="Broadsides answered, holds hauled home.">Career</SectionLabel>
             <div style={{ display: 'flex', gap: 8 }}>
               <StatTile label="Raids Won" value={career.raidsCompleted.toLocaleString()} color="#f87171" />
               <StatTile label="Voyage Loot" value={`${career.voyageLoot.toLocaleString()} ⟡`} color="#f0c040" />
