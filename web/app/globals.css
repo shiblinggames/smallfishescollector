@@ -965,7 +965,8 @@ body.hardcore-gauntlet::after {
       rgba(220,235,255,0.35) 35%,
       rgba(200,180,255,0.18) 65%,
       transparent 88%);
-  filter: blur(3px);
+  /* No blur (2026-07-11 perf audit): a blurred layer that scales every frame
+     re-rasterizes per frame; the radial falloff is already soft. */
   pointer-events: none;
   animation: boat-glow-halo 3.2s ease-in-out infinite;
 }
@@ -1082,7 +1083,9 @@ body.hardcore-gauntlet::after {
   background: conic-gradient(from 0deg,
     rgba(52,211,153,0.85), rgba(34,211,238,0.80), rgba(59,130,246,0.75),
     rgba(139,92,246,0.85), rgba(236,72,153,0.80), rgba(52,211,153,0.85));
-  filter: blur(5px);
+  /* No blur (2026-07-11 perf audit): blur + infinite rotate re-rasterizes per
+     frame, and this layer rides the Nav avatar on EVERY page. The continuous
+     hue conic is smooth without it. */
   animation: avatar-bg-aurora-spin 18s linear infinite;
   pointer-events: none;
 }
@@ -1108,7 +1111,7 @@ body.hardcore-gauntlet::after {
     rgba(255, 248, 200, 0.45), rgba(255, 248, 200, 0) 50%,
     rgba(255, 248, 200, 0.55), rgba(255, 248, 200, 0) 78%,
     rgba(255, 248, 200, 0.55));
-  filter: blur(4px);
+  /* No blur — see the aurora note (perf audit 2026-07-11). */
   animation: avatar-bg-treasure-spin 14s linear infinite;
   pointer-events: none;
 }
@@ -1136,7 +1139,7 @@ body.hardcore-gauntlet::after {
     rgba(226,232,240,0.55), rgba(255,255,255,0) 44%,
     rgba(255,255,255,0.95), rgba(255,255,255,0) 70%,
     rgba(255,255,255,0.85));
-  filter: blur(4px);
+  /* No blur — see the aurora note (perf audit 2026-07-11). */
   animation: avatar-bg-silver-spin 13s linear infinite;
   pointer-events: none;
 }
@@ -1198,14 +1201,12 @@ body.hardcore-gauntlet::after {
    skin via the --chase-c custom property, so one keyframe serves every chase
    skin (Kraken Hunter, Hunter's Bane, Prismatic, Tempest, …). Applied to the
    ART element itself, wherever a chase skin is shown. */
-@keyframes chase-skin-glow {
-  0%, 100% { filter: drop-shadow(0 0 4px var(--chase-c)) drop-shadow(0 0 11px var(--chase-c)); }
-  50%      { filter: drop-shadow(0 0 8px var(--chase-c)) drop-shadow(0 0 24px var(--chase-c)) brightness(1.07); }
-}
-.chase-skin-glow { animation: chase-skin-glow 2.4s ease-in-out infinite; }
-@media (prefers-reduced-motion: reduce) {
-  .chase-skin-glow { animation: none; filter: drop-shadow(0 0 6px var(--chase-c)) drop-shadow(0 0 15px var(--chase-c)); }
-}
+/* STATIC glow (2026-07-11 perf audit): the old keyframe interpolated the
+   drop-shadow chain every frame forever — an animated filter re-rasterizes
+   the art element per frame, on every roster card at once. A constant filter
+   rasterizes ONCE and stays cached; the "living" feel now comes from each
+   skin's signature FX overlay (ChaseSkinFx), which animates cheap layers. */
+.chase-skin-glow { filter: drop-shadow(0 0 6px var(--chase-c)) drop-shadow(0 0 15px var(--chase-c)); }
 
 /* ── Per-chase-skin SIGNATURE effects, played ON the crew art (ambient loop on
    every card surface + a bolder pass during the raid summon). Each chase skin
@@ -1224,8 +1225,16 @@ body.hardcore-gauntlet::after {
   10% { opacity: 0.08; }
   14% { opacity: 0; }
 }
-/* Kraken Hunter (Dole) — the abyss: rising bubbles + drifting caustic light. */
-@keyframes chase-bubble-rise { 0% { top: 108%; opacity: 0; } 12% { opacity: 0.9; } 88% { opacity: 0.45; } 100% { top: -12%; opacity: 0; } }
+/* Kraken Hunter (Dole) — the abyss: rising bubbles + drifting caustic light.
+   Bubbles rise via TRANSFORM, never `top` — animating a layout property on
+   10-16 elements per card, forever, is main-thread work every frame (the
+   Tidecaller-lag audit, 2026-07-11). Px fallback first; the @supports block
+   redefines it in container-height units (the .chase-skin-fx wrap is a size
+   container) so travel still spans the art box exactly on modern engines. */
+@keyframes chase-bubble-rise { 0% { transform: translateY(0); opacity: 0; } 12% { opacity: 0.9; } 88% { opacity: 0.45; } 100% { transform: translateY(-420px); opacity: 0; } }
+@supports (height: 100cqh) {
+  @keyframes chase-bubble-rise { 0% { transform: translateY(0); opacity: 0; } 12% { opacity: 0.9; } 88% { opacity: 0.45; } 100% { transform: translateY(-120cqh); opacity: 0; } }
+}
 @keyframes chase-caustic {
   0%, 100% { opacity: 0.1; transform: translate(-4%, 0) scale(1); }
   50% { opacity: 0.26; transform: translate(4%, 3%) scale(1.16); }
@@ -1282,15 +1291,13 @@ body.hardcore-gauntlet::after {
   from { transform: translateX(110%); }
   to   { transform: translateX(-240%); }
 }
-/* Sun: subtle breathing glow. */
-@keyframes raid-sun-pulse {
-  0%, 100% { filter: drop-shadow(0 0 18px rgba(255,220,160,0.55)) drop-shadow(0 0 36px rgba(255,200,120,0.25)); }
-  50%      { filter: drop-shadow(0 0 28px rgba(255,225,170,0.70)) drop-shadow(0 0 52px rgba(255,210,130,0.38)); }
-}
+/* Sun: STATIC glow (2026-07-11 perf audit) — the old breathing pulse
+   interpolated drop-shadows every frame for the whole fight; a constant
+   filter rasterizes once. The breathing was near-invisible anyway. */
 .raid-cloud-slow { animation: raid-cloud-drift-slow 60s linear infinite; }
 .raid-cloud-mid  { animation: raid-cloud-drift-mid  45s linear infinite; }
 .raid-cloud-fast { animation: raid-cloud-drift-fast 32s linear infinite; }
-.raid-sun        { animation: raid-sun-pulse 5.5s ease-in-out infinite; }
+.raid-sun        { filter: drop-shadow(0 0 22px rgba(255,220,160,0.62)) drop-shadow(0 0 44px rgba(255,205,125,0.30)); }
 
 /* Fog bands for the Cartographer raid backdrop. Drift sideways slowly
    with alternating direction so the seams never read as a hard reset.
@@ -1603,7 +1610,9 @@ body.hardcore-gauntlet::after {
     rgba(255,252,230,0.55) 65%,
     transparent
   );
-  mix-blend-mode: screen;
+  /* No blend mode (2026-07-11 perf audit): a screen-blended layer that
+     TRANSLATES forever recomposites the card every frame. The bright
+     gradient alone still reads as a light shaft. */
   animation: divineShaft 9s ease-in-out infinite;
   pointer-events: none;
 }
@@ -1619,7 +1628,6 @@ body.hardcore-gauntlet::after {
     rgba(255,248,200,0.4) 65%,
     transparent
   );
-  mix-blend-mode: screen;
   animation: divineShaft2 9s 3.5s ease-in-out infinite;
   pointer-events: none;
 }
@@ -1859,7 +1867,8 @@ body.hardcore-gauntlet::after {
   pointer-events: none;
   background: radial-gradient(ellipse 120% 55% at 50% 28%,
     rgba(168,85,247,0.30) 0%, rgba(124,58,237,0.14) 40%, transparent 72%);
-  mix-blend-mode: screen;
+  /* No blend mode (2026-07-11 perf audit): a full-viewport screen-blend over
+     the always-rising mote layer recomposited the page every frame. */
   animation: ancientGlowPulse 7s ease-in-out infinite;
 }
 

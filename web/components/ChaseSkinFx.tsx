@@ -18,6 +18,9 @@ type Variant = 'ambient' | 'summon'
 const wrap = (_summon: boolean): React.CSSProperties => ({
   position: 'absolute', inset: 0, pointerEvents: 'none',
   overflow: 'hidden',
+  // Size container so chase-bubble-rise can travel in cqh units (transform-
+  // based rise that still spans the art box exactly — see globals.css).
+  containerType: 'size',
 })
 
 // Tempest (Mako) — electric storm. A lightning FLASH lights the character and
@@ -30,9 +33,10 @@ function TempestFx({ color, summon }: { color: string; summon: boolean }) {
   return (
     <div className="chase-skin-fx" style={wrap(summon)}>
       {/* Lightning flash lighting the character — bright white core. THE effect.
-          No blend mode in the summon: mix-blend-mode breaks the summon's opacity
-          fade-out (the blended layer won't fade with everything else). */}
-      <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 50% 44%, #ffffffdd 0%, ${color}aa 26%, ${color}44 52%, transparent 74%)`, mixBlendMode: summon ? undefined : 'screen', opacity: 0, animation: `chase-storm-flash ${summon ? 2.6 : 4}s ease-out infinite` }} />
+          NO blend mode anywhere: mix-blend-mode on an infinitely-animating layer
+          forces continuous recompositing (the Tidecaller-lag class of bug), and
+          the summon variant already proved the plain gradient reads fine. */}
+      <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 50% 44%, #ffffffdd 0%, ${color}aa 26%, ${color}44 52%, transparent 74%)`, opacity: 0, animation: `chase-storm-flash ${summon ? 2.6 : 4}s ease-out infinite` }} />
       {/* Rare, subtle sparks — occasional accents, not the focus. */}
       {SPARK_PTS.map(([l, t], i) => (
         <div key={i} style={{
@@ -54,11 +58,13 @@ function KrakenFx({ color, summon }: { color: string; summon: boolean }) {
   const count = summon ? 15 : 10
   return (
     <div className="chase-skin-fx" style={wrap(summon)}>
-      {/* Dappled underwater light drifting behind the crew. */}
+      {/* Dappled underwater light drifting behind the crew. Softness comes from
+          the gradient falloff — NOT blur/blend, which on an infinite loop force
+          per-frame re-rasterizing/recompositing (the Tidecaller-lag bug class). */}
       {CAUSTICS.map((c, i) => (
         <div key={`c${i}`} style={{
           position: 'absolute', left: `${c.l}%`, top: `${c.t}%`, width: c.s, height: c.s, marginLeft: -c.s / 2, marginTop: -c.s / 2,
-          borderRadius: '50%', background: `radial-gradient(circle, ${color}66 0%, transparent 70%)`, filter: 'blur(7px)', mixBlendMode: summon ? undefined : 'screen', opacity: 0,
+          borderRadius: '50%', background: `radial-gradient(circle, ${color}55 0%, ${color}22 42%, transparent 72%)`, opacity: 0,
           animation: `chase-caustic ${summon ? 4 : 7}s ${c.d}s ease-in-out infinite`,
         }} />
       ))}
@@ -92,12 +98,12 @@ const GALAXY_NEBULA = [
 function GalaxyFx({ color, summon }: { color: string; summon: boolean }) {
   return (
     <div className="chase-skin-fx" style={wrap(summon)}>
-      {/* Nebula haze drifting behind the crew. */}
+      {/* Nebula haze drifting behind the crew. Gradient-falloff softness — no
+          blur/blend on infinite loops (see the caustics note in KrakenFx). */}
       {GALAXY_NEBULA.map((n, i) => (
         <div key={`neb-${i}`} style={{
           position: 'absolute', left: `${n.l}%`, top: `${n.t}%`, width: n.s, height: n.s, marginLeft: -n.s / 2, marginTop: -n.s / 2,
-          borderRadius: '50%', background: `radial-gradient(circle, ${n.hue}66 0%, transparent 70%)`, filter: 'blur(8px)',
-          mixBlendMode: summon ? undefined : 'screen', opacity: 0,
+          borderRadius: '50%', background: `radial-gradient(circle, ${n.hue}55 0%, ${n.hue}22 42%, transparent 72%)`, opacity: 0,
           animation: `chase-caustic ${summon ? 4.5 : 8}s ${n.d}s ease-in-out infinite`,
         }} />
       ))}
@@ -151,12 +157,12 @@ function FossilFx({ color, summon }: { color: string; summon: boolean }) {
           ))}
         </g>
       </svg>
-      {/* Jade + amber bioluminescent haze. */}
+      {/* Jade + amber bioluminescent haze. Gradient-falloff softness — no
+          blur/blend on infinite loops (see the caustics note in KrakenFx). */}
       {[{ c: color, l: 42, t: 42, s: 72, d: 0 }, { c: amber, l: 60, t: 58, s: 58, d: 2.6 }].map((h, i) => (
         <div key={`hz-${i}`} style={{
           position: 'absolute', left: `${h.l}%`, top: `${h.t}%`, width: h.s, height: h.s, marginLeft: -h.s / 2, marginTop: -h.s / 2,
-          borderRadius: '50%', background: `radial-gradient(circle, ${h.c}55 0%, transparent 70%)`, filter: 'blur(9px)',
-          mixBlendMode: summon ? undefined : 'screen', opacity: 0,
+          borderRadius: '50%', background: `radial-gradient(circle, ${h.c}44 0%, ${h.c}1a 42%, transparent 72%)`, opacity: 0,
           animation: `chase-caustic ${summon ? 5 : 9}s ${h.d}s ease-in-out infinite`,
         }} />
       ))}
@@ -201,8 +207,11 @@ function HuntersBaneFx({ color, summon }: { color: string; summon: boolean }) {
           ))}
         </g>
       </svg>
-      {/* Lock brackets that pulse in on the target. */}
-      <div style={{ position: 'absolute', left: '50%', top: '50%', width: '58%', height: '58%', marginLeft: '-29%', marginTop: '-29%', transformOrigin: '50% 50%', animation: `chase-reticle-lock ${summon ? 1.7 : 3.2}s ease-in-out infinite`, filter: `drop-shadow(0 0 3px ${color})` }}>
+      {/* Lock brackets that pulse in on the target. NO standing filter on the
+          animating container — a drop-shadow re-rasterizes every frame of the
+          infinite scale pulse (the needle-stutter rule). The border glow alone
+          still reads as a lit reticle. */}
+      <div style={{ position: 'absolute', left: '50%', top: '50%', width: '58%', height: '58%', marginLeft: '-29%', marginTop: '-29%', transformOrigin: '50% 50%', animation: `chase-reticle-lock ${summon ? 1.7 : 3.2}s ease-in-out infinite` }}>
         {corners.map((c, i) => (
           <div key={i} style={{ position: 'absolute', width: arm, height: arm, ...c }} />
         ))}

@@ -6126,11 +6126,16 @@ export default function FishingGame({
                 transition={{ duration: 2 }}
                 style={{ position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none' }}
               >
-                <div style={{ position: 'absolute', inset: 0, background: def.tint, mixBlendMode: 'screen' }} />
+                {/* NO mixBlendMode on these: the overlay persists for the whole
+                    120s event over the always-animating scene (clouds/shimmer),
+                    and blend layers force the region to re-composite every
+                    frame — the Tidecaller-lag bug class. Plain tint layers
+                    pulse opacity on the GPU for free. */}
+                <div style={{ position: 'absolute', inset: 0, background: def.tint }} />
                 <motion.div
                   animate={{ opacity: [0.3, 0.8, 0.3] }}
                   transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-                  style={{ position: 'absolute', inset: 0, background: def.tint, mixBlendMode: 'screen' }}
+                  style={{ position: 'absolute', inset: 0, background: def.tint }}
                 />
                 <EventParticles color={def.color} />
               </motion.div>

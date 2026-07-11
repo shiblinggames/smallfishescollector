@@ -4612,12 +4612,13 @@ export default function RaidCombat({
             <div
               aria-hidden
               style={{
+                // No blend/blur: this glint persists all fight under drifting
+                // clouds, and a standing blend+blur layer recomposites on every
+                // cloud frame (Tidecaller-lag class). Gradient does the softness.
                 position: 'absolute', top: '38%', right: '8%',
                 width: 140, height: '40%',
-                background: 'radial-gradient(ellipse at 50% 0%, rgba(255,180,110,0.38) 0%, rgba(255,150,90,0.18) 40%, transparent 78%)',
-                mixBlendMode: 'screen',
+                background: 'radial-gradient(ellipse at 50% 0%, rgba(255,180,110,0.34) 0%, rgba(255,150,90,0.14) 46%, transparent 80%)',
                 pointerEvents: 'none',
-                filter: 'blur(3px)',
               }}
             />
           </>
@@ -4773,12 +4774,11 @@ export default function RaidCombat({
             <div
               aria-hidden
               style={{
+                // No blend/blur — persistent glint; see the sunset variant note.
                 position: 'absolute', top: '38%', right: '9%',
                 width: 120, height: '36%',
-                background: 'radial-gradient(ellipse at 50% 0%, rgba(255,190,110,0.26) 0%, rgba(240,160,80,0.12) 42%, transparent 78%)',
-                mixBlendMode: 'screen',
+                background: 'radial-gradient(ellipse at 50% 0%, rgba(255,190,110,0.24) 0%, rgba(240,160,80,0.10) 48%, transparent 80%)',
                 pointerEvents: 'none',
-                filter: 'blur(3px)',
               }}
             />
           </>
@@ -4830,12 +4830,11 @@ export default function RaidCombat({
             <div
               aria-hidden
               style={{
+                // No blend/blur — persistent glint; see the sunset variant note.
                 position: 'absolute', top: '38%', right: '8%',
                 width: 110, height: '32%',
-                background: 'radial-gradient(ellipse at 50% 0%, rgba(255,235,180,0.22) 0%, rgba(255,225,160,0.10) 40%, transparent 75%)',
-                mixBlendMode: 'screen',
+                background: 'radial-gradient(ellipse at 50% 0%, rgba(255,235,180,0.20) 0%, rgba(255,225,160,0.09) 46%, transparent 78%)',
                 pointerEvents: 'none',
-                filter: 'blur(3px)',
               }}
             />
           </>
@@ -8352,7 +8351,10 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, aimBlack
                 rgba(220,232,242,${0.18 * fogOpacity}) 85%,
                 rgba(220,232,242,0) 100%
               )`,
-              filter: 'blur(1.5px)',
+              // No blur on a layer that TRANSLATES every frame — it would
+              // re-rasterize per frame ON THE AIM BAR, the most RAF-sensitive
+              // surface in the game. The gradient's own soft edges carry the
+              // fog read; the drift + density (the mechanic) are untouched.
               animation: 'mist-veil-drift 1.6s ease-in-out infinite',
             }} />
           </div>

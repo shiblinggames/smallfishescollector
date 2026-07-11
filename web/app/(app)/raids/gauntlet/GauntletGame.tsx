@@ -4293,7 +4293,10 @@ function Shell({ children, wide, hardcore }: { children: React.ReactNode; wide?:
           borderRadius: 18,
           padding: '1.25rem 1.2rem 1.4rem',
           boxShadow: '0 18px 54px rgba(0,0,0,0.6), inset 0 1px 0 rgba(240,192,64,0.08)',
-          backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
+          // No backdrop-filter (2026-07-11 perf audit): the panel is 86-93%
+          // opaque so the blur was imperceptible, but it forced continuous
+          // recomposite over the animated abyss backdrop (and backdrop-filter
+          // in this PWA scroller has bitten before — see DepthBar below).
         }}>
           {children}
         </div>
