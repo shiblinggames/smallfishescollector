@@ -486,7 +486,8 @@ export default function ShipHero({
   }
 
   const shipTierForSlots = Math.max(0, SHIPS.findIndex(s => s.name === shipStats.name))
-  const raidItemSlots = raidItemSlotsForTier(shipTierForSlots)
+  // Hull cap + the Ch4 Expanded Armory augment's extra mount.
+  const raidItemSlots = raidItemSlotsForTier(shipTierForSlots) + (aggregateShipClasses(shipClasses).itemSlots)
 
   // Ultimate weapon (Man-o-War Mega) — the end-of-Chapter-3 build. Its four-gate
   // checklist, previews, 24h build clock, and re-pick flow all live inside

@@ -11,20 +11,56 @@ export const ENEMY_IMG_BASE = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/s
 // the same resolveTurn handles it for the player.
 // 'special' (Ch4): the enemy casts its authored special ability this turn
 // (BroadsideEnemy.special) — the crew-ability analog, applying a STATUS from
-// the shared pipeline (lib/statuses) to the player or to itself. Slot it into
-// the pattern like any other action; enemies without a `special` config treat
-// the slot as a reload (defensive fallback, see pickEnemyAction).
-export type EnemyAction = 'reload' | 'fire' | 'volley' | 'dodge' | 'repair' | 'mega' | 'special'
+// the shared pipeline (lib/statuses) to the player or to itself, OR (raid 8)
+// an AIM-BAR ATTACK that strikes the player's lock-in minigame instead of
+// their hull. Slot it into the pattern like any other action; enemies without
+// a `special` config treat the slot as a reload (see pickEnemyAction).
+// 'ultimate' (raid 8): the enemy spends its ENTIRE full magazine on its
+// authored signature attack (BroadsideEnemy.ultimate) — the enemy-side mirror
+// of the player's Mega. The slot only fires at a FULL magazine (the pips glow
+// as the tell); short of that it degrades to a reload and re-attempts, so the
+// player can always see it building and answer it (burn the charges down,
+// shield, or brace to dodge).
+export type EnemyAction = 'reload' | 'fire' | 'volley' | 'dodge' | 'repair' | 'mega' | 'special' | 'ultimate'
+
+/** Raid-8 aim-bar attacks — enemy specials that strike the PLAYER'S AIM BAR
+ *  rather than their hull, for the player's next `aimPasses` lock-ins:
+ *    decoys   — False-Colours decoy bands appear on every afflicted pass
+ *               (locking a crimson fake duds the shot).
+ *    hardened — the lock is PLATED: the first tap only cracks it (the bar
+ *               keeps sweeping), the second tap lands the real judgment.
+ *    squall   — the needle gusts: its sweep speed surges and dies mid-pass,
+ *               so timing by rhythm alone fails. */
+export type AimAttackId = 'decoys' | 'hardened' | 'squall'
 
 /** Ch4 enemy special — one authored cast per enemy, slotted into its pattern.
- *  `status` is a lib/statuses id; `target` 'player' = a debuff thrown at you,
- *  'self' = a buff it gives itself. `line` is the log/telegraph sentence. */
+ *  TWO shapes, exactly one per special:
+ *   - STATUS cast: `status` (a lib/statuses id) + magnitude/turns/target —
+ *     'player' = a debuff thrown at you, 'self' = a buff it gives itself.
+ *   - AIM-BAR attack (raid 8): `aimAttack` + optional `aimPasses` (default 2)
+ *     — afflicts the player's next N lock-ins instead of touching hull/stats.
+ *  `line` is the log/telegraph sentence either way. */
 export interface EnemySpecial {
   name: string
-  status: string
-  magnitude: number
-  turns: number
-  target: 'player' | 'self'
+  status?: string
+  magnitude?: number
+  turns?: number
+  target?: 'player' | 'self'
+  /** Raid-8 aim-bar attack (see AimAttackId). When set, the status fields are ignored. */
+  aimAttack?: AimAttackId
+  /** How many of the player's aim passes the attack afflicts. Default 2. */
+  aimPasses?: number
+  line: string
+}
+
+/** Raid-8 enemy ULTIMATE — the signature attack an enemy unleashes by spending
+ *  its ENTIRE full magazine (see the 'ultimate' action). `mult` scales a normal
+ *  minDmg..maxDmg roll (a volley is ×2 for 3 balls; size ultimates ~×2.4–3 for
+ *  4). Never crits — the number is authored, not swingy. Dodge rules match a
+ *  normal shot, so brace-and-weave stays a real answer. */
+export interface EnemyUltimate {
+  name: string
+  mult: number
   line: string
 }
 
@@ -126,6 +162,10 @@ export interface BroadsideEnemy {
   shieldPct?: number
   /** Chapter-4 special ability, cast when the pattern hits a 'special' slot. */
   special?: EnemySpecial
+  /** Raid-8 ultimate, unleashed when the pattern hits an 'ultimate' slot AT A
+   *  FULL MAGAZINE (short of full it degrades to reload and re-attempts). The
+   *  full pips glow as the tell — the enemy-side mirror of the player's Mega. */
+  ultimate?: EnemyUltimate
   /** Legacy: real-time action interval. Kept for backwards-compat readouts; no longer drives combat. */
   actionMs: number
   /** Scripted action loop. Cycles in order every turn. */
@@ -1279,6 +1319,174 @@ export const THE_HAMMERHEAD: BossRaidConfig = {
     { speaker: 'player', text: "Then I'm exactly where I mean to be. Move your line." },
     { speaker: 'boss', text: "The Quartermaster talked too much and kept too little. I keep everything. Including you, when this is done." },
     { speaker: 'boss', text: "They call me the Hammerhead. You'll work out why the hard way." },
+  ],
+}
+
+// ── Chapter IV, Raid 8 — THE THRONE (Don Finleone) ──────────────────────────
+// The fake-final boss. Debuts the raid-8 layer on top of the Ch4 suite:
+// enemy ULTIMATES at a full 4-ball magazine (glowing pips = the tell) and
+// AIM-BAR ATTACKS (decoys / hardened lock / squall) — specials that strike
+// the player's lock-in minigame instead of their hull. Every mob teaches one
+// piece before the don stacks them. Don Finleone is a MEGALODON under the
+// don's colours — the mask drops in phase 2. ADMIN-ONLY until launch.
+// Art: Ch3 hull placeholders — bespoke Last-Fathom fleet art at polish.
+export const THE_THRONE: BossRaidConfig = {
+  raidId: 'the_throne',
+  enemyAccuracy: 36,
+  raidTitle: 'The Throne',
+  bossDefeatedText: 'Don Finleone Defeated',
+  atmosphere: 'vault',   // placeholder — bespoke throne-water palette at polish
+  enemies: {
+    court_herald: {
+      // The ULTIMATE teacher: light hull, no special — just the new tell.
+      // Watch the pips fill to four and glow, then answer it or eat it.
+      id: 'court_herald', name: 'The Court Herald', hpBase: 340, minDmg: 22, maxDmg: 36,
+      shipSpeed: 8, actionMs: 3400,
+      magazineSize: 4, shieldPct: 0.15,
+      ultimate: { name: 'Broadside Royale', mult: 2.4, line: 'Every gun on the deck speaks at once, in the don’s name.' },
+      pattern: ['reload', 'fire', 'reload', 'reload', 'ultimate', 'dodge', 'reload', 'fire'],
+      critChance: 0.12,
+      zoneSpeedMult: 2.3,
+      image: '/enemychapter3brigantine.png',
+      portrait: '/enemychapter3brigantine.png',
+    },
+    the_mirage: {
+      // DECOYS debut — False Court paints fake gold across your aim bar.
+      // Crimson bands dud the shot; find the real lane before you lock.
+      id: 'the_mirage', name: 'The Mirage', hpBase: 380, minDmg: 24, maxDmg: 38,
+      shipSpeed: 10, actionMs: 3400,
+      magazineSize: 4, shieldPct: 0.18,
+      special: { name: 'False Court', aimAttack: 'decoys', aimPasses: 2, line: 'Lantern-rigs bloom down her rail — a court of false colours, and only one throne among them.' },
+      pattern: ['reload', 'special', 'fire', 'reload', 'dodge', 'fire', 'special', 'reload'],
+      critChance: 0.12,
+      zoneSpeedMult: 2.5,
+      image: '/enemychapter3brigantine.png',
+      portrait: '/enemychapter3brigantine.png',
+    },
+    the_doorman: {
+      // HARDENED LOCK debut — Iron Etiquette plates your lock: the first tap
+      // only cracks it, the second lands. The heavy door you knock on twice.
+      id: 'the_doorman', name: 'The Doorman', hpBase: 420, minDmg: 24, maxDmg: 40,
+      shipSpeed: 5, actionMs: 4200,
+      magazineSize: 4, shieldPct: 0.24,
+      special: { name: 'Iron Etiquette', aimAttack: 'hardened', aimPasses: 2, line: 'Iron shutters slam over every line you’d take — nobody reaches the don in one knock.' },
+      pattern: ['reload', 'special', 'reload', 'fire', 'volley', 'reload', 'special', 'fire'],
+      critChance: 0.10,
+      zoneSpeedMult: 2.2,
+      image: '/enemychapter3galleon.png',
+      portrait: '/enemychapter3galleon.png',
+    },
+    the_stormcaller: {
+      // SQUALL debut — Kingmaker's Gale gusts your needle fast-slow mid-sweep.
+      // Timing by rhythm fails; watch the needle itself.
+      id: 'the_stormcaller', name: 'The Stormcaller', hpBase: 440, minDmg: 26, maxDmg: 40,
+      shipSpeed: 9, actionMs: 3600,
+      magazineSize: 4, shieldPct: 0.20,
+      special: { name: 'Kingmaker’s Gale', aimAttack: 'squall', aimPasses: 2, line: 'She whistles a wind out of dead water, and your gun-deck pitches with it.' },
+      pattern: ['reload', 'special', 'fire', 'reload', 'fire', 'volley', 'dodge', 'reload'],
+      critChance: 0.14,
+      zoneSpeedMult: 2.6,
+      image: '/enemychapter3galleon.png',
+      portrait: '/enemychapter3galleon.png',
+    },
+    the_left_hand: {
+      // The don's silencer, now with the ultimate stacked on top — Omertà
+      // locks your crew out of the answer while the battery builds.
+      id: 'the_left_hand', name: 'The Left Hand', hpBase: 480, minDmg: 26, maxDmg: 42,
+      shipSpeed: 8, actionMs: 3800,
+      magazineSize: 4, shieldPct: 0.24,
+      special: { name: 'Omertà', status: 'silence', magnitude: 1, turns: 2, target: 'player', line: 'The left hand draws a line across his throat, and your crew’s shouts die in the wind.' },
+      ultimate: { name: 'The Quiet Word', mult: 2.5, line: 'What the don whispers, the guns repeat.' },
+      pattern: ['reload', 'special', 'reload', 'reload', 'ultimate', 'fire', 'dodge', 'reload'],
+      critChance: 0.14,
+      zoneSpeedMult: 2.7,
+      image: '/enemychapter3galleon.png',
+      portrait: '/enemychapter3galleon.png',
+    },
+    the_consigliere: {
+      // The last counsel before the throne — marks you for the don (Feeble)
+      // and carries the biggest mob ultimate in the raid.
+      id: 'the_consigliere', name: 'The Consigliere', hpBase: 520, minDmg: 28, maxDmg: 44,
+      shipSpeed: 7, actionMs: 4000,
+      magazineSize: 4, shieldPct: 0.26,
+      special: { name: 'Marked for the Don', status: 'feeble', magnitude: 0.22, turns: 2, target: 'player', line: 'He reads your name off a short list, and every gun in the court knows where to aim.' },
+      ultimate: { name: 'Final Counsel', mult: 2.6, line: 'His advice, delivered all at once.' },
+      pattern: ['reload', 'special', 'reload', 'volley', 'reload', 'reload', 'ultimate', 'dodge'],
+      critChance: 0.12,
+      zoneSpeedMult: 2.5,
+      image: '/enemychapter3man-o-war.png',
+      portrait: '/enemychapter3man-o-war.png',
+    },
+    don_finleone: {
+      // DON FINLEONE — the fake-final boss. Phase 1: the don at his table,
+      // False Court decoys + The Deep Verdict ultimate. Phase 2 the mask
+      // drops (MEGALODON) and The Maw check arms; phase 3 is the frenzy,
+      // closed by The Sounding (blast or jam him out of the dive, or eat a
+      // near-lethal breach). Kills reveal nothing — the margin does.
+      id: 'don_finleone', name: 'Don Finleone', hpBase: 950, minDmg: 30, maxDmg: 50,
+      shipSpeed: 9, actionMs: 4000,
+      magazineSize: 4, shieldPct: 0.30, startCharges: 2,
+      special: { name: 'The Don’s Court', aimAttack: 'decoys', aimPasses: 2, line: 'The court closes around the throne — a dozen crowns, and only one that bleeds.' },
+      ultimate: { name: 'The Deep Verdict', mult: 2.8, line: 'The don passes sentence, and the water carries it out.' },
+      pattern: ['reload', 'special', 'fire', 'reload', 'reload', 'ultimate', 'dodge', 'fire', 'reload'],
+      critChance: 0.15,
+      phases: [
+        { revivePct: 0.85, damageMult: 1.30, badge: 'The Mask Drops',
+          pattern: ['special', 'fire', 'reload', 'reload', 'reload', 'ultimate', 'volley', 'dodge'],
+          dialogueLine: 'You came for a don. The deep sent you something older. Look at the WIDTH of what you’ve been bargaining with.',
+          check: {
+            id: 'the_maw', name: 'The Maw', chargeTurns: 2,
+            telegraph: 'The don’s hull ROLLS — and keeps rolling — a jaw the size of your broadside opening under the waterline.',
+            hint: 'A bite that wide can’t be weaved. It has to be met with a crew ability — a defensive one that puts something between you and the teeth.',
+            responses: ['brace', 'shield'],
+            counteredLine: 'The jaws close on your cover and grind iron instead of deck.',
+            failLine: 'The maw takes your ship the way a purse takes a coin.',
+            consequence: { kind: 'damagePctMaxHp', value: 0.70 },
+          } },
+        { revivePct: 0.60, damageMult: 1.50, badge: 'The Last Court',
+          pattern: ['special', 'fire', 'fire', 'reload', 'reload', 'reload', 'ultimate', 'volley'],
+          dialogueLine: 'Enough court. Enough colours. The Finndicate was never the family, captain — it was the FEEDING.',
+          check: {
+            id: 'the_sounding', name: 'The Sounding', chargeTurns: 2,
+            telegraph: 'The megalodon SOUNDS — the whole sea dips as he goes deep, gathering water for a breach that will land on your deck.',
+            hint: 'You can’t block a falling mountain — a crew ability has to stop the dive itself: jam him mid-sound, or hit hard enough to break it.',
+            responses: ['snare', 'burst'],
+            counteredLine: 'The dive breaks — he breaches early, wide, and the wave takes the blow for you.',
+            failLine: 'The sea goes still. Then it goes UP.',
+            consequence: { kind: 'damagePctMaxHp', value: 0.85 },
+          } },
+      ],
+      zoneSpeedMult: 2.4,
+      image: '/enemychapter3man-o-war.png',
+      portrait: '/enemychapter3man-o-war.png',
+    },
+  },
+  sequence: ['court_herald', 'the_mirage', 'the_doorman', 'the_stormcaller', 'the_left_hand', 'the_consigliere'],
+  bossId: 'don_finleone',
+  tides: { slots: [2, 5], maxTier: 2 },
+  loot: [
+    // Signature: the don's own ring — boss-killer legendary.
+    { id: 'dons_signet',    label: 'The Don’s Signet', image: null, emoji: '💍', rarity: 'legendary', weight: 10 },
+    { id: 'doubloons_800',  label: '+800 ⟡',   image: '/smallpile.png',  emoji: '🪙',      rarity: 'common',   weight: 28 },
+    { id: 'doubloons_1500', label: '+1,500 ⟡', image: '/dailybonus.png', emoji: '💰',      rarity: 'uncommon', weight: 24 },
+    { id: 'gems_50',        label: '50 Gems',  image: null,              emoji: GEM_GLYPH, rarity: 'rare',     weight: 22 },
+    { id: 'pack_2',         label: '200 Gems', image: null,              emoji: GEM_GLYPH, rarity: 'epic',     weight: 16 },
+  ],
+  killRewards: {
+    court_herald:    { gold: 200,  xp: 220  },
+    the_mirage:      { gold: 220,  xp: 240  },
+    the_doorman:     { gold: 240,  xp: 260  },
+    the_stormcaller: { gold: 260,  xp: 280  },
+    the_left_hand:   { gold: 290,  xp: 310  },
+    the_consigliere: { gold: 320,  xp: 340  },
+    don_finleone:    { gold: 2500, xp: 3000 },
+  },
+  preFightDialogue: [
+    { speaker: 'narrator', text: 'Past the thrown gates the water goes still and black, and the don’s flagship sits at anchor in the middle of it — lit like a feast, silent like a courtroom.' },
+    { speaker: 'boss', text: 'Sit down, captain. You’ve crossed my whole family to reach this table — the least I can do is hear your last request.' },
+    { speaker: 'player', text: 'I read your books, Finleone. Every coin accounted for. Almost every coin.' },
+    { speaker: 'boss', text: '...So. You found the margin.' },
+    { speaker: 'boss', text: 'Then you know why NOBODY leaves this water. Guns out, captain. The court is in session.' },
   ],
 }
 

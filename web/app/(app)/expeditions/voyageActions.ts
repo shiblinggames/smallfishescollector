@@ -4,6 +4,7 @@ import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
+import { classSlotBonuses } from '@/lib/shipClasses'
 import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
 import { generateVoyageEvents, type VoyageEvent, type VoyageRoute } from '@/lib/voyageEvents'
 import { ROUTE_CONFIGS, COMING_SOON_ROUTES } from '@/lib/voyageRoutes'
@@ -119,7 +120,7 @@ export async function sendDailyVoyage(route: VoyageRoute = 'open'): Promise<
   // Load profile for ship tier and expedition level
   const { data: profile } = await admin
     .from('profiles')
-    .select('ship_tier, expedition_xp, gauntlet_upgrades')
+    .select('ship_tier, expedition_xp, gauntlet_upgrades, ship_classes')
     .eq('id', user.id)
     .single()
 
@@ -140,7 +141,10 @@ export async function sendDailyVoyage(route: VoyageRoute = 'open'): Promise<
 
   // Deployed party from the new crew roster (voyage track), resolved with
   // effects. Voyage and raid each have an independent slot column now.
-  const party = await loadDeployedParty(admin, user.id, shipStats.crewSlots, 'voyage')
+  // Expanded Quarters (Ch4 augment) berths one more — ship-wide, so it counts
+  // on voyages too.
+  const crewSlotCap = shipStats.crewSlots + classSlotBonuses(profile.ship_classes as Record<string, string> | null).crewSlots
+  const party = await loadDeployedParty(admin, user.id, crewSlotCap, 'voyage')
   // The Inner Sea (coastal) is the safe intro route — any boat can sail it with
   // a single crew member aboard. Deeper routes still need a party of two.
   const minCrew = route === 'coastal' ? 1 : 2

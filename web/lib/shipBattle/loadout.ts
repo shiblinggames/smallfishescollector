@@ -9,6 +9,7 @@ import { getRaidPlayerStats } from '@/app/(app)/raids/actions'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getActiveEffects } from '@/lib/raidItems'
 import { raidItemSlotsForTier } from '@/lib/expeditions'
+import { classSlotBonuses } from '@/lib/shipClasses'
 import { classForSlug, CLASS_UNLOCK_LEVEL } from '@/lib/crewClasses'
 import { crewLevelFromXP } from '@/lib/crewLevel'
 import { getRepairKit, repairKitRange } from '@/lib/repairKits'
@@ -20,7 +21,9 @@ export async function snapshotLoadout(userId: string): Promise<BattleLoadout> {
   const admin = createAdminClient()
   const { data } = await admin.from('profiles').select('equipped_raid_items, ship_tier').eq('id', userId).single()
   const shipTier = (data?.ship_tier as number | null) ?? 0
-  const cap = raidItemSlotsForTier(shipTier)
+  // Hull cap + the Ch4 Expanded Armory augment (stats.shipClasses carries the
+  // player's picks from the same getRaidPlayerStats read).
+  const cap = raidItemSlotsForTier(shipTier) + classSlotBonuses(stats.shipClasses).itemSlots
   const items = ((data?.equipped_raid_items as string[] | null) ?? []).slice(0, cap)
   const effects = getActiveEffects(items)
   const prod = (type: string) => effects.filter(e => e.type === type).reduce((a, e) => a * e.value, 1)

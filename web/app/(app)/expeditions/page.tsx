@@ -2,6 +2,7 @@ import { Suspense, cache } from 'react'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { EXPEDITION_SHIP_STATS, raidItemSlotsForTier, computeCombatRating } from '@/lib/expeditions'
+import { classSlotBonuses } from '@/lib/shipClasses'
 import { getShipSkin } from '@/lib/shipSkins'
 import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
 import { getXPProgress, navLevelBonuses } from '@/lib/expeditionLevel'
@@ -232,7 +233,14 @@ async function ExpeditionHub() {
     : null
 
   const shipTier = profile?.ship_tier ?? 0
-  const shipStats = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
+  // Fold the Ch4 augments into the displayed hull caps: Expanded Quarters
+  // berths one more crew (shipStats.crewSlots feeds every downstream display
+  // + the voyage panel), Expanded Armory adds a raid-item mount below.
+  const slotBonus = classSlotBonuses(profile?.ship_classes as Record<string, string> | null)
+  const baseShipStats = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
+  const shipStats = slotBonus.crewSlots > 0
+    ? { ...baseShipStats, crewSlots: baseShipStats.crewSlots + slotBonus.crewSlots }
+    : baseShipStats
   // Next main-chain node: first non-cleared, non-sideBranch view.
   const next = raidMap.views.find(v => v.status !== 'cleared' && !v.node.sideBranch) ?? null
   const clearedViews = raidMap.views.filter(v => v.status === 'cleared')
@@ -291,7 +299,7 @@ async function ExpeditionHub() {
       doubloons={profile?.doubloons ?? 0}
       ownedRaidItems={ownedRaidItems}
       equippedRaidItems={equippedRaidItems}
-      raidItemSlots={raidItemSlotsForTier(shipTier)}
+      raidItemSlots={raidItemSlotsForTier(shipTier) + slotBonus.itemSlots}
       roster={roster}
       shipCrewSlots={shipStats.crewSlots}
       shipStats={shipStats}

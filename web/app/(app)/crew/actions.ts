@@ -6,6 +6,7 @@ import { isPremiumActive } from '@/lib/premium'
 import { getLevelFromXP } from '@/lib/expeditionLevel'
 import { crewCapacity } from '@/lib/crewCapacity'
 import { EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
+import { classSlotBonuses } from '@/lib/shipClasses'
 import {
   groupForSlug, rollRarity, rollCrew, crewDisplayName,
   FREE_WEIGHTS, GEM_WEIGHTS, type CrewRarity,
@@ -227,7 +228,7 @@ export async function getCrewState(): Promise<CrewState | null> {
 
   const { data: prof } = await admin
     .from('profiles')
-    .select('gems, is_premium, premium_expires_at, expedition_xp, last_free_recruit_date, ship_tier, crew_hall_tier, doubloons, blood_gems, owned_crew_skins, equipped_crew_skins, is_admin, gauntlet_deepest, raid_node_progress')
+    .select('gems, is_premium, premium_expires_at, expedition_xp, last_free_recruit_date, ship_tier, crew_hall_tier, doubloons, blood_gems, owned_crew_skins, equipped_crew_skins, is_admin, gauntlet_deepest, raid_node_progress, ship_classes')
     .eq('id', user.id)
     .single()
   if (!prof) return null
@@ -237,7 +238,9 @@ export async function getCrewState(): Promise<CrewState | null> {
   const capacity = crewCapacity(navLevel)
   const gems = (prof as any).gems ?? 0
   const shipTier = (prof as any).ship_tier ?? 0
-  const shipCrewSlots = EXPEDITION_SHIP_STATS[shipTier]?.crewSlots ?? 1
+  // Hull berths + the Ch4 Expanded Quarters augment.
+  const shipCrewSlots = (EXPEDITION_SHIP_STATS[shipTier]?.crewSlots ?? 1)
+    + classSlotBonuses((prof as any).ship_classes as Record<string, string> | null).crewSlots
 
   const { byGroup, meta } = await loadCards(admin)
   const today = utcDate()
@@ -588,9 +591,11 @@ async function applyAssignment(
     await admin.from('user_crew').update({ voyage_slot: null, raid_slot: null })
       .eq('id', crewId).eq('user_id', userId)
   } else {
-    const { data: prof } = await admin.from('profiles').select('ship_tier').eq('id', userId).single()
+    const { data: prof } = await admin.from('profiles').select('ship_tier, ship_classes').eq('id', userId).single()
     const tier = (prof as any)?.ship_tier ?? 0
-    const crewSlots = EXPEDITION_SHIP_STATS[tier]?.crewSlots ?? 1
+    // Hull berths + the Ch4 Expanded Quarters augment.
+    const crewSlots = (EXPEDITION_SHIP_STATS[tier]?.crewSlots ?? 1)
+      + classSlotBonuses((prof as any)?.ship_classes as Record<string, string> | null).crewSlots
     if (slot < 0 || slot >= crewSlots) return { error: 'Invalid slot' }
 
     const slotCol  = target === 'voyage' ? 'voyage_slot' : 'raid_slot'

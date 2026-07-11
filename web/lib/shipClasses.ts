@@ -14,6 +14,7 @@ export type ShipClassId =
   | 'master_gunner' | 'ironside' | 'helmsman' | 'buccaneer'              // Mark I (chapter-1 starters)
   | 'master_gunner_ii' | 'ironside_ii' | 'helmsman_ii' | 'buccaneer_ii'  // Mark II (deepen a line you already sail)
   | 'master_gunner_iii' | 'ironside_iii' | 'helmsman_iii' | 'buccaneer_iii' // Mark III (deepen again — chapter-3 capstone)
+  | 'armory_expansion' | 'crew_quarters'  // Chapter-4 AUGMENTS (either/or capstone pick, not on the class ladder)
 
 export interface ShipClassEffects {
   /** Multiplier on player outgoing raid damage. 1.15 = +15%, 0.90 = -10%. Default 1. */
@@ -24,6 +25,11 @@ export interface ShipClassEffects {
   speedFlat?: number
   /** Multiplier on doubloons awarded from raid clears. Default 1. */
   doubloonMult?: number
+  /** Flat EXTRA raid-item slots on top of the hull's cap (Ch4 augment). Default 0. */
+  itemSlots?: number
+  /** Flat EXTRA crew slots on top of the hull's cap — ship-wide, so voyages
+   *  benefit too (Ch4 augment: your ship berths one more crew). Default 0. */
+  crewSlots?: number
 }
 
 export interface ShipClassDef {
@@ -216,6 +222,35 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     emoji: '⊕',
     effects: { damageMult: 1.03, hpMult: 1.03 },
   },
+
+  // ── Chapter-4 AUGMENTS — the Last Fathom's either/or capstone. NOT part of
+  //    SHIP_CLASS_LINES (never offered on a normal class pick); the
+  //    chapter_4_augment node offers exactly these two via classPick.options.
+  //    Pure gains, no tradeoff — the tradeoff IS the road not taken.
+  armory_expansion: {
+    id: 'armory_expansion',
+    name: 'Expanded Armory',
+    tagline: 'One more answer bolted to the deck.',
+    description: 'Refit the hold for one more raid-item mount. Every fight, one more piece of gear working for you.',
+    bullets: [
+      { label: '+1 raid item slot', positive: true },
+    ],
+    color: '#a78bfa',
+    emoji: '⚒',
+    effects: { itemSlots: 1 },
+  },
+  crew_quarters: {
+    id: 'crew_quarters',
+    name: 'Expanded Quarters',
+    tagline: 'One more hammock below decks.',
+    description: 'Your ship berths one more crew — raids AND voyages sail a body heavier.',
+    bullets: [
+      { label: '+1 crew slot', positive: true },
+    ],
+    color: '#7adf9a',
+    emoji: '⚓',
+    effects: { crewSlots: 1 },
+  },
 }
 
 // Tier ladders, lowest → highest. A class_pick offers the LOWEST tier in each
@@ -266,6 +301,10 @@ export interface AggregatedClassEffects {
   hpMult: number
   speedFlat: number
   doubloonMult: number
+  /** Flat extra raid-item slots (Ch4 Expanded Armory augment). */
+  itemSlots: number
+  /** Flat extra crew slots, ship-wide (Ch4 Expanded Quarters augment). */
+  crewSlots: number
   /** Number of class picks aggregated (useful for UI display). */
   count: number
 }
@@ -276,6 +315,8 @@ export function aggregateShipClasses(picks: Record<string, ShipClassId | string>
     hpMult:       1,
     speedFlat:    0,
     doubloonMult: 1,
+    itemSlots:    0,
+    crewSlots:    0,
     count:        0,
   }
   for (const classId of Object.values(picks)) {
@@ -285,7 +326,23 @@ export function aggregateShipClasses(picks: Record<string, ShipClassId | string>
     out.hpMult       *= cls.effects.hpMult       ?? 1
     out.speedFlat    += cls.effects.speedFlat    ?? 0
     out.doubloonMult *= cls.effects.doubloonMult ?? 1
+    out.itemSlots    += cls.effects.itemSlots    ?? 0
+    out.crewSlots    += cls.effects.crewSlots    ?? 0
     out.count        += 1
   }
   return out
+}
+
+/** Just the flat slot bonuses from the player's class picks (the Ch4
+ *  augments). Null-tolerant so server actions can pass the raw jsonb column
+ *  straight in without the full aggregate. */
+export function classSlotBonuses(picks: Record<string, string> | null | undefined): { itemSlots: number; crewSlots: number } {
+  if (!picks) return { itemSlots: 0, crewSlots: 0 }
+  let itemSlots = 0, crewSlots = 0
+  for (const classId of Object.values(picks)) {
+    const cls = getShipClass(classId)
+    itemSlots += cls?.effects.itemSlots ?? 0
+    crewSlots += cls?.effects.crewSlots ?? 0
+  }
+  return { itemSlots, crewSlots }
 }

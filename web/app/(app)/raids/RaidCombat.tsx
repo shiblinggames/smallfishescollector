@@ -56,7 +56,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence, useAnimation } from 'framer-motion'
-import { BroadsideEnemy, EnemyAction, type BossMechanicCheck, type MechanicResponse } from '@/lib/bossRaids'
+import { BroadsideEnemy, EnemyAction, type AimAttackId, type BossMechanicCheck, type MechanicResponse } from '@/lib/bossRaids'
 import { raidDamageProfile, type RaidMods } from '@/lib/expeditions'
 import { MEGA_CHARGE_COST, RAILGUN_GRAZE_PCT, type ShipAugment } from '@/lib/shipAugments'
 import { applyStatus, statusMods, tickStatuses, cleanseStatuses, STATUS_DEFS, type ActiveStatus, type StatusId } from '@/lib/statuses'
@@ -127,8 +127,8 @@ const BACKDRAFT_FLARE_CHANCE = 0.35
 const BACKDRAFT_FLARE_MULT   = 0.7
 // Drowned Whispers (confuse curse) — action words for the "you called for X but
 // did Y" log line + the on-screen flash.
-const ACTION_NOUN: Record<EnemyAction, string> = { fire: 'a Shot', volley: 'a Volley', mega: 'a Mega', reload: 'a Reload', dodge: 'a Dodge', repair: 'a Repair', special: 'a Special' }
-const ACTION_PAST: Record<EnemyAction, string> = { fire: 'opened fire', volley: 'loosed a volley', mega: 'unleashed a Mega', reload: 'reloaded', dodge: 'dodged', repair: 'patched the hull', special: 'worked something strange' }
+const ACTION_NOUN: Record<EnemyAction, string> = { fire: 'a Shot', volley: 'a Volley', mega: 'a Mega', reload: 'a Reload', dodge: 'a Dodge', repair: 'a Repair', special: 'a Special', ultimate: 'an Ultimate' }
+const ACTION_PAST: Record<EnemyAction, string> = { fire: 'opened fire', volley: 'loosed a volley', mega: 'unleashed a Mega', reload: 'reloaded', dodge: 'dodged', repair: 'patched the hull', special: 'worked something strange', ultimate: 'emptied the full battery' }
 // Mechanic checks are answered by CREW ABILITIES. The cue names the KIND of
 // answer (category-vague on purpose — working out which crew ability is still
 // the player's job) but is explicit that a crew ability is what clears it.
@@ -167,7 +167,7 @@ const d20 = () => Math.floor(Math.random() * 20) + 1
 // branches if a new pattern shape needs its own tell.
 function enemyBehaviorHint(pattern: EnemyAction[]): string {
   const n = pattern.length || 1
-  const c = { reload: 0, fire: 0, volley: 0, dodge: 0, repair: 0, mega: 0, special: 0 }
+  const c = { reload: 0, fire: 0, volley: 0, dodge: 0, repair: 0, mega: 0, special: 0, ultimate: 0 }
   for (const a of pattern) c[a]++
   const aggR    = (c.fire + c.volley) / n
   const dodgeR  = c.dodge / n
@@ -1144,6 +1144,18 @@ export default function RaidCombat({
   const decoyElRefs = useRef<(HTMLDivElement | null)[]>([])
   const decoyFumbleRef = useRef(false)
   const [activeDecoys, setActiveDecoys] = useState(0)
+  // Raid-8 aim-bar attacks — enemy specials that strike YOUR aim, not your
+  // hull. One affliction at a time; `passes` = player aim sessions remaining:
+  //   decoys   — forces False-Colours decoy bands on every afflicted pass
+  //   hardened — the lock is plated: first tap CRACKS it (bar keeps sweeping,
+  //              no judgment), the second tap lands the real lock
+  //   squall   — the needle gusts (sweep speed surges and dies mid-pass)
+  // Consumed at aim-session start; the banner chip clears once spent.
+  const aimAfflictionRef = useRef<{ kind: AimAttackId; name: string; passes: number } | null>(null)
+  const [aimAffliction, setAimAffliction] = useState<{ kind: AimAttackId; name: string } | null>(null)
+  const hardenedArmedRef = useRef(false)
+  const [hardenedArmed, setHardenedArmed] = useState(false)
+  const squallPhaseRef = useRef(0)
   // Drowned Whispers (confuse curse) — when an order is scrambled, the swap is
   // stashed here so resolveTurn can explain it in the action log, and flashed
   // on screen so the player notices the moment it happens.
@@ -1716,6 +1728,11 @@ export default function RaidCombat({
     enemyPatternIdxRef.current = 0
     enemyFeintStreakRef.current = 0
     volleyCountRef.current = 0
+    // Aim afflictions are per-fight — a fresh enemy clears any live one.
+    aimAfflictionRef.current = null
+    setAimAffliction(null)
+    hardenedArmedRef.current = false
+    setHardenedArmed(false)
     // Vengeance is CURRENT-FIGHT only — a fresh enemy clears the ward and any
     // active rage buff (arm it again if you need it this fight).
     vengeanceWardRef.current = false
@@ -1745,10 +1762,29 @@ export default function RaidCombat({
     // per-enemy needle multiplier (rarely used — prefer zoneSpeedMult).
     const NEEDLE_SPEED = INDICATOR_SPEED * tide.aimSpeedMult * (enemy.aimSpeedMult ?? 1)
 
+    // Raid-8 aim affliction — read the live one for THIS pass, then burn a
+    // pass. The banner chip stays up through the final afflicted pass and
+    // clears the moment a clean session starts.
+    let affliction = aimAfflictionRef.current
+    if (affliction && affliction.passes <= 0) {
+      aimAfflictionRef.current = null
+      affliction = null
+      setAimAffliction(null)
+    }
+    if (affliction) affliction.passes -= 1
+    hardenedArmedRef.current = affliction?.kind === 'hardened'
+    setHardenedArmed(hardenedArmedRef.current)
+    squallPhaseRef.current = Math.random() * Math.PI * 2
+    const squallActive = affliction?.kind === 'squall'
+
     // False Colours: on a RANDOM fraction of fires, spawn N drifting decoy bands.
-    // Decided once per aiming session so the player can't predict it.
+    // Decided once per aiming session so the player can't predict it. The
+    // raid-8 'decoys' affliction forces them on EVERY afflicted pass instead.
     const dLo = HIT_W + GRAZE_W, dHi = 1 - HIT_W - GRAZE_W
-    const nDecoys = tide.aimDecoys > 0 && Math.random() < DECOY_FIRE_CHANCE ? tide.aimDecoys : 0
+    const forcedDecoys = affliction?.kind === 'decoys' ? 2 : 0
+    const nDecoys = forcedDecoys > 0
+      ? forcedDecoys
+      : tide.aimDecoys > 0 && Math.random() < DECOY_FIRE_CHANCE ? tide.aimDecoys : 0
     decoyRunRef.current = Array.from({ length: nDecoys }, (_, k) => ({
       pos: dLo + (dHi - dLo) * (nDecoys === 1 ? 0.32 + Math.random() * 0.36 : k / (nDecoys - 1)),
       dir: k % 2 === 0 ? 1 : -1,
@@ -1767,7 +1803,11 @@ export default function RaidCombat({
       if (critFreezeRef.current) { rafRef.current = requestAnimationFrame(tick); return }
       const frames = dt / 16.67
 
-      firePosRef.current += NEEDLE_SPEED * frames * fireDirRef.current
+      // Squall (raid-8 affliction): the needle's sweep speed surges and dies
+      // on a slow sine, so timing by rhythm alone fails — you have to watch
+      // the needle itself. Judgment is untouched (position sampled at tap).
+      const gust = squallActive ? 1 + 0.55 * Math.sin(now / 340 + squallPhaseRef.current) : 1
+      firePosRef.current += NEEDLE_SPEED * gust * frames * fireDirRef.current
       if (firePosRef.current >= 1) { firePosRef.current = 1; fireDirRef.current = -1 }
       if (firePosRef.current <= 0) { firePosRef.current = 0; fireDirRef.current = 1 }
 
@@ -1840,6 +1880,15 @@ export default function RaidCombat({
       // scaled variant without one) — degrade to a reload and advance.
       action = 'reload'
       enemyPatternIdxRef.current++
+    } else if (action === 'ultimate' && !enemy.ultimate) {
+      // Ultimate slot without an authored ultimate — same degrade as special.
+      action = 'reload'
+      enemyPatternIdxRef.current++
+    } else if (action === 'ultimate' && enemyCharges < enemyMagazine) {
+      // Ultimate needs a FULL magazine. Keep loading and DON'T advance — the
+      // slot re-attempts every turn until the clip fills, so the player
+      // watches it build (the glowing pips are the tell) and can answer.
+      action = 'reload'
     } else if ((action === 'fire'   && enemyCharges < 1) ||
         (action === 'volley' && enemyCharges < VOLLEY_COST)) {
       action = 'reload'
@@ -1887,6 +1936,10 @@ export default function RaidCombat({
       let action: EnemyAction = raw
       if (raw === 'special' && !enemy.special) {
         action = 'reload'; idx++    // mirrors pickEnemyAction's degrade
+      } else if (raw === 'ultimate' && !enemy.ultimate) {
+        action = 'reload'; idx++    // authoring slip — degrade + advance
+      } else if (raw === 'ultimate' && charges < enemyMagazine) {
+        action = 'reload'            // building to full — slot re-attempted (no advance)
       } else if ((raw === 'fire' && charges < 1) || (raw === 'volley' && charges < VOLLEY_COST)) {
         action = 'reload'            // impossible action → reload, slot re-attempted (no advance)
       } else if (raw === 'reload' && charges >= enemyMagazine) {
@@ -1898,6 +1951,7 @@ export default function RaidCombat({
       if (action === 'reload') charges = Math.min(enemyMagazine, charges + 1)
       else if (action === 'fire') charges = Math.max(0, charges - 1)
       else if (action === 'volley') charges = Math.max(0, charges - VOLLEY_COST)
+      else if (action === 'ultimate') charges = 0   // spends the whole magazine
       out.push(action)
     }
     return out
@@ -2262,7 +2316,7 @@ export default function RaidCombat({
           setLastPlayerAction(null)
           refreshed = true
         }
-        const nice = (a: EnemyAction) => a === 'fire' ? 'Fire' : a === 'volley' ? 'Volley' : a === 'reload' ? 'Reload' : a === 'mega' ? 'Mega' : a === 'repair' ? 'Repair' : a === 'special' ? (enemy.special?.name ?? 'Special') : 'Dodge'
+        const nice = (a: EnemyAction) => a === 'fire' ? 'Fire' : a === 'volley' ? 'Volley' : a === 'reload' ? 'Reload' : a === 'mega' ? 'Mega' : a === 'repair' ? 'Repair' : a === 'special' ? (enemy.special?.name ?? 'Special') : a === 'ultimate' ? (enemy.ultimate?.name ?? 'Ultimate') : 'Dodge'
         setResolveLog(prev => [...prev, `${crew.name} reads the tide — the enemy will ${moves.map(nice).join(', then ')}.${refreshed ? ' Your dodge is ready again.' : ''}`])
         break
       }
@@ -2464,6 +2518,18 @@ export default function RaidCombat({
     // double-tap in the same frame can't run the lock twice while the
     // critFreeze state commit is still pending.
     if (subPhase !== 'aiming' || critFreeze || critFreezeRef.current) return
+    // Hardened Lock (raid-8 affliction): the first tap only CRACKS the
+    // plating — no freeze, no judgment, the bar keeps sweeping — and the
+    // second tap lands the real lock. Deliberately BEFORE the freeze flip so
+    // the WYSIWYG protocol is untouched for the tap that actually judges.
+    if (hardenedArmedRef.current) {
+      hardenedArmedRef.current = false
+      setHardenedArmed(false)
+      vibrate([0, 12, 26, 8])
+      flashBar(barFlashRef.current, '#9fb2c8', 0.55)
+      snapIndicator(indicatorRef.current)
+      return
+    }
     // Freeze the RAF synchronously. The critFreezeRef mirror effect only
     // commits after this render, which let the tick run 1–2 more frames and
     // drift the painted needle past the spot being judged.
@@ -2978,6 +3044,12 @@ export default function RaidCombat({
           stepLines.push(enemyChargesHidden
             ? `The ${enemy.name} works something behind its shuttered gunports — you can't make it out.`
             : `Enemy loads a cannonball. (${eCharges}/${enemyMagazine})`)
+          // Ultimate telegraph — the moment the magazine tops out on an
+          // ultimate-carrying enemy, say so (the glowing pips are the visual
+          // tell; this is the narrated one). Suppressed under Shuttered Ports.
+          if (enemy.ultimate && eCharges >= enemyMagazine && !enemyChargesHidden) {
+            stepLines.push(`⚠ The ${enemy.name}'s full battery gleams — ${enemy.ultimate.name} is primed.`)
+          }
         }
       } else if (action === 'repair') {
         // Player-only consumable: heal the hull, lose the offensive
@@ -3000,26 +3072,52 @@ export default function RaidCombat({
           splatColor = '#4ade80'
         }
       } else if (action === 'special' && who === 'enemy' && enemy.special) {
-        // Ch4 enemy special — the crew-ability analog. Applies its authored
-        // status (shared pipeline, lib/statuses) to the player or to itself.
-        // Reapplying refreshes duration / keeps the stronger magnitude, per
-        // the pipeline's no-stacking rule.
         const sp = enemy.special
-        const sid = sp.status as StatusId
-        const def = STATUS_DEFS[sid]
-        if (sp.target === 'player') applyPlayerStatus(sid, sp.magnitude, sp.turns)
-        else applyEnemyStatus(sid, sp.magnitude, sp.turns)
-        const targetWord = sp.target === 'player' ? 'You are' : `The ${enemy.name} is`
-        pushStep({
-          who, action, pHp, eHp, pCharges, eCharges,
-          splatTarget: sp.target === 'player' ? 'player' : 'enemy',
-          splatText: def?.name ?? sp.name,
-          splatColor: def?.color ?? '#c084fc',
-          logLines: [
-            `${sp.name}! ${sp.line}`,
-            `${targetWord} ${def?.name ?? sp.status}${def ? ` — ${def.describe(sp.magnitude)}` : ''} (${sp.turns} turn${sp.turns === 1 ? '' : 's'}).`,
-          ],
-        })
+        if (sp.aimAttack) {
+          // Raid-8 AIM-BAR attack — afflicts the player's next N lock-ins
+          // (decoys / hardened / squall) instead of touching hull or stats.
+          // Recasting refreshes the pass count; the aim-session effect
+          // consumes one pass per lock-in and clears the chip when spent.
+          const passes = sp.aimPasses ?? 2
+          aimAfflictionRef.current = { kind: sp.aimAttack, name: sp.name, passes }
+          setAimAffliction({ kind: sp.aimAttack, name: sp.name })
+          const what =
+            sp.aimAttack === 'decoys'   ? 'False targets bloom across your aim bar — do NOT lock a crimson band.'
+            : sp.aimAttack === 'hardened' ? 'Your lock is plated over — the first tap only cracks it; tap TWICE to land a shot.'
+            :                               'A squall grips your aim — the needle will gust fast and slow mid-sweep.'
+          pushStep({
+            who, action, pHp, eHp, pCharges, eCharges,
+            splatTarget: 'player',
+            splatText: sp.name,
+            splatColor: '#c084fc',
+            logLines: [
+              `${sp.name}! ${sp.line}`,
+              `${what} (next ${passes} shot${passes === 1 ? '' : 's'}.)`,
+            ],
+          })
+        } else if (sp.status) {
+          // Ch4 status special — the crew-ability analog. Applies its authored
+          // status (shared pipeline, lib/statuses) to the player or to itself.
+          // Reapplying refreshes duration / keeps the stronger magnitude, per
+          // the pipeline's no-stacking rule.
+          const sid = sp.status as StatusId
+          const def = STATUS_DEFS[sid]
+          const magnitude = sp.magnitude ?? 0
+          const turns = sp.turns ?? 1
+          if (sp.target === 'player') applyPlayerStatus(sid, magnitude, turns)
+          else applyEnemyStatus(sid, magnitude, turns)
+          const targetWord = sp.target === 'player' ? 'You are' : `The ${enemy.name} is`
+          pushStep({
+            who, action, pHp, eHp, pCharges, eCharges,
+            splatTarget: sp.target === 'player' ? 'player' : 'enemy',
+            splatText: def?.name ?? sp.name,
+            splatColor: def?.color ?? '#c084fc',
+            logLines: [
+              `${sp.name}! ${sp.line}`,
+              `${targetWord} ${def?.name ?? sp.status}${def ? ` — ${def.describe(magnitude)}` : ''} (${turns} turn${turns === 1 ? '' : 's'}).`,
+            ],
+          })
+        }
       } else if (action === 'dodge') {
         // Skip the brace line when the dodger went SECOND in the order and
         // the other actor is firing this turn — the dodge outcome is
@@ -3032,9 +3130,9 @@ export default function RaidCombat({
         if (!(otherIsAttacking && dodgerWentSecond)) {
           stepLines.push(who === 'player' ? `You brace, ready to dodge.` : `Enemy braces, ready to dodge.`)
         }
-      } else if (action === 'fire' || action === 'volley' || action === 'mega') {
+      } else if (action === 'fire' || action === 'volley' || action === 'mega' || action === 'ultimate') {
         if (who === 'player') pCharges -= (action === 'mega' ? MEGA_CHARGE_COST : action === 'volley' ? VOLLEY_COST : 1)
-        else                  eCharges -= (action === 'volley' ? VOLLEY_COST : 1)
+        else                  eCharges = Math.max(0, eCharges - (action === 'ultimate' ? enemyMagazine : action === 'volley' ? VOLLEY_COST : 1))
 
         const isAttackerPlayer = who === 'player'
         // Mega (player-only): the augment whose damage + on-hit behaviour drives
@@ -3180,7 +3278,11 @@ export default function RaidCombat({
           }
         } else {
           const base = Math.floor(Math.random() * (enemy.maxDmg - enemy.minDmg + 1)) + enemy.minDmg
-          dmg = base * (action === 'volley' ? 2 : 1)
+          // Ultimate: the whole magazine in one authored blow (× its mult,
+          // floored). Volley stays the flat ×2.
+          dmg = action === 'ultimate'
+            ? Math.max(1, Math.floor(base * (enemy.ultimate?.mult ?? 2.6)))
+            : base * (action === 'volley' ? 2 : 1)
           // Statuses on the ENEMY's output: weaken ↓ / enrage ↑ (Ch4 pipeline).
           if (eStatus.dmgDealtMult !== 1) dmg = Math.max(1, Math.floor(dmg * eStatus.dmgDealtMult))
           // Phase 2 boss damage bump (challenge-mode Pete) — multiplies the
@@ -3200,6 +3302,8 @@ export default function RaidCombat({
           // Positive = Ghostward boon (enemies crit less); negative = Sharpshooters
           // curse (enemies crit MORE). Clamped to a valid 0-1 chance.
           if (tide.inCritReduce !== 0) effCrit = Math.max(0, Math.min(1, effCrit - tide.inCritReduce))
+          // Ultimates never crit — the number is authored, not swingy.
+          if (action === 'ultimate') effCrit = 0
           if (Math.random() < effCrit) {
             enemyCrit = true
             dmg = Math.floor(dmg * 1.5)
@@ -3635,11 +3739,18 @@ export default function RaidCombat({
             splatText = 'Shielded'
             splatColor = '#7dd3fc'
           } else if (partialDodge) {
-            stepLines.push(action === 'volley'
+            stepLines.push(action === 'ultimate'
+              ? `You partially dodge ${enemy.ultimate?.name ?? 'the ultimate'} — grazed for ${dmg}.`
+              : action === 'volley'
               ? `You partially dodge the volley — grazed for ${dmg}.`
               : `You partially dodge — grazed for ${dmg}.`)
             splatText = `-${dmg}`
             splatColor = '#94a3b8'
+          } else if (action === 'ultimate') {
+            if (enemy.ultimate?.line) stepLines.push(`${enemy.ultimate.name}! ${enemy.ultimate.line}`)
+            stepLines.push(`The full battery empties into you for ${dmg} damage.`)
+            splatText = `-${dmg}`
+            splatColor = '#ff4d6d'
           } else if (enemyCrit) {
             stepLines.push(action === 'volley'
               ? `Critical volley! Enemy blasts you for ${dmg} damage.`
@@ -3901,7 +4012,7 @@ export default function RaidCombat({
       }
 
       const step = steps[i]
-      const isAttack  = step.action === 'fire' || step.action === 'volley' || step.action === 'mega'
+      const isAttack  = step.action === 'fire' || step.action === 'volley' || step.action === 'mega' || step.action === 'ultimate'
       const isDodged  = isAttack && step.splatText === 'Dodged'
 
       // Phase 2 transition — this is the dramatic revival beat. The ref
@@ -4210,12 +4321,14 @@ export default function RaidCombat({
       } else if (isAttack && step.who === 'enemy') {
         // Enemy firing at player — muzzle flash off the enemy gun deck now,
         // projectile flies, then splat + shake + impact spray on the player hull.
-        const eIsVolley = step.action === 'volley' && !step.big
+        const eIsUltimate = step.action === 'ultimate'
+        const eIsVolley = (step.action === 'volley' && !step.big) || eIsUltimate
         const eCannonKind: 'normal' | 'volley' | 'crit' =
-          step.big ? 'crit' : eIsVolley ? 'volley' : 'normal'
+          step.big || eIsUltimate ? 'crit' : eIsVolley ? 'volley' : 'normal'
         if (eIsVolley) {
-          // Mirror the player's salvo — three muzzle pops off the enemy deck.
-          ;[0, 95, 190].forEach((off, k) => {
+          // Mirror the player's salvo — three muzzle pops off the enemy deck
+          // (an ultimate empties the whole 4-ball magazine, quicker cadence).
+          ;(eIsUltimate ? [0, 80, 160, 240] : [0, 95, 190]).forEach((off, k) => {
             playStepChainRef.current.push(setTimeout(() => {
               setEnemyMuzzle({ key: Date.now() + i + k * 103, kind: 'volley' })
               playStepChainRef.current.push(setTimeout(() => setEnemyMuzzle(null), 480))
@@ -4976,7 +5089,7 @@ export default function RaidCombat({
                 {foreseenMoves.map((a, i) => (
                   <span key={i} style={{ display: 'inline-flex', alignItems: 'center', opacity: i === 0 ? 1 : 0.5 }}>
                     {i > 0 && <span style={{ opacity: 0.6, margin: '0 2px' }}>→</span>}
-                    {a === 'fire' ? 'Fire' : a === 'volley' ? 'Volley' : a === 'reload' ? 'Reload' : a === 'mega' ? 'Mega' : a === 'repair' ? 'Repair' : a === 'special' ? 'Special' : 'Dodge'}
+                    {a === 'fire' ? 'Fire' : a === 'volley' ? 'Volley' : a === 'reload' ? 'Reload' : a === 'mega' ? 'Mega' : a === 'repair' ? 'Repair' : a === 'special' ? 'Special' : a === 'ultimate' ? 'Ultimate' : 'Dodge'}
                   </span>
                 ))}
               </span>
@@ -4985,7 +5098,12 @@ export default function RaidCombat({
                 HP bar as a violet segment so it reads as the enemy's, not your
                 cyan shield. */}
             <HPBar current={enemyHp} max={enemyHpMax} accent={ENEMY_COLOR} compact shield={enemyShieldHp} shieldColor="#c084fc" shieldGradTo="#a855f7" hidden={enemyHpHidden} />
-            <ChargesRow charges={enemyCharges} max={enemyMagazine} small hidden={enemyChargesHidden} />
+            <ChargesRow
+              charges={enemyCharges} max={enemyMagazine} small hidden={enemyChargesHidden}
+              // Ultimate tell — the full battery glows the same way the player's
+              // Mega-ready pips do, in the danger red the ultimate hits in.
+              readyGlow={enemy.ultimate && !enemyChargesHidden && enemyCharges >= enemyMagazine ? '#ff4d6d' : null}
+            />
             {/* Ch4 statuses + bespoke effect chips (burn/freeze/snare) — one row. */}
             <StatusBadgesRow statuses={enemyStatuses} bespoke={[
               ...(enemyBurning ? [{ key: 'burn', glyph: '🔥', color: '#fb923c', title: 'Ablaze — burning each turn' }] : []),
@@ -5654,6 +5772,10 @@ export default function RaidCombat({
             // False Colours curse — decoy bands the RAF drifts via these refs.
             decoyCount={activeDecoys}
             decoyElRefs={decoyElRefs}
+            // Raid-8 aim affliction — warning chip + (hardened) the tap-twice
+            // state so the player knows the first tap is the crack, not a miss.
+            afflictionLabel={aimAffliction?.name ?? null}
+            hardenedArmed={hardenedArmed}
           />
         ) : (
           <LogBox lines={resolveLog} turn={turn} />
@@ -8073,7 +8195,7 @@ function LogBox({ lines, turn }: { lines: string[]; turn: number }) {
 // shift. The actual aim bar is 44px; the surrounding chrome (Turn-
 // style header + centering + helper hint) fills the rest of the slot.
 // Pairs with InlineLockButton below.
-function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, aimBlackout, critW, sharpshotActive, decoyCount, decoyElRefs }: {
+function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, aimBlackout, critW, sharpshotActive, decoyCount, decoyElRefs, afflictionLabel, hardenedArmed }: {
   indicatorRef: React.RefObject<HTMLDivElement | null>
   zoneRef:      React.RefObject<HTMLDivElement | null>
   flashRef:     React.RefObject<HTMLDivElement | null>
@@ -8097,6 +8219,12 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, aimBlack
   /** Sharpshot buff live — pulse the gold crit band so the widened window
    *  reads as an active boon, not just a quietly bigger target. */
   sharpshotActive?: boolean
+  /** Raid-8 aim affliction (decoys / hardened / squall) — the special's name,
+   *  shown as a warning chip in the header while the affliction is live. */
+  afflictionLabel?: string | null
+  /** Hardened Lock: true while the plate is still intact THIS pass — the
+   *  header flips to "tap twice" so the crack-tap doesn't read as a bug. */
+  hardenedArmed?: boolean
 }) {
   const fogOpacity = Math.max(0, Math.min(1, aimFogDensity ?? 0))
   const hasFog = fogOpacity > 0
@@ -8149,12 +8277,18 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, aimBlack
         `}</style>
       )}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexShrink: 0 }}>
-        <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.65rem', color: '#fbbf24' }}>
-          Lock Your Shot
+        <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.65rem', color: hardenedArmed ? '#9fb2c8' : '#fbbf24' }}>
+          {hardenedArmed ? 'Plated — Tap Twice' : 'Lock Your Shot'}
         </p>
-        <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.55rem', color: '#5a7a9a' }}>
-          Gold = Crit
-        </p>
+        {afflictionLabel ? (
+          <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.55rem', color: '#c084fc', textShadow: '0 0 8px rgba(192,132,252,0.5)' }}>
+            ⚠ {afflictionLabel}
+          </p>
+        ) : (
+          <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.55rem', color: '#5a7a9a' }}>
+            Gold = Crit
+          </p>
+        )}
       </div>
 
       {/* The bar itself — same DOM as the old AimPanel so the
@@ -8303,7 +8437,7 @@ function ActionTilesRow({ playerAction, enemyAction, aimResult, firstActor }: {
   firstActor: Actor | null
 }) {
   const labelFor = (a: EnemyAction | null) =>
-    a === 'fire' ? 'Fire' : a === 'volley' ? 'Volley' : a === 'mega' ? 'Mega' : a === 'reload' ? 'Reload' : a === 'dodge' ? 'Dodge' : a === 'special' ? 'Special' : '—'
+    a === 'fire' ? 'Fire' : a === 'volley' ? 'Volley' : a === 'mega' ? 'Mega' : a === 'reload' ? 'Reload' : a === 'dodge' ? 'Dodge' : a === 'special' ? 'Special' : a === 'ultimate' ? 'Ultimate' : '—'
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
       <ActionTile label="YOU" action={labelFor(playerAction)} aim={aimResult} first={firstActor === 'player'} color="#4ade80" />

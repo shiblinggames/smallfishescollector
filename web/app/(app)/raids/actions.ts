@@ -95,10 +95,17 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
   const shipTier = profile?.ship_tier ?? 0
   const ship = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
 
+  // Ship classes: chapter-end identity picks (Master Gunner, Ironside,
+  // Helmsman, Buccaneer) + the Ch4 augments. Parsed EARLY because the
+  // Expanded Quarters augment widens the crew party and Expanded Armory
+  // widens the item cap, both read below.
+  const shipClassPicks = (profile?.ship_classes as Record<string, string> | null) ?? {}
+  const classEffects = aggregateShipClasses(shipClassPicks)
+
   // New crew system: deployed party from user_crew (raid track), resolved
   // with effects. Voyage and raid each have an independent assignment slot
   // now — see migrate_split_crew_assignment.
-  const party = await loadDeployedParty(admin, userId, ship.crewSlots, 'raid')
+  const party = await loadDeployedParty(admin, userId, ship.crewSlots + classEffects.crewSlots, 'raid')
   const resolved = resolveDeployedCrew(party)
   const totalPower = resolved.totals.power
   const totalDodge = resolved.totals.dodge
@@ -137,7 +144,8 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
   // capacity. The UI also caps at the same number when the loadout
   // drawer opens, so the next save will write the truncated list back.
   const rawEquipped = (profile?.equipped_raid_items as string[] | null) ?? []
-  const slotCap     = raidItemSlotsForTier((profile?.ship_tier as number | null) ?? 0)
+  // Hull cap + the Ch4 Expanded Armory augment's extra mount.
+  const slotCap     = raidItemSlotsForTier((profile?.ship_tier as number | null) ?? 0) + classEffects.itemSlots
   // Drop items that can't coexist (tier-family grades + a fusion beside its own
   // forge ingredients) so a legacy/stale loadout can't double-apply a stat that
   // was never meant to stack, then cap to the hull's slots.
@@ -145,13 +153,6 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
   const hpMaxMult = getActiveEffects(equippedItems)
     .filter(e => e.type === 'max_hp_mult')
     .reduce((a, e) => a * e.value, 1)
-
-  // Ship classes: chapter-end identity picks (Master Gunner, Ironside,
-  // Helmsman, Buccaneer). Each pick stacks multiplicatively with raid
-  // items + with other class picks. HP and speed bake into the base
-  // stats below; damageMult + doubloonMult pass through to RaidGame.
-  const shipClassPicks = (profile?.ship_classes as Record<string, string> | null) ?? {}
-  const classEffects = aggregateShipClasses(shipClassPicks)
 
   const gauntletUpgrades = (profile?.gauntlet_upgrades as string[] | null) ?? []
 
@@ -268,6 +269,7 @@ const ITEM_GRANTS: Record<string, { doubloons?: number; gems?: number; shipSkin?
   tell_tale_glass:         { raidItem: 'tell_tale_glass' },
   admirals_eye:            { raidItem: 'admirals_eye' },
   chain_shot:              { raidItem: 'chain_shot' },
+  dons_signet:             { raidItem: 'dons_signet' },
   war_drum:                { raidItem: 'war_drum' },
   thunder_drum:            { raidItem: 'thunder_drum' },
   finndicate_hull:         { shipSkin:  'finndicate_hull' },

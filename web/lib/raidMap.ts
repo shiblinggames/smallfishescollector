@@ -10,8 +10,8 @@
 // gated by `requiresNode` (+ optional Nav level); a cleared combat node
 // stays farmable.
 
-import { CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER, THE_COFFERS_FLEET, THE_QUARTERMASTER, THE_HAMMERHEAD, GEM_GLYPH, raidCompletionBonusXp, type RaidLootItem, type BossRaidConfig } from '@/lib/bossRaids'
-import { CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE, THE_CARTOGRAPHER_CHALLENGE, THE_TOLLMASTER_CHALLENGE, THE_COFFERS_FLEET_CHALLENGE, THE_QUARTERMASTER_CHALLENGE, THE_HAMMERHEAD_CHALLENGE } from '@/lib/raidChallenge'
+import { CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER, THE_COFFERS_FLEET, THE_QUARTERMASTER, THE_HAMMERHEAD, THE_THRONE, GEM_GLYPH, raidCompletionBonusXp, type RaidLootItem, type BossRaidConfig } from '@/lib/bossRaids'
+import { CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE, THE_CARTOGRAPHER_CHALLENGE, THE_TOLLMASTER_CHALLENGE, THE_COFFERS_FLEET_CHALLENGE, THE_QUARTERMASTER_CHALLENGE, THE_HAMMERHEAD_CHALLENGE, THE_THRONE_CHALLENGE } from '@/lib/raidChallenge'
 import { getShipSkin } from '@/lib/shipSkins'
 import { getRaidItem } from '@/lib/raidItems'
 
@@ -354,8 +354,11 @@ export interface RaidNode {
   comingSoon?: boolean
   /** class_pick node: one-time chapter-end ship-class pick. The
    *  chapterId is the RAID_CHAPTERS.id this pick contributes to (so
-   *  the picker writes into profiles.ship_classes[chapterId]). */
-  classPick?: { chapterId: string }
+   *  the picker writes into profiles.ship_classes[chapterId]).
+   *  `options` overrides the normal tall-vs-wide class ladder with an
+   *  EXACT menu (the Ch4 augment offers Expanded Armory vs Expanded
+   *  Quarters instead of the class lines). */
+  classPick?: { chapterId: string; options?: string[] }
   /** puzzle: the beacon-chain (Lights Out) or cipher dials. Solving clears it. */
   puzzle?: RaidPuzzle
   /** dice: a d20 skill-check / risk-reward throw. Picking + rolling clears it. */
@@ -545,7 +548,7 @@ export const RAID_CHAPTERS: RaidChapter[] = [
     // (The Hammerhead) → crooked_ledger → Tumbler Lock puzzle → Raid 8
     // (Don Finleone) → dons_fall → chapter_4_augment.
     // lastNodeId GROWS as nodes are built; final = chapter_4_augment.
-    lastNodeId: 'throne_gates',
+    lastNodeId: 'chapter_4_augment',
   },
 ]
 
@@ -1928,6 +1931,91 @@ export const RAID_MAP: RaidNode[] = [
         'Three tumblers, each a lattice of iron bars over one gold bolt. Bars slide along their grooves — never sideways — and the bolt only runs when its whole row stands clear to the edge. Throw all three within the slide budget; run out and the tumbler resets to its first set.',
       dropsNote: 'Throwing the gate pays Nav XP. The budget resets the tumbler, never the gate — read the bars before you slide.',
       ctaLabel: 'Work the Lock →',
+    },
+  },
+  {
+    // RAID 8 — The Throne. Debuts the raid-8 layer: enemy ULTIMATES at a
+    // full 4-ball magazine and AIM-BAR ATTACKS (decoys / hardened / squall).
+    id: 'the_throne',    type: 'raid',
+    label: 'Don Finleone',
+    flavor: "Past the gates the water goes still, and the don's court rides at anchor around one lit flagship. Every mob in it carries a trick you haven't been hit with yet — and the don carries all of them.",
+    bridge: "The court is drowned and the don with it. But the margin in his books is still open — and whatever signs itself F is still out there, older than the Finndicate and twice as patient.",
+    requiresNode: 'throne_gates',
+    requiresNavLevel: 58,
+    adminOnly: true,
+    route: '/raids/throne',
+    raidId: THE_THRONE.raidId,
+    image: THE_THRONE.enemies.don_finleone.portrait,
+    detail: {
+      description:
+        "The don's own court, and every hull in it fights with a new kind of dirty. Watch their cannonball pips: a FULL, glowing battery means an ULTIMATE is primed — burn their charges down, shield, or brace before it empties into you. And their specials strike your AIM BAR itself: false gold you must not lock, plated locks that take two taps, squalls that gust your needle mid-sweep. Don Finleone waits at the centre — and what rises when his mask drops is nothing the family ever put on a ledger.",
+      enemies: ['The Court Herald', 'The Mirage', 'The Doorman', 'The Stormcaller', 'The Left Hand', 'The Consigliere', 'Don Finleone'],
+      drops: lootDrops(THE_THRONE.loot),
+      clearReward: clearPayout(THE_THRONE),
+      dropsNote: "One crate per clear, rolled once and scaled by your Fortune. The Don's Signet is the signature chase — the ring the whole Finndicate answered to. Two stronger Tide events between fights.",
+    },
+  },
+  {
+    id: 'the_throne_challenge',    type: 'raid',
+    label: 'Challenge: The Throne',
+    flavor: 'The court reconvenes, and this time the don skips the pleasantries.',
+    requiresNode: 'the_throne',
+    adminOnly: true,
+    route: '/raids/throne/challenge',
+    raidId: THE_THRONE_CHALLENGE.raidId,
+    sideBranch: { parentId: 'the_throne' },
+    image: THE_THRONE.enemies.don_finleone.portrait,
+    detail: {
+      description:
+        'The Throne again, meaner in every seat. Thicker barriers, heavier ultimates, the same aim-bar tricks with less patience between them — and the don rises twice as angry. The chase rewards roll richer.',
+      enemies: ['The Court Herald', 'The Mirage', 'The Doorman', 'The Stormcaller', 'The Left Hand', 'The Consigliere', 'Don Finleone'],
+      drops: lootDrops(THE_THRONE_CHALLENGE.loot),
+      clearReward: clearPayout(THE_THRONE_CHALLENGE),
+      dropsNote: 'Every kill pays more and the clear bonus is steeper than the normal run.',
+    },
+  },
+  {
+    id: 'dons_fall',    type: 'story',
+    label: "The Don's Fall",
+    flavor: 'The megalodon goes down trailing a century of drowned debts. The Finndicate is finished. The margin is not.',
+    bridge: 'The family is broken and its water is yours. What remains is one initial, one open account, and a name you have known since your first cast.',
+    requiresNode: 'the_throne',
+    adminOnly: true,
+    image: '/raidlog.png',
+    scene: [
+      { text: 'The megalodon sinks the way an empire does — slowly, and then all at once.' },
+      { text: 'The court scatters. The colours strike. A hundred years of drowned debts settle to the bottom with their collector.' },
+      { text: 'It should feel finished. You take his ledgers apart page by page, looking for the feeling.' },
+      { text: 'Instead you find the margin again. F. Signing sums before the Finndicate had a name. Signing the sums that BUILT it.' },
+      { text: 'The don ran the family. The margin ran the don. Nothing on any chart says what F runs besides.' },
+      { text: "One account left open, then. You pour what remains of the don's wine, and start on the arithmetic of finding out." },
+    ],
+    detail: {
+      description:
+        "The don is down and the Finndicate died with him — but the ledgers say the family was never the top of the pyramid. The F in the margins signed sums before the Finndicate had a name; the don ran the family, and the margin ran the don. One account stays open, and it's older than everything you've sunk so far.",
+      drops: [
+        { emoji: '📜', label: "Captain's Logbook, Fragment XIV", sublabel: '"The don ran the family. The margin ran the don."', rarity: 'epic' },
+      ],
+      dropsNote: 'The fake-final falls. The real account is still open.',
+      ctaLabel: 'Settle the Court →',
+      summary: "Don Finleone is drowned and the Finndicate broken — but the F in the margins signed sums that BUILT the family. The don ran the family; the margin ran the don. One account stays open.",
+    },
+  },
+  {
+    // Chapter IV's capstone AUGMENT — an either/or refit instead of a class
+    // rung: one more raid-item mount, or one more crew berth (ship-wide).
+    // classPick.options pins the menu to exactly these two.
+    id: 'chapter_4_augment',    type: 'class_pick',
+    label: "The Don's Shipwright",
+    flavor: "The don kept a shipwright the way other captains keep a surgeon. He works for you now — once, and he only asks one question: more iron, or more hands?",
+    requiresNode: 'dons_fall',
+    adminOnly: true,
+    classPick: { chapterId: 'the_last_fathom', options: ['armory_expansion', 'crew_quarters'] },
+    detail: {
+      description:
+        "The finest shipwright on the drowned market owes you his freedom, and he pays in ONE refit. Expanded Armory bolts one more mount to your deck — an extra raid item working every fight. Expanded Quarters berths one more crew, on raids AND voyages. One choice, permanent, and the other refit sails with someone luckier.",
+      dropsNote: 'Permanent, and the road not taken is gone for good. Choose for the captain you actually are.',
+      ctaLabel: 'Commission the refit',
     },
   },
   // The Davy Jones Gauntlet used to sit here as a chapter-2 side branch.

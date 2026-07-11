@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { RARITY_TIERS } from '@/lib/variants'
 import { applyVariantBoosts, raidItemSlotsForTier } from '@/lib/expeditions'
 import { getForgeRecipe, dedupeRaidItems, unobtainableComponents } from '@/lib/raidItems'
+import { classSlotBonuses } from '@/lib/shipClasses'
 import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import { getShipAugment, AUGMENT_COST, ULTIMATE_BUILD_MS, canBuildUltimate, parseAugmentBuild, isBuildComplete, type ShipAugmentBuild } from '@/lib/shipAugments'
 import { getShipSkin, canEquipShipSkin } from '@/lib/shipSkins'
@@ -123,9 +124,11 @@ export async function saveEquippedRaidItems(itemIds: string[]): Promise<void> {
   // Pull ship_tier so the slot cap scales with hull size (see
   // raidItemSlotsForTier in lib/expeditions). A Rowboat captain gets 1
   // slot; a Man-o-War captain gets 4.
-  const { data: profile } = await admin.from('profiles').select('raid_items, ship_tier').eq('id', user.id).single()
+  const { data: profile } = await admin.from('profiles').select('raid_items, ship_tier, ship_classes').eq('id', user.id).single()
   const owned = (profile?.raid_items as string[] | null) ?? []
+  // Hull cap + the Ch4 Expanded Armory augment's extra mount.
   const slots = raidItemSlotsForTier((profile?.ship_tier as number | null) ?? 0)
+    + classSlotBonuses(profile?.ship_classes as Record<string, string> | null).itemSlots
   // Owned + can-coexist (one-per-tier-family, and no fusion beside its own forge
   // ingredients) + capped to the hull's slots. dedupe runs before the slice so a
   // conflicting pair can't waste a slot apiece.

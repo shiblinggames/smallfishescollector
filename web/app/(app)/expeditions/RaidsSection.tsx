@@ -1598,8 +1598,12 @@ function NodeDetailSheet({
           // Offered classes are computed from the player's OTHER picks (exclude
           // this chapter's own, so a cleared node still shows what was on the
           // menu). Owned Mark I → its Mark II ("deepen"); untouched → Mark I.
+          // A node with a PINNED menu (classPick.options — the Ch4 augment)
+          // offers exactly those instead of the ladder.
           const priorPicks = Object.fromEntries(Object.entries(shipClasses).filter(([k]) => k !== chapterId))
-          const offered = offeredShipClasses(priorPicks)
+          const offered = node.classPick.options
+            ? node.classPick.options.map(id => getShipClass(id)).filter((c): c is NonNullable<typeof c> => !!c)
+            : offeredShipClasses(priorPicks)
           return (
             <div style={{ marginTop: '1.1rem' }}>
               <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.68rem', color: '#7a7875', marginBottom: '0.65rem' }}>

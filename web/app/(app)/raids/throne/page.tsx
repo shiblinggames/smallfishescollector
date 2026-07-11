@@ -1,0 +1,64 @@
+// The Throne — Chapter IV's Raid 8: Don Finleone's court, and the don
+// himself (a megalodon under the family colours). Debuts the raid-8 layer:
+// enemy ULTIMATES at a full 4-ball magazine and AIM-BAR ATTACKS (decoys /
+// hardened lock / squall). ADMIN-ONLY until the Last Fathom launches (drop
+// this guard + the map adminOnly flags together, per the Ch3 playbook).
+
+import { redirect } from 'next/navigation'
+import RaidGame from '../RaidGame'
+import { getRaidPlayerStats } from '../actions'
+import { THE_THRONE } from '@/lib/bossRaids'
+import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
+
+export default async function ThroneRaidPage() {
+  const user = await getCurrentUser()
+  if (!user) redirect('/login')
+
+  const [profile, stats] = await Promise.all([
+    getCurrentProfile(),
+    getRaidPlayerStats(user.id),
+  ])
+
+  // In-review gate — Chapter IV is admin-only until launch.
+  if (profile?.is_admin !== true) redirect('/expeditions')
+  if ((profile?.raid_repair_owed ?? 0) > 0) redirect('/expeditions')
+
+  return (
+    <>
+      <main className="min-h-screen pt-6">
+        <div className="px-3 pb-12 max-w-xl mx-auto">
+          <RaidGame
+            config={THE_THRONE}
+            shipImageUrl={stats.shipImageUrl}
+            shipName={stats.shipName}
+            username={stats.username}
+            playerCharacterColor={stats.characterColor}
+            playerEquippedHat={stats.equippedHat}
+            playerAvatarBg={stats.avatarBgColor}
+            playerAvatarBorder={stats.avatarBorderColor}
+            playerHPMax={stats.playerHPMax}
+            shipMinDamage={stats.shipMinDamage}
+            shipSpeed={stats.shipSpeed}
+            totalPower={stats.totalPower}
+            totalDodge={stats.totalDodge}
+            totalFortune={stats.totalFortune}
+            crewCount={stats.crewCount}
+            crewMembers={stats.crewMembers}
+            equippedShipSkin={stats.equippedShipSkin}
+            shipSkins={stats.shipSkins}
+            equippedItems={stats.equippedRaidItems}
+            ownedRaidItems={stats.ownedRaidItems}
+            classDamageMult={stats.classDamageMult}
+            classDoubloonMult={stats.classDoubloonMult}
+            shipClasses={stats.shipClasses}
+            equippedRepairKit={stats.equippedRepairKit}
+            initialExpeditionXP={profile?.expedition_xp ?? 0}
+            raidMods={stats.raidMods}
+            bonusChargeSlots={stats.bonusChargeSlots}
+            manowarAugment={stats.manowarAugment}
+          />
+        </div>
+      </main>
+    </>
+  )
+}

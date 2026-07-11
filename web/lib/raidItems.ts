@@ -245,6 +245,18 @@ export const RAID_ITEMS: RaidItemDef[] = [
     ],
     source: 'The Blockade — The Hammerhead',
   },
+  {
+    id: 'dons_signet',
+    name: "The Don's Signet",
+    description: 'The ring every captain in the Finndicate answered to. +15% damage on boss rounds — thrones fall hardest to those who wear the crown-maker.',
+    image: null,  // TODO: /donssignet.png at the art pass
+    emoji: '💍',
+    rarity: 'legendary',
+    effects: [
+      { type: 'boss_damage_mult', value: 1.15 },
+    ],
+    source: 'The Throne — Don Finleone',
+  },
   // ── Davy Jones Gauntlet chest cannons ──────────────────────────────────────
   // Two rare chest-only drops + the forged combination. Odds climb up the
   // chest ladder (see lib/gauntlet chestCannonDropChance). Collect BOTH and the

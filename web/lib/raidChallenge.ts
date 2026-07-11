@@ -11,7 +11,7 @@
 // raid_id so completions track in their own bucket on the leaderboard.
 // PHASE 2: elite enemy variants + the affix system. PHASE 3: boss phases.
 
-import { CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER, THE_COFFERS_FLEET, THE_QUARTERMASTER, THE_HAMMERHEAD, type BossRaidConfig, type BroadsideEnemy, type BossPhase, type RaidLootItem } from './bossRaids'
+import { CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER, THE_COFFERS_FLEET, THE_QUARTERMASTER, THE_HAMMERHEAD, THE_THRONE, type BossRaidConfig, type BroadsideEnemy, type BossPhase, type RaidLootItem } from './bossRaids'
 
 /** Multipliers applied by buildChallengeRaid. Tweak here, not per-raid. */
 export const CHALLENGE_MODS = {
@@ -300,6 +300,10 @@ const QUARTERMASTER_CHALLENGE_PHASE5: BossPhase = {
 // Raid 7's challenge — the scaled blockade. Shields / magazines / specials /
 // the boss's phase all carry through scaleEnemy's spread automatically.
 export const THE_HAMMERHEAD_CHALLENGE: BossRaidConfig = buildChallengeRaid(THE_HAMMERHEAD)
+
+// Raid 8's challenge — the scaled court. Ultimates / aim-bar attacks / the
+// don's three phases all carry through scaleEnemy's spread automatically.
+export const THE_THRONE_CHALLENGE: BossRaidConfig = buildChallengeRaid(THE_THRONE)
 
 export const THE_QUARTERMASTER_CHALLENGE: BossRaidConfig = (() => {
   const base = buildChallengeRaid(THE_QUARTERMASTER)
