@@ -5105,9 +5105,9 @@ export default function RaidCombat({
             />
             {/* Ch4 statuses + bespoke effect chips (burn/freeze/snare) — one row. */}
             <StatusBadgesRow statuses={enemyStatuses} bespoke={[
-              ...(enemyBurning ? [{ key: 'burn', glyph: '🔥', color: '#fb923c', title: 'Ablaze — burning each turn' }] : []),
-              ...(enemyFrozen ? [{ key: 'freeze', glyph: '❄', color: '#7dd3fc', title: 'Frozen — its turn is skipped' }] : []),
-              ...(snareDodgeTurns > 0 ? [{ key: 'snare', glyph: '⚓', color: '#d9b066', turns: snareDodgeTurns, title: 'Snared — dodges can be fouled' }] : []),
+              ...(enemyBurning ? [{ key: 'burn', color: '#fb923c', title: 'Ablaze — burning each turn' }] : []),
+              ...(enemyFrozen ? [{ key: 'freeze', color: '#7dd3fc', title: 'Frozen — its turn is skipped' }] : []),
+              ...(snareDodgeTurns > 0 ? [{ key: 'snare', color: '#d9b066', turns: snareDodgeTurns, title: 'Snared — dodges can be fouled' }] : []),
             ]} />
           </div>
         </motion.button>
@@ -5734,8 +5734,8 @@ export default function RaidCombat({
             <ChargesRow charges={playerCharges} max={playerMaxCharges} small readyGlow={canMega ? (megaAugment?.color ?? null) : null} />
             {/* Ch4 statuses + bespoke effect chips on YOUR hull. */}
             <StatusBadgesRow statuses={playerStatuses} bespoke={[
-              ...(playerBurning ? [{ key: 'burn', glyph: '🔥', color: '#fb923c', title: 'Ablaze — burning each turn (a crew heal puts it out)' }] : []),
-              ...(playerFrozen ? [{ key: 'freeze', glyph: '❄', color: '#7dd3fc', title: 'Frozen — your turn is skipped' }] : []),
+              ...(playerBurning ? [{ key: 'burn', color: '#fb923c', title: 'Ablaze — burning each turn (a crew heal puts it out)' }] : []),
+              ...(playerFrozen ? [{ key: 'freeze', color: '#7dd3fc', title: 'Frozen — your turn is skipped' }] : []),
             ]} />
           </div>
         </motion.button>
@@ -5978,8 +5978,8 @@ export default function RaidCombat({
             effectLabels={runDepth > 0 ? { good: 'Boons', bad: 'Curses' } : { good: 'Buffs', bad: 'Penalties' }}
             conditions={[
               ...statusConditions(playerStatuses),
-              ...(playerBurning ? [{ key: 'burn', name: 'Ablaze', glyph: '🔥', color: BURN_COLOR, turns: playerBurnRef.current.turns, desc: `Your ship is on fire — it loses ${playerBurnRef.current.dmg} HP at the end of each of your turns. Any crew heal douses the flames.` }] : []),
-              ...(playerFrozen ? [{ key: 'freeze', name: 'Frozen', glyph: '❄', color: FREEZE_COLOR, desc: 'Your ship is iced over — your next turn is skipped, and you cannot weave aside from incoming shots while frozen.' }] : []),
+              ...(playerBurning ? [{ key: 'burn', name: 'Ablaze', color: BURN_COLOR, turns: playerBurnRef.current.turns, desc: `Your ship is on fire — it loses ${playerBurnRef.current.dmg} HP at the end of each of your turns. Any crew heal douses the flames.` }] : []),
+              ...(playerFrozen ? [{ key: 'freeze', name: 'Frozen', color: FREEZE_COLOR, desc: 'Your ship is iced over — your next turn is skipped, and you cannot weave aside from incoming shots while frozen.' }] : []),
             ]}
             onClose={() => setShowStats(false)}
           />
@@ -6001,9 +6001,9 @@ export default function RaidCombat({
             affix={affix}
             conditions={[
               ...statusConditions(enemyStatuses),
-              ...(enemyBurning ? [{ key: 'burn', name: 'Ablaze', glyph: '🔥', color: BURN_COLOR, turns: enemyBurnRef.current.turns, desc: `Its hull is on fire — it loses ${enemyBurnRef.current.dmg} HP at the end of each of its turns.` }] : []),
-              ...(enemyFrozen ? [{ key: 'freeze', name: 'Frozen', glyph: '❄', color: FREEZE_COLOR, desc: 'Iced over — its next turn is skipped, and it cannot weave aside from your shots while frozen.' }] : []),
-              ...(snareDodgeTurns > 0 ? [{ key: 'snare', name: 'Snared', glyph: '⚓', color: '#d9b066', turns: snareDodgeTurns, desc: 'A snare fouls its rigging — each time it tries to dodge, there is a chance the dodge fails and it must act instead.' }] : []),
+              ...(enemyBurning ? [{ key: 'burn', name: 'Ablaze', color: BURN_COLOR, turns: enemyBurnRef.current.turns, desc: `Its hull is on fire — it loses ${enemyBurnRef.current.dmg} HP at the end of each of its turns.` }] : []),
+              ...(enemyFrozen ? [{ key: 'freeze', name: 'Frozen', color: FREEZE_COLOR, desc: 'Iced over — its next turn is skipped, and it cannot weave aside from your shots while frozen.' }] : []),
+              ...(snareDodgeTurns > 0 ? [{ key: 'snare', name: 'Snared', color: '#d9b066', turns: snareDodgeTurns, desc: 'A snare fouls its rigging — each time it tries to dodge, there is a chance the dodge fails and it must act instead.' }] : []),
             ]}
             onClose={() => setShowEnemyStats(false)}
           />
@@ -7110,17 +7110,44 @@ function HPBar({ current, max, accent, compact, shield = 0, shieldColor = '#7dd3
   )
 }
 
+// ── Status icons ─────────────────────────────────────────────────────────────
+// Drawn stroke icons for every status + bespoke effect. NO text glyphs/emoji:
+// several of the old characters (⌛ ⚔ ❤ 🔥 ⚓ ❄) take emoji presentation on
+// iOS and broke the no-emoji-icons rule. One component, keyed by the status
+// id (or bespoke key), inheriting the chip's color via currentColor.
+function StatusGlyph({ icon, size = 10 }: { icon: string; size?: number }) {
+  const P = (d: string, extra?: React.ReactNode) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0 }}>
+      <path d={d} />{extra}
+    </svg>
+  )
+  switch (icon) {
+    case 'weaken':  return P('M12 4v14M6 12l6 7 6-7')                                                    // arrow driven down
+    case 'feeble':  return P('M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z', <path d="M12 7.5l-2 3.2h4l-2 3.2" />)  // cracked shield
+    case 'slowed':  return P('M7 3h10M7 21h10M8 3c0 4.2 3 5.4 4 6.6 1-1.2 4-2.4 4-6.6M8 21c0-4.2 3-5.4 4-6.6 1 1.2 4 2.4 4 6.6') // hourglass
+    case 'silence': return P('M6.2 6.2l11.6 11.6', <circle cx="12" cy="12" r="8.5" />)                   // barred circle
+    case 'corrode': return P('M12 4c3.2 4.2 5 6.6 5 9.2a5 5 0 0 1-10 0C7 10.6 8.8 8.2 12 4z')            // acid drop
+    case 'fortify': return P('M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z')                       // whole shield
+    case 'enrage':  return P('M5 19L16.5 7.5M19 5l-2.5 2.5M16.5 7.5L13 6.5M16.5 7.5l1 3.5M7 15l2 2')     // striking blade
+    case 'regen':   return P('M12 20s-7-4.4-9-8.8C1.8 8.4 3.6 5.2 6.8 5.2c2 0 3.5 1.2 5.2 3.3 1.7-2.1 3.2-3.3 5.2-3.3 3.2 0 5 3.2 3.8 6C19 15.6 12 20 12 20z') // heart
+    case 'burn':    return P('M12 2.5c4 4 6 7 6 10.3A6 6 0 0 1 6 12.8C6 9.5 8 6.5 12 2.5z', <path d="M12 11.5c1.6 1.7 1.6 3.4 0 5.1-1.6-1.7-1.6-3.4 0-5.1z" />) // flame
+    case 'freeze':  return P('M12 2v20M3.3 7l17.4 10M20.7 7L3.3 17')                                     // snowflake
+    case 'snare':   return P('M12 7.2v12.3M8.3 10h7.4M5 13.6c.5 3.7 3.3 5.9 7 5.9s6.5-2.2 7-5.9', <circle cx="12" cy="4.8" r="2" />) // anchor
+    default:        return P('M12 5v14M5 12h14')
+  }
+}
+
 // ── Conditions section (stats popups) ────────────────────────────────────────
 // The chip row under each HP bar answers "what's on me"; this section in the
 // player/enemy stats popups answers "what does it DO" — full name + plain
 // description + turns left, for the Ch4 pipeline statuses AND the bespoke
 // elemental effects (burn / freeze / snare), which players asked to see
 // explained in the same place.
-interface ConditionItem { key: string; name: string; glyph: string; color: string; turns?: number; desc: string }
+interface ConditionItem { key: string; name: string; color: string; turns?: number; desc: string }
 function statusConditions(statuses: ActiveStatus[]): ConditionItem[] {
   return statuses.map(s => {
     const d = STATUS_DEFS[s.id]
-    return { key: s.id, name: d.name, glyph: d.glyph, color: d.color, turns: s.turnsLeft, desc: d.describe(s.magnitude) }
+    return { key: s.id, name: d.name, color: d.color, turns: s.turnsLeft, desc: d.describe(s.magnitude) }
   })
 }
 function ConditionsSection({ conditions }: { conditions: ConditionItem[] }) {
@@ -7133,7 +7160,9 @@ function ConditionsSection({ conditions }: { conditions: ConditionItem[] }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {conditions.map(c => (
           <div key={c.key} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '0.55rem 0.65rem', background: `${c.color}10`, border: `1px solid ${c.color}44`, borderRadius: 10 }}>
-            <span aria-hidden style={{ width: 22, height: 22, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', background: `${c.color}1f`, border: `1px solid ${c.color}66`, color: c.color, fontSize: '0.72rem', lineHeight: 1 }}>{c.glyph}</span>
+            <span aria-hidden style={{ width: 22, height: 22, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', background: `${c.color}1f`, border: `1px solid ${c.color}66`, color: c.color }}>
+              <StatusGlyph icon={c.key} size={12} />
+            </span>
             <div style={{ minWidth: 0 }}>
               <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: c.color, lineHeight: 1.2 }}>
                 {c.name}{c.turns != null && <span style={{ color: 'rgba(240,237,232,0.55)' }}> · {c.turns} turn{c.turns === 1 ? '' : 's'} left</span>}
@@ -7152,10 +7181,12 @@ function ConditionsSection({ conditions }: { conditions: ConditionItem[] }) {
 // and red/purple-family for debuffs. Renders under each side's HP bar. The
 // bespoke effects (burn / freeze / snare) pass in as extra chips so the player
 // reads ONE coherent status row, even though their mechanics stay bespoke.
-interface BespokeChip { key: string; glyph: string; color: string; turns?: number; title: string }
+interface BespokeChip { key: string; color: string; turns?: number; title: string }
 function StatusBadgesRow({ statuses, bespoke = [] }: { statuses: ActiveStatus[]; bespoke?: BespokeChip[] }) {
   if (statuses.length === 0 && bespoke.length === 0) return null
-  const chip = (key: string, glyph: string, color: string, tone: 'buff' | 'debuff', turns: number | undefined, title: string) => (
+  // Icons are drawn SVGs keyed by the status id / bespoke key — never text
+  // glyphs (several took emoji presentation on iOS; see StatusGlyph).
+  const chip = (key: string, color: string, tone: 'buff' | 'debuff', turns: number | undefined, title: string) => (
     <motion.span key={key} title={title}
       initial={{ scale: 0.3, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
       transition={{ type: 'spring', stiffness: 520, damping: 22 }}
@@ -7165,7 +7196,7 @@ function StatusBadgesRow({ statuses, bespoke = [] }: { statuses: ActiveStatus[];
         padding: '0 5px', height: 16, borderRadius: 999, fontSize: '0.56rem', lineHeight: 1,
         color, background: `${color}1c`, border: `1px solid ${color}${tone === 'buff' ? '66' : '88'}`,
       }}>
-      <span aria-hidden style={{ fontSize: '0.62rem' }}>{glyph}</span>
+      <StatusGlyph icon={key} size={9} />
       {turns != null && <span>{turns}</span>}
     </motion.span>
   )
@@ -7173,9 +7204,9 @@ function StatusBadgesRow({ statuses, bespoke = [] }: { statuses: ActiveStatus[];
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 5 }}>
       {statuses.map(s => {
         const def = STATUS_DEFS[s.id]
-        return chip(s.id, def.glyph, def.color, def.tone, s.turnsLeft, `${def.name} — ${def.describe(s.magnitude)} (${s.turnsLeft} turn${s.turnsLeft === 1 ? '' : 's'})`)
+        return chip(s.id, def.color, def.tone, s.turnsLeft, `${def.name} — ${def.describe(s.magnitude)} (${s.turnsLeft} turn${s.turnsLeft === 1 ? '' : 's'})`)
       })}
-      {bespoke.map(b => chip(b.key, b.glyph, b.color, 'debuff', b.turns, b.title))}
+      {bespoke.map(b => chip(b.key, b.color, 'debuff', b.turns, b.title))}
     </div>
   )
 }
