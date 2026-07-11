@@ -17,6 +17,7 @@ import { getShipClass, offeredShipClasses } from '@/lib/shipClasses'
 import BeaconChainPuzzle from './BeaconChainPuzzle'
 import CipherDialsPuzzle from './CipherDialsPuzzle'
 import MirrorRunPuzzle from './MirrorRunPuzzle'
+import CargoShufflePuzzle from './CargoShufflePuzzle'
 import DiceRollNode from './DiceRollNode'
 import DpsCheckNode from './DpsCheckNode'
 import StoryScene from './StoryScene'
@@ -958,7 +959,7 @@ function NodeDetailSheet({
     // available → the puzzle itself is rendered in the body (auto-solves);
     // cleared/locked just show a status banner here.
     if (cleared) {
-      cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: `${accent}1a`, border: `1px solid ${accent}40`, color: accent }}>{node.puzzle?.kind === 'cipher' ? 'Manifest Read ✓' : 'Beacons Lit ✓'}</div>
+      cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: `${accent}1a`, border: `1px solid ${accent}40`, color: accent }}>{node.puzzle?.kind === 'cipher' ? 'Manifest Read ✓' : node.puzzle?.kind === 'cargo' ? 'Hold Stowed ✓' : 'Beacons Lit ✓'}</div>
     } else if (locked) {
       cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: 'rgba(255,255,255,0.06)', color: '#5a5856' }}>Locked</div>
     }
@@ -1183,7 +1184,9 @@ function NodeDetailSheet({
         {/* Puzzle: beacon-chain (Lights Out) or cipher dials, live when available */}
         {node.type === 'puzzle' && node.puzzle && status === 'available' && !revealed && (
           <div style={{ marginTop: '1.1rem' }}>
-            {node.puzzle.kind === 'mirror'
+            {node.puzzle.kind === 'cargo' && node.puzzle.cargo
+              ? <CargoShufflePuzzle puzzle={node.puzzle.cargo} onSolved={solvePuzzle} />
+              : node.puzzle.kind === 'mirror'
               ? <MirrorRunPuzzle puzzle={node.puzzle} onSolved={solvePuzzle} />
               : node.puzzle.kind === 'cipher'
               ? <CipherDialsPuzzle puzzle={node.puzzle} onSolved={solvePuzzle} />
@@ -1227,7 +1230,7 @@ function NodeDetailSheet({
             boxShadow: `0 0 20px ${accent}22`, padding: '1.1rem 1rem',
           }}>
             <p className="font-cinzel font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.62rem', color: accent, marginBottom: '0.6rem', textAlign: 'center' }}>
-              {node.puzzle.kind === 'cipher' ? 'The Cipher Reads True' : node.puzzle.kind === 'mirror' ? 'The Beam Strikes True' : 'The Network Reads True'}
+              {node.puzzle.kind === 'cipher' ? 'The Cipher Reads True' : node.puzzle.kind === 'mirror' ? 'The Beam Strikes True' : node.puzzle.kind === 'cargo' ? 'The Hold Is Stowed' : 'The Network Reads True'}
             </p>
             <p className="font-karla" style={{ fontSize: '0.84rem', lineHeight: 1.6, color: 'rgba(240,237,232,0.8)', whiteSpace: 'pre-line', textAlign: 'center' }}>
               {node.puzzle.reveal}

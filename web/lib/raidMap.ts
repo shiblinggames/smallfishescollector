@@ -100,12 +100,26 @@ export interface RaidMirrorPuzzle {
   fireBudget?: number
 }
 
+// Cargo Shuffle (Ch4) — Sokoban. Push powder crates onto their deck marks;
+// crates only PUSH (never pull), one at a time. Classic notation per row:
+// '#' wall · ' ' floor · '@' sailor · '$' crate · '.' mark · '*' crate on
+// mark · '+' sailor on mark. Every room MUST be validated with
+// web/verify-cargo.mjs (BFS: solvable + min moves vs budget) before shipping.
+export interface RaidCargoRoom {
+  grid: string[]
+  /** Move budget (steps, pushes included). Busting it resets the room —
+   *  planning beats brute-forcing, same philosophy as Mirror Run's fires. */
+  moveBudget: number
+}
+export interface RaidCargoPuzzle { rooms: RaidCargoRoom[] }
+
 export interface RaidPuzzle {
   /** Which puzzle engine renders this node. 'beacon' = Lights Out (default,
    *  back-compat for the existing smuggler's-chart node). 'cipher' = the
    *  coupled wax dials (turn one, its neighbours turn too; line every seal
-   *  to the index at once). 'mirror' = the light-beam redirection grid. */
-  kind?: 'beacon' | 'cipher' | 'mirror'
+   *  to the index at once). 'mirror' = the light-beam redirection grid.
+   *  'cargo' = Sokoban crate-pushing (Ch4). */
+  kind?: 'beacon' | 'cipher' | 'mirror' | 'cargo'
   /** beacon: grid columns. */
   cols?: number
   /** beacon: grid rows. */
@@ -120,6 +134,8 @@ export interface RaidPuzzle {
   scrambleTurns?: number
   /** mirror: the light-beam grid layout. */
   mirror?: RaidMirrorPuzzle
+  /** cargo: the Sokoban rooms (played in order; solving the last solves the node). */
+  cargo?: RaidCargoPuzzle
   /** Nav XP granted on solve (no doubloons — this is a navigation discovery). */
   rewardNavXp: number
   /** Story payoff shown the moment the puzzle resolves: where the freight runs,
@@ -515,7 +531,7 @@ export const RAID_CHAPTERS: RaidChapter[] = [
     // (The Hammerhead) → crooked_ledger → Tumbler Lock puzzle → Raid 8
     // (Don Finleone) → dons_fall → chapter_4_augment.
     // lastNodeId GROWS as nodes are built; final = chapter_4_augment.
-    lastNodeId: 'the_reclamation',
+    lastNodeId: 'throne_locks',
   },
 ]
 
@@ -1727,6 +1743,59 @@ export const RAID_MAP: RaidNode[] = [
       dropsNote: 'Buy back any Cache item you passed over. Steep, permanent, and it unlocks the forge recipes that needed the road not taken.',
       ctaLabel: 'Crack the Vault →',
       summary: "The Quartermaster's seized vault re-offers every Cache choice you passed over, at 125,000 doubloons apiece. The roads not taken are open again.",
+    },
+  },
+  {
+    // Cargo Shuffle #1 — Sokoban in the powder hold before the Hammerhead's
+    // blockade. Three escalating rooms; every grid is validated by
+    // web/verify-cargo.mjs (min moves 13 / 25 / 31 vs budgets 20 / 34 / 45).
+    // KEEP THE SCRIPT IN SYNC when editing rooms.
+    id: 'throne_locks',      type: 'puzzle',
+    label: 'The Powder Hold',
+    flavor: "The don's water doesn't forgive a loose hold. Every powder crate stows on its mark before the blockade, or the first broadside does the stowing for you.",
+    bridge: 'The hold is stowed tight and the guns are fed. Ahead: the blockade, and the don’s right fin who runs it.',
+    requiresNode: 'the_reclamation',
+    adminOnly: true,
+    puzzle: {
+      kind: 'cargo',
+      rewardNavXp: 900,
+      reveal: 'The hold sits trim and the powder is dry.\nPast the next swell: the blockade line, and the Hammerhead who holds it.',
+      cargo: {
+        rooms: [
+          { moveBudget: 20, grid: [
+            '#######',
+            '#  . .#',
+            '# $$  #',
+            '#  @# #',
+            '#     #',
+            '#######',
+          ]},
+          { moveBudget: 34, grid: [
+            '########',
+            '#   .  #',
+            '# #$#  #',
+            '# @ $..#',
+            '# #$#  #',
+            '#      #',
+            '########',
+          ]},
+          { moveBudget: 45, grid: [
+            '#########',
+            '#    #  #',
+            '# $$ . .#',
+            '#  # .# #',
+            '## @  $ #',
+            '#   #   #',
+            '#########',
+          ]},
+        ],
+      },
+    },
+    detail: {
+      description:
+        'Three holds of powder crates, and every crate has a marked square it must sit on before the blockade. Crates shove — they never pull — so a crate pushed into a corner stays there. Stow all three holds within the move budget; run out of moves and the hold resets.',
+      dropsNote: 'Solving the hold pays Nav XP. The budget resets the room, never the run — read the hold before you shove.',
+      ctaLabel: 'Stow the Hold →',
     },
   },
   // The Davy Jones Gauntlet used to sit here as a chapter-2 side branch.
