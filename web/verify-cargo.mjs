@@ -8,32 +8,38 @@
 // Rooms are duplicated here from lib/raidMap.ts (plain-node script; keep in
 // sync by hand when the node changes — the assert on room count guards drift).
 
+// PORTRAIT boards only (cols ≤ 7, grow ROWS) — wider boards overflow phone
+// edges; hardened 2026-07-11 after playtest read the first set as too easy.
 const ROOMS = [
-  { name: 'Room 1 — The Manifest', moveBudget: 20, grid: [
+  { name: 'Room 1 — The Manifest', moveBudget: 36, grid: [
+    '######',
+    '#@.  #',
+    '#  # #',
+    '#    #',
+    '# $$##',
+    '# .  #',
+    '######',
+  ]},
+  { name: 'Room 2 — The Lower Hold', moveBudget: 58, grid: [
     '#######',
-    '#  . .#',
-    '# $$  #',
-    '#  @# #',
+    '#    .#',
+    '# #$ .#',
+    '#.$   #',
+    '#   # #',
+    '##$# @#',
     '#     #',
     '#######',
   ]},
-  { name: 'Room 2 — The Lower Hold', moveBudget: 34, grid: [
-    '########',
-    '#   .  #',
-    '# #$#  #',
-    '# @ $..#',
-    '# #$#  #',
-    '#      #',
-    '########',
-  ]},
-  { name: 'Room 3 — The Magazine', moveBudget: 45, grid: [
-    '#########',
-    '#    #  #',
-    '# $$ . .#',
-    '#  # .# #',
-    '## @  $ #',
-    '#   #   #',
-    '#########',
+  { name: 'Room 3 — The Magazine', moveBudget: 90, grid: [
+    '#######',
+    '#   # #',
+    '#  $$ #',
+    '#  $. #',
+    '#   #.#',
+    '#  #  #',
+    '# #  @#',
+    '#    .#',
+    '#######',
   ]},
 ]
 

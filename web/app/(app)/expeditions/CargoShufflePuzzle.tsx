@@ -228,14 +228,12 @@ export default function CargoShufflePuzzle({ puzzle, onSolved }: { puzzle: RaidC
           )
         }))}
 
-        {/* Crates — proper wooden boxes: square frame, plank slats, diagonal
-            cross-braces, corner nails. Spring between tiles; the whole crate
-            relights gold once seated on a mark. */}
+        {/* Crates — kept deliberately SIMPLE: a square wooden box, a frame,
+            two plank lines. Spring between tiles; relights gold when seated. */}
         {st.crates.map((k, i) => {
           const r = Math.floor(k / 100), c = k % 100
           const seated = parsed.plates.has(k)
-          const frame = seated ? '#8a6a20' : '#3e2a12'
-          const slat  = seated ? 'rgba(120,86,10,0.45)'  : 'rgba(0,0,0,0.30)'
+          const slat = seated ? 'rgba(120,86,10,0.4)' : 'rgba(0,0,0,0.28)'
           return (
             <motion.div key={`crate-${i}`}
               animate={{ left: `calc(${CELL} * ${c})`, top: `calc(${CELL} * ${r})` }}
@@ -243,32 +241,24 @@ export default function CargoShufflePuzzle({ puzzle, onSolved }: { puzzle: RaidC
               style={{ position: 'absolute', width: CELL, height: CELL, zIndex: 1 }}
             >
               <div style={{
-                position: 'absolute', inset: '7%', borderRadius: 3, overflow: 'hidden',
+                position: 'absolute', inset: '8%', borderRadius: 3, overflow: 'hidden',
                 background: seated
                   ? 'linear-gradient(180deg, #ecd084, #c09a42)'
                   : 'linear-gradient(180deg, #a87c46, #7d5a30)',
-                border: `2px solid ${frame}`, boxSizing: 'border-box',
+                border: `2px solid ${seated ? '#8a6a20' : '#3e2a12'}`, boxSizing: 'border-box',
                 boxShadow: seated
                   ? '0 0 14px rgba(240,192,64,0.65), inset 0 2px 0 rgba(255,255,255,0.3)'
                   : 'inset 0 2px 0 rgba(255,255,255,0.2), inset 0 -2px 0 rgba(0,0,0,0.25), 0 3px 6px rgba(0,0,0,0.5)',
               }}>
-                {/* plank slats */}
-                <div style={{ position: 'absolute', left: 0, right: 0, top: '32%', height: 1.5, background: slat }} />
-                <div style={{ position: 'absolute', left: 0, right: 0, top: '65%', height: 1.5, background: slat }} />
-                {/* diagonal cross-braces */}
-                <div style={{ position: 'absolute', left: '-22%', right: '-22%', top: '50%', height: '16%', transform: 'translateY(-50%) rotate(45deg)', background: seated ? 'rgba(160,118,26,0.55)' : 'rgba(62,42,18,0.55)', borderTop: '1px solid rgba(255,255,255,0.12)' }} />
-                <div style={{ position: 'absolute', left: '-22%', right: '-22%', top: '50%', height: '16%', transform: 'translateY(-50%) rotate(-45deg)', background: seated ? 'rgba(160,118,26,0.55)' : 'rgba(62,42,18,0.55)', borderTop: '1px solid rgba(255,255,255,0.12)' }} />
-                {/* corner nails */}
-                {([['12%', '12%'], ['12%', '76%'], ['76%', '12%'], ['76%', '76%']] as const).map(([t, l], n) => (
-                  <div key={n} style={{ position: 'absolute', top: t, left: l, width: '12%', height: '12%', borderRadius: '50%', background: seated ? '#8a6a20' : '#2e1f0c', boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.3)' }} />
-                ))}
+                <div style={{ position: 'absolute', left: 0, right: 0, top: '33%', height: 1.5, background: slat }} />
+                <div style={{ position: 'absolute', left: 0, right: 0, top: '66%', height: 1.5, background: slat }} />
               </div>
             </motion.div>
           )
         })}
 
-        {/* The sailor — a brass-ringed deck token with a drawn anchor (SVG,
-            no emoji), so it reads as YOUR piece against the wooden crates. */}
+        {/* The sailor — a brass-ringed deck token with a drawn ship's WHEEL
+            (SVG, no emoji/anchor), so it reads as YOUR piece at the helm. */}
         <motion.div
           animate={{ left: `calc(${CELL} * ${st.player.c})`, top: `calc(${CELL} * ${st.player.r})` }}
           transition={{ type: 'spring', stiffness: 620, damping: 34 }}
@@ -285,13 +275,10 @@ export default function CargoShufflePuzzle({ puzzle, onSolved }: { puzzle: RaidC
             boxShadow: '0 3px 8px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.25), 0 0 10px rgba(196,169,106,0.35)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <svg width="62%" height="62%" viewBox="0 0 24 24" fill="none" stroke="#f0e6c8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="4.7" r="2" />
-              <path d="M12 6.7v12.7" />
-              <path d="M8.4 9.6h7.2" />
-              <path d="M5 13.4c.5 3.8 3.3 6 7 6s6.5-2.2 7-6" />
-              <path d="M5 13.4l-1.9-.8M5 13.4l.3 2" />
-              <path d="M19 13.4l1.9-.8M19 13.4l-.3 2" />
+            <svg width="66%" height="66%" viewBox="0 0 24 24" fill="none" stroke="#f0e6c8" strokeWidth="1.8" strokeLinecap="round">
+              <path d="M12 2v20M2 12h20M4.9 4.9l14.2 14.2M19.1 4.9L4.9 19.1" />
+              <circle cx="12" cy="12" r="6.4" strokeWidth="2" />
+              <circle cx="12" cy="12" r="2.2" fill="#f0e6c8" stroke="none" />
             </svg>
           </motion.div>
         </motion.div>

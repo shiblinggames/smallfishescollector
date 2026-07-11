@@ -1765,7 +1765,9 @@ export const RAID_MAP: RaidNode[] = [
   {
     // Cargo Shuffle #1 — Sokoban in the powder hold before the Hammerhead's
     // blockade. Three escalating rooms; every grid is validated by
-    // web/verify-cargo.mjs (min moves 13 / 25 / 31 vs budgets 20 / 34 / 45).
+    // web/verify-cargo.mjs (min moves 26 / 44 / 69 vs budgets 36 / 58 / 90;
+    // hardened 2026-07-11 after playtest read the first set as too easy).
+    // PORTRAIT boards only (cols ≤ 7, grow ROWS) — wider overflows phones.
     // KEEP THE SCRIPT IN SYNC when editing rooms.
     id: 'throne_locks',      type: 'puzzle',
     label: 'The Powder Hold',
@@ -1779,31 +1781,35 @@ export const RAID_MAP: RaidNode[] = [
       reveal: 'The hold sits trim and the powder is dry.\nPast the next swell: the blockade line, and the Hammerhead who holds it.',
       cargo: {
         rooms: [
-          { moveBudget: 20, grid: [
+          { moveBudget: 36, grid: [
+            '######',
+            '#@.  #',
+            '#  # #',
+            '#    #',
+            '# $$##',
+            '# .  #',
+            '######',
+          ]},
+          { moveBudget: 58, grid: [
             '#######',
-            '#  . .#',
-            '# $$  #',
-            '#  @# #',
+            '#    .#',
+            '# #$ .#',
+            '#.$   #',
+            '#   # #',
+            '##$# @#',
             '#     #',
             '#######',
           ]},
-          { moveBudget: 34, grid: [
-            '########',
-            '#   .  #',
-            '# #$#  #',
-            '# @ $..#',
-            '# #$#  #',
-            '#      #',
-            '########',
-          ]},
-          { moveBudget: 45, grid: [
-            '#########',
-            '#    #  #',
-            '# $$ . .#',
-            '#  # .# #',
-            '## @  $ #',
-            '#   #   #',
-            '#########',
+          { moveBudget: 90, grid: [
+            '#######',
+            '#   # #',
+            '#  $$ #',
+            '#  $. #',
+            '#   #.#',
+            '#  #  #',
+            '# #  @#',
+            '#    .#',
+            '#######',
           ]},
         ],
       },
