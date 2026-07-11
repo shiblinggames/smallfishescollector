@@ -5976,6 +5976,11 @@ export default function RaidCombat({
             damagePct={mods.damagePct}
             tideEffects={tideEffects}
             effectLabels={runDepth > 0 ? { good: 'Boons', bad: 'Curses' } : { good: 'Buffs', bad: 'Penalties' }}
+            conditions={[
+              ...statusConditions(playerStatuses),
+              ...(playerBurning ? [{ key: 'burn', name: 'Ablaze', glyph: '🔥', color: BURN_COLOR, turns: playerBurnRef.current.turns, desc: `Your ship is on fire — it loses ${playerBurnRef.current.dmg} HP at the end of each of your turns. Any crew heal douses the flames.` }] : []),
+              ...(playerFrozen ? [{ key: 'freeze', name: 'Frozen', glyph: '❄', color: FREEZE_COLOR, desc: 'Your ship is iced over — your next turn is skipped, and you cannot weave aside from incoming shots while frozen.' }] : []),
+            ]}
             onClose={() => setShowStats(false)}
           />
         )}
@@ -5994,6 +5999,12 @@ export default function RaidCombat({
             isBoss={isBoss}
             isElite={isElite}
             affix={affix}
+            conditions={[
+              ...statusConditions(enemyStatuses),
+              ...(enemyBurning ? [{ key: 'burn', name: 'Ablaze', glyph: '🔥', color: BURN_COLOR, turns: enemyBurnRef.current.turns, desc: `Its hull is on fire — it loses ${enemyBurnRef.current.dmg} HP at the end of each of its turns.` }] : []),
+              ...(enemyFrozen ? [{ key: 'freeze', name: 'Frozen', glyph: '❄', color: FREEZE_COLOR, desc: 'Iced over — its next turn is skipped, and it cannot weave aside from your shots while frozen.' }] : []),
+              ...(snareDodgeTurns > 0 ? [{ key: 'snare', name: 'Snared', glyph: '⚓', color: '#d9b066', turns: snareDodgeTurns, desc: 'A snare fouls its rigging — each time it tries to dodge, there is a chance the dodge fails and it must act instead.' }] : []),
+            ]}
             onClose={() => setShowEnemyStats(false)}
           />
         )}
@@ -6100,6 +6111,7 @@ function PlayerStatsPopup({
   isBoss, equippedRaidItems, shipClasses = {}, damagePct = 0,
   tideEffects = [],
   effectLabels = { good: 'Buffs', bad: 'Penalties' },
+  conditions = [],
   onClose,
 }: {
   shipName: string
@@ -6125,6 +6137,9 @@ function PlayerStatsPopup({
   /** Headings for the good/bad run-effect groups — "Boons"/"Curses" in the
    *  Gauntlet, "Buffs"/"Penalties" for raid Tides. */
   effectLabels?: { good: string; bad: string }
+  /** Active statuses + bespoke effects (burn/freeze) on the player right now,
+   *  with full descriptions — the popup-side twin of the HP-bar chip row. */
+  conditions?: ConditionItem[]
   onClose: () => void
 }) {
   // Single source of truth — mirrors rollShotDamage, incl. crew damage effects.
@@ -6364,10 +6379,12 @@ function PlayerStatsPopup({
           </div>
         )}
 
-        {/* ── This run (temporary): boons then curses, under one divider so
-            they read apart from the permanent build above. ── */}
-        {(buffs.length > 0 || penalties.length > 0) && (
+        {/* ── This run (temporary): live conditions first (statuses + burn/
+            freeze — the most urgent reads), then boons/curses, under one
+            divider so they read apart from the permanent build above. ── */}
+        {(buffs.length > 0 || penalties.length > 0 || conditions.length > 0) && (
           <div style={{ marginTop: 18, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <ConditionsSection conditions={conditions} />
             {effectGroup(buffs.length > 1 ? `${effectLabels.good} · ${buffs.length}` : effectLabels.good, buffs, '#5eead4')}
             {effectGroup(penalties.length > 1 ? `${effectLabels.bad} · ${penalties.length}` : effectLabels.bad, penalties, '#f08a8a')}
           </div>
@@ -6385,7 +6402,7 @@ function PlayerStatsPopup({
 // speed, the themed ability if any, and the full behavior pattern as chips so
 // the cycle is legible. Tapping the backdrop or Close dismisses.
 function EnemyStatsPopup({
-  enemy, currentHp, maxHp, isBoss, isElite, affix, onClose,
+  enemy, currentHp, maxHp, isBoss, isElite, affix, conditions = [], onClose,
 }: {
   enemy: BroadsideEnemy
   currentHp: number
@@ -6394,6 +6411,9 @@ function EnemyStatsPopup({
   isBoss: boolean
   isElite?: boolean
   affix?: AffixDef
+  /** Active statuses + bespoke effects (burn/freeze/snare) on this enemy right
+   *  now, with full descriptions — the popup-side twin of the chip row. */
+  conditions?: ConditionItem[]
   onClose: () => void
 }) {
   const minVolley = enemy.minDmg * 2
@@ -6770,6 +6790,14 @@ function EnemyStatsPopup({
           </div>
         )}
 
+        {/* Live conditions — what's ON it right now (statuses + burn/freeze/
+            snare), with the plain-English explanation the chips can't fit. */}
+        {conditions.length > 0 && (
+          <div style={{ marginBottom: 14 }}>
+            <ConditionsSection conditions={conditions} />
+          </div>
+        )}
+
         {/* Behavior — a single fuzzy tell, not a turn-by-turn pattern reveal.
             Players still have to read the rhythm in combat; this just tips
             them off to what to watch for. */}
@@ -7071,6 +7099,43 @@ function HPBar({ current, max, accent, compact, shield = 0, shieldColor = '#7dd3
           <p className="font-karla font-700" style={{ fontSize: '0.8rem', color: hidden ? '#8a95aa' : accent }}>{hidden ? '???' : `${current}/${max}`}</p>
         </div>
       )}
+    </div>
+  )
+}
+
+// ── Conditions section (stats popups) ────────────────────────────────────────
+// The chip row under each HP bar answers "what's on me"; this section in the
+// player/enemy stats popups answers "what does it DO" — full name + plain
+// description + turns left, for the Ch4 pipeline statuses AND the bespoke
+// elemental effects (burn / freeze / snare), which players asked to see
+// explained in the same place.
+interface ConditionItem { key: string; name: string; glyph: string; color: string; turns?: number; desc: string }
+function statusConditions(statuses: ActiveStatus[]): ConditionItem[] {
+  return statuses.map(s => {
+    const d = STATUS_DEFS[s.id]
+    return { key: s.id, name: d.name, glyph: d.glyph, color: d.color, turns: s.turnsLeft, desc: d.describe(s.magnitude) }
+  })
+}
+function ConditionsSection({ conditions }: { conditions: ConditionItem[] }) {
+  if (conditions.length === 0) return null
+  return (
+    <div>
+      <p className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', color: '#c084fc', letterSpacing: '0.14em', marginBottom: 5 }}>
+        {conditions.length > 1 ? `Conditions · ${conditions.length}` : 'Condition'}
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {conditions.map(c => (
+          <div key={c.key} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '0.55rem 0.65rem', background: `${c.color}10`, border: `1px solid ${c.color}44`, borderRadius: 10 }}>
+            <span aria-hidden style={{ width: 22, height: 22, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', background: `${c.color}1f`, border: `1px solid ${c.color}66`, color: c.color, fontSize: '0.72rem', lineHeight: 1 }}>{c.glyph}</span>
+            <div style={{ minWidth: 0 }}>
+              <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: c.color, lineHeight: 1.2 }}>
+                {c.name}{c.turns != null && <span style={{ color: 'rgba(240,237,232,0.55)' }}> · {c.turns} turn{c.turns === 1 ? '' : 's'} left</span>}
+              </p>
+              <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.72)', lineHeight: 1.4, marginTop: 2 }}>{c.desc}</p>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
