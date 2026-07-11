@@ -200,14 +200,14 @@ export async function getGauntletLeaderboard(): Promise<{
 
   const admin = createAdminClient()
   // #1 deepest CASHED-OUT descent (the leaderboard views exclude deaths +
-  // admins), same depth → fastest → first ordering as the board. One query per
-  // ledger (normal + hardcore).
+  // admins), same depth → FIRST-TO-DEPTH → fastest ordering as the board
+  // (leaderboard/actions fetchGauntlet — keep in sync). One query per ledger.
   const topQuery = (view: string) => admin
     .from(view)
     .select('username, score')
     .order('score', { ascending: false })
-    .order('time_ms', { ascending: true })
     .order('created_at', { ascending: true })
+    .order('time_ms', { ascending: true })
     .limit(1)
     .maybeSingle()
   const [{ data: top }, { data: hcTop }] = await Promise.all([
