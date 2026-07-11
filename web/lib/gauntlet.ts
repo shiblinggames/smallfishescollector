@@ -1612,11 +1612,23 @@ export function confluenceEffects(owned: Record<string, number>, taken: string[]
 // The descent is a place, not a treadmill. Each band has its own name (shown on
 // the plunge + the depth bar) and the deeper bands pair with the darker combat
 // atmosphere already wired in atmosphereForDepth.
-export interface DepthBand { name: string; minDepth: number }
+// `accent` tints the band's descent splash + the fight gloom, so sinking
+// through the ladder LOOKS like travelling somewhere, not a counter ticking.
+// Extended 2026-07-12: the ladder used to stop at 13 while real runs reach
+// 60-80+, so players sat in "Davy's Court" for fifty straight depths. 'The
+// Crush' band now sits at 60 to match the difficulty band of the same name
+// (DEEP_BEND_START + the Crush curse).
+export interface DepthBand { name: string; minDepth: number; accent: string }
 export const DEPTH_BANDS: DepthBand[] = [
-  { name: 'The Shallows of the Dead', minDepth: 1 },
-  { name: 'The Crush',                minDepth: 6 },
-  { name: "Davy's Court",             minDepth: 13 },
+  { name: 'The Shallows of the Dead', minDepth: 1,  accent: '#5eead4' },
+  { name: 'The Drowned Shelf',        minDepth: 6,  accent: '#4fb8a0' },
+  { name: "Davy's Court",             minDepth: 13, accent: '#5da7d4' },
+  { name: 'The Starless Reach',       minDepth: 22, accent: '#7090c0' },
+  { name: 'The Silt Fields',          minDepth: 32, accent: '#a78bfa' },
+  { name: "The Leviathan's Road",     minDepth: 42, accent: '#c084fc' },
+  { name: 'The Black Meridian',       minDepth: 51, accent: '#8a6aa0' },
+  { name: 'The Crush',                minDepth: 60, accent: '#e0555a' },
+  { name: 'The Bottom of the World',  minDepth: 85, accent: '#f87171' },
 ]
 export function bandForDepth(depth: number): DepthBand {
   let band = DEPTH_BANDS[0]
@@ -1628,11 +1640,19 @@ export function bandForDepth(depth: number): DepthBand {
 // mode that bears his name actually has him in it. Returns null on quiet depths.
 const DAVY_TAUNTS: Record<number, string> = {
   3:  'Down you come. They all come down, in the end.',
-  6:  'The Crush has you now. Feel it on your hull?',
+  6:  'Off the shelf now. The bottom is a long way from caring.',
   9:  'Still breathing? The deep is patient. So am I.',
   13: 'You stand in my court, captain. None leave it but as crew.',
   16: 'Deeper. Yes. Bring me all of it before you sink.',
   20: 'No light reaches here. Only me. Only the Locker.',
+  // The deep taunts — the ladder used to go quiet at 20 while runs reach 80+.
+  32: 'Everything that sinks ends up in my silt. You will too.',
+  42: 'You sail a road paved with things bigger than your ship.',
+  51: 'Past this line the charts are blank. The chartmakers never came home.',
+  60: 'Here is where the sea stops asking. Feel the weight, captain.',
+  70: 'Your pot means nothing to the water. Only to you. That is the joke.',
+  85: 'The bottom of the world. Even I visit rarely.',
+  100: 'A hundred fathoms. Sit a while. You have earned the dark.',
 }
 export function davyTaunt(depth: number): string | null {
   return DAVY_TAUNTS[depth] ?? null
