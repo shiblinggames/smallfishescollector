@@ -447,14 +447,6 @@ function GoalRow({ g, groupAccent, claimed, busy, onClaim, onOpen }: {
         ? 'linear-gradient(90deg, rgba(123,191,123,0.16) 0%, rgba(123,191,123,0.06) 58%, rgba(123,191,123,0.035) 100%)'
     : 'rgba(210,180,120,0.035)'   // warm timber, not app-gray — in-progress rows
 
-  // Porthole rim carries the state colour (the old left stripe read as admin
-  // UI): gold while a claim waits, green once banked, brass otherwise.
-  const rimColor =
-    state === 'ready' ? GOLD
-    : state === 'claimed' || state === 'done' ? 'rgba(123,191,123,0.8)'
-    : g.done ? 'rgba(196,169,106,0.7)'
-    : 'rgba(196,169,106,0.3)'
-
   // Rubber-stamp state marks — inked, slightly askew, like a purser working
   // through the ledger. The gold Claim button stays a button (the one live
   // action on the row).
@@ -480,26 +472,21 @@ function GoalRow({ g, groupAccent, claimed, busy, onClaim, onOpen }: {
         animation: state === 'ready' ? 'badgeReadyPulse 2.1s ease-in-out infinite' : undefined,
       }}
     >
-      {/* Badge art set in a brass PORTHOLE — a dark recess with a state-
-          coloured rim, so every medallion looks mounted rather than floating.
-          Locked colours sit sunken and grey until they're won. */}
+      {/* Badge art — the medallion has its own metal rim, so it stands free
+          with no box chrome. A ready-to-claim medallion glows gold. */}
       <div style={{
-        position: 'relative', width: 58, height: 58, flexShrink: 0,
+        position: 'relative', width: 54, height: 54, flexShrink: 0,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        borderRadius: '50%',
-        background: 'radial-gradient(circle at 38% 30%, rgba(60,48,28,0.9), rgba(14,10,5,0.95) 72%)',
-        border: `2px solid ${rimColor}`,
-        boxShadow: `inset 0 3px 9px rgba(0,0,0,0.7), inset 0 -1px 0 rgba(240,220,180,0.08)${state === 'ready' ? `, 0 0 12px ${GOLD}55` : ''}`,
       }}>
         {g.badgeImage ? (
           <img src={g.badgeImage} alt="" loading="lazy" decoding="async"
-            style={{ width: 44, height: 44, objectFit: 'contain', filter: g.done ? 'drop-shadow(0 1px 2px rgba(0,0,0,0.45))' : 'grayscale(1) brightness(0.8)', opacity: g.done ? 1 : 0.35 }}
+            style={{ width: 50, height: 50, objectFit: 'contain', filter: state === 'ready' ? `drop-shadow(0 0 7px ${GOLD}aa)` : g.done ? 'drop-shadow(0 1px 2px rgba(0,0,0,0.45))' : 'grayscale(1) brightness(0.85)', opacity: g.done ? 1 : 0.32 }}
             onError={e => {
               // No-emoji rule: a plain brass ring stands in for missing art.
               const el = e.target as HTMLImageElement
               el.style.display = 'none'
               const p = el.parentElement
-              if (p) p.innerHTML = `<span style="display:block;width:34px;height:34px;border-radius:50%;border:2.5px solid rgba(196,169,106,${g.done ? 0.8 : 0.3});box-shadow:inset 0 0 10px rgba(196,169,106,0.2)"></span>`
+              if (p) p.innerHTML = `<span style="display:block;width:42px;height:42px;border-radius:50%;border:2.5px solid rgba(196,169,106,${g.done ? 0.8 : 0.3});box-shadow:inset 0 0 10px rgba(196,169,106,0.2)"></span>`
             }} />
         ) : (
           <span style={{ width: 16, height: 16, borderRadius: '50%', background: g.done ? groupAccent : 'transparent', border: `2px solid ${groupAccent}`, opacity: g.done ? 1 : 0.5 }} />
