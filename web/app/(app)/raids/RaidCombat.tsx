@@ -98,6 +98,12 @@ const DAMAGE_RAMP_CAP = 1.0   // +100% ceiling on any per-turn/per-volley damage
 // gut the Gauntlet's attrition tension. 35% keeps the dedicated build very
 // strong without letting it become unkillable.
 const LIFESTEAL_CAP = 0.35
+// LIFESTEAL_CAP bounds the RATIO; this bounds the HEAL relative to your hull. A
+// single hit's damage-scaled heal (lifesteal boon/item + the Feed the Fire burn
+// heal) can't exceed this fraction of MAX HP — so deep-run damage doesn't turn
+// sustain into a full-heal-every-volley immortality switch. Big hits still cap
+// out here; full-healing from the brink now takes several hits, not one volley.
+const LIFESTEAL_HEAL_MAXHP_CAP = 0.20
 const PLAYER_COLOR = '#4ade80'
 const ENEMY_COLOR  = '#ef4444'
 
@@ -2708,9 +2714,11 @@ export default function RaidCombat({
       eHp = Math.max(0, eHp - total)
       enemyBurnRef.current = { turns: enemyBurnRef.current.turns - 1, dmg: enemyBurnRef.current.dmg }
       // Feed the Fire confluence: the burn ticks also heal you a slice of itself.
+      // Same per-tick MAX-HP cap as lifesteal — burn heal scales off damage the
+      // same way, so a Wildfire+Leviathan's build can't over-sustain via DoT.
       let feedHeal = 0
       if (tide.burnTickHealPct > 0 && pHp > 0) {
-        feedHeal = Math.min(healCap - pHp, Math.round(total * tide.burnTickHealPct))
+        feedHeal = Math.min(Math.round(playerHpMax * LIFESTEAL_HEAL_MAXHP_CAP), healCap - pHp, Math.round(total * tide.burnTickHealPct))
         if (feedHeal > 0) { pHp += feedHeal; onStat?.({ dmgHealed: feedHeal }) }
       }
       pushStep({ who: 'player', action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: `-${total}`, splatColor: BURN_COLOR, logLines: [`${flare > 0 ? `The ${enemy.name} burns for ${tick}, then the flames backdraft for ${flare} more.` : `The ${enemy.name} is ablaze, burning for ${tick}.`}${feedHeal > 0 ? ` The fire feeds you ${feedHeal}.` : ''}`], burnTurnsLeft: enemyBurnRef.current.turns, lifestealHeal: feedHeal || undefined })
@@ -3234,7 +3242,9 @@ export default function RaidCombat({
           const itemLifesteal = getActiveEffects(liveItems).filter(e => e.type === 'lifesteal_pct').reduce((a, e) => a + e.value, 0)
           const totalLifesteal = Math.min(LIFESTEAL_CAP, tide.lifestealPct + itemLifesteal)
           if (dmg > 0 && totalLifesteal > 0 && pHp > 0) {
-            const healed = Math.max(1, Math.round(dmg * totalLifesteal))
+            // Per-hit heal capped to a fraction of MAX HP — a huge volley can't
+            // refill the whole bar, no matter how hard the damage stack hits.
+            const healed = Math.min(Math.round(playerHpMax * LIFESTEAL_HEAL_MAXHP_CAP), Math.max(1, Math.round(dmg * totalLifesteal)))
             const before = pHp
             pHp = Math.min(healCap, pHp + healed)
             lifestealHealedOut = pHp - before
