@@ -113,13 +113,25 @@ export interface RaidCargoRoom {
 }
 export interface RaidCargoPuzzle { rooms: RaidCargoRoom[] }
 
+// Tumbler Lock (Ch4) — Rush Hour. Slide iron bars along their axis until the
+// gold BOLT can run out the right edge of its row. Notation per row: '.'
+// empty, letters = bars (contiguous h or v), 'Z' = the bolt (horizontal).
+// One SLIDE = one bar moved any distance. Every stage MUST be validated with
+// web/verify-tumbler.mjs (BFS: solvable + min slides vs budget).
+export interface RaidTumblerStage {
+  grid: string[]
+  /** Slide budget. Busting it resets the stage. */
+  moveBudget: number
+}
+export interface RaidTumblerPuzzle { stages: RaidTumblerStage[] }
+
 export interface RaidPuzzle {
   /** Which puzzle engine renders this node. 'beacon' = Lights Out (default,
    *  back-compat for the existing smuggler's-chart node). 'cipher' = the
    *  coupled wax dials (turn one, its neighbours turn too; line every seal
    *  to the index at once). 'mirror' = the light-beam redirection grid.
    *  'cargo' = Sokoban crate-pushing (Ch4). */
-  kind?: 'beacon' | 'cipher' | 'mirror' | 'cargo'
+  kind?: 'beacon' | 'cipher' | 'mirror' | 'cargo' | 'tumbler'
   /** beacon: grid columns. */
   cols?: number
   /** beacon: grid rows. */
@@ -136,6 +148,8 @@ export interface RaidPuzzle {
   mirror?: RaidMirrorPuzzle
   /** cargo: the Sokoban rooms (played in order; solving the last solves the node). */
   cargo?: RaidCargoPuzzle
+  /** tumbler: the Rush-Hour stages (played in order; the last solve clears the node). */
+  tumbler?: RaidTumblerPuzzle
   /** Nav XP granted on solve (no doubloons — this is a navigation discovery). */
   rewardNavXp: number
   /** Story payoff shown the moment the puzzle resolves: where the freight runs,
@@ -531,7 +545,7 @@ export const RAID_CHAPTERS: RaidChapter[] = [
     // (The Hammerhead) → crooked_ledger → Tumbler Lock puzzle → Raid 8
     // (Don Finleone) → dons_fall → chapter_4_augment.
     // lastNodeId GROWS as nodes are built; final = chapter_4_augment.
-    lastNodeId: 'the_hammerhead_challenge',
+    lastNodeId: 'throne_gates',
   },
 ]
 
@@ -1837,6 +1851,83 @@ export const RAID_MAP: RaidNode[] = [
       drops: lootDrops(THE_HAMMERHEAD_CHALLENGE.loot),
       clearReward: clearPayout(THE_HAMMERHEAD_CHALLENGE),
       dropsNote: 'Every kill pays more and the clear bonus is steeper than the normal run.',
+    },
+  },
+  {
+    id: 'crooked_ledger',    type: 'story',
+    label: 'The Crooked Ledger',
+    flavor: "The Hammerhead's books ride in your hold now — the don's own accounts, in the don's own hand. They balance perfectly. All but one margin, where a single initial repeats in ink older than the rest.",
+    bridge: "The books say the throne is dead ahead, past one last gate. The margin says something else — something with no name yet. You sail for the gate.",
+    requiresNode: 'the_hammerhead',
+    adminOnly: true,
+    image: '/raidlog.png',
+    scene: [
+      { text: "The Hammerhead's strongroom gives up the don's own ledgers — every account the Finndicate keeps, in Finleone's own hand." },
+      { text: 'They balance. Every catch, every Cache, every drowned captain, paid to the coin. A perfect empire, perfectly kept.' },
+      { text: 'All but one margin.' },
+      { text: 'Again and again, in ink older and finer than the rest, a single initial signs off sums that answer to no account: F.' },
+      { text: "Finleone, you'd say — but the don signs his whole name, every time, with a flourish. This hand is small. Patient. It was here first." },
+      { text: 'You close the books. The throne is dead ahead, and whatever the margin means, the answer sits on it.' },
+    ],
+    detail: {
+      description:
+        "The don's own ledgers, taken off the Hammerhead's wreck. They balance perfectly — a whole drowned empire, paid to the coin — except for one margin, where a small, patient initial keeps signing sums that answer to no account: F. The don signs his full name with a flourish, every time. This hand was here first. The throne ahead has your answer, one way or another.",
+      drops: [
+        { emoji: '📜', label: "Captain's Logbook, Fragment XIII", sublabel: `"The books balance. The margin doesn't. F."`, rarity: 'rare' },
+      ],
+      dropsNote: 'The don, made real in his own hand — and a margin that keeps a different set of books.',
+      ctaLabel: 'Open the Ledgers →',
+      summary: "The Hammerhead's strongroom gave up the don's ledgers: a perfect empire, perfectly kept — except one margin, where an old, patient initial signs sums no account explains: F. The throne ahead holds the answer.",
+    },
+  },
+  {
+    // Tumbler Lock — Rush Hour on the throne gate's great lock. Stages
+    // validated by web/verify-tumbler.mjs (min slides 7 / 11 / 18 vs budgets
+    // 12 / 16 / 26). KEEP THE SCRIPT IN SYNC when editing stages.
+    id: 'throne_gates',      type: 'puzzle',
+    label: 'The Throne Gates',
+    flavor: "The don's gate is one great lock: iron bars over iron bars, and a single gold bolt that only runs when every tumbler stands clear. Nobody knocks.",
+    bridge: 'The last tumbler throws and the gates swing on silence. Past them: the deepest water there is, and the don sitting in it.',
+    requiresNode: 'crooked_ledger',
+    adminOnly: true,
+    puzzle: {
+      kind: 'tumbler',
+      rewardNavXp: 1000,
+      reveal: 'The bolt runs free and the gates part.\nNo horns, no guns. The don knew you were coming the whole way down.',
+      tumbler: {
+        stages: [
+          { moveBudget: 12, grid: [
+            'AA...O',
+            'P..Q.O',
+            'PZZQ.O',
+            'P..Q..',
+            'B...CC',
+            'B.RRR.',
+          ]},
+          { moveBudget: 16, grid: [
+            '..CCC.',
+            '..IAD.',
+            'ZZIADE',
+            'B..AGE',
+            'BFF.G.',
+            'HHH...',
+          ]},
+          { moveBudget: 26, grid: [
+            'G..BDD',
+            'G..BI.',
+            'ZZE.I.',
+            '..EAC.',
+            'HHHAC.',
+            'FFF...',
+          ]},
+        ],
+      },
+    },
+    detail: {
+      description:
+        'Three tumblers, each a lattice of iron bars over one gold bolt. Bars slide along their grooves — never sideways — and the bolt only runs when its whole row stands clear to the edge. Throw all three within the slide budget; run out and the tumbler resets to its first set.',
+      dropsNote: 'Throwing the gate pays Nav XP. The budget resets the tumbler, never the gate — read the bars before you slide.',
+      ctaLabel: 'Work the Lock →',
     },
   },
   // The Davy Jones Gauntlet used to sit here as a chapter-2 side branch.
