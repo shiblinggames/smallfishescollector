@@ -96,6 +96,17 @@ export interface BroadsideEnemy {
    *  no help (old behaviour, dodge ≈ free). Only matters on the turns the enemy
    *  fires at a dodging player; ignored everywhere else. */
   accuracy?: number
+  /** Chapter-4 magazine: how many cannonballs this enemy can BANK (default 3).
+   *  Volley cost stays 3 everywhere — a 4-slot enemy carries a buffer ball, so
+   *  it can volley and still hold a shot, fire longer strings, and its
+   *  reload-at-max feint window moves to the bigger cap. Deeper clip = meaner,
+   *  less predictable cadence; nothing special triggers at full (enemy
+   *  ULTIMATES at full magazine are a raid-8 layer on top of this). */
+  magazineSize?: number
+  /** Chapter-4 baseline shield: fraction of max HP this enemy starts EVERY
+   *  fight shielded for (the Warded-affix machinery, made a first-class stat).
+   *  Combines with the Warded affix / Warding curse by MAX, not sum. */
+  shieldPct?: number
   /** Legacy: real-time action interval. Kept for backwards-compat readouts; no longer drives combat. */
   actionMs: number
   /** Scripted action loop. Cycles in order every turn. */

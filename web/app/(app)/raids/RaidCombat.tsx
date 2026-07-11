@@ -77,11 +77,12 @@ type ShotResult = 'miss' | 'graze' | 'hit' | 'critical'
 type SubPhase   = 'await_input' | 'aiming' | 'revealing' | 'resolving' | 'flares' | 'done'
 type Actor      = 'player' | 'enemy'
 
-// Cannonball cap. MAX_CHARGES is the enemy's cap AND the volley cost (a volley
-// spends VOLLEY_COST cannonballs for a double-shot). The PLAYER's cap can be
-// raised by the Locker Upgrade "Extra Cannonball Rack" (bonusChargeSlots prop):
-// they stockpile more, but the volley still costs VOLLEY_COST — the extra is
-// reserve.
+// Cannonball cap. MAX_CHARGES is the DEFAULT enemy cap AND the volley cost (a
+// volley spends VOLLEY_COST cannonballs for a double-shot). The PLAYER's cap
+// can be raised by the Locker Upgrade "Extra Cannonball Rack" (bonusChargeSlots
+// prop); Chapter-4 ENEMIES can raise theirs via enemy.magazineSize (a buffer
+// ball — volley cost never changes, the deeper clip just makes their cadence
+// meaner and their reload-at-max window later).
 const MAX_CHARGES = 3
 const VOLLEY_COST = MAX_CHARGES
 // Odds the enemy FEINTS instead of firing when a reload lands on a full
@@ -889,8 +890,9 @@ export default function RaidCombat({
   // push above max? no — clamped to max). Enemy HP scales. Player +
   // enemy starting charges include the tide deltas (clamped 0–MAX).
   // Player cannonball cap — MAX_CHARGES plus any "Extra Cannonball Rack" Locker
-  // Upgrade slots. Enemies always cap at MAX_CHARGES.
+  // Upgrade slots. Enemy cap = their magazineSize (Ch4 4-slot clips), default 3.
   const playerMaxCharges = MAX_CHARGES + Math.max(0, bonusChargeSlots)
+  const enemyMagazine = Math.max(VOLLEY_COST, enemy.magazineSize ?? MAX_CHARGES)
   const [playerHp, setPlayerHp]       = useState(() =>
     Math.max(0, Math.min(healCap, initialPlayerHp + tide.hpStartDelta + tide.everyFightHeal + Math.round(tide.everyFightHealPct * playerHpMax)))
   )
@@ -931,7 +933,7 @@ export default function RaidCombat({
   // buffer worth a % of the enemy's max HP that soaks the player's DIRECT hits
   // (shots/volleys/abilities, not burn/DoT) before the hull. The Railgun's
   // piercing Mega ignores it. Reforms fresh each fight (per remount).
-  const enemyShieldMax = Math.round(enemyHpMax * Math.max(tide.enemyShieldPct, affix?.shieldPctMaxHp ?? 0))
+  const enemyShieldMax = Math.round(enemyHpMax * Math.max(enemy.shieldPct ?? 0, tide.enemyShieldPct, affix?.shieldPctMaxHp ?? 0))
   const [enemyShieldHp, setEnemyShieldHp] = useState(enemyShieldMax)
   const enemyShieldRef = useRef(enemyShieldMax)
   const [playerCharges, setPlayerCharges] = useState(() =>
@@ -942,7 +944,7 @@ export default function RaidCombat({
   const playerChargesRef = useRef(playerCharges)
   playerChargesRef.current = playerCharges
   const [enemyCharges, setEnemyCharges]   = useState(() =>
-    Math.max(0, Math.min(MAX_CHARGES, (enemy.startCharges ?? 0) + tide.enemyChargesDelta))
+    Math.max(0, Math.min(enemyMagazine, (enemy.startCharges ?? 0) + tide.enemyChargesDelta))
   )
   // Live mirror so the (delayed) Foresight prediction reads the CURRENT charge
   // count — a curse's pre-loaded magazine, an accumulated charge, etc.
@@ -1615,7 +1617,9 @@ export default function RaidCombat({
     const scaledHp = Math.max(1, Math.round(enemy.hpBase * enemyHpScaleMultRef.current))
     setEnemyHp(scaledHp); enemyHpRef.current = scaledHp; enemyHpMaxRef.current = scaledHp
     // Enemy barrier reforms fresh each fight, sized off the ACTUAL scaled max HP.
-    const eShieldPct = Math.max(tide.enemyShieldPct, affix?.shieldPctMaxHp ?? 0)
+    // Baseline Ch4 shields (enemy.shieldPct) combine with the Warded affix /
+    // Warding curse by MAX — the strongest single source sets the pool.
+    const eShieldPct = Math.max(enemy.shieldPct ?? 0, tide.enemyShieldPct, affix?.shieldPctMaxHp ?? 0)
     const eShield = Math.round(scaledHp * eShieldPct)
     enemyShieldRef.current = eShield; setEnemyShieldHp(eShield)
     enemyBurnRef.current = { turns: 0, dmg: 0 }; enemyFrozenRef.current = 0; enemyFreezePendingRef.current = 0; snareBlockedRef.current = false; carapaceLoggedRef.current = false
@@ -1635,7 +1639,7 @@ export default function RaidCombat({
     // Powder Hoard carryover (initialCharges) folds in on top of any Primer
     // proc + start-charge tide, capped to the magazine.
     setPlayerCharges(Math.max(0, Math.min(playerMaxCharges, playerStartCharges + chargesStartRef.current + initialCharges)))
-    setEnemyCharges(Math.max(0, Math.min(MAX_CHARGES, (enemy.startCharges ?? 0) + enemyChargesDeltaRef.current)))
+    setEnemyCharges(Math.max(0, Math.min(enemyMagazine, (enemy.startCharges ?? 0) + enemyChargesDeltaRef.current)))
     guaranteedDodgeLeftRef.current = guaranteedDodgeBankRef.current
     // Stormward: reform the fight shield into the soak pool. Only when active,
     // so non-boon raids never touch the Abyssal Tide pool here.
@@ -1828,9 +1832,9 @@ export default function RaidCombat({
     //     dodge. Capped to one feint in a row so a full magazine can't stall
     //     forever; the next max-reload then fires for sure.
     if ((action === 'fire'   && enemyCharges < 1) ||
-        (action === 'volley' && enemyCharges < MAX_CHARGES)) {
+        (action === 'volley' && enemyCharges < VOLLEY_COST)) {
       action = 'reload'
-    } else if (action === 'reload' && enemyCharges >= MAX_CHARGES) {
+    } else if (action === 'reload' && enemyCharges >= enemyMagazine) {
       enemyPatternIdxRef.current++
       if (enemyFeintStreakRef.current < 1 && Math.random() < FEINT_CHANCE) {
         action = 'dodge'
@@ -1872,17 +1876,17 @@ export default function RaidCombat({
     for (let k = 0; k < Math.max(1, count); k++) {
       const raw = pattern[idx % pattern.length]
       let action: EnemyAction = raw
-      if ((raw === 'fire' && charges < 1) || (raw === 'volley' && charges < MAX_CHARGES)) {
+      if ((raw === 'fire' && charges < 1) || (raw === 'volley' && charges < VOLLEY_COST)) {
         action = 'reload'            // impossible action → reload, slot re-attempted (no advance)
-      } else if (raw === 'reload' && charges >= MAX_CHARGES) {
+      } else if (raw === 'reload' && charges >= enemyMagazine) {
         action = 'fire'; idx++       // wasted reload → fire (or a feint we can't foresee)
       } else {
         idx++
       }
       // Fold the predicted action's charge change in so later steps read right.
-      if (action === 'reload') charges = Math.min(MAX_CHARGES, charges + 1)
+      if (action === 'reload') charges = Math.min(enemyMagazine, charges + 1)
       else if (action === 'fire') charges = Math.max(0, charges - 1)
-      else if (action === 'volley') charges = Math.max(0, charges - MAX_CHARGES)
+      else if (action === 'volley') charges = Math.max(0, charges - VOLLEY_COST)
       out.push(action)
     }
     return out
@@ -2842,7 +2846,7 @@ export default function RaidCombat({
       // cannon animation loosens toward you.
       if (who === 'enemy' && counterEnemyShot) {
         counterEnemyShot = false
-        eCharges = Math.max(0, eCharges - (eAction === 'volley' ? MAX_CHARGES : 1))
+        eCharges = Math.max(0, eCharges - (eAction === 'volley' ? VOLLEY_COST : 1))
         const cLines = [`Counter-Battery! You fire into the ${enemy.name}'s broadside — its shot is smashed clean out of the air.`]
         // Broadside Duel: you loaded while they didn't.
         if (tide.counterBonusRefund > 0) {
@@ -2956,13 +2960,13 @@ export default function RaidCombat({
           }
         }
         else                  {
-          eCharges = Math.min(MAX_CHARGES, eCharges + 1)
+          eCharges = Math.min(enemyMagazine, eCharges + 1)
           // Shuttered Ports curse: the reload count is hidden, so don't leak it
           // in the log either (or the player could just tally reloads to rebuild
           // the magazine). Obscure the action entirely.
           stepLines.push(enemyChargesHidden
             ? `The ${enemy.name} works something behind its shuttered gunports — you can't make it out.`
-            : `Enemy loads a cannonball. (${eCharges}/${MAX_CHARGES})`)
+            : `Enemy loads a cannonball. (${eCharges}/${enemyMagazine})`)
         }
       } else if (action === 'repair') {
         // Player-only consumable: heal the hull, lose the offensive
@@ -2998,7 +3002,7 @@ export default function RaidCombat({
         }
       } else if (action === 'fire' || action === 'volley' || action === 'mega') {
         if (who === 'player') pCharges -= (action === 'mega' ? MEGA_CHARGE_COST : action === 'volley' ? VOLLEY_COST : 1)
-        else                  eCharges -= (action === 'volley' ? MAX_CHARGES : 1)
+        else                  eCharges -= (action === 'volley' ? VOLLEY_COST : 1)
 
         const isAttackerPlayer = who === 'player'
         // Mega (player-only): the augment whose damage + on-hit behaviour drives
@@ -4942,7 +4946,7 @@ export default function RaidCombat({
                 HP bar as a violet segment so it reads as the enemy's, not your
                 cyan shield. */}
             <HPBar current={enemyHp} max={enemyHpMax} accent={ENEMY_COLOR} compact shield={enemyShieldHp} shieldColor="#c084fc" shieldGradTo="#a855f7" hidden={enemyHpHidden} />
-            <ChargesRow charges={enemyCharges} max={MAX_CHARGES} small hidden={enemyChargesHidden} />
+            <ChargesRow charges={enemyCharges} max={enemyMagazine} small hidden={enemyChargesHidden} />
             {/* Ch4 statuses + bespoke effect chips (burn/freeze/snare) — one row. */}
             <StatusBadgesRow statuses={enemyStatuses} bespoke={[
               ...(enemyBurning ? [{ key: 'burn', glyph: '🔥', color: '#fb923c', title: 'Ablaze — burning each turn' }] : []),
