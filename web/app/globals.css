@@ -122,6 +122,12 @@ html, body {
     height: calc(100dvh - 116px - env(safe-area-inset-bottom, 0px));
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    /* Keep drags INSIDE the combat scroller: without containment a drag that
+       hits the region's edge chains to the document, and on iOS that pan
+       carried the fixed header away while hit-testing stayed put (the
+       tap-below-the-Lock-button bug). Region-scoped on purpose — the global
+       html/body rubber-band rule above is a deliberate product call. */
+    overscroll-behavior: contain;
   }
   /* The Gauntlet depth/pot/curses header lives inside that fixed-height
      scroller as its first child, so a tall RaidCombat layout scrolled it off

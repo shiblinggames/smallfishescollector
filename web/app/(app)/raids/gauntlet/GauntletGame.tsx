@@ -39,6 +39,7 @@ import { buySpecialItem } from '@/app/(app)/fishing/actions'
 import { getRaidItem, getActiveEffects } from '@/lib/raidItems'
 import LeaderboardModal from '@/components/LeaderboardModal'
 import { vibrate, hapticTap, hapticCommit } from '@/lib/haptics'
+import { lockBodyScroll } from '@/lib/bodyScrollLock'
 import { getXPProgress, MAX_LEVEL } from '@/lib/expeditionLevel'
 import { renownLevel } from '@/lib/renown'
 import RenownUpOverlay, { type RenownUpInfo } from '@/components/RenownUpOverlay'
@@ -452,15 +453,17 @@ export default function GauntletGame(props: GauntletGameProps) {
   // Body-scroll lock in installed PWA only, and ONLY during combat (keeps the
   // action buttons reachable — same reasoning as RaidGame). The meta screens
   // (intro/cooldown/between/reward/dead) are taller and must stay scrollable.
+  // position:fixed lock (lib/bodyScrollLock), NOT overflow:hidden — on iOS the
+  // overflow lock still let chained/rubber-band drags scroll the document mid-
+  // fight, visually carrying the fixed header away while hit-testing stayed
+  // put (the "have to tap below the Lock button" bug).
   useEffect(() => {
     const standalone =
       window.matchMedia?.('(display-mode: standalone)').matches ||
       (window.navigator as unknown as { standalone?: boolean }).standalone === true
     if (!standalone) return
     if (phase !== 'fighting') return
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = prev }
+    return lockBodyScroll()
   }, [phase])
 
   // Land every new screen at the top. Without this a tall body-scrolled meta

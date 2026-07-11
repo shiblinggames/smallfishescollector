@@ -26,6 +26,7 @@ import NavLevelUpOverlay, { NavLevelUpInfo } from '@/components/NavLevelUpOverla
 import RenownUpOverlay, { type RenownUpInfo } from '@/components/RenownUpOverlay'
 import { renownLevel } from '@/lib/renown'
 import TapToContinueGate from '@/components/TapToContinueGate'
+import { lockBodyScroll } from '@/lib/bodyScrollLock'
 
 type GamePhase  = 'idle' | 'ready' | 'playing' | 'clear' | 'dead' | 'loot'
 type ShotResult = 'miss' | 'graze' | 'hit' | 'critical' | null
@@ -429,14 +430,15 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   // body scroll — doing so made raids completely unplayable (no way to
   // scroll to FIRE/VOLLEY/DODGE); the document scrolls naturally instead,
   // identical to every other page.
+  // position:fixed lock (lib/bodyScrollLock), NOT overflow:hidden — on iOS the
+  // overflow lock still let chained/rubber-band drags scroll the document mid-
+  // fight, visually carrying the fixed header away while hit-testing stayed put.
   useEffect(() => {
     const standalone =
       window.matchMedia?.('(display-mode: standalone)').matches ||
       (window.navigator as unknown as { standalone?: boolean }).standalone === true
     if (!standalone) return
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = prev }
+    return lockBodyScroll()
   }, [])
 
   // Quartermaster's Anchor — once-per-RUN lethal save (raids only, this
