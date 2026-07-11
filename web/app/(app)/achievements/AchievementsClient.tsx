@@ -438,8 +438,6 @@ function GoalRow({ g, groupAccent, claimed, busy, onClaim, onOpen }: {
   const state: 'ready' | 'claimed' | 'progress' | 'done' =
     isBadge ? (g.done ? (claimed ? 'claimed' : 'ready') : 'progress') : (g.done ? 'done' : 'progress')
 
-  const statusColor = state === 'ready' ? GOLD : state === 'claimed' || state === 'done' ? '#7bbf7b' : 'rgba(255,255,255,0.12)'
-
   // A banked (claimed/done) badge gets a gentle green gradient fill, anchored
   // at its left status stripe and fading out — reads as "locked in" without
   // out-shouting the gold "ready to claim" rows, which stay the loudest.
@@ -449,6 +447,27 @@ function GoalRow({ g, groupAccent, claimed, busy, onClaim, onOpen }: {
         ? 'linear-gradient(90deg, rgba(123,191,123,0.16) 0%, rgba(123,191,123,0.06) 58%, rgba(123,191,123,0.035) 100%)'
     : 'rgba(210,180,120,0.035)'   // warm timber, not app-gray — in-progress rows
 
+  // Porthole rim carries the state colour (the old left stripe read as admin
+  // UI): gold while a claim waits, green once banked, brass otherwise.
+  const rimColor =
+    state === 'ready' ? GOLD
+    : state === 'claimed' || state === 'done' ? 'rgba(123,191,123,0.8)'
+    : g.done ? 'rgba(196,169,106,0.7)'
+    : 'rgba(196,169,106,0.3)'
+
+  // Rubber-stamp state marks — inked, slightly askew, like a purser working
+  // through the ledger. The gold Claim button stays a button (the one live
+  // action on the row).
+  const stamp = (text: string, ink: string, faint = false) => (
+    <span className="font-cinzel font-800 uppercase" style={{
+      display: 'inline-block', transform: 'rotate(-7deg)',
+      padding: '0.2rem 0.5rem', borderRadius: 4,
+      border: `2px solid ${ink}`, color: ink, opacity: faint ? 0.55 : 0.9,
+      fontSize: '0.6rem', letterSpacing: '0.12em', whiteSpace: 'nowrap',
+      boxShadow: `inset 0 0 6px ${ink}22`,
+    }}>{text}</span>
+  )
+
   return (
     <div
       onClick={onOpen}
@@ -456,35 +475,34 @@ function GoalRow({ g, groupAccent, claimed, busy, onClaim, onOpen }: {
         position: 'relative', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', overflow: 'hidden',
         background: rowBackground,
         border: `1px solid ${state === 'ready' ? 'transparent' : state === 'claimed' || state === 'done' ? 'rgba(123,191,123,0.25)' : 'rgba(196,169,106,0.16)'}`,
-        borderRadius: 14, padding: '0.75rem 0.85rem 0.75rem 0.95rem',
+        borderRadius: 14, padding: '0.75rem 0.85rem',
+        boxShadow: 'inset 0 1px 0 rgba(240,220,180,0.05)',
         animation: state === 'ready' ? 'badgeReadyPulse 2.1s ease-in-out infinite' : undefined,
       }}
     >
-      {/* Left status stripe — scannable state colour. */}
-      <span style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: statusColor }} />
-
-      {/* Badge art — the medallion already has its own metal rim, so it stands
-          on its own with no box chrome. State reads off the left stripe +
-          brightness (locked = grayscale + dim). */}
-      <div style={{ position: 'relative', width: 52, height: 52, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      {/* Badge art set in a brass PORTHOLE — a dark recess with a state-
+          coloured rim, so every medallion looks mounted rather than floating.
+          Locked colours sit sunken and grey until they're won. */}
+      <div style={{
+        position: 'relative', width: 58, height: 58, flexShrink: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        borderRadius: '50%',
+        background: 'radial-gradient(circle at 38% 30%, rgba(60,48,28,0.9), rgba(14,10,5,0.95) 72%)',
+        border: `2px solid ${rimColor}`,
+        boxShadow: `inset 0 3px 9px rgba(0,0,0,0.7), inset 0 -1px 0 rgba(240,220,180,0.08)${state === 'ready' ? `, 0 0 12px ${GOLD}55` : ''}`,
+      }}>
         {g.badgeImage ? (
           <img src={g.badgeImage} alt="" loading="lazy" decoding="async"
-            style={{ width: 48, height: 48, objectFit: 'contain', filter: g.done ? 'drop-shadow(0 1px 2px rgba(0,0,0,0.45))' : 'grayscale(1)', opacity: g.done ? 1 : 0.3 }}
+            style={{ width: 44, height: 44, objectFit: 'contain', filter: g.done ? 'drop-shadow(0 1px 2px rgba(0,0,0,0.45))' : 'grayscale(1) brightness(0.8)', opacity: g.done ? 1 : 0.35 }}
             onError={e => {
               // No-emoji rule: a plain brass ring stands in for missing art.
               const el = e.target as HTMLImageElement
               el.style.display = 'none'
               const p = el.parentElement
-              if (p) p.innerHTML = `<span style="display:block;width:40px;height:40px;border-radius:50%;border:2.5px solid rgba(196,169,106,${g.done ? 0.8 : 0.3});box-shadow:inset 0 0 10px rgba(196,169,106,0.2)"></span>`
+              if (p) p.innerHTML = `<span style="display:block;width:34px;height:34px;border-radius:50%;border:2.5px solid rgba(196,169,106,${g.done ? 0.8 : 0.3});box-shadow:inset 0 0 10px rgba(196,169,106,0.2)"></span>`
             }} />
         ) : (
           <span style={{ width: 16, height: 16, borderRadius: '50%', background: g.done ? groupAccent : 'transparent', border: `2px solid ${groupAccent}`, opacity: g.done ? 1 : 0.5 }} />
-        )}
-        {/* Claimed check overlay */}
-        {state === 'claimed' && (
-          <span style={{ position: 'absolute', bottom: -1, right: -1, width: 18, height: 18, borderRadius: '50%', background: '#1c2a1c', border: '1.5px solid #7bbf7b', display: 'grid', placeItems: 'center' }}>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#7bbf7b" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
-          </span>
         )}
       </div>
 
@@ -493,28 +511,35 @@ function GoalRow({ g, groupAccent, claimed, busy, onClaim, onOpen }: {
         <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: g.done ? '#f4ecd8' : 'rgba(240,237,232,0.85)', letterSpacing: '0.01em' }}>{g.label}</p>
         <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(240,237,232,0.62)', lineHeight: 1.4, marginTop: 2 }}>{g.desc}</p>
 
-        {/* Meta: tier · points · reward — always shown for badges. */}
+        {/* Meta — plain inked text, not chip soup: TIER · pts · ⟡. Grandmaster
+            keeps its shimmer chip (the one tier that has earned the noise). */}
         {isBadge && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 7, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 7, marginTop: 6, flexWrap: 'wrap' }}>
             {diff && (
               g.difficulty === 'grandmaster'
               ? <span className="font-karla font-700 uppercase tier-grandmaster-chip" style={{ fontSize: '0.6rem', letterSpacing: '0.06em', borderRadius: 999, padding: '0.15rem 0.5rem' }}>{diff.label}</span>
-              : <span className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.06em', color: accent, background: `${accent}1f`, border: `1px solid ${accent}55`, borderRadius: 999, padding: '0.15rem 0.5rem' }}>{diff.label}</span>
+              : <span className="font-karla font-800 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.12em', color: accent }}>{diff.label}</span>
             )}
-            <span className="font-karla font-700" style={{ fontSize: '0.74rem', color: 'rgba(240,237,232,0.72)' }}>{points} pt{points === 1 ? '' : 's'}</span>
-            <span style={{ color: 'rgba(240,237,232,0.28)', fontSize: '0.7rem' }}>·</span>
-            <span className="font-karla font-700" style={{ fontSize: '0.74rem', color: GOLD, opacity: state === 'claimed' ? 0.5 : 1 }}>{reward.toLocaleString()} ⟡</span>
+            <span style={{ color: 'rgba(240,237,232,0.25)', fontSize: '0.66rem' }}>·</span>
+            <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.62)' }}>{points} pt{points === 1 ? '' : 's'}</span>
+            <span style={{ color: 'rgba(240,237,232,0.25)', fontSize: '0.66rem' }}>·</span>
+            <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: GOLD, opacity: state === 'claimed' ? 0.5 : 1 }}>{reward.toLocaleString()} ⟡</span>
           </div>
         )}
 
+        {/* Progress — a ship's gauge, not an app bar: recessed channel with
+            quarter ticks the accent fill sweeps past. */}
         {!g.binary && !g.done && (
-          <div style={{ height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.06)', overflow: 'hidden', marginTop: 8 }}>
-            <div style={{ height: '100%', width: `${pct * 100}%`, background: accent, borderRadius: 3, opacity: 0.8 }} />
+          <div style={{ position: 'relative', height: 6, borderRadius: 3, background: 'rgba(0,0,0,0.35)', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.5)', overflow: 'hidden', marginTop: 8 }}>
+            <div style={{ height: '100%', width: `${pct * 100}%`, background: `linear-gradient(90deg, ${accent}88, ${accent})`, borderRadius: 3 }} />
+            {[25, 50, 75].map(t => (
+              <span key={t} aria-hidden style={{ position: 'absolute', left: `${t}%`, top: 0, bottom: 0, width: 1, background: 'rgba(10,8,4,0.55)' }} />
+            ))}
           </div>
         )}
       </div>
 
-      {/* Right action zone */}
+      {/* Right zone: the Claim button, an ink stamp, or the running tally. */}
       <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
         {state === 'ready' ? (
           <motion.button whileTap={{ scale: 0.92 }} onClick={e => { e.stopPropagation(); onClaim(rectCenter(e.currentTarget)) }} disabled={busy}
@@ -523,11 +548,11 @@ function GoalRow({ g, groupAccent, claimed, busy, onClaim, onOpen }: {
             {busy ? '…' : 'Claim'}
           </motion.button>
         ) : state === 'claimed' ? (
-          <span className="font-karla font-700 uppercase" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.68rem', letterSpacing: '0.05em', color: '#7bbf7b' }}>Claimed</span>
+          stamp('Claimed', '#7bbf7b')
         ) : state === 'done' ? (
-          <span className="font-karla font-700" style={{ fontSize: '0.82rem', color: '#7bbf7b' }}>Complete</span>
+          stamp('Done', '#7bbf7b')
         ) : g.binary ? (
-          <span className="font-karla font-700 uppercase" style={{ fontSize: '0.68rem', letterSpacing: '0.05em', color: 'rgba(240,237,232,0.4)' }}>Locked</span>
+          stamp('Unearned', 'rgba(240,237,232,0.5)', true)
         ) : (
           <span className="font-karla font-700" style={{ fontSize: '0.82rem', color: 'rgba(240,237,232,0.7)', fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>
             {g.record ? 'Best ' : ''}{g.current.toLocaleString()}<span style={{ opacity: 0.5 }}> / {g.target.toLocaleString()}</span>
