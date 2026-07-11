@@ -936,14 +936,14 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
     { desc: '+48% Volley damage', detail: 'Your Volley (the 3-charge double shot) deals 48% more damage. Single Fire shots are unaffected.', effect: { kind: 'volleyDmgMult', mult: 1.48 } },
   ] },
   { id: 'dead_eye', name: 'Dead-Eye', flavor: 'You learn exactly where a hull wants to break.', tiers: [
-    { desc: '+8% crit on clean hits', detail: 'Each clean hit (a green-zone landing, not the gold band) has an extra 8% chance to upgrade into a critical — your way to crit even when you miss the gold. Grazes and shots that already crit are unaffected.', effect: { kind: 'critChanceBonus', chance: 0.08 } },
-    { desc: '+16% crit on clean hits', detail: 'Each clean hit (a green-zone landing, not the gold band) has an extra 16% chance to upgrade into a critical — your way to crit even when you miss the gold. Grazes and shots that already crit are unaffected.', effect: { kind: 'critChanceBonus', chance: 0.16 } },
-    { desc: '+26% crit on clean hits', detail: 'Each clean hit (a green-zone landing, not the gold band) has an extra 26% chance to upgrade into a critical — your way to crit even when you miss the gold. Grazes and shots that already crit are unaffected.', effect: { kind: 'critChanceBonus', chance: 0.26 } },
+    { desc: '8% chance a normal hit becomes a crit', detail: 'When you land a normal hit (the green zone on your aim bar), there’s an 8% chance it upgrades into a critical hit anyway — so you can crit even when you miss the gold band. Grazes don’t count.', effect: { kind: 'critChanceBonus', chance: 0.08 } },
+    { desc: '16% chance a normal hit becomes a crit', detail: 'When you land a normal hit (the green zone), there’s a 16% chance it upgrades into a critical hit anyway. Grazes don’t count.', effect: { kind: 'critChanceBonus', chance: 0.16 } },
+    { desc: '26% chance a normal hit becomes a crit', detail: 'When you land a normal hit (the green zone), there’s a 26% chance it upgrades into a critical hit anyway. Grazes don’t count.', effect: { kind: 'critChanceBonus', chance: 0.26 } },
   ] },
   { id: 'wide_sights', name: 'Wide Sights', flavor: 'The perfect shot stops being luck.', tiers: [
-    { desc: 'Bigger crit zone', detail: 'The gold "perfect shot" band on your aim bar is 12% wider, so landing a crit is easier.', effect: { kind: 'critZoneScale', mult: 1.12 } },
-    { desc: 'Much bigger crit zone', detail: 'The gold "perfect shot" band on your aim bar is 26% wider.', effect: { kind: 'critZoneScale', mult: 1.26 } },
-    { desc: 'Huge crit zone', detail: 'The gold "perfect shot" band on your aim bar is 42% wider.', effect: { kind: 'critZoneScale', mult: 1.42 } },
+    { desc: 'Gold crit band 12% wider', detail: 'The gold "perfect shot" band on your aim bar is 12% wider, so landing a critical hit is easier.', effect: { kind: 'critZoneScale', mult: 1.12 } },
+    { desc: 'Gold crit band 26% wider', detail: 'The gold "perfect shot" band on your aim bar is 26% wider.', effect: { kind: 'critZoneScale', mult: 1.26 } },
+    { desc: 'Gold crit band 42% wider', detail: 'The gold "perfect shot" band on your aim bar is 42% wider.', effect: { kind: 'critZoneScale', mult: 1.42 } },
   ] },
   { id: 'ironhide', name: 'Ironhide', flavor: 'Plates doubled along the waterline.', rarity: 'rare', tiers: [
     { desc: 'Take 12% less damage', detail: 'Every hit an enemy lands on you deals 12% less damage for the rest of the run.', effect: { kind: 'incomingDmgMult', mult: 0.88, scope: 'allRemaining' } },
@@ -951,9 +951,9 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
     { desc: 'Take 34% less damage', detail: 'Every hit an enemy lands on you deals 34% less damage for the rest of the run.', effect: { kind: 'incomingDmgMult', mult: 0.66, scope: 'allRemaining' } },
   ] },
   { id: 'press_the_powder', name: 'Press the Powder', flavor: 'Your crew loads like the deep is at their heels.', tiers: [
-    { desc: 'Reloads can load extra', detail: 'Each reload has a 10% chance to chamber an extra cannonball on top.', effect: { kind: 'reloadProc', chance: 0.10, bonusCharges: 1 } },
-    { desc: 'Reloads often load extra', detail: 'Each reload has a 22% chance to chamber an extra cannonball on top.', effect: { kind: 'reloadProc', chance: 0.22, bonusCharges: 1 } },
-    { desc: 'Reloads frequently load extra', detail: 'Each reload has a 36% chance to chamber an extra cannonball on top.', effect: { kind: 'reloadProc', chance: 0.36, bonusCharges: 1 } },
+    { desc: '10% chance a Reload loads 2 cannonballs', detail: 'Each time you Reload, there’s a 10% chance a second cannonball is loaded for free on top of the usual one.', effect: { kind: 'reloadProc', chance: 0.10, bonusCharges: 1 } },
+    { desc: '22% chance a Reload loads 2 cannonballs', detail: 'Each time you Reload, there’s a 22% chance a second cannonball is loaded for free.', effect: { kind: 'reloadProc', chance: 0.22, bonusCharges: 1 } },
+    { desc: '36% chance a Reload loads 2 cannonballs', detail: 'Each time you Reload, there’s a 36% chance a second cannonball is loaded for free.', effect: { kind: 'reloadProc', chance: 0.36, bonusCharges: 1 } },
   ] },
   { id: 'following_sea', name: 'Following Sea', flavor: 'The current finally runs with you.', rarity: 'rare', tiers: [
     { desc: '+2 ship speed', detail: 'Your ship is 2 faster: you act first more often and slip more enemy shots when you dodge.', effect: { kind: 'speedDelta', n: 2, scope: 'allRemaining' } },
@@ -982,9 +982,9 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
     { desc: '+48% boss damage', detail: 'Deal 48% more damage to boss-depth ships. Regular enemies are unaffected.', effect: { kind: 'bossDamageMult', mult: 1.48 } },
   ] },
   { id: 'spiteful_wake', name: 'Spiteful Wake', flavor: 'Strike the hull and the hull strikes back — and slip its shot and the sea flings your spite anyway.', rarity: 'rare', tiers: [
-    { desc: 'Reflect 12% taken · chip 10% dodged', detail: 'When an enemy lands a hit on you, it takes 12% of that damage back into its own hull. And when you DODGE an enemy shot, the wake still lashes it for 10% of the damage it would have dealt — so good play pays too, not just eating hits.', effect: { kind: 'retaliatePct', pct: 0.12, dodgePct: 0.10 } },
-    { desc: 'Reflect 22% taken · chip 14% dodged', detail: 'Reflect 22% of any hit an enemy lands on you, and chip 14% of a shot you dodge into its hull.', effect: { kind: 'retaliatePct', pct: 0.22, dodgePct: 0.14 } },
-    { desc: 'Reflect 32% taken · chip 18% dodged', detail: 'Reflect 32% of any hit an enemy lands on you, and chip 18% of a shot you dodge into its hull.', effect: { kind: 'retaliatePct', pct: 0.32, dodgePct: 0.18 } },
+    { desc: 'Enemies take back 12% of hits on you (10% if you dodge)', detail: 'Whenever an enemy hits you, it takes 12% of that damage right back. And when you DODGE a shot, the enemy still takes 10% of the damage it WOULD have dealt — so you punish them whether the hit lands or not.', effect: { kind: 'retaliatePct', pct: 0.12, dodgePct: 0.10 } },
+    { desc: 'Enemies take back 22% of hits on you (14% if you dodge)', detail: 'Enemies take back 22% of any hit they land on you, and 14% of any shot you dodge.', effect: { kind: 'retaliatePct', pct: 0.22, dodgePct: 0.14 } },
+    { desc: 'Enemies take back 32% of hits on you (18% if you dodge)', detail: 'Enemies take back 32% of any hit they land on you, and 18% of any shot you dodge.', effect: { kind: 'retaliatePct', pct: 0.32, dodgePct: 0.18 } },
   ] },
   { id: 'wounded_fury', name: 'Wounded Fury', flavor: 'The closer to sinking, the harder your guns bite.', rarity: 'rare', tiers: [
     { desc: 'Up to +17% damage as HP drops', detail: 'Your shots hit harder the lower your HP, scaling with missing health. At full HP nothing; right at the brink, +17%.', effect: { kind: 'lowHpDamage', maxBonus: 0.17 } },
@@ -1004,9 +1004,9 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
     { desc: '+2.4% damage per depth (max +38%)', detail: 'Your damage rises with how deep you are — 2.4% for every depth reached, up to +38%. Scales live as you descend.', effect: { kind: 'depthScaleDamage', perDepth: 0.024, maxBonus: 0.38 } },
   ] },
   { id: 'cannonade', name: 'Cannonade', flavor: 'Land them clean and the guns never cool.', rarity: 'rare', tiers: [
-    { desc: '+6% per crit in a row (max 5)', detail: 'Each critical hit in a row stacks +6% damage, up to 5 stacks (+30%). Any shot that is NOT a crit resets the streak to zero. The streak resets at the start of every fight.', effect: { kind: 'critStreakDamage', perStack: 0.06, maxStacks: 5 } },
-    { desc: '+8% per crit in a row (max 5)', detail: 'Each critical hit in a row stacks +8% damage, up to 5 stacks (+40%). Any non-crit shot resets the streak. Resets each fight.', effect: { kind: 'critStreakDamage', perStack: 0.08, maxStacks: 5 } },
-    { desc: '+10% per crit in a row (max 6)', detail: 'Each critical hit in a row stacks +10% damage, up to 6 stacks (+60%). Any non-crit shot resets the streak. Resets each fight.', effect: { kind: 'critStreakDamage', perStack: 0.10, maxStacks: 6 } },
+    { desc: '+6% damage per crit in a row (up to +30%)', detail: 'Every critical hit you land in a row adds +6% damage, stacking up to +30%. Landing any shot that is NOT a crit resets the streak to zero, and the streak starts fresh each fight.', effect: { kind: 'critStreakDamage', perStack: 0.06, maxStacks: 5 } },
+    { desc: '+8% damage per crit in a row (up to +40%)', detail: 'Every critical hit in a row adds +8% damage, stacking up to +40%. Any non-crit shot resets the streak; it starts fresh each fight.', effect: { kind: 'critStreakDamage', perStack: 0.08, maxStacks: 5 } },
+    { desc: '+10% damage per crit in a row (up to +60%)', detail: 'Every critical hit in a row adds +10% damage, stacking up to +60%. Any non-crit shot resets the streak; it starts fresh each fight.', effect: { kind: 'critStreakDamage', perStack: 0.10, maxStacks: 6 } },
   ] },
   { id: 'counter_battery', name: 'Counter-Battery', flavor: 'Answer their broadside with yours — and let the sea swallow theirs.', rarity: 'rare', tiers: [
     { desc: '20% to cancel their shot when you both fire', detail: 'When you Fire, Volley or Mega on the same turn the enemy fires or volleys AND your shot lands, you have a 20% chance to smash their shot out of the air — their attack is fully negated while yours still hits. A whiffed aim does not count.', effect: { kind: 'counterFireChance', chance: 0.20 } },
@@ -1019,14 +1019,14 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
   //    but RaidCombat caps the total at 20% so a specialist gets DEADLIER procs,
   //    not infinitely more frequent ones. Higher tiers add signature levers.
   { id: 'permafrost', name: 'Permafrost', flavor: 'The cold off your guns finds the seams in their hull and holds it fast.', rarity: 'rare', tiers: [
-    { desc: '10% freeze, +20% vs frozen', detail: 'Each hit has a 10% chance to freeze the enemy (it loses its next turn), and you deal 20% more damage to a frozen hull. Stacks with the Frozen Cannonball, capped at 20% total freeze.', effect: { kind: 'iceAffinity', freezeChance: 0.10, frozenDmgMult: 1.20 } },
-    { desc: '15% freeze, +32% vs frozen, Brittle', detail: 'Freeze chance 15%, +32% damage to frozen hulls. BRITTLE: a critical hit on a frozen enemy shatters it for DOUBLE the frozen bonus.', effect: { kind: 'iceAffinity', freezeChance: 0.15, frozenDmgMult: 1.32, brittle: true } },
-    { desc: '20% freeze (2 turns), +42% vs frozen, Brittle', detail: 'Freeze chance 20% and +42% damage to frozen hulls, with Brittle. DEEP FREEZE: your freezes now last TWO skipped turns instead of one.', effect: { kind: 'iceAffinity', freezeChance: 0.20, frozenDmgMult: 1.42, brittle: true, deepFreeze: true } },
+    { desc: '10% chance to freeze; frozen ships take +20%', detail: 'Each hit you land has a 10% chance to FREEZE the enemy — it loses its next turn — and you deal 20% more damage to a frozen ship. (Stacks with the Frozen Cannonball item, up to 20% total freeze chance.)', effect: { kind: 'iceAffinity', freezeChance: 0.10, frozenDmgMult: 1.20 } },
+    { desc: '15% chance to freeze; frozen ships take +32%', detail: 'Freeze chance rises to 15% and frozen ships take 32% more damage. NEW — Brittle: a critical hit on a frozen ship shatters the ice for DOUBLE the frozen bonus.', effect: { kind: 'iceAffinity', freezeChance: 0.15, frozenDmgMult: 1.32, brittle: true } },
+    { desc: '20% chance to freeze for 2 turns; frozen ships take +42%', detail: 'Freeze chance rises to 20%, frozen ships take 42% more, and Brittle stays. NEW — Deep Freeze: your freezes now last TWO skipped turns instead of one.', effect: { kind: 'iceAffinity', freezeChance: 0.20, frozenDmgMult: 1.42, brittle: true, deepFreeze: true } },
   ] },
   { id: 'wildfire', name: 'Wildfire', flavor: 'You set the sea alight and let it do the work the guns started.', rarity: 'rare', tiers: [
-    { desc: '10% burn, 3 turns, ticks 13% of hit', detail: 'Each hit has a 10% chance to set the enemy ablaze. Your burns last 3 turns (one longer than normal) and each tick deals 13% of the hit that lit it (up from the base 10%). Stacks with the Incendiary Cannonball, capped at 20% total burn chance.', effect: { kind: 'fireAffinity', burnChance: 0.10, burnTurnsBonus: 1, burnTickMult: 1.3 } },
-    { desc: '15% burn, ticks 16%, Reignite', detail: 'Burn chance 15%, ticks deal 16% of the hit. REIGNITE: hitting an already-burning enemy refreshes the burn back to full duration, so you can keep the fire going as long as you keep landing shots.', effect: { kind: 'fireAffinity', burnChance: 0.15, burnTurnsBonus: 1, burnTickMult: 1.6, reignite: true } },
-    { desc: '20% burn, 4 turns, ticks 20% (max), Reignite + Backdraft', detail: 'Burn chance 20%, burns last 4 turns and each tick deals 20% of the hit (the burn ceiling), with Reignite. BACKDRAFT: while a hull burns, the flames keep flaring — each burn tick has a chance to erupt for a bonus burst, so the longer you keep it cooking (with Reignite) the more it goes off.', effect: { kind: 'fireAffinity', burnChance: 0.20, burnTurnsBonus: 2, burnTickMult: 2.0, reignite: true, backdraft: true } },
+    { desc: '10% chance to set enemies on fire', detail: 'Each hit you land has a 10% chance to set the enemy ON FIRE — it takes damage at the start of each of its turns for 3 turns (each tick deals 13% of the hit that started the fire). Stacks with the Incendiary Cannonball item, up to 20% total burn chance.', effect: { kind: 'fireAffinity', burnChance: 0.10, burnTurnsBonus: 1, burnTickMult: 1.3 } },
+    { desc: '15% chance to burn; hitting a burning ship rekindles it', detail: 'Burn chance rises to 15% and the fire ticks harder (16% of the hit). NEW — Reignite: hitting an already-burning ship resets the fire to full duration, so you can keep it burning as long as you keep landing shots.', effect: { kind: 'fireAffinity', burnChance: 0.15, burnTurnsBonus: 1, burnTickMult: 1.6, reignite: true } },
+    { desc: '20% chance to burn for 4 turns; fires can flare for bonus bursts', detail: 'Burn chance rises to 20%, fires last 4 turns, ticks hit their ceiling (20% of the hit), and Reignite stays. NEW — Backdraft: each burn tick has a chance to flare up for a bonus burst of damage — the longer the fire cooks, the more it erupts.', effect: { kind: 'fireAffinity', burnChance: 0.20, burnTurnsBonus: 2, burnTickMult: 2.0, reignite: true, backdraft: true } },
   ] },
   // ── Defensive HP scaling — the answer to enemy damage climbing with depth
   //    while a flat HP pool falls behind (DR is already covered by Ironhide /
@@ -1056,8 +1056,8 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
     { desc: 'Sink enemies below 8% HP', detail: 'The instant any hit drops an enemy to 8% of its health or lower, it is sunk outright.', effect: { kind: 'executeThreshold', pct: 0.08 } },
   ] },
   { id: 'leviathans_hunger', name: "Leviathan's Hunger", flavor: 'Every wound you open, the deep drinks — and feeds it back to your hull.', rarity: 'legendary', tiers: [
-    { desc: 'Heal 10% of damage dealt', detail: 'Whenever you damage an enemy, your ship repairs 10% of that damage. Sustain that climbs with how hard you hit.', effect: { kind: 'lifestealPct', pct: 0.10 } },
-    { desc: 'Heal 15% of damage dealt', detail: 'Whenever you damage an enemy, your ship repairs 15% of that damage.', effect: { kind: 'lifestealPct', pct: 0.15 } },
+    { desc: 'Heal 10% of the damage you deal', detail: 'Whenever you damage an enemy, your ship heals for 10% of that damage — the harder you hit, the more you heal. (A single hit can heal at most 20% of your max HP.)', effect: { kind: 'lifestealPct', pct: 0.10 } },
+    { desc: 'Heal 15% of the damage you deal', detail: 'Whenever you damage an enemy, your ship heals for 15% of that damage. (A single hit can heal at most 20% of your max HP.)', effect: { kind: 'lifestealPct', pct: 0.15 } },
   ] },
   { id: 'powder_hoard', name: 'Powder Hoard', flavor: "Whatever your crew doesn't spend, they keep racked for the next hull.", rarity: 'legendary', tiers: [
     { desc: 'Carry up to 2 cannonballs over', detail: 'Cannonballs you leave unfired when a fight ends carry into the next one, up to 2 of them.', effect: { kind: 'chargeCarryover', cap: 2 } },
@@ -1188,6 +1188,11 @@ export interface Confluence {
   requires: { boonId: string }[]
   /** One-line flavor. */
   flavor: string
+  /** Plain-English explanation of the MECHANIC (no numbers — the per-level
+   *  `desc` carries those): what triggers it, what happens, any cap/reset.
+   *  Surfaced in the detail popup + codex so the one-line desc isn't the only
+   *  explanation a new player ever sees. */
+  detail: string
   /** Effects + summary per confluence level (1..3), index = level - 1. */
   levels: ConfluenceLevel[]
 }
@@ -1198,10 +1203,11 @@ export const CONFLUENCES: Confluence[] = [
     name: 'Thermal Shock',
     requires: [{ boonId: 'permafrost' }, { boonId: 'wildfire' }],
     flavor: 'Ice in the seams, fire on the deck. The hull cracks where the two meet.',
+    detail: 'When an enemy is frozen and on fire at the same time, your next hit shatters the ice — dealing bonus damage on top of the hit (a percentage of that hit). The shatter ends the freeze.',
     levels: [
-      { desc: 'Frozen + burning hulls shatter for +50%', effects: [{ kind: 'thermalShock', burstMult: 0.50 }] },
-      { desc: 'Frozen + burning hulls shatter for +70%', effects: [{ kind: 'thermalShock', burstMult: 0.70 }] },
-      { desc: 'Frozen + burning hulls shatter for +95%', effects: [{ kind: 'thermalShock', burstMult: 0.95 }] },
+      { desc: 'Frozen + burning hulls shatter for +50% bonus damage', effects: [{ kind: 'thermalShock', burstMult: 0.50 }] },
+      { desc: 'Frozen + burning hulls shatter for +70% bonus damage', effects: [{ kind: 'thermalShock', burstMult: 0.70 }] },
+      { desc: 'Frozen + burning hulls shatter for +95% bonus damage', effects: [{ kind: 'thermalShock', burstMult: 0.95 }] },
     ],
   },
   {
@@ -1209,10 +1215,11 @@ export const CONFLUENCES: Confluence[] = [
     name: 'Coup de Grâce',
     requires: [{ boonId: 'executioner' }, { boonId: 'cold_fury' }],
     flavor: 'You know the killing mark, and when the shot rings true you find it every time.',
+    detail: 'Your critical hits deal extra damage, and any critical hit that leaves the enemy at low HP sinks it on the spot — a much wider finishing mark than Executioner alone.',
     levels: [
-      { desc: 'A crit on a hull below 12% HP sinks it', effects: [{ kind: 'critDmgMult', mult: 1.12 }, { kind: 'critExecute', pct: 0.12 }] },
-      { desc: 'A crit on a hull below 16% HP sinks it', effects: [{ kind: 'critDmgMult', mult: 1.18 }, { kind: 'critExecute', pct: 0.16 }] },
-      { desc: 'A crit on a hull below 20% HP sinks it', effects: [{ kind: 'critDmgMult', mult: 1.25 }, { kind: 'critExecute', pct: 0.20 }] },
+      { desc: '+12% crit damage; a crit sinks hulls below 12% HP', effects: [{ kind: 'critDmgMult', mult: 1.12 }, { kind: 'critExecute', pct: 0.12 }] },
+      { desc: '+18% crit damage; a crit sinks hulls below 16% HP', effects: [{ kind: 'critDmgMult', mult: 1.18 }, { kind: 'critExecute', pct: 0.16 }] },
+      { desc: '+25% crit damage; a crit sinks hulls below 20% HP', effects: [{ kind: 'critDmgMult', mult: 1.25 }, { kind: 'critExecute', pct: 0.20 }] },
     ],
   },
   {
@@ -1220,10 +1227,11 @@ export const CONFLUENCES: Confluence[] = [
     name: 'Hull Render',
     requires: [{ boonId: 'broadside_mastery' }, { boonId: 'grapeshot' }],
     flavor: 'Every gun on the rail, again and again, until the seams give. The deep loves a drummer.',
+    detail: 'Your Volley (the 3-cannonball heavy shot) hits harder, and every Volley you land in a fight makes the next one hit harder still. The ramp resets when the fight ends.',
     levels: [
-      { desc: 'Each Volley this fight hits +12% harder than the last', effects: [{ kind: 'volleyDmgMult', mult: 1.12 }, { kind: 'volleyRamp', perVolley: 0.12 }] },
-      { desc: 'Each Volley this fight hits +15% harder than the last', effects: [{ kind: 'volleyDmgMult', mult: 1.18 }, { kind: 'volleyRamp', perVolley: 0.15 }] },
-      { desc: 'Each Volley this fight hits +18% harder than the last', effects: [{ kind: 'volleyDmgMult', mult: 1.25 }, { kind: 'volleyRamp', perVolley: 0.18 }] },
+      { desc: '+12% Volley damage, and each Volley adds +12% more this fight', effects: [{ kind: 'volleyDmgMult', mult: 1.12 }, { kind: 'volleyRamp', perVolley: 0.12 }] },
+      { desc: '+18% Volley damage, and each Volley adds +15% more this fight', effects: [{ kind: 'volleyDmgMult', mult: 1.18 }, { kind: 'volleyRamp', perVolley: 0.15 }] },
+      { desc: '+25% Volley damage, and each Volley adds +18% more this fight', effects: [{ kind: 'volleyDmgMult', mult: 1.25 }, { kind: 'volleyRamp', perVolley: 0.18 }] },
     ],
   },
   {
@@ -1231,10 +1239,11 @@ export const CONFLUENCES: Confluence[] = [
     name: "Reaper's Tithe",
     requires: [{ boonId: 'executioner' }, { boonId: 'leviathans_hunger' }],
     flavor: 'Every hull you send down, the deep tithes back to you. Death feeds the killer.',
+    detail: 'Every enemy you sink heals you for a slice of ITS max HP — bigger ships pay a bigger tithe. The heal is capped at 15% of your own max HP per kill, so deep-run giants can’t refill your whole bar.',
     levels: [
-      { desc: 'Sinking a hull heals you 12% of its max HP', effects: [{ kind: 'executeHeal', pctMaxHp: 0.12 }] },
-      { desc: 'Sinking a hull heals you 16% of its max HP', effects: [{ kind: 'executeHeal', pctMaxHp: 0.16 }] },
-      { desc: 'Sinking a hull heals you 22% of its max HP', effects: [{ kind: 'executeHeal', pctMaxHp: 0.22 }] },
+      { desc: 'Sinking a hull heals you 12% of its max HP (up to 15% of yours)', effects: [{ kind: 'executeHeal', pctMaxHp: 0.12 }] },
+      { desc: 'Sinking a hull heals you 16% of its max HP (up to 15% of yours)', effects: [{ kind: 'executeHeal', pctMaxHp: 0.16 }] },
+      { desc: 'Sinking a hull heals you 22% of its max HP (up to 15% of yours)', effects: [{ kind: 'executeHeal', pctMaxHp: 0.22 }] },
     ],
   },
   {
@@ -1242,10 +1251,11 @@ export const CONFLUENCES: Confluence[] = [
     name: 'Feed the Fire',
     requires: [{ boonId: 'wildfire' }, { boonId: 'leviathans_hunger' }],
     flavor: 'The flames you set drink from the enemy and pour it into your hull.',
+    detail: 'While an enemy burns, every burn tick also heals you — a percentage of the damage that tick dealt. Capped at 20% of your max HP per tick. Keep the fire going and the fire keeps you afloat.',
     levels: [
-      { desc: 'Burn ticks heal you 65% of the tick', effects: [{ kind: 'burnTickHeal', pctTick: 0.65 }] },
-      { desc: 'Burn ticks heal you 95% of the tick', effects: [{ kind: 'burnTickHeal', pctTick: 0.95 }] },
-      { desc: 'Burn ticks heal you 130% of the tick', effects: [{ kind: 'burnTickHeal', pctTick: 1.30 }] },
+      { desc: 'Burn damage also heals you 65% of each tick', effects: [{ kind: 'burnTickHeal', pctTick: 0.65 }] },
+      { desc: 'Burn damage also heals you 95% of each tick', effects: [{ kind: 'burnTickHeal', pctTick: 0.95 }] },
+      { desc: 'Burn damage also heals you 130% of each tick', effects: [{ kind: 'burnTickHeal', pctTick: 1.30 }] },
     ],
   },
   {
@@ -1253,10 +1263,11 @@ export const CONFLUENCES: Confluence[] = [
     name: 'Untouchable',
     requires: [{ boonId: 'following_sea' }, { boonId: 'ghostward' }],
     flavor: 'You are never where the shot lands, and the wind hands you back your powder.',
+    detail: 'Your dodges succeed more often, and every enemy shot you successfully slip loads free cannonball(s) into your magazine — dodging becomes offense, not just survival.',
     levels: [
-      { desc: 'A dodge refunds a cannonball; +8% dodge', effects: [{ kind: 'dodgeRefund', charges: 1 }, { kind: 'dodgeBonus', chance: 0.08, scope: 'allRemaining' }] },
-      { desc: 'A dodge refunds a cannonball; +16% dodge', effects: [{ kind: 'dodgeRefund', charges: 1 }, { kind: 'dodgeBonus', chance: 0.16, scope: 'allRemaining' }] },
-      { desc: 'A dodge refunds 2 cannonballs; +24% dodge', effects: [{ kind: 'dodgeRefund', charges: 2 }, { kind: 'dodgeBonus', chance: 0.24, scope: 'allRemaining' }] },
+      { desc: 'Dodges succeed +8% more; slipping a shot loads 1 free cannonball', effects: [{ kind: 'dodgeRefund', charges: 1 }, { kind: 'dodgeBonus', chance: 0.08, scope: 'allRemaining' }] },
+      { desc: 'Dodges succeed +16% more; slipping a shot loads 1 free cannonball', effects: [{ kind: 'dodgeRefund', charges: 1 }, { kind: 'dodgeBonus', chance: 0.16, scope: 'allRemaining' }] },
+      { desc: 'Dodges succeed +24% more; slipping a shot loads 2 free cannonballs', effects: [{ kind: 'dodgeRefund', charges: 2 }, { kind: 'dodgeBonus', chance: 0.24, scope: 'allRemaining' }] },
     ],
   },
   {
@@ -1264,10 +1275,11 @@ export const CONFLUENCES: Confluence[] = [
     name: 'Iron Tempest',
     requires: [{ boonId: 'spiteful_wake' }, { boonId: 'ironhide' }],
     flavor: 'Plate over plate, and every blow that breaks on it is flung back twofold.',
+    detail: 'Multiplies Spiteful Wake: the damage you throw back when an enemy hits you is boosted by this factor. With Ironhide shrinking what you take, you become a wall that bites.',
     levels: [
-      { desc: 'Your reflected damage hits 1.8× harder', effects: [{ kind: 'retaliateBoost', mult: 1.8 }] },
-      { desc: 'Your reflected damage hits 2.5× harder', effects: [{ kind: 'retaliateBoost', mult: 2.5 }] },
-      { desc: 'Your reflected damage hits 3.2× harder', effects: [{ kind: 'retaliateBoost', mult: 3.2 }] },
+      { desc: 'Spiteful Wake’s thrown-back damage hits 1.8× harder', effects: [{ kind: 'retaliateBoost', mult: 1.8 }] },
+      { desc: 'Spiteful Wake’s thrown-back damage hits 2.5× harder', effects: [{ kind: 'retaliateBoost', mult: 2.5 }] },
+      { desc: 'Spiteful Wake’s thrown-back damage hits 3.2× harder', effects: [{ kind: 'retaliateBoost', mult: 3.2 }] },
     ],
   },
   {
@@ -1275,10 +1287,11 @@ export const CONFLUENCES: Confluence[] = [
     name: 'Broadside Duel',
     requires: [{ boonId: 'cannonade' }, { boonId: 'counter_battery' }],
     flavor: 'Trade broadsides and win the exchange every time — their shot in the water, and the guns already coming back to bear.',
+    detail: 'Boosts Counter-Battery: your chance to knock an enemy shot out of the air goes up, and every shot you DO knock down feeds Cannonade’s crit streak (and can hand you back a cannonball). Winning the exchange keeps your rhythm even on a non-crit.',
     levels: [
-      { desc: 'Counters fire +8% more often and add a Cannonade stack', effects: [{ kind: 'counterBonus', refund: 0, bonusStack: 1, chanceBonus: 0.08 }] },
-      { desc: 'Counters fire +15% more, add a stack, and refund a cannonball', effects: [{ kind: 'counterBonus', refund: 1, bonusStack: 1, chanceBonus: 0.15 }] },
-      { desc: 'Counters fire +22% more, add 2 stacks, and refund a cannonball', effects: [{ kind: 'counterBonus', refund: 1, bonusStack: 2, chanceBonus: 0.22 }] },
+      { desc: '+8% counter chance; a counter adds a Cannonade streak stack', effects: [{ kind: 'counterBonus', refund: 0, bonusStack: 1, chanceBonus: 0.08 }] },
+      { desc: '+15% counter chance; a counter adds a stack and a free cannonball', effects: [{ kind: 'counterBonus', refund: 1, bonusStack: 1, chanceBonus: 0.15 }] },
+      { desc: '+22% counter chance; a counter adds 2 stacks and a free cannonball', effects: [{ kind: 'counterBonus', refund: 1, bonusStack: 2, chanceBonus: 0.22 }] },
     ],
   },
   {
@@ -1286,10 +1299,11 @@ export const CONFLUENCES: Confluence[] = [
     name: 'Return to Sender',
     requires: [{ boonId: 'counter_battery' }, { boonId: 'spiteful_wake' }],
     flavor: "Their own shell, caught mid-air and flung right back down their throat.",
+    detail: 'When Counter-Battery knocks an enemy shot out of the air, the shell is flung back at them — dealing a percentage of the damage it WOULD have done to you. You take nothing; they eat their own broadside.',
     levels: [
-      { desc: 'A countered shot flings back 60% of their damage', effects: [{ kind: 'counterReflect', pct: 0.60 }] },
-      { desc: 'A countered shot flings back 85% of their damage', effects: [{ kind: 'counterReflect', pct: 0.85 }] },
-      { desc: 'A countered shot flings back 120% of their damage', effects: [{ kind: 'counterReflect', pct: 1.20 }] },
+      { desc: 'A countered shot is flung back for 60% of its damage', effects: [{ kind: 'counterReflect', pct: 0.60 }] },
+      { desc: 'A countered shot is flung back for 85% of its damage', effects: [{ kind: 'counterReflect', pct: 0.85 }] },
+      { desc: 'A countered shot is flung back for 120% of its damage', effects: [{ kind: 'counterReflect', pct: 1.20 }] },
     ],
   },
   {
@@ -1297,10 +1311,11 @@ export const CONFLUENCES: Confluence[] = [
     name: 'Feeding Frenzy',
     requires: [{ boonId: 'rising_tide' }, { boonId: 'leviathans_hunger' }],
     flavor: 'The swell of the slain makes the deep drink deeper — every hull in your wake feeds the next wound.',
+    detail: 'Every enemy you sink this run makes Leviathan’s Hunger drink deeper — the share of your damage that comes back as healing grows with each kill, up to the cap. It never resets during the run.',
     levels: [
-      { desc: 'Lifesteal grows +1.5% per hull sunk (max +18%)', effects: [{ kind: 'lifestealKillScale', perKill: 0.015, max: 0.18 }] },
-      { desc: 'Lifesteal grows +2% per hull sunk (max +24%)', effects: [{ kind: 'lifestealKillScale', perKill: 0.02, max: 0.24 }] },
-      { desc: 'Lifesteal grows +2.5% per hull sunk (max +30%)', effects: [{ kind: 'lifestealKillScale', perKill: 0.025, max: 0.30 }] },
+      { desc: 'Healing from damage grows +1.5% per hull sunk (max +18%)', effects: [{ kind: 'lifestealKillScale', perKill: 0.015, max: 0.18 }] },
+      { desc: 'Healing from damage grows +2% per hull sunk (max +24%)', effects: [{ kind: 'lifestealKillScale', perKill: 0.02, max: 0.24 }] },
+      { desc: 'Healing from damage grows +2.5% per hull sunk (max +30%)', effects: [{ kind: 'lifestealKillScale', perKill: 0.025, max: 0.30 }] },
     ],
   },
   {
@@ -1308,10 +1323,11 @@ export const CONFLUENCES: Confluence[] = [
     name: 'Bullseye',
     requires: [{ boonId: 'dead_eye' }, { boonId: 'wide_sights' }],
     flavor: 'Wide sights and a killer’s eye. The gold band stops being luck and starts being a habit.',
+    detail: 'Two ways to crit more, stacked: the gold crit band on your aim bar gets wider (easier to land a crit on purpose), AND normal hits get an extra chance to upgrade into crits anyway.',
     levels: [
-      { desc: 'Clean hits crit +10% more; the gold band is 10% wider', effects: [{ kind: 'critChanceBonus', chance: 0.10 }, { kind: 'critZoneScale', mult: 1.10 }] },
-      { desc: 'Clean hits crit +16% more; the gold band is 16% wider', effects: [{ kind: 'critChanceBonus', chance: 0.16 }, { kind: 'critZoneScale', mult: 1.16 }] },
-      { desc: 'Clean hits crit +24% more; the gold band is 24% wider', effects: [{ kind: 'critChanceBonus', chance: 0.24 }, { kind: 'critZoneScale', mult: 1.24 }] },
+      { desc: 'Gold band 10% wider; hits +10% more likely to become crits', effects: [{ kind: 'critChanceBonus', chance: 0.10 }, { kind: 'critZoneScale', mult: 1.10 }] },
+      { desc: 'Gold band 16% wider; hits +16% more likely to become crits', effects: [{ kind: 'critChanceBonus', chance: 0.16 }, { kind: 'critZoneScale', mult: 1.16 }] },
+      { desc: 'Gold band 24% wider; hits +24% more likely to become crits', effects: [{ kind: 'critChanceBonus', chance: 0.24 }, { kind: 'critZoneScale', mult: 1.24 }] },
     ],
   },
   {
@@ -1324,10 +1340,11 @@ export const CONFLUENCES: Confluence[] = [
     // Bounty's own scaling (RaidCombat sums same-axis killStack / depthScale and
     // applies each axis once), lifting a shared cap. So your momentum climbs
     // steeper and further — but it can't compound into a runaway multiplier.
+    detail: 'Feeds both momentum boons at once: Rising Tide gains more damage per hull you sink, Abyssal Bounty gains more per depth you reach, and both of their caps are raised. Your snowball rolls faster and further.',
     levels: [
-      { desc: 'Momentum climbs faster: +1% per hull and +0.5% per depth, higher cap', effects: [{ kind: 'killStackDamage', perKill: 0.01, maxBonus: 0.05 }, { kind: 'depthScaleDamage', perDepth: 0.005, maxBonus: 0.05 }] },
-      { desc: 'Momentum climbs faster: +1.5% per hull and +0.6% per depth, higher cap', effects: [{ kind: 'killStackDamage', perKill: 0.015, maxBonus: 0.08 }, { kind: 'depthScaleDamage', perDepth: 0.006, maxBonus: 0.08 }] },
-      { desc: 'Momentum climbs faster: +2% per hull and +0.8% per depth, higher cap', effects: [{ kind: 'killStackDamage', perKill: 0.02, maxBonus: 0.10 }, { kind: 'depthScaleDamage', perDepth: 0.008, maxBonus: 0.10 }] },
+      { desc: 'Rising Tide +1% more per kill, Abyssal Bounty +0.5% more per depth; caps +5%', effects: [{ kind: 'killStackDamage', perKill: 0.01, maxBonus: 0.05 }, { kind: 'depthScaleDamage', perDepth: 0.005, maxBonus: 0.05 }] },
+      { desc: 'Rising Tide +1.5% more per kill, Abyssal Bounty +0.6% more per depth; caps +8%', effects: [{ kind: 'killStackDamage', perKill: 0.015, maxBonus: 0.08 }, { kind: 'depthScaleDamage', perDepth: 0.006, maxBonus: 0.08 }] },
+      { desc: 'Rising Tide +2% more per kill, Abyssal Bounty +0.8% more per depth; caps +10%', effects: [{ kind: 'killStackDamage', perKill: 0.02, maxBonus: 0.10 }, { kind: 'depthScaleDamage', perDepth: 0.008, maxBonus: 0.10 }] },
     ],
   },
   {
@@ -1335,10 +1352,11 @@ export const CONFLUENCES: Confluence[] = [
     name: 'Dreadnought',
     requires: [{ boonId: 'giant_killer' }, { boonId: 'grapeshot' }],
     flavor: 'The bigger the hull, the more of it to scatter your iron across. Bring the whole broadside.',
+    detail: 'Extra damage against BOSSES only, on top of your boons: everything you fire at a boss hits harder, and your Volleys hit harder still. Regular enemies are unaffected.',
     levels: [
-      { desc: 'Giants take +12% from all fire and +18% more from volleys', effects: [{ kind: 'bossDamageMult', mult: 1.12 }, { kind: 'bossVolleyDmgMult', mult: 1.18 }] },
-      { desc: 'Giants take +20% from all fire and +30% more from volleys', effects: [{ kind: 'bossDamageMult', mult: 1.20 }, { kind: 'bossVolleyDmgMult', mult: 1.30 }] },
-      { desc: 'Giants take +30% from all fire and +45% more from volleys', effects: [{ kind: 'bossDamageMult', mult: 1.30 }, { kind: 'bossVolleyDmgMult', mult: 1.45 }] },
+      { desc: 'Bosses take +12% from everything, +18% more from Volleys', effects: [{ kind: 'bossDamageMult', mult: 1.12 }, { kind: 'bossVolleyDmgMult', mult: 1.18 }] },
+      { desc: 'Bosses take +20% from everything, +30% more from Volleys', effects: [{ kind: 'bossDamageMult', mult: 1.20 }, { kind: 'bossVolleyDmgMult', mult: 1.30 }] },
+      { desc: 'Bosses take +30% from everything, +45% more from Volleys', effects: [{ kind: 'bossDamageMult', mult: 1.30 }, { kind: 'bossVolleyDmgMult', mult: 1.45 }] },
     ],
   },
   {
@@ -1346,10 +1364,11 @@ export const CONFLUENCES: Confluence[] = [
     name: 'Last Bastion',
     requires: [{ boonId: 'stormward' }, { boonId: 'bilge_pump' }],
     flavor: 'A heavier ward, and hands quick on the seams. Nothing gets through that you can’t out-mend.',
+    detail: 'You start every fight with a bigger shield (a percentage of your max HP that soaks damage before your hull does) AND heal a little extra at the start of each fight. Both stack on top of Stormward and Bilge Pump.',
     levels: [
-      { desc: 'A 20% max-HP ward reforms each fight; patch +4% more between guns', effects: [{ kind: 'fightShield', pctMax: 0.20 }, { kind: 'startOfFightHealPct', pctMax: 0.04 }] },
-      { desc: 'A 28% max-HP ward reforms each fight; patch +7% more between guns', effects: [{ kind: 'fightShield', pctMax: 0.28 }, { kind: 'startOfFightHealPct', pctMax: 0.07 }] },
-      { desc: 'A 36% max-HP ward reforms each fight; patch +10% more between guns', effects: [{ kind: 'fightShield', pctMax: 0.36 }, { kind: 'startOfFightHealPct', pctMax: 0.10 }] },
+      { desc: 'Start each fight with an extra 20%-of-max-HP shield and a +4% heal', effects: [{ kind: 'fightShield', pctMax: 0.20 }, { kind: 'startOfFightHealPct', pctMax: 0.04 }] },
+      { desc: 'Start each fight with an extra 28%-of-max-HP shield and a +7% heal', effects: [{ kind: 'fightShield', pctMax: 0.28 }, { kind: 'startOfFightHealPct', pctMax: 0.07 }] },
+      { desc: 'Start each fight with an extra 36%-of-max-HP shield and a +10% heal', effects: [{ kind: 'fightShield', pctMax: 0.36 }, { kind: 'startOfFightHealPct', pctMax: 0.10 }] },
     ],
   },
   {
@@ -1357,10 +1376,11 @@ export const CONFLUENCES: Confluence[] = [
     name: 'Powder Keg',
     requires: [{ boonId: 'press_the_powder' }, { boonId: 'powder_hoard' }],
     flavor: 'A crew that never stops loading and never wastes a shell. The magazine is always full and always spilling over.',
+    detail: 'Ammo, everywhere: you start every fight with extra cannonballs already loaded, and each Reload has a chance to load bonus cannonball(s) on top of the usual one.',
     levels: [
-      { desc: 'Reloads chamber extra 15% of the time; open every fight +1 loaded', effects: [{ kind: 'reloadProc', chance: 0.15, bonusCharges: 1 }, { kind: 'startCharges', n: 1, scope: 'allRemaining' }] },
-      { desc: 'Reloads chamber extra 25% of the time; open every fight +2 loaded', effects: [{ kind: 'reloadProc', chance: 0.25, bonusCharges: 1 }, { kind: 'startCharges', n: 2, scope: 'allRemaining' }] },
-      { desc: 'Reloads chamber +2 extra 35% of the time; open every fight +2 loaded', effects: [{ kind: 'reloadProc', chance: 0.35, bonusCharges: 2 }, { kind: 'startCharges', n: 2, scope: 'allRemaining' }] },
+      { desc: 'Start fights +1 loaded; Reloads load a bonus cannonball 15% of the time', effects: [{ kind: 'reloadProc', chance: 0.15, bonusCharges: 1 }, { kind: 'startCharges', n: 1, scope: 'allRemaining' }] },
+      { desc: 'Start fights +2 loaded; Reloads load a bonus cannonball 25% of the time', effects: [{ kind: 'reloadProc', chance: 0.25, bonusCharges: 1 }, { kind: 'startCharges', n: 2, scope: 'allRemaining' }] },
+      { desc: 'Start fights +2 loaded; Reloads load 2 bonus cannonballs 35% of the time', effects: [{ kind: 'reloadProc', chance: 0.35, bonusCharges: 2 }, { kind: 'startCharges', n: 2, scope: 'allRemaining' }] },
     ],
   },
   {
@@ -1368,10 +1388,11 @@ export const CONFLUENCES: Confluence[] = [
     name: 'Pressure Hull',
     requires: [{ boonId: 'abyssal_bounty' }, { boonId: 'ironhide' }],
     flavor: 'The same deep that loads your guns crushes down on theirs. The lower you go, the less they land.',
+    detail: 'You take less damage the deeper you are — the reduction grows with every depth you reach, up to the cap. Stacks on top of Ironhide, so a deep run gets very hard to hurt.',
     levels: [
-      { desc: 'Incoming damage cut, scaling with depth (up to -12%)', effects: [{ kind: 'depthScaleMitigation', perDepth: 0.006, max: 0.12 }] },
-      { desc: 'Incoming damage cut, scaling with depth (up to -20%)', effects: [{ kind: 'depthScaleMitigation', perDepth: 0.009, max: 0.20 }] },
-      { desc: 'Incoming damage cut, scaling with depth (up to -28%)', effects: [{ kind: 'depthScaleMitigation', perDepth: 0.012, max: 0.28 }] },
+      { desc: 'Take less damage per depth reached (up to -12%)', effects: [{ kind: 'depthScaleMitigation', perDepth: 0.006, max: 0.12 }] },
+      { desc: 'Take less damage per depth reached (up to -20%)', effects: [{ kind: 'depthScaleMitigation', perDepth: 0.009, max: 0.20 }] },
+      { desc: 'Take less damage per depth reached (up to -28%)', effects: [{ kind: 'depthScaleMitigation', perDepth: 0.012, max: 0.28 }] },
     ],
   },
   {
@@ -1379,10 +1400,11 @@ export const CONFLUENCES: Confluence[] = [
     name: 'Field Repairs',
     requires: [{ boonId: 'reinforced_hull' }, { boonId: 'bilge_pump' }],
     flavor: 'A bigger hull and a crew who patch it like the deep is at their heels — and the seams hold water above the waterline.',
+    detail: 'Your repair kits heal more, and healing can OVERFILL your HP bar — pushing you above max into a temporary buffer that soaks damage. The overfill lasts for the current fight only.',
     levels: [
-      { desc: 'Repair kits heal +30% more; heals can overfill to +15% over max (this fight)', effects: [{ kind: 'repairHealMult', mult: 1.30 }, { kind: 'overhealPct', pct: 0.15 }] },
-      { desc: 'Repair kits heal +45% more; heals overfill to +25% over max', effects: [{ kind: 'repairHealMult', mult: 1.45 }, { kind: 'overhealPct', pct: 0.25 }] },
-      { desc: 'Repair kits heal +60% more; heals overfill to +40% over max', effects: [{ kind: 'repairHealMult', mult: 1.60 }, { kind: 'overhealPct', pct: 0.40 }] },
+      { desc: 'Repair kits heal +30%; heals can overfill you to 115% HP this fight', effects: [{ kind: 'repairHealMult', mult: 1.30 }, { kind: 'overhealPct', pct: 0.15 }] },
+      { desc: 'Repair kits heal +45%; heals can overfill you to 125% HP this fight', effects: [{ kind: 'repairHealMult', mult: 1.45 }, { kind: 'overhealPct', pct: 0.25 }] },
+      { desc: 'Repair kits heal +60%; heals can overfill you to 140% HP this fight', effects: [{ kind: 'repairHealMult', mult: 1.60 }, { kind: 'overhealPct', pct: 0.40 }] },
     ],
   },
   {
@@ -1390,10 +1412,11 @@ export const CONFLUENCES: Confluence[] = [
     name: 'Engorge',
     requires: [{ boonId: 'salvage_hull' }, { boonId: 'leviathans_hunger' }],
     flavor: 'The deep drinks through every wound you open, and your hull swells past its own lines with the surfeit.',
+    detail: 'The healing from Leviathan’s Hunger can OVERFILL your HP bar — damage you deal at full health banks a temporary buffer above max that soaks hits. The overfill lasts for the current fight only.',
     levels: [
-      { desc: 'Lifesteal can overfill to +18% over max HP (this fight)', effects: [{ kind: 'overhealPct', pct: 0.18 }] },
-      { desc: 'Lifesteal can overfill to +30% over max HP', effects: [{ kind: 'overhealPct', pct: 0.30 }] },
-      { desc: 'Lifesteal can overfill to +45% over max HP', effects: [{ kind: 'overhealPct', pct: 0.45 }] },
+      { desc: 'Healing from damage can overfill you to 118% HP this fight', effects: [{ kind: 'overhealPct', pct: 0.18 }] },
+      { desc: 'Healing from damage can overfill you to 130% HP this fight', effects: [{ kind: 'overhealPct', pct: 0.30 }] },
+      { desc: 'Healing from damage can overfill you to 145% HP this fight', effects: [{ kind: 'overhealPct', pct: 0.45 }] },
     ],
   },
   {
@@ -1403,10 +1426,11 @@ export const CONFLUENCES: Confluence[] = [
     flavor: 'The deeper hull and the doubled plate become one thing: a fortress the drowned break themselves on.',
     // fightShield is % of MAX HP — and Deep Hull grows max HP — so the ward
     // gets bigger the deeper you fall, without any new plumbing.
+    detail: 'You start every fight with a shield that soaks damage before your HP does. It’s a percentage of your max HP — and since Deep Hull GROWS your max HP as you descend, the shield grows with it.',
     levels: [
-      { desc: 'Start each fight with a shield worth 8% of max HP', effects: [{ kind: 'fightShield', pctMax: 0.08 }] },
-      { desc: 'Start each fight with a shield worth 12% of max HP', effects: [{ kind: 'fightShield', pctMax: 0.12 }] },
-      { desc: 'Start each fight with a shield worth 16% of max HP', effects: [{ kind: 'fightShield', pctMax: 0.16 }] },
+      { desc: 'Start each fight with a shield worth 8% of your max HP', effects: [{ kind: 'fightShield', pctMax: 0.08 }] },
+      { desc: 'Start each fight with a shield worth 12% of your max HP', effects: [{ kind: 'fightShield', pctMax: 0.12 }] },
+      { desc: 'Start each fight with a shield worth 16% of your max HP', effects: [{ kind: 'fightShield', pctMax: 0.16 }] },
     ],
   },
 ]
@@ -1450,6 +1474,8 @@ export interface ConfluenceOffer {
   /** The level it comes online at right now (min of the two boon tiers). */
   level: number
   desc: string
+  /** Plain-English mechanic explainer (Confluence.detail) for the draft card. */
+  detail: string
   /** The two boon family display names, for the card subtitle. */
   halves: [string, string]
 }
@@ -1478,7 +1504,7 @@ export function drawConfluenceOffer(owned: Record<string, number>, taken: string
   return {
     kind: 'confluence',
     id: c.id, name: c.name, flavor: c.flavor,
-    level, desc: confluenceDescAt(c, level),
+    level, desc: confluenceDescAt(c, level), detail: c.detail,
     halves: [halfName(c.requires[0].boonId), halfName(c.requires[1].boonId)],
   }
 }

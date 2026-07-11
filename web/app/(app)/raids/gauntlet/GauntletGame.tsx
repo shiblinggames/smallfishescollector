@@ -2065,7 +2065,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                     const reqNames = c.requires.map(r => GAUNTLET_BOONS.find(b => b.id === r.boonId)?.name ?? r.boonId)
                     return (
                       <button key={c.id} className="font-karla font-700 tap"
-                        onClick={() => setDetailEffect({ kind: 'confluence', name: lvlLabel ? `${c.name} ${lvlLabel}` : c.name, desc: confluenceDescAt(c, lvl), detail: `Drafted this run — it stays for the whole dive. Its level is the lower of your ${reqNames.join(' and ')} tiers, so deepen whichever is behind to level it up.`, flavor: c.flavor, count: 0 })}
+                        onClick={() => setDetailEffect({ kind: 'confluence', name: lvlLabel ? `${c.name} ${lvlLabel}` : c.name, desc: confluenceDescAt(c, lvl), detail: `${c.detail} Its level is the lower of your ${reqNames.join(' and ')} tiers, so deepen whichever is behind to level it up.`, flavor: c.flavor, count: 0 })}
                         style={{ cursor: 'pointer', fontSize: '0.64rem', padding: '0.24rem 0.6rem', borderRadius: 999, background: fresh ? `${GOLD}30` : `${GOLD}18`, border: `1px solid ${GOLD}${fresh ? 'aa' : '66'}`, color: '#fbe7c4', boxShadow: fresh ? `0 0 12px ${GOLD}66` : 'none' }}>
                         {c.name} {lvlLabel}{fresh ? ' · NEW' : ''}
                       </button>
@@ -2517,7 +2517,9 @@ export default function GauntletGame(props: GauntletGameProps) {
                     <span aria-hidden style={{ fontSize: '0.92rem', color: SYN, lineHeight: 1 }}>✦</span>
                     <span className="font-cinzel font-800" style={{ fontSize: '1.06rem', color: '#e6d5ff', lineHeight: 1.12, textShadow: `0 0 14px ${SYN}55` }}>{pendingConfluence.desc}</span>
                   </div>
-                  <p className="font-karla" style={{ fontSize: '0.8rem', color: 'rgba(243,236,255,0.6)', lineHeight: 1.4, fontStyle: 'italic', marginTop: 6 }}>{pendingConfluence.flavor}</p>
+                  {/* Plain-English mechanic explainer at the moment of decision —
+                      more useful here than flavor (which still lives in the codex). */}
+                  <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(243,236,255,0.72)', lineHeight: 1.45, marginTop: 6 }}>{pendingConfluence.detail}</p>
                   <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.1em', color: '#9a7fce', marginTop: 7 }}>You forgo the draft</p>
                 </motion.button>
               </>
@@ -3551,6 +3553,10 @@ function SynergiesModal({ owned, seen, taken = [], onClose }: { owned: Record<st
                   ))}
                 </div>
                 <p className="font-cinzel font-800" style={{ fontSize: '0.9rem', color: '#aef5c4', marginTop: 9, lineHeight: 1.25, textShadow: '0 0 12px rgba(74,222,128,0.3)' }}>{confluenceDescAt(c, Math.max(1, lvl))}</p>
+                {/* Plain-English mechanic explainer — the one-line desc above is
+                    the numbers; this is HOW it works, for players who don't
+                    already speak the game's shorthand. Discovered entries only. */}
+                <p className="font-karla" style={{ fontSize: '0.7rem', color: 'rgba(230,240,236,0.62)', lineHeight: 1.45, marginTop: 6 }}>{c.detail}</p>
                 {hint && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M7 13l5 5 5-5" /><path d="M7 6l5 5 5-5" /></svg>
