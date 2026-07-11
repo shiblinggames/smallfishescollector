@@ -52,6 +52,9 @@ export default function CargoShufflePuzzle({ puzzle, onSolved }: { puzzle: RaidC
   const parsed = useMemo(() => parseRoom(room.grid), [room])
   const [st, setSt] = useState<RoomState>(() => ({ player: parsed.player, crates: parsed.crates, moves: 0, history: [] }))
   const [bustKey, setBustKey] = useState(0)         // bumps on a budget bust (shake + reset)
+  // Blocked step (wall / immovable crate) — a rejected swipe used to do
+  // NOTHING, which read as dead input. Now the sailor jabs toward the block.
+  const [bump, setBump] = useState<{ dr: number; dc: number; key: number } | null>(null)
   const [roomClearFx, setRoomClearFx] = useState(false)
   const solvedRef = useRef(false)
   const swipeRef = useRef<{ x: number; y: number } | null>(null)
@@ -71,11 +74,19 @@ export default function CargoShufflePuzzle({ puzzle, onSolved }: { puzzle: RaidC
     setSt(prev => {
       const nr = prev.player.r + dr, nc = prev.player.c + dc
       const nk = keyOf(nr, nc)
-      if (parsed.walls.has(nk)) return prev
+      if (parsed.walls.has(nk)) {
+        vibrate(8)
+        setBump({ dr, dc, key: Date.now() })
+        return prev
+      }
       let crates = prev.crates
       if (prev.crates.includes(nk)) {
         const bk = keyOf(nr + dr, nc + dc)
-        if (parsed.walls.has(bk) || prev.crates.includes(bk)) return prev
+        if (parsed.walls.has(bk) || prev.crates.includes(bk)) {
+          vibrate(8)
+          setBump({ dr, dc, key: Date.now() })
+          return prev
+        }
         crates = prev.crates.map(k => (k === nk ? bk : k))
         vibrate(12)          // crate shoved — a heavier thud than a step
       } else {
@@ -139,7 +150,10 @@ export default function CargoShufflePuzzle({ puzzle, onSolved }: { puzzle: RaidC
     else step(dy > 0 ? 1 : -1, 0)
   }
 
-  const CELL = `min(11.5vw, 46px)`
+  // Fit-to-room cell size: the widest room (9 cols) was overflowing the sheet
+  // at a fixed 11.5vw/cell. Cap the BOARD at ~84vw and split it across the
+  // room's columns, so every room sits centred with margin to spare.
+  const CELL = `min(${(84 / parsed.cols).toFixed(2)}vw, 46px)`
   const movesLeft = room.moveBudget - st.moves
   const low = movesLeft <= Math.ceil(room.moveBudget * 0.2)
 
@@ -167,56 +181,119 @@ export default function CargoShufflePuzzle({ puzzle, onSolved }: { puzzle: RaidC
           position: 'relative', touchAction: 'none', userSelect: 'none', margin: '0 auto',
           width: `calc(${CELL} * ${parsed.cols})`, height: `calc(${CELL} * ${parsed.rows})`,
           borderRadius: 10, overflow: 'hidden',
-          background: 'rgba(30,22,12,0.55)', border: '1px solid rgba(196,169,106,0.3)',
+          background: '#140c06', border: '1px solid rgba(196,169,106,0.4)',
+          boxShadow: 'inset 0 0 26px rgba(0,0,0,0.6), 0 4px 14px rgba(0,0,0,0.4)',
         }}
       >
-        {/* Static tiles: walls + deck marks. */}
+        {/* Static tiles. Readability is the whole game here: FLOOR = warm lit
+            deck planks (checkered so distances read at a glance), WALL = near-
+            black raised timber, so the room's shape is unmistakable — the old
+            board painted both a similar dark brown and later rooms read as
+            noise. Deck marks are bright gold stencils on the floor. */}
         {room.grid.map((row, r) => row.split('').map((ch, c) => {
           const k = keyOf(r, c)
           if (ch === '#') {
-            return <div key={k} style={{ position: 'absolute', left: `calc(${CELL} * ${c})`, top: `calc(${CELL} * ${r})`, width: CELL, height: CELL, background: 'linear-gradient(180deg, #3a2c18, #241a0e)', border: '1px solid rgba(0,0,0,0.4)', boxSizing: 'border-box' }} />
-          }
-          if (parsed.plates.has(k)) {
             return (
-              <div key={k} style={{ position: 'absolute', left: `calc(${CELL} * ${c})`, top: `calc(${CELL} * ${r})`, width: CELL, height: CELL, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ width: '54%', height: '54%', borderRadius: 6, border: '2px dashed rgba(240,192,64,0.55)', boxShadow: 'inset 0 0 8px rgba(240,192,64,0.15)' }} />
-              </div>
+              <div key={k} style={{
+                position: 'absolute', left: `calc(${CELL} * ${c})`, top: `calc(${CELL} * ${r})`,
+                width: CELL, height: CELL, boxSizing: 'border-box',
+                background: 'linear-gradient(180deg, #221709, #120a04)',
+                boxShadow: 'inset 0 2px 0 rgba(255,255,255,0.05), inset 0 -2px 0 rgba(0,0,0,0.6), inset 0 0 0 1px rgba(0,0,0,0.5)',
+              }} />
             )
           }
-          return null
+          const light = (r + c) % 2 === 0
+          return (
+            <div key={k} style={{
+              position: 'absolute', left: `calc(${CELL} * ${c})`, top: `calc(${CELL} * ${r})`,
+              width: CELL, height: CELL, boxSizing: 'border-box',
+              background: light
+                ? 'linear-gradient(180deg, #6d5130 0%, #5f4629 100%)'
+                : 'linear-gradient(180deg, #614729 0%, #543d23 100%)',
+              boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.05)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              {parsed.plates.has(k) && (
+                <div style={{
+                  width: '62%', height: '62%', borderRadius: 4,
+                  border: '2px solid rgba(240,192,64,0.85)',
+                  background: 'rgba(240,192,64,0.10)',
+                  boxShadow: '0 0 10px rgba(240,192,64,0.3), inset 0 0 8px rgba(240,192,64,0.2)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <div style={{ width: '26%', height: '26%', background: 'rgba(240,192,64,0.75)', transform: 'rotate(45deg)', borderRadius: 1 }} />
+                </div>
+              )}
+            </div>
+          )
         }))}
 
-        {/* Crates — spring between tiles; lit gold when seated on a mark. */}
+        {/* Crates — proper wooden boxes: square frame, plank slats, diagonal
+            cross-braces, corner nails. Spring between tiles; the whole crate
+            relights gold once seated on a mark. */}
         {st.crates.map((k, i) => {
           const r = Math.floor(k / 100), c = k % 100
           const seated = parsed.plates.has(k)
+          const frame = seated ? '#8a6a20' : '#3e2a12'
+          const slat  = seated ? 'rgba(120,86,10,0.45)'  : 'rgba(0,0,0,0.30)'
           return (
             <motion.div key={`crate-${i}`}
               animate={{ left: `calc(${CELL} * ${c})`, top: `calc(${CELL} * ${r})` }}
               transition={{ type: 'spring', stiffness: 560, damping: 34 }}
-              style={{ position: 'absolute', width: CELL, height: CELL, padding: '7%', boxSizing: 'border-box' }}
+              style={{ position: 'absolute', width: CELL, height: CELL, zIndex: 1 }}
             >
               <div style={{
-                width: '100%', height: '100%', borderRadius: 7,
-                background: seated ? 'linear-gradient(180deg, #e8c879, #b8933f)' : 'linear-gradient(180deg, #8a6a3a, #5f4826)',
-                border: `2px solid ${seated ? '#ffe9ad' : 'rgba(0,0,0,0.35)'}`,
-                boxShadow: seated ? '0 0 12px rgba(240,192,64,0.6)' : 'inset 0 2px 0 rgba(255,255,255,0.12), 0 2px 5px rgba(0,0,0,0.45)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                position: 'absolute', inset: '7%', borderRadius: 3, overflow: 'hidden',
+                background: seated
+                  ? 'linear-gradient(180deg, #ecd084, #c09a42)'
+                  : 'linear-gradient(180deg, #a87c46, #7d5a30)',
+                border: `2px solid ${frame}`, boxSizing: 'border-box',
+                boxShadow: seated
+                  ? '0 0 14px rgba(240,192,64,0.65), inset 0 2px 0 rgba(255,255,255,0.3)'
+                  : 'inset 0 2px 0 rgba(255,255,255,0.2), inset 0 -2px 0 rgba(0,0,0,0.25), 0 3px 6px rgba(0,0,0,0.5)',
               }}>
-                <div style={{ width: '62%', height: 2, background: 'rgba(0,0,0,0.28)', borderRadius: 2, transform: 'rotate(45deg)', position: 'absolute' }} />
-                <div style={{ width: '62%', height: 2, background: 'rgba(0,0,0,0.28)', borderRadius: 2, transform: 'rotate(-45deg)', position: 'absolute' }} />
+                {/* plank slats */}
+                <div style={{ position: 'absolute', left: 0, right: 0, top: '32%', height: 1.5, background: slat }} />
+                <div style={{ position: 'absolute', left: 0, right: 0, top: '65%', height: 1.5, background: slat }} />
+                {/* diagonal cross-braces */}
+                <div style={{ position: 'absolute', left: '-22%', right: '-22%', top: '50%', height: '16%', transform: 'translateY(-50%) rotate(45deg)', background: seated ? 'rgba(160,118,26,0.55)' : 'rgba(62,42,18,0.55)', borderTop: '1px solid rgba(255,255,255,0.12)' }} />
+                <div style={{ position: 'absolute', left: '-22%', right: '-22%', top: '50%', height: '16%', transform: 'translateY(-50%) rotate(-45deg)', background: seated ? 'rgba(160,118,26,0.55)' : 'rgba(62,42,18,0.55)', borderTop: '1px solid rgba(255,255,255,0.12)' }} />
+                {/* corner nails */}
+                {([['12%', '12%'], ['12%', '76%'], ['76%', '12%'], ['76%', '76%']] as const).map(([t, l], n) => (
+                  <div key={n} style={{ position: 'absolute', top: t, left: l, width: '12%', height: '12%', borderRadius: '50%', background: seated ? '#8a6a20' : '#2e1f0c', boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.3)' }} />
+                ))}
               </div>
             </motion.div>
           )
         })}
 
-        {/* The sailor. */}
+        {/* The sailor — a brass-ringed deck token with a drawn anchor (SVG,
+            no emoji), so it reads as YOUR piece against the wooden crates. */}
         <motion.div
           animate={{ left: `calc(${CELL} * ${st.player.c})`, top: `calc(${CELL} * ${st.player.r})` }}
           transition={{ type: 'spring', stiffness: 620, damping: 34 }}
           style={{ position: 'absolute', width: CELL, height: CELL, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2, pointerEvents: 'none' }}
         >
-          <div style={{ fontSize: `calc(${CELL} * 0.58)`, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.6))', lineHeight: 1 }}>⚓</div>
+          <motion.div
+            key={bump?.key ?? 'idle'}
+            animate={{ x: [0, (bump?.dc ?? 0) * 5, 0], y: [0, (bump?.dr ?? 0) * 5, 0] }}
+            transition={{ duration: 0.16 }}
+            style={{
+            width: '74%', height: '74%', borderRadius: '50%',
+            background: 'radial-gradient(circle at 35% 30%, #3d5a7a, #182840)',
+            border: '2px solid #c4a96a',
+            boxShadow: '0 3px 8px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.25), 0 0 10px rgba(196,169,106,0.35)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <svg width="62%" height="62%" viewBox="0 0 24 24" fill="none" stroke="#f0e6c8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="4.7" r="2" />
+              <path d="M12 6.7v12.7" />
+              <path d="M8.4 9.6h7.2" />
+              <path d="M5 13.4c.5 3.8 3.3 6 7 6s6.5-2.2 7-6" />
+              <path d="M5 13.4l-1.9-.8M5 13.4l.3 2" />
+              <path d="M19 13.4l1.9-.8M19 13.4l-.3 2" />
+            </svg>
+          </motion.div>
         </motion.div>
 
         {/* Room-clear flash. */}
