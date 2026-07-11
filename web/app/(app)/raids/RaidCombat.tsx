@@ -6310,6 +6310,15 @@ function PlayerStatsPopup({
           ))}
         </div>
 
+        {/* Live conditions — what's on your hull RIGHT NOW (statuses + burn/
+            freeze). Sits right under Combat, above the build sections, so the
+            urgent transient reads come before the permanent loadout. */}
+        {conditions.length > 0 && (
+          <div style={{ marginTop: 16 }}>
+            <ConditionsSection conditions={conditions} />
+          </div>
+        )}
+
         {/* Classes — one consolidated card: combined stat chips + which picks
             are stacked, instead of a tall row per class. */}
         {classChips.length > 0 && (
@@ -6379,12 +6388,10 @@ function PlayerStatsPopup({
           </div>
         )}
 
-        {/* ── This run (temporary): live conditions first (statuses + burn/
-            freeze — the most urgent reads), then boons/curses, under one
-            divider so they read apart from the permanent build above. ── */}
-        {(buffs.length > 0 || penalties.length > 0 || conditions.length > 0) && (
+        {/* ── This run (temporary): boons then curses, under one divider so
+            they read apart from the permanent build above. ── */}
+        {(buffs.length > 0 || penalties.length > 0) && (
           <div style={{ marginTop: 18, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <ConditionsSection conditions={conditions} />
             {effectGroup(buffs.length > 1 ? `${effectLabels.good} · ${buffs.length}` : effectLabels.good, buffs, '#5eead4')}
             {effectGroup(penalties.length > 1 ? `${effectLabels.bad} · ${penalties.length}` : effectLabels.bad, penalties, '#f08a8a')}
           </div>
