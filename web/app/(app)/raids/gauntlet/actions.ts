@@ -15,7 +15,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { navRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
-import { maxPotForDepth, chestForDepth, chestCannonDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, gauntletXpForDepth, gauntletCrewXp, CONFLUENCES, hardcoreUnlocked, HARDCORE_LIVE, HARDCORE_UNLOCKS, HARDCORE_RUNS_PER_DAY, HC_FATHOMS_MULT, HC_SURVIVOR_XP_MULT, bloodGemsForDepth, coerceRunStats, type GauntletRunSnapshot, type GauntletRunState } from '@/lib/gauntlet'
+import { maxPotForDepth, chestForDepth, chestCannonDropChance, chestSkinDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, gauntletXpForDepth, gauntletCrewXp, CONFLUENCES, hardcoreUnlocked, HARDCORE_LIVE, HARDCORE_UNLOCKS, HARDCORE_RUNS_PER_DAY, HC_FATHOMS_MULT, HC_SURVIVOR_XP_MULT, bloodGemsForDepth, coerceRunStats, type GauntletRunSnapshot, type GauntletRunState } from '@/lib/gauntlet'
 import { getGauntletUpgrade, isUpgradeComingSoon, gauntletHaulMult, gauntletXpMult, gauntletFathomsMult } from '@/lib/gauntletUpgrades'
 import { DAVY_FORGE } from '@/lib/raidItems'
 import { GAUNTLET_DEEPEST_CONTEST_ENDS_AT } from '@/lib/contests'
@@ -25,7 +25,6 @@ import { getBait } from '@/lib/bait'
 // top chest tier (Davy Jones' Locker, chest tier 5 / depth 18+). Tunable here.
 const GOLD_HULL_SKIN_ID = 'golden_gauntlet_hull'
 const GOLD_HULL_CHEST_TIER = 5
-const GOLD_HULL_DROP_CHANCE = 0.04
 
 // Hardcore-only drops. Bad Blood Hull (Man-o-War skin) + Davy's Blood Cannon
 // (the first lifesteal raid item) both come ONLY from Hardcore Gauntlet chests.
@@ -33,17 +32,10 @@ const BLOOD_HULL_SKIN_ID = 'bad_blood_hull'
 const BLOOD_HULL_CHEST_TIER = 4        // from the deeper hardcore chests up (depth 14+)
 const BLOOD_CANNON_ITEM_ID = 'davys_blood_cannon'
 const BLOOD_CANNON_CHEST_TIER = 3      // depth 10+
-// Hardcore chase drops SCALE with cash-out depth (2026-07-11, was flat 6%/5%):
-// the deeper you bank, the better the roll. Linear from the anchor points,
-// clamped — cannon 3% @ depth 20 → 15% @ 50+; hull rarer, 2% @ 20 → 10% @ 50+.
-// Below the anchors the floor keeps a shallow qualifying cash-out a lottery
-// ticket, not a farm.
-function bloodCannonDropChance(depth: number): number {
-  return Math.min(0.15, Math.max(0.01, 0.03 + (depth - 20) * 0.004))
-}
-function bloodHullDropChance(depth: number): number {
-  return Math.min(0.10, Math.max(0.005, 0.02 + (depth - 20) * (0.08 / 30)))
-}
+// Chase odds scale smoothly with cash-out depth — shared curves in
+// lib/gauntlet (chestCannonDropChance / chestSkinDropChance) so the normal
+// chases (Hand/Heavy cannons, Golden Hull) and the hardcore chases (Blood
+// Cannon, Bad Blood Hull) roll the same ladder.
 
 /** Record a single gauntlet hit; persists the all-time biggest via greatest()
  *  (bump_gauntlet_hit). Fired per new run-best from GauntletGame (win OR loss),
@@ -483,7 +475,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   // tier's chance, only for cannons not yet owned, and never once the player
   // has forged them into the Grand Cannon.
   const ownedItems = (profile.raid_items as string[] | null) ?? []
-  const dropChance = chestCannonDropChance(chest.tier)
+  const dropChance = chestCannonDropChance(cd)
   const droppedItems: string[] = []
   if (!ownedItems.includes(DAVY_FORGE.result)) {
     for (const cannon of DAVY_FORGE.components) {
@@ -494,7 +486,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   // the deeper hardcore chests. Stops dropping once you own it OR have forged it
   // into one of its fusions (mirrors the Grand Cannon).
   const bloodForged = ['bloodletter', 'reavers_cannon'].some(id => ownedItems.includes(id))
-  if (hc && chest.tier >= BLOOD_CANNON_CHEST_TIER && !ownedItems.includes(BLOOD_CANNON_ITEM_ID) && !bloodForged && Math.random() < bloodCannonDropChance(cd)) {
+  if (hc && chest.tier >= BLOOD_CANNON_CHEST_TIER && !ownedItems.includes(BLOOD_CANNON_ITEM_ID) && !bloodForged && Math.random() < chestCannonDropChance(cd)) {
     droppedItems.push(BLOOD_CANNON_ITEM_ID)
   }
   const newRaidItems = droppedItems.length > 0 ? [...new Set([...ownedItems, ...droppedItems])] : ownedItems
@@ -504,13 +496,13 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   // it's owned even before the player has the hull to wear it.
   const ownedSkins = (profile.ship_skins as string[] | null) ?? []
   let droppedSkinId: string | null = null
-  if (chest.tier >= GOLD_HULL_CHEST_TIER && !ownedSkins.includes(GOLD_HULL_SKIN_ID) && Math.random() < GOLD_HULL_DROP_CHANCE) {
+  if (chest.tier >= GOLD_HULL_CHEST_TIER && !ownedSkins.includes(GOLD_HULL_SKIN_ID) && Math.random() < chestSkinDropChance(cd)) {
     droppedSkinId = GOLD_HULL_SKIN_ID
   }
   // Bad Blood Hull — the HARDCORE-only Man-o-War skin, from the deeper hardcore
   // chests. Owned to ship_skins even before the player has the Man-o-War to wear it.
   let droppedHcSkinId: string | null = null
-  if (hc && chest.tier >= BLOOD_HULL_CHEST_TIER && !ownedSkins.includes(BLOOD_HULL_SKIN_ID) && Math.random() < bloodHullDropChance(cd)) {
+  if (hc && chest.tier >= BLOOD_HULL_CHEST_TIER && !ownedSkins.includes(BLOOD_HULL_SKIN_ID) && Math.random() < chestSkinDropChance(cd)) {
     droppedHcSkinId = BLOOD_HULL_SKIN_ID
   }
   // Hardcore Drowned Fleet skins — granted the first time you cash out past a
