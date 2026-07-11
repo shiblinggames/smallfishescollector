@@ -8,6 +8,14 @@ import Link from 'next/link'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getLevelFromXP as getExpeditionLevel } from '@/lib/expeditionLevel'
 import CharacterAvatar from '@/components/CharacterAvatar'
+import RankMedallion from '@/components/RankMedallion'
+
+// Harbour-ledger palette (2026-07-12 warmth pass): the boards read as names
+// entered in a ledger on timber, not a cold dashboard — warm dark wood, brass
+// rules between rows, drawn metal medallions on the podium.
+const LEDGER_BG = 'linear-gradient(180deg, rgba(34,26,12,0.72) 0%, rgba(18,13,7,0.85) 100%)'
+const LEDGER_BORDER = '1px solid rgba(196,169,106,0.28)'
+const LEDGER_RULE = '1px solid rgba(196,169,106,0.12)'
 
 export interface LeaderboardEntry {
   user_id: string
@@ -171,20 +179,23 @@ export function LeaderboardSection({ accent, unit, subUnit, data, myScore, curre
   return (
     <div>
       {data.length === 0 && (
-        <p className="font-karla font-300 text-center py-10" style={{ color: '#4a4845', fontSize: '0.8rem' }}>No entries yet.</p>
+        <p className="font-karla text-center py-10" style={{ color: 'rgba(230,215,180,0.45)', fontSize: '0.82rem', fontStyle: 'italic' }}>
+          No names on this board yet. Be the first the sea remembers.
+        </p>
       )}
 
-      {/* Top 3 */}
+      {/* Top 3 — drawn metal medallions, no rank stripes; the podium reads as
+          the top of a harbour ledger. */}
       {top3.length > 0 && (
         <div style={{
-          background: 'rgba(4,10,20,0.82)', border: '1px solid rgba(255,255,255,0.1)',
+          background: LEDGER_BG, border: LEDGER_BORDER,
           borderRadius: 14, overflow: 'hidden', marginBottom: 6,
+          boxShadow: 'inset 0 1px 0 rgba(240,220,180,0.06)',
         }}>
           {top3.map((entry, i) => {
-            const rank = i + 1
+            const rank = (i + 1) as 1 | 2 | 3
             const isMe = entry.user_id === currentUserId
-            const medal = ['🥇','🥈','🥉'][i]
-            const rankColor = ['#f0c040', '#9ca3af', '#cd7f32'][i]
+            const rankColor = ['#f0c040', '#c0c8d4', '#c47a3a'][i]
             return (
               <Link
                 key={entry.user_id}
@@ -192,13 +203,12 @@ export function LeaderboardSection({ accent, unit, subUnit, data, myScore, curre
                 style={{
                   display: 'flex', alignItems: 'center', gap: 12,
                   padding: '0.8rem 1rem',
-                  borderBottom: i < top3.length - 1 ? `1px solid rgba(255,255,255,0.05)` : 'none',
-                  borderLeft: `3px solid ${rankColor}`,
+                  borderBottom: i < top3.length - 1 ? LEDGER_RULE : 'none',
                   background: isMe ? `${accent}0d` : 'transparent',
                   textDecoration: 'none',
                 }}
               >
-                <span style={{ fontSize: rank === 1 ? '1.3rem' : '1.1rem', lineHeight: 1, flexShrink: 0 }}>{medal}</span>
+                <RankMedallion rank={rank} size={rank === 1 ? 27 : 23} />
                 <Avatar
                   username={entry.username}
                   size={rank === 1 ? 36 : 28}
@@ -231,8 +241,9 @@ export function LeaderboardSection({ accent, unit, subUnit, data, myScore, curre
       {/* Ranks 4+ */}
       {rest.length > 0 && (
         <div style={{
-          background: 'rgba(4,10,20,0.82)', border: '1px solid rgba(255,255,255,0.1)',
+          background: LEDGER_BG, border: LEDGER_BORDER,
           borderRadius: 14, overflow: 'hidden',
+          boxShadow: 'inset 0 1px 0 rgba(240,220,180,0.06)',
         }}>
           {rest.map((entry, i) => {
             const rank = i + 4
@@ -244,13 +255,13 @@ export function LeaderboardSection({ accent, unit, subUnit, data, myScore, curre
                 style={{
                   display: 'flex', alignItems: 'center', gap: 12,
                   padding: '0.65rem 1rem',
-                  borderBottom: i < rest.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                  borderBottom: i < rest.length - 1 ? LEDGER_RULE : 'none',
                   background: isMe ? `${accent}0d` : 'transparent',
                   textDecoration: 'none',
                   transition: 'background 0.15s',
                 }}
               >
-                <span className="font-karla font-300 shrink-0" style={{ width: 22, textAlign: 'right', fontSize: '0.65rem', color: '#3a3835' }}>
+                <span className="font-cinzel font-600 shrink-0" style={{ width: 22, textAlign: 'right', fontSize: '0.66rem', color: 'rgba(196,169,106,0.5)' }}>
                   {rank}
                 </span>
                 <Avatar
@@ -269,10 +280,10 @@ export function LeaderboardSection({ accent, unit, subUnit, data, myScore, curre
                   {showZone && <ZoneBadge zone={entry.zone} />}
                 </div>
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <p className="font-cinzel font-600" style={{ fontSize: '0.75rem', color: valueColor ? valueColor(entry.score) : (isMe ? accent : '#6a6764') }}>
+                  <p className="font-cinzel font-600" style={{ fontSize: '0.75rem', color: valueColor ? valueColor(entry.score) : (isMe ? accent : '#8a8072') }}>
                     {unit(entry.score)}
                   </p>
-                  <p className="font-karla font-300" style={{ fontSize: '0.48rem', color: '#3a3835' }}>
+                  <p className="font-karla font-300" style={{ fontSize: '0.48rem', color: 'rgba(196,169,106,0.4)' }}>
                     {entry.sub ?? subUnit(entry.score)}
                   </p>
                 </div>

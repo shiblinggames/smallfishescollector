@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import CharacterAvatar from '@/components/CharacterAvatar'
+import RankMedallion from '@/components/RankMedallion'
 import {
   CONTESTS, formatContestScore,
   type ContestDef, type ContestView, type ContestStanding,
@@ -11,7 +12,6 @@ import {
 import { markContestsSeen } from './actions'
 
 const MEDAL_COLORS = ['#f0c040', '#c8c8c8', '#cd8c4a']
-const MEDALS = ['🥇', '🥈', '🥉']
 const LIVE = '#34d399'
 const GOLD = '#f0c040'
 
@@ -238,7 +238,11 @@ function StandingRow({ s, accent, def, topScore }: { s: ContestStanding; accent:
   const scoreLabel = def.endsAt ? `Depth ${Math.floor(s.score)}` : (def.board ? formatContestScore(def.board, s.score) : `${s.score}`)
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-      <span style={{ fontSize: '1.05rem', width: 22, textAlign: 'center', flexShrink: 0 }}>{MEDALS[s.rank - 1] ?? `${s.rank}`}</span>
+      <span style={{ width: 24, display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
+        {s.rank <= 3
+          ? <RankMedallion rank={s.rank as 1 | 2 | 3} size={22} />
+          : <span className="font-cinzel font-600" style={{ fontSize: '0.7rem', color: 'rgba(196,169,106,0.5)' }}>{s.rank}</span>}
+      </span>
       <CharacterAvatar characterColor={s.characterColor} equippedHat={s.equippedHat} size={32}
         ringColor={s.avatarBorder ?? undefined} bgColor={s.avatarBg ?? undefined} />
       <div style={{ flex: 1, minWidth: 0 }}>

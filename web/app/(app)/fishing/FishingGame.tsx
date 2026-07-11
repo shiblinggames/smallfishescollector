@@ -9101,8 +9101,10 @@ export default function FishingGame({
             {...dailyDrawerDrag.motionProps}
             style={{
               position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
-              background: 'rgba(6,12,20,0.98)',
-              borderTop: '1px solid rgba(255,255,255,0.09)',
+              // Warm timber, not cold navy — the badges-page palette (2026-07
+              // warmth pass); this drawer is a claim list, same as that page.
+              background: 'linear-gradient(180deg, rgba(30,22,10,0.98) 0%, rgba(16,11,6,0.99) 100%)',
+              borderTop: '1px solid rgba(196,169,106,0.3)',
               borderRadius: '18px 18px 0 0',
               padding: '0 1rem 2rem',
               maxHeight: '75vh', overflowY: 'auto', overscrollBehavior: 'contain',
@@ -9113,9 +9115,12 @@ export default function FishingGame({
             <div className="flex items-start justify-between mb-4" style={{ paddingTop: '0.75rem' }}>
               <div>
                 <p className="font-karla font-700 uppercase tracking-[0.20em]"
-                  style={{ fontSize: '0.6rem', color: '#7a9bc4', marginBottom: 4 }}>Captain&rsquo;s Log</p>
-                <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8', lineHeight: 1.1, marginBottom: 4 }}>
+                  style={{ fontSize: '0.6rem', color: '#c4a96a', marginBottom: 4 }}>Captain&rsquo;s Log</p>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8', lineHeight: 1.1, marginBottom: 3 }}>
                   Daily Challenges
+                </p>
+                <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(230,215,180,0.5)', fontStyle: 'italic', marginBottom: 4 }}>
+                  Three tasks the tide sets each dawn. Clear them before it turns.
                 </p>
                 <DailyResetCountdown />
               </div>
@@ -9129,21 +9134,20 @@ export default function FishingGame({
                 const done = progress >= challenge.target
                 const isClaiming = claimingDaily === i
                 const pct = Math.min(progress / challenge.target, 1)
-                // Difficulty palette: easy/medium/hard — accent stays color-coded
-                // until claimed, then everything shifts to a muted "done" tone.
-                const accent    = i === 0 ? '#60a5fa' : i === 1 ? '#f0c040' : '#f87171'
-                const accentRgb = i === 0 ? '96,165,250' : i === 1 ? '240,192,64' : '248,113,113'
+                // Difficulty palette on the WARM ramp — sand / gold / crimson
+                // (was blue/gold/red; blue was the one cold note in the drawer).
+                const accent    = i === 0 ? '#c9b37c' : i === 1 ? '#f0c040' : '#e0555a'
+                const accentRgb = i === 0 ? '201,179,124' : i === 1 ? '240,192,64' : '224,85,90'
                 const tier      = i === 0 ? 'Easy' : i === 1 ? 'Medium' : 'Hard'
-                // Gradient + top-accent chrome matches the rest of the new UI.
-                // Three visual states: in-progress (subtle), ready-to-claim (glow),
-                // claimed (muted slate).
+                // Three visual states on warm timber: in-progress (subtle),
+                // ready-to-claim (glow), claimed (banked green, badges-style).
                 const bg = claimed
-                  ? 'linear-gradient(180deg, rgba(120,130,160,0.10) 0%, rgba(120,130,160,0.02) 100%), #0a0e16'
+                  ? 'linear-gradient(90deg, rgba(123,191,123,0.14) 0%, rgba(123,191,123,0.04) 60%), #120d07'
                   : done
-                    ? `linear-gradient(180deg, rgba(${accentRgb},0.22) 0%, rgba(${accentRgb},0.06) 100%), #0d1320`
-                    : `linear-gradient(180deg, rgba(${accentRgb},0.10) 0%, rgba(${accentRgb},0.02) 100%), #06101c`
-                const borderColor    = claimed ? 'rgba(120,130,160,0.22)' : done ? `rgba(${accentRgb},0.50)` : `rgba(${accentRgb},0.28)`
-                const borderTopColor = claimed ? 'rgba(120,130,160,0.38)' : done ? `rgba(${accentRgb},0.80)` : `rgba(${accentRgb},0.52)`
+                    ? `linear-gradient(180deg, rgba(${accentRgb},0.20) 0%, rgba(${accentRgb},0.05) 100%), #161008`
+                    : `linear-gradient(180deg, rgba(${accentRgb},0.08) 0%, rgba(${accentRgb},0.02) 100%), #120d07`
+                const borderColor    = claimed ? 'rgba(123,191,123,0.28)' : done ? `rgba(${accentRgb},0.50)` : 'rgba(196,169,106,0.2)'
+                const borderTopColor = claimed ? 'rgba(123,191,123,0.4)' : done ? `rgba(${accentRgb},0.80)` : 'rgba(196,169,106,0.35)'
                 const glow           = done && !claimed ? `0 0 18px rgba(${accentRgb},0.28)` : 'none'
 
                 return (
@@ -9159,21 +9163,25 @@ export default function FishingGame({
                     {/* Top row — difficulty tag + reward */}
                     <div className="flex items-center justify-between mb-2" style={{ gap: 10 }}>
                       <div className="flex items-center" style={{ gap: 7 }}>
-                        <span className="font-karla font-700 uppercase"
+                        <span className="font-karla font-800 uppercase"
                           style={{
-                            fontSize: '0.54rem',
-                            color: claimed ? '#7a8090' : accent,
-                            letterSpacing: '0.20em',
-                            padding: '0.2rem 0.5rem',
-                            background: claimed ? 'rgba(120,130,160,0.10)' : `rgba(${accentRgb},0.12)`,
-                            border: `1px solid ${claimed ? 'rgba(120,130,160,0.28)' : `rgba(${accentRgb},0.36)`}`,
-                            borderRadius: 999,
+                            fontSize: '0.58rem',
+                            color: claimed ? 'rgba(240,237,232,0.4)' : accent,
+                            letterSpacing: '0.18em',
                           }}>
                           {tier}
                         </span>
                         {claimed && (
-                          <span className="font-karla font-700 uppercase" style={{ fontSize: '0.55rem', color: '#86efac', letterSpacing: '0.16em' }}>
-                            ✓ Claimed
+                          // Inked rubber stamp, matching the badges page — not a
+                          // text checkmark (no-emoji/glyph-icon rule).
+                          <span className="font-cinzel font-800 uppercase" style={{
+                            display: 'inline-block', transform: 'rotate(-7deg)',
+                            padding: '0.14rem 0.4rem', borderRadius: 4,
+                            border: '2px solid #7bbf7b', color: '#7bbf7b', opacity: 0.9,
+                            fontSize: '0.54rem', letterSpacing: '0.12em',
+                            boxShadow: 'inset 0 0 6px #7bbf7b22',
+                          }}>
+                            Claimed
                           </span>
                         )}
                       </div>
@@ -9202,10 +9210,12 @@ export default function FishingGame({
                       {challenge.label}
                     </p>
 
-                    {/* Progress bar + count */}
+                    {/* Progress — recessed gauge channel with quarter ticks,
+                        same treatment as the badges page. */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: done && !claimed ? '0.7rem' : 0 }}>
                       <div style={{
-                        flex: 1, height: 5, background: 'rgba(255,255,255,0.08)',
+                        position: 'relative', flex: 1, height: 6, background: 'rgba(0,0,0,0.38)',
+                        boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.5)',
                         borderRadius: 3, overflow: 'hidden',
                       }}>
                         <motion.div
@@ -9214,13 +9224,16 @@ export default function FishingGame({
                           style={{
                             height: '100%', borderRadius: 3,
                             background: claimed
-                              ? 'rgba(120,130,160,0.45)'
+                              ? 'rgba(123,191,123,0.45)'
                               : done
                                 ? accent
                                 : `linear-gradient(90deg, ${accent}88, ${accent})`,
                             boxShadow: done && !claimed ? `0 0 8px ${accent}88` : 'none',
                           }}
                         />
+                        {[25, 50, 75].map(t => (
+                          <span key={t} aria-hidden style={{ position: 'absolute', left: `${t}%`, top: 0, bottom: 0, width: 1, background: 'rgba(10,8,4,0.55)' }} />
+                        ))}
                       </div>
                       <span className="font-karla font-700 tabular-nums" style={{
                         fontSize: '0.66rem',
