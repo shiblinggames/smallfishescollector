@@ -4329,40 +4329,88 @@ function BackLink({ router, label, primary, onClick }: { router: ReturnType<type
 }
 
 function DepthBar({ depth, pot, isBoss, isElite, affixName, curses, isHardcore }: { depth: number; pot: number; isBoss: boolean; isElite: boolean; affixName?: string; curses: number; isHardcore?: boolean }) {
-  const tag = isBoss ? 'BOSS' : isElite ? `ELITE${affixName ? ` · ${affixName}` : ''}` : null
+  // The bar shows only the ESSENTIALS on one immovable row; tapping it opens
+  // the detail panel (full affix names, exact pot, curse count, hardcore
+  // note). Long dual-affix names + fat pots used to wrap the flex row and
+  // grow the header, which shifted the whole combat stage below it.
+  const [open, setOpen] = useState(false)
+  const tag = isBoss ? 'BOSS' : isElite ? 'ELITE' : null
   const tagColor = isBoss ? '#f87171' : '#c084fc'
+  // Compact pot so the row never grows with the number (full ⟡ in the panel).
+  const potShort = pot >= 10_000 ? `${(pot / 1000).toFixed(1)}k` : fmt(pot)
   return (
-    <div className="flex items-center justify-between"
-      // FULLY OPAQUE, no backdrop-filter. This bar is position:sticky inside the
-      // PWA's -webkit-overflow-scrolling:touch combat scroller; backdrop-filter on
-      // a sticky element there is an iOS repaint bug — during the aim-bar swap it
-      // failed to repaint (the bar "disappeared") AND mis-composited the hit-test
-      // layer below, so the Lock button's tap target drifted off its paint spot.
-      style={{ background: '#050b13', border: isHardcore ? '1px solid rgba(220,38,38,0.55)' : `1px solid ${GOLD}28`, borderRadius: 14, padding: '0.4rem 0.8rem', boxShadow: isHardcore ? '0 0 16px rgba(200,20,32,0.32), inset 0 0 10px rgba(120,10,18,0.3)' : undefined }}>
-      <div className="flex items-baseline gap-1.5">
-        <span className="font-karla font-600" style={{ fontSize: '0.46rem', color: GOLD + 'bb', letterSpacing: '0.1em' }}>DEPTH</span>
-        <span className="font-cinzel font-800" style={{ fontSize: '1rem', color: GOLD, lineHeight: 1 }}>{depth}</span>
-        {tag && <span className="font-cinzel font-700" style={{ fontSize: '0.56rem', color: tagColor, letterSpacing: '0.06em', marginLeft: 4 }}>{tag}</span>}
-      </div>
-      {isHardcore && (
-        <span className="font-cinzel font-800 uppercase" title="Hardcore — your crew die for good if you sink"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.54rem', letterSpacing: '0.12em', color: '#fca5a5', padding: '0.16rem 0.44rem', borderRadius: 999, background: 'rgba(140,10,20,0.4)', border: '1px solid rgba(220,38,38,0.6)', boxShadow: '0 0 10px rgba(220,38,38,0.4)', whiteSpace: 'nowrap' }}>
-          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a7 7 0 0 0-7 7v3.4c0 .9.6 1.7 1.5 2l.5.2V19a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-3.4l.5-.2c.9-.3 1.5-1.1 1.5-2V10a7 7 0 0 0-7-7Z" /><circle cx="9" cy="11" r="1.3" fill="currentColor" stroke="none" /><circle cx="15" cy="11" r="1.3" fill="currentColor" stroke="none" /></svg>
-          Hardcore
-        </span>
-      )}
-      <div className="flex items-center gap-2.5">
-        {curses > 0 && (
-          <span className="flex items-baseline gap-1" title={`${curses} curse${curses === 1 ? '' : 's'} active`}>
-            <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', color: '#f8717199', letterSpacing: '0.08em' }}>CURSED</span>
-            <span className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#f87171', lineHeight: 1 }}>{curses}</span>
+    <div style={{ position: 'relative' }}>
+      <div
+        role="button" aria-label="Run details" aria-expanded={open}
+        onClick={() => { hapticTap(); setOpen(o => !o) }}
+        // FULLY OPAQUE, no backdrop-filter. This bar is position:sticky inside the
+        // PWA's -webkit-overflow-scrolling:touch combat scroller; backdrop-filter on
+        // a sticky element there is an iOS repaint bug — during the aim-bar swap it
+        // failed to repaint (the bar "disappeared") AND mis-composited the hit-test
+        // layer below, so the Lock button's tap target drifted off its paint spot.
+        //
+        // ONE ROW, ALWAYS: 1fr/auto/1fr grid + nowrap cells. The centre column
+        // holds the hardcore skull so it sits EXACTLY mid-bar; both side
+        // columns clip rather than wrap.
+        style={{
+          display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', columnGap: 8,
+          background: '#050b13', border: isHardcore ? '1px solid rgba(220,38,38,0.55)' : `1px solid ${GOLD}28`,
+          borderRadius: 14, padding: '0.4rem 0.8rem', cursor: 'pointer',
+          boxShadow: isHardcore ? '0 0 16px rgba(200,20,32,0.32), inset 0 0 10px rgba(120,10,18,0.3)' : undefined,
+        }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden' }}>
+          <span className="font-karla font-600" style={{ fontSize: '0.46rem', color: GOLD + 'bb', letterSpacing: '0.1em' }}>DEPTH</span>
+          <span className="font-cinzel font-800" style={{ fontSize: '1rem', color: GOLD, lineHeight: 1 }}>{depth}</span>
+          {tag && <span className="font-cinzel font-700" style={{ fontSize: '0.56rem', color: tagColor, letterSpacing: '0.06em' }}>{tag}</span>}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {isHardcore && (
+            <span aria-label="Hardcore — your crew die for good if you sink" title="Hardcore — your crew die for good if you sink"
+              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, borderRadius: '50%', color: '#fca5a5', background: 'rgba(140,10,20,0.4)', border: '1px solid rgba(220,38,38,0.6)', boxShadow: '0 0 10px rgba(220,38,38,0.4)' }}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a7 7 0 0 0-7 7v3.4c0 .9.6 1.7 1.5 2l.5.2V19a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-3.4l.5-.2c.9-.3 1.5-1.1 1.5-2V10a7 7 0 0 0-7-7Z" /><circle cx="9" cy="11" r="1.3" fill="currentColor" stroke="none" /><circle cx="15" cy="11" r="1.3" fill="currentColor" stroke="none" /></svg>
+            </span>
+          )}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, minWidth: 0, whiteSpace: 'nowrap' }}>
+          {curses > 0 && (
+            <span className="flex items-baseline gap-1">
+              <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', color: '#f8717199', letterSpacing: '0.08em' }}>CURSED</span>
+              <span className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#f87171', lineHeight: 1 }}>{curses}</span>
+            </span>
+          )}
+          <span className="flex items-baseline gap-1">
+            <span className="font-karla font-600" style={{ fontSize: '0.46rem', color: '#9a948a', letterSpacing: '0.08em' }}>POT</span>
+            <span className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#e8dfc8' }}>{potShort} ⟡</span>
           </span>
-        )}
-        <span className="flex items-baseline gap-1">
-          <span className="font-karla font-600" style={{ fontSize: '0.46rem', color: '#9a948a', letterSpacing: '0.08em' }}>POT</span>
-          <span className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#e8dfc8' }}>{fmt(pot)} ⟡</span>
-        </span>
+          <svg aria-hidden width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#7a746a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transform: open ? 'rotate(180deg)' : undefined }}><path d="M6 9l6 6 6-6" /></svg>
+        </div>
       </div>
+
+      {/* Tap-for-details panel — everything the one-row bar elides. Anchored
+          under the sticky bar; tapping it (or the bar) closes it. */}
+      {open && (
+        <div
+          onClick={() => setOpen(false)}
+          style={{
+            position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 40,
+            background: '#0a1220', border: `1px solid ${isHardcore ? 'rgba(220,38,38,0.5)' : GOLD + '40'}`,
+            borderRadius: 12, padding: '0.65rem 0.85rem', boxShadow: '0 12px 32px rgba(0,0,0,0.6)',
+          }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+            <p className="font-karla" style={{ fontSize: '0.72rem', color: '#e8dfc8' }}>
+              <span style={{ color: GOLD }}>Depth {depth}</span>
+              {isBoss ? ' — a BOSS holds this water.' : isElite ? ` — Elite${affixName ? `: ${affixName}` : ''}.` : ' — open water.'}
+            </p>
+            <p className="font-karla" style={{ fontSize: '0.72rem', color: '#cfc9bf' }}>Pot: {fmt(pot)} ⟡</p>
+            <p className="font-karla" style={{ fontSize: '0.72rem', color: curses > 0 ? '#f8a5a5' : '#8a847a' }}>
+              {curses > 0 ? `${curses} curse${curses === 1 ? '' : 's'} on the run — see your loadout at the next breather.` : 'No curses on the run yet.'}
+            </p>
+            {isHardcore && (
+              <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#fca5a5' }}>Hardcore — your crew die for good if you sink.</p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
