@@ -23,6 +23,7 @@ import DiceRollNode from './DiceRollNode'
 import DpsCheckNode from './DpsCheckNode'
 import StoryScene from './StoryScene'
 import { getGauntletLeaderboard } from '@/app/(app)/raids/gauntlet/actions'
+import { IconLock, IconCrate } from '@/components/GameIcons'
 
 // Single parchment-gold accent for every main-chain node. Earlier this
 // was a six-color per-type palette (cyan/ember/gold/violet/sage/blue),
@@ -589,7 +590,7 @@ function RaidMap({
                 </p>
                 <p className="font-karla font-600" style={{ fontSize: '0.6rem', lineHeight: 1.35, color: '#c4a96a', marginTop: 4, textShadow: '0 1px 2px rgba(0,0,0,0.9)' }}>
                   <span style={{ background: 'rgba(6,5,4,0.55)', borderRadius: 5, padding: '1px 6px', boxDecorationBreak: 'clone', WebkitBoxDecorationBreak: 'clone' }}>
-                    🔒 {lockReason}
+                    <IconLock size={10} /> {lockReason}
                   </span>
                 </p>
               </div>
@@ -1286,7 +1287,7 @@ function NodeDetailSheet({
                         {item.image
                           // eslint-disable-next-line @next/next/no-img-element
                           ? <img src={item.image} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                          : <span>{item.emoji}</span>}
+                          : <span style={{ color: rc, display: 'flex' }}><IconCrate size={16} /></span>}
                       </div>
                       <span className="font-cinzel font-700" style={{ flex: 1, minWidth: 0, fontSize: '0.84rem', color: '#f0ede8' }}>{item.name}</span>
                       {cleared && owned && (
@@ -1415,7 +1416,7 @@ function NodeDetailSheet({
                             {item.image
                               // eslint-disable-next-line @next/next/no-img-element
                               ? <img src={item.image} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                              : <span>{item.emoji}</span>}
+                              : <span style={{ color: rc, display: 'flex' }}><IconCrate size={16} /></span>}
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <span className="font-cinzel font-700" style={{ display: 'block', fontSize: '0.84rem', color: '#f0ede8' }}>{item.name}</span>
@@ -1673,7 +1674,7 @@ function NodeDetailSheet({
                             padding: 0, touchAction: 'manipulation',
                           }}
                         >
-                          {pending ? '…' : locked ? '🔒' : 'Choose'}
+                          {pending ? '…' : locked ? <IconLock size={16} /> : 'Choose'}
                         </button>
                       ) : null}
                     </div>
@@ -1793,7 +1794,7 @@ function NodeDetailSheet({
                                   : d.image
                                     // eslint-disable-next-line @next/next/no-img-element
                                     ? <img src={d.image} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain', filter: d.imageFilter }} />
-                                    : <span>{d.emoji}</span>}
+                                    : <span style={{ color: rc, display: 'flex' }}><IconCrate size={17} /></span>}
                               </span>
                               <span className="font-karla font-600" style={{ fontSize: '0.8rem', color: '#e8e2d8', whiteSpace: 'nowrap' }}>{d.label}</span>
                               {d.chance && (
@@ -1834,7 +1835,9 @@ function NodeDetailSheet({
                           : d.image
                             // eslint-disable-next-line @next/next/no-img-element
                             ? <img src={d.image} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain', filter: d.imageFilter }} />
-                            : <span className={d.emoji === GEM_GLYPH ? 'font-cinzel' : undefined} style={d.emoji === GEM_GLYPH ? { color: GEM_COLOR } : undefined}>{d.emoji}</span>}
+                            : d.emoji === GEM_GLYPH
+                              ? <span className="font-cinzel" style={{ color: GEM_COLOR }}>{d.emoji}</span>
+                              : <span style={{ color: rc, display: 'flex' }}><IconCrate size={14} /></span>}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <span className="font-karla font-600" style={{ display: 'block', fontSize: '0.74rem', color: '#e8e2d8', whiteSpace: full ? 'normal' : 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.label}</span>
@@ -2009,7 +2012,7 @@ function DropDetailModal({ drop, onClose }: { drop: RaidNodeDrop; onClose: () =>
               : drop.image
                 // eslint-disable-next-line @next/next/no-img-element
                 ? <img src={drop.image} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain', filter: drop.imageFilter, padding: 4 }} />
-                : <span style={{ fontSize: '2rem' }}>{drop.emoji}</span>}
+                : <span style={{ fontSize: '2rem', color: rarityColor, display: 'flex' }}><IconCrate size={32} /></span>}
           </div>
           <div style={{ minWidth: 0, flex: 1 }}>
             <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.55rem', color: rarityColor, marginBottom: 4 }}>

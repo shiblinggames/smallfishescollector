@@ -8,6 +8,7 @@ import { useState } from 'react'
 import RaidCombat from '../RaidCombat'
 import { BossRaidConfig } from '@/lib/bossRaids'
 import { RaidPlayerStats } from '../actions'
+import { IconAnchor, IconSkull } from '@/components/GameIcons'
 
 export default function TurnBasedRaidPreview({ config, stats }: {
   config: BossRaidConfig
@@ -76,7 +77,7 @@ export default function TurnBasedRaidPreview({ config, stats }: {
         <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{
           fontSize: '0.6rem', color: outcome === 'won' ? '#fbbf24' : '#ef4444', marginBottom: 6,
         }}>
-          {outcome === 'won' ? '⚓ Raid Complete' : '☠ You Were Sunk'}
+          {outcome === 'won' ? <><IconAnchor size={11} /> Raid Complete</> : <><IconSkull size={11} /> You Were Sunk</>}
         </p>
         <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0ede8', marginBottom: 8 }}>
           {outcome === 'won' ? "Barnacle Pete defeated!" : `Your ship went down on round ${round + 1}.`}

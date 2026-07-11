@@ -236,7 +236,9 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
       { label: '+1 raid item slot', positive: true },
     ],
     color: '#a78bfa',
-    emoji: '⚒',
+    // Text glyph, NOT ⚒ — U+2692 takes emoji presentation on iOS and the
+    // class glyphs must stay monochrome typographic marks like ✦▣⟡⊕.
+    emoji: '‡',
     effects: { itemSlots: 1 },
   },
   crew_quarters: {
@@ -248,7 +250,8 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
       { label: '+1 crew slot', positive: true },
     ],
     color: '#7adf9a',
-    emoji: '⚓',
+    // Text glyph, NOT ⚓ — U+2693 takes emoji presentation on iOS.
+    emoji: '⌂',
     effects: { crewSlots: 1 },
   },
 }

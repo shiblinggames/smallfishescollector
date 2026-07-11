@@ -72,6 +72,7 @@ import { type AffixDef } from '@/lib/raidAffixes'
 import { getShipClass, aggregateShipClasses } from '@/lib/shipClasses'
 import { vibrate } from '@/lib/haptics'
 import CharacterAvatar from '@/components/CharacterAvatar'
+import { IconShield, IconFog, IconSwords, IconBurst, IconAnchor, IconCrate } from '@/components/GameIcons'
 
 type ShotResult = 'miss' | 'graze' | 'hit' | 'critical'
 type SubPhase   = 'await_input' | 'aiming' | 'revealing' | 'resolving' | 'flares' | 'done'
@@ -5025,17 +5026,17 @@ export default function RaidCombat({
               {(enemy.damageReduction ?? 0) > 0 && (
                 <span
                   aria-label={`Has ability: ${enemy.abilityName ?? 'special defense'}`}
-                  style={{ fontSize: '0.72rem', lineHeight: 1, flexShrink: 0, filter: 'drop-shadow(0 0 4px rgba(125,211,252,0.55))' }}
+                  style={{ fontSize: '0.72rem', lineHeight: 1, flexShrink: 0, color: '#7dd3fc', filter: 'drop-shadow(0 0 4px rgba(125,211,252,0.55))' }}
                 >
-                  🛡️
+                  <IconShield size={11} />
                 </span>
               )}
               {(enemy.aimFogDensity ?? 0) > 0 && (
                 <span
                   aria-label={`Has ability: ${enemy.aimFogName ?? 'Mist Veil'}`}
-                  style={{ fontSize: '0.72rem', lineHeight: 1, flexShrink: 0, filter: 'drop-shadow(0 0 4px rgba(180,200,220,0.55))' }}
+                  style={{ fontSize: '0.72rem', lineHeight: 1, flexShrink: 0, color: '#b8c8dc', filter: 'drop-shadow(0 0 4px rgba(180,200,220,0.55))' }}
                 >
-                  🌫️
+                  <IconFog size={11} />
                 </span>
               )}
               {isBoss && enemyPhase !== 2 && (
@@ -6375,7 +6376,7 @@ function PlayerStatsPopup({
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={item.image} alt="" style={{ width: 28, height: 28, objectFit: 'contain' }} />
                     ) : (
-                      <span style={{ fontSize: '1.1rem' }}>{item.emoji}</span>
+                      <span style={{ fontSize: '1.1rem', color: '#fbbf24', display: 'flex' }}><IconCrate size={18} /></span>
                     )}
                   </div>
                   <div style={{ minWidth: 0, flex: 1 }}>
@@ -6627,7 +6628,7 @@ function EnemyStatsPopup({
                 border: '1px solid rgba(56,189,248,0.3)',
                 borderRadius: 9,
               }}>
-                <span style={{ fontSize: '1.1rem' }} aria-hidden>🛡️</span>
+                <span style={{ fontSize: '1.1rem', color: '#7dd3fc', display: 'flex' }} aria-hidden><IconShield size={18} /></span>
               </div>
               <div style={{ minWidth: 0, flex: 1 }}>
                 <p className="font-karla font-700" style={{ fontSize: '0.85rem', color: '#7dd3fc', lineHeight: 1.15, marginBottom: 2 }}>
@@ -6665,7 +6666,7 @@ function EnemyStatsPopup({
                 border: '1px solid rgba(176,196,216,0.3)',
                 borderRadius: 9,
               }}>
-                <span style={{ fontSize: '1.1rem' }} aria-hidden>🌫️</span>
+                <span style={{ fontSize: '1.1rem', color: '#b0c4d8', display: 'flex' }} aria-hidden><IconFog size={18} /></span>
               </div>
               <div style={{ minWidth: 0, flex: 1 }}>
                 <p className="font-karla font-700" style={{ fontSize: '0.85rem', color: '#b0c4d8', lineHeight: 1.15, marginBottom: 2 }}>
@@ -6702,7 +6703,7 @@ function EnemyStatsPopup({
                 border: '1px solid rgba(240,192,64,0.3)',
                 borderRadius: 9,
               }}>
-                <span style={{ fontSize: '1.1rem' }} aria-hidden>⚔️</span>
+                <span style={{ fontSize: '1.1rem', color: '#f0c040', display: 'flex' }} aria-hidden><IconSwords size={18} /></span>
               </div>
               <div style={{ minWidth: 0, flex: 1 }}>
                 <p className="font-karla font-700" style={{ fontSize: '0.85rem', color: '#f0c040', lineHeight: 1.15, marginBottom: 2 }}>
@@ -6739,7 +6740,7 @@ function EnemyStatsPopup({
                 border: '1px solid rgba(251,146,60,0.32)',
                 borderRadius: 9,
               }}>
-                <span style={{ fontSize: '1.1rem' }} aria-hidden>🎆</span>
+                <span style={{ fontSize: '1.1rem', color: '#fb923c', display: 'flex' }} aria-hidden><IconBurst size={18} /></span>
               </div>
               <div style={{ minWidth: 0, flex: 1 }}>
                 <p className="font-karla font-700" style={{ fontSize: '0.85rem', color: '#fb923c', lineHeight: 1.15, marginBottom: 2 }}>
@@ -7835,7 +7836,7 @@ const AbilitySummonFx = memo(function AbilitySummonFx({ label, name, color, imag
               : `drop-shadow(0 0 28px ${color}) drop-shadow(0 0 66px ${color}88) drop-shadow(0 12px 32px rgba(0,0,0,0.65))` }} />
           </div>
         ) : (
-          <div style={{ fontSize: '3.4rem', filter: `drop-shadow(0 0 22px ${color})` }}>⚓</div>
+          <div style={{ fontSize: '3.4rem', color, filter: `drop-shadow(0 0 22px ${color})`, display: 'flex' }}><IconAnchor size={54} /></div>
         )}
       </motion.div>
 
@@ -7899,7 +7900,7 @@ function AbilityCastFx({ label, name, color, image, emoji }: { label: string; na
           {image
             // eslint-disable-next-line @next/next/no-img-element
             ? <img src={image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            : <span style={{ fontSize: '1.2rem' }}>{emoji}</span>}
+            : <span style={{ fontSize: '1.2rem', color, display: 'flex' }}><IconCrate size={19} /></span>}
         </div>
       </div>
       {/* Label + crew line */}
@@ -8125,7 +8126,7 @@ function ActionMenu({ canFire, canVolley, canMega = false, megaAugment = null, c
                   {item.image
                     // eslint-disable-next-line @next/next/no-img-element
                     ? <img src={item.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                    : <span>{item.emoji ?? '✦'}</span>}
+                    : <span style={{ color: item.color, display: 'flex' }}><IconCrate size={18} /></span>}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p className="font-cinzel font-700" style={{ fontSize: '0.84rem', color: item.disabled ? '#7a7674' : '#ffffff', lineHeight: 1.15 }}>{item.label}</p>

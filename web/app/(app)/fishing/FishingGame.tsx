@@ -48,6 +48,7 @@ import PodiumToast, { type PodiumNotif } from '@/components/PodiumToast'
 import LeaderboardModal from '@/components/LeaderboardModal'
 import AncientBgEffect from '@/components/AncientBgEffect'
 import PopupShell from '@/components/PopupShell'
+import { IconFlame, IconStar, IconTrophy, IconLock } from '@/components/GameIcons'
 import SpinReel from '@/components/SpinReel'
 import { finishSession, type ActiveSession } from '@/app/(app)/social/challengeActions'
 import { equipRod, purchaseRod, sellRod, buyReel, buyBait } from '@/app/(app)/marketplace/tackle-shop/actions'
@@ -1491,7 +1492,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  <span>{isOnFire ? '🔥' : '⭐'}</span>
+                  <span style={{ display: 'flex' }}>{isOnFire ? <IconFlame size={12} /> : <IconStar size={12} />}</span>
                   <span>{isOnFire ? 'On Fire' : 'Perfect'}</span>
                   {perfectStreak >= 2 && (
                     <span style={{ color: accent, letterSpacing: 0, textShadow: `0 0 8px rgba(${accentRgb},0.6)` }}>×{perfectStreak}</span>
@@ -2116,7 +2117,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      <span aria-hidden style={{ fontSize: '0.84rem' }}>🏆</span>
+                      <span aria-hidden style={{ fontSize: '0.84rem', display: 'flex' }}><IconTrophy size={13} /></span>
                       <span>Your biggest yet!</span>
                       {previousBest != null && (
                         <span style={{ color: '#99f6e4', letterSpacing: 0 }}>+{(sizeIn - previousBest).toFixed(1)} in</span>
@@ -2665,7 +2666,7 @@ function XPBarDisplay({ xp, bestStreak, renownAvailable, onOpenRenown }: {
         )}
         {(bestStreak ?? 0) > 0 && (
           <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: 'rgba(251,146,60,0.9)', lineHeight: 1 }}>
-            🔥{bestStreak}
+            <IconFlame size={10} />{bestStreak}
           </span>
         )}
       </div>
@@ -6581,7 +6582,7 @@ export default function FishingGame({
                           animate={{ opacity: [0.75, 1, 0.75] }}
                           transition={{ duration: 0.6, repeat: Infinity }}
                         >
-                          🔥 {perfectStreak} perfect streak
+                          <IconFlame size={15} /> {perfectStreak} perfect streak
                         </motion.span>
                       </motion.div>
                     )}
@@ -7866,9 +7867,9 @@ export default function FishingGame({
                 <motion.div
                   initial={{ scale: 0.5, rotate: -10 }} animate={{ scale: 1, rotate: 0 }}
                   transition={{ type: 'spring', stiffness: 400, damping: 18, delay: 0.1 }}
-                  style={{ fontSize: '2.5rem', marginBottom: '0.75rem', lineHeight: 1 }}
+                  style={{ fontSize: '2.5rem', marginBottom: '0.75rem', lineHeight: 1, color: zc, display: 'flex', justifyContent: 'center' }}
                 >
-                  🏆
+                  <IconTrophy size={40} />
                 </motion.div>
                 <p className="font-karla font-700 uppercase tracking-[0.18em]"
                   style={{ fontSize: '0.52rem', color: zc + 'cc', marginBottom: '0.4rem' }}>
@@ -8053,7 +8054,7 @@ export default function FishingGame({
                       }}
                     >
                       <div className="flex items-center gap-2">
-                        <span style={{ fontSize: '0.9rem' }}>🏆</span>
+                        <span style={{ fontSize: '0.9rem', color: zoneColor, display: 'flex' }}><IconTrophy size={14} /></span>
                         <div className="text-left">
                           <p className="font-karla font-700 uppercase tracking-[0.1em]"
                             style={{ fontSize: '0.52rem', color: zoneColor, lineHeight: 1 }}>Zone Complete!</p>
@@ -8298,7 +8299,7 @@ export default function FishingGame({
                       <div>
                         <p className="font-karla font-700 uppercase tracking-[0.14em]"
                           style={{ fontSize: '0.85rem', color: zoneColor, lineHeight: 1 }}>
-                          {isLocked ? '🔒 ' : ''}Ancient Deep
+                          {isLocked ? <><IconLock size={13} />{' '}</> : null}Ancient Deep
                         </p>
                         <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.55)', marginTop: 4 }}>
                           {isLocked ? 'Unlocks at Fishing Level 75' : 'Before time. Beyond depth.'}

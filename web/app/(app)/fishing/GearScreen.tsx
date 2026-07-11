@@ -13,6 +13,7 @@ import { getLine } from '@/lib/lines'
 import { playForgeSfx } from '@/lib/fishingMusic'
 import { vibrate } from '@/lib/haptics'
 import ForgeRodEmblem from './ForgeRodEmblem'
+import { IconAnchor } from '@/components/GameIcons'
 import { BAITS } from '@/lib/bait'
 import { BOATS, DEFAULT_BOAT_COLOR, boatGlowClass, BOAT_ASH_DARKEN } from '@/lib/boats'
 import { HATS } from '@/lib/hats'
@@ -1791,7 +1792,7 @@ export default function GearScreen({
                                     }}>
                                       <span className="font-karla font-700 uppercase tracking-[0.1em]"
                                         style={{ fontSize: '0.56rem', color: captainLocked ? '#f0c040' : !rodLevelMet ? '#e0a44a' : canAfford ? r.color : '#f87171' }}>
-                                        {captainLocked ? '⚓ Captain only' : !rodLevelMet ? `Fishing Lv ${rodReq}` : canAfford ? 'Tap to Buy' : `Need ${need.toLocaleString()}`}
+                                        {captainLocked ? <><IconAnchor size={10} /> Captain only</> : !rodLevelMet ? `Fishing Lv ${rodReq}` : canAfford ? 'Tap to Buy' : `Need ${need.toLocaleString()}`}
                                       </span>
                                       <span className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: canAfford ? '#f0c040' : '#f0c04088' }}>
                                         {r.cost.toLocaleString()} ⟡

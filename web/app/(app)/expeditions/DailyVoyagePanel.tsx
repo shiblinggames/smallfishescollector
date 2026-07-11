@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useCallback, useEffect, useRef, useMemo } from 'react'
+import { useState, useTransition, useCallback, useEffect, useRef, useMemo, type ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
@@ -17,6 +17,7 @@ import { getLevelFromXP, ROUTE_BASE_XP, VOYAGE_XP_MULT } from '@/lib/expeditionL
 import { BASE_VOYAGE_MS, computeVoyageDurationMs } from '@/lib/voyage'
 import VoyageHistory, { type VoyageHistoryEntry } from './VoyageHistory'
 import NavLevelUpOverlay, { NavLevelUpInfo } from '@/components/NavLevelUpOverlay'
+import { IconMap, IconSwords, IconBolt, IconWave, IconGull, IconHourglass, IconCrate, IconSkull, IconLock, IconWarning, IconCheck } from '@/components/GameIcons'
 
 type PanelState = 'idle' | 'away' | 'returned' | 'done'
 
@@ -29,12 +30,12 @@ function formatDuration(ms: number): string {
   return `${m}m`
 }
 
-const EVENT_ICONS: Record<string, string> = {
-  discovery: '🗺️',
-  encounter: '⚔️',
-  danger:    '⚡',
-  weather:   '🌊',
-  peaceful:  '🕊️',
+const EVENT_ICONS: Record<string, ReactNode> = {
+  discovery: <IconMap />,
+  encounter: <IconSwords />,
+  danger:    <IconBolt />,
+  weather:   <IconWave />,
+  peaceful:  <IconGull />,
 }
 
 const OUTCOME_STYLES: Record<string, { label: string; bg: string; color: string; border: string }> = {
@@ -394,13 +395,13 @@ export default function DailyVoyagePanel({
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
                       {([
-                        ['🗺️', 'Pick a route', 'Tap a location on the map. Riskier routes pay more — but your crew might not make it back.'],
-                        ['⏳', 'They sail (up to 3 hours)', 'Events unfold along the way. Higher Nav and expedition level reduce voyage time. Check back to watch the story.'],
-                        ['💰', 'Claim your loot', 'When they return, collect doubloons, gems, and rare drops.'],
-                        ['☠️', 'Crew can die', 'On dangerous routes, crew members can be lost at sea — permanently. Crew Fortune cuts the risk, all the way to zero. Deeper routes need more Fortune to sail safe.'],
-                      ] as [string, string, string][]).map(([icon, title, desc]) => (
+                        [<IconMap key="i" size={18} />, 'Pick a route', 'Tap a location on the map. Riskier routes pay more — but your crew might not make it back.'],
+                        [<IconHourglass key="i" size={18} />, 'They sail (up to 3 hours)', 'Events unfold along the way. Higher Nav and expedition level reduce voyage time. Check back to watch the story.'],
+                        [<IconCrate key="i" size={18} />, 'Claim your loot', 'When they return, collect doubloons, gems, and rare drops.'],
+                        [<IconSkull key="i" size={18} />, 'Crew can die', 'On dangerous routes, crew members can be lost at sea — permanently. Crew Fortune cuts the risk, all the way to zero. Deeper routes need more Fortune to sail safe.'],
+                      ] as [ReactNode, string, string][]).map(([icon, title, desc]) => (
                         <div key={title} style={{ display: 'flex', gap: '0.75rem' }}>
-                          <span style={{ fontSize: '1.1rem', flexShrink: 0, marginTop: 1 }}>{icon}</span>
+                          <span style={{ fontSize: '1.1rem', flexShrink: 0, marginTop: 1, color: '#c8aa6a' }}>{icon}</span>
                           <div>
                             <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: '#d4c8a0', marginBottom: '0.2rem' }}>{title}</p>
                             <p className="font-karla" style={{ fontSize: '0.76rem', color: '#7a6a50', lineHeight: 1.5 }}>{desc}</p>
@@ -461,7 +462,7 @@ export default function DailyVoyagePanel({
                           position: 'relative',
                           fontSize: locked ? '0.44rem' : undefined,
                         }}>
-                          {locked && '🔒'}
+                          {locked && <span style={{ color: '#c8a060', display: 'flex' }}><IconLock size={8} /></span>}
                         </span>
                         <span style={{
                           position: 'absolute', top: '100%', left: '50%',
@@ -552,7 +553,7 @@ export default function DailyVoyagePanel({
                                 </span>
                                 <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '0.7rem' }}>·</span>
                                 <span className="font-karla" style={{ fontSize: '0.76rem', color: '#7a6848' }}>
-                                  ⏳ {formatDuration(estMs)}
+                                  <IconHourglass size={11} /> {formatDuration(estMs)}
                                 </span>
                                 {voyageSpeedMult < 1 && (
                                   <span className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#46c0a0' }}>
@@ -571,16 +572,16 @@ export default function DailyVoyagePanel({
                             {/* Crew risk / crew count */}
                             {savedCrew.length < minCrew ? (
                               <span className="font-karla font-600" style={{ fontSize: '0.74rem', color: '#c87a4a' }}>
-                                {minCrew === 1 ? '⚠ Need at least 1 crew to set sail' : `⚠ Need at least ${minCrew} crew to set sail`}
+                                <IconWarning size={12} /> {minCrew === 1 ? 'Need at least 1 crew to set sail' : `Need at least ${minCrew} crew to set sail`}
                               </span>
                             ) : safeVoyages ? (
                               <span className="font-karla font-600" style={{ fontSize: '0.74rem', color: '#4ade80' }}>
-                                ✓ No crew risk — Safe Passage keeps your crew safe on every route.
+                                <IconCheck size={12} /> No crew risk — Safe Passage keeps your crew safe on every route.
                               </span>
                             ) : riskPct > 0 ? (
                               <>
                                 <span className="font-karla font-600" style={{ fontSize: '0.74rem', color: riskColor }}>
-                                  {riskPct >= 15 ? '☠' : '⚠'} {riskPct}% chance crew is lost permanently
+                                  {riskPct >= 15 ? <IconSkull size={12} /> : <IconWarning size={12} />} {riskPct}% chance crew is lost permanently
                                 </span>
                                 {/* Teach the mitigation: noobs should know Fortune is the
                                     survival stat, and vets should see what theirs is doing. */}
@@ -592,7 +593,7 @@ export default function DailyVoyagePanel({
                               </>
                             ) : rco.baseCrewLossChance > 0 && savedCrew.length >= 2 ? (
                               <span className="font-karla font-600" style={{ fontSize: '0.74rem', color: '#4ade80' }}>
-                                ✓ No crew risk. Your crew&apos;s {stats.fortune} Fortune covers these waters.
+                                <IconCheck size={12} /> No crew risk. Your crew&apos;s {stats.fortune} Fortune covers these waters.
                               </span>
                             ) : (
                               <span className="font-karla" style={{ fontSize: '0.74rem', color: '#5a7a5a' }}>No crew risk</span>
@@ -673,7 +674,7 @@ export default function DailyVoyagePanel({
                             padding: '0.45rem 1rem', textAlign: 'center',
                           }}>
                             <span className="font-cinzel font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.78rem', color: '#a08858' }}>
-                              {comingSoonRoute ? '🔒 Coming soon' : shipLockedRoute ? '🔒 Requires a Sloop or better' : `🔒 Unlocks at Expedition Lv ${minLevel}`}
+                              <IconLock size={12} /> {comingSoonRoute ? 'Coming soon' : shipLockedRoute ? 'Requires a Sloop or better' : `Unlocks at Expedition Lv ${minLevel}`}
                             </span>
                           </div>
                         ) : (

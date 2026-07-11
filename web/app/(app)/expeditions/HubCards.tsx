@@ -10,6 +10,7 @@ import { useState, useEffect, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import PopupShell from '@/components/PopupShell'
 import { RAID_ITEMS } from '@/lib/raidItems'
+import { IconLock, IconCrate } from '@/components/GameIcons'
 import { repairShip } from '@/app/(app)/raids/actions'
 import type { CrewMember } from '@/app/(app)/crew/actions'
 import { RARITY_COLORS as CREW_RARITY_COLORS } from '@/lib/crewGen'
@@ -361,7 +362,7 @@ export default function HubCards({
             </p>
             {campaign.nextNodeLocked && campaign.nextNodeLockReason && (
               <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#a8896a', lineHeight: 1.3, marginTop: 2 }}>
-                🔒 {campaign.nextNodeLockReason}
+                <IconLock size={10} /> {campaign.nextNodeLockReason}
               </p>
             )}
             <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#7a7672', lineHeight: 1.3, marginTop: 2 }}>
@@ -969,7 +970,7 @@ function PrepItemsView({ equippedRaidItems, raidItemSlots, ownedCount, accent, o
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={def.image} alt="" loading="lazy" decoding="async" style={{ width: '88%', height: '88%', objectFit: 'contain' }} />
               ) : (
-                <span style={{ fontSize: '0.95rem', lineHeight: 1 }}>{def.emoji}</span>
+                <span style={{ fontSize: '0.95rem', lineHeight: 1, color: '#c4a96a', display: 'flex' }}><IconCrate size={15} /></span>
               )}
             </div>
           )

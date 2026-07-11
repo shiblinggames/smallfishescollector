@@ -6,6 +6,7 @@ import { type BroadsideEnemy, type RaidLootItem, RARITY_COLOR, GEM_GLYPH, GEM_CO
 import { getShipSkin } from '@/lib/shipSkins'
 import { vibrate } from '@/lib/haptics'
 import { playChestSfx, playChestCreakSfx } from '@/lib/fishingMusic'
+import { IconCrate } from '@/components/GameIcons'
 
 const GOLD = '#f0c040'
 
@@ -151,9 +152,16 @@ export default function RaidLootStage(props: Props) {
       // eslint-disable-next-line @next/next/no-img-element
       return <img src={item.image} alt={item.label} style={{ width: size, height: size, objectFit: 'contain' }} />
     }
+    if (item.emoji === GEM_GLYPH) {
+      return (
+        <span className="font-cinzel font-700" style={{ fontSize: size * 0.62, color: GEM_COLOR }}>
+          {item.emoji}
+        </span>
+      )
+    }
     return (
-      <span className={item.emoji === GEM_GLYPH ? 'font-cinzel font-700' : undefined} style={{ fontSize: size * 0.62, color: item.emoji === GEM_GLYPH ? GEM_COLOR : undefined }}>
-        {item.emoji}
+      <span style={{ fontSize: size * 0.62, color: RARITY_COLOR[item.rarity], display: 'flex' }}>
+        <IconCrate size={Math.round(size * 0.62)} />
       </span>
     )
   }

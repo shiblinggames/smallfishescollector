@@ -19,6 +19,7 @@ import { getGauntletUpgrade } from '@/lib/gauntletUpgrades'
 import { buyRepairKit } from './repairKitActions'
 import { equipShipSkin, saveEquippedRaidItems, forgeRaidItem, learnForgeRecipe, markForgeIntroSeen } from './actions'
 import UltimateBuildPanel from './UltimateBuildPanel'
+import { IconCrate } from '@/components/GameIcons'
 import { type ShipAugmentId } from '@/lib/shipAugments'
 import { bonusChargeSlots, hasForge } from '@/lib/gauntletUpgrades'
 import PopupShell from '@/components/PopupShell'
@@ -1489,7 +1490,7 @@ export default function ShipHero({
                           {def.image
                             // eslint-disable-next-line @next/next/no-img-element
                             ? <img src={def.image} alt="" loading="lazy" decoding="async" style={{ width: 30, height: 30, objectFit: 'contain' }} />
-                            : <span style={{ fontSize: '1.4rem', lineHeight: 1 }}>{def.emoji}</span>}
+                            : <span style={{ fontSize: '1.4rem', lineHeight: 1, color, display: 'flex' }}><IconCrate size={22} /></span>}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.8rem', ...(forged ? PRISMATIC_TEXT_SOFT : { color }) }}>{def.name}</p>
@@ -1554,7 +1555,7 @@ export default function ShipHero({
                                     /* eslint-disable-next-line @next/next/no-img-element */
                                     <img src={def.image} alt="" loading="lazy" decoding="async" style={{ width: 33, height: 33, objectFit: 'contain' }} />
                                   ) : (
-                                    <span style={{ fontSize: '1.55rem', lineHeight: 1 }}>{def.emoji}</span>
+                                    <span style={{ fontSize: '1.55rem', lineHeight: 1, color, display: 'flex' }}><IconCrate size={25} /></span>
                                   )}
                                 </div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -1655,7 +1656,7 @@ export default function ShipHero({
                               {result.image
                                 // eslint-disable-next-line @next/next/no-img-element
                                 ? <img src={result.image} alt="" loading="lazy" decoding="async" style={{ width: 30, height: 30, objectFit: 'contain', opacity: owned ? 1 : 0.85 }} />
-                                : <span style={{ fontSize: '1.3rem', lineHeight: 1, opacity: owned ? 1 : 0.7 }}>{result.emoji}</span>}
+                                : <span style={{ fontSize: '1.3rem', lineHeight: 1, opacity: owned ? 1 : 0.7, color: '#f5ecd6', display: 'flex' }}><IconCrate size={21} /></span>}
                             </div>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.95rem', ...(owned ? PRISMATIC_TEXT_SOFT : { color: '#f5ecd6' }) }}>{result.name}</p>
