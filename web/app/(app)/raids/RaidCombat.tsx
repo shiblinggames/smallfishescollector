@@ -59,7 +59,7 @@ import { motion, AnimatePresence, useAnimation } from 'framer-motion'
 import { BroadsideEnemy, EnemyAction, type BossMechanicCheck, type MechanicResponse } from '@/lib/bossRaids'
 import { raidDamageProfile, type RaidMods } from '@/lib/expeditions'
 import { MEGA_CHARGE_COST, RAILGUN_GRAZE_PCT, type ShipAugment } from '@/lib/shipAugments'
-import { CannonShotBurst, ImpactBurst, RailgunBeam, NukeMissile, NukeBlast, MegaSplats } from './megaFx'
+import { CannonShotBurst, ImpactBurst, RailgunBeam, NukeMissile, NukeBlast } from './megaFx'
 import { getActiveEffects, getRaidItem, getActivatableItem } from '@/lib/raidItems'
 import { describeEffect, effectTone, type TideEffect } from '@/lib/tides'
 import { getRepairKit, rollRepairKitHeal, repairKitRange } from '@/lib/repairKits'
@@ -1042,7 +1042,8 @@ export default function RaidCombat({
   // Nuke "silo launch" — a missile that arcs from the player's deck to the
   // enemy before the detonation. Geometry measured from the real ship boxes.
   const [nukeMissile, setNukeMissile] = useState<{ key: number; color: string; x1: number; y1: number; x2: number; y2: number; dur: number } | null>(null)
-  const [megaSplats, setMegaSplats] = useState<{ key: number; color: string; items: { id: number; text: string; size: number; dx: number; dy: number; delay: number }[] } | null>(null)
+  // (Barrage's old one-blob MegaSplats renderer removed 2026-07-11 — its four
+  // sub-hits now play sequentially through barrageSplats, Mako-style.)
   // Crew-ability cast cue — themed portrait banner + ring that pops over the
   // stage so firing ANY ability has an unmistakable "you did something" tell.
   const [abilityCast, setAbilityCast] = useState<{ key: number; label: string; name: string; color: string; image?: string | null; emoji?: string } | null>(null)
@@ -3914,6 +3915,17 @@ export default function RaidCombat({
           playStepChainRef.current.push(setTimeout(() => setNukeMissile(null), flightMs))
           cameraShake('volley')           // lift-off rumble (the boom comes on impact)
           vibrate([0, 45, 60, 25])
+        } else if (megaId === 'barrage') {
+          // Barrage — FOUR muzzle pops on a tight cadence (quicker than Mako's
+          // 200ms rat-a-tat), one per sub-hit; the impacts land in the same
+          // rhythm below so the whole thing reads as four distinct blows.
+          ;[0, 120, 240, 360].forEach((off, k) => {
+            playStepChainRef.current.push(setTimeout(() => {
+              setPlayerRecoilKey(kk => kk + 1)
+              setCannonShot({ key: Date.now() + i + k * 101, kind: 'volley' })
+              playStepChainRef.current.push(setTimeout(() => setCannonShot(null), 300))
+            }, off))
+          })
         } else if (isVolleyShot) {
           // Rat-a-tat — three muzzle pops + recoil kicks for the 3-cannonball
           // burst, so a volley fires visibly as a salvo, not one shot.
@@ -3930,39 +3942,70 @@ export default function RaidCombat({
           setTimeout(() => setCannonShot(null), 700)
         }
 
+        // Barrage plays its impacts as a SEQUENTIAL rat-a-tat (Mako-style, but
+        // tighter): each sub-hit gets its own impact burst, shake, haptic and
+        // damage number, and the HP bar ticks down per blow — the step's true
+        // snapshot (incl. shields / reflect) syncs on the FINAL hit. Everything
+        // else keeps the single-splat path.
+        const seqBarrage = megaId === 'barrage' && !isDodged && step.splatTarget === 'enemy'
         setTimeout(() => {
-          syncEHp(step)
-          // ALSO push the player HP — Reflective and Volatile affix damage
-          // lives in step.pHp on a player-attacks step. Without this sync,
-          // the log says "reflects N back" / "wreck scorches for N" but
-          // the actual HP bar never moves until the next enemy-fires step
-          // catches up.
-          syncPHp(step)
+          if (!seqBarrage) {
+            syncEHp(step)
+            // ALSO push the player HP — Reflective and Volatile affix damage
+            // lives in step.pHp on a player-attacks step. Without this sync,
+            // the log says "reflects N back" / "wreck scorches for N" but
+            // the actual HP bar never moves until the next enemy-fires step
+            // catches up.
+            syncPHp(step)
+          }
           if (step.splatTarget === 'enemy') {
-            // Barrage: split the total into 4 falling splats (first biggest), so
-            // the broadside reads as four hammer-blows. Others: one splat.
-            if (megaId === 'barrage' && !isDodged) {
+            if (seqBarrage) {
+              const preHp = enemyHpRef.current
               const total = Math.max(0, parseInt(step.splatText.replace(/[^0-9]/g, ''), 10) || 0)
               const fr = [0.40, 0.25, 0.18, 0.17]
               let used = 0
-              const items = fr.map((f, k) => {
+              const parts = fr.map((f, k) => {
                 const v = k === fr.length - 1 ? total - used : Math.round(total * f)
                 used += v
-                return { id: k, text: `-${v}`, size: 1.5 - k * 0.22, dx: (k - 1.5) * 18, dy: -k * 6, delay: k * 0.07 }
+                return v
               })
-              setMegaSplats({ key: Date.now() + i + 1, color: megaColor, items })
-              setTimeout(() => setMegaSplats(null), SPLAT_HOLD_MS + 240)
+              const SUB = 120  // quicker than Mako's 200ms
+              let cum = 0
+              parts.forEach((v, k) => {
+                playStepChainRef.current.push(setTimeout(() => {
+                  cum += v
+                  const bk = Date.now() + i * 40 + k
+                  setEnemyImpact({ key: bk + 300, kind: k === 0 ? 'crit' : 'normal' })
+                  playStepChainRef.current.push(setTimeout(() => setEnemyImpact(null), 140))
+                  setEnemyShakeKind(k === 0 ? 'crit' : 'hit')
+                  setEnemyShakeKey(kk => kk + 1)
+                  vibrate(k === 0 ? 20 : 10)
+                  // Each blow floats its OWN number, scattered like Mako's frenzy.
+                  const dx = (k - 1.5) * 17 + (k % 2 ? 7 : -7)
+                  const sk = bk + 900
+                  setBarrageSplats(s => [...s, { key: sk, text: `-${v}`, dx, crit: k === 0, color: megaColor }])
+                  playStepChainRef.current.push(setTimeout(() => setBarrageSplats(s => s.filter(x => x.key !== sk)), 640))
+                  if (k === parts.length - 1) {
+                    // Final blow: settle to the step's true snapshot + the big kick.
+                    syncEHp(step); syncPHp(step)
+                    cameraShake('crit')
+                  } else {
+                    // Visual mid-chain tick — never below the step's real result.
+                    setEnemyHp(Math.max(step.eHp, preHp - cum))
+                  }
+                }, k * SUB))
+              })
             } else {
               setEHitsplat({ key: Date.now() + i + 1, text: step.splatText, color: megaId ? megaColor : step.splatColor, big: step.big || megaId === 'nuke' || megaId === 'railgun', volley: isVolleyShot })
             }
-            if (!isDodged) {
+            if (!isDodged && !seqBarrage) {
               const heavy = step.big || megaId === 'nuke' || megaId === 'railgun'
               setEnemyShakeKind(heavy ? 'crit' : isVolleyShot ? 'volley' : 'hit')
               setEnemyShakeKey(k => k + 1)
               if (heavy) cameraShake(megaId === 'nuke' ? 'nuke' : 'crit')
               else if (isVolleyShot) { cameraShake('volley'); vibrate([0, 22, 26, 30]) }
             }
-            if (!isDodged) {
+            if (!isDodged && !seqBarrage) {
               if (step.carapaceSoak) {
                 // Carapace shrugged it off — a steely deflect (plate flex +
                 // sparks bouncing away) instead of the penetrating debris burst,
@@ -4900,7 +4943,6 @@ export default function RaidCombat({
             {enemyDeflect > 0 && <CarapaceDeflect key={`cd-${enemyDeflect}`} />}
             {/* Man-o-War Mega FX (Railgun beam lives at stage level, below) */}
             {nukeBlast && <NukeBlast   key={`nb-${nukeBlast.key}`} color={nukeBlast.color} />}
-            {megaSplats && <MegaSplats key={`ms-${megaSplats.key}`} color={megaSplats.color} items={megaSplats.items} />}
             <AnimatePresence>
               {eHitsplat && <HitsplatOverlay key={eHitsplat.key} text={eHitsplat.text} color={eHitsplat.color} big={eHitsplat.big} volley={eHitsplat.volley} />}
             </AnimatePresence>
