@@ -226,9 +226,20 @@ export function estimatePotForDepth(depth: number): number {
   return total
 }
 
-/** Hard sanity cap on reported depth (no legit run reaches this; it just
- *  bounds an obviously-forged value). */
-export const MAX_GAUNTLET_DEPTH = 60
+/** Hard sanity cap on reported depth — bounds an obviously-forged value.
+ *  RAISED 60 → 100 (2026-07-11): the HP-scaling boons made 60+ legitimately
+ *  reachable and the old cap silently clamped a real depth-70 cash-out to 60
+ *  (record, pot, Fathoms, ledger — everything). Raise it again if real runs
+ *  ever approach 100. */
+export const MAX_GAUNTLET_DEPTH = 100
+
+/** Economy ceiling: pot / Nav XP / crew XP / Blood Gems all pay as if the run
+ *  ended here, no matter how much deeper it went. Depth PAST this still counts
+ *  for the record, the leaderboard, the contest, and Fathoms — you dive past
+ *  70 for glory, not doubloons. (Also the client-side pot gate: fights beyond
+ *  this contribute 0 to the pot, so the HUD never shows money the cash-out
+ *  won't pay.) */
+export const GAUNTLET_REWARD_DEPTH_CAP = 70
 
 // ── Enemy scaling curve ──────────────────────────────────────────────────────
 // Source enemies keep their pattern / speed / crit / art / signature ability;
@@ -467,9 +478,13 @@ export function generateFight(state: GauntletRollState, skipOffset = 0): Gauntle
     }
   }
 
+  // Past the reward cap the Locker's purse is dry — fights contribute nothing
+  // to the pot (the HUD pot must never show money the cash-out won't pay).
+  const paying = rewardDepth <= GAUNTLET_REWARD_DEPTH_CAP
+
   if (isBoss) {
     const enemy = scaleToCurve(pick(BOSS_POOL), depth, true)
-    return { enemy, isBoss: true, isElite: false, potContribution: roundContribution(rewardDepth, true), depth }
+    return { enemy, isBoss: true, isElite: false, potContribution: paying ? roundContribution(rewardDepth, true) : 0, depth }
   }
 
   // Mob — independent elite roll, chance scaling with depth.
@@ -493,7 +508,7 @@ export function generateFight(state: GauntletRollState, skipOffset = 0): Gauntle
       maxDmg: Math.max(2, Math.round(enemy.maxDmg * ELITE_DMG_MULT)),
     }
   }
-  return { enemy, isBoss: false, isElite, affix, potContribution: roundContribution(rewardDepth, false), depth }
+  return { enemy, isBoss: false, isElite, affix, potContribution: paying ? roundContribution(rewardDepth, false) : 0, depth }
 }
 
 /** Advance the guardrail state after a fight is generated. */

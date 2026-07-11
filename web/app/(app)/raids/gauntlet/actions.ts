@@ -15,7 +15,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { navRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
-import { maxPotForDepth, chestForDepth, chestCannonDropChance, chestSkinDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, gauntletXpForDepth, gauntletCrewXp, CONFLUENCES, hardcoreUnlocked, HARDCORE_LIVE, HARDCORE_UNLOCKS, HARDCORE_RUNS_PER_DAY, HC_FATHOMS_MULT, HC_SURVIVOR_XP_MULT, bloodGemsForDepth, coerceRunStats, type GauntletRunSnapshot, type GauntletRunState } from '@/lib/gauntlet'
+import { maxPotForDepth, chestForDepth, chestCannonDropChance, chestSkinDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_REWARD_DEPTH_CAP, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, gauntletXpForDepth, gauntletCrewXp, CONFLUENCES, hardcoreUnlocked, HARDCORE_LIVE, HARDCORE_UNLOCKS, HARDCORE_RUNS_PER_DAY, HC_FATHOMS_MULT, HC_SURVIVOR_XP_MULT, bloodGemsForDepth, coerceRunStats, type GauntletRunSnapshot, type GauntletRunState } from '@/lib/gauntlet'
 import { getGauntletUpgrade, isUpgradeComingSoon, gauntletHaulMult, gauntletXpMult, gauntletFathomsMult } from '@/lib/gauntletUpgrades'
 import { DAVY_FORGE } from '@/lib/raidItems'
 import { GAUNTLET_DEEPEST_CONTEST_ENDS_AT } from '@/lib/contests'
@@ -465,8 +465,12 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
     return { ok: false }
   }
 
-  const cleanPot = Math.max(0, Math.min(Math.floor(pot), maxPotForDepth(rd)))
-  const chest = chestForDepth(rd)
+  // Economy cap: everything that PAYS (pot, XP, crew XP, Blood Gems) is
+  // evaluated as if the run ended at GAUNTLET_REWARD_DEPTH_CAP. Depth past it
+  // still counts for the record / leaderboard / contest / Fathoms (cd below).
+  const payDepth = Math.min(rd, GAUNTLET_REWARD_DEPTH_CAP)
+  const cleanPot = Math.max(0, Math.min(Math.floor(pot), maxPotForDepth(payDepth)))
+  const chest = chestForDepth(payDepth)
 
   // Run Upgrades (Locker, scope 'gauntlet') that sweeten the cash-out.
   const upgrades   = (profile.gauntlet_upgrades as string[] | null) ?? []
@@ -517,7 +521,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   // Blood Gems — the Hardcore premium currency, dropped in the cash-out chest
   // (survive-only). Amount is a live server roll (~0.5–0.7 per reward depth), so
   // deeper survival = more. Normal runs earn none.
-  const earnedBloodGems = hc ? bloodGemsForDepth(rd, Math.random()) : 0
+  const earnedBloodGems = hc ? bloodGemsForDepth(payDepth, Math.random()) : 0
   const newBloodGems    = ((profile.blood_gems as number | null) ?? 0) + earnedBloodGems
 
   const classPicks = (profile.ship_classes as Record<string, string> | null) ?? {}
@@ -527,7 +531,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   const bankedDoubloons = Math.round(cleanPot * chest.potMult * doubloonMult * gauntletHaulMult(upgrades))
   // Nav XP is decoupled from the doubloon pot onto its own gentler depth curve
   // (leveling was the sharper concern). Chest multiplier still rides on top.
-  const bankedXp        = Math.round(gauntletXpForDepth(rd) * chest.potMult * gauntletXpMult(upgrades))
+  const bankedXp        = Math.round(gauntletXpForDepth(payDepth) * chest.potMult * gauntletXpMult(upgrades))
   const gems            = chest.gems
 
   // Fathoms — the Gauntlet's meta-currency — bank on reaching this depth
@@ -619,7 +623,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
     }),
     // Crew XP is DECOUPLED from the player's Nav XP onto a raid-calibrated scale.
     // Hardcore survivors earn a bonus for bringing the squad home alive.
-    grantXPToAssignedCrew(admin, user.id, Math.round(gauntletCrewXp(rd) * (hc ? HC_SURVIVOR_XP_MULT : 1) * navRenown.crewXpMult)),
+    grantXPToAssignedCrew(admin, user.id, Math.round(gauntletCrewXp(payDepth) * (hc ? HC_SURVIVOR_XP_MULT : 1) * navRenown.crewXpMult)),
   ])
 
   // Depth-milestone unlocks crossed by SURVIVING to this depth (cash-out only).

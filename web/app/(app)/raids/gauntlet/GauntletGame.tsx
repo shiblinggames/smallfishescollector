@@ -26,7 +26,7 @@ import {
   confluenceEffects, activeConfluences, eligibleConfluences, drawConfluenceOffer, confluenceLevel, confluenceDescAt, CONFLUENCES, type Confluence, type ConfluenceOffer,
   REPRIEVE_MIN_DEPTH, REPRIEVE_CHANCE, drawReprieve, type Reprieve,
   DROWNED_FILTER, bandForDepth, davyTaunt,
-  GAUNTLET_COOLDOWN_HOURS, HARDCORE_RUNS_PER_DAY, HC_UNLOCK_DEPTH,
+  GAUNTLET_COOLDOWN_HOURS, HARDCORE_RUNS_PER_DAY, HC_UNLOCK_DEPTH, GAUNTLET_REWARD_DEPTH_CAP,
   emptyRunStats, addRunStats, coerceRunStats,
   type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot, type GauntletRunState, type GauntletRunStats,
 } from '@/lib/gauntlet'
@@ -1906,10 +1906,14 @@ export default function GauntletGame(props: GauntletGameProps) {
     // pot stay on `cleared` so the head start is no reward shortcut.
     const combatDepth = cleared + skipOffset
     const nextDepth = combatDepth + 1
-    const chest = chestForDepth(cleared)
+    // Economy cap — previews mirror the server: pot/XP pay as if the run ended
+    // at the cap; deeper is for the record + Fathoms.
+    const payDepth = Math.min(cleared, GAUNTLET_REWARD_DEPTH_CAP)
+    const pastPayCap = cleared >= GAUNTLET_REWARD_DEPTH_CAP
+    const chest = chestForDepth(payDepth)
     const previewDoubloons = Math.round(pot * chest.potMult * props.classDoubloonMult)
     // Nav XP is on its own decoupled curve (not the pot) — mirror the server.
-    const previewXp = Math.round(gauntletXpForDepth(cleared) * chest.potMult)
+    const previewXp = Math.round(gauntletXpForDepth(payDepth) * chest.potMult)
     const hpPct = Math.max(0, Math.min(100, Math.round((playerHP / hpMax) * 100)))
     const hpColor = hpPct < 30 ? '#f87171' : hpPct < 60 ? GOLD : '#4ade80'
     const band = bandForDepth(combatDepth)
@@ -1926,7 +1930,8 @@ export default function GauntletGame(props: GauntletGameProps) {
     // A line of voice for the breather, keyed to the run's state — bleeding hull,
     // a fat haul, a record depth, or just the quiet before the next gun.
     const breathLine =
-      hpPct < 30          ? 'Your hull groans. The deep can smell blood in the water.'
+      pastPayCap          ? "The Locker's purse runs dry this deep. You dive for Fathoms and the record now."
+      : hpPct < 30          ? 'Your hull groans. The deep can smell blood in the water.'
       : combatDepth >= 14 ? 'Few ships sail this deep. Fewer ever sail back.'
       : previewDoubloons >= 5000 ? "A captain's ransom rides in your hold now."
       : combatDepth <= 2  ? 'Early yet. The Locker is only just stirring below.'
