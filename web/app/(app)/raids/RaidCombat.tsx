@@ -5420,7 +5420,7 @@ export default function RaidCombat({
             {/* Absorb shield (Abyssal Tide / Stormward) folds into the HP bar
                 as a cyan segment — one row, no stacked bar. */}
             <HPBar current={playerHp} max={playerHpMax} accent={PLAYER_COLOR} compact shield={abyssalShieldHp} />
-            <ChargesRow charges={playerCharges} max={playerMaxCharges} small />
+            <ChargesRow charges={playerCharges} max={playerMaxCharges} small readyGlow={canMega ? (megaAugment?.color ?? null) : null} />
           </div>
         </motion.button>
 
@@ -6752,7 +6752,14 @@ function HPBar({ current, max, accent, compact, shield = 0, shieldColor = '#7dd3
   )
 }
 
-function ChargesRow({ charges, max, small, hidden = false }: { charges: number; max: number; small?: boolean; hidden?: boolean }) {
+function ChargesRow({ charges, max, small, hidden = false, readyGlow = null }: {
+  charges: number; max: number; small?: boolean; hidden?: boolean
+  /** When set (the Mega is charged), every filled pip recolors to this and
+   *  pulses — the whole magazine reads as "the ultimate is READY". Scale-only
+   *  animation on purpose: animating box-shadow repaints on the main thread
+   *  and stutters the aim RAF (see the phase-2 aim-lag fix). */
+  readyGlow?: string | null
+}) {
   const dotSize = small ? 12 : 16
   // Track the prior count so a freshly-loaded cannonball "clicks in" — the new
   // pip pops from nothing with a brief overshoot. prevRef lags one render
@@ -6779,17 +6786,28 @@ function ChargesRow({ charges, max, small, hidden = false }: { charges: number; 
       {Array.from({ length: max }).map((_, i) => {
         const filled = i < charges
         const justLoaded = filled && i >= prev
+        const ready = filled && !!readyGlow
         return (
           <motion.div
             key={i}
             initial={false}
-            animate={justLoaded ? { scale: [0.2, 1.35, 1] } : { scale: 1 }}
-            transition={justLoaded ? { duration: 0.4, ease: 'easeOut' } : { duration: 0 }}
+            // Ready state wins: a slow breathing pulse across the whole
+            // magazine (staggered per pip so it reads as a wave). The
+            // just-loaded pop only plays when not in the ready state — the
+            // pulse taking over IS the arrival moment for the final pip.
+            animate={ready
+              ? { scale: [1, 1.22, 1] }
+              : justLoaded ? { scale: [0.2, 1.35, 1] } : { scale: 1 }}
+            transition={ready
+              ? { duration: 1.1, repeat: Infinity, ease: 'easeInOut', delay: i * 0.09 }
+              : justLoaded ? { duration: 0.4, ease: 'easeOut' } : { duration: 0 }}
             style={{
               width: dotSize, height: dotSize, borderRadius: '50%',
-              background: filled ? '#fbbf24' : '#1c2540',
-              border: `1px solid ${filled ? '#fbbf24' : '#3a4560'}`,
-              boxShadow: filled ? `0 0 ${small ? 5 : 7}px rgba(251,191,36,0.55)` : 'none',
+              background: ready ? readyGlow! : filled ? '#fbbf24' : '#1c2540',
+              border: `1px solid ${ready ? '#ffffffaa' : filled ? '#fbbf24' : '#3a4560'}`,
+              boxShadow: ready
+                ? `0 0 ${small ? 9 : 12}px ${readyGlow}, 0 0 ${small ? 16 : 22}px ${readyGlow}88`
+                : filled ? `0 0 ${small ? 5 : 7}px rgba(251,191,36,0.55)` : 'none',
             }}
           />
         )
