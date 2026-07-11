@@ -62,16 +62,18 @@ function fmtRunTime(ms: number): string {
 }
 
 // Gauntlet "Deepest Descent" — compound sort: deepest CASHED-OUT depth, then
-// fastest time to it, then who got there first (created_at). The view already
-// excludes deaths (only cash-outs write gauntlet_best_depth) + admins. The
-// hardcore "Drowned Ledger" board is the same shape on its own view.
+// WHO GOT THERE FIRST (created_at), then fastest run time. First-to-depth wins
+// ties by design (2026-07-11, was fastest-run-first): reaching a record depth
+// first is the claim; a later, faster run to the SAME depth doesn't take it.
+// The view already excludes deaths (only cash-outs write gauntlet_best_depth)
+// + admins. The hardcore "Drowned Ledger" board is the same shape on its own view.
 async function fetchGauntlet(admin: Admin, userId: string, view = 'leaderboard_gauntlet') {
   const [{ data: top }, { data: me }] = await Promise.all([
     admin.from(view)
       .select('user_id, username, score, time_ms')
       .order('score', { ascending: false })
-      .order('time_ms', { ascending: true })
       .order('created_at', { ascending: true })
+      .order('time_ms', { ascending: true })
       .limit(50),
     admin.from(view).select('score').eq('user_id', userId).single(),
   ])

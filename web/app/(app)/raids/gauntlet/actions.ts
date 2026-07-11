@@ -557,23 +557,35 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   if (hc) {
     const prevHcBestDep = (profile.gauntlet_hc_best_depth as number | null) ?? 0
     const prevHcBestMs  = (profile.gauntlet_hc_best_depth_ms as number | null) ?? null
-    const beatsHcBest   = runMs != null && (cd > prevHcBestDep || (cd === prevHcBestDep && (prevHcBestMs == null || runMs < prevHcBestMs)))
+    // First-to-depth wins board ties, so `_at` is the CLAIM time: stamped only
+    // when the depth strictly increases. A faster re-run at the SAME depth
+    // still improves the shown run time but keeps the original claim.
+    const hcNewDepth    = runMs != null && cd > prevHcBestDep
+    const hcFasterSame  = runMs != null && cd === prevHcBestDep && (prevHcBestMs == null || runMs < prevHcBestMs)
     recordFields = {
       gauntlet_hc_deepest: hcDeepest,
       gauntlet_run_hardcore: false,
       gauntlet_hc_squad: null,
-      ...(beatsHcBest ? { gauntlet_hc_best_depth: cd, gauntlet_hc_best_depth_ms: runMs, gauntlet_hc_best_depth_at: new Date().toISOString() } : {}),
+      ...(hcNewDepth
+        ? { gauntlet_hc_best_depth: cd, gauntlet_hc_best_depth_ms: runMs, gauntlet_hc_best_depth_at: new Date().toISOString() }
+        : hcFasterSame ? { gauntlet_hc_best_depth_ms: runMs } : {}),
       ...(cd > prevHcDeepest ? { gauntlet_hc_deepest_run: sanitizeRunSnapshot(runSnapshot, cd) } : {}),
     }
   } else {
     const prevBestDep = (profile.gauntlet_best_depth as number | null) ?? 0
     const prevBestMs  = (profile.gauntlet_best_depth_ms as number | null) ?? null
-    const beatsBest   = runMs != null && (cd > prevBestDep || (cd === prevBestDep && (prevBestMs == null || runMs < prevBestMs)))
+    // First-to-depth wins board ties — `_at` is the CLAIM time, stamped only on
+    // a strictly deeper cash-out. Faster same-depth re-runs update the run time
+    // shown on the board without moving the claim.
+    const newDepth    = runMs != null && cd > prevBestDep
+    const fasterSame  = runMs != null && cd === prevBestDep && (prevBestMs == null || runMs < prevBestMs)
     const contestActive  = Date.now() < Date.parse(GAUNTLET_DEEPEST_CONTEST_ENDS_AT)
     const prevContestDep = (profile.gauntlet_contest_depth as number | null) ?? 0
     recordFields = {
       gauntlet_deepest: deepest,
-      ...(beatsBest ? { gauntlet_best_depth: cd, gauntlet_best_depth_ms: runMs, gauntlet_best_depth_at: new Date().toISOString() } : {}),
+      ...(newDepth
+        ? { gauntlet_best_depth: cd, gauntlet_best_depth_ms: runMs, gauntlet_best_depth_at: new Date().toISOString() }
+        : fasterSame ? { gauntlet_best_depth_ms: runMs } : {}),
       ...(contestActive && cd > prevContestDep ? { gauntlet_contest_depth: cd, gauntlet_contest_depth_at: new Date().toISOString() } : {}),
       ...(cd > prevDeepest ? { gauntlet_deepest_run: sanitizeRunSnapshot(runSnapshot, cd) } : {}),
     }
