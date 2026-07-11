@@ -767,8 +767,19 @@ body.hardcore-gauntlet::after {
   border: 1px solid rgba(255, 255, 255, 0.4);
   animation: tier-prism 5s linear infinite;
 }
+/* Same prism, TEXT-ONLY (no pill): the rainbow rides the letters via
+   background-clip, so Grandmaster reads a step above gold without a filled
+   background block. Used on the badges page meta lines. */
+.tier-grandmaster-text {
+  background-image: linear-gradient(90deg, #f26d6d, #f2c14e, #57d06a, #5aa9f0, #c77dff, #f26d6d);
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: tier-prism 5s linear infinite;
+}
 @keyframes tier-prism { to { background-position: 220% center; } }
-@media (prefers-reduced-motion: reduce) { .tier-grandmaster-chip { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .tier-grandmaster-chip, .tier-grandmaster-text { animation: none; } }
 
 /* ── Hook glows (per-theme animated effects) ──
    Used by lib/hooks.ts via hookGlowClass(). chrome / gilded are very

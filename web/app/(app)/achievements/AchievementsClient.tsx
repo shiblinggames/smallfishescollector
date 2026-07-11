@@ -297,8 +297,8 @@ export default function AchievementsClient({ groups }: Props) {
                   {/* Tier · points · reward */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, marginTop: 8, flexWrap: 'wrap' }}>
                     {diff && (g.difficulty === 'grandmaster'
-                      ? <span className="font-karla font-700 uppercase tier-grandmaster-chip" style={{ fontSize: '0.62rem', letterSpacing: '0.06em', borderRadius: 999, padding: '0.18rem 0.6rem' }}>{diff.label}</span>
-                      : <span className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.06em', color: accent, background: `${accent}1f`, border: `1px solid ${accent}66`, borderRadius: 999, padding: '0.18rem 0.6rem' }}>{diff.label}</span>)}
+                      ? <span className="font-karla font-800 uppercase tier-grandmaster-text" style={{ fontSize: '0.64rem', letterSpacing: '0.12em' }}>{diff.label}</span>
+                      : <span className="font-karla font-800 uppercase" style={{ fontSize: '0.64rem', letterSpacing: '0.12em', color: accent }}>{diff.label}</span>)}
                     <span className="font-karla font-700" style={{ fontSize: '0.76rem', color: 'rgba(240,237,232,0.75)' }}>{points} pt{points === 1 ? '' : 's'}</span>
                     <span style={{ color: 'rgba(240,237,232,0.3)' }}>·</span>
                     <span className="font-karla font-700" style={{ fontSize: '0.76rem', color: GOLD }}>{reward.toLocaleString()} ⟡</span>
@@ -504,7 +504,7 @@ function GoalRow({ g, groupAccent, claimed, busy, onClaim, onOpen }: {
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 7, marginTop: 6, flexWrap: 'wrap' }}>
             {diff && (
               g.difficulty === 'grandmaster'
-              ? <span className="font-karla font-700 uppercase tier-grandmaster-chip" style={{ fontSize: '0.6rem', letterSpacing: '0.06em', borderRadius: 999, padding: '0.15rem 0.5rem' }}>{diff.label}</span>
+              ? <span className="font-karla font-800 uppercase tier-grandmaster-text" style={{ fontSize: '0.62rem', letterSpacing: '0.12em' }}>{diff.label}</span>
               : <span className="font-karla font-800 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.12em', color: accent }}>{diff.label}</span>
             )}
             <span style={{ color: 'rgba(240,237,232,0.25)', fontSize: '0.66rem' }}>·</span>
