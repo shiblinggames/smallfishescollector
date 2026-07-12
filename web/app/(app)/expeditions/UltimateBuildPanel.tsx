@@ -56,6 +56,8 @@ export default function UltimateBuildPanel({
   const [schemOwned, setSchemOwned] = useState(schematics)
   const [celebrate, setCelebrate] = useState(false)
   const [armKey, setArmKey] = useState(0)
+  // Weapon Bay slot selection (null = follow the armed / incoming weapon).
+  const [sel, setSel] = useState<ShipAugmentId | null>(null)
 
   const remaining = useRemaining(build?.completesAt ?? null)
   const complete = !!build && remaining <= 0
@@ -107,7 +109,7 @@ export default function UltimateBuildPanel({
   async function armWeapon(id: ShipAugmentId) {
     if (id === active) return
     const prev = active
-    setActive(id); setArmKey(k => k + 1); setErr(null)
+    setActive(id); setArmKey(k => k + 1); setSel(null); setErr(null)
     vibrate([0, 20])
     const res = await switchUltimate(id)
     if (!res.ok) { setActive(prev); setErr(res.error ?? 'Could not switch weapons.') }
@@ -123,7 +125,7 @@ export default function UltimateBuildPanel({
   )
 
   // ── State 3/4: a build is underway (or just finished) ──────────────────────
-  if (build) {
+  if (build && (complete || !build.retool)) {
     const a = getShipAugment(build.id)!
     const isRetool = !!build.retool
     if (complete) return (
@@ -184,156 +186,143 @@ export default function UltimateBuildPanel({
     )
   }
 
-  // ── State 4 (settled): a weapon is live. The armory opens up from here:
-  //    schematics owners swap freely and instantly; everyone else can retool
-  //    (250k + 24h, the mounted weapon stays armed while the work runs) or
-  //    buy the Full Schematics and never wait again. ──────────────────────────
+  // ── State 4 (settled): the WEAPON BAY — the one post-forge interface.
+  //    Three slots across the top, the selected weapon below, ONE action:
+  //    "Armed" chip, instant "Arm" (schematics), a paid "Switch" (retool),
+  //    or the retool countdown. Replaces the old stack of option cards. ───────
   if (active) {
-    const a = getShipAugment(active)!
-    const others = SHIP_AUGMENTS.filter(w => w.id !== active)
-    const rackNote = !hasRack && (
-      <p className="font-karla" style={{ fontSize: '0.64rem', color: '#caa05a', lineHeight: 1.4, marginTop: 7 }}>
-        It stays silent until you own the Extra Cannonball Rack (Gauntlet, depth 10) to hold {MEGA_CHARGE_COST} cannonballs and fire the Mega.
-      </p>
-    )
-
-    // Schematics unlock celebration — a one-shot takeover beat.
     if (celebrate) return (
       <div style={{ marginBottom: '1.7rem' }}>
-        {HEADER}
         <SchematicsCelebration onDone={() => setCelebrate(false)} />
       </div>
     )
 
-    // ── The Armory (Full Schematics owned): free, instant switching ──────────
-    if (schemOwned) return (
-      <div style={{ marginBottom: '1.7rem' }}>
-        {HEADER}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 }}>
-          <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.56rem', color: '#d4ba78' }}>The Armory</p>
-          <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#f0c040', background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.45)', borderRadius: 999, padding: '0.18rem 0.55rem' }}>Full Schematics</span>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-          {SHIP_AUGMENTS.map(w => {
-            const on = w.id === active
-            if (on) return (
-              <motion.div key={w.id} layout initial={{ scale: 0.97 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 380, damping: 26 }}
-                style={{ position: 'relative', borderRadius: 16, padding: '1rem 0.95rem', overflow: 'hidden', background: `${w.color}14`, border: `1.5px solid ${w.color}`, boxShadow: `0 0 26px ${w.color}2e` }}>
-                {/* one-shot color sweep every time this weapon is armed */}
-                <motion.div key={`sweep-${armKey}`} aria-hidden initial={{ x: '-130%' }} animate={{ x: '130%' }} transition={{ duration: 0.7, ease: 'easeOut' }}
-                  style={{ position: 'absolute', top: 0, bottom: 0, width: '45%', background: `linear-gradient(90deg, transparent, ${w.color}33, transparent)`, pointerEvents: 'none' }} />
-                <div style={{ position: 'relative' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
-                    <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: w.color }}>{w.name}</p>
-                    <motion.span key={`stamp-${armKey}`} initial={{ scale: 1.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 420, damping: 20 }}
-                      className="font-karla font-700 uppercase tracking-[0.1em]"
-                      style={{ fontSize: '0.5rem', color: '#0c0f14', background: w.color, borderRadius: 999, padding: '0.2rem 0.6rem', boxShadow: `0 0 14px ${w.color}88` }}>
-                      Armed
-                    </motion.span>
-                  </div>
-                  <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: w.color, margin: '2px 0 8px', lineHeight: 1.3 }}>{w.identity}</p>
-                  <UltimatePreview id={w.id} color={w.color} />
-                  <PerkList perks={w.perks} color={w.color} />
-                  {rackNote}
-                </div>
-              </motion.div>
-            )
-            return (
-              <motion.button key={w.id} layout type="button" onClick={() => armWeapon(w.id)}
-                whileTap={{ scale: 0.985 }}
-                className="tap"
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, textAlign: 'left', borderRadius: 14, padding: '0.75rem 0.85rem', cursor: 'pointer', background: `${w.color}0a`, border: `1px solid ${w.color}38` }}>
-                <div style={{ minWidth: 0 }}>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: w.color }}>{w.name}</p>
-                  <p className="font-karla" style={{ fontSize: '0.64rem', color: '#9a948c', lineHeight: 1.35, marginTop: 2 }}>{w.identity}</p>
-                </div>
-                <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ flexShrink: 0, fontSize: '0.6rem', color: w.color, background: `${w.color}16`, border: `1px solid ${w.color}55`, borderRadius: 999, padding: '0.35rem 0.75rem' }}>
-                  Arm ›
-                </span>
-              </motion.button>
-            )
-          })}
-        </div>
-        <p className="font-karla" style={{ fontSize: '0.62rem', color: '#7f7a72', textAlign: 'center', marginTop: 9, letterSpacing: '0.02em' }}>
-          Swap freely. No cost, no wait. The mounts answer to you now.
-        </p>
-        {err && <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#fca5a5', textAlign: 'center', marginTop: 6 }}>{err}</p>}
-      </div>
-    )
+    const retooling = !!build?.retool && !complete
+    const retoolTarget = retooling ? build!.id : null
+    const selectedId = sel ?? (retoolTarget ?? (active as ShipAugmentId))
+    const w = getShipAugment(selectedId)!
+    const armedSel = selectedId === active
+    const confirming = confirmRetool === selectedId
+    const canAfford = doubloons >= RETOOL_COST
+    const pickSlot = (id: ShipAugmentId) => { setSel(id); setConfirmRetool(null); setConfirmSchem(false); setErr(null) }
+    const progress = retooling ? Math.min(1, 1 - remaining / ULTIMATE_BUILD_MS) : 0
 
-    // ── Forged, no schematics: armed card + retool lane + the big unlock ─────
     return (
       <div style={{ marginBottom: '1.7rem' }}>
-        {HEADER}
-        <div style={{ borderRadius: 16, padding: '1rem 0.95rem', background: `${a.color}14`, border: `1px solid ${a.color}66`, boxShadow: `0 0 26px ${a.color}1c` }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
-            <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: a.color }}>{a.name}</p>
-            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#0c0f14', background: a.color, borderRadius: 999, padding: '0.2rem 0.6rem' }}>Armed</span>
+        <div style={{ position: 'relative', borderRadius: 16, overflow: 'hidden', padding: '0.85rem 0.85rem 0.9rem', background: 'linear-gradient(180deg, rgba(22,25,36,0.88), rgba(10,12,18,0.94))', border: `1px solid ${w.color}44`, boxShadow: `0 0 26px ${w.color}14` }}>
+          {/* header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 9 }}>
+            <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#ffd56b', letterSpacing: '0.04em' }}>Weapon Bay</p>
+            {schemOwned && (
+              <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.48rem', color: '#f0c040', background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.45)', borderRadius: 999, padding: '0.16rem 0.5rem' }}>Full Schematics</span>
+            )}
           </div>
-          <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: a.color, margin: '2px 0 8px', lineHeight: 1.3 }}>{a.identity}</p>
-          {/* No looping preview once it's forged and live — you already own it;
-              the perks are the useful reference now. */}
-          <PerkList perks={a.perks} color={a.color} />
-          {rackNote}
-        </div>
 
-        {/* Retool lane — the other two weapons, each a paid 24h refit. */}
-        <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.56rem', color: '#8a8480', margin: '1rem 0 0.55rem' }}>Retool the mounts</p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-          {others.map(w => {
-            const confirming = confirmRetool === w.id
-            const canAfford = doubloons >= RETOOL_COST
-            return (
-              <div key={w.id} style={{ borderRadius: 14, padding: '0.8rem', background: confirming ? `${w.color}16` : `${w.color}0b`, border: `1px solid ${w.color}${confirming ? '77' : '3a'}` }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: w.color }}>{w.name}</p>
-                  <span className="font-karla font-700" style={{ fontSize: '0.58rem', color: w.color }}>×{w.megaMult.toFixed(1)} damage</span>
-                </div>
-                <p className="font-karla font-700" style={{ fontSize: '0.66rem', color: w.color, margin: '2px 0 7px', lineHeight: 1.3 }}>{w.identity}</p>
-                {confirming ? (
-                  <div>
-                    <UltimatePreview id={w.id} color={w.color} />
-                    <p className="font-karla font-700" style={{ fontSize: '0.64rem', color: '#e0a955', lineHeight: 1.4, margin: '8px 0 7px' }}>
-                      {RETOOL_COST.toLocaleString()} ⟡ and 24 hours to retool. {a.name} stays armed until the work is done.
-                    </p>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button type="button" onClick={() => { setConfirmRetool(null); setErr(null) }} disabled={busy}
-                        className="font-karla font-700 uppercase tracking-[0.08em] tap"
-                        style={{ flex: 1, padding: '0.6rem', borderRadius: 10, fontSize: '0.66rem', color: '#cfc9bf', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', cursor: 'pointer' }}>
-                        Cancel
-                      </button>
-                      <button type="button" onClick={() => canAfford && startRetool(w.id)} disabled={!canAfford || busy}
-                        className="font-karla font-700 uppercase tracking-[0.08em] tap"
-                        style={{ flex: 1.5, padding: '0.6rem', borderRadius: 10, fontSize: '0.66rem', cursor: canAfford && !busy ? 'pointer' : 'default', color: canAfford ? w.color : '#6a6764', background: canAfford ? `${w.color}1c` : 'rgba(255,255,255,0.04)', border: `1px solid ${canAfford ? `${w.color}66` : 'rgba(255,255,255,0.1)'}` }}>
-                        {busy ? 'Starting…' : canAfford ? `Begin retool · ${RETOOL_COST.toLocaleString()} ⟡` : `Need ${(RETOOL_COST - doubloons).toLocaleString()} more ⟡`}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <button type="button" onClick={() => { setConfirmRetool(w.id); setConfirmSchem(false); setErr(null) }}
-                    className="font-karla font-700 uppercase tracking-[0.08em] tap"
-                    style={{ width: '100%', padding: '0.55rem', borderRadius: 10, fontSize: '0.64rem', color: w.color, background: `${w.color}12`, border: `1px solid ${w.color}50`, cursor: 'pointer' }}>
-                    Retool · {RETOOL_COST.toLocaleString()} ⟡ · 24 hrs
-                  </button>
-                )}
-              </div>
-            )
-          })}
-        </div>
+          {/* the three slots */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+            {SHIP_AUGMENTS.map(t => {
+              const on = t.id === selectedId
+              const tag = t.id === active ? 'Armed' : t.id === retoolTarget ? 'Incoming' : null
+              return (
+                <button key={t.id} type="button" onClick={() => pickSlot(t.id)}
+                  className="font-karla font-700 tap"
+                  style={{ flex: 1, padding: '0.5rem 0.2rem 0.4rem', borderRadius: 10, fontSize: '0.66rem', cursor: 'pointer', textAlign: 'center', color: on ? t.color : '#8d8880', background: on ? `${t.color}1c` : 'rgba(255,255,255,0.035)', border: `1px solid ${on ? `${t.color}88` : 'rgba(255,255,255,0.09)'}` }}>
+                  {t.name}
+                  <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ display: 'block', marginTop: 2, fontSize: '0.44rem', color: tag === 'Armed' ? t.color : tag === 'Incoming' ? '#e0a955' : 'transparent' }}>
+                    {tag ?? ' '}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
 
-        {/* The Full Schematics — the never-wait-again unlock. Blueprint look:
-            deep drafting-table blue, faint grid, gold rule. Static styling
-            only (no loops) — the celebration carries the fireworks. */}
-        <div style={{ position: 'relative', marginTop: '0.95rem', borderRadius: 16, overflow: 'hidden', padding: '1rem 0.95rem', border: '1px solid rgba(240,192,64,0.5)', background: 'linear-gradient(165deg, rgba(16,26,48,0.94), rgba(9,13,24,0.96))', boxShadow: '0 0 30px rgba(240,192,64,0.1)' }}>
-          <div aria-hidden style={{ position: 'absolute', inset: 0, opacity: 0.5, background: 'repeating-linear-gradient(0deg, transparent, transparent 17px, rgba(120,160,220,0.07) 17px, rgba(120,160,220,0.07) 18px), repeating-linear-gradient(90deg, transparent, transparent 17px, rgba(120,160,220,0.07) 17px, rgba(120,160,220,0.07) 18px)', pointerEvents: 'none' }} />
+          {/* selected weapon */}
           <div style={{ position: 'relative' }}>
-            <p className="font-karla font-700 uppercase tracking-[0.2em]" style={{ fontSize: '0.52rem', color: '#f0c040', marginBottom: 5 }}>One purchase · never wait again</p>
-            <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#f5f2ec', marginBottom: 6, textShadow: '0 0 16px rgba(240,192,64,0.25)' }}>{ULTIMATE_STORY.schematicsTitle}</p>
-            <p className="font-karla" style={{ fontSize: '0.7rem', color: '#aeb6c6', lineHeight: 1.5, marginBottom: 10 }}>{ULTIMATE_STORY.schematicsBlurb}</p>
-            {confirmSchem ? (
+            {/* one-shot color sweep when a weapon is armed */}
+            {armedSel && armKey > 0 && (
+              <motion.div key={`sweep-${armKey}`} aria-hidden initial={{ x: '-130%' }} animate={{ x: '130%' }} transition={{ duration: 0.7, ease: 'easeOut' }}
+                style={{ position: 'absolute', inset: 0, width: '45%', background: `linear-gradient(90deg, transparent, ${w.color}33, transparent)`, pointerEvents: 'none', zIndex: 1 }} />
+            )}
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+              <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: w.color, lineHeight: 1.3 }}>{w.identity}</p>
+              <span className="font-karla font-700" style={{ flexShrink: 0, fontSize: '0.58rem', color: w.color }}>×{w.megaMult.toFixed(1)} damage</span>
+            </div>
+            <UltimatePreview id={selectedId} color={w.color} />
+          </div>
+
+          {/* ONE action */}
+          <div style={{ marginTop: 10 }}>
+            {armedSel ? (
+              <>
+                <motion.div key={`stamp-${armKey}`} initial={armKey > 0 ? { scale: 1.12 } : false} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 420, damping: 20 }}
+                  className="font-karla font-700 uppercase tracking-[0.14em]"
+                  style={{ width: '100%', padding: '0.6rem', borderRadius: 10, fontSize: '0.66rem', textAlign: 'center', color: '#0c0f14', background: w.color, boxShadow: `0 0 16px ${w.color}66` }}>
+                  {retooling ? `Armed until ${getShipAugment(retoolTarget!)!.name} arrives` : 'Armed'}
+                </motion.div>
+                {!hasRack && (
+                  <p className="font-karla" style={{ fontSize: '0.62rem', color: '#caa05a', textAlign: 'center', lineHeight: 1.4, marginTop: 6 }}>
+                    Needs the Extra Cannonball Rack (Gauntlet depth 10) to fire.
+                  </p>
+                )}
+              </>
+            ) : selectedId === retoolTarget ? (
               <div>
-                <p className="font-karla font-700" style={{ fontSize: '0.64rem', color: '#e0a955', lineHeight: 1.4, marginBottom: 7 }}>
-                  {SCHEMATICS_COST.toLocaleString()} ⟡, once. Every ultimate, any time, free to swap, forever.
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                  <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.54rem', color: '#8a8480' }}>Arming in</span>
+                  <span className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: '#f5f2ec', fontVariantNumeric: 'tabular-nums' }}>{fmt(remaining)}</span>
+                </div>
+                <div style={{ marginTop: 5, height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
+                  <motion.div initial={false} animate={{ width: `${progress * 100}%` }} transition={{ ease: 'linear' }}
+                    style={{ height: '100%', borderRadius: 999, background: `linear-gradient(90deg, ${w.color}, #fff)`, boxShadow: `0 0 10px ${w.color}` }} />
+                </div>
+              </div>
+            ) : retooling ? (
+              <button type="button" onClick={() => swap(selectedId)} disabled={busy}
+                className="font-karla font-700 uppercase tracking-[0.08em] tap"
+                style={{ width: '100%', padding: '0.6rem', borderRadius: 10, fontSize: '0.66rem', color: w.color, background: `${w.color}14`, border: `1px solid ${w.color}55`, cursor: 'pointer' }}>
+                Switch the work to {w.name} · free
+              </button>
+            ) : schemOwned ? (
+              <button type="button" onClick={() => armWeapon(selectedId)}
+                className="font-cinzel font-700 uppercase tracking-[0.14em] tap"
+                style={{ width: '100%', padding: '0.65rem', borderRadius: 10, fontSize: '0.72rem', color: '#0c0f14', background: `linear-gradient(180deg, ${w.color}, ${w.color}cc)`, border: 'none', cursor: 'pointer', boxShadow: `0 0 18px ${w.color}55` }}>
+                Arm {w.name}
+              </button>
+            ) : confirming ? (
+              <div>
+                <p className="font-karla font-700" style={{ fontSize: '0.64rem', color: '#e0a955', textAlign: 'center', lineHeight: 1.4, marginBottom: 7 }}>
+                  Costs {RETOOL_COST.toLocaleString()} ⟡ and takes 24 hours. {getShipAugment(active)!.name} stays armed until then.
+                </p>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button type="button" onClick={() => { setConfirmRetool(null); setErr(null) }} disabled={busy}
+                    className="font-karla font-700 uppercase tracking-[0.08em] tap"
+                    style={{ flex: 1, padding: '0.6rem', borderRadius: 10, fontSize: '0.66rem', color: '#cfc9bf', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', cursor: 'pointer' }}>
+                    Cancel
+                  </button>
+                  <button type="button" onClick={() => canAfford && startRetool(selectedId)} disabled={!canAfford || busy}
+                    className="font-karla font-700 uppercase tracking-[0.08em] tap"
+                    style={{ flex: 1.5, padding: '0.6rem', borderRadius: 10, fontSize: '0.66rem', cursor: canAfford && !busy ? 'pointer' : 'default', color: canAfford ? w.color : '#6a6764', background: canAfford ? `${w.color}1c` : 'rgba(255,255,255,0.04)', border: `1px solid ${canAfford ? `${w.color}66` : 'rgba(255,255,255,0.1)'}` }}>
+                    {busy ? 'Starting…' : canAfford ? 'Start the switch' : `Need ${(RETOOL_COST - doubloons).toLocaleString()} more ⟡`}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button type="button" onClick={() => { setConfirmRetool(selectedId); setConfirmSchem(false); setErr(null) }}
+                className="font-karla font-700 uppercase tracking-[0.08em] tap"
+                style={{ width: '100%', padding: '0.6rem', borderRadius: 10, fontSize: '0.66rem', color: w.color, background: `${w.color}14`, border: `1px solid ${w.color}55`, cursor: 'pointer' }}>
+                Switch to {w.name} · {RETOOL_COST.toLocaleString()} ⟡ · 24 hrs
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Full Schematics — one compact line under the bay (until owned). */}
+        {!schemOwned && (
+          <div style={{ marginTop: 8, borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(240,192,64,0.45)', background: 'linear-gradient(165deg, rgba(16,26,48,0.94), rgba(9,13,24,0.96))' }}>
+            {confirmSchem ? (
+              <div style={{ padding: '0.7rem 0.75rem' }}>
+                <p className="font-karla font-700" style={{ fontSize: '0.64rem', color: '#e0a955', textAlign: 'center', lineHeight: 1.4, marginBottom: 7 }}>
+                  {SCHEMATICS_COST.toLocaleString()} ⟡ once. Switch weapons free and instantly, forever.
                 </p>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button type="button" onClick={() => { setConfirmSchem(false); setErr(null) }} disabled={busy}
@@ -343,20 +332,24 @@ export default function UltimateBuildPanel({
                   </button>
                   <button type="button" onClick={() => doubloons >= SCHEMATICS_COST && buySchem()} disabled={doubloons < SCHEMATICS_COST || busy}
                     className="font-karla font-700 uppercase tracking-[0.08em] tap"
-                    style={{ flex: 1.5, padding: '0.6rem', borderRadius: 10, fontSize: '0.66rem', cursor: doubloons >= SCHEMATICS_COST && !busy ? 'pointer' : 'default', color: doubloons >= SCHEMATICS_COST ? '#0c0f14' : '#6a6764', background: doubloons >= SCHEMATICS_COST ? 'linear-gradient(180deg, #f0c040, #d4a02c)' : 'rgba(255,255,255,0.04)', border: 'none', boxShadow: doubloons >= SCHEMATICS_COST ? '0 0 18px rgba(240,192,64,0.35)' : 'none' }}>
-                    {busy ? 'Buying…' : doubloons >= SCHEMATICS_COST ? `Buy · ${SCHEMATICS_COST.toLocaleString()} ⟡` : `Need ${(SCHEMATICS_COST - doubloons).toLocaleString()} more ⟡`}
+                    style={{ flex: 1.5, padding: '0.6rem', borderRadius: 10, fontSize: '0.66rem', cursor: doubloons >= SCHEMATICS_COST && !busy ? 'pointer' : 'default', color: doubloons >= SCHEMATICS_COST ? '#0c0f14' : '#6a6764', background: doubloons >= SCHEMATICS_COST ? 'linear-gradient(180deg, #f0c040, #d4a02c)' : 'rgba(255,255,255,0.04)', border: 'none' }}>
+                    {busy ? 'Buying…' : doubloons >= SCHEMATICS_COST ? 'Buy' : `Need ${(SCHEMATICS_COST - doubloons).toLocaleString()} more ⟡`}
                   </button>
                 </div>
               </div>
             ) : (
               <button type="button" onClick={() => { setConfirmSchem(true); setConfirmRetool(null); setErr(null) }}
-                className="font-karla font-700 uppercase tracking-[0.08em] tap"
-                style={{ width: '100%', padding: '0.6rem', borderRadius: 10, fontSize: '0.66rem', color: '#f0c040', background: 'rgba(240,192,64,0.1)', border: '1px solid rgba(240,192,64,0.5)', cursor: 'pointer' }}>
-                Buy the Full Schematics · {SCHEMATICS_COST.toLocaleString()} ⟡
+                className="tap"
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, width: '100%', padding: '0.65rem 0.75rem', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
+                <span style={{ minWidth: 0 }}>
+                  <span className="font-cinzel font-700" style={{ display: 'block', fontSize: '0.8rem', color: '#f0c040' }}>{ULTIMATE_STORY.schematicsTitle}</span>
+                  <span className="font-karla" style={{ display: 'block', fontSize: '0.6rem', color: '#aeb6c6', marginTop: 1 }}>Switch any time. Free, instant, forever.</span>
+                </span>
+                <span className="font-karla font-700" style={{ flexShrink: 0, fontSize: '0.62rem', color: '#f0c040' }}>{SCHEMATICS_COST.toLocaleString()} ⟡ ›</span>
               </button>
             )}
           </div>
-        </div>
+        )}
         {err && <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#fca5a5', textAlign: 'center', marginTop: 6 }}>{err}</p>}
       </div>
     )
