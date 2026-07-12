@@ -1838,7 +1838,7 @@ export const RAID_MAP: RaidNode[] = [
     detail: {
       description:
         "The don's escort armada fights like nothing before it. Every hull opens behind a barrier your shots must chew through first; every magazine runs FOUR cannonballs deep, so their fire never falls into a rhythm you can bank on. And his crews throw more than iron: nets that foul your wheel, chain-shot that softens your guns, cracker rounds that spring your seams, and a gag order that silences your crew. The Hammerhead himself rises angrier as he swings — meet the Full Swing with a crew ability, or fold under it.",
-      enemies: ['The Picket', 'The Netter', 'The Chainman', 'The Cracksman', 'The Muzzle', 'The Hammerhead'],
+      enemies: ['The Picket', 'The Bosun', 'The Netter', 'The Chainman', 'The Cracksman', 'The Purser', 'The Muzzle', 'The Hammerhead'],
       drops: lootDrops(THE_HAMMERHEAD.loot),
       clearReward: clearPayout(THE_HAMMERHEAD),
       dropsNote: 'One crate per clear, rolled once and scaled by your Fortune. The Chain-Shot Rack is the signature chase — turn their own Weaken back on them. Two stronger Tide events between fights.',
@@ -1857,7 +1857,7 @@ export const RAID_MAP: RaidNode[] = [
     detail: {
       description:
         "The blockade again, harder for the breaking. Thicker barriers, deeper clips, the same dirty specials and the same Full Swing — all of it meaner. The chase rewards roll richer.",
-      enemies: ['The Picket', 'The Netter', 'The Chainman', 'The Cracksman', 'The Muzzle', 'The Hammerhead'],
+      enemies: ['The Picket', 'The Bosun', 'The Netter', 'The Chainman', 'The Cracksman', 'The Purser', 'The Muzzle', 'The Hammerhead'],
       drops: lootDrops(THE_HAMMERHEAD_CHALLENGE.loot),
       clearReward: clearPayout(THE_HAMMERHEAD_CHALLENGE),
       dropsNote: 'Every kill pays more and the clear bonus is steeper than the normal run.',

@@ -1224,6 +1224,20 @@ export const THE_HAMMERHEAD: BossRaidConfig = {
       image: '/enemychapter3brigantine.png',
       portrait: '/enemychapter3brigantine.png',
     },
+    bosun: {
+      // FORTIFY debut (self-buff) — he closes ranks and takes less damage for
+      // a spell; learn to wait out (or burst through) a braced window.
+      id: 'bosun', name: 'The Bosun', hpBase: 330, minDmg: 21, maxDmg: 35,
+      shipSpeed: 6, actionMs: 3600,
+      magazineSize: 4, shieldPct: 0.16,
+      critDrift: 0.5, critDriftName: 'Rolling Plate',
+      special: { name: 'Close Ranks', status: 'fortify', magnitude: 0.25, turns: 2, target: 'self', line: 'The Bosun bellows and the line locks shields, iron to iron.' },
+      pattern: ['reload', 'fire', 'special', 'reload', 'volley', 'reload', 'fire', 'dodge'],
+      critChance: 0.11,
+      zoneSpeedMult: 2.3,
+      image: '/enemychapter3brigantine.png',
+      portrait: '/enemychapter3brigantine.png',
+    },
     netter: {
       // SLOWED debut — weighted nets across your rigging cut your speed, so
       // you lose turn-order rolls and slip fewer shots while it lasts.
@@ -1262,6 +1276,20 @@ export const THE_HAMMERHEAD: BossRaidConfig = {
       critDrift: 0.7, critDriftName: 'Rolling Plate',
       pattern: ['reload', 'reload', 'special', 'volley', 'reload', 'fire', 'volley', 'dodge'],
       critChance: 0.10,
+      zoneSpeedMult: 2.6,
+      image: '/enemychapter3galleon.png',
+      portrait: '/enemychapter3galleon.png',
+    },
+    purser: {
+      // REGEN debut (self-buff) — he patches his crews mid-fight and the bar
+      // creeps back up; a sponge that punishes slow, polite damage.
+      id: 'purser', name: 'The Purser', hpBase: 410, minDmg: 25, maxDmg: 39,
+      shipSpeed: 7, actionMs: 3800,
+      magazineSize: 4, shieldPct: 0.22,
+      critDrift: 0.8, critDriftName: 'Rolling Plate',
+      special: { name: 'Patch Crews', status: 'regen', magnitude: 16, turns: 3, target: 'self', line: 'The Purser pays his carpenters in advance, and the hull knits while you watch.' },
+      pattern: ['special', 'reload', 'fire', 'reload', 'fire', 'volley', 'reload', 'dodge'],
+      critChance: 0.12,
       zoneSpeedMult: 2.6,
       image: '/enemychapter3galleon.png',
       portrait: '/enemychapter3galleon.png',
@@ -1311,7 +1339,7 @@ export const THE_HAMMERHEAD: BossRaidConfig = {
       portrait: '/enemychapter3man-o-war.png',
     },
   },
-  sequence: ['picket', 'netter', 'chainman', 'cracksman', 'muzzle'],
+  sequence: ['picket', 'bosun', 'netter', 'chainman', 'cracksman', 'purser', 'muzzle'],
   bossId: 'hammerhead',
   tides: { slots: [3, 6], maxTier: 2 },
   loot: [
@@ -1324,9 +1352,11 @@ export const THE_HAMMERHEAD: BossRaidConfig = {
   ],
   killRewards: {
     picket:     { gold: 170,  xp: 190  },
+    bosun:      { gold: 180,  xp: 200  },
     netter:     { gold: 190,  xp: 210  },
     chainman:   { gold: 210,  xp: 230  },
     cracksman:  { gold: 230,  xp: 250  },
+    purser:     { gold: 245,  xp: 265  },
     muzzle:     { gold: 260,  xp: 280  },
     hammerhead: { gold: 1700, xp: 2000 },
   },
