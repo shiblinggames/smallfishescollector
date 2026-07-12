@@ -218,6 +218,16 @@ export interface BroadsideEnemy {
    *  steady bead on. The zone's base pace already scales with shipSpeed, so a
    *  slow brute stays easier to crit even with a mult. Undefined = 1. */
   zoneSpeedMult?: number
+  /** The Hammerhead's raid (Ch4, Raid 7) — "Rolling Plate." The gold CRIT
+   *  band drifts WITHIN the moving target zone (a target inside the target):
+   *  the crew rolls its armor plating, so the seam never sits still. Value is
+   *  the seam's drift speed (0.5 gentle, 1.2 fast). The seam is clamped inside
+   *  the green hit band, so a crit is always also a hit, and hit/graze still
+   *  judge off the zone center — only the gold wanders. Undefined = the seam
+   *  sits centered like every other raid (zero engine cost elsewhere). */
+  critDrift?: number
+  /** Nameplate/stats-popup label for the rolling seam (mirrors aimFogName). */
+  critDriftName?: string
   /** The Cartographer's raid — "Riposte." When this enemy executes a
    *  `dodge` action and the player's same-turn action was offensive
    *  (`fire` or `volley`), `parryChance` (0-1) rolls. On success, the
@@ -1219,6 +1229,7 @@ export const THE_HAMMERHEAD: BossRaidConfig = {
       shipSpeed: 6, actionMs: 3800,
       magazineSize: 4, shieldPct: 0.18,
       special: { name: 'Weighted Nets', status: 'slowed', magnitude: 3, turns: 2, target: 'player', line: 'Weighted nets whip across your rigging and drag the wheel dead.' },
+      critDrift: 0.55, critDriftName: 'Rolling Plate',
       pattern: ['reload', 'special', 'fire', 'reload', 'volley', 'dodge', 'reload', 'fire'],
       critChance: 0.10,
       zoneSpeedMult: 2.4,
@@ -1232,6 +1243,7 @@ export const THE_HAMMERHEAD: BossRaidConfig = {
       shipSpeed: 7, actionMs: 3600,
       magazineSize: 4, shieldPct: 0.20,
       special: { name: 'Chain-Shot', status: 'weaken', magnitude: 0.20, turns: 2, target: 'player', line: 'Chain-shot screams through your powder line and your guns cough where they roared.' },
+      critDrift: 0.7, critDriftName: 'Rolling Plate',
       pattern: ['reload', 'fire', 'special', 'reload', 'fire', 'volley', 'dodge', 'reload'],
       critChance: 0.12,
       zoneSpeedMult: 2.5,
@@ -1245,6 +1257,7 @@ export const THE_HAMMERHEAD: BossRaidConfig = {
       shipSpeed: 5, actionMs: 4200,
       magazineSize: 4, shieldPct: 0.20,
       special: { name: 'Hull-Cracker', status: 'feeble', magnitude: 0.22, turns: 2, target: 'player', line: 'A cracker round springs your seams wide — every blow will find them.' },
+      critDrift: 0.7, critDriftName: 'Rolling Plate',
       pattern: ['reload', 'reload', 'special', 'volley', 'reload', 'fire', 'volley', 'dodge'],
       critChance: 0.10,
       zoneSpeedMult: 2.6,
@@ -1258,6 +1271,7 @@ export const THE_HAMMERHEAD: BossRaidConfig = {
       shipSpeed: 8, actionMs: 3600,
       magazineSize: 4, shieldPct: 0.22,
       special: { name: 'Gag Order', status: 'silence', magnitude: 1, turns: 2, target: 'player', line: 'The gag order comes down, and your crew go quiet mid-shout.' },
+      critDrift: 0.85, critDriftName: 'Rolling Plate',
       pattern: ['reload', 'special', 'fire', 'reload', 'fire', 'volley', 'reload', 'dodge'],
       critChance: 0.14,
       zoneSpeedMult: 2.7,
@@ -1273,6 +1287,7 @@ export const THE_HAMMERHEAD: BossRaidConfig = {
       shipSpeed: 8, actionMs: 4000,
       magazineSize: 4, shieldPct: 0.25,
       special: { name: 'The Hammer Rises', status: 'enrage', magnitude: 0.25, turns: 2, target: 'self', line: 'The Hammerhead rears back, and the whole line holds its breath.' },
+      critDrift: 1.0, critDriftName: 'Rolling Plate',
       pattern: ['reload', 'special', 'fire', 'reload', 'volley', 'dodge', 'fire', 'reload', 'fire'],
       critChance: 0.14,
       phases: [

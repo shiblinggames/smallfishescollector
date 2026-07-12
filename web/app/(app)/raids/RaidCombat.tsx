@@ -1144,6 +1144,13 @@ export default function RaidCombat({
   const decoyRunRef = useRef<{ pos: number; dir: number; speed: number }[]>([])
   const decoyElRefs = useRef<(HTMLDivElement | null)[]>([])
   const decoyFumbleRef = useRef(false)
+  // Rolling Plate (Raid 7) — the gold CRIT seam drifts WITHIN the target zone.
+  // Offset is in bar units relative to the zone center, clamped inside the
+  // green hit band; the RAF paints the band imperatively (critBandElRef) and
+  // lockShot samples the offset at tap (WYSIWYG, same as needle + zone).
+  const critSeamOffsetRef = useRef(0)
+  const critSeamDirRef = useRef(1)
+  const critBandElRef = useRef<HTMLDivElement | null>(null)
   const [activeDecoys, setActiveDecoys] = useState(0)
   // Raid-8 aim-bar attacks — enemy specials that strike YOUR aim, not your
   // hull. One affliction at a time; `passes` = player aim sessions remaining:
@@ -1351,7 +1358,18 @@ export default function RaidCombat({
   )
   const rampBonusPct = Math.round(Math.min(DAMAGE_RAMP_CAP, rampPerTurn * Math.max(0, turn - 1)) * 100)
   const critFreezeRef      = useRef(false)
-  useEffect(() => { critFreezeRef.current = critFreeze }, [critFreeze])
+  useEffect(() => {
+    critFreezeRef.current = critFreeze
+    // Rolling Plate: re-assert the frozen seam position after the freeze
+    // render commits — if the band width changed at lock (Sharpshot spent),
+    // React recenters `left` and the frozen picture would lie.
+    if (critFreeze && (enemy.critDrift ?? 0) > 0 && critBandElRef.current) {
+      const w = lockedCritWRef.current
+      const critBandPct = (w / (HIT_W + GRAZE_W)) * 100
+      critBandElRef.current.style.left = `${((HIT_W + GRAZE_W + critSeamOffsetRef.current) / ((HIT_W + GRAZE_W) * 2)) * 100 - critBandPct / 2}%`
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [critFreeze])
   // Ability per-turn reset effect — every new player turn clears the
   // one-ability-per-turn lock and ticks Snare's finite duration down.
   // Skips the initial mount (turn=1 doesn't need a reset).
@@ -1702,6 +1720,9 @@ export default function RaidCombat({
     if ((enemy.aimFogDensity ?? 0) > 0) {
       introLines.push(`A ${(enemy.aimFogName ?? 'mist').toLowerCase()} drifts over your aim bar. Lock by rhythm, not by sight.`)
     }
+    if ((enemy.critDrift ?? 0) > 0) {
+      introLines.push('Its plating rolls. The gold seam drifts inside the target: track the seam, not the center.')
+    }
     // "Repossession": the crooked Quartermaster reclaims one raid item he sold
     // you for THIS fight. Prefer an item with an offensive (per-shot/proc)
     // effect so the theft always bites; fall back to any equipped item.
@@ -1778,6 +1799,13 @@ export default function RaidCombat({
     squallPhaseRef.current = Math.random() * Math.PI * 2
     const squallActive = affliction?.kind === 'squall'
 
+    // Rolling Plate: seam drift for THIS pass (0 = still, like every other
+    // raid). Reset each aiming session so the seam opens centered.
+    const seamDrift = enemy.critDrift ?? 0
+    critSeamOffsetRef.current = 0
+    critSeamDirRef.current = Math.random() < 0.5 ? 1 : -1
+    const SEAM_SPEED = 0.0009 * seamDrift
+
     // False Colors: on a RANDOM fraction of fires, spawn N drifting decoy bands.
     // Decided once per aiming session so the player can't predict it. The
     // raid-8 'decoys' affliction forces them on EVERY afflicted pass instead.
@@ -1816,6 +1844,21 @@ export default function RaidCombat({
       if (zonePosRef.current >= 1 - HIT_W - GRAZE_W) { zonePosRef.current = 1 - HIT_W - GRAZE_W; zoneDirRef.current = -1 }
       if (zonePosRef.current <= HIT_W + GRAZE_W)     { zonePosRef.current = HIT_W + GRAZE_W;     zoneDirRef.current = 1 }
 
+      // Rolling Plate: walk the seam inside the hit band, bouncing at the
+      // edges, and paint the gold band at its live position.
+      if (seamDrift > 0) {
+        const maxOff = Math.max(0, HIT_W - liveCritWRef.current)
+        let o = critSeamOffsetRef.current + SEAM_SPEED * frames * critSeamDirRef.current
+        if (o >= maxOff) { o = maxOff; critSeamDirRef.current = -1 }
+        if (o <= -maxOff) { o = -maxOff; critSeamDirRef.current = 1 }
+        critSeamOffsetRef.current = o
+        const bandEl = critBandElRef.current
+        if (bandEl) {
+          const critBandPct = (liveCritWRef.current / (HIT_W + GRAZE_W)) * 100
+          bandEl.style.left = `${((HIT_W + GRAZE_W + o) / ((HIT_W + GRAZE_W) * 2)) * 100 - critBandPct / 2}%`
+        }
+      }
+
       // Drift each decoy band; flag when the needle is sitting on a fake.
       let onDecoy = false
       for (let k = 0; k < decoyRunRef.current.length; k++) {
@@ -1830,7 +1873,13 @@ export default function RaidCombat({
 
       if (indicatorRef.current) {
         indicatorRef.current.style.left = `calc(${firePosRef.current * 100}% - 2px)`
-        const zone = getShotResult(firePosRef.current, zonePosRef.current, liveCritWRef.current)
+        let zone = getShotResult(firePosRef.current, zonePosRef.current, liveCritWRef.current)
+        // Rolling Plate: the gold tell tracks the SEAM, not the zone center.
+        if (seamDrift > 0) {
+          const seamC = zonePosRef.current + critSeamOffsetRef.current
+          if (Math.abs(firePosRef.current - seamC) <= liveCritWRef.current) zone = 'critical'
+          else if (zone === 'critical') zone = 'hit'
+        }
         const bg = onDecoy            ? '#ef4444'   // on a decoy — locking duds the shot
                  : zone === 'critical' ? '#fbbf24'
                  : zone === 'hit'      ? '#4ade80'
@@ -2572,8 +2621,12 @@ export default function RaidCombat({
     // color, so the frozen picture can never disagree with the badge.
     const pos = firePosRef.current
     const zoneCenter = zonePosRef.current
+    // Rolling Plate: the crit judges against the SEAM (zone center + drift
+    // offset); hit/graze still judge the zone itself. Offset is 0 on every
+    // enemy without critDrift, so this is the old ladder everywhere else.
+    const seamCenter = zoneCenter + ((enemy.critDrift ?? 0) > 0 ? critSeamOffsetRef.current : 0)
     let res: ShotResult =
-      pos >= zoneCenter - tideCritW && pos <= zoneCenter + tideCritW ? 'critical'
+      pos >= seamCenter - tideCritW && pos <= seamCenter + tideCritW ? 'critical'
       : pos >= zoneCenter - HIT_W && pos <= zoneCenter + HIT_W ? 'hit'
       : pos >= zoneCenter - HIT_W - GRAZE_W && pos <= zoneCenter + HIT_W + GRAZE_W ? 'graze'
       : 'miss'
@@ -5039,6 +5092,17 @@ export default function RaidCombat({
                   <IconFog size={11} />
                 </span>
               )}
+              {(enemy.critDrift ?? 0) > 0 && (
+                <span
+                  aria-label={`Has ability: ${enemy.critDriftName ?? 'Rolling Plate'}`}
+                  style={{ lineHeight: 1, flexShrink: 0, color: '#f0c040', filter: 'drop-shadow(0 0 4px rgba(240,192,64,0.5))', display: 'flex' }}
+                >
+                  {/* two-way seam arrows — the crit band slides */}
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M8 7l-5 5 5 5M16 7l5 5-5 5" />
+                  </svg>
+                </span>
+              )}
               {isBoss && enemyPhase !== 2 && (
                 <span className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', color: '#fbbf24', letterSpacing: '0.1em' }}>BOSS</span>
               )}
@@ -5782,6 +5846,8 @@ export default function RaidCombat({
             // state so the player knows the first tap is the crack, not a miss.
             afflictionLabel={aimAffliction?.name ?? null}
             hardenedArmed={hardenedArmed}
+            // Rolling Plate — the RAF drives the gold band through this ref.
+            critBandRef={critBandElRef}
           />
         ) : (
           <LogBox lines={resolveLog} turn={turn} />
@@ -6674,6 +6740,43 @@ function EnemyStatsPopup({
                 </p>
                 <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.68)', lineHeight: 1.35 }}>
                   Fog drifts across your aim bar, hiding the gold center. Lock through the mist by rhythm and timing.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Rolling Plate (Raid 7) — the gold crit seam drifts inside the
+            target zone. Gold accent so it reads as an aim-skill trait. */}
+        {(enemy.critDrift ?? 0) > 0 && (
+          <div style={{ marginBottom: 14 }}>
+            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.66rem', color: '#f0c040', letterSpacing: '0.16em', marginBottom: 6 }}>
+              Ability
+            </p>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '0.65rem 0.75rem',
+              background: 'rgba(240,192,64,0.06)',
+              border: '1px solid rgba(240,192,64,0.22)',
+              borderRadius: 12,
+            }}>
+              <div style={{
+                width: 36, height: 36, flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'rgba(240,192,64,0.1)',
+                border: '1px solid rgba(240,192,64,0.3)',
+                borderRadius: 9,
+              }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f0c040" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M8 7l-5 5 5 5M16 7l5 5-5 5" />
+                </svg>
+              </div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <p className="font-karla font-700" style={{ fontSize: '0.85rem', color: '#f0c040', lineHeight: 1.15, marginBottom: 2 }}>
+                  {enemy.critDriftName ?? 'Rolling Plate'}
+                </p>
+                <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.68)', lineHeight: 1.35 }}>
+                  Its armor plating rolls as it fights: the gold critical seam drifts inside the target zone. The band still hits anywhere in the green; only the moving seam crits.
                 </p>
               </div>
             </div>
@@ -8306,7 +8409,7 @@ function LogBox({ lines, turn }: { lines: string[]; turn: number }) {
 // shift. The actual aim bar is 44px; the surrounding chrome (Turn-
 // style header + centering + helper hint) fills the rest of the slot.
 // Pairs with InlineLockButton below.
-function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, aimBlackout, critW, sharpshotActive, decoyCount, decoyElRefs, afflictionLabel, hardenedArmed }: {
+function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, aimBlackout, critW, sharpshotActive, decoyCount, decoyElRefs, afflictionLabel, hardenedArmed, critBandRef }: {
   indicatorRef: React.RefObject<HTMLDivElement | null>
   zoneRef:      React.RefObject<HTMLDivElement | null>
   flashRef:     React.RefObject<HTMLDivElement | null>
@@ -8336,6 +8439,9 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, aimBlack
   /** Hardened Lock: true while the plate is still intact THIS pass — the
    *  header flips to "tap twice" so the crack-tap doesn't read as a bug. */
   hardenedArmed?: boolean
+  /** Rolling Plate: the aim RAF repositions the gold band through this ref
+   *  when the enemy's crit seam drifts. Undefined-safe (band stays centered). */
+  critBandRef?: React.MutableRefObject<HTMLDivElement | null>
 }) {
   const fogOpacity = Math.max(0, Math.min(1, aimFogDensity ?? 0))
   const hasFog = fogOpacity > 0
@@ -8420,8 +8526,11 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, aimBlack
           {/* Gold crit band at its real width (matches the practice bar),
               with the hairline kept on top as the aim focus. Pulses while
               Sharpshot is live. */}
-          <div className={sharpshotActive ? 'rc-sharp-band' : undefined} style={{ position: 'absolute', top: '3px', bottom: '3px', left: `${50 - critBandPct / 2}%`, width: `${critBandPct}%`, background: sharpshotActive ? 'rgba(251,191,36,0.62)' : 'rgba(251,191,36,0.45)', borderRadius: 2 }} />
-          <div style={{ position: 'absolute', top: '20%', bottom: '20%', left: 'calc(50% - 1px)', width: 2, background: '#fbbf24' }} />
+          <div ref={critBandRef} className={sharpshotActive ? 'rc-sharp-band' : undefined} style={{ position: 'absolute', top: '3px', bottom: '3px', left: `${50 - critBandPct / 2}%`, width: `${critBandPct}%`, background: sharpshotActive ? 'rgba(251,191,36,0.62)' : 'rgba(251,191,36,0.45)', borderRadius: 2 }}>
+            {/* Aim hairline lives INSIDE the band so it rides the seam when
+                Rolling Plate drifts it (and sits dead center otherwise). */}
+            <div style={{ position: 'absolute', top: '14%', bottom: '14%', left: 'calc(50% - 1px)', width: 2, background: '#fbbf24' }} />
+          </div>
         </div>
         {/* False Colors — drifting DECOY bands (narrower than the real target,
             crimson/danger). The RAF positions each via decoyElRefs; locking on
