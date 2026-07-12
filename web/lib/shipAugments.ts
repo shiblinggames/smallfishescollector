@@ -15,7 +15,7 @@
 // Extra Cannonball Rack (which raises max charges 3 -> 4) to ever fire — the
 // Man-o-War's signature blow is gated behind going deep in the Locker too.
 //
-// Combat behaviour + the per-augment damage numbers live with the combat phase
+// Combat behavior + the per-augment damage numbers live with the combat phase
 // (Phase 2); this file is the catalogue, the unlock gate, and the economy.
 
 export type ShipAugmentId = 'railgun' | 'barrage' | 'nuke'
@@ -27,7 +27,7 @@ export interface ShipAugment {
   tagline: string
   /** Longer flavour line. */
   flavor: string
-  /** Accent colour for the card + the in-combat FX. */
+  /** Accent color for the card + the in-combat FX. */
   color: string
   // ── Combat (Phase 2) — all tunable here. A Volley is ×2 a single shot for
   //    reference; the Mega scales off the same single-shot roll.
@@ -65,7 +65,7 @@ export const SHIP_AUGMENTS: ShipAugment[] = [
     identity: 'The sure thing. It never fully misses.',
     perks: [
       `Can't be fully dodged — even a clean dodge only grazes it (still ~${Math.round(RAILGUN_GRAZE_PCT * 100)}% damage), never a whiff.`,
-      'Armour-piercing — no plate or carapace can soak or deflect it.',
+      'Armor-piercing — no plate or carapace can soak or deflect it.',
       'The most reliable ultimate: it always lands something.',
       '— Lowest raw multiplier of the three (that certainty is the trade).',
     ],

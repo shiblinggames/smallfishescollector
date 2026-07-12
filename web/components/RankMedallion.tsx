@@ -1,6 +1,6 @@
 // Podium rank mark — an ENGRAVED metal numeral, not a badge widget. Gold /
 // silver / bronze Cinzel digits with an embossed cut (light catches the top
-// edge, shadow under the stroke), like a rank chiselled into the harbour
+// edge, shadow under the stroke), like a rank chiselled into the harbor
 // ledger's brass plate. Replaces the 🥇🥈🥉 emoji (no-emoji-icons rule) and
 // the earlier gradient-disc medallion, which read as app chrome.
 

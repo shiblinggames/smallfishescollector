@@ -169,7 +169,7 @@ export function RailgunBeam({ color, x1, y1, len, angle }: { color: string; x1: 
           background: `linear-gradient(90deg, ${color} 0%, #ffffff 28%, #ffffff 86%, ${color} 100%)`,
           boxShadow: `0 0 12px 2px ${color}, 0 0 30px 6px ${color}aa`,
         }} />
-      {/* Inner spine — a bright hairline down the centre. */}
+      {/* Inner spine — a bright hairline down the center. */}
       <motion.div aria-hidden
         initial={{ opacity: 0, scaleX: 0 }}
         animate={{ opacity: [0, 1, 1, 0], scaleX: [0, 1, 1, 1] }}
@@ -260,7 +260,7 @@ export function NukeBlast({ color }: { color: string }) {
       {/* White flash core — a hard, snappy punch at the instant of detonation. */}
       <motion.div aria-hidden initial={{ scale: 0.2, opacity: 1 }} animate={{ scale: [0.2, 1.4, 2.9], opacity: [1, 1, 0] }} transition={{ duration: 0.3, times: [0, 0.4, 1], ease: 'easeOut' }}
         style={{ position: 'absolute', inset: '2%', borderRadius: '50%', pointerEvents: 'none', zIndex: 8, background: 'radial-gradient(circle, #ffffff 0%, #fff4d6 52%, transparent 74%)' }} />
-      {/* Fireball — blooms big and slow, white-hot fading to the augment colour. */}
+      {/* Fireball — blooms big and slow, white-hot fading to the augment color. */}
       <motion.div aria-hidden initial={{ scale: 0.2, opacity: 0 }} animate={{ scale: [0.2, 2.4, 3.6], opacity: [0, 1, 0] }} transition={{ duration: 0.95, times: [0, 0.35, 1], ease: 'easeOut' }}
         style={{ position: 'absolute', inset: '-6%', borderRadius: '50%', pointerEvents: 'none', zIndex: 7, background: `radial-gradient(circle, #ffffff 0%, #ffd27a 30%, ${color} 58%, transparent 74%)` }} />
       {/* First shock ring. */}

@@ -903,7 +903,7 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
                 </div>
                 {sessionBuyIns > 0 && (() => {
                   // Sign + color track the ANIMATED value so a swing
-                  // through zero counts through red→grey→green.
+                  // through zero counts through red→gray→green.
                   const up = animatedTally > 0
                   const flat = animatedTally === 0
                   const color = flat ? '#8a8478' : up ? '#7fd49a' : '#e07070'

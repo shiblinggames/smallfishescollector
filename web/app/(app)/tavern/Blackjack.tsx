@@ -1830,7 +1830,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
               {sessionBuyIns > 0 ? (() => {
                 // Sign + color track the ANIMATED value, not the target
                 // — so a tally swinging from -100 → +200 visually
-                // counts through zero with the red→grey→green color
+                // counts through zero with the red→gray→green color
                 // shift mid-animation. Feels honest.
                 const displayUp = animatedTally > 0
                 const displayFlat = animatedTally === 0

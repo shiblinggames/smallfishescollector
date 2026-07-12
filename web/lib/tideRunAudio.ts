@@ -202,7 +202,7 @@ export function resumeTideRunAudioIfReady(): void {
  *  this from a gesture handler (a tap inside /tide-run is the
  *  natural fit since the game waits for a tap to start anyway). */
 export function unlockTideRunAudio(): void {
-  // Honour the "let other apps play music" preference — when on, we
+  // Honor the "let other apps play music" preference — when on, we
   // never spin up the silent session keeper, so iOS keeps Spotify alive.
   // The cost is silent SFX on iOS PWA; the player opted in to that.
   if (getLetOtherAudioPlay()) return

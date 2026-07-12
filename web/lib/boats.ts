@@ -157,7 +157,7 @@ export function getBoat(id: string | null | undefined): BoatDef | null {
 }
 
 /** Constant darken applied to the Charcoal ('ash') skin so it reads as
- *  deep charcoal, not plain grey. Where the ash glow animation runs, this
+ *  deep charcoal, not plain gray. Where the ash glow animation runs, this
  *  is baked into the `.boat-glow-ash` keyframes (an animated `filter`
  *  replaces a static one). Use this string for renders that DON'T get the
  *  glow class (e.g. the small gear picker tile). Keep in sync with the

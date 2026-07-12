@@ -70,8 +70,8 @@ export default function AchievementsClient({ groups }: Props) {
 
   const badgeGoals = allGoals.filter(g => (g.reward ?? 0) > 0)
   const earnedBadges = badgeGoals.filter(g => g.done).length
-  // The proudest colour: the hardest-tier badge earned (ties broken by reward
-  // size) — the medallion that anchors the honour-board plaque.
+  // The proudest color: the hardest-tier badge earned (ties broken by reward
+  // size) — the medallion that anchors the honor-board plaque.
   const proudest = useMemo(() => {
     const earned = badgeGoals.filter(g => g.done && g.badgeImage && g.difficulty)
     if (earned.length === 0) return null
@@ -156,14 +156,14 @@ export default function AchievementsClient({ groups }: Props) {
 
   return (
     <div>
-      {/* ── Hero: the honour board plaque — score + proudest colour ───────── */}
+      {/* ── Hero: the honor board plaque — score + proudest color ───────── */}
       <div style={{
         borderRadius: 16, padding: '0.85rem 1rem', marginBottom: 14,
         background: ['radial-gradient(ellipse 90% 80% at 0% 0%, rgba(240,192,64,0.16) 0%, transparent 62%)', 'linear-gradient(180deg, rgba(44,34,14,0.62) 0%, rgba(20,15,8,0.78) 100%)'].join(', '),
         border: '1px solid rgba(196,169,106,0.34)', boxShadow: 'inset 0 0 26px rgba(0,0,0,0.35)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          {/* Proudest colour — the hardest-won medallion anchors the plaque so
+          {/* Proudest color — the hardest-won medallion anchors the plaque so
               the board opens on YOUR badge, not a number. */}
           {proudest?.badgeImage && (
             <img src={proudest.badgeImage} alt="" title={proudest.label}
@@ -176,14 +176,14 @@ export default function AchievementsClient({ groups }: Props) {
                 {earnedPoints}<span style={{ color: 'rgba(240,237,232,0.42)', fontSize: '1.05rem' }}> / {totalPoints}</span>
               </span>
               <span className="font-karla font-600" style={{ fontSize: '0.78rem', color: 'rgba(240,237,232,0.62)' }}>
-                {earnedBadges} of {badgeGoals.length} colours flown
+                {earnedBadges} of {badgeGoals.length} colors flown
               </span>
             </div>
             <p className="font-karla" style={{ fontSize: '0.74rem', color: 'rgba(230,215,180,0.55)', fontStyle: 'italic', marginTop: 4 }}>
               {earnedBadges === 0
                 ? 'A bare mast, for now. The sea keeps a list.'
                 : earnedBadges >= badgeGoals.length
-                ? 'Every colour the sea has, flying from one mast. Absurd. Magnificent.'
+                ? 'Every color the sea has, flying from one mast. Absurd. Magnificent.'
                 : proudest ? `Proudest of the lot: ${proudest.label}.` : 'The sea keeps the list. You fly the proof.'}
             </p>
           </div>
@@ -257,7 +257,7 @@ export default function AchievementsClient({ groups }: Props) {
         ))}
         {visibleGroups.length === 0 && (
           <p className="font-karla" style={{ fontSize: '0.9rem', color: 'rgba(240,237,232,0.5)', textAlign: 'center', padding: '2rem 0', fontStyle: 'italic' }}>
-            No colours match that tack. Ease off the filters and look again.
+            No colors match that tack. Ease off the filters and look again.
           </p>
         )}
       </div>

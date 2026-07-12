@@ -7,7 +7,7 @@
 //   - pending      -> dimmed, swaps to a "…" verb
 //   - owned/done   -> disabled confirmation state (no price)
 //
-// `accent` lets a shop tint the button to its scene colour while keeping the
+// `accent` lets a shop tint the button to its scene color while keeping the
 // same shape/feel. Prices are passed as numbers so the button can compute the
 // shortfall itself.
 

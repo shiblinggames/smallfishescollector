@@ -238,7 +238,7 @@ function StationHeader({ Icon, label, color, count, max, sub }: {
 }
 
 // Collapsible, accent-coded party card. Each station (Raid / Voyage / etc.)
-// gets its own bordered card tinted to its colour so you instantly read which
+// gets its own bordered card tinted to its color so you instantly read which
 // group is which. The whole header toggles collapse (chevron + tap), and the
 // collapsed state shows just the crew names + open-seat count — the important
 // info at a glance.
@@ -381,9 +381,9 @@ function CrewPanel({
    *  a glance. No-op for benched crew. */
   isCaptain?: boolean
   /** True when this crew is at sea (voyage OR trawl) and can't be reassigned.
-   *  Greys the card out and disables the toggle buttons. */
+   *  Grays the card out and disables the toggle buttons. */
   locked?: boolean
-  /** Which kind of lock this is — drives the badge colour + the visible
+  /** Which kind of lock this is — drives the badge color + the visible
    *  "at sea" / "on a trawl" caption so the two read apart at a glance
    *  (the tooltip alone is invisible on mobile). */
   lockKind?: 'voyage' | 'trawl'
@@ -2812,7 +2812,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
       </AnimatePresence>
 
       {/* ── Skin unlock reveal ── a real moment when a skin is bought: the art
-          bursts in on a ray-fan in the skin's colour, its name slams up, and a
+          bursts in on a ray-fan in the skin's color, its name slams up, and a
           chase skin plays its signature FX. Portaled so no transformed ancestor
           clips it. Auto-dismisses; tap to continue. */}
       {typeof document !== 'undefined' && createPortal(
@@ -2838,7 +2838,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                 <motion.div aria-hidden initial={{ opacity: 0, scale: 0.4 }} animate={{ opacity: [0, 0.8, 0], scale: [0.4, 1.7, 2.1] }} transition={{ duration: 0.55, delay: 0.05, ease: 'easeOut' }}
                   style={{ position: 'absolute', width: 300, height: 300, borderRadius: '50%', background: `radial-gradient(circle, #ffffffcc 0%, ${c}55 40%, transparent 70%)`, pointerEvents: 'none' }} />
                 {/* Gems flying out — acknowledges the spend. They scatter from the
-                    centre and fall away as the art lands. */}
+                    center and fall away as the art lands. */}
                 {Array.from({ length: 11 }).map((_, i) => {
                   const ang = (i / 11) * Math.PI * 2
                   const dist = 110 + (i % 3) * 46

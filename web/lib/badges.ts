@@ -32,7 +32,7 @@ export const BADGE_POINTS: Record<BadgeDifficulty, number> = {
   grandmaster: 5,
 }
 
-// Display meta for each tier (pill label + accent colour, a low→high progression).
+// Display meta for each tier (pill label + accent color, a low→high progression).
 // Grandmaster's chip renders PRISMATIC in the UI (see .tier-grandmaster-chip);
 // the `color` here is the solid fallback used for its card border + progress bar.
 export const DIFFICULTY_META: Record<BadgeDifficulty, { label: string; color: string }> = {

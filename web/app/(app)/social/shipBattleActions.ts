@@ -330,7 +330,7 @@ export interface ShipBattleState {
   myMoveIn: boolean
   foeMoveIn: boolean
   rounds: { round: number; steps: RoundStep[] }[]
-  /** This player's spent Specials (grey out the chooser). */
+  /** This player's spent Specials (gray out the chooser). */
   myFx: { used: number[]; usedRepair: boolean }
   iWon: boolean | null
 }

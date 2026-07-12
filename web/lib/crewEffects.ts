@@ -102,7 +102,7 @@ export function effectPoolForRarity(rarity: number): string[] {
   return Object.values(CREW_EFFECTS).filter(e => e.minRarity <= rarity).map(e => e.id)
 }
 
-// Display metadata per scope (tag label + accent colour).
+// Display metadata per scope (tag label + accent color).
 export const SCOPE_META: Record<CrewEffectScope, { label: string; color: string }> = {
   always:      { label: 'Passive',     color: '#9aa0a6' },
   raid:        { label: 'Raid',        color: '#f0a36a' },
@@ -149,7 +149,7 @@ export function effectSummary(e: CrewEffect): string {
 // New recruits roll a single 's:P,D,F' encoded trait via lib/crewGen
 // rollTrait/encodeTraitId. Legacy crew with old named ids (dead_eye etc.)
 // get migrated *implicitly*: decodeTraitStats below honors their `flat`
-// field only if they had NO non-flat behaviour. If they had any pct / raid
+// field only if they had NO non-flat behavior. If they had any pct / raid
 // / voyage / conditional / aura effect the trait is treated as lost
 // (returns null) — per the design call, old crew don't keep half-broken
 // special traits, only the strictly flat-stat ones survive.
@@ -171,8 +171,8 @@ export function decodeTraitStats(id: string): TraitStats | null {
     }
     return null
   }
-  // Legacy id — honour the flat field if and only if the trait had NO
-  // non-flat behaviour. Otherwise the trait is lost.
+  // Legacy id — honor the flat field if and only if the trait had NO
+  // non-flat behavior. Otherwise the trait is lost.
   const old = CREW_EFFECTS[id]
   if (!old) return null
   const hasNonFlat = !!(old.pct || old.raid || old.voyage || old.cond || old.scope === 'aura' || old.scope === 'conditional' || old.scope === 'raid' || old.scope === 'voyage')

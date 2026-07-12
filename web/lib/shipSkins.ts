@@ -67,10 +67,10 @@ export const SHIP_SKINS: ShipSkinDef[] = [
   {
     // Chapter 3 shared trophy skin. Drops from BOTH the Harbor Fleet (raid 5)
     // and the Quartermaster (raid 6). Same swap-the-sprite mechanic, painted in
-    // the black-market colours of the Coffers.
+    // the black-market colors of the Coffers.
     id: 'coffers_hull',
     name: 'Coffers Hull',
-    description: "Fly the black-market colours of the Coffers. The hull that ran contraband past the harbor guns is yours now.",
+    description: "Fly the black-market colors of the Coffers. The hull that ran contraband past the harbor guns is yours now.",
     filter: 'none',
     color: '#9a8752',
     source: 'The Harbor Fleet + The Quartermaster',

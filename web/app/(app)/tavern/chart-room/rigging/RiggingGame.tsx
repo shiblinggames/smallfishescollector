@@ -253,7 +253,7 @@ export default function RiggingGame({ initial }: { initial: RiggingState }) {
                 )}
                 {/* dark rope edge — gives the cord an outline + depth */}
                 <polyline points={pts} fill="none" stroke="rgba(0,0,0,0.5)" strokeWidth={0.5} strokeLinecap="round" strokeLinejoin="round" opacity={done ? 0.95 : 0.8} />
-                {/* rope body in the pair colour */}
+                {/* rope body in the pair color */}
                 <polyline points={pts} fill="none" stroke={col} strokeWidth={0.4} strokeLinecap="round" strokeLinejoin="round" opacity={done ? 1 : 0.92} />
                 {/* twisted-hemp texture: dark bands + offset light strands read
                     as the diagonal twist of a laid rope */}

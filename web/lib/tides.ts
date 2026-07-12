@@ -62,7 +62,7 @@ export type TideEffect =
   | { kind: 'aimBlackout'; intensity: number }
   /** N drifting DECOY target bands appear on a random fraction of your fires.
    *  Lock onto one and your shot is a dud — chip damage + the turn ends. The
-   *  "False Colours" curse. */
+   *  "False Colors" curse. */
   | { kind: 'aimDecoys'; n: number }
   /** 0-1 chance, each turn, that the action you pick comes out SCRAMBLED — your
    *  crew does a different (valid) action instead. The "Drowned Whispers" curse. */
@@ -617,7 +617,7 @@ export const TIDE_POOL: TideEvent[] = [
     id: 'maelstrom_pull',
     tier: 2,
     title: "A Maelstrom's Pull",
-    flavor: 'The sea opens a slow grey throat off the bow. Ride its edge and it will hurl you forward, or swallow you whole.',
+    flavor: 'The sea opens a slow gray throat off the bow. Ride its edge and it will hurl you forward, or swallow you whole.',
     choices: [
       {
         id: 'ride',

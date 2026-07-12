@@ -15,7 +15,7 @@ const LOOP: Record<ShipAugmentId, number> = { railgun: 2200, barrage: 2600, nuke
 const NUKE_FLIGHT = 850
 
 // Positions as fractions of the stage. MUZZLE (where the shot launches) sits on
-// the player's deck — up and forward of the hull's centre — so the beam/missile
+// the player's deck — up and forward of the hull's center — so the beam/missile
 // doesn't appear to fire from under the boat. TARGET is the enemy hull + impact
 // point; kept off the right edge (with a tighter nuke blast box below) so the
 // blast/shockwave radius stays inside this small diorama.
@@ -110,7 +110,7 @@ export default function UltimatePreview({ id, color }: { id: ShipAugmentId; colo
     }}>
       {/* horizon shimmer */}
       <div style={{ position: 'absolute', left: 0, right: 0, top: '58%', height: 1, background: `linear-gradient(90deg, transparent, ${color}33, transparent)` }} />
-      {/* player gun (lower-left) + target hull (right-of-centre) */}
+      {/* player gun (lower-left) + target hull (right-of-center) */}
       <div style={{ position: 'absolute', left: `${PLAYER.x * 100}%`, top: `${PLAYER.y * 100}%`, transform: 'translate(-50%,-50%)' }}><Hull color={color} /></div>
       <div style={{ position: 'absolute', left: `${TARGET.x * 100}%`, top: `${TARGET.y * 100}%`, transform: 'translate(-50%,-50%)' }}><Hull foe color={color} /></div>
 
@@ -122,7 +122,7 @@ export default function UltimatePreview({ id, color }: { id: ShipAugmentId; colo
         <NukeMissile key={shot} color={color} x1={geo.x1} y1={geo.y1} x2={geo.x2} y2={geo.y2} dur={NUKE_FLIGHT} />
       )}
 
-      {/* Percent-based FX (blast, impacts, splats) live in a box centred on the
+      {/* Percent-based FX (blast, impacts, splats) live in a box centerd on the
           target hull, matching how they sit over the enemy ship in combat. The
           nuke's fireball scales off the box, so its box is tighter to keep the
           blast in frame now that the target sits further right. */}

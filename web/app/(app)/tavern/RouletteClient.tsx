@@ -92,7 +92,7 @@ export default function RouletteClient({ initial }: { initial: RouletteState }) 
   // Animated header counters — tick from the previous value to the new
   // one on every win/loss (blackjack-style) instead of snapping. Sign +
   // color of the session tally track the ANIMATED value so a swing
-  // through zero visibly counts through the red→grey→green shift.
+  // through zero visibly counts through the red→gray→green shift.
   const animatedChips = useAnimatedNumber(chips)
   const animatedTally = useAnimatedNumber(sessionNet)
 
@@ -252,7 +252,7 @@ export default function RouletteClient({ initial }: { initial: RouletteState }) 
         <div style={{ textAlign: 'center', flex: 1 }}>
           {sessionBuyIns > 0 ? (() => {
             // Session tally, blackjack-style: chips - buy-ins this
-            // session. Green when up, red when down, grey flat —
+            // session. Green when up, red when down, gray flat —
             // tracking the animated value so the color flips mid-tick.
             const color = animatedTally === 0 ? '#8a8478' : animatedTally > 0 ? '#7fd49a' : '#e07070'
             return (

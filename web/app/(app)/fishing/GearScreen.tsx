@@ -1260,7 +1260,7 @@ export default function GearScreen({
                         </motion.div>
 
                         {/* ── Power sockets ── one gem per slot. Filled gems glow
-                            in the donor rod's colour; the spark ring bursts here
+                            in the donor rod's color; the spark ring bursts here
                             on every fuse / un-fuse. */}
                         <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 14, padding: '0.35rem 0 0.15rem' }}>
                           {/* Spark burst — re-keyed on each forge so it restarts. */}

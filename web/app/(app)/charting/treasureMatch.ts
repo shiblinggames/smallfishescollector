@@ -22,7 +22,7 @@ const ix = (r: number, c: number, cols: number) => r * cols + c
 
 // Compass wildcard sentinel. Sits OUTSIDE the 0..nTypes-1 range and below 0 so
 // the `>= 0` guards in findMatches treat it as inert (it never forms a natural
-// match); it only does something when swapped (resolveSwap detonates a colour).
+// match); it only does something when swapped (resolveSwap detonates a color).
 export const WILD = -2
 
 function randType(rng: () => number, nTypes: number): number {
@@ -200,7 +200,7 @@ export function resolveSwap(
 
   // ── Compass wildcard detonation ──
   // Swapping a Compass against a normal gem clears EVERY gem of that gem's
-  // colour (plus the Compass), then cascades. Two Compasses have no colour to
+  // color (plus the Compass), then cascades. Two Compasses have no color to
   // lock onto → treated as an invalid swap.
   const aWild = board[a] === WILD, bWild = board[b] === WILD
   if (aWild || bWild) {

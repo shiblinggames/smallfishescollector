@@ -29,7 +29,7 @@ const lastCrewKey = (z: string) => `trawl_last_crew_${z}`
 // Per-zone DEPTH palette so the zones read as distinct waters at a glance —
 // bright aqua shallows sinking to a violet abyss and a phosphorescent ancient
 // deep — instead of five identical blue tiles. `accent` drives the running /
-// sendable state colour for that zone; top→mid→deep paints the card's water.
+// sendable state color for that zone; top→mid→deep paints the card's water.
 const DEPTH_THEMES: Record<TrawlZoneKey, { accent: string; top: string; mid: string; deep: string }> = {
   shallows:     { accent: '#46e0c0', top: 'rgba(70,224,192,0.32)',  mid: 'rgba(13,62,64,0.72)', deep: 'rgba(6,28,32,0.93)' },
   open_waters:  { accent: '#43a8f4', top: 'rgba(67,168,244,0.30)',  mid: 'rgba(10,40,74,0.74)', deep: 'rgba(5,18,42,0.94)' },
@@ -480,12 +480,12 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                 const zoneArt = getProfileBackground(z.key)?.src
                 // Per-zone DEPTH gradient over the art, so each zone reads as a
                 // different water. State (flash / ready / running) brightens the
-                // top band; the body always sinks to that zone's deep colour.
+                // top band; the body always sinks to that zone's deep color.
                 // Locked / no-slot cards are dead ends right now — render them as
-                // obviously inert: a flat neutral gradient, no zone colour.
+                // obviously inert: a flat neutral gradient, no zone color.
                 const inert = cardState === 'locked' || cardState === 'noslot'
                 const topBand = flashing ? `${theme.accent}54` : running ? `${theme.accent}3c` : theme.top
-                // Ready ditches the zone colour entirely for a warm GOLD wash so
+                // Ready ditches the zone color entirely for a warm GOLD wash so
                 // "come collect me" stands apart from every other card at a glance.
                 const scrim = inert
                   ? 'linear-gradient(180deg, rgba(40,42,46,0.62) 0%, rgba(20,22,26,0.86) 55%, rgba(11,12,15,0.96) 100%)'

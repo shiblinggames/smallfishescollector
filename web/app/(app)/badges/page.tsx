@@ -196,7 +196,7 @@ export default async function BadgesPage() {
     },
     {
       title: 'Crew',
-      flavor: 'The souls who sail with you, and the colours they fly.',
+      flavor: 'The souls who sail with you, and the colors they fly.',
       accent: '#5ec8e8',
       goals: [
         badgeGoal('growing_crew', 'Growing Crew', 'Recruit 25 crew', recruits, 25, '/crew'),
@@ -384,7 +384,7 @@ export default async function BadgesPage() {
               </Link>
             </div>
             <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(230,215,180,0.55)', fontStyle: 'italic', marginTop: 3 }}>
-              Every colour you have earned, and every one the sea still owes you.
+              Every color you have earned, and every one the sea still owes you.
             </p>
           </div>
 

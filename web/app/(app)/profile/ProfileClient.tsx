@@ -295,7 +295,7 @@ export default function ProfileClient({
   const charSprites = getCharacterSprites(characterColor)
   const equippedSpecial = equippedSpecialId ? SPECIAL_ITEMS.find(s => s.id === equippedSpecialId) ?? null : null
 
-  // Showcase honours the player's explicit pick first; if they haven't
+  // Showcase honors the player's explicit pick first; if they haven't
   // featured anyone yet, fall back to whoever's actually on the voyage
   // track (the public-facing roster, sorted captain → crew). Means the
   // section is informative on day one instead of just begging the player

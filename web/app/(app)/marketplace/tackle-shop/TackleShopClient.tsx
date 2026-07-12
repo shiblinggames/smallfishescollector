@@ -578,9 +578,9 @@ export default function TackleShopClient({
             {/* Rod list — single column so each rod gets a wide, readable row:
                 a big neutral art panel on the left, name + plain effect chips +
                 buy on the right. The old 2-col cards flooded every card with the
-                rod's own colour (bg, halo, pills, button), turning the shop into
+                rod's own color (bg, halo, pills, button), turning the shop into
                 a distracting rainbow where the rods + effects were hard to read.
-                Each rod's colour now shows ONLY as its art glow + a small
+                Each rod's color now shows ONLY as its art glow + a small
                 identity dot; the card chrome + chips are neutral. */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }} className="mb-4">
               {[...RODS].filter(r => !r.earnedOnly).sort((a, b) => a.cost - b.cost).map(rod => {
@@ -631,10 +631,10 @@ export default function TackleShopClient({
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={rod.slug ? `/${rod.slug}_thumb.png` : rod.imageUrl} alt={rod.name} loading="lazy" decoding="async"
                           className={owned ? rodGlowClass(rod) : undefined} style={{
-                            // Always show the rod in full colour — even unaffordable
+                            // Always show the rod in full color — even unaffordable
                             // ones — so players can see what they're saving up for.
                             // Owned rods are set apart by their animated glow (glow
-                            // class) or a colour-matched drop-shadow; unowned rods
+                            // class) or a color-matched drop-shadow; unowned rods
                             // just get a soft neutral shadow.
                             maxWidth: '100%', maxHeight: 92, objectFit: 'contain',
                             ...(owned && rod.glow
@@ -982,7 +982,7 @@ export default function TackleShopClient({
             }}
           >
             {/* Slow rotating prismatic ray-fan behind the rod — the four strand
-                colours blended into one spinning wheel of light. */}
+                colors blended into one spinning wheel of light. */}
             <motion.div aria-hidden
               initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 0.5, scale: 1, rotate: 360 }}
               transition={{ opacity: { duration: 0.8 }, scale: { duration: 0.9, ease: 'easeOut' }, rotate: { duration: 30, ease: 'linear', repeat: Infinity } }}
@@ -993,7 +993,7 @@ export default function TackleShopClient({
                 WebkitMaskImage: 'radial-gradient(circle, transparent 26%, #000 40%, transparent 72%)',
               }}
             />
-            {/* Expanding rings, each in a strand colour. */}
+            {/* Expanding rings, each in a strand color. */}
             {[0, 0.14, 0.28].map((d, i) => (
               <motion.div key={i} aria-hidden
                 initial={{ scale: 0, opacity: 0.85 }} animate={{ scale: 4.6, opacity: 0 }}
@@ -1007,7 +1007,7 @@ export default function TackleShopClient({
             >
               Completionist
             </motion.span>
-            {/* The rod, rising in — glow layered in all four strand colours. */}
+            {/* The rod, rising in — glow layered in all four strand colors. */}
             <motion.div
               initial={{ scale: 0, opacity: 0, y: 24 }}
               animate={{ scale: [0, 1.18, 1], opacity: 1, y: 0 }}
@@ -1035,7 +1035,7 @@ export default function TackleShopClient({
             >
               You have seen every fish the sea holds. Every gift it gave you now folds into one rod, yours to forge as you please.
             </motion.p>
-            {/* The seven folded gifts, streaming in — each in a strand colour. */}
+            {/* The seven folded gifts, streaming in — each in a strand color. */}
             <div className="flex flex-wrap justify-center gap-1.5" style={{ position: 'relative', maxWidth: 340, marginBottom: '1.5rem' }}>
               {gifts.map((g, i) => {
                 const gc = prism[i % prism.length]

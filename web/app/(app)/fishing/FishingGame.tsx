@@ -1185,7 +1185,7 @@ function DiscoveredStamp() {
           letterSpacing="0.55">
           DISCOVERED
         </text>
-        {/* Anchor sigil in the centre. Hand-drawn paths keep the ink
+        {/* Anchor sigil in the center. Hand-drawn paths keep the ink
             feel; no emoji that would render with native colors. */}
         <g stroke="url(#discovered-ink)" fill="none" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" opacity="0.92">
           <circle cx="28" cy="28.5" r="1.8" />
@@ -1206,7 +1206,7 @@ function DiscoveredStamp() {
 // Small sepia anchor seal that sits in the top-left of the species
 // detail modal. Pure decoration — gives the modal the visual register
 // of a logbook page rather than a generic detail panel. SVG-only so
-// it tints cleanly to whatever ink colour we want.
+// it tints cleanly to whatever ink color we want.
 function AnchorSeal() {
   return (
     <div style={{
@@ -1359,7 +1359,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
   }
   const borderOpMap: Record<number, string> = { 1: '55', 2: '70', 3: '88', 4: 'aa', 5: 'cc' }
   // Shiny matches the Treasure premium avatar background exactly:
-  // bright cream-yellow centre → warm amber → deep espresso edges.
+  // bright cream-yellow center → warm amber → deep espresso edges.
   // Combined with the slow rotating blurred sunburst overlay below
   // (also lifted from .avatar-bg-treasure in globals.css), this gives
   // the same "premium glowing gold" feel as the Treasure avatar bg
@@ -1369,7 +1369,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
     : 'rgba(6,16,26,0.82)'
   // Subtle warm inset glow only around the edges — gives the gold
   // border a soft "framed" depth like polished metal catching light.
-  // Kept low-alpha so it doesn't reach the centre and wash out the
+  // Kept low-alpha so it doesn't reach the center and wash out the
   // fish or body text.
   const shinyGlow: string | undefined = 'inset 0 0 22px rgba(200,140,40,0.18), inset 0 0 1px rgba(255,225,140,0.55)'
   // Sparkles are now concentrated AROUND the fish (not the whole
@@ -1378,10 +1378,10 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
   // vary so the field has texture without a uniform grid look.
   const shinySparkles = useMemo(
     () => Array.from({ length: 8 }, () => ({
-      // Polar around centre, biased to a halo radius so the sparkles
+      // Polar around center, biased to a halo radius so the sparkles
       // ring the fish without sitting directly on it.
       angle: Math.random() * Math.PI * 2,
-      radius: 38 + Math.random() * 32,        // % from centre
+      radius: 38 + Math.random() * 32,        // % from center
       size: 3 + Math.random() * 4,            // 3–7px
       delay: Math.random() * 2.5,
       duration: 1.8 + Math.random() * 1.4,
@@ -1990,7 +1990,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
                 burst + the orbiting sparkles supply all the ambient
                 gold light without needing a static halo div behind. */}
 
-            {/* Sparkles ringing the fish in polar coords from centre.
+            {/* Sparkles ringing the fish in polar coords from center.
                 Same wrapper-split as the halo above: outer span owns
                 the static polar position + the translate(-50%,-50%)
                 centering, inner motion.span owns the scale/opacity
@@ -3911,7 +3911,7 @@ export default function FishingGame({
   // through setZoneRotation. Eliminates the 33×/sec render thrash
   // during drift fish (Plesiosaurus / Chambered Nautilus / Tripod Fish).
   const zonesGroupRef    = useRef<SVGGElement | null>(null)
-  // Imperative targets for the zone-crossing paint (needle colour, arc
+  // Imperative targets for the zone-crossing paint (needle color, arc
   // highlight, live zone label). Crossings used to call setAngle(...),
   // re-rendering this entire component ~6-10×/revolution; on a cold
   // first revolution those renders blew the frame budget and the needle
@@ -4172,7 +4172,7 @@ export default function FishingGame({
       const ng = needleGroupRef.current
       if (ng && !spinAnimRef.current) ng.style.transform = `rotate(${angleRef.current}deg)`
       // Zone-crossing paint — also imperative. This used to call
-      // setAngle(...) so React could refresh the colour/label tells, but
+      // setAngle(...) so React could refresh the color/label tells, but
       // that re-rendered the entire component at every crossing; on a
       // cold first revolution those renders overran the frame budget and
       // the needle visibly hitched/skipped until the render path warmed
@@ -6887,7 +6887,7 @@ export default function FishingGame({
             {/* Lightsaber "Lightspeed" cue — a brief red blade-flash pill when
                 a near-instant bite fires. Localized at the top of the stage so
                 it reads as the rod's doing without a screen-wide flash. The
-                steady x:-50% keeps it centred while opacity/scale animate. */}
+                steady x:-50% keeps it centerd while opacity/scale animate. */}
             <AnimatePresence>
               {instantBiteFlash && (
                 <motion.div
@@ -9941,7 +9941,7 @@ export default function FishingGame({
                 <>
                   {/* ── Sell lanes ──
                       One unified neutral container, three rows.
-                      Old design used three differently-coloured cards
+                      Old design used three differently-colored cards
                       (blue / gold / silver) that read as competing
                       categories instead of a single decision. Now: same
                       dark background for every row, payout right-

@@ -840,8 +840,8 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
   },
   {
     id: 'false_colours',
-    name: 'False Colours',
-    flavor: 'The drowned fly colours that are not their own. Half the targets out there are lies.',
+    name: 'False Colors',
+    flavor: 'The drowned fly colors that are not their own. Half the targets out there are lies.',
     tiers: [
       { desc: 'A false target sometimes drifts your aim bar', detail: 'On some of your shots (not all), a decoy target band drifts across your aim bar alongside the real gold one. Lock onto the decoy and your shot is a dud: you take chip damage and your turn ends without firing. Pick the real band out of the lie.', effects: [{ kind: 'aimDecoys', n: 1 }] },
       { desc: 'Two false targets sometimes drift your aim bar', detail: 'The deception thickens. Now two decoy bands can drift your aim bar at once, so threading a clean shot to the real target gets harder. Locking either decoy still duds your shot and ends your turn.', effects: [{ kind: 'aimDecoys', n: 2 }] },
@@ -977,7 +977,7 @@ export function curseTierLabel(tier: number): string {
 // pipeline the Tides + Curses use. `desc` is the player-facing summary chip.
 export type BoonRarity = 'common' | 'rare' | 'legendary'
 
-/** Per-rarity draft WEIGHT (relative odds of being offered) + display colour +
+/** Per-rarity draft WEIGHT (relative odds of being offered) + display color +
  *  label. Stronger boons are rarer, so the draft visibly rewards a good roll. */
 export const BOON_RARITY_META: Record<BoonRarity, { label: string; color: string; weight: number }> = {
   common:    { label: 'Common',    color: '#6ee7d6', weight: 1.0 },   // teal

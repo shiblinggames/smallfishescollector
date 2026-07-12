@@ -36,7 +36,7 @@ export const CREW_SKINS: CrewSkin[] = [
   // ── Doby (sperm whale) ──
   { id: 'doby_warmachine',  slug: 'doby_mick', name: 'War Machine',   filename: 'Doby_warmachine.png',  gemCost: 1500, blurb: 'Ironclad and built for the kill.',           color: '#9ca3af' },
   { id: 'doby_moltenmaw',   slug: 'doby_mick', name: 'Molten Maw',    filename: 'Doby_moltenmaw.png',   gemCost: 1500, blurb: 'Breaching from a sea of fire.',               color: '#fb7185' },
-  { id: 'doby_spectral',    slug: 'doby_mick', name: 'Spectral',      filename: 'Doby_spectral.png',    gemCost: 2500, blurb: 'A ghost-grey leviathan from the black deep.',   color: '#93c5fd' },
+  { id: 'doby_spectral',    slug: 'doby_mick', name: 'Spectral',      filename: 'Doby_spectral.png',    gemCost: 2500, blurb: 'A ghost-gray leviathan from the black deep.',   color: '#93c5fd' },
   { id: 'doby_huntersbane', slug: 'doby_mick', name: "Hunter's Bane", filename: 'Doby_huntersbane.png', gemCost: 3000, blurb: 'The whale that hunts the hunters.',           color: '#dc2626', chase: true },
   // ── Catfish (Cat) ──
   { id: 'catfish_ancient',   slug: 'catfish', name: 'Ancient',   filename: 'Catfish_ancient.png',   gemCost: 1500, blurb: 'A relic that swam the first tides.',        color: '#d4a15a' },
@@ -115,7 +115,7 @@ export const CREW_SKINS: CrewSkin[] = [
   // ── Giant Squid (Skwid) — Epic ──
   { id: 'giant_squid_abyssal',  slug: 'giant_squid', name: 'Abyssal',  filename: 'Giant_Squid_abyssal.png',  gemCost: 1250, blurb: 'Born where no light reaches.',    color: '#3aa8a0' },
   { id: 'giant_squid_sorcerer', slug: 'giant_squid', name: 'Sorcerer', filename: 'Giant_Squid_sorcerer.png', gemCost: 1250, blurb: 'Ink and old magic in every arm.', color: '#a78bfa' },
-  { id: 'giant_squid_ghoul',    slug: 'giant_squid', name: 'Ghoul',    filename: 'Giant_Squid_ghoul.png',    gemCost: 1250, blurb: 'Risen grey and hungry from the black.', color: '#86efac' },
+  { id: 'giant_squid_ghoul',    slug: 'giant_squid', name: 'Ghoul',    filename: 'Giant_Squid_ghoul.png',    gemCost: 1250, blurb: 'Risen gray and hungry from the black.', color: '#86efac' },
   // ── Great White Shark (Great White) — Epic ──
   { id: 'great_white_shark_ghostrelic', slug: 'great_white_shark', name: 'Ghost Relic', filename: 'Great_White_ghostrelic.png', gemCost: 1250, blurb: 'Bleached bone and old ghosts.', color: '#a9c0cc' },
   { id: 'great_white_shark_iceborn',    slug: 'great_white_shark', name: 'Iceborn',     filename: 'Great_White_iceborn.png',    gemCost: 1250, blurb: 'Forged in the coldest deep.',  color: '#7dd3fc' },

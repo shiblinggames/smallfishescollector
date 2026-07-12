@@ -11,7 +11,7 @@
 //   - At the raid's halfway point a Rest Stop interstitial clears the used
 //     flag, so a crew can fire their ability twice across a full raid.
 //   - Only one ability fires per turn across the whole party (after any
-//     ability lands, all other ability cards grey out until the next turn).
+//     ability lands, all other ability cards gray out until the next turn).
 //   - Abilities do NOT consume the player's cannon turn — they're free
 //     actions on top of reload/fire/dodge.
 //

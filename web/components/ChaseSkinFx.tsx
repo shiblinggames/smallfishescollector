@@ -2,7 +2,7 @@
 
 // Per-chase-skin SIGNATURE effect, rendered as an overlay that fills its
 // (position:relative) parent and sits directly over the crew ART. One reusable
-// component for every surface: pass the skin id + accent colour and a variant.
+// component for every surface: pass the skin id + accent color and a variant.
 //   variant 'ambient'  — subtle continuous loop on card surfaces (roster card,
 //                        showcase poster, skin tile, detail portrait).
 //   variant 'summon'   — bolder pass over the big summoned character in raids.

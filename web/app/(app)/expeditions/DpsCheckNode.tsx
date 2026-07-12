@@ -19,7 +19,7 @@ const ORANGE = '#fb923c'
 type ShotResult = Extract<Awaited<ReturnType<typeof resolveDpsCheck>>, { outcome: 'passed' | 'failed' }>
 type Preview = Extract<Awaited<ReturnType<typeof getDpsCheckPreview>>, { passChance: number }>
 
-// Colour + label for a pass chance, matching the dice node's risk pills.
+// Color + label for a pass chance, matching the dice node's risk pills.
 function oddsTier(pct: number): { label: string; color: string } {
   if (pct >= 75) return { label: 'Likely', color: GREEN }
   if (pct >= 45) return { label: 'Even', color: GOLD }

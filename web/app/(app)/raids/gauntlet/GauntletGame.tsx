@@ -2968,8 +2968,8 @@ function GauntletReward({ r, recap, onBack }: { r: RewardOk; recap: { shipsSunk:
   // Counting starts a beat AFTER opening: chest cracks + reveals, then the
   // doubloons / XP increment (count-up + purse tick + bar fill).
   const [counting, setCounting] = useState(false)
-  // Hardcore recolours the coffer red/black + renames it; the tier sprite is
-  // shared, so we just swap the accent colour (all glows/rays read it) and
+  // Hardcore recolors the coffer red/black + renames it; the tier sprite is
+  // shared, so we just swap the accent color (all glows/rays read it) and
   // prepend a tint filter to the chest art.
   const baseArt = CHEST_ART[r.chest.tier] ?? CHEST_ART[1]
   const art = r.hardcore ? { ...baseArt, color: HARDCORE_CHEST_ACCENT } : baseArt
@@ -3176,7 +3176,7 @@ function GauntletReward({ r, recap, onBack }: { r: RewardOk; recap: { shipsSunk:
             })}
 
             {/* Man-o-War hull drops — the Golden Gauntlet Hull (deepest chest) and
-                the Hardcore-only Bad Blood Hull. Each gets its own coloured card
+                the Hardcore-only Bad Blood Hull. Each gets its own colored card
                 so the prestige drop lands. */}
             {[r.droppedSkinId, r.droppedHcSkinId].filter((x): x is string => !!x).map((skinId, i) => {
               const skin = getShipSkin(skinId)
@@ -4353,7 +4353,7 @@ function BoonShockRings() {
   )
 }
 
-// A modest gold spark burst from a legendary boon card's centre.
+// A modest gold spark burst from a legendary boon card's center.
 function BoonSparks() {
   const colors = ['#ffe48a', '#ffd23c', '#ffb800', '#fff3c0']
   const count = 30
@@ -4390,7 +4390,7 @@ function BoonSparks() {
 }
 
 function AbyssBackdrop({ hardcore }: { hardcore?: boolean }) {
-  // Hardcore recolours the whole abyss blood-dark: red god-rays, red motes, a
+  // Hardcore recolors the whole abyss blood-dark: red god-rays, red motes, a
   // heavier crimson-to-black vignette. Same motion, different palette, so every
   // meta screen of a hardcore run reads red/black at a glance.
   const bg = hardcore
@@ -4502,7 +4502,7 @@ function DepthBar({ depth, pot, isBoss, isElite, affixName, curses, isHardcore, 
         // failed to repaint (the bar "disappeared") AND mis-composited the hit-test
         // layer below, so the Lock button's tap target drifted off its paint spot.
         //
-        // ONE ROW, ALWAYS: 1fr/auto/1fr grid + nowrap cells. The centre column
+        // ONE ROW, ALWAYS: 1fr/auto/1fr grid + nowrap cells. The center column
         // holds the hardcore skull so it sits EXACTLY mid-bar; both side
         // columns clip rather than wrap.
         style={{

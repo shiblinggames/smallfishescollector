@@ -36,7 +36,7 @@ export type ShowcaseCrew = {
 
 /** One crew "poster" — borderless showcase art, meant to look like you're
  *  showing the crew off, not reading a stat card. Rarity (or equipped-skin)
- *  colour becomes a soft aura; name + rank sit on a scrim over the art; a
+ *  color becomes a soft aura; name + rank sit on a scrim over the art; a
  *  slim stat line is the only chrome. */
 export function CrewPortrait({ crew, w = 148, dimmed, fill, hideStats }: { crew: ShowcaseCrew; w?: number; dimmed?: boolean; fill?: boolean; hideStats?: boolean }) {
   const color = RARITY_COLORS[(crew.rarity as CrewRarity)] ?? '#8a857c'
@@ -49,7 +49,7 @@ export function CrewPortrait({ crew, w = 148, dimmed, fill, hideStats }: { crew:
   return (
     <div style={{ width: fill ? '100%' : w, flexShrink: 0, opacity: dimmed ? 0.4 : 1, transition: 'opacity 0.15s' }}>
       {/* Borderless art hero — a poster, not a card. Aura in the rarity (or
-          skin) colour; identity caption overlaid on a bottom scrim. */}
+          skin) color; identity caption overlaid on a bottom scrim. */}
       <div style={{
         position: 'relative', width: '100%', aspectRatio: '4 / 5', borderRadius: 14, overflow: 'hidden',
         background: `radial-gradient(ellipse at 50% 34%, ${glow}30 0%, #06050a 76%)`,

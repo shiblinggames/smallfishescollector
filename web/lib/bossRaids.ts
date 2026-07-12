@@ -25,7 +25,7 @@ export type EnemyAction = 'reload' | 'fire' | 'volley' | 'dodge' | 'repair' | 'm
 
 /** Raid-8 aim-bar attacks — enemy specials that strike the PLAYER'S AIM BAR
  *  rather than their hull, for the player's next `aimPasses` lock-ins:
- *    decoys   — False-Colours decoy bands appear on every afflicted pass
+ *    decoys   — False-Colors decoy bands appear on every afflicted pass
  *               (locking a crimson fake duds the shot).
  *    hardened — the lock is PLATED: the first tap only cracks it (the bar
  *               keeps sweeping), the second tap lands the real judgment.
@@ -68,16 +68,16 @@ export interface EnemyUltimate {
  *  `phase2` (single transition) and `phases[]` (multi-phase / final-boss style).
  *  The boss appears to sink, then rises at `revivePct` of max HP with the new
  *  pattern + damage mult + a quoted dialogue line, a red screen wash, and a big
- *  centre-screen callout. In any phase past 1 the nameplate + hull paint crimson
+ *  center-screen callout. In any phase past 1 the nameplate + hull paint crimson
  *  so the player can't lose track of the phase. */
 export interface BossPhase {
   /** Fraction of max HP the boss returns with after the false defeat
    *  (e.g. 0.5 = comes back at 50% of `hpBase`). Floored to at least 1. */
   revivePct: number
   damageMult: number        // 1.25 = +25% damage on enemy fire/volley rolls this phase
-  pattern: EnemyAction[]    // behaviour cycle used while in this phase
+  pattern: EnemyAction[]    // behavior cycle used while in this phase
   dialogueLine: string      // shown in the action log on transition, as a quoted boss line
-  /** Optional centre-screen callout label for the transition (e.g. 'RESERVE
+  /** Optional center-screen callout label for the transition (e.g. 'RESERVE
    *  DECK'). Falls back to "PHASE N" when unset. */
   badge?: string
   /** Optional telegraphed mechanic check that ARMS the instant this phase
@@ -146,7 +146,7 @@ export interface BroadsideEnemy {
    *  player realistically has by the time they reach this enemy: accuracy ≈
    *  (their nav) − ~6 lands a clean dodge ~77% of the time, with the rest
    *  grazing for 50%. Higher = harder to dodge, lower = easier. Default 0 =
-   *  no help (old behaviour, dodge ≈ free). Only matters on the turns the enemy
+   *  no help (old behavior, dodge ≈ free). Only matters on the turns the enemy
    *  fires at a dodging player; ignored everywhere else. */
   accuracy?: number
   /** Chapter-4 magazine: how many cannonballs this enemy can BANK (default 3).
@@ -315,8 +315,8 @@ export interface BossRaidConfig {
    *  raid stays visually unchanged unless it opts in.
    *    - dusk     : default warm seascape (cool blue sky, warm sun, drifting clouds)
    *    - sunset   : Pete's coastal reef at golden hour (saturated orange + purple)
-   *    - overcast : Krust's open ocean past the Bilge Strait (cold steel-grey, thick clouds, no sun)
-   *    - fog      : The Cartographer's Sounding Fog (washed-out grey, dim sun, drifting mist bands)
+   *    - overcast : Krust's open ocean past the Bilge Strait (cold steel-gray, thick clouds, no sun)
+   *    - fog      : The Cartographer's Sounding Fog (washed-out gray, dim sun, drifting mist bands)
    *    - harbor   : The Coffers' drowned black-market port (sickly green overcast, gun-smoke haze, black water)
    *    - vault    : The Quartermaster's lantern-lit gun-deck (deep indigo storm-dark, warm gold lamp glow) */
   atmosphere?: 'dusk' | 'sunset' | 'overcast' | 'fog' | 'harbor' | 'vault'
@@ -341,7 +341,7 @@ export interface BossRaidConfig {
    *  (~75-80% clean) instead of a free 0. Within the raid, faster ships are
    *  naturally harder to dodge (their shipSpeed is also in the roll), so one
    *  number gives a built-in spread. An individual enemy can still override
-   *  with its own `accuracy`. Undefined = 0 (dodge ≈ free, pre-2026-06 behaviour). */
+   *  with its own `accuracy`. Undefined = 0 (dodge ≈ free, pre-2026-06 behavior). */
   enemyAccuracy?: number
 }
 
@@ -573,7 +573,7 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
   bossId: 'krust',
   // Mirror Pete's two-tier structure. Krust's Carapace is the
   // standard plate (Epic, -10%); Captain's Carapace is Krust's own
-  // full-grade armour (Legendary, -15%). Same 30% special-drop /
+  // full-grade armor (Legendary, -15%). Same 30% special-drop /
   // 70% currency split as Pete; challenge variant overrides this
   // table with doubled special rates in raidChallenge.ts.
   loot: [
@@ -599,12 +599,12 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
     krust: { gold: 350, xp: 350 },
   },
   preFightDialogue: [
-    { speaker: 'narrator', text: "Past the Bilge Strait the water turns cold and the fog thins to a hard grey line. A long iron-sided carrack waits there, riding low under more cargo than any honest captain could explain. The wax on Pete's letter and the seal on her hull match." },
+    { speaker: 'narrator', text: "Past the Bilge Strait the water turns cold and the fog thins to a hard gray line. A long iron-sided carrack waits there, riding low under more cargo than any honest captain could explain. The wax on Pete's letter and the seal on her hull match." },
     { speaker: 'boss', text: "C.K. So you're the little hook that's been snagging my freight. I wondered who kept making my couriers late." },
     { speaker: 'player', text: "Captain Krust. Pete kept your letters but not his life. You run the Finndicate's cargo." },
     { speaker: 'boss', text: "I move what I'm told to move and I don't ask whose name is on the manifest. That's why I've lasted, and that's why captains like Pete are fodder and captains like me aren't." },
     { speaker: 'boss', text: "But you've cost the Finndicate a season's haul, captain, and someone above me will want that back out of you. I'll just take it out first." },
-    { speaker: 'boss', text: "Strike your colours or strike your guns. Either way this consignment sails on without you." },
+    { speaker: 'boss', text: "Strike your colors or strike your guns. Either way this consignment sails on without you." },
   ],
 }
 
@@ -616,7 +616,7 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
   atmosphere: 'fog',
   enemies: {
     // Tier-3 roster. The Cartographer's chart line sails the Sounding
-    // Fog for cover — the deep grey band on the Finndicate's own maps.
+    // Fog for cover — the deep gray band on the Finndicate's own maps.
     // 8-fight gauntlet (2 of each) escalating into the boss himself.
     //
     // RAID-WIDE RULE: every enemy in this raid carries MIST VEIL — a
@@ -794,7 +794,7 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
   // Krust's structure: narrator scene-set → boss intro → player name him
   // → boss thesis line → boss "I've already mapped you" beat → engage.
   preFightDialogue: [
-    { speaker: 'narrator', text: "The fog thickens until sea and sky blur into one grey wall. Out of it a slow-built galleon glides up, decks stacked with rolled charts and brass-bound sextants. No flags fly. No name painted on the hull." },
+    { speaker: 'narrator', text: "The fog thickens until sea and sky blur into one gray wall. Out of it a slow-built galleon glides up, decks stacked with rolled charts and brass-bound sextants. No flags fly. No name painted on the hull." },
     { speaker: 'boss', text: "I heard a young captain was reading my routes. I came up the line to see what kind of eyes were behind it." },
     { speaker: 'player', text: "You're the Cartographer. The Finndicate's chartmaker. Krust said his couriers followed your lines." },
     { speaker: 'boss', text: "Names belong to ships. I draw seas. Krust ran cargo, and you put him at the bottom of one of my channels. Now you're on a page of mine too." },
@@ -946,13 +946,13 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
   enemies: {
     // Ch3 hulls. SIGNATURE = DECOYS: false aim bands scaling 1 → 3 toward the
     // flagship. Admiral Ruse's deception fleet — the showy lionfish crew whose
-    // fanned fins are all display over a hidden sting (the "False Colours").
+    // fanned fins are all display over a hidden sting (the "False Colors").
     scout: {
       id: 'scout', name: 'Plume', hpBase: 110, minDmg: 8, maxDmg: 15,
       shipSpeed: 8, actionMs: 3500,
       pattern: ['reload', 'fire', 'dodge', 'reload', 'fire', 'reload', 'fire', 'dodge'],
       critChance: 0.07,
-      decoyCount: 1, decoyName: 'False Colours',   // deception ladder tier 1
+      decoyCount: 1, decoyName: 'False Colors',   // deception ladder tier 1
       // Endgame difficulty lives in the TARGET, not the needle (2026-07-04): the
       // crit zone drifts faster across Ch3 so clean crits are earned, not
       // automatic. The zone's base pace scales with shipSpeed, so slow brutes
@@ -966,7 +966,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
       shipSpeed: 6, actionMs: 4400,
       pattern: ['reload', 'reload', 'volley', 'dodge', 'fire', 'reload', 'dodge', 'reload', 'fire'],
       critChance: 0.08,
-      decoyCount: 1, decoyName: 'False Colours',   // tier 1
+      decoyCount: 1, decoyName: 'False Colors',   // tier 1
       zoneSpeedMult: 1.9,
       image: '/enemychapter3brigantine.png',
       portrait: '/raid5_sham.png',
@@ -976,7 +976,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
       shipSpeed: 3, actionMs: 5400,
       pattern: ['reload', 'reload', 'reload', 'volley', 'dodge', 'reload', 'reload', 'dodge', 'volley', 'fire'],
       critChance: 0.06,
-      decoyCount: 2, decoyName: 'False Colours',   // tier 2 — bigger spread
+      decoyCount: 2, decoyName: 'False Colors',   // tier 2 — bigger spread
       zoneSpeedMult: 2.6,
       image: '/enemychapter3galleon.png',
       portrait: '/raid5_bulwark.png',
@@ -986,7 +986,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
       shipSpeed: 9, actionMs: 3300,
       pattern: ['fire', 'dodge', 'reload', 'reload', 'volley', 'dodge', 'fire', 'reload', 'dodge', 'fire'],
       critChance: 0.13,
-      decoyCount: 2, decoyName: 'False Colours',   // tier 2
+      decoyCount: 2, decoyName: 'False Colors',   // tier 2
       zoneSpeedMult: 1.6,
       image: '/enemychapter3galleon.png',
       portrait: '/raid5_mirage.png',
@@ -998,7 +998,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
       // drops the act and fights for real, faster and meaner.
       pattern: ['reload', 'fire', 'dodge', 'reload', 'reload', 'volley', 'dodge', 'fire', 'reload', 'fire', 'dodge'],
       critChance: 0.12,
-      decoyCount: 3, decoyName: 'False Colours',   // tier 3 — the whole line lies
+      decoyCount: 3, decoyName: 'False Colors',   // tier 3 — the whole line lies
       phase2: {
         revivePct: 0.5,
         damageMult: 1.2,
@@ -1037,7 +1037,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
     { speaker: 'narrator', text: "Past the harbor wall the Coffers open up: a drowned market ringed by guns, and a line of Galleons already coming about to meet you." },
     { speaker: 'boss', text: "Far enough, captain. Nobody sails into the Coffers uninvited and lives to count the take." },
     { speaker: 'player', text: "You're a long way from the docks for a harbormaster." },
-    { speaker: 'boss', text: "Admiral, to you. I keep this wall, and my gunners fly whatever colours the market needs. You'll never know which gun is the live one until it's already in you." },
+    { speaker: 'boss', text: "Admiral, to you. I keep this wall, and my gunners fly whatever colors the market needs. You'll never know which gun is the live one until it's already in you." },
     { speaker: 'boss', text: "Run out your guns. Mine are already lying to you." },
   ],
 }
@@ -1278,7 +1278,7 @@ export const THE_HAMMERHEAD: BossRaidConfig = {
       phases: [
         { revivePct: 0.80, damageMult: 1.35, badge: 'The Hammer Falls',
           pattern: ['special', 'fire', 'reload', 'volley', 'fire', 'dodge', 'reload', 'volley'],
-          dialogueLine: "The don said bring him your colours. He never said in one piece.",
+          dialogueLine: "The don said bring him your colors. He never said in one piece.",
           check: {
             id: 'full_swing', name: 'The Full Swing', chargeTurns: 2,
             telegraph: 'The Hammerhead heaves the great maul off his deck and swings it high over your hull.',
@@ -1314,7 +1314,7 @@ export const THE_HAMMERHEAD: BossRaidConfig = {
     hammerhead: { gold: 1700, xp: 2000 },
   },
   preFightDialogue: [
-    { speaker: 'narrator', text: "The blockade line rides the swell ahead — the don's own escort armada, lanterns doused, gunports open. At its centre, a silhouette with a head like a smith's anvil." },
+    { speaker: 'narrator', text: "The blockade line rides the swell ahead — the don's own escort armada, lanterns doused, gunports open. At its center, a silhouette with a head like a smith's anvil." },
     { speaker: 'boss', text: "Far enough, captain. The don's water starts where your charts stop." },
     { speaker: 'player', text: "Then I'm exactly where I mean to be. Move your line." },
     { speaker: 'boss', text: "The Quartermaster talked too much and kept too little. I keep everything. Including you, when this is done." },
@@ -1328,7 +1328,7 @@ export const THE_HAMMERHEAD: BossRaidConfig = {
 // AIM-BAR ATTACKS (decoys / hardened lock / squall) — specials that strike
 // the player's lock-in minigame instead of their hull. Every mob teaches one
 // piece before the don stacks them. Don Finleone is a MEGALODON under the
-// don's colours — the mask drops in phase 2. ADMIN-ONLY until launch.
+// don's colors — the mask drops in phase 2. ADMIN-ONLY until launch.
 // Art: Ch3 hull placeholders — bespoke Last-Fathom fleet art at polish.
 export const THE_THRONE: BossRaidConfig = {
   raidId: 'the_throne',
@@ -1356,7 +1356,7 @@ export const THE_THRONE: BossRaidConfig = {
       id: 'the_mirage', name: 'The Mirage', hpBase: 380, minDmg: 24, maxDmg: 38,
       shipSpeed: 10, actionMs: 3400,
       magazineSize: 4, shieldPct: 0.18,
-      special: { name: 'False Court', aimAttack: 'decoys', aimPasses: 2, line: 'Lantern-rigs bloom down her rail — a court of false colours, and only one throne among them.' },
+      special: { name: 'False Court', aimAttack: 'decoys', aimPasses: 2, line: 'Lantern-rigs bloom down her rail — a court of false colors, and only one throne among them.' },
       pattern: ['reload', 'special', 'fire', 'reload', 'dodge', 'fire', 'special', 'reload'],
       critChance: 0.12,
       zoneSpeedMult: 2.5,
@@ -1445,7 +1445,7 @@ export const THE_THRONE: BossRaidConfig = {
           } },
         { revivePct: 0.60, damageMult: 1.50, badge: 'The Last Court',
           pattern: ['special', 'fire', 'fire', 'reload', 'reload', 'reload', 'ultimate', 'volley'],
-          dialogueLine: 'Enough court. Enough colours. The Finndicate was never the family, captain — it was the FEEDING.',
+          dialogueLine: 'Enough court. Enough colors. The Finndicate was never the family, captain — it was the FEEDING.',
           check: {
             id: 'the_sounding', name: 'The Sounding', chargeTurns: 2,
             telegraph: 'The megalodon SOUNDS — the whole sea dips as he goes deep, gathering water for a breach that will land on your deck.',

@@ -101,7 +101,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
   },
   // Same two-tier treatment as the Corsair Cannon. Krust's Carapace
   // is the standard plate; Captain's Carapace is the full-grade
-  // version of his own armour, dropped only at the higher rate from
+  // version of his own armor, dropped only at the higher rate from
   // his Consignment (with Prime rates in challenge mode).
   {
     id: 'krusts_carapace',
@@ -275,7 +275,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
   {
     id: 'davys_hand_cannon',
     name: "Davy's Hand Cannon",
-    description: '+20% damage to non-boss enemies. Tears through a crew before the captain ever shows his colours.',
+    description: '+20% damage to non-boss enemies. Tears through a crew before the captain ever shows his colors.',
     image: '/davyshandcannon.png',
     emoji: '💥',
     rarity: 'legendary',
@@ -644,7 +644,7 @@ export function unobtainableComponents(components: string[], ownedItems: string[
 }
 
 /** Whether an item is a forged combination (a FORGE_RECIPES result) — used to
- *  give fusions a distinct prismatic treatment vs the flat rarity colours. */
+ *  give fusions a distinct prismatic treatment vs the flat rarity colors. */
 export function isForgedRaidItem(id: string): boolean {
   return FORGE_RECIPES.some(r => r.result === id)
 }

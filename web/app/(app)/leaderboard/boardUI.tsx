@@ -10,7 +10,7 @@ import { getLevelFromXP as getExpeditionLevel } from '@/lib/expeditionLevel'
 import CharacterAvatar from '@/components/CharacterAvatar'
 import RankMedallion from '@/components/RankMedallion'
 
-// Harbour-ledger palette (2026-07-12 warmth pass): the boards read as names
+// Harbor-ledger palette (2026-07-12 warmth pass): the boards read as names
 // entered in a ledger on timber, not a cold dashboard — warm dark wood, brass
 // rules between rows, drawn metal medallions on the podium.
 const LEDGER_BG = 'linear-gradient(180deg, rgba(34,26,12,0.72) 0%, rgba(18,13,7,0.85) 100%)'
@@ -185,7 +185,7 @@ export function LeaderboardSection({ accent, unit, subUnit, data, myScore, curre
       )}
 
       {/* Top 3 — drawn metal medallions, no rank stripes; the podium reads as
-          the top of a harbour ledger. */}
+          the top of a harbor ledger. */}
       {top3.length > 0 && (
         <div style={{
           background: LEDGER_BG, border: LEDGER_BORDER,

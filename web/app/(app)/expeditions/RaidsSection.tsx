@@ -59,7 +59,7 @@ function formatRaidMs(ms: number): string {
 // at 36/64 (and a slight 32/68 nudge every fourth row for rhythm) give a
 // calm, readable lean without losing the "sea chart" feel.
 const COLS = [36, 64, 32, 68]
-const ROW = 84           // vertical pitch between node centres
+const ROW = 84           // vertical pitch between node centers
 const TOKEN = 72         // layout/max token diameter (drives spacing + viewBox)
 const PAD_TOP = 18
 // Bigger than PAD_TOP because the current-node label sits BELOW its
@@ -287,7 +287,7 @@ function RaidMap({
       style={{
         position: 'relative', width: '100%', height,
         // Parchment / sea-chart backdrop: warm sepia base, a soft cream
-        // top-down lift in the centre, and a subtle vignette at the
+        // top-down lift in the center, and a subtle vignette at the
         // edges so the chart reads as a thing you're holding rather
         // than a panel floating on a black page. Tuned to stay dark
         // enough that the parchment-gold tokens + lit route still

@@ -67,7 +67,7 @@ const Tile = memo(function Tile({ tok, isWild, isSel, isPop, isDrop, isCommit, i
         : undefined,
     } as CSSProperties}>
       {/* Wild = a clean glossy rainbow ORB (circle), not a star — reads clearly
-          as the "any colour" color bomb. Normal tiles keep their shaped gem. */}
+          as the "any color" color bomb. Normal tiles keep their shaped gem. */}
       <div aria-hidden style={{
         position: 'absolute', inset: 0,
         clipPath: isWild ? undefined : (tok.clip || undefined),
@@ -187,7 +187,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
       for (let k = 0; k < n; k++) {
         const ang = (k / n) * Math.PI * 2 + Math.random() * 0.9
         const dist = 36 + Math.random() * 52
-        // Alternate bright white sparks with bigger coloured shards; an upward
+        // Alternate bright white sparks with bigger colored shards; an upward
         // bias so the burst arcs up before gravity (in the render) drops it.
         const spark = k % 2 === 0
         out.push({
@@ -487,7 +487,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
 
       {!cleared && board.includes(WILD) && (
         <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: GOLD, textAlign: 'center', textShadow: `0 0 10px ${GOLD}66`, animation: 'tmWildPulse 1.8s ease-in-out infinite' }}>
-          ✦ A Compass dropped in — swap it onto any treasure to clear that whole colour.
+          ✦ A Compass dropped in — swap it onto any treasure to clear that whole color.
         </p>
       )}
       <p className="font-karla" style={{ fontSize: '0.62rem', color: '#8f8672', textAlign: 'center' }}>
@@ -528,7 +528,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
         document.body,
       )}
 
-      {/* Compass detonation burst — fires when a wildcard clears a whole colour. */}
+      {/* Compass detonation burst — fires when a wildcard clears a whole color. */}
       {mounted && createPortal(
         bomb ? (
           <div key={bomb.key} aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 8800, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -549,7 +549,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
                 COMPASS
               </span>
               <span className="font-karla font-700 uppercase" style={{ marginTop: 6, fontSize: 'clamp(0.85rem, 4.6vw, 1.4rem)', letterSpacing: '0.26em', color: '#fff', textShadow: `0 0 14px ${GOLD}, 0 2px 6px rgba(0,0,0,0.9)` }}>
-                Colour bomb!
+                Color bomb!
               </span>
             </div>
           </div>

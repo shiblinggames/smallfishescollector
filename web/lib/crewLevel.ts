@@ -132,7 +132,7 @@ function distributeProportional(total: number, affinity: StatTriple): StatTriple
   const sumW = weights[0] + weights[1] + weights[2]
 
   // No affinity signal — split as evenly as possible (power > dodge > fortune
-  // for the rounding tie-break so behaviour is deterministic).
+  // for the rounding tie-break so behavior is deterministic).
   if (sumW <= 0) {
     const each = Math.floor(total / 3)
     const rem  = total - each * 3

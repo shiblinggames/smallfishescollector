@@ -15,7 +15,7 @@ import { CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE, THE_CARTOGRAPHER
 import { getShipSkin } from '@/lib/shipSkins'
 import { getRaidItem } from '@/lib/raidItems'
 
-// Each type gets its own colour + glyph on the map:
+// Each type gets its own color + glyph on the map:
 //  - skirmish  : a single practice battle
 //  - raid      : a full multi-encounter campaign / boss
 //  - milestone : a "collect / hold X" goal (no fight)
@@ -264,14 +264,14 @@ export interface RaidNodeDrop {
   label: string
   emoji: string
   image?: string | null
-  /** CSS filter applied to `image` (ship-skin previews recolour a ship sprite). */
+  /** CSS filter applied to `image` (ship-skin previews recolor a ship sprite). */
   imageFilter?: string
   rarity?: RaidLootItem['rarity']
   /** Human-readable odds, e.g. "49%", "Guaranteed", "Every kill". */
   chance?: string
   /** Short, noob-friendly line under the label (what the thing is). */
   sublabel?: string
-  /** Solid swatch colour shown instead of an icon (ship skins). */
+  /** Solid swatch color shown instead of an icon (ship skins). */
   swatch?: string
   /** CSS filter applied to the swatch (the skin's actual effect). */
   swatchFilter?: string
@@ -394,8 +394,8 @@ export interface RaidNode {
   detail: RaidNodeDetail
 }
 
-// Ship-skin loot previews recolour this ship sprite (the tier-4 brigantine) so
-// players see the skin on an actual hull rather than a flat colour chip.
+// Ship-skin loot previews recolor this ship sprite (the tier-4 brigantine) so
+// players see the skin on an actual hull rather than a flat color chip.
 const SHIP_SKIN_PREVIEW_IMG = '/models/brigantine_v2.png'
 
 /** Derive a drop list (with rolled-once odds) from a boss raid's loot
@@ -415,15 +415,15 @@ function lootDrops(loot: RaidLootItem[]): RaidNodeDrop[] {
       rarity: l.rarity,
       ...(isDoubloons ? {} : { chance: `${Math.round((l.weight / total) * 100)}%` }),
     }
-    // Ship skin → preview the skin on a ship sprite (recoloured brigantine) so
-    // the player sees what it actually looks like, not just a flat colour.
+    // Ship skin → preview the skin on a ship sprite (recolored brigantine) so
+    // the player sees what it actually looks like, not just a flat color.
     if (l.shipSkinId) {
       const skin = getShipSkin(l.shipSkinId)
       if (skin) {
         drop.label = skin.name
         drop.sublabel = 'Ship skin. A cosmetic new look for your ship.'
-        // Most skins recolour via a bespoke sprite (imageByTier), not a CSS
-        // filter — preview that sprite (the recoloured brigantine) so the drop
+        // Most skins recolor via a bespoke sprite (imageByTier), not a CSS
+        // filter — preview that sprite (the recolored brigantine) so the drop
         // shows the skin's real look, not the base hull. Filter-only skins fall
         // back to the base preview image + their filter.
         drop.image = skin.imageByTier?.[4] ?? SHIP_SKIN_PREVIEW_IMG
@@ -1023,7 +1023,7 @@ export const RAID_MAP: RaidNode[] = [
     id: 'cartographer',
     type: 'raid',
     label: "The Cartographer's Survey",
-    flavor: "Past the Finndicate scouts the water turns to grey wall. The galleon waiting in the fog drew every chart Krust ever followed. Sink him and the Finndicate loses its eyes.",
+    flavor: "Past the Finndicate scouts the water turns to gray wall. The galleon waiting in the fog drew every chart Krust ever followed. Sink him and the Finndicate loses its eyes.",
     bridge: "His ship goes down with no flag and no name on the hull. The seas he drew belong to nobody now, and the charts in his cabin name half the danger lines you haven't sailed yet.",
     requiresNode: 'cartographer_reveal',
     requiresNavLevel: 28,
@@ -1206,12 +1206,12 @@ export const RAID_MAP: RaidNode[] = [
       { speaker: 'A Freed Scout', portrait: '/krust_soldier.png', text: "We owe you a deck, captain. We pay what we owe." },
       { speaker: 'A Freed Scout', portrait: '/krust_soldier.png', text: "Every crew in the Gullet sails loaded. They've all got a shot in the pipe before the fight even starts." },
       { speaker: 'A Freed Scout', portrait: '/krust_soldier.png', text: "They'll hit you on the first bell, before a slow captain's even found his range. Go in ready to take one." },
-      { text: "They hand across a strongbox and a folded chart, and slip back into the grey." },
+      { text: "They hand across a strongbox and a folded chart, and slip back into the gray." },
       { text: "Richer, wiser, and not sailing in blind anymore. The mercy paid." },
     ],
     detail: {
       description:
-        "You hold at the mouth of the Gullet and watch the fog. Out here a captain gets back exactly what he gave, no more. If you cut those scouts loose back past the danger line, the cold water remembers, and a sail comes out of the grey to settle the debt with coin, charts, and a warning worth more than both. If you didn't, the fog stays empty and you go in the way you came.",
+        "You hold at the mouth of the Gullet and watch the fog. Out here a captain gets back exactly what he gave, no more. If you cut those scouts loose back past the danger line, the cold water remembers, and a sail comes out of the gray to settle the debt with coin, charts, and a warning worth more than both. If you didn't, the fog stays empty and you go in the way you came.",
       drops: [
         { emoji: '📜', label: "Captain's Logbook, Fragment VII", sublabel: "\"Out past the danger line, the only sail that comes back for you is one you let go.\"", rarity: 'uncommon' },
       ],
@@ -1435,7 +1435,7 @@ export const RAID_MAP: RaidNode[] = [
     // Fantail/Bristle/Barb) under Admiral Ruse, on the 'harbor' backdrop. LIVE.
     id: 'coffers_fleet',    type: 'raid',
     label: 'The Harbor Fleet',
-    flavor: "The market keeps a war-fleet, and an admiral who's never lost a hull. His gunners run false colours on every shot, so you never know which gun is the one that's loaded.",
+    flavor: "The market keeps a war-fleet, and an admiral who's never lost a hull. His gunners run false colors on every shot, so you never know which gun is the one that's loaded.",
     bridge: "The admiral's fleet is wreckage on the harbor floor, and the way to the market's heart is open. The last push is on the keeper himself now.",
     requiresNode: 'coffers_keeper',
     requiresNavLevel: 40,
@@ -1444,7 +1444,7 @@ export const RAID_MAP: RaidNode[] = [
     image: THE_COFFERS_FLEET.enemies.admiral.portrait,
     detail: {
       description:
-        "The Coffers' war-fleet, and the admiral who has never lost a ship. His crews fight under false colours: decoy gun-bands strewn across your aim so you can't tell the live shot from the feint. The biggest hulls you've faced yet, and the admiral rises again when you think you've sunk him.",
+        "The Coffers' war-fleet, and the admiral who has never lost a ship. His crews fight under false colors: decoy gun-bands strewn across your aim so you can't tell the live shot from the feint. The biggest hulls you've faced yet, and the admiral rises again when you think you've sunk him.",
       enemies: ['Plume ×2', 'Fantail ×2', 'Bristle ×2', 'Barb ×2', 'Admiral Ruse'],
       drops: lootDrops(THE_COFFERS_FLEET.loot),
       clearReward: clearPayout(THE_COFFERS_FLEET),
@@ -1454,7 +1454,7 @@ export const RAID_MAP: RaidNode[] = [
   {
     id: 'coffers_fleet_challenge',    type: 'raid',
     label: 'Challenge: The Harbor Fleet',
-    flavor: "The same fleet, drilled harder and flying meaner colours. The admiral does not lose his wall twice.",
+    flavor: "The same fleet, drilled harder and flying meaner colors. The admiral does not lose his wall twice.",
     requiresNode: 'coffers_fleet',
     route: '/raids/coffers-fleet/challenge',
     raidId: THE_COFFERS_FLEET_CHALLENGE.raidId,
@@ -1462,7 +1462,7 @@ export const RAID_MAP: RaidNode[] = [
     image: THE_COFFERS_FLEET.enemies.admiral.portrait,
     detail: {
       description:
-        "The harbor fleet again, harder for the loss. More HP, sharper guns, the same wall of false colours, and the admiral's phase 2 bites deeper. The chase rewards roll richer for the trouble.",
+        "The harbor fleet again, harder for the loss. More HP, sharper guns, the same wall of false colors, and the admiral's phase 2 bites deeper. The chase rewards roll richer for the trouble.",
       enemies: ['Plume ×2', 'Fantail ×2', 'Bristle ×2', 'Barb ×2', 'Admiral Ruse'],
       drops: lootDrops(THE_COFFERS_FLEET_CHALLENGE.loot),
       clearReward: clearPayout(THE_COFFERS_FLEET_CHALLENGE),
@@ -1588,7 +1588,7 @@ export const RAID_MAP: RaidNode[] = [
         ],
       },
       reveal:
-        "The beam threads the last mirror and strikes the vault-eye dead centre. Deep in the iron, the strongroom bars grind back.\n\nThe Quartermaster's behind them, cornered, with nowhere left to run.",
+        "The beam threads the last mirror and strikes the vault-eye dead center. Deep in the iron, the strongroom bars grind back.\n\nThe Quartermaster's behind them, cornered, with nowhere left to run.",
     },
     detail: {
       description:
@@ -1704,7 +1704,7 @@ export const RAID_MAP: RaidNode[] = [
     // Writes profiles.ship_classes['the_coffers'], stacking with chapters I + II.
     id: 'chapter_3_class',    type: 'class_pick',
     label: "Captain's Choice",
-    flavor: "The Coffers in ruins, the Quartermaster under, and a don's name at the top of every ledger. Time to set what your colours mean before the deepest water.",
+    flavor: "The Coffers in ruins, the Quartermaster under, and a don's name at the top of every ledger. Time to set what your colors mean before the deepest water.",
     requiresNode: 'the_quartermaster',
     classPick: { chapterId: 'the_coffers' },
     detail: {
@@ -1955,7 +1955,7 @@ export const RAID_MAP: RaidNode[] = [
     image: THE_THRONE.enemies.don_finleone.portrait,
     detail: {
       description:
-        "The don's own court, and every hull in it fights with a new kind of dirty. Watch their cannonball pips: a FULL, glowing battery means an ULTIMATE is primed — burn their charges down, shield, or brace before it empties into you. And their specials strike your AIM BAR itself: false gold you must not lock, plated locks that take two taps, squalls that gust your needle mid-sweep. Don Finleone waits at the centre — and what rises when his mask drops is nothing the family ever put on a ledger.",
+        "The don's own court, and every hull in it fights with a new kind of dirty. Watch their cannonball pips: a FULL, glowing battery means an ULTIMATE is primed — burn their charges down, shield, or brace before it empties into you. And their specials strike your AIM BAR itself: false gold you must not lock, plated locks that take two taps, squalls that gust your needle mid-sweep. Don Finleone waits at the center — and what rises when his mask drops is nothing the family ever put on a ledger.",
       enemies: ['The Court Herald', 'The Mirage', 'The Doorman', 'The Stormcaller', 'The Left Hand', 'The Consigliere', 'Don Finleone'],
       drops: lootDrops(THE_THRONE.loot),
       clearReward: clearPayout(THE_THRONE),
@@ -1991,7 +1991,7 @@ export const RAID_MAP: RaidNode[] = [
     image: '/raidlog.png',
     scene: [
       { text: 'The megalodon sinks the way an empire does — slowly, and then all at once.' },
-      { text: 'The court scatters. The colours strike. A hundred years of drowned debts settle to the bottom with their collector.' },
+      { text: 'The court scatters. The colors strike. A hundred years of drowned debts settle to the bottom with their collector.' },
       { text: 'It should feel finished. You take his ledgers apart page by page, looking for the feeling.' },
       { text: 'Instead you find the margin again. F. Signing sums before the Finndicate had a name. Signing the sums that BUILT it.' },
       { text: 'The don ran the family. The margin ran the don. Nothing on any chart says what F runs besides.' },

@@ -69,7 +69,7 @@ const RARITY_ITEM_COLOR: Record<string, string> = {
 }
 
 // Prismatic (iridescent) treatment for forged combination items — deliberately
-// set apart from the flat rarity colours (epic purple / legendary orange). Used
+// set apart from the flat rarity colors (epic purple / legendary orange). Used
 // on the item's border + name across the inventory and loadout.
 const PRISMATIC = 'linear-gradient(115deg, #ff6b8b 0%, #ffd36b 22%, #7be0a3 44%, #5fb3ff 66%, #c58bff 85%, #ff6b8b 100%)'
 // A gradient BORDER that keeps rounded corners: fill on padding-box, the
@@ -93,7 +93,7 @@ const prismaticBorderSoft = (fill: string): CSSProperties => ({
   border: '1.5px solid transparent',
 })
 // Soft pearlescent text — pale so it reads clearly on dark, with only a hint of
-// colour (much subtler than the full-saturation PRISMATIC_TEXT).
+// color (much subtler than the full-saturation PRISMATIC_TEXT).
 const PRISMATIC_TEXT_SOFT: CSSProperties = {
   backgroundImage: 'linear-gradient(105deg, #e6dcef, #dde9f4, #efe6d6)',
   WebkitBackgroundClip: 'text',
@@ -711,7 +711,7 @@ export default function ShipHero({
   // shown in the drawer and tapping an item equips/unequips it directly (no
   // per-slot picker — effects stack regardless of position, so "slots" are
   // just a capacity cap). Tap an equipped item to free it; unequipped items
-  // grey out once the hull is full. Server caps + validates ownership.
+  // gray out once the hull is full. Server caps + validates ownership.
   function toggleItem(itemId: string) {
     const equipped = equippedItems.includes(itemId)
     hapticTap() // equip/unequip is already optimistic — give the tap a tick too

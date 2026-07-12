@@ -90,7 +90,7 @@ export type CrewState = {
    *  toggle to pick the next-open slot on the chosen track. */
   shipCrewSlots: number
   /** user_crew ids that are currently AT SEA (in a pending voyage). The
-   *  Crew Hall UI greys these cards out and disables the assignment
+   *  Crew Hall UI grays these cards out and disables the assignment
    *  toggle — players can't pull a crew off an in-progress voyage. */
   lockedCrewIds: number[]
   /** user_crew ids currently OUT ON A TRAWL — also locked from reassignment
@@ -270,7 +270,7 @@ export async function getCrewState(): Promise<CrewState | null> {
 
   // Pending voyage lock: any crew currently in a 'pending' daily_voyages
   // crew_variant_ids list can't be reassigned until the voyage reveals.
-  // Surface those ids so the UI can grey out + disable the toggle.
+  // Surface those ids so the UI can gray out + disable the toggle.
   // Crew out on a Trawl are likewise locked from reassignment (hard-locked
   // at sea for the hour). Surfaced separately so the UI can label them.
   const [{ data: pendingVoyage }, { data: trawlRows }] = await Promise.all([

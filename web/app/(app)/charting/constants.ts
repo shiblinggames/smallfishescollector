@@ -45,12 +45,12 @@ export function nextMatchTier(score: number): { score: number; points: number } 
 
 /** Token art by type index (must be >= MATCH_TYPES). Each token is a crew fish
  *  sprite on a colored gem, and EACH GETS ITS OWN SILHOUETTE (`clip`) so the
- *  six in play (0-5) read apart by shape AND colour AND art — fully
- *  colourblind-safe and instant even at thumbnail size. `clip` is a CSS
+ *  six in play (0-5) read apart by shape AND color AND art — fully
+ *  colorblind-safe and instant even at thumbnail size. `clip` is a CSS
  *  clip-path; '' = the default rounded square. emoji is a fallback only. */
 // `glint` overrides the cut-gem sparkle's position for shapes whose top-left
 // corner is empty (pointed-top silhouettes), so the highlight sits ON the gem.
-// `nudge` shifts the fish art down by N% of its height to centre it in the
+// `nudge` shifts the fish art down by N% of its height to center it in the
 // visible part of the silhouette. Both default to the top-left glint / no nudge.
 export const MATCH_TOKENS: { img: string; emoji: string; color: string; clip: string; glint?: { left: string; top: string }; nudge?: number }[] = [
   { img: '/fish/clownfish.png',     emoji: '🐠', color: '#ff7e1c', clip: 'circle(49% at 50% 50%)' },                                              // orange · circle
@@ -74,7 +74,7 @@ export function shade(hex: string, amt: number): string {
   return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`
 }
 
-/** Faceted-gem surface for a token colour. Layers, top→bottom: a sharp specular
+/** Faceted-gem surface for a token color. Layers, top→bottom: a sharp specular
  *  glint, a glossy diagonal sheen, translucent light/dark conic WEDGES that read
  *  as cut facets radiating from the table, and a rounded body that sinks to a
  *  deep bottom-right — so a token reads as a faceted 3-D gem, not a flat chip.

@@ -130,7 +130,7 @@ export function BoardReveal({ card, phase, onTap, children, bloodied }: {
         )}
       </motion.div>
 
-      {/* Payoff effects (Epic/Legendary), emanating from the card centre */}
+      {/* Payoff effects (Epic/Legendary), emanating from the card center */}
       {flipped && card.rarity >= 3 && <ShockRings rarity={card.rarity} />}
       {flipped && card.rarity >= 3 && <ParticleBurst rarity={card.rarity} />}
       {/* Soft landing ring for Common/Rare (Epic+ already get the shock rings) */}

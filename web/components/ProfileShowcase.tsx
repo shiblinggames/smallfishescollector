@@ -12,7 +12,7 @@
 import { CrewPortrait, type ShowcaseCrew } from '@/components/CrewShowcase'
 import { getRaidItem, type RaidItemDef } from '@/lib/raidItems'
 
-// Bite-rarity → colour / label (kept in sync with the profile pages).
+// Bite-rarity → color / label (kept in sync with the profile pages).
 const RARITY_COLOR: Record<number, string> = {
   1: '#94a3b8', 2: '#4ade80', 3: '#60a5fa', 4: '#c084fc', 5: '#f59e0b',
 }

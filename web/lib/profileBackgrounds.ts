@@ -12,7 +12,7 @@ export interface ProfileBackground {
   /** Full-scene painting in /public. */
   src: string
   /** Darkening overlay for legibility. Dark zones use a lighter scrim so the
-   *  art's texture/colour isn't crushed into the black page bg. */
+   *  art's texture/color isn't crushed into the black page bg. */
   scrim: string
   /** Fishing level required to unlock (from ZONE_MIN_LEVEL). */
   minLevel: number

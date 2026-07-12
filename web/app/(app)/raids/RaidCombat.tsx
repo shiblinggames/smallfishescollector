@@ -247,7 +247,7 @@ function flashBar(el: HTMLDivElement | null, color: string, peak = 0.55) {
 const GRAZE_W = 0.038
 const HIT_W = 0.06
 const CRIT_W = 0.012
-// False Colours curse — decoy bands. Smaller hit window than the real target
+// False Colors curse — decoy bands. Smaller hit window than the real target
 // (HIT_W) so they're a tighter, trickier read, and they only show on a random
 // fraction of fires so the player never settles into expecting them.
 const DECOY_HALF = HIT_W * 0.62
@@ -505,7 +505,7 @@ export default function RaidCombat({
     let aimSpeedMult  = 1
     let zoneSpeedMult = 1
     let aimBlackout   = 0
-    let aimDecoys     = 0   // False Colours curse: N decoy bands on random fires
+    let aimDecoys     = 0   // False Colors curse: N decoy bands on random fires
     let confuseChance = 0   // Drowned Whispers curse: chance to scramble your action
     let hideEnemyHpChance = 0       // Shrouded Hull curse: chance the enemy HP is hidden
     let hideEnemyChargesChance = 0  // Shuttered Ports curse: chance enemy charges hidden
@@ -771,7 +771,7 @@ export default function RaidCombat({
   // ── Crew class abilities (in-fight state) ─────────────────────────────────
   // Per-raid cooldown lives in RaidGame (usedAbilityIds prop). Per-turn lock
   // lives here and resets whenever the player starts a new turn — the chooser
-  // greys out ALL crew ability cards (including the repair kit) once any one
+  // grays out ALL crew ability cards (including the repair kit) once any one
   // of them fires this turn, so the player can't burst all four in a row.
   const [oneAbilityUsedThisTurn, setOneAbilityUsedThisTurn] = useState(false)
   // Sharpshot — next N shots have a wider crit zone. Consumed by a shot
@@ -1000,7 +1000,7 @@ export default function RaidCombat({
   // has its own keyframe set; the rest border color is recomputed off
   // the live enemy state so the snap-back lands on the right color
   // (boss-gold / elite-violet / phase-2-crimson) instead of the
-  // grey default.
+  // gray default.
   useEffect(() => {
     if (!nameplateFx || nameplateFxKey === 0) return
     const enemyRestBorder =
@@ -1054,7 +1054,7 @@ export default function RaidCombat({
   // Brief red wash when the boss flips to phase 2 (challenge-mode Pete).
   // Same shape as critFlash — fixed full-screen radial gradient, ~400ms.
   const [phaseFlash, setPhaseFlash]   = useState(false)
-  // Centre-screen callout label for the current phase transition ('Phase 3' or a
+  // Center-screen callout label for the current phase transition ('Phase 3' or a
   // custom badge like 'Reserve Deck'). Set the instant the transition step plays.
   const [phaseCallout, setPhaseCallout] = useState('Phase 2')
   const [critFreeze, setCritFreeze]   = useState(false)   // briefly freezes the aim bar at the lock moment
@@ -1137,7 +1137,7 @@ export default function RaidCombat({
   const zoneRef      = useRef<HTMLDivElement>(null)
   const barFlashRef  = useRef<HTMLDivElement>(null)
   const rafRef       = useRef(0)
-  // False Colours curse — drifting DECOY bands the player must NOT lock onto.
+  // False Colors curse — drifting DECOY bands the player must NOT lock onto.
   // Decided fresh each aiming session (a random fraction of fires). The RAF
   // drifts them + paints via decoyElRefs; lockShot reads decoyRunRef to detect a
   // bad lock; decoyFumbleRef tells resolveTurn the shot was a dud.
@@ -1147,7 +1147,7 @@ export default function RaidCombat({
   const [activeDecoys, setActiveDecoys] = useState(0)
   // Raid-8 aim-bar attacks — enemy specials that strike YOUR aim, not your
   // hull. One affliction at a time; `passes` = player aim sessions remaining:
-  //   decoys   — forces False-Colours decoy bands on every afflicted pass
+  //   decoys   — forces False-Colors decoy bands on every afflicted pass
   //   hardened — the lock is plated: first tap CRACKS it (bar keeps sweeping,
   //              no judgment), the second tap lands the real lock
   //   squall   — the needle gusts (sweep speed surges and dies mid-pass)
@@ -1216,11 +1216,11 @@ export default function RaidCombat({
   // ALSO fall back to their live refs (a defense that was already up counts too).
   const checkFlagsRef    = useRef<Record<'heal' | 'burst' | 'brace' | 'shield' | 'snare', boolean>>({ heal: false, burst: false, brace: false, shield: false, snare: false })
   const [pendingCheck, setPendingCheck] = useState<{ name: string; telegraph: string; turnsLeft: number; responses: MechanicResponse[] } | null>(null)
-  // Centre-screen result callout the instant a check resolves — green "Countered!"
+  // Center-screen result callout the instant a check resolves — green "Countered!"
   // or red "<name> hits!" so success/failure is unmistakable.
   const [checkResultFlash, setCheckResultFlash] = useState<{ ok: boolean; label: string; key: number } | null>(null)
-  // Centre-screen callout for a boon PROC (Counter-Battery). Same lane as the
-  // check flash but themed to the boon's colour.
+  // Center-screen callout for a boon PROC (Counter-Battery). Same lane as the
+  // check flash but themed to the boon's color.
   const [boonFlash, setBoonFlash] = useState<{ label: string; sub?: string; color: string; key: number } | null>(null)
   // Cannonade (boon): the live crit streak, mirrored to state (off the step,
   // in playStep) so the heat rim + badge on the player hull track it.
@@ -1526,7 +1526,7 @@ export default function RaidCombat({
   // enemy land a parting shot (Bulwark still mitigates). The same prompt
   // handles BOTH the ← button and any attempt to navigate away mid-battle
   // (RaidGame intercepts those and signals via fleeSignal). pendingFleeNavRef
-  // holds where to go on a clean getaway so success honours where the player
+  // holds where to go on a clean getaway so success honors where the player
   // was trying to head.
   // Nav divisor mirrors rollSpeed's nav/10 (tight d20 numbers, no late-game
   // determinism); tide speedDelta folds into effective speed same as the
@@ -1697,7 +1697,7 @@ export default function RaidCombat({
       if (dBonus > 0) introLines.push(`Abyssal Bounty: +${Math.round(dBonus * 100)}% damage at depth ${runDepth}.`)
     }
     if ((enemy.damageReduction ?? 0) > 0) {
-      introLines.push(`Its ${(enemy.abilityName ?? 'armour').toLowerCase()} soaks fire and graze. Volleys break through.`)
+      introLines.push(`Its ${(enemy.abilityName ?? 'armor').toLowerCase()} soaks fire and graze. Volleys break through.`)
     }
     if ((enemy.aimFogDensity ?? 0) > 0) {
       introLines.push(`A ${(enemy.aimFogName ?? 'mist').toLowerCase()} drifts over your aim bar. Lock by rhythm, not by sight.`)
@@ -1778,7 +1778,7 @@ export default function RaidCombat({
     squallPhaseRef.current = Math.random() * Math.PI * 2
     const squallActive = affliction?.kind === 'squall'
 
-    // False Colours: on a RANDOM fraction of fires, spawn N drifting decoy bands.
+    // False Colors: on a RANDOM fraction of fires, spawn N drifting decoy bands.
     // Decided once per aiming session so the player can't predict it. The
     // raid-8 'decoys' affliction forces them on EVERY afflicted pass instead.
     const dLo = HIT_W + GRAZE_W, dHi = 1 - HIT_W - GRAZE_W
@@ -2088,7 +2088,7 @@ export default function RaidCombat({
     // skin themes its whole summon in its own color), else the class color.
     const summonSkin = getCrewSkinByFilename(crew.imageUrl)
     const summonColor = summonSkin?.color ?? def.color
-    // If an equipped CHASE skin is on this crew, its accent colour themes the
+    // If an equipped CHASE skin is on this crew, its accent color themes the
     // ability's whole payoff — damage/heal numbers, auras — so the effect reads
     // as the skin (Tempest's shots strike lightning-blue, Hunter's Bane's blow
     // lands blood-red, Galaxy's heal glows cosmic, etc.). null for base/regular.
@@ -2539,7 +2539,7 @@ export default function RaidCombat({
     // most important input in combat should be felt the instant it lands,
     // distinct from the bigger result haptics that follow the judgment.
     vibrate(6)
-    // False Colours: locked onto a drifting decoy → the shot's a dud. Flag the
+    // False Colors: locked onto a drifting decoy → the shot's a dud. Flag the
     // fumble (resolveTurn turns the player's turn into chip damage + no shot),
     // flash the bar red, and skip the normal aim judgment entirely.
     if (decoyRunRef.current.some(d => Math.abs(firePosRef.current - d.pos) <= DECOY_HALF)) {
@@ -2624,9 +2624,9 @@ export default function RaidCombat({
     // Indicator glow boost for hit/crit. Re-center the WIDENED needle on the
     // judged pos: it's anchored by `left` for a 4px needle (pos% − 2px), so
     // just growing `width` would balloon it to the RIGHT and shift its visual
-    // centre ~(w−4)/2 px right of the real hit point — which read as the crit
+    // center ~(w−4)/2 px right of the real hit point — which read as the crit
     // zone being offset right of the gold band. Offset left by half the new
-    // width so the fat needle stays centred on `pos`.
+    // width so the fat needle stays centerd on `pos`.
     if (indicatorRef.current && (res === 'hit' || res === 'critical')) {
       const w = res === 'critical' ? 10 : 7
       const glow = res === 'critical' ? '#fbbf24' : '#4ade80'
@@ -2770,7 +2770,7 @@ export default function RaidCombat({
       // transition reads as a beat, not a silent shift in pattern.
       phaseTransition?: boolean
       // The phase being ENTERED (2, 3, 4…) + an optional custom callout label
-      // ('RESERVE DECK'); drive the nameplate badge + centre-screen callout.
+      // ('RESERVE DECK'); drive the nameplate badge + center-screen callout.
       phaseNumber?: number
       phaseBadge?: string
       // The mechanic check that arms as this phase begins (armed when the
@@ -2797,7 +2797,7 @@ export default function RaidCombat({
       // drives the ice+fire detonation FX + its own splat.
       thermalShock?: number
       // Counter-Battery (boon): this step is the negated enemy shot — fires the
-      // centre "COUNTER-BATTERY" flash + a clash spark on the enemy.
+      // center "COUNTER-BATTERY" flash + a clash spark on the enemy.
       countered?: boolean
       // Cannonade (boon): the crit streak AFTER this landed player shot (0 = the
       // chain just broke). Drives the persistent heat rim + streak badge.
@@ -2952,7 +2952,7 @@ export default function RaidCombat({
         continue
       }
       const action = who === 'player' ? pAction : eAction
-      // False Colours fumble — the player locked onto a decoy band. The shot is a
+      // False Colors fumble — the player locked onto a decoy band. The shot is a
       // dud: no cannon fires, but the loaded charge(s) are spent (you committed to
       // the shot), the player takes chip damage, and the turn is over (the enemy
       // still acts its half of the round). Modeled on the reload branch so nothing
@@ -2963,7 +2963,7 @@ export default function RaidCombat({
         pCharges = Math.max(0, pCharges - cost)
         const chip = Math.max(enemy.minDmg, Math.round(playerHpMax * 0.06))
         pHp = Math.max(1, pHp - chip)
-        pushStep({ who, action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'player', splatText: `-${chip}`, splatColor: '#ef4444', logLines: [`False Colours! You locked onto a phantom. The shot is a dud: the loaded shot is wasted and you take ${chip} chip damage for the mistake.`] })
+        pushStep({ who, action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'player', splatText: `-${chip}`, splatColor: '#ef4444', logLines: [`False Colors! You locked onto a phantom. The shot is a dud: the loaded shot is wasted and you take ${chip} chip damage for the mistake.`] })
         continue
       }
       let splatTarget: Actor | null = null
@@ -3136,7 +3136,7 @@ export default function RaidCombat({
         else                  eCharges = Math.max(0, eCharges - (action === 'ultimate' ? enemyMagazine : action === 'volley' ? VOLLEY_COST : 1))
 
         const isAttackerPlayer = who === 'player'
-        // Mega (player-only): the augment whose damage + on-hit behaviour drives
+        // Mega (player-only): the augment whose damage + on-hit behavior drives
         // this shot. megaMult replaces the volley's flat ×2.
         const isMega  = action === 'mega'
         const megaAug = isMega ? megaAugment : null
@@ -4042,7 +4042,7 @@ export default function RaidCombat({
         }, j * 220)
       })
 
-      // Counter-Battery proc — a centre "COUNTER-BATTERY" flash + a cyan clash
+      // Counter-Battery proc — a center "COUNTER-BATTERY" flash + a cyan clash
       // spark bursting on the enemy hull as its shot is knocked down.
       if (step.countered) {
         const bk = Date.now() + i + 31
@@ -4132,7 +4132,7 @@ export default function RaidCombat({
           if (stg && ps && es) {
             x1 = ps.left  - stg.left + ps.width * 0.56   // back from the bow, closer to the ship
             y1 = ps.top   - stg.top  + ps.height * 0.32  // upper deck
-            x2 = es.left  - stg.left + es.width * 0.52   // enemy centre
+            x2 = es.left  - stg.left + es.width * 0.52   // enemy center
             y2 = es.top   - stg.top  + es.height * 0.46
           } else {
             const W = stg?.width ?? 360, H = stg?.height ?? 400
@@ -4154,7 +4154,7 @@ export default function RaidCombat({
           const es  = enemyShipRef.current?.getBoundingClientRect()
           let mx1: number, my1: number, mx2: number, my2: number
           if (stg && ps && es) {
-            mx1 = ps.left - stg.left + ps.width * 0.50   // launches off the deck centre
+            mx1 = ps.left - stg.left + ps.width * 0.50   // launches off the deck center
             my1 = ps.top  - stg.top  + ps.height * 0.20
             mx2 = es.left - stg.left + es.width * 0.50   // comes down on the enemy
             my2 = es.top  - stg.top  + es.height * 0.42
@@ -4515,7 +4515,7 @@ export default function RaidCombat({
         {/* ── Atmospheric backdrop ─────────────────────────────────────────
             Sun/sky/clouds/water all swap based on `atmosphere`. Each
             variant is a self-contained fragment so the parts (sun
-            colour, cloud presence, sun reflection, fog bands) can
+            color, cloud presence, sun reflection, fog bands) can
             differ per raid without ifs cluttering the shared layout.
             Order of branches: fog first, then sunset/overcast, then
             dusk as default fall-through. */}
@@ -4679,7 +4679,7 @@ export default function RaidCombat({
           </>
         ) : atmosphere === 'harbor' ? (
           <>
-            {/* The Coffers' drowned harbour — a grim black-market port under a
+            {/* The Coffers' drowned harbor — a grim black-market port under a
                 sickly green overcast, the air thick with gun-smoke. No clean
                 sun; just a bruised green glow where daylight fights through the
                 smoke, and drifting powder-haze instead of clouds. */}
@@ -4694,7 +4694,7 @@ export default function RaidCombat({
               }}
             />
 
-            {/* Gun-smoke haze bands drifting across the harbour — warm-grey
+            {/* Gun-smoke haze bands drifting across the harbor — warm-gray
                 powder smoke tinted by the green sky. Reuses the fog sway. */}
             <div aria-hidden style={{ position: 'absolute', top: '11%', left: '-40%', width: '180%', height: 60, pointerEvents: 'none' }}>
               <div className="raid-fog-slow" style={{ width: '100%', height: '100%', background: 'linear-gradient(90deg, transparent 0%, rgba(120,128,120,0.20) 28%, rgba(140,148,136,0.26) 50%, rgba(120,128,120,0.20) 72%, transparent 100%)', filter: 'blur(8px)' }} />
@@ -4708,7 +4708,7 @@ export default function RaidCombat({
               <div className="raid-cloud-slow" style={{ width: 150, height: 30, borderRadius: 15, background: 'radial-gradient(ellipse at 50% 55%, rgba(120,140,124,0.30) 0%, rgba(96,116,104,0.15) 50%, transparent 78%)', filter: 'blur(1.5px)' }} />
             </div>
 
-            {/* Horizon — faint green line over black harbour water. */}
+            {/* Horizon — faint green line over black harbor water. */}
             <div style={{
               position: 'absolute', left: 0, right: 0, top: '38%', height: 1,
               background: 'rgba(160,196,170,0.12)', boxShadow: '0 0 24px rgba(120,170,140,0.12)',
@@ -5436,8 +5436,8 @@ export default function RaidCombat({
         )}
 
         {/* Boon proc callout — Counter-Battery's "smashed from the air" beat.
-            Sits a touch above centre so it never collides with the mechanic
-            check flash, themed to the boon's colour. */}
+            Sits a touch above center so it never collides with the mechanic
+            check flash, themed to the boon's color. */}
         {boonFlash && (
           <motion.div key={`boonflash-${boonFlash.key}`} initial={{ opacity: 0, scale: 0.55, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.24, ease: 'easeOut' }}
             style={{ position: 'absolute', inset: 0, zIndex: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, transform: 'translateY(-14%)', pointerEvents: 'none' }}>
@@ -5775,7 +5775,7 @@ export default function RaidCombat({
             // Shimmer the gold band while the buff is live (band is already
             // widened via liveCritW; the pulse makes the boon unmistakable).
             sharpshotActive={!!sharpshotBuff && !critFreeze}
-            // False Colours curse — decoy bands the RAF drifts via these refs.
+            // False Colors curse — decoy bands the RAF drifts via these refs.
             decoyCount={activeDecoys}
             decoyElRefs={decoyElRefs}
             // Raid-8 aim affliction — warning chip + (hardened) the tap-twice
@@ -5867,7 +5867,7 @@ export default function RaidCombat({
               }
 
               // Activatable item card (War Drum / Thunder Drum). One use per
-              // raid, greys out with a reason when spent or when there's no
+              // raid, grays out with a reason when spent or when there's no
               // spent crew ability to bring back.
               const activatable = getActivatableItem(equippedRaidItems)
               if (activatable?.activated) {
@@ -6432,7 +6432,7 @@ function EnemyStatsPopup({
   const dr = enemy.damageReduction ?? 0
   const drPct = Math.round(dr * 100)
   const abilityName = enemy.abilityName
-  // Signal Flares / "False Colours" barrage — driven off decoyCount (the same
+  // Signal Flares / "False Colors" barrage — driven off decoyCount (the same
   // deception tier that seeds the aim-bar decoys). Every few turns the fleet
   // screens itself with false flares the player must swat; the boss tier (3)
   // mixes in red live-shell feints you must NOT tap. Count mirrors RaidCombat's
@@ -6717,7 +6717,7 @@ function EnemyStatsPopup({
           </div>
         )}
 
-        {/* Signal Flares — the "False Colours" whack-a-mole interrupt carried by
+        {/* Signal Flares — the "False Colors" whack-a-mole interrupt carried by
             any decoy-fleet enemy (decoyCount > 0). Warm flare-orange accent so it
             reads apart from the cool decoy/fog abilities. Boss tier adds the
             live-shell feint warning. */}
@@ -6881,7 +6881,7 @@ function FlareBarrage({ count, color, label, feintChance = 0, clusterChance = 0.
 
   useEffect(() => {
     if (count <= 0) { onComplete(0, 0); return }
-    // Spacing: keep a new flare's centre far enough from any flare still on
+    // Spacing: keep a new flare's center far enough from any flare still on
     // screen that its 66px tap target can't overlap a live one and steal its
     // tap. Convert the button size (+ buffer) to this stage's % per axis so it
     // holds at any stage height. `placed` tracks each flare's live window
@@ -7064,7 +7064,7 @@ function CarapaceDeflect() {
 
 // HP bar with an OPTIONAL absorb-shield folded into the SAME row: the shield
 // (player's Abyssal Tide / Stormward buffer, or an enemy Warded/Warding
-// barrier) renders as a distinct-coloured segment filling the gap just past
+// barrier) renders as a distinct-colored segment filling the gap just past
 // the HP fill (reads as temporary bonus HP), plus a small inline chip on the
 // number line. No separate stacked bar — keeps the nameplate to one row.
 function HPBar({ current, max, accent, compact, shield = 0, shieldColor = '#7dd3fc', shieldGradTo = '#5eead4', hidden = false }: { current: number; max: number; accent: string; compact?: boolean; shield?: number; shieldColor?: string; shieldGradTo?: string; hidden?: boolean }) {
@@ -7440,7 +7440,7 @@ function ThermalShockBurst() {
       {/* Shockwave ring — ice rim, fire glow */}
       <motion.div initial={{ scale: 0.3, opacity: 0.9 }} animate={{ scale: 2.6, opacity: 0 }} transition={{ duration: 0.6, ease: 'easeOut' }}
         style={{ position: 'absolute', left: '46%', top: '50%', width: 70, height: 70, marginLeft: -35, marginTop: -35, borderRadius: '50%', border: `2.5px solid ${ICE}`, boxShadow: `0 0 18px ${ICE}, inset 0 0 14px ${FIRE}aa` }} />
-      {/* Fire bloom lingering in the centre */}
+      {/* Fire bloom lingering in the center */}
       <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: [0.5, 1.3, 1], opacity: [0, 0.85, 0] }} transition={{ duration: 0.7, ease: 'easeOut' }}
         style={{ position: 'absolute', left: '46%', top: '50%', width: 80, height: 80, marginLeft: -40, marginTop: -40, borderRadius: '50%', background: `radial-gradient(circle, ${FIRE}cc 0%, ${FIRE}44 44%, transparent 70%)`, mixBlendMode: 'screen' }} />
       {/* Ice shards flung outward */}
@@ -7866,7 +7866,7 @@ const AbilitySummonFx = memo(function AbilitySummonFx({ label, name, color, imag
 function AbilityCastFx({ label, name, color, image, emoji }: { label: string; name: string; color: string; image?: string | null; emoji?: string }) {
   return (
     <motion.div
-      // x:'-50%' carries the horizontal centre through the scale/y animation
+      // x:'-50%' carries the horizontal center through the scale/y animation
       // (a static translateX would be clobbered by FM's transform).
       initial={{ opacity: 0, x: '-50%', y: 16, scale: 0.82 }}
       animate={{ opacity: 1, x: '-50%', y: 0, scale: 1 }}
@@ -7997,7 +7997,7 @@ export interface SpecialItem {
   sub: string
   /** Accent color for the card border + label. */
   color: string
-  /** Greys the card and blocks clicks. Use for "already used", "at full HP", etc. */
+  /** Grays the card and blocks clicks. Use for "already used", "at full HP", etc. */
   disabled?: boolean
   emoji?: string
   image?: string | null
@@ -8021,7 +8021,7 @@ function ActionMenu({ canFire, canVolley, canMega = false, megaAugment = null, c
   /** When set, the matching button keeps its accent border. Volley highlights Fire. */
   highlightedAction?: EnemyAction | null
   /** Special items the player can choose from. Empty list = Special slot
-   *  greys out. Tapping Special opens a chooser; tapping an entry fires
+   *  grays out. Tapping Special opens a chooser; tapping an entry fires
    *  its onClick. Per-entry `disabled` keeps the entry visible (so the
    *  player still sees the item exists) but blocks the action. */
   specialItems?: SpecialItem[]
@@ -8310,7 +8310,7 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, aimBlack
   indicatorRef: React.RefObject<HTMLDivElement | null>
   zoneRef:      React.RefObject<HTMLDivElement | null>
   flashRef:     React.RefObject<HTMLDivElement | null>
-  /** False Colours curse — N drifting decoy bands the player must NOT lock onto.
+  /** False Colors curse — N drifting decoy bands the player must NOT lock onto.
    *  The RAF positions each via decoyElRefs. 0 = none this fire. */
   decoyCount?: number
   decoyElRefs?: React.MutableRefObject<(HTMLDivElement | null)[]>
@@ -8423,7 +8423,7 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, aimBlack
           <div className={sharpshotActive ? 'rc-sharp-band' : undefined} style={{ position: 'absolute', top: '3px', bottom: '3px', left: `${50 - critBandPct / 2}%`, width: `${critBandPct}%`, background: sharpshotActive ? 'rgba(251,191,36,0.62)' : 'rgba(251,191,36,0.45)', borderRadius: 2 }} />
           <div style={{ position: 'absolute', top: '20%', bottom: '20%', left: 'calc(50% - 1px)', width: 2, background: '#fbbf24' }} />
         </div>
-        {/* False Colours — drifting DECOY bands (narrower than the real target,
+        {/* False Colors — drifting DECOY bands (narrower than the real target,
             crimson/danger). The RAF positions each via decoyElRefs; locking on
             one duds the shot. Hidden until the RAF places it. */}
         {Array.from({ length: Math.max(0, Math.min(2, decoyCount ?? 0)) }).map((_, i) => (

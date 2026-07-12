@@ -1,5 +1,5 @@
 // The Throne — Chapter IV's Raid 8: Don Finleone's court, and the don
-// himself (a megalodon under the family colours). Debuts the raid-8 layer:
+// himself (a megalodon under the family colors). Debuts the raid-8 layer:
 // enemy ULTIMATES at a full 4-ball magazine and AIM-BAR ATTACKS (decoys /
 // hardened lock / squall). ADMIN-ONLY until the Last Fathom launches (drop
 // this guard + the map adminOnly flags together, per the Ch3 playbook).

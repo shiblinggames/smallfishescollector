@@ -1413,7 +1413,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
         userSelect: 'none',
         // Breathing gap so the bottom action buttons clear the fixed
         // MobileTabBar (~64px) + iOS home indicator + a comfort margin.
-        // Height/scroll behaviour lives in .raid-combat-region (browser =
+        // Height/scroll behavior lives in .raid-combat-region (browser =
         // natural document scroll, PWA = fixed-height internal scroller).
         paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 48px)',
       }}>
@@ -1721,7 +1721,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     return (
       <div className="raid-combat-region flex flex-col items-center gap-2 select-none" style={{
         userSelect: 'none',
-        // Same scroll behaviour as the playing phase (see .raid-combat-region)
+        // Same scroll behavior as the playing phase (see .raid-combat-region)
         // so the Return to Port button is always reachable.
         paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 48px)',
         // The region only ever scrolls vertically; overflow-y:auto makes the
