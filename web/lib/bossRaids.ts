@@ -83,6 +83,13 @@ export interface BossPhase {
   /** Optional telegraphed mechanic check that ARMS the instant this phase
    *  begins (answer it with the right crew play or eat the consequence). */
   check?: BossMechanicCheck
+  /** AEGIS (Hammerhead phase 3): the phase opens behind a wall that drinks
+   *  EVERY shot whole (zero damage) until it breaks. A player Mega shatters
+   *  it instantly (the intended discovery — hints stay oblique); without one
+   *  it collapses after `hitsToBreak` landed hits (volleys count double), so
+   *  no build is soft-locked, just slow-walked while the boss pounds away.
+   *  Burn does NOT tick through it (the puzzle stays pure). */
+  aegis?: { name: string; hitsToBreak: number }
   // Optional chance-gated incoming-damage mitigation while in this phase.
   // Mirrors the Ironclad affix shape: when the chance roll succeeds, dmg is
   // multiplied by `damageTakenMult` (e.g. 0.7 for -30%) and a log line surfaces.
@@ -1333,6 +1340,15 @@ export const THE_HAMMERHEAD: BossRaidConfig = {
             failLine: 'The maul falls true, and your deck folds under it.',
             consequence: { kind: 'damagePctMaxHp', value: 0.70 },
           } },
+        // Phase 3 — THE LAST WALL. He rises one final time behind an aegis
+        // that drinks every shot whole. The discovery is the player's: only
+        // an ultimate tears it down in one blow (dialogue + logs hint at
+        // "everything at once" without naming the Mega). Fallback: 6 landed
+        // hits batter it down, so a no-Mega build survives it the hard way.
+        { revivePct: 0.45, damageMult: 1.5, badge: 'The Last Wall',
+          pattern: ['reload', 'fire', 'special', 'reload', 'volley', 'fire', 'reload', 'fire'],
+          dialogueLine: 'You want the don? Then break what cannot be broken. No single shot you carry is heavy enough. Not one of them.',
+          aegis: { name: 'The Last Wall', hitsToBreak: 6 } },
       ],
       zoneSpeedMult: 2.1,
       image: '/enemychapter3man-o-war.png',

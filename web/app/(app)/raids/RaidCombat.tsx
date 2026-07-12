@@ -1206,6 +1206,16 @@ export default function RaidCombat({
   // classic phase2 boss just yields [] or [phase2], so all existing raids behave
   // exactly as before.
   const phaseList = useMemo(() => enemy.phases ?? (enemy.phase2 ? [enemy.phase2] : []), [enemy.phases, enemy.phase2])
+  // ── The Last Wall (aegis — Hammerhead phase 3) ──────────────────────────────
+  // A phase can open behind a wall that drinks EVERY player blow whole. A Mega
+  // shatters it outright (the discovery the fight wants the player to make);
+  // anything else chips its endurance (volley counts double) until it collapses
+  // under sheer battering — the slow lane, so a no-Mega build isn't locked out.
+  // Sim truth lives in the ref (resolveTurn mutates it at compute time); the
+  // visuals (chip + hull ring + popup card) follow step playback via aegisVis.
+  const aegisRef = useRef<{ name: string; hitsLeft: number } | null>(null)
+  const aegisHitsRef = useRef(0)   // blows wasted on the wall — escalates the hint lines
+  const [aegisVis, setAegisVis] = useState<{ name: string } | null>(null)
   // ── Mechanic checks (telegraphed boss moves you must answer) ────────────────
   // A phase's `check` arms the instant that phase begins: `pendingCheckRef` holds
   // the config, `checkTurnsLeftRef` counts down each player turn, and
@@ -1764,6 +1774,8 @@ export default function RaidCombat({
     vengeanceDmgBuffRef.current = 0
     enemyPhaseRef.current = 1
     setEnemyPhase(1)
+    aegisRef.current = null; aegisHitsRef.current = 0
+    setAegisVis(null)
     setEnemySinking(false)  // fresh enemy — clear any leftover sink from a prior fight
     turnRef.current = 1; setTurn(1)
     return () => clearTimeout(promptTimer)
@@ -2430,6 +2442,24 @@ export default function RaidCombat({
   // step-playback path inside resolveTurn so kills landed via an ability
   // run the same outro as kills landed via cannon fire.
   function applyAbilityDamage(rawDmg: number, logLine: string, hitKind: 'hit' | 'crit', skipSplat = false, splatColor?: string) {
+    // The Last Wall (aegis) drinks crew direct damage whole too — but the blow
+    // still chips the wall's endurance, so a spent ability isn't a total waste.
+    // This is a UI-time path, so the visual updates land right here.
+    if (aegisRef.current && rawDmg > 0) {
+      aegisRef.current.hitsLeft -= 1
+      aegisHitsRef.current += 1
+      const broke = aegisRef.current.hitsLeft <= 0
+      if (broke) { aegisRef.current = null; setAegisVis(null) }
+      setEHitsplat({ key: Date.now(), text: 'Walled', color: '#e8d8a8', big: false })
+      setTimeout(() => setEHitsplat(null), 480)
+      setEnemyShakeKind('hit')
+      setEnemyShakeKey(k => k + 1)
+      setResolveLog(prev => [...prev, logLine,
+        'The wall drinks the blow whole. Not a scratch on it.',
+        ...(broke ? ['The wall groans, buckles, and finally comes apart under sheer battering!'] : []),
+      ])
+      return
+    }
     // Crew abilities are direct player damage — they route through the enemy's
     // barrier (Warded / The Warding) before its hull, same as cannon fire.
     let toHull = rawDmg
@@ -2467,6 +2497,11 @@ export default function RaidCombat({
         setTimeout(() => setPhaseFlash(false), 2400)
         setTimeout(() => setResolveLog(prev => [...prev, `${enemy.name}: "${nextCfg.dialogueLine}"`]), 300)
         armMechanicCheck(nextCfg.check)
+        if (nextCfg.aegis) {
+          aegisRef.current = { name: nextCfg.aegis.name, hitsLeft: nextCfg.aegis.hitsToBreak }
+          aegisHitsRef.current = 0
+          setAegisVis({ name: nextCfg.aegis.name })
+        }
         vibrate([0, 50, 40, 80])
         return
       }
@@ -2836,6 +2871,12 @@ export default function RaidCombat({
       // The mechanic check that arms as this phase begins (armed when the
       // transition step plays), if the phase carries one.
       phaseCheck?: BossMechanicCheck
+      // The Last Wall: raised as this transition step plays (visual only —
+      // the sim ref armed back in resolveTurn when the revive resolved).
+      phaseAegis?: { name: string }
+      // The wall came down on this step — 'shatter' (Mega) or 'collapse'
+      // (battered down the slow way). Clears the visual at play time.
+      aegisDown?: 'shatter' | 'collapse'
       // Set when this hit lit an Incendiary / froze a Frozen cannonball, so the
       // enemy hull flares with the matching status aura the instant it lands.
       procStatus?: 'burn' | 'freeze'
@@ -2898,6 +2939,10 @@ export default function RaidCombat({
     // more than the hit carried, so the same shot strips plating faster
     // (the hull never takes more than the hit; corrode only eats shield).
     const soakEnemyShield = (amount: number, pierce = false): number => {
+      // The Last Wall (aegis) drinks EVERYTHING that isn't a Mega — reflects,
+      // thorns, spite, thermal bursts. The main attack path zeroes dmg and
+      // chips the wall before calling this; stray damage sources die here.
+      if (aegisRef.current) return 0
       if (amount <= 0 || pierce || enemyShieldRef.current <= 0) return amount
       const mult = eStatus.shieldDmgTakenMult
       const bite = Math.round(amount * mult)          // what the shield stands to lose
@@ -2934,7 +2979,9 @@ export default function RaidCombat({
     // Incendiary burn ticks at the top of the turn. It reads the burn set on a
     // PRIOR turn (a burn lit this turn ticks next turn, not now), and a tick
     // that drops the enemy to 0 ends the fight via the final-step death check.
-    if (enemyBurnRef.current.turns > 0 && eHp > 0) {
+    // While The Last Wall stands, fire can't reach the hull either — the tick
+    // is held (turns don't burn down) so the DoT resumes once the wall falls.
+    if (enemyBurnRef.current.turns > 0 && eHp > 0 && !aegisRef.current) {
       const tick = enemyBurnRef.current.dmg
       // Wildfire "Backdraft": while it burns, the flames can flare on any tick for
       // a bonus burst. Sustained burning (Reignite) = more flares — the two feed
@@ -3038,6 +3085,7 @@ export default function RaidCombat({
       let thermalBurstOut = 0    // Thermal Shock confluence: shatter burst this hit
       let shieldAbsorbedOut = 0  // Enemy barrier soak on the player's shot this step
       let carapaceSoaked = false
+      let aegisDownOut: 'shatter' | 'collapse' | undefined   // The Last Wall fell this step
       const stepLines: string[] = []
 
       // Snare made good — the enemy tried to slip aside but its helm is jammed,
@@ -3382,7 +3430,13 @@ export default function RaidCombat({
         // A frozen defender can't weave aside — its dodge stance is forfeit this
         // round (mirrors its skipped turn), so the shot lands clean.
         const defenderFrozen = isAttackerPlayer ? enemyFrozenThisRound : playerFrozenThisRound
-        if (defenderAction === 'dodge' && defenderFrozen) {
+        if (defenderAction === 'dodge' && isAttackerPlayer && aegisRef.current) {
+          // The Last Wall: while it stands, the enemy doesn't bother weaving —
+          // the wall is doing the work. Every player blow "lands" (into the
+          // wall, or the shattering Mega). Without this, a feint-dodge could
+          // full-dodge the Mega — wasting the exact answer the fight asks for.
+          stepLines.push(`The ${enemy.name} doesn't so much as flinch behind the wall.`)
+        } else if (defenderAction === 'dodge' && defenderFrozen) {
           stepLines.push(isAttackerPlayer
             ? `The ${enemy.name} is frozen solid — it can't weave aside.`
             : `Your ship is frozen solid — you can't weave aside.`)
@@ -3521,6 +3575,28 @@ export default function RaidCombat({
         }
 
         if (isAttackerPlayer) {
+          // ── THE LAST WALL (aegis) ────────────────────────────────────────
+          // The wall stands between your guns and his hull. A Mega takes it
+          // apart in one blow and the damage flows through; everything else
+          // is drunk whole (dmg → 0, all on-hit riders skip) and chips the
+          // wall's endurance — fire 1, volley 2 — until it collapses.
+          let aegisWalled = false
+          if (aegisRef.current && dmg > 0) {
+            if (isMega) {
+              aegisRef.current = null
+              aegisDownOut = 'shatter'
+              stepLines.push('The wall takes the full weight of your ultimate and comes apart in one blow!')
+            } else {
+              aegisWalled = true
+              aegisRef.current.hitsLeft -= action === 'volley' ? 2 : 1
+              aegisHitsRef.current += 1
+              if (aegisRef.current.hitsLeft <= 0) {
+                aegisRef.current = null
+                aegisDownOut = 'collapse'
+              }
+              dmg = 0
+            }
+          }
           const piercing = isMega && !!megaAug?.pierce
           const preShield = enemyShieldRef.current
           const toHull = soakEnemyShield(dmg, piercing)
@@ -3684,7 +3760,23 @@ export default function RaidCombat({
               stepLines.push(`The wreck goes up in flame, scorching you for ${burn}.`)
             }
           }
-          if (railgunGraze) {
+          if (aegisWalled) {
+            const n = aegisHitsRef.current
+            stepLines.push(
+              action === 'volley'
+                ? 'Your volley hammers the wall. The wall does not care.'
+                : n <= 1
+                  ? 'The wall drinks your shot whole. Not a scratch on it.'
+                  : n === 2
+                    ? 'Another blow wasted on the wall. Piece by piece will not open it.'
+                    : 'The wall wants everything you have in one blow. Nothing less.',
+            )
+            if (aegisDownOut === 'collapse') {
+              stepLines.push('The wall groans, buckles, and finally comes apart under sheer battering!')
+            }
+            splatText = 'Walled'
+            splatColor = '#e8d8a8'
+          } else if (railgunGraze) {
             stepLines.push(`The ${enemy.name} twists aside, but the beam still grazes clean through for ${dmg}.`)
             splatText = `-${dmg}`
             splatColor = '#5fd0ff'
@@ -3862,6 +3954,7 @@ export default function RaidCombat({
         carapaceSoak: carapaceSoaked,
         thermalShock: thermalBurstOut || undefined,
         cannonade: cannonadeStep,
+        aegisDown: aegisDownOut,
       })
 
       // Phase 2 revival — when the player's killing blow drops the boss
@@ -3884,6 +3977,12 @@ export default function RaidCombat({
         enemyPhaseRef.current += 1
         enemyPatternIdxRef.current = 0
         enemyFeintStreakRef.current = 0
+        // The Last Wall arms at SIM time (next resolveTurn must see it); the
+        // visual raises when the transition step PLAYS, via step.phaseAegis.
+        if (nextCfg.aegis) {
+          aegisRef.current = { name: nextCfg.aegis.name, hitsLeft: nextCfg.aegis.hitsToBreak }
+          aegisHitsRef.current = 0
+        }
         const revivedHp = Math.max(1, Math.floor(enemyHpMaxRef.current * nextCfg.revivePct))
         eHp = revivedHp
         pushStep({
@@ -3901,6 +4000,7 @@ export default function RaidCombat({
           phaseNumber: enemyPhaseRef.current,
           phaseBadge: nextCfg.badge,
           phaseCheck: nextCfg.check,
+          phaseAegis: nextCfg.aegis ? { name: nextCfg.aegis.name } : undefined,
         })
         break
       }
@@ -4091,6 +4191,15 @@ export default function RaidCombat({
         setTimeout(() => setPhaseFlash(false), 2400)
         // Arm this phase's mechanic check (if any) as the phase begins.
         armMechanicCheck(step.phaseCheck)
+        // Raise The Last Wall's visual as the transition step plays (chip +
+        // hull ring + popup card all key off aegisVis).
+        if (step.phaseAegis) setAegisVis({ name: step.phaseAegis.name })
+      }
+      // The wall came down on this step — Mega shatter gets the heavy haptic;
+      // a battered collapse just clears quietly (the log line carries it).
+      if (step.aegisDown) {
+        setAegisVis(null)
+        if (step.aegisDown === 'shatter') vibrate([0, 60, 40, 90])
       }
 
       // Stream this step's log lines into the visible log as the step plays.
@@ -5177,6 +5286,7 @@ export default function RaidCombat({
             />
             {/* Ch4 statuses + bespoke effect chips (burn/freeze/snare) — one row. */}
             <StatusBadgesRow statuses={enemyStatuses} bespoke={[
+              ...(aegisVis ? [{ key: 'aegis', color: '#e8d8a8', title: `${aegisVis.name} — a wall drinks every shot whole` }] : []),
               ...(enemyBurning ? [{ key: 'burn', color: '#fb923c', title: 'Ablaze — burning each turn' }] : []),
               ...(enemyFrozen ? [{ key: 'freeze', color: '#7dd3fc', title: 'Frozen — its turn is skipped' }] : []),
               ...(snareDodgeTurns > 0 ? [{ key: 'snare', color: '#d9b066', turns: snareDodgeTurns, title: 'Snared — dodges can be fouled' }] : []),
@@ -5252,6 +5362,12 @@ export default function RaidCombat({
             />
             {/* Persistent burn/freeze tell — lingers between activation + tick */}
             {(enemyBurning || enemyFrozen) && <ShipStatusAura burning={enemyBurning} frozen={enemyFrozen} />}
+            {/* The Last Wall — pale rampart ring around the hull while the
+                aegis stands; exit scales up + fades so the break reads as a
+                shatter without any extra FX machinery. */}
+            <AnimatePresence>
+              {aegisVis && <AegisWallRing key="aegis-wall" />}
+            </AnimatePresence>
             {/* Status aura — burning embers / freezing rime / snare jam over the hull */}
             <AnimatePresence>
               {enemyAura && <EnemyStatusAura key={`ea-${enemyAura.key}`} kind={enemyAura.kind} color={enemyAura.color} />}
@@ -6074,6 +6190,10 @@ export default function RaidCombat({
             isElite={isElite}
             affix={affix}
             conditions={[
+              // The Last Wall — deliberately vague: "everything you have in one
+              // blow" is the whole hint. Never names the Mega; the discovery is
+              // the player's to make.
+              ...(aegisVis ? [{ key: 'aegis', name: aegisVis.name, color: '#e8d8a8', desc: 'A wall of iron and will stands between your guns and his hull. Single shots glance off it whole. If anything can bring it down in one stroke, it is everything you have, all at once.' }] : []),
               ...statusConditions(enemyStatuses),
               ...(enemyBurning ? [{ key: 'burn', name: 'Ablaze', color: BURN_COLOR, turns: enemyBurnRef.current.turns, desc: `Its hull is on fire — it loses ${enemyBurnRef.current.dmg} HP at the end of each of its turns.` }] : []),
               ...(enemyFrozen ? [{ key: 'freeze', name: 'Frozen', color: FREEZE_COLOR, desc: 'Iced over — its next turn is skipped, and it cannot weave aside from your shots while frozen.' }] : []),
@@ -7226,6 +7346,33 @@ function HPBar({ current, max, accent, compact, shield = 0, shieldColor = '#7dd3
 // several of the old characters (⌛ ⚔ ❤ 🔥 ⚓ ❄) take emoji presentation on
 // iOS and broke the no-emoji-icons rule. One component, keyed by the status
 // id (or bespoke key), inheriting the chip's color via currentColor.
+// ── The Last Wall ring (aegis) ───────────────────────────────────────────────
+// Pale rampart aura hugging the enemy hull while the wall stands. Gradient +
+// opacity/transform only — no blur/mixBlendMode (persistent-element perf rule).
+// The AnimatePresence exit (scale up + fade) doubles as the shatter beat.
+function AegisWallRing() {
+  return (
+    <motion.div
+      aria-hidden
+      initial={{ opacity: 0, scale: 0.82 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 1.35 }}
+      transition={{ duration: 0.45, ease: 'easeOut' }}
+      style={{ position: 'absolute', inset: '-14% -9%', zIndex: 2, pointerEvents: 'none' }}
+    >
+      <motion.div
+        animate={{ opacity: [0.55, 0.95, 0.55] }}
+        transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+        style={{
+          position: 'absolute', inset: 0, borderRadius: '50%',
+          border: '1px solid rgba(232,216,168,0.45)',
+          background: 'radial-gradient(ellipse at center, rgba(232,216,168,0) 50%, rgba(232,216,168,0.10) 66%, rgba(232,216,168,0.30) 82%, rgba(232,216,168,0) 100%)',
+        }}
+      />
+    </motion.div>
+  )
+}
+
 function StatusGlyph({ icon, size = 10 }: { icon: string; size?: number }) {
   const P = (d: string, extra?: React.ReactNode) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0 }}>
@@ -7244,6 +7391,7 @@ function StatusGlyph({ icon, size = 10 }: { icon: string; size?: number }) {
     case 'burn':    return P('M12 2.5c4 4 6 7 6 10.3A6 6 0 0 1 6 12.8C6 9.5 8 6.5 12 2.5z', <path d="M12 11.5c1.6 1.7 1.6 3.4 0 5.1-1.6-1.7-1.6-3.4 0-5.1z" />) // flame
     case 'freeze':  return P('M12 2v20M3.3 7l17.4 10M20.7 7L3.3 17')                                     // snowflake
     case 'snare':   return P('M12 7.2v12.3M8.3 10h7.4M5 13.6c.5 3.7 3.3 5.9 7 5.9s6.5-2.2 7-5.9', <circle cx="12" cy="4.8" r="2" />) // anchor
+    case 'aegis':   return P('M4 6.5h16v11H4z', <path d="M4 12h16M9 6.5V12M15 12v5.5" />)                // brick wall
     default:        return P('M12 5v14M5 12h14')
   }
 }
