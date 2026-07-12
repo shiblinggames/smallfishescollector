@@ -339,7 +339,13 @@ export interface RaidNode {
    *  (EXCLUSIVE_CHOICE_PAIRS in lib/raidItems) for `price` doubloons each.
    *  Only pairs where the player owns exactly one side are offered;
    *  purchases stay available on revisit (clearing the node = reading it). */
-  reclaim?: { price: number }
+  reclaim?: {
+    price: number
+    /** The vault's purchases stay locked until this node is cleared (the node
+     *  itself still opens and clears normally, so the chapter chain flows).
+     *  Used to gate the Reclamation behind the Quartermaster's challenge run. */
+    requiresClearedNode?: string
+  }
   /** Event nodes: branching decision beats with N outcomes (loot /
    *  release / take logs etc). The chosen choice id is persisted in
    *  raid_node_progress.choices so the sheet can mark it on revisit. */
@@ -1753,11 +1759,11 @@ export const RAID_MAP: RaidNode[] = [
     bridge: "The vault is cracked and the roads not taken are for sale. Whatever you left behind in the Caches can come aboard at last — for a price.",
     requiresNode: 'throne_heading',
     adminOnly: true,
-    reclaim: { price: 125_000 },
+    reclaim: { price: 125_000, requiresClearedNode: 'the_quartermaster_challenge' },
     detail: {
       description:
-        "Every Cache the Quartermaster ever ran made you choose — one item aboard, the other gone for good. Or so he said. His seized stock says otherwise: everything you passed over is here, crated and waiting. His executors will part with each piece for 125,000 doubloons — the road not taken was always for sale, it just cost you.",
-      dropsNote: 'Buy back any Cache item you passed over. Steep, permanent, and it unlocks the forge recipes that needed the road not taken.',
+        "Every Cache the Quartermaster ever ran made you choose — one item aboard, the other gone for good. Or so he said. His seized stock says otherwise: everything you passed over is here, crated and waiting. His executors will part with each piece for 125,000 doubloons — but they only deal with the captain who broke the Quartermaster's CHALLENGE run. Prove it in Chapter III and the vault opens.",
+      dropsNote: 'Buy back any Cache item you passed over. Steep, permanent, and it unlocks the forge recipes that needed the road not taken. The executors deal only once Challenge: The Quartermaster is beaten.',
       ctaLabel: 'Crack the Vault →',
       summary: "The Quartermaster's seized vault re-offers every Cache choice you passed over, at 125,000 doubloons apiece. The roads not taken are open again.",
     },

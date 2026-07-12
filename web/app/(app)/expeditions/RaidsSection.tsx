@@ -640,6 +640,7 @@ function NodeDetailSheet({
   raidRecords,
   pickedEventChoiceId,
   allNodeChoices,
+  clearedNodeIds,
   onClose,
 }: {
   view: RaidNodeView
@@ -649,6 +650,10 @@ function NodeDetailSheet({
   equippedRaidItems: string[]
   shipClasses: Record<string, string>
   raidRecords: RaidRecords | null
+  /** Ids of every cleared node on the map — lets one node's content gate on
+   *  another's clear (the Reclamation vault needs the Quartermaster's
+   *  challenge run beaten before it deals). */
+  clearedNodeIds: Set<string>
   /** If this is an event node the player has already cleared, which
    *  of its choices did they pick? Drives the "Chosen ✓" badge + the
    *  dimmed-other-options visual state on revisit. */
@@ -1377,6 +1382,32 @@ function NodeDetailSheet({
             the vault is cracked (cleared) and stays buyable on every revisit. */}
         {node.reclaim && cleared && (() => {
           const price = node.reclaim.price
+          // The executors only deal with the captain who broke the
+          // Quartermaster's challenge run — until then the vault shows its
+          // crates and keeps the ledger shut. Server enforces the same gate.
+          const gateId = node.reclaim.requiresClearedNode
+          if (gateId && !clearedNodeIds.has(gateId)) {
+            return (
+              <div style={{ marginTop: '1.1rem' }}>
+                <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#7a7875', marginBottom: '0.55rem' }}>
+                  The Roads Not Taken
+                </p>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '0.8rem 0.85rem', borderRadius: 12, background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.18)' }}>
+                  <span aria-hidden style={{ flexShrink: 0, marginTop: 2, color: '#9a948c', display: 'flex' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="10" width="16" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
+                  </span>
+                  <div style={{ minWidth: 0 }}>
+                    <p className="font-karla font-700" style={{ fontSize: '0.76rem', color: '#e8e2d8', lineHeight: 1.35 }}>
+                      The executors look you over and put the ledger away.
+                    </p>
+                    <p className="font-karla" style={{ fontSize: '0.7rem', color: 'rgba(240,237,232,0.6)', lineHeight: 1.5, marginTop: 4 }}>
+                      They only deal with the captain who broke the Quartermaster in his challenge run. Beat Challenge: The Quartermaster in Chapter III and the vault opens.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )
+          }
           // Forge-aware: a Cache pick that was forged into a fusion left
           // raid_items, but the choice was made — the vault must offer the
           // MISSED side, never resell the taken-and-forged one.
@@ -2947,6 +2978,7 @@ export default function RaidsSection({ views, doubloons, navLevel, playerShipIma
             raidRecords={selected.node.type === 'raid' && selected.node.raidId ? raidRecords[selected.node.raidId] ?? null : null}
             pickedEventChoiceId={raidNodeChoices[selected.node.id]}
             allNodeChoices={raidNodeChoices}
+            clearedNodeIds={new Set(views.filter(v => v.status === 'cleared').map(v => v.node.id))}
             onClose={() => setSelected(null)}
           />
         )}

@@ -384,6 +384,11 @@ export async function buyReclaimedItem(
 
   const cleared = await buildClearedSet(admin, user.id, profile)
   if (node.requiresNode && !cleared.has(node.requiresNode)) return { error: 'Locked' }
+  // The executors only deal with a proven captain: purchases stay locked
+  // until the gate node (the Quartermaster's challenge run) is beaten.
+  if (node.reclaim.requiresClearedNode && !cleared.has(node.reclaim.requiresClearedNode)) {
+    return { error: 'The executors will not deal until the Quartermaster falls in his challenge run.' }
+  }
 
   // Forge-aware ownership: a Cache pick that was forged into a fusion left
   // raid_items, but the choice was still made — count it (and never resell it).
