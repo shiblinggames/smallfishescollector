@@ -16,7 +16,7 @@ import {
   BossRaidConfig, BroadsideEnemy, RaidLootItem, RARITY_COLOR, raidCompletionBonusXp,
 } from '@/lib/bossRaids'
 import { isChallengeRaidId } from '@/lib/raidChallenge'
-import { AFFIXES, ELITE_HP_MULT, ELITE_DMG_MULT, rollAffix, rollEliteSlots, type AffixDef, type AffixId } from '@/lib/raidAffixes'
+import { AFFIXES, ELITE_HP_MULT, ELITE_DMG_MULT, rollAffix, rollSecondAffix, mergeAffixes, rollEliteSlots, type AffixDef, type AffixId } from '@/lib/raidAffixes'
 import RaidCombat from './RaidCombat'
 import RaidLootStage from './RaidLootStage'
 import BossDialogueModal from './BossDialogueModal'
@@ -459,6 +459,20 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   const eliteAffixesRef = useRef<Record<number, AffixId>>(
     isChallengeRaidId(config.raidId)
       ? Object.fromEntries(rollEliteSlots(config.sequence.length, 2).map(slot => [slot, rollAffix()]))
+      : {},
+  )
+  // mergeRandomAffix raids (the Quartermaster challenge): every intro enemy that
+  // already carries a signature affix gets a random SECOND affix (distinct),
+  // rolled ONCE per run per slot so it's stable across encounter remounts but
+  // fresh on a new attempt. Merged onto the baked affix at resolve time.
+  const bonusAffixesRef = useRef<Record<number, AffixId>>(
+    isChallengeRaidId(config.raidId) && config.mergeRandomAffix
+      ? Object.fromEntries(
+          config.sequence
+            .map((key, i) => [i, config.enemies[key]?.affix] as const)
+            .filter(([, a]) => !!a)
+            .map(([i, a]) => [i, rollSecondAffix(a as AffixId)]),
+        )
       : {},
   )
 
@@ -1463,7 +1477,13 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
             // scaleEnemy already handled the numbers); only a purely random elite
             // gets buildEliteEnemy.
             const bakedAffix = baseEnemy.affix ? AFFIXES[baseEnemy.affix] : undefined
-            const eliteAffix = bakedAffix ?? rolledAffix
+            // Quartermaster challenge: fold this slot's random second affix onto
+            // the enforcer's signature so it reads as a fresh elite each run.
+            const bonusSlot = roundRef.current % (config.sequence.length + 1)
+            const bonusAffixId = bakedAffix ? bonusAffixesRef.current[bonusSlot] : undefined
+            const eliteAffix = bakedAffix
+              ? (bonusAffixId ? mergeAffixes(bakedAffix, AFFIXES[bonusAffixId]) : bakedAffix)
+              : rolledAffix
             // Stamp the raid's baseline gunnery accuracy onto the enemy (a
             // per-enemy `accuracy` still wins if set), so the dodge contest can
             // actually land shots through a high-nav captain's dodge.

@@ -311,6 +311,9 @@ export const THE_QUARTERMASTER_CHALLENGE: BossRaidConfig = (() => {
   if (!qm) return base
   return {
     ...base,
+    // Both intro enforcers (The Leech, The Breaker) keep their signature affix
+    // AND draw a random second affix each run — a fresh elite twist every try.
+    mergeRandomAffix: true,
     enemies: {
       ...base.enemies,
       quartermaster: { ...qm, phases: [...(qm.phases ?? []), QUARTERMASTER_CHALLENGE_PHASE5] },

@@ -324,6 +324,11 @@ export interface BossDialogueLine {
 
 export interface BossRaidConfig {
   raidId: string
+  /** Challenge-mode extra: every intro enemy that carries a BAKED signature
+   *  affix ALSO gets one random second affix, merged, rolled fresh each run
+   *  (guaranteed elite, different every attempt). Keeps the enforcer's identity
+   *  and stacks a surprise on top. Only meaningful on a challenge config. */
+  mergeRandomAffix?: boolean
   raidTitle: string
   bossDefeatedText: string
   enemies: Record<string, BroadsideEnemy>
