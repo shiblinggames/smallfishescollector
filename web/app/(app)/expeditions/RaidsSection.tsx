@@ -1382,32 +1382,11 @@ function NodeDetailSheet({
             the vault is cracked (cleared) and stays buyable on every revisit. */}
         {node.reclaim && cleared && (() => {
           const price = node.reclaim.price
-          // The executors only deal with the captain who broke the
-          // Quartermaster's challenge run — until then the vault shows its
-          // crates and keeps the ledger shut. Server enforces the same gate.
+          // Challenge gate: the wares ALWAYS show (players should see what
+          // they're missing and going for) — only BUYING is locked until the
+          // Quartermaster's challenge run is beaten. Server enforces the same.
           const gateId = node.reclaim.requiresClearedNode
-          if (gateId && !clearedNodeIds.has(gateId)) {
-            return (
-              <div style={{ marginTop: '1.1rem' }}>
-                <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#7a7875', marginBottom: '0.55rem' }}>
-                  The Roads Not Taken
-                </p>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '0.8rem 0.85rem', borderRadius: 12, background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.18)' }}>
-                  <span aria-hidden style={{ flexShrink: 0, marginTop: 2, color: '#9a948c', display: 'flex' }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="10" width="16" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
-                  </span>
-                  <div style={{ minWidth: 0 }}>
-                    <p className="font-karla font-700" style={{ fontSize: '0.76rem', color: '#e8e2d8', lineHeight: 1.35 }}>
-                      The executors look you over and put the ledger away.
-                    </p>
-                    <p className="font-karla" style={{ fontSize: '0.7rem', color: 'rgba(240,237,232,0.6)', lineHeight: 1.5, marginTop: 4 }}>
-                      They only deal with the captain who broke the Quartermaster in his challenge run. Beat Challenge: The Quartermaster in Chapter III and the vault opens.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )
-          }
+          const vaultLocked = !!gateId && !clearedNodeIds.has(gateId)
           // Forge-aware: a Cache pick that was forged into a fusion left
           // raid_items, but the choice was made — the vault must offer the
           // MISSED side, never resell the taken-and-forged one.
@@ -1425,6 +1404,16 @@ function NodeDetailSheet({
               <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#7a7875', marginBottom: '0.55rem' }}>
                 The Roads Not Taken
               </p>
+              {vaultLocked && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '0.65rem 0.8rem', marginBottom: 8, borderRadius: 10, background: 'rgba(240,192,64,0.08)', border: '1px solid rgba(240,192,64,0.35)' }}>
+                  <span aria-hidden style={{ flexShrink: 0, color: '#f0c040', display: 'flex' }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="10" width="16" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
+                  </span>
+                  <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#f0e4c0', lineHeight: 1.4 }}>
+                    Locked. Beat <span style={{ color: '#f0c040' }}>Challenge: The Quartermaster</span> (Chapter III) to buy these.
+                  </p>
+                </div>
+              )}
               {entries.length === 0 ? (
                 <p className="font-karla" style={{ fontSize: '0.74rem', color: 'rgba(240,237,232,0.55)', lineHeight: 1.5 }}>
                   The vault holds nothing you passed over — you haven&apos;t made a Cache choice yet. Come back once you have.
@@ -1459,6 +1448,16 @@ function NodeDetailSheet({
                           </div>
                         </div>
                         <span className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.62)', lineHeight: 1.45 }}>{item.description}</span>
+                        {vaultLocked ? (
+                          <div className="font-karla font-700 uppercase tracking-[0.08em]" style={{
+                            marginTop: 2, padding: '0.6rem', borderRadius: 9, fontSize: '0.66rem', textAlign: 'center',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                            background: 'rgba(255,255,255,0.04)', border: '1px dashed rgba(255,255,255,0.18)', color: '#8a8480',
+                          }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="10" width="16" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
+                            {price.toLocaleString()} ⟡ · Locked
+                          </div>
+                        ) : (
                         <button
                           onClick={() => buyReclaim(e.missing!)}
                           disabled={pending || !canAfford}
@@ -1473,6 +1472,7 @@ function NodeDetailSheet({
                         >
                           {pending ? '…' : canAfford ? `Reclaim · ${price.toLocaleString()} ⟡` : `Need ${(price - doubloons).toLocaleString()} more ⟡`}
                         </button>
+                        )}
                       </div>
                     )
                   })}

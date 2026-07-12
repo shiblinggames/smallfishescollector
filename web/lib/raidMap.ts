@@ -1762,8 +1762,8 @@ export const RAID_MAP: RaidNode[] = [
     reclaim: { price: 125_000, requiresClearedNode: 'the_quartermaster_challenge' },
     detail: {
       description:
-        "Every Cache the Quartermaster ever ran made you choose — one item aboard, the other gone for good. Or so he said. His seized stock says otherwise: everything you passed over is here, crated and waiting. His executors will part with each piece for 125,000 doubloons — but they only deal with the captain who broke the Quartermaster's CHALLENGE run. Prove it in Chapter III and the vault opens.",
-      dropsNote: 'Buy back any Cache item you passed over. Steep, permanent, and it unlocks the forge recipes that needed the road not taken. The executors deal only once Challenge: The Quartermaster is beaten.',
+        "Every Cache made you pick one item and leave the other behind. This vault holds everything you left. Buy any piece back for 125,000 doubloons. The vault is locked until you beat Challenge: The Quartermaster in Chapter III.",
+      dropsNote: 'Buy back the Cache items you passed up, 125,000 ⟡ each. Owning both halves unlocks the forge recipes that needed them.',
       ctaLabel: 'Crack the Vault →',
       summary: "The Quartermaster's seized vault re-offers every Cache choice you passed over, at 125,000 doubloons apiece. The roads not taken are open again.",
     },
