@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import CharacterAvatar from '@/components/CharacterAvatar'
 import RankMedallion from '@/components/RankMedallion'
+import { IconTrophy, IconCrate } from '@/components/GameIcons'
 import {
   CONTESTS, formatContestScore,
   type ContestDef, type ContestView, type ContestStanding,
@@ -88,7 +89,7 @@ function SectionHeader({ kind }: { kind: 'active' | 'completed' }) {
           style={{ width: 8, height: 8, borderRadius: '50%', background: LIVE, boxShadow: `0 0 9px ${LIVE}`, flexShrink: 0 }}
         />
       ) : (
-        <span style={{ fontSize: '0.95rem', lineHeight: 1, flexShrink: 0 }}>🏆</span>
+        <span style={{ color: GOLD, display: 'flex', flexShrink: 0 }}><IconTrophy size={15} /></span>
       )}
       <h2 className="font-cinzel font-800 uppercase tracking-[0.1em]" style={{ fontSize: '0.82rem', color }}>
         {isActive ? 'Active Now' : 'Hall of Champions'}
@@ -145,7 +146,7 @@ function ContestCard({ def, view, decided }: { def: ContestDef; view: ContestVie
       {/* Body */}
       <div style={{ padding: '0.9rem 1.05rem 1.05rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 12 }}>
-          <span style={{ fontSize: '0.95rem' }}>🎁</span>
+          <span style={{ color: GOLD, display: 'flex', flexShrink: 0 }}><IconCrate size={15} /></span>
           <span className="font-karla" style={{ fontSize: '0.74rem', color: '#c9c3b8' }}>
             <span className="font-700" style={{ color: '#e8dfc8' }}>Prize:</span> {def.prize}
           </span>
@@ -218,7 +219,9 @@ function WinnerBanner({ winner }: { winner: NonNullable<ContestView['winner']> }
       <div style={{ position: 'relative', flexShrink: 0 }}>
         <CharacterAvatar characterColor={winner.characterColor} equippedHat={winner.equippedHat} size={50}
           ringColor={winner.avatarBorder ?? undefined} bgColor={winner.avatarBg ?? undefined} />
-        <span style={{ position: 'absolute', bottom: -4, right: -4, fontSize: '1.05rem', lineHeight: 1 }}>🏆</span>
+        <span style={{ position: 'absolute', bottom: -4, right: -4, width: 20, height: 20, borderRadius: '50%', background: '#241a08', border: `1.5px solid ${GOLD}`, boxShadow: `0 0 8px ${GOLD}66`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: GOLD }}>
+          <IconTrophy size={11} />
+        </span>
       </div>
       <div style={{ minWidth: 0 }}>
         <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.5rem', color: GOLD, marginBottom: 2 }}>Champion</p>
