@@ -13,6 +13,7 @@
 // so a captain knows exactly what they're committing to.
 
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import UltimatePreview from './UltimatePreview'
@@ -202,7 +203,6 @@ export default function UltimateBuildPanel({
     const selectedId = sel ?? (retoolTarget ?? (active as ShipAugmentId))
     const w = getShipAugment(selectedId)!
     const armedSel = selectedId === active
-    const confirming = confirmRetool === selectedId
     const canAfford = doubloons >= RETOOL_COST
     const pickSlot = (id: ShipAugmentId) => { setSel(id); setConfirmRetool(null); setConfirmSchem(false); setErr(null) }
     const progress = retooling ? Math.min(1, 1 - remaining / ULTIMATE_BUILD_MS) : 0
@@ -212,7 +212,7 @@ export default function UltimateBuildPanel({
         <div style={{ position: 'relative', borderRadius: 16, overflow: 'hidden', padding: '0.85rem 0.85rem 0.9rem', background: 'linear-gradient(180deg, rgba(22,25,36,0.88), rgba(10,12,18,0.94))', border: `1px solid ${w.color}44`, boxShadow: `0 0 26px ${w.color}14` }}>
           {/* header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 9 }}>
-            <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#ffd56b', letterSpacing: '0.04em' }}>Weapon Bay</p>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: '#ffd56b', letterSpacing: '0.04em' }}>Weapon Bay</p>
             {schemOwned && (
               <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.48rem', color: '#f0c040', background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.45)', borderRadius: 999, padding: '0.16rem 0.5rem' }}>Full Schematics</span>
             )}
@@ -222,15 +222,19 @@ export default function UltimateBuildPanel({
           <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
             {SHIP_AUGMENTS.map(t => {
               const on = t.id === selectedId
-              const tag = t.id === active ? 'Armed' : t.id === retoolTarget ? 'Incoming' : null
+              const isArmedTab = t.id === active
+              const isIncoming = t.id === retoolTarget
               return (
                 <button key={t.id} type="button" onClick={() => pickSlot(t.id)}
                   className="font-karla font-700 tap"
-                  style={{ flex: 1, padding: '0.5rem 0.2rem 0.4rem', borderRadius: 10, fontSize: '0.66rem', cursor: 'pointer', textAlign: 'center', color: on ? t.color : '#8d8880', background: on ? `${t.color}1c` : 'rgba(255,255,255,0.035)', border: `1px solid ${on ? `${t.color}88` : 'rgba(255,255,255,0.09)'}` }}>
+                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '0.7rem 0.15rem', borderRadius: 10, fontSize: '0.88rem', cursor: 'pointer', color: on ? t.color : '#a8a29a', background: on ? `${t.color}1c` : 'rgba(255,255,255,0.035)', border: `1px solid ${isArmedTab ? `${t.color}aa` : on ? `${t.color}88` : 'rgba(255,255,255,0.09)'}`, boxShadow: isArmedTab ? `0 0 12px ${t.color}30, inset 0 0 10px ${t.color}14` : 'none' }}>
+                  {isArmedTab && (
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={t.color} strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" aria-label="Armed" style={{ flexShrink: 0 }}><path d="M20 6 9 17l-5-5" /></svg>
+                  )}
+                  {isIncoming && (
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#e0a955" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-label="Incoming" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" /></svg>
+                  )}
                   {t.name}
-                  <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ display: 'block', marginTop: 2, fontSize: '0.44rem', color: tag === 'Armed' ? t.color : tag === 'Incoming' ? '#e0a955' : 'transparent' }}>
-                    {tag ?? ' '}
-                  </span>
                 </button>
               )
             })}
@@ -255,9 +259,9 @@ export default function UltimateBuildPanel({
             {armedSel ? (
               <>
                 <motion.div key={`stamp-${armKey}`} initial={armKey > 0 ? { scale: 1.12 } : false} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 420, damping: 20 }}
-                  className="font-karla font-700 uppercase tracking-[0.14em]"
-                  style={{ width: '100%', padding: '0.6rem', borderRadius: 10, fontSize: '0.66rem', textAlign: 'center', color: '#0c0f14', background: w.color, boxShadow: `0 0 16px ${w.color}66` }}>
-                  {retooling ? `Armed until ${getShipAugment(retoolTarget!)!.name} arrives` : 'Armed'}
+                  aria-label="Armed"
+                  style={{ width: '100%', padding: '0.5rem', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: w.color, boxShadow: `0 0 16px ${w.color}66` }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0c0f14" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
                 </motion.div>
                 {!hasRack && (
                   <p className="font-karla" style={{ fontSize: '0.62rem', color: '#caa05a', textAlign: 'center', lineHeight: 1.4, marginTop: 6 }}>
@@ -288,29 +292,11 @@ export default function UltimateBuildPanel({
                 style={{ width: '100%', padding: '0.65rem', borderRadius: 10, fontSize: '0.72rem', color: '#0c0f14', background: `linear-gradient(180deg, ${w.color}, ${w.color}cc)`, border: 'none', cursor: 'pointer', boxShadow: `0 0 18px ${w.color}55` }}>
                 Arm {w.name}
               </button>
-            ) : confirming ? (
-              <div>
-                <p className="font-karla font-700" style={{ fontSize: '0.64rem', color: '#e0a955', textAlign: 'center', lineHeight: 1.4, marginBottom: 7 }}>
-                  Costs {RETOOL_COST.toLocaleString()} ⟡ and takes 24 hours. {getShipAugment(active)!.name} stays armed until then.
-                </p>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button type="button" onClick={() => { setConfirmRetool(null); setErr(null) }} disabled={busy}
-                    className="font-karla font-700 uppercase tracking-[0.08em] tap"
-                    style={{ flex: 1, padding: '0.6rem', borderRadius: 10, fontSize: '0.66rem', color: '#cfc9bf', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', cursor: 'pointer' }}>
-                    Cancel
-                  </button>
-                  <button type="button" onClick={() => canAfford && startRetool(selectedId)} disabled={!canAfford || busy}
-                    className="font-karla font-700 uppercase tracking-[0.08em] tap"
-                    style={{ flex: 1.5, padding: '0.6rem', borderRadius: 10, fontSize: '0.66rem', cursor: canAfford && !busy ? 'pointer' : 'default', color: canAfford ? w.color : '#6a6764', background: canAfford ? `${w.color}1c` : 'rgba(255,255,255,0.04)', border: `1px solid ${canAfford ? `${w.color}66` : 'rgba(255,255,255,0.1)'}` }}>
-                    {busy ? 'Starting…' : canAfford ? 'Start the switch' : `Need ${(RETOOL_COST - doubloons).toLocaleString()} more ⟡`}
-                  </button>
-                </div>
-              </div>
             ) : (
               <button type="button" onClick={() => { setConfirmRetool(selectedId); setConfirmSchem(false); setErr(null) }}
                 className="font-karla font-700 uppercase tracking-[0.08em] tap"
-                style={{ width: '100%', padding: '0.6rem', borderRadius: 10, fontSize: '0.66rem', color: w.color, background: `${w.color}14`, border: `1px solid ${w.color}55`, cursor: 'pointer' }}>
-                Switch to {w.name} · {RETOOL_COST.toLocaleString()} ⟡ · 24 hrs
+                style={{ width: '100%', padding: '0.65rem', borderRadius: 10, fontSize: '0.74rem', color: w.color, background: `${w.color}14`, border: `1px solid ${w.color}55`, cursor: 'pointer' }}>
+                Switch to {w.name} · {RETOOL_COST.toLocaleString()} ⟡
               </button>
             )}
           </div>
@@ -351,6 +337,48 @@ export default function UltimateBuildPanel({
           </div>
         )}
         {err && <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#fca5a5', textAlign: 'center', marginTop: 6 }}>{err}</p>}
+
+        {confirmRetool && typeof document !== 'undefined' && createPortal(
+          <div onClick={() => { if (!busy) setConfirmRetool(null) }}
+            style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.2rem', background: 'rgba(4,8,14,0.72)' }}>
+            {(() => {
+              const m = getShipAugment(confirmRetool)!
+              return (
+                <motion.div initial={{ opacity: 0, scale: 0.94, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ duration: 0.22, ease: 'easeOut' }}
+                  onClick={e => e.stopPropagation()}
+                  style={{ width: '100%', maxWidth: 330, borderRadius: 16, padding: '1.1rem 1rem 1rem', background: 'linear-gradient(180deg, #101826 0%, #0a111d 100%)', border: `1px solid ${m.color}55`, boxShadow: '0 18px 60px rgba(0,0,0,0.6)' }}>
+                  <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: m.color, marginBottom: 10 }}>Switch to the {m.name}?</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', padding: '0.55rem 0.7rem', borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                      <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#9aa3b2' }}>Cost</span>
+                      <span className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0c040' }}>{RETOOL_COST.toLocaleString()} ⟡</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', padding: '0.55rem 0.7rem', borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                      <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#9aa3b2' }}>Build time</span>
+                      <span className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f5f2ec' }}>24 hours</span>
+                    </div>
+                  </div>
+                  <p className="font-karla" style={{ fontSize: '0.68rem', color: '#9a948c', lineHeight: 1.45, marginBottom: 12 }}>
+                    Your {getShipAugment(active)!.name} stays armed until the work is done.
+                  </p>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button type="button" onClick={() => setConfirmRetool(null)} disabled={busy}
+                      className="font-karla font-700 tap"
+                      style={{ flex: 1, padding: '0.7rem', borderRadius: 10, fontSize: '0.74rem', color: '#cfc9bf', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', cursor: 'pointer' }}>
+                      Cancel
+                    </button>
+                    <button type="button" onClick={() => canAfford && startRetool(confirmRetool)} disabled={!canAfford || busy}
+                      className="font-karla font-700 tap"
+                      style={{ flex: 1.5, padding: '0.7rem', borderRadius: 10, fontSize: '0.74rem', cursor: canAfford && !busy ? 'pointer' : 'default', color: canAfford ? '#9ec5ff' : '#6a6764', background: canAfford ? 'rgba(96,165,250,0.16)' : 'rgba(255,255,255,0.04)', border: `1px solid ${canAfford ? 'rgba(96,165,250,0.5)' : 'rgba(255,255,255,0.1)'}` }}>
+                      {busy ? 'Starting…' : canAfford ? 'Start the switch' : `Need ${(RETOOL_COST - doubloons).toLocaleString()} more ⟡`}
+                    </button>
+                  </div>
+                </motion.div>
+              )
+            })()}
+          </div>,
+          document.body,
+        )}
       </div>
     )
   }
