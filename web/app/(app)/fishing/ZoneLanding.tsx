@@ -311,7 +311,12 @@ export default function ZoneLanding({
                     <span aria-hidden style={{ width: 10, height: 1, background: 'rgba(255,255,255,0.45)' }} />
                   </div>
 
-                  <div style={{ position: 'relative', zIndex: 1, height: '100%', minHeight: 'inherit', display: 'flex', flexDirection: 'column', padding: accessible ? '1rem 1.05rem 0.85rem' : '0 1.05rem', justifyContent: accessible ? 'flex-start' : 'center' }}>
+                  {/* No height:100% here — content must always define the band's
+                      height (a percentage against the min-height clamped the
+                      Ancient Deep band and clipped its bottom row). The last
+                      band gets extra bottom padding to clear the column's
+                      rounded clip + descent overlay. */}
+                  <div style={{ position: 'relative', zIndex: 1, minHeight: 'inherit', display: 'flex', flexDirection: 'column', padding: accessible ? `1rem 1.05rem ${i === ZONES.length - 1 ? '1.15rem' : '0.85rem'}` : '0 1.05rem', justifyContent: accessible ? 'flex-start' : 'center' }}>
                     {accessible ? (
                       <>
                         <div className="flex items-start justify-between" style={{ paddingRight: 46 }}>
