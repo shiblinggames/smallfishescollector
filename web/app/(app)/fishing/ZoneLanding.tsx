@@ -43,12 +43,13 @@ const ZONE_DIFFICULTY: Record<string, number> = {
   ancient_deep: 5,
 }
 
+// Sea voice, not app-store difficulty copy — the dots carry the scale.
 const ZONE_DIFFICULTY_LABEL: Record<string, string> = {
-  shallows:    'Beginner Friendly',
-  open_waters: 'Moderate',
-  deep:        'Challenging',
-  abyss:       'Expert Only',
-  ancient_deep: 'Beyond Expert',
+  shallows:    'Gentle Water',
+  open_waters: 'Fair Seas',
+  deep:        'Rough Water',
+  abyss:       'Cruel Water',
+  ancient_deep: 'Beyond Reckoning',
 }
 
 /** Per-zone summary stats computed server-side (see fishing/page.tsx). */
@@ -178,8 +179,8 @@ export default function ZoneLanding({
                 style={{ fontSize: '1.1rem', color: '#f0ede8' }}>
                 Level {fishingLevel}
               </p>
-              <p className="font-karla font-400" style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.75)' }}>
-                Choose your zone
+              <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(230,215,180,0.7)', fontStyle: 'italic' }}>
+                Five waters, each deeper than the last. Pick where you cast.
               </p>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
@@ -204,16 +205,16 @@ export default function ZoneLanding({
 
           {/* Cumulative stats strip */}
           <div className="flex gap-2 mb-4">
-            <div style={{ flex: 1, background: 'rgba(2,6,12,0.75)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '0.6rem 0.75rem' }}>
+            <div style={{ flex: 1, background: 'linear-gradient(180deg, rgba(34,26,12,0.72), rgba(18,13,7,0.82))', border: '1px solid rgba(196,169,106,0.24)', borderRadius: 10, padding: '0.6rem 0.75rem' }}>
               <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8', lineHeight: 1 }}>{fishingXP.toLocaleString()}</p>
               <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.55)', marginTop: 4 }}>Total XP</p>
             </div>
-            <div style={{ flex: 1, background: 'rgba(2,6,12,0.75)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '0.6rem 0.75rem' }}>
+            <div style={{ flex: 1, background: 'linear-gradient(180deg, rgba(34,26,12,0.72), rgba(18,13,7,0.82))', border: '1px solid rgba(196,169,106,0.24)', borderRadius: 10, padding: '0.6rem 0.75rem' }}>
               <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#60a5fa', lineHeight: 1 }}>{uniqueSpeciesCaught}</p>
               <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.55)', marginTop: 4 }}>Species Found</p>
             </div>
             {highestPerfectStreak > 0 && (
-              <div style={{ flex: 1, background: 'rgba(2,6,12,0.75)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '0.6rem 0.75rem' }}>
+              <div style={{ flex: 1, background: 'linear-gradient(180deg, rgba(34,26,12,0.72), rgba(18,13,7,0.82))', border: '1px solid rgba(196,169,106,0.24)', borderRadius: 10, padding: '0.6rem 0.75rem' }}>
                 <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#fb923c', lineHeight: 1 }}>{highestPerfectStreak}×</p>
                 <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.55)', marginTop: 4 }}>Best Streak</p>
               </div>
@@ -321,7 +322,7 @@ export default function ZoneLanding({
                                 background: `${color}cc`, border: `1px solid ${color}`,
                                 padding: '0.18rem 0.5rem', borderRadius: '2rem', flexShrink: 0,
                               }}>
-                              Recommended
+                              Fish Here
                             </span>
                           )}
                         </div>
@@ -409,7 +410,7 @@ export default function ZoneLanding({
                 style={{
                   position: 'absolute', left: '1rem', right: '1rem',
                   top: '50%', transform: 'translateY(-50%)',
-                  background: '#0d1e2e',
+                  background: 'linear-gradient(180deg, #241a10 0%, #140d07 100%)',
                   border: '1px solid rgba(240,192,64,0.2)',
                   borderRadius: 18, zIndex: 51,
                   padding: '1.5rem 1.25rem',
@@ -483,7 +484,7 @@ export default function ZoneLanding({
                 transition={{ duration: 0.2, ease: 'easeOut' }}
                 style={{
                   position: 'absolute', top: '10%', left: '1rem', right: '1rem',
-                  background: '#0d1e2e',
+                  background: 'linear-gradient(180deg, #241a10 0%, #140d07 100%)',
                   border: '1px solid rgba(255,255,255,0.14)',
                   borderRadius: 18,
                   zIndex: 51,
@@ -499,9 +500,10 @@ export default function ZoneLanding({
                   </p>
                   <button
                     onClick={() => setModalOpen(false)}
-                    style={{ color: 'rgba(255,255,255,0.4)', fontSize: '1.1rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none', padding: '0.1rem 0.3rem' }}
+                    aria-label="Close"
+                    style={{ color: 'rgba(255,255,255,0.45)', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none', padding: '0.15rem 0.3rem', display: 'flex' }}
                   >
-                    ✕
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
                   </button>
                 </div>
 
