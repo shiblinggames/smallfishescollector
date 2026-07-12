@@ -45,31 +45,41 @@ export default function UltimatePreview({ id, color }: { id: ShipAugmentId; colo
   const [hits, setHits] = useState<number[]>([]) // barrage's staggered impacts
 
   // Measure the stage so the beam / missile geometry connects the two real ship
-  // positions (pixels), exactly like combat measures its ship boxes.
+  // positions (pixels). offsetWidth/offsetHeight (NOT getBoundingClientRect):
+  // the layout size, immune to any in-flight entrance transform on an ancestor
+  // (a rect taken mid-scale once put every landing point past the boat while
+  // the percent-positioned hull stayed correct).
+  const measureNow = () => {
+    const el = stageRef.current
+    if (!el) return
+    const W = el.offsetWidth, H = el.offsetHeight
+    if (!W || !H) return
+    const x1 = W * MUZZLE.x, y1 = H * MUZZLE.y   // launch point (player deck)
+    const x2 = W * TARGET.x, y2 = H * TARGET.y   // enemy hull
+    const dx = x2 - x1, dy = y2 - y1
+    setGeo(g => (g && Math.abs(g.x1 - x1) < 0.5 && Math.abs(g.y1 - y1) < 0.5 && Math.abs(g.x2 - x2) < 0.5 && Math.abs(g.y2 - y2) < 0.5)
+      ? g
+      : { x1, y1, x2, y2, len: Math.hypot(dx, dy), angle: Math.atan2(dy, dx) * 180 / Math.PI })
+  }
   useEffect(() => {
     const el = stageRef.current
     if (!el) return
-    const measure = () => {
-      const r = el.getBoundingClientRect()
-      const W = r.width, H = r.height
-      const x1 = W * MUZZLE.x, y1 = H * MUZZLE.y   // launch point (player deck)
-      const x2 = W * TARGET.x, y2 = H * TARGET.y   // enemy hull
-      const dx = x2 - x1, dy = y2 - y1
-      setGeo({ x1, y1, x2, y2, len: Math.hypot(dx, dy), angle: Math.atan2(dy, dx) * 180 / Math.PI })
-    }
-    measure()
-    const ro = new ResizeObserver(measure)
+    measureNow()
+    const ro = new ResizeObserver(measureNow)
     ro.observe(el)
     return () => ro.disconnect()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Loop driver — replay the shot every LOOP ms.
+  // Loop driver — replay the shot every LOOP ms. Re-measure right before each
+  // shot so the geometry always reflects the settled layout of the moment.
   useEffect(() => {
     const period = LOOP[id]
     let t: ReturnType<typeof setTimeout>
-    const run = () => { setShot(s => s + 1); t = setTimeout(run, period) }
+    const run = () => { measureNow(); setShot(s => s + 1); t = setTimeout(run, period) }
     t = setTimeout(run, 450)
     return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
   // Nuke — the detonation fires when the lobbed missile lands.
@@ -123,16 +133,16 @@ export default function UltimatePreview({ id, color }: { id: ShipAugmentId; colo
       )}
 
       {/* Percent-based FX (blast, impacts, splats) live in a box centered on the
-          target hull, matching how they sit over the enemy ship in combat. The
-          nuke's fireball scales off the box, so its box is tighter to keep the
-          blast in frame now that the target sits further right. */}
-      {geo && (
-        <div style={{ position: 'absolute', left: geo.x2, top: geo.y2, width: id === 'nuke' ? 62 : 92, height: 70, marginLeft: id === 'nuke' ? -31 : -46, marginTop: -35, overflow: 'visible', pointerEvents: 'none' }}>
-          {id === 'nuke' && blastKey > 0 && <NukeBlast key={blastKey} color={color} />}
-          {id === 'barrage' && hits.map(k => <ImpactBurst key={k} kind="crit" />)}
-          {id === 'barrage' && shot > 0 && <MegaSplats key={shot} color={color} items={splatItems} />}
-        </div>
-      )}
+          target hull, matching how they sit over the enemy ship in combat. It's
+          anchored by the SAME percent constants that place the hull (not the
+          measured pixel geometry), so the landing always sits exactly on the
+          boat. The nuke's fireball scales off the box, so its box is tighter
+          to keep the blast in frame with the target parked at the right edge. */}
+      <div style={{ position: 'absolute', left: `${TARGET.x * 100}%`, top: `${TARGET.y * 100}%`, width: id === 'nuke' ? 62 : 92, height: 70, marginLeft: id === 'nuke' ? -31 : -46, marginTop: -35, overflow: 'visible', pointerEvents: 'none' }}>
+        {id === 'nuke' && blastKey > 0 && <NukeBlast key={blastKey} color={color} />}
+        {id === 'barrage' && hits.map(k => <ImpactBurst key={k} kind="crit" />)}
+        {id === 'barrage' && shot > 0 && <MegaSplats key={shot} color={color} items={splatItems} />}
+      </div>
     </div>
   )
 }
