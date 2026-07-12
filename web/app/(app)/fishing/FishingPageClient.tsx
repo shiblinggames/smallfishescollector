@@ -170,19 +170,18 @@ export default function FishingPageClient({
   )
 
   // Per-zone collection progress for the landing bands: species caught this
-  // prestige cycle vs the zone's species count. Ancient Deep counts trophies
-  // (ancient_catches) against its six giants instead of the catch log.
+  // prestige cycle vs the zone's species count. Ancient Deep counts the same
+  // way as every other zone — its regulars live in the catch log; the six
+  // giants land in ancient_catches, so union both (deduped by id).
   const zoneCollection = useMemo(() => {
     const caught = new Set(caughtFishIds)
+    const ancientSet = new Set(ancientCatches)
     const rec: Record<string, { caught: number; total: number }> = {}
     for (const f of allFishSpecies) {
-      if (f.habitat === 'ancient_deep') continue
       const r = rec[f.habitat] ?? (rec[f.habitat] = { caught: 0, total: 0 })
       r.total += 1
-      if (caught.has(f.id)) r.caught += 1
+      if (caught.has(f.id) || ancientSet.has(f.id)) r.caught += 1
     }
-    const ancientTotal = allFishSpecies.filter(f => f.habitat === 'ancient_deep').length || 6
-    rec.ancient_deep = { caught: ancientCatches.length, total: ancientTotal }
     return rec
   }, [allFishSpecies, caughtFishIds, ancientCatches])
 

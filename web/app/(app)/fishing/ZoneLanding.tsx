@@ -136,7 +136,7 @@ export default function ZoneLanding({
   fishingXP: number
   username: string
   zoneStats: Record<string, ZoneStat>
-  /** Species caught vs zone total (this prestige cycle); trophies for Ancient Deep. */
+  /** Species caught vs zone total (this prestige cycle), every zone alike. */
   zoneCollection: Record<string, { caught: number; total: number }>
   prestigeLevels: Record<string, number>
   onSelect: (zone: ZoneKey) => void
@@ -193,15 +193,14 @@ export default function ZoneLanding({
           padding: '1.1rem 0.9rem 1.5rem',
           overflowY: 'auto',
         }}>
-          {/* Header — one question, one breath. The old XP/species/streak
-              strip is gone (that summary lives on the player profile now). */}
+          {/* Header — just who you are on the water: your fishing level. */}
           <div className="flex items-end justify-between mb-3">
             <div style={{ minWidth: 0 }}>
               <p className="font-karla font-700 uppercase tracking-[0.22em]" style={{ fontSize: '0.56rem', color: 'rgba(196,169,106,0.85)' }}>
-                Fishing · Level {fishingLevel}
+                Fishing
               </p>
               <p className="font-cinzel font-700" style={{ fontSize: '1.35rem', color: '#f0ede8', lineHeight: 1.15, marginTop: 2 }}>
-                Where do you cast?
+                Level {fishingLevel}
               </p>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0" style={{ paddingBottom: 3 }}>
@@ -354,7 +353,7 @@ export default function ZoneLanding({
                             <span className="font-karla font-700" style={{ fontSize: '0.64rem', color: 'rgba(255,255,255,0.9)', whiteSpace: 'nowrap' }}>
                               {col.caught}/{col.total}
                               <span className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.6)', marginLeft: 5 }}>
-                                {zone === 'ancient_deep' ? 'trophies' : 'collected'}
+                                collected
                               </span>
                             </span>
                           </div>
@@ -394,14 +393,8 @@ export default function ZoneLanding({
                             </span>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-                            {zone === 'ancient_deep' ? (
-                              <ZoneStatInline label="Rarity" value="Legendary" color="#f59e0b" />
-                            ) : (
-                              <>
-                                <ZoneStatInline label="Avg" value={`${stats.avgValue.toLocaleString()} ⟡`} color="#f0c040" />
-                                <ZoneStatInline label="Top" value={`${stats.topValue.toLocaleString()} ⟡`} color="#f59e0b" />
-                              </>
-                            )}
+                            <ZoneStatInline label="Avg" value={`${stats.avgValue.toLocaleString()} ⟡`} color="#f0c040" />
+                            <ZoneStatInline label="Top" value={`${stats.topValue.toLocaleString()} ⟡`} color="#f59e0b" />
                           </div>
                         </div>
                       </>
@@ -437,9 +430,6 @@ export default function ZoneLanding({
             <div aria-hidden style={{ position: 'absolute', top: 12, bottom: 12, right: 12, width: 1, background: 'linear-gradient(180deg, rgba(255,255,255,0.32), rgba(255,255,255,0.04))', pointerEvents: 'none' }} />
           </div>
 
-          <p className="font-karla font-300 italic" style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.32)', textAlign: 'center', marginTop: 12 }}>
-            Five waters, each deeper than the last.
-          </p>
         </div>
 
         {/* Username prompt modal */}
