@@ -298,6 +298,10 @@ export interface BroadsideEnemy {
    *  = phase 2, phases[1] = phase 3, and so on. Supersedes `phase2` when set.
    *  Bosses with neither fight as a single phase. */
   phases?: BossPhase[]
+  /** A mechanic check that ARMS the instant the fight begins (phase 1), before
+   *  any revive. Same shape + answering as a phase check; lets a 6-phase boss
+   *  demand a crew ability in every phase including the opener. Boss-only. */
+  openingCheck?: BossMechanicCheck
 }
 
 export interface RaidLootItem {
@@ -1486,37 +1490,87 @@ export const THE_THRONE: BossRaidConfig = {
       // drops (MEGALODON) and The Maw check arms; phase 3 is the frenzy,
       // closed by The Sounding (blast or jam him out of the dive, or eat a
       // near-lethal breach). Kills reveal nothing — the margin does.
-      id: 'don_finleone', name: 'Don Finleone', hpBase: 950, minDmg: 30, maxDmg: 50,
+      // SIX-PHASE FINAL BOSS. The court steps aside and the don eats his way
+      // through your whole crew: every phase (the opener included) arms a check
+      // that ANY crew ability answers, so the gate is COUNT — six phases, six
+      // firings, a full six-berth crew. Miss one and the consequence snowballs.
+      id: 'don_finleone', name: 'Don Finleone', hpBase: 880, minDmg: 30, maxDmg: 50,
       shipSpeed: 9, actionMs: 4000,
       magazineSize: 4, shieldPct: 0.30, startCharges: 2,
       special: { name: 'The Don’s Court', aimAttack: 'decoys', aimPasses: 2, line: 'The court closes around the throne — a dozen crowns, and only one that bleeds.' },
       ultimate: { name: 'The Deep Verdict', mult: 2.8, line: 'The don passes sentence, and the water carries it out.' },
-      pattern: ['reload', 'special', 'fire', 'reload', 'reload', 'ultimate', 'dodge', 'fire', 'reload'],
+      pattern: ['special', 'fire', 'reload', 'reload', 'ultimate', 'dodge', 'fire', 'reload'],
       critChance: 0.15,
+      // Phase 1 opener check — the court itself. Answer him the moment guns are out.
+      openingCheck: {
+        id: 'the_court', name: 'The Don’s Court', chargeTurns: 2,
+        telegraph: 'The whole drowned court trains its guns on your hull at once, waiting on the don’s nod.',
+        hint: 'You do not answer a court alone. Call a crew ability — ANY of them — and let your people answer for you.',
+        responses: ['brace', 'shield', 'snare', 'heal', 'burst'],
+        counteredLine: 'Your crew answers first, and the court’s opening volley scatters wide.',
+        failLine: 'Nobody stands with you, and the whole court fires as one.',
+        consequence: { kind: 'damagePctMaxHp', value: 0.45 },
+      },
       phases: [
-        { revivePct: 0.85, damageMult: 1.30, badge: 'The Mask Drops',
-          pattern: ['special', 'fire', 'reload', 'reload', 'reload', 'ultimate', 'volley', 'dodge'],
+        { revivePct: 0.72, damageMult: 1.25, badge: 'The Mask Drops',
+          pattern: ['special', 'fire', 'reload', 'reload', 'ultimate', 'volley', 'dodge', 'reload'],
           dialogueLine: 'You came for a don. The deep sent you something older. Look at the WIDTH of what you’ve been bargaining with.',
           check: {
             id: 'the_maw', name: 'The Maw', chargeTurns: 2,
             telegraph: 'The don’s hull ROLLS — and keeps rolling — a jaw the size of your broadside opening under the waterline.',
-            hint: 'A bite that wide can’t be weaved. It has to be met with a crew ability — a defensive one that puts something between you and the teeth.',
-            responses: ['brace', 'shield'],
-            counteredLine: 'The jaws close on your cover and grind iron instead of deck.',
+            hint: 'A bite that wide can’t be weaved. Call another of your crew — ANY ability answers, so long as someone acts.',
+            responses: ['brace', 'shield', 'snare', 'heal', 'burst'],
+            counteredLine: 'Your crew throws the maw off its line and it grinds iron instead of deck.',
             failLine: 'The maw takes your ship the way a purse takes a coin.',
-            consequence: { kind: 'damagePctMaxHp', value: 0.70 },
+            consequence: { kind: 'damagePctMaxHp', value: 0.52 },
           } },
-        { revivePct: 0.60, damageMult: 1.50, badge: 'The Last Court',
-          pattern: ['special', 'fire', 'fire', 'reload', 'reload', 'reload', 'ultimate', 'volley'],
+        { revivePct: 0.60, damageMult: 1.35, badge: 'Blood in the Water',
+          pattern: ['fire', 'special', 'reload', 'fire', 'reload', 'ultimate', 'volley', 'dodge'],
+          dialogueLine: 'There it is. The blood. Now the whole ocean knows where you are.',
+          check: {
+            id: 'blood_water', name: 'Blood in the Water', chargeTurns: 2,
+            telegraph: 'He rakes a long gash down your hull and circles wide — the sea reddening with every pass at the smell of it.',
+            hint: 'A wound this loud only draws him back. Put a crew ability on it — ANY one — before he follows the trail in.',
+            responses: ['brace', 'shield', 'snare', 'heal', 'burst'],
+            counteredLine: 'Your crew answers the wound and the blood-trail goes cold; he loses the scent.',
+            failLine: 'He follows the blood straight in and takes the gash wider.',
+            consequence: { kind: 'damagePctMaxHp', value: 0.55 },
+          } },
+        { revivePct: 0.50, damageMult: 1.45, badge: 'The Sounding',
+          pattern: ['special', 'fire', 'reload', 'reload', 'ultimate', 'fire', 'volley', 'dodge'],
           dialogueLine: 'Enough court. Enough colors. The Finndicate was never the family, captain — it was the FEEDING.',
           check: {
             id: 'the_sounding', name: 'The Sounding', chargeTurns: 2,
             telegraph: 'The megalodon SOUNDS — the whole sea dips as he goes deep, gathering water for a breach that will land on your deck.',
-            hint: 'You can’t block a falling mountain — a crew ability has to stop the dive itself: jam him mid-sound, or hit hard enough to break it.',
-            responses: ['snare', 'burst'],
+            hint: 'You can’t block a falling mountain. A crew ability has to break the dive itself — ANY of them, but someone has to act NOW.',
+            responses: ['brace', 'shield', 'snare', 'heal', 'burst'],
             counteredLine: 'The dive breaks — he breaches early, wide, and the wave takes the blow for you.',
             failLine: 'The sea goes still. Then it goes UP.',
-            consequence: { kind: 'damagePctMaxHp', value: 0.85 },
+            consequence: { kind: 'damagePctMaxHp', value: 0.60 },
+          } },
+        { revivePct: 0.42, damageMult: 1.55, badge: 'The Undertow',
+          pattern: ['special', 'fire', 'fire', 'reload', 'reload', 'ultimate', 'volley', 'reload'],
+          dialogueLine: 'Down here, captain, EVERYTHING feeds the family. Even you.',
+          check: {
+            id: 'the_undertow', name: 'The Undertow', chargeTurns: 2,
+            telegraph: 'He circles fast and low and the whole drowned court fires down the whirlpool at once, a wall of iron closing on your hull.',
+            hint: 'No single cover holds against a barrage this wide. Call another crew ability — ANY one — before the wall lands.',
+            responses: ['brace', 'shield', 'snare', 'heal', 'burst'],
+            counteredLine: 'The barrage breaks on your crew’s answer in a wall of spray.',
+            failLine: 'The court empties every gun into you at once.',
+            consequence: { kind: 'damagePctMaxHp', value: 0.62 },
+          } },
+        { revivePct: 0.34, damageMult: 1.70, badge: 'The Last Bite',
+          pattern: ['fire', 'special', 'reload', 'ultimate', 'fire', 'reload', 'volley', 'dodge'],
+          dialogueLine: 'You crossed the WHOLE family to get here. Let me show you what the family is FOR.',
+          check: {
+            id: 'the_last_bite', name: 'The Last Bite', chargeTurns: 2,
+            telegraph: 'The megalodon rears his whole bulk from the water for one final lunge — and for one breath his throat hangs open above your deck.',
+            hint: 'A window this brief opens once. Your LAST crew ability, right now, straight down the gullet — any of them — or the lunge lands.',
+            responses: ['brace', 'shield', 'snare', 'heal', 'burst'],
+            counteredLine: 'Your crew fires straight down his throat and the last bite dies in the water.',
+            failLine: 'The last bite comes down, and the deep finally closes over you.',
+            consequence: { kind: 'damagePctMaxHp', value: 0.78 },
           } },
       ],
       zoneSpeedMult: 2.4,

@@ -120,7 +120,7 @@ export async function sendDailyVoyage(route: VoyageRoute = 'open'): Promise<
   // Load profile for ship tier and expedition level
   const { data: profile } = await admin
     .from('profiles')
-    .select('ship_tier, expedition_xp, gauntlet_upgrades, ship_classes')
+    .select('ship_tier, expedition_xp, gauntlet_upgrades, ship_classes, has_sixth_berth')
     .eq('id', user.id)
     .single()
 
@@ -143,7 +143,8 @@ export async function sendDailyVoyage(route: VoyageRoute = 'open'): Promise<
   // effects. Voyage and raid each have an independent slot column now.
   // Expanded Quarters (Ch4 augment) berths one more — ship-wide, so it counts
   // on voyages too.
-  const crewSlotCap = shipStats.crewSlots + classSlotBonuses(profile.ship_classes as Record<string, string> | null).crewSlots
+  const berthSlots = (profile as { has_sixth_berth?: boolean }).has_sixth_berth === true ? 1 : 0
+  const crewSlotCap = shipStats.crewSlots + classSlotBonuses(profile.ship_classes as Record<string, string> | null).crewSlots + berthSlots
   const party = await loadDeployedParty(admin, user.id, crewSlotCap, 'voyage')
   // The Inner Sea (coastal) is the safe intro route — any boat can sail it with
   // a single crew member aboard. Deeper routes still need a party of two.

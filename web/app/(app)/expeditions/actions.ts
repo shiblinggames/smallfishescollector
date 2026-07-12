@@ -7,6 +7,7 @@ import { applyVariantBoosts, raidItemSlotsForTier } from '@/lib/expeditions'
 import { getForgeRecipe, dedupeRaidItems, unobtainableComponents } from '@/lib/raidItems'
 import { classSlotBonuses } from '@/lib/shipClasses'
 import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
+import { SIXTH_BERTH_COST } from '@/lib/shipBerth'
 import { getShipAugment, AUGMENT_COST, RETOOL_COST, SCHEMATICS_COST, ULTIMATE_BUILD_MS, canBuildUltimate, parseAugmentBuild, isBuildComplete, type ShipAugmentBuild } from '@/lib/shipAugments'
 import { getShipSkin, canEquipShipSkin } from '@/lib/shipSkins'
 import { settleUltimateBuild } from '@/lib/ultimateBuild'
@@ -450,6 +451,44 @@ export async function switchUltimate(id: string): Promise<{ ok: boolean; error?:
     .update({ manowar_augment: augment.id, manowar_augment_build: null })
     .eq('id', user.id)
   return { ok: true, active: augment.id }
+}
+
+/** Buy the Sixth Berth — a permanent Man-o-War crew slot (5 → 6). Gated on
+ *  clearing Raid 7 (the Hammerhead); a heavy doubloon sink, once. Opens the
+ *  full six-crew bench Don Finleone's six phases demand. */
+export async function buySixthBerth(): Promise<{ ok: boolean; error?: string; doubloons?: number }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: 'Not signed in.' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles')
+    .select('doubloons, has_sixth_berth').eq('id', user.id).single()
+  if (!profile) return { ok: false, error: 'No profile.' }
+  if (profile.has_sixth_berth === true) return { ok: false, error: 'Your ship already carries the sixth berth.' }
+
+  // Gate: the berth reveals only once the Hammerhead (Raid 7) is beaten.
+  const { data: cleared } = await admin.from('raid_completions')
+    .select('id').eq('user_id', user.id).eq('raid_id', 'the_hammerhead').limit(1).maybeSingle()
+  if (!cleared) return { ok: false, error: 'Beat the Hammerhead before you can add a berth.' }
+
+  const doubloons = (profile.doubloons as number | null) ?? 0
+  if (doubloons < SIXTH_BERTH_COST) return { ok: false, error: `You need ${SIXTH_BERTH_COST.toLocaleString()} doubloons.` }
+
+  const newDoubloons = doubloons - SIXTH_BERTH_COST
+  // Conditional write (still false) guards a double-tap.
+  const { data: updated } = await admin.from('profiles')
+    .update({ has_sixth_berth: true, doubloons: newDoubloons })
+    .eq('id', user.id)
+    .eq('has_sixth_berth', false)
+    .select('has_sixth_berth')
+    .maybeSingle()
+  if (!updated) return { ok: false, error: 'Your ship already carries the sixth berth.' }
+
+  await admin.from('doubloon_transactions').insert({
+    user_id: user.id, amount: -SIXTH_BERTH_COST, reason: 'The Sixth Berth (Man-o-War crew slot)',
+  })
+  return { ok: true, doubloons: newDoubloons }
 }
 
 /** Dismiss the one-time "ultimate plans discovered" celebration. */

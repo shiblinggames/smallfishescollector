@@ -83,7 +83,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('ship_tier, saved_crew, ship_name, username, character_color, equipped_hat, avatar_bg_color, avatar_border_color, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, equipped_repair_kit, has_seen_raid_tutorial, expedition_xp, nav_renown_alloc, ship_classes, gauntlet_upgrades, manowar_augment, manowar_augment_build')
+    .select('ship_tier, saved_crew, ship_name, username, character_color, equipped_hat, avatar_bg_color, avatar_border_color, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, equipped_repair_kit, has_seen_raid_tutorial, expedition_xp, nav_renown_alloc, ship_classes, gauntlet_upgrades, manowar_augment, manowar_augment_build, has_sixth_berth')
     .eq('id', userId)
     .single()
 
@@ -105,7 +105,9 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
   // New crew system: deployed party from user_crew (raid track), resolved
   // with effects. Voyage and raid each have an independent assignment slot
   // now — see migrate_split_crew_assignment.
-  const party = await loadDeployedParty(admin, userId, ship.crewSlots + classEffects.crewSlots, 'raid')
+  // The Sixth Berth (bought after Raid 7) widens the raid party to six.
+  const berthSlots = (profile as { has_sixth_berth?: boolean } | null)?.has_sixth_berth === true ? 1 : 0
+  const party = await loadDeployedParty(admin, userId, ship.crewSlots + classEffects.crewSlots + berthSlots, 'raid')
   const resolved = resolveDeployedCrew(party)
   const totalPower = resolved.totals.power
   const totalDodge = resolved.totals.dodge

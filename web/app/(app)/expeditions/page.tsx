@@ -56,6 +56,17 @@ const cachedChapter3Cleared = cache(async (): Promise<boolean> => {
   return !!data
 })
 
+// Has the player beaten Raid 7 (the Hammerhead)? That clear reveals the Sixth
+// Berth purchase on the ship screen.
+const cachedHammerheadCleared = cache(async (): Promise<boolean> => {
+  const user = await getCurrentUser()
+  if (!user) return false
+  const admin = createAdminClient()
+  const { data } = await admin.from('raid_completions')
+    .select('id').eq('user_id', user.id).eq('raid_id', 'the_hammerhead').limit(1).maybeSingle()
+  return !!data
+})
+
 const cachedVoyageHistory = cache(async (): Promise<VoyageHistoryEntry[]> => {
   const user = await getCurrentUser()
   if (!user) return []
@@ -74,14 +85,19 @@ const cachedVoyageHistory = cache(async (): Promise<VoyageHistoryEntry[]> => {
 //    in when ready. Shared loaders are deduped by React.cache.
 
 async function ShipHeroSection() {
-  const [profile, roster, trawlingCrewIds, chapter3Cleared] = await Promise.all([
+  const [profile, roster, trawlingCrewIds, chapter3Cleared, hammerheadCleared] = await Promise.all([
     getCurrentProfile(),
     cachedCrewRoster(),
     cachedTrawlingCrewIds(),
     cachedChapter3Cleared(),
+    cachedHammerheadCleared(),
   ])
   const shipTier = profile?.ship_tier ?? 0
-  const shipStats = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
+  const baseShip = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
+  // The Sixth Berth widens the crew grid to six — fold it into the stats the
+  // roster + every downstream slot display reads.
+  const hasSixthBerth = profile?.has_sixth_berth === true
+  const shipStats = hasSixthBerth ? { ...baseShip, crewSlots: baseShip.crewSlots + 1 } : baseShip
   // Promote a matured ultimate build into the active slot on load, so a weapon
   // that finished while the player was away shows as live (and fires).
   const { active: activeAugment, build: manowarBuild } = profile
@@ -112,6 +128,8 @@ async function ShipHeroSection() {
       manowarBuild={manowarBuild}
       manowarSchematics={profile?.manowar_schematics === true}
       chapter3Cleared={chapter3Cleared}
+      hammerheadCleared={hammerheadCleared}
+      hasSixthBerth={hasSixthBerth}
       isAdmin={profile?.is_admin === true}
       navRenownAlloc={(profile?.nav_renown_alloc as Record<string, number> | null) ?? null}
       seenNavRenownIntro={profile?.seen_nav_renown_intro === true}
@@ -238,9 +256,11 @@ async function ExpeditionHub() {
   // berths one more crew (shipStats.crewSlots feeds every downstream display
   // + the voyage panel), Expanded Armory adds a raid-item mount below.
   const slotBonus = classSlotBonuses(profile?.ship_classes as Record<string, string> | null)
+  const berthCrew = profile?.has_sixth_berth === true ? 1 : 0
   const baseShipStats = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
-  const shipStats = slotBonus.crewSlots > 0
-    ? { ...baseShipStats, crewSlots: baseShipStats.crewSlots + slotBonus.crewSlots }
+  const extraCrew = slotBonus.crewSlots + berthCrew
+  const shipStats = extraCrew > 0
+    ? { ...baseShipStats, crewSlots: baseShipStats.crewSlots + extraCrew }
     : baseShipStats
   // Next main-chain node: first non-cleared, non-sideBranch view.
   const next = raidMap.views.find(v => v.status !== 'cleared' && !v.node.sideBranch) ?? null

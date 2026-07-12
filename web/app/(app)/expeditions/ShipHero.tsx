@@ -19,6 +19,7 @@ import { getGauntletUpgrade } from '@/lib/gauntletUpgrades'
 import { buyRepairKit } from './repairKitActions'
 import { equipShipSkin, saveEquippedRaidItems, forgeRaidItem, learnForgeRecipe, markForgeIntroSeen } from './actions'
 import UltimateBuildPanel from './UltimateBuildPanel'
+import SixthBerthPanel from './SixthBerthPanel'
 import { IconCrate } from '@/components/GameIcons'
 import { type ShipAugmentId } from '@/lib/shipAugments'
 import { bonusChargeSlots, hasForge } from '@/lib/gauntletUpgrades'
@@ -256,6 +257,10 @@ interface Props {
   manowarSchematics?: boolean
   /** Cleared Chapter 3 (beat the Quartermaster) — unlocks the ultimate build. */
   chapter3Cleared?: boolean
+  /** Cleared Raid 7 (the Hammerhead) — unlocks the Sixth Berth purchase. */
+  hammerheadCleared?: boolean
+  /** Owns the Sixth Berth (Man-o-War 5 → 6 crew). */
+  hasSixthBerth?: boolean
   isAdmin?: boolean
   /** Persisted Navigation Renown allocations ({} when none). Renown LEVEL
    *  derives live from expeditionXP. */
@@ -341,6 +346,8 @@ export default function ShipHero({
   manowarBuild = null,
   manowarSchematics = false,
   chapter3Cleared = false,
+  hammerheadCleared = false,
+  hasSixthBerth = false,
   isAdmin = false,
   navRenownAlloc = null,
   seenNavRenownIntro = true,
@@ -1770,6 +1777,15 @@ export default function ShipHero({
                         schematics={manowarSchematics}
                       />
                     )}
+
+                    {/* ── The Sixth Berth ── a Man-o-War crew slot (5 → 6),
+                        revealed once the Hammerhead (Raid 7) falls. */}
+                    <SixthBerthPanel
+                      hammerheadCleared={hammerheadCleared}
+                      hasSixthBerth={hasSixthBerth}
+                      baseCrewSlots={hasSixthBerth ? shipStats.crewSlots - 1 : shipStats.crewSlots}
+                      doubloons={doubloons}
+                    />
 
                     {/* ── Captain's Class ── permanent chapter-end buffs. Collapse
                         each class LINE to just its top tier (own I+II+III → show

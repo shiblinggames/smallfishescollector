@@ -142,6 +142,9 @@ const RESPONSE_CATEGORY: Record<MechanicResponse, string> = {
 }
 function crewCounterCue(responses: MechanicResponse[]): string {
   const cats = [...new Set(responses.map(r => RESPONSE_CATEGORY[r]))]
+  // A check that accepts every category (the Don's phases) — the answer is
+  // simply "act with your crew", so say so plainly instead of listing all four.
+  if (cats.length >= 4) return 'Fire ANY crew ability to answer him — but someone has to act.'
   return `Fire a crew ability to counter it — ${cats.join(' or ')}.`
 }
 // HP-relative per-tick cap. Now only guards the player from INCOMING burns
@@ -1778,7 +1781,17 @@ export default function RaidCombat({
     setAegisVis(null)
     setEnemySinking(false)  // fresh enemy — clear any leftover sink from a prior fight
     turnRef.current = 1; setTurn(1)
-    return () => clearTimeout(promptTimer)
+    // Fresh enemy clears any stale mechanic check, then arms this boss's
+    // OPENING check (phase 1) if it carries one — the Don demands a crew
+    // answer from the first turn. Delayed past the intro so the telegraph
+    // reads as the fight opening.
+    pendingCheckRef.current = null
+    checkTurnsLeftRef.current = 0
+    setPendingCheck(null)
+    let openingTimer: ReturnType<typeof setTimeout> | undefined
+    const oc = enemy.openingCheck
+    if (isBoss && oc) openingTimer = setTimeout(() => armMechanicCheck(oc), 850)
+    return () => { clearTimeout(promptTimer); if (openingTimer) clearTimeout(openingTimer) }
   }, [enemy.id, enemy.name, enemy.hpBase, isBoss])
 
   // ─── Aim bar RAF (only during 'aiming') ────────────────────────────────────
@@ -2399,6 +2412,7 @@ export default function RaidCombat({
         vengeanceHealPctRef.current = vg.healPctMaxHp
         vengeanceBuffPctRef.current = vg.dmgBuffPct
         vengeanceCleanseRef.current = !!vg.cleanseDebuff
+        noteCheckResponse('brace')   // a ward is a defensive answer to a mechanic check
         setResolveLog(prev => [...prev, `${crew.name} girds your ship with a vengeance ward. Fall now and it strikes back.`])
         break
       }

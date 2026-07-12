@@ -2020,15 +2020,15 @@ export const RAID_MAP: RaidNode[] = [
     // classPick.options pins the menu to exactly these two.
     id: 'chapter_4_augment',    type: 'class_pick',
     label: "The Don's Shipwright",
-    flavor: "The don kept a shipwright the way other captains keep a surgeon. He works for you now — once, and he only asks one question: more iron, or more hands?",
+    flavor: "The don kept a shipwright the way other captains keep a surgeon. He works for you now — one last refit, bolted to your deck for good.",
     requiresNode: 'dons_fall',
     adminOnly: true,
-    classPick: { chapterId: 'the_last_fathom', options: ['armory_expansion', 'crew_quarters'] },
+    classPick: { chapterId: 'the_last_fathom', options: ['armory_expansion'] },
     detail: {
       description:
-        "The finest shipwright on the drowned market owes you his freedom, and he pays in ONE refit. Expanded Armory bolts one more mount to your deck — an extra raid item working every fight. Expanded Quarters berths one more crew, on raids AND voyages. One choice, permanent, and the other refit sails with someone luckier.",
-      dropsNote: 'Permanent, and the road not taken is gone for good. Choose for the captain you actually are.',
-      ctaLabel: 'Commission the refit',
+        "The finest shipwright on the drowned market owes you his freedom, and he pays it in iron: the Expanded Armory bolts one more mount to your deck, an extra raid item working every fight, on every raid from here on. Permanent, and yours for clearing the last fathom.",
+      dropsNote: 'A permanent extra raid-item mount — the reward for taking the throne.',
+      ctaLabel: 'Claim the refit',
     },
   },
   // The Davy Jones Gauntlet used to sit here as a chapter-2 side branch.
