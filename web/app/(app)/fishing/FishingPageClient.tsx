@@ -208,8 +208,6 @@ export default function FishingPageClient({
       <ZoneLanding
         fishingLevel={fishingLevel}
         fishingXP={initialFishingXP}
-        uniqueSpeciesCaught={uniqueSpeciesCaught}
-        highestPerfectStreak={initialHighestPerfectStreak}
         username={username}
         zoneStats={zoneStats}
         onSelect={selectZone}
