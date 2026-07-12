@@ -45,11 +45,6 @@ export default function BossDialogueModal({
     else        setIndex(i => i + 1)
   }
 
-  const speakerName =
-    current.speaker === 'boss'   ? boss.name :
-    current.speaker === 'player' ? playerLabel :
-    null
-
   const showBossPortrait   = current.speaker === 'boss'
   const showPlayerPortrait = current.speaker === 'player'
   const isNarrator         = current.speaker === 'narrator'
@@ -162,16 +157,8 @@ export default function BossDialogueModal({
           </div>
         )}
 
-        {/* Speaker label for non-narrator (small caption above the line). */}
-        {!isNarrator && speakerName && (
-          <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{
-            fontSize: '0.7rem',
-            color: showBossPortrait ? '#fbbf24' : '#4ade80',
-            marginBottom: 8,
-          }}>
-            {speakerName}
-          </p>
-        )}
+        {/* No speaker caption — the lit portrait with its name IS the "who's
+            talking" signal (the name was showing twice). */}
 
         {/* Dialogue text — each line fades in on advance. Bumped sizes
             substantially so the dialogue is comfortable to read on mobile. */}
