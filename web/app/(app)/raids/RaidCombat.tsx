@@ -1721,7 +1721,7 @@ export default function RaidCombat({
       introLines.push(`A ${(enemy.aimFogName ?? 'mist').toLowerCase()} drifts over your aim bar. Lock by rhythm, not by sight.`)
     }
     if ((enemy.critDrift ?? 0) > 0) {
-      introLines.push('Its plating rolls. The gold seam drifts inside the target: track the seam, not the center.')
+      introLines.push('Its plating rolls. The gold seam wanders the whole target, even the gray fringe: chase it there and a near miss only grazes.')
     }
     // "Repossession": the crooked Quartermaster reclaims one raid item he sold
     // you for THIS fight. Prefer an item with an offensive (per-shot/proc)
@@ -1847,7 +1847,10 @@ export default function RaidCombat({
       // Rolling Plate: walk the seam inside the hit band, bouncing at the
       // edges, and paint the gold band at its live position.
       if (seamDrift > 0) {
-        const maxOff = Math.max(0, HIT_W - liveCritWRef.current)
+        // The seam roams the WHOLE zone, graze fringe included — chasing it
+        // out there is a wager: hit the seam and it still crits, but a near
+        // miss lands in the gray, not the green.
+        const maxOff = Math.max(0, HIT_W + GRAZE_W - liveCritWRef.current)
         let o = critSeamOffsetRef.current + SEAM_SPEED * frames * critSeamDirRef.current
         if (o >= maxOff) { o = maxOff; critSeamDirRef.current = -1 }
         if (o <= -maxOff) { o = -maxOff; critSeamDirRef.current = 1 }
@@ -6776,7 +6779,7 @@ function EnemyStatsPopup({
                   {enemy.critDriftName ?? 'Rolling Plate'}
                 </p>
                 <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.68)', lineHeight: 1.35 }}>
-                  Its armor plating rolls as it fights: the gold critical seam drifts inside the target zone. The band still hits anywhere in the green; only the moving seam crits.
+                  Its armor plating rolls as it fights: the gold critical seam wanders the whole target zone, even out into the gray fringe. Hitting the seam always crits, but chasing it into the fringe is a wager: miss it by a hair out there and you only graze.
                 </p>
               </div>
             </div>

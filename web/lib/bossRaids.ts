@@ -221,9 +221,10 @@ export interface BroadsideEnemy {
   /** The Hammerhead's raid (Ch4, Raid 7) — "Rolling Plate." The gold CRIT
    *  band drifts WITHIN the moving target zone (a target inside the target):
    *  the crew rolls its armor plating, so the seam never sits still. Value is
-   *  the seam's drift speed (0.5 gentle, 1.2 fast). The seam is clamped inside
-   *  the green hit band, so a crit is always also a hit, and hit/graze still
-   *  judge off the zone center — only the gold wanders. Undefined = the seam
+   *  the seam's drift speed (0.5 gentle, 1.2 fast). The seam roams the WHOLE
+   *  zone including the graze fringe — hitting the seam always crits, but
+   *  chasing it into the fringe is a wager (a near miss out there only
+   *  grazes). Hit/graze still judge off the zone center. Undefined = the seam
    *  sits centered like every other raid (zero engine cost elsewhere). */
   critDrift?: number
   /** Nameplate/stats-popup label for the rolling seam (mirrors aimFogName). */
