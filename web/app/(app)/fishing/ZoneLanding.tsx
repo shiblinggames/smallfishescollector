@@ -36,11 +36,12 @@ const HABITAT_TAGLINE: Record<string, string> = {
 }
 
 // Chart depths for the sounding line down the right edge — flavor, not math.
+// Plain feet: "ftm" (fathoms) read as jargon nobody knew.
 const ZONE_FATHOMS: Record<string, string> = {
-  shallows:    '2 ftm',
-  open_waters: '10 ftm',
-  deep:        '40 ftm',
-  abyss:       '100 ftm',
+  shallows:    '12 ft',
+  open_waters: '60 ft',
+  deep:        '240 ft',
+  abyss:       '600 ft',
   ancient_deep: 'no chart',
 }
 
@@ -276,6 +277,23 @@ export default function ZoneLanding({
                   {/* Seam — each band surfaces out of the one above it. */}
                   {i > 0 && (
                     <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 20, background: 'linear-gradient(180deg, rgba(2,4,10,0.6), rgba(2,4,10,0))', pointerEvents: 'none' }} />
+                  )}
+
+                  {/* Tap affordance — a chevron chip at the right edge so an
+                      open water reads as a row you can enter, not a mural.
+                      Locked bands get none; the contrast does the teaching. */}
+                  {accessible && (
+                    <div aria-hidden style={{
+                      position: 'absolute', right: 20, top: '50%', transform: 'translateY(-50%)', zIndex: 2,
+                      width: 28, height: 28, borderRadius: '50%',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: 'rgba(2,6,12,0.55)',
+                      border: `1.5px solid ${color}aa`,
+                      boxShadow: `0 0 10px ${color}33`,
+                      pointerEvents: 'none',
+                    }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m9 5 7 7-7 7" /></svg>
+                    </div>
                   )}
 
                   {/* Fathom mark — a tick off the sounding line. */}
