@@ -26,7 +26,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
   const [{ data: { user } }, { data: profile }] = await Promise.all([
     supabase.auth.getUser(),
     admin.from('profiles')
-      .select('id, username, showcase_crew_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, hook_tier, rod_tier, reel_tier, line_tier, ship_tier, ship_name, highest_perfect_streak, has_tide_turner, has_phantom_hook, has_perfected_sigil, equipped_ship_skin, raid_items, character_color, equipped_special, equipped_badges, equipped_boat, equipped_hat, equipped_pet, avatar_bg_color, avatar_border_color, profile_bg, fishing_casts, total_perfects, highest_raid_damage, equipped_crew_skins')
+      .select('id, username, showcase_crew_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, hook_tier, rod_tier, reel_tier, line_tier, ship_tier, ship_name, highest_perfect_streak, has_tide_turner, has_phantom_hook, has_perfected_sigil, equipped_ship_skin, raid_items, character_color, equipped_special, equipped_badges, equipped_boat, equipped_hat, equipped_pet, avatar_bg_color, avatar_border_color, profile_bg, fishing_casts, total_perfects, highest_raid_damage, equipped_crew_skins, prestige_levels')
       .ilike('username', username)
       .single(),
   ])
@@ -127,6 +127,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     raidsCompleted: agg.raidsCompleted ?? 0,
     voyageLoot: agg.voyageLoot ?? 0,
     highestRaidDamage: (profile.highest_raid_damage as number | null) ?? 0,
+    prestigeTotal: Object.values((profile.prestige_levels as Record<string, number> | null) ?? {}).reduce((a, b) => a + (Number(b) || 0), 0),
   }
 
   const navProfile = navProfileData.data

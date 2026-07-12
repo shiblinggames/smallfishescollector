@@ -171,6 +171,22 @@ async function fetchChartingPoints(admin: Admin, userId: string) {
   return { top, myScore: myIdx >= 0 ? rows[myIdx].score : null, myRank: myIdx >= 0 ? myIdx + 1 : null }
 }
 
+// Total Prestige: sum of profiles.prestige_levels values (all fishing zones).
+// Small-table scan like chartingPoints; highest total wins, ties by username.
+async function fetchTotalPrestige(admin: Admin, userId: string) {
+  const { data: profiles } = await admin
+    .from('profiles')
+    .select('id, username, prestige_levels')
+    .eq('is_admin', false)
+  const rows: LeaderboardEntry[] = ((profiles ?? []) as Array<{ id: string; username: string | null; prestige_levels: Record<string, number> | null }>)
+    .map(p => ({ user_id: p.id, username: p.username ?? '', score: Object.values(p.prestige_levels ?? {}).reduce((a, b) => a + (Number(b) || 0), 0) }))
+    .filter(r => r.score > 0)
+  rows.sort((a, b) => b.score - a.score || (a.username < b.username ? -1 : a.username > b.username ? 1 : 0))
+  const top = rows.slice(0, 50)
+  const myIdx = rows.findIndex(r => r.user_id === userId)
+  return { top, myScore: myIdx >= 0 ? rows[myIdx].score : null, myRank: myIdx >= 0 ? myIdx + 1 : null }
+}
+
 export interface LeaderboardBoardsResult {
   currentUserId: string
   boards: Partial<Record<BoardKey, LeaderboardEntry[]>>
@@ -197,6 +213,7 @@ export async function getLeaderboardBoards(
     else if (key === 'raidProgress')  res = await fetchRaidProgress(admin, user.id)
     else if (key === 'chartingPoints') res = await fetchChartingPoints(admin, user.id)
     else if (key === 'achievementPoints') res = await getAchievementPointsBoard(admin, user.id)
+    else if (key === 'totalPrestige')  res = await fetchTotalPrestige(admin, user.id)
     else if (key === 'gauntletDepth') res = await fetchGauntlet(admin, user.id)
     else if (key === 'gauntletHardcore') res = await fetchGauntlet(admin, user.id, 'leaderboard_gauntlet_hardcore')
     else {

@@ -16,6 +16,8 @@ export interface CareerStats {
   voyageLoot: number
   /** Biggest single hit landed in a raid (profiles.highest_raid_damage). */
   highestRaidDamage: number
+  /** Sum of zone prestige levels (profiles.prestige_levels values). */
+  prestigeTotal: number
 }
 
 /** Shape returned by the career_stats(uid) SQL function. */

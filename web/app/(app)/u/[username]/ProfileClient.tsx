@@ -270,6 +270,7 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
               <StatTile label="Lines Cast" value={career.fishingCasts.toLocaleString()} color="#60a5fa" />
               <StatTile label="Perfects" value={career.perfects.toLocaleString()} color="#fde68a" />
               <StatTile label="Fish Sold" value={`${career.fishSold.toLocaleString()} ⟡`} color="#4ade80" />
+              {career.prestigeTotal > 0 && <StatTile label="Prestige" value={career.prestigeTotal} color="#f0c040" />}
             </div>
           </div>
 

@@ -3350,6 +3350,9 @@ export default function FishingGame({
   const [skinUnlockToast, setSkinUnlockToast] = useState<string | null>(null)
   const [prestigeLevels, setPrestigeLevels] = useState<Record<string, number>>(initialPrestigeLevels)
   const [prestigingZone, setPrestigingZone] = useState<string | null>(null)
+  // The prestige ceremony overlay — the stamp-slam moment after a prestige
+  // lands (zone, new level, and any colorway the milestone unlocked).
+  const [prestigeCeremony, setPrestigeCeremony] = useState<{ zone: string; level: number; skin: string | null } | null>(null)
   const [confirmPrestigeZone, setConfirmPrestigeZone] = useState<string | null>(null)
   const [tappedFishId, setTappedFishId] = useState<number | null>(null)
   const [ancientCatches, setAncientCatches] = useState(() => new Set(initialAncientCatches))
@@ -5626,7 +5629,9 @@ export default function FishingGame({
     const result = await prestigeZone(zone)
     setPrestigingZone(null)
     if ('error' in result) { setConfirmPrestigeZone(null); return }
-    if (result.unlockedSkinId) { setSkinUnlockToast(result.unlockedSkinId); setTimeout(() => setSkinUnlockToast(null), 6000) }
+    // The ceremony carries the whole moment (incl. any unlocked colorway) —
+    // no separate skin toast on this path.
+    setPrestigeCeremony({ zone, level: result.prestigeLevel, skin: result.unlockedSkinId ?? null })
     const zoneIds = new Set(allFishSpecies.filter(f => f.habitat === zone).map(f => f.id))
     setCaughtFishIds(prev => { const next = new Set(prev); zoneIds.forEach(id => next.delete(id)); return next })
     setClaimedZones(prev => ({ ...prev, [zone]: false }))
@@ -7765,6 +7770,18 @@ export default function FishingGame({
               </div>
             </motion.div>
           </>
+        )}
+      </AnimatePresence>
+
+      {/* ── Prestige ceremony — the stamp slams, the log begins anew ── */}
+      <AnimatePresence>
+        {prestigeCeremony && (
+          <PrestigeCeremonyOverlay
+            zone={prestigeCeremony.zone}
+            level={prestigeCeremony.level}
+            skinName={prestigeCeremony.skin ? prestigeCeremony.skin.charAt(0).toUpperCase() + prestigeCeremony.skin.slice(1) : null}
+            onDone={() => setPrestigeCeremony(null)}
+          />
         )}
       </AnimatePresence>
 
@@ -10521,5 +10538,92 @@ export default function FishingGame({
       </div>
 
     </div>
+  )
+}
+
+// ── Prestige ceremony ─────────────────────────────────────────────────────────
+// A prestige is a rare, earned moment — it gets a full-screen beat, not a
+// confirm dialog fizzle. The zone-colored ink stamp slams in (haptic lands
+// with it), the stars count the new level, and the promise is spelled out.
+// Tap anywhere or the button to go back to the water.
+function PrestigeCeremonyOverlay({ zone, level, skinName, onDone }: {
+  zone: string
+  level: number
+  skinName: string | null
+  onDone: () => void
+}) {
+  const color = HABITAT_COLOR[zone] ?? '#f0c040'
+  const label = HABITAT_LABEL[zone] ?? zone
+  useEffect(() => {
+    const t = setTimeout(() => vibrate([0, 60, 50, 110]), 300)   // when the stamp lands
+    return () => clearTimeout(t)
+  }, [])
+  return (
+    <motion.div key="prestige-ceremony"
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      style={{
+        position: 'absolute', inset: 0, zIndex: 45,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'rgba(2,5,10,0.93)', padding: '1.5rem',
+      }}
+      onClick={onDone}
+    >
+      {/* rising flecks in the zone color */}
+      {Array.from({ length: 14 }).map((_, i) => (
+        <motion.div key={i} aria-hidden
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: [0, 1, 0], y: -90, x: (i % 2 ? 1 : -1) * (6 + (i * 5) % 40) }}
+          transition={{ duration: 2.4 + (i % 3) * 0.5, delay: (i * 0.17) % 1.7, repeat: Infinity, ease: 'easeOut' }}
+          style={{ position: 'absolute', left: `${(i * 29) % 100}%`, bottom: '16%', width: 4, height: 4, borderRadius: '50%', background: color, boxShadow: `0 0 8px ${color}` }} />
+      ))}
+      <div onClick={e => e.stopPropagation()} style={{ position: 'relative', textAlign: 'center', maxWidth: 320, width: '100%' }}>
+        <p className="font-karla font-700 uppercase tracking-[0.24em]" style={{ fontSize: '0.56rem', color: `${color}cc`, marginBottom: 14 }}>{label}</p>
+        {/* the ink stamp slams in */}
+        <motion.div
+          initial={{ scale: 2.3, opacity: 0, rotate: 3 }}
+          animate={{ scale: 1, opacity: 1, rotate: -6 }}
+          transition={{ type: 'spring', stiffness: 340, damping: 17, delay: 0.18 }}
+          className="font-cinzel font-800 uppercase"
+          style={{
+            display: 'inline-block', padding: '0.55rem 1.15rem',
+            border: `3px double ${color}`, borderRadius: 8,
+            color, fontSize: '1.7rem', letterSpacing: '0.14em', lineHeight: 1,
+            textShadow: `0 0 22px ${color}66`, boxShadow: `0 0 30px ${color}22, inset 0 0 18px ${color}14`,
+          }}
+        >
+          Prestige {level}
+        </motion.div>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 5, marginTop: 16 }}>
+          {Array.from({ length: level }).map((_, i) => (
+            <motion.svg key={i} width="15" height="15" viewBox="0 0 24 24" fill={color}
+              initial={{ opacity: 0, scale: 0.3, y: 6 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ delay: 0.55 + i * 0.12, type: 'spring', stiffness: 420, damping: 18 }}
+              style={{ filter: `drop-shadow(0 0 5px ${color})` }}>
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </motion.svg>
+          ))}
+        </div>
+        <motion.p initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}
+          className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f5f2ec', marginTop: 16 }}>
+          +{level * 10}% XP on every {label} catch, forever
+        </motion.p>
+        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9 }}
+          className="font-karla" style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.5, marginTop: 8, fontStyle: 'italic' }}>
+          The log begins anew. Every fish in these waters is waiting to be caught again.
+        </motion.p>
+        {skinName && (
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.05 }}
+            className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#4ade80', marginTop: 10 }}>
+            New colorway unlocked: {skinName}
+          </motion.p>
+        )}
+        <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.15 }}
+          type="button" onClick={onDone}
+          className="font-cinzel font-700 uppercase tracking-[0.14em] tap"
+          style={{ marginTop: 20, width: '100%', padding: '12px 0', borderRadius: 12, fontSize: '0.76rem', color: '#0c0f14', background: `linear-gradient(180deg, ${color}, ${color}cc)`, border: 'none', cursor: 'pointer', boxShadow: `0 0 22px ${color}55` }}>
+          Back to the water
+        </motion.button>
+      </div>
+    </motion.div>
   )
 }

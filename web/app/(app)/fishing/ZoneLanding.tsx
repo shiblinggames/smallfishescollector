@@ -205,7 +205,7 @@ export default function ZoneLanding({
               </p>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0" style={{ paddingBottom: 3 }}>
-              <LeaderboardModal boards={['perfectStreak', 'fishingLevel']} title="Fishing Leaderboard" />
+              <LeaderboardModal boards={['perfectStreak', 'fishingLevel', 'totalPrestige']} title="Fishing Leaderboard" />
               <button
                 onClick={() => setModalOpen(true)}
                 aria-label="How fishing works"
@@ -353,15 +353,29 @@ export default function ZoneLanding({
                               </span>
                             </span>
                           </div>
-                          {prestige > 0 && (
-                            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{
-                              flexShrink: 0, fontSize: '0.54rem', color: '#f0c040',
-                              background: 'rgba(240,192,64,0.14)', border: '1px solid rgba(240,192,64,0.45)',
-                              padding: '0.16rem 0.5rem', borderRadius: '2rem',
+                          {/* Prestige ladder: bronze (1-2) → silver (3-4) →
+                              gold (5-6) → prismatic text at 7+, matching the
+                              badges-page grandmaster treatment. */}
+                          {prestige >= 7 ? (
+                            <span className="font-karla font-800 uppercase tracking-[0.1em]" style={{
+                              flexShrink: 0, fontSize: '0.6rem',
+                              backgroundImage: 'linear-gradient(90deg, #7dd3fc, #f0c040, #f472b6, #a78bfa)',
+                              WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
                             }}>
                               Prestige {prestige}
                             </span>
-                          )}
+                          ) : prestige > 0 ? (() => {
+                            const tc = prestige >= 5 ? '#f0c040' : prestige >= 3 ? '#d7dee8' : '#e0a96d'
+                            return (
+                              <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{
+                                flexShrink: 0, fontSize: '0.54rem', color: tc,
+                                background: `${tc}22`, border: `1px solid ${tc}70`,
+                                padding: '0.16rem 0.5rem', borderRadius: '2rem',
+                              }}>
+                                Prestige {prestige}
+                              </span>
+                            )
+                          })() : null}
                         </div>
 
                         {/* Bottom line — rough-water marks left, catch stats right.

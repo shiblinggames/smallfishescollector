@@ -56,6 +56,7 @@ export default async function ProfilePage() {
     raidsCompleted: agg.raidsCompleted ?? 0,
     voyageLoot: agg.voyageLoot ?? 0,
     highestRaidDamage: profile?.highest_raid_damage ?? 0,
+    prestigeTotal: Object.values((profile?.prestige_levels as Record<string, number> | null) ?? {}).reduce((a, b) => a + (Number(b) || 0), 0),
   }
 
   const ship = getShip(profile?.ship_tier ?? 0)
