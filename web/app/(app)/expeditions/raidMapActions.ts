@@ -6,7 +6,7 @@ import { getLevelFromXP } from '@/lib/expeditionLevel'
 import { RAID_MAP, computeRaidMap, type RaidNodeView } from '@/lib/raidMap'
 import { GAUNTLET_LIVE, GAUNTLET_UNLOCK_NODE } from '@/lib/gauntlet'
 import { raidDamageProfile } from '@/lib/expeditions'
-import { getActiveEffects, exclusiveSiblingOf } from '@/lib/raidItems'
+import { getActiveEffects, exclusiveSiblingOf, effectiveOwnedItems } from '@/lib/raidItems'
 import { getRaidPlayerStats } from '@/app/(app)/raids/actions'
 
 type Admin = ReturnType<typeof createAdminClient>
@@ -385,9 +385,12 @@ export async function buyReclaimedItem(
   const cleared = await buildClearedSet(admin, user.id, profile)
   if (node.requiresNode && !cleared.has(node.requiresNode)) return { error: 'Locked' }
 
+  // Forge-aware ownership: a Cache pick that was forged into a fusion left
+  // raid_items, but the choice was still made — count it (and never resell it).
   const ownedItems = (profile.raid_items as string[] | null) ?? []
-  if (ownedItems.includes(itemId)) return { error: 'Already owned' }
-  if (!ownedItems.includes(ex.sibling)) return { error: 'No debt here — you never made that choice' }
+  const eff = effectiveOwnedItems(ownedItems)
+  if (eff.has(itemId)) return { error: 'Already owned' }
+  if (!eff.has(ex.sibling)) return { error: 'No debt here. You never made that choice.' }
 
   const doubloons = profile.doubloons ?? 0
   if (doubloons < node.reclaim.price) return { error: 'Not enough doubloons' }

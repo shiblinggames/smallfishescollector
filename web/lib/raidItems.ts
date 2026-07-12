@@ -649,6 +649,28 @@ export function isForgedRaidItem(id: string): boolean {
   return FORGE_RECIPES.some(r => r.result === id)
 }
 
+/** Ownership EXPANDED through the forge: everything in raid_items, plus every
+ *  component that was CONSUMED into a fusion the player owns (recursively, so
+ *  future fusion-of-fusion tiers expand too). The forge is destructive — a
+ *  forged-away Cache pick vanishes from raid_items, but the player still MADE
+ *  that choice. The Reclamation reads this, not raw ownership; otherwise it
+ *  offers to sell back the side you took and forged, instead of the road not
+ *  taken. */
+export function effectiveOwnedItems(ownedItems: string[]): Set<string> {
+  const owned = new Set(ownedItems)
+  let grew = true
+  while (grew) {
+    grew = false
+    for (const r of FORGE_RECIPES) {
+      if (!owned.has(r.result)) continue
+      for (const c of r.components) {
+        if (!owned.has(c)) { owned.add(c); grew = true }
+      }
+    }
+  }
+  return owned
+}
+
 /** The Davy recipe — its components double as the Gauntlet chest drop pool. */
 export const DAVY_FORGE = getForgeRecipe('davys_grand_cannon')!
 

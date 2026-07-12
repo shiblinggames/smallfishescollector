@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { isCombatNode, chapterForNode, RAID_CHAPTERS, type RaidChapter, type RaidNodeDrop, type RaidNodeView } from '@/lib/raidMap'
 import type { RaidRecords } from './raidMapActions'
 import { RARITY_COLOR, GEM_GLYPH, GEM_COLOR } from '@/lib/bossRaids'
-import { getRaidItem, EXCLUSIVE_CHOICE_PAIRS } from '@/lib/raidItems'
+import { getRaidItem, EXCLUSIVE_CHOICE_PAIRS, effectiveOwnedItems } from '@/lib/raidItems'
 import { getShipSkin } from '@/lib/shipSkins'
 import { claimMilestoneNode, markStoryNodeRead, claimScoutDebt, claimQuartermasterChoice, buyReclaimedItem, solvePuzzleNode, pickShipClass, markChapterUnlockSeen, pickRaidEventChoice, pickForkRoute } from './raidMapActions'
 import { repairShip } from '@/app/(app)/raids/actions'
@@ -1377,10 +1377,14 @@ function NodeDetailSheet({
             the vault is cracked (cleared) and stays buyable on every revisit. */}
         {node.reclaim && cleared && (() => {
           const price = node.reclaim.price
+          // Forge-aware: a Cache pick that was forged into a fusion left
+          // raid_items, but the choice was made — the vault must offer the
+          // MISSED side, never resell the taken-and-forged one.
+          const effOwned = effectiveOwnedItems(ownedRaidItems)
           const entries = EXCLUSIVE_CHOICE_PAIRS.map(pair => {
             const [a, b] = pair.items
-            const ownsA = ownedRaidItems.includes(a)
-            const ownsB = ownedRaidItems.includes(b)
+            const ownsA = effOwned.has(a)
+            const ownsB = effOwned.has(b)
             if (!ownsA && !ownsB) return null            // choice never made — no debt here
             const missing = ownsA && ownsB ? null : (ownsA ? b : a)
             return { source: pair.source, missing, kept: ownsA ? a : b }
