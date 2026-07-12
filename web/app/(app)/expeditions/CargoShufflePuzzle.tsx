@@ -175,7 +175,7 @@ export default function CargoShufflePuzzle({ puzzle, onSolved }: { puzzle: RaidC
 
   // Fit-to-room cell size: the widest room (9 cols) was overflowing the sheet
   // at a fixed 11.5vw/cell. Cap the BOARD at ~84vw and split it across the
-  // room's columns, so every room sits centerd with margin to spare.
+  // room's columns, so every room sits centered with margin to spare.
   const CELL = `min(${(84 / parsed.cols).toFixed(2)}vw, 46px)`
   const movesLeft = room.moveBudget - st.moves
   const low = movesLeft <= Math.ceil(room.moveBudget * 0.2)

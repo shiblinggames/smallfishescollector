@@ -6887,7 +6887,7 @@ export default function FishingGame({
             {/* Lightsaber "Lightspeed" cue — a brief red blade-flash pill when
                 a near-instant bite fires. Localized at the top of the stage so
                 it reads as the rod's doing without a screen-wide flash. The
-                steady x:-50% keeps it centerd while opacity/scale animate. */}
+                steady x:-50% keeps it centered while opacity/scale animate. */}
             <AnimatePresence>
               {instantBiteFlash && (
                 <motion.div

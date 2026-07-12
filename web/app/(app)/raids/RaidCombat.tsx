@@ -2626,7 +2626,7 @@ export default function RaidCombat({
     // just growing `width` would balloon it to the RIGHT and shift its visual
     // center ~(w−4)/2 px right of the real hit point — which read as the crit
     // zone being offset right of the gold band. Offset left by half the new
-    // width so the fat needle stays centerd on `pos`.
+    // width so the fat needle stays centered on `pos`.
     if (indicatorRef.current && (res === 'hit' || res === 'critical')) {
       const w = res === 'critical' ? 10 : 7
       const glow = res === 'critical' ? '#fbbf24' : '#4ade80'

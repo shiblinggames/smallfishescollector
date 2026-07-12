@@ -122,7 +122,7 @@ export default function UltimatePreview({ id, color }: { id: ShipAugmentId; colo
         <NukeMissile key={shot} color={color} x1={geo.x1} y1={geo.y1} x2={geo.x2} y2={geo.y2} dur={NUKE_FLIGHT} />
       )}
 
-      {/* Percent-based FX (blast, impacts, splats) live in a box centerd on the
+      {/* Percent-based FX (blast, impacts, splats) live in a box centered on the
           target hull, matching how they sit over the enemy ship in combat. The
           nuke's fireball scales off the box, so its box is tighter to keep the
           blast in frame now that the target sits further right. */}
