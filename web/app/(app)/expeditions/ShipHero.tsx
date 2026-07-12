@@ -251,7 +251,9 @@ interface Props {
   /** The active (completed) Man-o-War ultimate id, or null. */
   manowarAugment?: string | null
   /** An ultimate build in progress ({ id, completesAt }), or null. */
-  manowarBuild?: { id: ShipAugmentId; completesAt: string } | null
+  manowarBuild?: { id: ShipAugmentId; completesAt: string; retool?: boolean } | null
+  /** Owns the Full Schematics — free, instant switching between ultimates. */
+  manowarSchematics?: boolean
   /** Cleared Chapter 3 (beat the Quartermaster) — unlocks the ultimate build. */
   chapter3Cleared?: boolean
   isAdmin?: boolean
@@ -337,6 +339,7 @@ export default function ShipHero({
   hasSeenForgeIntro = true,
   manowarAugment: initialManowarAugment = null,
   manowarBuild = null,
+  manowarSchematics = false,
   chapter3Cleared = false,
   isAdmin = false,
   navRenownAlloc = null,
@@ -1764,6 +1767,7 @@ export default function ShipHero({
                         doubloons={doubloons}
                         activeId={initialManowarAugment}
                         build={manowarBuild}
+                        schematics={manowarSchematics}
                       />
                     )}
 

@@ -113,6 +113,12 @@ export const AUGMENT_NAV_LEVEL = 70
 export const AUGMENT_COST = 750_000
 /** The Mega spends a full magazine; this is also why it needs the Rack. */
 export const MEGA_CHARGE_COST = 4
+/** Retool an already-forged ultimate into a different weapon: paid per switch,
+ *  plus the same 24h shipwright clock. The old weapon stays armed until done. */
+export const RETOOL_COST = 250_000
+/** The Full Schematics: one purchase, then swap freely between all three
+ *  ultimates — instantly, at no cost, forever. The true endgame flex. */
+export const SCHEMATICS_COST = 1_250_000
 /** How long the ultimate takes to build from the Quartermaster's schematics. */
 export const ULTIMATE_BUILD_MS = 24 * 60 * 60 * 1000
 
@@ -139,12 +145,26 @@ export const ULTIMATE_STORY = {
   /** Shown while the build clock runs. */
   buildingLine:
     "Your shipwrights work the plans day and night. You can still change which weapon they raise until the work is done.",
+  /** Shown while a RETOOL clock runs ({current} = the still-armed weapon). */
+  retoolingLine:
+    "Your shipwrights strip the mounts and raise the new weapon. {current} stays armed until the work is done.",
+  /** The Full Schematics pitch (upsell card under the armed weapon). */
+  schematicsTitle: 'The Full Schematics',
+  schematicsBlurb:
+    "You built one weapon from a torn page. This is the whole book: every plan the Quartermaster ever stole, cover to cover. Own it and your shipwrights can swap your ultimate freely, any weapon, any time, no cost, no wait.",
+  /** The unlock celebration once the schematics are bought. */
+  schematicsUnlockKicker: 'The Whole Book',
+  schematicsUnlockLine:
+    "Every page accounted for. The armory is yours now. Swap your ultimate whenever the fight calls for it.",
 } as const
 
 export interface ShipAugmentBuild {
   id: ShipAugmentId
   /** ISO timestamp the build finishes and the ultimate goes live. */
   completesAt: string
+  /** True when this build is a paid RETOOL of an already-forged ultimate
+   *  (drives the copy — the current weapon stays armed while it runs). */
+  retool?: boolean
 }
 
 /** Narrow-and-validate a raw jsonb build column into a typed build (or null). */
@@ -153,7 +173,8 @@ export function parseAugmentBuild(raw: unknown): ShipAugmentBuild | null {
   const r = raw as { id?: unknown; completesAt?: unknown }
   if (typeof r.id !== 'string' || typeof r.completesAt !== 'string') return null
   if (!getShipAugment(r.id)) return null
-  return { id: r.id as ShipAugmentId, completesAt: r.completesAt }
+  const retool = (r as { retool?: unknown }).retool === true
+  return { id: r.id as ShipAugmentId, completesAt: r.completesAt, ...(retool ? { retool: true } : {}) }
 }
 
 export function isBuildComplete(build: ShipAugmentBuild | null, nowMs: number): boolean {

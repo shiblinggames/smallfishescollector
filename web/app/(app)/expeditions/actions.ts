@@ -7,7 +7,7 @@ import { applyVariantBoosts, raidItemSlotsForTier } from '@/lib/expeditions'
 import { getForgeRecipe, dedupeRaidItems, unobtainableComponents } from '@/lib/raidItems'
 import { classSlotBonuses } from '@/lib/shipClasses'
 import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
-import { getShipAugment, AUGMENT_COST, ULTIMATE_BUILD_MS, canBuildUltimate, parseAugmentBuild, isBuildComplete, type ShipAugmentBuild } from '@/lib/shipAugments'
+import { getShipAugment, AUGMENT_COST, RETOOL_COST, SCHEMATICS_COST, ULTIMATE_BUILD_MS, canBuildUltimate, parseAugmentBuild, isBuildComplete, type ShipAugmentBuild } from '@/lib/shipAugments'
 import { getShipSkin, canEquipShipSkin } from '@/lib/shipSkins'
 import { settleUltimateBuild } from '@/lib/ultimateBuild'
 import { hasForge, bonusChargeSlots } from '@/lib/gauntletUpgrades'
@@ -245,16 +245,17 @@ async function hasClearedChapter3(admin: ReturnType<typeof createAdminClient>, u
  *  ACTIVE (completed) augment id + the in-progress build, if any. Promoting a
  *  matured build here means the ultimate goes live the next time the player
  *  loads the ship screen — no cron needed (mirrors the pending-sales pattern). */
-export async function getUltimateState(): Promise<{ active: string | null; build: ShipAugmentBuild | null }> {
+export async function getUltimateState(): Promise<{ active: string | null; build: ShipAugmentBuild | null; schematics: boolean }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { active: null, build: null }
+  if (!user) return { active: null, build: null, schematics: false }
   const admin = createAdminClient()
   const { data: profile } = await admin.from('profiles')
-    .select('manowar_augment, manowar_augment_build').eq('id', user.id).single()
-  return settleUltimateBuild(admin, user.id,
+    .select('manowar_augment, manowar_augment_build, manowar_schematics').eq('id', user.id).single()
+  const settled = await settleUltimateBuild(admin, user.id,
     (profile?.manowar_augment as string | null) ?? null,
     profile?.manowar_augment_build ?? null)
+  return { ...settled, schematics: profile?.manowar_schematics === true }
 }
 
 /** Begin building an ultimate. Charges AUGMENT_COST doubloons and stamps a 24h
@@ -324,16 +325,131 @@ export async function swapUltimateBuild(id: string): Promise<{ ok: boolean; erro
 
   const admin = createAdminClient()
   const { data: profile } = await admin.from('profiles')
-    .select('manowar_augment_build').eq('id', user.id).single()
+    .select('manowar_augment, manowar_augment_build').eq('id', user.id).single()
   const existing = parseAugmentBuild(profile?.manowar_augment_build ?? null)
   if (!existing || isBuildComplete(existing, Date.now())) {
     return { ok: false, error: 'No build in progress.' }
   }
   if (existing.id === augment.id) return { ok: true }
+  // A retool can't target the weapon already on the mounts.
+  if (existing.retool && profile?.manowar_augment === augment.id) {
+    return { ok: false, error: 'That weapon is already mounted.' }
+  }
   // Keep the same clock — you're re-tasking the shipwrights, not restarting.
-  const build: ShipAugmentBuild = { id: augment.id, completesAt: existing.completesAt }
+  const build: ShipAugmentBuild = { id: augment.id, completesAt: existing.completesAt, ...(existing.retool ? { retool: true } : {}) }
   await admin.from('profiles').update({ manowar_augment_build: build }).eq('id', user.id)
   return { ok: true }
+}
+
+/** RETOOL a forged ultimate into a different weapon. Charges RETOOL_COST and
+ *  stamps the same 24h shipwright clock; the CURRENT weapon stays armed until
+ *  the work completes (settleUltimateBuild promotes it on read, as with the
+ *  first build). Schematics owners never pay this — they switch instantly. */
+export async function startUltimateRetool(id: string): Promise<{ ok: boolean; error?: string; doubloons?: number; completesAt?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: 'Not signed in.' }
+  const augment = getShipAugment(id)
+  if (!augment) return { ok: false, error: 'Unknown weapon.' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles')
+    .select('doubloons, manowar_augment, manowar_augment_build, manowar_schematics').eq('id', user.id).single()
+  if (!profile) return { ok: false, error: 'No profile.' }
+
+  if (!profile.manowar_augment) return { ok: false, error: 'Forge your first ultimate before retooling.' }
+  if (profile.manowar_augment === augment.id) return { ok: false, error: 'That weapon is already mounted.' }
+  if (profile.manowar_schematics === true) return { ok: false, error: 'You own the Full Schematics. Switch freely instead.' }
+  const existing = parseAugmentBuild(profile.manowar_augment_build ?? null)
+  if (existing && !isBuildComplete(existing, Date.now())) {
+    return { ok: false, error: 'The shipwrights are already at work. Change their pick instead.' }
+  }
+
+  const doubloons = (profile.doubloons as number | null) ?? 0
+  if (doubloons < RETOOL_COST) return { ok: false, error: `You need ${RETOOL_COST.toLocaleString()} doubloons.` }
+
+  const completesAt = new Date(Date.now() + ULTIMATE_BUILD_MS).toISOString()
+  const build: ShipAugmentBuild = { id: augment.id, completesAt, retool: true }
+  const newDoubloons = doubloons - RETOOL_COST
+  // Conditional write guards a double-tap, same as the first build.
+  const { data: updated } = await admin.from('profiles')
+    .update({ manowar_augment_build: build, doubloons: newDoubloons })
+    .eq('id', user.id)
+    .is('manowar_augment_build', null)
+    .select('manowar_augment_build')
+    .maybeSingle()
+  if (!updated) return { ok: false, error: 'The shipwrights are already at work.' }
+
+  await admin.from('doubloon_transactions').insert({
+    user_id: user.id, amount: -RETOOL_COST, reason: `Ultimate retool: ${augment.name}`,
+  })
+  return { ok: true, doubloons: newDoubloons, completesAt }
+}
+
+/** Buy the Full Schematics: one purchase, then free instant switching between
+ *  all three ultimates forever. If a paid retool is mid-clock, it completes on
+ *  the spot — you own every plan now; nobody waits on a torn page. */
+export async function buyUltimateSchematics(): Promise<{ ok: boolean; error?: string; doubloons?: number; active?: string | null }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: 'Not signed in.' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles')
+    .select('doubloons, manowar_augment, manowar_augment_build, manowar_schematics').eq('id', user.id).single()
+  if (!profile) return { ok: false, error: 'No profile.' }
+
+  if (!profile.manowar_augment) return { ok: false, error: 'Forge your first ultimate before buying the Full Schematics.' }
+  if (profile.manowar_schematics === true) return { ok: false, error: 'You already own the Full Schematics.' }
+
+  const doubloons = (profile.doubloons as number | null) ?? 0
+  if (doubloons < SCHEMATICS_COST) return { ok: false, error: `You need ${SCHEMATICS_COST.toLocaleString()} doubloons.` }
+
+  // A retool mid-clock finishes instantly with the purchase.
+  const pending = parseAugmentBuild(profile.manowar_augment_build ?? null)
+  const newDoubloons = doubloons - SCHEMATICS_COST
+  const active = pending?.retool ? pending.id : (profile.manowar_augment as string)
+  // Conditional write (schematics still false) guards a double-tap.
+  const { data: updated } = await admin.from('profiles')
+    .update({
+      manowar_schematics: true,
+      doubloons: newDoubloons,
+      manowar_augment: active,
+      ...(pending?.retool ? { manowar_augment_build: null } : {}),
+    })
+    .eq('id', user.id)
+    .eq('manowar_schematics', false)
+    .select('manowar_schematics')
+    .maybeSingle()
+  if (!updated) return { ok: false, error: 'You already own the Full Schematics.' }
+
+  await admin.from('doubloon_transactions').insert({
+    user_id: user.id, amount: -SCHEMATICS_COST, reason: 'Ultimate weapon: the Full Schematics',
+  })
+  return { ok: true, doubloons: newDoubloons, active }
+}
+
+/** Free instant ultimate switch — Full Schematics owners only. */
+export async function switchUltimate(id: string): Promise<{ ok: boolean; error?: string; active?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: 'Not signed in.' }
+  const augment = getShipAugment(id)
+  if (!augment) return { ok: false, error: 'Unknown weapon.' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles')
+    .select('manowar_augment, manowar_schematics').eq('id', user.id).single()
+  if (!profile) return { ok: false, error: 'No profile.' }
+  if (!profile.manowar_augment) return { ok: false, error: 'Forge your first ultimate before switching.' }
+  if (profile.manowar_schematics !== true) return { ok: false, error: 'Switching freely takes the Full Schematics.' }
+  if (profile.manowar_augment === augment.id) return { ok: true, active: augment.id }
+
+  // Any stale build is moot for a schematics owner — clear it as we switch.
+  await admin.from('profiles')
+    .update({ manowar_augment: augment.id, manowar_augment_build: null })
+    .eq('id', user.id)
+  return { ok: true, active: augment.id }
 }
 
 /** Dismiss the one-time "ultimate plans discovered" celebration. */

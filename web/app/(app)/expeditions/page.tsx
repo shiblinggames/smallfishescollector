@@ -110,6 +110,7 @@ async function ShipHeroSection() {
       hasSeenForgeIntro={profile?.has_seen_forge_intro === true}
       manowarAugment={activeAugment}
       manowarBuild={manowarBuild}
+      manowarSchematics={profile?.manowar_schematics === true}
       chapter3Cleared={chapter3Cleared}
       isAdmin={profile?.is_admin === true}
       navRenownAlloc={(profile?.nav_renown_alloc as Record<string, number> | null) ?? null}
