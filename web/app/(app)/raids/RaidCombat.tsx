@@ -1800,11 +1800,15 @@ export default function RaidCombat({
     const squallActive = affliction?.kind === 'squall'
 
     // Rolling Plate: seam drift for THIS pass (0 = still, like every other
-    // raid). Reset each aiming session so the seam opens centered.
+    // raid). The seam opens at a RANDOM spot in its range each pass (a
+    // centered start read as "not moving"), and the speed is sized against
+    // the needle: at drift 1.0 the seam sweeps its full range in ~1.3s —
+    // clearly alive, still trackable. (0.0009 was ~6s: imperceptible.)
     const seamDrift = enemy.critDrift ?? 0
-    critSeamOffsetRef.current = 0
+    const seamMaxOff0 = Math.max(0, HIT_W + GRAZE_W - liveCritWRef.current)
+    critSeamOffsetRef.current = seamDrift > 0 ? (Math.random() * 2 - 1) * seamMaxOff0 * 0.8 : 0
     critSeamDirRef.current = Math.random() < 0.5 ? 1 : -1
-    const SEAM_SPEED = 0.0009 * seamDrift
+    const SEAM_SPEED = 0.0022 * seamDrift
 
     // False Colors: on a RANDOM fraction of fires, spawn N drifting decoy bands.
     // Decided once per aiming session so the player can't predict it. The

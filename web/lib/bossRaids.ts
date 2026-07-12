@@ -1217,6 +1217,7 @@ export const THE_HAMMERHEAD: BossRaidConfig = {
       id: 'picket', name: 'The Picket', hpBase: 300, minDmg: 20, maxDmg: 34,
       shipSpeed: 9, actionMs: 3400,
       magazineSize: 4, shieldPct: 0.15,
+      critDrift: 0.4, critDriftName: 'Rolling Plate',
       pattern: ['fire', 'reload', 'dodge', 'fire', 'reload', 'fire', 'dodge', 'reload'],
       critChance: 0.12,
       zoneSpeedMult: 2.2,
