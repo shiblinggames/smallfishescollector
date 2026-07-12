@@ -17,11 +17,11 @@ const NUKE_FLIGHT = 850
 // Positions as fractions of the stage. MUZZLE (where the shot launches) sits on
 // the player's deck — up and forward of the hull's center — so the beam/missile
 // doesn't appear to fire from under the boat. TARGET is the enemy hull + impact
-// point; kept off the right edge (with a tighter nuke blast box below) so the
-// blast/shockwave radius stays inside this small diorama.
+// point, parked hard against the right edge (the tighter nuke blast box below
+// keeps the fireball mostly in frame; a clipped shockwave at the border is fine).
 const PLAYER = { x: 0.15, y: 0.60 }   // where the player hull is drawn
 const MUZZLE = { x: 0.21, y: 0.52 }   // where the shot launches from (the deck)
-const TARGET = { x: 0.62, y: 0.42 }   // enemy hull + impact point
+const TARGET = { x: 0.87, y: 0.42 }   // enemy hull + impact point (far right)
 
 interface Geo { x1: number; y1: number; x2: number; y2: number; len: number; angle: number }
 
