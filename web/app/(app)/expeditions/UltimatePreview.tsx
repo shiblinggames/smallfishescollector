@@ -11,7 +11,9 @@ import { RailgunBeam, NukeMissile, NukeBlast, ImpactBurst, MegaSplats } from '@/
 import type { ShipAugmentId } from '@/lib/shipAugments'
 
 const STAGE_H = 132
-const LOOP: Record<ShipAugmentId, number> = { railgun: 2200, barrage: 2600, nuke: 3400 }
+// Time between replays. The FX themselves run ~0.7s (railgun) to ~2s (nuke);
+// the rest is deliberate calm water between shots so the loop doesn't strobe.
+const LOOP: Record<ShipAugmentId, number> = { railgun: 4500, barrage: 5000, nuke: 6200 }
 const NUKE_FLIGHT = 850
 
 // Positions as fractions of the stage. MUZZLE (where the shot launches) sits on
