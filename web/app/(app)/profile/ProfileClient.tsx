@@ -11,7 +11,7 @@ import type { BorderStyle, ArtEffect } from '@/lib/types'
 import { updateUsername, updateShowcaseCrew, updateCharacterColor, updateAvatarColors, purchaseCharacterColor, purchaseAvatarSpecial, updateProfileBg } from '@/app/(app)/u/actions'
 import { PROFILE_BACKGROUNDS, getProfileBackground } from '@/lib/profileBackgrounds'
 import AncientBgEffect from '@/components/AncientBgEffect'
-import { StatTile } from '@/components/ProfileStats'
+import { StatTile, CoinAmount } from '@/components/ProfileStats'
 import type { CareerStats } from '@/lib/careerStats'
 import { AVATAR_PALETTE, AVATAR_BORDER_EXTRAS, AVATAR_SPECIALS, DEFAULT_AVATAR_BG_COLOR, DEFAULT_AVATAR_BORDER_COLOR, NONE_VALUE } from '@/lib/avatarColors'
 import { equipBadge, unequipBadge } from '@/app/(app)/achievements/badgeActions'
@@ -577,7 +577,7 @@ export default function ProfileClient({
             <div style={{ display: 'flex', gap: 8 }}>
               <StatTile label="Lines Cast" value={career.fishingCasts.toLocaleString()} color="#60a5fa" />
               <StatTile label="Perfects" value={career.perfects.toLocaleString()} color="#fde68a" />
-              <StatTile label="Fish Sold" value={`${career.fishSold.toLocaleString()} ⟡`} color="#4ade80" />
+              <StatTile label="Fish Sold" value={<CoinAmount amount={career.fishSold} />} />
               {career.prestigeTotal > 0 && <StatTile label="Prestige" value={career.prestigeTotal} color="#f0c040" />}
             </div>
           </div>
@@ -978,7 +978,7 @@ export default function ProfileClient({
             <SectionLabel color="#c084fc" flavor="Broadsides answered, holds hauled home.">Career</SectionLabel>
             <div style={{ display: 'flex', gap: 8 }}>
               <StatTile label="Raids Won" value={career.raidsCompleted.toLocaleString()} color="#f87171" />
-              <StatTile label="Voyage Loot" value={`${career.voyageLoot.toLocaleString()} ⟡`} color="#f0c040" />
+              <StatTile label="Voyage Loot" value={<CoinAmount amount={career.voyageLoot} baseColor="#f0c040" />} />
               <StatTile label="Biggest Hit" value={career.highestRaidDamage.toLocaleString()} color="#fb923c" />
             </div>
           </div>

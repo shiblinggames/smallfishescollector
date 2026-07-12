@@ -51,6 +51,32 @@ export function StatTile({ label, value, color = '#f0ede8' }: {
   )
 }
 
+/** 1350 → "1.35K", 4220000 → "4.22M" (3 significant digits, no trailing
+ *  zeros). Returns the tier so callers can escalate the presentation. */
+export function compactAmount(n: number): { text: string; tier: 0 | 1 | 2 } {
+  const fmt = (v: number) =>
+    v >= 100 ? String(Math.round(v)) : (v >= 10 ? v.toFixed(1) : v.toFixed(2)).replace(/\.?0+$/, '')
+  if (n >= 1_000_000) return { text: `${fmt(n / 1_000_000)}M`, tier: 2 }
+  if (n >= 1_000)     return { text: `${fmt(n / 1_000)}K`,     tier: 1 }
+  return { text: n.toLocaleString(), tier: 0 }
+}
+
+/** A doubloon amount that escalates as it climbs tiers: plain under 1K,
+ *  glowing gold in the thousands, gradient gold with a shine at millions —
+ *  an M should look like more of an achievement than a K. */
+export function CoinAmount({ amount, baseColor = '#4ade80' }: { amount: number; baseColor?: string }) {
+  const { text, tier } = compactAmount(amount)
+  if (tier === 2) return (
+    <span style={{
+      backgroundImage: 'linear-gradient(180deg, #fff3c4 0%, #f0c040 55%, #d99a1e 100%)',
+      WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
+      filter: 'drop-shadow(0 0 7px rgba(240,192,64,0.5))',
+    }}>{text} ⟡</span>
+  )
+  if (tier === 1) return <span style={{ color: '#f0c040', textShadow: '0 0 10px rgba(240,192,64,0.35)' }}>{text} ⟡</span>
+  return <span style={{ color: baseColor }}>{text} ⟡</span>
+}
+
 export const FishIcon = (
   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
     <path d="M3 12c3-4 7-6 11-6 3 0 5 1.5 6.5 3.5C19 11.5 19 12.5 20.5 14.5 19 16.5 17 18 14 18c-4 0-8-2-11-6z" />
