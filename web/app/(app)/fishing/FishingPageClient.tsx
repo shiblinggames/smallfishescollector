@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { startFishingMusic, fadeOutFishingMusic, setFishingTrack, primeFishingTrack, fishingTrackForZone } from '@/lib/fishingMusic'
@@ -169,6 +169,23 @@ export default function FishingPageClient({
     [],
   )
 
+  // Per-zone collection progress for the landing bands: species caught this
+  // prestige cycle vs the zone's species count. Ancient Deep counts trophies
+  // (ancient_catches) against its six giants instead of the catch log.
+  const zoneCollection = useMemo(() => {
+    const caught = new Set(caughtFishIds)
+    const rec: Record<string, { caught: number; total: number }> = {}
+    for (const f of allFishSpecies) {
+      if (f.habitat === 'ancient_deep') continue
+      const r = rec[f.habitat] ?? (rec[f.habitat] = { caught: 0, total: 0 })
+      r.total += 1
+      if (caught.has(f.id)) r.caught += 1
+    }
+    const ancientTotal = allFishSpecies.filter(f => f.habitat === 'ancient_deep').length || 6
+    rec.ancient_deep = { caught: ancientCatches.length, total: ancientTotal }
+    return rec
+  }, [allFishSpecies, caughtFishIds, ancientCatches])
+
   const [selectedZone, setSelectedZone] = useState<ZoneKey | null>(() => {
     if (typeof window === 'undefined') return null
     const saved = localStorage.getItem(LAST_ZONE_KEY) as ZoneKey | null
@@ -210,6 +227,8 @@ export default function FishingPageClient({
         fishingXP={initialFishingXP}
         username={username}
         zoneStats={zoneStats}
+        zoneCollection={zoneCollection}
+        prestigeLevels={prestigeLevels}
         onSelect={selectZone}
       />
     )

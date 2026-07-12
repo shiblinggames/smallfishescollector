@@ -130,12 +130,15 @@ const HOW_IT_WORKS = [
 ]
 
 export default function ZoneLanding({
-  fishingLevel, fishingXP, username, zoneStats, onSelect,
+  fishingLevel, fishingXP, username, zoneStats, zoneCollection, prestigeLevels, onSelect,
 }: {
   fishingLevel: number
   fishingXP: number
   username: string
   zoneStats: Record<string, ZoneStat>
+  /** Species caught vs zone total (this prestige cycle); trophies for Ancient Deep. */
+  zoneCollection: Record<string, { caught: number; total: number }>
+  prestigeLevels: Record<string, number>
   onSelect: (zone: ZoneKey) => void
 }) {
   const [modalOpen, setModalOpen] = useState(false)
@@ -234,6 +237,10 @@ export default function ZoneLanding({
               const difficulty = ZONE_DIFFICULTY[zone]
               const diffLabel = ZONE_DIFFICULTY_LABEL[zone]
               const stats = zoneStats[zone] ?? { avgValue: 0, avgXp: 0, topValue: 0, count: 0 }
+              const col = zoneCollection[zone] ?? { caught: 0, total: 0 }
+              const colPct = col.total > 0 ? Math.min(100, (col.caught / col.total) * 100) : 0
+              const colDone = col.total > 0 && col.caught >= col.total
+              const prestige = prestigeLevels[zone] ?? 0
               const isRecommended = accessible && ZONES.filter(z => fishingLevel >= (ZONE_MIN_LEVEL[z] ?? 1)).slice(-1)[0] === zone
 
               return (
@@ -331,10 +338,36 @@ export default function ZoneLanding({
                             </p>
                           </div>
                         </div>
+                        {/* Your standing in this water — collection progress bar
+                            (gold once complete: prestige is waiting) + prestige
+                            level. Fills what was dead space mid-band. */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 'auto', paddingTop: '0.8rem', paddingRight: 40, textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 7, flex: 1, minWidth: 0 }}>
+                            <div style={{ flex: 1, maxWidth: 110, height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.2)', overflow: 'hidden' }}>
+                              <div style={{ width: `${colPct}%`, height: '100%', borderRadius: 999, background: colDone ? '#f0c040' : color, boxShadow: `0 0 6px ${colDone ? '#f0c040' : color}` }} />
+                            </div>
+                            <span className="font-karla font-700" style={{ fontSize: '0.64rem', color: 'rgba(255,255,255,0.9)', whiteSpace: 'nowrap' }}>
+                              {col.caught}/{col.total}
+                              <span className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.6)', marginLeft: 5 }}>
+                                {zone === 'ancient_deep' ? 'trophies' : 'collected'}
+                              </span>
+                            </span>
+                          </div>
+                          {prestige > 0 && (
+                            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{
+                              flexShrink: 0, fontSize: '0.54rem', color: '#f0c040',
+                              background: 'rgba(240,192,64,0.14)', border: '1px solid rgba(240,192,64,0.45)',
+                              padding: '0.16rem 0.5rem', borderRadius: '2rem',
+                            }}>
+                              Prestige {prestige}
+                            </span>
+                          )}
+                        </div>
+
                         {/* Bottom line — rough-water marks left, catch stats right.
                             Ancient Deep fish are kept trophies (no sell value), so
                             it shows trophy/rarity reads instead. */}
-                        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginTop: 'auto', paddingTop: '0.9rem', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>
+                        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, paddingTop: '0.55rem', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                             <WaveMarks n={difficulty} color={color} />
                             <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.54rem', color: 'rgba(255,255,255,0.9)', whiteSpace: 'nowrap' }}>
@@ -343,10 +376,7 @@ export default function ZoneLanding({
                           </div>
                           <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
                             {zone === 'ancient_deep' ? (
-                              <>
-                                <ZoneStatInline label="Trophies" value={`${stats.count}`} color="#c084fc" />
-                                <ZoneStatInline label="Rarity" value="Legendary" color="#f59e0b" />
-                              </>
+                              <ZoneStatInline label="Rarity" value="Legendary" color="#f59e0b" />
                             ) : (
                               <>
                                 <ZoneStatInline label="Avg" value={`${stats.avgValue.toLocaleString()} ⟡`} color="#f0c040" />
