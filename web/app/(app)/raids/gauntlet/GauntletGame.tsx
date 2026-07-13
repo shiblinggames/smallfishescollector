@@ -310,6 +310,10 @@ export default function GauntletGame(props: GauntletGameProps) {
   const termFxRef = useRef(termFx)
   useEffect(() => { termFxRef.current = termFx }, [termFx])
   const pressure = useMemo(() => termPressure(signedTerms), [signedTerms])
+  const signedTermCount = useMemo(() => Object.values(signedTerms).filter(t => t >= 1).length, [signedTerms])
+  // The multiplier a signed board is WORTH at full depth — the headline the dive
+  // modal advertises (it ramps in with depth; the board itself explains that).
+  const gemMultAtFullDepth = useMemo(() => pressureGemMult(pressure, PRESSURE_DEPTH_FULL), [pressure])
   // Short-Handed (a signed Term): a berth stays empty, so the last crew slot is
   // not manned this run. The full squad is still aboard and still drowns on a
   // hardcore death — you simply fight without one of them.
@@ -691,9 +695,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         <GauntletTermsPanel
           signed={signedTerms}
           onChange={setSignedTerms}
-          onDive={() => begin(true)}
-          onBack={() => { setTermsOpen(false); setHcConfirmOpen(true) }}
-          diving={starting}
+          onDone={() => setTermsOpen(false)}
         />
       )}
 
@@ -717,20 +719,48 @@ export default function GauntletGame(props: GauntletGameProps) {
               ))}
             </div>
             <p className="font-karla font-700 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.14em', color: '#c48a8a', marginTop: 10 }}>{squadAtRisk.length} crew at risk</p>
-            {/* Why brave it — the upside, so the choice isn't all downside. Blood
-                Gems are the ONLY thing Hardcore pays that normal runs don't. */}
-            <div style={{ display: 'flex', gap: 9, alignItems: 'flex-start', textAlign: 'left', marginTop: 15, padding: '0.72rem 0.8rem', borderRadius: 12, background: 'rgba(120,10,20,0.18)', border: `1px solid ${DANGER}44`, boxShadow: `inset 0 0 14px rgba(120,10,18,0.28)` }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden style={{ flexShrink: 0, marginTop: 1, filter: 'drop-shadow(0 0 4px rgba(220,38,38,0.6))' }}><path d="M12 2s7 8.6 7 13a7 7 0 1 1-14 0c0-4.4 7-13 7-13z" fill="#e0555a" /><path d="M9.2 12.4a3.4 3.4 0 0 0-.2 4.2" stroke="#fff" strokeOpacity="0.5" strokeWidth="1.3" fill="none" strokeLinecap="round" /></svg>
-              <p className="font-karla" style={{ fontSize: '0.76rem', color: '#f0cfcf', lineHeight: 1.46 }}>
-                <span className="font-800" style={{ color: '#fca5a5' }}>Why brave it:</span> bring your crew home alive and the cash-out chest pays <span className="font-700" style={{ color: '#fca5a5' }}>Blood Gems</span> — earned nowhere else. Spend them in the Crew Hall&apos;s <span className="font-700" style={{ color: '#fca5a5' }}>Blood Market</span> to weight recruits toward Epic &amp; Legendary crew and gamble for skins.
-              </p>
-            </div>
-            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.54rem', letterSpacing: '0.12em', color: '#c48a8a', marginTop: 14 }}>
+            {/* The upside, in one line. Blood Gems are the only thing Hardcore
+                pays that a normal run doesn't. */}
+            <p className="font-karla" style={{ fontSize: '0.8rem', color: '#f0cfcf', lineHeight: 1.45, marginTop: 13 }}>
+              Bring them home alive and the chest pays <strong style={{ color: '#fca5a5' }}>Blood Gems</strong>, earned nowhere else.
+            </p>
+
+            {/* ── Davy's Terms — a section you open, sign, and come back from.
+                The board is a sub-modal; the descent is confirmed HERE. ── */}
+            <button onClick={() => setTermsOpen(true)} disabled={starting} className="tap"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left',
+                marginTop: 14, padding: '0.85rem 0.9rem', borderRadius: 13, cursor: 'pointer',
+                background: pressure > 0 ? 'rgba(240,192,64,0.1)' : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${pressure > 0 ? 'rgba(240,192,64,0.55)' : 'rgba(255,255,255,0.14)'}`,
+                boxShadow: pressure > 0 ? '0 0 18px rgba(240,192,64,0.14)' : 'none',
+              }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.02rem', color: pressure > 0 ? '#f0c040' : '#e0d6d6' }}>
+                  Davy&rsquo;s Terms
+                </p>
+                <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(240,220,220,0.62)', marginTop: 2, lineHeight: 1.35 }}>
+                  {pressure > 0
+                    ? `${signedTermCount} signed, ${pressure} Pressure`
+                    : 'Make the dive harder, and pay far more Blood Gems'}
+                </p>
+              </div>
+              {pressure > 0 && (
+                <span className="font-cinzel font-800" style={{ flexShrink: 0, fontSize: '1.2rem', color: '#f0c040', textShadow: '0 0 12px rgba(240,192,64,0.5)' }}>
+                  ×{gemMultAtFullDepth.toFixed(2)}
+                </span>
+              )}
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={pressure > 0 ? '#f0c040' : '#9a8e8e'} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="m9 18 6-6-6-6" /></svg>
+            </button>
+
+            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.54rem', letterSpacing: '0.12em', color: '#c48a8a', marginTop: 13 }}>
               {props.hcRunsLeft} of {HARDCORE_RUNS_PER_DAY} hardcore runs left today
             </p>
-            <button onClick={() => { setHcConfirmOpen(false); setTermsOpen(true) }} disabled={starting} className="font-cinzel font-800 uppercase tracking-[0.05em] tap"
-              style={{ width: '100%', marginTop: 10, padding: '1rem', borderRadius: 13, fontSize: '1rem', color: '#fff0f0', background: `linear-gradient(180deg, ${DANGER}3a, ${DANGER}18)`, border: `1px solid ${DANGER}88`, cursor: starting ? 'wait' : 'pointer', boxShadow: `0 0 22px ${DANGER}22` }}>
-              {starting ? 'Descending…' : 'Descend into the Locker'}
+            <button onClick={() => begin(true)} disabled={starting} className="font-cinzel font-800 tap"
+              style={{ width: '100%', marginTop: 9, padding: '1.05rem', borderRadius: 13, fontSize: '1.2rem', lineHeight: 1.1, color: '#170a0a', border: 'none', cursor: starting ? 'wait' : 'pointer',
+                background: pressure > 0 ? 'linear-gradient(180deg, #ffd868, #f0c040 55%, #d4a02c)' : `linear-gradient(180deg, #f0797d, ${DANGER} 55%, #b83f45)`,
+                boxShadow: `0 6px 22px ${pressure > 0 ? '#f0c040' : DANGER}44`, textShadow: '0 1px 0 rgba(255,255,255,0.25)' }}>
+              {starting ? 'Descending' : pressure > 0 ? 'Sign and Descend' : 'Descend into the Locker'}
             </button>
             <button onClick={() => setHcConfirmOpen(false)} className="font-karla font-600 tap" style={{ marginTop: 11, background: 'none', border: 'none', color: '#9a8e8e', fontSize: '0.76rem', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}>
               Not this time

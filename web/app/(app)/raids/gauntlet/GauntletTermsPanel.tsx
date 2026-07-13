@@ -29,13 +29,13 @@ const DANGER = '#e0555a'
 const ROMAN = ['', 'I', 'II', 'III']
 
 export default function GauntletTermsPanel({
-  signed, onChange, onDive, onBack, diving,
+  signed, onChange, onDone,
 }: {
   signed: SignedTerms
   onChange: (next: SignedTerms) => void
-  onDive: () => void
-  onBack: () => void
-  diving: boolean
+  /** Close the board and hand control back to the dive modal, which is where the
+   *  signing is confirmed and the descent actually happens. */
+  onDone: () => void
 }) {
   const [detail, setDetail] = useState<{ name: string; tier: number; flavor: string; text: string } | null>(null)
 
@@ -73,7 +73,7 @@ export default function GauntletTermsPanel({
         background: 'linear-gradient(180deg, rgba(40,12,16,0.96), rgba(20,6,10,0.96))',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-          <button onClick={onBack} className="font-karla font-700 tap" aria-label="Back"
+          <button onClick={onDone} className="font-karla font-700 tap" aria-label="Back"
             style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: '#a89898', fontSize: '0.82rem', cursor: 'pointer' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
             Back
@@ -233,12 +233,11 @@ export default function GauntletTermsPanel({
           <Tally label="Blood Gems" value={`×${fullMult.toFixed(2)}`} accent={pressure > 0 ? GOLD : '#6a5a5a'} />
         </div>
 
-        <button onClick={() => { vibrate([0, 40, 40, 80]); onDive() }} disabled={diving}
+        <button onClick={() => { vibrate([0, 30, 30, 60]); onDone() }}
           className="font-cinzel font-800 tap"
           style={{
             width: '100%', padding: '1.05rem 1rem', borderRadius: 14,
-            fontSize: '1.3rem', letterSpacing: '0.01em', lineHeight: 1.1,
-            cursor: diving ? 'wait' : 'pointer',
+            fontSize: '1.3rem', letterSpacing: '0.01em', lineHeight: 1.1, cursor: 'pointer',
             color: '#170a0a', border: 'none',
             background: pressure > 0
               ? `linear-gradient(180deg, #ffd868, ${GOLD} 55%, #d4a02c)`
@@ -246,12 +245,12 @@ export default function GauntletTermsPanel({
             boxShadow: `0 6px 22px ${pressure > 0 ? GOLD : DANGER}44`,
             textShadow: '0 1px 0 rgba(255,255,255,0.25)',
           }}>
-          {diving ? 'Descending' : pressure > 0 ? 'Sign and Descend' : 'Descend Clean'}
+          {pressure > 0 ? 'Take These Terms' : 'Sign Nothing'}
         </button>
 
         <p className="font-karla" style={{ fontSize: '0.74rem', color: 'rgba(240,220,220,0.45)', textAlign: 'center', marginTop: 8, lineHeight: 1.4 }}>
           {pressure > 0
-            ? 'Terms lock the moment you dive. There is no renegotiating with him.'
+            ? 'Nothing is locked until you descend. You can still tear these up.'
             : 'You can descend without signing anything. He will not think less of you. He will not think of you at all.'}
         </p>
       </div>
