@@ -434,7 +434,11 @@ function lootDrops(loot: RaidLootItem[]): RaidNodeDrop[] {
       id: l.id,
       label: l.label,
       emoji: l.emoji,
-      image: l.image,
+      // Fall back to the ITEM's own art. A loot row duplicates the sprite path, so a
+      // raid item that gets art later leaves its loot row on `image: null` and quietly
+      // renders a crate icon in the drops list forever (both racks did exactly that).
+      // The item registry is the one source of truth; the loot row only overrides it.
+      image: l.image ?? getRaidItem(l.id)?.image ?? null,
       rarity: l.rarity,
       ...(isDoubloons ? {} : { chance: `${Math.round((l.weight / total) * 100)}%` }),
     }
