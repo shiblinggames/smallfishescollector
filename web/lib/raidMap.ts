@@ -1886,11 +1886,11 @@ export const RAID_MAP: RaidNode[] = [
     image: THE_QUARTERMASTERS_GHOST.enemies.ghost.portrait,
     detail: {
       description:
-        "He is holding every Cache item you left behind, and every one you forged away.\n\nCOIN FLIP, EVERY CLEAR. Half the time he gives one back. It stays a coin flip whether you need all six or just the last one.\n\nRUN HIM AS OFTEN AS YOU LIKE. He only ever offers what you do not already have.\n\nHE FIGHTS WITH THEM. Your fire, your ice, your sights, your plating, your bearings, all turned on you. Every item you take back is one he can never use again.\n\nFOUR BARS, THREE CHECKS. He patches his hull with your plating, lights your fire-shot, and calls a shot down your own sights. Answer each with a CREW ABILITY.",
+        "He is holding every Cache item you left behind, and every one you forged away.\n\n50% DROP CHANCE EVERY CLEAR. It can be any item you do not currently have. Run him as often as you like.\n\nHE FIGHTS WITH THEM. Your fire, your ice, your sights, your plating, your bearings, all turned on you. Every item you take back is one he can never use again.\n\nFOUR BARS, THREE CHECKS. He patches his hull with your plating, lights your fire-shot, and calls a shot down your own sights. Answer each with a CREW ABILITY.",
       enemies: ["The Quartermaster's Ghost"],
       drops: lootDrops(THE_QUARTERMASTERS_GHOST.loot),
       clearReward: clearPayout(THE_QUARTERMASTERS_GHOST),
-      dropsNote: 'One crate per clear, with a flat 50% chance of a Cache item. The odds never worsen as you close in on the last one.',
+      dropsNote: '50% chance of a Cache item every clear. It can be any of the ones you do not currently have.',
       summary: "The Quartermaster died still holding every Cache item you passed up, and he collects the ones you forge away too. He hands one back for every time you put him down.",
     },
   },
