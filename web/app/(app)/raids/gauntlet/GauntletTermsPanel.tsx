@@ -13,8 +13,8 @@
 // be discovered the expensive way. Cards run two-up so the whole board is
 // scannable without endless scrolling.
 
-import { useMemo, useState } from 'react'
-import { motion } from 'framer-motion'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { motion, useMotionValue } from 'framer-motion'
 import { createPortal } from 'react-dom'
 import { vibrate } from '@/lib/haptics'
 import {
@@ -38,16 +38,33 @@ export default function GauntletTermsPanel({
   onDone: () => void
 }) {
   const [detail, setDetail] = useState<{ name: string; tier: number; flavor: string; text: string } | null>(null)
-  // The four rules are for a first read, not a permanent fixture. They collapse
-  // the moment you start scrolling the board (which is when you have stopped
-  // reading them and started needing the space) and unfold again at the top.
-  const [rulesOpen, setRulesOpen] = useState(true)
+
+  // The four rules are for a FIRST read, not a permanent fixture: they should get
+  // out of the way the moment you start scrolling the board.
+  //
+  // They live in the SCROLL FLOW rather than in the frozen header, and that is
+  // deliberate. Collapsing them out of the header would shrink it, which drags
+  // the scroll container's top edge upward and throws every card up the screen by
+  // the collapsed height ON TOP of the scroll the player is already doing. That
+  // cannot be compensated away either, because the collapse fires at scrollTop 0
+  // where there is no scroll left to give back. So instead the block simply
+  // scrolls, and fades out across exactly its own height: the layout never moves,
+  // so the board can only ever travel at the speed of the finger.
+  const rulesRef = useRef<HTMLDivElement>(null)
+  const rulesH = useRef(1)
+  const rulesFade = useMotionValue(1)
 
   const pressure = useMemo(() => termPressure(signed), [signed])
   // The multiplier at FULL depth: the number worth advertising, with the honest
   // caveat right under it (it ramps in, so shallow runs earn none of it).
   const fullMult = pressureGemMult(pressure, PRESSURE_DEPTH_FULL)
   const signedCount = Object.values(signed).filter(t => t >= 1).length
+
+  // Remeasure when the block's content can change (the cap note appears at 40).
+  const capNoted = pressure >= PRESSURE_CAP
+  useEffect(() => {
+    rulesH.current = Math.max(1, rulesRef.current?.offsetHeight ?? 1)
+  }, [capNoted])
 
   function setTier(id: string, tier: number) {
     const next = { ...signed }
@@ -76,13 +93,20 @@ export default function GauntletTermsPanel({
         borderBottom: `1px solid ${DANGER}33`,
         background: 'linear-gradient(180deg, rgba(40,12,16,0.96), rgba(20,6,10,0.96))',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
           <button onClick={onDone} className="font-karla font-700 tap" aria-label="Back"
             style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: '#a89898', fontSize: '0.82rem', cursor: 'pointer' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
             Back
           </button>
-          <p className="font-cinzel font-800 uppercase" style={{ fontSize: '1rem', color: '#f3d7d7', letterSpacing: '0.1em' }}>
+          {/* Centered on the HEADER, not wedged between the two buttons: "Back"
+              and "Clear" are different widths, so space-between would always sit
+              the title slightly off-center. The textIndent pays back the trailing
+              letter-space that would otherwise pull it a hair to the left. */}
+          <p className="font-cinzel font-800 uppercase" style={{
+            position: 'absolute', left: 0, right: 0, textAlign: 'center', pointerEvents: 'none',
+            fontSize: '1rem', color: '#f3d7d7', letterSpacing: '0.1em', textIndent: '0.1em',
+          }}>
             Davy&rsquo;s Terms
           </p>
           <button onClick={() => { vibrate([0, 12]); onChange({}) }} disabled={signedCount === 0}
@@ -119,16 +143,28 @@ export default function GauntletTermsPanel({
           />
         </div>
 
+        {pressure >= PRESSURE_SKIN_THRESHOLD && (
+          <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+            className="font-karla font-700" style={{ fontSize: '0.78rem', color: GOLD, marginTop: 7 }}>
+            ✦ At {PRESSURE_SKIN_THRESHOLD}+ Pressure, a cash-out earns colors nobody can buy.
+          </motion.p>
+        )}
+      </div>
+
+      {/* ── The board: two cards across, so it scans at a glance ──────────── */}
+      <div
+        onScroll={e => {
+          // Fade the rules out across exactly their own height, so they are gone
+          // the moment they leave the screen. A motion value, not state, so a
+          // scroll never costs a React render.
+          const t = e.currentTarget.scrollTop
+          rulesFade.set(Math.max(0, Math.min(1, 1 - t / rulesH.current)))
+        }}
+        style={{ flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain', padding: '1rem 0.9rem 1.2rem' }}>
+
         {/* How the whole thing works, in plain steps. A newcomer should be able to
-            read this once and never be surprised by the payout. Folds away on
-            scroll so the board gets the room. */}
-        <motion.div
-          initial={false}
-          animate={{ height: rulesOpen ? 'auto' : 0, opacity: rulesOpen ? 1 : 0, marginTop: rulesOpen ? 11 : 0 }}
-          transition={{ duration: 0.24, ease: 'easeOut' }}
-          style={{ overflow: 'hidden' }}
-        >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            read this once and never be surprised by the payout. */}
+        <motion.div ref={rulesRef} style={{ opacity: rulesFade, display: 'flex', flexDirection: 'column', gap: 6, marginBottom: '1.4rem' }}>
           <Step n={1}>
             Each term you sign makes the run <strong style={{ color: '#fca5a5' }}>harder</strong> and adds <strong style={{ color: '#fca5a5' }}>Pressure</strong>.
           </Step>
@@ -141,25 +177,13 @@ export default function GauntletTermsPanel({
           <Step n={4}>
             The bonus grows the <strong style={{ color: GOLD }}>deeper</strong> you go. It starts paying at depth {PRESSURE_DEPTH_FLOOR} and pays in full from depth {PRESSURE_DEPTH_FULL}.
           </Step>
-          {pressure >= PRESSURE_CAP && (
+          {capNoted && (
             <p className="font-karla" style={{ fontSize: '0.76rem', color: 'rgba(240,220,220,0.5)', lineHeight: 1.45, marginTop: 1 }}>
               Past {PRESSURE_CAP} Pressure the gems stop climbing. Anything beyond it is for glory alone.
             </p>
           )}
-        </div>
         </motion.div>
-        {pressure >= PRESSURE_SKIN_THRESHOLD && (
-          <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
-            className="font-karla font-700" style={{ fontSize: '0.78rem', color: GOLD, marginTop: 7 }}>
-            ✦ At {PRESSURE_SKIN_THRESHOLD}+ Pressure, a cash-out earns colors nobody can buy.
-          </motion.p>
-        )}
-      </div>
 
-      {/* ── The board: two cards across, so it scans at a glance ──────────── */}
-      <div
-        onScroll={e => setRulesOpen(e.currentTarget.scrollTop <= 6)}
-        style={{ flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain', padding: '1rem 0.9rem 1.2rem' }}>
         {groups.map(g => {
           const meta = TERM_GROUP_META[g]
           const terms = GAUNTLET_TERMS.filter(t => t.group === g)
