@@ -88,105 +88,60 @@ const VOYAGE_ACCENT: Record<VoyageStatus, { fg: string; bg: string; bd: string }
   returned: { fg: '#4ade80', bg: 'rgba(74,222,128,0.12)',  bd: 'rgba(74,222,128,0.4)'   },
 }
 
-// Inline portrait strip used on each hub card to surface the track's
-// assigned crew (raid for Campaign, voyage for Voyages). Tapping any
-// portrait — or the empty-state placeholder — navigates to Crew
-// Management with the corresponding sub-filter preselected so the
-// player lands directly on the party they meant to manage.
+// ── ASSIGNED CREW ────────────────────────────────────────────────────────────
+// A COUNT, not faces. This used to stack four 22px crew portraits on each hub card,
+// and at that size they read as four indistinct blobs: you could not tell who they
+// were, and the card sits one tap away from a Crew screen that shows them properly.
+//
+// What a player actually wants to know here is whether their deck is FULL, and that
+// matters more than it used to now the Man-o-War can carry a sixth. "5 / 6 raid crew"
+// answers it at a glance; four faces never did. Still taps straight through to the
+// right roster filter.
 function HubCrewStrip({
-  crew, accent, track, router, label,
+  crew, slots, accent, track, router, label,
 }: {
   crew: CrewMember[]
+  slots: number
   accent: string
   track: 'voyage' | 'raid'
   router: ReturnType<typeof useRouter>
   label: string
 }) {
-  const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL
   const href = `/crew?tab=roster&filter=${track}`
   const open = (e: React.MouseEvent) => {
     e.stopPropagation()
     e.preventDefault()
     router.push(href)
   }
-  // Cap the visible portraits at 4 so the strip never crowds the card
-  // narrow side-by-side hub-card layout. Anything past 4 collapses into a
-  // '+N' chip that picks up the same track accent.
-  const MAX_VISIBLE = 4
-  const visible = crew.slice(0, MAX_VISIBLE)
-  const hidden  = Math.max(0, crew.length - MAX_VISIBLE)
+  const empty = crew.length === 0
+  const full = slots > 0 && crew.length >= slots
+
   return (
     <div
       role="link"
       tabIndex={0}
       onClick={open}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(e as unknown as React.MouseEvent) } }}
-      style={{
-        display: 'flex', alignItems: 'center', gap: 6,
-        marginBottom: 6, minWidth: 0,
-        cursor: 'pointer',
-      }}
+      style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6, minWidth: 0, cursor: 'pointer' }}
     >
-      {crew.length === 0 ? (
-        <p className="font-karla font-600" style={{ flex: 1, minWidth: 0, fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          No {label} · <span style={{ color: accent }}>Assign →</span>
-        </p>
-      ) : (
-        <>
-          {/* Overlapping avatars — −6px margin between each gives a tight
-              stacked-portrait look that occupies the same vertical space
-              as a single line of text. */}
-          <div style={{ display: 'flex', flex: 'none', alignItems: 'center' }}>
-            {visible.map((c, i) => (
-              <div
-                key={c.id}
-                title={c.name}
-                style={{
-                  position: 'relative', width: 22, height: 22, borderRadius: '50%',
-                  overflow: 'hidden',
-                  border: `1.5px solid ${accent}cc`,
-                  boxShadow: `0 1px 3px rgba(0,0,0,0.6)`,
-                  background: `radial-gradient(circle at 50% 35%, ${accent}33 0%, #050403 75%)`,
-                  marginLeft: i === 0 ? 0 : -6,
-                  zIndex: visible.length - i,
-                  flexShrink: 0,
-                }}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={`${SUPA}/storage/v1/object/public/card-arts/${c.filename}`}
-                  alt={c.name}
-                  loading="lazy"
-                  decoding="async"
-                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 22%' }}
-                />
-              </div>
-            ))}
-            {hidden > 0 && (
-              <div className="font-karla font-700" style={{
-                position: 'relative', height: 22, marginLeft: -6, zIndex: 0,
-                padding: '0 6px', borderRadius: 999,
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '0.52rem', color: accent,
-                background: `radial-gradient(circle at 50% 35%, ${accent}33 0%, #050403 75%)`,
-                border: `1.5px solid ${accent}cc`,
-                boxShadow: '0 1px 3px rgba(0,0,0,0.6)',
-                whiteSpace: 'nowrap',
-              }}>
-                +{hidden}
-              </div>
-            )}
-          </div>
-          {/* Chevron-only affordance — the row is already a tap target, and
-              'MANAGE →' text was overflowing the hub card on narrow phones
-              once 4-5 portraits were stacked. The arrow does the same job
-              in a fraction of the width. */}
-          <span aria-hidden style={{
-            marginLeft: 'auto', flexShrink: 0,
-            color: accent, fontSize: '0.7rem', lineHeight: 1, opacity: 0.85,
-          }}>›</span>
-        </>
-      )}
+      <span aria-hidden style={{ flexShrink: 0, display: 'flex', color: empty ? 'rgba(255,255,255,0.35)' : accent }}>
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+        </svg>
+      </span>
+      <p className="font-karla font-600 truncate" style={{ flex: 1, minWidth: 0, fontSize: '0.62rem', lineHeight: 1.2, color: 'rgba(255,255,255,0.45)' }}>
+        {empty ? (
+          <>No {label} · <span style={{ color: accent }}>Assign →</span></>
+        ) : (
+          <>
+            <span style={{ color: full ? accent : '#e8c879', fontWeight: 700 }}>{crew.length}</span>
+            <span style={{ opacity: 0.7 }}> / {slots}</span> {label}
+            {!full && <span style={{ color: accent }}> · Assign →</span>}
+          </>
+        )}
+      </p>
     </div>
   )
 }
@@ -355,7 +310,7 @@ export default function HubCards({
           <p className="font-karla font-500" style={{ fontSize: '0.72rem', color: '#b8b0a0', lineHeight: 1.4, marginBottom: 10 }}>
             Story chapters, boss raids, and the hunt for the Finndicate.
           </p>
-          <HubCrewStrip crew={raidParty} accent="#e07c7c" track="raid" router={router} label="raid crew" />
+          <HubCrewStrip crew={raidParty} slots={shipCrewSlots} accent="#e07c7c" track="raid" router={router} label="raid crew" />
           <div style={{ marginTop: 'auto', paddingTop: 8, borderTop: `1px solid ${campaignAccent}1c` }}>
             <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#e8d8a8', lineHeight: 1.3 }}>
               {campaign.nextNodeName ? `Next: ${campaign.nextNodeName}` : 'All cleared'}
@@ -408,7 +363,7 @@ export default function HubCards({
           <p className="font-karla font-500" style={{ fontSize: '0.72rem', color: '#b8b0a0', lineHeight: 1.4, marginBottom: 10 }}>
             Send your crew off to earn doubloons, gems, and rare drops.
           </p>
-          <HubCrewStrip crew={voyageParty} accent="#5fa8c9" track="voyage" router={router} label="voyage crew" />
+          <HubCrewStrip crew={voyageParty} slots={shipCrewSlots} accent="#5fa8c9" track="voyage" router={router} label="voyage crew" />
           <div style={{ marginTop: 'auto', paddingTop: 8, borderTop: `1px solid ${vAcc.fg}1c` }}>
             <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: vAcc.fg, lineHeight: 1.3 }}>
               {voyages.statusLabel}
