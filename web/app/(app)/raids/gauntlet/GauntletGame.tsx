@@ -2707,27 +2707,40 @@ export default function GauntletGame(props: GauntletGameProps) {
                   {(() => {
                     const hints = confluenceHintsFor(b, boonTiers, confluencesTaken)
                     if (hints.length === 0) return null
+
+                    // A boon can genuinely feed SEVERAL confluences — ten of the
+                    // twenty-five do, and Leviathan's Hunger feeds four. A named chip
+                    // per confluence is right, but a FOGGED one has no name to show, so
+                    // four of them rendered four identical "Unlocks a hidden synergy"
+                    // chips and read as a duplication bug. (Testers reported exactly
+                    // that.) So the fogged ones collapse into ONE counted chip, which is
+                    // strictly better information: it says this boon is a HUB, without
+                    // spoiling which synergies it opens.
+                    const named  = hints.filter(h => h.kind === 'deepens' || seenConfluences.includes(h.c.id))
+                    const fogged = hints.filter(h => h.kind === 'unlocks' && !seenConfluences.includes(h.c.id))
+
+                    const chip = (key: string, label: string) => (
+                      <span key={key} className="font-karla font-700 uppercase"
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 4,
+                          fontSize: '0.5rem', letterSpacing: '0.1em',
+                          color: SYN, background: `${SYN}1c`, border: `1px solid ${SYN}77`,
+                          borderRadius: 999, padding: '0.16rem 0.5rem',
+                          boxShadow: `0 0 10px ${SYN}33`,
+                        }}>
+                        <span aria-hidden style={{ fontSize: '0.62rem', lineHeight: 1 }}>✦</span>
+                        {label}
+                      </span>
+                    )
+
                     return (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 7 }}>
-                        {hints.map(h => {
-                          const known = seenConfluences.includes(h.c.id) || h.kind === 'deepens'
-                          const label = h.kind === 'deepens'
-                            ? `Deepens ${h.c.name} ${boonTierLabel(h.level)}`
-                            : known ? `Unlocks ${h.c.name}` : 'Unlocks a hidden synergy'
-                          return (
-                            <span key={h.c.id} className="font-karla font-700 uppercase"
-                              style={{
-                                display: 'inline-flex', alignItems: 'center', gap: 4,
-                                fontSize: '0.5rem', letterSpacing: '0.1em',
-                                color: SYN, background: `${SYN}1c`, border: `1px solid ${SYN}77`,
-                                borderRadius: 999, padding: '0.16rem 0.5rem',
-                                boxShadow: `0 0 10px ${SYN}33`,
-                              }}>
-                              <span aria-hidden style={{ fontSize: '0.62rem', lineHeight: 1 }}>✦</span>
-                              {label}
-                            </span>
-                          )
-                        })}
+                        {named.map(h => chip(h.c.id, h.kind === 'deepens'
+                          ? `Deepens ${h.c.name} ${boonTierLabel(h.level)}`
+                          : `Unlocks ${h.c.name}`))}
+                        {fogged.length > 0 && chip('fogged', fogged.length === 1
+                          ? 'Unlocks a hidden synergy'
+                          : `Unlocks ${fogged.length} hidden synergies`)}
                       </div>
                     )
                   })()}
