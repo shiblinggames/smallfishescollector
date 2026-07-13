@@ -481,7 +481,10 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   const [enemyHP, setEnemyHP]           = useState(0)
   const [enemyHPMax, setEnemyHPMax]     = useState(0)
   const [enemyName, setEnemyName]       = useState('Reef Raider')
-  const [enemyImage, setEnemyImage]     = useState(() => config.enemies[config.sequence[0]]?.image ?? '')
+  // A BOSS-ONLY raid (sequence: []) has no sequence[0], so fall through to the
+  // boss. The round effect overwrites this on mount either way; this just stops
+  // the first frame rendering an empty hull.
+  const [enemyImage, setEnemyImage]     = useState(() => config.enemies[config.sequence[0]]?.image ?? config.enemies[config.bossId]?.image ?? '')
   const [enemyPortrait, setEnemyPortrait] = useState<string | null>(null)
   const [enemyCharges, setEnemyCharges]   = useState(0)
   const [enemyDodging, setEnemyDodging]   = useState(false)

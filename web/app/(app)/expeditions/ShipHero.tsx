@@ -28,7 +28,7 @@ import { assignToVoyage, benchCrew } from '@/app/(app)/crew/actions'
 import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
 import { applyCrewEffects, resolveEffects, effectSummary, SCOPE_META } from '@/lib/crewEffects'
 import { RARITY_COLORS as CREW_RARITY_COLORS, RARITY_NAMES } from '@/lib/crewGen'
-import { RAID_ITEMS, getRaidItem, FORGE_RECIPES, conflictingRaidItems, isForgedRaidItem, unobtainableComponents } from '@/lib/raidItems'
+import { RAID_ITEMS, getRaidItem, FORGE_RECIPES, conflictingRaidItems, isForgedRaidItem, cacheComponentsMissing } from '@/lib/raidItems'
 import { renameShip, buyShip } from '@/app/shipyard/actions'
 import { getXPProgress, navLevelBonuses, MAX_LEVEL, getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import { renownLevel, renownProgress, spentPoints, type RenownAlloc } from '@/lib/renown'
@@ -1647,11 +1647,13 @@ export default function ShipHero({
                       const haveAll = comps.every(c => c.owned)
                       const owned = ownedRaidItems.includes(recipe.result)
                       const learned = learnedRecipes.includes(recipe.result)
-                      // Components the player can NEVER get (took the other side of an
-                      // either/or Cache choice) — block the recipe + explain why.
-                      const blocked = unobtainableComponents(recipe.components, ownedRaidItems)
-                      const blockedById = new Map(blocked.map(b => [b.id, b]))
-                      const unbuildable = blocked.length > 0
+                      // Cache components not currently aboard. NOT a wall: the
+                      // Quartermaster's Ghost hands any of them back, including ones the
+                      // player took and then FORGED AWAY (fusing destroys the component,
+                      // which is how you can end up lacking an item you actually chose).
+                      // So this is a signpost telling them where to go.
+                      const missing = cacheComponentsMissing(recipe.components, ownedRaidItems)
+                      const missingById = new Map(missing.map(m => [m.id, m]))
                       const armed = forgeArmed === recipe.result
                       const busy = forging === recipe.result
                       const cost = recipe.fathomCost
@@ -1688,28 +1690,25 @@ export default function ShipHero({
                                     {c.owned ? <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#7fd49a" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg> : null}
                                   </span>
                                   <div style={{ flex: 1, minWidth: 0 }}>
-                                    <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: c.owned ? '#e0dccc' : blockedById.has(c.id) ? '#caa05a' : '#8a8480' }}>{c.def?.name}</span>
-                                    {/* Either "out of reach" (took the other Cache option) or where to find it. */}
-                                    {!c.owned && blockedById.has(c.id) ? (
-                                      <p className="font-karla" style={{ fontSize: '0.58rem', color: '#caa05a', lineHeight: 1.3, marginTop: 1 }}>You took {getRaidItem(blockedById.get(c.id)!.sibling)?.name ?? 'the other item'} at {blockedById.get(c.id)!.source} — reclaimable in Chapter IV.</p>
+                                    <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: c.owned ? '#e0dccc' : missingById.has(c.id) ? '#caa05a' : '#8a8480' }}>{c.def?.name}</span>
+                                    {/* A Cache item you don't hold, whether you passed it over OR forged
+                                        it away, points at the Ghost. Anything else says where it drops. */}
+                                    {!c.owned && missingById.has(c.id) ? (
+                                      <p className="font-karla" style={{ fontSize: '0.58rem', color: '#caa05a', lineHeight: 1.3, marginTop: 1 }}>Not aboard. The Quartermaster&rsquo;s Ghost still holds it.</p>
                                     ) : !c.owned && c.def?.source ? (
                                       <p className="font-karla" style={{ fontSize: '0.58rem', color: '#7a9ec4', lineHeight: 1.3, marginTop: 1 }}>Find it: {c.def.source}</p>
                                     ) : null}
                                   </div>
-                                  <span className="font-karla font-600 uppercase tracking-[0.06em]" style={{ flexShrink: 0, fontSize: '0.5rem', color: c.owned ? '#7fd49a' : blockedById.has(c.id) ? '#caa05a' : '#7a7470', marginTop: 1 }}>{c.owned ? 'Owned' : blockedById.has(c.id) ? 'Locked' : 'Needed'}</span>
+                                  <span className="font-karla font-600 uppercase tracking-[0.06em]" style={{ flexShrink: 0, fontSize: '0.5rem', color: c.owned ? '#7fd49a' : missingById.has(c.id) ? '#caa05a' : '#7a7470', marginTop: 1 }}>{c.owned ? 'Owned' : 'Needed'}</span>
                                 </div>
                               ))}
                             </div>
                           )}
 
-                          {owned ? null : unbuildable ? (
-                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '0.6rem 0.7rem', borderRadius: 11, background: 'rgba(202,160,90,0.08)', border: '1px solid rgba(202,160,90,0.35)' }}>
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#caa05a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
-                              <p className="font-karla" style={{ fontSize: '0.66rem', color: '#d8c39a', lineHeight: 1.4 }}>
-                                Can&rsquo;t be forged yet — {getRaidItem(blocked[0].id)?.name ?? 'a component'} was a one-time Cache choice and you took {getRaidItem(blocked[0].sibling)?.name ?? 'the other item'} instead. The Reclamation (Chapter IV) sells back the roads not taken — reclaim it there to unlock this recipe.
-                              </p>
-                            </div>
-                          ) : !learned ? (
+                          {/* No recipe is unbuildable any more, so there is no blocked branch:
+                              every Cache component can be won back off the Quartermaster's
+                              Ghost, and the component rows above say so. Learn away. */}
+                          {owned ? null : !learned ? (
                             <button type="button" onClick={() => onLearnTap(recipe.result, cost)} disabled={!canAfford || isLearning} className="font-cinzel font-700 uppercase tracking-[0.08em] tap"
                               style={{ width: '100%', padding: '0.7rem', borderRadius: 11, fontSize: '0.78rem',
                                 background: !canAfford ? 'rgba(255,255,255,0.04)' : armedLearn ? 'linear-gradient(180deg, rgba(248,140,90,0.34), rgba(196,90,60,0.16))' : 'linear-gradient(180deg, rgba(127,208,255,0.26), rgba(90,150,196,0.12))',

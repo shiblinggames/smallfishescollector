@@ -686,16 +686,24 @@ export function exclusiveSiblingOf(id: string): { sibling: string; source: strin
   return null
 }
 
-/** Components a player can NEVER obtain for this recipe because they took the
- *  OTHER side of an either/or Cache choice (they own the sibling). Empty = the
- *  recipe is still buildable (missing parts are farmable / choice not yet made). */
-export function unobtainableComponents(components: string[], ownedItems: string[]): { id: string; sibling: string; source: string }[] {
+/** Cache components this recipe needs that the player does NOT currently hold.
+ *
+ *  These are never permanently lost, which is the whole reason the Quartermaster's
+ *  Ghost exists. Two separate rules used to strand a player here: the Cache only
+ *  ever let you take ONE side, and the forge DESTROYS what it fuses, so you could
+ *  end up missing a component you actually chose. The Ghost answers both, since he
+ *  only ever offers what is not currently in your raid_items.
+ *
+ *  This is a HINT, not a block: it tells the player where to go, and nothing more.
+ *  (It replaces unobtainableComponents, which hard-blocked the recipe and, for a
+ *  player who had forged their pick away, claimed they had taken the other road.) */
+export function cacheComponentsMissing(components: string[], ownedItems: string[]): { id: string; source: string }[] {
   const owned = new Set(ownedItems)
-  const out: { id: string; sibling: string; source: string }[] = []
+  const out: { id: string; source: string }[] = []
   for (const id of components) {
     if (owned.has(id)) continue
     const ex = exclusiveSiblingOf(id)
-    if (ex && owned.has(ex.sibling)) out.push({ id, sibling: ex.sibling, source: ex.source })
+    if (ex) out.push({ id, source: ex.source })
   }
   return out
 }

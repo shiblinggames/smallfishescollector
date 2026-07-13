@@ -10,7 +10,7 @@
 // gated by `requiresNode` (+ optional Nav level); a cleared combat node
 // stays farmable.
 
-import { CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER, THE_COFFERS_FLEET, THE_QUARTERMASTER, THE_HAMMERHEAD, THE_THRONE, GEM_GLYPH, raidCompletionBonusXp, type RaidLootItem, type BossRaidConfig } from '@/lib/bossRaids'
+import { CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER, THE_COFFERS_FLEET, THE_QUARTERMASTER, THE_QUARTERMASTERS_GHOST, THE_HAMMERHEAD, THE_THRONE, GEM_GLYPH, raidCompletionBonusXp, type RaidLootItem, type BossRaidConfig } from '@/lib/bossRaids'
 import { SIXTH_BERTH_COST } from '@/lib/shipBerth'
 import { CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE, THE_CARTOGRAPHER_CHALLENGE, THE_TOLLMASTER_CHALLENGE, THE_COFFERS_FLEET_CHALLENGE, THE_QUARTERMASTER_CHALLENGE, THE_HAMMERHEAD_CHALLENGE, THE_THRONE_CHALLENGE } from '@/lib/raidChallenge'
 import { getShipSkin } from '@/lib/shipSkins'
@@ -22,7 +22,7 @@ import { getRaidItem } from '@/lib/raidItems'
 //  - milestone : a "collect / hold X" goal (no fight)
 //  - shop      : a contraband stall (future)
 //  - story     : an overarching-story beat (future)
-export type RaidNodeType = 'skirmish' | 'raid' | 'milestone' | 'shop' | 'story' | 'puzzle' | 'class_pick' | 'event' | 'dice' | 'gauntlet' | 'fork' | 'dps_check' | 'reclaim' | 'berth'
+export type RaidNodeType = 'skirmish' | 'raid' | 'milestone' | 'shop' | 'story' | 'puzzle' | 'class_pick' | 'event' | 'dice' | 'gauntlet' | 'fork' | 'dps_check' | 'berth'
 
 // Branching event nodes (lib/raidMap RaidNode.event). One-time, the
 // player picks ONE option which fires its outcome and clears the node;
@@ -317,6 +317,11 @@ export interface RaidNode {
   bridge?: string
   /** Node id that must be cleared before this one unlocks (omit = start). */
   requiresNode?: string
+  /** Optional SECOND node gate, independent of the chain. `requiresNode` places a
+   *  node in the chapter chain; this gates it on something off that chain (the
+   *  Quartermaster's Ghost sits in Chapter IV but only opens once you have put the
+   *  Quartermaster down in his CHALLENGE run). Both must be cleared. */
+  requiresClearedNode?: string
   /** Optional extra gate: minimum Navigation level. */
   requiresNavLevel?: number
   /** combat: route to the existing combat screen. */
@@ -335,22 +340,10 @@ export interface RaidNode {
    *  raid-item ids (lib/raidItems). Choosing one adds it to the
    *  player's raid_items permanently and clears the node. */
   choice?: { items: string[] }
-  /** reclaim: The Reclamation (Ch4) — the Quartermaster's seized stock
-   *  re-offers the MISSED side of every either/or Cache pair
-   *  (EXCLUSIVE_CHOICE_PAIRS in lib/raidItems) for `price` doubloons each.
-   *  Only pairs where the player owns exactly one side are offered;
-   *  purchases stay available on revisit (clearing the node = reading it). */
   /** Berth nodes: a one-time permanent CREW SLOT refit (Man-o-War 5 -> 6) for
    *  `price` doubloons. Clears on read (like the vault) so it never gates the
    *  chain; the purchase itself stays available on every revisit. */
   berth?: { price: number }
-  reclaim?: {
-    price: number
-    /** The vault's purchases stay locked until this node is cleared (the node
-     *  itself still opens and clears normally, so the chapter chain flows).
-     *  Used to gate the Reclamation behind the Quartermaster's challenge run. */
-    requiresClearedNode?: string
-  }
   /** Event nodes: branching decision beats with N outcomes (loot /
    *  release / take logs etc). The chosen choice id is persisted in
    *  raid_node_progress.choices so the sheet can mark it on revisit. */
@@ -1754,23 +1747,31 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    // The Reclamation — the Quartermaster's seized stock. Every either/or
-    // Cache choice from chapters 1-2 (EXCLUSIVE_CHOICE_PAIRS) is re-offered:
-    // the road not taken, for a steep price. Purchases stay available on
-    // revisit; the node clears on first read so it never gates progression.
-    id: 'the_reclamation',   type: 'reclaim',
-    label: 'The Reclamation',
-    flavor: "The Quartermaster's vault, masterless and cracked open. Everything he ever held back from you — every Cache's other half — waits inside, and dead men don't set prices. His executors do.",
-    bridge: "The vault is cracked and the roads not taken are for sale. Whatever you left behind in the Caches can come aboard at last — for a price.",
+    // The Quartermaster's Ghost — the FARM node, and the answer to a dead end the
+    // forge created. Every Cache made you pick one item and leave the other, and
+    // the forge is DESTRUCTIVE, so a component fused into a cannon is gone from
+    // raid_items for good. Between those two rules a player could end up unable to
+    // ever build a recipe. He fixes both: he still holds everything you left AND
+    // everything you spent, and he can be run as many times as you like.
+    // Boss-only, re-runnable, gated on having beaten him alive in his challenge.
+    id: 'the_quartermasters_ghost',   type: 'raid',
+    label: "The Quartermaster's Ghost",
+    flavor: "The gun-deck is exactly as he left it, and so is he. Dead men keep better books than living ones, and he never did stop counting what you owe.",
+    bridge: "The ghost keeps his counter open. Whatever you left in the Caches, and whatever you have melted down since, he still has it, and he will hand it over as many times as you can put him down.",
     requiresNode: 'throne_heading',
+    requiresClearedNode: 'the_quartermaster_challenge',
     adminOnly: true,
-    reclaim: { price: 125_000, requiresClearedNode: 'the_quartermaster_challenge' },
+    route: '/raids/ghost',
+    raidId: THE_QUARTERMASTERS_GHOST.raidId,
+    image: THE_QUARTERMASTERS_GHOST.enemies.ghost.portrait,
     detail: {
       description:
-        "Every Cache made you pick one item and leave the other behind. This vault holds everything you left. Buy any piece back for 125,000 doubloons. The vault is locked until you beat Challenge: The Quartermaster in Chapter III.",
-      dropsNote: 'Buy back the Cache items you passed up, 125,000 ⟡ each. Owning both halves unlocks the forge recipes that needed them.',
-      ctaLabel: 'Crack the Vault →',
-      summary: "The Quartermaster's seized vault re-offers every Cache choice you passed over, at 125,000 doubloons apiece. The roads not taken are open again.",
+        "Every Cache made you take one item and leave the other. Anything you forged is gone too, burned into the fusion. The ghost still has all of it. Put him down and he gives back one piece of what he is holding, and he will do it again every time you come back. He only ever offers what you do not already carry. He will not deal until you have beaten him alive, in Challenge: The Quartermaster.",
+      enemies: ["The Quartermaster's Ghost"],
+      drops: lootDrops(THE_QUARTERMASTERS_GHOST.loot),
+      clearReward: clearPayout(THE_QUARTERMASTERS_GHOST),
+      dropsNote: 'Run him as often as you like. Each clear rolls one crate, and the Cache items you already hold are taken out of the pool, so he only ever offers what you are missing.',
+      summary: "The Quartermaster died still holding every Cache item you passed up, and he collects the ones you forge away too. He hands one back for every time you put him down.",
     },
   },
   {
@@ -2097,11 +2098,12 @@ export function computeRaidMap(
       return { node, status: 'locked' as const, claimable: false, lockReason: 'Coming soon' }
     }
     const prereqOk = !node.requiresNode || cleared.has(node.requiresNode)
+    const gateOk = !node.requiresClearedNode || cleared.has(node.requiresClearedNode)
     const navOk = !node.requiresNavLevel || navLevel >= node.requiresNavLevel
-    if (!prereqOk || !navOk) {
-      const req = RAID_MAP.find(n => n.id === node.requiresNode)
+    if (!prereqOk || !gateOk || !navOk) {
+      const req = RAID_MAP.find(n => n.id === (prereqOk ? node.requiresClearedNode : node.requiresNode))
       const verb = req?.type === 'story' ? 'Read' : 'Clear'
-      const reason = !prereqOk
+      const reason = (!prereqOk || !gateOk)
         ? `${verb} ${req?.label ?? 'the previous stop'} first`
         : `Reach Navigation Level ${node.requiresNavLevel}`
       return { node, status: 'locked' as const, claimable: false, lockReason: reason }

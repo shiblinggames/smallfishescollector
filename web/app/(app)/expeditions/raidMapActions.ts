@@ -233,10 +233,10 @@ export async function markStoryNodeRead(
   if (!user) return { error: 'Unauthorized' }
 
   const node = RAID_MAP.find(n => n.id === nodeId)
-  // 'reclaim' + 'berth' clear like a story read — their purchases are separate,
-  // optional, and stay available on revisit, so reading one never gates the
-  // chain (a captain who cannot afford the refit yet still sails on).
-  if (!node || (node.type !== 'story' && node.type !== 'reclaim' && node.type !== 'berth')) return { error: 'Invalid node' }
+  // 'berth' clears like a story read — its purchase is separate, optional, and
+  // stays available on revisit, so reading it never gates the chain (a captain
+  // who cannot afford the refit yet still sails on).
+  if (!node || (node.type !== 'story' && node.type !== 'berth')) return { error: 'Invalid node' }
 
   const admin = createAdminClient()
   const { data: profile } = await admin
@@ -355,63 +355,6 @@ export async function claimQuartermasterChoice(
   return { ok: true }
 }
 
-// The Reclamation (Ch4): buy back the MISSED side of an either/or Cache
-// choice for the node's price. Server-authoritative on every rule: the item
-// must be an exclusive-pair member, the player must own its SIBLING (proof
-// they made that choice), must NOT own the item, and must afford the price.
-// Purchases are independent of the node's cleared state (buy on any revisit
-// once the node is unlocked) — owning the item IS the persistence.
-export async function buyReclaimedItem(
-  nodeId: string,
-  itemId: string,
-): Promise<{ doubloons: number } | { error: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
-
-  const node = RAID_MAP.find(n => n.id === nodeId)
-  if (!node || node.type !== 'reclaim' || !node.reclaim) return { error: 'Invalid node' }
-  const ex = exclusiveSiblingOf(itemId)
-  if (!ex) return { error: 'Invalid item' }
-
-  const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('doubloons, raid_items, has_completed_practice_raid, raid_node_progress, is_admin')
-    .eq('id', user.id)
-    .single()
-  if (!profile) return { error: 'Profile not found' }
-  if (node.adminOnly && profile.is_admin !== true) return { error: 'Locked' }
-
-  const cleared = await buildClearedSet(admin, user.id, profile)
-  if (node.requiresNode && !cleared.has(node.requiresNode)) return { error: 'Locked' }
-  // The executors only deal with a proven captain: purchases stay locked
-  // until the gate node (the Quartermaster's challenge run) is beaten.
-  if (node.reclaim.requiresClearedNode && !cleared.has(node.reclaim.requiresClearedNode)) {
-    return { error: 'The executors will not deal until the Quartermaster falls in his challenge run.' }
-  }
-
-  // Forge-aware ownership: a Cache pick that was forged into a fusion left
-  // raid_items, but the choice was still made — count it (and never resell it).
-  const ownedItems = (profile.raid_items as string[] | null) ?? []
-  const eff = effectiveOwnedItems(ownedItems)
-  if (eff.has(itemId)) return { error: 'Already owned' }
-  if (!eff.has(ex.sibling)) return { error: 'No debt here. You never made that choice.' }
-
-  const doubloons = profile.doubloons ?? 0
-  if (doubloons < node.reclaim.price) return { error: 'Not enough doubloons' }
-
-  const newDoubloons = doubloons - node.reclaim.price
-  await admin
-    .from('profiles')
-    .update({
-      doubloons: newDoubloons,
-      raid_items: [...new Set([...ownedItems, itemId])],
-    })
-    .eq('id', user.id)
-
-  return { doubloons: newDoubloons }
-}
 
 // Event nodes: one-time decision beats with branching outcomes (see
 // RaidEventChoice in lib/raidMap). Validates the choice id against

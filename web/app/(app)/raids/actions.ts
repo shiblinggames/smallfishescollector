@@ -273,6 +273,16 @@ const ITEM_GRANTS: Record<string, { doubloons?: number; gems?: number; shipSkin?
   chain_shot:              { raidItem: 'chain_shot' },
   dons_signet:             { raidItem: 'dons_signet' },
   war_drum:                { raidItem: 'war_drum' },
+  // The six either/or Cache items. They had NO grants until now because the Cache
+  // node handed them out directly and they had never been raid loot. The
+  // Quartermaster's Ghost drops them, and without an entry here the roll would
+  // show the player a crate and silently give them nothing.
+  quartermasters_anchor:   { raidItem: 'quartermasters_anchor' },
+  navigators_compass:      { raidItem: 'navigators_compass' },
+  gunners_sight:           { raidItem: 'gunners_sight' },
+  reinforced_hull:         { raidItem: 'reinforced_hull' },
+  incendiary_cannonball:   { raidItem: 'incendiary_cannonball' },
+  frozen_cannonball:       { raidItem: 'frozen_cannonball' },
   thunder_drum:            { raidItem: 'thunder_drum' },
   finndicate_hull:         { shipSkin:  'finndicate_hull' },
   chartmaker_hull:         { shipSkin:  'chartmaker_hull' },

@@ -1079,6 +1079,67 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
 // chapter's two-phase finale): at half HP he opens the reserve deck. Tier-2
 // tides. (Decoys were moved to Raid 5's Admiral Ruse so each Ch3 boss has ONE
 // clean, distinct signature.) NAMES ARE PLACEHOLDERS until step 4. Caps at Galleon.
+// ── THE QUARTERMASTER'S GHOST (Chapter IV) ───────────────────────────────────
+// The FARM node. He still holds every either/or Cache item you left behind, and
+// now every one you spent: the forge is destructive, so a component you fused
+// away is genuinely gone from raid_items, which makes it eligible to roll off him
+// again. That is the whole point of him. Without this, a player who forged their
+// Gunner's Sight into a Warlord's Cannon could never build a Deadeye Bulwark,
+// because the Cache only ever let them choose once.
+//
+// Repeatable by construction: raid nodes are re-runnable (that is how cannons get
+// refarmed), so "grind him" needs no new machinery. rollLootIndex already drops
+// uniques you CURRENTLY own out of the pool, and it reads raw raid_items, so he
+// only ever offers what you do not have.
+//
+// A one-bar duel on purpose. He is meant to be run over and over.
+export const THE_QUARTERMASTERS_GHOST: BossRaidConfig = {
+  raidId: 'the_quartermasters_ghost',
+  enemyAccuracy: 30,
+  raidTitle: "The Quartermaster's Ghost",
+  bossDefeatedText: 'The Ghost Dispersed',
+  atmosphere: 'vault',   // his own lantern-lit gun-deck, and he never left it
+  enemies: {
+    ghost: {
+      id: 'ghost', name: "The Quartermaster's Ghost", hpBase: 760, minDmg: 30, maxDmg: 50,
+      shipSpeed: 9, actionMs: 3600,
+      // Hits HARD and fast rather than long. No phases: a farm boss that takes
+      // four bars to put down stops being a farm.
+      pattern: ['reload', 'fire', 'volley', 'dodge', 'reload', 'fire', 'fire', 'dodge', 'reload', 'volley'],
+      critChance: 0.16,
+      image: '/enemychapter3galleon.png',
+      portrait: '/raid6_thequartermaster.png',   // ART PENDING: a spectral recut
+    },
+  },
+  sequence: [],          // BOSS ONLY. Round 0 is him.
+  bossId: 'ghost',
+  // Everything he ever made you choose between. rollLootIndex removes whatever is
+  // already in your raid_items, so the pool narrows to exactly what you are still
+  // missing: miss all six and roughly a third of clears pay a component; down to
+  // your last one it is about 1 in 7. The currency slots keep a clear from ever
+  // feeling wasted.
+  loot: [
+    { id: 'quartermasters_anchor', label: "Quartermaster's Anchor", image: '/quartermastersanchor.png', emoji: '⚓', rarity: 'epic', weight: 10 },
+    { id: 'navigators_compass',    label: "Navigator's Compass",    image: '/navigatorscompass.png',    emoji: '🧭', rarity: 'epic', weight: 10 },
+    { id: 'gunners_sight',         label: "Gunner's Sight",         image: '/gunnerssight.png',         emoji: '🎯', rarity: 'epic', weight: 10 },
+    { id: 'reinforced_hull',       label: 'Reinforced Hull',        image: '/reinforcedhull.png',       emoji: '🛠️', rarity: 'epic', weight: 10 },
+    { id: 'incendiary_cannonball', label: 'Incendiary Cannonball',  image: '/incendiarycannonball.png', emoji: '🔥', rarity: 'epic', weight: 10 },
+    { id: 'frozen_cannonball',     label: 'Frozen Cannonball',      image: '/frozencannonball.png',     emoji: '❄️', rarity: 'epic', weight: 10 },
+    { id: 'doubloons_1200', label: '+1,200 ⟡', image: '/dailybonus.png', emoji: '💰',      rarity: 'uncommon', weight: 30 },
+    { id: 'gems_50',        label: '50 Gems',  image: null,             emoji: GEM_GLYPH, rarity: 'rare',     weight: 20 },
+    { id: 'pack_2',         label: '200 Gems', image: null,             emoji: GEM_GLYPH, rarity: 'epic',     weight: 10 },
+  ],
+  killRewards: {
+    ghost: { gold: 900, xp: 1000 },
+  },
+  preFightDialogue: [
+    { speaker: 'narrator', text: 'The gun-deck is exactly as you left it, down to the lantern oil. The counter is still stocked. The keeper is still behind it, and you can see the shutters through him.' },
+    { speaker: 'boss', text: "Dead men keep better books than living ones. Everything you left on my counter, everything you melted down since. I have it all, and I have all the time there is." },
+    { speaker: 'player', text: "Then you'll not mind me taking it back off you. Twice, if it comes to that." },
+    { speaker: 'boss', text: 'They always come back. That is the one thing I could ever count on.' },
+  ],
+}
+
 export const THE_QUARTERMASTER: BossRaidConfig = {
   raidId: 'the_quartermaster',
   enemyAccuracy: 28,
