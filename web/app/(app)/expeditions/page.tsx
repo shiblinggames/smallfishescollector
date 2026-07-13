@@ -1,7 +1,8 @@
 import { Suspense, cache } from 'react'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
-import { EXPEDITION_SHIP_STATS, raidItemSlotsForTier, computeCombatRating } from '@/lib/expeditions'
+import { EXPEDITION_SHIP_STATS, raidItemSlotsForTier, raidDamageProfile } from '@/lib/expeditions'
+import { getRaidPlayerStats } from '@/app/(app)/raids/actions'
 import { classSlotBonuses } from '@/lib/shipClasses'
 import { getShipSkin } from '@/lib/shipSkins'
 import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
@@ -290,26 +291,20 @@ async function ExpeditionHub() {
   // raid_slot, mutually exclusive); the previews compute one score per
   // track from the right party. Nav-level bonuses apply to raid (the
   // captain bonus) but not voyage scores, per current convention.
-  const toDeployed = (track: 'voyage' | 'raid'): DeployedCrew[] => roster
-    .filter(c => (track === 'voyage' ? c.voyageSlot : c.raidSlot) !== null)
-    .map(c => ({
-      id: c.id,
-      slot: (track === 'voyage' ? c.voyageSlot : c.raidSlot) as number,
-      rarity: c.rarity,
-      power: c.power, dodge: c.dodge, fortune: c.fortune,
-      effects: c.effects, xp: c.xp, slug: c.slug,
-    }))
-  const resolvedRaid   = resolveDeployedCrew(toDeployed('raid'))
-  const xpProgress = getXPProgress(profile?.expedition_xp ?? 0)
-  const navBonus = navLevelBonuses(xpProgress.level)
-  const raidRating = computeCombatRating(
-    resolvedRaid.totals.power + navBonus.power,
-    resolvedRaid.totals.dodge + navBonus.navigation,
-    resolvedRaid.totals.fortune + navBonus.fortune,
-    shipStats.durability + navBonus.hp,
-    shipStats.minDamage,
-    resolvedRaid.raid,
-  )
+  // The numbers the RAID actually fights with: hull after items, classes and Renown;
+  // the real damage profile; the real dodge and fortune. Not a 0-100 score benchmarked
+  // against a constant, which is what Raid Score / Offense / Defense were.
+  const rp = await getRaidPlayerStats(profile!.id as string)
+  const dmg = raidDamageProfile(rp.totalPower, rp.shipMinDamage, rp.raidMods?.damagePct ?? 0)
+  const prepStats = {
+    hull:    rp.playerHPMax,
+    hitMin:  dmg.hitMin,
+    hitMax:  Math.round(dmg.powerMax * rp.classDamageMult),
+    crit:    Math.round(dmg.critMax * rp.classDamageMult),
+    dodge:   rp.totalDodge,
+    fortune: rp.totalFortune,
+    speed:   rp.shipSpeed,
+  }
 
   return (
     <HubCards
@@ -321,7 +316,7 @@ async function ExpeditionHub() {
       raidItemSlots={raidItemSlotsForTier(shipTier) + slotBonus.itemSlots}
       roster={roster}
       shipCrewSlots={shipStats.crewSlots}
-      raidRating={raidRating}
+      prepStats={prepStats}
       // Full DailyVoyagePanel-needed props — voyage panel was promoted
       // into the Voyages hub modal so it's no longer rendered inline.
       shipTier={shipTier}

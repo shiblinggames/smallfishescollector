@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation'
 import PopupShell from '@/components/PopupShell'
 import { RAID_ITEMS } from '@/lib/raidItems'
 import { IconLock, IconCrate } from '@/components/GameIcons'
+import { RARITY_COLOR } from '@/lib/variants'
 import { repairShip } from '@/app/(app)/raids/actions'
 import type { CrewMember } from '@/app/(app)/crew/actions'
 import { RARITY_COLORS as CREW_RARITY_COLORS } from '@/lib/crewGen'
@@ -22,7 +23,7 @@ import type { CrewMember as SocialCrewMember } from '@/app/(app)/social/actions'
 const CREW_IMG_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/storage/v1/object/public/card-arts/'
 import type { DailyVoyage } from './voyageActions'
 import type { VoyageHistoryEntry } from './VoyageHistory'
-import { getRankTitle, type CombatRating } from '@/lib/expeditions'
+
 
 export type CampaignCardData = {
   nextNodeId: string | null
@@ -57,7 +58,16 @@ interface Props {
   // Live readiness numbers (mirrors ShipHero's loadout math). Surfaced
   // inside the prep modals so the player sees what they're committing
   // with before tapping Begin / Set Sail.
-  raidRating: CombatRating
+  /** The numbers the RAID actually fights with. Not a score. */
+  prepStats: {
+    hull: number
+    hitMin: number
+    hitMax: number
+    crit: number
+    dodge: number
+    fortune: number
+    speed: number
+  }
   // DailyVoyagePanel-required props. The panel used to render inline
   // below the hub; now lives inside the Voyages modal so the data
   // pipes through here.
@@ -156,7 +166,7 @@ export default function HubCards({
   campaign, voyages, doubloons,
   ownedRaidItems, equippedRaidItems, raidItemSlots,
   roster, shipCrewSlots,
-  raidRating,
+  prepStats,
   shipTier, todayVoyage, readyVoyage, expeditionXP, voyageHistory,
   canPvp, gauntletOpen, gauntletUpgrades, pvp,
 }: Props) {
@@ -350,6 +360,11 @@ export default function HubCards({
             border: `1px solid ${campaignAccent}55`,
             borderRadius: 20, padding: '1.1rem 1rem 1rem',
             boxShadow: '0 20px 60px rgba(0,0,0,0.7)',
+            // The modal must never run off the screen. Cap it to the viewport and let the
+            // BODY scroll, so the header and the Begin button stay put and reachable no
+            // matter how much sits between them.
+            display: 'flex', flexDirection: 'column',
+            maxHeight: 'calc(100dvh - 2rem)',
           }}
         >
           <p className="font-karla font-700 uppercase tracking-[0.18em] text-center"
@@ -361,7 +376,9 @@ export default function HubCards({
             {campaign.nextNodeName ?? 'Story complete'}
           </p>
 
-          <PrepReadiness rating={raidRating} accent={campaignAccent} />
+          {/* Everything between the title and the buttons scrolls. */}
+          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain', margin: '0 -0.25rem', padding: '0 0.25rem' }}>
+          <PrepStats s={prepStats} accent={campaignAccent} />
 
           {campaign.nextNodeName && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 14 }}>
@@ -384,27 +401,41 @@ export default function HubCards({
                   voyage party (which was the original 'wrong crew shown'
                   bug). Editing happens on /crew; the 'Manage ›' link
                   inside the view is the canonical path off this modal. */}
-              <PrepPartyView
-                roster={roster}
-                shipCrewSlots={shipCrewSlots}
-                track="raid"
-                accent={campaignAccent}
-              />
-              {/* Items display — read-only confirmation of equipped
-                  raid items. The prep modal is no longer an editor;
-                  items are still managed via the Loadout drawer
-                  (ShipHero's Manage Ship button). 'Manage ›' closes this
-                  modal first so the drawer doesn't open behind it. */}
-              <PrepItemsView
-                equippedRaidItems={equippedRaidItems}
-                raidItemSlots={raidItemSlots}
-                ownedCount={ownedRaidItems.length}
-                accent={campaignAccent}
-                onManage={() => {
-                  setModal(null)
-                  window.dispatchEvent(new CustomEvent('expedition:open-loadout'))
-                }}
-              />
+              {(() => {
+                // Read the RAID slot, never the voyage one. Reading the wrong slot is
+                // what used to show the voyage party on the campaign modal.
+                const crewSlots: (CrewMember | null)[] = Array(shipCrewSlots).fill(null)
+                for (const c of roster) {
+                  if (c.raidSlot != null && c.raidSlot >= 0 && c.raidSlot < shipCrewSlots) crewSlots[c.raidSlot] = c
+                }
+                const itemDefs = equippedRaidItems
+                  .map(id => RAID_ITEMS.find(i => i.id === id) ?? null)
+                  .filter((d): d is (typeof RAID_ITEMS)[number] => !!d)
+                const itemSlots: ((typeof RAID_ITEMS)[number] | null)[] = Array(raidItemSlots).fill(null)
+                itemDefs.slice(0, raidItemSlots).forEach((d, i) => { itemSlots[i] = d })
+                return (
+                  <>
+                    <PrepLoadoutRow
+                      label="Crew" filled={crewSlots.filter(Boolean).length} total={shipCrewSlots}
+                      accent={campaignAccent} href="/crew?tab=roster&filter=raid"
+                    >
+                      {crewSlots.map((c, i) => <PrepCrewDot key={i} card={c} captain={i === 0} />)}
+                    </PrepLoadoutRow>
+                    <PrepLoadoutRow
+                      label="Items" filled={itemDefs.length} total={raidItemSlots}
+                      accent={campaignAccent}
+                      onManage={() => {
+                        // Close first, or the Loadout drawer mounts BEHIND this modal and
+                        // the player sees nothing happen.
+                        setModal(null)
+                        window.dispatchEvent(new CustomEvent('expedition:open-loadout'))
+                      }}
+                    >
+                      {itemSlots.map((d, i) => <PrepItemDot key={i} def={d} />)}
+                    </PrepLoadoutRow>
+                  </>
+                )
+              })()}
               {campaign.nextNodeLocked && (
                 <PrepRow
                   label="Node locked"
@@ -416,7 +447,9 @@ export default function HubCards({
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: 8 }}>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, flexShrink: 0, paddingTop: 10 }}>
             <button
               type="button"
               onClick={() => setModal(null)}
@@ -640,263 +673,138 @@ export default function HubCards({
 // model for the 0-100 nautical ladder. Concrete ship stats (HP / Speed /
 // DMG) stay because they're literal and actionable. score / scoreLabel /
 // scoreColor props stay on the type for API stability but are ignored.
-// ── READINESS ────────────────────────────────────────────────────────────────
-// What this modal is FOR: am I strong enough to walk through that door?
+// ── THE NUMBERS YOU ACTUALLY FIGHT WITH ──────────────────────────────────────
+// This block has now been wrong twice. First it showed HP / Speed / DMG straight
+// off the BARE HULL, which ignores crew, items, classes and Renown — a captain
+// with five level-100 legendaries read the same as one with an empty deck. Then it
+// showed a Raid Score / Offense / Defense, which are 0-100 inventions benchmarked
+// against a constant, and mean nothing to anyone.
 //
-// It used to answer with three tiles reading HP / Speed / DMG straight off the
-// bare hull — numbers that ignore your crew, your raid items, your ship classes
-// and your Renown, and so are not the numbers you actually fight with. Worse,
-// the Raid Score WAS being computed, passed into the block, and then silently
-// dropped: StatsBlock declared score/scoreLabel/scoreColor and destructured only
-// shipStats. The one number that answers the question was thrown on the floor.
-//
-// So: the Raid Score, its rank, and the two axes it is made of. Offense and
-// Defense are shown separately because a raid punishes being lopsided, and a
-// player staring at a single 62 cannot tell WHICH half is dragging.
-function PrepReadiness({ rating, accent }: { rating: CombatRating; accent: string }) {
-  const rank = getRankTitle(rating.score)
-  const OFF = '#e8896a'
-  const DEF = '#6aa9e8'
-  return (
-    <div style={{
-      marginBottom: 14, borderRadius: 14, padding: '0.85rem 0.9rem',
-      background: `radial-gradient(ellipse at 50% 0%, ${accent}14 0%, rgba(0,0,0,0.3) 70%)`,
-      border: `1px solid ${accent}33`,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10 }}>
-        <div style={{ minWidth: 0 }}>
-          <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.5rem', color: '#8a8680' }}>
-            Raid Score
-          </p>
-          <p className="font-cinzel font-800 truncate" style={{ fontSize: '0.92rem', color: accent, marginTop: 3 }}>
-            {rank}
-          </p>
-        </div>
-        <p className="font-cinzel font-800" style={{ flexShrink: 0, fontSize: '2rem', lineHeight: 1, color: '#f3ede0', textShadow: `0 0 16px ${accent}55` }}>
-          {Math.round(rating.score)}
-          <span style={{ fontSize: '0.8rem', color: '#7a7672' }}> / 100</span>
-        </p>
-      </div>
-
-      {/* The overall bar. */}
-      <div style={{ height: 5, borderRadius: 999, background: 'rgba(255,255,255,0.07)', overflow: 'hidden', marginTop: 9 }}>
-        <div style={{ height: '100%', width: `${Math.max(2, Math.min(100, rating.score))}%`, borderRadius: 999, background: `linear-gradient(90deg, ${OFF}, ${accent})` }} />
-      </div>
-
-      {/* The two axes. A raid punishes a lopsided build, so the split is the
-          useful part: it says WHICH half needs work, which one number cannot. */}
-      <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
-        {([['Offense', rating.offenseScore, OFF], ['Defense', rating.defenseScore, DEF]] as [string, number, string][]).map(([label, val, color]) => (
-          <div key={label} style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-              <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.48rem', color: '#8a8680' }}>{label}</span>
-              <span className="font-cinzel font-700" style={{ fontSize: '0.76rem', color }}>{Math.round(val)}</span>
-            </div>
-            <div style={{ height: 3, borderRadius: 999, background: 'rgba(255,255,255,0.07)', overflow: 'hidden', marginTop: 3 }}>
-              <div style={{ height: '100%', width: `${Math.max(2, Math.min(100, val))}%`, borderRadius: 999, background: color }} />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// ── Prep row primitive ────────────────────────────────────────────────
-// Read-only party display used inside the prep modals. Mirrors the
-// on-deck row from the expedition home page (captain on the left with a
-// crown, crew slots to the right) but is purely informational — there's
-// no tap-to-pick affordance and no nested editor opens. Crew assignment
-// now lives exclusively on the /crew page, and the prep modal is the
-// confirmation surface that shows what's actually deployed for the
-// track they're about to launch. The track prop is the critical bit:
-// reading the wrong slot is what was showing voyage crew on the
-// campaign modal.
-function PrepPartyView({ roster, shipCrewSlots, track, accent }: {
-  roster: CrewMember[]
-  shipCrewSlots: number
-  track: 'voyage' | 'raid'
+// These are the real values. They come out of getRaidPlayerStats — the very
+// function the raid screen calls — so what you read here is exactly what walks into
+// the fight. Hull is post-items, post-classes, post-Renown. The damage range is the
+// real roll, with the crit you can actually land on it.
+function PrepStats({ s, accent }: {
+  s: { hull: number; hitMin: number; hitMax: number; crit: number; dodge: number; fortune: number; speed: number }
   accent: string
 }) {
-  const slots: (CrewMember | null)[] = Array(shipCrewSlots).fill(null)
-  for (const c of roster) {
-    const slot = track === 'voyage' ? c.voyageSlot : c.raidSlot
-    if (slot != null && slot >= 0 && slot < shipCrewSlots) {
-      slots[slot] = c
-    }
-  }
-  const assignedCount = slots.filter(Boolean).length
-  const CAPTAIN_SIZE = 48
-  const CREW_SIZE = 40
-  function circle(card: CrewMember | null, i: number, size: number) {
-    const isCaptain = i === 0
-    const rc = card ? (CREW_RARITY_COLORS[card.rarity as 1 | 2 | 3 | 4] ?? '#6a6764') : '#6a6764'
-    const ring = card ? (isCaptain ? '#f0c040' : rc) : (isCaptain ? 'rgba(240,192,64,0.35)' : 'rgba(255,255,255,0.25)')
-    if (card) {
-      return (
-        <div title={card.name} aria-label={isCaptain ? `Captain: ${card.name}` : `Crew: ${card.name}`}
-          style={{ width: size, height: size, borderRadius: '50%', overflow: 'hidden', border: `2px solid ${ring}`, background: 'rgba(6,9,16,0.85)', boxShadow: '0 2px 6px rgba(0,0,0,0.55)' }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={CREW_IMG_BASE + card.filename} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} />
-        </div>
-      )
-    }
-    // Empty slot: subdued dashed circle with no '+' CTA — this is a
-    // display, not a picker. Player can see the slot exists; assigning
-    // happens on /crew.
-    return (
-      <div aria-label={isCaptain ? 'No captain assigned' : `Empty crew slot ${i + 1}`}
-        style={{ width: size, height: size, borderRadius: '50%', border: `2px dashed ${ring}`, background: 'rgba(6,9,16,0.4)' }} />
-    )
-  }
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: 10,
-      padding: '0.55rem 0.7rem', borderRadius: 10,
-      background: 'rgba(0,0,0,0.32)',
-      border: `1px solid ${assignedCount > 0 ? 'rgba(74,222,128,0.24)' : 'rgba(248,113,113,0.28)'}`,
+  const tile = (label: string, value: string, sub?: string, color?: string) => (
+    <div key={label} style={{
+      flex: 1, minWidth: 0, padding: '0.5rem 0.4rem', borderRadius: 10,
+      background: 'rgba(0,0,0,0.34)', border: '1px solid rgba(255,255,255,0.08)', textAlign: 'center',
     }}>
-      {/* Captain — own little cluster on the left with a crown */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-        <div style={{ position: 'relative' }}>
-          <div aria-hidden style={{ position: 'absolute', top: -9, left: '50%', transform: 'translateX(-50%)', zIndex: 2 }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="#f0c040" stroke="#1a1206" strokeWidth="1.2" strokeLinejoin="round" style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.7))' }}>
-              <path d="M5 17h14l1-9-5 3.5L12 5 9 11.5 4 8z" />
-            </svg>
-          </div>
-          {circle(slots[0], 0, CAPTAIN_SIZE)}
-        </div>
+      <p className="font-karla font-700 uppercase tracking-[0.13em]" style={{ fontSize: '0.46rem', color: '#8a8680' }}>{label}</p>
+      <p className="font-cinzel font-800 truncate" style={{ fontSize: '0.92rem', color: color ?? '#f3ede0', marginTop: 2 }}>{value}</p>
+      {sub && <p className="font-karla font-600" style={{ fontSize: '0.5rem', color: '#7a7672', marginTop: 1 }}>{sub}</p>}
+    </div>
+  )
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
+      <div style={{ display: 'flex', gap: 6 }}>
+        {tile('Hull', String(s.hull), 'max HP', '#7fd49a')}
+        {tile('Damage', `${s.hitMin}–${s.hitMax}`, `crit ${s.crit}`, accent)}
       </div>
-      {/* Divider */}
-      <div aria-hidden style={{ width: 1, alignSelf: 'stretch', background: 'rgba(255,255,255,0.08)', margin: '0.15rem 0' }} />
-      {/* Crew slots row */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 7, flex: 1 }}>
-        {slots.slice(1).map((c, idx) => (
-          <div key={idx + 1}>{circle(c, idx + 1, CREW_SIZE)}</div>
-        ))}
+      <div style={{ display: 'flex', gap: 6 }}>
+        {tile('Dodge', String(s.dodge))}
+        {tile('Fortune', String(s.fortune))}
+        {tile('Speed', String(s.speed))}
       </div>
-      {/* Manage hint — navigates to /crew with the matching track filter
-          pre-selected on the Roster tab. /crew reads ?tab=roster&filter=
-          (CrewClient.tsx:733-744), so 'raid' from the campaign prep lands
-          directly on the raid sub-filter instead of the full roster. */}
-      <a href={`/crew?tab=roster&filter=${track}`} onClick={e => e.stopPropagation()}
-        className="font-karla font-700 uppercase"
-        style={{
-          flexShrink: 0,
-          fontSize: '0.5rem', letterSpacing: '0.12em',
-          color: accent, opacity: 0.85,
-          textDecoration: 'none',
-          display: 'inline-flex', alignItems: 'center', gap: 3,
-        }}>
-        Manage <span style={{ fontSize: '0.75rem', lineHeight: 1 }}>›</span>
-      </a>
     </div>
   )
 }
 
-// Read-only items view used inside the campaign prep modal. Shows what's
-// currently equipped as a compact icon row + slot count. Editing happens
-// in the Loadout drawer (ShipHero's Manage Ship button) — there's no
-// tap-to-equip here; the prep modal is confirmation, not configuration.
-function PrepItemsView({ equippedRaidItems, raidItemSlots, ownedCount, accent, onManage }: {
-  equippedRaidItems: string[]
-  raidItemSlots: number
-  ownedCount: number
+// ── LOADOUT ROW ──────────────────────────────────────────────────────────────
+// Crew and items were two separate tall blocks, each with its own border, its own
+// padding and its own "Manage ›" link. On a 400px modal that is most of the height
+// spent saying very little.
+//
+// One primitive now does both: a label with the count that matters (5/6, 3/4), a
+// tight strip of the actual faces or icons, and one Manage link. Empty slots are
+// dashed circles, so "I forgot someone" is visible without reading a word. Same
+// shape twice reads faster than two bespoke layouts.
+function PrepLoadoutRow({ label, filled, total, children, accent, onManage, href }: {
+  label: string
+  filled: number
+  total: number
+  children: React.ReactNode
   accent: string
-  /** Called when the player taps 'Manage ›'. Parent should close the
-   *  prep modal BEFORE the Loadout drawer opens, otherwise the drawer
-   *  mounts behind the open PopupShell and the player just sees the
-   *  same prep modal with no visible feedback. */
-  onManage: () => void
+  onManage?: () => void
+  href?: string
 }) {
-  const equippedDefs = equippedRaidItems
-    .map(id => RAID_ITEMS.find(i => i.id === id))
-    .filter((d): d is NonNullable<typeof d> => !!d)
-  const equippedCount = equippedDefs.length
-  // Build N slots = filled icons + empty placeholders, so the player can
-  // see at a glance which slots are still open.
-  const slots = Array.from({ length: raidItemSlots }, (_, i) => equippedDefs[i] ?? null)
+  const short = filled < total
+  const empty = filled === 0
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', gap: 10,
-      padding: '0.55rem 0.7rem', borderRadius: 10,
+      display: 'flex', alignItems: 'center', gap: 9,
+      padding: '0.5rem 0.6rem', borderRadius: 10,
       background: 'rgba(0,0,0,0.32)',
-      border: `1px solid ${equippedCount > 0
-        ? 'rgba(74,222,128,0.24)'
-        : ownedCount === 0 ? 'rgba(255,255,255,0.08)' : 'rgba(248,113,113,0.28)'}`,
+      border: `1px solid ${empty ? 'rgba(248,113,113,0.32)' : short ? 'rgba(232,200,121,0.26)' : 'rgba(74,222,128,0.24)'}`,
     }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 70 }}>
-        <p className="font-karla font-700 uppercase tracking-[0.16em]"
-          style={{ fontSize: '0.5rem', color: 'rgba(196,169,106,0.7)' }}>
-          Items
-        </p>
-        <p className="font-cinzel font-700"
-          style={{ fontSize: '0.78rem', color: '#f0e8d0', lineHeight: 1 }}>
-          {ownedCount === 0 ? 'None owned' : `${equippedCount}/${raidItemSlots}`}
+      <div style={{ flexShrink: 0, minWidth: 52 }}>
+        <p className="font-karla font-700 uppercase tracking-[0.13em]" style={{ fontSize: '0.46rem', color: '#8a8680' }}>{label}</p>
+        <p className="font-cinzel font-700" style={{ fontSize: '0.8rem', marginTop: 1, color: empty ? '#f87171' : short ? '#e8c879' : '#7fd49a' }}>
+          {filled}<span style={{ color: '#6a6764' }}>/{total}</span>
         </p>
       </div>
-      {/* Icon row — filled slots show the item's image/emoji on an
-          accent-tinted plate; empty slots are dashed circles matching
-          the empty-crew-slot look. Compact so it still fits next to the
-          crew row visually. */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 5, flex: 1, flexWrap: 'wrap' }}>
-        {slots.map((def, i) => {
-          const SIZE = 32
-          if (!def) {
-            return (
-              <div key={i}
-                aria-label={`Empty item slot ${i + 1}`}
-                style={{
-                  width: SIZE, height: SIZE, borderRadius: '50%',
-                  border: '2px dashed rgba(255,255,255,0.18)',
-                  background: 'rgba(6,9,16,0.4)',
-                }} />
-            )
-          }
-          return (
-            <div key={i}
-              title={def.name}
-              aria-label={`Equipped: ${def.name}`}
-              style={{
-                width: SIZE, height: SIZE, borderRadius: '50%',
-                background: 'rgba(196,169,106,0.16)',
-                border: '1.5px solid rgba(196,169,106,0.6)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                overflow: 'hidden',
-                boxShadow: '0 2px 6px rgba(0,0,0,0.45)',
-              }}>
-              {def.image ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={def.image} alt="" loading="lazy" decoding="async" style={{ width: '88%', height: '88%', objectFit: 'contain' }} />
-              ) : (
-                <span style={{ fontSize: '0.95rem', lineHeight: 1, color: '#c4a96a', display: 'flex' }}><IconCrate size={15} /></span>
-              )}
-            </div>
-          )
-        })}
+
+      {/* The strip itself. Scrolls rather than wraps, so the row can never grow taller. */}
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 4, overflowX: 'auto' }}>
+        {children}
       </div>
-      {/* Manage hint — closes the prep modal first (via onManage) then
-          fires 'expedition:open-loadout' so ShipHero's Loadout drawer
-          mounts on a clear stage. Dispatching the event without closing
-          this modal leaves the drawer rendering BEHIND the PopupShell
-          (PopupShell uses z-index 111+; the Loadout drawer sits lower),
-          which read as 'nothing happened' to the player. */}
-      <button type="button"
-        onClick={onManage}
-        className="font-karla font-700 uppercase"
-        style={{
-          flexShrink: 0,
-          fontSize: '0.5rem', letterSpacing: '0.12em',
-          color: accent, opacity: 0.85,
-          background: 'transparent', border: 'none', cursor: 'pointer',
-          padding: 0,
-          display: 'inline-flex', alignItems: 'center', gap: 3,
-        }}>
-        Manage <span style={{ fontSize: '0.75rem', lineHeight: 1 }}>›</span>
-      </button>
+
+      {href ? (
+        <a href={href} onClick={e => e.stopPropagation()} className="font-karla font-700 uppercase tracking-[0.08em]"
+          style={{ flexShrink: 0, fontSize: '0.55rem', color: accent, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+          Manage <span style={{ fontSize: '0.72rem', lineHeight: 1 }}>›</span>
+        </a>
+      ) : (
+        <button type="button" onClick={onManage} className="font-karla font-700 uppercase tracking-[0.08em]"
+          style={{ flexShrink: 0, fontSize: '0.55rem', color: accent, background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+          Manage <span style={{ fontSize: '0.72rem', lineHeight: 1 }}>›</span>
+        </button>
+      )}
     </div>
   )
 }
+
+/** A crew face, or a dashed hole where one should be. The captain wears a gold ring. */
+function PrepCrewDot({ card, captain }: { card: CrewMember | null; captain: boolean }) {
+  const SIZE = 26
+  const rc = card ? (CREW_RARITY_COLORS[card.rarity as 1 | 2 | 3 | 4] ?? '#6a6764') : '#6a6764'
+  const ring = card ? (captain ? '#f0c040' : rc) : (captain ? 'rgba(240,192,64,0.35)' : 'rgba(255,255,255,0.22)')
+  if (!card) {
+    return <div aria-label="Empty crew slot" style={{ flexShrink: 0, width: SIZE, height: SIZE, borderRadius: '50%', border: `1.5px dashed ${ring}`, background: 'rgba(6,9,16,0.4)' }} />
+  }
+  return (
+    <div title={captain ? `Captain: ${card.name}` : card.name} style={{ flexShrink: 0, width: SIZE, height: SIZE, borderRadius: '50%', overflow: 'hidden', border: `1.5px solid ${ring}`, background: 'rgba(6,9,16,0.85)' }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={CREW_IMG_BASE + card.filename} alt="" loading="lazy" decoding="async"
+        style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} />
+    </div>
+  )
+}
+
+/** An equipped item, or a dashed hole. */
+function PrepItemDot({ def }: { def: (typeof RAID_ITEMS)[number] | null }) {
+  const SIZE = 26
+  if (!def) {
+    return <div aria-label="Empty item slot" style={{ flexShrink: 0, width: SIZE, height: SIZE, borderRadius: 7, border: '1.5px dashed rgba(255,255,255,0.22)', background: 'rgba(6,9,16,0.4)' }} />
+  }
+  const rc = RARITY_COLOR[def.rarity] ?? '#9ca3af'
+  return (
+    <div title={def.name} style={{
+      flexShrink: 0, width: SIZE, height: SIZE, borderRadius: 7, overflow: 'hidden',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      border: `1.5px solid ${rc}77`, background: `${rc}18`,
+    }}>
+      {def.image
+        // eslint-disable-next-line @next/next/no-img-element
+        ? <img src={def.image} alt="" loading="lazy" decoding="async" style={{ width: '86%', height: '86%', objectFit: 'contain' }} />
+        : <span style={{ color: rc, display: 'flex' }}><IconCrate size={14} /></span>}
+    </div>
+  )
+}
+
 
 function PrepRow({ label, detail, ok, onClick, disabled }: {
   label: string
