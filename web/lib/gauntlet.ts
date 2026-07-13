@@ -1552,6 +1552,47 @@ export function eligibleConfluences(owned: Record<string, number>, taken: string
   return CONFLUENCES.filter(c => !t.has(c.id) && confluenceLevel(c, owned) >= 1)
 }
 
+/** What a boon offer would DO to your synergies, read BEFORE you pick it.
+ *
+ *  Two cases, and they're the whole strategy layer:
+ *    - 'unlocks' — you hold the other half, so taking this qualifies a synergy
+ *      you haven't drafted yet. It doesn't hand it to you (the confluence still
+ *      has to be drafted as its own card), but it makes it eligible, and the
+ *      pity rule in drawConfluenceOffer then guarantees it gets offered.
+ *    - 'deepens' — you've already drafted it and it's online. A confluence's
+ *      level is the LOWER of its two halves, so upgrading the weaker half levels
+ *      the synergy itself. Invisible until now, which meant nobody knew that
+ *      re-taking a half could be worth more than a fresh boon.
+ *
+ *  Pure read; drives the draft-card chips so a pick is a plan, not a surprise. */
+export interface ConfluenceHint {
+  c: Confluence
+  kind: 'unlocks' | 'deepens'
+  /** The level the confluence would sit at after taking this boon. */
+  level: number
+}
+export function confluenceHintsFor(
+  offer: { id: string; tier: number },
+  owned: Record<string, number>,
+  taken: string[] = [],
+): ConfluenceHint[] {
+  const t = new Set(taken)
+  const after = { ...owned, [offer.id]: Math.max(owned[offer.id] ?? 0, offer.tier) }
+  const out: ConfluenceHint[] = []
+  for (const c of CONFLUENCES) {
+    if (!c.requires.some(r => r.boonId === offer.id)) continue
+    const before = confluenceLevel(c, owned)
+    const next   = confluenceLevel(c, after)
+    if (next < 1) continue
+    if (!t.has(c.id)) {
+      if (before < 1) out.push({ c, kind: 'unlocks', level: next })
+    } else if (next > before) {
+      out.push({ c, kind: 'deepens', level: next })
+    }
+  }
+  return out
+}
+
 /** The player-facing summary for a confluence at a given level (defaults to its
  *  base/level-1 line, e.g. for the codex when not yet held). */
 export function confluenceDescAt(c: Confluence, level: number): string {

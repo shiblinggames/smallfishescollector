@@ -23,7 +23,7 @@ import {
   generateFight, advanceRollState, chestForDepth, gauntletXpForDepth,
   isCurseDepth, drawCurse, curseEffects, curseHpDrain, curseSilenceCount, curseTierLabel, GAUNTLET_CURSES,
   isBoonDepth, drawBoons, boonEffects, hpBoonMult, boonTierLabel, GAUNTLET_BOONS, BOON_RARITY_META, boonRarity,
-  confluenceEffects, activeConfluences, eligibleConfluences, drawConfluenceOffer, confluenceLevel, confluenceDescAt, CONFLUENCES, type Confluence, type ConfluenceOffer,
+  confluenceEffects, activeConfluences, eligibleConfluences, drawConfluenceOffer, confluenceLevel, confluenceDescAt, confluenceHintsFor, CONFLUENCES, type Confluence, type ConfluenceOffer,
   REPRIEVE_MIN_DEPTH, REPRIEVE_CHANCE, drawReprieve, type Reprieve,
   DROWNED_FILTER, bandForDepth, davyTaunt,
   GAUNTLET_COOLDOWN_HOURS, HARDCORE_RUNS_PER_DAY, HC_UNLOCK_DEPTH, GAUNTLET_REWARD_DEPTH_CAP,
@@ -2505,6 +2505,38 @@ export default function GauntletGame(props: GauntletGameProps) {
                       </span>
                     )}
                   </div>
+                  {/* Row 2.5 — SYNERGY STEER. What this pick does to your
+                      confluences, shown BEFORE you commit: 'unlocks' one you
+                      hold the other half of, or 'deepens' an online one by
+                      raising its weaker half. An undiscovered synergy stays
+                      fogged (you still get to steer; the reveal survives). */}
+                  {(() => {
+                    const hints = confluenceHintsFor(b, boonTiers, confluencesTaken)
+                    if (hints.length === 0) return null
+                    return (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 7 }}>
+                        {hints.map(h => {
+                          const known = seenConfluences.includes(h.c.id) || h.kind === 'deepens'
+                          const label = h.kind === 'deepens'
+                            ? `Deepens ${h.c.name} ${boonTierLabel(h.level)}`
+                            : known ? `Unlocks ${h.c.name}` : 'Unlocks a hidden synergy'
+                          return (
+                            <span key={h.c.id} className="font-karla font-700 uppercase"
+                              style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 4,
+                                fontSize: '0.5rem', letterSpacing: '0.1em',
+                                color: SYN, background: `${SYN}1c`, border: `1px solid ${SYN}77`,
+                                borderRadius: 999, padding: '0.16rem 0.5rem',
+                                boxShadow: `0 0 10px ${SYN}33`,
+                              }}>
+                              <span aria-hidden style={{ fontSize: '0.62rem', lineHeight: 1 }}>✦</span>
+                              {label}
+                            </span>
+                          )
+                        })}
+                      </div>
+                    )
+                  })()}
                   {/* Row 3 — flavor */}
                   <p className="font-karla" style={{ fontSize: '0.8rem', color: 'rgba(231,246,242,0.6)', lineHeight: 1.4, fontStyle: 'italic', marginTop: 6 }}>
                     {b.flavor}
