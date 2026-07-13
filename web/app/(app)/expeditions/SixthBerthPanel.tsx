@@ -6,7 +6,7 @@
 // Ship, right under the ultimate build. Three states: locked teaser (Sal Brackwater
 // not beaten), buyable, and installed.
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { buySixthBerth } from './actions'
@@ -29,21 +29,27 @@ export default function SixthBerthPanel({
   const [busy, setBusy] = useState(false)
   const [celebrate, setCelebrate] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  // Server prop, mirrored so the purchase can flip it optimistically. Resynced when the
+  // prop changes (a later refresh, another tab) so it can never drift.
+  const [installed, setInstalled] = useState(hasSixthBerth)
+  useEffect(() => { setInstalled(hasSixthBerth) }, [hasSixthBerth])
 
   // Nothing to show until Sal Brackwater falls (that clear is the reveal).
-  if (!blockadeCleared && !hasSixthBerth) return null
+  if (!blockadeCleared && !installed) return null
 
   const canAfford = doubloons >= SIXTH_BERTH_COST
 
   async function buy() {
-    if (busy) return
+    if (busy || installed) return
     setBusy(true); setErr(null)
     const res = await buySixthBerth()
     setBusy(false)
     if (!res.ok) { setErr(res.error ?? 'Could not add the crew slot.'); return }
-    vibrate([0, 45, 55, 90])
+    // Flip it OURSELVES. Waiting on the server prop was the whole bug.
+    setInstalled(true)
     setCelebrate(true)
     setConfirming(false)
+    vibrate([0, 45, 55, 90])
     if (typeof res.doubloons === 'number') window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
   }
 
@@ -56,14 +62,16 @@ export default function SixthBerthPanel({
     </>
   )
 
+  // ── Just bought it: the celebration, before anything else can steal the beat ──
+  if (celebrate) return (
+    <div style={{ marginBottom: '1.7rem' }}>
+      {HEADER}
+      <BerthCelebration crew={baseCrewSlots + 1} onDone={() => { setCelebrate(false); router.refresh() }} />
+    </div>
+  )
+
   // ── Installed ──────────────────────────────────────────────────────────────
-  if (hasSixthBerth) {
-    if (celebrate) return (
-      <div style={{ marginBottom: '1.7rem' }}>
-        {HEADER}
-        <BerthCelebration crew={baseCrewSlots + 1} onDone={() => { setCelebrate(false); router.refresh() }} />
-      </div>
-    )
+  if (installed) {
     return (
       <div style={{ marginBottom: '1.7rem' }}>
         {HEADER}
@@ -149,8 +157,11 @@ function BerthCelebration({ crew, onDone }: { crew: number; onDone: () => void }
           style={{ position: 'absolute', left: `${(i * 34) % 100}%`, bottom: 0, width: 4, height: 4, borderRadius: '50%', background: ACCENT, boxShadow: `0 0 8px ${ACCENT}` }} />
       ))}
       <div style={{ position: 'relative' }}>
-        <p className="font-karla font-700 uppercase tracking-[0.24em]" style={{ fontSize: '0.54rem', color: ACCENT, marginBottom: 8 }}>Berth Cut</p>
+        <p className="font-karla font-700 uppercase tracking-[0.24em]" style={{ fontSize: '0.54rem', color: ACCENT, marginBottom: 8 }}>Crew Slot Added</p>
         <p className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: '#f5f2ec', textShadow: `0 0 20px ${ACCENT}66`, marginBottom: 10 }}>A Crew of {crew}</p>
+        <p className="font-karla" style={{ fontSize: '0.74rem', color: '#c8bda8', lineHeight: 1.45, marginBottom: 12 }}>
+          The deck is re-framed and the sixth bunk is yours. One more crew, and one more ability, in every fight from here on.
+        </p>
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}><CrewGlyph n={crew} /></div>
         <button type="button" onClick={onDone}
           className="font-cinzel font-700 uppercase tracking-[0.16em] tap"

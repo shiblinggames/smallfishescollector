@@ -460,12 +460,12 @@ export async function buySixthBerth(): Promise<{ ok: boolean; error?: string; do
   const { data: profile } = await admin.from('profiles')
     .select('doubloons, has_sixth_berth').eq('id', user.id).single()
   if (!profile) return { ok: false, error: 'No profile.' }
-  if (profile.has_sixth_berth === true) return { ok: false, error: 'Your ship already carries the sixth berth.' }
+  if (profile.has_sixth_berth === true) return { ok: false, error: 'Your ship already has its sixth crew slot.' }
 
   // Gate: the berth reveals only once Sal Brackwater (Raid 7) is beaten.
   const { data: cleared } = await admin.from('raid_completions')
     .select('id').eq('user_id', user.id).eq('raid_id', 'the_blockade').limit(1).maybeSingle()
-  if (!cleared) return { ok: false, error: 'Beat Sal Brackwater before you can add a berth.' }
+  if (!cleared) return { ok: false, error: 'Beat Sal Brackwater before you can add a crew slot.' }
 
   const doubloons = (profile.doubloons as number | null) ?? 0
   if (doubloons < SIXTH_BERTH_COST) return { ok: false, error: `You need ${SIXTH_BERTH_COST.toLocaleString()} doubloons.` }
