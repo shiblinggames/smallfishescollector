@@ -15,7 +15,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { navRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
-import { termPressure, pressureGemMult, resolveTerms, getTerm, type SignedTerms } from '@/lib/gauntletTerms'
+import { termPressure, pressureGemMult, getTerm, type SignedTerms } from '@/lib/gauntletTerms'
 import { maxPotForDepth, chestForDepth, chestCannonDropChance, chestSkinDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_REWARD_DEPTH_CAP, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, gauntletXpForDepth, gauntletCrewXp, CONFLUENCES, hardcoreUnlocked, HARDCORE_LIVE, HARDCORE_UNLOCKS, HARDCORE_RUNS_PER_DAY, HC_FATHOMS_MULT, HC_SURVIVOR_XP_MULT, bloodGemsForDepth, coerceRunStats, type GauntletRunSnapshot, type GauntletRunState } from '@/lib/gauntlet'
 import { getGauntletUpgrade, isUpgradeComingSoon, gauntletHaulMult, gauntletXpMult, gauntletFathomsMult } from '@/lib/gauntletUpgrades'
 import { DAVY_FORGE } from '@/lib/raidItems'
@@ -494,10 +494,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   // still counts for the record / leaderboard / contest / Fathoms (cd below).
   const payDepth = Math.min(rd, GAUNTLET_REWARD_DEPTH_CAP)
   const cleanPot = Math.max(0, Math.min(Math.floor(pot), maxPotForDepth(payDepth)))
-  // Empty Lockers (a signed Term) downgrades the chest you earned. Read from the
-  // stored terms so the client can't opt out of its own handicap at payout time.
-  const preTerms = (profile.gauntlet_run_terms as SignedTerms | null) ?? null
-  const chest = chestForDepth(payDepth, hc ? resolveTerms(preTerms).chestTierDrop : 0)
+  const chest = chestForDepth(payDepth)
 
   // Run Upgrades (Locker, scope 'gauntlet') that sweeten the cash-out.
   const upgrades   = (profile.gauntlet_upgrades as string[] | null) ?? []

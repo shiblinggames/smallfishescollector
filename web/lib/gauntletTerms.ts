@@ -24,6 +24,8 @@
 // you to be BOTH deep AND heavy to get paid, which is the achievement worth
 // rewarding in the first place.
 
+import type { TideEffect } from './tides'
+
 export interface GauntletTermTier {
   /** One-line, plain: what changes. Reads on the card. */
   desc: string
@@ -31,12 +33,16 @@ export interface GauntletTermTier {
    *  able to read this and know exactly what they just signed up for. */
   detail: string
   /** Pressure this tier costs. Priced against how much it ACTUALLY hurts, not
-   *  how scary it sounds — the cheap information terms are worth 1, because a
-   *  good player barely notices them (the ToA min-max lesson). */
+   *  how scary it sounds (the ToA min-max lesson). */
   pressure: number
+  /** COMBAT effects, folded into the same TideEffect pipeline as boons/curses.
+   *  Most terms are structural (they reshape the run), but the SKILL terms are
+   *  honest combat modifiers — the distinction that matters is that a curse is
+   *  random and imposed, while a term is chosen. */
+  effects?: TideEffect[]
 }
 
-export type TermGroup = 'opposition' | 'crew' | 'build' | 'safety'
+export type TermGroup = 'opposition' | 'gunnery' | 'crew' | 'build' | 'safety'
 
 export interface GauntletTerm {
   id: string
@@ -49,6 +55,7 @@ export interface GauntletTerm {
 
 export const TERM_GROUP_META: Record<TermGroup, { label: string; blurb: string; accent: string }> = {
   opposition: { label: 'The Opposition', blurb: 'What Davy sends up at you.',            accent: '#e0555a' },
+  gunnery:    { label: 'Your Gunnery',   blurb: 'What your aim is worth. Shoot well, or do not shoot.', accent: '#f0c040' },
   crew:       { label: 'Your Crew',      blurb: 'The hands that answer his mechanics.',  accent: '#e0a44a' },
   build:      { label: 'Your Fortune',   blurb: 'What the descent offers you on the way down.', accent: '#8b7bf0' },
   safety:     { label: 'Your Safety Net', blurb: 'Everything that would have caught you.', accent: '#5eead4' },
@@ -102,6 +109,35 @@ export const GAUNTLET_TERMS: GauntletTerm[] = [
       { desc: 'Bosses are far tougher and hit far harder',
         detail: 'Every boss carries a great deal more hull and lands much heavier blows. A boss becomes the thing most likely to end your run.',
         pressure: 5 },
+    ],
+  },
+
+  {
+    id: 'crowned', name: 'Crowned', group: 'opposition',
+    flavor: 'He sets his own mark on every captain he sends up.',
+    tiers: [
+      { desc: 'Every boss carries an elite affix',
+        detail: 'Bosses have never carried affixes before. Now every one of them does: a random elite power (Warded, Vampiric, Frenzied, and the rest) stacked on top of everything a boss already is.',
+        pressure: 4 },
+      { desc: 'Every boss carries TWO elite affixes',
+        detail: 'Every boss comes crowned with two random elite powers at once, merged into a single monstrous captain. Bosses are already the most likely thing to end your run.',
+        pressure: 6 },
+    ],
+  },
+
+  // ── Your gunnery (skill) ──────────────────────────────────────────────────
+  {
+    id: 'nothing_but_gold', name: 'Nothing but Gold', group: 'gunnery',
+    flavor: 'A glancing blow is no blow at all. He only counts the clean ones.',
+    tiers: [
+      { desc: 'Anything that is not a CRIT deals 25% less damage',
+        detail: 'Only critical hits land at full strength. Every ordinary hit and graze is cut by a quarter, so the gold crit band on the aim bar is the whole game. Pure skill: hit it and lose nothing, miss it and bleed damage all run.',
+        pressure: 3,
+        effects: [{ kind: 'noncritDmgMult', mult: 0.75 }] },
+      { desc: 'Anything that is not a CRIT deals 50% less damage',
+        detail: 'Every hit that is not a critical does HALF damage. If you cannot find the gold band consistently, you will not out-damage anything down there.',
+        pressure: 6,
+        effects: [{ kind: 'noncritDmgMult', mult: 0.50 }] },
     ],
   },
 
@@ -165,19 +201,6 @@ export const GAUNTLET_TERMS: GauntletTerm[] = [
         pressure: 3 },
     ],
   },
-  {
-    id: 'empty_lockers', name: 'Empty Lockers', group: 'build',
-    flavor: 'He gets to the chests before you do.',
-    tiers: [
-      { desc: 'Cash-out chests drop one tier lower',
-        detail: 'The chest you open when you cash out is a full tier worse than the depth you reached has earned, which lowers your pot multiplier and your drop chances.',
-        pressure: 1 },
-      { desc: 'Cash-out chests drop two tiers lower',
-        detail: 'Your cash-out chest is two tiers worse than earned. A deep run gets a shallow run’s chest.',
-        pressure: 2 },
-    ],
-  },
-
   // ── Your safety net ───────────────────────────────────────────────────────
   {
     id: 'loose_tongue', name: 'Loose Tongue', group: 'safety',
@@ -218,6 +241,15 @@ export const GAUNTLET_TERMS: GauntletTerm[] = [
     tiers: [
       { desc: 'Reprieves never appear',
         detail: 'The relief offers that normally show up between fights (a heal, a curse shed, a second wind) never appear at all.',
+        pressure: 2 },
+    ],
+  },
+  {
+    id: 'full_measure', name: 'The Full Measure', group: 'safety',
+    flavor: 'He does not take half of anything.',
+    tiers: [
+      { desc: 'The Blood Price drops you to 1 hull instead of costing half',
+        detail: 'At a Drowned Shrine you can normally bleed HALF your hull onto the stone for an extra boon. Now that offering takes everything: it leaves you on 1 hull. The boon is still yours, if you can survive to use it.',
         pressure: 2 },
     ],
   },
@@ -304,6 +336,9 @@ export interface TermEffects {
    *  you back (bosses feed 3x into the pot and refresh every crew ability). */
   bossHpMult: number
   bossDmgMult: number
+  /** Crowned: how many random elite affixes a BOSS carries (0 = none, the way
+   *  bosses have always fought). */
+  bossAffixCount: number
   /** Chance a boss kill restores crew abilities (1 = always, today's behavior). */
   crewRefreshChance: number
   /** Crew slots removed for the run. */
@@ -316,8 +351,6 @@ export interface TermEffects {
   commonSkew: number
   /** Multiplies the chance a qualifying confluence is offered (0 = never). */
   confluenceOfferMult: number
-  /** Cash-out chest tiers dropped. */
-  chestTierDrop: number
   /** Multiplies how often curses are drawn. */
   curseFrequencyMult: number
   /** Curses land straight at tier 2. */
@@ -331,6 +364,9 @@ export interface TermEffects {
   noReprieves: boolean
   /** No peeking at the next fight. */
   noPeek: boolean
+  /** The Full Measure: a shrine's Blood Price leaves you on 1 hull rather than
+   *  taking half of what you have. */
+  bloodPriceToOne: boolean
 }
 
 export const NO_TERM_EFFECTS: TermEffects = {
@@ -341,19 +377,34 @@ export const NO_TERM_EFFECTS: TermEffects = {
   eliteDmgMult: 1,
   bossHpMult: 1,
   bossDmgMult: 1,
+  bossAffixCount: 0,
   crewRefreshChance: 1,
   crewSlotsLost: 0,
   boonPicks: 3,
   boonFrequencyMult: 1,
   commonSkew: 0,
   confluenceOfferMult: 1,
-  chestTierDrop: 0,
   curseFrequencyMult: 1,
   curseStartsAtWorst: false,
   maxHpPct: 1,
   noLethalSaves: false,
   noReprieves: false,
   noPeek: false,
+  bloodPriceToOne: false,
+}
+
+/** The COMBAT effects a signed board contributes (the skill terms). Folded into
+ *  the run's TideEffect list alongside boons, curses and confluences. */
+export function termTideEffects(signed: SignedTerms | null | undefined): TideEffect[] {
+  if (!signed) return []
+  const out: TideEffect[] = []
+  for (const [id, tier] of Object.entries(signed)) {
+    const t = getTerm(id)
+    if (!t || tier < 1) continue
+    const lvl = t.tiers[Math.min(tier, t.tiers.length) - 1]
+    if (lvl?.effects) out.push(...lvl.effects)
+  }
+  return out
 }
 
 /** Fold the signed terms into the one knob-set the run reads. */
@@ -387,6 +438,8 @@ export function resolveTerms(signed: SignedTerms | null | undefined): TermEffect
     e.bossDmgMult = court === 1 ? 1.15 : 1.3
   }
 
+  e.bossAffixCount = tierOf('crowned')
+
   const skel = tierOf('skeleton_crew')
   if (skel) e.crewRefreshChance = skel === 1 ? 0.6 : 0.3
 
@@ -404,9 +457,6 @@ export function resolveTerms(signed: SignedTerms | null | undefined): TermEffect
   const barren = tierOf('barren_tides')
   if (barren) e.commonSkew = barren === 1 ? 0.6 : 0.85
 
-  const lockers = tierOf('empty_lockers')
-  if (lockers) e.chestTierDrop = lockers
-
   const tongue = tierOf('loose_tongue')
   if (tongue) {
     e.curseFrequencyMult = tongue === 1 ? 1.5 : 1.9
@@ -416,6 +466,7 @@ export function resolveTerms(signed: SignedTerms | null | undefined): TermEffect
   const draft = tierOf('deep_draft')
   if (draft) e.maxHpPct = draft === 1 ? 0.85 : 0.70
 
+  if (tierOf('full_measure'))  e.bloodPriceToOne = true
   if (tierOf('no_mercy'))      e.noLethalSaves = true
   if (tierOf('no_quarter'))    e.noReprieves   = true
   if (tierOf('blind_descent')) e.noPeek        = true

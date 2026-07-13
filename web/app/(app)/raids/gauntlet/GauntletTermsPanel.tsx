@@ -57,7 +57,7 @@ export default function GauntletTermsPanel({
     onChange(next)
   }
 
-  const groups: TermGroup[] = ['opposition', 'crew', 'build', 'safety']
+  const groups: TermGroup[] = ['opposition', 'gunnery', 'crew', 'build', 'safety']
 
   if (typeof document === 'undefined') return null
 

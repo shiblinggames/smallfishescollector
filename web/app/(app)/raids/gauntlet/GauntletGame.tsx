@@ -31,7 +31,7 @@ import {
   emptyRunStats, addRunStats, coerceRunStats,
   type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot, type GauntletRunState, type GauntletRunStats,
 } from '@/lib/gauntlet'
-import { GAUNTLET_TERMS, TERM_GROUP_META, resolveTerms, termPressure, pressureGemMult, pressureDepthFactor, NO_TERM_EFFECTS, PRESSURE_CAP, PRESSURE_DEPTH_FLOOR, PRESSURE_DEPTH_FULL, MAX_AVAILABLE_PRESSURE, type SignedTerms } from '@/lib/gauntletTerms'
+import { GAUNTLET_TERMS, TERM_GROUP_META, resolveTerms, termPressure, termTideEffects, pressureGemMult, pressureDepthFactor, NO_TERM_EFFECTS, PRESSURE_CAP, PRESSURE_DEPTH_FLOOR, PRESSURE_DEPTH_FULL, MAX_AVAILABLE_PRESSURE, type SignedTerms } from '@/lib/gauntletTerms'
 import GauntletTermsPanel from './GauntletTermsPanel'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen, recordGauntletHit, wagerGauntletFathoms, markConfluencesSeen, checkpointGauntletRun, resumeGauntletRun, buyBaitWithFathoms } from './actions'
 import { FATHOM_BAITS } from '@/lib/bait'
@@ -432,6 +432,9 @@ export default function GauntletGame(props: GauntletGameProps) {
     ...boonEffects(boonTiers),
     ...confluenceEffects(boonTiers, confluencesTaken),
     ...curseEffects(curseTiers),
+    // Skill terms (Nothing but Gold) are honest combat modifiers, so they ride
+    // the same pipeline. Hardcore only — a normal dive never signs anything.
+    ...termTideEffects(hardcoreRun ? signedTerms : {}),
   ]
   // Base ceiling × the HP-scaling boons (Deep / Salvage / Reinforced Hull), read
   // off the current depth + hulls sunk. Grows across the run; the effect below
@@ -1029,8 +1032,10 @@ export default function GauntletGame(props: GauntletGameProps) {
     runEventsRef.current.push({ depth: rollStateRef.current.cleared + skipOffset, kind: 'shrine' })
     const draft = drawBoons(termFxRef.current.boonPicks, boonTiers, gauntletBoonLuck(upgrades), termFxRef.current.commonSkew)
     if (draft.length === 0) { setPhase('between'); return }
-    const cost = Math.max(1, Math.round(playerHPRef.current * SHRINE_BLOOD_HP_PCT))
-    const left = Math.max(1, playerHPRef.current - cost)
+    // The Full Measure (a signed Term): he does not take half of anything.
+    const left = termFxRef.current.bloodPriceToOne
+      ? 1
+      : Math.max(1, playerHPRef.current - Math.max(1, Math.round(playerHPRef.current * SHRINE_BLOOD_HP_PCT)))
     playerHPRef.current = left
     setPlayerHP(left)
     vibrate([0, 60, 30, 30])
@@ -1976,7 +1981,9 @@ export default function GauntletGame(props: GauntletGameProps) {
                   <span className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.12em', color: '#fca5a5', background: 'rgba(239,68,68,0.2)', border: '1px solid rgba(239,68,68,0.6)', borderRadius: 999, padding: '0.2rem 0.5rem' }}>Sure thing</span>
                 </div>
                 <p className="font-karla" style={{ fontSize: '0.78rem', color: '#d3b8b8', lineHeight: 1.45, marginTop: 6 }}>
-                  Bleed <strong style={{ color: '#fca5a5' }}>half your hull ({fmt(bloodCost)} HP)</strong> onto the stone and a power surfaces: an extra boon draft, here and now.
+                  {termFx.bloodPriceToOne
+                    ? <>Bleed <strong style={{ color: '#fca5a5' }}>everything but a single point of hull</strong> onto the stone and a power surfaces: an extra boon draft, here and now. You signed for this.</>
+                    : <>Bleed <strong style={{ color: '#fca5a5' }}>half your hull ({fmt(bloodCost)} HP)</strong> onto the stone and a power surfaces: an extra boon draft, here and now.</>}
                 </p>
               </motion.button>
 
@@ -2041,7 +2048,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     // at the cap; deeper is for the record + Fathoms.
     const payDepth = Math.min(cleared, GAUNTLET_REWARD_DEPTH_CAP)
     const pastPayCap = cleared >= GAUNTLET_REWARD_DEPTH_CAP
-    const chest = chestForDepth(payDepth, termFxRef.current.chestTierDrop)
+    const chest = chestForDepth(payDepth)
     const previewDoubloons = Math.round(pot * chest.potMult * props.classDoubloonMult)
     // Nav XP is on its own decoupled curve (not the pot) — mirror the server.
     const previewXp = Math.round(gauntletXpForDepth(payDepth) * chest.potMult)

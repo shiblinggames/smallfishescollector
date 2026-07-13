@@ -525,7 +525,16 @@ export function generateFight(state: GauntletRollState, skipOffset = 0, terms: T
           maxDmg: Math.max(2, Math.round(base.maxDmg * terms.bossDmgMult)),
         }
       : base
-    return { enemy, isBoss: true, isElite: false, potContribution: paying ? roundContribution(rewardDepth, true) : 0, depth }
+    // Crowned (a signed Term): bosses have never carried affixes. Now they can.
+    let bossAffix: AffixDef | undefined
+    if (terms.bossAffixCount > 0) {
+      const firstId = rollAffix()
+      bossAffix = AFFIXES[firstId]
+      if (terms.bossAffixCount > 1) {
+        bossAffix = mergeAffixes(bossAffix, AFFIXES[rollSecondAffix(firstId)])
+      }
+    }
+    return { enemy, isBoss: true, isElite: false, affix: bossAffix, potContribution: paying ? roundContribution(rewardDepth, true) : 0, depth }
   }
 
   // Mob — independent elite roll, chance scaling with depth. Press-Ganged (a
@@ -638,7 +647,7 @@ export const CHEST_TIERS: ChestTier[] = [
 export function chestForDepth(depth: number, tierDrop = 0): ChestTier {
   let chest = CHEST_TIERS[0]
   for (const c of CHEST_TIERS) if (depth >= c.minDepth) chest = c
-  // Empty Lockers (a signed Term): the chest you earned, downgraded.
+  // Generic downgrade hook (no live caller since the Empty Lockers term was cut).
   if (tierDrop > 0) {
     const idx = CHEST_TIERS.findIndex(c => c.tier === chest.tier)
     chest = CHEST_TIERS[Math.max(0, idx - tierDrop)]

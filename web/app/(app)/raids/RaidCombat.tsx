@@ -5314,7 +5314,7 @@ export default function RaidCombat({
             {/* Affix label sits under the name when elite — players see at
                 a glance what twist this elite has, and can tap into the
                 stats popup for the full description. */}
-            {isElite && affix && (
+            {affix && (
               <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', color: '#a78bfa', letterSpacing: '0.14em', marginBottom: 3 }}>
                 {affix.name}
               </p>
@@ -6841,7 +6841,7 @@ function EnemyStatsPopup({
             twist for THIS specific elite reads first. Uses the same shape
             as the ability card with a violet palette so the two feel
             sibling but distinct. */}
-        {isElite && affix && (
+        {affix && (
           <div style={{ marginBottom: 14 }}>
             <p className="font-karla font-700 uppercase" style={{ fontSize: '0.66rem', color: '#a78bfa', letterSpacing: '0.16em', marginBottom: 6 }}>
               Elite Affix
