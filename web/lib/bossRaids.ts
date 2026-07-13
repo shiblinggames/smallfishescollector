@@ -1395,7 +1395,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       pattern: ['fire', 'reload', 'dodge', 'fire', 'reload', 'fire', 'dodge', 'reload'],
       critChance: 0.12,
       zoneSpeedMult: 2.2,
-      image: '/enemychapter3brigantine.png',
+      image: '/enemychapter4brigantine.png',
       portrait: '/raid7_thescute.png',
     },
     bosun: {
@@ -1411,7 +1411,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       pattern: ['reload', 'fire', 'special', 'reload', 'volley', 'reload', 'fire', 'dodge'],
       critChance: 0.11,
       zoneSpeedMult: 2.3,
-      image: '/enemychapter3brigantine.png',
+      image: '/enemychapter4brigantine.png',
       portrait: '/raid7_thebank.png',
     },
     netter: {
@@ -1426,7 +1426,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       pattern: ['reload', 'special', 'fire', 'reload', 'volley', 'dodge', 'reload', 'fire'],
       critChance: 0.10,
       zoneSpeedMult: 2.4,
-      image: '/enemychapter3brigantine.png',
+      image: '/enemychapter4brigantine.png',
       portrait: '/raid7_themangrove.png',
     },
     chainman: {
@@ -1442,7 +1442,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       pattern: ['reload', 'fire', 'special', 'reload', 'fire', 'volley', 'dodge', 'reload'],
       critChance: 0.12,
       zoneSpeedMult: 2.5,
-      image: '/enemychapter3galleon.png',
+      image: '/enemychapter4galleon.png',
       portrait: '/raid7_therasp.png',
     },
     cracksman: {
@@ -1457,7 +1457,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       pattern: ['reload', 'reload', 'special', 'volley', 'reload', 'fire', 'volley', 'dodge'],
       critChance: 0.10,
       zoneSpeedMult: 2.6,
-      image: '/enemychapter3galleon.png',
+      image: '/enemychapter4galleon.png',
       portrait: '/raid7_thewedge.png',
     },
     purser: {
@@ -1473,7 +1473,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       pattern: ['special', 'reload', 'fire', 'reload', 'fire', 'volley', 'reload', 'dodge'],
       critChance: 0.12,
       zoneSpeedMult: 2.6,
-      image: '/enemychapter3galleon.png',
+      image: '/enemychapter4galleon.png',
       portrait: '/raid7_oldscar.png',
     },
     muzzle: {
@@ -1489,7 +1489,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       pattern: ['reload', 'special', 'fire', 'reload', 'fire', 'volley', 'reload', 'dodge'],
       critChance: 0.14,
       zoneSpeedMult: 2.7,
-      image: '/enemychapter3galleon.png',
+      image: '/enemychapter4galleon.png',
       portrait: '/raid7_themuzzle.png',
     },
     saltie: {
@@ -1540,7 +1540,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
           aegis: { name: 'The Last Wall', hitsToBreak: 6 } },
       ],
       zoneSpeedMult: 2.1,
-      image: '/enemychapter3man-o-war.png',
+      image: '/enemychapter4man-o-war.png',
       portrait: '/raid7_salbrackwater.png',
     },
   },
@@ -1548,6 +1548,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
   bossId: 'saltie',
   tides: { slots: [3, 6], maxTier: 2 },
   loot: [
+    { id: 'last_fathom_hull', label: 'Last Fathom Hull', image: null, emoji: '🚢', rarity: 'epic', weight: 8, shipSkinId: 'last_fathom_hull' },
     // Signature: the Chain-Shot Rack — the first player-applied STATUS item.
     { id: 'chain_shot',     label: 'Chain-Shot Rack', image: null, emoji: '⛓️', rarity: 'epic', weight: 16 },
     { id: 'doubloons_800',  label: '+800 ⟡',   image: '/smallpile.png',  emoji: '🪙',      rarity: 'common',   weight: 30 },
@@ -1599,7 +1600,7 @@ export const THE_THRONE: BossRaidConfig = {
       pattern: ['reload', 'fire', 'reload', 'reload', 'ultimate', 'dodge', 'reload', 'fire'],
       critChance: 0.12,
       zoneSpeedMult: 2.3,
-      image: '/enemychapter3brigantine.png',
+      image: '/enemychapter4brigantine.png',
       portrait: '/enemychapter3brigantine.png',
     },
     the_mirage: {
@@ -1612,7 +1613,7 @@ export const THE_THRONE: BossRaidConfig = {
       pattern: ['reload', 'special', 'fire', 'reload', 'dodge', 'fire', 'special', 'reload'],
       critChance: 0.12,
       zoneSpeedMult: 2.5,
-      image: '/enemychapter3brigantine.png',
+      image: '/enemychapter4brigantine.png',
       portrait: '/enemychapter3brigantine.png',
     },
     the_doorman: {
@@ -1625,7 +1626,7 @@ export const THE_THRONE: BossRaidConfig = {
       pattern: ['reload', 'special', 'reload', 'fire', 'volley', 'reload', 'special', 'fire'],
       critChance: 0.10,
       zoneSpeedMult: 2.2,
-      image: '/enemychapter3galleon.png',
+      image: '/enemychapter4galleon.png',
       portrait: '/enemychapter3galleon.png',
     },
     the_stormcaller: {
@@ -1638,7 +1639,7 @@ export const THE_THRONE: BossRaidConfig = {
       pattern: ['reload', 'special', 'fire', 'reload', 'fire', 'volley', 'dodge', 'reload'],
       critChance: 0.14,
       zoneSpeedMult: 2.6,
-      image: '/enemychapter3galleon.png',
+      image: '/enemychapter4galleon.png',
       portrait: '/enemychapter3galleon.png',
     },
     the_left_hand: {
@@ -1652,7 +1653,7 @@ export const THE_THRONE: BossRaidConfig = {
       pattern: ['reload', 'special', 'reload', 'reload', 'ultimate', 'fire', 'dodge', 'reload'],
       critChance: 0.14,
       zoneSpeedMult: 2.7,
-      image: '/enemychapter3galleon.png',
+      image: '/enemychapter4galleon.png',
       portrait: '/enemychapter3galleon.png',
     },
     the_consigliere: {
@@ -1666,7 +1667,7 @@ export const THE_THRONE: BossRaidConfig = {
       pattern: ['reload', 'special', 'reload', 'volley', 'reload', 'reload', 'ultimate', 'dodge'],
       critChance: 0.12,
       zoneSpeedMult: 2.5,
-      image: '/enemychapter3man-o-war.png',
+      image: '/enemychapter4man-o-war.png',
       portrait: '/enemychapter3man-o-war.png',
     },
     don_finleone: {
@@ -1759,7 +1760,7 @@ export const THE_THRONE: BossRaidConfig = {
           } },
       ],
       zoneSpeedMult: 2.4,
-      image: '/enemychapter3man-o-war.png',
+      image: '/enemychapter4man-o-war.png',
       portrait: '/enemychapter3man-o-war.png',
     },
   },
@@ -1767,6 +1768,7 @@ export const THE_THRONE: BossRaidConfig = {
   bossId: 'don_finleone',
   tides: { slots: [2, 5], maxTier: 2 },
   loot: [
+    { id: 'last_fathom_hull', label: 'Last Fathom Hull', image: null, emoji: '🚢', rarity: 'epic', weight: 8, shipSkinId: 'last_fathom_hull' },
     // Signature: the don's own ring — boss-killer legendary.
     { id: 'dons_signet',    label: 'The Don’s Signet', image: null, emoji: '💍', rarity: 'legendary', weight: 10 },
     { id: 'doubloons_800',  label: '+800 ⟡',   image: '/smallpile.png',  emoji: '🪙',      rarity: 'common',   weight: 28 },

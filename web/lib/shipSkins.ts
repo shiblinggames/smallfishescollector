@@ -85,6 +85,29 @@ export const SHIP_SKINS: ShipSkinDef[] = [
     },
   },
   {
+    // Chapter 4 shared trophy skin. Drops from BOTH The Blockade (raid 7) and The
+    // Throne (raid 8), the same way the Coffers Hull drops from raids 5 and 6.
+    //
+    // TIER-GATED AT THE BRIGANTINE (4), and unusually so: the Chapter 4 enemy fleet
+    // was only ever painted in three hulls (brigantine, galleon, man-o-war) because
+    // those are the only ships Don's escort sails. That means there is no rowboat or
+    // sloop art to fall back on. It is safe: by the Last Fathom nobody is still
+    // sailing anything under a brigantine, and requiresShipTier stops the skin being
+    // equipped onto a hull it has no sprite for.
+    id: 'last_fathom_hull',
+    name: 'Last Fathom Hull',
+    description: "The cold slate of the don's own escort, run out past the last sounding on any chart. Nothing that flies these colors expects to come back up.",
+    filter: 'none',
+    color: '#5c7a9c',
+    source: 'The Blockade + The Throne',
+    requiresShipTier: 4,
+    imageByTier: {
+      4: '/enemychapter4brigantine.png',
+      5: '/enemychapter4galleon.png',
+      6: '/enemychapter4man-o-war.png',
+    },
+  },
+  {
     // Man-o-War-only prestige skin — the first of the late-game tier-gated
     // hulls. A RARE drop from the Davy Jones' Locker chest (the top Gauntlet
     // chest, depth 18+). Painted for the Man-o-War alone, so it can't be

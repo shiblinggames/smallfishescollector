@@ -100,4 +100,5 @@ export const ITEM_GRANTS: Record<string, { doubloons?: number; gems?: number; sh
   finndicate_hull:         { shipSkin:  'finndicate_hull' },
   chartmaker_hull:         { shipSkin:  'chartmaker_hull' },
   coffers_hull:            { shipSkin:  'coffers_hull' },
+  last_fathom_hull:        { shipSkin:  'last_fathom_hull' },
 }
