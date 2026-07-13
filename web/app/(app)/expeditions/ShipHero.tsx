@@ -28,7 +28,9 @@ import { assignToVoyage, benchCrew } from '@/app/(app)/crew/actions'
 import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
 import { applyCrewEffects, resolveEffects, effectSummary, SCOPE_META } from '@/lib/crewEffects'
 import { RARITY_COLORS as CREW_RARITY_COLORS, RARITY_NAMES } from '@/lib/crewGen'
-import { RAID_ITEMS, getRaidItem, FORGE_RECIPES, conflictingRaidItems, isForgedRaidItem, cacheComponentsMissing } from '@/lib/raidItems'
+import { RAID_ITEMS, getRaidItem, FORGE_RECIPES, conflictingRaidItems, isForgedRaidItem } from '@/lib/raidItems'
+import { PRISMATIC_TEXT, PRISMATIC_TEXT_SOFT, prismaticBorder, prismaticBorderSoft } from '@/lib/prismatic'
+import ForgeBoard from './ForgeBoard'
 import { renameShip, buyShip } from '@/app/shipyard/actions'
 import { getXPProgress, navLevelBonuses, MAX_LEVEL, getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import { renownLevel, renownProgress, spentPoints, type RenownAlloc } from '@/lib/renown'
@@ -67,39 +69,6 @@ const RARITY_ITEM_COLOR: Record<string, string> = {
   rare:      '#60a5fa',
   epic:      '#a78bfa',
   legendary: '#f0c040',
-}
-
-// Prismatic (iridescent) treatment for forged combination items — deliberately
-// set apart from the flat rarity colors (epic purple / legendary orange). Used
-// on the item's border + name across the inventory and loadout.
-const PRISMATIC = 'linear-gradient(115deg, #ff6b8b 0%, #ffd36b 22%, #7be0a3 44%, #5fb3ff 66%, #c58bff 85%, #ff6b8b 100%)'
-// A gradient BORDER that keeps rounded corners: fill on padding-box, the
-// prismatic sweep on border-box, revealed through a transparent border.
-const prismaticBorder = (fill: string): CSSProperties => ({
-  background: `linear-gradient(${fill}, ${fill}) padding-box, ${PRISMATIC} border-box`,
-  border: '1.5px solid transparent',
-})
-const PRISMATIC_TEXT: CSSProperties = {
-  backgroundImage: PRISMATIC,
-  WebkitBackgroundClip: 'text',
-  backgroundClip: 'text',
-  color: 'transparent',
-}
-// Muted iridescence for the item treatment itself (inventory / loadout / forged
-// trophy cards) — a gentle sheen, not a loud rainbow. The bold PRISMATIC above
-// stays for the celebration moments + the Forge page title.
-const PRISMATIC_SOFT = 'linear-gradient(115deg, #d7aebb 0%, #ddcca6 26%, #abd0bd 52%, #a9c3dd 74%, #c4b2dc 100%)'
-const prismaticBorderSoft = (fill: string): CSSProperties => ({
-  background: `linear-gradient(${fill}, ${fill}) padding-box, ${PRISMATIC_SOFT} border-box`,
-  border: '1.5px solid transparent',
-})
-// Soft pearlescent text — pale so it reads clearly on dark, with only a hint of
-// color (much subtler than the full-saturation PRISMATIC_TEXT).
-const PRISMATIC_TEXT_SOFT: CSSProperties = {
-  backgroundImage: 'linear-gradient(105deg, #e6dcef, #dde9f4, #efe6d6)',
-  WebkitBackgroundClip: 'text',
-  backgroundClip: 'text',
-  color: 'transparent',
 }
 
 // Crew picker row — a compact, scannable list entry: small portrait + name +
@@ -1627,109 +1596,23 @@ export default function ShipHero({
                     A major unlock earned deep in the Davy Jones Gauntlet{forgeUpg ? `: reach depth ${forgeUpg.depthRequired}, then spend ${forgeUpg.cost} Fathoms.` : '.'} Then learn recipes here and fuse your rarest relics.
                   </p>
                 </div>
-              ) : (() => {
-                const forgedCount = FORGE_RECIPES.filter(r => ownedRaidItems.includes(r.result)).length
-                const total = FORGE_RECIPES.length
-                return (
-                  <>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.56rem', color: '#b9b2a6' }}>Forged <span style={{ color: '#ffce8a' }}>{forgedCount}</span> / {total}</span>
-                      <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.56rem', color: '#8fb6d6' }}>Fathoms · <span style={{ color: '#7fd0ff' }}>{fathomsNow}</span></span>
-                    </div>
-                    <div style={{ height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden', marginBottom: '1.2rem' }}>
-                      <div style={{ height: '100%', width: `${Math.round((forgedCount / total) * 100)}%`, borderRadius: 999, background: PRISMATIC, transition: 'width 0.4s ease' }} />
-                    </div>
-
-                    {FORGE_RECIPES.map(recipe => {
-                      const result = getRaidItem(recipe.result)
-                      if (!result) return null
-                      const comps = recipe.components.map(id => ({ id, def: getRaidItem(id), owned: ownedRaidItems.includes(id) }))
-                      const haveAll = comps.every(c => c.owned)
-                      const owned = ownedRaidItems.includes(recipe.result)
-                      const learned = learnedRecipes.includes(recipe.result)
-                      // Cache components not currently aboard. NOT a wall: the
-                      // Quartermaster's Ghost hands any of them back, including ones the
-                      // player took and then FORGED AWAY (fusing destroys the component,
-                      // which is how you can end up lacking an item you actually chose).
-                      // So this is a signpost telling them where to go.
-                      const missing = cacheComponentsMissing(recipe.components, ownedRaidItems)
-                      const missingById = new Map(missing.map(m => [m.id, m]))
-                      const armed = forgeArmed === recipe.result
-                      const busy = forging === recipe.result
-                      const cost = recipe.fathomCost
-                      const canAfford = fathomsNow >= cost
-                      const isLearning = learning === recipe.result
-                      const armedLearn = learnArmed === recipe.result
-                      const label = owned ? 'Forged' : (learned && haveAll) ? 'Ready to Forge' : learned ? 'Learned · Gather Parts' : 'Recipe · Locked'
-                      return (
-                        <div key={recipe.result} className="app-card" style={{ padding: '0.85rem', marginBottom: '0.9rem', display: 'flex', flexDirection: 'column', gap: 9, ...(owned ? prismaticBorderSoft('rgba(12,16,24,0.9)') : (learned && haveAll) ? { border: '1px solid rgba(232,200,121,0.5)', background: 'rgba(30,24,12,0.4)' } : { border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.03)', opacity: learned ? 1 : 0.9 }) }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', ...(owned ? prismaticBorderSoft('rgba(20,24,32,0.9)') : { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)' }) }}>
-                              {result.image
-                                // eslint-disable-next-line @next/next/no-img-element
-                                ? <img src={result.image} alt="" loading="lazy" decoding="async" style={{ width: 30, height: 30, objectFit: 'contain', opacity: owned ? 1 : 0.85 }} />
-                                : <span style={{ fontSize: '1.3rem', lineHeight: 1, opacity: owned ? 1 : 0.7, color: '#f5ecd6', display: 'flex' }}><IconCrate size={21} /></span>}
-                            </div>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.95rem', ...(owned ? PRISMATIC_TEXT_SOFT : { color: '#f5ecd6' }) }}>{result.name}</p>
-                              <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: owned ? '#c9a7ff' : (learned && haveAll) ? '#e8c879' : learned ? '#9ae6b4' : '#8fb6d6', marginTop: 2 }}>{label}</p>
-                            </div>
-                            {owned
-                              ? <span style={{ flexShrink: 0, width: 22, height: 22, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', ...prismaticBorderSoft('rgba(14,18,26,0.9)') }}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#e6d4ff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg></span>
-                              : !learned ? <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ flexShrink: 0, fontSize: '0.5rem', color: '#7fd0ff' }}>{cost} Fathoms</span>
-                              : <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ flexShrink: 0, fontSize: '0.5rem', color: '#9a8a5a' }}>{comps.filter(c => c.owned).length}/{comps.length}</span>}
-                          </div>
-
-                          <p className="font-karla" style={{ fontSize: '0.7rem', color: owned ? '#b8b0c8' : '#b0aaa0', lineHeight: 1.4 }}>{result.description}</p>
-
-                          {!owned && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 5, padding: '0.1rem 0' }}>
-                              {comps.map((c, i) => (
-                                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                                  <span style={{ width: 15, height: 15, borderRadius: '50%', flexShrink: 0, marginTop: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: c.owned ? 'rgba(127,212,154,0.18)' : 'rgba(255,255,255,0.05)', border: `1px solid ${c.owned ? 'rgba(127,212,154,0.6)' : 'rgba(255,255,255,0.18)'}` }}>
-                                    {c.owned ? <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#7fd49a" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg> : null}
-                                  </span>
-                                  <div style={{ flex: 1, minWidth: 0 }}>
-                                    <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: c.owned ? '#e0dccc' : missingById.has(c.id) ? '#caa05a' : '#8a8480' }}>{c.def?.name}</span>
-                                    {/* A Cache item you don't hold, whether you passed it over OR forged
-                                        it away, points at the Ghost. Anything else says where it drops. */}
-                                    {!c.owned && missingById.has(c.id) ? (
-                                      <p className="font-karla" style={{ fontSize: '0.58rem', color: '#caa05a', lineHeight: 1.3, marginTop: 1 }}>Not aboard. The Quartermaster&rsquo;s Ghost still holds it.</p>
-                                    ) : !c.owned && c.def?.source ? (
-                                      <p className="font-karla" style={{ fontSize: '0.58rem', color: '#7a9ec4', lineHeight: 1.3, marginTop: 1 }}>Find it: {c.def.source}</p>
-                                    ) : null}
-                                  </div>
-                                  <span className="font-karla font-600 uppercase tracking-[0.06em]" style={{ flexShrink: 0, fontSize: '0.5rem', color: c.owned ? '#7fd49a' : missingById.has(c.id) ? '#caa05a' : '#7a7470', marginTop: 1 }}>{c.owned ? 'Owned' : 'Needed'}</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* No recipe is unbuildable any more, so there is no blocked branch:
-                              every Cache component can be won back off the Quartermaster's
-                              Ghost, and the component rows above say so. Learn away. */}
-                          {owned ? null : !learned ? (
-                            <button type="button" onClick={() => onLearnTap(recipe.result, cost)} disabled={!canAfford || isLearning} className="font-cinzel font-700 uppercase tracking-[0.08em] tap"
-                              style={{ width: '100%', padding: '0.7rem', borderRadius: 11, fontSize: '0.78rem',
-                                background: !canAfford ? 'rgba(255,255,255,0.04)' : armedLearn ? 'linear-gradient(180deg, rgba(248,140,90,0.34), rgba(196,90,60,0.16))' : 'linear-gradient(180deg, rgba(127,208,255,0.26), rgba(90,150,196,0.12))',
-                                border: `1px solid ${!canAfford ? 'rgba(255,255,255,0.16)' : armedLearn ? 'rgba(248,140,90,0.7)' : 'rgba(127,208,255,0.55)'}`,
-                                color: !canAfford ? '#8a8480' : armedLearn ? '#ffd0b0' : '#cfeaff', cursor: (!canAfford || isLearning) ? 'default' : 'pointer' }}>
-                              {isLearning ? 'Learning…' : !canAfford ? `Need ${cost} Fathoms — you have ${fathomsNow}` : armedLearn ? `Spend ${cost} Fathoms — tap to confirm` : `Learn Recipe · ${cost} Fathoms`}
-                            </button>
-                          ) : haveAll ? (
-                            <button type="button" onClick={() => onForgeTap(recipe.result)} disabled={busy} className="font-cinzel font-700 uppercase tracking-[0.08em] tap"
-                              style={{ width: '100%', padding: '0.7rem', borderRadius: 11, fontSize: '0.78rem', background: armed ? 'linear-gradient(180deg, rgba(248,140,90,0.34), rgba(196,90,60,0.16))' : 'linear-gradient(180deg, rgba(232,200,121,0.3), rgba(196,169,106,0.14))', border: `1px solid ${armed ? 'rgba(248,140,90,0.7)' : 'rgba(232,200,121,0.6)'}`, color: armed ? '#ffd0b0' : '#f0d695', cursor: busy ? 'default' : 'pointer' }}>
-                              {busy ? 'Forging…' : armed ? 'Sacrifice components — tap to confirm' : `Forge ${result.name} →`}
-                            </button>
-                          ) : (
-                            <p className="font-karla" style={{ fontSize: '0.66rem', color: '#8a8480', lineHeight: 1.4, fontStyle: 'italic' }}>Recipe learned. Gather every component, then forge them here — the forge sacrifices them.</p>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </>
-                )
-              })()}
+              ) : (
+                /* The board. The forge is a CONTESTED GRAPH (17 recipes, 13
+                   components, 11 of them feeding 2+ recipes), so ForgeBoard leads
+                   with what you can forge NOW, then your parts and what each one
+                   can become, then the whole collection as a wall of medallions. */
+                <ForgeBoard
+                  ownedRaidItems={ownedRaidItems}
+                  learnedRecipes={learnedRecipes}
+                  fathomsNow={fathomsNow}
+                  forging={forging}
+                  forgeArmed={forgeArmed}
+                  learning={learning}
+                  learnArmed={learnArmed}
+                  onForgeTap={onForgeTap}
+                  onLearnTap={onLearnTap}
+                />
+              )}
 
               </>)}
 

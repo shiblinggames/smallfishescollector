@@ -666,6 +666,44 @@ export function getForgeRecipe(resultId: string): ForgeRecipe | undefined {
   return FORGE_RECIPES.find(r => r.result === resultId)
 }
 
+// ── THE FORGE IS A CONTESTED GRAPH, NOT A LIST ──────────────────────────────
+// 17 recipes draw on only 13 components, and 11 of those 13 feed two or more
+// recipes. Davy's Hand Cannon alone feeds four. Forging is DESTRUCTIVE, so
+// spending a shared component on one recipe silently closes off the others until
+// you refarm it. That trade IS the interesting decision in the forge, and a flat
+// list of recipes hides it completely. These let the UI put it front and center.
+
+/** Every distinct item that is a component of some recipe. */
+export function forgeComponentIds(): string[] {
+  return [...new Set(FORGE_RECIPES.flatMap(r => r.components))]
+}
+
+/** The recipes a given component feeds. */
+export function recipesUsingComponent(componentId: string): ForgeRecipe[] {
+  return FORGE_RECIPES.filter(r => r.components.includes(componentId))
+}
+
+/** What you GIVE UP by forging `resultId`: the other recipes its components feed,
+ *  which this forge would spend the parts for. Only counts recipes you could still
+ *  otherwise make (not ones already forged), because a path you have already walked
+ *  is not a path you are losing. */
+export function forgeOpportunityCost(
+  resultId: string,
+  ownedItems: string[],
+): { component: string; alsoFeeds: string[] }[] {
+  const recipe = getForgeRecipe(resultId)
+  if (!recipe) return []
+  const owned = new Set(ownedItems)
+  const out: { component: string; alsoFeeds: string[] }[] = []
+  for (const c of recipe.components) {
+    const alsoFeeds = recipesUsingComponent(c)
+      .filter(r => r.result !== resultId && !owned.has(r.result))
+      .map(r => r.result)
+    if (alsoFeeds.length > 0) out.push({ component: c, alsoFeeds })
+  }
+  return out
+}
+
 // Either/or campaign choices — the "pick one, and only once" Cache nodes in the
 // raid map (raidMap.ts node.choice). Taking one item means the other is gone for
 // good, so a recipe that needs the road-not-taken can never be completed. We use
