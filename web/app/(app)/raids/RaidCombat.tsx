@@ -90,9 +90,21 @@ const VOLLEY_COST = MAX_CHARGES
 // magazine (see pickEnemyAction) — holds the shot and braces, so "enemy at MAX
 // charges" stops being a guaranteed incoming fire the player can pre-dodge.
 const FEINT_CHANCE = 0.3
-// Chain-Shot Rack (Ch4 item, weaken_on_hit): the proc's fixed payload — the
-// item's `value` carries only the chance; magnitude/duration are tuned here.
+// The RACKS (Chain-Shot Rack, Langrage Rack) — the proc's fixed payload. The item's
+// `value` carries only the CHANCE; the magnitudes and durations are tuned here.
+//
+// A rack holds different rounds, so a proc fires a SPREAD: ONE roll lands every
+// status the equipped rack carries. That keeps a proc a real event you can read in
+// the log, rather than three separate coin flips, and it makes the legendary an
+// artillery piece instead of a slot machine.
+//
+// CORRODE is the interesting one. It amplifies damage to the enemy's BARRIER, and
+// Chapter 4 is the chapter that put a barrier on every enemy in the game. The rack
+// drops from the raid where barriers debut, so the raid that teaches you the wall
+// also hands you the thing that eats it.
 const CHAIN_SHOT_WEAKEN_PCT = 0.20
+const CHAIN_SHOT_CORRODE_PCT = 0.30
+const CHAIN_SHOT_FEEBLE_PCT = 0.20
 const CHAIN_SHOT_WEAKEN_TURNS = 2
 // Confluence guard-rails: Reaper's Tithe heal per kill is capped to this slice
 // of the PLAYER's max HP (so a big boss doesn't near-full-heal you); Hull
@@ -3768,12 +3780,28 @@ export default function RaidCombat({
               stepLines.push(tide.deepFreeze ? `Frozen shot! The ${enemy.name} locks in deep ice — its next two turns are frozen.` : `Frozen shot! The ${enemy.name} ices over — its next turn is frozen.`)
               procStatus = 'freeze'
             }
-            // Chain-Shot Rack (Ch4 status item) — a landed hit can WEAKEN the
-            // enemy through the shared status pipeline. Reapply refreshes.
-            const weakenChance = onHitEffects.filter(e => e.type === 'weaken_on_hit').reduce((a, e) => Math.max(a, e.value), 0)
-            if (weakenChance > 0 && procRoll(weakenChance)) {
-              applyEnemyStatus('weaken', CHAIN_SHOT_WEAKEN_PCT, CHAIN_SHOT_WEAKEN_TURNS)
-              stepLines.push(`Chain-shot! The ${enemy.name}'s rigging tears — Weakened (−${Math.round(CHAIN_SHOT_WEAKEN_PCT * 100)}% damage, ${CHAIN_SHOT_WEAKEN_TURNS} rounds).`)
+            // THE RACK — a landed hit fires a SPREAD. One roll, and every round the
+            // equipped rack carries lands together through the shared status pipeline.
+            // (Reapplying refreshes rather than stacking, per the status rules.)
+            const rackWeaken  = onHitEffects.filter(e => e.type === 'weaken_on_hit').reduce((a, e) => Math.max(a, e.value), 0)
+            const rackCorrode = onHitEffects.filter(e => e.type === 'corrode_on_hit').reduce((a, e) => Math.max(a, e.value), 0)
+            const rackFeeble  = onHitEffects.filter(e => e.type === 'feeble_on_hit').reduce((a, e) => Math.max(a, e.value), 0)
+            const rackChance  = Math.max(rackWeaken, rackCorrode, rackFeeble)
+            if (rackChance > 0 && procRoll(rackChance)) {
+              const landed: string[] = []
+              if (rackWeaken > 0) {
+                applyEnemyStatus('weaken', CHAIN_SHOT_WEAKEN_PCT, CHAIN_SHOT_WEAKEN_TURNS)
+                landed.push(`Weakened (−${Math.round(CHAIN_SHOT_WEAKEN_PCT * 100)}% damage)`)
+              }
+              if (rackCorrode > 0) {
+                applyEnemyStatus('corrode', CHAIN_SHOT_CORRODE_PCT, CHAIN_SHOT_WEAKEN_TURNS)
+                landed.push(`Corroded (barrier takes +${Math.round(CHAIN_SHOT_CORRODE_PCT * 100)}%)`)
+              }
+              if (rackFeeble > 0) {
+                applyEnemyStatus('feeble', CHAIN_SHOT_FEEBLE_PCT, CHAIN_SHOT_WEAKEN_TURNS)
+                landed.push(`Feeble (+${Math.round(CHAIN_SHOT_FEEBLE_PCT * 100)}% damage taken)`)
+              }
+              stepLines.push(`The rack fires! Scrap iron rips through the ${enemy.name} — ${landed.join(', ')}, ${CHAIN_SHOT_WEAKEN_TURNS} rounds.`)
             }
           }
           // Confluence "Thermal Shock" (Permafrost + Wildfire) — placed AFTER the

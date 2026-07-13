@@ -1549,8 +1549,12 @@ export const THE_BLOCKADE: BossRaidConfig = {
   tides: { slots: [3, 6], maxTier: 2 },
   loot: [
     { id: 'last_fathom_hull', label: 'Last Fathom Hull', image: null, emoji: '🚢', rarity: 'epic', weight: 8, shipSkinId: 'last_fathom_hull' },
-    // Signature: the Chain-Shot Rack — the first player-applied STATUS item.
-    { id: 'chain_shot',     label: 'Chain-Shot Rack', image: null, emoji: '⛓️', rarity: 'epic', weight: 16 },
+    // Signature: the Chain-Shot Rack — the first player-applied STATUS item — and
+    // the Langrage Rack as its legendary chase. Rare here; buildChallengeLoot lifts
+    // every legendary to a flat 10% in the challenge table, so the challenge run is
+    // where you actually farm it.
+    { id: 'chain_shot',     label: 'Chain-Shot Rack', image: null, emoji: '⛓️', rarity: 'epic',      weight: 16 },
+    { id: 'langrage_rack',  label: 'Langrage Rack',   image: null, emoji: '⛓️', rarity: 'legendary', weight: 5  },
     { id: 'doubloons_800',  label: '+800 ⟡',   image: '/smallpile.png',  emoji: '🪙',      rarity: 'common',   weight: 30 },
     { id: 'doubloons_1500', label: '+1,500 ⟡', image: '/dailybonus.png', emoji: '💰',      rarity: 'uncommon', weight: 22 },
     { id: 'gems_50',        label: '50 Gems',  image: null,              emoji: GEM_GLYPH, rarity: 'rare',     weight: 20 },

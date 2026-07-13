@@ -17,7 +17,15 @@ export type RaidEffectType =
   | 'crit_upgrade_chance'   // value = 0-1 chance for a normal HIT to upgrade to a CRITICAL. Stacks with the Keen Cutlass crew effect + any tide crit bonus.
   | 'reload_charge_chance'  // value = 0-1 chance, on each RELOAD, to load a SECOND cannonball (catch the wind). Folds on top of any tide reload proc.
   | 'lifesteal_pct'         // value = 0-1 fraction of the damage you deal that heals your hull (Davy's Blood Cannon). Stacks additively with the Leviathan's Hunger boon's lifesteal.
-  | 'weaken_on_hit'         // value = 0-1 chance, each landed player hit, to WEAKEN the enemy (Ch4 status pipeline: -20% damage dealt for 2 rounds; reapply refreshes).
+  // ── THE RACK — one roll, several rounds ───────────────────────────────────
+  // A chain-shot RACK holds different rounds, so a proc fires a SPREAD: a single
+  // roll lands every status the rack carries, rather than rolling each separately.
+  // The chance sits on each effect's `value` (the racks set them all the same, and
+  // combat takes the max as the one trigger); the magnitudes and durations are
+  // tuned in RaidCombat beside the other proc payloads.
+  | 'weaken_on_hit'         // value = 0-1 chance to WEAKEN the enemy (it deals less damage)
+  | 'corrode_on_hit'        // value = 0-1 chance to CORRODE it (its BARRIER takes amplified damage). The Ch4 answer to the Ch4 wall.
+  | 'feeble_on_hit'         // value = 0-1 chance to make it FEEBLE (it takes more damage). Legendary rack only.
 
 export interface RaidEffect {
   type: RaidEffectType
@@ -236,14 +244,35 @@ export const RAID_ITEMS: RaidItemDef[] = [
   {
     id: 'chain_shot',
     name: 'Chain-Shot Rack',
-    description: "Landed hits have a 25% chance to tear the enemy's rigging — WEAKENED: it deals 20% less damage for 2 rounds. Sal Brackwater's own answer, turned back on the Finndicate.",
+    description: "Landed hits have a 25% chance to fire a spread that tears both rigging and plating. WEAKENED: it deals 20% less damage. CORRODED: its barrier takes 30% more damage. Both for 2 rounds. Sal Brackwater's own answer, turned back on the Finndicate.",
     image: null,  // TODO: /chainshot.png at the art pass
     emoji: '⛓️',
     rarity: 'epic',
     effects: [
-      { type: 'weaken_on_hit', value: 0.25 },
+      { type: 'weaken_on_hit',  value: 0.25 },
+      { type: 'corrode_on_hit', value: 0.25 },
     ],
     source: 'The Blockade — Sal Brackwater',
+    family: 'chainshot',
+  },
+  {
+    // The legendary rack. Langrage is the real thing: scrap iron and nails packed
+    // loose and fired to shred rigging, plating and crew at once, which is exactly
+    // what this does. A genuine escalation of chain shot rather than an invented
+    // name. Same family as the Rack, so the two can never be run together.
+    id: 'langrage_rack',
+    name: 'Langrage Rack',
+    description: "Landed hits have a 35% chance to fire a spread of scrap iron. WEAKENED: it deals 20% less damage. CORRODED: its barrier takes 30% more damage. FEEBLE: it takes 20% more damage. All three, for 2 rounds. The full rack.",
+    image: null,  // TODO: /langragerack.png at the art pass
+    emoji: '⛓️',
+    rarity: 'legendary',
+    effects: [
+      { type: 'weaken_on_hit',  value: 0.35 },
+      { type: 'corrode_on_hit', value: 0.35 },
+      { type: 'feeble_on_hit',  value: 0.35 },
+    ],
+    source: 'The Blockade — Sal Brackwater',
+    family: 'chainshot',
   },
   {
     id: 'dons_signet',
