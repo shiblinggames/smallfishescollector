@@ -2890,7 +2890,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             background: `radial-gradient(ellipse 116% 96% at 50% 44%, transparent 56%, rgba(${gloomHue},${gloom}) 100%)` }} />
         )}
         <div className="gauntlet-depthbar" style={{ width: '100%', flexShrink: 0, marginBottom: 2 }}>
-          <DepthBar depth={fight.depth} pot={pot} isBoss={fight.isBoss} isElite={fight.isElite} affixName={fight.affix?.name} curses={Object.keys(curseTiers).length} isHardcore={hardcoreRun} potGain={potGain} uncharted={uncharted} pressure={hardcoreRun ? pressure : 0} />
+          <DepthBar depth={fight.depth} pot={pot} isBoss={fight.isBoss} isElite={fight.isElite} affixName={fight.affix?.name} curses={Object.keys(curseTiers).length} isHardcore={hardcoreRun} potGain={potGain} uncharted={uncharted} pressure={hardcoreRun ? pressure : 0} signedTerms={hardcoreRun ? signedTerms : {}} />
         </div>
         <div style={{ width: '100%' }}>
           <RaidCombat
@@ -4604,7 +4604,7 @@ function BackLink({ router, label, primary, onClick }: { router: ReturnType<type
   )
 }
 
-function DepthBar({ depth, pot, isBoss, isElite, affixName, curses, isHardcore, potGain, uncharted, pressure = 0 }: { depth: number; pot: number; isBoss: boolean; isElite: boolean; affixName?: string; curses: number; isHardcore?: boolean; potGain?: { amount: number; key: number; boss: boolean } | null; uncharted?: boolean; pressure?: number }) {
+function DepthBar({ depth, pot, isBoss, isElite, affixName, curses, isHardcore, potGain, uncharted, pressure = 0, signedTerms = {} }: { depth: number; pot: number; isBoss: boolean; isElite: boolean; affixName?: string; curses: number; isHardcore?: boolean; potGain?: { amount: number; key: number; boss: boolean } | null; uncharted?: boolean; pressure?: number; signedTerms?: SignedTerms }) {
   // The bar shows only the ESSENTIALS on one immovable row; tapping it opens
   // the detail panel (full affix names, exact pot, curse count, hardcore
   // note). Long dual-affix names + fat pots used to wrap the flex row and
@@ -4705,6 +4705,42 @@ function DepthBar({ depth, pot, isBoss, isElite, affixName, curses, isHardcore, 
             </p>
             {isHardcore && (
               <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#fca5a5' }}>Hardcore — your crew die for good if you sink.</p>
+            )}
+
+            {/* DAVY'S TERMS — the one-row bar only has space for the Pressure
+                number, so the full contract lives here: every term you signed,
+                at what tier, what it is doing to you, and what it is paying. */}
+            {pressure > 0 && (
+              <div style={{ marginTop: 4, paddingTop: 7, borderTop: '1px solid rgba(240,192,64,0.22)' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: GOLD }}>Davy&rsquo;s Terms</p>
+                  <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: GOLD, whiteSpace: 'nowrap' }}>
+                    {pressure} Pressure, ×{pressureGemMult(pressure, PRESSURE_DEPTH_FULL).toFixed(2)} gems
+                  </p>
+                </div>
+                <p className="font-karla" style={{ fontSize: '0.64rem', color: '#8a847a', marginTop: 2 }}>
+                  Full value from depth {PRESSURE_DEPTH_FULL}. You must cash out alive to collect.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 6 }}>
+                  {GAUNTLET_TERMS
+                    .filter(t => (signedTerms[t.id] ?? 0) >= 1)
+                    .map(t => {
+                      const tier = Math.min(signedTerms[t.id], t.tiers.length)
+                      const roman = ['', 'I', 'II', 'III'][tier]
+                      return (
+                        <div key={t.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+                          <span className="font-karla font-800" style={{ flexShrink: 0, fontSize: '0.56rem', color: '#1a0c0c', background: TERM_GROUP_META[t.group].accent, borderRadius: 999, padding: '0.1rem 0.34rem', marginTop: 1 }}>
+                            {roman}
+                          </span>
+                          <p className="font-karla" style={{ flex: 1, minWidth: 0, fontSize: '0.68rem', color: '#d8d0c4', lineHeight: 1.35 }}>
+                            <span className="font-700" style={{ color: '#f0e6d8' }}>{t.name}</span>
+                            <span style={{ color: '#8a847a' }}> {t.tiers[tier - 1].desc}</span>
+                          </p>
+                        </div>
+                      )
+                    })}
+                </div>
+              </div>
             )}
           </div>
         </div>
