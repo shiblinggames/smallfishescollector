@@ -1741,14 +1741,14 @@ export const RAID_MAP: RaidNode[] = [
       ctaLabel: 'Pick a class',
     },
   },
-  // ── Chapter IV — The Last Fathom (UNDER CONSTRUCTION, all adminOnly) ──────
+  // ── Chapter IV — The Last Fathom. FIRST HALF IS LIVE (through the sixth crew
+  //    slot). Raid 8 and everything after it stays adminOnly until it ships. ─────
   {
     id: 'throne_heading',   type: 'story',
     label: 'The Deepest Water',
     flavor: "The Coffers burn behind you and every ledger points one way: down, past the last sounding on any chart, to the seat Don Finleone rules from. The deepest water there is — and nothing waits past it.",
     bridge: "The heading is set for the don's own water. And the Quartermaster's seized stock sails with you — a vault of everything he never sold you.",
     requiresNode: 'chapter_3_class',
-    adminOnly: true,
     image: '/raidlog.png',
     scene: [
       { text: 'The Coffers burn low behind you, and the sea ahead runs out of chart.' },
@@ -1785,7 +1785,6 @@ export const RAID_MAP: RaidNode[] = [
     // branch; putting him in the main chain would force every captain through the
     // Quartermaster's challenge run to finish the chapter.
     requiresNode: 'throne_heading',
-    adminOnly: true,
     puzzle: {
       kind: 'cargo',
       rewardNavXp: 900,
@@ -1844,7 +1843,6 @@ export const RAID_MAP: RaidNode[] = [
     flavor: "A cutter comes alongside before the line will part, and a clerk with a wet ledger counts your crew like livestock. He is not looking for guns. He is looking for hands that can do something when the shooting starts.",
     bridge: 'The clerk closes his ledger, unimpressed but satisfied. The line parts.',
     requiresNode: 'throne_locks',
-    adminOnly: true,
     muster: {
       minCrew: 5,
       // Real data: every captain who can reach this node (Nav 56) runs a raid crew
@@ -1888,7 +1886,6 @@ export const RAID_MAP: RaidNode[] = [
     // holding, because that is the entire reason to go and beat it. Sealing him shut
     // would hide the carrot behind the stick.
     previewWhenLocked: true,
-    adminOnly: true,
     route: '/raids/ghost',
     raidId: THE_QUARTERMASTERS_GHOST.raidId,
     image: THE_QUARTERMASTERS_GHOST.enemies.ghost.portrait,
@@ -1911,7 +1908,6 @@ export const RAID_MAP: RaidNode[] = [
     flavor: 'Something long and low lies on the mud bar off the point. The lookout calls it a fallen spar and goes back to his knots. It is still there an hour later, in exactly the same place, and it has not moved once.',
     bridge: 'The spar was not a spar. It was waiting, and it was in no hurry at all.',
     requiresNode: 'blockade_muster',
-    adminOnly: true,
     scene: [
       { text: 'The lookout calls a spar on the mud bar off the point. Half-sunk, barnacled, drifted down from some wreck upriver. Nobody looks twice.' },
       { text: 'An hour on, the bosun notices it is still there. Same bar. Same angle. The tide has moved a foot and a half in that time and the spar has not moved at all.' },
@@ -1934,7 +1930,6 @@ export const RAID_MAP: RaidNode[] = [
     bridge: "The blockade breaks and Sal Brackwater goes under it. The way to the don's own water lies open — and his books ride in your hold.",
     requiresNode: 'thing_on_the_bar',
     requiresNavLevel: 56,
-    adminOnly: true,
     route: '/raids/blockade',
     raidId: THE_BLOCKADE.raidId,
     image: THE_BLOCKADE.enemies.saltie.portrait,
@@ -1952,7 +1947,6 @@ export const RAID_MAP: RaidNode[] = [
     label: 'Challenge: The Blockade',
     flavor: "The blockade re-forms, heavier at every post. Sal Brackwater does not hold a line twice — he buries it.",
     requiresNode: 'the_blockade',
-    adminOnly: true,
     route: '/raids/blockade/challenge',
     raidId: THE_BLOCKADE_CHALLENGE.raidId,
     sideBranch: { parentId: 'the_blockade' },
@@ -1981,7 +1975,6 @@ export const RAID_MAP: RaidNode[] = [
     flavor: "He came apart along the grain, the way he tore everything else apart, and his hull showed you its bones on the way down. Six berths framed into a deck that had no business carrying more than five. Nobody does that by accident.",
     bridge: 'The plans are in your chart locker and your carpenters have stopped arguing about whether it can be done. Six, if you want to pay for it.',
     requiresNode: 'the_blockade',
-    adminOnly: true,
     berth: { price: SIXTH_BERTH_COST },
     detail: {
       description:
