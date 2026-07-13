@@ -365,8 +365,13 @@ export interface BossRaidConfig {
    *    - overcast : Krust's open ocean past the Bilge Strait (cold steel-gray, thick clouds, no sun)
    *    - fog      : The Cartographer's Sounding Fog (washed-out gray, dim sun, drifting mist bands)
    *    - harbor   : The Coffers' drowned black-market port (sickly green overcast, gun-smoke haze, black water)
-   *    - vault    : The Quartermaster's lantern-lit gun-deck (deep indigo storm-dark, warm gold lamp glow) */
-  atmosphere?: 'dusk' | 'sunset' | 'overcast' | 'fog' | 'harbor' | 'vault'
+   *    - vault    : The Quartermaster's lantern-lit gun-deck (deep indigo storm-dark, warm gold lamp glow)
+   *    - brackwater: Sal Brackwater's estuary, where the salt meets the fresh. Tannin-brown
+   *                 water under a low bronze haze, silt in the air, mangrove dark on the
+   *                 horizon. The water is DEAD FLAT and nothing moves on it, because that
+   *                 is the whole tell: when the chop goes out of the water, he is already
+   *                 deciding. No sun-glitter, no chop, no reflection to speak of. */
+  atmosphere?: 'dusk' | 'sunset' | 'overcast' | 'fog' | 'harbor' | 'vault' | 'brackwater'
   /** Optional dialogue sequence shown right before the boss fight starts.
    *  Tap to advance each line; the last line's button is "Engage" which
    *  closes the modal and mounts the combat. */
@@ -1406,7 +1411,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
   enemyAccuracy: 34,
   raidTitle: 'The Blockade',
   bossDefeatedText: 'Sal Brackwater Defeated',
-  atmosphere: 'overcast',   // placeholder — bespoke Last-Fathom palette at polish
+  atmosphere: 'brackwater',   // Sal's estuary: flat brown water, bronze haze, nothing moving
   enemies: {
     picket: {
       // THE SCUTE — the shield TEACHER. A scute is the bone plate grown into a

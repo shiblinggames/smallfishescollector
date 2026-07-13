@@ -456,7 +456,7 @@ export interface RaidCombatProps {
    *  the same look. Default ('dusk' / undefined) keeps the original
    *  warm seascape — used by the practice skirmish and any legacy
    *  caller that doesn't set the field. */
-  atmosphere?: 'dusk' | 'sunset' | 'overcast' | 'fog' | 'harbor' | 'vault'
+  atmosphere?: 'dusk' | 'sunset' | 'overcast' | 'fog' | 'harbor' | 'vault' | 'brackwater'
   /** Crew abilities pipeline. crewMembers carries id/slug/xp/name/portrait
    *  so RaidCombat can derive each crew's class + current milestone via
    *  lib/crewClasses. usedAbilityIds is the per-raid cooldown owned by
@@ -4824,6 +4824,7 @@ export default function RaidCombat({
           atmosphere === 'overcast' ? 'linear-gradient(180deg, #38485a 0%, #485868 30%, #546675 40%, #0a121a 100%)' :
           atmosphere === 'harbor'   ? 'linear-gradient(180deg, #2b3f39 0%, #35514a 28%, #3d5e54 40%, #071310 100%)' :
           atmosphere === 'vault'    ? 'linear-gradient(180deg, #0e1330 0%, #171d42 30%, #1e234e 40%, #04050e 100%)' :
+          atmosphere === 'brackwater' ? 'linear-gradient(180deg, #2b2a1e 0%, #454029 26%, #5c5133 40%, #100f08 100%)' :
                                       'linear-gradient(180deg, #1e3a5f 0%, #234567 30%, #2a5274 40%, #0a1c2e 100%)',
         overflow: 'hidden',
       }}>
@@ -5037,6 +5038,68 @@ export default function RaidCombat({
             <div aria-hidden style={{ position: 'absolute', top: '42%', left: '-40%', width: '180%', height: 34, pointerEvents: 'none' }}>
               <div className="raid-fog-slow" style={{ width: '100%', height: '100%', background: 'linear-gradient(90deg, transparent 0%, rgba(110,124,114,0.16) 30%, rgba(130,142,128,0.22) 50%, rgba(110,124,114,0.16) 70%, transparent 100%)', filter: 'blur(6px)' }} />
             </div>
+          </>
+        ) : atmosphere === 'brackwater' ? (
+          <>
+            {/* SAL BRACKWATER'S ESTUARY — where the salt meets the fresh. Tannin-brown
+                water under a low bronze haze, silt hanging in the air, mangrove dark on
+                the horizon.
+                The one thing this palette is FOR: the water is dead flat. No chop, no
+                glitter, no reflection worth the name. Every other raid's sea moves. This
+                one does not, and that is his tell told in paint. */}
+
+            {/* Silt haze pressing down. Heavier and lower than a storm cap: this is air
+                you can taste. */}
+            <div aria-hidden style={{
+              position: 'absolute', top: 0, left: 0, right: 0, height: '30%',
+              background: 'linear-gradient(180deg, rgba(38,34,20,0.62) 0%, rgba(66,58,32,0.30) 55%, transparent 100%)',
+              filter: 'blur(3px)', pointerEvents: 'none',
+            }} />
+
+            {/* The sun, smothered. A copper coin behind the haze — you can look straight
+                at it, which is never a good sign. */}
+            <div className="raid-sun" aria-hidden style={{
+              position: 'absolute', top: '20%', left: '18%',
+              width: 76, height: 76, borderRadius: '50%',
+              background: 'radial-gradient(circle at 50% 50%, rgba(226,168,88,0.42) 0%, rgba(186,132,64,0.22) 38%, rgba(120,92,44,0.08) 66%, transparent 88%)',
+              filter: 'blur(3px)', pointerEvents: 'none',
+            }} />
+
+            {/* Low brown cloud, dragging. */}
+            <div aria-hidden style={{ position: 'absolute', top: '12%', left: 0, right: 0, height: 32, pointerEvents: 'none' }}>
+              <div className="raid-cloud-slow" style={{ width: 176, height: 30, borderRadius: 15, background: 'radial-gradient(ellipse at 50% 55%, rgba(74,64,38,0.40) 0%, rgba(52,46,28,0.20) 52%, transparent 80%)', filter: 'blur(2px)' }} />
+            </div>
+            <div aria-hidden style={{ position: 'absolute', top: '22%', left: 0, right: 0, height: 26, pointerEvents: 'none' }}>
+              <div className="raid-cloud" style={{ width: 140, height: 24, borderRadius: 12, background: 'radial-gradient(ellipse at 50% 55%, rgba(64,56,34,0.30) 0%, transparent 76%)', filter: 'blur(2px)' }} />
+            </div>
+
+            {/* MANGROVE LINE on the horizon — a low, ragged dark band. Sal's country.
+                Not a silhouette anyone has to read; just a wrongness at the edge. */}
+            <div aria-hidden style={{
+              position: 'absolute', left: 0, right: 0, top: '36%', height: 10,
+              background: 'repeating-linear-gradient(90deg, rgba(22,26,16,0.85) 0px, rgba(22,26,16,0.85) 7px, rgba(30,34,20,0.55) 7px, rgba(30,34,20,0.55) 13px, rgba(16,20,12,0.9) 13px, rgba(16,20,12,0.9) 22px)',
+              filter: 'blur(1.2px)', pointerEvents: 'none',
+            }} />
+
+            {/* Horizon + the water itself. Opaque with silt, so nothing sits ON it and
+                nothing shows THROUGH it. You cannot see what is under this. */}
+            <div style={{
+              position: 'absolute', left: 0, right: 0, top: '38%', height: 1,
+              background: 'rgba(198,160,96,0.14)', boxShadow: '0 0 22px rgba(160,124,64,0.16)',
+            }} />
+            <div style={{
+              position: 'absolute', left: 0, right: 0, top: '38%', bottom: 0,
+              background: 'linear-gradient(180deg, rgba(58,48,26,0.72) 0%, rgba(30,26,14,0.90) 40%, rgba(12,11,6,0.97) 100%)',
+            }} />
+
+            {/* The only thing on the water: a thin skin of mist lying on it, going nowhere.
+                Deliberately NOT the drifting fog bands the fog palette uses — that fog
+                travels. This just sits there, the way he does. */}
+            <div aria-hidden style={{
+              position: 'absolute', left: 0, right: 0, top: '38%', height: '9%',
+              background: 'linear-gradient(180deg, rgba(180,160,110,0.13) 0%, rgba(150,132,88,0.05) 60%, transparent 100%)',
+              filter: 'blur(4px)', pointerEvents: 'none',
+            }} />
           </>
         ) : atmosphere === 'vault' ? (
           <>
