@@ -322,6 +322,15 @@ export interface RaidNode {
    *  Quartermaster's Ghost sits in Chapter IV but only opens once you have put the
    *  Quartermaster down in his CHALLENGE run). Both must be cleared. */
   requiresClearedNode?: string
+  /** Locked, but still OPENABLE. A locked node is normally inert: tapping it does
+   *  nothing and its sheet never opens. That is right for the story chain, where a
+   *  locked node is just the next thing you have not reached. It is wrong for a node
+   *  whose whole job is to be a GOAL, because hiding what it holds also hides the
+   *  reason to go and earn it. Set this and the token stays tappable while locked:
+   *  the sheet opens, shows the wares, and says plainly what stands in the way.
+   *  Entering is still refused (the CTA reads Locked, and the route re-checks the
+   *  gate server-side). */
+  previewWhenLocked?: boolean
   /** Optional extra gate: minimum Navigation level. */
   requiresNavLevel?: number
   /** combat: route to the existing combat screen. */
@@ -1760,6 +1769,11 @@ export const RAID_MAP: RaidNode[] = [
     bridge: "The ghost keeps his counter open. Whatever you left in the Caches, and whatever you have melted down since, he still has it, and he will hand it over as many times as you can put him down.",
     requiresNode: 'throne_heading',
     requiresClearedNode: 'the_quartermaster_challenge',
+    // He is a GOAL, not a wall. A captain who has not yet beaten the Quartermaster's
+    // challenge should still be able to open him up and see the six Cache items he is
+    // holding, because that is the entire reason to go and beat it. Sealing him shut
+    // would hide the carrot behind the stick.
+    previewWhenLocked: true,
     adminOnly: true,
     route: '/raids/ghost',
     raidId: THE_QUARTERMASTERS_GHOST.raidId,

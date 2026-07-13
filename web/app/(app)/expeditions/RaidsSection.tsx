@@ -403,7 +403,11 @@ function RaidMap({
         const cleared = status === 'cleared'
         // Ship sunk: no entering any combat node until it's repaired.
         const raidBlocked = repairOwed > 0 && isCombatNode(node.type)
-        const interactive = !locked && !raidBlocked
+        // A locked node is normally inert. `previewWhenLocked` nodes are the exception:
+        // they exist to be worked TOWARD, so they stay tappable and their sheet opens to
+        // show what they hold and what is blocking it. The sheet's CTA still reads
+        // Locked, and the route re-checks the gate on the server.
+        const interactive = (!locked || node.previewWhenLocked === true) && !raidBlocked
         const isCurrent = i === currentIdx
         // Labels live UNDER the token now (was beside) — map-pin style.
         // Only the current available main-chain node ("you are here / next
