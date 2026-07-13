@@ -32,6 +32,7 @@
 // turn). Handled in RaidCombat via playerBurnRef / playerFrozenRef.
 
 export type AffixId =
+  | 'ledger'
   | 'ironclad'
   | 'vampiric'
   | 'volatile'
@@ -112,6 +113,35 @@ export interface AffixDef {
 }
 
 export const AFFIXES: Record<AffixId, AffixDef> = {
+  // ── THE LEDGER — the Quartermaster's Ghost, and his alone ────────────────
+  // He is a dead quartermaster who never stopped holding what you left in the
+  // Caches and what you melted down in the forge. So he FIGHTS WITH IT. Every
+  // number below is one of the six Cache items he drops, turned around on you:
+  //
+  //   Incendiary Cannonball   -> burnChance     (he sets you alight)
+  //   Frozen Cannonball       -> freezeChance   (he freezes you out of a turn)
+  //   Gunner's Sight          -> critMult       (his crits double up)
+  //   Reinforced Hull         -> shieldPctMaxHp (he comes in behind a barrier)
+  //   Navigator's Compass     -> speedBonus     (he takes the first turn)
+  //
+  // The sixth, the Quartermaster's Anchor, is not an affix: it is his phase.
+  // He takes a killing blow and refuses to sink, exactly like the item does for
+  // you (see THE_QUARTERMASTERS_GHOST.phases in lib/bossRaids).
+  //
+  // The burn and freeze rates are the ITEMS' rates (15%), not the Scorching and
+  // Glacial affixes' louder 20% — he is carrying your gear, not a monster's.
+  //
+  // NOT in ALL_AFFIX_IDS: this is authored onto one boss and must never turn up
+  // on a random elite. See BESPOKE_AFFIX_IDS below.
+  ledger: {
+    id: 'ledger', name: 'The Ledger',
+    description: 'He fights with everything he is still holding: your fire, your ice, your sights, your plating, your bearings. Take them back and he cannot use them on you again.',
+    burnChance:      0.15,   // Incendiary Cannonball
+    freezeChance:    0.15,   // Frozen Cannonball
+    critMult:        2,      // Gunner's Sight
+    shieldPctMaxHp:  0.15,   // Reinforced Hull
+    speedBonus:      5,      // Navigator's Compass
+  },
   ironclad: {
     id: 'ironclad', name: 'Ironclad',
     description: '50% chance to soak 30% off your shot.',
@@ -184,7 +214,14 @@ export const AFFIXES: Record<AffixId, AffixDef> = {
   },
 }
 
-export const ALL_AFFIX_IDS: AffixId[] = Object.keys(AFFIXES) as AffixId[]
+/** Affixes authored onto ONE specific enemy as its signature. They live in AFFIXES
+ *  so combat and the UI can resolve them like any other, but they are held out of
+ *  the random pool: rolling "The Ledger" onto some anonymous elite would be
+ *  nonsense, and would quietly hand it five effects at once. */
+const BESPOKE_AFFIX_IDS = new Set<AffixId>(['ledger'])
+
+export const ALL_AFFIX_IDS: AffixId[] =
+  (Object.keys(AFFIXES) as AffixId[]).filter(id => !BESPOKE_AFFIX_IDS.has(id))
 
 /** Elite multipliers on top of whatever the challenge-mode scaling already
  *  applied. The affix is the headline twist for an elite; these multipliers

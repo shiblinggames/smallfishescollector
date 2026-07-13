@@ -1101,12 +1101,24 @@ export const THE_QUARTERMASTERS_GHOST: BossRaidConfig = {
   atmosphere: 'vault',   // his own lantern-lit gun-deck, and he never left it
   enemies: {
     ghost: {
-      id: 'ghost', name: "The Quartermaster's Ghost", hpBase: 760, minDmg: 30, maxDmg: 50,
+      id: 'ghost', name: "The Quartermaster's Ghost", hpBase: 620, minDmg: 26, maxDmg: 44,
       shipSpeed: 9, actionMs: 3600,
-      // Hits HARD and fast rather than long. No phases: a farm boss that takes
-      // four bars to put down stops being a farm.
       pattern: ['reload', 'fire', 'volley', 'dodge', 'reload', 'fire', 'fire', 'dodge', 'reload', 'volley'],
       critChance: 0.16,
+      // SIGNATURE: The Ledger. He fights with the six Cache items he is holding —
+      // your fire, your ice, your sights, your plating, your bearings — all turned
+      // on you. See AFFIXES.ledger. The hull is DELIBERATELY light (620, under the
+      // Hammerhead's 700) because the barrier and the phase below already add a
+      // third again on top: he is a farm boss and has to stay brisk.
+      affix: 'ledger',
+      // The sixth item. The Quartermaster's Anchor lets YOU survive one killing
+      // blow, so of course it lets him. He takes the shot, refuses to sink, and
+      // comes back up. One phase only: any more and the grind stops being one.
+      phases: [
+        { revivePct: 0.18, damageMult: 1.1, badge: 'The Anchor',
+          pattern: ['fire', 'volley', 'dodge', 'reload', 'fire', 'fire', 'reload', 'volley'],
+          dialogueLine: 'You did not think I would sell the last anchor, did you?' },
+      ],
       image: '/enemychapter3galleon.png',
       portrait: '/quartermasterghost.png',
     },
@@ -1132,6 +1144,8 @@ export const THE_QUARTERMASTERS_GHOST: BossRaidConfig = {
   killRewards: {
     ghost: { gold: 900, xp: 1000 },
   },
+  // No tides. The Ledger is the whole fight; a random tide on top would just muddy
+  // a boss the player is meant to learn cold and beat on muscle memory.
   preFightDialogue: [
     { speaker: 'narrator', text: 'The gun-deck is exactly as you left it, down to the lantern oil. The counter is still stocked. The keeper is still behind it, and you can see the shutters through him.' },
     { speaker: 'boss', text: "Dead men keep better books than living ones. Everything you left on my counter, everything you melted down since. I have it all, and I have all the time there is." },

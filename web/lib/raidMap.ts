@@ -1780,11 +1780,11 @@ export const RAID_MAP: RaidNode[] = [
     image: THE_QUARTERMASTERS_GHOST.enemies.ghost.portrait,
     detail: {
       description:
-        "Every Cache made you take one item and leave the other. Anything you forged is gone too, burned into the fusion. The ghost still has all of it. Put him down and he gives back one piece of what he is holding, and he will do it again every time you come back. He only ever offers what you do not already carry. He will not deal until you have beaten him alive, in Challenge: The Quartermaster.",
+        "Every Cache made you take one item and leave the other. Anything you forged is gone too, burned into the fusion. The ghost still has all of it, and he does not just hold it, he FIGHTS with it: your fire, your ice, your sights, your plating, your bearings, all turned back on you, and an anchor that will not let him sink the first time you put him down. Beat him and he hands back one piece of what he is carrying. Come back and he does it again. He only ever offers what you do not already have, so every item you take is one he can no longer use. He will not deal until you have beaten him alive, in Challenge: The Quartermaster.",
       enemies: ["The Quartermaster's Ghost"],
       drops: lootDrops(THE_QUARTERMASTERS_GHOST.loot),
       clearReward: clearPayout(THE_QUARTERMASTERS_GHOST),
-      dropsNote: 'Run him as often as you like. Each clear rolls one crate, and the Cache items you already hold are taken out of the pool, so he only ever offers what you are missing.',
+      dropsNote: 'Run him as often as you like. Each clear rolls one crate, and the Cache items you already hold are taken out of the pool, so he only ever offers what you are missing. He fights with the six he is holding, so what he throws at you is what is in his hold.',
       summary: "The Quartermaster died still holding every Cache item you passed up, and he collects the ones you forge away too. He hands one back for every time you put him down.",
     },
   },
