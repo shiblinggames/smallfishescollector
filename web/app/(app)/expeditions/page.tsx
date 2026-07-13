@@ -321,8 +321,7 @@ async function ExpeditionHub() {
       raidItemSlots={raidItemSlotsForTier(shipTier) + slotBonus.itemSlots}
       roster={roster}
       shipCrewSlots={shipStats.crewSlots}
-      shipStats={shipStats}
-      raidScore={raidRating.score}
+      raidRating={raidRating}
       // Full DailyVoyagePanel-needed props — voyage panel was promoted
       // into the Voyages hub modal so it's no longer rendered inline.
       shipTier={shipTier}

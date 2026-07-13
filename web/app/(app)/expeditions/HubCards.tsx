@@ -22,7 +22,7 @@ import type { CrewMember as SocialCrewMember } from '@/app/(app)/social/actions'
 const CREW_IMG_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/storage/v1/object/public/card-arts/'
 import type { DailyVoyage } from './voyageActions'
 import type { VoyageHistoryEntry } from './VoyageHistory'
-import type { ShipStats } from '@/lib/expeditions'
+import { getRankTitle, type CombatRating } from '@/lib/expeditions'
 
 export type CampaignCardData = {
   nextNodeId: string | null
@@ -57,8 +57,7 @@ interface Props {
   // Live readiness numbers (mirrors ShipHero's loadout math). Surfaced
   // inside the prep modals so the player sees what they're committing
   // with before tapping Begin / Set Sail.
-  shipStats: ShipStats
-  raidScore: number
+  raidRating: CombatRating
   // DailyVoyagePanel-required props. The panel used to render inline
   // below the hub; now lives inside the Voyages modal so the data
   // pipes through here.
@@ -157,7 +156,7 @@ export default function HubCards({
   campaign, voyages, doubloons,
   ownedRaidItems, equippedRaidItems, raidItemSlots,
   roster, shipCrewSlots,
-  shipStats, raidScore,
+  raidRating,
   shipTier, todayVoyage, readyVoyage, expeditionXP, voyageHistory,
   canPvp, gauntletOpen, gauntletUpgrades, pvp,
 }: Props) {
@@ -362,12 +361,7 @@ export default function HubCards({
             {campaign.nextNodeName ?? 'Story complete'}
           </p>
 
-          <StatsBlock
-            score={raidScore}
-            scoreLabel="Raid Score"
-            scoreColor="#dca494"
-            shipStats={shipStats}
-          />
+          <PrepReadiness rating={raidRating} accent={campaignAccent} />
 
           {campaign.nextNodeName && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 14 }}>
@@ -646,41 +640,64 @@ export default function HubCards({
 // model for the 0-100 nautical ladder. Concrete ship stats (HP / Speed /
 // DMG) stay because they're literal and actionable. score / scoreLabel /
 // scoreColor props stay on the type for API stability but are ignored.
-function StatsBlock({ shipStats }: {
-  score?: number
-  scoreLabel?: string
-  scoreColor?: string
-  shipStats: ShipStats
-}) {
-  return (
-    <div style={{ marginBottom: 14 }}>
-      <div style={{
-        display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6,
-      }}>
-        <StatTile label="HP" value={shipStats.durability} />
-        <StatTile label="Speed" value={shipStats.speed} />
-        <StatTile label="DMG" value={`${shipStats.minDamage}+`} />
-      </div>
-    </div>
-  )
-}
-
-function StatTile({ label, value }: { label: string; value: number | string }) {
+// ── READINESS ────────────────────────────────────────────────────────────────
+// What this modal is FOR: am I strong enough to walk through that door?
+//
+// It used to answer with three tiles reading HP / Speed / DMG straight off the
+// bare hull — numbers that ignore your crew, your raid items, your ship classes
+// and your Renown, and so are not the numbers you actually fight with. Worse,
+// the Raid Score WAS being computed, passed into the block, and then silently
+// dropped: StatsBlock declared score/scoreLabel/scoreColor and destructured only
+// shipStats. The one number that answers the question was thrown on the floor.
+//
+// So: the Raid Score, its rank, and the two axes it is made of. Offense and
+// Defense are shown separately because a raid punishes being lopsided, and a
+// player staring at a single 62 cannot tell WHICH half is dragging.
+function PrepReadiness({ rating, accent }: { rating: CombatRating; accent: string }) {
+  const rank = getRankTitle(rating.score)
+  const OFF = '#e8896a'
+  const DEF = '#6aa9e8'
   return (
     <div style={{
-      padding: '0.45rem 0.5rem', borderRadius: 9,
-      background: 'rgba(0,0,0,0.32)',
-      border: '1px solid rgba(255,255,255,0.08)',
-      textAlign: 'center',
+      marginBottom: 14, borderRadius: 14, padding: '0.85rem 0.9rem',
+      background: `radial-gradient(ellipse at 50% 0%, ${accent}14 0%, rgba(0,0,0,0.3) 70%)`,
+      border: `1px solid ${accent}33`,
     }}>
-      <p className="font-karla font-700 uppercase tracking-[0.14em]"
-        style={{ fontSize: '0.48rem', color: '#8a8680' }}>
-        {label}
-      </p>
-      <p className="font-cinzel font-700"
-        style={{ fontSize: '0.88rem', color: '#f0ede8', marginTop: 1 }}>
-        {value}
-      </p>
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10 }}>
+        <div style={{ minWidth: 0 }}>
+          <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.5rem', color: '#8a8680' }}>
+            Raid Score
+          </p>
+          <p className="font-cinzel font-800 truncate" style={{ fontSize: '0.92rem', color: accent, marginTop: 3 }}>
+            {rank}
+          </p>
+        </div>
+        <p className="font-cinzel font-800" style={{ flexShrink: 0, fontSize: '2rem', lineHeight: 1, color: '#f3ede0', textShadow: `0 0 16px ${accent}55` }}>
+          {Math.round(rating.score)}
+          <span style={{ fontSize: '0.8rem', color: '#7a7672' }}> / 100</span>
+        </p>
+      </div>
+
+      {/* The overall bar. */}
+      <div style={{ height: 5, borderRadius: 999, background: 'rgba(255,255,255,0.07)', overflow: 'hidden', marginTop: 9 }}>
+        <div style={{ height: '100%', width: `${Math.max(2, Math.min(100, rating.score))}%`, borderRadius: 999, background: `linear-gradient(90deg, ${OFF}, ${accent})` }} />
+      </div>
+
+      {/* The two axes. A raid punishes a lopsided build, so the split is the
+          useful part: it says WHICH half needs work, which one number cannot. */}
+      <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+        {([['Offense', rating.offenseScore, OFF], ['Defense', rating.defenseScore, DEF]] as [string, number, string][]).map(([label, val, color]) => (
+          <div key={label} style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+              <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.48rem', color: '#8a8680' }}>{label}</span>
+              <span className="font-cinzel font-700" style={{ fontSize: '0.76rem', color }}>{Math.round(val)}</span>
+            </div>
+            <div style={{ height: 3, borderRadius: 999, background: 'rgba(255,255,255,0.07)', overflow: 'hidden', marginTop: 3 }}>
+              <div style={{ height: '100%', width: `${Math.max(2, Math.min(100, val))}%`, borderRadius: 999, background: color }} />
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
