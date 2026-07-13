@@ -1432,8 +1432,8 @@ export const THE_BLOCKADE: BossRaidConfig = {
     chainman: {
       // THE RASP — WEAKEN debut. Chain-shot files your powder line down and your shots
       // hit soft while it lasts. Drops the Chain-Shot Rack so you can turn it around.
-      // SHARES A PORTRAIT with The Wedge: they are the same brute with a different
-      // tool, and pairing them is what keeps this raid to seven art files.
+      // Paired with The Wedge: the same brute doing the same job with a different tool.
+      // They share a build and a face, and differ by a mirror and the color of the coat.
       id: 'chainman', name: 'The Rasp', hpBase: 380, minDmg: 24, maxDmg: 38,
       shipSpeed: 7, actionMs: 3600,
       magazineSize: 4, shieldPct: 0.20,
@@ -1443,12 +1443,12 @@ export const THE_BLOCKADE: BossRaidConfig = {
       critChance: 0.12,
       zoneSpeedMult: 2.5,
       image: '/enemychapter3galleon.png',
-      portrait: '/raid7_gunhands.png',
+      portrait: '/raid7_therasp.png',
     },
     cracksman: {
       // THE WEDGE — FEEBLE debut. A cracker round splits your seams and everything
       // that lands after finds the gap. The kill-window status, used ON you.
-      // Shares The Rasp's portrait (see above): the two of them are a matched pair.
+      // The Rasp's opposite number (see above): same build, mirrored, different coat.
       id: 'cracksman', name: 'The Wedge', hpBase: 400, minDmg: 24, maxDmg: 40,
       shipSpeed: 5, actionMs: 4200,
       magazineSize: 4, shieldPct: 0.20,
@@ -1458,7 +1458,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       critChance: 0.10,
       zoneSpeedMult: 2.6,
       image: '/enemychapter3galleon.png',
-      portrait: '/raid7_gunhands.png',
+      portrait: '/raid7_thewedge.png',
     },
     purser: {
       // OLD SCAR — REGEN debut (self-buff). The bar creeps back up while you watch: a
