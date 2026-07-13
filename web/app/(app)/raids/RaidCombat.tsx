@@ -2041,6 +2041,15 @@ export default function RaidCombat({
       action = enemyCharges >= 1 ? 'fire' : 'reload'
       snareBlockedRef.current = true
     }
+    // BACKSTOP — the same hard rule the player lives under (see `canDodge`):
+    // nobody dodges twice in a row. The feint guard above already closes the
+    // only path that could produce it today, and no authored pattern stacks two
+    // dodges (base, boss-phase, and challenge-phase cycles all checked). This
+    // makes the invariant structural rather than a convention, so a future
+    // pattern or a future substitution can't quietly bring it back.
+    if (action === 'dodge' && enemyDodgedLastTurnRef.current) {
+      action = enemyCharges >= 1 ? 'fire' : 'reload'
+    }
     // Remember the RESOLVED action (a jammed dodge never happened), so next
     // turn's feint check knows whether it would be doubling up.
     enemyDodgedLastTurnRef.current = action === 'dodge'
