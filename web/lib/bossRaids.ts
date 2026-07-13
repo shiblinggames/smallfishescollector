@@ -1101,23 +1101,90 @@ export const THE_QUARTERMASTERS_GHOST: BossRaidConfig = {
   atmosphere: 'vault',   // his own lantern-lit gun-deck, and he never left it
   enemies: {
     ghost: {
-      id: 'ghost', name: "The Quartermaster's Ghost", hpBase: 620, minDmg: 26, maxDmg: 44,
+      id: 'ghost', name: "The Quartermaster's Ghost", hpBase: 560, minDmg: 26, maxDmg: 44,
       shipSpeed: 9, actionMs: 3600,
       pattern: ['reload', 'fire', 'volley', 'dodge', 'reload', 'fire', 'fire', 'dodge', 'reload', 'volley'],
       critChance: 0.16,
       // SIGNATURE: The Ledger. He fights with the six Cache items he is holding —
       // your fire, your ice, your sights, your plating, your bearings — all turned
-      // on you. See AFFIXES.ledger. The hull is DELIBERATELY light (620, under the
-      // Hammerhead's 700) because the barrier and the phase below already add a
-      // third again on top: he is a farm boss and has to stay brisk.
+      // on you at once. See AFFIXES.ledger.
       affix: 'ledger',
-      // The sixth item. The Quartermaster's Anchor lets YOU survive one killing
-      // blow, so of course it lets him. He takes the shot, refuses to sink, and
-      // comes back up. One phase only: any more and the grind stops being one.
+      // Nothing steals your kit here. Repossession is what he did in LIFE, and it
+      // has no place on a boss you are meant to run twenty times: a farm that opens
+      // by switching off your build is a farm nobody farms.
+      repossess: false,
+
+      // ── FOUR BARS, AND EACH ONE IS A GRIP TO BREAK ────────────────────────────
+      // He is a GHOST. You cannot sink him, because there is nothing left to sink.
+      // What you can do is prise his fingers off the things he is holding, one at a
+      // time, and each bar is one of them: the plating, the powder, the glass. That
+      // is why he comes back three times without a single revive needing to be
+      // explained away, and it is why the loot and the fight are the same object.
+      //
+      // Every bar is DELIBERATELY SHORT (560 base, then 32% / 26% / 20%: about
+      // 1,080 effective with the barrier, under the Hammerhead). The HP is not the
+      // content. The CHECKS are. He has to stay a boss you can clear in a sitting,
+      // because he is the only road back to six items and you will be here often.
+      //
+      // Each phase arms one telegraphed check, and the three of them deliberately
+      // demand THREE DIFFERENT crew plays, so no single roster answers the whole
+      // fight: disrupt him, then sustain through him, then stand and take it.
       phases: [
-        { revivePct: 0.18, damageMult: 1.1, badge: 'The Anchor',
-          pattern: ['fire', 'volley', 'dodge', 'reload', 'fire', 'fire', 'reload', 'volley'],
-          dialogueLine: 'You did not think I would sell the last anchor, did you?' },
+        // ── BAR 2: THE PLATING (Reinforced Hull) ────────────────────────────────
+        // He hauls up the plating you never claimed and starts bolting it onto his
+        // own hull. Let him and he heals a third of himself back.
+        // ANSWER: disrupt. Jam the crane (Snare) or blow it off him (a big shot).
+        { revivePct: 0.32, damageMult: 1.0, badge: 'The Plating',
+          pattern: ['reload', 'fire', 'dodge', 'volley', 'reload', 'fire', 'dodge', 'fire'],
+          dialogueLine: 'Sink me? Lad, I have been at the bottom for years. Try taking something off me instead.',
+          check: {
+            id: 'the_salvage', name: 'The Salvage',
+            telegraph: 'He swings a crane over the rail and hauls up the reinforced plating you never came back for. He means to wear it.',
+            hint: 'Disrupt him. He cannot bolt it on if he cannot work.',
+            chargeTurns: 2,
+            responses: ['snare', 'burst'],
+            counteredLine: 'The crane fouls and the plating goes back over the side. He does not take that well.',
+            failLine: 'He bolts your plating over his own ribs and the holes close up.',
+            consequence: { kind: 'enemyHealPctMaxHp', value: 0.30 },
+          } },
+
+        // ── BAR 3: THE POWDER (Incendiary Cannonball) ───────────────────────────
+        // He packs the incendiary and holds the match. Ignore it and you cook.
+        // ANSWER: survive it. A barrier to eat the shot, or a heal to smother the
+        // fire (the burn consequence is cleared by any crew heal, so a roster with
+        // sustain has a real out even after it lands).
+        { revivePct: 0.26, damageMult: 1.12, badge: 'The Powder',
+          pattern: ['fire', 'reload', 'volley', 'fire', 'dodge', 'reload', 'fire', 'volley'],
+          dialogueLine: 'You left the fire-shot on my counter. I have had a long time to think about where to put it.',
+          check: {
+            id: 'the_long_burn', name: 'The Long Burn',
+            telegraph: 'He packs the incendiary you passed over and stands there holding a lit match, in no hurry at all.',
+            hint: 'Survive it. Get a barrier up, or be ready to put the fire out.',
+            chargeTurns: 2,
+            responses: ['shield', 'heal'],
+            counteredLine: 'The shot bursts against the barrier and burns itself out on open water.',
+            failLine: 'Your own fire-shot goes through the deck and the ship starts to cook.',
+            consequence: { kind: 'burnDot', pctPerTurn: 0.08, turns: 4 },
+          } },
+
+        // ── BAR 4: THE GLASS (Gunner's Sight + Navigator's Compass) ─────────────
+        // The last thing he has, and the one that ends captains. He sights down
+        // your own glass, takes the bearing, and calls the shot.
+        // ANSWER: stand and take it. A brace or a shield. Nothing else gets between
+        // you and a shot that is already aimed.
+        { revivePct: 0.20, damageMult: 1.2, badge: 'The Glass',
+          pattern: ['reload', 'reload', 'fire', 'volley', 'fire', 'dodge', 'reload', 'volley'],
+          dialogueLine: 'Every captain I ever armed, I watched sink. I always did keep the good glass back.',
+          check: {
+            id: 'the_called_shot', name: 'The Called Shot',
+            telegraph: "He raises your Gunner's Sight to a dead eye, takes the bearing off your own compass, and holds it. He does not need to hurry.",
+            hint: 'Defend. Put something between you and a shot that is already aimed.',
+            chargeTurns: 2,
+            responses: ['brace', 'shield'],
+            counteredLine: 'The shot lands where your hull was and finds a braced wall instead. He mutters something about waste.',
+            failLine: 'He fires down your own sights. The shot goes exactly where he meant it to.',
+            consequence: { kind: 'damagePctMaxHp', value: 0.45 },
+          } },
       ],
       image: '/enemychapter3galleon.png',
       portrait: '/quartermasterghost.png',
