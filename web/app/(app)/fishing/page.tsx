@@ -54,7 +54,7 @@ export default async function FishingPage() {
       .select('rod_tier')
       .eq('user_id', user.id),
     admin.from('fish_species')
-      .select('id, name, scientific_name, fun_fact, habitat, bite_rarity, sell_value, catch_difficulty')
+      .select('id, name, scientific_name, fun_fact, habitat, bite_rarity, sell_value, catch_difficulty, length_min_in, length_max_in')
       .order('bite_rarity'),
     admin.from('fish_collection')
       .select('fish_id, is_golden')
@@ -187,7 +187,7 @@ export default async function FishingPage() {
           ownedRods={ownedRods}
           initialCompletionistEffects={(profile?.completionist_effects as number[] | null) ?? []}
           initialHasForgedBefore={profile?.has_seen_forge_flourish === true}
-          allFishSpecies={(allSpecies ?? []) as { id: number; name: string; scientific_name: string; fun_fact: string; habitat: string; bite_rarity: number; sell_value: number }[]}
+          allFishSpecies={(allSpecies ?? []) as { id: number; name: string; scientific_name: string; fun_fact: string; habitat: string; bite_rarity: number; sell_value: number; length_min_in: number | null; length_max_in: number | null }[]}
           caughtFishIds={caughtFishIds}
           mountedFishIds={mountedFishIds}
           initialPersonalBests={personalBests}

@@ -63,7 +63,7 @@ import RenownUpOverlay, { type RenownUpInfo } from '@/components/RenownUpOverlay
 import RenownIntroOverlay from '@/components/RenownIntroOverlay'
 import { fishingGearUnlockedBetween } from '@/lib/gearUnlocks'
 import GearUnlockRow from '@/components/GearUnlockRow'
-import { formatFishLength, type FishSizeTier } from '@/lib/fishSize'
+import { formatFishLength, tierForLength, TIER_COLOR, type FishSizeTier } from '@/lib/fishSize'
 import { SHINY_FISH_FILTER, SHINY_THEME, SHINY_SELL_MULT, pickShinyMessage } from '@/lib/shiny'
 import { getHook, HOOKS, hookGlowClass } from '@/lib/hooks'
 import { getRod, getEffectiveRod, RODS, rodGlowClass, jackpotChanceForZone, type RodDef } from '@/lib/rods'
@@ -2986,7 +2986,20 @@ function CrateSlotTile({ tile }: { tile: CrateRollTileShape }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-type FishSpeciesBasic = { id: number; name: string; scientific_name: string; fun_fact: string; habitat: string; bite_rarity: number; sell_value: number }
+/** The trophy mark: a drawn cup, so it lives in the same visual language as the rest of
+ *  the UI and never leans on an emoji. Sits on the collection card's corner and beside
+ *  the personal best. */
+function TrophyMark({ size = 10, color = '#fbbf24' }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0 }}>
+      <path d="M6 4h12v4a6 6 0 0 1-12 0z" />
+      <path d="M6 6H4a2 2 0 0 0 2 4M18 6h2a2 2 0 0 1-2 4" />
+      <path d="M12 14v4M9 20h6" />
+    </svg>
+  )
+}
+
+type FishSpeciesBasic = { id: number; name: string; scientific_name: string; fun_fact: string; habitat: string; bite_rarity: number; sell_value: number; length_min_in?: number | null; length_max_in?: number | null }
 
 export default function FishingGame({
   hookTier: initialHookTier, rodTier, reelTier: initialReelTier, lineTier,
@@ -7953,6 +7966,13 @@ export default function FishingGame({
             {ZONES.filter(z => z !== 'ancient_deep').map(zone => {
               const zoneSpecies = allFishSpecies.filter(f => f.habitat === zone)
               const discoveredCount = zoneSpecies.filter(f => caughtFishIds.has(f.id)).length
+              // Trophies landed in this zone. Size gives no XP, no coin and no sell bonus:
+              // the collection IS the reward, so it has to be somewhere you can point at.
+              const trophyCount = zoneSpecies.filter(f => {
+                const pb = personalBests[f.id]
+                if (pb == null || f.length_min_in == null || f.length_max_in == null) return false
+                return tierForLength(pb, Number(f.length_min_in), Number(f.length_max_in)) === 'trophy'
+              }).length
               const zoneColor = HABITAT_COLOR[zone]
               const isExpanded = expandedZone === zone
               const pct = zoneSpecies.length > 0 ? discoveredCount / zoneSpecies.length : 0
@@ -8031,6 +8051,13 @@ export default function FishingGame({
                             style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', lineHeight: 1 }}>
                             {discoveredCount}/{zoneSpecies.length}
                           </p>
+                          {trophyCount > 0 && (
+                            <p className="font-karla font-700" title={`${trophyCount} trophy catch${trophyCount === 1 ? '' : 'es'}`}
+                              style={{ display: 'flex', alignItems: 'center', gap: 2, fontSize: '0.7rem', lineHeight: 1, color: TIER_COLOR.trophy, textShadow: `0 0 7px ${TIER_COLOR.trophy}55` }}>
+                              <TrophyMark size={10} color={TIER_COLOR.trophy} />
+                              {trophyCount}
+                            </p>
+                          )}
                           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={zoneColor + '80'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
                             style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease', flexShrink: 0 }}>
                             <path d="M6 9l6 6 6-6"/>
@@ -8174,6 +8201,14 @@ export default function FishingGame({
                         const discovered = caughtFishIds.has(f.id)
                         const rarityColor = RARITY[f.bite_rarity]?.color ?? '#888'
                         const pb = personalBests[f.id]
+                        // The PB length, read back as a tier. fish_personal_bests never stored the
+                        // tier, so a 3%-roll trophy used to vanish into the log as a slightly bigger
+                        // number with nothing to say what it was. The length already knows:
+                        // tierForLength is the exact inverse of the roll. No migration, no new column.
+                        const pbTier = (pb != null && f.length_min_in != null && f.length_max_in != null)
+                          ? tierForLength(pb, Number(f.length_min_in), Number(f.length_max_in))
+                          : null
+                        const isTrophy = pbTier === 'trophy'
                         const isNew = uncheckedNewFishIds.has(f.id)
                         const cardVariants = {
                           hidden:  { opacity: 0, y: 10, scale: 0.96 },
@@ -8230,14 +8265,20 @@ export default function FishingGame({
                                 : `linear-gradient(180deg, rgba(4,10,18,0.7) 0%, ${rarityColor}10 100%)`,
                               border: isMounted
                                 ? '1px solid rgba(228,188,108,0.75)'
-                                : `1px solid ${rarityColor}55`,
+                                : isTrophy
+                                  ? `1px solid ${TIER_COLOR.trophy}aa`
+                                  : `1px solid ${rarityColor}55`,
                               borderRadius: 10,
                               padding: '0.55rem 0.5rem 0.55rem',
                               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
                               minHeight: 96,
                               cursor: 'pointer',
                               touchAction: 'manipulation',
-                              boxShadow: isMounted ? 'inset 0 0 18px rgba(200,140,40,0.18), 0 0 14px rgba(228,188,108,0.22)' : undefined,
+                              boxShadow: isMounted
+                                ? 'inset 0 0 18px rgba(200,140,40,0.18), 0 0 14px rgba(228,188,108,0.22)'
+                                : isTrophy
+                                  ? `inset 0 0 16px ${TIER_COLOR.trophy}1f, 0 0 12px ${TIER_COLOR.trophy}2e`
+                                  : undefined,
                             }}
                           >
                             <div style={{ width: '100%', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -8257,18 +8298,28 @@ export default function FishingGame({
                               textShadow: isMounted ? '0 0 8px rgba(251,204,74,0.45)' : undefined,
                             }}>{isMounted ? `Golden ${f.name}` : f.name}</p>
                             {pb != null && (
-                              <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: isMounted ? 'rgba(251,204,74,0.85)' : 'rgba(230,220,200,0.7)', letterSpacing: '0.04em' }}>
+                              <p className="font-karla font-600" style={{
+                                display: 'flex', alignItems: 'center', gap: 3,
+                                fontSize: '0.6rem', letterSpacing: '0.04em',
+                                color: isTrophy ? TIER_COLOR.trophy : isMounted ? 'rgba(251,204,74,0.85)' : 'rgba(230,220,200,0.7)',
+                                textShadow: isTrophy ? `0 0 8px ${TIER_COLOR.trophy}66` : undefined,
+                              }}>
+                                {isTrophy && <TrophyMark size={9} color={TIER_COLOR.trophy} />}
                                 {formatFishLength(pb)}
                               </p>
                             )}
-                            {isMounted && (
+                            {isMounted ? (
                               <span aria-hidden style={{
                                 position: 'absolute', top: 5, right: 5,
                                 fontSize: '0.62rem', color: '#fbcc4a',
                                 textShadow: '0 0 8px rgba(251,204,74,0.85)',
                                 lineHeight: 1,
                               }}>✦</span>
-                            )}
+                            ) : isTrophy ? (
+                              <span aria-hidden style={{ position: 'absolute', top: 4, right: 4, display: 'flex', filter: `drop-shadow(0 0 5px ${TIER_COLOR.trophy}aa)` }}>
+                                <TrophyMark size={11} color={TIER_COLOR.trophy} />
+                              </span>
+                            ) : null}
                             {isNew && <DiscoveredStamp />}
                           </motion.button>
                         )
@@ -8368,6 +8419,14 @@ export default function FishingGame({
                           const discovered = caughtFishIds.has(f.id)
                           const rarityColor = RARITY[f.bite_rarity]?.color ?? '#888'
                           const pb = personalBests[f.id]
+                          // The PB length, read back as a tier. fish_personal_bests never stored the
+                          // tier, so a 3%-roll trophy used to vanish into the log as a slightly bigger
+                          // number with nothing to say what it was. The length already knows:
+                          // tierForLength is the exact inverse of the roll. No migration, no new column.
+                          const pbTier = (pb != null && f.length_min_in != null && f.length_max_in != null)
+                            ? tierForLength(pb, Number(f.length_min_in), Number(f.length_max_in))
+                            : null
+                          const isTrophy = pbTier === 'trophy'
                           const isNew = uncheckedNewFishIds.has(f.id)
                           const cardVariants = {
                             hidden:  { opacity: 0, y: 10, scale: 0.96 },
@@ -8411,14 +8470,20 @@ export default function FishingGame({
                                   : `linear-gradient(180deg, rgba(4,10,18,0.7) 0%, ${rarityColor}10 100%)`,
                                 border: isMounted
                                   ? '1px solid rgba(228,188,108,0.75)'
-                                  : `1px solid ${rarityColor}55`,
+                                  : isTrophy
+                                    ? `1px solid ${TIER_COLOR.trophy}aa`
+                                    : `1px solid ${rarityColor}55`,
                                 borderRadius: 10,
                                 padding: '0.55rem 0.5rem 0.55rem',
                                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
                                 minHeight: 96,
                                 cursor: 'pointer',
                                 touchAction: 'manipulation',
-                                boxShadow: isMounted ? 'inset 0 0 18px rgba(200,140,40,0.18), 0 0 14px rgba(228,188,108,0.22)' : undefined,
+                                boxShadow: isMounted
+                                  ? 'inset 0 0 18px rgba(200,140,40,0.18), 0 0 14px rgba(228,188,108,0.22)'
+                                  : isTrophy
+                                    ? `inset 0 0 16px ${TIER_COLOR.trophy}1f, 0 0 12px ${TIER_COLOR.trophy}2e`
+                                    : undefined,
                               }}
                             >
                               <div style={{ width: '100%', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -8438,18 +8503,28 @@ export default function FishingGame({
                                 textShadow: isMounted ? '0 0 8px rgba(251,204,74,0.45)' : undefined,
                               }}>{isMounted ? `Golden ${f.name}` : f.name}</p>
                               {pb != null && (
-                                <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: isMounted ? 'rgba(251,204,74,0.85)' : 'rgba(230,220,200,0.7)', letterSpacing: '0.04em' }}>
+                                <p className="font-karla font-600" style={{
+                                  display: 'flex', alignItems: 'center', gap: 3,
+                                  fontSize: '0.6rem', letterSpacing: '0.04em',
+                                  color: isTrophy ? TIER_COLOR.trophy : isMounted ? 'rgba(251,204,74,0.85)' : 'rgba(230,220,200,0.7)',
+                                  textShadow: isTrophy ? `0 0 8px ${TIER_COLOR.trophy}66` : undefined,
+                                }}>
+                                  {isTrophy && <TrophyMark size={9} color={TIER_COLOR.trophy} />}
                                   {formatFishLength(pb)}
                                 </p>
                               )}
-                              {isMounted && (
+                              {isMounted ? (
                                 <span aria-hidden style={{
                                   position: 'absolute', top: 5, right: 5,
                                   fontSize: '0.62rem', color: '#fbcc4a',
                                   textShadow: '0 0 8px rgba(251,204,74,0.85)',
                                   lineHeight: 1,
                                 }}>✦</span>
-                              )}
+                              ) : isTrophy ? (
+                                <span aria-hidden style={{ position: 'absolute', top: 4, right: 4, display: 'flex', filter: `drop-shadow(0 0 5px ${TIER_COLOR.trophy}aa)` }}>
+                                  <TrophyMark size={11} color={TIER_COLOR.trophy} />
+                                </span>
+                              ) : null}
                               {isNew && <DiscoveredStamp />}
                             </motion.button>
                           )
