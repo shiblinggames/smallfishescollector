@@ -9,6 +9,10 @@ import { raidDamageProfile } from '@/lib/expeditions'
 import { getActiveEffects, exclusiveSiblingOf, effectiveOwnedItems } from '@/lib/raidItems'
 import { getRaidPlayerStats } from '@/app/(app)/raids/actions'
 import { buildClearedSet } from '@/lib/raidProgress'
+import { loadDeployedParty } from '@/lib/crewData'
+import { musterCrewFrom, musterReport, type MusterCrew } from '@/lib/crewMuster'
+import { EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
+import { aggregateShipClasses } from '@/lib/shipClasses'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -87,10 +91,10 @@ async function loadRaidRecords(
   return result
 }
 
-export async function getRaidMapView(): Promise<{ views: RaidNodeView[]; doubloons: number; navLevel: number; raidRecords: Record<string, RaidRecords>; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; seenUltimateUnlock: boolean; raidNodeChoices: Record<string, string> }> {
+export async function getRaidMapView(): Promise<{ views: RaidNodeView[]; doubloons: number; navLevel: number; raidRecords: Record<string, RaidRecords>; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; seenUltimateUnlock: boolean; raidNodeChoices: Record<string, string>; musterParty: MusterCrew[] }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { views: [], doubloons: 0, navLevel: 1, raidRecords: {}, shipClasses: {}, seenChapterUnlocks: [], seenUltimateUnlock: false, raidNodeChoices: {} }
+  if (!user) return { views: [], doubloons: 0, navLevel: 1, raidRecords: {}, shipClasses: {}, seenChapterUnlocks: [], seenUltimateUnlock: false, raidNodeChoices: {}, musterParty: [] }
 
   const admin = createAdminClient()
   const { data: profile } = await admin
@@ -110,11 +114,12 @@ export async function getRaidMapView(): Promise<{ views: RaidNodeView[]; doubloo
   // a cleared event node. Empty for any node the player hasn't run yet.
   const raidNodeProgress = (profile?.raid_node_progress as { choices?: Record<string, string> } | null) ?? {}
   const raidNodeChoices = raidNodeProgress.choices ?? {}
-  const [cleared, raidRecords] = await Promise.all([
+  const [cleared, raidRecords, musterParty] = await Promise.all([
     buildClearedSet(admin, user.id, profile ?? {}),
     loadRaidRecords(admin, user.id),
+    loadMusterParty(admin, user.id),
   ])
-  return { views: computeRaidMap(cleared, doubloons, navLevel, isAdmin), doubloons, navLevel, raidRecords, shipClasses, seenChapterUnlocks, seenUltimateUnlock, raidNodeChoices }
+  return { views: computeRaidMap(cleared, doubloons, navLevel, isAdmin), doubloons, navLevel, raidRecords, shipClasses, seenChapterUnlocks, seenUltimateUnlock, raidNodeChoices, musterParty }
 }
 
 /** First-time celebration dismiss — appends the chapter id to
@@ -326,6 +331,69 @@ export async function claimQuartermasterChoice(
   return { ok: true }
 }
 
+
+/** The RAID party as the inspection sees it: names, levels, and which of the five
+ *  check answers each hand can actually produce. Loaded from the same place the raid
+ *  itself loads its crew, so what the clerk counts is exactly who sails. */
+async function loadMusterParty(admin: Admin, userId: string): Promise<MusterCrew[]> {
+  const { data: p } = await admin
+    .from('profiles')
+    .select('ship_tier, ship_classes, has_sixth_berth')
+    .eq('id', userId)
+    .single()
+  if (!p) return []
+  const ship = EXPEDITION_SHIP_STATS[(p.ship_tier as number | null) ?? 0]
+  if (!ship) return []
+  const classSlots = aggregateShipClasses((p.ship_classes as Record<string, string> | null) ?? {}).crewSlots
+  const berth = p.has_sixth_berth === true ? 1 : 0
+  const party = await loadDeployedParty(admin, userId, ship.crewSlots + classSlots + berth, 'raid')
+  return party.map(musterCrewFrom)
+}
+
+/** Stand for the muster. A ROSTER gate, not a fight: the don's clerk counts your raid
+ *  crew and decides whether you are worth letting near the line. Server-authoritative
+ *  on every rule, and it runs the SAME pure musterReport the sheet renders, so the
+ *  button can never promise a pass the server then refuses. */
+export async function standForMuster(nodeId: string): Promise<{ ok: true } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const node = RAID_MAP.find(n => n.id === nodeId)
+  if (!node || node.type !== 'muster' || !node.muster) return { error: 'Invalid node' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('has_completed_practice_raid, raid_node_progress, is_admin, expedition_xp')
+    .eq('id', user.id)
+    .single()
+  if (!profile) return { error: 'Profile not found' }
+  if (node.adminOnly && profile.is_admin !== true) return { error: 'Locked' }
+
+  const cleared = await buildClearedSet(admin, user.id, profile)
+  if (cleared.has(nodeId)) return { ok: true }   // idempotent: already passed
+  if (node.requiresNode && !cleared.has(node.requiresNode)) return { error: 'Locked' }
+  if (node.requiresNavLevel) {
+    const navLevel = getLevelFromXP((profile.expedition_xp as number | null) ?? 0)
+    if (navLevel < node.requiresNavLevel) return { error: 'Locked' }
+  }
+
+  const party = await loadMusterParty(admin, user.id)
+  const report = musterReport(node.muster, party)
+  if (!report.passed) {
+    const missing = report.rows.filter(r => !r.ok).map(r => r.label)
+    return { error: `The clerk shakes his head: ${missing.join('; ')}.` }
+  }
+
+  const prog = (profile.raid_node_progress as { cleared?: string[] } | null) ?? {}
+  const next = [...new Set([...(prog.cleared ?? []), nodeId])]
+  await admin
+    .from('profiles')
+    .update({ raid_node_progress: { ...prog, cleared: next } })
+    .eq('id', user.id)
+  return { ok: true }
+}
 
 // Event nodes: one-time decision beats with branching outcomes (see
 // RaidEventChoice in lib/raidMap). Validates the choice id against

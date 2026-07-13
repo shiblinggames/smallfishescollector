@@ -9,7 +9,8 @@ import type { RaidRecords } from './raidMapActions'
 import { RARITY_COLOR, GEM_GLYPH, GEM_COLOR } from '@/lib/bossRaids'
 import { getRaidItem } from '@/lib/raidItems'
 import { getShipSkin } from '@/lib/shipSkins'
-import { claimMilestoneNode, markStoryNodeRead, claimScoutDebt, claimQuartermasterChoice, solvePuzzleNode, pickShipClass, markChapterUnlockSeen, pickRaidEventChoice, pickForkRoute } from './raidMapActions'
+import { claimMilestoneNode, markStoryNodeRead, claimScoutDebt, claimQuartermasterChoice, solvePuzzleNode, pickShipClass, markChapterUnlockSeen, pickRaidEventChoice, pickForkRoute, standForMuster } from './raidMapActions'
+import { musterReport, type MusterCrew } from '@/lib/crewMuster'
 import { repairShip } from '@/app/(app)/raids/actions'
 import { markUltimateUnlockSeen, buySixthBerth } from './actions'
 import { ULTIMATE_STORY } from '@/lib/shipAugments'
@@ -107,8 +108,8 @@ function NodeGlyph({ type, color, size = 22 }: { type: string; color: string; si
   if (type === 'gauntlet') return <svg {...common}><path d="M12 12a2.5 2.5 0 1 0 2.5 2.5M14.5 14.5A4.7 4.7 0 0 1 7 14a6.8 6.8 0 0 1 9.4-6.2A9 9 0 0 1 4.5 18.5" /></svg>
   // shop: market stall
   if (type === 'shop') return <svg {...common}><path d="M3 9l1.5-5h15L21 9M4 9v10a1 1 0 001 1h14a1 1 0 001-1V9M4 9h16M9 13h6" /></svg>
-  // reclaim: a strongbox (the seized vault)
-  if (type === 'reclaim') return <svg {...common}><rect x="3" y="8" width="18" height="12" rx="2" /><path d="M3 12h18M7 8V6a5 5 0 0 1 10 0v2" /><circle cx="12" cy="16" r="1.4" fill={color} stroke="none" /></svg>
+  // muster: the clerk's ledger, and a tick against your name
+  if (type === 'muster') return <svg {...common}><rect x="5" y="3" width="14" height="18" rx="2" /><path d="M9 3h6v3H9z" /><path d="m9 13 2 2 4-4" /></svg>
   // berth: stacked bunks (the crew refit)
   if (type === 'berth') return <svg {...common}><path d="M5 4v16M19 4v16M5 10h14M5 16h14" /><circle cx="8.6" cy="7.6" r="1.3" fill={color} stroke="none" /><circle cx="8.6" cy="13.6" r="1.3" fill={color} stroke="none" /></svg>
   // story: open book
@@ -649,6 +650,7 @@ function NodeDetailSheet({
   allNodeChoices,
   clearedNodeIds,
   hasSixthBerth,
+  musterParty,
   onClose,
 }: {
   view: RaidNodeView
@@ -671,6 +673,8 @@ function NodeDetailSheet({
   allNodeChoices: Record<string, string>
   /** Owns the Sixth Berth already (the refit node shows "cut" instead of a buy). */
   hasSixthBerth: boolean
+  /** The RAID crew, as the don's clerk sees them. Drives the muster checklist. */
+  musterParty: MusterCrew[]
   onClose: () => void
 }) {
   const router = useRouter()
@@ -725,6 +729,7 @@ function NodeDetailSheet({
     : node.type === 'shop' ? 'Planned Stock'
     : node.type === 'story' ? 'What You Uncover'
     : node.type === 'berth' ? 'The Refit'
+    : node.type === 'muster' ? 'The Inspection'
     : 'Reward'
 
   function claim() {
@@ -788,6 +793,19 @@ function NodeDetailSheet({
       if ('error' in res) { setErr(res.error); return }
       router.refresh()
       onClose()
+    })
+  }
+
+  // Stand for the muster. The server re-runs the SAME musterReport the checklist
+  // below renders, so the button can never promise a pass the server then refuses.
+  function standMuster() {
+    setErr(null)
+    startTransition(async () => {
+      const res = await standForMuster(node.id)
+      if ('error' in res) { setErr(res.error); return }
+      actedRef.current = true
+      onClose()
+      router.refresh()
     })
   }
 
@@ -949,6 +967,28 @@ function NodeDetailSheet({
           style={{ width: '100%', padding: '0.85rem', borderRadius: 12, fontSize: '1rem', background: `${accent}26`, border: `1px solid ${accent}66`, color: accent, cursor: pending ? 'wait' : 'pointer' }}
         >
           {pending ? '…' : (detail.ctaLabel ?? 'Continue the Story →')}
+        </button>
+      )
+    }
+  } else if (node.type === 'muster') {
+    // A roster gate: no cost, no fight. The button only lifts once the crew
+    // standing on your deck can actually answer what is past this point.
+    const report = node.muster ? musterReport(node.muster, musterParty) : null
+    if (cleared) {
+      cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: `${accent}1a`, border: `1px solid ${accent}40`, color: accent }}>Passed ✓</div>
+    } else if (locked) {
+      cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: 'rgba(255,255,255,0.06)', color: '#5a5856' }}>Locked</div>
+    } else if (!report?.passed) {
+      cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: '#8a8480' }}>Your Crew Is Not Ready</div>
+    } else {
+      cta = (
+        <button
+          onClick={standMuster}
+          disabled={pending}
+          className="font-cinzel font-700 uppercase tracking-[0.06em]"
+          style={{ width: '100%', padding: '0.85rem', borderRadius: 12, fontSize: '1rem', background: `${accent}26`, border: `1px solid ${accent}66`, color: accent, cursor: pending ? 'wait' : 'pointer' }}
+        >
+          {pending ? '…' : (detail.ctaLabel ?? 'Stand For Inspection →')}
         </button>
       )
     }
@@ -1384,6 +1424,46 @@ function NodeDetailSheet({
             })()}
           </div>
         )}
+
+        {/* THE MUSTER — a live checklist against the crew actually standing in your
+            raid slots. Green when a hand covers it, and it NAMES them, so a failing
+            row tells you exactly what to go and fix. */}
+        {node.type === 'muster' && node.muster && !cleared && (() => {
+          const report = musterReport(node.muster, musterParty)
+          return (
+            <div style={{ marginTop: '1.1rem' }}>
+              <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#7a7875', marginBottom: '0.55rem' }}>
+                The Clerk&rsquo;s Ledger
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                {report.rows.map(r => (
+                  <div key={r.label} style={{ display: 'flex', alignItems: 'flex-start', gap: 9, padding: '0.65rem 0.75rem', borderRadius: 11,
+                    background: r.ok ? 'rgba(127,212,154,0.07)' : 'rgba(240,124,124,0.06)',
+                    border: `1px solid ${r.ok ? 'rgba(127,212,154,0.35)' : 'rgba(240,124,124,0.32)'}` }}>
+                    <span aria-hidden style={{ flexShrink: 0, marginTop: 1, display: 'flex', color: r.ok ? '#7fd49a' : '#f47c7c' }}>
+                      {r.ok
+                        ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+                        : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>}
+                    </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: r.ok ? '#e6e1d6' : '#f0dcdc' }}>{r.label}</p>
+                      {r.met.length > 0 && (
+                        <p className="font-karla" style={{ fontSize: '0.7rem', color: r.ok ? 'rgba(240,237,232,0.55)' : '#d8a0a0', lineHeight: 1.4, marginTop: 2 }}>
+                          {r.met.join(', ')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {!report.passed && (
+                <p className="font-karla" style={{ fontSize: '0.74rem', color: '#9a948a', lineHeight: 1.5, marginTop: 9 }}>
+                  Change who sails from <span style={{ color: '#e0dccc' }}>Manage Crew</span>, then come back. The clerk is not going anywhere.
+                </p>
+              )}
+            </div>
+          )
+        })()}
 
         {/* The Sixth Berth: the crew refit. Shown once the yard has been
             spoken to (cleared) and stays buyable on every revisit until bought.
@@ -2611,7 +2691,7 @@ function RepairBlockedModal({
 
 /* ─────────────────────── Collapsible section ─────────────────── */
 
-export default function RaidsSection({ views, doubloons, navLevel, playerShipImage, raidRecords, repairOwed, ownedRaidItems, equippedRaidItems, shipClasses, seenChapterUnlocks, seenUltimateUnlock, raidNodeChoices, topRaidProgress, hasSixthBerth = false }: { views: RaidNodeView[]; doubloons: number; navLevel: number; playerShipImage?: string; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[]; equippedRaidItems: string[]; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; seenUltimateUnlock: boolean; raidNodeChoices: Record<string, string>; topRaidProgress: { username: string; score: number } | null; hasSixthBerth?: boolean }) {
+export default function RaidsSection({ views, doubloons, navLevel, playerShipImage, raidRecords, repairOwed, ownedRaidItems, equippedRaidItems, shipClasses, seenChapterUnlocks, seenUltimateUnlock, raidNodeChoices, topRaidProgress, hasSixthBerth = false, musterParty = [] }: { views: RaidNodeView[]; doubloons: number; navLevel: number; playerShipImage?: string; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[]; equippedRaidItems: string[]; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; seenUltimateUnlock: boolean; raidNodeChoices: Record<string, string>; topRaidProgress: { username: string; score: number } | null; hasSixthBerth?: boolean; musterParty?: MusterCrew[] }) {
   const [open, setOpen] = useState(true)
   const [selected, setSelected] = useState<RaidNodeView | null>(null)
   // Per-chapter manual toggle overrides. Membership means the player
@@ -2945,6 +3025,7 @@ export default function RaidsSection({ views, doubloons, navLevel, playerShipIma
             allNodeChoices={raidNodeChoices}
             clearedNodeIds={new Set(views.filter(v => v.status === 'cleared').map(v => v.node.id))}
             hasSixthBerth={hasSixthBerth}
+            musterParty={musterParty}
             onClose={() => setSelected(null)}
           />
         )}

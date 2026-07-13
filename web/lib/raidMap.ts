@@ -12,6 +12,7 @@
 
 import { CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER, THE_COFFERS_FLEET, THE_QUARTERMASTER, THE_QUARTERMASTERS_GHOST, THE_BLOCKADE, THE_THRONE, GEM_GLYPH, raidCompletionBonusXp, type RaidLootItem, type BossRaidConfig } from '@/lib/bossRaids'
 import { SIXTH_BERTH_COST } from '@/lib/shipBerth'
+import type { RaidMuster } from '@/lib/crewMuster'
 import { CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE, THE_CARTOGRAPHER_CHALLENGE, THE_TOLLMASTER_CHALLENGE, THE_COFFERS_FLEET_CHALLENGE, THE_QUARTERMASTER_CHALLENGE, THE_BLOCKADE_CHALLENGE, THE_THRONE_CHALLENGE } from '@/lib/raidChallenge'
 import { getShipSkin } from '@/lib/shipSkins'
 import { getRaidItem } from '@/lib/raidItems'
@@ -22,7 +23,7 @@ import { getRaidItem } from '@/lib/raidItems'
 //  - milestone : a "collect / hold X" goal (no fight)
 //  - shop      : a contraband stall (future)
 //  - story     : an overarching-story beat (future)
-export type RaidNodeType = 'skirmish' | 'raid' | 'milestone' | 'shop' | 'story' | 'puzzle' | 'class_pick' | 'event' | 'dice' | 'gauntlet' | 'fork' | 'dps_check' | 'berth'
+export type RaidNodeType = 'skirmish' | 'raid' | 'milestone' | 'shop' | 'story' | 'puzzle' | 'class_pick' | 'event' | 'dice' | 'gauntlet' | 'fork' | 'dps_check' | 'berth' | 'muster'
 
 // Branching event nodes (lib/raidMap RaidNode.event). One-time, the
 // player picks ONE option which fires its outcome and clears the node;
@@ -380,6 +381,11 @@ export interface RaidNode {
   fork?: RaidFork
   /** dps_check: a coin-or-skill gate (pay to skip, or one aim-bar shot). */
   dpsCheck?: RaidDpsCheck
+  /** muster: a ROSTER gate. The don's men look over your raid crew and decide
+   *  whether you are worth letting near the line. See lib/crewMuster: it checks
+   *  bodies, levels, and whether you actually brought crew who CAN answer a
+   *  mechanic check. It never asks you to use an ability, only to have packed one. */
+  muster?: RaidMuster
   /** story-type payoff gated on an earlier choice (the freed-scout debt). */
   payoff?: RaidPayoff
   /** In-review gate: hide + hard-block this node for non-admins. Filtered out
@@ -1855,11 +1861,66 @@ export const RAID_MAP: RaidNode[] = [
   {
     // RAID 7 — The Blockade. Introduces the Ch4 suite: baseline enemy shields,
     // 4-cannonball magazines, and enemy SPECIALS (statuses thrown at you).
+    // ── THE MUSTER ── a roster gate, not a fight. Sal's Death Roll can ONLY be
+    // answered with a crew ability, and nothing in the game has ever said so. A
+    // captain can arrive with five sharpshooters and simply have no legal answer to
+    // the move that kills them. So the don's men count your hands first.
+    id: 'blockade_muster',   type: 'muster',
+    label: 'The Muster',
+    flavor: "A cutter comes alongside before the line will part, and a clerk with a wet ledger counts your crew like livestock. He is not looking for guns. He is looking for hands that can do something when the shooting starts.",
+    bridge: 'The clerk closes his ledger, unimpressed but satisfied. The line parts.',
+    requiresNode: 'throne_locks',
+    adminOnly: true,
+    muster: {
+      minCrew: 5,
+      // Real data: every captain who can reach this node (Nav 56) runs a raid crew
+      // between Lv 77 and Lv 100. 60 is a floor that says "bring your real crew",
+      // not a wall.
+      minLevel: 60,
+      // Exactly what the fight beyond actually demands. The Death Roll is answered
+      // with a brace or a shield and NOTHING else; four bars of a hard-hitting
+      // crocodile are survived with a mender.
+      requires: [['brace', 'shield'], ['heal']],
+    },
+    detail: {
+      description:
+        "The don's clerk comes aboard to count your crew before the line will part. He is not counting guns.\n\nWhat is past this point cannot be out-shot. Sal Brackwater will take your hull in his teeth and roll, and the ONLY thing that stops it is a crew ability. Not a dodge. Not a good shot. A crew member who can get between you and the blow.\n\nBring hands who can do something, or the clerk sends you home.",
+      dropsNote: 'No cost and no fight. Bring the right crew and the line parts.',
+      ctaLabel: 'Stand For Inspection →',
+      summary: "The don's clerk counted your crew and found hands worth letting through.",
+    },
+  },
+  {
+    // The story beat immediately before the fight. It plants Sal's TELL — he goes
+    // still — so that when the water flattens mid-fight, the player has already been
+    // told once, in a place where it cost them nothing to learn.
+    id: 'thing_on_the_bar', type: 'story',
+    label: 'The Thing on the Bar',
+    flavor: 'Something long and low lies on the mud bar off the point. The lookout calls it a fallen spar and goes back to his knots. It is still there an hour later, in exactly the same place, and it has not moved once.',
+    bridge: 'The spar was not a spar. It was waiting, and it was in no hurry at all.',
+    requiresNode: 'blockade_muster',
+    adminOnly: true,
+    scene: [
+      { text: 'The lookout calls a spar on the mud bar off the point. Half-sunk, barnacled, drifted down from some wreck upriver. Nobody looks twice.' },
+      { text: 'An hour on, the bosun notices it is still there. Same bar. Same angle. The tide has moved a foot and a half in that time and the spar has not moved at all.' },
+      { text: 'A spar drifts. A spar rolls with the water. This one is lying against the current, and it is lying very deliberately.' },
+      { text: 'You watch it for a long minute. It does not move. Nothing about it moves. Then, without any part of it seeming to turn, you are aware that it is facing you.' },
+      { text: 'The blockade line is ahead. So is he. Remember this: when the water goes flat and nothing at all is happening, that is not nothing happening. That is him deciding.' },
+    ],
+    detail: {
+      description:
+        "A spar on the mud bar that does not drift, does not roll, and does not move with the tide. Watch it long enough and you understand it is not wreckage. It is waiting.\n\nRemember the shape of it: when the water goes flat and nothing seems to be happening, that is Sal deciding.",
+      dropsNote: 'The tell, learned for free instead of the hard way.',
+      ctaLabel: 'Watch It →',
+      summary: 'A spar on the mud bar that never drifted. It was not a spar, and it had been watching for some time.',
+    },
+  },
+  {
     id: 'the_blockade',    type: 'raid',
     label: 'The Blockade',
     flavor: "Don Finleone's blockade line, and the thing that holds it: Sal Brackwater, who has not moved in an hour and is not going to until it matters. Every hull rides behind a cold-light barrier, every magazine runs four deep, and his line fights dirtier than any market ever did.",
     bridge: "The blockade breaks and Sal Brackwater goes under it. The way to the don's own water lies open — and his books ride in your hold.",
-    requiresNode: 'throne_locks',
+    requiresNode: 'thing_on_the_bar',
     requiresNavLevel: 56,
     adminOnly: true,
     route: '/raids/blockade',

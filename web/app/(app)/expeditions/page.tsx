@@ -365,6 +365,7 @@ async function RaidsMapSection() {
       seenChapterUnlocks={raidMap.seenChapterUnlocks}
       seenUltimateUnlock={raidMap.seenUltimateUnlock}
       raidNodeChoices={raidMap.raidNodeChoices}
+      musterParty={raidMap.musterParty}
       topRaidProgress={topRaidProgress}
       hasSixthBerth={profile?.has_sixth_berth === true}
     />
