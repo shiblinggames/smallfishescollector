@@ -163,27 +163,58 @@ const BURN_PROC_CAP   = 0.20
 
 const d20 = () => Math.floor(Math.random() * 20) + 1
 
-// One-line BEHAVIORAL HINT for the enemy stats popup. Deliberately fuzzy: it
-// nudges the player toward what to watch for (volley-prone, slippery,
-// aggressive, etc.) without spelling out the per-turn pattern, which is the
-// "read the rhythm" puzzle they're supposed to discover in combat. Tuned by
-// looking at the actual enemy patterns in lib/bossRaids.ts; reorder the
-// branches if a new pattern shape needs its own tell.
-function enemyBehaviorHint(pattern: EnemyAction[]): string {
+// BEHAVIORAL TELL for the enemy stats popup. Fuzzy about TIMING (reading the
+// rhythm is the puzzle the player solves in combat) but honest about WHAT the
+// enemy actually does, which the old ratio thresholds were not: Snapjaw
+// (reload x3 -> volley -> fire x2) fell through every branch and read as
+// "trades shot for shot" despite being a volley-builder, and specials +
+// ultimates were ignored outright even though nothing else in the popup
+// surfaces them. Rules are derived from the real patterns in lib/bossRaids.ts
+// and verified against every enemy; keep them counted, not ratio-guessed.
+function enemyBehaviorHint(enemy: BroadsideEnemy): string {
+  const pattern = enemy.pattern
   const n = pattern.length || 1
   const c = { reload: 0, fire: 0, volley: 0, dodge: 0, repair: 0, mega: 0, special: 0, ultimate: 0 }
   for (const a of pattern) c[a]++
-  const aggR    = (c.fire + c.volley) / n
-  const dodgeR  = c.dodge / n
-  const reloadR = c.reload / n
+  const shots  = c.fire + c.volley
+  const dodgeR = c.dodge / n
+  const parts: string[] = []
 
-  if (c.volley >= 2)                          return 'Loves a heavy volley. More than one per cycle.'
-  if (c.volley === 1 && reloadR >= 0.5)       return 'Patient. Winds up long, then lands a heavy volley.'
-  if (dodgeR >= 0.25 && c.volley >= 1)        return 'Slippery and dangerous. Tends to dodge, then strike heavy.'
-  if (dodgeR >= 0.25)                         return 'Slippery. Tends to dodge your shots.'
-  if (aggR >= 0.55)                           return 'Aggressive. Trades shots constantly.'
-  if (reloadR >= 0.6)                         return 'Methodical. Long reloads before each strike.'
-  return 'Steady rhythm. Trades shot for shot.'
+  // Tempo — how it actually spends its guns. A volley is the headline threat
+  // (double damage), so any volley in the cycle leads, however it's built.
+  if (c.volley >= 2) {
+    parts.push('Volley-happy. Lands more than one heavy volley a cycle.')
+  } else if (c.volley === 1) {
+    parts.push(c.reload >= 2
+      ? 'Patient. Stacks charges, then lands a heavy volley.'
+      : 'Works a heavy volley in among its shots.')
+    if (c.fire >= 3) parts.push('Trades shots freely in between.')
+  } else if (shots > c.reload) {
+    parts.push('Aggressive. Trades shots constantly.')
+  } else if (c.reload > shots) {
+    parts.push('Methodical. Long reloads between strikes.')
+  } else {
+    parts.push('Steady rhythm. Trades shot for shot.')
+  }
+
+  // Evasion. Either a high dodge share or simply a lot of dodges (Pete camps
+  // three of them early in a long cycle and would miss a ratio-only test).
+  if (dodgeR >= 0.25 || c.dodge >= 3) parts.push('Slippery, and weaves aside often.')
+
+  // The two tells nothing else in the popup shows. Naming them is a capability
+  // reveal, not a timing one — combat announces both with a line anyway.
+  if (c.ultimate > 0) {
+    parts.push(enemy.ultimate
+      ? `Fills its whole battery, then empties it in one blow (${enemy.ultimate.name}).`
+      : 'Fills its whole battery, then empties it in one blow.')
+  }
+  if (c.special > 0) {
+    parts.push(enemy.special
+      ? `Casts ${enemy.special.name} when it gets the chance.`
+      : 'Casts a special when it gets the chance.')
+  }
+
+  return parts.join(' ')
 }
 
 function rollShotDamage(res: ShotResult, shipMinDamage: number, totalPower: number, damagePct = 0): number {
@@ -6660,7 +6691,7 @@ function EnemyStatsPopup({
   // the player is meant to learn by playing; spelling it out trivialises the
   // "read the rhythm" puzzle. The hint nudges them toward what to watch for
   // (volleys, dodges, aggression) without giving away turn-by-turn timing.
-  const behaviorHint = enemyBehaviorHint(enemy.pattern)
+  const behaviorHint = enemyBehaviorHint(enemy)
 
   // Multi-phase bosses (phases[] supersedes phase2). Surface each phase + its
   // telegraphed mechanic check here — the fights were too opaque with the answer
