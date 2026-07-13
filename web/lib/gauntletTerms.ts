@@ -441,6 +441,50 @@ export const NO_TERM_EFFECTS: TermEffects = {
 
 /** The COMBAT effects a signed board contributes (the skill terms). Folded into
  *  the run's TideEffect list alongside boons, curses and confluences. */
+// ── THE PRESSURE BADGES ──────────────────────────────────────────────────────
+// Every one pairs Pressure WITH the depth you BANKED at, and the pairing is the
+// whole point. Signing a term is free; surviving what you signed is the
+// achievement. Gate on Pressure alone and the exploit is trivial: sign the entire
+// board, win one fight, cash out at depth 2, collect the whole sheet.
+//
+// So the two halves move as a curve, not as independent axes. A heavier board is
+// allowed a shallower depth bar precisely BECAUSE the run is objectively harder:
+// the full board at depth 15 (nothing heals you, half hull, half damage on
+// non-crits, double-crowned bosses, and no leaving except after a boss) is a far
+// worse night than 40 Pressure at depth 35.
+export const PRESSURE_BADGES: { id: string; pressure: number; depth: number }[] = [
+  { id: 'ink_and_salt',   pressure: 5,  depth: 10 },
+  // Depth 20 is exactly where Pressure starts paying anything, so the badge and
+  // the economy teach the same lesson.
+  { id: 'the_weight',     pressure: 15, depth: PRESSURE_DEPTH_FLOOR },
+  // The marquee rung: the skin threshold meeting the depth where the gem bonus
+  // finally pays in full.
+  { id: 'crushing_depth', pressure: PRESSURE_SKIN_THRESHOLD, depth: PRESSURE_DEPTH_FULL },
+  // The heaviest board that still buys a single extra gem, hauled up well past the
+  // depth it pays at.
+  { id: 'paid_in_full',   pressure: PRESSURE_CAP, depth: 35 },
+]
+
+/** Every term on the board, each signed at its worst tier. */
+export function isFullBoard(signed: SignedTerms | null | undefined): boolean {
+  if (!signed) return false
+  return GAUNTLET_TERMS.every(t => (signed[t.id] ?? 0) >= t.tiers.length)
+}
+
+/** The badge feats a HARDCORE cash-out earned. `depth` is the depth BANKED at, never
+ *  the deepest touched: sinking pays no gems, so it can earn no badges either. */
+export function pressureFeats(signed: SignedTerms | null | undefined, depth: number): string[] {
+  if (!signed) return []
+  const p = termPressure(signed)
+  const out = PRESSURE_BADGES.filter(b => p >= b.pressure && depth >= b.depth).map(b => b.id)
+  // Iron Rations II: nothing healed you. Not one point, the whole way down.
+  if ((signed.iron_rations ?? 0) >= 2 && depth >= 20) out.push('not_a_drop')
+  // Past PRESSURE_CAP the gems stop climbing, so the back half of the board buys
+  // nothing whatsoever except this. Which is the name.
+  if (isFullBoard(signed) && depth >= 15) out.push('for_glory_alone')
+  return out
+}
+
 export function termTideEffects(signed: SignedTerms | null | undefined): TideEffect[] {
   if (!signed) return []
   const out: TideEffect[] = []

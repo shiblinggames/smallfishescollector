@@ -15,7 +15,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { navRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
-import { termPressure, pressureGemMult, getTerm, type SignedTerms } from '@/lib/gauntletTerms'
+import { termPressure, pressureGemMult, pressureFeats, getTerm, type SignedTerms } from '@/lib/gauntletTerms'
+import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
 import { maxPotForDepth, chestForDepth, chestCannonDropChance, chestSkinDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_REWARD_DEPTH_CAP, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, gauntletXpForDepth, gauntletCrewXp, CONFLUENCES, hardcoreUnlocked, HARDCORE_LIVE, HARDCORE_UNLOCKS, HARDCORE_RUNS_PER_DAY, HC_FATHOMS_MULT, HC_SURVIVOR_XP_MULT, bloodGemsForDepth, coerceRunStats, type GauntletRunSnapshot, type GauntletRunState } from '@/lib/gauntlet'
 import { getGauntletUpgrade, isUpgradeComingSoon, gauntletHaulMult, gauntletXpMult, gauntletFathomsMult } from '@/lib/gauntletUpgrades'
 import { DAVY_FORGE } from '@/lib/raidItems'
@@ -665,6 +666,15 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
     // Hardcore survivors earn a bonus for bringing the squad home alive.
     grantXPToAssignedCrew(admin, user.id, Math.round(gauntletCrewXp(payDepth) * (hc ? HC_SURVIVOR_XP_MULT : 1) * navRenown.crewXpMult)),
   ])
+
+  // Davy's Terms feats. Awaited (never fire-and-forget) so the write lands before
+  // we return: BadgeWatcher refetches off the doubloons-changed this cash-out
+  // fires, and a racing grant would miss its own celebration.
+  if (hc && runPressure > 0) {
+    for (const id of pressureFeats(runTerms, payDepth)) {
+      try { await unlockBadge(id) } catch { /* best-effort, never fail a cash-out */ }
+    }
+  }
 
   // Depth-milestone unlocks crossed by SURVIVING to this depth (cash-out only).
   // Hardcore surfaces its Drowned Fleet cosmetic unlocks here; normal surfaces

@@ -4,7 +4,7 @@
 import {
   GAUNTLET_TERMS, resolveTerms, termPressure, termTideEffects,
   pressureGemMult, NO_TERM_EFFECTS, MAX_AVAILABLE_PRESSURE, PRESSURE_CAP,
-  PRESSURE_DEPTH_FLOOR, type SignedTerms,
+  PRESSURE_DEPTH_FLOOR, PRESSURE_BADGES, pressureFeats, isFullBoard, type SignedTerms,
 } from './lib/gauntletTerms'
 import { generateFight, advanceRollState, isCurseDepth, drawCurse, isBoonDepth, drawBoons, drawConfluenceOffer, bloodGemsForDepth, type GauntletRollState } from './lib/gauntlet'
 
@@ -161,6 +161,35 @@ console.log('\n7. Normal runs are untouched by Terms')
   }
   if (bad.length === 0) ok('an unsigned board resolves to exactly the default behavior')
   else fail('unsigned board differs from defaults: ' + bad.join(', '))
+}
+
+// ── 8. The badge feats cannot be farmed by signing and immediately banking ───
+// The exploit the whole pairing exists to close: sign the entire board, win one
+// fight, cash out at depth 2, collect the sheet. Every feat MUST require depth.
+console.log('\n8. Pressure badges require depth, not just a signature')
+{
+  let bad = 0
+  const shallowest = Math.min(...PRESSURE_BADGES.map(b => b.depth), 15, 20)
+  // The heaviest possible board, banked shallower than any feat's depth bar.
+  for (let d = 0; d < shallowest; d++) {
+    const feats = pressureFeats(full, d)
+    if (feats.length) bad++, fail(`FULL BOARD at depth ${d} earned ${feats.join(', ')}`)
+  }
+  // Every rung must hold BOTH halves: right Pressure + wrong depth earns nothing,
+  // and right depth + no Pressure earns nothing.
+  for (const b of PRESSURE_BADGES) {
+    if (pressureFeats(full, b.depth - 1).includes(b.id)) bad++, fail(`${b.id} granted one depth short`)
+    if (pressureFeats({}, 70).includes(b.id)) bad++, fail(`${b.id} granted with nothing signed`)
+    if (!pressureFeats(full, b.depth).includes(b.id)) bad++, fail(`${b.id} NOT granted when both halves are met`)
+  }
+  // The two named feats key off their own term, not merely off Pressure.
+  if (pressureFeats({ iron_rations: 1 }, 70).includes('not_a_drop')) bad++, fail('not_a_drop granted at Iron Rations I')
+  if (!pressureFeats({ iron_rations: 2 }, 20).includes('not_a_drop')) bad++, fail('not_a_drop NOT granted at Iron Rations II, depth 20')
+  if (pressureFeats({ iron_rations: 2 }, 19).includes('not_a_drop')) bad++, fail('not_a_drop granted above depth 20')
+  if (!isFullBoard(full)) bad++, fail('isFullBoard rejects the full board')
+  if (isFullBoard({ ...full, iron_rations: 1 })) bad++, fail('isFullBoard accepts a board with a term below max tier')
+  if (pressureFeats(full, 14).includes('for_glory_alone')) bad++, fail('for_glory_alone granted above depth 15')
+  if (bad === 0) ok('no feat is reachable without its depth; every rung needs both halves')
 }
 
 console.log(`\nBoard: ${GAUNTLET_TERMS.length} terms, ${MAX_AVAILABLE_PRESSURE} Pressure, cap ${PRESSURE_CAP}`)

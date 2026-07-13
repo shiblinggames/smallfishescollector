@@ -149,6 +149,13 @@ const PLAN = [
   [20, 1, 0, 'completionist_rod'],
   [20, 1, 1, 'fully_rigged'],
   [20, 1, 2, 'reforged'],
+  // Batch 21 — Davy's Terms / Pressure.
+  [21, 0, 0, 'ink_and_salt'],
+  [21, 0, 1, 'the_weight'],
+  [21, 0, 2, 'crushing_depth'],
+  [21, 1, 0, 'not_a_drop'],
+  [21, 1, 1, 'paid_in_full'],
+  [21, 1, 2, 'for_glory_alone'],
 ]
 
 let skipped = 0

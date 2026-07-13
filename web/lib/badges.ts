@@ -175,6 +175,14 @@ export const BADGES: Badge[] = [
   { id: 'locker_bound',   name: 'Locker-Bound',       description: 'Reach depth 25 in the Hardcore Gauntlet',         imageUrl: '/badges/locker_bound.png',   difficulty: 'veteran'  },
   { id: 'the_deep_end',   name: 'The Deep End',       description: 'Reach depth 50 in the Hardcore Gauntlet',         imageUrl: '/badges/the_deep_end.png',   difficulty: 'master'   },
   { id: 'ferrymans_toll', name: "The Ferryman's Toll", description: 'Lose a squad to the Locker in Hardcore',         imageUrl: '/badges/ferrymans_toll.png', difficulty: 'seasoned' },
+  // Davy's Terms — Pressure. Each pairs the weight of the board you signed with the
+  // depth you actually brought it home from. Signing is free; surviving is not.
+  { id: 'ink_and_salt',    name: 'Ink and Salt',     description: 'Cash out from depth 10 with 5+ Pressure',       imageUrl: '/badges/ink_and_salt.png',    difficulty: 'rookie'   },
+  { id: 'the_weight',      name: 'The Weight',       description: 'Cash out from depth 20 with 15+ Pressure',      imageUrl: '/badges/the_weight.png',      difficulty: 'seasoned' },
+  { id: 'crushing_depth',  name: 'Crushing Depth',   description: 'Cash out from depth 30 with 25+ Pressure',      imageUrl: '/badges/crushing_depth.png',  difficulty: 'veteran'  },
+  { id: 'not_a_drop',      name: 'Not a Drop',       description: 'Cash out from depth 20 under Iron Rations II',  imageUrl: '/badges/not_a_drop.png',      difficulty: 'veteran'  },
+  { id: 'paid_in_full',    name: 'Paid in Full',     description: 'Cash out from depth 35 with 40+ Pressure',      imageUrl: '/badges/paid_in_full.png',    difficulty: 'master'   },
+  { id: 'for_glory_alone', name: 'For Glory Alone',  description: 'Cash out from depth 15 with every term signed', imageUrl: '/badges/for_glory_alone.png', difficulty: 'grandmaster' },
   // Blood Gems — the Hardcore premium currency.
   { id: 'blood_charged',   name: 'Blood-Charged',    description: 'Boost a recruit reroll with Blood Gems',          imageUrl: '/badges/blood_charged.png',   difficulty: 'rookie'   },
   { id: 'blood_rich',      name: 'Blood-Rich',       description: 'Earn 500 Blood Gems all-time',                    imageUrl: '/badges/blood_rich.png',      difficulty: 'seasoned' },
@@ -322,6 +330,12 @@ export const BADGE_DETAIL: Record<string, string> = {
   the_unsinkable:   'Reach depth 15 in the Hardcore Gauntlet, where a single fall would take your whole squad. Nerve most captains never test.',
   locker_bound:     'Reach depth 25 in the Hardcore Gauntlet. This deep, with your crew as the stake, few ever go and fewer return.',
   ferrymans_toll:   'Lose a squad to the Locker in Hardcore. The deep took them for good — the toll every hardcore captain pays sooner or later.',
+  ink_and_salt:     'Sign Davy’s terms for at least 5 Pressure and bring the run home from depth 10. Your first taste of a weighted board.',
+  the_weight:       'Cash out from depth 20 carrying 15+ Pressure. Depth 20 is exactly where Pressure starts paying, so this is the first run that was worth the ink.',
+  crushing_depth:   'Cash out from depth 30 carrying 25+ Pressure. The depth where the bonus pays in full, at the weight where Davy starts handing out colors nobody can buy.',
+  not_a_drop:       'Cash out from depth 20 with Iron Rations II signed. No crew heal, no repair kit, no lifesteal, no regen, no patch-up between fights. Nothing put a single point of hull back on your ship the whole way down.',
+  paid_in_full:     'Cash out from depth 35 carrying 40+ Pressure. The heaviest board that still buys an extra gem, hauled up well past the depth it pays at.',
+  for_glory_alone:  'Cash out from depth 15 with every term on the board signed at its worst tier. The gems stopped climbing 42 Pressure ago. There is nothing at the bottom of this one but the badge.',
   weapon_of_legend: 'Build a Man-o-War ultimate from the Quartermaster’s stolen plans — the nuke, the railgun, or the barrage.',
   first_fusion:     'Forge your first item at the Forge, fusing two raid items into one prismatic piece of gear.',
   ruse_undone:      'Defeat Admiral Ruse and the Coffers Fleet in challenge mode — the harder cut of Raid 5.',
