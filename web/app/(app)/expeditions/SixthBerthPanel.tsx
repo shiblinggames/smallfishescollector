@@ -40,7 +40,7 @@ export default function SixthBerthPanel({
     setBusy(true); setErr(null)
     const res = await buySixthBerth()
     setBusy(false)
-    if (!res.ok) { setErr(res.error ?? 'Could not add the berth.'); return }
+    if (!res.ok) { setErr(res.error ?? 'Could not add the crew slot.'); return }
     vibrate([0, 45, 55, 90])
     setCelebrate(true)
     setConfirming(false)
@@ -49,9 +49,9 @@ export default function SixthBerthPanel({
 
   const HEADER = (
     <>
-      <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#ffd56b', marginBottom: '0.3rem', letterSpacing: '0.04em' }}>The Sixth Berth</p>
+      <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#ffd56b', marginBottom: '0.3rem', letterSpacing: '0.04em' }}>A Sixth Crew Slot</p>
       <p className="font-karla" style={{ fontSize: '0.74rem', color: '#8a8480', marginBottom: '0.85rem', lineHeight: 1.45 }}>
-        Cut a sixth berth into the Man-o-War and sail a full crew of six — on every raid and voyage. The bench the deepest water demands.
+        Re-frame the Man-o-War's deck for a sixth crew slot. One more crew aboard, permanently, on every raid and every voyage.
       </p>
     </>
   )
@@ -70,7 +70,7 @@ export default function SixthBerthPanel({
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, borderRadius: 16, padding: '0.95rem 1rem', background: `${ACCENT}14`, border: `1px solid ${ACCENT}55`, boxShadow: `0 0 22px ${ACCENT}1a` }}>
           <CrewGlyph n={baseCrewSlots + 1} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: ACCENT }}>Six berths, all yours</p>
+            <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: ACCENT }}>Six crew slots, all yours</p>
             <p className="font-karla" style={{ fontSize: '0.68rem', color: '#9a948c', marginTop: 2 }}>Field a full crew of {baseCrewSlots + 1} every fight.</p>
           </div>
           <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ flexShrink: 0, fontSize: '0.5rem', color: '#0c0f14', background: ACCENT, borderRadius: 999, padding: '0.2rem 0.6rem' }}>Installed</span>
@@ -90,7 +90,7 @@ export default function SixthBerthPanel({
             <p className="font-karla font-700" style={{ fontSize: '0.9rem', color: '#f5f2ec' }}>
               <span style={{ color: '#9a948c' }}>{baseCrewSlots} crew</span> → <span style={{ color: ACCENT }}>{baseCrewSlots + 1} crew</span>
             </p>
-            <p className="font-karla" style={{ fontSize: '0.66rem', color: '#9a948c', marginTop: 2, lineHeight: 1.4 }}>One more ability every fight. Don Finleone will ask for all six.</p>
+            <p className="font-karla" style={{ fontSize: '0.66rem', color: '#9a948c', marginTop: 2, lineHeight: 1.4 }}>One more crew, and one more ability, in every fight you ever sail.</p>
           </div>
         </div>
         {confirming ? (
@@ -107,7 +107,7 @@ export default function SixthBerthPanel({
               <button type="button" onClick={() => canAfford && buy()} disabled={!canAfford || busy}
                 className="font-karla font-700 uppercase tracking-[0.08em] tap"
                 style={{ flex: 1.5, padding: '0.7rem', borderRadius: 10, fontSize: '0.7rem', cursor: canAfford && !busy ? 'pointer' : 'default', color: canAfford ? '#0c0f14' : '#6a6764', background: canAfford ? `linear-gradient(180deg, ${ACCENT}, ${ACCENT}cc)` : 'rgba(255,255,255,0.04)', border: 'none', boxShadow: canAfford ? `0 0 18px ${ACCENT}55` : 'none' }}>
-                {busy ? 'Cutting the berth…' : canAfford ? 'Add the berth' : `Need ${(SIXTH_BERTH_COST - doubloons).toLocaleString()} more ⟡`}
+                {busy ? 'Cutting the deck…' : canAfford ? 'Add the crew slot' : `Need ${(SIXTH_BERTH_COST - doubloons).toLocaleString()} more ⟡`}
               </button>
             </div>
           </div>

@@ -1972,19 +1972,23 @@ export const RAID_MAP: RaidNode[] = [
     // asks a crew ability of every phase: five hands cannot answer six. Clears
     // on read so a captain who cannot afford it yet is never blocked from the
     // chain; the purchase stays open on every revisit. Price = SIXTH_BERTH_COST.
+    // NOT a shop. The node is where you LEARN the refit is possible; the purchase
+    // itself happens in Manage Ship, beside the ship it changes. Buying a permanent
+    // upgrade to your hull from a story sheet on the raid map was always the wrong
+    // place for it.
     id: 'sixth_berth',    type: 'berth',
-    label: 'The Sixth Berth',
+    label: 'A Sixth Crew Slot',
     flavor: "He came apart along the grain, the way he tore everything else apart, and his hull showed you its bones on the way down. Six berths framed into a deck that had no business carrying more than five. Nobody does that by accident.",
-    bridge: 'The framing plans are in your chart locker and your carpenters have stopped arguing about whether it can be done. The gate to the throne is next, and the don counts hands.',
+    bridge: 'The plans are in your chart locker and your carpenters have stopped arguing about whether it can be done. Six, if you want to pay for it.',
     requiresNode: 'the_blockade',
     adminOnly: true,
     berth: { price: SIXTH_BERTH_COST },
     detail: {
       description:
-        "Every hull you have ever sailed berths five. Sal's berthed SIX, and when he broke open you finally saw how: the deck is framed wrong on purpose, load carried where no shipwright would put it. The plans were still in his locker, salted and legible, and you took them.\n\nYour own carpenters can read them. They can also tell you what it costs to cut open a finished hull and re-frame it around a sixth bunk, and the number is a fortune. It buys one more crew aboard, permanently, on every raid and every voyage.\n\nThink hard before you decide you cannot afford it. The don keeps his court in six parts and asks something of your crew in every one of them, and five hands do not answer six questions.",
-      dropsNote: 'A permanent sixth crew slot, on raids and voyages both. Bought once, and it never comes off.',
-      ctaLabel: 'Read the Plans →',
-      summary: "Sal's hull was framed for six, and the plans went down with him until you took them off the wreck. Your own yard can cut the same berth into your deck for a fortune: one more crew aboard, on every raid and voyage, permanently.",
+        "Your ship carries FIVE crew. Sal's carried six, and when he broke open you finally saw how: the deck is framed wrong on purpose, load taken where no shipwright would put it. The plans were still in his locker, salted and legible, and you took them.\n\nYour own carpenters can read them. Cut open the hull, re-frame it, and you sail with a SIXTH CREW SLOT: one more crew aboard, permanently, on every raid and every voyage.\n\nIt costs a fortune. Take the plans to your shipwrights in Manage Ship when you are ready to pay for it.",
+      dropsNote: 'A permanent sixth crew slot, on raids and voyages both. Bought once in Manage Ship, and it never comes off.',
+      ctaLabel: 'Take the Plans →',
+      summary: "Sal's hull was framed for six, and you took the plans off the wreck. Your own shipwrights can cut a SIXTH CREW SLOT into your deck for a fortune: one more crew aboard, on every raid and voyage, permanently. Buy it in Manage Ship.",
     },
   },
   {

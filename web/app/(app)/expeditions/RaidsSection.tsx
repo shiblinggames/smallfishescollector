@@ -14,7 +14,7 @@ import { getShipSkin } from '@/lib/shipSkins'
 import { claimMilestoneNode, markStoryNodeRead, claimScoutDebt, claimQuartermasterChoice, solvePuzzleNode, pickShipClass, markChapterUnlockSeen, pickRaidEventChoice, pickForkRoute, standForMuster } from './raidMapActions'
 import { musterReport, type MusterCrew } from '@/lib/crewMuster'
 import { repairShip } from '@/app/(app)/raids/actions'
-import { markUltimateUnlockSeen, buySixthBerth } from './actions'
+import { markUltimateUnlockSeen } from './actions'
 import { ULTIMATE_STORY } from '@/lib/shipAugments'
 import { getShipClass, offeredShipClasses } from '@/lib/shipClasses'
 import BeaconChainPuzzle from './BeaconChainPuzzle'
@@ -821,17 +821,6 @@ function NodeDetailSheet({
       router.refresh()
     })
   }
-  function buyBerth() {
-    setErr(null)
-    startTransition(async () => {
-      const res = await buySixthBerth()
-      if (!res.ok) { setErr(res.error ?? 'The yard turned you away.'); return }
-      if (typeof res.doubloons === 'number') window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
-      actedRef.current = true
-      router.refresh()
-    })
-  }
-
   function chooseClass(classId: string) {
     setErr(null)
     startTransition(async () => {
@@ -1472,7 +1461,6 @@ function NodeDetailSheet({
             Server (buySixthBerth) re-checks Sal Brackwater clear + the price. */}
         {node.berth && cleared && (() => {
           const price = node.berth.price
-          const canAfford = doubloons >= price
           const BERTH = '#e0a44a'
           return (
             <div style={{ marginTop: '1.1rem' }}>
@@ -1494,7 +1482,7 @@ function NodeDetailSheet({
                   </div>
                   <div style={{ minWidth: 0 }}>
                     <p className="font-karla font-700" style={{ fontSize: '0.86rem', color: '#f0ede8' }}>
-                      <span style={{ color: '#9a948c' }}>5 crew</span> → <span style={{ color: BERTH }}>6 crew</span>
+                      <span style={{ color: '#9a948c' }}>5 crew slots</span> → <span style={{ color: BERTH }}>6 crew slots</span>
                     </p>
                     <p className="font-karla" style={{ fontSize: '0.68rem', color: 'rgba(240,237,232,0.6)', lineHeight: 1.4, marginTop: 2 }}>
                       One more crew aboard, permanently. Raids and voyages both.
@@ -1503,26 +1491,30 @@ function NodeDetailSheet({
                 </div>
                 {hasSixthBerth ? (
                   <div className="font-karla font-700 uppercase tracking-[0.08em]" style={{ padding: '0.6rem', borderRadius: 9, textAlign: 'center', fontSize: '0.66rem', background: `${BERTH}1e`, border: `1px solid ${BERTH}66`, color: BERTH }}>
-                    Berth cut ✓ · you sail with six
+                    Installed ✓ · you sail with six
                   </div>
                 ) : (
+                  // The purchase does NOT happen here. A permanent change to your hull
+                  // belongs beside the hull, not on a story sheet in the raid map. This
+                  // sends you to the shipwrights with the plans.
                   <button
-                    onClick={buyBerth}
-                    disabled={pending || !canAfford}
+                    onClick={() => {
+                      onClose()
+                      window.dispatchEvent(new CustomEvent('expedition:open-loadout', { detail: { tab: 'ship' } }))
+                    }}
                     className="font-cinzel font-700 uppercase tracking-[0.06em]"
                     style={{
                       width: '100%', padding: '0.65rem', borderRadius: 9, fontSize: '0.82rem',
-                      background: canAfford ? `${BERTH}26` : 'rgba(255,255,255,0.05)',
-                      border: `1px solid ${canAfford ? `${BERTH}66` : 'rgba(255,255,255,0.12)'}`,
-                      color: canAfford ? BERTH : '#7a7470',
-                      cursor: pending ? 'wait' : canAfford ? 'pointer' : 'default',
+                      background: `${BERTH}26`, border: `1px solid ${BERTH}66`, color: BERTH, cursor: 'pointer',
                     }}
                   >
-                    {pending ? '…' : canAfford ? `Cut the berth · ${price.toLocaleString()} ⟡` : `Need ${(price - doubloons).toLocaleString()} more ⟡`}
+                    Open Manage Ship →
                   </button>
                 )}
-                <p className="font-karla" style={{ fontSize: '0.66rem', color: 'rgba(240,237,232,0.5)', lineHeight: 1.45, marginTop: 8, fontStyle: 'italic' }}>
-                  Don Finleone holds his court in six phases and asks a crew ability of every one.
+                <p className="font-karla" style={{ fontSize: '0.66rem', color: 'rgba(240,237,232,0.55)', lineHeight: 1.45, marginTop: 8 }}>
+                  {hasSixthBerth
+                    ? 'Assign the sixth crew from Manage Ship.'
+                    : `Your shipwrights will cut it for ${price.toLocaleString()} ⟡. Buy it in Manage Ship.`}
                 </p>
               </div>
             </div>
