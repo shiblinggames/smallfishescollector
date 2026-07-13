@@ -11,6 +11,7 @@
 // stays farmable.
 
 import { CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER, THE_COFFERS_FLEET, THE_QUARTERMASTER, THE_HAMMERHEAD, THE_THRONE, GEM_GLYPH, raidCompletionBonusXp, type RaidLootItem, type BossRaidConfig } from '@/lib/bossRaids'
+import { SIXTH_BERTH_COST } from '@/lib/shipBerth'
 import { CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE, THE_CARTOGRAPHER_CHALLENGE, THE_TOLLMASTER_CHALLENGE, THE_COFFERS_FLEET_CHALLENGE, THE_QUARTERMASTER_CHALLENGE, THE_HAMMERHEAD_CHALLENGE, THE_THRONE_CHALLENGE } from '@/lib/raidChallenge'
 import { getShipSkin } from '@/lib/shipSkins'
 import { getRaidItem } from '@/lib/raidItems'
@@ -21,7 +22,7 @@ import { getRaidItem } from '@/lib/raidItems'
 //  - milestone : a "collect / hold X" goal (no fight)
 //  - shop      : a contraband stall (future)
 //  - story     : an overarching-story beat (future)
-export type RaidNodeType = 'skirmish' | 'raid' | 'milestone' | 'shop' | 'story' | 'puzzle' | 'class_pick' | 'event' | 'dice' | 'gauntlet' | 'fork' | 'dps_check' | 'reclaim'
+export type RaidNodeType = 'skirmish' | 'raid' | 'milestone' | 'shop' | 'story' | 'puzzle' | 'class_pick' | 'event' | 'dice' | 'gauntlet' | 'fork' | 'dps_check' | 'reclaim' | 'berth'
 
 // Branching event nodes (lib/raidMap RaidNode.event). One-time, the
 // player picks ONE option which fires its outcome and clears the node;
@@ -339,6 +340,10 @@ export interface RaidNode {
    *  (EXCLUSIVE_CHOICE_PAIRS in lib/raidItems) for `price` doubloons each.
    *  Only pairs where the player owns exactly one side are offered;
    *  purchases stay available on revisit (clearing the node = reading it). */
+  /** Berth nodes: a one-time permanent CREW SLOT refit (Man-o-War 5 -> 6) for
+   *  `price` doubloons. Clears on read (like the vault) so it never gates the
+   *  chain; the purchase itself stays available on every revisit. */
+  berth?: { price: number }
   reclaim?: {
     price: number
     /** The vault's purchases stay locked until this node is cleared (the node
@@ -1870,11 +1875,32 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
+    // THE SIXTH BERTH — the Man-o-War crew refit (5 -> 6), bought here. Sits
+    // immediately after the Hammerhead because Don Finleone's six-phase court
+    // asks a crew ability of every phase: five hands cannot answer six. Clears
+    // on read so a captain who cannot afford it yet is never blocked from the
+    // chain; the purchase stays open on every revisit. Price = SIXTH_BERTH_COST.
+    id: 'sixth_berth',    type: 'berth',
+    label: 'The Sixth Berth',
+    flavor: "The Hammerhead's wreck gives up more than books. His hull was cut for six hands, not five, and the yard crew who did the cutting are still breathing. They will open your deck the same way, for a price that will hurt.",
+    bridge: 'Six berths, if you paid for them. The gate to the throne is next, and the don counts hands.',
+    requiresNode: 'the_hammerhead',
+    adminOnly: true,
+    berth: { price: SIXTH_BERTH_COST },
+    detail: {
+      description:
+        "Every hull you have ever sailed berths five. The Hammerhead's berthed six, and the yard hands who cut that sixth bunk survived the wreck. They will open your deck the same way: one more crew aboard, permanently, on every raid and every voyage. It will cost you a fortune. Take the offer seriously. Don Finleone holds his court in six phases and asks a crew ability of every one of them, so sail in with five hands and you will run out of crew before he runs out of teeth.",
+      dropsNote: 'A permanent sixth crew slot, on raids and voyages both. The don asks a crew ability of all six of his phases.',
+      ctaLabel: 'Talk to the Yard →',
+      summary: "The Hammerhead's yard hands cut a sixth berth into your hull for a fortune: one more crew aboard, on every raid and voyage. The don's court asks a crew ability of all six phases.",
+    },
+  },
+  {
     id: 'crooked_ledger',    type: 'story',
     label: 'The Crooked Ledger',
     flavor: "The Hammerhead's books ride in your hold now — the don's own accounts, in the don's own hand. They balance perfectly. All but one margin, where a single initial repeats in ink older than the rest.",
     bridge: "The books say the throne is dead ahead, past one last gate. The margin says something else — something with no name yet. You sail for the gate.",
-    requiresNode: 'the_hammerhead',
+    requiresNode: 'sixth_berth',
     adminOnly: true,
     image: '/raidlog.png',
     scene: [

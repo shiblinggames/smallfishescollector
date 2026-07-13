@@ -233,9 +233,10 @@ export async function markStoryNodeRead(
   if (!user) return { error: 'Unauthorized' }
 
   const node = RAID_MAP.find(n => n.id === nodeId)
-  // 'reclaim' clears like a story read — the purchases are separate, optional,
-  // and stay available on revisit, so reading the vault never gates the chain.
-  if (!node || (node.type !== 'story' && node.type !== 'reclaim')) return { error: 'Invalid node' }
+  // 'reclaim' + 'berth' clear like a story read — their purchases are separate,
+  // optional, and stay available on revisit, so reading one never gates the
+  // chain (a captain who cannot afford the refit yet still sails on).
+  if (!node || (node.type !== 'story' && node.type !== 'reclaim' && node.type !== 'berth')) return { error: 'Invalid node' }
 
   const admin = createAdminClient()
   const { data: profile } = await admin

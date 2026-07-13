@@ -11,7 +11,7 @@ import { getRaidItem, EXCLUSIVE_CHOICE_PAIRS, effectiveOwnedItems } from '@/lib/
 import { getShipSkin } from '@/lib/shipSkins'
 import { claimMilestoneNode, markStoryNodeRead, claimScoutDebt, claimQuartermasterChoice, buyReclaimedItem, solvePuzzleNode, pickShipClass, markChapterUnlockSeen, pickRaidEventChoice, pickForkRoute } from './raidMapActions'
 import { repairShip } from '@/app/(app)/raids/actions'
-import { markUltimateUnlockSeen } from './actions'
+import { markUltimateUnlockSeen, buySixthBerth } from './actions'
 import { ULTIMATE_STORY } from '@/lib/shipAugments'
 import { getShipClass, offeredShipClasses } from '@/lib/shipClasses'
 import BeaconChainPuzzle from './BeaconChainPuzzle'
@@ -109,6 +109,8 @@ function NodeGlyph({ type, color, size = 22 }: { type: string; color: string; si
   if (type === 'shop') return <svg {...common}><path d="M3 9l1.5-5h15L21 9M4 9v10a1 1 0 001 1h14a1 1 0 001-1V9M4 9h16M9 13h6" /></svg>
   // reclaim: a strongbox (the seized vault)
   if (type === 'reclaim') return <svg {...common}><rect x="3" y="8" width="18" height="12" rx="2" /><path d="M3 12h18M7 8V6a5 5 0 0 1 10 0v2" /><circle cx="12" cy="16" r="1.4" fill={color} stroke="none" /></svg>
+  // berth: stacked bunks (the crew refit)
+  if (type === 'berth') return <svg {...common}><path d="M5 4v16M19 4v16M5 10h14M5 16h14" /><circle cx="8.6" cy="7.6" r="1.3" fill={color} stroke="none" /><circle cx="8.6" cy="13.6" r="1.3" fill={color} stroke="none" /></svg>
   // story: open book
   if (type === 'story') return <svg {...common}><path d="M12 6.5C10.5 5 8 4.5 4 5v13c4-.5 6.5 0 8 1.5 1.5-1.5 4-2 8-1.5V5c-4-.5-6.5 0-8 1.5zM12 6.5V19" /></svg>
   // puzzle: a signal beacon flame (light the chain)
@@ -145,6 +147,7 @@ function nodeTypeLabel(type: string): string {
     case 'gauntlet':   return 'Gauntlet'
     case 'fork':       return 'Crossroads'
     case 'reclaim':    return 'Vault'
+    case 'berth':      return 'Refit'
     default:           return type
   }
 }
@@ -641,6 +644,7 @@ function NodeDetailSheet({
   pickedEventChoiceId,
   allNodeChoices,
   clearedNodeIds,
+  hasSixthBerth,
   onClose,
 }: {
   view: RaidNodeView
@@ -661,6 +665,8 @@ function NodeDetailSheet({
   /** Every node's recorded choice (raid_node_progress.choices). Lets a
    *  payoff node read a choice made at an EARLIER node (the freed scout). */
   allNodeChoices: Record<string, string>
+  /** Owns the Sixth Berth already (the refit node shows "cut" instead of a buy). */
+  hasSixthBerth: boolean
   onClose: () => void
 }) {
   const router = useRouter()
@@ -715,6 +721,7 @@ function NodeDetailSheet({
     : node.type === 'shop' ? 'Planned Stock'
     : node.type === 'story' ? 'What You Uncover'
     : node.type === 'reclaim' ? 'Seized Stock'
+    : node.type === 'berth' ? 'The Refit'
     : 'Reward'
 
   function claim() {
@@ -788,6 +795,27 @@ function NodeDetailSheet({
       if ('error' in res) { setErr(res.error); return }
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
       // Stay open — the refreshed ownedRaidItems flips the card to Reclaimed ✓.
+      router.refresh()
+    })
+  }
+
+  // The berth node's clear — same read-persistence as the vault, sheet stays
+  // open so the refit offer is right there. Buying is a separate, optional act.
+  function openBerth() {
+    setErr(null)
+    startTransition(async () => {
+      const res = await markStoryNodeRead(node.id)
+      if ('error' in res) { setErr(res.error); return }
+      router.refresh()
+    })
+  }
+  function buyBerth() {
+    setErr(null)
+    startTransition(async () => {
+      const res = await buySixthBerth()
+      if (!res.ok) { setErr(res.error ?? 'The yard turned you away.'); return }
+      if (typeof res.doubloons === 'number') window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+      actedRef.current = true
       router.refresh()
     })
   }
@@ -959,6 +987,25 @@ function NodeDetailSheet({
           style={{ width: '100%', padding: '0.85rem', borderRadius: 12, fontSize: '1rem', background: `${accent}26`, border: `1px solid ${accent}66`, color: accent, cursor: pending ? 'wait' : 'pointer' }}
         >
           {pending ? '…' : (detail.ctaLabel ?? 'Crack the Vault →')}
+        </button>
+      )
+    }
+  } else if (node.type === 'berth') {
+    // The refit offer lives in the body (and stays buyable on every revisit);
+    // the CTA only handles the one-time "read" that clears the node.
+    if (cleared) {
+      cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: `${accent}1a`, border: `1px solid ${accent}40`, color: accent }}>{hasSixthBerth ? 'Berth Cut ✓' : 'Terms Heard ✓'}</div>
+    } else if (locked) {
+      cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: 'rgba(255,255,255,0.06)', color: '#5a5856' }}>Locked</div>
+    } else {
+      cta = (
+        <button
+          onClick={openBerth}
+          disabled={pending}
+          className="font-cinzel font-700 uppercase tracking-[0.06em]"
+          style={{ width: '100%', padding: '0.85rem', borderRadius: 12, fontSize: '1rem', background: `${accent}26`, border: `1px solid ${accent}66`, color: accent, cursor: pending ? 'wait' : 'pointer' }}
+        >
+          {pending ? '…' : (detail.ctaLabel ?? 'Talk to the Yard →')}
         </button>
       )
     }
@@ -1478,6 +1525,68 @@ function NodeDetailSheet({
                   })}
                 </div>
               )}
+            </div>
+          )
+        })()}
+
+        {/* The Sixth Berth: the crew refit. Shown once the yard has been
+            spoken to (cleared) and stays buyable on every revisit until bought.
+            Server (buySixthBerth) re-checks the Hammerhead clear + the price. */}
+        {node.berth && cleared && (() => {
+          const price = node.berth.price
+          const canAfford = doubloons >= price
+          const BERTH = '#e0a44a'
+          return (
+            <div style={{ marginTop: '1.1rem' }}>
+              <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#7a7875', marginBottom: '0.55rem' }}>
+                The Refit
+              </p>
+              <div style={{ borderRadius: 12, padding: '0.85rem', background: `${BERTH}0e`, border: `1px solid ${BERTH}${hasSixthBerth ? '66' : '3a'}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: 10 }}>
+                  {/* six berths, the last one lit as the new one */}
+                  <div aria-hidden style={{ flexShrink: 0, display: 'grid', gridTemplateColumns: 'repeat(3, 8px)', gap: 4, padding: 8, borderRadius: 10, background: 'rgba(0,0,0,0.25)', border: `1px solid ${BERTH}33` }}>
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <span key={i} style={{
+                        width: 8, height: 8, borderRadius: '50%',
+                        background: i < 5 ? '#cfc9bf' : (hasSixthBerth ? BERTH : 'rgba(255,255,255,0.12)'),
+                        boxShadow: i === 5 && hasSixthBerth ? `0 0 7px ${BERTH}` : 'none',
+                        border: i === 5 && !hasSixthBerth ? `1px dashed ${BERTH}88` : 'none',
+                      }} />
+                    ))}
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <p className="font-karla font-700" style={{ fontSize: '0.86rem', color: '#f0ede8' }}>
+                      <span style={{ color: '#9a948c' }}>5 crew</span> → <span style={{ color: BERTH }}>6 crew</span>
+                    </p>
+                    <p className="font-karla" style={{ fontSize: '0.68rem', color: 'rgba(240,237,232,0.6)', lineHeight: 1.4, marginTop: 2 }}>
+                      One more crew aboard, permanently. Raids and voyages both.
+                    </p>
+                  </div>
+                </div>
+                {hasSixthBerth ? (
+                  <div className="font-karla font-700 uppercase tracking-[0.08em]" style={{ padding: '0.6rem', borderRadius: 9, textAlign: 'center', fontSize: '0.66rem', background: `${BERTH}1e`, border: `1px solid ${BERTH}66`, color: BERTH }}>
+                    Berth cut ✓ · you sail with six
+                  </div>
+                ) : (
+                  <button
+                    onClick={buyBerth}
+                    disabled={pending || !canAfford}
+                    className="font-cinzel font-700 uppercase tracking-[0.06em]"
+                    style={{
+                      width: '100%', padding: '0.65rem', borderRadius: 9, fontSize: '0.82rem',
+                      background: canAfford ? `${BERTH}26` : 'rgba(255,255,255,0.05)',
+                      border: `1px solid ${canAfford ? `${BERTH}66` : 'rgba(255,255,255,0.12)'}`,
+                      color: canAfford ? BERTH : '#7a7470',
+                      cursor: pending ? 'wait' : canAfford ? 'pointer' : 'default',
+                    }}
+                  >
+                    {pending ? '…' : canAfford ? `Cut the berth · ${price.toLocaleString()} ⟡` : `Need ${(price - doubloons).toLocaleString()} more ⟡`}
+                  </button>
+                )}
+                <p className="font-karla" style={{ fontSize: '0.66rem', color: 'rgba(240,237,232,0.5)', lineHeight: 1.45, marginTop: 8, fontStyle: 'italic' }}>
+                  Don Finleone holds his court in six phases and asks a crew ability of every one.
+                </p>
+              </div>
             </div>
           )
         })()}
@@ -2646,7 +2755,7 @@ function RepairBlockedModal({
 
 /* ─────────────────────── Collapsible section ─────────────────── */
 
-export default function RaidsSection({ views, doubloons, navLevel, playerShipImage, raidRecords, repairOwed, ownedRaidItems, equippedRaidItems, shipClasses, seenChapterUnlocks, seenUltimateUnlock, raidNodeChoices, topRaidProgress }: { views: RaidNodeView[]; doubloons: number; navLevel: number; playerShipImage?: string; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[]; equippedRaidItems: string[]; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; seenUltimateUnlock: boolean; raidNodeChoices: Record<string, string>; topRaidProgress: { username: string; score: number } | null }) {
+export default function RaidsSection({ views, doubloons, navLevel, playerShipImage, raidRecords, repairOwed, ownedRaidItems, equippedRaidItems, shipClasses, seenChapterUnlocks, seenUltimateUnlock, raidNodeChoices, topRaidProgress, hasSixthBerth = false }: { views: RaidNodeView[]; doubloons: number; navLevel: number; playerShipImage?: string; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[]; equippedRaidItems: string[]; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; seenUltimateUnlock: boolean; raidNodeChoices: Record<string, string>; topRaidProgress: { username: string; score: number } | null; hasSixthBerth?: boolean }) {
   const [open, setOpen] = useState(true)
   const [selected, setSelected] = useState<RaidNodeView | null>(null)
   // Per-chapter manual toggle overrides. Membership means the player
@@ -2979,6 +3088,7 @@ export default function RaidsSection({ views, doubloons, navLevel, playerShipIma
             pickedEventChoiceId={raidNodeChoices[selected.node.id]}
             allNodeChoices={raidNodeChoices}
             clearedNodeIds={new Set(views.filter(v => v.status === 'cleared').map(v => v.node.id))}
+            hasSixthBerth={hasSixthBerth}
             onClose={() => setSelected(null)}
           />
         )}

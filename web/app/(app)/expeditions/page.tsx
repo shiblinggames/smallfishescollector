@@ -366,6 +366,7 @@ async function RaidsMapSection() {
       seenUltimateUnlock={raidMap.seenUltimateUnlock}
       raidNodeChoices={raidMap.raidNodeChoices}
       topRaidProgress={topRaidProgress}
+      hasSixthBerth={profile?.has_sixth_berth === true}
     />
   )
 }
