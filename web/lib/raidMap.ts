@@ -1940,7 +1940,7 @@ export const RAID_MAP: RaidNode[] = [
     image: THE_BLOCKADE.enemies.saltie.portrait,
     detail: {
       description:
-        "Don Finleone's escort fleet. Three things here are new.\n\nBARRIERS. Every ship hides behind one. Break it before you can touch the hull. Volleys chew it fastest; fire burns straight past it.\n\nFOUR SHOTS, not three. Never assume a ship is empty.\n\nDIRTY TRICKS. Each one curses you differently: tangled rudder, softened guns, split seams, a hull that heals itself, and a gag that locks your crew's abilities.\n\nSal Brackwater does not swing at you. He goes STILL. The moment the water flattens, he has your hull in his teeth. Only a CREW ABILITY stops the roll.",
+        "The don's escort fleet, and it does not fight like anything you have met.\n\nEvery hull rides behind a barrier, so your opening shots buy nothing but broken plating. Their magazines run four deep, and a ship that has been firing all round is never as empty as you would like. And they fight dirty: nets for your rudder, chain-shot for your guns, cracker rounds for your seams, and a gag order for your crew.\n\nAt the center of the line, something long and low lies in the water and does not move.",
       enemies: ['The Scute', 'The Bank', 'The Mangrove', 'The Rasp', 'The Wedge', 'Old Scar', 'The Muzzle', 'Sal Brackwater'],
       drops: lootDrops(THE_BLOCKADE.loot),
       clearReward: clearPayout(THE_BLOCKADE),
