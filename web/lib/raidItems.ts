@@ -236,14 +236,14 @@ export const RAID_ITEMS: RaidItemDef[] = [
   {
     id: 'chain_shot',
     name: 'Chain-Shot Rack',
-    description: "Landed hits have a 25% chance to tear the enemy's rigging — WEAKENED: it deals 20% less damage for 2 rounds. The Hammerhead's own answer, turned back on the Finndicate.",
+    description: "Landed hits have a 25% chance to tear the enemy's rigging — WEAKENED: it deals 20% less damage for 2 rounds. Sal Brackwater's own answer, turned back on the Finndicate.",
     image: null,  // TODO: /chainshot.png at the art pass
     emoji: '⛓️',
     rarity: 'epic',
     effects: [
       { type: 'weaken_on_hit', value: 0.25 },
     ],
-    source: 'The Blockade — The Hammerhead',
+    source: 'The Blockade — Sal Brackwater',
   },
   {
     id: 'dons_signet',

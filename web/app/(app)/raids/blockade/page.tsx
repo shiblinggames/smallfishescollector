@@ -1,4 +1,4 @@
-// The Hammerhead — Chapter IV's Raid 7 (The Blockade): Don Finleone's escort
+// Sal Brackwater — Chapter IV's Raid 7 (The Blockade): Don Finleone's escort
 // armada + his chief enforcer. Introduces the Ch4 suite: baseline enemy
 // shields, 4-cannonball magazines, and enemy SPECIALS via the status pipeline.
 // ADMIN-ONLY until the Last Fathom launches (drop this guard + the map
@@ -7,10 +7,10 @@
 import { redirect } from 'next/navigation'
 import RaidGame from '../RaidGame'
 import { getRaidPlayerStats } from '../actions'
-import { THE_HAMMERHEAD } from '@/lib/bossRaids'
+import { THE_BLOCKADE } from '@/lib/bossRaids'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 
-export default async function HammerheadRaidPage() {
+export default async function BlockadeRaidPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
 
@@ -28,7 +28,7 @@ export default async function HammerheadRaidPage() {
       <main className="min-h-screen pt-6">
         <div className="px-3 pb-12 max-w-xl mx-auto">
           <RaidGame
-            config={THE_HAMMERHEAD}
+            config={THE_BLOCKADE}
             shipImageUrl={stats.shipImageUrl}
             shipName={stats.shipName}
             username={stats.username}

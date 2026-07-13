@@ -226,8 +226,8 @@ interface Props {
   manowarSchematics?: boolean
   /** Cleared Chapter 3 (beat the Quartermaster) — unlocks the ultimate build. */
   chapter3Cleared?: boolean
-  /** Cleared Raid 7 (the Hammerhead) — unlocks the Sixth Berth purchase. */
-  hammerheadCleared?: boolean
+  /** Cleared Raid 7 (the Blockade) — unlocks the Sixth Berth purchase. */
+  blockadeCleared?: boolean
   /** Owns the Sixth Berth (Man-o-War 5 → 6 crew). */
   hasSixthBerth?: boolean
   isAdmin?: boolean
@@ -315,7 +315,7 @@ export default function ShipHero({
   manowarBuild = null,
   manowarSchematics = false,
   chapter3Cleared = false,
-  hammerheadCleared = false,
+  blockadeCleared = false,
   hasSixthBerth = false,
   isAdmin = false,
   navRenownAlloc = null,
@@ -1661,9 +1661,9 @@ export default function ShipHero({
                     )}
 
                     {/* ── The Sixth Berth ── a Man-o-War crew slot (5 → 6),
-                        revealed once the Hammerhead (Raid 7) falls. */}
+                        revealed once Sal Brackwater (Raid 7) falls. */}
                     <SixthBerthPanel
-                      hammerheadCleared={hammerheadCleared}
+                      blockadeCleared={blockadeCleared}
                       hasSixthBerth={hasSixthBerth}
                       baseCrewSlots={hasSixthBerth ? shipStats.crewSlots - 1 : shipStats.crewSlots}
                       doubloons={doubloons}

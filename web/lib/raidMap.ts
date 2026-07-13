@@ -10,9 +10,9 @@
 // gated by `requiresNode` (+ optional Nav level); a cleared combat node
 // stays farmable.
 
-import { CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER, THE_COFFERS_FLEET, THE_QUARTERMASTER, THE_QUARTERMASTERS_GHOST, THE_HAMMERHEAD, THE_THRONE, GEM_GLYPH, raidCompletionBonusXp, type RaidLootItem, type BossRaidConfig } from '@/lib/bossRaids'
+import { CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER, THE_COFFERS_FLEET, THE_QUARTERMASTER, THE_QUARTERMASTERS_GHOST, THE_BLOCKADE, THE_THRONE, GEM_GLYPH, raidCompletionBonusXp, type RaidLootItem, type BossRaidConfig } from '@/lib/bossRaids'
 import { SIXTH_BERTH_COST } from '@/lib/shipBerth'
-import { CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE, THE_CARTOGRAPHER_CHALLENGE, THE_TOLLMASTER_CHALLENGE, THE_COFFERS_FLEET_CHALLENGE, THE_QUARTERMASTER_CHALLENGE, THE_HAMMERHEAD_CHALLENGE, THE_THRONE_CHALLENGE } from '@/lib/raidChallenge'
+import { CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE, THE_CARTOGRAPHER_CHALLENGE, THE_TOLLMASTER_CHALLENGE, THE_COFFERS_FLEET_CHALLENGE, THE_QUARTERMASTER_CHALLENGE, THE_BLOCKADE_CHALLENGE, THE_THRONE_CHALLENGE } from '@/lib/raidChallenge'
 import { getShipSkin } from '@/lib/shipSkins'
 import { getRaidItem } from '@/lib/raidItems'
 
@@ -558,7 +558,7 @@ export const RAID_CHAPTERS: RaidChapter[] = [
     subtitle:   'The deepest water there is, and the don who owns it. Nothing waits past this.',
     // UNDER CONSTRUCTION (all nodes adminOnly) — full locked chain:
     // throne_heading → the_reclamation → Cargo Shuffle puzzle → Raid 7
-    // (The Hammerhead) → crooked_ledger → Tumbler Lock puzzle → Raid 8
+    // (Sal Brackwater) → crooked_ledger → Tumbler Lock puzzle → Raid 8
     // (Don Finleone) → dons_fall → chapter_4_augment.
     // lastNodeId GROWS as nodes are built; final = chapter_4_augment.
     lastNodeId: 'chapter_4_augment',
@@ -1789,7 +1789,7 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    // Cargo Shuffle #1 — Sokoban in the powder hold before the Hammerhead's
+    // Cargo Shuffle #1 — Sokoban in the powder hold before Sal Brackwater's
     // blockade. Three escalating rooms; every grid is validated by
     // web/verify-cargo.mjs (min moves 22 / 44 / 69 vs budgets 30 / 58 / 90).
     // Room 1 is additionally ORDER-FREE (either crate can seat first —
@@ -1805,7 +1805,7 @@ export const RAID_MAP: RaidNode[] = [
     puzzle: {
       kind: 'cargo',
       rewardNavXp: 900,
-      reveal: 'The hold sits trim and the powder is dry.\nPast the next swell: the blockade line, and the Hammerhead who holds it.',
+      reveal: 'The hold sits trim and the powder is dry.\nPast the next swell: the blockade line, and Sal Brackwater who holds it.',
       cargo: {
         rooms: [
           { moveBudget: 30, grid: [
@@ -1851,75 +1851,75 @@ export const RAID_MAP: RaidNode[] = [
   {
     // RAID 7 — The Blockade. Introduces the Ch4 suite: baseline enemy shields,
     // 4-cannonball magazines, and enemy SPECIALS (statuses thrown at you).
-    id: 'the_hammerhead',    type: 'raid',
-    label: 'The Hammerhead',
-    flavor: "Don Finleone's blockade line, and the enforcer who holds it: the Hammerhead. Every hull rides behind a cold-light barrier, every magazine runs four deep, and his crews fight dirtier than any market ever did.",
-    bridge: "The blockade breaks and the Hammerhead goes under it. The way to the don's own water lies open — and his books ride in your hold.",
+    id: 'the_blockade',    type: 'raid',
+    label: 'Sal Brackwater',
+    flavor: "Don Finleone's blockade line, and the enforcer who holds it: Sal Brackwater. Every hull rides behind a cold-light barrier, every magazine runs four deep, and his crews fight dirtier than any market ever did.",
+    bridge: "The blockade breaks and Sal Brackwater goes under it. The way to the don's own water lies open — and his books ride in your hold.",
     requiresNode: 'throne_locks',
     requiresNavLevel: 56,
     adminOnly: true,
-    route: '/raids/hammerhead',
-    raidId: THE_HAMMERHEAD.raidId,
-    image: THE_HAMMERHEAD.enemies.hammerhead.portrait,
+    route: '/raids/blockade',
+    raidId: THE_BLOCKADE.raidId,
+    image: THE_BLOCKADE.enemies.saltie.portrait,
     detail: {
       description:
-        "The don's escort armada fights like nothing before it. Every hull opens behind a barrier your shots must chew through first; every magazine runs FOUR cannonballs deep, so their fire never falls into a rhythm you can bank on. And his crews throw more than iron: nets that foul your wheel, chain-shot that softens your guns, cracker rounds that spring your seams, and a gag order that silences your crew. The Hammerhead himself rises angrier as he swings — meet the Full Swing with a crew ability, or fold under it.",
-      enemies: ['The Picket', 'The Bosun', 'The Netter', 'The Chainman', 'The Cracksman', 'The Purser', 'The Muzzle', 'The Hammerhead'],
-      drops: lootDrops(THE_HAMMERHEAD.loot),
-      clearReward: clearPayout(THE_HAMMERHEAD),
+        "The don's escort armada fights like nothing before it. Every hull opens behind a barrier your shots must chew through first; every magazine runs FOUR cannonballs deep, so their fire never falls into a rhythm you can bank on. And his crews throw more than iron: nets that foul your wheel, chain-shot that softens your guns, cracker rounds that spring your seams, and a gag order that silences your crew. Sal Brackwater himself does not swing at you, he goes STILL, and that is the tell: when the water flattens, he is about to take your hull in his teeth and roll. Answer the Death Roll with a crew ability or he tears the ship apart along the grain.",
+      enemies: ['The Picket', 'The Bosun', 'The Netter', 'The Chainman', 'The Cracksman', 'The Purser', 'The Muzzle', 'Sal Brackwater'],
+      drops: lootDrops(THE_BLOCKADE.loot),
+      clearReward: clearPayout(THE_BLOCKADE),
       dropsNote: 'One crate per clear, rolled once and scaled by your Fortune. The Chain-Shot Rack is the signature chase — turn their own Weaken back on them. Two stronger Tide events between fights.',
     },
   },
   {
-    id: 'the_hammerhead_challenge',    type: 'raid',
-    label: 'Challenge: The Hammerhead',
-    flavor: "The blockade re-forms, heavier at every post. The Hammerhead does not hold a line twice — he buries it.",
-    requiresNode: 'the_hammerhead',
+    id: 'the_blockade_challenge',    type: 'raid',
+    label: 'Challenge: Sal Brackwater',
+    flavor: "The blockade re-forms, heavier at every post. Sal Brackwater does not hold a line twice — he buries it.",
+    requiresNode: 'the_blockade',
     adminOnly: true,
-    route: '/raids/hammerhead/challenge',
-    raidId: THE_HAMMERHEAD_CHALLENGE.raidId,
-    sideBranch: { parentId: 'the_hammerhead' },
-    image: THE_HAMMERHEAD.enemies.hammerhead.portrait,
+    route: '/raids/blockade/challenge',
+    raidId: THE_BLOCKADE_CHALLENGE.raidId,
+    sideBranch: { parentId: 'the_blockade' },
+    image: THE_BLOCKADE.enemies.saltie.portrait,
     detail: {
       description:
         "The blockade again, harder for the breaking. Thicker barriers, deeper clips, the same dirty specials and the same Full Swing — all of it meaner. The chase rewards roll richer.",
-      enemies: ['The Picket', 'The Bosun', 'The Netter', 'The Chainman', 'The Cracksman', 'The Purser', 'The Muzzle', 'The Hammerhead'],
-      drops: lootDrops(THE_HAMMERHEAD_CHALLENGE.loot),
-      clearReward: clearPayout(THE_HAMMERHEAD_CHALLENGE),
+      enemies: ['The Picket', 'The Bosun', 'The Netter', 'The Chainman', 'The Cracksman', 'The Purser', 'The Muzzle', 'Sal Brackwater'],
+      drops: lootDrops(THE_BLOCKADE_CHALLENGE.loot),
+      clearReward: clearPayout(THE_BLOCKADE_CHALLENGE),
       dropsNote: 'Every kill pays more and the clear bonus is steeper than the normal run.',
     },
   },
   {
     // THE SIXTH BERTH — the Man-o-War crew refit (5 -> 6), bought here. Sits
-    // immediately after the Hammerhead because Don Finleone's six-phase court
+    // immediately after Sal Brackwater because Don Finleone's six-phase court
     // asks a crew ability of every phase: five hands cannot answer six. Clears
     // on read so a captain who cannot afford it yet is never blocked from the
     // chain; the purchase stays open on every revisit. Price = SIXTH_BERTH_COST.
     id: 'sixth_berth',    type: 'berth',
     label: 'The Sixth Berth',
-    flavor: "The Hammerhead's wreck gives up more than books. His hull was cut for six hands, not five, and the yard crew who did the cutting are still breathing. They will open your deck the same way, for a price that will hurt.",
+    flavor: "Sal Brackwater's wreck gives up more than books. His hull was cut for six hands, not five, and the yard crew who did the cutting are still breathing. They will open your deck the same way, for a price that will hurt.",
     bridge: 'Six berths, if you paid for them. The gate to the throne is next, and the don counts hands.',
-    requiresNode: 'the_hammerhead',
+    requiresNode: 'the_blockade',
     adminOnly: true,
     berth: { price: SIXTH_BERTH_COST },
     detail: {
       description:
-        "Every hull you have ever sailed berths five. The Hammerhead's berthed six, and the yard hands who cut that sixth bunk survived the wreck. They will open your deck the same way: one more crew aboard, permanently, on every raid and every voyage. It will cost you a fortune. Take the offer seriously. Don Finleone holds his court in six phases and asks a crew ability of every one of them, so sail in with five hands and you will run out of crew before he runs out of teeth.",
+        "Every hull you have ever sailed berths five. Sal Brackwater's berthed six, and the yard hands who cut that sixth bunk survived the wreck. They will open your deck the same way: one more crew aboard, permanently, on every raid and every voyage. It will cost you a fortune. Take the offer seriously. Don Finleone holds his court in six phases and asks a crew ability of every one of them, so sail in with five hands and you will run out of crew before he runs out of teeth.",
       dropsNote: 'A permanent sixth crew slot, on raids and voyages both. The don asks a crew ability of all six of his phases.',
       ctaLabel: 'Talk to the Yard →',
-      summary: "The Hammerhead's yard hands cut a sixth berth into your hull for a fortune: one more crew aboard, on every raid and voyage. The don's court asks a crew ability of all six phases.",
+      summary: "Sal Brackwater's yard hands cut a sixth berth into your hull for a fortune: one more crew aboard, on every raid and voyage. The don's court asks a crew ability of all six phases.",
     },
   },
   {
     id: 'crooked_ledger',    type: 'story',
     label: 'The Crooked Ledger',
-    flavor: "The Hammerhead's books ride in your hold now — the don's own accounts, in the don's own hand. They balance perfectly. All but one margin, where a single initial repeats in ink older than the rest.",
+    flavor: "Sal Brackwater's books ride in your hold now — the don's own accounts, in the don's own hand. They balance perfectly. All but one margin, where a single initial repeats in ink older than the rest.",
     bridge: "The books say the throne is dead ahead, past one last gate. The margin says something else — something with no name yet. You sail for the gate.",
     requiresNode: 'sixth_berth',
     adminOnly: true,
     image: '/raidlog.png',
     scene: [
-      { text: "The Hammerhead's strongroom gives up the don's own ledgers — every account the Finndicate keeps, in Finleone's own hand." },
+      { text: "Sal Brackwater's strongroom gives up the don's own ledgers — every account the Finndicate keeps, in Finleone's own hand." },
       { text: 'They balance. Every catch, every Cache, every drowned captain, paid to the coin. A perfect empire, perfectly kept.' },
       { text: 'All but one margin.' },
       { text: 'Again and again, in ink older and finer than the rest, a single initial signs off sums that answer to no account: F.' },
@@ -1928,13 +1928,13 @@ export const RAID_MAP: RaidNode[] = [
     ],
     detail: {
       description:
-        "The don's own ledgers, taken off the Hammerhead's wreck. They balance perfectly — a whole drowned empire, paid to the coin — except for one margin, where a small, patient initial keeps signing sums that answer to no account: F. The don signs his full name with a flourish, every time. This hand was here first. The throne ahead has your answer, one way or another.",
+        "The don's own ledgers, taken off Sal Brackwater's wreck. They balance perfectly — a whole drowned empire, paid to the coin — except for one margin, where a small, patient initial keeps signing sums that answer to no account: F. The don signs his full name with a flourish, every time. This hand was here first. The throne ahead has your answer, one way or another.",
       drops: [
         { emoji: '📜', label: "Captain's Logbook, Fragment XIII", sublabel: `"The books balance. The margin doesn't. F."`, rarity: 'rare' },
       ],
       dropsNote: 'The don, made real in his own hand — and a margin that keeps a different set of books.',
       ctaLabel: 'Open the Ledgers →',
-      summary: "The Hammerhead's strongroom gave up the don's ledgers: a perfect empire, perfectly kept — except one margin, where an old, patient initial signs sums no account explains: F. The throne ahead holds the answer.",
+      summary: "Sal Brackwater's strongroom gave up the don's ledgers: a perfect empire, perfectly kept — except one margin, where an old, patient initial signs sums no account explains: F. The throne ahead holds the answer.",
     },
   },
   {

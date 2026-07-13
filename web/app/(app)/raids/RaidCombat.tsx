@@ -1246,7 +1246,7 @@ export default function RaidCombat({
   // classic phase2 boss just yields [] or [phase2], so all existing raids behave
   // exactly as before.
   const phaseList = useMemo(() => enemy.phases ?? (enemy.phase2 ? [enemy.phase2] : []), [enemy.phases, enemy.phase2])
-  // ── The Last Wall (aegis — Hammerhead phase 3) ──────────────────────────────
+  // ── The Last Wall (aegis — Sal Brackwater, phase 3) ──────────────────────────────
   // A phase can open behind a wall that drinks EVERY player blow whole. A Mega
   // shatters it outright (the discovery the fight wants the player to make);
   // anything else chips its endurance (volley counts double) until it collapses

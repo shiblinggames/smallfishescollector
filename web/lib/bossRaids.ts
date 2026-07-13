@@ -83,7 +83,7 @@ export interface BossPhase {
   /** Optional telegraphed mechanic check that ARMS the instant this phase
    *  begins (answer it with the right crew play or eat the consequence). */
   check?: BossMechanicCheck
-  /** AEGIS (Hammerhead phase 3): the phase opens behind a wall that drinks
+  /** AEGIS (Sal Brackwater, phase 3): the phase opens behind a wall that drinks
    *  EVERY shot whole (zero damage) until it breaks. A player Mega shatters
    *  it instantly (the intended discovery — hints stay oblique); without one
    *  it collapses after `hitsToBreak` landed hits (volleys count double), so
@@ -225,7 +225,7 @@ export interface BroadsideEnemy {
    *  steady bead on. The zone's base pace already scales with shipSpeed, so a
    *  slow brute stays easier to crit even with a mult. Undefined = 1. */
   zoneSpeedMult?: number
-  /** The Hammerhead's raid (Ch4, Raid 7) — "Rolling Plate." The gold CRIT
+  /** The Blockade (Ch4, Raid 7) — "Rolling Plate." The gold CRIT
    *  band drifts WITHIN the moving target zone (a target inside the target):
    *  the crew rolls its armor plating, so the seam never sits still. Value is
    *  the seam's drift speed (0.5 gentle, 1.2 fast). The seam roams the WHOLE
@@ -1127,12 +1127,12 @@ export const THE_QUARTERMASTERS_GHOST: BossRaidConfig = {
       //
       //     1050 x (1 + 0.60 + 0.48 + 0.38) + 158  =  ~2,740
       //
-      // For scale, the boss BARS around him: the Quartermaster 1,807, the Hammerhead
+      // For scale, the boss BARS around him: the Quartermaster 1,807, Sal Brackwater
       // 1,575, Don Finleone 3,150. He was built at 997, which was less than half the
       // Ch3 finale and far too little for captains who now hit for 300-480 a shot. He
-      // sits above both mid bosses and below the don, which is where a post-Hammerhead
+      // sits above both mid bosses and below the don, which is where a post-Sal Brackwater
       // farm boss belongs. He carries no adds, so this IS the whole encounter: 2,740
-      // against the Quartermaster's full raid at 2,387 and the Hammerhead's at 4,175.
+      // against the Quartermaster's full raid at 2,387 and the Blockade's at 4,350.
       // Long enough to be a fight, short enough to run again.
       //
       // Each phase arms one telegraphed check, and the three of them deliberately
@@ -1370,11 +1370,17 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
 //     member throws ONE debuff at you; the boss buffs HIMSELF.
 // Audience: post-Ch3, Nav ~55-70. Art = Ch3 hulls as placeholders (bespoke Ch4
 // hulls + portraits land at the polish pass, per the Ch3 playbook).
-export const THE_HAMMERHEAD: BossRaidConfig = {
-  raidId: 'the_hammerhead',
+// ── THE BLOCKADE (Raid 7) ────────────────────────────────────────────────────
+// Named for the RAID, not the boss. The boss used to be a hammerhead shark, which
+// stole the shark identity one raid early: Don Finleone is a MEGALODON and his six
+// phase checks are already The Maw, Blood in the Water and The Last Bite. Naming a
+// raid config after its current boss is how you end up renaming 111 references the
+// next time the fiction moves, so this one is called what the raid is called.
+export const THE_BLOCKADE: BossRaidConfig = {
+  raidId: 'the_blockade',
   enemyAccuracy: 34,
   raidTitle: 'The Blockade',
-  bossDefeatedText: 'The Hammerhead Defeated',
+  bossDefeatedText: 'Sal Brackwater Defeated',
   atmosphere: 'overcast',   // placeholder — bespoke Last-Fathom palette at polish
   enemies: {
     picket: {
@@ -1475,29 +1481,41 @@ export const THE_HAMMERHEAD: BossRaidConfig = {
       image: '/enemychapter3galleon.png',
       portrait: '/enemychapter3galleon.png',
     },
-    hammerhead: {
-      // THE HAMMERHEAD — Don's chief enforcer, the muscle at the gate. Fully
-      // shielded, deep clip, and he ENRAGES himself before his heavy swings.
-      // Phase 2 brings the Full Swing mechanic check (answer with a crew
-      // ability or eat 70% of your hull).
-      id: 'hammerhead', name: 'The Hammerhead', hpBase: 700, minDmg: 28, maxDmg: 46,
+    saltie: {
+      // SAL BRACKWATER — a saltwater crocodile, and Don's chief enforcer. The muscle
+      // at the gate.
+      //
+      // He is a BITER, and Don is a shark, so the two are kept apart on purpose. A
+      // shark is open water: it circles, it takes a piece, it comes back. A saltie is
+      // the shallows: it lies still where the salt meets the fresh, it does not move
+      // for hours, and then it has you and rolls until you stop. Don EATS you. Sal
+      // DROWNS you. Nothing about them reads the same.
+      //
+      // His kit did not change one number, because it already described a crocodile
+      // and I had it labelled as a hammer:
+      //   shieldPct 0.25  -> osteoderms, the bone plates grown into his hide
+      //   'Rolling Plate' -> the death roll, and the plates that survive it
+      //   enrage           -> he goes STILL. The water goes flat. That is the tell.
+      //   the 70% check    -> he takes your hull in his teeth and rolls
+      //   the aegis        -> his back. Nothing you carry goes through it alone.
+      id: 'saltie', name: 'Sal Brackwater', hpBase: 700, minDmg: 28, maxDmg: 46,
       shipSpeed: 8, actionMs: 4000,
       magazineSize: 4, shieldPct: 0.25,
-      special: { name: 'The Hammer Rises', status: 'enrage', magnitude: 0.25, turns: 2, target: 'self', line: 'The Hammerhead rears back, and the whole line holds its breath.' },
+      special: { name: 'Still Water', status: 'enrage', magnitude: 0.25, turns: 2, target: 'self', line: 'Sal stops moving. The chop goes flat around him, and every gun on the line goes quiet.' },
       critDrift: 1.0, critDriftName: 'Rolling Plate',
       pattern: ['reload', 'special', 'fire', 'reload', 'volley', 'dodge', 'fire', 'reload', 'fire'],
       critChance: 0.14,
       phases: [
-        { revivePct: 0.80, damageMult: 1.35, badge: 'The Hammer Falls',
+        { revivePct: 0.80, damageMult: 1.35, badge: 'The Death Roll',
           pattern: ['special', 'fire', 'reload', 'volley', 'fire', 'dodge', 'reload', 'volley'],
           dialogueLine: "The don said bring him your colors. He never said in one piece.",
           check: {
-            id: 'full_swing', name: 'The Full Swing', chargeTurns: 2,
-            telegraph: 'The Hammerhead heaves the great maul off his deck and swings it high over your hull.',
-            hint: 'A blow this heavy has to be met with a crew ability — a defensive one that gets something between you and the maul. Your own brace/dodge won’t stop it.',
+            id: 'death_roll', name: 'The Death Roll', chargeTurns: 2,
+            telegraph: 'Sal takes your hull in his teeth, sets his feet against the swell, and starts to turn.',
+            hint: 'He is going to roll, and he will not let go. Only a crew ability gets something between your hull and that grip — your own brace or dodge does nothing here.',
             responses: ['brace', 'shield'],
-            counteredLine: 'The maul comes down on your cover and the shock goes wide.',
-            failLine: 'The maul falls true, and your deck folds under it.',
+            counteredLine: 'He rolls against braced timber, tears off a mouthful of nothing, and lets go spitting splinters.',
+            failLine: 'He rolls, and he keeps rolling, and your hull comes apart along the grain.',
             consequence: { kind: 'damagePctMaxHp', value: 0.70 },
           } },
         // Phase 3 — THE LAST WALL. He rises one final time behind an aegis
@@ -1507,7 +1525,7 @@ export const THE_HAMMERHEAD: BossRaidConfig = {
         // hits batter it down, so a no-Mega build survives it the hard way.
         { revivePct: 0.45, damageMult: 1.5, badge: 'The Last Wall',
           pattern: ['reload', 'fire', 'special', 'reload', 'volley', 'fire', 'reload', 'fire'],
-          dialogueLine: 'You want the don? Then break what cannot be broken. No single shot you carry is heavy enough. Not one of them.',
+          dialogueLine: 'You want the don? Then come through my back. Nothing you carry goes through my back. Not one shot of it.',
           aegis: { name: 'The Last Wall', hitsToBreak: 6 } },
       ],
       zoneSpeedMult: 2.1,
@@ -1515,8 +1533,8 @@ export const THE_HAMMERHEAD: BossRaidConfig = {
       portrait: '/enemychapter3man-o-war.png',
     },
   },
-  sequence: ['picket', 'bosun', 'netter', 'chainman', 'cracksman', 'purser', 'muzzle'],
-  bossId: 'hammerhead',
+  sequence: ['picket', 'bosun', 'netter', 'chainman', 'cracksman', 'purser', 'muzzle'],   // the blockade crew: no species, and none needed
+  bossId: 'saltie',
   tides: { slots: [3, 6], maxTier: 2 },
   loot: [
     // Signature: the Chain-Shot Rack — the first player-applied STATUS item.
@@ -1534,14 +1552,14 @@ export const THE_HAMMERHEAD: BossRaidConfig = {
     cracksman:  { gold: 230,  xp: 250  },
     purser:     { gold: 245,  xp: 265  },
     muzzle:     { gold: 260,  xp: 280  },
-    hammerhead: { gold: 1700, xp: 2000 },
+    saltie: { gold: 1700, xp: 2000 },
   },
   preFightDialogue: [
-    { speaker: 'narrator', text: "The blockade line rides the swell ahead — the don's own escort armada, lanterns doused, gunports open. At its center, a silhouette with a head like a smith's anvil." },
+    { speaker: 'narrator', text: "The blockade line rides the swell ahead: the don's own escort armada, lanterns doused, gunports open. At the center of it, something long and low sits so still in the water you take it for a spar." },
     { speaker: 'boss', text: "Far enough, captain. The don's water starts where your charts stop." },
     { speaker: 'player', text: "Then I'm exactly where I mean to be. Move your line." },
-    { speaker: 'boss', text: "The Quartermaster talked too much and kept too little. I keep everything. Including you, when this is done." },
-    { speaker: 'boss', text: "They call me the Hammerhead. You'll work out why the hard way." },
+    { speaker: 'boss', text: "The Quartermaster talked too much and kept too little. I do not talk, and I do not let go. Ask anyone who ever got this far." },
+    { speaker: 'boss', text: "You will not see me move. You will only notice I have you." },
   ],
 }
 

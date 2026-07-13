@@ -449,7 +449,7 @@ export async function switchUltimate(id: string): Promise<{ ok: boolean; error?:
 }
 
 /** Buy the Sixth Berth — a permanent Man-o-War crew slot (5 → 6). Gated on
- *  clearing Raid 7 (the Hammerhead); a heavy doubloon sink, once. Opens the
+ *  clearing Raid 7 (the Blockade); a heavy doubloon sink, once. Opens the
  *  full six-crew bench Don Finleone's six phases demand. */
 export async function buySixthBerth(): Promise<{ ok: boolean; error?: string; doubloons?: number }> {
   const supabase = await createClient()
@@ -462,10 +462,10 @@ export async function buySixthBerth(): Promise<{ ok: boolean; error?: string; do
   if (!profile) return { ok: false, error: 'No profile.' }
   if (profile.has_sixth_berth === true) return { ok: false, error: 'Your ship already carries the sixth berth.' }
 
-  // Gate: the berth reveals only once the Hammerhead (Raid 7) is beaten.
+  // Gate: the berth reveals only once Sal Brackwater (Raid 7) is beaten.
   const { data: cleared } = await admin.from('raid_completions')
-    .select('id').eq('user_id', user.id).eq('raid_id', 'the_hammerhead').limit(1).maybeSingle()
-  if (!cleared) return { ok: false, error: 'Beat the Hammerhead before you can add a berth.' }
+    .select('id').eq('user_id', user.id).eq('raid_id', 'the_blockade').limit(1).maybeSingle()
+  if (!cleared) return { ok: false, error: 'Beat Sal Brackwater before you can add a berth.' }
 
   const doubloons = (profile.doubloons as number | null) ?? 0
   if (doubloons < SIXTH_BERTH_COST) return { ok: false, error: `You need ${SIXTH_BERTH_COST.toLocaleString()} doubloons.` }

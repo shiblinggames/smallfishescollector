@@ -1,9 +1,9 @@
 'use client'
 
 // The Sixth Berth — a purchasable Man-o-War crew slot (5 → 6), unlocked by
-// beating Raid 7 (the Hammerhead). A deliberate power-spike sink: it opens the
+// beating Raid 7 (the Blockade). A deliberate power-spike sink: it opens the
 // full six-crew bench Don Finleone's six phases demand. Lives in Manage Ship →
-// Ship, right under the ultimate build. Three states: locked teaser (Hammerhead
+// Ship, right under the ultimate build. Three states: locked teaser (Sal Brackwater
 // not beaten), buyable, and installed.
 
 import { useState } from 'react'
@@ -16,9 +16,9 @@ import { vibrate } from '@/lib/haptics'
 const ACCENT = '#e0a44a'
 
 export default function SixthBerthPanel({
-  hammerheadCleared, hasSixthBerth, baseCrewSlots, doubloons,
+  blockadeCleared, hasSixthBerth, baseCrewSlots, doubloons,
 }: {
-  hammerheadCleared: boolean
+  blockadeCleared: boolean
   hasSixthBerth: boolean
   /** The ship's own crew slots WITHOUT the berth (5 on the Man-o-War). */
   baseCrewSlots: number
@@ -30,8 +30,8 @@ export default function SixthBerthPanel({
   const [celebrate, setCelebrate] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
-  // Nothing to show until the Hammerhead falls (that clear is the reveal).
-  if (!hammerheadCleared && !hasSixthBerth) return null
+  // Nothing to show until Sal Brackwater falls (that clear is the reveal).
+  if (!blockadeCleared && !hasSixthBerth) return null
 
   const canAfford = doubloons >= SIXTH_BERTH_COST
 

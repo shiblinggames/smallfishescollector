@@ -56,14 +56,14 @@ const cachedChapter3Cleared = cache(async (): Promise<boolean> => {
   return !!data
 })
 
-// Has the player beaten Raid 7 (the Hammerhead)? That clear reveals the Sixth
+// Has the player beaten Raid 7 (the Blockade)? That clear reveals the Sixth
 // Berth purchase on the ship screen.
-const cachedHammerheadCleared = cache(async (): Promise<boolean> => {
+const cachedBlockadeCleared = cache(async (): Promise<boolean> => {
   const user = await getCurrentUser()
   if (!user) return false
   const admin = createAdminClient()
   const { data } = await admin.from('raid_completions')
-    .select('id').eq('user_id', user.id).eq('raid_id', 'the_hammerhead').limit(1).maybeSingle()
+    .select('id').eq('user_id', user.id).eq('raid_id', 'the_blockade').limit(1).maybeSingle()
   return !!data
 })
 
@@ -85,12 +85,12 @@ const cachedVoyageHistory = cache(async (): Promise<VoyageHistoryEntry[]> => {
 //    in when ready. Shared loaders are deduped by React.cache.
 
 async function ShipHeroSection() {
-  const [profile, roster, trawlingCrewIds, chapter3Cleared, hammerheadCleared] = await Promise.all([
+  const [profile, roster, trawlingCrewIds, chapter3Cleared, blockadeCleared] = await Promise.all([
     getCurrentProfile(),
     cachedCrewRoster(),
     cachedTrawlingCrewIds(),
     cachedChapter3Cleared(),
-    cachedHammerheadCleared(),
+    cachedBlockadeCleared(),
   ])
   const shipTier = profile?.ship_tier ?? 0
   const baseShip = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
@@ -128,7 +128,7 @@ async function ShipHeroSection() {
       manowarBuild={manowarBuild}
       manowarSchematics={profile?.manowar_schematics === true}
       chapter3Cleared={chapter3Cleared}
-      hammerheadCleared={hammerheadCleared}
+      blockadeCleared={blockadeCleared}
       hasSixthBerth={hasSixthBerth}
       isAdmin={profile?.is_admin === true}
       navRenownAlloc={(profile?.nav_renown_alloc as Record<string, number> | null) ?? null}

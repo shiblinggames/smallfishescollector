@@ -1387,7 +1387,7 @@ function NodeDetailSheet({
 
         {/* The Sixth Berth: the crew refit. Shown once the yard has been
             spoken to (cleared) and stays buyable on every revisit until bought.
-            Server (buySixthBerth) re-checks the Hammerhead clear + the price. */}
+            Server (buySixthBerth) re-checks Sal Brackwater clear + the price. */}
         {node.berth && cleared && (() => {
           const price = node.berth.price
           const canAfford = doubloons >= price
