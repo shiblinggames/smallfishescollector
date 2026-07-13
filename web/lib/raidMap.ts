@@ -1769,6 +1769,7 @@ export const RAID_MAP: RaidNode[] = [
     bridge: "The ghost keeps his counter open. Whatever you left in the Caches, and whatever you have melted down since, he still has it, and he will hand it over as many times as you can put him down.",
     requiresNode: 'throne_heading',
     requiresClearedNode: 'the_quartermaster_challenge',
+    sideBranch: { parentId: 'throne_heading' },
     // He is a GOAL, not a wall. A captain who has not yet beaten the Quartermaster's
     // challenge should still be able to open him up and see the six Cache items he is
     // holding, because that is the entire reason to go and beat it. Sealing him shut
@@ -1800,7 +1801,10 @@ export const RAID_MAP: RaidNode[] = [
     label: 'The Powder Hold',
     flavor: "The don's water doesn't forgive a loose hold. Every powder crate stows on its mark before the blockade, or the first broadside does the stowing for you.",
     bridge: 'The hold is stowed tight and the guns are fed. Ahead: the blockade, and the don’s right fin who runs it.',
-    requiresNode: 'the_reclamation',
+    // Hangs off the chapter OPENER, not the Ghost. The Ghost is a farm node on a side
+    // branch; putting him in the main chain would force every captain through the
+    // Quartermaster's challenge run to finish the chapter.
+    requiresNode: 'throne_heading',
     adminOnly: true,
     puzzle: {
       kind: 'cargo',
@@ -1863,7 +1867,7 @@ export const RAID_MAP: RaidNode[] = [
     image: THE_BLOCKADE.enemies.saltie.portrait,
     detail: {
       description:
-        "Don Finleone's escort fleet. It fights in three ways nothing before it has, so read this before you sail in.\n\nBARRIERS. Every ship arrives behind a shield. You have to break that before your shots touch its hull. Volleys chew through it fastest, and fire burns straight past it.\n\nDEEPER GUNS. They carry four cannonballs, not three. Never assume a ship is empty just because it has been firing.\n\nDIRTY TRICKS. Each one does something different to you. Roots tangle your rudder and slow you down. Chain-shot softens your guns. A cracker round splits your seams so everything after it hits harder. One of them heals itself. One gags your crew so you cannot use their abilities at all.\n\nSAL BRACKWATER. He will not swing at you. He goes completely still, and that is the warning: the moment the water goes flat, he already has your hull in his teeth and he is about to roll. Answer it with a CREW ABILITY or he tears the ship apart. And he does not sink easily. Expect him back on his feet more than once.",
+        "Don Finleone's escort fleet. Three things here are new.\n\nBARRIERS. Every ship hides behind one. Break it before you can touch the hull. Volleys chew it fastest; fire burns straight past it.\n\nFOUR SHOTS, not three. Never assume a ship is empty.\n\nDIRTY TRICKS. Each one curses you differently: tangled rudder, softened guns, split seams, a hull that heals itself, and a gag that locks your crew's abilities.\n\nSal Brackwater does not swing at you. He goes STILL. The moment the water flattens, he has your hull in his teeth. Only a CREW ABILITY stops the roll.",
       enemies: ['The Scute', 'The Bank', 'The Mangrove', 'The Rasp', 'The Wedge', 'Old Scar', 'The Muzzle', 'Sal Brackwater'],
       drops: lootDrops(THE_BLOCKADE.loot),
       clearReward: clearPayout(THE_BLOCKADE),
