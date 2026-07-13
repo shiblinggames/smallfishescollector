@@ -131,10 +131,10 @@ export default function ForgeBoard({
     <>
       {/* ── The pulse: how far along the whole collection is ─────────────── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-        <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.56rem', color: '#b9b2a6' }}>
+        <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.72rem', color: '#b9b2a6' }}>
           Forged <span style={{ color: '#ffce8a' }}>{forgedCount}</span> / {rows.length}
         </span>
-        <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.56rem', color: '#8fb6d6' }}>
+        <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.72rem', color: '#8fb6d6' }}>
           Fathoms <span style={{ color: BLUE }}>{fathomsNow}</span>
         </span>
       </div>
@@ -147,7 +147,7 @@ export default function ForgeBoard({
       {/* ── 1. READY — the question most visits are actually asking ───────── */}
       {ready.length > 0 && (
         <div style={{ marginBottom: '1.2rem' }}>
-          <p className="font-karla font-800 uppercase tracking-[0.14em]" style={{ fontSize: '0.56rem', color: GOLD, marginBottom: 7 }}>
+          <p className="font-karla font-800 uppercase tracking-[0.14em]" style={{ fontSize: '0.72rem', color: GOLD, marginBottom: 9 }}>
             Ready to Forge
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -172,12 +172,12 @@ export default function ForgeBoard({
                       style={{ position: 'absolute', inset: -1, borderRadius: 11, border: `1px solid ${GOLD}`, pointerEvents: 'none' }} />
                   </span>
                   <span style={{ flex: 1, minWidth: 0 }}>
-                    <span className="font-cinzel font-700 truncate" style={{ display: 'block', fontSize: '1rem', color: '#f7edd4' }}>{result.name}</span>
-                    <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ display: 'block', fontSize: '0.5rem', color: GOLD, marginTop: 2 }}>
+                    <span className="font-cinzel font-700 truncate" style={{ display: 'block', fontSize: '1.15rem', color: '#f7edd4' }}>{result.name}</span>
+                    <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ display: 'block', fontSize: '0.64rem', color: GOLD, marginTop: 3 }}>
                       Every part aboard
                     </span>
                   </span>
-                  <span className="font-cinzel font-700" style={{ flexShrink: 0, fontSize: '0.78rem', color: GOLD }}>Forge ›</span>
+                  <span className="font-cinzel font-700" style={{ flexShrink: 0, fontSize: '0.92rem', color: GOLD }}>Forge ›</span>
                 </motion.button>
               )
             })}
@@ -189,12 +189,12 @@ export default function ForgeBoard({
       {parts.length > 0 && (
         <div style={{ marginBottom: '1.2rem' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 7 }}>
-            <p className="font-karla font-800 uppercase tracking-[0.14em]" style={{ fontSize: '0.56rem', color: '#b9b2a6' }}>
+            <p className="font-karla font-800 uppercase tracking-[0.14em]" style={{ fontSize: '0.72rem', color: '#b9b2a6' }}>
               Your Parts
             </p>
             {filterPart && (
               <button type="button" onClick={() => { vibrate([0, 10]); setFilterPart(null) }}
-                className="font-karla font-700 tap" style={{ background: 'none', border: 'none', color: BLUE, fontSize: '0.66rem', cursor: 'pointer' }}>
+                className="font-karla font-700 tap" style={{ background: 'none', border: 'none', color: BLUE, fontSize: '0.8rem', cursor: 'pointer' }}>
                 Show all
               </button>
             )}
@@ -209,36 +209,31 @@ export default function ForgeBoard({
                   onClick={() => { vibrate([0, 12]); setFilterPart(on ? null : p.id) }}
                   className="tap"
                   style={{
-                    flexShrink: 0, width: 92, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-                    padding: '0.6rem 0.4rem 0.5rem', borderRadius: 12, cursor: 'pointer',
+                    flexShrink: 0, width: 106, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+                    padding: '0.65rem 0.45rem 0.55rem', borderRadius: 12, cursor: 'pointer',
                     background: on ? 'rgba(127,208,255,0.14)' : 'rgba(255,255,255,0.035)',
                     border: `1px solid ${on ? `${BLUE}99` : 'rgba(255,255,255,0.1)'}`,
                     transition: 'background 0.16s, border-color 0.16s',
                   }}>
-                  <ItemArt id={p.id} size={30} />
-                  <span className="font-karla font-700" style={{ fontSize: '0.56rem', color: on ? '#dcefff' : '#cfc9bf', lineHeight: 1.2, textAlign: 'center' }}>
+                  <ItemArt id={p.id} size={34} />
+                  <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: on ? '#dcefff' : '#cfc9bf', lineHeight: 1.25, textAlign: 'center' }}>
                     {def.name}
                   </span>
                   {/* The number that makes the graph visible: how many roads lead out of this part. */}
-                  <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.48rem', color: p.feeds > 1 ? AMBER : '#7a7470' }}>
-                    {p.feeds > 1 ? `${p.feeds} paths` : '1 path'}
+                  <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.6rem', color: p.feeds > 1 ? AMBER : '#7a7470' }}>
+                    {p.feeds > 1 ? `Feeds ${p.feeds}` : 'Feeds 1'}
                   </span>
                 </button>
               )
             })}
           </div>
-          {filterPart && (
-            <p className="font-karla" style={{ fontSize: '0.68rem', color: '#9a948a', marginTop: 8, lineHeight: 1.4 }}>
-              Everything <span style={{ color: '#e0dccc' }}>{getRaidItem(filterPart)?.name}</span> can become. Forging any one of them spends it.
-            </p>
-          )}
         </div>
       )}
 
       {/* ── 3. THE BOARD — every recipe, grouped by state ─────────────────── */}
       {groups.map(g => (
         <div key={g.state} style={{ marginBottom: '1.1rem' }}>
-          <p className="font-karla font-800 uppercase tracking-[0.14em]" style={{ fontSize: '0.56rem', color: STATE_META[g.state].accent, marginBottom: 7 }}>
+          <p className="font-karla font-800 uppercase tracking-[0.14em]" style={{ fontSize: '0.72rem', color: STATE_META[g.state].accent, marginBottom: 9 }}>
             {STATE_META[g.state].label} <span style={{ color: '#6f6a63' }}>{g.items.length}</span>
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
@@ -258,8 +253,8 @@ export default function ForgeBoard({
                       ? prismaticBorderSoft('rgba(14,18,26,0.92)')
                       : { background: state === 'ready' ? 'rgba(232,200,121,0.1)' : 'rgba(255,255,255,0.035)', border: `1px solid ${state === 'ready' ? `${GOLD}77` : 'rgba(255,255,255,0.1)'}` }),
                   }}>
-                  <ItemArt id={recipe.result} size={40} dim={dim} />
-                  <span className="font-cinzel font-700" style={{ fontSize: '0.62rem', lineHeight: 1.15, textAlign: 'center', minHeight: '1.4rem',
+                  <ItemArt id={recipe.result} size={44} dim={dim} />
+                  <span className="font-cinzel font-700" style={{ fontSize: '0.76rem', lineHeight: 1.2, textAlign: 'center', minHeight: '1.8rem',
                     ...(state === 'forged' ? PRISMATIC_TEXT_SOFT : { color: dim ? '#8a8480' : '#f0ede8' }) }}>
                     {result.name}
                   </span>
@@ -269,9 +264,9 @@ export default function ForgeBoard({
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
                     </span>
                   ) : state === 'locked' ? (
-                    <span className="font-karla font-700" style={{ fontSize: '0.5rem', color: BLUE }}>{recipe.fathomCost} Fathoms</span>
+                    <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: BLUE }}>{recipe.fathomCost} Fathoms</span>
                   ) : (
-                    <span className="font-karla font-700" style={{ fontSize: '0.5rem', color: accent }}>
+                    <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: accent }}>
                       {state === 'ready' ? 'Ready' : `${have}/${recipe.components.length} parts`}
                     </span>
                   )}
@@ -366,17 +361,17 @@ function RecipeSheet({
                   <ItemArt id={resultId} size={44} />
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p className="font-cinzel font-800" style={{ fontSize: '1.2rem', lineHeight: 1.1, ...(state === 'forged' ? PRISMATIC_TEXT_SOFT : { color: '#f7efd8' }) }}>{result.name}</p>
-                  <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.52rem', color: accent, marginTop: 3 }}>{STATE_META[state].label}</p>
+                  <p className="font-cinzel font-800" style={{ fontSize: '1.35rem', lineHeight: 1.12, ...(state === 'forged' ? PRISMATIC_TEXT_SOFT : { color: '#f7efd8' }) }}>{result.name}</p>
+                  <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.66rem', color: accent, marginTop: 4 }}>{STATE_META[state].label}</p>
                 </div>
               </div>
 
-              <p className="font-karla" style={{ fontSize: '0.8rem', color: '#c0bab0', lineHeight: 1.45, marginTop: 11 }}>{result.description}</p>
+              <p className="font-karla" style={{ fontSize: '0.92rem', color: '#c8c2b8', lineHeight: 1.5, marginTop: 12 }}>{result.description}</p>
 
               {/* The parts, and where to get the ones you lack. */}
               {state !== 'forged' && (
                 <div style={{ marginTop: 14 }}>
-                  <p className="font-karla font-800 uppercase tracking-[0.14em]" style={{ fontSize: '0.52rem', color: '#8a8480', marginBottom: 7 }}>Fused From</p>
+                  <p className="font-karla font-800 uppercase tracking-[0.14em]" style={{ fontSize: '0.68rem', color: '#8a8480', marginBottom: 8 }}>Fused From</p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                     {comps.map(c => (
                       <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '0.55rem 0.6rem', borderRadius: 11,
@@ -386,16 +381,16 @@ function RecipeSheet({
                           <ItemArt id={c.id} size={24} dim={!c.owned} />
                         </span>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <p className="font-karla font-700" style={{ fontSize: '0.76rem', color: c.owned ? '#e6e1d6' : '#9a948a' }}>{c.def?.name}</p>
+                          <p className="font-karla font-700" style={{ fontSize: '0.88rem', color: c.owned ? '#e6e1d6' : '#9a948a' }}>{c.def?.name}</p>
                           {!c.owned && (
-                            <p className="font-karla" style={{ fontSize: '0.62rem', lineHeight: 1.35, marginTop: 1, color: missing.has(c.id) ? AMBER : '#7a9ec4' }}>
+                            <p className="font-karla" style={{ fontSize: '0.74rem', lineHeight: 1.4, marginTop: 2, color: missing.has(c.id) ? AMBER : '#7a9ec4' }}>
                               {missing.has(c.id)
                                 ? 'Not aboard. The Quartermaster’s Ghost still holds it.'
                                 : c.def?.source ? `Find it: ${c.def.source}` : 'Not aboard.'}
                             </p>
                           )}
                         </div>
-                        <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ flexShrink: 0, fontSize: '0.5rem', color: c.owned ? GREEN : '#7a7470' }}>
+                        <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ flexShrink: 0, fontSize: '0.62rem', color: c.owned ? GREEN : '#7a7470' }}>
                           {c.owned ? 'Aboard' : 'Needed'}
                         </span>
                       </div>
@@ -416,10 +411,10 @@ function RecipeSheet({
                     <span style={{ display: 'flex', color: AMBER }}>
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 9v4" /><path d="M12 17h.01" /><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /></svg>
                     </span>
-                    <p className="font-karla font-800 uppercase tracking-[0.12em]" style={{ fontSize: '0.52rem', color: AMBER }}>This Closes Doors</p>
+                    <p className="font-karla font-800 uppercase tracking-[0.12em]" style={{ fontSize: '0.68rem', color: AMBER }}>This Closes Doors</p>
                   </div>
                   {cost.map(c => (
-                    <p key={c.component} className="font-karla" style={{ fontSize: '0.72rem', color: '#d8c39a', lineHeight: 1.45, marginTop: 2 }}>
+                    <p key={c.component} className="font-karla" style={{ fontSize: '0.84rem', color: '#d8c39a', lineHeight: 1.5, marginTop: 3 }}>
                       Spends your <strong style={{ color: '#f0e2c2' }}>{getRaidItem(c.component)?.name}</strong>, which also feeds{' '}
                       {c.alsoFeeds.map((id, i) => (
                         <span key={id}>
@@ -436,13 +431,13 @@ function RecipeSheet({
               {/* ── The one action ────────────────────────────────────────── */}
               <div style={{ marginTop: 15 }}>
                 {state === 'forged' ? (
-                  <div className="font-cinzel font-700 uppercase tracking-[0.06em]" style={{ width: '100%', padding: '0.8rem', borderRadius: 12, textAlign: 'center', fontSize: '0.86rem', ...prismaticBorderSoft('rgba(16,20,28,0.9)'), ...PRISMATIC_TEXT_SOFT }}>
+                  <div className="font-cinzel font-700 uppercase tracking-[0.06em]" style={{ width: '100%', padding: '0.9rem', borderRadius: 12, textAlign: 'center', fontSize: '1rem', ...prismaticBorderSoft('rgba(16,20,28,0.9)'), ...PRISMATIC_TEXT_SOFT }}>
                     Forged
                   </div>
                 ) : state === 'locked' ? (
                   <button type="button" onClick={() => onLearnTap(resultId, recipe.fathomCost)} disabled={!canAfford || isLearning}
                     className="font-cinzel font-700 uppercase tracking-[0.08em] tap"
-                    style={{ width: '100%', padding: '0.85rem', borderRadius: 12, fontSize: '0.86rem',
+                    style={{ width: '100%', padding: '0.95rem', borderRadius: 12, fontSize: '1rem',
                       background: !canAfford ? 'rgba(255,255,255,0.04)' : armedLearn ? 'linear-gradient(180deg, rgba(248,140,90,0.34), rgba(196,90,60,0.16))' : 'linear-gradient(180deg, rgba(127,208,255,0.26), rgba(90,150,196,0.12))',
                       border: `1px solid ${!canAfford ? 'rgba(255,255,255,0.16)' : armedLearn ? 'rgba(248,140,90,0.7)' : `${BLUE}8c`}`,
                       color: !canAfford ? '#8a8480' : armedLearn ? '#ffd0b0' : '#cfeaff',
@@ -455,21 +450,21 @@ function RecipeSheet({
                 ) : state === 'ready' ? (
                   <button type="button" onClick={() => { onForgeTap(resultId); if (armed) onClose() }} disabled={busy}
                     className="font-cinzel font-700 uppercase tracking-[0.08em] tap"
-                    style={{ width: '100%', padding: '0.85rem', borderRadius: 12, fontSize: '0.86rem',
+                    style={{ width: '100%', padding: '0.95rem', borderRadius: 12, fontSize: '1rem',
                       background: armed ? 'linear-gradient(180deg, rgba(248,140,90,0.34), rgba(196,90,60,0.16))' : 'linear-gradient(180deg, rgba(232,200,121,0.3), rgba(196,169,106,0.14))',
                       border: `1px solid ${armed ? 'rgba(248,140,90,0.7)' : `${GOLD}99`}`,
                       color: armed ? '#ffd0b0' : '#f0d695', cursor: busy ? 'default' : 'pointer' }}>
                     {busy ? 'Forging…' : armed ? 'Tap again to spend the parts' : `Forge ${result.name}`}
                   </button>
                 ) : (
-                  <p className="font-karla" style={{ fontSize: '0.74rem', color: '#8a8480', lineHeight: 1.45, textAlign: 'center' }}>
+                  <p className="font-karla" style={{ fontSize: '0.86rem', color: '#8a8480', lineHeight: 1.5, textAlign: 'center' }}>
                     Recipe learned. Bring every part aboard and the forge will take them.
                   </p>
                 )}
               </div>
 
               <button type="button" onClick={onClose} className="font-karla font-700 tap"
-                style={{ width: '100%', marginTop: 9, padding: '0.6rem', background: 'none', border: 'none', color: '#7a7470', fontSize: '0.76rem', cursor: 'pointer' }}>
+                style={{ width: '100%', marginTop: 10, padding: '0.65rem', background: 'none', border: 'none', color: '#7a7470', fontSize: '0.88rem', cursor: 'pointer' }}>
                 Close
               </button>
             </motion.div>
