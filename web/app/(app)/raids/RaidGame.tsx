@@ -17,6 +17,7 @@ import {
 } from '@/lib/bossRaids'
 import { isChallengeRaidId } from '@/lib/raidChallenge'
 import { AFFIXES, ELITE_HP_MULT, ELITE_DMG_MULT, rollAffix, rollSecondAffix, mergeAffixes, rollEliteSlots, type AffixDef, type AffixId } from '@/lib/raidAffixes'
+import { isUniqueLoot } from '@/lib/bossRaids'
 import RaidCombat from './RaidCombat'
 import RaidLootStage from './RaidLootStage'
 import BossDialogueModal from './BossDialogueModal'
@@ -36,7 +37,31 @@ type ShotResult = 'miss' | 'graze' | 'hit' | 'critical' | null
  *  the weight pool before rolling. Used to skip ship skins + raid
  *  items the player already owns so they always get something new
  *  (or fall through to a currency slot if every unique is owned). */
-function rollLootIndex(loot: RaidLootItem[], excludedIds: Set<string> = new Set()): number {
+function rollLootIndex(loot: RaidLootItem[], excludedIds: Set<string> = new Set(), uniqueShare?: number): number {
+  // FIXED-SHARE crates (BossRaidConfig.uniqueShare). Two-stage: `uniqueShare` of the
+  // time you get one of the uniques you're still missing, otherwise currency. Without
+  // this, dropping owned uniques out of the pool shrinks their share as you complete
+  // the set, so the LAST item you need is the hardest to get. See the field's doc.
+  if (uniqueShare != null && uniqueShare > 0) {
+    const pick = (rows: { idx: number; weight: number }[]): number => {
+      const total = rows.reduce((s, r) => s + r.weight, 0)
+      let r = Math.random() * total
+      for (const row of rows) { r -= row.weight; if (r <= 0) return row.idx }
+      return rows[rows.length - 1].idx
+    }
+    const uniques: { idx: number; weight: number }[] = []
+    const currency: { idx: number; weight: number }[] = []
+    loot.forEach((l, idx) => {
+      if (isUniqueLoot(l)) { if (!excludedIds.has(l.id)) uniques.push({ idx, weight: l.weight }) }
+      else currency.push({ idx, weight: l.weight })
+    })
+    // Own everything already, or a table with no currency: fall through to whichever
+    // side actually has rows, so a crate is never empty.
+    if (uniques.length === 0) return currency.length ? pick(currency) : 0
+    if (currency.length === 0) return pick(uniques)
+    return Math.random() < uniqueShare ? pick(uniques) : pick(currency)
+  }
+
   // Build the eligible pool, preserving original indices.
   const pool: { idx: number; weight: number }[] = []
   for (let i = 0; i < loot.length; i++) {
@@ -1157,7 +1182,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
         setWinGold(gold); setWinXP(xp)
         // Roll loot + dollar amount up front so the stage can pre-position
         // the slot before the player taps Loot Chest.
-        const final = rollLootIndex(config.loot, ownedUniqueIds)
+        const final = rollLootIndex(config.loot, ownedUniqueIds, config.uniqueShare)
         const base  = Math.floor(Math.random() * 301 + 300)
         // Tide doubloonsAtRaidEnd: sum all run-active deltas onto the
         // raw base BEFORE fortune scales it. Net result lands in the

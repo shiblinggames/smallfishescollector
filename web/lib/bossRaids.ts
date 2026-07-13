@@ -322,8 +322,28 @@ export interface BossDialogueLine {
   text: string
 }
 
+/** Is this loot row currency, or a real item? Mirrors lootCategory in raidChallenge:
+ *  a `doubloons_*`, `gems_*` or `pack*` id is currency, anything else is a unique. */
+export function isUniqueLoot(l: RaidLootItem): boolean {
+  return !(l.id.startsWith('doubloons_') || l.id.startsWith('gems_') || l.id.startsWith('pack'))
+}
+
 export interface BossRaidConfig {
   raidId: string
+  /** A FIXED share of the crate reserved for uniques you do not yet own, regardless of
+   *  how many are left.
+   *
+   *  Without it, the crate is one weighted roll and owned uniques are simply REMOVED
+   *  from the pool — which quietly shrinks the uniques' share as you complete a set.
+   *  The Quartermaster's Ghost showed how bad that gets: his six Cache items start at
+   *  50% of the crate and decay to 14% for the LAST one, so the item you specifically
+   *  need is by far the hardest to get, and everyone hits that wall. That is an
+   *  artifact of the roll, not a decision anyone made.
+   *
+   *  Set it and the roll becomes two-stage: `uniqueShare` of the time you get one of
+   *  the uniques you are missing (picked among them by weight), otherwise currency. The
+   *  odds no longer care how far through the set you are. */
+  uniqueShare?: number
   /** Challenge-mode extra: every intro enemy that carries a BAKED signature
    *  affix ALSO gets one random second affix, merged, rolled fresh each run
    *  (guaranteed elite, different every attempt). Keeps the enforcer's identity
@@ -1095,6 +1115,11 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
 // A one-bar duel on purpose. He is meant to be run over and over.
 export const THE_QUARTERMASTERS_GHOST: BossRaidConfig = {
   raidId: 'the_quartermasters_ghost',
+  // A flat 50% for a Cache item, no matter how many you still need. Under the normal
+  // weighted roll his six items start at 50% of the crate and rot to 14% for the last
+  // one, so the single item you are actually farming for is the rarest thing he has.
+  // Everybody would hit that wall, and it is the worst-feeling part of the whole loop.
+  uniqueShare: 0.5,
   enemyAccuracy: 30,
   raidTitle: "The Quartermaster's Ghost",
   bossDefeatedText: 'The Ghost Dispersed',
