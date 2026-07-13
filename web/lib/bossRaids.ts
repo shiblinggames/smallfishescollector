@@ -1101,7 +1101,7 @@ export const THE_QUARTERMASTERS_GHOST: BossRaidConfig = {
   atmosphere: 'vault',   // his own lantern-lit gun-deck, and he never left it
   enemies: {
     ghost: {
-      id: 'ghost', name: "The Quartermaster's Ghost", hpBase: 560, minDmg: 26, maxDmg: 44,
+      id: 'ghost', name: "The Quartermaster's Ghost", hpBase: 1050, minDmg: 26, maxDmg: 44,
       shipSpeed: 9, actionMs: 3600,
       pattern: ['reload', 'fire', 'volley', 'dodge', 'reload', 'fire', 'fire', 'dodge', 'reload', 'volley'],
       critChance: 0.16,
@@ -1121,10 +1121,19 @@ export const THE_QUARTERMASTERS_GHOST: BossRaidConfig = {
       // is why he comes back three times without a single revive needing to be
       // explained away, and it is why the loot and the fight are the same object.
       //
-      // Every bar is DELIBERATELY SHORT (560 base, then 32% / 26% / 20%: about
-      // 1,080 effective with the barrier, under the Hammerhead). The HP is not the
-      // content. The CHECKS are. He has to stay a boss you can clear in a sitting,
-      // because he is the only road back to six items and you will be here often.
+      // HP, sized against the rest of the late game rather than guessed. Effective
+      // hull is hpBase x (1 + the revives) + the barrier, which reforms once per
+      // fight (not per phase):
+      //
+      //     1050 x (1 + 0.60 + 0.48 + 0.38) + 158  =  ~2,740
+      //
+      // For scale, the boss BARS around him: the Quartermaster 1,807, the Hammerhead
+      // 1,575, Don Finleone 3,150. He was built at 997, which was less than half the
+      // Ch3 finale and far too little for captains who now hit for 300-480 a shot. He
+      // sits above both mid bosses and below the don, which is where a post-Hammerhead
+      // farm boss belongs. He carries no adds, so this IS the whole encounter: 2,740
+      // against the Quartermaster's full raid at 2,387 and the Hammerhead's at 4,175.
+      // Long enough to be a fight, short enough to run again.
       //
       // Each phase arms one telegraphed check, and the three of them deliberately
       // demand THREE DIFFERENT crew plays, so no single roster answers the whole
@@ -1134,7 +1143,7 @@ export const THE_QUARTERMASTERS_GHOST: BossRaidConfig = {
         // He hauls up the plating you never claimed and starts bolting it onto his
         // own hull. Let him and he heals a third of himself back.
         // ANSWER: disrupt. Jam the crane (Snare) or blow it off him (a big shot).
-        { revivePct: 0.32, damageMult: 1.0, badge: 'The Plating',
+        { revivePct: 0.60, damageMult: 1.0, badge: 'The Plating',
           pattern: ['reload', 'fire', 'dodge', 'volley', 'reload', 'fire', 'dodge', 'fire'],
           dialogueLine: 'Sink me? Lad, I have been at the bottom for years. Try taking something off me instead.',
           check: {
@@ -1153,7 +1162,7 @@ export const THE_QUARTERMASTERS_GHOST: BossRaidConfig = {
         // ANSWER: survive it. A barrier to eat the shot, or a heal to smother the
         // fire (the burn consequence is cleared by any crew heal, so a roster with
         // sustain has a real out even after it lands).
-        { revivePct: 0.26, damageMult: 1.12, badge: 'The Powder',
+        { revivePct: 0.48, damageMult: 1.12, badge: 'The Powder',
           pattern: ['fire', 'reload', 'volley', 'fire', 'dodge', 'reload', 'fire', 'volley'],
           dialogueLine: 'You left the fire-shot on my counter. I have had a long time to think about where to put it.',
           check: {
@@ -1172,7 +1181,7 @@ export const THE_QUARTERMASTERS_GHOST: BossRaidConfig = {
         // your own glass, takes the bearing, and calls the shot.
         // ANSWER: stand and take it. A brace or a shield. Nothing else gets between
         // you and a shot that is already aimed.
-        { revivePct: 0.20, damageMult: 1.2, badge: 'The Glass',
+        { revivePct: 0.38, damageMult: 1.2, badge: 'The Glass',
           pattern: ['reload', 'reload', 'fire', 'volley', 'fire', 'dodge', 'reload', 'volley'],
           dialogueLine: 'Every captain I ever armed, I watched sink. I always did keep the good glass back.',
           check: {
