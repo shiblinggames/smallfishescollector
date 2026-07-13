@@ -245,12 +245,35 @@ export const GAUNTLET_TERMS: GauntletTerm[] = [
     ],
   },
   {
+    id: 'iron_rations', name: 'Iron Rations', group: 'safety',
+    flavor: 'Salt beef and bilge water. Nothing down here mends a ship.',
+    tiers: [
+      { desc: 'Every heal you get is HALVED',
+        detail: 'Everything that would put hull back on your ship gives you half as much: crew heals, repair kits, lifesteal, regeneration, the patch-up between fights, and the reprieves.',
+        pressure: 3,
+        effects: [{ kind: 'healMult', mult: 0.5 }] },
+      { desc: 'NOTHING heals you. Not one point.',
+        detail: 'No healing works at all for the whole run. Crew heals, repair kits, lifesteal, regen, between-fight repairs, reprieves: all of it does nothing. Every point of hull you lose is gone for good.',
+        pressure: 6,
+        effects: [{ kind: 'healMult', mult: 0 }] },
+    ],
+  },
+  {
     id: 'full_measure', name: 'The Full Measure', group: 'safety',
     flavor: 'He does not take half of anything.',
     tiers: [
       { desc: 'The Blood Price drops you to 1 hull instead of costing half',
         detail: 'At a Drowned Shrine you can normally bleed HALF your hull onto the stone for an extra boon. Now that offering takes everything: it leaves you on 1 hull. The boon is still yours, if you can survive to use it.',
         pressure: 2 },
+    ],
+  },
+  {
+    id: 'no_second_thoughts', name: 'No Second Thoughts', group: 'safety',
+    flavor: 'You do not leave his table between hands. You leave when a captain falls.',
+    tiers: [
+      { desc: 'You can ONLY cash out after beating a boss',
+        detail: 'Normally you may bank your pot at any breather. Now Davy only lets you leave once you have just put a boss down. Frightened halfway between bosses? Too bad. You keep diving, or you sink with the pot.',
+        pressure: 5 },
     ],
   },
   {
@@ -289,17 +312,30 @@ export const MAX_AVAILABLE_PRESSURE = GAUNTLET_TERMS
   .reduce((a, t) => a + (t.tiers[t.tiers.length - 1]?.pressure ?? 0), 0)
 
 // ── The payout curve ─────────────────────────────────────────────────────────
-/** Blood Gems gained per point of Pressure, at full depth. */
-export const PRESSURE_GEM_RATE = 0.10
-/** Pressure at which the multiplier tops out (x4.0). Above this, extra Pressure
- *  is pure flex — it buys you the Ledger and the skin, not more gems. */
-export const PRESSURE_CAP = 30
+/** Blood Gems gained per point of Pressure, at full depth.
+ *  RETUNED with the board: the ceiling below must stay expensive. */
+export const PRESSURE_GEM_RATE = 0.075
+/** Pressure at which the multiplier tops out (still x4.0 — 1 + 40 * 0.075).
+ *  Above this, extra Pressure is pure flex: it buys the Ledger and the skin,
+ *  not more gems.
+ *  KEEP THIS AT ROUGHLY HALF OF MAX_AVAILABLE_PRESSURE. The whole point (the ToA
+ *  lesson) is that you cannot reach the ceiling on cheap terms alone — you have
+ *  to eat Skeleton Crew II, Iron Rations II, No Communion II and the like. Every
+ *  time a term is ADDED the board grows and this must grow with it, or the
+ *  ceiling silently gets cheaper. */
+export const PRESSURE_CAP = 40
 /** Below this depth the Pressure bonus is worth NOTHING. */
 export const PRESSURE_DEPTH_FLOOR = 20
-/** At this depth (and deeper) the Pressure bonus pays in full. */
-export const PRESSURE_DEPTH_FULL = 40
-/** Cash out at or above this Pressure to earn the Terms-only skin. */
-export const PRESSURE_SKIN_THRESHOLD = 20
+/** At this depth (and deeper) the Pressure bonus pays in full.
+ *  TUNED 30, not 40: a heavily-signed run realistically DIES around depth 25-30,
+ *  so a full-value depth of 40 meant a max-Pressure run earned LESS than a clean
+ *  one at the depths it could actually reach — nobody would ever sign anything.
+ *  30 keeps shallow farming worthless (depth 20 still pays zero bonus) while
+ *  making a heavy run that claws to 28-30 genuinely worth the risk. */
+export const PRESSURE_DEPTH_FULL = 30
+/** Cash out at or above this Pressure to earn the Terms-only skin. Scaled with
+ *  the board (see PRESSURE_CAP). */
+export const PRESSURE_SKIN_THRESHOLD = 25
 
 /** How much of the Pressure bonus a run at `depth` actually earns: nothing at
  *  PRESSURE_DEPTH_FLOOR, all of it at PRESSURE_DEPTH_FULL. This is what stops
@@ -367,6 +403,14 @@ export interface TermEffects {
   /** The Full Measure: a shrine's Blood Price leaves you on 1 hull rather than
    *  taking half of what you have. */
   bloodPriceToOne: boolean
+  /** No Second Thoughts: you may only bank the pot on a breather that follows a
+   *  BOSS kill. The mode's core safety valve, taken away. */
+  cashOutOnlyAfterBoss: boolean
+  /** Iron Rations. The COMBAT heals ride the TideEffect of the same name (see
+   *  termTideEffects), but the Gauntlet's own heals (Vigor after a kill, the
+   *  reprieve patch-up) sit outside that pipeline, so they read this. Keep the
+   *  two in step: both are driven by the one term. */
+  healMult: number
 }
 
 export const NO_TERM_EFFECTS: TermEffects = {
@@ -391,6 +435,8 @@ export const NO_TERM_EFFECTS: TermEffects = {
   noReprieves: false,
   noPeek: false,
   bloodPriceToOne: false,
+  cashOutOnlyAfterBoss: false,
+  healMult: 1,
 }
 
 /** The COMBAT effects a signed board contributes (the skill terms). Folded into
@@ -467,6 +513,10 @@ export function resolveTerms(signed: SignedTerms | null | undefined): TermEffect
   if (draft) e.maxHpPct = draft === 1 ? 0.85 : 0.70
 
   if (tierOf('full_measure'))  e.bloodPriceToOne = true
+  if (tierOf('no_second_thoughts')) e.cashOutOnlyAfterBoss = true
+
+  const rations = tierOf('iron_rations')
+  if (rations) e.healMult = rations === 1 ? 0.5 : 0
   if (tierOf('no_mercy'))      e.noLethalSaves = true
   if (tierOf('no_quarter'))    e.noReprieves   = true
   if (tierOf('blind_descent')) e.noPeek        = true

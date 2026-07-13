@@ -187,6 +187,10 @@ export type TideEffect =
    *  temporary overhealth worth up to `pct` of max, shed at fight end (never
    *  carries to the next fight — the host clamps carried HP to max). */
   | { kind: 'overhealPct'; pct: number }
+  // Iron Rations (a Term): scales EVERY heal the player receives (crew heals,
+  // repair kits, lifesteal, regen, between-fight vigor, reprieves). 0 = nothing
+  // heals you at all.
+  | { kind: 'healMult'; mult: number }
   /** "Field Repairs": repair-kit healing ×mult. */
   | { kind: 'repairHealMult'; mult: number }
   // ── Momentum / conditional damage (Gauntlet boons) ──────────────
@@ -287,6 +291,7 @@ export function effectTone(e: TideEffect): 'good' | 'bad' | 'neutral' {
     case 'hideEnemyHp': case 'hideEnemyCharges': return e.chance > 0 ? 'bad' : 'neutral'
     case 'iceAffinity':  return 'good'
     case 'fireAffinity': return 'good'
+    case 'healMult':     return e.mult > 1 ? 'good' : e.mult < 1 ? 'bad' : 'neutral'
     case 'aimSpeedMult': return e.mult > 1 ? 'bad' : e.mult < 1 ? 'good' : 'neutral'
     case 'zoneSpeedMult':return e.mult > 1 ? 'bad' : e.mult < 1 ? 'good' : 'neutral'
     case 'killStackDamage': case 'depthScaleDamage':
@@ -897,6 +902,7 @@ export function describeEffect(e: TideEffect): string {
     case 'iceAffinity':           return `${Math.round(e.freezeChance * 100)}% freeze + ${Math.round((e.frozenDmgMult - 1) * 100)}% vs frozen`
     case 'fireAffinity':          return `${Math.round(e.burnChance * 100)}% burn, longer + hotter`
     case 'aimFog':                return 'Fog drifts over your aim bar'
+    case 'healMult':              return e.mult <= 0 ? 'Nothing heals you' : e.mult < 1 ? `All healing ${pct(1 - e.mult)} weaker` : `All healing ${pct(e.mult - 1)} stronger`
     case 'aimSpeedMult':          return e.mult > 1 ? `Aim needle ${pct(e.mult - 1)} faster` : `Aim needle ${pct(1 - e.mult)} slower`
     case 'zoneSpeedMult':         return e.mult > 1 ? `Target band lurches ${pct(e.mult - 1)} faster` : `Target band ${pct(1 - e.mult)} steadier`
     case 'killStackDamage':       return `${pct(e.perKill)} damage per enemy sunk (max ${pct(e.maxBonus)})`

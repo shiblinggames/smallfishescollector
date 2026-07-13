@@ -570,6 +570,7 @@ export default function RaidCombat({
     let retaliateBoostMult = 1
     // All-or-Nothing curse: damage mult on non-crit shots (hit + graze).
     let noncritDmgMult = 1
+    let healMult = 1
     // Gauntlet boons: crit-damage mult, execute threshold (sink at <= % HP),
     // lifesteal (heal % of damage dealt).
     let critDmgMult     = 1
@@ -681,6 +682,7 @@ export default function RaidCombat({
         case 'dodgeRefund':           dodgeRefundCharges = Math.max(dodgeRefundCharges, e.charges); break
         case 'retaliateBoost':        retaliateBoostMult = Math.max(retaliateBoostMult, e.mult); break
         case 'noncritDmgMult':        noncritDmgMult *= e.mult; break
+        case 'healMult':              healMult *= e.mult; break
         // Rising Tide / Abyssal Bounty (+ Deep Wake): accumulate the per-axis
         // rate + cap; resolved into ONE multiplier per axis after the loop so
         // Deep Wake reinforces its component instead of compounding.
@@ -714,7 +716,7 @@ export default function RaidCombat({
       chargesStart, hpStartDelta, everyFightHeal, everyFightHealPct,
       reloadProc, guaranteedDodgeBank,
       enemyHpScaleMult, enemyChargesDelta,
-      aimFog, aimSpeedMult, zoneSpeedMult, aimBlackout, aimDecoys, confuseChance, hideEnemyHpChance, hideEnemyChargesChance, noncritDmgMult,
+      aimFog, aimSpeedMult, zoneSpeedMult, aimBlackout, aimDecoys, confuseChance, hideEnemyHpChance, hideEnemyChargesChance, noncritDmgMult, healMult,
       freezeChanceBoon, frozenDmgMult, deepFreeze, brittle,
       burnChanceBoon, burnTurnsBonus, burnTickMult, reignite, backdraft, thermalShockMult,
       critExecutePct, volleyRampPct,
@@ -876,7 +878,7 @@ export default function RaidCombat({
   // HP + buff for the caller to apply + log, or null when the ward isn't up.
   function tryVengeanceRevive(): { hp: number; buffPct: number } | null {
     if (!vengeanceWardRef.current) return null
-    const reviveHp = Math.max(1, Math.round(playerHpMax * vengeanceHealPctRef.current))
+    const reviveHp = Math.max(1, Math.round(playerHpMax * vengeanceHealPctRef.current * tide.healMult))
     const buffPct = vengeanceBuffPctRef.current
     vengeanceDmgBuffRef.current = buffPct
     vengeanceWardRef.current = false
@@ -933,7 +935,7 @@ export default function RaidCombat({
   const playerMaxCharges = MAX_CHARGES + Math.max(0, bonusChargeSlots)
   const enemyMagazine = Math.max(VOLLEY_COST, enemy.magazineSize ?? MAX_CHARGES)
   const [playerHp, setPlayerHp]       = useState(() =>
-    Math.max(0, Math.min(healCap, initialPlayerHp + tide.hpStartDelta + tide.everyFightHeal + Math.round(tide.everyFightHealPct * playerHpMax)))
+    Math.max(0, Math.min(healCap, initialPlayerHp + tide.hpStartDelta + Math.round((tide.everyFightHeal + tide.everyFightHealPct * playerHpMax) * tide.healMult)))
   )
   // ── Achievement telemetry ──────────────────────────────────────────────
   // Shots the player has locked in THIS fight + whether any crew ability fired
@@ -1443,7 +1445,7 @@ export default function RaidCombat({
       const lines: string[] = []
       const pRegen = statusMods(playerStatusesRef.current).regenPerRound
       if (pRegen > 0 && playerHpRef.current > 0) {
-        const healed = Math.min(healCap - playerHpRef.current, pRegen)
+        const healed = Math.round(Math.min(healCap - playerHpRef.current, pRegen) * tide.healMult)
         if (healed > 0) {
           playerHpRef.current += healed
           setPlayerHp(playerHpRef.current)
@@ -2266,7 +2268,7 @@ export default function RaidCombat({
     switch (def.id) {
       case 'mender': {
         const mm = m as import('@/lib/crewClasses').MenderMilestone
-        const heal = Math.round(playerHpMax * mm.pctMaxHp)
+        const heal = Math.round(playerHpMax * mm.pctMaxHp * tide.healMult)
         onStat?.({ dmgHealed: Math.max(0, Math.min(heal, playerHpMax - playerHpRef.current)) })
         setPlayerHp(prev => Math.min(healCap, prev + heal))
         playerHpRef.current = Math.min(healCap, playerHpRef.current + heal)
@@ -2322,7 +2324,7 @@ export default function RaidCombat({
       // ── Legendary signature abilities ────────────────────────────────
       case 'abyssal_tide': {
         const at = m as import('@/lib/crewClasses').AbyssalTideMilestone
-        const heal = Math.round(playerHpMax * at.pctMaxHp)
+        const heal = Math.round(playerHpMax * at.pctMaxHp * tide.healMult)
         setPlayerHp(prev => Math.min(healCap, prev + heal))
         playerHpRef.current = Math.min(healCap, playerHpRef.current + heal)
         // Shield buffer — soaks incoming damage before HP (resolver reads the
@@ -3240,7 +3242,7 @@ export default function RaidCombat({
         if (who === 'player' && repairKit) {
           // Seasoned Timbers (Gauntlet upgrade) + Field Repairs (confluence) both
           // boost repair heals; the latter also lets them overfill past max.
-          const roll = Math.round(rollRepairKitHeal(repairKit, totalFortune) * (mods.repairHealMult ?? 1) * tide.repairHealMult)
+          const roll = Math.round(rollRepairKitHeal(repairKit, totalFortune) * (mods.repairHealMult ?? 1) * tide.repairHealMult * tide.healMult)
           const before = pHp
           pHp = Math.min(healCap, pHp + roll)
           const healed = pHp - before
@@ -3689,7 +3691,7 @@ export default function RaidCombat({
           if (dmg > 0 && totalLifesteal > 0 && pHp > 0) {
             // Per-hit heal capped to a fraction of MAX HP — a huge volley can't
             // refill the whole bar, no matter how hard the damage stack hits.
-            const healed = Math.min(Math.round(playerHpMax * LIFESTEAL_HEAL_MAXHP_CAP), Math.max(1, Math.round(dmg * totalLifesteal)))
+            const healed = Math.round(Math.min(Math.round(playerHpMax * LIFESTEAL_HEAL_MAXHP_CAP), Math.max(1, Math.round(dmg * totalLifesteal))) * tide.healMult)
             const before = pHp
             pHp = Math.min(healCap, pHp + healed)
             lifestealHealedOut = pHp - before

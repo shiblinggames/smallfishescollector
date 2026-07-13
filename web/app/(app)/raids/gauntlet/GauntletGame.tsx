@@ -916,7 +916,8 @@ export default function GauntletGame(props: GauntletGameProps) {
     // shed here, so it never carries into the next fight.
     const carriedHp = Math.min(hpMax, remainingHp)
     // Vigor (Run Upgrade): patch up a slice of max HP for every ship you sink.
-    const vigorHeal = Math.round(hpMax * gauntletKillHealPct(upgrades))
+    // Iron Rations (a signed Term) scales every heal, this one included.
+    const vigorHeal = Math.round(hpMax * gauntletKillHealPct(upgrades) * termFxRef.current.healMult)
     const healedHp = vigorHeal > 0 ? Math.min(hpMax, carriedHp + vigorHeal) : carriedHp
     playerHPRef.current = healedHp
     setPlayerHP(healedHp)
@@ -1150,7 +1151,8 @@ export default function GauntletGame(props: GauntletGameProps) {
   // forgo the draft entirely (the give-up-upgrade-potential trade).
   function applyReprieve(r: Reprieve) {
     if (r.kind === 'heal') {
-      const healed = Math.min(hpMax, Math.round(playerHPRef.current + hpMax * r.amount))
+      // Iron Rations (a signed Term) guts this too — a reprieve is still a heal.
+      const healed = Math.min(hpMax, Math.round(playerHPRef.current + hpMax * r.amount * termFxRef.current.healMult))
       playerHPRef.current = healed
       setPlayerHP(healed)
     } else if (r.kind === 'crew') {
@@ -2249,12 +2251,29 @@ export default function GauntletGame(props: GauntletGameProps) {
             </div>
           )}
 
-          {/* The fork — bank or push, presented together as one clear decision. */}
+          {/* The fork — bank or push, presented together as one clear decision.
+              No Second Thoughts (a signed Term) takes the bank away except on a
+              breather that follows a BOSS kill: the mode's safety valve, gone. */}
           <div style={{ marginTop: 18 }}>
-            <button onClick={() => setConfirmClaim(true)} disabled={resolving} className="font-cinzel font-800 uppercase tracking-[0.05em] tap"
-              style={{ width: '100%', padding: '1.02rem', borderRadius: 14, fontSize: '1rem', color: '#f5d98a', background: `linear-gradient(180deg, ${GOLD}30, ${GOLD}10)`, border: `1px solid ${GOLD}88`, cursor: resolving ? 'wait' : 'pointer', boxShadow: `0 0 22px ${GOLD}22` }}>
-              {resolving ? '…' : <>Claim {fmt(previewDoubloons)} ⟡ &amp; Leave</>}
-            </button>
+            {(() => {
+              const bankBarred = termFx.cashOutOnlyAfterBoss && !rollStateRef.current.prevWasBoss
+              if (bankBarred) return (
+                <div style={{ width: '100%', padding: '0.95rem 1rem', borderRadius: 14, textAlign: 'center', background: 'rgba(255,255,255,0.04)', border: '1px dashed rgba(255,255,255,0.2)' }}>
+                  <p className="font-cinzel font-800 uppercase tracking-[0.05em]" style={{ fontSize: '0.9rem', color: '#8a8578' }}>
+                    You Cannot Leave
+                  </p>
+                  <p className="font-karla" style={{ fontSize: '0.74rem', color: '#6f6a62', marginTop: 4, lineHeight: 1.4 }}>
+                    You signed <strong style={{ color: '#a89898' }}>No Second Thoughts</strong>. Davy only lets you bank once you have put a boss down.
+                  </p>
+                </div>
+              )
+              return (
+                <button onClick={() => setConfirmClaim(true)} disabled={resolving} className="font-cinzel font-800 uppercase tracking-[0.05em] tap"
+                  style={{ width: '100%', padding: '1.02rem', borderRadius: 14, fontSize: '1rem', color: '#f5d98a', background: `linear-gradient(180deg, ${GOLD}30, ${GOLD}10)`, border: `1px solid ${GOLD}88`, cursor: resolving ? 'wait' : 'pointer', boxShadow: `0 0 22px ${GOLD}22` }}>
+                  {resolving ? '…' : <>Claim {fmt(previewDoubloons)} ⟡ &amp; Leave</>}
+                </button>
+              )
+            })()}
 
             {/* The hinge — makes the two buttons read as one either/or. */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '11px 4px 10px' }}>
