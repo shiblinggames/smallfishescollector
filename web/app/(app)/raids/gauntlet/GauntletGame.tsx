@@ -542,13 +542,20 @@ export default function GauntletGame(props: GauntletGameProps) {
     if (!props.hasSeenIntro) markGauntletIntroSeen().catch(() => {})
   }
 
+  /** Tear down the pre-dive surfaces. Called only once the run's fate is known,
+   *  never before the server answers — closing them early leaves the idle home
+   *  screen visible behind the in-flight request, which reads as a flash. */
+  function closePreDive() {
+    setModeChoiceOpen(false); setHcConfirmOpen(false); setTermsOpen(false)
+  }
+
   function begin(hardcore = false) {
     if (starting) return
-    setModeChoiceOpen(false); setHcConfirmOpen(false); setTermsOpen(false)
     setStarting(true)
     startGauntletRun(hardcore, hardcore ? signedTermsRef.current : undefined).then(res => {
       if (!res.started) {
         setStarting(false)
+        closePreDive()
         if (res.reason === 'cooldown') { if (res.nextAt) setCooldownUntil(res.nextAt); setPhase('usedup'); return }
         // Hardcore was rejected server-side (gate not met / no living squad).
         setHcBlockedMsg(res.reason === 'no_squad'
@@ -556,6 +563,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           : 'The Hardcore Gauntlet is not open to you yet.')
         return
       }
+      closePreDive()
       setHardcoreRun(hardcore)
       // Resolve the signed Terms EAGERLY, right here. termFxRef is mirrored from
       // state by an effect, and `hardcoreRun` has not flushed yet at this point —
