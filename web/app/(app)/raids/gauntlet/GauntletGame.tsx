@@ -331,6 +331,13 @@ export default function GauntletGame(props: GauntletGameProps) {
   // A qualifying confluence offered as a card in this draft (replaces one boon
   // slot — the Hades-duo opportunity cost). Null when none is offered.
   const [pendingConfluence, setPendingConfluence] = useState<ConfluenceOffer | null>(null)
+  // How many BOON cards a draft shows. A confluence offer takes one of the slots,
+  // so it is always one fewer. Derived from the Term (Scarce Powder) rather than
+  // hardcoded, or a 2-pick draft would still show 2 boons alongside a confluence
+  // and the term would silently do nothing on exactly the drafts that matter.
+  const boonCardCount = pendingConfluence
+    ? Math.max(1, termFx.boonPicks - 1)
+    : termFx.boonPicks
   // Confluence ids already SURFACED as a draft card this run — drives the pity
   // in drawConfluenceOffer (a newly-qualified synergy is guaranteed once). Per
   // run only; not checkpointed (worst case on resume you re-see one, harmless).
@@ -550,10 +557,19 @@ export default function GauntletGame(props: GauntletGameProps) {
         return
       }
       setHardcoreRun(hardcore)
+      // Resolve the signed Terms EAGERLY, right here. termFxRef is mirrored from
+      // state by an effect, and `hardcoreRun` has not flushed yet at this point —
+      // so reading termFxRef.current now would hand back NO_TERM_EFFECTS, and the
+      // FIRST fight of a signed run would be generated (and its starting hull set,
+      // and its lethal saves granted) as though nothing had been signed at all.
+      // This is HARDCORE: the terms must be true from the very first shot.
+      const fx = hardcore ? resolveTerms(signedTermsRef.current) : NO_TERM_EFFECTS
+      termFxRef.current = fx
+      const runHpMax = Math.max(1, Math.round(baseHpMax * fx.maxHpPct))
       // Fresh run.
       rollStateRef.current = { cleared: 0, prevWasBoss: false, roundsSinceBoss: 0 }
-      playerHPRef.current = Math.round(baseHpMax * termFxRef.current.maxHpPct)
-      prevHpMaxRef.current = Math.round(baseHpMax * termFxRef.current.maxHpPct)
+      playerHPRef.current = runHpMax
+      prevHpMaxRef.current = runHpMax
       potRef.current = 0
       runEventsRef.current = []
       recordShownRef.current = false
@@ -563,7 +579,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       runMaxHitRef.current = 0
       runStatsRef.current = emptyRunStats()
       // Deep Draft (a signed Term) cut the ceiling, so a full hull IS the smaller number.
-      setPlayerHP(Math.max(1, Math.round(baseHpMax * termFxRef.current.maxHpPct)))
+      setPlayerHP(runHpMax)
       setPot(0)
       setBossesDefeated(0)
       setUsedAbilityIds(new Set())
@@ -583,9 +599,9 @@ export default function GauntletGame(props: GauntletGameProps) {
       calmBeforeUsedRef.current = false
       // No Mercy (a signed Term): the Anchor does not hold. The first blow that
       // would sink you, sinks you.
-      anchorSavesLeftRef.current = termFxRef.current.noLethalSaves ? 0 : getActiveEffects(props.equippedItems)
+      anchorSavesLeftRef.current = fx.noLethalSaves ? 0 : getActiveEffects(props.equippedItems)
         .filter(e => e.type === 'lethal_save').reduce((a, e) => a + e.value, 0)
-      setFight(generateFight(rollStateRef.current, skipOffset, termFxRef.current))
+      setFight(generateFight(rollStateRef.current, skipOffset, fx))
       setPhase('descending')
       setStarting(false)
     })
@@ -840,7 +856,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     const rank = (r: string) => (r === 'legendary' ? 3 : r === 'rare' ? 2 : 1)
     // Only reveal the SHOWN cards — a confluence offer takes one boon slot, so
     // the hidden 3rd boon must not flip (or fire a banner the player can't see).
-    const shown = pendingBoons.slice(0, pendingConfluence ? 2 : 3)
+    const shown = pendingBoons.slice(0, boonCardCount)
     const init: Record<number, 'sealed' | 'charging' | 'flipped'> = {}
     shown.forEach((_, i) => { init[i] = 'sealed' })
     setBoonPhases(init)
@@ -2451,7 +2467,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     // When a confluence is offered it takes one boon slot, so only 2 boon cards
     // render. Gate the reveal-dependent extras (confluence card, reprieve, reroll)
     // on just the SHOWN boons — else the hidden 3rd card never flips.
-    const shownBoons = pendingConfluence ? 2 : 3
+    const shownBoons = boonCardCount
     const revealDone = pendingBoons.slice(0, shownBoons).every((_, i) => (boonPhases[i] ?? 'sealed') === 'flipped')
     return (
       <>
@@ -2528,7 +2544,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {pendingBoons.slice(0, pendingConfluence ? 2 : 3).map((b, idx) => {
+            {pendingBoons.slice(0, boonCardCount).map((b, idx) => {
               const rm = BOON_RARITY_META[b.rarity]
               const legendary = b.rarity === 'legendary'
               const rare = b.rarity === 'rare'
