@@ -441,6 +441,32 @@ export const NO_TERM_EFFECTS: TermEffects = {
 
 /** The COMBAT effects a signed board contributes (the skill terms). Folded into
  *  the run's TideEffect list alongside boons, curses and confluences. */
+// ── THE PITCH BLACK HULL ─────────────────────────────────────────────────────
+// The Pressure-exclusive drop, and the only hull in the game that cannot be bought,
+// forged, or reached by depth alone. It is a walking receipt: you cannot be wearing
+// it unless you signed a heavy board and brought it home.
+//
+// BOTH gates must hold on the SAME cash-out:
+//   - PRESSURE_SKIN_THRESHOLD Pressure signed, and
+//   - banked from PRESSURE_SKIN_DEPTH, the depth where Pressure finally pays in full.
+// Below either line the chance is a hard ZERO rather than merely small, so no amount
+// of signing-and-immediately-banking can ever roll it. And since Blood Gems (and this)
+// only pay on a CASH-OUT, sinking with a monstrous board earns exactly nothing.
+//
+// Above the line, Pressure is the dial: rare at the threshold, meaningfully better at
+// the cap, and no better past it. Past PRESSURE_CAP you are still diving for glory alone.
+export const PRESSURE_SKIN_ID = 'pitch_black_hull'
+export const PRESSURE_SKIN_DEPTH = PRESSURE_DEPTH_FULL
+const PRESSURE_SKIN_MIN_CHANCE = 0.03
+const PRESSURE_SKIN_MAX_CHANCE = 0.12
+
+export function pressureSkinDropChance(pressure: number, depth: number): number {
+  if (pressure < PRESSURE_SKIN_THRESHOLD || depth < PRESSURE_SKIN_DEPTH) return 0
+  const span = PRESSURE_CAP - PRESSURE_SKIN_THRESHOLD
+  const t = span > 0 ? Math.min(1, (pressure - PRESSURE_SKIN_THRESHOLD) / span) : 1
+  return PRESSURE_SKIN_MIN_CHANCE + (PRESSURE_SKIN_MAX_CHANCE - PRESSURE_SKIN_MIN_CHANCE) * t
+}
+
 // ── THE PRESSURE BADGES ──────────────────────────────────────────────────────
 // Every one pairs Pressure WITH the depth you BANKED at, and the pairing is the
 // whole point. Signing a term is free; surviving what you signed is the

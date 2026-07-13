@@ -4,7 +4,8 @@
 import {
   GAUNTLET_TERMS, resolveTerms, termPressure, termTideEffects,
   pressureGemMult, NO_TERM_EFFECTS, MAX_AVAILABLE_PRESSURE, PRESSURE_CAP,
-  PRESSURE_DEPTH_FLOOR, PRESSURE_BADGES, pressureFeats, isFullBoard, type SignedTerms,
+  PRESSURE_DEPTH_FLOOR, PRESSURE_BADGES, pressureFeats, isFullBoard,
+  PRESSURE_SKIN_THRESHOLD, PRESSURE_SKIN_DEPTH, pressureSkinDropChance, type SignedTerms,
 } from './lib/gauntletTerms'
 import { generateFight, advanceRollState, isCurseDepth, drawCurse, isBoonDepth, drawBoons, drawConfluenceOffer, bloodGemsForDepth, type GauntletRollState } from './lib/gauntlet'
 
@@ -190,6 +191,30 @@ console.log('\n8. Pressure badges require depth, not just a signature')
   if (isFullBoard({ ...full, iron_rations: 1 })) bad++, fail('isFullBoard accepts a board with a term below max tier')
   if (pressureFeats(full, 14).includes('for_glory_alone')) bad++, fail('for_glory_alone granted above depth 15')
   if (bad === 0) ok('no feat is reachable without its depth; every rung needs both halves')
+}
+
+// ── 9. The Pitch Black Hull cannot roll below EITHER gate ───────────────────
+// The one cosmetic that says "I signed a heavy board and I lived". If it could roll
+// on a shallow sign-and-bank, it would say nothing at all.
+console.log('\n9. Pitch Black Hull needs Pressure AND depth')
+{
+  let bad = 0
+  for (let p = 0; p <= MAX_AVAILABLE_PRESSURE; p++) {
+    for (let d = 0; d <= 70; d++) {
+      const c = pressureSkinDropChance(p, d)
+      if (!Number.isFinite(c) || c < 0 || c > 1) bad++, fail(`chance ${c} at P${p} depth ${d}`)
+      const gated = p < PRESSURE_SKIN_THRESHOLD || d < PRESSURE_SKIN_DEPTH
+      if (gated && c !== 0) bad++, fail(`rollable at P${p} depth ${d}, below a gate`)
+      if (!gated && c <= 0) bad++, fail(`unrollable at P${p} depth ${d} with both gates met`)
+    }
+  }
+  // A heavier board must roll it strictly better, right up to the cap.
+  const atMin = pressureSkinDropChance(PRESSURE_SKIN_THRESHOLD, PRESSURE_SKIN_DEPTH)
+  const atCap = pressureSkinDropChance(PRESSURE_CAP, PRESSURE_SKIN_DEPTH)
+  if (!(atCap > atMin)) bad++, fail('the cap rolls no better than the threshold')
+  // Past the cap it must NOT keep climbing: that half of the board is glory alone.
+  if (pressureSkinDropChance(MAX_AVAILABLE_PRESSURE, 70) > atCap + 1e-9) bad++, fail('Pressure past the cap still improves the drop')
+  if (bad === 0) ok(`hard 0 below either gate; ${(atMin * 100).toFixed(0)}% at the threshold rising to ${(atCap * 100).toFixed(0)}% at the cap, no better past it`)
 }
 
 console.log(`\nBoard: ${GAUNTLET_TERMS.length} terms, ${MAX_AVAILABLE_PRESSURE} Pressure, cap ${PRESSURE_CAP}`)

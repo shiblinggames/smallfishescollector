@@ -15,7 +15,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { navRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
-import { termPressure, pressureGemMult, pressureFeats, getTerm, type SignedTerms } from '@/lib/gauntletTerms'
+import { termPressure, pressureGemMult, pressureFeats, pressureSkinDropChance, PRESSURE_SKIN_ID, getTerm, type SignedTerms } from '@/lib/gauntletTerms'
 import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
 import { maxPotForDepth, chestForDepth, chestCannonDropChance, chestSkinDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_REWARD_DEPTH_CAP, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, gauntletXpForDepth, gauntletCrewXp, CONFLUENCES, hardcoreUnlocked, HARDCORE_LIVE, HARDCORE_UNLOCKS, HARDCORE_RUNS_PER_DAY, HC_FATHOMS_MULT, HC_SURVIVOR_XP_MULT, bloodGemsForDepth, coerceRunStats, type GauntletRunSnapshot, type GauntletRunState } from '@/lib/gauntlet'
 import { getGauntletUpgrade, isUpgradeComingSoon, gauntletHaulMult, gauntletXpMult, gauntletFathomsMult } from '@/lib/gauntletUpgrades'
@@ -453,6 +453,8 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
       droppedSkinId: string | null
       /** Bad Blood Hull (Hardcore-only Man-o-War skin) id if it dropped, else null. */
       droppedHcSkinId: string | null
+      /** The Pitch Black Hull, if this heavy run rolled it. */
+      droppedPressureSkinId: string | null
       /** Depth-milestone unlocks crossed by this CASH-OUT (surfaced on the
        *  reward screen — the Gauntlet no longer mails these). */
       unlockedThisRun: { name: string; blurb: string; where: string }[]
@@ -520,6 +522,12 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   }
   const newRaidItems = droppedItems.length > 0 ? [...new Set([...ownedItems, ...droppedItems])] : ownedItems
 
+  // DAVY'S TERMS — the Pressure this run actually carried, derived from the terms
+  // column WE stored at run start and never from the client. Hoisted above the skin
+  // rolls because the Pitch Black Hull's drop chance keys off it.
+  const runTerms = (profile.gauntlet_run_terms as SignedTerms | null) ?? null
+  const runPressure = hc ? termPressure(runTerms) : 0
+
   // Golden Gauntlet Hull — a RARE cosmetic drop from the Davy Jones' Locker chest
   // (the top chest tier, depth 18+). Man-o-War-only skin; grants to ship_skins so
   // it's owned even before the player has the hull to wear it.
@@ -534,13 +542,20 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   if (hc && chest.tier >= BLOOD_HULL_CHEST_TIER && !ownedSkins.includes(BLOOD_HULL_SKIN_ID) && Math.random() < chestSkinDropChance(cd)) {
     droppedHcSkinId = BLOOD_HULL_SKIN_ID
   }
+  // Pitch Black Hull — the PRESSURE-exclusive drop. Needs hardcore, a heavy board AND
+  // a deep bank, all on this one run: pressureSkinDropChance returns a hard 0 below
+  // either gate, so no shallow sign-and-bank can ever roll it.
+  let droppedPressureSkinId: string | null = null
+  if (hc && !ownedSkins.includes(PRESSURE_SKIN_ID) && Math.random() < pressureSkinDropChance(runPressure, payDepth)) {
+    droppedPressureSkinId = PRESSURE_SKIN_ID
+  }
   // Hardcore Drowned Fleet skins — granted the first time you cash out past a
   // hardcore-depth milestone (mirrors GAUNTLET_DEPTH_UNLOCKS but for cosmetics).
   const prevHcDeepest = (profile.gauntlet_hc_deepest as number | null) ?? 0
   const hcDeepest = hc ? Math.max(prevHcDeepest, cd) : prevHcDeepest
   const hcUnlocks = hc ? HARDCORE_UNLOCKS.filter(u => prevHcDeepest < u.depth && u.depth <= hcDeepest) : []
   const hcSkinIds = hcUnlocks.map(u => u.skinId).filter(id => !ownedSkins.includes(id))
-  const grantSkins = [...(droppedSkinId ? [droppedSkinId] : []), ...(droppedHcSkinId ? [droppedHcSkinId] : []), ...hcSkinIds]
+  const grantSkins = [...(droppedSkinId ? [droppedSkinId] : []), ...(droppedHcSkinId ? [droppedHcSkinId] : []), ...(droppedPressureSkinId ? [droppedPressureSkinId] : []), ...hcSkinIds]
   const skinFields = grantSkins.length > 0 ? { ship_skins: [...new Set([...ownedSkins, ...grantSkins])] } : {}
 
   // Blood Gems — the Hardcore premium currency, dropped in the cash-out chest
@@ -551,9 +566,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   // Pressure is derived from the terms column WE stored at run start, never from
   // the client. The multiplier also ramps in with depth (pressureGemMult), so
   // signing the whole board and farming short shallow dives pays nothing — you
-  // have to be deep AND heavy.
-  const runTerms = (profile.gauntlet_run_terms as SignedTerms | null) ?? null
-  const runPressure = hc ? termPressure(runTerms) : 0
+  // have to be deep AND heavy. (runPressure is derived above, beside the skin rolls.)
   const gemMult = pressureGemMult(runPressure, payDepth)
   const baseBloodGems   = hc ? bloodGemsForDepth(payDepth, Math.random()) : 0
   const earnedBloodGems = Math.round(baseBloodGems * gemMult)
@@ -706,6 +719,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
     droppedItems,
     droppedSkinId,
     droppedHcSkinId,
+    droppedPressureSkinId,
     unlockedThisRun,
     hardcore: hc,
   }

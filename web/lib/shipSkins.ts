@@ -114,6 +114,22 @@ export const SHIP_SKINS: ShipSkinDef[] = [
       6: '/badbloodhull.png',
     },
   },
+  {
+    // The PRESSURE-exclusive hull. Not bought, not forged, not earned by depth alone:
+    // it only ever rolls on a hardcore cash-out that was carrying real weight (25+
+    // Pressure, banked from depth 30+). Nobody can be wearing this without having
+    // signed Davy's terms and lived. See pressureSkinDropChance in lib/gauntletTerms.
+    id: 'pitch_black_hull',
+    name: 'Pitch Black Hull',
+    description: 'Not painted black. Drowned black. She carries no colors but the bone on her sails, and no captain flies her without having signed for it.',
+    filter: 'none',
+    color: '#e8e4dc',
+    source: "Pressure drop · Davy's Terms",
+    requiresShipTier: MANOWAR_SHIP_TIER,
+    imageByTier: {
+      6: '/pitchblackhull.png',
+    },
+  },
 
   // ── Drowned Fleet — Hardcore Gauntlet ── REMOVED 2026-07-08: the hull skins
   // aren't ready (placeholder tints, no bespoke art), so they're pulled from the

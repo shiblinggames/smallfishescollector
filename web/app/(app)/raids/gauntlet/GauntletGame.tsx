@@ -3420,10 +3420,11 @@ function GauntletReward({ r, recap, onBack }: { r: RewardOk; recap: { shipsSunk:
               )
             })}
 
-            {/* Man-o-War hull drops — the Golden Gauntlet Hull (deepest chest) and
-                the Hardcore-only Bad Blood Hull. Each gets its own colored card
-                so the prestige drop lands. */}
-            {[r.droppedSkinId, r.droppedHcSkinId].filter((x): x is string => !!x).map((skinId, i) => {
+            {/* Man-o-War hull drops — the Golden Gauntlet Hull (deepest chest), the
+                Hardcore-only Bad Blood Hull, and the Pitch Black Hull that only a
+                heavy board can roll. Each gets its own colored card so the prestige
+                drop lands. */}
+            {[r.droppedSkinId, r.droppedHcSkinId, r.droppedPressureSkinId].filter((x): x is string => !!x).map((skinId, i) => {
               const skin = getShipSkin(skinId)
               if (!skin) return null
               return (

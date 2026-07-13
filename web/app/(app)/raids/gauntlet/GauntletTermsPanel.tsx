@@ -20,7 +20,7 @@ import { vibrate } from '@/lib/haptics'
 import {
   GAUNTLET_TERMS, TERM_GROUP_META, termPressure, pressureGemMult,
   MAX_AVAILABLE_PRESSURE, PRESSURE_CAP, PRESSURE_DEPTH_FLOOR, PRESSURE_DEPTH_FULL,
-  PRESSURE_SKIN_THRESHOLD, type SignedTerms, type TermGroup,
+  PRESSURE_SKIN_THRESHOLD, PRESSURE_SKIN_DEPTH, type SignedTerms, type TermGroup,
 } from '@/lib/gauntletTerms'
 
 const GOLD = '#f0c040'
@@ -146,7 +146,7 @@ export default function GauntletTermsPanel({
         {pressure >= PRESSURE_SKIN_THRESHOLD && (
           <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
             className="font-karla font-700" style={{ fontSize: '0.78rem', color: GOLD, marginTop: 7 }}>
-            ✦ At {PRESSURE_SKIN_THRESHOLD}+ Pressure, a cash-out earns colors nobody can buy.
+            ✦ At {PRESSURE_SKIN_THRESHOLD}+ Pressure, a cash-out from depth {PRESSURE_SKIN_DEPTH} can drop the Pitch Black Hull. Nothing else in the game drops it.
           </motion.p>
         )}
       </div>
