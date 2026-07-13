@@ -1413,7 +1413,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       // crocodile's hide, so the name IS the mechanic: he is nothing but barrier,
       // light and fast, with no trick behind it. Break the plating, then the hull.
       // Burn bleeds through it; volleys chew it fastest.
-      id: 'picket', name: 'The Scute', hpBase: 300, minDmg: 20, maxDmg: 34,
+      id: 'picket', name: 'The Scute', hpBase: 275, minDmg: 20, maxDmg: 34,
       shipSpeed: 9, actionMs: 3400,
       magazineSize: 4, shieldPct: 0.10,
       critDrift: 0.4, critDriftName: 'Rolling Plate',
@@ -1428,7 +1428,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       // damage for a spell: learn to wait out the braced window, or burst through it.
       // A riverbank is where a saltie hauls out, and it is also the thing you cannot
       // get through.
-      id: 'bosun', name: 'The Bank', hpBase: 330, minDmg: 21, maxDmg: 35,
+      id: 'bosun', name: 'The Bank', hpBase: 305, minDmg: 21, maxDmg: 35,
       shipSpeed: 6, actionMs: 3600,
       magazineSize: 4, shieldPct: 0.11,
       critDrift: 0.5, critDriftName: 'Rolling Plate',
@@ -1443,7 +1443,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       // THE MANGROVE — SLOWED debut. Roots fouled through your rigging and rudder cut
       // your speed, so you lose turn-order rolls and slip fewer shots while it lasts.
       // The estuary's own net, and it does not need throwing.
-      id: 'netter', name: 'The Mangrove', hpBase: 360, minDmg: 22, maxDmg: 36,
+      id: 'netter', name: 'The Mangrove', hpBase: 330, minDmg: 22, maxDmg: 36,
       shipSpeed: 6, actionMs: 3800,
       magazineSize: 4, shieldPct: 0.13,
       special: { name: 'Deadwood', status: 'slowed', magnitude: 3, turns: 2, target: 'player', line: 'Root and deadwood come up under the hull and wrap the rudder, and the wheel goes dead in your hands.' },
@@ -1459,7 +1459,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       // hit soft while it lasts. Drops the Chain-Shot Rack so you can turn it around.
       // Paired with The Wedge: the same brute doing the same job with a different tool.
       // They share a build and a face, and differ by a mirror and the color of the coat.
-      id: 'chainman', name: 'The Rasp', hpBase: 380, minDmg: 24, maxDmg: 38,
+      id: 'chainman', name: 'The Rasp', hpBase: 350, minDmg: 24, maxDmg: 38,
       shipSpeed: 7, actionMs: 3600,
       magazineSize: 4, shieldPct: 0.15,
       special: { name: 'Chain-Shot', status: 'weaken', magnitude: 0.20, turns: 2, target: 'player', line: 'Chain-shot screams through your powder line and your guns cough where they roared.' },
@@ -1474,7 +1474,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       // THE WEDGE — FEEBLE debut. A cracker round splits your seams and everything
       // that lands after finds the gap. The kill-window status, used ON you.
       // The Rasp's opposite number (see above): same build, mirrored, different coat.
-      id: 'cracksman', name: 'The Wedge', hpBase: 400, minDmg: 24, maxDmg: 40,
+      id: 'cracksman', name: 'The Wedge', hpBase: 370, minDmg: 24, maxDmg: 40,
       shipSpeed: 5, actionMs: 4200,
       magazineSize: 4, shieldPct: 0.15,
       special: { name: 'Hull-Cracker', status: 'feeble', magnitude: 0.22, turns: 2, target: 'player', line: 'A cracker round splits your seams wide open, and every blow after it will find the gap.' },
@@ -1490,7 +1490,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       // sponge that punishes slow, polite damage. He is nothing but healed-over wounds,
       // which is the most crocodile thing about him. Nothing down here has killed him
       // yet and he has stopped expecting it.
-      id: 'purser', name: 'Old Scar', hpBase: 410, minDmg: 25, maxDmg: 39,
+      id: 'purser', name: 'Old Scar', hpBase: 380, minDmg: 25, maxDmg: 39,
       shipSpeed: 7, actionMs: 3800,
       magazineSize: 4, shieldPct: 0.17,
       critDrift: 0.8, critDriftName: 'Rolling Plate',
@@ -1506,7 +1506,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       // enforcer who makes sure nobody talks. The name is kept from the old roster
       // because it is ALREADY a crocodile's snout and the word for shutting a thing up,
       // and a double meaning that good does not come along twice.
-      id: 'muzzle', name: 'The Muzzle', hpBase: 420, minDmg: 26, maxDmg: 40,
+      id: 'muzzle', name: 'The Muzzle', hpBase: 385, minDmg: 26, maxDmg: 40,
       shipSpeed: 8, actionMs: 3600,
       magazineSize: 4, shieldPct: 0.17,
       special: { name: 'Gag Order', status: 'silence', magnitude: 1, turns: 2, target: 'player', line: 'The gag order comes down, and your crew go quiet mid-shout.' },
@@ -1534,7 +1534,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       //   enrage           -> he goes STILL. The water goes flat. That is the tell.
       //   the 70% check    -> he takes your hull in his teeth and rolls
       //   the aegis        -> his back. Nothing you carry goes through it alone.
-      id: 'saltie', name: 'Sal Brackwater', hpBase: 700, minDmg: 28, maxDmg: 46,
+      id: 'saltie', name: 'Sal Brackwater', hpBase: 645, minDmg: 28, maxDmg: 46,
       shipSpeed: 8, actionMs: 4000,
       magazineSize: 4, shieldPct: 0.20,
       special: { name: 'Still Water', status: 'enrage', magnitude: 0.25, turns: 2, target: 'self', line: 'Sal stops moving. The chop goes flat around him, and every gun on the line goes quiet.' },
