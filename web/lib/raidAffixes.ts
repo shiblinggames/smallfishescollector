@@ -44,6 +44,7 @@ export type AffixId =
   | 'glacial'
   | 'riposte'
   | 'warded'
+  | 'yawing'
 
 export interface AffixDef {
   id: AffixId
@@ -100,6 +101,14 @@ export interface AffixDef {
   //    max HP that soaks your direct hits (not burn/DoT) before its hull. The
   //    Railgun's piercing Mega ignores it. ──────────────────────────────
   shieldPctMaxHp?:     number  // 0.30
+
+  // ── Yawing — the TARGET band slides across the aim bar faster (never the
+  //    needle). Multiplies the enemy's own zone drift, so an already-evasive
+  //    hull becomes genuinely slippery. This is the aim-pressure affix: it
+  //    attacks your read of WHERE to shoot, not your reaction speed, which is
+  //    why it can be strong without becoming a coin flip the way a faster
+  //    needle does (see the Racing Tide retune). ────────────────────────
+  zoneSpeedMult?:      number  // 1.7
 }
 
 export const AFFIXES: Record<AffixId, AffixDef> = {
@@ -162,6 +171,11 @@ export const AFFIXES: Record<AffixId, AffixDef> = {
     id: 'riposte', name: 'Riposte',
     description: 'When it dodges your shot, it turns 50% of that blow back on you.',
     riposteReflectPct: 0.50,
+  },
+  yawing: {
+    id: 'yawing', name: 'Yawing',
+    description: 'Never holds a line. Your target band slides across the aim bar far faster.',
+    zoneSpeedMult: 1.7,
   },
   warded: {
     id: 'warded', name: 'Warded',

@@ -1837,10 +1837,11 @@ export default function RaidCombat({
     let last = performance.now()
 
     // Zone drift: enemy ship speed sets the pace, player Navigation slows it
-    // back down. Gauntlet curses (tide) + a per-enemy multiplier both lurch it —
-    // the per-enemy one is how evasive raid enemies deny clean crits (a faster
-    // TARGET rather than a faster needle).
-    const ZONE_SPEED = enemy.shipSpeed * 0.0008 * (1 / (1 + totalNavigation * 0.015)) * tide.zoneSpeedMult * (enemy.zoneSpeedMult ?? 1)
+    // back down. Gauntlet curses (tide), a per-enemy multiplier, and the Yawing
+    // elite affix all lurch it — these are how an evasive target denies clean
+    // crits (a faster TARGET rather than a faster needle, which is the fair way
+    // to pressure aim; see the Racing Tide retune).
+    const ZONE_SPEED = enemy.shipSpeed * 0.0008 * (1 / (1 + totalNavigation * 0.015)) * tide.zoneSpeedMult * (enemy.zoneSpeedMult ?? 1) * (affix?.zoneSpeedMult ?? 1)
     // Needle sweep, with the curse multiplier (Racing Tide etc.) AND any
     // per-enemy needle multiplier (rarely used — prefer zoneSpeedMult).
     const NEEDLE_SPEED = INDICATOR_SPEED * tide.aimSpeedMult * (enemy.aimSpeedMult ?? 1)
@@ -1964,7 +1965,7 @@ export default function RaidCombat({
     }
     rafRef.current = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(rafRef.current)
-  }, [subPhase, enemy.shipSpeed, enemy.aimSpeedMult, enemy.zoneSpeedMult, totalNavigation, tide.aimSpeedMult, tide.zoneSpeedMult])
+  }, [subPhase, enemy.shipSpeed, enemy.aimSpeedMult, enemy.zoneSpeedMult, totalNavigation, tide.aimSpeedMult, tide.zoneSpeedMult, affix?.zoneSpeedMult])
 
   // ─── Enemy AI: pick next action from pattern ───────────────────────────────
 
