@@ -17,7 +17,7 @@ import { navRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
 import { termPressure, pressureGemMult, pressureFeats, pressureSkinDropChance, PRESSURE_SKIN_ID, getTerm, type SignedTerms } from '@/lib/gauntletTerms'
 import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
-import { maxPotForDepth, chestForDepth, chestCannonDropChance, chestSkinDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_REWARD_DEPTH_CAP, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, gauntletXpForDepth, gauntletCrewXp, CONFLUENCES, hardcoreUnlocked, HARDCORE_LIVE, HARDCORE_UNLOCKS, HARDCORE_RUNS_PER_DAY, HC_FATHOMS_MULT, HC_SURVIVOR_XP_MULT, bloodGemsForDepth, coerceRunStats, type GauntletRunSnapshot, type GauntletRunState } from '@/lib/gauntlet'
+import { GOLD_HULL_SKIN_ID, GOLD_HULL_CHEST_TIER, BLOOD_HULL_SKIN_ID, BLOOD_HULL_CHEST_TIER, BLOOD_CANNON_ITEM_ID, BLOOD_CANNON_CHEST_TIER, maxPotForDepth, chestForDepth, chestCannonDropChance, chestSkinDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_REWARD_DEPTH_CAP, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, gauntletXpForDepth, gauntletCrewXp, CONFLUENCES, hardcoreUnlocked, HARDCORE_LIVE, HARDCORE_UNLOCKS, HARDCORE_RUNS_PER_DAY, HC_FATHOMS_MULT, HC_SURVIVOR_XP_MULT, bloodGemsForDepth, coerceRunStats, type GauntletRunSnapshot, type GauntletRunState } from '@/lib/gauntlet'
 import { getGauntletUpgrade, isUpgradeComingSoon, gauntletHaulMult, gauntletXpMult, gauntletFathomsMult } from '@/lib/gauntletUpgrades'
 import { DAVY_FORGE } from '@/lib/raidItems'
 import { GAUNTLET_DEEPEST_CONTEST_ENDS_AT } from '@/lib/contests'
@@ -25,15 +25,9 @@ import { getBait } from '@/lib/bait'
 
 // Golden Gauntlet Hull — a rare Man-o-War-only cosmetic that drops only from the
 // top chest tier (Davy Jones' Locker, chest tier 5 / depth 18+). Tunable here.
-const GOLD_HULL_SKIN_ID = 'golden_gauntlet_hull'
-const GOLD_HULL_CHEST_TIER = 5
 
 // Hardcore-only drops. Bad Blood Hull (Man-o-War skin) + Davy's Blood Cannon
 // (the first lifesteal raid item) both come ONLY from Hardcore Gauntlet chests.
-const BLOOD_HULL_SKIN_ID = 'bad_blood_hull'
-const BLOOD_HULL_CHEST_TIER = 4        // from the deeper hardcore chests up (depth 14+)
-const BLOOD_CANNON_ITEM_ID = 'davys_blood_cannon'
-const BLOOD_CANNON_CHEST_TIER = 3      // depth 10+
 // Chase odds scale smoothly with cash-out depth — shared curves in
 // lib/gauntlet (chestCannonDropChance / chestSkinDropChance) so the normal
 // chases (Hand/Heavy cannons, Golden Hull) and the hardcore chases (Blood

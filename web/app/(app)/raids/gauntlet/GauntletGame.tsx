@@ -29,8 +29,7 @@ import {
   DROWNED_FILTER, bandForDepth, davyTaunt,
   GAUNTLET_COOLDOWN_HOURS, HARDCORE_RUNS_PER_DAY, HC_UNLOCK_DEPTH, GAUNTLET_REWARD_DEPTH_CAP,
   emptyRunStats, addRunStats, coerceRunStats,
-  type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot, type GauntletRunState, type GauntletRunStats,
-} from '@/lib/gauntlet'
+  type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot, type GauntletRunState, type GauntletRunStats, chestOdds } from '@/lib/gauntlet'
 import { GAUNTLET_TERMS, TERM_GROUP_META, resolveTerms, termPressure, termTideEffects, pressureGemMult, pressureDepthFactor, NO_TERM_EFFECTS, PRESSURE_CAP, PRESSURE_DEPTH_FLOOR, PRESSURE_DEPTH_FULL, MAX_AVAILABLE_PRESSURE, type SignedTerms } from '@/lib/gauntletTerms'
 import GauntletTermsPanel from './GauntletTermsPanel'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen, recordGauntletHit, wagerGauntletFathoms, markConfluencesSeen, checkpointGauntletRun, resumeGauntletRun, buyBaitWithFathoms } from './actions'
@@ -39,7 +38,7 @@ import { GAUNTLET_UPGRADES, COMING_SOON_UPGRADES, bonusChargeSlots, gauntletRunH
 import { type ShipAugment } from '@/lib/shipAugments'
 import { getSpecialItem } from '@/lib/specialItems'
 import { buySpecialItem } from '@/app/(app)/fishing/actions'
-import { getRaidItem, getActiveEffects } from '@/lib/raidItems'
+import { getRaidItem, getActiveEffects, DAVY_FORGE } from '@/lib/raidItems'
 import LeaderboardModal from '@/components/LeaderboardModal'
 import { vibrate, hapticTap, hapticCommit } from '@/lib/haptics'
 import { lockBodyScroll } from '@/lib/bodyScrollLock'
@@ -83,6 +82,10 @@ export interface GauntletGameProps {
   crewMembers: RaidCrewMember[]
   equippedShipSkin: string | null
   equippedItems: string[]
+  /** Everything already owned — a chest never re-drops it, so the odds shown on the
+   *  breather must know about it or they are a lie. */
+  ownedRaidItems: string[]
+  ownedShipSkins: string[]
   classDamageMult: number
   classDoubloonMult: number
   shipClasses: Record<string, string>
@@ -2195,6 +2198,57 @@ export default function GauntletGame(props: GauntletGameProps) {
               +{fmt(previewXp)} Nav XP{chest.gems > 0 ? ` · +${chest.gems} ◆` : ''} · {hardcoreRun ? HARDCORE_CHEST_LABEL : chest.label}{chest.potMult > 1 ? ` ×${chest.potMult}` : ''}
             </p>
           </div>
+
+          {/* ── WHAT IS IN THE CHEST ────────────────────────────────────────
+              The drop odds ramp with depth and are gated on what you already own,
+              and both of those were completely invisible. They are also the single
+              best argument for diving one more time, which makes the bank-or-dive
+              screen the only place they belong.
+
+              Computed by chestOdds in lib/gauntlet — the SAME code the cash-out
+              action rolls against, so the counter can never quietly pay different
+              odds than it advertised here. Anything already owned is left out
+              entirely rather than shown at 0%. */}
+          {(() => {
+            const odds = chestOdds({
+              depth: rollStateRef.current.cleared,
+              hardcore: hardcoreRun,
+              pressure,
+              ownedItems: props.ownedRaidItems,
+              ownedSkins: props.ownedShipSkins,
+              davyForge: DAVY_FORGE,
+            })
+            if (odds.length === 0) return null
+            return (
+              <div style={{ marginTop: 13, textAlign: 'left', padding: '0.7rem 0.75rem', borderRadius: 12,
+                background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.09)' }}>
+                <p className="font-karla font-800 uppercase tracking-[0.16em]" style={{ fontSize: '0.55rem', color: '#9a988e', marginBottom: 7 }}>
+                  In the Chest If You Bank Now
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  {odds.map(o => {
+                    const c = o.kind === 'skin' ? '#c9a7ff' : GOLD
+                    return (
+                      <div key={o.id} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                        <span aria-hidden style={{ flexShrink: 0, display: 'flex', color: c }}>
+                          {o.kind === 'skin'
+                            ? <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 18l9-14 9 14z" /><path d="M3 18h18" /></svg>
+                            : <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 8l9-5 9 5v8l-9 5-9-5z" /><path d="M3 8l9 5 9-5" /></svg>}
+                        </span>
+                        <span className="font-karla font-600 truncate" style={{ flex: 1, minWidth: 0, fontSize: '0.74rem', color: '#c8c2b6' }}>{o.name}</span>
+                        <span className="font-cinzel font-700" style={{ flexShrink: 0, fontSize: '0.82rem', color: c }}>
+                          {(o.chance * 100).toFixed(o.chance < 0.1 ? 1 : 0)}%
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+                <p className="font-karla" style={{ fontSize: '0.66rem', color: '#7a746a', marginTop: 7, lineHeight: 1.35 }}>
+                  Every one of these gets likelier the deeper you bank. Sink and the chest is never opened.
+                </p>
+              </div>
+            )
+          })()}
 
           {/* Hull — the other half of the gamble, right under the reward. */}
           <div style={{ marginTop: 13, textAlign: 'left' }}>

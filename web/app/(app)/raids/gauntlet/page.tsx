@@ -43,6 +43,8 @@ export default async function GauntletPage() {
           crewMembers={stats.crewMembers}
           equippedShipSkin={stats.equippedShipSkin}
           equippedItems={stats.equippedRaidItems}
+          ownedRaidItems={stats.ownedRaidItems}
+          ownedShipSkins={stats.shipSkins}
           classDamageMult={stats.classDamageMult}
           classDoubloonMult={stats.classDoubloonMult}
           shipClasses={stats.shipClasses}

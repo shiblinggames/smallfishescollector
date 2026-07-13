@@ -29,7 +29,7 @@ import {
 } from './raidChallenge'
 import { AFFIXES, ALL_AFFIX_IDS, ELITE_HP_MULT, ELITE_DMG_MULT, rollAffix, rollSecondAffix, mergeAffixes, type AffixDef } from './raidAffixes'
 import { type TideEffect } from './tides'
-import { NO_TERM_EFFECTS, type TermEffects } from './gauntletTerms'
+import { NO_TERM_EFFECTS, type TermEffects, PRESSURE_SKIN_ID, pressureSkinDropChance } from './gauntletTerms'
 
 // ── Economy ────────────────────────────────────────────────────────────────
 // Per-round pot contribution = POT_BASE + POT_GROWTH * min(depth, POT_FLATTEN).
@@ -667,6 +667,78 @@ export function chestCannonDropChance(depth: number): number {
 }
 export function chestSkinDropChance(depth: number): number {
   return Math.min(0.10, Math.max(0.005, 0.02 + (depth - 20) * (0.08 / 30)))
+}
+
+// ── WHAT THE CHEST CAN ACTUALLY PAY YOU, RIGHT NOW ───────────────────────────
+// Every chest drop is gated on the chest TIER (so on depth) and on not already
+// owning the thing. Both of those the player cannot see, and the odds RAMP with
+// depth — which makes them the single best argument for diving one more time, and
+// they were invisible.
+//
+// These ids and tiers used to live privately inside the cash-out action. They live
+// here now so the odds the breather SHOWS are produced by the same code that ROLLS
+// them at the counter. Two copies of this would drift, and the day they drifted the
+// game would be lying to a player about a decision that can end their run.
+export const GOLD_HULL_SKIN_ID = 'golden_gauntlet_hull'
+export const GOLD_HULL_CHEST_TIER = 5
+export const BLOOD_HULL_SKIN_ID = 'bad_blood_hull'
+export const BLOOD_HULL_CHEST_TIER = 4
+export const BLOOD_CANNON_ITEM_ID = 'davys_blood_cannon'
+export const BLOOD_CANNON_CHEST_TIER = 3
+
+export interface ChestOdd {
+  id: string
+  name: string
+  kind: 'item' | 'skin'
+  /** 0-1. Already accounts for tier gates and for what the player owns. */
+  chance: number
+}
+
+/** Everything this player could still pull out of a chest banked at `depth`, and how
+ *  likely each one is. Anything already owned (or forged away into a fusion, which is
+ *  how the cash-out treats it) is left out entirely rather than shown at 0%. */
+export function chestOdds(opts: {
+  depth: number
+  hardcore: boolean
+  pressure: number
+  ownedItems: string[]
+  ownedSkins: string[]
+  davyForge: { result: string; components: string[] }
+}): ChestOdd[] {
+  const { depth, hardcore, pressure, ownedItems, ownedSkins, davyForge } = opts
+  const payDepth = Math.min(depth, GAUNTLET_REWARD_DEPTH_CAP)
+  const tier = chestForDepth(payDepth).tier
+  const cannon = chestCannonDropChance(payDepth)
+  const skin = chestSkinDropChance(payDepth)
+  const out: ChestOdd[] = []
+
+  // The two Davy cannons roll INDEPENDENTLY, and stop once you have forged the Grand.
+  if (!ownedItems.includes(davyForge.result)) {
+    for (const id of davyForge.components) {
+      if (!ownedItems.includes(id)) out.push({ id, name: CHEST_DROP_NAMES[id] ?? id, kind: 'item', chance: cannon })
+    }
+  }
+  // Hardcore: the Blood Cannon. Gone once forged into either of its fusions.
+  const bloodForged = ['bloodletter', 'reavers_cannon'].some(id => ownedItems.includes(id))
+  if (hardcore && tier >= BLOOD_CANNON_CHEST_TIER && !ownedItems.includes(BLOOD_CANNON_ITEM_ID) && !bloodForged) {
+    out.push({ id: BLOOD_CANNON_ITEM_ID, name: "Davy's Blood Cannon", kind: 'item', chance: cannon })
+  }
+  if (tier >= GOLD_HULL_CHEST_TIER && !ownedSkins.includes(GOLD_HULL_SKIN_ID)) {
+    out.push({ id: GOLD_HULL_SKIN_ID, name: 'Golden Gauntlet Hull', kind: 'skin', chance: skin })
+  }
+  if (hardcore && tier >= BLOOD_HULL_CHEST_TIER && !ownedSkins.includes(BLOOD_HULL_SKIN_ID)) {
+    out.push({ id: BLOOD_HULL_SKIN_ID, name: 'Bad Blood Hull', kind: 'skin', chance: skin })
+  }
+  if (hardcore && !ownedSkins.includes(PRESSURE_SKIN_ID)) {
+    const c = pressureSkinDropChance(pressure, payDepth)
+    if (c > 0) out.push({ id: PRESSURE_SKIN_ID, name: 'Pitch Black Hull', kind: 'skin', chance: c })
+  }
+  return out
+}
+
+const CHEST_DROP_NAMES: Record<string, string> = {
+  davys_heavy_cannon: "Davy's Heavy Cannon",
+  davys_hand_cannon:  "Davy's Hand Cannon",
 }
 
 // ── Curses — the Locker's Pressure ────────────────────────────────────────────
