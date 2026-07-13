@@ -30,8 +30,6 @@ export type CampaignCardData = {
   nextNodeImage: string | null
   nextNodeLocked: boolean
   nextNodeLockReason: string | null
-  clearedCount: number
-  totalNodes: number
   repairOwed: number
   equippedItemsCount: number
 }
@@ -86,64 +84,6 @@ const VOYAGE_ACCENT: Record<VoyageStatus, { fg: string; bg: string; bd: string }
   idle:     { fg: '#7090c0', bg: 'rgba(112,144,192,0.10)', bd: 'rgba(112,144,192,0.32)' },
   sailing:  { fg: '#c4a96a', bg: 'rgba(196,169,106,0.10)', bd: 'rgba(196,169,106,0.32)' },
   returned: { fg: '#4ade80', bg: 'rgba(74,222,128,0.12)',  bd: 'rgba(74,222,128,0.4)'   },
-}
-
-// ── ASSIGNED CREW ────────────────────────────────────────────────────────────
-// A COUNT, not faces. This used to stack four 22px crew portraits on each hub card,
-// and at that size they read as four indistinct blobs: you could not tell who they
-// were, and the card sits one tap away from a Crew screen that shows them properly.
-//
-// What a player actually wants to know here is whether their deck is FULL, and that
-// matters more than it used to now the Man-o-War can carry a sixth. "5 / 6 raid crew"
-// answers it at a glance; four faces never did. Still taps straight through to the
-// right roster filter.
-function HubCrewStrip({
-  crew, slots, accent, track, router, label,
-}: {
-  crew: CrewMember[]
-  slots: number
-  accent: string
-  track: 'voyage' | 'raid'
-  router: ReturnType<typeof useRouter>
-  label: string
-}) {
-  const href = `/crew?tab=roster&filter=${track}`
-  const open = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    e.preventDefault()
-    router.push(href)
-  }
-  const empty = crew.length === 0
-  const full = slots > 0 && crew.length >= slots
-
-  return (
-    <div
-      role="link"
-      tabIndex={0}
-      onClick={open}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(e as unknown as React.MouseEvent) } }}
-      style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6, minWidth: 0, cursor: 'pointer' }}
-    >
-      <span aria-hidden style={{ flexShrink: 0, display: 'flex', color: empty ? 'rgba(255,255,255,0.35)' : accent }}>
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-          <circle cx="9" cy="7" r="4" />
-          <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-        </svg>
-      </span>
-      <p className="font-karla font-600 truncate" style={{ flex: 1, minWidth: 0, fontSize: '0.62rem', lineHeight: 1.2, color: 'rgba(255,255,255,0.45)' }}>
-        {empty ? (
-          <>No {label} · <span style={{ color: accent }}>Assign →</span></>
-        ) : (
-          <>
-            <span style={{ color: full ? accent : '#e8c879', fontWeight: 700 }}>{crew.length}</span>
-            <span style={{ opacity: 0.7 }}> / {slots}</span> {label}
-            {!full && <span style={{ color: accent }}> · Assign →</span>}
-          </>
-        )}
-      </p>
-    </div>
-  )
 }
 
 // Second-row hub card (PvP / Gauntlets). Smaller than the Campaign /
@@ -222,14 +162,6 @@ export default function HubCards({
   canPvp, gauntletOpen, gauntletUpgrades, pvp,
 }: Props) {
   const router = useRouter()
-  // Compute each track's party once. Filtering by voyage_slot / raid_slot
-  // mirrors how the rest of the system treats the split.
-  const raidParty = roster
-    .filter(c => c.raidSlot !== null)
-    .sort((a, b) => (a.raidSlot as number) - (b.raidSlot as number))
-  const voyageParty = roster
-    .filter(c => c.voyageSlot !== null)
-    .sort((a, b) => (a.voyageSlot as number) - (b.voyageSlot as number))
   const [modal, setModal] = useState<null | 'campaign' | 'voyages' | 'pvp' | 'gauntlets'>(null)
   const [, startTransition] = useTransition()
 
@@ -310,7 +242,6 @@ export default function HubCards({
           <p className="font-karla font-500" style={{ fontSize: '0.72rem', color: '#b8b0a0', lineHeight: 1.4, marginBottom: 10 }}>
             Story chapters, boss raids, and the hunt for the Finndicate.
           </p>
-          <HubCrewStrip crew={raidParty} slots={shipCrewSlots} accent="#e07c7c" track="raid" router={router} label="raid crew" />
           <div style={{ marginTop: 'auto', paddingTop: 8, borderTop: `1px solid ${campaignAccent}1c` }}>
             <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#e8d8a8', lineHeight: 1.3 }}>
               {campaign.nextNodeName ? `Next: ${campaign.nextNodeName}` : 'All cleared'}
@@ -320,9 +251,6 @@ export default function HubCards({
                 <IconLock size={10} /> {campaign.nextNodeLockReason}
               </p>
             )}
-            <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#7a7672', lineHeight: 1.3, marginTop: 2 }}>
-              {campaign.clearedCount}/{campaign.totalNodes} cleared
-            </p>
           </div>
         </button>
 
@@ -363,7 +291,6 @@ export default function HubCards({
           <p className="font-karla font-500" style={{ fontSize: '0.72rem', color: '#b8b0a0', lineHeight: 1.4, marginBottom: 10 }}>
             Send your crew off to earn doubloons, gems, and rare drops.
           </p>
-          <HubCrewStrip crew={voyageParty} slots={shipCrewSlots} accent="#5fa8c9" track="voyage" router={router} label="voyage crew" />
           <div style={{ marginTop: 'auto', paddingTop: 8, borderTop: `1px solid ${vAcc.fg}1c` }}>
             <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: vAcc.fg, lineHeight: 1.3 }}>
               {voyages.statusLabel}

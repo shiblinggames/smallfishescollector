@@ -276,8 +276,6 @@ async function ExpeditionHub() {
     nextNodeImage: (next?.node.image ?? null) as string | null,
     nextNodeLocked: next?.status === 'locked',
     nextNodeLockReason: next?.status === 'locked' ? next.lockReason ?? null : null,
-    clearedCount: cleared,
-    totalNodes: raidMap.views.length,
     repairOwed: profile?.raid_repair_owed ?? 0,
     equippedItemsCount: equippedRaidItems.length,
   }
