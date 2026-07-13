@@ -1108,7 +1108,7 @@ export const THE_QUARTERMASTERS_GHOST: BossRaidConfig = {
       pattern: ['reload', 'fire', 'volley', 'dodge', 'reload', 'fire', 'fire', 'dodge', 'reload', 'volley'],
       critChance: 0.16,
       image: '/enemychapter3galleon.png',
-      portrait: '/raid6_thequartermaster.png',   // ART PENDING: a spectral recut
+      portrait: '/quartermasterghost.png',
     },
   },
   sequence: [],          // BOSS ONLY. Round 0 is him.

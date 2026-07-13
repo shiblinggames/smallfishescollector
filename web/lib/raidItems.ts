@@ -573,9 +573,9 @@ export const RAID_ITEMS: RaidItemDef[] = [
   // pays off, and the whole point of the Emberfrost is that you no longer have to
   // pick which way the enemy suffers.
   {
-    id: 'emberfrost_shot',
-    name: 'Emberfrost Shot',
-    image: null,  // ART PENDING -> '/forge_emberfrostshot.png'
+    id: 'emberfrost_cannonball',
+    name: 'Emberfrost Cannonball',
+    image: '/forge_emberfrostcannonball.png',
     description: 'Each hit has an 18% chance to set the enemy ablaze for 2 turns, and an 18% chance to freeze them solid and cost them their next turn. Both can land on the same shot.',
     emoji: '🔥',
     rarity: 'legendary',
@@ -588,7 +588,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
   {
     id: 'deadmans_bearing',
     name: "Deadman's Bearing",
-    image: null,  // ART PENDING -> '/forge_deadmansbearing.png'
+    image: '/forge_deadmansbearing.png',
     description: 'Adds a quarter of your Savvy to your turn-order roll, and once per raid a killing blow leaves you at 1 HP instead of sinking. Strike first, and refuse to go down.',
     emoji: '⚓',
     rarity: 'legendary',
@@ -599,10 +599,10 @@ export const RAID_ITEMS: RaidItemDef[] = [
     source: "Forged from the Quartermaster's Anchor + Navigator's Compass",
   },
   {
-    id: 'deadeye_bulwark',
-    name: 'Deadeye Bulwark',
-    image: null,  // ART PENDING -> '/forge_deadeyebulwark.png'
-    description: '+18% critical damage and +12% max HP, and none of the Sight\u2019s non-crit penalty. Steady hands behind heavier strakes.',
+    id: 'heavy_gunners_sight',
+    name: "Heavy Gunner's Sight",
+    image: '/forge_heavygunnerssight.png',
+    description: '+18% critical damage and +12% max HP, and none of the Sight’s non-crit penalty. The same steady hands, behind heavier strakes.',
     emoji: '🎯',
     rarity: 'legendary',
     effects: [
@@ -657,9 +657,9 @@ export const FORGE_RECIPES: ForgeRecipe[] = [
   // these can be LEARNED until the Reclamation sells back the side you left behind
   // (unobtainableComponents blocks the learn and says so). They are the reason the
   // Reclamation is worth the doubloons.
-  { components: ['incendiary_cannonball', 'frozen_cannonball'],    result: 'emberfrost_shot',   fathomCost: 150 },
+  { components: ['incendiary_cannonball', 'frozen_cannonball'],    result: 'emberfrost_cannonball', fathomCost: 150 },
   { components: ['quartermasters_anchor', 'navigators_compass'],   result: 'deadmans_bearing',  fathomCost: 150 },
-  { components: ['gunners_sight', 'reinforced_hull'],              result: 'deadeye_bulwark',   fathomCost: 150 },
+  { components: ['gunners_sight', 'reinforced_hull'],              result: 'heavy_gunners_sight',   fathomCost: 150 },
 ]
 
 export function getForgeRecipe(resultId: string): ForgeRecipe | undefined {
