@@ -561,6 +561,56 @@ export const RAID_ITEMS: RaidItemDef[] = [
     effects: [{ type: 'reload_charge_chance', value: 0.15 }],
     source: "The Quartermaster's Cache",
   },
+
+  // ── THE ROADS NOT TAKEN ─────────────────────────────────────────────────────
+  // Three fusions, one per either/or Cache (EXCLUSIVE_CHOICE_PAIRS below). Each
+  // needs BOTH halves of a choice the campaign only ever let you make once, so
+  // none of them was buildable at all until the Reclamation opened and started
+  // selling back the road you didn't walk.
+  //
+  // Each fusion is designed to RESOLVE the tension of its choice rather than to
+  // simply stack both sides: the Sight's non-crit penalty is what the Bulwark
+  // pays off, and the whole point of the Emberfrost is that you no longer have to
+  // pick which way the enemy suffers.
+  {
+    id: 'emberfrost_shot',
+    name: 'Emberfrost Shot',
+    image: null,  // ART PENDING -> '/forge_emberfrostshot.png'
+    description: 'Each hit has an 18% chance to set the enemy ablaze for 2 turns, and an 18% chance to freeze them solid and cost them their next turn. Both can land on the same shot.',
+    emoji: '🔥',
+    rarity: 'legendary',
+    effects: [
+      { type: 'burn_chance',   value: 0.18 },
+      { type: 'freeze_chance', value: 0.18 },
+    ],
+    source: 'Forged from the Incendiary + Frozen Cannonball',
+  },
+  {
+    id: 'deadmans_bearing',
+    name: "Deadman's Bearing",
+    image: null,  // ART PENDING -> '/forge_deadmansbearing.png'
+    description: 'Adds a quarter of your Savvy to your turn-order roll, and once per raid a killing blow leaves you at 1 HP instead of sinking. Strike first, and refuse to go down.',
+    emoji: '⚓',
+    rarity: 'legendary',
+    effects: [
+      { type: 'speed_roll_nav_pct', value: 0.25 },
+      { type: 'lethal_save',        value: 1 },
+    ],
+    source: "Forged from the Quartermaster's Anchor + Navigator's Compass",
+  },
+  {
+    id: 'deadeye_bulwark',
+    name: 'Deadeye Bulwark',
+    image: null,  // ART PENDING -> '/forge_deadeyebulwark.png'
+    description: '+18% critical damage and +12% max HP, and none of the Sight\u2019s non-crit penalty. Steady hands behind heavier strakes.',
+    emoji: '🎯',
+    rarity: 'legendary',
+    effects: [
+      { type: 'crit_damage_mult', value: 1.18 },
+      { type: 'max_hp_mult',      value: 1.12 },
+    ],
+    source: "Forged from the Gunner's Sight + Reinforced Hull",
+  },
 ]
 
 // ── Forge recipes ─────────────────────────────────────────────────────────────
@@ -603,6 +653,13 @@ export const FORGE_RECIPES: ForgeRecipe[] = [
   // Blood Cannon fusions (Hardcore Blood Cannon + a normal-run damage cannon).
   { components: ['davys_blood_cannon', 'davys_heavy_cannon'],   result: 'bloodletter',            fathomCost: 150 },
   { components: ['davys_blood_cannon', 'davys_hand_cannon'],    result: 'reavers_cannon',         fathomCost: 150 },
+  // The roads not taken — each needs BOTH halves of an either/or Cache, so none of
+  // these can be LEARNED until the Reclamation sells back the side you left behind
+  // (unobtainableComponents blocks the learn and says so). They are the reason the
+  // Reclamation is worth the doubloons.
+  { components: ['incendiary_cannonball', 'frozen_cannonball'],    result: 'emberfrost_shot',   fathomCost: 150 },
+  { components: ['quartermasters_anchor', 'navigators_compass'],   result: 'deadmans_bearing',  fathomCost: 150 },
+  { components: ['gunners_sight', 'reinforced_hull'],              result: 'deadeye_bulwark',   fathomCost: 150 },
 ]
 
 export function getForgeRecipe(resultId: string): ForgeRecipe | undefined {
