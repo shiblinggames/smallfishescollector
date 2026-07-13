@@ -8,6 +8,8 @@ import { isCombatNode, chapterForNode, RAID_CHAPTERS, type RaidChapter, type Rai
 import type { RaidRecords } from './raidMapActions'
 import { RARITY_COLOR, GEM_GLYPH, GEM_COLOR } from '@/lib/bossRaids'
 import { getRaidItem } from '@/lib/raidItems'
+import { getRaidConfigById } from '@/lib/raidRegistry'
+import { isUniqueLoot } from '@/lib/bossRaids'
 import { getShipSkin } from '@/lib/shipSkins'
 import { claimMilestoneNode, markStoryNodeRead, claimScoutDebt, claimQuartermasterChoice, solvePuzzleNode, pickShipClass, markChapterUnlockSeen, pickRaidEventChoice, pickForkRoute, standForMuster } from './raidMapActions'
 import { musterReport, type MusterCrew } from '@/lib/crewMuster'
@@ -1819,6 +1821,28 @@ function NodeDetailSheet({
               // so they read as the chase. Plain doubloon tiers stay folded into
               // the payout figure.
               const drops = detail.drops ?? []
+
+              // ── LIVE ODDS on a uniqueShare crate ───────────────────────────
+              // Those raids reserve a FIXED slice of the crate for the uniques you
+              // are still missing and split it between them. So the odds printed by
+              // lootDrops (static weights) are only ever right in the one case where
+              // you own none of them. The Ghost's Cache items read a flat 8%, but 8%
+              // is the six-missing case: with one left it is 50%.
+              //
+              // The sheet knows what the player owns, so it can just tell the truth.
+              const cfg = node.raidId ? getRaidConfigById(node.raidId) : undefined
+              const share = cfg?.uniqueShare
+              const liveChance = (d: RaidNodeDrop): string | undefined => {
+                if (share == null || !cfg || !d.id) return undefined
+                const row = cfg.loot.find(l => l.id === d.id)
+                if (!row || !isUniqueLoot(row)) return undefined
+                if (ownedRaidItems.includes(d.id)) return 'Owned'
+                const missing = cfg.loot.filter(l => isUniqueLoot(l) && !ownedRaidItems.includes(l.id))
+                const totalW = missing.reduce((a, l) => a + l.weight, 0)
+                if (totalW <= 0) return undefined
+                return `${Math.round(share * (row.weight / totalW) * 100)}%`
+              }
+
               const gemDrop = drops.find(d => d.emoji === GEM_GLYPH)
               const gemAmount = gemDrop?.label.replace(/\s*Gems$/i, '')
               const uniques = drops.filter(d => d.emoji !== GEM_GLYPH && !d.label.includes('⟡'))
@@ -1854,6 +1878,15 @@ function NodeDetailSheet({
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 7 }}>
                         {uniques.map(d => {
                           const rc = d.rarity ? RARITY_COLOR[d.rarity] : '#9ca3af'
+                          // The odds baked in by lootDrops are the STATIC weights, which
+                          // are wrong on a uniqueShare raid: those crates reserve a fixed
+                          // slice for the items you're still missing and split it between
+                          // them, so a Ghost item printed as a flat 8% is really 8% when
+                          // you need all six and 50% when you need one. Recompute against
+                          // what this player actually holds, and say "Owned" for the rest
+                          // rather than quoting odds on something that cannot drop.
+                          const chance = liveChance(d) ?? d.chance
+                          const owned = !!d.id && ownedRaidItems.includes(d.id)
                           return (
                             <button
                               type="button"
@@ -1878,9 +1911,9 @@ function NodeDetailSheet({
                                     : <span style={{ color: rc, display: 'flex' }}><IconCrate size={17} /></span>}
                               </span>
                               <span className="font-karla font-600 truncate" style={{ flex: 1, minWidth: 0, fontSize: '0.8rem', color: '#e8e2d8' }}>{d.label}</span>
-                              {d.chance && (
-                                <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.56rem', color: rc, background: `${rc}1c`, border: `1px solid ${rc}40`, borderRadius: 5, padding: '0.18rem 0.4rem', flexShrink: 0 }}>
-                                  {d.chance}
+                              {chance && (
+                                <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.56rem', color: owned ? '#7fd49a' : rc, background: owned ? 'rgba(127,212,154,0.14)' : `${rc}1c`, border: `1px solid ${owned ? 'rgba(127,212,154,0.45)' : `${rc}40`}`, borderRadius: 5, padding: '0.18rem 0.4rem', flexShrink: 0 }}>
+                                  {chance}
                                 </span>
                               )}
                             </button>

@@ -263,6 +263,9 @@ export interface SceneLine {
 
 /** One row in a node's "possible drops" panel. */
 export interface RaidNodeDrop {
+  /** The loot id, so a live sheet can match this row against what the player owns.
+   *  Needed by uniqueShare raids, where the printed odds depend on your inventory. */
+  id?: string
   label: string
   emoji: string
   image?: string | null
@@ -428,6 +431,7 @@ function lootDrops(loot: RaidLootItem[]): RaidNodeDrop[] {
   const drops = loot.map(l => {
     const isDoubloons = l.id.startsWith('doubloons_')
     const drop: RaidNodeDrop = {
+      id: l.id,
       label: l.label,
       emoji: l.emoji,
       image: l.image,
