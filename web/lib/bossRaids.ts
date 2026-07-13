@@ -1384,10 +1384,11 @@ export const THE_BLOCKADE: BossRaidConfig = {
   atmosphere: 'overcast',   // placeholder — bespoke Last-Fathom palette at polish
   enemies: {
     picket: {
-      // The shield TEACHER: light and fast, nothing but the new barrier to
-      // learn on. Break the plating, then the hull — burn bleeds through,
-      // volleys chew it fastest.
-      id: 'picket', name: 'The Picket', hpBase: 300, minDmg: 20, maxDmg: 34,
+      // THE SCUTE — the shield TEACHER. A scute is the bone plate grown into a
+      // crocodile's hide, so the name IS the mechanic: he is nothing but barrier,
+      // light and fast, with no trick behind it. Break the plating, then the hull.
+      // Burn bleeds through it; volleys chew it fastest.
+      id: 'picket', name: 'The Scute', hpBase: 300, minDmg: 20, maxDmg: 34,
       shipSpeed: 9, actionMs: 3400,
       magazineSize: 4, shieldPct: 0.15,
       critDrift: 0.4, critDriftName: 'Rolling Plate',
@@ -1395,40 +1396,45 @@ export const THE_BLOCKADE: BossRaidConfig = {
       critChance: 0.12,
       zoneSpeedMult: 2.2,
       image: '/enemychapter3brigantine.png',
-      portrait: '/enemychapter3brigantine.png',
+      portrait: '/raid7_thescute.png',
     },
     bosun: {
-      // FORTIFY debut (self-buff) — he closes ranks and takes less damage for
-      // a spell; learn to wait out (or burst through) a braced window.
-      id: 'bosun', name: 'The Bosun', hpBase: 330, minDmg: 21, maxDmg: 35,
+      // THE BANK — FORTIFY debut (self-buff). He digs into the mud and takes less
+      // damage for a spell: learn to wait out the braced window, or burst through it.
+      // A riverbank is where a saltie hauls out, and it is also the thing you cannot
+      // get through.
+      id: 'bosun', name: 'The Bank', hpBase: 330, minDmg: 21, maxDmg: 35,
       shipSpeed: 6, actionMs: 3600,
       magazineSize: 4, shieldPct: 0.16,
       critDrift: 0.5, critDriftName: 'Rolling Plate',
-      special: { name: 'Close Ranks', status: 'fortify', magnitude: 0.25, turns: 2, target: 'self', line: 'The Bosun bellows and the line locks shields, iron to iron.' },
+      special: { name: 'Dig In', status: 'fortify', magnitude: 0.25, turns: 2, target: 'self', line: 'The Bank drops his weight into the silt and settles, and the shot just thumps into mud.' },
       pattern: ['reload', 'fire', 'special', 'reload', 'volley', 'reload', 'fire', 'dodge'],
       critChance: 0.11,
       zoneSpeedMult: 2.3,
       image: '/enemychapter3brigantine.png',
-      portrait: '/enemychapter3brigantine.png',
+      portrait: '/raid7_thebank.png',
     },
     netter: {
-      // SLOWED debut — weighted nets across your rigging cut your speed, so
-      // you lose turn-order rolls and slip fewer shots while it lasts.
-      id: 'netter', name: 'The Netter', hpBase: 360, minDmg: 22, maxDmg: 36,
+      // THE MANGROVE — SLOWED debut. Roots fouled through your rigging and rudder cut
+      // your speed, so you lose turn-order rolls and slip fewer shots while it lasts.
+      // The estuary's own net, and it does not need throwing.
+      id: 'netter', name: 'The Mangrove', hpBase: 360, minDmg: 22, maxDmg: 36,
       shipSpeed: 6, actionMs: 3800,
       magazineSize: 4, shieldPct: 0.18,
-      special: { name: 'Weighted Nets', status: 'slowed', magnitude: 3, turns: 2, target: 'player', line: 'Weighted nets whip across your rigging and drag the wheel dead.' },
+      special: { name: 'Deadwood', status: 'slowed', magnitude: 3, turns: 2, target: 'player', line: 'Root and deadwood come up under the hull and wrap the rudder, and the wheel goes dead in your hands.' },
       critDrift: 0.55, critDriftName: 'Rolling Plate',
       pattern: ['reload', 'special', 'fire', 'reload', 'volley', 'dodge', 'reload', 'fire'],
       critChance: 0.10,
       zoneSpeedMult: 2.4,
       image: '/enemychapter3brigantine.png',
-      portrait: '/enemychapter3brigantine.png',
+      portrait: '/raid7_themangrove.png',
     },
     chainman: {
-      // WEAKEN debut — chain-shot rips your powder line; your shots hit soft
-      // while it lasts. Drops the Chain-Shot Rack so you can turn it around.
-      id: 'chainman', name: 'The Chainman', hpBase: 380, minDmg: 24, maxDmg: 38,
+      // THE RASP — WEAKEN debut. Chain-shot files your powder line down and your shots
+      // hit soft while it lasts. Drops the Chain-Shot Rack so you can turn it around.
+      // SHARES A PORTRAIT with The Wedge: they are the same brute with a different
+      // tool, and pairing them is what keeps this raid to seven art files.
+      id: 'chainman', name: 'The Rasp', hpBase: 380, minDmg: 24, maxDmg: 38,
       shipSpeed: 7, actionMs: 3600,
       magazineSize: 4, shieldPct: 0.20,
       special: { name: 'Chain-Shot', status: 'weaken', magnitude: 0.20, turns: 2, target: 'player', line: 'Chain-shot screams through your powder line and your guns cough where they roared.' },
@@ -1437,39 +1443,44 @@ export const THE_BLOCKADE: BossRaidConfig = {
       critChance: 0.12,
       zoneSpeedMult: 2.5,
       image: '/enemychapter3galleon.png',
-      portrait: '/enemychapter3galleon.png',
+      portrait: '/raid7_gunhands.png',
     },
     cracksman: {
-      // FEEBLE debut — a hull-cracker round springs your seams; everything
-      // hits you harder while it lasts. The kill-window status, used ON you.
-      id: 'cracksman', name: 'The Cracksman', hpBase: 400, minDmg: 24, maxDmg: 40,
+      // THE WEDGE — FEEBLE debut. A cracker round splits your seams and everything
+      // that lands after finds the gap. The kill-window status, used ON you.
+      // Shares The Rasp's portrait (see above): the two of them are a matched pair.
+      id: 'cracksman', name: 'The Wedge', hpBase: 400, minDmg: 24, maxDmg: 40,
       shipSpeed: 5, actionMs: 4200,
       magazineSize: 4, shieldPct: 0.20,
-      special: { name: 'Hull-Cracker', status: 'feeble', magnitude: 0.22, turns: 2, target: 'player', line: 'A cracker round springs your seams wide — every blow will find them.' },
+      special: { name: 'Hull-Cracker', status: 'feeble', magnitude: 0.22, turns: 2, target: 'player', line: 'A cracker round splits your seams wide open, and every blow after it will find the gap.' },
       critDrift: 0.7, critDriftName: 'Rolling Plate',
       pattern: ['reload', 'reload', 'special', 'volley', 'reload', 'fire', 'volley', 'dodge'],
       critChance: 0.10,
       zoneSpeedMult: 2.6,
       image: '/enemychapter3galleon.png',
-      portrait: '/enemychapter3galleon.png',
+      portrait: '/raid7_gunhands.png',
     },
     purser: {
-      // REGEN debut (self-buff) — he patches his crews mid-fight and the bar
-      // creeps back up; a sponge that punishes slow, polite damage.
-      id: 'purser', name: 'The Purser', hpBase: 410, minDmg: 25, maxDmg: 39,
+      // OLD SCAR — REGEN debut (self-buff). The bar creeps back up while you watch: a
+      // sponge that punishes slow, polite damage. He is nothing but healed-over wounds,
+      // which is the most crocodile thing about him. Nothing down here has killed him
+      // yet and he has stopped expecting it.
+      id: 'purser', name: 'Old Scar', hpBase: 410, minDmg: 25, maxDmg: 39,
       shipSpeed: 7, actionMs: 3800,
       magazineSize: 4, shieldPct: 0.22,
       critDrift: 0.8, critDriftName: 'Rolling Plate',
-      special: { name: 'Patch Crews', status: 'regen', magnitude: 16, turns: 3, target: 'self', line: 'The Purser pays his carpenters in advance, and the hull knits while you watch.' },
+      special: { name: 'Old Wounds', status: 'regen', magnitude: 16, turns: 3, target: 'self', line: 'Old Scar takes the hit the way he has taken every other one, and the hole closes while you watch.' },
       pattern: ['special', 'reload', 'fire', 'reload', 'fire', 'volley', 'reload', 'dodge'],
       critChance: 0.12,
       zoneSpeedMult: 2.6,
       image: '/enemychapter3galleon.png',
-      portrait: '/enemychapter3galleon.png',
+      portrait: '/raid7_oldscar.png',
     },
     muzzle: {
-      // SILENCE debut — the don's gag order. Your crew abilities lock for two
-      // rounds: the enforcer who makes sure nobody talks.
+      // THE MUZZLE — SILENCE debut. Your crew abilities lock for two rounds: the
+      // enforcer who makes sure nobody talks. The name is kept from the old roster
+      // because it is ALREADY a crocodile's snout and the word for shutting a thing up,
+      // and a double meaning that good does not come along twice.
       id: 'muzzle', name: 'The Muzzle', hpBase: 420, minDmg: 26, maxDmg: 40,
       shipSpeed: 8, actionMs: 3600,
       magazineSize: 4, shieldPct: 0.22,
@@ -1479,7 +1490,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       critChance: 0.14,
       zoneSpeedMult: 2.7,
       image: '/enemychapter3galleon.png',
-      portrait: '/enemychapter3galleon.png',
+      portrait: '/raid7_themuzzle.png',
     },
     saltie: {
       // SAL BRACKWATER — a saltwater crocodile, and Don's chief enforcer. The muscle
@@ -1530,7 +1541,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       ],
       zoneSpeedMult: 2.1,
       image: '/enemychapter3man-o-war.png',
-      portrait: '/enemychapter3man-o-war.png',
+      portrait: '/raid7_salbrackwater.png',
     },
   },
   sequence: ['picket', 'bosun', 'netter', 'chainman', 'cracksman', 'purser', 'muzzle'],   // the blockade crew: no species, and none needed

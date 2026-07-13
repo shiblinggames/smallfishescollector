@@ -1853,7 +1853,7 @@ export const RAID_MAP: RaidNode[] = [
     // 4-cannonball magazines, and enemy SPECIALS (statuses thrown at you).
     id: 'the_blockade',    type: 'raid',
     label: 'Sal Brackwater',
-    flavor: "Don Finleone's blockade line, and the enforcer who holds it: Sal Brackwater. Every hull rides behind a cold-light barrier, every magazine runs four deep, and his crews fight dirtier than any market ever did.",
+    flavor: "Don Finleone's blockade line, and the thing that holds it: Sal Brackwater, who has not moved in an hour and is not going to until it matters. Every hull rides behind a cold-light barrier, every magazine runs four deep, and his line fights dirtier than any market ever did.",
     bridge: "The blockade breaks and Sal Brackwater goes under it. The way to the don's own water lies open — and his books ride in your hold.",
     requiresNode: 'throne_locks',
     requiresNavLevel: 56,
@@ -1863,8 +1863,8 @@ export const RAID_MAP: RaidNode[] = [
     image: THE_BLOCKADE.enemies.saltie.portrait,
     detail: {
       description:
-        "The don's escort armada fights like nothing before it. Every hull opens behind a barrier your shots must chew through first; every magazine runs FOUR cannonballs deep, so their fire never falls into a rhythm you can bank on. And his crews throw more than iron: nets that foul your wheel, chain-shot that softens your guns, cracker rounds that spring your seams, and a gag order that silences your crew. Sal Brackwater himself does not swing at you, he goes STILL, and that is the tell: when the water flattens, he is about to take your hull in his teeth and roll. Answer the Death Roll with a crew ability or he tears the ship apart along the grain.",
-      enemies: ['The Picket', 'The Bosun', 'The Netter', 'The Chainman', 'The Cracksman', 'The Purser', 'The Muzzle', 'Sal Brackwater'],
+        "The don's escort armada fights like nothing before it. Every hull opens behind a barrier your shots must chew through first; every magazine runs FOUR cannonballs deep, so their fire never falls into a rhythm you can bank on. And Sal's line throws more than iron: root and deadwood that wrap your rudder, chain-shot that files your guns down, cracker rounds that split your seams open, and a gag order that shuts your crew up mid-shout. Sal Brackwater himself does not swing at you. He goes STILL, and that is the tell: when the water flattens, he is already taking your hull in his teeth. Answer the Death Roll with a crew ability or he rolls until the ship comes apart along the grain.",
+      enemies: ['The Scute', 'The Bank', 'The Mangrove', 'The Rasp', 'The Wedge', 'Old Scar', 'The Muzzle', 'Sal Brackwater'],
       drops: lootDrops(THE_BLOCKADE.loot),
       clearReward: clearPayout(THE_BLOCKADE),
       dropsNote: 'One crate per clear, rolled once and scaled by your Fortune. The Chain-Shot Rack is the signature chase — turn their own Weaken back on them. Two stronger Tide events between fights.',
@@ -1883,7 +1883,7 @@ export const RAID_MAP: RaidNode[] = [
     detail: {
       description:
         "The blockade again, harder for the breaking. Thicker barriers, deeper clips, the same dirty specials and the same Full Swing — all of it meaner. The chase rewards roll richer.",
-      enemies: ['The Picket', 'The Bosun', 'The Netter', 'The Chainman', 'The Cracksman', 'The Purser', 'The Muzzle', 'Sal Brackwater'],
+      enemies: ['The Scute', 'The Bank', 'The Mangrove', 'The Rasp', 'The Wedge', 'Old Scar', 'The Muzzle', 'Sal Brackwater'],
       drops: lootDrops(THE_BLOCKADE_CHALLENGE.loot),
       clearReward: clearPayout(THE_BLOCKADE_CHALLENGE),
       dropsNote: 'Every kill pays more and the clear bonus is steeper than the normal run.',
