@@ -38,6 +38,10 @@ export default function GauntletTermsPanel({
   onDone: () => void
 }) {
   const [detail, setDetail] = useState<{ name: string; tier: number; flavor: string; text: string } | null>(null)
+  // The four rules are for a first read, not a permanent fixture. They collapse
+  // the moment you start scrolling the board (which is when you have stopped
+  // reading them and started needing the space) and unfold again at the top.
+  const [rulesOpen, setRulesOpen] = useState(true)
 
   const pressure = useMemo(() => termPressure(signed), [signed])
   // The multiplier at FULL depth: the number worth advertising, with the honest
@@ -116,8 +120,15 @@ export default function GauntletTermsPanel({
         </div>
 
         {/* How the whole thing works, in plain steps. A newcomer should be able to
-            read this once and never be surprised by the payout. */}
-        <div style={{ marginTop: 11, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            read this once and never be surprised by the payout. Folds away on
+            scroll so the board gets the room. */}
+        <motion.div
+          initial={false}
+          animate={{ height: rulesOpen ? 'auto' : 0, opacity: rulesOpen ? 1 : 0, marginTop: rulesOpen ? 11 : 0 }}
+          transition={{ duration: 0.24, ease: 'easeOut' }}
+          style={{ overflow: 'hidden' }}
+        >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <Step n={1}>
             Each term you sign makes the run <strong style={{ color: '#fca5a5' }}>harder</strong> and adds <strong style={{ color: '#fca5a5' }}>Pressure</strong>.
           </Step>
@@ -130,12 +141,13 @@ export default function GauntletTermsPanel({
           <Step n={4}>
             The bonus grows the <strong style={{ color: GOLD }}>deeper</strong> you go. It starts paying at depth {PRESSURE_DEPTH_FLOOR} and pays in full from depth {PRESSURE_DEPTH_FULL}.
           </Step>
+          {pressure >= PRESSURE_CAP && (
+            <p className="font-karla" style={{ fontSize: '0.76rem', color: 'rgba(240,220,220,0.5)', lineHeight: 1.45, marginTop: 1 }}>
+              Past {PRESSURE_CAP} Pressure the gems stop climbing. Anything beyond it is for glory alone.
+            </p>
+          )}
         </div>
-        {pressure >= PRESSURE_CAP && (
-          <p className="font-karla" style={{ fontSize: '0.76rem', color: 'rgba(240,220,220,0.5)', lineHeight: 1.45, marginTop: 7 }}>
-            Past {PRESSURE_CAP} Pressure the gems stop climbing. Anything beyond it is for glory alone.
-          </p>
-        )}
+        </motion.div>
         {pressure >= PRESSURE_SKIN_THRESHOLD && (
           <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
             className="font-karla font-700" style={{ fontSize: '0.78rem', color: GOLD, marginTop: 7 }}>
@@ -145,7 +157,9 @@ export default function GauntletTermsPanel({
       </div>
 
       {/* ── The board: two cards across, so it scans at a glance ──────────── */}
-      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain', padding: '1rem 0.9rem 1.2rem' }}>
+      <div
+        onScroll={e => setRulesOpen(e.currentTarget.scrollTop <= 6)}
+        style={{ flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain', padding: '1rem 0.9rem 1.2rem' }}>
         {groups.map(g => {
           const meta = TERM_GROUP_META[g]
           const terms = GAUNTLET_TERMS.filter(t => t.group === g)
