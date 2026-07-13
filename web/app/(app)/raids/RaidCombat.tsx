@@ -1226,6 +1226,10 @@ export default function RaidCombat({
   // Consecutive reload-at-max FEINTS (see pickEnemyAction). Capped so a full
   // magazine can't become a guaranteed incoming fire OR an endless bluff.
   const enemyFeintStreakRef = useRef(0)
+  // Did the enemy DODGE on its previous turn (from the pattern OR a feint)?
+  // The feint guard above only knew about feints, so a slotted dodge sitting
+  // next to a reload-at-MAX slot could produce two dodges back to back.
+  const enemyDodgedLastTurnRef = useRef(false)
   // Boss phase tracking. The ref drives combat reads (pickEnemyAction,
   // damage rolls, mitigation checks) without re-renders; the state
   // mirror drives the persistent visual treatment (crimson nameplate +
@@ -1793,6 +1797,7 @@ export default function RaidCombat({
     setPlayerBurning(false); setPlayerFrozen(false)
     enemyPatternIdxRef.current = 0
     enemyFeintStreakRef.current = 0
+    enemyDodgedLastTurnRef.current = false
     volleyCountRef.current = 0
     // Aim afflictions are per-fight — a fresh enemy clears any live one.
     aimAfflictionRef.current = null
@@ -2007,7 +2012,17 @@ export default function RaidCombat({
       action = 'reload'
     } else if (action === 'reload' && enemyCharges >= enemyMagazine) {
       enemyPatternIdxRef.current++
-      if (enemyFeintStreakRef.current < 1 && Math.random() < FEINT_CHANCE) {
+      // A feint may NEVER produce back-to-back dodges. The old guard only
+      // blocked feint-after-feint, so an enemy whose reloads outnumber its
+      // fires (Krust and his crew — they sit at MAX by design) could dodge
+      // twice running: once from a slotted dodge, once from the feint that
+      // landed beside it. Refuse the feint if we dodged last turn, and refuse
+      // it if the slot we just advanced INTO is itself a dodge.
+      const nextSlot = pattern[enemyPatternIdxRef.current % pattern.length]
+      const feintOk = enemyFeintStreakRef.current < 1
+        && !enemyDodgedLastTurnRef.current
+        && nextSlot !== 'dodge'
+      if (feintOk && Math.random() < FEINT_CHANCE) {
         action = 'dodge'
         enemyFeintStreakRef.current++
       } else {
@@ -2025,6 +2040,9 @@ export default function RaidCombat({
       action = enemyCharges >= 1 ? 'fire' : 'reload'
       snareBlockedRef.current = true
     }
+    // Remember the RESOLVED action (a jammed dodge never happened), so next
+    // turn's feint check knows whether it would be doubling up.
+    enemyDodgedLastTurnRef.current = action === 'dodge'
     return action
   }, [enemy.pattern, phaseList, enemyCharges])
 
