@@ -419,7 +419,7 @@ export default function HubCards({
                       label="Crew" filled={crewSlots.filter(Boolean).length} total={shipCrewSlots}
                       accent={campaignAccent} href="/crew?tab=roster&filter=raid"
                     >
-                      {crewSlots.map((c, i) => <PrepCrewDot key={i} card={c} captain={i === 0} />)}
+                      {crewSlots.map((c, i) => <PrepCrewDot key={i} card={c} captain={i === 0} i={i} total={crewSlots.length} />)}
                     </PrepLoadoutRow>
                     <PrepLoadoutRow
                       label="Items" filled={itemDefs.length} total={raidItemSlots}
@@ -431,7 +431,7 @@ export default function HubCards({
                         window.dispatchEvent(new CustomEvent('expedition:open-loadout'))
                       }}
                     >
-                      {itemSlots.map((d, i) => <PrepItemDot key={i} def={d} />)}
+                      {itemSlots.map((d, i) => <PrepItemDot key={i} def={d} i={i} total={itemSlots.length} />)}
                     </PrepLoadoutRow>
                   </>
                 )
@@ -747,8 +747,11 @@ function PrepLoadoutRow({ label, filled, total, children, accent, onManage, href
         </p>
       </div>
 
-      {/* The strip itself. Scrolls rather than wraps, so the row can never grow taller. */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 4, overflowX: 'auto' }}>
+      {/* The strip. Portraits OVERLAP rather than sit side by side, so the row's width
+          is bounded no matter how many slots a ship carries — six crew, eight items, it
+          makes no difference. Nothing to overflow, nothing to scroll, and it reads as a
+          stack of people rather than a queue of them. */}
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center' }}>
         {children}
       </div>
 
@@ -767,16 +770,30 @@ function PrepLoadoutRow({ label, filled, total, children, accent, onManage, href
   )
 }
 
+const DOT = 27
+/** Overlap so the strip's width can never run away from the row. Earlier slots sit ON
+ *  TOP, which keeps the captain (slot 0) unobscured — he is the one you look for. */
+function stackStyle(i: number, total: number): React.CSSProperties {
+  return { flexShrink: 0, marginLeft: i === 0 ? 0 : -9, zIndex: total - i, position: 'relative' }
+}
+
 /** A crew face, or a dashed hole where one should be. The captain wears a gold ring. */
-function PrepCrewDot({ card, captain }: { card: CrewMember | null; captain: boolean }) {
-  const SIZE = 26
+function PrepCrewDot({ card, captain, i, total }: { card: CrewMember | null; captain: boolean; i: number; total: number }) {
   const rc = card ? (CREW_RARITY_COLORS[card.rarity as 1 | 2 | 3 | 4] ?? '#6a6764') : '#6a6764'
   const ring = card ? (captain ? '#f0c040' : rc) : (captain ? 'rgba(240,192,64,0.35)' : 'rgba(255,255,255,0.22)')
+  const base: React.CSSProperties = {
+    ...stackStyle(i, total),
+    width: DOT, height: DOT, borderRadius: '50%',
+    // A ring the same color as the row's backdrop, so overlapping portraits read as
+    // separate discs instead of one smeared blob.
+    boxShadow: '0 0 0 2px rgba(10,8,7,0.95)',
+  }
   if (!card) {
-    return <div aria-label="Empty crew slot" style={{ flexShrink: 0, width: SIZE, height: SIZE, borderRadius: '50%', border: `1.5px dashed ${ring}`, background: 'rgba(6,9,16,0.4)' }} />
+    return <div aria-label="Empty crew slot" style={{ ...base, border: `1.5px dashed ${ring}`, background: 'rgba(6,9,16,0.55)' }} />
   }
   return (
-    <div title={captain ? `Captain: ${card.name}` : card.name} style={{ flexShrink: 0, width: SIZE, height: SIZE, borderRadius: '50%', overflow: 'hidden', border: `1.5px solid ${ring}`, background: 'rgba(6,9,16,0.85)' }}>
+    <div title={captain ? `Captain: ${card.name}` : card.name}
+      style={{ ...base, overflow: 'hidden', border: `1.5px solid ${ring}`, background: 'rgba(6,9,16,0.85)' }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={CREW_IMG_BASE + card.filename} alt="" loading="lazy" decoding="async"
         style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} />
@@ -785,17 +802,21 @@ function PrepCrewDot({ card, captain }: { card: CrewMember | null; captain: bool
 }
 
 /** An equipped item, or a dashed hole. */
-function PrepItemDot({ def }: { def: (typeof RAID_ITEMS)[number] | null }) {
-  const SIZE = 26
-  if (!def) {
-    return <div aria-label="Empty item slot" style={{ flexShrink: 0, width: SIZE, height: SIZE, borderRadius: 7, border: '1.5px dashed rgba(255,255,255,0.22)', background: 'rgba(6,9,16,0.4)' }} />
+function PrepItemDot({ def, i, total }: { def: (typeof RAID_ITEMS)[number] | null; i: number; total: number }) {
+  const rc = def ? (RARITY_COLOR[def.rarity] ?? '#9ca3af') : '#9ca3af'
+  const base: React.CSSProperties = {
+    ...stackStyle(i, total),
+    width: DOT, height: DOT, borderRadius: 8,
+    boxShadow: '0 0 0 2px rgba(10,8,7,0.95)',
   }
-  const rc = RARITY_COLOR[def.rarity] ?? '#9ca3af'
+  if (!def) {
+    return <div aria-label="Empty item slot" style={{ ...base, border: '1.5px dashed rgba(255,255,255,0.22)', background: 'rgba(6,9,16,0.55)' }} />
+  }
   return (
     <div title={def.name} style={{
-      flexShrink: 0, width: SIZE, height: SIZE, borderRadius: 7, overflow: 'hidden',
+      ...base, overflow: 'hidden',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      border: `1.5px solid ${rc}77`, background: `${rc}18`,
+      border: `1.5px solid ${rc}77`, background: `${rc}22`,
     }}>
       {def.image
         // eslint-disable-next-line @next/next/no-img-element
