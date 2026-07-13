@@ -1974,17 +1974,17 @@ export const RAID_MAP: RaidNode[] = [
     // chain; the purchase stays open on every revisit. Price = SIXTH_BERTH_COST.
     id: 'sixth_berth',    type: 'berth',
     label: 'The Sixth Berth',
-    flavor: "Sal Brackwater's wreck gives up more than books. His hull was cut for six hands, not five, and the yard crew who did the cutting are still breathing. They will open your deck the same way, for a price that will hurt.",
-    bridge: 'Six berths, if you paid for them. The gate to the throne is next, and the don counts hands.',
+    flavor: "He came apart along the grain, the way he tore everything else apart, and his hull showed you its bones on the way down. Six berths framed into a deck that had no business carrying more than five. Nobody does that by accident.",
+    bridge: 'The framing plans are in your chart locker and your carpenters have stopped arguing about whether it can be done. The gate to the throne is next, and the don counts hands.',
     requiresNode: 'the_blockade',
     adminOnly: true,
     berth: { price: SIXTH_BERTH_COST },
     detail: {
       description:
-        "Every hull you have ever sailed berths five. Sal Brackwater's berthed six, and the yard hands who cut that sixth bunk survived the wreck. They will open your deck the same way: one more crew aboard, permanently, on every raid and every voyage. It will cost you a fortune. Take the offer seriously. Don Finleone holds his court in six phases and asks a crew ability of every one of them, so sail in with five hands and you will run out of crew before he runs out of teeth.",
-      dropsNote: 'A permanent sixth crew slot, on raids and voyages both. The don asks a crew ability of all six of his phases.',
-      ctaLabel: 'Talk to the Yard →',
-      summary: "Sal Brackwater's yard hands cut a sixth berth into your hull for a fortune: one more crew aboard, on every raid and voyage. The don's court asks a crew ability of all six phases.",
+        "Every hull you have ever sailed berths five. Sal's berthed SIX, and when he broke open you finally saw how: the deck is framed wrong on purpose, load carried where no shipwright would put it. The plans were still in his locker, salted and legible, and you took them.\n\nYour own carpenters can read them. They can also tell you what it costs to cut open a finished hull and re-frame it around a sixth bunk, and the number is a fortune. It buys one more crew aboard, permanently, on every raid and every voyage.\n\nThink hard before you decide you cannot afford it. The don keeps his court in six parts and asks something of your crew in every one of them, and five hands do not answer six questions.",
+      dropsNote: 'A permanent sixth crew slot, on raids and voyages both. Bought once, and it never comes off.',
+      ctaLabel: 'Read the Plans →',
+      summary: "Sal's hull was framed for six, and the plans went down with him until you took them off the wreck. Your own yard can cut the same berth into your deck for a fortune: one more crew aboard, on every raid and voyage, permanently.",
     },
   },
   {
