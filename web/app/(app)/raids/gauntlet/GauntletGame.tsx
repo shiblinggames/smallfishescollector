@@ -8,7 +8,7 @@
 // lib/gauntlet; boons + curses are the run-modifier layer (Tides are raids-only).
 // The pot is only banked on cash-out; a wipe loses everything.
 
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -25,11 +25,14 @@ import {
   isBoonDepth, drawBoons, boonEffects, hpBoonMult, boonTierLabel, GAUNTLET_BOONS, BOON_RARITY_META, boonRarity,
   confluenceEffects, activeConfluences, eligibleConfluences, drawConfluenceOffer, confluenceLevel, confluenceDescAt, confluenceHintsFor, CONFLUENCES, type Confluence, type ConfluenceOffer,
   REPRIEVE_MIN_DEPTH, REPRIEVE_CHANCE, drawReprieve, type Reprieve,
+  // Davy's Terms — the chosen, structural difficulty layer (hardcore only).
   DROWNED_FILTER, bandForDepth, davyTaunt,
   GAUNTLET_COOLDOWN_HOURS, HARDCORE_RUNS_PER_DAY, HC_UNLOCK_DEPTH, GAUNTLET_REWARD_DEPTH_CAP,
   emptyRunStats, addRunStats, coerceRunStats,
   type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot, type GauntletRunState, type GauntletRunStats,
 } from '@/lib/gauntlet'
+import { GAUNTLET_TERMS, TERM_GROUP_META, resolveTerms, termPressure, pressureGemMult, pressureDepthFactor, NO_TERM_EFFECTS, PRESSURE_CAP, PRESSURE_DEPTH_FLOOR, PRESSURE_DEPTH_FULL, MAX_AVAILABLE_PRESSURE, type SignedTerms } from '@/lib/gauntletTerms'
+import GauntletTermsPanel from './GauntletTermsPanel'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen, recordGauntletHit, wagerGauntletFathoms, markConfluencesSeen, checkpointGauntletRun, resumeGauntletRun, buyBaitWithFathoms } from './actions'
 import { FATHOM_BAITS } from '@/lib/bait'
 import { GAUNTLET_UPGRADES, COMING_SOON_UPGRADES, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck, gauntletBoonRerolls, gauntletCurseRerolls } from '@/lib/gauntletUpgrades'
@@ -98,6 +101,8 @@ export interface GauntletGameProps {
   gauntletUpgrades: string[]
   /** Confluence ids the player has ever discovered — drives the codex fog. */
   confluencesSeen: string[]
+  /** Terms signed for the currently OPEN run (restored on a resume). */
+  runTerms?: SignedTerms | null
   deepest: number
   /** Snapshot of the deepest run (boons/curses/tides) for the home recap. */
   deepestRun: GauntletRunSnapshot | null
@@ -185,6 +190,8 @@ export default function GauntletGame(props: GauntletGameProps) {
   const [hardcoreRun, setHardcoreRun] = useState(props.runHardcore)
   const [modeChoiceOpen, setModeChoiceOpen] = useState(false)
   const [hcConfirmOpen, setHcConfirmOpen] = useState(false)
+  // The Terms board — the hardcore pre-dive difficulty selector.
+  const [termsOpen, setTermsOpen] = useState(false)
   const [hcBlockedMsg, setHcBlockedMsg] = useState<string | null>(null)
   // When the next run unlocks (cooldown). Set from props, or refreshed if a
   // start attempt races the cooldown.
@@ -287,6 +294,32 @@ export default function GauntletGame(props: GauntletGameProps) {
   // Boons — drafted as TIERS (family id → highest tier owned, 1..3). Drafting a
   // higher tier replaces the lower; no infinite single-boon stacking.
   const [boonTiers, setBoonTiers] = useState<Record<string, number>>({})
+  // ── Davy's Terms ──────────────────────────────────────────────────────────
+  // Signed BEFORE a hardcore dive; they reshape the run (they are NOT curses —
+  // curses stay the random mid-run layer and are untouched). termFx is the one
+  // resolved knob-set every generator below reads. A resumed run restores its
+  // terms from the server, or the rest of the dive would silently play on easy.
+  const [signedTerms, setSignedTerms] = useState<SignedTerms>(props.runTerms ?? {})
+  const signedTermsRef = useRef<SignedTerms>(props.runTerms ?? {})
+  useEffect(() => { signedTermsRef.current = signedTerms }, [signedTerms])
+  // The knobs only apply to a HARDCORE run — a normal dive never sees them.
+  const termFx = useMemo(
+    () => (hardcoreRun ? resolveTerms(signedTerms) : NO_TERM_EFFECTS),
+    [hardcoreRun, signedTerms],
+  )
+  const termFxRef = useRef(termFx)
+  useEffect(() => { termFxRef.current = termFx }, [termFx])
+  const pressure = useMemo(() => termPressure(signedTerms), [signedTerms])
+  // Short-Handed (a signed Term): a berth stays empty, so the last crew slot is
+  // not manned this run. The full squad is still aboard and still drowns on a
+  // hardcore death — you simply fight without one of them.
+  const runCrew = useMemo(
+    () => (termFx.crewSlotsLost > 0
+      ? props.crewMembers.slice(0, Math.max(1, props.crewMembers.length - termFx.crewSlotsLost))
+      : props.crewMembers),
+    [props.crewMembers, termFx.crewSlotsLost],
+  )
+
   // Confluences the player has DRAFTED (opportunity-cost model — a confluence
   // only applies once taken as a draft card, then scales with its boon tiers).
   const [confluencesTaken, setConfluencesTaken] = useState<string[]>([])
@@ -495,9 +528,9 @@ export default function GauntletGame(props: GauntletGameProps) {
 
   function begin(hardcore = false) {
     if (starting) return
-    setModeChoiceOpen(false); setHcConfirmOpen(false)
+    setModeChoiceOpen(false); setHcConfirmOpen(false); setTermsOpen(false)
     setStarting(true)
-    startGauntletRun(hardcore).then(res => {
+    startGauntletRun(hardcore, hardcore ? signedTermsRef.current : undefined).then(res => {
       if (!res.started) {
         setStarting(false)
         if (res.reason === 'cooldown') { if (res.nextAt) setCooldownUntil(res.nextAt); setPhase('usedup'); return }
@@ -520,7 +553,8 @@ export default function GauntletGame(props: GauntletGameProps) {
       carriedChargesRef.current = 0
       runMaxHitRef.current = 0
       runStatsRef.current = emptyRunStats()
-      setPlayerHP(baseHpMax)
+      // Deep Draft (a signed Term): you go down already holed.
+      setPlayerHP(Math.max(1, Math.round(baseHpMax * termFxRef.current.startHpPct)))
       setPot(0)
       setBossesDefeated(0)
       setUsedAbilityIds(new Set())
@@ -538,9 +572,11 @@ export default function GauntletGame(props: GauntletGameProps) {
       peekFightRef.current = null; setPeekFight(null)
       crewRefreshedRef.current = false; setFightOpensRefreshed(false)
       calmBeforeUsedRef.current = false
-      anchorSavesLeftRef.current = getActiveEffects(props.equippedItems)
+      // No Mercy (a signed Term): the Anchor does not hold. The first blow that
+      // would sink you, sinks you.
+      anchorSavesLeftRef.current = termFxRef.current.noLethalSaves ? 0 : getActiveEffects(props.equippedItems)
         .filter(e => e.type === 'lethal_save').reduce((a, e) => a + e.value, 0)
-      setFight(generateFight(rollStateRef.current, skipOffset))
+      setFight(generateFight(rollStateRef.current, skipOffset, termFxRef.current))
       setPhase('descending')
       setStarting(false)
     })
@@ -651,6 +687,16 @@ export default function GauntletGame(props: GauntletGameProps) {
         </div>
       )}
 
+      {termsOpen && (
+        <GauntletTermsPanel
+          signed={signedTerms}
+          onChange={setSignedTerms}
+          onDive={() => begin(true)}
+          onBack={() => { setTermsOpen(false); setHcConfirmOpen(true) }}
+          diving={starting}
+        />
+      )}
+
       {hcConfirmOpen && (
         <div onClick={() => setHcConfirmOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 1310, background: 'rgba(10,2,4,0.88)', backdropFilter: 'blur(5px)', WebkitBackdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem', overflowY: 'auto' }}>
           <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 380, borderRadius: 20, padding: '1.35rem 1.15rem 1.15rem', textAlign: 'center', background: 'linear-gradient(180deg, rgba(30,10,12,0.99), rgba(14,6,8,0.99))', border: `1px solid ${DANGER}66`, boxShadow: `0 0 44px ${DANGER}22, 0 18px 50px rgba(0,0,0,0.6)` }}>
@@ -682,7 +728,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             <p className="font-karla font-700 uppercase" style={{ fontSize: '0.54rem', letterSpacing: '0.12em', color: '#c48a8a', marginTop: 14 }}>
               {props.hcRunsLeft} of {HARDCORE_RUNS_PER_DAY} hardcore runs left today
             </p>
-            <button onClick={() => begin(true)} disabled={starting} className="font-cinzel font-800 uppercase tracking-[0.05em] tap"
+            <button onClick={() => { setHcConfirmOpen(false); setTermsOpen(true) }} disabled={starting} className="font-cinzel font-800 uppercase tracking-[0.05em] tap"
               style={{ width: '100%', marginTop: 10, padding: '1rem', borderRadius: 13, fontSize: '1rem', color: '#fff0f0', background: `linear-gradient(180deg, ${DANGER}3a, ${DANGER}18)`, border: `1px solid ${DANGER}88`, cursor: starting ? 'wait' : 'pointer', boxShadow: `0 0 22px ${DANGER}22` }}>
               {starting ? 'Descending…' : 'Descend into the Locker'}
             </button>
@@ -711,9 +757,11 @@ export default function GauntletGame(props: GauntletGameProps) {
   // roll state doesn't change between here and the push, so this is consistent.
   useEffect(() => {
     if (phase !== 'between') return
-    const nf = generateFight(rollStateRef.current, skipOffset)
+    const nf = generateFight(rollStateRef.current, skipOffset, termFxRef.current)
     peekFightRef.current = nf
-    setPeekFight(nf)
+    // Blind Descent (a signed Term): the roll is still pre-committed (pushOn must
+    // fight the same one), you just don't get to see it.
+    setPeekFight(termFxRef.current.noPeek ? null : nf)
     // Crash safety net: checkpoint the settled run state at every breather so an
     // interruption resumes here (worst case: redo the fight you were in).
     void checkpointGauntletRun(buildCheckpoint()).catch(() => {})
@@ -854,7 +902,11 @@ export default function GauntletGame(props: GauntletGameProps) {
     // so Veteran's Start can't desync it. The on-demand Reprieve fills the gaps.
     // Refresh everyone EXCEPT crew the deep has silenced (Dead Hands) — they
     // stay spent through the refresh.
-    if (f.isBoss) { setUsedAbilityIds(new Set(silencedCrewIdsRef.current)); crewRefreshedRef.current = true }
+    // Skeleton Crew (a signed Term): a boss kill normally restores every crew
+    // ability. Now it only has a CHANCE to, so you can be caught empty-handed.
+    if (f.isBoss && Math.random() < termFxRef.current.crewRefreshChance) {
+      setUsedAbilityIds(new Set(silencedCrewIdsRef.current)); crewRefreshedRef.current = true
+    }
 
     // Curse milestone (descend INTO a CURSE_DEPTH) and boon draft (INTO a
     // BOON_DEPTH). They sit on different depths so the run alternates toll and
@@ -865,19 +917,19 @@ export default function GauntletGame(props: GauntletGameProps) {
     const nextDepth = clearedNow + 1 + skipOffset
     // isCurseDepth / isBoonDepth carry the cadence PAST the fixed schedule
     // (every few depths forever) so deep runs keep stacking rules.
-    const atCurseDepth = isCurseDepth(nextDepth)
+    const atCurseDepth = isCurseDepth(nextDepth, termFxRef.current.curseFrequencyMult)
     // Calm Before waves off the FIRST curse milestone the player actually hits,
     // not a hardcoded depth — so it still works under Veteran's Start, which
     // starts past depth 4. Spent the moment it fires.
     const skipFirstCurse = atCurseDepth && !calmBeforeUsedRef.current && gauntletSkipsFirstCurse(upgrades)
     if (skipFirstCurse) calmBeforeUsedRef.current = true
     const curse = (atCurseDepth && !skipFirstCurse)
-      ? drawCurse(curseTiersRef.current, nextDepth)   // null once the curse pool is spent
+      ? drawCurse(curseTiersRef.current, nextDepth, termFxRef.current.curseStartsAtWorst)   // null once the curse pool is spent
       : null
     // Draw the boons up front so an exhausted pool ([] when every family is
     // maxed) falls through to the breather instead of an empty draft screen.
-    const boons = isBoonDepth(nextDepth)
-      ? drawBoons(3, boonTiers, gauntletBoonLuck(upgrades))
+    const boons = isBoonDepth(nextDepth, termFxRef.current.boonFrequencyMult)
+      ? drawBoons(termFxRef.current.boonPicks, boonTiers, gauntletBoonLuck(upgrades), termFxRef.current.commonSkew)
       : []
     if (curse || boons.length > 0) {
       // Set the boon draft now even on a curse round, so applyCurse can hand off
@@ -890,10 +942,10 @@ export default function GauntletGame(props: GauntletGameProps) {
         // haven't taken, it can surface as a gold card in place of a boon slot —
         // taking it forgoes those boons. Mutually exclusive with the Reprieve so
         // the screen never stacks two "instead of a boon" cards.
-        const conf = drawConfluenceOffer(boonTiers, confluencesTaken, offeredConfluenceIdsRef.current)
+        const conf = drawConfluenceOffer(boonTiers, confluencesTaken, offeredConfluenceIdsRef.current, termFxRef.current.confluenceOfferMult)
         if (conf) offeredConfluenceIdsRef.current.add(conf.id)
         setPendingConfluence(conf)
-        setPendingReprieve(!conf && nextDepth >= REPRIEVE_MIN_DEPTH && Math.random() < REPRIEVE_CHANCE
+        setPendingReprieve(!conf && !termFxRef.current.noReprieves && nextDepth >= REPRIEVE_MIN_DEPTH && Math.random() < REPRIEVE_CHANCE
           ? drawReprieve({ curseCount: Object.keys(curseTiersRef.current).length })
           : null)
       }
@@ -943,7 +995,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   // spent, charge nothing and just move on.
   function shrineBloodPrice() {
     runEventsRef.current.push({ depth: rollStateRef.current.cleared + skipOffset, kind: 'shrine' })
-    const draft = drawBoons(3, boonTiers, gauntletBoonLuck(upgrades))
+    const draft = drawBoons(termFxRef.current.boonPicks, boonTiers, gauntletBoonLuck(upgrades), termFxRef.current.commonSkew)
     if (draft.length === 0) { setPhase('between'); return }
     const cost = Math.max(1, Math.round(playerHPRef.current * SHRINE_BLOOD_HP_PCT))
     const left = Math.max(1, playerHPRef.current - cost)
@@ -953,7 +1005,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     setPendingBoons(draft)
     setRerollsLeft(0)
     setPendingReprieve(null)
-    { const conf = drawConfluenceOffer(boonTiers, confluencesTaken, offeredConfluenceIdsRef.current); if (conf) offeredConfluenceIdsRef.current.add(conf.id); setPendingConfluence(conf) }
+    { const conf = drawConfluenceOffer(boonTiers, confluencesTaken, offeredConfluenceIdsRef.current, termFxRef.current.confluenceOfferMult); if (conf) offeredConfluenceIdsRef.current.add(conf.id); setPendingConfluence(conf) }
     setBoonFromShrine(true)
     setPhase('boon')
   }
@@ -1038,8 +1090,8 @@ export default function GauntletGame(props: GauntletGameProps) {
   // synergy card re-rolls with them).
   function rerollBoons() {
     if (rerollsLeft <= 0) return
-    setPendingBoons(drawBoons(3, boonTiers, gauntletBoonLuck(upgrades)))
-    { const conf = drawConfluenceOffer(boonTiers, confluencesTaken, offeredConfluenceIdsRef.current); if (conf) offeredConfluenceIdsRef.current.add(conf.id); setPendingConfluence(conf) }
+    setPendingBoons(drawBoons(termFxRef.current.boonPicks, boonTiers, gauntletBoonLuck(upgrades), termFxRef.current.commonSkew))
+    { const conf = drawConfluenceOffer(boonTiers, confluencesTaken, offeredConfluenceIdsRef.current, termFxRef.current.confluenceOfferMult); if (conf) offeredConfluenceIdsRef.current.add(conf.id); setPendingConfluence(conf) }
     setRerollsLeft(r => r - 1)
   }
 
@@ -1049,9 +1101,9 @@ export default function GauntletGame(props: GauntletGameProps) {
   function rerollCurse() {
     if (curseRerollsLeft <= 0 || !pendingCurse) return
     const depth = curseDepthRef.current
-    let next = drawCurse(curseTiersRef.current, depth)
+    let next = drawCurse(curseTiersRef.current, depth, termFxRef.current.curseStartsAtWorst)
     for (let i = 0; i < 6 && next && next.id === pendingCurse.id && next.tier === pendingCurse.tier; i++) {
-      next = drawCurse(curseTiersRef.current, depth)
+      next = drawCurse(curseTiersRef.current, depth, termFxRef.current.curseStartsAtWorst)
     }
     if (next) setPendingCurse(next)
     setCurseRerollsLeft(r => r - 1)
@@ -1219,7 +1271,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     }
     // Fight the fight Sounding Line pre-rolled at the breather (fallback-roll if
     // somehow unset). Clear the peek so the next breather rolls fresh.
-    const next = peekFightRef.current ?? generateFight(rollStateRef.current, skipOffset)
+    const next = peekFightRef.current ?? generateFight(rollStateRef.current, skipOffset, termFxRef.current)
     peekFightRef.current = null
     setPeekFight(null)
     // Snapshot whether this fight opens with freshly restored abilities, then
@@ -1957,7 +2009,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     // at the cap; deeper is for the record + Fathoms.
     const payDepth = Math.min(cleared, GAUNTLET_REWARD_DEPTH_CAP)
     const pastPayCap = cleared >= GAUNTLET_REWARD_DEPTH_CAP
-    const chest = chestForDepth(payDepth)
+    const chest = chestForDepth(payDepth, termFxRef.current.chestTierDrop)
     const previewDoubloons = Math.round(pot * chest.potMult * props.classDoubloonMult)
     // Nav XP is on its own decoupled curve (not the pot) — mirror the server.
     const previewXp = Math.round(gauntletXpForDepth(payDepth) * chest.potMult)
@@ -2808,7 +2860,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             background: `radial-gradient(ellipse 116% 96% at 50% 44%, transparent 56%, rgba(${gloomHue},${gloom}) 100%)` }} />
         )}
         <div className="gauntlet-depthbar" style={{ width: '100%', flexShrink: 0, marginBottom: 2 }}>
-          <DepthBar depth={fight.depth} pot={pot} isBoss={fight.isBoss} isElite={fight.isElite} affixName={fight.affix?.name} curses={Object.keys(curseTiers).length} isHardcore={hardcoreRun} potGain={potGain} uncharted={uncharted} />
+          <DepthBar depth={fight.depth} pot={pot} isBoss={fight.isBoss} isElite={fight.isElite} affixName={fight.affix?.name} curses={Object.keys(curseTiers).length} isHardcore={hardcoreRun} potGain={potGain} uncharted={uncharted} pressure={hardcoreRun ? pressure : 0} />
         </div>
         <div style={{ width: '100%' }}>
           <RaidCombat
@@ -2853,7 +2905,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             onLeave={hardcoreRun ? undefined : () => setConfirmLeave(true)}
             raidMods={runRaidMods}
             tideEffects={runEffects}
-            crewMembers={props.crewMembers}
+            crewMembers={runCrew}
             usedAbilityIds={usedAbilityIds}
             megaAugment={props.manowarAugment}
             abilitiesRefreshed={fightOpensRefreshed}
@@ -3149,7 +3201,16 @@ function GauntletReward({ r, recap, onBack }: { r: RewardOk; recap: { shipsSunk:
               {r.earnedBloodGems > 0 && (
                 <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.68, duration: 0.35 }}
                   style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, padding: '0.55rem 0.6rem', borderRadius: 11, background: 'linear-gradient(180deg, rgba(192,56,74,0.18), rgba(120,20,32,0.12))', border: '1px solid rgba(220,38,38,0.55)', boxShadow: '0 0 20px rgba(192,56,74,0.28), inset 0 0 12px rgba(120,20,32,0.35)' }}>
-                  <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.56rem', color: '#e88a97', textShadow: '0 0 8px rgba(192,56,74,0.5)' }}>Blood Gems</span>
+                  <span style={{ minWidth: 0 }}>
+                    <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{ display: 'block', fontSize: '0.56rem', color: '#e88a97', textShadow: '0 0 8px rgba(192,56,74,0.5)' }}>Blood Gems</span>
+                    {/* What Davy's Terms actually bought you. Only shown when the
+                        Pressure genuinely paid (deep enough for the ramp). */}
+                    {r.gemMult > 1 && (
+                      <span className="font-karla font-700" style={{ display: 'block', fontSize: '0.56rem', color: '#f0c040', marginTop: 2 }}>
+                        {r.runPressure} Pressure · ×{r.gemMult.toFixed(2)}
+                      </span>
+                    )}
+                  </span>
                   <span className="font-cinzel font-800" style={{ fontSize: '1.25rem', color: '#f2536a', textShadow: '0 0 14px rgba(220,38,38,0.7)' }}>+<CountUp to={r.earnedBloodGems} run={counting} /></span>
                 </motion.div>
               )}
@@ -4513,7 +4574,7 @@ function BackLink({ router, label, primary, onClick }: { router: ReturnType<type
   )
 }
 
-function DepthBar({ depth, pot, isBoss, isElite, affixName, curses, isHardcore, potGain, uncharted }: { depth: number; pot: number; isBoss: boolean; isElite: boolean; affixName?: string; curses: number; isHardcore?: boolean; potGain?: { amount: number; key: number; boss: boolean } | null; uncharted?: boolean }) {
+function DepthBar({ depth, pot, isBoss, isElite, affixName, curses, isHardcore, potGain, uncharted, pressure = 0 }: { depth: number; pot: number; isBoss: boolean; isElite: boolean; affixName?: string; curses: number; isHardcore?: boolean; potGain?: { amount: number; key: number; boss: boolean } | null; uncharted?: boolean; pressure?: number }) {
   // The bar shows only the ESSENTIALS on one immovable row; tapping it opens
   // the detail panel (full affix names, exact pot, curse count, hardcore
   // note). Long dual-affix names + fat pots used to wrap the flex row and
@@ -4561,6 +4622,14 @@ function DepthBar({ depth, pot, isBoss, isElite, affixName, curses, isHardcore, 
             <span className="flex items-baseline gap-1">
               <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', color: '#f8717199', letterSpacing: '0.08em' }}>CURSED</span>
               <span className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#f87171', lineHeight: 1 }}>{curses}</span>
+            </span>
+          )}
+          {/* The Terms you signed, carried for the whole dive so you never forget
+              what you agreed to (or what it's paying you). */}
+          {pressure > 0 && (
+            <span className="flex items-baseline gap-1">
+              <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', color: '#f0c04099', letterSpacing: '0.08em' }}>PRESSURE</span>
+              <span className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#f0c040', lineHeight: 1 }}>{pressure}</span>
             </span>
           )}
           <span className="flex items-baseline gap-1" style={{ position: 'relative' }}>

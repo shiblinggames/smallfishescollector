@@ -15,6 +15,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { navRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
+import { termPressure, pressureGemMult, resolveTerms, getTerm, type SignedTerms } from '@/lib/gauntletTerms'
 import { maxPotForDepth, chestForDepth, chestCannonDropChance, chestSkinDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_REWARD_DEPTH_CAP, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, gauntletXpForDepth, gauntletCrewXp, CONFLUENCES, hardcoreUnlocked, HARDCORE_LIVE, HARDCORE_UNLOCKS, HARDCORE_RUNS_PER_DAY, HC_FATHOMS_MULT, HC_SURVIVOR_XP_MULT, bloodGemsForDepth, coerceRunStats, type GauntletRunSnapshot, type GauntletRunState } from '@/lib/gauntlet'
 import { getGauntletUpgrade, isUpgradeComingSoon, gauntletHaulMult, gauntletXpMult, gauntletFathomsMult } from '@/lib/gauntletUpgrades'
 import { DAVY_FORGE } from '@/lib/raidItems'
@@ -238,15 +239,15 @@ export async function getGauntletLeaderboard(): Promise<{
 
 /** Whether the player can start a run now (cooldown elapsed) + their lifetime
  *  deepest + when the next run unlocks (ISO, null when available now). */
-export async function getGauntletDailyState(): Promise<{ available: boolean; deepest: number; fathoms: number; nextAt: string | null; deepestRun: GauntletRunSnapshot | null; hcDeepestRun: GauntletRunSnapshot | null; resumeState: GauntletRunState | null; hardcoreUnlocked: boolean; hardcoreLive: boolean; hcDeepest: number; hcRunsLeft: number; runHardcore: boolean }> {
+export async function getGauntletDailyState(): Promise<{ available: boolean; deepest: number; fathoms: number; nextAt: string | null; deepestRun: GauntletRunSnapshot | null; hcDeepestRun: GauntletRunSnapshot | null; resumeState: GauntletRunState | null; hardcoreUnlocked: boolean; hardcoreLive: boolean; hcDeepest: number; hcRunsLeft: number; runHardcore: boolean; runTerms: SignedTerms | null }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { available: false, deepest: 0, fathoms: 0, nextAt: null, deepestRun: null, hcDeepestRun: null, resumeState: null, hardcoreUnlocked: false, hardcoreLive: HARDCORE_LIVE, hcDeepest: 0, hcRunsLeft: 0, runHardcore: false }
+  if (!user) return { available: false, deepest: 0, fathoms: 0, nextAt: null, deepestRun: null, hcDeepestRun: null, resumeState: null, hardcoreUnlocked: false, hardcoreLive: HARDCORE_LIVE, hcDeepest: 0, hcRunsLeft: 0, runHardcore: false, runTerms: null }
 
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_last_run_at, gauntlet_deepest, gauntlet_fathoms, gauntlet_deepest_run, gauntlet_hc_deepest_run, is_admin, gauntlet_run_open, gauntlet_run_state, gauntlet_resumes_used, gauntlet_hc_deepest, gauntlet_run_hardcore, gauntlet_hc_last_run_at, gauntlet_hc_runs_today, raid_node_progress')
+    .select('gauntlet_last_run_at, gauntlet_deepest, gauntlet_fathoms, gauntlet_deepest_run, gauntlet_hc_deepest_run, is_admin, gauntlet_run_open, gauntlet_run_state, gauntlet_resumes_used, gauntlet_hc_deepest, gauntlet_run_hardcore, gauntlet_hc_last_run_at, gauntlet_hc_runs_today, raid_node_progress, gauntlet_run_terms')
     .eq('id', user.id)
     .single()
 
@@ -288,6 +289,9 @@ export async function getGauntletDailyState(): Promise<{ available: boolean; dee
     // Is the currently OPEN (resumable) run a hardcore one? Lets a resumed run
     // keep its hardcore end-beats + abandon warning.
     runHardcore: profile?.gauntlet_run_hardcore === true,
+    // Terms signed for the currently OPEN run — a resume must restore them, or
+    // the rest of the dive would silently play on easy.
+    runTerms: (profile?.gauntlet_run_terms as SignedTerms | null) ?? null,
   }
 }
 
@@ -336,7 +340,7 @@ export async function resumeGauntletRun(): Promise<{ ok: false } | { ok: true; s
  *  Hardcore: the crew you send in (your living raid party) is snapshotted into
  *  gauntlet_hc_squad and PERMANENTLY dies on death/abandon. Gated server-side —
  *  admin-only until HARDCORE_LIVE, then unlock + a living squad. */
-export async function startGauntletRun(hardcore = false): Promise<{ started: boolean; reason?: 'cooldown' | 'locked' | 'no_squad'; deepest: number; nextAt?: string }> {
+export async function startGauntletRun(hardcore = false, terms?: SignedTerms): Promise<{ started: boolean; reason?: 'cooldown' | 'locked' | 'no_squad'; deepest: number; nextAt?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { started: false, reason: 'cooldown', deepest: 0 }
@@ -358,7 +362,22 @@ export async function startGauntletRun(hardcore = false): Promise<{ started: boo
   }
 
   // ── Hardcore: gate + snapshot the squad at risk ──────────────────────────
-  let hcFields: Record<string, unknown> = { gauntlet_run_hardcore: false, gauntlet_hc_squad: null }
+  // Davy's Terms — HARDCORE ONLY, and sanitized here so a tampered client can't
+  // invent terms/tiers (the Blood Gem multiplier is derived from this column
+  // server-side at cash-out, never from anything the client reports).
+  let signedTerms: SignedTerms | null = null
+  if (hardcore && terms) {
+    const clean: SignedTerms = {}
+    for (const [id, tier] of Object.entries(terms)) {
+      const term = getTerm(id)
+      if (!term) continue
+      const t = Math.floor(Number(tier) || 0)
+      if (t >= 1) clean[id] = Math.min(t, term.tiers.length)
+    }
+    if (Object.keys(clean).length > 0) signedTerms = clean
+  }
+
+  let hcFields: Record<string, unknown> = { gauntlet_run_hardcore: false, gauntlet_hc_squad: null, gauntlet_run_terms: null }
   let hcRunsToday = 0
   if (hardcore) {
     const clearedNodes = (profile?.raid_node_progress as { cleared?: string[] } | null)?.cleared ?? []
@@ -389,7 +408,7 @@ export async function startGauntletRun(hardcore = false): Promise<{ started: boo
       .is('died_at', null)
     const squad = (squadRows ?? []).map(r => r.id as number)
     if (squad.length === 0) return { started: false, reason: 'no_squad', deepest }
-    hcFields = { gauntlet_run_hardcore: true, gauntlet_hc_squad: squad, gauntlet_hc_last_run_at: new Date().toISOString(), gauntlet_hc_runs_today: hcRunsToday }
+    hcFields = { gauntlet_run_hardcore: true, gauntlet_hc_squad: squad, gauntlet_hc_last_run_at: new Date().toISOString(), gauntlet_hc_runs_today: hcRunsToday, gauntlet_run_terms: signedTerms }
   }
 
   await admin
@@ -421,6 +440,11 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
       newFathoms: number
       /** Blood Gems from the chest (Hardcore cash-out only; 0 on normal) + new total. */
       earnedBloodGems: number
+      /** Davy's Terms: the Pressure this run carried, and the Blood Gem
+       *  multiplier it actually earned at the depth reached (1 when unsigned or
+       *  too shallow to qualify). Drives the cash-out payoff beat. */
+      runPressure: number
+      gemMult: number
       newBloodGems: number
       /** Davy cannons that dropped this cash-out (chest chase items). */
       droppedItems: string[]
@@ -442,7 +466,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_run_open, gauntlet_deepest, gauntlet_last_run_at, gauntlet_best_depth, gauntlet_best_depth_ms, gauntlet_contest_depth, gauntlet_fathoms, gauntlet_fathoms_earned, gauntlet_runs_completed, gauntlet_upgrades, expedition_xp, doubloons, gems, ship_classes, nav_renown_alloc, raid_items, ship_skins, gauntlet_run_hardcore, gauntlet_hc_deepest, gauntlet_hc_best_depth, gauntlet_hc_best_depth_ms, blood_gems, blood_gems_earned')
+    .select('gauntlet_run_open, gauntlet_deepest, gauntlet_last_run_at, gauntlet_best_depth, gauntlet_best_depth_ms, gauntlet_contest_depth, gauntlet_fathoms, gauntlet_fathoms_earned, gauntlet_runs_completed, gauntlet_upgrades, expedition_xp, doubloons, gems, ship_classes, nav_renown_alloc, raid_items, ship_skins, gauntlet_run_hardcore, gauntlet_hc_deepest, gauntlet_hc_best_depth, gauntlet_hc_best_depth_ms, blood_gems, blood_gems_earned, gauntlet_run_terms, gauntlet_hc_best_pressure')
     .eq('id', user.id)
     .single()
 
@@ -470,7 +494,10 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   // still counts for the record / leaderboard / contest / Fathoms (cd below).
   const payDepth = Math.min(rd, GAUNTLET_REWARD_DEPTH_CAP)
   const cleanPot = Math.max(0, Math.min(Math.floor(pot), maxPotForDepth(payDepth)))
-  const chest = chestForDepth(payDepth)
+  // Empty Lockers (a signed Term) downgrades the chest you earned. Read from the
+  // stored terms so the client can't opt out of its own handicap at payout time.
+  const preTerms = (profile.gauntlet_run_terms as SignedTerms | null) ?? null
+  const chest = chestForDepth(payDepth, hc ? resolveTerms(preTerms).chestTierDrop : 0)
 
   // Run Upgrades (Locker, scope 'gauntlet') that sweeten the cash-out.
   const upgrades   = (profile.gauntlet_upgrades as string[] | null) ?? []
@@ -521,7 +548,17 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   // Blood Gems — the Hardcore premium currency, dropped in the cash-out chest
   // (survive-only). Amount is a live server roll (~0.5–0.7 per reward depth), so
   // deeper survival = more. Normal runs earn none.
-  const earnedBloodGems = hc ? bloodGemsForDepth(payDepth, Math.random()) : 0
+  // DAVY'S TERMS — Pressure multiplies Blood Gems and NOTHING else (doubloons,
+  // Nav XP and Fathoms all stay 1x, so the main economy never sees this). The
+  // Pressure is derived from the terms column WE stored at run start, never from
+  // the client. The multiplier also ramps in with depth (pressureGemMult), so
+  // signing the whole board and farming short shallow dives pays nothing — you
+  // have to be deep AND heavy.
+  const runTerms = (profile.gauntlet_run_terms as SignedTerms | null) ?? null
+  const runPressure = hc ? termPressure(runTerms) : 0
+  const gemMult = pressureGemMult(runPressure, payDepth)
+  const baseBloodGems   = hc ? bloodGemsForDepth(payDepth, Math.random()) : 0
+  const earnedBloodGems = Math.round(baseBloodGems * gemMult)
   const newBloodGems    = ((profile.blood_gems as number | null) ?? 0) + earnedBloodGems
 
   const classPicks = (profile.ship_classes as Record<string, string> | null) ?? {}
@@ -604,6 +641,12 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
       gauntlet_run_open: false,
       gauntlet_run_state: null,
       gauntlet_resumes_used: 0,
+      gauntlet_run_terms: null,
+      // The Pressure behind the deepest hardcore cash-out — a depth 45 at 18
+      // Pressure is a very different run to a clean 45, and the Ledger should
+      // eventually be able to say so.
+      ...(hc && cd >= ((profile.gauntlet_hc_best_depth as number | null) ?? 0)
+        ? { gauntlet_hc_best_pressure: runPressure } : {}),
       gauntlet_fathoms: newFathoms,
       blood_gems: newBloodGems,
       // Lifetime Blood Gems earned (never decremented on spend) — backs the
@@ -650,6 +693,8 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
     earnedFathoms,
     newFathoms,
     earnedBloodGems,
+    runPressure,
+    gemMult: Math.round(gemMult * 100) / 100,
     newBloodGems,
     droppedItems,
     droppedSkinId,
@@ -725,6 +770,7 @@ export async function resolveGauntletDeath(rewardDepth: number, combatDepth: num
       gauntlet_fathoms: newFathoms,
       gauntlet_run_state: null,
       gauntlet_resumes_used: 0,
+      gauntlet_run_terms: null,
       gauntlet_runs_completed: ((profile.gauntlet_runs_completed as number | null) ?? 0) + 1,
       gauntlet_fathoms_earned: ((profile.gauntlet_fathoms_earned as number | null) ?? 0) + earnedFathoms,
       ...deathFields,

@@ -71,6 +71,7 @@ export default async function GauntletPage() {
           hcRunsLeft={daily.hcRunsLeft}
           hardcoreTop={leaderboard.hardcoreTop}
           runHardcore={daily.runHardcore}
+          runTerms={daily.runTerms}
           bloodGems={(profile?.blood_gems as number | null) ?? 0}
         />
       </div>

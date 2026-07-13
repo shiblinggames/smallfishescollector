@@ -29,6 +29,7 @@ import {
 } from './raidChallenge'
 import { AFFIXES, ALL_AFFIX_IDS, ELITE_HP_MULT, ELITE_DMG_MULT, rollAffix, rollSecondAffix, mergeAffixes, type AffixDef } from './raidAffixes'
 import { type TideEffect } from './tides'
+import { NO_TERM_EFFECTS, type TermEffects } from './gauntletTerms'
 
 // ── Economy ────────────────────────────────────────────────────────────────
 // Per-round pot contribution = POT_BASE + POT_GROWTH * min(depth, POT_FLATTEN).
@@ -488,19 +489,21 @@ export interface GauntletRollState {
  *  `skipOffset` (Veteran's Start) raises the COMBAT depth — enemy scaling, boss
  *  / elite odds, and the displayed depth — while the pot stays keyed to the
  *  REWARD depth (ships actually sunk), so the head start is no reward shortcut. */
-export function generateFight(state: GauntletRollState, skipOffset = 0): GauntletFight {
+export function generateFight(state: GauntletRollState, skipOffset = 0, terms: TermEffects = NO_TERM_EFFECTS): GauntletFight {
   const rewardDepth = state.cleared + 1
   const depth = rewardDepth + skipOffset
 
   // Boss decision — rising chance, never back-to-back, pity ceiling.
+  // Davy's Court (a signed Term) raises the chance and lowers the pity ceiling.
   let isBoss = false
+  const bossPity = Math.max(2, BOSS_PITY - terms.bossPityDelta)
   if (depth >= FIRST_BOSS_EARLIEST && !state.prevWasBoss) {
-    if (state.roundsSinceBoss >= BOSS_PITY) {
+    if (state.roundsSinceBoss >= bossPity) {
       isBoss = true
     } else {
       const chance = Math.min(
-        BOSS_CHANCE_CAP,
-        BOSS_CHANCE_BASE + (depth - FIRST_BOSS_EARLIEST) * BOSS_CHANCE_GROWTH,
+        BOSS_CHANCE_CAP * terms.bossChanceMult,
+        (BOSS_CHANCE_BASE + (depth - FIRST_BOSS_EARLIEST) * BOSS_CHANCE_GROWTH) * terms.bossChanceMult,
       )
       isBoss = Math.random() < chance
     }
@@ -515,34 +518,44 @@ export function generateFight(state: GauntletRollState, skipOffset = 0): Gauntle
     return { enemy, isBoss: true, isElite: false, potContribution: paying ? roundContribution(rewardDepth, true) : 0, depth }
   }
 
-  // Mob — independent elite roll, chance scaling with depth.
+  // Mob — independent elite roll, chance scaling with depth. Press-Ganged (a
+  // signed Term) multiplies it; Marked Hulls pairs affixes from depth 1 and can
+  // stack a third; Ironbacked bumps the elite's hull + guns on top of the usual
+  // elite treatment.
   let enemy = scaleToCurve(pick(MOB_POOL), depth, false)
   let isElite = false
   let affix: AffixDef | undefined
-  const eliteChance = Math.min(ELITE_CHANCE_CAP, ELITE_CHANCE_BASE + depth * ELITE_CHANCE_GROWTH)
+  const eliteChance = Math.min(
+    Math.min(0.95, ELITE_CHANCE_CAP * terms.eliteChanceMult),
+    (ELITE_CHANCE_BASE + depth * ELITE_CHANCE_GROWTH) * terms.eliteChanceMult,
+  )
   if (Math.random() < eliteChance) {
     isElite = true
     const firstId = rollAffix()
     affix = AFFIXES[firstId]
-    if (depth > DEEP_BEND_START) {
-      // The Crush band: elites this deep ALWAYS pair affixes, and one in four
-      // carries a third (all merged into one — combined effects + name).
+    // Pair the affix if the depth band says so OR a Term forces it from the start.
+    const pairs = depth > DEEP_BEND_START
+      || terms.affixPairFromStart
+      || (depth >= DUAL_AFFIX_MIN_DEPTH && Math.random() < DUAL_AFFIX_CHANCE)
+    if (pairs) {
       const secondId = rollSecondAffix(firstId)
       affix = mergeAffixes(affix, AFFIXES[secondId])
-      if (Math.random() < TRIPLE_AFFIX_CHANCE) {
+      // A third affix: the deep Crush band rolls for it, and Marked Hulls II
+      // rolls for it at ANY depth. Take the better of the two chances.
+      const tripleChance = Math.max(
+        depth > DEEP_BEND_START ? TRIPLE_AFFIX_CHANCE : 0,
+        terms.tripleAffixChance,
+      )
+      if (tripleChance > 0 && Math.random() < tripleChance) {
         const pool = ALL_AFFIX_IDS.filter(id => id !== firstId && id !== secondId)
         affix = mergeAffixes(affix, AFFIXES[pool[Math.floor(Math.random() * pool.length)]])
       }
-    } else if (depth >= DUAL_AFFIX_MIN_DEPTH && Math.random() < DUAL_AFFIX_CHANCE) {
-      // The abyss gets crueller: from DUAL_AFFIX_MIN_DEPTH, an elite can carry
-      // a SECOND affix.
-      affix = mergeAffixes(affix, AFFIXES[rollSecondAffix(firstId)])
     }
     enemy = {
       ...enemy,
-      hpBase: Math.round(enemy.hpBase * ELITE_HP_MULT),
-      minDmg: Math.max(1, Math.round(enemy.minDmg * ELITE_DMG_MULT)),
-      maxDmg: Math.max(2, Math.round(enemy.maxDmg * ELITE_DMG_MULT)),
+      hpBase: Math.round(enemy.hpBase * ELITE_HP_MULT * terms.eliteHpMult),
+      minDmg: Math.max(1, Math.round(enemy.minDmg * ELITE_DMG_MULT * terms.eliteDmgMult)),
+      maxDmg: Math.max(2, Math.round(enemy.maxDmg * ELITE_DMG_MULT * terms.eliteDmgMult)),
     }
   }
   return { enemy, isBoss: false, isElite, affix, potContribution: paying ? roundContribution(rewardDepth, false) : 0, depth }
@@ -612,9 +625,14 @@ export const CHEST_TIERS: ChestTier[] = [
   { tier: 4, label: "Leviathan's Cache",  minDepth: 14, potMult: 1.35, gems: 50 },
   { tier: 5, label: "Davy Jones' Locker", minDepth: 18, potMult: 1.5,  gems: 90 },
 ]
-export function chestForDepth(depth: number): ChestTier {
+export function chestForDepth(depth: number, tierDrop = 0): ChestTier {
   let chest = CHEST_TIERS[0]
   for (const c of CHEST_TIERS) if (depth >= c.minDepth) chest = c
+  // Empty Lockers (a signed Term): the chest you earned, downgraded.
+  if (tierDrop > 0) {
+    const idx = CHEST_TIERS.findIndex(c => c.tier === chest.tier)
+    chest = CHEST_TIERS[Math.max(0, idx - tierDrop)]
+  }
   return chest
 }
 
@@ -911,15 +929,28 @@ export const CURSE_TIER2_DEPTH = 13
 
 /** Is `depth` a curse milestone? The fixed early schedule, then every
  *  CURSE_INTERVAL depths forever after, so the deep end never stops cursing. */
-export function isCurseDepth(depth: number): boolean {
+export function isCurseDepth(depth: number, frequencyMult = 1): boolean {
   const last = CURSE_DEPTHS[CURSE_DEPTHS.length - 1]
-  return CURSE_DEPTHS.includes(depth) || (depth > last && (depth - last) % CURSE_INTERVAL === 0)
+  const onSchedule = CURSE_DEPTHS.includes(depth) || (depth > last && (depth - last) % CURSE_INTERVAL === 0)
+  if (onSchedule) return true
+  // Loose Tongue (a signed Term): curse depths come more often. We tighten the
+  // recurring interval rather than inventing a new schedule, so the early fixed
+  // beats stay intact and the deep end simply curses you more.
+  if (frequencyMult > 1 && depth > last) {
+    const tightened = Math.max(2, Math.round(CURSE_INTERVAL / frequencyMult))
+    return (depth - last) % tightened === 0
+  }
+  // Below the recurring band, squeeze an extra curse in between the fixed beats.
+  if (frequencyMult > 1 && depth <= last && depth >= CURSE_DEPTHS[0]) {
+    return CURSE_DEPTHS.some(d => depth === d - 1) && depth > CURSE_DEPTHS[0]
+  }
+  return false
 }
 
 /** Pick the next curse the Locker imposes. Eligible = a fresh tier-1 curse you
  *  don't have, OR (from CURSE_TIER2_DEPTH on) a tier-2 deepening of one you do.
  *  Uniform random among eligible; null if none remain. */
-export function drawCurse(curseTiers: Record<string, number>, depth: number): CurseOffer | null {
+export function drawCurse(curseTiers: Record<string, number>, depth: number, startsAtWorst = false): CurseOffer | null {
   // The Crush never enters the normal pool — it's the fallback pressure once
   // every named curse is spent (and only in the deep band).
   const eligible = GAUNTLET_CURSES
@@ -927,7 +958,11 @@ export function drawCurse(curseTiers: Record<string, number>, depth: number): Cu
     .map(c => ({ c, next: (curseTiers[c.id] ?? 0) + 1 }))
     .filter(x => x.next <= x.c.tiers.length && (x.next === 1 || depth >= CURSE_TIER2_DEPTH))
   if (eligible.length > 0) {
-    const { c, next } = eligible[Math.floor(Math.random() * eligible.length)]
+    const drawn = eligible[Math.floor(Math.random() * eligible.length)]
+    const c = drawn.c
+    // Loose Tongue II (a signed Term): a fresh curse lands straight at its
+    // nastier tier instead of building up to it.
+    const next = startsAtWorst ? Math.min(c.tiers.length, Math.max(drawn.next, 2)) : drawn.next
     const t = c.tiers[next - 1]
     return { id: c.id, name: c.name, flavor: c.flavor, tier: next, desc: t.desc, detail: t.detail, effects: t.effects, hpDrainPct: t.hpDrainPct, silenceCrew: t.silenceCrew, isUpgrade: next > 1 }
   }
@@ -1179,10 +1214,15 @@ export const BOON_DEPTHS = [2, 4, 7, 9, 12, 14, 17, 19, 22, 24]  // illustrative
 
 /** Is `depth` a boon draft? A ~2.5-depth cadence via a period-5 pattern, so
  *  deep runs keep drafting (until the boon pool is maxed). */
-export function isBoonDepth(depth: number): boolean {
+export function isBoonDepth(depth: number, frequencyMult = 1): boolean {
   if (depth < 2) return false
   const m = (depth - 2) % 5
-  return m === 0 || m === 2
+  const onSchedule = m === 0 || m === 2
+  if (!onSchedule) return false
+  // Scarce Powder II (a signed Term): drafts come LESS often. Drop the second
+  // beat of each period so the cadence halves cleanly rather than randomly.
+  if (frequencyMult < 1 && m === 2) return false
+  return true
 }
 
 /** A single draft choice: a specific TIER of a boon family. The offered tier is
@@ -1205,16 +1245,19 @@ export interface BoonOffer {
  *  families already at max tier are excluded. Picks are RARITY-WEIGHTED, so
  *  Legendary/Rare boons surface far less often than Commons. No infinite
  *  single-boon stacking. */
-export function drawBoons(n: number, owned: Record<string, number> = {}, luckMult = 1): BoonOffer[] {
+export function drawBoons(n: number, owned: Record<string, number> = {}, luckMult = 1, commonSkew = 0): BoonOffer[] {
   const avail = GAUNTLET_BOONS
     .map(fam => ({ fam, next: (owned[fam.id] ?? 0) + 1 }))
     .filter(x => x.next <= x.fam.tiers.length)
   // Diviner's Charm (luckMult > 1) scales up the draft weight of the non-Common
   // rarities, so Rare/Legendary boons surface more often without changing which
   // families exist. luckMult = 1 leaves the base odds untouched.
+  // Barren Tides (a signed Term, commonSkew > 0) does the reverse: it crushes
+  // the Rare/Legendary weight so the draft skews to Commons.
   const weightFor = (fam: GauntletBoon) => {
     const r = boonRarity(fam)
-    return BOON_RARITY_META[r].weight * (r === 'common' ? 1 : luckMult)
+    if (r === 'common') return BOON_RARITY_META[r].weight
+    return BOON_RARITY_META[r].weight * luckMult * (1 - Math.max(0, Math.min(1, commonSkew)))
   }
   const out: BoonOffer[] = []
   for (let i = 0; i < n && avail.length > 0; i++) {
@@ -1627,11 +1670,17 @@ export const CONFLUENCE_OFFER_CHANCE = 0.7
  *  to appear next draft (and is preferred when picking), so a build you commit to
  *  reliably shows up. Once it's been offered once (taken or not), it reverts to
  *  the base chance — this keeps a large pool from swamping every draft. */
-export function drawConfluenceOffer(owned: Record<string, number>, taken: string[] = [], offered: Set<string> = new Set()): ConfluenceOffer | null {
+export function drawConfluenceOffer(owned: Record<string, number>, taken: string[] = [], offered: Set<string> = new Set(), offerMult = 1): ConfluenceOffer | null {
+  // No Communion (a signed Term): offerMult 0 switches synergies off entirely —
+  // you can hold both halves and never be offered the confluence.
+  if (offerMult <= 0) return null
   const pool = eligibleConfluences(owned, taken)
   if (pool.length === 0) return null
   const fresh = pool.filter(c => !offered.has(c.id))   // never-surfaced yet = pity priority
-  if (fresh.length === 0 && Math.random() >= CONFLUENCE_OFFER_CHANCE) return null
+  // The pity (a never-surfaced synergy is guaranteed) still applies at full
+  // offerMult; a reduced offerMult scales it back like any other draw.
+  if (fresh.length > 0 && offerMult < 1 && Math.random() >= offerMult) return null
+  if (fresh.length === 0 && Math.random() >= CONFLUENCE_OFFER_CHANCE * offerMult) return null
   const chooseFrom = fresh.length > 0 ? fresh : pool
   const c = chooseFrom[Math.floor(Math.random() * chooseFrom.length)]
   const level = confluenceLevel(c, owned)
