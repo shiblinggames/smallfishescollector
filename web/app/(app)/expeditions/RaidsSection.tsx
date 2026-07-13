@@ -1851,7 +1851,7 @@ function NodeDetailSheet({
                       <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.55rem', color: '#7a7875', margin: '0 0 0.5rem' }}>
                         Unique Drops
                       </p>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 7 }}>
                         {uniques.map(d => {
                           const rc = d.rarity ? RARITY_COLOR[d.rarity] : '#9ca3af'
                           return (
@@ -1861,7 +1861,8 @@ function NodeDetailSheet({
                               onClick={() => setSelectedDrop(d)}
                               aria-label={`${d.label} — details`}
                               style={{
-                                display: 'inline-flex', alignItems: 'center', gap: '0.45rem',
+                                display: 'flex', alignItems: 'center', gap: '0.45rem',
+                                minWidth: 0, textAlign: 'left',
                                 background: `${rc}16`, border: `1px solid ${rc}40`,
                                 borderRadius: 9, padding: '0.4rem 0.55rem 0.4rem 0.45rem',
                                 cursor: 'pointer', font: 'inherit', color: 'inherit',
@@ -1876,7 +1877,7 @@ function NodeDetailSheet({
                                     ? <img src={d.image} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain', filter: d.imageFilter }} />
                                     : <span style={{ color: rc, display: 'flex' }}><IconCrate size={17} /></span>}
                               </span>
-                              <span className="font-karla font-600" style={{ fontSize: '0.8rem', color: '#e8e2d8', whiteSpace: 'nowrap' }}>{d.label}</span>
+                              <span className="font-karla font-600 truncate" style={{ flex: 1, minWidth: 0, fontSize: '0.8rem', color: '#e8e2d8' }}>{d.label}</span>
                               {d.chance && (
                                 <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.56rem', color: rc, background: `${rc}1c`, border: `1px solid ${rc}40`, borderRadius: 5, padding: '0.18rem 0.4rem', flexShrink: 0 }}>
                                   {d.chance}
