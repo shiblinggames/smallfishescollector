@@ -41,14 +41,28 @@ export interface OfferState {
 export const EMPTY_OFFER_STATE: OfferState = { live: null, refused: 0, lastAt: 0 }
 
 // ── WHEN HE SHOWS UP ─────────────────────────────────────────────────────────
-/** Too shallow and there is nothing to tempt you with. */
-export const OFFER_MIN_DEPTH = 8
+/**
+ * Too shallow and there is nothing to tempt you with. This is set LATE on purpose.
+ * Measured as "how many more depths must you survive for a plain bank to beat the
+ * best offer on the table", a shallow bargain is worth about four more depths, which
+ * is a shrug. Past 30 it is worth thirteen to nineteen, which is a decision. Davy
+ * does not waste his breath on a captain who has nothing to lose yet.
+ */
+export const OFFER_MIN_DEPTH = 30
 /** He does not haggle with the drowning. Below this, no offer — the bargain must
  *  land while you still feel strong enough to refuse it. */
 export const OFFER_MIN_HP_PCT = 0.5
-/** Breathers of quiet between offers, so he stays an event and not a menu. */
-export const OFFER_COOLDOWN = 3
-export const OFFER_CHANCE = 0.22
+/**
+ * Depths of quiet between offers, so he stays an event and not a menu. Together with
+ * OFFER_CHANCE this is deliberately STINGY: a captain who banks around 40 usually
+ * meets him once and a third of them never meet him at all, while a run to the floor
+ * of the world sees maybe three. He was a vending machine at 22% and a 3-depth
+ * cooldown (seven offers on a deep dive), which is no way to treat a bargain.
+ */
+export const OFFER_COOLDOWN = 8
+export const OFFER_CHANCE = 0.10
+/** Tier only climbs when you REFUSE, so at this rarity a tier-3 offer takes a very
+ *  deep run AND the nerve to have told him no twice. It should be a story. */
 export const OFFER_MAX_TIER = 3
 
 // ── WHAT HE PAYS ─────────────────────────────────────────────────────────────
