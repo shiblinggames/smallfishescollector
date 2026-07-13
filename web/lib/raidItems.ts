@@ -256,14 +256,17 @@ export const RAID_ITEMS: RaidItemDef[] = [
     family: 'chainshot',
   },
   {
-    // The legendary rack. Langrage is the real thing: scrap iron and nails packed
-    // loose and fired to shred rigging, plating and crew at once, which is exactly
-    // what this does. A genuine escalation of chain shot rather than an invented
-    // name. Same family as the Rack, so the two can never be run together.
-    id: 'langrage_rack',
-    name: 'Langrage Rack',
-    description: "Landed hits have a 35% chance to fire a spread of scrap iron. WEAKENED: it deals 20% less damage. CORRODED: its barrier takes 30% more damage. FEEBLE: it takes 20% more damage. All three, for 2 rounds. The full rack.",
-    image: null,  // TODO: /langragerack.png at the art pass
+    // The legendary rack: SAL'S OWN, hauled off the wreck. Named for him the way
+    // Krust's Carapace becomes the Captain's and Spet's Primer becomes the
+    // Tollmaster's — the tier-up is the boss's personal version of the thing he used
+    // on you. (It was briefly the "Langrage Rack", after the real naval term for scrap
+    // iron fired to shred rigging. Correct, and completely illegible. "Grapeshot" was
+    // out too: that name already belongs to a Gauntlet boon.)
+    // Same family as the Chain-Shot Rack, so the two can never be run together.
+    id: 'brackwater_rack',
+    name: 'Brackwater Rack',
+    description: "Landed hits have a 35% chance to fire a spread of scrap iron. WEAKENED: it deals 20% less damage. CORRODED: its barrier takes 30% more damage. FEEBLE: it takes 20% more damage. All three, for 2 rounds. Sal's own rack, hauled off his wreck and turned around.",
+    image: null,  // TODO: /brackwaterrack.png at the art pass
     emoji: '⛓️',
     rarity: 'legendary',
     effects: [
