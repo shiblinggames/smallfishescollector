@@ -15,11 +15,15 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { navRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
-import { termPressure, pressureGemMult, pressureFeats, pressureSkinDropChance, PRESSURE_SKIN_ID, getTerm, type SignedTerms } from '@/lib/gauntletTerms'
+import { termPressure, pressureGemMult, pressureFeats, pressureSkinDropChance, resolveTerms, PRESSURE_SKIN_ID, getTerm, type SignedTerms } from '@/lib/gauntletTerms'
 import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
-import { GOLD_HULL_SKIN_ID, GOLD_HULL_CHEST_TIER, BLOOD_HULL_SKIN_ID, BLOOD_HULL_CHEST_TIER, BLOOD_CANNON_ITEM_ID, BLOOD_CANNON_CHEST_TIER, maxPotForDepth, chestForDepth, chestCannonDropChance, chestSkinDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_REWARD_DEPTH_CAP, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, gauntletXpForDepth, gauntletCrewXp, CONFLUENCES, hardcoreUnlocked, HARDCORE_LIVE, HARDCORE_UNLOCKS, HARDCORE_RUNS_PER_DAY, HC_FATHOMS_MULT, HC_SURVIVOR_XP_MULT, bloodGemsForDepth, coerceRunStats, type GauntletRunSnapshot, type GauntletRunState } from '@/lib/gauntlet'
+import { GOLD_HULL_SKIN_ID, GOLD_HULL_CHEST_TIER, BLOOD_HULL_SKIN_ID, BLOOD_HULL_CHEST_TIER, BLOOD_CANNON_ITEM_ID, BLOOD_CANNON_CHEST_TIER, maxPotForDepth, chestForDepth, chestCannonDropChance, chestSkinDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_REWARD_DEPTH_CAP, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, gauntletXpForDepth, gauntletCrewXp, CONFLUENCES, hardcoreUnlocked, HARDCORE_LIVE, HARDCORE_UNLOCKS, HARDCORE_RUNS_PER_DAY, HC_FATHOMS_MULT, HC_SURVIVOR_XP_MULT, bloodGemsForDepth, coerceRunStats, chestOdds, type GauntletRunSnapshot, type GauntletRunState } from '@/lib/gauntlet'
 import { getGauntletUpgrade, isUpgradeComingSoon, gauntletHaulMult, gauntletXpMult, gauntletFathomsMult } from '@/lib/gauntletUpgrades'
 import { DAVY_FORGE } from '@/lib/raidItems'
+import {
+  rollOffer, offerCoinMult, offerFathomMult, offerChestMult,
+  EMPTY_OFFER_STATE, CHEST_ODDS_CAP, type OfferState, type DavyOffer,
+} from '@/lib/gauntletOffer'
 import { GAUNTLET_DEEPEST_CONTEST_ENDS_AT } from '@/lib/contests'
 import { getBait } from '@/lib/bait'
 
@@ -408,7 +412,7 @@ export async function startGauntletRun(hardcore = false, terms?: SignedTerms): P
 
   await admin
     .from('profiles')
-    .update({ gauntlet_last_run_at: new Date().toISOString(), gauntlet_run_open: true, gauntlet_run_state: null, gauntlet_resumes_used: 0, ...hcFields })
+    .update({ gauntlet_last_run_at: new Date().toISOString(), gauntlet_run_open: true, gauntlet_run_state: null, gauntlet_resumes_used: 0, gauntlet_run_offer: null, ...hcFields })
     .eq('id', user.id)
 
   return { started: true, deepest }
@@ -416,7 +420,63 @@ export async function startGauntletRun(hardcore = false, terms?: SignedTerms): P
 
 /** Cash out an open run at the reached depth, banking the (clamped) pot ×
  *  chest multiplier + the chest's gem bonus. Closes the run. */
-export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, pot: number, runSnapshot?: GauntletRunSnapshot): Promise<
+// ── DAVY'S OFFER ─────────────────────────────────────────────────────────────
+// Called once when a breather opens (right after the run checkpoints, so the depth
+// below is the one WE stored, not one the client can name). The server decides
+// whether an offer happens, what kind it is and what tier — the client is only ever
+// TOLD. All it supplies is its hull fraction, and lying about that can at worst earn
+// an offer while wounded, which the bounded payout below makes worthless.
+export async function rollDavyOffer(hpPct: number): Promise<{ offer: DavyOffer | null }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { offer: null }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('gauntlet_run_open, gauntlet_run_state, gauntlet_run_offer, gauntlet_run_hardcore, gauntlet_run_terms, raid_items, ship_skins')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || profile.gauntlet_run_open !== true) return { offer: null }
+
+  const state = (profile.gauntlet_run_state as GauntletRunState | null) ?? null
+  const depth = Math.max(0, Math.floor(state?.cleared ?? 0))
+  const hc = profile.gauntlet_run_hardcore === true
+  const terms = profile.gauntlet_run_terms as SignedTerms | null
+  const prev = (profile.gauntlet_run_offer as OfferState | null) ?? EMPTY_OFFER_STATE
+
+  // NO SECOND THOUGHTS bars banking until a boss is down. Davy dangling a bargain
+  // the captain physically cannot accept would be a cruel little bug, so he keeps
+  // his mouth shut at a breather where the door is bolted.
+  if (resolveTerms(terms).cashOutOnlyAfterBoss && state?.prevWasBoss !== true) {
+    return { offer: null }
+  }
+
+  // A heavier chest is only a bargain if the chest can still pay this captain
+  // anything. Offering it to someone who owns every chase item would be a lie.
+  const chestWorthOffering = chestOdds({
+    depth,
+    hardcore: hc,
+    pressure: hc ? termPressure(terms) : 0,
+    ownedItems: (profile.raid_items as string[] | null) ?? [],
+    ownedSkins: (profile.ship_skins as string[] | null) ?? [],
+    davyForge: DAVY_FORGE,
+  }).length > 0
+
+  const next = rollOffer({
+    prev,
+    depth,
+    hpPct: Math.max(0, Math.min(1, hpPct)),
+    hardcore: hc,
+    chestWorthOffering,
+  })
+
+  await admin.from('profiles').update({ gauntlet_run_offer: next }).eq('id', user.id)
+  return { offer: next.live }
+}
+
+export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, pot: number, runSnapshot?: GauntletRunSnapshot, takeOffer = false): Promise<
   | { ok: false }
   | {
       ok: true
@@ -454,6 +514,9 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
       unlockedThisRun: { name: string; blurb: string; where: string }[]
       /** Was this a Hardcore run? Drives the "your crew sailed home" cash-out beat. */
       hardcore: boolean
+      /** Davy's Offer, if this captain shook on it. Null if he never offered or they
+       *  told him no. Drives the cash-out beat that names what the deal paid. */
+      offerTaken: DavyOffer | null
     }
 > {
   const supabase = await createClient()
@@ -463,7 +526,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_run_open, gauntlet_deepest, gauntlet_last_run_at, gauntlet_best_depth, gauntlet_best_depth_ms, gauntlet_contest_depth, gauntlet_fathoms, gauntlet_fathoms_earned, gauntlet_runs_completed, gauntlet_upgrades, expedition_xp, doubloons, gems, ship_classes, nav_renown_alloc, raid_items, ship_skins, gauntlet_run_hardcore, gauntlet_hc_deepest, gauntlet_hc_best_depth, gauntlet_hc_best_depth_ms, blood_gems, blood_gems_earned, gauntlet_run_terms, gauntlet_hc_best_pressure')
+    .select('gauntlet_run_open, gauntlet_deepest, gauntlet_last_run_at, gauntlet_best_depth, gauntlet_best_depth_ms, gauntlet_contest_depth, gauntlet_fathoms, gauntlet_fathoms_earned, gauntlet_runs_completed, gauntlet_upgrades, expedition_xp, doubloons, gems, ship_classes, nav_renown_alloc, raid_items, ship_skins, gauntlet_run_hardcore, gauntlet_hc_deepest, gauntlet_hc_best_depth, gauntlet_hc_best_depth_ms, blood_gems, blood_gems_earned, gauntlet_run_terms, gauntlet_hc_best_pressure, gauntlet_run_offer')
     .eq('id', user.id)
     .single()
 
@@ -496,11 +559,22 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   // Run Upgrades (Locker, scope 'gauntlet') that sweeten the cash-out.
   const upgrades   = (profile.gauntlet_upgrades as string[] | null) ?? []
 
+  // DAVY'S OFFER — honored only if he actually made one AND the player is banking at
+  // the very depth he made it. Both come from the column WE wrote at the breather, so
+  // a client cannot conjure a deal, upgrade its tier, or carry a shallow offer down to
+  // a deeper pot. Anything else means no deal, and no deal means no bonus.
+  const offerState  = (profile.gauntlet_run_offer as OfferState | null) ?? EMPTY_OFFER_STATE
+  const offerTaken: DavyOffer | null =
+    takeOffer && offerState.live && offerState.live.depth === rd ? offerState.live : null
+  const offerChest  = offerChestMult(offerTaken)
+
   // Davy cannon chest drops — each component rolls independently at the chest
   // tier's chance, only for cannons not yet owned, and never once the player
-  // has forged them into the Grand Cannon.
+  // has forged them into the Grand Cannon. Every chance below runs through
+  // chestDrop(), which is the SAME capped multiply the breather showed the player.
   const ownedItems = (profile.raid_items as string[] | null) ?? []
-  const dropChance = chestCannonDropChance(cd)
+  const chestDrop = (c: number) => Math.min(CHEST_ODDS_CAP, c * offerChest)
+  const dropChance = chestDrop(chestCannonDropChance(cd))
   const droppedItems: string[] = []
   if (!ownedItems.includes(DAVY_FORGE.result)) {
     for (const cannon of DAVY_FORGE.components) {
@@ -511,7 +585,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   // the deeper hardcore chests. Stops dropping once you own it OR have forged it
   // into one of its fusions (mirrors the Grand Cannon).
   const bloodForged = ['bloodletter', 'reavers_cannon'].some(id => ownedItems.includes(id))
-  if (hc && chest.tier >= BLOOD_CANNON_CHEST_TIER && !ownedItems.includes(BLOOD_CANNON_ITEM_ID) && !bloodForged && Math.random() < chestCannonDropChance(cd)) {
+  if (hc && chest.tier >= BLOOD_CANNON_CHEST_TIER && !ownedItems.includes(BLOOD_CANNON_ITEM_ID) && !bloodForged && Math.random() < chestDrop(chestCannonDropChance(cd))) {
     droppedItems.push(BLOOD_CANNON_ITEM_ID)
   }
   const newRaidItems = droppedItems.length > 0 ? [...new Set([...ownedItems, ...droppedItems])] : ownedItems
@@ -527,20 +601,20 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   // it's owned even before the player has the hull to wear it.
   const ownedSkins = (profile.ship_skins as string[] | null) ?? []
   let droppedSkinId: string | null = null
-  if (chest.tier >= GOLD_HULL_CHEST_TIER && !ownedSkins.includes(GOLD_HULL_SKIN_ID) && Math.random() < chestSkinDropChance(cd)) {
+  if (chest.tier >= GOLD_HULL_CHEST_TIER && !ownedSkins.includes(GOLD_HULL_SKIN_ID) && Math.random() < chestDrop(chestSkinDropChance(cd))) {
     droppedSkinId = GOLD_HULL_SKIN_ID
   }
   // Bad Blood Hull — the HARDCORE-only Man-o-War skin, from the deeper hardcore
   // chests. Owned to ship_skins even before the player has the Man-o-War to wear it.
   let droppedHcSkinId: string | null = null
-  if (hc && chest.tier >= BLOOD_HULL_CHEST_TIER && !ownedSkins.includes(BLOOD_HULL_SKIN_ID) && Math.random() < chestSkinDropChance(cd)) {
+  if (hc && chest.tier >= BLOOD_HULL_CHEST_TIER && !ownedSkins.includes(BLOOD_HULL_SKIN_ID) && Math.random() < chestDrop(chestSkinDropChance(cd))) {
     droppedHcSkinId = BLOOD_HULL_SKIN_ID
   }
   // Pitch Black Hull — the PRESSURE-exclusive drop. Needs hardcore, a heavy board AND
   // a deep bank, all on this one run: pressureSkinDropChance returns a hard 0 below
   // either gate, so no shallow sign-and-bank can ever roll it.
   let droppedPressureSkinId: string | null = null
-  if (hc && !ownedSkins.includes(PRESSURE_SKIN_ID) && Math.random() < pressureSkinDropChance(runPressure, payDepth)) {
+  if (hc && !ownedSkins.includes(PRESSURE_SKIN_ID) && Math.random() < chestDrop(pressureSkinDropChance(runPressure, payDepth))) {
     droppedPressureSkinId = PRESSURE_SKIN_ID
   }
   // Hardcore Drowned Fleet skins — granted the first time you cash out past a
@@ -570,7 +644,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   const navRenown = navRenownEffects(profile.nav_renown_alloc as RenownAlloc | null)
   const doubloonMult = aggregateShipClasses(classPicks).doubloonMult * navRenown.doubloonMult
 
-  const bankedDoubloons = Math.round(cleanPot * chest.potMult * doubloonMult * gauntletHaulMult(upgrades))
+  const bankedDoubloons = Math.round(cleanPot * chest.potMult * doubloonMult * gauntletHaulMult(upgrades) * offerCoinMult(offerTaken))
   // Nav XP is decoupled from the doubloon pot onto its own gentler depth curve
   // (leveling was the sharper concern). Chest multiplier still rides on top.
   const bankedXp        = Math.round(gauntletXpForDepth(payDepth) * chest.potMult * gauntletXpMult(upgrades))
@@ -583,7 +657,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   // contest / leaderboard below count the combat depth.
   // Hardcore now banks Fathoms at the SAME rate as normal (HC_*_MULT = 1); its
   // only added payout is Blood Gems above.
-  const earnedFathoms    = Math.round(fathomsForDepth(rd) * gauntletFathomsMult(upgrades) * (hc ? HC_FATHOMS_MULT : 1))
+  const earnedFathoms    = Math.round(fathomsForDepth(rd) * gauntletFathomsMult(upgrades) * (hc ? HC_FATHOMS_MULT : 1) * offerFathomMult(offerTaken))
   const newFathoms       = ((profile.gauntlet_fathoms as number | null) ?? 0) + earnedFathoms
   const newDoubloons     = (profile.doubloons ?? 0) + bankedDoubloons
   const newGems          = (profile.gems ?? 0) + gems
@@ -647,6 +721,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
       gauntlet_run_state: null,
       gauntlet_resumes_used: 0,
       gauntlet_run_terms: null,
+      gauntlet_run_offer: null,
       // The Pressure behind the deepest hardcore cash-out — a depth 45 at 18
       // Pressure is a very different run to a clean 45, and the Ledger should
       // eventually be able to say so.
@@ -716,6 +791,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
     droppedPressureSkinId,
     unlockedThisRun,
     hardcore: hc,
+    offerTaken,
   }
 }
 
@@ -786,6 +862,7 @@ export async function resolveGauntletDeath(rewardDepth: number, combatDepth: num
       gauntlet_run_state: null,
       gauntlet_resumes_used: 0,
       gauntlet_run_terms: null,
+      gauntlet_run_offer: null,
       gauntlet_runs_completed: ((profile.gauntlet_runs_completed as number | null) ?? 0) + 1,
       gauntlet_fathoms_earned: ((profile.gauntlet_fathoms_earned as number | null) ?? 0) + earnedFathoms,
       ...deathFields,

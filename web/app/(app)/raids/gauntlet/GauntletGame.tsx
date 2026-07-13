@@ -32,7 +32,8 @@ import {
   type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot, type GauntletRunState, type GauntletRunStats, chestOdds } from '@/lib/gauntlet'
 import { GAUNTLET_TERMS, TERM_GROUP_META, resolveTerms, termPressure, termTideEffects, pressureGemMult, pressureDepthFactor, NO_TERM_EFFECTS, PRESSURE_CAP, PRESSURE_DEPTH_FLOOR, PRESSURE_DEPTH_FULL, MAX_AVAILABLE_PRESSURE, type SignedTerms } from '@/lib/gauntletTerms'
 import GauntletTermsPanel from './GauntletTermsPanel'
-import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen, recordGauntletHit, wagerGauntletFathoms, markConfluencesSeen, checkpointGauntletRun, resumeGauntletRun, buyBaitWithFathoms } from './actions'
+import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen, recordGauntletHit, wagerGauntletFathoms, markConfluencesSeen, checkpointGauntletRun, resumeGauntletRun, buyBaitWithFathoms, rollDavyOffer } from './actions'
+import { offerCoinMult, offerChestMult, offerCopy, offerTakenLine, type DavyOffer } from '@/lib/gauntletOffer'
 import { FATHOM_BAITS } from '@/lib/bait'
 import { GAUNTLET_UPGRADES, COMING_SOON_UPGRADES, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck, gauntletBoonRerolls, gauntletCurseRerolls } from '@/lib/gauntletUpgrades'
 import { type ShipAugment } from '@/lib/shipAugments'
@@ -406,6 +407,10 @@ export default function GauntletGame(props: GauntletGameProps) {
   const [confirmLeave, setConfirmLeave] = useState(false)
   // Confirm before banking the haul + ending the run on the breather.
   const [confirmClaim, setConfirmClaim] = useState(false)
+  // DAVY'S OFFER — the banker's bargain. Rolled and stored by the SERVER when a
+  // breather opens; we are only ever told what it is. Cleared the instant we dive,
+  // so it can never be carried down to a fatter pot.
+  const [offer, setOffer] = useState<DavyOffer | null>(null)
   // First-timer explainer. Auto-opens once (server flag), reopenable via the
   // "How it works" link.
   const [introOpen, setIntroOpen] = useState(!props.hasSeenIntro)
@@ -826,7 +831,15 @@ export default function GauntletGame(props: GauntletGameProps) {
     setPeekFight(termFxRef.current.noPeek ? null : nf)
     // Crash safety net: checkpoint the settled run state at every breather so an
     // interruption resumes here (worst case: redo the fight you were in).
-    void checkpointGauntletRun(buildCheckpoint()).catch(() => {})
+    // Then ask Davy whether he wants to make an offer. The checkpoint goes FIRST and
+    // is awaited, because the server reads the depth out of that very row — so the
+    // depth an offer is stamped with is one we wrote, never one the client named.
+    void (async () => {
+      await checkpointGauntletRun(buildCheckpoint()).catch(() => {})
+      const hpPct = playerHPRef.current / Math.max(1, hpMax)
+      const { offer: o } = await rollDavyOffer(hpPct).catch(() => ({ offer: null }))
+      setOffer(o)
+    })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, skipOffset])
 
@@ -1345,13 +1358,14 @@ export default function GauntletGame(props: GauntletGameProps) {
     setFightOpensRefreshed(crewRefreshedRef.current)
     crewRefreshedRef.current = false
     setFight(next)
+    setOffer(null)   // no deal. The server counts this as a refusal and sweetens the next one.
     setPhase('descending')
   }
 
-  function cashOut() {
+  function cashOut(takeOffer = false) {
     if (resolving) return
     setResolving(true)
-    cashOutGauntlet(rollStateRef.current.cleared, rollStateRef.current.cleared + skipOffset, potRef.current, buildRunSnapshot()).then(res => {
+    cashOutGauntlet(rollStateRef.current.cleared, rollStateRef.current.cleared + skipOffset, potRef.current, buildRunSnapshot(), takeOffer).then(res => {
       setResolving(false)
       setReward(res)
       if (res.ok) setBloodGemsNow(res.newBloodGems)
@@ -2079,6 +2093,11 @@ export default function GauntletGame(props: GauntletGameProps) {
     const pastPayCap = cleared >= GAUNTLET_REWARD_DEPTH_CAP
     const chest = chestForDepth(payDepth)
     const previewDoubloons = Math.round(pot * chest.potMult * props.classDoubloonMult)
+    // DAVY'S OFFER, if he made one at this breather. `dealDoubloons` is what the bank
+    // button must SAY — quoting the un-sweetened pot and then paying more (or worse,
+    // less) is the one thing a bargain screen can never do.
+    const offerChest    = offerChestMult(offer)
+    const dealDoubloons = Math.round(previewDoubloons * offerCoinMult(offer))
     // Nav XP is on its own decoupled curve (not the pot) — mirror the server.
     const previewXp = Math.round(gauntletXpForDepth(payDepth) * chest.potMult)
     const hpPct = Math.max(0, Math.min(100, Math.round((playerHP / hpMax) * 100)))
@@ -2217,13 +2236,17 @@ export default function GauntletGame(props: GauntletGameProps) {
               ownedItems: props.ownedRaidItems,
               ownedSkins: props.ownedShipSkins,
               davyForge: DAVY_FORGE,
+              // A chest offer multiplies these on the spot, so the row the player is
+              // staring at visibly jumps the moment Davy leans over the rail.
+              oddsMult: offerChest,
             })
             if (odds.length === 0) return null
+            const sweetened = offerChest > 1
             return (
               <div style={{ marginTop: 13, textAlign: 'left', padding: '0.7rem 0.75rem', borderRadius: 12,
                 background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.09)' }}>
-                <p className="font-karla font-800 uppercase tracking-[0.16em]" style={{ fontSize: '0.55rem', color: '#9a988e', marginBottom: 7 }}>
-                  In the Chest If You Bank Now
+                <p className="font-karla font-800 uppercase tracking-[0.16em]" style={{ fontSize: '0.55rem', color: sweetened ? '#c9a7ff' : '#9a988e', marginBottom: 7 }}>
+                  In the Chest If You Bank Now{sweetened ? ` · Davy's ${offerChest}x` : ''}
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                   {odds.map(o => {
@@ -2243,8 +2266,10 @@ export default function GauntletGame(props: GauntletGameProps) {
                     )
                   })}
                 </div>
-                <p className="font-karla" style={{ fontSize: '0.66rem', color: '#7a746a', marginTop: 7, lineHeight: 1.35 }}>
-                  Every one of these gets likelier the deeper you bank. Sink and the chest is never opened.
+                <p className="font-karla" style={{ fontSize: '0.66rem', color: sweetened ? '#9b86c4' : '#7a746a', marginTop: 7, lineHeight: 1.35 }}>
+                  {sweetened
+                    ? 'Davy has his thumb on the scale, and only if you bank right here. Dive on and these fall back.'
+                    : 'Every one of these gets likelier the deeper you bank. Sink and the chest is never opened.'}
                 </p>
               </div>
             )
@@ -2393,6 +2418,38 @@ export default function GauntletGame(props: GauntletGameProps) {
               No Second Thoughts (a signed Term) takes the bank away except on a
               breather that follows a BOSS kill: the mode's safety valve, gone. */}
           <div style={{ marginTop: 18 }}>
+            {/* ── DAVY'S OFFER ─────────────────────────────────────────────────
+                He leans over the rail and tries to buy you out. This sits directly on
+                top of the bank button because it IS the bank button's new terms: while
+                an offer stands, banking means taking it. Diving is the refusal, and the
+                server makes him come back richer for it. */}
+            {offer && (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 26 }}
+                style={{ marginBottom: 10, padding: '0.75rem 0.85rem', borderRadius: 13, textAlign: 'left',
+                  background: 'linear-gradient(180deg, rgba(78,44,124,0.34), rgba(38,20,64,0.18))',
+                  border: '1px solid rgba(201,167,255,0.5)', boxShadow: '0 0 26px rgba(140,90,220,0.16)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c9a7ff" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                    <path d="M12 3v18" /><path d="M5 7h9a3 3 0 0 1 0 6H5" /><path d="M19 17H8" />
+                  </svg>
+                  <p className="font-karla font-800 uppercase tracking-[0.16em]" style={{ fontSize: '0.52rem', color: '#c9a7ff' }}>
+                    {offerCopy(offer).badge}
+                  </p>
+                </div>
+                <p className="font-cinzel font-800" style={{ fontSize: '1.05rem', color: '#f0e6ff', marginTop: 5, lineHeight: 1.15 }}>
+                  {offerCopy(offer).title}
+                </p>
+                <p className="font-karla font-600" style={{ fontSize: '0.76rem', color: '#cfc0e6', marginTop: 4, lineHeight: 1.4 }}>
+                  {offerCopy(offer).line}
+                </p>
+                <p className="font-karla" style={{ fontSize: '0.66rem', color: '#9b86c4', marginTop: 6, lineHeight: 1.35 }}>
+                  Dive on and the offer sinks with the light. He may come back with more.
+                </p>
+              </motion.div>
+            )}
+
             {(() => {
               const bankBarred = termFx.cashOutOnlyAfterBoss && !rollStateRef.current.prevWasBoss
               if (bankBarred) return (
@@ -2407,8 +2464,13 @@ export default function GauntletGame(props: GauntletGameProps) {
               )
               return (
                 <button onClick={() => setConfirmClaim(true)} disabled={resolving} className="font-cinzel font-800 uppercase tracking-[0.05em] tap"
-                  style={{ width: '100%', padding: '1.02rem', borderRadius: 14, fontSize: '1rem', color: '#f5d98a', background: `linear-gradient(180deg, ${GOLD}30, ${GOLD}10)`, border: `1px solid ${GOLD}88`, cursor: resolving ? 'wait' : 'pointer', boxShadow: `0 0 22px ${GOLD}22` }}>
-                  {resolving ? '…' : <>Claim {fmt(previewDoubloons)} ⟡ &amp; Leave</>}
+                  style={{ width: '100%', padding: '1.02rem', borderRadius: 14, fontSize: '1rem',
+                    color: offer ? '#efe4ff' : '#f5d98a',
+                    background: offer ? 'linear-gradient(180deg, rgba(201,167,255,0.30), rgba(140,90,220,0.12))' : `linear-gradient(180deg, ${GOLD}30, ${GOLD}10)`,
+                    border: offer ? '1px solid rgba(201,167,255,0.75)' : `1px solid ${GOLD}88`,
+                    cursor: resolving ? 'wait' : 'pointer',
+                    boxShadow: offer ? '0 0 24px rgba(140,90,220,0.3)' : `0 0 22px ${GOLD}22` }}>
+                  {resolving ? '…' : offer ? <>Take the Deal · {fmt(dealDoubloons)} ⟡</> : <>Claim {fmt(previewDoubloons)} ⟡ &amp; Leave</>}
                 </button>
               )
             })()}
@@ -2416,7 +2478,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             {/* The hinge — makes the two buttons read as one either/or. */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '11px 4px 10px' }}>
               <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
-              <span className="font-karla font-700 uppercase tracking-[0.24em]" style={{ fontSize: '0.5rem', color: '#8a8578' }}>or press your luck</span>
+              <span className="font-karla font-700 uppercase tracking-[0.24em]" style={{ fontSize: '0.5rem', color: offer ? '#9b86c4' : '#8a8578' }}>{offer ? 'or no deal' : 'or press your luck'}</span>
               <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
             </div>
 
@@ -2476,23 +2538,25 @@ export default function GauntletGame(props: GauntletGameProps) {
         {confirmClaim && (
           <div onClick={() => setConfirmClaim(false)} style={{ position: 'fixed', inset: 0, zIndex: 1310, background: 'rgba(6,8,14,0.86)', backdropFilter: 'blur(5px)', WebkitBackdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem', overflowY: 'auto' }}>
             <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 360, borderRadius: 20, padding: '1.35rem 1.15rem 1.15rem', textAlign: 'center', background: 'linear-gradient(180deg, rgba(24,20,10,0.99), rgba(12,10,6,0.99))', border: `1px solid ${GOLD}66`, boxShadow: `0 0 44px ${GOLD}22, 0 18px 50px rgba(0,0,0,0.6)` }}>
-              <p className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.24em', color: `${GOLD}cc` }}>Bank the Haul</p>
-              <p className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f6ead0', lineHeight: 1.08, marginTop: 8 }}>Claim &amp; leave?</p>
+              <p className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.24em', color: offer ? '#c9a7ff' : `${GOLD}cc` }}>{offer ? "Davy's Offer" : 'Bank the Haul'}</p>
+              <p className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f6ead0', lineHeight: 1.08, marginTop: 8 }}>{offer ? 'Shake on it?' : 'Claim & leave?'}</p>
               <p className="font-cinzel font-800" style={{ fontSize: '2rem', color: GOLD, lineHeight: 1, marginTop: 12, textShadow: `0 0 26px ${GOLD}55` }}>
-                {fmt(previewDoubloons)} <span style={{ fontSize: '1.2rem' }}>⟡</span>
+                {fmt(dealDoubloons)} <span style={{ fontSize: '1.2rem' }}>⟡</span>
               </p>
               <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#b0a890', marginTop: 6 }}>
                 +{fmt(previewXp)} Nav XP{chest.gems > 0 ? ` · +${chest.gems} ◆` : ''}{hardcoreRun ? ' · Blood Gems' : ''}
               </p>
               <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(230,222,205,0.8)', lineHeight: 1.5, marginTop: 12, maxWidth: 300, marginInline: 'auto' }}>
-                Your descent ends here and this is yours to keep. Push deeper and it grows — but sink and it all goes down with you.
+                {offer
+                  ? `${offerCopy(offer).line} Your descent ends here, and what he owes you is yours to keep.`
+                  : 'Your descent ends here and this is yours to keep. Push deeper and it grows, but sink and it all goes down with you.'}
               </p>
-              <button onClick={() => { setConfirmClaim(false); cashOut() }} disabled={resolving} className="font-cinzel font-800 uppercase tracking-[0.05em] tap"
+              <button onClick={() => { setConfirmClaim(false); cashOut(!!offer) }} disabled={resolving} className="font-cinzel font-800 uppercase tracking-[0.05em] tap"
                 style={{ width: '100%', marginTop: 16, padding: '1rem', borderRadius: 13, fontSize: '1rem', color: '#1a1206', background: `linear-gradient(180deg, ${GOLD}, ${GOLD}cc)`, border: `1px solid ${GOLD}`, cursor: resolving ? 'wait' : 'pointer', boxShadow: `0 0 22px ${GOLD}33` }}>
-                {resolving ? '…' : <>Claim {fmt(previewDoubloons)} ⟡ &amp; Leave</>}
+                {resolving ? '…' : offer ? <>Shake on It · {fmt(dealDoubloons)} ⟡</> : <>Claim {fmt(previewDoubloons)} ⟡ &amp; Leave</>}
               </button>
               <button onClick={() => setConfirmClaim(false)} className="font-karla font-600 tap" style={{ marginTop: 11, background: 'none', border: 'none', color: '#9a948a', fontSize: '0.76rem', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}>
-                Keep diving
+                {offer ? 'No deal' : 'Keep diving'}
               </button>
             </div>
           </div>
@@ -3379,6 +3443,13 @@ function GauntletReward({ r, recap, onBack }: { r: RewardOk; recap: { shipsSunk:
                 {r.gemMult > 1
                   ? <>Blood Gems ×{r.gemMult.toFixed(2)}</>
                   : <span style={{ color: '#8a8578' }}>Too shallow to earn the bonus.</span>}
+              </p>
+            )}
+            {/* You shook on it. Name what the bargain actually paid, so the deal reads
+                as a decision the captain made and not a number that quietly appeared. */}
+            {r.offerTaken && (
+              <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#c9a7ff', marginTop: 4 }}>
+                {offerTakenLine(r.offerTaken)}
               </p>
             )}
             <button onClick={open} disabled={opening} className="font-cinzel font-800 uppercase tracking-[0.08em] tap"

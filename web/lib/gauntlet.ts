@@ -30,6 +30,7 @@ import {
 import { AFFIXES, ALL_AFFIX_IDS, ELITE_HP_MULT, ELITE_DMG_MULT, rollAffix, rollSecondAffix, mergeAffixes, type AffixDef } from './raidAffixes'
 import { type TideEffect } from './tides'
 import { NO_TERM_EFFECTS, type TermEffects, PRESSURE_SKIN_ID, pressureSkinDropChance } from './gauntletTerms'
+import { CHEST_ODDS_CAP } from './gauntletOffer'
 
 // ── Economy ────────────────────────────────────────────────────────────────
 // Per-round pot contribution = POT_BASE + POT_GROWTH * min(depth, POT_FLATTEN).
@@ -704,12 +705,16 @@ export function chestOdds(opts: {
   ownedItems: string[]
   ownedSkins: string[]
   davyForge: { result: string; components: string[] }
+  /** Davy's Offer, when he has offered a heavier chest. Multiplies every drop
+   *  chance below (capped), and the cash-out rolls against the very same number. */
+  oddsMult?: number
 }): ChestOdd[] {
   const { depth, hardcore, pressure, ownedItems, ownedSkins, davyForge } = opts
   const payDepth = Math.min(depth, GAUNTLET_REWARD_DEPTH_CAP)
   const tier = chestForDepth(payDepth).tier
-  const cannon = chestCannonDropChance(payDepth)
-  const skin = chestSkinDropChance(payDepth)
+  const m = (c: number) => Math.min(CHEST_ODDS_CAP, c * (opts.oddsMult ?? 1))
+  const cannon = m(chestCannonDropChance(payDepth))
+  const skin = m(chestSkinDropChance(payDepth))
   const out: ChestOdd[] = []
 
   // The two Davy cannons roll INDEPENDENTLY, and stop once you have forged the Grand.
@@ -731,7 +736,7 @@ export function chestOdds(opts: {
   }
   if (hardcore && !ownedSkins.includes(PRESSURE_SKIN_ID)) {
     const c = pressureSkinDropChance(pressure, payDepth)
-    if (c > 0) out.push({ id: PRESSURE_SKIN_ID, name: 'Pitch Black Hull', kind: 'skin', chance: c })
+    if (c > 0) out.push({ id: PRESSURE_SKIN_ID, name: 'Pitch Black Hull', kind: 'skin', chance: m(c) })
   }
   return out
 }
