@@ -2275,6 +2275,66 @@ export default function GauntletGame(props: GauntletGameProps) {
             </div>
           )}
 
+          {/* DAVY'S TERMS — what they are paying you AT THIS DEPTH. The bonus
+              ramps in, so a board worth x3.25 deep can be paying almost nothing
+              here. That gap is the whole dive-or-bank argument, so it belongs on
+              the screen where the player makes that call. */}
+          {hardcoreRun && pressure > 0 && (() => {
+            const payDepthNow = Math.min(cleared, GAUNTLET_REWARD_DEPTH_CAP)
+            const multNow  = pressureGemMult(pressure, payDepthNow)
+            const multFull = pressureGemMult(pressure, PRESSURE_DEPTH_FULL)
+            const atFull   = multNow >= multFull - 0.001
+            const signedList = GAUNTLET_TERMS.filter(t => (signedTerms[t.id] ?? 0) >= 1)
+            return (
+              <div style={{ marginTop: 12, padding: '0.9rem 0.95rem', borderRadius: 16, textAlign: 'left',
+                background: `radial-gradient(ellipse at 50% 0%, ${GOLD}16 0%, rgba(8,13,22,0.6) 76%)`,
+                border: `1px solid ${GOLD}3a` }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+                  <p className="font-karla font-800 uppercase tracking-[0.2em]" style={{ fontSize: '0.56rem', color: `${GOLD}cc` }}>
+                    Davy&rsquo;s Terms
+                  </p>
+                  <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#c48a8a' }}>
+                    {pressure} Pressure
+                  </p>
+                </div>
+
+                {/* The live number, and the one it becomes if you keep going. */}
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, marginTop: 8 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <p className="font-cinzel font-800" style={{ fontSize: '1.75rem', color: atFull ? GOLD : '#e8dfc8', lineHeight: 1, textShadow: atFull ? `0 0 16px ${GOLD}66` : 'none' }}>
+                      ×{multNow.toFixed(2)}
+                    </p>
+                    <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.5rem', color: '#8a8578', marginTop: 4 }}>
+                      Blood Gems if you bank now
+                    </p>
+                  </div>
+                  {!atFull && (
+                    <p className="font-karla font-600" style={{ flex: 1, textAlign: 'right', fontSize: '0.7rem', color: `${GOLD}cc`, lineHeight: 1.35 }}>
+                      Reaches <strong style={{ color: GOLD }}>×{multFull.toFixed(2)}</strong> at depth {PRESSURE_DEPTH_FULL}
+                    </p>
+                  )}
+                </div>
+
+                {/* What you are actually carrying, so it is never a mystery. */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 9 }}>
+                  {signedList.map(t => {
+                    const tier = Math.min(signedTerms[t.id], t.tiers.length)
+                    const accent = TERM_GROUP_META[t.group].accent
+                    return (
+                      <span key={t.id} className="font-karla font-700"
+                        style={{ fontSize: '0.58rem', color: accent, background: `${accent}16`, border: `1px solid ${accent}55`, borderRadius: 999, padding: '0.16rem 0.45rem' }}>
+                        {t.name}{t.tiers.length > 1 ? ` ${['', 'I', 'II', 'III'][tier]}` : ''}
+                      </span>
+                    )
+                  })}
+                </div>
+                <p className="font-karla" style={{ fontSize: '0.64rem', color: '#7a746a', marginTop: 7, lineHeight: 1.35 }}>
+                  Sink and every gem of this is lost. You only collect by cashing out alive.
+                </p>
+              </div>
+            )
+          })()}
+
           {/* The fork — bank or push, presented together as one clear decision.
               No Second Thoughts (a signed Term) takes the bank away except on a
               breather that follows a BOSS kill: the mode's safety valve, gone. */}
@@ -3244,6 +3304,16 @@ function GauntletReward({ r, recap, onBack }: { r: RewardOk; recap: { shipsSunk:
             <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#9a948a', marginTop: 5 }}>
               Hauled up from depth {r.depth}{r.chest.potMult > 1 ? ` · ×${r.chest.potMult} haul` : ''}
             </p>
+            {/* You came back up under Davy's terms. Say what they were, and what
+                they turned your Blood Gems into. */}
+            {r.runPressure > 0 && (
+              <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: GOLD, marginTop: 4 }}>
+                You came up under Davy&rsquo;s terms at {r.runPressure} Pressure.{' '}
+                {r.gemMult > 1
+                  ? <>Blood Gems ×{r.gemMult.toFixed(2)}</>
+                  : <span style={{ color: '#8a8578' }}>Too shallow to earn the bonus.</span>}
+              </p>
+            )}
             <button onClick={open} disabled={opening} className="font-cinzel font-800 uppercase tracking-[0.08em] tap"
               style={{ marginTop: 24, width: '100%', padding: '1.05rem', borderRadius: 14, fontSize: '1.05rem', color: GOLD, background: `linear-gradient(180deg, ${GOLD}26, ${GOLD}0f)`, border: `1px solid ${GOLD}66`, cursor: opening ? 'default' : 'pointer', opacity: opening ? 0.55 : 1, boxShadow: `0 0 20px ${GOLD}1f` }}>
               {opening ? 'Prising It Open…' : 'Crack It Open'}
