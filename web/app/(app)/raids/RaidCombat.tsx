@@ -2360,14 +2360,16 @@ export default function RaidCombat({
         // "guaranteed crit" often compressed toward a normal hit and let Blitz's
         // barrage out-damage it. A fixed crit amount keeps Leviathan the
         // reliable heavy hitter it's meant to be. × the milestone's dmgMult.
-        const { critMax } = raidDamageProfile(totalPower, shipMinDamage)
+        // mods.damagePct folds in here too — the salvo used to miss it entirely.
+        const { critMax } = raidDamageProfile(totalPower, shipMinDamage, mods.damagePct)
         let dmg = Math.floor(critMax * lv.dmgMult)
         // Made for BIG prey: a bonus vs bosses/elites, a HEAVY penalty vs a
         // regular hull. The anti-big-target identity (Blitz is the swarm).
         const bigGame = isBoss || isElite
         if (bigGame && (lv.bossBonusPct ?? 0) > 0)        dmg = Math.floor(dmg * (1 + lv.bossBonusPct!))
         else if (!bigGame && (lv.mobPenaltyPct ?? 0) > 0) dmg = Math.floor(dmg * (1 - lv.mobPenaltyPct!))
-        dmg = Math.max(1, dmg)
+        // ...and then everything the build actually is.
+        dmg = Math.max(1, Math.floor(dmg * abilityDamageMult(bigGame)))
         noteCheckResponse('burst')
         // Big-knock FX: a heavy muzzle flash, a beat as the shell crosses, then
         // a massive hull impact + full screen heave landing WITH the damage.
@@ -2407,10 +2409,11 @@ export default function RaidCombat({
         const frMaxHp = Math.max(1, enemyHpMaxRef.current)
         let frSimHp = enemyHpRef.current
         const shotDmgs: number[] = []
+        const bzBuild = abilityDamageMult(isBoss || isElite)   // the build, applied per shot
         for (let s = 0; s < shots; s++) {
           const hpFrac = Math.max(0, Math.min(1, frSimHp / frMaxHp))
           const frenzyMult = 1 + bz.frenzyMaxPct * (1 - hpFrac)
-          const dmg = Math.max(1, Math.floor(rollShotDamage(shotResult, shipMinDamage, totalPower) * bz.shotDmgMult * frenzyMult))
+          const dmg = Math.max(1, Math.floor(rollShotDamage(shotResult, shipMinDamage, totalPower, mods.damagePct) * bz.shotDmgMult * frenzyMult * bzBuild))
           shotDmgs.push(dmg)
           frSimHp = Math.max(0, frSimHp - dmg)
         }
@@ -2528,6 +2531,46 @@ export default function RaidCombat({
   // detection / sink animation / onEnemyDefeated dispatch, mirroring the
   // step-playback path inside resolveTurn so kills landed via an ability
   // run the same outro as kills landed via cannon fire.
+  // ── ABILITY DAMAGE MUST SCALE WITH THE BUILD ────────────────────────────────
+  // Crew ability damage used to be applied RAW: computed straight off totalPower and
+  // shipMinDamage, then handed to applyAbilityDamage, skipping the entire multiplier
+  // chain a normal shot takes. A normal crit grew with every boon, item, class pick,
+  // Renown point and enemy status. Doby's salvo and Mako's barrage did not. They were
+  // FROZEN at base stats.
+  //
+  // Measured against a normal crit for an endgame captain, Doby's legendary boss salvo
+  // went 2.22x -> 1.11x -> 0.74x -> 0.55x as boons stacked. Deep in a Gauntlet run, the
+  // boss-killer legendary did HALF of what simply firing the cannon would have done.
+  // Their milestone numbers were never wrong; they were being applied to a base that
+  // never moved.
+  //
+  // This is the same chain as a normal HIT, minus everything ACTION-specific. An
+  // ability is neither a fire nor a volley, so volley/fire mults, the volley ramp and
+  // the crit-streak chain have no business here.
+  function abilityDamageMult(againstBig: boolean): number {
+    // The same live item set a shot sees: everything equipped MINUS whatever the boss
+    // repossessed at fight start (the Quartermaster switches a piece of your kit off).
+    const items = getActiveEffects(equippedRaidItems.filter(id => id !== repossessedItemRef.current))
+    const mul = (t: string) => items.filter(e => e.type === t).reduce((a, e) => a * e.value, 1)
+
+    const bossMult    = againstBig ? mul('boss_damage_mult') : 1
+    const nonbossMult = againstBig ? 1 : mul('nonboss_damage_mult')
+    const rampPerTurn = items.filter(e => e.type === 'ramp_damage_per_turn').reduce((a, e) => a + e.value, 0)
+    const rampMult    = 1 + Math.min(DAMAGE_RAMP_CAP, rampPerTurn * Math.max(0, turnRef.current - 1))
+    const tideBossMult = againstBig ? tide.bossDmgMult : 1
+    const lowHpMult   = tide.lowHpDamage > 0
+      ? 1 + tide.lowHpDamage * Math.max(0, 1 - playerHpRef.current / playerHpMax)
+      : 1
+    const frozenMult  = enemyFrozenRef.current > 0 && tide.frozenDmgMult > 1 ? tide.frozenDmgMult : 1
+    const vengeanceMult = vengeanceDmgBuffRef.current > 0 ? 1 + vengeanceDmgBuffRef.current : 1
+    // What YOU deal (weaken/enrage) x what the ENEMY takes (feeble/fortify).
+    const statusOutMult = statusMods(playerStatusesRef.current).dmgDealtMult
+                        * statusMods(enemyStatusesRef.current).dmgTakenMult
+
+    return bossMult * nonbossMult * rampMult * classDamageMult
+         * tide.dmgMult * tideBossMult * lowHpMult * frozenMult * vengeanceMult * statusOutMult
+  }
+
   function applyAbilityDamage(rawDmg: number, logLine: string, hitKind: 'hit' | 'crit', skipSplat = false, splatColor?: string) {
     // The Last Wall (aegis) drinks crew direct damage whole too — but the blow
     // still chips the wall's endurance, so a spent ability isn't a total waste.

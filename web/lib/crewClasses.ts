@@ -331,8 +331,15 @@ export const NAVIGATOR: ClassDef<NavigatorMilestone> = {
     { unlockLevel: 10,  oneChargeChance: 0.40, twoChargeChance: 0,    desc: '40% chance to gain +1 charge.' },
     { unlockLevel: 25,  oneChargeChance: 0.60, twoChargeChance: 0,    desc: '60% chance to gain +1 charge.' },
     { unlockLevel: 40,  oneChargeChance: 0.80, twoChargeChance: 0,    desc: '80% chance to gain +1 charge.' },
-    { unlockLevel: 75,  oneChargeChance: 1.00, twoChargeChance: 0.30, desc: 'Always gain +1 charge. 30% chance for +2.' },
-    { unlockLevel: 100, oneChargeChance: 1.00, twoChargeChance: 1.00, desc: 'Always gain +2 charges.' },
+    // NERFED. A GUARANTEED +2 was a legendary-grade payout on a base class, and it
+    // scaled better than the legendaries did: charges convert into normal shots, and
+    // normal shots take every boon, item and class multiplier, so Navigator held a
+    // flat 1.33x of a crit shot at ANY power level while Doby and Mako sat frozen. The
+    // legendaries are fixed now (see abilityDamageMult in RaidCombat), and Navigator
+    // goes back to being a strong TEMPO class rather than a guaranteed two-thirds of a
+    // volley every raid.
+    { unlockLevel: 75,  oneChargeChance: 1.00, twoChargeChance: 0.20, desc: 'Always gain +1 charge. 20% chance for +2.' },
+    { unlockLevel: 100, oneChargeChance: 1.00, twoChargeChance: 0.50, desc: 'Always gain +1 charge. 50% chance for +2.' },
   ],
 }
 
