@@ -97,7 +97,7 @@ export default function GauntletTermsPanel({
               {pressure}
             </motion.span>
           </Readout>
-          <Readout label="Blood Gems" accent={GOLD}>
+          <Readout label={`Blood Gems at depth ${PRESSURE_DEPTH_FULL}+`} accent={GOLD}>
             <motion.span key={fullMult} initial={{ scale: 1.35 }} animate={{ scale: 1 }}
               transition={{ type: 'spring', stiffness: 460, damping: 17 }}
               className="font-cinzel font-800" style={{ fontSize: '2.1rem', color: pressure > 0 ? GOLD : '#6a5a5a', lineHeight: 1, textShadow: pressure > 0 ? `0 0 18px ${GOLD}55` : 'none' }}>
@@ -115,15 +115,27 @@ export default function GauntletTermsPanel({
           />
         </div>
 
-        {/* The two rules that bite people. Said up front, not learned the hard way. */}
-        <p className="font-karla" style={{ fontSize: '0.8rem', color: 'rgba(240,220,220,0.72)', lineHeight: 1.5, marginTop: 10 }}>
-          Sign his terms to make the dive harder. Pressure pays out more <strong style={{ color: GOLD }}>Blood Gems</strong>, and nothing else.
-          You only collect if you <strong style={{ color: '#fca5a5' }}>cash out alive</strong>. Sink, and you get nothing.
-        </p>
-        <p className="font-karla" style={{ fontSize: '0.76rem', color: 'rgba(240,220,220,0.5)', lineHeight: 1.45, marginTop: 5 }}>
-          The bonus only pays deep. Nothing before depth {PRESSURE_DEPTH_FLOOR}, full value from depth {PRESSURE_DEPTH_FULL}.
-          {pressure >= PRESSURE_CAP ? ` Past ${PRESSURE_CAP} Pressure the gems stop climbing, and it is all for glory.` : ''}
-        </p>
+        {/* How the whole thing works, in plain steps. A newcomer should be able to
+            read this once and never be surprised by the payout. */}
+        <div style={{ marginTop: 11, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <Step n={1}>
+            Each term you sign makes the run <strong style={{ color: '#fca5a5' }}>harder</strong> and adds <strong style={{ color: '#fca5a5' }}>Pressure</strong>.
+          </Step>
+          <Step n={2}>
+            More Pressure means more <strong style={{ color: GOLD }}>Blood Gems</strong> when you cash out. It changes nothing else. No extra doubloons, no extra XP.
+          </Step>
+          <Step n={3}>
+            You have to <strong style={{ color: '#fca5a5' }}>survive and cash out</strong> to be paid. If you sink, you get nothing at all.
+          </Step>
+          <Step n={4}>
+            The bonus grows the <strong style={{ color: GOLD }}>deeper</strong> you go. It starts paying at depth {PRESSURE_DEPTH_FLOOR} and pays in full from depth {PRESSURE_DEPTH_FULL}.
+          </Step>
+        </div>
+        {pressure >= PRESSURE_CAP && (
+          <p className="font-karla" style={{ fontSize: '0.76rem', color: 'rgba(240,220,220,0.5)', lineHeight: 1.45, marginTop: 7 }}>
+            Past {PRESSURE_CAP} Pressure the gems stop climbing. Anything beyond it is for glory alone.
+          </p>
+        )}
         {pressure >= PRESSURE_SKIN_THRESHOLD && (
           <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
             className="font-karla font-700" style={{ fontSize: '0.78rem', color: GOLD, marginTop: 7 }}>
@@ -282,6 +294,23 @@ export default function GauntletTermsPanel({
       )}
     </div>,
     document.body,
+  )
+}
+
+/* A numbered rule in the header explainer. */
+function Step({ n, children }: { n: number; children: React.ReactNode }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+      <span className="font-cinzel font-800" style={{
+        flexShrink: 0, width: 18, height: 18, borderRadius: '50%', marginTop: 1,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: '0.66rem', color: '#f3d7d7',
+        background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)',
+      }}>{n}</span>
+      <p className="font-karla" style={{ flex: 1, minWidth: 0, fontSize: '0.82rem', color: 'rgba(240,220,220,0.78)', lineHeight: 1.45 }}>
+        {children}
+      </p>
+    </div>
   )
 }
 
