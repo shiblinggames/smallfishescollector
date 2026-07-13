@@ -10,6 +10,9 @@ import { getActiveEffects, dedupeRaidItems } from '@/lib/raidItems'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { navRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { getShipSkin } from '@/lib/shipSkins'
+import { computeRaidMap } from '@/lib/raidMap'
+import { buildClearedSet } from '@/lib/raidProgress'
+import { getRaidConfigById, raidLootIds, ITEM_GRANTS, MAX_CRATE_BASE_DOUBLOONS } from '@/lib/raidRegistry'
 import { bonusChargeSlots, gauntletRepairHealMult } from '@/lib/gauntletUpgrades'
 import { getShipAugment, MANOWAR_TIER, type ShipAugment } from '@/lib/shipAugments'
 import { settleUltimateBuild } from '@/lib/ultimateBuild'
@@ -248,46 +251,6 @@ export async function repairShip(): Promise<
   return { newDoubloonTotal: newTotal }
 }
 
-// Item IDs and what they grant
-const ITEM_GRANTS: Record<string, { doubloons?: number; gems?: number; shipSkin?: string; raidItem?: string }> = {
-  doubloons_300:   { doubloons: 300 },
-  doubloons_600:   { doubloons: 600 },
-  doubloons_800:   { doubloons: 800 },
-  doubloons_1200:  { doubloons: 1200 },
-  doubloons_1500:  { doubloons: 1500 },
-  gems_25:         { gems: 25 },
-  gems_50:         { gems: 50 },
-  // Legacy "pack" loot ids now pay gems (packs are retired): 100 gems per pack.
-  pack:            { gems: 100 },
-  pack_2:          { gems: 200 },
-  corsair_cannon:          { raidItem: 'corsair_cannon' },
-  corsair_prime_cannon:    { raidItem: 'corsair_prime_cannon' },
-  krusts_carapace:         { raidItem: 'krusts_carapace' },
-  captains_carapace:       { raidItem: 'captains_carapace' },
-  cartographers_astrolabe: { raidItem: 'cartographers_astrolabe' },
-  captains_astrolabe:      { raidItem: 'captains_astrolabe' },
-  spets_primer:            { raidItem: 'spets_primer' },
-  tollmasters_primer:      { raidItem: 'tollmasters_primer' },
-  tell_tale_glass:         { raidItem: 'tell_tale_glass' },
-  admirals_eye:            { raidItem: 'admirals_eye' },
-  chain_shot:              { raidItem: 'chain_shot' },
-  dons_signet:             { raidItem: 'dons_signet' },
-  war_drum:                { raidItem: 'war_drum' },
-  // The six either/or Cache items. They had NO grants until now because the Cache
-  // node handed them out directly and they had never been raid loot. The
-  // Quartermaster's Ghost drops them, and without an entry here the roll would
-  // show the player a crate and silently give them nothing.
-  quartermasters_anchor:   { raidItem: 'quartermasters_anchor' },
-  navigators_compass:      { raidItem: 'navigators_compass' },
-  gunners_sight:           { raidItem: 'gunners_sight' },
-  reinforced_hull:         { raidItem: 'reinforced_hull' },
-  incendiary_cannonball:   { raidItem: 'incendiary_cannonball' },
-  frozen_cannonball:       { raidItem: 'frozen_cannonball' },
-  thunder_drum:            { raidItem: 'thunder_drum' },
-  finndicate_hull:         { shipSkin:  'finndicate_hull' },
-  chartmaker_hull:         { shipSkin:  'chartmaker_hull' },
-  coffers_hull:            { shipSkin:  'coffers_hull' },
-}
 
 /** Record a raid clear the MOMENT the boss dies — independent of the
  *  loot-claim flow. Previously the raid_completions insert was bundled
@@ -329,6 +292,23 @@ export async function claimRaidLoot(
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { newShipSkins: [], newDoubloonTotal: 0, newRaidItems: [] }
+
+  // ── WHAT THIS FUNCTION CAN AND CANNOT DO ───────────────────────────────────
+  // Raid combat runs entirely on the client, so the server can never PROVE a win
+  // happened. What it can do is make a forged claim worth no more than a real one.
+  // This is a server action, i.e. an HTTP endpoint any logged-in user can POST to,
+  // so every argument below is hostile input until checked.
+  //
+  // The three things it now refuses to take on faith:
+  //   1. the raid itself  — must be a real config, and one this player can REACH
+  //   2. the item rolled  — must be in THAT raid's own loot table, and only one
+  //   3. the doubloons    — clamped to what a crate can honestly be worth
+  //
+  // Net effect: the worst a crafted request can do is hand you a drop from a raid
+  // you were already allowed to farm. That is a shortcut past a fight, not a way to
+  // mint currency or pull items out of raids you have never even unlocked.
+  const config = getRaidConfigById(raidId)
+  if (!config) return { newShipSkins: [], newDoubloonTotal: 0, newRaidItems: [] }
   // Challenge-mode boss-clear badge unlocks live in RaidGame's
   // handleEnemyDefeated (the moment the boss sinks) so the celebration
   // pops as part of the kill beat, not after the loot crate is claimed.
@@ -338,16 +318,41 @@ export async function claimRaidLoot(
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, gems, ship_skins, equipped_ship_skin, raid_items, ship_classes')
+    .select('doubloons, gems, ship_skins, equipped_ship_skin, raid_items, ship_classes, has_completed_practice_raid, raid_node_progress, is_admin, expedition_xp')
     .eq('id', user.id)
     .single()
+  if (!profile) return { newShipSkins: [], newDoubloonTotal: 0, newRaidItems: [] }
+
+  // 1. REACHABLE? You may only claim a crate from a raid whose map node is actually
+  //    open to you. This is the check that protects the Quartermaster's Ghost: his
+  //    six Cache items gate forge recipes, and without this anyone could POST for
+  //    them without ever beating the Quartermaster, or the game.
+  const cleared = await buildClearedSet(admin, user.id, profile)
+  const navLevel = getLevelFromXP((profile.expedition_xp as number | null) ?? 0)
+  const nodeView = computeRaidMap(cleared, profile.doubloons ?? 0, navLevel, profile.is_admin === true)
+    .find(v => v.node.raidId === raidId)
+  if (!nodeView || nodeView.status === 'locked') {
+    return { newShipSkins: [], newDoubloonTotal: 0, newRaidItems: [] }
+  }
+
+  // 2. FROM THIS RAID? The ids used to be looked up in the global ITEM_GRANTS map,
+  //    so any raid could claim any item in the game. Now a crate can only contain
+  //    what that raid's own table lists, and only ONE of them: the client rolls a
+  //    single index (rollLootIndex), so a claim of two is already a lie.
+  const table = raidLootIds(raidId)
+  const safeItemIds = rolledItemIds.filter(id => table.has(id)).slice(0, 1)
+
+  // 3. WORTH THAT MUCH? The exact figure can't be recomputed (tides are rolled
+  //    mid-run on the client), but it can be bounded. See MAX_CRATE_BASE_DOUBLOONS.
+  const claimedBase = Number.isFinite(baseDoubloons) ? Math.floor(baseDoubloons) : 0
+  const safeBaseDoubloons = Math.max(0, Math.min(claimedBase, MAX_CRATE_BASE_DOUBLOONS))
 
   // Helmsman + future doubloon-mult class picks scale the crate
   // doubloons too, in addition to the per-kill gold (which scales via
   // awardRaidKill). Same multiplier read from the same place.
   const classPicks = (profile?.ship_classes as Record<string, string> | null) ?? {}
   const classDoubloonMult = aggregateShipClasses(classPicks).doubloonMult
-  const scaledBaseDoubloons = Math.round(baseDoubloons * classDoubloonMult)
+  const scaledBaseDoubloons = Math.round(safeBaseDoubloons * classDoubloonMult)
   let doubloons       = (profile?.doubloons ?? 0) + scaledBaseDoubloons
   let gems            = profile?.gems ?? 0
   const ownedSkins    = (profile?.ship_skins as string[] | null) ?? []
@@ -356,7 +361,7 @@ export async function claimRaidLoot(
   const ownedRaidItems = (profile?.raid_items as string[] | null) ?? []
   const newRaidItems   = [...ownedRaidItems]
 
-  for (const id of rolledItemIds) {
+  for (const id of safeItemIds) {
     const grant = ITEM_GRANTS[id]
     if (!grant) continue
     if (grant.doubloons) doubloons += grant.doubloons

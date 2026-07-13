@@ -8,38 +8,9 @@ import { GAUNTLET_LIVE, GAUNTLET_UNLOCK_NODE } from '@/lib/gauntlet'
 import { raidDamageProfile } from '@/lib/expeditions'
 import { getActiveEffects, exclusiveSiblingOf, effectiveOwnedItems } from '@/lib/raidItems'
 import { getRaidPlayerStats } from '@/app/(app)/raids/actions'
+import { buildClearedSet } from '@/lib/raidProgress'
 
 type Admin = ReturnType<typeof createAdminClient>
-
-// Combat clears are DERIVED from existing data (no raid-engine changes):
-//  - 'skirmish'   = profiles.has_completed_practice_raid
-//  - raid nodes   = a raid_completions row whose raid_id matches the
-//                   node's RaidNode.raidId (legacy Pete rows backfilled
-//                   to 'corsairs_reckoning' by the migration)
-// One-time nodes (milestone/shop) persist in raid_node_progress.cleared[].
-async function buildClearedSet(
-  admin: Admin,
-  userId: string,
-  profile: { has_completed_practice_raid?: boolean | null; raid_node_progress?: unknown },
-): Promise<Set<string>> {
-  const cleared = new Set<string>()
-  if (profile.has_completed_practice_raid) cleared.add('skirmish')
-
-  const { data: comps } = await admin
-    .from('raid_completions')
-    .select('raid_id')
-    .eq('user_id', userId)
-  const doneRaidIds = new Set((comps ?? []).map(r => (r as { raid_id: string }).raid_id))
-  for (const node of RAID_MAP) {
-    if (node.type === 'raid' && node.raidId && doneRaidIds.has(node.raidId)) {
-      cleared.add(node.id)
-    }
-  }
-
-  const prog = (profile.raid_node_progress as { cleared?: string[] } | null) ?? {}
-  for (const id of prog.cleared ?? []) cleared.add(id)
-  return cleared
-}
 
 /** Per-raid social records surfaced in the raid node sheet so players see
  *  the fastest clear, their own personal best, and how many other captains
