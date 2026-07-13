@@ -245,7 +245,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'chain_shot',
     name: 'Chain-Shot Rack',
     description: "Landed hits have a 25% chance to fire a spread that tears both rigging and plating. WEAKENED: it deals 20% less damage. CORRODED: its barrier takes 30% more damage. Both for 2 rounds. Sal Brackwater's own answer, turned back on the Finndicate.",
-    image: null,  // TODO: /chainshot.png at the art pass
+    image: '/chainshotrack.png',
     emoji: '⛓️',
     rarity: 'epic',
     effects: [
@@ -266,7 +266,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'brackwater_rack',
     name: 'Brackwater Rack',
     description: "Landed hits have a 35% chance to fire a spread of scrap iron. WEAKENED: it deals 20% less damage. CORRODED: its barrier takes 30% more damage. FEEBLE: it takes 20% more damage. All three, for 2 rounds. Sal's own rack, hauled off his wreck and turned around.",
-    image: null,  // TODO: /brackwaterrack.png at the art pass
+    image: '/brackwaterrack.png',
     emoji: '⛓️',
     rarity: 'legendary',
     effects: [
