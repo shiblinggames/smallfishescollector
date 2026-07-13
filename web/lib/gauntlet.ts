@@ -761,8 +761,14 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
     name: 'Racing Tide',
     flavor: 'A fast current rips down the deck. The wheel will not hold still.',
     tiers: [
-      { desc: 'Your aim needle sweeps faster', detail: 'Your aiming needle whips back and forth far quicker for the rest of the run, so the window to lock a clean shot is much tighter.', effects: [{ kind: 'aimSpeedMult', mult: 1.6 }] },
-      { desc: 'Your aim needle tears across the bar', detail: 'The current rips harder. Your needle blurs back and forth, leaving a razor-thin window to lock anything clean.', effects: [{ kind: 'aimSpeedMult', mult: 2.2 }] },
+      // Retuned 2026-07-12 (was 1.6 / 2.2). At 2.2x the needle crossed the crit
+      // band in ~30ms — under two frames, below human tap precision — so crits
+      // stopped being skill and became a coin flip. It also MULTIPLIES with the
+      // Drowned Armory's heavy-shot boon (1.15), which pushed the ceiling to
+      // 2.53x. These numbers keep it the "your aim goes to hell" curse while
+      // leaving a crit window a player can actually hit.
+      { desc: 'Your aim needle sweeps faster', detail: 'Your aiming needle whips back and forth quicker for the rest of the run, so the window to lock a clean shot is tighter.', effects: [{ kind: 'aimSpeedMult', mult: 1.35 }] },
+      { desc: 'Your aim needle races across the bar', detail: 'The current rips harder. Your needle tears back and forth, and a clean lock takes real timing.', effects: [{ kind: 'aimSpeedMult', mult: 1.7 }] },
     ],
   },
   {
