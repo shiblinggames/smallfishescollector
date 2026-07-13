@@ -1762,40 +1762,6 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    // The Quartermaster's Ghost — the FARM node, and the answer to a dead end the
-    // forge created. Every Cache made you pick one item and leave the other, and
-    // the forge is DESTRUCTIVE, so a component fused into a cannon is gone from
-    // raid_items for good. Between those two rules a player could end up unable to
-    // ever build a recipe. He fixes both: he still holds everything you left AND
-    // everything you spent, and he can be run as many times as you like.
-    // Boss-only, re-runnable, gated on having beaten him alive in his challenge.
-    id: 'the_quartermasters_ghost',   type: 'raid',
-    label: "The Quartermaster's Ghost",
-    flavor: "The gun-deck is exactly as he left it, and so is he. Dead men keep better books than living ones, and he never did stop counting what you owe.",
-    bridge: "The ghost keeps his counter open. Whatever you left in the Caches, and whatever you have melted down since, he still has it, and he will hand it over as many times as you can put him down.",
-    requiresNode: 'throne_heading',
-    requiresClearedNode: 'the_quartermaster_challenge',
-    sideBranch: { parentId: 'throne_heading' },
-    // He is a GOAL, not a wall. A captain who has not yet beaten the Quartermaster's
-    // challenge should still be able to open him up and see the six Cache items he is
-    // holding, because that is the entire reason to go and beat it. Sealing him shut
-    // would hide the carrot behind the stick.
-    previewWhenLocked: true,
-    adminOnly: true,
-    route: '/raids/ghost',
-    raidId: THE_QUARTERMASTERS_GHOST.raidId,
-    image: THE_QUARTERMASTERS_GHOST.enemies.ghost.portrait,
-    detail: {
-      description:
-        "Every Cache made you take one item and leave the other. Anything you forged is gone too, burned into the fusion. The ghost still has all of it, and he does not merely hold it, he FIGHTS with it: your fire, your ice, your sights, your plating, your bearings, all turned back on you at once. You cannot sink him, because there is nothing left to sink. You prise his fingers off one thing at a time. Four bars, and three of them open with a move you have to answer with your crew: he bolts your plating onto his own ribs, he lights the fire-shot you passed over, and he calls the last shot down your own glass. Beat him and he hands back one piece of what he is carrying, and he does it again every time you come back. He only ever offers what you do not already have, so every item you take is one he can never use on you again. He will not deal until you have beaten him alive, in Challenge: The Quartermaster.",
-      enemies: ["The Quartermaster's Ghost"],
-      drops: lootDrops(THE_QUARTERMASTERS_GHOST.loot),
-      clearReward: clearPayout(THE_QUARTERMASTERS_GHOST),
-      dropsNote: 'Run him as often as you like. Each clear rolls one crate, and the Cache items you already hold drop out of the pool, so he only ever offers what you are missing. He fights with the six he is holding, so what he throws at you is exactly what is in his hold.',
-      summary: "The Quartermaster died still holding every Cache item you passed up, and he collects the ones you forge away too. He hands one back for every time you put him down.",
-    },
-  },
-  {
     // Cargo Shuffle #1 — Sokoban in the powder hold before Sal Brackwater's
     // blockade. Three escalating rooms; every grid is validated by
     // web/verify-cargo.mjs (min moves 22 / 44 / 69 vs budgets 30 / 58 / 90).
@@ -1888,6 +1854,44 @@ export const RAID_MAP: RaidNode[] = [
       dropsNote: 'No cost and no fight. Bring the right crew and the line parts.',
       ctaLabel: 'Stand For Inspection →',
       summary: "The don's clerk counted your crew and found hands worth letting through.",
+    },
+  },
+  {
+    // The Quartermaster's Ghost — the FARM node, and the answer to a dead end the
+    // forge created. Every Cache made you pick one item and leave the other, and
+    // the forge is DESTRUCTIVE, so a component fused into a cannon is gone from
+    // raid_items for good. Between those two rules a player could end up unable to
+    // ever build a recipe. He fixes both: he still holds everything you left AND
+    // everything you spent, and he can be run as many times as you like.
+    // Boss-only, re-runnable, gated on having beaten him alive in his challenge.
+    id: 'the_quartermasters_ghost',   type: 'raid',
+    label: "The Quartermaster's Ghost",
+    flavor: "The gun-deck is exactly as he left it, and so is he. Dead men keep better books than living ones, and he never did stop counting what you owe.",
+    bridge: "The ghost keeps his counter open. Whatever you left in the Caches, and whatever you have melted down since, he still has it, and he will hand it over as many times as you can put him down.",
+    // He opens once the CLERK has passed you. The muster is where the game finally
+    // says out loud that checks are answered with crew abilities, and the Ghost is
+    // three more checks in a row. Hanging him off the inspection puts him exactly
+    // where a captain has just been told what he is for.
+    requiresNode: 'blockade_muster',
+    requiresClearedNode: 'the_quartermaster_challenge',
+    sideBranch: { parentId: 'blockade_muster' },
+    // He is a GOAL, not a wall. A captain who has not yet beaten the Quartermaster's
+    // challenge should still be able to open him up and see the six Cache items he is
+    // holding, because that is the entire reason to go and beat it. Sealing him shut
+    // would hide the carrot behind the stick.
+    previewWhenLocked: true,
+    adminOnly: true,
+    route: '/raids/ghost',
+    raidId: THE_QUARTERMASTERS_GHOST.raidId,
+    image: THE_QUARTERMASTERS_GHOST.enemies.ghost.portrait,
+    detail: {
+      description:
+        "Every Cache made you take one item and leave the other. Anything you forged is gone too, burned into the fusion. The ghost still has all of it, and he does not merely hold it, he FIGHTS with it: your fire, your ice, your sights, your plating, your bearings, all turned back on you at once. You cannot sink him, because there is nothing left to sink. You prise his fingers off one thing at a time. Four bars, and three of them open with a move you have to answer with your crew: he bolts your plating onto his own ribs, he lights the fire-shot you passed over, and he calls the last shot down your own glass. Beat him and he hands back one piece of what he is carrying, and he does it again every time you come back. He only ever offers what you do not already have, so every item you take is one he can never use on you again. He will not deal until you have beaten him alive, in Challenge: The Quartermaster.",
+      enemies: ["The Quartermaster's Ghost"],
+      drops: lootDrops(THE_QUARTERMASTERS_GHOST.loot),
+      clearReward: clearPayout(THE_QUARTERMASTERS_GHOST),
+      dropsNote: 'Run him as often as you like. Each clear rolls one crate, and the Cache items you already hold drop out of the pool, so he only ever offers what you are missing. He fights with the six he is holding, so what he throws at you is exactly what is in his hold.',
+      summary: "The Quartermaster died still holding every Cache item you passed up, and he collects the ones you forge away too. He hands one back for every time you put him down.",
     },
   },
   {
