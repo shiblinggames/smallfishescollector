@@ -94,14 +94,14 @@ export const GAUNTLET_TERMS: GauntletTerm[] = [
   },
   {
     id: 'davys_court', name: "Davy's Court", group: 'opposition',
-    flavor: 'He calls his captains up to meet you. All of them.',
+    flavor: 'He does not send more captains. He sends better ones.',
     tiers: [
-      { desc: 'Bosses come more often',
-        detail: 'Boss fights appear more frequently. Worth knowing: bosses pay TRIPLE into the pot, so this raises your reward as well as your risk.',
-        pressure: 2 },
-      { desc: 'Bosses come constantly',
-        detail: 'Boss fights appear far more frequently and you can never go long without one. They pay triple into the pot, so this is the one term that pays you back in coin as well as gems.',
-        pressure: 4 },
+      { desc: 'Bosses are tougher and hit harder',
+        detail: 'Every boss you meet comes with noticeably more hull and heavier guns. Bosses appear no more often than usual, they are simply worse to meet.',
+        pressure: 3 },
+      { desc: 'Bosses are far tougher and hit far harder',
+        detail: 'Every boss carries a great deal more hull and lands much heavier blows. A boss becomes the thing most likely to end your run.',
+        pressure: 5 },
     ],
   },
 
@@ -185,21 +185,21 @@ export const GAUNTLET_TERMS: GauntletTerm[] = [
     tiers: [
       { desc: 'Curses come more often',
         detail: 'The Locker curses you more frequently than usual. The curses themselves are unchanged, there are simply more of them.',
-        pressure: 3 },
+        pressure: 4 },
       { desc: 'Curses come more often, and start at their WORST tier',
         detail: 'Curses arrive more frequently AND every one lands at its second, nastier tier straight away instead of building up to it.',
-        pressure: 5 },
+        pressure: 6 },
     ],
   },
   {
     id: 'deep_draft', name: 'Deep Draft', group: 'safety',
-    flavor: 'You go down heavy, and you go down holed.',
+    flavor: 'She rides low the whole way down, and she never rides high again.',
     tiers: [
-      { desc: 'Begin the dive at 85% hull',
-        detail: 'You start the run already damaged, at 85% of your maximum hull, and you never get that opening buffer back.',
+      { desc: 'Your MAXIMUM hull is cut to 85%',
+        detail: 'Your maximum hull is 15% smaller for the entire run. This is not damage you can patch. Every heal, every repair, tops you up to the smaller number.',
         pressure: 2 },
-      { desc: 'Begin the dive at 70% hull',
-        detail: 'You start the run at 70% of your maximum hull. The first few fights are dangerous immediately.',
+      { desc: 'Your MAXIMUM hull is cut to 70%',
+        detail: 'Your maximum hull is 30% smaller for the entire run. Nothing restores it. You fight the whole descent on a permanently smaller ship.',
         pressure: 4 },
     ],
   },
@@ -208,8 +208,8 @@ export const GAUNTLET_TERMS: GauntletTerm[] = [
     flavor: 'The anchor does not hold. Not this time.',
     tiers: [
       { desc: 'Lethal saves do not fire',
-        detail: 'Any effect that would normally save you from a killing blow (an Anchor from your equipped items) does nothing. The first blow that would sink you, sinks you.',
-        pressure: 3 },
+        detail: 'Any effect that would normally save you from a killing blow (an Anchor from your equipped items) does nothing. The first blow that would sink you, sinks you. If you carry no Anchor, this costs you nothing.',
+        pressure: 2 },
     ],
   },
   {
@@ -226,8 +226,8 @@ export const GAUNTLET_TERMS: GauntletTerm[] = [
     flavor: 'Down you go, and you will meet it when you meet it.',
     tiers: [
       { desc: 'You cannot see what waits below',
-        detail: 'The peek that normally tells you whether a boss or an elite is next is gone. Every dive is blind.',
-        pressure: 1 },
+        detail: 'The Sounding Line normally shows you what the next fight is (a boss, an elite, or open water) while you decide whether to dive on or cash out. It is gone. Every dive is blind, and so is every decision to keep going.',
+        pressure: 2 },
     ],
   },
 ]
@@ -299,10 +299,11 @@ export interface TermEffects {
   /** Extra multipliers on elite hull / damage, ON TOP of the usual elite bump. */
   eliteHpMult: number
   eliteDmgMult: number
-  /** Multiplies the boss spawn chance (and its cap). */
-  bossChanceMult: number
-  /** Lowers the bossless-rounds pity ceiling (forces bosses sooner). */
-  bossPityDelta: number
+  /** Extra multipliers on BOSS hull / damage. Davy's Court makes the bosses you
+   *  meet meaner rather than more frequent — more of them would have partly paid
+   *  you back (bosses feed 3x into the pot and refresh every crew ability). */
+  bossHpMult: number
+  bossDmgMult: number
   /** Chance a boss kill restores crew abilities (1 = always, today's behavior). */
   crewRefreshChance: number
   /** Crew slots removed for the run. */
@@ -321,8 +322,9 @@ export interface TermEffects {
   curseFrequencyMult: number
   /** Curses land straight at tier 2. */
   curseStartsAtWorst: boolean
-  /** Fraction of max hull you begin the run with. */
-  startHpPct: number
+  /** Multiplies your MAXIMUM hull for the whole run. Not damage: the ceiling
+   *  itself is lower, so heals only ever top you up to the smaller number. */
+  maxHpPct: number
   /** Lethal saves (Anchor) are dead. */
   noLethalSaves: boolean
   /** Reprieves never appear. */
@@ -337,8 +339,8 @@ export const NO_TERM_EFFECTS: TermEffects = {
   tripleAffixChance: 0,
   eliteHpMult: 1,
   eliteDmgMult: 1,
-  bossChanceMult: 1,
-  bossPityDelta: 0,
+  bossHpMult: 1,
+  bossDmgMult: 1,
   crewRefreshChance: 1,
   crewSlotsLost: 0,
   boonPicks: 3,
@@ -348,7 +350,7 @@ export const NO_TERM_EFFECTS: TermEffects = {
   chestTierDrop: 0,
   curseFrequencyMult: 1,
   curseStartsAtWorst: false,
-  startHpPct: 1,
+  maxHpPct: 1,
   noLethalSaves: false,
   noReprieves: false,
   noPeek: false,
@@ -381,8 +383,8 @@ export function resolveTerms(signed: SignedTerms | null | undefined): TermEffect
 
   const court = tierOf('davys_court')
   if (court) {
-    e.bossChanceMult = court === 1 ? 1.7 : 2.4
-    e.bossPityDelta  = court === 1 ? 3 : 5
+    e.bossHpMult  = court === 1 ? 1.25 : 1.5
+    e.bossDmgMult = court === 1 ? 1.15 : 1.3
   }
 
   const skel = tierOf('skeleton_crew')
@@ -412,7 +414,7 @@ export function resolveTerms(signed: SignedTerms | null | undefined): TermEffect
   }
 
   const draft = tierOf('deep_draft')
-  if (draft) e.startHpPct = draft === 1 ? 0.85 : 0.70
+  if (draft) e.maxHpPct = draft === 1 ? 0.85 : 0.70
 
   if (tierOf('no_mercy'))      e.noLethalSaves = true
   if (tierOf('no_quarter'))    e.noReprieves   = true

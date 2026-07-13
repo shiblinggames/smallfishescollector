@@ -493,17 +493,18 @@ export function generateFight(state: GauntletRollState, skipOffset = 0, terms: T
   const rewardDepth = state.cleared + 1
   const depth = rewardDepth + skipOffset
 
-  // Boss decision — rising chance, never back-to-back, pity ceiling.
-  // Davy's Court (a signed Term) raises the chance and lowers the pity ceiling.
+  // Boss decision — rising chance, never back-to-back, pity ceiling. Terms never
+  // touch how OFTEN a boss appears (see Davy's Court: more bosses would have
+  // partly paid the player back, since bosses feed 3x into the pot and refresh
+  // every crew ability on the kill). Terms make the boss you meet meaner instead.
   let isBoss = false
-  const bossPity = Math.max(2, BOSS_PITY - terms.bossPityDelta)
   if (depth >= FIRST_BOSS_EARLIEST && !state.prevWasBoss) {
-    if (state.roundsSinceBoss >= bossPity) {
+    if (state.roundsSinceBoss >= BOSS_PITY) {
       isBoss = true
     } else {
       const chance = Math.min(
-        BOSS_CHANCE_CAP * terms.bossChanceMult,
-        (BOSS_CHANCE_BASE + (depth - FIRST_BOSS_EARLIEST) * BOSS_CHANCE_GROWTH) * terms.bossChanceMult,
+        BOSS_CHANCE_CAP,
+        BOSS_CHANCE_BASE + (depth - FIRST_BOSS_EARLIEST) * BOSS_CHANCE_GROWTH,
       )
       isBoss = Math.random() < chance
     }
@@ -514,7 +515,16 @@ export function generateFight(state: GauntletRollState, skipOffset = 0, terms: T
   const paying = rewardDepth <= GAUNTLET_REWARD_DEPTH_CAP
 
   if (isBoss) {
-    const enemy = scaleToCurve(pick(BOSS_POOL), depth, true)
+    // Davy's Court (a signed Term): the captains he sends are his best.
+    const base = scaleToCurve(pick(BOSS_POOL), depth, true)
+    const enemy = (terms.bossHpMult !== 1 || terms.bossDmgMult !== 1)
+      ? {
+          ...base,
+          hpBase: Math.round(base.hpBase * terms.bossHpMult),
+          minDmg: Math.max(1, Math.round(base.minDmg * terms.bossDmgMult)),
+          maxDmg: Math.max(2, Math.round(base.maxDmg * terms.bossDmgMult)),
+        }
+      : base
     return { enemy, isBoss: true, isElite: false, potContribution: paying ? roundContribution(rewardDepth, true) : 0, depth }
   }
 

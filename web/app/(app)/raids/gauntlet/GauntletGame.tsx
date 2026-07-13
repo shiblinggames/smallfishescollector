@@ -437,7 +437,9 @@ export default function GauntletGame(props: GauntletGameProps) {
   // off the current depth + hulls sunk. Grows across the run; the effect below
   // heals the player by any increase, so a gained hull is a gained ceiling AND HP.
   const curDepthForHp = fight?.depth ?? (rollStateRef.current.cleared + skipOffset + 1)
-  const hpMax = Math.round(baseHpMax * hpBoonMult(runEffects, curDepthForHp, rollStateRef.current.cleared))
+  // Deep Draft (a signed Term) lowers the CEILING, so every heal tops you up to
+  // the smaller number. Applied before the boon scaling.
+  const hpMax = Math.round(baseHpMax * termFx.maxHpPct * hpBoonMult(runEffects, curDepthForHp, rollStateRef.current.cleared))
   const prevHpMaxRef = useRef(hpMax)
   useEffect(() => {
     const delta = hpMax - prevHpMaxRef.current
@@ -547,8 +549,8 @@ export default function GauntletGame(props: GauntletGameProps) {
       setHardcoreRun(hardcore)
       // Fresh run.
       rollStateRef.current = { cleared: 0, prevWasBoss: false, roundsSinceBoss: 0 }
-      playerHPRef.current = baseHpMax
-      prevHpMaxRef.current = baseHpMax
+      playerHPRef.current = Math.round(baseHpMax * termFxRef.current.maxHpPct)
+      prevHpMaxRef.current = Math.round(baseHpMax * termFxRef.current.maxHpPct)
       potRef.current = 0
       runEventsRef.current = []
       recordShownRef.current = false
@@ -557,8 +559,8 @@ export default function GauntletGame(props: GauntletGameProps) {
       carriedChargesRef.current = 0
       runMaxHitRef.current = 0
       runStatsRef.current = emptyRunStats()
-      // Deep Draft (a signed Term): you go down already holed.
-      setPlayerHP(Math.max(1, Math.round(baseHpMax * termFxRef.current.startHpPct)))
+      // Deep Draft (a signed Term) cut the ceiling, so a full hull IS the smaller number.
+      setPlayerHP(Math.max(1, Math.round(baseHpMax * termFxRef.current.maxHpPct)))
       setPot(0)
       setBossesDefeated(0)
       setUsedAbilityIds(new Set())
@@ -1222,7 +1224,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     // effect sees no delta (s.hp was already saved against that max).
     {
       const restoredEffects = [...boonEffects(s.boonTiers), ...confluenceEffects(s.boonTiers, s.confluencesTaken ?? []), ...curseEffects(s.curseTiers)]
-      prevHpMaxRef.current = Math.round(baseHpMax * hpBoonMult(restoredEffects, s.cleared + skipOffset + 1, s.cleared))
+      prevHpMaxRef.current = Math.round(baseHpMax * termFxRef.current.maxHpPct * hpBoonMult(restoredEffects, s.cleared + skipOffset + 1, s.cleared))
     }
     potRef.current = s.pot; setPot(s.pot)
     setBossesDefeated(s.bossesDefeated)
