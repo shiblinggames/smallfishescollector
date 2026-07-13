@@ -1390,7 +1390,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       // Burn bleeds through it; volleys chew it fastest.
       id: 'picket', name: 'The Scute', hpBase: 300, minDmg: 20, maxDmg: 34,
       shipSpeed: 9, actionMs: 3400,
-      magazineSize: 4, shieldPct: 0.15,
+      magazineSize: 4, shieldPct: 0.10,
       critDrift: 0.4, critDriftName: 'Rolling Plate',
       pattern: ['fire', 'reload', 'dodge', 'fire', 'reload', 'fire', 'dodge', 'reload'],
       critChance: 0.12,
@@ -1405,7 +1405,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       // get through.
       id: 'bosun', name: 'The Bank', hpBase: 330, minDmg: 21, maxDmg: 35,
       shipSpeed: 6, actionMs: 3600,
-      magazineSize: 4, shieldPct: 0.16,
+      magazineSize: 4, shieldPct: 0.11,
       critDrift: 0.5, critDriftName: 'Rolling Plate',
       special: { name: 'Dig In', status: 'fortify', magnitude: 0.25, turns: 2, target: 'self', line: 'The Bank drops his weight into the silt and settles, and the shot just thumps into mud.' },
       pattern: ['reload', 'fire', 'special', 'reload', 'volley', 'reload', 'fire', 'dodge'],
@@ -1420,7 +1420,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       // The estuary's own net, and it does not need throwing.
       id: 'netter', name: 'The Mangrove', hpBase: 360, minDmg: 22, maxDmg: 36,
       shipSpeed: 6, actionMs: 3800,
-      magazineSize: 4, shieldPct: 0.18,
+      magazineSize: 4, shieldPct: 0.13,
       special: { name: 'Deadwood', status: 'slowed', magnitude: 3, turns: 2, target: 'player', line: 'Root and deadwood come up under the hull and wrap the rudder, and the wheel goes dead in your hands.' },
       critDrift: 0.55, critDriftName: 'Rolling Plate',
       pattern: ['reload', 'special', 'fire', 'reload', 'volley', 'dodge', 'reload', 'fire'],
@@ -1436,7 +1436,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       // They share a build and a face, and differ by a mirror and the color of the coat.
       id: 'chainman', name: 'The Rasp', hpBase: 380, minDmg: 24, maxDmg: 38,
       shipSpeed: 7, actionMs: 3600,
-      magazineSize: 4, shieldPct: 0.20,
+      magazineSize: 4, shieldPct: 0.15,
       special: { name: 'Chain-Shot', status: 'weaken', magnitude: 0.20, turns: 2, target: 'player', line: 'Chain-shot screams through your powder line and your guns cough where they roared.' },
       critDrift: 0.7, critDriftName: 'Rolling Plate',
       pattern: ['reload', 'fire', 'special', 'reload', 'fire', 'volley', 'dodge', 'reload'],
@@ -1451,7 +1451,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       // The Rasp's opposite number (see above): same build, mirrored, different coat.
       id: 'cracksman', name: 'The Wedge', hpBase: 400, minDmg: 24, maxDmg: 40,
       shipSpeed: 5, actionMs: 4200,
-      magazineSize: 4, shieldPct: 0.20,
+      magazineSize: 4, shieldPct: 0.15,
       special: { name: 'Hull-Cracker', status: 'feeble', magnitude: 0.22, turns: 2, target: 'player', line: 'A cracker round splits your seams wide open, and every blow after it will find the gap.' },
       critDrift: 0.7, critDriftName: 'Rolling Plate',
       pattern: ['reload', 'reload', 'special', 'volley', 'reload', 'fire', 'volley', 'dodge'],
@@ -1467,7 +1467,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       // yet and he has stopped expecting it.
       id: 'purser', name: 'Old Scar', hpBase: 410, minDmg: 25, maxDmg: 39,
       shipSpeed: 7, actionMs: 3800,
-      magazineSize: 4, shieldPct: 0.22,
+      magazineSize: 4, shieldPct: 0.17,
       critDrift: 0.8, critDriftName: 'Rolling Plate',
       special: { name: 'Old Wounds', status: 'regen', magnitude: 16, turns: 3, target: 'self', line: 'Old Scar takes the hit the way he has taken every other one, and the hole closes while you watch.' },
       pattern: ['special', 'reload', 'fire', 'reload', 'fire', 'volley', 'reload', 'dodge'],
@@ -1483,7 +1483,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       // and a double meaning that good does not come along twice.
       id: 'muzzle', name: 'The Muzzle', hpBase: 420, minDmg: 26, maxDmg: 40,
       shipSpeed: 8, actionMs: 3600,
-      magazineSize: 4, shieldPct: 0.22,
+      magazineSize: 4, shieldPct: 0.17,
       special: { name: 'Gag Order', status: 'silence', magnitude: 1, turns: 2, target: 'player', line: 'The gag order comes down, and your crew go quiet mid-shout.' },
       critDrift: 0.85, critDriftName: 'Rolling Plate',
       pattern: ['reload', 'special', 'fire', 'reload', 'fire', 'volley', 'reload', 'dodge'],
@@ -1504,14 +1504,14 @@ export const THE_BLOCKADE: BossRaidConfig = {
       //
       // His kit did not change one number, because it already described a crocodile
       // and I had it labelled as a hammer:
-      //   shieldPct 0.25  -> osteoderms, the bone plates grown into his hide
+      //   shieldPct 0.20  -> osteoderms, the bone plates grown into his hide
       //   'Rolling Plate' -> the death roll, and the plates that survive it
       //   enrage           -> he goes STILL. The water goes flat. That is the tell.
       //   the 70% check    -> he takes your hull in his teeth and rolls
       //   the aegis        -> his back. Nothing you carry goes through it alone.
       id: 'saltie', name: 'Sal Brackwater', hpBase: 700, minDmg: 28, maxDmg: 46,
       shipSpeed: 8, actionMs: 4000,
-      magazineSize: 4, shieldPct: 0.25,
+      magazineSize: 4, shieldPct: 0.20,
       special: { name: 'Still Water', status: 'enrage', magnitude: 0.25, turns: 2, target: 'self', line: 'Sal stops moving. The chop goes flat around him, and every gun on the line goes quiet.' },
       critDrift: 1.0, critDriftName: 'Rolling Plate',
       pattern: ['reload', 'special', 'fire', 'reload', 'volley', 'dodge', 'fire', 'reload', 'fire'],

@@ -1852,7 +1852,7 @@ export const RAID_MAP: RaidNode[] = [
     // RAID 7 — The Blockade. Introduces the Ch4 suite: baseline enemy shields,
     // 4-cannonball magazines, and enemy SPECIALS (statuses thrown at you).
     id: 'the_blockade',    type: 'raid',
-    label: 'Sal Brackwater',
+    label: 'The Blockade',
     flavor: "Don Finleone's blockade line, and the thing that holds it: Sal Brackwater, who has not moved in an hour and is not going to until it matters. Every hull rides behind a cold-light barrier, every magazine runs four deep, and his line fights dirtier than any market ever did.",
     bridge: "The blockade breaks and Sal Brackwater goes under it. The way to the don's own water lies open — and his books ride in your hold.",
     requiresNode: 'throne_locks',
@@ -1863,7 +1863,7 @@ export const RAID_MAP: RaidNode[] = [
     image: THE_BLOCKADE.enemies.saltie.portrait,
     detail: {
       description:
-        "The don's escort armada fights like nothing before it. Every hull opens behind a barrier your shots must chew through first; every magazine runs FOUR cannonballs deep, so their fire never falls into a rhythm you can bank on. And Sal's line throws more than iron: root and deadwood that wrap your rudder, chain-shot that files your guns down, cracker rounds that split your seams open, and a gag order that shuts your crew up mid-shout. Sal Brackwater himself does not swing at you. He goes STILL, and that is the tell: when the water flattens, he is already taking your hull in his teeth. Answer the Death Roll with a crew ability or he rolls until the ship comes apart along the grain.",
+        "Don Finleone's escort fleet. It fights in three ways nothing before it has, so read this before you sail in.\n\nBARRIERS. Every ship arrives behind a shield. You have to break that before your shots touch its hull. Volleys chew through it fastest, and fire burns straight past it.\n\nDEEPER GUNS. They carry four cannonballs, not three. Never assume a ship is empty just because it has been firing.\n\nDIRTY TRICKS. Each one does something different to you. Roots tangle your rudder and slow you down. Chain-shot softens your guns. A cracker round splits your seams so everything after it hits harder. One of them heals itself. One gags your crew so you cannot use their abilities at all.\n\nSAL BRACKWATER. He will not swing at you. He goes completely still, and that is the warning: the moment the water goes flat, he already has your hull in his teeth and he is about to roll. Answer it with a CREW ABILITY or he tears the ship apart. And he does not sink easily. Expect him back on his feet more than once.",
       enemies: ['The Scute', 'The Bank', 'The Mangrove', 'The Rasp', 'The Wedge', 'Old Scar', 'The Muzzle', 'Sal Brackwater'],
       drops: lootDrops(THE_BLOCKADE.loot),
       clearReward: clearPayout(THE_BLOCKADE),
@@ -1872,7 +1872,7 @@ export const RAID_MAP: RaidNode[] = [
   },
   {
     id: 'the_blockade_challenge',    type: 'raid',
-    label: 'Challenge: Sal Brackwater',
+    label: 'Challenge: The Blockade',
     flavor: "The blockade re-forms, heavier at every post. Sal Brackwater does not hold a line twice — he buries it.",
     requiresNode: 'the_blockade',
     adminOnly: true,
@@ -1882,7 +1882,7 @@ export const RAID_MAP: RaidNode[] = [
     image: THE_BLOCKADE.enemies.saltie.portrait,
     detail: {
       description:
-        "The blockade again, harder for the breaking. Thicker barriers, deeper clips, the same dirty specials and the same Full Swing — all of it meaner. The chase rewards roll richer.",
+        "The blockade again, and it has learned. Every ship is tougher, every barrier thicker, and Sal rolls harder. Same rules, none of the mercy. The chase rewards roll richer for it.",
       enemies: ['The Scute', 'The Bank', 'The Mangrove', 'The Rasp', 'The Wedge', 'Old Scar', 'The Muzzle', 'Sal Brackwater'],
       drops: lootDrops(THE_BLOCKADE_CHALLENGE.loot),
       clearReward: clearPayout(THE_BLOCKADE_CHALLENGE),
