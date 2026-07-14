@@ -26,6 +26,20 @@ export interface TrawlZone {
    *  big hauls pay out at a lower EFFECTIVE xp/hr — offsetting the deep-zone
    *  reward without shrinking the haul itself. Still all roughly "hourly". */
   durationMin: number
+  /**
+   * Per-zone override of TRAWL_XP_PCT. Only the two deepest zones set it.
+   *
+   * The deep zones' ACTIVE xp/hr climbs far faster than their cycle length does
+   * (Abyss 19k -> Ancient 42k, a 2.2x jump, against a cycle that only grows 1.5x), so
+   * a flat 35% share let their EFFECTIVE xp/hr run away. Four trawls were paying
+   * 11.9k xp/hr passively — MORE than actively fishing the Deep (11k) pays a player
+   * sitting at the rod. Passive income should never beat playing the game.
+   *
+   * Tapering the share here rather than lengthening the cycle keeps this surgical:
+   * the doubloon side of those hauls is untouched, and the haul the player SEES is
+   * simply smaller rather than slower to arrive.
+   */
+  xpPct?: number
 }
 
 // Ordered shallow → deep. Anchors per the locked balance model. minLevel is the
@@ -39,8 +53,8 @@ export const TRAWL_ZONES: TrawlZone[] = [
   { key: 'shallows',     label: 'Shallows',     minLevel: 4,  activeXpHr: 2_000,  activeDblHr: 1_300, durationMin: 68 },
   { key: 'open_waters',  label: 'Open Waters',  minLevel: 18, activeXpHr: 5_000,  activeDblHr: 2_100, durationMin: 83 },
   { key: 'deep',         label: 'Deep',         minLevel: 33, activeXpHr: 11_000, activeDblHr: 2_850, durationMin: 98 },
-  { key: 'abyss',        label: 'Abyss',        minLevel: 53, activeXpHr: 19_000, activeDblHr: 5_800, durationMin: 117 },
-  { key: 'ancient_deep', label: 'Ancient Deep', minLevel: 78, activeXpHr: 42_000, activeDblHr: 5_400, durationMin: 180 },
+  { key: 'abyss',        label: 'Abyss',        minLevel: 53, activeXpHr: 19_000, activeDblHr: 5_800, durationMin: 117, xpPct: 0.29 },
+  { key: 'ancient_deep', label: 'Ancient Deep', minLevel: 78, activeXpHr: 42_000, activeDblHr: 5_400, durationMin: 180, xpPct: 0.24 },
 ]
 
 export const TRAWL_ZONE_BY_KEY: Record<TrawlZoneKey, TrawlZone> =
@@ -88,7 +102,7 @@ export function nextTrawlSlot(fishingLevel: number, navLevel: number): { slot: n
 }
 
 // ── Reward math ──────────────────────────────────────────────────────────────
-export const TRAWL_XP_PCT = 0.35   // maxed crew = 35% of the zone's active xp/hr
+export const TRAWL_XP_PCT = 0.35   // maxed crew = 35% of the zone's active xp/hr (Abyss/Ancient taper — see TrawlZone.xpPct)
 export const TRAWL_DBL_PCT = 0.15  // maxed crew = 15% of the zone's active doubloons/hr
 export const TRAWL_STAT_REF = 40   // a maxed affinity-skewed Legendary's Savvy/Fortune
 export const TRAWL_FACTOR_FLOOR = 0.2
@@ -211,8 +225,8 @@ export function pickTrawlEvent(tier: BumperTier, rng: () => number = Math.random
 export function expectedTrawlHaul(zoneKey: TrawlZoneKey, savvy: number, fortune: number): { xp: number; doubloons: number } {
   const z = TRAWL_ZONE_BY_KEY[zoneKey]
   return {
-    xp:        Math.round(z.activeXpHr  * TRAWL_XP_PCT  * trawlStatFactor(savvy)),
-    doubloons: Math.round(z.activeDblHr * TRAWL_DBL_PCT * trawlStatFactor(fortune)),
+    xp:        Math.round(z.activeXpHr  * (z.xpPct ?? TRAWL_XP_PCT) * trawlStatFactor(savvy)),
+    doubloons: Math.round(z.activeDblHr * TRAWL_DBL_PCT             * trawlStatFactor(fortune)),
   }
 }
 
