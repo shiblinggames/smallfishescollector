@@ -1225,7 +1225,7 @@ export const THE_QUARTERMASTERS_GHOST: BossRaidConfig = {
             consequence: { kind: 'damagePctMaxHp', value: 0.45 },
           } },
       ],
-      image: '/enemychapter3galleon.png',
+      image: '/enemychapter4galleon.png',
       portrait: '/quartermasterghost.png',
     },
   },
@@ -1635,7 +1635,7 @@ export const THE_THRONE: BossRaidConfig = {
       critChance: 0.12,
       zoneSpeedMult: 2.3,
       image: '/enemychapter4brigantine.png',
-      portrait: '/enemychapter3brigantine.png',
+      portrait: '/enemychapter4brigantine.png',
     },
     the_mirage: {
       // DECOYS debut — False Court paints fake gold across your aim bar.
@@ -1648,7 +1648,7 @@ export const THE_THRONE: BossRaidConfig = {
       critChance: 0.12,
       zoneSpeedMult: 2.5,
       image: '/enemychapter4brigantine.png',
-      portrait: '/enemychapter3brigantine.png',
+      portrait: '/enemychapter4brigantine.png',
     },
     the_doorman: {
       // HARDENED LOCK debut — Iron Etiquette plates your lock: the first tap
@@ -1661,7 +1661,7 @@ export const THE_THRONE: BossRaidConfig = {
       critChance: 0.10,
       zoneSpeedMult: 2.2,
       image: '/enemychapter4galleon.png',
-      portrait: '/enemychapter3galleon.png',
+      portrait: '/enemychapter4galleon.png',
     },
     the_stormcaller: {
       // SQUALL debut — Kingmaker's Gale gusts your needle fast-slow mid-sweep.
@@ -1674,7 +1674,7 @@ export const THE_THRONE: BossRaidConfig = {
       critChance: 0.14,
       zoneSpeedMult: 2.6,
       image: '/enemychapter4galleon.png',
-      portrait: '/enemychapter3galleon.png',
+      portrait: '/enemychapter4galleon.png',
     },
     the_left_hand: {
       // The don's silencer, now with the ultimate stacked on top — Omertà
@@ -1688,7 +1688,7 @@ export const THE_THRONE: BossRaidConfig = {
       critChance: 0.14,
       zoneSpeedMult: 2.7,
       image: '/enemychapter4galleon.png',
-      portrait: '/enemychapter3galleon.png',
+      portrait: '/enemychapter4galleon.png',
     },
     the_consigliere: {
       // The last counsel before the throne — marks you for the don (Feeble)
@@ -1702,7 +1702,7 @@ export const THE_THRONE: BossRaidConfig = {
       critChance: 0.12,
       zoneSpeedMult: 2.5,
       image: '/enemychapter4man-o-war.png',
-      portrait: '/enemychapter3man-o-war.png',
+      portrait: '/enemychapter4man-o-war.png',
     },
     don_finleone: {
       // DON FINLEONE — the fake-final boss. Phase 1: the don at his table,
@@ -1795,7 +1795,7 @@ export const THE_THRONE: BossRaidConfig = {
       ],
       zoneSpeedMult: 2.4,
       image: '/enemychapter4man-o-war.png',
-      portrait: '/enemychapter3man-o-war.png',
+      portrait: '/enemychapter4man-o-war.png',
     },
   },
   sequence: ['court_herald', 'the_mirage', 'the_doorman', 'the_stormcaller', 'the_left_hand', 'the_consigliere'],
