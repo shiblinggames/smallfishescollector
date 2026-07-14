@@ -134,6 +134,22 @@ const BURN_TURNS = 2
  *  of the class is the READ, so the ward has to be able to run out: arm it on the
  *  turns you believe will kill you, or waste your legendary. */
 const VENGEANCE_WARD_TURNS = 3
+/**
+ * How much of your BUILD's damage scaling a crew ability inherits (Doby's leviathan
+ * salvo, Mako's blitz barrage). 1 = the full ride a manual cannon shot gets.
+ *
+ * It is 0.7 because these abilities are FREE: a guaranteed crit that costs no turn
+ * and cannot whiff. Letting a free shot compound at 100% with items, boons, classes
+ * and Renown meant that the better your build got, the more the correct play was to
+ * hold the ability and delete the boss with it. Giving them zero scaling was worse
+ * (they fell off a cliff late — the bug we just fixed). 70% keeps them scaling into
+ * the endgame while making a turn-costing, aimed cannon shot the better multiplier.
+ *
+ * Applied to the EXCESS above 1x, not the whole multiplier — see abilityDamageMult.
+ * Scaling the whole thing would quietly nerf a bare build's abilities by 30% for no
+ * reason, which punishes exactly the players who have no build to scale with.
+ */
+const ABILITY_BUILD_SCALING = 0.7
 // Burn tick = this fraction of the hit that lit it. 10% base; Wildfire heats it
 // up to a hard 20% ceiling (BURN_TICK_MAX). Uncapped vs target HP — it just
 // scales with your damage.
@@ -2587,8 +2603,14 @@ export default function RaidCombat({
     const statusOutMult = statusMods(playerStatusesRef.current).dmgDealtMult
                         * statusMods(enemyStatusesRef.current).dmgTakenMult
 
-    return bossMult * nonbossMult * rampMult * classDamageMult
-         * tide.dmgMult * tideBossMult * lowHpMult * frozenMult * vengeanceMult * statusOutMult
+    const raw = bossMult * nonbossMult * rampMult * classDamageMult
+              * tide.dmgMult * tideBossMult * lowHpMult * frozenMult * vengeanceMult * statusOutMult
+
+    // Abilities take ABILITY_BUILD_SCALING of the build's scaling, not all of it. The
+    // damping is on the EXCESS above 1x: a captain with no items and no boons has
+    // raw = 1 and is completely unaffected, while a stacked build's free crit no
+    // longer compounds as hard as the aimed shot it costs nothing to replace.
+    return 1 + (raw - 1) * ABILITY_BUILD_SCALING
   }
 
   function applyAbilityDamage(rawDmg: number, logLine: string, hitKind: 'hit' | 'crit', skipSplat = false, splatColor?: string) {
