@@ -3704,6 +3704,33 @@ export default function FishingGame({
     prevCollectionOpenRef.current = collectionOpen
   }, [collectionOpen])
   const [fishingXP, setFishingXP]   = useState(initialFishingXP)
+
+  // ── PAY WHAT IS OWED, ON ARRIVAL ────────────────────────────────────────────
+  // The claim used to fire ONLY from the catch handler's level-up branch, which meant
+  // a level earned anywhere else was stranded. Fishing XP also arrives from TRAWLS,
+  // which resolve while the captain is on another screen entirely: they would come back
+  // already levelled, so `newLevel > oldLevel` was false on their next catch, so nothing
+  // ever claimed it. The reward sat unpaid until the NEXT level-up swept it up as a
+  // batch -- and if they never levelled again, or were already at the level-50 cap, it
+  // was never paid at all.
+  //
+  // The grant was always idempotent and state-based; it just had nowhere to be called
+  // from. So: reconcile on mount. Anything owed is handed over the moment they open the
+  // fishing screen, and they see the same celebration they would have seen live.
+  useEffect(() => {
+    claimFishingLevelRewards().then(res => {
+      if (res.granted.length === 0) return
+      const from = res.granted[0].level - 1
+      const to   = res.granted[res.granted.length - 1].level
+      setLevelRewards(res.granted)
+      setLevelUpNotif({ from, to })
+      setDoubloons(res.newDoubloons)
+      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloons }))
+      window.dispatchEvent(new CustomEvent('gems-changed', { detail: res.newGems }))
+      if (res.newHoldTier > 0) setCurrentFishHoldTier(res.newHoldTier)
+    }).catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const [xpPopup, setXpPopup]       = useState<{ value: number; id: number; prestige?: boolean } | null>(null)
   // Fishing Renown (post-100). Level derives live from fishingXP; only the
   // spend map is stateful (updated when the panel allocates/respecs).
