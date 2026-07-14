@@ -400,11 +400,16 @@ export default function DailyVoyagePanel({
                       <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#c8aa6a' }}>How Voyages Work</p>
                       <button onClick={() => setInfoOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6a5a40', fontSize: '1rem', lineHeight: 1 }}>✕</button>
                     </div>
+                    {/* The one thing this explainer never said, and the whole point of the
+                        mode: you do not PLAY a voyage. The Campaign is where you fight. */}
+                    <p className="font-karla" style={{ fontSize: '0.8rem', color: '#d8cdb4', lineHeight: 1.5, marginBottom: '0.9rem' }}>
+                      Voyages are <strong style={{ color: '#f0c040' }}>passive income</strong>. You do not play them: your crew sail off on their own and come back with doubloons, gems and Nav XP whether you are here or not. The <strong style={{ color: '#dca494' }}>Campaign</strong> is the opposite, and it is where you fight the battles yourself.
+                    </p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
                       {([
-                        [<IconMap key="i" size={18} />, 'Pick a route', 'Tap a location on the map. Riskier routes pay more — but your crew might not make it back.'],
+                        [<IconMap key="i" size={18} />, 'Pick a route', 'Tap a location on the map. Riskier routes pay more, but your crew might not make it back.'],
                         [<IconHourglass key="i" size={18} />, 'They sail (up to 3 hours)', 'Events unfold along the way. Higher Nav and expedition level reduce voyage time. Check back to watch the story.'],
-                        [<IconCrate key="i" size={18} />, 'Claim your loot', 'When they return, collect doubloons, gems, and rare drops.'],
+                        [<IconCrate key="i" size={18} />, 'Claim your loot', 'When they return, collect doubloons, gems, rare drops and Nav XP. All of it earned while you were doing something else.'],
                         [<IconSkull key="i" size={18} />, 'Crew can die', 'On dangerous routes, crew members can be lost at sea — permanently. Crew Fortune cuts the risk, all the way to zero. Deeper routes need more Fortune to sail safe.'],
                       ] as [ReactNode, string, string][]).map(([icon, title, desc]) => (
                         <div key={title} style={{ display: 'flex', gap: '0.75rem' }}>

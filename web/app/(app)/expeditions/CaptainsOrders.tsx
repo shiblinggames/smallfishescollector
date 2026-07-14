@@ -75,7 +75,7 @@ const ORDERS: Order[] = [
     title: () => 'Recruit your first crew',
     // The FIRST thing a captain reads about Expeditions. It has to teach the shape of
     // the whole page in one breath, not just name a button.
-    why: () => 'Expeditions are two loops, and both run on crew. RAIDS are the story and the loot. VOYAGES earn while you are away. Your first recruit is free.',
+    why: () => 'Expeditions are two loops, and both run on crew. The CAMPAIGN is the story: you sail in and fight every battle yourself. VOYAGES are passive: your crew sail without you and bring back doubloons and Nav XP while you are gone. Your first recruit is free.',
     cta: () => 'Go to the Crew Hall',
     href: () => '/crew',
     done: s => s.crewOwned > 0,
@@ -94,7 +94,7 @@ const ORDERS: Order[] = [
     // The campaign OPENS on a story node, so promising a fight and delivering a cutscene
     // would be the first thing this card got wrong.
     title: s => (s.raidsCleared === 0 && s.crewOwned > 0 ? 'Start the campaign' : 'Win your first raid'),
-    why: () => 'The campaign is the spine of Expeditions: it pays the items, the ship classes and the story. It opens with a scene, then your first fight.',
+    why: () => 'The campaign is the story mode, and you fight every battle in it yourself. It is where the raid items, the ship classes and the plot come from. It opens with a scene, then your first fight.',
     cta: () => 'Open the campaign',
     action: () => 'campaign',
     done: s => s.raidsCleared > 0,
@@ -114,8 +114,8 @@ const ORDERS: Order[] = [
     // this order teaches the actual lesson instead: you need enough crew for both tracks.
     title: s => (canVoyage(s) ? 'Send a voyage' : 'Recruit crew for voyages'),
     why: s => (canVoyage(s)
-      ? 'Voyages earn doubloons and gems while you are away. They sail with the crew you did NOT take into raids.'
-      : 'Every crew you own is in a raid slot, and a crew can only sail one track. Recruit a few more and put them on voyages, so both loops earn at once.'),
+      ? 'Voyages are passive. You do not play them: your crew sail off on their own and come back with doubloons, gems and Nav XP whether you are here or not. They go with the crew you did NOT take into raids.'
+      : 'Every crew you own is in a raid slot, and a crew sails one track or the other. Recruit a few more for the voyage track, and you will be earning passively while you fight the campaign.'),
     cta: s => (canVoyage(s) ? 'Send a voyage' : 'Recruit more crew'),
     href: s => (canVoyage(s) ? undefined : '/crew'),
     action: s => (canVoyage(s) ? 'voyages' : undefined),
