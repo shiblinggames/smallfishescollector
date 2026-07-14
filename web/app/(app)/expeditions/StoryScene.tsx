@@ -33,7 +33,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { vibrate } from '@/lib/haptics'
 import type { SceneLine } from '@/lib/raidMap'
 
-const ACCENT = '#f0c040'
+const GOLD = '#f0c040'
 const TYPE_MS = 22          // per character
 const PUNCT_MS = 190        // extra beat after . ! ? — the line breathes where it should
 const COMMA_MS = 80
@@ -78,14 +78,17 @@ function renderText(text: string, accent: string) {
   )
 }
 
-export default function StoryScene({ title, lines, ctaLabel, pending, onComplete, onSkip }: {
+export default function StoryScene({ title, lines, ctaLabel, pending, accent, onComplete, onSkip }: {
   title: string
   lines: SceneLine[]
   ctaLabel: string
   pending?: boolean
+  /** The scene's color temperature (node.sceneAccent). Gold when unset. */
+  accent?: string
   onComplete: () => void
   onSkip: () => void
 }) {
+  const ACCENT = accent ?? GOLD
   const [idx, setIdx] = useState(0)
   const [shown, setShown] = useState(0)      // characters revealed of the current line
   const [held, setHeld] = useState(false)    // inside a `pause` beat, before typing
@@ -162,34 +165,54 @@ export default function StoryScene({ title, lines, ctaLabel, pending, onComplete
   const hasCast = useMemo(() => lines.some(l => l.speaker && l.portrait), [lines])
   const shake = line?.fx === 'shake' && !reduced && !held
 
+  // ── THE BUST ────────────────────────────────────────────────────────────────
+  // It used to enter and then stand perfectly still forever, which is the difference
+  // between an actor and a cardboard cutout. Now it BREATHES (a slow float that never
+  // stops), LEANS IN when it takes a line, JOLTS on a shake, and creeps forward
+  // through a held pause so a silence has something to build on.
   const bust = (c: StageChar | null, side: 'left' | 'right') => {
     if (!c) return null
     const lit = speaking === c.speaker
+    // Lean on the line, jolt on the hit, creep during the beat before it.
+    const emphasis = lit && shake ? 1.06 : lit && held ? 1.03 : lit ? 1 : 0.93
     return (
       <motion.div
         key={`${side}-${c.speaker}`}
-        initial={{ opacity: 0, x: side === 'left' ? -40 : 40, scale: 0.94 }}
+        initial={{ opacity: 0, x: side === 'left' ? -46 : 46, scale: 0.9 }}
         animate={{
-          opacity: lit ? 1 : 0.42,
-          x: 0,
-          scale: lit ? 1 : 0.93,
-          y: lit ? 0 : 6,
-          filter: lit ? 'grayscale(0) brightness(1)' : 'grayscale(0.75) brightness(0.55)',
+          opacity: lit ? 1 : 0.4,
+          x: shake && lit ? [0, -6, 5, -3, 0] : 0,
+          scale: emphasis,
+          y: lit ? 0 : 8,
+          filter: lit ? 'grayscale(0) brightness(1)' : 'grayscale(0.8) brightness(0.5)',
         }}
-        transition={{ type: 'spring', stiffness: 220, damping: 26 }}
+        transition={{
+          scale: { type: 'spring', stiffness: 260, damping: 20 },
+          x: shake && lit ? { duration: 0.4 } : { type: 'spring', stiffness: 220, damping: 26 },
+          default: { type: 'spring', stiffness: 220, damping: 26 },
+        }}
         style={{
           position: 'absolute', bottom: 0, [side]: '2%',
-          width: 'min(42vw, 190px)', aspectRatio: '1 / 1',
+          width: 'min(44vw, 200px)', aspectRatio: '1 / 1',
           zIndex: lit ? 2 : 1, pointerEvents: 'none',
           transformOrigin: side === 'left' ? 'bottom left' : 'bottom right',
         }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={c.portrait} alt="" decoding="async"
-          style={{
-            width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'bottom',
-            filter: lit ? `drop-shadow(0 0 26px ${ACCENT}2e) drop-shadow(0 12px 30px rgba(0,0,0,0.75))` : 'drop-shadow(0 10px 24px rgba(0,0,0,0.7))',
-          }} />
+        {/* The breath. Never stops, so nobody on this stage is ever a photograph. */}
+        <motion.div
+          animate={reduced ? {} : { y: [0, -5, 0], rotate: lit ? [0, 0.5, 0] : [0, 0.25, 0] }}
+          transition={{ duration: lit ? 3.4 : 4.8, repeat: Infinity, ease: 'easeInOut' }}
+          style={{ width: '100%', height: '100%' }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={c.portrait} alt="" decoding="async"
+            style={{
+              width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'bottom',
+              filter: lit
+                ? `drop-shadow(0 0 30px ${ACCENT}33) drop-shadow(0 12px 30px rgba(0,0,0,0.78))`
+                : 'drop-shadow(0 10px 24px rgba(0,0,0,0.7))',
+            }} />
+        </motion.div>
       </motion.div>
     )
   }
@@ -265,8 +288,16 @@ export default function StoryScene({ title, lines, ctaLabel, pending, onComplete
 
       {/* ── THE SHOT: stage + dialogue, rocked together when a line hits. ────── */}
       <motion.div
-        animate={shake ? { x: [0, -9, 8, -6, 4, 0], y: [0, 4, -3, 2, 0] } : { x: 0, y: 0 }}
-        transition={shake ? { duration: 0.42 } : { duration: 0.2 }}
+        animate={
+          shake ? { x: [0, -9, 8, -6, 4, 0], y: [0, 4, -3, 2, 0], scale: 1.02 }
+          : held ? { x: 0, y: 0, scale: 1.035 }     // the camera creeps in on a held beat
+          : { x: 0, y: 0, scale: 1 }
+        }
+        transition={
+          shake ? { duration: 0.42 }
+          : held ? { duration: (line?.pause ?? 600) / 1000, ease: 'easeInOut' }
+          : { duration: 0.5, ease: 'easeOut' }
+        }
         style={{ position: 'absolute', inset: '44px 0', display: 'flex', flexDirection: 'column',
           justifyContent: hasCast ? 'flex-end' : 'center' }}
       >

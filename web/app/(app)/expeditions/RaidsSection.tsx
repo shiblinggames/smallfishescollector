@@ -2036,6 +2036,7 @@ function NodeDetailSheet({
       lines={sceneLines}
       ctaLabel={sceneCta}
       pending={pending}
+      accent={node.sceneAccent}
       onComplete={finishScene}
       onSkip={finishScene}
     />

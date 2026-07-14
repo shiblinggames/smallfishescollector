@@ -423,6 +423,12 @@ export interface RaidNode {
    *  description becomes archive/fallback text. Cleared nodes offer a
    *  replay. */
   scene?: SceneLine[]
+  /**
+   * The scene's color temperature. Everything was gold, so a betrayal, a joke and a
+   * death all wore the same face. Crimson for a turn, sick green for the Gullet, bone
+   * white for the thing on the bar. Defaults to gold when a scene does not care.
+   */
+  sceneAccent?: string
   /** Rich detail surfaced in the tap-to-open sheet. */
   detail: RaidNodeDetail
 }
@@ -617,8 +623,8 @@ export const RAID_MAP: RaidNode[] = [
       { text: "Little crews. Fishing folk. The odd unlucky angler. Anyone too small to swing back." },
       { speaker: 'A Passing Sailor', text: "Pete don't spend his haul. He delivers it." },
       { text: "Said once, by a sailor who knew better than to say it twice." },
-      { text: "Here's the funny part. Pete steals a fortune and keeps about a copper. The rest sails off to someone he'd rather you never asked about." },
-      { text: "So nobody asks." },
+      { text: "Here's the funny part. Pete steals a fortune and keeps about a copper. The rest sails off to *someone he'd rather you never asked about*." },
+      { text: "So nobody asks.", pause: 700 },
       { text: "You, though, you've got a boat, a free afternoon, and no manners worth mentioning." },
       { speaker: 'Barnacle Pete', portrait: CORSAIRS_RECKONING.enemies.pete.portrait, text: "Broke, me? Couldn't rob a rockpool. Now mind yer business, guppy." },
       { text: "Go shake the loudest pirate on the water and see what falls out of his coat." },
@@ -726,11 +732,11 @@ export const RAID_MAP: RaidNode[] = [
     scene: [
       { text: "Pete's strongbox cracks open at last. No fortune inside. Only paperwork." },
       { text: "Cut sheets. Courier routes. Years of neat little sums." },
-      { text: "And one word stamped on every page: the Finndicate." },
+      { text: "And one word stamped on every page: *the Finndicate*.", pause: 800 },
       { speaker: 'Barnacle Pete', portrait: CORSAIRS_RECKONING.enemies.pete.portrait, text: "You think I keep the coin? Not a copper of it stays with me. Never has." },
       { text: "So much for the kingpin. Pete was a cash cow like all the rest, squeezed dry and tossed back same as everyone he ever robbed." },
       { text: "And the coin never sits still. Page after page, every haul buys the same thing over and over, and not one line says what." },
-      { text: "Under the ledgers there's a sealed letter. No name on it. Just two letters pressed into the wax: C.K." },
+      { text: "Under the ledgers there's a sealed letter. No name on it. Just two letters pressed into the wax: *C.K.*", pause: 700 },
       { text: "The route's mostly burned away, but the heading held. Out past the Bilge Strait, into the cold." },
       { text: "Whoever C.K. is, the Finndicate trusts them with cargo by the holdful. And now you know which way it sails." },
     ],
@@ -777,6 +783,7 @@ export const RAID_MAP: RaidNode[] = [
       { text: "No bulling through at your size, and they only deal with captains who've logged real sea." },
       { text: "Pay up and the way opens onto C.K.'s trail. Keep your purse shut and the trail goes cold as the water." },
     ],
+    sceneAccent: '#7dd3fc',
     detail: {
       description:
         "The letter left no address, just a heading: out past the Bilge Strait, into the cold. That's enough to follow, and lucky you, the whole stretch belongs to the Bilge Eels.\n\nThey bow to nobody. Not the Finndicate, not you, just a knot of thugs squatting on the only water that points where C.K.'s cargo went, charging good coin to cross it. No bulling through at your size. They'll only deal with a captain who's logged enough sea to be worth the breath (Navigation 10), and even then they want paying. Slip them 1,000 ⟡ and the way opens onto C.K.'s trail. Keep your purse shut and the trail goes cold as the water.",
@@ -813,15 +820,16 @@ export const RAID_MAP: RaidNode[] = [
     scene: [
       { text: "Pete's wax only ever coughed up two letters: C.K." },
       { text: "The fence on the cold side of the strait can fill in the rest. Long as you act like he did you no favour by it." },
-      { speaker: 'The Fence', text: "Captain Krust. And you never heard it here." },
+      { speaker: 'The Fence', text: "*Captain Krust*. And you never heard it here.", pause: 800 },
       { speaker: 'The Fence', portrait: CAPTAIN_KRUST.enemies.krust.portrait, text: "Old, leathery, and the Finndicate sets its clock by him. He moves their freight. All of it." },
       { speaker: 'The Fence', portrait: CAPTAIN_KRUST.enemies.krust.portrait, text: "Never once asked whose name's on a manifest. Stayed afloat a whole lifetime for exactly that reason." },
       { text: "Nothing like Pete, this one. He doesn't rob the small. He moves cargo, on time, in bulk." },
       { speaker: 'The Fence', text: "No kingpin, mind. Krust answers upward, same as every other fish in this sea." },
-      { speaker: 'The Fence', text: "But C.K. don't lose cargo. Lose his cargo, and you find out why." },
+      { speaker: 'The Fence', text: "But C.K. don't lose cargo. Lose his cargo, and you find out why.", pause: 500 },
       { text: "A name at last. The Finndicate's freight has a face, and the face keeps a schedule." },
       { text: "His consignment's on the cold water right now." },
     ],
+    sceneAccent: '#7dd3fc',
     detail: {
       description:
         "Pete's wax only ever coughed up two letters: C.K. The fence past the strait fills in the rest, long as you act like he did you no favour by it.\n\nCaptain Krust. An old, leathery hand the Finndicate trusts with its freight, the kind who's never once asked whose name's on a manifest and has stayed afloat a whole lifetime for exactly that reason. He's nothing like Pete. He doesn't rob the small. He moves cargo, on time, in bulk, and the Finndicate sets its clock by him. Still no kingpin, mind. He answers upward like every other fish in this sea. But he sits a long way above a barnacled chancer, and his consignment's on the cold water right now.",
@@ -911,15 +919,16 @@ export const RAID_MAP: RaidNode[] = [
     scene: [
       { text: "Krust was no small cog, and the gap he leaves shows plain in the books." },
       { text: "Somewhere well above the freight desk, somebody sets down the ledgers." },
-      { text: "And takes a long, cold look at the captain who keeps sinking their cargo." },
-      { text: "You've got the Finndicate's full attention now. Which is the one prize you can't hand back." },
+      { text: "And takes a long, cold look at the captain who keeps sinking their cargo.", pause: 600 },
+      { text: "You've got the Finndicate's *full attention* now. Which is the one prize you can't hand back." },
       { text: "A single scrap rode out the wreck of Krust's run." },
       { speaker: 'A Finndicate Order', text: "Danger-zone consignment. Priority freight. It will not open for him. Find the hands that it will." },
       { text: "Stamped with a mark no clerk would explain." },
       { text: "Priority freight, steered through water their own manifests will only call the danger zones. Most captains sail in there exactly once." },
       { text: "Whatever they're hauling through it is worth every hull it swallows." },
-      { text: "They'd love nothing more than for you to drop the thread and walk away. You won't." },
+      { text: "They'd love nothing more than for you to drop the thread and walk away. You won't.", pause: 400 },
     ],
+    sceneAccent: '#a78bfa',
     detail: {
       description:
         "Krust was no small cog, and the gap he leaves shows plain in the books. For the first time someone well above the freight desk has set down the ledgers and taken a long, cold look at the captain who keeps sinking their cargo. You've got the Finndicate's full attention now, which is the one prize you can't hand back.\n\nA single scrap rode out the wreck of Krust's run. The Finndicate moves a special class of cargo, priority freight steered through water its own manifests will only call the danger zones. Most captains sail in there exactly once. Whatever they're hauling through it is worth every hull it swallows, and they'd love nothing more than for you to drop the thread and walk away.",
@@ -1021,7 +1030,7 @@ export const RAID_MAP: RaidNode[] = [
       { text: "You don't need them to say it. The cargo in the hold says it. The cut of the ships says it." },
       { text: "The Finndicate has scouts on this water. And scouts carry headings worth more than coin." },
       { speaker: 'A Caught Scout', portrait: '/krust_soldier.png', text: "Whatever you do, do it quick. This water doesn't stay empty long." },
-      { text: "The choice is yours, captain. Pick once, and only once." },
+      { text: "The choice is yours, captain. Pick *once, and only once*.", pause: 600 },
     ],
     event: {
       choices: [
@@ -1112,10 +1121,11 @@ export const RAID_MAP: RaidNode[] = [
       { text: "The Cartographer's charts and Krust's beacon map finally point the same way." },
       { text: "Every freight lane you've chased bends to one spot, far past the danger line." },
       { text: "The old charts leave it blank. No depth, no name. Only a warning." },
-      { text: "The crews out here have a name for it, though. They don't say it twice." },
-      { text: "The Gullet. Where the sea swallows everything down." },
+      { text: "The crews out here have a name for it, though. They don't say it twice.", pause: 700 },
+      { text: "*The Gullet*. Where the sea swallows everything down.", pause: 900, fx: 'shake' },
       { text: "Whatever the Finndicate takes off the weak, it all ends up down there. And so do you." },
     ],
+    sceneAccent: '#8fa76b',
     detail: {
       description:
         "The Cartographer's charts and Krust's beacon map finally agree: every freight lane bends to one drowned anchorage far past the danger line, the place the old charts leave blank with only a warning. The crews call it the Gullet, and they don't say it twice. Whatever the Finndicate takes off the weak gets swallowed down there, and that's exactly where you're bound.",
@@ -1161,8 +1171,9 @@ export const RAID_MAP: RaidNode[] = [
     scene: [
       { text: "Deep in the Gullet's throat, a Finndicate freighter hangs snagged on the reef, half-swallowed already." },
       { text: "Her hold's split wide, cargo bleeding out into the dark, and the whole wreck's one bad lurch from sliding off for good." },
-      { text: "No time to be careful. Pick your play and roll the bones." },
+      { text: "No time to be careful. Pick your play and roll the bones.", pause: 400 },
     ],
+    sceneAccent: '#8fa76b',
     dice: {
       bonusPerLevels: 10,
       maxBonus: 4,
@@ -1245,7 +1256,7 @@ export const RAID_MAP: RaidNode[] = [
       { speaker: 'A Freed Scout', portrait: '/krust_soldier.png', text: "Every crew in the Gullet sails loaded. They've all got a shot in the pipe before the fight even starts." },
       { speaker: 'A Freed Scout', portrait: '/krust_soldier.png', text: "They'll hit you on the first bell, before a slow captain's even found his range. Go in ready to take one." },
       { text: "They hand across a strongbox and a folded chart, and slip back into the gray." },
-      { text: "Richer, wiser, and not sailing in blind anymore. The mercy paid." },
+      { text: "Richer, wiser, and not sailing in blind anymore. *The mercy paid.*" },
     ],
     detail: {
       description:
@@ -1333,7 +1344,7 @@ export const RAID_MAP: RaidNode[] = [
       { text: "Tollmaster Spet weighed every crate the Gullet swallowed. He never kept a coin of it." },
       { text: "His manifests all point past the throat, to a harbor no honest chart will name." },
       { text: "A drowned market, they say, where the whole sea's plunder gets counted and sold twice over." },
-      { text: "The crews who've seen it call it the Coffers." },
+      { text: "The crews who've seen it call it *the Coffers*.", pause: 700 },
       { text: "Everything the Finndicate ever took off the weak is stacked down there, behind a wall of guns." },
       { text: "And someone keeps the books on all of it, counting every coin the gang ever stole." },
     ],
@@ -1450,7 +1461,7 @@ export const RAID_MAP: RaidNode[] = [
       { text: "You re-arm at the Quartermaster's Cache, the same stall that's kitted you out since the coast, while he watches from behind his counter in no hurry at all." },
       { speaker: 'The Quartermaster', portrait: THE_QUARTERMASTER.enemies.quartermaster.portrait, text: "Good pick. I'd have steered you to it myself. I always do." },
       { speaker: 'The Quartermaster', portrait: THE_QUARTERMASTER.enemies.quartermaster.portrait, text: "Every captain who sails into the Coffers gets kitted out right here at my counter. Then I watch how far they get." },
-      { text: "The way he says it puts a cold coin in your gut. Like he's already seen how your story ends." },
+      { text: "The way he says it puts a cold coin in your gut. Like he's already seen *how your story ends*.", pause: 600 },
       { speaker: 'The Quartermaster', portrait: THE_QUARTERMASTER.enemies.quartermaster.portrait, text: "That admiral past the wall has never lost a fight. But every gun on your deck, you bought off me. Don't forget that, captain." },
       { text: "You want to ask whose side he's really on. Then the war-fleet swings around, and there's no more time for questions." },
       { text: "You'll come back to it later, once the admiral's on the harbor floor." },
@@ -1518,10 +1529,11 @@ export const RAID_MAP: RaidNode[] = [
       { text: "You put in at the Quartermaster's Cache to re-arm. Same stall that's kitted you out since the coast." },
       { speaker: 'The Quartermaster', text: "Captain. Knew you'd wash up here eventually. They all do." },
       { speaker: 'The Quartermaster', text: "Every hook, every cannon, every clever little trick. You bought it all off me." },
-      { speaker: 'The Quartermaster', text: "The Cache was never neutral, captain. There's no such thing out here." },
-      { text: "The guns behind the counter swing your way. The shelves you've trusted since the coast were Finndicate all along." },
-      { speaker: 'The Quartermaster', text: "I armed you because they let me. And whatever I sold you, I can take back." },
+      { speaker: 'The Quartermaster', text: "The Cache was *never neutral*, captain. There's no such thing out here.", pause: 800 },
+      { text: "The guns behind the counter swing your way. The shelves you've trusted since the coast were *Finndicate all along*.", fx: 'shake' },
+      { speaker: 'The Quartermaster', text: "I armed you because they let me. And whatever I sold you, *I can take back*.", pause: 600 },
     ],
+    sceneAccent: '#dc2626',
     detail: {
       description:
         "The Quartermaster's Cache, the shady stall that's armed you since the coast, sits in the heart of the Coffers, and the keeper's been expecting you. It was a Finndicate front the whole time. Every piece of kit you bought was a leash, and the merchant who sold it can yank it back. He answers to the don who runs the market, the first time you hear the name: Don Finleone.",
@@ -1544,11 +1556,12 @@ export const RAID_MAP: RaidNode[] = [
     requiresNode: 'quartermaster_turn',
     image: '/raidlog.png',
     scene: [
-      { text: "The moment the keeper's guns come up, his counting-house turns into a riot." },
+      { text: "The moment the keeper's guns come up, his counting-house turns into a riot.", fx: 'shake' },
       { text: "Clerks bolt, coin scatters underfoot, and his hired muscle starts shoving through the crowd toward you." },
       { text: "Bolted to the planks by the scales sits a strongbox, lid still warm from the day's counting." },
-      { text: "You'll get one grab at it before they reach you. Pick your play and be quick." },
+      { text: "You'll get one grab at it before they reach you. Pick your play and be quick.", pause: 400 },
     ],
+    sceneAccent: '#dc2626',
     dice: {
       bonusPerLevels: 10,
       maxBonus: 4,
@@ -1653,9 +1666,9 @@ export const RAID_MAP: RaidNode[] = [
       { text: "Shelf on shelf of other captains' plunder, every piece tagged, sorted, and priced to sell back to whoever comes up next." },
       { text: "Chained to a stand in the heart of it, a ledger the size of a hatch cover: the Quartermaster's accounts." },
       { text: "Every captain the Quartermaster ever armed is in that book, and beside each name, a note on how they sank." },
-      { text: "Lost off the Shrouds. Drowned in the Gullet. Sold their own hull back a plank at a time. Debt cleared, debt cleared, debt cleared." },
-      { text: "Your name's near the bottom, in fresh ink. The line for how you sank is still blank." },
-      { text: "And at the top of every page, the name the whole market answers to: Don Finleone." },
+      { text: "Lost off the Shrouds. Drowned in the Gullet. Sold their own hull back a plank at a time. Debt cleared, debt cleared, debt cleared.", pause: 500 },
+      { text: "Your name's near the bottom, in fresh ink. The line for how you sank is *still blank*.", pause: 900 },
+      { text: "And at the top of every page, the name the whole market answers to: *Don Finleone*.", pause: 900, fx: 'flash' },
       { speaker: 'The Quartermaster', portrait: THE_QUARTERMASTER.enemies.quartermaster.portrait, text: "Now you see it, captain. Everything down here gets sold twice. Even the captains who come to take it back." },
       { text: "He's backed against his own shelves, and he's still smiling. Whatever he sold you, he means to reach out and take it back." },
     ],
@@ -1722,7 +1735,7 @@ export const RAID_MAP: RaidNode[] = [
       { text: "The Quartermaster's strongbox cracks, and the ledgers spill across the deck." },
       { text: "Every page settles the same way, every debt running up to one signature." },
       { text: "A megalodon don who runs the Coffers and every Cache that feeds them." },
-      { text: "Don Finleone. The head of the Finndicate, as far as any ledger knows." },
+      { text: "Don Finleone. The head of the Finndicate, *as far as any ledger knows*.", pause: 700 },
       { text: "Three captains under the water, a market in ruins, and now a name at the top of it." },
       { text: "Whatever waits past the Coffers answers to him. And so, soon, will you." },
     ],
@@ -1766,9 +1779,10 @@ export const RAID_MAP: RaidNode[] = [
       { text: 'Past the last sounding, past the last named reef, the water only goes down.' },
       { text: 'Every ledger, every debt, every drowned captain pointed the same way.' },
       { text: 'Don Finleone. The seat he rules from sits in the deepest water there is.' },
-      { text: 'The crew call it the last fathom — the depth past which nothing comes back up.' },
-      { text: 'You set the heading anyway. Nothing waits past this. That is rather the point.' },
+      { text: 'The crew call it *the last fathom*. The depth past which nothing comes back up.', pause: 600 },
+      { text: 'You set the heading anyway. Nothing waits past this. That is rather the point.', pause: 500 },
     ],
+    sceneAccent: '#6ea8d8',
     detail: {
       description:
         "Past the Coffers there is no more market, no more middlemen, no more names between you and the don. The chase runs out of chart here: Don Finleone's seat lies in the deepest water there is, and the crew have taken to calling it the last fathom — the depth past which nothing comes back up. Set the heading.",
@@ -1921,11 +1935,12 @@ export const RAID_MAP: RaidNode[] = [
     requiresNode: 'blockade_muster',
     scene: [
       { text: 'The lookout calls a spar on the mud bar off the point. Half-sunk, barnacled, drifted down from some wreck upriver. Nobody looks twice.' },
-      { text: 'An hour on, the bosun notices it is still there. Same bar. Same angle. The tide has moved a foot and a half in that time and the spar has not moved at all.' },
-      { text: 'A spar drifts. A spar rolls with the water. This one is lying against the current, and it is lying very deliberately.' },
-      { text: 'You watch it for a long minute. It does not move. Nothing about it moves. Then, without any part of it seeming to turn, you are aware that it is facing you.' },
-      { text: 'The blockade line is ahead. So is he. Remember this: when the water goes flat and nothing at all is happening, that is not nothing happening. That is him deciding.' },
+      { text: 'An hour on, the bosun notices it is still there. Same bar. Same angle. The tide has moved a foot and a half in that time and the spar *has not moved at all*.', pause: 700 },
+      { text: 'A spar drifts. A spar rolls with the water. This one is lying against the current, and it is lying *very deliberately*.', pause: 600 },
+      { text: 'You watch it for a long minute. It does not move. Nothing about it moves. Then, without any part of it seeming to turn, you are aware that *it is facing you*.', pause: 1100, fx: 'shake' },
+      { text: 'The blockade line is ahead. So is he. Remember this: when the water goes flat and nothing at all is happening, that is not nothing happening. *That is him deciding.*', pause: 800 },
     ],
+    sceneAccent: '#e8e4dc',
     detail: {
       description:
         "A spar on the mud bar that does not drift, does not roll, and does not move with the tide. Watch it long enough and you understand it is not wreckage. It is waiting.\n\nRemember the shape of it: when the water goes flat and nothing seems to be happening, that is Sal deciding.",
@@ -2004,11 +2019,11 @@ export const RAID_MAP: RaidNode[] = [
     adminOnly: true,
     image: '/raidlog.png',
     scene: [
-      { text: "Sal Brackwater's strongroom gives up the don's own ledgers — every account the Finndicate keeps, in Finleone's own hand." },
+      { text: "Sal Brackwater's strongroom gives up the don's own ledgers: every account the Finndicate keeps, in Finleone's own hand." },
       { text: 'They balance. Every catch, every Cache, every drowned captain, paid to the coin. A perfect empire, perfectly kept.' },
-      { text: 'All but one margin.' },
-      { text: 'Again and again, in ink older and finer than the rest, a single initial signs off sums that answer to no account: F.' },
-      { text: "Finleone, you'd say — but the don signs his whole name, every time, with a flourish. This hand is small. Patient. It was here first." },
+      { text: 'All but one margin.', pause: 800 },
+      { text: 'Again and again, in ink older and finer than the rest, a single initial signs off sums that answer to no account: *F.*', pause: 700 },
+      { text: "Finleone, you'd say. But the don signs his whole name, every time, with a flourish. This hand is small. Patient. *It was here first.*", pause: 600 },
       { text: 'You close the books. The throne is dead ahead, and whatever the margin means, the answer sits on it.' },
     ],
     detail: {
@@ -2122,13 +2137,14 @@ export const RAID_MAP: RaidNode[] = [
     adminOnly: true,
     image: '/raidlog.png',
     scene: [
-      { text: 'The megalodon sinks the way an empire does — slowly, and then all at once.' },
+      { text: 'The megalodon sinks the way an empire does. Slowly, and then all at once.' },
       { text: 'The court scatters. The colors strike. A hundred years of drowned debts settle to the bottom with their collector.' },
-      { text: 'It should feel finished. You take his ledgers apart page by page, looking for the feeling.' },
-      { text: 'Instead you find the margin again. F. Signing sums before the Finndicate had a name. Signing the sums that BUILT it.' },
-      { text: 'The don ran the family. The margin ran the don. Nothing on any chart says what F runs besides.' },
+      { text: 'It should feel finished. You take his ledgers apart page by page, looking for the feeling.', pause: 500 },
+      { text: 'Instead you find the margin again. F. Signing sums before the Finndicate had a name. Signing the sums that *built* it.', pause: 900, fx: 'flash' },
+      { text: 'The don ran the family. *The margin ran the don.* Nothing on any chart says what F runs besides.', pause: 800 },
       { text: "One account left open, then. You pour what remains of the don's wine, and start on the arithmetic of finding out." },
     ],
+    sceneAccent: '#a78bfa',
     detail: {
       description:
         "The don is down and the Finndicate died with him — but the ledgers say the family was never the top of the pyramid. The F in the margins signed sums before the Finndicate had a name; the don ran the family, and the margin ran the don. One account stays open, and it's older than everything you've sunk so far.",
