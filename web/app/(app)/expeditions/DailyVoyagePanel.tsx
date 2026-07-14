@@ -297,6 +297,13 @@ export default function DailyVoyagePanel({
         if ('error' in res) { setError(res.error); return }
         setActiveVoyage(res.voyage)
         setPanelState('away')
+        // The panel knows the crew has sailed. The VOYAGE CARD up in HubCards does
+        // not: it reads todayVoyage/readyVoyage as SERVER props, so nothing short of
+        // a server re-render can move it off "Ready to Set Sail". Local state cannot
+        // reach it. Without this the card sat there lying until you tabbed away and
+        // back, which is the only reason it ever looked correct.
+        // (handleClaim below has always done this. Only the launch path forgot.)
+        router.refresh()
       } catch (e) {
         // Never let a thrown action leave the button stuck on "Sending…"
         // with no feedback — surface it and clear the pending state.
@@ -304,7 +311,7 @@ export default function DailyVoyagePanel({
         setError('Could not set sail. Please try again.')
       }
     })
-  }, [savedCrew, selectedRoute])
+  }, [savedCrew, selectedRoute, router])
 
   const handleClaim = useCallback(() => {
     if (!activeVoyage) return
