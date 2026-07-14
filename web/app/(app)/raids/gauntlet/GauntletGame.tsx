@@ -30,7 +30,7 @@ import {
   GAUNTLET_COOLDOWN_HOURS, HARDCORE_RUNS_PER_DAY, HC_UNLOCK_DEPTH, GAUNTLET_REWARD_DEPTH_CAP,
   emptyRunStats, addRunStats, coerceRunStats,
   type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot, type GauntletRunState, type GauntletRunStats, chestOdds } from '@/lib/gauntlet'
-import { GAUNTLET_TERMS, TERM_GROUP_META, resolveTerms, termPressure, termTideEffects, pressureGemMult, pressureDepthFactor, NO_TERM_EFFECTS, PRESSURE_CAP, PRESSURE_DEPTH_FLOOR, PRESSURE_DEPTH_FULL, PRESSURE_SKIN_THRESHOLD, PRESSURE_SKIN_DEPTH, MAX_AVAILABLE_PRESSURE, type SignedTerms } from '@/lib/gauntletTerms'
+import { GAUNTLET_TERMS, TERM_GROUP_META, resolveTerms, termPressure, termTideEffects, pressureGemMult, pressureDepthFactor, NO_TERM_EFFECTS, PRESSURE_CAP, PRESSURE_DEPTH_FLOOR, PRESSURE_DEPTH_FULL, PRESSURE_SKIN_THRESHOLD, PRESSURE_SKIN_DEPTH, PRESSURE_SKIN_ID, MAX_AVAILABLE_PRESSURE, type SignedTerms } from '@/lib/gauntletTerms'
 import GauntletTermsPanel from './GauntletTermsPanel'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen, recordGauntletHit, wagerGauntletFathoms, markConfluencesSeen, checkpointGauntletRun, resumeGauntletRun, buyBaitWithFathoms, rollDavyOffer } from './actions'
 import { offerCoinMult, offerChestMult, offerCopy, offerTakenLine, type DavyOffer } from '@/lib/gauntletOffer'
@@ -4215,6 +4215,7 @@ function LootModal({ mode, onClose }: { mode: 'normal' | 'hardcore'; onClose: ()
   const goldHull = getShipSkin('golden_gauntlet_hull')
   const bloodCannon = getRaidItem('davys_blood_cannon')
   const badBloodHull = getShipSkin('bad_blood_hull')
+  const pitchBlackHull = getShipSkin(PRESSURE_SKIN_ID)
 
   const Label = ({ children, color }: { children: React.ReactNode; color?: string }) => (
     <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: color ?? '#8a8480', marginTop: 14, marginBottom: 6 }}>{children}</p>
@@ -4288,6 +4289,14 @@ function LootModal({ mode, onClose }: { mode: 'normal' | 'hardcore'; onClose: ()
                 </div>
                 {bloodCannon && <DropRow img={bloodCannon.image} name={bloodCannon.name} desc={bloodCannon.description} color={accent} />}
                 {badBloodHull && <DropRow img={badBloodHull.imageByTier?.[6]} name={badBloodHull.name} desc={badBloodHull.description} color={badBloodHull.color} big />}
+                {/* The rarest thing in the mode, and it was the one drop this list never
+                    showed. Its price rides in the row itself: the hull is not won by
+                    diving deep, it is won by diving deep UNDER WEIGHT, and a player who
+                    does not know that will never once roll for it. */}
+                {pitchBlackHull && (
+                  <DropRow img={pitchBlackHull.imageByTier?.[6]} name={pitchBlackHull.name} color={pitchBlackHull.color} big
+                    desc={`${pitchBlackHull.description} Only rolls on a cash-out carrying ${PRESSURE_SKIN_THRESHOLD}+ Pressure from Davy's Terms, banked from depth ${PRESSURE_SKIN_DEPTH} or deeper.`} />
+                )}
               </div>
             </>
           )}
