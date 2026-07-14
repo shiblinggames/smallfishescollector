@@ -130,6 +130,10 @@ const ENEMY_COLOR  = '#ef4444'
 // this fraction of the hit that lit it (locked at application, "constant fixed
 // damage scaled to your damage").
 const BURN_TURNS = 2
+/** How many turns Laz's vengeance ward stays lit after it is armed. The whole point
+ *  of the class is the READ, so the ward has to be able to run out: arm it on the
+ *  turns you believe will kill you, or waste your legendary. */
+const VENGEANCE_WARD_TURNS = 3
 // Burn tick = this fraction of the hit that lit it. 10% base; Wildfire heats it
 // up to a hard 20% ceiling (BURN_TICK_MAX). Uncapped vs target HP — it just
 // scales with your damage.
@@ -881,6 +885,19 @@ export default function RaidCombat({
   const vengeanceCleanseRef = useRef(false)
   const vengeanceDmgBuffRef = useRef(0)   // applied buff, live for rest of fight
   const [vengeanceEruptFx, setVengeanceEruptFx] = useState(0)   // bump → crimson burst
+  // THE WARD BURNS DOWN. It used to hold for the whole fight, which made Laz a
+  // "press it whenever" ability: arm it early, forget it, and it either caught a
+  // death for free or quietly did nothing. A 3-turn fuse turns him into what the
+  // class is actually named for — a READ. You arm it because you think the next
+  // few turns are the ones that kill you, and if you misjudge, it gutters out and
+  // you spent your legendary on nothing.
+  //
+  // Mirrored into STATE (not just a ref) because the chip under your hull has to
+  // count down where you can see it. An invisible fuse is not a decision, it is a
+  // trap, and this ability had NO on-screen presence at all before now.
+  const vengeanceWardTurnsRef = useRef(0)
+  const [vengeanceWardTurns, setVengeanceWardTurns] = useState(0)
+  const setWardTurns = (n: number) => { vengeanceWardTurnsRef.current = n; setVengeanceWardTurns(n) }
   // Laz's Vengeance ward is the FIRST line against death — it runs BEFORE any
   // item save (Quartermaster's Anchor) at every lethal gate, so the anchor is
   // never spent while Laz can catch the blow. When armed and a would-be-lethal
@@ -889,11 +906,12 @@ export default function RaidCombat({
   // for the rest of the fight (Lv 100 also cleanses debuffs). Returns the revive
   // HP + buff for the caller to apply + log, or null when the ward isn't up.
   function tryVengeanceRevive(): { hp: number; buffPct: number } | null {
-    if (!vengeanceWardRef.current) return null
+    if (!vengeanceWardRef.current || vengeanceWardTurnsRef.current <= 0) return null
     const reviveHp = Math.max(1, Math.round(playerHpMax * vengeanceHealPctRef.current * tide.healMult))
     const buffPct = vengeanceBuffPctRef.current
     vengeanceDmgBuffRef.current = buffPct
     vengeanceWardRef.current = false
+    setWardTurns(0)
     setVengeanceEruptFx(k => k + 1)
     vibrate([0, 55, 45, 95])
     if (vengeanceCleanseRef.current) {
@@ -1821,6 +1839,7 @@ export default function RaidCombat({
     // Vengeance is CURRENT-FIGHT only — a fresh enemy clears the ward and any
     // active rage buff (arm it again if you need it this fight).
     vengeanceWardRef.current = false
+    setWardTurns(0)
     vengeanceHealPctRef.current = 0
     vengeanceBuffPctRef.current = 0
     vengeanceCleanseRef.current = false
@@ -2485,11 +2504,12 @@ export default function RaidCombat({
         // and light the rage buff. Skill-timed: if no lethal hit comes, it just
         // sits there (a spent ability) — arm it when you read the danger.
         vengeanceWardRef.current = true
+        setWardTurns(VENGEANCE_WARD_TURNS)
         vengeanceHealPctRef.current = vg.healPctMaxHp
         vengeanceBuffPctRef.current = vg.dmgBuffPct
         vengeanceCleanseRef.current = !!vg.cleanseDebuff
         noteCheckResponse('brace')   // a ward is a defensive answer to a mechanic check
-        setResolveLog(prev => [...prev, `${crew.name} girds your ship with a vengeance ward. Fall now and it strikes back.`])
+        setResolveLog(prev => [...prev, `${crew.name} girds your ship with a vengeance ward. Fall within ${VENGEANCE_WARD_TURNS} turns and it strikes back.`])
         break
       }
     }
@@ -3130,6 +3150,23 @@ export default function RaidCombat({
         if (feedHeal > 0) { pHp += feedHeal; onStat?.({ dmgHealed: feedHeal }) }
       }
       pushStep({ who: 'player', action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: `-${total}`, splatColor: BURN_COLOR, logLines: [`${flare > 0 ? `The ${enemy.name} burns for ${tick}, then the flames backdraft for ${flare} more.` : `The ${enemy.name} is ablaze, burning for ${tick}.`}${feedHeal > 0 ? ` The fire feeds you ${feedHeal}.` : ''}`], burnTurnsLeft: enemyBurnRef.current.turns, lifestealHeal: feedHeal || undefined })
+    }
+
+    // The vengeance ward's fuse burns at the same boundary the burn decays at, so
+    // "a turn" means exactly what it already means everywhere else on this screen.
+    // Ticked BEFORE the round resolves, so a ward armed with 1 turn left still
+    // catches a death that lands this round, and only then gutters out.
+    if (vengeanceWardRef.current && vengeanceWardTurnsRef.current > 0) {
+      const left = vengeanceWardTurnsRef.current - 1
+      if (left <= 0) {
+        vengeanceWardRef.current = false
+        setWardTurns(0)
+        pushStep({ who: 'enemy', action: 'reload', pHp, eHp, pCharges, eCharges,
+          splatTarget: null, splatText: '', splatColor: '#d1495b',
+          logLines: ['The vengeance ward gutters out. Whatever Laz was waiting for, it never came.'] })
+      } else {
+        setWardTurns(left)
+      }
     }
 
     // Scorching burn (elite affix) ticks the PLAYER's hull at the top of the turn
@@ -5667,6 +5704,10 @@ export default function RaidCombat({
               </AnimatePresence>
               {/* Persistent burn glow / frost tint from elite Scorching / Glacial */}
               {(playerBurning || playerFrozen) && <ShipStatusAura burning={playerBurning} frozen={playerFrozen} paused={subPhase === 'aiming'} />}
+              {/* The ward, while it holds: a slow crimson pulse around your hull. It
+                  quickens on the last turn, because a fuse you cannot hear run out is
+                  not a decision. */}
+              {vengeanceWardTurns > 0 && <VengeanceWardAura urgent={vengeanceWardTurns === 1} paused={subPhase === 'aiming'} />}
               {/* Wounded Fury (boon) — deliberately NO hull halo. The old crimson
                   rage rim (radial ring growing as HP dropped) read as a SHIELD
                   bubble — the same visual language as the absorb-shield glow —
@@ -6131,6 +6172,10 @@ export default function RaidCombat({
             <ChargesRow charges={playerCharges} max={playerMaxCharges} small readyGlow={canMega ? (megaAugment?.color ?? null) : null} />
             {/* Ch4 statuses + bespoke effect chips on YOUR hull. */}
             <StatusBadgesRow statuses={playerStatuses} bespoke={[
+              // Laz's ward, with its fuse showing. This ability had no on-screen
+              // presence whatsoever before now: you spent your legendary and got
+              // nothing back until it either saved you or died with the enemy.
+              ...(vengeanceWardTurns > 0 ? [{ key: 'ward', color: '#d1495b', tone: 'buff' as const, turns: vengeanceWardTurns, title: `Vengeance Ward — a killing blow in the next ${vengeanceWardTurns} turn${vengeanceWardTurns === 1 ? '' : 's'} is cheated. Let it run out and it is wasted.` }] : []),
               ...(playerBurning ? [{ key: 'burn', color: '#fb923c', title: 'Ablaze — burning each turn (a crew heal puts it out)' }] : []),
               ...(playerFrozen ? [{ key: 'freeze', color: '#7dd3fc', title: 'Frozen — your turn is skipped' }] : []),
             ]} />
@@ -7601,6 +7646,7 @@ function StatusGlyph({ icon, size = 10 }: { icon: string; size?: number }) {
     case 'freeze':  return P('M12 2v20M3.3 7l17.4 10M20.7 7L3.3 17')                                     // snowflake
     case 'snare':   return P('M12 7.2v12.3M8.3 10h7.4M5 13.6c.5 3.7 3.3 5.9 7 5.9s6.5-2.2 7-5.9', <circle cx="12" cy="4.8" r="2" />) // anchor
     case 'aegis':   return P('M4 6.5h16v11H4z', <path d="M4 12h16M9 6.5V12M15 12v5.5" />)                // brick wall
+    case 'ward':    return P('M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z', <path d="M12 8v6M9.2 10.4h5.6" />) // shield + cross (Laz's ward)
     default:        return P('M12 5v14M5 12h14')
   }
 }
@@ -7649,7 +7695,7 @@ function ConditionsSection({ conditions }: { conditions: ConditionItem[] }) {
 // and red/purple-family for debuffs. Renders under each side's HP bar. The
 // bespoke effects (burn / freeze / snare) pass in as extra chips so the player
 // reads ONE coherent status row, even though their mechanics stay bespoke.
-interface BespokeChip { key: string; color: string; turns?: number; title: string }
+interface BespokeChip { key: string; color: string; turns?: number; title: string; tone?: 'buff' | 'debuff' }
 function StatusBadgesRow({ statuses, bespoke = [] }: { statuses: ActiveStatus[]; bespoke?: BespokeChip[] }) {
   if (statuses.length === 0 && bespoke.length === 0) return null
   // Icons are drawn SVGs keyed by the status id / bespoke key — never text
@@ -7674,7 +7720,7 @@ function StatusBadgesRow({ statuses, bespoke = [] }: { statuses: ActiveStatus[];
         const def = STATUS_DEFS[s.id]
         return chip(s.id, def.color, def.tone, s.turnsLeft, `${def.name} — ${def.describe(s.magnitude)} (${s.turnsLeft} turn${s.turnsLeft === 1 ? '' : 's'})`)
       })}
-      {bespoke.map(b => chip(b.key, b.color, 'debuff', b.turns, b.title))}
+      {bespoke.map(b => chip(b.key, b.color, b.tone ?? 'debuff', b.turns, b.title))}
     </div>
   )
 }
@@ -8019,6 +8065,24 @@ function AnchorSaveBurst() {
 
 // Vengeance erupt — Laz's ward catches a killing blow. A crimson shockwave +
 // "Vengeance!" over the hull, redder and harder than the anchor's calm hold.
+// The ward, while it holds. A slow crimson breath around your hull that QUICKENS on
+// its last turn — the ability's only tell that the fuse is nearly out, short of
+// reading the number on the chip.
+function VengeanceWardAura({ urgent, paused }: { urgent: boolean; paused?: boolean }) {
+  const C = '#d1495b'
+  return (
+    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
+      <motion.div
+        aria-hidden
+        animate={paused ? { opacity: 0.34 } : { opacity: urgent ? [0.3, 0.66, 0.3] : [0.16, 0.38, 0.16] }}
+        transition={paused ? { duration: 0.2 } : { duration: urgent ? 0.62 : 2.1, repeat: Infinity, ease: 'easeInOut' }}
+        style={{ position: 'absolute', inset: '-8% -4% -2%', borderRadius: '46%',
+          background: `radial-gradient(ellipse at 50% 62%, ${C}77 0%, ${C}26 48%, transparent 74%)` }}
+      />
+    </div>
+  )
+}
+
 function VengeanceEruptBurst() {
   return (
     <>

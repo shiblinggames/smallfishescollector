@@ -424,20 +424,26 @@ export const FORESIGHT: ClassDef<ForesightMilestone> = {
 }
 
 // Vengeance (Laz the Coelacanth only). The Lazarus fish, back from the dead.
-// A SKILL-TIMED active: arm the ward when you read a killing blow coming. If a
-// lethal hit lands THIS FIGHT while the ward holds, cheat death — heal part of
-// your hull and sail on with bonus damage for the rest of the fight. Misread
-// the danger and the ward fizzles, so timing is everything. Buff capped at +35%.
+// A SKILL-TIMED active: arm the ward when you read a killing blow coming. It stays
+// lit for VENGEANCE_WARD_TURNS (3) turns, and ONLY those. Take a lethal hit while it
+// burns and you cheat death — heal part of your hull and sail on with bonus damage
+// for the rest of the fight. Let the fuse run out and it is simply gone, along with
+// your once-per-raid legendary.
+//
+// The 3-turn fuse is the whole class. Held for the entire fight, this was a "press it
+// whenever" ability: arm it on round one, forget it, and it either caught a death for
+// free or quietly did nothing. The fuse is what makes it the READ the name promises.
+// Buff capped at +35%.
 export const VENGEANCE: ClassDef<VengeanceMilestone> = {
   id: 'vengeance', name: 'Vengeance', shortLabel: 'Vengeance',
-  blurb: 'Arm a vengeance ward. If a killing blow would land while it holds, cheat death: heal part of your hull and surge with bonus damage for the rest of the fight. Arm it too early or too late and it fizzles.',
+  blurb: 'Arm a vengeance ward for 3 turns. Take a killing blow while it burns and you cheat death: heal part of your hull and surge with bonus damage for the rest of the fight. Let it run out and it is wasted.',
   color: '#d1495b', emoji: '†',
   milestones: [
-    { unlockLevel: 10,  healPctMaxHp: 0.25, dmgBuffPct: 0.15, desc: 'Arm the ward. Cheat a killing blow this fight: heal 25% max HP, gain +15% damage for the rest of the fight.' },
-    { unlockLevel: 25,  healPctMaxHp: 0.25, dmgBuffPct: 0.20, desc: 'Cheat a killing blow: heal 25% max HP, gain +20% damage for the rest of the fight.' },
-    { unlockLevel: 40,  healPctMaxHp: 0.35, dmgBuffPct: 0.25, desc: 'Cheat a killing blow: heal 35% max HP, gain +25% damage for the rest of the fight.' },
-    { unlockLevel: 75,  healPctMaxHp: 0.35, dmgBuffPct: 0.30, desc: 'Cheat a killing blow: heal 35% max HP, gain +30% damage for the rest of the fight.' },
-    { unlockLevel: 100, healPctMaxHp: 0.50, dmgBuffPct: 0.35, cleanseDebuff: true, desc: 'Cheat a killing blow: heal 50% max HP, gain +35% damage for the rest of the fight, and cleanse every debuff.' },
+    { unlockLevel: 10,  healPctMaxHp: 0.25, dmgBuffPct: 0.15, desc: 'Arm the ward for 3 turns. Cheat a killing blow while it burns: heal 25% max HP, gain +15% damage for the rest of the fight.' },
+    { unlockLevel: 25,  healPctMaxHp: 0.25, dmgBuffPct: 0.20, desc: 'Arm the ward for 3 turns. Cheat a killing blow while it burns: heal 25% max HP, gain +20% damage for the rest of the fight.' },
+    { unlockLevel: 40,  healPctMaxHp: 0.35, dmgBuffPct: 0.25, desc: 'Arm the ward for 3 turns. Cheat a killing blow while it burns: heal 35% max HP, gain +25% damage for the rest of the fight.' },
+    { unlockLevel: 75,  healPctMaxHp: 0.35, dmgBuffPct: 0.30, desc: 'Arm the ward for 3 turns. Cheat a killing blow while it burns: heal 35% max HP, gain +30% damage for the rest of the fight.' },
+    { unlockLevel: 100, healPctMaxHp: 0.50, dmgBuffPct: 0.35, cleanseDebuff: true, desc: 'Arm the ward for 3 turns. Cheat a killing blow while it burns: heal 50% max HP, gain +35% damage for the rest of the fight, and cleanse every debuff.' },
   ],
 }
 
