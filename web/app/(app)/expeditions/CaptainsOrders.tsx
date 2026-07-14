@@ -36,17 +36,32 @@ export type OrderAction = 'campaign' | 'voyages' | 'loadout'
 
 interface Order {
   id: string
-  title: string
-  why: string
-  cta: string
+  /** Titles, reasons and destinations are FUNCTIONS of state, because two of them were
+   *  traps as constants: "Sail your first raid" opened a STORY node (the campaign starts
+   *  with one), and "Send a voyage" could be impossible for a captain whose entire crew
+   *  was in raid slots — a dead end the checklist could never clear. */
+  title: (s: OrdersState) => string
+  why: (s: OrdersState) => string
+  cta: (s: OrdersState) => string
   /** A real route. */
-  href?: string
+  href?: (s: OrdersState) => string | undefined
   /** Or an action the HUB implements. Never an invented window event: two of the three
    *  I first reached for had no listener anywhere, which would have made this card
    *  silently do nothing — the precise failure it exists to prevent. */
-  action?: OrderAction
+  action?: (s: OrdersState) => OrderAction | undefined
   done: (s: OrdersState) => boolean
 }
+
+/**
+ * CAN this captain send a voyage at all?
+ *
+ * Not "do they have spare crew" — that was the bug. A captain who has already ASSIGNED
+ * someone to the voyage track has zero spare, and would have been nagged to recruit more
+ * while a fully crewed voyage sat there ready to sail. They can go if anyone is ON the
+ * voyage track, OR if anyone is free to be put there.
+ */
+const canVoyage = (s: OrdersState) =>
+  s.voyageCrew > 0 || (s.crewOwned - s.raidCrew - s.voyageCrew) > 0
 
 /**
  * The order matters. Recruit before you can crew; crew before you fight; fight before
@@ -57,42 +72,53 @@ interface Order {
 const ORDERS: Order[] = [
   {
     id: 'recruit',
-    title: 'Recruit your first crew',
-    why: 'A ship with no crew loses. Every captain who cleared the first raid sailed with four or more.',
-    cta: 'Go to the Crew Hall',
-    href: '/crew',
+    title: () => 'Recruit your first crew',
+    // The FIRST thing a captain reads about Expeditions. It has to teach the shape of
+    // the whole page in one breath, not just name a button.
+    why: () => 'Expeditions are two loops, and both run on crew. RAIDS are the story and the loot. VOYAGES earn while you are away. Your first recruit is free.',
+    cta: () => 'Go to the Crew Hall',
+    href: () => '/crew',
     done: s => s.crewOwned > 0,
   },
   {
     id: 'crew_the_deck',
-    title: 'Put your crew in the RAID slots',
-    why: 'Voyage crew and raid crew are separate. A crew member sails one track or the other, never both, so crew assigned to voyages will not fight for you.',
-    cta: 'Assign raid crew',
-    href: '/crew?tab=roster&filter=raid',
+    title: () => 'Put your crew in the RAID slots',
+    // The single concept the game was failing to teach, and the reason players stalled.
+    why: () => 'Raid crew and voyage crew are SEPARATE rosters, and a crew sails one or the other, never both. Crew you put on voyages will not fight for you.',
+    cta: () => 'Assign raid crew',
+    href: () => '/crew?tab=roster&filter=raid',
     done: s => s.raidCrew > 0,
   },
   {
     id: 'first_raid',
-    title: 'Sail your first raid',
-    why: 'The campaign is the spine of the game. It pays the items, the story and the ship classes.',
-    cta: 'Open the campaign',
-    action: 'campaign',
+    // The campaign OPENS on a story node, so promising a fight and delivering a cutscene
+    // would be the first thing this card got wrong.
+    title: s => (s.raidsCleared === 0 && s.crewOwned > 0 ? 'Start the campaign' : 'Win your first raid'),
+    why: () => 'The campaign is the spine of Expeditions: it pays the items, the ship classes and the story. It opens with a scene, then your first fight.',
+    cta: () => 'Open the campaign',
+    action: () => 'campaign',
     done: s => s.raidsCleared > 0,
   },
   {
     id: 'equip_item',
-    title: 'Equip a raid item',
-    why: 'Items are half your power in a fight, and they sit in your hold doing nothing until you slot them.',
-    cta: 'Open your loadout',
-    action: 'loadout',
+    title: () => 'Equip a raid item',
+    why: () => 'Items are half your power in a fight. Raids drop them, and they sit in your hold doing nothing until you slot them.',
+    cta: () => 'Open your loadout',
+    action: () => 'loadout',
     done: s => s.equippedItems > 0 || s.ownedItems === 0,
   },
   {
     id: 'first_voyage',
-    title: 'Send a voyage',
-    why: 'Voyages earn while you are away. Use the crew you are NOT taking into raids.',
-    cta: 'Send a voyage',
-    action: 'voyages',
+    // A captain with three crew who just crewed the deck has NONE spare, so "Send a
+    // voyage" would be a dead end the checklist could never clear. When that is the case
+    // this order teaches the actual lesson instead: you need enough crew for both tracks.
+    title: s => (canVoyage(s) ? 'Send a voyage' : 'Recruit crew for voyages'),
+    why: s => (canVoyage(s)
+      ? 'Voyages earn doubloons and gems while you are away. They sail with the crew you did NOT take into raids.'
+      : 'Every crew you own is in a raid slot, and a crew can only sail one track. Recruit a few more and put them on voyages, so both loops earn at once.'),
+    cta: s => (canVoyage(s) ? 'Send a voyage' : 'Recruit more crew'),
+    href: s => (canVoyage(s) ? undefined : '/crew'),
+    action: s => (canVoyage(s) ? 'voyages' : undefined),
     done: s => s.voyagesRun > 0,
   },
 ]
@@ -121,7 +147,9 @@ export default function CaptainsOrders({ state, onAction, alreadyDone }: {
   const doneCount = ORDERS.filter(o => o.done(state)).length
   const ACCENT = '#f0c040'
 
-  const go = () => { if (next.action) onAction(next.action) }
+  const href = next.href?.(state)
+  const action = next.action?.(state)
+  const go = () => { if (action) onAction(action) }
 
   const body = (
     <>
@@ -140,10 +168,10 @@ export default function CaptainsOrders({ state, onAction, alreadyDone }: {
       </div>
 
       <p className="font-cinzel font-800" style={{ fontSize: '1.05rem', color: '#f4ecd8', lineHeight: 1.18, marginTop: 6 }}>
-        {next.title}
+        {next.title(state)}
       </p>
-      <p className="font-karla" style={{ fontSize: '0.76rem', color: '#b0a99c', lineHeight: 1.45, marginTop: 5 }}>
-        {next.why}
+      <p className="font-karla" style={{ fontSize: '0.78rem', color: '#b8b1a4', lineHeight: 1.5, marginTop: 5 }}>
+        {next.why(state)}
       </p>
 
       <div className="font-cinzel font-800 uppercase tracking-[0.06em]" style={{
@@ -152,7 +180,7 @@ export default function CaptainsOrders({ state, onAction, alreadyDone }: {
         color: '#1a1206', background: `linear-gradient(180deg, ${ACCENT}, ${ACCENT}cc)`,
         boxShadow: `0 0 18px ${ACCENT}33`,
       }}>
-        {next.cta}
+        {next.cta(state)}
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
       </div>
     </>
@@ -168,8 +196,8 @@ export default function CaptainsOrders({ state, onAction, alreadyDone }: {
 
   return (
     <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
-      {next.href
-        ? <Link href={next.href} className="tap" style={shell}>{body}</Link>
+      {href
+        ? <Link href={href} className="tap" style={shell}>{body}</Link>
         : <button type="button" onClick={go} className="tap" style={{ ...shell, border: `1px solid ${ACCENT}55`, background: shell.background as string }}>{body}</button>}
     </motion.div>
   )
