@@ -72,6 +72,12 @@ export default function UltimateBuildPanel({
     setBuild({ id, completesAt: res.completesAt })
     setConfirmId(null)
     if (typeof res.doubloons === 'number') window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+    // The purse event only reaches the Nav. ShipHero reads `doubloons` as a SERVER
+    // prop to decide whether you can afford a repair (canAffordRepair), and it does
+    // not listen for that event — so after a build purchase the repair button still
+    // offered a price you could no longer pay. The server refuses it; the button was
+    // simply lying.
+    router.refresh()
   }
 
   async function swap(id: ShipAugmentId) {
@@ -91,6 +97,12 @@ export default function UltimateBuildPanel({
     setBuild({ id, completesAt: res.completesAt, retool: true })
     setConfirmRetool(null)
     if (typeof res.doubloons === 'number') window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+    // The purse event only reaches the Nav. ShipHero reads `doubloons` as a SERVER
+    // prop to decide whether you can afford a repair (canAffordRepair), and it does
+    // not listen for that event — so after a build purchase the repair button still
+    // offered a price you could no longer pay. The server refuses it; the button was
+    // simply lying.
+    router.refresh()
   }
 
   async function buySchem() {
@@ -103,6 +115,12 @@ export default function UltimateBuildPanel({
     if (res.active) setActive(res.active)
     setBuild(null)   // any retool mid-clock completed with the purchase
     if (typeof res.doubloons === 'number') window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+    // The purse event only reaches the Nav. ShipHero reads `doubloons` as a SERVER
+    // prop to decide whether you can afford a repair (canAffordRepair), and it does
+    // not listen for that event — so after a build purchase the repair button still
+    // offered a price you could no longer pay. The server refuses it; the button was
+    // simply lying.
+    router.refresh()
   }
 
   // Free switch (schematics owners) — optimistic, with the tactile beat:

@@ -387,6 +387,9 @@ export default function ShipHero({
 
   const [repairing, startRepair] = useTransition()
   const [repairErr, setRepairErr] = useState<string | null>(null)
+  // Set when a Renown point is actually spent, so closing the panel untouched costs
+  // nothing. See the RenownPanel onClose below.
+  const renownDirtyRef = useRef(false)
   const canAffordRepair = doubloons >= raidRepairOwed
   function doRepair() {
     setRepairErr(null)
@@ -683,7 +686,14 @@ export default function ShipHero({
   // Skin equip
   function handleEquipSkin(skinId: string | null) {
     setEquippedSkin(skinId)
-    startTransition(async () => { await equipShipSkin(skinId) })
+    startTransition(async () => {
+      await equipShipSkin(skinId)
+      // The hero sprite up here is local state and updates instantly. The STORY MAP's
+      // Captain's-Choice nodes are not: page.tsx derives playerShipImage from
+      // profile.equipped_ship_skin and threads it into RaidsSection, so without this
+      // they keep drawing the old hull.
+      router.refresh()
+    })
   }
 
   // Raid items are an inventory-first toggle: the whole owned collection is
@@ -2076,10 +2086,19 @@ export default function ShipHero({
       {/* Navigation Renown board — opens from the Lv pill once Nav hits 100. */}
       <RenownPanel
         open={renownOpen}
-        onClose={() => setRenownOpen(false)}
+        onClose={() => {
+          setRenownOpen(false)
+          // Nav Renown feeds the REAL fight numbers: getRaidPlayerStats folds
+          // nav_renown_alloc into playerHPMax and classDamageMult, and page.tsx sends
+          // those to the campaign launch modal as prepStats. Spend a point in Hull and
+          // the modal kept quoting your pre-Renown hull. Refreshed once on close
+          // rather than per point, so a captain spending five points does not trigger
+          // five server round-trips.
+          if (renownDirtyRef.current) { renownDirtyRef.current = false; router.refresh() }
+        }}
         skill="nav"
         initial={navRenownState}
-        onChange={s => setNavRenownAllocState(s.alloc)}
+        onChange={s => { setNavRenownAllocState(s.alloc); renownDirtyRef.current = true }}
       />
       <RenownIntroOverlay
         open={navRenownIntro}

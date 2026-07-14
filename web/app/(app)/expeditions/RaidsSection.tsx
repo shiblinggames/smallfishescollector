@@ -836,6 +836,13 @@ function NodeDetailSheet({
     startTransition(async () => {
       const res = await solvePuzzleNode(node.id)
       if ('error' in res) { setErr(res.error); return }
+      // The node is CLEARED server-side now, so every exit from this sheet has to
+      // refresh the map. actedRef is exactly that contract (see closeSheet), and this
+      // path was the one that never signed it: solve the puzzle, then dismiss via the
+      // backdrop or the X instead of the reveal CTA, and the node stayed drawn as
+      // uncleared with the next node still locked until you navigated away and back.
+      // finishReveal() refreshes, but it is only ONE of three ways out.
+      actedRef.current = true
       // Stay open and reveal the destination — the Nav XP is already granted.
       setRevealed(true)
     })
