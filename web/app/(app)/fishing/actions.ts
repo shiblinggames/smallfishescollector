@@ -1853,7 +1853,9 @@ export async function claimFishingLevelRewards(): Promise<{
   for (const { reward } of owed) {
     doubloons += reward.doubloons ?? 0
     gems      += reward.gems ?? 0
-    if (reward.holdTiers) holdTier += reward.holdTiers
+    // A FLOOR, never a bump: a captain who already bought a better hold keeps it and
+    // the reward is simply already satisfied. See LevelReward.holdFloor.
+    if (reward.holdFloor != null) holdTier = Math.max(holdTier, reward.holdFloor)
     for (const [type, qty] of Object.entries(reward.bait ?? {})) {
       // Never hand over a bait type that does not exist — a typo in the table would
       // otherwise write a junk row the shop cannot render.

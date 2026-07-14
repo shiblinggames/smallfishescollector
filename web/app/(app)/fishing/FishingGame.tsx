@@ -9904,7 +9904,7 @@ export default function FishingGame({
                 const baitTotals: Record<string, number> = {}
                 for (const { reward } of levelRewards)
                   for (const [t, q] of Object.entries(reward.bait ?? {})) baitTotals[t] = (baitTotals[t] ?? 0) + q
-                const holdUp = levelRewards.some(r => r.reward.holdTiers)
+                const holdFloor = Math.max(0, ...levelRewards.map(r => r.reward.holdFloor ?? 0))
                 const milestone = levelRewards.some(r => r.reward.milestone)
                 const GOLD = '#f0c040'
                 const chip = (key: string, text: string, color: string) => (
@@ -9936,7 +9936,7 @@ export default function FishingGame({
                       {totalGems > 0 && chip('gems', `+${totalGems} \u25c6`, '#a78bfa')}
                       {Object.entries(baitTotals).map(([t, q]) =>
                         chip(t, `+${q} ${getBait(t).name}`, '#7fd49a'))}
-                      {holdUp && chip('hold', 'Bigger Fish Hold', '#60a5fa')}
+                      {holdFloor > 0 && chip('hold', FISH_HOLD_TIERS[holdFloor].name, '#60a5fa')}
                     </div>
                   </motion.div>
                 )

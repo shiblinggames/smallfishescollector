@@ -27,8 +27,17 @@ export interface LevelReward {
   gems?: number
   /** Bait to hand over: type → count. Types must exist in lib/bait. */
   bait?: Record<string, number>
-  /** Bump the fish hold by this many tiers. */
-  holdTiers?: number
+  /**
+   * Raise the fish hold to AT LEAST this tier. A FLOOR, not a bump.
+   *
+   * It was `holdTiers: 1` (a relative +1), which meant the identical "bigger fish
+   * hold" reward was worth 500 doubloons to a fresh captain and 50,000 to one who had
+   * already bought up to a Deep Hold. The same level-up, a hundredfold difference in
+   * value, scaling with how much the player had ALREADY paid. A floor gives everyone
+   * the same thing: by Lv 10 you have at least a Medium Crate, and if you already
+   * bought better, the reward is simply already satisfied.
+   */
+  holdFloor?: number
   /** The headline on the level-up overlay. Say what they GOT, not what it means. */
   label: string
   /** A milestone gets the bigger treatment on the overlay. */
@@ -53,7 +62,7 @@ export const LEVEL_REWARDS: Record<number, LevelReward> = {
   7:  { doubloons: coinFor(7),                                label: '440 ⟡' },
   8:  { doubloons: coinFor(8),  bait: { night_crawler: 3 },   label: '480 ⟡ and 3 Night Crawlers' },
   9:  { doubloons: coinFor(9),                                label: '530 ⟡' },
-  10: { doubloons: 1500, gems: 10, holdTiers: 1,              label: '1,500 ⟡, 10 ◆, and a bigger fish hold', milestone: true },
+  10: { doubloons: 1500, gems: 10, holdFloor: 1,              label: '1,500 ⟡, 10 ◆, and a Medium Crate', milestone: true },
   11: { doubloons: coinFor(11), bait: { minnow: 6 },          label: '620 ⟡ and 6 Minnow' },
   12: { doubloons: coinFor(12),                               label: '660 ⟡' },
   13: { doubloons: coinFor(13), bait: { night_crawler: 5 },   label: '710 ⟡ and 5 Night Crawlers' },
@@ -63,7 +72,7 @@ export const LEVEL_REWARDS: Record<number, LevelReward> = {
   17: { doubloons: coinFor(17),                               label: '890 ⟡' },
   18: { doubloons: coinFor(18), bait: { chum: 4 },            label: '930 ⟡ and 4 Chum' },
   19: { doubloons: coinFor(19),                               label: '980 ⟡' },
-  20: { doubloons: 4000, gems: 20, holdTiers: 1,              label: '4,000 ⟡, 20 ◆, and a bigger fish hold', milestone: true },
+  20: { doubloons: 4000, gems: 20, holdFloor: 2,              label: '4,000 ⟡, 20 ◆, and a Large Crate', milestone: true },
   21: { doubloons: coinFor(21), bait: { night_crawler: 8 },   label: '1,070 ⟡ and 8 Night Crawlers' },
   22: { doubloons: coinFor(22),                               label: '1,110 ⟡' },
   23: { doubloons: coinFor(23), bait: { chum: 6 },            label: '1,160 ⟡ and 6 Chum' },
@@ -84,7 +93,10 @@ export function rewardForLevel(level: number): LevelReward | null {
   if (listed) return listed
 
   const milestone = isMilestoneLevel(level)
-  const doubloons = milestone ? coinFor(level) * 6 : coinFor(level) * 2
+  // Ordinary levels use the SAME coinFor the table uses. It was coinFor * 2 here,
+  // which meant Lv 24 (table) paid 1,200 and Lv 26 (fallback) paid 2,580 — the payout
+  // curve doubled at the table's edge for no reason a player could ever see.
+  const doubloons = milestone ? coinFor(level) * 6 : coinFor(level)
   const gems = milestone ? Math.min(50, 20 + Math.floor(level / 5) * 2) : undefined
   return {
     doubloons,
