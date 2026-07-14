@@ -79,6 +79,59 @@ export function useTypewriter(
   return { shown, typing, held, finish }
 }
 
+/** The asterisks are markup, not letters. Strip them for anything that MEASURES text. */
+export function stripEmphasis(text: string): string {
+  return text.replace(/\*([^*]+)\*/g, '$1')
+}
+
+/**
+ * The dialogue body, at a CONSTANT height for the entire scene.
+ *
+ * It used to size to whatever was currently TYPED, so the plate grew line by line as
+ * the characters arrived and then jumped again between a short line and a long one.
+ * The box flexed constantly while you were trying to read it.
+ *
+ * Every line of the scene is rendered into the SAME grid cell, invisible. The tallest
+ * one sets the row height, the visible line overlays it, and the plate is therefore
+ * exactly one size from the first character of the scene to the last. Nothing moves.
+ */
+export function TypedBody({ all, text, shown, typing, accent, italic, quoted, size = '1.05rem', align = 'left' }: {
+  /** Every line in this scene, so the tallest can reserve the height. */
+  all: string[]
+  text: string
+  shown: number
+  typing: boolean
+  accent: string
+  italic?: boolean
+  quoted?: boolean
+  size?: string
+  align?: 'left' | 'center'
+}) {
+  // Sizers always measure at the LARGER (non-italic character-line) metrics, so a
+  // narrator line can never reserve less room than a spoken one would need.
+  const metrics: React.CSSProperties = { fontSize: size, lineHeight: 1.62, margin: 0, whiteSpace: 'pre-wrap', textAlign: align }
+  return (
+    <div style={{ display: 'grid' }}>
+      {all.map((t, i) => (
+        <p key={i} aria-hidden className="font-karla"
+          style={{ ...metrics, gridArea: '1 / 1', visibility: 'hidden', pointerEvents: 'none' }}>
+          {quoted ? `“${stripEmphasis(t)}”` : stripEmphasis(t)}
+        </p>
+      ))}
+      <p className="font-karla" style={{
+        ...metrics, gridArea: '1 / 1',
+        fontStyle: italic ? 'italic' : 'normal',
+        color: italic ? 'rgba(240,237,232,0.86)' : '#f4f0e8',
+      }}>
+        {quoted && shown > 0 && <span style={{ color: `${accent}bb` }}>&ldquo;</span>}
+        {renderEmphasis(text.slice(0, shown), accent)}
+        {quoted && !typing && <span style={{ color: `${accent}bb` }}>&rdquo;</span>}
+        {typing && <Caret accent={accent} />}
+      </p>
+    </div>
+  )
+}
+
 /** A blinking caret. The thing that says "words are arriving". */
 export function Caret({ accent }: { accent: string }) {
   return (

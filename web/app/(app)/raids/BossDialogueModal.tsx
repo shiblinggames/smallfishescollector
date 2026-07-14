@@ -19,8 +19,8 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import CharacterAvatar from '@/components/CharacterAvatar'
 import {
-  GOLD, useTypewriter, renderEmphasis, prefersReducedMotion,
-  Caret, Letterbox, LivingFrame, FlashOut, SceneProgress, lineHaptic,
+  GOLD, useTypewriter, prefersReducedMotion,
+  TypedBody, Letterbox, LivingFrame, FlashOut, SceneProgress, lineHaptic,
 } from '@/components/cutscene'
 import type { BossDialogueLine, BroadsideEnemy } from '@/lib/bossRaids'
 
@@ -51,6 +51,8 @@ export default function BossDialogueModal({
 
   const line = lines[idx]
   const last = idx >= lines.length - 1
+  // Every line, so the plate can reserve the tallest and never resize again.
+  const allText = lines.map(l => l.text)
 
   const { shown, typing, held, finish } = useTypewriter(line.text, idx, {
     pause: line.pause,
@@ -161,47 +163,53 @@ export default function BossDialogueModal({
         </button>
       </div>
 
-      {/* The shot: two wings and a plate, rocked together when a line hits. */}
+      {/* ── THE SHOT ─────────────────────────────────────────────────────────
+          The frame SHAKES as one (x/y), but the camera's push-in scale is applied to
+          the WINGS ONLY. It used to scale this whole container, and the dialogue plate
+          lives at the bottom of it: scaling about the center pushed the plate's bottom
+          edge DOWN, straight under the black letterbox bar, and the box read as cut
+          off. The plate is not part of the shot. It is the subtitle track, and a
+          subtitle track does not move when the camera does. */}
       <motion.div
-        animate={
-          shake ? { x: [0, -9, 8, -6, 4, 0], y: [0, 4, -3, 2, 0], scale: 1.02 }
-          : held ? { x: 0, y: 0, scale: 1.035 }
-          : { x: 0, y: 0, scale: 1 }
-        }
-        transition={
-          shake ? { duration: 0.42 }
-          : held ? { duration: (line.pause ?? 600) / 1000, ease: 'easeInOut' }
-          : { duration: 0.5, ease: 'easeOut' }
-        }
+        animate={shake ? { x: [0, -9, 8, -6, 4, 0], y: [0, 4, -3, 2, 0] } : { x: 0, y: 0 }}
+        transition={shake ? { duration: 0.42 } : { duration: 0.3 }}
         style={{ position: 'absolute', inset: '44px 0', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}
       >
-        <div style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          gap: 12, padding: '0 6% 1.1rem' }}>
+        <motion.div
+          animate={{ scale: shake ? 1.04 : held ? 1.05 : 1 }}
+          transition={
+            shake ? { duration: 0.42 }
+            : held ? { duration: (line.pause ?? 600) / 1000, ease: 'easeInOut' }
+            : { duration: 0.5, ease: 'easeOut' }
+          }
+          style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            gap: 12, padding: '0 6% 1.1rem' }}
+        >
           {wing('left', isBoss, boss.name, bossArt, ACCENT)}
           {wing('right', isPlayer, playerLabel, playerArt, '#4ade80')}
-        </div>
+        </motion.div>
 
         <div style={{ position: 'relative', zIndex: 3, padding: '0 1rem calc(env(safe-area-inset-bottom, 0px) + 1.15rem)' }}>
           <div style={{
-            width: '100%', maxWidth: 540, margin: '0 auto', minHeight: 142,
+            width: '100%', maxWidth: 540, margin: '0 auto',
             padding: '1.05rem 1.15rem 1.15rem', borderRadius: 16,
             background: 'linear-gradient(180deg, rgba(12,10,7,0.94), rgba(5,4,4,0.97))',
             border: `1px solid ${isNarrator ? 'rgba(255,255,255,0.12)' : `${isPlayer ? '#4ade80' : ACCENT}55`}`,
             boxShadow: '0 -8px 40px rgba(0,0,0,0.7)',
             backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)',
           }}>
-            <p className="font-karla" style={{
-              fontSize: isNarrator ? '0.98rem' : '1.05rem',
-              lineHeight: 1.62,
-              color: isNarrator ? 'rgba(240,237,232,0.86)' : '#f4f0e8',
-              fontStyle: isNarrator ? 'italic' : 'normal',
-              textAlign: 'left', margin: 0, minHeight: '3.2em',
-            }}>
-              {!isNarrator && shown > 0 && <span style={{ color: `${ACCENT}bb` }}>&ldquo;</span>}
-              {renderEmphasis(line.text.slice(0, shown), ACCENT)}
-              {!isNarrator && !typing && <span style={{ color: `${ACCENT}bb` }}>&rdquo;</span>}
-              {typing && <Caret accent={ACCENT} />}
-            </p>
+            {/* One height for the whole scene: every line reserves it, the tallest
+                wins. The box never grows as the text types and never jumps between a
+                short line and a long one. */}
+            <TypedBody
+              all={allText}
+              text={line.text}
+              shown={shown}
+              typing={typing}
+              accent={ACCENT}
+              italic={isNarrator}
+              quoted={!isNarrator}
+            />
 
             <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end', minHeight: 34, alignItems: 'center' }}>
               {last && !typing ? (

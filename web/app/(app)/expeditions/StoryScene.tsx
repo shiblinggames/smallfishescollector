@@ -30,6 +30,7 @@
 import { useEffect, useRef, useState, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import { TypedBody } from '@/components/cutscene'
 import { vibrate } from '@/lib/haptics'
 import type { SceneLine } from '@/lib/raidMap'
 
@@ -163,6 +164,7 @@ export default function StoryScene({ title, lines, ctaLabel, pending, accent, on
   // stage, plate at their feet. The variety is the point; a betrayal and a weather
   // report should not be framed identically.
   const hasCast = useMemo(() => lines.some(l => l.speaker && l.portrait), [lines])
+  const allText = useMemo(() => lines.map(l => l.text), [lines])
   const shake = line?.fx === 'shake' && !reduced && !held
 
   // ── THE BUST ────────────────────────────────────────────────────────────────
@@ -288,37 +290,27 @@ export default function StoryScene({ title, lines, ctaLabel, pending, accent, on
 
       {/* ── THE SHOT: stage + dialogue, rocked together when a line hits. ────── */}
       <motion.div
-        animate={
-          shake ? { x: [0, -9, 8, -6, 4, 0], y: [0, 4, -3, 2, 0], scale: 1.02 }
-          : held ? { x: 0, y: 0, scale: 1.035 }     // the camera creeps in on a held beat
-          : { x: 0, y: 0, scale: 1 }
-        }
-        transition={
-          shake ? { duration: 0.42 }
-          : held ? { duration: (line?.pause ?? 600) / 1000, ease: 'easeInOut' }
-          : { duration: 0.5, ease: 'easeOut' }
-        }
+        animate={shake ? { x: [0, -9, 8, -6, 4, 0], y: [0, 4, -3, 2, 0] } : { x: 0, y: 0 }}
+        transition={shake ? { duration: 0.42 } : { duration: 0.3 }}
         style={{ position: 'absolute', inset: '44px 0', display: 'flex', flexDirection: 'column',
           justifyContent: hasCast ? 'flex-end' : 'center' }}
       >
         {/* ── TITLE CARD — a scene with no cast. Words in the dark, nothing else. */}
         {!hasCast && (
           <div style={{ padding: '0 1.6rem', textAlign: 'center' }}>
-            <p className="font-karla" style={{
-              maxWidth: 500, margin: '0 auto',
-              fontSize: '1.22rem', lineHeight: 1.72,
-              color: 'rgba(244,240,232,0.94)', fontStyle: 'italic',
-              textShadow: '0 2px 20px rgba(0,0,0,0.8)',
-              minHeight: '5.2em',
-            }}>
-              {renderText(line?.text.slice(0, shown) ?? '', ACCENT)}
-              {typing && (
-                <motion.span aria-hidden
-                  animate={{ opacity: [1, 0.15, 1] }} transition={{ duration: 0.75, repeat: Infinity }}
-                  style={{ display: 'inline-block', width: 2, height: '1em', marginLeft: 3,
-                    verticalAlign: 'text-bottom', background: ACCENT }} />
-              )}
-            </p>
+            <motion.div
+              animate={{ scale: shake ? 1.04 : held ? 1.05 : 1 }}
+              transition={
+                shake ? { duration: 0.42 }
+                : held ? { duration: (line?.pause ?? 600) / 1000, ease: 'easeInOut' }
+                : { duration: 0.5, ease: 'easeOut' }
+              }
+              style={{ maxWidth: 500, margin: '0 auto', textShadow: '0 2px 20px rgba(0,0,0,0.8)' }}>
+              <TypedBody
+                all={allText} text={line?.text ?? ''} shown={shown} typing={typing}
+                accent={ACCENT} italic align="center" size="1.22rem"
+              />
+            </motion.div>
             <div style={{ marginTop: 26, minHeight: 52, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
               {last && !typing ? (
                 <button onClick={e => { e.stopPropagation(); onComplete() }} disabled={pending}
@@ -342,17 +334,24 @@ export default function StoryScene({ title, lines, ctaLabel, pending, accent, on
         {hasCast && (<>
         {/* The stage. Busts sit BEHIND the dialogue plate and are overlapped by it,
             which is what puts them in the room instead of on a card. */}
-        <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
+        <motion.div
+          animate={{ scale: shake ? 1.04 : held ? 1.05 : 1 }}
+          transition={
+            shake ? { duration: 0.42 }
+            : held ? { duration: (line?.pause ?? 600) / 1000, ease: 'easeInOut' }
+            : { duration: 0.5, ease: 'easeOut' }
+          }
+          style={{ position: 'relative', flex: 1, minHeight: 0 }}>
           <AnimatePresence>{bust(left, 'left')}</AnimatePresence>
           <AnimatePresence>{bust(right, 'right')}</AnimatePresence>
-        </div>
+        </motion.div>
 
         {/* The dialogue plate. */}
         <div style={{ position: 'relative', zIndex: 3, padding: '0 1rem calc(env(safe-area-inset-bottom, 0px) + 1.15rem)' }}>
-          <motion.div layout
+          <div
             style={{
               position: 'relative', width: '100%', maxWidth: 540, margin: '0 auto',
-              minHeight: 132, padding: '1.05rem 1.15rem 1.15rem',
+              padding: '1.05rem 1.15rem 1.15rem',
               borderRadius: 16,
               background: 'linear-gradient(180deg, rgba(14,11,7,0.93), rgba(6,5,4,0.97))',
               border: `1px solid ${speaking ? `${ACCENT}55` : 'rgba(255,255,255,0.12)'}`,
@@ -377,24 +376,13 @@ export default function StoryScene({ title, lines, ctaLabel, pending, accent, on
               )}
             </AnimatePresence>
 
-            <p className="font-karla" style={{
-              fontSize: speaking ? '1.02rem' : '0.98rem',
-              lineHeight: 1.62,
-              color: speaking ? '#f4f0e8' : 'rgba(240,237,232,0.86)',
-              fontStyle: speaking ? 'normal' : 'italic',
-              textAlign: 'left', margin: 0, minHeight: '3.2em',
-            }}>
-              {speaking && shown > 0 && <span style={{ color: `${ACCENT}bb` }}>&ldquo;</span>}
-              {renderText(line?.text.slice(0, shown) ?? '', ACCENT)}
-              {speaking && !typing && <span style={{ color: `${ACCENT}bb` }}>&rdquo;</span>}
-              {/* The cursor. It is the thing that says "words are arriving". */}
-              {typing && (
-                <motion.span aria-hidden
-                  animate={{ opacity: [1, 0.15, 1] }} transition={{ duration: 0.75, repeat: Infinity }}
-                  style={{ display: 'inline-block', width: 2, height: '1em', marginLeft: 2,
-                    verticalAlign: 'text-bottom', background: ACCENT }} />
-              )}
-            </p>
+            {/* One height for the whole scene: every line reserves it, the tallest
+                wins. The box never grows as the text types, and never jumps between a
+                short line and a long one. */}
+            <TypedBody
+              all={allText} text={line?.text ?? ''} shown={shown} typing={typing}
+              accent={ACCENT} italic={!speaking} quoted={!!speaking}
+            />
 
             {/* Advance affordance / final CTA, in the plate where the eye already is. */}
             <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end', minHeight: 34, alignItems: 'center' }}>
@@ -415,7 +403,7 @@ export default function StoryScene({ title, lines, ctaLabel, pending, accent, on
                 </motion.span>
               )}
             </div>
-          </motion.div>
+          </div>
         </div>
         </>)}
       </motion.div>
