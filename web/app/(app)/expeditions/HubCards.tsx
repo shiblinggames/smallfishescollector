@@ -13,7 +13,10 @@ import { RAID_ITEMS } from '@/lib/raidItems'
 import { IconLock, IconCrate } from '@/components/GameIcons'
 import { RARITY_COLOR } from '@/lib/variants'
 import { repairShip } from '@/app/(app)/raids/actions'
+import Link from 'next/link'
+import CaptainsOrders, { type OrderAction } from './CaptainsOrders'
 import type { CrewMember } from '@/app/(app)/crew/actions'
+import { crewTheDeck } from '@/app/(app)/crew/actions'
 import { RARITY_COLORS as CREW_RARITY_COLORS } from '@/lib/crewGen'
 import DailyVoyagePanel from './DailyVoyagePanel'
 import ShipDuels from './ShipDuels'
@@ -31,6 +34,9 @@ export type CampaignCardData = {
   nextNodeImage: string | null
   nextNodeLocked: boolean
   nextNodeLockReason: string | null
+  /** The node's type. A FIGHT needs a crew; a story node does not, and being barred
+   *  from reading would be nonsense. */
+  nextNodeKind: string | null
   repairOwed: number
   equippedItemsCount: number
 }
@@ -76,6 +82,8 @@ interface Props {
   readyVoyage: DailyVoyage | null
   expeditionXP: number
   voyageHistory: VoyageHistoryEntry[]
+  /** How many raids the captain has actually finished. Drives Captain's Orders. */
+  raidsCleared: number
   // Whether the PvP "coming soon" entry point is open to this viewer (admins +
   // duel testers). Everyone else sees it locked. PvP data is only fetched +
   // passed when this is true (null otherwise).
@@ -169,9 +177,12 @@ export default function HubCards({
   prepStats,
   shipTier, todayVoyage, readyVoyage, expeditionXP, voyageHistory,
   canPvp, gauntletOpen, gauntletUpgrades, pvp,
+  raidsCleared,
 }: Props) {
   const router = useRouter()
   const [modal, setModal] = useState<null | 'campaign' | 'voyages' | 'pvp' | 'gauntlets'>(null)
+  const [crewing, setCrewing] = useState(false)
+  const [crewMsg, setCrewMsg] = useState<string | null>(null)
   const [, startTransition] = useTransition()
 
   // Esc closes the open prep modal. (Used to also handle a nested items
@@ -225,8 +236,30 @@ export default function HubCards({
     })
   }
 
+  const onOrder = (a: OrderAction) => {
+    if (a === 'campaign') setModal('campaign')
+    else if (a === 'voyages') setModal('voyages')
+    else if (a === 'loadout') window.dispatchEvent(new CustomEvent('expedition:open-loadout'))
+  }
+
   return (
     <>
+      {/* One task at a time, from the player's real state. Vanishes for good once a
+          captain has done all of it, so a veteran never sees it. */}
+      <CaptainsOrders
+        onAction={onOrder}
+        state={{
+          crewOwned: roster.length,
+          raidCrew: roster.filter(c => c.raidSlot != null).length,
+          voyageCrew: roster.filter(c => c.voyageSlot != null).length,
+          crewSlots: shipCrewSlots,
+          equippedItems: equippedRaidItems.length,
+          ownedItems: ownedRaidItems.length,
+          raidsCleared,
+          voyagesRun: voyageHistory.length,
+        }}
+      />
+
       {/* ── Hub cards (2-col) ─────────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: '1.2rem' }}>
         <button
@@ -413,14 +446,90 @@ export default function HubCards({
                   .filter((d): d is (typeof RAID_ITEMS)[number] => !!d)
                 const itemSlots: ((typeof RAID_ITEMS)[number] | null)[] = Array(raidItemSlots).fill(null)
                 itemDefs.slice(0, raidItemSlots).forEach((d, i) => { itemSlots[i] = d })
+                const aboardNow  = crewSlots.filter(Boolean).length
+                const onVoyageNow = roster.filter(c => c.voyageSlot != null).length
+                const ashoreNow   = roster.filter(c => c.raidSlot == null && c.voyageSlot == null).length
                 return (
                   <>
+                    {/* ── SAILING ALONE ─────────────────────────────────────
+                        The empty deck used to be a quiet "Crew 0/5" that a new captain
+                        had no reason to read as fatal. It is the loudest thing on the
+                        screen now, it says WHY (their crew is on the voyage track, and
+                        the two tracks are exclusive), and it offers the one tap that
+                        fixes it. */}
+                    {aboardNow === 0 && (
+                      <div style={{
+                        marginBottom: 10, padding: '0.8rem 0.85rem', borderRadius: 12, textAlign: 'left',
+                        background: 'linear-gradient(180deg, rgba(220,38,38,0.18), rgba(140,20,20,0.06))',
+                        border: '1px solid rgba(239,68,68,0.55)',
+                      }}>
+                        <p className="font-cinzel font-800 uppercase tracking-[0.06em]" style={{ fontSize: '0.86rem', color: '#fca5a5' }}>
+                          You are sailing alone
+                        </p>
+                        <p className="font-karla" style={{ fontSize: '0.76rem', color: '#f0cfcf', lineHeight: 1.45, marginTop: 4 }}>
+                          {ashoreNow > 0
+                            ? `All ${shipCrewSlots} crew slots are empty and you have ${ashoreNow} crew ashore. A raid without a crew is a losing fight.`
+                            : onVoyageNow > 0
+                              ? `All ${shipCrewSlots} crew slots are empty. Your ${onVoyageNow} crew are on the VOYAGE track, and a crew can only sail one track at a time.`
+                              : 'You have no crew. Recruit at the Crew Hall before you sail into a fight.'}
+                        </p>
+                        {(ashoreNow > 0 || onVoyageNow > 0) && (
+                          <button
+                            type="button"
+                            disabled={crewing}
+                            onClick={async () => {
+                              setCrewing(true); setCrewMsg(null)
+                              const res = await crewTheDeck(ashoreNow === 0)
+                              setCrewing(false)
+                              if ('error' in res) { setCrewMsg(res.error); return }
+                              setCrewMsg(res.assigned > 0
+                                ? `${res.assigned} crew aboard. Weigh anchor.`
+                                : 'No crew free to bring aboard.')
+                              router.refresh()
+                            }}
+                            className="font-cinzel font-800 uppercase tracking-[0.06em] tap"
+                            style={{
+                              width: '100%', marginTop: 9, padding: '0.7rem', borderRadius: 10, fontSize: '0.86rem',
+                              color: '#1a0f0f', background: 'linear-gradient(180deg, #fca5a5, #ef4444)',
+                              border: '1px solid #ef4444', cursor: crewing ? 'wait' : 'pointer',
+                            }}>
+                            {crewing ? 'Mustering…'
+                              : ashoreNow > 0 ? 'Crew the Deck'
+                              : 'Recall Crew from Voyages'}
+                          </button>
+                        )}
+                        {ashoreNow === 0 && onVoyageNow === 0 && (
+                          <Link href="/crew" className="font-cinzel font-800 uppercase tracking-[0.06em] tap"
+                            style={{
+                              display: 'block', width: '100%', marginTop: 9, padding: '0.7rem', borderRadius: 10,
+                              fontSize: '0.86rem', textAlign: 'center',
+                              color: '#1a0f0f', background: 'linear-gradient(180deg, #fca5a5, #ef4444)',
+                              border: '1px solid #ef4444',
+                            }}>
+                            Go to the Crew Hall
+                          </Link>
+                        )}
+                        {crewMsg && (
+                          <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#fde68a', marginTop: 7 }}>{crewMsg}</p>
+                        )}
+                      </div>
+                    )}
+
                     <PrepLoadoutRow
-                      label="Crew" filled={crewSlots.filter(Boolean).length} total={shipCrewSlots}
+                      label="Raid Crew" filled={aboardNow} total={shipCrewSlots}
                       accent={campaignAccent} href="/crew?tab=roster&filter=raid"
                     >
                       {crewSlots.map((c, i) => <PrepCrewDot key={i} card={c} captain={i === 0} i={i} total={crewSlots.length} />)}
                     </PrepLoadoutRow>
+
+                    {/* The OTHER roster. A captain who has assigned their crew to voyages
+                        believes their crew is assigned, and they are right — just not to
+                        this. Showing both makes the trade visible instead of a trap. */}
+                    {onVoyageNow > 0 && (
+                      <p className="font-karla" style={{ fontSize: '0.66rem', color: '#8a8680', lineHeight: 1.4, margin: '-2px 0 8px' }}>
+                        {onVoyageNow} more crew are out on the <strong style={{ color: '#a8a29a' }}>voyage</strong> track. A crew sails one track or the other, never both.
+                      </p>
+                    )}
                     <PrepLoadoutRow
                       label="Items" filled={itemDefs.length} total={raidItemSlots}
                       accent={campaignAccent}
@@ -465,14 +574,31 @@ export default function HubCards({
               Cancel
             </button>
             {(() => {
+              // ── SAILING ALONE ────────────────────────────────────────────
+              // The steepest leak in the game. voyage_slot and raid_slot are MUTUALLY
+              // EXCLUSIVE, so a captain who put their crew on voyages (which everyone
+              // finds first, because voyages are passive and forgiving) has an EMPTY
+              // raid deck and no idea. The modal showed them "Crew 0/5" and cheerfully
+              // let them sail. Every player who beat Raid 1 had 4-6 raid crew; every
+              // player who stalled had 0-2. One had run 23 voyages and never once put a
+              // soul in a raid slot.
+              //
+              // A story node is not a fight, so it is still allowed through — being
+              // blocked from READING is nonsense. A FIGHT is barred.
+              const aboard = roster.filter(c => c.raidSlot != null).length
+              const isFight = campaign.nextNodeKind === 'raid' || campaign.nextNodeKind === 'challenge'
+              const sailingAlone = aboard === 0 && isFight
+
               const beginBlocked =
                 !campaign.nextNodeId ||
                 campaign.nextNodeLocked ||
-                campaign.repairOwed > 0
+                campaign.repairOwed > 0 ||
+                sailingAlone
               const beginLabel =
                 !campaign.nextNodeId   ? 'Story Complete'
                 : campaign.nextNodeLocked ? (campaign.nextNodeLockReason ?? 'Node Locked')
                 : campaign.repairOwed > 0 ? 'Repair Ship First'
+                : sailingAlone ? 'Crew Your Ship First'
                 : 'Begin →'
               return (
                 <button

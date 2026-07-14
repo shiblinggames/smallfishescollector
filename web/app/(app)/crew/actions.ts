@@ -862,3 +862,78 @@ export async function getCrewGraveyard(): Promise<FallenCrew[]> {
     }
   })
 }
+
+// ── CREW THE DECK ────────────────────────────────────────────────────────────
+// One tap that fills every empty RAID slot with the best crew available.
+//
+// This exists because of the single worst leak in the game. voyage_slot and raid_slot
+// are MUTUALLY EXCLUSIVE (a DB CHECK constraint), so a crew member is on the voyage
+// track or the raid track and never both. New captains find voyages first — they are
+// passive and forgiving — assign their crew there, and reasonably conclude "my crew is
+// assigned". Then they open the campaign and sail into a raid with an EMPTY deck.
+//
+// The data was unambiguous: every player who beat Raid 1 had 4-6 raid crew. Every
+// player who stalled had 0-2. One of them had run 23 voyages, bought a tier-3 ship, and
+// never once put a soul in a raid slot.
+//
+// `pullFromVoyages` decides whether crew currently out on the voyage track may be
+// recalled. Off by default: taking someone off a voyage is a real trade and the player
+// should choose it, not have it happen to them.
+export async function crewTheDeck(pullFromVoyages = false): Promise<
+  { assigned: number; stillEmpty: number; onVoyages: number; state: CrewState } | { error: string }
+> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not signed in' }
+
+  const admin = createAdminClient()
+  const { data: prof } = await admin
+    .from('profiles')
+    .select('ship_tier, has_sixth_berth')
+    .eq('id', user.id)
+    .single()
+
+  const slots = EXPEDITION_SHIP_STATS[(prof?.ship_tier as number | null) ?? 0].crewSlots
+    + ((prof as any)?.has_sixth_berth === true ? 1 : 0)
+
+  const roster = await getCrewRoster()
+  const alive = roster.filter(c => c.raidSlot != null || c.voyageSlot != null || true)
+
+  // Who is already aboard, and which slots are empty.
+  const taken = new Set(alive.filter(c => c.raidSlot != null).map(c => c.raidSlot as number))
+  const empty: number[] = []
+  for (let i = 0; i < slots; i++) if (!taken.has(i)) empty.push(i)
+  if (empty.length === 0) {
+    const s = await getCrewState()
+    return s ? { assigned: 0, stillEmpty: 0, onVoyages: 0, state: s } : { error: 'Failed to load crew' }
+  }
+
+  // Eligible: not already on the raid track, and (unless recalled) not out on a voyage.
+  // One of each fish per track — applyAssignment enforces it, so filter here too or the
+  // second copy would silently bench the first.
+  const aboardCards = new Set(alive.filter(c => c.raidSlot != null).map(c => c.cardId))
+  const onVoyages = alive.filter(c => c.voyageSlot != null).length
+  const pool = alive
+    .filter(c => c.raidSlot == null)
+    .filter(c => pullFromVoyages || c.voyageSlot == null)
+    .filter(c => !aboardCards.has(c.cardId))
+    // Best first: rarity, then the raw stat line. A new captain should not have to know
+    // what "best" means yet — that is the whole point of the button.
+    .sort((a, b) => (b.rarity - a.rarity) || ((b.power + b.dodge + b.fortune) - (a.power + a.dodge + a.fortune)))
+
+  let assigned = 0
+  const used = new Set<number>()
+  for (const slot of empty) {
+    const pick = pool.find(c => !used.has(c.id) && !aboardCards.has(c.cardId))
+    if (!pick) break
+    used.add(pick.id)
+    aboardCards.add(pick.cardId)
+    const res = await applyAssignment(user.id, pick.id, 'raid', slot)
+    if ('error' in res) continue
+    assigned++
+  }
+
+  const state = await getCrewState()
+  if (!state) return { error: 'Failed to load crew' }
+  return { assigned, stillEmpty: empty.length - assigned, onVoyages, state }
+}

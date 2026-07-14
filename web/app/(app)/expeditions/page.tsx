@@ -68,6 +68,17 @@ const cachedBlockadeCleared = cache(async (): Promise<boolean> => {
   return !!data
 })
 
+/** How many raids the captain has actually finished. Drives Captain's Orders, which
+ *  cannot know "have you ever won a fight" from the roster alone. */
+const cachedRaidsCleared = cache(async (): Promise<number> => {
+  const user = await getCurrentUser()
+  if (!user) return 0
+  const admin = createAdminClient()
+  const { count } = await admin.from('raid_completions')
+    .select('id', { count: 'exact', head: true }).eq('user_id', user.id)
+  return count ?? 0
+})
+
 const cachedVoyageHistory = cache(async (): Promise<VoyageHistoryEntry[]> => {
   const user = await getCurrentUser()
   if (!user) return []
@@ -277,6 +288,7 @@ async function ExpeditionHub() {
     nextNodeImage: (next?.node.image ?? null) as string | null,
     nextNodeLocked: next?.status === 'locked',
     nextNodeLockReason: next?.status === 'locked' ? next.lockReason ?? null : null,
+    nextNodeKind: next?.node.type ?? null,
     repairOwed: profile?.raid_repair_owed ?? 0,
     equippedItemsCount: equippedRaidItems.length,
   }
@@ -296,6 +308,7 @@ async function ExpeditionHub() {
   // against a constant, which is what Raid Score / Offense / Defense were.
   const rp = await getRaidPlayerStats(profile!.id as string)
   const dmg = raidDamageProfile(rp.totalPower, rp.shipMinDamage, rp.raidMods?.damagePct ?? 0)
+  const raidsCleared = await cachedRaidsCleared()
   const prepStats = {
     hull:    rp.playerHPMax,
     hitMin:  dmg.hitMin,
@@ -324,6 +337,7 @@ async function ExpeditionHub() {
       readyVoyage={'error' in dailyVoyageState ? null : dailyVoyageState.readyVoyage}
       expeditionXP={profile?.expedition_xp ?? 0}
       voyageHistory={voyageHistory}
+      raidsCleared={raidsCleared}
       canPvp={canPvp}
       gauntletOpen={gauntletOpen}
       gauntletUpgrades={(profile?.gauntlet_upgrades as string[] | null) ?? []}
