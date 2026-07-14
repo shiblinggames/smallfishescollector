@@ -759,6 +759,41 @@ function DialSVG({
 
 // ─── UnifiedGearDrawer ───────────────────────────────────────────────────────
 
+// ── TACKLE SHOP LINK ─────────────────────────────────────────────────────────
+// The gear drawer's link to the store used to be a muted grey row ("Buy more bait ·
+// Tackle Shop ↗") that read as disabled text, not a place you could spend money. It
+// is the store CTA now: gold (the currency's colour), a drawn storefront, and an
+// arrow that says "this leaves the drawer and takes you shopping". One component so
+// bait / rod / reel / hook all match, and all close the drawer on the way out — two
+// of them used to leave it stacked behind the shop.
+function TackleShopLink({ label, anchor, onClose }: { label: string; anchor: string; onClose: () => void }) {
+  const GOLD = '#f0c040'
+  return (
+    <Link href={`/marketplace/tackle-shop#${anchor}`} onClick={onClose}
+      className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl mt-0.5 tap"
+      style={{
+        textDecoration: 'none',
+        background: `linear-gradient(180deg, ${GOLD}22, ${GOLD}0d)`,
+        border: `1px solid ${GOLD}66`,
+        boxShadow: `0 0 14px ${GOLD}18`,
+      }}>
+      {/* storefront */}
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+        <path d="M3 9l1.5-4.5A1 1 0 0 1 5.4 4h13.2a1 1 0 0 1 .9.5L21 9" />
+        <path d="M3 9h18v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0z" />
+        <path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7" />
+      </svg>
+      <div style={{ flex: 1, minWidth: 0, lineHeight: 1.15 }}>
+        <span className="font-cinzel font-800" style={{ display: 'block', fontSize: '0.78rem', color: GOLD }}>{label}</span>
+        <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.12em', color: `${GOLD}aa` }}>Tackle Shop</span>
+      </div>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+        <path d="M9 6l6 6-6 6" />
+      </svg>
+    </Link>
+  )
+}
+
 function StatPill({ label, color, muted }: { label: string; color?: string; muted?: boolean }) {
   const c = color ?? '#94a3b8'
   return (
@@ -850,12 +885,7 @@ function UnifiedGearDrawer({
                 {sec.key === 'bait' && (
                   <div className="flex flex-col gap-2">
                     <BaitSelector baitInventory={baitInventory} selectedBait={selectedBait} onSelect={onSelectBait} />
-                    <Link href="/marketplace/tackle-shop#bait" onClick={onClose}
-                      className="flex items-center justify-between px-3 py-2.5 rounded-xl mt-0.5"
-                      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', textDecoration: 'none' }}>
-                      <span className="font-karla font-700" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)' }}>Buy more bait</span>
-                      <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#5a5956' }}>Tackle Shop ↗</span>
-                    </Link>
+                    <TackleShopLink label="Buy more bait" anchor="bait" onClose={onClose} />
                   </div>
                 )}
 
@@ -902,12 +932,7 @@ function UnifiedGearDrawer({
                         </div>
                       )
                     })}
-                    <Link href="/marketplace/tackle-shop#rod" onClick={onClose}
-                      className="flex items-center justify-between px-3 py-2.5 rounded-xl mt-0.5"
-                      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', textDecoration: 'none' }}>
-                      <span className="font-karla font-700" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)' }}>Buy more rods</span>
-                      <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#5a5956' }}>Tackle Shop ↗</span>
-                    </Link>
+                    <TackleShopLink label="Buy more rods" anchor="rod" onClose={onClose} />
                   </div>
                 )}
 
@@ -923,12 +948,7 @@ function UnifiedGearDrawer({
                     <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: '#6a6764', lineHeight: 1.5 }}>
                       {reel.description}
                     </p>
-                    <Link href="/marketplace/tackle-shop#reel" onClick={onClose}
-                      className="flex items-center justify-between px-3 py-2.5 rounded-xl"
-                      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', textDecoration: 'none' }}>
-                      <span className="font-karla font-700" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)' }}>Upgrade reel</span>
-                      <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#5a5956' }}>Tackle Shop ↗</span>
-                    </Link>
+                    <TackleShopLink label="Upgrade reel" anchor="reel" onClose={onClose} />
                   </div>
                 )}
 
@@ -944,12 +964,7 @@ function UnifiedGearDrawer({
                     <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: '#6a6764', lineHeight: 1.5 }}>
                       {hook.description}
                     </p>
-                    <Link href="/marketplace/tackle-shop#hook" onClick={onClose}
-                      className="flex items-center justify-between px-3 py-2.5 rounded-xl"
-                      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', textDecoration: 'none' }}>
-                      <span className="font-karla font-700" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)' }}>Upgrade hook</span>
-                      <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#5a5956' }}>Tackle Shop ↗</span>
-                    </Link>
+                    <TackleShopLink label="Upgrade hook" anchor="hook" onClose={onClose} />
                   </div>
                 )}
 
