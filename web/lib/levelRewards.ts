@@ -85,26 +85,31 @@ const COIN: Record<number, number> = {
 const EXTRAS: Record<number, Omit<LevelReward, 'doubloons' | 'milestone'>> = {
   2:  { bait: { worm: 5 } },
   3:  { bait: { minnow: 3 } },
-  5:  { gems: 5,  bait: { minnow: 5 } },
+  5:  { gems: 15, bait: { minnow: 5 } },
   6:  { bait: { worm: 8 } },
   8:  { bait: { night_crawler: 3 } },
-  10: { gems: 10, holdFloor: 1 },
+  10: { gems: 25, holdFloor: 1 },
   11: { bait: { minnow: 6 } },
   13: { bait: { night_crawler: 5 } },
-  15: { gems: 15, bait: { chum: 5 } },
+  15: { gems: 40, bait: { chum: 5 } },
   16: { bait: { worm: 12 } },
   18: { bait: { chum: 4 } },
-  20: { gems: 20, holdFloor: 2 },
+  20: { gems: 55, holdFloor: 2 },
   21: { bait: { night_crawler: 8 } },
   23: { bait: { chum: 6 } },
-  25: { gems: 30, bait: { anglers_formula: 3 } },
-  30: { gems: 35 },
-  35: { gems: 40 },
-  40: { gems: 45 },
-  45: { gems: 50 },
+  25: { gems: 75, bait: { anglers_formula: 3 } },
+  30: { gems: 95 },
+  35: { gems: 115 },
+  40: { gems: 140 },
+  45: { gems: 165 },
   // The last reward there is. It leans on GEMS, a separate currency that does not inflate
   // the doubloon economy the way another five-figure purse would.
-  50: { gems: 100, bait: { anglers_formula: 10 } },
+  //
+  // The milestone gems escalate to exactly 1,000 across the whole climb (15, 25, 40, 55,
+  // 75, 95, 115, 140, 165, 275). That is deliberate, and gems are the REAL reward for
+  // levelling now: an Epic crew skin costs 1,250, so reaching 50 puts one within arm's
+  // reach without ever touching the doubloon economy the fishing loop depends on.
+  50: { gems: 275, bait: { anglers_formula: 10 } },
 }
 
 /** What level `level` pays, or null if it pays nothing (below 2, or past the cap). */
