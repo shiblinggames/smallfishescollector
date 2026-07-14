@@ -78,17 +78,34 @@ export const LEVEL_REWARDS: Record<number, LevelReward> = {
   23: { doubloons: coinFor(23), bait: { chum: 6 },            label: '1,160 ⟡ and 6 Chum' },
   24: { doubloons: coinFor(24),                               label: '1,200 ⟡' },
   25: { doubloons: 6000, gems: 30, bait: { anglers_formula: 3 }, label: "6,000 ⟡, 30 ◆, and 3 Angler's Formula", milestone: true },
+  // Levels 26-49 fall through to the formula below. 50 is the LAST reward there is, so
+  // it does not just tick over as another milestone: it is the send-off, and it hands
+  // over a Deep Hold, which is the 20,000-doubloon purchase a captain at this level
+  // would otherwise be saving for.
+  50: { doubloons: 25000, gems: 100, holdFloor: 4, bait: { anglers_formula: 10 },
+        label: "25,000 ⟡, 100 ◆, a Deep Hold, and 10 Angler's Formula", milestone: true },
 }
 
-/** Every 5th level is a milestone, table or not. */
+/**
+ * The last level that pays. Past 50 a captain is earning real money on their own — the
+ * audit put a level-60 reward at 55% of what fishing that level already gave them, and
+ * a level-80 reward at 14%. A reward you would not notice is not a reward, it is noise,
+ * and it cheapens the ones that DO land. So the rewards stop here, and level 50 is a
+ * send-off rather than a fade-out.
+ *
+ * Levelling past 50 is not empty: Abyss opens at 50, Ancient Deep at 75, the gear tiers
+ * keep climbing, and Renown waits at 100. It just stops needing a purse taped to it.
+ */
+export const LEVEL_REWARD_MAX = 50
+
+/** Every 5th level up to the cap is a milestone. */
 export function isMilestoneLevel(level: number): boolean {
-  return level >= 5 && level % 5 === 0
+  return level >= 5 && level <= LEVEL_REWARD_MAX && level % 5 === 0
 }
 
-/** What level `level` pays. Past the table, a scaling purse (with a milestone bump)
- *  so a high-level captain is never levelling for nothing. */
+/** What level `level` pays, or null if it pays nothing (below 2, or past the cap). */
 export function rewardForLevel(level: number): LevelReward | null {
-  if (level < 2) return null
+  if (level < 2 || level > LEVEL_REWARD_MAX) return null
   const listed = LEVEL_REWARDS[level]
   if (listed) return listed
 
