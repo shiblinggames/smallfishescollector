@@ -173,7 +173,14 @@ export default function BossDialogueModal({
       <motion.div
         animate={shake ? { x: [0, -9, 8, -6, 4, 0], y: [0, 4, -3, 2, 0] } : { x: 0, y: 0 }}
         transition={shake ? { duration: 0.42 } : { duration: 0.3 }}
-        style={{ position: 'absolute', inset: '44px 0', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}
+        style={{
+          position: 'absolute', top: 44, left: 0, right: 0,
+          // Clear the bottom letterbox AND the home indicator. `inset: 44px 0` only
+          // cleared the bar, so on a device with a safe area the plate sat right on
+          // top of it with nothing to breathe.
+          bottom: 'calc(44px + env(safe-area-inset-bottom, 0px))',
+          display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
+        }}
       >
         <motion.div
           animate={{ scale: shake ? 1.04 : held ? 1.05 : 1 }}
@@ -189,7 +196,10 @@ export default function BossDialogueModal({
           {wing('right', isPlayer, playerLabel, playerArt, '#4ade80')}
         </motion.div>
 
-        <div style={{ position: 'relative', zIndex: 3, padding: '0 1rem calc(env(safe-area-inset-bottom, 0px) + 1.15rem)' }}>
+        {/* flexShrink 0: the plate reserves the scene's tallest line, and as a flex
+            item it would otherwise SHRINK to fit and spill its content out the bottom,
+            under the letterbox. The wings give up the room instead. They can. */}
+        <div style={{ position: 'relative', zIndex: 3, flexShrink: 0, padding: '0 1rem 1.15rem' }}>
           <div style={{
             width: '100%', maxWidth: 540, margin: '0 auto',
             padding: '1.05rem 1.15rem 1.15rem', borderRadius: 16,

@@ -292,8 +292,13 @@ export default function StoryScene({ title, lines, ctaLabel, pending, accent, on
       <motion.div
         animate={shake ? { x: [0, -9, 8, -6, 4, 0], y: [0, 4, -3, 2, 0] } : { x: 0, y: 0 }}
         transition={shake ? { duration: 0.42 } : { duration: 0.3 }}
-        style={{ position: 'absolute', inset: '44px 0', display: 'flex', flexDirection: 'column',
-          justifyContent: hasCast ? 'flex-end' : 'center' }}
+        style={{
+          position: 'absolute', top: 44, left: 0, right: 0,
+          // Clear the bottom letterbox AND the home indicator.
+          bottom: 'calc(44px + env(safe-area-inset-bottom, 0px))',
+          display: 'flex', flexDirection: 'column',
+          justifyContent: hasCast ? 'flex-end' : 'center',
+        }}
       >
         {/* ── TITLE CARD — a scene with no cast. Words in the dark, nothing else. */}
         {!hasCast && (
@@ -347,7 +352,9 @@ export default function StoryScene({ title, lines, ctaLabel, pending, accent, on
         </motion.div>
 
         {/* The dialogue plate. */}
-        <div style={{ position: 'relative', zIndex: 3, padding: '0 1rem calc(env(safe-area-inset-bottom, 0px) + 1.15rem)' }}>
+        {/* flexShrink 0 — see BossDialogueModal. The plate holds its height; the
+            stage above gives up the room. */}
+        <div style={{ position: 'relative', zIndex: 3, flexShrink: 0, padding: '0 1rem 1.15rem' }}>
           <div
             style={{
               position: 'relative', width: '100%', maxWidth: 540, margin: '0 auto',

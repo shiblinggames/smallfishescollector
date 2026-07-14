@@ -111,7 +111,11 @@ export function TypedBody({ all, text, shown, typing, accent, italic, quoted, si
   // narrator line can never reserve less room than a spoken one would need.
   const metrics: React.CSSProperties = { fontSize: size, lineHeight: 1.62, margin: 0, whiteSpace: 'pre-wrap', textAlign: align }
   return (
-    <div style={{ display: 'grid' }}>
+    // The reserved height is the scene's LONGEST line, which for a scene with a big
+    // narrator opener is genuinely tall. Cap it and scroll the overflow: without this
+    // the plate can grow past what the frame has to give, and on a short phone the
+    // bottom of it ends up behind the letterbox bar.
+    <div style={{ display: 'grid', maxHeight: '34vh', overflowY: 'auto', overscrollBehavior: 'contain' }}>
       {all.map((t, i) => (
         <p key={i} aria-hidden className="font-karla"
           style={{ ...metrics, gridArea: '1 / 1', visibility: 'hidden', pointerEvents: 'none' }}>
