@@ -1709,6 +1709,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
               bossDefeatedText={config.bossDefeatedText}
               raidTitle={config.raidTitle}
               lines={config.preFightDialogue}
+              accent={config.dialogueAccent}
               playerLabel={username ?? shipName}
               playerCharacterColor={playerCharacterColor}
               playerEquippedHat={playerEquippedHat}
