@@ -1782,14 +1782,22 @@ export default function ShipHero({
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={skinImg} alt="" loading="lazy" decoding="async" style={{ width: 38, height: 38, objectFit: 'contain', filter: owned && !tierLocked ? skin.filter : 'brightness(0.25) saturate(0)', transition: 'filter 0.25s' }} />
                             <p className="font-cinzel font-700" style={{ fontSize: '0.68rem', color: owned && !tierLocked ? '#f0ede8' : '#a8a3a0', lineHeight: 1.1, textAlign: 'center' }}>{skin.name}</p>
+                            {/* OWNERSHIP IS ASKED FIRST, and that ordering is the point. The
+                                tier lock used to be tested ahead of it, so every chase hull
+                                (all three are Man-o-War-only) told a captain who had not bought
+                                a Man-o-War yet "Man-o-War only" and never once said the thing
+                                was a DROP. The hint died for exactly the players who needed it.
+                                Now: if you do not own it, you are told how it is won. Only once
+                                you own it does the hull you need to wear it become the useful
+                                thing to say. */}
                             {isEquipped ? (
                               <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: skin.color }}>✓ Equipped</span>
+                            ) : !owned ? (
+                              <span className="font-karla font-600" style={{ fontSize: '0.5rem', color: '#7a7674', textAlign: 'center', lineHeight: 1.25 }}>{skin.source}</span>
                             ) : tierLocked ? (
                               <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: skin.color, textAlign: 'center', lineHeight: 1.25 }}>{SHIPS[skin.requiresShipTier!]?.name ?? 'Top hull'} only</span>
-                            ) : owned ? (
-                              <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: '#4ade80' }}>Tap to equip</span>
                             ) : (
-                              <span className="font-karla font-600" style={{ fontSize: '0.5rem', color: '#7a7674', textAlign: 'center', lineHeight: 1.25 }}>{skin.source}</span>
+                              <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: '#4ade80' }}>Tap to equip</span>
                             )}
                           </button>
                         )

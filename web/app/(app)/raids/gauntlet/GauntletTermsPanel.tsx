@@ -143,12 +143,20 @@ export default function GauntletTermsPanel({
           />
         </div>
 
-        {pressure >= PRESSURE_SKIN_THRESHOLD && (
-          <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
-            className="font-karla font-700" style={{ fontSize: '0.78rem', color: GOLD, marginTop: 7 }}>
-            ✦ At {PRESSURE_SKIN_THRESHOLD}+ Pressure, a cash-out from depth {PRESSURE_SKIN_DEPTH} can drop the Pitch Black Hull. Nothing else in the game drops it.
-          </motion.p>
-        )}
+        {/* The Pitch Black Hull is the whole REASON to sign heavy, so it cannot be a
+            reward you only learn about after you have already signed heavy enough to
+            earn it. It stands here from zero Pressure as a stated goal, and lights up
+            the moment the board is heavy enough to roll it. */}
+        {(() => {
+          const qualifies = pressure >= PRESSURE_SKIN_THRESHOLD
+          return (
+            <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: qualifies ? GOLD : '#6f6a62', marginTop: 7, transition: 'color 0.3s' }}>
+              {qualifies ? '✦ ' : ''}At {PRESSURE_SKIN_THRESHOLD}+ Pressure, a cash-out from depth {PRESSURE_SKIN_DEPTH} can drop the{' '}
+              <strong style={{ color: qualifies ? GOLD : '#a09a90' }}>Pitch Black Hull</strong>. Nothing else in the game drops it.
+              {!qualifies && <span style={{ color: '#8a8578' }}> You are carrying {pressure}.</span>}
+            </p>
+          )
+        })()}
       </div>
 
       {/* ── The board: two cards across, so it scans at a glance ──────────── */}
