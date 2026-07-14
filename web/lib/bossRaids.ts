@@ -1243,9 +1243,16 @@ export const THE_QUARTERMASTERS_GHOST: BossRaidConfig = {
     { id: 'reinforced_hull',       label: 'Reinforced Hull',        image: '/reinforcedhull.png',       emoji: '🛠️', rarity: 'epic', weight: 10 },
     { id: 'incendiary_cannonball', label: 'Incendiary Cannonball',  image: '/incendiarycannonball.png', emoji: '🔥', rarity: 'epic', weight: 10 },
     { id: 'frozen_cannonball',     label: 'Frozen Cannonball',      image: '/frozencannonball.png',     emoji: '❄️', rarity: 'epic', weight: 10 },
-    { id: 'doubloons_1200', label: '+1,200 ⟡', image: '/dailybonus.png', emoji: '💰',      rarity: 'uncommon', weight: 30 },
-    { id: 'gems_50',        label: '50 Gems',  image: null,             emoji: GEM_GLYPH, rarity: 'rare',     weight: 20 },
-    { id: 'pack_2',         label: '200 Gems', image: null,             emoji: GEM_GLYPH, rarity: 'epic',     weight: 10 },
+    // CURRENCY. He is ONE fight with no mobs and no cooldown, so his gem slots are
+    // deliberately thin: a crate is a single roll no matter how long a raid is, which
+    // made him pay the same crate as an 8-fight raid for an eighth of the time. He
+    // was the best gem farm in the game by 3.4x, and worse, his rate DOUBLED once you
+    // owned all six Cache items (the unique pool empties and rollLootIndex falls
+    // through to 100% currency), so the boss you had finished with quietly became an
+    // infinite gem printer. He pays doubloons and the Cache now. Gems are earned by
+    // raids you actually have to fight through.
+    { id: 'doubloons_1200', label: '+1,200 ⟡', image: '/dailybonus.png', emoji: '💰',      rarity: 'uncommon', weight: 48 },
+    { id: 'gems_25',        label: '25 Gems',  image: null,             emoji: GEM_GLYPH, rarity: 'rare',     weight: 12 },
   ],
   killRewards: {
     ghost: { gold: 900, xp: 1000 },
@@ -1369,10 +1376,13 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
     // Thunder Drum (legendary chase). Challenge variant lifts the legendary rate.
     { id: 'war_drum',       label: 'War Drum',     image: '/wardrum.png',     emoji: '🥁',      rarity: 'epic',      weight: 20 },
     { id: 'thunder_drum',   label: 'Thunder Drum', image: '/thunderdrum.png', emoji: '🥁',      rarity: 'legendary', weight: 5  },
-    { id: 'doubloons_600',  label: '+600 ⟡',   image: '/smallpile.png',  emoji: '🪙',      rarity: 'common',   weight: 26 },
-    { id: 'doubloons_1200', label: '+1,200 ⟡', image: '/dailybonus.png', emoji: '💰',      rarity: 'uncommon', weight: 20 },
-    { id: 'gems_50',        label: '50 Gems',  image: null,              emoji: GEM_GLYPH, rarity: 'rare',     weight: 22 },
-    { id: 'pack_2',         label: '200 Gems', image: null,              emoji: GEM_GLYPH, rarity: 'epic',     weight: 12 },
+    // CURRENCY. Only 3 fights, and farmable on no cooldown, so it was the second-best
+    // gem faucet in the game. The 200-gem slot survives as a genuine jackpot but at a
+    // fraction of the rate — it was carrying most of the EV at 12/80.
+    { id: 'doubloons_600',  label: '+600 ⟡',   image: '/smallpile.png',  emoji: '🪙',      rarity: 'common',   weight: 33 },
+    { id: 'doubloons_1200', label: '+1,200 ⟡', image: '/dailybonus.png', emoji: '💰',      rarity: 'uncommon', weight: 28 },
+    { id: 'gems_50',        label: '50 Gems',  image: null,              emoji: GEM_GLYPH, rarity: 'rare',     weight: 16 },
+    { id: 'pack_2',         label: '200 Gems', image: null,              emoji: GEM_GLYPH, rarity: 'epic',     weight: 3  },
   ],
   killRewards: {
     // Two genuinely strong enforcers, then the epic boss (which carries the XP
