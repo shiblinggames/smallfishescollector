@@ -32,30 +32,32 @@ export const CREW_SKINS: CrewSkin[] = [
   { id: 'dole_frostbite',    slug: 'dole', name: 'Frostbite',      filename: 'Dole_frostbite.png',    gemCost: 1500, blurb: 'Rimed in the ice of the far cold seas.',       color: '#7dd3fc' },
   { id: 'dole_royaladmiral', slug: 'dole', name: 'Royal Admiral',  filename: 'Dole_royaladmiral.png', gemCost: 1500, blurb: 'Gold braid and a fleet at her back.',        color: '#f0c040' },
   { id: 'dole_cursedghost',  slug: 'dole', name: 'Cursed Ghost',   filename: 'Dole_cursedghost.png',  gemCost: 2500, blurb: 'A wraith dragged back from the Locker.',        color: '#a78bfa' },
-  { id: 'dole_krakenhunter', slug: 'dole', name: 'Kraken Hunter',  filename: 'Dole_krakenhunter.png', gemCost: 3000, blurb: 'Scarred from a hundred dives into the deep.',  color: '#2dd4bf', chase: true },
+  { id: 'dole_krakenhunter', slug: 'dole', name: 'Kraken Hunter',  filename: 'Dole_krakenhunter.png', gemCost: 3500, blurb: 'Scarred from a hundred dives into the deep.',  color: '#2dd4bf', chase: true },
   // ── Doby (sperm whale) ──
   { id: 'doby_warmachine',  slug: 'doby_mick', name: 'War Machine',   filename: 'Doby_warmachine.png',  gemCost: 1500, blurb: 'Ironclad and built for the kill.',           color: '#9ca3af' },
   { id: 'doby_moltenmaw',   slug: 'doby_mick', name: 'Molten Maw',    filename: 'Doby_moltenmaw.png',   gemCost: 1500, blurb: 'Breaching from a sea of fire.',               color: '#fb7185' },
   { id: 'doby_spectral',    slug: 'doby_mick', name: 'Spectral',      filename: 'Doby_spectral.png',    gemCost: 2500, blurb: 'A ghost-gray leviathan from the black deep.',   color: '#93c5fd' },
-  { id: 'doby_huntersbane', slug: 'doby_mick', name: "Hunter's Bane", filename: 'Doby_huntersbane.png', gemCost: 3000, blurb: 'The whale that hunts the hunters.',           color: '#dc2626', chase: true },
+  { id: 'doby_huntersbane', slug: 'doby_mick', name: "Hunter's Bane", filename: 'Doby_huntersbane.png', gemCost: 3500, blurb: 'The whale that hunts the hunters.',           color: '#dc2626', chase: true },
   // ── Catfish (Cat) ──
   { id: 'catfish_ancient',   slug: 'catfish', name: 'Ancient',   filename: 'Catfish_ancient.png',   gemCost: 1500, blurb: 'A relic that swam the first tides.',        color: '#d4a15a' },
   { id: 'catfish_cursed',    slug: 'catfish', name: 'Cursed',    filename: 'Catfish_cursed.png',    gemCost: 2500, blurb: 'Hexed whiskers, humming with old magic.',    color: '#a78bfa' },
   { id: 'catfish_prismatic', slug: 'catfish', name: 'Prismatic', filename: 'Catfish_prismatic.png', gemCost: 2500, blurb: 'Every color of the abyss at once.',        color: '#e879f9' },
-  { id: 'catfish_galaxy',    slug: 'catfish', name: 'Galaxy',    filename: 'Catfish_galaxy.png',    gemCost: 3000, blurb: 'A whole galaxy swims in her scales.',      color: '#8b7bf0', chase: true },
+  { id: 'catfish_galaxy',    slug: 'catfish', name: 'Galaxy',    filename: 'Catfish_galaxy.png',    gemCost: 3500, blurb: 'A whole galaxy swims in her scales.',      color: '#8b7bf0', chase: true },
   // ── Mako ──
   { id: 'mako_bloodtide',  slug: 'mako', name: 'Blood Tide',  filename: 'Mako_bloodtide.png',  gemCost: 1500, blurb: 'Trailing red through the water.',        color: '#ef4444' },
   { id: 'mako_highroller', slug: 'mako', name: 'High Roller', filename: 'Mako_highroller.png', gemCost: 1500, blurb: 'Dressed to win, built to bite.',         color: '#f0c040' },
   { id: 'mako_wraithfin',  slug: 'mako', name: 'Wraithfin',   filename: 'Mako_wraithfin.png',  gemCost: 2500, blurb: 'A phantom that haunts the shallows.',    color: '#a5b4fc' },
-  { id: 'mako_tempest',    slug: 'mako', name: 'Tempest',     filename: 'Mako_tempest.png',    gemCost: 3000, blurb: 'Born of storm and lightning.',         color: '#38bdf8', chase: true },
+  { id: 'mako_tempest',    slug: 'mako', name: 'Tempest',     filename: 'Mako_tempest.png',    gemCost: 3500, blurb: 'Born of storm and lightning.',         color: '#38bdf8', chase: true },
   // ── Laz (Coelacanth) ──
   { id: 'coelacanth_deadeye',    slug: 'coelacanth', name: 'Deadeye',      filename: 'Laz_deadeye.png',    gemCost: 1500, blurb: 'One cold eye on the deep, one on the kill.', color: '#67e8f9' },
   { id: 'coelacanth_goldenrelic', slug: 'coelacanth', name: 'Golden Relic', filename: 'Laz_goldenrelic.png', gemCost: 2000, blurb: 'Gilded by ages beneath the waves.', color: '#f0c040' },
   { id: 'coelacanth_undying',    slug: 'coelacanth', name: 'Undying',      filename: 'Laz_undying.png',    gemCost: 2500, blurb: 'Dragged back from the Locker, unwilling to stay dead.', color: '#86efac' },
-  { id: 'coelacanth_fossil',     slug: 'coelacanth', name: 'Fossil',       filename: 'Laz_fossil.png',     gemCost: 3000, blurb: 'A living fossil, older than the tides themselves.', color: '#c8a45c', chase: true },
+  { id: 'coelacanth_fossil',     slug: 'coelacanth', name: 'Fossil',       filename: 'Laz_fossil.png',     gemCost: 3500, blurb: 'A living fossil, older than the tides themselves.', color: '#c8a45c', chase: true },
 
   // ── RARE / EPIC crews ── 2 skins each, NO chase (no animated FX). Pricing by
-  //    rarity: Rare = 1000, Epic = 1250. (Legendary skins run 1500-3000.) ──
+  //    rarity: Rare = 1000, Epic = 1250. (Legendary skins run 1500-2500, and the five
+  //    CHASE skins — one per base legendary — are 3500, the most expensive thing gems
+  //    buy.) ──
   // ── Hammerhead (Hammer) — Rare ──
   { id: 'hammerhead_shark_bloodtide', slug: 'hammerhead_shark', name: 'Blood Tide', filename: 'Hammerhead_bloodtide.png', gemCost: 1000, blurb: 'The hunt turns the water red.',        color: '#ef4444' },
   { id: 'hammerhead_shark_kingpin',   slug: 'hammerhead_shark', name: 'Kingpin',    filename: 'Hammerhead_kingpin.png',  gemCost: 1000, blurb: 'Boss of the reef. Everyone pays up.',   color: '#f0c040' },
