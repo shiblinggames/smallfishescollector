@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { HOOKS, hookGlowClass } from '@/lib/hooks'
-import { RODS, rodGlowClass, isCaptainRod } from '@/lib/rods'
+import { RODS, rodGlowClass, isCaptainRod, COMPLETIONIST_TIER } from '@/lib/rods'
 import { openMembership } from '@/components/MembershipModal'
 import { REELS } from '@/lib/reels'
 import { LINES } from '@/lib/lines'
@@ -25,6 +25,35 @@ const HookViewer3D = dynamic(() => import('./HookViewer3D'), { ssr: false })
 
 type BaitInventoryItem = { bait_type: string; quantity: number }
 type Section = 'bait' | 'hook' | 'rod' | 'reel' | 'line' | null
+
+// ── THE SHOP AS A COLLECTION ─────────────────────────────────────────────────
+// Modelled on the Forge. The tackle shop used to be a wall of five tiles that told
+// you nothing until you drilled in: you had to open Rods to learn whether you could
+// afford a rod, open Reels to learn the same about reels, and so on. The one question
+// a shop should answer instantly — "what can I buy right now" — took five taps.
+//
+// So every category now carries a STATE, computed once, exactly like a forge recipe:
+// what you own, what is ready to buy, what is locked behind a level, what you are
+// saving for. The landing surfaces the ready buys in a shelf up top and colours each
+// category tile by where it stands, so the whole shop reads in one glance.
+
+type GearState = 'ready' | 'locked' | 'saving' | 'maxed' | 'earned'
+
+interface CategorySummary {
+  key: Exclude<Section, null>
+  label: string
+  color: string
+  imageUrl?: string
+  /** How many rungs of this ladder you hold, over the total. */
+  owned: number
+  total: number
+  /** The next thing to acquire, if any, and whether you can. */
+  next: { name: string; cost: number; levelReq: number } | null
+  state: GearState
+  /** For the Ready shelf and the tile pip. */
+  detail: string
+}
+
 
 export default function TackleShopClient({
   hookTier: initialHookTier,
@@ -210,89 +239,182 @@ export default function TackleShopClient({
     { key: 'line',  label: 'Line',  color: '#4ade80', desc: 'Shrinks snag zones. Earned by species.',  imageUrl: '/monofilament.png' },
   ]
 
-  // ── Landing ────────────────────────────────────────────────────────────
-  if (section === null) {
-    // Storefront grid: 2-up art-forward tiles so the row width is actually
-    // used (the old single-column rows left a big empty gutter beside the
-    // short text). Line is the odd one out → it spans full width as a wide
-    // banner that also has room for its "earned by species" context.
-    const tileBase = (color: string): React.CSSProperties => ({
-      position: 'relative', cursor: 'pointer', overflow: 'hidden',
-      background: `linear-gradient(165deg, ${color}1c 0%, rgba(6,12,20,0.95) 62%)`,
-      border: `1px solid ${color}30`,
-      borderTop: `1px solid ${color}70`,
-      borderRadius: 18,
-      boxShadow: `0 3px 12px rgba(0,0,0,0.4), 0 0 16px ${color}12`,
-    })
-    const sheen = <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(255,255,255,0.07) 0%, transparent 22%)', pointerEvents: 'none', zIndex: 1 }} />
+  // ── STATE PER CATEGORY — computed once, the way a forge recipe is ─────────
+  // A LADDER category (reel/hook) has one next rung: tier+1. RODS are a collection,
+  // so the next buy is the cheapest rod you do not own yet. LINE is earned by species,
+  // never bought. BAIT is consumable and always "ready" while any is for sale.
+  const gearReq = (item: { minLevel?: number; cost: number }) => fishingGearLevelReq(item)
+  function ladderSummary(
+    key: 'reel' | 'hook', label: string, color: string, imageUrl: string,
+    list: { tier: number; name: string; cost: number; minLevel?: number }[], tier: number,
+  ): CategorySummary {
+    const owned = tier + 1
+    const next = list[tier + 1] ?? null
+    if (!next) return { key, label, color, imageUrl, owned, total: list.length, next: null, state: 'maxed', detail: 'Fully upgraded' }
+    const req = gearReq(next)
+    const levelOk = fishingLevel >= req
+    const canAfford = doubloons >= next.cost
+    const state: GearState = !levelOk ? 'locked' : canAfford ? 'ready' : 'saving'
+    const detail = !levelOk ? `Fishing Lv ${req} · ${req - fishingLevel} to go`
+      : canAfford ? `${next.name} · ${next.cost.toLocaleString()} ⟡`
+      : `${(next.cost - doubloons).toLocaleString()} ⟡ short`
+    return { key, label, color, imageUrl, owned, total: list.length, next: { name: next.name, cost: next.cost, levelReq: req }, state, detail }
+  }
 
+  const summaries: CategorySummary[] = [
+    // RODS — a collection. Next buy = cheapest unowned, non-captain-locked rod.
+    (() => {
+      const buyable = RODS
+        .filter(r => !ownedRods.includes(r.tier) && !isCaptainRod(r) && r.tier !== COMPLETIONIST_TIER)
+        .sort((a, b) => a.cost - b.cost)
+      const next = buyable.find(r => fishingLevel >= gearReq(r) && doubloons >= r.cost)
+        ?? buyable.find(r => fishingLevel >= gearReq(r))
+        ?? buyable[0] ?? null
+      const total = RODS.filter(r => r.tier !== COMPLETIONIST_TIER).length
+      const owned = ownedRods.filter(t => t !== COMPLETIONIST_TIER).length
+      if (!next) return { key: 'rod' as const, label: 'Rods', color: '#b8956a', imageUrl: '/rod_driftwood_thumb.png', owned, total, next: null, state: 'maxed' as GearState, detail: 'Every rod owned' }
+      const req = gearReq(next), levelOk = fishingLevel >= req, canAfford = doubloons >= next.cost
+      const state: GearState = !levelOk ? 'locked' : canAfford ? 'ready' : 'saving'
+      const detail = !levelOk ? `Fishing Lv ${req} · ${req - fishingLevel} to go`
+        : canAfford ? `${next.name} · ${next.cost.toLocaleString()} ⟡`
+        : `${(next.cost - doubloons).toLocaleString()} ⟡ short`
+      return { key: 'rod' as const, label: 'Rods', color: '#b8956a', imageUrl: '/rod_driftwood_thumb.png', owned, total, next: { name: next.name, cost: next.cost, levelReq: req }, state, detail }
+    })(),
+    ladderSummary('reel', 'Reels', '#60a5fa', '/reel_basic_thumb.png', REELS, reelTier),
+    ladderSummary('hook', 'Hooks', '#f0c040', '/hook_steel_thumb.png', HOOKS, hookTier),
+    // LINE — earned by discovering species, never bought.
+    (() => {
+      const owned = lineTier + 1
+      const maxed = lineTier >= LINES.length - 1
+      const remaining = Math.max(0, totalSpecies - uniqueSpeciesCaught)
+      return {
+        key: 'line' as const, label: 'Line', color: '#4ade80', imageUrl: '/monofilament.png',
+        owned, total: LINES.length, next: null, state: (maxed ? 'maxed' : 'earned') as GearState,
+        detail: maxed ? 'Finest line unlocked' : `${uniqueSpeciesCaught}/${totalSpecies} species discovered`,
+      }
+    })(),
+    // BAIT — consumable, always available.
+    {
+      key: 'bait', label: 'Bait', color: '#34d399', imageUrl: '/worms.png',
+      owned: Object.keys(baitMap).filter(k => (baitMap[k] ?? 0) > 0).length, total: shopBaits.length,
+      next: null, state: 'ready', detail: totalBait > 0 ? `${totalBait} in your tin` : 'Stock your tin',
+    },
+  ]
+  const readyBuys = summaries.filter(s => s.state === 'ready' && s.key !== 'bait')
+  const gearOwned = summaries.reduce((a, s) => a + s.owned, 0)
+  const gearTotal = summaries.reduce((a, s) => a + s.total, 0)
+
+  const STATE_PIP: Record<GearState, { label: string; color: string }> = {
+    ready:  { label: 'Ready to buy', color: '#f0c040' },
+    saving: { label: 'Saving up',    color: '#9a958c' },
+    locked: { label: 'Level locked', color: '#60a5fa' },
+    maxed:  { label: 'Maxed',        color: '#c9a7ff' },
+    earned: { label: 'Earned by play', color: '#4ade80' },
+  }
+
+  // ── Landing — the Forge shape ────────────────────────────────────────────
+  // A collection pulse, a shelf of what you can buy RIGHT NOW, and a state-coloured
+  // board. The old landing was five identical tiles that answered nothing until you
+  // opened them; this answers "what can I afford" before you touch anything.
+  if (section === null) {
     return (
       <div className="px-4 sm:px-6 max-w-lg sm:max-w-2xl mx-auto pb-16">
         <ShopHeader title="Tackle Shop" backLabel="Back" onBack={() => router.back()} badge={levelBadge} />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 11 }}>
-          {CATEGORIES.map(({ key, label, desc, color, imageUrl }) => {
-            const wide = key === 'line'
-            return (
-              <motion.div
-                key={key}
-                onClick={() => { setSection(key); setError(null) }}
-                whileTap={{ scale: 0.98 }}
-                transition={{ type: 'spring', stiffness: 600, damping: 22 }}
-                style={{
-                  ...tileBase(color),
-                  gridColumn: wide ? '1 / -1' : undefined,
-                  display: 'flex',
-                  flexDirection: wide ? 'row' : 'column',
-                  alignItems: wide ? 'center' : 'stretch',
-                  gap: wide ? '1rem' : 0,
-                  padding: wide ? '0.9rem 1.2rem' : 0,
-                }}
-              >
-                {sheen}
 
-                {wide ? (
-                  <>
-                    <div style={{ flex: 1, minWidth: 0, position: 'relative', zIndex: 2 }}>
-                      <p className="font-cinzel font-700" style={{ fontSize: '1.25rem', color: '#fff', lineHeight: 1.15, marginBottom: '0.3rem' }}>{label}</p>
-                      <p className="font-karla font-400" style={{ fontSize: '0.74rem', color: '#b0ada8', lineHeight: 1.45 }}>{desc}</p>
-                    </div>
-                    {imageUrl && (
-                      <div style={{ flexShrink: 0, width: 92, height: 80, position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={imageUrl} alt={label} loading="lazy" decoding="async" style={{ maxWidth: '100%', maxHeight: 80, objectFit: 'contain', filter: `drop-shadow(0 4px 16px ${color}55)` }} />
-                      </div>
+        {/* ── THE PULSE: how kitted-out you are, at a glance ─────────────── */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+          <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.72rem', color: '#b9b2a6' }}>
+            Gear <span style={{ color: '#ffce8a' }}>{gearOwned}</span> / {gearTotal}
+          </span>
+          <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.72rem', color: '#e0b45a' }}>
+            {doubloons.toLocaleString()} ⟡
+          </span>
+        </div>
+        <div style={{ height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden', marginBottom: '1.2rem' }}>
+          <motion.div initial={false} animate={{ width: `${Math.round((gearOwned / Math.max(1, gearTotal)) * 100)}%` }}
+            transition={{ type: 'spring', stiffness: 200, damping: 30 }}
+            style={{ height: '100%', borderRadius: 999, background: 'linear-gradient(90deg, #d8a24a, #f0c877)' }} />
+        </div>
+
+        {/* ── READY TO BUY: the one question a shop should answer instantly ── */}
+        {readyBuys.length > 0 && (
+          <div style={{ marginBottom: '1.3rem' }}>
+            <p className="font-karla font-800 uppercase tracking-[0.14em]" style={{ fontSize: '0.72rem', color: '#f0c040', marginBottom: 9 }}>
+              Ready to Buy
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {readyBuys.map(s => (
+                <motion.button key={s.key} type="button"
+                  onClick={() => { vibrate([0, 14]); setSection(s.key); setError(null) }}
+                  whileTap={{ scale: 0.985 }} className="tap"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 11, width: '100%', textAlign: 'left',
+                    padding: '0.7rem 0.8rem', borderRadius: 14, cursor: 'pointer',
+                    background: 'linear-gradient(180deg, rgba(240,192,64,0.15), rgba(240,192,64,0.05))',
+                    border: '1px solid rgba(240,192,64,0.55)', boxShadow: '0 0 20px rgba(240,192,64,0.16)',
+                  }}>
+                  <span style={{ position: 'relative', flexShrink: 0, width: 46, height: 46, borderRadius: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.28)', border: `1px solid ${s.color}55` }}>
+                    {s.imageUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={s.imageUrl} alt="" loading="lazy" decoding="async" style={{ maxWidth: 34, maxHeight: 34, objectFit: 'contain', filter: `drop-shadow(0 2px 6px ${s.color}66)` }} />
                     )}
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={`${color}99`} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ position: 'relative', zIndex: 2, flexShrink: 0 }}>
-                      <path d="M9 6l6 6-6 6" />
-                    </svg>
-                  </>
-                ) : (
-                  <>
-                    {/* Art scene — fills the tile width with a radial halo behind the piece */}
-                    <div style={{
-                      position: 'relative', height: 120,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: `radial-gradient(ellipse 75% 70% at 50% 45%, ${color}24 0%, transparent 70%)`,
-                      borderBottom: `1px solid ${color}1f`,
-                    }}>
-                      {imageUrl && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={imageUrl} alt={label} loading="lazy" decoding="async" style={{ maxWidth: '72%', maxHeight: 96, objectFit: 'contain', filter: `drop-shadow(0 5px 18px ${color}60)`, position: 'relative', zIndex: 2 }} />
-                      )}
-                    </div>
-                    {/* Label + desc */}
-                    <div style={{ position: 'relative', zIndex: 2, padding: '0.7rem 0.85rem 0.85rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                        <p className="font-cinzel font-700" style={{ fontSize: '1.18rem', color: '#fff', lineHeight: 1.1 }}>{label}</p>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={`${color}99`} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0 }}>
-                          <path d="M9 6l6 6-6 6" />
-                        </svg>
-                      </div>
-                      <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#b0ada8', lineHeight: 1.4, marginTop: 3 }}>{desc}</p>
-                    </div>
-                  </>
-                )}
-              </motion.div>
+                    <motion.span aria-hidden animate={{ opacity: [0.15, 0.5, 0.15] }} transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+                      style={{ position: 'absolute', inset: -1, borderRadius: 11, border: '1px solid #f0c040', pointerEvents: 'none' }} />
+                  </span>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span className="font-cinzel font-700 truncate" style={{ display: 'block', fontSize: '1.02rem', color: '#f7edd4' }}>{s.next?.name ?? s.label}</span>
+                    <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ display: 'block', fontSize: '0.6rem', color: '#c8bfa8', marginTop: 2 }}>{s.label}</span>
+                  </span>
+                  <span className="font-cinzel font-700" style={{ flexShrink: 0, fontSize: '0.92rem', color: '#f0c040', whiteSpace: 'nowrap' }}>
+                    {(s.next?.cost ?? 0).toLocaleString()} ⟡
+                  </span>
+                </motion.button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── THE BOARD: every category, coloured by where it stands ─────── */}
+        <p className="font-karla font-800 uppercase tracking-[0.14em]" style={{ fontSize: '0.72rem', color: '#b9b2a6', marginBottom: 9 }}>
+          All Tackle
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          {summaries.map(s => {
+            const pip = STATE_PIP[s.state]
+            const isReady = s.state === 'ready'
+            return (
+              <motion.button key={s.key} type="button"
+                onClick={() => { vibrate([0, 12]); setSection(s.key); setError(null) }}
+                whileTap={{ scale: 0.97 }} className="tap"
+                style={{
+                  position: 'relative', overflow: 'hidden', textAlign: 'left', cursor: 'pointer',
+                  display: 'flex', flexDirection: 'column', borderRadius: 16,
+                  background: `linear-gradient(165deg, ${s.color}18 0%, rgba(6,12,20,0.95) 60%)`,
+                  border: `1px solid ${isReady ? 'rgba(240,192,64,0.6)' : `${s.color}33`}`,
+                  borderTop: `1px solid ${s.color}70`,
+                  boxShadow: isReady ? '0 0 18px rgba(240,192,64,0.14)' : `0 3px 12px rgba(0,0,0,0.4)`,
+                }}>
+                {/* art */}
+                <div style={{ position: 'relative', height: 92, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: `radial-gradient(ellipse 75% 70% at 50% 45%, ${s.color}22 0%, transparent 70%)` }}>
+                  {s.imageUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={s.imageUrl} alt={s.label} loading="lazy" decoding="async" style={{ maxWidth: '56%', maxHeight: 72, objectFit: 'contain', filter: `drop-shadow(0 4px 14px ${s.color}55)` }} />
+                  )}
+                  {/* the "how far you've climbed" count, top-right */}
+                  <span className="font-karla font-700" style={{ position: 'absolute', top: 7, right: 8, fontSize: '0.58rem', color: `${s.color}dd`, background: 'rgba(0,0,0,0.4)', border: `1px solid ${s.color}33`, borderRadius: 999, padding: '0.08rem 0.4rem' }}>
+                    {s.owned}/{s.total}
+                  </span>
+                </div>
+                {/* label + the STATE — the forge's contribution: you know before you tap */}
+                <div style={{ padding: '0.5rem 0.7rem 0.7rem' }}>
+                  <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#fff', lineHeight: 1.1 }}>{s.label}</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4 }}>
+                    <span aria-hidden style={{ flexShrink: 0, width: 6, height: 6, borderRadius: 999, background: pip.color }} />
+                    <span className="font-karla font-700 truncate" style={{ fontSize: '0.6rem', color: pip.color }}>{s.detail}</span>
+                  </div>
+                </div>
+              </motion.button>
             )
           })}
         </div>
