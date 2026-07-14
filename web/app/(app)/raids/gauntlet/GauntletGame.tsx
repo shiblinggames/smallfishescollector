@@ -53,6 +53,10 @@ type CashResult = Awaited<ReturnType<typeof cashOutGauntlet>>
 
 const GOLD = '#f0c040'
 const TEAL = '#5eead4'
+/** Hardcore's one colour. The Haul modal marks a Hardcore-only drop with this and
+ *  nothing else, so "you cannot get this on a Normal dive" is a single visual fact
+ *  rather than a sentence. */
+const HC_RED = '#e0555a'
 
 // Davy Jones himself — the gauntlet's face. Drives both the intro centerpiece
 // and the descent transition.
@@ -4203,128 +4207,188 @@ function CurrencyInfoModal({ kind, onClose }: { kind: 'fathoms' | 'blood'; onClo
   )
 }
 
-// Per-mode loot guide — one for Normal, one for Hardcore. Tied to the two
-// descent cards so a player can see exactly what each mode drops. The chest
-// ladder is gone (it read as a spreadsheet); it's now one concise line.
+// ── THE HAUL ─────────────────────────────────────────────────────────────────
+// What a dive pays, Normal or Hardcore. This used to be five paragraphs of prose in
+// four competing accent colors, with the actual ARTWORK shrunk to 34px thumbnails
+// beside it — the loot guide buried the loot. It is now a grid: the art is the
+// content, and every word beyond a name lives one tap away in a detail sheet, for
+// the players who want it.
+//
+// Both modes render the SAME grid, because a Hardcore dive genuinely earns
+// everything a Normal dive drops plus its own spoils. On Normal the Hardcore drops
+// sit there greyed and locked, which says "this is what the other mode adds" with no
+// prose at all, and says it far better than a paragraph did.
+
+interface HaulDrop {
+  id: string
+  name: string
+  img?: string | null
+  icon?: React.ReactNode
+  /** One line on the tile. Everything else waits behind the tap. */
+  tag: string
+  desc: string
+  /** How it is actually won. The fact players came here for. */
+  how: string
+  hardcoreOnly?: boolean
+}
+
 function LootModal({ mode, onClose }: { mode: 'normal' | 'hardcore'; onClose: () => void }) {
   const hardcore = mode === 'hardcore'
-  const accent = hardcore ? '#e0555a' : TEAL
-  const cannons = ['davys_heavy_cannon', 'davys_hand_cannon']
-    .map(getRaidItem)
-    .filter((it): it is NonNullable<ReturnType<typeof getRaidItem>> => !!it)
-  const goldHull = getShipSkin('golden_gauntlet_hull')
-  const bloodCannon = getRaidItem('davys_blood_cannon')
-  const badBloodHull = getShipSkin('bad_blood_hull')
-  const pitchBlackHull = getShipSkin(PRESSURE_SKIN_ID)
+  const accent = hardcore ? HC_RED : TEAL
+  const [detail, setDetail] = useState<HaulDrop | null>(null)
 
-  const Label = ({ children, color }: { children: React.ReactNode; color?: string }) => (
-    <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: color ?? '#8a8480', marginTop: 14, marginBottom: 6 }}>{children}</p>
+  const heavy   = getRaidItem('davys_heavy_cannon')
+  const hand    = getRaidItem('davys_hand_cannon')
+  const bloodCn = getRaidItem('davys_blood_cannon')
+  const gold    = getShipSkin('golden_gauntlet_hull')
+  const badBlood = getShipSkin('bad_blood_hull')
+  const pitch   = getShipSkin(PRESSURE_SKIN_ID)
+
+  const GEM_ICON = (
+    <svg width="30" height="30" viewBox="0 0 24 24" aria-hidden><path d="M12 2s7 8.6 7 13a7 7 0 1 1-14 0c0-4.4 7-13 7-13z" fill="#d1394b" /><path d="M9.2 12.4a3.4 3.4 0 0 0-.2 4.2" stroke="#fff" strokeOpacity="0.55" strokeWidth="1.3" fill="none" strokeLinecap="round" /></svg>
   )
-  const DropRow = ({ img, name, desc, color, big }: { img?: string | null; name: string; desc: string; color: string; big?: boolean }) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.5rem 0.6rem', borderRadius: 10, background: `${color}14`, border: `1px solid ${color}55` }}>
-      {img && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={img} alt="" loading="lazy" decoding="async" style={{ width: big ? 44 : 34, height: big ? 44 : 34, objectFit: 'contain', flexShrink: 0, filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.5))' }} />
-      )}
-      <div style={{ minWidth: 0 }}>
-        <p className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: '#f2ede2', lineHeight: 1.1 }}>{name}</p>
-        <p className="font-karla" style={{ fontSize: '0.62rem', color: '#a49e94', lineHeight: 1.3, marginTop: 1 }}>{desc}</p>
-      </div>
-    </div>
+
+  // ── What every dive pays, win or lose ──────────────────────────────────────
+  const banked: HaulDrop[] = [
+    {
+      id: 'pot', name: 'The Pot', tag: 'Doubloons',
+      icon: <span className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: GOLD }}>⟡</span>,
+      desc: 'Every ship you sink grows one pot. Cash out at any depth and it banks as doubloons, plus a share of Nav XP.',
+      how: 'The deeper you bank, the richer the chest and the bigger the multiplier on the pot. Sink before you bank and you lose the lot.',
+    },
+    {
+      id: 'fathoms', name: 'Fathoms', tag: 'Kept even if you sink',
+      icon: <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={TEAL} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M3 7h18" /><path d="M3 12h18" /><path d="M3 17h18" /></svg>,
+      desc: 'The Gauntlet\u2019s own currency. One per ship sunk, and the only thing a dive pays whether you come home or not.',
+      how: 'Spend them in the Locker on permanent upgrades that carry into every future dive.',
+    },
+    {
+      id: 'blood_gems', name: 'Blood Gems', tag: 'Hardcore only', hardcoreOnly: true,
+      icon: GEM_ICON,
+      desc: 'The premium currency, and the reason to risk the crew. Banked in your cash-out chest, never dropped anywhere else in the game.',
+      how: `Survive and bank them. The deeper you go the more you carry up, and signing Davy\u2019s Terms multiplies them further.`,
+    },
+  ]
+
+  // ── The chase. Art first; the rules are one tap away. ──────────────────────
+  const chase: HaulDrop[] = [
+    heavy && {
+      id: heavy.id, name: heavy.name, img: heavy.image, tag: 'Rare from any chest',
+      desc: heavy.description, how: 'A rare roll in any cash-out chest. The odds climb the deeper you bank.',
+    },
+    hand && {
+      id: hand.id, name: hand.name, img: hand.image, tag: 'Rare from any chest',
+      desc: hand.description, how: 'A rare roll in any cash-out chest. The odds climb the deeper you bank. Forge it with the Heavy to make the Grand Cannon.',
+    },
+    gold && {
+      id: gold.id, name: gold.name, img: gold.imageByTier?.[6], tag: 'Deepest chest only',
+      desc: gold.description, how: `Only rolls from Davy Jones\u2019 Locker, the deepest chest tier. Man-o-War hulls only.`,
+    },
+    bloodCn && {
+      id: bloodCn.id, name: bloodCn.name, img: bloodCn.image, tag: 'Hardcore only', hardcoreOnly: true,
+      desc: bloodCn.description, how: 'A rare roll from the deeper Hardcore chests. The only lifesteal in the game.',
+    },
+    badBlood && {
+      id: badBlood.id, name: badBlood.name, img: badBlood.imageByTier?.[6], tag: 'Hardcore only', hardcoreOnly: true,
+      desc: badBlood.description, how: 'A rare roll from the deeper Hardcore chests. Man-o-War hulls only.',
+    },
+    pitch && {
+      id: pitch.id, name: pitch.name, img: pitch.imageByTier?.[6], tag: `${PRESSURE_SKIN_THRESHOLD}+ Pressure`, hardcoreOnly: true,
+      desc: pitch.description,
+      how: `The rarest thing in the Gauntlet. It is not won by diving deep, it is won by diving deep UNDER WEIGHT: a Hardcore cash-out carrying ${PRESSURE_SKIN_THRESHOLD}+ Pressure from Davy\u2019s Terms, banked from depth ${PRESSURE_SKIN_DEPTH} or deeper. Man-o-War hulls only.`,
+    },
+  ].filter(Boolean) as HaulDrop[]
+
+  // On Normal, a Hardcore drop is shown but locked. That single grey tile does the
+  // job the "here is what Hardcore adds" paragraph was doing, without the paragraph.
+  const Tile = ({ d, big }: { d: HaulDrop; big?: boolean }) => {
+    const locked = !hardcore && d.hardcoreOnly === true
+    return (
+      <button onClick={() => setDetail(d)} className="tap"
+        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, padding: big ? '0.75rem 0.4rem 0.6rem' : '0.6rem 0.35rem',
+          borderRadius: 12, cursor: 'pointer', textAlign: 'center', width: '100%',
+          background: 'rgba(255,255,255,0.035)',
+          border: `1px solid ${d.hardcoreOnly ? `${HC_RED}44` : 'rgba(255,255,255,0.09)'}` }}>
+        <div style={{ height: big ? 52 : 40, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          filter: locked ? 'grayscale(1) brightness(0.5)' : 'drop-shadow(0 2px 5px rgba(0,0,0,0.55))', opacity: locked ? 0.75 : 1 }}>
+          {d.img
+            // eslint-disable-next-line @next/next/no-img-element
+            ? <img src={d.img} alt="" loading="lazy" decoding="async" style={{ maxWidth: big ? 62 : 44, maxHeight: big ? 52 : 40, objectFit: 'contain' }} />
+            : d.icon}
+        </div>
+        <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: locked ? '#8d8781' : '#f2ede2', lineHeight: 1.12 }}>{d.name}</p>
+        <p className="font-karla font-600" style={{ fontSize: '0.55rem', lineHeight: 1.2, color: d.hardcoreOnly ? `${HC_RED}dd` : '#7f7a72' }}>
+          {locked ? 'Hardcore only' : d.tag}
+        </p>
+      </button>
+    )
+  }
+
+  const SectionLabel = ({ children }: { children: React.ReactNode }) => (
+    <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: '#7f7a72', margin: '15px 0 7px' }}>{children}</p>
   )
 
   return (
     <ModalScrim zIndex={1300} onClose={onClose}>
       <motion.div initial={{ opacity: 0, y: 16, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 24 }}
         onClick={e => e.stopPropagation()}
-        style={{ width: '100%', maxWidth: 440, maxHeight: '86vh', overflowY: 'auto', borderRadius: 18, background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${accent}3a`, boxShadow: `0 0 44px ${accent}1f, 0 18px 50px rgba(0,0,0,0.6)`, padding: '1.2rem 1.1rem 1.1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
-          <div>
-            <p className="font-karla font-700 uppercase tracking-[0.24em]" style={{ fontSize: '0.52rem', color: `${accent}cc` }}>{hardcore ? 'Hardcore Spoils' : "What's Down There"}</p>
-            <p className="font-cinzel font-800" style={{ fontSize: '1.35rem', color: '#eafffb', lineHeight: 1.1, marginTop: 3 }}>{hardcore ? 'Hardcore Haul' : 'Normal Haul'}</p>
-          </div>
-          <button onClick={onClose} aria-label="Close" style={{ flexShrink: 0, width: 32, height: 32, borderRadius: '50%', padding: 0, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
-          </button>
-        </div>
+        style={{ width: '100%', maxWidth: 420, maxHeight: '86vh', overflowY: 'auto', borderRadius: 18, background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${accent}3a`, boxShadow: `0 0 44px ${accent}1f, 0 18px 50px rgba(0,0,0,0.6)`, padding: '1.15rem 1.05rem 1.05rem' }}>
 
-        <div style={{ marginTop: 12, textAlign: 'left' }}>
-          {/* The pot loop in one breath. */}
-          <p className="font-karla" style={{ fontSize: '0.76rem', color: '#b8b2a6', lineHeight: 1.5 }}>
-            Every ship you sink grows <span style={{ color: GOLD, fontWeight: 700 }}>one pot</span>. Cash out at any depth to bank it as doubloons plus a share of Nav XP — but sink first and you lose the lot.
-          </p>
-
-          {/* Chest multiplier — one concise line, no ladder. */}
-          <p className="font-karla" style={{ fontSize: '0.74rem', color: '#b8b2a6', lineHeight: 1.5, marginTop: 9 }}>
-            The <span style={{ color: GOLD, fontWeight: 700 }}>deeper you sink</span> before cashing out, the richer the chest — a bigger multiplier on your doubloon pot, with <span style={{ color: '#a78bfa', fontWeight: 700 }}>gems ◆</span> on top from the deeper tiers.
-          </p>
-
-          {/* The crux for the player: which mode drops what. */}
-          {hardcore ? (
-            <div style={{ marginTop: 11, padding: '0.65rem 0.75rem', borderRadius: 10, background: `${accent}12`, border: `1px solid ${accent}45` }}>
-              <p className="font-karla" style={{ fontSize: '0.74rem', color: '#f0cfcf', lineHeight: 1.5 }}>
-                A Hardcore dive earns <span style={{ color: '#fdd', fontWeight: 700 }}>everything a Normal dive drops</span> — the Davy cannons, the Golden Hull, all of it — <span style={{ color: accent, fontWeight: 700 }}>plus the Hardcore-only spoils</span> below. Normal dives never turn up the Hardcore items.
-              </p>
+        {detail ? (
+          // ── DETAIL: one drop, all the words, nothing competing with it ────────
+          <motion.div key={detail.id} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.18 }}>
+            <button onClick={() => setDetail(null)} className="font-karla font-700 tap"
+              style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', color: '#9a948a', fontSize: '0.72rem', cursor: 'pointer', padding: 0 }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+              Back
+            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 12 }}>
+              <div style={{ height: 92, display: 'flex', alignItems: 'center', justifyContent: 'center', filter: 'drop-shadow(0 4px 14px rgba(0,0,0,0.6))' }}>
+                {detail.img
+                  // eslint-disable-next-line @next/next/no-img-element
+                  ? <img src={detail.img} alt="" style={{ maxWidth: 120, maxHeight: 92, objectFit: 'contain' }} />
+                  : <div style={{ transform: 'scale(2)' }}>{detail.icon}</div>}
+              </div>
+              {detail.hardcoreOnly && (
+                <span className="font-karla font-800 uppercase tracking-[0.16em]" style={{ marginTop: 10, fontSize: '0.5rem', color: HC_RED, background: `${HC_RED}16`, border: `1px solid ${HC_RED}55`, borderRadius: 999, padding: '0.2rem 0.55rem' }}>
+                  Hardcore only
+                </span>
+              )}
+              <p className="font-cinzel font-800" style={{ fontSize: '1.3rem', color: '#f2ede2', lineHeight: 1.12, marginTop: 9, textAlign: 'center' }}>{detail.name}</p>
             </div>
-          ) : null}
-
-          {/* Fathoms — always-earned. */}
-          <div style={{ marginTop: 11, padding: '0.6rem 0.7rem', borderRadius: 10, background: `${TEAL}0c`, border: `1px solid ${TEAL}30` }}>
-            <p className="font-karla" style={{ fontSize: '0.72rem', color: '#b8b2a6', lineHeight: 1.5 }}>
-              Every dive also pays <span style={{ color: TEAL, fontWeight: 700 }}>Fathoms</span>, one per ship sunk, <span style={{ color: TEAL, fontWeight: 700 }}>kept even if you go down</span>. Spend them in the Locker&apos;s shops on permanent upgrades.
-            </p>
-          </div>
-
-          {/* ── HARDCORE-ONLY spoils, up top so they read as the mode's draw ── */}
-          {hardcore && (
-            <>
-              <Label color={`${accent}cc`}>Hardcore-only spoils</Label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.55rem 0.65rem', borderRadius: 10, background: `${accent}14`, border: `1px solid ${accent}55` }}>
-                  <svg width="30" height="30" viewBox="0 0 24 24" aria-hidden style={{ flexShrink: 0, filter: 'drop-shadow(0 0 6px rgba(220,38,38,0.7))' }}><path d="M12 2s7 8.6 7 13a7 7 0 1 1-14 0c0-4.4 7-13 7-13z" fill="#d1394b" /><path d="M9.2 12.4a3.4 3.4 0 0 0-.2 4.2" stroke="#fff" strokeOpacity="0.55" strokeWidth="1.3" fill="none" strokeLinecap="round" /></svg>
-                  <div style={{ minWidth: 0 }}>
-                    <p className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: '#f3d3d3', lineHeight: 1.1 }}>Blood Gems</p>
-                    <p className="font-karla" style={{ fontSize: '0.62rem', color: '#c3a3a3', lineHeight: 1.3, marginTop: 1 }}>The premium currency — banked in your cash-out chest. Survive to keep them; the deeper you go, the more you carry up.</p>
-                  </div>
-                </div>
-                {bloodCannon && <DropRow img={bloodCannon.image} name={bloodCannon.name} desc={bloodCannon.description} color={accent} />}
-                {badBloodHull && <DropRow img={badBloodHull.imageByTier?.[6]} name={badBloodHull.name} desc={badBloodHull.description} color={badBloodHull.color} big />}
-                {/* The rarest thing in the mode, and it was the one drop this list never
-                    showed. Its price rides in the row itself: the hull is not won by
-                    diving deep, it is won by diving deep UNDER WEIGHT, and a player who
-                    does not know that will never once roll for it. */}
-                {pitchBlackHull && (
-                  <DropRow img={pitchBlackHull.imageByTier?.[6]} name={pitchBlackHull.name} color={pitchBlackHull.color} big
-                    desc={`${pitchBlackHull.description} Only rolls on a cash-out carrying ${PRESSURE_SKIN_THRESHOLD}+ Pressure from Davy's Terms, banked from depth ${PRESSURE_SKIN_DEPTH} or deeper.`} />
-                )}
+            <p className="font-karla" style={{ fontSize: '0.82rem', color: '#b8b2a6', lineHeight: 1.55, marginTop: 11, textAlign: 'left' }}>{detail.desc}</p>
+            <div style={{ marginTop: 11, padding: '0.7rem 0.8rem', borderRadius: 11, textAlign: 'left', background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.09)' }}>
+              <p className="font-karla font-800 uppercase tracking-[0.16em]" style={{ fontSize: '0.5rem', color: '#7f7a72', marginBottom: 5 }}>How it drops</p>
+              <p className="font-karla" style={{ fontSize: '0.78rem', color: '#c8c2b6', lineHeight: 1.5 }}>{detail.how}</p>
+            </div>
+          </motion.div>
+        ) : (
+          <>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+              <div style={{ textAlign: 'left' }}>
+                <p className="font-karla font-700 uppercase tracking-[0.24em]" style={{ fontSize: '0.52rem', color: `${accent}cc` }}>{hardcore ? 'Hardcore' : 'Normal'}</p>
+                <p className="font-cinzel font-800" style={{ fontSize: '1.35rem', color: '#eafffb', lineHeight: 1.1, marginTop: 3 }}>The Haul</p>
               </div>
-            </>
-          )}
+              <button onClick={onClose} aria-label="Close" style={{ flexShrink: 0, width: 32, height: 32, borderRadius: '50%', padding: 0, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+              </button>
+            </div>
 
-          {/* Shared drops — full chase list on Normal; on Hardcore just one line
-              (no need to re-list them all). */}
-          {hardcore ? (
-            <p className="font-karla" style={{ fontSize: '0.72rem', color: '#cbb8e8', lineHeight: 1.5, marginTop: 13, padding: '0.6rem 0.75rem', borderRadius: 10, background: 'rgba(147,112,208,0.10)', border: '1px solid rgba(147,112,208,0.3)' }}>
-              You also earn <span style={{ color: '#e4d6f7', fontWeight: 700 }}>every Normal Gauntlet drop</span> — the Davy cannons, the Golden Hull, and everything else a Normal dive can turn up.
+            <p className="font-karla" style={{ fontSize: '0.76rem', color: '#8f8a82', lineHeight: 1.45, marginTop: 8, textAlign: 'left' }}>
+              Tap anything to see how it drops.
             </p>
-          ) : (
-            <>
-              <Label>The chase — rare from any chest</Label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {cannons.map(it => (
-                  <DropRow key={it.id} img={it.image} name={it.name} desc={it.description} color="#9370d0" />
-                ))}
-                {goldHull && <DropRow img={goldHull.imageByTier?.[6]} name={goldHull.name} desc={goldHull.description} color={goldHull.color} big />}
-              </div>
-              <p className="font-karla" style={{ fontSize: '0.63rem', color: '#8a8480', marginTop: 7, lineHeight: 1.4 }}>
-                The cannons are a rare chase from any chest; the Golden Hull drops only from the deepest one (Davy Jones&apos; Locker).
-              </p>
-              <p className="font-karla" style={{ fontSize: '0.63rem', color: '#8a8480', marginTop: 8, lineHeight: 1.45 }}>
-                The <span style={{ color: '#e0888c', fontWeight: 700 }}>Hardcore-only spoils</span> — Blood Gems, Davy&apos;s Blood Cannon, the Bad Blood Hull, and the Pitch Black Hull that only Davy&apos;s Terms can drop — never come up on a Normal dive. A Hardcore dive earns all of the above <em>and</em> those.
-              </p>
-            </>
-          )}
-        </div>
+
+            <SectionLabel>Every dive pays</SectionLabel>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+              {banked.map(d => <Tile key={d.id} d={d} />)}
+            </div>
+
+            <SectionLabel>The chase</SectionLabel>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+              {chase.map(d => <Tile key={d.id} d={d} big />)}
+            </div>
+          </>
+        )}
       </motion.div>
     </ModalScrim>
   )
