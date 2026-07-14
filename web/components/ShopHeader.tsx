@@ -1,5 +1,7 @@
 'use client'
 
+import type React from 'react'
+
 // Shared header chrome for every marketplace shop (Tackle, Shipyard, Redeem)
 // and the in-shop section views. A tactile back pill on the left (same plate +
 // gold edge as BackButton) and a centered Cinzel title. The live doubloon purse
@@ -31,13 +33,18 @@ const PILL_STYLE: React.CSSProperties = {
 }
 
 export default function ShopHeader({
-  title, backLabel, href, onBack, accent = '#f0c040',
+  title, backLabel, href, onBack, accent = '#f0c040', badge,
 }: {
   title: string
   backLabel: string
   href?: string
   onBack?: () => void
   accent?: string
+  /** Optional pill on the right. The Tackle Shop uses it to carry the player's
+   *  Fishing level, since every gate in that shop is a fishing-level gate and the
+   *  number was only visible back on the fishing screen. Generic on purpose: the
+   *  Shipyard's gates are Nav levels and can use the same slot. */
+  badge?: React.ReactNode
 }) {
   const back = href ? (
     <motion.div whileTap={{ scale: 0.9 }} whileHover={{ y: -1 }} transition={{ type: 'spring', stiffness: 600, damping: 22 }} style={{ display: 'inline-flex' }}>
@@ -58,7 +65,7 @@ export default function ShopHeader({
   )
 
   return (
-    <div style={{ position: 'relative', display: 'flex', alignItems: 'center', minHeight: 36, marginBottom: 18 }}>
+    <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minHeight: 36, marginBottom: 18 }}>
       {back}
       <p
         className="font-cinzel font-700"
@@ -71,6 +78,7 @@ export default function ShopHeader({
       >
         {title}
       </p>
+      {badge ?? <span style={{ width: 1 }} />}
     </div>
   )
 }

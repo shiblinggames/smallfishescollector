@@ -13,7 +13,7 @@ import { BAITS } from '@/lib/bait'
 import { motion } from 'framer-motion'
 import { buyHook } from '@/app/(app)/hooks/actions'
 import { buyBait, purchaseRod, equipRod, buyReel, claimCompletionistRod } from './actions'
-import { getLevelFromXP } from '@/lib/fishingLevel'
+import { getLevelFromXP, getXPProgress, MAX_LEVEL } from '@/lib/fishingLevel'
 import { fishingGearLevelReq } from '@/lib/gearGating'
 import ShopHeader from '@/components/ShopHeader'
 import ShopStatusPill from '@/components/ShopStatusPill'
@@ -79,6 +79,34 @@ export default function TackleShopClient({
   const shopBaits = BAITS
   // Fishing-level gate on buying gear (rod / reel / hook). Server-enforced too.
   const fishingLevel = getLevelFromXP(fishingXP)
+  // ── FISHING LEVEL, ON SCREEN ────────────────────────────────────────────────
+  // Every gate in this shop is a fishing-level gate, and the locked buttons only
+  // ever showed the REQUIREMENT ("Fishing Lv 30"). Your own level lived back on the
+  // fishing screen, so working out whether a rod was one level away or thirty meant
+  // leaving the shop. This pill rides the header on the landing AND on every
+  // purchase section, and carries the bar to the next level so "how close am I" is
+  // answered in the same glance.
+  const fishingProgress = getXPProgress(fishingXP)
+  const levelBadge = (
+    <div style={{
+      flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3,
+      padding: '0.3rem 0.6rem 0.35rem', borderRadius: 10,
+      background: 'rgba(94,234,212,0.08)', border: '1px solid rgba(94,234,212,0.3)',
+    }}>
+      <span className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.12em', color: '#7fd4c4', lineHeight: 1 }}>
+        Fishing
+      </span>
+      <span className="font-cinzel font-800" style={{ fontSize: '0.95rem', color: '#5eead4', lineHeight: 1 }}>
+        Lv {fishingLevel}
+      </span>
+      {fishingLevel < MAX_LEVEL && (
+        <div aria-hidden title={`${Math.round(fishingProgress.progress * 100)}% to Lv ${fishingLevel + 1}`}
+          style={{ width: 44, height: 3, borderRadius: 999, background: 'rgba(0,0,0,0.45)', overflow: 'hidden' }}>
+          <div style={{ width: `${Math.max(2, Math.min(100, fishingProgress.progress * 100))}%`, height: '100%', background: '#5eead4' }} />
+        </div>
+      )}
+    </div>
+  )
 
   function broadcastDoubloons(amount: number) {
     window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: amount }))
@@ -200,7 +228,7 @@ export default function TackleShopClient({
 
     return (
       <div className="px-4 sm:px-6 max-w-lg sm:max-w-2xl mx-auto pb-16">
-        <ShopHeader title="Tackle Shop" backLabel="Back" onBack={() => router.back()} />
+        <ShopHeader title="Tackle Shop" backLabel="Back" onBack={() => router.back()} badge={levelBadge} />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 11 }}>
           {CATEGORIES.map(({ key, label, desc, color, imageUrl }) => {
             const wide = key === 'line'
@@ -283,6 +311,7 @@ export default function TackleShopClient({
         backLabel="Tackle Shop"
         onBack={() => { setSection(null); setError(null) }}
         accent={sectionColor}
+        badge={levelBadge}
       />
 
       {error && <p className="font-karla font-300 text-red-400 text-xs text-center mb-3">{error}</p>}
@@ -502,7 +531,7 @@ export default function TackleShopClient({
                             border: `1px solid ${hookReady ? `${c}55` : 'rgba(240,192,64,0.32)'}`,
                             padding: '0.14rem 0.5rem', borderRadius: 999,
                           }}>
-                            {isPending ? 'Upgrading…' : !hookLevelMet ? `Fishing Lv ${hookReq}` : canAffordHook ? 'Tap to upgrade' : `${(hook.cost - doubloons).toLocaleString()} ⟡ short`}
+                            {isPending ? 'Upgrading…' : !hookLevelMet ? `Fishing Lv ${hookReq} · ${hookReq - fishingLevel} to go` : canAffordHook ? 'Tap to upgrade' : `${(hook.cost - doubloons).toLocaleString()} ⟡ short`}
                           </span>
                         )}
                       </div>
@@ -694,7 +723,7 @@ export default function TackleShopClient({
                               cursor: rodBuyable && !isPending ? 'pointer' : 'default', opacity: isBuying ? 0.5 : 1,
                               boxShadow: rodBuyable ? 'inset 0 1px 0 rgba(255,255,255,0.08)' : 'none',
                             }}>
-                            {isBuying ? '…' : !rodLevelMet ? `Fishing Lv ${rodReq}` : canAfford ? `Buy · ${rod.cost.toLocaleString()} ⟡` : `Need ${(rod.cost - doubloons).toLocaleString()} ⟡`}
+                            {isBuying ? '…' : !rodLevelMet ? `Fishing Lv ${rodReq} · ${rodReq - fishingLevel} to go` : canAfford ? `Buy · ${rod.cost.toLocaleString()} ⟡` : `Need ${(rod.cost - doubloons).toLocaleString()} ⟡`}
                           </motion.button>
                         )}
                         {owned && !isActive && (
@@ -861,7 +890,7 @@ export default function TackleShopClient({
                           border: `1px solid ${reelReady ? `${c}55` : 'rgba(240,192,64,0.32)'}`,
                           padding: '0.14rem 0.5rem', borderRadius: 999,
                         }}>
-                          {isPending ? 'Upgrading…' : !reelLevelMet ? `Fishing Lv ${reelReq}` : canAffordReel ? 'Tap to upgrade' : `${(reel.cost - doubloons).toLocaleString()} ⟡ short`}
+                          {isPending ? 'Upgrading…' : !reelLevelMet ? `Fishing Lv ${reelReq} · ${reelReq - fishingLevel} to go` : canAffordReel ? 'Tap to upgrade' : `${(reel.cost - doubloons).toLocaleString()} ⟡ short`}
                         </span>
                       )}
                     </div>
