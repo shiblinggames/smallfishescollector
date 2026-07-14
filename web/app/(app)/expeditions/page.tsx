@@ -12,7 +12,8 @@ import ShipHero from './ShipHero'
 import ExpeditionsTour from './ExpeditionsTour'
 import HubCards from './HubCards'
 import type { CampaignCardData, VoyageCardData, VoyageStatus } from './HubCards'
-import { gauntletUnlocked } from '@/lib/gauntlet'
+import { gauntletUnlocked, GAUNTLET_COOLDOWN_MS } from '@/lib/gauntlet'
+import { CREW_SKINS } from '@/lib/crewSkins'
 import { getCrewRoster } from '@/app/(app)/crew/actions'
 import { getDailyVoyageState } from './voyageActions'
 import { getRaidMapView } from './raidMapActions'
@@ -309,6 +310,21 @@ async function ExpeditionHub() {
   const rp = await getRaidPlayerStats(profile!.id as string)
   const dmg = raidDamageProfile(rp.totalPower, rp.shipMinDamage, rp.raidMods?.damagePct ?? 0)
   const raidsCleared = await cachedRaidsCleared()
+
+  // ── OPPORTUNITY STRIP INPUTS ────────────────────────────────────────────────
+  // Cheap to derive from data already fetched — no extra round-trips. All read off
+  // the shared getCurrentProfile() select('*').
+  const todayUTC = new Date().toISOString().slice(0, 10)
+  const freeRecruitAvailable = (profile?.last_free_recruit_date as string | null) !== todayUTC
+  const gems = (profile?.gems as number | null) ?? 0
+  const lastGauntlet = profile?.gauntlet_last_run_at ? new Date(profile.gauntlet_last_run_at as string).getTime() : 0
+  const gauntletDailyReady = gauntletOpen && (Date.now() - lastGauntlet >= GAUNTLET_COOLDOWN_MS)
+  // Affordable AND not-already-owned: never nudge a whale who owns every skin.
+  const ownedSkinIds = new Set((profile?.owned_crew_skins as string[] | null) ?? [])
+  const cheapestUnownedSkin = CREW_SKINS
+    .filter(sk => !ownedSkinIds.has(sk.id))
+    .reduce((min, sk) => Math.min(min, sk.gemCost), Infinity)
+  const canAffordNewSkin = gems >= cheapestUnownedSkin
   const prepStats = {
     hull:    rp.playerHPMax,
     hitMin:  dmg.hitMin,
@@ -339,6 +355,10 @@ async function ExpeditionHub() {
       voyageHistory={voyageHistory}
       raidsCleared={raidsCleared}
       captainsOrdersDone={profile?.captains_orders_done === true}
+      gems={gems}
+      freeRecruitAvailable={freeRecruitAvailable}
+      gauntletDailyReady={gauntletDailyReady}
+      canAffordNewSkin={canAffordNewSkin}
       canPvp={canPvp}
       gauntletOpen={gauntletOpen}
       gauntletUpgrades={(profile?.gauntlet_upgrades as string[] | null) ?? []}

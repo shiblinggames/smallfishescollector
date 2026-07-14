@@ -15,6 +15,8 @@ import { RARITY_COLOR } from '@/lib/variants'
 import { repairShip } from '@/app/(app)/raids/actions'
 import Link from 'next/link'
 import CaptainsOrders, { type OrderAction } from './CaptainsOrders'
+import OpportunityStrip from './OpportunityStrip'
+import { type OpportunityAction } from '@/lib/expeditionOpportunities'
 import type { CrewMember } from '@/app/(app)/crew/actions'
 import { crewTheDeck } from '@/app/(app)/crew/actions'
 import { RARITY_COLORS as CREW_RARITY_COLORS } from '@/lib/crewGen'
@@ -87,6 +89,11 @@ interface Props {
   /** profiles.captains_orders_done — once every order has been completed once, the
    *  checklist is gone for good and never comes back. */
   captainsOrdersDone: boolean
+  /** Live state the Opportunity strip needs that the hub does not already hold. */
+  gems: number
+  freeRecruitAvailable: boolean
+  gauntletDailyReady: boolean
+  canAffordNewSkin: boolean
   // Whether the PvP "coming soon" entry point is open to this viewer (admins +
   // duel testers). Everyone else sees it locked. PvP data is only fetched +
   // passed when this is true (null otherwise).
@@ -181,6 +188,7 @@ export default function HubCards({
   shipTier, todayVoyage, readyVoyage, expeditionXP, voyageHistory,
   canPvp, gauntletOpen, gauntletUpgrades, pvp,
   raidsCleared, captainsOrdersDone,
+  gems, freeRecruitAvailable, gauntletDailyReady, canAffordNewSkin,
 }: Props) {
   const router = useRouter()
   const [modal, setModal] = useState<null | 'campaign' | 'voyages' | 'pvp' | 'gauntlets'>(null)
@@ -244,25 +252,57 @@ export default function HubCards({
     else if (a === 'voyages') setModal('voyages')
     else if (a === 'loadout') window.dispatchEvent(new CustomEvent('expedition:open-loadout'))
   }
+  // The Opportunity strip's actions are a superset — modals, routes (Link handles
+  // those itself), and loadout via event.
+  const onOpportunity = (a: OpportunityAction) => {
+    if (a.kind === 'modal') setModal(a.modal)
+    else if (a.kind === 'event') window.dispatchEvent(new CustomEvent(a.event))
+  }
 
   return (
     <>
-      {/* One task at a time, from the player's real state. Vanishes for good once a
-          captain has done all of it, so a veteran never sees it. */}
-      <CaptainsOrders
-        onAction={onOrder}
-        alreadyDone={captainsOrdersDone}
-        state={{
-          crewOwned: roster.length,
-          raidCrew: roster.filter(c => c.raidSlot != null).length,
-          voyageCrew: roster.filter(c => c.voyageSlot != null).length,
-          crewSlots: shipCrewSlots,
-          equippedItems: equippedRaidItems.length,
-          ownedItems: ownedRaidItems.length,
-          raidsCleared,
-          voyagesRun: voyageHistory.length,
-        }}
-      />
+      {/* Onboarding TEACHES then latches. The Opportunity strip REMINDS, forever.
+          They never both show: Orders returns null once every task is done, and the
+          strip is gated on that same latch, so the top-of-page slot transitions cleanly
+          from "learn the game" to "here's what's worth your time today." */}
+      {captainsOrdersDone ? (
+        <OpportunityStrip
+          onAction={onOpportunity}
+          state={{
+            repairOwed: campaign.repairOwed,
+            voyageStatus: voyages.status,
+            voyageRewardDoubloons: readyVoyage?.total_doubloons ?? 0,
+            voyageRewardGems: readyVoyage?.total_gems ?? 0,
+            canVoyage: roster.some(c => c.voyageSlot != null) || roster.some(c => c.raidSlot == null && c.voyageSlot == null),
+            freeRecruitAvailable,
+            gauntletUnlocked: gauntletOpen,
+            gauntletDailyReady,
+            nextNodeName: campaign.nextNodeName,
+            nextNodeIsFight: campaign.nextNodeKind === 'raid' || campaign.nextNodeKind === 'challenge',
+            nextNodeLocked: campaign.nextNodeLocked,
+            raidCrewAboard: roster.filter(c => c.raidSlot != null).length,
+            unequippedItems: Math.max(0, ownedRaidItems.length - equippedRaidItems.length),
+            itemSlotsFree: Math.max(0, raidItemSlots - equippedRaidItems.length),
+            gems,
+            canAffordNewSkin,
+          }}
+        />
+      ) : (
+        <CaptainsOrders
+          onAction={onOrder}
+          alreadyDone={captainsOrdersDone}
+          state={{
+            crewOwned: roster.length,
+            raidCrew: roster.filter(c => c.raidSlot != null).length,
+            voyageCrew: roster.filter(c => c.voyageSlot != null).length,
+            crewSlots: shipCrewSlots,
+            equippedItems: equippedRaidItems.length,
+            ownedItems: ownedRaidItems.length,
+            raidsCleared,
+            voyagesRun: voyageHistory.length,
+          }}
+        />
+      )}
 
       {/* ── Hub cards (2-col) ─────────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: '1.2rem' }}>
