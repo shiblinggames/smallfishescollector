@@ -1314,68 +1314,77 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     // expireAfterFight so the two can't drift on what's one-shot.
     setActiveTideEffects(expireAfterFight)
 
+    // ── THE INTERSTITIAL CHAIN ────────────────────────────────────────────────
+    // Three things can stand between one kill and the next fight: a Tide, the Rest
+    // Stop, and the boss's pre-fight dialogue. They used to be three independent
+    // `if (...) return` blocks that each committed the round themselves, which meant
+    // WHICHEVER FIRED FIRST SILENTLY CANCELLED THE OTHERS.
+    //
+    // That is not hypothetical. The Blockade runs a 7-mob sequence, so its Rest Stop
+    // falls after kill floor(7/2) = 3 — and its tide slots are 3 and 6. The tide won
+    // the race and returned, the round advanced past the halfway point, and the Rest
+    // Stop condition (nextRound === halfway) could never match again. The whole raid
+    // ran with no crew-ability refresh, and nothing anywhere said so. It was the only
+    // raid in the game with an odd sequence, which is exactly why it was the only one
+    // that broke: every other raid's halfway lands between its tide slots by luck.
+    //
+    // So they CHAIN now. Each gate hands off to the next instead of committing the
+    // round, and only the last one through actually advances. Luck is no longer load
+    // bearing, and an odd-length raid is no longer a trap.
     const advanceToNext = () => {
       setEnemySinking(false)
       const nextRound = roundRef.current + 1
-      // Tide check: slots are 1-indexed kill counts ("after the 3rd kill").
-      // roundRef.current is the just-killed 0-indexed round, so kill count
-      // = roundRef.current + 1. If a slot matches AND we haven't already
-      // fired for it this run, queue the tide modal and gate the
-      // advance behind its pick — same pattern as boss dialogue below.
+
+      const commitRound = () => {
+        roundRef.current = nextRound
+        resetEnemyForRound(roundRef.current)
+        setRoundDisplay(roundRef.current + 1)
+        // Phase stays 'playing'; the key={`combat-r${roundDisplay}`} on
+        // <RaidCombat /> remounts it fresh with the next enemy.
+      }
+
+      // Gate 3 (last): the boss's pre-fight dialogue.
+      const bossGate = () => {
+        if (
+          isBossRound(nextRound, config.sequence.length) &&
+          config.preFightDialogue && config.preFightDialogue.length > 0
+        ) {
+          pendingBossAdvanceRef.current = commitRound
+          setBossDialoguePending(true)
+          return
+        }
+        commitRound()
+      }
+
+      // Gate 2: the Rest Stop, once per raid, after the last fight of the first half.
+      // Crew abilities reset on the player's confirm.
+      const restGate = () => {
+        if (
+          !restStopFiredRef.current &&
+          config.sequence.length >= 4 &&
+          nextRound === Math.floor(config.sequence.length / 2)
+        ) {
+          restStopFiredRef.current = true
+          pendingRestAdvanceRef.current = bossGate
+          setRestStopPending(true)
+          return
+        }
+        bossGate()
+      }
+
+      // Gate 1: a Tide. Slots are 1-indexed kill counts ("after the 3rd kill");
+      // roundRef.current is the just-killed 0-indexed round, so kill count = +1.
       if (config.tides && drawnTidesRef.current.length > 0) {
         const killCount = roundRef.current + 1
         const slotIdx = config.tides.slots.indexOf(killCount)
         if (slotIdx >= 0 && !tidesFiredRef.current.has(slotIdx) && drawnTidesRef.current[slotIdx]) {
           tidesFiredRef.current.add(slotIdx)
-          pendingTideAdvanceRef.current = () => {
-            roundRef.current = nextRound
-            resetEnemyForRound(roundRef.current)
-            setRoundDisplay(roundRef.current + 1)
-          }
+          pendingTideAdvanceRef.current = restGate
           setPendingTide(drawnTidesRef.current[slotIdx])
           return
         }
       }
-      // Rest Stop: if we just finished the LAST fight of the first half,
-      // gate the advance behind the Rest Stop interstitial. Crew abilities
-      // reset on the player's confirm. Fires once per raid.
-      // Halfway = Math.floor(sequence.length / 2). For Krust (8 sequence
-      // + boss): halfway = 4, so after fight 4 the rest stop appears,
-      // then fights 5-8 + boss happen with refreshed abilities.
-      if (
-        !restStopFiredRef.current &&
-        config.sequence.length >= 4 &&
-        nextRound === Math.floor(config.sequence.length / 2)
-      ) {
-        restStopFiredRef.current = true
-        pendingRestAdvanceRef.current = () => {
-          roundRef.current = nextRound
-          resetEnemyForRound(roundRef.current)
-          setRoundDisplay(roundRef.current + 1)
-        }
-        setRestStopPending(true)
-        return
-      }
-      // If the next round is the boss AND the raid config has pre-fight
-      // dialogue, gate the round advance on the dialogue modal. Real
-      // round/enemy advance runs in the modal's onComplete callback.
-      if (
-        isBossRound(nextRound, config.sequence.length) &&
-        config.preFightDialogue && config.preFightDialogue.length > 0
-      ) {
-        pendingBossAdvanceRef.current = () => {
-          roundRef.current = nextRound
-          resetEnemyForRound(roundRef.current)
-          setRoundDisplay(roundRef.current + 1)
-        }
-        setBossDialoguePending(true)
-        return
-      }
-      roundRef.current = nextRound
-      resetEnemyForRound(roundRef.current)
-      setRoundDisplay(roundRef.current + 1)
-      // Phase stays 'playing'; the key={`combat-r${roundDisplay}`} on
-      // <RaidCombat /> remounts it fresh with the next enemy.
+      restGate()
     }
 
     let res: Awaited<ReturnType<typeof awardRaidKill>> | null = null
