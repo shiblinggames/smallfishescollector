@@ -30,7 +30,7 @@ import {
   GAUNTLET_COOLDOWN_HOURS, HARDCORE_RUNS_PER_DAY, HC_UNLOCK_DEPTH, GAUNTLET_REWARD_DEPTH_CAP,
   emptyRunStats, addRunStats, coerceRunStats,
   type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot, type GauntletRunState, type GauntletRunStats, chestOdds } from '@/lib/gauntlet'
-import { GAUNTLET_TERMS, TERM_GROUP_META, resolveTerms, termPressure, termTideEffects, pressureGemMult, pressureDepthFactor, NO_TERM_EFFECTS, PRESSURE_CAP, PRESSURE_DEPTH_FLOOR, PRESSURE_DEPTH_FULL, MAX_AVAILABLE_PRESSURE, type SignedTerms } from '@/lib/gauntletTerms'
+import { GAUNTLET_TERMS, TERM_GROUP_META, resolveTerms, termPressure, termTideEffects, pressureGemMult, pressureDepthFactor, NO_TERM_EFFECTS, PRESSURE_CAP, PRESSURE_DEPTH_FLOOR, PRESSURE_DEPTH_FULL, PRESSURE_SKIN_THRESHOLD, PRESSURE_SKIN_DEPTH, MAX_AVAILABLE_PRESSURE, type SignedTerms } from '@/lib/gauntletTerms'
 import GauntletTermsPanel from './GauntletTermsPanel'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen, recordGauntletHit, wagerGauntletFathoms, markConfluencesSeen, checkpointGauntletRun, resumeGauntletRun, buyBaitWithFathoms, rollDavyOffer } from './actions'
 import { offerCoinMult, offerChestMult, offerCopy, offerTakenLine, type DavyOffer } from '@/lib/gauntletOffer'
@@ -756,11 +756,34 @@ export default function GauntletGame(props: GauntletGameProps) {
               ))}
             </div>
             <p className="font-karla font-700 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.14em', color: '#c48a8a', marginTop: 10 }}>{squadAtRisk.length} crew at risk</p>
-            {/* The upside, in one line. Blood Gems are the only thing Hardcore
-                pays that a normal run doesn't. */}
+            {/* THE UPSIDE. This used to promise Blood Gems and stop there, which sold
+                Hardcore short by three whole items: the Blood Cannon, the Bad Blood Hull
+                and the Pitch Black Hull all drop ONLY here and were never named at the
+                one screen where a captain decides to risk the crew for them. If we are
+                going to ask someone to wager their roster, we can at least tell them
+                everything that is on the other side of it. */}
             <p className="font-karla" style={{ fontSize: '0.8rem', color: '#f0cfcf', lineHeight: 1.45, marginTop: 13 }}>
               Bring them home alive and the chest pays <strong style={{ color: '#fca5a5' }}>Blood Gems</strong>, earned nowhere else.
             </p>
+            <div style={{ marginTop: 9, padding: '0.6rem 0.7rem', borderRadius: 11, textAlign: 'left',
+              background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(220,38,38,0.28)' }}>
+              <p className="font-karla font-800 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#c48a8a', marginBottom: 5 }}>
+                Drops Only on Hardcore
+              </p>
+              {[
+                { name: "Davy's Blood Cannon", note: 'the only lifesteal in the game' },
+                { name: 'Bad Blood Hull', note: 'Man-o-War skin' },
+                { name: 'Pitch Black Hull', note: `Man-o-War skin · needs ${PRESSURE_SKIN_THRESHOLD}+ Pressure, banked from depth ${PRESSURE_SKIN_DEPTH}` },
+              ].map(d => (
+                <div key={d.name} style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 3 }}>
+                  <span aria-hidden style={{ flexShrink: 0, width: 3, height: 3, borderRadius: 999, background: '#fca5a5', transform: 'translateY(-2px)' }} />
+                  <p className="font-karla" style={{ fontSize: '0.7rem', color: '#f0cfcf', lineHeight: 1.35 }}>
+                    <strong className="font-700" style={{ color: '#fca5a5' }}>{d.name}</strong>
+                    <span style={{ color: '#a88a8a' }}> · {d.note}</span>
+                  </p>
+                </div>
+              ))}
+            </div>
 
             {/* ── Davy's Terms — a section you open, sign, and come back from.
                 The board is a sub-modal; the descent is confirmed HERE. ── */}
@@ -4288,7 +4311,7 @@ function LootModal({ mode, onClose }: { mode: 'normal' | 'hardcore'; onClose: ()
                 The cannons are a rare chase from any chest; the Golden Hull drops only from the deepest one (Davy Jones&apos; Locker).
               </p>
               <p className="font-karla" style={{ fontSize: '0.63rem', color: '#8a8480', marginTop: 8, lineHeight: 1.45 }}>
-                The <span style={{ color: '#e0888c', fontWeight: 700 }}>Hardcore-only spoils</span> — Blood Gems, Davy&apos;s Blood Cannon, Bad Blood Hull — never drop on a Normal dive. A Hardcore dive earns all of the above <em>and</em> those.
+                The <span style={{ color: '#e0888c', fontWeight: 700 }}>Hardcore-only spoils</span> — Blood Gems, Davy&apos;s Blood Cannon, the Bad Blood Hull, and the Pitch Black Hull that only Davy&apos;s Terms can drop — never come up on a Normal dive. A Hardcore dive earns all of the above <em>and</em> those.
               </p>
             </>
           )}
