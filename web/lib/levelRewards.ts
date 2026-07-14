@@ -1,26 +1,39 @@
 // ── FISHING LEVEL REWARDS ────────────────────────────────────────────────────
-// Every level pays something. It did not before, and that was the single worst thing
-// about the early game.
+// Every level from 2 to 50 pays something. Before this, 20 of the first 25 paid
+// NOTHING, while the level-up overlay fired a full-screen fireworks display around
+// `Math.floor(level * 0.2)` degrees of catch zone — which only ticks every 5th level.
+// Four times out of five a new captain got rings, sparkles, and nothing measurable.
+// That is not a missing dopamine hit, it is a broken promise, and it teaches a player
+// that levelling is noise.
 //
-// The numbers said it plainly: 20 of the first 25 levels handed the player NOTHING.
-// Worse, the level-up overlay fired a full-screen fireworks display around
-// `Math.floor(level * 0.2)` degrees of catch zone — which only ticks every 5th level —
-// so four times out of five a new captain got rings, sparkles, and the words
-// "Catch Zone +0". That is not a missing dopamine hit, it is a BROKEN PROMISE, and it
-// teaches a player that levelling up is noise.
+// ── HOW THE COIN IS SIZED, AND WHY IT IS NOT MORE ────────────────────────────
+// The first cut of this table was a SECOND JOB. Reaching level 50, a captain fishes up
+// roughly 67,000 doubloons — and the rewards handed them another 133,000 on top. A 197%
+// bonus on their entire income. Levelling was out-earning the core loop two to one,
+// which quietly tells a player: do not bother fishing, just level.
 //
-// The pacing was never the problem: a new captain levels every 6 to 14 catches. The
-// payload was. So now:
+// So a reward is now a SLICE of what that level already paid you, tapering from ~35% of
+// it early to ~5% by level 50, as your own income takes over. Milestones multiply that
+// slice by 3, so the pop survives while staying cheap in absolute terms. Total across
+// all 49 levels: ~23,000 doubloons — a 34% bonus. A garnish on the loop, not a rival.
 //
-//   - EVERY level from 2 up pays. There is no empty level-up left.
-//   - MILESTONES (5/10/15/20/25/30...) pay heavily. Variable reward size is what
-//     sustains a loop; a flat drip is only marginally better than nothing.
-//   - The rewards VARY (coin, bait, gems, hold space). A predictable reward stops
-//     being a reward.
+// The ordinary levels are MONOTONE by construction. The raw model dipped when a captain
+// entered a new zone (XP-per-catch changes, so level 16 paid less than level 14), and a
+// reward that SHRINKS as you climb is worse than no reward at all.
 //
-// Granted STATE-BASED, never on the crossing: trawl XP can level a captain up while
-// they are nowhere near the fishing screen, so the grant reconciles against
+// ── AND IT STOPS AT 50 ───────────────────────────────────────────────────────
+// Past 50 you are making real money. A level-60 reward measured 55% of what fishing that
+// level had already given you; a level-80 reward, 14%. A reward you would not notice is
+// noise, and it cheapens the ones that land. Levelling past 50 is not empty — the Abyss
+// opens at 50, Ancient Deep at 75, gear keeps climbing, Renown waits at 100 — it just
+// stops needing a purse taped to it.
+//
+// Granted STATE-BASED, never on the crossing: trawl XP can level a captain up while they
+// are nowhere near the fishing screen, so the grant reconciles against
 // claimed_fishing_levels and is idempotent. See claimFishingLevelRewards.
+
+import { getBait } from './bait'
+import { FISH_HOLD_TIERS } from './fishHold'
 
 export interface LevelReward {
   doubloons?: number
@@ -30,116 +43,113 @@ export interface LevelReward {
   /**
    * Raise the fish hold to AT LEAST this tier. A FLOOR, not a bump.
    *
-   * It was `holdTiers: 1` (a relative +1), which meant the identical "bigger fish
-   * hold" reward was worth 500 doubloons to a fresh captain and 50,000 to one who had
-   * already bought up to a Deep Hold. The same level-up, a hundredfold difference in
-   * value, scaling with how much the player had ALREADY paid. A floor gives everyone
-   * the same thing: by Lv 10 you have at least a Medium Crate, and if you already
-   * bought better, the reward is simply already satisfied.
+   * It was a relative +1, which meant the identical "bigger fish hold" reward was worth
+   * 500 doubloons to a fresh captain and 50,000 to one who had already bought a Deep
+   * Hold — the same level-up, a hundredfold difference in value, scaling with what the
+   * player had ALREADY paid. A floor gives everyone the same thing, and a captain who
+   * already bought better simply keeps it.
    */
   holdFloor?: number
-  /** The headline on the level-up overlay. Say what they GOT, not what it means. */
-  label: string
   /** A milestone gets the bigger treatment on the overlay. */
   milestone?: boolean
 }
 
-/** Doubloons for an ordinary level. Grows with the level so it stays worth having. */
-function coinFor(level: number): number {
-  return Math.round((120 + level * 45) / 10) * 10
-}
-
-/**
- * What each level pays. Levels past the table's end fall back to a scaling coin purse,
- * so the curve never dead-ends and a level 80 captain is not levelling for nothing.
- */
-export const LEVEL_REWARDS: Record<number, LevelReward> = {
-  2:  { doubloons: coinFor(2),  bait: { worm: 5 },            label: '210 ⟡ and 5 Worms' },
-  3:  { doubloons: coinFor(3),  bait: { minnow: 3 },          label: '260 ⟡ and 3 Minnow' },
-  4:  { doubloons: coinFor(4),                                label: '300 ⟡' },
-  5:  { doubloons: 750, gems: 5, bait: { minnow: 5 },         label: '750 ⟡, 5 ◆, and 5 Minnow', milestone: true },
-  6:  { doubloons: coinFor(6),  bait: { worm: 8 },            label: '390 ⟡ and 8 Worms' },
-  7:  { doubloons: coinFor(7),                                label: '440 ⟡' },
-  8:  { doubloons: coinFor(8),  bait: { night_crawler: 3 },   label: '480 ⟡ and 3 Night Crawlers' },
-  9:  { doubloons: coinFor(9),                                label: '530 ⟡' },
-  10: { doubloons: 1500, gems: 10, holdFloor: 1,              label: '1,500 ⟡, 10 ◆, and a Medium Crate', milestone: true },
-  11: { doubloons: coinFor(11), bait: { minnow: 6 },          label: '620 ⟡ and 6 Minnow' },
-  12: { doubloons: coinFor(12),                               label: '660 ⟡' },
-  13: { doubloons: coinFor(13), bait: { night_crawler: 5 },   label: '710 ⟡ and 5 Night Crawlers' },
-  14: { doubloons: coinFor(14),                               label: '750 ⟡' },
-  15: { doubloons: 2500, gems: 15, bait: { chum: 5 },         label: '2,500 ⟡, 15 ◆, and 5 Chum', milestone: true },
-  16: { doubloons: coinFor(16), bait: { worm: 12 },           label: '840 ⟡ and 12 Worms' },
-  17: { doubloons: coinFor(17),                               label: '890 ⟡' },
-  18: { doubloons: coinFor(18), bait: { chum: 4 },            label: '930 ⟡ and 4 Chum' },
-  19: { doubloons: coinFor(19),                               label: '980 ⟡' },
-  20: { doubloons: 4000, gems: 20, holdFloor: 2,              label: '4,000 ⟡, 20 ◆, and a Large Crate', milestone: true },
-  21: { doubloons: coinFor(21), bait: { night_crawler: 8 },   label: '1,070 ⟡ and 8 Night Crawlers' },
-  22: { doubloons: coinFor(22),                               label: '1,110 ⟡' },
-  23: { doubloons: coinFor(23), bait: { chum: 6 },            label: '1,160 ⟡ and 6 Chum' },
-  24: { doubloons: coinFor(24),                               label: '1,200 ⟡' },
-  25: { doubloons: 6000, gems: 30, bait: { anglers_formula: 3 }, label: "6,000 ⟡, 30 ◆, and 3 Angler's Formula", milestone: true },
-  // Levels 26-49 fall through to the formula below. 50 is the LAST reward there is, so
-  // it does not just tick over as another milestone: it is the send-off, and it hands
-  // over a Deep Hold, which is the 20,000-doubloon purchase a captain at this level
-  // would otherwise be saving for.
-  50: { doubloons: 25000, gems: 100, holdFloor: 4, bait: { anglers_formula: 10 },
-        label: "25,000 ⟡, 100 ◆, a Deep Hold, and 10 Angler's Formula", milestone: true },
-}
-
-/**
- * The last level that pays. Past 50 a captain is earning real money on their own — the
- * audit put a level-60 reward at 55% of what fishing that level already gave them, and
- * a level-80 reward at 14%. A reward you would not notice is not a reward, it is noise,
- * and it cheapens the ones that DO land. So the rewards stop here, and level 50 is a
- * send-off rather than a fade-out.
- *
- * Levelling past 50 is not empty: Abyss opens at 50, Ancient Deep at 75, the gear tiers
- * keep climbing, and Renown waits at 100. It just stops needing a purse taped to it.
- */
+/** The last level that pays. See the header. */
 export const LEVEL_REWARD_MAX = 50
 
-/** Every 5th level up to the cap is a milestone. */
+/** Every 5th level up to the cap. */
 export function isMilestoneLevel(level: number): boolean {
   return level >= 5 && level <= LEVEL_REWARD_MAX && level % 5 === 0
+}
+
+/**
+ * Doubloons per level. A literal table rather than a formula, so it can be READ and
+ * audited at a glance, and so a future tweak to the XP curve can never silently move the
+ * economy. Derived from "a tapering slice of that level's own fishing income" (35% → 5%,
+ * milestones x3), then locked in. Monotone: no level pays less than the one before it.
+ */
+const COIN: Record<number, number> = {
+  2: 90,    3: 100,   4: 110,   5: 360,   6: 130,   7: 140,   8: 150,   9: 160,   10: 510,
+  11: 180,  12: 190,  13: 200,  14: 210,  15: 660,  16: 230,  17: 240,  18: 250,  19: 260,  20: 810,
+  21: 280,  22: 290,  23: 300,  24: 310,  25: 960,  26: 330,  27: 340,  28: 350,  29: 360,  30: 1110,
+  31: 380,  32: 390,  33: 400,  34: 410,  35: 1260, 36: 430,  37: 440,  38: 450,  39: 460,  40: 1410,
+  41: 480,  42: 490,  43: 500,  44: 510,  45: 1560, 46: 530,  47: 540,  48: 550,  49: 560,  50: 1710,
+}
+
+/**
+ * The non-coin extras. Bait survives the trim because it feeds the fishing loop rather
+ * than bypassing it. The hold floors are deliberately CHEAP tiers (500 and 2,000): the
+ * Lv 50 send-off used to hand over a Deep Hold worth 20,000, which was most of the bloat
+ * on its own.
+ */
+const EXTRAS: Record<number, Omit<LevelReward, 'doubloons' | 'milestone'>> = {
+  2:  { bait: { worm: 5 } },
+  3:  { bait: { minnow: 3 } },
+  5:  { gems: 5,  bait: { minnow: 5 } },
+  6:  { bait: { worm: 8 } },
+  8:  { bait: { night_crawler: 3 } },
+  10: { gems: 10, holdFloor: 1 },
+  11: { bait: { minnow: 6 } },
+  13: { bait: { night_crawler: 5 } },
+  15: { gems: 15, bait: { chum: 5 } },
+  16: { bait: { worm: 12 } },
+  18: { bait: { chum: 4 } },
+  20: { gems: 20, holdFloor: 2 },
+  21: { bait: { night_crawler: 8 } },
+  23: { bait: { chum: 6 } },
+  25: { gems: 30, bait: { anglers_formula: 3 } },
+  30: { gems: 35 },
+  35: { gems: 40 },
+  40: { gems: 45 },
+  45: { gems: 50 },
+  // The last reward there is. It leans on GEMS, a separate currency that does not inflate
+  // the doubloon economy the way another five-figure purse would.
+  50: { gems: 100, bait: { anglers_formula: 10 } },
 }
 
 /** What level `level` pays, or null if it pays nothing (below 2, or past the cap). */
 export function rewardForLevel(level: number): LevelReward | null {
   if (level < 2 || level > LEVEL_REWARD_MAX) return null
-  const listed = LEVEL_REWARDS[level]
-  if (listed) return listed
-
-  const milestone = isMilestoneLevel(level)
-  // Ordinary levels use the SAME coinFor the table uses. It was coinFor * 2 here,
-  // which meant Lv 24 (table) paid 1,200 and Lv 26 (fallback) paid 2,580 — the payout
-  // curve doubled at the table's edge for no reason a player could ever see.
-  const doubloons = milestone ? coinFor(level) * 6 : coinFor(level)
-  const gems = milestone ? Math.min(50, 20 + Math.floor(level / 5) * 2) : undefined
-  return {
-    doubloons,
-    gems,
-    milestone,
-    label: gems
-      ? `${doubloons.toLocaleString()} ⟡ and ${gems} ◆`
-      : `${doubloons.toLocaleString()} ⟡`,
-  }
+  const coin = COIN[level]
+  if (coin == null) return null
+  return { doubloons: coin, milestone: isMilestoneLevel(level), ...EXTRAS[level] }
 }
 
-/** Every level in (from, to] that owes a reward. `from` is what they had ALREADY been
- *  paid for, so this is a set difference and not a crossing test. */
+/**
+ * The label, BUILT FROM THE PAYLOAD.
+ *
+ * These used to be hand-written strings sitting beside the numbers, which is precisely
+ * what drifts: change a value, forget the label, and the game cheerfully promises one
+ * figure and pays another. The label can no longer disagree with the reward, because it
+ * is derived from it.
+ */
+export function rewardLabel(r: LevelReward): string {
+  const parts: string[] = []
+  if (r.doubloons) parts.push(`${r.doubloons.toLocaleString()} ⟡`)
+  if (r.gems) parts.push(`${r.gems} ◆`)
+  for (const [type, qty] of Object.entries(r.bait ?? {})) {
+    const b = getBait(type)
+    if (b) parts.push(`${qty} ${b.name}`)
+  }
+  if (r.holdFloor != null) parts.push(FISH_HOLD_TIERS[r.holdFloor]?.name ?? 'a bigger hold')
+  if (parts.length <= 1) return parts[0] ?? ''
+  return `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`
+}
+
+/** Every level in (claimedThrough, level] that owes a reward. A set difference, not a
+ *  crossing test — a trawl can level you up while you are nowhere near this screen. */
 export function rewardsOwed(claimedThrough: number, level: number): { level: number; reward: LevelReward }[] {
   const out: { level: number; reward: LevelReward }[] = []
-  for (let l = Math.max(2, claimedThrough + 1); l <= level; l++) {
+  for (let l = Math.max(2, claimedThrough + 1); l <= Math.min(level, LEVEL_REWARD_MAX); l++) {
     const r = rewardForLevel(l)
     if (r) out.push({ level: l, reward: r })
   }
   return out
 }
 
-/** The carrot. What the NEXT level pays, so there is always a stated reason to fish
- *  one more cast. Nothing on the XP bar said this before. */
+/** The carrot. What the NEXT level pays, so there is always a stated reason to cast one
+ *  more time. Nothing on the XP bar said this before. Null past the cap. */
 export function nextLevelReward(level: number): { level: number; reward: LevelReward } | null {
-  const next = level + 1
-  const r = rewardForLevel(next)
-  return r ? { level: next, reward: r } : null
+  const r = rewardForLevel(level + 1)
+  return r ? { level: level + 1, reward: r } : null
 }

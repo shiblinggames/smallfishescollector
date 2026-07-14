@@ -56,7 +56,7 @@ import { buyHook } from '@/app/(app)/hooks/actions'
 import { buildFishZones, FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY, CATCH_CENTER, type ZoneDef, type ZoneType } from './depths'
 import { ZONE_MIN_LEVEL } from './zoneData'
 import { getXPProgress, getLevelFromXP, levelCatchBonus, MAX_LEVEL } from '@/lib/fishingLevel'
-import { rewardsOwed, nextLevelReward, LEVEL_REWARD_MAX, type LevelReward } from '@/lib/levelRewards'
+import { rewardsOwed, nextLevelReward, rewardLabel, LEVEL_REWARD_MAX, type LevelReward } from '@/lib/levelRewards'
 import { renownLevel, renownProgress, spentPoints, fishingRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { markRenownIntroSeen, type RenownState } from '@/app/(app)/actions/renown'
 import RenownPanel from '@/components/RenownPanel'
@@ -2680,7 +2680,7 @@ function XPBarDisplay({ xp, bestStreak, renownAvailable, onOpenRenown }: {
                       color: nx.reward.milestone ? gold : 'rgba(255,255,255,0.45)',
                       textShadow: nx.reward.milestone ? `0 0 10px ${gold}66` : 'none',
                     }}>
-                    {nx.level === LEVEL_REWARD_MAX ? '★ Last reward · ' : nx.reward.milestone ? '★ ' : ''}{nx.reward.label}
+                    {nx.level === LEVEL_REWARD_MAX ? '★ Last reward · ' : nx.reward.milestone ? '★ ' : ''}{rewardLabel(nx.reward)}
                   </p>
                 )}
               </div>
