@@ -84,6 +84,9 @@ interface Props {
   voyageHistory: VoyageHistoryEntry[]
   /** How many raids the captain has actually finished. Drives Captain's Orders. */
   raidsCleared: number
+  /** profiles.captains_orders_done — once every order has been completed once, the
+   *  checklist is gone for good and never comes back. */
+  captainsOrdersDone: boolean
   // Whether the PvP "coming soon" entry point is open to this viewer (admins +
   // duel testers). Everyone else sees it locked. PvP data is only fetched +
   // passed when this is true (null otherwise).
@@ -177,7 +180,7 @@ export default function HubCards({
   prepStats,
   shipTier, todayVoyage, readyVoyage, expeditionXP, voyageHistory,
   canPvp, gauntletOpen, gauntletUpgrades, pvp,
-  raidsCleared,
+  raidsCleared, captainsOrdersDone,
 }: Props) {
   const router = useRouter()
   const [modal, setModal] = useState<null | 'campaign' | 'voyages' | 'pvp' | 'gauntlets'>(null)
@@ -248,6 +251,7 @@ export default function HubCards({
           captain has done all of it, so a veteran never sees it. */}
       <CaptainsOrders
         onAction={onOrder}
+        alreadyDone={captainsOrdersDone}
         state={{
           crewOwned: roster.length,
           raidCrew: roster.filter(c => c.raidSlot != null).length,

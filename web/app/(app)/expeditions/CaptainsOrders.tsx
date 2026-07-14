@@ -16,8 +16,10 @@
 // to do next. It disappears for good once a captain has done all of it, so a veteran
 // never sees it.
 
+import { useEffect } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
+import { markCaptainsOrdersDone } from './tourActions'
 
 export interface OrdersState {
   crewOwned: number
@@ -95,12 +97,26 @@ const ORDERS: Order[] = [
   },
 ]
 
-export default function CaptainsOrders({ state, onAction }: {
+export default function CaptainsOrders({ state, onAction, alreadyDone }: {
   state: OrdersState
   onAction: (a: OrderAction) => void
+  /** profiles.captains_orders_done. Once latched, never shown again. */
+  alreadyDone: boolean
 }) {
-  const next = ORDERS.find(o => !o.done(state))
-  if (!next) return null   // a veteran never sees this again
+  const next = alreadyDone ? undefined : ORDERS.find(o => !o.done(state))
+  const allDone = !alreadyDone && !next
+
+  // THE LATCH. It is a LIVE checklist while you are learning, which is the whole point:
+  // a tour you dismiss cannot help you two days later when you are stuck. But live means
+  // it would come BACK — a veteran who benches their raid crew to run voyages for a day
+  // would be served a beginner's card despite eight raids behind them. So the first time
+  // every order is complete, it shuts for good. The launch guard still catches an empty
+  // deck at the moment it actually matters.
+  useEffect(() => {
+    if (allDone) void markCaptainsOrdersDone().catch(() => {})
+  }, [allDone])
+
+  if (!next) return null
 
   const doneCount = ORDERS.filter(o => o.done(state)).length
   const ACCENT = '#f0c040'

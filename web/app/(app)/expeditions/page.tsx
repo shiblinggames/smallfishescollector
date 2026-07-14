@@ -338,6 +338,7 @@ async function ExpeditionHub() {
       expeditionXP={profile?.expedition_xp ?? 0}
       voyageHistory={voyageHistory}
       raidsCleared={raidsCleared}
+      captainsOrdersDone={profile?.captains_orders_done === true}
       canPvp={canPvp}
       gauntletOpen={gauntletOpen}
       gauntletUpgrades={(profile?.gauntlet_upgrades as string[] | null) ?? []}
