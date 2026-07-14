@@ -258,7 +258,18 @@ export interface SceneLine {
   speaker?: string
   /** Portrait image path. Falls back to none (text-only line). */
   portrait?: string
+  /**
+   * The line. Wrap a word or phrase in *asterisks* to hit it — it renders in the
+   * scene accent, so a writer can put weight on a word instead of hoping the reader
+   * finds it.
+   */
   text: string
+  /** ── DIRECTION (all optional; a scene with none of it still plays) ──────────
+   *  A held beat, in ms, BEFORE this line starts typing. Silence is a tool: it is
+   *  the difference between a reveal and a sentence. */
+  pause?: number
+  /** A hit on this line. 'shake' rocks the frame, 'flash' blows it out for a beat. */
+  fx?: 'shake' | 'flash'
 }
 
 /** One row in a node's "possible drops" panel. */

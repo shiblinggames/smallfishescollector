@@ -1,194 +1,400 @@
 'use client'
 
-// Tap-through dialogue scene for story nodes — the visual-novel delivery
-// that replaced the prose-wall reading experience (players read ten-word
-// speech lines, they skip 150-word paragraphs). One SceneLine per tap:
-// narrator lines render as italic log-style text, character lines get a
-// portrait + name plate. Tapping anywhere advances; the final line swaps
-// the "tap to continue" hint for the node's CTA button which fires
-// onComplete (the caller marks the node read / closes).
+// ── STORY SCENES ─────────────────────────────────────────────────────────────
+// The writing was never the problem. The DELIVERY was: centered text on a static
+// gradient, a 110px portrait in the same spot every line, and progress dots at the
+// bottom telling the player they were on slide 4 of 9. It read as a slideshow
+// because it was built like one.
 //
-// Portaled to document.body — Nav has translateZ(0) and the node sheet
-// is itself a fixed portal at z-1000, so the scene sits above both.
+// This is the cutscene vocabulary it was missing:
+//
+//   TEXT TYPES. Letter by letter. One tap finishes the line, the next advances. A
+//   tap is pacing now instead of paging, and it is the single strongest signal that
+//   this is a scene and not a page of prose.
+//
+//   CHARACTERS TAKE A STAGE. Portraits are big busts, entering from the wings and
+//   holding their side. Whoever is talking is lit and forward; everyone else dims
+//   and desaturates but STAYS ON STAGE, so a conversation looks like two people in
+//   a room rather than two slides.
+//
+//   THE FRAME IS ALIVE. A slow push-in, drifting motes, a vignette that breathes.
+//   Nothing loud. It just has to not be a photograph.
+//
+//   BEATS CAN LAND. `pause` holds a silence before a line (the difference between a
+//   reveal and a sentence), `fx` shakes or blows out the frame, and *asterisks* hit
+//   a word in the accent. All optional, so every existing scene still plays.
+//
+// Portaled to document.body — Nav has translateZ(0) and the node sheet is itself a
+// fixed portal at z-1000, so the scene sits above both.
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState, useMemo } from 'react'
 import { createPortal } from 'react-dom'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
+import { vibrate } from '@/lib/haptics'
 import type { SceneLine } from '@/lib/raidMap'
 
 const ACCENT = '#f0c040'
+const TYPE_MS = 22          // per character
+const PUNCT_MS = 190        // extra beat after . ! ? — the line breathes where it should
+const COMMA_MS = 80
+
+/** Who is on stage, and where. Two slots: a conversation, not a crowd. */
+interface StageChar { speaker: string; portrait: string }
+
+/**
+ * Walk the scene up to `idx` and work out who is standing where. Deterministic, so
+ * it recomputes cleanly on any index change (including a Skip-back or a replay) with
+ * no refs to fall out of sync.
+ *
+ * First character to speak takes the LEFT. The next distinct one takes the RIGHT. A
+ * third evicts whoever has been quiet longest, which is what a camera would do.
+ */
+function stageAt(lines: SceneLine[], idx: number): { left: StageChar | null; right: StageChar | null } {
+  let left: StageChar | null = null
+  let right: StageChar | null = null
+  let lastSpokeLeft = -1
+  let lastSpokeRight = -1
+
+  for (let i = 0; i <= idx && i < lines.length; i++) {
+    const l = lines[i]
+    if (!l.speaker || !l.portrait) continue
+    const c: StageChar = { speaker: l.speaker, portrait: l.portrait }
+    if (left?.speaker === l.speaker) { lastSpokeLeft = i; continue }
+    if (right?.speaker === l.speaker) { lastSpokeRight = i; continue }
+    if (!left) { left = c; lastSpokeLeft = i }
+    else if (!right) { right = c; lastSpokeRight = i }
+    else if (lastSpokeLeft <= lastSpokeRight) { left = c; lastSpokeLeft = i }
+    else { right = c; lastSpokeRight = i }
+  }
+  return { left, right }
+}
+
+/** *Emphasis* → accent. A writer's hammer. */
+function renderText(text: string, accent: string) {
+  return text.split(/(\*[^*]+\*)/g).map((seg, i) =>
+    seg.startsWith('*') && seg.endsWith('*') && seg.length > 2
+      ? <strong key={i} className="font-800" style={{ color: accent }}>{seg.slice(1, -1)}</strong>
+      : <span key={i}>{seg}</span>
+  )
+}
 
 export default function StoryScene({ title, lines, ctaLabel, pending, onComplete, onSkip }: {
-  /** Node label, shown small at the top so the player knows which beat
-   *  they are in. */
   title: string
   lines: SceneLine[]
-  /** Final-line button text (node's detail.ctaLabel or a default). */
   ctaLabel: string
-  /** Disables the final CTA while the mark-read server action runs. */
   pending?: boolean
-  /** Final CTA tapped — caller marks the node read and closes. */
   onComplete: () => void
-  /** Skip/close without completing (replays use this for the CTA too —
-   *  caller decides whether completing means a server write). */
   onSkip: () => void
 }) {
   const [idx, setIdx] = useState(0)
+  const [shown, setShown] = useState(0)      // characters revealed of the current line
+  const [held, setHeld] = useState(false)    // inside a `pause` beat, before typing
+  const [flash, setFlash] = useState(0)
+  const timers = useRef<number[]>([])
+
   const line = lines[idx]
   const last = idx === lines.length - 1
+  const full = line?.text.length ?? 0
+  const typing = held || shown < full
+  const reduced = useMemo(
+    () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
+    [],
+  )
 
-  // Lock body scroll while the scene is up (same trick the raid
-  // overlays use — the scene owns the whole viewport).
+  const clearTimers = () => { timers.current.forEach(clearTimeout); timers.current = [] }
+
+  // ── The typewriter. Each character schedules the next, so punctuation can buy
+  //    itself an extra beat and the line reads at the speed it should be read at.
+  useEffect(() => {
+    clearTimers()
+    setShown(0)
+    if (!line) return
+    if (reduced) { setShown(line.text.length); setHeld(false); return }
+
+    const type = (n: number) => {
+      if (n >= line.text.length) return
+      const ch = line.text[n]
+      const delay = '.!?'.includes(ch) ? PUNCT_MS : ',;:'.includes(ch) ? COMMA_MS : TYPE_MS
+      timers.current.push(window.setTimeout(() => { setShown(n + 1); type(n + 1) }, delay))
+    }
+
+    // Hold the beat first, if the line asked for one.
+    const begin = () => {
+      setHeld(false)
+      if (line.fx === 'flash') setFlash(f => f + 1)
+      vibrate(line.fx === 'shake' ? [0, 40, 30, 60] : line.speaker ? 8 : 4)
+      type(0)
+    }
+    if (line.pause && line.pause > 0) {
+      setHeld(true)
+      timers.current.push(window.setTimeout(begin, line.pause))
+    } else {
+      begin()
+    }
+    return clearTimers
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idx, reduced])
+
+  // Lock body scroll while the scene owns the viewport.
   useEffect(() => {
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = prev }
   }, [])
 
-  function advance() {
+  /** One tap finishes the line. The next one moves on. Never both at once — a tap
+   *  that both completed AND advanced would eat lines on a fast tapper. */
+  function tap() {
+    if (typing) { clearTimers(); setHeld(false); setShown(full); return }
     if (!last) setIdx(i => i + 1)
+  }
+
+  const { left, right } = stageAt(lines, idx)
+  const speaking = line?.speaker ?? null
+  // TWO SHOT TYPES, chosen once per scene so the layout never jumps mid-beat.
+  //
+  // 11 of the 19 scenes are pure narration with no portraits at all. Hanging a
+  // dialogue plate at the bottom of an empty frame would look worse than what it
+  // replaced, so a cast-less scene plays as a TITLE CARD: the words centered in the
+  // dark, big, unboxed. A scene WITH a cast gets the visual-novel shot — busts on a
+  // stage, plate at their feet. The variety is the point; a betrayal and a weather
+  // report should not be framed identically.
+  const hasCast = useMemo(() => lines.some(l => l.speaker && l.portrait), [lines])
+  const shake = line?.fx === 'shake' && !reduced && !held
+
+  const bust = (c: StageChar | null, side: 'left' | 'right') => {
+    if (!c) return null
+    const lit = speaking === c.speaker
+    return (
+      <motion.div
+        key={`${side}-${c.speaker}`}
+        initial={{ opacity: 0, x: side === 'left' ? -40 : 40, scale: 0.94 }}
+        animate={{
+          opacity: lit ? 1 : 0.42,
+          x: 0,
+          scale: lit ? 1 : 0.93,
+          y: lit ? 0 : 6,
+          filter: lit ? 'grayscale(0) brightness(1)' : 'grayscale(0.75) brightness(0.55)',
+        }}
+        transition={{ type: 'spring', stiffness: 220, damping: 26 }}
+        style={{
+          position: 'absolute', bottom: 0, [side]: '2%',
+          width: 'min(42vw, 190px)', aspectRatio: '1 / 1',
+          zIndex: lit ? 2 : 1, pointerEvents: 'none',
+          transformOrigin: side === 'left' ? 'bottom left' : 'bottom right',
+        }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={c.portrait} alt="" decoding="async"
+          style={{
+            width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'bottom',
+            filter: lit ? `drop-shadow(0 0 26px ${ACCENT}2e) drop-shadow(0 12px 30px rgba(0,0,0,0.75))` : 'drop-shadow(0 10px 24px rgba(0,0,0,0.7))',
+          }} />
+      </motion.div>
+    )
   }
 
   const scene = (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      onClick={advance}
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      onClick={tap}
       style={{
-        position: 'fixed', inset: 0, zIndex: 1100,
-        background: 'radial-gradient(ellipse at 50% 30%, #16120c 0%, #070504 78%)',
-        display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
-        padding: 'calc(env(safe-area-inset-top, 0px) + 3rem) 1.4rem calc(env(safe-area-inset-bottom, 0px) + 2.2rem)',
-        cursor: last ? 'default' : 'pointer',
-        WebkitTapHighlightColor: 'transparent',
-        userSelect: 'none',
+        position: 'fixed', inset: 0, zIndex: 1100, overflow: 'hidden',
+        background: 'radial-gradient(ellipse at 50% 38%, #171208 0%, #0a0705 62%, #040303 100%)',
+        cursor: last && !typing ? 'default' : 'pointer',
+        WebkitTapHighlightColor: 'transparent', userSelect: 'none',
       }}
     >
-      {/* Chapter-beat title + skip — pinned top */}
-      <div style={{
-        position: 'absolute',
-        top: 'calc(env(safe-area-inset-top, 0px) + 0.9rem)',
-        left: 0, right: 0,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 1.1rem',
-      }}>
-        <span className="font-karla font-700 uppercase" style={{ fontSize: '0.55rem', letterSpacing: '0.18em', color: 'rgba(240,237,232,0.4)' }}>
+      {/* ── THE FRAME IS ALIVE ────────────────────────────────────────────────
+          A slow push-in on the whole plate plus drifting motes. It is barely
+          perceptible on purpose: the job is only to not be a photograph. */}
+      {!reduced && (
+        <motion.div aria-hidden
+          animate={{ scale: [1, 1.07] }}
+          transition={{ duration: 26, repeat: Infinity, repeatType: 'reverse', ease: 'easeInOut' }}
+          style={{ position: 'absolute', inset: '-4%', pointerEvents: 'none' }}>
+          {Array.from({ length: 14 }).map((_, i) => (
+            <motion.span key={i}
+              animate={{ y: [0, -26, 0], opacity: [0, 0.5, 0] }}
+              transition={{ duration: 7 + (i % 5) * 2.4, repeat: Infinity, delay: i * 0.9, ease: 'easeInOut' }}
+              style={{
+                position: 'absolute',
+                left: `${(i * 37) % 96 + 2}%`, top: `${(i * 53) % 78 + 10}%`,
+                width: i % 4 === 0 ? 3 : 2, height: i % 4 === 0 ? 3 : 2,
+                borderRadius: '50%', background: i % 3 === 0 ? `${ACCENT}88` : 'rgba(255,245,220,0.5)',
+              }} />
+          ))}
+        </motion.div>
+      )}
+      {/* Vignette that breathes. */}
+      <motion.div aria-hidden
+        animate={reduced ? {} : { opacity: [0.6, 0.82, 0.6] }}
+        transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }}
+        style={{ position: 'absolute', inset: 0, pointerEvents: 'none',
+          background: 'radial-gradient(ellipse at 50% 45%, transparent 38%, rgba(2,2,3,0.85) 100%)' }} />
+
+      {/* fx: flash — a hard blow-out on a beat that earns it. */}
+      <AnimatePresence>
+        {flash > 0 && (
+          <motion.div key={flash} aria-hidden
+            initial={{ opacity: 0.85 }} animate={{ opacity: 0 }} transition={{ duration: 0.5, ease: 'easeOut' }}
+            style={{ position: 'absolute', inset: 0, background: '#fff6df', pointerEvents: 'none', zIndex: 8 }} />
+        )}
+      </AnimatePresence>
+
+      {/* ── LETTERBOX. The oldest trick there is for saying "this is a scene". */}
+      <motion.div aria-hidden initial={{ height: 0 }} animate={{ height: 44 }}
+        transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, background: '#000', zIndex: 6 }} />
+      <motion.div aria-hidden initial={{ height: 0 }} animate={{ height: 44 }}
+        transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+        style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#000', zIndex: 6 }} />
+
+      {/* Beat title + skip, riding the top bar. */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 44, zIndex: 7,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 1.1rem' }}>
+        <span className="font-karla font-700 uppercase truncate" style={{ fontSize: '0.55rem', letterSpacing: '0.18em', color: 'rgba(240,237,232,0.42)' }}>
           {title}
         </span>
-        <button
-          onClick={e => { e.stopPropagation(); onSkip() }}
-          className="font-karla font-700 uppercase"
-          style={{
-            fontSize: '0.55rem', letterSpacing: '0.14em',
-            padding: '0.4rem 0.7rem', borderRadius: 8,
-            background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
-            color: 'rgba(240,237,232,0.55)', cursor: 'pointer',
-          }}
-        >
+        <button onClick={e => { e.stopPropagation(); onSkip() }} className="font-karla font-700 uppercase tap"
+          style={{ flexShrink: 0, fontSize: '0.55rem', letterSpacing: '0.14em', padding: '0.3rem 0.6rem', borderRadius: 7,
+            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(240,237,232,0.5)', cursor: 'pointer' }}>
           Skip
         </button>
       </div>
 
-      {/* The line — keyed by index so each tap fades the new line in.
-          A fixed-height slot for the portrait keeps the text block from
-          jumping between narrator and character lines. */}
-      <div style={{ width: '100%', maxWidth: 440, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <motion.div
-          key={idx}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.28, ease: 'easeOut' }}
-          style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
-        >
-          <div style={{
-            height: 124, marginBottom: '0.9rem',
-            display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-          }}>
-            {line.portrait && (
-              <div style={{
-                width: 110, height: 110, borderRadius: 16, overflow: 'hidden',
-                border: `1px solid ${ACCENT}40`,
-                background: 'rgba(255,255,255,0.04)',
-                boxShadow: '0 10px 30px rgba(0,0,0,0.6)',
-              }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={line.portrait} alt="" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              </div>
-            )}
-          </div>
-
-          {line.speaker ? (
-            <>
-              <span className="font-cinzel font-800 uppercase" style={{
-                fontSize: '0.68rem', letterSpacing: '0.16em', color: ACCENT,
-                marginBottom: '0.55rem',
-              }}>
-                {line.speaker}
-              </span>
-              <p className="font-karla" style={{
-                fontSize: '1.05rem', lineHeight: 1.6, textAlign: 'center',
-                color: '#f0ede8',
-                margin: 0,
-              }}>
-                &ldquo;{line.text}&rdquo;
-              </p>
-            </>
-          ) : (
+      {/* ── THE SHOT: stage + dialogue, rocked together when a line hits. ────── */}
+      <motion.div
+        animate={shake ? { x: [0, -9, 8, -6, 4, 0], y: [0, 4, -3, 2, 0] } : { x: 0, y: 0 }}
+        transition={shake ? { duration: 0.42 } : { duration: 0.2 }}
+        style={{ position: 'absolute', inset: '44px 0', display: 'flex', flexDirection: 'column',
+          justifyContent: hasCast ? 'flex-end' : 'center' }}
+      >
+        {/* ── TITLE CARD — a scene with no cast. Words in the dark, nothing else. */}
+        {!hasCast && (
+          <div style={{ padding: '0 1.6rem', textAlign: 'center' }}>
             <p className="font-karla" style={{
-              fontSize: '1rem', lineHeight: 1.65, textAlign: 'center',
-              fontStyle: 'italic', color: 'rgba(240,237,232,0.82)',
-              margin: 0,
+              maxWidth: 500, margin: '0 auto',
+              fontSize: '1.22rem', lineHeight: 1.72,
+              color: 'rgba(244,240,232,0.94)', fontStyle: 'italic',
+              textShadow: '0 2px 20px rgba(0,0,0,0.8)',
+              minHeight: '5.2em',
             }}>
-              {line.text}
+              {renderText(line?.text.slice(0, shown) ?? '', ACCENT)}
+              {typing && (
+                <motion.span aria-hidden
+                  animate={{ opacity: [1, 0.15, 1] }} transition={{ duration: 0.75, repeat: Infinity }}
+                  style={{ display: 'inline-block', width: 2, height: '1em', marginLeft: 3,
+                    verticalAlign: 'text-bottom', background: ACCENT }} />
+              )}
             </p>
-          )}
-        </motion.div>
-      </div>
-
-      {/* Bottom rail: progress dots + advance hint / final CTA */}
-      <div style={{
-        position: 'absolute',
-        bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.4rem)',
-        left: 0, right: 0,
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.85rem',
-        padding: '0 1.4rem',
-      }}>
-        <div style={{ display: 'flex', gap: 5 }}>
-          {lines.map((_, i) => (
-            <div key={i} style={{
-              width: 5, height: 5, borderRadius: '50%',
-              background: i <= idx ? `${ACCENT}cc` : 'rgba(255,255,255,0.14)',
-              transition: 'background 0.2s',
-            }} />
-          ))}
+            <div style={{ marginTop: 26, minHeight: 52, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+              {last && !typing ? (
+                <button onClick={e => { e.stopPropagation(); onComplete() }} disabled={pending}
+                  className="font-cinzel font-800 uppercase tracking-[0.06em] tap"
+                  style={{ width: '100%', maxWidth: 340, padding: '0.85rem', borderRadius: 12, fontSize: '0.98rem',
+                    color: '#1a1206', background: `linear-gradient(180deg, ${ACCENT}, ${ACCENT}cc)`,
+                    border: `1px solid ${ACCENT}`, cursor: pending ? 'wait' : 'pointer', boxShadow: `0 0 22px ${ACCENT}33` }}>
+                  {pending ? '…' : ctaLabel}
+                </button>
+              ) : (
+                <motion.span className="font-karla font-700 uppercase"
+                  animate={{ opacity: typing ? 0.3 : [0.4, 0.85, 0.4] }}
+                  transition={typing ? { duration: 0.2 } : { duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+                  style={{ fontSize: '0.56rem', letterSpacing: '0.16em', color: 'rgba(240,237,232,0.6)' }}>
+                  {typing ? 'Tap to skip ▸' : 'Tap ▸'}
+                </motion.span>
+              )}
+            </div>
+          </div>
+        )}
+        {hasCast && (<>
+        {/* The stage. Busts sit BEHIND the dialogue plate and are overlapped by it,
+            which is what puts them in the room instead of on a card. */}
+        <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
+          <AnimatePresence>{bust(left, 'left')}</AnimatePresence>
+          <AnimatePresence>{bust(right, 'right')}</AnimatePresence>
         </div>
 
-        {last ? (
-          <button
-            onClick={e => { e.stopPropagation(); onComplete() }}
-            disabled={pending}
-            className="font-cinzel font-700 uppercase tracking-[0.06em]"
+        {/* The dialogue plate. */}
+        <div style={{ position: 'relative', zIndex: 3, padding: '0 1rem calc(env(safe-area-inset-bottom, 0px) + 1.15rem)' }}>
+          <motion.div layout
             style={{
-              width: '100%', maxWidth: 360, padding: '0.85rem', borderRadius: 12,
-              fontSize: '1rem',
-              background: `${ACCENT}26`, border: `1px solid ${ACCENT}66`, color: ACCENT,
-              cursor: pending ? 'wait' : 'pointer',
-            }}
-          >
-            {pending ? '…' : ctaLabel}
-          </button>
-        ) : (
-          <motion.span
-            className="font-karla font-700 uppercase"
-            animate={{ opacity: [0.35, 0.7, 0.35] }}
-            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-            style={{ fontSize: '0.58rem', letterSpacing: '0.16em', color: 'rgba(240,237,232,0.6)' }}
-          >
-            Tap to continue ▸
-          </motion.span>
-        )}
+              position: 'relative', width: '100%', maxWidth: 540, margin: '0 auto',
+              minHeight: 132, padding: '1.05rem 1.15rem 1.15rem',
+              borderRadius: 16,
+              background: 'linear-gradient(180deg, rgba(14,11,7,0.93), rgba(6,5,4,0.97))',
+              border: `1px solid ${speaking ? `${ACCENT}55` : 'rgba(255,255,255,0.12)'}`,
+              boxShadow: `0 -8px 40px rgba(0,0,0,0.7)${speaking ? `, 0 0 30px ${ACCENT}12` : ''}`,
+              backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)',
+            }}>
+            {/* Nameplate — a tab on the plate's shoulder. */}
+            <AnimatePresence>
+              {speaking && (
+                <motion.span key={speaking}
+                  initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                  className="font-cinzel font-800 uppercase"
+                  style={{
+                    position: 'absolute', top: -11, left: 16,
+                    fontSize: '0.62rem', letterSpacing: '0.16em', color: '#1a1206',
+                    padding: '0.2rem 0.7rem', borderRadius: 999,
+                    background: `linear-gradient(180deg, ${ACCENT}, ${ACCENT}cc)`,
+                    boxShadow: `0 0 16px ${ACCENT}44`,
+                  }}>
+                  {speaking}
+                </motion.span>
+              )}
+            </AnimatePresence>
+
+            <p className="font-karla" style={{
+              fontSize: speaking ? '1.02rem' : '0.98rem',
+              lineHeight: 1.62,
+              color: speaking ? '#f4f0e8' : 'rgba(240,237,232,0.86)',
+              fontStyle: speaking ? 'normal' : 'italic',
+              textAlign: 'left', margin: 0, minHeight: '3.2em',
+            }}>
+              {speaking && shown > 0 && <span style={{ color: `${ACCENT}bb` }}>&ldquo;</span>}
+              {renderText(line?.text.slice(0, shown) ?? '', ACCENT)}
+              {speaking && !typing && <span style={{ color: `${ACCENT}bb` }}>&rdquo;</span>}
+              {/* The cursor. It is the thing that says "words are arriving". */}
+              {typing && (
+                <motion.span aria-hidden
+                  animate={{ opacity: [1, 0.15, 1] }} transition={{ duration: 0.75, repeat: Infinity }}
+                  style={{ display: 'inline-block', width: 2, height: '1em', marginLeft: 2,
+                    verticalAlign: 'text-bottom', background: ACCENT }} />
+              )}
+            </p>
+
+            {/* Advance affordance / final CTA, in the plate where the eye already is. */}
+            <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end', minHeight: 34, alignItems: 'center' }}>
+              {last && !typing ? (
+                <button onClick={e => { e.stopPropagation(); onComplete() }} disabled={pending}
+                  className="font-cinzel font-800 uppercase tracking-[0.06em] tap"
+                  style={{ width: '100%', padding: '0.8rem', borderRadius: 11, fontSize: '0.95rem',
+                    color: '#1a1206', background: `linear-gradient(180deg, ${ACCENT}, ${ACCENT}cc)`,
+                    border: `1px solid ${ACCENT}`, cursor: pending ? 'wait' : 'pointer', boxShadow: `0 0 20px ${ACCENT}33` }}>
+                  {pending ? '…' : ctaLabel}
+                </button>
+              ) : (
+                <motion.span className="font-karla font-700 uppercase"
+                  animate={{ opacity: typing ? 0.35 : [0.4, 0.85, 0.4] }}
+                  transition={typing ? { duration: 0.2 } : { duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+                  style={{ fontSize: '0.56rem', letterSpacing: '0.16em', color: 'rgba(240,237,232,0.6)' }}>
+                  {typing ? 'Tap to skip ▸' : 'Tap ▸'}
+                </motion.span>
+              )}
+            </div>
+          </motion.div>
+        </div>
+        </>)}
+      </motion.div>
+
+      {/* Progress. A hairline on the bottom bar — the dots said "slide 4 of 9". */}
+      <div aria-hidden style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 2, zIndex: 7, background: 'rgba(255,255,255,0.07)' }}>
+        <motion.div
+          animate={{ width: `${((idx + 1) / lines.length) * 100}%` }}
+          transition={{ duration: 0.35, ease: 'easeOut' }}
+          style={{ height: '100%', background: `linear-gradient(90deg, ${ACCENT}77, ${ACCENT})` }} />
       </div>
     </motion.div>
   )
