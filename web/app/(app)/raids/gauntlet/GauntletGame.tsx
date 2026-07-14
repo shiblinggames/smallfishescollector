@@ -411,6 +411,10 @@ export default function GauntletGame(props: GauntletGameProps) {
   const [confirmLeave, setConfirmLeave] = useState(false)
   // Confirm before banking the haul + ending the run on the breather.
   const [confirmClaim, setConfirmClaim] = useState(false)
+  // The breather's loadout (powers / synergies / curses) folds away by default. It is
+  // reference material you consult, not news you need every single depth, and left
+  // open it pushed the actual decision below the fold.
+  const [loadoutOpen, setLoadoutOpen] = useState(false)
   // DAVY'S OFFER — the banker's bargain. Rolled and stored by the SERVER when a
   // breather opens; we are only ever told what it is. Cleared the instant we dive,
   // so it can never be carried down to a fatter pot.
@@ -2221,40 +2225,24 @@ export default function GauntletGame(props: GauntletGameProps) {
           padding: '10px 0.95rem', textAlign: 'center',
           paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
         }}>
-          <motion.p initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
-            className="font-karla font-800 uppercase" style={{ fontSize: '0.68rem', letterSpacing: '0.34em', color: TEAL, marginTop: 12, textShadow: `0 0 14px ${TEAL}44` }}>
-            Catch Your Breath
-          </motion.p>
-          <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#ece5d7', marginTop: 7, lineHeight: 1.1 }}>
+          {/* Depth + a line of voice. The "Catch Your Breath" eyebrow is gone: the
+              screen IS the breather, and a label announcing that spent the most
+              valuable line on the page saying nothing. */}
+          <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#ece5d7', marginTop: 14, lineHeight: 1.1 }}>
             Depth {combatDepth} · {band.name}
           </p>
           <p className="font-karla" style={{ fontSize: '0.82rem', fontStyle: 'italic', color: 'rgba(150,205,194,0.75)', lineHeight: 1.4, marginTop: 7, maxWidth: 340, marginInline: 'auto' }}>
             &ldquo;{breathLine}&rdquo;
           </p>
 
-          {/* Stakes — the haul you'd walk away with (the fork below decides). */}
-          <div style={{ marginTop: 15, padding: '1.15rem 1rem 1.05rem', borderRadius: 18,
-            background: `radial-gradient(ellipse at 50% 0%, ${GOLD}24 0%, rgba(8,13,22,0.6) 76%)`,
-            border: `1px solid ${GOLD}4a`, boxShadow: `inset 0 0 32px ${GOLD}12, 0 14px 40px rgba(0,0,0,0.5)` }}>
-            <p className="font-karla font-800 uppercase tracking-[0.2em]" style={{ fontSize: '0.58rem', color: `${GOLD}cc` }}>Your Haul If You Bank Now</p>
-            <p className="font-cinzel font-800" style={{ fontSize: '2.5rem', color: GOLD, lineHeight: 1.0, marginTop: 5, textShadow: `0 0 30px ${GOLD}55` }}>
-              {fmt(previewDoubloons)} <span style={{ fontSize: '1.4rem' }}>⟡</span>
-            </p>
-            <p className="font-karla font-600" style={{ fontSize: '0.76rem', color: '#b0a890', marginTop: 7 }}>
-              +{fmt(previewXp)} Nav XP{chest.gems > 0 ? ` · +${chest.gems} ◆` : ''} · {hardcoreRun ? HARDCORE_CHEST_LABEL : chest.label}{chest.potMult > 1 ? ` ×${chest.potMult}` : ''}
-            </p>
-          </div>
+          {/* ── THE HAUL ─────────────────────────────────────────────────────────
+              Everything banking pays you, in ONE card. The chest odds used to sit in
+              a separate panel below, which was the same question ("what do I get if I
+              stop here?") asked twice in two places.
 
-          {/* ── WHAT IS IN THE CHEST ────────────────────────────────────────
-              The drop odds ramp with depth and are gated on what you already own,
-              and both of those were completely invisible. They are also the single
-              best argument for diving one more time, which makes the bank-or-dive
-              screen the only place they belong.
-
-              Computed by chestOdds in lib/gauntlet — the SAME code the cash-out
-              action rolls against, so the counter can never quietly pay different
-              odds than it advertised here. Anything already owned is left out
-              entirely rather than shown at 0%. */}
+              The values are a right-aligned ledger now. They were a run-on line of
+              bullet separators (+1,240 Nav XP · +3 ◆ · Locker ×2), which reads as a
+              sentence and scans as nothing. */}
           {(() => {
             const odds = chestOdds({
               depth: rollStateRef.current.cleared,
@@ -2263,41 +2251,51 @@ export default function GauntletGame(props: GauntletGameProps) {
               ownedItems: props.ownedRaidItems,
               ownedSkins: props.ownedShipSkins,
               davyForge: DAVY_FORGE,
-              // A chest offer multiplies these on the spot, so the row the player is
-              // staring at visibly jumps the moment Davy leans over the rail.
+              // A chest offer multiplies these on the spot, so the rows the player is
+              // staring at visibly jump the moment Davy leans over the rail.
               oddsMult: offerChest,
             })
-            if (odds.length === 0) return null
             const sweetened = offerChest > 1
+            const Line = ({ label, value }: { label: string; value: string }) => (
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+                <span className="font-karla font-600" style={{ fontSize: '0.74rem', color: '#8f8a80' }}>{label}</span>
+                <span className="font-cinzel font-700" style={{ fontSize: '0.86rem', color: '#e8e1d2' }}>{value}</span>
+              </div>
+            )
             return (
-              <div style={{ marginTop: 13, textAlign: 'left', padding: '0.7rem 0.75rem', borderRadius: 12,
-                background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.09)' }}>
-                <p className="font-karla font-800 uppercase tracking-[0.16em]" style={{ fontSize: '0.55rem', color: sweetened ? '#c9a7ff' : '#9a988e', marginBottom: 7 }}>
-                  In the Chest If You Bank Now{sweetened ? ` · Davy's ${offerChest}x` : ''}
+              <div style={{ marginTop: 15, padding: '1.15rem 1rem 1rem', borderRadius: 18,
+                background: `radial-gradient(ellipse at 50% 0%, ${GOLD}24 0%, rgba(8,13,22,0.6) 76%)`,
+                border: `1px solid ${GOLD}4a`, boxShadow: `inset 0 0 32px ${GOLD}12, 0 14px 40px rgba(0,0,0,0.5)` }}>
+                <p className="font-karla font-800 uppercase tracking-[0.2em]" style={{ fontSize: '0.58rem', color: `${GOLD}cc` }}>Your Haul If You Bank Now</p>
+                <p className="font-cinzel font-800" style={{ fontSize: '2.5rem', color: GOLD, lineHeight: 1.0, marginTop: 5, textShadow: `0 0 30px ${GOLD}55` }}>
+                  {fmt(dealDoubloons)} <span style={{ fontSize: '1.4rem' }}>⟡</span>
                 </p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                  {odds.map(o => {
-                    const c = o.kind === 'skin' ? '#c9a7ff' : GOLD
-                    return (
-                      <div key={o.id} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                        <span aria-hidden style={{ flexShrink: 0, display: 'flex', color: c }}>
-                          {o.kind === 'skin'
-                            ? <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 18l9-14 9 14z" /><path d="M3 18h18" /></svg>
-                            : <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 8l9-5 9 5v8l-9 5-9-5z" /><path d="M3 8l9 5 9-5" /></svg>}
-                        </span>
-                        <span className="font-karla font-600 truncate" style={{ flex: 1, minWidth: 0, fontSize: '0.74rem', color: '#c8c2b6' }}>{o.name}</span>
-                        <span className="font-cinzel font-700" style={{ flexShrink: 0, fontSize: '0.82rem', color: c }}>
-                          {(o.chance * 100).toFixed(o.chance < 0.1 ? 1 : 0)}%
-                        </span>
-                      </div>
-                    )
-                  })}
+
+                <div style={{ marginTop: 12, paddingTop: 11, borderTop: `1px solid ${GOLD}22`, textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <Line label="Nav XP" value={`+${fmt(previewXp)}`} />
+                  {chest.gems > 0 && <Line label="Gems" value={`+${chest.gems} ◆`} />}
+                  <Line label="Chest" value={`${hardcoreRun ? HARDCORE_CHEST_LABEL : chest.label}${chest.potMult > 1 ? ` ×${chest.potMult}` : ''}`} />
                 </div>
-                <p className="font-karla" style={{ fontSize: '0.66rem', color: sweetened ? '#9b86c4' : '#7a746a', marginTop: 7, lineHeight: 1.35 }}>
-                  {sweetened
-                    ? 'Davy has his thumb on the scale, and only if you bank right here. Dive on and these fall back.'
-                    : 'Every one of these gets likelier the deeper you bank. Sink and the chest is never opened.'}
-                </p>
+
+                {/* The chase, folded into the same card. Anything already owned is
+                    left out entirely rather than shown at 0%. */}
+                {odds.length > 0 && (
+                  <div style={{ marginTop: 11, paddingTop: 11, borderTop: `1px solid ${GOLD}22`, textAlign: 'left' }}>
+                    <p className="font-karla font-800 uppercase tracking-[0.16em]" style={{ fontSize: '0.5rem', color: sweetened ? '#c9a7ff' : '#8f8a80', marginBottom: 7 }}>
+                      In the Chest{sweetened ? ` · Davy's ${offerChest}x` : ''}
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {odds.map(o => (
+                        <div key={o.id} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+                          <span className="font-karla font-600 truncate" style={{ minWidth: 0, fontSize: '0.74rem', color: '#8f8a80' }}>{o.name}</span>
+                          <span className="font-cinzel font-700" style={{ flexShrink: 0, fontSize: '0.86rem', color: sweetened ? '#c9a7ff' : '#e8e1d2' }}>
+                            {(o.chance * 100).toFixed(o.chance < 0.1 ? 1 : 0)}%
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )
           })()}
@@ -2314,70 +2312,95 @@ export default function GauntletGame(props: GauntletGameProps) {
             </div>
           </div>
 
-          {/* Loadout — powers, synergies, curses as one tidy panel of chip rows.
-              Tap any chip for its plain-English detail; the footer carries the
-              "within reach" nudge + the codex. */}
+          {/* ── LOADOUT, FOLDED AWAY ─────────────────────────────────────────────
+              Powers, synergies and curses are reference material you consult, not news
+              you need at every depth. Open by default they ran to a dozen chips and
+              pushed the bank-or-dive decision below the fold, which is the one thing
+              this screen exists to ask. Collapsed, the header still carries the counts
+              and the "synergy within reach" nudge, so nothing urgent is hidden. */}
           {(ownedBoons.length > 0 || activeConf.length > 0 || ownedCurses.length > 0) && (
-            <div style={{ marginTop: 13, padding: '0.85rem 0.9rem 0.75rem', borderRadius: 14, background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 9 }}>
-              {ownedBoons.length > 0 && (
-                <LoadoutRow label="Powers" color={TEAL}>
-                  {ownedBoons.map(({ fam, tier }) => {
-                    const t = fam.tiers[tier - 1]
-                    const rc = BOON_RARITY_META[boonRarity(fam)].color
-                    return (
-                      <button key={fam.id} className="font-karla font-700 tap"
-                        onClick={() => setDetailEffect({ kind: 'boon', name: `${fam.name} ${boonTierLabel(tier)}`, desc: t.desc, detail: t.detail, flavor: fam.flavor, count: tier, maxTier: fam.tiers.length })}
-                        style={{ cursor: 'pointer', fontSize: '0.64rem', padding: '0.24rem 0.6rem', borderRadius: 999, background: `${rc}20`, border: `1px solid ${rc}66`, color: rc }}>
-                        {fam.name} {boonTierLabel(tier)}
-                      </button>
-                    )
-                  })}
-                </LoadoutRow>
-              )}
-              {activeConf.length > 0 && (
-                <LoadoutRow label="Synergies" color={GOLD}>
-                  {activeConf.map(c => {
-                    const lvl = confluenceLevel(c, boonTiers)
-                    const lvlLabel = ['', 'I', 'II', 'III'][lvl] ?? ''
-                    const fresh = confluenceUnlocked?.id === c.id
-                    const reqNames = c.requires.map(r => GAUNTLET_BOONS.find(b => b.id === r.boonId)?.name ?? r.boonId)
-                    return (
-                      <button key={c.id} className="font-karla font-700 tap"
-                        onClick={() => setDetailEffect({ kind: 'confluence', name: lvlLabel ? `${c.name} ${lvlLabel}` : c.name, desc: confluenceDescAt(c, lvl), detail: `${c.detail} Its level is the lower of your ${reqNames.join(' and ')} tiers, so deepen whichever is behind to level it up.`, flavor: c.flavor, count: 0 })}
-                        style={{ cursor: 'pointer', fontSize: '0.64rem', padding: '0.24rem 0.6rem', borderRadius: 999, background: fresh ? `${GOLD}30` : `${GOLD}18`, border: `1px solid ${GOLD}${fresh ? 'aa' : '66'}`, color: '#fbe7c4', boxShadow: fresh ? `0 0 12px ${GOLD}66` : 'none' }}>
-                        {c.name} {lvlLabel}{fresh ? ' · NEW' : ''}
-                      </button>
-                    )
-                  })}
-                </LoadoutRow>
-              )}
-              {ownedCurses.length > 0 && (
-                <LoadoutRow label="Curses" color="#f87171">
-                  {ownedCurses.map(({ c, tier }) => {
-                    const t = c.tiers[tier - 1]
-                    const label = curseTierLabel(tier)
-                    return (
-                      <button key={c.id} className="font-karla font-700 tap"
-                        onClick={() => setDetailEffect({ kind: 'curse', name: label ? `${c.name} ${label}` : c.name, desc: t.desc, detail: t.detail, flavor: c.flavor, count: tier, maxTier: c.tiers.length })}
-                        style={{ cursor: 'pointer', fontSize: '0.64rem', padding: '0.24rem 0.6rem', borderRadius: 999, background: 'rgba(248,113,113,0.14)', border: '1px solid rgba(248,113,113,0.42)', color: '#fca5a5' }}>
-                        {c.name}{label ? ` ${label}` : ''}
-                      </button>
-                    )
-                  })}
-                </LoadoutRow>
-              )}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 3, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                <span className="font-karla font-600" style={{ fontSize: '0.58rem', lineHeight: 1.3, color: eligibleConf.length > 0 ? '#c6b0ff' : '#7a756c' }}>
+            <div style={{ marginTop: 13, borderRadius: 14, background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)', textAlign: 'left', overflow: 'hidden' }}>
+              <button onClick={() => setLoadoutOpen(o => !o)} className="tap"
+                style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '0.7rem 0.9rem', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
+                <span className="font-karla font-800 uppercase tracking-[0.16em]" style={{ flexShrink: 0, fontSize: '0.55rem', color: '#9a988e' }}>Loadout</span>
+                <span className="font-karla font-600 truncate" style={{ flex: 1, minWidth: 0, fontSize: '0.62rem', color: eligibleConf.length > 0 ? '#c6b0ff' : '#7a756c' }}>
                   {eligibleConf.length > 0
-                    ? `${eligibleConf.length} synerg${eligibleConf.length === 1 ? 'y' : 'ies'} within reach — forge in a draft`
-                    : 'Tap any to read'}
+                    ? `${eligibleConf.length} synerg${eligibleConf.length === 1 ? 'y' : 'ies'} within reach`
+                    : [
+                        ownedBoons.length > 0 ? `${ownedBoons.length} power${ownedBoons.length === 1 ? '' : 's'}` : null,
+                        activeConf.length > 0 ? `${activeConf.length} synerg${activeConf.length === 1 ? 'y' : 'ies'}` : null,
+                        ownedCurses.length > 0 ? `${ownedCurses.length} curse${ownedCurses.length === 1 ? '' : 's'}` : null,
+                      ].filter(Boolean).join(', ')}
                 </span>
-                <button onClick={() => setSynergiesOpen(true)} className="font-karla font-800 uppercase tracking-[0.1em] tap"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.54rem', color: '#c9bfa8', background: 'transparent', border: 'none', cursor: 'pointer', flexShrink: 0, padding: 0 }}>
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></svg>
-                  Codex
-                </button>
-              </div>
+                <motion.span aria-hidden animate={{ rotate: loadoutOpen ? 180 : 0 }} transition={{ duration: 0.2 }} style={{ flexShrink: 0, display: 'flex', color: '#8a8578' }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+                </motion.span>
+              </button>
+
+              <AnimatePresence initial={false}>
+                {loadoutOpen && (
+                  <motion.div key="loadout" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.22, ease: 'easeOut' }} style={{ overflow: 'hidden' }}>
+                    <div style={{ padding: '0 0.9rem 0.75rem', display: 'flex', flexDirection: 'column', gap: 9 }}>
+                      {ownedBoons.length > 0 && (
+                        <LoadoutRow label="Powers" color={TEAL}>
+                          {ownedBoons.map(({ fam, tier }) => {
+                            const t = fam.tiers[tier - 1]
+                            const rc = BOON_RARITY_META[boonRarity(fam)].color
+                            return (
+                              <button key={fam.id} className="font-karla font-700 tap"
+                                onClick={() => setDetailEffect({ kind: 'boon', name: `${fam.name} ${boonTierLabel(tier)}`, desc: t.desc, detail: t.detail, flavor: fam.flavor, count: tier, maxTier: fam.tiers.length })}
+                                style={{ cursor: 'pointer', fontSize: '0.64rem', padding: '0.24rem 0.6rem', borderRadius: 999, background: `${rc}20`, border: `1px solid ${rc}66`, color: rc }}>
+                                {fam.name} {boonTierLabel(tier)}
+                              </button>
+                            )
+                          })}
+                        </LoadoutRow>
+                      )}
+                      {activeConf.length > 0 && (
+                        <LoadoutRow label="Synergies" color={GOLD}>
+                          {activeConf.map(c => {
+                            const lvl = confluenceLevel(c, boonTiers)
+                            const lvlLabel = ['', 'I', 'II', 'III'][lvl] ?? ''
+                            const fresh = confluenceUnlocked?.id === c.id
+                            const reqNames = c.requires.map(r => GAUNTLET_BOONS.find(b => b.id === r.boonId)?.name ?? r.boonId)
+                            return (
+                              <button key={c.id} className="font-karla font-700 tap"
+                                onClick={() => setDetailEffect({ kind: 'confluence', name: lvlLabel ? `${c.name} ${lvlLabel}` : c.name, desc: confluenceDescAt(c, lvl), detail: `${c.detail} Its level is the lower of your ${reqNames.join(' and ')} tiers, so deepen whichever is behind to level it up.`, flavor: c.flavor, count: 0 })}
+                                style={{ cursor: 'pointer', fontSize: '0.64rem', padding: '0.24rem 0.6rem', borderRadius: 999, background: fresh ? `${GOLD}30` : `${GOLD}18`, border: `1px solid ${GOLD}${fresh ? 'aa' : '66'}`, color: '#fbe7c4', boxShadow: fresh ? `0 0 12px ${GOLD}66` : 'none' }}>
+                                {c.name} {lvlLabel}{fresh ? ' · NEW' : ''}
+                              </button>
+                            )
+                          })}
+                        </LoadoutRow>
+                      )}
+                      {ownedCurses.length > 0 && (
+                        <LoadoutRow label="Curses" color="#f87171">
+                          {ownedCurses.map(({ c, tier }) => {
+                            const t = c.tiers[tier - 1]
+                            const label = curseTierLabel(tier)
+                            return (
+                              <button key={c.id} className="font-karla font-700 tap"
+                                onClick={() => setDetailEffect({ kind: 'curse', name: label ? `${c.name} ${label}` : c.name, desc: t.desc, detail: t.detail, flavor: c.flavor, count: tier, maxTier: c.tiers.length })}
+                                style={{ cursor: 'pointer', fontSize: '0.64rem', padding: '0.24rem 0.6rem', borderRadius: 999, background: 'rgba(248,113,113,0.14)', border: '1px solid rgba(248,113,113,0.42)', color: '#fca5a5' }}>
+                                {c.name}{label ? ` ${label}` : ''}
+                              </button>
+                            )
+                          })}
+                        </LoadoutRow>
+                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 1, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                        <span className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#7a756c' }}>Tap any to read</span>
+                        <button onClick={() => setSynergiesOpen(true)} className="font-karla font-800 uppercase tracking-[0.1em] tap"
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.54rem', color: '#c9bfa8', background: 'transparent', border: 'none', cursor: 'pointer', flexShrink: 0, padding: 0 }}>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></svg>
+                          Codex
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )}
 
@@ -2403,8 +2426,6 @@ export default function GauntletGame(props: GauntletGameProps) {
                     {pressure} Pressure
                   </p>
                 </div>
-
-                {/* The live number, and the one it becomes if you keep going. */}
                 <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, marginTop: 8 }}>
                   <div style={{ minWidth: 0 }}>
                     <p className="font-cinzel font-800" style={{ fontSize: '1.75rem', color: atFull ? GOLD : '#e8dfc8', lineHeight: 1, textShadow: atFull ? `0 0 16px ${GOLD}66` : 'none' }}>
@@ -2420,8 +2441,6 @@ export default function GauntletGame(props: GauntletGameProps) {
                     </p>
                   )}
                 </div>
-
-                {/* What you are actually carrying, so it is never a mystery. */}
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 9 }}>
                   {signedList.map(t => {
                     const tier = Math.min(signedTerms[t.id], t.tiers.length)
@@ -2434,22 +2453,17 @@ export default function GauntletGame(props: GauntletGameProps) {
                     )
                   })}
                 </div>
-                <p className="font-karla" style={{ fontSize: '0.64rem', color: '#7a746a', marginTop: 7, lineHeight: 1.35 }}>
-                  Sink and every gem of this is lost. You only collect by cashing out alive.
-                </p>
               </div>
             )
           })()}
 
-          {/* The fork — bank or push, presented together as one clear decision.
-              No Second Thoughts (a signed Term) takes the bank away except on a
-              breather that follows a BOSS kill: the mode's safety valve, gone. */}
+          {/* ── THE FORK ─────────────────────────────────────────────────────────
+              Bank or dive, SIDE BY SIDE, because it is one either/or and stacking it
+              vertically made the second option read as an afterthought under the
+              first. Gold rises, teal descends, and each button carries an arrow that
+              says which way it takes you. */}
           <div style={{ marginTop: 18 }}>
-            {/* ── DAVY'S OFFER ─────────────────────────────────────────────────
-                He leans over the rail and tries to buy you out. This sits directly on
-                top of the bank button because it IS the bank button's new terms: while
-                an offer stands, banking means taking it. Diving is the refusal, and the
-                server makes him come back richer for it. */}
+            {/* DAVY'S OFFER — while one stands, banking means taking it. */}
             {offer && (
               <motion.div
                 initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
@@ -2469,48 +2483,12 @@ export default function GauntletGame(props: GauntletGameProps) {
                   {offerCopy(offer).title}
                 </p>
                 <p className="font-karla font-600" style={{ fontSize: '0.76rem', color: '#cfc0e6', marginTop: 4, lineHeight: 1.4 }}>
-                  {offerCopy(offer).line}
-                </p>
-                <p className="font-karla" style={{ fontSize: '0.66rem', color: '#9b86c4', marginTop: 6, lineHeight: 1.35 }}>
-                  Dive on and the offer sinks with the light. He may come back with more.
+                  {offerCopy(offer).line} Dive on and it sinks with the light.
                 </p>
               </motion.div>
             )}
 
-            {(() => {
-              const bankBarred = termFx.cashOutOnlyAfterBoss && !rollStateRef.current.prevWasBoss
-              if (bankBarred) return (
-                <div style={{ width: '100%', padding: '0.95rem 1rem', borderRadius: 14, textAlign: 'center', background: 'rgba(255,255,255,0.04)', border: '1px dashed rgba(255,255,255,0.2)' }}>
-                  <p className="font-cinzel font-800 uppercase tracking-[0.05em]" style={{ fontSize: '0.9rem', color: '#8a8578' }}>
-                    You Cannot Leave
-                  </p>
-                  <p className="font-karla" style={{ fontSize: '0.74rem', color: '#6f6a62', marginTop: 4, lineHeight: 1.4 }}>
-                    You signed <strong style={{ color: '#a89898' }}>No Second Thoughts</strong>. Davy only lets you bank once you have put a boss down.
-                  </p>
-                </div>
-              )
-              return (
-                <button onClick={() => setConfirmClaim(true)} disabled={resolving} className="font-cinzel font-800 uppercase tracking-[0.05em] tap"
-                  style={{ width: '100%', padding: '1.02rem', borderRadius: 14, fontSize: '1rem',
-                    color: offer ? '#efe4ff' : '#f5d98a',
-                    background: offer ? 'linear-gradient(180deg, rgba(201,167,255,0.30), rgba(140,90,220,0.12))' : `linear-gradient(180deg, ${GOLD}30, ${GOLD}10)`,
-                    border: offer ? '1px solid rgba(201,167,255,0.75)' : `1px solid ${GOLD}88`,
-                    cursor: resolving ? 'wait' : 'pointer',
-                    boxShadow: offer ? '0 0 24px rgba(140,90,220,0.3)' : `0 0 22px ${GOLD}22` }}>
-                  {resolving ? '…' : offer ? <>Take the Deal · {fmt(dealDoubloons)} ⟡</> : <>Claim {fmt(previewDoubloons)} ⟡ &amp; Leave</>}
-                </button>
-              )
-            })()}
-
-            {/* The hinge — makes the two buttons read as one either/or. */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '11px 4px 10px' }}>
-              <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
-              <span className="font-karla font-700 uppercase tracking-[0.24em]" style={{ fontSize: '0.5rem', color: offer ? '#9b86c4' : '#8a8578' }}>{offer ? 'or no deal' : 'or press your luck'}</span>
-              <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
-            </div>
-
-            {/* What lies below (Sounding Line) — the intel that informs the dive,
-                now sitting right on top of the dive button. */}
+            {/* Sounding Line — intel that informs the dive, so it sits above the fork. */}
             {sounding && (
               <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
                 style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 9, padding: '0.55rem 0.85rem', borderRadius: 11, background: `${sounding.color}12`, border: `1px solid ${sounding.color}44` }}>
@@ -2524,7 +2502,7 @@ export default function GauntletGame(props: GauntletGameProps) {
               </motion.div>
             )}
 
-            {/* Hardcore — compact stakes reminder, in the dive lane where it matters. */}
+            {/* Hardcore — the stakes, in the lane where they matter. */}
             {hardcoreRun && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 9, padding: '0.55rem 0.8rem', borderRadius: 11, textAlign: 'left',
                 background: 'linear-gradient(180deg, rgba(140,10,20,0.28), rgba(88,4,10,0.14))', border: '1px solid rgba(220,38,38,0.45)' }}>
@@ -2535,25 +2513,54 @@ export default function GauntletGame(props: GauntletGameProps) {
               </div>
             )}
 
-            {/* The dive button CARRIES the wager — the pot rides on every
-                push-on, so the number sits on the button itself, plainly. */}
-            <button onClick={pushOn} disabled={resolving} className="tap"
-              style={{ width: '100%', padding: '0.8rem 1rem', borderRadius: 14, background: `${TEAL}20`, border: `1px solid ${TEAL}88`, color: TEAL, cursor: resolving ? 'wait' : 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-              <span className="font-cinzel font-700 uppercase tracking-[0.05em]" style={{ fontSize: '1rem', display: 'flex', alignItems: 'center', gap: 8 }}>
-                Dive to Depth {nextDepth}
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
-              </span>
-              {previewDoubloons > 0 && (
-                <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#d8a14a' }}>
-                  {fmt(previewDoubloons)} ⟡ rides on this dive
-                </span>
-              )}
-            </button>
-            <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#9a857a', marginTop: 8, lineHeight: 1.4, textAlign: 'center' }}>
-              {hardcoreRun
-                ? 'Sink and you lose every doubloon of it. Your crew drowns with it.'
-                : 'Sink and you lose every doubloon of it.'}
-            </p>
+            {(() => {
+              const bankBarred = termFx.cashOutOnlyAfterBoss && !rollStateRef.current.prevWasBoss
+              const diveBtn = (
+                <button onClick={pushOn} disabled={resolving} className="tap"
+                  style={{ width: '100%', height: '100%', minHeight: 92, padding: '0.75rem 0.6rem', borderRadius: 14,
+                    background: `linear-gradient(180deg, ${TEAL}26, ${TEAL}0c)`, border: `1px solid ${TEAL}88`,
+                    cursor: resolving ? 'wait' : 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={TEAL} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 5v14" /><path d="M19 12l-7 7-7-7" /></svg>
+                  <span className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ fontSize: '0.92rem', color: TEAL, lineHeight: 1.1 }}>Dive Deeper</span>
+                  <span className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#8fb8b0' }}>To depth {nextDepth}</span>
+                  {previewDoubloons > 0 && (
+                    <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#9a857a', lineHeight: 1.25 }}>
+                      {fmt(previewDoubloons)} ⟡ at risk
+                    </span>
+                  )}
+                </button>
+              )
+              if (bankBarred) return (
+                <>
+                  <div style={{ width: '100%', padding: '0.85rem 1rem', borderRadius: 14, textAlign: 'center', marginBottom: 10, background: 'rgba(255,255,255,0.04)', border: '1px dashed rgba(255,255,255,0.2)' }}>
+                    <p className="font-cinzel font-800 uppercase tracking-[0.05em]" style={{ fontSize: '0.85rem', color: '#8a8578' }}>You Cannot Leave</p>
+                    <p className="font-karla" style={{ fontSize: '0.72rem', color: '#6f6a62', marginTop: 4, lineHeight: 1.4 }}>
+                      You signed <strong style={{ color: '#a89898' }}>No Second Thoughts</strong>. Davy only lets you bank once you have put a boss down.
+                    </p>
+                  </div>
+                  {diveBtn}
+                </>
+              )
+              return (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, alignItems: 'stretch' }}>
+                  {/* SURFACE. Gold, and it points UP. */}
+                  <button onClick={() => setConfirmClaim(true)} disabled={resolving} className="tap"
+                    style={{ width: '100%', minHeight: 92, padding: '0.75rem 0.6rem', borderRadius: 14,
+                      background: offer ? 'linear-gradient(180deg, rgba(201,167,255,0.30), rgba(140,90,220,0.10))' : `linear-gradient(180deg, ${GOLD}30, ${GOLD}0e)`,
+                      border: offer ? '1px solid rgba(201,167,255,0.75)' : `1px solid ${GOLD}88`,
+                      cursor: resolving ? 'wait' : 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
+                      boxShadow: offer ? '0 0 22px rgba(140,90,220,0.28)' : `0 0 20px ${GOLD}1e` }}>
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={offer ? '#c9a7ff' : GOLD} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 19V5" /><path d="M5 12l7-7 7 7" /></svg>
+                    <span className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ fontSize: '0.92rem', color: offer ? '#efe4ff' : '#f5d98a', lineHeight: 1.1 }}>
+                      {resolving ? '…' : offer ? 'Take the Deal' : 'Claim & Leave'}
+                    </span>
+                    <span className="font-karla font-700" style={{ fontSize: '0.68rem', color: offer ? '#c9a7ff' : GOLD }}>{fmt(dealDoubloons)} ⟡</span>
+                    <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#9a948a', lineHeight: 1.25 }}>Surface with it</span>
+                  </button>
+                  {diveBtn}
+                </div>
+              )
+            })()}
           </div>
         </div>
 
