@@ -4,7 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getBait } from '@/lib/bait'
 import { getRod, getEffectiveRod, COMPLETIONIST_TIER, COMPLETIONIST_MAX_EFFECTS, REFORGE_COST, rodHasUniqueEffect } from '@/lib/rods'
-import { getFishHold } from '@/lib/fishHold'
+import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
+import { rewardsOwed, type LevelReward } from '@/lib/levelRewards'
 import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
 import { recordChallengeScore } from '@/app/(app)/social/challengeActions'
 import { catchXP, getLevelFromXP } from '@/lib/fishingLevel'
@@ -1804,3 +1805,78 @@ export async function setCompletionistEffects(
   return { completionistEffects: clean, firstForge, charged: mustPay, newDoubloons }
 }
 
+
+// ── FISHING LEVEL REWARDS ────────────────────────────────────────────────────
+// Pay out every level the captain has earned but not yet been paid for.
+//
+// STATE-BASED, deliberately. The obvious implementation is "grant on the level-up",
+// but fishing XP arrives from TRAWLS too, which resolve while the player is nowhere
+// near the fishing screen. A crossing-based grant would silently drop those levels on
+// the floor. So this reconciles the level they ARE against the level they have been
+// PAID for, which makes it idempotent: call it twice and the second call pays nothing.
+export async function claimFishingLevelRewards(): Promise<{
+  granted: { level: number; reward: LevelReward }[]
+  newDoubloons: number
+  newGems: number
+  newHoldTier: number
+}> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const empty = { granted: [], newDoubloons: 0, newGems: 0, newHoldTier: 0 }
+  if (!user) return empty
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('fishing_xp, claimed_fishing_levels, doubloons, gems, fish_hold_tier')
+    .eq('id', user.id)
+    .single()
+  if (!profile) return empty
+
+  const level   = getLevelFromXP((profile.fishing_xp as number | null) ?? 0)
+  const claimed = (profile.claimed_fishing_levels as number | null) ?? 1
+  const owed    = rewardsOwed(claimed, level)
+  if (owed.length === 0) {
+    return {
+      granted: [],
+      newDoubloons: profile.doubloons ?? 0,
+      newGems: profile.gems ?? 0,
+      newHoldTier: (profile.fish_hold_tier as number | null) ?? 0,
+    }
+  }
+
+  let doubloons = profile.doubloons ?? 0
+  let gems      = profile.gems ?? 0
+  let holdTier  = (profile.fish_hold_tier as number | null) ?? 0
+  const bait: Record<string, number> = {}
+
+  for (const { reward } of owed) {
+    doubloons += reward.doubloons ?? 0
+    gems      += reward.gems ?? 0
+    if (reward.holdTiers) holdTier += reward.holdTiers
+    for (const [type, qty] of Object.entries(reward.bait ?? {})) {
+      // Never hand over a bait type that does not exist — a typo in the table would
+      // otherwise write a junk row the shop cannot render.
+      if (getBait(type)) bait[type] = (bait[type] ?? 0) + qty
+    }
+  }
+  holdTier = Math.min(holdTier, FISH_HOLD_TIERS.length - 1)
+
+  await Promise.all([
+    admin.from('profiles').update({
+      doubloons,
+      gems,
+      fish_hold_tier: holdTier,
+      claimed_fishing_levels: level,   // paid up to here; a re-call grants nothing
+    }).eq('id', user.id),
+    ...Object.entries(bait).map(([type, qty]) =>
+      admin.rpc('upsert_bait', { p_user_id: user.id, p_bait_type: type, p_qty: qty })),
+    admin.from('doubloon_transactions').insert({
+      user_id: user.id,
+      amount: owed.reduce((a, o) => a + (o.reward.doubloons ?? 0), 0),
+      reason: `Fishing level reward (Lv ${owed[0].level}${owed.length > 1 ? `-${level}` : ''})`,
+    }),
+  ])
+
+  return { granted: owed, newDoubloons: doubloons, newGems: gems, newHoldTier: holdTier }
+}

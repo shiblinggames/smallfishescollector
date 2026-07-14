@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence, useDragControls } from 'framer-motion'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { castLine, reelIn, reelCrate, rerollWormhole, quickSellAllFish, markFishingTourSeen, markFishingCatchTourSeen, markFirstCatchCelebrationSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipPet, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, sellGoldenTrophy, mountGoldenTrophy, setCompletionistEffects as saveCompletionistEffects, setShowWaitTimer as persistShowWaitTimer, type FishSpecies } from './actions'
+import { castLine, reelIn, reelCrate, rerollWormhole, quickSellAllFish, markFishingTourSeen, markFishingCatchTourSeen, markFirstCatchCelebrationSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipPet, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, sellGoldenTrophy, mountGoldenTrophy, setCompletionistEffects as saveCompletionistEffects, setShowWaitTimer as persistShowWaitTimer, claimFishingLevelRewards, type FishSpecies } from './actions'
 import { recordFinnEncounter, settleFinnChallenge, recordFinnPass, markFinnRevealSeen } from './finnActions'
 import FinnEncounter from './FinnEncounter'
 import TrawlIndicator from './TrawlIndicator'
@@ -56,6 +56,7 @@ import { buyHook } from '@/app/(app)/hooks/actions'
 import { buildFishZones, FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY, CATCH_CENTER, type ZoneDef, type ZoneType } from './depths'
 import { ZONE_MIN_LEVEL } from './zoneData'
 import { getXPProgress, getLevelFromXP, levelCatchBonus, MAX_LEVEL } from '@/lib/fishingLevel'
+import { rewardsOwed, nextLevelReward, type LevelReward } from '@/lib/levelRewards'
 import { renownLevel, renownProgress, spentPoints, fishingRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { markRenownIntroSeen, type RenownState } from '@/app/(app)/actions/renown'
 import RenownPanel from '@/components/RenownPanel'
@@ -2659,10 +2660,32 @@ function XPBarDisplay({ xp, bestStreak, renownAvailable, onOpenRenown }: {
             )}
           </span>
         ) : (
-          <p className="font-karla font-600"
-            style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.65)', textAlign: 'right', lineHeight: 1 }}>
-            {`${toGo.toLocaleString()} xp`}
-          </p>
+          // ── THE CARROT ──────────────────────────────────────────────────
+          // "312 xp" told the player how far, and NOTHING about why. There was no
+          // stated reason anywhere in the game to reach the next level. Now the bar
+          // says what is waiting at the top of it, and lights gold on a milestone.
+          (() => {
+            const nx = nextLevelReward(level)
+            const gold = '#f0c040'
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, minWidth: 0 }}>
+                <p className="font-karla font-600"
+                  style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.65)', textAlign: 'right', lineHeight: 1 }}>
+                  {`${toGo.toLocaleString()} xp`}
+                </p>
+                {nx && (
+                  <p className="font-karla font-700 truncate"
+                    style={{
+                      maxWidth: 116, fontSize: '0.52rem', lineHeight: 1, textAlign: 'right',
+                      color: nx.reward.milestone ? gold : 'rgba(255,255,255,0.45)',
+                      textShadow: nx.reward.milestone ? `0 0 10px ${gold}66` : 'none',
+                    }}>
+                    {nx.reward.milestone ? '★ ' : ''}{nx.reward.label}
+                  </p>
+                )}
+              </div>
+            )
+          })()
         )}
         {(bestStreak ?? 0) > 0 && (
           <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: 'rgba(251,146,60,0.9)', lineHeight: 1 }}>
@@ -3742,6 +3765,10 @@ export default function FishingGame({
   // compute the stat deltas the player just earned (catch-zone width,
   // bite speed, zone unlocks) — see fishingLevelDeltas() helper.
   const [levelUpNotif, setLevelUpNotif] = useState<{ from: number; to: number } | null>(null)
+  // What the levels just crossed actually PAID. Reconciled with the server, which owns
+  // the money and is the only thing that can say "already paid" -- so a level earned by
+  // a TRAWL while the player was nowhere near this screen still gets handed over.
+  const [levelRewards, setLevelRewards] = useState<{ level: number; reward: LevelReward }[]>([])
   const [podiumNotif, setPodiumNotif] = useState<PodiumNotif | null>(null)
   const podiumPositionsRef = useRef<{ fishingLevel: number | null; perfectStreak: number | null }>({ fishingLevel: null, perfectStreak: null })
   const [, startTransition]         = useTransition()
@@ -5220,6 +5247,16 @@ export default function FishingGame({
           window.dispatchEvent(new CustomEvent('fishing-leveled'))
         } else if (newLevel > oldLevel) {
           setLevelUpNotif({ from: oldLevel, to: newLevel })
+          // Paint the payload instantly from the shared table so the overlay is never
+          // empty, then reconcile with the server (which is authoritative on the coin).
+          setLevelRewards(rewardsOwed(oldLevel, newLevel))
+          claimFishingLevelRewards().then(res => {
+            if (res.granted.length > 0) setLevelRewards(res.granted)
+            setDoubloons(res.newDoubloons)
+            window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloons }))
+            window.dispatchEvent(new CustomEvent('gems-changed', { detail: res.newGems }))
+            if (res.newHoldTier > 0) setCurrentFishHoldTier(res.newHoldTier)
+          }).catch(() => {})
           // Tell the Trawls indicator a level-up overlay is showing, so it
           // holds any "Crew Trawls unlocked" celebration until this is dismissed
           // (no stacked popups). Then nudge it to re-check the slot count.
@@ -9856,13 +9893,62 @@ export default function FishingGame({
                 {levelUpNotif.to}
               </p>
 
+              {/* ── WHAT YOU ACTUALLY GOT ───────────────────────────────────
+                  This is the whole point. The overlay used to fire a full-screen
+                  fireworks display around "+0.7% bite speed" -- and on four levels out
+                  of five, around nothing at all -- which taught a new captain that
+                  levelling up is noise. Now every level pays, and the payment leads. */}
+              {levelRewards.length > 0 && (() => {
+                const totalCoin = levelRewards.reduce((a, r) => a + (r.reward.doubloons ?? 0), 0)
+                const totalGems = levelRewards.reduce((a, r) => a + (r.reward.gems ?? 0), 0)
+                const baitTotals: Record<string, number> = {}
+                for (const { reward } of levelRewards)
+                  for (const [t, q] of Object.entries(reward.bait ?? {})) baitTotals[t] = (baitTotals[t] ?? 0) + q
+                const holdUp = levelRewards.some(r => r.reward.holdTiers)
+                const milestone = levelRewards.some(r => r.reward.milestone)
+                const GOLD = '#f0c040'
+                const chip = (key: string, text: string, color: string) => (
+                  <motion.span key={key}
+                    initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.34, type: 'spring', stiffness: 340, damping: 18 }}
+                    className="font-cinzel font-800"
+                    style={{
+                      fontSize: '0.95rem', color, padding: '0.34rem 0.8rem', borderRadius: 999,
+                      background: `${color}1c`, border: `1px solid ${color}66`,
+                      boxShadow: `0 0 18px ${color}33`, whiteSpace: 'nowrap',
+                    }}>
+                    {text}
+                  </motion.span>
+                )
+                return (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3, duration: 0.3, ease: 'easeOut' }}
+                    style={{ marginTop: '1.15rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}
+                  >
+                    <p className="font-karla font-800 uppercase tracking-[0.22em]"
+                       style={{ fontSize: '0.55rem', color: milestone ? GOLD : 'rgba(255,255,255,0.55)',
+                         textShadow: milestone ? `0 0 16px ${GOLD}88` : 'none' }}>
+                      {milestone ? 'Milestone Reward' : 'Reward'}
+                    </p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, justifyContent: 'center', maxWidth: 320 }}>
+                      {totalCoin > 0 && chip('coin', `+${totalCoin.toLocaleString()} \u27e1`, GOLD)}
+                      {totalGems > 0 && chip('gems', `+${totalGems} \u25c6`, '#a78bfa')}
+                      {Object.entries(baitTotals).map(([t, q]) =>
+                        chip(t, `+${q} ${getBait(t).name}`, '#7fd49a'))}
+                      {holdUp && chip('hold', 'Bigger Fish Hold', '#60a5fa')}
+                    </div>
+                  </motion.div>
+                )
+              })()}
+
               {/* Perks at this level — cumulative numbers so the player sees
                   where they ARE, not just the marginal gain. */}
               <motion.div
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.28, duration: 0.3, ease: 'easeOut' }}
-                style={{ marginTop: '1.25rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
+                transition={{ delay: 0.42, duration: 0.3, ease: 'easeOut' }}
+                style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
               >
                 <p className="font-karla font-700 uppercase tracking-[0.22em]"
                    style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.45)', marginBottom: '0.4rem', textShadow: '0 0 12px rgba(96,165,250,0.4)' }}>
