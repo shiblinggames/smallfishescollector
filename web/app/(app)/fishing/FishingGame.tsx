@@ -3907,6 +3907,9 @@ export default function FishingGame({
   // returns the live value). The client mirrors it for display and reconciles
   // from each catch's response — see the catch handler below.
   const [snapKey, setSnapKey] = useState(0)
+  // Brief on-dial arrow that flashes when the needle reverses (in the dead zone),
+  // so the direction change reads as a telegraphed event, not a glitch.
+  const [reverseTell, setReverseTell] = useState<{ key: number; dir: number } | null>(null)
   const [castRippleKey, setCastRippleKey] = useState(0)
   const [reelRippleKey, setReelRippleKey] = useState(0)
   const [newStreakRecord, setNewStreakRecord] = useState<number | null>(null)
@@ -4262,6 +4265,10 @@ export default function FishingGame({
   const catchingZonesRef = useRef<ZoneDef[]>([])
   const zoneRotationRef  = useRef(0)
   const lastZoneFromRef  = useRef<number>(NaN)
+  // Reversal telegraph: elapsed-ms of the last needle reversal (a cooldown so it
+  // can't ping-pong) and a bumping key that fires the on-dial direction arrow.
+  const lastReverseMsRef = useRef(-9999)
+  const reverseTellKeyRef = useRef(0)
   const hookedFishRef   = useRef<{ fishId: number; catchDifficulty: number; crateTier?: 'wooden' | 'metal' | 'gold' | 'diamond' } | null>(null)
   const selectedBaitRef = useRef(selectedBait)
   useEffect(() => { phaseRef.current = phase }, [phase])
@@ -4383,6 +4390,13 @@ export default function FishingGame({
     }
   }, [phase, hasSeenFishingCatchTour])
 
+  // Clear the reversal telegraph arrow after its flash.
+  useEffect(() => {
+    if (!reverseTell) return
+    const t = setTimeout(() => setReverseTell(null), 520)
+    return () => clearTimeout(t)
+  }, [reverseTell])
+
   // Character frame — drives which sprite is shown
   const [charFrame, setCharFrame] = useState<CharFrame>('rest')
   const [castAnimDone, setCastAnimDone] = useState(false)
@@ -4437,7 +4451,6 @@ export default function FishingGame({
     const zoneDiff  = ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows
     const baseMin = diffSpeed.speedMin * reel.needleSpeedMultiplier * bossNeedleMultRef.current
     const baseMax = diffSpeed.speedMax * reel.needleSpeedMultiplier * bossNeedleMultRef.current
-    const capturedZoneRotation = zoneRotation
     // Trophy-only reversals in Ancient Deep — the 6 prehistoric trophies
     // keep the 35% needle reverse near the catch zone, but the 12 new
     // sellable regulars don't get it. Captured once per cast so the
@@ -4453,6 +4466,7 @@ export default function FishingGame({
     speedRef.current   = baseMin + Math.random() * (baseMax - baseMin)
     lastTimeRef.current  = 0
     elapsedMsRef.current = 0
+    lastReverseMsRef.current = -9999 // let the first reversal fire immediately
     nextChgMsRef.current = (zoneDiff.changeMin + Math.floor(Math.random() * (zoneDiff.changeMax - zoneDiff.changeMin))) * 50
     lastZoneFromRef.current = NaN // force a zone sync on the first frame
     reelLockPendingRef.current = false // defensive: never start a spin locked
@@ -4485,14 +4499,26 @@ export default function FishingGame({
         // now only drives the discrete zone mechanics below (reversals,
         // blackouts), which are telegraphed effects rather than wobble.
         if (Math.random() < effectiveReverseChance) {
-          // Only reverse near the catch zone — not while drifting through dead space
-          const catchCenter = (CATCH_CENTER + capturedZoneRotation) % 360
+          // SKILL, NOT LUCK: reverse ONLY in the far dead zone, never within the
+          // catch approach, and never twice in quick succession. The needle always
+          // enters the catch from a settled, readable direction — no coin-flip yank
+          // at the moment you commit (which is exactly what the old dist<=55 rule
+          // did). And when it does turn, we TELEGRAPH it: a direction arrow flashes
+          // on the dial + a haptic double-tick, so the turn reads as an event you
+          // can see and plan around, not a glitch.
+          // Live rotation, not the cast-start capture — so the safe band tracks the
+          // catch even while it drifts / gyres / snaps (a moving-zone giant).
+          const catchCenter = (CATCH_CENTER + zoneRotationRef.current) % 360
           const needle = angleRef.current
           const dist = Math.min(Math.abs(catchCenter - needle), 360 - Math.abs(catchCenter - needle))
-          if (dist <= 55) {
+          const REVERSE_SAFE_DEG = 100 // no reversal within this arc of the catch
+          if (dist >= REVERSE_SAFE_DEG && elapsedMsRef.current - lastReverseMsRef.current > 550) {
+            lastReverseMsRef.current = elapsedMsRef.current
             dirRef.current *= -1
-            // Restart the compositor animation from the flip point.
-            startNeedleSpin(angleRef.current)
+            startNeedleSpin(angleRef.current) // restart the compositor spin from the flip point
+            reverseTellKeyRef.current += 1
+            setReverseTell({ key: reverseTellKeyRef.current, dir: dirRef.current })
+            vibrate([0, 22, 30, 22])
           }
         }
         const scaledBlackout = zoneDiff.blackoutChance * (hookedFish.catchDifficulty / 5)
@@ -7028,6 +7054,25 @@ export default function FishingGame({
                       fireLevel={perfectStreak >= 3 ? 2 : perfectStreak === 2 ? 1 : 0}
                       ancientBoss={isAncientTrophyFight}
                       snapKey={snapKey} perfectBurstKey={perfectBurstKey} />
+
+                    {/* Reversal telegraph — flashes a spin-direction arrow the moment
+                        the needle turns (which now only happens out in the dead zone),
+                        so the change reads as a signalled event you plan around. */}
+                    <AnimatePresence>
+                      {reverseTell && (
+                        <motion.div key={reverseTell.key}
+                          initial={{ opacity: 0, scale: 0.5 }}
+                          animate={{ opacity: [0, 0.95, 0], scale: [0.5, 1.15, 1.35] }}
+                          transition={{ duration: 0.52, ease: 'easeOut' }}
+                          style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 6 }}>
+                          <svg width="70" height="70" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
+                            style={{ transform: reverseTell.dir > 0 ? 'none' : 'scaleX(-1)', filter: 'drop-shadow(0 0 9px rgba(251,191,36,0.75))' }}>
+                            <path d="M20 12a8 8 0 1 1-2.34-5.66" />
+                            <path d="M20 4v5h-5" />
+                          </svg>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 </motion.div>
               )}
