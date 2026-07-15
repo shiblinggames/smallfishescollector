@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation'
 import { castLine, reelIn, reelCrate, rerollWormhole, quickSellAllFish, markFishingTourSeen, markFishingCatchTourSeen, markFirstCatchCelebrationSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipPet, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, sellGoldenTrophy, mountGoldenTrophy, setCompletionistEffects as saveCompletionistEffects, setShowWaitTimer as persistShowWaitTimer, claimFishingLevelRewards, type FishSpecies } from './actions'
 import { recordFinnEncounter, settleFinnChallenge, recordFinnPass, markFinnRevealSeen } from './finnActions'
 import FinnEncounter from './FinnEncounter'
+import FinnScene from './FinnScene'
 import TrawlIndicator from './TrawlIndicator'
 import {
   FINN_ENCOUNTER_RATE, FINN_PERFECT_TIERS, FINN_SPEED_TIERS, FINN_SPEED_ZONE_MULT, FINN_REVEAL_BEAT,
@@ -16,8 +17,8 @@ import {
   FINN_EPILOGUE_LORE_LINES, FINN_EPILOGUE_LORE_CHANCE,
   FINN_RETURN_AFTER_WIN, FINN_RETURN_AFTER_LOSS, FINN_RETURN_AFTER_PASS,
   pickFinnTier, pickChallengeType, pickRandomLine,
-  findNextEncounterBeat, findNextWinBeat,
-  type FinnChallengeType,
+  findNextEncounterBeat, findNextWinBeat, finnAncientBeat,
+  type FinnChallengeType, type FinnAncientBeat,
 } from '@/lib/finn'
 import { liquidateAllFish } from '@/app/(app)/tavern/market/actions'
 import { BOATS, getBoat, boatGlowClass } from '@/lib/boats'
@@ -3669,7 +3670,9 @@ export default function FishingGame({
   // YOLO Rod jackpot celebration — set when a jackpot resolves, drives the
   // full-screen JackpotBoom overlay. Cleared on auto-dismiss / tap.
   const [jackpotBoom, setJackpotBoom] = useState<{ qty: number } | null>(null)
-  const [ancientCinematic, setAncientCinematic] = useState<{ fish: FishSpecies; count: number; total: number; isMegalodon: boolean } | null>(null)
+  const [ancientCinematic, setAncientCinematic] = useState<{ fish: FishSpecies; count: number; total: number; isMegalodon: boolean; finnBeat: FinnAncientBeat | null } | null>(null)
+  // The Finn cutscene queued to play AFTER the slain-cinematic dismisses.
+  const [finnAncientScene, setFinnAncientScene] = useState<FinnAncientBeat | null>(null)
   // First-catch celebration — true for the player's very first successful
   // reel-in if their account flag is still unset. Server-flag gated so it
   // can't replay across devices. Set + immediately fire the mark-seen
@@ -5398,7 +5401,18 @@ export default function FishingGame({
         if (isNewSpecies && fish.habitat === 'ancient_deep' && (fish.sell_value ?? 0) === 0) {
           const trophyTotal = allFishSpecies.filter(f => f.habitat === 'ancient_deep' && (f.sell_value ?? 0) === 0).length || 6
           const countAfter = new Set([...ancientCatches, fish.id]).size
-          setAncientCinematic({ fish, count: countAfter, total: trophyTotal, isMegalodon: fish.id === MEGALODON_ID })
+          // Finn reacts to THIS giant after the slain-cinematic clears (see the
+          // AncientSlainCinematic onDone). The first giant a captain lands also
+          // stands in for the old encounter "reveal": flip finn_revealed so his
+          // banter shifts to the epilogue pool and mark 'reveal' seen so the old
+          // FINN_REVEAL_BEAT never also fires.
+          const finnBeat = finnAncientBeat(fish.id)
+          if (countAfter === 1 && !finnRevealed) {
+            setFinnRevealed(true)
+            setFinnSeenBeats(prev => prev.includes('reveal') ? prev : [...prev, 'reveal'])
+            startTransition(() => { void markFinnRevealSeen() })
+          }
+          setAncientCinematic({ fish, count: countAfter, total: trophyTotal, isMegalodon: fish.id === MEGALODON_ID, finnBeat })
         }
         const catchCount = actualQty
         const newCatches = [...sessionCatches, ...Array(catchCount).fill(fish)]
@@ -9773,7 +9787,8 @@ export default function FishingGame({
       </AnimatePresence>
 
       {/* ── Ancient giant slain — full-screen cinematic over the result card.
-            Fires only for the 6 trophies, once each. Tap to skip. */}
+            Fires only for the 6 trophies, once each. Tap to skip. When it clears,
+            it hands off to Finn's cutscene for that giant (if any). */}
       <AnimatePresence>
         {ancientCinematic && (
           <AncientSlainCinematic
@@ -9782,7 +9797,23 @@ export default function FishingGame({
             count={ancientCinematic.count}
             total={ancientCinematic.total}
             isMegalodon={ancientCinematic.isMegalodon}
-            onDone={() => setAncientCinematic(null)}
+            onDone={() => {
+              const beat = ancientCinematic?.finnBeat ?? null
+              setAncientCinematic(null)
+              if (beat) setFinnAncientScene(beat)
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── Finn reacts to the giant — cinematic one-hander, plays right after the
+            slain moment. The rival keeps his mask on until Megalodon. */}
+      <AnimatePresence>
+        {finnAncientScene && (
+          <FinnScene
+            key="finn-ancient"
+            beat={finnAncientScene}
+            onComplete={() => setFinnAncientScene(null)}
           />
         )}
       </AnimatePresence>

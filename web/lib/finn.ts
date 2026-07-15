@@ -342,6 +342,113 @@ export const FINN_REVEAL_BEAT: FinnBeat = {
   ],
 }
 
+// ─── Ancient-catch cutscenes (one per giant) ─────────────────────────────────
+// A cinematic Finn beat plays right after each of the 6 Ancient Deep trophies is
+// landed (see FinnScene.tsx, built on the shared cutscene kit). The FIRST giant a
+// player lands also stands in for the old encounter "reveal" — it flips
+// finn_revealed so his banter shifts to the epilogue pool, and it retires the
+// FINN_REVEAL_BEAT so the mask never slips twice.
+//
+// Tone rules (canon — do NOT break): these are keyed by SPECIES, not by ordinal,
+// and the five non-Megalodon giants can be caught in ANY order, so none of them
+// may count ("your fifth", "one to go") or assume what came before. Each is a
+// per-giant reaction with a FAINT wrongness under the rivalry — he knows these
+// creatures too well, he is too invested, small slips of "me / I" leak through.
+// He never says he is using the player and never names the Finndicate. Megalodon
+// (id 143) is ALWAYS last (server-gated behind the other five), so its beat is the
+// one real crack: the rival act drops for a breath and something older shows,
+// then he covers it. Full reveal stays for the end-game merge.
+export interface FinnSceneLine {
+  text: string
+  /** Silence held BEFORE the line types — a beat, not a sentence. ms. */
+  pause?: number
+  /** 'flash' blows the frame out (the mask flickering); 'shake' rocks it. */
+  fx?: 'flash' | 'shake'
+}
+export interface FinnAncientBeat {
+  /** Scene color temperature. Warm amber = the rival. Megalodon runs cold. */
+  accent?: string
+  /** Final button label. Defaults to "Back to the water". */
+  ctaLabel?: string
+  lines: FinnSceneLine[]
+}
+
+const FINN_AMBER = '#c8a060'
+
+export const FINN_ANCIENT_BEATS: Record<number, FinnAncientBeat> = {
+  // 144 — Plesiosaurus
+  144: {
+    accent: FINN_AMBER,
+    lines: [
+      { text: "The long-neck. *Plesiosaurus.* I have watched that thing take a rig and swim off like it felt nothing.", pause: 300 },
+      { text: "It let you land it. Sat in your hands like it decided to." },
+      { text: "The deep does not just decide. Not for most of us.", pause: 400 },
+      { text: "Hm. Go on, then." },
+    ],
+  },
+  // 145 — Dunkleosteus
+  145: {
+    accent: FINN_AMBER,
+    lines: [
+      { text: "*Dunkleosteus.* A jaw like a ship's prow, older than the first keel that ever cut this water.", pause: 300 },
+      { text: "I hooked it once. It took my line and left me the story. That is all it has ever left anyone." },
+      { text: "It handed you the whole fish. I would sit a while with why.", pause: 400 },
+      { text: "...or do not. Just keep pulling them up." },
+    ],
+  },
+  // 146 — Mosasaurus
+  146: {
+    accent: FINN_AMBER,
+    lines: [
+      { text: "*Mosasaurus.* The sea-dragon every old chart drew a hard border around.", pause: 250 },
+      { text: "Turns out that border was the only honest ink on the page." },
+      { text: "Every soul who chased these is a name cut in stone now. Every one but you.", pause: 400 },
+      { text: "That is not luck. Luck drowned a long way back. You are something the water wants." },
+    ],
+  },
+  // 147 — Basilosaurus
+  147: {
+    accent: FINN_AMBER,
+    lines: [
+      { text: "The *Basilosaurus.* It swam this water before there was a single soul alive to fear it.", pause: 300 },
+      { text: "I have wanted to look one of these in the eye my whole life. Never once got the chance." },
+      { text: "And here it lies on your deck, dripping like a market cod.", pause: 400 },
+      { text: "Sits wrong, does it not. ...Good. It ought to." },
+    ],
+  },
+  // 148 — Shastasaurus
+  148: {
+    accent: FINN_AMBER,
+    lines: [
+      { text: "*Shastasaurus.* The largest thing that ever drew breath in salt water, and it is on your hook.", pause: 300 },
+      { text: "The others all swore these were stories. Easier than admitting they were out of reach." },
+      { text: "They were never out of yours. The deep keeps handing you what it kept from me.", pause: 450 },
+      { text: "...from everyone. Keep at it. You are nearer the end than you think." },
+    ],
+  },
+  // 143 — Megalodon (ALWAYS last — the crack)
+  143: {
+    accent: '#7d9aa8', // cold steel, wrong against his usual warmth
+    ctaLabel: 'Back to the water',
+    lines: [
+      { text: "...*Megalodon.*", pause: 700 },
+      { text: "The last one. The one all the others were only ever leading up to.", pause: 300 },
+      { text: "All six. In a single pair of hands." },
+      { text: "Do you have any notion what you have just finished building?", pause: 350 },
+      { text: "Years I stood at that black water, and it would not open for me. Not one inch. And you...", pause: 500 },
+      { text: "You were exactly what it was waiting for. Exactly what *I* was waiting for.", pause: 200, fx: 'flash' },
+      { text: "...", pause: 700 },
+      { text: "Listen to me. Ranting at the tide like a drowned prophet. Old rivals get sentimental.", pause: 300 },
+      { text: "Go on. Enjoy your wall of monsters. You have earned every last tooth of it." },
+    ],
+  },
+}
+
+/** The Finn beat to play after landing this Ancient trophy, or null. */
+export function finnAncientBeat(fishId: number): FinnAncientBeat | null {
+  return FINN_ANCIENT_BEATS[fishId] ?? null
+}
+
 // ─── Generic line pools (pre-reveal) ─────────────────────────────────────────
 
 /** Shown when an encounter fires but no story beat is due. Single-line. */
