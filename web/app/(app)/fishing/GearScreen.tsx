@@ -2849,7 +2849,10 @@ export default function GearScreen({
       </AnimatePresence>
       , document.body)}
 
-      {/* ── Purchase confirmation ── */}
+      {/* ── Purchase confirmation ── portaled to <body> and above the slot sheet
+           (zIndex 300 vs the sheet's 201). The buy list lives INSIDE the portaled slot
+           sheet, so a confirm left in the normal tree at zIndex 100 rendered behind it. */}
+      {mounted && createPortal(
       <AnimatePresence>
         {pendingPurchase && (
           <motion.div
@@ -2860,7 +2863,7 @@ export default function GearScreen({
             transition={{ duration: 0.16 }}
             onClick={() => { if (!confirming) setPendingPurchase(null) }}
             style={{
-              position: 'fixed', inset: 0, zIndex: 100,
+              position: 'fixed', inset: 0, zIndex: 300,
               background: 'rgba(0,0,0,0.72)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               padding: '1.25rem',
@@ -2952,6 +2955,7 @@ export default function GearScreen({
           </motion.div>
         )}
       </AnimatePresence>
+      , document.body)}
 
       {/* ── Completionist forge cinematic ── the staged donor rods streak in and
            merge into the Completionist on a prismatic flash. Plays on commit. */}
