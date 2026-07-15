@@ -95,16 +95,28 @@ export default function OpportunityStrip({ state, onAction }: {
         ? <Link href={op.action.href} className="tap" style={rowStyle}>{rowInner}</Link>
         : <button type="button" onClick={() => onAction(op.action)} className="tap" style={{ ...rowStyle, borderTopStyle: 'solid' }}>{rowInner}</button>}
 
-      {/* Page dots — only when there is more than one, and only tall enough to tap.
-          A separate row, so they are never nested inside the action above. */}
+      {/* HOW YOU SEE THE REST. Page dots said nothing and were 6px to hit. This is a
+          real, labelled control: a count that says more exist, and a "Next" pill that
+          plainly looks tappable. It advances and wraps. Sibling of the action row, so
+          nothing is nested. */}
       {list.length > 1 && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 5, marginTop: 6 }}>
-          {list.map((_, n) => (
-            <button key={n} type="button" aria-label={`Opportunity ${n + 1}`} onClick={() => setI(n)}
-              className="tap"
-              style={{ width: n === idx ? 16 : 6, height: 6, borderRadius: 999, padding: 0, cursor: 'pointer', border: 'none',
-                background: n === idx ? accent : 'rgba(255,255,255,0.18)', transition: 'width 0.2s, background 0.2s' }} />
-          ))}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6, padding: '0 0.2rem' }}>
+          <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.56rem', color: '#7a756c' }}>
+            {idx + 1} of {list.length}
+          </span>
+          <button type="button" onClick={() => setI(v => (v + 1) % list.length)}
+            className="font-karla font-800 uppercase tracking-[0.08em] tap"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              padding: '0.32rem 0.7rem', borderRadius: 999, cursor: 'pointer',
+              fontSize: '0.58rem', color: '#c8c2b6',
+              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.16)',
+            }}>
+            {idx === list.length - 1 ? 'Back to top' : 'Next'}
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+              {idx === list.length - 1 ? <path d="M3 12a9 9 0 1 0 9-9 9 9 0 0 0-6.5 2.8M3 4v4h4" /> : <path d="M9 6l6 6-6 6" />}
+            </svg>
+          </button>
         </div>
       )}
     </motion.div>
