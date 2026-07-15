@@ -287,6 +287,11 @@ async function ExpeditionHub() {
   const cleared = clearedViews.length
   // Gauntlet door: admin-only until GAUNTLET_LIVE, then cleared-Chapter-2.
   const gauntletOpen = gauntletUnlocked({ isAdmin: profile?.is_admin, clearedNodes: clearedViews.map(v => v.node.id) })
+  // A saved run is waiting to be picked back up — mirrors getGauntletDailyState's
+  // resumeState gate (paused = unlimited, or a crash resume still in the bank).
+  const gauntletResumable = profile?.gauntlet_run_open === true
+    && !!profile?.gauntlet_run_state
+    && (profile?.gauntlet_run_paused === true || ((profile?.gauntlet_resumes_used as number | null) ?? 0) < 1)
   const equippedRaidItems = (profile?.equipped_raid_items as string[] | null) ?? []
   const ownedRaidItems = (profile?.raid_items as string[] | null) ?? []
   const campaign: CampaignCardData = {
@@ -365,6 +370,7 @@ async function ExpeditionHub() {
       challengeName={challengeName}
       canPvp={canPvp}
       gauntletOpen={gauntletOpen}
+      gauntletResumable={gauntletResumable}
       gauntletUpgrades={(profile?.gauntlet_upgrades as string[] | null) ?? []}
       pvp={pvp}
     />

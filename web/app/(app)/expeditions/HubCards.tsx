@@ -101,6 +101,9 @@ interface Props {
   /** Whether the Gauntlet door is open to this player (admin, or live + cleared
    *  Chapter 2). Drives the Gauntlets card lock independently of PvP. */
   gauntletOpen: boolean
+  /** A saved Gauntlet run is waiting (paused or crash-resumable) — the card
+   *  swaps its CTA to "Resume" so the player knows to pick it back up. */
+  gauntletResumable?: boolean
   /** Claimed Gauntlet Locker Upgrade ids — drives the voyage panel's truthful
    *  Safe Passage / Swift Sails surfacing. */
   gauntletUpgrades: string[]
@@ -117,7 +120,7 @@ const VOYAGE_ACCENT: Record<VoyageStatus, { fg: string; bg: string; bd: string }
 // Voyages cards — art + title + one line + a status footer. When `locked`
 // it dims, drops its tap handler, and shows a "Coming Soon" lock instead of
 // the open affordance.
-function SideHubCard({ accent, image, title, desc, locked, onClick, tag, lockLabel = 'Coming Soon' }: {
+function SideHubCard({ accent, image, title, desc, locked, onClick, tag, lockLabel = 'Coming Soon', cta = 'Open ›' }: {
   accent: string
   image: string
   title: string
@@ -129,6 +132,9 @@ function SideHubCard({ accent, image, title, desc, locked, onClick, tag, lockLab
   /** Footer text when locked. Defaults to 'Coming Soon'; a released-but-gated
    *  card (e.g. the Gauntlet) overrides it with the unlock requirement. */
   lockLabel?: string
+  /** Footer call-to-action when available. Defaults to 'Open ›'; the Gauntlet
+   *  swaps to 'Resume ›' when a run is waiting to be picked back up. */
+  cta?: string
 }) {
   return (
     <button
@@ -172,7 +178,7 @@ function SideHubCard({ accent, image, title, desc, locked, onClick, tag, lockLab
           </p>
         ) : (
           <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: accent }}>
-            Open ›
+            {cta}
           </p>
         )}
       </div>
@@ -186,7 +192,7 @@ export default function HubCards({
   roster, shipCrewSlots,
   prepStats,
   shipTier, todayVoyage, readyVoyage, expeditionXP, voyageHistory,
-  canPvp, gauntletOpen, gauntletUpgrades, pvp,
+  canPvp, gauntletOpen, gauntletResumable, gauntletUpgrades, pvp,
   raidsCleared, captainsOrdersDone,
   gems, freeRecruitAvailable, canAffordNewSkin, challengeName,
 }: Props) {
@@ -424,6 +430,8 @@ export default function HubCards({
           locked={!gauntletOpen}
           onClick={gauntletOpen ? () => router.push('/raids/gauntlet') : undefined}
           lockLabel="Clear Chapter 2"
+          tag={gauntletResumable ? 'Resume' : undefined}
+          cta={gauntletResumable ? 'Resume ›' : undefined}
         />
       </div>
 
