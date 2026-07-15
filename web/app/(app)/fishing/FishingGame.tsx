@@ -90,6 +90,24 @@ type InventoryItem = {
 // ─── Wait time mechanics ──────────────────────────────────────────────────────
 
 
+// Insert `ins` into a contiguous zone ring, CLIPPING anything it overlaps so the
+// ring stays gap-free and `ins` is the only zone covering its range. Needed because
+// getZone() returns the FIRST matching zone and DialSVG paints in array order: a
+// naively-appended overlapping zone renders on top but resolves to whatever was
+// under it (the old split bug — a gold decoy that scored as a miss). After a splice
+// there is no overlap, so the picture and the resolver finally agree. Assumes `ins`
+// does not wrap past 0/360 (callers guard).
+function spliceZone(zones: ZoneDef[], ins: ZoneDef): ZoneDef[] {
+  const out: ZoneDef[] = []
+  for (const z of zones) {
+    if (z.to <= ins.from || z.from >= ins.to) { out.push(z); continue } // no overlap
+    if (z.from < ins.from) out.push({ ...z, to: ins.from })             // left remnant
+    if (z.to > ins.to)   out.push({ ...z, from: ins.to })              // right remnant
+  }
+  out.push(ins)
+  return out
+}
+
 function applyBossMods(zones: ZoneDef[], mechanic: BossMechanic | null, shrinkDeg: number): ZoneDef[] {
   if (!mechanic) return zones
   let result = [...zones]
@@ -102,15 +120,25 @@ function applyBossMods(zones: ZoneDef[], mechanic: BossMechanic | null, shrinkDe
     result = result.map(z => z.type === 'catch' ? { ...z, type: 'miss' as ZoneType, label: 'Miss', color: '#f87171' } : z)
   }
   if (mechanic === 'split') {
+    // A SECOND, real perfect window on the far side of the dial. Spliced in
+    // (not appended) so it actually lands the fish instead of reading gold and
+    // scoring a miss. Guarded against wrap so the splice math stays simple.
     const perfect = result.find(z => z.type === 'perfect')
     if (perfect) {
       const center = (perfect.from + perfect.to) / 2
       const half = (perfect.to - perfect.from) / 2
       const opposite = (center + 180) % 360
-      result = [...result, { from: opposite - half, to: opposite + half, type: 'perfect' as ZoneType, label: 'Perfect!', color: '#fde68a' }]
+      const from = opposite - half, to = opposite + half
+      if (from >= 0 && to <= 360) {
+        result = spliceZone(result, { from, to, type: 'perfect' as ZoneType, label: 'Perfect!', color: '#fde68a' })
+      }
     }
   }
   if (shrinkDeg > 0) {
+    // Narrow the gold PERFECT sliver each stage. The green catch band is
+    // narrowed separately at the buildFishZones call sites (a reduced catch
+    // bonus), so the whole landing window truly closes stage to stage — not
+    // just the perfect. Both stay in lockstep because both read bossZoneShrink.
     result = result.map(z => {
       if (z.type !== 'perfect') return z
       const center = (z.from + z.to) / 2
@@ -206,24 +234,35 @@ const ZONE_CLOUD_VARIANT: Record<string, CloudVariant> = {
 const ZONES = ['shallows', 'open_waters', 'deep', 'abyss', 'ancient_deep'] as const
 type ZoneKey = typeof ZONES[number]
 
-type BossMechanic = 'shrink' | 'drift' | 'accelerate' | 'randomize' | 'split' | 'precision'
+type BossMechanic = 'shrink' | 'drift' | 'accelerate' | 'randomize' | 'split' | 'precision' | 'gyre'
 // Ancient Deep multi-phase reel config. Each of the 6 trophies now has its OWN
 // signature mechanic so no two giants fight alike, and Megalodon is the gated
-// final-final boss: a 4-phase GAUNTLET that rerolls its mechanic every stage
-// (wildcard) — the only fight where you can face any of the six, including the
-// perfect-only precision that no single giant uses. New sellable regulars run a
-// shorter 2 stages with their own mechanic each. The wildcard flag means the
-// mechanic rerolls each stage (Megalodon's gauntlet; Sea Lamprey inherits the
-// same "primitive, unpredictable" feel at the lower tier).
-interface BossConfig { mechanic: BossMechanic; phases: number; wildcard?: boolean }
+// final-final boss: a 4-phase GAUNTLET that rerolls its mechanic every stage from a
+// curated hard pool (wildcardPool) and ALWAYS ends on a perfect-only precision
+// stage (finalMechanic) so the capstone has a real difficulty floor. New sellable
+// regulars run a shorter 2 stages. The wildcard flag rerolls the mechanic each
+// stage (Megalodon's gauntlet; Sea Lamprey inherits the same "primitive,
+// unpredictable" feel from the general pool at the lower tier).
+interface BossConfig {
+  mechanic: BossMechanic
+  phases: number
+  wildcard?: boolean
+  /** Reroll pool for wildcard fish. Defaults to WILDCARD_MECHANICS. */
+  wildcardPool?: BossMechanic[]
+  /** Force this mechanic on the LAST stage (Megalodon's precision finale). */
+  finalMechanic?: BossMechanic
+}
+// Megalodon draws only from the mechanics that genuinely gate a clear or ramp the
+// pressure — no no-op filler — and its finale is always precision.
+const MEGALODON_POOL: BossMechanic[] = ['precision', 'accelerate', 'drift', 'gyre', 'shrink']
 const BOSS_CONFIG: Record<string, BossConfig> = {
   // ── Ancients (sell_value 0, route to ancient_catches) ──
-  'Megalodon':         { mechanic: 'shrink',     phases: 4, wildcard: true }, // FINAL boss — 4-phase all-mechanic gauntlet, only surfaces after the other 5
-  'Plesiosaurus':      { mechanic: 'drift',      phases: 3 }, // the ring circles you
+  'Megalodon':         { mechanic: 'accelerate', phases: 4, wildcard: true, wildcardPool: MEGALODON_POOL, finalMechanic: 'precision' }, // FINAL boss — curated 4-stage gauntlet, precision finale, gated behind the other 5
+  'Plesiosaurus':      { mechanic: 'drift',      phases: 3 }, // the ring circles you, one way
   'Dunkleosteus':      { mechanic: 'accelerate', phases: 3 }, // the armored ram — faster each stage
-  'Mosasaurus':        { mechanic: 'randomize',  phases: 3 }, // the dial reshuffles
-  'Basilosaurus':      { mechanic: 'split',      phases: 3 }, // two perfect windows
-  'Shastasaurus':      { mechanic: 'shrink',     phases: 3 }, // the closing jaw — window narrows each stage
+  'Mosasaurus':        { mechanic: 'gyre',       phases: 3 }, // the sea-dragon coils — the ring rocks like a swell
+  'Basilosaurus':      { mechanic: 'split',      phases: 3 }, // two live perfect windows
+  'Shastasaurus':      { mechanic: 'shrink',     phases: 3 }, // the closing jaw — the whole window narrows each stage
   // ── New sellable regulars (sell_value > 0, route to inventory) ──
   'Chambered Nautilus': { mechanic: 'drift',      phases: 2 },
   'Ghost Shark':        { mechanic: 'randomize',  phases: 2 },
@@ -234,11 +273,11 @@ const BOSS_CONFIG: Record<string, BossConfig> = {
   'Pacific Hagfish':    { mechanic: 'split',      phases: 2 },
   'Tripod Fish':        { mechanic: 'drift',      phases: 2 },
   'Sea Pig':            { mechanic: 'accelerate', phases: 2 },
-  'Bigfin Squid':       { mechanic: 'randomize',  phases: 2 },
+  'Bigfin Squid':       { mechanic: 'gyre',       phases: 2 },
   'Vent Octopus':       { mechanic: 'shrink',     phases: 2 },
   'Black Dragonfish':   { mechanic: 'shrink',     phases: 2, wildcard: true },
 }
-const WILDCARD_MECHANICS: BossMechanic[] = ['shrink', 'drift', 'accelerate', 'randomize', 'split', 'precision']
+const WILDCARD_MECHANICS: BossMechanic[] = ['shrink', 'drift', 'accelerate', 'randomize', 'split', 'precision', 'gyre']
 
 const RARITY: Record<number, { label: string; color: string; hookedText: string }> = {
   1: { label: 'Common',    color: '#94a3b8', hookedText: "Something's on the line…" },
@@ -4465,6 +4504,19 @@ export default function FishingGame({
             blackoutTimerRef.current = null
           }, duration)
         }
+        // Randomize mechanic: on some change ticks the whole ring SNAPS to a new
+        // rotation — the layout jumps under you. getZone reads zoneRotationRef, so
+        // the crossing paint + resolver follow the snap automatically. ~40% of
+        // ticks so it's unpredictable but never a strobe.
+        if (activeBossMechanicRef.current === 'randomize' && Math.random() < 0.4) {
+          const r = Math.floor(Math.random() * 360)
+          zoneRotationRef.current = r
+          zonesGroupRef.current?.setAttribute('transform', `rotate(${r}, ${CX}, ${CY})`)
+          // Sync state too (unlike drift/gyre, randomize has no re-asserting
+          // interval, so an unrelated re-render would otherwise snap the VISUAL
+          // back to the stale state rotation while the resolver uses the ref).
+          setZoneRotation(r)
+        }
         nextChgMsRef.current = elapsedMsRef.current + (zoneDiff.changeMin + Math.floor(Math.random() * (zoneDiff.changeMax - zoneDiff.changeMin))) * 50
       }
       // Fallback only — when the WAAPI spin couldn't start, drive the
@@ -4553,6 +4605,26 @@ export default function FishingGame({
     if (phase !== 'catching' || activeBossMechanic !== 'drift') return
     const id = setInterval(() => {
       const next = (zoneRotationRef.current + 1) % 360
+      zoneRotationRef.current = next
+      const zg = zonesGroupRef.current
+      if (zg) zg.setAttribute('transform', `rotate(${next}, ${CX}, ${CY})`)
+    }, 30)
+    return () => clearInterval(id)
+  }, [phase, activeBossMechanic])
+
+  // Gyre mechanic (Mosasaurus, Bigfin Squid): the ring ROCKS back and forth like a
+  // swell instead of drifting one way — the sea-dragon coiling. Same imperative
+  // rotation channel as drift (so getZone + the resolver follow it for free), but a
+  // sine sway around the stage's starting rotation. You time the turnaround, where
+  // the ring hangs still for a beat, rather than a steady chase. ~±38° over ~2.4s.
+  useEffect(() => {
+    if (phase !== 'catching' || activeBossMechanic !== 'gyre') return
+    const base = zoneRotationRef.current
+    const AMP = 38, PERIOD = 2400
+    let t = 0
+    const id = setInterval(() => {
+      t += 30
+      const next = (base + AMP * Math.sin((t / PERIOD) * Math.PI * 2) + 360) % 360
       zoneRotationRef.current = next
       const zg = zonesGroupRef.current
       if (zg) zg.setAttribute('transform', `rotate(${next}, ${CX}, ${CY})`)
@@ -4716,8 +4788,9 @@ export default function FishingGame({
       if (selectedZone === 'ancient_deep') {
         const bossName = allFishSpecies.find(f => f.id === res.fishId)?.name ?? ''
         const cfg = BOSS_CONFIG[bossName] ?? { mechanic: 'shrink' as BossMechanic, phases: 2 }
+        const pool = cfg.wildcardPool ?? WILDCARD_MECHANICS
         const mechanic = cfg.wildcard
-          ? WILDCARD_MECHANICS[Math.floor(Math.random() * WILDCARD_MECHANICS.length)]
+          ? pool[Math.floor(Math.random() * pool.length)]
           : cfg.mechanic
         activeBossMechanicRef.current = mechanic
         setActiveBossMechanic(mechanic)
@@ -5050,7 +5123,11 @@ export default function FishingGame({
     const zoneDiff2 = ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows
     const baitBonus = getBait(selectedBaitRef.current).catchZoneBonus
     const eventCatchBonus = activeEventRef.current?.type === 'glassy' ? 12 : 0
-    const baseZones = buildFishZones(hookedFishRef.current.catchDifficulty, hookTier, line.penaltyMultiplier, zoneDiff2.catchMultiplier, levelBonus + baitBonus + rod.catchZoneBonus + eventCatchBonus, rod.perfectZoneBonus + 1)
+    // Shrink narrows the green catch band too (not just the perfect), so the whole
+    // window closes stage to stage — applied as a negative catch bonus here and
+    // mirrored in the catchingZones memo so the picture and resolver match.
+    const shrinkCatch2 = activeBossMechanicRef.current === 'shrink' ? bossZoneShrinkRef.current : 0
+    const baseZones = buildFishZones(hookedFishRef.current.catchDifficulty, hookTier, line.penaltyMultiplier, zoneDiff2.catchMultiplier, levelBonus + baitBonus + rod.catchZoneBonus + eventCatchBonus - shrinkCatch2, rod.perfectZoneBonus + 1)
     const zones = selectedZone === 'ancient_deep'
       ? applyBossMods(baseZones, activeBossMechanicRef.current, bossZoneShrinkRef.current)
       : baseZones
@@ -5147,10 +5224,15 @@ export default function FishingGame({
             bossNeedleMultRef.current = Math.min(bossNeedleMultRef.current * 1.4, 4.0)
           }
 
-          // Wildcard fish (Shastasaurus, Sea Lamprey) reroll mechanic
-          // each stage instead of escalating one fixed mechanic.
+          // Wildcard fish (Megalodon, Sea Lamprey) reroll the mechanic each stage
+          // instead of escalating one fixed mechanic. Megalodon draws from its
+          // curated pool and its FINAL stage is forced to precision (finalMechanic)
+          // so the capstone always ends on a perfect-only strike.
           if (cfg.wildcard) {
-            const next = WILDCARD_MECHANICS[Math.floor(Math.random() * WILDCARD_MECHANICS.length)]
+            const pool = cfg.wildcardPool ?? WILDCARD_MECHANICS
+            const next = (cfg.finalMechanic && nextStage === cfg.phases)
+              ? cfg.finalMechanic
+              : pool[Math.floor(Math.random() * pool.length)]
             activeBossMechanicRef.current = next
             setActiveBossMechanic(next)
             bossZoneShrinkRef.current = next === 'shrink' ? 8 : 0
@@ -6005,7 +6087,10 @@ export default function FishingGame({
 
   const catchingZones = useMemo(() => {
     if (!hookedFish) return [] as ZoneDef[]
-    const base = buildFishZones(hookedFish.catchDifficulty, hookTier, line.penaltyMultiplier, (ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows).catchMultiplier, levelBonus + getBait(selectedBait).catchZoneBonus + rod.catchZoneBonus + (activeEvent?.type === 'glassy' ? 12 : 0), rod.perfectZoneBonus + 1)
+    // Shrink narrows the green catch band too — mirror of the handleReelIn resolver
+    // so the dial the player sees matches what the reel-in scores.
+    const shrinkCatch = activeBossMechanic === 'shrink' ? bossZoneShrink : 0
+    const base = buildFishZones(hookedFish.catchDifficulty, hookTier, line.penaltyMultiplier, (ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows).catchMultiplier, levelBonus + getBait(selectedBait).catchZoneBonus + rod.catchZoneBonus + (activeEvent?.type === 'glassy' ? 12 : 0) - shrinkCatch, rod.perfectZoneBonus + 1)
     const withMods = selectedZone === 'ancient_deep' ? applyBossMods(base, activeBossMechanic, bossZoneShrink) : base
     // The 6 giants fight on the eldritch palette; regulars keep the normal dial.
     return isAncientTrophyFight ? applyAncientPalette(withMods) : withMods
