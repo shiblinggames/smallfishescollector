@@ -1207,15 +1207,17 @@ export default function GearScreen({
               style={{
                 position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 11,
                 background: 'rgba(6,12,22,0.99)', borderTop: '1px solid rgba(255,255,255,0.12)',
-                borderRadius: '20px 20px 0 0', padding: '1rem 0.9rem calc(env(safe-area-inset-bottom, 0px) + 1.2rem)',
-                // Sized to the viewport, not to whatever tab is behind it. maxHeight (not
-                // a fixed height) so a long list like Rods gets the full 82vh to scroll,
-                // while a short one like Reel stays compact.
-                maxHeight: '82vh', overflowY: 'auto', overscrollBehavior: 'contain',
+                borderRadius: '20px 20px 0 0', padding: '0 0.9rem calc(env(safe-area-inset-bottom, 0px) + 1.2rem)',
+                // 72vh, not 82: at 82 the sheet filled the whole drawer and its top edge
+                // was clipped by the drawer's rounded/overflow top (the chop). 72 pulls
+                // the top down into clear space; a long list like Rods scrolls inside it.
+                maxHeight: '72vh', overflowY: 'auto', overscrollBehavior: 'contain',
               }}
             >
-              {/* Close row */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              {/* Close row — sticky, so a long rod list can scroll under it and the
+                  close button + title never leave the top of the sheet. */}
+              <div style={{ position: 'sticky', top: 0, zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '0.85rem 0 0.7rem', marginBottom: 6, background: 'rgba(6,12,22,0.99)' }}>
                 <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.55)' }}>
                   {openSlot.charAt(0).toUpperCase() + openSlot.slice(1)}
                 </p>
