@@ -234,6 +234,12 @@ export async function castLine(baitType: string, habitat: string): Promise<
   //      surface for a Luminous or Golden Lure. Sell_value === 0 is
   //      the trophy discriminator (matches the trophy/inventory split
   //      in the catch handler below).
+  // TEST ACCOUNT hook: kingkong always hooks an uncaught Ancient trophy in the
+  // Ancient Deep, on ANY bait, so the boss reels + Finn cutscenes can be exercised
+  // without the RNG grind. Scoped to this one id so it can never touch a real
+  // player. The Megalodon gate below still applies, so the giants come in order.
+  const ALWAYS_ANCIENT_TROPHY = user.id === 'a67c8905-45a9-4a71-9720-f6396187fde6'
+
   let pool = candidates
   if (habitat === 'ancient_deep') {
     const caught = new Set<number>((profile.ancient_catches as number[] | null) ?? [])
@@ -246,7 +252,7 @@ export async function castLine(baitType: string, habitat: string): Promise<
     const megalodonLocked = !MEGALODON_PREREQS.every(id => caught.has(id))
     pool = candidates.filter(f => {
       if (caught.has(f.id)) return false
-      if (!isLure && (f.sell_value ?? 0) === 0) return false
+      if (!isLure && !ALWAYS_ANCIENT_TROPHY && (f.sell_value ?? 0) === 0) return false
       if (f.id === MEGALODON_ID && megalodonLocked) return false
       return true
     })
@@ -304,7 +310,11 @@ export async function castLine(baitType: string, habitat: string): Promise<
     const regularPool = pool.filter(f => (f.sell_value ?? 0) > 0)
     const baseTrophyChance = baitType === 'golden' ? 0.20 : baitType === 'luminous' ? 0.15 : 0
     const trophyChance = Math.min(0.95, baseTrophyChance * (1 + (rod.rarityBonus + eventRarityBonus) * 4))
-    if (trophyPool.length > 0 && Math.random() < trophyChance) {
+    if (ALWAYS_ANCIENT_TROPHY && trophyPool.length > 0) {
+      // Test account: always the lowest-id uncaught giant, so they surface in a
+      // predictable order (144→148, then Megalodon once the gate opens).
+      fish = [...trophyPool].sort((a, b) => a.id - b.id)[0]
+    } else if (trophyPool.length > 0 && Math.random() < trophyChance) {
       fish = trophyPool[Math.floor(Math.random() * trophyPool.length)]
     } else if (regularPool.length > 0) {
       fish = tierWeightedPick(regularPool, habitat, rod.rarityBonus + eventRarityBonus)
