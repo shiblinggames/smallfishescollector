@@ -350,11 +350,10 @@ export default function TackleShopClient({
                   style={{
                     display: 'flex', alignItems: 'center', gap: 11, width: '100%', textAlign: 'left',
                     padding: '0.7rem 0.8rem', borderRadius: 14, cursor: 'pointer',
-                    // Opaque dark-gold, so the row is a solid card, not a see-through wash.
-                    background: 'linear-gradient(180deg, rgba(240,192,64,0.18), #14110a)',
-                    border: '1px solid rgba(240,192,64,0.5)', boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
+                    background: 'linear-gradient(180deg, rgba(240,192,64,0.15), rgba(240,192,64,0.05))',
+                    border: '1px solid rgba(240,192,64,0.55)', boxShadow: '0 0 20px rgba(240,192,64,0.16)',
                   }}>
-                  <span style={{ position: 'relative', flexShrink: 0, width: 46, height: 46, borderRadius: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a0d14', border: '1px solid rgba(240,192,64,0.3)' }}>
+                  <span style={{ position: 'relative', flexShrink: 0, width: 46, height: 46, borderRadius: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.28)', border: `1px solid ${s.color}55` }}>
                     {s.imageUrl && (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={s.imageUrl} alt="" loading="lazy" decoding="async" style={{ maxWidth: 34, maxHeight: 34, objectFit: 'contain', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.6))' }} />
@@ -395,11 +394,11 @@ export default function TackleShopClient({
                   position: 'relative',
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
                   padding: '1rem 0.5rem 0.75rem', borderRadius: 14, cursor: 'pointer', minWidth: 0,
-                  // SOLID dark fill, not translucent white. On pure black a 3.5%-white
-                  // wash reads as muddy nothing; a solid panel reads as a clean card.
-                  background: ready ? 'linear-gradient(180deg, rgba(240,192,64,0.16), #14110a)' : '#111824',
-                  border: `1px solid ${ready ? 'rgba(240,192,64,0.65)' : 'rgba(255,255,255,0.08)'}`,
-                  boxShadow: ready ? '0 0 18px rgba(240,192,64,0.12)' : '0 2px 8px rgba(0,0,0,0.4)',
+                  // Translucent, the Forge way — now that the PAGE is a flat dark surface
+                  // (no photo behind it), a subtle wash reads as a clean lift, not mud.
+                  background: ready ? 'rgba(240,192,64,0.1)' : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${ready ? 'rgba(240,192,64,0.65)' : 'rgba(255,255,255,0.1)'}`,
+                  boxShadow: ready ? '0 0 18px rgba(240,192,64,0.12)' : 'none',
                 }}>
                 {/* Art sits DIRECTLY on the tile, like the Forge. The old nested black
                     disc-in-a-faint-square was the muddy double layer. */}

@@ -15,7 +15,10 @@ const ROUTE_BG: [string, BgConfig][] = [
   ['/tavern/market',           { src: '/exchangebackground.jpeg',  overlay: 'rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.68) 50%, rgba(0,0,0,0.88) 100%' }],
   ['/tavern',                  { src: '/tavernbackground.jpg',     overlay: 'rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.68) 50%, rgba(0,0,0,0.88) 100%' }],
   ['/marketplace/shipyard',    { src: `${SUPABASE_BG}/shipyardbackground.jpeg`,   overlay: 'rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.68) 50%, rgba(0,0,0,0.88) 100%' }],
-  ['/marketplace/tackle-shop', { src: `${SUPABASE_BG}/tackleshopbackground.jpg`, overlay: 'rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.68) 50%, rgba(0,0,0,0.88) 100%' }],
+  // The Tackle Shop deliberately has NO image background. It reads as a clean, dark
+  // catalogue (a solid page set on the <main>), so its translucent cards lift off a
+  // flat dark surface the way the Forge's do. A busy photo behind translucent tiles
+  // was exactly what made them look muddy.
 ]
 
 export default function ClientBackground() {

@@ -29,7 +29,10 @@ export default async function TackleShopPage() {
 
   return (
     <>
-      <main className="min-h-screen pb-24 sm:pb-0 pt-6">
+      {/* A solid dark PAGE, not pure black. The shop's translucent cards need a dark
+          surface to sit on the way the Forge's do — on raw black a subtle wash reads as
+          nothing. This is the surface; the cards lift off it. */}
+      <main className="min-h-screen pb-24 sm:pb-0 pt-6" style={{ background: '#0b0f18' }}>
         <TackleShopClient
           hookTier={profile?.hook_tier ?? 0}
           equippedRod={profile?.rod_tier ?? 0}
