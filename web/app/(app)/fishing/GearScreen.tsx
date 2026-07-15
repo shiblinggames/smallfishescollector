@@ -68,7 +68,7 @@ function rodTagline(r: typeof RODS[number]): string {
 
 function Pill({ label, color, muted }: { label: string; color?: string; muted?: boolean }) {
   if (muted) return (
-    <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#4a4845', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(196,169,106,0.2)', padding: '0.12rem 0.45rem', borderRadius: '2rem' }}>{label}</span>
+    <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#4a4845', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', padding: '0.12rem 0.45rem', borderRadius: '2rem' }}>{label}</span>
   )
   return (
     <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: `${color}cc`, background: `${color}14`, border: `1px solid ${color}30`, padding: '0.12rem 0.45rem', borderRadius: '2rem' }}>{label}</span>
@@ -491,7 +491,7 @@ function GearSlot({
         position: 'relative',
         width: '100%',
         border: `1px solid ${color}40`,
-        background: 'linear-gradient(180deg, rgba(34,26,12,0.68), rgba(18,13,7,0.8))',
+        background: 'rgba(255,255,255,0.04)',
         borderRadius: 20,
         padding: small ? '0.55rem 0.4rem' : '0.65rem 0.5rem',
         cursor: 'pointer',
@@ -572,7 +572,7 @@ function AppearanceSlot({
         position: 'relative',
         width: '100%', height: '100%',
         border: `1px solid ${accent}40`,
-        background: 'linear-gradient(180deg, rgba(34,26,12,0.68), rgba(18,13,7,0.8))',
+        background: 'rgba(255,255,255,0.04)',
         borderRadius: 20,
         padding: '0.6rem 0.5rem 0.55rem',
         cursor: 'pointer',
@@ -1089,7 +1089,7 @@ export default function GearScreen({
 
       {tab === 'stats' && (<>
       {/* ── Loadout stats ── */}
-      <div style={{ background: 'linear-gradient(180deg, rgba(34,26,12,0.68), rgba(18,13,7,0.8))', border: '1px solid rgba(196,169,106,0.2)', borderRadius: 20, padding: '0.9rem' }}>
+      <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 20, padding: '0.9rem' }}>
         <div style={{ marginBottom: 8 }}>
           <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#c4a96a', letterSpacing: '0.04em' }}>
             Loadout Stats
@@ -1144,8 +1144,8 @@ export default function GearScreen({
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
           width: '100%',
-          background: 'linear-gradient(180deg, rgba(34,26,12,0.68), rgba(18,13,7,0.8))',
-          border: '1px solid rgba(196,169,106,0.2)',
+          background: 'rgba(255,255,255,0.04)',
+          border: '1px solid rgba(255,255,255,0.1)',
           borderRadius: 20,
           padding: '0.85rem 0.95rem',
           cursor: 'pointer', textAlign: 'left',
@@ -1195,7 +1195,7 @@ export default function GearScreen({
               exit={{ opacity: 0 }}
               transition={{ duration: 0.18 }}
               onClick={() => setOpenSlot(null)}
-              style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)', borderRadius: 20, zIndex: 10 }}
+              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 10 }}
             />
             {/* Sheet */}
             <motion.div
@@ -1205,10 +1205,13 @@ export default function GearScreen({
               exit={{ opacity: 0, y: 16 }}
               transition={{ type: 'spring', stiffness: 420, damping: 32 }}
               style={{
-                position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 11,
-                background: 'rgba(6,12,22,0.98)', border: '1px solid rgba(255,255,255,0.11)',
-                borderRadius: 20, padding: '1rem 0.9rem 1.1rem',
-                maxHeight: '80%', overflowY: 'auto',
+                position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 11,
+                background: 'rgba(6,12,22,0.99)', borderTop: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: '20px 20px 0 0', padding: '1rem 0.9rem calc(env(safe-area-inset-bottom, 0px) + 1.2rem)',
+                // Sized to the viewport, not to whatever tab is behind it. maxHeight (not
+                // a fixed height) so a long list like Rods gets the full 82vh to scroll,
+                // while a short one like Reel stays compact.
+                maxHeight: '82vh', overflowY: 'auto', overscrollBehavior: 'contain',
               }}
             >
               {/* Close row */}
@@ -1404,7 +1407,7 @@ export default function GearScreen({
                                     padding: '0.5rem 0.6rem', borderRadius: 9,
                                     textAlign: 'left', width: '100%',
                                     cursor: full ? 'default' : 'pointer',
-                                    border: '1px solid rgba(196,169,106,0.2)',
+                                    border: '1px solid rgba(255,255,255,0.1)',
                                     boxShadow: selected ? `0 0 12px ${fr.color}33` : 'none',
                                   }}
                                 >
