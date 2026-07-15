@@ -10,8 +10,8 @@
 // This is a SLIM BAR, not a card. The first version was a tall tinted card with a
 // "What's Worth Your Time" eyebrow that neither blended with the page nor earned the
 // height. This is one row: a tone-coloured edge, a title and a one-line detail, an
-// arrow, and — only when there is more than one — a set of page dots. It sits above
-// the hub cards and looks like it belongs to them.
+// arrow, and — only when there is more than one — a compact "n/N" advance control on
+// the same row (never a second row). It sits above the hub cards and belongs to them.
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -81,7 +81,7 @@ export default function OpportunityStrip({ state, onAction }: {
   )
 
   const rowStyle: React.CSSProperties = {
-    display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left',
+    display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0, textAlign: 'left',
     padding: '0.6rem 0.8rem', borderRadius: 14, cursor: 'pointer', textDecoration: 'none',
     background: 'rgba(6,12,20,0.72)',
     border: '1px solid rgba(255,255,255,0.08)',
@@ -90,34 +90,32 @@ export default function OpportunityStrip({ state, onAction }: {
 
   return (
     <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}
-      style={{ marginBottom: 12 }}>
+      style={{ marginBottom: 12, display: 'flex', alignItems: 'stretch', gap: 6 }}>
       {op.action.kind === 'href'
         ? <Link href={op.action.href} className="tap" style={rowStyle}>{rowInner}</Link>
         : <button type="button" onClick={() => onAction(op.action)} className="tap" style={{ ...rowStyle, borderTopStyle: 'solid' }}>{rowInner}</button>}
 
-      {/* HOW YOU SEE THE REST. Page dots said nothing and were 6px to hit. This is a
-          real, labelled control: a count that says more exist, and a "Next" pill that
-          plainly looks tappable. It advances and wraps. Sibling of the action row, so
-          nothing is nested. */}
+      {/* HOW YOU SEE THE REST. Folded onto the same row as a compact count + advance
+          control, so paging costs no extra height. It stretches to the strip's height,
+          shows "n/N", and cycles (wrapping to the top). Sibling of the action, never
+          nested inside the tap target. */}
       {list.length > 1 && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6, padding: '0 0.2rem' }}>
-          <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.56rem', color: '#7a756c' }}>
-            {idx + 1} of {list.length}
+        <button type="button" onClick={() => setI(v => (v + 1) % list.length)}
+          aria-label={idx === list.length - 1 ? 'Back to first suggestion' : 'Next suggestion'}
+          className="tap"
+          style={{
+            flexShrink: 0, display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center', gap: 3,
+            padding: '0 0.7rem', borderRadius: 14, cursor: 'pointer',
+            background: 'rgba(6,12,20,0.72)', border: '1px solid rgba(255,255,255,0.08)',
+          }}>
+          <span className="font-karla font-800 tracking-[0.04em]" style={{ fontSize: '0.56rem', color: '#8a857c' }}>
+            {idx + 1}/{list.length}
           </span>
-          <button type="button" onClick={() => setI(v => (v + 1) % list.length)}
-            className="font-karla font-800 uppercase tracking-[0.08em] tap"
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 5,
-              padding: '0.32rem 0.7rem', borderRadius: 999, cursor: 'pointer',
-              fontSize: '0.58rem', color: '#c8c2b6',
-              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.16)',
-            }}>
-            {idx === list.length - 1 ? 'Back to top' : 'Next'}
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-              {idx === list.length - 1 ? <path d="M3 12a9 9 0 1 0 9-9 9 9 0 0 0-6.5 2.8M3 4v4h4" /> : <path d="M9 6l6 6-6 6" />}
-            </svg>
-          </button>
-        </div>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#c8c2b6" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+            {idx === list.length - 1 ? <path d="M3 12a9 9 0 1 0 9-9 9 9 0 0 0-6.5 2.8M3 4v4h4" /> : <path d="M9 6l6 6-6 6" />}
+          </svg>
+        </button>
       )}
     </motion.div>
   )
