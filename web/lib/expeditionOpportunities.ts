@@ -42,6 +42,8 @@ export interface OpportunityState {
   nextNodeIsFight: boolean
   nextNodeLocked: boolean
   raidCrewAboard: number
+  /** Crew the captain owns, so a "crew your deck" nudge only fires when they can. */
+  crewOwned: number
   /** Owned raid items not currently slotted, and whether a slot is free for them. */
   unequippedItems: number
   itemSlotsFree: number
@@ -106,11 +108,22 @@ export function deriveOpportunities(s: OpportunityState): Opportunity[] {
     })
   }
 
-  if (s.nextNodeName && s.nextNodeIsFight && !s.nextNodeLocked && s.raidCrewAboard > 0) {
+  // A fight is waiting. Either the deck is crewed (advance) or it is empty (crew up).
+  // These are mutually exclusive, so exactly one fires, and the strip can never say
+  // "nothing pending" while a fight is sitting there with an empty deck.
+  const fightWaiting = s.nextNodeName && s.nextNodeIsFight && !s.nextNodeLocked
+  if (fightWaiting && s.raidCrewAboard === 0 && s.crewOwned > 0) {
+    out.push({
+      id: 'crew_deck', tone: 'urgent',
+      title: 'Your raid deck is empty',
+      detail: `${s.nextNodeName} is next, and you are sailing alone. Put your crew in the raid slots before you fight.`,
+      cta: 'Crew the deck', action: { kind: 'href', href: '/crew?tab=roster&filter=raid' },
+    })
+  } else if (fightWaiting && s.raidCrewAboard > 0) {
     out.push({
       id: 'next_fight', tone: 'progress',
       title: `Next: ${s.nextNodeName}`,
-      detail: 'Your deck is crewed and the next battle is ready. Advance the campaign.',
+      detail: 'Your deck is crewed and the next battle is ready.',
       cta: 'To the fight', action: { kind: 'modal', modal: 'campaign' },
     })
   }
@@ -136,8 +149,8 @@ export function deriveOpportunities(s: OpportunityState): Opportunity[] {
   if (s.canAffordNewSkin) {
     out.push({
       id: 'buy_skin', tone: 'idle',
-      title: `You have ${s.gems.toLocaleString()} gems`,
-      detail: 'Enough to dress a legendary crew member in a skin they have not worn yet.',
+      title: 'A crew skin is within reach',
+      detail: `Your ${s.gems.toLocaleString()} gems are enough to dress a legendary crew member in a skin they have not worn yet.`,
       cta: 'Visit the Crew Hall', action: { kind: 'href', href: '/crew' },
     })
   }

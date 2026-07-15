@@ -281,6 +281,7 @@ export default function HubCards({
             nextNodeIsFight: campaign.nextNodeKind === 'raid' || campaign.nextNodeKind === 'challenge',
             nextNodeLocked: campaign.nextNodeLocked,
             raidCrewAboard: roster.filter(c => c.raidSlot != null).length,
+            crewOwned: roster.length,
             unequippedItems: Math.max(0, ownedRaidItems.length - equippedRaidItems.length),
             itemSlotsFree: Math.max(0, raidItemSlots - equippedRaidItems.length),
             gems,

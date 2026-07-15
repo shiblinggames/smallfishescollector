@@ -47,6 +47,12 @@ export default function OpportunityStrip({ state, onAction }: {
   const idx = Math.min(i, list.length - 1)
   const op = list[idx]
   const t = TONE[op.tone]
+  const ctaStyle: React.CSSProperties = {
+    display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 11,
+    padding: '0.55rem 0.95rem', borderRadius: 10, fontSize: '0.78rem', cursor: 'pointer',
+    textDecoration: 'none', border: 'none',
+    color: '#14100a', background: `linear-gradient(180deg, ${t.accent}, ${t.accent}cc)`,
+  }
 
   const body = (
     <>
@@ -82,37 +88,38 @@ export default function OpportunityStrip({ state, onAction }: {
           <p className="font-karla" style={{ fontSize: '0.76rem', color: '#b0a99c', lineHeight: 1.45, marginTop: 4 }}>
             {op.detail}
           </p>
-          <span className="font-cinzel font-800 uppercase tracking-[0.06em]" style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 10,
-            padding: '0.5rem 0.9rem', borderRadius: 10, fontSize: '0.78rem',
-            color: '#14100a', background: `linear-gradient(180deg, ${t.accent}, ${t.accent}cc)`,
-          }}>
-            {op.cta}
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
-          </span>
         </motion.div>
       </AnimatePresence>
+
+      {/* The CTA is a REAL button/link, not a fake span inside a tappable card. The
+          card used to be one big <button> with the paging chevrons nested inside it —
+          a button within a button, invalid HTML, and taps near the arrows could fire
+          the card's action instead of paging. Now the container is a plain div and the
+          only interactive things are the paging controls and this one explicit CTA. */}
+      {op.action.kind === 'href' ? (
+        <Link href={op.action.href} className="font-cinzel font-800 uppercase tracking-[0.06em] tap"
+          style={ctaStyle}>
+          {op.cta}
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+        </Link>
+      ) : (
+        <button type="button" onClick={() => onAction(op.action)} className="font-cinzel font-800 uppercase tracking-[0.06em] tap"
+          style={ctaStyle}>
+          {op.cta}
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+        </button>
+      )}
     </>
   )
 
-  const shell: React.CSSProperties = {
-    display: 'block', width: '100%', textAlign: 'left', cursor: 'pointer',
-    marginBottom: 12, padding: '0.85rem 1rem 0.95rem', borderRadius: 16,
-    background: `radial-gradient(ellipse at 0% 0%, ${t.wash} 0%, rgba(8,13,22,0.7) 72%)`,
-    border: `1px solid ${t.accent}4a`,
-  }
-
-  // The whole card is the tap target for the current opportunity's action.
-  if (op.action.kind === 'href') {
-    return <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-      <Link href={op.action.href} className="tap" style={shell}>{body}</Link>
-    </motion.div>
-  }
   return (
-    <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-      <button type="button" onClick={() => onAction(op.action)} className="tap" style={{ ...shell, border: `1px solid ${t.accent}4a` }}>
-        {body}
-      </button>
+    <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}
+      style={{
+        marginBottom: 12, padding: '0.85rem 1rem 0.95rem', borderRadius: 16,
+        background: `radial-gradient(ellipse at 0% 0%, ${t.wash} 0%, rgba(8,13,22,0.7) 72%)`,
+        border: `1px solid ${t.accent}4a`,
+      }}>
+      {body}
     </motion.div>
   )
 }
