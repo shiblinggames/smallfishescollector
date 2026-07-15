@@ -423,7 +423,6 @@ export default function HubCards({
           desc="Push your luck down a gauntlet for one swelling pot. Bank it or sink."
           locked={!gauntletOpen}
           onClick={gauntletOpen ? () => router.push('/raids/gauntlet') : undefined}
-          tag="NEW"
           lockLabel="Clear Chapter 2"
         />
       </div>
