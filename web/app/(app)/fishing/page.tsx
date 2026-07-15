@@ -168,6 +168,7 @@ export default async function FishingPage() {
           reelTier={profile?.reel_tier ?? 0}
           lineTier={profile?.line_tier ?? 0}
           initialDoubloons={profile?.doubloons ?? 0}
+          initialFathoms={profile?.gauntlet_fathoms ?? 0}
           initialFishingXP={profile?.fishing_xp ?? 0}
           initialBait={baitInventory ?? []}
           initialLastUsedBait={(profile?.last_used_bait as string | null) ?? null}

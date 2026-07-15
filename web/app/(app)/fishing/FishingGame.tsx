@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { castLine, reelIn, reelCrate, rerollWormhole, quickSellAllFish, markFishingTourSeen, markFishingCatchTourSeen, markFirstCatchCelebrationSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipPet, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, sellGoldenTrophy, mountGoldenTrophy, setCompletionistEffects as saveCompletionistEffects, setShowWaitTimer as persistShowWaitTimer, claimFishingLevelRewards, type FishSpecies } from './actions'
 import { recordFinnEncounter, settleFinnChallenge, recordFinnPass, markFinnRevealSeen } from './finnActions'
+import { buyBaitWithFathoms } from '@/app/(app)/raids/gauntlet/actions'
 import FinnEncounter from './FinnEncounter'
 import FinnScene from './FinnScene'
 import TrawlIndicator from './TrawlIndicator'
@@ -72,7 +73,7 @@ import { getRod, getEffectiveRod, RODS, rodGlowClass, jackpotChanceForZone, type
 import { vibrate, hapticTap } from '@/lib/haptics'
 import { getReel, REELS } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
-import { BAITS, getBait } from '@/lib/bait'
+import { BAITS, getBait, type BaitDef } from '@/lib/bait'
 import GearScreen from './GearScreen'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -1045,7 +1046,7 @@ function UnifiedGearDrawer({
 
 // ─── BaitSelector ─────────────────────────────────────────────────────────────
 
-function BaitSelector({ baitInventory, selectedBait, onSelect, onBuy, buyingType }: {
+function BaitSelector({ baitInventory, selectedBait, onSelect, onBuy, buyingType, fathoms = 0, onBuyLure, buyingLure, lureBought }: {
   baitInventory: BaitItem[]
   selectedBait: string
   onSelect: (type: string) => void
@@ -1053,15 +1054,26 @@ function BaitSelector({ baitInventory, selectedBait, onSelect, onBuy, buyingType
    *  quantity-confirm modal. */
   onBuy?: (type: string) => void
   buyingType?: string | null
+  /** The player's Fathom balance — gates the premium-lure Buy buttons. */
+  fathoms?: number
+  /** When provided, the Fathom lures (Golden / Luminous) show a Fathom Buy
+   *  button that purchases a fixed bundle. */
+  onBuyLure?: (type: string) => void
+  buyingLure?: string | null
+  lureBought?: string | null
 }) {
   const inventoryMap = Object.fromEntries(baitInventory.map(b => [b.bait_type, b.quantity]))
-  // Show EVERY purchasable bait (so any can be bought directly) plus any
-  // earned-only lure you actually own. Without onBuy (legacy callers) fall
-  // back to just the owned list.
+  const isFathomLure = (b: BaitDef) => (b.fathomCost ?? 0) > 0
+  // Show EVERY purchasable bait (so any can be bought directly). Doubloon baits
+  // first, then the premium Fathom lures (always shown when onBuyLure is wired,
+  // so they can be bought here even at 0 owned), then any other earned-only bait
+  // you actually own. Without onBuy (legacy callers) fall back to the owned list.
   const list = onBuy
     ? [
         ...BAITS.filter(b => b.shopCost > 0),
-        ...BAITS.filter(b => b.shopCost === 0 && ((inventoryMap[b.type] ?? 0) > 0 || b.type === selectedBait)),
+        ...BAITS.filter(b => b.shopCost === 0 && (
+          (onBuyLure && isFathomLure(b)) || (inventoryMap[b.type] ?? 0) > 0 || b.type === selectedBait
+        )),
       ]
     : BAITS.filter(b => (inventoryMap[b.type] ?? 0) > 0 || b.type === selectedBait)
 
@@ -1145,6 +1157,36 @@ function BaitSelector({ baitInventory, selectedBait, onSelect, onBuy, buyingType
                 {isBuying ? '…' : 'Buy'}
               </button>
             )}
+
+            {/* Premium lures buy with Fathoms (a fixed bundle), same server-validated
+                path as the Gauntlet Locker. Disabled until you can afford it. */}
+            {onBuyLure && isFathomLure(bait) && (() => {
+              const cost = bait.fathomCost ?? 0
+              const bundle = bait.fathomBundle ?? 0
+              const canAfford = fathoms >= cost
+              const busy = buyingLure === bait.type
+              const ok = canAfford && !busy
+              return (
+                <button
+                  disabled={!ok}
+                  onClick={ok ? () => onBuyLure(bait.type) : undefined}
+                  className="tap"
+                  style={{
+                    flexShrink: 0, width: 66, borderRadius: 11,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, lineHeight: 1,
+                    background: ok ? `${c}18` : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${ok ? c + '55' : 'rgba(255,255,255,0.1)'}`,
+                    color: ok ? c : '#6a6764', cursor: ok ? 'pointer' : 'default',
+                  }}
+                >
+                  <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.1em', opacity: 0.85 }}>
+                    {lureBought === bait.type ? `+${bundle}` : busy ? '' : canAfford ? `Buy ×${bundle}` : 'Need'}
+                  </span>
+                  <span className="font-cinzel font-800" style={{ fontSize: '0.95rem' }}>{busy ? '…' : cost}</span>
+                  <span className="font-karla font-700 uppercase" style={{ fontSize: '0.4rem', letterSpacing: '0.08em', opacity: 0.7 }}>Fathoms</span>
+                </button>
+              )
+            })()}
           </div>
         )
       })}
@@ -3187,7 +3229,7 @@ type FishSpeciesBasic = { id: number; name: string; scientific_name: string; fun
 
 export default function FishingGame({
   hookTier: initialHookTier, rodTier, reelTier: initialReelTier, lineTier,
-  initialDoubloons, initialFishingXP, initialBait, initialLastUsedBait, initialInventory,
+  initialDoubloons, initialFathoms, initialFishingXP, initialBait, initialLastUsedBait, initialInventory,
   fishHoldTier: initialFishHoldTier,
   ownedRods: initialOwnedRods,
   initialCompletionistEffects,
@@ -3211,6 +3253,7 @@ export default function FishingGame({
   reelTier: number
   lineTier: number
   initialDoubloons: number
+  initialFathoms: number
   initialFishingXP: number
   initialBait: BaitItem[]
   initialLastUsedBait: string | null
@@ -3443,6 +3486,7 @@ export default function FishingGame({
   const baitDraggedRef = useRef(false)
   const [inventory, setInventory]   = useState<InventoryItem[]>(initialInventory)
   const [doubloons, setDoubloons]   = useState(initialDoubloons)
+  const [fathoms, setFathoms]       = useState(initialFathoms)
   // Perfected Sigil payout — gold coins arc from the catch result area
   // up to the Nav's doubloon pill (tagged data-doubloon-pill) so the
   // player sees the bonus actually landing. A floating "+N ⟡" caption
@@ -3654,6 +3698,28 @@ export default function FishingGame({
     setDoubloons(res.doubloons)
     window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
     setConfirmBait(null)
+  }
+  // Buy a bundle of a premium lure (Golden / Luminous) with Fathoms, right in the
+  // bait drawer. Same server-validated action the Gauntlet Locker uses; fixed
+  // bundle, no quantity picker. Flashes "+N" on the row via lureBought.
+  const [buyingLure, setBuyingLure] = useState<string | null>(null)
+  const [lureBought, setLureBought] = useState<string | null>(null)
+  async function handleBuyLure(type: string) {
+    if (buyingLure) return
+    setBuyingLure(type)
+    const res = await buyBaitWithFathoms(type)
+    setBuyingLure(null)
+    // The Buy button is disabled when unaffordable, so errors here are rare
+    // (races / network). Fail quiet rather than hijack the low-bait toast.
+    if ('error' in res) return
+    setBaitInventory(prev =>
+      prev.some(b => b.bait_type === type)
+        ? prev.map(b => b.bait_type === type ? { ...b, quantity: b.quantity + res.added } : b)
+        : [...prev, { bait_type: type, quantity: res.added }]
+    )
+    setFathoms(res.fathoms)
+    setLureBought(type)
+    setTimeout(() => setLureBought(cur => cur === type ? null : cur), 1800)
   }
   // Low-bait warning — fires once when the player's total bait crosses
   // BELOW the threshold so they aren't ambushed by an "out of bait"
@@ -9337,7 +9403,14 @@ export default function FishingGame({
             <div className="flex items-center justify-between mb-4" style={{ paddingTop: '0.75rem' }}>
               <p className="font-karla font-700 uppercase tracking-[0.14em]"
                 style={{ fontSize: '0.6rem', color: '#6a6764' }}>Bait</p>
-              <DrawerClose onClick={() => setBaitOpen(false)} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                {/* Fathom balance — the premium lures buy with these. */}
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5fd0c0" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 3v6" /><circle cx="12" cy="14" r="5" /><path d="M12 19v2" /></svg>
+                  <span className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#a9ede2' }}>{fathoms.toLocaleString()}</span>
+                </span>
+                <DrawerClose onClick={() => setBaitOpen(false)} />
+              </div>
             </div>
             <BaitSelector
               baitInventory={baitInventory}
@@ -9345,9 +9418,13 @@ export default function FishingGame({
               onSelect={setSelectedBait}
               onBuy={(type) => { setConfirmQty(10); setConfirmBait(type) }}
               buyingType={buyingBait}
+              fathoms={fathoms}
+              onBuyLure={handleBuyLure}
+              buyingLure={buyingLure}
+              lureBought={lureBought}
             />
             <p className="font-karla font-600 text-center" style={{ fontSize: '0.66rem', color: '#6a6764', marginTop: 10 }}>
-              Tap a bait to use it · tap Buy to purchase any amount
+              Tap a bait to use it · buy with ⟡, or premium lures with Fathoms
             </p>
           </motion.div>
         )}

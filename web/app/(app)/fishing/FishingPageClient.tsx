@@ -46,7 +46,7 @@ type FishSpeciesBasic = { id: number; name: string; scientific_name: string; fun
 
 export default function FishingPageClient({
   hookTier, rodTier, reelTier, lineTier,
-  initialDoubloons, initialFishingXP, initialBait, initialLastUsedBait, initialInventory, uniqueSpeciesCaught, zoneStats,
+  initialDoubloons, initialFathoms, initialFishingXP, initialBait, initialLastUsedBait, initialInventory, uniqueSpeciesCaught, zoneStats,
   fishHoldTier, ownedRods, initialCompletionistEffects, initialHasForgedBefore, allFishSpecies, caughtFishIds, mountedFishIds, initialPersonalBests, initialHighestPerfectStreak, initialPerfectStreak,
   hasSeenFishingTour, hasSeenFishingCatchTour, hasSeenFirstCatchCelebration, initialShowWaitTimer, activeSession, username, zoneRewardsClaimed,
   initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, gauntletUpgrades, hasPerfectedSigil, prestigeLevels, ancientCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges, marketMultipliers, isPremium, equippedBoat, unlockedBoats, equippedHat, unlockedHats, equippedPet, unlockedPets,
@@ -58,6 +58,7 @@ export default function FishingPageClient({
   reelTier: number
   lineTier: number
   initialDoubloons: number
+  initialFathoms: number
   initialFishingXP: number
   initialBait: BaitItem[]
   initialLastUsedBait: string | null
@@ -240,6 +241,7 @@ export default function FishingPageClient({
       reelTier={reelTier}
       lineTier={lineTier}
       initialDoubloons={initialDoubloons}
+      initialFathoms={initialFathoms}
       initialFishingXP={initialFishingXP}
       initialBait={initialBait}
       initialLastUsedBait={initialLastUsedBait}
