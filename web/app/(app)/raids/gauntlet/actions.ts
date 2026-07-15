@@ -238,15 +238,15 @@ export async function getGauntletLeaderboard(): Promise<{
 
 /** Whether the player can start a run now (cooldown elapsed) + their lifetime
  *  deepest + when the next run unlocks (ISO, null when available now). */
-export async function getGauntletDailyState(): Promise<{ available: boolean; deepest: number; fathoms: number; nextAt: string | null; deepestRun: GauntletRunSnapshot | null; hcDeepestRun: GauntletRunSnapshot | null; resumeState: GauntletRunState | null; hardcoreUnlocked: boolean; hardcoreLive: boolean; hcDeepest: number; hcRunsLeft: number; runHardcore: boolean; runTerms: SignedTerms | null }> {
+export async function getGauntletDailyState(): Promise<{ available: boolean; deepest: number; fathoms: number; nextAt: string | null; deepestRun: GauntletRunSnapshot | null; hcDeepestRun: GauntletRunSnapshot | null; resumeState: GauntletRunState | null; resumePaused: boolean; hardcoreUnlocked: boolean; hardcoreLive: boolean; hcDeepest: number; hcRunsLeft: number; runHardcore: boolean; runTerms: SignedTerms | null }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { available: false, deepest: 0, fathoms: 0, nextAt: null, deepestRun: null, hcDeepestRun: null, resumeState: null, hardcoreUnlocked: false, hardcoreLive: HARDCORE_LIVE, hcDeepest: 0, hcRunsLeft: 0, runHardcore: false, runTerms: null }
+  if (!user) return { available: false, deepest: 0, fathoms: 0, nextAt: null, deepestRun: null, hcDeepestRun: null, resumeState: null, resumePaused: false, hardcoreUnlocked: false, hardcoreLive: HARDCORE_LIVE, hcDeepest: 0, hcRunsLeft: 0, runHardcore: false, runTerms: null }
 
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_last_run_at, gauntlet_deepest, gauntlet_fathoms, gauntlet_deepest_run, gauntlet_hc_deepest_run, is_admin, gauntlet_run_open, gauntlet_run_state, gauntlet_resumes_used, gauntlet_hc_deepest, gauntlet_run_hardcore, gauntlet_hc_last_run_at, gauntlet_hc_runs_today, raid_node_progress, gauntlet_run_terms')
+    .select('gauntlet_last_run_at, gauntlet_deepest, gauntlet_fathoms, gauntlet_deepest_run, gauntlet_hc_deepest_run, is_admin, gauntlet_run_open, gauntlet_run_state, gauntlet_resumes_used, gauntlet_run_paused, gauntlet_hc_deepest, gauntlet_run_hardcore, gauntlet_hc_last_run_at, gauntlet_hc_runs_today, raid_node_progress, gauntlet_run_terms')
     .eq('id', user.id)
     .single()
 
@@ -256,12 +256,17 @@ export async function getGauntletDailyState(): Promise<{ available: boolean; dee
   const nextMs = lastRunAt + GAUNTLET_COOLDOWN_MS
   const available = isAdmin || Date.now() >= nextMs
 
-  // A run left open with a saved checkpoint and a resume still in the bank (one
-  // per run) can be picked back up — the crash safety net. The counter is
-  // server-owned; getResumeState only PREVIEWS it, resumeGauntletRun spends it.
+  // A run left open with a saved checkpoint can be picked back up. Two flavours:
+  //   • PAUSED (deliberate — player hit "Pause & step away"): unlimited resumes,
+  //     doesn't spend the crash budget. For taking breaks.
+  //   • CRASH (disconnect): one forced resume per run (server-owned counter).
+  // resumePaused tells the client which resume screen to show.
   const runState = (profile?.gauntlet_run_state as GauntletRunState | null) ?? null
   const resumesUsed = (profile?.gauntlet_resumes_used as number | null) ?? 0
-  const resumeState = profile?.gauntlet_run_open === true && runState && resumesUsed < 1 ? runState : null
+  const runPaused = profile?.gauntlet_run_paused === true
+  const canResume = profile?.gauntlet_run_open === true && !!runState && (runPaused || resumesUsed < 1)
+  const resumeState = canResume ? runState : null
+  const resumePaused = canResume && runPaused
 
   const deepest = (profile?.gauntlet_deepest as number | null) ?? 0
   const clearedNodes = (profile?.raid_node_progress as { cleared?: string[] } | null)?.cleared ?? []
@@ -279,6 +284,7 @@ export async function getGauntletDailyState(): Promise<{ available: boolean; dee
     deepestRun: (profile?.gauntlet_deepest_run as GauntletRunSnapshot | null) ?? null,
     hcDeepestRun: (profile?.gauntlet_hc_deepest_run as GauntletRunSnapshot | null) ?? null,
     resumeState,
+    resumePaused,
     // Can this player start a hardcore run right now? (admin-only pre-launch.)
     hardcoreUnlocked: hardcoreUnlocked({ isAdmin, clearedNodes, deepest }),
     hardcoreLive: HARDCORE_LIVE,
@@ -310,9 +316,26 @@ export async function checkpointGauntletRun(state: GauntletRunState): Promise<{ 
   return { ok: true }
 }
 
-/** Spend the run's single resume: hand back the checkpointed state and bump the
- *  server-owned counter so it can't be used twice. Refuses if there's no open
- *  run, no checkpoint, or the resume is already spent. */
+/** DELIBERATE pause — the player hit "Pause & step away" at a breather. Saves the
+ *  checkpoint and flags the run as paused so it resumes UNLIMITED times (no crash
+ *  budget spent). For taking breaks mid-run without cashing out. */
+export async function pauseGauntletRun(state: GauntletRunState): Promise<{ ok: boolean }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles').select('gauntlet_run_open').eq('id', user.id).single()
+  if (profile?.gauntlet_run_open !== true) return { ok: false }
+
+  await admin.from('profiles').update({ gauntlet_run_state: state, gauntlet_run_paused: true }).eq('id', user.id)
+  return { ok: true }
+}
+
+/** Pick a run back up. A PAUSED run (deliberate) resumes without limit and doesn't
+ *  touch the crash budget. A CRASHED run spends its single server-owned resume.
+ *  Refuses if there's no open run, no checkpoint, or a crash resume is spent. */
 export async function resumeGauntletRun(): Promise<{ ok: false } | { ok: true; state: GauntletRunState }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -321,14 +344,22 @@ export async function resumeGauntletRun(): Promise<{ ok: false } | { ok: true; s
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_run_open, gauntlet_run_state, gauntlet_resumes_used')
+    .select('gauntlet_run_open, gauntlet_run_state, gauntlet_resumes_used, gauntlet_run_paused')
     .eq('id', user.id).single()
 
   const state = (profile?.gauntlet_run_state as GauntletRunState | null) ?? null
-  const used = (profile?.gauntlet_resumes_used as number | null) ?? 0
-  if (profile?.gauntlet_run_open !== true || !state || used >= 1) return { ok: false }
+  if (profile?.gauntlet_run_open !== true || !state) return { ok: false }
 
-  // Server owns the counter — increment regardless of any client-reported value.
+  if (profile?.gauntlet_run_paused === true) {
+    // Deliberate pause: unlimited, no crash budget spent. Clear the flag — the run
+    // is live again (a later disconnect from here is a normal crash resume).
+    await admin.from('profiles').update({ gauntlet_run_paused: false }).eq('id', user.id)
+    return { ok: true, state }
+  }
+
+  // Crash resume: one per run, server-owned counter (ignores any client value).
+  const used = (profile?.gauntlet_resumes_used as number | null) ?? 0
+  if (used >= 1) return { ok: false }
   await admin.from('profiles').update({ gauntlet_resumes_used: used + 1 }).eq('id', user.id)
   return { ok: true, state }
 }
@@ -412,7 +443,7 @@ export async function startGauntletRun(hardcore = false, terms?: SignedTerms): P
 
   await admin
     .from('profiles')
-    .update({ gauntlet_last_run_at: new Date().toISOString(), gauntlet_run_open: true, gauntlet_run_state: null, gauntlet_resumes_used: 0, gauntlet_run_offer: null, ...hcFields })
+    .update({ gauntlet_last_run_at: new Date().toISOString(), gauntlet_run_open: true, gauntlet_run_state: null, gauntlet_resumes_used: 0, gauntlet_run_paused: false, gauntlet_run_offer: null, ...hcFields })
     .eq('id', user.id)
 
   return { started: true, deepest }
@@ -720,6 +751,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
       gauntlet_run_open: false,
       gauntlet_run_state: null,
       gauntlet_resumes_used: 0,
+      gauntlet_run_paused: false,
       gauntlet_run_terms: null,
       gauntlet_run_offer: null,
       // The Pressure behind the deepest hardcore cash-out — a depth 45 at 18
@@ -861,6 +893,7 @@ export async function resolveGauntletDeath(rewardDepth: number, combatDepth: num
       gauntlet_fathoms: newFathoms,
       gauntlet_run_state: null,
       gauntlet_resumes_used: 0,
+      gauntlet_run_paused: false,
       gauntlet_run_terms: null,
       gauntlet_run_offer: null,
       gauntlet_runs_completed: ((profile.gauntlet_runs_completed as number | null) ?? 0) + 1,

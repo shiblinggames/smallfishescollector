@@ -32,7 +32,7 @@ import {
   type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot, type GauntletRunState, type GauntletRunStats, chestOdds } from '@/lib/gauntlet'
 import { GAUNTLET_TERMS, TERM_GROUP_META, resolveTerms, termPressure, termTideEffects, pressureGemMult, pressureDepthFactor, NO_TERM_EFFECTS, PRESSURE_CAP, PRESSURE_DEPTH_FLOOR, PRESSURE_DEPTH_FULL, PRESSURE_SKIN_THRESHOLD, PRESSURE_SKIN_DEPTH, PRESSURE_SKIN_ID, MAX_AVAILABLE_PRESSURE, type SignedTerms } from '@/lib/gauntletTerms'
 import GauntletTermsPanel from './GauntletTermsPanel'
-import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen, recordGauntletHit, wagerGauntletFathoms, markConfluencesSeen, checkpointGauntletRun, resumeGauntletRun, buyBaitWithFathoms, rollDavyOffer } from './actions'
+import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen, recordGauntletHit, wagerGauntletFathoms, markConfluencesSeen, checkpointGauntletRun, pauseGauntletRun, resumeGauntletRun, buyBaitWithFathoms, rollDavyOffer } from './actions'
 import { offerCoinMult, offerChestMult, offerCopy, offerTakenLine, type DavyOffer } from '@/lib/gauntletOffer'
 import { FATHOM_BAITS } from '@/lib/bait'
 import { GAUNTLET_UPGRADES, COMING_SOON_UPGRADES, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck, gauntletBoonRerolls, gauntletCurseRerolls } from '@/lib/gauntletUpgrades'
@@ -47,7 +47,7 @@ import { getXPProgress, MAX_LEVEL } from '@/lib/expeditionLevel'
 import { renownLevel } from '@/lib/renown'
 import RenownUpOverlay, { type RenownUpInfo } from '@/components/RenownUpOverlay'
 
-type Phase = 'intro' | 'usedup' | 'resume' | 'descending' | 'fighting' | 'curse' | 'boon' | 'shrine' | 'between' | 'reward' | 'dead'
+type Phase = 'intro' | 'usedup' | 'resume' | 'paused' | 'descending' | 'fighting' | 'curse' | 'boon' | 'shrine' | 'between' | 'reward' | 'dead'
 
 type CashResult = Awaited<ReturnType<typeof cashOutGauntlet>>
 
@@ -127,9 +127,12 @@ export interface GauntletGameProps {
   hasSeenIntro: boolean
   /** #1 deepest cashed-out descender across all captains, or null if none yet. */
   topDescender: { name: string; depth: number } | null
-  /** A crashed run's saved checkpoint, if one can still be resumed (one resume
-   *  per run). Present → the run offers a Resume beat before a fresh descent. */
+  /** A saved checkpoint that can still be resumed. Present → the run offers a
+   *  Resume beat before a fresh descent. */
   resumeState: GauntletRunState | null
+  /** True when the resumable run was DELIBERATELY paused (unlimited resumes, no
+   *  crew risk) vs a crash (one forced resume). Drives the resume screen's copy. */
+  resumePaused?: boolean
   // ── Hardcore mode ──
   /** Can this player START a hardcore run right now? (admin-only pre-launch.) */
   hardcoreUnlocked: boolean
@@ -1327,6 +1330,8 @@ export default function GauntletGame(props: GauntletGameProps) {
   }
 
   const [resuming, setResuming] = useState(false)
+  const [pausing, setPausing] = useState(false)
+  const [letGoArmed, setLetGoArmed] = useState(false) // two-tap confirm on the crash-resume "Let it go" in hardcore
   // Take the crashed run back (spends the run's single resume, server-owned).
   function doResume() {
     if (resuming || !props.resumeState) return
@@ -1335,6 +1340,16 @@ export default function GauntletGame(props: GauntletGameProps) {
       if (res.ok) applyCheckpoint(res.state)
       else setPhase(props.available ? 'intro' : 'usedup') // already spent / raced
     }).finally(() => setResuming(false))
+  }
+  // Deliberate pause at a breather: save + step away. Unlimited, never risks the
+  // crew — the run is simply held until the captain comes back. Fire the save,
+  // then show the "held" screen (they leave via the nav or the Back link).
+  function doPause() {
+    if (pausing) return
+    setPausing(true)
+    pauseGauntletRun(buildCheckpoint())
+      .then(() => setPhase('paused'))
+      .finally(() => setPausing(false))
   }
   // Let the crashed run go: close it out (banks Fathoms for the depth reached,
   // clears the checkpoint) and show the death recap — same end-of-dive screen as
@@ -1506,10 +1521,12 @@ export default function GauntletGame(props: GauntletGameProps) {
             paddingTop: 6, paddingLeft: '0.85rem', paddingRight: '0.85rem', textAlign: 'center',
           }}>
           <h1 className="font-cinzel font-800" style={{ fontSize: '1.7rem', color: '#f3ead2', lineHeight: 1.12, marginTop: 26, textShadow: '0 0 26px rgba(240,192,64,0.32)' }}>
-            The Deep Still Has You
+            {props.resumePaused ? 'Your Dive Is Held' : 'The Deep Still Has You'}
           </h1>
           <p className="font-karla" style={{ fontSize: '0.82rem', color: '#b9b2a6', lineHeight: 1.55, marginTop: 12, maxWidth: 340, marginInline: 'auto' }}>
-            Your last dive was cut short before it ended. The current holds you at your breather — take the line back up and press on.
+            {props.resumePaused
+              ? 'You stepped away mid-descent. Pick the line back up whenever you like — your progress is right where you left it.'
+              : 'Your last dive was cut short before it ended. The current holds you at your breather — take the line back up and press on.'}
           </p>
           <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 20 }}>
             {pill('Depth', `${depth}`, GOLD)}
@@ -1525,13 +1542,65 @@ export default function GauntletGame(props: GauntletGameProps) {
             }}>
             {resuming ? 'Descending…' : 'Resume the Dive'}
           </button>
-          <button onClick={abandonResume} disabled={resuming} className="font-karla font-700 tap"
-            style={{ marginTop: 12, width: '100%', padding: '0.7rem', borderRadius: 12, fontSize: '0.78rem', color: '#9a948a', background: 'transparent', border: '1px solid rgba(154,148,138,0.28)', cursor: resuming ? 'wait' : 'pointer' }}>
-            Let it go
-          </button>
-          <p className="font-karla" style={{ fontSize: '0.62rem', color: '#7d776e', lineHeight: 1.5, marginTop: 12 }}>
-            A crashed run can be resumed once. Letting it go banks the Fathoms you earned and ends the run.
+
+          {props.resumePaused ? (
+            <>
+              <div style={{ marginTop: 12 }}>
+                <BackLink router={router} label="Leave it held" />
+              </div>
+              <p className="font-karla" style={{ fontSize: '0.62rem', color: '#7d776e', lineHeight: 1.5, marginTop: 6 }}>
+                Held safely. Resume as many times as you like — no limit{hardcoreRun ? ', and your crew are never at risk while it is paused' : ''}.
+              </p>
+            </>
+          ) : (
+            <>
+              {/* Crash resume. In hardcore, "Let it go" DROWNS the crew (it ends the
+                  run = a death), so require a second, explicit tap to confirm. */}
+              <button
+                onClick={hardcoreRun && !letGoArmed ? () => setLetGoArmed(true) : abandonResume}
+                disabled={resuming}
+                className="font-karla font-700 tap"
+                style={{ marginTop: 12, width: '100%', padding: '0.7rem', borderRadius: 12, fontSize: '0.78rem',
+                  color: hardcoreRun ? '#f0a6a6' : '#9a948a', background: 'transparent',
+                  border: `1px solid ${hardcoreRun && letGoArmed ? 'rgba(224,85,90,0.6)' : 'rgba(154,148,138,0.28)'}`,
+                  cursor: resuming ? 'wait' : 'pointer' }}>
+                {hardcoreRun ? (letGoArmed ? 'Yes — end it and lose the crew' : 'Let it go') : 'Let it go'}
+              </button>
+              <p className="font-karla" style={{ fontSize: '0.62rem', color: hardcoreRun ? '#c88a8a' : '#7d776e', lineHeight: 1.5, marginTop: 12 }}>
+                {hardcoreRun
+                  ? (letGoArmed
+                      ? 'This ends the run and drowns your whole squad, for good. Tap once more to confirm, or resume above.'
+                      : 'A crashed run can be resumed once. Letting it go ends the run AND drowns your hardcore crew — permanently.')
+                  : 'A crashed run can be resumed once. Letting it go banks the Fathoms you earned and ends the run.'}
+              </p>
+            </>
+          )}
+        </div>
+      </>
+    )
+  }
+
+  // Held: the confirmation shown right after "Pause & step away". The run is saved
+  // server-side; the captain can wander off and resume from the hub any time.
+  if (phase === 'paused') {
+    return (
+      <>
+        <AbyssBackdrop hardcore={hardcoreRun} />
+        <div className="pb-10 sm:pb-6" style={{ position: 'relative', zIndex: 1, maxWidth: 460, margin: '0 auto', paddingTop: 6, paddingLeft: '0.85rem', paddingRight: '0.85rem', textAlign: 'center' }}>
+          <div style={{ fontSize: '2.4rem', marginTop: 30 }} aria-hidden>⏸</div>
+          <h1 className="font-cinzel font-800" style={{ fontSize: '1.6rem', color: '#f3ead2', lineHeight: 1.12, marginTop: 10, textShadow: '0 0 26px rgba(240,192,64,0.3)' }}>
+            Your Dive Is Held
+          </h1>
+          <p className="font-karla" style={{ fontSize: '0.82rem', color: '#b9b2a6', lineHeight: 1.55, marginTop: 12, maxWidth: 340, marginInline: 'auto' }}>
+            Saved right where you stopped. Step away as long as you need — come back to the Gauntlet whenever and pick up the descent{hardcoreRun ? '. Your crew are safe while it is held' : ''}.
           </p>
+          <button onClick={doResume} disabled={resuming} className="font-cinzel font-800 uppercase tracking-[0.08em] tap"
+            style={{ marginTop: 24, width: '100%', padding: '1.05rem', borderRadius: 14, fontSize: '1.05rem', color: GOLD, background: `linear-gradient(180deg, ${GOLD}2a, ${GOLD}10)`, border: `1px solid ${GOLD}70`, cursor: resuming ? 'wait' : 'pointer', boxShadow: `0 0 22px ${GOLD}22` }}>
+            {resuming ? 'Descending…' : 'Resume Now'}
+          </button>
+          <div style={{ marginTop: 12 }}>
+            <BackLink router={router} label="Leave for now" />
+          </div>
         </div>
       </>
     )
@@ -2562,6 +2631,17 @@ export default function GauntletGame(props: GauntletGameProps) {
               )
             })()}
           </div>
+
+          {/* Pause & step away — save the run and take a break. Unlimited, and it
+              never risks the crew: the dive is held server-side and picks up right
+              here. Deliberately quiet so it never competes with the dive/bank fork. */}
+          <button onClick={doPause} disabled={pausing || resolving} className="font-karla font-600 tap"
+            style={{ marginTop: 12, width: '100%', padding: '0.6rem', borderRadius: 11, fontSize: '0.72rem',
+              color: '#8a857c', background: 'transparent', border: '1px solid rgba(154,148,138,0.22)',
+              cursor: (pausing || resolving) ? 'wait' : 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden><path d="M8 5v14M16 5v14" /></svg>
+            {pausing ? 'Saving…' : 'Pause & step away'}
+          </button>
         </div>
 
         {detailModal}
