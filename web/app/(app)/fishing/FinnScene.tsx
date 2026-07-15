@@ -8,37 +8,62 @@
 // bust art needed), breathing and leaning into his lines. Megalodon's beat runs on
 // a cold accent so the frame itself feels a shade wrong the moment the mask cracks.
 //
+// PERF: the typewriter's per-character setState used to re-render the WHOLE scene
+// ~45x/sec — reconciling Finn's avatar AND the living-frame's 15 motion nodes every
+// tick, on a portal sitting over the still-animating fishing game. That lagged hard.
+// Now the typing lives in its own <TypewriterPlate> child, so a keystroke re-renders
+// ONLY the text; the parent hears "typing/held" a handful of times per line via a
+// callback, and the avatar + frame are memoized so its rare re-renders skip them.
+//
 // Portaled to document.body so it sits above the fishing scene and the result card.
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import CharacterAvatar from '@/components/CharacterAvatar'
 import { TypedBody, Letterbox, LivingFrame, FlashOut, useTypewriter, lineHaptic, prefersReducedMotion } from '@/components/cutscene'
-import { FINN_NAME, FINN_AVATAR, type FinnAncientBeat } from '@/lib/finn'
+import { FINN_NAME, FINN_AVATAR, type FinnAncientBeat, type FinnSceneLine } from '@/lib/finn'
+
+// Owns the per-character reveal. Re-renders on every keystroke, but only paints the
+// dialogue text — nothing else in the scene is in this subtree. Reports typing/held
+// up so the parent can lean the bust and swap the tap affordance without itself
+// re-rendering per char.
+function TypewriterPlate({ line, lineKey, reduced, accent, allText, onBegin, onState, finishRef }: {
+  line: FinnSceneLine
+  lineKey: number
+  reduced: boolean
+  accent: string
+  allText: string[]
+  onBegin: () => void
+  onState: (typing: boolean, held: boolean) => void
+  finishRef: React.MutableRefObject<() => void>
+}) {
+  const { shown, typing, held, finish } = useTypewriter(line.text, lineKey, { pause: line.pause, reduced, onBegin })
+  finishRef.current = finish
+  useEffect(() => { onState(typing, held) }, [typing, held, onState])
+  return <TypedBody all={allText} text={line.text} shown={shown} typing={typing} accent={accent} quoted />
+}
 
 export default function FinnScene({ beat, onComplete }: {
   beat: FinnAncientBeat
   onComplete: () => void
 }) {
   const ACCENT = beat.accent ?? '#c8a060'
+  const reduced = useMemo(prefersReducedMotion, [])
   const [idx, setIdx] = useState(0)
   const [flash, setFlash] = useState(0)
-  const reduced = useMemo(prefersReducedMotion, [])
+  // Mirrors of the child typewriter's state — updated a few times per line (start,
+  // pause-end, done), NOT per character. Drive the bust lean + tap affordance.
+  const [typing, setTyping] = useState(true)
+  const [held, setHeld] = useState(false)
+  const finishRef = useRef<() => void>(() => {})
 
   const line = beat.lines[idx]
   const last = idx === beat.lines.length - 1
   const allText = useMemo(() => beat.lines.map(l => l.text), [beat])
-
-  const { shown, typing, held, finish } = useTypewriter(line?.text ?? '', idx, {
-    pause: line?.pause,
-    reduced,
-    onBegin: () => {
-      if (line?.fx === 'flash') setFlash(f => f + 1)
-      lineHaptic(line?.fx, true)
-    },
-  })
   const shake = line?.fx === 'shake' && !reduced && !held
+  const lean = shake ? 1.05 : held ? 1.03 : typing ? 1.0 : 0.99
+  const avatarSize = useMemo(() => Math.round(Math.min(220, typeof window !== 'undefined' ? window.innerWidth * 0.5 : 200)), [])
 
   // Own the viewport — no background scroll while the scene plays.
   useEffect(() => {
@@ -47,15 +72,38 @@ export default function FinnScene({ beat, onComplete }: {
     return () => { document.body.style.overflow = prev }
   }, [])
 
+  const onState = useCallback((t: boolean, h: boolean) => { setTyping(t); setHeld(h) }, [])
+  const onBegin = () => {
+    if (line?.fx === 'flash') setFlash(f => f + 1)
+    lineHaptic(line?.fx, true)
+  }
+
   // One tap finishes the line; the next advances. Never both — a fast tapper would
   // eat lines otherwise.
   function tap() {
-    if (typing) { finish(); return }
+    if (typing) { finishRef.current(); return }
     if (!last) setIdx(i => i + 1)
   }
 
-  // Finn leans in on a line, jolts on a hit, creeps forward through a held beat.
-  const lean = shake ? 1.05 : held ? 1.03 : typing ? 1.0 : 0.99
+  // Heavy statics, memoized so the parent's (now rare) re-renders never reconcile
+  // the avatar or the 15 living-frame motion nodes — and the breathing loop never
+  // restarts. This is the bulk of the perf win.
+  const livingFrame = useMemo(() => <LivingFrame accent={ACCENT} reduced={reduced} />, [ACCENT, reduced])
+  const bust = useMemo(() => (
+    // Mirror lives on a STATIC wrapper — framer animates the scale/y above, so a
+    // scaleX(-1) up there would be clobbered by its generated transform.
+    <div style={{ transform: FINN_AVATAR.mirrored ? 'scaleX(-1)' : 'none' }}>
+      <motion.div animate={reduced ? {} : { y: [0, -6, 0] }} transition={{ duration: 3.6, repeat: Infinity, ease: 'easeInOut' }}>
+        <CharacterAvatar
+          characterColor={FINN_AVATAR.characterColor}
+          equippedHat={FINN_AVATAR.equippedHat ?? null}
+          bgColor={FINN_AVATAR.bgColor}
+          ringColor={ACCENT}
+          size={avatarSize}
+        />
+      </motion.div>
+    </div>
+  ), [ACCENT, reduced, avatarSize])
 
   const scene = (
     <motion.div
@@ -68,7 +116,7 @@ export default function FinnScene({ beat, onComplete }: {
         WebkitTapHighlightColor: 'transparent', userSelect: 'none',
       }}
     >
-      <LivingFrame accent={ACCENT} reduced={reduced} />
+      {livingFrame}
       <AnimatePresence><FlashOut k={flash} /></AnimatePresence>
       <Letterbox />
 
@@ -104,22 +152,7 @@ export default function FinnScene({ beat, onComplete }: {
             transition={{ scale: { type: 'spring', stiffness: 260, damping: 20 }, default: { type: 'spring', stiffness: 220, damping: 26 } }}
             style={{ marginBottom: 6, filter: `drop-shadow(0 0 34px ${ACCENT}33) drop-shadow(0 14px 30px rgba(0,0,0,0.8))` }}
           >
-            {/* Mirror lives on a STATIC wrapper — framer animates the scale/y above,
-                so a scaleX(-1) up there would be clobbered by its generated transform. */}
-            <div style={{ transform: FINN_AVATAR.mirrored ? 'scaleX(-1)' : 'none' }}>
-              <motion.div
-                animate={reduced ? {} : { y: [0, -6, 0] }}
-                transition={{ duration: 3.6, repeat: Infinity, ease: 'easeInOut' }}
-              >
-                <CharacterAvatar
-                  characterColor={FINN_AVATAR.characterColor}
-                  equippedHat={FINN_AVATAR.equippedHat ?? null}
-                  bgColor={FINN_AVATAR.bgColor}
-                  ringColor={ACCENT}
-                  size={Math.round(Math.min(220, typeof window !== 'undefined' ? window.innerWidth * 0.5 : 200))}
-                />
-              </motion.div>
-            </div>
+            {bust}
           </motion.div>
         </div>
 
@@ -140,7 +173,10 @@ export default function FinnScene({ beat, onComplete }: {
               {FINN_NAME}
             </span>
 
-            <TypedBody all={allText} text={line?.text ?? ''} shown={shown} typing={typing} accent={ACCENT} quoted />
+            <TypewriterPlate
+              line={line} lineKey={idx} reduced={reduced} accent={ACCENT} allText={allText}
+              onBegin={onBegin} onState={onState} finishRef={finishRef}
+            />
 
             <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end', minHeight: 34, alignItems: 'center' }}>
               {last && !typing ? (

@@ -7295,6 +7295,13 @@ export default function FishingGame({
                     </motion.div>
                   ) : catchResult ? (
                     <>
+                    {/* While an ancient cutscene overlay (the slain-cinematic or Finn's
+                        beat) fully covers the screen, DON'T mount the result card — its
+                        7 looping animations were burning frames behind the overlay and
+                        compounding the cutscene lag. It mounts once when Finn fades, which
+                        doubles as the reveal. Both overlays hand off in one tick, so it
+                        stays gated through the whole sequence. */}
+                    {!ancientCinematic && !finnAncientScene && (
                     <ResultCard
                       fish={catchResult.fish}
                       baitSaved={catchResult.baitSaved}
@@ -7317,6 +7324,7 @@ export default function FishingGame({
                       previousBest={catchResult.previousBest}
                       isShiny={catchResult.isShiny}
                     />
+                    )}
                     {/* Galaxy Rod — Wormhole reroll. One-shot, opt-in gamble. */}
                     {catchResult.wormhole && !catchResult.isShiny && (
                       <motion.button
