@@ -238,9 +238,16 @@ export async function castLine(baitType: string, habitat: string): Promise<
   if (habitat === 'ancient_deep') {
     const caught = new Set<number>((profile.ancient_catches as number[] | null) ?? [])
     const isLure = baitType === 'luminous' || baitType === 'golden'
+    // Megalodon (143) is the final-final boss of fishing: it never surfaces until
+    // the other five giants (144-148) are all on the wall. Enforced HERE, server-
+    // side, so it holds no matter what a client claims.
+    const MEGALODON_ID = 143
+    const MEGALODON_PREREQS = [144, 145, 146, 147, 148]
+    const megalodonLocked = !MEGALODON_PREREQS.every(id => caught.has(id))
     pool = candidates.filter(f => {
       if (caught.has(f.id)) return false
       if (!isLure && (f.sell_value ?? 0) === 0) return false
+      if (f.id === MEGALODON_ID && megalodonLocked) return false
       return true
     })
     if (pool.length === 0) return { error: 'You have caught every Ancient Deep species available with this bait!' }

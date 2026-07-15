@@ -119,6 +119,29 @@ function applyBossMods(zones: ZoneDef[], mechanic: BossMechanic | null, shrinkDe
   return result
 }
 
+// ─── Ancient boss dial palette ────────────────────────────────────────────────
+// The 6 giants ("final bosses of fishing") don't fight on the ordinary green/gold
+// dial — the whole reel goes eldritch. We recolor BY ZONE TYPE so the semantic read
+// survives (gold is still the target, red is still danger): the safe water glows
+// cold cyan, the dead space turns void-violet. The needle inherits currentZone.color,
+// so it adopts these tones for free. Only the 6 trophies get this — the 12 sellable
+// regulars keep the normal look. Applied after applyBossMods so precision's
+// converted bands recolor as void too.
+const ANCIENT_ZONE_COLOR: Record<ZoneType, string> = {
+  catch:   '#22d3ee', // cyan — the water that will land the giant
+  perfect: '#fde68a', // gold stays the target (universal read)
+  penalty: '#fb5f7a', // hot rose — danger, but hotter/pinker than the normal red
+  miss:    '#4b3a63', // void-violet — dead water
+}
+function applyAncientPalette(zones: ZoneDef[]): ZoneDef[] {
+  return zones.map(z => ({ ...z, color: ANCIENT_ZONE_COLOR[z.type] ?? z.color }))
+}
+
+// Megalodon (fish id 143) is the final-final boss. The SERVER gates it out of the
+// pool until the other five giants are on the wall (see fishing/actions.ts); this
+// id is only used client-side to flag its slain-cinematic as the apex variant.
+const MEGALODON_ID = 143
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const CX = 110, CY = 110
@@ -182,20 +205,23 @@ const ZONES = ['shallows', 'open_waters', 'deep', 'abyss', 'ancient_deep'] as co
 type ZoneKey = typeof ZONES[number]
 
 type BossMechanic = 'shrink' | 'drift' | 'accelerate' | 'randomize' | 'split' | 'precision'
-// Ancient Deep multi-phase reel config. Trophies (the original 6) run 3
-// stages with one fixed mechanic per fish; new sellable regulars run a
-// shorter 2 stages with their own mechanic each. The wildcard flag means
-// the mechanic rerolls each stage (Shastasaurus does this; Sea Lamprey
-// inherits the same "primitive, unpredictable" feel at the lower tier).
+// Ancient Deep multi-phase reel config. Each of the 6 trophies now has its OWN
+// signature mechanic so no two giants fight alike, and Megalodon is the gated
+// final-final boss: a 4-phase GAUNTLET that rerolls its mechanic every stage
+// (wildcard) — the only fight where you can face any of the six, including the
+// perfect-only precision that no single giant uses. New sellable regulars run a
+// shorter 2 stages with their own mechanic each. The wildcard flag means the
+// mechanic rerolls each stage (Megalodon's gauntlet; Sea Lamprey inherits the
+// same "primitive, unpredictable" feel at the lower tier).
 interface BossConfig { mechanic: BossMechanic; phases: number; wildcard?: boolean }
 const BOSS_CONFIG: Record<string, BossConfig> = {
   // ── Ancients (sell_value 0, route to ancient_catches) ──
-  'Megalodon':         { mechanic: 'shrink',     phases: 3 },
-  'Plesiosaurus':      { mechanic: 'drift',      phases: 3 },
-  'Dunkleosteus':      { mechanic: 'accelerate', phases: 3 },
-  'Mosasaurus':        { mechanic: 'randomize',  phases: 3 },
-  'Basilosaurus':      { mechanic: 'split',      phases: 3 },
-  'Shastasaurus':      { mechanic: 'shrink',     phases: 3, wildcard: true },
+  'Megalodon':         { mechanic: 'shrink',     phases: 4, wildcard: true }, // FINAL boss — 4-phase all-mechanic gauntlet, only surfaces after the other 5
+  'Plesiosaurus':      { mechanic: 'drift',      phases: 3 }, // the ring circles you
+  'Dunkleosteus':      { mechanic: 'accelerate', phases: 3 }, // the armored ram — faster each stage
+  'Mosasaurus':        { mechanic: 'randomize',  phases: 3 }, // the dial reshuffles
+  'Basilosaurus':      { mechanic: 'split',      phases: 3 }, // two perfect windows
+  'Shastasaurus':      { mechanic: 'shrink',     phases: 3 }, // the closing jaw — window narrows each stage
   // ── New sellable regulars (sell_value > 0, route to inventory) ──
   'Chambered Nautilus': { mechanic: 'drift',      phases: 2 },
   'Ghost Shark':        { mechanic: 'randomize',  phases: 2 },
@@ -210,7 +236,7 @@ const BOSS_CONFIG: Record<string, BossConfig> = {
   'Vent Octopus':       { mechanic: 'shrink',     phases: 2 },
   'Black Dragonfish':   { mechanic: 'shrink',     phases: 2, wildcard: true },
 }
-const SHASTASAURUS_MECHANICS: BossMechanic[] = ['shrink', 'drift', 'accelerate', 'randomize', 'split', 'precision']
+const WILDCARD_MECHANICS: BossMechanic[] = ['shrink', 'drift', 'accelerate', 'randomize', 'split', 'precision']
 
 const RARITY: Record<number, { label: string; color: string; hookedText: string }> = {
   1: { label: 'Common',    color: '#94a3b8', hookedText: "Something's on the line…" },
@@ -297,12 +323,13 @@ const WAIT_MESSAGES: Record<ZoneKey, string[]> = {
   ancient_deep: [
     "Something ancient stirs…",
     "You are not alone down here.",
-    "Three perfect strikes. That's the deal.",
+    "Clear every stage, or land nothing.",
     "It knows you're here.",
     "Few have ever seen what swims here.",
-    "Stay sharp. All three stages.",
+    "Stay sharp. Every stage counts.",
     "These things were here before the continents split.",
     "No second chances in the Ancient Deep.",
+    "The oldest giant will not show until the rest are yours.",
   ],
 }
 
@@ -539,7 +566,7 @@ const REEL_LOOKAHEAD_FRAMES = 1
 // ─── DialSVG ─────────────────────────────────────────────────────────────────
 
 function DialSVG({
-  zones, angle, rotation = 0, needleColor, zoneOpacityFn, fireLevel = 0, snapKey = 0, perfectBurstKey = 0, needleRef, zonesGroupRef,
+  zones, angle, rotation = 0, needleColor, zoneOpacityFn, fireLevel = 0, snapKey = 0, perfectBurstKey = 0, ancientBoss = false, needleRef, zonesGroupRef,
 }: {
   zones: ZoneDef[]
   angle: number
@@ -549,6 +576,9 @@ function DialSVG({
   fireLevel?: 0 | 1 | 2
   snapKey?: number
   perfectBurstKey?: number
+  /** When true this is one of the 6 Ancient trophy fights — the dial wears a
+   *  breathing void/cyan aura so it reads as a boss the instant it appears. */
+  ancientBoss?: boolean
   /** Ref on the needle OVERLAY DIV (not an SVG group). The needle lives
    *  outside the main dial SVG in its own tiny composited layer so the
    *  parent can spin it with a Web Animations API rotation that runs on
@@ -716,6 +746,22 @@ function DialSVG({
             animate={{ strokeOpacity: [0.1, 0.28, 0.1] }}
             transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
           />
+        )}
+
+        {/* Ancient boss aura — a slow breathing void-violet halo with a thin
+            cyan rim, so the 6 giants' dial reads as a boss at a glance. Sits
+            under the fire rings so a perfect streak still layers on top. */}
+        {ancientBoss && (
+          <>
+            <motion.circle cx={CX} cy={CY} r={OUTER_R + 11} fill="none" stroke="#7c3aed" strokeWidth="12"
+              animate={{ strokeOpacity: [0.12, 0.34, 0.12] }}
+              transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+            />
+            <motion.circle cx={CX} cy={CY} r={OUTER_R + 4} fill="none" stroke="#67e8f9" strokeWidth="1.5"
+              animate={{ strokeOpacity: [0.35, 0.8, 0.35] }}
+              transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut', delay: 0.15 }}
+            />
+          </>
         )}
       </svg>
       {/* Needle overlay — its own tiny composited layer ABOVE the dial SVG.
@@ -2934,6 +2980,105 @@ function JackpotBoomOverlay({ qty, onDone }: { qty: number; onDone: () => void }
   )
 }
 
+// ─── Ancient giant slain — full-screen cinematic ──────────────────────────────
+// The 6 giants are the final bosses of fishing, so landing one earns a real
+// takeover moment before the result card: letterbox slams in, the giant surfaces
+// from the dark on a colored glow, its name lands, and the "N / VI" tally counts
+// the wall. Megalodon — the gated apex — runs the crimson variant and, at 6/6,
+// calls the whole collection complete. Auto-dismisses; tap anywhere to skip. The
+// result card sits underneath as the lasting proof surface.
+function AncientSlainCinematic({ fish, count, total, isMegalodon, onDone }: {
+  fish: FishSpecies; count: number; total: number; isMegalodon: boolean; onDone: () => void
+}) {
+  const complete = count >= total
+  // Apex crimson for Megalodon (and any final 6/6 fill); abyssal violet/cyan for
+  // the other giants.
+  const apex = isMegalodon || complete
+  const glow   = apex ? '#f43f5e' : '#22d3ee'
+  const accent = apex ? '#fb7185' : '#a855f7'
+  const bg = apex
+    ? 'radial-gradient(ellipse 90% 70% at 50% 46%, rgba(120,8,20,0.82) 0%, rgba(6,2,6,0.96) 62%)'
+    : 'radial-gradient(ellipse 90% 70% at 50% 46%, rgba(40,10,70,0.80) 0%, rgba(4,4,10,0.96) 62%)'
+  const eyebrow = apex ? (isMegalodon ? 'The Apex Falls' : 'The Wall Is Complete') : 'Ancient Slain'
+
+  useEffect(() => {
+    // Heavy triple-buzz on the moment landing. Guarded — not all devices have it.
+    try { navigator.vibrate?.(apex ? [60, 40, 60, 40, 120] : [40, 30, 90]) } catch { /* no haptics */ }
+    const t = setTimeout(onDone, apex ? 3400 : 2900)
+    return () => clearTimeout(t)
+  }, [onDone, apex])
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      transition={{ duration: 0.28 }}
+      onClick={onDone}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9200,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        background: bg, cursor: 'pointer', overflow: 'hidden',
+      }}
+    >
+      {/* Letterbox bars — slam in from top and bottom */}
+      <motion.div initial={{ height: 0 }} animate={{ height: '13%' }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, background: '#000' }} />
+      <motion.div initial={{ height: 0 }} animate={{ height: '13%' }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#000' }} />
+
+      {/* Expanding rings behind the giant */}
+      {[0, 0.14, 0.3].map((delay, i) => (
+        <motion.div key={i}
+          initial={{ scale: 0.5, opacity: 0.5 - i * 0.14 }}
+          animate={{ scale: 2.4 - i * 0.3, opacity: 0 }}
+          transition={{ duration: 1.1, ease: 'easeOut', delay: 0.2 + delay }}
+          style={{ position: 'absolute', width: 260, height: 260, borderRadius: '50%', border: `2px solid ${glow}`, pointerEvents: 'none' }}
+        />
+      ))}
+
+      {/* The giant surfacing from the dark */}
+      <motion.div
+        initial={{ opacity: 0, y: 70, scale: 0.7 }}
+        animate={{ opacity: 1, y: [70, 0, 0], scale: [0.7, 1.06, 1] }}
+        transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1], delay: 0.12 }}
+        style={{ position: 'relative', zIndex: 2 }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={fishImageUrl(fish.name)} alt={fish.name} decoding="async"
+          style={{ width: 'min(72vw, 300px)', height: 'auto', objectFit: 'contain',
+            filter: `drop-shadow(0 0 18px ${glow}) drop-shadow(0 0 44px ${glow}aa)` }} />
+      </motion.div>
+
+      {/* Eyebrow + name slam + tally */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.55 }}
+        style={{ position: 'relative', zIndex: 2, textAlign: 'center', marginTop: 8, padding: '0 1.2rem' }}
+      >
+        <p className="font-karla font-800 uppercase" style={{ letterSpacing: '0.34em', textIndent: '0.34em', fontSize: '0.62rem', color: accent, marginBottom: 6 }}>
+          {eyebrow}
+        </p>
+        <motion.p className="font-cinzel font-700"
+          initial={{ scale: 1.25, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: 'spring', stiffness: 260, damping: 16, delay: 0.5 }}
+          style={{ fontSize: 'clamp(1.6rem, 8vw, 2.6rem)', lineHeight: 1.05, color: '#fdf4e3',
+            textShadow: `0 0 18px ${glow}88` }}>
+          {fish.name}
+        </motion.p>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12 }}>
+          <span style={{ height: 1, width: 26, background: `${accent}66` }} />
+          <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: accent, letterSpacing: '0.08em' }}>
+            {toRoman(count)} <span style={{ color: `${accent}77` }}>/ {toRoman(total)}</span>
+          </p>
+          <span style={{ height: 1, width: 26, background: `${accent}66` }} />
+        </div>
+        <p className="font-karla font-600 uppercase" style={{ letterSpacing: '0.2em', fontSize: '0.5rem', color: '#8a8a99', marginTop: 5 }}>
+          {complete ? 'Every giant on the wall' : 'Giants of the Ancient Deep'}
+        </p>
+      </motion.div>
+    </motion.div>
+  )
+}
+
 // ─── Crate slot strip tile ────────────────────────────────────────────────
 // One tile in the decelerating slot strip — icon + label, sized to fill
 // exactly CRATE_TILE_W × CRATE_TILE_H. Each tile uses the same icon/color
@@ -3524,6 +3669,7 @@ export default function FishingGame({
   // YOLO Rod jackpot celebration — set when a jackpot resolves, drives the
   // full-screen JackpotBoom overlay. Cleared on auto-dismiss / tap.
   const [jackpotBoom, setJackpotBoom] = useState<{ qty: number } | null>(null)
+  const [ancientCinematic, setAncientCinematic] = useState<{ fish: FishSpecies; count: number; total: number; isMegalodon: boolean } | null>(null)
   // First-catch celebration — true for the player's very first successful
   // reel-in if their account flag is still unset. Server-flag gated so it
   // can't replay across devices. Set + immediately fire the mark-seen
@@ -4502,7 +4648,7 @@ export default function FishingGame({
         const bossName = allFishSpecies.find(f => f.id === res.fishId)?.name ?? ''
         const cfg = BOSS_CONFIG[bossName] ?? { mechanic: 'shrink' as BossMechanic, phases: 2 }
         const mechanic = cfg.wildcard
-          ? SHASTASAURUS_MECHANICS[Math.floor(Math.random() * SHASTASAURUS_MECHANICS.length)]
+          ? WILDCARD_MECHANICS[Math.floor(Math.random() * WILDCARD_MECHANICS.length)]
           : cfg.mechanic
         activeBossMechanicRef.current = mechanic
         setActiveBossMechanic(mechanic)
@@ -4935,7 +5081,7 @@ export default function FishingGame({
           // Wildcard fish (Shastasaurus, Sea Lamprey) reroll mechanic
           // each stage instead of escalating one fixed mechanic.
           if (cfg.wildcard) {
-            const next = SHASTASAURUS_MECHANICS[Math.floor(Math.random() * SHASTASAURUS_MECHANICS.length)]
+            const next = WILDCARD_MECHANICS[Math.floor(Math.random() * WILDCARD_MECHANICS.length)]
             activeBossMechanicRef.current = next
             setActiveBossMechanic(next)
             bossZoneShrinkRef.current = next === 'shrink' ? 8 : 0
@@ -5231,12 +5377,28 @@ export default function FishingGame({
           setLatestCatchHabitat(fish.habitat)
         }
         if (isNewSpecies) {
-          if (fish.habitat === 'ancient_deep') {
+          // Only the 6 sell_value-0 TROPHIES belong in ancientCatches (it mirrors
+          // the server's ancient_catches column, which routes trophies only). The
+          // 12 sellable ancient_deep regulars stack in the hold like any other
+          // catch, so they track in caughtFishIds — putting them in ancientCatches
+          // wrongly inflated the "N/6 giants" count.
+          const isTrophy = fish.habitat === 'ancient_deep' && (fish.sell_value ?? 0) === 0
+          if (isTrophy) {
             setAncientCatches(prev => new Set([...prev, fish.id]))
           } else {
             setCaughtFishIds(prev => new Set([...prev, fish.id]))
             setUncheckedNewFishIds(prev => new Set([...prev, fish.id]))
           }
+        }
+        // ── Ancient giant slain — full-screen cinematic ──────────────────────
+        // Fires only for the 6 trophies, and only on a first-ever catch of that
+        // giant (they're one-and-done). Plays over the result card, which stays
+        // underneath as the proof surface. ancientCatches state hasn't flushed
+        // this tick, so count the giant we just landed by hand.
+        if (isNewSpecies && fish.habitat === 'ancient_deep' && (fish.sell_value ?? 0) === 0) {
+          const trophyTotal = allFishSpecies.filter(f => f.habitat === 'ancient_deep' && (f.sell_value ?? 0) === 0).length || 6
+          const countAfter = new Set([...ancientCatches, fish.id]).size
+          setAncientCinematic({ fish, count: countAfter, total: trophyTotal, isMegalodon: fish.id === MEGALODON_ID })
         }
         const catchCount = actualQty
         const newCatches = [...sessionCatches, ...Array(catchCount).fill(fish)]
@@ -5752,11 +5914,22 @@ export default function FishingGame({
   // memo also gives `catchingZones` a stable identity, which lets
   // DialSVG's internal useMemos (arc paths, perfect/penalty lookups)
   // actually hit.
+  // True only while fighting one of the 6 Ancient TROPHIES (sell_value 0) — the
+  // capstone giants, not the 12 sellable ancient_deep regulars. Drives the eldritch
+  // dial recolor + aura + the full-screen cinematic on the catch.
+  const isAncientTrophyFight = useMemo(() => {
+    if (!hookedFish) return false
+    const hf = allFishSpecies.find(f => f.id === hookedFish.fishId)
+    return hf?.habitat === 'ancient_deep' && (hf.sell_value ?? 0) === 0
+  }, [hookedFish, allFishSpecies])
+
   const catchingZones = useMemo(() => {
     if (!hookedFish) return [] as ZoneDef[]
     const base = buildFishZones(hookedFish.catchDifficulty, hookTier, line.penaltyMultiplier, (ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows).catchMultiplier, levelBonus + getBait(selectedBait).catchZoneBonus + rod.catchZoneBonus + (activeEvent?.type === 'glassy' ? 12 : 0), rod.perfectZoneBonus + 1)
-    return selectedZone === 'ancient_deep' ? applyBossMods(base, activeBossMechanic, bossZoneShrink) : base
-  }, [hookedFish, hookTier, line.penaltyMultiplier, selectedZone, levelBonus, selectedBait, rod.catchZoneBonus, rod.perfectZoneBonus, activeEvent?.type, activeBossMechanic, bossZoneShrink])
+    const withMods = selectedZone === 'ancient_deep' ? applyBossMods(base, activeBossMechanic, bossZoneShrink) : base
+    // The 6 giants fight on the eldritch palette; regulars keep the normal dial.
+    return isAncientTrophyFight ? applyAncientPalette(withMods) : withMods
+  }, [hookedFish, hookTier, line.penaltyMultiplier, selectedZone, levelBonus, selectedBait, rod.catchZoneBonus, rod.perfectZoneBonus, activeEvent?.type, activeBossMechanic, bossZoneShrink, isAncientTrophyFight])
   // Mirror the latest zones so the needle rAF loop can detect zone
   // crossings without depending on per-frame React state.
   catchingZonesRef.current = catchingZones
@@ -6688,6 +6861,7 @@ export default function FishingGame({
                       zonesGroupRef={zonesGroupRef}
                       needleColor={needleColor()} zoneOpacityFn={zoneOpacity}
                       fireLevel={perfectStreak >= 3 ? 2 : perfectStreak === 2 ? 1 : 0}
+                      ancientBoss={isAncientTrophyFight}
                       snapKey={snapKey} perfectBurstKey={perfectBurstKey} />
                   </div>
                 </motion.div>
@@ -6924,7 +7098,7 @@ export default function FishingGame({
                       jackpotMultiplier={catchResult.jackpotMultiplier}
                       perfectXpMult={catchResult.perfectXpMult}
                       ancientCount={ancientCatches.size}
-                      ancientTotal={allFishSpecies.filter(f => f.habitat === 'ancient_deep').length || 6}
+                      ancientTotal={allFishSpecies.filter(f => f.habitat === 'ancient_deep' && (f.sell_value ?? 0) === 0).length || 6}
                       sizeIn={catchResult.sizeIn}
                       sizeMin={catchResult.sizeMin}
                       sizeMax={catchResult.sizeMax}
@@ -9594,6 +9768,21 @@ export default function FishingGame({
             key="jackpot-boom"
             qty={jackpotBoom.qty}
             onDone={() => setJackpotBoom(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── Ancient giant slain — full-screen cinematic over the result card.
+            Fires only for the 6 trophies, once each. Tap to skip. */}
+      <AnimatePresence>
+        {ancientCinematic && (
+          <AncientSlainCinematic
+            key="ancient-slain"
+            fish={ancientCinematic.fish}
+            count={ancientCinematic.count}
+            total={ancientCinematic.total}
+            isMegalodon={ancientCinematic.isMegalodon}
+            onDone={() => setAncientCinematic(null)}
           />
         )}
       </AnimatePresence>
