@@ -350,13 +350,14 @@ export default function TackleShopClient({
                   style={{
                     display: 'flex', alignItems: 'center', gap: 11, width: '100%', textAlign: 'left',
                     padding: '0.7rem 0.8rem', borderRadius: 14, cursor: 'pointer',
-                    background: 'linear-gradient(180deg, rgba(240,192,64,0.15), rgba(240,192,64,0.05))',
-                    border: '1px solid rgba(240,192,64,0.55)', boxShadow: '0 0 20px rgba(240,192,64,0.16)',
+                    // Opaque dark-gold, so the row is a solid card, not a see-through wash.
+                    background: 'linear-gradient(180deg, rgba(240,192,64,0.18), #14110a)',
+                    border: '1px solid rgba(240,192,64,0.5)', boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
                   }}>
-                  <span style={{ position: 'relative', flexShrink: 0, width: 46, height: 46, borderRadius: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.28)', border: `1px solid ${s.color}55` }}>
+                  <span style={{ position: 'relative', flexShrink: 0, width: 46, height: 46, borderRadius: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a0d14', border: '1px solid rgba(240,192,64,0.3)' }}>
                     {s.imageUrl && (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={s.imageUrl} alt="" loading="lazy" decoding="async" style={{ maxWidth: 34, maxHeight: 34, objectFit: 'contain', filter: `drop-shadow(0 2px 6px ${s.color}66)` }} />
+                      <img src={s.imageUrl} alt="" loading="lazy" decoding="async" style={{ maxWidth: 34, maxHeight: 34, objectFit: 'contain', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.6))' }} />
                     )}
                     <motion.span aria-hidden animate={{ opacity: [0.15, 0.5, 0.15] }} transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
                       style={{ position: 'absolute', inset: -1, borderRadius: 11, border: '1px solid #f0c040', pointerEvents: 'none' }} />
@@ -391,23 +392,27 @@ export default function TackleShopClient({
                 onClick={() => { vibrate([0, 12]); setSection(s.key); setError(null) }}
                 whileTap={{ scale: 0.96 }} className="tap"
                 style={{
+                  position: 'relative',
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                  padding: '0.85rem 0.5rem 0.7rem', borderRadius: 14, cursor: 'pointer', minWidth: 0,
-                  background: ready ? 'rgba(240,192,64,0.1)' : 'rgba(255,255,255,0.035)',
-                  border: `1px solid ${ready ? 'rgba(240,192,64,0.7)' : 'rgba(255,255,255,0.1)'}`,
-                  boxShadow: ready ? '0 0 18px rgba(240,192,64,0.12)' : 'none',
+                  padding: '1rem 0.5rem 0.75rem', borderRadius: 14, cursor: 'pointer', minWidth: 0,
+                  // SOLID dark fill, not translucent white. On pure black a 3.5%-white
+                  // wash reads as muddy nothing; a solid panel reads as a clean card.
+                  background: ready ? 'linear-gradient(180deg, rgba(240,192,64,0.16), #14110a)' : '#111824',
+                  border: `1px solid ${ready ? 'rgba(240,192,64,0.65)' : 'rgba(255,255,255,0.08)'}`,
+                  boxShadow: ready ? '0 0 18px rgba(240,192,64,0.12)' : '0 2px 8px rgba(0,0,0,0.4)',
                 }}>
-                {/* art on a clean neutral disc — no category wash, so the piece reads */}
-                <span style={{ position: 'relative', flexShrink: 0, width: 62, height: 62, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.28)', border: `1px solid ${ready ? 'rgba(240,192,64,0.5)' : 'rgba(255,255,255,0.09)'}` }}>
+                {/* Art sits DIRECTLY on the tile, like the Forge. The old nested black
+                    disc-in-a-faint-square was the muddy double layer. */}
+                <div style={{ position: 'relative', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {s.imageUrl && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={s.imageUrl} alt={s.label} loading="lazy" decoding="async" style={{ maxWidth: 46, maxHeight: 46, objectFit: 'contain' }} />
+                    <img src={s.imageUrl} alt={s.label} loading="lazy" decoding="async" style={{ maxWidth: 52, maxHeight: 56, objectFit: 'contain', filter: 'drop-shadow(0 3px 8px rgba(0,0,0,0.6))' }} />
                   )}
-                  {ready && (
-                    <motion.span aria-hidden animate={{ opacity: [0.15, 0.5, 0.15] }} transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-                      style={{ position: 'absolute', inset: -1, borderRadius: 14, border: '1px solid #f0c040', pointerEvents: 'none' }} />
-                  )}
-                </span>
+                </div>
+                {ready && (
+                  <motion.span aria-hidden animate={{ opacity: [0.2, 0.6, 0.2] }} transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+                    style={{ position: 'absolute', top: 7, right: 8, width: 6, height: 6, borderRadius: 999, background: '#f0c040', boxShadow: '0 0 8px #f0c040', pointerEvents: 'none' }} />
+                )}
                 <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0ede8', lineHeight: 1.1 }}>{s.label}</p>
                 {/* One clean status line, centred, coloured by state — the forge tell. */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, maxWidth: '100%' }}>
