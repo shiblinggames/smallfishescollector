@@ -764,6 +764,11 @@ export default function GearScreen({
   onClose: () => void
 }) {
   const [openSlot, setOpenSlot] = useState<SlotKey | null>(null)
+  // The modal was doing five jobs in one scroll (gear grid, appearance, badges, the
+  // shop link, a heavy stats card, a prefs toggle), which is why it felt overwhelming.
+  // Three tabs, each with one job: LOADOUT (what you're using), SHOP (what you can buy),
+  // STATS (what it adds up to).
+  const [tab, setTab] = useState<'loadout' | 'shop' | 'stats'>('loadout')
   const [selectedBadgeSlot, setSelectedBadgeSlot] = useState<0 | 1 | 2 | null>(null)
   useEffect(() => { if (openSlot !== 'badge') setSelectedBadgeSlot(null) }, [openSlot])
   // Rod panel tabs — split owned vs shop so the player sees a focused
@@ -932,6 +937,27 @@ export default function GearScreen({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, position: 'relative' }}>
 
+      {/* ── TABS ── one job per screen. */}
+      <div style={{ display: 'flex', gap: 3, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: 3 }}>
+        {([['loadout', 'Loadout'], ['shop', 'Shop'], ['stats', 'Stats']] as const).map(([key, label]) => {
+          const on = tab === key
+          return (
+            <button key={key} type="button" onClick={() => setTab(key)}
+              className="font-karla font-800 uppercase tracking-[0.1em] tap"
+              style={{
+                flex: 1, padding: '0.5rem 0', borderRadius: 9, fontSize: '0.62rem', cursor: 'pointer', border: 'none',
+                color: on ? '#1a1206' : 'rgba(255,255,255,0.55)',
+                background: on ? 'linear-gradient(180deg, #f0c877, #e0a82e)' : 'transparent',
+                boxShadow: on ? '0 1px 6px rgba(224,168,46,0.35)' : 'none',
+                transition: 'color 0.15s',
+              }}>
+              {label}
+            </button>
+          )
+        })}
+      </div>
+
+      {tab === 'loadout' && (<>
       {/* ── Visual gear grid ──
           Cosmetic slots (Skin / Hat / Boat — and Pet, once it ships)
           consolidated into a single Appearance tile in the center
@@ -1020,12 +1046,48 @@ export default function GearScreen({
           )
         })()}
       </div>
+      </>)}
 
-      {/* ── Tackle Shop — full upgrades catalog. Lives here (under your
-          current gear, above the loadout stats) now that the standalone
-          Market tab is gone. */}
-      <ShopLink href="/marketplace/tackle-shop" label="Tackle Shop" sub="Bait · hooks · rods · reels · line" color="#f0c040" onClick={onClose} />
+      {/* ── SHOP TAB ── upgrade-focused: which gear can I buy right now, and the door
+          to the full catalogue. The actual buy/equip UI lives in each slot's detail
+          modal (correct gating, costs, level reqs already there), so each row just
+          opens it and flags whether an upgrade is affordable. */}
+      {tab === 'shop' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {([
+            { key: 'rod' as SlotKey,  label: 'Rod',  name: rod.name,  color: rod.color,  thumb: rod.slug ? `/${rod.slug}_thumb.png` : (rod.imageUrl ?? '/rod_bamboo_thumb.png'), ready: rodHasAffordable },
+            { key: 'reel' as SlotKey, label: 'Reel', name: reel.name, color: reel.color, thumb: reel.imageUrl ? reel.imageUrl.replace(/\.png$/, '_thumb.png') : null, ready: reelHasAffordable },
+            { key: 'hook' as SlotKey, label: 'Hook', name: hook.name, color: hook.color, thumb: hook.imageUrl ? hook.imageUrl.replace(/\.png$/, '_thumb.png') : null, ready: hookHasAffordable },
+            { key: 'bait' as SlotKey, label: 'Bait', name: bait?.name ?? 'Restock your tin', color: bait?.color ?? '#34d399', thumb: bait?.imageUrl ?? '/worms.png', ready: false },
+          ]).map(row => (
+            <button key={row.key} type="button" onClick={() => setOpenSlot(row.key)} className="tap"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 11, width: '100%', textAlign: 'left',
+                padding: '0.65rem 0.75rem', borderRadius: 14, cursor: 'pointer',
+                background: row.ready ? 'rgba(240,192,64,0.1)' : 'rgba(255,255,255,0.035)',
+                border: `1px solid ${row.ready ? 'rgba(240,192,64,0.55)' : 'rgba(255,255,255,0.09)'}`,
+              }}>
+              <span style={{ flexShrink: 0, width: 42, height: 42, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.3)', border: `1px solid ${row.color}44` }}>
+                {row.thumb && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={row.thumb} alt="" loading="lazy" decoding="async" style={{ maxWidth: 30, maxHeight: 30, objectFit: 'contain' }} />
+                )}
+              </span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ display: 'block', fontSize: '0.56rem', color: 'rgba(255,255,255,0.4)' }}>{row.label}</span>
+                <span className="font-cinzel font-700 truncate" style={{ display: 'block', fontSize: '0.86rem', color: '#f0ede8' }}>{row.name}</span>
+              </span>
+              <span className="font-karla font-800 uppercase tracking-[0.06em]" style={{ flexShrink: 0, fontSize: '0.56rem', color: row.ready ? '#f0c040' : 'rgba(255,255,255,0.35)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                {row.ready ? 'Upgrade ready' : 'Browse'}
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+              </span>
+            </button>
+          ))}
+          <ShopLink href="/marketplace/tackle-shop" label="The Tackle Shop" sub="The full catalogue — every rod, reel, hook, line and bait" color="#f0c040" onClick={onClose} />
+        </div>
+      )}
 
+      {tab === 'stats' && (<>
       {/* ── Loadout stats ── */}
       <div style={{ background: 'linear-gradient(180deg, rgba(34,26,12,0.68), rgba(18,13,7,0.8))', border: '1px solid rgba(196,169,106,0.2)', borderRadius: 20, padding: '0.9rem' }}>
         <div style={{ marginBottom: 8 }}>
@@ -1119,8 +1181,9 @@ export default function GearScreen({
           }} />
         </div>
       </button>
+      </>)}
 
-      {/* ── Item detail modal ── */}
+      {/* ── Item detail modal ── (global — opens over any tab) */}
       <AnimatePresence>
         {openSlot && (
           <>
