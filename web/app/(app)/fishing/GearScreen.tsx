@@ -769,12 +769,16 @@ export default function GearScreen({
   // Three tabs, each with one job: LOADOUT (what you're using), SHOP (what you can buy),
   // STATS (what it adds up to).
   const [tab, setTab] = useState<'loadout' | 'shop' | 'stats'>('loadout')
+  // The rod sheet opens to EQUIP (from the Loadout tile) or to BUY (from the Shop tab's
+  // "Browse"). No in-sheet toggle — the entry point sets it. Resets to equip on close.
+  const [rodView, setRodView] = useState<'owned' | 'shop'>('owned')
   // The slot detail sheet portals to <body>, so `mounted` gates it until the client
   // has document. See the modal block below for why the portal is necessary.
   const [mounted, setMounted] = useState(false)
   useEffect(() => { setMounted(true) }, [])
   const [selectedBadgeSlot, setSelectedBadgeSlot] = useState<0 | 1 | 2 | null>(null)
   useEffect(() => { if (openSlot !== 'badge') setSelectedBadgeSlot(null) }, [openSlot])
+  useEffect(() => { if (openSlot !== 'rod') setRodView('owned') }, [openSlot])
   const [appearanceTab, setAppearanceTab] = useState<AppearanceTab>('skin')
   // Pet sub-tab — Pets grid is split by species (Parrots / Monkeys)
   // so the list stays readable as new species ship. Sub-tab state
@@ -1053,13 +1057,12 @@ export default function GearScreen({
       {tab === 'shop' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {([
-            // Rods are BOUGHT on the full Tackle Shop page (variety + level gates), so
-            // the rod row links out. Reel/hook/bait still upgrade inside their own slot
-            // sheet, so those open the sheet.
-            { key: 'rod' as SlotKey,  label: 'Rod',  name: rod.name,  color: rod.color,  thumb: rod.slug ? `/${rod.slug}_thumb.png` : (rod.imageUrl ?? '/rod_bamboo_thumb.png'), ready: rodHasAffordable, href: '/marketplace/tackle-shop#rod' as string | null },
-            { key: 'reel' as SlotKey, label: 'Reel', name: reel.name, color: reel.color, thumb: reel.imageUrl ? reel.imageUrl.replace(/\.png$/, '_thumb.png') : null, ready: reelHasAffordable, href: null },
-            { key: 'hook' as SlotKey, label: 'Hook', name: hook.name, color: hook.color, thumb: hook.imageUrl ? hook.imageUrl.replace(/\.png$/, '_thumb.png') : null, ready: hookHasAffordable, href: null },
-            { key: 'bait' as SlotKey, label: 'Bait', name: bait?.name ?? 'Restock your tin', color: bait?.color ?? '#34d399', thumb: bait?.imageUrl ?? '/worms.png', ready: false, href: null },
+            // Every row opens its slot's buy sheet. The rod row opens that sheet straight
+            // to the Buy view (rodView 'shop'); the rest have a single view.
+            { key: 'rod' as SlotKey,  label: 'Rod',  name: rod.name,  color: rod.color,  thumb: rod.slug ? `/${rod.slug}_thumb.png` : (rod.imageUrl ?? '/rod_bamboo_thumb.png'), ready: rodHasAffordable },
+            { key: 'reel' as SlotKey, label: 'Reel', name: reel.name, color: reel.color, thumb: reel.imageUrl ? reel.imageUrl.replace(/\.png$/, '_thumb.png') : null, ready: reelHasAffordable },
+            { key: 'hook' as SlotKey, label: 'Hook', name: hook.name, color: hook.color, thumb: hook.imageUrl ? hook.imageUrl.replace(/\.png$/, '_thumb.png') : null, ready: hookHasAffordable },
+            { key: 'bait' as SlotKey, label: 'Bait', name: bait?.name ?? 'Restock your tin', color: bait?.color ?? '#34d399', thumb: bait?.imageUrl ?? '/worms.png', ready: false },
           ]).map(row => {
             const rowStyle: React.CSSProperties = {
               display: 'flex', alignItems: 'center', gap: 11, width: '100%', textAlign: 'left',
@@ -1085,9 +1088,15 @@ export default function GearScreen({
                 </span>
               </>
             )
-            return row.href
-              ? <Link key={row.key} href={row.href} onClick={onClose} className="tap" style={rowStyle}>{inner}</Link>
-              : <button key={row.key} type="button" onClick={() => setOpenSlot(row.key)} className="tap" style={rowStyle}>{inner}</button>
+            return (
+              <button
+                key={row.key}
+                type="button"
+                onClick={() => { if (row.key === 'rod') setRodView('shop'); setOpenSlot(row.key) }}
+                className="tap"
+                style={rowStyle}
+              >{inner}</button>
+            )
           })}
           <ShopLink href="/marketplace/tackle-shop" label="The Tackle Shop" sub="The full catalogue — every rod, reel, hook, line and bait" color="#f0c040" onClick={onClose} />
         </div>
@@ -1252,8 +1261,12 @@ export default function GearScreen({
 
               {/* ── Rod ── */}
               {openSlot === 'rod' && (() => {
+                const unownedRodDefs = RODS
+                  .filter(r => r.cost > 0 && !r.earnedOnly && !ownedRods.includes(r.tier))
+                  .sort((a, b) => a.cost - b.cost)
                 const rodLines = rodStatLines(rod)
                 const ownedCount = ownedRodDefs.length
+                const shopCount  = unownedRodDefs.length
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     <AnimatePresence>
@@ -1471,8 +1484,9 @@ export default function GearScreen({
                       )
                     })()}
 
-                    {/* Your rods — tap to equip. Buying moved to the Shop tab and the
-                        full Tackle Shop page, so this panel is equip-only now. */}
+                    {/* Equip your rods (from Loadout) or buy new ones (from the Shop tab's
+                        Browse). Entry point decides; no toggle. */}
+                    {rodView === 'owned' ? (
                     <>
                         {/* Equipped rod recap — image + name + compact
                             bullet stats + a Sell pill on the right of
@@ -1694,6 +1708,184 @@ export default function GearScreen({
                           </>
                         )}
                       </>
+                    ) : (
+                      <>
+                        {shopCount === 0 ? (
+                          <div style={{
+                            padding: '1.4rem 1rem',
+                            background: 'rgba(4,10,18,0.5)',
+                            border: '1px dashed rgba(255,255,255,0.12)',
+                            borderRadius: 12,
+                            textAlign: 'center',
+                          }}>
+                            <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#a09890', marginBottom: 4 }}>
+                              You own every rod in the sea.
+                            </p>
+                            <p className="font-karla" style={{ fontSize: '0.75rem', color: '#6a6460' }}>
+                              The shop is bare, Captain.
+                            </p>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {unownedRodDefs.map(r => {
+                              const canAfford = doubloons >= r.cost
+                              const rodReq = fishingGearLevelReq(r)
+                              const rodLevelMet = fishingLevel >= rodReq
+                              const captainLocked = isCaptainRod(r) && !isPremium
+                              const onTap = () => {
+                                if (captainLocked) { openMembership(); return }
+                                // Open the detail view either way — players can read
+                                // a rod's stats before they can afford it; the dialog
+                                // just shows a disabled "Need X more" CTA.
+                                // Build "what changes vs my current rod" deltas. If two
+                                // rods are stat-identical (rare but possible across re-skins),
+                                // fall back to the new rod's full stat list so the modal
+                                // isn't empty.
+                                const deltas = rodStatDeltas(rod, r)
+                                const fallbackLines = deltas.length === 0 ? rodStatLines(r) : null
+                                setPendingPurchase({
+                                  name: r.name, color: r.color, cost: r.cost, affordable: canAfford && rodLevelMet,
+                                  lockedNote: rodLevelMet ? undefined : `Reach Fishing Lv ${rodReq} to buy this rod.`,
+                                  onConfirm: async () => { flashPurchase(r.name, r.color, r.cost, 'rod'); await onBuyRod(r.tier) },
+                                  details: (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img
+                                          src={r.slug ? `/${r.slug}_thumb.png` : (r.imageUrl ?? '/rod_bamboo_thumb.png')}
+                                          alt={r.name}
+                                          loading="lazy"
+                                          decoding="async"
+                                          className={rodGlowClass(r)}
+                                          style={{
+                                            width: 56, height: 56, objectFit: 'contain', flexShrink: 0,
+                                            ...(r.glow ? { ['--rod-glow-color' as string]: r.color } : { filter: `drop-shadow(0 2px 8px ${r.color}66)` }),
+                                          } as React.CSSProperties}
+                                        />
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                          <p className="font-karla font-700 uppercase tracking-[0.12em]"
+                                            style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.45)', marginBottom: 2 }}>
+                                            New Rod
+                                          </p>
+                                          <p className="font-cinzel font-700"
+                                            style={{ fontSize: '1.05rem', color: r.color, lineHeight: 1.1 }}>
+                                            {r.name}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <p className="font-karla font-300"
+                                        style={{ fontSize: '0.82rem', color: '#a09890', lineHeight: 1.5 }}>
+                                        {r.description}
+                                      </p>
+                                      {fallbackLines ? (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                          {fallbackLines.map(l => (
+                                            <StatRow key={l.title} title={l.title} value={l.value} help={l.help} color={r.color} />
+                                          ))}
+                                        </div>
+                                      ) : (
+                                        <>
+                                          <p className="font-karla font-700 uppercase tracking-[0.12em]"
+                                            style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
+                                            What changes
+                                          </p>
+                                          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                                            {deltas.map(d => (
+                                              <StatDeltaRow key={d.title} row={d} color={r.color} />
+                                            ))}
+                                          </div>
+                                        </>
+                                      )}
+                                    </div>
+                                  ),
+                                })
+                              }
+                              // Aspirational view: locked rods show "Need X more"
+                              // with a progress bar (current doubloons / cost)
+                              // along the bottom of the card. Turns "can't afford"
+                              // from a dead-end into a goal the player can see
+                              // closing as they fish.
+                              const need = Math.max(0, r.cost - doubloons)
+                              const progressPct = Math.min(1, doubloons / r.cost)
+                              return (
+                                <button
+                                  key={r.tier}
+                                  onClick={onTap}
+                                  className="font-karla"
+                                  style={{
+                                    position: 'relative',
+                                    display: 'flex', flexDirection: 'column', gap: 0,
+                                    padding: 0,
+                                    borderRadius: 12,
+                                    background: 'rgba(4,10,18,0.72)',
+                                    border: `1px solid ${canAfford ? r.color + '50' : 'rgba(255,255,255,0.09)'}`,
+                                    cursor: 'pointer',
+                                    opacity: canAfford ? 1 : 0.82,
+                                    textAlign: 'left',
+                                    width: '100%',
+                                    overflow: 'hidden',
+                                  }}
+                                >
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.75rem 0.85rem' }}>
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                      src={r.slug ? `/${r.slug}_thumb.png` : (r.imageUrl ?? '/rod_bamboo_thumb.png')}
+                                      alt=""
+                                      loading="lazy"
+                                      decoding="async"
+                                      className={rodGlowClass(r)}
+                                      style={{
+                                        width: 48, height: 48, objectFit: 'contain', flexShrink: 0,
+                                        ...(r.glow ? { ['--rod-glow-color' as string]: r.color } : { filter: `drop-shadow(0 1px 6px ${r.color}66)` }),
+                                        opacity: canAfford ? 1 : 0.7,
+                                      } as React.CSSProperties}
+                                    />
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                      <p className="font-cinzel font-700" style={{ fontSize: '0.86rem', color: canAfford ? '#f0ede8' : '#c4bfb6', lineHeight: 1.15, marginBottom: 2 }}>
+                                        {r.name}
+                                      </p>
+                                      <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: r.color, lineHeight: 1.3, opacity: 0.85 }}>
+                                        {rodTagline(r)}
+                                      </p>
+                                    </div>
+                                    <div style={{
+                                      display: 'flex', flexDirection: 'column', alignItems: 'flex-end',
+                                      gap: 2, flexShrink: 0,
+                                    }}>
+                                      <span className="font-karla font-700 uppercase tracking-[0.1em]"
+                                        style={{ fontSize: '0.56rem', color: captainLocked ? '#f0c040' : !rodLevelMet ? '#e0a44a' : canAfford ? r.color : '#f87171' }}>
+                                        {captainLocked ? <><IconAnchor size={10} /> Captain only</> : !rodLevelMet ? `Fishing Lv ${rodReq}` : canAfford ? 'Tap to Buy' : `Need ${need.toLocaleString()}`}
+                                      </span>
+                                      <span className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: canAfford ? '#f0c040' : '#f0c04088' }}>
+                                        {r.cost.toLocaleString()} ⟡
+                                      </span>
+                                    </div>
+                                  </div>
+                                  {/* Progress bar — only on unaffordable rods.
+                                      Sits flush with the card's bottom edge so
+                                      it reads as "fill this up". Color matches
+                                      the rod so each row has its own goal feel. */}
+                                  {!canAfford && (
+                                    <div style={{
+                                      height: 3, width: '100%',
+                                      background: 'rgba(255,255,255,0.06)',
+                                      overflow: 'hidden',
+                                    }}>
+                                      <div style={{
+                                        width: `${progressPct * 100}%`, height: '100%',
+                                        background: `linear-gradient(90deg, ${r.color}99, ${r.color})`,
+                                        boxShadow: `0 0 6px ${r.color}88`,
+                                        transition: 'width 0.4s',
+                                      }} />
+                                    </div>
+                                  )}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
                 )
               })()}
