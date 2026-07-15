@@ -134,11 +134,13 @@ function applyBossMods(zones: ZoneDef[], mechanic: BossMechanic | null, shrinkDe
       }
     }
   }
-  if (shrinkDeg > 0) {
-    // Narrow the gold PERFECT sliver each stage. The green catch band is
-    // narrowed separately at the buildFishZones call sites (a reduced catch
-    // bonus), so the whole landing window truly closes stage to stage — not
-    // just the perfect. Both stay in lockstep because both read bossZoneShrink.
+  if (shrinkDeg !== 0) {
+    // Resize the gold PERFECT sliver. Positive shrinkDeg NARROWS it each stage (the
+    // closing jaw); NEGATIVE shrinkDeg WIDENS it (Megalodon opens on a generous
+    // perfect, then tightens phase by phase). The green catch band is narrowed
+    // separately at the buildFishZones call sites (a reduced catch bonus) for the
+    // 'shrink' mechanic; Megalodon is precision, so the catch is a miss anyway and
+    // only this perfect matters. Both read bossZoneShrink, so they stay in lockstep.
     result = result.map(z => {
       if (z.type !== 'perfect') return z
       const center = (z.from + z.to) / 2
@@ -235,29 +237,30 @@ const ZONES = ['shallows', 'open_waters', 'deep', 'abyss', 'ancient_deep'] as co
 type ZoneKey = typeof ZONES[number]
 
 type BossMechanic = 'shrink' | 'drift' | 'accelerate' | 'randomize' | 'split' | 'precision' | 'gyre'
-// Ancient Deep multi-phase reel config. Each of the 6 trophies now has its OWN
-// signature mechanic so no two giants fight alike, and Megalodon is the gated
-// final-final boss: a 4-phase GAUNTLET that rerolls its mechanic every stage from a
-// curated hard pool (wildcardPool) and ALWAYS ends on a perfect-only precision
-// stage (finalMechanic) so the capstone has a real difficulty floor. New sellable
-// regulars run a shorter 2 stages. The wildcard flag rerolls the mechanic each
-// stage (Megalodon's gauntlet; Sea Lamprey inherits the same "primitive,
-// unpredictable" feel from the general pool at the lower tier).
+// Ancient Deep multi-phase reel config. Each of the 6 trophies has its OWN signature
+// mechanic so no two giants fight alike. Megalodon is the gated final-final boss: a
+// pure CONSISTENCY test — precision (perfect-only) on all 4 phases, each phase a
+// little tighter and faster than the last (perfectShrinkStep / speedStepMult). It
+// starts generous (a WIDE perfect via a negative perfectShrinkStart) and closes down,
+// with NO blackouts (noBlackout) — the challenge is landing four perfects in a row,
+// not fighting the dark. New sellable regulars run a shorter 2 stages. The wildcard
+// flag rerolls the mechanic each stage (Sea Lamprey's "primitive, unpredictable" feel).
 interface BossConfig {
   mechanic: BossMechanic
   phases: number
   wildcard?: boolean
-  /** Reroll pool for wildcard fish. Defaults to WILDCARD_MECHANICS. */
-  wildcardPool?: BossMechanic[]
-  /** Force this mechanic on the LAST stage (Megalodon's precision finale). */
-  finalMechanic?: BossMechanic
+  /** Perfect-escalation (Megalodon): the perfect window's bossZoneShrink at phase 1
+   *  (NEGATIVE = wider than normal), then += perfectShrinkStep each phase. */
+  perfectShrinkStart?: number
+  perfectShrinkStep?: number
+  /** Needle-speed multiplier applied each phase (Megalodon's gentle ramp). */
+  speedStepMult?: number
+  /** Suppress the zone blackout for this fish (Megalodon reads clean). */
+  noBlackout?: boolean
 }
-// Megalodon draws only from the mechanics that genuinely gate a clear or ramp the
-// pressure — no no-op filler — and its finale is always precision.
-const MEGALODON_POOL: BossMechanic[] = ['precision', 'accelerate', 'drift', 'gyre', 'shrink']
 const BOSS_CONFIG: Record<string, BossConfig> = {
   // ── Ancients (sell_value 0, route to ancient_catches) ──
-  'Megalodon':         { mechanic: 'accelerate', phases: 4, wildcard: true, wildcardPool: MEGALODON_POOL, finalMechanic: 'precision' }, // FINAL boss — curated 4-stage gauntlet, precision finale, gated behind the other 5
+  'Megalodon':         { mechanic: 'precision', phases: 4, perfectShrinkStart: -18, perfectShrinkStep: 6, speedStepMult: 1.12, noBlackout: true }, // FINAL boss — 4 perfects in a row, tightening each phase, gated behind the other 5
   'Plesiosaurus':      { mechanic: 'drift',      phases: 3 }, // the ring circles you, one way
   'Dunkleosteus':      { mechanic: 'accelerate', phases: 3 }, // the armored ram — faster each stage
   'Mosasaurus':        { mechanic: 'gyre',       phases: 3 }, // the sea-dragon coils — the ring rocks like a swell
@@ -4462,6 +4465,9 @@ export default function FishingGame({
     const fishSpecies = allFishSpecies.find(f => f.id === hookedFish.fishId)
     const reverseEligible = selectedZone !== 'ancient_deep' || (fishSpecies?.sell_value ?? 0) === 0
     const effectiveReverseChance = reverseEligible ? zoneDiff.reverseChance : 0
+    // Megalodon (noBlackout) reads clean — its difficulty is the tightening perfect,
+    // not the dark. Captured once so the lookup doesn't run inside the rAF tick.
+    const noBlackout = selectedZone === 'ancient_deep' && BOSS_CONFIG[fishSpecies?.name ?? '']?.noBlackout === true
 
     speedRef.current   = baseMin + Math.random() * (baseMax - baseMin)
     lastTimeRef.current  = 0
@@ -4521,7 +4527,7 @@ export default function FishingGame({
             vibrate([0, 22, 30, 22])
           }
         }
-        const scaledBlackout = zoneDiff.blackoutChance * (hookedFish.catchDifficulty / 5)
+        const scaledBlackout = noBlackout ? 0 : zoneDiff.blackoutChance * (hookedFish.catchDifficulty / 5)
         if (Math.random() < scaledBlackout && blackoutTimerRef.current === null) {
           const duration = 500 + Math.random() * 600
           paintBlackout(0.91)
@@ -4814,16 +4820,18 @@ export default function FishingGame({
       if (selectedZone === 'ancient_deep') {
         const bossName = allFishSpecies.find(f => f.id === res.fishId)?.name ?? ''
         const cfg = BOSS_CONFIG[bossName] ?? { mechanic: 'shrink' as BossMechanic, phases: 2 }
-        const pool = cfg.wildcardPool ?? WILDCARD_MECHANICS
         const mechanic = cfg.wildcard
-          ? pool[Math.floor(Math.random() * pool.length)]
+          ? WILDCARD_MECHANICS[Math.floor(Math.random() * WILDCARD_MECHANICS.length)]
           : cfg.mechanic
         activeBossMechanicRef.current = mechanic
         setActiveBossMechanic(mechanic)
         bossStageRef.current = 1
         setBossStage(1)
-        bossZoneShrinkRef.current = 0
-        setBossZoneShrink(0)
+        // Megalodon opens on a WIDE perfect (negative perfectShrinkStart) and tightens
+        // each phase; everyone else starts un-shrunk.
+        const startShrink = cfg.perfectShrinkStart ?? 0
+        bossZoneShrinkRef.current = startShrink
+        setBossZoneShrink(startShrink)
         bossNeedleMultRef.current = 1.0
       }
 
@@ -5242,7 +5250,15 @@ export default function FishingGame({
 
           // Apply stage-escalation for each mechanic
           const mechanic = activeBossMechanicRef.current
-          if (mechanic === 'shrink') {
+          if (cfg.perfectShrinkStep != null) {
+            // Megalodon's consistency ramp: the perfect closes a step each phase
+            // (from its wide start toward a tight sliver) and the needle nudges
+            // faster. Mechanic stays 'precision', so every phase is perfect-only.
+            const newShrink = bossZoneShrinkRef.current + cfg.perfectShrinkStep
+            bossZoneShrinkRef.current = newShrink
+            setBossZoneShrink(newShrink)
+            if (cfg.speedStepMult) bossNeedleMultRef.current = Math.min(bossNeedleMultRef.current * cfg.speedStepMult, 4.0)
+          } else if (mechanic === 'shrink') {
             const newShrink = bossZoneShrinkRef.current + 10
             bossZoneShrinkRef.current = newShrink
             setBossZoneShrink(newShrink)
@@ -5250,15 +5266,10 @@ export default function FishingGame({
             bossNeedleMultRef.current = Math.min(bossNeedleMultRef.current * 1.4, 4.0)
           }
 
-          // Wildcard fish (Megalodon, Sea Lamprey) reroll the mechanic each stage
-          // instead of escalating one fixed mechanic. Megalodon draws from its
-          // curated pool and its FINAL stage is forced to precision (finalMechanic)
-          // so the capstone always ends on a perfect-only strike.
+          // Wildcard fish (Sea Lamprey) reroll the mechanic each stage instead of
+          // escalating one fixed mechanic.
           if (cfg.wildcard) {
-            const pool = cfg.wildcardPool ?? WILDCARD_MECHANICS
-            const next = (cfg.finalMechanic && nextStage === cfg.phases)
-              ? cfg.finalMechanic
-              : pool[Math.floor(Math.random() * pool.length)]
+            const next = WILDCARD_MECHANICS[Math.floor(Math.random() * WILDCARD_MECHANICS.length)]
             activeBossMechanicRef.current = next
             setActiveBossMechanic(next)
             bossZoneShrinkRef.current = next === 'shrink' ? 8 : 0
