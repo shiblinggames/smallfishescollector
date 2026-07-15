@@ -7,25 +7,17 @@
 // rest. When a captain is caught up it collapses to one calm line rather than
 // vanishing, so the space reads as "handled", not broken.
 //
-// This is a SLIM BAR, not a card. The first version was a tall tinted card with a
-// "What's Worth Your Time" eyebrow that neither blended with the page nor earned the
-// height. This is one row: a tone-coloured edge, a title and a one-line detail, an
-// arrow, and — only when there is more than one — a compact "n/N" advance control on
-// the same row (never a second row). It sits above the hub cards and belongs to them.
+// This is ONE fluid bar, not a card and not a strip-plus-box. The first version was a
+// tall tinted card with a "What's Worth Your Time" eyebrow; a later one had a coloured
+// dot and left edge that read as generic. This is a single neutral container: a title
+// and a one-line detail fill it, and — only when there is more than one — a compact
+// "n/N" advance control lives inside the same bar past a hairline divider. No dot, no
+// coloured edge, one chevron. It sits above the hub cards and belongs to them.
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { deriveOpportunities, type Opportunity, type OpportunityState, type OpportunityAction } from '@/lib/expeditionOpportunities'
+import { deriveOpportunities, type OpportunityState, type OpportunityAction } from '@/lib/expeditionOpportunities'
 import Link from 'next/link'
-
-// One colour per tone. It rides the left edge and the little dot — enough to read the
-// urgency, not enough to shout.
-const TONE: Record<Opportunity['tone'], string> = {
-  urgent:   '#ef4444',
-  reward:   '#f0c040',
-  progress: '#dca494',
-  idle:     '#5eead4',
-}
 
 export default function OpportunityStrip({ state, onAction }: {
   state: OpportunityState
@@ -52,14 +44,12 @@ export default function OpportunityStrip({ state, onAction }: {
 
   const idx = Math.min(i, list.length - 1)
   const op = list[idx]
-  const accent = TONE[op.tone]
 
   const content = (
     <AnimatePresence mode="wait">
       <motion.div key={op.id}
         initial={{ opacity: 0, x: 6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -6 }}
-        transition={{ duration: 0.16 }}
-        style={{ flex: 1, minWidth: 0 }}>
+        transition={{ duration: 0.16 }}>
         <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.9rem', color: '#f2ece0', lineHeight: 1.2 }}>
           {op.title}
         </p>
@@ -70,35 +60,26 @@ export default function OpportunityStrip({ state, onAction }: {
     </AnimatePresence>
   )
 
-  // The action fills the row; the container is a plain div so the page dots (below)
-  // are siblings, never nested inside a tap target.
-  const rowInner = (
-    <>
-      <span aria-hidden style={{ flexShrink: 0, width: 8, height: 8, borderRadius: 999, background: accent, boxShadow: `0 0 8px ${accent}88` }} />
-      {content}
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M9 6l6 6-6 6" /></svg>
-    </>
-  )
-
-  const rowStyle: React.CSSProperties = {
-    display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0, textAlign: 'left',
-    padding: '0.6rem 0.8rem', borderRadius: 14, cursor: 'pointer', textDecoration: 'none',
-    background: 'rgba(6,12,20,0.72)',
-    border: '1px solid rgba(255,255,255,0.08)',
-    borderLeft: `2px solid ${accent}`,
+  // The action fills the left of the bar; it is transparent so the ONE outer container
+  // is the whole visible shape. No dot, no coloured edge — just the bar.
+  const actionStyle: React.CSSProperties = {
+    display: 'block', flex: 1, minWidth: 0, textAlign: 'left', textDecoration: 'none',
+    padding: '0.6rem 0.85rem', cursor: 'pointer', background: 'transparent', border: 'none',
   }
 
   return (
     <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}
-      style={{ marginBottom: 12, display: 'flex', alignItems: 'stretch', gap: 6 }}>
+      style={{
+        marginBottom: 12, display: 'flex', alignItems: 'stretch', overflow: 'hidden',
+        borderRadius: 14, background: 'rgba(6,12,20,0.72)', border: '1px solid rgba(255,255,255,0.08)',
+      }}>
       {op.action.kind === 'href'
-        ? <Link href={op.action.href} className="tap" style={rowStyle}>{rowInner}</Link>
-        : <button type="button" onClick={() => onAction(op.action)} className="tap" style={{ ...rowStyle, borderTopStyle: 'solid' }}>{rowInner}</button>}
+        ? <Link href={op.action.href} className="tap" style={actionStyle}>{content}</Link>
+        : <button type="button" onClick={() => onAction(op.action)} className="tap" style={actionStyle}>{content}</button>}
 
-      {/* HOW YOU SEE THE REST. Folded onto the same row as a compact count + advance
-          control, so paging costs no extra height. It stretches to the strip's height,
-          shows "n/N", and cycles (wrapping to the top). Sibling of the action, never
-          nested inside the tap target. */}
+      {/* HOW YOU SEE THE REST — one compact control inside the same bar, past a hairline
+          divider. Shows "n/N" and one chevron (a loop on the last), cycling and wrapping.
+          Sibling of the action so nothing is nested in a tap target. */}
       {list.length > 1 && (
         <button type="button" onClick={() => setI(v => (v + 1) % list.length)}
           aria-label={idx === list.length - 1 ? 'Back to first suggestion' : 'Next suggestion'}
@@ -106,8 +87,9 @@ export default function OpportunityStrip({ state, onAction }: {
           style={{
             flexShrink: 0, display: 'flex', flexDirection: 'column',
             alignItems: 'center', justifyContent: 'center', gap: 3,
-            padding: '0 0.7rem', borderRadius: 14, cursor: 'pointer',
-            background: 'rgba(6,12,20,0.72)', border: '1px solid rgba(255,255,255,0.08)',
+            padding: '0 0.75rem', cursor: 'pointer',
+            background: 'transparent', border: 'none',
+            borderLeft: '1px solid rgba(255,255,255,0.08)',
           }}>
           <span className="font-karla font-800 tracking-[0.04em]" style={{ fontSize: '0.56rem', color: '#8a857c' }}>
             {idx + 1}/{list.length}
