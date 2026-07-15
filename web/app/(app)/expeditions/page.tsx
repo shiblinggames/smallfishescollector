@@ -12,7 +12,7 @@ import ShipHero from './ShipHero'
 import ExpeditionsTour from './ExpeditionsTour'
 import HubCards from './HubCards'
 import type { CampaignCardData, VoyageCardData, VoyageStatus } from './HubCards'
-import { gauntletUnlocked, GAUNTLET_COOLDOWN_MS } from '@/lib/gauntlet'
+import { gauntletUnlocked } from '@/lib/gauntlet'
 import { CREW_SKINS } from '@/lib/crewSkins'
 import { getCrewRoster } from '@/app/(app)/crew/actions'
 import { getDailyVoyageState } from './voyageActions'
@@ -317,8 +317,6 @@ async function ExpeditionHub() {
   const todayUTC = new Date().toISOString().slice(0, 10)
   const freeRecruitAvailable = (profile?.last_free_recruit_date as string | null) !== todayUTC
   const gems = (profile?.gems as number | null) ?? 0
-  const lastGauntlet = profile?.gauntlet_last_run_at ? new Date(profile.gauntlet_last_run_at as string).getTime() : 0
-  const gauntletDailyReady = gauntletOpen && (Date.now() - lastGauntlet >= GAUNTLET_COOLDOWN_MS)
   // Affordable AND not-already-owned: never nudge a whale who owns every skin.
   const ownedSkinIds = new Set((profile?.owned_crew_skins as string[] | null) ?? [])
   const cheapestUnownedSkin = CREW_SKINS
@@ -357,7 +355,6 @@ async function ExpeditionHub() {
       captainsOrdersDone={profile?.captains_orders_done === true}
       gems={gems}
       freeRecruitAvailable={freeRecruitAvailable}
-      gauntletDailyReady={gauntletDailyReady}
       canAffordNewSkin={canAffordNewSkin}
       canPvp={canPvp}
       gauntletOpen={gauntletOpen}

@@ -35,8 +35,6 @@ export interface OpportunityState {
   /** Can a voyage be sent at all — crew on the voyage track, or free to be put there. */
   canVoyage: boolean
   freeRecruitAvailable: boolean
-  gauntletUnlocked: boolean
-  gauntletDailyReady: boolean
   /** The campaign's next node, and whether it can be entered. */
   nextNodeName: string | null
   nextNodeIsFight: boolean
@@ -72,7 +70,7 @@ export function deriveOpportunities(s: OpportunityState): Opportunity[] {
     out.push({
       id: 'repair', tone: 'urgent',
       title: 'Your ship needs repairs',
-      detail: `${s.repairOwed.toLocaleString()} ⟡ to make her seaworthy. You cannot sail into a fight broken.`,
+      detail: `${s.repairOwed.toLocaleString()} ⟡ to fix her. You cannot fight broken.`,
       cta: 'Repair the ship', action: { kind: 'modal', modal: 'campaign' },
     })
   }
@@ -85,7 +83,7 @@ export function deriveOpportunities(s: OpportunityState): Opportunity[] {
     out.push({
       id: 'claim_voyage', tone: 'reward',
       title: 'Your voyage is back',
-      detail: bits ? `${bits} waiting to be claimed.` : 'Your crew are home. Claim the haul.',
+      detail: bits ? `${bits} to claim.` : 'Your crew are home. Claim the haul.',
       cta: 'Claim the haul', action: { kind: 'modal', modal: 'voyages' },
     })
   }
@@ -94,19 +92,11 @@ export function deriveOpportunities(s: OpportunityState): Opportunity[] {
     out.push({
       id: 'free_recruit', tone: 'reward',
       title: 'A free recruit is waiting',
-      detail: 'Your daily free crew is at the Crew Hall. Crew is what everything else runs on.',
+      detail: 'Your daily free crew is at the Crew Hall.',
       cta: 'Recruit for free', action: { kind: 'href', href: '/crew' },
     })
   }
 
-  if (s.gauntletUnlocked && s.gauntletDailyReady) {
-    out.push({
-      id: 'gauntlet_daily', tone: 'reward',
-      title: 'Your daily Gauntlet run is ready',
-      detail: 'One dive a day. Push your luck down the Gauntlet for Fathoms and a swelling pot.',
-      cta: 'Descend', action: { kind: 'modal', modal: 'gauntlets' },
-    })
-  }
 
   // A fight is waiting. Either the deck is crewed (advance) or it is empty (crew up).
   // These are mutually exclusive, so exactly one fires, and the strip can never say
@@ -116,14 +106,14 @@ export function deriveOpportunities(s: OpportunityState): Opportunity[] {
     out.push({
       id: 'crew_deck', tone: 'urgent',
       title: 'Your raid deck is empty',
-      detail: `${s.nextNodeName} is next, and you are sailing alone. Put your crew in the raid slots before you fight.`,
+      detail: `${s.nextNodeName} is next and you are sailing alone.`,
       cta: 'Crew the deck', action: { kind: 'href', href: '/crew?tab=roster&filter=raid' },
     })
   } else if (fightWaiting && s.raidCrewAboard > 0) {
     out.push({
       id: 'next_fight', tone: 'progress',
       title: `Next: ${s.nextNodeName}`,
-      detail: 'Your deck is crewed and the next battle is ready.',
+      detail: 'Your deck is crewed and the battle is ready.',
       cta: 'To the fight', action: { kind: 'modal', modal: 'campaign' },
     })
   }
@@ -132,7 +122,7 @@ export function deriveOpportunities(s: OpportunityState): Opportunity[] {
     out.push({
       id: 'send_voyage', tone: 'idle',
       title: 'A voyage could be earning',
-      detail: 'No voyage is out. Send your spare crew to bring back doubloons and Nav XP while you play.',
+      detail: 'Send spare crew for doubloons and Nav XP while you play.',
       cta: 'Send a voyage', action: { kind: 'modal', modal: 'voyages' },
     })
   }
@@ -141,7 +131,7 @@ export function deriveOpportunities(s: OpportunityState): Opportunity[] {
     out.push({
       id: 'equip_item', tone: 'idle',
       title: `${s.unequippedItems} raid item${s.unequippedItems === 1 ? '' : 's'} sitting in your hold`,
-      detail: 'Items are half your power in a fight, and they do nothing until you slot them.',
+      detail: 'Half your power in a fight, and unslotted they do nothing.',
       cta: 'Open your loadout', action: { kind: 'event', event: 'expedition:open-loadout' },
     })
   }
@@ -150,7 +140,7 @@ export function deriveOpportunities(s: OpportunityState): Opportunity[] {
     out.push({
       id: 'buy_skin', tone: 'idle',
       title: 'A crew skin is within reach',
-      detail: `Your ${s.gems.toLocaleString()} gems are enough to dress a legendary crew member in a skin they have not worn yet.`,
+      detail: `${s.gems.toLocaleString()} gems, enough for a legendary crew skin.`,
       cta: 'Visit the Crew Hall', action: { kind: 'href', href: '/crew' },
     })
   }

@@ -1,22 +1,30 @@
 'use client'
 
 // ── OPPORTUNITY STRIP ────────────────────────────────────────────────────────
-// The ongoing "what's worth your time" guide, in the slot Captain's Orders vacates
-// once onboarding latches. It shows the single highest-value actionable thing (see
+// The ongoing "what's worth your time" nudge, in the slot Captain's Orders vacates
+// once onboarding latches. It surfaces the single highest-value actionable thing (see
 // lib/expeditionOpportunities for the ranking), with a quiet way to page through the
-// rest so nothing is hidden. When a captain is caught up it collapses to one calm line
-// rather than vanishing, so the space reads as "handled", not broken.
+// rest. When a captain is caught up it collapses to one calm line rather than
+// vanishing, so the space reads as "handled", not broken.
+//
+// This is a SLIM BAR, not a card. The first version was a tall tinted card with a
+// "What's Worth Your Time" eyebrow that neither blended with the page nor earned the
+// height. This is one row: a tone-coloured edge, a title and a one-line detail, an
+// arrow, and — only when there is more than one — a set of page dots. It sits above
+// the hub cards and looks like it belongs to them.
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { deriveOpportunities, type Opportunity, type OpportunityState, type OpportunityAction } from '@/lib/expeditionOpportunities'
 import Link from 'next/link'
 
-const TONE: Record<Opportunity['tone'], { accent: string; wash: string }> = {
-  urgent:   { accent: '#ef4444', wash: 'rgba(220,38,38,0.14)' },
-  reward:   { accent: '#f0c040', wash: 'rgba(240,192,64,0.12)' },
-  progress: { accent: '#dca494', wash: 'rgba(220,164,148,0.12)' },
-  idle:     { accent: '#5eead4', wash: 'rgba(94,234,212,0.10)' },
+// One colour per tone. It rides the left edge and the little dot — enough to read the
+// urgency, not enough to shout.
+const TONE: Record<Opportunity['tone'], string> = {
+  urgent:   '#ef4444',
+  reward:   '#f0c040',
+  progress: '#dca494',
+  idle:     '#5eead4',
 }
 
 export default function OpportunityStrip({ state, onAction }: {
@@ -26,19 +34,17 @@ export default function OpportunityStrip({ state, onAction }: {
   const list = deriveOpportunities(state)
   const [i, setI] = useState(0)
 
-  // ── ALL CAUGHT UP ───────────────────────────────────────────────────────────
-  // Not hidden. A calm line confirms the guide is working and there is genuinely
-  // nothing pending, which is a small reward in itself.
+  // ── ALL CAUGHT UP — a calm line, not a gap ──────────────────────────────────
   if (list.length === 0) {
     return (
       <div style={{
-        marginBottom: 12, padding: '0.7rem 0.9rem', borderRadius: 14,
-        background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
+        marginBottom: 12, padding: '0.6rem 0.85rem', borderRadius: 14,
+        background: 'rgba(6,12,20,0.72)', border: '1px solid rgba(255,255,255,0.07)',
         display: 'flex', alignItems: 'center', gap: 9,
       }}>
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7fd4c4" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M20 6L9 17l-5-5" /></svg>
-        <p className="font-karla font-600" style={{ fontSize: '0.76rem', color: '#8a9a94' }}>
-          All squared away, captain. Nothing pending.
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6f8a84" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M20 6L9 17l-5-5" /></svg>
+        <p className="font-karla font-600" style={{ fontSize: '0.74rem', color: '#7a8a84' }}>
+          All squared away, captain.
         </p>
       </div>
     )
@@ -46,80 +52,61 @@ export default function OpportunityStrip({ state, onAction }: {
 
   const idx = Math.min(i, list.length - 1)
   const op = list[idx]
-  const t = TONE[op.tone]
-  const ctaStyle: React.CSSProperties = {
-    display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 11,
-    padding: '0.55rem 0.95rem', borderRadius: 10, fontSize: '0.78rem', cursor: 'pointer',
-    textDecoration: 'none', border: 'none',
-    color: '#14100a', background: `linear-gradient(180deg, ${t.accent}, ${t.accent}cc)`,
-  }
+  const accent = TONE[op.tone]
 
-  const body = (
-    <>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <p className="font-karla font-800 uppercase tracking-[0.2em]" style={{ fontSize: '0.5rem', color: `${t.accent}cc` }}>
-          What&rsquo;s Worth Your Time
+  const content = (
+    <AnimatePresence mode="wait">
+      <motion.div key={op.id}
+        initial={{ opacity: 0, x: 6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -6 }}
+        transition={{ duration: 0.16 }}
+        style={{ flex: 1, minWidth: 0 }}>
+        <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.9rem', color: '#f2ece0', lineHeight: 1.2 }}>
+          {op.title}
         </p>
-        {list.length > 1 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }} onClick={e => e.preventDefault()}>
-            {/* Page through the rest. Nothing is hidden, it is just ranked. */}
-            <button type="button" aria-label="Previous" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setI(v => (v - 1 + list.length) % list.length) }}
-              className="tap" style={{ background: 'none', border: 'none', color: `${t.accent}bb`, cursor: 'pointer', padding: 2, display: 'flex' }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
-            </button>
-            <span className="font-karla font-700" style={{ fontSize: '0.56rem', color: '#8a8680', minWidth: 26, textAlign: 'center' }}>
-              {idx + 1}/{list.length}
-            </span>
-            <button type="button" aria-label="Next" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setI(v => (v + 1) % list.length) }}
-              className="tap" style={{ background: 'none', border: 'none', color: `${t.accent}bb`, cursor: 'pointer', padding: 2, display: 'flex' }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
-            </button>
-          </div>
-        )}
-      </div>
+        <p className="font-karla font-600 truncate" style={{ fontSize: '0.68rem', color: '#9a948a', lineHeight: 1.3, marginTop: 1 }}>
+          {op.detail}
+        </p>
+      </motion.div>
+    </AnimatePresence>
+  )
 
-      <AnimatePresence mode="wait">
-        <motion.div key={op.id}
-          initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }}
-          transition={{ duration: 0.2 }}>
-          <p className="font-cinzel font-800" style={{ fontSize: '1.02rem', color: '#f4ecd8', lineHeight: 1.2, marginTop: 6 }}>
-            {op.title}
-          </p>
-          <p className="font-karla" style={{ fontSize: '0.76rem', color: '#b0a99c', lineHeight: 1.45, marginTop: 4 }}>
-            {op.detail}
-          </p>
-        </motion.div>
-      </AnimatePresence>
-
-      {/* The CTA is a REAL button/link, not a fake span inside a tappable card. The
-          card used to be one big <button> with the paging chevrons nested inside it —
-          a button within a button, invalid HTML, and taps near the arrows could fire
-          the card's action instead of paging. Now the container is a plain div and the
-          only interactive things are the paging controls and this one explicit CTA. */}
-      {op.action.kind === 'href' ? (
-        <Link href={op.action.href} className="font-cinzel font-800 uppercase tracking-[0.06em] tap"
-          style={ctaStyle}>
-          {op.cta}
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
-        </Link>
-      ) : (
-        <button type="button" onClick={() => onAction(op.action)} className="font-cinzel font-800 uppercase tracking-[0.06em] tap"
-          style={ctaStyle}>
-          {op.cta}
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
-        </button>
-      )}
+  // The action fills the row; the container is a plain div so the page dots (below)
+  // are siblings, never nested inside a tap target.
+  const rowInner = (
+    <>
+      <span aria-hidden style={{ flexShrink: 0, width: 8, height: 8, borderRadius: 999, background: accent, boxShadow: `0 0 8px ${accent}88` }} />
+      {content}
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M9 6l6 6-6 6" /></svg>
     </>
   )
 
+  const rowStyle: React.CSSProperties = {
+    display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left',
+    padding: '0.6rem 0.8rem', borderRadius: 14, cursor: 'pointer', textDecoration: 'none',
+    background: 'rgba(6,12,20,0.72)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderLeft: `2px solid ${accent}`,
+  }
+
   return (
-    <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}
-      style={{
-        marginBottom: 12, padding: '0.85rem 1rem 0.95rem', borderRadius: 16,
-        background: `radial-gradient(ellipse at 0% 0%, ${t.wash} 0%, rgba(8,13,22,0.7) 72%)`,
-        border: `1px solid ${t.accent}4a`,
-      }}>
-      {body}
+    <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}
+      style={{ marginBottom: 12 }}>
+      {op.action.kind === 'href'
+        ? <Link href={op.action.href} className="tap" style={rowStyle}>{rowInner}</Link>
+        : <button type="button" onClick={() => onAction(op.action)} className="tap" style={{ ...rowStyle, borderTopStyle: 'solid' }}>{rowInner}</button>}
+
+      {/* Page dots — only when there is more than one, and only tall enough to tap.
+          A separate row, so they are never nested inside the action above. */}
+      {list.length > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 5, marginTop: 6 }}>
+          {list.map((_, n) => (
+            <button key={n} type="button" aria-label={`Opportunity ${n + 1}`} onClick={() => setI(n)}
+              className="tap"
+              style={{ width: n === idx ? 16 : 6, height: 6, borderRadius: 999, padding: 0, cursor: 'pointer', border: 'none',
+                background: n === idx ? accent : 'rgba(255,255,255,0.18)', transition: 'width 0.2s, background 0.2s' }} />
+          ))}
+        </div>
+      )}
     </motion.div>
   )
 }

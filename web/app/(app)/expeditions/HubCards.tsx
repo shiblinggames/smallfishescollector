@@ -92,7 +92,6 @@ interface Props {
   /** Live state the Opportunity strip needs that the hub does not already hold. */
   gems: number
   freeRecruitAvailable: boolean
-  gauntletDailyReady: boolean
   canAffordNewSkin: boolean
   // Whether the PvP "coming soon" entry point is open to this viewer (admins +
   // duel testers). Everyone else sees it locked. PvP data is only fetched +
@@ -188,7 +187,7 @@ export default function HubCards({
   shipTier, todayVoyage, readyVoyage, expeditionXP, voyageHistory,
   canPvp, gauntletOpen, gauntletUpgrades, pvp,
   raidsCleared, captainsOrdersDone,
-  gems, freeRecruitAvailable, gauntletDailyReady, canAffordNewSkin,
+  gems, freeRecruitAvailable, canAffordNewSkin,
 }: Props) {
   const router = useRouter()
   const [modal, setModal] = useState<null | 'campaign' | 'voyages' | 'pvp' | 'gauntlets'>(null)
@@ -275,8 +274,6 @@ export default function HubCards({
             voyageRewardGems: readyVoyage?.total_gems ?? 0,
             canVoyage: roster.some(c => c.voyageSlot != null) || roster.some(c => c.raidSlot == null && c.voyageSlot == null),
             freeRecruitAvailable,
-            gauntletUnlocked: gauntletOpen,
-            gauntletDailyReady,
             nextNodeName: campaign.nextNodeName,
             nextNodeIsFight: campaign.nextNodeKind === 'raid' || campaign.nextNodeKind === 'challenge',
             nextNodeLocked: campaign.nextNodeLocked,
