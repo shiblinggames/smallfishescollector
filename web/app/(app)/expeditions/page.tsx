@@ -277,6 +277,12 @@ async function ExpeditionHub() {
     : baseShipStats
   // Next main-chain node: first non-cleared, non-sideBranch view.
   const next = raidMap.views.find(v => v.status !== 'cleared' && !v.node.sideBranch) ?? null
+  // The first available, un-cleared Challenge (a harder rerun of a beaten boss). Its
+  // label carries the "Challenge: " prefix; strip it, the card says "A Challenge".
+  const challengeView = raidMap.views.find(v =>
+    v.status === 'available' &&
+    (v.node.id.endsWith('_challenge') || v.node.route === '/raids/challenge'))
+  const challengeName = challengeView ? (challengeView.node.label ?? '').replace(/^Challenge:\s*/, '') : null
   const clearedViews = raidMap.views.filter(v => v.status === 'cleared')
   const cleared = clearedViews.length
   // Gauntlet door: admin-only until GAUNTLET_LIVE, then cleared-Chapter-2.
@@ -356,6 +362,7 @@ async function ExpeditionHub() {
       gems={gems}
       freeRecruitAvailable={freeRecruitAvailable}
       canAffordNewSkin={canAffordNewSkin}
+      challengeName={challengeName}
       canPvp={canPvp}
       gauntletOpen={gauntletOpen}
       gauntletUpgrades={(profile?.gauntlet_upgrades as string[] | null) ?? []}

@@ -42,6 +42,9 @@ export interface OpportunityState {
   raidCrewAboard: number
   /** Crew the captain owns, so a "crew your deck" nudge only fires when they can. */
   crewOwned: number
+  /** An available, un-cleared Challenge raid, if any — harder replays of beaten
+   *  bosses for better loot. Null when none is open. */
+  challengeName: string | null
   /** Owned raid items not currently slotted, and whether a slot is free for them. */
   unequippedItems: number
   itemSlotsFree: number
@@ -115,6 +118,18 @@ export function deriveOpportunities(s: OpportunityState): Opportunity[] {
       title: `Next: ${s.nextNodeName}`,
       detail: 'Your deck is crewed and the battle is ready.',
       cta: 'To the fight', action: { kind: 'modal', modal: 'campaign' },
+    })
+  }
+
+  // A Challenge is a harder rerun of a boss you have already beaten, for better loot.
+  // Only surfaced when your deck is crewed — being sent at a hard fight with an empty
+  // ship would be a trap, and the empty-deck nudge above already owns that case.
+  if (s.challengeName && s.raidCrewAboard > 0) {
+    out.push({
+      id: 'challenge', tone: 'progress',
+      title: 'A Challenge is open',
+      detail: `${s.challengeName} can be fought again, harder, for better loot.`,
+      cta: 'Take the Challenge', action: { kind: 'modal', modal: 'campaign' },
     })
   }
 
