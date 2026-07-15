@@ -3134,6 +3134,23 @@ export default function RaidCombat({
     // snapshot. Used everywhere a step's HP is committed during playback.
     const syncPHp = (step: Step) => { setPlayerHp(step.pHp); if (step.pShield != null) setAbyssalShieldHp(step.pShield) }
     const syncEHp = (step: Step) => { setEnemyHp(step.eHp); if (step.eShield != null) setEnemyShieldHp(step.eShield) }
+    // ── Player shield soak, one place ────────────────────────────────────────
+    // Drain the player shield pool (Stormward boon / Abyssal Tide) BEFORE damage
+    // reaches HP, and return what's left. Every source of incoming player damage
+    // routes through here so the buffer behaves consistently — a normal hit, a
+    // riposte/parry counter, a reflected slice, and a Frenzied bonus shot are all
+    // soaked the same way instead of some slipping straight past it. Each step's
+    // pushStep snapshots the ref, so the shield segment of the HP bar tracks it.
+    const soakPlayerShield = (amount: number, lines: string[]): number => {
+      if (abyssalShieldRef.current > 0 && amount > 0) {
+        const soaked = Math.min(abyssalShieldRef.current, amount)
+        abyssalShieldRef.current -= soaked
+        onStat?.({ dmgAbsorbed: soaked })
+        lines.push(abyssalShieldRef.current > 0 ? `Your shield soaks ${soaked}.` : `Your shield soaks ${soaked} and shatters.`)
+        return amount - soaked
+      }
+      return amount
+    }
 
     // Promote any freeze armed LAST round into the active skip for THIS round.
     // A freeze procced during this round only set the pending flag, so it can't
@@ -3729,8 +3746,8 @@ export default function RaidCombat({
               let parryDmg = Math.max(1, Math.floor(parryBase * enemy.parryDamagePct))
               const takenMult = incomingDmgMult * (1 + mods.damageTakenPct / 100) * tide.inDmgMult * pStatus.dmgTakenMult
               if (takenMult !== 1) parryDmg = Math.max(1, Math.floor(parryDmg * takenMult))
-              pHp = Math.max(0, pHp - parryDmg)
               stepLines.push(`${enemy.parryName ?? 'Riposte'}! ${enemy.name} counters your strike for ${parryDmg}.`)
+              pHp = Math.max(0, pHp - soakPlayerShield(parryDmg, stepLines))
             } else if (isAttackerPlayer && affix?.riposteReflectPct && dmg > 0) {
               // Riposte affix — reflect a slice of the shot you WOULD have landed
               // (so it scales with the player's own damage and punishes heavy
@@ -3738,9 +3755,9 @@ export default function RaidCombat({
               let riposteDmg = Math.max(1, Math.round(dmg * affix.riposteReflectPct))
               const takenMult = incomingDmgMult * (1 + mods.damageTakenPct / 100) * tide.inDmgMult * pStatus.dmgTakenMult
               if (takenMult !== 1) riposteDmg = Math.max(1, Math.floor(riposteDmg * takenMult))
-              pHp = Math.max(0, pHp - riposteDmg)
-              riposteDmgOut = riposteDmg
               stepLines.push(`Riposte! ${enemy.name} turns your own ${dmg}-damage strike back for ${riposteDmg}.`)
+              pHp = Math.max(0, pHp - soakPlayerShield(riposteDmg, stepLines))
+              riposteDmgOut = riposteDmg
             } else if (!isAttackerPlayer) {
               const parryEffects = getActiveEffects(liveItems)
               const parryChance      = parryEffects.filter(e => e.type === 'parry_chance').reduce((a, e) => Math.max(a, e.value), 0)
@@ -3950,8 +3967,8 @@ export default function RaidCombat({
             && Math.random() < (affix.reflectChance ?? 1)
           ) {
             const reflected = Math.max(1, Math.round(dmg * affix.reflectPct))
-            pHp = Math.max(0, pHp - reflected)
             stepLines.push(`${enemy.name}'s plating reflects ${reflected} back at you.`)
+            pHp = Math.max(0, pHp - soakPlayerShield(reflected, stepLines))
           }
           // Volatile affix: if this shot just killed the enemy, the wreck
           // explodes for 10% of the PLAYER'S REMAINING HP. Scales to how
@@ -4038,17 +4055,10 @@ export default function RaidCombat({
           }
           // Shield pool — soaks from the pool before HP. Seeded by the Stormward
           // boon at fight start and/or topped up by the Abyssal Tide ability;
-          // carries across turns until drained.
-          if (abyssalShieldRef.current > 0 && dmg > 0) {
-            const soaked = Math.min(abyssalShieldRef.current, dmg)
-            abyssalShieldRef.current -= soaked
-            dmg -= soaked
-            shieldChanged = true
-            onStat?.({ dmgAbsorbed: soaked })
-            stepLines.push(abyssalShieldRef.current > 0
-              ? `Your shield soaks ${soaked}.`
-              : `Your shield soaks ${soaked} and shatters.`)
-          }
+          // carries across turns until drained. (Same helper every other incoming
+          // source uses, so a normal hit and a riposte drain it identically.)
+          dmg = soakPlayerShield(dmg, stepLines)
+          shieldChanged = true
           if (dmg > 0) onStat?.({ dmgTaken: dmg })
           pHp = Math.max(0, pHp - dmg)
           // Spiteful Wake (boon): the attacker takes a slice of what it dealt
@@ -4238,10 +4248,15 @@ export default function RaidCombat({
         if (Math.random() < effCrit2) { frenziedCrit = true; dmg2 = Math.floor(dmg2 * 1.5) }
         const takenMult2 = incomingDmgMult * (1 + mods.damageTakenPct / 100) * pStatus.dmgTakenMult
         if (takenMult2 !== 1 && dmg2 > 0) dmg2 = Math.max(1, Math.floor(dmg2 * takenMult2))
-        pHp = Math.max(0, pHp - dmg2)
+        // The bonus shot is a real enemy fire, so it soaks the player shield just
+        // like the primary one (it used to slip straight past the buffer).
+        const frenzyLines = [`Frenzied! ${enemy.name} fires again for ${dmg2}${frenziedCrit ? ' (critical!)' : ''}.`]
+        const dmg2Net = soakPlayerShield(dmg2, frenzyLines)
+        pHp = Math.max(0, pHp - dmg2Net)
         // Vampiric carry-through on the Frenzied second shot — same chance
         // gate as the primary fire so an enemy with Frenzied + Vampiric
-        // can occasionally lifesteal from the bonus shot too.
+        // can occasionally lifesteal from the bonus shot too. Reads dmg2 (what
+        // it fired), same as the primary shot's vampiric.
         if (
           dmg2 > 0
           && eHp > 0 && eHp < enemyHpMaxRef.current
@@ -4255,10 +4270,10 @@ export default function RaidCombat({
           who: 'enemy', action: 'fire',
           pHp, eHp, pCharges, eCharges,
           splatTarget: 'player',
-          splatText: `-${dmg2}`,
-          splatColor: frenziedCrit ? '#fbbf24' : '#ef4444',
-          big: frenziedCrit,
-          logLines: [`Frenzied! ${enemy.name} fires again for ${dmg2}${frenziedCrit ? ' (critical!)' : ''}.`],
+          splatText: dmg2Net > 0 ? `-${dmg2Net}` : 'Shielded',
+          splatColor: dmg2Net > 0 ? (frenziedCrit ? '#fbbf24' : '#ef4444') : '#7dd3fc',
+          big: frenziedCrit && dmg2Net > 0,
+          logLines: frenzyLines,
         })
       }
     }
