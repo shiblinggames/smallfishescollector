@@ -381,38 +381,38 @@ export default function TackleShopClient({
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           {summaries.map(s => {
             const pip = STATE_PIP[s.state]
-            const isReady = s.state === 'ready'
+            // The Forge's cleanliness comes from styling by STATE, not by category.
+            // Colouring every tile by its category turned the board into a rainbow;
+            // now the chrome is uniform and neutral, the READY ones lift in gold, and
+            // the art alone carries which category it is. Calm grid, one loud signal.
+            const ready = s.state === 'ready'
             return (
               <motion.button key={s.key} type="button"
                 onClick={() => { vibrate([0, 12]); setSection(s.key); setError(null) }}
-                whileTap={{ scale: 0.97 }} className="tap"
+                whileTap={{ scale: 0.96 }} className="tap"
                 style={{
-                  position: 'relative', overflow: 'hidden', textAlign: 'left', cursor: 'pointer',
-                  display: 'flex', flexDirection: 'column', borderRadius: 16,
-                  background: `linear-gradient(165deg, ${s.color}18 0%, rgba(6,12,20,0.95) 60%)`,
-                  border: `1px solid ${isReady ? 'rgba(240,192,64,0.6)' : `${s.color}33`}`,
-                  borderTop: `1px solid ${s.color}70`,
-                  boxShadow: isReady ? '0 0 18px rgba(240,192,64,0.14)' : `0 3px 12px rgba(0,0,0,0.4)`,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                  padding: '0.85rem 0.5rem 0.7rem', borderRadius: 14, cursor: 'pointer', minWidth: 0,
+                  background: ready ? 'rgba(240,192,64,0.1)' : 'rgba(255,255,255,0.035)',
+                  border: `1px solid ${ready ? 'rgba(240,192,64,0.7)' : 'rgba(255,255,255,0.1)'}`,
+                  boxShadow: ready ? '0 0 18px rgba(240,192,64,0.12)' : 'none',
                 }}>
-                {/* art */}
-                <div style={{ position: 'relative', height: 92, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: `radial-gradient(ellipse 75% 70% at 50% 45%, ${s.color}22 0%, transparent 70%)` }}>
+                {/* art on a clean neutral disc — no category wash, so the piece reads */}
+                <span style={{ position: 'relative', flexShrink: 0, width: 62, height: 62, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.28)', border: `1px solid ${ready ? 'rgba(240,192,64,0.5)' : 'rgba(255,255,255,0.09)'}` }}>
                   {s.imageUrl && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={s.imageUrl} alt={s.label} loading="lazy" decoding="async" style={{ maxWidth: '56%', maxHeight: 72, objectFit: 'contain', filter: `drop-shadow(0 4px 14px ${s.color}55)` }} />
+                    <img src={s.imageUrl} alt={s.label} loading="lazy" decoding="async" style={{ maxWidth: 46, maxHeight: 46, objectFit: 'contain' }} />
                   )}
-                  {/* the "how far you've climbed" count, top-right */}
-                  <span className="font-karla font-700" style={{ position: 'absolute', top: 7, right: 8, fontSize: '0.58rem', color: `${s.color}dd`, background: 'rgba(0,0,0,0.4)', border: `1px solid ${s.color}33`, borderRadius: 999, padding: '0.08rem 0.4rem' }}>
-                    {s.owned}/{s.total}
-                  </span>
-                </div>
-                {/* label + the STATE — the forge's contribution: you know before you tap */}
-                <div style={{ padding: '0.5rem 0.7rem 0.7rem' }}>
-                  <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#fff', lineHeight: 1.1 }}>{s.label}</p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4 }}>
-                    <span aria-hidden style={{ flexShrink: 0, width: 6, height: 6, borderRadius: 999, background: pip.color }} />
-                    <span className="font-karla font-700 truncate" style={{ fontSize: '0.6rem', color: pip.color }}>{s.detail}</span>
-                  </div>
+                  {ready && (
+                    <motion.span aria-hidden animate={{ opacity: [0.15, 0.5, 0.15] }} transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+                      style={{ position: 'absolute', inset: -1, borderRadius: 14, border: '1px solid #f0c040', pointerEvents: 'none' }} />
+                  )}
+                </span>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0ede8', lineHeight: 1.1 }}>{s.label}</p>
+                {/* One clean status line, centred, coloured by state — the forge tell. */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, maxWidth: '100%' }}>
+                  <span aria-hidden style={{ flexShrink: 0, width: 5, height: 5, borderRadius: 999, background: pip.color }} />
+                  <span className="font-karla font-700 truncate" style={{ fontSize: '0.6rem', color: pip.color }}>{s.detail}</span>
                 </div>
               </motion.button>
             )
