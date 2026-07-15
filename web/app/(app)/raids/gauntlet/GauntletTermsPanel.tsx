@@ -74,6 +74,16 @@ export default function GauntletTermsPanel({
     onChange(next)
   }
 
+  // Max Pressure — sign EVERY term at its top tier in one tap. The heavy end of
+  // the board (glory / a Pitch Black Hull roll) without scrolling the whole thing.
+  const atMax = useMemo(() => GAUNTLET_TERMS.every(t => (signed[t.id] ?? 0) >= t.tiers.length), [signed])
+  function maxAll() {
+    const next: SignedTerms = {}
+    for (const t of GAUNTLET_TERMS) next[t.id] = t.tiers.length
+    vibrate([0, 22, 26, 48])
+    onChange(next)
+  }
+
   const groups: TermGroup[] = ['opposition', 'gunnery', 'crew', 'build', 'safety']
 
   if (typeof document === 'undefined') return null
@@ -109,11 +119,26 @@ export default function GauntletTermsPanel({
           }}>
             Davy&rsquo;s Terms
           </p>
-          <button onClick={() => { vibrate([0, 12]); onChange({}) }} disabled={signedCount === 0}
-            className="font-karla font-700 tap"
-            style={{ flexShrink: 0, background: 'none', border: 'none', color: signedCount === 0 ? '#5a4a4a' : '#a89898', fontSize: '0.82rem', cursor: signedCount === 0 ? 'default' : 'pointer' }}>
-            Clear
-          </button>
+          {/* Max Pressure (crank the whole board up) + Clear (tear it all up) — the
+              two "all at once" actions, paired on the right. */}
+          <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button onClick={maxAll} disabled={atMax}
+              className="font-karla font-800 uppercase tracking-[0.06em] tap"
+              style={{
+                background: atMax ? 'rgba(224,85,90,0.08)' : `linear-gradient(180deg, ${DANGER}2e, ${DANGER}14)`,
+                border: `1px solid ${atMax ? 'rgba(224,85,90,0.25)' : `${DANGER}88`}`,
+                borderRadius: 8, padding: '0.32rem 0.6rem',
+                color: atMax ? '#7a5a5c' : '#ffb3b3', fontSize: '0.66rem',
+                cursor: atMax ? 'default' : 'pointer',
+              }}>
+              Max
+            </button>
+            <button onClick={() => { vibrate([0, 12]); onChange({}) }} disabled={signedCount === 0}
+              className="font-karla font-700 tap"
+              style={{ background: 'none', border: 'none', color: signedCount === 0 ? '#5a4a4a' : '#a89898', fontSize: '0.82rem', cursor: signedCount === 0 ? 'default' : 'pointer' }}>
+              Clear
+            </button>
+          </div>
         </div>
 
         {/* The two numbers that matter, side by side. */}
