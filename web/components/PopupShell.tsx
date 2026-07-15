@@ -77,7 +77,19 @@ export default function PopupShell({
               pointerEvents: 'none',
             }}
           />
-          <div
+          {/* Scroll wrapper is a KEYED motion element, not a plain div, so
+              AnimatePresence keeps it (and the card nested inside) mounted through
+              the close. Otherwise a plain wrapper unmounts the instant `open` flips
+              false and the card cuts while only the backdrop fades — the classic
+              "modal doesn't close smoothly". Fading the wrapper carries the card out
+              even when a caller forgets an `exit` on its own inner card. Opacity is
+              safe for any `position: fixed` children (unlike transform/filter). */}
+          <motion.div
+            key="popup-wrapper"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
             onClick={e => { if (e.target === e.currentTarget) onClose() }}
             style={{
               position: 'fixed', inset: 0, zIndex,
@@ -92,7 +104,7 @@ export default function PopupShell({
             }}
           >
             {children}
-          </div>
+          </motion.div>
         </>
       )}
     </AnimatePresence>
