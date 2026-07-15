@@ -769,6 +769,10 @@ export default function GearScreen({
   // Three tabs, each with one job: LOADOUT (what you're using), SHOP (what you can buy),
   // STATS (what it adds up to).
   const [tab, setTab] = useState<'loadout' | 'shop' | 'stats'>('loadout')
+  // The slot detail sheet portals to <body>, so `mounted` gates it until the client
+  // has document. See the modal block below for why the portal is necessary.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
   const [selectedBadgeSlot, setSelectedBadgeSlot] = useState<0 | 1 | 2 | null>(null)
   useEffect(() => { if (openSlot !== 'badge') setSelectedBadgeSlot(null) }, [openSlot])
   // Rod panel tabs — split owned vs shop so the player sees a focused
@@ -1183,7 +1187,13 @@ export default function GearScreen({
       </button>
       </>)}
 
-      {/* ── Item detail modal ── (global — opens over any tab) */}
+      {/* ── Item detail modal ── PORTALED TO <body>.
+          It was position:fixed inside the gear drawer, but the drawer has BOTH a
+          transform (its slide-in) and overflow:auto — which makes it the containing
+          block for a fixed child AND clips that child to the scroll viewport. That is
+          what chopped the top off a long list (rods). Portaling to <body> escapes both,
+          so the sheet is a true viewport bottom sheet, unclipped, at any height. */}
+      {mounted && createPortal(
       <AnimatePresence>
         {openSlot && (
           <>
@@ -1195,7 +1205,7 @@ export default function GearScreen({
               exit={{ opacity: 0 }}
               transition={{ duration: 0.18 }}
               onClick={() => setOpenSlot(null)}
-              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 10 }}
+              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 200 }}
             />
             {/* Sheet */}
             <motion.div
@@ -1205,13 +1215,13 @@ export default function GearScreen({
               exit={{ opacity: 0, y: 16 }}
               transition={{ type: 'spring', stiffness: 420, damping: 32 }}
               style={{
-                position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 11,
+                position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 201,
                 background: 'rgba(6,12,22,0.99)', borderTop: '1px solid rgba(255,255,255,0.12)',
                 borderRadius: '20px 20px 0 0', padding: '0 0.9rem calc(env(safe-area-inset-bottom, 0px) + 1.2rem)',
-                // 72vh, not 82: at 82 the sheet filled the whole drawer and its top edge
-                // was clipped by the drawer's rounded/overflow top (the chop). 72 pulls
-                // the top down into clear space; a long list like Rods scrolls inside it.
-                maxHeight: '72vh', overflowY: 'auto', overscrollBehavior: 'contain',
+                // Now portaled to <body> and unclipped, so it can use the full height —
+                // 85vh from the bottom, leaving a strip of dimmed backdrop up top to tap
+                // out. A long rod list scrolls under the sticky header.
+                maxHeight: '85vh', overflowY: 'auto', overscrollBehavior: 'contain',
               }}
             >
               {/* Close row — sticky, so a long rod list can scroll under it and the
@@ -2864,6 +2874,7 @@ export default function GearScreen({
           </>
         )}
       </AnimatePresence>
+      , document.body)}
 
       {/* ── Purchase confirmation ── */}
       <AnimatePresence>
