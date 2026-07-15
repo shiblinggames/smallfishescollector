@@ -2,8 +2,6 @@
 
 import { usePathname } from 'next/navigation'
 
-const SUPABASE_BG = 'https://pwvndjczpdcttmyvnsyq.supabase.co/storage/v1/object/public/card-arts/backgrounds'
-
 type BgConfig = { src: string; overlay: string }
 
 const ROUTE_BG: [string, BgConfig][] = [
@@ -14,11 +12,10 @@ const ROUTE_BG: [string, BgConfig][] = [
   ['/tavern/slots',            { src: '/gamesbackground.jpg',      overlay: 'rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.72) 50%, rgba(0,0,0,0.88) 100%' }],
   ['/tavern/market',           { src: '/exchangebackground.jpeg',  overlay: 'rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.68) 50%, rgba(0,0,0,0.88) 100%' }],
   ['/tavern',                  { src: '/tavernbackground.jpg',     overlay: 'rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.68) 50%, rgba(0,0,0,0.88) 100%' }],
-  ['/marketplace/shipyard',    { src: `${SUPABASE_BG}/shipyardbackground.jpeg`,   overlay: 'rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.68) 50%, rgba(0,0,0,0.88) 100%' }],
-  // The Tackle Shop deliberately has NO image background. It reads as a clean, dark
-  // catalogue (a solid page set on the <main>), so its translucent cards lift off a
-  // flat dark surface the way the Forge's do. A busy photo behind translucent tiles
-  // was exactly what made them look muddy.
+  // Both marketplace pages deliberately have NO image background. They read as clean,
+  // dark catalogues (a solid page set on the <main>), so their translucent cards lift
+  // off a flat dark surface the way the Forge's do. A busy photo behind translucent
+  // tiles was exactly what made them look muddy.
 ]
 
 export default function ClientBackground() {

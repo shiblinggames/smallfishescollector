@@ -16,7 +16,9 @@ export default async function ShipyardPage() {
 
   return (
     <>
-      <main className="min-h-screen pb-24 sm:pb-0 pt-6">
+      {/* Flat dark page, matching the Tackle Shop — a solid surface for translucent
+          cards, not a photo behind them. */}
+      <main className="min-h-screen pb-24 sm:pb-0 pt-6" style={{ background: '#0b0f18' }}>
         <ShipyardClient
           shipTier={profile?.ship_tier ?? 0}
           doubloons={profile?.doubloons ?? 0}
