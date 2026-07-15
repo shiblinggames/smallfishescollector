@@ -131,9 +131,12 @@ function AncientNiche({ giant, index, caught }: {
       borderTop: `1px solid ${caught ? a + 'bb' : 'rgba(150,142,180,0.3)'}`,
       boxShadow: caught ? `inset 0 1px 0 ${a}44, 0 0 22px ${a}26` : 'inset 0 1px 0 rgba(255,255,255,0.04)',
     }}>
-      {/* index numeral */}
+      {/* Index numeral — at the arch KEYSTONE (top-center), the one spot the arched
+          corners never clip. Top-left sat inside the 44px corner curve and got cut
+          off by overflow:hidden. */}
       <span className="font-cinzel font-700" style={{
-        position: 'absolute', top: 9, left: 12, fontSize: '0.52rem', letterSpacing: '0.08em',
+        position: 'absolute', top: 7, left: '50%', transform: 'translateX(-50%)',
+        fontSize: '0.52rem', letterSpacing: '0.14em', lineHeight: 1,
         color: caught ? a : 'rgba(150,142,180,0.4)',
       }}>{ROMAN[index]}</span>
 
