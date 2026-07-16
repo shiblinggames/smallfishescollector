@@ -808,19 +808,15 @@ function DialSVG({
           />
         )}
 
-        {/* Ancient boss aura — a slow breathing void-violet halo with a thin
-            cyan rim, so the 6 giants' dial reads as a boss at a glance. Sits
-            under the fire rings so a perfect streak still layers on top. */}
+        {/* Ancient boss aura — a void-violet halo with a thin cyan rim so the 6
+            giants' dial reads as a boss at a glance. STATIC on purpose: the old
+            breathing version animated strokeOpacity on two thick rings every frame
+            for the whole fight, which re-rastered the stroke ~60x/sec and was a big
+            part of the "Ancient Deep is laggy" report. Drawn once, zero per-frame cost. */}
         {ancientBoss && (
           <>
-            <motion.circle cx={CX} cy={CY} r={OUTER_R + 11} fill="none" stroke="#7c3aed" strokeWidth="12"
-              animate={{ strokeOpacity: [0.12, 0.34, 0.12] }}
-              transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
-            />
-            <motion.circle cx={CX} cy={CY} r={OUTER_R + 4} fill="none" stroke="#67e8f9" strokeWidth="1.5"
-              animate={{ strokeOpacity: [0.35, 0.8, 0.35] }}
-              transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut', delay: 0.15 }}
-            />
+            <circle cx={CX} cy={CY} r={OUTER_R + 11} fill="none" stroke="#7c3aed" strokeWidth="12" strokeOpacity={0.24} />
+            <circle cx={CX} cy={CY} r={OUTER_R + 4} fill="none" stroke="#67e8f9" strokeWidth="1.5" strokeOpacity={0.6} />
           </>
         )}
       </svg>
@@ -5183,7 +5179,12 @@ export default function FishingGame({
     // two renders of this component before it reached the glass.
     let resolveAngle: number
     if (spinAnimRef.current) {
-      const lookaheadMs = REEL_LOOKAHEAD_FRAMES * frameDurRef.current
+      // Cap the frame duration the lookahead scales with. At 60fps (~16ms) this
+      // is a no-op, so the tuned feel is unchanged; but if the frame rate drops
+      // (a laggy Ancient Deep dial), an un-capped lookahead balloons and the
+      // resolve overshoots the tight perfect — you tap the gold and it lands on the
+      // miss past it. 20ms bounds that.
+      const lookaheadMs = REEL_LOOKAHEAD_FRAMES * Math.min(frameDurRef.current, 20)
       const a = spinAngleNow() + dirRef.current * speedRef.current * lookaheadMs / 1000
       resolveAngle = ((a % 360) + 360) % 360
     } else {
@@ -5830,7 +5831,7 @@ export default function FishingGame({
     const startAt = performance.now()
     const predictAngle = () => {
       if (spinAnimRef.current) {
-        const lookaheadMs = REEL_LOOKAHEAD_FRAMES * frameDurRef.current
+        const lookaheadMs = REEL_LOOKAHEAD_FRAMES * Math.min(frameDurRef.current, 20)
         const a = spinAngleNow() + dirRef.current * speedRef.current * lookaheadMs / 1000
         return (((a % 360) + 360) % 360)
       }
