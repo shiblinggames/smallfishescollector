@@ -15,6 +15,7 @@ import { clampHallTier, nextHallTier, hallStartXP, type CrewHallTierNum } from '
 import { crewLevelFromXP } from '@/lib/crewLevel'
 import { getCrewSkin, resolveCrewFilename, CREW_SKINS, type EquippedCrewSkins } from '@/lib/crewSkins'
 import { bloodRerollTier, BLOOD_SKIN_GAMBLE_COST, hardcoreUnlocked } from '@/lib/gauntlet'
+import { isLegendaryLocked } from '@/lib/legendaryUnlocks'
 
 const REROLL_COST = 100
 
@@ -150,8 +151,15 @@ function generateBoardRows(
   byGroup: Record<CrewRarity, number[]>,
   meta: Map<number, CardMeta>,
   startXp: number,
+  legendaryUnlocks: readonly string[],
 ) {
-  const poolFor = (r: CrewRarity) => byGroup[r]
+  // Campaign gate: a locked legendary (Mako/Dole/Laz/Mira before its chapter
+  // node is cleared) is dropped from the group-4 pool for THIS player. Catfish
+  // + Doby Mick are never gated, so group 4 is never empty — new players can
+  // still roll the two originals. If every legendary happened to be locked, the
+  // empty-group fallback below drops the roll to Epic.
+  const group4 = byGroup[4].filter(id => !isLegendaryLocked(meta.get(id)?.slug ?? '', legendaryUnlocks))
+  const poolFor = (r: CrewRarity) => (r === 4 ? group4 : byGroup[r])
   const rows: any[] = []
   for (let slot = 0; slot < size; slot++) {
     let rarity = rollRarity(weights)
@@ -228,7 +236,7 @@ export async function getCrewState(): Promise<CrewState | null> {
 
   const { data: prof } = await admin
     .from('profiles')
-    .select('gems, is_premium, premium_expires_at, expedition_xp, last_free_recruit_date, ship_tier, crew_hall_tier, doubloons, blood_gems, owned_crew_skins, equipped_crew_skins, is_admin, gauntlet_deepest, raid_node_progress, ship_classes, has_sixth_berth')
+    .select('gems, is_premium, premium_expires_at, expedition_xp, last_free_recruit_date, ship_tier, crew_hall_tier, doubloons, blood_gems, owned_crew_skins, equipped_crew_skins, is_admin, gauntlet_deepest, raid_node_progress, ship_classes, has_sixth_berth, legendary_unlocks')
     .eq('id', user.id)
     .single()
   if (!prof) return null
@@ -245,12 +253,13 @@ export async function getCrewState(): Promise<CrewState | null> {
 
   const { byGroup, meta } = await loadCards(admin)
   const today = utcDate()
+  const legendaryUnlocks = ((prof as any).legendary_unlocks as string[] | null) ?? []
 
   // Free board fills once per UTC day; gem rerolls (which set the date too)
   // won't be clobbered by this.
   if ((prof as any).last_free_recruit_date !== today) {
     await admin.from('daily_recruits').delete().eq('user_id', user.id)
-    const rows = generateBoardRows(user.id, premium ? 3 : 2, 'free', FREE_WEIGHTS, byGroup, meta, hallStartXP((prof as any).crew_hall_tier))
+    const rows = generateBoardRows(user.id, premium ? 3 : 2, 'free', FREE_WEIGHTS, byGroup, meta, hallStartXP((prof as any).crew_hall_tier), legendaryUnlocks)
     if (rows.length) await admin.from('daily_recruits').insert(rows)
     await admin.from('profiles').update({ last_free_recruit_date: today }).eq('id', user.id)
   }
@@ -336,7 +345,7 @@ export async function rerollBoard(bloodTierId?: string | null): Promise<CrewActi
   const tier = bloodRerollTier(bloodTierId)
   if (bloodTierId && !tier) return { error: 'Unknown reroll tier' }
 
-  const { data: prof } = await admin.from('profiles').select('gems, crew_hall_tier, blood_gems, unlocked_badges').eq('id', user.id).single()
+  const { data: prof } = await admin.from('profiles').select('gems, crew_hall_tier, blood_gems, unlocked_badges, legendary_unlocks').eq('id', user.id).single()
   const gems = (prof as any)?.gems ?? 0
   const bloodGems = ((prof as any)?.blood_gems as number | null) ?? 0
   if (gems < REROLL_COST) return { error: 'Not enough gems' }
@@ -366,7 +375,8 @@ export async function rerollBoard(bloodTierId?: string | null): Promise<CrewActi
   const { byGroup, meta } = await loadCards(admin)
   await admin.from('daily_recruits').delete().eq('user_id', user.id)
   const weights = tier ? tier.weights : GEM_WEIGHTS
-  const rows = generateBoardRows(user.id, 3, 'gem', weights, byGroup, meta, hallStartXP((prof as any)?.crew_hall_tier))
+  const legendaryUnlocks = ((prof as any)?.legendary_unlocks as string[] | null) ?? []
+  const rows = generateBoardRows(user.id, 3, 'gem', weights, byGroup, meta, hallStartXP((prof as any)?.crew_hall_tier), legendaryUnlocks)
   if (rows.length) await admin.from('daily_recruits').insert(rows)
 
   const state = await getCrewState()

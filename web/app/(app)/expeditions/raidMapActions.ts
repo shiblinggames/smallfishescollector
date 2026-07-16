@@ -13,6 +13,7 @@ import { loadDeployedParty } from '@/lib/crewData'
 import { musterCrewFrom, musterReport, type MusterCrew } from '@/lib/crewMuster'
 import { EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
 import { aggregateShipClasses } from '@/lib/shipClasses'
+import { GATE_NODE_TO_LEGENDARY, slugToCardKey, type UnlockedLegendary } from '@/lib/legendaryUnlocks'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -203,7 +204,7 @@ export async function claimMilestoneNode(
 // (raid_node_progress.cleared[]), no doubloon logic.
 export async function markStoryNodeRead(
   nodeId: string,
-): Promise<{ ok: true } | { error: string }> {
+): Promise<{ ok: true; unlockedLegendary?: UnlockedLegendary } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
@@ -217,7 +218,7 @@ export async function markStoryNodeRead(
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('has_completed_practice_raid, raid_node_progress, is_admin')
+    .select('has_completed_practice_raid, raid_node_progress, is_admin, legendary_unlocks')
     .eq('id', user.id)
     .single()
   if (!profile) return { error: 'Profile not found' }
@@ -230,12 +231,37 @@ export async function markStoryNodeRead(
   const prog = (profile.raid_node_progress as { cleared?: string[] } | null) ?? {}
   const newCleared = [...new Set([...(prog.cleared ?? []), nodeId])]
 
-  await admin
-    .from('profiles')
-    .update({ raid_node_progress: { ...prog, cleared: newCleared } })
-    .eq('id', user.id)
+  // Legendary unlock: if this is a gate node, add its legendary to the recruit
+  // pool now (the debut cutscene doubles as the unlock). Written in the same
+  // update; surfaced back so the client can fire the "recruitable" celebration.
+  const patch: Record<string, unknown> = { raid_node_progress: { ...prog, cleared: newCleared } }
+  const unlockedLegendary = await applyLegendaryGate(admin, nodeId, (profile.legendary_unlocks as string[] | null) ?? [], patch)
 
-  return { ok: true }
+  await admin.from('profiles').update(patch).eq('id', user.id)
+
+  return unlockedLegendary ? { ok: true, unlockedLegendary } : { ok: true }
+}
+
+// Grant a gate node's legendary into the recruit pool, mutating `updates` with
+// the new legendary_unlocks array. Returns the crew's card details for the
+// client celebration, or undefined if this node gates nothing / already
+// unlocked. Shared by markStoryNodeRead and claimScoutDebt (scout_debt is a
+// payoff node, so Dole's gate flows through the latter).
+async function applyLegendaryGate(
+  admin: Admin,
+  nodeId: string,
+  priorUnlocks: string[],
+  updates: Record<string, unknown>,
+): Promise<UnlockedLegendary | undefined> {
+  const gateSlug = GATE_NODE_TO_LEGENDARY[nodeId]
+  if (!gateSlug || priorUnlocks.some(u => u.toLowerCase() === gateSlug)) return undefined
+  updates.legendary_unlocks = [...priorUnlocks, gateSlug]
+  const { data: card } = await admin.from('cards').select('name, filename').eq('slug', slugToCardKey(gateSlug)).maybeSingle()
+  return {
+    slug: gateSlug,
+    name: (card as any)?.name ?? gateSlug,
+    filename: (card as any)?.filename ?? '',
+  }
 }
 
 // Puzzle nodes (beacon-chain / Lights Out) are solved client-side; the server
@@ -731,7 +757,7 @@ export async function resolveDpsCheck(
 // either way mark it read. Idempotent.
 export async function claimScoutDebt(
   nodeId: string,
-): Promise<{ met: boolean; doubloonsDelta: number; navXpDelta: number; newDoubloons: number; newExpeditionXp: number } | { error: string }> {
+): Promise<{ met: boolean; doubloonsDelta: number; navXpDelta: number; newDoubloons: number; newExpeditionXp: number; unlockedLegendary?: UnlockedLegendary } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
@@ -743,7 +769,7 @@ export async function claimScoutDebt(
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress, is_admin')
+    .select('doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress, is_admin, legendary_unlocks')
     .eq('id', user.id)
     .single()
   if (!profile) return { error: 'Profile not found' }
@@ -773,6 +799,9 @@ export async function claimScoutDebt(
   if (doubloonsDelta !== 0) updates.doubloons = newDoubloons
   if (navXpDelta !== 0) updates.expedition_xp = newExpeditionXp
 
+  // Dole's gate: scout_debt is a payoff node, so her unlock rides this action.
+  const unlockedLegendary = await applyLegendaryGate(admin, nodeId, (profile.legendary_unlocks as string[] | null) ?? [], updates)
+
   await admin.from('profiles').update(updates).eq('id', user.id)
 
   if (doubloonsDelta !== 0) {
@@ -783,7 +812,7 @@ export async function claimScoutDebt(
     }).then(() => {}, () => {})
   }
 
-  return { met, doubloonsDelta, navXpDelta, newDoubloons, newExpeditionXp }
+  return { met, doubloonsDelta, navXpDelta, newDoubloons, newExpeditionXp, unlockedLegendary }
 }
 
 // Chapter-end class pick. Writes profiles.ship_classes[chapterId] =

@@ -12,6 +12,8 @@ import { getRaidConfigById } from '@/lib/raidRegistry'
 import { isUniqueLoot } from '@/lib/bossRaids'
 import { getShipSkin } from '@/lib/shipSkins'
 import { claimMilestoneNode, markStoryNodeRead, claimScoutDebt, claimQuartermasterChoice, solvePuzzleNode, pickShipClass, markChapterUnlockSeen, pickRaidEventChoice, pickForkRoute, standForMuster } from './raidMapActions'
+import { LegendaryUnlockOverlay } from './LegendaryUnlockOverlay'
+import type { UnlockedLegendary } from '@/lib/legendaryUnlocks'
 import { musterReport, type MusterCrew } from '@/lib/crewMuster'
 import { repairShip } from '@/app/(app)/raids/actions'
 import { markUltimateUnlockSeen } from './actions'
@@ -755,6 +757,12 @@ function NodeDetailSheet({
       if ('error' in res) { setErr(res.error); setSceneOpen(false); return }
       if ('newDoubloons' in res && res.doubloonsDelta !== 0) {
         window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloons }))
+      }
+      // Gate node just unlocked a legendary → celebrate. Dispatched as an event
+      // because onClose() unmounts this sheet; the RaidsSection root catches it
+      // and renders the overlay (which outlives the closing scene).
+      if ('unlockedLegendary' in res && res.unlockedLegendary) {
+        window.dispatchEvent(new CustomEvent('legendary-unlocked', { detail: res.unlockedLegendary }))
       }
       router.refresh()
       onClose()
@@ -2745,6 +2753,19 @@ export default function RaidsSection({ views, doubloons, navLevel, playerShipIma
   // overlay. Cleared by tapping the CTA, which fires the server
   // action to persist seen-state across devices.
   const [celebratingChapter, setCelebratingChapter] = useState<RaidChapter | null>(null)
+  // Legendary-recruitable celebration. A gate story node's read fires a
+  // 'legendary-unlocked' window event (the node sheet unmounts on read, so it
+  // can't render the overlay itself); the root catches it here and shows the
+  // reveal that outlives the closing scene.
+  const [unlockedLegendary, setUnlockedLegendary] = useState<UnlockedLegendary | null>(null)
+  useEffect(() => {
+    const onUnlock = (e: Event) => {
+      const detail = (e as CustomEvent<UnlockedLegendary>).detail
+      if (detail) setUnlockedLegendary(detail)
+    }
+    window.addEventListener('legendary-unlocked', onUnlock)
+    return () => window.removeEventListener('legendary-unlocked', onUnlock)
+  }, [])
   const clearedCount = views.filter(v => v.status === 'cleared').length
 
   // Detect "just unlocked, never seen" celebrations. The bucket math
@@ -3079,6 +3100,18 @@ export default function RaidsSection({ views, doubloons, navLevel, playerShipIma
               return idx > 0 ? RAID_CHAPTERS[idx - 1] : null
             })()}
             onDismiss={dismissCelebration}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Legendary-recruitable reveal — a gate story node just added its
+          legendary to the recruit pool. */}
+      <AnimatePresence>
+        {unlockedLegendary && (
+          <LegendaryUnlockOverlay
+            key={unlockedLegendary.slug}
+            crew={unlockedLegendary}
+            onClose={() => setUnlockedLegendary(null)}
           />
         )}
       </AnimatePresence>
