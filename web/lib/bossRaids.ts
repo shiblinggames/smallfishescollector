@@ -318,7 +318,10 @@ export interface RaidLootItem {
  *  battle begins. `narrator` lines render without a portrait; `boss` and
  *  `player` lines render with the speaker's portrait/avatar. */
 export interface BossDialogueLine {
-  speaker: 'boss' | 'player' | 'narrator'
+  speaker: 'boss' | 'player' | 'narrator' | 'crew'
+  /** For `crew` lines — the legendary answering back on your side of the stage
+   *  (name + card-art portrait). Spread a CREW_SPEAKER entry in. */
+  crew?: { name: string; portrait: string }
   /** Wrap a word or phrase in *asterisks* to hit it in the scene accent. */
   text: string
   /** A held silence, in ms, BEFORE this line types. The difference between a threat
@@ -327,6 +330,21 @@ export interface BossDialogueLine {
   /** A hit on this line. 'shake' rocks the frame, 'flash' blows it out. */
   fx?: 'shake' | 'flash'
 }
+
+/** The legendary crew as pre-fight SPEAKERS — they hold your side of the boss
+ *  stage and trade barbs with the villain. Portrait = card art (same as the
+ *  story-node GUIDE map). Use as `{ speaker: 'crew', ...CREW_SPEAKER.mako, text }`.
+ *  Which crew are aboard for a given fight follows the campaign: Doby + Kat from
+ *  the start, then one legendary per chapter (see [[cutscene-living-crew]]). */
+const CREW_ART_BASE = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/`
+export const CREW_SPEAKER = {
+  doby: { crew: { name: 'Doby', portrait: `${CREW_ART_BASE}Doby_Mick_v2.png` } },
+  kat:  { crew: { name: 'Kat',  portrait: `${CREW_ART_BASE}Catfish.png` } },
+  mako: { crew: { name: 'Mako', portrait: `${CREW_ART_BASE}Mako_Shark.png` } },
+  dole: { crew: { name: 'Dole', portrait: `${CREW_ART_BASE}Dole.png` } },
+  laz:  { crew: { name: 'Laz',  portrait: `${CREW_ART_BASE}Coelacanth.png` } },
+  mira: { crew: { name: 'Mira', portrait: `${CREW_ART_BASE}Mira.png` } },
+} as const
 
 /** Is this loot row currency, or a real item? Mirrors lootCategory in raidChallenge:
  *  a `doubloons_*`, `gems_*` or `pack*` id is currency, anything else is a unique. */
@@ -530,8 +548,10 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
     { speaker: 'narrator', text: "A weathered galleon slides out of the fog. Barnacle-crusted hull, patched sails, cannons already trained on your ship." },
     { speaker: 'boss', text: "So another pup thinks they can take old Barnacle Pete. Many've tried, captain. *None've sailed home.*" },
     { speaker: 'boss', text: "I've been raiding these waters since before your grandfather wet his trousers in his first storm. Your crew, your ship, your name, they'll all join the others at the bottom." },
+    { speaker: 'crew', ...CREW_SPEAKER.doby, text: "I have swum this coast longer than you have drawn breath, Pete, and I never once heard your name. There is a lesson in that, if you live to learn it." },
     { speaker: 'player', text: "Save your breath, Pete. I'm not here to talk. I'm here for the plunder." },
     { speaker: 'boss', text: "Plunder?! Hah! The only thing you'll take from me is a swift trip to Davy Jones." },
+    { speaker: 'crew', ...CREW_SPEAKER.kat, text: "He does love the sound of himself. Put a ball through his mainmast, captain, and let us all get on with our day." },
     { speaker: 'boss', text: "Ready your guns. *This is where your story ends.*", pause: 600, fx: 'shake' },
   ],
 }
@@ -664,7 +684,9 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
     { speaker: 'boss', text: "C.K. So you're the little hook that's been snagging my freight. I wondered who kept making my couriers late." },
     { speaker: 'player', text: "Captain Krust. Pete kept your letters but not his life. You run the Finndicate's cargo." },
     { speaker: 'boss', text: "I move what I'm told to move and I don't ask whose name is on the manifest. That's why I've lasted, and that's why captains like Pete are fodder and captains like me aren't." },
+    { speaker: 'crew', ...CREW_SPEAKER.mako, text: "A hauler who is proud he never looks in his own crates. I have eaten braver fish than you for breakfast, Krust." },
     { speaker: 'boss', text: "But you've cost the Finndicate a season's haul, captain, and someone above me will want that back out of you. *I'll just take it out first.*", pause: 500 },
+    { speaker: 'crew', ...CREW_SPEAKER.kat, text: "Someone above you. There is always someone above. This whole sea is just fish too frightened to look up, captain. Let us give this one a reason to." },
     { speaker: 'boss', text: "Strike your colors or strike your guns. Either way this consignment sails on without you." },
   ],
 }

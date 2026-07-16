@@ -72,8 +72,22 @@ export default function BossDialogueModal({
 
   const isBoss     = line.speaker === 'boss'
   const isPlayer   = line.speaker === 'player'
+  const isCrew     = line.speaker === 'crew'
   const isNarrator = line.speaker === 'narrator'
   const shake = line.fx === 'shake' && !reduced && !held
+
+  // The RIGHT wing is "your side": the most recent player-or-crew speaker holds
+  // it, so a crew member busts in to answer the villain and the camera returns
+  // to whoever last spoke on your deck when the boss talks. Boss keeps the left.
+  const yourSide: { kind: 'player' | 'crew'; name: string; portrait?: string } = (() => {
+    for (let i = idx; i >= 0; i--) {
+      const l = lines[i]
+      if (l.speaker === 'player') return { kind: 'player', name: playerLabel }
+      if (l.speaker === 'crew' && l.crew) return { kind: 'crew', name: l.crew.name, portrait: l.crew.portrait }
+    }
+    return { kind: 'player', name: playerLabel }
+  })()
+  const rightLit = isPlayer || isCrew
 
   /** A wing. Lit and forward when it speaks, dimmed but PRESENT when it does not,
    *  breathing either way, leaning on a hit. Nobody here is a photograph. */
@@ -136,6 +150,21 @@ export default function BossDialogueModal({
     </div>
   )
 
+  // A crew member holding your side of the stage — their card art in the same
+  // 118px medallion the boss uses, lit in the accent when they speak.
+  const crewBust = (portrait: string) => (
+    <div style={{
+      width: 118, height: 118, borderRadius: '50%', overflow: 'hidden',
+      border: `3px solid ${rightLit ? '#4ade80' : 'rgba(255,255,255,0.16)'}`,
+      background: 'radial-gradient(circle at 35% 30%, rgba(255,255,255,0.08) 0%, rgba(30,22,44,0.85) 70%)',
+      boxShadow: rightLit ? '0 0 30px rgba(74,222,128,0.45)' : 'none', transition: 'border-color 0.2s, box-shadow 0.2s',
+    }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={portrait} alt="" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: '50% 20%' }} />
+    </div>
+  )
+  const rightArt = yourSide.kind === 'crew' && yourSide.portrait ? crewBust(yourSide.portrait) : playerArt
+
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -193,7 +222,7 @@ export default function BossDialogueModal({
             gap: 12, padding: '0 6% 1.1rem' }}
         >
           {wing('left', isBoss, boss.name, bossArt, ACCENT)}
-          {wing('right', isPlayer, playerLabel, playerArt, '#4ade80')}
+          {wing('right', rightLit, yourSide.name, rightArt, '#4ade80')}
         </motion.div>
 
         {/* flexShrink 0: the plate reserves the scene's tallest line, and as a flex
@@ -204,7 +233,7 @@ export default function BossDialogueModal({
             width: '100%', maxWidth: 540, margin: '0 auto',
             padding: '1.05rem 1.15rem 1.15rem', borderRadius: 16,
             background: 'linear-gradient(180deg, rgba(12,10,7,0.94), rgba(5,4,4,0.97))',
-            border: `1px solid ${isNarrator ? 'rgba(255,255,255,0.12)' : `${isPlayer ? '#4ade80' : ACCENT}55`}`,
+            border: `1px solid ${isNarrator ? 'rgba(255,255,255,0.12)' : `${isPlayer || isCrew ? '#4ade80' : ACCENT}55`}`,
             boxShadow: '0 -8px 40px rgba(0,0,0,0.7)',
             backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)',
           }}>
