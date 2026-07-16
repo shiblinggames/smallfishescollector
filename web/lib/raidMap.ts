@@ -752,8 +752,8 @@ export const RAID_MAP: RaidNode[] = [
       { text: "A fin has been cutting your wake since the strongbox cracked. It closes the distance now, in no hurry at all.", pause: 500 },
       { ...GUIDE.mako, text: "Bilge Strait, after one sealed letter. Most captains wouldn't sail that far on a hunch." },
       { ...GUIDE.mako, text: "Good thing I'm not most captains. Turns out neither are you." },
-      { ...GUIDE.mako, text: "Mako. I don't waste myself in small water. You just made yourself interesting, so I'm in." },
-      { text: "No handshake. Sharks don't. He simply slides into your wake and stays there." },
+      { ...GUIDE.mako, text: "Mako. I don't waste myself in small water, and you just made yourself worth watching. Muster a crew and my name's on offer." },
+      { text: "No handshake. Sharks don't. He drifts back into the deep, unhurried, a shape you could call on when the water turns mean." },
     ],
     detail: {
       description:
@@ -844,7 +844,7 @@ export const RAID_MAP: RaidNode[] = [
       { text: "A name at last. The Finndicate's freight has a face, and the face keeps a schedule." },
       { text: "His consignment's on the cold water right now." },
       { ...GUIDE.mako, text: "An old hauler who never asks whose name's on the box. He'll be slow, and he'll be certain. My two favorite things in a target." },
-      { ...GUIDE.mako, text: "Point us at his cargo, captain. I'll be the part he doesn't see coming." },
+      { ...GUIDE.mako, text: "Sign me on for that run, captain, and I'll be the part he doesn't see coming." },
     ],
     sceneAccent: '#7dd3fc',
     detail: {
@@ -947,7 +947,7 @@ export const RAID_MAP: RaidNode[] = [
       { text: "A shape you hadn't logged is already at the chart table, turning the Finndicate's scrap to the light like he's appraising it.", pause: 500 },
       { ...GUIDE.dole, text: "Danger zones. Such a marvelous name. You only bother naming water that frightening when you're hiding something worth the fright." },
       { ...GUIDE.dole, text: "Three dead captains couldn't read this order. I read it before my tea went cold. The cipher was never the hard part, captain. It's who wrote it." },
-      { ...GUIDE.dole, text: "Dole. I know every current worth knowing and most of the ones that aren't. You'll want someone aboard who's already been where you're headed." },
+      { ...GUIDE.dole, text: "Dole. I know every current worth knowing and most of the ones that aren't. When you're mustering hands for that water, you could do worse than a navigator who's already been there." },
       { text: "He sets the scrap down facing you, the heading circled. You hadn't circled it." },
     ],
     sceneAccent: '#a78bfa',
@@ -1284,7 +1284,7 @@ export const RAID_MAP: RaidNode[] = [
       { text: "They hand across a strongbox and a folded chart, and slip back into the gray." },
       { text: "Richer, wiser, and not sailing in blind anymore. *The mercy paid.*" },
       { ...GUIDE.dole, text: "A crew that settles its debts in charts. I like them already." },
-      { ...GUIDE.dole, text: "They're right about the first bell, captain. Every hull in the Gullet opens loaded. So we simply open smarter." },
+      { ...GUIDE.dole, text: "They're right about the first bell, captain. Every hull in the Gullet opens loaded. Take on someone who sees it coming, and you open smarter." },
     ],
     detail: {
       description:
@@ -1378,8 +1378,8 @@ export const RAID_MAP: RaidNode[] = [
       { text: "A broad shadow settles over the chart. Old scales, older eyes. A captain the sea was said to have kept, years back.", pause: 500 },
       { ...GUIDE.laz, text: "The Coffers. I know this harbor. I was counted and shelved here once, same as the plunder." },
       { ...GUIDE.laz, text: "The drowned market takes everything and files it as a debt. I am the one account it failed to close." },
-      { ...GUIDE.laz, text: "Laz. Take me down there with you, captain. I know the way in, and I know exactly what it costs. Hold my heading where the water goes dark." },
-      { text: "He does not wait to be welcomed. Captains like Laz rarely need to be." },
+      { ...GUIDE.laz, text: "Laz. When you crew up for the dark water, put my name at the top of the list. I know the way in, and I know exactly what it costs." },
+      { text: "He makes the offer like a thing already weighed, and leaves the choosing to you. Captains like Laz rarely have to ask twice." },
     ],
     detail: {
       description:
@@ -1707,7 +1707,7 @@ export const RAID_MAP: RaidNode[] = [
       { speaker: 'The Quartermaster', portrait: THE_QUARTERMASTER.enemies.quartermaster.portrait, text: "Now you see it, captain. Everything down here gets sold twice. Even the captains who come to take it back." },
       { text: "He's backed against his own shelves, and he's still smiling. Whatever he sold you, he means to reach out and take it back." },
       { ...GUIDE.laz, text: "I know this book. My name is a few pages up, and the line for how I sank was filled in long ago." },
-      { ...GUIDE.laz, text: "They were wrong. I have read this ledger from the other side of it, captain. I promise you his account closes tonight." },
+      { ...GUIDE.laz, text: "They were wrong. I have read this ledger from the other side of it, captain. Sign me on, and I will see his account closed the right way." },
     ],
     detail: {
       description:
@@ -1776,7 +1776,7 @@ export const RAID_MAP: RaidNode[] = [
       { text: "Three captains under the water, a market in ruins, and now a name at the top of it." },
       { text: "Whatever waits past the Coffers answers to him. And so, soon, will you." },
       { ...GUIDE.laz, text: "Finleone. The name every drowned captain in that book was paying toward, whether they knew it or not." },
-      { ...GUIDE.laz, text: "The deepest water is his. Good. Everything owed a reckoning ends up at the bottom, captain. We will simply be the ones who arrive on purpose." },
+      { ...GUIDE.laz, text: "The deepest water is his. Good. Everything owed a reckoning ends up at the bottom, captain. Bring me aboard, and we arrive there on purpose." },
     ],
     detail: {
       description:
