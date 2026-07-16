@@ -4599,7 +4599,7 @@ export default function FishingGame({
   useEffect(() => {
     if (phase !== 'catching' || activeBossMechanic !== 'drift') return
     const id = setInterval(() => {
-      const next = (zoneRotationRef.current + 1) % 360
+      const next = (zoneRotationRef.current + 2.4) % 360 // ~80°/s — a brisk circle, not a crawl
       zoneRotationRef.current = next
       const zg = zonesGroupRef.current
       if (zg) zg.setAttribute('transform', `rotate(${next}, ${CX}, ${CY})`)
@@ -4611,11 +4611,11 @@ export default function FishingGame({
   // swell instead of drifting one way — the sea-dragon coiling. Same imperative
   // rotation channel as drift (so getZone + the resolver follow it for free), but a
   // sine sway around the stage's starting rotation. You time the turnaround, where
-  // the ring hangs still for a beat, rather than a steady chase. ~±38° over ~2.4s.
+  // the ring hangs still for a beat, rather than a steady chase. ~±46° over ~1.5s.
   useEffect(() => {
     if (phase !== 'catching' || activeBossMechanic !== 'gyre') return
     const base = zoneRotationRef.current
-    const AMP = 38, PERIOD = 2400
+    const AMP = 46, PERIOD = 1500 // wider + faster rock than before (was 38 / 2400)
     let t = 0
     const id = setInterval(() => {
       t += 30
