@@ -124,10 +124,14 @@ export const FISH_DIFFICULTY_SPEED = [
 ]
 
 // Erraticism + catch window by zone (environment trait — currents, pressure, visibility)
-export const ZONE_DIFFICULTY: Record<string, { reverseChance: number; changeMin: number; changeMax: number; catchMultiplier: number; blackoutChance: number }> = {
-  shallows:    { reverseChance: 0.00, changeMin: 28, changeMax: 48, catchMultiplier: 1.00, blackoutChance: 0.00 },
-  open_waters: { reverseChance: 0.00, changeMin: 20, changeMax: 35, catchMultiplier: 0.90, blackoutChance: 0.00 },
-  deep:        { reverseChance: 0.00, changeMin: 12, changeMax: 22, catchMultiplier: 0.78, blackoutChance: 0.00 },
-  abyss:       { reverseChance: 0.00, changeMin:  6, changeMax: 12, catchMultiplier: 0.65, blackoutChance: 0.15 },
-  ancient_deep: { reverseChance: 0.00, changeMin:  3, changeMax:  7, catchMultiplier: 0.50, blackoutChance: 0.12 },
+// driftPerTick = degrees the whole dial rotates every 30ms while catching (a steady
+// deep-sea current). Deep's signature mechanic — a slow, predictable one-way push you
+// time your tap against. 0.9/tick ≈ 30°/s: noticeable but readable, never a coin-flip.
+// Foreshadows the Plesiosaurus/Basilosaurus drift bosses in the Ancient Deep.
+export const ZONE_DIFFICULTY: Record<string, { reverseChance: number; changeMin: number; changeMax: number; catchMultiplier: number; blackoutChance: number; driftPerTick: number }> = {
+  shallows:    { reverseChance: 0.00, changeMin: 28, changeMax: 48, catchMultiplier: 1.00, blackoutChance: 0.00, driftPerTick: 0.0 },
+  open_waters: { reverseChance: 0.00, changeMin: 20, changeMax: 35, catchMultiplier: 0.90, blackoutChance: 0.00, driftPerTick: 0.0 },
+  deep:        { reverseChance: 0.00, changeMin: 12, changeMax: 22, catchMultiplier: 0.78, blackoutChance: 0.00, driftPerTick: 0.9 },
+  abyss:       { reverseChance: 0.00, changeMin:  6, changeMax: 12, catchMultiplier: 0.65, blackoutChance: 0.15, driftPerTick: 0.0 },
+  ancient_deep: { reverseChance: 0.00, changeMin:  3, changeMax:  7, catchMultiplier: 0.50, blackoutChance: 0.12, driftPerTick: 0.0 },
 }

@@ -4632,6 +4632,24 @@ export default function FishingGame({
     return () => clearInterval(id)
   }, [phase, activeBossMechanic])
 
+  // Deep-zone CURRENT: the zone's signature mechanic. Every catch in Deep rides a
+  // slow, steady one-way drift (ZONE_DIFFICULTY.driftPerTick) — a deep-sea current
+  // pushing the ring. Same imperative rotation channel as the boss drift, so getZone
+  // + the reel-in resolver follow it for free with zero React re-renders. Skipped while
+  // a boss mechanic owns the rotation (Ancient Deep), so the two never fight the channel.
+  useEffect(() => {
+    if (phase !== 'catching' || activeBossMechanic) return
+    const per = (ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows).driftPerTick
+    if (!per) return
+    const id = setInterval(() => {
+      const next = (zoneRotationRef.current + per) % 360
+      zoneRotationRef.current = next
+      const zg = zonesGroupRef.current
+      if (zg) zg.setAttribute('transform', `rotate(${next}, ${CX}, ${CY})`)
+    }, 30)
+    return () => clearInterval(id)
+  }, [phase, activeBossMechanic, selectedZone])
+
   // ── Mid-cast exit guard ─────────────────────────────────────────────
   // Once castLine fires, the server has already deducted the bait — a
   // hard exit (Back button, in-app nav, tab close) doesn't refund it.
