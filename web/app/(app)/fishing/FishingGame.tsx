@@ -4272,6 +4272,10 @@ export default function FishingGame({
   // can't ping-pong) and a bumping key that fires the on-dial direction arrow.
   const lastReverseMsRef = useRef(-9999)
   const reverseTellKeyRef = useRef(0)
+  // A reversal that's been TELEGRAPHED but hasn't flipped yet — the arrow is up,
+  // the flip fires when elapsedMs reaches `at`. This is what gives the tell lead
+  // time instead of flashing the instant the needle turns.
+  const reversePendingRef = useRef<{ at: number } | null>(null)
   const hookedFishRef   = useRef<{ fishId: number; catchDifficulty: number; crateTier?: 'wooden' | 'metal' | 'gold' | 'diamond' } | null>(null)
   const selectedBaitRef = useRef(selectedBait)
   useEffect(() => { phaseRef.current = phase }, [phase])
@@ -4473,6 +4477,7 @@ export default function FishingGame({
     lastTimeRef.current  = 0
     elapsedMsRef.current = 0
     lastReverseMsRef.current = -9999 // let the first reversal fire immediately
+    reversePendingRef.current = null
     nextChgMsRef.current = (zoneDiff.changeMin + Math.floor(Math.random() * (zoneDiff.changeMax - zoneDiff.changeMin))) * 50
     lastZoneFromRef.current = NaN // force a zone sync on the first frame
     reelLockPendingRef.current = false // defensive: never start a spin locked
@@ -4497,6 +4502,16 @@ export default function FishingGame({
         ? spinAngleNow()
         : ((angleRef.current + dirRef.current * speedRef.current * delta / 1000) % 360 + 360) % 360
 
+      // Fire a TELEGRAPHED reversal once its warning window elapses. The arrow +
+      // haptic already fired ~REVERSE_WARN_MS ago (see the change-tick below), so
+      // by now the player has had the heads-up. Checked every frame so the flip
+      // lands on time, not at the next boundary.
+      if (reversePendingRef.current && elapsedMsRef.current >= reversePendingRef.current.at) {
+        reversePendingRef.current = null
+        dirRef.current *= -1
+        startNeedleSpin(angleRef.current)
+      }
+
       if (elapsedMsRef.current >= nextChgMsRef.current) {
         // NO speed re-roll here. The needle keeps the one speed rolled at
         // cast start for the whole spin — a mid-spin jump (e.g. 130→210°/s
@@ -4505,26 +4520,33 @@ export default function FishingGame({
         // now only drives the discrete zone mechanics below (reversals,
         // blackouts), which are telegraphed effects rather than wobble.
         if (Math.random() < effectiveReverseChance) {
-          // SKILL, NOT LUCK: reverse ONLY in the far dead zone, never within the
-          // catch approach, and never twice in quick succession. The needle always
-          // enters the catch from a settled, readable direction — no coin-flip yank
-          // at the moment you commit (which is exactly what the old dist<=55 rule
-          // did). And when it does turn, we TELEGRAPH it: a direction arrow flashes
-          // on the dial + a haptic double-tick, so the turn reads as an event you
-          // can see and plan around, not a glitch.
-          // Live rotation, not the cast-start capture — so the safe band tracks the
-          // catch even while it drifts / gyres / snaps (a moving-zone giant).
+          // SKILL, NOT LUCK. The reversal is TELEGRAPHED AHEAD: when we decide to
+          // turn, we flash the arrow + haptic NOW and flip ~REVERSE_WARN_MS LATER,
+          // so the tell is an actual heads-up ("about to reverse") rather than a
+          // flash the instant the needle turns (which gave no warning). Two guards
+          // keep it fair: the needle must currently be in the far dead zone, AND
+          // the point it WILL be at when the flip fires must also be clear of the
+          // catch — so the delayed flip can never land on your tap. Live rotation
+          // so the safe band tracks a drifting / gyring / snapping zone.
+          const REVERSE_WARN_MS = 380
           const catchCenter = (CATCH_CENTER + zoneRotationRef.current) % 360
           const needle = angleRef.current
           const dist = Math.min(Math.abs(catchCenter - needle), 360 - Math.abs(catchCenter - needle))
-          const REVERSE_SAFE_DEG = 100 // no reversal within this arc of the catch
-          if (dist >= REVERSE_SAFE_DEG && elapsedMsRef.current - lastReverseMsRef.current > 550) {
+          const projected = ((needle + dirRef.current * speedRef.current * REVERSE_WARN_MS / 1000) % 360 + 360) % 360
+          const projDist = Math.min(Math.abs(catchCenter - projected), 360 - Math.abs(catchCenter - projected))
+          const REVERSE_SAFE_DEG = 100 // no reversal decided within this arc of the catch
+          if (
+            dist >= REVERSE_SAFE_DEG
+            && projDist >= 70 // and the flip point itself lands clear of the catch
+            && !reversePendingRef.current
+            && elapsedMsRef.current - lastReverseMsRef.current > 550
+          ) {
             lastReverseMsRef.current = elapsedMsRef.current
-            dirRef.current *= -1
-            startNeedleSpin(angleRef.current) // restart the compositor spin from the flip point
+            reversePendingRef.current = { at: elapsedMsRef.current + REVERSE_WARN_MS }
+            // Tell NOW; the arrow points the way it's ABOUT to turn (opposite of now).
             reverseTellKeyRef.current += 1
-            setReverseTell({ key: reverseTellKeyRef.current, dir: dirRef.current })
-            vibrate([0, 22, 30, 22])
+            setReverseTell({ key: reverseTellKeyRef.current, dir: -dirRef.current })
+            vibrate([0, 16, 40, 16])
           }
         }
         const scaledBlackout = noBlackout ? 0 : zoneDiff.blackoutChance * (hookedFish.catchDifficulty / 5)
