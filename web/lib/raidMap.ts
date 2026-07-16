@@ -22,6 +22,10 @@ import { getRaidItem } from '@/lib/raidItems'
 // transparent busts later by pointing these at new files. See lib/legendaryUnlocks.
 const CREW_ART = (f: string) => `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/${f}`
 const GUIDE = {
+  // OG crew — always aboard, no unlock. They open the story and mentor.
+  doby: { speaker: 'Doby', portrait: CREW_ART('Doby_Mick_v2.png') },
+  kat:  { speaker: 'Kat',  portrait: CREW_ART('Catfish.png') },
+  // The legendaries who join one per chapter.
   mako: { speaker: 'Mako', portrait: CREW_ART('Mako_Shark.png') },
   dole: { speaker: 'Dole', portrait: CREW_ART('Dole.png') },
   laz:  { speaker: 'Laz',  portrait: CREW_ART('Coelacanth.png') },
@@ -643,15 +647,18 @@ export const RAID_MAP: RaidNode[] = [
     bridge: "Pull any thread and it runs back to one reef, where Pete's little fish do his collecting for him.",
     image: '/raidlog.png',
     scene: [
+      { ...GUIDE.doby, text: "Every reef on this coast has gone quiet, small fry. And a quiet sea is a sea with something wrong in it." },
       { text: "Barnacle Pete robs the small and the slow. Has done for years, all up and down this coast." },
       { text: "Little crews. Fishing folk. The odd unlucky angler. Anyone too small to swing back." },
+      { ...GUIDE.kat, text: "And here is the part that never sat right with me. Pete steals a fortune and stays poor as a barnacle." },
       { speaker: 'A Passing Sailor', text: "Pete don't spend his haul. He delivers it." },
       { text: "Said once, by a sailor who knew better than to say it twice." },
-      { text: "Here's the funny part. Pete steals a fortune and keeps about a copper. The rest sails off to *someone he'd rather you never asked about*." },
-      { text: "So nobody asks.", pause: 700 },
-      { text: "You, though, you've got a boat, a free afternoon, and no manners worth mentioning." },
+      { text: "The rest sails off to *someone Pete would rather you never asked about*. So nobody asks.", pause: 700 },
+      { ...GUIDE.doby, text: "You have got a boat, a free afternoon, and no manners worth mentioning. Kat and I have sailed with worse. We are with you." },
       { speaker: 'Barnacle Pete', portrait: CORSAIRS_RECKONING.enemies.pete.portrait, text: "Broke, me? Couldn't rob a rockpool. Now mind yer business, guppy." },
-      { text: "Go shake the loudest pirate on the water and see what falls out of his coat." },
+      { ...GUIDE.kat, text: "Charming man. Go shake him till the truth falls out of his coat, captain. But do it clever, not bare-knuckled." },
+      { ...GUIDE.kat, text: "A ship is only as strong as her hull and her hands. Upgrade the ship when the coin allows, and sign on crew at the Crew Hall. A full deck wins the fights a lone captain loses." },
+      { ...GUIDE.doby, text: "Then point us at the reef. Time Pete's Raiders learned who they picked a fight with." },
     ],
     detail: {
       description:
@@ -759,6 +766,8 @@ export const RAID_MAP: RaidNode[] = [
       { text: "And one word stamped on every page: *the Finndicate*.", pause: 800 },
       { speaker: 'Barnacle Pete', portrait: CORSAIRS_RECKONING.enemies.pete.portrait, text: "You think I keep the coin? Not a copper of it stays with me. Never has." },
       { text: "So much for the kingpin. Pete was a cash cow like all the rest, squeezed dry and tossed back same as everyone he ever robbed." },
+      { ...GUIDE.kat, text: "A cash cow. All that noise, and he was only ever another hand passing the plate up the line." },
+      { ...GUIDE.doby, text: "The Finndicate. I have heard that name whispered in deep water, small fry, and never once by anything that lived to say it twice." },
       { text: "And the coin never sits still. Page after page, every haul buys the same thing over and over, and not one line says what." },
       { text: "Under the ledgers there's a sealed letter. No name on it. Just two letters pressed into the wax: *C.K.*", pause: 700, insert: { kind: 'sealed-letter', wax: 'C.K.' } },
       { text: "The route's mostly burned away, but the heading held. Out past the Bilge Strait, into the cold." },
@@ -922,16 +931,45 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    // Chapter-end ship-class pick. Unlocks the moment the player beats
-    // the main Krust raid (challenge optional). Picks a permanent ship
-    // identity from the 4-class roster in lib/shipClasses.ts; locked in
-    // once chosen. New class nodes for future chapters follow the same
-    // pattern (one per chapter, gated on the chapter's final boss).
+    // Chapter I closer — "Between Watches". The recurring denouement beat: after
+    // the chapter boss, the crew takes a quiet watch together before the Captain's
+    // Choice. Grows richer each chapter as more hands join. Ends on MOOD, never a
+    // plot noun (the next reveal belongs to the next chapter's opener). Gates the
+    // class pick so it always plays first.
+    id: 'chapter_1_close',
+    type: 'story',
+    label: 'Between Watches',
+    flavor: "Two captains under, and a rare quiet on the deck. Before the next heading, the crew takes a watch together.",
+    bridge: "The rest never lasts. Somewhere past the dark water, the Finndicate has started asking who you are.",
+    requiresNode: 'krust',
+    image: '/raidlog.png',
+    scene: [
+      { text: "Krust's consignment burns to the waterline, and for the first time since the coast, the deck goes quiet." },
+      { ...GUIDE.kat, text: "Sit. Eat something. You have been running on spite and seawater for a week." },
+      { ...GUIDE.doby, text: "Let the captain stand, Kat. A hand who just put Captain Krust under has earned the view." },
+      { ...GUIDE.mako, text: "That view being your name on every wanted board from here to the danger lines. You put us on the Finndicate's list today, captain." },
+      { ...GUIDE.mako, text: "For what it is worth, I have never eaten better than when something bigger was hunting me." },
+      { ...GUIDE.kat, text: "That is the most encouraging thing you have ever said, and it terrifies me." },
+      { text: "Somewhere past the dark water, something large stops what it is doing to look your way.", pause: 700 },
+      { text: "But that is tomorrow's heading. Tonight the crew is whole, and the grog is cold." },
+    ],
+    detail: {
+      description:
+        "Pete and Krust both on the seabed, and the coast knows your sails now. Before the next heading the deck goes quiet: Kat patches the hull and the hands, Doby watches the dark water, and Mako grins at the wanted board with your name freshly on it. The Finndicate has noticed you. Tomorrow that will matter. Tonight the crew is whole.",
+      ctaLabel: 'Rest a While →',
+      summary: "With Pete and Krust both under, the crew took a quiet watch together before the next heading. The Finndicate has noticed you now, but tonight the deck is whole.",
+    },
+  },
+  {
+    // Chapter-end ship-class pick. Unlocks after the chapter closer (Between
+    // Watches) plays. Picks a permanent ship identity from the 4-class roster in
+    // lib/shipClasses.ts; locked in once chosen. New class nodes for future
+    // chapters follow the same pattern (one per chapter, after the closer).
     id: 'chapter_1_class',
     type: 'class_pick',
     label: "Captain's Choice",
     flavor: "Two captains on the seabed and your name on every wanted board from here to the danger lines. Time to decide what kind of captain you want to be.",
-    requiresNode: 'krust',
+    requiresNode: 'chapter_1_close',
     classPick: { chapterId: 'thread' },
     detail: {
       description:
