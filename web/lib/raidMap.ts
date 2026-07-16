@@ -281,7 +281,20 @@ export interface SceneLine {
   pause?: number
   /** A hit on this line. 'shake' rocks the frame, 'flash' blows it out for a beat. */
   fx?: 'shake' | 'flash'
+  /** CLOSE-UP: the speaking bust fills the frame for this line (a big emotional
+   *  beat). Ignored on narrator lines with no cast. */
+  closeup?: boolean
+  /** INSERT SHOT: a stylized object the frame pushes into on this line (the cast
+   *  steps aside). For the marquee reveals — the F in the margin, a sealed
+   *  letter. The narrator text still rides the plate below it. */
+  insert?: SceneInsert
 }
+
+/** A stylized object beat (rendered in CSS, no art). Extend the union +
+ *  the InsertShot switch in components/cutscene.tsx to add new ones. */
+export type SceneInsert =
+  | { kind: 'ledger-f' }                 // the patient F signing the margin
+  | { kind: 'sealed-letter'; wax?: string } // a wax-sealed letter (wax = the initials pressed in it)
 
 /** One row in a node's "possible drops" panel. */
 export interface RaidNodeDrop {
@@ -747,7 +760,7 @@ export const RAID_MAP: RaidNode[] = [
       { speaker: 'Barnacle Pete', portrait: CORSAIRS_RECKONING.enemies.pete.portrait, text: "You think I keep the coin? Not a copper of it stays with me. Never has." },
       { text: "So much for the kingpin. Pete was a cash cow like all the rest, squeezed dry and tossed back same as everyone he ever robbed." },
       { text: "And the coin never sits still. Page after page, every haul buys the same thing over and over, and not one line says what." },
-      { text: "Under the ledgers there's a sealed letter. No name on it. Just two letters pressed into the wax: *C.K.*", pause: 700 },
+      { text: "Under the ledgers there's a sealed letter. No name on it. Just two letters pressed into the wax: *C.K.*", pause: 700, insert: { kind: 'sealed-letter', wax: 'C.K.' } },
       { text: "The route's mostly burned away, but the heading held. Out past the Bilge Strait, into the cold." },
       { text: "Whoever C.K. is, the Finndicate trusts them with cargo by the holdful. And now you know which way it sails." },
       { text: "A fin has been cutting your wake since the strongbox cracked. It closes the distance now, in no hurry at all.", pause: 500 },
@@ -2069,7 +2082,7 @@ export const RAID_MAP: RaidNode[] = [
       { text: "Sal Brackwater's strongroom gives up the don's own ledgers: every account the Finndicate keeps, in Finleone's own hand." },
       { text: 'They balance. Every catch, every Cache, every drowned captain, paid to the coin. A perfect empire, perfectly kept.' },
       { text: 'All but one margin.', pause: 800 },
-      { text: 'Again and again, in ink older and finer than the rest, a single initial signs off sums that answer to no account: *F.*', pause: 700 },
+      { text: 'Again and again, in ink older and finer than the rest, a single initial signs off sums that answer to no account: *F.*', pause: 900, fx: 'flash', insert: { kind: 'ledger-f' } },
       { text: "Finleone, you'd say. But the don signs his whole name, every time, with a flourish. This hand is small. Patient. *It was here first.*", pause: 600 },
       { text: 'You close the books. The throne is dead ahead, and whatever the margin means, the answer sits on it.' },
       { ...GUIDE.mira, text: 'One initial. Older than the don, patient as debt, and not one soul in this sea brave enough to put a price on it.' },

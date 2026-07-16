@@ -201,6 +201,70 @@ export function FlashOut({ k }: { k: number }) {
   )
 }
 
+/** ── INSERT SHOT ─────────────────────────────────────────────────────────────
+ *  A stylized OBJECT the frame pushes into on a marquee reveal — no art, pure
+ *  CSS/type. The cast steps aside and the thing itself takes the screen: the F
+ *  signing the margin, a wax-sealed letter. Slow push-in; the key mark ignites
+ *  in the scene accent. Extend the switch to add new objects. */
+const PARCHMENT = 'linear-gradient(160deg, #e9ddc2 0%, #d9c9a6 55%, #ccb991 100%)'
+
+export function InsertShot({ kind, wax, accent, reduced }: { kind: string; wax?: string; accent: string; reduced?: boolean }) {
+  if (kind === 'ledger-f') return <LedgerFInsert accent={accent} reduced={reduced} />
+  if (kind === 'sealed-letter') return <SealedLetterInsert wax={wax ?? ''} accent={accent} reduced={reduced} />
+  return null
+}
+
+function LedgerFInsert({ accent, reduced }: { accent: string; reduced?: boolean }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9, rotate: -1.5 }}
+      animate={{ opacity: 1, scale: reduced ? 1 : 1.06, rotate: 0 }}
+      transition={{ opacity: { duration: 0.5 }, scale: { duration: 6.5, ease: 'easeOut' }, rotate: { duration: 0.6 } }}
+      style={{ position: 'relative', width: 'min(72vw, 300px)', aspectRatio: '4 / 5', borderRadius: 5,
+        background: PARCHMENT, transformOrigin: 'center',
+        boxShadow: '0 18px 46px rgba(0,0,0,0.6), inset 0 0 46px rgba(80,52,16,0.28)',
+        border: '1px solid rgba(60,40,15,0.45)' }}>
+      <div aria-hidden style={{ position: 'absolute', inset: '11% 8% 9%', backgroundImage: 'repeating-linear-gradient(rgba(60,40,15,0.16) 0 1px, transparent 1px 16px)' }} />
+      <div aria-hidden style={{ position: 'absolute', top: '9%', bottom: '9%', right: '24%', width: 1, background: 'rgba(60,40,15,0.4)' }} />
+      {/* faded ledger entries — abstract ink strokes, never fake numbers */}
+      {Array.from({ length: 9 }).map((_, i) => (
+        <div key={i} aria-hidden style={{ position: 'absolute', left: '12%', right: '28%', top: `${17 + i * 8}%`, height: 3, borderRadius: 2,
+          background: `rgba(50,35,12,${0.3 - (i % 3) * 0.06})`, transform: `scaleX(${0.55 + ((i * 37) % 42) / 100})`, transformOrigin: 'left' }} />
+      ))}
+      {/* the patient F, small in the margin, igniting in the accent */}
+      <motion.span className="font-pirata"
+        initial={{ opacity: 0.55, color: '#3a2a10' }}
+        animate={reduced ? { opacity: 1, color: accent } : { opacity: [0.55, 1], color: ['#3a2a10', accent] }}
+        transition={{ delay: 0.9, duration: 1.4, ease: 'easeOut' }}
+        style={{ position: 'absolute', right: '8%', top: '41%', fontSize: 'clamp(30px, 10vw, 50px)', lineHeight: 1, textShadow: `0 0 18px ${accent}66` }}>
+        F
+      </motion.span>
+    </motion.div>
+  )
+}
+
+function SealedLetterInsert({ wax, accent, reduced }: { wax: string; accent: string; reduced?: boolean }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: reduced ? 1 : 1.05 }}
+      transition={{ opacity: { duration: 0.5 }, scale: { duration: 6, ease: 'easeOut' } }}
+      style={{ position: 'relative', width: 'min(72vw, 300px)', aspectRatio: '5 / 3.4', borderRadius: 4,
+        background: PARCHMENT, transformOrigin: 'center',
+        boxShadow: '0 18px 46px rgba(0,0,0,0.6), inset 0 0 40px rgba(80,52,16,0.22)',
+        border: '1px solid rgba(60,40,15,0.4)' }}>
+      <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, top: '50%', height: 1, background: 'rgba(60,40,15,0.22)' }} />
+      <div aria-hidden style={{ position: 'absolute', top: 0, bottom: 0, left: '50%', width: 1, background: 'rgba(60,40,15,0.18)' }} />
+      <motion.div
+        initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.5, type: 'spring', stiffness: 260, damping: 18 }}
+        style={{ position: 'absolute', left: '50%', top: '50%', width: '30%', aspectRatio: '1', marginLeft: '-15%', marginTop: '-15%',
+          borderRadius: '50%', background: 'radial-gradient(circle at 40% 35%, #b0203a, #7a1226 72%)',
+          boxShadow: `0 3px 10px rgba(0,0,0,0.5), 0 0 18px ${accent}44`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <span className="font-cinzel font-800" style={{ fontSize: 'clamp(11px, 3.4vw, 16px)', letterSpacing: '0.06em', color: '#f2d7b0' }}>{wax}</span>
+      </motion.div>
+    </motion.div>
+  )
+}
+
 /** A thin progress line. The dots said "slide 4 of 9". */
 export function SceneProgress({ idx, total, accent }: { idx: number; total: number; accent: string }) {
   return (

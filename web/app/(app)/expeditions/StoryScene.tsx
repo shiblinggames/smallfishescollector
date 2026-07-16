@@ -30,7 +30,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { GOLD, TypedBody, Letterbox, LivingFrame, FlashOut, SceneProgress, useTypewriter, lineHaptic, prefersReducedMotion } from '@/components/cutscene'
+import { GOLD, TypedBody, Letterbox, LivingFrame, FlashOut, SceneProgress, InsertShot, useTypewriter, lineHaptic, prefersReducedMotion } from '@/components/cutscene'
 import type { SceneLine } from '@/lib/raidMap'
 
 /** Who is on stage, and where. Two slots: a conversation, not a crowd. */
@@ -120,6 +120,9 @@ export default function StoryScene({ title, lines, ctaLabel, pending, accent, on
   const hasCast = useMemo(() => lines.some(l => l.speaker && l.portrait), [lines])
   const allText = useMemo(() => lines.map(l => l.text), [lines])
   const shake = line?.fx === 'shake' && !reduced && !held
+  // Insert = an object beat; the cast steps aside. Close-up = the speaker looms.
+  const insertActive = !!line?.insert
+  const closeupActive = !!line?.closeup && hasCast
 
   // ── THE BUST ────────────────────────────────────────────────────────────────
   // It used to enter and then stand perfectly still forever, which is the difference
@@ -129,14 +132,15 @@ export default function StoryScene({ title, lines, ctaLabel, pending, accent, on
   const bust = (c: StageChar | null, side: 'left' | 'right') => {
     if (!c) return null
     const lit = speaking === c.speaker
-    // Lean on the line, jolt on the hit, creep during the beat before it.
-    const emphasis = lit && shake ? 1.06 : lit && held ? 1.03 : lit ? 1 : 0.93
+    // Lean on the line, jolt on the hit, creep during the beat before it, and
+    // LOOM on a close-up. Step off-stage entirely for an insert shot.
+    const emphasis = lit && closeupActive ? 1.55 : lit && shake ? 1.06 : lit && held ? 1.03 : lit ? 1 : 0.93
     return (
       <motion.div
         key={`${side}-${c.speaker}`}
         initial={{ opacity: 0, x: side === 'left' ? -46 : 46, scale: 0.9 }}
         animate={{
-          opacity: lit ? 1 : 0.4,
+          opacity: insertActive ? 0 : lit ? 1 : closeupActive ? 0.06 : 0.4,
           x: shake && lit ? [0, -6, 5, -3, 0] : 0,
           scale: emphasis,
           y: lit ? 0 : 8,
@@ -216,6 +220,13 @@ export default function StoryScene({ title, lines, ctaLabel, pending, accent, on
           justifyContent: hasCast ? 'flex-end' : 'center',
         }}
       >
+        {/* ── INSERT SHOT — the object takes the frame (cast dimmed to 0 above). */}
+        {insertActive && line?.insert && (
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            paddingBottom: hasCast ? '22%' : '8%', zIndex: 2, pointerEvents: 'none' }}>
+            <InsertShot kind={line.insert.kind} wax={'wax' in line.insert ? line.insert.wax : undefined} accent={ACCENT} reduced={reduced} />
+          </div>
+        )}
         {/* ── TITLE CARD — a scene with no cast. Words in the dark, nothing else. */}
         {!hasCast && (
           <div style={{ padding: '0 1.6rem', textAlign: 'center' }}>
