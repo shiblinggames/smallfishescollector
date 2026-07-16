@@ -883,7 +883,9 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
     { speaker: 'player', text: "You're the Cartographer. The Finndicate's chartmaker. Krust said his couriers followed your lines." },
     { speaker: 'boss', text: "Names belong to ships. I draw seas. Krust ran cargo, and you put him at the bottom of one of my channels. Now you're on a page of mine too." },
     { speaker: 'boss', text: "Every water you've crossed since Driftwood is marked in the cabin behind me. I knew the shape of your wake *before you knew the shape of your hold*.", pause: 700 },
+    { speaker: 'crew', ...CREW_SPEAKER.dole, text: "You drew where I have already been, chartmaker. I read where a captain is going. Only one of those wins a fight, and it is not the man holding the older map." },
     { speaker: 'boss', text: "Lock your gunports if you've any sense. Or don't, and let this fog have you the way it had the others.", pause: 400 },
+    { speaker: 'crew', ...CREW_SPEAKER.kat, text: "Charts and threats, and so proud of both. Let us show him a sea he did not draw, captain." },
   ],
 }
 
@@ -1008,8 +1010,10 @@ export const THE_TOLLMASTER: BossRaidConfig = {
     { speaker: 'boss', text: "You came a long way down my channel, captain. Everything that swims this deep pays the toll. Coin, cargo, hull, crew. *I take my cut of all of it*.", pause: 500 },
     { speaker: 'player', text: "Tollmaster Spet. You're the one the whole Finndicate funnels its plunder to." },
     { speaker: 'boss', text: "I'm the one who counts it. Krust shipped it, the Cartographer charted it, and it all comes down my throat to be weighed. You sank two of mine. That's a debt." },
+    { speaker: 'crew', ...CREW_SPEAKER.doby, text: "Everything down here pays the toll. I have heard that from bigger things than you, collector, and I am still in the water. They are not." },
     { speaker: 'boss', text: "And out here, captain, I always collect first." },
     { speaker: 'boss', text: "Run out your guns if you've got the nerve. Mine already are. *We fire on the bell.*", pause: 600 },
+    { speaker: 'crew', ...CREW_SPEAKER.mako, text: "Fire on the bell. How patient. Give the word, captain, and I will show him what fires *before* it." },
   ],
 }
 
@@ -1124,7 +1128,9 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
     { speaker: 'boss', text: "Far enough, captain. Nobody sails into the Coffers uninvited and lives to count the take." },
     { speaker: 'player', text: "You're a long way from the docks for a harbormaster." },
     { speaker: 'boss', text: "Admiral, to you. I keep this wall, and my gunners fly whatever colors the market needs. You'll never know which gun is the live one until it's already in you." },
+    { speaker: 'crew', ...CREW_SPEAKER.dole, text: "A fleet that lies about which gun is loaded. How quaint. I have already told the captain which of yours are bluffing, admiral. Do keep pretending." },
     { speaker: 'boss', text: "Run out your guns. *Mine are already lying to you.*", pause: 700 },
+    { speaker: 'crew', ...CREW_SPEAKER.laz, text: "Everything in this drowned market lies. I came back from its floor to say so, admiral. Your painted colors do not frighten a dead man." },
   ],
 }
 
@@ -1430,9 +1436,11 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
   preFightDialogue: [
     { speaker: 'narrator', text: "The Cache's shutters roll up into a gun-deck, and the keeper stands behind a counter of run-out cannon, smiling like he's already counted your coin." },
     { speaker: 'boss', text: "Every captain who ever beat me bought the means to do it off my own shelf. *You included.*", pause: 600 },
+    { speaker: 'crew', ...CREW_SPEAKER.mako, text: "Then I will beat you with the one thing I never bought off your shelf, keeper. My teeth." },
     { speaker: 'player', text: "Then I'll sink you with your own goods. Hold still." },
     { speaker: 'boss', text: "Your goods? Everything you carry was a loan, captain. *And I am calling one back.*", pause: 500, fx: 'shake' },
     { speaker: 'boss', text: "Let's see how bold you sail once I reach across the counter and take back the piece you leaned on most.", pause: 400 },
+    { speaker: 'crew', ...CREW_SPEAKER.kat, text: "Take your trinkets back, keeper. The one thing you never sold this captain is the crew standing on her deck. Good luck reaching across the counter for us." },
   ],
 }
 
@@ -1651,8 +1659,10 @@ export const THE_BLOCKADE: BossRaidConfig = {
     { speaker: 'narrator', text: "The blockade line rides the swell ahead: the don's own escort armada, lanterns doused, gunports open. At the center of it, something long and low sits *so still in the water you take it for a spar*.", pause: 700 },
     { speaker: 'boss', text: "Far enough, captain. The don's water starts where your charts stop." },
     { speaker: 'player', text: "Then I'm exactly where I mean to be. Move your line." },
+    { speaker: 'crew', ...CREW_SPEAKER.doby, text: "Move it, or be moved with it. I have shifted reefs that argued less than you, enforcer." },
     { speaker: 'boss', text: "The Quartermaster talked too much and kept too little. I do not talk, and *I do not let go*. Ask anyone who ever got this far.", pause: 500 },
     { speaker: 'boss', text: "You will not see me move. *You will only notice I have you.*", pause: 1100, fx: 'shake' },
+    { speaker: 'crew', ...CREW_SPEAKER.mira, text: "I noticed you an hour ago, love. A thing that lies that still is a thing afraid to move first. Let us find out what it is afraid of." },
   ],
 }
 
@@ -1871,7 +1881,9 @@ export const THE_THRONE: BossRaidConfig = {
     { speaker: 'boss', text: 'Sit down, captain. You’ve crossed my whole family to reach this table. The least I can do is hear your last request.', pause: 500 },
     { speaker: 'player', text: 'I read your books, Finleone. Every coin accounted for. Almost every coin.' },
     { speaker: 'boss', text: '...So. *You found the margin.*', pause: 1200 },
+    { speaker: 'crew', ...CREW_SPEAKER.dole, text: 'We found it, don. The account your whole empire was really paying into. You were never the top of this, and you know it. Does that frighten you as much as it frightens your books?' },
     { speaker: 'boss', text: 'Then you know why *nobody* leaves this water. Guns out, captain. The court is in session.', pause: 600, fx: 'shake' },
+    { speaker: 'crew', ...CREW_SPEAKER.mira, text: 'Look at him, captain. The biggest name in the whole sea, and he is afraid of a single letter. That is the only thing in this room worth knowing.' },
   ],
 }
 
