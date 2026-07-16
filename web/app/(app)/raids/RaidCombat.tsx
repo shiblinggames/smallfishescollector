@@ -901,6 +901,11 @@ export default function RaidCombat({
   const vengeanceCleanseRef = useRef(false)
   const vengeanceDmgBuffRef = useRef(0)   // applied buff, live for rest of fight
   const [vengeanceEruptFx, setVengeanceEruptFx] = useState(0)   // bump → crimson burst
+  // Requiem (Mira) Lv100 — rounds the enemy's shield is IGNORED while her mark
+  // burns. Set at cast, decremented each round tick, gates the shield pierce in
+  // both the cannon path (`piercing`) and the crew-ability soak. Independent of
+  // the `marked` status so a raid-item feeble can't accidentally pierce.
+  const markPierceTurnsRef = useRef(0)
   // THE WARD BURNS DOWN. It used to hold for the whole fight, which made Laz a
   // "press it whenever" ability: arm it early, forget it, and it either caught a
   // death for free or quietly did nothing. A 3-turn fuse turns him into what the
@@ -1184,7 +1189,7 @@ export default function RaidCombat({
   const [restorePulse, setRestorePulse] = useState(0)
   // Enemy status aura — a themed glow over the enemy hull while a tide/raid-item
   // status (burn, freeze) procs on it, so those effects read on the ship itself.
-  const [enemyAura, setEnemyAura] = useState<{ key: number; kind: 'burn' | 'freeze' | 'snared' | 'foresee'; color?: string } | null>(null)
+  const [enemyAura, setEnemyAura] = useState<{ key: number; kind: 'burn' | 'freeze' | 'snared' | 'foresee' | 'marked'; color?: string } | null>(null)
   // Thermal Shock confluence detonation — an ice+fire shatter burst over the hull.
   const [thermalShockFx, setThermalShockFx] = useState<{ key: number } | null>(null)
   // Persistent status — the enemy keeps a low ember glow while burning and a
@@ -1516,6 +1521,8 @@ export default function RaidCombat({
       enemyStatusesRef.current = eTick.next
       setEnemyStatuses(eTick.next)
       for (const s of eTick.expired) lines.push(`${STATUS_DEFS[s.id].name} wears off the ${enemy.name}.`)
+      // Mira's shield pierce runs on the same clock as her mark — one round per tick.
+      if (markPierceTurnsRef.current > 0) markPierceTurnsRef.current -= 1
       if (lines.length > 0) setResolveLog(prev => [...prev, ...lines])
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1784,6 +1791,7 @@ export default function RaidCombat({
     // Statuses are per-FIGHT: both sides start every encounter clean.
     playerStatusesRef.current = []; setPlayerStatuses([])
     enemyStatusesRef.current = []; setEnemyStatuses([])
+    markPierceTurnsRef.current = 0   // Mira's shield pierce is per-fight, like the mark
     const intro = isBoss
       ? `${enemy.name} heaves into view!`
       : `A ${enemy.name} draws alongside!`
@@ -2294,7 +2302,7 @@ export default function RaidCombat({
       setPlayerAura({ key: ak, kind, color: color ?? undefined })
       setTimeout(() => setPlayerAura(a => (a && a.key === ak ? null : a)), 950)
     }
-    const themeEnemy = (kind: 'snared' | 'foresee', color?: string | null) => {
+    const themeEnemy = (kind: 'snared' | 'foresee' | 'marked', color?: string | null) => {
       setEnemyAura({ key: ak, kind, color: color ?? undefined })
       setTimeout(() => setEnemyAura(a => (a && a.key === ak ? null : a)), 950)
     }
@@ -2309,6 +2317,7 @@ export default function RaidCombat({
     else if (def.id === 'snare')        themeEnemy('snared')
     else if (def.id === 'foresight')    themeEnemy('foresee', chaseColor)
     else if (def.id === 'vengeance')    themePlayer('brace', chaseColor)
+    else if (def.id === 'requiem')      themeEnemy('marked', chaseColor)
 
     // Dispatch on class id — TS narrows the milestone shape from the
     // per-class table.
@@ -2528,6 +2537,21 @@ export default function RaidCombat({
         setResolveLog(prev => [...prev, `${crew.name} girds your ship with a vengeance ward. Fall within ${VENGEANCE_WARD_TURNS} turns and it strikes back.`])
         break
       }
+      case 'requiem': {
+        const rq = m as import('@/lib/crewClasses').RequiemMilestone
+        // Pure force-multiplier — NO damage. Paint the enemy with a `marked`
+        // debuff: while it burns, that target takes +markMag damage from every
+        // source (the player's aim shots AND every crew ability, both of which
+        // already fold in enemy dmgTakenMult). Lv100 also arms the shield pierce.
+        applyEnemyStatus('marked', rq.markMag, rq.markTurns)
+        if (rq.pierceShield) markPierceTurnsRef.current = rq.markTurns
+        noteCheckResponse('snare')   // a debuff cast on the enemy answers a "punish the enemy" check
+        setEHitsplat({ key: ak + 1, text: 'MARKED', color: '#f43f5e', big: true })
+        setTimeout(() => setEHitsplat(null), 900)
+        const dur = `${rq.markTurns} turn${rq.markTurns === 1 ? '' : 's'}`
+        setResolveLog(prev => [...prev, `${crew.name} marks the ${enemy.name} for death — +${Math.round(rq.markMag * 100)}% damage from the whole crew for ${dur}${rq.pierceShield ? ', and its shield is laid open' : ''}.`])
+        break
+      }
     }
     }, SUMMON_LEAD_MS)
   }
@@ -2634,8 +2658,10 @@ export default function RaidCombat({
     }
     // Crew abilities are direct player damage — they route through the enemy's
     // barrier (Warded / The Warding) before its hull, same as cannon fire.
+    // ...unless Mira's mark has laid the shield open (Lv100 pierce), in which
+    // case the blow skips the barrier entirely.
     let toHull = rawDmg
-    if (enemyShieldRef.current > 0 && rawDmg > 0) {
+    if (enemyShieldRef.current > 0 && rawDmg > 0 && markPierceTurnsRef.current <= 0) {
       const absorbed = Math.min(enemyShieldRef.current, rawDmg)
       enemyShieldRef.current -= absorbed
       setEnemyShieldHp(enemyShieldRef.current)
@@ -2704,7 +2730,7 @@ export default function RaidCombat({
   // applyAbilityDamage instead (that one owns the summary line + kill outro).
   function applyChainHit(rawDmg: number, hitKind: 'hit' | 'crit', skipSplat = false) {
     let toHull = rawDmg
-    if (enemyShieldRef.current > 0 && rawDmg > 0) {
+    if (enemyShieldRef.current > 0 && rawDmg > 0 && markPierceTurnsRef.current <= 0) {
       const absorbed = Math.min(enemyShieldRef.current, rawDmg)
       enemyShieldRef.current -= absorbed
       setEnemyShieldHp(enemyShieldRef.current)
@@ -3803,7 +3829,7 @@ export default function RaidCombat({
               dmg = 0
             }
           }
-          const piercing = isMega && !!megaAug?.pierce
+          const piercing = (isMega && !!megaAug?.pierce) || markPierceTurnsRef.current > 0
           const preShield = enemyShieldRef.current
           const toHull = soakEnemyShield(dmg, piercing)
           shieldAbsorbedOut = preShield - enemyShieldRef.current
@@ -7673,6 +7699,7 @@ function StatusGlyph({ icon, size = 10 }: { icon: string; size?: number }) {
   switch (icon) {
     case 'weaken':  return P('M12 4v14M6 12l6 7 6-7')                                                    // arrow driven down
     case 'feeble':  return P('M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z', <path d="M12 7.5l-2 3.2h4l-2 3.2" />)  // cracked shield
+    case 'marked':  return P('M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3', <circle cx="12" cy="12" r="6" />)  // target reticle (Requiem)
     case 'slowed':  return P('M7 3h10M7 21h10M8 3c0 4.2 3 5.4 4 6.6 1-1.2 4-2.4 4-6.6M8 21c0-4.2 3-5.4 4-6.6 1 1.2 4 2.4 4 6.6') // hourglass
     case 'silence': return P('M6.2 6.2l11.6 11.6', <circle cx="12" cy="12" r="8.5" />)                   // barred circle
     case 'corrode': return P('M12 4c3.2 4.2 5 6.6 5 9.2a5 5 0 0 1-10 0C7 10.6 8.8 8.2 12 4z')            // acid drop
@@ -7911,12 +7938,13 @@ function BarrageSplat({ text, dx, crit, color: colorProp }: { text: string; dx: 
 // Enemy status aura — a brief themed glow + drifting motes over the hull when
 // a burn or freeze status ticks. Burn = embers rising; freeze = cold rime
 // settling. Localized to the enemy ship, fades on its own.
-function EnemyStatusAura({ kind, color: colorOverride }: { kind: 'burn' | 'freeze' | 'snared' | 'foresee'; color?: string }) {
+function EnemyStatusAura({ kind, color: colorOverride }: { kind: 'burn' | 'freeze' | 'snared' | 'foresee' | 'marked'; color?: string }) {
   const burn = kind === 'burn'
   const snared = kind === 'snared'
   const foresee = kind === 'foresee'
-  const color = colorOverride ?? (burn ? '#fb923c' : snared ? '#d9b066' : foresee ? '#8b7bf0' : '#7dd3fc')
-  const moteColor = colorOverride ?? (burn ? '#ffd27a' : snared ? '#f0d79a' : foresee ? '#cfc4ff' : '#e0f4ff')
+  const marked = kind === 'marked'
+  const color = colorOverride ?? (burn ? '#fb923c' : snared ? '#d9b066' : foresee ? '#8b7bf0' : marked ? '#f43f5e' : '#7dd3fc')
+  const moteColor = colorOverride ?? (burn ? '#ffd27a' : snared ? '#f0d79a' : foresee ? '#cfc4ff' : marked ? '#ffa8b8' : '#e0f4ff')
   const motes = useMemo(() => Array.from({ length: snared ? 8 : 6 }, (_, n) => ({
     // snare = motes clamp INWARD (a tightening net); burn rises, rime drifts down.
     x: snared ? (Math.random() - 0.5) * 52 : (Math.random() - 0.5) * 46,
@@ -7952,6 +7980,30 @@ function EnemyStatusAura({ kind, color: colorOverride }: { kind: 'burn' | 'freez
           }}
         />
       ))}
+      {/* Marked (Requiem) — reticle rings CONVERGE onto the hull, like a
+          crosshair locking a bounty, then a crimson crosshair snaps in. */}
+      {marked && [0, 1].map(n => (
+        <motion.div key={`mk${n}`}
+          initial={{ scale: 2.2, opacity: 0 }} animate={{ scale: 0.6, opacity: [0, 0.9, 0] }}
+          transition={{ duration: 0.7, delay: n * 0.14, ease: 'easeIn' }}
+          style={{
+            position: 'absolute', left: '46%', top: '50%', width: 60, height: 60,
+            marginLeft: -30, marginTop: -30, borderRadius: '50%',
+            border: `2px solid ${color}`, boxShadow: `0 0 16px ${color}aa`,
+          }}
+        />
+      ))}
+      {marked && (
+        <motion.div
+          initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: [0, 1, 0] }}
+          transition={{ duration: 0.85, times: [0, 0.4, 1], ease: 'easeOut' }}
+          style={{ position: 'absolute', left: '46%', top: '50%', width: 34, height: 34, marginLeft: -17, marginTop: -17 }}
+        >
+          <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" style={{ filter: `drop-shadow(0 0 5px ${color})` }}>
+            <circle cx="12" cy="12" r="7" /><path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4" />
+          </svg>
+        </motion.div>
+      )}
       {/* Drifting motes — snare clamps inward, burn/freeze/foresee drift outward */}
       {motes.map((m, n) => (
         <motion.div
@@ -8292,6 +8344,7 @@ const ABILITY_CAST_LABEL: Record<string, string> = {
   blitz:        'Frenzy',
   foresight:    'Foresight',
   vengeance:    'Vengeance Ward',
+  requiem:      'Marked for Death',
 }
 
 // Crew-ability cast cue. A themed pill (crew portrait + ability name) pops up

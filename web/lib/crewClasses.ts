@@ -31,6 +31,7 @@ export type CrewClass =
   | 'blitz'         // Mako only — extra cannon shots this turn
   | 'foresight'     // Dole only — reveal the enemy's next move(s); refresh dodge
   | 'vengeance'     // Laz (Coelacanth) only — arm a ward; cheat a killing blow, heal + rage
+  | 'requiem'       // Mira (Moorish Idol) only — mark the enemy; the whole crew hits it harder, shield ignored at cap
 
 // ── Species → class map ────────────────────────────────────────────────────
 // Keyed by lower-cased cards.slug so callers can do `CLASS_BY_SLUG[slug.toLowerCase()]`.
@@ -93,6 +94,7 @@ export const CLASS_BY_SLUG: Record<string, CrewClass> = {
   mako:          'blitz',
   dole:          'foresight',
   coelacanth:    'vengeance',
+  moorish_idol:  'requiem',
 }
 
 /** Resolve a species slug to its class. Slugs in cards.slug are Title_Case;
@@ -236,6 +238,22 @@ export interface VengeanceMilestone {
   dmgBuffPct: number
   /** Lv 100: the revival also strips every enemy debuff on the player. */
   cleanseDebuff?: boolean
+  desc: string
+}
+
+export interface RequiemMilestone {
+  unlockLevel: ClassMilestoneLevel
+  /** Fraction of BONUS damage the marked enemy takes from ALL sources (your aim
+   *  shots AND every crew ability), 0–1. Applied as a `marked` status (same math
+   *  as feeble). Capped at +25% by design — she is a pure force-multiplier that
+   *  deals no damage herself, so the value is entirely in what the crew lands. */
+  markMag: number
+  /** How many rounds the mark burns. */
+  markTurns: number
+  /** Lv 100: while the mark burns, the enemy's shield / barrier is IGNORED —
+   *  damage bypasses it and hits the hull directly. Cracks open shielded bosses
+   *  for the whole crew. */
+  pierceShield?: boolean
   desc: string
 }
 
@@ -447,6 +465,27 @@ export const VENGEANCE: ClassDef<VengeanceMilestone> = {
   ],
 }
 
+// Requiem (Mira the Moorish Idol only). The force-multiplier: she deals ZERO
+// damage herself. Her whole kit is the MARK — she paints the enemy for death,
+// and while the mark burns that target takes bonus damage from EVERYTHING (your
+// aim shots and every crew ability). Pop the mark, then the ship dogpiles the
+// window (skill = timing your burst into it). Damage bonus caps at +25% (hit at
+// Lv75); the Lv100 capstone shifts to a SHIELD PIERCE — a marked enemy's barrier
+// is ignored, cracking shielded bosses open for the crew. The support-damage
+// counterpart to the heal (Tidecaller) and info (Oracle) legendaries.
+export const REQUIEM: ClassDef<RequiemMilestone> = {
+  id: 'requiem', name: 'Requiem', shortLabel: 'Mark',
+  blurb: 'Marks the enemy for death. While the mark burns, that target takes bonus damage from everything — your shots and every crew ability. She deals no damage herself; the whole crew collects. At the cap, a marked enemy\'s shield is ignored.',
+  color: '#f43f5e', emoji: '◎',
+  milestones: [
+    { unlockLevel: 10,  markMag: 0.15, markTurns: 2, desc: 'Mark the enemy for 2 turns — it takes +15% damage from all sources.' },
+    { unlockLevel: 25,  markMag: 0.18, markTurns: 2, desc: 'Mark the enemy for 2 turns — it takes +18% damage from all sources.' },
+    { unlockLevel: 40,  markMag: 0.22, markTurns: 3, desc: 'Mark the enemy for 3 turns — it takes +22% damage from all sources.' },
+    { unlockLevel: 75,  markMag: 0.25, markTurns: 3, desc: 'Mark the enemy for 3 turns — it takes +25% damage from all sources.' },
+    { unlockLevel: 100, markMag: 0.25, markTurns: 3, pierceShield: true, desc: 'Mark the enemy for 3 turns — it takes +25% damage from all sources, and its shield is ignored while marked.' },
+  ],
+}
+
 // ── Registry lookup ─────────────────────────────────────────────────────────
 // Union the class defs through a discriminated wrapper so callers can switch
 // on `.id` and TypeScript narrows the milestones to the right shape.
@@ -462,6 +501,7 @@ export type AnyClassDef =
   | (ClassDef<BlitzMilestone>       & { id: 'blitz' })
   | (ClassDef<ForesightMilestone>   & { id: 'foresight' })
   | (ClassDef<VengeanceMilestone>   & { id: 'vengeance' })
+  | (ClassDef<RequiemMilestone>     & { id: 'requiem' })
 
 export const CLASSES: Record<CrewClass, AnyClassDef> = {
   mender:       MENDER       as AnyClassDef,
@@ -474,6 +514,7 @@ export const CLASSES: Record<CrewClass, AnyClassDef> = {
   blitz:        BLITZ        as AnyClassDef,
   foresight:    FORESIGHT    as AnyClassDef,
   vengeance:    VENGEANCE    as AnyClassDef,
+  requiem:      REQUIEM      as AnyClassDef,
 }
 
 /** Highest-tier milestone unlocked by a crew at this level. Returns null if

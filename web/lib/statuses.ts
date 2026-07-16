@@ -20,7 +20,7 @@
 //   regen → flat HP per round.
 
 export type StatusId =
-  | 'weaken' | 'feeble' | 'slowed' | 'silence' | 'corrode'
+  | 'weaken' | 'feeble' | 'marked' | 'slowed' | 'silence' | 'corrode'
   | 'fortify' | 'enrage' | 'regen'
 
 export interface ActiveStatus {
@@ -46,6 +46,7 @@ const pct = (m: number) => `${Math.round(m * 100)}%`
 export const STATUS_DEFS: Record<StatusId, StatusDef> = {
   weaken:  { name: 'Weakened',  tone: 'debuff', glyph: '↓', color: '#f0a05a', describe: m => `deals ${pct(m)} less damage` },
   feeble:  { name: 'Feeble',    tone: 'debuff', glyph: '✚', color: '#f47c7c', describe: m => `takes ${pct(m)} more damage` },
+  marked:  { name: 'Marked',    tone: 'debuff', glyph: '◎', color: '#f43f5e', describe: m => `marked for death — takes ${pct(m)} more damage from all sources` },
   slowed:  { name: 'Slowed',    tone: 'debuff', glyph: '⌛', color: '#8fb4e0', describe: m => `${m} slower (turn order + dodging)` },
   silence: { name: 'Silenced',  tone: 'debuff', glyph: '✕', color: '#c084fc', describe: () => 'special abilities are locked' },
   corrode: { name: 'Corroded',  tone: 'debuff', glyph: '≋', color: '#a3e635', describe: m => `its shield takes ${pct(m)} more damage` },
@@ -105,6 +106,7 @@ export function statusMods(list: ActiveStatus[]): StatusMods {
       case 'weaken':  dealt *= (1 - s.magnitude); break
       case 'enrage':  dealt *= (1 + s.magnitude); break
       case 'feeble':  taken *= (1 + s.magnitude); break
+      case 'marked':  taken *= (1 + s.magnitude); break   // Mira's Requiem — same +dmg-taken math as feeble, its own badge
       case 'fortify': taken *= (1 - s.magnitude); break
       case 'slowed':  speed -= s.magnitude; break
       case 'silence': silenced = true; break
