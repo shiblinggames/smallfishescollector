@@ -220,6 +220,65 @@ function HuntersBaneFx({ color, summon }: { color: string; summon: boolean }) {
   )
 }
 
+// The Idol (Mira) — worshipped and deadly. A gilded aureole of rays slowly
+// turns behind her like a crown/halo, a rose-and-gold radiant haze breathes,
+// her Requiem mark pulses in as a soft crosshair at the heart, and reverent
+// rose-gold motes rise through the light. Only existing keyframes.
+const IDOL_GOLD = '#f5c542'
+function IdolFx({ color, summon }: { color: string; summon: boolean }) {
+  const gold = IDOL_GOLD
+  const moteN = summon ? 14 : 10
+  const bw = summon ? 2.2 : 1.4
+  const arm = summon ? '22%' : '24%'
+  const corners: React.CSSProperties[] = [
+    { top: 0, left: 0, borderTop: `${bw}px solid ${color}`, borderLeft: `${bw}px solid ${color}` },
+    { top: 0, right: 0, borderTop: `${bw}px solid ${color}`, borderRight: `${bw}px solid ${color}` },
+    { bottom: 0, left: 0, borderBottom: `${bw}px solid ${color}`, borderLeft: `${bw}px solid ${color}` },
+    { bottom: 0, right: 0, borderBottom: `${bw}px solid ${color}`, borderRight: `${bw}px solid ${color}` },
+  ]
+  return (
+    <div className="chase-skin-fx" style={wrap(summon)}>
+      {/* Gilded aureole — a slow halo of rays turning behind her, like a crown. */}
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
+        <g style={{ transformOrigin: '50% 50%', animation: `chase-reticle-spin ${summon ? 16 : 30}s linear infinite`, opacity: summon ? 0.5 : 0.32 }}>
+          <circle cx="50" cy="50" r="40" fill="none" stroke={gold} strokeWidth="0.5" strokeDasharray="1 5" />
+          {Array.from({ length: 24 }).map((_, k) => (
+            <line key={k} x1="50" y1="6" x2="50" y2={k % 2 ? 12 : 10} stroke={k % 2 ? color : gold} strokeWidth="1" transform={`rotate(${k * 15} 50 50)`} />
+          ))}
+        </g>
+      </svg>
+      {/* Rose + gold radiant haze breathing behind her. */}
+      {[{ c: color, l: 46, t: 42, s: 74, d: 0 }, { c: gold, l: 56, t: 56, s: 58, d: 2.4 }].map((h, i) => (
+        <div key={`hz-${i}`} style={{
+          position: 'absolute', left: `${h.l}%`, top: `${h.t}%`, width: h.s, height: h.s, marginLeft: -h.s / 2, marginTop: -h.s / 2,
+          borderRadius: '50%', background: `radial-gradient(circle, ${h.c}4d 0%, ${h.c}1a 42%, transparent 72%)`, opacity: 0,
+          animation: `chase-caustic ${summon ? 4.5 : 8}s ${h.d}s ease-in-out infinite`,
+        }} />
+      ))}
+      {/* Her mark — a soft crosshair pulsing in at the heart (the Requiem tell). */}
+      <div style={{ position: 'absolute', left: '50%', top: '50%', width: '54%', height: '54%', marginLeft: '-27%', marginTop: '-27%', transformOrigin: '50% 50%', animation: `chase-reticle-lock ${summon ? 2 : 3.6}s ease-in-out infinite` }}>
+        {corners.map((c, i) => (
+          <div key={i} style={{ position: 'absolute', width: arm, height: arm, ...c }} />
+        ))}
+      </div>
+      {/* Reverent rose-gold motes rising through the light. */}
+      {Array.from({ length: moteN }).map((_, i) => {
+        const left = 8 + ((i * 77) / moteN) % 84
+        const c = i % 2 ? gold : color
+        const dur = (summon ? 2.6 : 4.4) + (i % 4) * 0.7
+        const size = 2 + (i % 3)
+        return (
+          <div key={`mote-${i}`} style={{
+            position: 'absolute', left: `${left}%`, top: '108%', width: size, height: size, borderRadius: '50%',
+            background: c, boxShadow: `0 0 4px ${c}, 0 0 9px ${c}`, opacity: 0,
+            animation: `chase-bubble-rise ${dur.toFixed(2)}s ${(i * 0.34).toFixed(2)}s linear infinite`,
+          }} />
+        )
+      })}
+    </div>
+  )
+}
+
 export function ChaseSkinFx({ skinId, color, variant = 'ambient' }: { skinId: string | null | undefined; color: string; variant?: Variant }) {
   const summon = variant === 'summon'
   switch (skinId) {
@@ -228,6 +287,7 @@ export function ChaseSkinFx({ skinId, color, variant = 'ambient' }: { skinId: st
     case 'catfish_galaxy':    return <GalaxyFx color={color} summon={summon} />
     case 'coelacanth_fossil': return <FossilFx color={color} summon={summon} />
     case 'doby_huntersbane':  return <HuntersBaneFx color={color} summon={summon} />
+    case 'moorish_idol_idol': return <IdolFx color={color} summon={summon} />
     default: return null
   }
 }

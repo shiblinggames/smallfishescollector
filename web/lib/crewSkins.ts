@@ -53,6 +53,11 @@ export const CREW_SKINS: CrewSkin[] = [
   { id: 'coelacanth_goldenrelic', slug: 'coelacanth', name: 'Golden Relic', filename: 'Laz_goldenrelic.png', gemCost: 2000, blurb: 'Gilded by ages beneath the waves.', color: '#f0c040' },
   { id: 'coelacanth_undying',    slug: 'coelacanth', name: 'Undying',      filename: 'Laz_undying.png',    gemCost: 2500, blurb: 'Dragged back from the Locker, unwilling to stay dead.', color: '#86efac' },
   { id: 'coelacanth_fossil',     slug: 'coelacanth', name: 'Fossil',       filename: 'Laz_fossil.png',     gemCost: 3500, blurb: 'A living fossil, older than the tides themselves.', color: '#c8a45c', chase: true },
+  // ── Mira (Moorish Idol) ──
+  { id: 'moorish_idol_corsairqueen',  slug: 'moorish_idol', name: 'Corsair Queen',  filename: 'Mira_corsairqueen.png',  gemCost: 1500, blurb: 'She took a crown off the sea and dared it to ask for it back.', color: '#d61f5c' },
+  { id: 'moorish_idol_goldencommand', slug: 'moorish_idol', name: 'Golden Command', filename: 'Mira_goldencommand.png', gemCost: 2000, blurb: 'Gold braid, colder eyes. The fleet answers before she finishes the order.', color: '#f0c040' },
+  { id: 'moorish_idol_cursedghost',   slug: 'moorish_idol', name: 'Cursed Ghost',   filename: 'Mira_cursedghost.png',  gemCost: 2500, blurb: 'A haunt in the fog, marking names the living cannot read.', color: '#a78bfa' },
+  { id: 'moorish_idol_idol',          slug: 'moorish_idol', name: 'The Idol',       filename: 'Mira_idol.png',         gemCost: 3500, blurb: 'The rarest catch in the sea, worshipped and feared. Hold her gaze and you are already marked.', color: '#ff4d7d', chase: true },
 
   // ── RARE / EPIC crews ── 2 skins each, NO chase (no animated FX). Pricing by
   //    rarity: Rare = 1000, Epic = 1250. (Legendary skins run 1500-2500, and the five

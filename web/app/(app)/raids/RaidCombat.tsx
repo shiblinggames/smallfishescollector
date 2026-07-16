@@ -2546,7 +2546,7 @@ export default function RaidCombat({
         applyEnemyStatus('marked', rq.markMag, rq.markTurns)
         if (rq.pierceShield) markPierceTurnsRef.current = rq.markTurns
         noteCheckResponse('snare')   // a debuff cast on the enemy answers a "punish the enemy" check
-        setEHitsplat({ key: ak + 1, text: 'MARKED', color: '#f43f5e', big: true })
+        setEHitsplat({ key: ak + 1, text: 'MARKED', color: chaseColor ?? '#f43f5e', big: true })
         setTimeout(() => setEHitsplat(null), 900)
         const dur = `${rq.markTurns} turn${rq.markTurns === 1 ? '' : 's'}`
         setResolveLog(prev => [...prev, `${crew.name} marks the ${enemy.name} for death — +${Math.round(rq.markMag * 100)}% damage from the whole crew for ${dur}${rq.pierceShield ? ', and its shield is laid open' : ''}.`])
