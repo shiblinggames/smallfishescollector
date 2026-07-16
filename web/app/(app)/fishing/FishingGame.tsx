@@ -7515,6 +7515,7 @@ export default function FishingGame({
                   </motion.div>
                 )
 
+                const bossPhases = BOSS_CONFIG[bossName ?? '']?.phases ?? 3
                 if (isBoss && bossName) return (
                   <motion.div key={`hooked-${hookedFish.fishId}`}
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }}
@@ -7560,15 +7561,16 @@ export default function FishingGame({
                       {/* Divider */}
                       <div style={{ height: 1, background: 'linear-gradient(90deg, #ef444444, #ef444422, transparent)', marginBottom: '0.5rem' }} />
 
-                      {/* 3-stage warning */}
+                      {/* Stage warning — dot count + copy track the fish's real phase
+                          count (Megalodon is 4, the other giants 3). */}
                       <div className="flex items-center gap-2" style={{ marginBottom: '0.35rem' }}>
                         <div className="flex gap-1">
-                          {[1,2,3].map(s => (
+                          {Array.from({ length: bossPhases }, (_, i) => i + 1).map(s => (
                             <div key={s} style={{ width: 7, height: 7, borderRadius: '50%', background: '#ef4444', boxShadow: '0 0 5px #ef4444' }} />
                           ))}
                         </div>
                         <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#fca5a5' }}>
-                          3 stages required
+                          {bossPhases} stages required
                         </p>
                       </div>
                       <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: 'rgba(252,165,165,0.55)', lineHeight: 1.4 }}>
