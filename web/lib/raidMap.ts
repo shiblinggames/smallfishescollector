@@ -17,6 +17,16 @@ import { CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE, THE_CARTOGRAPHER
 import { getShipSkin } from '@/lib/shipSkins'
 import { getRaidItem } from '@/lib/raidItems'
 
+// Legendary-crew card art, reused as a StoryScene bust so the chapter guides
+// (Mako/Dole/Laz/Mira) can appear in cutscenes. Card art now; swap to
+// transparent busts later by pointing these at new files. See lib/legendaryUnlocks.
+const CREW_ART = (f: string) => `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/${f}`
+const GUIDE = {
+  mako: { speaker: 'Mako', portrait: CREW_ART('Mako_Shark.png') },
+  dole: { speaker: 'Dole', portrait: CREW_ART('Dole.png') },
+  laz:  { speaker: 'Laz',  portrait: CREW_ART('Coelacanth.png') },
+} as const
+
 // Each type gets its own color + glyph on the map:
 //  - skirmish  : a single practice battle
 //  - raid      : a full multi-encounter campaign / boss
@@ -739,6 +749,11 @@ export const RAID_MAP: RaidNode[] = [
       { text: "Under the ledgers there's a sealed letter. No name on it. Just two letters pressed into the wax: *C.K.*", pause: 700 },
       { text: "The route's mostly burned away, but the heading held. Out past the Bilge Strait, into the cold." },
       { text: "Whoever C.K. is, the Finndicate trusts them with cargo by the holdful. And now you know which way it sails." },
+      { text: "A fin has been cutting your wake since the strongbox cracked. It closes the distance now, in no hurry at all.", pause: 500 },
+      { ...GUIDE.mako, text: "Bilge Strait, after one sealed letter. Most captains wouldn't sail that far on a hunch." },
+      { ...GUIDE.mako, text: "Good thing I'm not most captains. Turns out neither are you." },
+      { ...GUIDE.mako, text: "Mako. I don't waste myself in small water. You just made yourself interesting, so I'm in." },
+      { text: "No handshake. Sharks don't. He simply slides into your wake and stays there." },
     ],
     detail: {
       description:
@@ -828,6 +843,8 @@ export const RAID_MAP: RaidNode[] = [
       { speaker: 'The Fence', text: "But C.K. don't lose cargo. Lose his cargo, and you find out why.", pause: 500 },
       { text: "A name at last. The Finndicate's freight has a face, and the face keeps a schedule." },
       { text: "His consignment's on the cold water right now." },
+      { ...GUIDE.mako, text: "An old hauler who never asks whose name's on the box. He'll be slow, and he'll be certain. My two favorite things in a target." },
+      { ...GUIDE.mako, text: "Point us at his cargo, captain. I'll be the part he doesn't see coming." },
     ],
     sceneAccent: '#7dd3fc',
     detail: {
@@ -927,6 +944,11 @@ export const RAID_MAP: RaidNode[] = [
       { text: "Priority freight, steered through water their own manifests will only call the danger zones. Most captains sail in there exactly once." },
       { text: "Whatever they're hauling through it is worth every hull it swallows." },
       { text: "They'd love nothing more than for you to drop the thread and walk away. You won't.", pause: 400 },
+      { text: "A shape you hadn't logged is already at the chart table, turning the Finndicate's scrap to the light like he's appraising it.", pause: 500 },
+      { ...GUIDE.dole, text: "Danger zones. Such a marvelous name. You only bother naming water that frightening when you're hiding something worth the fright." },
+      { ...GUIDE.dole, text: "Three dead captains couldn't read this order. I read it before my tea went cold. The cipher was never the hard part, captain. It's who wrote it." },
+      { ...GUIDE.dole, text: "Dole. I know every current worth knowing and most of the ones that aren't. You'll want someone aboard who's already been where you're headed." },
+      { text: "He sets the scrap down facing you, the heading circled. You hadn't circled it." },
     ],
     sceneAccent: '#a78bfa',
     detail: {
@@ -1124,6 +1146,9 @@ export const RAID_MAP: RaidNode[] = [
       { text: "The crews out here have a name for it, though. They don't say it twice.", pause: 700 },
       { text: "*The Gullet*. Where the sea swallows everything down.", pause: 900, fx: 'shake' },
       { text: "Whatever the Finndicate takes off the weak, it all ends up down there. And so do you." },
+      { ...GUIDE.dole, text: "The Gullet. Everyone says it like a curse. It's a current with excellent marketing." },
+      { ...GUIDE.dole, text: "Three charts, one point of water, and not one agrees on the depth. That isn't a warning, captain. It's an invitation with the address smudged." },
+      { text: "He has already inked a heading you had not thought to ask for." },
     ],
     sceneAccent: '#8fa76b',
     detail: {
@@ -1247,6 +1272,7 @@ export const RAID_MAP: RaidNode[] = [
         { text: "None comes." },
         { text: "Out here you get back exactly what you gave, and you gave the cold water nothing." },
         { text: "Whatever's waiting down the throat, you'll meet it the way you came. Blind, and on your own keel." },
+        { ...GUIDE.dole, text: "No sail, then. Mercy compounds like interest, captain. A pity you didn't invest." },
       ],
     },
     scene: [
@@ -1257,6 +1283,8 @@ export const RAID_MAP: RaidNode[] = [
       { speaker: 'A Freed Scout', portrait: '/krust_soldier.png', text: "They'll hit you on the first bell, before a slow captain's even found his range. Go in ready to take one." },
       { text: "They hand across a strongbox and a folded chart, and slip back into the gray." },
       { text: "Richer, wiser, and not sailing in blind anymore. *The mercy paid.*" },
+      { ...GUIDE.dole, text: "A crew that settles its debts in charts. I like them already." },
+      { ...GUIDE.dole, text: "They're right about the first bell, captain. Every hull in the Gullet opens loaded. So we simply open smarter." },
     ],
     detail: {
       description:
@@ -1347,6 +1375,11 @@ export const RAID_MAP: RaidNode[] = [
       { text: "The crews who've seen it call it *the Coffers*.", pause: 700 },
       { text: "Everything the Finndicate ever took off the weak is stacked down there, behind a wall of guns." },
       { text: "And someone keeps the books on all of it, counting every coin the gang ever stole." },
+      { text: "A broad shadow settles over the chart. Old scales, older eyes. A captain the sea was said to have kept, years back.", pause: 500 },
+      { ...GUIDE.laz, text: "The Coffers. I know this harbor. I was counted and shelved here once, same as the plunder." },
+      { ...GUIDE.laz, text: "The drowned market takes everything and files it as a debt. I am the one account it failed to close." },
+      { ...GUIDE.laz, text: "Laz. Take me down there with you, captain. I know the way in, and I know exactly what it costs. Hold my heading where the water goes dark." },
+      { text: "He does not wait to be welcomed. Captains like Laz rarely need to be." },
     ],
     detail: {
       description:
@@ -1465,6 +1498,8 @@ export const RAID_MAP: RaidNode[] = [
       { speaker: 'The Quartermaster', portrait: THE_QUARTERMASTER.enemies.quartermaster.portrait, text: "That admiral past the wall has never lost a fight. But every gun on your deck, you bought off me. Don't forget that, captain." },
       { text: "You want to ask whose side he's really on. Then the war-fleet swings around, and there's no more time for questions." },
       { text: "You'll come back to it later, once the admiral's on the harbor floor." },
+      { ...GUIDE.laz, text: "That smile. I have seen it on every shopkeeper who ever sold a captain the rope he hangs by." },
+      { ...GUIDE.laz, text: "Trust the guns, captain. Not the hand that sold them. When the fleet turns, hold the line and let him keep his questions." },
     ],
     detail: {
       description:
@@ -1671,6 +1706,8 @@ export const RAID_MAP: RaidNode[] = [
       { text: "And at the top of every page, the name the whole market answers to: *Don Finleone*.", pause: 900, fx: 'flash' },
       { speaker: 'The Quartermaster', portrait: THE_QUARTERMASTER.enemies.quartermaster.portrait, text: "Now you see it, captain. Everything down here gets sold twice. Even the captains who come to take it back." },
       { text: "He's backed against his own shelves, and he's still smiling. Whatever he sold you, he means to reach out and take it back." },
+      { ...GUIDE.laz, text: "I know this book. My name is a few pages up, and the line for how I sank was filled in long ago." },
+      { ...GUIDE.laz, text: "They were wrong. I have read this ledger from the other side of it, captain. I promise you his account closes tonight." },
     ],
     detail: {
       description:
@@ -1738,6 +1775,8 @@ export const RAID_MAP: RaidNode[] = [
       { text: "Don Finleone. The head of the Finndicate, *as far as any ledger knows*.", pause: 700 },
       { text: "Three captains under the water, a market in ruins, and now a name at the top of it." },
       { text: "Whatever waits past the Coffers answers to him. And so, soon, will you." },
+      { ...GUIDE.laz, text: "Finleone. The name every drowned captain in that book was paying toward, whether they knew it or not." },
+      { ...GUIDE.laz, text: "The deepest water is his. Good. Everything owed a reckoning ends up at the bottom, captain. We will simply be the ones who arrive on purpose." },
     ],
     detail: {
       description:

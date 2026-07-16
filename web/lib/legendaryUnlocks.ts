@@ -25,11 +25,13 @@ export const ALWAYS_UNLOCKED_LEGENDARIES = new Set(['catfish', 'doby_mick'])
 
 /** Gated legendary slug -> the required story node whose clear unlocks it
  *  (and where the legendary debuts as that chapter's guide). */
+// Each legendary DEBUTS (and unlocks) as you cross into/through their chapter,
+// then guides it through later story nodes. The gate is their debut node:
 export const LEGENDARY_GATE: Record<string, string> = {
-  mako:         'syndicate',      // Chapter I  — The Loose Thread
-  dole:         'scout_debt',     // Chapter II — The Sunken Hand
-  coelacanth:   'coffers_ledger', // Chapter III — The Coffers (Laz)
-  moorish_idol: 'dons_fall',      // Chapter IV — The Last Fathom (Mira)
+  mako:         'syndicate',          // Chapter I  — joins after you beat Pete
+  dole:         'finndicate_notice',  // Chapter II — the Ch II opener (charts/navigator)
+  coelacanth:   'coffers_heading',    // Chapter III — the Ch III opener (Laz, into the drowned)
+  moorish_idol: 'dons_fall',          // Chapter IV — parked on the admin-only finale until Ch4 + art ship
 }
 
 /** Reverse map: story node id -> the legendary slug it unlocks. Used by
