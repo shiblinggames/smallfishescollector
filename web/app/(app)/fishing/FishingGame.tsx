@@ -137,16 +137,32 @@ function applyBossMods(zones: ZoneDef[], mechanic: BossMechanic | null, shrinkDe
   if (shrinkDeg !== 0) {
     // Resize the gold PERFECT sliver. Positive shrinkDeg NARROWS it each stage (the
     // closing jaw); NEGATIVE shrinkDeg WIDENS it (Megalodon opens on a generous
-    // perfect, then tightens phase by phase). The green catch band is narrowed
-    // separately at the buildFishZones call sites (a reduced catch bonus) for the
-    // 'shrink' mechanic; Megalodon is precision, so the catch is a miss anyway and
-    // only this perfect matters. Both read bossZoneShrink, so they stay in lockstep.
-    result = result.map(z => {
-      if (z.type !== 'perfect') return z
-      const center = (z.from + z.to) / 2
-      const newHalf = Math.max(2, (z.to - z.from) / 2 - shrinkDeg / 2)
-      return { ...z, from: center - newHalf, to: center + newHalf }
-    })
+    // perfect, then tightens phase by phase).
+    //
+    // CRUCIAL: don't just mutate from/to. getZone returns the FIRST matching zone and
+    // DialSVG paints in array order, so a naively-widened perfect draws gold OVER the
+    // neighbour zones while getZone still resolves them as miss underneath — the dial
+    // would show a hit window bigger than the one that actually scores (the Megalodon
+    // "reel-in changes colour" bug). So: WIDEN by splicing the bigger perfect in (it
+    // clips whatever it now covers, becoming the sole zone in its arc); NARROW by
+    // pulling it in and growing its immediate neighbours to meet it (no dead gap).
+    const p = result.find(z => z.type === 'perfect')
+    if (p) {
+      const center = (p.from + p.to) / 2
+      const newHalf = Math.max(2, (p.to - p.from) / 2 - shrinkDeg / 2)
+      const nf = center - newHalf, nt = center + newHalf
+      if (shrinkDeg < 0) {
+        result = spliceZone(result.filter(z => z !== p), { ...p, from: nf, to: nt })
+      } else {
+        const oldFrom = p.from, oldTo = p.to
+        result = result.map(z => {
+          if (z === p) return { ...z, from: nf, to: nt }
+          if (Math.abs(z.to - oldFrom) < 1e-6) return { ...z, to: nf }     // left neighbour meets it
+          if (Math.abs(z.from - oldTo) < 1e-6) return { ...z, from: nt }   // right neighbour meets it
+          return z
+        })
+      }
+    }
   }
   return result
 }
