@@ -127,7 +127,7 @@ export const FISH_DIFFICULTY_SPEED = [
 export const ZONE_DIFFICULTY: Record<string, { reverseChance: number; changeMin: number; changeMax: number; catchMultiplier: number; blackoutChance: number }> = {
   shallows:    { reverseChance: 0.00, changeMin: 28, changeMax: 48, catchMultiplier: 1.00, blackoutChance: 0.00 },
   open_waters: { reverseChance: 0.00, changeMin: 20, changeMax: 35, catchMultiplier: 0.90, blackoutChance: 0.00 },
-  deep:        { reverseChance: 0.14, changeMin: 12, changeMax: 22, catchMultiplier: 0.78, blackoutChance: 0.00 },
+  deep:        { reverseChance: 0.00, changeMin: 12, changeMax: 22, catchMultiplier: 0.78, blackoutChance: 0.00 },
   abyss:       { reverseChance: 0.00, changeMin:  6, changeMax: 12, catchMultiplier: 0.65, blackoutChance: 0.15 },
-  ancient_deep: { reverseChance: 0.35, changeMin:  3, changeMax:  7, catchMultiplier: 0.50, blackoutChance: 0.12 },
+  ancient_deep: { reverseChance: 0.00, changeMin:  3, changeMax:  7, catchMultiplier: 0.50, blackoutChance: 0.12 },
 }

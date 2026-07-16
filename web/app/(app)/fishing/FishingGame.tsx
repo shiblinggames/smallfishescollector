@@ -3922,9 +3922,6 @@ export default function FishingGame({
   // returns the live value). The client mirrors it for display and reconciles
   // from each catch's response — see the catch handler below.
   const [snapKey, setSnapKey] = useState(0)
-  // Brief on-dial arrow that flashes when the needle reverses (in the dead zone),
-  // so the direction change reads as a telegraphed event, not a glitch.
-  const [reverseTell, setReverseTell] = useState<{ key: number; dir: number } | null>(null)
   const [castRippleKey, setCastRippleKey] = useState(0)
   const [reelRippleKey, setReelRippleKey] = useState(0)
   const [newStreakRecord, setNewStreakRecord] = useState<number | null>(null)
@@ -4280,14 +4277,6 @@ export default function FishingGame({
   const catchingZonesRef = useRef<ZoneDef[]>([])
   const zoneRotationRef  = useRef(0)
   const lastZoneFromRef  = useRef<number>(NaN)
-  // Reversal telegraph: elapsed-ms of the last needle reversal (a cooldown so it
-  // can't ping-pong) and a bumping key that fires the on-dial direction arrow.
-  const lastReverseMsRef = useRef(-9999)
-  const reverseTellKeyRef = useRef(0)
-  // A reversal that's been TELEGRAPHED but hasn't flipped yet — the arrow is up,
-  // the flip fires when elapsedMs reaches `at`. This is what gives the tell lead
-  // time instead of flashing the instant the needle turns.
-  const reversePendingRef = useRef<{ at: number } | null>(null)
   const hookedFishRef   = useRef<{ fishId: number; catchDifficulty: number; crateTier?: 'wooden' | 'metal' | 'gold' | 'diamond' } | null>(null)
   const selectedBaitRef = useRef(selectedBait)
   useEffect(() => { phaseRef.current = phase }, [phase])
@@ -4409,13 +4398,6 @@ export default function FishingGame({
     }
   }, [phase, hasSeenFishingCatchTour])
 
-  // Clear the reversal telegraph arrow after its flash.
-  useEffect(() => {
-    if (!reverseTell) return
-    const t = setTimeout(() => setReverseTell(null), 520)
-    return () => clearTimeout(t)
-  }, [reverseTell])
-
   // Character frame — drives which sprite is shown
   const [charFrame, setCharFrame] = useState<CharFrame>('rest')
   const [castAnimDone, setCastAnimDone] = useState(false)
@@ -4470,26 +4452,14 @@ export default function FishingGame({
     const zoneDiff  = ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows
     const baseMin = diffSpeed.speedMin * reel.needleSpeedMultiplier * bossNeedleMultRef.current
     const baseMax = diffSpeed.speedMax * reel.needleSpeedMultiplier * bossNeedleMultRef.current
-    // Trophy-only reversals in Ancient Deep — the 6 prehistoric trophies
-    // keep the 35% needle reverse near the catch zone, but the 12 new
-    // sellable regulars don't get it. Captured once per cast so the
-    // lookup doesn't run inside the rAF tick. Falls back to true for
-    // any zone that isn't Ancient Deep so other zones (Deep, Abyss)
-    // keep their existing reverseChance behavior unchanged. Same
-    // sell_value === 0 discriminator the catch routing + boss-warning
-    // panel + result-card chrome already use.
-    const fishSpecies = allFishSpecies.find(f => f.id === hookedFish.fishId)
-    const reverseEligible = selectedZone !== 'ancient_deep' || (fishSpecies?.sell_value ?? 0) === 0
-    const effectiveReverseChance = reverseEligible ? zoneDiff.reverseChance : 0
     // Megalodon (noBlackout) reads clean — its difficulty is the tightening perfect,
     // not the dark. Captured once so the lookup doesn't run inside the rAF tick.
+    const fishSpecies = allFishSpecies.find(f => f.id === hookedFish.fishId)
     const noBlackout = selectedZone === 'ancient_deep' && BOSS_CONFIG[fishSpecies?.name ?? '']?.noBlackout === true
 
     speedRef.current   = baseMin + Math.random() * (baseMax - baseMin)
     lastTimeRef.current  = 0
     elapsedMsRef.current = 0
-    lastReverseMsRef.current = -9999 // let the first reversal fire immediately
-    reversePendingRef.current = null
     nextChgMsRef.current = (zoneDiff.changeMin + Math.floor(Math.random() * (zoneDiff.changeMax - zoneDiff.changeMin))) * 50
     lastZoneFromRef.current = NaN // force a zone sync on the first frame
     reelLockPendingRef.current = false // defensive: never start a spin locked
@@ -4514,53 +4484,12 @@ export default function FishingGame({
         ? spinAngleNow()
         : ((angleRef.current + dirRef.current * speedRef.current * delta / 1000) % 360 + 360) % 360
 
-      // Fire a TELEGRAPHED reversal once its warning window elapses. The arrow +
-      // haptic already fired ~REVERSE_WARN_MS ago (see the change-tick below), so
-      // by now the player has had the heads-up. Checked every frame so the flip
-      // lands on time, not at the next boundary.
-      if (reversePendingRef.current && elapsedMsRef.current >= reversePendingRef.current.at) {
-        reversePendingRef.current = null
-        dirRef.current *= -1
-        startNeedleSpin(angleRef.current)
-      }
-
       if (elapsedMsRef.current >= nextChgMsRef.current) {
-        // NO speed re-roll here. The needle keeps the one speed rolled at
-        // cast start for the whole spin — a mid-spin jump (e.g. 130→210°/s
-        // in Shallows) read as a stutter/skip, and the first boundary
-        // almost always landed inside the first revolution. This boundary
-        // now only drives the discrete zone mechanics below (reversals,
-        // blackouts), which are telegraphed effects rather than wobble.
-        if (Math.random() < effectiveReverseChance) {
-          // SKILL, NOT LUCK. The reversal is TELEGRAPHED AHEAD: when we decide to
-          // turn, we flash the arrow + haptic NOW and flip ~REVERSE_WARN_MS LATER,
-          // so the tell is an actual heads-up ("about to reverse") rather than a
-          // flash the instant the needle turns (which gave no warning). Two guards
-          // keep it fair: the needle must currently be in the far dead zone, AND
-          // the point it WILL be at when the flip fires must also be clear of the
-          // catch — so the delayed flip can never land on your tap. Live rotation
-          // so the safe band tracks a drifting / gyring / snapping zone.
-          const REVERSE_WARN_MS = 380
-          const catchCenter = (CATCH_CENTER + zoneRotationRef.current) % 360
-          const needle = angleRef.current
-          const dist = Math.min(Math.abs(catchCenter - needle), 360 - Math.abs(catchCenter - needle))
-          const projected = ((needle + dirRef.current * speedRef.current * REVERSE_WARN_MS / 1000) % 360 + 360) % 360
-          const projDist = Math.min(Math.abs(catchCenter - projected), 360 - Math.abs(catchCenter - projected))
-          const REVERSE_SAFE_DEG = 100 // no reversal decided within this arc of the catch
-          if (
-            dist >= REVERSE_SAFE_DEG
-            && projDist >= 70 // and the flip point itself lands clear of the catch
-            && !reversePendingRef.current
-            && elapsedMsRef.current - lastReverseMsRef.current > 550
-          ) {
-            lastReverseMsRef.current = elapsedMsRef.current
-            reversePendingRef.current = { at: elapsedMsRef.current + REVERSE_WARN_MS }
-            // Tell NOW; the arrow points the way it's ABOUT to turn (opposite of now).
-            reverseTellKeyRef.current += 1
-            setReverseTell({ key: reverseTellKeyRef.current, dir: -dirRef.current })
-            vibrate([0, 16, 40, 16])
-          }
-        }
+        // NO speed re-roll here. The needle keeps the one speed rolled at cast start
+        // for the whole spin — a mid-spin jump read as a stutter/skip. This boundary
+        // now only drives the blackout (needle reversals were removed: even
+        // telegraphed they felt like a cheap coin-flip, and the per-giant mechanics
+        // carry the challenge on their own).
         const scaledBlackout = noBlackout ? 0 : zoneDiff.blackoutChance * (hookedFish.catchDifficulty / 5)
         if (Math.random() < scaledBlackout && blackoutTimerRef.current === null) {
           const duration = 500 + Math.random() * 600
@@ -7104,25 +7033,6 @@ export default function FishingGame({
                       fireLevel={perfectStreak >= 3 ? 2 : perfectStreak === 2 ? 1 : 0}
                       ancientBoss={isAncientTrophyFight}
                       snapKey={snapKey} perfectBurstKey={perfectBurstKey} />
-
-                    {/* Reversal telegraph — flashes a spin-direction arrow the moment
-                        the needle turns (which now only happens out in the dead zone),
-                        so the change reads as a signalled event you plan around. */}
-                    <AnimatePresence>
-                      {reverseTell && (
-                        <motion.div key={reverseTell.key}
-                          initial={{ opacity: 0, scale: 0.5 }}
-                          animate={{ opacity: [0, 0.95, 0], scale: [0.5, 1.15, 1.35] }}
-                          transition={{ duration: 0.52, ease: 'easeOut' }}
-                          style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 6 }}>
-                          <svg width="70" height="70" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
-                            style={{ transform: reverseTell.dir > 0 ? 'none' : 'scaleX(-1)', filter: 'drop-shadow(0 0 9px rgba(251,191,36,0.75))' }}>
-                            <path d="M20 12a8 8 0 1 1-2.34-5.66" />
-                            <path d="M20 4v5h-5" />
-                          </svg>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
                   </div>
                 </motion.div>
               )}
