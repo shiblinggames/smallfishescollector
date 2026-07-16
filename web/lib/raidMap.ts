@@ -1198,6 +1198,8 @@ export const RAID_MAP: RaidNode[] = [
       { text: "The crews out here have a name for it, though. They don't say it twice.", pause: 700 },
       { text: "*The Gullet*. Where the sea swallows everything down.", pause: 900, fx: 'shake' },
       { text: "Whatever the Finndicate takes off the weak, it all ends up down there. And so do you." },
+      { ...GUIDE.mako, text: "The Cartographer folded like a wet chart. And still every line he ever drew points the same way. Down." },
+      { ...GUIDE.doby, text: "Because he was never the place, small fry. Only the finger pointing at it." },
       { ...GUIDE.dole, text: "The Gullet. Everyone says it like a curse. It's a current with excellent marketing." },
       { ...GUIDE.dole, text: "Three charts, one point of water, and not one agrees on the depth. That isn't a warning, captain. It's an invitation with the address smudged." },
       { text: "He has already inked a heading you had not thought to ask for." },
@@ -1393,13 +1395,37 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    // Chapter II's closing class pick — mirrors chapter_1_class. Gated on the
-    // boss (gullet_raid, Tollmaster Spet — live). Writes
-    // profiles.ship_classes['sunken_hand'], stacking with the chapter I pick.
+    // Chapter II closer — "Between Watches". Cast grown by one (Dole).
+    id: 'chapter_2_close',
+    type: 'story',
+    label: 'Between Watches',
+    flavor: "The Gullet drained and its collector under. Before the next heading, the crew takes a watch together, one hand heavier than it sailed in.",
+    bridge: "The rest never lasts. Past the drained throat, the water only keeps going down.",
+    requiresNode: 'gullet_raid',
+    image: '/raidlog.png',
+    scene: [
+      { text: "The Gullet drains to mud, the Tollmaster with it, and the crew catches its breath in water that finally holds still." },
+      { ...GUIDE.dole, text: "Three of the Finndicate's captains on the bottom now, and every one of them pointed us further down. I do love a pattern." },
+      { ...GUIDE.doby, text: "Patterns end somewhere, navigator. This one ends deep. I can feel it in the old bones." },
+      { ...GUIDE.mako, text: "Deep is where the big things live. Suits me." },
+      { ...GUIDE.kat, text: "It suits none of you, and you all know it, and you are going anyway. Sit down and let me look at that arm before you bleed on my clean deck." },
+      { text: "Past the drained throat, the water keeps going down, darker than any chart will admit. But that is tomorrow's heading.", pause: 700 },
+      { text: "Tonight the crew is whole, one hand heavier than it was, and the grog is cold." },
+    ],
+    detail: {
+      description:
+        "The Gullet is mud and the Tollmaster is under it. Before the next heading the crew takes a quiet watch: Dole reads the pattern in the dead captains, Doby feels the deep coming in his old bones, Mako grins at it, and Kat patches the lot of them. The water ahead only goes down. Tonight the crew is whole.",
+      ctaLabel: 'Rest a While →',
+      summary: "With the Gullet drained and the Tollmaster under, the crew took a watch together before the deeper water ahead. One hand heavier, and whole.",
+    },
+  },
+  {
+    // Chapter II's closing class pick — mirrors chapter_1_class. Now gated on the
+    // Between Watches closer. Writes profiles.ship_classes['sunken_hand'].
     id: 'chapter_2_class',    type: 'class_pick',
     label: "Captain's Choice",
     flavor: "Three Finndicate captains on the seabed and the Gullet drained dry. Time to decide what your name stands for on the deep water.",
-    requiresNode: 'gullet_raid',
+    requiresNode: 'chapter_2_close',
     classPick: { chapterId: 'sunken_hand' },
     detail: {
       description:
@@ -1842,12 +1868,41 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    // Chapter III's closing class pick. Gated on the Quartermaster (the boss).
+    // Chapter III closer — "Between Watches". Cast grown by one (Laz). Sits after
+    // the finleone_named reveal (which it requires), so the tense reveal and the
+    // warm reflection each land in their own register.
+    id: 'chapter_3_close',
+    type: 'story',
+    label: 'Between Watches',
+    flavor: "A don named and the Coffers in ruins. Before the deepest water, the crew takes a watch together, and one navigator cannot quite settle.",
+    bridge: "The rest never lasts. Past the last of the Coffers' light, the sea drops toward the seat the don rules from.",
+    requiresNode: 'finleone_named',
+    image: '/raidlog.png',
+    scene: [
+      { text: "The Coffers burn low, the Quartermaster's counter is kindling, and a don's name sits at the top of every ledger you took." },
+      { ...GUIDE.mako, text: "Don Finleone. A megalodon. I have wanted to bite something that size my whole life." },
+      { ...GUIDE.kat, text: "You say the loveliest things right before I have to stitch you back together." },
+      { ...GUIDE.laz, text: "I knew a captain once who thought he was the biggest thing in the water. The water disagreed. It always does, in the end." },
+      { ...GUIDE.dole, text: "The don runs the Coffers, the Coffers ran the Caches, the Caches armed half this sea. Cut the head, the whole body falls. It should." },
+      { ...GUIDE.doby, text: "There is a doubt in your voice, navigator." },
+      { ...GUIDE.dole, text: "There is a margin in my notes I cannot account for. But that is a worry for deeper water. Tonight, we won." },
+      { text: "Past the last of the Coffers' light, the sea drops away toward the seat the don rules from. But that is tomorrow's heading.", pause: 700 },
+      { text: "Tonight the crew is whole, one hand heavier still, and the grog is cold." },
+    ],
+    detail: {
+      description:
+        "The Coffers are ash and the don is named. Before the deepest water the crew takes a watch: Mako itching to bite something megalodon-sized, Kat threatening to stitch him for saying so, Laz grave over how big things end, and Dole unable to shake a margin in his notes that will not add up. A worry for deeper water. Tonight the crew is whole.",
+      ctaLabel: 'Rest a While →',
+      summary: "With the Coffers in ruins and Don Finleone named, the crew took a watch before the deepest water. Dole cannot quite settle a margin in his notes, but tonight the crew is whole.",
+    },
+  },
+  {
+    // Chapter III's closing class pick. Now gated on the Between Watches closer.
     // Writes profiles.ship_classes['the_coffers'], stacking with chapters I + II.
     id: 'chapter_3_class',    type: 'class_pick',
     label: "Captain's Choice",
     flavor: "The Coffers in ruins, the Quartermaster under, and a don's name at the top of every ledger. Time to set what your colors mean before the deepest water.",
-    requiresNode: 'the_quartermaster',
+    requiresNode: 'chapter_3_close',
     classPick: { chapterId: 'the_coffers' },
     detail: {
       description:
@@ -2123,6 +2178,8 @@ export const RAID_MAP: RaidNode[] = [
       { text: 'Again and again, in ink older and finer than the rest, a single initial signs off sums that answer to no account: *F.*', pause: 900, fx: 'flash', insert: { kind: 'ledger-f' } },
       { text: "Finleone, you'd say. But the don signs his whole name, every time, with a flourish. This hand is small. Patient. *It was here first.*", pause: 600 },
       { text: 'You close the books. The throne is dead ahead, and whatever the margin means, the answer sits on it.' },
+      { ...GUIDE.dole, text: 'A second set of books, kept in a hand older than the empire it built. That is not a lieutenant, captain. That is a landlord.' },
+      { ...GUIDE.laz, text: 'Or a ghost. I have signed a ledger from the far side of death, navigator. Some hands do not stop when the body does.' },
       { ...GUIDE.mira, text: 'One initial. Older than the don, patient as debt, and not one soul in this sea brave enough to put a price on it.' },
       { ...GUIDE.mira, text: 'That is not a mystery, captain. That is the richest bounty in the water, sitting unclaimed because everyone cleverer than us is too afraid to reach for it. How very convenient.' },
     ],
@@ -2261,13 +2318,46 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
+    // Chapter IV closer — "Between Watches", the FULL company (all six). The
+    // campaign's current emotional climax: the Finndicate is down, and the whole
+    // crew sits with the F still open. Grows out of the crooked_ledger / dons_fall
+    // F beats but is the DENOUEMENT, not a re-analysis — warmth, then the hook.
+    id: 'chapter_4_close',
+    type: 'story',
+    label: 'Between Watches',
+    flavor: "The Finndicate on the seabed and a whole crew on the deck that put it there. Before anything else, they take the longest watch of all together.",
+    bridge: "One tide ends. Somewhere in bottomless water, an old and patient hand closes a ledger it has kept since before any of you were born.",
+    requiresNode: 'dons_fall',
+    adminOnly: true,
+    image: '/raidlog.png',
+    sceneAccent: '#a78bfa',
+    scene: [
+      { text: "The don's court settles to the seabed, and for the first time in four chapters, there is nothing left ahead to point at." },
+      { ...GUIDE.doby, text: "I have sailed this sea longer than any of you have drawn breath, and I never once believed I would see the Finndicate on the bottom. Well done, small fry." },
+      { ...GUIDE.kat, text: "Do not let him fool you, captain. He is crying. Whales do that." },
+      { ...GUIDE.mako, text: "Biggest bounty in the sea, collected, and a bigger one hiding in the margin. I could get used to this crew." },
+      { ...GUIDE.dole, text: "The F was signing sums before the don drew his first breath. Whatever it is, we did not beat it today. We introduced ourselves." },
+      { ...GUIDE.laz, text: "Then it knows our names now. Good. Let it lie awake with them, the way it made a whole sea lie awake with its own." },
+      { ...GUIDE.mira, text: "Six of us, one impossible mark, and a captain with no sense of self-preservation. I have never had better odds in my life." },
+      { text: "Somewhere in water with no bottom, an old and patient hand closes a ledger it has kept since before the first of you was born.", pause: 900, fx: 'flash' },
+      { text: "But that is the next tide. Tonight the crew is whole, and the whole sea knows your name.", pause: 500 },
+    ],
+    detail: {
+      description:
+        "The Finndicate is on the seabed and all six of you are on the deck that put it there. Before the next heading, the longest watch: Doby proud to tears, Kat mocking him for it, Mako already hungry for the F in the margin, Dole naming what you really did today (introduced yourselves), Laz daring it to remember, and Mira counting the odds she loves. One tide ends. Somewhere in bottomless water, a patient hand closes its ledger. Tonight, the crew is whole.",
+      ctaLabel: 'Rest a While →',
+      summary: "The Finndicate drowned with its don, and the whole crew took the longest watch together. The F in the margin is still open, older than everything you sank. But tonight the crew is whole, and the whole sea knows your name.",
+    },
+  },
+  {
     // Chapter IV's capstone AUGMENT — an either/or refit instead of a class
     // rung: one more raid-item mount, or one more crew berth (ship-wide).
-    // classPick.options pins the menu to exactly these two.
+    // classPick.options pins the menu to exactly these two. Now gated on the
+    // Between Watches finale closer.
     id: 'chapter_4_augment',    type: 'class_pick',
     label: "The Don's Shipwright",
     flavor: "The don kept a shipwright the way other captains keep a surgeon. He works for you now — one last refit, bolted to your deck for good.",
-    requiresNode: 'dons_fall',
+    requiresNode: 'chapter_4_close',
     adminOnly: true,
     classPick: { chapterId: 'the_last_fathom', options: ['armory_expansion'] },
     detail: {
