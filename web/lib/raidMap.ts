@@ -25,6 +25,7 @@ const GUIDE = {
   mako: { speaker: 'Mako', portrait: CREW_ART('Mako_Shark.png') },
   dole: { speaker: 'Dole', portrait: CREW_ART('Dole.png') },
   laz:  { speaker: 'Laz',  portrait: CREW_ART('Coelacanth.png') },
+  mira: { speaker: 'Mira', portrait: CREW_ART('Mira.png') },
 } as const
 
 // Each type gets its own color + glyph on the map:
@@ -1820,6 +1821,11 @@ export const RAID_MAP: RaidNode[] = [
       { text: 'Don Finleone. The seat he rules from sits in the deepest water there is.' },
       { text: 'The crew call it *the last fathom*. The depth past which nothing comes back up.', pause: 600 },
       { text: 'You set the heading anyway. Nothing waits past this. That is rather the point.', pause: 500 },
+      { text: 'You are not the only sail bound for the edge of the chart. One you do not know has been holding your distance since the Coffers, matching you turn for turn.', pause: 500 },
+      { ...GUIDE.mira, text: 'Don Finleone. The one bounty in this whole sea nobody is fool enough to chase. And here you are, sailing off the last sounding to do exactly that.' },
+      { ...GUIDE.mira, text: 'I do love a captain with no sense of self-preservation. It is the only kind worth following.' },
+      { ...GUIDE.mira, text: 'Mira. I hunt the marks the smart money leaves alone. When you crew up for the deepest water, captain, put my name down. I want a good seat for this one.' },
+      { text: 'She lets her sail settle in beside yours, unhurried, the way a thing does when it has already decided how the hunt ends.' },
     ],
     sceneAccent: '#6ea8d8',
     detail: {
@@ -1978,6 +1984,8 @@ export const RAID_MAP: RaidNode[] = [
       { text: 'A spar drifts. A spar rolls with the water. This one is lying against the current, and it is lying *very deliberately*.', pause: 600 },
       { text: 'You watch it for a long minute. It does not move. Nothing about it moves. Then, without any part of it seeming to turn, you are aware that *it is facing you*.', pause: 1100, fx: 'shake' },
       { text: 'The blockade line is ahead. So is he. Remember this: when the water goes flat and nothing at all is happening, that is not nothing happening. *That is him deciding.*', pause: 800 },
+      { ...GUIDE.mira, text: "A thing that lies perfectly still until the moment it doesn't. I know the type, captain. I am the type." },
+      { ...GUIDE.mira, text: "So when the water goes flat, don't wait to see what he decides. Make him answer what you decide instead." },
     ],
     sceneAccent: '#e8e4dc',
     detail: {
@@ -2064,6 +2072,8 @@ export const RAID_MAP: RaidNode[] = [
       { text: 'Again and again, in ink older and finer than the rest, a single initial signs off sums that answer to no account: *F.*', pause: 700 },
       { text: "Finleone, you'd say. But the don signs his whole name, every time, with a flourish. This hand is small. Patient. *It was here first.*", pause: 600 },
       { text: 'You close the books. The throne is dead ahead, and whatever the margin means, the answer sits on it.' },
+      { ...GUIDE.mira, text: 'One initial. Older than the don, patient as debt, and not one soul in this sea brave enough to put a price on it.' },
+      { ...GUIDE.mira, text: 'That is not a mystery, captain. That is the richest bounty in the water, sitting unclaimed because everyone cleverer than us is too afraid to reach for it. How very convenient.' },
     ],
     detail: {
       description:
@@ -2182,6 +2192,10 @@ export const RAID_MAP: RaidNode[] = [
       { text: 'Instead you find the margin again. F. Signing sums before the Finndicate had a name. Signing the sums that *built* it.', pause: 900, fx: 'flash' },
       { text: 'The don ran the family. *The margin ran the don.* Nothing on any chart says what F runs besides.', pause: 800 },
       { text: "One account left open, then. You pour what remains of the don's wine, and start on the arithmetic of finding out." },
+      { text: "The don's wine has a second glass poured before you reach for the bottle. You did not pour it.", pause: 400 },
+      { ...GUIDE.mira, text: "Relax, captain. If I were here for you, we would not be talking." },
+      { ...GUIDE.mira, text: "You drowned the biggest name in the sea and found a bigger one hiding in its margins. Most captains would call that a nightmare. I call it repeat business." },
+      { text: "She lifts her glass to the open ledger, to the small patient F, and to whatever it turns out to be." },
     ],
     sceneAccent: '#a78bfa',
     detail: {

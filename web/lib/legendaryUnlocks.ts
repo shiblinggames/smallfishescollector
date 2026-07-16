@@ -31,7 +31,7 @@ export const LEGENDARY_GATE: Record<string, string> = {
   mako:         'syndicate',          // Chapter I  — joins after you beat Pete
   dole:         'finndicate_notice',  // Chapter II — the Ch II opener (charts/navigator)
   coelacanth:   'coffers_heading',    // Chapter III — the Ch III opener (Laz, into the drowned)
-  moorish_idol: 'dons_fall',          // Chapter IV — parked on the admin-only finale until Ch4 + art ship
+  moorish_idol: 'throne_heading',     // Chapter IV — the Ch IV opener (Mira, into the last fathom)
 }
 
 /** Reverse map: story node id -> the legendary slug it unlocks. Used by
