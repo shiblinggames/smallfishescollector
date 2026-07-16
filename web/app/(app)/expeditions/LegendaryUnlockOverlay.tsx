@@ -10,6 +10,7 @@ import { motion } from 'framer-motion'
 import { createPortal } from 'react-dom'
 import { classForSlug, CLASSES } from '@/lib/crewClasses'
 import type { UnlockedLegendary } from '@/lib/legendaryUnlocks'
+import { Letterbox, LivingFrame, prefersReducedMotion } from '@/components/cutscene'
 
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL
 const artSrc = (f: string) => `${SUPA}/storage/v1/object/public/card-arts/${f}`
@@ -18,6 +19,7 @@ export function LegendaryUnlockOverlay({ crew, onClose }: { crew: UnlockedLegend
   const cls = classForSlug(crew.slug)
   const def = cls ? CLASSES[cls] : null
   const color = def?.color ?? '#f5c542'
+  const reduced = prefersReducedMotion()
 
   useEffect(() => {
     try { navigator.vibrate?.([0, 60, 40, 90]) } catch { /* no haptics */ }
@@ -37,6 +39,12 @@ export function LegendaryUnlockOverlay({ crew, onClose }: { crew: UnlockedLegend
         backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)',
       }}
     >
+      {/* Same cinematic frame as the story/boss scenes — drifting motes, a
+          breathing vignette, and letterbox bars — so the reveal reads as part
+          of the same film. */}
+      <LivingFrame accent={color} reduced={reduced} />
+      <Letterbox />
+
       {/* Ray-fan burst behind the portrait */}
       <motion.div
         initial={{ scale: 0.4, opacity: 0, rotate: 0 }}

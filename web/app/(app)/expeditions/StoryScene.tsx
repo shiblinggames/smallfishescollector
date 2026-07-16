@@ -27,17 +27,11 @@
 // Portaled to document.body — Nav has translateZ(0) and the node sheet is itself a
 // fixed portal at z-1000, so the scene sits above both.
 
-import { useEffect, useRef, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { TypedBody } from '@/components/cutscene'
-import { vibrate } from '@/lib/haptics'
+import { GOLD, TypedBody, Letterbox, LivingFrame, FlashOut, SceneProgress, useTypewriter, lineHaptic, prefersReducedMotion } from '@/components/cutscene'
 import type { SceneLine } from '@/lib/raidMap'
-
-const GOLD = '#f0c040'
-const TYPE_MS = 22          // per character
-const PUNCT_MS = 190        // extra beat after . ! ? — the line breathes where it should
-const COMMA_MS = 80
 
 /** Who is on stage, and where. Two slots: a conversation, not a crowd. */
 interface StageChar { speaker: string; portrait: string }
@@ -70,15 +64,6 @@ function stageAt(lines: SceneLine[], idx: number): { left: StageChar | null; rig
   return { left, right }
 }
 
-/** *Emphasis* → accent. A writer's hammer. */
-function renderText(text: string, accent: string) {
-  return text.split(/(\*[^*]+\*)/g).map((seg, i) =>
-    seg.startsWith('*') && seg.endsWith('*') && seg.length > 2
-      ? <strong key={i} className="font-800" style={{ color: accent }}>{seg.slice(1, -1)}</strong>
-      : <span key={i}>{seg}</span>
-  )
-}
-
 export default function StoryScene({ title, lines, ctaLabel, pending, accent, onComplete, onSkip }: {
   title: string
   lines: SceneLine[]
@@ -91,53 +76,22 @@ export default function StoryScene({ title, lines, ctaLabel, pending, accent, on
 }) {
   const ACCENT = accent ?? GOLD
   const [idx, setIdx] = useState(0)
-  const [shown, setShown] = useState(0)      // characters revealed of the current line
-  const [held, setHeld] = useState(false)    // inside a `pause` beat, before typing
   const [flash, setFlash] = useState(0)
-  const timers = useRef<number[]>([])
+  const reduced = useMemo(() => prefersReducedMotion(), [])
 
   const line = lines[idx]
   const last = idx === lines.length - 1
-  const full = line?.text.length ?? 0
-  const typing = held || shown < full
-  const reduced = useMemo(
-    () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
-    [],
-  )
 
-  const clearTimers = () => { timers.current.forEach(clearTimeout); timers.current = [] }
-
-  // ── The typewriter. Each character schedules the next, so punctuation can buy
-  //    itself an extra beat and the line reads at the speed it should be read at.
-  useEffect(() => {
-    clearTimers()
-    setShown(0)
-    if (!line) return
-    if (reduced) { setShown(line.text.length); setHeld(false); return }
-
-    const type = (n: number) => {
-      if (n >= line.text.length) return
-      const ch = line.text[n]
-      const delay = '.!?'.includes(ch) ? PUNCT_MS : ',;:'.includes(ch) ? COMMA_MS : TYPE_MS
-      timers.current.push(window.setTimeout(() => { setShown(n + 1); type(n + 1) }, delay))
-    }
-
-    // Hold the beat first, if the line asked for one.
-    const begin = () => {
-      setHeld(false)
-      if (line.fx === 'flash') setFlash(f => f + 1)
-      vibrate(line.fx === 'shake' ? [0, 40, 30, 60] : line.speaker ? 8 : 4)
-      type(0)
-    }
-    if (line.pause && line.pause > 0) {
-      setHeld(true)
-      timers.current.push(window.setTimeout(begin, line.pause))
-    } else {
-      begin()
-    }
-    return clearTimers
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idx, reduced])
+  // Shared typewriter (kit) — the beat/haptic/flash fire from onBegin so story
+  // nodes and boss dialogue read identically.
+  const { shown, typing, held, finish } = useTypewriter(line?.text ?? '', idx, {
+    pause: line?.pause,
+    reduced,
+    onBegin: () => {
+      if (line?.fx === 'flash') setFlash(f => f + 1)
+      lineHaptic(line?.fx, !!line?.speaker)
+    },
+  })
 
   // Lock body scroll while the scene owns the viewport.
   useEffect(() => {
@@ -149,7 +103,7 @@ export default function StoryScene({ title, lines, ctaLabel, pending, accent, on
   /** One tap finishes the line. The next one moves on. Never both at once — a tap
    *  that both completed AND advanced would eat lines on a fast tapper. */
   function tap() {
-    if (typing) { clearTimers(); setHeld(false); setShown(full); return }
+    if (typing) { finish(); return }
     if (!last) setIdx(i => i + 1)
   }
 
@@ -230,50 +184,12 @@ export default function StoryScene({ title, lines, ctaLabel, pending, accent, on
         WebkitTapHighlightColor: 'transparent', userSelect: 'none',
       }}
     >
-      {/* ── THE FRAME IS ALIVE ────────────────────────────────────────────────
-          A slow push-in on the whole plate plus drifting motes. It is barely
-          perceptible on purpose: the job is only to not be a photograph. */}
-      {!reduced && (
-        <motion.div aria-hidden
-          animate={{ scale: [1, 1.07] }}
-          transition={{ duration: 26, repeat: Infinity, repeatType: 'reverse', ease: 'easeInOut' }}
-          style={{ position: 'absolute', inset: '-4%', pointerEvents: 'none' }}>
-          {Array.from({ length: 14 }).map((_, i) => (
-            <motion.span key={i}
-              animate={{ y: [0, -26, 0], opacity: [0, 0.5, 0] }}
-              transition={{ duration: 7 + (i % 5) * 2.4, repeat: Infinity, delay: i * 0.9, ease: 'easeInOut' }}
-              style={{
-                position: 'absolute',
-                left: `${(i * 37) % 96 + 2}%`, top: `${(i * 53) % 78 + 10}%`,
-                width: i % 4 === 0 ? 3 : 2, height: i % 4 === 0 ? 3 : 2,
-                borderRadius: '50%', background: i % 3 === 0 ? `${ACCENT}88` : 'rgba(255,245,220,0.5)',
-              }} />
-          ))}
-        </motion.div>
-      )}
-      {/* Vignette that breathes. */}
-      <motion.div aria-hidden
-        animate={reduced ? {} : { opacity: [0.6, 0.82, 0.6] }}
-        transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }}
-        style={{ position: 'absolute', inset: 0, pointerEvents: 'none',
-          background: 'radial-gradient(ellipse at 50% 45%, transparent 38%, rgba(2,2,3,0.85) 100%)' }} />
-
-      {/* fx: flash — a hard blow-out on a beat that earns it. */}
-      <AnimatePresence>
-        {flash > 0 && (
-          <motion.div key={flash} aria-hidden
-            initial={{ opacity: 0.85 }} animate={{ opacity: 0 }} transition={{ duration: 0.5, ease: 'easeOut' }}
-            style={{ position: 'absolute', inset: 0, background: '#fff6df', pointerEvents: 'none', zIndex: 8 }} />
-        )}
-      </AnimatePresence>
-
-      {/* ── LETTERBOX. The oldest trick there is for saying "this is a scene". */}
-      <motion.div aria-hidden initial={{ height: 0 }} animate={{ height: 44 }}
-        transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, background: '#000', zIndex: 6 }} />
-      <motion.div aria-hidden initial={{ height: 0 }} animate={{ height: 44 }}
-        transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-        style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#000', zIndex: 6 }} />
+      {/* The frame is alive (push-in + motes + breathing vignette), the flash on
+          an earned beat, and the letterbox — all from the shared cutscene kit so
+          story nodes, boss dialogue and Finn read as one film. */}
+      <LivingFrame accent={ACCENT} reduced={reduced} />
+      <FlashOut k={flash} />
+      <Letterbox />
 
       {/* Beat title + skip, riding the top bar. */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 44, zIndex: 7,
@@ -415,13 +331,7 @@ export default function StoryScene({ title, lines, ctaLabel, pending, accent, on
         </>)}
       </motion.div>
 
-      {/* Progress. A hairline on the bottom bar — the dots said "slide 4 of 9". */}
-      <div aria-hidden style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 2, zIndex: 7, background: 'rgba(255,255,255,0.07)' }}>
-        <motion.div
-          animate={{ width: `${((idx + 1) / lines.length) * 100}%` }}
-          transition={{ duration: 0.35, ease: 'easeOut' }}
-          style={{ height: '100%', background: `linear-gradient(90deg, ${ACCENT}77, ${ACCENT})` }} />
-      </div>
+      <SceneProgress idx={idx} total={lines.length} accent={ACCENT} />
     </motion.div>
   )
 
