@@ -252,7 +252,10 @@ const ZONE_CLOUD_VARIANT: Record<string, CloudVariant> = {
 const ZONES = ['shallows', 'open_waters', 'deep', 'abyss', 'ancient_deep'] as const
 type ZoneKey = typeof ZONES[number]
 
-type BossMechanic = 'shrink' | 'drift' | 'accelerate' | 'randomize' | 'split' | 'precision' | 'gyre'
+type BossMechanic = 'shrink' | 'drift' | 'accelerate' | 'randomize' | 'split' | 'precision' | 'gyre' | 'surge'
+// shrink = the whole landing window BREATHES (shrinks and expands in real time), each
+//   phase tighter + faster. surge = drift AND accelerate stacked (the ring circles you
+//   while the needle speeds up each phase).
 // Ancient Deep multi-phase reel config. Each of the 6 trophies has its OWN signature
 // mechanic so no two giants fight alike. Megalodon is the gated final-final boss: a
 // pure CONSISTENCY test — precision (perfect-only) on all 4 phases, each phase a
@@ -280,8 +283,8 @@ const BOSS_CONFIG: Record<string, BossConfig> = {
   'Plesiosaurus':      { mechanic: 'drift',      phases: 3 }, // the ring circles you, one way
   'Dunkleosteus':      { mechanic: 'accelerate', phases: 3 }, // the armored ram — faster each stage
   'Mosasaurus':        { mechanic: 'gyre',       phases: 3 }, // the sea-dragon coils — the ring rocks like a swell
-  'Basilosaurus':      { mechanic: 'split',      phases: 3 }, // two live perfect windows
-  'Shastasaurus':      { mechanic: 'shrink',     phases: 3 }, // the closing jaw — the whole window narrows each stage
+  'Basilosaurus':      { mechanic: 'surge',      phases: 3 }, // the leviathan bears down — ring drifts AND the needle speeds each stage
+  'Shastasaurus':      { mechanic: 'shrink',     phases: 3 }, // the breathing jaw — the window shrinks and expands in real time
   // ── New sellable regulars (sell_value > 0, route to inventory) ──
   'Chambered Nautilus': { mechanic: 'drift',      phases: 2 },
   'Ghost Shark':        { mechanic: 'randomize',  phases: 2 },
@@ -4597,7 +4600,9 @@ export default function FishingGame({
   // detection so the catch math is unaffected; handleReelIn now reads
   // from the same ref for resolution.
   useEffect(() => {
-    if (phase !== 'catching' || activeBossMechanic !== 'drift') return
+    // Surge (Basilosaurus) rides the same one-way drift; its extra bite is the
+    // per-phase speed ramp handled in the stage-advance (accelerate escalation).
+    if (phase !== 'catching' || (activeBossMechanic !== 'drift' && activeBossMechanic !== 'surge')) return
     const id = setInterval(() => {
       const next = (zoneRotationRef.current + 2.4) % 360 // ~80°/s — a brisk circle, not a crawl
       zoneRotationRef.current = next
@@ -5226,11 +5231,11 @@ export default function FishingGame({
             bossZoneShrinkRef.current = newShrink
             setBossZoneShrink(newShrink)
             if (cfg.speedStepMult) bossNeedleMultRef.current = Math.min(bossNeedleMultRef.current * cfg.speedStepMult, 4.0)
-          } else if (mechanic === 'shrink') {
-            const newShrink = bossZoneShrinkRef.current + 10
-            bossZoneShrinkRef.current = newShrink
-            setBossZoneShrink(newShrink)
-          } else if (mechanic === 'accelerate') {
+          } else if (mechanic === 'accelerate' || mechanic === 'surge') {
+            // accelerate + surge both ramp needle speed each phase (surge also drifts
+            // via its own interval). shrink is NOT stepped here — it breathes in real
+            // time and reads bossStage for its per-phase intensity, so it needs no
+            // bossZoneShrink escalation (held at 0 so the memo renders the open base).
             bossNeedleMultRef.current = Math.min(bossNeedleMultRef.current * 1.4, 4.0)
           }
 
@@ -5240,9 +5245,9 @@ export default function FishingGame({
             const next = WILDCARD_MECHANICS[Math.floor(Math.random() * WILDCARD_MECHANICS.length)]
             activeBossMechanicRef.current = next
             setActiveBossMechanic(next)
-            bossZoneShrinkRef.current = next === 'shrink' ? 8 : 0
-            setBossZoneShrink(next === 'shrink' ? 8 : 0)
-            bossNeedleMultRef.current = next === 'accelerate' ? 1.5 : 1.0
+            bossZoneShrinkRef.current = 0 // shrink breathes via its interval, not a static value
+            setBossZoneShrink(0)
+            bossNeedleMultRef.current = (next === 'accelerate' || next === 'surge') ? 1.5 : 1.0
           }
 
           {
@@ -6103,6 +6108,43 @@ export default function FishingGame({
   // Mirror the latest zones so the needle rAF loop can detect zone
   // crossings without depending on per-frame React state.
   catchingZonesRef.current = catchingZones
+
+  // Shrink → BREATHE (Shastasaurus, Vent Octopus, wildcard rolls): the whole landing
+  // window shrinks AND expands in real time instead of stepping down per phase — a
+  // living jaw you time your tap through. Done IMPERATIVELY (like drift/gyre): each
+  // tick rebuilds the zones at the current pulse size, writes them to catchingZonesRef
+  // (so the crossing paint + reel-in resolve follow), and re-draws the arc `d`s — zero
+  // React re-renders, so it never re-introduces dial lag. Only the widths change (the
+  // ring never adds/removes zones at difficulty 5), so the arc list stays index-aligned.
+  // Deeper phases breathe tighter + faster (bossStage). bossZoneShrink is held at 0 for
+  // shrink fish, so the memo renders the open base and this owns the animation.
+  useEffect(() => {
+    if (phase !== 'catching' || activeBossMechanic !== 'shrink' || !hookedFish) return
+    const diff = hookedFish.catchDifficulty
+    const catchMult = (ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows).catchMultiplier
+    const baseBonus = levelBonus + getBait(selectedBait).catchZoneBonus + rod.catchZoneBonus + (activeEvent?.type === 'glassy' ? 12 : 0)
+    const perfBonus = rod.perfectZoneBonus + 1
+    const trophy = isAncientTrophyFight
+    const stage = Math.max(1, bossStageRef.current)
+    const AMP = 12 + stage * 3          // tighter trough each phase
+    const PERIOD = Math.max(650, 1500 - stage * 250) // faster breath each phase
+    let t = 0
+    const id = setInterval(() => {
+      t += 40
+      // 0 at the crest (fully open) → AMP at the trough (tightest). Starts open.
+      const s = AMP * (0.5 - 0.5 * Math.cos((t / PERIOD) * Math.PI * 2))
+      const base = buildFishZones(diff, hookTier, line.penaltyMultiplier, catchMult, baseBonus - s, perfBonus)
+      let zones = applyBossMods(base, 'shrink', s)
+      if (trophy) zones = applyAncientPalette(zones)
+      catchingZonesRef.current = zones
+      const zg = zonesGroupRef.current
+      if (zg) {
+        const arcs = zg.querySelectorAll<SVGPathElement>('path[data-zone-arc]')
+        arcs.forEach((p, i) => { if (zones[i]) p.setAttribute('d', arcPath(zones[i].from, zones[i].to)) })
+      }
+    }, 40)
+    return () => clearInterval(id)
+  }, [phase, activeBossMechanic, hookedFish, hookTier, line.penaltyMultiplier, selectedZone, levelBonus, selectedBait, rod.catchZoneBonus, rod.perfectZoneBonus, activeEvent?.type, isAncientTrophyFight, bossStage])
   // NOTE: zoneRotationRef is intentionally NOT synced from state here.
   // The ref is now the source of truth during the drift spin (updated
   // by the drift interval imperatively); syncing state → ref on every
