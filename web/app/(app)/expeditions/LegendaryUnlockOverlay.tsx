@@ -88,9 +88,19 @@ export function LegendaryUnlockOverlay({ crew, onClose }: { crew: UnlockedLegend
         </motion.p>
       )}
 
+      {/* Signature ability — so the reveal tells you what they DO, not just who. */}
+      {def && (
+        <motion.p
+          initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.4 }}
+          className="font-karla" style={{ position: 'relative', marginTop: 8, fontSize: '0.84rem', lineHeight: 1.4, color: 'rgba(240,237,232,0.9)', textAlign: 'center', maxWidth: 340, padding: '10px 14px', border: `1px solid ${color}44`, borderRadius: 12, background: `${color}12` }}
+        >
+          {def.blurb}
+        </motion.p>
+      )}
+
       <motion.p
-        initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.4 }}
-        className="font-karla" style={{ position: 'relative', marginTop: 8, fontSize: '0.9rem', color: 'rgba(240,237,232,0.82)', textAlign: 'center', maxWidth: 320 }}
+        initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.62, duration: 0.4 }}
+        className="font-karla" style={{ position: 'relative', marginTop: 8, fontSize: '0.88rem', color: 'rgba(240,237,232,0.78)', textAlign: 'center', maxWidth: 320 }}
       >
         {crew.name} now sails the recruit boards in the Crew Hall.
       </motion.p>
