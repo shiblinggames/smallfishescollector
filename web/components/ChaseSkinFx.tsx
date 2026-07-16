@@ -222,20 +222,11 @@ function HuntersBaneFx({ color, summon }: { color: string; summon: boolean }) {
 
 // The Idol (Mira) — worshipped and deadly. A gilded aureole of rays slowly
 // turns behind her like a crown/halo, a rose-and-gold radiant haze breathes,
-// her Requiem mark pulses in as a soft crosshair at the heart, and reverent
-// rose-gold motes rise through the light. Only existing keyframes.
+// and reverent rose-gold motes rise through the light. Only existing keyframes.
 const IDOL_GOLD = '#f5c542'
 function IdolFx({ color, summon }: { color: string; summon: boolean }) {
   const gold = IDOL_GOLD
   const moteN = summon ? 14 : 10
-  const bw = summon ? 2.2 : 1.4
-  const arm = summon ? '22%' : '24%'
-  const corners: React.CSSProperties[] = [
-    { top: 0, left: 0, borderTop: `${bw}px solid ${color}`, borderLeft: `${bw}px solid ${color}` },
-    { top: 0, right: 0, borderTop: `${bw}px solid ${color}`, borderRight: `${bw}px solid ${color}` },
-    { bottom: 0, left: 0, borderBottom: `${bw}px solid ${color}`, borderLeft: `${bw}px solid ${color}` },
-    { bottom: 0, right: 0, borderBottom: `${bw}px solid ${color}`, borderRight: `${bw}px solid ${color}` },
-  ]
   return (
     <div className="chase-skin-fx" style={wrap(summon)}>
       {/* Gilded aureole — a slow halo of rays turning behind her, like a crown. */}
@@ -255,12 +246,6 @@ function IdolFx({ color, summon }: { color: string; summon: boolean }) {
           animation: `chase-caustic ${summon ? 4.5 : 8}s ${h.d}s ease-in-out infinite`,
         }} />
       ))}
-      {/* Her mark — a soft crosshair pulsing in at the heart (the Requiem tell). */}
-      <div style={{ position: 'absolute', left: '50%', top: '50%', width: '54%', height: '54%', marginLeft: '-27%', marginTop: '-27%', transformOrigin: '50% 50%', animation: `chase-reticle-lock ${summon ? 2 : 3.6}s ease-in-out infinite` }}>
-        {corners.map((c, i) => (
-          <div key={i} style={{ position: 'absolute', width: arm, height: arm, ...c }} />
-        ))}
-      </div>
       {/* Reverent rose-gold motes rising through the light. */}
       {Array.from({ length: moteN }).map((_, i) => {
         const left = 8 + ((i * 77) / moteN) % 84
