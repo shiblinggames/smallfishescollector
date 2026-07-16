@@ -32,7 +32,7 @@ export function LegendaryUnlockOverlay({ crew, onClose }: { crew: UnlockedLegend
       onClick={onClose}
       style={{
         position: 'fixed', inset: 0, zIndex: 1300, display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', gap: 4, padding: 24, cursor: 'pointer',
+        alignItems: 'center', justifyContent: 'center', gap: 4, padding: 24, cursor: 'pointer', overflowY: 'auto',
         background: 'radial-gradient(ellipse at center, rgba(10,14,24,0.92) 0%, rgba(4,6,12,0.98) 70%)',
         backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)',
       }}
@@ -54,14 +54,14 @@ export function LegendaryUnlockOverlay({ crew, onClose }: { crew: UnlockedLegend
         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.4 }}
         className="font-karla font-800 uppercase" style={{ position: 'relative', fontSize: '0.7rem', letterSpacing: '0.24em', color }}
       >
-        New Legendary
+        Legendary Unlocked
       </motion.p>
 
       {/* Crew portrait */}
       <motion.div
         initial={{ scale: 0.6, opacity: 0, y: 14 }} animate={{ scale: 1, opacity: 1, y: 0 }}
         transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.05 }}
-        style={{ position: 'relative', width: 'min(64vw, 240px)', aspectRatio: '3 / 4' }}
+        style={{ position: 'relative', width: 'min(52vw, 200px)', aspectRatio: '3 / 4', flexShrink: 0 }}
       >
         {crew.filename ? (
           <img src={artSrc(crew.filename)} alt={crew.name}
@@ -79,35 +79,43 @@ export function LegendaryUnlockOverlay({ crew, onClose }: { crew: UnlockedLegend
         {crew.name}
       </motion.h2>
 
+      {/* Signature ability — clearly labeled as THEIR ability, with the class + effect. */}
       {def && (
-        <motion.p
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4, duration: 0.4 }}
-          className="font-karla font-700 uppercase" style={{ position: 'relative', fontSize: '0.72rem', letterSpacing: '0.18em', color }}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.42, duration: 0.4 }}
+          style={{ position: 'relative', marginTop: 10, maxWidth: 360, padding: '11px 15px', border: `1px solid ${color}55`, borderRadius: 14, background: `${color}14`, textAlign: 'center' }}
         >
-          {def.name} · {def.shortLabel}
-        </motion.p>
+          <p className="font-karla font-800 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.2em', color, marginBottom: 4 }}>
+            Signature Ability
+          </p>
+          <p className="font-pirata" style={{ fontSize: '1.2rem', lineHeight: 1.1, color: '#f0ede8', marginBottom: 5 }}>
+            {def.name} <span style={{ color, fontSize: '0.82rem' }}>· {def.shortLabel}</span>
+          </p>
+          <p className="font-karla" style={{ fontSize: '0.82rem', lineHeight: 1.4, color: 'rgba(240,237,232,0.85)' }}>
+            {def.blurb}
+          </p>
+        </motion.div>
       )}
 
-      {/* Signature ability — so the reveal tells you what they DO, not just who. */}
-      {def && (
-        <motion.p
-          initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.4 }}
-          className="font-karla" style={{ position: 'relative', marginTop: 8, fontSize: '0.84rem', lineHeight: 1.4, color: 'rgba(240,237,232,0.9)', textAlign: 'center', maxWidth: 340, padding: '10px 14px', border: `1px solid ${color}44`, borderRadius: 12, background: `${color}12` }}
-        >
-          {def.blurb}
-        </motion.p>
-      )}
-
-      <motion.p
-        initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.62, duration: 0.4 }}
-        className="font-karla" style={{ position: 'relative', marginTop: 8, fontSize: '0.88rem', color: 'rgba(240,237,232,0.78)', textAlign: 'center', maxWidth: 320 }}
+      {/* Recruit callout — crystal clear that they are RECRUITABLE, not auto-added. */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.62, duration: 0.4 }}
+        style={{ position: 'relative', marginTop: 14, maxWidth: 360, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}
       >
-        {crew.name} now sails the recruit boards in the Crew Hall.
-      </motion.p>
+        <span className="font-karla font-800 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.16em', color: '#0a0e18', background: color, padding: '3px 11px', borderRadius: 999 }}>
+          Now Recruitable
+        </span>
+        <p className="font-karla font-700" style={{ fontSize: '0.98rem', color: '#f0ede8', textAlign: 'center', lineHeight: 1.25 }}>
+          {crew.name} can now be recruited in the Crew Hall.
+        </p>
+        <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(240,237,232,0.6)', textAlign: 'center', lineHeight: 1.35 }}>
+          They won't join on their own. Sign them on from the recruit board.
+        </p>
+      </motion.div>
 
       <motion.p
         initial={{ opacity: 0 }} animate={{ opacity: 0.6 }} transition={{ delay: 1.1, duration: 0.5 }}
-        className="font-karla" style={{ position: 'absolute', bottom: 32, fontSize: '0.72rem', color: 'rgba(240,237,232,0.5)' }}
+        className="font-karla" style={{ position: 'relative', marginTop: 18, fontSize: '0.72rem', color: 'rgba(240,237,232,0.5)' }}
       >
         Tap to continue
       </motion.p>
