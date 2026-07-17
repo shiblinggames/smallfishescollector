@@ -32,10 +32,10 @@ import {
   type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot, type GauntletRunState, type GauntletRunStats, chestOdds } from '@/lib/gauntlet'
 import { GAUNTLET_TERMS, TERM_GROUP_META, resolveTerms, termPressure, termTideEffects, pressureGemMult, pressureDepthFactor, NO_TERM_EFFECTS, PRESSURE_CAP, PRESSURE_DEPTH_FLOOR, PRESSURE_DEPTH_FULL, PRESSURE_SKIN_THRESHOLD, PRESSURE_SKIN_DEPTH, PRESSURE_SKIN_ID, MAX_AVAILABLE_PRESSURE, type SignedTerms } from '@/lib/gauntletTerms'
 import GauntletTermsPanel from './GauntletTermsPanel'
-import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen, recordGauntletHit, wagerGauntletFathoms, markConfluencesSeen, checkpointGauntletRun, pauseGauntletRun, resumeGauntletRun, buyBaitWithFathoms, rollDavyOffer } from './actions'
+import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, setGauntletUpgradeActive, markGauntletIntroSeen, recordGauntletHit, wagerGauntletFathoms, markConfluencesSeen, checkpointGauntletRun, pauseGauntletRun, resumeGauntletRun, buyBaitWithFathoms, rollDavyOffer } from './actions'
 import { offerCoinMult, offerChestMult, offerCopy, offerTakenLine, type DavyOffer } from '@/lib/gauntletOffer'
 import { FATHOM_BAITS } from '@/lib/bait'
-import { GAUNTLET_UPGRADES, COMING_SOON_UPGRADES, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck, gauntletBoonRerolls, gauntletCurseRerolls } from '@/lib/gauntletUpgrades'
+import { GAUNTLET_UPGRADES, COMING_SOON_UPGRADES, activeGauntletUpgrades, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck, gauntletBoonRerolls, gauntletCurseRerolls } from '@/lib/gauntletUpgrades'
 import { type ShipAugment } from '@/lib/shipAugments'
 import { getSpecialItem } from '@/lib/specialItems'
 import { buySpecialItem } from '@/app/(app)/fishing/actions'
@@ -107,6 +107,9 @@ export interface GauntletGameProps {
   /** Claimed Locker Upgrade ids — drives the run-scoped perks (Diving Bell,
    *  Calm Before…). */
   gauntletUpgrades: string[]
+  /** Run Upgrade ids the player has switched OFF — owned but inactive, so their
+   *  effect is skipped this dive. */
+  gauntletUpgradesOff: string[]
   /** Confluence ids the player has ever discovered — drives the codex fog. */
   confluencesSeen: string[]
   /** Terms signed for the currently OPEN run (restored on a resume). */
@@ -175,20 +178,28 @@ export default function GauntletGame(props: GauntletGameProps) {
   // server later sends a new prop. See [[feedback-usestate-prop-sync]].
   const [upgrades, setUpgrades] = useState(props.gauntletUpgrades)
   useEffect(() => { setUpgrades(props.gauntletUpgrades) }, [props.gauntletUpgrades])
+  // Run Upgrades the player switched OFF (owned but inactive this dive). Mirrored
+  // into local state like `upgrades` so a toggle in the Locker applies to the
+  // very next dive without a reload; resynced if the server sends a new prop.
+  const [upgradesOff, setUpgradesOff] = useState(props.gauntletUpgradesOff)
+  useEffect(() => { setUpgradesOff(props.gauntletUpgradesOff) }, [props.gauntletUpgradesOff])
+  // The upgrades that actually shape THIS dive — claimed minus switched-off. Every
+  // run-effect helper reads this, so a disabled Run Upgrade contributes nothing.
+  const activeUpgrades = useMemo(() => activeGauntletUpgrades(upgrades, upgradesOff), [upgrades, upgradesOff])
   // Diving Bell (Run Upgrade) lifts the player's max HP for the whole run. This
   // is the BASE ceiling (stat × upgrade); the LIVE ceiling `hpMax` (computed
   // below, once boons/depth exist) folds the HP-scaling boons on top.
-  const baseHpMax = Math.round(props.playerHPMax * gauntletRunHpMult(upgrades))
+  const baseHpMax = Math.round(props.playerHPMax * gauntletRunHpMult(activeUpgrades))
   // Veteran's Start: combat depth = cleared + 1 + skipOffset (enemies, boon/curse
   // cadence, displayed depth). Rewards stay on the cleared count, so the head
   // start never inflates pot / chests / Fathoms / record.
-  const skipOffset = gauntletSkipOffset(upgrades)
+  const skipOffset = gauntletSkipOffset(activeUpgrades)
   // Run Upgrades that fold into the combat mods: Iron Hide (−damage taken) +
   // Gunner's Eye (+damage dealt).
   const runRaidMods = {
     ...props.raidMods,
-    damageTakenPct: (props.raidMods.damageTakenPct ?? 0) + gauntletDamageTakenMod(upgrades),
-    damagePct: (props.raidMods.damagePct ?? 0) + gauntletDamageMod(upgrades),
+    damageTakenPct: (props.raidMods.damageTakenPct ?? 0) + gauntletDamageTakenMod(activeUpgrades),
+    damagePct: (props.raidMods.damagePct ?? 0) + gauntletDamageMod(activeUpgrades),
   }
 
   // A resumable crashed run takes priority over the intro/cooldown screens — the
@@ -991,7 +1002,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     const carriedHp = Math.min(hpMax, remainingHp)
     // Vigor (Run Upgrade): patch up a slice of max HP for every ship you sink.
     // Iron Rations (a signed Term) scales every heal, this one included.
-    const vigorHeal = Math.round(hpMax * gauntletKillHealPct(upgrades) * termFxRef.current.healMult)
+    const vigorHeal = Math.round(hpMax * gauntletKillHealPct(activeUpgrades) * termFxRef.current.healMult)
     const healedHp = vigorHeal > 0 ? Math.min(hpMax, carriedHp + vigorHeal) : carriedHp
     playerHPRef.current = healedHp
     setPlayerHP(healedHp)
@@ -1031,7 +1042,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     // Calm Before waves off the FIRST curse milestone the player actually hits,
     // not a hardcoded depth — so it still works under Veteran's Start, which
     // starts past depth 4. Spent the moment it fires.
-    const skipFirstCurse = atCurseDepth && !calmBeforeUsedRef.current && gauntletSkipsFirstCurse(upgrades)
+    const skipFirstCurse = atCurseDepth && !calmBeforeUsedRef.current && gauntletSkipsFirstCurse(activeUpgrades)
     if (skipFirstCurse) calmBeforeUsedRef.current = true
     const curse = (atCurseDepth && !skipFirstCurse)
       ? drawCurse(curseTiersRef.current, nextDepth, termFxRef.current.curseStartsAtWorst)   // null once the curse pool is spent
@@ -1039,7 +1050,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     // Draw the boons up front so an exhausted pool ([] when every family is
     // maxed) falls through to the breather instead of an empty draft screen.
     const boons = isBoonDepth(nextDepth, termFxRef.current.boonFrequencyMult)
-      ? drawBoons(termFxRef.current.boonPicks, boonTiers, gauntletBoonLuck(upgrades), termFxRef.current.commonSkew)
+      ? drawBoons(termFxRef.current.boonPicks, boonTiers, gauntletBoonLuck(activeUpgrades), termFxRef.current.commonSkew)
       : []
     if (curse || boons.length > 0) {
       // Set the boon draft now even on a curse round, so applyCurse can hand off
@@ -1047,7 +1058,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       if (boons.length > 0) {
         setPendingBoons(boons)
         setBoonFromShrine(false)
-        setRerollsLeft(gauntletBoonRerolls(upgrades))
+        setRerollsLeft(gauntletBoonRerolls(activeUpgrades))
         // Confluence draft (Hades-duo model): if you QUALIFY for a synergy you
         // haven't taken, it can surface as a gold card in place of a boon slot —
         // taking it forgoes those boons. Mutually exclusive with the Reprieve so
@@ -1059,7 +1070,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           ? drawReprieve({ curseCount: Object.keys(curseTiersRef.current).length })
           : null)
       }
-      if (curse) { curseDepthRef.current = nextDepth; setPendingCurse(curse); setCurseRerollsLeft(gauntletCurseRerolls(upgrades)); setPhase('curse') }
+      if (curse) { curseDepthRef.current = nextDepth; setPendingCurse(curse); setCurseRerollsLeft(gauntletCurseRerolls(activeUpgrades)); setPhase('curse') }
       else setPhase('boon')
       return
     }
@@ -1105,7 +1116,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   // spent, charge nothing and just move on.
   function shrineBloodPrice() {
     runEventsRef.current.push({ depth: rollStateRef.current.cleared + skipOffset, kind: 'shrine' })
-    const draft = drawBoons(termFxRef.current.boonPicks, boonTiers, gauntletBoonLuck(upgrades), termFxRef.current.commonSkew)
+    const draft = drawBoons(termFxRef.current.boonPicks, boonTiers, gauntletBoonLuck(activeUpgrades), termFxRef.current.commonSkew)
     if (draft.length === 0) { setPhase('between'); return }
     // The Full Measure (a signed Term): he does not take half of anything.
     const left = termFxRef.current.bloodPriceToOne
@@ -1202,7 +1213,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   // synergy card re-rolls with them).
   function rerollBoons() {
     if (rerollsLeft <= 0) return
-    setPendingBoons(drawBoons(termFxRef.current.boonPicks, boonTiers, gauntletBoonLuck(upgrades), termFxRef.current.commonSkew))
+    setPendingBoons(drawBoons(termFxRef.current.boonPicks, boonTiers, gauntletBoonLuck(activeUpgrades), termFxRef.current.commonSkew))
     { const conf = drawConfluenceOffer(boonTiers, confluencesTaken, offeredConfluenceIdsRef.current, termFxRef.current.confluenceOfferMult); if (conf) offeredConfluenceIdsRef.current.add(conf.id); setPendingConfluence(conf) }
     setRerollsLeft(r => r - 1)
   }
@@ -1235,7 +1246,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       crewRefreshedRef.current = true
     } else if (r.kind === 'charges') {
       // Open the next fight with the gun deck run out (carryover plumbing).
-      carriedChargesRef.current = 3 + bonusChargeSlots(upgrades)
+      carriedChargesRef.current = 3 + bonusChargeSlots(activeUpgrades)
     } else if (r.kind === 'cleanse') {
       // Shed one random active curse.
       const owned = Object.keys(curseTiersRef.current)
@@ -1804,7 +1815,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                 Global Ship & Shore unlocks live out in the world, so they'd
                 only confuse here. */}
             {(() => {
-              const owned = GAUNTLET_UPGRADES.filter(u => u.scope === 'gauntlet' && upgrades.includes(u.id))
+              const owned = GAUNTLET_UPGRADES.filter(u => u.scope === 'gauntlet' && activeUpgrades.includes(u.id))
               if (owned.length === 0) return null
               return (
                 <div style={{ marginTop: 14 }}>
@@ -1828,7 +1839,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         {infoCurrency && <CurrencyInfoModal kind={infoCurrency} onClose={() => setInfoCurrency(null)} />}
         {synergiesOpen && <SynergiesModal owned={boonTiers} seen={seenConfluences} taken={confluencesTaken} onClose={() => setSynergiesOpen(false)} />}
         {recapRun && <DeepestRunModal run={recapRun.run} hardcore={recapRun.hardcore} onClose={() => setRecapRun(null)} />}
-        {shopSection && <LockerUpgradesModal section={shopSection} onClose={() => setShopSection(null)} onClaimed={(owned) => { setUpgrades(owned); setBonusSlots(bonusChargeSlots(owned)) }} />}
+        {shopSection && <LockerUpgradesModal section={shopSection} onClose={() => setShopSection(null)} onClaimed={(owned) => { setUpgrades(owned); setBonusSlots(bonusChargeSlots(owned)) }} onToggled={setUpgradesOff} />}
         {descentModals}
       </>
     )
@@ -1873,7 +1884,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           </button>
         </div>
         <BackLink router={router} label="Back to the map" primary={!ready} />
-        {shopSection && <LockerUpgradesModal section={shopSection} onClose={() => setShopSection(null)} onClaimed={(owned) => { setUpgrades(owned); setBonusSlots(bonusChargeSlots(owned)) }} />}
+        {shopSection && <LockerUpgradesModal section={shopSection} onClose={() => setShopSection(null)} onClaimed={(owned) => { setUpgrades(owned); setBonusSlots(bonusChargeSlots(owned)) }} onToggled={setUpgradesOff} />}
         {descentModals}
       </Shell>
     )
@@ -2223,7 +2234,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       : combatDepth <= 2  ? 'Early yet. The Locker is only just stirring below.'
       :                   'The water stills. The Locker waits on your nerve.'
     // Sounding Line — read what waits at the next depth before committing.
-    const sounding = (gauntletHasSoundingLine(upgrades) && peekFight)
+    const sounding = (gauntletHasSoundingLine(activeUpgrades) && peekFight)
       ? peekFight.isBoss
         ? { label: 'A BOSS lies below', sub: peekFight.enemy.name, color: '#f87171' }
         : peekFight.isElite
@@ -4589,7 +4600,7 @@ function CannonballRackDemo() {
 // "Hauled to Shore" (scope account/world + the Auto Catcher special item — power
 // for the wider game). Server-validated on claim (depth + cost + prereq + no
 // double); the panel just reflects state and disables what you can't take yet.
-type LockerState = { deepest: number; fathoms: number; owned: string[]; hasAutoCatcher: boolean; hasAutoCaster: boolean }
+type LockerState = { deepest: number; fathoms: number; owned: string[]; off: string[]; hasAutoCatcher: boolean; hasAutoCaster: boolean }
 /** A purchasable row in the Locker — either a Gauntlet upgrade or a special
  *  item (the Auto Catcher) — normalized so both render through one card. */
 type ShopEntry = {
@@ -4607,12 +4618,32 @@ const SHORE_CATEGORIES: { id: 'voyages' | 'raids' | 'fishing'; label: string; ic
   { id: 'fishing', label: 'Fishing', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12c3-4 8-5 12-3 2 1 4 3 6 3-2 0-4 2-6 3-4 2-9 1-12-3z" /><path d="m16 9.5 4-2.5v10l-4-2.5" /><circle cx="7.5" cy="11.5" r="0.7" fill="currentColor" stroke="none" /></svg> },
 ]
 
-function LockerUpgradesModal({ section, onClose, onClaimed }: { section: 'run' | 'shore'; onClose: () => void; onClaimed?: (owned: string[]) => void }) {
+function LockerUpgradesModal({ section, onClose, onClaimed, onToggled }: { section: 'run' | 'shore'; onClose: () => void; onClaimed?: (owned: string[]) => void; onToggled?: (off: string[]) => void }) {
   const [state, setState] = useState<LockerState | null>(null)
   const [claiming, setClaiming] = useState<string | null>(null)
+  const [toggling, setToggling] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
 
   useEffect(() => { getGauntletUpgradeState().then(setState) }, [])
+
+  // Flip an owned Run Upgrade on/off. Optimistic — the switch moves instantly,
+  // then the server-authoritative off-set is written back (and pushed to the
+  // parent so the next dive reads it). Reverts on error.
+  async function toggle(id: string, active: boolean) {
+    if (toggling) return
+    setToggling(id); setErr(null)
+    setState(s => (s ? { ...s, off: active ? s.off.filter(x => x !== id) : [...new Set([...s.off, id])] } : s))
+    vibrate([0, 18])
+    const res = await setGauntletUpgradeActive(id, active)
+    setToggling(null)
+    if ('error' in res) {
+      setErr(res.error)
+      const fresh = await getGauntletUpgradeState(); setState(fresh); onToggled?.(fresh.off)
+      return
+    }
+    setState(s => (s ? { ...s, off: res.off } : s))
+    onToggled?.(res.off)
+  }
 
   async function claim(id: string, special: boolean) {
     if (claiming) return
@@ -4760,13 +4791,59 @@ function LockerUpgradesModal({ section, onClose, onClaimed }: { section: 'run' |
               <span className="font-cinzel font-800" style={{ fontSize: '1.2rem', color: TEAL }}>{fmt(state.fathoms)}</span>
             </div>
 
-            {/* What you already own — name + what it does, so the loadout you've
-                built (and what each piece is doing for you) is readable, not just
-                a row of names. No price; a check marks it claimed. */}
-            {owned.length > 0 && (
+            {/* Your loadout. Run Upgrades render as a switchboard — each owned
+                perk carries an on/off toggle so a player can leave, say,
+                Veteran's Start out of the next dive without unlearning it. A
+                switched-off perk dims to grey and its effect is skipped. Ship &
+                Shore permanents aren't toggleable, so they stay simple claimed
+                cards. */}
+            {owned.length > 0 && section === 'run' ? (() => {
+              const activeCount = owned.filter(e => !state.off.includes(e.id)).length
+              return (
+              <div style={{ marginTop: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 3 }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#8a8480' }}>Your Run Perks</p>
+                  <p className="font-karla font-700" style={{ fontSize: '0.5rem', color: `${TEAL}cc` }}>{activeCount} of {owned.length} on</p>
+                </div>
+                <p className="font-karla" style={{ fontSize: '0.62rem', color: '#7a766e', lineHeight: 1.4, marginBottom: 9 }}>
+                  Switch any perk off to leave it out of your next dive. It stays yours — flip it back on any time.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {owned.map(e => {
+                    const on = !state.off.includes(e.id)
+                    const busyT = toggling === e.id
+                    return (
+                      <div key={e.id} style={{ position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', gap: 11, borderRadius: 12, padding: '0.6rem 0.75rem 0.6rem 0.95rem', background: on ? `${TEAL}0d` : 'rgba(255,255,255,0.03)', border: `1px solid ${on ? `${TEAL}33` : 'rgba(255,255,255,0.09)'}`, transition: 'background 0.15s, border-color 0.15s' }}>
+                        <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: on ? TEAL : '#57534e', transition: 'background 0.15s' }} />
+                        <div style={{ flex: 1, minWidth: 0, opacity: on ? 1 : 0.5, transition: 'opacity 0.15s' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                            <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: on ? '#eafffb' : '#c4bfb6', lineHeight: 1.15 }}>{e.name}</p>
+                            {!on && <span className="font-karla font-800 uppercase tracking-[0.12em]" style={{ fontSize: '0.44rem', color: '#8a8480', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 999, padding: '0.14rem 0.4rem' }}>Off</span>}
+                          </div>
+                          <p className="font-karla" style={{ fontSize: '0.68rem', color: on ? '#a7c4bd' : '#8a857c', lineHeight: 1.42, marginTop: 3 }}>{e.description}</p>
+                        </div>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={on}
+                          aria-label={`${e.name} — ${on ? 'on' : 'off'}`}
+                          disabled={busyT}
+                          onClick={() => toggle(e.id, !on)}
+                          className="tap"
+                          style={{ flexShrink: 0, alignSelf: 'center', width: 46, height: 27, borderRadius: 999, padding: 3, cursor: busyT ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: on ? 'flex-end' : 'flex-start', background: on ? `${TEAL}3a` : 'rgba(255,255,255,0.06)', border: `1px solid ${on ? `${TEAL}88` : 'rgba(255,255,255,0.16)'}`, transition: 'background 0.18s, border-color 0.18s', opacity: busyT ? 0.6 : 1 }}
+                        >
+                          <motion.span layout transition={{ type: 'spring', stiffness: 620, damping: 34 }} aria-hidden style={{ width: 19, height: 19, borderRadius: '50%', background: on ? TEAL : '#7a756c', boxShadow: '0 1px 3px rgba(0,0,0,0.45)' }} />
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+              )
+            })() : owned.length > 0 && (
               <div style={{ marginTop: 14 }}>
                 <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#8a8480', marginBottom: 7 }}>
-                  {section === 'run' ? `Active every dive · ${owned.length}` : `Owned · ${owned.length}`}
+                  {`Owned · ${owned.length}`}
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {owned.map(e => (

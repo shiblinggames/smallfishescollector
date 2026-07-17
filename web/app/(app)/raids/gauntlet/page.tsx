@@ -57,6 +57,7 @@ export default async function GauntletPage() {
           bonusChargeSlots={stats.bonusChargeSlots}
             manowarAugment={stats.manowarAugment}
           gauntletUpgrades={(profile?.gauntlet_upgrades as string[] | null) ?? []}
+          gauntletUpgradesOff={(profile?.gauntlet_upgrades_off as string[] | null) ?? []}
           confluencesSeen={(profile?.gauntlet_confluences_seen as string[] | null) ?? []}
           deepest={daily.deepest}
           deepestRun={daily.deepestRun}

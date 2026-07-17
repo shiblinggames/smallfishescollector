@@ -18,7 +18,7 @@ import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
 import { termPressure, pressureGemMult, pressureFeats, pressureSkinDropChance, resolveTerms, PRESSURE_SKIN_ID, getTerm, type SignedTerms } from '@/lib/gauntletTerms'
 import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
 import { GOLD_HULL_SKIN_ID, GOLD_HULL_CHEST_TIER, BLOOD_HULL_SKIN_ID, BLOOD_HULL_CHEST_TIER, BLOOD_CANNON_ITEM_ID, BLOOD_CANNON_CHEST_TIER, maxPotForDepth, chestForDepth, chestCannonDropChance, chestSkinDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_REWARD_DEPTH_CAP, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, gauntletXpForDepth, gauntletCrewXp, CONFLUENCES, hardcoreUnlocked, HARDCORE_LIVE, HARDCORE_UNLOCKS, HARDCORE_RUNS_PER_DAY, HC_FATHOMS_MULT, HC_SURVIVOR_XP_MULT, bloodGemsForDepth, coerceRunStats, chestOdds, type GauntletRunSnapshot, type GauntletRunState } from '@/lib/gauntlet'
-import { getGauntletUpgrade, isUpgradeComingSoon, gauntletHaulMult, gauntletXpMult, gauntletFathomsMult } from '@/lib/gauntletUpgrades'
+import { getGauntletUpgrade, isUpgradeComingSoon, isToggleableUpgrade, activeGauntletUpgrades, gauntletHaulMult, gauntletXpMult, gauntletFathomsMult } from '@/lib/gauntletUpgrades'
 import { DAVY_FORGE } from '@/lib/raidItems'
 import {
   rollOffer, offerCoinMult, offerFathomMult, offerChestMult,
@@ -79,23 +79,56 @@ function sanitizeRunSnapshot(snap: unknown, depth: number): GauntletRunSnapshot 
 
 /** State for the Locker Upgrades panel: the player's deepest run, Fathoms purse,
  *  and which upgrades they've already claimed. */
-export async function getGauntletUpgradeState(): Promise<{ deepest: number; fathoms: number; owned: string[]; hasAutoCatcher: boolean; hasAutoCaster: boolean }> {
+export async function getGauntletUpgradeState(): Promise<{ deepest: number; fathoms: number; owned: string[]; off: string[]; hasAutoCatcher: boolean; hasAutoCaster: boolean }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { deepest: 0, fathoms: 0, owned: [], hasAutoCatcher: false, hasAutoCaster: false }
+  if (!user) return { deepest: 0, fathoms: 0, owned: [], off: [], hasAutoCatcher: false, hasAutoCaster: false }
   const admin = createAdminClient()
   const { data } = await admin
     .from('profiles')
-    .select('gauntlet_deepest, gauntlet_fathoms, gauntlet_upgrades, has_auto_catcher, has_auto_caster')
+    .select('gauntlet_deepest, gauntlet_fathoms, gauntlet_upgrades, gauntlet_upgrades_off, has_auto_catcher, has_auto_caster')
     .eq('id', user.id)
     .single()
   return {
     deepest: (data?.gauntlet_deepest as number | null) ?? 0,
     fathoms: (data?.gauntlet_fathoms as number | null) ?? 0,
     owned: (data?.gauntlet_upgrades as string[] | null) ?? [],
+    off: (data?.gauntlet_upgrades_off as string[] | null) ?? [],
     hasAutoCatcher: data?.has_auto_catcher === true,
     hasAutoCaster: data?.has_auto_caster === true,
   }
+}
+
+/** Switch an owned Run Upgrade on or off. Only gauntlet-scope upgrades toggle
+ *  (Ship & Shore permanents are always on); an id you don't own is rejected.
+ *  The off-set is server-authoritative so a disabled upgrade truly contributes
+ *  nothing — run behavior AND cash-out multipliers both read it. Returns the
+ *  fresh off-set. */
+export async function setGauntletUpgradeActive(id: string, active: boolean): Promise<
+  { ok: true; off: string[] } | { error: string }
+> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not signed in.' }
+  if (!isToggleableUpgrade(id)) return { error: 'That upgrade can’t be switched off.' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('gauntlet_upgrades, gauntlet_upgrades_off')
+    .eq('id', user.id)
+    .single()
+  if (!profile) return { error: 'Profile not found.' }
+
+  const owned = (profile.gauntlet_upgrades as string[] | null) ?? []
+  if (!owned.includes(id)) return { error: 'You don’t own that upgrade.' }
+
+  const off = (profile.gauntlet_upgrades_off as string[] | null) ?? []
+  const nextOff = active ? off.filter(x => x !== id) : (off.includes(id) ? off : [...off, id])
+  // Keep the set clean: never store ids the player no longer owns / can't toggle.
+  const cleanOff = nextOff.filter(x => owned.includes(x) && isToggleableUpgrade(x))
+  await admin.from('profiles').update({ gauntlet_upgrades_off: cleanOff }).eq('id', user.id)
+  return { ok: true, off: cleanOff }
 }
 
 /** Claim a Locker Upgrade. Server-validates the depth gate, the Fathoms cost,
@@ -557,7 +590,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_run_open, gauntlet_deepest, gauntlet_last_run_at, gauntlet_best_depth, gauntlet_best_depth_ms, gauntlet_contest_depth, gauntlet_fathoms, gauntlet_fathoms_earned, gauntlet_runs_completed, gauntlet_upgrades, expedition_xp, doubloons, gems, ship_classes, nav_renown_alloc, raid_items, ship_skins, gauntlet_run_hardcore, gauntlet_hc_deepest, gauntlet_hc_best_depth, gauntlet_hc_best_depth_ms, blood_gems, blood_gems_earned, gauntlet_run_terms, gauntlet_hc_best_pressure, gauntlet_run_offer')
+    .select('gauntlet_run_open, gauntlet_deepest, gauntlet_last_run_at, gauntlet_best_depth, gauntlet_best_depth_ms, gauntlet_contest_depth, gauntlet_fathoms, gauntlet_fathoms_earned, gauntlet_runs_completed, gauntlet_upgrades, gauntlet_upgrades_off, expedition_xp, doubloons, gems, ship_classes, nav_renown_alloc, raid_items, ship_skins, gauntlet_run_hardcore, gauntlet_hc_deepest, gauntlet_hc_best_depth, gauntlet_hc_best_depth_ms, blood_gems, blood_gems_earned, gauntlet_run_terms, gauntlet_hc_best_pressure, gauntlet_run_offer')
     .eq('id', user.id)
     .single()
 
@@ -587,8 +620,13 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   const cleanPot = Math.max(0, Math.min(Math.floor(pot), maxPotForDepth(payDepth)))
   const chest = chestForDepth(payDepth)
 
-  // Run Upgrades (Locker, scope 'gauntlet') that sweeten the cash-out.
-  const upgrades   = (profile.gauntlet_upgrades as string[] | null) ?? []
+  // Run Upgrades (Locker, scope 'gauntlet') that sweeten the cash-out — minus
+  // any the player has switched off, so a disabled Salvager's Eye / Navigator's
+  // Log / Lucky Locker really pays nothing.
+  const upgrades   = activeGauntletUpgrades(
+    (profile.gauntlet_upgrades as string[] | null) ?? [],
+    (profile.gauntlet_upgrades_off as string[] | null) ?? [],
+  )
 
   // DAVY'S OFFER — honored only if he actually made one AND the player is banking at
   // the very depth he made it. Both come from the column WE wrote at the breather, so
@@ -840,7 +878,7 @@ export async function resolveGauntletDeath(rewardDepth: number, combatDepth: num
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_run_open, gauntlet_deepest, gauntlet_fathoms, gauntlet_fathoms_earned, gauntlet_runs_completed, gauntlet_deepest_died, gauntlet_upgrades, gauntlet_run_hardcore, gauntlet_hc_squad, gauntlet_hc_deepest_died')
+    .select('gauntlet_run_open, gauntlet_deepest, gauntlet_fathoms, gauntlet_fathoms_earned, gauntlet_runs_completed, gauntlet_deepest_died, gauntlet_upgrades, gauntlet_upgrades_off, gauntlet_run_hardcore, gauntlet_hc_squad, gauntlet_hc_deepest_died')
     .eq('id', user.id)
     .single()
 
@@ -853,7 +891,10 @@ export async function resolveGauntletDeath(rewardDepth: number, combatDepth: num
   // reward descending, not surviving (Lucky Locker boosts the payout). Veteran's
   // Start's head start is excluded here, same as on cash-out.
   const rd = Math.max(0, Math.min(MAX_GAUNTLET_DEPTH, Math.floor(rewardDepth)))
-  const earnedFathoms = Math.round(fathomsForDepth(rd) * gauntletFathomsMult((profile.gauntlet_upgrades as string[] | null) ?? []))
+  const earnedFathoms = Math.round(fathomsForDepth(rd) * gauntletFathomsMult(activeGauntletUpgrades(
+    (profile.gauntlet_upgrades as string[] | null) ?? [],
+    (profile.gauntlet_upgrades_off as string[] | null) ?? [],
+  )))
   const newFathoms = ((profile.gauntlet_fathoms as number | null) ?? 0) + earnedFathoms
 
   const cd = Math.max(rd, Math.min(MAX_GAUNTLET_DEPTH, Math.floor(combatDepth)))

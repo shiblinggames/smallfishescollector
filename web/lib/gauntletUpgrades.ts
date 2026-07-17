@@ -221,6 +221,28 @@ export function getGauntletUpgrade(id: string): GauntletUpgrade | null {
   return GAUNTLET_UPGRADES.find(u => u.id === id) ?? null
 }
 
+/** Run Upgrades (scope 'gauntlet') are the only upgrades a player can switch
+ *  off — they shape a dive, so opting out is a real playstyle choice (e.g.
+ *  starting from depth 1 instead of Veteran's Start). Ship & Shore permanents
+ *  are always on. One source of truth for the toggle UI + the server guard. */
+export function isToggleableUpgrade(id: string): boolean {
+  return getGauntletUpgrade(id)?.scope === 'gauntlet'
+}
+
+/** The owned upgrades that actually apply this dive: everything claimed, minus
+ *  the Run Upgrades the player has switched off. Effect helpers below all read
+ *  this list, so a disabled upgrade contributes nothing (start depth, combat
+ *  mods, cash-out multipliers) while staying purchased. Non-gauntlet ids can't
+ *  be in `off`, so Ship & Shore power is never filtered out. */
+export function activeGauntletUpgrades(
+  owned: string[] | null | undefined,
+  off: string[] | null | undefined,
+): string[] {
+  const disabled = off ?? []
+  if (disabled.length === 0) return owned ?? []
+  return (owned ?? []).filter(id => !disabled.includes(id))
+}
+
 /** Upgrade ids that are built but NOT live for players yet — surfaced in the
  *  shop with a Coming Soon lock (no price, can't buy) and rejected at claim
  *  time. One source of truth for the client card + the server guard. */
