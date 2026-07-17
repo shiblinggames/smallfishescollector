@@ -1702,7 +1702,7 @@ export const THE_THRONE: BossRaidConfig = {
       pattern: ['reload', 'fire', 'reload', 'reload', 'ultimate', 'dodge', 'reload', 'fire'],
       critChance: 0.12,
       zoneSpeedMult: 2.3,
-      image: '/raid8_theripper.png',
+      image: '/enemychapter4brigantine.png',
       portrait: '/raid8_theripper.png',
     },
     the_mirage: {
@@ -1715,7 +1715,7 @@ export const THE_THRONE: BossRaidConfig = {
       pattern: ['reload', 'special', 'fire', 'reload', 'dodge', 'fire', 'special', 'reload'],
       critChance: 0.12,
       zoneSpeedMult: 2.5,
-      image: '/raid8_therender.png',
+      image: '/enemychapter4brigantine.png',
       portrait: '/raid8_therender.png',
     },
     the_doorman: {
@@ -1728,7 +1728,7 @@ export const THE_THRONE: BossRaidConfig = {
       pattern: ['reload', 'special', 'reload', 'fire', 'volley', 'reload', 'special', 'fire'],
       critChance: 0.10,
       zoneSpeedMult: 2.2,
-      image: '/raid8_thegnash.png',
+      image: '/enemychapter4galleon.png',
       portrait: '/raid8_thegnash.png',
     },
     the_stormcaller: {
@@ -1741,7 +1741,7 @@ export const THE_THRONE: BossRaidConfig = {
       pattern: ['reload', 'special', 'fire', 'reload', 'fire', 'volley', 'dodge', 'reload'],
       critChance: 0.14,
       zoneSpeedMult: 2.6,
-      image: '/raid8_thegorge.png',
+      image: '/enemychapter4galleon.png',
       portrait: '/raid8_thegorge.png',
     },
     the_left_hand: {
@@ -1755,7 +1755,7 @@ export const THE_THRONE: BossRaidConfig = {
       pattern: ['reload', 'special', 'reload', 'reload', 'ultimate', 'fire', 'dodge', 'reload'],
       critChance: 0.14,
       zoneSpeedMult: 2.7,
-      image: '/raid8_thereaper.png',
+      image: '/enemychapter4galleon.png',
       portrait: '/raid8_thereaper.png',
     },
     the_consigliere: {
@@ -1769,7 +1769,7 @@ export const THE_THRONE: BossRaidConfig = {
       pattern: ['reload', 'special', 'reload', 'volley', 'reload', 'reload', 'ultimate', 'dodge'],
       critChance: 0.12,
       zoneSpeedMult: 2.5,
-      image: '/raid8_thewidowmaker.png',
+      image: '/enemychapter4man-o-war.png',
       portrait: '/raid8_thewidowmaker.png',
     },
     don_finleone: {
@@ -1862,7 +1862,7 @@ export const THE_THRONE: BossRaidConfig = {
           } },
       ],
       zoneSpeedMult: 2.4,
-      image: '/raid8_donfinleone.png',
+      image: '/enemychapter4man-o-war.png',
       portrait: '/raid8_donfinleone.png',
     },
   },
