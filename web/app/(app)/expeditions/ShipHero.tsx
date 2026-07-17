@@ -21,7 +21,7 @@ import { equipShipSkin, saveEquippedRaidItems, forgeRaidItem, learnForgeRecipe, 
 import UltimateBuildPanel from './UltimateBuildPanel'
 import SixthBerthPanel from './SixthBerthPanel'
 import { IconCrate } from '@/components/GameIcons'
-import { type ShipAugmentId } from '@/lib/shipAugments'
+import { getShipAugment, type ShipAugmentId } from '@/lib/shipAugments'
 import { bonusChargeSlots, hasForge } from '@/lib/gauntletUpgrades'
 import PopupShell from '@/components/PopupShell'
 import { assignToVoyage, benchCrew } from '@/app/(app)/crew/actions'
@@ -534,6 +534,9 @@ export default function ShipHero({
   const [upgradeOpen, setUpgradeOpen] = useState(false)
   // Captain's-class detail popup — the owned tier ids of the tapped class line.
   const [classDetail, setClassDetail] = useState<ShipClassId[] | null>(null)
+  // Ultimate Weapon Manage modal — the build/swap/retool controls + the looping
+  // preview animation live here instead of stacked inline on the Ship tab.
+  const [ultimateOpen, setUltimateOpen] = useState(false)
   const [upgradeBusy, setUpgradeBusy] = useState(false)
   const [upgradeError, setUpgradeError] = useState<string | null>(null)
   // Tappable Nav-level info modal — shows captain bonuses, XP to next level,
@@ -1654,21 +1657,30 @@ export default function ShipHero({
                       </div>
                     )}
 
-                    {/* ── Ultimate Weapon ── the end-of-Chapter-3 build. Appears
-                        once the Quartermaster's plans are yours; the panel owns
-                        the requirements checklist, previews, and 24h build clock. */}
-                    {showUltimate && (
-                      <UltimateBuildPanel
-                        shipTier={shipTierForSlots}
-                        navLevel={navLevelNow}
-                        hasRack={hasRack}
-                        chapter3Cleared={chapter3Cleared}
-                        doubloons={doubloons}
-                        activeId={initialManowarAugment}
-                        build={manowarBuild}
-                        schematics={manowarSchematics}
-                      />
-                    )}
+                    {/* ── Ultimate Weapon ── compact status row. The looping
+                        preview animation + the full build/swap/retool/schematics
+                        controls now live in the Manage modal, so the tab stays a
+                        calm one-line status instead of a wall. */}
+                    {showUltimate && (() => {
+                      const activeAug = initialManowarAugment ? getShipAugment(initialManowarAugment) : null
+                      const buildAug  = manowarBuild ? getShipAugment(manowarBuild.id) : null
+                      const accent    = buildAug?.color ?? activeAug?.color ?? '#f0c040'
+                      const statusLabel = buildAug ? (manowarBuild?.retool ? 'Retooling' : 'Forging') : activeAug ? 'Armed' : 'Ready to build'
+                      const statusText  = buildAug ? buildAug.name : activeAug ? activeAug.name : 'Man-o-War capstone weapon'
+                      return (
+                        <button type="button" onClick={() => setUltimateOpen(true)}
+                          style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', width: '100%', textAlign: 'left', background: `${accent}12`, border: `1px solid ${accent}45`, borderRadius: 14, padding: '0.85rem 0.9rem', marginBottom: '1.7rem', cursor: 'pointer' }}>
+                          <span style={{ flexShrink: 0, width: 40, height: 40, borderRadius: 10, background: `${accent}20`, border: `1px solid ${accent}55`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+                          </span>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: accent }}>Ultimate Weapon · {statusLabel}</p>
+                            <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0ede8', lineHeight: 1.1 }}>{statusText}</p>
+                          </div>
+                          <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.56rem', color: accent, flexShrink: 0 }}>Manage ›</span>
+                        </button>
+                      )
+                    })()}
 
                     {/* ── The Sixth Berth ── a Man-o-War crew slot (5 → 6),
                         revealed once Sal Brackwater (Raid 7) falls. */}
@@ -2202,6 +2214,33 @@ export default function ShipHero({
             onClose={() => { setKitOpen(false); setKitErr(null) }}
           />
         </motion.div>
+      </PopupShell>
+
+      {/* Ultimate Weapon — Manage modal. Holds the full build/swap/retool/
+          schematics controls AND the looping preview animation, moved off the
+          Ship tab so the tab is just a status row. */}
+      <PopupShell open={ultimateOpen} onClose={() => setUltimateOpen(false)}>
+        {ultimateOpen && showUltimate && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 4 }}
+            transition={{ duration: 0.18 }}
+            style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 440, background: 'rgba(8,14,24,0.98)', borderRadius: 18, padding: '0.85rem 0.8rem 1rem', maxHeight: '88vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', boxShadow: '0 0 34px rgba(240,192,64,0.14)' }}
+          >
+            <button onClick={() => setUltimateOpen(false)} aria-label="Close" style={{ position: 'absolute', top: 6, right: 8, zIndex: 6, color: 'rgba(255,255,255,0.55)', fontSize: '1.2rem', lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem 0.4rem' }}>✕</button>
+            <UltimateBuildPanel
+              shipTier={shipTierForSlots}
+              navLevel={navLevelNow}
+              hasRack={hasRack}
+              chapter3Cleared={chapter3Cleared}
+              doubloons={doubloons}
+              activeId={initialManowarAugment}
+              build={manowarBuild}
+              schematics={manowarSchematics}
+            />
+          </motion.div>
+        )}
       </PopupShell>
 
       {/* Captain's-class detail — the tiers you own in this line + their combined
