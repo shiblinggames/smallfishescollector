@@ -72,7 +72,7 @@ import { type AffixDef } from '@/lib/raidAffixes'
 import { getShipClass, aggregateShipClasses } from '@/lib/shipClasses'
 import { vibrate } from '@/lib/haptics'
 import CharacterAvatar from '@/components/CharacterAvatar'
-import { IconShield, IconFog, IconSwords, IconBurst, IconAnchor, IconCrate, IconSkull, IconBolt, IconFlame } from '@/components/GameIcons'
+import { IconShield, IconFog, IconSwords, IconBurst, IconAnchor, IconCrate, IconSkull, IconBolt, IconFlame, IconStar } from '@/components/GameIcons'
 
 type ShotResult = 'miss' | 'graze' | 'hit' | 'critical'
 type SubPhase   = 'await_input' | 'aiming' | 'revealing' | 'resolving' | 'flares' | 'done'
@@ -5614,66 +5614,30 @@ export default function RaidCombat({
               <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#ffffff', lineHeight: 1, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {enemy.name}
               </p>
-              {/* Has-ability tell — small inline indicator instead of a full
-                  row pill. The full ability details live in the enemy stats
-                  popup (tap the nameplate to open it). Each themed ability
-                  shows its own glyph: shield for Carapace-style mitigation,
-                  fog cloud for Mist Veil. Both can coexist if a future
-                  enemy carries multiple traits. */}
-              {(enemy.damageReduction ?? 0) > 0 && (
-                <span
-                  aria-label={`Has ability: ${enemy.abilityName ?? 'special defense'}`}
-                  style={{ fontSize: '0.72rem', lineHeight: 1, flexShrink: 0, color: '#7dd3fc', filter: 'drop-shadow(0 0 4px rgba(125,211,252,0.55))' }}
-                >
-                  <IconShield size={11} />
-                </span>
-              )}
-              {(enemy.aimFogDensity ?? 0) > 0 && (
-                <span
-                  aria-label={`Has ability: ${enemy.aimFogName ?? 'Mist Veil'}`}
-                  style={{ fontSize: '0.72rem', lineHeight: 1, flexShrink: 0, color: '#b8c8dc', filter: 'drop-shadow(0 0 4px rgba(180,200,220,0.55))' }}
-                >
-                  <IconFog size={11} />
-                </span>
-              )}
-              {(enemy.critDrift ?? 0) > 0 && (
-                <span
-                  aria-label={`Has ability: ${enemy.critDriftName ?? 'Rolling Plate'}`}
-                  style={{ lineHeight: 1, flexShrink: 0, color: '#f0c040', filter: 'drop-shadow(0 0 4px rgba(240,192,64,0.5))', display: 'flex' }}
-                >
-                  {/* two-way seam arrows — the crit band slides */}
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                    <path d="M8 7l-5 5 5 5M16 7l5 5-5 5" />
-                  </svg>
-                </span>
-              )}
-              {/* Shark's Bite / Special / Ultimate tells — same glyph + accent as
-                  each one's card in the stats popup, so a raid-7/8 enemy reads its
-                  kit on the nameplate just like a Carapace enemy does. */}
-              {(enemy.chargeBiteChance ?? 0) > 0 && (
-                <span
-                  aria-label="Has ability: Shark's Bite"
-                  style={{ lineHeight: 1, flexShrink: 0, color: '#f0715e', filter: 'drop-shadow(0 0 4px rgba(240,113,94,0.5))', display: 'flex' }}
-                >
-                  <IconSkull size={11} />
-                </span>
-              )}
-              {enemy.special && (
-                <span
-                  aria-label={`Has ability: ${enemy.special.name}`}
-                  style={{ lineHeight: 1, flexShrink: 0, color: '#a78bfa', filter: 'drop-shadow(0 0 4px rgba(167,139,250,0.55))', display: 'flex' }}
-                >
-                  <IconBolt size={11} />
-                </span>
-              )}
-              {enemy.ultimate && (
-                <span
-                  aria-label={`Has ability: ${enemy.ultimate.name}`}
-                  style={{ lineHeight: 1, flexShrink: 0, color: '#fbbf24', filter: 'drop-shadow(0 0 4px rgba(251,191,36,0.5))', display: 'flex' }}
-                >
-                  <IconFlame size={11} />
-                </span>
-              )}
+              {/* Has-abilities tell — ONE inline glyph whenever the enemy carries
+                  any themed ability (Carapace, Mist Veil, Rolling Plate, Shark's
+                  Bite, a Special or an Ultimate). A single marker scales no matter
+                  how many an enemy stacks; the full spelled-out breakdown lives in
+                  the stats popup (tap the nameplate). aria-label names each one so
+                  screen readers still get the specifics. */}
+              {(() => {
+                const tells: string[] = []
+                if ((enemy.damageReduction ?? 0) > 0)  tells.push(enemy.abilityName ?? 'special defense')
+                if ((enemy.aimFogDensity ?? 0) > 0)    tells.push(enemy.aimFogName ?? 'Mist Veil')
+                if ((enemy.critDrift ?? 0) > 0)        tells.push(enemy.critDriftName ?? 'Rolling Plate')
+                if ((enemy.chargeBiteChance ?? 0) > 0) tells.push("Shark's Bite")
+                if (enemy.special)  tells.push(enemy.special.name)
+                if (enemy.ultimate) tells.push(enemy.ultimate.name)
+                if (tells.length === 0) return null
+                return (
+                  <span
+                    aria-label={`Has ${tells.length > 1 ? 'abilities' : 'ability'}: ${tells.join(', ')}`}
+                    style={{ lineHeight: 1, flexShrink: 0, color: '#f0c040', filter: 'drop-shadow(0 0 4px rgba(240,192,64,0.5))', display: 'flex' }}
+                  >
+                    <IconStar size={11} />
+                  </span>
+                )
+              })()}
               {isBoss && enemyPhase !== 2 && (
                 <span className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', color: '#fbbf24', letterSpacing: '0.1em' }}>BOSS</span>
               )}
