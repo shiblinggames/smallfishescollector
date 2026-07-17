@@ -3314,6 +3314,7 @@ export default function RaidCombat({
       let riposteDmgOut: number | undefined
       let enemyHealOut: number | undefined
       let lifestealHealedOut = 0
+      let lifestealLabel = ''   // which source drank the wound (boon vs Blood Cannon)
       let thermalBurstOut = 0    // Thermal Shock confluence: shatter burst this hit
       let shieldAbsorbedOut = 0  // Enemy barrier soak on the player's shot this step
       let carapaceSoaked = false
@@ -3852,7 +3853,20 @@ export default function RaidCombat({
             const before = pHp
             pHp = Math.min(healCap, pHp + healed)
             lifestealHealedOut = pHp - before
-            if (lifestealHealedOut > 0) onStat?.({ dmgHealed: lifestealHealedOut })
+            if (lifestealHealedOut > 0) {
+              onStat?.({ dmgHealed: lifestealHealedOut })
+              // Attribute the heal to its ACTUAL source(s). Lifesteal comes from
+              // the Leviathan's Hunger boon (tide.lifestealPct) AND/OR Davy's Blood
+              // Cannon lineage (lifesteal_pct item) — the log used to always credit
+              // the boon, so the Blood Cannon read as "Leviathan's Hunger".
+              const fromBoon = tide.lifestealPct > 0
+              if (fromBoon && itemLifesteal > 0) lifestealLabel = 'The wound drinks back'
+              else if (fromBoon) lifestealLabel = "Leviathan's Hunger drinks the wound"
+              else {
+                const lsId = liveItems.find(id => getActiveEffects([id]).some(e => e.type === 'lifesteal_pct'))
+                lifestealLabel = `${(lsId && getRaidItem(lsId)?.name) || "Davy's Blood Cannon"} drinks the wound`
+              }
+            }
           }
           // Executioner (boon): the moment a hit drops the enemy to <= X% HP,
           // it's sunk outright (only when it actually landed + isn't already dead).
@@ -4060,7 +4074,7 @@ export default function RaidCombat({
           }
           // Leviathan's Hunger heal line — pushed here so it follows the shot
           // it fed on, not before it.
-          if (lifestealHealedOut > 0) stepLines.push(`Leviathan's Hunger drinks the wound — +${lifestealHealedOut} HP.`)
+          if (lifestealHealedOut > 0) stepLines.push(`${lifestealLabel || "Leviathan's Hunger drinks the wound"} — +${lifestealHealedOut} HP.`)
         } else {
           // Hull plating (raid items) + crew survivability effects (Bulwark
           // cuts, Soft Shell adds) both scale incoming damage here.
