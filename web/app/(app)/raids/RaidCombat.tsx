@@ -72,7 +72,7 @@ import { type AffixDef } from '@/lib/raidAffixes'
 import { getShipClass, aggregateShipClasses } from '@/lib/shipClasses'
 import { vibrate } from '@/lib/haptics'
 import CharacterAvatar from '@/components/CharacterAvatar'
-import { IconShield, IconFog, IconSwords, IconBurst, IconAnchor, IconCrate, IconSkull } from '@/components/GameIcons'
+import { IconShield, IconFog, IconSwords, IconBurst, IconAnchor, IconCrate, IconSkull, IconBolt, IconFlame } from '@/components/GameIcons'
 
 type ShotResult = 'miss' | 'graze' | 'hit' | 'critical'
 type SubPhase   = 'await_input' | 'aiming' | 'revealing' | 'resolving' | 'flares' | 'done'
@@ -233,20 +233,40 @@ function enemyBehaviorHint(enemy: BroadsideEnemy): string {
   // three of them early in a long cycle and would miss a ratio-only test).
   if (dodgeR >= 0.25 || c.dodge >= 3) parts.push('Slippery, and weaves aside often.')
 
-  // The two tells nothing else in the popup shows. Naming them is a capability
-  // reveal, not a timing one — combat announces both with a line anyway.
-  if (c.ultimate > 0) {
-    parts.push(enemy.ultimate
-      ? `Fills its whole battery, then empties it in one blow (${enemy.ultimate.name}).`
-      : 'Fills its whole battery, then empties it in one blow.')
-  }
-  if (c.special > 0) {
-    parts.push(enemy.special
-      ? `Casts ${enemy.special.name} when it gets the chance.`
-      : 'Casts a special when it gets the chance.')
-  }
+  // NOTE: special + ultimate are NOT summarized here anymore — they each get
+  // their own spelled-out ability card in the popup (enemySpecialDesc /
+  // enemyUltimateDesc below), so a vague sentence here would just double them.
 
   return parts.join(' ')
+}
+
+/** Plain-English description of an enemy SPECIAL for the stats popup. Raid-8
+ *  aim-bar attacks (aimAttack set) describe the aim interference; everything
+ *  else reads its status/magnitude/turns into a sentence. Falls back to the
+ *  enemy's own flavor line for any status we don't have copy for. */
+function enemySpecialDesc(s: NonNullable<BroadsideEnemy['special']>): string {
+  const turns  = s.turns ?? 2
+  const passes = s.aimPasses ?? 2
+  const pct = (m: number) => Math.round((m ?? 0) * 100)
+  if (s.aimAttack === 'decoys')   return `Throws false gold across your aim bar for your next ${passes} shots. Lock a decoy band and the shot misfires — only the true mark scores.`
+  if (s.aimAttack === 'hardened') return `Plates your aim lock for your next ${passes} shots, so it takes two taps to lock a shot instead of one.`
+  if (s.aimAttack === 'squall')   return `Gusts your aim needle mid-sweep for your next ${passes} shots, dragging the mark off line as you aim.`
+  const mag = s.magnitude ?? 0
+  switch (s.status) {
+    case 'fortify': return `Braces behind its own plating, taking ${pct(mag)}% less damage for ${turns} turns. Wait out the braced window, or burst straight through it.`
+    case 'slowed':  return `Fouls your rudder: -${mag} speed for ${turns} turns, so you lose turn-order rolls and slip fewer shots.`
+    case 'weaken':  return `Files down your guns: your shots deal ${pct(mag)}% less damage for ${turns} turns.`
+    case 'feeble':  return `Splits your seams: you take ${pct(mag)}% more damage for ${turns} turns.`
+    case 'regen':   return `Closes its own wounds, healing ${mag} HP a turn for ${turns} turns. Punish it with fast, heavy hits, not a slow trade.`
+    case 'silence': return `Silences your crew, locking their abilities for ${turns} turns.`
+    default:        return s.line
+  }
+}
+
+/** Plain-English description of an enemy ULTIMATE (raid-8). It spends a full
+ *  magazine for one authored, non-crit blow scaled by `mult`. */
+function enemyUltimateDesc(u: NonNullable<BroadsideEnemy['ultimate']>): string {
+  return `At a full magazine it spends every cannonball at once for one massive blow, about ${u.mult}x a normal shot. The pips glow full as the tell — burn its charges down, brace, or shield before it fires.`
 }
 
 function rollShotDamage(res: ShotResult, shipMinDamage: number, totalPower: number, damagePct = 0): number {
@@ -7396,6 +7416,78 @@ function EnemyStatsPopup({
                 </p>
                 <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.68)', lineHeight: 1.35 }}>
                   When a shot lands on you, {Math.round((enemy.chargeBiteChance ?? 0) * 100)}% of the time it also tears a loaded cannonball off your rack. Dodging, bracing, or soaking it fully on shield spares the shot; a reload puts the cannonball back.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Special — the enemy's signature status / aim-bar move (enemy.special).
+            Violet accent. Covers raid-7 status debuffs (fortify/slow/weaken/
+            feeble/regen/silence) and raid-8 aim-bar attacks (decoys/hardened/
+            squall), each spelled out by enemySpecialDesc. */}
+        {enemy.special && (
+          <div style={{ marginBottom: 14 }}>
+            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.66rem', color: '#a78bfa', letterSpacing: '0.16em', marginBottom: 6 }}>
+              Special
+            </p>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '0.65rem 0.75rem',
+              background: 'rgba(167,139,250,0.06)',
+              border: '1px solid rgba(167,139,250,0.24)',
+              borderRadius: 12,
+            }}>
+              <div style={{
+                width: 36, height: 36, flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'rgba(167,139,250,0.1)',
+                border: '1px solid rgba(167,139,250,0.32)',
+                borderRadius: 9,
+              }}>
+                <span style={{ fontSize: '1.1rem', color: '#a78bfa', display: 'flex' }} aria-hidden><IconBolt size={18} /></span>
+              </div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <p className="font-karla font-700" style={{ fontSize: '0.85rem', color: '#a78bfa', lineHeight: 1.15, marginBottom: 2 }}>
+                  {enemy.special.name}
+                </p>
+                <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.68)', lineHeight: 1.35 }}>
+                  {enemySpecialDesc(enemy.special)}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Ultimate — raid-8 full-magazine blow (enemy.ultimate). Amber, tied to
+            the "full glowing pips" charged-battery tell. */}
+        {enemy.ultimate && (
+          <div style={{ marginBottom: 14 }}>
+            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.66rem', color: '#fbbf24', letterSpacing: '0.16em', marginBottom: 6 }}>
+              Ultimate
+            </p>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '0.65rem 0.75rem',
+              background: 'rgba(251,191,36,0.06)',
+              border: '1px solid rgba(251,191,36,0.24)',
+              borderRadius: 12,
+            }}>
+              <div style={{
+                width: 36, height: 36, flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'rgba(251,191,36,0.1)',
+                border: '1px solid rgba(251,191,36,0.32)',
+                borderRadius: 9,
+              }}>
+                <span style={{ fontSize: '1.1rem', color: '#fbbf24', display: 'flex' }} aria-hidden><IconFlame size={18} /></span>
+              </div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <p className="font-karla font-700" style={{ fontSize: '0.85rem', color: '#fbbf24', lineHeight: 1.15, marginBottom: 2 }}>
+                  {enemy.ultimate.name}
+                </p>
+                <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.68)', lineHeight: 1.35 }}>
+                  {enemyUltimateDesc(enemy.ultimate)}
                 </p>
               </div>
             </div>
