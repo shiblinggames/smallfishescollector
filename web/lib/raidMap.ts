@@ -619,7 +619,7 @@ export const RAID_CHAPTERS: RaidChapter[] = [
     // UNDER CONSTRUCTION (all nodes adminOnly) — full locked chain:
     // throne_heading → the_reclamation → Cargo Shuffle puzzle → Raid 7
     // (Sal Brackwater) → crooked_ledger → Tumbler Lock puzzle → Raid 8
-    // (Don Finleone) → dons_fall → chapter_4_augment.
+    // (Don Finleone) → chapter_4_close (Between Watches) → chapter_4_augment.
     // lastNodeId GROWS as nodes are built; final = chapter_4_augment.
     lastNodeId: 'chapter_4_augment',
   },
@@ -2290,69 +2290,48 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    id: 'dons_fall',    type: 'story',
-    label: "The Don's Fall",
-    flavor: 'The megalodon goes down trailing a century of drowned debts. The Finndicate is finished, the biggest name in the sea drowned in its own black water. And then, out past the wreck, something you never expected rises to watch.',
-    bridge: 'The don is drowned and the family with him. It should be the end of it. Out past the wreck, at the lip of the true deep, something that was never in his court says otherwise.',
+    // Chapter IV FINALE — one seamless post-Don beat (merged from the old
+    // dons_fall + Between Watches so there's no back-to-back story node). The
+    // Don sinks, the ONE deniable Finn silhouette rises and is gone, Mira pivots
+    // the room from unease to victory, then the full six-hander denouement +
+    // the "crew is whole, grog is cold" refrain. The silhouette is the ONLY Finn
+    // hook in Ch4; everything before it read Don-as-endgame. Gates the augment.
+    id: 'chapter_4_close',
+    type: 'story',
+    label: 'Between Watches',
+    flavor: "The don's court on the seabed and a whole crew on the deck that put it there. But before the grog is even cold, something out past the wreck rises to watch — and is gone before you can be sure it was there.",
+    bridge: "One tide ends. The Finndicate is drowned, the crew is whole, and whatever watched from the deep can wait for morning.",
     requiresNode: 'the_throne',
     adminOnly: true,
     image: '/raidlog.png',
+    sceneAccent: '#a78bfa',
     scene: [
       { text: 'The megalodon sinks the way an empire does. Slowly, and then all at once.' },
       { text: 'The court scatters, the colors strike, and a hundred years of drowned debts settle to the bottom with their collector.' },
       { text: 'The Finndicate is finished. The biggest name in the sea, drowned in its own black water. By every account, this is the end of it.', pause: 500 },
-      { text: "You pour what's left of the don's wine. There is a second glass at the table before you reach the bottle. You did not pour it.", pause: 400 },
-      { ...GUIDE.mira, text: 'Relax, captain. If I were here for you, we would not be talking.' },
-      { ...GUIDE.mira, text: 'You just drowned the one name this whole sea was afraid to say aloud. Marks like that come once in a life. Savor it.' },
-      { text: 'She lifts her glass to the wreck, to the drowned throne, to a hunt well ended.' },
-      { text: 'Then her glass stops halfway.', pause: 400 },
-      { text: "Out past the wreck, where the don's water spills over the edge into the true deep, the black surface stirs. Something is out there watching the ruin you made. Something that was never once in the don's court.", pause: 700 },
+      { text: "Then, out past the wreck, where the don's water spills over into the true deep, the black surface stirs. Something is out there watching the ruin you made. Something that was never once in the don's court.", pause: 700 },
       { text: 'It rises just enough to throw a shape against the dark: a figure, rod-straight and easy, a stance you would almost swear you had seen before, on sunnier water, over a far shorter line.', pause: 400, fx: 'flash', insert: { kind: 'finn-silhouette' } },
       { text: 'The don was the biggest name in the sea. He was not your last fight.', pause: 900, closeup: true },
-      { text: 'The shape holds a moment, taking its own unhurried look at the wreck, and at you. Then the deep folds over it, and it is gone before you can be sure it was there at all.' },
-      { ...GUIDE.mira, text: 'Captain. Tell me you saw that too.' },
-    ],
-    sceneAccent: '#a78bfa',
-    detail: {
-      description:
-        "Don Finleone is drowned and the Finndicate broken with him — the biggest name in the sea, answered for at last. By every account it should be the end. But out past the wreck, at the lip of the true deep, a figure that was never once in the don's court rises just long enough to watch, then sinks. The don was the biggest name in the sea. He was not your last fight.",
-      drops: [
-        { emoji: '📜', label: "Captain's Logbook, Fragment XIV", sublabel: '"The don is drowned. And something out past the wreck rose to watch. He was not the last fight."', rarity: 'epic' },
-      ],
-      dropsNote: 'The don falls — and something out past the wreck rises to watch.',
-      ctaLabel: 'Settle the Court →',
-      summary: "Don Finleone is drowned and the Finndicate broken — the biggest name in the sea, answered for. And then, out past the wreck at the lip of the true deep, a figure that was never in his court rises just long enough to watch: the don was not your last fight.",
-    },
-  },
-  {
-    // Chapter IV closer — "Between Watches", the FULL company (all six). The
-    // campaign's current emotional climax: the Finndicate is down, and the whole
-    // crew sits with the F still open. Grows out of the crooked_ledger / dons_fall
-    // F beats but is the DENOUEMENT, not a re-analysis — warmth, then the hook.
-    id: 'chapter_4_close',
-    type: 'story',
-    label: 'Between Watches',
-    flavor: "The Finndicate on the seabed and a whole crew on the deck that put it there. Before anything else, they take the longest watch of all together.",
-    bridge: "One tide ends. The Finndicate is on the seabed, the crew is whole, and for one night there is nothing ahead to point at.",
-    requiresNode: 'dons_fall',
-    adminOnly: true,
-    image: '/raidlog.png',
-    sceneAccent: '#a78bfa',
-    scene: [
-      { text: "The don's court settles to the seabed, and for the first time in four chapters, there is nothing left ahead to point at." },
+      { text: 'Then the deep folds over it, and it is gone before you can be sure it was ever there at all.' },
+      { ...GUIDE.mira, text: 'Captain. Tell me you saw that too. ...No. Not tonight. Tonight the biggest name in the sea is on the bottom, and that was us.' },
+      { text: 'The court settles to the seabed, and for the first time in four chapters, there is nothing ahead to point at. So the crew takes the longest watch of all — together.', pause: 500 },
       { ...GUIDE.doby, text: "I have sailed this sea longer than any of you have drawn breath, and I never once believed I would see the Finndicate on the bottom. Well done, small fry." },
       { ...GUIDE.kat, text: "Do not let him fool you, captain. He is crying. Whales do that." },
       { ...GUIDE.mako, text: "The biggest bounty in the sea, collected, and I got to be there for it. I could get used to this crew." },
-      { ...GUIDE.dole, text: "Four chapters, one drowned empire, and a debt the whole sea owed finally paid in full. I have run sums my whole life. That is the finest one I ever balanced." },
+      { ...GUIDE.dole, text: "Four chapters, one drowned empire, and a debt the whole sea owed finally paid in full. The finest sum I ever balanced." },
       { ...GUIDE.laz, text: "The drowned can rest now. All the captains the don fed to this water. That is worth more than any coin in his vault." },
       { ...GUIDE.mira, text: "Six of us, one impossible mark, and a captain with no sense of self-preservation. I have never had better odds in my life." },
-      { text: "Tonight the crew is whole, the grog is cold, and the whole sea knows your name. The next tide can wait for morning.", pause: 600 },
+      { text: "Tonight the crew is whole, the grog is cold, and the whole sea knows your name. Whatever waited out past the wreck can wait for morning.", pause: 600 },
     ],
     detail: {
       description:
-        "The Finndicate is on the seabed and all six of you are on the deck that put it there. Before the next heading, the longest watch: Doby proud to tears, Kat mocking him for it, Mako hungry for the next mark, Dole savoring the finest sum he ever balanced, Laz at peace for the drowned who can finally rest, and Mira counting the odds she loves. One tide ends. Tonight, the crew is whole.",
+        "Don Finleone is drowned and the Finndicate broken with him — the biggest name in the sea, answered for. And then, out past the wreck at the lip of the true deep, a figure that was never in the don's court rises just long enough to watch, then sinks: he was not your last fight. But that is tomorrow's tide. Tonight all six of you take the longest watch together, and for once the crew is whole.",
+      drops: [
+        { emoji: '📜', label: "Captain's Logbook, Fragment XIV", sublabel: '"The don is drowned, and that was us. Something out past the wreck rose to watch. Tomorrow. Tonight the crew is whole."', rarity: 'epic' },
+      ],
+      dropsNote: 'The don falls, something out past the wreck rises to watch — and the crew takes the longest watch together.',
       ctaLabel: 'Rest a While →',
-      summary: "The Finndicate drowned with its don, and the whole crew took the longest watch together. Four chapters, one empire, answered for. Tonight the crew is whole, the grog is cold, and the whole sea knows your name.",
+      summary: "Don Finleone is drowned and the Finndicate broken — the biggest name in the sea, answered for. A figure that was never in his court rises past the wreck to watch, then sinks: he was not your last fight. But that is tomorrow. Tonight the whole crew takes the longest watch together, and the whole sea knows your name.",
     },
   },
   {
