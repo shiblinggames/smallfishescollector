@@ -1702,8 +1702,8 @@ export const THE_THRONE: BossRaidConfig = {
       pattern: ['reload', 'fire', 'reload', 'reload', 'ultimate', 'dodge', 'reload', 'fire'],
       critChance: 0.12,
       zoneSpeedMult: 2.3,
-      image: '/enemychapter4brigantine.png',
-      portrait: '/enemychapter4brigantine.png',
+      image: '/raid8_theripper.png',
+      portrait: '/raid8_theripper.png',
     },
     the_mirage: {
       // DECOYS debut — False Court paints fake gold across your aim bar.
@@ -1715,8 +1715,8 @@ export const THE_THRONE: BossRaidConfig = {
       pattern: ['reload', 'special', 'fire', 'reload', 'dodge', 'fire', 'special', 'reload'],
       critChance: 0.12,
       zoneSpeedMult: 2.5,
-      image: '/enemychapter4brigantine.png',
-      portrait: '/enemychapter4brigantine.png',
+      image: '/raid8_therender.png',
+      portrait: '/raid8_therender.png',
     },
     the_doorman: {
       // HARDENED LOCK debut — Iron Etiquette plates your lock: the first tap
@@ -1728,8 +1728,8 @@ export const THE_THRONE: BossRaidConfig = {
       pattern: ['reload', 'special', 'reload', 'fire', 'volley', 'reload', 'special', 'fire'],
       critChance: 0.10,
       zoneSpeedMult: 2.2,
-      image: '/enemychapter4galleon.png',
-      portrait: '/enemychapter4galleon.png',
+      image: '/raid8_thegnash.png',
+      portrait: '/raid8_thegnash.png',
     },
     the_stormcaller: {
       // SQUALL debut — Kingmaker's Gale gusts your needle fast-slow mid-sweep.
@@ -1741,8 +1741,8 @@ export const THE_THRONE: BossRaidConfig = {
       pattern: ['reload', 'special', 'fire', 'reload', 'fire', 'volley', 'dodge', 'reload'],
       critChance: 0.14,
       zoneSpeedMult: 2.6,
-      image: '/enemychapter4galleon.png',
-      portrait: '/enemychapter4galleon.png',
+      image: '/raid8_thegorge.png',
+      portrait: '/raid8_thegorge.png',
     },
     the_left_hand: {
       // The don's silencer, now with the ultimate stacked on top — Omertà
@@ -1755,8 +1755,8 @@ export const THE_THRONE: BossRaidConfig = {
       pattern: ['reload', 'special', 'reload', 'reload', 'ultimate', 'fire', 'dodge', 'reload'],
       critChance: 0.14,
       zoneSpeedMult: 2.7,
-      image: '/enemychapter4galleon.png',
-      portrait: '/enemychapter4galleon.png',
+      image: '/raid8_thereaper.png',
+      portrait: '/raid8_thereaper.png',
     },
     the_consigliere: {
       // The last counsel before the throne — marks you for the don (Feeble)
@@ -1769,8 +1769,8 @@ export const THE_THRONE: BossRaidConfig = {
       pattern: ['reload', 'special', 'reload', 'volley', 'reload', 'reload', 'ultimate', 'dodge'],
       critChance: 0.12,
       zoneSpeedMult: 2.5,
-      image: '/enemychapter4man-o-war.png',
-      portrait: '/enemychapter4man-o-war.png',
+      image: '/raid8_thewidowmaker.png',
+      portrait: '/raid8_thewidowmaker.png',
     },
     don_finleone: {
       // DON FINLEONE — the fake-final boss. Phase 1: the don at his table,
@@ -1862,8 +1862,8 @@ export const THE_THRONE: BossRaidConfig = {
           } },
       ],
       zoneSpeedMult: 2.4,
-      image: '/enemychapter4man-o-war.png',
-      portrait: '/enemychapter4man-o-war.png',
+      image: '/raid8_donfinleone.png',
+      portrait: '/raid8_donfinleone.png',
     },
   },
   sequence: ['court_herald', 'the_mirage', 'the_doorman', 'the_stormcaller', 'the_left_hand', 'the_consigliere'],
