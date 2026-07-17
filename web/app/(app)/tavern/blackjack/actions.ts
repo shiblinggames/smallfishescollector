@@ -10,7 +10,7 @@ import {
 } from '@/lib/blackjack'
 import { BJ_MIN_BET, BJ_MAX_BET, denDailyCap } from '../constants'
 import { isPremiumActive } from '@/lib/premium'
-import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
+import { grantBadgeDirect } from '@/lib/badgeGrant'
 
 // ── Server-side state shape (lives in blackjack_hands.state JSONB) ──
 
@@ -311,8 +311,8 @@ async function finalizeSettlement(
   void reason
 
   // Badge hooks (best-effort): 5-win streak and the dealer's back-to-back naturals.
-  if (newWinStreak >= 5) { try { await unlockBadge('unstoppable') } catch { /* best-effort */ } }
-  if (newDealerBjStreak >= 2) { try { await unlockBadge('stacked_deck') } catch { /* best-effort */ } }
+  if (newWinStreak >= 5) { try { await grantBadgeDirect(userId, 'unstoppable') } catch { /* best-effort */ } }
+  if (newDealerBjStreak >= 2) { try { await grantBadgeDirect(userId, 'stacked_deck') } catch { /* best-effort */ } }
 
   const [dailyWagered, dailyCap] = await Promise.all([getDailyBuyInTotal(userId), getDenCap(userId)])
   const currentDoubloons = (profile?.doubloons as number | null) ?? 0

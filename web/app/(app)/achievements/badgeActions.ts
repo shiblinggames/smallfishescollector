@@ -110,8 +110,25 @@ export async function getUnlockedBadges(): Promise<string[]> {
   return (profile?.unlocked_badges as string[] | null) ?? []
 }
 
+// Badges the CLIENT is allowed to unlock directly. These are raid combat-feat
+// trophies earned mid-fight (client-side combat, so the server can't re-derive
+// them) — they carry small rewards. EVERY other badge is granted only by a
+// trusted server hook via grantBadgeDirect, so a crafted `unlockBadge('zone_legend')`
+// call can no longer forge a high-value badge and then claim its doubloon reward.
+// Keep this in sync with the unlockBadge() calls in RaidGame.tsx (the only client
+// caller).
+const CLIENT_GRANTABLE_BADGES = new Set<string>([
+  'corsairs_bane', 'ghost_ship',          // challenge-mode boss clears
+  'all_hands_legends', 'iron_ruse', 'tight_quarters', 'dead_reckoning', // raid feats
+  'not_a_shot_fired',
+])
+
 export async function unlockBadge(badgeId: string): Promise<{ ok: true } | { error: string }> {
   if (!BADGE_MAP[badgeId]) return { error: 'Unknown badge' }
+  // Only the client-earned raid feat badges may be unlocked via this HTTP-
+  // reachable action. Server-side milestones grant their badges through
+  // grantBadgeDirect (lib/badgeGrant), which this endpoint deliberately can't reach.
+  if (!CLIENT_GRANTABLE_BADGES.has(badgeId)) return { error: 'Not eligible' }
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

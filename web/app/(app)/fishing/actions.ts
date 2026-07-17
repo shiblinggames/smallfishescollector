@@ -6,7 +6,7 @@ import { getBait } from '@/lib/bait'
 import { getRod, getEffectiveRod, COMPLETIONIST_TIER, COMPLETIONIST_MAX_EFFECTS, REFORGE_COST, rodHasUniqueEffect, jackpotChanceForZone } from '@/lib/rods'
 import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
 import { rewardsOwed, type LevelReward } from '@/lib/levelRewards'
-import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
+import { grantBadgeDirect } from '@/lib/badgeGrant'
 import { recordChallengeScore } from '@/app/(app)/social/challengeActions'
 import { catchXP, getLevelFromXP } from '@/lib/fishingLevel'
 import { fishingRenownEffects, type RenownAlloc } from '@/lib/renown'
@@ -536,8 +536,8 @@ export async function reelIn(
     }
     if (isNewTrophy) updates.ancient_catches = [...existing, fishId]
     const newTrophies = isNewTrophy ? [...existing, fishId] : existing
-    if (newTrophies.length >= 6) await unlockBadge('ancient_ones')
-    if (aStreak >= 10) await unlockBadge('unbroken')
+    if (newTrophies.length >= 6) await grantBadgeDirect(user.id, 'ancient_ones')
+    if (aStreak >= 10) await grantBadgeDirect(user.id, 'unbroken')
     // Perfected Sigil pays out on ancient perfects too — same gate
     // (equipped + perfect) as the regular catch path, same streak-scaling
     // formula (+10 ⟡ × min(streak, 3)). See sigilBonus below for the
@@ -699,7 +699,7 @@ export async function reelIn(
     if (newLineTier > (profile?.line_tier ?? 0)) {
       await admin.from('profiles').update({ line_tier: newLineTier }).eq('id', user.id)
     }
-    if (unique >= (totalCount ?? Infinity)) await unlockBadge('full_collection')
+    if (unique >= (totalCount ?? Infinity)) await grantBadgeDirect(user.id, 'full_collection')
   }
 
   // Track abyss streak for achievements
@@ -770,8 +770,8 @@ export async function reelIn(
       reelInUnlockedSkin = toAdd[toAdd.length - 1]
     }
   }
-  if (oldFishingLevel < 100 && newFishingLevel >= 100) await unlockBadge('master_angler')
-  if (newPerfectStreak >= 10) await unlockBadge('unbroken')
+  if (oldFishingLevel < 100 && newFishingLevel >= 100) await grantBadgeDirect(user.id, 'master_angler')
+  if (newPerfectStreak >= 10) await grantBadgeDirect(user.id, 'unbroken')
 
   const [, baitFetchResult] = await Promise.all([
     admin.from('profiles').update(profileUpdates).eq('id', user.id),
@@ -821,7 +821,7 @@ export async function reelIn(
     // Also tick the lifetime Trophy-SIZE counter (feeds the Trophy Hunter badge;
     // distinct from ancient_catches, which is the 6 Ancient Deep giants).
     if (sizeTier === 'trophy') {
-      try { await unlockBadge('trophy_catch') } catch { /* best-effort */ }
+      try { await grantBadgeDirect(user.id, 'trophy_catch') } catch { /* best-effort */ }
       void admin.rpc('bump_profile_stat', { uid: user.id, col: 'trophy_size_catches', n: 1 }).then(() => {}, () => {})
     }
 
@@ -1298,7 +1298,7 @@ export async function sellFish(
     admin.from('doubloon_transactions').insert({
       user_id: user.id, amount: earned, reason: 'Sold fish (quick-sell)',
     }),
-    ...(newDoubloons >= 1_000_000 ? [unlockBadge('deep_pockets')] : []),
+    ...(newDoubloons >= 1_000_000 ? [grantBadgeDirect(user.id, 'deep_pockets')] : []),
   ])
 
   return { earned, doubloons: newDoubloons }
@@ -1360,7 +1360,7 @@ export async function quickSellAllFish(): Promise<
     admin.from('doubloon_transactions').insert({
       user_id: user.id, amount: totalEarned, reason: `Sold ${totalFishSold} fish (quick-sell)`,
     }),
-    ...(newDoubloons >= 1_000_000 ? [unlockBadge('deep_pockets')] : []),
+    ...(newDoubloons >= 1_000_000 ? [grantBadgeDirect(user.id, 'deep_pockets')] : []),
   ])
 
   return { earned: totalEarned, fishSold: totalFishSold, doubloons: newDoubloons }
@@ -1538,8 +1538,8 @@ export async function prestigeZone(zone: string): Promise<{ prestigeLevel: numbe
   await Promise.all([
     admin.from('fish_collection').delete().eq('user_id', user.id).in('fish_id', zoneIds),
     admin.from('profiles').update(profileUpdate).eq('id', user.id),
-    unlockBadge('prestige_i'),
-    ...(allZonesPrestiged ? [unlockBadge('zone_legend')] : []),
+    grantBadgeDirect(user.id, 'prestige_i'),
+    ...(allZonesPrestiged ? [grantBadgeDirect(user.id, 'zone_legend')] : []),
   ])
 
   return { prestigeLevel: newLevel, unlockedSkinId: prestigeUnlockedSkin }

@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
-import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
+import { grantBadgeDirect } from '@/lib/badgeGrant'
 import { SLOT_SYMBOLS_LIST, SLOT_PAYOUTS, SLOT_PAIR_PAYOUTS, SLOTS_MIN_BET, SLOTS_MAX_BET, SLOTS_JACKPOT_FEED_PCT } from './constants'
 import type { SlotSymbolId } from './constants'
 
@@ -253,7 +253,7 @@ export async function spinSlots(wager: number): Promise<SlotSpinResult | { error
   ])
 
   // Catfish Jackpot badge — winning the global pot (natural or via a bonus roll).
-  if (jackpotWin && jackpotWin > 0) { try { await unlockBadge('catfish_jackpot') } catch { /* best-effort */ } }
+  if (jackpotWin && jackpotWin > 0) { try { await grantBadgeDirect(user.id, 'catfish_jackpot') } catch { /* best-effort */ } }
 
   revalidatePath('/tavern/slots')
   return { reels, outcome, payout, net, newChips, sessionNet: newSessionNet, sessionBuyIns: newSessionBuyIns, matchedSymbol, pot, jackpotWin, bonus }

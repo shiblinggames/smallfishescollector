@@ -10,7 +10,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
+import { grantBadgeDirect } from '@/lib/badgeGrant'
 import { getThisWeeksLadder, type GeneratedRung } from './generate'
 import {
   PIRATE_KING_PRIZES,
@@ -149,8 +149,8 @@ export async function answerKingRung(
   }
 
   // Badge hooks (best-effort): the crown, and the rung-7 stepping stone.
-  if (status === 'crowned') { try { await unlockBadge('crowned') } catch { /* best-effort */ } }
-  if (newRung >= 7) { try { await unlockBadge('throne_in_sight') } catch { /* best-effort */ } }
+  if (status === 'crowned') { try { await grantBadgeDirect(user.id, 'crowned') } catch { /* best-effort */ } }
+  if (newRung >= 7) { try { await grantBadgeDirect(user.id, 'throne_in_sight') } catch { /* best-effort */ } }
 
   return {
     correct,

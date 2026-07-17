@@ -11,7 +11,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
+import { grantBadgeDirect } from '@/lib/badgeGrant'
 import { isPremiumActive } from '@/lib/premium'
 import { getThisWeeksBoard, type GeneratedTile } from './generate'
 import {
@@ -247,7 +247,7 @@ export async function answerCaptainsTile(
 
   // Clean Sweep badge (best-effort): every card on the board answered correctly.
   if (correct && board.every(t => newAnswers[triviaTileKey(t.category, t.tier)]?.correct === true)) {
-    try { await unlockBadge('clean_sweep') } catch { /* best-effort */ }
+    try { await grantBadgeDirect(user.id, 'clean_sweep') } catch { /* best-effort */ }
   }
 
   return {

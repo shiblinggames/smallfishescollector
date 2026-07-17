@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
 import { classSlotBonuses } from '@/lib/shipClasses'
-import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
+import { grantBadgeDirect } from '@/lib/badgeGrant'
 import { generateVoyageEvents, type VoyageEvent, type VoyageRoute } from '@/lib/voyageEvents'
 import { ROUTE_CONFIGS, COMING_SOON_ROUTES } from '@/lib/voyageRoutes'
 import { generateAndSaveVoyageLog, type VoyageCrewMember } from '@/lib/captains-log'
@@ -303,7 +303,7 @@ export async function revealVoyageResults(voyageId: number): Promise<
   // equip — see updateCharacterColor).
   let unlockedSkinId: string | undefined
   if (newExpeditionLevel >= 50) {
-    await unlockBadge('navigator')
+    await grantBadgeDirect(user.id, 'navigator')
     const currentUnlocked = (profile.unlocked_character_colors as string[] | null) ?? []
     if (!currentUnlocked.includes('sky')) {
       profileUpdate.unlocked_character_colors = [...currentUnlocked, 'sky']
@@ -316,7 +316,7 @@ export async function revealVoyageResults(voyageId: number): Promise<
     .select('*', { count: 'exact', head: true })
     .eq('user_id', user.id)
     .eq('status', 'revealed')
-  if ((completedVoyages ?? 0) + 1 >= 100) await unlockBadge('fleet_admiral')
+  if ((completedVoyages ?? 0) + 1 >= 100) await grantBadgeDirect(user.id, 'fleet_admiral')
 
   // Crew XP: surviving crew earn the player's full voyage XP payout. Lost
   // crew earn nothing (the soft-delete that follows will skip them anyway
