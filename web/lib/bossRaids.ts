@@ -136,6 +136,12 @@ export interface BossMechanicCheck {
     | { kind: 'damagePctMaxHp';    value: number }   // hit for value × player max HP (can wipe)
     | { kind: 'enemyHealPctMaxHp'; value: number }   // boss heals value × its own max HP
     | { kind: 'burnDot'; pctPerTurn: number; turns: number }  // sets you ablaze: pctPerTurn × maxHP per turn for `turns`; any crew heal clears it (can wipe if ignored)
+    // Ch4 status pipeline: a lingering PLAYER debuff (feeble = +dmg taken, weaken =
+    // −dmg dealt, slowed = −turn-order/dodge), with an optional instant chip of
+    // damage. A less instantly-lethal, more TEXTURED fail than a flat one-shot;
+    // a Mender cleanse can lift it. Magnitude follows the status: feeble/weaken =
+    // fraction (0.3 = 30%), slowed = flat speed points.
+    | { kind: 'status'; status: 'weaken' | 'feeble' | 'slowed'; magnitude: number; turns: number; dmgPct?: number }
 }
 
 export interface BroadsideEnemy {
@@ -1786,7 +1792,7 @@ export const THE_THRONE: BossRaidConfig = {
         responses: ['brace', 'shield', 'snare', 'heal', 'burst'],
         counteredLine: 'Your crew answers first, and the court’s opening volley scatters wide.',
         failLine: 'Nobody stands with you, and the whole court fires as one.',
-        consequence: { kind: 'damagePctMaxHp', value: 0.45 },
+        consequence: { kind: 'damagePctMaxHp', value: 0.42 },
       },
       phases: [
         { revivePct: 0.72, damageMult: 1.25, badge: 'The Mask Drops',
@@ -1798,8 +1804,8 @@ export const THE_THRONE: BossRaidConfig = {
             hint: 'A bite that wide can’t be weaved. Call another of your crew — ANY ability answers, so long as someone acts.',
             responses: ['brace', 'shield', 'snare', 'heal', 'burst'],
             counteredLine: 'Your crew throws the maw off its line and it grinds iron instead of deck.',
-            failLine: 'The maw takes your ship the way a purse takes a coin.',
-            consequence: { kind: 'damagePctMaxHp', value: 0.52 },
+            failLine: 'The maw closes on your hull and something structural gives. Every blow after this one finds the gap.',
+            consequence: { kind: 'status', status: 'feeble', magnitude: 0.32, turns: 3, dmgPct: 0.22 },
           } },
         { revivePct: 0.60, damageMult: 1.35, badge: 'Blood in the Water',
           pattern: ['fire', 'special', 'reload', 'fire', 'reload', 'ultimate', 'volley', 'dodge'],
@@ -1810,8 +1816,8 @@ export const THE_THRONE: BossRaidConfig = {
             hint: 'A wound this loud only draws him back. Put a crew ability on it — ANY one — before he follows the trail in.',
             responses: ['brace', 'shield', 'snare', 'heal', 'burst'],
             counteredLine: 'Your crew answers the wound and the blood-trail goes cold; he loses the scent.',
-            failLine: 'He follows the blood straight in and takes the gash wider.',
-            consequence: { kind: 'damagePctMaxHp', value: 0.55 },
+            failLine: 'He follows the blood straight in, tears the gash wider, and the wound feeds him.',
+            consequence: { kind: 'enemyHealPctMaxHp', value: 0.15 },
           } },
         { revivePct: 0.50, damageMult: 1.45, badge: 'The Sounding',
           pattern: ['special', 'fire', 'reload', 'reload', 'ultimate', 'fire', 'volley', 'dodge'],
@@ -1822,8 +1828,8 @@ export const THE_THRONE: BossRaidConfig = {
             hint: 'You can’t block a falling mountain. A crew ability has to break the dive itself — ANY of them, but someone has to act NOW.',
             responses: ['brace', 'shield', 'snare', 'heal', 'burst'],
             counteredLine: 'The dive breaks — he breaches early, wide, and the wave takes the blow for you.',
-            failLine: 'The sea goes still. Then it goes UP.',
-            consequence: { kind: 'damagePctMaxHp', value: 0.60 },
+            failLine: 'The sea goes still. Then it goes UP, and the breach leaves your ship reeling and slow to answer.',
+            consequence: { kind: 'status', status: 'slowed', magnitude: 8, turns: 3, dmgPct: 0.30 },
           } },
         { revivePct: 0.42, damageMult: 1.55, badge: 'The Undertow',
           pattern: ['special', 'fire', 'fire', 'reload', 'reload', 'ultimate', 'volley', 'reload'],
@@ -1834,8 +1840,8 @@ export const THE_THRONE: BossRaidConfig = {
             hint: 'No single cover holds against a barrage this wide. Call another crew ability — ANY one — before the wall lands.',
             responses: ['brace', 'shield', 'snare', 'heal', 'burst'],
             counteredLine: 'The barrage breaks on your crew’s answer in a wall of spray.',
-            failLine: 'The court empties every gun into you at once.',
-            consequence: { kind: 'damagePctMaxHp', value: 0.62 },
+            failLine: 'The undertow drags your broadside off true, and the court’s iron rakes you while your guns swing wild.',
+            consequence: { kind: 'status', status: 'weaken', magnitude: 0.30, turns: 3, dmgPct: 0.24 },
           } },
         { revivePct: 0.34, damageMult: 1.70, badge: 'The Last Bite',
           pattern: ['fire', 'special', 'reload', 'ultimate', 'fire', 'reload', 'volley', 'dodge'],
@@ -1847,7 +1853,7 @@ export const THE_THRONE: BossRaidConfig = {
             responses: ['brace', 'shield', 'snare', 'heal', 'burst'],
             counteredLine: 'Your crew fires straight down his throat and the last bite dies in the water.',
             failLine: 'The last bite comes down, and the deep finally closes over you.',
-            consequence: { kind: 'damagePctMaxHp', value: 0.78 },
+            consequence: { kind: 'damagePctMaxHp', value: 0.70 },
           } },
       ],
       zoneSpeedMult: 2.4,

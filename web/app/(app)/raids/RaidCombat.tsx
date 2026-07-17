@@ -1397,9 +1397,19 @@ export default function RaidCombat({
     pendingCheckRef.current = null
     setPendingCheck(null)
     // Failed the check — the consequence lands, and the log/flash is LOUD about it.
-    setResolveLog(prev => [...prev, `${chk.name} lands — you did not stop the Quartermaster. ${chk.failLine}`])
+    setResolveLog(prev => [...prev, `${chk.name} lands — no one answered the ${enemy.name}. ${chk.failLine}`])
     setCheckResultFlash({ ok: false, label: `${chk.name} hits!`, key: Date.now() })
     setTimeout(() => setCheckResultFlash(cf => (cf && !cf.ok ? null : cf)), 1700)
+    // Status fail — a lingering Ch4 debuff on the player (+ an optional damage
+    // chip, which falls through to the shared wipe/revive path below).
+    let statusChipDmg = 0
+    if (chk.consequence.kind === 'status') {
+      const c = chk.consequence
+      applyPlayerStatus(c.status, c.magnitude, c.turns)
+      setResolveLog(prev => [...prev, `${STATUS_DEFS[c.status].name} takes hold — your ship ${STATUS_DEFS[c.status].describe(c.magnitude)} for ${c.turns} turns.`])
+      if (!c.dmgPct) return
+      statusChipDmg = Math.max(1, Math.round(playerHpMax * c.dmgPct))
+    }
     if (chk.consequence.kind === 'enemyHealPctMaxHp') {
       const heal = Math.max(1, Math.round(enemyHpMaxRef.current * chk.consequence.value))
       const nHp = Math.min(enemyHpMaxRef.current, enemyHpRef.current + heal)
@@ -1419,8 +1429,8 @@ export default function RaidCombat({
       setResolveLog(prev => [...prev, `Your hull catches — it burns for ${turns} turns unless a crew heal puts the fire out.`])
       return
     }
-    // damagePctMaxHp — a big hit that can wipe (the whole point of a one-shot).
-    const dmg = Math.max(1, Math.round(playerHpMax * chk.consequence.value))
+    // damagePctMaxHp (or a status's damage chip) — a hit that can wipe.
+    const dmg = chk.consequence.kind === 'status' ? statusChipDmg : Math.max(1, Math.round(playerHpMax * chk.consequence.value))
     const newHp = playerHpRef.current - dmg
     setPlayerShakeKey(k => k + 1)
     setPlayerImpact({ key: Date.now(), kind: 'volley' })
@@ -6993,6 +7003,8 @@ function EnemyStatsPopup({
       ? `hits you for ${Math.round(c.value * 100)}% of your max hull`
       : c.kind === 'burnDot'
       ? `sets you ablaze — ${Math.round(c.pctPerTurn * 100)}% of your hull per turn for ${c.turns} turns unless a heal puts it out`
+      : c.kind === 'status'
+      ? `leaves you ${c.status === 'feeble' ? 'exposed (you take more damage)' : c.status === 'weaken' ? 'weakened (you deal less)' : 'slowed'} for ${c.turns} turns${c.dmgPct ? `, and clips you for ${Math.round(c.dmgPct * 100)}%` : ''}`
       : `the boss heals ${Math.round(c.value * 100)}% of its HP`
 
   if (typeof document === 'undefined') return null
