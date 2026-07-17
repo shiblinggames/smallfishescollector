@@ -85,6 +85,7 @@ export const ITEM_GRANTS: Record<string, { doubloons?: number; gems?: number; sh
   admirals_eye:            { raidItem: 'admirals_eye' },
   chain_shot:              { raidItem: 'chain_shot' },
   brackwater_rack:           { raidItem: 'brackwater_rack' },
+  court_fang:              { raidItem: 'court_fang' },
   dons_signet:             { raidItem: 'dons_signet' },
   war_drum:                { raidItem: 'war_drum' },
   // The six either/or Cache items. They had NO grants until now because the Cache

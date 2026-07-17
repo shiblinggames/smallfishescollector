@@ -15,6 +15,7 @@ export type RaidEffectType =
   | 'ramp_damage_per_turn'  // value = extra damage fraction PER TURN elapsed this fight (resets each enemy). turn 1 = +0, turn 2 = +value, …
   | 'dodge_pierce_chance'   // value = 0-1 chance, when the ENEMY would dodge your shot, to land it anyway ("see through the feint"). Only fires vs a would-be dodge, so naturally infrequent.
   | 'crit_upgrade_chance'   // value = 0-1 chance for a normal HIT to upgrade to a CRITICAL. Stacks with the Keen Cutlass crew effect + any tide crit bonus.
+  | 'crit_strip_charge'     // value = 0-1 chance, on a player CRITICAL hit, to tear one loaded cannonball off the ENEMY's magazine. Mirror of the Raid-8 sharks' bite. The enemy's pickEnemyAction degrades gracefully (a shot it can no longer afford becomes a reload + re-attempt), so stripping just delays its fire/volley/ULTIMATE — never soft-locks it.
   | 'reload_charge_chance'  // value = 0-1 chance, on each RELOAD, to load a SECOND cannonball (catch the wind). Folds on top of any tide reload proc.
   | 'lifesteal_pct'         // value = 0-1 fraction of the damage you deal that heals your hull (Davy's Blood Cannon). Stacks additively with the Leviathan's Hunger boon's lifesteal.
   // ── THE RACK — one roll, several rounds ───────────────────────────────────
@@ -278,16 +279,34 @@ export const RAID_ITEMS: RaidItemDef[] = [
     family: 'chainshot',
   },
   {
+    // Raid-8 signature EPIC: the players' answer to the sharks' bite, turned
+    // back on the court. A crit tears a loaded cannonball off the enemy — enough
+    // to knock an Ultimate off full or downgrade a volley. Shares the 'court_bite'
+    // family with the Signet so the two never stack (the Signet supersedes).
+    id: 'court_fang',
+    name: "The Court's Fang",
+    description: 'A tooth pried from one of the don’s court. On a CRITICAL hit, 50% chance to tear a loaded cannonball clean off the enemy’s rack, delaying its next shot.',
+    image: null,
+    emoji: '🦈',
+    rarity: 'epic',
+    effects: [
+      { type: 'crit_strip_charge', value: 0.5 },
+    ],
+    source: 'The Throne — Don Finleone',
+    family: 'court_bite',
+  },
+  {
     id: 'dons_signet',
     name: "The Don's Signet",
-    description: 'The ring every captain in the Finndicate answered to. +15% damage on boss rounds — thrones fall hardest to those who wear the crown-maker.',
+    description: 'The ring every captain in the Finndicate answered to — and every gun in his court. On a CRITICAL hit, the command turns against them: you tear a loaded cannonball off the enemy’s rack every time, delaying its next shot.',
     image: null,  // TODO: /donssignet.png at the art pass
     emoji: '💍',
     rarity: 'legendary',
     effects: [
-      { type: 'boss_damage_mult', value: 1.15 },
+      { type: 'crit_strip_charge', value: 1.0 },
     ],
     source: 'The Throne — Don Finleone',
+    family: 'court_bite',
   },
   // ── Davy Jones Gauntlet chest cannons ──────────────────────────────────────
   // Two rare chest-only drops + the forged combination. Odds climb up the

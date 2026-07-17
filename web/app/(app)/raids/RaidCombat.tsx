@@ -3319,6 +3319,7 @@ export default function RaidCombat({
       let splatText = ''
       let splatColor = '#ef4444'
       let enemyCrit = false
+      let playerCritShot = false   // this step is a player CRITICAL (for crit_strip_charge items)
       let procStatus: 'burn' | 'freeze' | undefined
       let reflectDmgOut: number | undefined
       let riposteDmgOut: number | undefined
@@ -3517,6 +3518,7 @@ export default function RaidCombat({
           // crit mult; hit + graze multiply by the non-crit mult. Skipped
           // entirely on a miss (rollShotDamage already returns 0).
           const isCritShot = lockedAimResult === 'critical'
+          playerCritShot = isCritShot
           const aimItemMult = isCritShot
             ? getActiveEffects(liveItems).filter(e => e.type === 'crit_damage_mult').reduce((a, e) => a * e.value, 1)
             : getActiveEffects(liveItems).filter(e => e.type === 'noncrit_damage_mult').reduce((a, e) => a * e.value, 1)
@@ -3846,6 +3848,21 @@ export default function RaidCombat({
           shieldAbsorbedOut = preShield - enemyShieldRef.current
           eHp = Math.max(0, eHp - toHull)
           if (dmg > 0) onPlayerHit?.(dmg)
+          // ── CRIT STRIP (The Court's Fang / The Don's Signet) ──────────────
+          // The raid-8 mirror of the sharks' bite, aimed the other way: a landed
+          // player CRITICAL can tear a loaded cannonball off the enemy's rack,
+          // delaying its next fire/volley/ULTIMATE. pickEnemyAction degrades a
+          // now-unaffordable shot to a reload + re-attempt, so this never
+          // soft-locks the enemy — it just loses tempo.
+          if (playerCritShot && dmg > 0 && eHp > 0 && eCharges > 0) {
+            const stripChance = getActiveEffects(liveItems)
+              .filter(e => e.type === 'crit_strip_charge')
+              .reduce((a, e) => Math.max(a, e.value), 0)
+            if (stripChance > 0 && Math.random() < stripChance) {
+              eCharges = Math.max(0, eCharges - 1)
+              stepLines.push(`Your critical shot rips a loaded cannonball off the ${enemy.name}'s deck.`)
+            }
+          }
           // Telemetry: a landed player shot (fire/volley/mega). dmg is the blow
           // the hitsplat shows; highestHit takes the max host-side.
           onStat?.({ shots: 1, volleys: action === 'volley' ? 1 : 0, crits: lockedAimResult === 'critical' ? 1 : 0, dmgDealt: dmg, highestHit: dmg })
