@@ -5039,8 +5039,13 @@ export default function RaidCombat({
               pointerEvents: 'none',
             }} />
             <div aria-hidden style={{
-              position: 'absolute', inset: 0,
-              background: 'linear-gradient(180deg, rgba(4,8,14,0.30) 0%, rgba(4,8,14,0.10) 34%, rgba(4,8,14,0.40) 70%, rgba(3,5,10,0.80) 100%)',
+              // MONOTONIC top→bottom darkening. An earlier scrim lightened to a
+              // bright window mid-stage then darkened again; on a dark backdrop
+              // (the Gauntlet abyss) those two transitions read as hard edges —
+              // a lit "box" around the enemy ship and a dark box-top above the
+              // player card. A smooth, always-increasing ramp has no bands: sky
+              // stays visible up top, the water eases down, cards keep contrast.
+              background: 'linear-gradient(180deg, rgba(4,8,14,0.16) 0%, rgba(4,8,14,0.16) 20%, rgba(4,8,14,0.26) 46%, rgba(4,8,14,0.42) 72%, rgba(3,5,10,0.72) 100%)',
               pointerEvents: 'none',
             }} />
           </>
