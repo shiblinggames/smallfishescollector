@@ -2342,7 +2342,7 @@ export const RAID_MAP: RaidNode[] = [
     detail: {
       description:
         "The don's own court, and every hull in it fights with a new kind of dirty. Watch their cannonball pips: a FULL, glowing battery means an ULTIMATE is primed — burn their charges down, shield, or brace before it empties into you. And their specials strike your AIM BAR itself: false gold you must not lock, plated locks that take two taps, squalls that gust your needle mid-sweep. Don Finleone waits at the center — and what rises when his mask drops is nothing the family ever put on a ledger.",
-      enemies: ['The Court Herald', 'The Mirage', 'The Doorman', 'The Stormcaller', 'The Left Hand', 'The Consigliere', 'Don Finleone'],
+      enemies: ['The Ripper', 'The Render', 'The Gnash', 'The Gorge', 'The Reaper', 'The Widowmaker', 'Don Finleone'],
       drops: lootDrops(THE_THRONE.loot),
       clearReward: clearPayout(THE_THRONE),
       dropsNote: "One crate per clear, rolled once and scaled by your Fortune. The Don's Signet is the signature chase — the ring the whole Finndicate answered to. Two stronger Tide events between fights.",
@@ -2361,7 +2361,7 @@ export const RAID_MAP: RaidNode[] = [
     detail: {
       description:
         'The Throne again, meaner in every seat. Thicker barriers, heavier ultimates, the same aim-bar tricks with less patience between them — and the don rises twice as angry. The chase rewards roll richer.',
-      enemies: ['The Court Herald', 'The Mirage', 'The Doorman', 'The Stormcaller', 'The Left Hand', 'The Consigliere', 'Don Finleone'],
+      enemies: ['The Ripper', 'The Render', 'The Gnash', 'The Gorge', 'The Reaper', 'The Widowmaker', 'Don Finleone'],
       drops: lootDrops(THE_THRONE_CHALLENGE.loot),
       clearReward: clearPayout(THE_THRONE_CHALLENGE),
       dropsNote: 'Every kill pays more and the clear bonus is steeper than the normal run.',

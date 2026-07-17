@@ -1695,7 +1695,7 @@ export const THE_THRONE: BossRaidConfig = {
     court_herald: {
       // The ULTIMATE teacher: light hull, no special — just the new tell.
       // Watch the pips fill to four and glow, then answer it or eat it.
-      id: 'court_herald', name: 'The Court Herald', hpBase: 340, minDmg: 22, maxDmg: 36,
+      id: 'court_herald', name: 'The Ripper', hpBase: 340, minDmg: 22, maxDmg: 36,
       shipSpeed: 8, actionMs: 3400,
       magazineSize: 4, shieldPct: 0.15, chargeBiteChance: 0.35,
       ultimate: { name: 'Broadside Royale', mult: 2.4, line: 'Every gun on the deck speaks at once, in the don’s name.' },
@@ -1708,7 +1708,7 @@ export const THE_THRONE: BossRaidConfig = {
     the_mirage: {
       // DECOYS debut — False Court paints fake gold across your aim bar.
       // Crimson bands dud the shot; find the real lane before you lock.
-      id: 'the_mirage', name: 'The Mirage', hpBase: 380, minDmg: 24, maxDmg: 38,
+      id: 'the_mirage', name: 'The Render', hpBase: 380, minDmg: 24, maxDmg: 38,
       shipSpeed: 10, actionMs: 3400,
       magazineSize: 4, shieldPct: 0.18, chargeBiteChance: 0.35,
       special: { name: 'False Court', aimAttack: 'decoys', aimPasses: 2, line: 'Lantern-rigs bloom down her rail — a court of false colors, and only one throne among them.' },
@@ -1721,7 +1721,7 @@ export const THE_THRONE: BossRaidConfig = {
     the_doorman: {
       // HARDENED LOCK debut — Iron Etiquette plates your lock: the first tap
       // only cracks it, the second lands. The heavy door you knock on twice.
-      id: 'the_doorman', name: 'The Doorman', hpBase: 420, minDmg: 24, maxDmg: 40,
+      id: 'the_doorman', name: 'The Gnash', hpBase: 420, minDmg: 24, maxDmg: 40,
       shipSpeed: 5, actionMs: 4200,
       magazineSize: 4, shieldPct: 0.24, chargeBiteChance: 0.35,
       special: { name: 'Iron Etiquette', aimAttack: 'hardened', aimPasses: 2, line: 'Iron shutters slam over every line you’d take — nobody reaches the don in one knock.' },
@@ -1734,7 +1734,7 @@ export const THE_THRONE: BossRaidConfig = {
     the_stormcaller: {
       // SQUALL debut — Kingmaker's Gale gusts your needle fast-slow mid-sweep.
       // Timing by rhythm fails; watch the needle itself.
-      id: 'the_stormcaller', name: 'The Stormcaller', hpBase: 440, minDmg: 26, maxDmg: 40,
+      id: 'the_stormcaller', name: 'The Gorge', hpBase: 440, minDmg: 26, maxDmg: 40,
       shipSpeed: 9, actionMs: 3600,
       magazineSize: 4, shieldPct: 0.20, chargeBiteChance: 0.35,
       special: { name: 'Kingmaker’s Gale', aimAttack: 'squall', aimPasses: 2, line: 'She whistles a wind out of dead water, and your gun-deck pitches with it.' },
@@ -1747,7 +1747,7 @@ export const THE_THRONE: BossRaidConfig = {
     the_left_hand: {
       // The don's silencer, now with the ultimate stacked on top — Omertà
       // locks your crew out of the answer while the battery builds.
-      id: 'the_left_hand', name: 'The Left Hand', hpBase: 480, minDmg: 26, maxDmg: 42,
+      id: 'the_left_hand', name: 'The Reaper', hpBase: 480, minDmg: 26, maxDmg: 42,
       shipSpeed: 8, actionMs: 3800,
       magazineSize: 4, shieldPct: 0.24, chargeBiteChance: 0.35,
       special: { name: 'Omertà', status: 'silence', magnitude: 1, turns: 2, target: 'player', line: 'The left hand draws a line across his throat, and your crew’s shouts die in the wind.' },
@@ -1761,7 +1761,7 @@ export const THE_THRONE: BossRaidConfig = {
     the_consigliere: {
       // The last counsel before the throne — marks you for the don (Feeble)
       // and carries the biggest mob ultimate in the raid.
-      id: 'the_consigliere', name: 'The Consigliere', hpBase: 520, minDmg: 28, maxDmg: 44,
+      id: 'the_consigliere', name: 'The Widowmaker', hpBase: 520, minDmg: 28, maxDmg: 44,
       shipSpeed: 7, actionMs: 4000,
       magazineSize: 4, shieldPct: 0.26, chargeBiteChance: 0.35,
       special: { name: 'Marked for the Don', status: 'feeble', magnitude: 0.22, turns: 2, target: 'player', line: 'He reads your name off a short list, and every gun in the court knows where to aim.' },
