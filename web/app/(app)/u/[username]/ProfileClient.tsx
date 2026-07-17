@@ -158,12 +158,35 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
     return () => { window.removeEventListener('scroll', onScroll); if (raf) cancelAnimationFrame(raf) }
   }, [activeBg])
 
+  // Briefly true right after a successful add, so the button can flash a clear
+  // "Added" confirmation before settling into its steady "Friends" state — the
+  // tap otherwise gave no feedback that it landed.
+  const [justAdded, setJustAdded] = useState(false)
+  const justAddedTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   function toggleCrew() {
+    if (crewPending) return
+    // Optimistic: flip immediately so the tap feels instant, then reconcile with
+    // the server and roll back if it actually failed.
+    const wasIn = inCrew
+    if (navigator.vibrate) navigator.vibrate(wasIn ? 12 : [0, 18, 40, 22])
+    setInCrew(!wasIn)
+    if (!wasIn) {
+      setJustAdded(true)
+      if (justAddedTimer.current) clearTimeout(justAddedTimer.current)
+      justAddedTimer.current = setTimeout(() => setJustAdded(false), 1600)
+    } else {
+      setJustAdded(false)
+    }
     startCrewTransition(async () => {
-      if (inCrew) { await removeCrewMember(username); setInCrew(false) }
-      else         { await addCrewMember(username);    setInCrew(true)  }
+      const res = wasIn ? await removeCrewMember(username) : await addCrewMember(username)
+      if (res?.error) {
+        // Roll back the optimistic flip on failure.
+        setInCrew(wasIn)
+        setJustAdded(false)
+      }
     })
   }
+  useEffect(() => () => { if (justAddedTimer.current) clearTimeout(justAddedTimer.current) }, [])
 
   const visibleVoyages = showAllVoyages ? (voyages ?? []) : (voyages ?? []).slice(0, 1)
   const hiddenCount = (voyages?.length ?? 0) - 1
@@ -217,17 +240,32 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
 
           {!isOwnProfile && (
             <button
+              type="button"
               onClick={toggleCrew}
-              disabled={crewPending}
-              className="flex items-center gap-1.5 rounded-full font-karla font-700 uppercase tracking-[0.1em] transition-all disabled:opacity-40"
+              aria-pressed={inCrew}
+              className="tap flex items-center justify-center gap-1.5 rounded-full font-karla font-700 uppercase tracking-[0.1em]"
               style={{
-                padding: '0.4rem 0.95rem', fontSize: '0.62rem',
-                background: inCrew ? 'rgba(74,222,128,0.08)' : 'rgba(255,255,255,0.06)',
-                border: `1px solid ${inCrew ? 'rgba(74,222,128,0.25)' : 'rgba(255,255,255,0.16)'}`,
-                color: inCrew ? '#4ade80' : '#c0bdb8',
+                padding: '0.62rem 1.3rem', fontSize: '0.66rem', minWidth: 150, lineHeight: 1,
+                cursor: 'pointer', appearance: 'none', WebkitAppearance: 'none',
+                touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent',
+                transition: 'background 0.18s, border-color 0.18s, color 0.18s',
+                background: justAdded ? 'rgba(74,222,128,0.22)' : inCrew ? 'rgba(74,222,128,0.1)' : 'rgba(96,165,250,0.14)',
+                border: `1px solid ${justAdded ? 'rgba(74,222,128,0.6)' : inCrew ? 'rgba(74,222,128,0.3)' : 'rgba(96,165,250,0.45)'}`,
+                color: inCrew ? '#4ade80' : '#9cc4ff',
+                boxShadow: justAdded ? '0 0 16px rgba(74,222,128,0.35)' : 'none',
               }}
             >
-              {crewPending ? '…' : inCrew ? '✓ Friends' : '+ Add Friend'}
+              {inCrew ? (
+                <>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0 }}><path d="M20 6 9 17l-5-5" /></svg>
+                  {justAdded ? 'Added' : 'Friends'}
+                </>
+              ) : (
+                <>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0 }}><path d="M12 5v14M5 12h14" /></svg>
+                  Add Friend
+                </>
+              )}
             </button>
           )}
         </div>
