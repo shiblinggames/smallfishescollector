@@ -285,12 +285,12 @@ export const RAID_ITEMS: RaidItemDef[] = [
     // family with the Signet so the two never stack (the Signet supersedes).
     id: 'court_fang',
     name: "The Court's Fang",
-    description: 'A tooth pried from one of the don’s court. On a CRITICAL hit, 50% chance to tear a loaded cannonball clean off the enemy’s rack, delaying its next shot.',
+    description: 'A tooth pried from one of the don’s court. On a CRITICAL hit, 20% chance to tear a loaded cannonball clean off the enemy’s rack, delaying its next shot.',
     image: null,
     emoji: '🦈',
     rarity: 'epic',
     effects: [
-      { type: 'crit_strip_charge', value: 0.5 },
+      { type: 'crit_strip_charge', value: 0.2 },
     ],
     source: 'The Throne — Don Finleone',
     family: 'court_bite',
@@ -298,12 +298,12 @@ export const RAID_ITEMS: RaidItemDef[] = [
   {
     id: 'dons_signet',
     name: "The Don's Signet",
-    description: 'The ring every captain in the Finndicate answered to — and every gun in his court. On a CRITICAL hit, the command turns against them: you tear a loaded cannonball off the enemy’s rack every time, delaying its next shot.',
+    description: 'The ring every captain in the Finndicate answered to — and every gun in his court. On a CRITICAL hit, the command turns against them: 50% chance to tear a loaded cannonball off the enemy’s rack, delaying its next shot.',
     image: null,  // TODO: /donssignet.png at the art pass
     emoji: '💍',
     rarity: 'legendary',
     effects: [
-      { type: 'crit_strip_charge', value: 1.0 },
+      { type: 'crit_strip_charge', value: 0.5 },
     ],
     source: 'The Throne — Don Finleone',
     family: 'court_bite',
