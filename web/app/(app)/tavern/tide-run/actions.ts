@@ -142,25 +142,7 @@ export async function awardTideRunBeacons(beacons: number): Promise<AwardTideRun
       .single()
     if (!profile) return { error: 'Profile not found' }
 
-    // Daily doubloon ceiling from Tide Run. The run itself is client-scored, so
-    // beacons can't be server-verified (proper fix = a server run token); until
-    // then a generous per-day cap turns an unbounded faucet — loop
-    // awardTideRunBeacons(10000) for 20k/call forever — into at most CAP/day.
-    // "Tiny passive income" legit play stays far under it.
-    const TIDE_RUN_DAILY_DOUBLOON_CAP = 10000
-    const startOfDayUtc = new Date(); startOfDayUtc.setUTCHours(0, 0, 0, 0)
-    const { data: todays } = await admin
-      .from('doubloon_transactions')
-      .select('amount')
-      .eq('user_id', user.id)
-      .like('reason', 'Tide Run beacons%')
-      .gte('created_at', startOfDayUtc.toISOString())
-    const earnedToday = (todays ?? []).reduce((s: number, r: { amount: number | null }) => s + (r.amount ?? 0), 0)
-    const remainingToday = Math.max(0, TIDE_RUN_DAILY_DOUBLOON_CAP - earnedToday)
-    const doubloonsEarned = Math.min(smashed * DOUBLOONS_PER_BEACON, remainingToday)
-    if (doubloonsEarned <= 0) {
-      return { ok: true, doubloons: 0, newDoubloonTotal: profile.doubloons ?? 0 }
-    }
+    const doubloonsEarned = smashed * DOUBLOONS_PER_BEACON
     const newDoubloons = (profile.doubloons ?? 0) + doubloonsEarned
 
     const { error: updateErr } = await admin
