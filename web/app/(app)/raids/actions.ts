@@ -318,7 +318,7 @@ export async function claimRaidLoot(
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, gems, ship_skins, equipped_ship_skin, raid_items, ship_classes, has_completed_practice_raid, raid_node_progress, is_admin, expedition_xp, raid_loot_claimed')
+    .select('doubloons, gems, ship_skins, equipped_ship_skin, raid_items, ship_classes, has_completed_practice_raid, raid_node_progress, is_admin, expedition_xp')
     .eq('id', user.id)
     .single()
   if (!profile) return { newShipSkins: [], newDoubloonTotal: 0, newRaidItems: [] }
@@ -361,17 +361,11 @@ export async function claimRaidLoot(
   const ownedRaidItems = (profile?.raid_items as string[] | null) ?? []
   const newRaidItems   = [...ownedRaidItems]
 
-  // First-loot gate for the CURRENCY inside the loot table. Skins/raid items
-  // are already idempotent (granted only if not owned), but grant.gems /
-  // grant.doubloons would otherwise stack on every re-claim of a reachable
-  // raid — the pack_2 = 200-gems replay. Base crate doubloons above stay
-  // per-claim (intended farm, clamped); the loot-table currency is one-time.
-  const alreadyLooted = ((profile.raid_loot_claimed as string[] | null) ?? []).includes(raidId)
   for (const id of safeItemIds) {
     const grant = ITEM_GRANTS[id]
     if (!grant) continue
-    if (!alreadyLooted && grant.doubloons) doubloons += grant.doubloons
-    if (!alreadyLooted && grant.gems)      gems      += grant.gems
+    if (grant.doubloons) doubloons += grant.doubloons
+    if (grant.gems)      gems      += grant.gems
     if (grant.shipSkin && !newSkins.includes(grant.shipSkin)) {
       newSkins.push(grant.shipSkin)
       if (!equippedSkin) equippedSkin = grant.shipSkin
@@ -385,15 +379,9 @@ export async function claimRaidLoot(
   // the boss dies (see RaidGame handleEnemyDefeated). Keeping the
   // clear independent of the loot grant means a failed loot persist
   // doesn't strand the player on a still-locked next node.
-  const lootUpdate: Record<string, unknown> = { doubloons, gems, ship_skins: newSkins, equipped_ship_skin: equippedSkin, raid_items: newRaidItems }
-  // Mark this raid's loot-table currency as claimed the first time, so the
-  // gem/doubloon item grants don't pay out again on a re-claim.
-  if (!alreadyLooted && safeItemIds.length > 0) {
-    lootUpdate.raid_loot_claimed = [...((profile.raid_loot_claimed as string[] | null) ?? []), raidId]
-  }
   await admin
     .from('profiles')
-    .update(lootUpdate)
+    .update({ doubloons, gems, ship_skins: newSkins, equipped_ship_skin: equippedSkin, raid_items: newRaidItems })
     .eq('id', user.id)
 
   return {
