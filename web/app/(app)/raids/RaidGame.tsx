@@ -13,7 +13,7 @@ import { raidDamageProfile, type RaidMods } from '@/lib/expeditions'
 import { crewLevelFromXP, CREW_MAX_LEVEL } from '@/lib/crewLevel'
 import { type ShipAugment } from '@/lib/shipAugments'
 import {
-  BossRaidConfig, BroadsideEnemy, RaidLootItem, RARITY_COLOR, raidCompletionBonusXp,
+  BossRaidConfig, BroadsideEnemy, RaidLootItem, RARITY_COLOR, raidCompletionBonusXp, RAID_ZONE_BG,
 } from '@/lib/bossRaids'
 import { isChallengeRaidId } from '@/lib/raidChallenge'
 import { AFFIXES, ELITE_HP_MULT, ELITE_DMG_MULT, rollAffix, rollSecondAffix, mergeAffixes, rollEliteSlots, type AffixDef, type AffixId } from '@/lib/raidAffixes'
@@ -1533,6 +1533,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 key={`combat-r${roundDisplay}`}
                 enemy={enemyForCombat}
                 atmosphere={config.atmosphere}
+                zoneBg={config.zone ? RAID_ZONE_BG[config.zone] : undefined}
                 affix={eliteAffix}
                 isElite={!!eliteAffix}
                 isBoss={isBoss}

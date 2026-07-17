@@ -477,6 +477,11 @@ export interface RaidCombatProps {
    *  warm seascape — used by the practice skirmish and any legacy
    *  caller that doesn't set the field. */
   atmosphere?: 'dusk' | 'sunset' | 'overcast' | 'fog' | 'harbor' | 'vault' | 'brackwater'
+  /** Fishing-zone battle background image URL (resolved from the raid config's
+   *  `zone` via RAID_ZONE_BG). When set, the stage paints this image + a scrim
+   *  and SKIPS the procedural `atmosphere` scene entirely. Undefined = keep the
+   *  procedural look (practice skirmish, Gauntlet). */
+  zoneBg?: string
   /** Crew abilities pipeline. crewMembers carries id/slug/xp/name/portrait
    *  so RaidCombat can derive each crew's class + current milestone via
    *  lib/crewClasses. usedAbilityIds is the per-raid cooldown owned by
@@ -532,6 +537,7 @@ export default function RaidCombat({
   raidMods, riskyFlee = false, fleeSignal, fleeNav,
   tideEffects = [],
   atmosphere = 'dusk',
+  zoneBg,
   crewMembers = [], usedAbilityIds, abilitiesRefreshed = false, onAbilityFired,
   usedRaidItemIds, onRaidItemUsed, onRefreshAbility,
   usedAbilitySub = 'Already used this raid.', openingNote,
@@ -4984,15 +4990,38 @@ export default function RaidCombat({
                                       'linear-gradient(180deg, #1e3a5f 0%, #234567 30%, #2a5274 40%, #0a1c2e 100%)',
         overflow: 'hidden',
       }}>
+        {/* Fishing-zone backdrop — when the raid opts into a `zone`, we paint the
+            matching fishing background image (a static JPG, no per-frame animation)
+            plus a readability scrim, and skip the whole procedural scene below. A
+            top + bottom dark gradient keeps the header, Leave button, HP bars and
+            aim bar legible over the photo while leaving the sky mostly clear. */}
+        {zoneBg && (
+          <>
+            <div aria-hidden style={{
+              position: 'absolute', inset: 0,
+              backgroundImage: `url(${zoneBg})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              pointerEvents: 'none',
+            }} />
+            <div aria-hidden style={{
+              position: 'absolute', inset: 0,
+              background: 'linear-gradient(180deg, rgba(4,8,14,0.30) 0%, rgba(4,8,14,0.10) 34%, rgba(4,8,14,0.40) 70%, rgba(3,5,10,0.80) 100%)',
+              pointerEvents: 'none',
+            }} />
+          </>
+        )}
+
         {/* ── Atmospheric backdrop ─────────────────────────────────────────
             Sun/sky/clouds/water all swap based on `atmosphere`. Each
             variant is a self-contained fragment so the parts (sun
             color, cloud presence, sun reflection, fog bands) can
             differ per raid without ifs cluttering the shared layout.
             Order of branches: fog first, then sunset/overcast, then
-            dusk as default fall-through. */}
+            dusk as default fall-through. Skipped entirely when a zone
+            image is set — that raid uses the fishing backdrop instead. */}
 
-        {atmosphere === 'fog' ? (
+        {!zoneBg && (atmosphere === 'fog' ? (
           <>
             {/* Sun behind the Sounding Fog — barely a disc, just a cool
                 pale glow where the sun should be. No pulse — the fog
@@ -5373,7 +5402,7 @@ export default function RaidCombat({
               }}
             />
           </>
-        )}
+        ))}
 
         {/* Leave button — small ← icon in the top-right of the battle stage.
             Replaces the dedicated Leave row above the XP bar so the game

@@ -407,6 +407,12 @@ export interface BossRaidConfig {
    *                 is the whole tell: when the chop goes out of the water, he is already
    *                 deciding. No sun-glitter, no chop, no reflection to speak of. */
   atmosphere?: 'dusk' | 'sunset' | 'overcast' | 'fog' | 'harbor' | 'vault' | 'brackwater'
+  /** Fishing-zone battle backdrop, chosen by chapter feel. When set, RaidCombat
+   *  drops the procedural sky/cloud/fog scene entirely and renders the matching
+   *  fishing background image (RAID_ZONE_BG) plus a readability scrim. Chapter I
+   *  → shallows, II → open_waters, III → deep, IV → abyss (Throne → ancient_deep).
+   *  Undefined keeps the procedural `atmosphere` scene (practice skirmish, Gauntlet). */
+  zone?: 'shallows' | 'open_waters' | 'deep' | 'abyss' | 'ancient_deep'
   /** Optional dialogue sequence shown right before the boss fight starts.
    *  Tap to advance each line; the last line's button is "Engage" which
    *  closes the modal and mounts the combat. */
@@ -448,12 +454,24 @@ export const RARITY_COLOR: Record<RaidLootItem['rarity'], string> = {
   legendary: '#f0c040',
 }
 
+/** Zone → fishing-background JPG (files live in /public, shared with the fishing
+ *  game's ZONE_BG). A raid config's `zone` resolves through this to the image
+ *  RaidCombat paints behind the fight. */
+export const RAID_ZONE_BG: Record<NonNullable<BossRaidConfig['zone']>, string> = {
+  shallows:     '/shallows.jpg',
+  open_waters:  '/openwaters.jpg',
+  deep:         '/deep.jpg',
+  abyss:        '/abyss.jpg',
+  ancient_deep: '/ancient.jpg',
+}
+
 export const CORSAIRS_RECKONING: BossRaidConfig = {
   raidId: 'corsairs_reckoning',
   enemyAccuracy: 4,
   raidTitle: "The Corsair's Reckoning",
   bossDefeatedText: 'Barnacle Pete Defeated',
   atmosphere: 'sunset',
+  zone: 'shallows',       // Chapter I — the Shallows
   enemies: {
     // Patterns punish a reload-fire-reload-fire autopilot (player fires on
     // even turns, reloads on odd). Difficulty rises with enemy tier; the
@@ -573,6 +591,7 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
   raidTitle: "Krust's Consignment",
   bossDefeatedText: 'Captain Krust Defeated',
   atmosphere: 'overcast',
+  zone: 'shallows',       // Chapter I — the Shallows
   enemies: {
     // Tier-2 roster. Stiffer than Pete's reef: a Finndicate shipping
     // crew that runs cargo on a schedule and does not like being late.
@@ -708,6 +727,7 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
   raidTitle: "The Cartographer's Survey",
   bossDefeatedText: 'The Cartographer Defeated',
   atmosphere: 'fog',
+  zone: 'open_waters',    // Chapter II — the Open Waters
   enemies: {
     // Tier-3 roster. The Cartographer's chart line sails the Sounding
     // Fog for cover — the deep gray band on the Finndicate's own maps.
@@ -906,6 +926,7 @@ export const THE_TOLLMASTER: BossRaidConfig = {
   raidTitle: "The Tollmaster's Cut",
   bossDefeatedText: 'Tollmaster Spet Defeated',
   atmosphere: 'overcast',
+  zone: 'open_waters',    // Chapter II — the Open Waters
   enemies: {
     // Tier-4 roster, Chapter II's second raid (Nav 35). The Gullet's toll crew
     // are barracudas: fast, toothy, and ambush-built.
@@ -1043,6 +1064,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
   raidTitle: 'The Harbor Fleet',
   bossDefeatedText: 'Admiral Ruse Defeated',
   atmosphere: 'harbor',  // the Coffers' drowned black-market port, gun-smoke haze
+  zone: 'deep',          // Chapter III — the Deep
   enemies: {
     // Ch3 hulls. SIGNATURE = DECOYS: false aim bands scaling 1 → 3 toward the
     // flagship. Admiral Ruse's deception fleet — the showy lionfish crew whose
@@ -1180,6 +1202,7 @@ export const THE_QUARTERMASTERS_GHOST: BossRaidConfig = {
   raidTitle: "The Quartermaster's Ghost",
   bossDefeatedText: 'The Ghost Dispersed',
   atmosphere: 'vault',   // his own lantern-lit gun-deck, and he never left it
+  zone: 'abyss',         // Chapter IV — the Abyss
   enemies: {
     ghost: {
       id: 'ghost', name: "The Quartermaster's Ghost", hpBase: 1050, minDmg: 26, maxDmg: 44,
@@ -1325,6 +1348,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
   raidTitle: 'The Quartermaster',
   bossDefeatedText: 'The Quartermaster Defeated',
   atmosphere: 'vault',  // the Cache's lantern-lit gun-deck vault, storm-dark finale
+  zone: 'deep',          // Chapter III — the Deep
   enemies: {
     // A "FINAL BOSS" duel (Chapter III finale): a SHORT 2-ship intro of two
     // DISTINCT, strong enforcers — The Leech (sneaky glass-cannon) then The
@@ -1477,6 +1501,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
   raidTitle: 'The Blockade',
   bossDefeatedText: 'Sal Brackwater Defeated',
   atmosphere: 'brackwater',   // Sal's estuary: flat brown water, bronze haze, nothing moving
+  zone: 'abyss',         // Chapter IV — the Abyss
   enemies: {
     picket: {
       // THE SCUTE — the shield TEACHER. A scute is the bone plate grown into a
@@ -1691,6 +1716,7 @@ export const THE_THRONE: BossRaidConfig = {
   raidTitle: 'The Throne',
   bossDefeatedText: 'Don Finleone Defeated',
   atmosphere: 'vault',   // placeholder — bespoke throne-water palette at polish
+  zone: 'ancient_deep',  // Chapter IV finale — the Ancient Deep (Don Finleone's last fathom)
   enemies: {
     court_herald: {
       // The ULTIMATE teacher: light hull, no special — just the new tell.
