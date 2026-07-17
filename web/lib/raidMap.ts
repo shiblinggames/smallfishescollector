@@ -2200,6 +2200,43 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
+    // CONVERGENCE SEED #1 (the deep). Reframes the whole Finndicate as a
+    // hundred-year reach DOWN — the cargo was never the point, the bottom was.
+    // Ties the raid-side "last fathom" to the fishing-side Ancient Deep without
+    // naming it, and plants the 6-ancients gate obliquely ("does not open for a
+    // hull... you have felt it pull on a line before"). Finn NEVER named; the F
+    // margin is the only handle. See [[project_finn_finndicate_twist]].
+    id: 'the_long_reach',   type: 'story',
+    label: 'The Long Reach',
+    flavor: "The F in the margins bought something with all that drowned coin. Not an empire. A direction. You run the don's accounts to their end and every one of them points the same way the water does: down.",
+    bridge: "The family never wanted the cargo. It wanted the bottom. The don is the deepest it ever reached, and the margin is still signing, so the don was never deep enough.",
+    requiresNode: 'crooked_ledger',
+    adminOnly: true,
+    image: '/raidlog.png',
+    scene: [
+      { text: 'You chase the crooked margin backward, account by account, to see what all that coin was ever spent ON.' },
+      { text: 'It does not add up to an empire. Cargo, Caches, danger-runs, a hundred years of drowned captains. It adds up to a heading.', pause: 500 },
+      { text: 'Down. Always down. Every coin the family ever swallowed bought one more fathom toward the bottom of the last fathom.' },
+      { text: 'The don is the deepest anyone in the Finndicate ever reached. And the margin kept signing. So the don was never deep enough.', pause: 700 },
+      { ...GUIDE.doby, text: 'There is old things down there, captain. Older than the family. Older than me. The deep keeps them because nothing else in the sea could hold them down.' },
+      { ...GUIDE.laz, text: 'I have been to the bottom, navigator. Something in that black water is awake, and it has been waited on a long, long time. Patient. The way the margin waits.' },
+      { ...GUIDE.dole, text: 'So the richest crime in the whole sea was a century-long excuse to go fishing. I would laugh, if the arithmetic of how badly it wants to would let me stop.' },
+      { text: 'One thing the crew will not say aloud: whatever sits at the bottom does not open for a hull, or a broadside, or a don.', pause: 800 },
+      { text: 'You already half-know what it opens for. You have felt it pull on a line before.', pause: 600 },
+    ],
+    sceneAccent: '#6ea8d8',
+    detail: {
+      description:
+        "Run the don's accounts backward and they don't buy an empire — they buy a direction. Down. A hundred years of swallowed coin spent reaching for the bottom of the last fathom, and the don was only the deepest the family ever got. The margin kept signing because the don was not deep enough. Whatever waits down there does not open for a hull.",
+      drops: [
+        { emoji: '📜', label: "Captain's Logbook, Fragment XIV", sublabel: '"They were never smuggling. They were reaching. All of it pointed at the bottom."', rarity: 'rare' },
+      ],
+      dropsNote: 'The whole family was a hundred-year reach for the deepest water. The don was just the arm.',
+      ctaLabel: 'Follow the Coin Down →',
+      summary: "The don's accounts don't buy an empire — they buy a heading: down. A century of Finndicate coin spent reaching for the bottom of the last fathom, and the don was only as deep as the family ever got. Whatever waits down there doesn't open for a hull.",
+    },
+  },
+  {
     // Tumbler Lock — Rush Hour on the throne gate's great lock. Stages
     // validated by web/verify-tumbler.mjs (min slides 7 / 11 / 18 vs budgets
     // 12 / 16 / 26). KEEP THE SCRIPT IN SYNC when editing stages.
@@ -2207,7 +2244,7 @@ export const RAID_MAP: RaidNode[] = [
     label: 'The Throne Gates',
     flavor: "The don's gate is one great lock: iron bars over iron bars, and a single gold bolt that only runs when every tumbler stands clear. Nobody knocks.",
     bridge: 'The last tumbler throws and the gates swing on silence. Past them: the deepest water there is, and the don sitting in it.',
-    requiresNode: 'crooked_ledger',
+    requiresNode: 'the_long_reach',
     adminOnly: true,
     puzzle: {
       kind: 'tumbler',
@@ -2250,13 +2287,52 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
+    // CONVERGENCE SEED #2 (the watcher), the last beat before the Don. A NEW
+    // strange sail (NOT the Coffers shadow — that was Mira, now crew, so SHE
+    // reads it) waits off the throne and leaves a worn dock-hand's HOOK on the
+    // water, pointing past the don, DOWN. Deniable Finn signifiers (dock-hand,
+    // glad you came, wants you to reach what's under the don = the ancients) —
+    // Finn STILL never named; full reveal stays for the merge cutscene. On
+    // re-read this is obviously Finn. See [[project_finn_finndicate_twist]].
+    id: 'the_watcher',   type: 'story',
+    label: 'The One That Waits',
+    flavor: "The gate stands open and the don's water lies flat. And there is a sail on it that is not the don's and not yours: a stranger holding just off the throne, running no guns, asking nothing. Mira knows the way it sits. She used to sit exactly like it.",
+    bridge: "It did not come for the don. It came to see whether you can reach what the don has been sitting on. Then it eases back to watch, and you turn your bow to the throne.",
+    requiresNode: 'throne_gates',
+    adminOnly: true,
+    image: '/raidlog.png',
+    scene: [
+      { text: 'The throne gate throws open on dead-flat water, and there is a third sail on it.' },
+      { text: "Not the don's. Not yours. A stranger, holding just off the throne, running no guns, matching the don's own stillness.", pause: 500 },
+      { ...GUIDE.mira, text: 'Now that is a familiar way to sit a ship, captain. Off the shoulder, patient, letting the mark do all the work. I shadowed you exactly like it, the whole way from the Coffers, before I let you see me.' },
+      { ...GUIDE.mira, text: 'The difference is I was hunting you to JOIN you. Whoever that is has a different appetite. They are not out here to sign on.' },
+      { text: 'On the black water between the hulls, something bobs up where a hand set it for you to find: a hook. Honest, hand-worn, the kind a dock-hand keeps for luck.', pause: 700, fx: 'flash' },
+      { text: "Not a threat. Not a gift. A dare. And it does not point at the don's flagship at all. It rides the current pointing past it. Down.", pause: 600 },
+      { ...GUIDE.kat, text: 'Whoever they are, they are glad we came, captain. Glad. That is the part that turns my stomach. Someone wanted us all the way down here, and they are enjoying the view.' },
+      { ...GUIDE.mira, text: 'They want to know if you are the hull that can reach what the don has sat on his whole life. So let us answer them. Sink the don, captain, and let the stranger get its long look at what you can do.' },
+      { text: 'The sail eases back to a patient distance, unhurried, the way a thing does when it has already decided how the hunt ends.', pause: 500 },
+      { text: 'You leave the little hook riding the current, still pointing down, and turn your bow to the don.' },
+    ],
+    sceneAccent: '#a78bfa',
+    detail: {
+      description:
+        "The gate opens, and a sail that is neither yours nor the don's waits just off the throne — no guns, no words, only a small worn hook set on the water for you to find, riding the current pointing not at the don's flagship but past it. Down. Mira, who shadowed you the same way from the Coffers, knows the difference at a glance: this one did not come to sign on. It came to see whether you are the one who can reach what the don's been sitting on. Then it falls back to watch.",
+      drops: [
+        { emoji: '📜', label: "Captain's Logbook, Fragment XV", sublabel: `"Not here for the don. Here to see if I can reach what's under him. And glad, glad, that I came this far."`, rarity: 'rare' },
+      ],
+      dropsNote: 'The watcher wants you deeper than the throne. It left a hook to say so.',
+      ctaLabel: 'Turn to the Throne →',
+      summary: "A strange sail waits at the open gate — not the don's, not yours — and leaves a small worn hook on the water, pointing past the don's flagship. Down. Mira, who once shadowed you the same way, reads it cold: this one didn't come to sign on. It came to see if you can reach what's under the don, and it's glad you made it this far.",
+    },
+  },
+  {
     // RAID 8 — The Throne. Debuts the raid-8 layer: enemy ULTIMATES at a
     // full 4-ball magazine and AIM-BAR ATTACKS (decoys / hardened / squall).
     id: 'the_throne',    type: 'raid',
     label: 'Don Finleone',
     flavor: "Past the gates the water goes still, and the don's court rides at anchor around one lit flagship. Every mob in it carries a trick you haven't been hit with yet — and the don carries all of them.",
     bridge: "The court is drowned and the don with it. But the margin in his books is still open — and whatever signs itself F is still out there, older than the Finndicate and twice as patient.",
-    requiresNode: 'throne_gates',
+    requiresNode: 'the_watcher',
     requiresNavLevel: 58,
     adminOnly: true,
     route: '/raids/throne',
@@ -2315,7 +2391,7 @@ export const RAID_MAP: RaidNode[] = [
       description:
         "The don is down and the Finndicate died with him — but the ledgers say the family was never the top of the pyramid. The F in the margins signed sums before the Finndicate had a name; the don ran the family, and the margin ran the don. One account stays open, and it's older than everything you've sunk so far.",
       drops: [
-        { emoji: '📜', label: "Captain's Logbook, Fragment XIV", sublabel: '"The don ran the family. The margin ran the don."', rarity: 'epic' },
+        { emoji: '📜', label: "Captain's Logbook, Fragment XVI", sublabel: '"The don ran the family. The margin ran the don."', rarity: 'epic' },
       ],
       dropsNote: 'The fake-final falls. The real account is still open.',
       ctaLabel: 'Settle the Court →',
