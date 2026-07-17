@@ -685,6 +685,7 @@ function NodeDetailSheet({
   const [pending, startTransition] = useTransition()
   const [err, setErr] = useState<string | null>(null)
   const [revealed, setRevealed] = useState(false) // puzzle solved → show the destination
+  const [locallyCleared, setLocallyCleared] = useState(false) // berth read this session — the open sheet holds a stale view, so reflect the clear locally
   // Some in-sheet actions clear the node server-side without going through a
   // handler that also refreshes (e.g. the DPS check resolves on FIRE, and the
   // player may dismiss the result via the backdrop). Mark that so ANY close
@@ -715,7 +716,7 @@ function NodeDetailSheet({
   const accent = MAIN_ACCENT
   const img = node.image ?? TYPE_IMAGE[node.type]
   const locked = status === 'locked'
-  const cleared = status === 'cleared'
+  const cleared = status === 'cleared' || locallyCleared
   const detail = node.detail
   // Payoff node (freed-scout debt): does the player's earlier choice match?
   // Picks which scene plays (met = node.scene, unmet = node.payoff.sceneUnmet).
@@ -826,6 +827,10 @@ function NodeDetailSheet({
     startTransition(async () => {
       const res = await markStoryNodeRead(node.id)
       if ('error' in res) { setErr(res.error); return }
+      // Reflect the clear in THIS open sheet (its node view is stale until a
+      // reopen): flip the CTA to "Terms Heard" and reveal the refit offer body.
+      actedRef.current = true
+      setLocallyCleared(true)
       router.refresh()
     })
   }

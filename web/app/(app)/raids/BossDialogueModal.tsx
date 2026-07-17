@@ -16,6 +16,7 @@
 // button is Engage.
 
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import CharacterAvatar from '@/components/CharacterAvatar'
 import {
@@ -154,7 +155,10 @@ export default function BossDialogueModal({
   const speakerName = isBoss ? boss.name : isPlayer ? playerLabel : isCrew ? (line.crew?.name ?? null) : null
   const nameColor = (isPlayer || isCrew) ? '#4ade80' : ACCENT
 
-  return (
+  // Portal to <body> — same as StoryScene. Rendered inline in the raid tree, the
+  // fixed overlay anchors to a transformed ancestor and the plate clips at the
+  // bottom; on <body> it fills the real viewport (see transform-breaks-fixed).
+  const modal = (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       onClick={tap}
@@ -279,4 +283,6 @@ export default function BossDialogueModal({
       <SceneProgress idx={idx} total={lines.length} accent={ACCENT} />
     </motion.div>
   )
+
+  return typeof document !== 'undefined' ? createPortal(modal, document.body) : null
 }
