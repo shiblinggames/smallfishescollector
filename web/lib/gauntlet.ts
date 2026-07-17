@@ -334,8 +334,12 @@ function pick<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length
 // Every ship in the Locker is a drowned thing — reused raid enemies are
 // renamed + (in combat) washed cold so the bestiary reads as the Locker's, not
 // a campaign shuffle. The CSS filter is layered onto the enemy sprite by
-// RaidCombat (enemyArtFilter prop).
-export const DROWNED_FILTER = 'grayscale(0.45) brightness(0.82) drop-shadow(0 0 11px rgba(110,220,210,0.6))'
+// RaidCombat (enemyArtFilter prop). NOTE: this is desaturation/dim ONLY — no
+// drop-shadow glow. An earlier teal drop-shadow traced the sprite's near-
+// rectangular footprint and, against the dark abyss backdrop, read as a lit
+// BOX around the boat rather than a glow on it. The cold wash carries the
+// drowned look on its own.
+export const DROWNED_FILTER = 'grayscale(0.5) brightness(0.8) contrast(1.05)'
 
 // Two-phase boss revives are an ENDGAME escalation — early/mid Gauntlet bosses
 // stay single-phase; only past this depth do they bring their phase 2.
