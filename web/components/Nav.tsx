@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import AnnouncementBanner from './AnnouncementBanner'
 import CharacterAvatar from './CharacterAvatar'
 import MailInbox from './MailInbox'
+import { getMailUnreadCount } from '@/app/actions/mail'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -117,14 +118,16 @@ export default function Nav({ doubloons, gems }: { packsAvailable?: number; doub
       const user = session?.user
       if (!user) return
       setIsSignedIn(true)
-      const nowIso = new Date().toISOString()
       Promise.all([
         supabase.from('profiles').select('character_color, equipped_hat, avatar_bg_color, avatar_border_color, is_admin, doubloons, gems').eq('id', user.id).single(),
         supabase.from('daily_voyages').select('created_at, duration_ms').eq('user_id', user.id).eq('status', 'pending'),
-        // Active mail messages — RLS lets every signed-in player SELECT.
-        supabase.from('mail_messages').select('id').or(`expires_at.is.null,expires_at.gt.${nowIso}`),
-        supabase.from('mail_reads').select('message_id').eq('user_id', user.id),
-      ]).then(([{ data: profile }, { data: voyages }, { data: mailMsgs }, { data: mailReads }]) => {
+        // Unread mail via the SERVER helper so the pip respects the SAME
+        // visibility as the inbox (targeting + join-date + evergreen). The old
+        // inline client query counted EVERY active row — including mail targeted
+        // to other users and broadcasts sent before this player joined — so the
+        // pip showed mail the inbox correctly hides ("badge but nothing there").
+        getMailUnreadCount(),
+      ]).then(([{ data: profile }, { data: voyages }, mailUnreadCount]) => {
         const cc = (profile?.character_color as string | null) ?? null
         const hat = (profile?.equipped_hat as string | null) ?? null
         const bg = (profile?.avatar_bg_color as string | null) ?? null
@@ -161,10 +164,8 @@ export default function Nav({ doubloons, gems }: { packsAvailable?: number; doub
             new Date(r.created_at).getTime() + (r.duration_ms ?? 7200000) <= now
         )
         setVoyageBadge(hasReadyVoyage)
-        const readSet = new Set(((mailReads ?? []) as { message_id: string }[]).map(r => r.message_id))
-        const unread = ((mailMsgs ?? []) as { id: string }[]).reduce((n, m) => n + (readSet.has(m.id) ? 0 : 1), 0)
-        setMailUnread(unread)
-        writeNavCache('mail_unread', unread > 0 ? String(unread) : null)
+        setMailUnread(mailUnreadCount)
+        writeNavCache('mail_unread', mailUnreadCount > 0 ? String(mailUnreadCount) : null)
       }).catch(() => {})
     })
   }, [])

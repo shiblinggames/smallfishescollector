@@ -57,7 +57,7 @@ export default async function FishingPage() {
       .select('id, name, scientific_name, fun_fact, habitat, bite_rarity, sell_value, catch_difficulty, length_min_in, length_max_in')
       .order('bite_rarity'),
     admin.from('fish_collection')
-      .select('fish_id, is_golden')
+      .select('fish_id, is_golden, catch_count')
       .eq('user_id', user.id),
     admin.from('fish_market')
       .select('fish_id, multiplier'),
@@ -119,6 +119,13 @@ export default async function FishingPage() {
   const personalBests: Record<number, number> = {}
   for (const r of (pbRows ?? []) as { fish_id: number; best_length_in: number | string }[]) {
     personalBests[r.fish_id] = Number(r.best_length_in)
+  }
+  // Total lifetime catches per species — surfaced alongside the PB length in
+  // the collection detail modal. New catches during the session bump this
+  // client-side so the modal reflects them without a refresh.
+  const catchCounts: Record<number, number> = {}
+  for (const r of (collectionRows ?? []) as { fish_id: number; catch_count: number | string }[]) {
+    catchCounts[r.fish_id] = Number(r.catch_count)
   }
 
   const todayStr = new Date().toISOString().split('T')[0]
@@ -192,6 +199,7 @@ export default async function FishingPage() {
           caughtFishIds={caughtFishIds}
           mountedFishIds={mountedFishIds}
           initialPersonalBests={personalBests}
+          initialCatchCounts={catchCounts}
           initialHighestPerfectStreak={profile?.highest_perfect_streak ?? 0}
           initialPerfectStreak={profile?.catch_pending ? 0 : (profile?.current_perfect_streak ?? 0)}
           hasSeenFishingTour={profile?.has_seen_fishing_tour ?? false}

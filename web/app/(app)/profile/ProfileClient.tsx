@@ -435,6 +435,10 @@ export default function ProfileClient({
   // Which group the "Profile Look" modal is showing — splits the old long
   // scroll into tabs: character / avatar (bg+border) / page background.
   const [lookTab, setLookTab] = useState<'character' | 'avatar' | 'page'>('character')
+  // Press-and-hold on any bg/border swatch (owned OR locked) paints it onto the
+  // big live avatar so a player can see what it looks like before buying. Null
+  // when nothing is being previewed, so the avatar shows the saved look.
+  const [avatarPreview, setAvatarPreview] = useState<{ bg?: string; border?: string } | null>(null)
   // Main profile page tab — Fishing (angler + catches) vs Navigation (ship +
   // expedition). Shared identity header sits above both.
   const [profileTab, setProfileTab] = useState<'fishing' | 'navigation'>('fishing')
@@ -505,6 +509,14 @@ export default function ProfileClient({
     setAvatarLockMsg(msg)
     setTimeout(() => setAvatarLockMsg(prev => (prev === msg ? null : prev)), 4000)
   }
+  // Press-and-hold handlers for a swatch: paint `patch` onto the big live
+  // avatar while held, revert on release/leave. Spread onto a swatch button.
+  const holdPreview = (patch: { bg?: string; border?: string }) => ({
+    onPointerDown: () => setAvatarPreview(patch),
+    onPointerUp: () => setAvatarPreview(null),
+    onPointerLeave: () => setAvatarPreview(null),
+    onPointerCancel: () => setAvatarPreview(null),
+  })
   const [badgeSaving, setBadgeSaving] = useState(false)
   const [selectedBadgeSlot, setSelectedBadgeSlot] = useState<0 | 1 | 2 | null>(null)
   useEffect(() => { if (!badgePickerOpen) setSelectedBadgeSlot(null) }, [badgePickerOpen])
@@ -1307,14 +1319,19 @@ export default function ProfileClient({
               padding: '1.1rem 1rem 1.3rem',
             }}>
             {/* Live preview */}
-            <div className="flex items-center justify-center" style={{ marginBottom: 14 }}>
+            <div className="flex flex-col items-center justify-center" style={{ marginBottom: 14 }}>
               <CharacterAvatar
                 characterColor={characterColor}
                 equippedHat={equippedHat}
                 size={92}
-                bgColor={avatarBg ?? DEFAULT_AVATAR_BG_COLOR}
-                ringColor={avatarBorder ?? DEFAULT_AVATAR_BORDER_COLOR}
+                bgColor={avatarPreview?.bg ?? avatarBg ?? DEFAULT_AVATAR_BG_COLOR}
+                ringColor={avatarPreview?.border ?? avatarBorder ?? DEFAULT_AVATAR_BORDER_COLOR}
               />
+              {lookTab === 'avatar' && (
+                <span className="font-karla" style={{ marginTop: 7, fontSize: '0.56rem', letterSpacing: '0.06em', color: avatarPreview ? '#f0c040' : 'rgba(240,237,232,0.42)', transition: 'color 0.15s' }}>
+                  {avatarPreview ? 'Previewing' : 'Hold a swatch to preview it here'}
+                </span>
+              )}
             </div>
 
             <p className="font-cinzel font-700 text-center" style={{ fontSize: '1.05rem', color: '#f0ede8', marginBottom: 12 }}>
@@ -1426,6 +1443,7 @@ export default function ProfileClient({
                   <button
                     key={`bg-${c.id}`}
                     type="button"
+                    {...holdPreview({ bg: c.hex })}
                     onClick={() => {
                       if (locked) { flashLockMsg('Captain-only color'); return }
                       saveAvatarBg(c.hex)
@@ -1464,6 +1482,7 @@ export default function ProfileClient({
                   <button
                     key={`bg-${s.id}`}
                     type="button"
+                    {...holdPreview({ bg: s.hex })}
                     onClick={() => {
                       if (!owned) {
                         if (!isPremium) {
@@ -1512,6 +1531,7 @@ export default function ProfileClient({
                   <button
                     key={`bd-${c.id}`}
                     type="button"
+                    {...holdPreview({ border: c.hex })}
                     onClick={() => {
                       if (locked) { flashLockMsg('Captain-only color'); return }
                       saveAvatarBorder(c.hex)
@@ -1552,6 +1572,7 @@ export default function ProfileClient({
                     key={`bd-${s.id}`}
                     type="button"
                     className={s.cssClass}
+                    {...holdPreview({ border: s.hex })}
                     onClick={() => {
                       if (!owned) {
                         if (!isPremium) {

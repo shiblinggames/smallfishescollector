@@ -3292,7 +3292,7 @@ export default function FishingGame({
   initialCompletionistEffects,
   initialHasForgedBefore,
   allFishSpecies, initialCaughtFishIds, initialMountedFishIds,
-  initialPersonalBests,
+  initialPersonalBests, initialCatchCounts,
   initialHighestPerfectStreak, initialPerfectStreak,
   hasSeenFishingTour, hasSeenFishingCatchTour, hasSeenFirstCatchCelebration, initialShowWaitTimer,
   selectedZone: initialZone, onBack, activeSession, zoneRewardsClaimed,
@@ -3329,6 +3329,9 @@ export default function FishingGame({
   /** fish_id → best length in inches. Seeded from fish_personal_bests on
    *  page load; updated in state when a new PB lands during the session. */
   initialPersonalBests: Record<number, number>
+  /** fish_id → total lifetime catch count. Seeded from fish_collection on
+   *  page load; bumped in state on each catch during the session. */
+  initialCatchCounts: Record<number, number>
   initialHighestPerfectStreak: number
   initialPerfectStreak: number
   hasSeenFishingTour: boolean
@@ -3429,6 +3432,10 @@ export default function FishingGame({
   // state when a new PB lands so the drawer reflects it without a page
   // refresh.
   const [personalBests, setPersonalBests] = useState<Record<number, number>>(initialPersonalBests)
+  // Live total-caught lookup for the collection detail modal. Seeded
+  // server-side; bumped in state on each catch so the modal reflects it
+  // without a page refresh.
+  const [catchCounts, setCatchCounts] = useState<Record<number, number>>(initialCatchCounts)
   const rod  = getEffectiveRod(equippedRodTier, completionistEffects)
   const reel = getReel(reelTier)
   const hook = getHook(hookTier)
@@ -4079,6 +4086,11 @@ export default function FishingGame({
   // compute the stat deltas the player just earned (catch-zone width,
   // bite speed, zone unlocks) — see fishingLevelDeltas() helper.
   const [levelUpNotif, setLevelUpNotif] = useState<{ from: number; to: number } | null>(null)
+  // A level-up is QUEUED, not shown instantly, so it never buries the catch
+  // reveal (a legendary was landing right as the overlay slammed over it). The
+  // fish shows first; the overlay slides in after a beat, or the moment the
+  // player taps Cast Again — whichever comes first.
+  const pendingLevelUpRef = useRef<{ from: number; to: number } | null>(null)
   // What the levels just crossed actually PAID. Reconciled with the server, which owns
   // the money and is the only thing that can say "already paid" -- so a level earned by
   // a TRAWL while the player was nowhere near this screen still gets handed over.
@@ -5543,6 +5555,10 @@ export default function FishingGame({
         if (res.isPB && res.sizeIn > 0) {
           setPersonalBests(prev => ({ ...prev, [fish.id]: res.sizeIn }))
         }
+        // Bump the live total-caught lookup (mirrors fish_collection.catch_count,
+        // which reelIn already incremented server-side) so the collection
+        // detail modal shows the updated tally without a refresh.
+        setCatchCounts(prev => ({ ...prev, [fish.id]: (prev[fish.id] ?? 0) + actualQty }))
         // Stage the Logbook header-button flash for noteworthy catches.
         // New species wins over PB so the gold treatment lands on
         // first-time catches that also set a PB. Cleared on next cast
@@ -5640,7 +5656,16 @@ export default function FishingGame({
           setTimeout(() => setRenownIntro(true), 600)
           window.dispatchEvent(new CustomEvent('fishing-leveled'))
         } else if (newLevel > oldLevel) {
-          setLevelUpNotif({ from: oldLevel, to: newLevel })
+          // QUEUE the overlay behind the catch reveal — don't slam it over the
+          // fish the instant it surfaces. Auto-reveal after a beat if the player
+          // is still on the result; handleCastAgain flushes it first otherwise.
+          pendingLevelUpRef.current = { from: oldLevel, to: newLevel }
+          setTimeout(() => {
+            if (pendingLevelUpRef.current && phaseRef.current === 'result') {
+              setLevelUpNotif(pendingLevelUpRef.current)
+              pendingLevelUpRef.current = null
+            }
+          }, 2100)
           // Paint the payload instantly from the shared table so the overlay is never
           // empty, then reconcile with the server (which is authoritative on the coin).
           setLevelRewards(rewardsOwed(oldLevel, newLevel))
@@ -5917,6 +5942,13 @@ export default function FishingGame({
   async function handleCastAgain() {
     if (phase !== 'result') return
     if (finnPending) return
+    // A level-up is waiting behind the catch reveal — show it now instead of
+    // casting, so the sequence is always fish, then level-up, then cast.
+    if (pendingLevelUpRef.current) {
+      setLevelUpNotif(pendingLevelUpRef.current)
+      pendingLevelUpRef.current = null
+      return
+    }
     setFreshCatchHook(null)  // moving on from the last catch — dismiss the Logbook flash
     // Same Finn intercept as handleCast. Bait isn't consumed during an
     // encounter, so the player can pass freely.
@@ -9159,6 +9191,7 @@ export default function FishingGame({
           if (!f) return null
           const rarityColor = RARITY[f.bite_rarity]?.color ?? '#888'
           const pb = personalBests[f.id]
+          const totalCaught = catchCounts[f.id]
           return (
             <motion.div
               initial={{ opacity: 0, scale: 0.96, y: 8 }}
@@ -9253,11 +9286,18 @@ export default function FishingGame({
                 <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#f0c040' }}>
                   {f.sell_value.toLocaleString()} ⟡
                 </p>
-                {pb != null && (
-                  <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#9a8870', letterSpacing: '0.04em', textAlign: 'right' }}>
-                    Largest you&apos;ve caught: <span className="font-cinzel font-700" style={{ color: '#e6dcc8' }}>{formatFishLength(pb)}</span>
-                  </p>
-                )}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'flex-end' }}>
+                  {pb != null && (
+                    <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#9a8870', letterSpacing: '0.04em', textAlign: 'right' }}>
+                      Largest you&apos;ve caught: <span className="font-cinzel font-700" style={{ color: '#e6dcc8' }}>{formatFishLength(pb)}</span>
+                    </p>
+                  )}
+                  {totalCaught != null && totalCaught > 0 && (
+                    <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#9a8870', letterSpacing: '0.04em', textAlign: 'right' }}>
+                      Total caught: <span className="font-cinzel font-700" style={{ color: '#e6dcc8' }}>{totalCaught.toLocaleString()}</span>
+                    </p>
+                  )}
+                </div>
               </div>
             </motion.div>
           )
