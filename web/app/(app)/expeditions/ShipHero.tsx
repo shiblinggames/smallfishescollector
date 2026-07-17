@@ -265,6 +265,25 @@ function WrenchGlyph({ color }: { color: string }) {
   )
 }
 
+// One cell of the Ship tab's 2-column management grid: icon + section label +
+// current value + a CTA, tapping opens that section's detail modal.
+function ShipTile({ accent, title, value, sub, cta, icon, onClick }: {
+  accent: string; title: string; value: string; sub?: string; cta: string; icon: React.ReactNode; onClick: () => void
+}) {
+  return (
+    <button type="button" onClick={onClick}
+      style={{ display: 'flex', flexDirection: 'column', gap: 3, textAlign: 'left', padding: '0.75rem 0.7rem', borderRadius: 13, background: `${accent}10`, border: `1px solid ${accent}3a`, cursor: 'pointer', minHeight: 98 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginBottom: 3 }}>
+        <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 8, background: `${accent}20`, border: `1px solid ${accent}50`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{icon}</span>
+        <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: accent, whiteSpace: 'nowrap' }}>{cta}</span>
+      </div>
+      <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.48rem', color: accent }}>{title}</p>
+      <p className="font-cinzel font-700" style={{ fontSize: '0.86rem', color: '#f0ede8', lineHeight: 1.12 }}>{value}</p>
+      {sub && <p className="font-karla" style={{ fontSize: '0.58rem', color: '#8a8480', lineHeight: 1.3 }}>{sub}</p>}
+    </button>
+  )
+}
+
 function DrawerHandle({ controls }: { controls: DragControls }) {
   return (
     <div
@@ -534,9 +553,13 @@ export default function ShipHero({
   const [upgradeOpen, setUpgradeOpen] = useState(false)
   // Captain's-class detail popup — the owned tier ids of the tapped class line.
   const [classDetail, setClassDetail] = useState<ShipClassId[] | null>(null)
-  // Ultimate Weapon Manage modal — the build/swap/retool controls + the looping
-  // preview animation live here instead of stacked inline on the Ship tab.
+  // Ship-tab detail modals — the Ship tab is now a 2-column grid of tiles; each
+  // tile opens its section here (ultimate build/preview, sixth berth, the class
+  // breakdowns, the skin picker).
   const [ultimateOpen, setUltimateOpen] = useState(false)
+  const [sixthBerthOpen, setSixthBerthOpen] = useState(false)
+  const [classesOpen, setClassesOpen] = useState(false)
+  const [skinsOpen, setSkinsOpen] = useState(false)
   const [upgradeBusy, setUpgradeBusy] = useState(false)
   const [upgradeError, setUpgradeError] = useState<string | null>(null)
   // Tappable Nav-level info modal — shows captain bonuses, XP to next level,
@@ -1635,211 +1658,100 @@ export default function ShipHero({
                 const nextShip = SHIPS[shipTier + 1]
                 return (
                   <>
-                    {/* Hull stats grid removed — those numbers read live during the
-                        fight. The upgrade ladder (and Man-o-War augment) stay. */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.7rem' }}>
-                      <span className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.22em', color: '#8794a6' }}>Hull</span>
-                      <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
-                    </div>
-                    {nextShip ? (
-                      <button type="button" onClick={() => { setUpgradeError(null); setUpgradeOpen(true) }}
-                        style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', width: '100%', textAlign: 'left', background: 'rgba(240,192,64,0.1)', border: '1px solid rgba(240,192,64,0.45)', borderRadius: 14, padding: '0.85rem 0.9rem', marginBottom: '1.7rem', cursor: 'pointer' }}>
-                        <span style={{ flexShrink: 0, width: 40, height: 40, borderRadius: 10, background: 'rgba(240,192,64,0.16)', border: '1px solid rgba(240,192,64,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f0c040" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
-                        </span>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#d8b24a' }}>Upgrade Hull</p>
-                          <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0ede8', lineHeight: 1.1 }}>{nextShip.name}</p>
-                          <p className="font-karla" style={{ fontSize: '0.66rem', color: '#9a948a', marginTop: 1 }}>{nextShip.cost.toLocaleString()} ⟡ · bigger hull, more slots</p>
-                        </div>
-                        <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.56rem', color: '#f0c040', flexShrink: 0 }}>Upgrade ›</span>
-                      </button>
-                    ) : (
-                      <div style={{ borderRadius: 14, padding: '0.85rem 0.9rem', marginBottom: '1.7rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', textAlign: 'center' }}>
-                        <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.58rem', color: '#9a948a' }}>Top of the line — no bigger hull.</p>
-                      </div>
-                    )}
-
-                    {/* REFITS — the permanent, chapter-earned power: the ultimate
-                        weapon, the sixth berth, and the captain's classes. */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.75rem' }}>
-                      <span className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.22em', color: '#8794a6' }}>Refits</span>
-                      <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
-                    </div>
-
-                    {/* ── Ultimate Weapon ── compact status row. The looping
-                        preview animation + the full build/swap/retool/schematics
-                        controls now live in the Manage modal, so the tab stays a
-                        calm one-line status instead of a wall. */}
-                    {showUltimate && (() => {
-                      const activeAug = initialManowarAugment ? getShipAugment(initialManowarAugment) : null
-                      const buildAug  = manowarBuild ? getShipAugment(manowarBuild.id) : null
-                      const accent    = buildAug?.color ?? activeAug?.color ?? '#f0c040'
-                      const statusLabel = buildAug ? (manowarBuild?.retool ? 'Retooling' : 'Forging') : activeAug ? 'Armed' : 'Ready to build'
-                      const statusText  = buildAug ? buildAug.name : activeAug ? activeAug.name : 'Man-o-War capstone weapon'
-                      return (
-                        <button type="button" onClick={() => setUltimateOpen(true)}
-                          style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', width: '100%', textAlign: 'left', background: `${accent}12`, border: `1px solid ${accent}45`, borderRadius: 14, padding: '0.85rem 0.9rem', marginBottom: '1.7rem', cursor: 'pointer' }}>
-                          <span style={{ flexShrink: 0, width: 40, height: 40, borderRadius: 10, background: `${accent}20`, border: `1px solid ${accent}55`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>
-                          </span>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: accent }}>Ultimate Weapon · {statusLabel}</p>
-                            <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0ede8', lineHeight: 1.1 }}>{statusText}</p>
-                          </div>
-                          <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.56rem', color: accent, flexShrink: 0 }}>Manage ›</span>
-                        </button>
-                      )
-                    })()}
-
-                    {/* ── The Sixth Berth ── a Man-o-War crew slot (5 → 6),
-                        revealed once Sal Brackwater (Raid 7) falls. */}
-                    <SixthBerthPanel
-                      blockadeCleared={blockadeCleared}
-                      hasSixthBerth={hasSixthBerth}
-                      baseCrewSlots={hasSixthBerth ? shipStats.crewSlots - 1 : shipStats.crewSlots}
-                      doubloons={doubloons}
-                    />
-
-                    {/* ── Captain's Class ── permanent chapter-end buffs. Collapse
-                        each class LINE to just its top tier (own I+II+III → show
-                        III), all on one scrollable row; tap a card for the full
-                        breakdown + combined effect. */}
-                    <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#c4b078', marginBottom: '0.6rem' }}>
-                      Captain&rsquo;s Class <span className="font-400" style={{ color: '#6f6a64', textTransform: 'none', letterSpacing: 'normal' }}>· chapter-end buffs, they stack</span>
-                    </p>
-                    {(() => {
-                      const ownedIds = new Set(Object.values(shipClasses))
-                      const lines = SHIP_CLASS_LINES
-                        .map(line => line.filter(id => ownedIds.has(id)) as ShipClassId[])
-                        .filter(owned => owned.length > 0)
-                        .map(owned => ({ owned, top: getShipClass(owned[owned.length - 1])! }))
-                      if (lines.length === 0) {
+                    {/* Ship management as a 2-column tile grid — each tile shows
+                        its live status and opens its detail modal. Replaces the
+                        old tall stack of full-width sections. */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10, marginBottom: '1.4rem' }}>
+                      {/* Hull */}
+                      <ShipTile
+                        accent="#f0c040"
+                        title="Hull"
+                        icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f0c040" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>}
+                        value={nextShip ? nextShip.name : shipStats.name}
+                        sub={nextShip ? `${nextShip.cost.toLocaleString()} ⟡ · bigger hull` : 'Top of the line'}
+                        cta={nextShip ? 'Upgrade ›' : 'Maxed'}
+                        onClick={() => { if (nextShip) { setUpgradeError(null); setUpgradeOpen(true) } }}
+                      />
+                      {/* Ultimate Weapon */}
+                      {showUltimate && (() => {
+                        const activeAug = initialManowarAugment ? getShipAugment(initialManowarAugment) : null
+                        const buildAug  = manowarBuild ? getShipAugment(manowarBuild.id) : null
+                        const accent    = buildAug?.color ?? activeAug?.color ?? '#f0c040'
+                        const statusLabel = buildAug ? (manowarBuild?.retool ? 'Retooling' : 'Forging') : activeAug ? 'Armed' : 'Not built'
+                        const statusText  = buildAug ? buildAug.name : activeAug ? activeAug.name : 'Capstone weapon'
                         return (
-                          <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.14)', borderRadius: 14, padding: '1.3rem 1rem', marginBottom: '1.7rem' }}>
-                            <p className="font-karla text-center" style={{ fontSize: '0.78rem', color: '#7a7470', lineHeight: 1.5 }}>No class yet. Clear a chapter to choose one.</p>
-                          </div>
-                        )
-                      }
-                      return (
-                        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 6, marginBottom: '1.7rem', WebkitOverflowScrolling: 'touch' }}>
-                          {lines.map(({ owned, top }) => (
-                            <button key={top.id} type="button" onClick={() => setClassDetail(owned)}
-                              style={{ flexShrink: 0, width: 116, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, padding: '0.7rem 0.5rem', borderRadius: 12, background: `${top.color}12`, border: `1px solid ${top.color}45`, cursor: 'pointer', textAlign: 'center' }}>
-                              <span style={{ flexShrink: 0, width: 34, height: 34, borderRadius: 9, background: `${top.color}20`, border: `1px solid ${top.color}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.05rem', color: top.color }}>{top.emoji}</span>
-                              <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#f0ede8', lineHeight: 1.15 }}>{top.name}</p>
-                              <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.52rem', color: `${top.color}` }}>Details ›</span>
-                            </button>
-                          ))}
-                        </div>
-                      )
-                    })()}
-
-                    {/* From the Locker section removed — Gauntlet upgrades are
-                        surfaced in the Gauntlet itself; repeating them here was
-                        redundant. */}
-
-                    {/* ── Repair Kit ── once-per-battle hull patch (Special action). */}
-                    {(() => {
-                      const kit = getRepairKit(kitEquipped) ?? getRepairKit('basic_repair_kit')!
-                      const range = repairKitRange(kit, ratedFortune)
-                      const accent = kitRarityColor(kit.rarity)
-                      const next = nextRepairKit(kitsOwned)
-                      return (
-                        <>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.75rem' }}>
-                            <span className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.22em', color: '#8794a6' }}>Combat Gear</span>
-                            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
-                          </div>
-                          <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#c4b078', marginBottom: '0.6rem' }}>
-                            Repair Kit <span className="font-400" style={{ color: '#6f6a64', textTransform: 'none', letterSpacing: 'normal' }}>· Special action, once per battle</span>
-                          </p>
-                          <div onClick={next ? () => { setKitErr(null); setKitOpen(true) } : undefined}
-                            style={{ background: `${accent}14`, border: `1px solid ${accent}55`, borderRadius: 14, padding: '0.8rem 0.9rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.85rem', cursor: next ? 'pointer' : 'default' }}>
-                            <div style={{ position: 'relative', flexShrink: 0, width: 48, height: 48 }}>
-                              <div style={{ width: '100%', height: '100%', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${accent}1f`, border: `1px solid ${accent}55` }}>
-                                {kit.image
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  ? <img src={kit.image} alt="" loading="lazy" decoding="async" style={{ width: 34, height: 34, objectFit: 'contain' }} />
-                                  : <WrenchGlyph color={accent} />}
-                              </div>
-                              {next && (
-                                <span aria-hidden style={{ position: 'absolute', right: -6, bottom: -6, width: 22, height: 22, borderRadius: '50%', background: 'linear-gradient(180deg, #f4c84e, #d4a017)', border: '2px solid #14110d', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.5)', zIndex: 2 }}>
-                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#1a1206" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
-                                </span>
-                              )}
-                            </div>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 2, flexWrap: 'wrap' }}>
-                                <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#f0ede8' }}>{kit.name}</p>
-                                <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#4ade80' }}>+{range.min}-{range.max} HP</p>
-                              </div>
-                              <p className="font-karla" style={{ fontSize: '0.68rem', color: '#8a8480', lineHeight: 1.4 }}>
-                                {kit.description.replace(/\s*Once per battle\.\s*$/i, '').trim()} Fortune scales the max ({range.max - kit.baseMax > 0 ? `+${range.max - kit.baseMax}` : 'no'} bonus from your {ratedFortune} Fortune).
-                              </p>
-                            </div>
-                            {next ? (
-                              <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.56rem', color: '#f0c040', flexShrink: 0, whiteSpace: 'nowrap' }}>Upgrade ›</span>
-                            ) : (
-                              <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.54rem', color: '#7a7674', flexShrink: 0 }}>Max</span>
-                            )}
-                          </div>
-                        </>
-                      )
-                    })()}
-
-                    {/* ── Ship Skins ── cosmetic, least important, so they sit at
-                        the very bottom as ONE compact scrollable row. */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.6rem' }}>
-                      <span className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.22em', color: '#8794a6' }}>Appearance</span>
-                      <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
-                    </div>
-                    <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 6, WebkitOverflowScrolling: 'touch' }}>
-                      {(() => {
-                        const isEquipped = equippedSkin === null
-                        return (
-                          <button onClick={() => { if (!isEquipped) handleEquipSkin(null) }} disabled={isEquipped}
-                            style={{ flexShrink: 0, width: 92, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '0.5rem 0.35rem', borderRadius: 10, background: isEquipped ? 'rgba(255,255,255,0.06)' : 'rgba(4,10,18,0.72)', border: `1px solid ${isEquipped ? 'rgba(255,255,255,0.32)' : 'rgba(255,255,255,0.09)'}`, cursor: isEquipped ? 'default' : 'pointer' }}>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={shipStats.image} alt="" loading="lazy" decoding="async" style={{ width: 38, height: 38, objectFit: 'contain' }} />
-                            <p className="font-cinzel font-700" style={{ fontSize: '0.68rem', color: '#f0ede8', lineHeight: 1.1, textAlign: 'center' }}>Default</p>
-                            <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: isEquipped ? '#e0ddd8' : '#7a7674' }}>{isEquipped ? '✓ Equipped' : 'Original'}</span>
-                          </button>
+                          <ShipTile
+                            accent={accent}
+                            title="Ultimate Weapon"
+                            icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>}
+                            value={statusText}
+                            sub={statusLabel}
+                            cta="Manage ›"
+                            onClick={() => setUltimateOpen(true)}
+                          />
                         )
                       })()}
-                      {SHIP_SKINS.map(skin => {
-                        const owned = ownedSkins.includes(skin.id)
-                        const tierLocked = skin.requiresShipTier != null && shipTier < skin.requiresShipTier
-                        const isEquipped = equippedSkin === skin.id
-                        const equippable = owned && !isEquipped && !tierLocked
-                        const skinImg = skin.imageByTier?.[shipTier] ?? (skin.requiresShipTier != null ? skin.imageByTier?.[skin.requiresShipTier] : undefined) ?? shipStats.image
+                      {/* Sixth Berth — same unlock gate as the panel (Raid 7 / owned). */}
+                      {(blockadeCleared || hasSixthBerth) && (
+                        <ShipTile
+                          accent="#ffd56b"
+                          title="Sixth Berth"
+                          icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffd56b" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="7" r="3"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/><path d="M19 8v6M22 11h-6"/></svg>}
+                          value={hasSixthBerth ? 'Six crew slots' : 'A sixth slot'}
+                          sub={hasSixthBerth ? 'Installed' : 'Add a berth'}
+                          cta={hasSixthBerth ? 'View ›' : 'Add ›'}
+                          onClick={() => setSixthBerthOpen(true)}
+                        />
+                      )}
+                      {/* Captain's Class */}
+                      {(() => {
+                        const ownedIds = new Set(Object.values(shipClasses))
+                        const lines = SHIP_CLASS_LINES
+                          .map(line => line.filter(id => ownedIds.has(id)) as ShipClassId[])
+                          .filter(owned => owned.length > 0)
+                          .map(owned => getShipClass(owned[owned.length - 1])!)
                         return (
-                          <button key={skin.id} onClick={equippable ? () => handleEquipSkin(skin.id) : undefined} disabled={!equippable}
-                            style={{ flexShrink: 0, width: 92, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '0.5rem 0.35rem', borderRadius: 10, background: isEquipped ? `${skin.color}1f` : 'rgba(4,10,18,0.72)', border: `1px solid ${isEquipped ? skin.color + '90' : owned && !tierLocked ? 'rgba(255,255,255,0.09)' : `${skin.color}22`}`, boxShadow: isEquipped ? `0 0 12px ${skin.color}33` : 'none', cursor: equippable ? 'pointer' : 'default', opacity: owned && !tierLocked ? 1 : 0.6 }}>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={skinImg} alt="" loading="lazy" decoding="async" style={{ width: 38, height: 38, objectFit: 'contain', filter: owned && !tierLocked ? skin.filter : 'brightness(0.25) saturate(0)', transition: 'filter 0.25s' }} />
-                            <p className="font-cinzel font-700" style={{ fontSize: '0.68rem', color: owned && !tierLocked ? '#f0ede8' : '#a8a3a0', lineHeight: 1.1, textAlign: 'center' }}>{skin.name}</p>
-                            {/* OWNERSHIP IS ASKED FIRST, and that ordering is the point. The
-                                tier lock used to be tested ahead of it, so every chase hull
-                                (all three are Man-o-War-only) told a captain who had not bought
-                                a Man-o-War yet "Man-o-War only" and never once said the thing
-                                was a DROP. The hint died for exactly the players who needed it.
-                                Now: if you do not own it, you are told how it is won. Only once
-                                you own it does the hull you need to wear it become the useful
-                                thing to say. */}
-                            {isEquipped ? (
-                              <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: skin.color }}>✓ Equipped</span>
-                            ) : !owned ? (
-                              <span className="font-karla font-600" style={{ fontSize: '0.5rem', color: '#7a7674', textAlign: 'center', lineHeight: 1.25 }}>{skin.source}</span>
-                            ) : tierLocked ? (
-                              <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: skin.color, textAlign: 'center', lineHeight: 1.25 }}>{SHIPS[skin.requiresShipTier!]?.name ?? 'Top hull'} only</span>
-                            ) : (
-                              <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: '#4ade80' }}>Tap to equip</span>
-                            )}
-                          </button>
+                          <ShipTile
+                            accent="#c084fc"
+                            title="Captain's Class"
+                            icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c084fc" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 15 9l7 .5-5.5 4.5L18 21l-6-3.5L6 21l1.5-7L2 9.5 9 9z"/></svg>}
+                            value={lines.length ? lines.map(l => l.name).join(', ') : 'None yet'}
+                            sub={lines.length ? `${lines.length} line${lines.length > 1 ? 's' : ''} · stack` : 'Clear a chapter'}
+                            cta={lines.length ? 'View ›' : 'Locked'}
+                            onClick={() => { if (lines.length) setClassesOpen(true) }}
+                          />
                         )
-                      })}
+                      })()}
+                      {/* Repair Kit */}
+                      {(() => {
+                        const kit = getRepairKit(kitEquipped) ?? getRepairKit('basic_repair_kit')!
+                        const range = repairKitRange(kit, ratedFortune)
+                        const accent = kitRarityColor(kit.rarity)
+                        const next = nextRepairKit(kitsOwned)
+                        return (
+                          <ShipTile
+                            accent={accent}
+                            title="Repair Kit"
+                            icon={<WrenchGlyph color={accent} />}
+                            value={kit.name}
+                            sub={`+${range.min}-${range.max} HP · Special`}
+                            cta={next ? 'Upgrade ›' : 'Max'}
+                            onClick={() => { if (next) { setKitErr(null); setKitOpen(true) } }}
+                          />
+                        )
+                      })()}
+                      {/* Appearance / Ship Skins */}
+                      <ShipTile
+                        accent="#9cc4ff"
+                        title="Appearance"
+                        icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9cc4ff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v9"/><path d="M12 5l6 6-6 1"/><path d="M4 14h16l-1.6 4.2a2 2 0 0 1-1.9 1.3H7.5a2 2 0 0 1-1.9-1.3z"/></svg>}
+                        value={equippedSkin ? (SHIP_SKINS.find(s => s.id === equippedSkin)?.name ?? 'Custom skin') : 'Default'}
+                        sub="Ship skins"
+                        cta="Change ›"
+                        onClick={() => setSkinsOpen(true)}
+                      />
                     </div>
+
                   </>
                 )
               })()}
@@ -2254,6 +2166,106 @@ export default function ShipHero({
               build={manowarBuild}
               schematics={manowarSchematics}
             />
+          </motion.div>
+        )}
+      </PopupShell>
+
+      {/* Sixth Berth — Manage modal (the buy / installed panel). */}
+      <PopupShell open={sixthBerthOpen} onClose={() => setSixthBerthOpen(false)}>
+        {sixthBerthOpen && (
+          <motion.div initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 4 }} transition={{ duration: 0.18 }}
+            style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 400, background: 'rgba(8,14,24,0.98)', borderRadius: 18, padding: '1.5rem 0.95rem 1rem', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 0 30px rgba(255,213,107,0.16)' }}>
+            <button onClick={() => setSixthBerthOpen(false)} aria-label="Close" style={{ position: 'absolute', top: 6, right: 8, zIndex: 6, color: 'rgba(255,255,255,0.55)', fontSize: '1.2rem', lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem 0.4rem' }}>✕</button>
+            <SixthBerthPanel
+              blockadeCleared={blockadeCleared}
+              hasSixthBerth={hasSixthBerth}
+              baseCrewSlots={hasSixthBerth ? shipStats.crewSlots - 1 : shipStats.crewSlots}
+              doubloons={doubloons}
+            />
+          </motion.div>
+        )}
+      </PopupShell>
+
+      {/* Captain's Class — overview modal: each owned line, tap for its breakdown. */}
+      <PopupShell open={classesOpen} onClose={() => setClassesOpen(false)}>
+        {classesOpen && (
+          <motion.div initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 4 }} transition={{ duration: 0.18 }}
+            style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 400, background: 'rgba(8,14,24,0.98)', border: '1px solid rgba(192,132,252,0.4)', borderRadius: 18, padding: '1.1rem 1rem 1.2rem', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 0 30px rgba(192,132,252,0.18)' }}>
+            <button onClick={() => setClassesOpen(false)} aria-label="Close" style={{ position: 'absolute', top: 8, right: 10, zIndex: 6, color: 'rgba(255,255,255,0.5)', fontSize: '1.2rem', lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem 0.4rem' }}>✕</button>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#c084fc', marginBottom: 4 }}>Captain&rsquo;s Class</p>
+            <p className="font-karla" style={{ fontSize: '0.72rem', color: '#8a8480', marginBottom: 14, lineHeight: 1.45 }}>Permanent buffs you pick at the end of each chapter. They stack. Tap one for its full breakdown.</p>
+            {(() => {
+              const ownedIds = new Set(Object.values(shipClasses))
+              const lines = SHIP_CLASS_LINES
+                .map(line => line.filter(id => ownedIds.has(id)) as ShipClassId[])
+                .filter(owned => owned.length > 0)
+                .map(owned => ({ owned, top: getShipClass(owned[owned.length - 1])! }))
+              if (lines.length === 0) return <p className="font-karla text-center" style={{ fontSize: '0.78rem', color: '#7a7470', padding: '0.8rem 0' }}>No class yet. Clear a chapter to choose one.</p>
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {lines.map(({ owned, top }) => (
+                    <button key={top.id} type="button" onClick={() => { setClassesOpen(false); setClassDetail(owned) }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '0.7rem 0.8rem', borderRadius: 12, background: `${top.color}12`, border: `1px solid ${top.color}45`, cursor: 'pointer', textAlign: 'left' }}>
+                      <span style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 9, background: `${top.color}20`, border: `1px solid ${top.color}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', color: top.color }}>{top.emoji}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#f0ede8', lineHeight: 1.15 }}>{top.name}</p>
+                        <p className="font-karla font-700" style={{ fontSize: '0.62rem', color: top.color }}>{top.tagline}</p>
+                      </div>
+                      <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.52rem', color: top.color, flexShrink: 0 }}>Details ›</span>
+                    </button>
+                  ))}
+                </div>
+              )
+            })()}
+          </motion.div>
+        )}
+      </PopupShell>
+
+      {/* Appearance — Ship Skins picker modal. */}
+      <PopupShell open={skinsOpen} onClose={() => setSkinsOpen(false)}>
+        {skinsOpen && (
+          <motion.div initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 4 }} transition={{ duration: 0.18 }}
+            style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 420, background: 'rgba(8,14,24,0.98)', border: '1px solid rgba(156,196,255,0.35)', borderRadius: 18, padding: '1.1rem 1rem 1.2rem', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 0 30px rgba(156,196,255,0.16)' }}>
+            <button onClick={() => setSkinsOpen(false)} aria-label="Close" style={{ position: 'absolute', top: 8, right: 10, zIndex: 6, color: 'rgba(255,255,255,0.5)', fontSize: '1.2rem', lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem 0.4rem' }}>✕</button>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#9cc4ff', marginBottom: 12 }}>Ship Skins</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
+              {(() => {
+                const isEquipped = equippedSkin === null
+                return (
+                  <button onClick={() => { if (!isEquipped) handleEquipSkin(null) }} disabled={isEquipped}
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '0.5rem 0.35rem', borderRadius: 10, background: isEquipped ? 'rgba(255,255,255,0.06)' : 'rgba(4,10,18,0.72)', border: `1px solid ${isEquipped ? 'rgba(255,255,255,0.32)' : 'rgba(255,255,255,0.09)'}`, cursor: isEquipped ? 'default' : 'pointer' }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={shipStats.image} alt="" loading="lazy" decoding="async" style={{ width: 38, height: 38, objectFit: 'contain' }} />
+                    <p className="font-cinzel font-700" style={{ fontSize: '0.68rem', color: '#f0ede8', lineHeight: 1.1, textAlign: 'center' }}>Default</p>
+                    <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: isEquipped ? '#e0ddd8' : '#7a7674' }}>{isEquipped ? '✓ Equipped' : 'Original'}</span>
+                  </button>
+                )
+              })()}
+              {SHIP_SKINS.map(skin => {
+                const owned = ownedSkins.includes(skin.id)
+                const tierLocked = skin.requiresShipTier != null && shipTierForSlots < skin.requiresShipTier
+                const isEquipped = equippedSkin === skin.id
+                const equippable = owned && !isEquipped && !tierLocked
+                const skinImg = skin.imageByTier?.[shipTierForSlots] ?? (skin.requiresShipTier != null ? skin.imageByTier?.[skin.requiresShipTier] : undefined) ?? shipStats.image
+                return (
+                  <button key={skin.id} onClick={equippable ? () => handleEquipSkin(skin.id) : undefined} disabled={!equippable}
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '0.5rem 0.35rem', borderRadius: 10, background: isEquipped ? `${skin.color}1f` : 'rgba(4,10,18,0.72)', border: `1px solid ${isEquipped ? skin.color + '90' : owned && !tierLocked ? 'rgba(255,255,255,0.09)' : `${skin.color}22`}`, boxShadow: isEquipped ? `0 0 12px ${skin.color}33` : 'none', cursor: equippable ? 'pointer' : 'default', opacity: owned && !tierLocked ? 1 : 0.6 }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={skinImg} alt="" loading="lazy" decoding="async" style={{ width: 38, height: 38, objectFit: 'contain', filter: owned && !tierLocked ? skin.filter : 'brightness(0.25) saturate(0)', transition: 'filter 0.25s' }} />
+                    <p className="font-cinzel font-700" style={{ fontSize: '0.68rem', color: owned && !tierLocked ? '#f0ede8' : '#a8a3a0', lineHeight: 1.1, textAlign: 'center' }}>{skin.name}</p>
+                    {isEquipped ? (
+                      <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: skin.color }}>✓ Equipped</span>
+                    ) : !owned ? (
+                      <span className="font-karla font-600" style={{ fontSize: '0.5rem', color: '#7a7674', textAlign: 'center', lineHeight: 1.25 }}>{skin.source}</span>
+                    ) : tierLocked ? (
+                      <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: skin.color, textAlign: 'center', lineHeight: 1.25 }}>{SHIPS[skin.requiresShipTier!]?.name ?? 'Top hull'} only</span>
+                    ) : (
+                      <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: '#4ade80' }}>Tap to equip</span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
           </motion.div>
         )}
       </PopupShell>
