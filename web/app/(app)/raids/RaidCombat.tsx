@@ -5647,6 +5647,33 @@ export default function RaidCombat({
                   </svg>
                 </span>
               )}
+              {/* Shark's Bite / Special / Ultimate tells — same glyph + accent as
+                  each one's card in the stats popup, so a raid-7/8 enemy reads its
+                  kit on the nameplate just like a Carapace enemy does. */}
+              {(enemy.chargeBiteChance ?? 0) > 0 && (
+                <span
+                  aria-label="Has ability: Shark's Bite"
+                  style={{ lineHeight: 1, flexShrink: 0, color: '#f0715e', filter: 'drop-shadow(0 0 4px rgba(240,113,94,0.5))', display: 'flex' }}
+                >
+                  <IconSkull size={11} />
+                </span>
+              )}
+              {enemy.special && (
+                <span
+                  aria-label={`Has ability: ${enemy.special.name}`}
+                  style={{ lineHeight: 1, flexShrink: 0, color: '#a78bfa', filter: 'drop-shadow(0 0 4px rgba(167,139,250,0.55))', display: 'flex' }}
+                >
+                  <IconBolt size={11} />
+                </span>
+              )}
+              {enemy.ultimate && (
+                <span
+                  aria-label={`Has ability: ${enemy.ultimate.name}`}
+                  style={{ lineHeight: 1, flexShrink: 0, color: '#fbbf24', filter: 'drop-shadow(0 0 4px rgba(251,191,36,0.5))', display: 'flex' }}
+                >
+                  <IconFlame size={11} />
+                </span>
+              )}
               {isBoss && enemyPhase !== 2 && (
                 <span className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', color: '#fbbf24', letterSpacing: '0.1em' }}>BOSS</span>
               )}
