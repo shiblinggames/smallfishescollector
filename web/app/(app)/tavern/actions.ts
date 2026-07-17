@@ -93,7 +93,10 @@ export async function getSlotStats(): Promise<SlotStats> {
 }
 
 export async function spinSlots(wager: number): Promise<SlotSpinResult | { error: string }> {
-  if (wager < SLOTS_MIN_BET || wager > SLOTS_MAX_BET) return { error: 'Invalid wager' }
+  // Integer + range guard. NaN/fractional wagers slipped past a bare min/max
+  // compare (NaN < MIN and NaN > MAX are both false) and could corrupt the
+  // player's own int chip balance. Blackjack/roulette already guard this.
+  if (!Number.isInteger(wager) || wager < SLOTS_MIN_BET || wager > SLOTS_MAX_BET) return { error: 'Invalid wager' }
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

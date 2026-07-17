@@ -53,6 +53,14 @@ export async function createChallenge(
   const user = await getUser()
   if (!user) return { error: 'Unauthorized' }
 
+  // Wager must be a non-negative whole number within a sane ceiling. Without
+  // this a NEGATIVE wager slipped past every `wager > 0` gate and, on payout
+  // (wager * 2 credited to the winner), SUBTRACTED doubloons from the loser —
+  // a griefing vector that could drive any accepting player's balance negative.
+  if (!Number.isInteger(wager) || wager < 0 || wager > 100_000_000) {
+    return { error: 'Invalid wager' }
+  }
+
   const admin = createAdminClient()
 
   const [{ data: myProfile }, { data: challenged }] = await Promise.all([
