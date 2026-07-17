@@ -69,7 +69,7 @@ import GearUnlockRow from '@/components/GearUnlockRow'
 import { formatFishLength, tierForLength, TIER_COLOR, type FishSizeTier } from '@/lib/fishSize'
 import { SHINY_FISH_FILTER, SHINY_THEME, SHINY_SELL_MULT, pickShinyMessage } from '@/lib/shiny'
 import { getHook, HOOKS, hookGlowClass } from '@/lib/hooks'
-import { getRod, getEffectiveRod, RODS, rodGlowClass, jackpotChanceForZone, type RodDef } from '@/lib/rods'
+import { getRod, getEffectiveRod, RODS, rodGlowClass, type RodDef } from '@/lib/rods'
 import { vibrate, hapticTap } from '@/lib/haptics'
 import { getReel, REELS } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
@@ -3796,7 +3796,7 @@ export default function FishingGame({
     const t = setTimeout(() => setLowBaitMsg(null), 2500)
     return () => clearTimeout(t)
   }, [lowBaitMsg])
-  const [hookedFish, setHookedFish] = useState<{ fishId: number; catchDifficulty: number; biteRarity: number; crateTier?: 'wooden' | 'metal' | 'gold' | 'diamond' } | null>(null)
+  const [hookedFish, setHookedFish] = useState<{ fishId: number; catchDifficulty: number; biteRarity: number; crateTier?: 'wooden' | 'metal' | 'gold' | 'diamond'; jackpotMult?: number; doubleCatch?: boolean } | null>(null)
   // YOLO Rod jackpot celebration — set when a jackpot resolves, drives the
   // full-screen JackpotBoom overlay. Cleared on auto-dismiss / tap.
   const [jackpotBoom, setJackpotBoom] = useState<{ qty: number } | null>(null)
@@ -4292,7 +4292,7 @@ export default function FishingGame({
   const catchingZonesRef = useRef<ZoneDef[]>([])
   const zoneRotationRef  = useRef(0)
   const lastZoneFromRef  = useRef<number>(NaN)
-  const hookedFishRef   = useRef<{ fishId: number; catchDifficulty: number; crateTier?: 'wooden' | 'metal' | 'gold' | 'diamond' } | null>(null)
+  const hookedFishRef   = useRef<{ fishId: number; catchDifficulty: number; crateTier?: 'wooden' | 'metal' | 'gold' | 'diamond'; jackpotMult?: number; doubleCatch?: boolean } | null>(null)
   const selectedBaitRef = useRef(selectedBait)
   useEffect(() => { phaseRef.current = phase }, [phase])
   useEffect(() => { retryFlashRef.current = retryFlash }, [retryFlash])
@@ -4790,7 +4790,7 @@ export default function FishingGame({
 
       await new Promise(r => setTimeout(r, res.waitMs))
 
-      setHookedFish({ fishId: res.fishId, catchDifficulty: res.catchDifficulty, biteRarity: res.biteRarity, crateTier: res.crateTier })
+      setHookedFish({ fishId: res.fishId, catchDifficulty: res.catchDifficulty, biteRarity: res.biteRarity, crateTier: res.crateTier, jackpotMult: res.jackpotMult, doubleCatch: res.doubleCatch })
 
       // Lightsaber Lightspeed cue — the blade flashed the fish onto the line.
       if (res.instantBite) {
@@ -5375,19 +5375,13 @@ export default function FishingGame({
     // Rolled HERE (before the Finn block) so a speed challenge can count
     // the full haul from the same roll that reelIn receives below.
     const inAncient = selectedZone === 'ancient_deep'
-    const ancientTrophy = inAncient && (allFishSpecies.find(f => f.id === hookedFishRef.current!.fishId)?.sell_value ?? 0) === 0
-    // Always-double rods (Millionaire's) double in the Ancient Deep too;
-    // partial-double rods (Twin-Strike) stay single-catch there. Trophies never
-    // multiply. Server re-checks the rod so a manipulated client can't sneak it.
-    const canDoubleHere = !inAncient || rod.doubleCatchChance >= 1
-    // Roll the JACKPOT FIRST. On a forged Completionist Rod you can have BOTH a
-    // jackpot (YOLO) and an always-double (Millionaire's, doubleCatchChance 1);
-    // if double-catch rolled first it would always win and the jackpot could
-    // never fire. Jackpot takes priority; a double only rolls when it misses.
-    const zoneJackpotChance = jackpotChanceForZone(rod, selectedZone)
-    const jackpotHit = !ancientTrophy && zoneJackpotChance > 0 && Math.random() < zoneJackpotChance
-    const jackpotMultiplier = jackpotHit ? (rod.jackpotMultiplier ?? 1) : 1
-    const doubleCatch = !jackpotHit && !ancientTrophy && canDoubleHere && rod.doubleCatchChance > 0 && Math.random() < rod.doubleCatchChance
+    // The haul multipliers (jackpot / double-catch) are rolled SERVER-SIDE at
+    // cast time now (castLine) and returned on the hooked fish. Use those
+    // verbatim so the celebration matches exactly what reelIn grants — the
+    // client no longer rolls its own, which is what made them forgeable.
+    const jackpotMultiplier = hookedFishRef.current!.jackpotMult ?? 1
+    const jackpotHit = jackpotMultiplier > 1
+    const doubleCatch = hookedFishRef.current!.doubleCatch ?? false
 
     // Finn challenge progression — replaces the old gem-challenge mechanic.
     // Perfect-streak: a non-perfect catch fails. Speed-catch: any catch

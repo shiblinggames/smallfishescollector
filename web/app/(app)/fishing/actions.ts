@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getBait } from '@/lib/bait'
-import { getRod, getEffectiveRod, COMPLETIONIST_TIER, COMPLETIONIST_MAX_EFFECTS, REFORGE_COST, rodHasUniqueEffect } from '@/lib/rods'
+import { getRod, getEffectiveRod, COMPLETIONIST_TIER, COMPLETIONIST_MAX_EFFECTS, REFORGE_COST, rodHasUniqueEffect, jackpotChanceForZone } from '@/lib/rods'
 import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
 import { rewardsOwed, type LevelReward } from '@/lib/levelRewards'
 import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
@@ -150,6 +150,19 @@ export async function activateEvent(type: string): Promise<{ ok: true } | { erro
 
 export type CrateTier = 'wooden' | 'metal' | 'gold' | 'diamond'
 
+// Server-rolled outcome of a cast, persisted to profiles.pending_cast and
+// consumed one-shot by reelIn / reelCrate. The client can pass whatever it
+// likes to those actions; the server binds to THESE values instead.
+type PendingCast = {
+  fishId: number          // the rolled species id (CRATE_FISH_ID === -1 for a crate)
+  habitat: string
+  baitType: string
+  crateTier?: CrateTier    // present only for crate casts
+  jackpotMult: number      // server-rolled YOLO jackpot (1 = none)
+  doubleCatch: boolean     // server-rolled double catch
+  castAt: number
+}
+
 const ZONE_CRATE_TIERS: Record<string, Record<CrateTier, number>> = {
   shallows:    { wooden: 80, metal: 10, gold: 7,  diamond: 3  },
   open_waters: { wooden: 60, metal: 20, gold: 12, diamond: 8  },
@@ -168,7 +181,7 @@ function rollCrateTier(habitat: string): CrateTier {
 }
 
 export async function castLine(baitType: string, habitat: string): Promise<
-  | { fishId: number; catchDifficulty: number; biteRarity: number; waitMs: number; crateTier?: CrateTier; baitRemaining?: number; instantBite?: boolean }
+  | { fishId: number; catchDifficulty: number; biteRarity: number; waitMs: number; crateTier?: CrateTier; baitRemaining?: number; instantBite?: boolean; jackpotMult?: number; doubleCatch?: boolean }
   | { error: string }
 > {
   const supabase = await createClient()
@@ -287,6 +300,11 @@ export async function castLine(baitType: string, habitat: string): Promise<
     }
     const crateWait = { shallows: 4000, open_waters: 7000, deep: 11000, abyss: 16000 }[habitat] ?? 6000
     const crateTier = rollCrateTier(habitat)
+    // Persist the server-rolled crate token; reelCrate binds to THIS tier and
+    // clears it one-shot, so the client can't name its own tier or open a crate
+    // it never cast for. Awaited so it commits before the client can call back.
+    const crateToken: PendingCast = { fishId: CRATE_FISH_ID, habitat, baitType, crateTier, jackpotMult: 1, doubleCatch: false, castAt: Date.now() }
+    await admin.from('profiles').update({ pending_cast: crateToken }).eq('id', user.id)
     return { fishId: CRATE_FISH_ID, catchDifficulty: 1, biteRarity: 1, waitMs: crateWait, crateTier, baitRemaining: !noBait && baitRow ? baitRow.quantity - 1 : undefined }
   }
 
@@ -337,7 +355,23 @@ export async function castLine(baitType: string, habitat: string): Promise<
     instantBite = true
   }
 
-  return { fishId: fish.id, catchDifficulty: fish.catch_difficulty, biteRarity: fish.bite_rarity, waitMs, baitRemaining: !noBait && baitRow ? baitRow.quantity - 1 : undefined, instantBite }
+  // Roll the haul multipliers SERVER-SIDE at cast time (mirrors what the client
+  // used to roll at reel time), and lock them into the token. reelIn binds to
+  // these — a client can no longer pass its own jackpot/double. Ancient trophies
+  // (sell_value 0) never multiply; ancient regulars only double with an
+  // always-double rod. Jackpot and double never stack (jackpot wins).
+  const isAncientTrophyRoll = habitat === 'ancient_deep' && (fish.sell_value ?? 0) === 0
+  const canDoubleHere = habitat !== 'ancient_deep' || (rod.doubleCatchChance ?? 0) >= 1
+  const zoneJackpotChance = isAncientTrophyRoll ? 0 : jackpotChanceForZone(rod, habitat)
+  const jackpotHit = zoneJackpotChance > 0 && Math.random() < zoneJackpotChance
+  const rolledJackpotMult = jackpotHit ? (rod.jackpotMultiplier ?? 1) : 1
+  const rolledDoubleCatch = !jackpotHit && !isAncientTrophyRoll && canDoubleHere
+    && (rod.doubleCatchChance ?? 0) > 0 && Math.random() < (rod.doubleCatchChance ?? 0)
+
+  const token: PendingCast = { fishId: fish.id, habitat, baitType, jackpotMult: rolledJackpotMult, doubleCatch: rolledDoubleCatch, castAt: Date.now() }
+  await admin.from('profiles').update({ pending_cast: token }).eq('id', user.id)
+
+  return { fishId: fish.id, catchDifficulty: fish.catch_difficulty, biteRarity: fish.bite_rarity, waitMs, baitRemaining: !noBait && baitRow ? baitRow.quantity - 1 : undefined, instantBite, jackpotMult: rolledJackpotMult, doubleCatch: rolledDoubleCatch }
 }
 
 const CRATE_FISH_ID = -1
@@ -437,18 +471,42 @@ export async function reelIn(
 
   if (!isCatch) {
     // A missed / snagged cast breaks the perfect streak — server-authoritative
-    // (the client value is never trusted). Also clears the in-flight flag.
-    await admin.from('profiles').update({ current_perfect_streak: 0, catch_pending: false }).eq('id', user.id)
+    // (the client value is never trusted). Also clears the in-flight flag AND
+    // the pending-cast token so it can't be reeled later.
+    await admin.from('profiles').update({ current_perfect_streak: 0, catch_pending: false, pending_cast: null }).eq('id', user.id)
     return { caught: false }
   }
 
-  const [{ data: fish }, { data: profile }, { data: holdRows }] = await Promise.all([
-    admin.from('fish_species').select('*').eq('id', fishId).single(),
-    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, rod_tier, completionist_effects, fish_hold_tier, has_phantom_hook, has_perfected_sigil, equipped_special, line_tier, prestige_levels, ancient_catches, unlocked_character_colors, total_perfects, current_perfect_streak, highest_perfect_streak, force_shiny_next_perfect, force_shiny_always, fishing_renown_alloc').eq('id', user.id).single(),
+  const [{ data: profile }, { data: holdRows }] = await Promise.all([
+    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, rod_tier, completionist_effects, fish_hold_tier, has_phantom_hook, has_perfected_sigil, equipped_special, line_tier, prestige_levels, ancient_catches, unlocked_character_colors, total_perfects, current_perfect_streak, highest_perfect_streak, force_shiny_next_perfect, force_shiny_always, fishing_renown_alloc, pending_cast').eq('id', user.id).single(),
     admin.from('fish_inventory').select('quantity').eq('user_id', user.id),
   ])
 
-  if (!fish || !profile) return { error: 'Data not found' }
+  if (!profile) return { error: 'Data not found' }
+
+  // ── Bind to the server-rolled cast token (anti-forgery) ──────────────────
+  // castLine wrote pending_cast with the TRUE fish id + haul multipliers. Claim
+  // it one-shot: the atomic null-ing gates on `pending_cast is not null`, so of
+  // any concurrent reelIn calls exactly one wins, and each legitimate cast
+  // yields at most one catch. If there's no live cast, nothing is minted. The
+  // client's fishId / doubleCatch / jackpotMultiplier arguments are IGNORED —
+  // we rebind them to the token, so a caller can't pick a legendary, force a
+  // ×100 jackpot, or reel without casting.
+  const token = profile.pending_cast as PendingCast | null
+  const { data: claimed } = await admin
+    .from('profiles')
+    .update({ pending_cast: null, catch_pending: false })
+    .eq('id', user.id)
+    .not('pending_cast', 'is', null)
+    .select('id')
+    .maybeSingle()
+  if (!token || !claimed || token.fishId === CRATE_FISH_ID) return { caught: false }
+  fishId = token.fishId
+  doubleCatch = token.doubleCatch
+  jackpotMultiplier = token.jackpotMult
+
+  const { data: fish } = await admin.from('fish_species').select('*').eq('id', fishId).single()
+  if (!fish) return { error: 'Data not found' }
 
   // Fishing Renown (post-100): a tiny XP multiplier on every catch (Wisdom).
   const renownXpMult = fishingRenownEffects(profile.fishing_renown_alloc as RenownAlloc | null).xpMult
@@ -1052,12 +1110,29 @@ export async function reelCrate(_zone: string, tier: CrateTier = 'wooden'): Prom
   if (!user) return { error: 'Unauthorized' }
   const admin = createAdminClient()
 
+  const { data: profile } = await admin.from('profiles')
+    .select('doubloons, unlocked_character_colors, unlocked_boats, unlocked_hats, unlocked_pets, equipped_pet, pending_cast')
+    .eq('id', user.id).single()
+
+  // Bind to the server-rolled crate token (anti-forgery). castLine chose the
+  // tier and stored it; claim it one-shot via the atomic null-ing. The client's
+  // `tier` argument is IGNORED, and a call with no live crate cast opens nothing
+  // — closing the "loop reelCrate('diamond') with no cast" doubloon faucet.
+  const crateToken = profile?.pending_cast as PendingCast | null
+  const { data: claimed } = await admin
+    .from('profiles')
+    .update({ pending_cast: null })
+    .eq('id', user.id)
+    .not('pending_cast', 'is', null)
+    .select('id')
+    .maybeSingle()
+  if (!profile || !crateToken || !claimed || crateToken.fishId !== CRATE_FISH_ID || !crateToken.crateTier) {
+    return { error: 'No crate to open.' }
+  }
+  tier = crateToken.crateTier
+
   // Lifetime crates-opened counter (admin stat).
   await admin.rpc('bump_profile_stat', { uid: user.id, col: 'fishing_crates_opened', n: 1 })
-
-  const { data: profile } = await admin.from('profiles')
-    .select('doubloons, unlocked_character_colors, unlocked_boats, unlocked_hats, unlocked_pets, equipped_pet')
-    .eq('id', user.id).single()
 
   const unlockedSkins = (profile?.unlocked_character_colors as string[] | null) ?? []
   const unlockedBoats = (profile?.unlocked_boats as string[] | null) ?? []
