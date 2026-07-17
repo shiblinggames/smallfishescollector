@@ -5001,11 +5001,13 @@ export default function RaidCombat({
               position: 'absolute', inset: 0,
               backgroundImage: `url(${zoneBg})`,
               backgroundSize: 'cover',
-              // Anchor the TOP of the tall backdrop strip (sky + horizon live in
-              // the top ~7%) to the top of the stage, same as the fishing scene's
-              // objectPosition: 'top center'. 'center' would land mid-strip and
-              // show nothing but open ocean.
-              backgroundPosition: 'top center',
+              // Vertical anchor into the tall backdrop strip (sky + horizon live
+              // in the top ~7%, then a long ocean gradient). 0% ('top') shows too
+              // much sky and floats the ships above the horizon; 50% ('center')
+              // lands mid-strip and shows only open ocean. ~8% keeps the horizon
+              // high with a slim sky band, so ships sit on water. Tune this one
+              // number if a zone wants more/less sky.
+              backgroundPosition: '50% 8%',
               pointerEvents: 'none',
             }} />
             <div aria-hidden style={{
