@@ -1479,13 +1479,11 @@ export default function ShipHero({
                   slots, so what's equipped reads at a glance. Tap a filled slot
                   to remove it; equip from the Inventory below. Effects stack —
                   any item in any slot — so the slots are just capacity. */}
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', letterSpacing: '0.04em' }}>Battle Loadout</p>
-                <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.6rem', color: '#8a8480' }}>{equippedItems.length}/{raidItemSlots} slots</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.8rem' }}>
+                <span className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.22em', color: '#8794a6' }}>Battle Loadout</span>
+                <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
+                <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.56rem', color: '#c4b078' }}>{equippedItems.length}/{raidItemSlots} slots</span>
               </div>
-              <p className="font-karla" style={{ fontSize: '0.74rem', color: '#8a8480', marginBottom: '0.9rem', lineHeight: 1.45 }}>
-                Equipped for your next raid. Tap a slot to remove it.
-              </p>
               <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(raidItemSlots, 2)}, minmax(0, 1fr))`, gap: 8, marginBottom: '1.6rem' }}>
                 {Array.from({ length: raidItemSlots }, (_, i) => {
                   const itemId = equippedItems[i]
@@ -1528,7 +1526,11 @@ export default function ShipHero({
                 const full = equippedItems.length >= raidItemSlots
                 return (
                   <>
-                    <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.3rem', letterSpacing: '0.04em' }}>Inventory</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.6rem' }}>
+                      <span className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.22em', color: '#8794a6' }}>Inventory</span>
+                      <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
+                      {unequipped.length > 0 && <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.56rem', color: '#8a8480' }}>{unequipped.length} owned</span>}
+                    </div>
                     {ownedRaidItems.length === 0 ? (
                       <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.14)', borderRadius: 14, padding: '1.7rem 1rem', margin: '0.7rem 0 1.6rem' }}>
                         <p className="font-karla text-center" style={{ fontSize: '0.8rem', color: '#7a7470', lineHeight: 1.55 }}>No items yet.<br />Clear raids to earn them.</p>
@@ -1578,7 +1580,7 @@ export default function ShipHero({
                                     {def.name}
                                     {isNew && <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.08em', color: '#1a1206', background: '#ffd96a', borderRadius: 4, padding: '0.12rem 0.32rem', marginLeft: 7, verticalAlign: 'middle' }}>New</span>}
                                   </p>
-                                  <p className="font-karla" style={{ fontSize: '0.72rem', color: '#8a8480', lineHeight: 1.4 }}>{def.description}</p>
+                                  <p className="font-karla" style={{ fontSize: '0.72rem', color: '#8a8480', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{def.description}</p>
                                   {wouldSwap && (
                                     <p className="font-karla font-700" style={{ fontSize: '0.64rem', color: '#d8a14a', lineHeight: 1.35, marginTop: 3 }}>
                                       Same gear as {swapNames.join(', ')} — equipping swaps it in (they don&apos;t stack).
