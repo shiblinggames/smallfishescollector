@@ -5001,7 +5001,11 @@ export default function RaidCombat({
               position: 'absolute', inset: 0,
               backgroundImage: `url(${zoneBg})`,
               backgroundSize: 'cover',
-              backgroundPosition: 'center',
+              // Anchor the TOP of the tall backdrop strip (sky + horizon live in
+              // the top ~7%) to the top of the stage, same as the fishing scene's
+              // objectPosition: 'top center'. 'center' would land mid-strip and
+              // show nothing but open ocean.
+              backgroundPosition: 'top center',
               pointerEvents: 'none',
             }} />
             <div aria-hidden style={{
