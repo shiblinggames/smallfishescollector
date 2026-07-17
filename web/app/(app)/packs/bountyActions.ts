@@ -168,6 +168,19 @@ export async function claimBountyReward(
   if (!p?.[info.completedKey]) return { error: 'Bounty not yet completed' }
   if (p?.[info.claimedKey]) return { error: 'Already claimed' }
 
+  // Atomic claim: stamp claimed_at only if it's still null. Only the winner of a
+  // concurrent double-fire gets a row back, so the doubloon+gem reward pays out
+  // exactly once (the old read-check-then-write could pay N parallel requests).
+  const { data: claimedRow } = await admin
+    .from('weekly_bounty_progress')
+    .update({ [info.claimedKey]: new Date().toISOString() })
+    .eq('user_id', user.id)
+    .eq('week_start', weekStart)
+    .is(info.claimedKey, null)
+    .select('user_id')
+    .maybeSingle()
+  if (!claimedRow) return { error: 'Already claimed' }
+
   const { data: profile } = await admin
     .from('profiles')
     .select('doubloons, gems')
@@ -182,10 +195,6 @@ export async function claimBountyReward(
   if (info.gemReward > 0) profileUpdate.gems = newGems
 
   await Promise.all([
-    admin.from('weekly_bounty_progress')
-      .update({ [info.claimedKey]: new Date().toISOString() })
-      .eq('user_id', user.id)
-      .eq('week_start', weekStart),
     admin.from('profiles').update(profileUpdate).eq('id', user.id),
     admin.from('doubloon_transactions').insert({
       user_id: user.id,

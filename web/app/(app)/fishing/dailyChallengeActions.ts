@@ -97,11 +97,23 @@ export async function claimDailyReward(
 
   const claimKey = `claimed_${index + 1}` as 'claimed_1' | 'claimed_2' | 'claimed_3'
 
+  // Atomic claim: flip this index's flag in one guarded update (matching
+  // not-yet-true, i.e. false OR null). Only the winner of a concurrent
+  // double-fire gets a row back, so the reward is granted exactly once — the
+  // old read-check-then-write let two parallel calls both pass and pay twice.
+  const { data: claimedRow } = await admin
+    .from('daily_challenge_progress')
+    .update({ [claimKey]: true })
+    .eq('user_id', user.id)
+    .eq('date', date)
+    .not(claimKey, 'is', true)
+    .select('user_id')
+    .maybeSingle()
+  if (!claimedRow) return { error: 'Already claimed' }
+
   const newDoubloons = (profile.doubloons ?? 0) + challenge.reward
 
   await Promise.all([
-    admin.from('daily_challenge_progress')
-      .upsert({ user_id: user.id, date, [claimKey]: true }, { onConflict: 'user_id,date' }),
     admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
     admin.from('doubloon_transactions').insert({
       user_id: user.id, amount: challenge.reward,

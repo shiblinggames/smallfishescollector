@@ -20,7 +20,7 @@ export async function buyBait(
 
   const bait = getBait(baitType)
   if (!bait || bait.shopCost <= 0) return { error: 'Not for sale' }
-  if (qty <= 0) return { error: 'Invalid quantity' }
+  if (!Number.isInteger(qty) || qty <= 0) return { error: 'Invalid quantity' }
 
   const admin = createAdminClient()
   const { data: profile } = await admin
@@ -34,7 +34,10 @@ export async function buyBait(
   const totalCost = bait.shopCost * qty
   if (profile.doubloons < totalCost) return { error: `Need ${totalCost.toLocaleString()} ⟡` }
 
-  const newDoubloons = profile.doubloons - totalCost
+  // Atomic debit first (relative, balance-guarded) so parallel buys of two
+  // different bait types can't both settle against one balance.
+  const { data: newDoubloons } = await admin.rpc('deduct_doubloons', { uid: user.id, amount: totalCost })
+  if (newDoubloons == null) return { error: `Need ${totalCost.toLocaleString()} ⟡` }
 
   const { data: existing } = await admin
     .from('bait_inventory')
@@ -53,9 +56,6 @@ export async function buyBait(
           .eq('bait_type', baitType)
       : admin.from('bait_inventory')
           .insert({ user_id: user.id, bait_type: baitType, quantity: qty }),
-    admin.from('profiles')
-      .update({ doubloons: newDoubloons })
-      .eq('id', user.id),
     admin.from('doubloon_transactions').insert({
       user_id: user.id,
       amount: -totalCost,
@@ -91,11 +91,14 @@ export async function purchaseRod(
   if (getLevelFromXP(profile.fishing_xp ?? 0) < levelReq) return { error: `Reach Fishing Lv ${levelReq} to buy the ${rod.name}` }
   if (profile.doubloons < rod.cost) return { error: `Need ${rod.cost.toLocaleString()} ⟡` }
 
-  const newDoubloons = profile.doubloons - rod.cost
+  // Atomic debit FIRST — a relative decrement guarded on the live balance, so
+  // two concurrent buys of different rods can't both read the same balance and
+  // pay for only one (the old full-value overwrite lost one deduction).
+  const { data: newDoubloons } = await admin.rpc('deduct_doubloons', { uid: user.id, amount: rod.cost })
+  if (newDoubloons == null) return { error: `Need ${rod.cost.toLocaleString()} ⟡` }
 
   await Promise.all([
     admin.from('rod_inventory').insert({ user_id: user.id, rod_tier: rodTier }),
-    admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
     admin.from('doubloon_transactions').insert({
       user_id: user.id,
       amount: -rod.cost,
