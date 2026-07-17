@@ -299,6 +299,7 @@ export interface SceneLine {
 export type SceneInsert =
   | { kind: 'ledger-f' }                 // the patient F signing the margin
   | { kind: 'sealed-letter'; wax?: string } // a wax-sealed letter (wax = the initials pressed in it)
+  | { kind: 'finn-silhouette' }          // a figure rising from the true deep — Finn's shape, blacked to a silhouette (the "not the final boss" sting; reuses his CharacterAvatar, no art)
 
 /** One row in a node's "possible drops" panel. */
 export interface RaidNodeDrop {
@@ -2385,6 +2386,12 @@ export const RAID_MAP: RaidNode[] = [
       { ...GUIDE.mira, text: "Relax, captain. If I were here for you, we would not be talking." },
       { ...GUIDE.mira, text: "You drowned the biggest name in the sea and found a bigger one hiding in its margins. Most captains would call that a nightmare. I call it repeat business." },
       { text: "She lifts her glass to the open ledger, to the small patient F, and to whatever it turns out to be." },
+      { text: 'Then her glass stops halfway.', pause: 400 },
+      { text: "Out past the wreck, where the don's water spills over the edge into the true deep, the black surface stirs. Something is out there watching the ruin you made. Something that was never once in the don's court.", pause: 700 },
+      { text: 'It rises just enough to throw a shape against the dark: a figure, rod-straight and easy, a stance you would almost swear you had seen before, on sunnier water, over a far shorter line.', pause: 400, fx: 'flash', insert: { kind: 'finn-silhouette' } },
+      { text: 'The don was the biggest name in the sea. He was never your last fight. He was the *bait*.', pause: 900, closeup: true },
+      { text: 'The shape takes its own unhurried look, at the wreck and at you, the way a thing does when everything is going exactly to plan. Then the deep folds over it, and it is gone before you can be sure it was there at all.' },
+      { ...GUIDE.mira, text: 'Captain. Tell me you saw that too.' },
     ],
     sceneAccent: '#a78bfa',
     detail: {
@@ -2393,9 +2400,9 @@ export const RAID_MAP: RaidNode[] = [
       drops: [
         { emoji: '📜', label: "Captain's Logbook, Fragment XVI", sublabel: '"The don ran the family. The margin ran the don."', rarity: 'epic' },
       ],
-      dropsNote: 'The fake-final falls. The real account is still open.',
+      dropsNote: 'The fake-final falls, and something out past the wreck rises to watch. The real account is still open.',
       ctaLabel: 'Settle the Court →',
-      summary: "Don Finleone is drowned and the Finndicate broken — but the F in the margins signed sums that BUILT the family. The don ran the family; the margin ran the don. One account stays open.",
+      summary: "Don Finleone is drowned and the Finndicate broken — but the F in the margins signed sums that BUILT the family. The don ran the family; the margin ran the don. And out past the wreck, at the lip of the true deep, a figure rises just long enough to watch: the don was never your last fight. He was the bait.",
     },
   },
   {

@@ -11,6 +11,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { vibrate } from '@/lib/haptics'
+import { getCharacterSprites } from '@/lib/characters'
+import { FINN_AVATAR } from '@/lib/finn'
 
 export const GOLD = '#f0c040'
 const TYPE_MS = 22          // per character
@@ -211,7 +213,43 @@ const PARCHMENT = 'linear-gradient(160deg, #e9ddc2 0%, #d9c9a6 55%, #ccb991 100%
 export function InsertShot({ kind, wax, accent, reduced }: { kind: string; wax?: string; accent: string; reduced?: boolean }) {
   if (kind === 'ledger-f') return <LedgerFInsert accent={accent} reduced={reduced} />
   if (kind === 'sealed-letter') return <SealedLetterInsert wax={wax ?? ''} accent={accent} reduced={reduced} />
+  if (kind === 'finn-silhouette') return <FinnSilhouetteInsert accent={accent} reduced={reduced} />
   return null
+}
+
+/*  FINN SILHOUETTE — the "not the final boss" sting after the Don. Reuses Finn's
+ *  own CharacterAvatar (ruby, mirrored to face the player) blacked to a pure
+ *  silhouette and risen from below, backlit by a cold deep-water glow so only
+ *  the SHAPE reads. Recognizable to a fishing player who's met him; deniable to
+ *  everyone else. NO art added, and Finn is never named — the full reveal stays
+ *  for the merge cutscene. See [[project_finn_finndicate_twist]]. */
+function FinnSilhouetteInsert({ accent, reduced }: { accent: string; reduced?: boolean }) {
+  const sprite = getCharacterSprites(FINN_AVATAR.characterColor).rest
+  return (
+    <div style={{ position: 'relative', width: 'min(74vw, 300px)', aspectRatio: '1 / 1', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', overflow: 'hidden' }}>
+      {/* cold deep-water backlight so the black shape separates from the scene */}
+      <motion.div aria-hidden
+        initial={{ opacity: 0, scale: 0.7 }}
+        animate={{ opacity: reduced ? 0.85 : [0, 0.9, 0.72], scale: reduced ? 1 : [0.7, 1.08, 1] }}
+        transition={{ duration: reduced ? 0.6 : 3.4, ease: 'easeOut', delay: 0.2 }}
+        style={{ position: 'absolute', left: '50%', top: '44%', width: '78%', aspectRatio: '1', transform: 'translate(-50%, -50%)', borderRadius: '50%',
+          background: `radial-gradient(circle at 50% 45%, ${accent}cc 0%, ${accent}44 42%, transparent 70%)`,
+          filter: 'blur(6px)' }} />
+      {/* Finn's own sprite, mirrored to face the player, risen from below and
+          blacked to a pure silhouette. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <motion.img src={sprite} alt="" aria-hidden decoding="async"
+        initial={{ opacity: 0, y: reduced ? 0 : 54 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ opacity: { duration: 0.5, delay: 0.25 }, y: { duration: reduced ? 0.4 : 2.4, ease: 'easeOut' } }}
+        style={{ position: 'relative', height: '90%', width: 'auto', objectFit: 'contain',
+          transform: FINN_AVATAR.mirrored ? 'scaleX(-1)' : 'none',
+          filter: 'brightness(0) drop-shadow(0 0 12px rgba(0,0,0,0.75))' }} />
+      {/* the waterline the deep folds back over him */}
+      <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, bottom: '9%', height: 2,
+        background: `linear-gradient(90deg, transparent, ${accent}66, transparent)` }} />
+    </div>
+  )
 }
 
 function LedgerFInsert({ accent, reduced }: { accent: string; reduced?: boolean }) {
