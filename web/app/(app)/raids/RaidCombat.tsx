@@ -482,6 +482,12 @@ export interface RaidCombatProps {
    *  and SKIPS the procedural `atmosphere` scene entirely. Undefined = keep the
    *  procedural look (practice skirmish, Gauntlet). */
   zoneBg?: string
+  /** Optional CSS filter applied to the zone backdrop image only (not the ships
+   *  or UI). Lets a caller retint the shared art without a new asset — e.g. the
+   *  Gauntlet runs the abyss backdrop through a deeper, drowned-teal filter to set
+   *  it apart from the campaign's abyss raids. Hardcore leaves it unset so its
+   *  red vignette reads clean. */
+  zoneFilter?: string
   /** Crew abilities pipeline. crewMembers carries id/slug/xp/name/portrait
    *  so RaidCombat can derive each crew's class + current milestone via
    *  lib/crewClasses. usedAbilityIds is the per-raid cooldown owned by
@@ -538,6 +544,7 @@ export default function RaidCombat({
   tideEffects = [],
   atmosphere = 'dusk',
   zoneBg,
+  zoneFilter,
   crewMembers = [], usedAbilityIds, abilitiesRefreshed = false, onAbilityFired,
   usedRaidItemIds, onRaidItemUsed, onRefreshAbility,
   usedAbilitySub = 'Already used this raid.', openingNote,
@@ -5008,6 +5015,7 @@ export default function RaidCombat({
               // high with a slim sky band, so ships sit on water. Tune this one
               // number if a zone wants more/less sky.
               backgroundPosition: '50% 8%',
+              filter: zoneFilter,
               pointerEvents: 'none',
             }} />
             <div aria-hidden style={{

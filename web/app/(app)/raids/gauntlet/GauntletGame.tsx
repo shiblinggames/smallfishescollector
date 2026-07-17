@@ -74,6 +74,13 @@ function atmosphereForDepth(depth: number): 'fog' | 'overcast' | 'sunset' {
   return 'fog'
 }
 
+// The Gauntlet fights over the abyss backdrop (same art as the campaign's
+// Chapter IV raids) but runs it through a deeper, drowned-teal filter so it
+// reads as Davy's water, not the campaign's. Echoes DROWNED_FILTER's
+// desaturated, teal-shifted look. Hardcore skips this (passes undefined) so
+// its red blood-vignette stays clean instead of muddying against teal.
+const GAUNTLET_ABYSS_FILTER = 'brightness(0.7) saturate(1.15) hue-rotate(-18deg) contrast(1.05)'
+
 export interface GauntletGameProps {
   shipImageUrl: string
   shipName: string
@@ -3265,6 +3272,8 @@ export default function GauntletGame(props: GauntletGameProps) {
             key={`gauntlet-r${fight.depth}`}
             enemy={fight.enemy}
             atmosphere={atmosphereForDepth(fight.depth)}
+            zoneBg="/abyss.jpg"
+            zoneFilter={hardcoreRun ? undefined : GAUNTLET_ABYSS_FILTER}
             enemyArtFilter={DROWNED_FILTER}
             bonusChargeSlots={bonusSlots}
             anchorSaveAvailable={anchorSavesLeftRef.current > 0}
