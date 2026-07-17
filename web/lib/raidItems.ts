@@ -286,7 +286,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'court_fang',
     name: "The Court's Fang",
     description: 'A tooth pried from one of the don’s court. On a CRITICAL hit, 20% chance to tear a loaded cannonball clean off the enemy’s rack, delaying its next shot.',
-    image: null,
+    image: '/thecourtsfang.png',
     emoji: '🦈',
     rarity: 'epic',
     effects: [
@@ -299,7 +299,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'dons_signet',
     name: "The Don's Signet",
     description: 'The ring every captain in the Finndicate answered to — and every gun in his court. On a CRITICAL hit, the command turns against them: 50% chance to tear a loaded cannonball off the enemy’s rack, delaying its next shot.',
-    image: null,  // TODO: /donssignet.png at the art pass
+    image: '/thedonssignet.png',
     emoji: '💍',
     rarity: 'legendary',
     effects: [

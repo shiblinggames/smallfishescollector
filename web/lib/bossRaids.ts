@@ -1899,8 +1899,8 @@ export const THE_THRONE: BossRaidConfig = {
     { id: 'last_fathom_hull', label: 'Last Fathom Hull', image: null, emoji: '🚢', rarity: 'epic', weight: 8, shipSkinId: 'last_fathom_hull' },
     // The court's own bite, turned back: a CRIT strips an enemy cannonball (epic
     // 20% chance / legendary 50%). Same 'court_bite' family — they don't stack.
-    { id: 'court_fang',     label: "The Court's Fang", image: null, emoji: '🦈', rarity: 'epic',      weight: 14 },
-    { id: 'dons_signet',    label: 'The Don’s Signet', image: null, emoji: '💍', rarity: 'legendary', weight: 10 },
+    { id: 'court_fang',     label: "The Court's Fang", image: '/thecourtsfang.png', emoji: '🦈', rarity: 'epic',      weight: 14 },
+    { id: 'dons_signet',    label: 'The Don’s Signet', image: '/thedonssignet.png', emoji: '💍', rarity: 'legendary', weight: 10 },
     { id: 'doubloons_800',  label: '+800 ⟡',   image: '/smallpile.png',  emoji: '🪙',      rarity: 'common',   weight: 28 },
     { id: 'doubloons_1500', label: '+1,500 ⟡', image: '/dailybonus.png', emoji: '💰',      rarity: 'uncommon', weight: 24 },
     { id: 'gems_50',        label: '50 Gems',  image: null,              emoji: GEM_GLYPH, rarity: 'rare',     weight: 22 },
