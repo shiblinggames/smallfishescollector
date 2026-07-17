@@ -4111,6 +4111,21 @@ export default function RaidCombat({
           shieldChanged = true
           if (dmg > 0) onStat?.({ dmgTaken: dmg })
           pHp = Math.max(0, pHp - dmg)
+          // ── SHARK'S BITE (Raid 8 shared mechanic) ─────────────────────────
+          // Don Finleone's court doesn't just hurt you, it disarms you: a shot
+          // that actually connects (dmg > 0 — a dodge/brace or a full shield
+          // spares your rack) has a per-shark chance to tear a loaded cannonball
+          // off your magazine. Reload recovers it. Only real offensive shots
+          // bite (fire / volley / ultimate), never a reload/dodge/repair step.
+          if (
+            dmg > 0 && pCharges > 0
+            && (enemy.chargeBiteChance ?? 0) > 0
+            && (action === 'fire' || action === 'volley' || action === 'ultimate')
+            && Math.random() < (enemy.chargeBiteChance ?? 0)
+          ) {
+            pCharges = Math.max(0, pCharges - 1)
+            stepLines.push(`The ${enemy.name} rips a loaded cannonball clean off your rack.`)
+          }
           // Spiteful Wake (boon): the attacker takes a slice of what it dealt
           // straight back. Reads the post-shield, post-mitigation damage (what
           // actually hit the hull); never reflects onto an already-sunk enemy.

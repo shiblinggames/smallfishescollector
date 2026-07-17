@@ -173,6 +173,11 @@ export interface BroadsideEnemy {
    *  fight shielded for (the Warded-affix machinery, made a first-class stat).
    *  Combines with the Warded affix / Warding curse by MAX, not sum. */
   shieldPct?: number
+  /** Raid-8 SHARK'S BITE — the shared signature of Don Finleone's court. When
+   *  one of these sharks lands a shot on you (a real hit; a dodge/brace/full
+   *  shield spares your rack), this is the chance (0–1) it also tears one loaded
+   *  cannonball off your magazine. Reload recovers it. Default 0 (no bite). */
+  chargeBiteChance?: number
   /** Chapter-4 special ability, cast when the pattern hits a 'special' slot. */
   special?: EnemySpecial
   /** Raid-8 ultimate, unleashed when the pattern hits an 'ultimate' slot AT A
@@ -1692,7 +1697,7 @@ export const THE_THRONE: BossRaidConfig = {
       // Watch the pips fill to four and glow, then answer it or eat it.
       id: 'court_herald', name: 'The Court Herald', hpBase: 340, minDmg: 22, maxDmg: 36,
       shipSpeed: 8, actionMs: 3400,
-      magazineSize: 4, shieldPct: 0.15,
+      magazineSize: 4, shieldPct: 0.15, chargeBiteChance: 0.35,
       ultimate: { name: 'Broadside Royale', mult: 2.4, line: 'Every gun on the deck speaks at once, in the don’s name.' },
       pattern: ['reload', 'fire', 'reload', 'reload', 'ultimate', 'dodge', 'reload', 'fire'],
       critChance: 0.12,
@@ -1705,7 +1710,7 @@ export const THE_THRONE: BossRaidConfig = {
       // Crimson bands dud the shot; find the real lane before you lock.
       id: 'the_mirage', name: 'The Mirage', hpBase: 380, minDmg: 24, maxDmg: 38,
       shipSpeed: 10, actionMs: 3400,
-      magazineSize: 4, shieldPct: 0.18,
+      magazineSize: 4, shieldPct: 0.18, chargeBiteChance: 0.35,
       special: { name: 'False Court', aimAttack: 'decoys', aimPasses: 2, line: 'Lantern-rigs bloom down her rail — a court of false colors, and only one throne among them.' },
       pattern: ['reload', 'special', 'fire', 'reload', 'dodge', 'fire', 'special', 'reload'],
       critChance: 0.12,
@@ -1718,7 +1723,7 @@ export const THE_THRONE: BossRaidConfig = {
       // only cracks it, the second lands. The heavy door you knock on twice.
       id: 'the_doorman', name: 'The Doorman', hpBase: 420, minDmg: 24, maxDmg: 40,
       shipSpeed: 5, actionMs: 4200,
-      magazineSize: 4, shieldPct: 0.24,
+      magazineSize: 4, shieldPct: 0.24, chargeBiteChance: 0.35,
       special: { name: 'Iron Etiquette', aimAttack: 'hardened', aimPasses: 2, line: 'Iron shutters slam over every line you’d take — nobody reaches the don in one knock.' },
       pattern: ['reload', 'special', 'reload', 'fire', 'volley', 'reload', 'special', 'fire'],
       critChance: 0.10,
@@ -1731,7 +1736,7 @@ export const THE_THRONE: BossRaidConfig = {
       // Timing by rhythm fails; watch the needle itself.
       id: 'the_stormcaller', name: 'The Stormcaller', hpBase: 440, minDmg: 26, maxDmg: 40,
       shipSpeed: 9, actionMs: 3600,
-      magazineSize: 4, shieldPct: 0.20,
+      magazineSize: 4, shieldPct: 0.20, chargeBiteChance: 0.35,
       special: { name: 'Kingmaker’s Gale', aimAttack: 'squall', aimPasses: 2, line: 'She whistles a wind out of dead water, and your gun-deck pitches with it.' },
       pattern: ['reload', 'special', 'fire', 'reload', 'fire', 'volley', 'dodge', 'reload'],
       critChance: 0.14,
@@ -1744,7 +1749,7 @@ export const THE_THRONE: BossRaidConfig = {
       // locks your crew out of the answer while the battery builds.
       id: 'the_left_hand', name: 'The Left Hand', hpBase: 480, minDmg: 26, maxDmg: 42,
       shipSpeed: 8, actionMs: 3800,
-      magazineSize: 4, shieldPct: 0.24,
+      magazineSize: 4, shieldPct: 0.24, chargeBiteChance: 0.35,
       special: { name: 'Omertà', status: 'silence', magnitude: 1, turns: 2, target: 'player', line: 'The left hand draws a line across his throat, and your crew’s shouts die in the wind.' },
       ultimate: { name: 'The Quiet Word', mult: 2.5, line: 'What the don whispers, the guns repeat.' },
       pattern: ['reload', 'special', 'reload', 'reload', 'ultimate', 'fire', 'dodge', 'reload'],
@@ -1758,7 +1763,7 @@ export const THE_THRONE: BossRaidConfig = {
       // and carries the biggest mob ultimate in the raid.
       id: 'the_consigliere', name: 'The Consigliere', hpBase: 520, minDmg: 28, maxDmg: 44,
       shipSpeed: 7, actionMs: 4000,
-      magazineSize: 4, shieldPct: 0.26,
+      magazineSize: 4, shieldPct: 0.26, chargeBiteChance: 0.35,
       special: { name: 'Marked for the Don', status: 'feeble', magnitude: 0.22, turns: 2, target: 'player', line: 'He reads your name off a short list, and every gun in the court knows where to aim.' },
       ultimate: { name: 'Final Counsel', mult: 2.6, line: 'His advice, delivered all at once.' },
       pattern: ['reload', 'special', 'reload', 'volley', 'reload', 'reload', 'ultimate', 'dodge'],
@@ -1779,7 +1784,7 @@ export const THE_THRONE: BossRaidConfig = {
       // firings, a full six-berth crew. Miss one and the consequence snowballs.
       id: 'don_finleone', name: 'Don Finleone', hpBase: 880, minDmg: 30, maxDmg: 50,
       shipSpeed: 9, actionMs: 4000,
-      magazineSize: 4, shieldPct: 0.30, startCharges: 2,
+      magazineSize: 4, shieldPct: 0.30, chargeBiteChance: 0.35, startCharges: 2,
       special: { name: 'The Don’s Court', aimAttack: 'decoys', aimPasses: 2, line: 'The court closes around the throne — a dozen crowns, and only one that bleeds.' },
       ultimate: { name: 'The Deep Verdict', mult: 2.8, line: 'The don passes sentence, and the water carries it out.' },
       pattern: ['special', 'fire', 'reload', 'reload', 'ultimate', 'dodge', 'fire', 'reload'],
