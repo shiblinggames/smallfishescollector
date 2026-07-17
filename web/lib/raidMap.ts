@@ -2172,69 +2172,30 @@ export const RAID_MAP: RaidNode[] = [
   {
     id: 'crooked_ledger',    type: 'story',
     label: 'The Crooked Ledger',
-    flavor: "Sal Brackwater's books ride in your hold now — the don's own accounts, in the don's own hand. They balance perfectly. All but one margin, where a single initial repeats in ink older than the rest.",
-    bridge: "The books say the throne is dead ahead, past one last gate. The margin says something else — something with no name yet. You sail for the gate.",
+    flavor: "Sal Brackwater's strongroom gives up the don's own accounts, in the don's own hand — and every drowned debt in the sea runs up to him. Don Finleone is the head of the whole Finndicate, proven in ink. One last gate stands between you and his throne.",
+    bridge: 'The books name the don the top of it all. Past one last lock he is sitting on his throne, waiting.',
     requiresNode: 'sixth_berth',
     adminOnly: true,
     image: '/raidlog.png',
     scene: [
-      { text: "Sal Brackwater's strongroom gives up the don's own ledgers: every account the Finndicate keeps, in Finleone's own hand." },
-      { text: 'They balance. Every catch, every Cache, every drowned captain, paid to the coin. A perfect empire, perfectly kept.' },
-      { text: 'All but one margin.', pause: 800 },
-      { text: 'Again and again, in ink older and finer than the rest, a single initial signs off sums that answer to no account: *F.*', pause: 900, fx: 'flash', insert: { kind: 'ledger-f' } },
-      { text: "Finleone, you'd say. But the don signs his whole name, every time, with a flourish. This hand is small. Patient. *It was here first.*", pause: 600 },
-      { text: 'You close the books. The throne is dead ahead, and whatever the margin means, the answer sits on it.' },
-      { ...GUIDE.dole, text: 'A second set of books, kept in a hand older than the empire it built. That is not a lieutenant, captain. That is a landlord.' },
-      { ...GUIDE.laz, text: 'Or a ghost. I have signed a ledger from the far side of death, navigator. Some hands do not stop when the body does.' },
-      { ...GUIDE.mira, text: 'One initial. Older than the don, patient as debt, and not one soul in this sea brave enough to put a price on it.' },
-      { ...GUIDE.mira, text: 'That is not a mystery, captain. That is the richest bounty in the water, sitting unclaimed because everyone cleverer than us is too afraid to reach for it. How very convenient.' },
+      { text: "Sal Brackwater's strongroom gives up the don's own ledgers: every account the Finndicate ever kept, in Finleone's own hand." },
+      { text: 'And there it is, plain as a confession. Every catch, every Cache, every drowned captain, all of it running up to one name at the top. His.', pause: 600 },
+      { text: 'The don is the head of the whole rotten thing, exactly as the trail promised. No one above him, no one beside him. Just the throne, dead ahead.', pause: 500 },
+      { text: 'The books balance to the coin. A perfect empire, perfectly kept. Almost.', pause: 500 },
+      { text: 'One margin carries an older, finer hand you cannot quite place, initialling a few odd sums that tie to no account. A dead partner, most like. Some old debt he never bothered to close.' },
+      { text: 'You shut the books on it. There is a throne to take.' },
+      { ...GUIDE.dole, text: 'All the coin in the sea, and the man still keeps his own ledger by hand. Proud to the last decimal. Let us go relieve him of the pen, captain.' },
+      { ...GUIDE.mira, text: 'The biggest name in the water, sitting still at the end of its own paper trail. I have never had a mark make it this tidy. Do not keep the don waiting on my account.' },
     ],
     detail: {
       description:
-        "The don's own ledgers, taken off Sal Brackwater's wreck. They balance perfectly — a whole drowned empire, paid to the coin — except for one margin, where a small, patient initial keeps signing sums that answer to no account: F. The don signs his full name with a flourish, every time. This hand was here first. The throne ahead has your answer, one way or another.",
+        "The don's own ledgers, off Sal Brackwater's wreck. Every drowned debt in the sea runs up to one name at the top: Finleone. The books prove it — he is the head of the whole Finndicate, no one above him. They balance to the coin, but for one margin in an older hand you can't place, initialling a few odd sums. A dead partner, most like. The throne is dead ahead.",
       drops: [
-        { emoji: '📜', label: "Captain's Logbook, Fragment XIII", sublabel: `"The books balance. The margin doesn't. F."`, rarity: 'rare' },
+        { emoji: '📜', label: "Captain's Logbook, Fragment XIII", sublabel: `"Every debt runs up to Finleone. He is the head of it all. The throne is ahead."`, rarity: 'rare' },
       ],
-      dropsNote: 'The don, made real in his own hand — and a margin that keeps a different set of books.',
+      dropsNote: 'The don, made real in his own hand — the proven head of the whole Finndicate.',
       ctaLabel: 'Open the Ledgers →',
-      summary: "Sal Brackwater's strongroom gave up the don's ledgers: a perfect empire, perfectly kept — except one margin, where an old, patient initial signs sums no account explains: F. The throne ahead holds the answer.",
-    },
-  },
-  {
-    // CONVERGENCE SEED #1 (the deep). Reframes the whole Finndicate as a
-    // hundred-year reach DOWN — the cargo was never the point, the bottom was.
-    // Ties the raid-side "last fathom" to the fishing-side Ancient Deep without
-    // naming it, and plants the 6-ancients gate obliquely ("does not open for a
-    // hull... you have felt it pull on a line before"). Finn NEVER named; the F
-    // margin is the only handle. See [[project_finn_finndicate_twist]].
-    id: 'the_long_reach',   type: 'story',
-    label: 'The Long Reach',
-    flavor: "The F in the margins bought something with all that drowned coin. Not an empire. A direction. You run the don's accounts to their end and every one of them points the same way the water does: down.",
-    bridge: "The family never wanted the cargo. It wanted the bottom. The don is the deepest it ever reached, and the margin is still signing, so the don was never deep enough.",
-    requiresNode: 'crooked_ledger',
-    adminOnly: true,
-    image: '/raidlog.png',
-    scene: [
-      { text: 'You chase the crooked margin backward, account by account, to see what all that coin was ever spent ON.' },
-      { text: 'It does not add up to an empire. Cargo, Caches, danger-runs, a hundred years of drowned captains. It adds up to a heading.', pause: 500 },
-      { text: 'Down. Always down. Every coin the family ever swallowed bought one more fathom toward the bottom of the last fathom.' },
-      { text: 'The don is the deepest anyone in the Finndicate ever reached. And the margin kept signing. So the don was never deep enough.', pause: 700 },
-      { ...GUIDE.doby, text: 'There is old things down there, captain. Older than the family. Older than me. The deep keeps them because nothing else in the sea could hold them down.' },
-      { ...GUIDE.laz, text: 'I have been to the bottom, navigator. Something in that black water is awake, and it has been waited on a long, long time. Patient. The way the margin waits.' },
-      { ...GUIDE.dole, text: 'So the richest crime in the whole sea was a century-long excuse to go fishing. I would laugh, if the arithmetic of how badly it wants to would let me stop.' },
-      { text: 'One thing the crew will not say aloud: whatever sits at the bottom does not open for a hull, or a broadside, or a don.', pause: 800 },
-      { text: 'You already half-know what it opens for. You have felt it pull on a line before.', pause: 600 },
-    ],
-    sceneAccent: '#6ea8d8',
-    detail: {
-      description:
-        "Run the don's accounts backward and they don't buy an empire — they buy a direction. Down. A hundred years of swallowed coin spent reaching for the bottom of the last fathom, and the don was only the deepest the family ever got. The margin kept signing because the don was not deep enough. Whatever waits down there does not open for a hull.",
-      drops: [
-        { emoji: '📜', label: "Captain's Logbook, Fragment XIV", sublabel: '"They were never smuggling. They were reaching. All of it pointed at the bottom."', rarity: 'rare' },
-      ],
-      dropsNote: 'The whole family was a hundred-year reach for the deepest water. The don was just the arm.',
-      ctaLabel: 'Follow the Coin Down →',
-      summary: "The don's accounts don't buy an empire — they buy a heading: down. A century of Finndicate coin spent reaching for the bottom of the last fathom, and the don was only as deep as the family ever got. Whatever waits down there doesn't open for a hull.",
+      summary: "Sal Brackwater's strongroom gave up the don's ledgers: every drowned debt in the sea runs up to Finleone. He is the head of the whole Finndicate, proven in his own hand. One last gate stands between you and his throne.",
     },
   },
   {
@@ -2245,7 +2206,7 @@ export const RAID_MAP: RaidNode[] = [
     label: 'The Throne Gates',
     flavor: "The don's gate is one great lock: iron bars over iron bars, and a single gold bolt that only runs when every tumbler stands clear. Nobody knocks.",
     bridge: 'The last tumbler throws and the gates swing on silence. Past them: the deepest water there is, and the don sitting in it.',
-    requiresNode: 'the_long_reach',
+    requiresNode: 'crooked_ledger',
     adminOnly: true,
     puzzle: {
       kind: 'tumbler',
@@ -2288,52 +2249,13 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    // CONVERGENCE SEED #2 (the watcher), the last beat before the Don. A NEW
-    // strange sail (NOT the Coffers shadow — that was Mira, now crew, so SHE
-    // reads it) waits off the throne and leaves a worn dock-hand's HOOK on the
-    // water, pointing past the don, DOWN. Deniable Finn signifiers (dock-hand,
-    // glad you came, wants you to reach what's under the don = the ancients) —
-    // Finn STILL never named; full reveal stays for the merge cutscene. On
-    // re-read this is obviously Finn. See [[project_finn_finndicate_twist]].
-    id: 'the_watcher',   type: 'story',
-    label: 'The One That Waits',
-    flavor: "The gate stands open and the don's water lies flat. And there is a sail on it that is not the don's and not yours: a stranger holding just off the throne, running no guns, asking nothing. Mira knows the way it sits. She used to sit exactly like it.",
-    bridge: "It did not come for the don. It came to see whether you can reach what the don has been sitting on. Then it eases back to watch, and you turn your bow to the throne.",
-    requiresNode: 'throne_gates',
-    adminOnly: true,
-    image: '/raidlog.png',
-    scene: [
-      { text: 'The throne gate throws open on dead-flat water, and there is a third sail on it.' },
-      { text: "Not the don's. Not yours. A stranger, holding just off the throne, running no guns, matching the don's own stillness.", pause: 500 },
-      { ...GUIDE.mira, text: 'Now that is a familiar way to sit a ship, captain. Off the shoulder, patient, letting the mark do all the work. I shadowed you exactly like it, the whole way from the Coffers, before I let you see me.' },
-      { ...GUIDE.mira, text: 'The difference is I was hunting you to JOIN you. Whoever that is has a different appetite. They are not out here to sign on.' },
-      { text: 'On the black water between the hulls, something bobs up where a hand set it for you to find: a hook. Honest, hand-worn, the kind a dock-hand keeps for luck.', pause: 700, fx: 'flash' },
-      { text: "Not a threat. Not a gift. A dare. And it does not point at the don's flagship at all. It rides the current pointing past it. Down.", pause: 600 },
-      { ...GUIDE.kat, text: 'Whoever they are, they are glad we came, captain. Glad. That is the part that turns my stomach. Someone wanted us all the way down here, and they are enjoying the view.' },
-      { ...GUIDE.mira, text: 'They want to know if you are the hull that can reach what the don has sat on his whole life. So let us answer them. Sink the don, captain, and let the stranger get its long look at what you can do.' },
-      { text: 'The sail eases back to a patient distance, unhurried, the way a thing does when it has already decided how the hunt ends.', pause: 500 },
-      { text: 'You leave the little hook riding the current, still pointing down, and turn your bow to the don.' },
-    ],
-    sceneAccent: '#a78bfa',
-    detail: {
-      description:
-        "The gate opens, and a sail that is neither yours nor the don's waits just off the throne — no guns, no words, only a small worn hook set on the water for you to find, riding the current pointing not at the don's flagship but past it. Down. Mira, who shadowed you the same way from the Coffers, knows the difference at a glance: this one did not come to sign on. It came to see whether you are the one who can reach what the don's been sitting on. Then it falls back to watch.",
-      drops: [
-        { emoji: '📜', label: "Captain's Logbook, Fragment XV", sublabel: `"Not here for the don. Here to see if I can reach what's under him. And glad, glad, that I came this far."`, rarity: 'rare' },
-      ],
-      dropsNote: 'The watcher wants you deeper than the throne. It left a hook to say so.',
-      ctaLabel: 'Turn to the Throne →',
-      summary: "A strange sail waits at the open gate — not the don's, not yours — and leaves a small worn hook on the water, pointing past the don's flagship. Down. Mira, who once shadowed you the same way, reads it cold: this one didn't come to sign on. It came to see if you can reach what's under the don, and it's glad you made it this far.",
-    },
-  },
-  {
     // RAID 8 — The Throne. Debuts the raid-8 layer: enemy ULTIMATES at a
     // full 4-ball magazine and AIM-BAR ATTACKS (decoys / hardened / squall).
     id: 'the_throne',    type: 'raid',
     label: 'Don Finleone',
     flavor: "Past the gates the water goes still, and the don's court rides at anchor around one lit flagship. Every mob in it carries a trick you haven't been hit with yet — and the don carries all of them.",
-    bridge: "The court is drowned and the don with it. But the margin in his books is still open — and whatever signs itself F is still out there, older than the Finndicate and twice as patient.",
-    requiresNode: 'the_watcher',
+    bridge: "The court is drowned and the don with it. The Finndicate dies here, on its own throne, in its own black water — the biggest name in the sea, finally answered for.",
+    requiresNode: 'throne_gates',
     requiresNavLevel: 58,
     adminOnly: true,
     route: '/raids/throne',
@@ -2370,39 +2292,36 @@ export const RAID_MAP: RaidNode[] = [
   {
     id: 'dons_fall',    type: 'story',
     label: "The Don's Fall",
-    flavor: 'The megalodon goes down trailing a century of drowned debts. The Finndicate is finished. The margin is not.',
-    bridge: 'The family is broken and its water is yours. What remains is one initial, one open account, and a name you have known since your first cast.',
+    flavor: 'The megalodon goes down trailing a century of drowned debts. The Finndicate is finished, the biggest name in the sea drowned in its own black water. And then, out past the wreck, something you never expected rises to watch.',
+    bridge: 'The don is drowned and the family with him. It should be the end of it. Out past the wreck, at the lip of the true deep, something that was never in his court says otherwise.',
     requiresNode: 'the_throne',
     adminOnly: true,
     image: '/raidlog.png',
     scene: [
       { text: 'The megalodon sinks the way an empire does. Slowly, and then all at once.' },
-      { text: 'The court scatters. The colors strike. A hundred years of drowned debts settle to the bottom with their collector.' },
-      { text: 'It should feel finished. You take his ledgers apart page by page, looking for the feeling.', pause: 500 },
-      { text: 'Instead you find the margin again. F. Signing sums before the Finndicate had a name. Signing the sums that *built* it.', pause: 900, fx: 'flash' },
-      { text: 'The don ran the family. *The margin ran the don.* Nothing on any chart says what F runs besides.', pause: 800 },
-      { text: "One account left open, then. You pour what remains of the don's wine, and start on the arithmetic of finding out." },
-      { text: "The don's wine has a second glass poured before you reach for the bottle. You did not pour it.", pause: 400 },
-      { ...GUIDE.mira, text: "Relax, captain. If I were here for you, we would not be talking." },
-      { ...GUIDE.mira, text: "You drowned the biggest name in the sea and found a bigger one hiding in its margins. Most captains would call that a nightmare. I call it repeat business." },
-      { text: "She lifts her glass to the open ledger, to the small patient F, and to whatever it turns out to be." },
+      { text: 'The court scatters, the colors strike, and a hundred years of drowned debts settle to the bottom with their collector.' },
+      { text: 'The Finndicate is finished. The biggest name in the sea, drowned in its own black water. By every account, this is the end of it.', pause: 500 },
+      { text: "You pour what's left of the don's wine. There is a second glass at the table before you reach the bottle. You did not pour it.", pause: 400 },
+      { ...GUIDE.mira, text: 'Relax, captain. If I were here for you, we would not be talking.' },
+      { ...GUIDE.mira, text: 'You just drowned the one name this whole sea was afraid to say aloud. Marks like that come once in a life. Savor it.' },
+      { text: 'She lifts her glass to the wreck, to the drowned throne, to a hunt well ended.' },
       { text: 'Then her glass stops halfway.', pause: 400 },
       { text: "Out past the wreck, where the don's water spills over the edge into the true deep, the black surface stirs. Something is out there watching the ruin you made. Something that was never once in the don's court.", pause: 700 },
       { text: 'It rises just enough to throw a shape against the dark: a figure, rod-straight and easy, a stance you would almost swear you had seen before, on sunnier water, over a far shorter line.', pause: 400, fx: 'flash', insert: { kind: 'finn-silhouette' } },
-      { text: 'The don was the biggest name in the sea. He was never your last fight. He was the *bait*.', pause: 900, closeup: true },
-      { text: 'The shape takes its own unhurried look, at the wreck and at you, the way a thing does when everything is going exactly to plan. Then the deep folds over it, and it is gone before you can be sure it was there at all.' },
+      { text: 'The don was the biggest name in the sea. He was not your last fight.', pause: 900, closeup: true },
+      { text: 'The shape holds a moment, taking its own unhurried look at the wreck, and at you. Then the deep folds over it, and it is gone before you can be sure it was there at all.' },
       { ...GUIDE.mira, text: 'Captain. Tell me you saw that too.' },
     ],
     sceneAccent: '#a78bfa',
     detail: {
       description:
-        "The don is down and the Finndicate died with him — but the ledgers say the family was never the top of the pyramid. The F in the margins signed sums before the Finndicate had a name; the don ran the family, and the margin ran the don. One account stays open, and it's older than everything you've sunk so far.",
+        "Don Finleone is drowned and the Finndicate broken with him — the biggest name in the sea, answered for at last. By every account it should be the end. But out past the wreck, at the lip of the true deep, a figure that was never once in the don's court rises just long enough to watch, then sinks. The don was the biggest name in the sea. He was not your last fight.",
       drops: [
-        { emoji: '📜', label: "Captain's Logbook, Fragment XVI", sublabel: '"The don ran the family. The margin ran the don."', rarity: 'epic' },
+        { emoji: '📜', label: "Captain's Logbook, Fragment XIV", sublabel: '"The don is drowned. And something out past the wreck rose to watch. He was not the last fight."', rarity: 'epic' },
       ],
-      dropsNote: 'The fake-final falls, and something out past the wreck rises to watch. The real account is still open.',
+      dropsNote: 'The don falls — and something out past the wreck rises to watch.',
       ctaLabel: 'Settle the Court →',
-      summary: "Don Finleone is drowned and the Finndicate broken — but the F in the margins signed sums that BUILT the family. The don ran the family; the margin ran the don. And out past the wreck, at the lip of the true deep, a figure rises just long enough to watch: the don was never your last fight. He was the bait.",
+      summary: "Don Finleone is drowned and the Finndicate broken — the biggest name in the sea, answered for. And then, out past the wreck at the lip of the true deep, a figure that was never in his court rises just long enough to watch: the don was not your last fight.",
     },
   },
   {
@@ -2414,7 +2333,7 @@ export const RAID_MAP: RaidNode[] = [
     type: 'story',
     label: 'Between Watches',
     flavor: "The Finndicate on the seabed and a whole crew on the deck that put it there. Before anything else, they take the longest watch of all together.",
-    bridge: "One tide ends. Somewhere in bottomless water, an old and patient hand closes a ledger it has kept since before any of you were born.",
+    bridge: "One tide ends. The Finndicate is on the seabed, the crew is whole, and for one night there is nothing ahead to point at.",
     requiresNode: 'dons_fall',
     adminOnly: true,
     image: '/raidlog.png',
@@ -2423,18 +2342,17 @@ export const RAID_MAP: RaidNode[] = [
       { text: "The don's court settles to the seabed, and for the first time in four chapters, there is nothing left ahead to point at." },
       { ...GUIDE.doby, text: "I have sailed this sea longer than any of you have drawn breath, and I never once believed I would see the Finndicate on the bottom. Well done, small fry." },
       { ...GUIDE.kat, text: "Do not let him fool you, captain. He is crying. Whales do that." },
-      { ...GUIDE.mako, text: "Biggest bounty in the sea, collected, and a bigger one hiding in the margin. I could get used to this crew." },
-      { ...GUIDE.dole, text: "The F was signing sums before the don drew his first breath. Whatever it is, we did not beat it today. We introduced ourselves." },
-      { ...GUIDE.laz, text: "Then it knows our names now. Good. Let it lie awake with them, the way it made a whole sea lie awake with its own." },
+      { ...GUIDE.mako, text: "The biggest bounty in the sea, collected, and I got to be there for it. I could get used to this crew." },
+      { ...GUIDE.dole, text: "Four chapters, one drowned empire, and a debt the whole sea owed finally paid in full. I have run sums my whole life. That is the finest one I ever balanced." },
+      { ...GUIDE.laz, text: "The drowned can rest now. All the captains the don fed to this water. That is worth more than any coin in his vault." },
       { ...GUIDE.mira, text: "Six of us, one impossible mark, and a captain with no sense of self-preservation. I have never had better odds in my life." },
-      { text: "Somewhere in water with no bottom, an old and patient hand closes a ledger it has kept since before the first of you was born.", pause: 900, fx: 'flash' },
-      { text: "But that is the next tide. Tonight the crew is whole, and the whole sea knows your name.", pause: 500 },
+      { text: "Tonight the crew is whole, the grog is cold, and the whole sea knows your name. The next tide can wait for morning.", pause: 600 },
     ],
     detail: {
       description:
-        "The Finndicate is on the seabed and all six of you are on the deck that put it there. Before the next heading, the longest watch: Doby proud to tears, Kat mocking him for it, Mako already hungry for the F in the margin, Dole naming what you really did today (introduced yourselves), Laz daring it to remember, and Mira counting the odds she loves. One tide ends. Somewhere in bottomless water, a patient hand closes its ledger. Tonight, the crew is whole.",
+        "The Finndicate is on the seabed and all six of you are on the deck that put it there. Before the next heading, the longest watch: Doby proud to tears, Kat mocking him for it, Mako hungry for the next mark, Dole savoring the finest sum he ever balanced, Laz at peace for the drowned who can finally rest, and Mira counting the odds she loves. One tide ends. Tonight, the crew is whole.",
       ctaLabel: 'Rest a While →',
-      summary: "The Finndicate drowned with its don, and the whole crew took the longest watch together. The F in the margin is still open, older than everything you sank. But tonight the crew is whole, and the whole sea knows your name.",
+      summary: "The Finndicate drowned with its don, and the whole crew took the longest watch together. Four chapters, one empire, answered for. Tonight the crew is whole, the grog is cold, and the whole sea knows your name.",
     },
   },
   {
