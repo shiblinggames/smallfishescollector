@@ -1637,7 +1637,10 @@ export default function ShipHero({
                   <>
                     {/* Hull stats grid removed — those numbers read live during the
                         fight. The upgrade ladder (and Man-o-War augment) stay. */}
-                    <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.7rem', letterSpacing: '0.04em' }}>Upgrade Your Hull</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.7rem' }}>
+                      <span className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.22em', color: '#8794a6' }}>Hull</span>
+                      <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
+                    </div>
                     {nextShip ? (
                       <button type="button" onClick={() => { setUpgradeError(null); setUpgradeOpen(true) }}
                         style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', width: '100%', textAlign: 'left', background: 'rgba(240,192,64,0.1)', border: '1px solid rgba(240,192,64,0.45)', borderRadius: 14, padding: '0.85rem 0.9rem', marginBottom: '1.7rem', cursor: 'pointer' }}>
@@ -1656,6 +1659,13 @@ export default function ShipHero({
                         <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.58rem', color: '#9a948a' }}>Top of the line — no bigger hull.</p>
                       </div>
                     )}
+
+                    {/* REFITS — the permanent, chapter-earned power: the ultimate
+                        weapon, the sixth berth, and the captain's classes. */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.75rem' }}>
+                      <span className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.22em', color: '#8794a6' }}>Refits</span>
+                      <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
+                    </div>
 
                     {/* ── Ultimate Weapon ── compact status row. The looping
                         preview animation + the full build/swap/retool/schematics
@@ -1695,9 +1705,8 @@ export default function ShipHero({
                         each class LINE to just its top tier (own I+II+III → show
                         III), all on one scrollable row; tap a card for the full
                         breakdown + combined effect. */}
-                    <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.3rem', letterSpacing: '0.04em' }}>Captain&rsquo;s Class</p>
-                    <p className="font-karla" style={{ fontSize: '0.74rem', color: '#8a8480', marginBottom: '0.85rem', lineHeight: 1.45 }}>
-                      Permanent buffs you pick at the end of each chapter. They stack.
+                    <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#c4b078', marginBottom: '0.6rem' }}>
+                      Captain&rsquo;s Class <span className="font-400" style={{ color: '#6f6a64', textTransform: 'none', letterSpacing: 'normal' }}>· chapter-end buffs, they stack</span>
                     </p>
                     {(() => {
                       const ownedIds = new Set(Object.values(shipClasses))
@@ -1738,9 +1747,12 @@ export default function ShipHero({
                       const next = nextRepairKit(kitsOwned)
                       return (
                         <>
-                          <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.35rem', letterSpacing: '0.04em' }}>Repair Kit</p>
-                          <p className="font-karla" style={{ fontSize: '0.74rem', color: '#8a8480', marginBottom: '0.8rem', lineHeight: 1.45 }}>
-                            Fired from the Special action in combat. Once per battle, costs the turn.
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.75rem' }}>
+                            <span className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.22em', color: '#8794a6' }}>Combat Gear</span>
+                            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
+                          </div>
+                          <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#c4b078', marginBottom: '0.6rem' }}>
+                            Repair Kit <span className="font-400" style={{ color: '#6f6a64', textTransform: 'none', letterSpacing: 'normal' }}>· Special action, once per battle</span>
                           </p>
                           <div onClick={next ? () => { setKitErr(null); setKitOpen(true) } : undefined}
                             style={{ background: `${accent}14`, border: `1px solid ${accent}55`, borderRadius: 14, padding: '0.8rem 0.9rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.85rem', cursor: next ? 'pointer' : 'default' }}>
@@ -1778,7 +1790,10 @@ export default function ShipHero({
 
                     {/* ── Ship Skins ── cosmetic, least important, so they sit at
                         the very bottom as ONE compact scrollable row. */}
-                    <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#b8a878', marginBottom: '0.5rem', letterSpacing: '0.04em' }}>Ship Skins</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.6rem' }}>
+                      <span className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.22em', color: '#8794a6' }}>Appearance</span>
+                      <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
+                    </div>
                     <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 6, WebkitOverflowScrolling: 'touch' }}>
                       {(() => {
                         const isEquipped = equippedSkin === null

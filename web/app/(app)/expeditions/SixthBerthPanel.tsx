@@ -54,12 +54,9 @@ export default function SixthBerthPanel({
   }
 
   const HEADER = (
-    <>
-      <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#ffd56b', marginBottom: '0.3rem', letterSpacing: '0.04em' }}>A Sixth Crew Slot</p>
-      <p className="font-karla" style={{ fontSize: '0.74rem', color: '#8a8480', marginBottom: '0.85rem', lineHeight: 1.45 }}>
-        Re-frame the Man-o-War's deck for a sixth crew slot. One more crew aboard, permanently, on every raid and every voyage.
-      </p>
-    </>
+    <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#c4b078', marginBottom: '0.6rem' }}>
+      The Sixth Berth <span className="font-400" style={{ color: '#6f6a64', textTransform: 'none', letterSpacing: 'normal' }}>· one more crew slot, every fight</span>
+    </p>
   )
 
   // ── Just bought it: the celebration, before anything else can steal the beat ──
