@@ -606,7 +606,7 @@ export const RAID_CHAPTERS: RaidChapter[] = [
     subtitle:   'Follow the coin to its vault, and learn who you have been buying from.',
     // coffers_heading → coffers_fork → coffers_fleet (Raid 5) →
     // quartermaster_turn (the Cache betrayal) → the_quartermaster (Raid 6) →
-    // finleone_named (names Don Finleone) → chapter_3_class.
+    // chapter_3_close (names the don, then the crew's watch) → chapter_3_class.
     // LIVE since 2026-07-04 (adminOnly + route is_admin guards dropped).
     lastNodeId: 'chapter_3_class',
   },
@@ -1829,57 +1829,42 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    id: 'finleone_named',    type: 'story',
-    label: 'The Name Above the Counter',
-    flavor: "The Quartermaster's strongbox spills its ledgers, and every page settles a debt up to one signature. A megalodon don who runs the Coffers and everything that feeds them: Don Finleone.",
-    bridge: "You have the don's name now. Finleone runs the Coffers, the Caches, the whole drowned market. Chapter's end, and the deepest water is the last that's left.",
+    // Chapter III closer — "Between Watches", now carrying the Don Finleone
+    // reveal in its opening beats (merged in from the old finleone_named node,
+    // to kill the two-story-nodes-back-to-back beat). The ledgers spill and name
+    // the don, then the counter burns down into the crew's watch. Cast grown by
+    // one (Laz). requiresNode moved up to the_quartermaster.
+    id: 'chapter_3_close',
+    type: 'story',
+    label: 'Between Watches',
+    flavor: "The Quartermaster's ledgers spill and name the don at the top of it all. Then the Coffers burn low, and before the deepest water the crew takes a watch together, one navigator unable to quite settle.",
+    bridge: "You have the don's name now: Finleone, at the top of every ledger. The rest never lasts, and past the last of the Coffers' light the sea drops toward the seat he rules from.",
     requiresNode: 'the_quartermaster',
     image: '/raidlog.png',
     scene: [
       { text: "The Quartermaster's strongbox cracks, and the last of his ledgers spill across the deck. Not one of them argues with the others." },
       { ...GUIDE.dole, text: "I have been adding this up since the coast, captain, and here is the sum. Pete fed Krust. Krust fed the Gullet. The Gullet fed this market. And every coin of it, all of it, runs up to one signature." },
       { ...GUIDE.laz, text: "Don Finleone. A megalodon the sea was said to have swallowed and thought better of. He runs the Coffers, and the Coffers ran everything." },
-      { ...GUIDE.mako, text: "The head of the whole Finndicate, and he sits at the bottom of the deepest water there is. I was starting to worry this hunt had a small ending." },
-      { ...GUIDE.laz, text: "The deepest water is his. Good. Everything owed a reckoning ends up at the bottom in the end. Bring me aboard, captain, and we arrive there on purpose.", pause: 400 },
-    ],
-    detail: {
-      description:
-        "The Quartermaster's strongbox spills its ledgers, and every page runs up to one signature: Don Finleone, a megalodon crime-don — vast, ancient — who runs the Coffers and every Cache that feeds them. As far as any ledger in the market knows, he is the head of the Finndicate. You have the name at the top now, and the only water left to chase him into is the deepest there is.",
-      drops: [
-        { emoji: '📜', label: "Captain's Logbook, Fragment XI", sublabel: "\"Every debt in the market runs up to one name: Finleone. The head of the whole Finndicate.\"", rarity: 'rare' },
-      ],
-      dropsNote: 'The don at the top of the Coffers, named at last. The chapter closes on his shadow.',
-      ctaLabel: 'Read the Ledgers →',
-      summary: "The Quartermaster's ledgers all ran up to one name: Don Finleone, the megalodon don who runs the Coffers and the whole Finndicate. The chapter closes with the don named and the deep water ahead.",
-    },
-  },
-  {
-    // Chapter III closer — "Between Watches". Cast grown by one (Laz). Sits after
-    // the finleone_named reveal (which it requires), so the tense reveal and the
-    // warm reflection each land in their own register.
-    id: 'chapter_3_close',
-    type: 'story',
-    label: 'Between Watches',
-    flavor: "A don named and the Coffers in ruins. Before the deepest water, the crew takes a watch together, and one navigator cannot quite settle.",
-    bridge: "The rest never lasts. Past the last of the Coffers' light, the sea drops toward the seat the don rules from.",
-    requiresNode: 'finleone_named',
-    image: '/raidlog.png',
-    scene: [
-      { text: "The Coffers burn low, the Quartermaster's counter is kindling, and a don's name sits at the top of every ledger you took." },
-      { ...GUIDE.mako, text: "Don Finleone. A megalodon. I have wanted to bite something that size my whole life." },
-      { ...GUIDE.kat, text: "You say the loveliest things right before I have to stitch you back together." },
+      { ...GUIDE.mako, text: "The head of the whole Finndicate, and he sits at the bottom of the deepest water there is. I have wanted to bite something that size my whole life.", pause: 500 },
+      { text: "The Coffers burn low, the Quartermaster's counter down to kindling, and for the first time since the harbor gate the deck goes quiet." },
+      { ...GUIDE.kat, text: "You say the loveliest things right before I have to stitch you back together. Sit down, the pair of you." },
       { ...GUIDE.laz, text: "I knew a captain once who thought he was the biggest thing in the water. The water disagreed. It always does, in the end." },
-      { ...GUIDE.dole, text: "The don runs the Coffers, the Coffers ran the Caches, the Caches armed half this sea. Cut the head, the whole body falls. It should." },
-      { ...GUIDE.doby, text: "There is a doubt in your voice, navigator." },
-      { ...GUIDE.dole, text: "There is a margin in my notes I cannot account for. But that is a worry for deeper water. Tonight, we won." },
+      { ...GUIDE.doby, text: "Cut the head and the whole body falls. That is the plan, is it not, navigator?" },
+      { ...GUIDE.dole, text: "It is. It should even be true." },
+      { ...GUIDE.doby, text: "There is a doubt in your voice." },
+      { ...GUIDE.dole, text: "There is a margin in my notes I cannot account for. A few sums that tie up to no name I have. But that is a worry for deeper water. Tonight, we won.", pause: 500 },
       { text: "Past the last of the Coffers' light, the sea drops away toward the seat the don rules from. But that is tomorrow's heading.", pause: 700 },
       { text: "Tonight the crew is whole, one hand heavier still, and the grog is cold." },
     ],
     detail: {
       description:
-        "The Coffers are ash and the don is named. Before the deepest water the crew takes a watch: Mako itching to bite something megalodon-sized, Kat threatening to stitch him for saying so, Laz grave over how big things end, and Dole unable to shake a margin in his notes that will not add up. A worry for deeper water. Tonight the crew is whole.",
-      ctaLabel: 'Rest a While →',
-      summary: "With the Coffers in ruins and Don Finleone named, the crew took a watch before the deepest water. Dole cannot quite settle a margin in his notes, but tonight the crew is whole.",
+        "The Quartermaster's ledgers spill and settle the same way every time: up to one signature, Don Finleone, the megalodon who runs the Coffers and every Cache that feeds them. As far as any ledger in the market knows, he is the head of the Finndicate. Then the counter burns low and the crew takes a watch: Mako itching to bite something megalodon-sized, Kat threatening to stitch him for saying so, Laz grave over how big things end, and Dole unable to shake a margin in his notes that will not add up. A worry for deeper water. Tonight the crew is whole.",
+      drops: [
+        { emoji: '📜', label: "Captain's Logbook, Fragment XI", sublabel: "\"Every debt in the market runs up to one name: Finleone. The head of the whole Finndicate.\"", rarity: 'rare' },
+      ],
+      dropsNote: 'The don named at the top of every ledger, and the crew whole before the deep.',
+      ctaLabel: 'Read the Ledgers →',
+      summary: "The Quartermaster's ledgers all ran up to Don Finleone, the megalodon who runs the Coffers and the whole Finndicate. Then the crew took a watch before the deepest water. Dole cannot quite settle a margin in his notes, but tonight the crew is whole.",
     },
   },
   {
