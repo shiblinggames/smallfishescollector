@@ -72,7 +72,7 @@ import { type AffixDef } from '@/lib/raidAffixes'
 import { getShipClass, aggregateShipClasses } from '@/lib/shipClasses'
 import { vibrate } from '@/lib/haptics'
 import CharacterAvatar from '@/components/CharacterAvatar'
-import { IconShield, IconFog, IconSwords, IconBurst, IconAnchor, IconCrate } from '@/components/GameIcons'
+import { IconShield, IconFog, IconSwords, IconBurst, IconAnchor, IconCrate, IconSkull } from '@/components/GameIcons'
 
 type ShotResult = 'miss' | 'graze' | 'hit' | 'critical'
 type SubPhase   = 'await_input' | 'aiming' | 'revealing' | 'resolving' | 'flares' | 'done'
@@ -7359,6 +7359,43 @@ function EnemyStatsPopup({
                 </p>
                 <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.68)', lineHeight: 1.35 }}>
                   Counters a dodged strike for {Math.round(enemy.parryDamagePct * 100)}% of his damage roll, {Math.round(enemy.parryChance * 100)}% of the time. Firing into his dodge is never safe.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Shark's Bite — Raid 8 signature (chargeBiteChance). An on-hit steal:
+            a landed shot has a chance to tear a loaded cannonball off your rack.
+            Crimson accent so this "it takes from you" trait reads apart from the
+            gold counter and orange flares. */}
+        {(enemy.chargeBiteChance ?? 0) > 0 && (
+          <div style={{ marginBottom: 14 }}>
+            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.66rem', color: '#f0715e', letterSpacing: '0.16em', marginBottom: 6 }}>
+              Ability
+            </p>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '0.65rem 0.75rem',
+              background: 'rgba(240,113,94,0.06)',
+              border: '1px solid rgba(240,113,94,0.24)',
+              borderRadius: 12,
+            }}>
+              <div style={{
+                width: 36, height: 36, flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'rgba(240,113,94,0.1)',
+                border: '1px solid rgba(240,113,94,0.32)',
+                borderRadius: 9,
+              }}>
+                <span style={{ fontSize: '1.1rem', color: '#f0715e', display: 'flex' }} aria-hidden><IconSkull size={18} /></span>
+              </div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <p className="font-karla font-700" style={{ fontSize: '0.85rem', color: '#f0715e', lineHeight: 1.15, marginBottom: 2 }}>
+                  Shark&apos;s Bite
+                </p>
+                <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.68)', lineHeight: 1.35 }}>
+                  When a shot lands on you, {Math.round((enemy.chargeBiteChance ?? 0) * 100)}% of the time it also tears a loaded cannonball off your rack. Dodging, bracing, or soaking it fully on shield spares the shot; a reload puts the cannonball back.
                 </p>
               </div>
             </div>
