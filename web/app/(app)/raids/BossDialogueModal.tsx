@@ -89,15 +89,18 @@ export default function BossDialogueModal({
   })()
   const rightLit = isPlayer || isCrew
 
-  /** A wing. Lit and forward when it speaks, dimmed but PRESENT when it does not,
-   *  breathing either way, leaning on a hit. Nobody here is a photograph. */
-  const wing = (side: 'left' | 'right', lit: boolean, name: string, art: React.ReactNode, color: string) => (
+  /** A bust on the stage — big, bottom-anchored, breathing, lit and forward when
+   *  it speaks and dimmed-but-present when it doesn't. The SAME stage StoryScene
+   *  uses, so a boss scene and a story node read as one film (not a slideshow of
+   *  portrait medallions). */
+  const bustStage = (side: 'left' | 'right', lit: boolean, keyId: string, content: React.ReactNode) => (
     <motion.div
-      initial={{ opacity: 0, x: side === 'left' ? -40 : 40, scale: 0.92 }}
+      key={`${side}-${keyId}`}
+      initial={{ opacity: 0, x: side === 'left' ? -46 : 46, scale: 0.9 }}
       animate={{
-        opacity: lit ? 1 : 0.38,
+        opacity: lit ? 1 : 0.4,
         x: shake && lit ? [0, -6, 5, -3, 0] : 0,
-        scale: lit && shake ? 1.05 : lit && held ? 1.03 : lit ? 1 : 0.92,
+        scale: lit && shake ? 1.06 : lit && held ? 1.03 : lit ? 1 : 0.93,
         y: lit ? 0 : 8,
         filter: lit ? 'grayscale(0) brightness(1)' : 'grayscale(0.8) brightness(0.5)',
       }}
@@ -107,63 +110,49 @@ export default function BossDialogueModal({
         default: { type: 'spring', stiffness: 220, damping: 26 },
       }}
       style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7,
+        position: 'absolute', bottom: 0, [side]: '2%',
+        width: 'min(44vw, 200px)', aspectRatio: '1 / 1',
         zIndex: lit ? 2 : 1, pointerEvents: 'none',
+        transformOrigin: side === 'left' ? 'bottom left' : 'bottom right',
       }}
     >
       <motion.div
         animate={reduced ? {} : { y: [0, -5, 0] }}
         transition={{ duration: lit ? 3.4 : 4.8, repeat: Infinity, ease: 'easeInOut' }}
+        style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
       >
-        {art}
+        {content}
       </motion.div>
-      <p className="font-cinzel font-700 truncate" style={{ maxWidth: 130, fontSize: '0.82rem', color: lit ? color : '#6a6764', textAlign: 'center' }}>
-        {name}
-      </p>
     </motion.div>
   )
 
-  const bossArt = boss.portrait ? (
-    <div style={{
-      width: 118, height: 118, borderRadius: '50%', overflow: 'hidden',
-      border: `3px solid ${isBoss ? ACCENT : 'rgba(255,255,255,0.16)'}`,
-      background: 'radial-gradient(circle at 35% 30%, rgba(255,255,255,0.08) 0%, rgba(20,40,60,0.85) 70%)',
-      boxShadow: isBoss ? `0 0 30px ${ACCENT}66` : 'none',
-      transition: 'border-color 0.2s, box-shadow 0.2s',
-    }}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={boss.portrait} alt="" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-    </div>
-  ) : (
-    <div style={{ width: 118, height: 118, borderRadius: '50%', background: 'rgba(120,80,30,0.4)', border: `3px solid ${ACCENT}` }} />
+  const bustImg = (src: string, glow: string) => (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={src} alt="" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'bottom', filter: glow }} />
   )
-
-  const playerArt = (
-    <div style={{ borderRadius: '50%', boxShadow: isPlayer ? '0 0 30px rgba(74,222,128,0.5)' : 'none', transition: 'box-shadow 0.2s' }}>
-      <CharacterAvatar
-        characterColor={playerCharacterColor}
-        equippedHat={playerEquippedHat}
-        bgColor={playerAvatarBg ?? undefined}
-        ringColor={isPlayer ? '#4ade80' : (playerAvatarBorder ?? undefined)}
-        size={118}
-      />
-    </div>
-  )
-
-  // A crew member holding your side of the stage — their card art in the same
-  // 118px medallion the boss uses, lit in the accent when they speak.
-  const crewBust = (portrait: string) => (
-    <div style={{
-      width: 118, height: 118, borderRadius: '50%', overflow: 'hidden',
-      border: `3px solid ${rightLit ? '#4ade80' : 'rgba(255,255,255,0.16)'}`,
-      background: 'radial-gradient(circle at 35% 30%, rgba(255,255,255,0.08) 0%, rgba(30,22,44,0.85) 70%)',
-      boxShadow: rightLit ? '0 0 30px rgba(74,222,128,0.45)' : 'none', transition: 'border-color 0.2s, box-shadow 0.2s',
-    }}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={portrait} alt="" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: '50% 20%' }} />
-    </div>
-  )
-  const rightArt = yourSide.kind === 'crew' && yourSide.portrait ? crewBust(yourSide.portrait) : playerArt
+  const bossContent = boss.portrait
+    ? bustImg(boss.portrait, isBoss
+        ? `drop-shadow(0 0 30px ${ACCENT}55) drop-shadow(0 12px 30px rgba(0,0,0,0.78))`
+        : 'drop-shadow(0 10px 24px rgba(0,0,0,0.7))')
+    : <div style={{ width: '70%', height: '84%', alignSelf: 'flex-end', borderRadius: 14, background: `${ACCENT}18`, border: `2px solid ${ACCENT}55` }} />
+  const rightContent = yourSide.kind === 'crew' && yourSide.portrait
+    ? bustImg(yourSide.portrait, rightLit
+        ? 'drop-shadow(0 0 30px rgba(74,222,128,0.4)) drop-shadow(0 12px 30px rgba(0,0,0,0.78))'
+        : 'drop-shadow(0 10px 24px rgba(0,0,0,0.7))')
+    : (
+      <div style={{ filter: isPlayer ? 'drop-shadow(0 0 26px rgba(74,222,128,0.4))' : 'drop-shadow(0 10px 24px rgba(0,0,0,0.7))' }}>
+        <CharacterAvatar
+          characterColor={playerCharacterColor}
+          equippedHat={playerEquippedHat}
+          bgColor={playerAvatarBg ?? undefined}
+          ringColor={isPlayer ? '#4ade80' : (playerAvatarBorder ?? undefined)}
+          size={168}
+        />
+      </div>
+    )
+  // Nameplate rides the plate (StoryScene style), not under each bust.
+  const speakerName = isBoss ? boss.name : isPlayer ? playerLabel : isCrew ? (line.crew?.name ?? null) : null
+  const nameColor = (isPlayer || isCrew) ? '#4ade80' : ACCENT
 
   return (
     <motion.div
@@ -171,7 +160,7 @@ export default function BossDialogueModal({
       onClick={tap}
       style={{
         position: 'fixed', inset: 0, zIndex: 100, overflow: 'hidden',
-        background: 'radial-gradient(ellipse at 50% 36%, #14100a 0%, #08060a 62%, #030304 100%)',
+        background: 'radial-gradient(ellipse at 50% 38%, #171208 0%, #0a0705 62%, #040303 100%)',
         cursor: 'pointer', WebkitTapHighlightColor: 'transparent', userSelect: 'none',
       }}
     >
@@ -218,11 +207,12 @@ export default function BossDialogueModal({
             : held ? { duration: (line.pause ?? 600) / 1000, ease: 'easeInOut' }
             : { duration: 0.5, ease: 'easeOut' }
           }
-          style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            gap: 12, padding: '0 6% 1.1rem' }}
+          style={{ position: 'relative', flex: 1, minHeight: 0 }}
         >
-          {wing('left', isBoss, boss.name, bossArt, ACCENT)}
-          {wing('right', rightLit, yourSide.name, rightArt, '#4ade80')}
+          {/* The stage: busts sit BEHIND the dialogue plate and are overlapped by
+              it, which puts them in the room instead of on a card. */}
+          <AnimatePresence>{bustStage('left', isBoss, 'boss', bossContent)}</AnimatePresence>
+          <AnimatePresence>{bustStage('right', rightLit, yourSide.kind === 'crew' ? yourSide.name : 'player', rightContent)}</AnimatePresence>
         </motion.div>
 
         {/* flexShrink 0: the plate reserves the scene's tallest line, and as a flex
@@ -230,6 +220,7 @@ export default function BossDialogueModal({
             under the letterbox. The wings give up the room instead. They can. */}
         <div style={{ position: 'relative', zIndex: 3, flexShrink: 0, padding: '0 1rem 1.15rem' }}>
           <div style={{
+            position: 'relative',
             width: '100%', maxWidth: 540, margin: '0 auto',
             padding: '1.05rem 1.15rem 1.15rem', borderRadius: 16,
             background: 'linear-gradient(180deg, rgba(12,10,7,0.94), rgba(5,4,4,0.97))',
@@ -237,6 +228,19 @@ export default function BossDialogueModal({
             boxShadow: '0 -8px 40px rgba(0,0,0,0.7)',
             backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)',
           }}>
+            {/* Nameplate — a tab on the plate's shoulder, same as StoryScene. */}
+            <AnimatePresence>
+              {speakerName && (
+                <motion.span key={speakerName}
+                  initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                  className="font-cinzel font-800 uppercase"
+                  style={{ position: 'absolute', top: -11, left: 16, fontSize: '0.62rem', letterSpacing: '0.16em',
+                    color: '#1a1206', padding: '0.2rem 0.7rem', borderRadius: 999,
+                    background: `linear-gradient(180deg, ${nameColor}, ${nameColor}cc)`, boxShadow: `0 0 16px ${nameColor}44` }}>
+                  {speakerName}
+                </motion.span>
+              )}
+            </AnimatePresence>
             {/* One height for the whole scene: every line reserves it, the tallest
                 wins. The box never grows as the text types and never jumps between a
                 short line and a long one. */}
