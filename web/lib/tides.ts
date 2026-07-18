@@ -399,10 +399,10 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'sail_wide',
         label: 'Sail wide of the bell',
-        description: '+15% Volley damage in the boss fight. Next fight starts with 0 cannonballs.',
+        description: '+15% Volley damage in the boss fight. The long way around runs the crew ragged — you enter the boss with 12 less HP.',
         effects: [
           { kind: 'bossVolleyDmgMult', mult: 1.15 },
-          { kind: 'startCharges', n: NO_CHARGES, scope: 'nextFight' },
+          { kind: 'startHpDelta', n: -12, scope: 'boss' },
         ],
       },
     ],
@@ -427,19 +427,19 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'rig',
         label: 'Rig it as a one-shot',
-        description: 'Next enemy starts at half HP. That fight starts with 0 cannonballs.',
+        description: 'Next enemy starts at 65% HP. Rigging the blast leaves your hull wide open — you take 20% more damage that fight.',
         effects: [
-          { kind: 'enemyHpScale', mult: 0.5, scope: 'nextFight' },
-          { kind: 'startCharges', n: NO_CHARGES, scope: 'nextFight' },
+          { kind: 'enemyHpScale', mult: 0.65, scope: 'nextFight' },
+          { kind: 'incomingDmgMult', mult: 1.20, scope: 'nextFight' },
         ],
       },
       {
         id: 'heave',
         label: 'Heave it overboard',
-        description: '1 guaranteed dodge next fight (no roll needed). Heaving it took the crew off the guns — that fight starts with 1 fewer cannonball.',
+        description: '1 guaranteed dodge next fight (no roll needed). Heaving it took the crew off the rail — you enter that fight with 8 less HP.',
         effects: [
           { kind: 'guaranteedDodge', n: 1 },
-          { kind: 'startCharges', n: -1, scope: 'nextFight' },
+          { kind: 'startHpDelta', n: -8, scope: 'nextFight' },
         ],
       },
     ],
@@ -463,10 +463,10 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'pocket',
         label: 'Pocket the bottle',
-        description: '+150 ⟡ at raid end. Next fight starts with 1 fewer cannonball.',
+        description: '+150 ⟡ at raid end. Reading it under way, you let the watch slip — you enter the next fight with 10 less HP.',
         effects: [
           { kind: 'doubloonsAtRaidEnd', n: 150 },
-          { kind: 'startCharges', n: -1, scope: 'nextFight' },
+          { kind: 'startHpDelta', n: -10, scope: 'nextFight' },
         ],
       },
       {
@@ -539,10 +539,10 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'anchor',
         label: 'Drop the sea anchor',
-        description: 'Take 15% less damage next fight. That fight starts with 0 cannonballs.',
+        description: 'Take 12% less damage all run. Riding low and cautious blunts your guns — -8% damage all run.',
         effects: [
-          { kind: 'incomingDmgMult', mult: 0.85, scope: 'nextFight' },
-          { kind: 'startCharges', n: NO_CHARGES, scope: 'nextFight' },
+          { kind: 'incomingDmgMult', mult: 0.88, scope: 'allRemaining' },
+          { kind: 'damageMult', mult: 0.92 },
         ],
       },
     ],
@@ -590,10 +590,10 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'live_fire',
         label: 'Live-fire drill',
-        description: '+5% crit chance all run. Next fight starts with 1 fewer cannonball.',
+        description: '+6% crit chance all run. The powder spent drilling leaves you thin — you enter the next fight with 6 less HP.',
         effects: [
-          { kind: 'critChanceBonus', chance: 0.05 },
-          { kind: 'startCharges', n: -1, scope: 'nextFight' },
+          { kind: 'critChanceBonus', chance: 0.06 },
+          { kind: 'startHpDelta', n: -6, scope: 'nextFight' },
         ],
       },
       {
@@ -627,9 +627,9 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'ride',
         label: 'Ride the current',
-        description: '+25% damage all run. Enemies hit you 20% harder all run.',
+        description: '+16% damage all run. Enemies hit you 20% harder all run.',
         effects: [
-          { kind: 'damageMult', mult: 1.25 },
+          { kind: 'damageMult', mult: 1.16 },
           { kind: 'incomingDmgMult', mult: 1.20, scope: 'allRemaining' },
         ],
       },
@@ -661,10 +661,10 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'heavy_shot',
         label: 'Load the heavy shot',
-        description: '+30% Fire damage all run. Your aim needle runs faster all run.',
+        description: '+18% Fire damage all run. The heavy rounds are a slow, back-breaking load — -2 ship speed all run.',
         effects: [
-          { kind: 'fireDmgMult', mult: 1.30 },
-          { kind: 'aimSpeedMult', mult: 1.15 },
+          { kind: 'fireDmgMult', mult: 1.18 },
+          { kind: 'speedDelta', n: -2, scope: 'allRemaining' },
         ],
       },
       {
@@ -679,10 +679,10 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'plate',
         label: 'Bolt on the hull plate',
-        description: 'Take 30% less damage all run. The added weight slows your guns — -10% damage all run.',
+        description: 'Take 22% less damage all run. The added weight slows your guns — -12% damage all run.',
         effects: [
-          { kind: 'incomingDmgMult', mult: 0.70, scope: 'allRemaining' },
-          { kind: 'damageMult', mult: 0.90 },
+          { kind: 'incomingDmgMult', mult: 0.78, scope: 'allRemaining' },
+          { kind: 'damageMult', mult: 0.88 },
         ],
       },
     ],
@@ -697,19 +697,19 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'sing_back',
         label: 'Sing back',
-        description: '+20% crit chance all run. Enemies hit you 15% harder all run.',
+        description: '+12% crit chance all run. Enemies hit you 15% harder all run.',
         effects: [
-          { kind: 'critChanceBonus', chance: 0.20 },
+          { kind: 'critChanceBonus', chance: 0.12 },
           { kind: 'incomingDmgMult', mult: 1.15, scope: 'allRemaining' },
         ],
       },
       {
         id: 'ears',
         label: 'Take the song',
-        description: 'Full HP restored. But the bargain is paid in full — you take 15% more damage all run.',
+        description: 'Full HP restored. But the bargain is paid in full — you take 12% more damage all run.',
         effects: [
           { kind: 'fullHeal' },
-          { kind: 'incomingDmgMult', mult: 1.15, scope: 'allRemaining' },
+          { kind: 'incomingDmgMult', mult: 1.12, scope: 'allRemaining' },
         ],
       },
       {
@@ -730,19 +730,19 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'crest',
         label: 'Crest the wave',
-        description: '+40% damage in the boss fight. Next fight starts with 0 cannonballs.',
+        description: '+25% damage in the boss fight. Riding the crest in slams you against the hull — you enter the boss with 15 less HP.',
         effects: [
-          { kind: 'bossDamageMult', mult: 1.40 },
-          { kind: 'startCharges', n: NO_CHARGES, scope: 'nextFight' },
+          { kind: 'bossDamageMult', mult: 1.25 },
+          { kind: 'startHpDelta', n: -15, scope: 'boss' },
         ],
       },
       {
         id: 'trough',
         label: 'Heal in the trough',
-        description: '+15 HP at the start of every remaining fight. -20% Volley damage all run.',
+        description: '+12 HP at the start of every remaining fight. -15% Volley damage all run.',
         effects: [
-          { kind: 'startOfFightHeal', n: 15 },
-          { kind: 'volleyDmgMult', mult: 0.80 },
+          { kind: 'startOfFightHeal', n: 12 },
+          { kind: 'volleyDmgMult', mult: 0.85 },
         ],
       },
       {
@@ -795,19 +795,30 @@ export const TIDE_POOL: TideEvent[] = [
 // Draw helper
 // ──────────────────────────────────────────────────────────────────────
 
-/** Pick `n` distinct tides at random from the pool where tier <= maxTier.
- *  Returns fewer than `n` if the pool runs out (defensive — should not
- *  happen with the tier-1 pool of 8). */
-export function drawTides(n: number, maxTier: number): TideEvent[] {
-  const eligible = TIDE_POOL.filter(t => t.tier <= maxTier)
-  // In-place Fisher-Yates on a copy. Caller controls randomness source
-  // (we just use Math.random — tides are pure run state, not anti-cheat).
-  const pool = [...eligible]
-  for (let i = pool.length - 1; i > 0; i--) {
+function shuffleTides(arr: TideEvent[]): TideEvent[] {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
-    ;[pool[i], pool[j]] = [pool[j], pool[i]]
+    ;[a[i], a[j]] = [a[j], a[i]]
   }
-  return pool.slice(0, Math.min(n, pool.length))
+  return a
+}
+
+/** Pick `n` distinct tides for a run. Tier-2 events are big swings, so a run
+ *  draws AT MOST ONE of them (and only ~55% of runs roll one at all); the
+ *  milder tier-1 pool is the backbone. This kills the old feast-or-famine
+ *  where a maxTier-2 raid could stack two run-swinging tier-2 tides. maxTier-1
+ *  raids never see tier 2 at all. Returns fewer than `n` only if the pool runs
+ *  dry (defensive — won't happen with 8 tier-1 events and 2 slots). */
+export function drawTides(n: number, maxTier: number): TideEvent[] {
+  const t1 = shuffleTides(TIDE_POOL.filter(t => t.tier === 1 && t.tier <= maxTier))
+  const t2 = shuffleTides(TIDE_POOL.filter(t => t.tier >= 2 && t.tier <= maxTier))
+  const picks: TideEvent[] = []
+  if (t2.length > 0 && Math.random() < 0.55) picks.push(t2[0])   // at most ONE tier-2
+  for (const e of t1) { if (picks.length >= n) break; picks.push(e) }
+  // Defensive top-up if the tier-1 pool somehow can't fill the slots.
+  if (picks.length < n) for (const e of t2.slice(1)) { if (picks.length >= n) break; picks.push(e) }
+  return shuffleTides(picks).slice(0, Math.min(n, picks.length))
 }
 
 // ──────────────────────────────────────────────────────────────────────
