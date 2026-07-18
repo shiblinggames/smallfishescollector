@@ -29,7 +29,7 @@ import {
   DROWNED_FILTER, bandForDepth, davyTaunt,
   GAUNTLET_COOLDOWN_HOURS, HARDCORE_RUNS_PER_DAY, HC_UNLOCK_DEPTH, GAUNTLET_REWARD_DEPTH_CAP,
   emptyRunStats, addRunStats, coerceRunStats,
-  type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot, type GauntletRunState, type GauntletRunStats, chestOdds } from '@/lib/gauntlet'
+  type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot, type GauntletRunState, type GauntletRunStats, chestOdds, type GauntletVariant } from '@/lib/gauntlet'
 import { GAUNTLET_TERMS, TERM_GROUP_META, resolveTerms, termPressure, termTideEffects, pressureGemMult, pressureDepthFactor, NO_TERM_EFFECTS, PRESSURE_CAP, PRESSURE_DEPTH_FLOOR, PRESSURE_DEPTH_FULL, PRESSURE_SKIN_THRESHOLD, PRESSURE_SKIN_DEPTH, PRESSURE_SKIN_ID, MAX_AVAILABLE_PRESSURE, type SignedTerms } from '@/lib/gauntletTerms'
 import GauntletTermsPanel from './GauntletTermsPanel'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, setGauntletUpgradeActive, markGauntletIntroSeen, recordGauntletHit, wagerGauntletFathoms, markConfluencesSeen, checkpointGauntletRun, pauseGauntletRun, resumeGauntletRun, buyBaitWithFathoms, rollDavyOffer } from './actions'
@@ -82,6 +82,10 @@ function atmosphereForDepth(depth: number): 'fog' | 'overcast' | 'sunset' {
 const GAUNTLET_ABYSS_FILTER = 'brightness(0.7) saturate(1.15) hue-rotate(-18deg) contrast(1.05)'
 
 export interface GauntletGameProps {
+  /** Which gauntlet this run host is driving. Defaults to Davy Jones; the Don's
+   *  Gauntlet route passes 'don'. Threaded into startGauntletRun so the server
+   *  tags the run + routes its records. */
+  variant?: GauntletVariant
   shipImageUrl: string
   shipName: string
   username: string | null
@@ -589,11 +593,13 @@ export default function GauntletGame(props: GauntletGameProps) {
   function begin(hardcore = false) {
     if (starting) return
     setStarting(true)
-    startGauntletRun(hardcore, hardcore ? signedTermsRef.current : undefined).then(res => {
+    startGauntletRun(hardcore, hardcore ? signedTermsRef.current : undefined, props.variant).then(res => {
       if (!res.started) {
         setStarting(false)
         closePreDive()
         if (res.reason === 'cooldown') { if (res.nextAt) setCooldownUntil(res.nextAt); setPhase('usedup'); return }
+        // One run at a time: the OTHER gauntlet still has an unfinished run.
+        if (res.reason === 'other_run') { setHcBlockedMsg(`You have an unfinished ${props.variant === 'don' ? 'Davy Jones' : "Don's"} Gauntlet run. Finish or bank it first.`); return }
         // Hardcore was rejected server-side (gate not met / no living squad).
         setHcBlockedMsg(res.reason === 'no_squad'
           ? 'Assign at least one crew to your raid party first — that party is the squad you risk.'
