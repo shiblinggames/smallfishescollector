@@ -2213,13 +2213,117 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
+    // Ch4 finale lead-in +1: the gates part into the don's own water. His court
+    // is arrayed; the crew reads the enemies (heavy legendary banter); his
+    // consigliere the Widowmaker glides out as his mouthpiece with the warning.
+    // No back-to-back story — throne_gates (puzzle) precedes, the muster follows.
+    id: 'the_drowned_court',   type: 'story',
+    label: 'The Drowned Court',
+    flavor: "The gates open on the deepest water there is, and the don's court rides at anchor around one lit flagship — six killers arrayed like courtiers, and the biggest name in the sea sitting still at the center of them.",
+    bridge: "The court knows your name now. His consigliere has promised, in his voice, that you will not leave this water. Past her, the aisle to the throne stands open.",
+    requiresNode: 'throne_gates',
+    adminOnly: true,
+    image: '/raid8_thewidowmaker.png',
+    sceneAccent: '#dc2626',
+    scene: [
+      { text: "The last gate swings on silence and you slip into the don's own black water. No horns. No warning shot. Just the pressure of the deep and one lit flagship far ahead, ringed by its court." },
+      { text: "Six hulls ride at anchor around it, arrayed like courtiers around a throne. Each flies the shark colors. Each, on any other water, would have been the thing you came to sink." },
+      { ...GUIDE.mira, text: "Look at them. A Render. A Reaper. A Widowmaker, by the cut of that rail. Every one a bounty I would have crossed an ocean for on its own — and they are just the DOOR, captain." },
+      { ...GUIDE.mako, text: "Six big fish, and one enormous one at the back of the room. Do you have any idea how long I have wanted a table set like this?" },
+      { ...GUIDE.kat, text: "Mako. That is not a table. That is the thing that eats the table, and everyone still sitting at it." },
+      { ...GUIDE.dole, text: "The Widowmaker there has put down more captains than the other five combined. Which makes it curious that she is the one peeling off the line to greet us. A court does not send its deadliest to say hello." },
+      { text: "One hull glides out of the ring, unhurried, and stops across your bow — close enough to read the old scars crossing her plating like a ledger of everyone she has closed.", pause: 500 },
+      { speaker: 'The Widowmaker', portrait: THE_THRONE.enemies.the_consigliere.portrait, text: "The don sends his regards, little captain. He has read your whole story. The barnacle. The old hauler. The market. The thing in the estuary. A tidy little climb." },
+      { speaker: 'The Widowmaker', portrait: THE_THRONE.enemies.the_consigliere.portrait, text: "He wanted you to hear it from me, since I keep his accounts: you will not leave this water. The line for how you sink is already written, in his own hand. You are simply the last to read it.", pause: 500 },
+      { ...GUIDE.laz, text: "That is the same voice that read me my debt, a lifetime ago, in this exact water. Calm. Certain. Counting me closed before I had drawn a breath to argue." },
+      { ...GUIDE.laz, text: "It was wrong about me. I am still here." },
+      { ...GUIDE.doby, text: "Then let it be wrong twice, small fry. The court can talk all it likes. We came to answer." },
+      { text: "The Widowmaker holds a moment longer, as if offering you the chance to turn. You do not. She slides back into the ring, and the court parts — an aisle of guns opening straight to the throne.", pause: 600 },
+    ],
+    detail: {
+      description:
+        "The don's court rides at anchor around his lit flagship: six shark-captains, each a killer you would have crossed an ocean to sink on its own. His consigliere, the Widowmaker, glides out to read you his terms — he has watched your whole climb, found it quaint, and already written the line for how you sink. Then the court parts, and the aisle to the throne opens.",
+      drops: [
+        { emoji: '🦈', label: "The Widowmaker's Terms", sublabel: "\"The line for how you sink is already written, in his own hand. You are simply the last to read it.\"", rarity: 'rare' },
+      ],
+      dropsNote: 'The don\'s court, named and arrayed — and his mouthpiece\'s promise, in his voice, that you will not leave this water.',
+      ctaLabel: 'Take the Aisle →',
+      summary: "Past the gates, the don's court parted for you — but not before his consigliere promised, in his name, that you would not leave this water.",
+    },
+  },
+  {
+    // Ch4 finale lead-in +2: the doorman (The Gnash) holds the aisle and counts
+    // your crew. A crew-gate that maps to the Don's phase checks (brace/shield,
+    // heal, snare/burst) so you arrive ready. Non-story separator between the two
+    // finale story beats.
+    id: 'the_last_muster',   type: 'muster',
+    label: 'The Last Muster',
+    flavor: "The court parts, but one hull holds the aisle — the don's doorman, The Gnash, counting your deck before it will let you through. The don does not admit a half-manned crew to his table.",
+    bridge: "The Gnash slides aside, unimpressed. Nothing stands between you and the throne now but open water.",
+    requiresNode: 'the_drowned_court',
+    adminOnly: true,
+    muster: {
+      minCrew: 5,
+      minLevel: 65,
+      // Exactly what the don's court demands across its phases: a defender for
+      // the volleys (brace/shield), a mender for his jaws (heal), and someone
+      // who can jam or blast him out of a dive (snare/burst).
+      requires: [['brace', 'shield'], ['heal'], ['snare', 'burst']],
+    },
+    detail: {
+      description:
+        "The Gnash blocks the aisle and reads your deck. What waits at the throne answers to nothing but the right hand at the right moment: a brace or a shield when the whole court fires as one, a mender when the don's jaws find your hull, and someone who can jam or blast him out of a dive. Bring hands for all three, or the doorman turns you back.\n\nThis is the fight the Sixth Berth was built for. Field your whole crew.",
+      dropsNote: 'No cost and no fight. Bring a crew that can answer the don\'s court, and the aisle opens.',
+      ctaLabel: 'Stand For the Doorman →',
+      summary: "The don's doorman counted your crew and found hands enough to face the throne.",
+    },
+  },
+  {
+    // Ch4 finale lead-in +3: within hail of the throne, the don himself speaks —
+    // the escalation from his consigliere's warning to the apex's own taunt.
+    // Legendary banter carries the crew's resolve; ends on his contemptuous
+    // stillness, straight into the fight.
+    id: 'within_hail',   type: 'story',
+    label: 'Within Hail',
+    flavor: "The aisle of guns opens onto the throne, and for the first time the don deigns to speak — almost impressed you climbed the whole ladder, only to learn where it ends. Then he goes still, and the whole black sea goes still with him.",
+    bridge: "The don has said his piece: you will not beat him, nothing in his water ever has. The sea lies flat as a held breath. There is nothing left between you and the biggest name in it.",
+    requiresNode: 'the_last_muster',
+    adminOnly: true,
+    image: THE_THRONE.enemies.don_finleone.portrait,
+    sceneAccent: '#dc2626',
+    scene: [
+      { text: "You take the aisle. The court holds its fire and its formation, every gun tracking you in, and the lit flagship at the end grows from a lantern to a leviathan." },
+      { ...GUIDE.mako, text: "Bigger than the stories. Bigger than the Cartographer swore anything in this sea could get. I did not think I would ever be the small one at a table." },
+      { ...GUIDE.dole, text: "Everything ran up to him. Every debt, every drowned captain, every clever little sum I read off a dead man's ledger. And here he is at the bottom of it all, exactly where the numbers said he would be. I do hate being right about a monster." },
+      { ...GUIDE.mira, text: "Hold your nerve. This is the mark no one in the trade will touch. Which means when he goes down, it is us who put him there — and no one else in the whole sea gets to say it." },
+      { text: "Close enough to hail now. And the don, who has not stirred for the whole descent, finally lifts his vast head and regards you — the way you would look at a coin you have already spent.", pause: 500, closeup: true },
+      { speaker: 'Don Finleone', portrait: THE_THRONE.enemies.don_finleone.portrait, text: "All this way. Past my hauler, my market, my whole drowned family. I confess I am almost impressed, little captain." },
+      { speaker: 'Don Finleone', portrait: THE_THRONE.enemies.don_finleone.portrait, text: "Almost. You have climbed the entire ladder to learn the one thing every captain learns too late: the ladder ends in a mouth. You will not beat me. Nothing in this water ever has. But come — let me see how you sink.", pause: 700, fx: 'flash' },
+      { ...GUIDE.kat, text: "Big words, for a fish." },
+      { ...GUIDE.laz, text: "Let him talk, captain. The drowned always sound certain, right up until the water disagrees. And it always does, in the end." },
+      { ...GUIDE.doby, text: "You have the whole crew at your back and the biggest name in the sea in front of you. I have waited a long life to see a captain stand here. Take him." },
+      { text: "Then the don falls still — stiller than a thing that size has any right to hold — and the court falls still with him. The whole black water holds its breath.", pause: 600 },
+      { ...GUIDE.doby, text: "Steady, small fry. Something this old only goes quiet right before it moves.", pause: 400 },
+    ],
+    detail: {
+      description:
+        "The aisle opens onto the throne, and the don finally deigns to speak — almost impressed you climbed the whole ladder, only to learn it ends in a mouth. He tells you plainly you will not beat him; nothing in his water ever has. Then he goes still, and the whole black sea goes still with him.",
+      drops: [
+        { emoji: '📜', label: "The Don's Word", sublabel: "\"You have climbed the entire ladder to learn the one thing every captain learns too late: the ladder ends in a mouth.\"", rarity: 'epic' },
+      ],
+      dropsNote: "The don's own promise, delivered face to face: you will not beat him. Time to find out.",
+      ctaLabel: 'Answer the Throne →',
+      summary: "Within hail of the throne, the don spoke: you will not beat him, nothing in his water ever has. Then he went still, and so did the sea.",
+    },
+  },
+  {
     // RAID 8 — The Throne. Debuts the raid-8 layer: enemy ULTIMATES at a
     // full 4-ball magazine and AIM-BAR ATTACKS (decoys / hardened / squall).
     id: 'the_throne',    type: 'raid',
     label: 'Don Finleone',
-    flavor: "Past the gates the water goes still, and the don's court rides at anchor around one lit flagship. Every mob in it carries a trick you haven't been hit with yet — and the don carries all of them.",
+    flavor: "The court rides at anchor and the don sits still at the center of it, done talking. Every hull here carries a trick you haven't been hit with yet — and the don carries all of them.",
     bridge: "The court is drowned and the don with it. The Finndicate dies here, on its own throne, in its own black water — the biggest name in the sea, finally answered for.",
-    requiresNode: 'throne_gates',
+    requiresNode: 'within_hail',
     requiresNavLevel: 58,
     adminOnly: true,
     route: '/raids/throne',
