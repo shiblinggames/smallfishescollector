@@ -1441,30 +1441,27 @@ function NodeDetailSheet({
           </div>
         )}
 
-        {/* THE MUSTER — a live checklist against the crew actually standing in your
-            raid slots. Green when a hand covers it, and it NAMES them, so a failing
-            row tells you exactly what to go and fix. */}
-        {node.type === 'muster' && node.muster && !cleared && (() => {
+        {/* THE MUSTER LEDGER — a RECORD of the passed inspection, shown only once
+            you've cleared it. Before that, the read-off IS the cutscene (the crew
+            reading the manifest back), so no static checklist competes with it. */}
+        {node.type === 'muster' && node.muster && cleared && (() => {
           const report = musterReport(node.muster, musterParty)
           return (
             <div style={{ marginTop: '1.1rem' }}>
               <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#7a7875', marginBottom: '0.55rem' }}>
-                The Clerk&rsquo;s Ledger
+                The Ledger &middot; Passed
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                 {report.rows.map(r => (
                   <div key={r.label} style={{ display: 'flex', alignItems: 'flex-start', gap: 9, padding: '0.65rem 0.75rem', borderRadius: 11,
-                    background: r.ok ? 'rgba(127,212,154,0.07)' : 'rgba(240,124,124,0.06)',
-                    border: `1px solid ${r.ok ? 'rgba(127,212,154,0.35)' : 'rgba(240,124,124,0.32)'}` }}>
-                    <span aria-hidden style={{ flexShrink: 0, marginTop: 1, display: 'flex', color: r.ok ? '#7fd49a' : '#f47c7c' }}>
-                      {r.ok
-                        ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
-                        : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>}
+                    background: 'rgba(127,212,154,0.07)', border: '1px solid rgba(127,212,154,0.35)' }}>
+                    <span aria-hidden style={{ flexShrink: 0, marginTop: 1, display: 'flex', color: '#7fd49a' }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
                     </span>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: r.ok ? '#e6e1d6' : '#f0dcdc' }}>{r.label}</p>
+                      <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: '#e6e1d6' }}>{r.label}</p>
                       {r.met.length > 0 && (
-                        <p className="font-karla" style={{ fontSize: '0.7rem', color: r.ok ? 'rgba(240,237,232,0.55)' : '#d8a0a0', lineHeight: 1.4, marginTop: 2 }}>
+                        <p className="font-karla" style={{ fontSize: '0.7rem', color: 'rgba(240,237,232,0.55)', lineHeight: 1.4, marginTop: 2 }}>
                           {r.met.join(', ')}
                         </p>
                       )}
@@ -1472,11 +1469,6 @@ function NodeDetailSheet({
                   </div>
                 ))}
               </div>
-              {!report.passed && (
-                <p className="font-karla" style={{ fontSize: '0.74rem', color: '#9a948a', lineHeight: 1.5, marginTop: 9 }}>
-                  Change who sails from <span style={{ color: '#e0dccc' }}>Manage Crew</span>, then come back. The clerk is not going anywhere.
-                </p>
-              )}
             </div>
           )
         })()}

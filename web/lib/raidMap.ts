@@ -37,32 +37,63 @@ const GUIDE = {
 // judges seasoning, Mira/Kat close it out. Built LIVE from the musterReport so
 // each line names the actual hands that answer (or the hole that doesn't).
 export function musterSceneLines(nodeId: string, report: MusterReport): SceneLine[] {
-  const inspector = nodeId === 'the_last_muster' ? 'The Gnash' : "Sal Brackwater's clerk"
-  const lines: SceneLine[] = [
-    { text: `${inspector} holds the line and will not move until your deck is counted. Dole takes up the manifest and reads it back, ticking each hand as he goes.` },
-  ]
+  const isLast = nodeId === 'the_last_muster'
+  const lines: SceneLine[] = []
+
+  // Opening + framing — deliberately different between the two musters. The
+  // Blockade is a clerk skimming for useful hands before Sal; the Last Muster is
+  // the final door before the Don, where the whole point is a FULL crew.
+  if (isLast) {
+    lines.push({ text: 'The Gnash holds the aisle, the last door before the throne, and he will not shift it for a half-manned deck. Dole runs the manifest one final time, and this time nobody jokes.' })
+    lines.push({ ...GUIDE.dole, text: 'Understand what we are counting for, captain. The don is not one fight. He is his whole court, and then he is six of himself, each worse than the last. There is no carrying this on three good hands. Every berth has to answer.' })
+    lines.push({ ...GUIDE.laz, text: 'I have watched crews go into water like this a hand short. Not one of them came back up. Fill every seat, or do not go in at all.' })
+  } else {
+    lines.push({ text: "Sal Brackwater's clerk comes alongside with a wet ledger and counts your crew like livestock. He is not looking for guns. Dole leans over his shoulder and reads it back, ticking each hand as he goes." })
+    lines.push({ ...GUIDE.dole, text: 'He wants hands that can DO something when the shooting starts. Sal will take your hull in his teeth and roll, and the only thing that stops that is a crew who can get between you and the blow.' })
+  }
+
   report.rows.forEach((row, i) => {
     if (i === 0) {
+      // Crew count.
       lines.push(row.ok
-        ? { ...GUIDE.dole, text: `A full rail. ${row.met.join(', ')}. That is a crew. Tick.` }
-        : { ...GUIDE.dole, text: `The rail is thin, captain. Only ${row.met.length} standing, and the throne wants more hands than that.` })
+        ? { ...GUIDE.dole, text: isLast
+            ? `Hands at the rail. ${row.met.join(', ')}. A full bench, every berth crewed. It is the one thing the don does not expect, and the only thing that beats him.`
+            : `Hands at the rail. ${row.met.join(', ')}. That is a crew. Tick.` }
+        : { ...GUIDE.dole, text: isLast
+            ? `The bench is thin, captain. Only ${row.met.length} standing. Against the don, an empty berth is a whole phase of him with no one to answer it.`
+            : `The rail is thin, captain. Only ${row.met.length} standing, and the throne wants more hands than that.` })
     } else if (i === 1) {
+      // Seasoning.
       lines.push(row.ok
-        ? { ...GUIDE.doby, text: `Not a green hand among them, small fry. Every one has real sea under the keel.` }
+        ? { ...GUIDE.doby, text: 'Not a green hand among them, small fry. Every one has real sea under the keel.' }
         : { ...GUIDE.doby, text: `Some of these are still wet behind the fins. ${row.met.join('; ')}. The don finds the soft ones first.` })
     } else {
+      // A required answer (one of the Don's / Sal's phases).
       const ask = row.label.replace(/^Someone who can /, '')
       lines.push(row.ok
         ? { ...GUIDE.dole, text: `${ask}? ${row.met.join(', ')}. Aye. Tick.` }
-        : { ...GUIDE.dole, text: `${ask}? ...No one on this deck. A hole in the line the don will walk straight through.` })
+        : { ...GUIDE.dole, text: isLast
+            ? `${ask}? ...No one on this deck. That is a phase of the don with no answer, captain. He will find it, and he will end you on it.`
+            : `${ask}? ...No one on this deck. A hole in the line Sal will roll straight through.` })
     }
   })
+
   if (report.passed) {
-    lines.push({ ...GUIDE.dole, text: `Every line answered, captain. A full, ugly, dangerous crew, and every hand can DO something when the shooting starts.` })
-    lines.push({ ...GUIDE.mira, text: `Then stop admiring your own handwriting and let us through. The don is not getting any smaller.` })
+    if (isLast) {
+      lines.push({ ...GUIDE.dole, text: 'Every berth crewed, every phase covered. THIS is the crew that takes a don, captain. Not one big gun and a prayer. A full, complete deck, each hand answering a piece of him.' })
+      lines.push({ ...GUIDE.mira, text: 'Six of us against the biggest mark in the sea. I like those odds better than I have any right to. Open the door.' })
+    } else {
+      lines.push({ ...GUIDE.dole, text: 'Every line answered. A full, ugly, dangerous crew, and every hand can DO something when the guns start. The clerk has no cause to send us home.' })
+      lines.push({ ...GUIDE.mira, text: 'Then stop admiring your own handwriting and wave us through.' })
+    }
   } else {
-    lines.push({ ...GUIDE.dole, text: `The manifest is short a hand. ${inspector} will not pass a half-answered deck, and I would not sail one at the don if he did.` })
-    lines.push({ ...GUIDE.kat, text: `Better we find the gap here than on his teeth. Go and fill it, captain, then come back and we will read it again.` })
+    if (isLast) {
+      lines.push({ ...GUIDE.dole, text: 'The bench is short a hand, captain, and against the don a missing hand is a missing phase. The Gnash will not open the door, and I would not walk you through it if he did.' })
+      lines.push({ ...GUIDE.kat, text: 'This is the one fight in the whole sea you do not enter a hand short. Fill the berth from Manage Crew, then come back and we read it again.' })
+    } else {
+      lines.push({ ...GUIDE.dole, text: 'The manifest is short a hand. The clerk will not pass a half-answered deck.' })
+      lines.push({ ...GUIDE.kat, text: "Better we find the gap here than on Sal's teeth. Go and fill it, captain." })
+    }
   }
   return lines
 }
