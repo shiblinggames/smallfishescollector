@@ -1795,6 +1795,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
           {pendingReprieve && (
             <TideModal
               tide={PRE_BOSS_REPRIEVE}
+              theme="don"
               onPicked={(choice: TideChoice) => {
                 // Heal / +damage picks ride the normal tide effect path.
                 let healDelta = 0

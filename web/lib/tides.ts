@@ -811,8 +811,8 @@ export const TIDE_POOL: TideEvent[] = [
 export const PRE_BOSS_REPRIEVE: TideEvent = {
   id: 'pre_boss_reprieve',
   tier: 1,
-  title: 'One Breath Before the Throne',
-  flavor: 'The court is drowned and the water goes still. Past the last lit flagship, the don is waiting. Take one breath — you will not get another.',
+  title: "The Don's Gift",
+  flavor: 'Don Finleone waves the court back and looks you over, unimpressed. "Half-sunk already? No, no. I did not swim up from the deep to gut some wounded little thing. Patch yourself. Load your guns. Wake a hand. Make this worth my while."',
   choices: [
     {
       id: 'reprieve_heal',
@@ -828,7 +828,7 @@ export const PRE_BOSS_REPRIEVE: TideEvent = {
     },
     {
       id: 'reprieve_ability',
-      label: 'Rally a hand',
+      label: 'Wake a hand',
       description: 'Refresh one spent crew ability, ready for the don.',
       effects: [],
     },
