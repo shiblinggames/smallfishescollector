@@ -3,48 +3,56 @@
 import { motion } from 'framer-motion'
 import { type TideEvent, type TideChoice, type TideEffect, describeEffect, effectTone } from '@/lib/tides'
 
-// ─── Tide modal ────────────────────────────────────────────────────────────
-// Between-fight roguelike event interrupt. Fires after the kill of a
-// configured slot (see BossRaidConfig.tides.slots) and gates the next
-// encounter mount until the player picks a choice. Effects are added to
-// the run's activeTideEffects array (managed by the host).
-//
-// This is a fork-in-the-road moment, so it's meant to LAND: the sea surges
-// in behind a dark scrim, the card rides up on it, and each choice reads as
-// a distinct path with its boons (green) and costs (red) called out so the
-// trade is obvious at a glance.
+// ─── Tide event ─────────────────────────────────────────────────────────────
+// A CAMPAIGN-ONLY between-fights event, and deliberately a DIFFERENT ANIMAL from
+// the Gauntlet's boon DRAFT (a row of vertical 3D flip-cards in gold). A tide is
+// a weather event that FLOODS the screen: rolling wave layers rise from the
+// bottom, and the choices read as CURRENTS you pick a heading through — full-
+// width bands riding the water, not cards you draw. Ocean palette (cyan/foam,
+// never gold) so the two systems never read as the same thing. Fully self-
+// contained (no globals.css); transform/opacity animation only (cheap on iOS).
 
-const SEA = '#38bdf8'
+const SEA  = '#38bdf8'   // sky-sea (primary)
+const DEEP = '#0e7490'   // deep current
+const FOAM = '#cffafe'   // foam white-cyan
+const GLOW = '#67e8f9'   // bioluminescent highlight
 
-// Self-contained keyframes (no globals.css touch). Transform/opacity only so
-// it's cheap on mobile / iOS PWA.
-const TIDE_KEYFRAMES = `
-@keyframes tideSwell { 0%, 100% { transform: translateY(10px); opacity: 0.65 } 50% { transform: translateY(-8px); opacity: 1 } }
-@keyframes tideFoam { 0% { transform: translateY(0); opacity: 0 } 18% { opacity: 0.6 } 100% { transform: translateY(-150px); opacity: 0 } }
-@keyframes tideShimmer { 0% { background-position: -180% 0 } 100% { background-position: 180% 0 } }
-@keyframes tideGlow { 0%, 100% { opacity: 0.4 } 50% { opacity: 0.75 } }
+const KF = `
+@keyframes tideFloodIn { from { transform: translateY(24px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
+@keyframes tideWaveA { 0% { transform: translateX(0) }      100% { transform: translateX(-50%) } }
+@keyframes tideWaveB { 0% { transform: translateX(-50%) }   100% { transform: translateX(0) } }
+@keyframes tideFoam  { 0% { transform: translateY(0); opacity: 0 } 16% { opacity: 0.7 } 100% { transform: translateY(-180px); opacity: 0 } }
+@keyframes tideCaustic { 0%,100% { opacity: 0.10; transform: translateX(-3%) } 50% { opacity: 0.24; transform: translateX(3%) } }
+@keyframes tideRule  { 0% { background-position: -160% 0 } 100% { background-position: 160% 0 } }
+@keyframes tideCrest { 0%,100% { opacity: 0.45 } 50% { opacity: 0.9 } }
 `
 
+// A tiling wave path — period 1440 across a 2880 viewBox, so translating one
+// layer by 50% loops seamlessly. Two layers at different speeds fake depth.
+const WAVE_PATH =
+  'M0,60 C240,20 480,100 720,60 C960,20 1200,100 1440,60 C1680,20 1920,100 2160,60 C2400,20 2640,100 2880,60 L2880,140 L0,140 Z'
+
 // Deterministic foam motes (no Math.random in render → no hydration drift).
-const FOAM = [
-  { left: 14, size: 3, dur: 6.5, delay: 0 },
-  { left: 28, size: 2, dur: 8, delay: 1.4 },
-  { left: 41, size: 4, dur: 5.5, delay: 0.6 },
-  { left: 57, size: 2, dur: 7.5, delay: 2.2 },
-  { left: 69, size: 3, dur: 6, delay: 1 },
-  { left: 83, size: 2, dur: 8.5, delay: 3 },
-  { left: 91, size: 3, dur: 6.5, delay: 0.4 },
+const FOAM_MOTES = [
+  { left: 10, size: 3, dur: 7,   delay: 0 },
+  { left: 23, size: 2, dur: 9,   delay: 1.6 },
+  { left: 38, size: 4, dur: 6,   delay: 0.7 },
+  { left: 52, size: 2, dur: 8.5, delay: 2.4 },
+  { left: 64, size: 3, dur: 6.5, delay: 1.1 },
+  { left: 78, size: 2, dur: 9.5, delay: 3.1 },
+  { left: 88, size: 3, dur: 7,   delay: 0.5 },
+  { left: 95, size: 2, dur: 8,   delay: 2 },
 ]
 
 const TONE: Record<'good' | 'bad' | 'neutral', { bg: string; bd: string; fg: string }> = {
-  good:    { bg: 'rgba(74,222,128,0.13)',  bd: 'rgba(74,222,128,0.42)',  fg: '#86efac' },
-  bad:     { bg: 'rgba(248,113,113,0.13)', bd: 'rgba(248,113,113,0.42)', fg: '#fca5a5' },
-  neutral: { bg: 'rgba(125,211,252,0.11)', bd: 'rgba(125,211,252,0.30)', fg: '#bae6fd' },
+  good:    { bg: 'rgba(94,234,212,0.14)',  bd: 'rgba(94,234,212,0.45)',  fg: '#7ff0dc' },
+  bad:     { bg: 'rgba(251,113,133,0.14)', bd: 'rgba(251,113,133,0.45)', fg: '#fda4af' },
+  neutral: { bg: 'rgba(103,232,249,0.11)', bd: 'rgba(103,232,249,0.32)', fg: '#a5f3fc' },
 }
 
 interface Props {
   tide: TideEvent
-  /** Player picks a choice card — parent applies effects + advances. */
+  /** Player picks a current — parent applies effects + advances. */
   onPicked: (choice: TideChoice) => void
 }
 
@@ -54,152 +62,162 @@ export default function TideModal({ tide, onPicked }: Props) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.25 }}
+      transition={{ duration: 0.28 }}
       style={{
         position: 'fixed', inset: 0, zIndex: 1200,
-        background: 'radial-gradient(ellipse 120% 70% at 50% 120%, rgba(8,40,64,0.9) 0%, rgba(2,8,16,0.9) 55%), rgba(2,6,12,0.86)',
-        backdropFilter: 'blur(5px)',
-        WebkitBackdropFilter: 'blur(5px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '1.25rem',
+        // A deep-sea gradient, darkest at the surface (top) down into the light
+        // the tide throws up from below.
+        background: 'radial-gradient(ellipse 130% 90% at 50% 118%, rgba(10,70,104,0.94) 0%, rgba(4,26,42,0.95) 46%, rgba(2,8,16,0.96) 100%)',
+        backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+        display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
+        padding: '1.15rem',
         overflow: 'hidden',
       }}
     >
-      <style>{TIDE_KEYFRAMES}</style>
+      <style>{KF}</style>
 
-      {/* The tide itself — a swell rising up the bottom of the screen + foam
-          carried up off it. Purely atmospheric, never blocks taps. */}
+      {/* ── The sea itself ─────────────────────────────────────────────────
+          Two rolling wave layers rising off the bottom, drifting foam carried
+          up off the crests, and a slow caustic light band. Purely atmospheric,
+          never blocks taps. This is the signature that reads "TIDE," not draft. */}
       <div aria-hidden style={{
-        position: 'absolute', left: 0, right: 0, bottom: 0, height: '42%',
-        background: `linear-gradient(to top, ${SEA}33 0%, ${SEA}12 45%, transparent 100%)`,
-        animation: 'tideSwell 5.5s ease-in-out infinite',
-        pointerEvents: 'none',
-      }} />
-      {FOAM.map((f, i) => (
-        <div key={i} aria-hidden style={{
-          position: 'absolute', bottom: '6%', left: `${f.left}%`,
-          width: f.size, height: f.size, borderRadius: '50%',
-          background: `${SEA}cc`, boxShadow: `0 0 6px ${SEA}aa`,
-          animation: `tideFoam ${f.dur}s linear ${f.delay}s infinite`,
-          pointerEvents: 'none',
+        position: 'absolute', left: 0, right: 0, bottom: 0, top: 0, pointerEvents: 'none',
+      }}>
+        {/* Caustic light shimmering up from the deep */}
+        <div style={{
+          position: 'absolute', left: '-6%', right: '-6%', bottom: 0, height: '55%',
+          background: `radial-gradient(ellipse 70% 100% at 50% 100%, ${GLOW}22 0%, transparent 70%)`,
+          animation: 'tideCaustic 9s ease-in-out infinite',
         }} />
-      ))}
+        {/* Back wave — slower, deeper, dimmer */}
+        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 190, overflow: 'hidden' }}>
+          <svg viewBox="0 0 2880 140" preserveAspectRatio="none" style={{ width: '200%', height: '100%', animation: 'tideWaveB 13s linear infinite' }}>
+            <path d={WAVE_PATH} fill={`${DEEP}55`} />
+          </svg>
+        </div>
+        {/* Front wave — faster, brighter, foam-lit crest */}
+        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 150, overflow: 'hidden' }}>
+          <svg viewBox="0 0 2880 140" preserveAspectRatio="none" style={{ width: '200%', height: '100%', animation: 'tideWaveA 8.5s linear infinite' }}>
+            <path d={WAVE_PATH} fill={`${SEA}3a`} />
+          </svg>
+        </div>
+        {/* Foam motes drifting up */}
+        {FOAM_MOTES.map((f, i) => (
+          <div key={i} style={{
+            position: 'absolute', bottom: '3%', left: `${f.left}%`,
+            width: f.size, height: f.size, borderRadius: '50%',
+            background: FOAM, boxShadow: `0 0 6px ${GLOW}`,
+            animation: `tideFoam ${f.dur}s linear ${f.delay}s infinite`,
+          }} />
+        ))}
+      </div>
 
+      {/* ── The event, docked low so it rides the rising water ──────────── */}
       <motion.div
-        initial={{ opacity: 0, y: 46, scale: 0.95 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: 14, scale: 0.98 }}
-        transition={{ type: 'spring', stiffness: 240, damping: 22 }}
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 16 }}
+        transition={{ type: 'spring', stiffness: 210, damping: 24 }}
         style={{
-          position: 'relative',
-          width: '100%', maxWidth: 450,
-          borderRadius: 20,
-          background: 'linear-gradient(180deg, rgba(16,30,48,0.98) 0%, rgba(7,15,26,0.99) 100%)',
-          border: `1px solid ${SEA}3a`,
-          boxShadow: `0 0 54px ${SEA}26, 0 24px 70px rgba(0,0,0,0.6)`,
-          maxHeight: '88vh',
-          overflowY: 'auto',
-          WebkitOverflowScrolling: 'touch',
-          overscrollBehavior: 'contain',
+          position: 'relative', zIndex: 1,
+          width: '100%', maxWidth: 520, margin: '0 auto',
+          maxHeight: '90vh', overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain',
+          paddingBottom: '0.4rem',
         }}
       >
-        {/* Crest band — a shimmering tide line across the top of the card */}
-        <div aria-hidden style={{
-          height: 3,
-          background: `linear-gradient(90deg, transparent, ${SEA}, ${SEA}66, ${SEA}, transparent)`,
-          backgroundSize: '200% 100%',
-          animation: 'tideShimmer 3.2s linear infinite',
-          borderTopLeftRadius: 20, borderTopRightRadius: 20,
-        }} />
-        {/* Soft glow pulse behind the header */}
-        <div aria-hidden style={{
-          position: 'absolute', top: -10, left: '50%', transform: 'translateX(-50%)',
-          width: 220, height: 90, borderRadius: '50%',
-          background: `radial-gradient(ellipse, ${SEA}2e 0%, transparent 70%)`,
-          filter: 'blur(8px)', animation: 'tideGlow 4s ease-in-out infinite', pointerEvents: 'none',
-        }} />
-
-        <div style={{ padding: '1.3rem 1.3rem 1.2rem', position: 'relative' }}>
-          {/* Eyebrow + tier */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: '0.55rem' }}>
+        {/* Header — a weather notice, not a card. No panel around it; it sits
+            straight on the flooded scene. */}
+        <div style={{ textAlign: 'center', marginBottom: '0.9rem', padding: '0 0.3rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: '0.5rem' }}>
             <WaveGlyph />
-            <p className="font-karla font-700 uppercase tracking-[0.24em]" style={{ fontSize: '0.56rem', color: `${SEA}cc` }}>
-              A Tide Rolls In
+            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.3em', color: GLOW }}>
+              The Tide Turns
             </p>
             <WaveGlyph flip />
           </div>
           {tide.tier > 1 && (
-            <p className="font-karla font-700 uppercase tracking-[0.18em] text-center" style={{ fontSize: '0.5rem', color: 'rgba(245,242,236,0.4)', marginBottom: '0.5rem' }}>
-              Tier {tide.tier} Tide
+            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.2em', color: 'rgba(207,250,254,0.5)', marginBottom: '0.55rem' }}>
+              A Spring Tide · Tier {tide.tier}
             </p>
           )}
-
-          {/* Title */}
-          <p className="font-cinzel font-700 text-center" style={{ fontSize: '1.45rem', color: '#f5f2ec', lineHeight: 1.18, marginBottom: '0.7rem', textShadow: `0 0 22px ${SEA}33` }}>
+          <p className="font-cinzel font-700" style={{ fontSize: '1.6rem', color: '#f2fbff', lineHeight: 1.14, marginBottom: '0.6rem', textShadow: `0 0 26px ${SEA}55` }}>
             {tide.title}
           </p>
-
-          {/* Flavor */}
-          <p className="font-karla text-center" style={{
-            fontSize: '0.85rem', lineHeight: 1.55,
-            color: 'rgba(245,242,236,0.74)', fontStyle: 'italic',
-            marginBottom: '1.15rem', padding: '0 0.3rem',
-          }}>
+          <p className="font-karla" style={{ fontSize: '0.86rem', lineHeight: 1.55, color: 'rgba(224,247,255,0.78)', fontStyle: 'italic' }}>
             {tide.flavor}
           </p>
+          {/* A shimmering wave-rule instead of a card border */}
+          <div aria-hidden style={{
+            height: 2, margin: '0.95rem auto 0', maxWidth: 260,
+            background: `linear-gradient(90deg, transparent, ${SEA}, ${FOAM}, ${SEA}, transparent)`,
+            backgroundSize: '200% 100%', animation: 'tideRule 3.4s linear infinite',
+          }} />
+          <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.24em', color: 'rgba(207,250,254,0.42)', marginTop: '0.7rem' }}>
+            Choose your heading
+          </p>
+        </div>
 
-          {/* Choices — each a path, with boons (green) and costs (red) called
-              out so the trade reads instantly. */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {tide.choices.map((c, idx) => (
-              <ChoiceCard key={c.id} choice={c} index={idx} onPick={() => onPicked(c)} />
-            ))}
-          </div>
+        {/* Currents — full-width bands riding the water. Each is a heading you
+            can take, boons (green) and costs (red) called out on the crest. */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+          {tide.choices.map((c, idx) => (
+            <CurrentBand key={c.id} choice={c} index={idx} onPick={() => onPicked(c)} />
+          ))}
         </div>
       </motion.div>
     </motion.div>
   )
 }
 
-function ChoiceCard({ choice, index, onPick }: { choice: TideChoice; index: number; onPick: () => void }) {
-  // Build the chip list with tone so each effect shows as a boon or a cost.
+function CurrentBand({ choice, index, onPick }: { choice: TideChoice; index: number; onPick: () => void }) {
   const chips = choice.effects
     .map((e: TideEffect) => ({ label: describeEffect(e), tone: effectTone(e) }))
     .filter(c => c.label.length > 0)
 
   return (
     <motion.button
-      initial={{ opacity: 0, x: -10 }}
+      initial={{ opacity: 0, x: -14 }}
       animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: 0.12 + index * 0.07, duration: 0.3 }}
-      whileTap={{ scale: 0.975 }}
+      transition={{ delay: 0.14 + index * 0.08, duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+      whileTap={{ scale: 0.985 }}
       onClick={onPick}
       className="tap"
       style={{
         position: 'relative',
         textAlign: 'left',
-        padding: '0.85rem 0.95rem 0.85rem 1.05rem',
-        borderRadius: 13,
-        background: `linear-gradient(180deg, ${SEA}10, rgba(255,255,255,0.012))`,
-        border: `1px solid ${SEA}30`,
-        color: '#e7eef6',
+        padding: '0.9rem 1rem 0.95rem 1.15rem',
+        borderRadius: 14,
+        // A horizontal current gradient — deep on the left, running lighter to
+        // the right, like water moving through the band.
+        background: `linear-gradient(100deg, ${DEEP}2e 0%, ${SEA}18 42%, rgba(8,20,32,0.55) 100%)`,
+        border: `1px solid ${SEA}3a`,
+        boxShadow: `inset 0 1px 0 ${FOAM}22, 0 6px 22px rgba(2,12,22,0.4)`,
+        color: '#eaf7ff',
         cursor: 'pointer',
         overflow: 'hidden',
       }}
     >
-      {/* Left accent rail */}
-      <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: `linear-gradient(180deg, ${SEA}, ${SEA}33)` }} />
+      {/* Foam crest riding the top edge of the current */}
+      <span aria-hidden style={{
+        position: 'absolute', top: 0, left: 8, right: 8, height: 2, borderRadius: 2,
+        background: `linear-gradient(90deg, transparent, ${FOAM}bb 20%, ${GLOW}aa 50%, ${FOAM}bb 80%, transparent)`,
+        animation: 'tideCrest 3.6s ease-in-out infinite',
+      }} />
+      {/* Left current-rail */}
+      <span aria-hidden style={{ position: 'absolute', left: 0, top: 6, bottom: 6, width: 3, borderRadius: 3, background: `linear-gradient(180deg, ${GLOW}, ${DEEP}55)` }} />
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-        <p className="font-cinzel font-700" style={{ flex: 1, fontSize: '0.98rem', color: '#bae6fd', lineHeight: 1.2 }}>
+        <p className="font-cinzel font-700" style={{ flex: 1, fontSize: '1rem', color: '#d6f4ff', lineHeight: 1.2 }}>
           {choice.label}
         </p>
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={`${SEA}aa`} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-          <path d="M9 18l6-6-6-6" />
+        {/* Heading arrow — "steer this way" */}
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={GLOW} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, opacity: 0.9 }}>
+          <path d="M5 12h14M13 6l6 6-6 6" />
         </svg>
       </div>
 
-      <p className="font-karla" style={{ fontSize: '0.74rem', color: 'rgba(231,238,246,0.72)', lineHeight: 1.45, marginBottom: chips.length > 0 ? 8 : 0 }}>
+      <p className="font-karla" style={{ fontSize: '0.76rem', color: 'rgba(234,247,255,0.74)', lineHeight: 1.45, marginBottom: chips.length > 0 ? 8 : 0 }}>
         {choice.description}
       </p>
 
@@ -210,7 +228,7 @@ function ChoiceCard({ choice, index, onPick }: { choice: TideChoice; index: numb
             return (
               <span key={i} className="font-karla font-700" style={{
                 display: 'inline-flex', alignItems: 'center', gap: 4,
-                fontSize: '0.6rem', padding: '0.18rem 0.5rem', borderRadius: 999,
+                fontSize: '0.6rem', padding: '0.2rem 0.5rem', borderRadius: 999,
                 background: t.bg, border: `1px solid ${t.bd}`, color: t.fg, whiteSpace: 'nowrap',
               }}>
                 {chip.tone !== 'neutral' && (
@@ -228,8 +246,8 @@ function ChoiceCard({ choice, index, onPick }: { choice: TideChoice; index: numb
 
 function WaveGlyph({ flip }: { flip?: boolean }) {
   return (
-    <svg width="20" height="9" viewBox="0 0 28 10" fill="none" stroke={SEA} strokeWidth="1.6" strokeLinecap="round"
-      style={{ opacity: 0.7, transform: flip ? 'scaleX(-1)' : 'none' }} aria-hidden>
+    <svg width="22" height="10" viewBox="0 0 28 10" fill="none" stroke={SEA} strokeWidth="1.7" strokeLinecap="round"
+      style={{ opacity: 0.8, transform: flip ? 'scaleX(-1)' : 'none' }} aria-hidden>
       <path d="M1 6c2.5 0 2.5-4 5-4s2.5 4 5 4 2.5-4 5-4 2.5 4 5 4 2.5-4 5-4" />
     </svg>
   )
