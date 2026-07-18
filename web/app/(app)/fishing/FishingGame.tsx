@@ -313,11 +313,11 @@ const RARITY: Record<number, { label: string; color: string; hookedText: string 
 
 type EventType = 'bloom' | 'fullmoon' | 'redtide' | 'glassy'
 
-const EVENT_DEFS: Record<EventType, { name: string; tagline: string; color: string; tint: string }> = {
-  bloom:    { name: 'Bioluminescent Bloom', tagline: 'No bait consumed this cycle',        color: '#2dd4bf', tint: 'rgba(45,212,191,0.09)' },
-  fullmoon: { name: 'Full Moon Rising',     tagline: 'Quick sell pays full market price',  color: '#e2e8f0', tint: 'rgba(226,232,240,0.07)' },
-  redtide:  { name: 'Red Tide',             tagline: 'Rare fish are surfacing',             color: '#f87171', tint: 'rgba(248,113,113,0.08)' },
-  glassy:   { name: 'Glassy Waters',        tagline: 'Catch window is wider',              color: '#c084fc', tint: 'rgba(192,132,252,0.08)' },
+const EVENT_DEFS: Record<EventType, { name: string; tagline: string; detail: string; color: string; tint: string }> = {
+  bloom:    { name: 'Bioluminescent Bloom', tagline: 'No bait consumed this cycle',        detail: 'The water lights up and the fish rise to it. Every cast is free while the bloom holds, so your bait stays in the tin.', color: '#2dd4bf', tint: 'rgba(45,212,191,0.09)' },
+  fullmoon: { name: 'Full Moon Rising',     tagline: 'Quick sell pays full market price',  detail: 'The tide runs high and the buyers are generous. Quick-sell pays the full market price, not the usual cut, so there is no reason to hold your catch.', color: '#e2e8f0', tint: 'rgba(226,232,240,0.07)' },
+  redtide:  { name: 'Red Tide',             tagline: 'Rare fish are surfacing',             detail: 'Something has stirred the deep. Rare and better fish surface far more often than usual for as long as the tide runs red.', color: '#f87171', tint: 'rgba(248,113,113,0.08)' },
+  glassy:   { name: 'Glassy Waters',        tagline: 'Catch window is wider',              detail: 'The surface goes dead calm and every strike reads clean. Your catch window is wider, so landing fish (and perfect catches) comes easier.', color: '#c084fc', tint: 'rgba(192,132,252,0.08)' },
 }
 
 const EVENT_TYPES: EventType[] = ['bloom', 'fullmoon', 'redtide', 'glassy']
@@ -3695,6 +3695,7 @@ export default function FishingGame({
   const baitDrawerDrag  = useDrawerDrag(() => setBaitOpen(false))
   const dailyDrawerDrag = useDrawerDrag(() => setDailyOpen(false))
   const holdDrawerDrag  = useDrawerDrag(() => setHoldOpen(false))
+  const eventInfoDrawerDrag = useDrawerDrag(() => setEventInfoOpen(false))
 
   // Refs for the collection drawer's scrollable body + each zone block.
   // When the player taps a zone header, we want the just-expanded zone's
@@ -4118,6 +4119,9 @@ export default function FishingGame({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dailyProgress, dailyClaimed])
   const [dailyOpen, setDailyOpen] = useState(false)
+  // Tap the active-event chip (docked on the action row under the XP bar) to
+  // open a small drawer explaining what the event does.
+  const [eventInfoOpen, setEventInfoOpen] = useState(false)
   const [dailyJustCompleted, setDailyJustCompleted] = useState<number | null>(null)
   const [claimingDaily, setClaimingDaily] = useState<number | null>(null)
 
@@ -6784,93 +6788,141 @@ export default function FishingGame({
                 )}
               </AnimatePresence>
             </div>
-            {/* Special item action — chip docked under the XP bar.
-               Only renders when an equipped special has an activatable action
-               available in the current phase. */}
-            <AnimatePresence>
-              {equippedSpecial === 'tide_turner' && tideTurnerSkipsLeft > 0 && phase === 'catching' && (
-                <motion.button
-                  key="tide-turner-action"
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  transition={{ duration: 0.18 }}
-                  onClick={handleTideTurnerSkip}
-                  className="font-karla font-700"
-                  style={{
-                    marginTop: '0.4rem',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    background: 'rgba(14,8,28,0.85)',
-                    border: '1px solid rgba(167,139,250,0.5)',
-                    borderRadius: 999,
-                    padding: '0.32rem 0.8rem',
-                    color: '#c4b5fd',
-                    fontSize: '0.64rem',
-                    cursor: 'pointer',
-                    letterSpacing: '0.05em',
-                    boxShadow: '0 2px 10px rgba(139,111,192,0.28)',
-                  }}
-                >
-                  <span style={{ textTransform: 'uppercase', color: 'rgba(196,181,253,0.7)', fontSize: '0.52rem', letterSpacing: '0.12em' }}>Tide Turner</span>
-                  <span style={{ color: '#e9e4ff' }}>Skip</span>
-                  <span style={{ opacity: 0.7 }}>· {tideTurnerSkipsLeft} left</span>
-                </motion.button>
-              )}
-              {/* Auto Caster / Catcher — on/off toggle, always available while
-                  one is equipped so you can pause it without the gear shop. */}
-              {((equippedSpecial === 'auto_caster' && ownedAutoCaster) || (equippedSpecial === 'auto_catcher' && ownedAutoCatcher)) && (() => {
-                const isCatcher = equippedSpecial === 'auto_catcher'
-                const col = isCatcher ? '#46e0c0' : '#f0c040'
-                return (
-                  <motion.button
-                    key="auto-toggle"
-                    initial={{ opacity: 0, y: -4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -4 }}
-                    transition={{ duration: 0.18 }}
-                    onClick={() => setAutoEnabled(v => !v)}
-                    aria-label={`${isCatcher ? 'Auto Catcher' : 'Auto Caster'}: ${autoEnabled ? 'on' : 'off'}`}
-                    className="font-karla font-700"
-                    // Matches the XP bar's panel (same dark fill so it reads over
-                    // the water); the equipped item's icon stands in for a label.
-                    style={{
-                      marginTop: '0.4rem',
-                      display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
-                      background: 'rgba(4,10,18,0.72)',
-                      border: `1px solid ${col}${autoEnabled ? '55' : '28'}`,
-                      borderRadius: 20, padding: '0.3rem 0.7rem',
-                      fontSize: '0.62rem', cursor: 'pointer', letterSpacing: '0.04em',
-                      boxShadow: autoEnabled ? `0 0 10px ${col}22` : 'none',
-                    }}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="/autocaster.png" alt="" style={{ width: 17, height: 17, objectFit: 'contain', flexShrink: 0, opacity: autoEnabled ? 1 : 0.45, filter: autoEnabled ? `drop-shadow(0 0 4px ${col}66)` : 'grayscale(1) brightness(0.8)' }} />
-                    {/* switch */}
-                    <span aria-hidden style={{ width: 22, height: 12, borderRadius: 999, flexShrink: 0, position: 'relative', background: autoEnabled ? `${col}55` : 'rgba(255,255,255,0.1)', border: `1px solid ${autoEnabled ? col : 'rgba(255,255,255,0.22)'}` }}>
-                      <span style={{ position: 'absolute', top: 1, left: autoEnabled ? 11 : 1, width: 8, height: 8, borderRadius: '50%', background: autoEnabled ? col : '#7a7672', transition: 'left 0.15s, background 0.15s' }} />
-                    </span>
-                    <span style={{ color: autoEnabled ? '#f0ede8' : '#9a9488' }}>{autoEnabled ? 'On' : 'Off'}</span>
-                    {/* Tireless Catcher (Gauntlet Locker Upgrade) — flag that the
-                        Auto Catcher now nets rares too, so the perk is visibly on. */}
-                    {isCatcher && gauntletAutoCatchRares(gauntletUpgrades) && (
-                      <span title="Tireless Catcher: also auto-reels rare fish" style={{ color: autoEnabled ? col : '#9a9488', fontSize: '0.52rem', fontWeight: 700, letterSpacing: '0.06em', borderLeft: `1px solid ${col}33`, paddingLeft: '0.45rem' }}>+ RARES</span>
-                    )}
-                  </motion.button>
-                )
-              })()}
-            </AnimatePresence>
+            {/* Action row under the XP bar. The equipped special's action chip
+               (Tide Turner skip / Auto Caster–Catcher toggle) sits on the LEFT,
+               and the active fishing event's name sits CENTERED on the SAME row.
+               The event always centers here; if the left chip would crowd it, the
+               name truncates rather than shoving the chip off-screen. Tapping the
+               event opens a small drawer explaining what it does. */}
+            {(() => {
+              const hasChip =
+                (equippedSpecial === 'tide_turner' && tideTurnerSkipsLeft > 0 && phase === 'catching') ||
+                (equippedSpecial === 'auto_caster' && ownedAutoCaster) ||
+                (equippedSpecial === 'auto_catcher' && ownedAutoCatcher)
+              const rowActive = hasChip || !!activeEvent
+              return (
+                <div style={{ marginTop: rowActive ? '0.4rem' : 0, minHeight: rowActive ? 26 : 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {/* left: equipped-special action chip */}
+                  <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+                    <AnimatePresence>
+                      {equippedSpecial === 'tide_turner' && tideTurnerSkipsLeft > 0 && phase === 'catching' && (
+                        <motion.button
+                          key="tide-turner-action"
+                          initial={{ opacity: 0, y: -4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -4 }}
+                          transition={{ duration: 0.18 }}
+                          onClick={handleTideTurnerSkip}
+                          className="font-karla font-700"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            background: 'rgba(14,8,28,0.85)',
+                            border: '1px solid rgba(167,139,250,0.5)',
+                            borderRadius: 999,
+                            padding: '0.32rem 0.8rem',
+                            color: '#c4b5fd',
+                            fontSize: '0.64rem',
+                            cursor: 'pointer',
+                            letterSpacing: '0.05em',
+                            boxShadow: '0 2px 10px rgba(139,111,192,0.28)',
+                          }}
+                        >
+                          <span style={{ textTransform: 'uppercase', color: 'rgba(196,181,253,0.7)', fontSize: '0.52rem', letterSpacing: '0.12em' }}>Tide Turner</span>
+                          <span style={{ color: '#e9e4ff' }}>Skip</span>
+                          <span style={{ opacity: 0.7 }}>· {tideTurnerSkipsLeft} left</span>
+                        </motion.button>
+                      )}
+                      {/* Auto Caster / Catcher — on/off toggle, always available while
+                          one is equipped so you can pause it without the gear shop. */}
+                      {((equippedSpecial === 'auto_caster' && ownedAutoCaster) || (equippedSpecial === 'auto_catcher' && ownedAutoCatcher)) && (() => {
+                        const isCatcher = equippedSpecial === 'auto_catcher'
+                        const col = isCatcher ? '#46e0c0' : '#f0c040'
+                        return (
+                          <motion.button
+                            key="auto-toggle"
+                            initial={{ opacity: 0, y: -4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -4 }}
+                            transition={{ duration: 0.18 }}
+                            onClick={() => setAutoEnabled(v => !v)}
+                            aria-label={`${isCatcher ? 'Auto Catcher' : 'Auto Caster'}: ${autoEnabled ? 'on' : 'off'}`}
+                            className="font-karla font-700"
+                            // Matches the XP bar's panel (same dark fill so it reads over
+                            // the water); the equipped item's icon stands in for a label.
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
+                              background: 'rgba(4,10,18,0.72)',
+                              border: `1px solid ${col}${autoEnabled ? '55' : '28'}`,
+                              borderRadius: 20, padding: '0.3rem 0.7rem',
+                              fontSize: '0.62rem', cursor: 'pointer', letterSpacing: '0.04em',
+                              boxShadow: autoEnabled ? `0 0 10px ${col}22` : 'none',
+                            }}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src="/autocaster.png" alt="" style={{ width: 17, height: 17, objectFit: 'contain', flexShrink: 0, opacity: autoEnabled ? 1 : 0.45, filter: autoEnabled ? `drop-shadow(0 0 4px ${col}66)` : 'grayscale(1) brightness(0.8)' }} />
+                            {/* switch */}
+                            <span aria-hidden style={{ width: 22, height: 12, borderRadius: 999, flexShrink: 0, position: 'relative', background: autoEnabled ? `${col}55` : 'rgba(255,255,255,0.1)', border: `1px solid ${autoEnabled ? col : 'rgba(255,255,255,0.22)'}` }}>
+                              <span style={{ position: 'absolute', top: 1, left: autoEnabled ? 11 : 1, width: 8, height: 8, borderRadius: '50%', background: autoEnabled ? col : '#7a7672', transition: 'left 0.15s, background 0.15s' }} />
+                            </span>
+                            <span style={{ color: autoEnabled ? '#f0ede8' : '#9a9488' }}>{autoEnabled ? 'On' : 'Off'}</span>
+                            {/* Tireless Catcher (Gauntlet Locker Upgrade) — flag that the
+                                Auto Catcher now nets rares too, so the perk is visibly on. */}
+                            {isCatcher && gauntletAutoCatchRares(gauntletUpgrades) && (
+                              <span title="Tireless Catcher: also auto-reels rare fish" style={{ color: autoEnabled ? col : '#9a9488', fontSize: '0.52rem', fontWeight: 700, letterSpacing: '0.06em', borderLeft: `1px solid ${col}33`, paddingLeft: '0.45rem' }}>+ RARES</span>
+                            )}
+                          </motion.button>
+                        )
+                      })()}
+                    </AnimatePresence>
+                  </div>
+                  {/* center: active event — name only, centered, truncating, tappable */}
+                  <div style={{ flex: 1, minWidth: 0, display: 'flex', justifyContent: 'center' }}>
+                    <AnimatePresence>
+                      {activeEvent && (() => {
+                        const def = EVENT_DEFS[activeEvent.type]
+                        return (
+                          <motion.button
+                            key={activeEvent.type}
+                            initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
+                            transition={{ duration: 0.4 }}
+                            onClick={() => setEventInfoOpen(true)}
+                            aria-label={`${def.name} — tap for details`}
+                            className="font-karla font-600"
+                            style={{
+                              maxWidth: '100%', minWidth: 0,
+                              display: 'inline-flex', alignItems: 'center', gap: 7,
+                              background: 'rgba(4,10,18,0.82)', border: `1px solid ${def.color}50`,
+                              borderRadius: 20, padding: '0.3rem 0.7rem',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <motion.span
+                              aria-hidden
+                              animate={{ opacity: [1, 0.4, 1] }}
+                              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                              style={{ width: 5, height: 5, borderRadius: '50%', background: def.color, boxShadow: `0 0 6px ${def.color}`, flexShrink: 0 }}
+                            />
+                            <span style={{ fontSize: '0.62rem', color: def.color, letterSpacing: '0.04em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>
+                              {def.name}
+                            </span>
+                          </motion.button>
+                        )
+                      })()}
+                    </AnimatePresence>
+                  </div>
+                </div>
+              )
+            })()}
           </div>
 
 
-          {/* Active event + Finn-bet indicators share ONE reserved strip below
-              the XP bar. The Finn chip used to be its own row, which added ~36px
-              of fixed header height while a challenge was live — on short phones
-              that pushed the (intentionally compact) result card's bottom, and
-              the Cast Again button, below the fold so it read as cut off. Folding
-              it into the already-reserved strip costs ~zero extra height. */}
-          <div style={{ minHeight: 28, marginBottom: '0.3rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+          {/* Finn's Bet indicator strip. (The active-event chip used to live here
+              too; it now docks on the action row under the XP bar, centered on the
+              same line as the Auto Catcher toggle.) Reserves height only while a
+              bet is live so it costs nothing on short phones otherwise. */}
+          <div style={{ minHeight: finnChallenge ? 28 : 0, marginBottom: finnChallenge ? '0.3rem' : 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
             {finnChallenge && (
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -6894,35 +6946,6 @@ export default function FishingGame({
                 )}
               </div>
             )}
-            <AnimatePresence>
-              {activeEvent && (() => {
-                const def = EVENT_DEFS[activeEvent.type]
-                return (
-                  <motion.div
-                    key={activeEvent.type}
-                    initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
-                    transition={{ duration: 0.4 }}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 7,
-                      background: 'rgba(4,10,18,0.82)', border: `1px solid ${def.color}50`,
-                      borderRadius: 20, padding: '0.3rem 0.65rem',
-                    }}
-                  >
-                    <motion.div
-                      animate={{ opacity: [1, 0.4, 1] }}
-                      transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                      style={{ width: 5, height: 5, borderRadius: '50%', background: def.color, boxShadow: `0 0 6px ${def.color}`, flexShrink: 0 }}
-                    />
-                    <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: def.color, letterSpacing: '0.04em' }}>
-                      {def.name}
-                    </span>
-                    <span className="font-karla font-400" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.72)' }}>
-                      · {def.tagline}
-                    </span>
-                  </motion.div>
-                )
-              })()}
-            </AnimatePresence>
           </div>
 
           {/* Challenge session strip */}
@@ -9722,6 +9745,57 @@ export default function FishingGame({
           document.body,
         )
       })()}
+
+      {/* ── Active event details drawer ── */}
+      <AnimatePresence>
+        {eventInfoOpen && activeEvent && (() => {
+          const def = EVENT_DEFS[activeEvent.type]
+          return (
+            <motion.div key="event-info-drawer"
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'tween', duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
+              {...eventInfoDrawerDrag.motionProps}
+              style={{
+                position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
+                background: `linear-gradient(180deg, ${def.tint} 0%, rgba(6,12,20,0.99) 40%), #06101a`,
+                borderTop: `1px solid ${def.color}55`,
+                borderRadius: '18px 18px 0 0',
+                padding: '0 1.15rem 2rem',
+                maxHeight: '70vh', overflowY: 'auto', overscrollBehavior: 'contain',
+                willChange: 'transform',
+              }}
+            >
+              <DrawerHandle dragHandleProps={eventInfoDrawerDrag.handleProps} />
+              <div className="flex items-start justify-between mb-3" style={{ paddingTop: '0.75rem' }}>
+                <div style={{ minWidth: 0 }}>
+                  <div className="flex items-center gap-2" style={{ marginBottom: 5 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: def.color, boxShadow: `0 0 8px ${def.color}`, flexShrink: 0 }} />
+                    <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.58rem', color: def.color }}>Fishing Event</p>
+                  </div>
+                  <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#f2efe9', lineHeight: 1.1 }}>
+                    {def.name}
+                  </p>
+                </div>
+                <DrawerClose onClick={() => setEventInfoOpen(false)} />
+              </div>
+              <div style={{
+                borderRadius: 14, padding: '0.7rem 0.85rem', marginBottom: 12,
+                background: `${def.color}12`, border: `1px solid ${def.color}33`,
+              }}>
+                <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: def.color, letterSpacing: '0.02em' }}>
+                  {def.tagline}
+                </p>
+              </div>
+              <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(240,237,232,0.82)', lineHeight: 1.5 }}>
+                {def.detail}
+              </p>
+              <p className="font-karla" style={{ fontSize: '0.68rem', color: 'rgba(240,237,232,0.42)', fontStyle: 'italic', marginTop: 12 }}>
+                Events roll in on their own and last a couple of minutes. Make the most of it while it&apos;s up.
+              </p>
+            </motion.div>
+          )
+        })()}
+      </AnimatePresence>
 
       {/* ── Daily challenge drawer ── */}
       <AnimatePresence>
