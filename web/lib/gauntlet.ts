@@ -74,6 +74,24 @@ export function gauntletUnlocked(opts: { isAdmin?: boolean | null; clearedNodes?
   return GAUNTLET_LIVE && (opts.clearedNodes ?? []).includes(GAUNTLET_UNLOCK_NODE)
 }
 
+// ── Don's Gauntlet (Gauntlet 2) ───────────────────────────────────────────────
+// The endgame variant, led by the ghost of Don Finleone: Chapter 3+4 enemies,
+// its own steeper curve + upgrade tree, shared Fathoms (2× rate). Built by
+// PARAMETERIZING this gauntlet with a `variant` dial rather than forking it —
+// 'davy' = the classic Ch1-2 gauntlet, 'don' = this one. Pools/curve/rewards/
+// theme/boon-pool all key off the variant. See project_dons_gauntlet_plan.
+export type GauntletVariant = 'davy' | 'don'
+
+// Master switch (mirrors GAUNTLET_LIVE). Admin-only until this flips true.
+export const DONS_GAUNTLET_LIVE = false
+/** Has this player unlocked Don's Gauntlet? Admins always; everyone else only
+ *  once it's live AND they've finished the campaign (beat Don Finleone = the
+ *  `the_throne` raid clear), NOT a node clear like the classic gauntlet. */
+export function donsGauntletUnlocked(opts: { isAdmin?: boolean | null; throneCleared?: boolean | null }): boolean {
+  if (opts.isAdmin) return true
+  return DONS_GAUNTLET_LIVE && !!opts.throneCleared
+}
+
 // ── Hardcore mode ─────────────────────────────────────────────────────────────
 // The Hardcore Gauntlet: the crew SQUAD you send in (your raid party) is lost
 // FOR GOOD if you die or abandon, tracked on its own hiscore (the Drowned
