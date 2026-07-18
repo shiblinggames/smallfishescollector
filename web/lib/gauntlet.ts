@@ -21,6 +21,7 @@
 
 import {
   CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER,
+  THE_COFFERS_FLEET, THE_QUARTERMASTER, THE_BLOCKADE, THE_THRONE,
   type BroadsideEnemy,
 } from './bossRaids'
 import {
@@ -359,6 +360,40 @@ function pick<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length
 // drowned look on its own.
 export const DROWNED_FILTER = 'grayscale(0.5) brightness(0.8) contrast(1.05)'
 
+// ── Don's Gauntlet (variant 'don') — Ch3+4 enemies, a steeper curve, a crimson
+//    ghost-fleet reskin. generateFight/scaleToCurve pick these by variant. ──────
+const RAID_CONFIGS_2 = [THE_COFFERS_FLEET, THE_QUARTERMASTER, THE_BLOCKADE, THE_THRONE]
+// Mobs = every non-boss enemy across raids 5-8, MINUS the Closer (the_consigliere:
+// a mini-boss, slice 2) and each raid's own boss.
+const MOB_POOL_2: BroadsideEnemy[] = RAID_CONFIGS_2.flatMap(c =>
+  Object.entries(c.enemies)
+    .filter(([key]) => key !== c.bossId && key !== 'the_consigliere')
+    .map(([, e]) => e),
+)
+// Random boss pool = Ruse / Quartermaster / Sal (the Ch3/4 base bosses, which
+// already carry their own phases). Don Finleone is PULLED OUT → the rare apex
+// event (slice 2), never a random boss.
+const BOSS_POOL_2: BroadsideEnemy[] = [THE_COFFERS_FLEET, THE_QUARTERMASTER, THE_BLOCKADE].map(c => c.enemies[c.bossId])
+
+// G2 curve: much higher baseline + steeper slope (an endgame captain one-shots
+// Davy's mid mobs) + the Crush band starts earlier. Ship + tune live on kingkong.
+const DEEP_BEND_START_2 = 48
+function deepBend2(depth: number): number {
+  return depth > DEEP_BEND_START_2 ? Math.pow(DEEP_BEND_RATE, depth - DEEP_BEND_START_2) : 1
+}
+function mobHp2(depth: number)    { return Math.round((350 + depth * 30) * deepBend2(depth)) }
+function mobMinDmg2(depth: number){ return Math.round((22 + depth * 3) * deepBend2(depth)) }
+function mobMaxDmg2(depth: number){ return Math.round((34 + depth * 5) * deepBend2(depth)) }
+
+// The Don's ghost fleet — his drowned court + crews raised, washed a spectral
+// crimson (vs Davy's cold grey DROWNED_FILTER) and renamed "Spectral X".
+export const GHOST_FILTER = 'brightness(0.8) contrast(1.05) sepia(0.55) saturate(1.8) hue-rotate(-20deg)'
+function ghostName(name: string): string {
+  if (name.includes('Spectral')) return name
+  if (name.startsWith('The ')) return `The Spectral ${name.slice(4)}`
+  return `Spectral ${name}`
+}
+
 // Two-phase boss revives are an ENDGAME escalation — early/mid Gauntlet bosses
 // stay single-phase; only past this depth do they bring their phase 2.
 const PHASE2_BOSS_MIN_DEPTH = 20
@@ -366,20 +401,35 @@ const PHASE2_BOSS_MIN_DEPTH = 20
 /** Overlay the gauntlet curve onto a source enemy, preserving identity
  *  (pattern, art, signature ability, First-Cut startCharges, etc) but
  *  reframing it as a drowned Locker creature. */
-function scaleToCurve(src: BroadsideEnemy, depth: number, isBoss: boolean): BroadsideEnemy {
-  const hp  = isBoss ? Math.round(mobHp(depth) * BOSS_HP_MULT) : mobHp(depth)
-  const min = Math.round(mobMinDmg(depth) * (isBoss ? BOSS_DMG_MULT : 1))
-  const max = Math.round(mobMaxDmg(depth) * (isBoss ? BOSS_DMG_MULT : 1))
+function scaleToCurve(src: BroadsideEnemy, depth: number, isBoss: boolean, variant: GauntletVariant = 'davy'): BroadsideEnemy {
+  const don = variant === 'don'
+  const baseHp  = don ? mobHp2(depth)     : mobHp(depth)
+  const baseMin = don ? mobMinDmg2(depth) : mobMinDmg(depth)
+  const baseMax = don ? mobMaxDmg2(depth) : mobMaxDmg(depth)
+  const hp  = isBoss ? Math.round(baseHp * BOSS_HP_MULT) : baseHp
+  const min = Math.round(baseMin * (isBoss ? BOSS_DMG_MULT : 1))
+  const max = Math.round(baseMax * (isBoss ? BOSS_DMG_MULT : 1))
   // Gunnery accuracy climbs with depth so dodge stays a real read as a
   // high-nav endgame captain keeps descending (the fixed per-raid accuracy on
   // the source enemy would fall behind). Gauntlet players are already post-
   // Chapter-2, so this opens near the late-raid band (~24) and ramps. Bosses
   // shoot a touch straighter. See BroadsideEnemy.accuracy for the dodge math.
   const accuracy = Math.round(18 + depth * 1.4) + (isBoss ? 3 : 0)
-  const out: BroadsideEnemy = { ...src, name: drownedName(src.name), hpBase: hp, minDmg: Math.max(1, min), maxDmg: Math.max(min + 1, max), accuracy }
-  // Phase-2 revives only past PHASE2_BOSS_MIN_DEPTH — strip the inherited
-  // challenge phase2 on shallower boss rounds so they stay single-phase.
-  if (isBoss && depth <= PHASE2_BOSS_MIN_DEPTH) out.phase2 = undefined
+  const out: BroadsideEnemy = { ...src, name: (don ? ghostName : drownedName)(src.name), hpBase: hp, minDmg: Math.max(1, min), maxDmg: Math.max(min + 1, max), accuracy }
+  if (isBoss) {
+    if (don) {
+      // SLICE 1 INTERIM: Ch3/4 bosses run SINGLE-PHASE + CHECK-FREE until the
+      // slice-2 boss/apex engine (phases[] depth-trim + kept bookend checks) lands.
+      // Their special/ultimate/barrier kit (the mechanic load) carries through.
+      out.phases = undefined
+      out.phase2 = undefined
+      out.openingCheck = undefined
+    } else if (depth <= PHASE2_BOSS_MIN_DEPTH) {
+      // Phase-2 revives only past PHASE2_BOSS_MIN_DEPTH — strip the inherited
+      // challenge phase2 on shallower Davy boss rounds so they stay single-phase.
+      out.phase2 = undefined
+    }
+  }
   return out
 }
 
@@ -512,7 +562,7 @@ export interface GauntletRollState {
  *  `skipOffset` (Veteran's Start) raises the COMBAT depth — enemy scaling, boss
  *  / elite odds, and the displayed depth — while the pot stays keyed to the
  *  REWARD depth (ships actually sunk), so the head start is no reward shortcut. */
-export function generateFight(state: GauntletRollState, skipOffset = 0, terms: TermEffects = NO_TERM_EFFECTS): GauntletFight {
+export function generateFight(state: GauntletRollState, skipOffset = 0, terms: TermEffects = NO_TERM_EFFECTS, variant: GauntletVariant = 'davy'): GauntletFight {
   const rewardDepth = state.cleared + 1
   const depth = rewardDepth + skipOffset
 
@@ -539,7 +589,7 @@ export function generateFight(state: GauntletRollState, skipOffset = 0, terms: T
 
   if (isBoss) {
     // Davy's Court (a signed Term): the captains he sends are his best.
-    const base = scaleToCurve(pick(BOSS_POOL), depth, true)
+    const base = scaleToCurve(pick(variant === 'don' ? BOSS_POOL_2 : BOSS_POOL), depth, true, variant)
     const enemy = (terms.bossHpMult !== 1 || terms.bossDmgMult !== 1)
       ? {
           ...base,
@@ -564,7 +614,7 @@ export function generateFight(state: GauntletRollState, skipOffset = 0, terms: T
   // signed Term) multiplies it; Marked Hulls pairs affixes from depth 1 and can
   // stack a third; Ironbacked bumps the elite's hull + guns on top of the usual
   // elite treatment.
-  let enemy = scaleToCurve(pick(MOB_POOL), depth, false)
+  let enemy = scaleToCurve(pick(variant === 'don' ? MOB_POOL_2 : MOB_POOL), depth, false, variant)
   let isElite = false
   let affix: AffixDef | undefined
   const eliteChance = Math.min(

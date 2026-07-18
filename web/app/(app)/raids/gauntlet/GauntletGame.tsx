@@ -26,7 +26,7 @@ import {
   confluenceEffects, activeConfluences, eligibleConfluences, drawConfluenceOffer, confluenceLevel, confluenceDescAt, confluenceHintsFor, CONFLUENCES, type Confluence, type ConfluenceOffer,
   REPRIEVE_MIN_DEPTH, REPRIEVE_CHANCE, drawReprieve, type Reprieve,
   // Davy's Terms — the chosen, structural difficulty layer (hardcore only).
-  DROWNED_FILTER, bandForDepth, davyTaunt,
+  DROWNED_FILTER, GHOST_FILTER, bandForDepth, davyTaunt,
   GAUNTLET_COOLDOWN_HOURS, HARDCORE_RUNS_PER_DAY, HC_UNLOCK_DEPTH, GAUNTLET_REWARD_DEPTH_CAP,
   emptyRunStats, addRunStats, coerceRunStats,
   type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot, type GauntletRunState, type GauntletRunStats, chestOdds, type GauntletVariant } from '@/lib/gauntlet'
@@ -652,7 +652,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       // would sink you, sinks you.
       anchorSavesLeftRef.current = fx.noLethalSaves ? 0 : getActiveEffects(props.equippedItems)
         .filter(e => e.type === 'lethal_save').reduce((a, e) => a + e.value, 0)
-      setFight(generateFight(rollStateRef.current, skipOffset, fx))
+      setFight(generateFight(rollStateRef.current, skipOffset, fx, props.variant))
       setPhase('descending')
       setStarting(false)
     })
@@ -882,7 +882,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   // roll state doesn't change between here and the push, so this is consistent.
   useEffect(() => {
     if (phase !== 'between') return
-    const nf = generateFight(rollStateRef.current, skipOffset, termFxRef.current)
+    const nf = generateFight(rollStateRef.current, skipOffset, termFxRef.current, props.variant)
     peekFightRef.current = nf
     // Blind Descent (a signed Term): the roll is still pre-committed (pushOn must
     // fight the same one), you just don't get to see it.
@@ -1420,7 +1420,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     }
     // Fight the fight Sounding Line pre-rolled at the breather (fallback-roll if
     // somehow unset). Clear the peek so the next breather rolls fresh.
-    const next = peekFightRef.current ?? generateFight(rollStateRef.current, skipOffset, termFxRef.current)
+    const next = peekFightRef.current ?? generateFight(rollStateRef.current, skipOffset, termFxRef.current, props.variant)
     peekFightRef.current = null
     setPeekFight(null)
     // Snapshot whether this fight opens with freshly restored abilities, then
@@ -1948,7 +1948,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <motion.img src={MAW_IMG} alt="" loading="eager" decoding="async"
               animate={{ y: [0, -5, 0] }} transition={{ duration: 4.2, repeat: Infinity, ease: 'easeInOut' }}
-              style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', filter: `${DROWNED_FILTER} drop-shadow(0 10px 30px rgba(0,0,0,0.8)) drop-shadow(0 0 22px ${CRIMSON}40)` }} />
+              style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', filter: `${props.variant === 'don' ? GHOST_FILTER : DROWNED_FILTER} drop-shadow(0 10px 30px rgba(0,0,0,0.8)) drop-shadow(0 0 22px ${CRIMSON}40)` }} />
           </motion.div>
 
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
@@ -3280,7 +3280,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             atmosphere={atmosphereForDepth(fight.depth)}
             zoneBg="/abyss.jpg"
             zoneFilter={hardcoreRun ? undefined : GAUNTLET_ABYSS_FILTER}
-            enemyArtFilter={DROWNED_FILTER}
+            enemyArtFilter={props.variant === 'don' ? GHOST_FILTER : DROWNED_FILTER}
             bonusChargeSlots={bonusSlots}
             anchorSaveAvailable={anchorSavesLeftRef.current > 0}
             onAnchorSave={() => { anchorSavesLeftRef.current = Math.max(0, anchorSavesLeftRef.current - 1) }}
