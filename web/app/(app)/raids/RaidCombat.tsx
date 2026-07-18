@@ -591,6 +591,7 @@ export default function RaidCombat({
     let speedDelta    = 0
     let chargesStart  = 0
     let hpStartDelta  = 0
+    let hpStartPct    = 0   // startHpPctDelta — fraction of max HP entering the fight
     let reloadProc    = { chance: 0, bonus: 0 }
     let everyFightHeal = 0
     let everyFightHealPct = 0
@@ -708,6 +709,12 @@ export default function RaidCombat({
           if (e.scope === 'nextFight') hpStartDelta += e.n
           else if (e.scope === 'boss' && isBoss) hpStartDelta += e.n
           break
+        case 'startHpPctDelta':
+          // Same scoping, but a fraction of max HP (resolved against playerHpMax
+          // below) so a wound still bites at high level.
+          if (e.scope === 'nextFight') hpStartPct += e.pct
+          else if (e.scope === 'boss' && isBoss) hpStartPct += e.pct
+          break
         case 'startOfFightHeal':      everyFightHeal += e.n; break
         case 'startOfFightHealPct':   everyFightHealPct += e.pctMax; break
         case 'reloadProc':
@@ -766,7 +773,7 @@ export default function RaidCombat({
         case 'counterReflect':        counterReflectPct = Math.max(counterReflectPct, e.pct); break
         case 'lifestealKillScale':    lifestealPct += Math.min(e.max, e.perKill * Math.max(0, runKills)); break
         case 'depthScaleMitigation':  inDmgMult *= (1 - Math.min(e.max, e.perDepth * Math.max(0, runDepth))); break
-        case 'instantHeal': case 'fullHeal': case 'doubloonsAtRaidEnd': break // handled elsewhere
+        case 'instantHeal': case 'instantHealPct': case 'fullHeal': case 'doubloonsAtRaidEnd': break // handled at pick-time
       }
     }
     // Momentum axes resolved ONCE each (summed rate, capped at summed cap), so
@@ -778,7 +785,7 @@ export default function RaidCombat({
       dmgMult, fireDmgMult, volleyDmgMult, bossDmgMult, bossVolMult,
       critBonus, critZoneMult, inDmgMult, inCritReduce,
       dodgeBonus, speedDelta,
-      chargesStart, hpStartDelta, everyFightHeal, everyFightHealPct,
+      chargesStart, hpStartDelta, hpStartPct, everyFightHeal, everyFightHealPct,
       reloadProc, guaranteedDodgeBank,
       enemyHpScaleMult, enemyChargesDelta,
       aimFog, aimSpeedMult, zoneSpeedMult, aimBlackout, aimDecoys, confuseChance, hideEnemyHpChance, hideEnemyChargesChance, noncritDmgMult, healMult,
@@ -1019,7 +1026,7 @@ export default function RaidCombat({
   const playerMaxCharges = MAX_CHARGES + Math.max(0, bonusChargeSlots)
   const enemyMagazine = Math.max(VOLLEY_COST, enemy.magazineSize ?? MAX_CHARGES)
   const [playerHp, setPlayerHp]       = useState(() =>
-    Math.max(0, Math.min(healCap, initialPlayerHp + tide.hpStartDelta + Math.round((tide.everyFightHeal + tide.everyFightHealPct * playerHpMax) * tide.healMult)))
+    Math.max(0, Math.min(healCap, initialPlayerHp + tide.hpStartDelta + Math.round(tide.hpStartPct * playerHpMax) + Math.round((tide.everyFightHeal + tide.everyFightHealPct * playerHpMax) * tide.healMult)))
   )
   // ── Achievement telemetry ──────────────────────────────────────────────
   // Shots the player has locked in THIS fight + whether any crew ability fired

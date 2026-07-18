@@ -116,10 +116,17 @@ export type TideEffect =
   // ── HP — instant + per-fight ────────────────────────────────────
   /** Apply RIGHT NOW (modal-time): heal +N HP (clamped to max). */
   | { kind: 'instantHeal'; n: number }
+  /** Apply right now: heal a FRACTION of max HP — scales with the hull so it
+   *  stays meaningful at high level (the pct version of instantHeal). */
+  | { kind: 'instantHealPct'; pct: number }
   /** Apply right now: full HP restore to max. */
   | { kind: 'fullHeal' }
   /** Delta applied at the START of the next fight (negative = wound). */
   | { kind: 'startHpDelta'; n: number; scope: 'nextFight' | 'boss' }
+  /** Delta applied at the START of a fight as a FRACTION of max HP (negative =
+   *  wound). Scales with the hull so a wound still bites at high level — the
+   *  pct version of startHpDelta. */
+  | { kind: 'startHpPctDelta'; pct: number; scope: 'nextFight' | 'boss' }
   /** Passive heal at the START of each REMAINING fight (flat HP). */
   | { kind: 'startOfFightHeal'; n: number }
   /** Passive heal at the START of each REMAINING fight, as a fraction of max
@@ -242,6 +249,7 @@ export function expireAfterFight(effects: TideEffect[]): TideEffect[] {
     if (e.kind === 'guaranteedDodge')                             return []
     if (e.kind === 'startCharges'    && e.scope === 'nextFight')  return []
     if (e.kind === 'startHpDelta'    && e.scope === 'nextFight')  return []
+    if (e.kind === 'startHpPctDelta' && e.scope === 'nextFight')  return []
     if (e.kind === 'incomingDmgMult' && e.scope === 'nextFight')  return []
     if (e.kind === 'dodgeBonus'      && e.scope === 'nextFight')  return []
     // speedDelta "next 2 fights" is a real 2-fight window: tick a countdown
@@ -270,6 +278,8 @@ export function effectTone(e: TideEffect): 'good' | 'bad' | 'neutral' {
     case 'fightShield':  return e.pctMax > 0 ? 'good' : 'neutral'
     case 'enemyShield':  return e.pctMax > 0 ? 'bad' : 'neutral'
     case 'startOfFightHealPct': return e.pctMax > 0 ? 'good' : 'neutral'
+    case 'instantHealPct':  return e.pct > 0 ? 'good' : 'neutral'
+    case 'startHpPctDelta': return e.pct > 0 ? 'good' : e.pct < 0 ? 'bad' : 'neutral'
     case 'chargeCarryover': return 'good'
     case 'incomingDmgMult':
     case 'enemyHpScale':
@@ -360,9 +370,9 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'medical',
         label: 'Take the medical chest',
-        description: '+25 HP now. Costs you 50 ⟡ at raid end.',
+        description: 'Heal 18% of your max HP now. Costs you 50 ⟡ at raid end.',
         effects: [
-          { kind: 'instantHeal', n: 25 },
+          { kind: 'instantHealPct', pct: 0.18 },
           { kind: 'doubloonsAtRaidEnd', n: -50 },
         ],
       },
@@ -384,10 +394,10 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'follow',
         label: 'Follow the bell',
-        description: 'It leads to a half-sunk cache: +150 ⟡ at raid end. But the chase leaves you ragged — you enter the boss fight with 10 less HP.',
+        description: 'It leads to a half-sunk cache: +150 ⟡ at raid end. But the chase leaves you ragged — you enter the boss fight with 8% less HP.',
         effects: [
           { kind: 'doubloonsAtRaidEnd', n: 150 },
-          { kind: 'startHpDelta', n: -10, scope: 'boss' },
+          { kind: 'startHpPctDelta', pct: -0.08, scope: 'boss' },
         ],
       },
       {
@@ -399,10 +409,10 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'sail_wide',
         label: 'Sail wide of the bell',
-        description: '+15% Volley damage in the boss fight. The long way around runs the crew ragged — you enter the boss with 12 less HP.',
+        description: '+15% Volley damage in the boss fight. The long way around runs the crew ragged — you enter the boss with 10% less HP.',
         effects: [
           { kind: 'bossVolleyDmgMult', mult: 1.15 },
-          { kind: 'startHpDelta', n: -12, scope: 'boss' },
+          { kind: 'startHpPctDelta', pct: -0.10, scope: 'boss' },
         ],
       },
     ],
@@ -418,10 +428,10 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'refill',
         label: 'Refill stores',
-        description: 'Every reload has a 10% chance to load +1 cannonball, all run. -10 HP next fight.',
+        description: 'Every reload has a 10% chance to load +1 cannonball, all run. Enter the next fight with 8% less HP.',
         effects: [
           { kind: 'reloadProc', chance: 0.10, bonusCharges: 1 },
-          { kind: 'startHpDelta', n: -10, scope: 'nextFight' },
+          { kind: 'startHpPctDelta', pct: -0.08, scope: 'nextFight' },
         ],
       },
       {
@@ -436,10 +446,10 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'heave',
         label: 'Heave it overboard',
-        description: '1 guaranteed dodge next fight (no roll needed). Heaving it took the crew off the rail — you enter that fight with 8 less HP.',
+        description: '1 guaranteed dodge next fight (no roll needed). Heaving it took the crew off the rail — you enter that fight with 6% less HP.',
         effects: [
           { kind: 'guaranteedDodge', n: 1 },
-          { kind: 'startHpDelta', n: -8, scope: 'nextFight' },
+          { kind: 'startHpPctDelta', pct: -0.06, scope: 'nextFight' },
         ],
       },
     ],
@@ -454,19 +464,19 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'read',
         label: 'Read it',
-        description: 'Gold crit zone is 5% wider all run. -10 HP next fight (wheel went unattended).',
+        description: 'Gold crit zone is 5% wider all run. Enter the next fight with 8% less HP (wheel went unattended).',
         effects: [
           { kind: 'critZoneScale', mult: 1.05 },
-          { kind: 'startHpDelta', n: -10, scope: 'nextFight' },
+          { kind: 'startHpPctDelta', pct: -0.08, scope: 'nextFight' },
         ],
       },
       {
         id: 'pocket',
         label: 'Pocket the bottle',
-        description: '+150 ⟡ at raid end. Reading it under way, you let the watch slip — you enter the next fight with 10 less HP.',
+        description: '+150 ⟡ at raid end. Reading it under way, you let the watch slip — you enter the next fight with 8% less HP.',
         effects: [
           { kind: 'doubloonsAtRaidEnd', n: 150 },
-          { kind: 'startHpDelta', n: -10, scope: 'nextFight' },
+          { kind: 'startHpPctDelta', pct: -0.08, scope: 'nextFight' },
         ],
       },
       {
@@ -506,10 +516,10 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'netting',
         label: 'Take only the netting',
-        description: '+2 cannonballs at the start of the next fight. Hauling it aboard leaves the rail exposed — -5 HP entering that fight.',
+        description: '+2 cannonballs at the start of the next fight. Hauling it aboard leaves the rail exposed — enter that fight with 5% less HP.',
         effects: [
           { kind: 'startCharges', n: 2, scope: 'nextFight' },
-          { kind: 'startHpDelta', n: -5, scope: 'nextFight' },
+          { kind: 'startHpPctDelta', pct: -0.05, scope: 'nextFight' },
         ],
       },
     ],
@@ -566,10 +576,10 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'quick_patch',
         label: 'Quick patch in the bow',
-        description: '+25 HP now. You enter the boss fight with 12 less HP.',
+        description: 'Heal 18% of your max HP now. You enter the boss fight with 10% less HP.',
         effects: [
-          { kind: 'instantHeal', n: 25 },
-          { kind: 'startHpDelta', n: -12, scope: 'boss' },
+          { kind: 'instantHealPct', pct: 0.18 },
+          { kind: 'startHpPctDelta', pct: -0.10, scope: 'boss' },
         ],
       },
       {
@@ -590,18 +600,18 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'live_fire',
         label: 'Live-fire drill',
-        description: '+6% crit chance all run. The powder spent drilling leaves you thin — you enter the next fight with 6 less HP.',
+        description: '+6% crit chance all run. The powder spent drilling leaves you thin — you enter the next fight with 5% less HP.',
         effects: [
           { kind: 'critChanceBonus', chance: 0.06 },
-          { kind: 'startHpDelta', n: -6, scope: 'nextFight' },
+          { kind: 'startHpPctDelta', pct: -0.05, scope: 'nextFight' },
         ],
       },
       {
         id: 'damage_control',
         label: 'Damage-control rehearsal',
-        description: '+5 HP at the start of every remaining fight. The crew drills patches, not gunnery — -10% Fire damage all run.',
+        description: 'Heal 4% of your max HP at the start of every remaining fight. The crew drills patches, not gunnery — -10% Fire damage all run.',
         effects: [
-          { kind: 'startOfFightHeal', n: 5 },
+          { kind: 'startOfFightHealPct', pctMax: 0.04 },
           { kind: 'fireDmgMult', mult: 0.90 },
         ],
       },
@@ -636,9 +646,9 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'bail',
         label: 'Brace and bail',
-        description: '+50 HP now. Costs you 100 ⟡ at raid end.',
+        description: 'Heal 30% of your max HP now. Costs you 100 ⟡ at raid end.',
         effects: [
-          { kind: 'instantHeal', n: 50 },
+          { kind: 'instantHealPct', pct: 0.30 },
           { kind: 'doubloonsAtRaidEnd', n: -100 },
         ],
       },
@@ -730,18 +740,18 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'crest',
         label: 'Crest the wave',
-        description: '+25% damage in the boss fight. Riding the crest in slams you against the hull — you enter the boss with 15 less HP.',
+        description: '+25% damage in the boss fight. Riding the crest in slams you against the hull — you enter the boss with 12% less HP.',
         effects: [
           { kind: 'bossDamageMult', mult: 1.25 },
-          { kind: 'startHpDelta', n: -15, scope: 'boss' },
+          { kind: 'startHpPctDelta', pct: -0.12, scope: 'boss' },
         ],
       },
       {
         id: 'trough',
         label: 'Heal in the trough',
-        description: '+12 HP at the start of every remaining fight. -15% Volley damage all run.',
+        description: 'Heal 6% of your max HP at the start of every remaining fight. -15% Volley damage all run.',
         effects: [
-          { kind: 'startOfFightHeal', n: 12 },
+          { kind: 'startOfFightHealPct', pctMax: 0.06 },
           { kind: 'volleyDmgMult', mult: 0.85 },
         ],
       },
@@ -775,10 +785,10 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'flank',
         label: 'Fall in behind them',
-        description: '+2 guaranteed dodges next fight (no roll needed). Drifting in their cold wake saps the crew — -10 HP entering that fight.',
+        description: '+2 guaranteed dodges next fight (no roll needed). Drifting in their cold wake saps the crew — enter that fight with 8% less HP.',
         effects: [
           { kind: 'guaranteedDodge', n: 2 },
-          { kind: 'startHpDelta', n: -10, scope: 'nextFight' },
+          { kind: 'startHpPctDelta', pct: -0.08, scope: 'nextFight' },
         ],
       },
       {
@@ -866,12 +876,20 @@ export function describeEffect(e: TideEffect): string {
       ? `Enemies crit ${Math.round(e.chance * 100)}% less often`
       : `Enemies crit ${Math.round(-e.chance * 100)}% more often`
     case 'instantHeal':           return `+${e.n} HP now`
+    case 'instantHealPct':        return `Heal ${Math.round(e.pct * 100)}% max HP now`
     case 'fullHeal':              return 'Full HP restored'
     case 'startHpDelta': {
       if (e.n === 0) return ''   // marker only
       const sign = e.n >= 0 ? '+' : ''
       const scope = e.scope === 'boss' ? 'boss fight' : 'next fight'
       return `${sign}${e.n} HP entering ${scope}`
+    }
+    case 'startHpPctDelta': {
+      if (e.pct === 0) return ''
+      const scope = e.scope === 'boss' ? 'the boss fight' : 'the next fight'
+      return e.pct >= 0
+        ? `+${Math.round(e.pct * 100)}% max HP entering ${scope}`
+        : `Enter ${scope} with ${Math.round(-e.pct * 100)}% less HP`
     }
     case 'startOfFightHeal':      return `+${e.n} HP at every fight start`
     case 'startOfFightHealPct':   return `Heal ${Math.round(e.pctMax * 100)}% max HP each fight`

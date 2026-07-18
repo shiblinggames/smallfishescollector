@@ -1741,6 +1741,8 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 for (const e of choice.effects) {
                   if (e.kind === 'instantHeal') {
                     healDelta += e.n
+                  } else if (e.kind === 'instantHealPct') {
+                    healDelta += Math.round(e.pct * playerHPMax)
                   } else if (e.kind === 'fullHeal') {
                     fullHealTriggered = true
                   } else {
