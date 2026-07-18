@@ -2287,7 +2287,7 @@ export const RAID_MAP: RaidNode[] = [
     bridge: "The court knows your name now. His right hand has promised, in his voice, that you will not leave this water. Past him, the aisle to the throne stands open.",
     requiresNode: 'throne_gates',
     adminOnly: true,
-    image: '/raid8_thecloser.png',
+    image: '/raidlog.png',
     sceneAccent: '#dc2626',
     scene: [
       { text: "The last gate swings on silence and you slip into the don's own black water. No horns. No warning shot. Just the pressure of the deep and one lit flagship far ahead, ringed by its court." },
@@ -2354,7 +2354,7 @@ export const RAID_MAP: RaidNode[] = [
     bridge: "The don has said his piece: you will not beat him, nothing in his water ever has. The sea lies flat as a held breath. There is nothing left between you and the biggest name in it.",
     requiresNode: 'the_last_muster',
     adminOnly: true,
-    image: THE_THRONE.enemies.don_finleone.portrait,
+    image: '/raidlog.png',
     sceneAccent: '#dc2626',
     scene: [
       { text: "You take the aisle. The court holds its fire and its formation, every gun tracking you in, and the lit flagship at the end grows from a lantern to a leviathan." },
