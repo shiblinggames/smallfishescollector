@@ -36,6 +36,7 @@ export default async function FishingPage() {
     { data: collectionRows },
     { data: marketRows },
     { data: pbRows },
+    { data: ch3Row },
   ] = await Promise.all([
     getActiveChallengeSession(),
     getDailyChallenge(),
@@ -67,6 +68,10 @@ export default async function FishingPage() {
     admin.from('fish_personal_bests')
       .select('fish_id, best_length_in')
       .eq('user_id', user.id),
+    // Chapter 3 clear (defeated the Quartermaster) — the second gate on the
+    // Ancient Deep, alongside Fishing 75.
+    admin.from('raid_completions')
+      .select('id').eq('user_id', user.id).eq('raid_id', 'the_quartermaster').limit(1).maybeSingle(),
   ])
 
   const marketMultipliers: Record<number, number> = {}
@@ -74,6 +79,13 @@ export default async function FishingPage() {
     marketMultipliers[row.fish_id] = Number(row.multiplier)
   }
   const isPremium = isPremiumActive(profile)
+
+  // Ancient Deep unlock — Fishing 75 AND Chapter 3 cleared (or grandfathered via
+  // has_ancient_deep_access). Drives the zone selector's lock so a player can't
+  // pick a zone the server would reject. Mirrors the gate in actions.ts castLine.
+  const ancientDeepUnlocked =
+    profile?.has_ancient_deep_access === true
+    || (fishLevelFromXP(profile?.fishing_xp ?? 0) >= 75 && !!ch3Row)
 
   // Union earned-but-ungranted level colors into the GearScreen picker (e.g.
   // crossed Nav 50 via raids without the voyage grant firing). Equipping one
@@ -192,6 +204,7 @@ export default async function FishingPage() {
           unlockedBadges={(profile?.unlocked_badges as string[] | null) ?? []}
           uniqueSpeciesCaught={uniqueSpeciesCaught ?? 0}
           zoneStats={zoneStats}
+          ancientDeepUnlocked={ancientDeepUnlocked}
           ownedRods={ownedRods}
           initialCompletionistEffects={(profile?.completionist_effects as number[] | null) ?? []}
           initialHasForgedBefore={profile?.has_seen_forge_flourish === true}

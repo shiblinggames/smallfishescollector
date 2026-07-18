@@ -46,7 +46,7 @@ type FishSpeciesBasic = { id: number; name: string; scientific_name: string; fun
 
 export default function FishingPageClient({
   hookTier, rodTier, reelTier, lineTier,
-  initialDoubloons, initialFathoms, initialFishingXP, initialBait, initialLastUsedBait, initialInventory, uniqueSpeciesCaught, zoneStats,
+  initialDoubloons, initialFathoms, initialFishingXP, initialBait, initialLastUsedBait, initialInventory, uniqueSpeciesCaught, zoneStats, ancientDeepUnlocked,
   fishHoldTier, ownedRods, initialCompletionistEffects, initialHasForgedBefore, allFishSpecies, caughtFishIds, mountedFishIds, initialPersonalBests, initialCatchCounts, initialHighestPerfectStreak, initialPerfectStreak,
   hasSeenFishingTour, hasSeenFishingCatchTour, hasSeenFirstCatchCelebration, initialShowWaitTimer, activeSession, username, zoneRewardsClaimed,
   initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, gauntletUpgrades, hasPerfectedSigil, prestigeLevels, ancientCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges, marketMultipliers, isPremium, equippedBoat, unlockedBoats, equippedHat, unlockedHats, equippedPet, unlockedPets,
@@ -65,6 +65,7 @@ export default function FishingPageClient({
   initialInventory: InventoryItem[]
   uniqueSpeciesCaught: number
   zoneStats: Record<string, ZoneStat>
+  ancientDeepUnlocked: boolean
   fishHoldTier: number
   ownedRods: number[]
   initialCompletionistEffects: number[]
@@ -192,7 +193,10 @@ export default function FishingPageClient({
     const saved = localStorage.getItem(LAST_ZONE_KEY) as ZoneKey | null
     if (!saved) return null
     const minLevel = ZONE_MIN_LEVEL[saved] ?? 1
-    return fishingLevel >= minLevel ? saved : null
+    // Don't auto-restore into Ancient Deep if it isn't unlocked (Ch3 gate) —
+    // the server would reject every cast.
+    const ok = fishingLevel >= minLevel && (saved !== 'ancient_deep' || ancientDeepUnlocked)
+    return ok ? saved : null
   })
 
   function selectZone(zone: ZoneKey) {
@@ -230,6 +234,7 @@ export default function FishingPageClient({
         zoneStats={zoneStats}
         zoneCollection={zoneCollection}
         prestigeLevels={prestigeLevels}
+        ancientDeepUnlocked={ancientDeepUnlocked}
         onSelect={selectZone}
       />
     )

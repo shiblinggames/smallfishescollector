@@ -475,7 +475,7 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                   running:  { c: theme.accent, label: `Fishing · ${fmtCountdown(ms)}`, filled: false, dot: true  },
                   sendable: { c: theme.accent, label: 'Tap to send crew',              filled: false, dot: false },
                   noslot:   { c: '#9a958c',    label: 'No free slot',                  filled: false, dot: false },
-                  locked:   { c: '#8f877a',    label: `Locked · Lv ${z.minLevel}`,     filled: false, dot: false },
+                  locked:   { c: '#8f877a',    label: z.key === 'ancient_deep' && state.fishingLevel >= z.minLevel ? 'Locked · Clear Chapter 3' : `Locked · Lv ${z.minLevel}`, filled: false, dot: false },
                 }[cardState]
                 const zoneArt = getProfileBackground(z.key)?.src
                 // Per-zone DEPTH gradient over the art, so each zone reads as a

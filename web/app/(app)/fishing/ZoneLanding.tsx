@@ -130,7 +130,7 @@ const HOW_IT_WORKS = [
 ]
 
 export default function ZoneLanding({
-  fishingLevel, fishingXP, username, zoneStats, zoneCollection, prestigeLevels, onSelect,
+  fishingLevel, fishingXP, username, zoneStats, zoneCollection, prestigeLevels, ancientDeepUnlocked, onSelect,
 }: {
   fishingLevel: number
   fishingXP: number
@@ -139,6 +139,8 @@ export default function ZoneLanding({
   /** Species caught vs zone total (this prestige cycle), every zone alike. */
   zoneCollection: Record<string, { caught: number; total: number }>
   prestigeLevels: Record<string, number>
+  /** Ancient Deep is gated on Fishing 75 AND clearing Chapter 3 (or grandfathered). */
+  ancientDeepUnlocked: boolean
   onSelect: (zone: ZoneKey) => void
 }) {
   const [modalOpen, setModalOpen] = useState(false)
@@ -231,7 +233,8 @@ export default function ZoneLanding({
           <div style={{ position: 'relative', borderRadius: 18, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 12px 36px rgba(0,0,0,0.55)' }}>
             {ZONES.map((zone, i) => {
               const minLevel = ZONE_MIN_LEVEL[zone] ?? 1
-              const accessible = fishingLevel >= minLevel
+              // Ancient Deep needs Fishing 75 AND Chapter 3 cleared (or grandfathered).
+              const accessible = fishingLevel >= minLevel && (zone !== 'ancient_deep' || ancientDeepUnlocked)
               const color = HABITAT_COLOR[zone]
               const difficulty = ZONE_DIFFICULTY[zone]
               const diffLabel = ZONE_DIFFICULTY_LABEL[zone]
@@ -240,7 +243,7 @@ export default function ZoneLanding({
               const colPct = col.total > 0 ? Math.min(100, (col.caught / col.total) * 100) : 0
               const colDone = col.total > 0 && col.caught >= col.total
               const prestige = prestigeLevels[zone] ?? 0
-              const isRecommended = accessible && ZONES.filter(z => fishingLevel >= (ZONE_MIN_LEVEL[z] ?? 1)).slice(-1)[0] === zone
+              const isRecommended = accessible && ZONES.filter(z => fishingLevel >= (ZONE_MIN_LEVEL[z] ?? 1) && (z !== 'ancient_deep' || ancientDeepUnlocked)).slice(-1)[0] === zone
 
               return (
                 <motion.div
@@ -413,7 +416,7 @@ export default function ZoneLanding({
                               border: '1px dashed rgba(255,255,255,0.28)',
                               padding: '0.2rem 0.55rem', borderRadius: '2rem', whiteSpace: 'nowrap',
                             }}>
-                            Unlocks at Lv {minLevel}
+                            {zone === 'ancient_deep' && fishingLevel >= minLevel ? 'Clear Chapter 3' : `Unlocks at Lv ${minLevel}`}
                           </span>
                         </div>
                       </div>

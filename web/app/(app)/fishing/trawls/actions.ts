@@ -56,13 +56,16 @@ const isZone = (z: string): z is TrawlZoneKey => z in TRAWL_ZONE_BY_KEY
 
 // Build the full client state from the player's profile + roster + active trawls.
 async function buildTrawlState(admin: Admin, userId: string): Promise<TrawlState> {
-  const [{ data: profile }, { data: trawlRows }, { data: crewRows }, { data: pendingVoyage }] = await Promise.all([
-    admin.from('profiles').select('fishing_xp, expedition_xp').eq('id', userId).single(),
+  const [{ data: profile }, { data: trawlRows }, { data: crewRows }, { data: pendingVoyage }, { data: ch3Row }] = await Promise.all([
+    admin.from('profiles').select('fishing_xp, expedition_xp, has_ancient_deep_access').eq('id', userId).single(),
     admin.from('trawls').select('zone, crew_id, ends_at').eq('user_id', userId),
     admin.from('user_crew').select(CREW_COLS).eq('user_id', userId).is('died_at', null),
     // Crew on a pending voyage are also unavailable — exclude from the picker.
     admin.from('daily_voyages').select('crew_variant_ids').eq('user_id', userId).eq('status', 'pending').maybeSingle(),
+    // Ancient Deep trawls carry the same Chapter 3 gate as fishing it directly.
+    admin.from('raid_completions').select('id').eq('user_id', userId).eq('raid_id', 'the_quartermaster').limit(1).maybeSingle(),
   ])
+  const ancientDeepUnlocked = (profile as { has_ancient_deep_access?: boolean } | null)?.has_ancient_deep_access === true || !!ch3Row
   const onVoyage = new Set<number>(((pendingVoyage as { crew_variant_ids?: number[] } | null)?.crew_variant_ids ?? []))
 
   const fishingLevel = fishingLevelFromXP((profile?.fishing_xp as number | null) ?? 0)
@@ -104,7 +107,7 @@ async function buildTrawlState(admin: Admin, userId: string): Promise<TrawlState
       key: z.key,
       label: z.label,
       minLevel: z.minLevel,
-      unlocked: fishingLevel >= z.minLevel,
+      unlocked: fishingLevel >= z.minLevel && (z.key !== 'ancient_deep' || ancientDeepUnlocked),
       trawl: trawlByZone.get(z.key) ?? null,
     })),
     freeCrew,
@@ -127,7 +130,7 @@ export async function deployTrawl(zone: string, crewId: number): Promise<TrawlSt
 
   const admin = createAdminClient()
   const [{ data: profile }, { data: trawlRows }, { data: crewRow }, { data: pendingVoyage }] = await Promise.all([
-    admin.from('profiles').select('fishing_xp, expedition_xp').eq('id', user.id).single(),
+    admin.from('profiles').select('fishing_xp, expedition_xp, has_ancient_deep_access').eq('id', user.id).single(),
     admin.from('trawls').select('zone, crew_id').eq('user_id', user.id),
     admin.from('user_crew').select('id, died_at').eq('id', crewId).eq('user_id', user.id).maybeSingle(),
     admin.from('daily_voyages').select('id').eq('user_id', user.id).eq('status', 'pending').contains('crew_variant_ids', [crewId]).maybeSingle(),
@@ -137,6 +140,13 @@ export async function deployTrawl(zone: string, crewId: number): Promise<TrawlSt
   const navLevel = navLevelFromXP((profile?.expedition_xp as number | null) ?? 0)
   const z = TRAWL_ZONE_BY_KEY[zone]
   if (fishingLevel < z.minLevel) return { error: `Reach Fishing Level ${z.minLevel} to trawl the ${z.label}` }
+  // Ancient Deep carries the campaign gate too (Chapter 3 / the Quartermaster),
+  // or the grandfather flag — otherwise trawls would be a passive XP hole around it.
+  if (zone === 'ancient_deep' && (profile as { has_ancient_deep_access?: boolean } | null)?.has_ancient_deep_access !== true) {
+    const { data: ch3 } = await admin.from('raid_completions')
+      .select('id').eq('user_id', user.id).eq('raid_id', 'the_quartermaster').limit(1).maybeSingle()
+    if (!ch3) return { error: 'Clear Chapter 3 (defeat the Quartermaster) to trawl the Ancient Deep.' }
+  }
 
   const active = (trawlRows ?? []) as { zone: string; crew_id: number }[]
   if (active.length >= unlockedTrawlSlots(fishingLevel, navLevel)) return { error: 'No free trawl slot' }

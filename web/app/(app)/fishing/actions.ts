@@ -192,7 +192,7 @@ export async function castLine(baitType: string, habitat: string): Promise<
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('rod_tier, completionist_effects, hook_tier, fishing_xp, fish_hold_tier, ancient_catches, active_event, catch_pending, fishing_renown_alloc')
+    .select('rod_tier, completionist_effects, hook_tier, fishing_xp, fish_hold_tier, ancient_catches, active_event, catch_pending, fishing_renown_alloc, has_ancient_deep_access')
     .eq('id', user.id)
     .single()
 
@@ -206,6 +206,19 @@ export async function castLine(baitType: string, habitat: string): Promise<
   const minLevel = ZONE_MIN_LEVEL[habitat] ?? 1
   if (fishingLevel < minLevel) {
     return { error: `Reach Fishing Level ${minLevel} to fish here` }
+  }
+
+  // Ancient Deep also gates on campaign progress: you cannot fish the deep the
+  // story hasn't taken you to yet. Fishing 75 (above) AND clearing Chapter 3
+  // (defeating the Quartermaster). `has_ancient_deep_access` grandfathers anyone
+  // who already had access + sticky-caches the unlock so this only queries once.
+  if (habitat === 'ancient_deep' && (profile as { has_ancient_deep_access?: boolean }).has_ancient_deep_access !== true) {
+    const { data: ch3 } = await admin.from('raid_completions')
+      .select('id').eq('user_id', user.id).eq('raid_id', 'the_quartermaster').limit(1).maybeSingle()
+    if (!ch3) {
+      return { error: 'Clear Chapter 3 (defeat the Quartermaster) to reach the Ancient Deep.' }
+    }
+    await admin.from('profiles').update({ has_ancient_deep_access: true }).eq('id', user.id)
   }
 
   // Derive event effects server-side — never trust client flags
