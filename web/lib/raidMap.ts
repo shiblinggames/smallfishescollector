@@ -22,7 +22,7 @@ import { getRaidItem } from '@/lib/raidItems'
 // transparent busts later by pointing these at new files. See lib/legendaryUnlocks.
 const CREW_ART = (f: string) => `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/${f}`
 const GUIDE = {
-  // OG crew — always aboard, no unlock. They open the story and mentor.
+  // OG crew. Always aboard, no unlock. They open the story and mentor.
   doby: { speaker: 'Doby', portrait: CREW_ART('Doby_Mick_v2.png') },
   kat:  { speaker: 'Kat',  portrait: CREW_ART('Catfish.png') },
   // The legendaries who join one per chapter.
@@ -45,7 +45,7 @@ export type RaidNodeType = 'skirmish' | 'raid' | 'milestone' | 'shop' | 'story' 
 // the other options are gone for good. Distinct from `choice` (which
 // picks from raid items only) because each option here can grant a
 // different KIND of reward, including "nothing." Used for in-world
-// decision beats — captured scouts, faction parlays, etc.
+// decision beats. Captured scouts, faction parlays, etc.
 export type RaidEventOutcome =
   | { type: 'doubloons'; amount: number }   // gain doubloons + ledger row
   | { type: 'navXp';     amount: number }   // gain Navigation XP
@@ -73,7 +73,7 @@ export function isCombatNode(t: RaidNodeType): boolean {
 // lighting one flips the beacons beside it. Light the WHOLE chain at once to read
 // the heading. The component scrambles the all-lit board with random taps, so it
 // is always solvable but has no greedy/hill-climb solve (the parity makes
-// guessing useless) — that is what makes it genuinely hard. There is no hidden
+// guessing useless). That is what makes it genuinely hard. There is no hidden
 // answer to leak, so the solve is checked client-side and the server just records
 // completion + pays the reward (same trust level as the "mark story read" nodes).
 // Difficulty knobs = grid size + scrambleTaps.
@@ -90,7 +90,7 @@ export interface RaidMirrorTile {
   /** Orientation the tile STARTS in (the player rotates it from here). For a
    *  fixed tile this is its permanent orientation. */
   init: MirrorOrient
-  /** A locked maze mirror the player CANNOT rotate — pure structure the beam
+  /** A locked maze mirror the player CANNOT rotate. Pure structure the beam
    *  must be routed around/through. Omit/false = a normal rotatable mirror. */
   fixed?: boolean
 }
@@ -101,36 +101,35 @@ export interface RaidMirrorPuzzle {
   source: { x: number; y: number; dir: BeamDir }
   /** Lenses the beam must pass through. The beam goes STRAIGHT through a lens
    *  (it isn't a mirror) and must cross EVERY lens in one fired path to solve.
-   *  Multiple lenses force a threaded route — no single obvious trace. */
+   *  Multiple lenses force a threaded route. No single obvious trace. */
   targets: { x: number; y: number }[]
   /** Solid pillars the beam dies against (also just maze dressing). */
   walls: { x: number; y: number }[]
-  /** Prism tiles — a beam that enters SPLITS into the two perpendicular
+  /** Prism tiles. A beam that enters SPLITS into the two perpendicular
    *  directions (both branches travel on, both can light lenses). Turns the
    *  single line into a branching tree so it can't be traced at a glance. */
   prisms?: { x: number; y: number }[]
   /** Rotatable mirror tiles. */
   mirrors: RaidMirrorTile[]
-  /** "Par" — how many fires the player gets to light the lens. Burning them all
+  /** "Par". How many fires the player gets to light the lens. Burning them all
    *  without a hit resets the mirrors to their start (planning beats guessing).
    *  Omit for unlimited. */
   fireBudget?: number
 }
 
-// Cargo Shuffle (Ch4) — Sokoban. Push powder crates onto their deck marks;
+// Cargo Shuffle (Ch4). Sokoban. Push powder crates onto their deck marks;
 // crates only PUSH (never pull), one at a time. Classic notation per row:
 // '#' wall · ' ' floor · '@' sailor · '$' crate · '.' mark · '*' crate on
 // mark · '+' sailor on mark. Every room MUST be validated with
 // web/verify-cargo.mjs (BFS: solvable + min moves vs budget) before shipping.
 export interface RaidCargoRoom {
   grid: string[]
-  /** Move budget (steps, pushes included). Busting it resets the room —
-   *  planning beats brute-forcing, same philosophy as Mirror Run's fires. */
+  /** Move budget (steps, pushes included). Busting it resets the room, *  planning beats brute-forcing, same philosophy as Mirror Run's fires. */
   moveBudget: number
 }
 export interface RaidCargoPuzzle { rooms: RaidCargoRoom[] }
 
-// Tumbler Lock (Ch4) — Rush Hour. Slide iron bars along their axis until the
+// Tumbler Lock (Ch4). Rush Hour. Slide iron bars along their axis until the
 // gold BOLT can run out the right edge of its row. Notation per row: '.'
 // empty, letters = bars (contiguous h or v), 'Z' = the bolt (horizontal).
 // One SLIDE = one bar moved any distance. Every stage MUST be validated with
@@ -167,7 +166,7 @@ export interface RaidPuzzle {
   cargo?: RaidCargoPuzzle
   /** tumbler: the Rush-Hour stages (played in order; the last solve clears the node). */
   tumbler?: RaidTumblerPuzzle
-  /** Nav XP granted on solve (no doubloons — this is a navigation discovery). */
+  /** Nav XP granted on solve (no doubloons. This is a navigation discovery). */
   rewardNavXp: number
   /** Story payoff shown the moment the puzzle resolves: where the freight runs,
    *  i.e. the next place to head. Supports \n line breaks. */
@@ -177,7 +176,7 @@ export interface RaidPuzzle {
 // ── Bones (a d20 skill-check / risk-reward node) ─────────────────────────────
 // A D&D-style throw: the player picks ONE approach, the server rolls a d20 and
 // adds a small Navigation bonus, and the total vs the option's DC decides win or
-// miss. One-time. Risk/reward is baked per option — a safe option always pays
+// miss. One-time. Risk/reward is baked per option. A safe option always pays
 // something, the bold one can cost the player coin on a miss. Server-rolled
 // (rollDiceNode) so the throw can't be cheated.
 export interface RaidDiceGrant {
@@ -214,7 +213,7 @@ export interface RaidDice {
 // ONE route (recorded in raid_node_progress.choices like an event/dice pick),
 // which clears the fork and grants Nav XP. Downstream nodes on each route gate on
 // that recorded choice so only the taken path opens (the other stays fogged).
-// First new map structure since Ch2 — adds agency + replay.
+// First new map structure since Ch2. Adds agency + replay.
 export interface RaidForkRoute {
   /** Stable id stored in raid_node_progress.choices[forkNodeId]. Don't reuse. */
   id: string
@@ -235,7 +234,7 @@ export interface RaidFork {
 // to skip it, or FIRES one shot: the server rolls a straight (non-critical) hit
 // from the player's real damage profile (ship + power + gear) and compares it to
 // `threshold`. Meet it and you pass free; fall short and you owe `failCost`.
-// No aiming — the roll is bounded by your stats, so it's a gear check with a
+// No aiming. The roll is bounded by your stats, so it's a gear check with a
 // coin fallback. `threshold` is tuned for a non-crit hit (lower than a crit).
 export interface RaidDpsCheck {
   /** Single-shot (non-crit) damage you must MEET OR BEAT to pass free. */
@@ -262,7 +261,7 @@ export interface RaidPayoff {
 
 // ── Dialogue scenes ──────────────────────────────────────────────────────────
 // Story beats play as tap-through dialogue scenes (visual-novel style)
-// instead of prose walls — players read ten-word speech lines, they skip
+// instead of prose walls. Players read ten-word speech lines, they skip
 // 150-word paragraphs. Each line is one tap. Narrator lines omit both
 // speaker and portrait and render as italic log-style text; character
 // lines show a portrait + name plate. `portrait` can also ride a
@@ -274,7 +273,7 @@ export interface SceneLine {
   /** Portrait image path. Falls back to none (text-only line). */
   portrait?: string
   /**
-   * The line. Wrap a word or phrase in *asterisks* to hit it — it renders in the
+   * The line. Wrap a word or phrase in *asterisks* to hit it. It renders in the
    * scene accent, so a writer can put weight on a word instead of hoping the reader
    * finds it.
    */
@@ -289,7 +288,7 @@ export interface SceneLine {
    *  beat). Ignored on narrator lines with no cast. */
   closeup?: boolean
   /** INSERT SHOT: a stylized object the frame pushes into on this line (the cast
-   *  steps aside). For the marquee reveals — the F in the margin, a sealed
+   *  steps aside). For the marquee reveals. The F in the margin, a sealed
    *  letter. The narrator text still rides the plate below it. */
   insert?: SceneInsert
 }
@@ -299,7 +298,7 @@ export interface SceneLine {
 export type SceneInsert =
   | { kind: 'ledger-f' }                 // the patient F signing the margin
   | { kind: 'sealed-letter'; wax?: string } // a wax-sealed letter (wax = the initials pressed in it)
-  | { kind: 'finn-silhouette' }          // a figure rising from the true deep — Finn's shape, blacked to a silhouette (the "not the final boss" sting; reuses his CharacterAvatar, no art)
+  | { kind: 'finn-silhouette' }          // a figure rising from the true deep. Finn's shape, blacked to a silhouette (the "not the final boss" sting; reuses his CharacterAvatar, no art)
 
 /** One row in a node's "possible drops" panel. */
 export interface RaidNodeDrop {
@@ -321,10 +320,10 @@ export interface RaidNodeDrop {
   /** CSS filter applied to the swatch (the skin's actual effect). */
   swatchFilter?: string
   /** If this drop is a raid item, its id (so the detail modal can pull
-   *  the full RaidItemDef — effects, description, source). */
+   *  the full RaidItemDef. Effects, description, source). */
   raidItemId?: string
   /** If this drop is a ship skin, its id (so the detail modal can
-   *  pull the full ShipSkin — name, filter, lore). */
+   *  pull the full ShipSkin. Name, filter, lore). */
   shipSkinId?: string
 }
 
@@ -446,7 +445,7 @@ export interface RaidNode {
    *  it and the final tap marks the node read. On milestone/event nodes
    *  it's an INTRO cutscene: the sheet gates the interactive bits (pay
    *  bar / choice cards) behind a first watch, and the node's own
-   *  claim/choice action stays the clear — the scene itself never
+   *  claim/choice action stays the clear. The scene itself never
    *  writes to the server. When present, the sheet shows flavor as the
    *  pre-watch teaser and detail.summary once cleared; the prose
    *  description becomes archive/fallback text. Cleared nodes offer a
@@ -468,7 +467,7 @@ const SHIP_SKIN_PREVIEW_IMG = '/models/brigantine_v2.png'
 
 /** Derive a drop list (with rolled-once odds) from a boss raid's loot
  *  table so the node sheet and the live crate never drift apart.
- *  Doubloons entries skip the % chip — the % feels transactional for
+ *  Doubloons entries skip the % chip. The % feels transactional for
  *  currency and only really tells the player "you'll probably get gold",
  *  which they already assume. The chip stays on items / skins / packs
  *  where the rarity actually matters to the player's chase decision. */
@@ -496,7 +495,7 @@ function lootDrops(loot: RaidLootItem[]): RaidNodeDrop[] {
         drop.label = skin.name
         drop.sublabel = 'Ship skin. A cosmetic new look for your ship.'
         // Most skins recolor via a bespoke sprite (imageByTier), not a CSS
-        // filter — preview that sprite (the recolored brigantine) so the drop
+        // filter. Preview that sprite (the recolored brigantine) so the drop
         // shows the skin's real look, not the base hull. Filter-only skins fall
         // back to the base preview image + their filter.
         drop.image = skin.imageByTier?.[4] ?? SHIP_SKIN_PREVIEW_IMG
@@ -555,7 +554,7 @@ function clearPayout(config: BossRaidConfig): { doubloons: number; xp: number } 
 /** A named arc of the raid map. Players read the chain as discrete
  *  chapters, not an infinite scroll: every new raid arc gets its own
  *  RAID_CHAPTERS entry + extends RAID_MAP under that chapter's
- *  boundary. The boundary is given by lastNodeId — walking RAID_MAP
+ *  boundary. The boundary is given by lastNodeId. Walking RAID_MAP
  *  in order, any node up to and including that id belongs to this
  *  chapter; the next chapter begins at the next node. Order in
  *  RAID_CHAPTERS must match the linear order of RAID_MAP. */
@@ -580,7 +579,7 @@ export const RAID_CHAPTERS: RaidChapter[] = [
     subtitle:   'A coast full of pirates, and a thread that runs to somewhere bigger.',
     // Pete's arc + Krust's arc, both challenge variants, AND the
     // class-pick that closes the chapter. Captain's Choice is the
-    // final beat — a permanent ship-identity decision for clearing
+    // final beat. A permanent ship-identity decision for clearing
     // the chapter.
     lastNodeId: 'chapter_1_class',
   },
@@ -616,7 +615,7 @@ export const RAID_CHAPTERS: RaidChapter[] = [
     romanNumeral: 'IV',
     title:      'The Last Fathom',
     subtitle:   'The deepest water there is, and the don who owns it. Nothing waits past this.',
-    // UNDER CONSTRUCTION (all nodes adminOnly) — full locked chain:
+    // UNDER CONSTRUCTION (all nodes adminOnly). Full locked chain:
     // throne_heading → the_reclamation → Cargo Shuffle puzzle → Raid 7
     // (Sal Brackwater) → crooked_ledger → Tumbler Lock puzzle → Raid 8
     // (Don Finleone) → chapter_4_close (Between Watches) → chapter_4_augment.
@@ -628,7 +627,7 @@ export const RAID_CHAPTERS: RaidChapter[] = [
 /** Which chapter does this node belong to? Walks RAID_CHAPTERS in
  *  order and returns the first one whose lastNodeId comes at or after
  *  this node in RAID_MAP. Falls back to the last chapter if the node
- *  somehow sits past every boundary (defensive — should never happen
+ *  somehow sits past every boundary (defensive. Should never happen
  *  if RAID_CHAPTERS is kept in sync with RAID_MAP). */
 export function chapterForNode(nodeId: string): RaidChapter {
   const nodeIdx = RAID_MAP.findIndex(n => n.id === nodeId)
@@ -691,7 +690,7 @@ export const RAID_MAP: RaidNode[] = [
         "Pete's not the type to do his own swinging. That's what the Reef Raiders are for, and the reef's crawling with them. Sink one and another bobs up grinning to take the empty seat.\n\nNo grand plan out here. Pick them off, one soggy thug at a time, and wait to see who comes asking once too many of them stop rowing home.",
       enemies: ['Reef Raider'],
       drops: [
-        // Single combined-reward line — skirmish is "kill a raider, get
+        // Single combined-reward line. Skirmish is "kill a raider, get
         // XP + gold." Two separate rows with "Every kill" chips was
         // redundant; one line spells out the actual amounts up-front.
         {
@@ -724,13 +723,13 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    // Challenge variant — unlocks once normal Pete is cleared. Same gauntlet,
+    // Challenge variant. Unlocks once normal Pete is cleared. Same gauntlet,
     // scaled-up stats (+30% mob HP, +15% mob dmg, +50% boss HP, +20% boss
     // dmg) and scaled payouts (+50% gold/XP per kill, +50% gem weight in
     // the crate, DOUBLE the unique drop rate). Completions track under the
     // suffixed raid_id so the Boss Records leaderboard is its own bucket.
     // The "syndicate" story chain still gates on the normal pete clear,
-    // not this one — challenge stays optional / parallel to the main line.
+    // not this one. Challenge stays optional / parallel to the main line.
     id: 'pete_challenge',
     type: 'raid',
     label: "Challenge: The Corsair's Reckoning",
@@ -739,7 +738,7 @@ export const RAID_MAP: RaidNode[] = [
     route: '/raids/challenge',
     raidId: CORSAIRS_RECKONING_CHALLENGE.raidId,
     sideBranch: { parentId: 'pete' },
-    // Same boss portrait as the parent raid — the side-branch token paints
+    // Same boss portrait as the parent raid. The side-branch token paints
     // it with a red border + red glow to signal "harder version of the
     // same fight" rather than a different enemy. See SIDE_BRANCH_ACCENT
     // in RaidsSection.tsx.
@@ -908,7 +907,7 @@ export const RAID_MAP: RaidNode[] = [
   },
   {
     // Challenge variant of Krust. Same scaling rules as Pete's challenge
-    // node — see pete_challenge for the design notes. Gates on the normal
+    // node. See pete_challenge for the design notes. Gates on the normal
     // krust clear only; the finndicate_notice story chain keeps gating on
     // normal krust so the main plot is unaffected.
     id: 'krust_challenge',
@@ -931,7 +930,7 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    // Chapter I closer — "Between Watches". The recurring denouement beat: after
+    // Chapter I closer. "Between Watches". The recurring denouement beat: after
     // the chapter boss, the crew takes a quiet watch together before the Captain's
     // Choice. Grows richer each chapter as more hands join. Ends on MOOD, never a
     // plot noun (the next reveal belongs to the next chapter's opener). Gates the
@@ -1023,12 +1022,12 @@ export const RAID_MAP: RaidNode[] = [
     flavor: "Krust's cabin gave up the freight network map: every drop along the coast strung onto a single chain of signal beacons. Light the whole chain and it shows where it all ships to.",
     bridge: "The beacons catch all at once, and every lane on the map bends to a single point far past the danger line. That's where the freight ends up, and that's where you're headed.",
     requiresNode: 'finndicate_notice',
-    // No per-node image — every puzzle node defaults to /puzzle.png via
+    // No per-node image. Every puzzle node defaults to /puzzle.png via
     // TYPE_IMAGE in RaidsSection. Override here only for a one-off art.
     puzzle: {
       // 4×4 Lights Out. Light every beacon at once; each tap flips the beacon and
       // its neighbours, so there is no greedy solve. 4×4 is fully solvable with a
-      // unique solution (no quiet patterns) — a real puzzle that isn't a wall.
+      // unique solution (no quiet patterns). A real puzzle that isn't a wall.
       // Scrambled from the solved board, so always solvable. Difficulty = grid
       // size + scrambleTaps.
       cols: 4,
@@ -1073,7 +1072,7 @@ export const RAID_MAP: RaidNode[] = [
     // choice with three outcomes (loot doubloons / cut them loose /
     // take their navigator's logs for Nav XP). The scouts refuse to
     // name their captain; the player only SUSPECTS Finndicate from
-    // the cargo + the cut of the ship — keeps the one-noun-per-story-
+    // the cargo + the cut of the ship. Keeps the one-noun-per-story-
     // node cadence (no new name revealed here; that lands later in
     // Raid 3's pre-fight). Gated at Nav 25 to match the "past the
     // danger line" framing. Node id stays `cartographer_reveal` so
@@ -1090,7 +1089,7 @@ export const RAID_MAP: RaidNode[] = [
     // Mercy path ("release") currently pays no immediate outcome; its
     // delayed payoff is wired in later content. The choice copy hints
     // at it ("the cold water remembers") so players sense the cost is
-    // not zero, but no mechanic backs it yet — wire when ready.
+    // not zero, but no mechanic backs it yet. Wire when ready.
     image: '/krust_soldier.png',
     scene: [
       { text: "Two cutters running tight together. No flag flying, and neither one built to carry freight." },
@@ -1154,12 +1153,12 @@ export const RAID_MAP: RaidNode[] = [
       enemies: ['Drift Scout ×2', 'Sounding Hand ×2', 'Wakebreaker ×2', 'The Surveyor ×2', 'The Cartographer'],
       drops: lootDrops(THE_CARTOGRAPHER.loot),
       clearReward: clearPayout(THE_CARTOGRAPHER),
-      dropsNote: 'One crate per Cartographer clear, rolled once and scaled by your Fortune. Every kill along the way pays gold + Nav XP, and the run carries two Tide events between fights — read them and choose.',
+      dropsNote: 'One crate per Cartographer clear, rolled once and scaled by your Fortune. Every kill along the way pays gold + Nav XP, and the run carries two Tide events between fights. Read them and choose.',
     },
   },
   {
     // Challenge variant of The Cartographer. Same scaling rules as
-    // Pete + Krust challenge nodes. No phase 2 — Riposte is already
+    // Pete + Krust challenge nodes. No phase 2. Riposte is already
     // a second mechanic layer on top of crew-wide Mist Veil; stacking
     // a third would over-pack the fight.
     id: 'cartographer_challenge',
@@ -1390,7 +1389,7 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    // Chapter II closer — "Between Watches". Cast grown by one (Dole).
+    // Chapter II closer. "Between Watches". Cast grown by one (Dole).
     id: 'chapter_2_close',
     type: 'story',
     label: 'Between Watches',
@@ -1415,7 +1414,7 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    // Chapter II's closing class pick — mirrors chapter_1_class. Now gated on the
+    // Chapter II's closing class pick. Mirrors chapter_1_class. Now gated on the
     // Between Watches closer. Writes profiles.ship_classes['sunken_hand'].
     id: 'chapter_2_class',    type: 'class_pick',
     label: "Captain's Choice",
@@ -1430,10 +1429,10 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
 
-  // ── CHAPTER III — The Coffers (raids 5 & 6) ──────────────────────────────
+  // ── CHAPTER III. The Coffers (raids 5 & 6) ──────────────────────────────
   // LIVE since 2026-07-04 (adminOnly flags + route is_admin guards dropped).
   // Story spine: the Quartermaster's Cache (the shop you've bought from since
-  // Ch I) is revealed a Finndicate front, and names Don Finleone — the Ch IV hook.
+  // Ch I) is revealed a Finndicate front, and names Don Finleone. The Ch IV hook.
   {
     id: 'coffers_heading',    type: 'story',
     label: 'Where the Coin Sleeps',
@@ -1464,7 +1463,7 @@ export const RAID_MAP: RaidNode[] = [
   },
   {
     // Was a branching `fork`. Reworked into a coin-or-skill `dps_check`: bribe
-    // your way in (pay 10k), or run the blockade — one cannon shot at the boom
+    // your way in (pay 10k), or run the blockade. One cannon shot at the boom
     // chain. Land a big enough hit and you punch through free; fall short and
     // you limp in under fire, owing 20k in repairs. Node id kept so the
     // downstream chain (coffers_lens.requiresNode) is untouched.
@@ -1531,7 +1530,7 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    // The LAST Quartermaster's Cache — a rig choice (masts vs sails) right before
+    // The LAST Quartermaster's Cache. A rig choice (masts vs sails) right before
     // the fleet fight, and the final "friendly" stop before the betrayal at
     // quartermaster_turn. The keeper's a touch too glad to see you, seeding it.
     // Reuses the generic `choice` node + claimQuartermasterChoice action.
@@ -1544,12 +1543,12 @@ export const RAID_MAP: RaidNode[] = [
     choice: { items: ['crows_nest_rigging', 'trade_wind_sails'] },
     detail: {
       description:
-        "Even here, in the drowned heart of the market, the Quartermaster's Cache keeps a stall — the same shady supplier that's kitted you out since the coast. The keeper's all smiles today, a shade too glad to see you. He lays two cuts of ship's rigging on the counter: a crow's-nest set that sharpens your eye, or trade-wind canvas that keeps your guns fed. Pick one. The other rolls back under the counter.\n\nWhatever you take is yours to keep, ready to equip in your raid loadout.",
+        "Even here, in the drowned heart of the market, the Quartermaster's Cache keeps a stall. The same shady supplier that's kitted you out since the coast. The keeper's all smiles today, a shade too glad to see you. He lays two cuts of ship's rigging on the counter: a crow's-nest set that sharpens your eye, or trade-wind canvas that keeps your guns fed. Pick one. The other rolls back under the counter.\n\nWhatever you take is yours to keep, ready to equip in your raid loadout.",
       dropsNote: 'Pick one rig. Permanent, equippable, and you can\'t come back for the other.',
     },
   },
   {
-    // Quartermaster foreshadow — a short character beat between the last Cache
+    // Quartermaster foreshadow. A short character beat between the last Cache
     // and the fleet fight. The keeper is too glad, too knowing, and lets slip
     // that flying his goods "counts for something" without saying to whom. Plants
     // the betrayal that lands for real at quartermaster_turn (after Raid 5).
@@ -1584,7 +1583,7 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    // Raid 5. The escort-fleet admiral guarding the Coffers — the player's first
+    // Raid 5. The escort-fleet admiral guarding the Coffers. The player's first
     // capital-ship fight (Galleon-tier). Signature: Decoys (false crit bands) +
     // the admiral's phase 2 + tier-2 tides. The lionfish deception fleet (Plume/
     // Fantail/Bristle/Barb) under Admiral Ruse, on the 'harbor' backdrop. LIVE.
@@ -1652,7 +1651,7 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    // Pursuit dice beat — the counting-house has gone to a riot now the keeper's
+    // Pursuit dice beat. The counting-house has gone to a riot now the keeper's
     // turned on you. Grab a strongbox before his muscle reaches you. Risk/reward
     // d20, mirrors gullet_bones. Non-combat, one-time.
     id: 'coffers_strongbox',    type: 'dice',
@@ -1722,7 +1721,7 @@ export const RAID_MAP: RaidNode[] = [
       kind: 'mirror',
       rewardNavXp: 750,
       mirror: {
-        // 10x10, the chapter's hardest — a PRISM splits the trunk into two arms;
+        // 10x10, the chapter's hardest. A PRISM splits the trunk into two arms;
         // 3 lenses (trunk + one per arm) must ALL light. Solution: (0,0)r ->
         //   (4,0)\\ down [lens 4,2] -> (4,6) PRISM. RIGHT arm: right -> (7,6)/ up
         //   -> (7,2)\\ left [lens 5,2]. LEFT arm: left -> (1,6)/ down -> (1,8)\\
@@ -1757,7 +1756,7 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    // The lore/dread payoff — inside the opened vault, the keeper's ledger of
+    // The lore/dread payoff. Inside the opened vault, the keeper's ledger of
     // every captain he armed and how each sank. Earns Repossession + deepens
     // Finleone one beat before the boss. Fragment X. Non-combat story.
     id: 'coffers_ledger',    type: 'story',
@@ -1788,7 +1787,7 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    // Raid 6 — the chapter finale. The Quartermaster (Galleon-tier). Signature:
+    // Raid 6. The chapter finale. The Quartermaster (Galleon-tier). Signature:
     // Repossession (reclaims one equipped raid item at fight start) + a 4-phase
     // final-boss duel. LIVE config (THE_QUARTERMASTER), on the 'vault' backdrop
     // (lantern-lit gun-deck). LIVE for all players.
@@ -1829,7 +1828,7 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    // Chapter III closer — "Between Watches", now carrying the Don Finleone
+    // Chapter III closer. "Between Watches", now carrying the Don Finleone
     // reveal in its opening beats (merged in from the old finleone_named node,
     // to kill the two-story-nodes-back-to-back beat). The ledgers spill and name
     // the don, then the counter burns down into the crew's watch. Cast grown by
@@ -1882,13 +1881,13 @@ export const RAID_MAP: RaidNode[] = [
       ctaLabel: 'Pick a class',
     },
   },
-  // ── Chapter IV — The Last Fathom. FIRST HALF IS LIVE (through the sixth crew
+  // ── Chapter IV. The Last Fathom. FIRST HALF IS LIVE (through the sixth crew
   //    slot). Raid 8 and everything after it stays adminOnly until it ships. ─────
   {
     id: 'throne_heading',   type: 'story',
     label: 'The Deepest Water',
-    flavor: "The Coffers burn behind you and every ledger points one way: down, past the last sounding on any chart, to the seat Don Finleone rules from. The deepest water there is — and nothing waits past it.",
-    bridge: "The heading is set for the don's own water. And the Quartermaster's seized stock sails with you — a vault of everything he never sold you.",
+    flavor: "The Coffers burn behind you and every ledger points one way: down, past the last sounding on any chart, to the seat Don Finleone rules from. The deepest water there is. And nothing waits past it.",
+    bridge: "The heading is set for the don's own water. And the Quartermaster's seized stock sails with you. A vault of everything he never sold you.",
     requiresNode: 'chapter_3_class',
     image: '/raidlog.png',
     scene: [
@@ -1904,23 +1903,22 @@ export const RAID_MAP: RaidNode[] = [
     sceneAccent: '#6ea8d8',
     detail: {
       description:
-        "Past the Coffers there is no more market, no more middlemen, no more names between you and the don. The chase runs out of chart here: Don Finleone's seat lies in the deepest water there is, and the crew have taken to calling it the last fathom — the depth past which nothing comes back up. Set the heading.",
+        "Past the Coffers there is no more market, no more middlemen, no more names between you and the don. The chase runs out of chart here: Don Finleone's seat lies in the deepest water there is, and the crew have taken to calling it the last fathom. The depth past which nothing comes back up. Set the heading.",
       drops: [
         { emoji: '📜', label: "Captain's Logbook, Fragment XII", sublabel: '"Past the last sounding the water only goes down. So that\'s where we go."', rarity: 'rare' },
       ],
       dropsNote: 'The final chapter opens. The heading is set for the deepest water.',
       ctaLabel: 'Set the Heading →',
-      summary: 'The heading is set past the last sounding on any chart — for the deepest water there is, and the don who rules it. The final chapter has begun.',
+      summary: 'The heading is set past the last sounding on any chart. For the deepest water there is, and the don who rules it. The final chapter has begun.',
     },
   },
   {
-    // Cargo Shuffle #1 — Sokoban in the powder hold before Sal Brackwater's
+    // Cargo Shuffle #1. Sokoban in the powder hold before Sal Brackwater's
     // blockade. Three escalating rooms; every grid is validated by
     // web/verify-cargo.mjs (min moves 22 / 44 / 69 vs budgets 30 / 58 / 90).
-    // Room 1 is additionally ORDER-FREE (either crate can seat first —
-    // solver-proven): the opener must never carry a seal-the-room order trap,
+    // Room 1 is additionally ORDER-FREE (either crate can seat first, // solver-proven): the opener must never carry a seal-the-room order trap,
     // that bite belongs to rooms 2-3. PORTRAIT boards only (cols ≤ 7, grow
-    // ROWS) — wider overflows phones. KEEP THE SCRIPT IN SYNC when editing.
+    // ROWS). Wider overflows phones. KEEP THE SCRIPT IN SYNC when editing.
     id: 'throne_locks',      type: 'puzzle',
     label: 'The Powder Hold',
     flavor: "The don's water doesn't forgive a loose hold. Every powder crate stows on its mark before the blockade, or the first broadside does the stowing for you.",
@@ -1970,13 +1968,13 @@ export const RAID_MAP: RaidNode[] = [
     },
     detail: {
       description:
-        'Three holds of powder crates, and every crate has a marked square it must sit on before the blockade. Crates shove — they never pull — so a crate pushed into a corner stays there. Stow all three holds within the move budget; run out of moves and the hold resets.',
-      dropsNote: 'Solving the hold pays Nav XP. The budget resets the room, never the run — read the hold before you shove.',
+        'Three holds of powder crates, and every crate has a marked square it must sit on before the blockade. Crates shove, they never pull, so a crate pushed into a corner stays there. Stow all three holds within the move budget; run out of moves and the hold resets.',
+      dropsNote: 'Solving the hold pays Nav XP. The budget resets the room, never the run. Read the hold before you shove.',
       ctaLabel: 'Stow the Hold →',
     },
   },
   {
-    // RAID 7 — The Blockade. Introduces the Ch4 suite: baseline enemy shields,
+    // RAID 7. The Blockade. Introduces the Ch4 suite: baseline enemy shields,
     // 4-cannonball magazines, and enemy SPECIALS (statuses thrown at you).
     // ── THE MUSTER ── a roster gate, not a fight. Sal's Death Roll can ONLY be
     // answered with a crew ability, and nothing in the game has ever said so. A
@@ -2007,7 +2005,7 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    // The Quartermaster's Ghost — the FARM node, and the answer to a dead end the
+    // The Quartermaster's Ghost. The FARM node, and the answer to a dead end the
     // forge created. Every Cache made you pick one item and leave the other, and
     // the forge is DESTRUCTIVE, so a component fused into a cannon is gone from
     // raid_items for good. Between those two rules a player could end up unable to
@@ -2044,8 +2042,8 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    // The story beat immediately before the fight. It plants Sal's TELL — he goes
-    // still — so that when the water flattens mid-fight, the player has already been
+    // The story beat immediately before the fight. It plants Sal's TELL. He goes
+    // still. So that when the water flattens mid-fight, the player has already been
     // told once, in a place where it cost them nothing to learn.
     id: 'thing_on_the_bar', type: 'story',
     label: 'The Thing on the Bar',
@@ -2075,7 +2073,7 @@ export const RAID_MAP: RaidNode[] = [
     id: 'the_blockade',    type: 'raid',
     label: 'The Blockade',
     flavor: "Don Finleone's blockade line, and the thing that holds it: Sal Brackwater, who has not moved in an hour and is not going to until it matters. Every hull rides behind a cold-light barrier, every magazine runs four deep, and his line fights dirtier than any market ever did.",
-    bridge: "The blockade breaks and Sal Brackwater goes under it. The way to the don's own water lies open — and his books ride in your hold.",
+    bridge: "The blockade breaks and Sal Brackwater goes under it. The way to the don's own water lies open. And his books ride in your hold.",
     requiresNode: 'thing_on_the_bar',
     requiresNavLevel: 56,
     route: '/raids/blockade',
@@ -2087,13 +2085,13 @@ export const RAID_MAP: RaidNode[] = [
       enemies: ['The Scute', 'The Bank', 'The Mangrove', 'The Rasp', 'The Wedge', 'Old Scar', 'The Muzzle', 'Sal Brackwater'],
       drops: lootDrops(THE_BLOCKADE.loot),
       clearReward: clearPayout(THE_BLOCKADE),
-      dropsNote: 'One crate per clear, rolled once and scaled by your Fortune. The Chain-Shot Rack is the signature chase — turn their own Weaken back on them. Two stronger Tide events between fights.',
+      dropsNote: 'One crate per clear, rolled once and scaled by your Fortune. The Chain-Shot Rack is the signature chase. Turn their own Weaken back on them. Two stronger Tide events between fights.',
     },
   },
   {
     id: 'the_blockade_challenge',    type: 'raid',
     label: 'Challenge: The Blockade',
-    flavor: "The blockade re-forms, heavier at every post. Sal Brackwater does not hold a line twice — he buries it.",
+    flavor: "The blockade re-forms, heavier at every post. Sal Brackwater does not hold a line twice. He buries it.",
     requiresNode: 'the_blockade',
     route: '/raids/blockade/challenge',
     raidId: THE_BLOCKADE_CHALLENGE.raidId,
@@ -2109,7 +2107,7 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    // THE SIXTH BERTH — the Man-o-War crew refit (5 -> 6), bought here. Sits
+    // THE SIXTH BERTH. The Man-o-War crew refit (5 -> 6), bought here. Sits
     // immediately after Sal Brackwater because Don Finleone's six-phase court
     // asks a crew ability of every phase: five hands cannot answer six. Clears
     // on read so a captain who cannot afford it yet is never blocked from the
@@ -2163,7 +2161,7 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    // Tumbler Lock — Rush Hour on the throne gate's great lock. Stages
+    // Tumbler Lock. Rush Hour on the throne gate's great lock. Stages
     // validated by web/verify-tumbler.mjs (min slides 7 / 11 / 18 vs budgets
     // 12 / 16 / 26). KEEP THE SCRIPT IN SYNC when editing stages.
     id: 'throne_gates',      type: 'puzzle',
@@ -2207,8 +2205,8 @@ export const RAID_MAP: RaidNode[] = [
     },
     detail: {
       description:
-        'Three tumblers, each a lattice of iron bars over one gold bolt. Bars slide along their grooves — never sideways — and the bolt only runs when its whole row stands clear to the edge. Throw all three within the slide budget; run out and the tumbler resets to its first set.',
-      dropsNote: 'Throwing the gate pays Nav XP. The budget resets the tumbler, never the gate — read the bars before you slide.',
+        'Three tumblers, each a lattice of iron bars over one gold bolt. Bars slide along their grooves, never sideways, and the bolt only runs when its whole row stands clear to the edge. Throw all three within the slide budget; run out and the tumbler resets to its first set.',
+      dropsNote: 'Throwing the gate pays Nav XP. The budget resets the tumbler, never the gate. Read the bars before you slide.',
       ctaLabel: 'Work the Lock →',
     },
   },
@@ -2216,10 +2214,10 @@ export const RAID_MAP: RaidNode[] = [
     // Ch4 finale lead-in +1: the gates part into the don's own water. His court
     // is arrayed; the crew reads the enemies (heavy legendary banter); his
     // consigliere the Closer glides out as his mouthpiece with the warning.
-    // No back-to-back story — throne_gates (puzzle) precedes, the muster follows.
+    // No back-to-back story. Throne_gates (puzzle) precedes, the muster follows.
     id: 'the_drowned_court',   type: 'story',
     label: 'The Drowned Court',
-    flavor: "The gates open on the deepest water there is, and the don's court rides at anchor around one lit flagship — six apex killers arrayed like courtiers, the most dangerous crew in the sea, and the biggest name in it sitting still at the center of them.",
+    flavor: "The gates open on the deepest water there is, and the don's court rides at anchor around one lit flagship. Six apex killers arrayed like courtiers, the most dangerous crew in the sea, and the biggest name in it sitting still at the center of them.",
     bridge: "The court knows your name now. His right hand has promised, in his voice, that you will not leave this water. Past him, the aisle to the throne stands open.",
     requiresNode: 'throne_gates',
     adminOnly: true,
@@ -2228,28 +2226,28 @@ export const RAID_MAP: RaidNode[] = [
     scene: [
       { text: "The last gate swings on silence and you slip into the don's own black water. No horns. No warning shot. Just the pressure of the deep and one lit flagship far ahead, ringed by its court." },
       { text: "Six hulls ride at anchor around it, arrayed like courtiers around a throne. Each flies the shark colors. Each, on any other water, would have been the thing you came to sink." },
-      { ...GUIDE.mira, text: "Look at them. A Render. A Reaper. The don's own Closer, by the scars on that one. Every single one a bounty I would have crossed an ocean for on its own — and they are only the DOOR, captain." },
-      { ...GUIDE.doby, text: "In a long life on this water I have never seen them gathered in one place. Every hull there is a shark whole fleets tell stories about to frighten one another quiet. The don did not hire this court, small fry. He collected it — the deadliest thing each dark corner of the sea ever spat out, all anchored in one room." },
+      { ...GUIDE.mira, text: "Look at them. A Render. A Reaper. The don's own Closer, by the scars on that one. Every single one a bounty I would have crossed an ocean for on its own. And they are only the DOOR, captain." },
+      { ...GUIDE.doby, text: "In a long life on this water I have never seen them gathered in one place. Every hull there is a shark whole fleets tell stories about to frighten one another quiet. The don did not hire this court, small fry. He collected it. The deadliest thing each dark corner of the sea ever spat out, all anchored in one room." },
       { ...GUIDE.mako, text: "Six of the biggest killers in the sea, and one enormous one at the back of the room. Do you have any idea how long I have wanted a table set like this?" },
       { ...GUIDE.kat, text: "Mako. That is not a table. That is the thing that eats the table, and everyone still sitting at it." },
       { ...GUIDE.dole, text: "The Closer there has put down more captains than the other five combined, and every one of those five is an apex the whole trade gave up trying to touch. Which makes it curious that he is the one peeling off the line to greet us. A court does not send its deadliest just to say hello." },
-      { text: "One hull glides out of the ring, unhurried, and stops across your bow — close enough to read the old scars crossing his plating like a ledger of every captain he has closed.", pause: 500 },
+      { text: "One hull glides out of the ring, unhurried, and stops across your bow. Close enough to read the old scars crossing his plating like a ledger of every captain he has closed.", pause: 500 },
       { speaker: 'The Closer', portrait: THE_THRONE.enemies.the_consigliere.portrait, text: "The don sends his regards, little captain. He has read your whole story. The barnacle. The old hauler. The market. The thing in the estuary. A tidy little climb." },
       { speaker: 'The Closer', portrait: THE_THRONE.enemies.the_consigliere.portrait, text: "He wanted you to hear it from me, since I keep his accounts: you will not leave this water. The line for how you sink is already written, in his own hand. You are simply the last to read it.", pause: 500 },
       { ...GUIDE.laz, text: "That is the same voice that read me my debt, a lifetime ago, in this exact water. Calm. Certain. Counting me closed before I had drawn a breath to argue." },
       { ...GUIDE.laz, text: "It was wrong about me. I am still here." },
       { ...GUIDE.doby, text: "Then let it be wrong twice, small fry. The court can talk all it likes. We came to answer." },
-      { text: "The Closer holds a moment longer, as if offering you the chance to turn. You do not. He slides back into the ring, and the court parts — an aisle of guns opening straight to the throne.", pause: 600 },
+      { text: "The Closer holds a moment longer, as if offering you the chance to turn. You do not. He slides back into the ring, and the court parts, an aisle of guns opening straight to the throne.", pause: 600 },
     ],
     detail: {
       description:
-        "The don's court rides at anchor around his lit flagship: six shark-captains, and not one a common hull. Every one is an apex killer the whole trade long ago gave up trying to touch — the deadliest crew in the sea, hand-picked by the don. His right hand, the Closer, glides out to read you his terms: he has watched your whole climb, found it quaint, and already written the line for how you sink. Then the court parts, and the aisle to the throne opens.",
+        "The don's court rides at anchor around his lit flagship: six shark-captains, and not one a common hull. Every one is an apex killer the whole trade long ago gave up trying to touch. The deadliest crew in the sea, hand-picked by the don. His right hand, the Closer, glides out to read you his terms: he has watched your whole climb, found it quaint, and already written the line for how you sink. Then the court parts, and the aisle to the throne opens.",
       drops: [
         { emoji: '🦈', label: "The Closer's Terms", sublabel: "\"The line for how you sink is already written, in his own hand. You are simply the last to read it.\"", rarity: 'rare' },
       ],
-      dropsNote: 'The don\'s court, named and arrayed — and his mouthpiece\'s promise, in his voice, that you will not leave this water.',
+      dropsNote: 'The don\'s court, named and arrayed. And his mouthpiece\'s promise, in his voice, that you will not leave this water.',
       ctaLabel: 'Take the Aisle →',
-      summary: "Past the gates, the don's court parted for you — but not before his consigliere promised, in his name, that you would not leave this water.",
+      summary: "Past the gates, the don's court parted for you. But not before his consigliere promised, in his name, that you would not leave this water.",
     },
   },
   {
@@ -2259,7 +2257,7 @@ export const RAID_MAP: RaidNode[] = [
     // finale story beats.
     id: 'the_last_muster',   type: 'muster',
     label: 'The Last Muster',
-    flavor: "The court parts, but one hull holds the aisle — the don's doorman, The Gnash, counting your deck before it will let you through. The don does not admit a half-manned crew to his table.",
+    flavor: "The court parts, but one hull holds the aisle: the don's doorman, The Gnash, counting your deck before it lets you through. The don does not admit a half-manned crew to his table.",
     bridge: "The Gnash slides aside, unimpressed. Nothing stands between you and the throne now but open water.",
     requiresNode: 'the_drowned_court',
     adminOnly: true,
@@ -2280,13 +2278,13 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    // Ch4 finale lead-in +3: within hail of the throne, the don himself speaks —
+    // Ch4 finale lead-in +3: within hail of the throne, the don himself speaks,
     // the escalation from his consigliere's warning to the apex's own taunt.
     // Legendary banter carries the crew's resolve; ends on his contemptuous
     // stillness, straight into the fight.
     id: 'within_hail',   type: 'story',
     label: 'Within Hail',
-    flavor: "The aisle of guns opens onto the throne, and for the first time the don deigns to speak — almost impressed you climbed the whole ladder, only to learn where it ends. Then he goes still, and the whole black sea goes still with him.",
+    flavor: "The aisle of guns opens onto the throne, and for the first time the don deigns to speak, almost impressed you climbed the whole ladder only to learn where it ends. Then he goes still, and the whole black sea goes still with him.",
     bridge: "The don has said his piece: you will not beat him, nothing in his water ever has. The sea lies flat as a held breath. There is nothing left between you and the biggest name in it.",
     requiresNode: 'the_last_muster',
     adminOnly: true,
@@ -2296,19 +2294,19 @@ export const RAID_MAP: RaidNode[] = [
       { text: "You take the aisle. The court holds its fire and its formation, every gun tracking you in, and the lit flagship at the end grows from a lantern to a leviathan." },
       { ...GUIDE.mako, text: "Bigger than the stories. Bigger than the Cartographer swore anything in this sea could get. I did not think I would ever be the small one at a table." },
       { ...GUIDE.dole, text: "Everything ran up to him. Every debt, every drowned captain, every clever little sum I read off a dead man's ledger. And here he is at the bottom of it all, exactly where the numbers said he would be. I do hate being right about a monster." },
-      { ...GUIDE.mira, text: "Hold your nerve. This is the mark no one in the trade will touch. Which means when he goes down, it is us who put him there — and no one else in the whole sea gets to say it." },
-      { text: "Close enough to hail now. And the don, who has not stirred for the whole descent, finally lifts his vast head and regards you — the way you would look at a coin you have already spent.", pause: 500, closeup: true },
+      { ...GUIDE.mira, text: "Hold your nerve. This is the mark no one in the trade will touch. Which means when he goes down, it is us who put him there. And no one else in the whole sea gets to say it." },
+      { text: "Close enough to hail now, and the don, who has not stirred for the whole descent, finally lifts his vast head and regards you the way you would look at a coin you have already spent.", pause: 500, closeup: true },
       { speaker: 'Don Finleone', portrait: THE_THRONE.enemies.don_finleone.portrait, text: "All this way. Past my hauler, my market, my whole drowned family. I confess I am almost impressed, little captain." },
-      { speaker: 'Don Finleone', portrait: THE_THRONE.enemies.don_finleone.portrait, text: "Almost. You have climbed the entire ladder to learn the one thing every captain learns too late: the ladder ends in a mouth. You will not beat me. Nothing in this water ever has. But come — let me see how you sink.", pause: 700, fx: 'flash' },
+      { speaker: 'Don Finleone', portrait: THE_THRONE.enemies.don_finleone.portrait, text: "Almost. You have climbed the entire ladder to learn the one thing every captain learns too late: the ladder ends in a mouth. You will not beat me. Nothing in this water ever has. But come. Let me see how you sink.", pause: 700, fx: 'flash' },
       { ...GUIDE.kat, text: "Big words, for a fish." },
       { ...GUIDE.laz, text: "Let him talk, captain. The drowned always sound certain, right up until the water disagrees. And it always does, in the end." },
       { ...GUIDE.doby, text: "You have the whole crew at your back and the biggest name in the sea in front of you. I have waited a long life to see a captain stand here. Take him." },
-      { text: "Then the don falls still — stiller than a thing that size has any right to hold — and the court falls still with him. The whole black water holds its breath.", pause: 600 },
+      { text: "Then the don falls still, stiller than a thing that size has any right to hold, and the court falls still with him. The whole black water holds its breath.", pause: 600 },
       { ...GUIDE.doby, text: "Steady, small fry. Something this old only goes quiet right before it moves.", pause: 400 },
     ],
     detail: {
       description:
-        "The aisle opens onto the throne, and the don finally deigns to speak — almost impressed you climbed the whole ladder, only to learn it ends in a mouth. He tells you plainly you will not beat him; nothing in his water ever has. Then he goes still, and the whole black sea goes still with him.",
+        "The aisle opens onto the throne, and the don finally deigns to speak. Almost impressed you climbed the whole ladder, only to learn it ends in a mouth. He tells you plainly you will not beat him; nothing in his water ever has. Then he goes still, and the whole black sea goes still with him.",
       drops: [
         { emoji: '📜', label: "The Don's Word", sublabel: "\"You have climbed the entire ladder to learn the one thing every captain learns too late: the ladder ends in a mouth.\"", rarity: 'epic' },
       ],
@@ -2318,12 +2316,12 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    // RAID 8 — The Throne. Debuts the raid-8 layer: enemy ULTIMATES at a
+    // RAID 8. The Throne. Debuts the raid-8 layer: enemy ULTIMATES at a
     // full 4-ball magazine and AIM-BAR ATTACKS (decoys / hardened / squall).
     id: 'the_throne',    type: 'raid',
     label: 'Don Finleone',
-    flavor: "The court rides at anchor and the don sits still at the center of it, done talking. Every hull here carries a trick you haven't been hit with yet — and the don carries all of them.",
-    bridge: "The court is drowned and the don with it. The Finndicate dies here, on its own throne, in its own black water — the biggest name in the sea, finally answered for.",
+    flavor: "The court rides at anchor and the don sits still at the center of it, done talking. Every hull here carries a trick you haven't been hit with yet. And the don carries all of them.",
+    bridge: "The court is drowned and the don with it. The Finndicate dies here, on its own throne, in its own black water. The biggest name in the sea, finally answered for.",
     requiresNode: 'within_hail',
     requiresNavLevel: 58,
     adminOnly: true,
@@ -2332,11 +2330,11 @@ export const RAID_MAP: RaidNode[] = [
     image: THE_THRONE.enemies.don_finleone.portrait,
     detail: {
       description:
-        "The don's own court, and every hull in it fights with a new kind of dirty. Watch their cannonball pips: a FULL, glowing battery means an ULTIMATE is primed — burn their charges down, shield, or brace before it empties into you. And their specials strike your AIM BAR itself: false gold you must not lock, plated locks that take two taps, squalls that gust your needle mid-sweep. Don Finleone waits at the center — and what rises when his mask drops is nothing the family ever put on a ledger.",
+        "The don's own court, and every hull in it fights with a new kind of dirty. Watch their cannonball pips: a FULL, glowing battery means an ULTIMATE is primed. Burn their charges down, shield, or brace before it empties into you. And their specials strike your AIM BAR itself: false gold you must not lock, plated locks that take two taps, squalls that gust your needle mid-sweep. Don Finleone waits at the center. And what rises when his mask drops is nothing the family ever put on a ledger.",
       enemies: ['The Ripper', 'The Render', 'The Gnash', 'The Gorge', 'The Reaper', 'The Closer', 'Don Finleone'],
       drops: lootDrops(THE_THRONE.loot),
       clearReward: clearPayout(THE_THRONE),
-      dropsNote: "One crate per clear, rolled once and scaled by your Fortune. The Don's Signet is the signature chase — the ring the whole Finndicate answered to. Two stronger Tide events between fights.",
+      dropsNote: "One crate per clear, rolled once and scaled by your Fortune. The Don's Signet is the signature chase. The ring the whole Finndicate answered to. Two stronger Tide events between fights.",
     },
   },
   {
@@ -2351,7 +2349,7 @@ export const RAID_MAP: RaidNode[] = [
     image: THE_THRONE.enemies.don_finleone.portrait,
     detail: {
       description:
-        'The Throne again, meaner in every seat. Thicker barriers, heavier ultimates, the same aim-bar tricks with less patience between them — and the don rises twice as angry. The chase rewards roll richer.',
+        'The Throne again, meaner in every seat. Thicker barriers, heavier ultimates, the same aim-bar tricks with less patience between them. And the don rises twice as angry. The chase rewards roll richer.',
       enemies: ['The Ripper', 'The Render', 'The Gnash', 'The Gorge', 'The Reaper', 'The Closer', 'Don Finleone'],
       drops: lootDrops(THE_THRONE_CHALLENGE.loot),
       clearReward: clearPayout(THE_THRONE_CHALLENGE),
@@ -2359,7 +2357,7 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    // Chapter IV FINALE — one seamless post-Don beat (merged from the old
+    // Chapter IV FINALE. One seamless post-Don beat (merged from the old
     // dons_fall + Between Watches so there's no back-to-back story node). The
     // Don sinks, the ONE deniable Finn silhouette rises and is gone, Mira pivots
     // the room from unease to victory, then the full six-hander denouement +
@@ -2403,26 +2401,26 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    // Chapter IV's capstone AUGMENT — an either/or refit instead of a class
+    // Chapter IV's capstone AUGMENT. An either/or refit instead of a class
     // rung: one more raid-item mount, or one more crew berth (ship-wide).
     // classPick.options pins the menu to exactly these two. Now gated on the
     // Between Watches finale closer.
     id: 'chapter_4_augment',    type: 'class_pick',
     label: "The Don's Shipwright",
-    flavor: "The don kept a shipwright the way other captains keep a surgeon. He works for you now — one last refit, bolted to your deck for good.",
+    flavor: "The don kept a shipwright the way other captains keep a surgeon. He works for you now. One last refit, bolted to your deck for good.",
     requiresNode: 'chapter_4_close',
     adminOnly: true,
     classPick: { chapterId: 'the_last_fathom', options: ['armory_expansion'] },
     detail: {
       description:
         "The finest shipwright on the drowned market owes you his freedom, and he pays it in iron: the Expanded Armory bolts one more mount to your deck, an extra raid item working every fight, on every raid from here on. Permanent, and yours for clearing the last fathom.",
-      dropsNote: 'A permanent extra raid-item mount — the reward for taking the throne.',
+      dropsNote: 'A permanent extra raid-item mount. The reward for taking the throne.',
       ctaLabel: 'Claim the refit',
     },
   },
   // The Davy Jones Gauntlet used to sit here as a chapter-2 side branch.
-  // It's now a permanent top-level entry point — the "Gauntlets" hub card
-  // on the Expeditions page (HubCards.tsx) — so it no longer lives in the
+  // It's now a permanent top-level entry point. The "Gauntlets" hub card
+  // on the Expeditions page (HubCards.tsx). So it no longer lives in the
   // story map. The /raids/gauntlet route + its server actions are unchanged.
 ]
 
@@ -2453,7 +2451,7 @@ export function computeRaidMap(
       return { node, status: 'cleared' as const, claimable: false }
     }
     // Coming-soon takes precedence over normal lock-reason resolution
-    // — the node is intentionally inaccessible while content lands,
+    //. The node is intentionally inaccessible while content lands,
     // not blocked by player progression. Stays locked even when the
     // player has met every prereq + Nav requirement.
     if (node.comingSoon) {

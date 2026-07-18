@@ -4,41 +4,40 @@ export const ENEMY_IMG_BASE = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/s
 
 // 'repair' is a player-only action (consumes a turn to use a repair kit).
 // Enemy `pattern` arrays never include it and `pickEnemyAction` never
-// returns it — it lives in this union only so the same action type
+// returns it. It lives in this union only so the same action type
 // flows through resolveTurn for both sides.
 // 'mega' is a PLAYER-only Man-o-War augment attack (a 4-charge super-volley).
 // Enemy patterns / pickEnemyAction never produce it; it lives in the union so
 // the same resolveTurn handles it for the player.
 // 'special' (Ch4): the enemy casts its authored special ability this turn
-// (BroadsideEnemy.special) — the crew-ability analog, applying a STATUS from
+// (BroadsideEnemy.special). The crew-ability analog, applying a STATUS from
 // the shared pipeline (lib/statuses) to the player or to itself, OR (raid 8)
 // an AIM-BAR ATTACK that strikes the player's lock-in minigame instead of
 // their hull. Slot it into the pattern like any other action; enemies without
 // a `special` config treat the slot as a reload (see pickEnemyAction).
 // 'ultimate' (raid 8): the enemy spends its ENTIRE full magazine on its
-// authored signature attack (BroadsideEnemy.ultimate) — the enemy-side mirror
+// authored signature attack (BroadsideEnemy.ultimate). The enemy-side mirror
 // of the player's Mega. The slot only fires at a FULL magazine (the pips glow
 // as the tell); short of that it degrades to a reload and re-attempts, so the
 // player can always see it building and answer it (burn the charges down,
 // shield, or brace to dodge).
 export type EnemyAction = 'reload' | 'fire' | 'volley' | 'dodge' | 'repair' | 'mega' | 'special' | 'ultimate'
 
-/** Raid-8 aim-bar attacks — enemy specials that strike the PLAYER'S AIM BAR
+/** Raid-8 aim-bar attacks. Enemy specials that strike the PLAYER'S AIM BAR
  *  rather than their hull, for the player's next `aimPasses` lock-ins:
- *    decoys   — False-Colors decoy bands appear on every afflicted pass
+ *    decoys  . False-Colors decoy bands appear on every afflicted pass
  *               (locking a crimson fake duds the shot).
- *    hardened — the lock is PLATED: the first tap only cracks it (the bar
+ *    hardened. The lock is PLATED: the first tap only cracks it (the bar
  *               keeps sweeping), the second tap lands the real judgment.
- *    squall   — the needle gusts: its sweep speed surges and dies mid-pass,
+ *    squall  . The needle gusts: its sweep speed surges and dies mid-pass,
  *               so timing by rhythm alone fails. */
 export type AimAttackId = 'decoys' | 'hardened' | 'squall'
 
-/** Ch4 enemy special — one authored cast per enemy, slotted into its pattern.
+/** Ch4 enemy special. One authored cast per enemy, slotted into its pattern.
  *  TWO shapes, exactly one per special:
- *   - STATUS cast: `status` (a lib/statuses id) + magnitude/turns/target —
- *     'player' = a debuff thrown at you, 'self' = a buff it gives itself.
+ *   - STATUS cast: `status` (a lib/statuses id) + magnitude/turns/target, *     'player' = a debuff thrown at you, 'self' = a buff it gives itself.
  *   - AIM-BAR attack (raid 8): `aimAttack` + optional `aimPasses` (default 2)
- *     — afflicts the player's next N lock-ins instead of touching hull/stats.
+ *    . Afflicts the player's next N lock-ins instead of touching hull/stats.
  *  `line` is the log/telegraph sentence either way. */
 export interface EnemySpecial {
   name: string
@@ -53,10 +52,10 @@ export interface EnemySpecial {
   line: string
 }
 
-/** Raid-8 enemy ULTIMATE — the signature attack an enemy unleashes by spending
+/** Raid-8 enemy ULTIMATE. The signature attack an enemy unleashes by spending
  *  its ENTIRE full magazine (see the 'ultimate' action). `mult` scales a normal
  *  minDmg..maxDmg roll (a volley is ×2 for 3 balls; size ultimates ~×2.4–3 for
- *  4). Never crits — the number is authored, not swingy. Dodge rules match a
+ *  4). Never crits. The number is authored, not swingy. Dodge rules match a
  *  normal shot, so brace-and-weave stays a real answer. */
 export interface EnemyUltimate {
   name: string
@@ -85,7 +84,7 @@ export interface BossPhase {
   check?: BossMechanicCheck
   /** AEGIS (Sal Brackwater, phase 3): the phase opens behind a wall that drinks
    *  EVERY shot whole (zero damage) until it breaks. A player Mega shatters
-   *  it instantly (the intended discovery — hints stay oblique); without one
+   *  it instantly (the intended discovery. Hints stay oblique); without one
    *  it collapses after `hitsToBreak` landed hits (volleys count double), so
    *  no build is soft-locked, just slow-walked while the boss pounds away.
    *  Burn does NOT tick through it (the puzzle stays pure). */
@@ -107,16 +106,16 @@ export interface BossPhase {
  *  appears, and the player has that window to produce ANY ONE of the broad
  *  `responses`. At resolution: satisfied -> COUNTERED (chip + a line); unmet ->
  *  the `consequence` lands. Deliberately BROAD (several answers per check) so a
- *  roster isn't hard-locked by one class — see [[raid-mechanic-checks]].
+ *  roster isn't hard-locked by one class. See [[raid-mechanic-checks]].
  *
  *  Each `MechanicResponse` maps to a deliberate CREW-ABILITY play RaidCombat can
- *  read — never an incidental action (a plain Dodge or a normal crit do NOT
+ *  read. Never an incidental action (a plain Dodge or a normal crit do NOT
  *  count, so answering a check is a real decision, found by trial and error):
- *    brace  — an Anchor brace is active (anchorReductionRef > 0)
- *    shield — a Tidecaller shield is up (abyssalShieldRef > 0)
- *    snare  — the enemy's dodge is jammed by a Snare (snareDodgeTurnsRef !== 0)
- *    heal   — a heal ABILITY fired in the window (Mender / Tidecaller / repair kit)
- *    burst  — a legendary big-shot ABILITY fired in the window (Leviathan / Apex) */
+ *    brace . An Anchor brace is active (anchorReductionRef > 0)
+ *    shield. A Tidecaller shield is up (abyssalShieldRef > 0)
+ *    snare . The enemy's dodge is jammed by a Snare (snareDodgeTurnsRef !== 0)
+ *    heal  . A heal ABILITY fired in the window (Mender / Tidecaller / repair kit)
+ *    burst . A legendary big-shot ABILITY fired in the window (Leviathan / Apex) */
 export type MechanicResponse = 'brace' | 'shield' | 'snare' | 'heal' | 'burst'
 
 export interface BossMechanicCheck {
@@ -124,7 +123,7 @@ export interface BossMechanicCheck {
   name: string          // banner label, e.g. 'The Big Gun'
   telegraph: string     // warning line the moment the wind-up begins
   /** A NUDGE toward the KIND of answer (defend / disrupt / survive / hit hard),
-   *  shown on the enemy stats popup — deliberately does NOT name the exact crew
+   *  shown on the enemy stats popup. Deliberately does NOT name the exact crew
    *  ability, so working out the play is still on the player. Falls back to a
    *  generic category hint derived from `responses` when unset. */
   hint?: string
@@ -152,7 +151,7 @@ export interface BroadsideEnemy {
   maxDmg: number
   /** Ship speed: used in the speed roll for turn order, dodge roll, and aim-bar target speed. */
   shipSpeed: number
-  /** Gunnery accuracy — a flat bonus added to this enemy's roll to land a shot
+  /** Gunnery accuracy. A flat bonus added to this enemy's roll to land a shot
    *  through the PLAYER's dodge. The player's dodge roll adds their FULL nav
    *  (15-40+), so without this a single-digit ship speed could never punch
    *  through dodge and every dodge was a free 0. Size it to the navigation a
@@ -163,7 +162,7 @@ export interface BroadsideEnemy {
    *  fires at a dodging player; ignored everywhere else. */
   accuracy?: number
   /** Chapter-4 magazine: how many cannonballs this enemy can BANK (default 3).
-   *  Volley cost stays 3 everywhere — a 4-slot enemy carries a buffer ball, so
+   *  Volley cost stays 3 everywhere. A 4-slot enemy carries a buffer ball, so
    *  it can volley and still hold a shot, fire longer strings, and its
    *  reload-at-max feint window moves to the bigger cap. Deeper clip = meaner,
    *  less predictable cadence; nothing special triggers at full (enemy
@@ -173,7 +172,7 @@ export interface BroadsideEnemy {
    *  fight shielded for (the Warded-affix machinery, made a first-class stat).
    *  Combines with the Warded affix / Warding curse by MAX, not sum. */
   shieldPct?: number
-  /** Raid-8 SHARK'S BITE — the shared signature of Don Finleone's court. When
+  /** Raid-8 SHARK'S BITE. The shared signature of Don Finleone's court. When
    *  one of these sharks lands a shot on you (a real hit; a dodge/brace/full
    *  shield spares your rack), this is the chance (0–1) it also tears one loaded
    *  cannonball off your magazine. Reload recovers it. Default 0 (no bite). */
@@ -182,7 +181,7 @@ export interface BroadsideEnemy {
   special?: EnemySpecial
   /** Raid-8 ultimate, unleashed when the pattern hits an 'ultimate' slot AT A
    *  FULL MAGAZINE (short of full it degrades to reload and re-attempts). The
-   *  full pips glow as the tell — the enemy-side mirror of the player's Mega. */
+   *  full pips glow as the tell. The enemy-side mirror of the player's Mega. */
   ultimate?: EnemyUltimate
   /** Legacy: real-time action interval. Kept for backwards-compat readouts; no longer drives combat. */
   actionMs: number
@@ -192,8 +191,7 @@ export interface BroadsideEnemy {
    *  aim bar; enemies don't have that, so this stat gives them the same
    *  outcome via RNG. On crit, damage is multiplied by 1.5×. */
   critChance: number
-  /** Cannonballs already chambered when this enemy becomes the active target —
-   *  the raid-wide "First Cut" trait (Tollmaster Spet's barracuda crew open
+  /** Cannonballs already chambered when this enemy becomes the active target, *  the raid-wide "First Cut" trait (Tollmaster Spet's barracuda crew open
    *  loaded, so they can fire on the opening bell). Default 0 (every other raid
    *  opens cold and must reload first). The boss opens with 2. */
   startCharges?: number
@@ -205,21 +203,21 @@ export interface BroadsideEnemy {
    *  Krust's crew = crustacean "Carapace" defense. */
   damageReduction?: number
   abilityName?: string
-  /** BAKED elite affix — permanently attaches one of the challenge-mode elite
+  /** BAKED elite affix. Permanently attaches one of the challenge-mode elite
    *  affixes (raidAffixes) to THIS specific enemy, in normal AND challenge play
    *  (RaidGame reads it and passes it as the affix prop). Unlike a random
-   *  challenge-elite roll it does NOT apply the ×1.5/×1.25 elite stat bump — the
+   *  challenge-elite roll it does NOT apply the ×1.5/×1.25 elite stat bump. The
    *  enemy's own stats stand, then challenge scaling multiplies them as usual.
    *  Used for named enforcers whose signature IS an affix (e.g. The Leech's
    *  Vampiric lifesteal, The Breaker's Ironclad plating). */
   affix?: AffixId
-  /** The Cartographer's raid — "Mist Veil." A drifting fog band
+  /** The Cartographer's raid. "Mist Veil." A drifting fog band
    *  overlaid on the player's aim bar during lock-in, partially
    *  obscuring the gold Critical center. `aimFogDensity` is the band's
    *  opacity (0 = none, ~0.4 = thin/scout-tier, ~0.7 = deep/boss-tier).
    *  `aimFogName` labels it on the enemy nameplate (mirrors
    *  `abilityName`). The fog is always-on while this enemy is the
-   *  active target — symmetrical with Krust's Carapace cadence (every
+   *  active target. Symmetrical with Krust's Carapace cadence (every
    *  player aim is affected). Render lives in RaidCombat's
    *  AimBarInline; both fields undefined on every non-Cartographer-raid
    *  enemy means zero rendering cost. */
@@ -232,42 +230,41 @@ export interface BroadsideEnemy {
   aimSpeedMult?: number
   /** Per-enemy TARGET (crit-zone) drift-speed multiplier (1 = normal). Above 1
    *  makes the gold zone slide across the bar faster, so it's harder to line up
-   *  a clean Critical — the enemy reads as a fast, evasive ship you can't get a
+   *  a clean Critical. The enemy reads as a fast, evasive ship you can't get a
    *  steady bead on. The zone's base pace already scales with shipSpeed, so a
    *  slow brute stays easier to crit even with a mult. Undefined = 1. */
   zoneSpeedMult?: number
-  /** The Blockade (Ch4, Raid 7) — "Rolling Plate." The gold CRIT
+  /** The Blockade (Ch4, Raid 7). "Rolling Plate." The gold CRIT
    *  band drifts WITHIN the moving target zone (a target inside the target):
    *  the crew rolls its armor plating, so the seam never sits still. Value is
    *  the seam's drift speed (0.5 gentle, 1.2 fast). The seam roams the WHOLE
-   *  zone including the graze fringe — hitting the seam always crits, but
+   *  zone including the graze fringe. Hitting the seam always crits, but
    *  chasing it into the fringe is a wager (a near miss out there only
    *  grazes). Hit/graze still judge off the zone center. Undefined = the seam
    *  sits centered like every other raid (zero engine cost elsewhere). */
   critDrift?: number
   /** Nameplate/stats-popup label for the rolling seam (mirrors aimFogName). */
   critDriftName?: string
-  /** The Cartographer's raid — "Riposte." When this enemy executes a
+  /** The Cartographer's raid. "Riposte." When this enemy executes a
    *  `dodge` action and the player's same-turn action was offensive
    *  (`fire` or `volley`), `parryChance` (0-1) rolls. On success, the
    *  enemy rolls its damage normally (minDmg..maxDmg, no crit), then
    *  multiplies by `parryDamagePct` (0-1) and deals that to the
    *  player. `parryName` labels it on the enemy nameplate (mirrors
    *  `abilityName` / `aimFogName`). Unlike a normal enemy fire, the
-   *  parry counter does not consume a charge — it's a free reflection
+   *  parry counter does not consume a charge. It's a free reflection
    *  off the dodge. All three fields undefined on every non-Cartographer
    *  enemy means zero rendering + zero engine cost. */
   parryChance?: number
   parryDamagePct?: number
   parryName?: string
-  /** The Quartermaster raid (Chapter 3, Raid 6) — "Flare Barrage." Every few
+  /** The Quartermaster raid (Chapter 3, Raid 6). "Flare Barrage." Every few
    *  turns the keeper throws up false flares the player must swat (reactive
    *  whack-a-mole) before they can act. `decoyCount` is the per-ENEMY ladder
    *  tier (1-3), so the mechanic escalates up the raid (a barrage every 3 turns):
-   *    1 — gentle warmup: ~5 flares, generous fuses.
-   *    2 — pressure: ~7 flares, tighter fuses, heavy clustering.
-   *    3 — the boss: ~9 flares, tightest fuses, PLUS (sparse) FEINTS —
-   *        red "live shell" flares you must NOT tap (tapping one chips you; the
+   *    1. Gentle warmup: ~5 flares, generous fuses.
+   *    2. Pressure: ~7 flares, tighter fuses, heavy clustering.
+   *    3. The boss: ~9 flares, tightest fuses, PLUS (sparse) FEINTS, *        red "live shell" flares you must NOT tap (tapping one chips you; the
    *        rule flips), so the climax is discriminate-and-react, not just swat.
    *  Flares spawn ARRHYTHMICALLY (clusters / lulls) so you can't autopilot a
    *  rhythm; each penalty (a real flare missed OR a feint tapped) chips the
@@ -282,18 +279,18 @@ export interface BroadsideEnemy {
    *  (lower = the flares close faster / harder to swat). Default 1 = normal. */
   flareDmgMult?: number
   flareFuseMult?: number
-  /** The Coffers (Chapter 3) — "Repossession." At the START of this fight the
+  /** The Coffers (Chapter 3). "Repossession." At the START of this fight the
    *  crooked Quartermaster reclaims ONE of the player's equipped raid items for
    *  the whole fight: its COMBAT effects (the per-shot damage mults + on-hit
    *  procs + parry) don't apply. Prefers an item with an offensive effect so
    *  the theft always bites. One-time at fight start, no per-turn timer.
    *  `repossessName` labels it on the nameplate / intro line. Fight-start stats
-   *  (HP, speed, starting cannonballs) stay baked — he takes your guns' edge,
+   *  (HP, speed, starting cannonballs) stay baked. He takes your guns' edge,
    *  not your hull. Undefined on every other enemy = no effect. */
   repossess?: boolean
   repossessName?: string
   /** Optional two-phase boss config. The phase 2 trigger is a "false
-   *  defeat" — the boss appears to sink, then rises back at `revivePct`
+   *  defeat". The boss appears to sink, then rises back at `revivePct`
    *  of their max HP with the alternate pattern, damage mult, and (if
    *  set) chance-gated mitigation. The transition lands a quoted
    *  dialogue line in the action log, a red screen wash, and a big
@@ -330,7 +327,7 @@ export interface RaidLootItem {
  *  `player` lines render with the speaker's portrait/avatar. */
 export interface BossDialogueLine {
   speaker: 'boss' | 'player' | 'narrator' | 'crew'
-  /** For `crew` lines — the legendary answering back on your side of the stage
+  /** For `crew` lines. The legendary answering back on your side of the stage
    *  (name + card-art portrait). Spread a CREW_SPEAKER entry in. */
   crew?: { name: string; portrait: string }
   /** Wrap a word or phrase in *asterisks* to hit it in the scene accent. */
@@ -342,7 +339,7 @@ export interface BossDialogueLine {
   fx?: 'shake' | 'flash'
 }
 
-/** The legendary crew as pre-fight SPEAKERS — they hold your side of the boss
+/** The legendary crew as pre-fight SPEAKERS. They hold your side of the boss
  *  stage and trade barbs with the villain. Portrait = card art (same as the
  *  story-node GUIDE map). Use as `{ speaker: 'crew', ...CREW_SPEAKER.mako, text }`.
  *  Which crew are aboard for a given fight follows the campaign: Doby + Kat from
@@ -369,7 +366,7 @@ export interface BossRaidConfig {
    *  how many are left.
    *
    *  Without it, the crate is one weighted roll and owned uniques are simply REMOVED
-   *  from the pool — which quietly shrinks the uniques' share as you complete a set.
+   *  from the pool. Which quietly shrinks the uniques' share as you complete a set.
    *  The Quartermaster's Ghost showed how bad that gets: his six Cache items start at
    *  50% of the crate and decay to 14% for the LAST one, so the item you specifically
    *  need is by far the hardest to get, and everyone hits that wall. That is an
@@ -422,7 +419,7 @@ export interface BossRaidConfig {
   /** Optional mid-raid Tide events (see lib/tides.ts). `slots` lists
    *  the encounter indices AFTER which a tide fires (e.g. [3, 6] fires
    *  one tide after the 3rd kill and another after the 6th).
-   *  `maxTier` caps the eligible pool — The Cartographer's raid is
+   *  `maxTier` caps the eligible pool. The Cartographer's raid is
    *  the first with `maxTier: 1`; later, longer raids bump this to
    *  unlock stronger effects from the same pool. Undefined = no tides
    *  for this raid (Pete + Krust stay untouched). */
@@ -431,7 +428,7 @@ export interface BossRaidConfig {
     maxTier: 1 | 2 | 3 | 4
   }
   /** When true, a guaranteed one-time "reprieve" choice fires right before the
-   *  boss fight (heal / +damage / refresh a crew ability) — a catch-your-breath
+   *  boss fight (heal / +damage / refresh a crew ability). A catch-your-breath
    *  beat for a hard finale. Used by the Throne (Don Finleone). */
   preBossReprieve?: boolean
   /** Baseline gunnery accuracy for EVERY enemy in this raid (see
@@ -475,7 +472,7 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
   raidTitle: "The Corsair's Reckoning",
   bossDefeatedText: 'Barnacle Pete Defeated',
   atmosphere: 'sunset',
-  zone: 'shallows',       // Chapter I — the Shallows
+  zone: 'shallows',       // Chapter I. The Shallows
   enemies: {
     // Patterns punish a reload-fire-reload-fire autopilot (player fires on
     // even turns, reloads on odd). Difficulty rises with enemy tier; the
@@ -484,7 +481,7 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
     brute: {
       id: 'brute', name: 'Reef Raider', hpBase: 20, minDmg: 2, maxDmg: 5,
       shipSpeed: 4, actionMs: 4500,
-      // 4-turn loop. Pure trade — no surprises, no punishment turns.
+      // 4-turn loop. Pure trade. No surprises, no punishment turns.
       // Brutes are the cannon fodder of the raid; the player can mash
       // reload-fire and win. Difficulty starts at the next enemy.
       // Charges: 0→1→0→1→0
@@ -514,7 +511,7 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
       //   T4 dodge → wastes player's 2nd fire
       //   T7 volley while player reloads → big free hit
       //   T9 fire while player reloads → free hit
-      // Fastest ship in the raid (speed 7) — wins speed rolls more often
+      // Fastest ship in the raid (speed 7). Wins speed rolls more often
       // so its dodges + volleys land before the player's reply.
       // Charges: 0→1→0→1→1→2→3→0→1→0
       pattern: ['reload', 'fire', 'reload', 'dodge', 'reload', 'reload', 'volley', 'reload', 'fire'],
@@ -527,7 +524,7 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
       shipSpeed: 6, actionMs: 4500,
       // 13-turn loop, boss-grade threat. Brutal opener: three reload-dodge
       // pairs in a row (T2, T4, T6) all land on the player's autopilot
-      // fire turns — three wasted shots if the player doesn't break
+      // fire turns. Three wasted shots if the player doesn't break
       // rhythm. Then a volley T7 while player reloads (free 2× hit).
       // Second half: another fire T9 while reloading, then a closing
       // volley T13.
@@ -595,7 +592,7 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
   raidTitle: "Krust's Consignment",
   bossDefeatedText: 'Captain Krust Defeated',
   atmosphere: 'overcast',
-  zone: 'shallows',       // Chapter I — the Shallows
+  zone: 'shallows',       // Chapter I. The Shallows
   enemies: {
     // Tier-2 roster. Stiffer than Pete's reef: a Finndicate shipping
     // crew that runs cargo on a schedule and does not like being late.
@@ -604,15 +601,14 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
     // RAID-WIDE RULE: NO ONE IN THIS RAID EVER VOLLEYS. They plate up
     // behind the Carapace, take a methodical reload-and-trade rhythm,
     // and just keep firing. The player's volley is the answer (it
-    // punches through Carapace — see the volley bypass in RaidCombat),
+    // punches through Carapace. See the volley bypass in RaidCombat),
     // so the whole raid is "stack 3 charges, blow open the plate."
     // Per-enemy patterns vary the cadence + dodge density so each
     // tier still has its own read.
     scout: {
       id: 'scout', name: 'Bilge Runner', hpBase: 40, minDmg: 4, maxDmg: 8,
       shipSpeed: 5, actionMs: 4200,
-      // Cannon fodder of the consignment crew. Pure trade, no tricks —
-      // the player can mash reload-fire and win. Difficulty starts next.
+      // Cannon fodder of the consignment crew. Pure trade, no tricks, // the player can mash reload-fire and win. Difficulty starts next.
       // Charges: 0→1→0→1→0
       pattern: ['reload', 'fire', 'reload', 'fire'],
       critChance: 0.03,
@@ -636,7 +632,7 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
     brute: {
       id: 'brute', name: 'Hull Breaker', hpBase: 70, minDmg: 9, maxDmg: 14,
       shipSpeed: 4, actionMs: 5200,
-      // Tanky and slow. Defensive wall — leads with a dodge to absorb
+      // Tanky and slow. Defensive wall. Leads with a dodge to absorb
       // the opening shot, then steady fire with another dodge mid-loop.
       // Low speed loses most speed rolls; survives via plate + dodges.
       // Charges: 0→1→1→2→1→1→2→1
@@ -650,8 +646,8 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
       id: 'elite', name: 'Krust Overseer', hpBase: 64, minDmg: 6, maxDmg: 13,
       shipSpeed: 6, actionMs: 3400,
       // 8-turn aggressive trader: three fires per loop, two dodges.
-      // Pressure comes from the rotation — high fire rate + the
-      // Carapace soak — not from raw speed-roll dominance. Was speed
+      // Pressure comes from the rotation. High fire rate + the
+      // Carapace soak. Not from raw speed-roll dominance. Was speed
       // 9 (fastest in the run) but that combined with d20 + the prior
       // 0.25 Compass coefficient meant the Overseer outpaced almost
       // every player; dropped to 6 (parity with Pete) so the test feels
@@ -668,7 +664,7 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
       shipSpeed: 7, actionMs: 4200,
       // 8-turn boss loop. Krust's signature: always saves up two
       // reloads, then either fires or dodges. Methodical, plate-and-
-      // trade. Never volleys (the whole crew doesn't — see raid-wide
+      // trade. Never volleys (the whole crew doesn't. See raid-wide
       // rule above), so his offense is one big-base shot every fourth
       // turn (12-22 × 1.5 crit tops near 33-damage singles).
       //   T1-T2 reload, T3 fire, T4 dodge, T5-T6 reload, T7 fire, T8 dodge
@@ -731,20 +727,20 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
   raidTitle: "The Cartographer's Survey",
   bossDefeatedText: 'The Cartographer Defeated',
   atmosphere: 'fog',
-  zone: 'open_waters',    // Chapter II — the Open Waters
+  zone: 'open_waters',    // Chapter II. The Open Waters
   enemies: {
     // Tier-3 roster. The Cartographer's chart line sails the Sounding
-    // Fog for cover — the deep gray band on the Finndicate's own maps.
+    // Fog for cover. The deep gray band on the Finndicate's own maps.
     // 8-fight gauntlet (2 of each) escalating into the boss himself.
     //
-    // RAID-WIDE RULE: every enemy in this raid carries MIST VEIL — a
+    // RAID-WIDE RULE: every enemy in this raid carries MIST VEIL. A
     // drifting fog band drawn over the player's aim bar during lock-in,
     // partially hiding the Critical center. Density climbs through the
     // tiers (0.35 scout → 0.70 boss) so the gauntlet visibly thickens.
     // Krust's crew identity was no-volleys + Carapace plating; this
-    // crew is the inverse — no plating, but they volley readily, and
+    // crew is the inverse. No plating, but they volley readily, and
     // the fog makes every player aim a real read instead of a flick.
-    // The Cartographer himself layers a unique Riposte on top — a
+    // The Cartographer himself layers a unique Riposte on top. A
     // chance to counter-hit off any of his dodges.
     // Tides also debut in this raid (slots [3, 6]), adding the
     // between-fight boon/debuff choice that future longer raids will
@@ -752,12 +748,12 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
     scout: {
       id: 'scout', name: 'Drift Scout', hpBase: 48, minDmg: 5, maxDmg: 10,
       shipSpeed: 7, actionMs: 4000,
-      // Light cutter ranging ahead of the chart line. Pure trade — no
-      // tricks, no dodges — so the player's first taste of Mist Veil
+      // Light cutter ranging ahead of the chart line. Pure trade. No
+      // tricks, no dodges. So the player's first taste of Mist Veil
       // lands without other variables in the way. Faster than Krust's
       // scout (5 → 7) so even a clean read still risks losing the
       // speed roll on the first turn. Fog density 0.40 here is the
-      // floor for this raid — every fight reads the fog.
+      // floor for this raid. Every fight reads the fog.
       // Charges: 0→1→0→1→0
       pattern: ['reload', 'fire', 'reload', 'fire'],
       critChance: 0.05,
@@ -769,11 +765,11 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
       id: 'reg', name: 'Sounding Hand', hpBase: 66, minDmg: 7, maxDmg: 13,
       shipSpeed: 5, actionMs: 4600,
       // 6-turn loop. Workhorse of the chart line, and the player's
-      // FIRST introduction to the guaranteed-hit mechanic — fires a
+      // FIRST introduction to the guaranteed-hit mechanic. Fires a
       // single shot on T4, then volleys on T5 while the player is
       // dodge-gated from the T4 defense (one-dodge-at-a-time rule in
       // RaidCombat). The fire-volley shape is distinct from the
-      // Surveyor/Cartographer fire-fire shape later — same lesson, two
+      // Surveyor/Cartographer fire-fire shape later. Same lesson, two
       // teaches, so the player learns variations of "you cannot
       // perfectly defend everything" without monotony.
       //   T1-T3 triple-reload telegraph (the punch is loaded)
@@ -813,13 +809,12 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
       // 8-turn aggressive trader. The fastest ship the player has met
       // in any raid (post-d30): wins first strike a clear majority of
       // turns and carries a charged volley mid-loop. The fog jumps to
-      // 0.55 here too — half a tier above the rest of the crew — so
+      // 0.55 here too, half a tier above the rest of the crew, so
       // the "real test before the boss" is a triple-threat of speed,
       // cadence, and a meaningfully harder aim read. He is also the
       // FIRST enemy in the game to fire on consecutive turns: the
       // T3-T4 double-tap forces a guaranteed hit. Player can dodge T3
-      // OR T4 but not both (RaidCombat's one-dodge-at-a-time rule —
-      // `canDodge = lastPlayerAction !== 'dodge'`), so one shot in the
+      // OR T4 but not both (RaidCombat's one-dodge-at-a-time rule, // `canDodge = lastPlayerAction !== 'dodge'`), so one shot in the
       // double-tap ALWAYS lands. Trade or take it; you can't fully avoid it.
       //   T3 fire   → opens with a charged shot off 2 reloads
       //   T4 fire   → IMMEDIATE second shot, guaranteed hit (dodge gated)
@@ -837,7 +832,7 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
       shipSpeed: 6, actionMs: 4400,
       // 8-turn boss loop. Signature shape: triple-reload telegraph →
       // DOUBLE-TAP fires → reload → volley → dodge. Methodical speed
-      // (6) leaves Mist Veil (0.70 — the deep band) as his soft edge,
+      // (6) leaves Mist Veil (0.70. The deep band) as his soft edge,
       // and the back-to-back T4-T5 fires as his hard one. Player sees
       // three reloads stack and knows the punch is coming, but the
       // one-dodge-at-a-time rule guarantees one of T4/T5 lands no
@@ -847,7 +842,7 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
       // Layered on top: RIPOSTE. When the T8 dodge lands against a
       // player attack (fire or volley), 30% chance to counter for
       // 25% of his damage roll. Means even his defensive turn carries
-      // threat — the player can't safely fire into his dodge.
+      // threat. The player can't safely fire into his dodge.
       //   T1-T3 reload triple-stack telegraph
       //   T4 fire   → first of the double-tap (dodge-able)
       //   T5 fire   → second, GUARANTEED hit if T4 was dodged
@@ -862,13 +857,13 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
       parryChance: 0.30, parryDamagePct: 0.25, parryName: 'Riposte',
     },
   },
-  // Interleaved sequence — no back-to-back duplicates, every type met
+  // Interleaved sequence. No back-to-back duplicates, every type met
   // by fight 5, low-tier scouts seeded between heavier fights as
   // breathers. Reads as a chartmaker's planned interception rather
   // than the standard 2-of-each block escalation:
   //   1 scout  → recon vanguard
   //   2 reg    → line scout makes contact
-  //   3 scout  → second vanguard (recon phase closes here — tide 1)
+  //   3 scout  → second vanguard (recon phase closes here. Tide 1)
   //   4 brute  → heavy hull crashes the line
   //   5 elite  → Surveyor darts in to verify the kill
   //   6 reg    → workhorse closes the net behind him (tide 2)
@@ -877,7 +872,7 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
   //   9 boss   → The Cartographer
   sequence: ['scout', 'reg', 'scout', 'brute', 'elite', 'reg', 'brute', 'elite'],
   bossId: 'cartographer',
-  // Tides fire after the 3rd and 6th kills — one at the close of the
+  // Tides fire after the 3rd and 6th kills. One at the close of the
   // recon phase (the 2 scouts + 1 reg "feeler" group), one mid-way
   // through the closing net (after the Surveyor's first appearance
   // and the second workhorse goes down). maxTier 1 keeps the eligible
@@ -885,7 +880,7 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
   // longer raids bump this cap to unlock the stronger tier-2+ effects.
   tides: { slots: [3, 6], maxTier: 1 },
   // Same 70/30 currency/special split as Pete + Krust. The Astrolabe
-  // pair are the chase items — mirror the Carapace pair from Krust
+  // pair are the chase items. Mirror the Carapace pair from Krust
   // (Epic at the standard rate, Legendary at the chase rate).
   // Chartmaker Hull is the chapter-2 shared trophy skin (lower rate
   // here; raid 4 will drop it at the realistic chase rate when it
@@ -930,26 +925,26 @@ export const THE_TOLLMASTER: BossRaidConfig = {
   raidTitle: "The Tollmaster's Cut",
   bossDefeatedText: 'Tollmaster Spet Defeated',
   atmosphere: 'overcast',
-  zone: 'open_waters',    // Chapter II — the Open Waters
+  zone: 'open_waters',    // Chapter II. The Open Waters
   enemies: {
     // Tier-4 roster, Chapter II's second raid (Nav 35). The Gullet's toll crew
     // are barracudas: fast, toothy, and ambush-built.
     //
-    // SIGNATURE: "First Cut" — the QUICK hulls (scout, elite, boss) open LOADED
+    // SIGNATURE: "First Cut". The QUICK hulls (scout, elite, boss) open LOADED
     // (startCharges ≥ 1) with fire-leading patterns, so they shoot on the
     // opening bell and steal the first exchange. The slower crew (reg, brute)
     // open cold like a normal raid, giving the player turns to fire first. On
     // top, this raid's patterns run harder than the Cartographer's: more volleys
     // and mid-loop double-taps (consecutive fires the player can only half-
     // dodge, since you can't dodge twice in a row), so the cadence punishes. No
-    // plating, no fog, no parry — the threat is raw aggression + the First Cut
+    // plating, no fog, no parry. The threat is raw aggression + the First Cut
     // tempo. The player answers with Spet's own drop (Spet's Primer = 50% /
     // Tollmaster's Primer = 100% chance to open a fight loaded yourself). Caps
-    // at the Brigantine art tier — Galleon + Man-o-War held for later chapters.
+    // at the Brigantine art tier. Galleon + Man-o-War held for later chapters.
     scout: {
       id: 'scout', name: 'Silverdart', hpBase: 60, minDmg: 6, maxDmg: 12,
       shipSpeed: 8, actionMs: 3600,
-      // Fast young barracuda — FIRST CUT (opens loaded, fires turn 1). Light but
+      // Fast young barracuda. FIRST CUT (opens loaded, fires turn 1). Light but
       // mean: the opener, then a mid-loop double-tap (T4-T5) the player can only
       // half-dodge. Charges: 1→0→1→2→1→0
       pattern: ['fire', 'reload', 'reload', 'fire', 'fire', 'dodge'],
@@ -984,7 +979,7 @@ export const THE_TOLLMASTER: BossRaidConfig = {
     elite: {
       id: 'elite', name: 'The Exactor', hpBase: 106, minDmg: 10, maxDmg: 18,
       shipSpeed: 9, actionMs: 3200,
-      // Spet's chief enforcer — FIRST CUT + the fastest hull in the raid (speed
+      // Spet's chief enforcer. FIRST CUT + the fastest hull in the raid (speed
       // 9), so it almost always lands the opener, then a mid-loop double-tap
       // (T4-T5, guaranteed one hits) and a closing volley. The real test before
       // the boss. Charges: 1→0→1→2→1→0→volley(self-corrects)→dodge
@@ -997,10 +992,10 @@ export const THE_TOLLMASTER: BossRaidConfig = {
     spet: {
       id: 'spet', name: 'Tollmaster Spet', hpBase: 215, minDmg: 18, maxDmg: 32,
       shipSpeed: 7, actionMs: 4200,
-      // The collector himself. FIRST CUT, DOUBLED — opens with two chambered and
+      // The collector himself. FIRST CUT, DOUBLED. Opens with two chambered and
       // double-fires turns 1-2 before the player can reply, then a volley and
       // ANOTHER fire, closing on a single dodge. Five damage turns in eight, the
-      // heaviest cadence in the game. No second signature mechanic — the doubled
+      // heaviest cadence in the game. No second signature mechanic. The doubled
       // opener + the highest stats in the chapter are the fight.
       // Charges: 2→fire1→fire0→reload1→reload2→reload3→volley0→fire(sub)→dodge
       pattern: ['fire', 'fire', 'reload', 'reload', 'reload', 'volley', 'fire', 'dodge'],
@@ -1020,7 +1015,7 @@ export const THE_TOLLMASTER: BossRaidConfig = {
   // 70/30 currency/special split, same as every prior raid. Spet's drop is the
   // First Cut pair (Spet's Primer epic at the standard rate, Tollmaster's Hot
   // Iron legendary at the chase rate). Chartmaker Hull (the chapter-2 trophy
-  // skin) rides here at the realistic chase rate now — higher than the
+  // skin) rides here at the realistic chase rate now. Higher than the
   // Cartographer's reserve weight, since this is the chapter's second raid.
   loot: [
     // ~70% currency
@@ -1053,25 +1048,25 @@ export const THE_TOLLMASTER: BossRaidConfig = {
   ],
 }
 
-// ── CHAPTER III, Raid 5 — The Harbor Fleet (The Coffers) ────────────────────
+// ── CHAPTER III, Raid 5. The Harbor Fleet (The Coffers) ────────────────────
 // ADMIN-ONLY (the map node is adminOnly + the route page guards is_admin). The
-// Coffers' escort fleet + its admiral. GALLEON-tier hulls — the player's first
-// capital-ship fight. SIGNATURE: TBD — the Flare Barrage that used to live here
+// Coffers' escort fleet + its admiral. GALLEON-tier hulls. The player's first
+// capital-ship fight. SIGNATURE: TBD. The Flare Barrage that used to live here
 // moved to Raid 6 (The Quartermaster) so each Coffers raid keeps a distinct
 // identity; pick a fresh fleet gimmick in step 4. The admiral runs a PHASE 2
 // (normal-boss two-phase starts this chapter). Tier-2 tides. NAMES + ART ARE
 // PLACEHOLDERS (working names; Ch2 hull art reused as stand-ins) until step 4.
-// Caps at Galleon — Man-o-War held for Chapter IV.
+// Caps at Galleon. Man-o-War held for Chapter IV.
 export const THE_COFFERS_FLEET: BossRaidConfig = {
   raidId: 'coffers_fleet',
   enemyAccuracy: 24,
   raidTitle: 'The Harbor Fleet',
   bossDefeatedText: 'Admiral Ruse Defeated',
   atmosphere: 'harbor',  // the Coffers' drowned black-market port, gun-smoke haze
-  zone: 'deep',          // Chapter III — the Deep
+  zone: 'deep',          // Chapter III. The Deep
   enemies: {
     // Ch3 hulls. SIGNATURE = DECOYS: false aim bands scaling 1 → 3 toward the
-    // flagship. Admiral Ruse's deception fleet — the showy lionfish crew whose
+    // flagship. Admiral Ruse's deception fleet. The showy lionfish crew whose
     // fanned fins are all display over a hidden sting (the "False Colors").
     scout: {
       id: 'scout', name: 'Plume', hpBase: 110, minDmg: 8, maxDmg: 15,
@@ -1102,7 +1097,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
       shipSpeed: 3, actionMs: 5400,
       pattern: ['reload', 'reload', 'reload', 'volley', 'dodge', 'reload', 'reload', 'dodge', 'volley', 'fire'],
       critChance: 0.06,
-      decoyCount: 2, decoyName: 'False Colors',   // tier 2 — bigger spread
+      decoyCount: 2, decoyName: 'False Colors',   // tier 2. Bigger spread
       zoneSpeedMult: 2.6,
       image: '/enemychapter3galleon.png',
       portrait: '/raid5_bulwark.png',
@@ -1124,7 +1119,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
       // drops the act and fights for real, faster and meaner.
       pattern: ['reload', 'fire', 'dodge', 'reload', 'reload', 'volley', 'dodge', 'fire', 'reload', 'fire', 'dodge'],
       critChance: 0.12,
-      decoyCount: 3, decoyName: 'False Colors',   // tier 3 — the whole line lies
+      decoyCount: 3, decoyName: 'False Colors',   // tier 3. The whole line lies
       phase2: {
         revivePct: 0.5,
         damageMult: 1.2,
@@ -1138,12 +1133,12 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
   },
   sequence: ['scout', 'reg', 'scout', 'brute', 'elite', 'reg', 'brute', 'elite'],
   bossId: 'admiral',
-  tides: { slots: [3, 6], maxTier: 2 },  // tier-2 tides — Chapter III's bigger swings
+  tides: { slots: [3, 6], maxTier: 2 },  // tier-2 tides. Chapter III's bigger swings
   // Chapter-III trophy skin (Coffers Hull) drops from BOTH Ch3 raids, lower rate
   // here than the finale. Rest is currency (signature special drops TBD in step 4).
   loot: [
     { id: 'coffers_hull',   label: 'Coffers Hull', image: null,          emoji: '🚢',      rarity: 'epic',     weight: 5,  shipSkinId: 'coffers_hull' },
-    // Signature deception-fleet drops — the anti-evasion Tell-Tale Glass (epic)
+    // Signature deception-fleet drops. The anti-evasion Tell-Tale Glass (epic)
     // + Admiral's Eye (legendary chase). Challenge variant lifts the rare rate.
     { id: 'tell_tale_glass', label: 'Tell-Tale Glass', image: '/telltaleglass.png', emoji: '🔭',  rarity: 'epic',      weight: 20 },
     { id: 'admirals_eye',    label: "Admiral's Eye",   image: '/admiralseye.png',   emoji: '👁️', rarity: 'legendary', weight: 5  },
@@ -1171,10 +1166,10 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
   ],
 }
 
-// ── CHAPTER III, Raid 6 — The Quartermaster (The Coffers finale) ─────────────
+// ── CHAPTER III, Raid 6. The Quartermaster (The Coffers finale) ─────────────
 // ADMIN-ONLY (map node adminOnly + route page guards is_admin). The keeper of
 // the Cache and his hired guns, behind the counter of the market he runs.
-// GALLEON-tier. SIGNATURE: REPOSSESSION — at fight start the keeper reclaims one
+// GALLEON-tier. SIGNATURE: REPOSSESSION. At fight start the keeper reclaims one
 // of the player's equipped raid items for the whole fight (prefers an offensive
 // per-shot/proc item so the theft bites). THE perfect betrayal-boss mechanic:
 // the merchant who sold you your edge switches it off. PLUS a phase 2 (the
@@ -1206,15 +1201,14 @@ export const THE_QUARTERMASTERS_GHOST: BossRaidConfig = {
   raidTitle: "The Quartermaster's Ghost",
   bossDefeatedText: 'The Ghost Dispersed',
   atmosphere: 'vault',   // his own lantern-lit gun-deck, and he never left it
-  zone: 'abyss',         // Chapter IV — the Abyss
+  zone: 'abyss',         // Chapter IV. The Abyss
   enemies: {
     ghost: {
       id: 'ghost', name: "The Quartermaster's Ghost", hpBase: 1050, minDmg: 26, maxDmg: 44,
       shipSpeed: 9, actionMs: 3600,
       pattern: ['reload', 'fire', 'volley', 'dodge', 'reload', 'fire', 'fire', 'dodge', 'reload', 'volley'],
       critChance: 0.16,
-      // SIGNATURE: The Ledger. He fights with the six Cache items he is holding —
-      // your fire, your ice, your sights, your plating, your bearings — all turned
+      // SIGNATURE: The Ledger. He fights with the six Cache items he is holding, // your fire, your ice, your sights, your plating, your bearings. All turned
       // on you at once. See AFFIXES.ledger.
       affix: 'ledger',
       // Nothing steals your kit here. Repossession is what he did in LIFE, and it
@@ -1352,22 +1346,22 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
   raidTitle: 'The Quartermaster',
   bossDefeatedText: 'The Quartermaster Defeated',
   atmosphere: 'vault',  // the Cache's lantern-lit gun-deck vault, storm-dark finale
-  zone: 'deep',          // Chapter III — the Deep
+  zone: 'deep',          // Chapter III. The Deep
   enemies: {
     // A "FINAL BOSS" duel (Chapter III finale): a SHORT 2-ship intro of two
-    // DISTINCT, strong enforcers — The Leech (sneaky glass-cannon) then The
-    // Breaker (slow tank) — then the keeper himself as a 4-PHASE epic (no long
+    // DISTINCT, strong enforcers. The Leech (sneaky glass-cannon) then The
+    // Breaker (slow tank). Then the keeper himself as a 4-PHASE epic (no long
     // gauntlet). He carries Repossession (fight start) + escalation via `phases[]`.
     scout: {
       // Sinister + SNEAKY (a lamprey): fast, evasive, and spikes hard on a crit
-      // — a glass-cannon assassin that punishes a careless opener. Vampiric: it
+      //. A glass-cannon assassin that punishes a careless opener. Vampiric: it
       // repairs off the blood it draws, so a slow kill lets it claw back.
       id: 'scout', name: 'The Leech', hpBase: 180, minDmg: 12, maxDmg: 22,
       shipSpeed: 10, actionMs: 3000,
       pattern: ['fire', 'dodge', 'reload', 'fire', 'dodge', 'reload', 'dodge', 'fire', 'reload'],
       critChance: 0.20,
       affix: 'vampiric',
-      // A darting lamprey — the crit zone RACES, so landing a clean Critical on
+      // A darting lamprey. The crit zone RACES, so landing a clean Critical on
       // it is genuinely hard (you have to catch a fast, narrow window). Already a
       // fast ship (10); a big mult on top of the shipSpeed base makes the zone fly.
       zoneSpeedMult: 2.7,
@@ -1376,7 +1370,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
     },
     reg: {
       // BRUTE (a goliath grouper): slow and TANKY, but every shot is a wrecking
-      // blow — heavy volleys you have to weather or out-pace. Ironclad: his hull
+      // blow. Heavy volleys you have to weather or out-pace. Ironclad: his hull
       // plating has a real chance to shrug non-volley fire, so crack him open
       // with volleys.
       id: 'reg', name: 'The Breaker', hpBase: 400, minDmg: 18, maxDmg: 32,
@@ -1391,8 +1385,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
     quartermaster: {
       id: 'quartermaster', name: 'The Quartermaster', hpBase: 570, minDmg: 22, maxDmg: 38,
       shipSpeed: 7, actionMs: 4200,
-      // The keeper himself, a 4-PHASE final-boss fight. SIGNATURE: Repossession —
-      // at fight start he reclaims one of your equipped raid items for the whole
+      // The keeper himself, a 4-PHASE final-boss fight. SIGNATURE: Repossession, // at fight start he reclaims one of your equipped raid items for the whole
       // fight (the merchant who sold you your edge switches it off). Then he burns
       // through 4 escalating phases (false defeat -> rise again, harder), each a
       // fresh bar + meaner pattern + more damage + a quoted line.
@@ -1400,40 +1393,40 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
       critChance: 0.12,
       repossess: true, repossessName: 'Repossession',
       phases: [
-        // Phase 2 — the debt called in. Faster cadence + a MITIGATION check.
+        // Phase 2. The debt called in. Faster cadence + a MITIGATION check.
         { revivePct: 0.85, damageMult: 1.15, badge: 'Called In',
           pattern: ['reload', 'fire', 'volley', 'dodge', 'reload', 'fire', 'dodge', 'fire', 'reload'],
           dialogueLine: "You cracked the ledger. You have not cleared the debt.",
           check: {
             id: 'big_gun', name: 'The Big Gun', chargeTurns: 2,
             telegraph: 'The Quartermaster hauls the reserve cannon onto the rail and swings the muzzle toward you.',
-            hint: 'A shot this heavy has to be met with a crew ability — a defensive one that gets something between you and the muzzle before it fires. Your own brace/dodge won’t turn it aside.',
+            hint: 'A shot this heavy has to be met with a crew ability. A defensive one that gets something between you and the muzzle before it fires. Your own brace/dodge won’t turn it aside.',
             responses: ['brace', 'shield'],
             counteredLine: 'The big shot slams into your cover and glances wide.',
             failLine: 'The reserve cannon speaks, and nothing turned it aside.',
             consequence: { kind: 'damagePctMaxHp', value: 0.75 },
           } },
-        // Phase 3 — the reserve deck. Volley-heavy + a DISRUPT ("dodge cancel") check.
+        // Phase 3. The reserve deck. Volley-heavy + a DISRUPT ("dodge cancel") check.
         { revivePct: 0.72, damageMult: 1.30, badge: 'Reserve Deck',
           pattern: ['reload', 'reload', 'volley', 'dodge', 'fire', 'volley', 'dodge', 'fire', 'reload'],
           dialogueLine: "You think the shelves are bare? I keep a reserve deck for captains like you.",
           check: {
             id: 'cooking_books', name: 'Cooking the Books', chargeTurns: 2,
             telegraph: 'The Quartermaster ducks low behind the counter and starts working the ledger, fast.',
-            hint: "Don't let him finish the tally — fire a crew ability to break it. Something disrupting to foul his concentration, or a heavy-hitting one to overpower him before the count closes, or he balances the ledger in his favour.",
+            hint: "Don't let him finish the tally. Fire a crew ability to break it. Something disrupting to foul his concentration, or a heavy-hitting one to overpower him before the count closes, or he balances the ledger in his favour.",
             responses: ['snare', 'burst'],
             counteredLine: 'You break his tally before it can close.',
             failLine: 'The ledger balances in his favour.',
             consequence: { kind: 'enemyHealPctMaxHp', value: 0.30 },
           } },
-        // Phase 4 — nothing left to sell. Desperation + a HEAL check.
+        // Phase 4. Nothing left to sell. Desperation + a HEAL check.
         { revivePct: 0.60, damageMult: 1.50, badge: 'Empty Shelves',
           pattern: ['fire', 'volley', 'dodge', 'reload', 'fire', 'fire', 'volley', 'fire'],
           dialogueLine: "Nothing left to sell. Then I sink you and take the lot back myself.",
           check: {
             id: 'fire_sale', name: 'Fire Sale', chargeTurns: 2,
             telegraph: 'The Quartermaster touches a torch to the stock and the whole Cache goes up in flame.',
-            hint: 'The whole stock goes up at once and sets your hull ablaze. Fire a crew ability before it catches — a recovery one or a defensive one — and if it does catch, only a crew heal puts the fire out.',
+            hint: 'The whole stock goes up at once and sets your hull ablaze. Fire a crew ability before it catches, a recovery one or a defensive one, and if it does catch, only a crew heal puts the fire out.',
             responses: ['heal', 'shield'],
             counteredLine: 'You smother the blaze before it can spread.',
             failLine: 'The fire sale catches, and your hull goes up in flame.',
@@ -1447,18 +1440,18 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
   },
   sequence: ['scout', 'reg'],   // short 2-ship intro, then the 4-phase duel
   bossId: 'quartermaster',
-  // No tides — a clean, escalating duel (the phases carry the swings).
+  // No tides. A clean, escalating duel (the phases carry the swings).
   // Chapter-III trophy skin (Coffers Hull) drops here at the higher finale rate.
   // Rest is currency (signature finale special drops TBD in step 4).
   loot: [
     { id: 'coffers_hull',   label: 'Coffers Hull', image: null,          emoji: '🚢',      rarity: 'epic',     weight: 8,  shipSkinId: 'coffers_hull' },
-    // Signature finale drops — the activatable War Drum (epic) + guaranteed
+    // Signature finale drops. The activatable War Drum (epic) + guaranteed
     // Thunder Drum (legendary chase). Challenge variant lifts the legendary rate.
     { id: 'war_drum',       label: 'War Drum',     image: '/wardrum.png',     emoji: '🥁',      rarity: 'epic',      weight: 20 },
     { id: 'thunder_drum',   label: 'Thunder Drum', image: '/thunderdrum.png', emoji: '🥁',      rarity: 'legendary', weight: 5  },
     // CURRENCY. Only 3 fights, and farmable on no cooldown, so it was the second-best
     // gem faucet in the game. The 200-gem slot survives as a genuine jackpot but at a
-    // fraction of the rate — it was carrying most of the EV at 12/80.
+    // fraction of the rate. It was carrying most of the EV at 12/80.
     { id: 'doubloons_600',  label: '+600 ⟡',   image: '/smallpile.png',  emoji: '🪙',      rarity: 'common',   weight: 33 },
     { id: 'doubloons_1200', label: '+1,200 ⟡', image: '/dailybonus.png', emoji: '💰',      rarity: 'uncommon', weight: 28 },
     { id: 'gems_50',        label: '50 Gems',  image: null,              emoji: GEM_GLYPH, rarity: 'rare',     weight: 16 },
@@ -1466,7 +1459,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
   ],
   killRewards: {
     // Two genuinely strong enforcers, then the epic boss (which carries the XP
-    // the old mob gauntlet used to — 4 phases = the fight).
+    // the old mob gauntlet used to. 4 phases = the fight).
     scout:         { gold: 130,  xp: 140  },   // The Leech
     reg:           { gold: 180,  xp: 200  },   // The Breaker
     quartermaster: { gold: 1400, xp: 1600 },
@@ -1483,11 +1476,11 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
   ],
 }
 
-// ─── Raid 7 — "The Blockade" (Chapter IV: The Last Fathom) ───────────────────
+// ─── Raid 7. "The Blockade" (Chapter IV: The Last Fathom) ───────────────────
 // Don Finleone's escort armada, run by his chief enforcer THE HAMMERHEAD.
 // This raid INTRODUCES the whole Ch4 suite:
 //   · baseline SHIELDS on every enemy (shieldPct, scaling 15%→25% up the roster)
-//   · 4-cannonball MAGAZINES (deeper clips — meaner, less predictable cadences;
+//   · 4-cannonball MAGAZINES (deeper clips. Meaner, less predictable cadences;
 //     volley still costs 3, so they can volley and keep a shot in hand)
 //   · enemy SPECIALS via the shared status pipeline (lib/statuses): each crew
 //     member throws ONE debuff at you; the boss buffs HIMSELF.
@@ -1505,10 +1498,10 @@ export const THE_BLOCKADE: BossRaidConfig = {
   raidTitle: 'The Blockade',
   bossDefeatedText: 'Sal Brackwater Defeated',
   atmosphere: 'brackwater',   // Sal's estuary: flat brown water, bronze haze, nothing moving
-  zone: 'abyss',         // Chapter IV — the Abyss
+  zone: 'abyss',         // Chapter IV. The Abyss
   enemies: {
     picket: {
-      // THE SCUTE — the shield TEACHER. A scute is the bone plate grown into a
+      // THE SCUTE. The shield TEACHER. A scute is the bone plate grown into a
       // crocodile's hide, so the name IS the mechanic: he is nothing but barrier,
       // light and fast, with no trick behind it. Break the plating, then the hull.
       // Burn bleeds through it; volleys chew it fastest.
@@ -1523,7 +1516,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       portrait: '/raid7_thescute.png',
     },
     bosun: {
-      // THE BANK — FORTIFY debut (self-buff). He digs into the mud and takes less
+      // THE BANK. FORTIFY debut (self-buff). He digs into the mud and takes less
       // damage for a spell: learn to wait out the braced window, or burst through it.
       // A riverbank is where a saltie hauls out, and it is also the thing you cannot
       // get through.
@@ -1539,7 +1532,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       portrait: '/raid7_thebank.png',
     },
     netter: {
-      // THE MANGROVE — SLOWED debut. Roots fouled through your rigging and rudder cut
+      // THE MANGROVE. SLOWED debut. Roots fouled through your rigging and rudder cut
       // your speed, so you lose turn-order rolls and slip fewer shots while it lasts.
       // The estuary's own net, and it does not need throwing.
       id: 'netter', name: 'The Mangrove', hpBase: 330, minDmg: 22, maxDmg: 36,
@@ -1554,7 +1547,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       portrait: '/raid7_themangrove.png',
     },
     chainman: {
-      // THE RASP — WEAKEN debut. Chain-shot files your powder line down and your shots
+      // THE RASP. WEAKEN debut. Chain-shot files your powder line down and your shots
       // hit soft while it lasts. Drops the Chain-Shot Rack so you can turn it around.
       // Paired with The Wedge: the same brute doing the same job with a different tool.
       // They share a build and a face, and differ by a mirror and the color of the coat.
@@ -1570,7 +1563,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       portrait: '/raid7_therasp.png',
     },
     cracksman: {
-      // THE WEDGE — FEEBLE debut. A cracker round splits your seams and everything
+      // THE WEDGE. FEEBLE debut. A cracker round splits your seams and everything
       // that lands after finds the gap. The kill-window status, used ON you.
       // The Rasp's opposite number (see above): same build, mirrored, different coat.
       id: 'cracksman', name: 'The Wedge', hpBase: 370, minDmg: 24, maxDmg: 40,
@@ -1585,7 +1578,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       portrait: '/raid7_thewedge.png',
     },
     purser: {
-      // OLD SCAR — REGEN debut (self-buff). The bar creeps back up while you watch: a
+      // OLD SCAR. REGEN debut (self-buff). The bar creeps back up while you watch: a
       // sponge that punishes slow, polite damage. He is nothing but healed-over wounds,
       // which is the most crocodile thing about him. Nothing down here has killed him
       // yet and he has stopped expecting it.
@@ -1601,7 +1594,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       portrait: '/raid7_oldscar.png',
     },
     muzzle: {
-      // THE MUZZLE — SILENCE debut. Your crew abilities lock for two rounds: the
+      // THE MUZZLE. SILENCE debut. Your crew abilities lock for two rounds: the
       // enforcer who makes sure nobody talks. The name is kept from the old roster
       // because it is ALREADY a crocodile's snout and the word for shutting a thing up,
       // and a double meaning that good does not come along twice.
@@ -1617,7 +1610,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       portrait: '/raid7_themuzzle.png',
     },
     saltie: {
-      // SAL BRACKWATER — a saltwater crocodile, and Don's chief enforcer. The muscle
+      // SAL BRACKWATER. A saltwater crocodile, and Don's chief enforcer. The muscle
       // at the gate.
       //
       // He is a BITER, and Don is a shark, so the two are kept apart on purpose. A
@@ -1647,13 +1640,13 @@ export const THE_BLOCKADE: BossRaidConfig = {
           check: {
             id: 'death_roll', name: 'The Death Roll', chargeTurns: 2,
             telegraph: 'Sal takes your hull in his teeth, sets his feet against the swell, and starts to turn.',
-            hint: 'He is going to roll, and he will not let go. Only a crew ability gets something between your hull and that grip — your own brace or dodge does nothing here.',
+            hint: 'He is going to roll, and he will not let go. Only a crew ability gets something between your hull and that grip. Your own brace or dodge does nothing here.',
             responses: ['brace', 'shield'],
             counteredLine: 'He rolls against braced timber, tears off a mouthful of nothing, and lets go spitting splinters.',
             failLine: 'He rolls, and he keeps rolling, and your hull comes apart along the grain.',
             consequence: { kind: 'damagePctMaxHp', value: 0.70 },
           } },
-        // Phase 3 — THE LAST WALL. He rises one final time behind an aegis
+        // Phase 3. THE LAST WALL. He rises one final time behind an aegis
         // that drinks every shot whole. The discovery is the player's: only
         // an ultimate tears it down in one blow (dialogue + logs hint at
         // "everything at once" without naming the Mega). Fallback: 6 landed
@@ -1673,7 +1666,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
   tides: { slots: [3, 6], maxTier: 2 },
   loot: [
     { id: 'last_fathom_hull', label: 'Last Fathom Hull', image: null, emoji: '🚢', rarity: 'epic', weight: 8, shipSkinId: 'last_fathom_hull' },
-    // Signature: the Chain-Shot Rack — the first player-applied STATUS item — and
+    // Signature: the Chain-Shot Rack, the first player-applied STATUS item, and
     // the Brackwater Rack as its legendary chase. Rare here; buildChallengeLoot lifts
     // every legendary to a flat 10% in the challenge table, so the challenge run is
     // where you actually farm it.
@@ -1706,24 +1699,24 @@ export const THE_BLOCKADE: BossRaidConfig = {
   ],
 }
 
-// ── Chapter IV, Raid 8 — THE THRONE (Don Finleone) ──────────────────────────
+// ── Chapter IV, Raid 8. THE THRONE (Don Finleone) ──────────────────────────
 // The fake-final boss. Debuts the raid-8 layer on top of the Ch4 suite:
 // enemy ULTIMATES at a full 4-ball magazine (glowing pips = the tell) and
-// AIM-BAR ATTACKS (decoys / hardened lock / squall) — specials that strike
+// AIM-BAR ATTACKS (decoys / hardened lock / squall). Specials that strike
 // the player's lock-in minigame instead of their hull. Every mob teaches one
 // piece before the don stacks them. Don Finleone is a MEGALODON under the
-// don's colors — the mask drops in phase 2. ADMIN-ONLY until launch.
-// Art: Ch3 hull placeholders — bespoke Last-Fathom fleet art at polish.
+// don's colors. The mask drops in phase 2. ADMIN-ONLY until launch.
+// Art: Ch3 hull placeholders. Bespoke Last-Fathom fleet art at polish.
 export const THE_THRONE: BossRaidConfig = {
   raidId: 'the_throne',
   enemyAccuracy: 36,
   raidTitle: 'The Throne',
   bossDefeatedText: 'Don Finleone Defeated',
-  atmosphere: 'vault',   // placeholder — bespoke throne-water palette at polish
-  zone: 'ancient_deep',  // Chapter IV finale — the Ancient Deep (Don Finleone's last fathom)
+  atmosphere: 'vault',   // placeholder. Bespoke throne-water palette at polish
+  zone: 'ancient_deep',  // Chapter IV finale. The Ancient Deep (Don Finleone's last fathom)
   enemies: {
     court_herald: {
-      // The ULTIMATE teacher: light hull, no special — just the new tell.
+      // The ULTIMATE teacher: light hull, no special. Just the new tell.
       // Watch the pips fill to four and glow, then answer it or eat it.
       id: 'court_herald', name: 'The Ripper', hpBase: 340, minDmg: 22, maxDmg: 36,
       shipSpeed: 8, actionMs: 3400,
@@ -1736,12 +1729,12 @@ export const THE_THRONE: BossRaidConfig = {
       portrait: '/raid8_theripper.png',
     },
     the_mirage: {
-      // DECOYS debut — False Court paints fake gold across your aim bar.
+      // DECOYS debut. False Court paints fake gold across your aim bar.
       // Crimson bands dud the shot; find the real lane before you lock.
       id: 'the_mirage', name: 'The Render', hpBase: 380, minDmg: 24, maxDmg: 38,
       shipSpeed: 10, actionMs: 3400,
       magazineSize: 4, shieldPct: 0.18, chargeBiteChance: 0.35,
-      special: { name: 'False Court', aimAttack: 'decoys', aimPasses: 2, line: 'Lantern-rigs bloom down his rail — a court of false colors, and only one throne among them.' },
+      special: { name: 'False Court', aimAttack: 'decoys', aimPasses: 2, line: 'Lantern-rigs bloom down his rail, a court of false colors with only one throne among them.' },
       pattern: ['reload', 'special', 'fire', 'reload', 'dodge', 'fire', 'special', 'reload'],
       critChance: 0.12,
       zoneSpeedMult: 2.5,
@@ -1749,12 +1742,12 @@ export const THE_THRONE: BossRaidConfig = {
       portrait: '/raid8_therender.png',
     },
     the_doorman: {
-      // HARDENED LOCK debut — Iron Etiquette plates your lock: the first tap
+      // HARDENED LOCK debut. Iron Etiquette plates your lock: the first tap
       // only cracks it, the second lands. The heavy door you knock on twice.
       id: 'the_doorman', name: 'The Gnash', hpBase: 420, minDmg: 24, maxDmg: 40,
       shipSpeed: 5, actionMs: 4200,
       magazineSize: 4, shieldPct: 0.24, chargeBiteChance: 0.35,
-      special: { name: 'Iron Etiquette', aimAttack: 'hardened', aimPasses: 2, line: 'Iron shutters slam over every line you’d take — nobody reaches the don in one knock.' },
+      special: { name: 'Iron Etiquette', aimAttack: 'hardened', aimPasses: 2, line: 'Iron shutters slam over every line you’d take. Nobody reaches the don in one knock.' },
       pattern: ['reload', 'special', 'reload', 'fire', 'volley', 'reload', 'special', 'fire'],
       critChance: 0.10,
       zoneSpeedMult: 2.2,
@@ -1762,7 +1755,7 @@ export const THE_THRONE: BossRaidConfig = {
       portrait: '/raid8_thegnash.png',
     },
     the_stormcaller: {
-      // SQUALL debut — Kingmaker's Gale gusts your needle fast-slow mid-sweep.
+      // SQUALL debut. Kingmaker's Gale gusts your needle fast-slow mid-sweep.
       // Timing by rhythm fails; watch the needle itself.
       id: 'the_stormcaller', name: 'The Gorge', hpBase: 440, minDmg: 26, maxDmg: 40,
       shipSpeed: 9, actionMs: 3600,
@@ -1775,7 +1768,7 @@ export const THE_THRONE: BossRaidConfig = {
       portrait: '/raid8_thegorge.png',
     },
     the_left_hand: {
-      // The don's silencer, now with the ultimate stacked on top — Omertà
+      // The don's silencer, now with the ultimate stacked on top. Omertà
       // locks your crew out of the answer while the battery builds.
       id: 'the_left_hand', name: 'The Reaper', hpBase: 480, minDmg: 26, maxDmg: 42,
       shipSpeed: 8, actionMs: 3800,
@@ -1789,7 +1782,7 @@ export const THE_THRONE: BossRaidConfig = {
       portrait: '/raid8_thereaper.png',
     },
     the_consigliere: {
-      // The don's right hand and the last gate before the throne — a TWO-PHASE
+      // The don's right hand and the last gate before the throne. A TWO-PHASE
       // mini-boss. Phase 1 marks you for the don (Feeble) and carries the biggest
       // mob ultimate in the raid; drop him and he rises to collect (phase 2).
       id: 'the_consigliere', name: 'The Closer', hpBase: 520, minDmg: 28, maxDmg: 44,
@@ -1800,7 +1793,7 @@ export const THE_THRONE: BossRaidConfig = {
       pattern: ['reload', 'special', 'reload', 'volley', 'reload', 'reload', 'ultimate', 'dodge'],
       critChance: 0.12,
       // False defeat: he goes down, then hauls himself back up at 55% to settle
-      // the account — opens on the Feeble mark and runs a tighter, harder cadence.
+      // the account. Opens on the Feeble mark and runs a tighter, harder cadence.
       phase2: {
         revivePct: 0.55,
         damageMult: 1.30,
@@ -1813,14 +1806,14 @@ export const THE_THRONE: BossRaidConfig = {
       portrait: '/raid8_thecloser.png',
     },
     don_finleone: {
-      // DON FINLEONE — the fake-final boss. Phase 1: the don at his table,
+      // DON FINLEONE. The fake-final boss. Phase 1: the don at his table,
       // False Court decoys + The Deep Verdict ultimate. Phase 2 the mask
       // drops (MEGALODON) and The Maw check arms; phase 3 is the frenzy,
       // closed by The Sounding (blast or jam him out of the dive, or eat a
-      // near-lethal breach). Kills reveal nothing — the margin does.
+      // near-lethal breach). Kills reveal nothing. The margin does.
       // SIX-PHASE FINAL BOSS. The court steps aside and the don eats his way
       // through your whole crew: every phase (the opener included) arms a check.
-      // Unlike the earlier raids, these do NOT take any ability — each phase wants
+      // Unlike the earlier raids, these do NOT take any ability. Each phase wants
       // a specific KIND of answer (defend / heal / disrupt / blast), themed to its
       // telegraph, and the answer sets vary so no single ability clears all six.
       // The two near-lethal checks (the opener and the Last Bite) take a third,
@@ -1832,15 +1825,15 @@ export const THE_THRONE: BossRaidConfig = {
       id: 'don_finleone', name: 'Don Finleone', hpBase: 880, minDmg: 30, maxDmg: 50,
       shipSpeed: 9, actionMs: 4000,
       magazineSize: 4, shieldPct: 0.30, chargeBiteChance: 0.35, startCharges: 2,
-      special: { name: 'The Don’s Court', aimAttack: 'decoys', aimPasses: 2, line: 'The court closes around the throne — a dozen crowns, and only one that bleeds.' },
+      special: { name: 'The Don’s Court', aimAttack: 'decoys', aimPasses: 2, line: 'The court closes around the throne. A dozen crowns, and only one that bleeds.' },
       ultimate: { name: 'The Deep Verdict', mult: 2.8, line: 'The don passes sentence, and the water carries it out.' },
       pattern: ['special', 'fire', 'reload', 'reload', 'ultimate', 'dodge', 'fire', 'reload'],
       critChance: 0.15,
-      // Phase 1 opener check — the court itself. Answer him the moment guns are out.
+      // Phase 1 opener check. The court itself. Answer him the moment guns are out.
       openingCheck: {
         id: 'the_court', name: 'The Don’s Court', chargeTurns: 2,
         telegraph: 'The whole drowned court trains its guns on your hull at once, waiting on the don’s nod.',
-        hint: 'You cannot out-gun a whole court. Weather the opening volley — a brace, a shield, or a big heal will all ride it out.',
+        hint: 'You cannot out-gun a whole court. Weather the opening volley. A brace, a shield, or a big heal will all ride it out.',
         responses: ['brace', 'shield', 'heal'],
         counteredLine: 'Your crew answers first, and the court’s opening volley scatters wide.',
         failLine: 'Nobody stands with you, and the whole court fires as one.',
@@ -1852,7 +1845,7 @@ export const THE_THRONE: BossRaidConfig = {
           dialogueLine: 'You came for a don. The deep sent you something older. Look at the WIDTH of what you’ve been bargaining with.',
           check: {
             id: 'the_maw', name: 'The Maw', chargeTurns: 2,
-            telegraph: 'The don’s hull ROLLS — and keeps rolling — a jaw the size of your broadside opening under the waterline.',
+            telegraph: 'The don’s hull ROLLS, and keeps rolling, a jaw the size of your broadside opening under the waterline.',
             hint: 'A bite that wide can’t be weaved. Harden the hull with a brace, or blast the jaw apart with a big shot before it shuts.',
             responses: ['brace', 'burst'],
             counteredLine: 'Your crew throws the maw off its line and it grinds iron instead of deck.',
@@ -1864,7 +1857,7 @@ export const THE_THRONE: BossRaidConfig = {
           dialogueLine: 'There it is. The blood. Now the whole ocean knows where you are.',
           check: {
             id: 'blood_water', name: 'Blood in the Water', chargeTurns: 2,
-            telegraph: 'He rakes a long gash down your hull and circles wide — the sea reddening with every pass at the smell of it.',
+            telegraph: 'He rakes a long gash down your hull and circles wide, the sea reddening with every pass at the smell of it.',
             hint: 'The wound is what keeps drawing him. Close it with a heal, or snare him off the blood-trail before he circles back in.',
             responses: ['heal', 'snare'],
             counteredLine: 'Your crew answers the wound and the blood-trail goes cold; he loses the scent.',
@@ -1873,13 +1866,13 @@ export const THE_THRONE: BossRaidConfig = {
           } },
         { revivePct: 0.50, damageMult: 1.45, badge: 'The Sounding',
           pattern: ['special', 'fire', 'reload', 'reload', 'ultimate', 'fire', 'volley', 'dodge'],
-          dialogueLine: 'Enough court. Enough colors. The Finndicate was never the family, captain — it was the FEEDING.',
+          dialogueLine: 'Enough court. Enough colors. The Finndicate was never the family, captain. It was the FEEDING.',
           check: {
             id: 'the_sounding', name: 'The Sounding', chargeTurns: 2,
-            telegraph: 'The megalodon SOUNDS — the whole sea dips as he goes deep, gathering water for a breach that will land on your deck.',
-            hint: 'You can’t block a falling mountain — you have to break the dive itself. Snare him out of it, or blast him up early with a big shot.',
+            telegraph: 'The megalodon SOUNDS. The whole sea dips as he goes deep, gathering water for a breach that will land on your deck.',
+            hint: 'You can’t block a falling mountain. You have to break the dive itself. Snare him out of it, or blast him up early with a big shot.',
             responses: ['snare', 'burst'],
-            counteredLine: 'The dive breaks — he breaches early, wide, and the wave takes the blow for you.',
+            counteredLine: 'The dive breaks. He breaches early, wide, and the wave takes the blow for you.',
             failLine: 'The sea goes still. Then it goes UP, and the breach leaves your ship reeling and slow to answer.',
             consequence: { kind: 'status', status: 'slowed', magnitude: 12, turns: 4, dmgPct: 0.40 },
           } },
@@ -1900,7 +1893,7 @@ export const THE_THRONE: BossRaidConfig = {
           dialogueLine: 'You crossed the WHOLE family to get here. Let me show you what the family is FOR.',
           check: {
             id: 'the_last_bite', name: 'The Last Bite', chargeTurns: 2,
-            telegraph: 'The megalodon rears his whole bulk from the water for one final lunge — and for one breath his throat hangs open above your deck.',
+            telegraph: 'The megalodon rears his whole bulk from the water for one final lunge. And for one breath his throat hangs open above your deck.',
             hint: 'The throat hangs open for one breath. Fire everything down it with a big shot, or throw up a brace or shield and ride out the lunge.',
             responses: ['burst', 'brace', 'shield'],
             counteredLine: 'Your crew fires straight down his throat and the last bite dies in the water.',
@@ -1920,7 +1913,7 @@ export const THE_THRONE: BossRaidConfig = {
   loot: [
     { id: 'last_fathom_hull', label: 'Last Fathom Hull', image: null, emoji: '🚢', rarity: 'epic', weight: 8, shipSkinId: 'last_fathom_hull' },
     // The court's own bite, turned back: a CRIT strips an enemy cannonball (epic
-    // 20% chance / legendary 50%). Same 'court_bite' family — they don't stack.
+    // 20% chance / legendary 50%). Same 'court_bite' family. They don't stack.
     { id: 'court_fang',     label: "The Court's Fang", image: '/thecourtsfang.png', emoji: '🦈', rarity: 'epic',      weight: 20 },
     { id: 'dons_signet',    label: 'The Don’s Signet', image: '/thedonssignet.png', emoji: '💍', rarity: 'legendary', weight: 5  },
     { id: 'doubloons_800',  label: '+800 ⟡',   image: '/smallpile.png',  emoji: '🪙',      rarity: 'common',   weight: 28 },

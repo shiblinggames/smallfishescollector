@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────────────────────
-// Tides — mid-raid roguelike event interrupts.
+// Tides. Mid-raid roguelike event interrupts.
 // ──────────────────────────────────────────────────────────────────────────
 // A raid declares a couple of slots (between-fight encounter indices) +
 // a max tier. At raid start, N tides are drawn at random from TIDE_POOL
@@ -24,7 +24,7 @@
 //   - Scopes: "next fight" / "boss fight" / "all run". Never "for one
 //     upcoming fight" or "on the next fight" (inconsistent).
 //   - HP changes phrased "+N HP" / "-N HP" / "starts with N less HP",
-//     never "at -N HP" (ambiguous — looks like a total).
+//     never "at -N HP" (ambiguous. Looks like a total).
 //   - Effect chips (describeEffect) mirror the description's vocab.
 
 /** Discrete effect kinds. Each carries the data needed to apply it.
@@ -35,9 +35,9 @@ export type TideEffect =
   /** Multiplier on EVERY outgoing damage roll (fire AND volley). */
   | { kind: 'damageMult'; mult: number }
   // ── Per-action damage (more flavorful than broad damageMult) ────
-  /** Fire damage only — does NOT affect volleys. Encourages reload-fire-reload. */
+  /** Fire damage only. Does NOT affect volleys. Encourages reload-fire-reload. */
   | { kind: 'fireDmgMult'; mult: number }
-  /** Volley damage only — does NOT affect base fire. Rewards volley-saving. */
+  /** Volley damage only. Does NOT affect base fire. Rewards volley-saving. */
   | { kind: 'volleyDmgMult'; mult: number }
   /** Damage multiplier on NON-crit shots only (hit + graze). <1 = the
    *  "All or Nothing" curse: anything short of a gold crit hits soft. */
@@ -50,7 +50,7 @@ export type TideEffect =
   | { kind: 'critZoneScale'; mult: number }
   /** Critical hits deal mult× more damage (stacks with the Gunner's Sight item). */
   | { kind: 'critDmgMult'; mult: number }
-  // ── Aim-bar disruptors (visual + feel) — Gauntlet curses lean on these.
+  // ── Aim-bar disruptors (visual + feel). Gauntlet curses lean on these.
   /** Drifting fog band over the aim bar (0-1 density), like the Mist Veil. */
   | { kind: 'aimFog'; density: number }
   /** Multiplier on the aim NEEDLE sweep speed (>1 = faster, harder to time). */
@@ -61,19 +61,19 @@ export type TideEffect =
    *  like the abyss reel going dark. The "Inkfall" curse. */
   | { kind: 'aimBlackout'; intensity: number }
   /** N drifting DECOY target bands appear on a random fraction of your fires.
-   *  Lock onto one and your shot is a dud — chip damage + the turn ends. The
+   *  Lock onto one and your shot is a dud. Chip damage + the turn ends. The
    *  "False Colors" curse. */
   | { kind: 'aimDecoys'; n: number }
-  /** 0-1 chance, each turn, that the action you pick comes out SCRAMBLED — your
+  /** 0-1 chance, each turn, that the action you pick comes out SCRAMBLED. Your
    *  crew does a different (valid) action instead. The "Drowned Whispers" curse. */
   | { kind: 'confuse'; chance: number }
-  /** 0-1 chance, rolled per fight, that the enemy's HP bar is HIDDEN — you fight
+  /** 0-1 chance, rolled per fight, that the enemy's HP bar is HIDDEN. You fight
    *  blind on how close it is to sinking. The "Shrouded Hull" curse. */
   | { kind: 'hideEnemyHp'; chance: number }
   /** 0-1 chance, rolled per fight, that the enemy's loaded-cannonball count is
-   *  HIDDEN — no reading when the next broadside comes. "Shuttered Ports" curse. */
+   *  HIDDEN. No reading when the next broadside comes. "Shuttered Ports" curse. */
   | { kind: 'hideEnemyCharges'; chance: number }
-  // ── Elemental builds (Gauntlet boons) — composite effects so one boon tier
+  // ── Elemental builds (Gauntlet boons). Composite effects so one boon tier
   //    carries a whole identity. Fold into the item burn/freeze proc math (the
   //    chances STACK with the matching cannonball, capped in RaidCombat).
   /** Ice build "Permafrost": a freeze chance on hit (skips the enemy's turn) +
@@ -94,7 +94,7 @@ export type TideEffect =
   | { kind: 'critExecute'; pct: number }
   /** Confluence "Hull Render" (Broadside Mastery + Grapeshot): each Volley you
    *  fire THIS fight hits `perVolley` harder than the last (a stacking ramp that
-   *  resets every fight) — rewards saving up and slamming repeated volleys. */
+   *  resets every fight). Rewards saving up and slamming repeated volleys. */
   | { kind: 'volleyRamp'; perVolley: number }
   /** Confluence "Reaper's Tithe" (Executioner + Leviathan's Hunger): sinking a
    *  hull heals you `pctMaxHp` of THAT enemy's max HP. */
@@ -113,10 +113,10 @@ export type TideEffect =
   | { kind: 'incomingDmgMult'; mult: number; scope: 'nextFight' | 'allRemaining' }
   /** Reduces enemy crit-chance against the player. */
   | { kind: 'incomingCritReduction'; chance: number }
-  // ── HP — instant + per-fight ────────────────────────────────────
+  // ── HP. Instant + per-fight ────────────────────────────────────
   /** Apply RIGHT NOW (modal-time): heal +N HP (clamped to max). */
   | { kind: 'instantHeal'; n: number }
-  /** Apply right now: heal a FRACTION of max HP — scales with the hull so it
+  /** Apply right now: heal a FRACTION of max HP. Scales with the hull so it
    *  stays meaningful at high level (the pct version of instantHeal). */
   | { kind: 'instantHealPct'; pct: number }
   /** Apply right now: full HP restore to max. */
@@ -124,13 +124,13 @@ export type TideEffect =
   /** Delta applied at the START of the next fight (negative = wound). */
   | { kind: 'startHpDelta'; n: number; scope: 'nextFight' | 'boss' }
   /** Delta applied at the START of a fight as a FRACTION of max HP (negative =
-   *  wound). Scales with the hull so a wound still bites at high level — the
+   *  wound). Scales with the hull so a wound still bites at high level. The
    *  pct version of startHpDelta. */
   | { kind: 'startHpPctDelta'; pct: number; scope: 'nextFight' | 'boss' }
   /** Passive heal at the START of each REMAINING fight (flat HP). */
   | { kind: 'startOfFightHeal'; n: number }
   /** Passive heal at the START of each REMAINING fight, as a fraction of max
-   *  HP — scales with the hull so it doesn't fall off late (Bilge Pump). */
+   *  HP. Scales with the hull so it doesn't fall off late (Bilge Pump). */
   | { kind: 'startOfFightHealPct'; pctMax: number }
   // ── Charges (cannonballs) ───────────────────────────────────────
   /** Extra charges at the START of fights. scope=allRemaining for run,
@@ -170,7 +170,7 @@ export type TideEffect =
   | { kind: 'lifestealPct'; pct: number }
   /** Reflect pct of the damage an enemy lands on you back into it (thorns).
    *  `dodgePct` (optional) also chips the enemy for that fraction of a shot you
-   *  DODGE — so the boon rewards slipping hits, not only eating them. */
+   *  DODGE. So the boon rewards slipping hits, not only eating them. */
   | { kind: 'retaliatePct'; pct: number; dodgePct?: number }
   /** Bonus damage that scales with MISSING HP. `maxBonus` is the damage bonus
    *  at 0 HP (e.g. 0.45 = up to +45%); it tapers linearly to 0 at full HP. */
@@ -181,7 +181,7 @@ export type TideEffect =
   /** Start every fight with a damage-absorbing shield worth `pctMax` of max HP;
    *  it soaks incoming hits before the hull does and reforms each fight. */
   | { kind: 'fightShield'; pctMax: number }
-  // ── HP scaling (Gauntlet defensive boons) — resolved by the Gauntlet HOST
+  // ── HP scaling (Gauntlet defensive boons). Resolved by the Gauntlet HOST
   //    into the run's LIVE max HP (base × these). RaidCombat just receives the
   //    boosted ceiling as playerHpMax; it does not read these itself. ──
   /** "Reinforced Hull": flat ×mult to max HP for the run. */
@@ -192,7 +192,7 @@ export type TideEffect =
   | { kind: 'maxHpPerKill'; perKill: number; max: number }
   /** "Field Repairs" / "Engorge" confluences: heals may exceed max HP into
    *  temporary overhealth worth up to `pct` of max, shed at fight end (never
-   *  carries to the next fight — the host clamps carried HP to max). */
+   *  carries to the next fight. The host clamps carried HP to max). */
   | { kind: 'overhealPct'; pct: number }
   // Iron Rations (a Term): scales EVERY heal the player receives (crew heals,
   // repair kits, lifesteal, regen, between-fight vigor, reprieves). 0 = nothing
@@ -202,8 +202,7 @@ export type TideEffect =
   | { kind: 'repairHealMult'; mult: number }
   // ── Momentum / conditional damage (Gauntlet boons) ──────────────
   /** "Rising Tide": +perKill outgoing damage for EVERY enemy sunk this run
-   *  (retroactive; bosses count), capped at maxBonus. Run-scoped snowball —
-   *  the host feeds the live kill tally; RaidCombat reads it off `tide`. */
+   *  (retroactive; bosses count), capped at maxBonus. Run-scoped snowball, *  the host feeds the live kill tally; RaidCombat reads it off `tide`. */
   | { kind: 'killStackDamage'; perKill: number; maxBonus: number }
   /** "Abyssal Bounty": +perDepth outgoing damage scaled by the current run
    *  depth, capped at maxBonus. A live function of depth (no wind-up). */
@@ -218,7 +217,7 @@ export type TideEffect =
   | { kind: 'counterFireChance'; chance: number }
   // ── Confluences on the new momentum boons ───────────────────────
   /** "Broadside Duel" (Cannonade + Counter-Battery): winning the exchange feeds
-   *  your rhythm — a counter fires `chanceBonus` more often (additive on top of
+   *  your rhythm. A counter fires `chanceBonus` more often (additive on top of
    *  Counter-Battery), adds `bonusStack` extra Cannonade stacks when you crit it,
    *  and refunds `refund` cannonballs. */
   | { kind: 'counterBonus'; refund: number; bonusStack: number; chanceBonus: number }
@@ -226,10 +225,10 @@ export type TideEffect =
    *  flung back for `pct` of the enemy's would-be damage. */
   | { kind: 'counterReflect'; pct: number }
   /** "Feeding Frenzy" (Rising Tide + Leviathan's Hunger): lifesteal grows with
-   *  every hull sunk this run — +perKill × kills, capped at `max`. */
+   *  every hull sunk this run. +PerKill × kills, capped at `max`. */
   | { kind: 'lifestealKillScale'; perKill: number; max: number }
   /** "Pressure Hull" (Abyssal Bounty + Ironhide): incoming damage is reduced,
-   *  scaling with the current depth — the defensive mirror of Abyssal Bounty.
+   *  scaling with the current depth. The defensive mirror of Abyssal Bounty.
    *  −perDepth × depth, capped at `max`. */
   | { kind: 'depthScaleMitigation'; perDepth: number; max: number }
   // ── Meta (post-raid only) ───────────────────────────────────────
@@ -331,7 +330,7 @@ export interface TideChoice {
 
 export interface TideEvent {
   id: string
-  /** Tier ladder — see TIER_PHILOSOPHY comment below. */
+  /** Tier ladder. See TIER_PHILOSOPHY comment below. */
   tier: 1 | 2 | 3 | 4
   title: string
   /** Italic flavor line shown above the choices. */
@@ -394,7 +393,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'follow',
         label: 'Follow the bell',
-        description: 'It leads to a half-sunk cache: +150 ⟡ at raid end. But the chase leaves you ragged — you enter the boss fight with 8% less HP.',
+        description: 'It leads to a half-sunk cache: +150 ⟡ at raid end. But the chase leaves you ragged. You enter the boss fight with 8% less HP.',
         effects: [
           { kind: 'doubloonsAtRaidEnd', n: 150 },
           { kind: 'startHpPctDelta', pct: -0.08, scope: 'boss' },
@@ -409,7 +408,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'sail_wide',
         label: 'Sail wide of the bell',
-        description: '+15% Volley damage in the boss fight. The long way around runs the crew ragged — you enter the boss with 10% less HP.',
+        description: '+15% Volley damage in the boss fight. The long way around runs the crew ragged. You enter the boss with 10% less HP.',
         effects: [
           { kind: 'bossVolleyDmgMult', mult: 1.15 },
           { kind: 'startHpPctDelta', pct: -0.10, scope: 'boss' },
@@ -423,7 +422,7 @@ export const TIDE_POOL: TideEvent[] = [
     tier: 1,
     title: 'Empty Powder Keg',
     flavor: 'A black-powder cask bobs alongside, lid half-off. Useful to the right captain. Dangerous to the careless one.',
-    // Pure boon-pick — no opt-out. Each option is a real trade.
+    // Pure boon-pick. No opt-out. Each option is a real trade.
     choices: [
       {
         id: 'refill',
@@ -437,7 +436,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'rig',
         label: 'Rig it as a one-shot',
-        description: 'Next enemy starts at 65% HP. Rigging the blast leaves your hull wide open — you take 20% more damage that fight.',
+        description: 'Next enemy starts at 65% HP. Rigging the blast leaves your hull wide open. You take 20% more damage that fight.',
         effects: [
           { kind: 'enemyHpScale', mult: 0.65, scope: 'nextFight' },
           { kind: 'incomingDmgMult', mult: 1.20, scope: 'nextFight' },
@@ -446,7 +445,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'heave',
         label: 'Heave it overboard',
-        description: '1 guaranteed dodge next fight (no roll needed). Heaving it took the crew off the rail — you enter that fight with 6% less HP.',
+        description: '1 guaranteed dodge next fight (no roll needed). Heaving it took the crew off the rail. You enter that fight with 6% less HP.',
         effects: [
           { kind: 'guaranteedDodge', n: 1 },
           { kind: 'startHpPctDelta', pct: -0.06, scope: 'nextFight' },
@@ -473,7 +472,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'pocket',
         label: 'Pocket the bottle',
-        description: '+150 ⟡ at raid end. Reading it under way, you let the watch slip — you enter the next fight with 8% less HP.',
+        description: '+150 ⟡ at raid end. Reading it under way, you let the watch slip. You enter the next fight with 8% less HP.',
         effects: [
           { kind: 'doubloonsAtRaidEnd', n: 150 },
           { kind: 'startHpPctDelta', pct: -0.08, scope: 'nextFight' },
@@ -498,7 +497,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'cut_loose',
         label: 'Cut it loose',
-        description: '+10% Volley damage all run. The freed whale thrashes through your lines — -2 ship speed for the next 2 fights.',
+        description: '+10% Volley damage all run. The freed whale thrashes through your lines. -2 ship speed for the next 2 fights.',
         effects: [
           { kind: 'volleyDmgMult', mult: 1.10 },
           { kind: 'speedDelta', n: -2, scope: 'next2Fights' },
@@ -516,7 +515,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'netting',
         label: 'Take only the netting',
-        description: '+2 cannonballs at the start of the next fight. Hauling it aboard leaves the rail exposed — enter that fight with 5% less HP.',
+        description: '+2 cannonballs at the start of the next fight. Hauling it aboard leaves the rail exposed. Enter that fight with 5% less HP.',
         effects: [
           { kind: 'startCharges', n: 2, scope: 'nextFight' },
           { kind: 'startHpPctDelta', pct: -0.05, scope: 'nextFight' },
@@ -549,7 +548,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'anchor',
         label: 'Drop the sea anchor',
-        description: 'Take 12% less damage all run. Riding low and cautious blunts your guns — -8% damage all run.',
+        description: 'Take 12% less damage all run. Riding low and cautious blunts your guns. -8% damage all run.',
         effects: [
           { kind: 'incomingDmgMult', mult: 0.88, scope: 'allRemaining' },
           { kind: 'damageMult', mult: 0.92 },
@@ -567,7 +566,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'beach',
         label: 'Beach the ship and patch the hull',
-        description: 'Full HP restored. But the long stop leaves your gun crews rusty — -12% damage all run.',
+        description: 'Full HP restored. But the long stop leaves your gun crews rusty. -12% damage all run.',
         effects: [
           { kind: 'fullHeal' },
           { kind: 'damageMult', mult: 0.88 },
@@ -600,7 +599,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'live_fire',
         label: 'Live-fire drill',
-        description: '+6% crit chance all run. The powder spent drilling leaves you thin — you enter the next fight with 5% less HP.',
+        description: '+6% crit chance all run. The powder spent drilling leaves you thin. You enter the next fight with 5% less HP.',
         effects: [
           { kind: 'critChanceBonus', chance: 0.06 },
           { kind: 'startHpPctDelta', pct: -0.05, scope: 'nextFight' },
@@ -609,7 +608,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'damage_control',
         label: 'Damage-control rehearsal',
-        description: 'Heal 4% of your max HP at the start of every remaining fight. The crew drills patches, not gunnery — -10% Fire damage all run.',
+        description: 'Heal 4% of your max HP at the start of every remaining fight. The crew drills patches, not gunnery. -10% Fire damage all run.',
         effects: [
           { kind: 'startOfFightHealPct', pctMax: 0.04 },
           { kind: 'fireDmgMult', mult: 0.90 },
@@ -666,12 +665,12 @@ export const TIDE_POOL: TideEvent[] = [
     tier: 2,
     title: 'The Drowned Armory',
     flavor: "A sunken man-o-war's gun deck, still stocked, the powder somehow dry. Take what the sea was keeping.",
-    // Pure boon-pick — no opt-out. Each is a real trade.
+    // Pure boon-pick. No opt-out. Each is a real trade.
     choices: [
       {
         id: 'heavy_shot',
         label: 'Load the heavy shot',
-        description: '+18% Fire damage all run. The heavy rounds are a slow, back-breaking load — -2 ship speed all run.',
+        description: '+18% Fire damage all run. The heavy rounds are a slow, back-breaking load. -2 ship speed all run.',
         effects: [
           { kind: 'fireDmgMult', mult: 1.18 },
           { kind: 'speedDelta', n: -2, scope: 'allRemaining' },
@@ -680,7 +679,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'powder',
         label: 'Haul the powder aboard',
-        description: 'Every reload has a 20% chance to load +1 cannonball, all run. The extra powder weighs the hull down — -1 ship speed all run.',
+        description: 'Every reload has a 20% chance to load +1 cannonball, all run. The extra powder weighs the hull down. -1 ship speed all run.',
         effects: [
           { kind: 'reloadProc', chance: 0.20, bonusCharges: 1 },
           { kind: 'speedDelta', n: -1, scope: 'allRemaining' },
@@ -689,7 +688,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'plate',
         label: 'Bolt on the hull plate',
-        description: 'Take 22% less damage all run. The added weight slows your guns — -12% damage all run.',
+        description: 'Take 22% less damage all run. The added weight slows your guns. -12% damage all run.',
         effects: [
           { kind: 'incomingDmgMult', mult: 0.78, scope: 'allRemaining' },
           { kind: 'damageMult', mult: 0.88 },
@@ -716,7 +715,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'ears',
         label: 'Take the song',
-        description: 'Full HP restored. But the bargain is paid in full — you take 12% more damage all run.',
+        description: 'Full HP restored. But the bargain is paid in full. You take 12% more damage all run.',
         effects: [
           { kind: 'fullHeal' },
           { kind: 'incomingDmgMult', mult: 1.12, scope: 'allRemaining' },
@@ -740,7 +739,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'crest',
         label: 'Crest the wave',
-        description: '+25% damage in the boss fight. Riding the crest in slams you against the hull — you enter the boss with 12% less HP.',
+        description: '+25% damage in the boss fight. Riding the crest in slams you against the hull. You enter the boss with 12% less HP.',
         effects: [
           { kind: 'bossDamageMult', mult: 1.25 },
           { kind: 'startHpPctDelta', pct: -0.12, scope: 'boss' },
@@ -758,7 +757,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'ride_out',
         label: 'Ride it out',
-        description: '+2 ship speed all run (turn order and aim). The hard heel into the swell strains the seams — take 12% more damage all run.',
+        description: '+2 ship speed all run (turn order and aim). The hard heel into the swell strains the seams. Take 12% more damage all run.',
         effects: [
           { kind: 'speedDelta', n: 2, scope: 'allRemaining' },
           { kind: 'incomingDmgMult', mult: 1.12, scope: 'allRemaining' },
@@ -785,7 +784,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'flank',
         label: 'Fall in behind them',
-        description: '+2 guaranteed dodges next fight (no roll needed). Drifting in their cold wake saps the crew — enter that fight with 8% less HP.',
+        description: '+2 guaranteed dodges next fight (no roll needed). Drifting in their cold wake saps the crew. Enter that fight with 8% less HP.',
         effects: [
           { kind: 'guaranteedDodge', n: 2 },
           { kind: 'startHpPctDelta', pct: -0.08, scope: 'nextFight' },
@@ -802,7 +801,7 @@ export const TIDE_POOL: TideEvent[] = [
 ]
 
 // ──────────────────────────────────────────────────────────────────────
-// Pre-boss reprieve — a guaranteed catch-your-breath choice fired right before
+// Pre-boss reprieve. A guaranteed catch-your-breath choice fired right before
 // a hard finale (raids that set `preBossReprieve`). Reuses the TideEvent shape
 // so it renders through TideModal. The heal/+damage picks ride the normal tide
 // effect path; the 'reprieve_ability' pick has no TideEffect (empty effects) and
@@ -853,7 +852,7 @@ function shuffleTides(arr: TideEvent[]): TideEvent[] {
  *  milder tier-1 pool is the backbone. This kills the old feast-or-famine
  *  where a maxTier-2 raid could stack two run-swinging tier-2 tides. maxTier-1
  *  raids never see tier 2 at all. Returns fewer than `n` only if the pool runs
- *  dry (defensive — won't happen with 8 tier-1 events and 2 slots). */
+ *  dry (defensive. Won't happen with 8 tier-1 events and 2 slots). */
 export function drawTides(n: number, maxTier: number): TideEvent[] {
   const t1 = shuffleTides(TIDE_POOL.filter(t => t.tier === 1 && t.tier <= maxTier))
   const t2 = shuffleTides(TIDE_POOL.filter(t => t.tier >= 2 && t.tier <= maxTier))
