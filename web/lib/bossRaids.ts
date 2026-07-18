@@ -430,6 +430,10 @@ export interface BossRaidConfig {
     slots: number[]
     maxTier: 1 | 2 | 3 | 4
   }
+  /** When true, a guaranteed one-time "reprieve" choice fires right before the
+   *  boss fight (heal / +damage / refresh a crew ability) — a catch-your-breath
+   *  beat for a hard finale. Used by the Throne (Don Finleone). */
+  preBossReprieve?: boolean
   /** Baseline gunnery accuracy for EVERY enemy in this raid (see
    *  BroadsideEnemy.accuracy). Set once per raid, sized to the navigation a
    *  player has by the time they reach it, so dodge stays a strong read
@@ -1902,6 +1906,7 @@ export const THE_THRONE: BossRaidConfig = {
   sequence: ['court_herald', 'the_mirage', 'the_doorman', 'the_stormcaller', 'the_left_hand', 'the_consigliere'],
   bossId: 'don_finleone',
   tides: { slots: [2, 5], maxTier: 2 },
+  preBossReprieve: true,   // one breath before the Don: heal / +damage / refresh a crew ability
   loot: [
     { id: 'last_fathom_hull', label: 'Last Fathom Hull', image: null, emoji: '🚢', rarity: 'epic', weight: 8, shipSkinId: 'last_fathom_hull' },
     // The court's own bite, turned back: a CRIT strips an enemy cannonball (epic

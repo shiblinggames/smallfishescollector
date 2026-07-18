@@ -22,7 +22,7 @@ import RaidCombat from './RaidCombat'
 import RaidLootStage from './RaidLootStage'
 import BossDialogueModal from './BossDialogueModal'
 import TideModal from './TideModal'
-import { drawTides, expireAfterFight, type TideEvent, type TideEffect, type TideChoice } from '@/lib/tides'
+import { drawTides, expireAfterFight, PRE_BOSS_REPRIEVE, type TideEvent, type TideEffect, type TideChoice } from '@/lib/tides'
 import NavLevelUpOverlay, { NavLevelUpInfo } from '@/components/NavLevelUpOverlay'
 import RenownUpOverlay, { type RenownUpInfo } from '@/components/RenownUpOverlay'
 import { renownLevel } from '@/lib/renown'
@@ -577,6 +577,11 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   // the player already saw this run (defensive — we also clear it on
   // reset). Indices are kept relative to config.tides.slots.
   const tidesFiredRef = useRef<Set<number>>(new Set())
+  // Pre-boss reprieve (config.preBossReprieve) — a guaranteed one-time choice
+  // right before the boss fight. Same gate/ref pattern as tides.
+  const [pendingReprieve, setPendingReprieve] = useState(false)
+  const pendingReprieveAdvanceRef = useRef<(() => void) | null>(null)
+  const reprieveFiredRef = useRef(false)
   const [shotResult, setShotResult]     = useState<ShotResult>(null)
   const [dodgePrimed, setDodgePrimed]   = useState(false)
   const [dodgeCooldown, setDodgeCooldown] = useState(false)
@@ -779,6 +784,9 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     setPendingTide(null)
     pendingTideAdvanceRef.current = null
     tidesFiredRef.current = new Set()
+    setPendingReprieve(false)
+    pendingReprieveAdvanceRef.current = null
+    reprieveFiredRef.current = false
   }, [playerHPMax, resetEnemyForRound, config.tides])
 
   // Turn-based: no "OPEN FIRE" gate, so jump straight into combat on mount.
@@ -1343,17 +1351,34 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
         // <RaidCombat /> remounts it fresh with the next enemy.
       }
 
-      // Gate 3 (last): the boss's pre-fight dialogue.
+      // Gate 4 (last): the pre-boss reprieve — a guaranteed catch-your-breath
+      // choice right before the boss fight (heal / +damage / refresh an ability).
+      const reprieveGate = () => {
+        if (
+          config.preBossReprieve &&
+          !reprieveFiredRef.current &&
+          isBossRound(nextRound, config.sequence.length)
+        ) {
+          reprieveFiredRef.current = true
+          pendingReprieveAdvanceRef.current = commitRound
+          setPendingReprieve(true)
+          return
+        }
+        commitRound()
+      }
+
+      // Gate 3: the boss's pre-fight dialogue. Hands off to the reprieve, so the
+      // don speaks, THEN you take your breath, THEN the fight begins.
       const bossGate = () => {
         if (
           isBossRound(nextRound, config.sequence.length) &&
           config.preFightDialogue && config.preFightDialogue.length > 0
         ) {
-          pendingBossAdvanceRef.current = commitRound
+          pendingBossAdvanceRef.current = reprieveGate
           setBossDialoguePending(true)
           return
         }
-        commitRound()
+        reprieveGate()
       }
 
       // Gate 2: the Rest Stop, once per raid, after the last fight of the first half.
@@ -1763,6 +1788,44 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 setPendingTide(null)
                 const fn = pendingTideAdvanceRef.current
                 pendingTideAdvanceRef.current = null
+                fn?.()
+              }}
+            />
+          )}
+          {pendingReprieve && (
+            <TideModal
+              tide={PRE_BOSS_REPRIEVE}
+              onPicked={(choice: TideChoice) => {
+                // Heal / +damage picks ride the normal tide effect path.
+                let healDelta = 0
+                const persisted: TideEffect[] = []
+                for (const e of choice.effects) {
+                  if (e.kind === 'instantHealPct')      healDelta += Math.round(e.pct * playerHPMax)
+                  else if (e.kind === 'instantHeal')    healDelta += e.n
+                  else if (e.kind === 'fullHeal') { playerHPRef.current = playerHPMax; setPlayerHP(playerHPMax) }
+                  else                                  persisted.push(e)
+                }
+                if (healDelta !== 0) {
+                  const next = Math.min(playerHPMax, Math.max(0, playerHPRef.current + healDelta))
+                  playerHPRef.current = next
+                  setPlayerHP(next)
+                }
+                if (persisted.length > 0) setActiveTideEffects(prev => [...prev, ...persisted])
+                // 'Rally a hand' — clear ONE random spent crew ability so it's
+                // ready to fire again in the boss fight.
+                if (choice.id === 'reprieve_ability') {
+                  setUsedAbilityIds(prev => {
+                    const spent = crewMembers.filter(c => prev.has(c.id))
+                    if (spent.length === 0) return prev
+                    const pick = spent[Math.floor(Math.random() * spent.length)]
+                    const nextSet = new Set(prev)
+                    nextSet.delete(pick.id)
+                    return nextSet
+                  })
+                }
+                setPendingReprieve(false)
+                const fn = pendingReprieveAdvanceRef.current
+                pendingReprieveAdvanceRef.current = null
                 fn?.()
               }}
             />

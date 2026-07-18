@@ -802,6 +802,40 @@ export const TIDE_POOL: TideEvent[] = [
 ]
 
 // ──────────────────────────────────────────────────────────────────────
+// Pre-boss reprieve — a guaranteed catch-your-breath choice fired right before
+// a hard finale (raids that set `preBossReprieve`). Reuses the TideEvent shape
+// so it renders through TideModal. The heal/+damage picks ride the normal tide
+// effect path; the 'reprieve_ability' pick has no TideEffect (empty effects) and
+// is handled as a side-effect in RaidGame (refresh one spent crew ability).
+// ──────────────────────────────────────────────────────────────────────
+export const PRE_BOSS_REPRIEVE: TideEvent = {
+  id: 'pre_boss_reprieve',
+  tier: 1,
+  title: 'One Breath Before the Throne',
+  flavor: 'The court is drowned and the water goes still. Past the last lit flagship, the don is waiting. Take one breath — you will not get another.',
+  choices: [
+    {
+      id: 'reprieve_heal',
+      label: 'Patch the hull',
+      description: 'Heal 20% of your max HP before the fight.',
+      effects: [{ kind: 'instantHealPct', pct: 0.20 }],
+    },
+    {
+      id: 'reprieve_damage',
+      label: 'Sharpen the guns',
+      description: '+5% damage for the fight ahead.',
+      effects: [{ kind: 'damageMult', mult: 1.05 }],
+    },
+    {
+      id: 'reprieve_ability',
+      label: 'Rally a hand',
+      description: 'Refresh one spent crew ability, ready for the don.',
+      effects: [],
+    },
+  ],
+}
+
+// ──────────────────────────────────────────────────────────────────────
 // Draw helper
 // ──────────────────────────────────────────────────────────────────────
 
