@@ -2215,36 +2215,37 @@ export const RAID_MAP: RaidNode[] = [
   {
     // Ch4 finale lead-in +1: the gates part into the don's own water. His court
     // is arrayed; the crew reads the enemies (heavy legendary banter); his
-    // consigliere the Widowmaker glides out as his mouthpiece with the warning.
+    // consigliere the Closer glides out as his mouthpiece with the warning.
     // No back-to-back story — throne_gates (puzzle) precedes, the muster follows.
     id: 'the_drowned_court',   type: 'story',
     label: 'The Drowned Court',
-    flavor: "The gates open on the deepest water there is, and the don's court rides at anchor around one lit flagship — six killers arrayed like courtiers, and the biggest name in the sea sitting still at the center of them.",
-    bridge: "The court knows your name now. His consigliere has promised, in his voice, that you will not leave this water. Past her, the aisle to the throne stands open.",
+    flavor: "The gates open on the deepest water there is, and the don's court rides at anchor around one lit flagship — six apex killers arrayed like courtiers, the most dangerous crew in the sea, and the biggest name in it sitting still at the center of them.",
+    bridge: "The court knows your name now. His right hand has promised, in his voice, that you will not leave this water. Past him, the aisle to the throne stands open.",
     requiresNode: 'throne_gates',
     adminOnly: true,
-    image: '/raid8_thewidowmaker.png',
+    image: '/raid8_thecloser.png',
     sceneAccent: '#dc2626',
     scene: [
       { text: "The last gate swings on silence and you slip into the don's own black water. No horns. No warning shot. Just the pressure of the deep and one lit flagship far ahead, ringed by its court." },
       { text: "Six hulls ride at anchor around it, arrayed like courtiers around a throne. Each flies the shark colors. Each, on any other water, would have been the thing you came to sink." },
-      { ...GUIDE.mira, text: "Look at them. A Render. A Reaper. A Widowmaker, by the cut of that rail. Every one a bounty I would have crossed an ocean for on its own — and they are just the DOOR, captain." },
-      { ...GUIDE.mako, text: "Six big fish, and one enormous one at the back of the room. Do you have any idea how long I have wanted a table set like this?" },
+      { ...GUIDE.mira, text: "Look at them. A Render. A Reaper. The don's own Closer, by the scars on that one. Every single one a bounty I would have crossed an ocean for on its own — and they are only the DOOR, captain." },
+      { ...GUIDE.doby, text: "In a long life on this water I have never seen them gathered in one place. Every hull there is a shark whole fleets tell stories about to frighten one another quiet. The don did not hire this court, small fry. He collected it — the deadliest thing each dark corner of the sea ever spat out, all anchored in one room." },
+      { ...GUIDE.mako, text: "Six of the biggest killers in the sea, and one enormous one at the back of the room. Do you have any idea how long I have wanted a table set like this?" },
       { ...GUIDE.kat, text: "Mako. That is not a table. That is the thing that eats the table, and everyone still sitting at it." },
-      { ...GUIDE.dole, text: "The Widowmaker there has put down more captains than the other five combined. Which makes it curious that she is the one peeling off the line to greet us. A court does not send its deadliest to say hello." },
-      { text: "One hull glides out of the ring, unhurried, and stops across your bow — close enough to read the old scars crossing her plating like a ledger of everyone she has closed.", pause: 500 },
-      { speaker: 'The Widowmaker', portrait: THE_THRONE.enemies.the_consigliere.portrait, text: "The don sends his regards, little captain. He has read your whole story. The barnacle. The old hauler. The market. The thing in the estuary. A tidy little climb." },
-      { speaker: 'The Widowmaker', portrait: THE_THRONE.enemies.the_consigliere.portrait, text: "He wanted you to hear it from me, since I keep his accounts: you will not leave this water. The line for how you sink is already written, in his own hand. You are simply the last to read it.", pause: 500 },
+      { ...GUIDE.dole, text: "The Closer there has put down more captains than the other five combined, and every one of those five is an apex the whole trade gave up trying to touch. Which makes it curious that he is the one peeling off the line to greet us. A court does not send its deadliest just to say hello." },
+      { text: "One hull glides out of the ring, unhurried, and stops across your bow — close enough to read the old scars crossing his plating like a ledger of every captain he has closed.", pause: 500 },
+      { speaker: 'The Closer', portrait: THE_THRONE.enemies.the_consigliere.portrait, text: "The don sends his regards, little captain. He has read your whole story. The barnacle. The old hauler. The market. The thing in the estuary. A tidy little climb." },
+      { speaker: 'The Closer', portrait: THE_THRONE.enemies.the_consigliere.portrait, text: "He wanted you to hear it from me, since I keep his accounts: you will not leave this water. The line for how you sink is already written, in his own hand. You are simply the last to read it.", pause: 500 },
       { ...GUIDE.laz, text: "That is the same voice that read me my debt, a lifetime ago, in this exact water. Calm. Certain. Counting me closed before I had drawn a breath to argue." },
       { ...GUIDE.laz, text: "It was wrong about me. I am still here." },
       { ...GUIDE.doby, text: "Then let it be wrong twice, small fry. The court can talk all it likes. We came to answer." },
-      { text: "The Widowmaker holds a moment longer, as if offering you the chance to turn. You do not. She slides back into the ring, and the court parts — an aisle of guns opening straight to the throne.", pause: 600 },
+      { text: "The Closer holds a moment longer, as if offering you the chance to turn. You do not. He slides back into the ring, and the court parts — an aisle of guns opening straight to the throne.", pause: 600 },
     ],
     detail: {
       description:
-        "The don's court rides at anchor around his lit flagship: six shark-captains, each a killer you would have crossed an ocean to sink on its own. His consigliere, the Widowmaker, glides out to read you his terms — he has watched your whole climb, found it quaint, and already written the line for how you sink. Then the court parts, and the aisle to the throne opens.",
+        "The don's court rides at anchor around his lit flagship: six shark-captains, and not one a common hull. Every one is an apex killer the whole trade long ago gave up trying to touch — the deadliest crew in the sea, hand-picked by the don. His right hand, the Closer, glides out to read you his terms: he has watched your whole climb, found it quaint, and already written the line for how you sink. Then the court parts, and the aisle to the throne opens.",
       drops: [
-        { emoji: '🦈', label: "The Widowmaker's Terms", sublabel: "\"The line for how you sink is already written, in his own hand. You are simply the last to read it.\"", rarity: 'rare' },
+        { emoji: '🦈', label: "The Closer's Terms", sublabel: "\"The line for how you sink is already written, in his own hand. You are simply the last to read it.\"", rarity: 'rare' },
       ],
       dropsNote: 'The don\'s court, named and arrayed — and his mouthpiece\'s promise, in his voice, that you will not leave this water.',
       ctaLabel: 'Take the Aisle →',
@@ -2332,7 +2333,7 @@ export const RAID_MAP: RaidNode[] = [
     detail: {
       description:
         "The don's own court, and every hull in it fights with a new kind of dirty. Watch their cannonball pips: a FULL, glowing battery means an ULTIMATE is primed — burn their charges down, shield, or brace before it empties into you. And their specials strike your AIM BAR itself: false gold you must not lock, plated locks that take two taps, squalls that gust your needle mid-sweep. Don Finleone waits at the center — and what rises when his mask drops is nothing the family ever put on a ledger.",
-      enemies: ['The Ripper', 'The Render', 'The Gnash', 'The Gorge', 'The Reaper', 'The Widowmaker', 'Don Finleone'],
+      enemies: ['The Ripper', 'The Render', 'The Gnash', 'The Gorge', 'The Reaper', 'The Closer', 'Don Finleone'],
       drops: lootDrops(THE_THRONE.loot),
       clearReward: clearPayout(THE_THRONE),
       dropsNote: "One crate per clear, rolled once and scaled by your Fortune. The Don's Signet is the signature chase — the ring the whole Finndicate answered to. Two stronger Tide events between fights.",
@@ -2351,7 +2352,7 @@ export const RAID_MAP: RaidNode[] = [
     detail: {
       description:
         'The Throne again, meaner in every seat. Thicker barriers, heavier ultimates, the same aim-bar tricks with less patience between them — and the don rises twice as angry. The chase rewards roll richer.',
-      enemies: ['The Ripper', 'The Render', 'The Gnash', 'The Gorge', 'The Reaper', 'The Widowmaker', 'Don Finleone'],
+      enemies: ['The Ripper', 'The Render', 'The Gnash', 'The Gorge', 'The Reaper', 'The Closer', 'Don Finleone'],
       drops: lootDrops(THE_THRONE_CHALLENGE.loot),
       clearReward: clearPayout(THE_THRONE_CHALLENGE),
       dropsNote: 'Every kill pays more and the clear bonus is steeper than the normal run.',

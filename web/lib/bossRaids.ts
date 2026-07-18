@@ -1741,7 +1741,7 @@ export const THE_THRONE: BossRaidConfig = {
       id: 'the_mirage', name: 'The Render', hpBase: 380, minDmg: 24, maxDmg: 38,
       shipSpeed: 10, actionMs: 3400,
       magazineSize: 4, shieldPct: 0.18, chargeBiteChance: 0.35,
-      special: { name: 'False Court', aimAttack: 'decoys', aimPasses: 2, line: 'Lantern-rigs bloom down her rail — a court of false colors, and only one throne among them.' },
+      special: { name: 'False Court', aimAttack: 'decoys', aimPasses: 2, line: 'Lantern-rigs bloom down his rail — a court of false colors, and only one throne among them.' },
       pattern: ['reload', 'special', 'fire', 'reload', 'dodge', 'fire', 'special', 'reload'],
       critChance: 0.12,
       zoneSpeedMult: 2.5,
@@ -1767,7 +1767,7 @@ export const THE_THRONE: BossRaidConfig = {
       id: 'the_stormcaller', name: 'The Gorge', hpBase: 440, minDmg: 26, maxDmg: 40,
       shipSpeed: 9, actionMs: 3600,
       magazineSize: 4, shieldPct: 0.20, chargeBiteChance: 0.35,
-      special: { name: 'Kingmaker’s Gale', aimAttack: 'squall', aimPasses: 2, line: 'She whistles a wind out of dead water, and your gun-deck pitches with it.' },
+      special: { name: 'Kingmaker’s Gale', aimAttack: 'squall', aimPasses: 2, line: 'He whistles a wind out of dead water, and your gun-deck pitches with it.' },
       pattern: ['reload', 'special', 'fire', 'reload', 'fire', 'volley', 'dodge', 'reload'],
       critChance: 0.14,
       zoneSpeedMult: 2.6,
@@ -1791,7 +1791,7 @@ export const THE_THRONE: BossRaidConfig = {
     the_consigliere: {
       // The last counsel before the throne — marks you for the don (Feeble)
       // and carries the biggest mob ultimate in the raid.
-      id: 'the_consigliere', name: 'The Widowmaker', hpBase: 520, minDmg: 28, maxDmg: 44,
+      id: 'the_consigliere', name: 'The Closer', hpBase: 520, minDmg: 28, maxDmg: 44,
       shipSpeed: 7, actionMs: 4000,
       magazineSize: 4, shieldPct: 0.26, chargeBiteChance: 0.35,
       special: { name: 'Marked for the Don', status: 'feeble', magnitude: 0.22, turns: 2, target: 'player', line: 'He reads your name off a short list, and every gun in the court knows where to aim.' },
@@ -1800,7 +1800,7 @@ export const THE_THRONE: BossRaidConfig = {
       critChance: 0.12,
       zoneSpeedMult: 2.5,
       image: '/enemychapter4man-o-war.png',
-      portrait: '/raid8_thewidowmaker.png',
+      portrait: '/raid8_thecloser.png',
     },
     don_finleone: {
       // DON FINLEONE — the fake-final boss. Phase 1: the don at his table,
