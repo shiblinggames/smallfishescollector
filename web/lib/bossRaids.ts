@@ -1805,9 +1805,14 @@ export const THE_THRONE: BossRaidConfig = {
       // closed by The Sounding (blast or jam him out of the dive, or eat a
       // near-lethal breach). Kills reveal nothing — the margin does.
       // SIX-PHASE FINAL BOSS. The court steps aside and the don eats his way
-      // through your whole crew: every phase (the opener included) arms a check
-      // that ANY crew ability answers, so the gate is COUNT — six phases, six
-      // firings, a full six-berth crew. Miss one and the consequence snowballs.
+      // through your whole crew: every phase (the opener included) arms a check.
+      // Unlike the earlier raids, these do NOT take any ability — each phase wants
+      // a specific KIND of answer (defend / heal / disrupt / blast), themed to its
+      // telegraph, and the pairs vary so no single ability clears all six. It is a
+      // COUNT gate (six firings, a full six-berth crew) AND a MATCH gate (the right
+      // answer on the right phase). LEGENDARY abilities count for more than one kind
+      // (see RaidCombat noteCheckResponse), so a legendary crew flexes across phases
+      // a base-class roster has to plan around. Miss one and the consequence snowballs.
       id: 'don_finleone', name: 'Don Finleone', hpBase: 880, minDmg: 30, maxDmg: 50,
       shipSpeed: 9, actionMs: 4000,
       magazineSize: 4, shieldPct: 0.30, chargeBiteChance: 0.35, startCharges: 2,
@@ -1819,8 +1824,8 @@ export const THE_THRONE: BossRaidConfig = {
       openingCheck: {
         id: 'the_court', name: 'The Don’s Court', chargeTurns: 2,
         telegraph: 'The whole drowned court trains its guns on your hull at once, waiting on the don’s nod.',
-        hint: 'You do not answer a court alone. Call a crew ability — ANY of them — and let your people answer for you.',
-        responses: ['brace', 'shield', 'snare', 'heal', 'burst'],
+        hint: 'You cannot out-gun a whole court. Get a defense up — a brace or a shield — and let the opening volley break on it.',
+        responses: ['brace', 'shield'],
         counteredLine: 'Your crew answers first, and the court’s opening volley scatters wide.',
         failLine: 'Nobody stands with you, and the whole court fires as one.',
         consequence: { kind: 'damagePctMaxHp', value: 0.55 },
@@ -1832,8 +1837,8 @@ export const THE_THRONE: BossRaidConfig = {
           check: {
             id: 'the_maw', name: 'The Maw', chargeTurns: 2,
             telegraph: 'The don’s hull ROLLS — and keeps rolling — a jaw the size of your broadside opening under the waterline.',
-            hint: 'A bite that wide can’t be weaved. Call another of your crew — ANY ability answers, so long as someone acts.',
-            responses: ['brace', 'shield', 'snare', 'heal', 'burst'],
+            hint: 'A bite that wide can’t be weaved. Harden the hull with a brace, or blast the jaw apart with a big shot before it shuts.',
+            responses: ['brace', 'burst'],
             counteredLine: 'Your crew throws the maw off its line and it grinds iron instead of deck.',
             failLine: 'The maw closes on your hull and something structural gives. Every blow after this one finds the gap.',
             consequence: { kind: 'status', status: 'feeble', magnitude: 0.50, turns: 4, dmgPct: 0.35 },
@@ -1844,8 +1849,8 @@ export const THE_THRONE: BossRaidConfig = {
           check: {
             id: 'blood_water', name: 'Blood in the Water', chargeTurns: 2,
             telegraph: 'He rakes a long gash down your hull and circles wide — the sea reddening with every pass at the smell of it.',
-            hint: 'A wound this loud only draws him back. Put a crew ability on it — ANY one — before he follows the trail in.',
-            responses: ['brace', 'shield', 'snare', 'heal', 'burst'],
+            hint: 'The wound is what keeps drawing him. Close it with a heal, or snare him off the blood-trail before he circles back in.',
+            responses: ['heal', 'snare'],
             counteredLine: 'Your crew answers the wound and the blood-trail goes cold; he loses the scent.',
             failLine: 'He follows the blood straight in, tears the gash wider, and the wound feeds him.',
             consequence: { kind: 'enemyHealPctMaxHp', value: 0.30 },
@@ -1856,8 +1861,8 @@ export const THE_THRONE: BossRaidConfig = {
           check: {
             id: 'the_sounding', name: 'The Sounding', chargeTurns: 2,
             telegraph: 'The megalodon SOUNDS — the whole sea dips as he goes deep, gathering water for a breach that will land on your deck.',
-            hint: 'You can’t block a falling mountain. A crew ability has to break the dive itself — ANY of them, but someone has to act NOW.',
-            responses: ['brace', 'shield', 'snare', 'heal', 'burst'],
+            hint: 'You can’t block a falling mountain — you have to break the dive itself. Snare him out of it, or blast him up early with a big shot.',
+            responses: ['snare', 'burst'],
             counteredLine: 'The dive breaks — he breaches early, wide, and the wave takes the blow for you.',
             failLine: 'The sea goes still. Then it goes UP, and the breach leaves your ship reeling and slow to answer.',
             consequence: { kind: 'status', status: 'slowed', magnitude: 12, turns: 4, dmgPct: 0.40 },
@@ -1868,8 +1873,8 @@ export const THE_THRONE: BossRaidConfig = {
           check: {
             id: 'the_undertow', name: 'The Undertow', chargeTurns: 2,
             telegraph: 'He circles fast and low and the whole drowned court fires down the whirlpool at once, a wall of iron closing on your hull.',
-            hint: 'No single cover holds against a barrage this wide. Call another crew ability — ANY one — before the wall lands.',
-            responses: ['brace', 'shield', 'snare', 'heal', 'burst'],
+            hint: 'No brace holds against a wall this wide. Raise a shield to break it, or out-heal what gets through.',
+            responses: ['shield', 'heal'],
             counteredLine: 'The barrage breaks on your crew’s answer in a wall of spray.',
             failLine: 'The undertow drags your broadside off true, and the court’s iron rakes you while your guns swing wild.',
             consequence: { kind: 'status', status: 'weaken', magnitude: 0.45, turns: 4, dmgPct: 0.35 },
@@ -1880,8 +1885,8 @@ export const THE_THRONE: BossRaidConfig = {
           check: {
             id: 'the_last_bite', name: 'The Last Bite', chargeTurns: 2,
             telegraph: 'The megalodon rears his whole bulk from the water for one final lunge — and for one breath his throat hangs open above your deck.',
-            hint: 'A window this brief opens once. Your LAST crew ability, right now, straight down the gullet — any of them — or the lunge lands.',
-            responses: ['brace', 'shield', 'snare', 'heal', 'burst'],
+            hint: 'The throat hangs open for one breath. Fire everything down it with a big shot, or brace hard and ride out the lunge.',
+            responses: ['burst', 'brace'],
             counteredLine: 'Your crew fires straight down his throat and the last bite dies in the water.',
             failLine: 'The last bite comes down, and the deep finally closes over you.',
             consequence: { kind: 'damagePctMaxHp', value: 0.90 },

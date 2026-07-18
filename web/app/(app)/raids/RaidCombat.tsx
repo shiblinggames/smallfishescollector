@@ -2432,7 +2432,7 @@ export default function RaidCombat({
         setAbyssalShieldHp(prev => prev + shield)
         abyssalShieldRef.current += shield
         if (at.cleanseDebuff) { setCleanseDebuffPending(true); cleansePlayerStatuses() }
-        noteCheckResponse('heal'); noteCheckResponse('shield'); dousePlayerBurnFromHeal()   // a shield+heal ability answers both
+        noteCheckResponse('heal'); noteCheckResponse('shield'); noteCheckResponse('brace'); dousePlayerBurnFromHeal()   // legendary breadth: the abyss answers heal, shield AND brace checks
         setPHitsplat({ key: ak + 1, text: `+${heal}`, color: chaseColor ?? '#5eead4', big: true })
         setTimeout(() => setPHitsplat(null), 900)
         setResolveLog(prev => [...prev, `${crew.name} calls the abyss: +${heal} HP, ${shield} HP shield.`])
@@ -2457,7 +2457,7 @@ export default function RaidCombat({
         else if (!bigGame && (lv.mobPenaltyPct ?? 0) > 0) dmg = Math.floor(dmg * (1 - lv.mobPenaltyPct!))
         // ...and then everything the build actually is.
         dmg = Math.max(1, Math.floor(dmg * abilityDamageMult(bigGame)))
-        noteCheckResponse('burst')
+        noteCheckResponse('burst'); noteCheckResponse('snare')   // legendary breadth: a blow this heavy also staggers him out of an action (disrupt check)
         // Big-knock FX: a heavy muzzle flash, a beat as the shell crosses, then
         // a massive hull impact + full screen heave landing WITH the damage.
         const lk = Date.now()
@@ -2506,7 +2506,7 @@ export default function RaidCombat({
         }
         const total = shotDmgs.reduce((a, b) => a + b, 0)
         const isCrit = !!bz.autoCrit
-        noteCheckResponse('burst')
+        noteCheckResponse('burst'); noteCheckResponse('snare')   // legendary breadth: the barrage pins him down (disrupt check) as well as a burst
         // Find the shot that lands the kill (running total vs current HP) so the
         // chain STOPS there and that shot runs the outro. Nothing else damages
         // the enemy mid-burst (turn resolution), so this is stable.
@@ -2561,6 +2561,9 @@ export default function RaidCombat({
           setLastPlayerAction(null)
           refreshed = true
         }
+        // Legendary breadth (Don Finleone checks): reading the blow means you are
+        // ready for it — foresight answers both a "defend" and a "disrupt" check.
+        noteCheckResponse('brace'); noteCheckResponse('snare')
         const nice = (a: EnemyAction) => a === 'fire' ? 'Fire' : a === 'volley' ? 'Volley' : a === 'reload' ? 'Reload' : a === 'mega' ? 'Mega' : a === 'repair' ? 'Repair' : a === 'special' ? (enemy.special?.name ?? 'Special') : a === 'ultimate' ? (enemy.ultimate?.name ?? 'Ultimate') : 'Dodge'
         setResolveLog(prev => [...prev, `${crew.name} reads the tide — the enemy will ${moves.map(nice).join(', then ')}.${refreshed ? ' Your dodge is ready again.' : ''}`])
         break
@@ -2576,7 +2579,7 @@ export default function RaidCombat({
         vengeanceHealPctRef.current = vg.healPctMaxHp
         vengeanceBuffPctRef.current = vg.dmgBuffPct
         vengeanceCleanseRef.current = !!vg.cleanseDebuff
-        noteCheckResponse('brace')   // a ward is a defensive answer to a mechanic check
+        noteCheckResponse('brace'); noteCheckResponse('shield')   // legendary breadth: a ward that cheats a killing blow answers both brace AND shield checks
         setResolveLog(prev => [...prev, `${crew.name} girds your ship with a vengeance ward. Fall within ${VENGEANCE_WARD_TURNS} turns and it strikes back.`])
         break
       }
@@ -2588,7 +2591,7 @@ export default function RaidCombat({
         // already fold in enemy dmgTakenMult). Lv100 also arms the shield pierce.
         applyEnemyStatus('marked', rq.markMag, rq.markTurns)
         if (rq.pierceShield) markPierceTurnsRef.current = rq.markTurns
-        noteCheckResponse('snare')   // a debuff cast on the enemy answers a "punish the enemy" check
+        noteCheckResponse('snare'); noteCheckResponse('burst')   // legendary breadth: marking him for the kill answers a disrupt AND a "hit hard" check
         setEHitsplat({ key: ak + 1, text: 'MARKED', color: chaseColor ?? '#f43f5e', big: true })
         setTimeout(() => setEHitsplat(null), 900)
         const dur = `${rq.markTurns} turn${rq.markTurns === 1 ? '' : 's'}`
