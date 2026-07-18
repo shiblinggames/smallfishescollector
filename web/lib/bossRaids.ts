@@ -1808,7 +1808,9 @@ export const THE_THRONE: BossRaidConfig = {
       // through your whole crew: every phase (the opener included) arms a check.
       // Unlike the earlier raids, these do NOT take any ability — each phase wants
       // a specific KIND of answer (defend / heal / disrupt / blast), themed to its
-      // telegraph, and the pairs vary so no single ability clears all six. It is a
+      // telegraph, and the answer sets vary so no single ability clears all six.
+      // The two near-lethal checks (the opener and the Last Bite) take a third,
+      // forgiving option so a thin crew can't get one-shot on a forced miss. It is a
       // COUNT gate (six firings, a full six-berth crew) AND a MATCH gate (the right
       // answer on the right phase). LEGENDARY abilities count for more than one kind
       // (see RaidCombat noteCheckResponse), so a legendary crew flexes across phases
@@ -1824,8 +1826,8 @@ export const THE_THRONE: BossRaidConfig = {
       openingCheck: {
         id: 'the_court', name: 'The Don’s Court', chargeTurns: 2,
         telegraph: 'The whole drowned court trains its guns on your hull at once, waiting on the don’s nod.',
-        hint: 'You cannot out-gun a whole court. Get a defense up — a brace or a shield — and let the opening volley break on it.',
-        responses: ['brace', 'shield'],
+        hint: 'You cannot out-gun a whole court. Weather the opening volley — a brace, a shield, or a big heal will all ride it out.',
+        responses: ['brace', 'shield', 'heal'],
         counteredLine: 'Your crew answers first, and the court’s opening volley scatters wide.',
         failLine: 'Nobody stands with you, and the whole court fires as one.',
         consequence: { kind: 'damagePctMaxHp', value: 0.55 },
@@ -1885,8 +1887,8 @@ export const THE_THRONE: BossRaidConfig = {
           check: {
             id: 'the_last_bite', name: 'The Last Bite', chargeTurns: 2,
             telegraph: 'The megalodon rears his whole bulk from the water for one final lunge — and for one breath his throat hangs open above your deck.',
-            hint: 'The throat hangs open for one breath. Fire everything down it with a big shot, or brace hard and ride out the lunge.',
-            responses: ['burst', 'brace'],
+            hint: 'The throat hangs open for one breath. Fire everything down it with a big shot, or throw up a brace or shield and ride out the lunge.',
+            responses: ['burst', 'brace', 'shield'],
             counteredLine: 'Your crew fires straight down his throat and the last bite dies in the water.',
             failLine: 'The last bite comes down, and the deep finally closes over you.',
             consequence: { kind: 'damagePctMaxHp', value: 0.90 },
