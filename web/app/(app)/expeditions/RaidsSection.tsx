@@ -1541,6 +1541,69 @@ function NodeDetailSheet({
           )
         })()}
 
+        {/* The Expanded Armory: the raid-item mount refit. Same shape as the
+            berth — shown once the shipwright's been heard (cleared), stays
+            buyable until owned, and routes the actual purchase to Manage Ship
+            (buyArmoryExpansion re-checks the Throne clear + the price there). */}
+        {node.armory && cleared && (() => {
+          const price = node.armory.price
+          const ARMORY = '#a78bfa'
+          return (
+            <div style={{ marginTop: '1.1rem' }}>
+              <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#7a7875', marginBottom: '0.55rem' }}>
+                The Refit
+              </p>
+              <div style={{ borderRadius: 12, padding: '0.85rem', background: `${ARMORY}0e`, border: `1px solid ${ARMORY}${hasArmoryExpansion ? '66' : '3a'}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: 10 }}>
+                  {/* five mounts, the last one lit as the new one */}
+                  <div aria-hidden style={{ flexShrink: 0, display: 'grid', gridTemplateColumns: 'repeat(5, 8px)', gap: 4, padding: 8, borderRadius: 10, background: 'rgba(0,0,0,0.25)', border: `1px solid ${ARMORY}33` }}>
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <span key={i} style={{
+                        width: 8, height: 8, borderRadius: 2,
+                        background: i < 4 ? '#cfc9bf' : (hasArmoryExpansion ? ARMORY : 'rgba(255,255,255,0.12)'),
+                        boxShadow: i === 4 && hasArmoryExpansion ? `0 0 7px ${ARMORY}` : 'none',
+                        border: i === 4 && !hasArmoryExpansion ? `1px dashed ${ARMORY}88` : 'none',
+                      }} />
+                    ))}
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <p className="font-karla font-700" style={{ fontSize: '0.86rem', color: '#f0ede8' }}>
+                      <span style={{ color: '#9a948c' }}>4 mounts</span> → <span style={{ color: ARMORY }}>5 mounts</span>
+                    </p>
+                    <p className="font-karla" style={{ fontSize: '0.68rem', color: 'rgba(240,237,232,0.6)', lineHeight: 1.4, marginTop: 2 }}>
+                      One more raid item bolted to your deck, working every fight.
+                    </p>
+                  </div>
+                </div>
+                {hasArmoryExpansion ? (
+                  <div className="font-karla font-700 uppercase tracking-[0.08em]" style={{ padding: '0.6rem', borderRadius: 9, textAlign: 'center', fontSize: '0.66rem', background: `${ARMORY}1e`, border: `1px solid ${ARMORY}66`, color: ARMORY }}>
+                    Installed ✓ · an extra mount
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      onClose()
+                      window.dispatchEvent(new CustomEvent('expedition:open-loadout', { detail: { tab: 'ship' } }))
+                    }}
+                    className="font-cinzel font-700 uppercase tracking-[0.06em]"
+                    style={{
+                      width: '100%', padding: '0.65rem', borderRadius: 9, fontSize: '0.82rem',
+                      background: `${ARMORY}26`, border: `1px solid ${ARMORY}66`, color: ARMORY, cursor: 'pointer',
+                    }}
+                  >
+                    Open Manage Ship →
+                  </button>
+                )}
+                <p className="font-karla" style={{ fontSize: '0.66rem', color: 'rgba(240,237,232,0.55)', lineHeight: 1.45, marginTop: 8 }}>
+                  {hasArmoryExpansion
+                    ? 'Fit the extra raid item from Manage Ship.'
+                    : `The don's shipwright will cut it for ${price.toLocaleString()} ⟡. Buy it in Manage Ship.`}
+                </p>
+              </div>
+            </div>
+          )
+        })()}
+
         {/* Event nodes: branching one-time decision. Renders one card
             per choice with its outcome chip ("+1,200 ⟡" / "+750 Nav
             XP" / "No spoils"); after the player picks, that card
