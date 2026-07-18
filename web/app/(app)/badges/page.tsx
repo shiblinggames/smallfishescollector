@@ -12,6 +12,7 @@ import { CREW_HALL_MAX_TIER } from '@/lib/crewHall'
 import { GAUNTLET_UPGRADES } from '@/lib/gauntletUpgrades'
 import { FORGE_RECIPES, isForgedRaidItem } from '@/lib/raidItems'
 import { LEGENDARY_SLUGS_ALL, BASE_LEGENDARY_SLUGS, CONFLUENCE_COUNT, CHASE_SKIN_IDS, LEGENDARY_SKIN_SETS, CHALLENGE_RAID_IDS_ALL } from '@/lib/badgeConditions'
+import { BUYABLE_ROD_TIERS } from '@/lib/rods'
 
 const ZONES = ['shallows', 'open_waters', 'deep', 'abyss'] as const
 const CHALLENGE_RAID_IDS = ['corsairs_reckoning_challenge', 'captain_krust_challenge', 'cartographer_challenge', 'tollmasters_cut_challenge']
@@ -26,7 +27,7 @@ export default async function BadgesPage() {
   // Profile via the request-scoped cached loader (lib/userData.ts).
   // reconcileBadges runs first-class so any newly-met condition is granted on
   // visit (and its return is the authoritative unlocked list).
-  const [profile, collectionRes, speciesRes, voyageCountRes, unlocked, raidComplRes, crewRes] = await Promise.all([
+  const [profile, collectionRes, speciesRes, voyageCountRes, unlocked, raidComplRes, crewRes, rodRes] = await Promise.all([
     getCurrentProfile(),
     admin.from('fish_collection').select('fish_id').eq('user_id', user.id),
     admin.from('fish_species').select('id, habitat'),
@@ -34,6 +35,7 @@ export default async function BadgesPage() {
     reconcileBadges(),
     admin.from('raid_completions').select('raid_id, elapsed_ms').eq('user_id', user.id),
     admin.from('user_crew').select('xp, died_at, cards(slug)').eq('user_id', user.id),
+    admin.from('rod_inventory').select('rod_tier').eq('user_id', user.id),
   ])
 
   // ── Derive everything from existing data — no new columns ────────────────
@@ -73,6 +75,8 @@ export default async function BadgesPage() {
   const trawlsCollected = Number(profile?.trawls_collected ?? 0)
   const hasSixthBerth = profile?.has_sixth_berth === true
   const hasArmoryExpansion = profile?.has_armory_expansion === true
+  const ownedRodTiers = new Set(((rodRes.data ?? []) as { rod_tier: number }[]).map(r => r.rod_tier))
+  const buyableRodsOwned = BUYABLE_ROD_TIERS.filter(t => ownedRodTiers.has(t)).length
 
   // ── 2026-07 expansion: Gauntlet counters + endgame state ─────────────────
   const gauntletRuns = Number(profile?.gauntlet_runs_completed ?? 0)
@@ -163,6 +167,7 @@ export default async function BadgesPage() {
         badgeGoal('sure_shot', 'Sure Shot', 'Land 250 perfect catches all-time', totalPerfects, 250, '/fishing'),
         badgeGoal('dead_eye', 'Dead-Eye', 'Land 1,000 perfect catches all-time', totalPerfects, 1000, '/fishing'),
         badgeGoal('master_angler', 'Master Angler', 'Reach Fishing Level 100', fishLevel, 100, '/fishing'),
+        badgeGoal('full_tackle_box', 'Full Tackle Box', 'Own every rod money can buy', buyableRodsOwned, BUYABLE_ROD_TIERS.length, '/marketplace/tackle-shop'),
         badgeGoal('zone_legend', 'Zone Legend', 'Reach Prestige in all 4 zones', prestigedZones, 4, '/fishing'),
         badgeGoal('prestige_stars', 'Prestige Stars', 'Earn all 20 prestige stars (5 per zone)', totalStars, 20, '/fishing'),
         badgeGoal('completionist_rod', 'The Completionist', 'Claim the Completionist Rod', has('completionist_rod') ? 1 : 0, 1, '/marketplace/tackle-shop', { binary: true }),

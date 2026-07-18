@@ -17,6 +17,7 @@ import { CREW_HALL_MAX_TIER } from './crewHall'
 import { GAUNTLET_UPGRADES } from './gauntletUpgrades'
 import { FORGE_RECIPES, isForgedRaidItem } from './raidItems'
 import { CREW_SKINS } from './crewSkins'
+import { BUYABLE_ROD_TIERS } from './rods'
 
 // Chase-skin ids (the animated legendary skins) — for "The Chase".
 export const CHASE_SKIN_IDS = new Set(CREW_SKINS.filter(s => s.chase).map(s => s.id))
@@ -112,6 +113,7 @@ export interface BadgeJoinData {
   crew: { xp: number | null; died_at: string | null; slug: string | null }[]
   voyageCount: number       // revealed daily_voyages
   collectionCount: number   // fish_collection rows
+  rodTiers: number[]        // rod_inventory rod_tier values (owned rods)
 }
 
 /** Map of badge id → whether its derivable condition is met. */
@@ -148,6 +150,7 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
   const ownedSkins = new Set(p.owned_crew_skins ?? [])
   const equippedSkinCount = Object.keys(p.equipped_crew_skins ?? {}).length
   const ancientsCaught = ((p.ancient_catches as number[] | null) ?? []).length
+  const ownedRodTiers = new Set(j.rodTiers)
 
   return {
     master_angler:  fishLevelFromXP(Number(p.fishing_xp ?? 0)) >= 100,
@@ -273,6 +276,8 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
     the_sunken_hand: CHALLENGE_RAID_IDS_ALL.every(id => raidIds.has(id)),
     six_aboard:      p.has_sixth_berth === true,
     expanded_armory: p.has_armory_expansion === true,
+    // Own every purchasable rod (Bamboo starter + earned-only Completionist excluded).
+    full_tackle_box: BUYABLE_ROD_TIERS.every(t => ownedRodTiers.has(t)),
   }
 }
 

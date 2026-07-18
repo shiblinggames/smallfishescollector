@@ -223,6 +223,7 @@ export const BADGES: Badge[] = [
   { id: 'the_sunken_hand', name: 'The Sunken Hand',    description: 'Clear all 8 raids in challenge mode',             imageUrl: '/badges/the_sunken_hand.png', difficulty: 'master'   },
   { id: 'six_aboard',      name: 'Six Aboard',         description: 'Add the Sixth Berth to your ship',                imageUrl: '/badges/six_aboard.png',      difficulty: 'seasoned' },
   { id: 'expanded_armory', name: 'Expanded Armory',    description: 'Bolt the Expanded Armory onto your deck',         imageUrl: '/badges/expanded_armory.png', difficulty: 'seasoned' },
+  { id: 'full_tackle_box', name: 'Full Tackle Box',    description: 'Own every rod money can buy',                     imageUrl: '/badges/full_tackle_box.png', difficulty: 'master'   },
 ]
 
 export const BADGE_MAP: Record<string, Badge> = Object.fromEntries(
@@ -372,6 +373,7 @@ export const BADGE_DETAIL: Record<string, string> = {
   the_sunken_hand:  'Clear every raid, one through eight, in challenge mode. The whole Sunken Hand pulled apart finger by finger — the complete hard-mode campaign.',
   six_aboard:       'Buy the Sixth Berth and sail with a crew of six. One more hand, and one more ability, on every raid and voyage from here on.',
   expanded_armory:  'Buy the Expanded Armory from the don’s shipwright and bolt one more raid-item mount to your deck. One more piece of gear working every fight.',
+  full_tackle_box:  'Own every purchasable rod in the tackle shop, from the Driftwood Staff to the Lightsaber. The Completionist Rod is earned, not bought, so it does not count. A serious pile of doubloons spent across the whole catalogue.',
 }
 
 /** Detail blurb for a badge id (falls back to its short description). */

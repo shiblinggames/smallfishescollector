@@ -29,12 +29,13 @@ export interface AchievementPointsBoard {
 }
 
 export async function getAchievementPointsBoard(admin: Admin, userId: string): Promise<AchievementPointsBoard> {
-  const [{ data: profiles }, { data: raidRows }, { data: crewRows }, { data: voyageRows }, { data: collectionRows }] = await Promise.all([
+  const [{ data: profiles }, { data: raidRows }, { data: crewRows }, { data: voyageRows }, { data: collectionRows }, { data: rodRows }] = await Promise.all([
     admin.from('profiles').select(`id, username, unlocked_badges, ${BADGE_PROFILE_COLUMNS}`).eq('is_admin', false),
     admin.from('raid_completions').select('user_id, raid_id, elapsed_ms'),
     admin.from('user_crew').select('user_id, xp, died_at, cards(slug)'),
     admin.from('daily_voyages').select('user_id').eq('status', 'revealed'),
     admin.from('fish_collection').select('user_id'),
+    admin.from('rod_inventory').select('user_id, rod_tier'),
   ])
 
   // Bucket the joined rows by user so each player's conditions compute in memory.
@@ -55,6 +56,12 @@ export async function getAchievementPointsBoard(admin: Admin, userId: string): P
   for (const v of (voyageRows ?? []) as Array<{ user_id: string }>) voyageBy.set(v.user_id, (voyageBy.get(v.user_id) ?? 0) + 1)
   const collectionBy = new Map<string, number>()
   for (const f of (collectionRows ?? []) as Array<{ user_id: string }>) collectionBy.set(f.user_id, (collectionBy.get(f.user_id) ?? 0) + 1)
+  const rodsBy = new Map<string, number[]>()
+  for (const r of (rodRows ?? []) as Array<{ user_id: string; rod_tier: number }>) {
+    const arr = rodsBy.get(r.user_id) ?? []
+    arr.push(r.rod_tier)
+    rodsBy.set(r.user_id, arr)
+  }
 
   const rows: AchievementPointsRow[] = []
   for (const p of (profiles ?? []) as Array<BadgeProfileFields & { id: string; username: string | null; unlocked_badges: string[] | null }>) {
@@ -63,6 +70,7 @@ export async function getAchievementPointsBoard(admin: Admin, userId: string): P
       crew: crewBy.get(p.id) ?? [],
       voyageCount: voyageBy.get(p.id) ?? 0,
       collectionCount: collectionBy.get(p.id) ?? 0,
+      rodTiers: rodsBy.get(p.id) ?? [],
     })
     const all = new Set<string>([...(p.unlocked_badges ?? []), ...derived])
     let score = 0

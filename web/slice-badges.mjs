@@ -162,6 +162,7 @@ const PLAN = [
   [22, 0, 2, 'the_sunken_hand'],
   [22, 1, 0, 'six_aboard'],
   [22, 1, 1, 'expanded_armory'],
+  [22, 1, 2, 'full_tackle_box'],
 ]
 
 let skipped = 0

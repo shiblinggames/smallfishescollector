@@ -210,6 +210,11 @@ export function getRod(tier: number): RodDef {
   return RODS.find(r => r.tier === tier) ?? RODS[0]
 }
 
+/** Tiers of every rod that can be BOUGHT — excludes the free Bamboo starter
+ *  (cost 0) and the earned-only Completionist. Drives the "own every rod"
+ *  badge; auto-grows as new purchasable rods ship. */
+export const BUYABLE_ROD_TIERS: number[] = RODS.filter(r => !r.earnedOnly && r.cost > 0).map(r => r.tier)
+
 // ── Completionist Rod forge ───────────────────────────────────────────────────
 // The Completionist (the 100%-completion reward) is a plain master-tool base;
 // the player sockets up to 3 of their OWNED rods' unique effects into it,
