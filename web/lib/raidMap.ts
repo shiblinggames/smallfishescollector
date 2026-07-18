@@ -45,7 +45,7 @@ export function musterSceneLines(nodeId: string, report: MusterReport): SceneLin
   // the final door before the Don, where the whole point is a FULL crew.
   if (isLast) {
     lines.push({ text: 'The Gnash holds the aisle, the last door before the throne, and he will not shift it for a half-manned deck. Dole runs the manifest one final time, and this time nobody jokes.' })
-    lines.push({ ...GUIDE.dole, text: 'Understand what we are counting for, captain. The don is not one fight. He is his whole court, and then he is six of himself, each worse than the last. There is no carrying this on three good hands. Every berth has to answer.' })
+    lines.push({ ...GUIDE.dole, text: 'Understand what we are counting for, captain. The don is not a thing you beat with one big gun and a lucky lock. He is the oldest, largest killer in this sea, with his whole court at his back. There is no carrying this on three good hands. Every berth has to pull.' })
     lines.push({ ...GUIDE.laz, text: 'I have watched crews go into water like this a hand short. Not one of them came back up. Fill every seat, or do not go in at all.' })
   } else {
     lines.push({ text: "Sal Brackwater's clerk comes alongside with a wet ledger and counts your crew like livestock. He is not looking for guns. Dole leans over his shoulder and reads it back, ticking each hand as he goes." })
@@ -60,7 +60,7 @@ export function musterSceneLines(nodeId: string, report: MusterReport): SceneLin
             ? `Hands at the rail. ${row.met.join(', ')}. A full bench, every berth crewed. It is the one thing the don does not expect, and the only thing that beats him.`
             : `Hands at the rail. ${row.met.join(', ')}. That is a crew. Tick.` }
         : { ...GUIDE.dole, text: isLast
-            ? `The bench is thin, captain. Only ${row.met.length} standing. Against the don, an empty berth is a whole phase of him with no one to answer it.`
+            ? `The bench is thin, captain. Only ${row.met.length} standing. Against the don, an empty berth is a hole in your line, and he does not miss holes.`
             : `The rail is thin, captain. Only ${row.met.length} standing, and the throne wants more hands than that.` })
     } else if (i === 1) {
       // Seasoning.
@@ -73,14 +73,14 @@ export function musterSceneLines(nodeId: string, report: MusterReport): SceneLin
       lines.push(row.ok
         ? { ...GUIDE.dole, text: `${ask}? ${row.met.join(', ')}. Aye. Tick.` }
         : { ...GUIDE.dole, text: isLast
-            ? `${ask}? ...No one on this deck. That is a phase of the don with no answer, captain. He will find it, and he will end you on it.`
+            ? `${ask}? ...No one on this deck. That is one thing the don can do that nobody aboard can answer, captain. He will find it, and he will end you on it.`
             : `${ask}? ...No one on this deck. A hole in the line Sal will roll straight through.` })
     }
   })
 
   if (report.passed) {
     if (isLast) {
-      lines.push({ ...GUIDE.dole, text: 'Every berth crewed, every phase covered. THIS is the crew that takes a don, captain. Not one big gun and a prayer. A full, complete deck, each hand answering a piece of him.' })
+      lines.push({ ...GUIDE.dole, text: 'Every berth crewed, every gap closed. THIS is the crew that takes a don, captain. Not one big gun and a prayer. A full, complete deck, every hand pulling its weight.' })
       lines.push({ ...GUIDE.mira, text: 'Six of us against the biggest mark in the sea. I like those odds better than I have any right to. Open the door.' })
     } else {
       lines.push({ ...GUIDE.dole, text: 'Every line answered. A full, ugly, dangerous crew, and every hand can DO something when the guns start. The clerk has no cause to send us home.' })
@@ -88,7 +88,7 @@ export function musterSceneLines(nodeId: string, report: MusterReport): SceneLin
     }
   } else {
     if (isLast) {
-      lines.push({ ...GUIDE.dole, text: 'The bench is short a hand, captain, and against the don a missing hand is a missing phase. The Gnash will not open the door, and I would not walk you through it if he did.' })
+      lines.push({ ...GUIDE.dole, text: 'The bench is short a hand, captain, and against the don a missing hand is a hole he will find. The Gnash will not open the door, and I would not walk you through it if he did.' })
       lines.push({ ...GUIDE.kat, text: 'This is the one fight in the whole sea you do not enter a hand short. Fill the berth from Manage Crew, then come back and we read it again.' })
     } else {
       lines.push({ ...GUIDE.dole, text: 'The manifest is short a hand. The clerk will not pass a half-answered deck.' })
