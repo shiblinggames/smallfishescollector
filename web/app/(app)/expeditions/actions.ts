@@ -7,7 +7,7 @@ import { applyVariantBoosts, raidItemSlotsForTier } from '@/lib/expeditions'
 import { getForgeRecipe, dedupeRaidItems } from '@/lib/raidItems'
 import { classSlotBonuses } from '@/lib/shipClasses'
 import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
-import { SIXTH_BERTH_COST } from '@/lib/shipBerth'
+import { SIXTH_BERTH_COST, ARMORY_EXPANSION_COST } from '@/lib/shipBerth'
 import { getShipAugment, AUGMENT_COST, RETOOL_COST, SCHEMATICS_COST, ULTIMATE_BUILD_MS, canBuildUltimate, parseAugmentBuild, isBuildComplete, type ShipAugmentBuild } from '@/lib/shipAugments'
 import { getShipSkin, canEquipShipSkin } from '@/lib/shipSkins'
 import { settleUltimateBuild } from '@/lib/ultimateBuild'
@@ -482,6 +482,44 @@ export async function buySixthBerth(): Promise<{ ok: boolean; error?: string; do
 
   await admin.from('doubloon_transactions').insert({
     user_id: user.id, amount: -SIXTH_BERTH_COST, reason: 'The Sixth Berth (Man-o-War crew slot)',
+  })
+  return { ok: true, doubloons: newDoubloons }
+}
+
+/** Buy the Expanded Armory — a permanent extra raid-item mount from Don
+ *  Finleone's shipwright. Gated on clearing Raid 8 (the Throne); a heavy
+ *  doubloon sink, once. One more piece of gear working every fight. */
+export async function buyArmoryExpansion(): Promise<{ ok: boolean; error?: string; doubloons?: number }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: 'Not signed in.' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles')
+    .select('doubloons, has_armory_expansion').eq('id', user.id).single()
+  if (!profile) return { ok: false, error: 'No profile.' }
+  if (profile.has_armory_expansion === true) return { ok: false, error: 'Your deck already carries the extra mount.' }
+
+  // Gate: the refit reveals only once Don Finleone (Raid 8) is beaten.
+  const { data: cleared } = await admin.from('raid_completions')
+    .select('id').eq('user_id', user.id).eq('raid_id', 'the_throne').limit(1).maybeSingle()
+  if (!cleared) return { ok: false, error: 'Take the throne before the shipwright will cut you a new mount.' }
+
+  const doubloons = (profile.doubloons as number | null) ?? 0
+  if (doubloons < ARMORY_EXPANSION_COST) return { ok: false, error: `You need ${ARMORY_EXPANSION_COST.toLocaleString()} doubloons.` }
+
+  const newDoubloons = doubloons - ARMORY_EXPANSION_COST
+  // Conditional write (still false) guards a double-tap.
+  const { data: updated } = await admin.from('profiles')
+    .update({ has_armory_expansion: true, doubloons: newDoubloons })
+    .eq('id', user.id)
+    .eq('has_armory_expansion', false)
+    .select('has_armory_expansion')
+    .maybeSingle()
+  if (!updated) return { ok: false, error: 'Your deck already carries the extra mount.' }
+
+  await admin.from('doubloon_transactions').insert({
+    user_id: user.id, amount: -ARMORY_EXPANSION_COST, reason: 'The Expanded Armory (extra raid-item mount)',
   })
   return { ok: true, doubloons: newDoubloons }
 }

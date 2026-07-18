@@ -654,6 +654,7 @@ function NodeDetailSheet({
   allNodeChoices,
   clearedNodeIds,
   hasSixthBerth,
+  hasArmoryExpansion,
   musterParty,
   onClose,
 }: {
@@ -677,6 +678,8 @@ function NodeDetailSheet({
   allNodeChoices: Record<string, string>
   /** Owns the Sixth Berth already (the refit node shows "cut" instead of a buy). */
   hasSixthBerth: boolean
+  /** Owns the Expanded Armory already (the armory refit node reflects it). */
+  hasArmoryExpansion: boolean
   /** The RAID crew, as the don's clerk sees them. Drives the muster checklist. */
   musterParty: MusterCrew[]
   onClose: () => void
@@ -1012,7 +1015,7 @@ function NodeDetailSheet({
     // The refit offer lives in the body (and stays buyable on every revisit);
     // the CTA only handles the one-time "read" that clears the node.
     if (cleared) {
-      cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: `${accent}1a`, border: `1px solid ${accent}40`, color: accent }}>{hasSixthBerth ? 'Berth Cut ✓' : 'Terms Heard ✓'}</div>
+      cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: `${accent}1a`, border: `1px solid ${accent}40`, color: accent }}>{node.armory ? (hasArmoryExpansion ? 'Mount Bolted ✓' : 'Terms Heard ✓') : (hasSixthBerth ? 'Berth Cut ✓' : 'Terms Heard ✓')}</div>
     } else if (locked) {
       cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: 'rgba(255,255,255,0.06)', color: '#5a5856' }}>Locked</div>
     } else {
@@ -2741,7 +2744,7 @@ function RepairBlockedModal({
 
 /* ─────────────────────── Collapsible section ─────────────────── */
 
-export default function RaidsSection({ views, doubloons, navLevel, playerShipImage, raidRecords, repairOwed, ownedRaidItems, equippedRaidItems, shipClasses, seenChapterUnlocks, seenUltimateUnlock, raidNodeChoices, topRaidProgress, hasSixthBerth = false, musterParty = [] }: { views: RaidNodeView[]; doubloons: number; navLevel: number; playerShipImage?: string; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[]; equippedRaidItems: string[]; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; seenUltimateUnlock: boolean; raidNodeChoices: Record<string, string>; topRaidProgress: { username: string; score: number } | null; hasSixthBerth?: boolean; musterParty?: MusterCrew[] }) {
+export default function RaidsSection({ views, doubloons, navLevel, playerShipImage, raidRecords, repairOwed, ownedRaidItems, equippedRaidItems, shipClasses, seenChapterUnlocks, seenUltimateUnlock, raidNodeChoices, topRaidProgress, hasSixthBerth = false, hasArmoryExpansion = false, musterParty = [] }: { views: RaidNodeView[]; doubloons: number; navLevel: number; playerShipImage?: string; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[]; equippedRaidItems: string[]; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; seenUltimateUnlock: boolean; raidNodeChoices: Record<string, string>; topRaidProgress: { username: string; score: number } | null; hasSixthBerth?: boolean; hasArmoryExpansion?: boolean; musterParty?: MusterCrew[] }) {
   const [open, setOpen] = useState(true)
   const [selected, setSelected] = useState<RaidNodeView | null>(null)
   // Per-chapter manual toggle overrides. Membership means the player
@@ -3088,6 +3091,7 @@ export default function RaidsSection({ views, doubloons, navLevel, playerShipIma
             allNodeChoices={raidNodeChoices}
             clearedNodeIds={new Set(views.filter(v => v.status === 'cleared').map(v => v.node.id))}
             hasSixthBerth={hasSixthBerth}
+            hasArmoryExpansion={hasArmoryExpansion}
             musterParty={musterParty}
             onClose={() => setSelected(null)}
           />

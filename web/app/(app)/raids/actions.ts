@@ -86,7 +86,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('ship_tier, saved_crew, ship_name, username, character_color, equipped_hat, avatar_bg_color, avatar_border_color, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, equipped_repair_kit, has_seen_raid_tutorial, expedition_xp, nav_renown_alloc, ship_classes, gauntlet_upgrades, manowar_augment, manowar_augment_build, has_sixth_berth')
+    .select('ship_tier, saved_crew, ship_name, username, character_color, equipped_hat, avatar_bg_color, avatar_border_color, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, equipped_repair_kit, has_seen_raid_tutorial, expedition_xp, nav_renown_alloc, ship_classes, gauntlet_upgrades, manowar_augment, manowar_augment_build, has_sixth_berth, has_armory_expansion')
     .eq('id', userId)
     .single()
 
@@ -149,8 +149,10 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
   // capacity. The UI also caps at the same number when the loadout
   // drawer opens, so the next save will write the truncated list back.
   const rawEquipped = (profile?.equipped_raid_items as string[] | null) ?? []
-  // Hull cap + the Ch4 Expanded Armory augment's extra mount.
-  const slotCap     = raidItemSlotsForTier((profile?.ship_tier as number | null) ?? 0) + classEffects.itemSlots
+  // Hull cap + the Ch4 Expanded Armory refit's extra mount (purchased flag),
+  // plus any legacy class-pick itemSlots (none in production).
+  const armorySlot  = (profile as { has_armory_expansion?: boolean } | null)?.has_armory_expansion === true ? 1 : 0
+  const slotCap     = raidItemSlotsForTier((profile?.ship_tier as number | null) ?? 0) + classEffects.itemSlots + armorySlot
   // Drop items that can't coexist (tier-family grades + a fusion beside its own
   // forge ingredients) so a legacy/stale loadout can't double-apply a stat that
   // was never meant to stack, then cap to the hull's slots.

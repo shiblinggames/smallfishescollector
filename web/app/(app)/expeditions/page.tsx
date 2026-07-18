@@ -69,6 +69,17 @@ const cachedBlockadeCleared = cache(async (): Promise<boolean> => {
   return !!data
 })
 
+// Has the player beaten Raid 8 (the Throne / Don Finleone)? That clear reveals
+// the Expanded Armory purchase on the ship screen.
+const cachedThroneCleared = cache(async (): Promise<boolean> => {
+  const user = await getCurrentUser()
+  if (!user) return false
+  const admin = createAdminClient()
+  const { data } = await admin.from('raid_completions')
+    .select('id').eq('user_id', user.id).eq('raid_id', 'the_throne').limit(1).maybeSingle()
+  return !!data
+})
+
 /** How many raids the captain has actually finished. Drives Captain's Orders, which
  *  cannot know "have you ever won a fight" from the roster alone. */
 const cachedRaidsCleared = cache(async (): Promise<number> => {
@@ -98,12 +109,13 @@ const cachedVoyageHistory = cache(async (): Promise<VoyageHistoryEntry[]> => {
 //    in when ready. Shared loaders are deduped by React.cache.
 
 async function ShipHeroSection() {
-  const [profile, roster, trawlingCrewIds, chapter3Cleared, blockadeCleared] = await Promise.all([
+  const [profile, roster, trawlingCrewIds, chapter3Cleared, blockadeCleared, throneCleared] = await Promise.all([
     getCurrentProfile(),
     cachedCrewRoster(),
     cachedTrawlingCrewIds(),
     cachedChapter3Cleared(),
     cachedBlockadeCleared(),
+    cachedThroneCleared(),
   ])
   const shipTier = profile?.ship_tier ?? 0
   const baseShip = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
@@ -143,6 +155,8 @@ async function ShipHeroSection() {
       chapter3Cleared={chapter3Cleared}
       blockadeCleared={blockadeCleared}
       hasSixthBerth={hasSixthBerth}
+      throneCleared={throneCleared}
+      hasArmoryExpansion={profile?.has_armory_expansion === true}
       isAdmin={profile?.is_admin === true}
       navRenownAlloc={(profile?.nav_renown_alloc as Record<string, number> | null) ?? null}
       seenNavRenownIntro={profile?.seen_nav_renown_intro === true}
@@ -405,6 +419,7 @@ async function RaidsMapSection() {
       musterParty={raidMap.musterParty}
       topRaidProgress={topRaidProgress}
       hasSixthBerth={profile?.has_sixth_berth === true}
+      hasArmoryExpansion={profile?.has_armory_expansion === true}
     />
   )
 }

@@ -11,7 +11,7 @@
 // stays farmable.
 
 import { CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER, THE_COFFERS_FLEET, THE_QUARTERMASTER, THE_QUARTERMASTERS_GHOST, THE_BLOCKADE, THE_THRONE, GEM_GLYPH, raidCompletionBonusXp, type RaidLootItem, type BossRaidConfig } from '@/lib/bossRaids'
-import { SIXTH_BERTH_COST } from '@/lib/shipBerth'
+import { SIXTH_BERTH_COST, ARMORY_EXPANSION_COST } from '@/lib/shipBerth'
 import type { RaidMuster, MusterReport } from '@/lib/crewMuster'
 import { CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE, THE_CARTOGRAPHER_CHALLENGE, THE_TOLLMASTER_CHALLENGE, THE_COFFERS_FLEET_CHALLENGE, THE_QUARTERMASTER_CHALLENGE, THE_BLOCKADE_CHALLENGE, THE_THRONE_CHALLENGE } from '@/lib/raidChallenge'
 import { getShipSkin } from '@/lib/shipSkins'
@@ -462,6 +462,10 @@ export interface RaidNode {
    *  `price` doubloons. Clears on read (like the vault) so it never gates the
    *  chain; the purchase itself stays available on every revisit. */
   berth?: { price: number }
+  /** Armory refit nodes: a one-time permanent extra RAID-ITEM MOUNT for
+   *  `price` doubloons. Same berth-node mechanics (clears on read, purchase
+   *  lives in Manage Ship), just for item slots instead of a crew slot. */
+  armory?: { price: number }
   /** Event nodes: branching decision beats with N outcomes (loot /
    *  release / take logs etc). The chosen choice id is persisted in
    *  raid_node_progress.choices so the sheet can mark it on revisit. */
@@ -2467,21 +2471,22 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    // Chapter IV's capstone AUGMENT. An either/or refit instead of a class
-    // rung: one more raid-item mount, or one more crew berth (ship-wide).
-    // classPick.options pins the menu to exactly these two. Now gated on the
-    // Between Watches finale closer.
-    id: 'chapter_4_augment',    type: 'class_pick',
+    // Chapter IV's capstone REFIT. Not a class pick: a purchasable extra
+    // raid-item mount, bought once in Manage Ship (like the Sixth Berth).
+    // Same berth-node mechanics, keyed on `armory` instead of `berth`.
+    id: 'chapter_4_augment',    type: 'berth',
     label: "The Don's Shipwright",
     flavor: "The don kept a shipwright the way other captains keep a surgeon. He works for you now. One last refit, bolted to your deck for good.",
+    bridge: 'The plans are cut and the iron is on the deck. One more mount, if you want to pay for it.',
     requiresNode: 'chapter_4_close',
     adminOnly: true,
-    classPick: { chapterId: 'the_last_fathom', options: ['armory_expansion'] },
+    armory: { price: ARMORY_EXPANSION_COST },
     detail: {
       description:
-        "The finest shipwright on the drowned market owes you his freedom, and he pays it in iron: the Expanded Armory bolts one more mount to your deck, an extra raid item working every fight, on every raid from here on. Permanent, and yours for clearing the last fathom.",
-      dropsNote: 'A permanent extra raid-item mount. The reward for taking the throne.',
-      ctaLabel: 'Claim the refit',
+        "The finest shipwright on the drowned market owes you his freedom, and he pays it in iron. He can cut your deck for one more RAID-ITEM MOUNT: an extra piece of gear working every fight, on every raid from here on.\n\nIt costs a fortune. Take his plans to your shipwrights in Manage Ship when you are ready to pay for it.",
+      dropsNote: 'A permanent extra raid-item mount, on every raid. Bought once in Manage Ship, and it never comes off.',
+      ctaLabel: 'Take the Plans →',
+      summary: "The don's shipwright owes you his freedom and pays it in iron: an extra RAID-ITEM MOUNT cut into your deck for a fortune, one more piece of gear working every fight. Buy it in Manage Ship.",
     },
   },
   // The Davy Jones Gauntlet used to sit here as a chapter-2 side branch.

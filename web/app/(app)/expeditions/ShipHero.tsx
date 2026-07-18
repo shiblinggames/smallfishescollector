@@ -20,6 +20,7 @@ import { buyRepairKit } from './repairKitActions'
 import { equipShipSkin, saveEquippedRaidItems, forgeRaidItem, learnForgeRecipe, markForgeIntroSeen } from './actions'
 import UltimateBuildPanel from './UltimateBuildPanel'
 import SixthBerthPanel from './SixthBerthPanel'
+import ArmoryExpansionPanel from './ArmoryExpansionPanel'
 import { IconCrate } from '@/components/GameIcons'
 import { getShipAugment, type ShipAugmentId } from '@/lib/shipAugments'
 import { bonusChargeSlots, hasForge } from '@/lib/gauntletUpgrades'
@@ -230,6 +231,10 @@ interface Props {
   blockadeCleared?: boolean
   /** Owns the Sixth Berth (Man-o-War 5 → 6 crew). */
   hasSixthBerth?: boolean
+  /** Cleared Raid 8 (the Throne) — unlocks the Expanded Armory purchase. */
+  throneCleared?: boolean
+  /** Owns the Expanded Armory (extra raid-item mount). */
+  hasArmoryExpansion?: boolean
   isAdmin?: boolean
   /** Persisted Navigation Renown allocations ({} when none). Renown LEVEL
    *  derives live from expeditionXP. */
@@ -336,6 +341,8 @@ export default function ShipHero({
   chapter3Cleared = false,
   blockadeCleared = false,
   hasSixthBerth = false,
+  throneCleared = false,
+  hasArmoryExpansion = false,
   isAdmin = false,
   navRenownAlloc = null,
   seenNavRenownIntro = true,
@@ -488,8 +495,9 @@ export default function ShipHero({
   }
 
   const shipTierForSlots = Math.max(0, SHIPS.findIndex(s => s.name === shipStats.name))
-  // Hull cap + the Ch4 Expanded Armory augment's extra mount.
-  const raidItemSlots = raidItemSlotsForTier(shipTierForSlots) + (aggregateShipClasses(shipClasses).itemSlots)
+  // Hull cap + the Ch4 Expanded Armory refit's extra mount (purchased flag),
+  // plus any legacy class-pick itemSlots (none in production).
+  const raidItemSlots = raidItemSlotsForTier(shipTierForSlots) + (aggregateShipClasses(shipClasses).itemSlots) + (hasArmoryExpansion ? 1 : 0)
 
   // Ultimate weapon (Man-o-War Mega) — the end-of-Chapter-3 build. Its four-gate
   // checklist, previews, 24h build clock, and re-pick flow all live inside
@@ -558,6 +566,7 @@ export default function ShipHero({
   // breakdowns, the skin picker).
   const [ultimateOpen, setUltimateOpen] = useState(false)
   const [sixthBerthOpen, setSixthBerthOpen] = useState(false)
+  const [armoryOpen, setArmoryOpen] = useState(false)
   const [classesOpen, setClassesOpen] = useState(false)
   const [skinsOpen, setSkinsOpen] = useState(false)
   const [upgradeBusy, setUpgradeBusy] = useState(false)
@@ -1705,6 +1714,18 @@ export default function ShipHero({
                           onClick={() => setSixthBerthOpen(true)}
                         />
                       )}
+                      {/* Expanded Armory — same unlock gate as the panel (Raid 8 / owned). */}
+                      {(throneCleared || hasArmoryExpansion) && (
+                        <ShipTile
+                          accent="#a78bfa"
+                          title="Expanded Armory"
+                          icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M17.5 14v7M14 17.5h7"/></svg>}
+                          value={hasArmoryExpansion ? 'Extra mount' : 'One more mount'}
+                          sub={hasArmoryExpansion ? 'Installed' : 'Add a mount'}
+                          cta={hasArmoryExpansion ? 'View ›' : 'Add ›'}
+                          onClick={() => setArmoryOpen(true)}
+                        />
+                      )}
                       {/* Captain's Class */}
                       {(() => {
                         const ownedIds = new Set(Object.values(shipClasses))
@@ -2182,6 +2203,22 @@ export default function ShipHero({
               blockadeCleared={blockadeCleared}
               hasSixthBerth={hasSixthBerth}
               baseCrewSlots={hasSixthBerth ? shipStats.crewSlots - 1 : shipStats.crewSlots}
+              doubloons={doubloons}
+            />
+          </motion.div>
+        )}
+      </PopupShell>
+
+      {/* Expanded Armory — the raid-item mount refit. Same shell as the berth. */}
+      <PopupShell open={armoryOpen} onClose={() => setArmoryOpen(false)}>
+        {armoryOpen && (
+          <motion.div initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 4 }} transition={{ duration: 0.18 }}
+            style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 400, background: 'rgba(8,14,24,0.98)', borderRadius: 18, padding: '1.5rem 0.95rem 1rem', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 0 30px rgba(167,139,250,0.16)' }}>
+            <button onClick={() => setArmoryOpen(false)} aria-label="Close" style={{ position: 'absolute', top: 6, right: 8, zIndex: 6, color: 'rgba(255,255,255,0.55)', fontSize: '1.2rem', lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem 0.4rem' }}>✕</button>
+            <ArmoryExpansionPanel
+              throneCleared={throneCleared}
+              hasArmoryExpansion={hasArmoryExpansion}
+              baseItemSlots={hasArmoryExpansion ? raidItemSlots - 1 : raidItemSlots}
               doubloons={doubloons}
             />
           </motion.div>
