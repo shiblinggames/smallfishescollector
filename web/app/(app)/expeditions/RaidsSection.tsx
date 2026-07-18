@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { isCombatNode, chapterForNode, RAID_CHAPTERS, type RaidChapter, type RaidNodeDrop, type RaidNodeView } from '@/lib/raidMap'
+import { isCombatNode, chapterForNode, RAID_CHAPTERS, musterSceneLines, type RaidChapter, type RaidNodeDrop, type RaidNodeView } from '@/lib/raidMap'
 import type { RaidRecords } from './raidMapActions'
 import { RARITY_COLOR, GEM_GLYPH, GEM_COLOR } from '@/lib/bossRaids'
 import { getRaidItem } from '@/lib/raidItems'
@@ -721,7 +721,14 @@ function NodeDetailSheet({
   // Payoff node (freed-scout debt): does the player's earlier choice match?
   // Picks which scene plays (met = node.scene, unmet = node.payoff.sceneUnmet).
   const payoffMet = node.payoff ? allNodeChoices[node.payoff.requiresChoice.nodeId] === node.payoff.requiresChoice.choiceId : false
-  const sceneLines = node.payoff && !payoffMet ? node.payoff.sceneUnmet : node.scene
+  // Muster nodes play their inspection as a cutscene: the crew read the manifest
+  // back and tick it off (musterSceneLines), built live from the report so the
+  // lines name the actual hands. Passed → the closing CTA stands the muster;
+  // failed → it turns you back to fix your crew.
+  const musterRep = node.type === 'muster' && node.muster ? musterReport(node.muster, musterParty) : null
+  const sceneLines = node.type === 'muster'
+    ? (musterRep ? musterSceneLines(node.id, musterRep) : null)
+    : (node.payoff && !payoffMet ? node.payoff.sceneUnmet : node.scene)
   // Non-story node with an unwatched intro cutscene → hide the
   // interactive bits (pay bar / choice cards) and offer the scene CTA
   // instead. Recomputed on every render: finishing the scene adds the
@@ -982,19 +989,17 @@ function NodeDetailSheet({
       )
     }
   } else if (node.type === 'muster') {
-    // A roster gate: no cost, no fight. The button only lifts once the crew
-    // standing on your deck can actually answer what is past this point.
-    const report = node.muster ? musterReport(node.muster, musterParty) : null
+    // A roster gate: no cost, no fight. Tapping plays the crew read the manifest
+    // back as a cutscene (musterSceneLines); it ends by standing the muster if
+    // the deck answers, or turning you back if it doesn't.
     if (cleared) {
       cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: `${accent}1a`, border: `1px solid ${accent}40`, color: accent }}>Passed ✓</div>
     } else if (locked) {
       cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: 'rgba(255,255,255,0.06)', color: '#5a5856' }}>Locked</div>
-    } else if (!report?.passed) {
-      cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: '#8a8480' }}>Your Crew Is Not Ready</div>
     } else {
       cta = (
         <button
-          onClick={standMuster}
+          onClick={() => setSceneOpen(true)}
           disabled={pending}
           className="font-cinzel font-700 uppercase tracking-[0.06em]"
           style={{ width: '100%', padding: '0.85rem', borderRadius: 12, fontSize: '1rem', background: `${accent}26`, border: `1px solid ${accent}66`, color: accent, cursor: pending ? 'wait' : 'pointer' }}
@@ -2033,12 +2038,18 @@ function NodeDetailSheet({
   // Replay (already cleared): both buttons just close the scene.
   const finishScene = () => {
     if (cleared) { setSceneOpen(false); return }
+    if (node.type === 'muster') {
+      // The read-off is done: pass the inspection, or turn back to fix the crew.
+      if (musterRep?.passed) { standMuster(); return }
+      setSceneOpen(false); return
+    }
     if (node.type === 'story') { readStory(); return }
     seenIntroScenes.add(node.id)
     setSceneOpen(false)
   }
   const sceneCta = cleared
     ? 'Close'
+    : node.type === 'muster' ? (musterRep?.passed ? (detail.ctaLabel ?? 'Stand For Inspection →') : 'Turn Back and Fix It →')
     : node.type === 'story' ? (detail.ctaLabel ?? 'Log it →')
     : node.type === 'event' ? 'Make the Call →'
     : node.type === 'dice' ? (detail.ctaLabel ?? 'Throw the Bones →')

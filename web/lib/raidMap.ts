@@ -12,7 +12,7 @@
 
 import { CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER, THE_COFFERS_FLEET, THE_QUARTERMASTER, THE_QUARTERMASTERS_GHOST, THE_BLOCKADE, THE_THRONE, GEM_GLYPH, raidCompletionBonusXp, type RaidLootItem, type BossRaidConfig } from '@/lib/bossRaids'
 import { SIXTH_BERTH_COST } from '@/lib/shipBerth'
-import type { RaidMuster } from '@/lib/crewMuster'
+import type { RaidMuster, MusterReport } from '@/lib/crewMuster'
 import { CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE, THE_CARTOGRAPHER_CHALLENGE, THE_TOLLMASTER_CHALLENGE, THE_COFFERS_FLEET_CHALLENGE, THE_QUARTERMASTER_CHALLENGE, THE_BLOCKADE_CHALLENGE, THE_THRONE_CHALLENGE } from '@/lib/raidChallenge'
 import { getShipSkin } from '@/lib/shipSkins'
 import { getRaidItem } from '@/lib/raidItems'
@@ -31,6 +31,41 @@ const GUIDE = {
   laz:  { speaker: 'Laz',  portrait: CREW_ART('Coelacanth.png') },
   mira: { speaker: 'Mira', portrait: CREW_ART('Mira.png') },
 } as const
+
+// A muster plays as a cutscene, not a static checklist: the crew read the
+// manifest back and tick it off. Dole leads (the numbers/ledger hand), Doby
+// judges seasoning, Mira/Kat close it out. Built LIVE from the musterReport so
+// each line names the actual hands that answer (or the hole that doesn't).
+export function musterSceneLines(nodeId: string, report: MusterReport): SceneLine[] {
+  const inspector = nodeId === 'the_last_muster' ? 'The Gnash' : "Sal Brackwater's clerk"
+  const lines: SceneLine[] = [
+    { text: `${inspector} holds the line and will not move until your deck is counted. Dole takes up the manifest and reads it back, ticking each hand as he goes.` },
+  ]
+  report.rows.forEach((row, i) => {
+    if (i === 0) {
+      lines.push(row.ok
+        ? { ...GUIDE.dole, text: `A full rail. ${row.met.join(', ')}. That is a crew. Tick.` }
+        : { ...GUIDE.dole, text: `The rail is thin, captain. Only ${row.met.length} standing, and the throne wants more hands than that.` })
+    } else if (i === 1) {
+      lines.push(row.ok
+        ? { ...GUIDE.doby, text: `Not a green hand among them, small fry. Every one has real sea under the keel.` }
+        : { ...GUIDE.doby, text: `Some of these are still wet behind the fins. ${row.met.join('; ')}. The don finds the soft ones first.` })
+    } else {
+      const ask = row.label.replace(/^Someone who can /, '')
+      lines.push(row.ok
+        ? { ...GUIDE.dole, text: `${ask}? ${row.met.join(', ')}. Aye. Tick.` }
+        : { ...GUIDE.dole, text: `${ask}? ...No one on this deck. A hole in the line the don will walk straight through.` })
+    }
+  })
+  if (report.passed) {
+    lines.push({ ...GUIDE.dole, text: `Every line answered, captain. A full, ugly, dangerous crew, and every hand can DO something when the shooting starts.` })
+    lines.push({ ...GUIDE.mira, text: `Then stop admiring your own handwriting and let us through. The don is not getting any smaller.` })
+  } else {
+    lines.push({ ...GUIDE.dole, text: `The manifest is short a hand. ${inspector} will not pass a half-answered deck, and I would not sail one at the don if he did.` })
+    lines.push({ ...GUIDE.kat, text: `Better we find the gap here than on his teeth. Go and fill it, captain, then come back and we will read it again.` })
+  }
+  return lines
+}
 
 // Each type gets its own color + glyph on the map:
 //  - skirmish  : a single practice battle
