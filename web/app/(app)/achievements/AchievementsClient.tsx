@@ -43,6 +43,7 @@ interface Props {
 const GOLD = '#f0c040'
 const TIER_ORDER: BadgeDifficulty[] = ['rookie', 'seasoned', 'veteran', 'master', 'grandmaster']
 type Filter = 'all' | BadgeDifficulty
+type StatusFilter = 'all' | 'unclaimed' | 'claimed'
 
 const rectCenter = (el: Element) => {
   const r = el.getBoundingClientRect()
@@ -59,6 +60,7 @@ export default function AchievementsClient({ groups }: Props) {
   const [busy, setBusy] = useState<string | null>(null)
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [tierFilter, setTierFilter] = useState<Filter>('all')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [detailGoal, setDetailGoal] = useState<JourneyGoal | null>(null)
   const [, startTransition] = useTransition()
   const [mounted, setMounted] = useState(false)
@@ -89,12 +91,25 @@ export default function AchievementsClient({ groups }: Props) {
   // they earned without hunting down the category list. Richest reward first.
   const claimableSorted = [...claimable].sort((a, b) => (b.reward ?? 0) - (a.reward ?? 0))
 
+  // Claim-status filter — only meaningful for reward-bearing badges. "Unclaimed"
+  // is every badge whose reward is still owed (earned-but-unclaimed AND still in
+  // progress); "claimed" is the banked shelf. Non-badge journey goals fall out
+  // of both, since they have nothing to claim.
+  const matchesStatus = (g: JourneyGoal) => {
+    if (statusFilter === 'all') return true
+    if ((g.reward ?? 0) <= 0) return false
+    return statusFilter === 'claimed' ? claimedIds.has(g.id) : !claimedIds.has(g.id)
+  }
+  const claimedCount = badgeGoals.filter(g => claimedIds.has(g.id)).length
+  const unclaimedCount = badgeGoals.length - claimedCount
+
   const visibleGroups = useMemo(
     () => groups
       .filter(grp => categoryFilter === 'all' || grp.title === categoryFilter)
-      .map(grp => ({ ...grp, goals: grp.goals.filter(g => tierFilter === 'all' || g.difficulty === tierFilter) }))
+      .map(grp => ({ ...grp, goals: grp.goals.filter(g => (tierFilter === 'all' || g.difficulty === tierFilter) && matchesStatus(g)) }))
       .filter(grp => grp.goals.length > 0),
-    [groups, categoryFilter, tierFilter],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [groups, categoryFilter, tierFilter, statusFilter, claimedIds],
   )
 
   const notifyDoubloons = (n: number) => window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: n }))
@@ -232,11 +247,36 @@ export default function AchievementsClient({ groups }: Props) {
       )}
 
       {/* ── Filters: category + tier dropdowns ─────────────────────────────── */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
         <FilterSelect value={categoryFilter} onChange={setCategoryFilter}
           options={[{ value: 'all', label: 'All Categories' }, ...groups.map(g => ({ value: g.title, label: g.title }))]} />
         <FilterSelect value={tierFilter} onChange={v => setTierFilter(v as Filter)}
           options={[{ value: 'all', label: 'All Tiers' }, ...TIER_ORDER.map(t => ({ value: t, label: DIFFICULTY_META[t].label }))]} />
+      </div>
+
+      {/* Claim status — a segmented toggle so it reads as one control, not a
+          third dropdown crowding the row. */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 18 }}>
+        {([
+          ['all', 'All', badgeGoals.length],
+          ['unclaimed', 'Unclaimed', unclaimedCount],
+          ['claimed', 'Claimed', claimedCount],
+        ] as const).map(([val, label, n]) => {
+          const active = statusFilter === val
+          return (
+            <button key={val} type="button" onClick={() => setStatusFilter(val)}
+              className="font-karla font-700"
+              style={{
+                flex: 1, padding: '0.5rem 0.4rem', borderRadius: 11, fontSize: '0.76rem', cursor: 'pointer',
+                background: active ? `${GOLD}1c` : 'rgba(255,255,255,0.04)',
+                color: active ? GOLD : '#e8e2d6',
+                border: `1px solid ${active ? `${GOLD}88` : 'rgba(196,169,106,0.34)'}`,
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              }}>
+              {label} <span style={{ opacity: 0.6, fontVariantNumeric: 'tabular-nums' }}>{n}</span>
+            </button>
+          )
+        })}
       </div>
 
       {/* ── Goal groups ────────────────────────────────────────────────────── */}
