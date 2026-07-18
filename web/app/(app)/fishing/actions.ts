@@ -715,7 +715,13 @@ export async function reelIn(
   // ourselves from the stored value; the client-supplied number is ignored, so
   // it can't be inflated to mint XP.
   const newPerfectStreak = result === 'perfect' ? (profile.current_perfect_streak ?? 0) + 1 : 0
-  const serverStreakBonus = newPerfectStreak * newPerfectStreak * 3 // streak 1=+3, 2=+12, 3=+27, … (0 when not perfect)
+  // Streak XP bonus is quadratic but CAPPED at streak 10 (10²×3 = 300 max) so a
+  // long perfect streak can't fountain uncapped XP (esp. into post-100 Fishing
+  // Renown). The streak ITSELF keeps climbing — badges (Untouchable=20) + the
+  // display read newPerfectStreak; only its XP contribution flattens past 10.
+  const STREAK_XP_CAP = 10
+  const streakForXp = Math.min(newPerfectStreak, STREAK_XP_CAP)
+  const serverStreakBonus = streakForXp * streakForXp * 3 // 1=+3, 2=+12, … 10=+300, then flat (0 when not perfect)
   const xpGained = Math.round((catchXP(fish.catch_difficulty, fish.habitat, result === 'perfect') + serverStreakBonus) * prestigeXPMult * perfectXpMult * renownXpMult)
   const newXP = (profile.fishing_xp ?? 0) + xpGained
 
