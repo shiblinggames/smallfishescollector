@@ -36,6 +36,15 @@ export const LEGENDARY_SKIN_SETS: string[][] = (() => {
 export const PRESTIGE_ZONES = ['shallows', 'open_waters', 'deep', 'abyss'] as const
 // All four raids' challenge-completion ids (Finndicate's Bane capstone).
 export const CHALLENGE_RAID_IDS = ['corsairs_reckoning_challenge', 'captain_krust_challenge', 'cartographer_challenge', 'tollmasters_cut_challenge']
+// Every raid's challenge id, chapters I-IV (The Sunken Hand capstone). Add each
+// new raid's challenge id here as chapters ship.
+export const CHALLENGE_RAID_IDS_ALL = [
+  ...CHALLENGE_RAID_IDS,
+  'coffers_fleet_challenge',      // Raid 5 — Admiral Ruse
+  'the_quartermaster_challenge',  // Raid 6 — the Quartermaster
+  'the_blockade_challenge',       // Raid 7 — Sal Brackwater
+  'the_throne_challenge',         // Raid 8 — Don Finleone
+]
 // The three ORIGINAL legendary crew species (Legendary Recruit).
 export const LEGENDARY_SLUGS = new Set(['catfish', 'doby_mick', 'mako'])
 // EVERY legendary crew species (Three Legends = own any 3 of these). Add each
@@ -93,6 +102,9 @@ export interface BadgeProfileFields {
   raid_items?: string[] | null
   owned_crew_skins?: string[] | null
   equipped_crew_skins?: Record<string, string> | null
+  // Chapter IV ship refits.
+  has_sixth_berth?: boolean | null
+  has_armory_expansion?: boolean | null
 }
 
 export interface BadgeJoinData {
@@ -255,6 +267,12 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
     dressed_to_the_nines: ownedSkins.size >= 10,
     trophy_hunter:  Number(p.trophy_size_catches ?? 0) >= 25,
     overkill:       raidDmg >= 500,
+    // ── Chapter IV: the Sunken Hand (challenge clears + ship refits) ──
+    blockade_broken: raidIds.has('the_blockade_challenge'),
+    don_drowned:     raidIds.has('the_throne_challenge'),
+    the_sunken_hand: CHALLENGE_RAID_IDS_ALL.every(id => raidIds.has(id)),
+    six_aboard:      p.has_sixth_berth === true,
+    expanded_armory: p.has_armory_expansion === true,
   }
 }
 
@@ -267,4 +285,4 @@ export function earnedBadgeIds(p: BadgeProfileFields, j: BadgeJoinData): string[
 
 /** Columns a query must select to feed badgeConditions(). */
 export const BADGE_PROFILE_COLUMNS =
-  'fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, ancient_catches, trophy_size_catches, prestige_levels, fishing_casts, fishing_double_catches, fishing_crates_opened, fishing_snags, fishing_jackpots, tide_run_beacons_smashed, tide_run_total_distance, is_premium, ship_tier, trawls_collected, unlocked_pets, gauntlet_upgrades, gauntlet_confluences_seen, gauntlet_runs_completed, gauntlet_fathoms_earned, gauntlet_max_hit, gauntlet_deepest_died, gauntlet_hc_deepest, gauntlet_hc_deepest_died, blood_gems_earned, completionist_effects, manowar_augment, ship_classes, forge_recipes_learned, raid_items, owned_crew_skins, equipped_crew_skins'
+  'fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, ancient_catches, trophy_size_catches, prestige_levels, fishing_casts, fishing_double_catches, fishing_crates_opened, fishing_snags, fishing_jackpots, tide_run_beacons_smashed, tide_run_total_distance, is_premium, ship_tier, trawls_collected, unlocked_pets, gauntlet_upgrades, gauntlet_confluences_seen, gauntlet_runs_completed, gauntlet_fathoms_earned, gauntlet_max_hit, gauntlet_deepest_died, gauntlet_hc_deepest, gauntlet_hc_deepest_died, blood_gems_earned, completionist_effects, manowar_augment, ship_classes, forge_recipes_learned, raid_items, owned_crew_skins, equipped_crew_skins, has_sixth_berth, has_armory_expansion'

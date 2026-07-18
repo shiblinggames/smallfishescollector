@@ -214,6 +214,15 @@ export const BADGES: Badge[] = [
   { id: 'not_a_shot_fired', name: 'Not a Shot Fired', description: 'Sink a boss without a shot or a crew ability',    imageUrl: '/badges/not_a_shot_fired.png', difficulty: 'veteran'  },
   { id: 'tight_quarters', name: 'Tight Quarters',     description: 'Beat the Quartermaster raid using no crew abilities', imageUrl: '/badges/tight_quarters.png', difficulty: 'master' },
   { id: 'dead_reckoning', name: 'Dead Reckoning',     description: 'Clear the Cartographer raid missing no critical hits', imageUrl: '/badges/dead_reckoning.png', difficulty: 'master' },
+
+  // ── 2026-07 expansion (batch 22) — Chapter IV: the Sunken Hand ────────────
+  // Raids 7-8 challenge clears + the all-eight capstone, plus the two Ch4
+  // ship refits (Sixth Berth / Expanded Armory).
+  { id: 'blockade_broken', name: 'Blockade Broken',   description: 'Defeat Sal Brackwater in challenge mode',         imageUrl: '/badges/blockade_broken.png', difficulty: 'veteran'  },
+  { id: 'don_drowned',     name: 'The Don Is Drowned', description: 'Defeat Don Finleone in challenge mode',           imageUrl: '/badges/don_drowned.png',     difficulty: 'veteran'  },
+  { id: 'the_sunken_hand', name: 'The Sunken Hand',    description: 'Clear all 8 raids in challenge mode',             imageUrl: '/badges/the_sunken_hand.png', difficulty: 'master'   },
+  { id: 'six_aboard',      name: 'Six Aboard',         description: 'Add the Sixth Berth to your ship',                imageUrl: '/badges/six_aboard.png',      difficulty: 'seasoned' },
+  { id: 'expanded_armory', name: 'Expanded Armory',    description: 'Bolt the Expanded Armory onto your deck',         imageUrl: '/badges/expanded_armory.png', difficulty: 'seasoned' },
 ]
 
 export const BADGE_MAP: Record<string, Badge> = Object.fromEntries(
@@ -357,6 +366,12 @@ export const BADGE_DETAIL: Record<string, string> = {
   not_a_shot_fired: 'Sink a raid boss without ever firing a shot OR using a crew ability — let riposte and damage over time do all the killing. A build puzzle, not a lucky break.',
   tight_quarters:   'Clear the whole Quartermaster raid without using a single crew ability. Just you, your guns, and your nerve.',
   dead_reckoning:   'Clear the entire Cartographer raid without missing one critical hit. Every shot lands true across the longest fight on the map.',
+  // ── Chapter IV: the Sunken Hand ──
+  blockade_broken:  'Defeat Sal Brackwater in challenge mode, the tuned-up cut of Raid 7. Break the blockade that walled off the don, the hard way.',
+  don_drowned:      'Defeat Don Finleone in challenge mode, the hardest cut of the final raid. The biggest name in the sea, answered for on the cruelest terms.',
+  the_sunken_hand:  'Clear every raid, one through eight, in challenge mode. The whole Sunken Hand pulled apart finger by finger — the complete hard-mode campaign.',
+  six_aboard:       'Buy the Sixth Berth and sail with a crew of six. One more hand, and one more ability, on every raid and voyage from here on.',
+  expanded_armory:  'Buy the Expanded Armory from the don’s shipwright and bolt one more raid-item mount to your deck. One more piece of gear working every fight.',
 }
 
 /** Detail blurb for a badge id (falls back to its short description). */

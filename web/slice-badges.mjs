@@ -156,6 +156,12 @@ const PLAN = [
   [21, 1, 0, 'not_a_drop'],
   [21, 1, 1, 'paid_in_full'],
   [21, 1, 2, 'for_glory_alone'],
+  // Batch 22 — Chapter IV: the Sunken Hand (raids 7-8 challenge + refits).
+  [22, 0, 0, 'blockade_broken'],
+  [22, 0, 1, 'don_drowned'],
+  [22, 0, 2, 'the_sunken_hand'],
+  [22, 1, 0, 'six_aboard'],
+  [22, 1, 1, 'expanded_armory'],
 ]
 
 let skipped = 0

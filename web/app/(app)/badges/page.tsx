@@ -11,7 +11,7 @@ import { crewLevelFromXP, CREW_MAX_LEVEL } from '@/lib/crewLevel'
 import { CREW_HALL_MAX_TIER } from '@/lib/crewHall'
 import { GAUNTLET_UPGRADES } from '@/lib/gauntletUpgrades'
 import { FORGE_RECIPES, isForgedRaidItem } from '@/lib/raidItems'
-import { LEGENDARY_SLUGS_ALL, BASE_LEGENDARY_SLUGS, CONFLUENCE_COUNT, CHASE_SKIN_IDS, LEGENDARY_SKIN_SETS } from '@/lib/badgeConditions'
+import { LEGENDARY_SLUGS_ALL, BASE_LEGENDARY_SLUGS, CONFLUENCE_COUNT, CHASE_SKIN_IDS, LEGENDARY_SKIN_SETS, CHALLENGE_RAID_IDS_ALL } from '@/lib/badgeConditions'
 
 const ZONES = ['shallows', 'open_waters', 'deep', 'abyss'] as const
 const CHALLENGE_RAID_IDS = ['corsairs_reckoning_challenge', 'captain_krust_challenge', 'cartographer_challenge', 'tollmasters_cut_challenge']
@@ -49,6 +49,7 @@ export default async function BadgesPage() {
   const hasLegendaryCrew = ownedCrewSlugsLc.some(s => LEGENDARY_SLUGS.has(s))
   const hasLostCrew = crew.some(c => c.died_at != null)
   const challengeCleared = CHALLENGE_RAID_IDS.filter(id => raidIds.has(id)).length
+  const challengeClearedAll = CHALLENGE_RAID_IDS_ALL.filter(id => raidIds.has(id)).length
   const collectionCount = (collectionRes.data ?? []).length
 
   const crewHallTier = Number(profile?.crew_hall_tier ?? 0)
@@ -70,6 +71,8 @@ export default async function BadgesPage() {
   const petsOwned = ((profile?.unlocked_pets as string[] | null) ?? []).length
   const shipTier = Number(profile?.ship_tier ?? 0)
   const trawlsCollected = Number(profile?.trawls_collected ?? 0)
+  const hasSixthBerth = profile?.has_sixth_berth === true
+  const hasArmoryExpansion = profile?.has_armory_expansion === true
 
   // ── 2026-07 expansion: Gauntlet counters + endgame state ─────────────────
   const gauntletRuns = Number(profile?.gauntlet_runs_completed ?? 0)
@@ -236,9 +239,14 @@ export default async function BadgesPage() {
         badgeGoal('finndicates_bane', "Finndicate's Bane", 'Clear all 4 raids in challenge mode', challengeCleared, 4, '/raids'),
         badgeGoal('ruse_undone', 'Ruse Undone', 'Defeat Admiral Ruse in challenge mode', raidIds.has('coffers_fleet_challenge') ? 1 : 0, 1, '/raids', { binary: true }),
         badgeGoal('account_settled', 'Account Settled', 'Defeat the Quartermaster in challenge mode', raidIds.has('the_quartermaster_challenge') ? 1 : 0, 1, '/raids', { binary: true }),
+        badgeGoal('blockade_broken', 'Blockade Broken', 'Defeat Sal Brackwater in challenge mode', raidIds.has('the_blockade_challenge') ? 1 : 0, 1, '/raids', { binary: true }),
+        badgeGoal('don_drowned', 'The Don Is Drowned', 'Defeat Don Finleone in challenge mode', raidIds.has('the_throne_challenge') ? 1 : 0, 1, '/raids', { binary: true }),
+        badgeGoal('the_sunken_hand', 'The Sunken Hand', 'Clear all 8 raids in challenge mode', challengeClearedAll, 8, '/raids'),
         badgeGoal('quick_draw', 'Quick Draw', 'Clear any raid in under 1:00', fastestAnyRaid <= 60_000 ? 1 : 0, 1, '/raids', { binary: true }),
         badgeGoal('mark_of_mastery', 'Mark of Mastery', 'Reach a Mark III ship class', hasMarkIII ? 1 : 0, 1, '/raids', { binary: true }),
         badgeGoal('ship_of_the_line', 'Ship of the Line', 'Own the Man-o-War', shipTier, 6, '/shipyard', { binary: true }),
+        badgeGoal('six_aboard', 'Six Aboard', 'Add the Sixth Berth to your ship', hasSixthBerth ? 1 : 0, 1, '/expeditions', { binary: true }),
+        badgeGoal('expanded_armory', 'Expanded Armory', 'Bolt on the Expanded Armory mount', hasArmoryExpansion ? 1 : 0, 1, '/expeditions', { binary: true }),
         badgeGoal('weapon_of_legend', 'Weapon of Legend', 'Build your Man-o-War ultimate', hasUltimate ? 1 : 0, 1, '/expeditions', { binary: true }),
         badgeGoal('first_fusion', 'First Fusion', 'Forge your first item', hasForgedItem ? 1 : 0, 1, '/expeditions', { binary: true }),
         badgeGoal('grand_forgemaster', 'Grand Forgemaster', 'Learn every forge recipe', forgeRecipesLearned, FORGE_RECIPES.length, '/expeditions'),
