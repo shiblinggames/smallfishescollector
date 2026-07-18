@@ -428,10 +428,10 @@ export default function HubCards({
           title="Gauntlets"
           desc="Push your luck down a gauntlet for one swelling pot. Bank it or sink."
           locked={!gauntletOpen}
-          onClick={gauntletOpen ? () => router.push('/raids/gauntlet') : undefined}
+          onClick={gauntletOpen ? () => setModal('gauntlets') : undefined}
           lockLabel="Clear Chapter 2"
           tag={gauntletResumable ? 'Resume' : undefined}
-          cta={gauntletResumable ? 'Resume ›' : undefined}
+          cta={gauntletResumable ? 'Resume ›' : 'Choose ›'}
         />
       </div>
 
@@ -822,11 +822,31 @@ export default function HubCards({
                 Fight down the deep. Every win fattens one pot; cash out or sink with it.
               </p>
             </div>
-            <span aria-hidden className="font-karla font-700" style={{ flexShrink: 0, color: gauntletAccent, fontSize: '1rem' }}>›</span>
+            {gauntletResumable
+              ? <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ flexShrink: 0, fontSize: '0.5rem', color: '#0c0f14', background: gauntletAccent, borderRadius: 999, padding: '0.25rem 0.55rem', whiteSpace: 'nowrap' }}>Resume ›</span>
+              : <span aria-hidden className="font-karla font-700" style={{ flexShrink: 0, color: gauntletAccent, fontSize: '1rem' }}>›</span>}
           </button>
-          <p className="font-karla font-500" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.32)', textAlign: 'center', marginTop: 10 }}>
-            More gauntlets are on the way.
-          </p>
+
+          {/* Don's Gauntlet — Gauntlet II, led by the ghost of Don Finleone.
+              Teased here (Coming Soon, blocked) until it goes live. */}
+          <div aria-disabled
+            style={{
+              marginTop: 10, width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+              padding: '0.75rem', borderRadius: 14, textAlign: 'left', cursor: 'default', opacity: 0.72,
+              background: 'linear-gradient(180deg, rgba(150,60,66,0.14), rgba(0,0,0,0.25))',
+              border: '1px solid rgba(150,60,66,0.4)',
+            }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/donsgauntlet.png" alt="" loading="lazy" decoding="async"
+              style={{ width: 52, height: 52, objectFit: 'contain', flexShrink: 0, filter: 'grayscale(0.35) drop-shadow(0 3px 10px rgba(150,60,66,0.45))' }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#ecdcd6', lineHeight: 1.1 }}>Don&apos;s Gauntlet</p>
+              <p className="font-karla font-500" style={{ fontSize: '0.66rem', color: '#bda2a3', lineHeight: 1.35, marginTop: 2 }}>
+                The don went down with the deep, and his ghost is still collecting. A darker gauntlet stirs below.
+              </p>
+            </div>
+            <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ flexShrink: 0, fontSize: '0.5rem', color: '#e29aa0', background: 'rgba(150,60,66,0.24)', border: '1px solid rgba(150,60,66,0.55)', borderRadius: 999, padding: '0.25rem 0.5rem', whiteSpace: 'nowrap' }}>Coming Soon</span>
+          </div>
         </div>
       </PopupShell>
 
