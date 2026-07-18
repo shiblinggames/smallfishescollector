@@ -1789,8 +1789,9 @@ export const THE_THRONE: BossRaidConfig = {
       portrait: '/raid8_thereaper.png',
     },
     the_consigliere: {
-      // The last counsel before the throne — marks you for the don (Feeble)
-      // and carries the biggest mob ultimate in the raid.
+      // The don's right hand and the last gate before the throne — a TWO-PHASE
+      // mini-boss. Phase 1 marks you for the don (Feeble) and carries the biggest
+      // mob ultimate in the raid; drop him and he rises to collect (phase 2).
       id: 'the_consigliere', name: 'The Closer', hpBase: 520, minDmg: 28, maxDmg: 44,
       shipSpeed: 7, actionMs: 4000,
       magazineSize: 4, shieldPct: 0.26, chargeBiteChance: 0.35,
@@ -1798,6 +1799,15 @@ export const THE_THRONE: BossRaidConfig = {
       ultimate: { name: 'Final Counsel', mult: 2.6, line: 'His advice, delivered all at once.' },
       pattern: ['reload', 'special', 'reload', 'volley', 'reload', 'reload', 'ultimate', 'dodge'],
       critChance: 0.12,
+      // False defeat: he goes down, then hauls himself back up at 55% to settle
+      // the account — opens on the Feeble mark and runs a tighter, harder cadence.
+      phase2: {
+        revivePct: 0.55,
+        damageMult: 1.30,
+        pattern: ['special', 'reload', 'reload', 'volley', 'reload', 'fire', 'reload', 'reload', 'ultimate', 'dodge'],
+        dialogueLine: 'You do not close an account by sinking it once, captain. Let me show you the interest.',
+        badge: 'The Reckoning',
+      },
       zoneSpeedMult: 2.5,
       image: '/enemychapter4man-o-war.png',
       portrait: '/raid8_thecloser.png',
