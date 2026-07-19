@@ -1198,6 +1198,24 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
       }
     }),
   },
+
+  // ── Don's Gauntlet curses (gauntlet: 'don' — never surface in Davy's) ────────
+  {
+    id: 'glass_hull', name: 'Glass Hull', gauntlet: 'don',
+    flavor: 'The ghost fleet trades its armor for teeth, and dares you to do the same.',
+    tiers: [
+      { desc: 'Deal +15% damage, take +15%', detail: 'A gamble the deep forces on you: every shot you fire lands 15% harder, but every hull that hits you lands 15% harder too. Both ways, all fight.', effects: [{ kind: 'damageMult', mult: 1.15 }, { kind: 'incomingDmgMult', mult: 1.15, scope: 'allRemaining' }] as TideEffect[] },
+      { desc: 'Deal +25% damage, take +25%', detail: 'The trade steepens: +25% to the damage you deal AND the damage you take, for the rest of the run.', effects: [{ kind: 'damageMult', mult: 1.25 }, { kind: 'incomingDmgMult', mult: 1.25, scope: 'allRemaining' }] as TideEffect[] },
+    ],
+  },
+  {
+    id: 'the_mark', name: 'The Mark', gauntlet: 'don',
+    flavor: 'The Don paints your hull before the bell. You start every fight already bleeding.',
+    tiers: [
+      { desc: 'Start every fight Feeble (+15% damage taken, 2 rounds)', detail: 'Every fight from now on opens with your ship already Feeble — you take 15% more damage from every hit for the first 2 rounds of each fight, until it wears off. Cleansing it (a Mender) clears it early.', effects: [{ kind: 'playerStartStatus', status: 'feeble', magnitude: 0.15, turns: 2 }] as TideEffect[] },
+      { desc: 'Start every fight Feeble (+22% damage taken, 3 rounds)', detail: 'The brand cuts deeper: every fight opens with your ship Feeble for 3 rounds, taking 22% more damage from every hit until it wears off.', effects: [{ kind: 'playerStartStatus', status: 'feeble', magnitude: 0.22, turns: 3 }] as TideEffect[] },
+    ],
+  },
 ]
 
 // Depths at which the Locker imposes its next curse. One per milestone, drawn at
@@ -1481,6 +1499,22 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
   { id: 'stormward', name: 'Stormward', flavor: 'A ward of cold iron reforms before every gun. It eats the first blows so your hull never feels them.', rarity: 'legendary', tiers: [
     { desc: 'Shield 10% of max HP each fight', detail: 'Start every fight with a shield worth 10% of your max HP. It soaks incoming damage before your hull takes any, and reforms fresh each fight.', effect: { kind: 'fightShield', pctMax: 0.10 } },
     { desc: 'Shield 18% of max HP each fight', detail: 'Start every fight with a shield worth 18% of your max HP. It soaks incoming damage before your hull takes any, and reforms fresh each fight.', effect: { kind: 'fightShield', pctMax: 0.18 } },
+  ] },
+  // ── Don's Gauntlet boons (gauntlet: 'don' — the ghost fleet's on-hit hexes) ──
+  { id: 'rattling_shot', name: 'Rattling Shot', gauntlet: 'don', flavor: 'Your iron rattles a hull loose, and it flinches at every blow after.', rarity: 'rare', tiers: [
+    { desc: '35% on a hit to make the enemy Feeble (+15% damage taken, 2 rounds)', detail: 'Whenever you land a hit, there is a 35% chance the enemy turns Feeble — it takes 15% more damage from everything for the next 2 rounds. Reapplying refreshes it rather than stacking.', effect: { kind: 'statusOnHit', status: 'feeble', chance: 0.35, magnitude: 0.15, turns: 2 } },
+    { desc: '45% on a hit to make the enemy Feeble (+20% damage taken, 2 rounds)', detail: 'Whenever you land a hit, there is a 45% chance the enemy turns Feeble — it takes 20% more damage from everything for the next 2 rounds.', effect: { kind: 'statusOnHit', status: 'feeble', chance: 0.45, magnitude: 0.20, turns: 2 } },
+    { desc: '55% on a hit to make the enemy Feeble (+25% damage taken, 3 rounds)', detail: 'Whenever you land a hit, there is a 55% chance the enemy turns Feeble — it takes 25% more damage from everything for the next 3 rounds.', effect: { kind: 'statusOnHit', status: 'feeble', chance: 0.55, magnitude: 0.25, turns: 3 } },
+  ] },
+  { id: 'chainshot', name: 'Chainshot', gauntlet: 'don', flavor: 'Linked iron fouls their rigging. A snarled hull is a slow hull.', tiers: [
+    { desc: '30% on a hit to Slow the enemy (2 rounds)', detail: 'Whenever you land a hit, there is a 30% chance the enemy is Slowed for 2 rounds — it acts later in the round and dodges worse.', effect: { kind: 'statusOnHit', status: 'slowed', chance: 0.30, magnitude: 2, turns: 2 } },
+    { desc: '45% on a hit to Slow the enemy (2 rounds)', detail: 'Whenever you land a hit, there is a 45% chance the enemy is Slowed for 2 rounds — it acts later in the round and dodges worse.', effect: { kind: 'statusOnHit', status: 'slowed', chance: 0.45, magnitude: 2, turns: 2 } },
+    { desc: '60% on a hit to heavily Slow the enemy (3 rounds)', detail: 'Whenever you land a hit, there is a 60% chance the enemy is heavily Slowed for 3 rounds — it acts later in the round and dodges much worse.', effect: { kind: 'statusOnHit', status: 'slowed', chance: 0.60, magnitude: 3, turns: 3 } },
+  ] },
+  { id: 'hexshot', name: 'Hexshot', gauntlet: 'don', flavor: 'A cursed round saps the fight out of whatever it strikes.', tiers: [
+    { desc: '30% on a hit to Weaken the enemy (−15% damage dealt, 2 rounds)', detail: 'Whenever you land a hit, there is a 30% chance the enemy is Weakened — its own hits deal 15% less damage for the next 2 rounds.', effect: { kind: 'statusOnHit', status: 'weaken', chance: 0.30, magnitude: 0.15, turns: 2 } },
+    { desc: '45% on a hit to Weaken the enemy (−22% damage dealt, 2 rounds)', detail: 'Whenever you land a hit, there is a 45% chance the enemy is Weakened — its own hits deal 22% less damage for the next 2 rounds.', effect: { kind: 'statusOnHit', status: 'weaken', chance: 0.45, magnitude: 0.22, turns: 2 } },
+    { desc: '60% on a hit to Weaken the enemy (−30% damage dealt, 3 rounds)', detail: 'Whenever you land a hit, there is a 60% chance the enemy is Weakened — its own hits deal 30% less damage for the next 3 rounds.', effect: { kind: 'statusOnHit', status: 'weaken', chance: 0.60, magnitude: 0.30, turns: 3 } },
   ] },
 ]
 

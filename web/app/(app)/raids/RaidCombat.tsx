@@ -678,6 +678,8 @@ export default function RaidCombat({
     // a runaway ×4+ multiplier while keeping its kill/depth-damage identity.
     let killDmgPerKill = 0,  killDmgCap = 0
     let depthDmgPerDepth = 0, depthDmgCap = 0
+    const statusOnHitList: { status: string; chance: number; magnitude: number; turns: number }[] = []
+    const playerStartStatusList: { status: string; magnitude: number; turns: number }[] = []
     for (const e of tideEffects) {
       switch (e.kind) {
         case 'damageMult':            dmgMult *= e.mult; break
@@ -773,6 +775,8 @@ export default function RaidCombat({
         case 'counterReflect':        counterReflectPct = Math.max(counterReflectPct, e.pct); break
         case 'lifestealKillScale':    lifestealPct += Math.min(e.max, e.perKill * Math.max(0, runKills)); break
         case 'depthScaleMitigation':  inDmgMult *= (1 - Math.min(e.max, e.perDepth * Math.max(0, runDepth))); break
+        case 'statusOnHit':           statusOnHitList.push({ status: e.status, chance: e.chance, magnitude: e.magnitude, turns: e.turns }); break
+        case 'playerStartStatus':     playerStartStatusList.push({ status: e.status, magnitude: e.magnitude, turns: e.turns }); break
         case 'instantHeal': case 'instantHealPct': case 'fullHeal': case 'doubloonsAtRaidEnd': break // handled at pick-time
       }
     }
@@ -798,6 +802,7 @@ export default function RaidCombat({
       overhealPct, repairHealMult,
       critStreakPerStack, critStreakMaxStacks, counterFireChance,
       counterBonusRefund, counterBonusStack, counterBonusChance, counterReflectPct,
+      statusOnHitList, playerStartStatusList,
     }
   }, [tideEffects, isBoss, runKills, runDepth])
   // Shrouded Hull / Shuttered Ports curses — rolled ONCE per fight (RaidCombat
@@ -1841,6 +1846,8 @@ export default function RaidCombat({
     // Statuses are per-FIGHT: both sides start every encounter clean.
     playerStatusesRef.current = []; setPlayerStatuses([])
     enemyStatusesRef.current = []; setEnemyStatuses([])
+    // Don's Gauntlet — playerStartStatus curses (The Mark): open each fight already afflicted.
+    for (const s of tide.playerStartStatusList) applyPlayerStatus(s.status as StatusId, s.magnitude, s.turns)
     markPierceTurnsRef.current = 0   // Mira's shield pierce is per-fight, like the mark
     const intro = isBoss
       ? `${enemy.name} heaves into view!`
@@ -4008,6 +4015,14 @@ export default function RaidCombat({
               enemyFreezePendingRef.current = tide.deepFreeze ? 2 : 1
               stepLines.push(tide.deepFreeze ? `Frozen shot! The ${enemy.name} locks in deep ice — its next two turns are frozen.` : `Frozen shot! The ${enemy.name} ices over — its next turn is frozen.`)
               procStatus = 'freeze'
+            }
+            // Don's Gauntlet — statusOnHit boons (Rattling Shot / Chainshot): a
+            // landed hit rolls each to apply a timed status to the enemy.
+            for (const s of tide.statusOnHitList) {
+              if (procRoll(s.chance)) {
+                applyEnemyStatus(s.status as StatusId, s.magnitude, s.turns)
+                stepLines.push(`Your shot leaves the ${enemy.name} ${s.status === 'slowed' ? 'snared' : s.status}.`)
+              }
             }
             // THE RACK — a landed hit fires a SPREAD. One roll, and every round the
             // equipped rack carries lands together through the shared status pipeline.

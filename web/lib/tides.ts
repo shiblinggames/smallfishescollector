@@ -231,6 +231,12 @@ export type TideEffect =
    *  scaling with the current depth. The defensive mirror of Abyssal Bounty.
    *  −perDepth × depth, capped at `max`. */
   | { kind: 'depthScaleMitigation'; perDepth: number; max: number }
+  // ── Don's Gauntlet (variant 'don') ──────────────────────────────
+  /** Rattling Shot / Chainshot: a landed player shot has `chance` to apply a
+   *  timed STATUS to the enemy (reuses lib/statuses — weaken/feeble/slowed). */
+  | { kind: 'statusOnHit'; status: string; chance: number; magnitude: number; turns: number }
+  /** The Mark: the player STARTS each fight under a timed status (e.g. feeble). */
+  | { kind: 'playerStartStatus'; status: string; magnitude: number; turns: number }
   // ── Meta (post-raid only) ───────────────────────────────────────
   /** Doubloons granted / deducted at raid end. */
   | { kind: 'doubloonsAtRaidEnd'; n: number }
@@ -296,6 +302,8 @@ export function effectTone(e: TideEffect): 'good' | 'bad' | 'neutral' {
       return e.n < 0 ? 'good' : e.n > 0 ? 'bad' : 'neutral'
     case 'aimFog':       return e.density > 0 ? 'bad' : 'neutral'
     case 'aimDecoys':    return e.n > 0 ? 'bad' : 'neutral'
+    case 'statusOnHit':       return 'good'  // debuffs the ENEMY
+    case 'playerStartStatus': return 'bad'   // debuffs YOU
     case 'confuse':      return e.chance > 0 ? 'bad' : 'neutral'
     case 'hideEnemyHp': case 'hideEnemyCharges': return e.chance > 0 ? 'bad' : 'neutral'
     case 'iceAffinity':  return 'good'
@@ -980,6 +988,8 @@ export function describeEffect(e: TideEffect): string {
     case 'maxHpPerKill':          return `+${pct(e.perKill)} max HP per hull sunk (max ${pct(e.max)})`
     case 'overhealPct':           return `Heals can overfill to +${Math.round(e.pct * 100)}% over max (this fight only)`
     case 'repairHealMult':        return `Repair kits heal +${Math.round((e.mult - 1) * 100)}% more`
+    case 'statusOnHit':           return `${Math.round(e.chance * 100)}% on a landed hit to ${e.status} the enemy`
+    case 'playerStartStatus':     return `Start each fight ${e.status}`
   }
 }
 
