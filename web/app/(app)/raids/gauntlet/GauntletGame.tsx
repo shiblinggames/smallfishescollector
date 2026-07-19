@@ -36,7 +36,7 @@ import GauntletTermsPanel from './GauntletTermsPanel'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, setGauntletUpgradeActive, markGauntletIntroSeen, recordGauntletHit, wagerGauntletFathoms, markConfluencesSeen, checkpointGauntletRun, pauseGauntletRun, resumeGauntletRun, buyBaitWithFathoms, rollDavyOffer } from './actions'
 import { offerCoinMult, offerChestMult, offerCopy, offerTakenLine, type DavyOffer } from '@/lib/gauntletOffer'
 import { FATHOM_BAITS } from '@/lib/bait'
-import { upgradesForVariant, getGauntletUpgrade, COMING_SOON_UPGRADES, activeGauntletUpgrades, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck, gauntletBoonRerolls, gauntletCurseRerolls, gauntletStartAnchorSaves } from '@/lib/gauntletUpgrades'
+import { upgradesForVariant, getGauntletUpgrade, upgradeTierInfo, romanTier, COMING_SOON_UPGRADES, activeGauntletUpgrades, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck, gauntletBoonRerolls, gauntletCurseRerolls, gauntletStartAnchorSaves } from '@/lib/gauntletUpgrades'
 import { type ShipAugment } from '@/lib/shipAugments'
 import { getSpecialItem } from '@/lib/specialItems'
 import { buySpecialItem } from '@/app/(app)/fishing/actions'
@@ -4728,6 +4728,8 @@ type ShopEntry = {
   id: string; name: string; description: string; depthRequired: number; cost: number
   scope: string; owned: boolean; lockNote: string | null; demo: boolean; special: boolean
   category?: 'voyages' | 'raids' | 'fishing'
+  /** "I of III" when this upgrade is part of a tier chain (so players see more). */
+  tierLabel?: string
   /** Built but not live yet — shown with a Coming Soon lock, can't be bought. */
   comingSoon?: boolean
 }
@@ -4827,6 +4829,9 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             <p className="font-cinzel font-700" style={{ fontSize: '0.96rem', color: comingSoon ? '#cfcabf' : '#f0ede8', lineHeight: 1.15 }}>{e.name}</p>
+            {e.tierLabel && !comingSoon && (
+              <span title="This upgrade has higher tiers — buy this to unlock the next." className="font-karla font-800 uppercase tracking-[0.1em]" style={{ flexShrink: 0, fontSize: '0.46rem', color: GOLD, background: `${GOLD}18`, border: `1px solid ${GOLD}55`, borderRadius: 999, padding: '0.16rem 0.42rem' }}>Tier {e.tierLabel}</span>
+            )}
             {comingSoon && (
               <span className="font-karla font-800 uppercase tracking-[0.12em]" style={{ flexShrink: 0, fontSize: '0.46rem', color: AC, background: `${AC}1c`, border: `1px solid ${AC}55`, borderRadius: 999, padding: '0.16rem 0.4rem' }}>Coming Soon</span>
             )}
@@ -4891,12 +4896,14 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
               // Relentless Catcher needs Tireless Catcher owned first.
               const req = u.requires ? getGauntletUpgrade(u.requires) : null
               const prereqMissing = !!req && !state.ownedAll.includes(u.requires!)
+              const ti = upgradeTierInfo(u.id)
               return {
                 id: u.id, name: u.name, description: u.description, depthRequired: u.depthRequired,
                 cost: u.cost, scope: u.scope, owned: state.owned.includes(u.id),
                 lockNote: prereqMissing ? `Unlock ${req!.name} first.` : null,
                 demo: u.id === 'cannonball_rack', special: false, category: u.category,
                 comingSoon: COMING_SOON_UPGRADES.has(u.id),
+                tierLabel: ti ? `${romanTier(ti.tier)} of ${romanTier(ti.total)}` : undefined,
               }
             })
             // Auto Catcher is a Davy's-Locker fishing perk (bought with Fathoms
@@ -4955,6 +4962,7 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
                         <div style={{ flex: 1, minWidth: 0, opacity: on ? 1 : 0.5, transition: 'opacity 0.15s' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                             <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: on ? '#eafffb' : '#c4bfb6', lineHeight: 1.15 }}>{e.name}</p>
+                            {e.tierLabel && <span title="Owned tier — higher tiers may be available in the shop." className="font-karla font-800 uppercase tracking-[0.1em]" style={{ flexShrink: 0, fontSize: '0.44rem', color: GOLD, background: `${GOLD}18`, border: `1px solid ${GOLD}55`, borderRadius: 999, padding: '0.14rem 0.4rem' }}>Tier {e.tierLabel}</span>}
                             {!on && <span className="font-karla font-800 uppercase tracking-[0.12em]" style={{ fontSize: '0.44rem', color: '#8a8480', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 999, padding: '0.14rem 0.4rem' }}>Off</span>}
                           </div>
                           <p className="font-karla" style={{ fontSize: '0.68rem', color: on ? '#a7c4bd' : '#8a857c', lineHeight: 1.42, marginTop: 3 }}>{e.description}</p>

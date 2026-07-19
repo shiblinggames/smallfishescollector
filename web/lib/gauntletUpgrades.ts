@@ -270,6 +270,38 @@ export function upgradesForVariant(variant: UpgradeGauntlet): GauntletUpgrade[] 
   return GAUNTLET_UPGRADES.filter(u => (u.gauntlet ?? 'davy') === variant)
 }
 
+/** An upgrade's position in its TIER CHAIN (Deep Lungs I/II/III), or null if it
+ *  isn't tiered. A chain is upgrades linked by `requires` within the SAME family
+ *  (same gauntlet tag) — so cross-Locker prereqs (Relentless → Tireless) don't
+ *  read as tiers. Drives the "I of III" badge so players know more tiers exist. */
+export function upgradeTierInfo(id: string): { tier: number; total: number } | null {
+  if (!getGauntletUpgrade(id)) return null
+  const fam = (x: string) => getGauntletUpgrade(x)?.gauntlet ?? 'davy'
+  const sameFam = (a: string, b: string) => !!getGauntletUpgrade(a) && !!getGauntletUpgrade(b) && fam(a) === fam(b)
+  // Walk back to the chain root through same-family `requires` links.
+  let rootId = id
+  for (let g = 0; g < 20; g++) {
+    const req = getGauntletUpgrade(rootId)?.requires
+    if (req && sameFam(rootId, req)) rootId = req
+    else break
+  }
+  // Walk forward from the root, building the full chain.
+  const chain = [rootId]
+  for (let g = 0; g < 20; g++) {
+    const last = chain[chain.length - 1]
+    const next = GAUNTLET_UPGRADES.find(x => x.requires === last && sameFam(x.id, last))
+    if (next) chain.push(next.id)
+    else break
+  }
+  if (chain.length < 2) return null
+  return { tier: chain.indexOf(id) + 1, total: chain.length }
+}
+
+/** Roman numeral for tier badges (1-5; enough for any realistic chain). */
+export function romanTier(n: number): string {
+  return ['', 'I', 'II', 'III', 'IV', 'V'][n] ?? String(n)
+}
+
 export function getGauntletUpgrade(id: string): GauntletUpgrade | null {
   return GAUNTLET_UPGRADES.find(u => u.id === id) ?? null
 }
