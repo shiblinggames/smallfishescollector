@@ -735,7 +735,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   const bankedDoubloons = Math.round(cleanPot * chest.potMult * doubloonMult * gauntletHaulMult(upgrades) * offerCoinMult(offerTaken))
   // Nav XP is decoupled from the doubloon pot onto its own gentler depth curve
   // (leveling was the sharper concern). Chest multiplier still rides on top.
-  const bankedXp        = Math.round(gauntletXpForDepth(payDepth) * chest.potMult * gauntletXpMult(upgrades))
+  const bankedXp        = Math.round(gauntletXpForDepth(payDepth, variant) * chest.potMult * gauntletXpMult(upgrades))
   const gems            = chest.gems
 
   // Fathoms — the Gauntlet's meta-currency — bank on reaching this depth
@@ -745,7 +745,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   // contest / leaderboard below count the combat depth.
   // Hardcore now banks Fathoms at the SAME rate as normal (HC_*_MULT = 1); its
   // only added payout is Blood Gems above.
-  const earnedFathoms    = Math.round(fathomsForDepth(rd) * gauntletFathomsMult(upgrades) * (hc ? HC_FATHOMS_MULT : 1) * offerFathomMult(offerTaken))
+  const earnedFathoms    = Math.round(fathomsForDepth(rd, variant) * gauntletFathomsMult(upgrades) * (hc ? HC_FATHOMS_MULT : 1) * offerFathomMult(offerTaken))
   const newFathoms       = ((profile.gauntlet_fathoms as number | null) ?? 0) + earnedFathoms
   const newDoubloons     = (profile.doubloons ?? 0) + bankedDoubloons
   const newGems          = (profile.gems ?? 0) + gems
@@ -849,7 +849,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
     }),
     // Crew XP is DECOUPLED from the player's Nav XP onto a raid-calibrated scale.
     // Hardcore survivors earn a bonus for bringing the squad home alive.
-    grantXPToAssignedCrew(admin, user.id, Math.round(gauntletCrewXp(payDepth) * (hc ? HC_SURVIVOR_XP_MULT : 1) * navRenown.crewXpMult)),
+    grantXPToAssignedCrew(admin, user.id, Math.round(gauntletCrewXp(payDepth, variant) * (hc ? HC_SURVIVOR_XP_MULT : 1) * navRenown.crewXpMult)),
   ])
 
   // Davy's Terms feats. Awaited (never fire-and-forget) so the write lands before
@@ -925,7 +925,7 @@ export async function resolveGauntletDeath(rewardDepth: number, combatDepth: num
   // reward descending, not surviving (Lucky Locker boosts the payout). Veteran's
   // Start's head start is excluded here, same as on cash-out.
   const rd = Math.max(0, Math.min(MAX_GAUNTLET_DEPTH, Math.floor(rewardDepth)))
-  const earnedFathoms = Math.round(fathomsForDepth(rd) * gauntletFathomsMult(activeGauntletUpgrades(
+  const earnedFathoms = Math.round(fathomsForDepth(rd, isDon ? 'don' : 'davy') * gauntletFathomsMult(activeGauntletUpgrades(
     ((isDon ? profile.dons_gauntlet_upgrades : profile.gauntlet_upgrades) as string[] | null) ?? [],
     ((isDon ? profile.dons_gauntlet_upgrades_off : profile.gauntlet_upgrades_off) as string[] | null) ?? [],
   )))

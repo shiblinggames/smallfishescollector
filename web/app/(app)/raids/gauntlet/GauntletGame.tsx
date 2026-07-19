@@ -2223,7 +2223,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     const offerChest    = offerChestMult(offer)
     const dealDoubloons = Math.round(previewDoubloons * offerCoinMult(offer))
     // Nav XP is on its own decoupled curve (not the pot) — mirror the server.
-    const previewXp = Math.round(gauntletXpForDepth(payDepth) * chest.potMult)
+    const previewXp = Math.round(gauntletXpForDepth(payDepth, props.variant) * chest.potMult)
     const hpPct = Math.max(0, Math.min(100, Math.round((playerHP / hpMax) * 100)))
     const hpColor = hpPct < 30 ? '#f87171' : hpPct < 60 ? GOLD : '#4ade80'
     const band = bandForDepth(combatDepth)

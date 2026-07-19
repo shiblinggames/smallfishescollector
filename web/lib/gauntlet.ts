@@ -213,12 +213,18 @@ const XP_BASE = 80
 const XP_GROWTH = 25
 const XP_FLATTEN_DEPTH = 15
 const XP_BOSS_FACTOR = 1.35
-export function gauntletXpForDepth(depth: number): number {
+// Don's Gauntlet reward multipliers (variant 'don'). Fathoms is the headline
+// draw (2×); Nav XP + crew XP are modest bumps. Pot / chest / reward-cap tuning
+// is deferred (Davy's for now). Ship + tune live on kingkong.
+export const DONS_FATHOM_MULT  = 2
+export const DONS_XP_MULT      = 1.2
+export const DONS_CREW_XP_MULT = 1.25
+export function gauntletXpForDepth(depth: number, variant: GauntletVariant = 'davy'): number {
   let total = 0
   for (let d = 1; d <= Math.max(0, Math.floor(depth)); d++) {
     total += XP_BASE + XP_GROWTH * Math.min(d, XP_FLATTEN_DEPTH)
   }
-  return Math.round(total * XP_BOSS_FACTOR)
+  return Math.round(total * XP_BOSS_FACTOR * (variant === 'don' ? DONS_XP_MULT : 1))
 }
 
 // CREW XP from a Gauntlet cash-out at `depth`, on a MUCH smaller scale than the
@@ -228,8 +234,8 @@ export function gauntletXpForDepth(depth: number): number {
 // roughly depth/6 raids of crew XP (depth 30 ≈ 4,500 ≈ 5 raids; ~42 depth-40
 // dives to max one crew). Granted per-assigned-crew, cash-out only.
 const CREW_XP_PER_DEPTH = 150
-export function gauntletCrewXp(depth: number): number {
-  return Math.round(Math.max(0, Math.floor(depth)) * CREW_XP_PER_DEPTH)
+export function gauntletCrewXp(depth: number, variant: GauntletVariant = 'davy'): number {
+  return Math.round(Math.max(0, Math.floor(depth)) * CREW_XP_PER_DEPTH * (variant === 'don' ? DONS_CREW_XP_MULT : 1))
 }
 
 /** Server-side ceiling for a reported depth: the pot the player would have
@@ -245,8 +251,9 @@ export function maxPotForDepth(depth: number): number {
  *  depth on a run. Banked whether you cash out OR sink, so it rewards how deep
  *  you got, not whether you played it safe. One Fathom per depth cleared. Spent
  *  on permanent Locker Upgrades + the Auto Catcher. */
-export function fathomsForDepth(depth: number): number {
-  return Math.max(0, Math.floor(depth))
+export function fathomsForDepth(depth: number, variant: GauntletVariant = 'davy'): number {
+  const base = Math.max(0, Math.floor(depth))
+  return variant === 'don' ? base * DONS_FATHOM_MULT : base
 }
 
 /** Honest floor estimate of the pot a run reaching `depth` banks: every
