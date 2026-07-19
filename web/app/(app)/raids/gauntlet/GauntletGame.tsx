@@ -180,6 +180,12 @@ const SHRINE_WALK_HEAL    = 0.05  // Walk on: fraction of MAX HP healed (deliber
 
 export default function GauntletGame(props: GauntletGameProps) {
   const router = useRouter()
+  // Variant-aware branding (a light touch until the full theme slice): Don's
+  // Gauntlet swaps the title + hero face. Full crimson/ghost theming comes later.
+  const isDonG = props.variant === 'don'
+  const heroImg = isDonG ? '/donsgauntlet.png' : MAW_IMG
+  const gauntletTitle = isDonG ? "Don's Gauntlet" : 'Davy Jones Gauntlet'
+  const gauntletFace = isDonG ? 'Don Finleone' : 'Davy Jones'
   const shipFilter = props.equippedShipSkin ? getShipSkin(props.equippedShipSkin)?.filter ?? 'none' : 'none'
   // Locker run-upgrades, mirrored into local state. The server-loaded prop only
   // refreshes on a fresh page render (tab switch / navigation), so a player who
@@ -1647,14 +1653,14 @@ export default function GauntletGame(props: GauntletGameProps) {
           }}>
           {/* Title */}
           <h1 className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f3ead2', lineHeight: 1.08, marginTop: 8, textShadow: '0 0 22px rgba(240,192,64,0.3)' }}>
-            Davy Jones Gauntlet
+            {gauntletTitle}
           </h1>
 
           {/* The maw — the hole you drop into */}
           <div style={{ position: 'relative', width: 148, height: 148, margin: '12px auto 4px' }}>
             <div style={{ position: 'absolute', inset: -20, borderRadius: '50%', background: 'radial-gradient(circle, rgba(240,192,64,0.26) 0%, rgba(94,234,212,0.12) 42%, transparent 70%)', animation: 'gauntPulse 4.2s ease-in-out infinite' }} />
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={MAW_IMG} alt="" loading="eager" decoding="async"
+            <img src={heroImg} alt="" loading="eager" decoding="async"
               style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', filter: 'drop-shadow(0 10px 32px rgba(0,0,0,0.75))', animation: 'gauntDrift 6s ease-in-out infinite' }} />
           </div>
 
@@ -1946,9 +1952,9 @@ export default function GauntletGame(props: GauntletGameProps) {
           >
             <div style={{ position: 'absolute', inset: -22, borderRadius: '50%', background: `radial-gradient(circle, ${CRIMSON}30 0%, rgba(120,20,20,0.14) 42%, transparent 70%)`, animation: 'gauntPulse 3.4s ease-in-out infinite' }} />
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <motion.img src={MAW_IMG} alt="" loading="eager" decoding="async"
+            <motion.img src={heroImg} alt="" loading="eager" decoding="async"
               animate={{ y: [0, -5, 0] }} transition={{ duration: 4.2, repeat: Infinity, ease: 'easeInOut' }}
-              style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', filter: `${props.variant === 'don' ? GHOST_FILTER : DROWNED_FILTER} drop-shadow(0 10px 30px rgba(0,0,0,0.8)) drop-shadow(0 0 22px ${CRIMSON}40)` }} />
+              style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', filter: `${isDonG ? '' : DROWNED_FILTER + ' '}drop-shadow(0 10px 30px rgba(0,0,0,0.8)) drop-shadow(0 0 22px ${CRIMSON}40)` }} />
           </motion.div>
 
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
@@ -3205,7 +3211,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         }}>
           <motion.div initial={{ opacity: 0, y: -22, scale: 0.86 }} animate={{ opacity: 0.92, y: 0, scale: 1 }} transition={{ duration: 1.2, ease: 'easeOut' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={MAW_IMG} alt="" loading="eager" decoding="async"
+            <img src={heroImg} alt="" loading="eager" decoding="async"
               style={{ width: 104, height: 104, objectFit: 'contain', filter: 'drop-shadow(0 8px 26px rgba(0,0,0,0.7))' }} />
           </motion.div>
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.12, duration: 0.4 }}
@@ -3237,7 +3243,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             <motion.p initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55, duration: 0.5 }}
               className="font-karla" style={{ maxWidth: 320, fontSize: '0.78rem', fontStyle: 'italic', color: 'rgba(94,234,212,0.82)', lineHeight: 1.5, marginTop: 16 }}>
               &ldquo;{taunt}&rdquo;
-              <span className="font-karla font-700 uppercase tracking-[0.16em]" style={{ display: 'block', fontSize: '0.5rem', color: 'rgba(94,234,212,0.5)', marginTop: 6 }}>Davy Jones</span>
+              <span className="font-karla font-700 uppercase tracking-[0.16em]" style={{ display: 'block', fontSize: '0.5rem', color: 'rgba(94,234,212,0.5)', marginTop: 6 }}>{gauntletFace}</span>
             </motion.p>
           )}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, marginTop: 18 }}>
