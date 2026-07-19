@@ -695,7 +695,7 @@ export default function RaidCombat({
         case 'retaliatePct':          retaliatePct += e.pct; retaliateDodgePct += (e.dodgePct ?? 0); break
         case 'lowHpDamage':           lowHpDamage = Math.max(lowHpDamage, e.maxBonus); break
         case 'chargeCarryover':       chargeCarryover = Math.max(chargeCarryover, e.cap); break
-        case 'fightShield':           fightShieldPct = Math.max(fightShieldPct, e.pctMax); break
+        case 'fightShield':           fightShieldPct += e.pctMax; break   // sources STACK (Stormward + Deep Fortress + Last Bastion), per their copy
         case 'enemyShield':           enemyShieldPct = Math.max(enemyShieldPct, e.pctMax); break
         case 'incomingDmgMult':       inDmgMult *= e.mult; break
         case 'overhealPct':           overhealPct = Math.max(overhealPct, e.pct); break
