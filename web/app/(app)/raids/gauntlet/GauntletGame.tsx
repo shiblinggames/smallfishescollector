@@ -946,9 +946,12 @@ export default function GauntletGame(props: GauntletGameProps) {
       setRecordBeat(false)
     }
     // Hold longer on depths where Davy speaks, so his taunt is readable —
-    // and on the uncharted beat, so the record moment lands.
+    // and on the uncharted beat, so the record moment lands. The Don apex gets
+    // the longest hold + a heavy haptic: his rise is an EVENT, not a fight.
     const hasTaunt = fight ? gauntletTaunt(fight.depth, props.variant) !== null : false
-    const t = setTimeout(() => setPhase('fighting'), hasTaunt ? 3000 : firedBeat ? 2200 : 1350)
+    const isApexFight = fight?.isApex === true
+    if (isApexFight) vibrate([0, 45, 90, 45, 140])
+    const t = setTimeout(() => setPhase('fighting'), isApexFight ? 4200 : hasTaunt ? 3000 : firedBeat ? 2200 : 1350)
     return () => clearTimeout(t)
   }, [phase, fight])
 
@@ -3252,6 +3255,38 @@ export default function GauntletGame(props: GauntletGameProps) {
     const taunt = gauntletTaunt(d, props.variant)
     // First depth OF a band = a real arrival — the name gets the loud cut.
     const bandEntry = band.minDepth === d && d > 1
+
+    // The Don apex (Don's Gauntlet only, rare + deep): his rise gets its OWN
+    // telegraph so you feel him coming, not just meet a big boss mid-descent.
+    if (fight?.isApex) {
+      return (
+        <>
+          <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
+          <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 120% 82% at 50% 58%, ${KRAKEN_DEEP}3a 0%, ${KRAKEN_DEEP}14 40%, transparent 70%)` }} />
+          <div style={{ position: 'relative', zIndex: 1, minHeight: '62vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '2rem 1.2rem' }}>
+            <motion.div initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 0.97, scale: 1 }} transition={{ duration: 1.4, ease: 'easeOut' }} style={{ position: 'relative', width: 190, height: 190 }}>
+              <motion.div aria-hidden animate={{ scale: [1, 1.12, 1], opacity: [0.5, 0.85, 0.5] }} transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
+                style={{ position: 'absolute', inset: -30, borderRadius: '50%', background: `radial-gradient(circle, ${KRAKEN}44 0%, ${KRAKEN_DEEP}22 45%, transparent 72%)` }} />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <motion.img src={heroImg} alt="" loading="eager" decoding="async"
+                animate={{ y: [0, -6, 0] }} transition={{ duration: 3.4, repeat: Infinity, ease: 'easeInOut' }}
+                style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', filter: `drop-shadow(0 12px 34px rgba(0,0,0,0.85)) drop-shadow(0 0 26px ${KRAKEN}66)` }} />
+            </motion.div>
+            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
+              className="font-karla font-800 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.36em', color: KRAKEN, marginTop: 16, textShadow: `0 0 18px ${KRAKEN}88` }}>The Court Falls Silent</motion.p>
+            <motion.p initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.36, type: 'spring', stiffness: 210, damping: 17 }}
+              className="font-cinzel font-800" style={{ fontSize: '2.3rem', color: '#eafff2', lineHeight: 1.04, marginTop: 8, textShadow: `0 2px 12px rgba(0,0,0,0.7), 0 0 30px ${KRAKEN}55` }}>Don Finleone Rises</motion.p>
+            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
+              className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: KRAKEN, marginTop: 6, letterSpacing: '0.06em' }}>Depth {d} · The Apex</motion.p>
+            <motion.p initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.72, duration: 0.5 }}
+              className="font-karla" style={{ maxWidth: 330, fontSize: '0.8rem', fontStyle: 'italic', color: 'rgba(63,191,130,0.9)', lineHeight: 1.5, marginTop: 16 }}>
+              &ldquo;You sank my whole Family to reach me, captain. Come and be counted with them.&rdquo;
+              <span className="font-karla font-700 uppercase tracking-[0.16em]" style={{ display: 'block', fontSize: '0.5rem', color: 'rgba(63,191,130,0.6)', marginTop: 6 }}>Don Finleone</span>
+            </motion.p>
+          </div>
+        </>
+      )
+    }
     return (
       <>
         <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
