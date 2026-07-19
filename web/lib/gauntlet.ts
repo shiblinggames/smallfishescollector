@@ -1938,6 +1938,105 @@ export const CONFLUENCES: Confluence[] = [
       { desc: 'Start each fight with a shield worth 16% of your max HP', effects: [{ kind: 'fightShield', pctMax: 0.16 }] },
     ],
   },
+
+  // ── Don's Gauntlet confluences (gauntlet: 'don' — fuse the ghost-fleet boons;
+  //    each needs a 'don'-only half, so they can never surface in Davy's) ───────
+  {
+    id: 'cripple', name: 'Cripple', gauntlet: 'don',
+    requires: [{ boonId: 'rattling_shot' }, { boonId: 'chainshot' }],
+    flavor: 'Feeble and snared at once. A hull that can neither hit nor run is just target practice.',
+    detail: 'With both on-hit hexes running, your hits pile the control on — extra chances to Feeble AND Slow the enemy every shot — and you deal more damage while it flails.',
+    levels: [
+      { desc: 'Extra Feeble + Slow on hit; +10% damage', effects: [{ kind: 'statusOnHit', status: 'feeble', chance: 0.35, magnitude: 0.15, turns: 2 }, { kind: 'statusOnHit', status: 'slowed', chance: 0.35, magnitude: 2, turns: 2 }, { kind: 'damageMult', mult: 1.10 }] },
+      { desc: 'Bigger Feeble + Slow on hit; +16% damage', effects: [{ kind: 'statusOnHit', status: 'feeble', chance: 0.45, magnitude: 0.20, turns: 3 }, { kind: 'statusOnHit', status: 'slowed', chance: 0.45, magnitude: 2, turns: 3 }, { kind: 'damageMult', mult: 1.16 }] },
+      { desc: 'Heavy Feeble + Slow on hit; +24% damage', effects: [{ kind: 'statusOnHit', status: 'feeble', chance: 0.55, magnitude: 0.25, turns: 3 }, { kind: 'statusOnHit', status: 'slowed', chance: 0.55, magnitude: 3, turns: 3 }, { kind: 'damageMult', mult: 1.24 }] },
+    ],
+  },
+  {
+    id: 'sapping_fire', name: 'Sapping Fire', gauntlet: 'don',
+    requires: [{ boonId: 'rattling_shot' }, { boonId: 'wildfire' }],
+    flavor: 'Fire in the timbers and the fight bled out of them. They burn, and they buckle.',
+    detail: 'A burning hull is a broken one: your hits carry an extra Feeble, and everything you fire lands harder while the fire eats them.',
+    levels: [
+      { desc: 'Extra Feeble on hit; +10% damage', effects: [{ kind: 'statusOnHit', status: 'feeble', chance: 0.40, magnitude: 0.18, turns: 2 }, { kind: 'damageMult', mult: 1.10 }] },
+      { desc: 'Bigger Feeble on hit; +16% damage', effects: [{ kind: 'statusOnHit', status: 'feeble', chance: 0.50, magnitude: 0.24, turns: 3 }, { kind: 'damageMult', mult: 1.16 }] },
+      { desc: 'Heavy Feeble on hit; +24% damage', effects: [{ kind: 'statusOnHit', status: 'feeble', chance: 0.60, magnitude: 0.30, turns: 3 }, { kind: 'damageMult', mult: 1.24 }] },
+    ],
+  },
+  {
+    id: 'hobble', name: 'Hobble', gauntlet: 'don',
+    requires: [{ boonId: 'chainshot' }, { boonId: 'following_sea' }],
+    flavor: 'Snare their rigging, ride their wake. They lumber; you dance.',
+    detail: 'A slowed hull can’t chase you: your hits Slow harder, and you slip their shots more often for the rest of the run.',
+    levels: [
+      { desc: 'Extra Slow on hit; +8% dodge', effects: [{ kind: 'statusOnHit', status: 'slowed', chance: 0.40, magnitude: 2, turns: 2 }, { kind: 'dodgeBonus', chance: 0.08, scope: 'allRemaining' }] },
+      { desc: 'Bigger Slow on hit; +14% dodge', effects: [{ kind: 'statusOnHit', status: 'slowed', chance: 0.50, magnitude: 3, turns: 3 }, { kind: 'dodgeBonus', chance: 0.14, scope: 'allRemaining' }] },
+      { desc: 'Heavy Slow on hit; +20% dodge', effects: [{ kind: 'statusOnHit', status: 'slowed', chance: 0.60, magnitude: 3, turns: 3 }, { kind: 'dodgeBonus', chance: 0.20, scope: 'allRemaining' }] },
+    ],
+  },
+  {
+    id: 'coring_shot', name: 'Coring Shot', gauntlet: 'don',
+    requires: [{ boonId: 'armor_piercing' }, { boonId: 'cold_fury' }],
+    flavor: 'A cold, hard round that finds the core through any ward and cracks it wide.',
+    detail: 'Barriers stop meaning anything: nearly all of your shot skips the shield straight to the hull, and your critical hits land far harder.',
+    levels: [
+      { desc: 'Shots ignore 85% of barriers; +18% crit damage', effects: [{ kind: 'shieldPierce', pct: 0.85 }, { kind: 'critDmgMult', mult: 1.18 }] },
+      { desc: 'Shots ignore 92% of barriers; +26% crit damage', effects: [{ kind: 'shieldPierce', pct: 0.92 }, { kind: 'critDmgMult', mult: 1.26 }] },
+      { desc: 'Shots ignore barriers entirely; +36% crit damage', effects: [{ kind: 'shieldPierce', pct: 1 }, { kind: 'critDmgMult', mult: 1.36 }] },
+    ],
+  },
+  {
+    id: 'clear_skies', name: 'Clear Skies', gauntlet: 'don',
+    requires: [{ boonId: 'steady_sights' }, { boonId: 'wide_sights' }],
+    flavor: 'No fog, no lie, and a target you could hit blindfolded. So you don’t miss.',
+    detail: 'Your glass is spotless AND your gold band is huge: nothing clouds your aim, and the perfect-shot window widens so crits come easy.',
+    levels: [
+      { desc: 'Immune to aim fog/decoys; gold crit band +16% wider', effects: [{ kind: 'aimClarity', reduce: 1 }, { kind: 'critZoneScale', mult: 1.16 }] },
+      { desc: 'Immune to aim fog/decoys; gold band +26% wider', effects: [{ kind: 'aimClarity', reduce: 1 }, { kind: 'critZoneScale', mult: 1.26 }] },
+      { desc: 'Immune to aim fog/decoys; gold band +38% wider', effects: [{ kind: 'aimClarity', reduce: 1 }, { kind: 'critZoneScale', mult: 1.38 }] },
+    ],
+  },
+  {
+    id: 'riposte_wall', name: 'Riposte Wall', gauntlet: 'don',
+    requires: [{ boonId: 'cutlass_guard' }, { boonId: 'spiteful_wake' }],
+    flavor: 'Turn the blow, and the sea turns it back twice as hard. Nothing that swings at you leaves whole.',
+    detail: 'Parry AND thorns, reinforcing each other: you parry more often and reflect harder, and every hit you DO eat is flung back with more spite.',
+    levels: [
+      { desc: '35% parry / 65% reflect; thrown-back damage +1.6x', effects: [{ kind: 'parryChance', chance: 0.35, reflectPct: 0.65 }, { kind: 'retaliateBoost', mult: 1.6 }] },
+      { desc: '45% parry / 80% reflect; thrown-back damage +2.2x', effects: [{ kind: 'parryChance', chance: 0.45, reflectPct: 0.80 }, { kind: 'retaliateBoost', mult: 2.2 }] },
+      { desc: '55% parry / 100% reflect; thrown-back damage +3x', effects: [{ kind: 'parryChance', chance: 0.55, reflectPct: 1.0 }, { kind: 'retaliateBoost', mult: 3.0 }] },
+    ],
+  },
+  {
+    id: 'prize_crew', name: 'Prize Crew', gauntlet: 'don',
+    requires: [{ boonId: 'press_gang' }, { boonId: 'powder_hoard' }],
+    flavor: 'What you take, you keep, and what you keep carries over. Their magazine becomes yours.',
+    detail: 'A theft engine: you steal enemy cannonballs far more often, and you open every fight already loaded on top of Powder Hoard’s carryover.',
+    levels: [
+      { desc: '+20% steal chance; start each fight +1 loaded', effects: [{ kind: 'stealCharge', chance: 0.20 }, { kind: 'startCharges', n: 1, scope: 'allRemaining' }] },
+      { desc: '+35% steal chance; start each fight +2 loaded', effects: [{ kind: 'stealCharge', chance: 0.35 }, { kind: 'startCharges', n: 2, scope: 'allRemaining' }] },
+    ],
+  },
+  {
+    id: 'deep_terror', name: 'Deep Terror', gauntlet: 'don',
+    requires: [{ boonId: 'krakens_grip' }, { boonId: 'permafrost' }],
+    flavor: 'Frozen solid and seized by the deep. Some hulls never get another turn.',
+    detail: 'Total lockdown: your hits stun far more often on top of Permafrost’s freezes, and a held hull takes extra damage while it can’t act.',
+    levels: [
+      { desc: '+15% stun chance on hit; +14% damage', effects: [{ kind: 'stunOnHit', chance: 0.15, turns: 1 }, { kind: 'damageMult', mult: 1.14 }] },
+      { desc: '+22% stun chance (2 turns); +22% damage', effects: [{ kind: 'stunOnHit', chance: 0.22, turns: 2 }, { kind: 'damageMult', mult: 1.22 }] },
+    ],
+  },
+  {
+    id: 'loaded_dice', name: 'Loaded Dice', gauntlet: 'don',
+    requires: [{ boonId: 'dons_favor' }, { boonId: 'loaded_for_bear' }],
+    flavor: 'The Don’s luck and a gun that can’t miss the mark. The house always wins now.',
+    detail: 'Every fight opens with a STRONGER random blessing, and your guaranteed-crit rhythm speeds up to every other shot.',
+    levels: [
+      { desc: 'Stronger fight blessing; every 2nd shot is a guaranteed crit', effects: [{ kind: 'randomFightBuff', magnitude: 0.35 }, { kind: 'guaranteedCritEvery', n: 2 }] },
+      { desc: 'Even stronger blessing; every 2nd shot crits', effects: [{ kind: 'randomFightBuff', magnitude: 0.50 }, { kind: 'guaranteedCritEvery', n: 2 }] },
+    ],
+  },
 ]
 
 /** A confluence's current LEVEL (1..3), or 0 if you don't hold both halves. The
