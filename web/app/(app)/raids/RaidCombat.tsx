@@ -684,6 +684,9 @@ export default function RaidCombat({
     let stunOnHitChance = 0, stunOnHitTurns = 1   // Kraken's Grip
     let guaranteedCritEvery = 0     // Loaded for Bear: 0 = off; else every Nth shot crits
     let stealChargeChance = 0       // Press-Gang
+    let parryChance = 0, parryReflectPct = 0      // Cutlass Guard
+    let aimClarity = 0              // Steady Sights: 0-1 fog/blackout reduction
+    let randomFightBuff = 0        // The Don's Favor: magnitude of the per-fight blessing
     for (const e of tideEffects) {
       switch (e.kind) {
         case 'damageMult':            dmgMult *= e.mult; break
@@ -785,6 +788,9 @@ export default function RaidCombat({
         case 'stunOnHit':             if (e.chance > stunOnHitChance) { stunOnHitChance = e.chance; stunOnHitTurns = e.turns } break
         case 'guaranteedCritEvery':   if (e.n > 0 && (guaranteedCritEvery === 0 || e.n < guaranteedCritEvery)) guaranteedCritEvery = e.n; break
         case 'stealCharge':           stealChargeChance = Math.max(stealChargeChance, e.chance); break
+        case 'parryChance':           if (e.chance > parryChance) { parryChance = e.chance; parryReflectPct = e.reflectPct } break
+        case 'aimClarity':            aimClarity = Math.max(aimClarity, e.reduce); break
+        case 'randomFightBuff':       randomFightBuff = Math.max(randomFightBuff, e.magnitude); break
         case 'instantHeal': case 'instantHealPct': case 'fullHeal': case 'doubloonsAtRaidEnd': break // handled at pick-time
       }
     }
@@ -812,6 +818,7 @@ export default function RaidCombat({
       counterBonusRefund, counterBonusStack, counterBonusChance, counterReflectPct,
       statusOnHitList, playerStartStatusList,
       shieldPierceFrac, stunOnHitChance, stunOnHitTurns, guaranteedCritEvery, stealChargeChance,
+      parryChance, parryReflectPct, aimClarity, randomFightBuff,
     }
   }, [tideEffects, isBoss, runKills, runDepth])
   // Shrouded Hull / Shuttered Ports curses — rolled ONCE per fight (RaidCombat
@@ -1865,6 +1872,23 @@ export default function RaidCombat({
     // soft / why the bar fogs over. Each ability gets its own line so an
     // enemy carrying both reads cleanly in the log.
     const introLines = [intro]
+    // The Don's Favor (boon): open each fight with ONE random blessing rolled
+    // from a small pool — enrage (offense), fortify (defense), or regen (heal),
+    // applied for the whole fight via the shared status pipeline.
+    if (tide.randomFightBuff > 0) {
+      const roll = Math.random()
+      if (roll < 0.34) {
+        applyPlayerStatus('enrage', tide.randomFightBuff, 99)
+        introLines.push(`The Don's Favor — you open ENRAGED (+${Math.round(tide.randomFightBuff * 100)}% damage).`)
+      } else if (roll < 0.67) {
+        applyPlayerStatus('fortify', tide.randomFightBuff, 99)
+        introLines.push(`The Don's Favor — you open FORTIFIED (−${Math.round(tide.randomFightBuff * 100)}% damage taken).`)
+      } else {
+        const perRound = Math.max(3, Math.round(playerHpMax * (0.03 + tide.randomFightBuff * 0.06)))
+        applyPlayerStatus('regen', perRound, 99)
+        introLines.push(`The Don's Favor — you open MENDING (+${perRound} HP each round).`)
+      }
+    }
     // Host-supplied opener (Gauntlet: 'Crew abilities refreshed.' on a refresh round).
     if (openingNote) introLines.push(openingNote)
     // Momentum boons are passive damage mults with no per-shot trigger, so
@@ -2000,7 +2024,10 @@ export default function RaidCombat({
     // raid-8 'decoys' affliction forces them on EVERY afflicted pass instead.
     const dLo = HIT_W + GRAZE_W, dHi = 1 - HIT_W - GRAZE_W
     const forcedDecoys = affliction?.kind === 'decoys' ? 2 : 0
-    const nDecoys = forcedDecoys > 0
+    // Steady Sights (boon) at full clarity clears decoys entirely (native + tide).
+    const nDecoys = tide.aimClarity >= 1
+      ? 0
+      : forcedDecoys > 0
       ? forcedDecoys
       : tide.aimDecoys > 0 && Math.random() < DECOY_FIRE_CHANCE ? tide.aimDecoys : 0
     decoyRunRef.current = Array.from({ length: nDecoys }, (_, k) => ({
@@ -4200,6 +4227,22 @@ export default function RaidCombat({
           // mitigation/anchor/shield reduces it — Spiteful Wake reflects off
           // this (see below) so defense doesn't starve the thorns.
           const rawIncoming = dmg
+          // Cutlass Guard (boon): a chance to PARRY a landing blow outright —
+          // take nothing, and (higher tiers) lash a slice of the intended hit
+          // back. A parry counts as an avoided hit, so it suppresses the on-hit
+          // effects below (shark's bite gates on dmg>0; Spiteful Wake on !parried).
+          let parried = false
+          if (tide.parryChance > 0 && rawIncoming > 0 && Math.random() < tide.parryChance) {
+            parried = true
+            dmg = 0
+            if (tide.parryReflectPct > 0 && eHp > 0) {
+              const reflect = Math.max(1, Math.round(rawIncoming * tide.parryReflectPct))
+              eHp = Math.max(0, eHp - soakEnemyShield(reflect))
+              stepLines.push(`Cutlass Guard! You turn the ${enemy.name}'s blow and lash back for ${reflect}.`)
+            } else {
+              stepLines.push(`Cutlass Guard! You turn the ${enemy.name}'s blow clean aside.`)
+            }
+          }
           // Hull plating (raid items) + crew survivability effects (Bulwark
           // cuts, Soft Shell adds) both scale incoming damage here.
           // Tide layer: tide.inDmgMult folds in incomingDmgMult tide
@@ -4245,7 +4288,7 @@ export default function RaidCombat({
           // (rawIncoming), so Ironhide, fight-shields and heavy plating don't
           // starve the thorns (a fully-soaked hit still bites back). Never
           // reflects onto an already-sunk enemy.
-          if (tide.retaliatePct > 0 && rawIncoming > 0 && eHp > 0) {
+          if (tide.retaliatePct > 0 && rawIncoming > 0 && eHp > 0 && !parried) {
             // Iron Tempest confluence multiplies the reflected damage.
             const thorns = Math.max(1, Math.round(rawIncoming * tide.retaliatePct * tide.retaliateBoostMult))
             eHp = Math.max(0, eHp - soakEnemyShield(thorns))
@@ -6450,9 +6493,10 @@ export default function RaidCombat({
           <AimBarInline
             indicatorRef={indicatorRef} zoneRef={zoneRef} flashRef={barFlashRef}
             // Enemy Mist Veil + any Gauntlet fog curse stack into one band.
-            aimFogDensity={Math.min(0.95, (enemy.aimFogDensity ?? 0) + tide.aimFog)}
+            // Steady Sights (boon) clears a fraction (all at full clarity).
+            aimFogDensity={Math.min(0.95, (enemy.aimFogDensity ?? 0) + tide.aimFog) * (1 - tide.aimClarity)}
             // Inkfall curse: the bar randomly blacks out for a beat.
-            aimBlackout={tide.aimBlackout}
+            aimBlackout={tide.aimBlackout * (1 - tide.aimClarity)}
             // During the freeze, show the width the shot was judged at —
             // Sharpshot is consumed at lock and the live width would
             // shrink the band mid-freeze, making the picture lie.

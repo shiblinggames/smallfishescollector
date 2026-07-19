@@ -1547,6 +1547,20 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
     { desc: '18% on a hit to STUN the enemy (skips its next turn)', detail: 'Whenever you land a hit, there’s an 18% chance the deep seizes the enemy — it loses its next turn entirely, exactly like a freeze. Bosses are not immune.', effect: { kind: 'stunOnHit', chance: 0.18, turns: 1 } },
     { desc: '26% on a hit to STUN the enemy for 2 turns', detail: 'Whenever you land a hit, there’s a 26% chance the deep seizes the enemy and holds it for its next TWO turns.', effect: { kind: 'stunOnHit', chance: 0.26, turns: 2 } },
   ] },
+  { id: 'cutlass_guard', name: 'Cutlass Guard', gauntlet: 'don', flavor: 'Meet the blow, turn it, and answer before they’ve recovered.', rarity: 'rare', tiers: [
+    { desc: '20% to parry a hit (take nothing) and lash back 40%', detail: 'Every enemy blow that would land has a 20% chance to be PARRIED — you take no damage, and 40% of the hit it aimed at you is flung straight back. A parry counts as an avoided hit.', effect: { kind: 'parryChance', chance: 0.20, reflectPct: 0.40 } },
+    { desc: '30% to parry a hit and lash back 55%', detail: 'Enemy blows have a 30% chance to be parried; you take nothing and reflect 55% of the intended hit.', effect: { kind: 'parryChance', chance: 0.30, reflectPct: 0.55 } },
+    { desc: '40% to parry a hit and lash back 70%', detail: 'Enemy blows have a 40% chance to be parried; you take nothing and reflect 70% of the intended hit.', effect: { kind: 'parryChance', chance: 0.40, reflectPct: 0.70 } },
+  ] },
+  { id: 'steady_sights', name: 'Steady Sights', gauntlet: 'don', flavor: 'The green can fog every glass in the fleet but yours.', tiers: [
+    { desc: 'Aim fog + blackout cut in half', detail: 'Any fog, mist, or blackout thrown over your aim bar (enemy Mist Veil, the ghost fleet, fog curses) is cut by 50% — your sight stays clearer than the fleet’s.', effect: { kind: 'aimClarity', reduce: 0.5 } },
+    { desc: 'Aim fog + blackout cut 75%', detail: 'Aim fog, mist, and blackout are reduced by 75%.', effect: { kind: 'aimClarity', reduce: 0.75 } },
+    { desc: 'Immune to aim fog, blackout AND decoys', detail: 'Nothing clouds your glass: aim fog, mist, and blackout are gone entirely, and false-target decoys never drift your bar.', effect: { kind: 'aimClarity', reduce: 1 } },
+  ] },
+  { id: 'dons_favor', name: "The Don's Favor", gauntlet: 'don', flavor: 'The Don owes no one, but now and then the green smiles on you anyway. Never the same way twice.', rarity: 'legendary', tiers: [
+    { desc: 'Open each fight with a random blessing (Enrage / Fortify / Mending)', detail: 'At the start of EVERY fight you roll one of three blessings for the whole fight: ENRAGED (+25% damage dealt), FORTIFIED (−25% damage taken), or MENDING (heal a slice of your hull each round). Which one is always a surprise.', effect: { kind: 'randomFightBuff', magnitude: 0.25 } },
+    { desc: 'A STRONGER random blessing each fight', detail: 'Every fight opens with a stronger random blessing: ENRAGED (+40% damage), FORTIFIED (−40% damage taken), or MENDING (a bigger heal each round).', effect: { kind: 'randomFightBuff', magnitude: 0.40 } },
+  ] },
 ]
 
 // Boon drafts fall on a ~every-2.5-depths cadence (alternating +2 / +3), up

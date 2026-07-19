@@ -248,6 +248,16 @@ export type TideEffect =
   /** Press-Gang: a landed hit has `chance` to steal a loaded cannonball off the
    *  enemy and ram it into your own rack. */
   | { kind: 'stealCharge'; chance: number }
+  // ── Don's Gauntlet Batch B — player-side defense / utility ──────
+  /** Cutlass Guard: `chance` to PARRY a landing enemy hit (take nothing) and
+   *  lash `reflectPct` (0-1) of the intended blow straight back. */
+  | { kind: 'parryChance'; chance: number; reflectPct: number }
+  /** Steady Sights: `reduce` (0-1) of aim-bar fog + blackout is cleared; at full
+   *  (1) decoys are suppressed too. */
+  | { kind: 'aimClarity'; reduce: number }
+  /** The Don's Favor: open each fight with ONE random blessing (enrage / fortify
+   *  / regen), scaled by `magnitude`. */
+  | { kind: 'randomFightBuff'; magnitude: number }
   // ── Meta (post-raid only) ───────────────────────────────────────
   /** Doubloons granted / deducted at raid end. */
   | { kind: 'doubloonsAtRaidEnd'; n: number }
@@ -319,6 +329,9 @@ export function effectTone(e: TideEffect): 'good' | 'bad' | 'neutral' {
     case 'stunOnHit':           return 'good'
     case 'guaranteedCritEvery': return 'good'
     case 'stealCharge':         return 'good'
+    case 'parryChance':         return 'good'
+    case 'aimClarity':          return 'good'
+    case 'randomFightBuff':     return 'good'
     case 'confuse':      return e.chance > 0 ? 'bad' : 'neutral'
     case 'hideEnemyHp': case 'hideEnemyCharges': return e.chance > 0 ? 'bad' : 'neutral'
     case 'iceAffinity':  return 'good'
@@ -1009,6 +1022,9 @@ export function describeEffect(e: TideEffect): string {
     case 'stunOnHit':             return `${Math.round(e.chance * 100)}% on a hit to stun the enemy ${e.turns > 1 ? `${e.turns} turns` : 'a turn'}`
     case 'guaranteedCritEvery':   return `Every ${e.n}${e.n === 1 ? 'st' : e.n === 2 ? 'nd' : e.n === 3 ? 'rd' : 'th'} landed shot is a guaranteed crit`
     case 'stealCharge':           return `${Math.round(e.chance * 100)}% on a hit to steal an enemy cannonball`
+    case 'parryChance':           return `${Math.round(e.chance * 100)}% to parry a hit${e.reflectPct > 0 ? ` and reflect ${Math.round(e.reflectPct * 100)}%` : ''}`
+    case 'aimClarity':            return e.reduce >= 1 ? `Immune to aim fog, blackout + decoys` : `Aim fog + blackout cut ${Math.round(e.reduce * 100)}%`
+    case 'randomFightBuff':       return `Open each fight with a random blessing`
   }
 }
 
