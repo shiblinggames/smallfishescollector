@@ -17,7 +17,7 @@ import { navRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
 import { termPressure, pressureGemMult, pressureFeats, pressureSkinDropChance, resolveTerms, PRESSURE_SKIN_ID, getTerm, type SignedTerms } from '@/lib/gauntletTerms'
 import { grantBadgeDirect } from '@/lib/badgeGrant'
-import { GOLD_HULL_SKIN_ID, GOLD_HULL_CHEST_TIER, BLOOD_HULL_SKIN_ID, BLOOD_HULL_CHEST_TIER, BLOOD_CANNON_ITEM_ID, BLOOD_CANNON_CHEST_TIER, maxPotForDepth, chestForDepth, chestCannonDropChance, chestSkinDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_REWARD_DEPTH_CAP, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, gauntletXpForDepth, gauntletCrewXp, CONFLUENCES, hardcoreUnlocked, HARDCORE_LIVE, HARDCORE_UNLOCKS, HARDCORE_RUNS_PER_DAY, HC_FATHOMS_MULT, HC_SURVIVOR_XP_MULT, bloodGemsForDepth, coerceRunStats, chestOdds, type GauntletRunSnapshot, type GauntletRunState, type GauntletVariant } from '@/lib/gauntlet'
+import { GOLD_HULL_SKIN_ID, GOLD_HULL_CHEST_TIER, BLOOD_HULL_SKIN_ID, BLOOD_HULL_CHEST_TIER, BLOOD_CANNON_ITEM_ID, BLOOD_CANNON_CHEST_TIER, maxPotForDepth, chestForDepth, chestCannonDropChance, chestSkinDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_REWARD_DEPTH_CAP, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, gauntletXpForDepth, gauntletCrewXp, DONS_CHEST_GEM_MULT, CONFLUENCES, hardcoreUnlocked, HARDCORE_LIVE, HARDCORE_UNLOCKS, HARDCORE_RUNS_PER_DAY, HC_FATHOMS_MULT, HC_SURVIVOR_XP_MULT, bloodGemsForDepth, coerceRunStats, chestOdds, type GauntletRunSnapshot, type GauntletRunState, type GauntletVariant } from '@/lib/gauntlet'
 import { getGauntletUpgrade, isUpgradeComingSoon, isToggleableUpgrade, activeGauntletUpgrades, gauntletHaulMult, gauntletXpMult, gauntletFathomsMult } from '@/lib/gauntletUpgrades'
 import { DAVY_FORGE } from '@/lib/raidItems'
 import {
@@ -664,7 +664,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   // evaluated as if the run ended at GAUNTLET_REWARD_DEPTH_CAP. Depth past it
   // still counts for the record / leaderboard / contest / Fathoms (cd below).
   const payDepth = Math.min(rd, GAUNTLET_REWARD_DEPTH_CAP)
-  const cleanPot = Math.max(0, Math.min(Math.floor(pot), maxPotForDepth(payDepth)))
+  const cleanPot = Math.max(0, Math.min(Math.floor(pot), maxPotForDepth(payDepth, variant)))
   const chest = chestForDepth(payDepth)
 
   // Run Upgrades (Locker, scope 'gauntlet') that sweeten the cash-out — minus
@@ -764,7 +764,9 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   // Nav XP is decoupled from the doubloon pot onto its own gentler depth curve
   // (leveling was the sharper concern). Chest multiplier still rides on top.
   const bankedXp        = Math.round(gauntletXpForDepth(payDepth, variant) * chest.potMult * gauntletXpMult(upgrades))
-  const gems            = chest.gems
+  // Don's chests hand out richer gems (the valuable chest reward) — via the gem
+  // count only, NOT chest.potMult, so Nav XP + doubloons stay on their own mults.
+  const gems            = Math.round(chest.gems * (isDon ? DONS_CHEST_GEM_MULT : 1))
 
   // Fathoms — the Gauntlet's meta-currency — bank on reaching this depth
   // (Lucky Locker boosts the payout).

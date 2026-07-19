@@ -203,10 +203,12 @@ export const GAUNTLET_DEPTH_UNLOCKS: GauntletDepthUnlock[] = [
 ]
 
 /** ⟡ a single cleared round at this depth adds to the pot (flattens past
- *  POT_FLATTEN_DEPTH so deep runs stop scaling quadratically). */
-export function roundContribution(depth: number, isBoss: boolean): number {
+ *  POT_FLATTEN_DEPTH so deep runs stop scaling quadratically). Don's Gauntlet
+ *  swells the pot ×DONS_POT_MULT — doubloons are DEMOTED to stakes there, so a
+ *  bigger pot just makes the push-your-luck gamble sting more on a sink. */
+export function roundContribution(depth: number, isBoss: boolean, variant: GauntletVariant = 'davy'): number {
   const base = POT_BASE + POT_GROWTH * Math.min(depth, POT_FLATTEN_DEPTH)
-  return Math.round(base * (isBoss ? BOSS_POT_MULT : 1))
+  return Math.round(base * (isBoss ? BOSS_POT_MULT : 1) * (variant === 'don' ? DONS_POT_MULT : 1))
 }
 
 // Nav XP earned by cashing out at `depth`, DECOUPLED from the doubloon pot and
@@ -222,11 +224,17 @@ const XP_GROWTH = 25
 const XP_FLATTEN_DEPTH = 15
 const XP_BOSS_FACTOR = 1.35
 // Don's Gauntlet reward multipliers (variant 'don'). Fathoms is the headline
-// draw (2×); Nav XP + crew XP are modest bumps. Pot / chest / reward-cap tuning
-// is deferred (Davy's for now). Ship + tune live on kingkong.
-export const DONS_FATHOM_MULT  = 2
-export const DONS_XP_MULT      = 1.2
-export const DONS_CREW_XP_MULT = 1.25
+// draw (2×); Nav XP + crew XP are modest bumps. The pot swells 1.5× (doubloons
+// = stakes, so a deeper sink stings more) and chests hand out 1.5× the gems
+// (the genuinely-valuable chest reward). NOTE: chest potMult is left SHARED on
+// purpose — it multiplies Nav XP too, and a richer potMult would double-dip
+// past the intended 1.2× XP. Reward-depth cap stays shared at 70 (a harder mode
+// earning more per depth is the point). Ship + tune live on kingkong.
+export const DONS_FATHOM_MULT   = 2
+export const DONS_XP_MULT       = 1.2
+export const DONS_CREW_XP_MULT  = 1.25
+export const DONS_POT_MULT      = 1.5
+export const DONS_CHEST_GEM_MULT = 1.5
 export function gauntletXpForDepth(depth: number, variant: GauntletVariant = 'davy'): number {
   let total = 0
   for (let d = 1; d <= Math.max(0, Math.floor(depth)); d++) {
@@ -249,9 +257,9 @@ export function gauntletCrewXp(depth: number, variant: GauntletVariant = 'davy')
 /** Server-side ceiling for a reported depth: the pot the player would have
  *  if EVERY round had been a boss. Used to reject forged cash-out values
  *  while still trusting the client's real (lower) pot. */
-export function maxPotForDepth(depth: number): number {
+export function maxPotForDepth(depth: number, variant: GauntletVariant = 'davy'): number {
   let total = 0
-  for (let d = 1; d <= depth; d++) total += roundContribution(d, true)
+  for (let d = 1; d <= depth; d++) total += roundContribution(d, true, variant)
   return total
 }
 
@@ -267,9 +275,9 @@ export function fathomsForDepth(depth: number, variant: GauntletVariant = 'davy'
 /** Honest floor estimate of the pot a run reaching `depth` banks: every
  *  cleared round at its non-boss contribution. Real runs land higher (bosses
  *  multiply), so this reads as a conservative "about" for the intro preview. */
-export function estimatePotForDepth(depth: number): number {
+export function estimatePotForDepth(depth: number, variant: GauntletVariant = 'davy'): number {
   let total = 0
-  for (let d = 1; d <= depth; d++) total += roundContribution(d, false)
+  for (let d = 1; d <= depth; d++) total += roundContribution(d, false, variant)
   return total
 }
 
@@ -695,13 +703,13 @@ export function generateFight(state: GauntletRollState, skipOffset = 0, terms: T
   // Gauntlet only). Not in the random boss pool; counts as a boss (ability
   // refresh + boss pot). Takes priority over the normal boss roll when it fires.
   if (variant === 'don' && !state.apexDone && depth >= APEX_MIN_DEPTH && !state.prevWasBoss && Math.random() < APEX_CHANCE) {
-    return { enemy: buildDonApex(depth), isBoss: true, isApex: true, isElite: false, potContribution: paying ? roundContribution(rewardDepth, true) : 0, depth }
+    return { enemy: buildDonApex(depth), isBoss: true, isApex: true, isElite: false, potContribution: paying ? roundContribution(rewardDepth, true, variant) : 0, depth }
   }
 
   // The Closer mini-boss — its own low roll (Don's Gauntlet). A tough named ship
   // with a single revive, but NOT a full boss (mob-tier pot, no ability refresh).
   if (variant === 'don' && !isBoss && depth >= CLOSER_MIN_DEPTH && !state.prevWasBoss && Math.random() < CLOSER_CHANCE) {
-    return { enemy: buildCloser(depth), isBoss: false, isElite: false, potContribution: paying ? roundContribution(rewardDepth, false) : 0, depth }
+    return { enemy: buildCloser(depth), isBoss: false, isElite: false, potContribution: paying ? roundContribution(rewardDepth, false, variant) : 0, depth }
   }
 
   if (isBoss) {
@@ -724,7 +732,7 @@ export function generateFight(state: GauntletRollState, skipOffset = 0, terms: T
         bossAffix = mergeAffixes(bossAffix, AFFIXES[rollSecondAffix(firstId)])
       }
     }
-    return { enemy, isBoss: true, isElite: false, affix: bossAffix, potContribution: paying ? roundContribution(rewardDepth, true) : 0, depth }
+    return { enemy, isBoss: true, isElite: false, affix: bossAffix, potContribution: paying ? roundContribution(rewardDepth, true, variant) : 0, depth }
   }
 
   // Mob — independent elite roll, chance scaling with depth. Press-Ganged (a
@@ -767,7 +775,7 @@ export function generateFight(state: GauntletRollState, skipOffset = 0, terms: T
       maxDmg: Math.max(2, Math.round(enemy.maxDmg * ELITE_DMG_MULT * terms.eliteDmgMult)),
     }
   }
-  return { enemy, isBoss: false, isElite, affix, potContribution: paying ? roundContribution(rewardDepth, false) : 0, depth }
+  return { enemy, isBoss: false, isElite, affix, potContribution: paying ? roundContribution(rewardDepth, false, variant) : 0, depth }
 }
 
 /** Advance the guardrail state after a fight is generated. */
