@@ -8668,7 +8668,7 @@ export default function FishingGame({
                             Are you sure?
                           </p>
                           <p className="font-karla font-500" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.7)', marginBottom: '0.55rem', lineHeight: 1.4 }}>
-                            Your {HABITAT_LABEL[zone]} catch log resets, but you&apos;ll permanently earn <span style={{ color: zoneColor, fontWeight: 700 }}>+{((prestigeLevels[zone] ?? 0) + 1) * 10}% XP</span> on every catch here. You can complete the collection again for another full reward.
+                            Your {HABITAT_LABEL[zone]} catch log resets (your <span style={{ color: '#f5c451', fontWeight: 700 }}>golden trophies stay</span>), but you&apos;ll permanently earn <span style={{ color: zoneColor, fontWeight: 700 }}>+{((prestigeLevels[zone] ?? 0) + 1) * 10}% XP</span> on every catch here. You can complete the collection again for another full reward.
                           </p>
                           <div className="flex items-center gap-2">
                             <button
@@ -8695,7 +8695,7 @@ export default function FishingGame({
                             </p>
                           </div>
                           <p className="font-karla font-500" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.65)', marginBottom: '0.55rem', lineHeight: 1.35 }}>
-                            Reset your collection and permanently earn <span style={{ color: zoneColor, fontWeight: 700 }}>+{((prestigeLevels[zone] ?? 0) + 1) * 10}% XP</span> on every {HABITAT_LABEL[zone]} catch — forever.
+                            Reset your collection (golden trophies stay) and permanently earn <span style={{ color: zoneColor, fontWeight: 700 }}>+{((prestigeLevels[zone] ?? 0) + 1) * 10}% XP</span> on every {HABITAT_LABEL[zone]} catch — forever.
                           </p>
                           <button
                             onClick={e => { e.stopPropagation(); setConfirmPrestigeZone(zone) }}

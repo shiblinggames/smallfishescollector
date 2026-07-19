@@ -1554,8 +1554,26 @@ export async function prestigeZone(zone: string): Promise<{ prestigeLevel: numbe
   const allZones = ['shallows', 'open_waters', 'deep', 'abyss']
   const allZonesPrestiged = allZones.every(z => (newLevels[z] ?? 0) >= 1)
 
+  // Preserve GOLDEN mounts: a prestige resets the catch log so you re-collect
+  // the regular species, but golden fish are permanent trophies (the is_golden
+  // flag drives the whole golden display, and the shiny_catches row it pairs
+  // with isn't surfaced anywhere else). Deleting those rows silently wiped the
+  // trophy. So delete only the NON-golden rows; golden species stay caught +
+  // golden across every prestige cycle. Fetch golden ids explicitly so it works
+  // regardless of whether non-golden rows store is_golden as false or null.
+  const { data: goldenRows } = await admin
+    .from('fish_collection')
+    .select('fish_id')
+    .eq('user_id', user.id)
+    .in('fish_id', zoneIds)
+    .eq('is_golden', true)
+  const goldenIds = new Set((goldenRows ?? []).map((r: { fish_id: number }) => r.fish_id))
+  const idsToClear = zoneIds.filter(id => !goldenIds.has(id))
+
   await Promise.all([
-    admin.from('fish_collection').delete().eq('user_id', user.id).in('fish_id', zoneIds),
+    idsToClear.length > 0
+      ? admin.from('fish_collection').delete().eq('user_id', user.id).in('fish_id', idsToClear)
+      : Promise.resolve(),
     admin.from('profiles').update(profileUpdate).eq('id', user.id),
     grantBadgeDirect(user.id, 'prestige_i'),
     ...(allZonesPrestiged ? [grantBadgeDirect(user.id, 'zone_legend')] : []),
