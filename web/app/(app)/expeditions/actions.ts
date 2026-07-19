@@ -125,11 +125,14 @@ export async function saveEquippedRaidItems(itemIds: string[]): Promise<void> {
   // Pull ship_tier so the slot cap scales with hull size (see
   // raidItemSlotsForTier in lib/expeditions). A Rowboat captain gets 1
   // slot; a Man-o-War captain gets 4.
-  const { data: profile } = await admin.from('profiles').select('raid_items, ship_tier, ship_classes').eq('id', user.id).single()
+  const { data: profile } = await admin.from('profiles').select('raid_items, ship_tier, ship_classes, has_armory_expansion').eq('id', user.id).single()
   const owned = (profile?.raid_items as string[] | null) ?? []
-  // Hull cap + the Ch4 Expanded Armory augment's extra mount.
+  // Hull cap + the Ch4 Expanded Armory refit's extra mount (the purchased flag),
+  // plus any legacy class-pick itemSlots. MUST match the ShipHero UI + the
+  // raids/actions combat cap, or a 5th equipped item gets sliced off on save.
   const slots = raidItemSlotsForTier((profile?.ship_tier as number | null) ?? 0)
     + classSlotBonuses(profile?.ship_classes as Record<string, string> | null).itemSlots
+    + ((profile as { has_armory_expansion?: boolean } | null)?.has_armory_expansion === true ? 1 : 0)
   // Owned + can-coexist (one-per-tier-family, and no fusion beside its own forge
   // ingredients) + capped to the hull's slots. dedupe runs before the slice so a
   // conflicting pair can't waste a slot apiece.

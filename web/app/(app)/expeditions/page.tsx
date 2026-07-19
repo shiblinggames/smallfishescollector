@@ -365,7 +365,7 @@ async function ExpeditionHub() {
       doubloons={profile?.doubloons ?? 0}
       ownedRaidItems={ownedRaidItems}
       equippedRaidItems={equippedRaidItems}
-      raidItemSlots={raidItemSlotsForTier(shipTier) + slotBonus.itemSlots}
+      raidItemSlots={raidItemSlotsForTier(shipTier) + slotBonus.itemSlots + (profile?.has_armory_expansion === true ? 1 : 0)}
       roster={roster}
       shipCrewSlots={shipStats.crewSlots}
       prepStats={prepStats}
