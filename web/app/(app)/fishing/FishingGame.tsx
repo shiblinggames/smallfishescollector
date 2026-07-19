@@ -27,7 +27,7 @@ import { HATS, getHat } from '@/lib/hats'
 import { getPet, getPetOverlay } from '@/lib/pets'
 import { upgradeFishHold } from './holdActions'
 import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
-import { gauntletAutoCatchRares } from '@/lib/gauntletUpgrades'
+import { gauntletAutoCatchMaxRarity } from '@/lib/gauntletUpgrades'
 import { setFishingMusicMuted, playPerfectSfx, playCastSfx, playCast2Sfx, startDialLoop, stopDialLoop, getFishingSfxMuted, setFishingSfxMuted } from '@/lib/fishingMusic'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { zoneRewardDoubloons } from '@/lib/zoneRewards'
@@ -5795,9 +5795,9 @@ export default function FishingGame({
     if (equippedSpecial !== 'auto_catcher' || !ownedAutoCatcher || !autoEnabled) return
     if (phase !== 'catching' || !hookedFish) return
     if (hookedFish.fishId === CRATE_FISH_ID) return
-    // Commons + uncommons (tiers 1-2) by default; Tireless Catcher (Gauntlet
-    // Locker Upgrade) extends it to rares (tier 3). Epic+ always need your hand.
-    const autoMaxRarity = gauntletAutoCatchRares(gauntletUpgrades) ? 3 : 2
+    // Commons + uncommons (tiers 1-2) by default; Tireless Catcher extends it to
+    // rares (3), Relentless Catcher to epics (4). Legendaries always need your hand.
+    const autoMaxRarity = gauntletAutoCatchMaxRarity(gauntletUpgrades)
     if ((hookedFish.biteRarity ?? 1) > autoMaxRarity) return
     if (selectedZone === 'ancient_deep') return           // never the boss zone
     if (finnChallenge) return                             // don't auto-fail/skew a Finn challenge
@@ -6867,10 +6867,10 @@ export default function FishingGame({
                               <span style={{ position: 'absolute', top: 1, left: autoEnabled ? 11 : 1, width: 8, height: 8, borderRadius: '50%', background: autoEnabled ? col : '#7a7672', transition: 'left 0.15s, background 0.15s' }} />
                             </span>
                             <span style={{ color: autoEnabled ? '#f0ede8' : '#9a9488' }}>{autoEnabled ? 'On' : 'Off'}</span>
-                            {/* Tireless Catcher (Gauntlet Locker Upgrade) — flag that the
-                                Auto Catcher now nets rares too, so the perk is visibly on. */}
-                            {isCatcher && gauntletAutoCatchRares(gauntletUpgrades) && (
-                              <span title="Tireless Catcher: also auto-reels rare fish" style={{ color: autoEnabled ? col : '#9a9488', fontSize: '0.52rem', fontWeight: 700, letterSpacing: '0.06em', borderLeft: `1px solid ${col}33`, paddingLeft: '0.45rem' }}>+ RARES</span>
+                            {/* Tireless / Relentless Catcher (Locker Upgrades) — flag how
+                                far up the rarity ladder the Auto Catcher now reels. */}
+                            {isCatcher && gauntletAutoCatchMaxRarity(gauntletUpgrades) >= 3 && (
+                              <span title={gauntletAutoCatchMaxRarity(gauntletUpgrades) >= 4 ? 'Relentless Catcher: also auto-reels epic fish' : 'Tireless Catcher: also auto-reels rare fish'} style={{ color: autoEnabled ? col : '#9a9488', fontSize: '0.52rem', fontWeight: 700, letterSpacing: '0.06em', borderLeft: `1px solid ${col}33`, paddingLeft: '0.45rem' }}>+ {gauntletAutoCatchMaxRarity(gauntletUpgrades) >= 4 ? 'EPICS' : 'RARES'}</span>
                             )}
                           </motion.button>
                         )

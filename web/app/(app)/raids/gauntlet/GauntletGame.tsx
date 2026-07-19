@@ -36,7 +36,7 @@ import GauntletTermsPanel from './GauntletTermsPanel'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, setGauntletUpgradeActive, markGauntletIntroSeen, recordGauntletHit, wagerGauntletFathoms, markConfluencesSeen, checkpointGauntletRun, pauseGauntletRun, resumeGauntletRun, buyBaitWithFathoms, rollDavyOffer } from './actions'
 import { offerCoinMult, offerChestMult, offerCopy, offerTakenLine, type DavyOffer } from '@/lib/gauntletOffer'
 import { FATHOM_BAITS } from '@/lib/bait'
-import { upgradesForVariant, COMING_SOON_UPGRADES, activeGauntletUpgrades, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck, gauntletBoonRerolls, gauntletCurseRerolls, gauntletStartAnchorSaves } from '@/lib/gauntletUpgrades'
+import { upgradesForVariant, getGauntletUpgrade, COMING_SOON_UPGRADES, activeGauntletUpgrades, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck, gauntletBoonRerolls, gauntletCurseRerolls, gauntletStartAnchorSaves } from '@/lib/gauntletUpgrades'
 import { type ShipAugment } from '@/lib/shipAugments'
 import { getSpecialItem } from '@/lib/specialItems'
 import { buySpecialItem } from '@/app/(app)/fishing/actions'
@@ -4682,7 +4682,7 @@ function CannonballRackDemo() {
 // "Hauled to Shore" (scope account/world + the Auto Catcher special item — power
 // for the wider game). Server-validated on claim (depth + cost + prereq + no
 // double); the panel just reflects state and disables what you can't take yet.
-type LockerState = { deepest: number; fathoms: number; owned: string[]; off: string[]; hasAutoCatcher: boolean; hasAutoCaster: boolean }
+type LockerState = { deepest: number; fathoms: number; owned: string[]; ownedAll: string[]; off: string[]; hasAutoCatcher: boolean; hasAutoCaster: boolean }
 /** A purchasable row in the Locker — either a Gauntlet upgrade or a special
  *  item (the Auto Catcher) — normalized so both render through one card. */
 type ShopEntry = {
@@ -4847,12 +4847,19 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
         {state === null ? (
           <p className="font-karla" style={{ fontSize: '0.8rem', color: '#7a766e', textAlign: 'center', padding: '2rem 0' }}>Reading the ledger…</p>
         ) : (() => {
-            const upgrades: ShopEntry[] = upgradesForVariant(variant).map(u => ({
-              id: u.id, name: u.name, description: u.description, depthRequired: u.depthRequired,
-              cost: u.cost, scope: u.scope, owned: state.owned.includes(u.id), lockNote: null,
-              demo: u.id === 'cannonball_rack', special: false, category: u.category,
-              comingSoon: COMING_SOON_UPGRADES.has(u.id),
-            }))
+            const upgrades: ShopEntry[] = upgradesForVariant(variant).map(u => {
+              // Prereq lock (checked across both Lockers via ownedAll): e.g.
+              // Relentless Catcher needs Tireless Catcher owned first.
+              const req = u.requires ? getGauntletUpgrade(u.requires) : null
+              const prereqMissing = !!req && !state.ownedAll.includes(u.requires!)
+              return {
+                id: u.id, name: u.name, description: u.description, depthRequired: u.depthRequired,
+                cost: u.cost, scope: u.scope, owned: state.owned.includes(u.id),
+                lockNote: prereqMissing ? `Unlock ${req!.name} first.` : null,
+                demo: u.id === 'cannonball_rack', special: false, category: u.category,
+                comingSoon: COMING_SOON_UPGRADES.has(u.id),
+              }
+            })
             // Auto Catcher is a Davy's-Locker fishing perk (bought with Fathoms
             // via buySpecialItem) — Don's Ship & Shore doesn't re-list it.
             const ac = variant === 'davy' ? getSpecialItem('auto_catcher') : null

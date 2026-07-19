@@ -79,10 +79,10 @@ function sanitizeRunSnapshot(snap: unknown, depth: number): GauntletRunSnapshot 
 
 /** State for the Locker Upgrades panel: the player's deepest run, Fathoms purse,
  *  and which upgrades they've already claimed. */
-export async function getGauntletUpgradeState(variant: GauntletVariant = 'davy'): Promise<{ deepest: number; fathoms: number; owned: string[]; off: string[]; hasAutoCatcher: boolean; hasAutoCaster: boolean }> {
+export async function getGauntletUpgradeState(variant: GauntletVariant = 'davy'): Promise<{ deepest: number; fathoms: number; owned: string[]; ownedAll: string[]; off: string[]; hasAutoCatcher: boolean; hasAutoCaster: boolean }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { deepest: 0, fathoms: 0, owned: [], off: [], hasAutoCatcher: false, hasAutoCaster: false }
+  if (!user) return { deepest: 0, fathoms: 0, owned: [], ownedAll: [], off: [], hasAutoCatcher: false, hasAutoCaster: false }
   const isDon = variant === 'don'
   const admin = createAdminClient()
   const { data } = await admin
@@ -92,10 +92,15 @@ export async function getGauntletUpgradeState(variant: GauntletVariant = 'davy')
     .select('gauntlet_deepest, dons_gauntlet_deepest, gauntlet_fathoms, gauntlet_upgrades, gauntlet_upgrades_off, dons_gauntlet_upgrades, dons_gauntlet_upgrades_off, has_auto_catcher, has_auto_caster')
     .eq('id', user.id)
     .single()
+  const davyOwned = (data?.gauntlet_upgrades as string[] | null) ?? []
+  const donOwned = (data?.dons_gauntlet_upgrades as string[] | null) ?? []
   return {
     deepest: ((isDon ? data?.dons_gauntlet_deepest : data?.gauntlet_deepest) as number | null) ?? 0,
     fathoms: (data?.gauntlet_fathoms as number | null) ?? 0,
-    owned: ((isDon ? data?.dons_gauntlet_upgrades : data?.gauntlet_upgrades) as string[] | null) ?? [],
+    owned: isDon ? donOwned : davyOwned,
+    // Union across BOTH Lockers — for cross-Locker prereqs (a Don's upgrade that
+    // requires a Davy's one) the Card checks ownership here.
+    ownedAll: [...davyOwned, ...donOwned],
     off: ((isDon ? data?.dons_gauntlet_upgrades_off : data?.gauntlet_upgrades_off) as string[] | null) ?? [],
     hasAutoCatcher: data?.has_auto_catcher === true,
     hasAutoCaster: data?.has_auto_caster === true,
@@ -156,17 +161,27 @@ export async function claimGauntletUpgrade(id: string, variant: GauntletVariant 
   const isDon = variant === 'don'
   const depthCol = isDon ? 'dons_gauntlet_deepest' : 'gauntlet_deepest'
   const ownedCol = isDon ? 'dons_gauntlet_upgrades' : 'gauntlet_upgrades'
+  const otherOwnedCol = isDon ? 'gauntlet_upgrades' : 'dons_gauntlet_upgrades'
 
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select(`${depthCol}, gauntlet_fathoms, ${ownedCol}`)
+    .select(`${depthCol}, gauntlet_fathoms, ${ownedCol}, ${otherOwnedCol}`)
     .eq('id', user.id)
     .single()
   if (!profile) return { error: 'Profile not found.' }
 
   const owned = ((profile as Record<string, unknown>)[ownedCol] as string[] | null) ?? []
   if (owned.includes(id)) return { error: 'Already unlocked.' }
+  // Prereq (checked across BOTH Lockers, so a Don's upgrade can build on a
+  // Davy's one like Relentless Catcher → Tireless Catcher).
+  if (upgrade.requires) {
+    const otherOwned = ((profile as Record<string, unknown>)[otherOwnedCol] as string[] | null) ?? []
+    if (!owned.includes(upgrade.requires) && !otherOwned.includes(upgrade.requires)) {
+      const req = getGauntletUpgrade(upgrade.requires)
+      return { error: `Unlock ${req?.name ?? 'its prerequisite'} first.` }
+    }
+  }
   const deepest = ((profile as Record<string, unknown>)[depthCol] as number | null) ?? 0
   if (deepest < upgrade.depthRequired) return { error: `Reach depth ${upgrade.depthRequired} in the Gauntlet first.` }
   const fathoms = (profile.gauntlet_fathoms as number | null) ?? 0

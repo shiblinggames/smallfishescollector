@@ -148,7 +148,12 @@ export default async function FishingPage() {
   const hasAutoCaster = profile?.has_auto_caster ?? false
   const hasAutoCatcher = profile?.has_auto_catcher ?? false
   const gauntletDeepest = profile?.gauntlet_deepest ?? 0
-  const gauntletUpgrades = (profile?.gauntlet_upgrades as string[] | null) ?? []
+  // Account/world Locker perks apply from EITHER gauntlet (e.g. Tireless Catcher
+  // in Davy's, Relentless Catcher in Don's), so fishing reads the union.
+  const gauntletUpgrades = [
+    ...((profile?.gauntlet_upgrades as string[] | null) ?? []),
+    ...((profile?.dons_gauntlet_upgrades as string[] | null) ?? []),
+  ]
   const hasPerfectedSigil = profile?.has_perfected_sigil ?? false
   const characterColor = profile?.character_color ?? 'default'
 
