@@ -687,6 +687,7 @@ export default function RaidCombat({
     let parryChance = 0, parryReflectPct = 0      // Cutlass Guard
     let aimClarity = 0              // Steady Sights: 0-1 fog/blackout reduction
     let randomFightBuff = 0        // The Don's Favor: magnitude of the per-fight blessing
+    let abilityRefundChance = 0    // Second Calling: chance a fired ability isn't spent
     let enemyUltDmgMult = 1, enemyUltChargeChance = 0   // The Verdict
     let enemyChargeSteal = 0       // Cutpurse Tide
     let enemyParryChance = 0       // Thornmail
@@ -796,6 +797,7 @@ export default function RaidCombat({
         case 'parryChance':           if (e.chance > parryChance) { parryChance = e.chance; parryReflectPct = e.reflectPct } break
         case 'aimClarity':            aimClarity = Math.max(aimClarity, e.reduce); break
         case 'randomFightBuff':       randomFightBuff = Math.max(randomFightBuff, e.magnitude); break
+        case 'abilityRefundChance':   abilityRefundChance = Math.max(abilityRefundChance, e.chance); break
         case 'enemyUltimateBoost':    enemyUltDmgMult *= e.dmgMult; enemyUltChargeChance = Math.max(enemyUltChargeChance, e.chargeChance); break
         case 'enemyChargeSteal':      enemyChargeSteal = Math.max(enemyChargeSteal, e.bonus); break
         case 'enemyParry':            enemyParryChance = Math.max(enemyParryChance, e.chance); break
@@ -828,7 +830,7 @@ export default function RaidCombat({
       counterBonusRefund, counterBonusStack, counterBonusChance, counterReflectPct,
       statusOnHitList, playerStartStatusList,
       shieldPierceFrac, stunOnHitChance, stunOnHitTurns, guaranteedCritEvery, stealChargeChance,
-      parryChance, parryReflectPct, aimClarity, randomFightBuff,
+      parryChance, parryReflectPct, aimClarity, randomFightBuff, abilityRefundChance,
       enemyUltDmgMult, enemyUltChargeChance, enemyChargeSteal, enemyParryChance, enemyLifesteal, randomFightDebuff,
     }
   }, [tideEffects, isBoss, runKills, runDepth])
@@ -2382,6 +2384,15 @@ export default function RaidCombat({
     abilityUsedThisFightRef.current = true
     onAbilityFired?.(crew.id)
     vibrate(18)
+    // Second Calling (boon): a chance the ability isn't spent — the effect still
+    // fires, but the parent immediately clears it back off usedAbilityIds so it's
+    // usable again (next turn; one ability per turn still holds). Same restore
+    // pulse + log cue the War Drum uses.
+    if (tide.abilityRefundChance > 0 && Math.random() < tide.abilityRefundChance) {
+      onRefreshAbility?.(crew.id)
+      setRestorePulse(k => k + 1)
+      setResolveLog(prev => [...prev, `Second Calling — the deep answers, and ${crew.name} keeps their station. Ability unspent.`])
+    }
 
     // FINAL-FANTASY-STYLE SUMMON. Instead of a small portrait pill, a big image
     // of the crew fades in over the whole battle screen, holds a beat, then fades

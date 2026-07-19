@@ -258,6 +258,9 @@ export type TideEffect =
   /** The Don's Favor: open each fight with ONE random blessing (enrage / fortify
    *  / regen), scaled by `magnitude`. */
   | { kind: 'randomFightBuff'; magnitude: number }
+  /** Second Calling: firing a crew ability has `chance` to NOT consume it — the
+   *  effect still happens, but the ability stays available (immediate refresh). */
+  | { kind: 'abilityRefundChance'; chance: number }
   // ── Don's Gauntlet Batch B — enemy-side curses ──────────────────
   /** The Verdict: enemy ultimates hit ×`dmgMult` and gain an extra charge per
    *  reload with `chargeChance` probability (charge faster). */
@@ -347,6 +350,7 @@ export function effectTone(e: TideEffect): 'good' | 'bad' | 'neutral' {
     case 'parryChance':         return 'good'
     case 'aimClarity':          return 'good'
     case 'randomFightBuff':     return 'good'
+    case 'abilityRefundChance': return 'good'
     case 'enemyUltimateBoost':  return 'bad'
     case 'enemyChargeSteal':    return 'bad'
     case 'enemyParry':          return 'bad'
@@ -1045,6 +1049,7 @@ export function describeEffect(e: TideEffect): string {
     case 'parryChance':           return `${Math.round(e.chance * 100)}% to parry a hit${e.reflectPct > 0 ? ` and reflect ${Math.round(e.reflectPct * 100)}%` : ''}`
     case 'aimClarity':            return e.reduce >= 1 ? `Immune to aim fog, blackout + decoys` : `Aim fog + blackout cut ${Math.round(e.reduce * 100)}%`
     case 'randomFightBuff':       return `Open each fight with a random blessing`
+    case 'abilityRefundChance':   return `${Math.round(e.chance * 100)}% to NOT spend a crew ability on use`
     case 'enemyUltimateBoost':    return `Enemy ultimates hit ${Math.round((e.dmgMult - 1) * 100)}% harder + charge faster`
     case 'enemyChargeSteal':      return `Enemies steal your cannonballs (+${Math.round(e.bonus * 100)}%)`
     case 'enemyParry':            return `Enemies ${Math.round(e.chance * 100)}% to parry your shots`

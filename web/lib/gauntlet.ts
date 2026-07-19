@@ -1601,6 +1601,11 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
     { desc: 'Open each fight with a random blessing (Enrage / Fortify / Mending)', detail: 'At the start of EVERY fight you roll one of three blessings for the whole fight: ENRAGED (+25% damage dealt), FORTIFIED (−25% damage taken), or MENDING (heal a slice of your hull each round). Which one is always a surprise.', effect: { kind: 'randomFightBuff', magnitude: 0.25 } },
     { desc: 'A STRONGER random blessing each fight', detail: 'Every fight opens with a stronger random blessing: ENRAGED (+40% damage), FORTIFIED (−40% damage taken), or MENDING (a bigger heal each round).', effect: { kind: 'randomFightBuff', magnitude: 0.40 } },
   ] },
+  { id: 'second_calling', name: 'Second Calling', gauntlet: 'don', flavor: 'Some crews the deep just won’t let rest. Call them once, and the green calls them right back.', rarity: 'rare', tiers: [
+    { desc: '15% chance a crew ability isn’t spent when used', detail: 'When you fire a crew ability, there’s a 15% chance it ISN’T spent — the effect still happens, but the crew keeps their station and the ability is ready again next turn (one ability per turn still holds).', effect: { kind: 'abilityRefundChance', chance: 0.15 } },
+    { desc: '25% chance a crew ability isn’t spent when used', detail: 'When you fire a crew ability, there’s a 25% chance it isn’t spent and stays ready for next turn.', effect: { kind: 'abilityRefundChance', chance: 0.25 } },
+    { desc: '35% chance a crew ability isn’t spent when used', detail: 'When you fire a crew ability, there’s a 35% chance it isn’t spent and stays ready for next turn.', effect: { kind: 'abilityRefundChance', chance: 0.35 } },
+  ] },
 ]
 
 // Boon drafts fall on a ~every-2.5-depths cadence (alternating +2 / +3), up
