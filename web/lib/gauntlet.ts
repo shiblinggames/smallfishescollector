@@ -22,7 +22,7 @@
 import {
   CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER,
   THE_COFFERS_FLEET, THE_QUARTERMASTER, THE_BLOCKADE, THE_THRONE,
-  type BroadsideEnemy,
+  type BroadsideEnemy, type BossPhase, type BossMechanicCheck,
 } from './bossRaids'
 import {
   CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE,
@@ -394,6 +394,77 @@ function ghostName(name: string): string {
   return `Spectral ${name}`
 }
 
+// G2 RANDOM bosses earn their revive phases by depth (base + N revives), mirroring
+// how Davy gates phase2 but generalized to the Ch3/4 phases[] engine: shallow =
+// base only, mid = one revive, deep = two. (The Don apex is separate + fuller.)
+function donBossReviveCount(depth: number): number {
+  return depth < 15 ? 0 : depth < 30 ? 1 : 2
+}
+
+// ── The Don apex — the rare, once-per-run set-piece (Don's Gauntlet only) ──────
+const APEX_MIN_DEPTH = 30    // no apex before here
+const APEX_CHANCE    = 0.06  // per eligible fight (fires at most once per run)
+const APEX_HP_MULT   = 3.6   // heavier than a normal boss (2.8)
+
+// Cap a check's self-damage consequence — the near-lethal ones assume a PLANNED
+// raid crew; a fixed gauntlet party needs them survivable.
+function softenCheckConsequence(check: BossMechanicCheck, maxPct: number): BossMechanicCheck {
+  const c = check.consequence
+  if (c && c.kind === 'damagePctMaxHp' && c.value > maxPct) {
+    return { ...check, consequence: { ...c, value: maxPct } }
+  }
+  return check
+}
+
+/** Build the Don Finleone apex: THE_THRONE boss on the G2 curve at a heavier
+ *  mult, cut to 3 SIGNATURE phases (The Court opener → The Maw → The Last Bite)
+ *  and keeping only the two BOOKEND checks (Court + Last Bite), both softened.
+ *  The 3 middle phases (Blood in the Water / Sounding / Undertow) are dropped. */
+function buildDonApex(depth: number): BroadsideEnemy {
+  const src = THE_THRONE.enemies.don_finleone
+  const hp  = Math.round(mobHp2(depth) * APEX_HP_MULT)
+  const min = Math.round(mobMinDmg2(depth) * BOSS_DMG_MULT)
+  const max = Math.round(mobMaxDmg2(depth) * BOSS_DMG_MULT)
+  const accuracy = Math.round(18 + depth * 1.4) + 3
+  const srcPhases = src.phases ?? []
+  const maw  = srcPhases[0]                    // The Mask Drops / The Maw (spectacle)
+  const last = srcPhases[srcPhases.length - 1] // The Last Bite (finale)
+  const phases: BossPhase[] = []
+  if (maw)  phases.push({ ...maw, check: undefined })   // the megalodon reveal, no forced answer
+  if (last) phases.push({ ...last, check: last.check ? softenCheckConsequence(last.check, 0.5) : undefined })
+  return {
+    ...src,
+    name: 'Don Finleone',   // the apex keeps his name (recognizable — the telegraph is HIM)
+    hpBase: hp, minDmg: Math.max(1, min), maxDmg: Math.max(min + 1, max), accuracy,
+    openingCheck: src.openingCheck ? softenCheckConsequence(src.openingCheck, 0.45) : undefined,
+    phases: phases.length ? phases : undefined,
+    phase2: undefined,
+  }
+}
+
+// ── The Closer — a recurring mini-boss (the don's right hand). Its own low roll,
+//    tougher than a mob + a single revive, lighter than a full boss (no ability-
+//    refresh breather). "The don's right hand blocks your descent." ──────────────
+const CLOSER_MIN_DEPTH  = 12
+const CLOSER_CHANCE     = 0.05
+const MINI_BOSS_HP_MULT = 1.8
+function buildCloser(depth: number): BroadsideEnemy {
+  const src = THE_THRONE.enemies.the_consigliere
+  const min = Math.round(mobMinDmg2(depth) * 1.25)
+  const max = Math.round(mobMaxDmg2(depth) * 1.25)
+  return {
+    ...src,
+    name: ghostName(src.name),   // "The Spectral Closer"
+    hpBase: Math.round(mobHp2(depth) * MINI_BOSS_HP_MULT),
+    minDmg: Math.max(1, min), maxDmg: Math.max(min + 1, max),
+    accuracy: Math.round(18 + depth * 1.4) + 2,
+    // Keep his single false-defeat revive (check stripped — his phase2 has none anyway).
+    phase2: src.phase2 ? { ...src.phase2, check: undefined } : undefined,
+    phases: undefined,
+    openingCheck: undefined,
+  }
+}
+
 // Two-phase boss revives are an ENDGAME escalation — early/mid Gauntlet bosses
 // stay single-phase; only past this depth do they bring their phase 2.
 const PHASE2_BOSS_MIN_DEPTH = 20
@@ -418,11 +489,17 @@ function scaleToCurve(src: BroadsideEnemy, depth: number, isBoss: boolean, varia
   const out: BroadsideEnemy = { ...src, name: (don ? ghostName : drownedName)(src.name), hpBase: hp, minDmg: Math.max(1, min), maxDmg: Math.max(min + 1, max), accuracy }
   if (isBoss) {
     if (don) {
-      // SLICE 1 INTERIM: Ch3/4 bosses run SINGLE-PHASE + CHECK-FREE until the
-      // slice-2 boss/apex engine (phases[] depth-trim + kept bookend checks) lands.
-      // Their special/ultimate/barrier kit (the mechanic load) carries through.
-      out.phases = undefined
-      out.phase2 = undefined
+      // Random G2 bosses (Ruse/Quartermaster/Sal): KEEP their special/ultimate/
+      // barrier kit + DEPTH-TRIMMED revive phases, but STRIP every check — a fixed
+      // roguelike party can't plan the crew answers a check demands. (The Don apex
+      // is built separately in buildDonApex and DOES keep its two bookend checks.)
+      const revives = donBossReviveCount(depth)
+      if (out.phases && out.phases.length) {
+        out.phases = revives > 0 ? out.phases.slice(0, revives).map(p => ({ ...p, check: undefined })) : undefined
+      }
+      if (out.phase2) {
+        out.phase2 = revives > 0 ? { ...out.phase2, check: undefined } : undefined
+      }
       out.openingCheck = undefined
     } else if (depth <= PHASE2_BOSS_MIN_DEPTH) {
       // Phase-2 revives only past PHASE2_BOSS_MIN_DEPTH — strip the inherited
@@ -543,6 +620,9 @@ export interface GauntletFight {
   enemy: BroadsideEnemy
   isBoss: boolean
   isElite: boolean
+  /** The Don apex — a rare once-per-run set-piece (Don's Gauntlet). Counts as a
+   *  boss; the flag lets the host telegraph it + the roll-state mark it fired. */
+  isApex?: boolean
   affix?: AffixDef
   /** What this round adds to the pot when cleared. */
   potContribution: number
@@ -555,6 +635,8 @@ export interface GauntletRollState {
   cleared: number
   prevWasBoss: boolean
   roundsSinceBoss: number
+  /** Don's Gauntlet: has the Don apex already fired this run? (once per run) */
+  apexDone?: boolean
 }
 
 /** Generate the next fight. Pure given Math.random; the caller threads the
@@ -586,6 +668,19 @@ export function generateFight(state: GauntletRollState, skipOffset = 0, terms: T
   // Past the reward cap the Locker's purse is dry — fights contribute nothing
   // to the pot (the HUD pot must never show money the cash-out won't pay).
   const paying = rewardDepth <= GAUNTLET_REWARD_DEPTH_CAP
+
+  // The Don apex — a rare, once-per-run set-piece past a deep floor (Don's
+  // Gauntlet only). Not in the random boss pool; counts as a boss (ability
+  // refresh + boss pot). Takes priority over the normal boss roll when it fires.
+  if (variant === 'don' && !state.apexDone && depth >= APEX_MIN_DEPTH && !state.prevWasBoss && Math.random() < APEX_CHANCE) {
+    return { enemy: buildDonApex(depth), isBoss: true, isApex: true, isElite: false, potContribution: paying ? roundContribution(rewardDepth, true) : 0, depth }
+  }
+
+  // The Closer mini-boss — its own low roll (Don's Gauntlet). A tough named ship
+  // with a single revive, but NOT a full boss (mob-tier pot, no ability refresh).
+  if (variant === 'don' && !isBoss && depth >= CLOSER_MIN_DEPTH && !state.prevWasBoss && Math.random() < CLOSER_CHANCE) {
+    return { enemy: buildCloser(depth), isBoss: false, isElite: false, potContribution: paying ? roundContribution(rewardDepth, false) : 0, depth }
+  }
 
   if (isBoss) {
     // Davy's Court (a signed Term): the captains he sends are his best.
@@ -659,6 +754,7 @@ export function advanceRollState(state: GauntletRollState, fight: GauntletFight)
     cleared: state.cleared + 1,
     prevWasBoss: fight.isBoss,
     roundsSinceBoss: fight.isBoss ? 0 : state.roundsSinceBoss + 1,
+    apexDone: state.apexDone || fight.isApex === true,
   }
 }
 
