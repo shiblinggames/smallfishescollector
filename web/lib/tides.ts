@@ -237,6 +237,17 @@ export type TideEffect =
   | { kind: 'statusOnHit'; status: string; chance: number; magnitude: number; turns: number }
   /** The Mark: the player STARTS each fight under a timed status (e.g. feeble). */
   | { kind: 'playerStartStatus'; status: string; magnitude: number; turns: number }
+  // ── Don's Gauntlet Batch B — player-side offense hexes ──────────
+  /** Armor-Piercing: your shots ignore `pct` (0-1) of the enemy's barrier. */
+  | { kind: 'shieldPierce'; pct: number }
+  /** Kraken's Grip: a landed hit has `chance` to STUN the enemy `turns` turns
+   *  (reuses the freeze skip-turn machinery). */
+  | { kind: 'stunOnHit'; chance: number; turns: number }
+  /** Loaded for Bear: every `n`-th landed shot is a guaranteed crit. */
+  | { kind: 'guaranteedCritEvery'; n: number }
+  /** Press-Gang: a landed hit has `chance` to steal a loaded cannonball off the
+   *  enemy and ram it into your own rack. */
+  | { kind: 'stealCharge'; chance: number }
   // ── Meta (post-raid only) ───────────────────────────────────────
   /** Doubloons granted / deducted at raid end. */
   | { kind: 'doubloonsAtRaidEnd'; n: number }
@@ -304,6 +315,10 @@ export function effectTone(e: TideEffect): 'good' | 'bad' | 'neutral' {
     case 'aimDecoys':    return e.n > 0 ? 'bad' : 'neutral'
     case 'statusOnHit':       return 'good'  // debuffs the ENEMY
     case 'playerStartStatus': return 'bad'   // debuffs YOU
+    case 'shieldPierce':        return 'good'
+    case 'stunOnHit':           return 'good'
+    case 'guaranteedCritEvery': return 'good'
+    case 'stealCharge':         return 'good'
     case 'confuse':      return e.chance > 0 ? 'bad' : 'neutral'
     case 'hideEnemyHp': case 'hideEnemyCharges': return e.chance > 0 ? 'bad' : 'neutral'
     case 'iceAffinity':  return 'good'
@@ -990,6 +1005,10 @@ export function describeEffect(e: TideEffect): string {
     case 'repairHealMult':        return `Repair kits heal +${Math.round((e.mult - 1) * 100)}% more`
     case 'statusOnHit':           return `${Math.round(e.chance * 100)}% on a landed hit to ${e.status} the enemy`
     case 'playerStartStatus':     return `Start each fight ${e.status}`
+    case 'shieldPierce':          return `Your shots ignore ${Math.round(e.pct * 100)}% of enemy barriers`
+    case 'stunOnHit':             return `${Math.round(e.chance * 100)}% on a hit to stun the enemy ${e.turns > 1 ? `${e.turns} turns` : 'a turn'}`
+    case 'guaranteedCritEvery':   return `Every ${e.n}${e.n === 1 ? 'st' : e.n === 2 ? 'nd' : e.n === 3 ? 'rd' : 'th'} landed shot is a guaranteed crit`
+    case 'stealCharge':           return `${Math.round(e.chance * 100)}% on a hit to steal an enemy cannonball`
   }
 }
 

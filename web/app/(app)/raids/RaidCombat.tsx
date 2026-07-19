@@ -680,6 +680,10 @@ export default function RaidCombat({
     let depthDmgPerDepth = 0, depthDmgCap = 0
     const statusOnHitList: { status: string; chance: number; magnitude: number; turns: number }[] = []
     const playerStartStatusList: { status: string; magnitude: number; turns: number }[] = []
+    let shieldPierceFrac = 0        // Armor-Piercing: fraction of enemy barrier ignored
+    let stunOnHitChance = 0, stunOnHitTurns = 1   // Kraken's Grip
+    let guaranteedCritEvery = 0     // Loaded for Bear: 0 = off; else every Nth shot crits
+    let stealChargeChance = 0       // Press-Gang
     for (const e of tideEffects) {
       switch (e.kind) {
         case 'damageMult':            dmgMult *= e.mult; break
@@ -777,6 +781,10 @@ export default function RaidCombat({
         case 'depthScaleMitigation':  inDmgMult *= (1 - Math.min(e.max, e.perDepth * Math.max(0, runDepth))); break
         case 'statusOnHit':           statusOnHitList.push({ status: e.status, chance: e.chance, magnitude: e.magnitude, turns: e.turns }); break
         case 'playerStartStatus':     playerStartStatusList.push({ status: e.status, magnitude: e.magnitude, turns: e.turns }); break
+        case 'shieldPierce':          shieldPierceFrac = Math.max(shieldPierceFrac, e.pct); break
+        case 'stunOnHit':             if (e.chance > stunOnHitChance) { stunOnHitChance = e.chance; stunOnHitTurns = e.turns } break
+        case 'guaranteedCritEvery':   if (e.n > 0 && (guaranteedCritEvery === 0 || e.n < guaranteedCritEvery)) guaranteedCritEvery = e.n; break
+        case 'stealCharge':           stealChargeChance = Math.max(stealChargeChance, e.chance); break
         case 'instantHeal': case 'instantHealPct': case 'fullHeal': case 'doubloonsAtRaidEnd': break // handled at pick-time
       }
     }
@@ -803,6 +811,7 @@ export default function RaidCombat({
       critStreakPerStack, critStreakMaxStacks, counterFireChance,
       counterBonusRefund, counterBonusStack, counterBonusChance, counterReflectPct,
       statusOnHitList, playerStartStatusList,
+      shieldPierceFrac, stunOnHitChance, stunOnHitTurns, guaranteedCritEvery, stealChargeChance,
     }
   }, [tideEffects, isBoss, runKills, runDepth])
   // Shrouded Hull / Shuttered Ports curses — rolled ONCE per fight (RaidCombat
@@ -2957,6 +2966,9 @@ export default function RaidCombat({
       .filter(e => e.type === 'crit_upgrade_chance').reduce((a, e) => a + e.value, 0)
     const critUpgradeChance = (mods.critPct / 100) + tide.critBonus + critUpgradeItem
     if (res === 'hit' && critUpgradeChance > 0 && Math.random() < critUpgradeChance) res = 'critical'
+    // Loaded for Bear (boon): every Nth landed shot is a guaranteed crit. Counts
+    // all resolved shots this fight; a whiff on the Nth just doesn't upgrade.
+    if (res === 'hit' && tide.guaranteedCritEvery > 0 && (shotsThisFightRef.current + 1) % tide.guaranteedCritEvery === 0) res = 'critical'
     // Telemetry: a locked shot (post crit-upgrade). "Dead Reckoning" wants every
     // shot to be a crit; "Not a Shot Fired" wants zero shots taken all fight.
     shotsThisFightRef.current++
@@ -3196,21 +3208,25 @@ export default function RaidCombat({
     // Corrode (status): the shield takes AMPLIFIED damage — the pool loses
     // more than the hit carried, so the same shot strips plating faster
     // (the hull never takes more than the hit; corrode only eats shield).
-    const soakEnemyShield = (amount: number, pierce = false): number => {
+    const soakEnemyShield = (amount: number, pierce = false, pierceFrac = 0): number => {
       // The Last Wall (aegis) drinks EVERYTHING that isn't a Mega — reflects,
       // thorns, spite, thermal bursts. The main attack path zeroes dmg and
       // chips the wall before calling this; stray damage sources die here.
       if (aegisRef.current) return 0
       if (amount <= 0 || pierce || enemyShieldRef.current <= 0) return amount
+      // Armor-Piercing (boon): a fraction of the shot skips the barrier and hits
+      // the hull directly; only the remainder is ever offered to the shield.
+      const bypass = pierceFrac > 0 ? Math.round(amount * Math.min(1, pierceFrac)) : 0
+      const soakable = amount - bypass
       const mult = eStatus.shieldDmgTakenMult
-      const bite = Math.round(amount * mult)          // what the shield stands to lose
+      const bite = Math.round(soakable * mult)         // what the shield stands to lose
       const absorbed = Math.min(enemyShieldRef.current, bite)
       enemyShieldRef.current -= absorbed
       eShieldChanged = true
       // The raw damage the soak consumed (amplified soak eats the shield faster
-      // per point of hit); the remainder of the RAW hit reaches the hull.
+      // per point of hit); the remainder of the RAW hit + the bypass reach the hull.
       const rawConsumed = Math.ceil(absorbed / mult)
-      return Math.max(0, amount - rawConsumed)
+      return Math.max(0, soakable - rawConsumed) + bypass
     }
     // Snapshot both shield pools onto every step as it's pushed, so the display
     // can deplete them in lockstep with the animation (see syncPHp/syncEHp)
@@ -3894,7 +3910,7 @@ export default function RaidCombat({
           }
           const piercing = (isMega && !!megaAug?.pierce) || markPierceTurnsRef.current > 0
           const preShield = enemyShieldRef.current
-          const toHull = soakEnemyShield(dmg, piercing)
+          const toHull = soakEnemyShield(dmg, piercing, tide.shieldPierceFrac)
           shieldAbsorbedOut = preShield - enemyShieldRef.current
           eHp = Math.max(0, eHp - toHull)
           if (dmg > 0) onPlayerHit?.(dmg)
@@ -3912,6 +3928,16 @@ export default function RaidCombat({
               eCharges = Math.max(0, eCharges - 1)
               stepLines.push(`Your critical shot rips a loaded cannonball off the ${enemy.name}'s deck.`)
             }
+          }
+          // Press-Gang (boon): ANY landed hit can rip a loaded cannonball off the
+          // enemy AND ram it into your own rack (steal, not just strip).
+          if (tide.stealChargeChance > 0 && dmg > 0 && eHp > 0 && eCharges > 0 && Math.random() < tide.stealChargeChance) {
+            eCharges = Math.max(0, eCharges - 1)
+            const grabbed = pCharges < playerMaxCharges
+            if (grabbed) pCharges += 1
+            stepLines.push(grabbed
+              ? `Press-Gang! You rip a cannonball off the ${enemy.name} and ram it into your own rack.`
+              : `Press-Gang! You rip a loaded cannonball off the ${enemy.name} — your rack is already full.`)
           }
           // Telemetry: a landed player shot (fire/volley/mega). dmg is the blow
           // the hitsplat shows; highestHit takes the max host-side.
@@ -4023,6 +4049,15 @@ export default function RaidCombat({
                 applyEnemyStatus(s.status as StatusId, s.magnitude, s.turns)
                 stepLines.push(`Your shot leaves the ${enemy.name} ${s.status === 'slowed' ? 'snared' : s.status}.`)
               }
+            }
+            // Kraken's Grip (boon): a landed hit can seize the enemy, making it
+            // skip its next turn(s) — reuses the freeze skip machinery.
+            if (tide.stunOnHitChance > 0 && procRoll(tide.stunOnHitChance)) {
+              enemyFreezePendingRef.current = Math.max(enemyFreezePendingRef.current, tide.stunOnHitTurns)
+              stepLines.push(tide.stunOnHitTurns > 1
+                ? `Kraken's Grip! The deep seizes the ${enemy.name} — it's held for its next two turns.`
+                : `Kraken's Grip! The deep seizes the ${enemy.name} — it loses its next turn.`)
+              procStatus = 'freeze'
             }
             // THE RACK — a landed hit fires a SPREAD. One roll, and every round the
             // equipped rack carries lands together through the shared status pipeline.

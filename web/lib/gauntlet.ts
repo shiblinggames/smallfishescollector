@@ -1528,6 +1528,25 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
     { desc: '45% on a hit to Weaken the enemy (−22% damage dealt, 2 rounds)', detail: 'Whenever you land a hit, there is a 45% chance the enemy is Weakened — its own hits deal 22% less damage for the next 2 rounds.', effect: { kind: 'statusOnHit', status: 'weaken', chance: 0.45, magnitude: 0.22, turns: 2 } },
     { desc: '60% on a hit to Weaken the enemy (−30% damage dealt, 3 rounds)', detail: 'Whenever you land a hit, there is a 60% chance the enemy is Weakened — its own hits deal 30% less damage for the next 3 rounds.', effect: { kind: 'statusOnHit', status: 'weaken', chance: 0.60, magnitude: 0.30, turns: 3 } },
   ] },
+  { id: 'armor_piercing', name: 'Armor-Piercing Shot', gauntlet: 'don', flavor: 'Ghost-iron finds the gap in any ward. Barriers are a suggestion.', rarity: 'rare', tiers: [
+    { desc: 'Your shots ignore 35% of enemy barriers', detail: 'A slice of every shot you fire skips straight past an enemy barrier and hits the hull — 35% of the damage ignores the shield entirely. The hard counter to the Warding curse and the ghost fleet’s shielded hulls.', effect: { kind: 'shieldPierce', pct: 0.35 } },
+    { desc: 'Your shots ignore 55% of enemy barriers', detail: '55% of every shot skips the barrier and hits the hull directly.', effect: { kind: 'shieldPierce', pct: 0.55 } },
+    { desc: 'Your shots ignore 75% of enemy barriers', detail: '75% of every shot skips the barrier and hits the hull directly — barriers barely slow you.', effect: { kind: 'shieldPierce', pct: 0.75 } },
+  ] },
+  { id: 'press_gang', name: 'Press-Gang', gauntlet: 'don', flavor: 'What’s theirs is yours. Rip the shot right off their deck and load it yourself.', rarity: 'rare', tiers: [
+    { desc: '20% on a hit to steal an enemy cannonball', detail: 'Whenever you land a hit, there’s a 20% chance you rip a loaded cannonball off the enemy and ram it into your own rack — you gain the shot, they lose it. Does nothing if your rack is already full or the enemy is empty.', effect: { kind: 'stealCharge', chance: 0.20 } },
+    { desc: '30% on a hit to steal an enemy cannonball', detail: 'Whenever you land a hit, there’s a 30% chance you steal a loaded cannonball off the enemy into your own rack.', effect: { kind: 'stealCharge', chance: 0.30 } },
+    { desc: '40% on a hit to steal an enemy cannonball', detail: 'Whenever you land a hit, there’s a 40% chance you steal a loaded cannonball off the enemy into your own rack.', effect: { kind: 'stealCharge', chance: 0.40 } },
+  ] },
+  { id: 'loaded_for_bear', name: 'Loaded for Bear', gauntlet: 'don', flavor: 'Every so often your gunners pack a shot that simply cannot miss the mark.', tiers: [
+    { desc: 'Every 5th landed shot is a guaranteed crit', detail: 'Count your landed shots each fight — every 5th one is upgraded to a guaranteed critical hit. (A shot that whiffs on the count just doesn’t upgrade.)', effect: { kind: 'guaranteedCritEvery', n: 5 } },
+    { desc: 'Every 4th landed shot is a guaranteed crit', detail: 'Every 4th landed shot each fight is upgraded to a guaranteed critical hit.', effect: { kind: 'guaranteedCritEvery', n: 4 } },
+    { desc: 'Every 3rd landed shot is a guaranteed crit', detail: 'Every 3rd landed shot each fight is upgraded to a guaranteed critical hit.', effect: { kind: 'guaranteedCritEvery', n: 3 } },
+  ] },
+  { id: 'krakens_grip', name: "Kraken's Grip", gauntlet: 'don', flavor: 'A landed shot calls the deep up around their hull — and the deep does not let go.', rarity: 'legendary', tiers: [
+    { desc: '18% on a hit to STUN the enemy (skips its next turn)', detail: 'Whenever you land a hit, there’s an 18% chance the deep seizes the enemy — it loses its next turn entirely, exactly like a freeze. Bosses are not immune.', effect: { kind: 'stunOnHit', chance: 0.18, turns: 1 } },
+    { desc: '26% on a hit to STUN the enemy for 2 turns', detail: 'Whenever you land a hit, there’s a 26% chance the deep seizes the enemy and holds it for its next TWO turns.', effect: { kind: 'stunOnHit', chance: 0.26, turns: 2 } },
+  ] },
 ]
 
 // Boon drafts fall on a ~every-2.5-depths cadence (alternating +2 / +3), up
