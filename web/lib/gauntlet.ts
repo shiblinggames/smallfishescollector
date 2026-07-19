@@ -2252,6 +2252,48 @@ export const CONVERGENCES: Convergence[] = [
       { desc: '+25% dodge; +40% thrown-back damage', effects: [{ kind: 'dodgeBonus', chance: 0.25, scope: 'allRemaining' }, { kind: 'retaliatePct', pct: 0.40 }] },
     ],
   },
+  // ── Convergences fusing the NEW Don's confluences (fully his meta-tier) ───────
+  {
+    id: 'the_vise', name: 'The Vise', gauntlet: 'don',
+    requires: [{ confluenceId: 'cripple' }, { confluenceId: 'deep_terror' }],
+    flavor: 'Feeble, snared, frozen, seized — and then broken. Nothing that meets the vise gets another turn.',
+    detail: 'The control capstone: on top of Cripple and Deep Terror, your hits pile on even more Slow, and a locked-down hull simply takes far more damage and crits far more often.',
+    levels: [
+      { desc: 'Extra Slow on hit; +18% damage, +14% crit chance', effects: [{ kind: 'statusOnHit', status: 'slowed', chance: 0.4, magnitude: 3, turns: 3 }, { kind: 'damageMult', mult: 1.18 }, { kind: 'critChanceBonus', chance: 0.14 }] },
+      { desc: 'Heavy Slow on hit; +28% damage, +20% crit chance', effects: [{ kind: 'statusOnHit', status: 'slowed', chance: 0.55, magnitude: 3, turns: 3 }, { kind: 'damageMult', mult: 1.28 }, { kind: 'critChanceBonus', chance: 0.20 }] },
+    ],
+  },
+  {
+    id: 'executioners_court', name: "Executioner's Court", gauntlet: 'don',
+    requires: [{ confluenceId: 'coring_shot' }, { confluenceId: 'loaded_dice' }],
+    flavor: 'Barriers cored, luck loaded, and every clean shot a death sentence read aloud.',
+    detail: 'The crit capstone: on top of Coring Shot and Loaded Dice, your critical hits deal even more, land even more often, and the gold band widens further.',
+    levels: [
+      { desc: '+28% crit damage, +16% crit chance, gold band +22% wider', effects: [{ kind: 'critDmgMult', mult: 1.28 }, { kind: 'critChanceBonus', chance: 0.16 }, { kind: 'critZoneScale', mult: 1.22 }] },
+      { desc: '+42% crit damage, +24% crit chance, gold band +34% wider', effects: [{ kind: 'critDmgMult', mult: 1.42 }, { kind: 'critChanceBonus', chance: 0.24 }, { kind: 'critZoneScale', mult: 1.34 }] },
+    ],
+  },
+  {
+    id: 'the_riptide', name: 'The Riptide', gauntlet: 'don',
+    requires: [{ confluenceId: 'riposte_wall' }, { confluenceId: 'hobble' }],
+    flavor: 'Never where the blow falls, and the sea drags back everything they throw. You are the undertow.',
+    detail: 'The evasion capstone: on top of Riposte Wall and Hobble, you slip more shots, take less from the ones that land, and throw more spite back.',
+    levels: [
+      { desc: '+14% dodge, take −12%, +18% thrown-back damage', effects: [{ kind: 'dodgeBonus', chance: 0.14, scope: 'allRemaining' }, { kind: 'incomingDmgMult', mult: 0.88, scope: 'allRemaining' }, { kind: 'retaliatePct', pct: 0.18 }] },
+      { desc: '+20% dodge, take −18%, +28% thrown-back damage', effects: [{ kind: 'dodgeBonus', chance: 0.20, scope: 'allRemaining' }, { kind: 'incomingDmgMult', mult: 0.82, scope: 'allRemaining' }, { kind: 'retaliatePct', pct: 0.28 }] },
+      { desc: '+26% dodge, take −25%, +40% thrown-back damage', effects: [{ kind: 'dodgeBonus', chance: 0.26, scope: 'allRemaining' }, { kind: 'incomingDmgMult', mult: 0.75, scope: 'allRemaining' }, { kind: 'retaliatePct', pct: 0.40 }] },
+    ],
+  },
+  {
+    id: 'the_windfall', name: 'The Windfall', gauntlet: 'don',
+    requires: [{ confluenceId: 'prize_crew' }, { confluenceId: 'clear_skies' }],
+    flavor: 'A full magazine, a clear glass, and a gold band you could not miss if you tried.',
+    detail: 'The tempo capstone: on top of Prize Crew and Clear Skies, you open every fight with more shots loaded, and the perfect-shot window widens so crits come easy.',
+    levels: [
+      { desc: 'Start each fight +1 loaded; gold band +18% wider, +12% crit chance', effects: [{ kind: 'startCharges', n: 1, scope: 'allRemaining' }, { kind: 'critZoneScale', mult: 1.18 }, { kind: 'critChanceBonus', chance: 0.12 }] },
+      { desc: 'Start each fight +2 loaded; gold band +30% wider, +18% crit chance', effects: [{ kind: 'startCharges', n: 2, scope: 'allRemaining' }, { kind: 'critZoneScale', mult: 1.30 }, { kind: 'critChanceBonus', chance: 0.18 }] },
+    ],
+  },
 ]
 
 /** A convergence's LEVEL (1..3), or 0 if not both confluences are drafted +
