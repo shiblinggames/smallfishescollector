@@ -4161,6 +4161,10 @@ export default function RaidCombat({
           // it fed on, not before it.
           if (lifestealHealedOut > 0) stepLines.push(`${lifestealLabel || "Leviathan's Hunger drinks the wound"} — +${lifestealHealedOut} HP.`)
         } else {
+          // The enemy's INTENDED hit, captured before ANY of the player's
+          // mitigation/anchor/shield reduces it — Spiteful Wake reflects off
+          // this (see below) so defense doesn't starve the thorns.
+          const rawIncoming = dmg
           // Hull plating (raid items) + crew survivability effects (Bulwark
           // cuts, Soft Shell adds) both scale incoming damage here.
           // Tide layer: tide.inDmgMult folds in incomingDmgMult tide
@@ -4201,12 +4205,14 @@ export default function RaidCombat({
             pCharges = Math.max(0, pCharges - 1)
             stepLines.push(`The ${enemy.name} rips a loaded cannonball clean off your rack.`)
           }
-          // Spiteful Wake (boon): the attacker takes a slice of what it dealt
-          // straight back. Reads the post-shield, post-mitigation damage (what
-          // actually hit the hull); never reflects onto an already-sunk enemy.
-          if (tide.retaliatePct > 0 && dmg > 0 && eHp > 0) {
+          // Spiteful Wake (boon): the attacker takes a slice of what it SWUNG
+          // for straight back — read off the PRE-mitigation intended hit
+          // (rawIncoming), so Ironhide, fight-shields and heavy plating don't
+          // starve the thorns (a fully-soaked hit still bites back). Never
+          // reflects onto an already-sunk enemy.
+          if (tide.retaliatePct > 0 && rawIncoming > 0 && eHp > 0) {
             // Iron Tempest confluence multiplies the reflected damage.
-            const thorns = Math.max(1, Math.round(dmg * tide.retaliatePct * tide.retaliateBoostMult))
+            const thorns = Math.max(1, Math.round(rawIncoming * tide.retaliatePct * tide.retaliateBoostMult))
             eHp = Math.max(0, eHp - soakEnemyShield(thorns))
             stepLines.push(tide.retaliateBoostMult > 1 ? `Iron Tempest! The blow is flung back for ${thorns}.` : `Spiteful Wake bites back for ${thorns}.`)
           }

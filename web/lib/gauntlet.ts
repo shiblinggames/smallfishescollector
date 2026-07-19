@@ -1419,9 +1419,9 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
     { desc: '+48% boss damage', detail: 'Deal 48% more damage to boss-depth ships. Regular enemies are unaffected.', effect: { kind: 'bossDamageMult', mult: 1.48 } },
   ] },
   { id: 'spiteful_wake', name: 'Spiteful Wake', flavor: 'Strike the hull and the hull strikes back — and slip its shot and the sea flings your spite anyway.', rarity: 'rare', tiers: [
-    { desc: 'Enemies take back 12% of hits on you (10% if you dodge)', detail: 'Whenever an enemy hits you, it takes 12% of that damage right back. And when you DODGE a shot, the enemy still takes 10% of the damage it WOULD have dealt — so you punish them whether the hit lands or not.', effect: { kind: 'retaliatePct', pct: 0.12, dodgePct: 0.10 } },
-    { desc: 'Enemies take back 22% of hits on you (14% if you dodge)', detail: 'Enemies take back 22% of any hit they land on you, and 14% of any shot you dodge.', effect: { kind: 'retaliatePct', pct: 0.22, dodgePct: 0.14 } },
-    { desc: 'Enemies take back 32% of hits on you (18% if you dodge)', detail: 'Enemies take back 32% of any hit they land on you, and 18% of any shot you dodge.', effect: { kind: 'retaliatePct', pct: 0.32, dodgePct: 0.18 } },
+    { desc: 'Enemies take back 18% of the hit they aim at you (12% if you dodge)', detail: "Whenever an enemy fires on you, it takes 18% of that shot's full damage right back — even if your armour or a shield soaks the blow. When you DODGE, the enemy still takes 12% of the damage it would have dealt. You punish them whether the hit lands or not.", effect: { kind: 'retaliatePct', pct: 0.18, dodgePct: 0.12 } },
+    { desc: 'Enemies take back 30% of the hit they aim at you (15% if you dodge)', detail: "Enemies take back 30% of every shot's full damage (soaked or not), and 15% of any shot you dodge.", effect: { kind: 'retaliatePct', pct: 0.30, dodgePct: 0.15 } },
+    { desc: 'Enemies take back 42% of the hit they aim at you (18% if you dodge)', detail: "Enemies take back 42% of every shot's full damage (soaked or not), and 18% of any shot you dodge.", effect: { kind: 'retaliatePct', pct: 0.42, dodgePct: 0.18 } },
   ] },
   { id: 'wounded_fury', name: 'Wounded Fury', flavor: 'The closer to sinking, the harder your guns bite.', rarity: 'rare', tiers: [
     { desc: 'Up to +17% damage as HP drops', detail: 'Your shots hit harder the lower your HP, scaling with missing health. At full HP nothing; right at the brink, +17%.', effect: { kind: 'lowHpDamage', maxBonus: 0.17 } },
