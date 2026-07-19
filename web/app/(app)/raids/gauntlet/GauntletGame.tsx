@@ -1501,6 +1501,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     <AbandonRunModal
       pot={potRef.current}
       hardcore={hardcoreRun}
+      don={isDonG}
       onStay={() => { pendingNavRef.current = null; setConfirmLeave(false) }}
       onAbandon={() => {
         setConfirmLeave(false)
@@ -1897,10 +1898,10 @@ export default function GauntletGame(props: GauntletGameProps) {
           <BackLink router={router} label="Not today" />
         </div>
         {introOpen && <GauntletIntroModal onClose={dismissIntro} firstTime={!props.hasSeenIntro} />}
-        {lootMode && <LootModal mode={lootMode} onClose={() => setLootMode(null)} />}
-        {infoCurrency && <CurrencyInfoModal kind={infoCurrency} onClose={() => setInfoCurrency(null)} />}
+        {lootMode && <LootModal mode={lootMode} don={isDonG} onClose={() => setLootMode(null)} />}
+        {infoCurrency && <CurrencyInfoModal kind={infoCurrency} don={isDonG} onClose={() => setInfoCurrency(null)} />}
         {synergiesOpen && <SynergiesModal owned={boonTiers} seen={seenConfluences} taken={confluencesTaken} onClose={() => setSynergiesOpen(false)} />}
-        {recapRun && <DeepestRunModal run={recapRun.run} hardcore={recapRun.hardcore} onClose={() => setRecapRun(null)} />}
+        {recapRun && <DeepestRunModal run={recapRun.run} hardcore={recapRun.hardcore} don={isDonG} onClose={() => setRecapRun(null)} />}
         {shopSection && <LockerUpgradesModal section={shopSection} variant={props.variant ?? 'davy'} onClose={() => setShopSection(null)} onClaimed={(owned) => { setUpgrades(owned); setBonusSlots(bonusChargeSlots(owned)) }} onToggled={setUpgradesOff} />}
         {descentModals}
       </>
@@ -1963,7 +1964,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         </Shell>
       )
     }
-    return <GauntletReward r={r} recap={{ shipsSunk: rollStateRef.current.cleared, maxHit: runMaxHitRef.current, boonTiers, curseTiers, confluencesTaken, convergencesTaken, stats: runStatsRef.current, events: runEventsRef.current }} onBack={backToIntro} />
+    return <GauntletReward r={r} recap={{ shipsSunk: rollStateRef.current.cleared, maxHit: runMaxHitRef.current, boonTiers, curseTiers, confluencesTaken, convergencesTaken, stats: runStatsRef.current, events: runEventsRef.current }} onBack={backToIntro} don={isDonG} />
   }
 
   // ── Dead ────────────────────────────────────────────────────────────────
@@ -2075,7 +2076,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           </motion.div>
 
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.62, duration: 0.4 }}>
-            <RunRecap depth={reached} shipsSunk={cleared} maxHit={runMaxHitRef.current} boonTiers={boonTiers} curseTiers={curseTiers} confluencesTaken={confluencesTaken} convergencesTaken={convergencesTaken} stats={runStatsRef.current} events={runEventsRef.current} />
+            <RunRecap depth={reached} shipsSunk={cleared} maxHit={runMaxHitRef.current} boonTiers={boonTiers} curseTiers={curseTiers} confluencesTaken={confluencesTaken} convergencesTaken={convergencesTaken} stats={runStatsRef.current} events={runEventsRef.current} don={isDonG} />
           </motion.div>
 
           <div style={{ marginTop: 22 }}>
@@ -2319,7 +2320,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             comes online (the boon you just claimed completed a pair). */}
         <AnimatePresence>
           {confluenceBanner && (() => {
-            const GLD = confluenceBanner.isConvergence ? '#ff7a4d' : '#f5b94a'
+            const GLD = confluenceBanner.isConvergence ? '#ff8a3d' : '#f5b94a'
             return (
               <motion.div key={confluenceBanner.key} aria-hidden
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -3117,7 +3118,7 @@ export default function GauntletGame(props: GauntletGameProps) {
               // Convergences (Don's meta-tier) take a hotter crimson-gold lane so
               // "forge a convergence" reads as a bigger moment than a synergy.
               const cvg = !!pendingConfluence.isConvergence
-              const AC = cvg ? '#ff7a4d' : SYN
+              const AC = cvg ? '#ff8a3d' : SYN
               return (
               <>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '2px 2px' }}>
@@ -3513,7 +3514,8 @@ const REVEAL_DELAY = 900
 // The wind-up beat before the lid bursts — chest rattles + creaks, glow builds.
 const ANTICIPATION_MS = 750
 
-function GauntletReward({ r, recap, onBack }: { r: RewardOk; recap: { shipsSunk: number; maxHit: number; boonTiers: Record<string, number>; curseTiers: Record<string, number>; confluencesTaken?: string[]; convergencesTaken?: string[]; stats?: GauntletRunStats; events?: RunEvent[] }; onBack: () => void }) {
+function GauntletReward({ r, recap, onBack, don }: { r: RewardOk; recap: { shipsSunk: number; maxHit: number; boonTiers: Record<string, number>; curseTiers: Record<string, number>; confluencesTaken?: string[]; convergencesTaken?: string[]; stats?: GauntletRunStats; events?: RunEvent[] }; onBack: () => void; don?: boolean }) {
+  const AC = don ? KRAKEN : TEAL   // Don's cash-out wears the kraken green
   // Three beats: closed -> opening (a wind-up rattle + creak) -> open (burst +
   // reveal). The anticipation phase makes the crack land as a payoff.
   const [opening, setOpening] = useState(false)
@@ -3586,7 +3588,7 @@ function GauntletReward({ r, recap, onBack }: { r: RewardOk; recap: { shipsSunk:
 
   return (
     <>
-      <AbyssBackdrop hardcore={r.hardcore} />
+      <AbyssBackdrop hardcore={r.hardcore} don={don} />
       <RenownUpOverlay info={renownUp} onDismiss={() => setRenownUp(null)} />
       <div style={{
         position: 'relative', zIndex: 1, maxWidth: 440, margin: '0 auto',
@@ -3600,7 +3602,7 @@ function GauntletReward({ r, recap, onBack }: { r: RewardOk; recap: { shipsSunk:
       }}>
         {!opened ? (
           <>
-            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.3em', color: r.hardcore ? '#8b7bf0' : TEAL, marginTop: 16 }}>
+            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.3em', color: r.hardcore ? '#8b7bf0' : AC, marginTop: 16 }}>
               {r.hardcore ? 'Your Crew Sailed Home From the Locker' : 'You Climbed Back Into the Light'}
             </p>
             {r.hardcore && (
@@ -3668,7 +3670,7 @@ function GauntletReward({ r, recap, onBack }: { r: RewardOk; recap: { shipsSunk:
                 style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', filter: `${chestFilter}drop-shadow(0 8px 22px rgba(0,0,0,0.6)) drop-shadow(0 0 30px ${art.color}66)` }} />
             </div>
             <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}
-              className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.32em', color: TEAL }}>
+              className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.32em', color: AC }}>
               Hauled Up
             </motion.p>
             <motion.p initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.18, type: 'spring', stiffness: 240, damping: 18 }}
@@ -3680,7 +3682,7 @@ function GauntletReward({ r, recap, onBack }: { r: RewardOk; recap: { shipsSunk:
               <RewardLine label="Doubloons" to={r.bankedDoubloons} suffix=" ⟡" color={GOLD} delay={0.2} run={counting} />
               <RewardLine label="Nav XP" to={r.bankedXp} color="#4ade80" delay={0.32} run={counting} />
               {r.gems > 0 && <RewardLine label="Gems" to={r.gems} suffix=" ◆" color="#a78bfa" delay={0.44} run={counting} />}
-              {r.earnedFathoms > 0 && <RewardLine label="Fathoms" to={r.earnedFathoms} suffix=" Fathoms" color={TEAL} delay={0.56} run={counting} />}
+              {r.earnedFathoms > 0 && <RewardLine label="Fathoms" to={r.earnedFathoms} suffix=" Fathoms" color={AC} delay={0.56} run={counting} />}
               {/* Blood Gems — the premium Hardcore spoil. A crimson, glowing row
                   set apart from the plain payouts above it (only ever > 0 on a
                   Hardcore cash-out). */}
@@ -3729,7 +3731,7 @@ function GauntletReward({ r, recap, onBack }: { r: RewardOk; recap: { shipsSunk:
 
             {newBest && (
               <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
-                className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: TEAL, marginTop: 12 }}>
+                className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: AC, marginTop: 12 }}>
                 New deepest descent — depth {r.depth}.
               </motion.p>
             )}
@@ -3781,10 +3783,10 @@ function GauntletReward({ r, recap, onBack }: { r: RewardOk; recap: { shipsSunk:
                 here, in the moment, instead of a piece of mail after the fact. */}
             {r.unlockedThisRun.map((u, i) => (
               <motion.div key={u.name} initial={{ opacity: 0, scale: 0.85, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ delay: 0.7 + i * 0.15, type: 'spring', stiffness: 260, damping: 18 }}
-                style={{ display: 'flex', alignItems: 'center', gap: 11, marginTop: 10, padding: '0.7rem 0.8rem', borderRadius: 12, background: `${TEAL}12`, border: `1px solid ${TEAL}55`, boxShadow: `0 0 22px ${TEAL}1c` }}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={TEAL} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M7 11V7a5 5 0 0 1 10 0v4" /><rect x="3" y="11" width="18" height="11" rx="2" /></svg>
+                style={{ display: 'flex', alignItems: 'center', gap: 11, marginTop: 10, padding: '0.7rem 0.8rem', borderRadius: 12, background: `${AC}12`, border: `1px solid ${AC}55`, boxShadow: `0 0 22px ${AC}1c` }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={AC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M7 11V7a5 5 0 0 1 10 0v4" /><rect x="3" y="11" width="18" height="11" rx="2" /></svg>
                 <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-                  <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: TEAL }}>Depth unlocked · {u.where}</p>
+                  <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: AC }}>Depth unlocked · {u.where}</p>
                   <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#eaf5f2', lineHeight: 1.1 }}>{u.name}</p>
                   <p className="font-karla" style={{ fontSize: '0.66rem', color: '#a8b6b2', lineHeight: 1.35, marginTop: 1 }}>{u.blurb}</p>
                 </div>
@@ -3793,7 +3795,7 @@ function GauntletReward({ r, recap, onBack }: { r: RewardOk; recap: { shipsSunk:
 
             {counting && (
               <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9, duration: 0.4 }}>
-                <RunRecap depth={r.depth} shipsSunk={recap.shipsSunk} maxHit={recap.maxHit} boonTiers={recap.boonTiers} curseTiers={recap.curseTiers} confluencesTaken={recap.confluencesTaken} convergencesTaken={recap.convergencesTaken} stats={recap.stats} events={recap.events} />
+                <RunRecap depth={r.depth} shipsSunk={recap.shipsSunk} maxHit={recap.maxHit} boonTiers={recap.boonTiers} curseTiers={recap.curseTiers} confluencesTaken={recap.confluencesTaken} convergencesTaken={recap.convergencesTaken} stats={recap.stats} events={recap.events} don={don} />
               </motion.div>
             )}
 
@@ -3834,7 +3836,8 @@ function ModalScrim({ zIndex, onClose, bg = 'rgba(2,6,12,0.85)', blur = 'blur(4p
 // ── Abandon-run confirm ───────────────────────────────────────────────────────
 // The mid-fight ← is one mis-tap from wiping a whole descent. Make the player
 // say so out loud, and spell out exactly what sinks with the ship.
-function AbandonRunModal({ pot, hardcore = false, onStay, onAbandon }: { pot: number; hardcore?: boolean; onStay: () => void; onAbandon: () => void }) {
+function AbandonRunModal({ pot, hardcore = false, don, onStay, onAbandon }: { pot: number; hardcore?: boolean; don?: boolean; onStay: () => void; onAbandon: () => void }) {
+  const AC = don ? KRAKEN : TEAL
   const CRIMSON = '#ef4444'
   return (
     <ModalScrim zIndex={1400} onClose={onStay}>
@@ -3857,7 +3860,7 @@ function AbandonRunModal({ pot, hardcore = false, onStay, onAbandon }: { pot: nu
         )}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: 18 }}>
           <button onClick={onStay} className="font-cinzel font-700 uppercase tracking-[0.07em] tap"
-            style={{ width: '100%', padding: '0.85rem', borderRadius: 12, fontSize: '0.92rem', background: 'rgba(94,234,212,0.16)', border: `1px solid ${TEAL}55`, color: TEAL, cursor: 'pointer' }}>
+            style={{ width: '100%', padding: '0.85rem', borderRadius: 12, fontSize: '0.92rem', background: `${AC}29`, border: `1px solid ${AC}55`, color: AC, cursor: 'pointer' }}>
             Stay in the Fight
           </button>
           <button onClick={onAbandon} className="font-karla font-700 tap"
@@ -3921,11 +3924,12 @@ function RunRibbon({ events, depth }: { events: RunEvent[]; depth: number }) {
   )
 }
 
-function RunRecap({ depth, shipsSunk, maxHit, boonTiers, curseTiers, confluencesTaken = [], convergencesTaken = [], stats, events }: {
+function RunRecap({ depth, shipsSunk, maxHit, boonTiers, curseTiers, confluencesTaken = [], convergencesTaken = [], stats, events, don }: {
   depth: number; shipsSunk: number; maxHit: number
   boonTiers: Record<string, number>; curseTiers: Record<string, number>; confluencesTaken?: string[]; convergencesTaken?: string[]; stats?: GauntletRunStats
-  events?: RunEvent[]
+  events?: RunEvent[]; don?: boolean
 }) {
+  const AC = don ? KRAKEN : TEAL
   const boons = Object.entries(boonTiers)
     .map(([id, tier]) => ({ fam: GAUNTLET_BOONS.find(b => b.id === id), tier }))
     .filter((x): x is { fam: NonNullable<typeof x.fam>; tier: number } => !!x.fam && x.tier >= 1)
@@ -3957,7 +3961,7 @@ function RunRecap({ depth, shipsSunk, maxHit, boonTiers, curseTiers, confluences
       {events && events.length > 0 && <RunRibbon events={events} depth={depth} />}
       <p className="font-karla font-800 uppercase tracking-[0.22em]" style={{ fontSize: '0.52rem', color: '#7e96a8', marginBottom: 9, textAlign: 'center' }}>The Dive</p>
       <div style={{ display: 'flex', gap: 8 }}>
-        <Stat label="Depth" value={depth} color={TEAL} />
+        <Stat label="Depth" value={depth} color={AC} />
         <Stat label="Ships Sunk" value={shipsSunk} color="#f4fbf9" />
         <Stat label="Biggest Hit" value={fmt(maxHit)} color={GOLD} />
       </div>
@@ -3977,14 +3981,14 @@ function RunRecap({ depth, shipsSunk, maxHit, boonTiers, curseTiers, confluences
             <Stat label="Dmg Absorbed" value={fmt(stats.dmgAbsorbed)} color="#7dd3fc" />
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-            <Stat label="Volleys" value={fmt(stats.volleys)} color={TEAL} />
+            <Stat label="Volleys" value={fmt(stats.volleys)} color={AC} />
             <Stat label="Dodges Slipped" value={fmt(stats.dodgesWon)} color="#38bdf8" />
             <Stat label="Dodges Failed" value={fmt(stats.dodgesLost)} color="#9a948a" />
           </div>
         </>
       )}
       {boons.length > 0 && (
-        <Chips title={`Powers · ${boons.length}`} color={TEAL}
+        <Chips title={`Powers · ${boons.length}`} color={AC}
           items={boons.map(({ fam, tier }) => ({ key: fam.id, label: `${fam.name} ${boonTierLabel(tier)}`.trim(), rc: BOON_RARITY_META[boonRarity(fam)].color }))} />
       )}
       {confs.length > 0 && (
@@ -3992,8 +3996,8 @@ function RunRecap({ depth, shipsSunk, maxHit, boonTiers, curseTiers, confluences
           items={confs.map(c => ({ key: c.id, label: c.name, rc: '#f5b94a' }))} />
       )}
       {convs.length > 0 && (
-        <Chips title={`Convergences · ${convs.length}`} color="#ff7a4d"
-          items={convs.map(cv => ({ key: cv.id, label: cv.name, rc: '#ff7a4d' }))} />
+        <Chips title={`Convergences · ${convs.length}`} color="#ff8a3d"
+          items={convs.map(cv => ({ key: cv.id, label: cv.name, rc: '#ff8a3d' }))} />
       )}
       {curses.length > 0 && (
         <Chips title={`Curses · ${curses.length}`} color="#f87171"
@@ -4008,7 +4012,8 @@ function RunRecap({ depth, shipsSunk, maxHit, boonTiers, curseTiers, confluences
 // Tapping the "Deepest Descent" chip opens this: the boons, curses, and tides
 // the player carried on their record dive, resolved from the stored id→tier
 // snapshot against the live boon/curse tables.
-function DeepestRunModal({ run, hardcore = false, onClose }: { run: GauntletRunSnapshot; hardcore?: boolean; onClose: () => void }) {
+function DeepestRunModal({ run, hardcore = false, don, onClose }: { run: GauntletRunSnapshot; hardcore?: boolean; don?: boolean; onClose: () => void }) {
+  const AC = don ? KRAKEN : TEAL
   const accent = hardcore ? '#e0555a' : GOLD
   const boons = Object.entries(run.boons ?? {})
     .map(([id, tier]) => ({ fam: GAUNTLET_BOONS.find(b => b.id === id), tier }))
@@ -4047,7 +4052,7 @@ function DeepestRunModal({ run, hardcore = false, onClose }: { run: GauntletRunS
         {/* Stat strip — the run at a glance */}
         <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 6, marginTop: 11 }}>
           {([
-            { n: boons.length, label: 'Powers', color: TEAL },
+            { n: boons.length, label: 'Powers', color: AC },
             { n: curses.length, label: 'Curses', color: '#f87171' },
             { n: tides.length,  label: 'Tides',  color: '#bae6fd' },
           ] as const).filter(s => s.n > 0).map(s => (
@@ -4087,7 +4092,7 @@ function DeepestRunModal({ run, hardcore = false, onClose }: { run: GauntletRunS
         })()}
 
         {boons.length > 0 && (
-          <Section title="Powers" color={TEAL}>
+          <Section title="Powers" color={AC}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {boons.map(({ fam, tier }) => {
                 const t = fam.tiers[Math.min(tier, fam.tiers.length) - 1]
@@ -4321,9 +4326,9 @@ function SynergiesModal({ owned, seen, taken = [], onClose }: { owned: Record<st
 
 // Tap a purse pill on the intro screen → this explains the currency + where to
 // spend it. Themed teal (Fathoms) or crimson (Blood Gems).
-function CurrencyInfoModal({ kind, onClose }: { kind: 'fathoms' | 'blood'; onClose: () => void }) {
+function CurrencyInfoModal({ kind, don, onClose }: { kind: 'fathoms' | 'blood'; don?: boolean; onClose: () => void }) {
   const blood = kind === 'blood'
-  const accent = blood ? '#d1394b' : TEAL
+  const accent = blood ? '#d1394b' : (don ? KRAKEN : TEAL)
   const title = blood ? 'Blood Gems' : 'Fathoms'
   const kicker = blood ? 'Hardcore Spoils' : 'Gauntlet Currency'
   const earn = blood
@@ -4406,9 +4411,10 @@ interface HaulDrop {
   hardcoreOnly?: boolean
 }
 
-function LootModal({ mode, onClose }: { mode: 'normal' | 'hardcore'; onClose: () => void }) {
+function LootModal({ mode, don, onClose }: { mode: 'normal' | 'hardcore'; don?: boolean; onClose: () => void }) {
   const hardcore = mode === 'hardcore'
-  const accent = hardcore ? HC_RED : TEAL
+  const AC = don ? KRAKEN : TEAL
+  const accent = hardcore ? HC_RED : AC
   const [detail, setDetail] = useState<HaulDrop | null>(null)
 
   const heavy   = getRaidItem('davys_heavy_cannon')
@@ -4432,7 +4438,7 @@ function LootModal({ mode, onClose }: { mode: 'normal' | 'hardcore'; onClose: ()
     },
     {
       id: 'fathoms', name: 'Fathoms', tag: 'Kept even if you sink',
-      icon: <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={TEAL} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M3 7h18" /><path d="M3 12h18" /><path d="M3 17h18" /></svg>,
+      icon: <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={AC} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M3 7h18" /><path d="M3 12h18" /><path d="M3 17h18" /></svg>,
       desc: 'The Gauntlet\u2019s own currency. One per ship sunk, and the only thing a dive pays whether you come home or not.',
       how: 'Spend them in the Locker on permanent upgrades that carry into every future dive.',
     },
