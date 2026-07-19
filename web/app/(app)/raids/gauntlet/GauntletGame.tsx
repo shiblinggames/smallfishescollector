@@ -1881,7 +1881,11 @@ export default function GauntletGame(props: GauntletGameProps) {
                 Global Ship & Shore unlocks live out in the world, so they'd
                 only confuse here. */}
             {(() => {
-              const owned = upgradesForVariant(props.variant ?? 'davy').filter(u => u.scope === 'gauntlet' && activeUpgrades.includes(u.id))
+              // Tiered chains (Deep Lungs I/II/III): show only the TOP owned tier
+              // — a perk is superseded if an owned upgrade `requires` it.
+              const owned = upgradesForVariant(props.variant ?? 'davy').filter(u =>
+                u.scope === 'gauntlet' && activeUpgrades.includes(u.id)
+                && !activeUpgrades.some(o => getGauntletUpgrade(o)?.requires === u.id))
               if (owned.length === 0) return null
               return (
                 <div style={{ marginTop: 14 }}>
@@ -4908,8 +4912,14 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
             const runShop = upgrades.filter(e => e.scope === 'gauntlet')
             const shoreShop = [...upgrades.filter(e => e.scope !== 'gauntlet'), ...(autoCatcher ? [autoCatcher] : [])]
             const entries = section === 'run' ? runShop : shoreShop
-            const owned = entries.filter(e => e.owned)
-            const forSale = entries.filter(e => !e.owned)
+            // Owned chips: collapse a tier chain to its TOP owned tier (a tier is
+            // superseded if an owned entry `requires` it).
+            const owned = entries.filter(e => e.owned && !entries.some(o => o.owned && getGauntletUpgrade(o.id)?.requires === e.id))
+            // Tiered Run Upgrades (Deep Lungs I/II/III etc.) chain via `requires`.
+            // Hide a locked HIGHER tier until its prior tier is bought, so the
+            // ladder surfaces one buyable step at a time instead of a wall of
+            // "Unlock X first" cards. (Account-perk prereqs stay visible-locked.)
+            const forSale = entries.filter(e => !e.owned && !(e.lockNote && e.scope === 'gauntlet'))
             return (
           <>
             {/* Fathoms wallet — the currency you're spending, up top. */}

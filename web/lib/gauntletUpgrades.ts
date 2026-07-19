@@ -237,13 +237,21 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
   // ── Run Upgrades (scope 'gauntlet') ─────────────────────────────────────────
   { id: 'dg_calm',         name: 'Uncursed Descent', description: "The Locker's first curse passes you by. You descend clean until the second.", depthRequired: 0,  cost: 90,  scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_hp',           name: 'Deep Lungs',       description: 'Start every dive with 20% more max HP — a bigger hull for a nastier deep.',      depthRequired: 0,  cost: 140, scope: 'gauntlet', gauntlet: 'don' },
+  { id: 'dg_hp_2',         name: 'Deep Lungs II',    description: 'Deepen your hull: start every dive with 35% more max HP instead.',                depthRequired: 4,  cost: 240, scope: 'gauntlet', gauntlet: 'don', requires: 'dg_hp' },
+  { id: 'dg_hp_3',         name: 'Deep Lungs III',   description: 'The deepest hull: start every dive with 50% more max HP.',                         depthRequired: 10, cost: 380, scope: 'gauntlet', gauntlet: 'don', requires: 'dg_hp_2' },
   { id: 'dg_peek',         name: 'Ghostlight',       description: 'Before each dive, read what waits below: a lone hull, an elite and its trick, or a boss.', depthRequired: 0, cost: 140, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_fathoms',      name: 'Spoils of the Deep', description: 'Earn 40% more Fathoms from every dive, win or lose. Grab it early and the grind speeds up.', depthRequired: 0, cost: 150, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_reroll_boon',  name: 'Rechamber',        description: 'Once per power draft, throw the offered boons back and draw three fresh ones.',  depthRequired: 0,  cost: 175, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_reroll_curse', name: 'Break the Hex',    description: "Once per curse the Locker lays on you, throw it back and force a different one. Could be milder, could be worse.", depthRequired: 0, cost: 190, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_armor',        name: 'Spectral Plate',   description: 'Take 12% less damage from every enemy for the whole dive.',                       depthRequired: 0,  cost: 210, scope: 'gauntlet', gauntlet: 'don' },
+  { id: 'dg_armor_2',      name: 'Spectral Plate II', description: 'Thicker plate: take 18% less damage from every enemy for the whole dive.',        depthRequired: 6,  cost: 320, scope: 'gauntlet', gauntlet: 'don', requires: 'dg_armor' },
+  { id: 'dg_armor_3',      name: 'Spectral Plate III', description: 'Ghost-forged plate: take 25% less damage from every enemy for the whole dive.',   depthRequired: 12, cost: 480, scope: 'gauntlet', gauntlet: 'don', requires: 'dg_armor_2' },
   { id: 'dg_power',        name: 'Ghost Gunners',    description: 'Deal 12% more damage to every enemy for the whole dive.',                          depthRequired: 0,  cost: 210, scope: 'gauntlet', gauntlet: 'don' },
+  { id: 'dg_power_2',      name: 'Ghost Gunners II', description: 'Re-bored guns: deal 20% more damage to every enemy for the whole dive.',           depthRequired: 6,  cost: 320, scope: 'gauntlet', gauntlet: 'don', requires: 'dg_power' },
+  { id: 'dg_power_3',      name: 'Ghost Gunners III', description: 'The ghost-fleet pattern: deal 30% more damage to every enemy for the whole dive.', depthRequired: 12, cost: 480, scope: 'gauntlet', gauntlet: 'don', requires: 'dg_power_2' },
   { id: 'dg_lifedrain',    name: 'Bloodward',        description: 'Patch up 10% of your max HP each time you sink a ship.',                           depthRequired: 5,  cost: 230, scope: 'gauntlet', gauntlet: 'don' },
+  { id: 'dg_lifedrain_2',  name: 'Bloodward II',     description: 'Patch up 15% of your max HP each time you sink a ship.',                           depthRequired: 10, cost: 340, scope: 'gauntlet', gauntlet: 'don', requires: 'dg_lifedrain' },
+  { id: 'dg_lifedrain_3',  name: 'Bloodward III',    description: 'Patch up 22% of your max HP each time you sink a ship.',                           depthRequired: 16, cost: 500, scope: 'gauntlet', gauntlet: 'don', requires: 'dg_lifedrain_2' },
   { id: 'dg_luck',         name: 'Drowned Fortune',  description: 'The deep deals you a better hand — Rare and Legendary boons surface far more often.', depthRequired: 8, cost: 250, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_veteran',      name: 'Deep Veteran',     description: 'Begin every dive at depth 8: tougher ships, boons and curses sooner. Pot, chests and Fathoms still count only the ships you sink.', depthRequired: 10, cost: 270, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_haul',         name: 'Pieces of Eight',  description: 'Bank 20% more doubloons every time you cash out a dive.',                          depthRequired: 12, cost: 210, scope: 'gauntlet', gauntlet: 'don' },
@@ -370,9 +378,11 @@ export function gauntletFathomsMult(unlocked: string[] | null | undefined): numb
   return u.includes('lucky_locker') ? 1.33 : 1
 }
 
-/** Diving Bell (Davy) / Deep Lungs (Don's): max-HP multiplier for the whole run. */
+/** Diving Bell (Davy) / Deep Lungs I-III (Don's, tiered): max-HP mult per run. */
 export function gauntletRunHpMult(unlocked: string[] | null | undefined): number {
   const u = unlocked ?? []
+  if (u.includes('dg_hp_3')) return 1.50
+  if (u.includes('dg_hp_2')) return 1.35
   if (u.includes('dg_hp')) return 1.20
   return u.includes('diving_bell') ? 1.15 : 1
 }
@@ -410,23 +420,29 @@ export function gauntletSkipsFirstCurse(unlocked: string[] | null | undefined): 
  *  1 + pct/100, so -10 → ×0.9 incoming). */
 export function gauntletDamageTakenMod(unlocked: string[] | null | undefined): number {
   const u = unlocked ?? []
-  if (u.includes('dg_armor')) return -12   // Spectral Plate (Don's)
+  if (u.includes('dg_armor_3')) return -25   // Spectral Plate III (Don's)
+  if (u.includes('dg_armor_2')) return -18   // Spectral Plate II
+  if (u.includes('dg_armor')) return -12     // Spectral Plate I
   return u.includes('iron_hide') ? -10 : 0
 }
 
-/** Gunner's Eye (Davy) / Ghost Gunners (Don's): bonus damage % DEALT during
- *  Gauntlet runs (into runRaidMods). */
+/** Gunner's Eye (Davy) / Ghost Gunners I-III (Don's, tiered): bonus damage %
+ *  DEALT during Gauntlet runs (into runRaidMods). */
 export function gauntletDamageMod(unlocked: string[] | null | undefined): number {
   const u = unlocked ?? []
-  if (u.includes('dg_power')) return 12   // Ghost Gunners (Don's)
+  if (u.includes('dg_power_3')) return 30   // Ghost Gunners III (Don's)
+  if (u.includes('dg_power_2')) return 20   // Ghost Gunners II
+  if (u.includes('dg_power')) return 12     // Ghost Gunners I
   return u.includes('gunners_eye') ? 10 : 0
 }
 
-/** Vigor (Davy) / Bloodward (Don's): fraction of max HP restored after each
- *  enemy sunk in a run. */
+/** Vigor (Davy) / Bloodward I-III (Don's, tiered): fraction of max HP restored
+ *  after each enemy sunk in a run. */
 export function gauntletKillHealPct(unlocked: string[] | null | undefined): number {
   const u = unlocked ?? []
-  if (u.includes('dg_lifedrain')) return 0.10   // Bloodward (Don's)
+  if (u.includes('dg_lifedrain_3')) return 0.22   // Bloodward III (Don's)
+  if (u.includes('dg_lifedrain_2')) return 0.15   // Bloodward II
+  if (u.includes('dg_lifedrain')) return 0.10     // Bloodward I
   return u.includes('vigor') ? 0.08 : 0
 }
 
