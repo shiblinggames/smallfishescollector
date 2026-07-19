@@ -839,38 +839,38 @@ export default function HubCards({
               style={{
                 marginTop: 10, width: '100%', display: 'flex', alignItems: 'center', gap: 12,
                 padding: '0.75rem', borderRadius: 14, textAlign: 'left', cursor: 'pointer',
-                background: 'linear-gradient(180deg, rgba(150,60,66,0.22), rgba(0,0,0,0.25))',
-                border: '1px solid rgba(150,60,66,0.6)',
+                background: 'linear-gradient(180deg, rgba(36,116,78,0.22), rgba(0,0,0,0.25))',
+                border: '1px solid rgba(36,116,78,0.6)',
               }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/donsgauntlet.png" alt="" loading="lazy" decoding="async"
-                style={{ width: 52, height: 52, objectFit: 'contain', flexShrink: 0, filter: 'drop-shadow(0 3px 10px rgba(150,60,66,0.5))' }} />
+                style={{ width: 52, height: 52, objectFit: 'contain', flexShrink: 0, filter: 'drop-shadow(0 3px 10px rgba(36,116,78,0.5))' }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0ede8', lineHeight: 1.1 }}>Don&apos;s Gauntlet</p>
-                <p className="font-karla font-500" style={{ fontSize: '0.66rem', color: '#cbb0b1', lineHeight: 1.35, marginTop: 2 }}>
+                <p className="font-karla font-500" style={{ fontSize: '0.66rem', color: '#a9c6b6', lineHeight: 1.35, marginTop: 2 }}>
                   The don went down with the deep, and his ghost is still collecting. Descend into the darker gauntlet.
                 </p>
               </div>
-              <span aria-hidden className="font-karla font-700" style={{ flexShrink: 0, color: '#e29aa0', fontSize: '1rem' }}>›</span>
+              <span aria-hidden className="font-karla font-700" style={{ flexShrink: 0, color: '#7fd9a8', fontSize: '1rem' }}>›</span>
             </button>
           ) : (
             <div aria-disabled
               style={{
                 marginTop: 10, width: '100%', display: 'flex', alignItems: 'center', gap: 12,
                 padding: '0.75rem', borderRadius: 14, textAlign: 'left', cursor: 'default', opacity: 0.72,
-                background: 'linear-gradient(180deg, rgba(150,60,66,0.14), rgba(0,0,0,0.25))',
-                border: '1px solid rgba(150,60,66,0.4)',
+                background: 'linear-gradient(180deg, rgba(36,116,78,0.14), rgba(0,0,0,0.25))',
+                border: '1px solid rgba(36,116,78,0.4)',
               }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/donsgauntlet.png" alt="" loading="lazy" decoding="async"
-                style={{ width: 52, height: 52, objectFit: 'contain', flexShrink: 0, filter: 'grayscale(0.35) drop-shadow(0 3px 10px rgba(150,60,66,0.45))' }} />
+                style={{ width: 52, height: 52, objectFit: 'contain', flexShrink: 0, filter: 'grayscale(0.35) drop-shadow(0 3px 10px rgba(36,116,78,0.45))' }} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#ecdcd6', lineHeight: 1.1 }}>Don&apos;s Gauntlet</p>
-                <p className="font-karla font-500" style={{ fontSize: '0.66rem', color: '#bda2a3', lineHeight: 1.35, marginTop: 2 }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#dcece4', lineHeight: 1.1 }}>Don&apos;s Gauntlet</p>
+                <p className="font-karla font-500" style={{ fontSize: '0.66rem', color: '#9db9ab', lineHeight: 1.35, marginTop: 2 }}>
                   The don went down with the deep, and his ghost is still collecting. A darker gauntlet stirs below.
                 </p>
               </div>
-              <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ flexShrink: 0, fontSize: '0.5rem', color: '#e29aa0', background: 'rgba(150,60,66,0.24)', border: '1px solid rgba(150,60,66,0.55)', borderRadius: 999, padding: '0.25rem 0.5rem', whiteSpace: 'nowrap' }}>Coming Soon</span>
+              <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ flexShrink: 0, fontSize: '0.5rem', color: '#7fd9a8', background: 'rgba(36,116,78,0.24)', border: '1px solid rgba(36,116,78,0.55)', borderRadius: 999, padding: '0.25rem 0.5rem', whiteSpace: 'nowrap' }}>Coming Soon</span>
             </div>
           )}
         </div>

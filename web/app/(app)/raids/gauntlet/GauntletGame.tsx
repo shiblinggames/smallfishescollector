@@ -27,7 +27,7 @@ import {
   convergenceEffects, activeConvergences, drawConvergenceOffer, convergenceDescAt, CONVERGENCES,
   REPRIEVE_MIN_DEPTH, REPRIEVE_CHANCE, drawReprieve, type Reprieve,
   // Davy's Terms — the chosen, structural difficulty layer (hardcore only).
-  DROWNED_FILTER, GHOST_FILTER, bandForDepth, davyTaunt,
+  DROWNED_FILTER, GHOST_FILTER, bandForDepth, gauntletTaunt,
   GAUNTLET_COOLDOWN_HOURS, HARDCORE_RUNS_PER_DAY, HC_UNLOCK_DEPTH, GAUNTLET_REWARD_DEPTH_CAP,
   emptyRunStats, addRunStats, coerceRunStats,
   type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot, type GauntletRunState, type GauntletRunStats, chestOdds, type GauntletVariant } from '@/lib/gauntlet'
@@ -54,6 +54,10 @@ type CashResult = Awaited<ReturnType<typeof cashOutGauntlet>>
 
 const GOLD = '#f0c040'
 const TEAL = '#5eead4'
+// Don's Gauntlet accent — a luminous-but-sickly kraken green (bright enough to
+// stay legible on the dark UI), with a deep toxic green for atmosphere haze.
+const KRAKEN = '#3fbf82'
+const KRAKEN_DEEP = '#1f7a4d'
 /** Hardcore's one colour. The Haul modal marks a Hardcore-only drop with this and
  *  nothing else, so "you cannot get this on a Normal dive" is a single visual fact
  *  rather than a sentence. */
@@ -181,12 +185,16 @@ const SHRINE_WALK_HEAL    = 0.05  // Walk on: fraction of MAX HP healed (deliber
 
 export default function GauntletGame(props: GauntletGameProps) {
   const router = useRouter()
-  // Variant-aware branding (a light touch until the full theme slice): Don's
-  // Gauntlet swaps the title + hero face. Full crimson/ghost theming comes later.
+  // Variant-aware branding + theme: Don's Gauntlet is a scary KRAKEN-GREEN abyss,
+  // distinct from Davy's teal-and-gold. `AC` is the primary accent (replaces TEAL
+  // on the player-facing screens); GOLD (Fathoms/treasure) stays shared. `atmoGlow`
+  // tints the landing/descent haze his sickly green instead of Davy's red.
   const isDonG = props.variant === 'don'
   const heroImg = isDonG ? '/donsgauntlet.png' : MAW_IMG
   const gauntletTitle = isDonG ? "Don's Gauntlet" : 'Davy Jones Gauntlet'
   const gauntletFace = isDonG ? 'Don Finleone' : 'Davy Jones'
+  const AC = isDonG ? KRAKEN : TEAL
+  const atmoGlow = isDonG ? KRAKEN_DEEP : '#ef4444'
   const shipFilter = props.equippedShipSkin ? getShipSkin(props.equippedShipSkin)?.filter ?? 'none' : 'none'
   // Locker run-upgrades, mirrored into local state. The server-loaded prop only
   // refreshes on a fresh page render (tab switch / navigation), so a player who
@@ -741,11 +749,11 @@ export default function GauntletGame(props: GauntletGameProps) {
               return (
                 <div style={{ display: 'flex', gap: 11, alignItems: 'stretch' }}>
                   <Card
-                    accent={TEAL} title="Normal" titleColor={TEAL} icon={chevrons} enabled={!starting}
+                    accent={AC} title="Normal" titleColor={AC} icon={chevrons} enabled={!starting}
                     desc="Push your luck for the pot. Your crew are never at risk."
                     onClick={() => begin(false)}
                     footer={<>
-                      <p className="font-karla font-700 uppercase" style={{ fontSize: '0.48rem', letterSpacing: '0.1em', color: `${TEAL}cc` }}>Your Deepest</p>
+                      <p className="font-karla font-700 uppercase" style={{ fontSize: '0.48rem', letterSpacing: '0.1em', color: `${AC}cc` }}>Your Deepest</p>
                       <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#dbf5ef' }}>{props.deepest > 0 ? `Depth ${props.deepest}` : 'Uncharted'}</p>
                     </>}
                   />
@@ -939,7 +947,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     }
     // Hold longer on depths where Davy speaks, so his taunt is readable —
     // and on the uncharted beat, so the record moment lands.
-    const hasTaunt = fight ? davyTaunt(fight.depth) !== null : false
+    const hasTaunt = fight ? gauntletTaunt(fight.depth, props.variant) !== null : false
     const t = setTimeout(() => setPhase('fighting'), hasTaunt ? 3000 : firedBeat ? 2200 : 1350)
     return () => clearTimeout(t)
   }, [phase, fight])
@@ -1511,7 +1519,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       {detailEffect && (() => {
         const isBoon = detailEffect.kind === 'boon'
         const isConf = detailEffect.kind === 'confluence'
-        const accent = isConf ? '#f5b94a' : isBoon ? TEAL : '#f87171'
+        const accent = isConf ? '#f5b94a' : isBoon ? AC : '#f87171'
         const fg = isConf ? '#fbe7c4' : isBoon ? '#aef3e6' : '#fca5a5'
         return (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.16 }}
@@ -1573,7 +1581,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     )
     return (
       <>
-        <AbyssBackdrop hardcore={hardcoreRun} />
+        <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
         {/* Just enough bottom pad to clear the fixed mobile tab bar (~58px):
             this + the global page footer below (~25px) lands "Not today" just
             above the bar. No safe-area inset (the bar already sits at bottom:0,
@@ -1595,7 +1603,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           </p>
           <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 20 }}>
             {pill('Depth', `${depth}`, GOLD)}
-            {pill(boonCount === 1 ? 'Boon' : 'Boons', `${boonCount}`, TEAL)}
+            {pill(boonCount === 1 ? 'Boon' : 'Boons', `${boonCount}`, AC)}
             {pill(curseCount === 1 ? 'Curse' : 'Curses', `${curseCount}`, '#e08a6a')}
           </div>
           <button onClick={doResume} disabled={resuming} className="font-cinzel font-800 uppercase tracking-[0.08em] tap"
@@ -1650,7 +1658,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   if (phase === 'paused') {
     return (
       <>
-        <AbyssBackdrop hardcore={hardcoreRun} />
+        <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
         <div className="pb-10 sm:pb-6" style={{ position: 'relative', zIndex: 1, maxWidth: 460, margin: '0 auto', paddingTop: 6, paddingLeft: '0.85rem', paddingRight: '0.85rem', textAlign: 'center' }}>
           <div style={{ fontSize: '2.4rem', marginTop: 30 }} aria-hidden>⏸</div>
           <h1 className="font-cinzel font-800" style={{ fontSize: '1.6rem', color: '#f3ead2', lineHeight: 1.12, marginTop: 10, textShadow: '0 0 26px rgba(240,192,64,0.3)' }}>
@@ -1674,7 +1682,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   if (phase === 'intro') {
     return (
       <>
-        <AbyssBackdrop hardcore={hardcoreRun} />
+        <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
         {/* Just enough bottom pad to clear the fixed mobile tab bar (~58px):
             this + the global page footer below (~25px) lands "Not today" just
             above the bar. No safe-area inset (the bar already sits at bottom:0,
@@ -1693,7 +1701,7 @@ export default function GauntletGame(props: GauntletGameProps) {
 
           {/* The maw — the hole you drop into */}
           <div style={{ position: 'relative', width: 148, height: 148, margin: '12px auto 4px' }}>
-            <div style={{ position: 'absolute', inset: -20, borderRadius: '50%', background: 'radial-gradient(circle, rgba(240,192,64,0.26) 0%, rgba(94,234,212,0.12) 42%, transparent 70%)', animation: 'gauntPulse 4.2s ease-in-out infinite' }} />
+            <div style={{ position: 'absolute', inset: -20, borderRadius: '50%', background: `radial-gradient(circle, rgba(240,192,64,0.26) 0%, ${isDonG ? 'rgba(63,191,130,0.14)' : 'rgba(94,234,212,0.12)'} 42%, transparent 70%)`, animation: 'gauntPulse 4.2s ease-in-out infinite' }} />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={heroImg} alt="" loading="eager" decoding="async"
               style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', filter: 'drop-shadow(0 10px 32px rgba(0,0,0,0.75))', animation: 'gauntDrift 6s ease-in-out infinite' }} />
@@ -1705,11 +1713,11 @@ export default function GauntletGame(props: GauntletGameProps) {
           <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 8 }}>
             <button onClick={() => setInfoCurrency('fathoms')} title="What are Fathoms?"
               className="active:scale-95"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.3rem 0.7rem 0.3rem 0.55rem', borderRadius: 999, background: 'rgba(45,212,191,0.12)', border: `1px solid ${TEAL}55`, cursor: 'pointer', transition: 'transform 0.08s' }}>
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.3rem 0.7rem 0.3rem 0.55rem', borderRadius: 999, background: `${AC}1f`, border: `1px solid ${AC}55`, cursor: 'pointer', transition: 'transform 0.08s' }}>
               {/* Anchor = Fathoms (depth). */}
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEAL} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="5" r="2" /><path d="M12 7v13" /><path d="M5 12H3a9 9 0 0 0 18 0h-2" /><path d="M8 10h8" /></svg>
-              <span className="font-cinzel font-800" style={{ fontSize: '0.95rem', color: TEAL, lineHeight: 1 }}>{fmt(fathomsNow)}</span>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={TEAL} strokeWidth="2.2" strokeLinecap="round" aria-hidden style={{ opacity: 0.55 }}><circle cx="12" cy="12" r="9" /><path d="M12 11v5" /><path d="M12 8h.01" /></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={AC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="5" r="2" /><path d="M12 7v13" /><path d="M5 12H3a9 9 0 0 0 18 0h-2" /><path d="M8 10h8" /></svg>
+              <span className="font-cinzel font-800" style={{ fontSize: '0.95rem', color: AC, lineHeight: 1 }}>{fmt(fathomsNow)}</span>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={AC} strokeWidth="2.2" strokeLinecap="round" aria-hidden style={{ opacity: 0.55 }}><circle cx="12" cy="12" r="9" /><path d="M12 11v5" /><path d="M12 8h.01" /></svg>
             </button>
             {/* Blood Gems — shown once Hardcore is unlocked (discoverable at 0)
                 or whenever the player holds any. */}
@@ -1741,7 +1749,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                 const comingSoon = !canHc && !props.hardcoreLive
                 const cards = [
                   {
-                    key: 'normal' as const, color: TEAL, label: 'Normal', rec: props.topDescender,
+                    key: 'normal' as const, color: AC, label: 'Normal', rec: props.topDescender,
                     mine: props.deepest, recap: (props.deepestRun && props.deepest > 0) ? props.deepestRun : null,
                     enabled: !starting,
                     onClick: () => begin(false),
@@ -1812,7 +1820,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                 what that descent drops before you commit. */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 8 }}>
               {([
-                { m: 'normal' as const, color: TEAL, label: 'What Normal drops' },
+                { m: 'normal' as const, color: AC, label: 'What Normal drops' },
                 { m: 'hardcore' as const, color: '#e0555a', label: 'What Hardcore drops' },
               ]).map(({ m, color, label }) => (
                 <button key={m} onClick={() => setLootMode(m)} className="tap"
@@ -1876,7 +1884,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                   <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: '#7a8e8a', marginBottom: 7 }}>Active Run Perks · {owned.length}</p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {owned.map(u => (
-                      <span key={u.id} title={u.description} className="font-karla font-700" style={{ fontSize: '0.56rem', color: `${TEAL}dd`, background: `${TEAL}12`, border: `1px solid ${TEAL}30`, borderRadius: 999, padding: '0.2rem 0.6rem' }}>
+                      <span key={u.id} title={u.description} className="font-karla font-700" style={{ fontSize: '0.56rem', color: `${AC}dd`, background: `${AC}12`, border: `1px solid ${AC}30`, borderRadius: 999, padding: '0.2rem 0.6rem' }}>
                         ✓ {u.name}
                       </span>
                     ))}
@@ -1929,7 +1937,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         ) : null}
         <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
           <button onClick={() => setShopSection('run')} className="font-cinzel font-700 uppercase tracking-[0.07em] tap"
-            style={{ flex: 1, padding: '0.8rem', borderRadius: 13, fontSize: '0.74rem', color: TEAL, background: `${TEAL}14`, border: `1px solid ${TEAL}55`, cursor: 'pointer' }}>
+            style={{ flex: 1, padding: '0.8rem', borderRadius: 13, fontSize: '0.74rem', color: AC, background: `${AC}14`, border: `1px solid ${AC}55`, cursor: 'pointer' }}>
             Run Upgrades
           </button>
           <button onClick={() => setShopSection('shore')} className="font-cinzel font-700 uppercase tracking-[0.07em] tap"
@@ -1967,11 +1975,12 @@ export default function GauntletGame(props: GauntletGameProps) {
     const reached = cleared + skipOffset
     const diedAt = reached + 1
     const lost = potRef.current
-    const CRIMSON = '#ef4444'
+    // Death wash: Davy's crimson, or Don's sickly kraken green.
+    const CRIMSON = isDonG ? '#2ea86a' : '#ef4444'
     return (
       <>
-        <AbyssBackdrop hardcore={hardcoreRun} />
-        {/* Crimson death wash bleeding up from the deep, over the abyss. */}
+        <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
+        {/* Death wash bleeding up from the deep, over the abyss. */}
         <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 120% 75% at 50% 112%, ${CRIMSON}24 0%, ${CRIMSON}10 34%, transparent 66%)` }} />
         <div style={{
           position: 'relative', zIndex: 1, maxWidth: 440, margin: '0 auto',
@@ -1985,7 +1994,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
             style={{ position: 'relative', width: 188, height: 188, margin: '14px auto 2px' }}
           >
-            <div style={{ position: 'absolute', inset: -22, borderRadius: '50%', background: `radial-gradient(circle, ${CRIMSON}30 0%, rgba(120,20,20,0.14) 42%, transparent 70%)`, animation: 'gauntPulse 3.4s ease-in-out infinite' }} />
+            <div style={{ position: 'absolute', inset: -22, borderRadius: '50%', background: `radial-gradient(circle, ${CRIMSON}30 0%, ${isDonG ? 'rgba(20,90,55,0.16)' : 'rgba(120,20,20,0.14)'} 42%, transparent 70%)`, animation: 'gauntPulse 3.4s ease-in-out infinite' }} />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <motion.img src={heroImg} alt="" loading="eager" decoding="async"
               animate={{ y: [0, -5, 0] }} transition={{ duration: 4.2, repeat: Infinity, ease: 'easeInOut' }}
@@ -1994,10 +2003,10 @@ export default function GauntletGame(props: GauntletGameProps) {
 
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
             className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.32em', color: CRIMSON }}>
-            The Locker Takes It
+            {isDonG ? 'The Green Takes It' : 'The Locker Takes It'}
           </motion.p>
           <motion.h1 initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.24, type: 'spring', stiffness: 240, damping: 18 }}
-            className="font-cinzel font-800" style={{ fontSize: '1.95rem', color: '#f3d6d6', lineHeight: 1.08, marginTop: 6, textShadow: `0 0 26px ${CRIMSON}3a` }}>
+            className="font-cinzel font-800" style={{ fontSize: '1.95rem', color: isDonG ? '#d6f3e6' : '#f3d6d6', lineHeight: 1.08, marginTop: 6, textShadow: `0 0 26px ${CRIMSON}3a` }}>
             You Sank
           </motion.h1>
           <p className="font-karla" style={{ fontSize: '0.78rem', color: '#9a948a', marginTop: 6 }}>
@@ -2005,7 +2014,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           </p>
           {/* Band epitaph — WHERE you fell, in the sea's own words. */}
           <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: `${CRIMSON}bb`, marginTop: 4, letterSpacing: '0.03em' }}>
-            {bandForDepth(diedAt).name} keeps what it takes.
+            {bandForDepth(diedAt, props.variant).name} keeps what it takes.
           </p>
 
           {/* The pot lost — the cost of pushing too far. */}
@@ -2055,9 +2064,9 @@ export default function GauntletGame(props: GauntletGameProps) {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} style={{ marginTop: 14 }}>
             <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#7a766e' }}>Deepest run: depth {props.deepest}</p>
             {deathFathoms > 0 && (
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: 10, padding: '0.36rem 0.85rem', borderRadius: 999, background: `${TEAL}0e`, border: `1px solid ${TEAL}3a` }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: 10, padding: '0.36rem 0.85rem', borderRadius: 999, background: `${AC}0e`, border: `1px solid ${AC}3a` }}>
                 <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#8aa39e' }}>Salvaged</span>
-                <span className="font-cinzel font-800" style={{ fontSize: '0.85rem', color: TEAL }}>+{fmt(deathFathoms)} Fathoms</span>
+                <span className="font-cinzel font-800" style={{ fontSize: '0.85rem', color: AC }}>+{fmt(deathFathoms)} Fathoms</span>
               </div>
             )}
             <p className="font-karla" style={{ fontSize: '0.66rem', color: '#8a8480', marginTop: 8, lineHeight: 1.45 }}>
@@ -2089,7 +2098,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     const canWager = fathomsNow >= 1
     return (
       <>
-        <AbyssBackdrop hardcore={hardcoreRun} />
+        <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
         <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: [0.4, 0.7, 0.4] }} transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
           style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 130% 90% at 50% 0%, ${VIO}1f 0%, ${VIO}0a 42%, transparent 70%)` }} />
         <div style={{
@@ -2267,7 +2276,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     const previewXp = Math.round(gauntletXpForDepth(payDepth, props.variant) * chest.potMult)
     const hpPct = Math.max(0, Math.min(100, Math.round((playerHP / hpMax) * 100)))
     const hpColor = hpPct < 30 ? '#f87171' : hpPct < 60 ? GOLD : '#4ade80'
-    const band = bandForDepth(combatDepth)
+    const band = bandForDepth(combatDepth, props.variant)
     const ownedBoons = GAUNTLET_BOONS
       .map(fam => ({ fam, tier: boonTiers[fam.id] ?? 0 }))
       .filter(x => x.tier >= 1)
@@ -2293,7 +2302,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         ? { label: 'A BOSS lies below', sub: peekFight.enemy.name, color: '#f87171' }
         : peekFight.isElite
           ? { label: peekFight.affix ? `An Elite below · ${peekFight.affix.name}` : 'An Elite lies below', sub: peekFight.enemy.name, color: '#c084fc' }
-          : { label: 'Open water below · a lone hull', sub: peekFight.enemy.name, color: TEAL }
+          : { label: 'Open water below · a lone hull', sub: peekFight.enemy.name, color: AC }
       : null
     // Aligned label + wrapping chips — one tidy row per loadout category so the
     // whole loadout reads as a single block instead of three headed sections.
@@ -2305,7 +2314,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     )
     return (
       <>
-        <AbyssBackdrop hardcore={hardcoreRun} />
+        <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
         {/* Synergy Unlocked — a one-shot fanfare overlay the moment a confluence
             comes online (the boon you just claimed completed a pair). */}
         <AnimatePresence>
@@ -2343,12 +2352,12 @@ export default function GauntletGame(props: GauntletGameProps) {
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               style={{ position: 'fixed', inset: 0, zIndex: 70, pointerEvents: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '0 1.2rem' }}>
               <motion.div initial={{ scale: 0.3, opacity: 0.7 }} animate={{ scale: 2.6, opacity: 0 }} transition={{ duration: 0.9, ease: 'easeOut' }}
-                style={{ position: 'absolute', width: 260, height: 260, borderRadius: '50%', background: `radial-gradient(circle, ${TEAL}77 0%, ${TEAL}1c 42%, transparent 70%)` }} />
+                style={{ position: 'absolute', width: 260, height: 260, borderRadius: '50%', background: `radial-gradient(circle, ${AC}77 0%, ${AC}1c 42%, transparent 70%)` }} />
               <motion.div initial={{ scale: 0.6, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} transition={{ delay: 0.1, type: 'spring', stiffness: 220, damping: 16 }}
                 style={{ position: 'relative' }}>
-                <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke={TEAL} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ filter: `drop-shadow(0 0 14px ${TEAL}aa)` }}><path d="M20 6 9 17l-5-5" /></svg>
-                <p className="font-karla font-800 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.3em', color: TEAL, marginTop: 10, textShadow: `0 0 16px ${TEAL}88` }}>Curse Shed</p>
-                <p className="font-cinzel font-800" style={{ fontSize: '1.9rem', lineHeight: 1.05, color: '#eafffb', marginTop: 6, textShadow: `0 0 30px ${TEAL}66` }}>{curseShed.name}</p>
+                <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke={AC} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ filter: `drop-shadow(0 0 14px ${AC}aa)` }}><path d="M20 6 9 17l-5-5" /></svg>
+                <p className="font-karla font-800 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.3em', color: AC, marginTop: 10, textShadow: `0 0 16px ${AC}88` }}>Curse Shed</p>
+                <p className="font-cinzel font-800" style={{ fontSize: '1.9rem', lineHeight: 1.05, color: '#eafffb', marginTop: 6, textShadow: `0 0 30px ${AC}66` }}>{curseShed.name}</p>
                 <p className="font-karla" style={{ fontSize: '0.84rem', color: '#9cc7bf', marginTop: 8, fontStyle: 'italic' }}>The deep takes it back.</p>
               </motion.div>
             </motion.div>
@@ -2477,7 +2486,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                     transition={{ duration: 0.22, ease: 'easeOut' }} style={{ overflow: 'hidden' }}>
                     <div style={{ padding: '0 0.9rem 0.75rem', display: 'flex', flexDirection: 'column', gap: 9 }}>
                       {ownedBoons.length > 0 && (
-                        <LoadoutRow label="Powers" color={TEAL}>
+                        <LoadoutRow label="Powers" color={AC}>
                           {ownedBoons.map(({ fam, tier }) => {
                             const t = fam.tiers[tier - 1]
                             const rc = BOON_RARITY_META[boonRarity(fam)].color
@@ -2652,10 +2661,10 @@ export default function GauntletGame(props: GauntletGameProps) {
               const diveBtn = (
                 <button onClick={pushOn} disabled={resolving} className="tap"
                   style={{ width: '100%', height: '100%', minHeight: 92, padding: '0.75rem 0.6rem', borderRadius: 14,
-                    background: `linear-gradient(180deg, ${TEAL}26, ${TEAL}0c)`, border: `1px solid ${TEAL}88`,
+                    background: `linear-gradient(180deg, ${AC}26, ${AC}0c)`, border: `1px solid ${AC}88`,
                     cursor: resolving ? 'wait' : 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={TEAL} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 5v14" /><path d="M19 12l-7 7-7-7" /></svg>
-                  <span className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ fontSize: '0.92rem', color: TEAL, lineHeight: 1.1 }}>Dive Deeper</span>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={AC} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 5v14" /><path d="M19 12l-7 7-7-7" /></svg>
+                  <span className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ fontSize: '0.92rem', color: AC, lineHeight: 1.1 }}>Dive Deeper</span>
                   <span className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#8fb8b0' }}>To depth {nextDepth}</span>
                   {previewDoubloons > 0 && (
                     <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#9a857a', lineHeight: 1.25 }}>
@@ -2754,7 +2763,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     const curseTotalAfter = c.isUpgrade ? curseCount : curseCount + 1
     return (
       <>
-        <AbyssBackdrop hardcore={hardcoreRun} />
+        <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
         {/* Crimson dread, bleeding up from the deep and breathing slowly. */}
         <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: [0.55, 0.9, 0.55] }} transition={{ duration: 4.2, repeat: Infinity, ease: 'easeInOut' }}
           style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 135% 95% at 50% 112%, ${CRIM}26 0%, ${CRIM}0d 40%, transparent 68%)` }} />
@@ -2836,10 +2845,10 @@ export default function GauntletGame(props: GauntletGameProps) {
     const revealDone = pendingBoons.slice(0, shownBoons).every((_, i) => (boonPhases[i] ?? 'sealed') === 'flipped')
     return (
       <>
-        <AbyssBackdrop hardcore={hardcoreRun} />
+        <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
         {/* Teal "treasure surfacing" wash — the whole screen should read as a reward. */}
         <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6 }}
-          style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 120% 66% at 50% 6%, ${TEAL}24 0%, ${TEAL}08 38%, transparent 64%)` }} />
+          style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 120% 66% at 50% 6%, ${AC}24 0%, ${AC}08 38%, transparent 64%)` }} />
         {/* Legendary climax — a brief gold screen flash the instant the rarest
             card flips open (rare/common land quietly on the card itself). */}
         <AnimatePresence>
@@ -2883,11 +2892,11 @@ export default function GauntletGame(props: GauntletGameProps) {
           paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
         }}>
           <motion.p initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
-            className="font-karla font-800 uppercase" style={{ fontSize: '0.72rem', letterSpacing: '0.36em', color: boonFromShrine ? '#f87171' : TEAL, marginTop: 10, textShadow: boonFromShrine ? '0 0 16px rgba(239,68,68,0.5)' : `0 0 16px ${TEAL}66` }}>
+            className="font-karla font-800 uppercase" style={{ fontSize: '0.72rem', letterSpacing: '0.36em', color: boonFromShrine ? '#f87171' : AC, marginTop: 10, textShadow: boonFromShrine ? '0 0 16px rgba(239,68,68,0.5)' : `0 0 16px ${AC}66` }}>
             {boonFromShrine ? 'Paid in Blood' : 'Plunder of the Deep'}
           </motion.p>
           <motion.h1 initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: 'spring', stiffness: 240, damping: 17 }}
-            className="font-cinzel font-800" style={{ fontSize: 'clamp(1.6rem, 8vw, 2.2rem)', whiteSpace: 'nowrap', color: boonFromShrine ? '#ffe9e9' : '#eafffb', lineHeight: 1.04, marginTop: 9, textShadow: boonFromShrine ? '0 0 32px rgba(220,50,60,0.55)' : `0 0 32px ${TEAL}55` }}>
+            className="font-cinzel font-800" style={{ fontSize: 'clamp(1.6rem, 8vw, 2.2rem)', whiteSpace: 'nowrap', color: boonFromShrine ? '#ffe9e9' : '#eafffb', lineHeight: 1.04, marginTop: 9, textShadow: boonFromShrine ? '0 0 32px rgba(220,50,60,0.55)' : `0 0 32px ${AC}55` }}>
             {boonFromShrine ? 'A Power Surfaces' : 'Choose a Power'}
           </motion.h1>
           <p className="font-karla font-600" style={{ fontSize: '0.95rem', color: boonFromShrine ? '#d3b0b0' : '#b6c7c2', marginTop: 9, marginBottom: boonFromShrine ? 10 : 20, lineHeight: 1.4 }}>
@@ -3206,7 +3215,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           {/* Second Cast — reroll the offered boons (limited per draft). */}
           {rerollsLeft > 0 && revealDone && (
             <button onClick={rerollBoons} className="font-karla font-700 uppercase tracking-[0.1em] tap"
-              style={{ marginTop: 16, display: 'inline-flex', alignItems: 'center', gap: 7, padding: '0.55rem 1.1rem', borderRadius: 999, fontSize: '0.64rem', color: TEAL, background: `${TEAL}14`, border: `1px solid ${TEAL}55`, cursor: 'pointer' }}>
+              style={{ marginTop: 16, display: 'inline-flex', alignItems: 'center', gap: 7, padding: '0.55rem 1.1rem', borderRadius: 999, fontSize: '0.64rem', color: AC, background: `${AC}14`, border: `1px solid ${AC}55`, cursor: 'pointer' }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2v6h-6" /><path d="M3 12a9 9 0 0 1 15-6.7L21 8" /><path d="M3 22v-6h6" /><path d="M21 12a9 9 0 0 1-15 6.7L3 16" /></svg>
               Reroll · {rerollsLeft} left
             </button>
@@ -3238,13 +3247,13 @@ export default function GauntletGame(props: GauntletGameProps) {
   // ── Descent transition ─────────────────────────────────────────────────────
   if (phase === 'descending') {
     const d = fight?.depth ?? 1
-    const band = bandForDepth(d)
-    const taunt = davyTaunt(d)
+    const band = bandForDepth(d, props.variant)
+    const taunt = gauntletTaunt(d, props.variant)
     // First depth OF a band = a real arrival — the name gets the loud cut.
     const bandEntry = band.minDepth === d && d > 1
     return (
       <>
-        <AbyssBackdrop hardcore={hardcoreRun} />
+        <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
         <div style={{
           position: 'relative', zIndex: 1, minHeight: '60vh',
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -3256,8 +3265,8 @@ export default function GauntletGame(props: GauntletGameProps) {
               style={{ width: 104, height: 104, objectFit: 'contain', filter: 'drop-shadow(0 8px 26px rgba(0,0,0,0.7))' }} />
           </motion.div>
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.12, duration: 0.4 }}
-            className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.34em', color: bandEntry ? band.accent : TEAL, marginTop: 16 }}>
-            {d === 1 ? 'Into the Locker' : bandEntry ? 'You Sink Into' : 'Deeper Still'}
+            className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.34em', color: bandEntry ? band.accent : AC, marginTop: 16 }}>
+            {d === 1 ? (isDonG ? 'Into the Green' : 'Into the Locker') : bandEntry ? 'You Sink Into' : 'Deeper Still'}
           </motion.p>
           <motion.p initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.18, type: 'spring', stiffness: 230, damping: 18 }}
             className="font-cinzel font-800" style={{ fontSize: '2.4rem', color: GOLD, lineHeight: 1, marginTop: 8, textShadow: '0 0 28px rgba(240,192,64,0.4)' }}>
@@ -3282,9 +3291,9 @@ export default function GauntletGame(props: GauntletGameProps) {
           )}
           {taunt && (
             <motion.p initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55, duration: 0.5 }}
-              className="font-karla" style={{ maxWidth: 320, fontSize: '0.78rem', fontStyle: 'italic', color: 'rgba(94,234,212,0.82)', lineHeight: 1.5, marginTop: 16 }}>
+              className="font-karla" style={{ maxWidth: 320, fontSize: '0.78rem', fontStyle: 'italic', color: isDonG ? 'rgba(63,191,130,0.85)' : 'rgba(94,234,212,0.82)', lineHeight: 1.5, marginTop: 16 }}>
               &ldquo;{taunt}&rdquo;
-              <span className="font-karla font-700 uppercase tracking-[0.16em]" style={{ display: 'block', fontSize: '0.5rem', color: 'rgba(94,234,212,0.5)', marginTop: 6 }}>{gauntletFace}</span>
+              <span className="font-karla font-700 uppercase tracking-[0.16em]" style={{ display: 'block', fontSize: '0.5rem', color: isDonG ? 'rgba(63,191,130,0.55)' : 'rgba(94,234,212,0.5)', marginTop: 6 }}>{gauntletFace}</span>
             </motion.p>
           )}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, marginTop: 18 }}>
@@ -4686,6 +4695,7 @@ const SHORE_CATEGORIES: { id: 'voyages' | 'raids' | 'fishing'; label: string; ic
 ]
 
 function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }: { section: 'run' | 'shore'; variant: GauntletVariant; onClose: () => void; onClaimed?: (owned: string[]) => void; onToggled?: (off: string[]) => void }) {
+  const AC = variant === 'don' ? KRAKEN : TEAL   // Don's Locker wears the kraken green
   const [state, setState] = useState<LockerState | null>(null)
   const [claiming, setClaiming] = useState<string | null>(null)
   const [toggling, setToggling] = useState<string | null>(null)
@@ -4759,7 +4769,7 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
     const busy = claiming === e.id
     const prereqLocked = !!e.lockNote
     const claimable = depthMet && canAfford && !prereqLocked && !busy && !comingSoon
-    const accent = comingSoon ? `${TEAL}66` : claimable ? GOLD : (!depthMet || prereqLocked) ? '#caa05a' : '#6a6764'
+    const accent = comingSoon ? `${AC}66` : claimable ? GOLD : (!depthMet || prereqLocked) ? '#caa05a' : '#6a6764'
     // Compact buy control on the right: a small tinted price-button when you can
     // take it, a dim status chip when you can't. Fathoms read teal, matching the
     // wallet, so it never needs a gold fill.
@@ -4773,7 +4783,7 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             <p className="font-cinzel font-700" style={{ fontSize: '0.96rem', color: comingSoon ? '#cfcabf' : '#f0ede8', lineHeight: 1.15 }}>{e.name}</p>
             {comingSoon && (
-              <span className="font-karla font-800 uppercase tracking-[0.12em]" style={{ flexShrink: 0, fontSize: '0.46rem', color: TEAL, background: `${TEAL}1c`, border: `1px solid ${TEAL}55`, borderRadius: 999, padding: '0.16rem 0.4rem' }}>Coming Soon</span>
+              <span className="font-karla font-800 uppercase tracking-[0.12em]" style={{ flexShrink: 0, fontSize: '0.46rem', color: AC, background: `${AC}1c`, border: `1px solid ${AC}55`, borderRadius: 999, padding: '0.16rem 0.4rem' }}>Coming Soon</span>
             )}
           </div>
           {e.depthRequired > 0 && !comingSoon && (
@@ -4784,7 +4794,7 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
           <p className="font-karla" style={{ fontSize: '0.72rem', color: '#b0aaa0', lineHeight: 1.45, marginTop: 4 }}>{e.description}</p>
           {e.demo && <CannonballRackDemo />}
           {prereqLocked && <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#caa05a', marginTop: 7 }}>{e.lockNote}</p>}
-          {comingSoon && <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: `${TEAL}cc`, marginTop: 7 }}>Still on the anvil. Not ready yet.</p>}
+          {comingSoon && <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: `${AC}cc`, marginTop: 7 }}>Still on the anvil. Not ready yet.</p>}
         </div>
         <button
           type="button"
@@ -4795,9 +4805,9 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
             flexShrink: 0, alignSelf: 'center', width: 66, padding: '0.5rem 0.4rem', borderRadius: 11,
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, lineHeight: 1,
             cursor: claimable ? 'pointer' : 'default',
-            color: claimable ? TEAL : '#6a6764',
-            background: claimable ? `${TEAL}1c` : 'rgba(255,255,255,0.04)',
-            border: `1px solid ${claimable ? `${TEAL}66` : 'rgba(255,255,255,0.1)'}`,
+            color: claimable ? AC : '#6a6764',
+            background: claimable ? `${AC}1c` : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${claimable ? `${AC}66` : 'rgba(255,255,255,0.1)'}`,
           }}
         >
           {topLabel && <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.1em', opacity: 0.85 }}>{topLabel}</span>}
@@ -4812,10 +4822,10 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
     <ModalScrim zIndex={1300} onClose={onClose}>
       <motion.div initial={{ opacity: 0, y: 16, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 24 }}
         onClick={e => e.stopPropagation()}
-        style={{ width: '100%', maxWidth: 440, borderRadius: 18, background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${TEAL}3a`, boxShadow: `0 0 44px ${TEAL}1f, 0 18px 50px rgba(0,0,0,0.6)`, padding: '1.2rem 1.1rem 1.1rem' }}>
+        style={{ width: '100%', maxWidth: 440, borderRadius: 18, background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${AC}3a`, boxShadow: `0 0 44px ${AC}1f, 0 18px 50px rgba(0,0,0,0.6)`, padding: '1.2rem 1.1rem 1.1rem' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
           <div>
-            <p className="font-karla font-700 uppercase tracking-[0.24em]" style={{ fontSize: '0.52rem', color: `${TEAL}cc` }}>The Locker</p>
+            <p className="font-karla font-700 uppercase tracking-[0.24em]" style={{ fontSize: '0.52rem', color: `${AC}cc` }}>The Locker</p>
             <p className="font-cinzel font-800" style={{ fontSize: '1.35rem', color: '#eafffb', lineHeight: 1.1, marginTop: 3 }}>{section === 'run' ? 'Run Upgrades' : 'Ship & Shore'}</p>
           </div>
           <button onClick={onClose} aria-label="Close" style={{ flexShrink: 0, width: 32, height: 32, borderRadius: '50%', padding: 0, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -4855,9 +4865,9 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
             return (
           <>
             {/* Fathoms wallet — the currency you're spending, up top. */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, margin: '13px 0 0', padding: '0.65rem 0.85rem', borderRadius: 12, background: `${TEAL}10`, border: `1px solid ${TEAL}33` }}>
-              <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.52rem', color: `${TEAL}cc` }}>Your Fathoms</span>
-              <span className="font-cinzel font-800" style={{ fontSize: '1.2rem', color: TEAL }}>{fmt(state.fathoms)}</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, margin: '13px 0 0', padding: '0.65rem 0.85rem', borderRadius: 12, background: `${AC}10`, border: `1px solid ${AC}33` }}>
+              <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.52rem', color: `${AC}cc` }}>Your Fathoms</span>
+              <span className="font-cinzel font-800" style={{ fontSize: '1.2rem', color: AC }}>{fmt(state.fathoms)}</span>
             </div>
 
             {/* Your loadout. Run Upgrades render as a switchboard — each owned
@@ -4872,7 +4882,7 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
               <div style={{ marginTop: 14 }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 3 }}>
                   <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#8a8480' }}>Your Run Perks</p>
-                  <p className="font-karla font-700" style={{ fontSize: '0.5rem', color: `${TEAL}cc` }}>{activeCount} of {owned.length} on</p>
+                  <p className="font-karla font-700" style={{ fontSize: '0.5rem', color: `${AC}cc` }}>{activeCount} of {owned.length} on</p>
                 </div>
                 <p className="font-karla" style={{ fontSize: '0.62rem', color: '#7a766e', lineHeight: 1.4, marginBottom: 9 }}>
                   Switch any perk off to leave it out of your next dive. It stays yours — flip it back on any time.
@@ -4882,8 +4892,8 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
                     const on = !state.off.includes(e.id)
                     const busyT = toggling === e.id
                     return (
-                      <div key={e.id} style={{ position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', gap: 11, borderRadius: 12, padding: '0.6rem 0.75rem 0.6rem 0.95rem', background: on ? `${TEAL}0d` : 'rgba(255,255,255,0.03)', border: `1px solid ${on ? `${TEAL}33` : 'rgba(255,255,255,0.09)'}`, transition: 'background 0.15s, border-color 0.15s' }}>
-                        <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: on ? TEAL : '#57534e', transition: 'background 0.15s' }} />
+                      <div key={e.id} style={{ position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', gap: 11, borderRadius: 12, padding: '0.6rem 0.75rem 0.6rem 0.95rem', background: on ? `${AC}0d` : 'rgba(255,255,255,0.03)', border: `1px solid ${on ? `${AC}33` : 'rgba(255,255,255,0.09)'}`, transition: 'background 0.15s, border-color 0.15s' }}>
+                        <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: on ? AC : '#57534e', transition: 'background 0.15s' }} />
                         <div style={{ flex: 1, minWidth: 0, opacity: on ? 1 : 0.5, transition: 'opacity 0.15s' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                             <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: on ? '#eafffb' : '#c4bfb6', lineHeight: 1.15 }}>{e.name}</p>
@@ -4899,9 +4909,9 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
                           disabled={busyT}
                           onClick={() => toggle(e.id, !on)}
                           className="tap"
-                          style={{ flexShrink: 0, alignSelf: 'center', width: 46, height: 27, borderRadius: 999, padding: 3, cursor: busyT ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: on ? 'flex-end' : 'flex-start', background: on ? `${TEAL}3a` : 'rgba(255,255,255,0.06)', border: `1px solid ${on ? `${TEAL}88` : 'rgba(255,255,255,0.16)'}`, transition: 'background 0.18s, border-color 0.18s', opacity: busyT ? 0.6 : 1 }}
+                          style={{ flexShrink: 0, alignSelf: 'center', width: 46, height: 27, borderRadius: 999, padding: 3, cursor: busyT ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: on ? 'flex-end' : 'flex-start', background: on ? `${AC}3a` : 'rgba(255,255,255,0.06)', border: `1px solid ${on ? `${AC}88` : 'rgba(255,255,255,0.16)'}`, transition: 'background 0.18s, border-color 0.18s', opacity: busyT ? 0.6 : 1 }}
                         >
-                          <motion.span layout transition={{ type: 'spring', stiffness: 620, damping: 34 }} aria-hidden style={{ width: 19, height: 19, borderRadius: '50%', background: on ? TEAL : '#7a756c', boxShadow: '0 1px 3px rgba(0,0,0,0.45)' }} />
+                          <motion.span layout transition={{ type: 'spring', stiffness: 620, damping: 34 }} aria-hidden style={{ width: 19, height: 19, borderRadius: '50%', background: on ? AC : '#7a756c', boxShadow: '0 1px 3px rgba(0,0,0,0.45)' }} />
                         </button>
                       </div>
                     )
@@ -4916,10 +4926,10 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {owned.map(e => (
-                    <div key={e.id} style={{ position: 'relative', overflow: 'hidden', borderRadius: 12, padding: '0.6rem 0.8rem 0.6rem 0.95rem', background: `${TEAL}0d`, border: `1px solid ${TEAL}33` }}>
-                      <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: TEAL }} />
+                    <div key={e.id} style={{ position: 'relative', overflow: 'hidden', borderRadius: 12, padding: '0.6rem 0.8rem 0.6rem 0.95rem', background: `${AC}0d`, border: `1px solid ${AC}33` }}>
+                      <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: AC }} />
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={TEAL} strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M20 6 9 17l-5-5" /></svg>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={AC} strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M20 6 9 17l-5-5" /></svg>
                         <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#eafffb', lineHeight: 1.15 }}>{e.name}</p>
                       </div>
                       <p className="font-karla" style={{ fontSize: '0.7rem', color: '#a7c4bd', lineHeight: 1.45, marginTop: 4 }}>{e.description}</p>
@@ -4950,7 +4960,7 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
                   return (
                     <div key={cat.id}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
-                        <span style={{ color: TEAL, display: 'flex' }}>{cat.icon}</span>
+                        <span style={{ color: AC, display: 'flex' }}>{cat.icon}</span>
                         <span className="font-cinzel font-800" style={{ fontSize: '0.88rem', color: '#eafffb', letterSpacing: '0.02em' }}>{cat.label}</span>
                         <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
                       </div>
@@ -4964,7 +4974,7 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
                 {FATHOM_BAITS().length > 0 && (
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
-                      <span style={{ color: TEAL, display: 'flex' }}>
+                      <span style={{ color: AC, display: 'flex' }}>
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v6" /><circle cx="12" cy="14" r="5" /><path d="M12 19v2" /></svg>
                       </span>
                       <span className="font-cinzel font-800" style={{ fontSize: '0.88rem', color: '#eafffb', letterSpacing: '0.02em' }}>Lures</span>
@@ -4998,7 +5008,7 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
                               onClick={buyable ? () => buyLure(b.type) : undefined}
                               disabled={!buyable}
                               className="tap"
-                              style={{ flexShrink: 0, alignSelf: 'center', width: 66, padding: '0.5rem 0.4rem', borderRadius: 11, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, lineHeight: 1, cursor: buyable ? 'pointer' : 'default', color: buyable ? TEAL : '#6a6764', background: buyable ? `${TEAL}1c` : 'rgba(255,255,255,0.04)', border: `1px solid ${buyable ? `${TEAL}66` : 'rgba(255,255,255,0.1)'}` }}
+                              style={{ flexShrink: 0, alignSelf: 'center', width: 66, padding: '0.5rem 0.4rem', borderRadius: 11, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, lineHeight: 1, cursor: buyable ? 'pointer' : 'default', color: buyable ? AC : '#6a6764', background: buyable ? `${AC}1c` : 'rgba(255,255,255,0.04)', border: `1px solid ${buyable ? `${AC}66` : 'rgba(255,255,255,0.1)'}` }}
                             >
                               <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.1em', opacity: 0.85 }}>{busy ? '' : canAfford ? 'Buy' : 'Need'}</span>
                               <span className="font-cinzel font-800" style={{ fontSize: '1rem' }}>{busy ? '…' : fmt(cost)}</span>
@@ -5102,18 +5112,24 @@ function BoonSparks() {
   )
 }
 
-function AbyssBackdrop({ hardcore }: { hardcore?: boolean }) {
-  // Hardcore recolors the whole abyss blood-dark: red god-rays, red motes, a
-  // heavier crimson-to-black vignette. Same motion, different palette, so every
-  // meta screen of a hardcore run reads red/black at a glance.
-  const bg = hardcore
+function AbyssBackdrop({ hardcore, don }: { hardcore?: boolean; don?: boolean }) {
+  // Hardcore recolors the whole abyss blood-dark; Don's Gauntlet washes it a
+  // scary kraken green (deep bile-green rays + motes, near-black green vignette).
+  // Hardcore wins if both (Blood Gems own the red). Same motion, different
+  // palette, so every meta screen reads its mode at a glance.
+  const mode = hardcore ? 'hc' : don ? 'don' : 'base'
+  const bg = mode === 'hc'
     ? 'radial-gradient(ellipse 130% 80% at 50% -12%, rgba(120,22,28,0.5) 0%, rgba(46,8,12,0.66) 36%, rgba(6,1,2,0.98) 76%), #060102'
+    : mode === 'don'
+    ? 'radial-gradient(ellipse 130% 80% at 50% -12%, rgba(20,74,52,0.52) 0%, rgba(8,32,22,0.66) 36%, rgba(2,8,5,0.98) 76%), #030905'
     : 'radial-gradient(ellipse 130% 80% at 50% -12%, rgba(34,64,98,0.55) 0%, rgba(10,20,34,0.62) 36%, rgba(2,5,10,0.97) 76%), #02040a'
-  const shaft = hardcore ? 'rgba(224,90,90,0.16)' : 'rgba(120,180,220,0.18)'
-  const shaft2 = hardcore ? 'rgba(224,90,90,0.12)' : 'rgba(120,180,220,0.13)'
-  const mote = hardcore ? 'rgba(240,120,120,0.5)' : 'rgba(150,200,230,0.55)'
-  const vignette = hardcore
+  const shaft = mode === 'hc' ? 'rgba(224,90,90,0.16)' : mode === 'don' ? 'rgba(80,200,140,0.15)' : 'rgba(120,180,220,0.18)'
+  const shaft2 = mode === 'hc' ? 'rgba(224,90,90,0.12)' : mode === 'don' ? 'rgba(80,200,140,0.11)' : 'rgba(120,180,220,0.13)'
+  const mote = mode === 'hc' ? 'rgba(240,120,120,0.5)' : mode === 'don' ? 'rgba(120,230,175,0.52)' : 'rgba(150,200,230,0.55)'
+  const vignette = mode === 'hc'
     ? 'radial-gradient(ellipse at 50% 42%, transparent 40%, rgba(60,2,6,0.5) 82%, rgba(10,0,1,0.82) 100%)'
+    : mode === 'don'
+    ? 'radial-gradient(ellipse at 50% 42%, transparent 44%, rgba(4,32,20,0.5) 82%, rgba(1,10,6,0.85) 100%)'
     : 'radial-gradient(ellipse at 50% 42%, transparent 48%, rgba(0,0,0,0.6) 100%)'
   return (
     <>

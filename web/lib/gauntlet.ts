@@ -403,9 +403,10 @@ function mobHp2(depth: number)    { return Math.round((350 + depth * 30) * deepB
 function mobMinDmg2(depth: number){ return Math.round((16 + depth * 2) * deepBend2(depth)) }
 function mobMaxDmg2(depth: number){ return Math.round((24 + depth * 3.2) * deepBend2(depth)) }
 
-// The Don's ghost fleet — his drowned court + crews raised, washed a spectral
-// crimson (vs Davy's cold grey DROWNED_FILTER) and renamed "Spectral X".
-export const GHOST_FILTER = 'brightness(0.8) contrast(1.05) sepia(0.55) saturate(1.8) hue-rotate(-20deg)'
+// The Don's ghost fleet — his drowned court + crews raised, washed a sickly,
+// scary KRAKEN GREEN (vs Davy's cold grey DROWNED_FILTER) and renamed "Spectral
+// X". Dark + toxic so the whole bestiary reads as his, not Davy's. Tunable.
+export const GHOST_FILTER = 'brightness(0.66) contrast(1.12) sepia(0.85) saturate(2.4) hue-rotate(70deg)'
 function ghostName(name: string): string {
   if (name.includes('Spectral')) return name
   if (name.startsWith('The ')) return `The Spectral ${name.slice(4)}`
@@ -2204,9 +2205,24 @@ export const DEPTH_BANDS: DepthBand[] = [
   { name: 'The Crush',                minDepth: 60, accent: '#e0555a' },
   { name: 'The Bottom of the World',  minDepth: 85, accent: '#f87171' },
 ]
-export function bandForDepth(depth: number): DepthBand {
-  let band = DEPTH_BANDS[0]
-  for (const b of DEPTH_BANDS) if (depth >= b.minDepth) band = b
+// Don's Gauntlet ladder — the same descent, a KRAKEN-GREEN abyss instead of
+// Davy's blue-to-red court. Deep-green place names (his territory + the kraken
+// that keeps it), accents darkening from luminous weed-green to near-black bile.
+export const DON_DEPTH_BANDS: DepthBand[] = [
+  { name: 'The Green Shallows',    minDepth: 1,  accent: '#4fc98a' },
+  { name: 'The Weedbound Shelf',   minDepth: 6,  accent: '#3fb87c' },
+  { name: "The Kraken's Court",    minDepth: 13, accent: '#35a06a' },
+  { name: 'The Ink Reach',         minDepth: 22, accent: '#2f9d7a' },
+  { name: 'The Drowned Canopy',    minDepth: 32, accent: '#2b8f68' },
+  { name: "The Leviathan's Coil",  minDepth: 42, accent: '#26855f' },
+  { name: 'The Black Kelp',        minDepth: 51, accent: '#1f7d5a' },
+  { name: 'The Crushing Deep',     minDepth: 60, accent: '#2f6b4a' },
+  { name: 'The Maw of the World',  minDepth: 85, accent: '#164a34' },
+]
+export function bandForDepth(depth: number, variant: GauntletVariant = 'davy'): DepthBand {
+  const bands = variant === 'don' ? DON_DEPTH_BANDS : DEPTH_BANDS
+  let band = bands[0]
+  for (const b of bands) if (depth >= b.minDepth) band = b
   return band
 }
 
@@ -2230,4 +2246,30 @@ const DAVY_TAUNTS: Record<number, string> = {
 }
 export function davyTaunt(depth: number): string | null {
   return DAVY_TAUNTS[depth] ?? null
+}
+
+// Don Finleone's voice from the green — the ghost of the Family's head, holding
+// court in a kraken-haunted deep. Mob-boss menace, sea-cold, no em-dashes.
+const DON_TAUNTS: Record<number, string> = {
+  3:  'You came down to see me. They all do. It never ends well for them.',
+  6:  'The green takes everyone in the end. You just came early.',
+  9:  'Still afloat? The Family respects persistence. Right up until we stop.',
+  13: 'My court now, captain. The kraken keeps the door, and it never opens out.',
+  16: 'Deeper. Good. I like a captain who brings himself to the meeting.',
+  20: 'No sun down here. No law. Just me, and the thing I feed.',
+  32: 'Every debt sinks to the bottom eventually. Yours is past due.',
+  42: 'Feel the coils? That is the house saying hello, captain.',
+  51: 'Past this line the charts all lie. So did everyone who drew them.',
+  60: 'The green closes its fist now. Nothing personal. It never is.',
+  70: 'You counted your pot. The deep counted you. One of you came up short.',
+  85: 'The belly of the world. Even I keep it a short visit.',
+  100: 'A hundred fathoms in my green. Sit. Consider it a standing invitation.',
+}
+export function donTaunt(depth: number): string | null {
+  return DON_TAUNTS[depth] ?? null
+}
+
+/** The descending voice for a run — Davy's from the grey, Don's from the green. */
+export function gauntletTaunt(depth: number, variant: GauntletVariant = 'davy'): string | null {
+  return variant === 'don' ? donTaunt(depth) : davyTaunt(depth)
 }
