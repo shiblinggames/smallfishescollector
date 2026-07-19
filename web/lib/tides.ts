@@ -258,6 +258,21 @@ export type TideEffect =
   /** The Don's Favor: open each fight with ONE random blessing (enrage / fortify
    *  / regen), scaled by `magnitude`. */
   | { kind: 'randomFightBuff'; magnitude: number }
+  // ── Don's Gauntlet Batch B — enemy-side curses ──────────────────
+  /** The Verdict: enemy ultimates hit ×`dmgMult` and gain an extra charge per
+   *  reload with `chargeChance` probability (charge faster). */
+  | { kind: 'enemyUltimateBoost'; dmgMult: number; chargeChance: number }
+  /** Cutpurse Tide: every enemy gains +`bonus` chance to rip a loaded cannonball
+   *  off your rack on a landed hit. */
+  | { kind: 'enemyChargeSteal'; bonus: number }
+  /** Thornmail: enemies have `chance` to parry your shot outright (it deals
+   *  nothing). */
+  | { kind: 'enemyParry'; chance: number }
+  /** The Tithe: the enemy heals `pct` (0-1) of the damage it lands on you. */
+  | { kind: 'enemyLifesteal'; pct: number }
+  /** The Undertow: you START each fight under one random debuff (weaken /
+   *  feeble / slowed), scaled by `magnitude`. */
+  | { kind: 'randomFightDebuff'; magnitude: number }
   // ── Meta (post-raid only) ───────────────────────────────────────
   /** Doubloons granted / deducted at raid end. */
   | { kind: 'doubloonsAtRaidEnd'; n: number }
@@ -332,6 +347,11 @@ export function effectTone(e: TideEffect): 'good' | 'bad' | 'neutral' {
     case 'parryChance':         return 'good'
     case 'aimClarity':          return 'good'
     case 'randomFightBuff':     return 'good'
+    case 'enemyUltimateBoost':  return 'bad'
+    case 'enemyChargeSteal':    return 'bad'
+    case 'enemyParry':          return 'bad'
+    case 'enemyLifesteal':      return 'bad'
+    case 'randomFightDebuff':   return 'bad'
     case 'confuse':      return e.chance > 0 ? 'bad' : 'neutral'
     case 'hideEnemyHp': case 'hideEnemyCharges': return e.chance > 0 ? 'bad' : 'neutral'
     case 'iceAffinity':  return 'good'
@@ -1025,6 +1045,11 @@ export function describeEffect(e: TideEffect): string {
     case 'parryChance':           return `${Math.round(e.chance * 100)}% to parry a hit${e.reflectPct > 0 ? ` and reflect ${Math.round(e.reflectPct * 100)}%` : ''}`
     case 'aimClarity':            return e.reduce >= 1 ? `Immune to aim fog, blackout + decoys` : `Aim fog + blackout cut ${Math.round(e.reduce * 100)}%`
     case 'randomFightBuff':       return `Open each fight with a random blessing`
+    case 'enemyUltimateBoost':    return `Enemy ultimates hit ${Math.round((e.dmgMult - 1) * 100)}% harder + charge faster`
+    case 'enemyChargeSteal':      return `Enemies steal your cannonballs (+${Math.round(e.bonus * 100)}%)`
+    case 'enemyParry':            return `Enemies ${Math.round(e.chance * 100)}% to parry your shots`
+    case 'enemyLifesteal':        return `Enemies heal ${Math.round(e.pct * 100)}% of the damage they deal you`
+    case 'randomFightDebuff':     return `Start each fight under a random debuff`
   }
 }
 

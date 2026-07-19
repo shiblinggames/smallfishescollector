@@ -1228,6 +1228,46 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
       { desc: 'Start every fight Feeble (+22% damage taken, 3 rounds)', detail: 'The brand cuts deeper: every fight opens with your ship Feeble for 3 rounds, taking 22% more damage from every hit until it wears off.', effects: [{ kind: 'playerStartStatus', status: 'feeble', magnitude: 0.22, turns: 3 }] as TideEffect[] },
     ],
   },
+  {
+    id: 'the_verdict', name: 'The Verdict', gauntlet: 'don',
+    flavor: 'The Don has already decided how this ends. His guns just carry out the sentence.',
+    tiers: [
+      { desc: 'Enemy ultimates hit +25% and charge faster', detail: 'Every enemy ultimate lands 25% harder, and their reloads have a good chance to load an extra charge — so the big blow comes sooner, and hurts more.', effects: [{ kind: 'enemyUltimateBoost', dmgMult: 1.25, chargeChance: 0.35 }] as TideEffect[] },
+      { desc: 'Enemy ultimates hit +50% and charge much faster', detail: 'Enemy ultimates now land 50% harder and charge much faster.', effects: [{ kind: 'enemyUltimateBoost', dmgMult: 1.50, chargeChance: 0.60 }] as TideEffect[] },
+    ],
+  },
+  {
+    id: 'cutpurse_tide', name: 'Cutpurse Tide', gauntlet: 'don',
+    flavor: 'The green picks your pockets. Every hull down here reaches for your powder.',
+    tiers: [
+      { desc: 'Enemies rip your cannonballs on a +15% chance', detail: 'Every enemy — not just the sharks — gains a 15% chance on a landed hit to tear a loaded cannonball clean off your rack. Reload gets it back, but you lose the tempo.', effects: [{ kind: 'enemyChargeSteal', bonus: 0.15 }] as TideEffect[] },
+      { desc: 'Enemies rip your cannonballs on a +28% chance', detail: 'Every enemy now has a 28% chance on a hit to rip a loaded cannonball off your rack.', effects: [{ kind: 'enemyChargeSteal', bonus: 0.28 }] as TideEffect[] },
+    ],
+  },
+  {
+    id: 'thornmail', name: 'Thornmail', gauntlet: 'don',
+    flavor: 'The ghost fleet armours in cold iron that turns a shot the way a reef turns a wave.',
+    tiers: [
+      { desc: 'Enemies parry 15% of your shots (dealing nothing)', detail: 'Every enemy has a 15% chance to PARRY a shot you fire — it turns the blow aside entirely and takes no damage. Your Mega ultimate can never be parried.', effects: [{ kind: 'enemyParry', chance: 0.15 }] as TideEffect[] },
+      { desc: 'Enemies parry 25% of your shots', detail: 'Every enemy now has a 25% chance to parry a shot you fire, taking no damage.', effects: [{ kind: 'enemyParry', chance: 0.25 }] as TideEffect[] },
+    ],
+  },
+  {
+    id: 'the_tithe', name: 'The Tithe', gauntlet: 'don',
+    flavor: 'Every wound they open on you, the green feeds straight back into their hull. You pay the tithe in blood.',
+    tiers: [
+      { desc: 'Enemies heal 15% of the damage they deal you', detail: 'Every hit an enemy lands on you heals it for 15% of that damage (never above its own full hull). A long fight against a Tithed enemy is a war of attrition you are losing.', effects: [{ kind: 'enemyLifesteal', pct: 0.15 }] as TideEffect[] },
+      { desc: 'Enemies heal 28% of the damage they deal you', detail: 'Every enemy hit now heals it for 28% of the damage it deals you.', effects: [{ kind: 'enemyLifesteal', pct: 0.28 }] as TideEffect[] },
+    ],
+  },
+  {
+    id: 'the_undertow', name: 'The Undertow', gauntlet: 'don',
+    flavor: 'The current drags at you before every bell. Never the same way twice, never in your favour.',
+    tiers: [
+      { desc: 'Start each fight under a random debuff', detail: 'Every fight opens with your ship dragged under one random debuff for the fight: WEAKENED (−15% damage dealt), FEEBLE (+15% damage taken), or SLOWED. Which one is always a nasty surprise. A Mender cleanses it.', effects: [{ kind: 'randomFightDebuff', magnitude: 0.15 }] as TideEffect[] },
+      { desc: 'Start each fight under a STRONGER random debuff', detail: 'Every fight opens with a stronger random debuff: WEAKENED (−25% damage), FEEBLE (+25% damage taken), or a heavier SLOW.', effects: [{ kind: 'randomFightDebuff', magnitude: 0.25 }] as TideEffect[] },
+    ],
+  },
 ]
 
 // Depths at which the Locker imposes its next curse. One per milestone, drawn at

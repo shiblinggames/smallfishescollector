@@ -687,6 +687,11 @@ export default function RaidCombat({
     let parryChance = 0, parryReflectPct = 0      // Cutlass Guard
     let aimClarity = 0              // Steady Sights: 0-1 fog/blackout reduction
     let randomFightBuff = 0        // The Don's Favor: magnitude of the per-fight blessing
+    let enemyUltDmgMult = 1, enemyUltChargeChance = 0   // The Verdict
+    let enemyChargeSteal = 0       // Cutpurse Tide
+    let enemyParryChance = 0       // Thornmail
+    let enemyLifesteal = 0         // The Tithe
+    let randomFightDebuff = 0      // The Undertow
     for (const e of tideEffects) {
       switch (e.kind) {
         case 'damageMult':            dmgMult *= e.mult; break
@@ -791,6 +796,11 @@ export default function RaidCombat({
         case 'parryChance':           if (e.chance > parryChance) { parryChance = e.chance; parryReflectPct = e.reflectPct } break
         case 'aimClarity':            aimClarity = Math.max(aimClarity, e.reduce); break
         case 'randomFightBuff':       randomFightBuff = Math.max(randomFightBuff, e.magnitude); break
+        case 'enemyUltimateBoost':    enemyUltDmgMult *= e.dmgMult; enemyUltChargeChance = Math.max(enemyUltChargeChance, e.chargeChance); break
+        case 'enemyChargeSteal':      enemyChargeSteal = Math.max(enemyChargeSteal, e.bonus); break
+        case 'enemyParry':            enemyParryChance = Math.max(enemyParryChance, e.chance); break
+        case 'enemyLifesteal':        enemyLifesteal = Math.max(enemyLifesteal, e.pct); break
+        case 'randomFightDebuff':     randomFightDebuff = Math.max(randomFightDebuff, e.magnitude); break
         case 'instantHeal': case 'instantHealPct': case 'fullHeal': case 'doubloonsAtRaidEnd': break // handled at pick-time
       }
     }
@@ -819,6 +829,7 @@ export default function RaidCombat({
       statusOnHitList, playerStartStatusList,
       shieldPierceFrac, stunOnHitChance, stunOnHitTurns, guaranteedCritEvery, stealChargeChance,
       parryChance, parryReflectPct, aimClarity, randomFightBuff,
+      enemyUltDmgMult, enemyUltChargeChance, enemyChargeSteal, enemyParryChance, enemyLifesteal, randomFightDebuff,
     }
   }, [tideEffects, isBoss, runKills, runDepth])
   // Shrouded Hull / Shuttered Ports curses — rolled ONCE per fight (RaidCombat
@@ -1887,6 +1898,21 @@ export default function RaidCombat({
         const perRound = Math.max(3, Math.round(playerHpMax * (0.03 + tide.randomFightBuff * 0.06)))
         applyPlayerStatus('regen', perRound, 99)
         introLines.push(`The Don's Favor — you open MENDING (+${perRound} HP each round).`)
+      }
+    }
+    // The Undertow (curse): open each fight under ONE random debuff (weaken /
+    // feeble / slowed), the dark mirror of The Don's Favor.
+    if (tide.randomFightDebuff > 0) {
+      const roll = Math.random()
+      if (roll < 0.34) {
+        applyPlayerStatus('weaken', tide.randomFightDebuff, 99)
+        introLines.push(`The Undertow — you open WEAKENED (−${Math.round(tide.randomFightDebuff * 100)}% damage dealt).`)
+      } else if (roll < 0.67) {
+        applyPlayerStatus('feeble', tide.randomFightDebuff, 99)
+        introLines.push(`The Undertow — you open FEEBLE (+${Math.round(tide.randomFightDebuff * 100)}% damage taken).`)
+      } else {
+        applyPlayerStatus('slowed', Math.max(1, Math.round(tide.randomFightDebuff * 10)), 99)
+        introLines.push(`The Undertow — you open SLOWED.`)
       }
     }
     // Host-supplied opener (Gauntlet: 'Crew abilities refreshed.' on a refresh round).
@@ -3483,7 +3509,10 @@ export default function RaidCombat({
           }
         }
         else                  {
-          eCharges = Math.min(enemyMagazine, eCharges + 1)
+          // The Verdict curse: a reload can load an EXTRA charge, priming the
+          // enemy's ultimate faster.
+          const extraCharge = tide.enemyUltChargeChance > 0 && Math.random() < tide.enemyUltChargeChance ? 1 : 0
+          eCharges = Math.min(enemyMagazine, eCharges + 1 + extraCharge)
           // Shuttered Ports curse: the reload count is hidden, so don't leak it
           // in the log either (or the player could just tally reloads to rebuild
           // the magazine). Obscure the action entirely.
@@ -3728,7 +3757,7 @@ export default function RaidCombat({
           // Ultimate: the whole magazine in one authored blow (× its mult,
           // floored). Volley stays the flat ×2.
           dmg = action === 'ultimate'
-            ? Math.max(1, Math.floor(base * (enemy.ultimate?.mult ?? 2.6)))
+            ? Math.max(1, Math.floor(base * (enemy.ultimate?.mult ?? 2.6) * tide.enemyUltDmgMult))  // The Verdict curse
             : base * (action === 'volley' ? 2 : 1)
           // Statuses on the ENEMY's output: weaken ↓ / enrage ↑ (Ch4 pipeline).
           if (eStatus.dmgDealtMult !== 1) dmg = Math.max(1, Math.floor(dmg * eStatus.dmgDealtMult))
@@ -3934,6 +3963,12 @@ export default function RaidCombat({
               }
               dmg = 0
             }
+          }
+          // Thornmail curse: the enemy can parry your shot outright — it deals
+          // nothing (zeroing dmg also skips the on-hit procs, all gated dmg>0).
+          if (tide.enemyParryChance > 0 && dmg > 0 && !isMega && Math.random() < tide.enemyParryChance) {
+            dmg = 0
+            stepLines.push(`The ${enemy.name} turns your shot aside — parried.`)
           }
           const piercing = (isMega && !!megaAug?.pierce) || markPierceTurnsRef.current > 0
           const preShield = enemyShieldRef.current
@@ -4274,11 +4309,13 @@ export default function RaidCombat({
           // spares your rack) has a per-shark chance to tear a loaded cannonball
           // off your magazine. Reload recovers it. Only real offensive shots
           // bite (fire / volley / ultimate), never a reload/dodge/repair step.
+          // Cutpurse Tide curse: grants/raises the bite chance on EVERY enemy.
+          const biteChance = Math.min(1, (enemy.chargeBiteChance ?? 0) + tide.enemyChargeSteal)
           if (
             dmg > 0 && pCharges > 0
-            && (enemy.chargeBiteChance ?? 0) > 0
+            && biteChance > 0
             && (action === 'fire' || action === 'volley' || action === 'ultimate')
-            && Math.random() < (enemy.chargeBiteChance ?? 0)
+            && Math.random() < biteChance
           ) {
             pCharges = Math.max(0, pCharges - 1)
             stepLines.push(`The ${enemy.name} rips a loaded cannonball clean off your rack.`)
@@ -4314,12 +4351,13 @@ export default function RaidCombat({
           // damage. Capped at its maxHP. Fires after the damage lands so
           // the heal feels like a follow-up, not a pre-emptive negation.
           if (
-            affix?.lifestealPct
+            (affix?.lifestealPct || tide.enemyLifesteal > 0)   // The Tithe curse grants it to any enemy
             && dmg > 0
             && eHp > 0 && eHp < enemyHpMaxRef.current
-            && Math.random() < (affix.lifestealChance ?? 1)
+            && Math.random() < (affix?.lifestealChance ?? 1)
           ) {
-            const stolen = Math.min(enemyHpMaxRef.current - eHp, Math.max(1, Math.round(dmg * affix.lifestealPct)))
+            const stealPct = Math.max(affix?.lifestealPct ?? 0, tide.enemyLifesteal)
+            const stolen = Math.min(enemyHpMaxRef.current - eHp, Math.max(1, Math.round(dmg * stealPct)))
             if (stolen > 0) {
               eHp += stolen
               enemyHealOut = stolen
