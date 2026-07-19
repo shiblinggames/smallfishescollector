@@ -611,6 +611,9 @@ export interface GauntletRunState {
    *  confluence only applies once taken, then scales with its boon tiers).
    *  Optional so runs saved before the draft model resume cleanly. */
   confluencesTaken?: string[]
+  /** convergence ids DRAFTED (Don's Gauntlet meta-tier — a synergy of two
+   *  confluences). Optional so pre-convergence saves resume cleanly. */
+  convergencesTaken?: string[]
   /** Fun run telemetry accumulated so far (optional — old saves predate it). */
   stats?: GauntletRunStats
   /** curse id -> tier */
@@ -1979,6 +1982,10 @@ export interface ConfluenceOffer {
   detail: string
   /** The two boon family display names, for the card subtitle. */
   halves: [string, string]
+  /** Set when this offer is a CONVERGENCE (meta-tier). The card is styled as a
+   *  convergence and, on pick, routes to convergencesTaken. `halves` then hold
+   *  the two confluence names it fuses. Omitted/false = ordinary confluence. */
+  isConvergence?: boolean
 }
 
 /** Base chance a qualifying confluence is offered on a draft where one exists.
@@ -2024,6 +2031,154 @@ export function confluenceEffects(owned: Record<string, number>, taken: string[]
     if (!t.has(c.id)) return []
     const lvl = confluenceLevel(c, owned)
     return lvl >= 1 ? c.levels[lvl - 1].effects : []
+  })
+}
+
+// ── Convergences — the meta-synergy tier (Don's Gauntlet) ──────────────────────
+// A synergy of synergies. Hold TWO drafted confluences (each online) and a
+// Convergence becomes eligible — drafted the same way a confluence is, as a card
+// in place of a boon. It's the payoff for a run that commits hard enough to keep
+// two whole synergies alive, and it scales with them: a Convergence's level is
+// the LOWER of its two confluences' levels. Don's-Gauntlet-only (gauntlet:'don'),
+// so Davy's flow never sees one. Effects ride the same TideEffect pipeline and
+// use only multiply/sum kinds, so they stack cleanly ON TOP of the confluences
+// they build from (never a 'max' kind that a strong confluence would swallow).
+export interface ConvergenceLevel { desc: string; effects: TideEffect[] }
+export interface Convergence {
+  id: string
+  name: string
+  /** Which gauntlet draws it. Convergences are Don's-only. */
+  gauntlet?: GauntletTag
+  /** The two confluences that must BOTH be drafted + online to unlock. */
+  requires: { confluenceId: string }[]
+  flavor: string
+  /** Plain-English mechanic explainer for the draft card + codex. */
+  detail: string
+  /** Effects + summary per level (1..3), index = level - 1. */
+  levels: ConvergenceLevel[]
+}
+
+export const CONVERGENCES: Convergence[] = [
+  {
+    id: 'the_reckoning',
+    name: 'The Reckoning',
+    gauntlet: 'don',
+    requires: [{ confluenceId: 'coup_de_grace' }, { confluenceId: 'bullseye' }],
+    flavor: 'A killer’s eye and a killer’s mark, married. Every clean shot is a verdict.',
+    detail: 'Stacks on your two crit synergies: your critical hits deal even more damage, the gold "perfect shot" band widens further, and normal hits gain extra chance to crit. All on top of Coup de Grâce and Bullseye.',
+    levels: [
+      { desc: '+18% crit damage, gold band +12% wider, +10% crit chance', effects: [{ kind: 'critDmgMult', mult: 1.18 }, { kind: 'critZoneScale', mult: 1.12 }, { kind: 'critChanceBonus', chance: 0.10 }] },
+      { desc: '+28% crit damage, gold band +20% wider, +15% crit chance', effects: [{ kind: 'critDmgMult', mult: 1.28 }, { kind: 'critZoneScale', mult: 1.20 }, { kind: 'critChanceBonus', chance: 0.15 }] },
+      { desc: '+40% crit damage, gold band +30% wider, +22% crit chance', effects: [{ kind: 'critDmgMult', mult: 1.40 }, { kind: 'critZoneScale', mult: 1.30 }, { kind: 'critChanceBonus', chance: 0.22 }] },
+    ],
+  },
+  {
+    id: 'feast_of_the_deep',
+    name: 'Feast of the Deep',
+    gauntlet: 'don',
+    requires: [{ confluenceId: 'reapers_tithe' }, { confluenceId: 'feeding_frenzy' }],
+    flavor: 'Every hull you open, the deep drinks — and it has learned to drink faster than you can bleed.',
+    detail: 'Builds on your two life-drain synergies: a flat share of ALL the damage you deal comes back as healing, and every shot lands harder. Stacks on top of Reaper’s Tithe and Feeding Frenzy.',
+    levels: [
+      { desc: 'Heal 8% of all damage dealt; +10% all damage', effects: [{ kind: 'lifestealPct', pct: 0.08 }, { kind: 'damageMult', mult: 1.10 }] },
+      { desc: 'Heal 12% of all damage dealt; +16% all damage', effects: [{ kind: 'lifestealPct', pct: 0.12 }, { kind: 'damageMult', mult: 1.16 }] },
+      { desc: 'Heal 16% of all damage dealt; +24% all damage', effects: [{ kind: 'lifestealPct', pct: 0.16 }, { kind: 'damageMult', mult: 1.24 }] },
+    ],
+  },
+  {
+    id: 'bulwark_of_the_abyss',
+    name: 'Bulwark of the Abyss',
+    gauntlet: 'don',
+    requires: [{ confluenceId: 'pressure_hull' }, { confluenceId: 'deep_fortress' }],
+    flavor: 'The deep leans on their guns, not yours. What reaches your hull barely dents it.',
+    detail: 'Builds on your two defensive synergies: every hit you take lands for less, and you patch a little hull at the start of every fight. Stacks on top of Pressure Hull and Deep Fortress.',
+    levels: [
+      { desc: 'Take -14% damage; heal 5% of max HP each fight start', effects: [{ kind: 'incomingDmgMult', mult: 0.86, scope: 'allRemaining' }, { kind: 'startOfFightHealPct', pctMax: 0.05 }] },
+      { desc: 'Take -20% damage; heal 8% of max HP each fight start', effects: [{ kind: 'incomingDmgMult', mult: 0.80, scope: 'allRemaining' }, { kind: 'startOfFightHealPct', pctMax: 0.08 }] },
+      { desc: 'Take -28% damage; heal 12% of max HP each fight start', effects: [{ kind: 'incomingDmgMult', mult: 0.72, scope: 'allRemaining' }, { kind: 'startOfFightHealPct', pctMax: 0.12 }] },
+    ],
+  },
+  {
+    id: 'perfect_storm',
+    name: 'Perfect Storm',
+    gauntlet: 'don',
+    requires: [{ confluenceId: 'untouchable' }, { confluenceId: 'iron_tempest' }],
+    flavor: 'Never where the shot lands, and every blow that misses is flung back twice as hard.',
+    detail: 'Builds on your dodge and retaliation synergies: you slip more shots, and the damage you throw back on a hit climbs higher. Stacks on top of Untouchable and Iron Tempest.',
+    levels: [
+      { desc: '+12% dodge; +15% thrown-back damage', effects: [{ kind: 'dodgeBonus', chance: 0.12, scope: 'allRemaining' }, { kind: 'retaliatePct', pct: 0.15 }] },
+      { desc: '+18% dodge; +25% thrown-back damage', effects: [{ kind: 'dodgeBonus', chance: 0.18, scope: 'allRemaining' }, { kind: 'retaliatePct', pct: 0.25 }] },
+      { desc: '+25% dodge; +40% thrown-back damage', effects: [{ kind: 'dodgeBonus', chance: 0.25, scope: 'allRemaining' }, { kind: 'retaliatePct', pct: 0.40 }] },
+    ],
+  },
+]
+
+/** A convergence's LEVEL (1..3), or 0 if not both confluences are drafted +
+ *  online. The level is the LOWER of the two confluences' current levels. */
+export function convergenceLevel(cv: Convergence, owned: Record<string, number>, taken: string[] = []): number {
+  const t = new Set(taken)
+  const levels = cv.requires.map(r => {
+    if (!t.has(r.confluenceId)) return 0
+    const c = CONFLUENCES.find(x => x.id === r.confluenceId)
+    return c ? confluenceLevel(c, owned) : 0
+  })
+  if (levels.some(l => l < 1)) return 0
+  return Math.min(Math.min(...levels), cv.levels.length)
+}
+
+/** Convergences ONLINE — drafted AND both confluences still qualify. */
+export function activeConvergences(owned: Record<string, number>, taken: string[] = [], takenConv: string[] = []): Convergence[] {
+  const tc = new Set(takenConv)
+  return CONVERGENCES.filter(cv => tc.has(cv.id) && convergenceLevel(cv, owned, taken) >= 1)
+}
+
+/** Convergences you QUALIFY for (both confluences online) but have NOT drafted. */
+export function eligibleConvergences(owned: Record<string, number>, taken: string[] = [], takenConv: string[] = [], variant: GauntletVariant = 'davy'): Convergence[] {
+  const tc = new Set(takenConv)
+  return CONVERGENCES.filter(cv => inGauntletPool(cv.gauntlet, variant) && !tc.has(cv.id) && convergenceLevel(cv, owned, taken) >= 1)
+}
+
+/** Player-facing summary for a convergence at a given level. */
+export function convergenceDescAt(cv: Convergence, level: number): string {
+  const i = Math.max(1, Math.min(level || 1, cv.levels.length)) - 1
+  return cv.levels[i].desc
+}
+
+/** Base chance a qualifying convergence is offered on a draft (a bigger moment
+ *  than a confluence — near-guaranteed once you've earned it). */
+export const CONVERGENCE_OFFER_CHANCE = 0.85
+
+/** Roll whether to slot a convergence into this draft. Reuses the confluence
+ *  offer shape (isConvergence flag). A newly-qualified convergence never yet
+ *  surfaced is GUARANTEED next draft (pity), matching the confluence rule. */
+export function drawConvergenceOffer(owned: Record<string, number>, taken: string[] = [], takenConv: string[] = [], offered: Set<string> = new Set(), offerMult = 1, variant: GauntletVariant = 'davy'): ConfluenceOffer | null {
+  if (offerMult <= 0) return null
+  const pool = eligibleConvergences(owned, taken, takenConv, variant)
+  if (pool.length === 0) return null
+  const fresh = pool.filter(cv => !offered.has(cv.id))
+  if (fresh.length > 0 && offerMult < 1 && Math.random() >= offerMult) return null
+  if (fresh.length === 0 && Math.random() >= CONVERGENCE_OFFER_CHANCE * offerMult) return null
+  const chooseFrom = fresh.length > 0 ? fresh : pool
+  const cv = chooseFrom[Math.floor(Math.random() * chooseFrom.length)]
+  const level = convergenceLevel(cv, owned, taken)
+  const confName = (id: string) => CONFLUENCES.find(c => c.id === id)?.name ?? id
+  return {
+    kind: 'confluence',
+    id: cv.id, name: cv.name, flavor: cv.flavor,
+    level, desc: convergenceDescAt(cv, level), detail: cv.detail,
+    halves: [confName(cv.requires[0].confluenceId), confName(cv.requires[1].confluenceId)],
+    isConvergence: true,
+  }
+}
+
+/** Flattened TideEffects from every TAKEN, still-qualified convergence at its
+ *  current level — appended to the boon + confluence effects fed into combat. */
+export function convergenceEffects(owned: Record<string, number>, taken: string[] = [], takenConv: string[] = []): TideEffect[] {
+  const tc = new Set(takenConv)
+  return CONVERGENCES.flatMap(cv => {
+    if (!tc.has(cv.id)) return []
+    const lvl = convergenceLevel(cv, owned, taken)
+    return lvl >= 1 ? cv.levels[lvl - 1].effects : []
   })
 }
 
