@@ -93,6 +93,14 @@ export function donsGauntletUnlocked(opts: { isAdmin?: boolean | null; throneCle
   return DONS_GAUNTLET_LIVE && !!opts.throneCleared
 }
 
+// Which gauntlet a boon / curse / confluence belongs to. OMITTED = both. So the
+// recycled Davy pool is left untagged (draws in both), and G2-only entries are
+// tagged 'don' (never surface in Davy). The draw fns filter by the run's variant.
+export type GauntletTag = GauntletVariant | 'both'
+function inGauntletPool(tag: GauntletTag | undefined, variant: GauntletVariant): boolean {
+  return !tag || tag === 'both' || tag === variant
+}
+
 // ── Hardcore mode ─────────────────────────────────────────────────────────────
 // The Hardcore Gauntlet: the crew SQUAD you send in (your raid party) is lost
 // FOR GOOD if you die or abandon, tracked on its own hiscore (the Drowned
@@ -949,6 +957,8 @@ export interface GauntletCurseTier {
 export interface GauntletCurse {
   id: string
   name: string
+  /** Which gauntlet draws it. Omitted = both (the recycled Davy pool). */
+  gauntlet?: GauntletTag
   /** One-line dread, shown on the curse interstitial (shared across tiers). */
   flavor: string
   /** Tier ladder [tier1, tier2]. Tier 2 only DEEPENS a curse already taken at
@@ -1221,11 +1231,11 @@ export function isCurseDepth(depth: number, frequencyMult = 1): boolean {
 /** Pick the next curse the Locker imposes. Eligible = a fresh tier-1 curse you
  *  don't have, OR (from CURSE_TIER2_DEPTH on) a tier-2 deepening of one you do.
  *  Uniform random among eligible; null if none remain. */
-export function drawCurse(curseTiers: Record<string, number>, depth: number, startsAtWorst = false): CurseOffer | null {
+export function drawCurse(curseTiers: Record<string, number>, depth: number, startsAtWorst = false, variant: GauntletVariant = 'davy'): CurseOffer | null {
   // The Crush never enters the normal pool — it's the fallback pressure once
   // every named curse is spent (and only in the deep band).
   const eligible = GAUNTLET_CURSES
-    .filter(c => c.id !== 'the_crush')
+    .filter(c => c.id !== 'the_crush' && inGauntletPool(c.gauntlet, variant))
     .map(c => ({ c, next: (curseTiers[c.id] ?? 0) + 1 }))
     .filter(x => x.next <= x.c.tiers.length && (x.next === 1 || depth >= CURSE_TIER2_DEPTH))
   if (eligible.length > 0) {
@@ -1308,6 +1318,8 @@ export interface GauntletBoon {
   id: string
   name: string
   flavor: string
+  /** Which gauntlet draws it. Omitted = both (the recycled Davy pool). */
+  gauntlet?: GauntletTag
   /** Omit for Common. */
   rarity?: BoonRarity
   /** Tier 1 → 2 → 3, strongest last. The highest tier you hold is the ONE that
@@ -1516,8 +1528,9 @@ export interface BoonOffer {
  *  families already at max tier are excluded. Picks are RARITY-WEIGHTED, so
  *  Legendary/Rare boons surface far less often than Commons. No infinite
  *  single-boon stacking. */
-export function drawBoons(n: number, owned: Record<string, number> = {}, luckMult = 1, commonSkew = 0): BoonOffer[] {
+export function drawBoons(n: number, owned: Record<string, number> = {}, luckMult = 1, commonSkew = 0, variant: GauntletVariant = 'davy'): BoonOffer[] {
   const avail = GAUNTLET_BOONS
+    .filter(fam => inGauntletPool(fam.gauntlet, variant))
     .map(fam => ({ fam, next: (owned[fam.id] ?? 0) + 1 }))
     .filter(x => x.next <= x.fam.tiers.length)
   // Diviner's Charm (luckMult > 1) scales up the draft weight of the non-Common
@@ -1592,6 +1605,8 @@ export interface ConfluenceLevel { desc: string; effects: TideEffect[] }
 export interface Confluence {
   id: string
   name: string
+  /** Which gauntlet draws it. Omitted = both (the recycled Davy pool). */
+  gauntlet?: GauntletTag
   /** The two families that must BOTH be held (tier 1+ to unlock). */
   requires: { boonId: string }[]
   /** One-line flavor. */
@@ -1861,9 +1876,9 @@ export function activeConfluences(owned: Record<string, number>, taken: string[]
 
 /** Confluences you QUALIFY for (hold both halves at tier 1+) but have NOT yet
  *  drafted — the pool eligible to be offered as a draft card. */
-export function eligibleConfluences(owned: Record<string, number>, taken: string[] = []): Confluence[] {
+export function eligibleConfluences(owned: Record<string, number>, taken: string[] = [], variant: GauntletVariant = 'davy'): Confluence[] {
   const t = new Set(taken)
-  return CONFLUENCES.filter(c => !t.has(c.id) && confluenceLevel(c, owned) >= 1)
+  return CONFLUENCES.filter(c => inGauntletPool(c.gauntlet, variant) && !t.has(c.id) && confluenceLevel(c, owned) >= 1)
 }
 
 /** What a boon offer would DO to your synergies, read BEFORE you pick it.
@@ -1941,11 +1956,11 @@ export const CONFLUENCE_OFFER_CHANCE = 0.7
  *  to appear next draft (and is preferred when picking), so a build you commit to
  *  reliably shows up. Once it's been offered once (taken or not), it reverts to
  *  the base chance — this keeps a large pool from swamping every draft. */
-export function drawConfluenceOffer(owned: Record<string, number>, taken: string[] = [], offered: Set<string> = new Set(), offerMult = 1): ConfluenceOffer | null {
+export function drawConfluenceOffer(owned: Record<string, number>, taken: string[] = [], offered: Set<string> = new Set(), offerMult = 1, variant: GauntletVariant = 'davy'): ConfluenceOffer | null {
   // No Communion (a signed Term): offerMult 0 switches synergies off entirely —
   // you can hold both halves and never be offered the confluence.
   if (offerMult <= 0) return null
-  const pool = eligibleConfluences(owned, taken)
+  const pool = eligibleConfluences(owned, taken, variant)
   if (pool.length === 0) return null
   const fresh = pool.filter(c => !offered.has(c.id))   // never-surfaced yet = pity priority
   // The pity (a never-surfaced synergy is guaranteed) still applies at full

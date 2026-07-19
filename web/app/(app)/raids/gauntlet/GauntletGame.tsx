@@ -1058,12 +1058,12 @@ export default function GauntletGame(props: GauntletGameProps) {
     const skipFirstCurse = atCurseDepth && !calmBeforeUsedRef.current && gauntletSkipsFirstCurse(activeUpgrades)
     if (skipFirstCurse) calmBeforeUsedRef.current = true
     const curse = (atCurseDepth && !skipFirstCurse)
-      ? drawCurse(curseTiersRef.current, nextDepth, termFxRef.current.curseStartsAtWorst)   // null once the curse pool is spent
+      ? drawCurse(curseTiersRef.current, nextDepth, termFxRef.current.curseStartsAtWorst, props.variant)   // null once the curse pool is spent
       : null
     // Draw the boons up front so an exhausted pool ([] when every family is
     // maxed) falls through to the breather instead of an empty draft screen.
     const boons = isBoonDepth(nextDepth, termFxRef.current.boonFrequencyMult)
-      ? drawBoons(termFxRef.current.boonPicks, boonTiers, gauntletBoonLuck(activeUpgrades), termFxRef.current.commonSkew)
+      ? drawBoons(termFxRef.current.boonPicks, boonTiers, gauntletBoonLuck(activeUpgrades), termFxRef.current.commonSkew, props.variant)
       : []
     if (curse || boons.length > 0) {
       // Set the boon draft now even on a curse round, so applyCurse can hand off
@@ -1076,7 +1076,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         // haven't taken, it can surface as a gold card in place of a boon slot —
         // taking it forgoes those boons. Mutually exclusive with the Reprieve so
         // the screen never stacks two "instead of a boon" cards.
-        const conf = drawConfluenceOffer(boonTiers, confluencesTaken, offeredConfluenceIdsRef.current, termFxRef.current.confluenceOfferMult)
+        const conf = drawConfluenceOffer(boonTiers, confluencesTaken, offeredConfluenceIdsRef.current, termFxRef.current.confluenceOfferMult, props.variant)
         if (conf) offeredConfluenceIdsRef.current.add(conf.id)
         setPendingConfluence(conf)
         setPendingReprieve(!conf && !termFxRef.current.noReprieves && nextDepth >= REPRIEVE_MIN_DEPTH && Math.random() < REPRIEVE_CHANCE
@@ -1129,7 +1129,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   // spent, charge nothing and just move on.
   function shrineBloodPrice() {
     runEventsRef.current.push({ depth: rollStateRef.current.cleared + skipOffset, kind: 'shrine' })
-    const draft = drawBoons(termFxRef.current.boonPicks, boonTiers, gauntletBoonLuck(activeUpgrades), termFxRef.current.commonSkew)
+    const draft = drawBoons(termFxRef.current.boonPicks, boonTiers, gauntletBoonLuck(activeUpgrades), termFxRef.current.commonSkew, props.variant)
     if (draft.length === 0) { setPhase('between'); return }
     // The Full Measure (a signed Term): he does not take half of anything.
     const left = termFxRef.current.bloodPriceToOne
@@ -1141,7 +1141,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     setPendingBoons(draft)
     setRerollsLeft(0)
     setPendingReprieve(null)
-    { const conf = drawConfluenceOffer(boonTiers, confluencesTaken, offeredConfluenceIdsRef.current, termFxRef.current.confluenceOfferMult); if (conf) offeredConfluenceIdsRef.current.add(conf.id); setPendingConfluence(conf) }
+    { const conf = drawConfluenceOffer(boonTiers, confluencesTaken, offeredConfluenceIdsRef.current, termFxRef.current.confluenceOfferMult, props.variant); if (conf) offeredConfluenceIdsRef.current.add(conf.id); setPendingConfluence(conf) }
     setBoonFromShrine(true)
     setPhase('boon')
   }
@@ -1226,8 +1226,8 @@ export default function GauntletGame(props: GauntletGameProps) {
   // synergy card re-rolls with them).
   function rerollBoons() {
     if (rerollsLeft <= 0) return
-    setPendingBoons(drawBoons(termFxRef.current.boonPicks, boonTiers, gauntletBoonLuck(activeUpgrades), termFxRef.current.commonSkew))
-    { const conf = drawConfluenceOffer(boonTiers, confluencesTaken, offeredConfluenceIdsRef.current, termFxRef.current.confluenceOfferMult); if (conf) offeredConfluenceIdsRef.current.add(conf.id); setPendingConfluence(conf) }
+    setPendingBoons(drawBoons(termFxRef.current.boonPicks, boonTiers, gauntletBoonLuck(activeUpgrades), termFxRef.current.commonSkew, props.variant))
+    { const conf = drawConfluenceOffer(boonTiers, confluencesTaken, offeredConfluenceIdsRef.current, termFxRef.current.confluenceOfferMult, props.variant); if (conf) offeredConfluenceIdsRef.current.add(conf.id); setPendingConfluence(conf) }
     setRerollsLeft(r => r - 1)
   }
 
@@ -1237,9 +1237,9 @@ export default function GauntletGame(props: GauntletGameProps) {
   function rerollCurse() {
     if (curseRerollsLeft <= 0 || !pendingCurse) return
     const depth = curseDepthRef.current
-    let next = drawCurse(curseTiersRef.current, depth, termFxRef.current.curseStartsAtWorst)
+    let next = drawCurse(curseTiersRef.current, depth, termFxRef.current.curseStartsAtWorst, props.variant)
     for (let i = 0; i < 6 && next && next.id === pendingCurse.id && next.tier === pendingCurse.tier; i++) {
-      next = drawCurse(curseTiersRef.current, depth, termFxRef.current.curseStartsAtWorst)
+      next = drawCurse(curseTiersRef.current, depth, termFxRef.current.curseStartsAtWorst, props.variant)
     }
     if (next) setPendingCurse(next)
     setCurseRerollsLeft(r => r - 1)
@@ -2236,7 +2236,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     const activeConf = activeConfluences(boonTiers, confluencesTaken)
     // Synergies you QUALIFY for but haven't drafted — nudge the player to watch
     // for the gold "forge a synergy" card in an upcoming draft.
-    const eligibleConf = eligibleConfluences(boonTiers, confluencesTaken)
+    const eligibleConf = eligibleConfluences(boonTiers, confluencesTaken, props.variant)
     // A line of voice for the breather, keyed to the run's state — bleeding hull,
     // a fat haul, a record depth, or just the quiet before the next gun.
     const breathLine =
