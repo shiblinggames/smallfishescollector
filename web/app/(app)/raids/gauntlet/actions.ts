@@ -79,21 +79,24 @@ function sanitizeRunSnapshot(snap: unknown, depth: number): GauntletRunSnapshot 
 
 /** State for the Locker Upgrades panel: the player's deepest run, Fathoms purse,
  *  and which upgrades they've already claimed. */
-export async function getGauntletUpgradeState(): Promise<{ deepest: number; fathoms: number; owned: string[]; off: string[]; hasAutoCatcher: boolean; hasAutoCaster: boolean }> {
+export async function getGauntletUpgradeState(variant: GauntletVariant = 'davy'): Promise<{ deepest: number; fathoms: number; owned: string[]; off: string[]; hasAutoCatcher: boolean; hasAutoCaster: boolean }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { deepest: 0, fathoms: 0, owned: [], off: [], hasAutoCatcher: false, hasAutoCaster: false }
+  const isDon = variant === 'don'
   const admin = createAdminClient()
   const { data } = await admin
     .from('profiles')
-    .select('gauntlet_deepest, gauntlet_fathoms, gauntlet_upgrades, gauntlet_upgrades_off, has_auto_catcher, has_auto_caster')
+    // Fathoms are the ONE shared purse; the deepest gate + owned/off sets are
+    // per-variant (Don's has its own bespoke tree in dons_gauntlet_upgrades).
+    .select('gauntlet_deepest, dons_gauntlet_deepest, gauntlet_fathoms, gauntlet_upgrades, gauntlet_upgrades_off, dons_gauntlet_upgrades, dons_gauntlet_upgrades_off, has_auto_catcher, has_auto_caster')
     .eq('id', user.id)
     .single()
   return {
-    deepest: (data?.gauntlet_deepest as number | null) ?? 0,
+    deepest: ((isDon ? data?.dons_gauntlet_deepest : data?.gauntlet_deepest) as number | null) ?? 0,
     fathoms: (data?.gauntlet_fathoms as number | null) ?? 0,
-    owned: (data?.gauntlet_upgrades as string[] | null) ?? [],
-    off: (data?.gauntlet_upgrades_off as string[] | null) ?? [],
+    owned: ((isDon ? data?.dons_gauntlet_upgrades : data?.gauntlet_upgrades) as string[] | null) ?? [],
+    off: ((isDon ? data?.dons_gauntlet_upgrades_off : data?.gauntlet_upgrades_off) as string[] | null) ?? [],
     hasAutoCatcher: data?.has_auto_catcher === true,
     hasAutoCaster: data?.has_auto_caster === true,
   }
@@ -104,7 +107,7 @@ export async function getGauntletUpgradeState(): Promise<{ deepest: number; fath
  *  The off-set is server-authoritative so a disabled upgrade truly contributes
  *  nothing — run behavior AND cash-out multipliers both read it. Returns the
  *  fresh off-set. */
-export async function setGauntletUpgradeActive(id: string, active: boolean): Promise<
+export async function setGauntletUpgradeActive(id: string, active: boolean, variant: GauntletVariant = 'davy'): Promise<
   { ok: true; off: string[] } | { error: string }
 > {
   const supabase = await createClient()
@@ -112,28 +115,32 @@ export async function setGauntletUpgradeActive(id: string, active: boolean): Pro
   if (!user) return { error: 'Not signed in.' }
   if (!isToggleableUpgrade(id)) return { error: 'That upgrade can’t be switched off.' }
 
+  const isDon = variant === 'don'
+  const ownedCol = isDon ? 'dons_gauntlet_upgrades' : 'gauntlet_upgrades'
+  const offCol = isDon ? 'dons_gauntlet_upgrades_off' : 'gauntlet_upgrades_off'
+
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_upgrades, gauntlet_upgrades_off')
+    .select(`${ownedCol}, ${offCol}`)
     .eq('id', user.id)
     .single()
   if (!profile) return { error: 'Profile not found.' }
 
-  const owned = (profile.gauntlet_upgrades as string[] | null) ?? []
+  const owned = ((profile as Record<string, unknown>)[ownedCol] as string[] | null) ?? []
   if (!owned.includes(id)) return { error: 'You don’t own that upgrade.' }
 
-  const off = (profile.gauntlet_upgrades_off as string[] | null) ?? []
+  const off = ((profile as Record<string, unknown>)[offCol] as string[] | null) ?? []
   const nextOff = active ? off.filter(x => x !== id) : (off.includes(id) ? off : [...off, id])
   // Keep the set clean: never store ids the player no longer owns / can't toggle.
   const cleanOff = nextOff.filter(x => owned.includes(x) && isToggleableUpgrade(x))
-  await admin.from('profiles').update({ gauntlet_upgrades_off: cleanOff }).eq('id', user.id)
+  await admin.from('profiles').update({ [offCol]: cleanOff }).eq('id', user.id)
   return { ok: true, off: cleanOff }
 }
 
 /** Claim a Locker Upgrade. Server-validates the depth gate, the Fathoms cost,
  *  and no-double-claim, then deducts Fathoms + records the id. */
-export async function claimGauntletUpgrade(id: string): Promise<
+export async function claimGauntletUpgrade(id: string, variant: GauntletVariant = 'davy'): Promise<
   { ok: true; fathoms: number; owned: string[] } | { error: string }
 > {
   const supabase = await createClient()
@@ -143,25 +150,31 @@ export async function claimGauntletUpgrade(id: string): Promise<
   const upgrade = getGauntletUpgrade(id)
   if (!upgrade) return { error: 'Unknown upgrade.' }
   if (isUpgradeComingSoon(id)) return { error: 'Coming soon.' }
+  // An upgrade can only be bought in its OWN Locker (Don's tree is separate).
+  if ((upgrade.gauntlet ?? 'davy') !== variant) return { error: 'Wrong Locker for that upgrade.' }
+
+  const isDon = variant === 'don'
+  const depthCol = isDon ? 'dons_gauntlet_deepest' : 'gauntlet_deepest'
+  const ownedCol = isDon ? 'dons_gauntlet_upgrades' : 'gauntlet_upgrades'
 
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_deepest, gauntlet_fathoms, gauntlet_upgrades')
+    .select(`${depthCol}, gauntlet_fathoms, ${ownedCol}`)
     .eq('id', user.id)
     .single()
   if (!profile) return { error: 'Profile not found.' }
 
-  const owned = (profile.gauntlet_upgrades as string[] | null) ?? []
+  const owned = ((profile as Record<string, unknown>)[ownedCol] as string[] | null) ?? []
   if (owned.includes(id)) return { error: 'Already unlocked.' }
-  const deepest = (profile.gauntlet_deepest as number | null) ?? 0
+  const deepest = ((profile as Record<string, unknown>)[depthCol] as number | null) ?? 0
   if (deepest < upgrade.depthRequired) return { error: `Reach depth ${upgrade.depthRequired} in the Gauntlet first.` }
   const fathoms = (profile.gauntlet_fathoms as number | null) ?? 0
   if (fathoms < upgrade.cost) return { error: 'Not enough Fathoms.' }
 
   const newFathoms = fathoms - upgrade.cost
   const newOwned = [...owned, id]
-  await admin.from('profiles').update({ gauntlet_fathoms: newFathoms, gauntlet_upgrades: newOwned }).eq('id', user.id)
+  await admin.from('profiles').update({ gauntlet_fathoms: newFathoms, [ownedCol]: newOwned }).eq('id', user.id)
   return { ok: true, fathoms: newFathoms, owned: newOwned }
 }
 

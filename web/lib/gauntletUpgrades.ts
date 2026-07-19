@@ -23,6 +23,12 @@ export type UpgradeScope =
  *  shop into sections. Run Upgrades (scope 'gauntlet') don't carry one. */
 export type UpgradeCategory = 'voyages' | 'raids' | 'fishing'
 
+/** Which Gauntlet's Locker sells this upgrade. Omitted = Davy's (the original).
+ *  Don's Gauntlet has a FULLY SEPARATE, bespoke tree (own ids, own column
+ *  `dons_gauntlet_upgrades`) — see the DON entries below. The two never mix in
+ *  a shop; a run reads only its own variant's catalog + column. */
+export type UpgradeGauntlet = 'davy' | 'don'
+
 export interface GauntletUpgrade {
   id: string
   name: string
@@ -35,6 +41,8 @@ export interface GauntletUpgrade {
   scope: UpgradeScope
   /** Ship & Shore section this lands in. */
   category?: UpgradeCategory
+  /** Which Gauntlet's Locker this belongs to (omitted = Davy's). */
+  gauntlet?: UpgradeGauntlet
 }
 
 export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
@@ -215,7 +223,37 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     scope: 'world',
     category: 'fishing',
   },
+
+  // ══ DON'S GAUNTLET — a FULLY SEPARATE, bespoke Locker (gauntlet: 'don') ══════
+  // Own ids (dg_*), own column (dons_gauntlet_upgrades), own depth gates (read
+  // against dons_gauntlet_deepest). Priced ~1.5–2× Davy's since Don's drops 2×
+  // Fathoms. The effect CHANNELS reuse the same helpers below (each gains a dg_*
+  // branch) — a run reads only one column, so the ids never collide. Themed to
+  // the ghost fleet + the Ch3/4 threat. Ordered cheap → dear.
+  // ── Run Upgrades (scope 'gauntlet') ─────────────────────────────────────────
+  { id: 'dg_calm',         name: 'Uncursed Descent', description: "The Locker's first curse passes you by. You descend clean until the second.", depthRequired: 0,  cost: 55,  scope: 'gauntlet', gauntlet: 'don' },
+  { id: 'dg_hp',           name: 'Deep Lungs',       description: 'Start every dive with 20% more max HP — a bigger hull for a nastier deep.',      depthRequired: 0,  cost: 80,  scope: 'gauntlet', gauntlet: 'don' },
+  { id: 'dg_peek',         name: 'Ghostlight',       description: 'Before each dive, read what waits below: a lone hull, an elite and its trick, or a boss.', depthRequired: 0, cost: 80, scope: 'gauntlet', gauntlet: 'don' },
+  { id: 'dg_fathoms',      name: 'Spoils of the Deep', description: 'Earn 40% more Fathoms from every dive, win or lose. Grab it early and the grind speeds up.', depthRequired: 0, cost: 90, scope: 'gauntlet', gauntlet: 'don' },
+  { id: 'dg_reroll_boon',  name: 'Rechamber',        description: 'Once per power draft, throw the offered boons back and draw three fresh ones.',  depthRequired: 0,  cost: 100, scope: 'gauntlet', gauntlet: 'don' },
+  { id: 'dg_reroll_curse', name: 'Break the Hex',    description: "Once per curse the Locker lays on you, throw it back and force a different one. Could be milder, could be worse.", depthRequired: 0, cost: 110, scope: 'gauntlet', gauntlet: 'don' },
+  { id: 'dg_armor',        name: 'Spectral Plate',   description: 'Take 12% less damage from every enemy for the whole dive.',                       depthRequired: 0,  cost: 120, scope: 'gauntlet', gauntlet: 'don' },
+  { id: 'dg_power',        name: 'Ghost Gunners',    description: 'Deal 12% more damage to every enemy for the whole dive.',                          depthRequired: 0,  cost: 120, scope: 'gauntlet', gauntlet: 'don' },
+  { id: 'dg_lifedrain',    name: 'Bloodward',        description: 'Patch up 10% of your max HP each time you sink a ship.',                           depthRequired: 5,  cost: 130, scope: 'gauntlet', gauntlet: 'don' },
+  { id: 'dg_luck',         name: 'Drowned Fortune',  description: 'The deep deals you a better hand — Rare and Legendary boons surface far more often.', depthRequired: 8, cost: 140, scope: 'gauntlet', gauntlet: 'don' },
+  { id: 'dg_veteran',      name: 'Deep Veteran',     description: 'Begin every dive at depth 8: tougher ships, boons and curses sooner. Pot, chests and Fathoms still count only the ships you sink.', depthRequired: 10, cost: 150, scope: 'gauntlet', gauntlet: 'don' },
+  { id: 'dg_haul',         name: 'Pieces of Eight',  description: 'Bank 20% more doubloons every time you cash out a dive.',                          depthRequired: 12, cost: 120, scope: 'gauntlet', gauntlet: 'don' },
+  { id: 'dg_xp',           name: 'Deep Ledger',      description: 'Earn 25% more Nav XP every time you cash out a dive.',                             depthRequired: 14, cost: 170, scope: 'gauntlet', gauntlet: 'don' },
+  { id: 'dg_second_wind',  name: 'Second Wind',      description: 'Once per run, the deep spits you back up: the blow that would sink you leaves you at 25% HP instead.', depthRequired: 15, cost: 200, scope: 'gauntlet', gauntlet: 'don' },
+  // ── Ship & Shore (scope 'account') — the Abyssal Forge, still on the anvil. ──
+  { id: 'dg_abyssal_forge', name: 'The Abyssal Forge', description: 'Fuse two forged raid items into one tier-3 Abyssal item, carrying both effect sets in a single mount. The endgame forge.', depthRequired: 20, cost: 400, scope: 'account', category: 'raids', gauntlet: 'don' },
 ]
+
+/** The upgrades sold in a given Gauntlet's Locker. Davy's = untagged; Don's =
+ *  `gauntlet: 'don'`. A run/shop only ever sees its own variant's catalog. */
+export function upgradesForVariant(variant: UpgradeGauntlet): GauntletUpgrade[] {
+  return GAUNTLET_UPGRADES.filter(u => (u.gauntlet ?? 'davy') === variant)
+}
 
 export function getGauntletUpgrade(id: string): GauntletUpgrade | null {
   return GAUNTLET_UPGRADES.find(u => u.id === id) ?? null
@@ -246,7 +284,7 @@ export function activeGauntletUpgrades(
 /** Upgrade ids that are built but NOT live for players yet — surfaced in the
  *  shop with a Coming Soon lock (no price, can't buy) and rejected at claim
  *  time. One source of truth for the client card + the server guard. */
-export const COMING_SOON_UPGRADES = new Set<string>([])
+export const COMING_SOON_UPGRADES = new Set<string>(['dg_abyssal_forge'])
 
 export function isUpgradeComingSoon(id: string): boolean {
   return COMING_SOON_UPGRADES.has(id)
@@ -284,31 +322,50 @@ export function gauntletAutoCatchRares(unlocked: string[] | null | undefined): b
   return (unlocked ?? []).includes('tireless_catcher')
 }
 
-/** Salvager's Eye: doubloon multiplier applied to a Gauntlet cash-out haul. */
+/** Salvager's Eye (Davy) / Pieces of Eight (Don's): doubloon multiplier on a
+ *  Gauntlet cash-out haul. */
 export function gauntletHaulMult(unlocked: string[] | null | undefined): number {
-  return (unlocked ?? []).includes('salvagers_eye') ? 1.15 : 1
+  const u = unlocked ?? []
+  if (u.includes('dg_haul')) return 1.20
+  return u.includes('salvagers_eye') ? 1.15 : 1
 }
 
-/** Navigator's Log: Nav XP multiplier on a Gauntlet cash-out. */
+/** Navigator's Log (Davy) / Deep Ledger (Don's): Nav XP multiplier on cash-out. */
 export function gauntletXpMult(unlocked: string[] | null | undefined): number {
-  return (unlocked ?? []).includes('navigators_log') ? 1.2 : 1
+  const u = unlocked ?? []
+  if (u.includes('dg_xp')) return 1.25
+  return u.includes('navigators_log') ? 1.2 : 1
 }
 
-/** Lucky Locker: multiplier on Fathoms earned per run (cash-out AND death). */
+/** Lucky Locker (Davy) / Spoils of the Deep (Don's): Fathoms multiplier per run
+ *  (cash-out AND death). */
 export function gauntletFathomsMult(unlocked: string[] | null | undefined): number {
-  return (unlocked ?? []).includes('lucky_locker') ? 1.33 : 1
+  const u = unlocked ?? []
+  if (u.includes('dg_fathoms')) return 1.40
+  return u.includes('lucky_locker') ? 1.33 : 1
 }
 
-/** Diving Bell: max-HP multiplier applied for the whole Gauntlet run. */
+/** Diving Bell (Davy) / Deep Lungs (Don's): max-HP multiplier for the whole run. */
 export function gauntletRunHpMult(unlocked: string[] | null | undefined): number {
-  return (unlocked ?? []).includes('diving_bell') ? 1.15 : 1
+  const u = unlocked ?? []
+  if (u.includes('dg_hp')) return 1.20
+  return u.includes('diving_bell') ? 1.15 : 1
 }
 
-/** Veteran's Start: the COMBAT depth the run opens at (enemies + boon/curse
- *  cadence + the displayed depth). Rewards stay keyed to ships actually sunk,
- *  so this never inflates pot / chests / Fathoms / record. */
+/** Veteran's Start (Davy, depth 5) / Deep Veteran (Don's, depth 8): the COMBAT
+ *  depth the run opens at (enemies + boon/curse cadence + the displayed depth).
+ *  Rewards stay keyed to ships actually sunk, so this never inflates pot /
+ *  chests / Fathoms / record. */
 export function gauntletStartDepth(unlocked: string[] | null | undefined): number {
-  return (unlocked ?? []).includes('veterans_start') ? 5 : 1
+  const u = unlocked ?? []
+  if (u.includes('dg_veteran')) return 8
+  return u.includes('veterans_start') ? 5 : 1
+}
+
+/** Second Wind (Don's): lethal-save charges seeded at run start on TOP of any
+ *  from equipped items — the deep spits you back up once per run. */
+export function gauntletStartAnchorSaves(unlocked: string[] | null | undefined): number {
+  return (unlocked ?? []).includes('dg_second_wind') ? 1 : 0
 }
 
 /** The depth offset Veteran's Start adds to the combat depth (0 without it). */
@@ -316,46 +373,61 @@ export function gauntletSkipOffset(unlocked: string[] | null | undefined): numbe
   return gauntletStartDepth(unlocked) - 1
 }
 
-/** Calm Before: the Locker's first curse milestone passes without a curse. */
+/** Calm Before (Davy) / Uncursed Descent (Don's): the Locker's first curse
+ *  milestone passes without a curse. */
 export function gauntletSkipsFirstCurse(unlocked: string[] | null | undefined): boolean {
-  return (unlocked ?? []).includes('calm_before')
+  const u = unlocked ?? []
+  return u.includes('calm_before') || u.includes('dg_calm')
 }
 
 /** Iron Hide: damageTakenPct mod folded into the run's RaidMods. NEGATIVE =
  *  less damage (matches the crewEffects convention; RaidCombat applies it as
  *  1 + pct/100, so -10 → ×0.9 incoming). */
 export function gauntletDamageTakenMod(unlocked: string[] | null | undefined): number {
-  return (unlocked ?? []).includes('iron_hide') ? -10 : 0
+  const u = unlocked ?? []
+  if (u.includes('dg_armor')) return -12   // Spectral Plate (Don's)
+  return u.includes('iron_hide') ? -10 : 0
 }
 
-/** Gunner's Eye: bonus damage % DEALT during Gauntlet runs (into runRaidMods). */
+/** Gunner's Eye (Davy) / Ghost Gunners (Don's): bonus damage % DEALT during
+ *  Gauntlet runs (into runRaidMods). */
 export function gauntletDamageMod(unlocked: string[] | null | undefined): number {
-  return (unlocked ?? []).includes('gunners_eye') ? 10 : 0
+  const u = unlocked ?? []
+  if (u.includes('dg_power')) return 12   // Ghost Gunners (Don's)
+  return u.includes('gunners_eye') ? 10 : 0
 }
 
-/** Vigor: fraction of max HP restored after each enemy sunk in a run. */
+/** Vigor (Davy) / Bloodward (Don's): fraction of max HP restored after each
+ *  enemy sunk in a run. */
 export function gauntletKillHealPct(unlocked: string[] | null | undefined): number {
-  return (unlocked ?? []).includes('vigor') ? 0.08 : 0
+  const u = unlocked ?? []
+  if (u.includes('dg_lifedrain')) return 0.10   // Bloodward (Don's)
+  return u.includes('vigor') ? 0.08 : 0
 }
 
-/** Sounding Line: when owned, the breather reveals the next fight (lone hull /
- *  elite + affix / boss) before the player commits to the dive. */
+/** Sounding Line (Davy) / Ghostlight (Don's): the breather reveals the next
+ *  fight (lone hull / elite + affix / boss) before the player commits. */
 export function gauntletHasSoundingLine(unlocked: string[] | null | undefined): boolean {
-  return (unlocked ?? []).includes('sounding_line')
+  const u = unlocked ?? []
+  return u.includes('sounding_line') || u.includes('dg_peek')
 }
 
-/** Diviner's Charm: multiplier on the draft weight of the non-Common boon
- *  rarities (Rare + Legendary), so good boons are offered more often. */
+/** Diviner's Charm (Davy) / Drowned Fortune (Don's): multiplier on the draft
+ *  weight of the non-Common boon rarities (Rare + Legendary). */
 export function gauntletBoonLuck(unlocked: string[] | null | undefined): number {
-  return (unlocked ?? []).includes('diviners_charm') ? 1.7 : 1
+  const u = unlocked ?? []
+  if (u.includes('dg_luck')) return 1.8   // Drowned Fortune (Don's)
+  return u.includes('diviners_charm') ? 1.7 : 1
 }
 
-/** Second Cast: how many times the player may reroll the offered boons per draft. */
+/** Second Cast (Davy) / Rechamber (Don's): boon rerolls per draft. */
 export function gauntletBoonRerolls(unlocked: string[] | null | undefined): number {
-  return (unlocked ?? []).includes('second_cast') ? 1 : 0
+  const u = unlocked ?? []
+  return u.includes('second_cast') || u.includes('dg_reroll_boon') ? 1 : 0
 }
 
-/** Salt Ward: how many times the player may reroll a curse the Locker imposes. */
+/** Salt Ward (Davy) / Break the Hex (Don's): curse rerolls per imposed curse. */
 export function gauntletCurseRerolls(unlocked: string[] | null | undefined): number {
-  return (unlocked ?? []).includes('salt_ward') ? 1 : 0
+  const u = unlocked ?? []
+  return u.includes('salt_ward') || u.includes('dg_reroll_curse') ? 1 : 0
 }

@@ -36,7 +36,7 @@ import GauntletTermsPanel from './GauntletTermsPanel'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, setGauntletUpgradeActive, markGauntletIntroSeen, recordGauntletHit, wagerGauntletFathoms, markConfluencesSeen, checkpointGauntletRun, pauseGauntletRun, resumeGauntletRun, buyBaitWithFathoms, rollDavyOffer } from './actions'
 import { offerCoinMult, offerChestMult, offerCopy, offerTakenLine, type DavyOffer } from '@/lib/gauntletOffer'
 import { FATHOM_BAITS } from '@/lib/bait'
-import { GAUNTLET_UPGRADES, COMING_SOON_UPGRADES, activeGauntletUpgrades, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck, gauntletBoonRerolls, gauntletCurseRerolls } from '@/lib/gauntletUpgrades'
+import { upgradesForVariant, COMING_SOON_UPGRADES, activeGauntletUpgrades, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck, gauntletBoonRerolls, gauntletCurseRerolls, gauntletStartAnchorSaves } from '@/lib/gauntletUpgrades'
 import { type ShipAugment } from '@/lib/shipAugments'
 import { getSpecialItem } from '@/lib/specialItems'
 import { buySpecialItem } from '@/app/(app)/fishing/actions'
@@ -665,6 +665,8 @@ export default function GauntletGame(props: GauntletGameProps) {
       // would sink you, sinks you.
       anchorSavesLeftRef.current = fx.noLethalSaves ? 0 : getActiveEffects(props.equippedItems)
         .filter(e => e.type === 'lethal_save').reduce((a, e) => a + e.value, 0)
+        // Second Wind (Don's Locker): one extra lethal-save seeded at run start.
+        + gauntletStartAnchorSaves(activeUpgrades)
       setFight(generateFight(rollStateRef.current, skipOffset, fx, props.variant))
       setPhase('descending')
       setStarting(false)
@@ -1867,7 +1869,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                 Global Ship & Shore unlocks live out in the world, so they'd
                 only confuse here. */}
             {(() => {
-              const owned = GAUNTLET_UPGRADES.filter(u => u.scope === 'gauntlet' && activeUpgrades.includes(u.id))
+              const owned = upgradesForVariant(props.variant ?? 'davy').filter(u => u.scope === 'gauntlet' && activeUpgrades.includes(u.id))
               if (owned.length === 0) return null
               return (
                 <div style={{ marginTop: 14 }}>
@@ -1891,7 +1893,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         {infoCurrency && <CurrencyInfoModal kind={infoCurrency} onClose={() => setInfoCurrency(null)} />}
         {synergiesOpen && <SynergiesModal owned={boonTiers} seen={seenConfluences} taken={confluencesTaken} onClose={() => setSynergiesOpen(false)} />}
         {recapRun && <DeepestRunModal run={recapRun.run} hardcore={recapRun.hardcore} onClose={() => setRecapRun(null)} />}
-        {shopSection && <LockerUpgradesModal section={shopSection} onClose={() => setShopSection(null)} onClaimed={(owned) => { setUpgrades(owned); setBonusSlots(bonusChargeSlots(owned)) }} onToggled={setUpgradesOff} />}
+        {shopSection && <LockerUpgradesModal section={shopSection} variant={props.variant ?? 'davy'} onClose={() => setShopSection(null)} onClaimed={(owned) => { setUpgrades(owned); setBonusSlots(bonusChargeSlots(owned)) }} onToggled={setUpgradesOff} />}
         {descentModals}
       </>
     )
@@ -1936,7 +1938,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           </button>
         </div>
         <BackLink router={router} label="Back to the map" primary={!ready} />
-        {shopSection && <LockerUpgradesModal section={shopSection} onClose={() => setShopSection(null)} onClaimed={(owned) => { setUpgrades(owned); setBonusSlots(bonusChargeSlots(owned)) }} onToggled={setUpgradesOff} />}
+        {shopSection && <LockerUpgradesModal section={shopSection} variant={props.variant ?? 'davy'} onClose={() => setShopSection(null)} onClaimed={(owned) => { setUpgrades(owned); setBonusSlots(bonusChargeSlots(owned)) }} onToggled={setUpgradesOff} />}
         {descentModals}
       </Shell>
     )
@@ -4683,13 +4685,13 @@ const SHORE_CATEGORIES: { id: 'voyages' | 'raids' | 'fishing'; label: string; ic
   { id: 'fishing', label: 'Fishing', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12c3-4 8-5 12-3 2 1 4 3 6 3-2 0-4 2-6 3-4 2-9 1-12-3z" /><path d="m16 9.5 4-2.5v10l-4-2.5" /><circle cx="7.5" cy="11.5" r="0.7" fill="currentColor" stroke="none" /></svg> },
 ]
 
-function LockerUpgradesModal({ section, onClose, onClaimed, onToggled }: { section: 'run' | 'shore'; onClose: () => void; onClaimed?: (owned: string[]) => void; onToggled?: (off: string[]) => void }) {
+function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }: { section: 'run' | 'shore'; variant: GauntletVariant; onClose: () => void; onClaimed?: (owned: string[]) => void; onToggled?: (off: string[]) => void }) {
   const [state, setState] = useState<LockerState | null>(null)
   const [claiming, setClaiming] = useState<string | null>(null)
   const [toggling, setToggling] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
 
-  useEffect(() => { getGauntletUpgradeState().then(setState) }, [])
+  useEffect(() => { getGauntletUpgradeState(variant).then(setState) }, [variant])
 
   // Flip an owned Run Upgrade on/off. Optimistic — the switch moves instantly,
   // then the server-authoritative off-set is written back (and pushed to the
@@ -4699,11 +4701,11 @@ function LockerUpgradesModal({ section, onClose, onClaimed, onToggled }: { secti
     setToggling(id); setErr(null)
     setState(s => (s ? { ...s, off: active ? s.off.filter(x => x !== id) : [...new Set([...s.off, id])] } : s))
     vibrate([0, 18])
-    const res = await setGauntletUpgradeActive(id, active)
+    const res = await setGauntletUpgradeActive(id, active, variant)
     setToggling(null)
     if ('error' in res) {
       setErr(res.error)
-      const fresh = await getGauntletUpgradeState(); setState(fresh); onToggled?.(fresh.off)
+      const fresh = await getGauntletUpgradeState(variant); setState(fresh); onToggled?.(fresh.off)
       return
     }
     setState(s => (s ? { ...s, off: res.off } : s))
@@ -4720,9 +4722,9 @@ function LockerUpgradesModal({ section, onClose, onClaimed, onToggled }: { secti
       setClaiming(null)
       if ('error' in res) { setErr(res.error); return }
       vibrate([0, 30, 50, 40])
-      const fresh = await getGauntletUpgradeState(); setState(fresh)
+      const fresh = await getGauntletUpgradeState(variant); setState(fresh)
     } else {
-      const res = await claimGauntletUpgrade(id)
+      const res = await claimGauntletUpgrade(id, variant)
       setClaiming(null)
       if ('error' in res) { setErr(res.error); return }
       setState(s => (s ? { ...s, fathoms: res.fathoms, owned: res.owned } : s))
@@ -4829,13 +4831,15 @@ function LockerUpgradesModal({ section, onClose, onClaimed, onToggled }: { secti
         {state === null ? (
           <p className="font-karla" style={{ fontSize: '0.8rem', color: '#7a766e', textAlign: 'center', padding: '2rem 0' }}>Reading the ledger…</p>
         ) : (() => {
-            const upgrades: ShopEntry[] = GAUNTLET_UPGRADES.map(u => ({
+            const upgrades: ShopEntry[] = upgradesForVariant(variant).map(u => ({
               id: u.id, name: u.name, description: u.description, depthRequired: u.depthRequired,
               cost: u.cost, scope: u.scope, owned: state.owned.includes(u.id), lockNote: null,
               demo: u.id === 'cannonball_rack', special: false, category: u.category,
               comingSoon: COMING_SOON_UPGRADES.has(u.id),
             }))
-            const ac = getSpecialItem('auto_catcher')
+            // Auto Catcher is a Davy's-Locker fishing perk (bought with Fathoms
+            // via buySpecialItem) — Don's Ship & Shore doesn't re-list it.
+            const ac = variant === 'davy' ? getSpecialItem('auto_catcher') : null
             const autoCatcher: ShopEntry | null = ac ? {
               id: 'auto_catcher', name: ac.name, description: ac.description,
               depthRequired: ac.requiresGauntletDepth ?? 5, cost: ac.costFathoms ?? 0,
