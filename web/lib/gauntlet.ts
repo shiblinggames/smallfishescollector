@@ -397,8 +397,11 @@ function deepBend2(depth: number): number {
   return depth > DEEP_BEND_START_2 ? Math.pow(DEEP_BEND_RATE, depth - DEEP_BEND_START_2) : 1
 }
 function mobHp2(depth: number)    { return Math.round((350 + depth * 30) * deepBend2(depth)) }
-function mobMinDmg2(depth: number){ return Math.round((22 + depth * 3) * deepBend2(depth)) }
-function mobMaxDmg2(depth: number){ return Math.round((34 + depth * 5) * deepBend2(depth)) }
+// Damage: retuned 2026-07-18 after playtest — Ch3/4 enemies already hit hard from
+// depth 1, so the base is lower and the slope FLATTER than Davy's (they start
+// strong, they don't need a steep ramp on top). HP curve unchanged.
+function mobMinDmg2(depth: number){ return Math.round((16 + depth * 2) * deepBend2(depth)) }
+function mobMaxDmg2(depth: number){ return Math.round((24 + depth * 3.2) * deepBend2(depth)) }
 
 // The Don's ghost fleet — his drowned court + crews raised, washed a spectral
 // crimson (vs Davy's cold grey DROWNED_FILTER) and renamed "Spectral X".
