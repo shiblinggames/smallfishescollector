@@ -13,7 +13,7 @@ import { getShipSkin } from '@/lib/shipSkins'
 import { computeRaidMap } from '@/lib/raidMap'
 import { buildClearedSet } from '@/lib/raidProgress'
 import { getRaidConfigById, raidLootIds, ITEM_GRANTS, MAX_CRATE_BASE_DOUBLOONS } from '@/lib/raidRegistry'
-import { bonusChargeSlots, gauntletRepairHealMult } from '@/lib/gauntletUpgrades'
+import { bonusChargeSlots, gauntletRepairHealMult, donsRaidHpMult, donsRaidDamageMult } from '@/lib/gauntletUpgrades'
 import { getShipAugment, MANOWAR_TIER, type ShipAugment } from '@/lib/shipAugments'
 import { settleUltimateBuild } from '@/lib/ultimateBuild'
 
@@ -86,7 +86,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('ship_tier, saved_crew, ship_name, username, character_color, equipped_hat, avatar_bg_color, avatar_border_color, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, equipped_repair_kit, has_seen_raid_tutorial, expedition_xp, nav_renown_alloc, ship_classes, gauntlet_upgrades, manowar_augment, manowar_augment_build, has_sixth_berth, has_armory_expansion')
+    .select('ship_tier, saved_crew, ship_name, username, character_color, equipped_hat, avatar_bg_color, avatar_border_color, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, equipped_repair_kit, has_seen_raid_tutorial, expedition_xp, nav_renown_alloc, ship_classes, gauntlet_upgrades, dons_gauntlet_upgrades, manowar_augment, manowar_augment_build, has_sixth_berth, has_armory_expansion')
     .eq('id', userId)
     .single()
 
@@ -162,9 +162,12 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
     .reduce((a, e) => a * e.value, 1)
 
   const gauntletUpgrades = (profile?.gauntlet_upgrades as string[] | null) ?? []
+  // Account-scope Locker perks apply from EITHER gauntlet, so the Don's Ship &
+  // Shore perks (Deep-Sea Plating / Ghost Ordnance) read the union of both.
+  const accountUpgrades = [...gauntletUpgrades, ...((profile?.dons_gauntlet_upgrades as string[] | null) ?? [])]
 
   return {
-    playerHPMax:      Math.round((ship.durability + navBonus.hp + navRenown.hullFlat) * hpMaxMult * classEffects.hpMult),
+    playerHPMax:      Math.round((ship.durability + navBonus.hp + navRenown.hullFlat) * hpMaxMult * classEffects.hpMult * donsRaidHpMult(accountUpgrades)),
     shipMinDamage:    ship.minDamage,
     shipSpeed:        Math.max(0, ship.speed + classEffects.speedFlat),
     totalPower:       totalPower   + navBonus.power,
@@ -186,7 +189,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
     shipSkins:            (profile?.ship_skins as string[] | null) ?? [],
     equippedRaidItems:    equippedItems,
     ownedRaidItems:       (profile?.raid_items as string[] | null) ?? [],
-    classDamageMult:      classEffects.damageMult * navRenown.damageMult,
+    classDamageMult:      classEffects.damageMult * navRenown.damageMult * donsRaidDamageMult(accountUpgrades),
     classDoubloonMult:    classEffects.doubloonMult,
     shipClasses:          shipClassPicks,
     equippedRepairKit:    (profile?.equipped_repair_kit as string | null) ?? 'basic_repair_kit',
