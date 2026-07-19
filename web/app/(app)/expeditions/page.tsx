@@ -12,7 +12,7 @@ import ShipHero from './ShipHero'
 import ExpeditionsTour from './ExpeditionsTour'
 import HubCards from './HubCards'
 import type { CampaignCardData, VoyageCardData, VoyageStatus } from './HubCards'
-import { gauntletUnlocked } from '@/lib/gauntlet'
+import { gauntletUnlocked, donsGauntletUnlocked } from '@/lib/gauntlet'
 import { CREW_SKINS } from '@/lib/crewSkins'
 import { getCrewRoster } from '@/app/(app)/crew/actions'
 import { getDailyVoyageState } from './voyageActions'
@@ -301,6 +301,9 @@ async function ExpeditionHub() {
   const cleared = clearedViews.length
   // Gauntlet door: admin-only until GAUNTLET_LIVE, then cleared-Chapter-2.
   const gauntletOpen = gauntletUnlocked({ isAdmin: profile?.is_admin, clearedNodes: clearedViews.map(v => v.node.id) })
+  // Don's Gauntlet door: admin-only until DONS_GAUNTLET_LIVE, then beating the
+  // Don (the_throne). Lets admins reach it from the hub picker, not just the URL.
+  const donsGauntletOpen = donsGauntletUnlocked({ isAdmin: profile?.is_admin, throneCleared: clearedViews.some(v => v.node.id === 'the_throne') })
   // A saved run is waiting to be picked back up — mirrors getGauntletDailyState's
   // resumeState gate (paused = unlimited, or a crash resume still in the bank).
   const gauntletResumable = profile?.gauntlet_run_open === true
@@ -384,6 +387,7 @@ async function ExpeditionHub() {
       challengeName={challengeName}
       canPvp={canPvp}
       gauntletOpen={gauntletOpen}
+      donsGauntletOpen={donsGauntletOpen}
       gauntletResumable={gauntletResumable}
       gauntletUpgrades={(profile?.gauntlet_upgrades as string[] | null) ?? []}
       pvp={pvp}

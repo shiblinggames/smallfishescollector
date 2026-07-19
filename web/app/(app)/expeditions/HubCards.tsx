@@ -101,6 +101,9 @@ interface Props {
   /** Whether the Gauntlet door is open to this player (admin, or live + cleared
    *  Chapter 2). Drives the Gauntlets card lock independently of PvP. */
   gauntletOpen: boolean
+  /** Don's Gauntlet door — admin-only until DONS_GAUNTLET_LIVE. When open, the
+   *  picker's Don's card becomes a live link instead of a "Coming Soon" tease. */
+  donsGauntletOpen?: boolean
   /** A saved Gauntlet run is waiting (paused or crash-resumable) — the card
    *  swaps its CTA to "Resume" so the player knows to pick it back up. */
   gauntletResumable?: boolean
@@ -192,7 +195,7 @@ export default function HubCards({
   roster, shipCrewSlots,
   prepStats,
   shipTier, todayVoyage, readyVoyage, expeditionXP, voyageHistory,
-  canPvp, gauntletOpen, gauntletResumable, gauntletUpgrades, pvp,
+  canPvp, gauntletOpen, donsGauntletOpen, gauntletResumable, gauntletUpgrades, pvp,
   raidsCleared, captainsOrdersDone,
   gems, freeRecruitAvailable, canAffordNewSkin, challengeName,
 }: Props) {
@@ -828,25 +831,48 @@ export default function HubCards({
           </button>
 
           {/* Don's Gauntlet — Gauntlet II, led by the ghost of Don Finleone.
-              Teased here (Coming Soon, blocked) until it goes live. */}
-          <div aria-disabled
-            style={{
-              marginTop: 10, width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-              padding: '0.75rem', borderRadius: 14, textAlign: 'left', cursor: 'default', opacity: 0.72,
-              background: 'linear-gradient(180deg, rgba(150,60,66,0.14), rgba(0,0,0,0.25))',
-              border: '1px solid rgba(150,60,66,0.4)',
-            }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/donsgauntlet.png" alt="" loading="lazy" decoding="async"
-              style={{ width: 52, height: 52, objectFit: 'contain', flexShrink: 0, filter: 'grayscale(0.35) drop-shadow(0 3px 10px rgba(150,60,66,0.45))' }} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#ecdcd6', lineHeight: 1.1 }}>Don&apos;s Gauntlet</p>
-              <p className="font-karla font-500" style={{ fontSize: '0.66rem', color: '#bda2a3', lineHeight: 1.35, marginTop: 2 }}>
-                The don went down with the deep, and his ghost is still collecting. A darker gauntlet stirs below.
-              </p>
+              A "Coming Soon" tease until it goes live; once the door is open
+              (admins now, everyone post-launch) it becomes a live link. */}
+          {donsGauntletOpen ? (
+            <button type="button"
+              onClick={() => { setModal(null); router.push('/raids/dons-gauntlet') }}
+              style={{
+                marginTop: 10, width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                padding: '0.75rem', borderRadius: 14, textAlign: 'left', cursor: 'pointer',
+                background: 'linear-gradient(180deg, rgba(150,60,66,0.22), rgba(0,0,0,0.25))',
+                border: '1px solid rgba(150,60,66,0.6)',
+              }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/donsgauntlet.png" alt="" loading="lazy" decoding="async"
+                style={{ width: 52, height: 52, objectFit: 'contain', flexShrink: 0, filter: 'drop-shadow(0 3px 10px rgba(150,60,66,0.5))' }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0ede8', lineHeight: 1.1 }}>Don&apos;s Gauntlet</p>
+                <p className="font-karla font-500" style={{ fontSize: '0.66rem', color: '#cbb0b1', lineHeight: 1.35, marginTop: 2 }}>
+                  The don went down with the deep, and his ghost is still collecting. Descend into the darker gauntlet.
+                </p>
+              </div>
+              <span aria-hidden className="font-karla font-700" style={{ flexShrink: 0, color: '#e29aa0', fontSize: '1rem' }}>›</span>
+            </button>
+          ) : (
+            <div aria-disabled
+              style={{
+                marginTop: 10, width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                padding: '0.75rem', borderRadius: 14, textAlign: 'left', cursor: 'default', opacity: 0.72,
+                background: 'linear-gradient(180deg, rgba(150,60,66,0.14), rgba(0,0,0,0.25))',
+                border: '1px solid rgba(150,60,66,0.4)',
+              }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/donsgauntlet.png" alt="" loading="lazy" decoding="async"
+                style={{ width: 52, height: 52, objectFit: 'contain', flexShrink: 0, filter: 'grayscale(0.35) drop-shadow(0 3px 10px rgba(150,60,66,0.45))' }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#ecdcd6', lineHeight: 1.1 }}>Don&apos;s Gauntlet</p>
+                <p className="font-karla font-500" style={{ fontSize: '0.66rem', color: '#bda2a3', lineHeight: 1.35, marginTop: 2 }}>
+                  The don went down with the deep, and his ghost is still collecting. A darker gauntlet stirs below.
+                </p>
+              </div>
+              <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ flexShrink: 0, fontSize: '0.5rem', color: '#e29aa0', background: 'rgba(150,60,66,0.24)', border: '1px solid rgba(150,60,66,0.55)', borderRadius: 999, padding: '0.25rem 0.5rem', whiteSpace: 'nowrap' }}>Coming Soon</span>
             </div>
-            <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ flexShrink: 0, fontSize: '0.5rem', color: '#e29aa0', background: 'rgba(150,60,66,0.24)', border: '1px solid rgba(150,60,66,0.55)', borderRadius: 999, padding: '0.25rem 0.5rem', whiteSpace: 'nowrap' }}>Coming Soon</span>
-          </div>
+          )}
         </div>
       </PopupShell>
 
