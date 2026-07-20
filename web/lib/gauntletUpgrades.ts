@@ -233,7 +233,8 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
   // drops 2× Fathoms, so its Locker costs run well above Davy's. The effect
   // CHANNELS reuse the same helpers below (each gains a dg_* branch) — a run
   // reads only one column, so the ids never collide. Themed to the ghost fleet +
-  // the Ch3/4 threat. Ordered cheap → dear.
+  // the Ch3/4 threat. Catalog order is grouped by theme; the shop sorts the run
+  // list by cost at render, so new entries can be appended anywhere.
   // ── Run Upgrades (scope 'gauntlet') ─────────────────────────────────────────
   { id: 'dg_calm',         name: 'Uncursed Descent', description: "The Locker's first curse passes you by. You descend clean until the second.", depthRequired: 0,  cost: 90,  scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_hp',           name: 'Deep Lungs',       description: 'Start every dive with 20% more max HP — a bigger hull for a nastier deep.',      depthRequired: 0,  cost: 140, scope: 'gauntlet', gauntlet: 'don' },
@@ -243,6 +244,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
   { id: 'dg_fathoms',      name: 'Spoils of the Deep', description: 'Earn 40% more Fathoms from every dive, win or lose. Grab it early and the grind speeds up.', depthRequired: 0, cost: 150, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_reroll_boon',  name: 'Rechamber',        description: 'Once per power draft, throw the offered boons back and draw three fresh ones.',  depthRequired: 0,  cost: 175, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_reroll_curse', name: 'Break the Hex',    description: "Once per curse the Locker lays on you, throw it back and force a different one. Could be milder, could be worse.", depthRequired: 0, cost: 190, scope: 'gauntlet', gauntlet: 'don' },
+  { id: 'dg_curse_ward',   name: 'Saltbound',        description: 'Ward your hull against the Locker’s worst. Every named curse it lays on you lands one tier weaker — a deepening comes in mild, and a base curse is never fully lifted. The Crush of the deep still tightens.', depthRequired: 8, cost: 280, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_boon_filter',  name: 'Blacklist',        description: 'Once per dive, banish one offered boon for good — mark it on any power draft and it never surfaces again for the rest of the run. Cut the dead weight so the good draws come up more often.', depthRequired: 0, cost: 200, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_boon_filter_2', name: 'Blacklist II',    description: 'Banish up to two boons per dive instead of one. Shape the pool harder toward the build you want.', depthRequired: 8, cost: 320, scope: 'gauntlet', gauntlet: 'don', requires: 'dg_boon_filter' },
   { id: 'dg_armor',        name: 'Spectral Plate',   description: 'Take 12% less damage from every enemy for the whole dive.',                       depthRequired: 0,  cost: 210, scope: 'gauntlet', gauntlet: 'don' },
@@ -260,7 +262,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
   { id: 'dg_xp',           name: 'Deep Ledger',      description: 'Earn 25% more Nav XP every time you cash out a dive.',                             depthRequired: 14, cost: 300, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_second_wind',  name: 'Second Wind',      description: 'Once per run, the deep spits you back up: the blow that would sink you leaves you at 25% HP instead.', depthRequired: 15, cost: 360, scope: 'gauntlet', gauntlet: 'don' },
   // ── Bespoke to Don's — no Davy equivalent. Risk/reward + build-shaping. ──────
-  { id: 'dg_loan_shark',   name: 'Loan Shark',       description: 'Sign the Don’s terms: deal 25% MORE damage for the whole dive, but take 12% more from every hit. The debt always comes due. Stacks with your other damage and plate.', depthRequired: 0, cost: 200, scope: 'gauntlet', gauntlet: 'don' },
+  { id: 'dg_loan_shark',   name: 'Loan Shark',       description: 'Sign the Don’s terms: deal 25% MORE damage for the whole dive, but take 18% more from every hit. The debt always comes due. Stacks with your other damage and plate.', depthRequired: 0, cost: 240, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_blood_oath',   name: 'Blood Oath',       description: 'Swear in before you dive: start every run already holding one random boon, a favor from the deep to build on from the first fight.', depthRequired: 4, cost: 280, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_consigliere',  name: 'Consigliere',      description: 'The Don whispers in your ear. Synergy offers — confluences and convergences — surface on far more of your power drafts, so you actually build toward them.', depthRequired: 6, cost: 300, scope: 'gauntlet', gauntlet: 'don' },
   // ── Ship & Shore (scope 'account'/'world') — permanent topside power. ────────
@@ -471,9 +473,10 @@ export function gauntletDamageTakenMod(unlocked: string[] | null | undefined): n
            : u.includes('dg_armor')   ? -12   // Spectral Plate I
            : u.includes('iron_hide')  ? -10   // Iron Hide (Davy)
            : 0
-  // Loan Shark (Don's): the debt side of the pact — +12% damage taken, stacking
-  // ON TOP of any plate (partially eats it, or +12 from nothing).
-  if (u.includes('dg_loan_shark')) base += 12
+  // Loan Shark (Don's): the debt side of the pact — +18% damage taken, stacking
+  // ON TOP of any plate (partially eats it, or +18 from nothing). Tuned as a real
+  // glass-cannon trade so it doesn't strictly beat the Ghost Gunners ladder.
+  if (u.includes('dg_loan_shark')) base += 18
   return base
 }
 
@@ -548,4 +551,10 @@ export function gauntletSynergyOfferMult(unlocked: string[] | null | undefined):
 /** Blood Oath (Don's): start every dive already holding one random boon. */
 export function gauntletHasBloodOath(unlocked: string[] | null | undefined): boolean {
   return (unlocked ?? []).includes('dg_blood_oath')
+}
+
+/** Saltbound (Don's): named curses land one tier weaker (drawCurse floors the
+ *  reduced tier at 1; The Crush's deep-bend escalation is left untouched). */
+export function gauntletCurseWard(unlocked: string[] | null | undefined): boolean {
+  return (unlocked ?? []).includes('dg_curse_ward')
 }
