@@ -685,11 +685,11 @@ export const RAID_CHAPTERS: RaidChapter[] = [
     romanNumeral: 'IV',
     title:      'The Last Fathom',
     subtitle:   'The deepest water there is, and the don who owns it. Nothing waits past this.',
-    // UNDER CONSTRUCTION (all nodes adminOnly). Full locked chain:
+    // FULLY LIVE since 2026-07-19 (adminOnly flags + the /raids/throne and
+    // /raids/throne/challenge is_admin guards all dropped together). Chain:
     // throne_heading → the_reclamation → Cargo Shuffle puzzle → Raid 7
     // (Sal Brackwater) → crooked_ledger → Tumbler Lock puzzle → Raid 8
     // (Don Finleone) → chapter_4_close (Between Watches) → chapter_4_augment.
-    // lastNodeId GROWS as nodes are built; final = chapter_4_augment.
     lastNodeId: 'chapter_4_augment',
   },
 ]
@@ -1951,8 +1951,8 @@ export const RAID_MAP: RaidNode[] = [
       ctaLabel: 'Pick a class',
     },
   },
-  // ── Chapter IV. The Last Fathom. FIRST HALF IS LIVE (through the sixth crew
-  //    slot). Raid 8 and everything after it stays adminOnly until it ships. ─────
+  // ── Chapter IV. The Last Fathom. FULLY LIVE since 2026-07-19 — Raid 8 (Don
+  //    Finleone) and the chapter close shipped; no adminOnly gates remain. ───────
   {
     id: 'throne_heading',   type: 'story',
     label: 'The Deepest Water',
@@ -2206,7 +2206,6 @@ export const RAID_MAP: RaidNode[] = [
     flavor: "Sal Brackwater's strongroom gives up the don's own accounts, every column in his own hand. Read them and the debts all run down into one pocket. Past one last lock, Don Finleone is waiting on his throne.",
     bridge: 'The books settle the argument: the don sits at the top of it all. One last lock, and then his throne.',
     requiresNode: 'sixth_berth',
-    adminOnly: true,
     image: '/raidlog.png',
     scene: [
       { text: "The strongroom door gives with a groan, and Sal Brackwater's last secret spills out across the deck: ledgers stacked to the beam, every one filled in the same close, careful hand." },
@@ -2239,7 +2238,6 @@ export const RAID_MAP: RaidNode[] = [
     flavor: "The don's gate is one great lock: iron bars over iron bars, and a single gold bolt that only runs when every tumbler stands clear. Nobody knocks.",
     bridge: 'The last tumbler throws and the gates swing on silence. Past them: the deepest water there is, and the don sitting in it.',
     requiresNode: 'crooked_ledger',
-    adminOnly: true,
     puzzle: {
       kind: 'tumbler',
       rewardNavXp: 1000,
@@ -2290,7 +2288,6 @@ export const RAID_MAP: RaidNode[] = [
     flavor: "The gates open on the deepest water there is, and the don's court rides at anchor around one lit flagship. Six apex killers arrayed like courtiers, the most dangerous crew in the sea, and the biggest name in it sitting still at the center of them.",
     bridge: "The court knows your name now. His right hand has promised, in his voice, that you will not leave this water. Past him, the aisle to the throne stands open.",
     requiresNode: 'throne_gates',
-    adminOnly: true,
     image: '/raidlog.png',
     sceneAccent: '#dc2626',
     scene: [
@@ -2330,7 +2327,6 @@ export const RAID_MAP: RaidNode[] = [
     flavor: "The court parts, but one hull holds the aisle: the don's doorman, The Gnash, counting your deck before it lets you through. The don does not admit a half-manned crew to his table.",
     bridge: "The Gnash slides aside, unimpressed. Nothing stands between you and the throne now but open water.",
     requiresNode: 'the_drowned_court',
-    adminOnly: true,
     muster: {
       minCrew: 5,
       minLevel: 65,
@@ -2357,7 +2353,6 @@ export const RAID_MAP: RaidNode[] = [
     flavor: "The aisle of guns opens onto the throne, and for the first time the don deigns to speak, almost impressed you climbed the whole ladder only to learn where it ends. Then he goes still, and the whole black sea goes still with him.",
     bridge: "The don has said his piece: you will not beat him, nothing in his water ever has. The sea lies flat as a held breath. There is nothing left between you and the biggest name in it.",
     requiresNode: 'the_last_muster',
-    adminOnly: true,
     image: '/raidlog.png',
     sceneAccent: '#dc2626',
     scene: [
@@ -2394,7 +2389,6 @@ export const RAID_MAP: RaidNode[] = [
     bridge: "The court is drowned and the don with it. The Finndicate dies here, on its own throne, in its own black water. The biggest name in the sea, finally answered for.",
     requiresNode: 'within_hail',
     requiresNavLevel: 58,
-    adminOnly: true,
     route: '/raids/throne',
     raidId: THE_THRONE.raidId,
     image: THE_THRONE.enemies.don_finleone.portrait,
@@ -2412,7 +2406,6 @@ export const RAID_MAP: RaidNode[] = [
     label: 'Challenge: The Throne',
     flavor: 'The court reconvenes, and this time the don skips the pleasantries.',
     requiresNode: 'the_throne',
-    adminOnly: true,
     route: '/raids/throne/challenge',
     raidId: THE_THRONE_CHALLENGE.raidId,
     sideBranch: { parentId: 'the_throne' },
@@ -2439,7 +2432,6 @@ export const RAID_MAP: RaidNode[] = [
     flavor: "The don's court on the seabed and a whole crew on the deck that put it there. But before the grog is even cold, something out past the wreck rises to watch, and is gone before you can be sure it was there.",
     bridge: "One tide ends. The Finndicate is drowned, the crew is whole, and whatever watched from the deep can wait for morning.",
     requiresNode: 'the_throne',
-    adminOnly: true,
     image: '/raidlog.png',
     sceneAccent: '#a78bfa',
     scene: [
@@ -2479,7 +2471,6 @@ export const RAID_MAP: RaidNode[] = [
     flavor: "The don kept a shipwright the way other captains keep a surgeon. He works for you now. One last refit, bolted to your deck for good.",
     bridge: 'The plans are cut and the iron is on the deck. One more mount, if you want to pay for it.',
     requiresNode: 'chapter_4_close',
-    adminOnly: true,
     armory: { price: ARMORY_EXPANSION_COST },
     detail: {
       description:

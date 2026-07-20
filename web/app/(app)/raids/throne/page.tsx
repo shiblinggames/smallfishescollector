@@ -19,8 +19,6 @@ export default async function ThroneRaidPage() {
     getRaidPlayerStats(user.id),
   ])
 
-  // In-review gate — Chapter IV is admin-only until launch.
-  if (profile?.is_admin !== true) redirect('/expeditions')
   if ((profile?.raid_repair_owed ?? 0) > 0) redirect('/expeditions')
 
   return (
