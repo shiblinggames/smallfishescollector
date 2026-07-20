@@ -243,23 +243,24 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
   { id: 'dg_peek',         name: 'Ghostlight',       description: 'Before each dive, read what waits below: a lone hull, an elite and its trick, or a boss.', depthRequired: 0, cost: 140, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_fathoms',      name: 'Spoils of the Deep', description: 'Earn 40% more Fathoms from every dive, win or lose. Grab it early and the grind speeds up.', depthRequired: 0, cost: 150, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_reroll_boon',  name: 'Rechamber',        description: 'Once per power draft, throw the offered boons back and draw three fresh ones.',  depthRequired: 0,  cost: 175, scope: 'gauntlet', gauntlet: 'don' },
+  { id: 'dg_reroll_boon_2', name: 'Rechamber II',    description: 'Twice per power draft, throw the offered boons back and draw three fresh ones.',  depthRequired: 8,  cost: 300, scope: 'gauntlet', gauntlet: 'don', requires: 'dg_reroll_boon' },
   { id: 'dg_reroll_curse', name: 'Break the Hex',    description: "Once per curse the Locker lays on you, throw it back and force a different one. Could be milder, could be worse.", depthRequired: 0, cost: 190, scope: 'gauntlet', gauntlet: 'don' },
+  { id: 'dg_reroll_curse_2', name: 'Break the Hex II', description: 'Twice per curse the Locker lays on you, throw it back and force a different one.', depthRequired: 8, cost: 320, scope: 'gauntlet', gauntlet: 'don', requires: 'dg_reroll_curse' },
   { id: 'dg_boon_filter',  name: 'Blacklist',        description: 'Once per dive, banish one offered boon for good — mark it on any power draft and it never surfaces again for the rest of the run. Cut the dead weight so the good draws come up more often.', depthRequired: 0, cost: 200, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_boon_filter_2', name: 'Blacklist II',    description: 'Banish up to two boons per dive instead of one. Shape the pool harder toward the build you want.', depthRequired: 8, cost: 320, scope: 'gauntlet', gauntlet: 'don', requires: 'dg_boon_filter' },
   { id: 'dg_armor',        name: 'Spectral Plate',   description: 'Take 12% less damage from every enemy for the whole dive.',                       depthRequired: 0,  cost: 210, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_armor_2',      name: 'Spectral Plate II', description: 'Thicker plate: take 18% less damage from every enemy for the whole dive.',        depthRequired: 6,  cost: 320, scope: 'gauntlet', gauntlet: 'don', requires: 'dg_armor' },
   { id: 'dg_armor_3',      name: 'Spectral Plate III', description: 'Ghost-forged plate: take 25% less damage from every enemy for the whole dive.',   depthRequired: 12, cost: 480, scope: 'gauntlet', gauntlet: 'don', requires: 'dg_armor_2' },
-  { id: 'dg_power',        name: 'Ghost Gunners',    description: 'Deal 12% more damage to every enemy for the whole dive.',                          depthRequired: 0,  cost: 210, scope: 'gauntlet', gauntlet: 'don' },
-  { id: 'dg_power_2',      name: 'Ghost Gunners II', description: 'Re-bored guns: deal 20% more damage to every enemy for the whole dive.',           depthRequired: 6,  cost: 320, scope: 'gauntlet', gauntlet: 'don', requires: 'dg_power' },
-  { id: 'dg_power_3',      name: 'Ghost Gunners III', description: 'The ghost-fleet pattern: deal 30% more damage to every enemy for the whole dive.', depthRequired: 12, cost: 480, scope: 'gauntlet', gauntlet: 'don', requires: 'dg_power_2' },
+  { id: 'dg_power',        name: 'Ghost Gunners',    description: 'Deal 10% more damage to every enemy for the whole dive.',                          depthRequired: 0,  cost: 210, scope: 'gauntlet', gauntlet: 'don' },
+  { id: 'dg_power_2',      name: 'Ghost Gunners II', description: 'Re-bored guns: deal 16% more damage to every enemy for the whole dive.',           depthRequired: 6,  cost: 320, scope: 'gauntlet', gauntlet: 'don', requires: 'dg_power' },
+  { id: 'dg_power_3',      name: 'Ghost Gunners III', description: 'The ghost-fleet pattern: deal 22% more damage to every enemy for the whole dive.', depthRequired: 12, cost: 480, scope: 'gauntlet', gauntlet: 'don', requires: 'dg_power_2' },
   { id: 'dg_lifedrain',    name: 'Bloodward',        description: 'Patch up 10% of your max HP each time you sink a ship.',                           depthRequired: 5,  cost: 230, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_lifedrain_2',  name: 'Bloodward II',     description: 'Patch up 15% of your max HP each time you sink a ship.',                           depthRequired: 10, cost: 340, scope: 'gauntlet', gauntlet: 'don', requires: 'dg_lifedrain' },
   { id: 'dg_lifedrain_3',  name: 'Bloodward III',    description: 'Patch up 22% of your max HP each time you sink a ship.',                           depthRequired: 16, cost: 500, scope: 'gauntlet', gauntlet: 'don', requires: 'dg_lifedrain_2' },
   { id: 'dg_luck',         name: 'Drowned Fortune',  description: 'The deep deals you a better hand — Rare and Legendary boons surface far more often.', depthRequired: 8, cost: 250, scope: 'gauntlet', gauntlet: 'don' },
-  { id: 'dg_veteran',      name: 'Deep Veteran',     description: 'Begin every dive at depth 8: tougher ships, boons and curses sooner. Pot, chests and Fathoms still count only the ships you sink.', depthRequired: 10, cost: 270, scope: 'gauntlet', gauntlet: 'don' },
+  { id: 'dg_veteran',      name: "Veteran's Start",  description: 'Begin every dive at depth 5: tougher ships, boons and curses sooner. Pot, chests and Fathoms still count only the ships you sink.', depthRequired: 10, cost: 270, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_haul',         name: 'Pieces of Eight',  description: 'Bank 20% more doubloons every time you cash out a dive.',                          depthRequired: 12, cost: 210, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_xp',           name: 'Deep Ledger',      description: 'Earn 25% more Nav XP every time you cash out a dive.',                             depthRequired: 14, cost: 300, scope: 'gauntlet', gauntlet: 'don' },
-  { id: 'dg_second_wind',  name: 'Second Wind',      description: 'Once per run, the deep spits you back up: the blow that would sink you leaves you at 25% HP instead.', depthRequired: 15, cost: 360, scope: 'gauntlet', gauntlet: 'don' },
   // ── Bespoke to Don's — no Davy equivalent. Risk/reward + build-shaping. ──────
   { id: 'dg_loan_shark',   name: 'Loan Shark',       description: 'Sign the Don’s terms: deal 25% MORE damage for the whole dive, but take 18% more from every hit. The debt always comes due. Stacks with your other damage and plate.', depthRequired: 0, cost: 240, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_blood_oath',   name: 'Blood Oath',       description: 'Swear in before you dive: start every run already holding one random boon, a favor from the deep to build on from the first fight.', depthRequired: 4, cost: 280, scope: 'gauntlet', gauntlet: 'don' },
@@ -434,20 +435,20 @@ export function gauntletRunHpMult(unlocked: string[] | null | undefined): number
   return u.includes('diving_bell') ? 1.15 : 1
 }
 
-/** Veteran's Start (Davy, depth 5) / Deep Veteran (Don's, depth 8): the COMBAT
- *  depth the run opens at (enemies + boon/curse cadence + the displayed depth).
- *  Rewards stay keyed to ships actually sunk, so this never inflates pot /
- *  chests / Fathoms / record. */
+/** Veteran's Start (Davy OR Don's): the COMBAT depth the run opens at (enemies +
+ *  boon/curse cadence + the displayed depth) — depth 5 for both. Rewards stay
+ *  keyed to ships actually sunk, so this never inflates pot / chests / Fathoms /
+ *  record. */
 export function gauntletStartDepth(unlocked: string[] | null | undefined): number {
   const u = unlocked ?? []
-  if (u.includes('dg_veteran')) return 8
-  return u.includes('veterans_start') ? 5 : 1
+  return (u.includes('veterans_start') || u.includes('dg_veteran')) ? 5 : 1
 }
 
-/** Second Wind (Don's): lethal-save charges seeded at run start on TOP of any
- *  from equipped items — the deep spits you back up once per run. */
-export function gauntletStartAnchorSaves(unlocked: string[] | null | undefined): number {
-  return (unlocked ?? []).includes('dg_second_wind') ? 1 : 0
+/** Extra lethal-save charges seeded at run start (beyond any from equipped
+ *  items). No upgrade grants these right now — Second Wind was removed — so this
+ *  is 0; kept as the hook if a run-start save is ever re-added. */
+export function gauntletStartAnchorSaves(_unlocked: string[] | null | undefined): number {
+  return 0
 }
 
 /** The depth offset Veteran's Start adds to the combat depth (0 without it). */
@@ -483,9 +484,9 @@ export function gauntletDamageTakenMod(unlocked: string[] | null | undefined): n
  *  DEALT during Gauntlet runs (into runRaidMods). */
 export function gauntletDamageMod(unlocked: string[] | null | undefined): number {
   const u = unlocked ?? []
-  let base = u.includes('dg_power_3') ? 30   // Ghost Gunners III (Don's)
-           : u.includes('dg_power_2') ? 20   // Ghost Gunners II
-           : u.includes('dg_power')   ? 12   // Ghost Gunners I
+  let base = u.includes('dg_power_3') ? 22   // Ghost Gunners III (Don's)
+           : u.includes('dg_power_2') ? 16   // Ghost Gunners II
+           : u.includes('dg_power')   ? 10   // Ghost Gunners I
            : u.includes('gunners_eye') ? 10  // Gunner's Eye (Davy)
            : 0
   // Loan Shark (Don's): the payout side of the pact — +25% damage dealt, stacking
@@ -519,15 +520,17 @@ export function gauntletBoonLuck(unlocked: string[] | null | undefined): number 
   return u.includes('diviners_charm') ? 1.7 : 1
 }
 
-/** Second Cast (Davy) / Rechamber (Don's): boon rerolls per draft. */
+/** Second Cast (Davy) / Rechamber I-II (Don's): boon rerolls per draft. */
 export function gauntletBoonRerolls(unlocked: string[] | null | undefined): number {
   const u = unlocked ?? []
+  if (u.includes('dg_reroll_boon_2')) return 2
   return u.includes('second_cast') || u.includes('dg_reroll_boon') ? 1 : 0
 }
 
-/** Salt Ward (Davy) / Break the Hex (Don's): curse rerolls per imposed curse. */
+/** Salt Ward (Davy) / Break the Hex I-II (Don's): curse rerolls per imposed curse. */
 export function gauntletCurseRerolls(unlocked: string[] | null | undefined): number {
   const u = unlocked ?? []
+  if (u.includes('dg_reroll_curse_2')) return 2
   return u.includes('salt_ward') || u.includes('dg_reroll_curse') ? 1 : 0
 }
 
