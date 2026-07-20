@@ -1215,11 +1215,11 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
 
   // ── Don's Gauntlet curses (gauntlet: 'don' — never surface in Davy's) ────────
   {
-    id: 'glass_hull', name: 'Glass Hull', gauntlet: 'don',
-    flavor: 'The ghost fleet trades its armor for teeth, and dares you to do the same.',
+    id: 'narrowed_sights', name: 'Narrowed Sights', gauntlet: 'don',
+    flavor: 'The green pinches your glass to a needle’s eye. The perfect shot all but vanishes.',
     tiers: [
-      { desc: 'Deal +15% damage, take +15%', detail: 'A gamble the deep forces on you: every shot you fire lands 15% harder, but every hull that hits you lands 15% harder too. Both ways, all fight.', effects: [{ kind: 'damageMult', mult: 1.15 }, { kind: 'incomingDmgMult', mult: 1.15, scope: 'allRemaining' }] as TideEffect[] },
-      { desc: 'Deal +25% damage, take +25%', detail: 'The trade steepens: +25% to the damage you deal AND the damage you take, for the rest of the run.', effects: [{ kind: 'damageMult', mult: 1.25 }, { kind: 'incomingDmgMult', mult: 1.25, scope: 'allRemaining' }] as TideEffect[] },
+      { desc: 'The gold crit band shrinks 30%', detail: 'The gold "perfect shot" band on your aim bar narrows by 30% for the rest of the run — crits are far harder to land because the target is simply smaller. Boons that widen the band still help.', effects: [{ kind: 'critZoneScale', mult: 0.70 }] as TideEffect[] },
+      { desc: 'The gold crit band shrinks 45%', detail: 'The band pinches to a sliver — 45% narrower. Landing a critical takes near-perfect timing.', effects: [{ kind: 'critZoneScale', mult: 0.55 }] as TideEffect[] },
     ],
   },
   {
@@ -1263,11 +1263,27 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
     ],
   },
   {
-    id: 'the_undertow', name: 'The Undertow', gauntlet: 'don',
-    flavor: 'The current drags at you before every bell. Never the same way twice, never in your favour.',
+    id: 'bloodscent', name: 'Bloodscent', gauntlet: 'don',
+    flavor: 'The green guides their gunners to your seams. Every hull down here shoots for the kill.',
     tiers: [
-      { desc: 'Start each fight under a random debuff', detail: 'Every fight opens with your ship dragged under one random debuff for the fight: WEAKENED (−15% damage dealt), FEEBLE (+15% damage taken), or SLOWED. Which one is always a nasty surprise. A Mender cleanses it.', effects: [{ kind: 'randomFightDebuff', magnitude: 0.15 }] as TideEffect[] },
-      { desc: 'Start each fight under a STRONGER random debuff', detail: 'Every fight opens with a stronger random debuff: WEAKENED (−25% damage), FEEBLE (+25% damage taken), or a heavier SLOW.', effects: [{ kind: 'randomFightDebuff', magnitude: 0.25 }] as TideEffect[] },
+      { desc: 'Enemies crit you 15% more often', detail: 'Every enemy in the run gains a flat +15% chance to land a CRITICAL hit on you — the big, painful shots come far more often. Dodging still avoids them entirely.', effects: [{ kind: 'incomingCritReduction', chance: -0.15 }] as TideEffect[] },
+      { desc: 'Enemies crit you 28% more often', detail: 'The scent thickens: enemies land criticals on you 28% more often. Bracing and dodging matter more than ever.', effects: [{ kind: 'incomingCritReduction', chance: -0.28 }] as TideEffect[] },
+    ],
+  },
+  {
+    id: 'flare_storm', name: 'Flare Storm', gauntlet: 'don',
+    flavor: 'The green lights the whole sky. When the keeper’s crews throw flares, they come like a squall.',
+    tiers: [
+      { desc: 'Flare barrages come faster and hit 30% harder', detail: 'On any enemy that throws a Flare Barrage (the swat-the-flares, don’t-tap-the-red test), the fuses run tighter — flares resolve faster — and every flare you let through or feint you tap chips you for 30% more. Enemies with no flares are unaffected.', effects: [{ kind: 'flareStorm', fuseMult: 0.85, dmgMult: 1.30 }] as TideEffect[] },
+      { desc: 'Flare barrages come much faster and hit 55% harder', detail: 'The sky never darkens. Flare fuses run much tighter and each mistake chips you for 55% more. Only enemies that throw flares are affected — but this deep, plenty do.', effects: [{ kind: 'flareStorm', fuseMult: 0.70, dmgMult: 1.55 }] as TideEffect[] },
+    ],
+  },
+  {
+    id: 'barrier_regrowth', name: 'Barrier Regrowth', gauntlet: 'don',
+    flavor: 'Ghost-iron knits itself shut faster than you can peel it. Hit it all at once, or not at all.',
+    tiers: [
+      { desc: 'Enemies carry a 25% barrier that reknits 8% each round', detail: 'Every enemy starts each fight behind a barrier worth 25% of its hull, and at the top of every round the barrier reknits 8% of its full value before your shot lands. A slow chip never breaks through — you have to burst it open in one turn (burn bleeds through, the Railgun pierces it).', effects: [{ kind: 'enemyShield', pctMax: 0.25 }, { kind: 'barrierRegrow', pctMax: 0.08 }] as TideEffect[] },
+      { desc: 'Enemies carry a 35% barrier that reknits 14% each round', detail: 'The warding is relentless — a 35% barrier that reknits 14% of its full value every round. Only a heavy burst opens the hull beneath.', effects: [{ kind: 'enemyShield', pctMax: 0.35 }, { kind: 'barrierRegrow', pctMax: 0.14 }] as TideEffect[] },
     ],
   },
 ]

@@ -291,6 +291,15 @@ export type TideEffect =
   /** The Undertow: you START each fight under one random debuff (weaken /
    *  feeble / slowed), scaled by `magnitude`. */
   | { kind: 'randomFightDebuff'; magnitude: number }
+  /** Flare Storm (Don's curse): the Quartermaster's Flare Barrage burns hotter —
+   *  `fuseMult` < 1 tightens the fuse (flares resolve faster) and `dmgMult` > 1
+   *  raises the chip per missed flare / tapped feint. Inert on enemies that
+   *  carry no flares (decoyCount 0). */
+  | { kind: 'flareStorm'; fuseMult: number; dmgMult: number }
+  /** Barrier Regrowth (Don's curse): the enemy barrier reknits `pctMax` of its
+   *  full value each round before your shot lands, so a slow chip never breaks
+   *  through — you must burst. Pairs with an enemyShield grant on the curse. */
+  | { kind: 'barrierRegrow'; pctMax: number }
   // ── Meta (post-raid only) ───────────────────────────────────────
   /** Doubloons granted / deducted at raid end. */
   | { kind: 'doubloonsAtRaidEnd'; n: number }
@@ -373,6 +382,8 @@ export function effectTone(e: TideEffect): 'good' | 'bad' | 'neutral' {
     case 'enemyParry':          return 'bad'
     case 'enemyLifesteal':      return 'bad'
     case 'randomFightDebuff':   return 'bad'
+    case 'flareStorm':          return 'bad'
+    case 'barrierRegrow':       return 'bad'
     case 'confuse':      return e.chance > 0 ? 'bad' : 'neutral'
     case 'hideEnemyHp': case 'hideEnemyCharges': return e.chance > 0 ? 'bad' : 'neutral'
     case 'iceAffinity':  return 'good'
@@ -1076,6 +1087,8 @@ export function describeEffect(e: TideEffect): string {
     case 'enemyParry':            return `Enemies ${Math.round(e.chance * 100)}% to parry your shots`
     case 'enemyLifesteal':        return `Enemies heal ${Math.round(e.pct * 100)}% of the damage they deal you`
     case 'randomFightDebuff':     return `Start each fight under a random debuff`
+    case 'flareStorm':            return `Flare barrages come faster and hit harder`
+    case 'barrierRegrow':         return `Enemy barriers reknit each round`
   }
 }
 

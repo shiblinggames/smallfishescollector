@@ -696,7 +696,9 @@ export default function RaidCombat({
     let enemyChargeSteal = 0       // Cutpurse Tide
     let enemyParryChance = 0       // Thornmail
     let enemyLifesteal = 0         // The Tithe
-    let randomFightDebuff = 0      // The Undertow
+    let randomFightDebuff = 0      // The Undertow / Bloodscent
+    let flareFuseMult = 1, flareDmgMult = 1   // Flare Storm
+    let barrierRegrow = 0          // Barrier Regrowth
     for (const e of tideEffects) {
       switch (e.kind) {
         case 'damageMult':            dmgMult *= e.mult; break
@@ -811,6 +813,8 @@ export default function RaidCombat({
         case 'enemyParry':            enemyParryChance = Math.max(enemyParryChance, e.chance); break
         case 'enemyLifesteal':        enemyLifesteal = Math.max(enemyLifesteal, e.pct); break
         case 'randomFightDebuff':     randomFightDebuff = Math.max(randomFightDebuff, e.magnitude); break
+        case 'flareStorm':            flareFuseMult *= e.fuseMult; flareDmgMult *= e.dmgMult; break
+        case 'barrierRegrow':         barrierRegrow = Math.max(barrierRegrow, e.pctMax); break
         case 'instantHeal': case 'instantHealPct': case 'fullHeal': case 'doubloonsAtRaidEnd': break // handled at pick-time
       }
     }
@@ -840,6 +844,7 @@ export default function RaidCombat({
       shieldPierceFrac, stunOnHitChance, stunOnHitTurns, guaranteedCritEvery, stealChargeChance,
       parryChance, parryReflectPct, aimClarity, randomFightBuff, abilityRefundChance,
       enemyUltDmgMult, enemyUltChargeChance, enemyChargeSteal, enemyParryChance, enemyLifesteal, randomFightDebuff,
+      flareFuseMult, flareDmgMult, barrierRegrow,
     }
   }, [tideEffects, isBoss, runKills, runDepth])
   // Shrouded Hull / Shuttered Ports curses — rolled ONCE per fight (RaidCombat
@@ -2302,8 +2307,10 @@ export default function RaidCombat({
   const flareClusterChance = flareTier >= 2 ? 0.42 : 0.24
   // Challenge mode can tighten the fuse (flareFuseMult < 1 = faster) and hit
   // harder (flareDmgMult > 1) so the barrage is a real step up, not just stats.
-  const flareFuseScale     = (flareTier >= 3 ? 0.82 : flareTier === 2 ? 0.95 : 1.15) * (enemy.flareFuseMult ?? 1)
-  const flarePerMiss = Math.round(Math.max(Math.round(enemy.minDmg * 0.7), Math.round(playerHpMax * 0.032)) * (enemy.flareDmgMult ?? 1))
+  // Flare Storm curse folds in on top of the per-enemy tuning: a tighter fuse
+  // (tide.flareFuseMult < 1) and hotter chip (tide.flareDmgMult > 1).
+  const flareFuseScale     = (flareTier >= 3 ? 0.82 : flareTier === 2 ? 0.95 : 1.15) * (enemy.flareFuseMult ?? 1) * tide.flareFuseMult
+  const flarePerMiss = Math.round(Math.max(Math.round(enemy.minDmg * 0.7), Math.round(playerHpMax * 0.032)) * (enemy.flareDmgMult ?? 1) * tide.flareDmgMult)
   // Tapping a live-shell feint hurts MORE than letting a flare through — the
   // whole point of the "don't tap the red" test is that grabbing one bites.
   const flarePerFeint = Math.round(flarePerMiss * 1.4)
@@ -3309,6 +3316,14 @@ export default function RaidCombat({
     // can deplete them in lockstep with the animation (see syncPHp/syncEHp)
     // instead of the whole turn's soak landing the instant it resolves.
     const pushStep = (s: Step) => { steps.push({ ...s, pShield: abyssalShieldRef.current, eShield: enemyShieldRef.current }) }
+    // Barrier Regrowth curse: the enemy barrier reknits a slice of its full value
+    // at the top of each round, BEFORE the player's shot lands — so a slow chip
+    // never breaks through and the hull only takes damage once you burst the wall
+    // open in one turn. Only the ref is bumped here; the next pushStep's eShield
+    // snapshot carries it to the bar. Inert when the enemy has no barrier.
+    if (tide.barrierRegrow > 0 && enemyShieldMax > 0 && eHp > 0 && enemyShieldRef.current < enemyShieldMax) {
+      enemyShieldRef.current = Math.min(enemyShieldMax, enemyShieldRef.current + Math.round(enemyShieldMax * tide.barrierRegrow))
+    }
     // HP appliers that ALSO settle the matching shield bar to this step's
     // snapshot. Used everywhere a step's HP is committed during playback.
     const syncPHp = (step: Step) => { setPlayerHp(step.pHp); if (step.pShield != null) setAbyssalShieldHp(step.pShield) }
