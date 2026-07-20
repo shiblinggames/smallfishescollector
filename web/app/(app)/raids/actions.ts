@@ -13,7 +13,7 @@ import { getShipSkin } from '@/lib/shipSkins'
 import { computeRaidMap } from '@/lib/raidMap'
 import { buildClearedSet } from '@/lib/raidProgress'
 import { getRaidConfigById, raidLootIds, ITEM_GRANTS, MAX_CRATE_BASE_DOUBLOONS } from '@/lib/raidRegistry'
-import { bonusChargeSlots, gauntletRepairHealMult, donsRaidHpMult, donsRaidDamageMult } from '@/lib/gauntletUpgrades'
+import { bonusChargeSlots, gauntletRepairHealMult, donsRaidHpMult } from '@/lib/gauntletUpgrades'
 import { getShipAugment, MANOWAR_TIER, type ShipAugment } from '@/lib/shipAugments'
 import { settleUltimateBuild } from '@/lib/ultimateBuild'
 
@@ -189,7 +189,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
     shipSkins:            (profile?.ship_skins as string[] | null) ?? [],
     equippedRaidItems:    equippedItems,
     ownedRaidItems:       (profile?.raid_items as string[] | null) ?? [],
-    classDamageMult:      classEffects.damageMult * navRenown.damageMult * donsRaidDamageMult(accountUpgrades),
+    classDamageMult:      classEffects.damageMult * navRenown.damageMult,
     classDoubloonMult:    classEffects.doubloonMult,
     shipClasses:          shipClassPicks,
     equippedRepairKit:    (profile?.equipped_repair_kit as string | null) ?? 'basic_repair_kit',

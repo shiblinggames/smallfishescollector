@@ -267,7 +267,6 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
   { id: 'dg_consigliere',  name: 'Consigliere',      description: 'The Don whispers in your ear. Synergy offers — confluences and convergences — surface on far more of your power drafts, so you actually build toward them.', depthRequired: 6, cost: 300, scope: 'gauntlet', gauntlet: 'don' },
   // ── Ship & Shore (scope 'account'/'world') — permanent topside power. ────────
   { id: 'dg_deep_plating',   name: 'Deep-Sea Plating',   description: 'The Don’s shipwrights re-hull you in pressure-forged plate: 10% more ship max HP in EVERY raid and gauntlet dive, forever.', depthRequired: 10, cost: 320, scope: 'account', category: 'raids', gauntlet: 'don' },
-  { id: 'dg_ghost_ordnance', name: 'Ghost Ordnance',     description: 'His gunners re-bore your cannons to the ghost-fleet pattern: your guns hit 8% harder in EVERY raid and gauntlet dive, forever.', depthRequired: 14, cost: 380, scope: 'account', category: 'raids', gauntlet: 'don' },
   { id: 'dg_master_catcher', name: 'Relentless Catcher', description: 'Upgrades your Tireless Catcher: the Auto Catcher now reels in epic fish on its own too, on top of rares. Legendaries and the Ancient Deep still want your hand.', depthRequired: 18, cost: 330, scope: 'world', category: 'fishing', gauntlet: 'don', requires: 'tireless_catcher' },
   { id: 'dg_abyssal_forge', name: 'The Abyssal Forge', description: 'Fuse two forged raid items into one tier-3 Abyssal item, carrying both effect sets in a single mount. The endgame forge.', depthRequired: 20, cost: 700, scope: 'account', category: 'raids', gauntlet: 'don' },
 ]
@@ -374,12 +373,6 @@ export function hasAbyssalForge(unlocked: string[] | null | undefined): boolean 
  *  gauntlet dive. Read against the UNION of both Lockers' upgrades. */
 export function donsRaidHpMult(unlocked: string[] | null | undefined): number {
   return (unlocked ?? []).includes('dg_deep_plating') ? 1.10 : 1
-}
-
-/** Ghost Ordnance (Don's account perk): +8% raid damage everywhere. Read
- *  against the UNION of both Lockers' upgrades. */
-export function donsRaidDamageMult(unlocked: string[] | null | undefined): number {
-  return (unlocked ?? []).includes('dg_ghost_ordnance') ? 1.08 : 1
 }
 
 /** Seasoned Timbers: repair-kit heal multiplier in EVERY raid (account-wide). */
