@@ -1665,9 +1665,12 @@ export interface BoonOffer {
  *  families already at max tier are excluded. Picks are RARITY-WEIGHTED, so
  *  Legendary/Rare boons surface far less often than Commons. No infinite
  *  single-boon stacking. */
-export function drawBoons(n: number, owned: Record<string, number> = {}, luckMult = 1, commonSkew = 0, variant: GauntletVariant = 'davy'): BoonOffer[] {
+export function drawBoons(n: number, owned: Record<string, number> = {}, luckMult = 1, commonSkew = 0, variant: GauntletVariant = 'davy', banned: Iterable<string> = []): BoonOffer[] {
+  // Blacklist (Don's Locker): families the player banished this run never surface
+  // again. Also used for single-slot replacement (pass the other shown ids too).
+  const ban = banned instanceof Set ? banned : new Set(banned)
   const avail = GAUNTLET_BOONS
-    .filter(fam => inGauntletPool(fam.gauntlet, variant))
+    .filter(fam => inGauntletPool(fam.gauntlet, variant) && !ban.has(fam.id))
     .map(fam => ({ fam, next: (owned[fam.id] ?? 0) + 1 }))
     .filter(x => x.next <= x.fam.tiers.length)
   // Diviner's Charm (luckMult > 1) scales up the draft weight of the non-Common

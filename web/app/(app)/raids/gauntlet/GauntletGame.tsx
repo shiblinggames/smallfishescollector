@@ -36,7 +36,7 @@ import GauntletTermsPanel from './GauntletTermsPanel'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, setGauntletUpgradeActive, markGauntletIntroSeen, recordGauntletHit, wagerGauntletFathoms, markConfluencesSeen, checkpointGauntletRun, pauseGauntletRun, resumeGauntletRun, buyBaitWithFathoms, rollDavyOffer } from './actions'
 import { offerCoinMult, offerChestMult, offerCopy, offerTakenLine, type DavyOffer } from '@/lib/gauntletOffer'
 import { FATHOM_BAITS } from '@/lib/bait'
-import { upgradesForVariant, getGauntletUpgrade, upgradeTierInfo, romanTier, COMING_SOON_UPGRADES, activeGauntletUpgrades, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck, gauntletBoonRerolls, gauntletCurseRerolls, gauntletStartAnchorSaves } from '@/lib/gauntletUpgrades'
+import { upgradesForVariant, getGauntletUpgrade, upgradeTierInfo, romanTier, COMING_SOON_UPGRADES, activeGauntletUpgrades, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck, gauntletBoonRerolls, gauntletCurseRerolls, gauntletBoonFilters, gauntletStartAnchorSaves } from '@/lib/gauntletUpgrades'
 import { type ShipAugment } from '@/lib/shipAugments'
 import { getSpecialItem } from '@/lib/specialItems'
 import { buySpecialItem } from '@/app/(app)/fishing/actions'
@@ -318,6 +318,11 @@ export default function GauntletGame(props: GauntletGameProps) {
   const [pendingReprieve, setPendingReprieve] = useState<Reprieve | null>(null)
   // Second Cast: rerolls left on the CURRENT boon draft (set when it opens).
   const [rerollsLeft, setRerollsLeft] = useState(0)
+  // Blacklist (Don's): boons the player has banished stay gone for the whole run,
+  // so the banned set lives in a ref (read by every drawBoons, survives closures).
+  // `filtersLeft` is the per-RUN ban budget remaining (drives the Ban button).
+  const bannedBoonsRef = useRef<Set<string>>(new Set())
+  const [filtersLeft, setFiltersLeft] = useState(0)
   // Salt Ward: rerolls left on the CURRENT imposed curse (set when it appears).
   const [curseRerollsLeft, setCurseRerollsLeft] = useState(0)
   // Depth the current curse was drawn at — so a Salt Ward reroll redraws at the
@@ -379,6 +384,10 @@ export default function GauntletGame(props: GauntletGameProps) {
   // drafted through the same synergy slot; see drawConvergenceOffer / applyConfluence).
   const [convergencesTaken, setConvergencesTaken] = useState<string[]>([])
   const [pendingBoons, setPendingBoons] = useState<BoonOffer[] | null>(null)
+  // Bumped only when a genuinely NEW draft is dealt (fresh draw or a reroll), so
+  // the seal→flip reveal fires for those but NOT for an in-place Blacklist swap
+  // (which mutates pendingBoons but must not re-seal every card).
+  const [draftGen, setDraftGen] = useState(0)
   // A qualifying confluence offered as a card in this draft (replaces one boon
   // slot — the Hades-duo opportunity cost). Null when none is offered.
   const [pendingConfluence, setPendingConfluence] = useState<ConfluenceOffer | null>(null)
@@ -664,6 +673,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       silencedCrewIdsRef.current = []
       setPendingCurse(null)
       setBoonTiers({}); setConfluencesTaken([]); setPendingBoons(null); setPendingConfluence(null); setPendingReprieve(null); offeredConfluenceIdsRef.current = new Set()
+      bannedBoonsRef.current = new Set(); setFiltersLeft(gauntletBoonFilters(activeUpgrades))
       setConfluenceUnlocked(null); setConfluenceBanner(null); setCurseShed(null)
       nextShrineRef.current = SHRINE_FIRST_DEPTH; setShrineCoin(null); setShrineFlipping(false); setBoonFromShrine(false)
       peekFightRef.current = null; setPeekFight(null)
@@ -1004,7 +1014,11 @@ export default function GauntletGame(props: GauntletGameProps) {
       }
     })
     return () => timers.forEach(clearTimeout)
-  }, [phase, pendingBoons, pendingConfluence])
+    // NOTE: intentionally keyed on draftGen, not pendingBoons — a Blacklist swap
+    // mutates pendingBoons but must not restart the reveal. Reads pendingBoons at
+    // run time; phase entering/leaving 'boon' still drives the seal + clear.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, draftGen, pendingConfluence])
 
   // Auto-dismiss the legendary banner a beat after it lands.
   useEffect(() => {
@@ -1089,13 +1103,14 @@ export default function GauntletGame(props: GauntletGameProps) {
     // Draw the boons up front so an exhausted pool ([] when every family is
     // maxed) falls through to the breather instead of an empty draft screen.
     const boons = isBoonDepth(nextDepth, termFxRef.current.boonFrequencyMult)
-      ? drawBoons(termFxRef.current.boonPicks, boonTiers, gauntletBoonLuck(activeUpgrades), termFxRef.current.commonSkew, props.variant)
+      ? drawBoons(termFxRef.current.boonPicks, boonTiers, gauntletBoonLuck(activeUpgrades), termFxRef.current.commonSkew, props.variant, bannedBoonsRef.current)
       : []
     if (curse || boons.length > 0) {
       // Set the boon draft now even on a curse round, so applyCurse can hand off
       // to the boon screen (it routes to 'boon' whenever pendingBoons is set).
       if (boons.length > 0) {
         setPendingBoons(boons)
+        setDraftGen(g => g + 1)
         setBoonFromShrine(false)
         setRerollsLeft(gauntletBoonRerolls(activeUpgrades))
         // Confluence draft (Hades-duo model): if you QUALIFY for a synergy you
@@ -1155,7 +1170,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   // spent, charge nothing and just move on.
   function shrineBloodPrice() {
     runEventsRef.current.push({ depth: rollStateRef.current.cleared + skipOffset, kind: 'shrine' })
-    const draft = drawBoons(termFxRef.current.boonPicks, boonTiers, gauntletBoonLuck(activeUpgrades), termFxRef.current.commonSkew, props.variant)
+    const draft = drawBoons(termFxRef.current.boonPicks, boonTiers, gauntletBoonLuck(activeUpgrades), termFxRef.current.commonSkew, props.variant, bannedBoonsRef.current)
     if (draft.length === 0) { setPhase('between'); return }
     // The Full Measure (a signed Term): he does not take half of anything.
     const left = termFxRef.current.bloodPriceToOne
@@ -1165,6 +1180,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     setPlayerHP(left)
     vibrate([0, 60, 30, 30])
     setPendingBoons(draft)
+    setDraftGen(g => g + 1)
     setRerollsLeft(0)
     setPendingReprieve(null)
     { const conf = rollSynergyOffer(); if (conf) offeredConfluenceIdsRef.current.add(conf.id); setPendingConfluence(conf) }
@@ -1275,9 +1291,34 @@ export default function GauntletGame(props: GauntletGameProps) {
   // synergy card re-rolls with them).
   function rerollBoons() {
     if (rerollsLeft <= 0) return
-    setPendingBoons(drawBoons(termFxRef.current.boonPicks, boonTiers, gauntletBoonLuck(activeUpgrades), termFxRef.current.commonSkew, props.variant))
+    setPendingBoons(drawBoons(termFxRef.current.boonPicks, boonTiers, gauntletBoonLuck(activeUpgrades), termFxRef.current.commonSkew, props.variant, bannedBoonsRef.current))
+    setDraftGen(g => g + 1)
     { const conf = rollSynergyOffer(); if (conf) offeredConfluenceIdsRef.current.add(conf.id); setPendingConfluence(conf) }
     setRerollsLeft(r => r - 1)
+  }
+
+  // Blacklist (Don's): banish ONE offered boon for the rest of the run. The
+  // banned family is added to the run-long set (so it never surfaces in any
+  // later draw), the ban budget drops, and this slot is refilled on the spot
+  // with a fresh boon that isn't banned and isn't one of the others shown. The
+  // replacement keeps the slot's index, so it renders face-up straight away.
+  function banBoon(idx: number) {
+    if (filtersLeft <= 0 || !pendingBoons) return
+    const target = pendingBoons[idx]
+    if (!target) return
+    bannedBoonsRef.current.add(target.id)
+    const others = pendingBoons.filter((_, i) => i !== idx).map(x => x.id)
+    const excl = new Set<string>([...bannedBoonsRef.current, ...others])
+    const [fresh] = drawBoons(1, boonTiers, gauntletBoonLuck(activeUpgrades), termFxRef.current.commonSkew, props.variant, excl)
+    setPendingBoons(prev => {
+      if (!prev) return prev
+      const next = prev.slice()
+      if (fresh) next[idx] = fresh          // swap in a replacement
+      else next.splice(idx, 1)              // pool exhausted — just drop the slot
+      return next
+    })
+    setFiltersLeft(n => n - 1)
+    hapticTap()
   }
 
   // Salt Ward: throw the imposed curse back and draw a different one. Tries a few
@@ -2993,6 +3034,21 @@ export default function GauntletGame(props: GauntletGameProps) {
                     <span className="font-karla font-800 uppercase" style={{ flexShrink: 0, fontSize: '0.52rem', letterSpacing: '0.13em', color: legendary ? '#1a1206' : rm.color, background: legendary ? rm.color : `${rm.color}26`, border: `1px solid ${rm.color}`, borderRadius: 999, padding: '0.2rem 0.55rem', boxShadow: legendary ? `0 0 12px ${rm.color}88` : 'none' }}>
                       {rm.label}
                     </span>
+                    {/* Blacklist (Don's): banish this boon for the rest of the run.
+                        Only appears once the card is face-up and the player still
+                        has a ban to spend. Red-tinted so it reads as "remove", not
+                        "pick". stopPropagation keeps it from selecting the boon. */}
+                    {flipped && filtersLeft > 0 && (
+                      <span
+                        role="button" tabIndex={0} aria-label={`Banish ${b.name} for the rest of the run`}
+                        onClick={(e) => { e.stopPropagation(); banBoon(idx) }}
+                        className="tap"
+                        style={{ flexShrink: 0, width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(220,70,70,0.14)', border: '1px solid rgba(230,90,90,0.5)', color: '#f0a0a0', cursor: 'pointer', lineHeight: 1 }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden>
+                          <circle cx="12" cy="12" r="9" /><line x1="5.6" y1="5.6" x2="18.4" y2="18.4" />
+                        </svg>
+                      </span>
+                    )}
                     <span
                       role="button" tabIndex={0} aria-label={`What ${b.name} does`}
                       onClick={(e) => { e.stopPropagation(); setDetailEffect({ kind: 'boon', name: `${b.name} ${boonTierLabel(b.tier)}`, desc: b.desc, detail: b.detail, flavor: b.flavor, count: b.tier, maxTier }) }}
@@ -3227,6 +3283,14 @@ export default function GauntletGame(props: GauntletGameProps) {
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2v6h-6" /><path d="M3 12a9 9 0 0 1 15-6.7L21 8" /><path d="M3 22v-6h6" /><path d="M21 12a9 9 0 0 1-15 6.7L3 16" /></svg>
               Reroll · {rerollsLeft} left
             </button>
+          )}
+          {/* Blacklist hint — teaches the red ✕ on the cards and tracks the
+              per-run ban budget. Only while a ban is still available. */}
+          {filtersLeft > 0 && revealDone && (
+            <p className="font-karla" style={{ marginTop: rerollsLeft > 0 ? 9 : 16, fontSize: '0.62rem', color: 'rgba(240,160,160,0.82)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden><circle cx="12" cy="12" r="9" /><line x1="5.6" y1="5.6" x2="18.4" y2="18.4" /></svg>
+              Tap ✕ to banish a boon for the run · {filtersLeft} left
+            </p>
           )}
           {/* Codex access — review what a synergy does / what you're building
               toward right when you're deciding. Lights violet when one is on

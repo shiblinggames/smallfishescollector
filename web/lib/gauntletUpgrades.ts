@@ -243,6 +243,8 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
   { id: 'dg_fathoms',      name: 'Spoils of the Deep', description: 'Earn 40% more Fathoms from every dive, win or lose. Grab it early and the grind speeds up.', depthRequired: 0, cost: 150, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_reroll_boon',  name: 'Rechamber',        description: 'Once per power draft, throw the offered boons back and draw three fresh ones.',  depthRequired: 0,  cost: 175, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_reroll_curse', name: 'Break the Hex',    description: "Once per curse the Locker lays on you, throw it back and force a different one. Could be milder, could be worse.", depthRequired: 0, cost: 190, scope: 'gauntlet', gauntlet: 'don' },
+  { id: 'dg_boon_filter',  name: 'Blacklist',        description: 'Once per dive, banish one offered boon for good — mark it on any power draft and it never surfaces again for the rest of the run. Cut the dead weight so the good draws come up more often.', depthRequired: 0, cost: 200, scope: 'gauntlet', gauntlet: 'don' },
+  { id: 'dg_boon_filter_2', name: 'Blacklist II',    description: 'Banish up to two boons per dive instead of one. Shape the pool harder toward the build you want.', depthRequired: 8, cost: 320, scope: 'gauntlet', gauntlet: 'don', requires: 'dg_boon_filter' },
   { id: 'dg_armor',        name: 'Spectral Plate',   description: 'Take 12% less damage from every enemy for the whole dive.',                       depthRequired: 0,  cost: 210, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_armor_2',      name: 'Spectral Plate II', description: 'Thicker plate: take 18% less damage from every enemy for the whole dive.',        depthRequired: 6,  cost: 320, scope: 'gauntlet', gauntlet: 'don', requires: 'dg_armor' },
   { id: 'dg_armor_3',      name: 'Spectral Plate III', description: 'Ghost-forged plate: take 25% less damage from every enemy for the whole dive.',   depthRequired: 12, cost: 480, scope: 'gauntlet', gauntlet: 'don', requires: 'dg_armor_2' },
@@ -511,4 +513,13 @@ export function gauntletBoonRerolls(unlocked: string[] | null | undefined): numb
 export function gauntletCurseRerolls(unlocked: string[] | null | undefined): number {
   const u = unlocked ?? []
   return u.includes('salt_ward') || u.includes('dg_reroll_curse') ? 1 : 0
+}
+
+/** Blacklist (Don's): how many boons the player may banish per RUN (not per
+ *  draft). Tier 2 raises the cap to 2. A banished boon never surfaces again for
+ *  the rest of that dive. */
+export function gauntletBoonFilters(unlocked: string[] | null | undefined): number {
+  const u = unlocked ?? []
+  if (u.includes('dg_boon_filter_2')) return 2
+  return u.includes('dg_boon_filter') ? 1 : 0
 }
