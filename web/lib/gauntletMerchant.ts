@@ -23,12 +23,16 @@ export interface MerchantItem {
   color: string
 }
 
+// Fathoms are a TINY currency (a Don's run earns ~depth×2, the shrine wager caps
+// at 10), so the market trades in pocket change: a few Fathoms for the minor
+// picks, 10 max for the extra draft. Cheap enough to actually use every visit,
+// still a real nibble out of the Locker savings you're hoarding for upgrades.
 export const MERCHANT_ITEMS: Record<MerchantItemKind, MerchantItem> = {
-  heal:    { id: 'heal',    name: 'Patch Kit',       blurb: 'Ghost-market repairs — mend 35% of your max hull, right here.',                 price: 120, color: '#86efac' },
-  cleanse: { id: 'cleanse', name: 'Hex-Breaker',     blurb: 'The fence knows a charm-worker. Lift one curse the Locker laid on you.',        price: 150, color: '#c084fc' },
-  charges: { id: 'charges', name: 'Powder Run',      blurb: 'A crate of shot slid across the counter. Open the next fight with a full rack.', price: 90,  color: '#fbbf24' },
-  crew:    { id: 'crew',    name: 'Round of Grog',   blurb: 'Rally the deck — every crew ability comes back ready for the next fight.',      price: 110, color: '#5eead4' },
-  boon:    { id: 'boon',    name: 'Contraband',      blurb: 'Something fell off a passing hull. An extra power draft, here and now.',        price: 220, color: '#8b9cff' },
+  heal:    { id: 'heal',    name: 'Patch Kit',       blurb: 'Ghost-market repairs — mend 35% of your max hull, right here.',                 price: 6,  color: '#86efac' },
+  cleanse: { id: 'cleanse', name: 'Hex-Breaker',     blurb: 'The fence knows a charm-worker. Lift one curse the Locker laid on you.',        price: 8,  color: '#c084fc' },
+  charges: { id: 'charges', name: 'Powder Run',      blurb: 'A crate of shot slid across the counter. Open the next fight with a full rack.', price: 4,  color: '#fbbf24' },
+  crew:    { id: 'crew',    name: 'Round of Grog',   blurb: 'Rally the deck — every crew ability comes back ready for the next fight.',      price: 5,  color: '#5eead4' },
+  boon:    { id: 'boon',    name: 'Contraband',      blurb: 'Something fell off a passing hull. An extra power draft, here and now.',        price: 10, color: '#8b9cff' },
 }
 
 /** All item ids, stable order (for display + the "sold" set). */
