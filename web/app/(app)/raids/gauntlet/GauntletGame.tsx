@@ -2669,6 +2669,7 @@ export default function GauntletGame(props: GauntletGameProps) {
               ownedItems: props.ownedRaidItems,
               ownedSkins: props.ownedShipSkins,
               davyForge: DAVY_FORGE,
+              variant: props.variant,
               // A chest offer multiplies these on the spot, so the rows the player is
               // staring at visibly jump the moment Davy leans over the rail.
               oddsMult: offerChest,
@@ -4746,13 +4747,6 @@ function LootModal({ mode, don, onClose }: { mode: 'normal' | 'hardcore'; don?: 
   const accent = hardcore ? HC_RED : AC
   const [detail, setDetail] = useState<HaulDrop | null>(null)
 
-  const heavy   = getRaidItem('davys_heavy_cannon')
-  const hand    = getRaidItem('davys_hand_cannon')
-  const bloodCn = getRaidItem('davys_blood_cannon')
-  const gold    = getShipSkin('golden_gauntlet_hull')
-  const badBlood = getShipSkin('bad_blood_hull')
-  const pitch   = getShipSkin(PRESSURE_SKIN_ID)
-
   const GEM_ICON = (
     <svg width="30" height="30" viewBox="0 0 24 24" aria-hidden><path d="M12 2s7 8.6 7 13a7 7 0 1 1-14 0c0-4.4 7-13 7-13z" fill="#d1394b" /><path d="M9.2 12.4a3.4 3.4 0 0 0-.2 4.2" stroke="#fff" strokeOpacity="0.55" strokeWidth="1.3" fill="none" strokeLinecap="round" /></svg>
   )
@@ -4780,33 +4774,39 @@ function LootModal({ mode, don, onClose }: { mode: 'normal' | 'hardcore'; don?: 
   ]
 
   // ── The chase. Art first; the rules are one tap away. ──────────────────────
-  const chase: HaulDrop[] = [
-    heavy && {
-      id: heavy.id, name: heavy.name, img: heavy.image, tag: 'Rare from any chest',
-      desc: heavy.description, how: 'A rare roll in any cash-out chest. The odds climb the deeper you bank.',
-    },
-    hand && {
-      id: hand.id, name: hand.name, img: hand.image, tag: 'Rare from any chest',
-      desc: hand.description, how: 'A rare roll in any cash-out chest. The odds climb the deeper you bank. Forge it with the Heavy to make the Grand Cannon.',
-    },
-    gold && {
-      id: gold.id, name: gold.name, img: gold.imageByTier?.[6], tag: 'Deepest chest only',
-      desc: gold.description, how: `Only rolls from Davy Jones\u2019 Locker, the deepest chest tier. Man-o-War hulls only.`,
-    },
-    bloodCn && {
-      id: bloodCn.id, name: bloodCn.name, img: bloodCn.image, tag: 'Hardcore only', hardcoreOnly: true,
-      desc: bloodCn.description, how: 'A rare roll from the deeper Hardcore chests. The only lifesteal in the game.',
-    },
-    badBlood && {
-      id: badBlood.id, name: badBlood.name, img: badBlood.imageByTier?.[6], tag: 'Hardcore only', hardcoreOnly: true,
-      desc: badBlood.description, how: 'A rare roll from the deeper Hardcore chests. Man-o-War hulls only.',
-    },
-    pitch && {
-      id: pitch.id, name: pitch.name, img: pitch.imageByTier?.[6], tag: `${PRESSURE_SKIN_THRESHOLD}+ Pressure`, hardcoreOnly: true,
-      desc: pitch.description,
-      how: `The rarest thing in the Gauntlet. It is not won by diving deep, it is won by diving deep UNDER WEIGHT: a Hardcore cash-out carrying ${PRESSURE_SKIN_THRESHOLD}+ Pressure from Davy\u2019s Terms, banked from depth ${PRESSURE_SKIN_DEPTH} or deeper. Man-o-War hulls only.`,
-    },
-  ].filter(Boolean) as HaulDrop[]
+  // Variant-specific: the two gauntlets share no chase drops \u2014 each drops its own
+  // Man-o-War hulls (and Davy's its cannons). A shared helper builds a skin tile.
+  const skinDrop = (id: string, tag: string, how: string, hardcoreOnly = false): HaulDrop | null => {
+    const s = getShipSkin(id)
+    return s ? { id: s.id, name: s.name, img: s.imageByTier?.[6], tag, desc: s.description, how, hardcoreOnly } : null
+  }
+  const chase: HaulDrop[] = (don
+    ? [
+        skinDrop('galaxy_hull', 'Deepest chest only',
+          "Only rolls from the deepest Don's Gauntlet chest. Man-o-War hulls only."),
+        skinDrop('dons_ghost_hull', 'Hardcore only',
+          "A rare roll from the deeper Hardcore Don's chests. Man-o-War hulls only.", true),
+      ]
+    : (() => {
+        const heavy   = getRaidItem('davys_heavy_cannon')
+        const hand    = getRaidItem('davys_hand_cannon')
+        const bloodCn = getRaidItem('davys_blood_cannon')
+        return [
+          heavy && { id: heavy.id, name: heavy.name, img: heavy.image, tag: 'Rare from any chest',
+            desc: heavy.description, how: 'A rare roll in any cash-out chest. The odds climb the deeper you bank.' },
+          hand && { id: hand.id, name: hand.name, img: hand.image, tag: 'Rare from any chest',
+            desc: hand.description, how: 'A rare roll in any cash-out chest. The odds climb the deeper you bank. Forge it with the Heavy to make the Grand Cannon.' },
+          skinDrop('golden_gauntlet_hull', 'Deepest chest only',
+            'Only rolls from Davy Jones\u2019 Locker, the deepest chest tier. Man-o-War hulls only.'),
+          bloodCn && { id: bloodCn.id, name: bloodCn.name, img: bloodCn.image, tag: 'Hardcore only', hardcoreOnly: true,
+            desc: bloodCn.description, how: 'A rare roll from the deeper Hardcore chests. The only lifesteal in the game.' },
+          skinDrop('bad_blood_hull', 'Hardcore only',
+            'A rare roll from the deeper Hardcore chests. Man-o-War hulls only.', true),
+          skinDrop(PRESSURE_SKIN_ID, `${PRESSURE_SKIN_THRESHOLD}+ Pressure`,
+            `The rarest thing in the Gauntlet. It is not won by diving deep, it is won by diving deep UNDER WEIGHT: a Hardcore cash-out carrying ${PRESSURE_SKIN_THRESHOLD}+ Pressure from Davy\u2019s Terms, banked from depth ${PRESSURE_SKIN_DEPTH} or deeper. Man-o-War hulls only.`, true),
+        ]
+      })()
+  ).filter(Boolean) as HaulDrop[]
 
   // On Normal, a Hardcore drop is shown but locked. That single grey tile does the
   // job the "here is what Hardcore adds" paragraph was doing, without the paragraph.

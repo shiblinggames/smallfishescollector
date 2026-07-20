@@ -884,6 +884,12 @@ export const GOLD_HULL_SKIN_ID = 'golden_gauntlet_hull'
 export const GOLD_HULL_CHEST_TIER = 5
 export const BLOOD_HULL_SKIN_ID = 'bad_blood_hull'
 export const BLOOD_HULL_CHEST_TIER = 4
+// Don's Gauntlet own hull chases — the Davy hulls never drop in Don's runs, and
+// these never drop in Davy's. Same chest tiers as their Davy counterparts.
+export const GALAXY_HULL_SKIN_ID = 'galaxy_hull'
+export const GALAXY_HULL_CHEST_TIER = 5   // deepest chest, mirrors the Golden Hull
+export const GHOST_HULL_SKIN_ID = 'dons_ghost_hull'
+export const GHOST_HULL_CHEST_TIER = 4    // hardcore, mirrors the Bad Blood Hull
 export const BLOOD_CANNON_ITEM_ID = 'davys_blood_cannon'
 export const BLOOD_CANNON_CHEST_TIER = 3
 
@@ -905,11 +911,15 @@ export function chestOdds(opts: {
   ownedItems: string[]
   ownedSkins: string[]
   davyForge: { result: string; components: string[] }
+  /** Which gauntlet — Don's drops its own hulls and no cannons; Davy's is the
+   *  default table. Omitted = Davy's. */
+  variant?: GauntletVariant
   /** Davy's Offer, when he has offered a heavier chest. Multiplies every drop
    *  chance below (capped), and the cash-out rolls against the very same number. */
   oddsMult?: number
 }): ChestOdd[] {
   const { depth, hardcore, pressure, ownedItems, ownedSkins, davyForge } = opts
+  const isDon = opts.variant === 'don'
   const payDepth = Math.min(depth, GAUNTLET_REWARD_DEPTH_CAP)
   const tier = chestForDepth(payDepth).tier
   const m = (c: number) => Math.min(CHEST_ODDS_CAP, c * (opts.oddsMult ?? 1))
@@ -917,6 +927,16 @@ export function chestOdds(opts: {
   const skin = m(chestSkinDropChance(payDepth))
   const out: ChestOdd[] = []
 
+  if (isDon) {
+    // Don's Gauntlet: its own two hulls, no cannons, no Davy skins.
+    if (tier >= GALAXY_HULL_CHEST_TIER && !ownedSkins.includes(GALAXY_HULL_SKIN_ID)) {
+      out.push({ id: GALAXY_HULL_SKIN_ID, name: 'Galaxy Hull', kind: 'skin', chance: skin })
+    }
+    if (hardcore && tier >= GHOST_HULL_CHEST_TIER && !ownedSkins.includes(GHOST_HULL_SKIN_ID)) {
+      out.push({ id: GHOST_HULL_SKIN_ID, name: "Don's Ghost Hull", kind: 'skin', chance: skin })
+    }
+    return out
+  }
   // The two Davy cannons roll INDEPENDENTLY, and stop once you have forged the Grand.
   if (!ownedItems.includes(davyForge.result)) {
     for (const id of davyForge.components) {

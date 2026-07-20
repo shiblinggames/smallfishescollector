@@ -17,7 +17,7 @@ import { navRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
 import { termPressure, pressureGemMult, pressureFeats, pressureSkinDropChance, resolveTerms, PRESSURE_SKIN_ID, getTerm, type SignedTerms } from '@/lib/gauntletTerms'
 import { grantBadgeDirect } from '@/lib/badgeGrant'
-import { GOLD_HULL_SKIN_ID, GOLD_HULL_CHEST_TIER, BLOOD_HULL_SKIN_ID, BLOOD_HULL_CHEST_TIER, BLOOD_CANNON_ITEM_ID, BLOOD_CANNON_CHEST_TIER, maxPotForDepth, chestForDepth, chestCannonDropChance, chestSkinDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_REWARD_DEPTH_CAP, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, gauntletXpForDepth, gauntletCrewXp, DONS_CHEST_GEM_MULT, CONFLUENCES, hardcoreUnlocked, HARDCORE_LIVE, HARDCORE_UNLOCKS, HARDCORE_RUNS_PER_DAY, HC_FATHOMS_MULT, HC_SURVIVOR_XP_MULT, bloodGemsForDepth, coerceRunStats, chestOdds, type GauntletRunSnapshot, type GauntletRunState, type GauntletVariant } from '@/lib/gauntlet'
+import { GOLD_HULL_SKIN_ID, GOLD_HULL_CHEST_TIER, BLOOD_HULL_SKIN_ID, BLOOD_HULL_CHEST_TIER, GALAXY_HULL_SKIN_ID, GALAXY_HULL_CHEST_TIER, GHOST_HULL_SKIN_ID, GHOST_HULL_CHEST_TIER, BLOOD_CANNON_ITEM_ID, BLOOD_CANNON_CHEST_TIER, maxPotForDepth, chestForDepth, chestCannonDropChance, chestSkinDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_REWARD_DEPTH_CAP, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, gauntletXpForDepth, gauntletCrewXp, DONS_CHEST_GEM_MULT, CONFLUENCES, hardcoreUnlocked, HARDCORE_LIVE, HARDCORE_UNLOCKS, HARDCORE_RUNS_PER_DAY, HC_FATHOMS_MULT, HC_SURVIVOR_XP_MULT, bloodGemsForDepth, coerceRunStats, chestOdds, type GauntletRunSnapshot, type GauntletRunState, type GauntletVariant } from '@/lib/gauntlet'
 import { getGauntletUpgrade, isUpgradeComingSoon, isToggleableUpgrade, activeGauntletUpgrades, gauntletHaulMult, gauntletXpMult, gauntletFathomsMult } from '@/lib/gauntletUpgrades'
 import { DAVY_FORGE } from '@/lib/raidItems'
 import {
@@ -571,12 +571,13 @@ export async function rollDavyOffer(hpPct: number): Promise<{ offer: DavyOffer |
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_run_open, gauntlet_run_state, gauntlet_run_offer, gauntlet_run_hardcore, gauntlet_run_terms, raid_items, ship_skins')
+    .select('gauntlet_run_open, gauntlet_run_state, gauntlet_run_offer, gauntlet_run_hardcore, gauntlet_run_terms, gauntlet_run_variant, raid_items, ship_skins')
     .eq('id', user.id)
     .single()
 
   if (!profile || profile.gauntlet_run_open !== true) return { offer: null }
 
+  const variant = ((profile.gauntlet_run_variant as GauntletVariant | null) ?? 'davy')
   const state = (profile.gauntlet_run_state as GauntletRunState | null) ?? null
   const depth = Math.max(0, Math.floor(state?.cleared ?? 0))
   const hc = profile.gauntlet_run_hardcore === true
@@ -599,6 +600,7 @@ export async function rollDavyOffer(hpPct: number): Promise<{ offer: DavyOffer |
     ownedItems: (profile.raid_items as string[] | null) ?? [],
     ownedSkins: (profile.ship_skins as string[] | null) ?? [],
     davyForge: DAVY_FORGE,
+    variant,
   }).length > 0
 
   const next = rollOffer({
@@ -720,11 +722,13 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   // tier's chance, only for cannons not yet owned, and never once the player
   // has forged them into the Grand Cannon. Every chance below runs through
   // chestDrop(), which is the SAME capped multiply the breather showed the player.
+  // Item drops are Davy's-Gauntlet-only — the Davy cannons never roll in a Don's
+  // run. Don's has its own chase (the hull skins below); it drops no cannons.
   const ownedItems = (profile.raid_items as string[] | null) ?? []
   const chestDrop = (c: number) => Math.min(CHEST_ODDS_CAP, c * offerChest)
   const dropChance = chestDrop(chestCannonDropChance(cd))
   const droppedItems: string[] = []
-  if (!ownedItems.includes(DAVY_FORGE.result)) {
+  if (!isDon && !ownedItems.includes(DAVY_FORGE.result)) {
     for (const cannon of DAVY_FORGE.components) {
       if (!ownedItems.includes(cannon) && Math.random() < dropChance) droppedItems.push(cannon)
     }
@@ -733,7 +737,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   // the deeper hardcore chests. Stops dropping once you own it OR have forged it
   // into one of its fusions (mirrors the Grand Cannon).
   const bloodForged = ['bloodletter', 'reavers_cannon'].some(id => ownedItems.includes(id))
-  if (hc && chest.tier >= BLOOD_CANNON_CHEST_TIER && !ownedItems.includes(BLOOD_CANNON_ITEM_ID) && !bloodForged && Math.random() < chestDrop(chestCannonDropChance(cd))) {
+  if (!isDon && hc && chest.tier >= BLOOD_CANNON_CHEST_TIER && !ownedItems.includes(BLOOD_CANNON_ITEM_ID) && !bloodForged && Math.random() < chestDrop(chestCannonDropChance(cd))) {
     droppedItems.push(BLOOD_CANNON_ITEM_ID)
   }
   const newRaidItems = droppedItems.length > 0 ? [...new Set([...ownedItems, ...droppedItems])] : ownedItems
@@ -744,25 +748,29 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   const runTerms = (profile.gauntlet_run_terms as SignedTerms | null) ?? null
   const runPressure = hc ? termPressure(runTerms) : 0
 
-  // Golden Gauntlet Hull — a RARE cosmetic drop from the Davy Jones' Locker chest
-  // (the top chest tier, depth 18+). Man-o-War-only skin; grants to ship_skins so
-  // it's owned even before the player has the hull to wear it.
+  // The deep-chest Man-o-War hull chase, variant-specific: Davy's drops the
+  // Golden Gauntlet Hull, Don's drops the Galaxy Hull. Same chest tier + odds.
+  // Granted to ship_skins even before the player owns the Man-o-War to wear it.
   const ownedSkins = (profile.ship_skins as string[] | null) ?? []
+  const normalHullId  = isDon ? GALAXY_HULL_SKIN_ID : GOLD_HULL_SKIN_ID
+  const normalHullTier = isDon ? GALAXY_HULL_CHEST_TIER : GOLD_HULL_CHEST_TIER
   let droppedSkinId: string | null = null
-  if (chest.tier >= GOLD_HULL_CHEST_TIER && !ownedSkins.includes(GOLD_HULL_SKIN_ID) && Math.random() < chestDrop(chestSkinDropChance(cd))) {
-    droppedSkinId = GOLD_HULL_SKIN_ID
+  if (chest.tier >= normalHullTier && !ownedSkins.includes(normalHullId) && Math.random() < chestDrop(chestSkinDropChance(cd))) {
+    droppedSkinId = normalHullId
   }
-  // Bad Blood Hull — the HARDCORE-only Man-o-War skin, from the deeper hardcore
-  // chests. Owned to ship_skins even before the player has the Man-o-War to wear it.
+  // The HARDCORE-only Man-o-War hull, variant-specific: Davy's Bad Blood Hull,
+  // Don's Ghost Hull (dormant until Don's hardcore goes live).
+  const hcHullId  = isDon ? GHOST_HULL_SKIN_ID : BLOOD_HULL_SKIN_ID
+  const hcHullTier = isDon ? GHOST_HULL_CHEST_TIER : BLOOD_HULL_CHEST_TIER
   let droppedHcSkinId: string | null = null
-  if (hc && chest.tier >= BLOOD_HULL_CHEST_TIER && !ownedSkins.includes(BLOOD_HULL_SKIN_ID) && Math.random() < chestDrop(chestSkinDropChance(cd))) {
-    droppedHcSkinId = BLOOD_HULL_SKIN_ID
+  if (hc && chest.tier >= hcHullTier && !ownedSkins.includes(hcHullId) && Math.random() < chestDrop(chestSkinDropChance(cd))) {
+    droppedHcSkinId = hcHullId
   }
-  // Pitch Black Hull — the PRESSURE-exclusive drop. Needs hardcore, a heavy board AND
-  // a deep bank, all on this one run: pressureSkinDropChance returns a hard 0 below
-  // either gate, so no shallow sign-and-bank can ever roll it.
+  // Pitch Black Hull — the PRESSURE-exclusive drop (Davy's only). Needs hardcore,
+  // a heavy board AND a deep bank, all on this one run: pressureSkinDropChance
+  // returns a hard 0 below either gate, so no shallow sign-and-bank can ever roll it.
   let droppedPressureSkinId: string | null = null
-  if (hc && !ownedSkins.includes(PRESSURE_SKIN_ID) && Math.random() < chestDrop(pressureSkinDropChance(runPressure, payDepth))) {
+  if (!isDon && hc && !ownedSkins.includes(PRESSURE_SKIN_ID) && Math.random() < chestDrop(pressureSkinDropChance(runPressure, payDepth))) {
     droppedPressureSkinId = PRESSURE_SKIN_ID
   }
   // Hardcore Drowned Fleet skins — granted the first time you cash out past a

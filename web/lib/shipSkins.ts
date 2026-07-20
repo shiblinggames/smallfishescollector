@@ -154,6 +154,35 @@ export const SHIP_SKINS: ShipSkinDef[] = [
     },
   },
 
+  {
+    // Don's Gauntlet NORMAL chase — the Man-o-War skin from the deepest Don's
+    // chest, the ghost fleet's answer to the Golden Gauntlet Hull. Man-o-War only.
+    id: 'galaxy_hull',
+    name: 'Galaxy Hull',
+    description: 'Plating drowned so deep it drank the stars. The whole night sky runs in her hull — only the Man-o-War carries the sky itself.',
+    filter: 'none',
+    color: '#9d7bff',
+    source: "Rare drop · Don's Gauntlet deepest chest",
+    requiresShipTier: MANOWAR_SHIP_TIER,
+    imageByTier: {
+      6: '/galaxyhull.png',
+    },
+  },
+  {
+    // Don's Gauntlet HARDCORE chase — the ghost-fleet Man-o-War skin, the Don's
+    // equivalent of the Bad Blood Hull. Dormant until Don's hardcore goes live.
+    id: 'dons_ghost_hull',
+    name: "Don's Ghost Hull",
+    description: 'The cold green of the drowned court, run up on a hull that should be at the bottom. The Don sails on. So do you.',
+    filter: 'none',
+    color: '#3fbf82',
+    source: "Hardcore drop · Don's Gauntlet",
+    requiresShipTier: MANOWAR_SHIP_TIER,
+    imageByTier: {
+      6: '/donsghosthull.png',
+    },
+  },
+
   // ── Drowned Fleet — Hardcore Gauntlet ── REMOVED 2026-07-08: the hull skins
   // aren't ready (placeholder tints, no bespoke art), so they're pulled from the
   // game for now. HARDCORE_UNLOCKS in lib/gauntlet is emptied to match. Re-add
