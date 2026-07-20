@@ -970,9 +970,9 @@ export function chestOdds(opts: {
 const CHEST_DROP_NAMES: Record<string, string> = {
   davys_heavy_cannon: "Davy's Heavy Cannon",
   davys_hand_cannon:  "Davy's Hand Cannon",
-  opening_statement:  'Opening Statement',
-  made_man:           'Made Man',
-  the_shakedown:      'The Shakedown',
+  opening_statement:  'Vanguard Battery',
+  made_man:           'Dampener Plate',
+  the_shakedown:      'Carrion Sight',
 }
 
 // ── Curses — the Locker's Pressure ────────────────────────────────────────────

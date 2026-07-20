@@ -3753,13 +3753,13 @@ export default function RaidCombat({
           // Statuses: what YOU deal (weaken ↓ / enrage ↑) × what the ENEMY
           // takes (feeble ↑ / fortify ↓) — the Ch4 pipeline's damage hooks.
           const statusOutMult = pStatus.dmgDealtMult * eStatus.dmgTakenMult
-          // Opening Statement (item): the FIRST shot of the fight lands harder.
+          // Vanguard Battery (item, id opening_statement): the FIRST shot of the fight lands harder.
           // shotsThisFightRef was already bumped for this shot at aim-lock, so the
           // opener reads as === 1. Every later shot is untouched.
           const firstShotMult = shotsThisFightRef.current === 1
             ? getActiveEffects(liveItems).filter(e => e.type === 'first_shot_mult').reduce((a, e) => a * e.value, 1)
             : 1
-          // The Shakedown (item): +% vs an enemy that ALREADY carries any status —
+          // Carrion Sight (item, id the_shakedown): +% vs an enemy that ALREADY carries any status —
           // a Ch4 status (weaken/feeble/corrode/slowed/marked), a burn, or a
           // freeze. This hit's own on-hit proc lands later, so a fresh affliction
           // only pays off from the next hit on.
@@ -4379,7 +4379,7 @@ export default function RaidCombat({
             anchorReductionRef.current = null
             anchorConsumed = true
           }
-          // Made Man (item): a single hit exceeding max_hit_pct of your MAX HP has
+          // Dampener Plate (item, id made_man): a single hit exceeding max_hit_pct of your MAX HP has
           // a max_hit_chance shot at being knocked down to that ceiling. Rolled
           // after mitigation, before the shield soaks it, so a burst / ultimate
           // gets defanged HALF the time while chip damage is left alone. Multiple
@@ -4392,7 +4392,7 @@ export default function RaidCombat({
             if (dmg > ceil && Math.random() < capChance) {
               const before = dmg
               dmg = ceil
-              stepLines.push(`Made Man — the blow can't land clean on you (${before} → ${dmg}).`)
+              stepLines.push(`Dampener Plate holds — the blow is blunted (${before} → ${dmg}).`)
             }
           }
           // Shield pool — soaks from the pool before HP. Seeded by the Stormward

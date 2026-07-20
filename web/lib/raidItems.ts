@@ -388,9 +388,9 @@ export const RAID_ITEMS: RaidItemDef[] = [
   // ── Don's Gauntlet chase — its own two items, mechanics the roster never had.
   //    Art PENDING (emoji fallback for now, like the Abyssal tier-3 items). ──────
   {
-    id: 'opening_statement',
-    name: 'Opening Statement',
-    description: 'Your FIRST shot of every fight lands for +30% damage — every shot after is normal. Lead with a loaded volley or Mega and make an example of whoever steps up first.',
+    id: 'opening_statement',   // display: Vanguard Battery
+    name: 'Vanguard Battery',
+    description: 'Your FIRST shot of every fight lands for +30% damage — every shot after is normal. The vanguard gun runs hot off the first pull, so lead with a loaded volley or Mega and open heavy.',
     image: null,
     emoji: '🎯',
     rarity: 'legendary',
@@ -398,9 +398,9 @@ export const RAID_ITEMS: RaidItemDef[] = [
     source: "Don's Gauntlet",
   },
   {
-    id: 'made_man',
-    name: 'Made Man',
-    description: 'When a single hit would take more than 25% of your max hull, there is a 50% chance it is knocked back down to 25% — a coin-flip that defangs the heaviest blows. Nobody roughs up a made man clean every time.',
+    id: 'made_man',            // display: Dampener Plate
+    name: 'Dampener Plate',
+    description: 'When a single hit would take more than 25% of your max hull, there is a 50% chance the plating dampens it back down to 25% — a coin-flip that blunts the heaviest blows. The slow bleed still gets through.',
     image: null,
     emoji: '🕴️',
     rarity: 'legendary',
@@ -408,9 +408,9 @@ export const RAID_ITEMS: RaidItemDef[] = [
     source: "Don's Gauntlet",
   },
   {
-    id: 'the_shakedown',
-    name: 'The Shakedown',
-    description: 'You deal +25% damage to any enemy already suffering a status — burning, frozen, weakened, corroded, or any hex you laid on it. Once they are in trouble, you make it worse. Kick them while they are down.',
+    id: 'the_shakedown',       // display: Carrion Sight
+    name: 'Carrion Sight',
+    description: 'You deal +25% damage to any enemy already suffering a status — burning, frozen, weakened, corroded, or any hex you laid on it. The glass finds the crack in a hull that is already breaking.',
     image: null,
     emoji: '💢',
     rarity: 'legendary',
