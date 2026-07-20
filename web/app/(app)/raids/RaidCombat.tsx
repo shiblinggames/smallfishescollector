@@ -3759,8 +3759,16 @@ export default function RaidCombat({
           const firstShotMult = shotsThisFightRef.current === 1
             ? getActiveEffects(liveItems).filter(e => e.type === 'first_shot_mult').reduce((a, e) => a * e.value, 1)
             : 1
+          // The Shakedown (item): +% vs an enemy that ALREADY carries any status —
+          // a Ch4 status (weaken/feeble/corrode/slowed/marked), a burn, or a
+          // freeze. This hit's own on-hit proc lands later, so a fresh affliction
+          // only pays off from the next hit on.
+          const enemyAfflicted = enemyStatusesRef.current.length > 0 || enemyBurnRef.current.turns > 0 || enemyFrozenRef.current > 0
+          const afflictedMult = enemyAfflicted
+            ? getActiveEffects(liveItems).filter(e => e.type === 'afflicted_damage_mult').reduce((a, e) => a * e.value, 1)
+            : 1
           const mult = actionBaseMult * bossMult * nonbossMult * rampMult * aimItemMult * classDamageMult
-                       * tide.dmgMult * tideActionMult * tideBossMult * critTideMult * lowHpMult * noncritTideMult * frozenMult * volleyRampMult * critStreakMult * vengeanceMult * statusOutMult * firstShotMult
+                       * tide.dmgMult * tideActionMult * tideBossMult * critTideMult * lowHpMult * noncritTideMult * frozenMult * volleyRampMult * critStreakMult * vengeanceMult * statusOutMult * firstShotMult * afflictedMult
           dmg = Math.floor(rollShotDamage(lockedAimResult ?? 'miss', shipMinDamage, totalPower, mods.damagePct) * mult)
           if (isVolley) volleyCountRef.current += 1   // this volley is now "fired" — the next ramps further
           // Enemy themed defense: crustacean carapace soaks a flat % off every

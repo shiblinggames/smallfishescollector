@@ -892,7 +892,7 @@ export const GHOST_HULL_SKIN_ID = 'dons_ghost_hull'
 export const GHOST_HULL_CHEST_TIER = 4    // hardcore, mirrors the Bad Blood Hull
 // Don's Gauntlet item chase — rolls from any chest like the Davy cannons, on the
 // same odds curve. Never drop in Davy's; the Davy cannons never drop in Don's.
-export const DONS_GAUNTLET_ITEM_IDS = ['opening_statement', 'made_man']
+export const DONS_GAUNTLET_ITEM_IDS = ['opening_statement', 'made_man', 'the_shakedown']
 export const BLOOD_CANNON_ITEM_ID = 'davys_blood_cannon'
 export const BLOOD_CANNON_CHEST_TIER = 3
 
@@ -972,6 +972,7 @@ const CHEST_DROP_NAMES: Record<string, string> = {
   davys_hand_cannon:  "Davy's Hand Cannon",
   opening_statement:  'Opening Statement',
   made_man:           'Made Man',
+  the_shakedown:      'The Shakedown',
 }
 
 // ── Curses — the Locker's Pressure ────────────────────────────────────────────

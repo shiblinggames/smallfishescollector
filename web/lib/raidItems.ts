@@ -30,6 +30,7 @@ export type RaidEffectType =
   // ── Don's Gauntlet chase — mechanics the roster never had ─────────────────
   | 'first_shot_mult'       // value = damage multiplier applied ONLY to the FIRST shot you fire each fight (Opening Statement). Nothing else rewards the opener. Multiplies onto the normal shot math.
   | 'max_hit_pct'           // value = 0-1 cap: no single incoming hit can take more than this fraction of your MAX HP (Made Man). A per-hit ceiling, not a flat reduction — defangs burst/ultimates, leaves chip damage untouched. Multiple sources take the LOWEST (tightest) cap.
+  | 'afflicted_damage_mult' // value = damage multiplier vs an enemy that ALREADY carries any status/affliction (burning, frozen, weakened, corroded, feeble, slowed, marked…) at the moment you hit (The Shakedown). The proc that FIRST applies a status lands after this hit, so the bonus kicks in from the next hit on. Rewards a status/elemental build.
 
 export interface RaidEffect {
   type: RaidEffectType
@@ -403,6 +404,16 @@ export const RAID_ITEMS: RaidItemDef[] = [
     emoji: '🕴️',
     rarity: 'legendary',
     effects: [{ type: 'max_hit_pct', value: 0.25 }],
+    source: "Don's Gauntlet",
+  },
+  {
+    id: 'the_shakedown',
+    name: 'The Shakedown',
+    description: 'You deal +25% damage to any enemy already suffering a status — burning, frozen, weakened, corroded, or any hex you laid on it. Once they are in trouble, you make it worse. Kick them while they are down.',
+    image: null,
+    emoji: '💢',
+    rarity: 'legendary',
+    effects: [{ type: 'afflicted_damage_mult', value: 1.25 }],
     source: "Don's Gauntlet",
   },
   // ── Forge fusions (learned in The Forge, sacrificing both components) ────────
