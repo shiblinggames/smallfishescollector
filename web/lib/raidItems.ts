@@ -391,7 +391,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'opening_statement',   // display: Vanguard Battery
     name: 'Vanguard Battery',
     description: 'Your FIRST shot of every fight lands for +30% damage — every shot after is normal. The vanguard gun runs hot off the first pull, so lead with a loaded volley or Mega and open heavy.',
-    image: null,
+    image: '/vanguardbattery.png',
     emoji: '🎯',
     rarity: 'legendary',
     effects: [{ type: 'first_shot_mult', value: 1.3 }],
@@ -401,7 +401,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'made_man',            // display: Dampener Plate
     name: 'Dampener Plate',
     description: 'When a single hit would take more than 25% of your max hull, there is a 50% chance the plating dampens it back down to 25% — a coin-flip that blunts the heaviest blows. The slow bleed still gets through.',
-    image: null,
+    image: '/dampenerplate.png',
     emoji: '🕴️',
     rarity: 'legendary',
     effects: [{ type: 'max_hit_pct', value: 0.25 }, { type: 'max_hit_chance', value: 0.5 }],
@@ -411,7 +411,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'the_shakedown',       // display: Carrion Sight
     name: 'Carrion Sight',
     description: 'You deal +25% damage to any enemy already suffering a status — burning, frozen, weakened, corroded, or any hex you laid on it. The glass finds the crack in a hull that is already breaking.',
-    image: null,
+    image: '/carrionsight.png',
     emoji: '💢',
     rarity: 'legendary',
     effects: [{ type: 'afflicted_damage_mult', value: 1.25 }],
