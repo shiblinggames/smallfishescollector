@@ -26,6 +26,7 @@ import {
 } from '@/lib/gauntletOffer'
 import { GAUNTLET_DEEPEST_CONTEST_ENDS_AT } from '@/lib/contests'
 import { getBait } from '@/lib/bait'
+import { merchantPrice } from '@/lib/gauntletMerchant'
 
 // Golden Gauntlet Hull — a rare Man-o-War-only cosmetic that drops only from the
 // top chest tier (Davy Jones' Locker, chest tier 5 / depth 18+). Tunable here.
@@ -223,6 +224,37 @@ export async function wagerGauntletFathoms(stake: number): Promise<
   const newFathoms = Math.max(0, won ? balance + staked : balance - staked)
   await admin.from('profiles').update({ gauntlet_fathoms: newFathoms }).eq('id', user.id)
   return { ok: true, won, stake: staked, fathoms: newFathoms }
+}
+
+// The Black Market (Don's Gauntlet mid-run shop): spend FATHOMS on one item.
+// Server-authoritative like the shrine wager — the price is looked up from the
+// canonical catalog (never trusted from the client), the balance is checked and
+// deducted here, and the item's game EFFECT is applied client-side in run state.
+export async function buyMerchantItem(itemId: string): Promise<
+  { ok: true; fathoms: number } | { error: string }
+> {
+  const price = merchantPrice(itemId)
+  if (price == null) return { error: 'Unknown item.' }
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not signed in.' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('gauntlet_fathoms, gauntlet_run_open')
+    .eq('id', user.id)
+    .single()
+  if (!profile) return { error: 'Profile not found.' }
+  if (!profile.gauntlet_run_open) return { error: 'No run in progress.' }
+
+  const balance = (profile.gauntlet_fathoms as number | null) ?? 0
+  if (balance < price) return { error: 'Not enough Fathoms.' }
+
+  const newFathoms = balance - price
+  await admin.from('profiles').update({ gauntlet_fathoms: newFathoms }).eq('id', user.id)
+  return { ok: true, fathoms: newFathoms }
 }
 
 // Record confluences the player has discovered (first unlocked), so the Synergies

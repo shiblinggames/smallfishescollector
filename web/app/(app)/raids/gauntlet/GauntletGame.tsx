@@ -33,7 +33,8 @@ import {
   type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot, type GauntletRunState, type GauntletRunStats, chestOdds, type GauntletVariant } from '@/lib/gauntlet'
 import { GAUNTLET_TERMS, TERM_GROUP_META, resolveTerms, termPressure, termTideEffects, pressureGemMult, pressureDepthFactor, NO_TERM_EFFECTS, PRESSURE_CAP, PRESSURE_DEPTH_FLOOR, PRESSURE_DEPTH_FULL, PRESSURE_SKIN_THRESHOLD, PRESSURE_SKIN_DEPTH, PRESSURE_SKIN_ID, MAX_AVAILABLE_PRESSURE, type SignedTerms } from '@/lib/gauntletTerms'
 import GauntletTermsPanel from './GauntletTermsPanel'
-import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, setGauntletUpgradeActive, markGauntletIntroSeen, recordGauntletHit, wagerGauntletFathoms, markConfluencesSeen, checkpointGauntletRun, pauseGauntletRun, resumeGauntletRun, buyBaitWithFathoms, rollDavyOffer } from './actions'
+import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, setGauntletUpgradeActive, markGauntletIntroSeen, recordGauntletHit, wagerGauntletFathoms, markConfluencesSeen, checkpointGauntletRun, pauseGauntletRun, resumeGauntletRun, buyBaitWithFathoms, rollDavyOffer, buyMerchantItem } from './actions'
+import { MERCHANT_ITEMS, rollMerchantStock, type MerchantItemKind } from '@/lib/gauntletMerchant'
 import { offerCoinMult, offerChestMult, offerCopy, offerTakenLine, type DavyOffer } from '@/lib/gauntletOffer'
 import { FATHOM_BAITS } from '@/lib/bait'
 import { upgradesForVariant, getGauntletUpgrade, upgradeTierInfo, romanTier, COMING_SOON_UPGRADES, activeGauntletUpgrades, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck, gauntletBoonRerolls, gauntletCurseRerolls, gauntletBoonFilters, gauntletSynergyOfferMult, gauntletHasBloodOath, gauntletStartAnchorSaves } from '@/lib/gauntletUpgrades'
@@ -48,7 +49,7 @@ import { getXPProgress, MAX_LEVEL } from '@/lib/expeditionLevel'
 import { renownLevel } from '@/lib/renown'
 import RenownUpOverlay, { type RenownUpInfo } from '@/components/RenownUpOverlay'
 
-type Phase = 'intro' | 'usedup' | 'resume' | 'paused' | 'descending' | 'fighting' | 'curse' | 'boon' | 'shrine' | 'between' | 'reward' | 'dead'
+type Phase = 'intro' | 'usedup' | 'resume' | 'paused' | 'descending' | 'fighting' | 'curse' | 'boon' | 'shrine' | 'merchant' | 'between' | 'reward' | 'dead'
 
 type CashResult = Awaited<ReturnType<typeof cashOutGauntlet>>
 
@@ -179,6 +180,11 @@ export interface GauntletGameProps {
 // first two before depth 25 (≈ depths 9 and 18) and keeps the same pace after.
 const SHRINE_FIRST_DEPTH = 8
 const SHRINE_INTERVAL    = 7
+// The Black Market (Don's only) rides its own cadence, offset from the shrine so
+// the two rarely land on the same depth (whichever check fires first wins that
+// depth, and both only trigger on a quiet depth).
+const MERCHANT_FIRST_DEPTH = 11
+const MERCHANT_INTERVAL    = 9
 const SHRINE_WAGER_MAX    = 10    // Davy's Coin: most Fathoms you can stake (double or nothing, server-rolled)
 const SHRINE_BLOOD_HP_PCT = 0.50  // Blood Price: fraction of CURRENT HP paid for a boon (a normal draft, no skew)
 const SHRINE_WALK_HEAL    = 0.05  // Walk on: fraction of MAX HP healed (deliberately small — the safe-but-weak out)
@@ -425,6 +431,13 @@ export default function GauntletGame(props: GauntletGameProps) {
   const nextShrineRef = useRef(SHRINE_FIRST_DEPTH)
   const [shrineCoin, setShrineCoin] = useState<{ result: 'win' | 'lose'; stake: number; fathoms: number } | null>(null)
   const [shrineFlipping, setShrineFlipping] = useState(false)
+  // The Black Market (Don's only) — next combat depth a stall is due, the stock
+  // rolled for the current visit, the ids already bought this visit, and the id
+  // whose purchase is mid-flight (buttons lock while the server round-trips).
+  const nextMerchantRef = useRef(MERCHANT_FIRST_DEPTH)
+  const [merchantStock, setMerchantStock] = useState<MerchantItemKind[]>([])
+  const [merchantSold, setMerchantSold] = useState<Set<MerchantItemKind>>(new Set())
+  const [merchantBuying, setMerchantBuying] = useState<MerchantItemKind | null>(null)
   // Banked Fathoms, mirrored so a shrine wager can update it live without a
   // refetch (Fathoms only change here or at cashout/Locker, all of which resync).
   const [fathomsNow, setFathomsNow] = useState(props.fathoms)
@@ -538,7 +551,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   // tab close with the browser's native prompt. Active across the whole run
   // (every in-fight + interstitial phase) so the Back sentinel is pushed once.
   const runLive = phase === 'descending' || phase === 'fighting'
-    || phase === 'curse' || phase === 'boon' || phase === 'shrine' || phase === 'between'
+    || phase === 'curse' || phase === 'boon' || phase === 'shrine' || phase === 'merchant' || phase === 'between'
   useEffect(() => {
     if (!runLive) return
     window.history.pushState(null, '', window.location.href) // Back sentinel
@@ -680,6 +693,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       bannedBoonsRef.current = new Set(); setFiltersLeft(gauntletBoonFilters(activeUpgrades))
       setConfluenceUnlocked(null); setConfluenceBanner(null); setCurseShed(null)
       nextShrineRef.current = SHRINE_FIRST_DEPTH; setShrineCoin(null); setShrineFlipping(false); setBoonFromShrine(false)
+      nextMerchantRef.current = MERCHANT_FIRST_DEPTH; setMerchantStock([]); setMerchantSold(new Set()); setMerchantBuying(null)
       peekFightRef.current = null; setPeekFight(null)
       crewRefreshedRef.current = false; setFightOpensRefreshed(false)
       calmBeforeUsedRef.current = false
@@ -1145,6 +1159,17 @@ export default function GauntletGame(props: GauntletGameProps) {
       return
     }
 
+    // The Black Market — Don's-only vendor node on its own cadence. Same rule as
+    // the shrine: only on a quiet depth, only once we've passed the due depth.
+    if (props.variant === 'don' && nextDepth >= nextMerchantRef.current) {
+      nextMerchantRef.current = nextDepth + MERCHANT_INTERVAL + Math.floor(Math.random() * 3)
+      setMerchantStock(rollMerchantStock(Object.keys(curseTiersRef.current).length > 0))
+      setMerchantSold(new Set())
+      setMerchantBuying(null)
+      setPhase('merchant')
+      return
+    }
+
     setPhase('between')
   }
 
@@ -1204,6 +1229,63 @@ export default function GauntletGame(props: GauntletGameProps) {
   // Leave the shrine after a resolved coin flip.
   function shrineDescend() {
     setShrineCoin(null)
+    setPhase('between')
+  }
+
+  // ── The Black Market (Don's mid-run shop) ──────────────────────────────────
+  // Apply a purchased item's game effect in run state. Mirrors the Reprieve
+  // effects; the Fathom spend already happened server-side in buyMerchant. The
+  // 'boon' item hands off to a draft (which ends the visit at that draft).
+  function applyMerchantEffect(id: MerchantItemKind) {
+    if (id === 'heal') {
+      const healed = Math.min(hpMax, playerHPRef.current + Math.round(hpMax * 0.35 * termFxRef.current.healMult))
+      playerHPRef.current = healed; setPlayerHP(healed)
+      vibrate([0, 40, 40, 60])
+    } else if (id === 'charges') {
+      carriedChargesRef.current = 3 + bonusChargeSlots(activeUpgrades)
+      vibrate([0, 30, 30, 40])
+    } else if (id === 'crew') {
+      setUsedAbilityIds(new Set(silencedCrewIdsRef.current))
+      crewRefreshedRef.current = true
+      vibrate([0, 30, 30, 40])
+    } else if (id === 'cleanse') {
+      const owned = Object.keys(curseTiersRef.current)
+      if (owned.length > 0) {
+        const drop = owned[Math.floor(Math.random() * owned.length)]
+        const next = { ...curseTiersRef.current }; delete next[drop]
+        curseTiersRef.current = next; setCurseTiers(next)
+        if (drop === 'dead_hands') reconcileSilence()
+        setCurseShed({ name: GAUNTLET_CURSES.find(c => c.id === drop)?.name ?? 'a curse', key: Date.now() })
+        vibrate([0, 40, 50, 70])
+      }
+    } else if (id === 'boon') {
+      // Contraband — an extra draft, right now. Opens the boon screen and so ends
+      // the market visit (same hand-off the shrine's Blood Price uses).
+      const draft = drawBoons(termFxRef.current.boonPicks, boonTiers, gauntletBoonLuck(activeUpgrades), termFxRef.current.commonSkew, props.variant, bannedBoonsRef.current)
+      if (draft.length === 0) { setPhase('between'); return }
+      setPendingBoons(draft); setDraftGen(g => g + 1); setRerollsLeft(0); setPendingReprieve(null)
+      { const conf = rollSynergyOffer(); if (conf) offeredConfluenceIdsRef.current.add(conf.id); setPendingConfluence(conf) }
+      setBoonFromShrine(true); setPhase('boon')
+    }
+  }
+
+  async function buyMerchant(id: MerchantItemKind) {
+    if (merchantBuying || merchantSold.has(id)) return
+    const item = MERCHANT_ITEMS[id]
+    if (fathomsNow < item.price) return
+    // A Hex-Breaker with no curse to break is a wasted buy — block it defensively
+    // (the card is filtered out of stock too, this is belt-and-braces).
+    if (id === 'cleanse' && Object.keys(curseTiersRef.current).length === 0) return
+    setMerchantBuying(id)
+    const res = await buyMerchantItem(id)
+    if ('error' in res) { setMerchantBuying(null); return }
+    setFathomsNow(res.fathoms)
+    setMerchantSold(prev => { const n = new Set(prev); n.add(id); return n })
+    setMerchantBuying(null)
+    applyMerchantEffect(id)   // last — may switch phase (Contraband → draft)
+  }
+
+  function merchantLeave() {
     setPhase('between')
   }
 
@@ -1413,6 +1495,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       anchorSavesLeft: anchorSavesLeftRef.current,
       runMaxHit: runMaxHitRef.current,
       nextShrine: nextShrineRef.current,
+      nextMerchant: nextMerchantRef.current,
       calmBeforeUsed: calmBeforeUsedRef.current,
     }
   }
@@ -1442,6 +1525,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     anchorSavesLeftRef.current = s.anchorSavesLeft
     runMaxHitRef.current = s.runMaxHit
     nextShrineRef.current = s.nextShrine
+    nextMerchantRef.current = s.nextMerchant ?? MERCHANT_FIRST_DEPTH
     calmBeforeUsedRef.current = s.calmBeforeUsed
     // Transient state rebuilt fresh at the breather.
     peekFightRef.current = null; setPeekFight(null)
@@ -2303,6 +2387,89 @@ export default function GauntletGame(props: GauntletGameProps) {
               </motion.button>
             </>
           )}
+        </div>
+        {exitModal}
+      </>
+    )
+  }
+
+  // ── The Black Market (Don's mid-run shop) ────────────────────────────────
+  if (phase === 'merchant') {
+    const MC = '#3fbf82'   // ghost-market green
+    return (
+      <>
+        <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
+        <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: [0.35, 0.6, 0.35] }} transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+          style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 130% 90% at 50% 0%, ${MC}1c 0%, ${MC}09 44%, transparent 72%)` }} />
+        <div style={{
+          position: 'relative', zIndex: 1, maxWidth: 440, margin: '0 auto',
+          padding: '12px 0.95rem', textAlign: 'center',
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
+        }}>
+          <motion.p initial={{ opacity: 0, letterSpacing: '0.5em' }} animate={{ opacity: 1, letterSpacing: '0.3em' }} transition={{ duration: 0.8 }}
+            className="font-karla font-800 uppercase" style={{ fontSize: '0.7rem', color: MC, marginTop: 16, textShadow: `0 0 16px ${MC}55` }}>
+            A Black Market
+          </motion.p>
+          <motion.div initial={{ opacity: 0, y: -18, scale: 0.8 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+            style={{ position: 'relative', width: 96, height: 96, margin: '14px auto 4px' }}>
+            <div style={{ position: 'absolute', inset: -16, borderRadius: '50%', background: `radial-gradient(circle, ${MC}33 0%, transparent 66%)`, animation: 'gauntPulse 3.4s ease-in-out infinite' }} />
+            <svg width="96" height="96" viewBox="0 0 24 24" fill="none" stroke={MC} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'relative', filter: `drop-shadow(0 6px 20px ${MC}55)` }} aria-hidden>
+              <path d="M3 9l1.5-4.5h15L21 9" /><path d="M4 9h16v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z" /><path d="M9 13h6" />
+            </svg>
+          </motion.div>
+          <motion.h1 initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.12, type: 'spring', stiffness: 220, damping: 18 }}
+            className="font-cinzel font-800" style={{ fontSize: '1.85rem', color: '#e7f6ee', lineHeight: 1.06, marginTop: 4, textShadow: `0 0 24px ${MC}44` }}>
+            The Fence
+          </motion.h1>
+          <p className="font-karla" style={{ fontSize: '0.88rem', fontStyle: 'italic', color: 'rgba(206,232,220,0.68)', lineHeight: 1.5, marginTop: 8, padding: '0 0.4rem' }}>
+            One of the Don&apos;s people, waiting in the dark with a crate and a grin. His goods are real. So is his price, in Fathoms.
+          </p>
+
+          <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {merchantStock.map((id, i) => {
+              const item = MERCHANT_ITEMS[id]
+              const sold = merchantSold.has(id)
+              const afford = fathomsNow >= item.price
+              const busy = merchantBuying === id
+              const blocked = sold || !afford || !!merchantBuying
+              return (
+                <motion.button key={id} type="button" disabled={blocked} onClick={() => buyMerchant(id)}
+                  whileTap={blocked ? undefined : { scale: 0.975 }}
+                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 + i * 0.08 }}
+                  className={blocked ? '' : 'tap'}
+                  style={{
+                    position: 'relative', overflow: 'hidden', width: '100%', textAlign: 'left',
+                    padding: '0.85rem 1rem 0.85rem 1.1rem', borderRadius: 16,
+                    background: sold ? 'rgba(255,255,255,0.03)' : `linear-gradient(180deg, ${item.color}1e, rgba(8,14,20,0.6) 80%)`,
+                    border: `1.5px solid ${sold ? 'rgba(255,255,255,0.12)' : `${item.color}${afford ? '88' : '44'}`}`,
+                    color: '#eaf5f0', cursor: blocked ? 'default' : 'pointer', opacity: sold ? 0.5 : afford ? 1 : 0.72,
+                  }}>
+                  <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 5, background: `linear-gradient(180deg, ${item.color}, ${item.color}22)` }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                    <p className="font-cinzel font-800" style={{ flex: 1, minWidth: 0, fontSize: '1.04rem', color: sold ? '#9aa39d' : item.color }}>{item.name}</p>
+                    {sold ? (
+                      <span className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.12em', color: '#8a938d', background: 'rgba(255,255,255,0.08)', borderRadius: 999, padding: '0.22rem 0.6rem' }}>Sold</span>
+                    ) : busy ? (
+                      <span className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.12em', color: item.color }}>…</span>
+                    ) : (
+                      <span className="font-cinzel font-800" style={{ flexShrink: 0, fontSize: '1.02rem', color: afford ? '#f5d98a' : '#e0888a' }}>{item.price} <span style={{ fontSize: '0.66rem' }}>F</span></span>
+                    )}
+                  </div>
+                  {!sold && <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(214,230,222,0.66)', lineHeight: 1.4, marginTop: 5 }}>{item.blurb}</p>}
+                </motion.button>
+              )
+            })}
+          </div>
+
+          <motion.button whileTap={{ scale: 0.97 }} onClick={merchantLeave} disabled={!!merchantBuying}
+            className="font-cinzel font-800 uppercase tracking-[0.06em] tap"
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+            style={{ width: '100%', marginTop: 18, padding: '1rem', borderRadius: 14, fontSize: '1rem', color: '#e7f6ee', background: `linear-gradient(180deg, ${MC}2e, ${MC}10)`, border: `1px solid ${MC}66`, cursor: 'pointer' }}>
+            Leave the Market
+          </motion.button>
+          <p className="font-karla font-700 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.14em', color: '#6f8a7e', marginTop: 14 }}>
+            Fathoms banked · {fmt(fathomsNow)} · Hull {playerHP}/{hpMax}
+          </p>
         </div>
         {exitModal}
       </>

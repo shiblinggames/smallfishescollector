@@ -642,6 +642,8 @@ export interface GauntletRunState {
   runMaxHit: number
   /** next combat depth a Drowned Shrine is due */
   nextShrine: number
+  /** next combat depth a Black Market is due (Don's only; optional for old saves) */
+  nextMerchant?: number
   /** Calm Before already waved off the first curse milestone */
   calmBeforeUsed: boolean
 }
