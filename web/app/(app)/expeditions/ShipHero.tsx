@@ -29,8 +29,8 @@ import { assignToVoyage, benchCrew } from '@/app/(app)/crew/actions'
 import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
 import { applyCrewEffects, resolveEffects, effectSummary, SCOPE_META } from '@/lib/crewEffects'
 import { RARITY_COLORS as CREW_RARITY_COLORS, RARITY_NAMES } from '@/lib/crewGen'
-import { RAID_ITEMS, getRaidItem, FORGE_RECIPES, conflictingRaidItems, isForgedRaidItem } from '@/lib/raidItems'
-import { PRISMATIC_TEXT, PRISMATIC_TEXT_SOFT, prismaticBorder, prismaticBorderSoft } from '@/lib/prismatic'
+import { RAID_ITEMS, getRaidItem, FORGE_RECIPES, conflictingRaidItems, isForgedRaidItem, isAbyssalForgedItem } from '@/lib/raidItems'
+import { PRISMATIC_TEXT, prismaticBorder, forgedBorderSoft, forgedTextSoft } from '@/lib/prismatic'
 import ForgeBoard from './ForgeBoard'
 import { renameShip, buyShip } from '@/app/shipyard/actions'
 import { getXPProgress, navLevelBonuses, MAX_LEVEL, getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
@@ -1503,22 +1503,23 @@ export default function ShipHero({
                   if (def && itemId) {
                     const color = RARITY_ITEM_COLOR[def.rarity]
                     const forged = isForgedRaidItem(itemId)
+                    const abyssal = isAbyssalForgedItem(itemId)
                     return (
                       <button
                         key={i}
                         type="button"
                         onClick={() => toggleItem(itemId)}
                         aria-label={`${def.name}, equipped. Tap to remove.`}
-                        style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, padding: '0.6rem 0.7rem', borderRadius: 12, textAlign: 'left', cursor: 'pointer', ...(forged ? { ...prismaticBorderSoft('rgba(14,18,26,0.92)'), boxShadow: '0 0 12px rgba(150,140,180,0.18)' } : { background: `${color}1c`, border: `1.5px solid ${color}88`, boxShadow: `0 0 14px ${color}1f` }) }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, padding: '0.6rem 0.7rem', borderRadius: 12, textAlign: 'left', cursor: 'pointer', ...(forged ? { ...forgedBorderSoft('rgba(14,18,26,0.92)', abyssal), boxShadow: abyssal ? '0 0 14px rgba(63,191,130,0.26)' : '0 0 12px rgba(150,140,180,0.18)' } : { background: `${color}1c`, border: `1.5px solid ${color}88`, boxShadow: `0 0 14px ${color}1f` }) }}
                       >
-                        <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', ...(forged ? prismaticBorderSoft('rgba(20,24,32,0.9)') : { background: `${color}12`, border: `1px solid ${color}40` }) }}>
+                        <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', ...(forged ? forgedBorderSoft('rgba(20,24,32,0.9)', abyssal) : { background: `${color}12`, border: `1px solid ${color}40` }) }}>
                           {def.image
                             // eslint-disable-next-line @next/next/no-img-element
                             ? <img src={def.image} alt="" loading="lazy" decoding="async" style={{ width: 30, height: 30, objectFit: 'contain' }} />
                             : <span style={{ fontSize: '1.4rem', lineHeight: 1, color, display: 'flex' }}><IconCrate size={22} /></span>}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.8rem', ...(forged ? PRISMATIC_TEXT_SOFT : { color }) }}>{def.name}</p>
+                          <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.8rem', ...(forged ? forgedTextSoft(abyssal) : { color }) }}>{def.name}</p>
                           <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: '#9a948a' }}>Tap to remove</span>
                         </div>
                       </button>
@@ -1560,6 +1561,7 @@ export default function ShipHero({
                             if (!def) return null
                             const color = RARITY_ITEM_COLOR[def.rarity]
                             const forged = isForgedRaidItem(itemId)
+                            const abyssal = isAbyssalForgedItem(itemId)
                             const isNew = newRaidItems.has(itemId)
                             // A conflicting item currently equipped (same-family
                             // grade, or the ingredients this fusion was forged
@@ -1577,9 +1579,9 @@ export default function ShipHero({
                                 onClick={blocked ? undefined : () => toggleItem(itemId)}
                                 disabled={blocked}
                                 aria-label={blocked ? `${def.name}. Hull full, free a slot first.` : wouldSwap ? `${def.name}. Tap to swap for ${swapNames.join(', ')}.` : `${def.name}. Tap to equip.`}
-                                style={{ borderRadius: 12, padding: '0.7rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.8rem', cursor: blocked ? 'not-allowed' : 'pointer', width: '100%', textAlign: 'left', opacity: blocked ? 0.42 : 1, transition: 'opacity 0.15s', ...(forged ? { ...prismaticBorderSoft('rgba(14,18,26,0.9)'), boxShadow: '0 0 11px rgba(150,140,180,0.16)' } : { background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.1)' }) }}
+                                style={{ borderRadius: 12, padding: '0.7rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.8rem', cursor: blocked ? 'not-allowed' : 'pointer', width: '100%', textAlign: 'left', opacity: blocked ? 0.42 : 1, transition: 'opacity 0.15s', ...(forged ? { ...forgedBorderSoft('rgba(14,18,26,0.9)', abyssal), boxShadow: abyssal ? '0 0 13px rgba(63,191,130,0.24)' : '0 0 11px rgba(150,140,180,0.16)' } : { background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.1)' }) }}
                               >
-                                <div style={{ flexShrink: 0, width: 46, height: 46, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', ...(forged ? prismaticBorderSoft('rgba(20,24,32,0.9)') : { background: `${color}12`, border: `1px solid ${color}40` }) }}>
+                                <div style={{ flexShrink: 0, width: 46, height: 46, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', ...(forged ? forgedBorderSoft('rgba(20,24,32,0.9)', abyssal) : { background: `${color}12`, border: `1px solid ${color}40` }) }}>
                                   {def.image ? (
                                     /* eslint-disable-next-line @next/next/no-img-element */
                                     <img src={def.image} alt="" loading="lazy" decoding="async" style={{ width: 33, height: 33, objectFit: 'contain' }} />
@@ -1588,7 +1590,7 @@ export default function ShipHero({
                                   )}
                                 </div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                  <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', marginBottom: 2, ...(forged ? PRISMATIC_TEXT_SOFT : { color: '#f0ede8' }) }}>
+                                  <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', marginBottom: 2, ...(forged ? forgedTextSoft(abyssal) : { color: '#f0ede8' }) }}>
                                     {def.name}
                                     {isNew && <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.08em', color: '#1a1206', background: '#ffd96a', borderRadius: 4, padding: '0.12rem 0.32rem', marginLeft: 7, verticalAlign: 'middle' }}>New</span>}
                                   </p>

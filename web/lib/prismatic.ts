@@ -37,3 +37,53 @@ export const PRISMATIC_TEXT_SOFT: CSSProperties = {
   backgroundClip: 'text',
   color: 'transparent',
 }
+
+// ── ABYSSAL (tier 3) ────────────────────────────────────────────────────────
+// The Abyssal Forge's fusions sit ABOVE the prismatic tier-2 treatment, so they
+// need to read as a clear step up at a glance. Two deliberate differences from
+// PRISMATIC: a deep-sea palette (abyss green into gold into violet, rather than
+// the pastel rainbow) and a GLOW, which the prismatic border never has. Kept
+// STATIC — these render in inventory/forge lists, and an animated sheen there
+// would repaint per row for no real gain.
+export const ABYSSAL = 'linear-gradient(115deg, #0e5c48 0%, #3fbf82 16%, #ffd98a 34%, #f5c451 48%, #6ee7c0 66%, #9d7bff 84%, #0e5c48 100%)'
+
+/** Gradient border + abyssal aura. Same padding-box/border-box trick as
+ *  prismaticBorder, with a green-gold glow to mark the higher tier. */
+export const abyssalBorder = (fill: string): CSSProperties => ({
+  background: `linear-gradient(${fill}, ${fill}) padding-box, ${ABYSSAL} border-box`,
+  border: '2px solid transparent',
+  boxShadow: '0 0 16px rgba(63,191,130,0.34), inset 0 0 12px rgba(245,196,81,0.10)',
+})
+
+export const ABYSSAL_TEXT: CSSProperties = {
+  backgroundImage: ABYSSAL,
+  WebkitBackgroundClip: 'text',
+  backgroundClip: 'text',
+  color: 'transparent',
+}
+
+// Muted abyssal for the item treatment itself (inventory / loadout rows), the
+// mirror of PRISMATIC_SOFT — still unmistakably the deeper tier, just quieter.
+export const ABYSSAL_SOFT = 'linear-gradient(115deg, #2f7d68 0%, #7fcfae 26%, #e8d3a0 52%, #86d8c4 74%, #b9a8dc 100%)'
+
+export const abyssalBorderSoft = (fill: string): CSSProperties => ({
+  background: `linear-gradient(${fill}, ${fill}) padding-box, ${ABYSSAL_SOFT} border-box`,
+  border: '2px solid transparent',
+  boxShadow: '0 0 12px rgba(63,191,130,0.22)',
+})
+
+export const ABYSSAL_TEXT_SOFT: CSSProperties = {
+  backgroundImage: 'linear-gradient(105deg, #d8ecdf, #f0e6c8, #dde8f4)',
+  WebkitBackgroundClip: 'text',
+  backgroundClip: 'text',
+  color: 'transparent',
+}
+
+// ── Tier-aware pickers ──────────────────────────────────────────────────────
+// Every forged item renders through these, so a call site just passes whether
+// it's the Abyssal tier instead of nesting a ternary per style object.
+export const forgedBorderSoft = (fill: string, abyssal = false): CSSProperties =>
+  (abyssal ? abyssalBorderSoft(fill) : prismaticBorderSoft(fill))
+
+export const forgedTextSoft = (abyssal = false): CSSProperties =>
+  (abyssal ? ABYSSAL_TEXT_SOFT : PRISMATIC_TEXT_SOFT)

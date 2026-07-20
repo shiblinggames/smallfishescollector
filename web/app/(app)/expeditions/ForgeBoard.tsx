@@ -32,7 +32,7 @@ import {
   FORGE_RECIPES, getRaidItem, getForgeRecipe, cacheComponentsMissing,
   forgeComponentIds, recipesUsingComponent, forgeOpportunityCost,
 } from '@/lib/raidItems'
-import { PRISMATIC, PRISMATIC_TEXT_SOFT, prismaticBorderSoft } from '@/lib/prismatic'
+import { PRISMATIC, forgedBorderSoft, forgedTextSoft } from '@/lib/prismatic'
 
 const GOLD = '#e8c879'
 const BLUE = '#7fd0ff'
@@ -247,6 +247,7 @@ export default function ForgeBoard({
               const result = getRaidItem(recipe.result)!
               const accent = STATE_META[state].accent
               const dim = state === 'locked'
+              const abyssal = recipe.tier === 3
               return (
                 <motion.button key={recipe.result} type="button"
                   onClick={() => { vibrate([0, 12]); setOpen(recipe.result) }}
@@ -256,12 +257,12 @@ export default function ForgeBoard({
                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
                     padding: '0.65rem 0.35rem 0.55rem', borderRadius: 13, cursor: 'pointer', minWidth: 0,
                     ...(state === 'forged'
-                      ? prismaticBorderSoft('rgba(14,18,26,0.92)')
+                      ? forgedBorderSoft('rgba(14,18,26,0.92)', abyssal)
                       : { background: state === 'ready' ? 'rgba(232,200,121,0.1)' : 'rgba(255,255,255,0.035)', border: `1px solid ${state === 'ready' ? `${GOLD}77` : 'rgba(255,255,255,0.1)'}` }),
                   }}>
                   <ItemArt id={recipe.result} size={44} dim={dim} />
                   <span className="font-cinzel font-700" style={{ fontSize: '0.76rem', lineHeight: 1.2, textAlign: 'center', minHeight: '1.8rem',
-                    ...(state === 'forged' ? PRISMATIC_TEXT_SOFT : { color: dim ? '#8a8480' : '#f0ede8' }) }}>
+                    ...(state === 'forged' ? forgedTextSoft(abyssal) : { color: dim ? '#8a8480' : '#f0ede8' }) }}>
                     {result.name}
                   </span>
                   {/* One glance tells you where this one stands. */}
@@ -341,6 +342,7 @@ function RecipeSheet({
         const armedLearn = learnArmed === resultId
         const canAfford = fathomsNow >= recipe.fathomCost
         const accent = STATE_META[state].accent
+        const abyssal = recipe.tier === 3
 
         return (
           <>
@@ -363,11 +365,11 @@ function RecipeSheet({
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span style={{ flexShrink: 0, width: 58, height: 58, borderRadius: 13, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  ...(state === 'forged' ? prismaticBorderSoft('rgba(16,20,28,0.95)') : { background: 'rgba(255,255,255,0.05)', border: `1px solid ${accent}55` }) }}>
+                  ...(state === 'forged' ? forgedBorderSoft('rgba(16,20,28,0.95)', abyssal) : { background: 'rgba(255,255,255,0.05)', border: `1px solid ${accent}55` }) }}>
                   <ItemArt id={resultId} size={44} />
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p className="font-cinzel font-800" style={{ fontSize: '1.35rem', lineHeight: 1.12, ...(state === 'forged' ? PRISMATIC_TEXT_SOFT : { color: '#f7efd8' }) }}>{result.name}</p>
+                  <p className="font-cinzel font-800" style={{ fontSize: '1.35rem', lineHeight: 1.12, ...(state === 'forged' ? forgedTextSoft(abyssal) : { color: '#f7efd8' }) }}>{result.name}</p>
                   <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.66rem', color: accent, marginTop: 4 }}>{STATE_META[state].label}</p>
                 </div>
               </div>
@@ -437,7 +439,7 @@ function RecipeSheet({
               {/* ── The one action ────────────────────────────────────────── */}
               <div style={{ marginTop: 15 }}>
                 {state === 'forged' ? (
-                  <div className="font-cinzel font-700 uppercase tracking-[0.06em]" style={{ width: '100%', padding: '0.9rem', borderRadius: 12, textAlign: 'center', fontSize: '1rem', ...prismaticBorderSoft('rgba(16,20,28,0.9)'), ...PRISMATIC_TEXT_SOFT }}>
+                  <div className="font-cinzel font-700 uppercase tracking-[0.06em]" style={{ width: '100%', padding: '0.9rem', borderRadius: 12, textAlign: 'center', fontSize: '1rem', ...forgedBorderSoft('rgba(16,20,28,0.9)', abyssal), ...forgedTextSoft(abyssal) }}>
                     Forged
                   </div>
                 ) : state === 'locked' ? (
