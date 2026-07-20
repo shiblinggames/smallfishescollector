@@ -767,6 +767,152 @@ export const RAID_ITEMS: RaidItemDef[] = [
     ],
     source: "Abyssal Forge: Vanguard's Chronometer + Riposte Chronometer",
   },
+  // ── NEW forge results — Ch3/4 items + Don's Gauntlet items. Art PENDING
+  //    (emoji fallback, like the first Abyssal batch). Tier-2 first, then tier-3.
+  {
+    id: 'carrion_rack',
+    name: 'Carrion Rack',
+    description: 'A chance each hit to Weaken, Corrode and make the enemy Feeble — and you deal +21% damage to anything already suffering a status. It opens the wound and twists it.',
+    image: null,
+    emoji: '☠️',
+    rarity: 'legendary',
+    effects: [
+      { type: 'weaken_on_hit',        value: 0.30 },
+      { type: 'corrode_on_hit',       value: 0.30 },
+      { type: 'feeble_on_hit',        value: 0.30 },
+      { type: 'afflicted_damage_mult', value: 1.21 },
+    ],
+    source: 'Forged from Carrion Sight + Brackwater Rack',
+  },
+  {
+    id: 'ambush_signet',
+    name: 'Ambush Signet',
+    description: 'Your first shot each fight lands +26% harder, and a critical hit has a 45% chance to tear a loaded cannonball off the enemy. Open loud, and disarm them while they reel.',
+    image: null,
+    emoji: '💍',
+    rarity: 'legendary',
+    effects: [
+      { type: 'first_shot_mult',   value: 1.26 },
+      { type: 'crit_strip_charge', value: 0.45 },
+    ],
+    source: "Forged from Vanguard Battery + The Don's Signet",
+  },
+  {
+    id: 'bastion_drum',
+    name: 'Bastion Drum',
+    description: 'A single hit over 25% of your max hull has a 50% chance to be dampened back to it — and once per raid, beat the drum to bring a spent crew ability back. Hold the line, then rally.',
+    image: null,
+    emoji: '🥁',
+    rarity: 'legendary',
+    effects: [
+      { type: 'max_hit_pct',    value: 0.25 },
+      { type: 'max_hit_chance', value: 0.5 },
+    ],
+    activated: { kind: 'refresh_ability', chance: 1.0 },
+    source: 'Forged from Dampener Plate + Thunder Drum',
+  },
+  {
+    id: 'hawkeye_glass',
+    name: 'Hawkeye Glass',
+    description: 'A 30% chance to see through a feint and land a shot the enemy would have dodged, and a 13% chance any clean hit sharpens into a crit. Nothing slips the glass.',
+    image: null,
+    emoji: '🦅',
+    rarity: 'legendary',
+    effects: [
+      { type: 'dodge_pierce_chance', value: 0.30 },
+      { type: 'crit_upgrade_chance', value: 0.13 },
+    ],
+    source: "Forged from Admiral's Eye + Crow's-Nest Rigging",
+  },
+  {
+    id: 'predators_battery',
+    name: "Predator's Battery",
+    description: 'Your first shot each fight lands +26% harder, and you deal +21% damage to any enemy already suffering a status. Pick the wounded, and open on them hard.',
+    image: null,
+    emoji: '🎯',
+    rarity: 'legendary',
+    effects: [
+      { type: 'first_shot_mult',       value: 1.26 },
+      { type: 'afflicted_damage_mult', value: 1.21 },
+    ],
+    source: 'Forged from Vanguard Battery + Carrion Sight',
+  },
+  {
+    id: 'rally_rigging',
+    name: 'Rally Rigging',
+    description: 'Each reload has a 15% chance to catch the wind and load a second cannonball, and once per raid you can rally a spent crew ability back to the line. Never lose your tempo.',
+    image: null,
+    emoji: '🪢',
+    rarity: 'legendary',
+    effects: [
+      { type: 'reload_charge_chance', value: 0.15 },
+    ],
+    activated: { kind: 'refresh_ability', chance: 1.0 },
+    source: 'Forged from Trade-Wind Sails + Thunder Drum',
+  },
+  // ── TIER 3 · Abyssal ────────────────────────────────────────────────────────
+  {
+    id: 'plague_cannon',
+    name: 'Plague Cannon',
+    description: 'Every hit can Weaken, Corrode and make the enemy Feeble, you deal +25% to anything afflicted, and your criticals hit +15% harder. A rotting hull dies screaming.',
+    image: null,
+    emoji: '☠️',
+    rarity: 'legendary',
+    effects: [
+      { type: 'weaken_on_hit',        value: 0.35 },
+      { type: 'corrode_on_hit',       value: 0.35 },
+      { type: 'feeble_on_hit',        value: 0.35 },
+      { type: 'afflicted_damage_mult', value: 1.25 },
+      { type: 'crit_damage_mult',     value: 1.15 },
+    ],
+    source: "Abyssal Forge: Carrion Rack + Sharpshooter's Cannon",
+  },
+  {
+    id: 'warden_of_the_deep',
+    name: 'Warden of the Deep',
+    description: 'A big hit has a 60% chance to be dampened to 25% of your hull, the first killing blow each raid leaves you standing, a fifth of your Savvy joins your turn-order roll, and once per raid you rally a spent ability. The deep does not let you fall.',
+    image: null,
+    emoji: '🛡️',
+    rarity: 'legendary',
+    effects: [
+      { type: 'max_hit_pct',        value: 0.25 },
+      { type: 'max_hit_chance',     value: 0.6 },
+      { type: 'lethal_save',        value: 1 },
+      { type: 'speed_roll_nav_pct', value: 0.25 },
+    ],
+    activated: { kind: 'refresh_ability', chance: 1.0 },
+    source: 'Abyssal Forge: Bastion Drum + Deadman’s Bearing',
+  },
+  {
+    id: 'oracles_eye',
+    name: "Oracle's Eye",
+    description: 'A 35% chance to see through a feint, an 18% chance a clean hit becomes a crit, criticals hit +20% harder, and +12% max hull. You see the shot before it is taken.',
+    image: null,
+    emoji: '👁️',
+    rarity: 'legendary',
+    effects: [
+      { type: 'dodge_pierce_chance', value: 0.35 },
+      { type: 'crit_upgrade_chance', value: 0.18 },
+      { type: 'crit_damage_mult',    value: 1.20 },
+      { type: 'max_hp_mult',         value: 1.12 },
+    ],
+    source: "Abyssal Forge: Hawkeye Glass + Heavy Gunner's Sight",
+  },
+  {
+    id: 'warlords_reckoning',
+    name: "Warlord's Reckoning",
+    description: 'Your first shot each fight lands +35% harder, a crit has a 50% chance to strip a loaded cannonball, and you deal +22% to bosses AND non-bosses alike. When you open, the account is already settled.',
+    image: null,
+    emoji: '⚔️',
+    rarity: 'legendary',
+    effects: [
+      { type: 'first_shot_mult',   value: 1.35 },
+      { type: 'crit_strip_charge', value: 0.50 },
+      { type: 'boss_damage_mult',  value: 1.22 },
+      { type: 'nonboss_damage_mult', value: 1.22 },
+    ],
+    source: "Abyssal Forge: Ambush Signet + Marauder's Cannon",
+  },
 ]
 
 // ── Forge recipes ─────────────────────────────────────────────────────────────
@@ -828,10 +974,32 @@ export const FORGE_RECIPES: ForgeRecipe[] = [
   { components: ['ironclad_bulwark', 'deflector_plate'],                result: 'aegis_of_the_deep',   fathomCost: 250, tier: 3 },
   { components: ['marauders_cannon', 'last_bastion'],                   result: 'drowned_crown',       fathomCost: 250, tier: 3 },
   { components: ['vanguards_chronometer', 'riposte_chronometer'],       result: 'tempest_chronometer', fathomCost: 250, tier: 3 },
+  // ── NEW tier-2 fusions — Ch3/4 raid items + the Don's Gauntlet items. ────────
+  { components: ['the_shakedown', 'brackwater_rack'],           result: 'carrion_rack',      fathomCost: 150 },
+  { components: ['opening_statement', 'dons_signet'],           result: 'ambush_signet',     fathomCost: 150 },
+  { components: ['made_man', 'thunder_drum'],                   result: 'bastion_drum',      fathomCost: 150 },
+  { components: ['admirals_eye', 'crows_nest_rigging'],         result: 'hawkeye_glass',     fathomCost: 150 },
+  { components: ['opening_statement', 'the_shakedown'],         result: 'predators_battery', fathomCost: 150 },
+  { components: ['trade_wind_sails', 'thunder_drum'],           result: 'rally_rigging',     fathomCost: 150 },
+  // ── NEW tier-3 Abyssal fusions — pairs of the tier-2 items above + unused ones.
+  { components: ['carrion_rack', 'sharpshooters_cannon'],       result: 'plague_cannon',       fathomCost: 250, tier: 3 },
+  { components: ['bastion_drum', 'deadmans_bearing'],           result: 'warden_of_the_deep',  fathomCost: 250, tier: 3 },
+  { components: ['hawkeye_glass', 'heavy_gunners_sight'],       result: 'oracles_eye',         fathomCost: 250, tier: 3 },
+  { components: ['ambush_signet', 'marauders_cannon'],          result: 'warlords_reckoning',  fathomCost: 250, tier: 3 },
 ]
 
 export function getForgeRecipe(resultId: string): ForgeRecipe | undefined {
   return FORGE_RECIPES.find(r => r.result === resultId)
+}
+
+// Don's Gauntlet base items. Recipes that consume one stay OFF the Forge board
+// until the player has Don's access — otherwise a live (Don's-locked) player
+// would see locked "chase" rows spoiling unreleased items. gated in ForgeBoard.
+export const GAUNTLET2_BASE_ITEM_IDS = ['opening_statement', 'made_man', 'the_shakedown']
+/** Does this recipe directly consume a Don's-Gauntlet item? */
+export function recipeNeedsGauntlet2(resultId: string): boolean {
+  const r = getForgeRecipe(resultId)
+  return !!r && r.components.some(c => GAUNTLET2_BASE_ITEM_IDS.includes(c))
 }
 
 // ── THE FORGE IS A CONTESTED GRAPH, NOT A LIST ──────────────────────────────

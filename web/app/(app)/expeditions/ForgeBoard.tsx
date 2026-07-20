@@ -31,6 +31,7 @@ import { lockBodyScroll } from '@/lib/bodyScrollLock'
 import {
   FORGE_RECIPES, getRaidItem, getForgeRecipe, cacheComponentsMissing,
   forgeComponentIds, recipesUsingComponent, forgeOpportunityCost,
+  recipeNeedsGauntlet2, GAUNTLET2_BASE_ITEM_IDS,
 } from '@/lib/raidItems'
 import { PRISMATIC, forgedBorderSoft, forgedTextSoft } from '@/lib/prismatic'
 
@@ -101,10 +102,16 @@ export default function ForgeBoard({
     return recipe.components.every(c => owned.has(c)) ? 'ready' : 'gathering'
   }
 
+  // Has the player any path to Don's-Gauntlet components? (owns one, or has the
+  // Abyssal Forge). Live/Don's-locked players don't — so recipes needing a Don's
+  // item stay hidden and can't spoil unreleased content.
+  const hasDonsAccess = abyssalUnlocked || ownedRaidItems.some(id => GAUNTLET2_BASE_ITEM_IDS.includes(id))
   const rows = useMemo(() => FORGE_RECIPES
     // Tier-3 Abyssal recipes stay invisible until Don's Abyssal Forge is owned,
     // so the board never shows recipes the player has no path to learn.
     .filter(r => r.tier !== 3 || abyssalUnlocked)
+    // Recipes consuming a Don's-Gauntlet item stay hidden until Don's is reachable.
+    .filter(r => !recipeNeedsGauntlet2(r.result) || hasDonsAccess)
     .map(r => ({
       recipe: r,
       state: stateOf(r.result),
