@@ -290,10 +290,9 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
     dons_descent:    Number(p.dons_gauntlet_deepest ?? 0) >= 1,
     dons_doorstep:   Number(p.dons_gauntlet_deepest ?? 0) >= 50,
     dons_reckoning:  Number(p.dons_gauntlet_deepest ?? 0) >= 75,
-    galaxy_hull_won: (p.ship_skins ?? []).includes('galaxy_hull'),
     dons_ghost_hull_won: (p.ship_skins ?? []).includes('dons_ghost_hull'),
-    // ultimate_only / weight_of_green / untouched are cash-out HOOKS (see
-    // cashOutGauntlet) — not derivable, so they're not listed here.
+    // first_convergence / ultimate_only / weight_of_green / untouched are HOOKS
+    // (GauntletGame draft + cashOutGauntlet) — not derivable, so not listed here.
   }
 }
 

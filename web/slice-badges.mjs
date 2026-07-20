@@ -167,8 +167,8 @@ const PLAN = [
   [23, 0, 0, 'dons_descent'],
   [23, 0, 1, 'dons_doorstep'],
   [23, 0, 2, 'dons_reckoning'],
-  [23, 1, 0, 'galaxy_hull_won'],
-  [23, 1, 1, 'dons_ghost_hull_won'],
+  [23, 1, 0, 'dons_ghost_hull_won'],
+  [23, 1, 1, 'first_convergence'],
   [23, 1, 2, 'one_true_shot'],
   // Batch 24 — The Abyssal Forge (forge mastery + challenge feats).
   [24, 0, 0, 'abyssal_smith'],

@@ -35,6 +35,7 @@ import { GAUNTLET_TERMS, TERM_GROUP_META, resolveTerms, termPressure, termTideEf
 import GauntletTermsPanel from './GauntletTermsPanel'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, setGauntletUpgradeActive, markGauntletIntroSeen, recordGauntletHit, wagerGauntletFathoms, markConfluencesSeen, checkpointGauntletRun, pauseGauntletRun, resumeGauntletRun, buyBaitWithFathoms, rollDavyOffer, buyMerchantItem } from './actions'
 import { MERCHANT_ITEMS, rollMerchantStock, type MerchantItemKind } from '@/lib/gauntletMerchant'
+import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
 import { offerCoinMult, offerChestMult, offerCopy, offerTakenLine, type DavyOffer } from '@/lib/gauntletOffer'
 import { FATHOM_BAITS } from '@/lib/bait'
 import { upgradesForVariant, getGauntletUpgrade, upgradeTierInfo, romanTier, COMING_SOON_UPGRADES, activeGauntletUpgrades, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck, gauntletBoonRerolls, gauntletCurseRerolls, gauntletBoonFilters, gauntletSynergyOfferMult, gauntletHasBloodOath, gauntletStartAnchorSaves } from '@/lib/gauntletUpgrades'
@@ -1358,6 +1359,8 @@ export default function GauntletGame(props: GauntletGameProps) {
         vibrate([0, 55, 40, 90, 40, 150])
         import('@/lib/fishingMusic').then(m => m.playChestSfx(true)).catch(() => {})
       }
+      // "The Convergence" badge — forging any convergence (a Don's-only meta synergy).
+      if (props.variant === 'don') unlockBadge('first_convergence').catch(() => {})
       setPhase('between')
       return
     }

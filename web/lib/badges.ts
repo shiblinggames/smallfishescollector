@@ -231,8 +231,8 @@ export const BADGES: Badge[] = [
   { id: 'dons_descent',    name: 'The Green Beckons',  description: "Cash out a Don's Gauntlet run",                   imageUrl: '/badges/dons_descent.png',    difficulty: 'seasoned'    },
   { id: 'dons_doorstep',   name: "The Don's Doorstep", description: "Descend to depth 50 in Don's Gauntlet",           imageUrl: '/badges/dons_doorstep.png',   difficulty: 'master'      },
   { id: 'dons_reckoning',  name: "The Don's Reckoning", description: "Descend to depth 75 in Don's Gauntlet",          imageUrl: '/badges/dons_reckoning.png',  difficulty: 'grandmaster' },
-  { id: 'galaxy_hull_won', name: 'The Sky in Her Hull', description: "Earn the Galaxy Hull from Don's Gauntlet",        imageUrl: '/badges/galaxy_hull_won.png', difficulty: 'veteran'     },
   { id: 'dons_ghost_hull_won', name: 'Ghost of the Court', description: "Earn the Don's Ghost Hull from Don's Gauntlet", imageUrl: '/badges/dons_ghost_hull_won.png', difficulty: 'veteran'  },
+  { id: 'first_convergence', name: 'The Convergence',  description: "Forge a convergence in Don's Gauntlet",           imageUrl: '/badges/first_convergence.png', difficulty: 'master'    },
   { id: 'one_true_shot',   name: 'One True Shot',      description: 'Land a single Gauntlet hit for 4,000+',           imageUrl: '/badges/one_true_shot.png',   difficulty: 'veteran'     },
   // Sheet 24 — The Abyssal Forge: forge mastery + challenge feats.
   { id: 'abyssal_smith',   name: 'The Abyssal Forge',  description: 'Forge your first tier-3 Abyssal item',            imageUrl: '/badges/abyssal_smith.png',   difficulty: 'master'      },
