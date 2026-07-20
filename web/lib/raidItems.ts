@@ -710,7 +710,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
   {
     id: 'leviathans_cannon',
     name: "Leviathan's Cannon",
-    image: null,
+    image: '/forge_leviathanscannon.png',
     description: '+30% damage to bosses, your damage climbs +4% every turn of a fight, and +13% critical damage with a softened non-crit penalty. The siege gun and the warlord’s piece welded into one barrel.',
     emoji: '🐋',
     rarity: 'legendary',
@@ -725,7 +725,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
   {
     id: 'aegis_of_the_deep',
     name: 'Aegis of the Deep',
-    image: null,
+    image: '/forge_aegisofthedeep.png',
     description: '+15% max HP, cuts incoming enemy fire by 25%, and on a successful dodge a 50% chance to deflect 75% of the shot back at the attacker. Nothing the deep throws reaches the hull clean.',
     emoji: '🛡️',
     rarity: 'legendary',
@@ -740,7 +740,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
   {
     id: 'drowned_crown',
     name: 'Drowned Crown',
-    image: null,
+    image: '/forge_drownedcrown.png',
     description: '+17% damage to bosses AND non-boss enemies, +15% max HP, and once per raid a killing blow leaves you at 1 HP instead of sinking. The crown that will not be taken.',
     emoji: '👑',
     rarity: 'legendary',
@@ -755,7 +755,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
   {
     id: 'tempest_chronometer',
     name: 'Tempest Chronometer',
-    image: null,
+    image: '/forge_tempestchronometer.png',
     description: 'Adds a fifth of your Savvy to your turn-order roll, always opens each fight with a cannonball already loaded, and on a successful dodge a 50% chance to deflect 75% of the shot back. Strike first, and answer everything.',
     emoji: '🌀',
     rarity: 'legendary',
@@ -773,7 +773,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'carrion_rack',
     name: 'Carrion Rack',
     description: 'A chance each hit to Weaken, Corrode and make the enemy Feeble — and you deal +21% damage to anything already suffering a status. It opens the wound and twists it.',
-    image: null,
+    image: '/forge_carrionrack.png',
     emoji: '☠️',
     rarity: 'legendary',
     effects: [
@@ -788,7 +788,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'ambush_signet',
     name: 'Ambush Signet',
     description: 'Your first shot each fight lands +26% harder, and a critical hit has a 45% chance to tear a loaded cannonball off the enemy. Open loud, and disarm them while they reel.',
-    image: null,
+    image: '/forge_ambushsignet.png',
     emoji: '💍',
     rarity: 'legendary',
     effects: [
@@ -801,7 +801,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'bastion_drum',
     name: 'Bastion Drum',
     description: 'A single hit over 25% of your max hull has a 50% chance to be dampened back to it — and once per raid, beat the drum to bring a spent crew ability back. Hold the line, then rally.',
-    image: null,
+    image: '/forge_bastiondrum.png',
     emoji: '🥁',
     rarity: 'legendary',
     effects: [
@@ -815,7 +815,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'hawkeye_glass',
     name: 'Hawkeye Glass',
     description: 'A 30% chance to see through a feint and land a shot the enemy would have dodged, and a 13% chance any clean hit sharpens into a crit. Nothing slips the glass.',
-    image: null,
+    image: '/forge_hawkeyeglass.png',
     emoji: '🦅',
     rarity: 'legendary',
     effects: [
@@ -828,7 +828,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'predators_battery',
     name: "Predator's Battery",
     description: 'Your first shot each fight lands +26% harder, and you deal +21% damage to any enemy already suffering a status. Pick the wounded, and open on them hard.',
-    image: null,
+    image: '/forge_predatorsbattery.png',
     emoji: '🎯',
     rarity: 'legendary',
     effects: [
@@ -841,7 +841,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'rally_rigging',
     name: 'Rally Rigging',
     description: 'Each reload has a 15% chance to catch the wind and load a second cannonball, and once per raid you can rally a spent crew ability back to the line. Never lose your tempo.',
-    image: null,
+    image: '/forge_rallyrigging.png',
     emoji: '🪢',
     rarity: 'legendary',
     effects: [
@@ -855,7 +855,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'plague_cannon',
     name: 'Plague Cannon',
     description: 'Every hit can Weaken, Corrode and make the enemy Feeble, you deal +25% to anything afflicted, and your criticals hit +15% harder. A rotting hull dies screaming.',
-    image: null,
+    image: '/forge_plaguecannon.png',
     emoji: '☠️',
     rarity: 'legendary',
     effects: [
@@ -871,7 +871,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'warden_of_the_deep',
     name: 'Warden of the Deep',
     description: 'A big hit has a 60% chance to be dampened to 25% of your hull, the first killing blow each raid leaves you standing, a fifth of your Savvy joins your turn-order roll, and once per raid you rally a spent ability. The deep does not let you fall.',
-    image: null,
+    image: '/forge_wardenofthedeep.png',
     emoji: '🛡️',
     rarity: 'legendary',
     effects: [
@@ -887,7 +887,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'oracles_eye',
     name: "Oracle's Eye",
     description: 'A 35% chance to see through a feint, an 18% chance a clean hit becomes a crit, criticals hit +20% harder, and +12% max hull. You see the shot before it is taken.',
-    image: null,
+    image: '/forge_oracleseye.png',
     emoji: '👁️',
     rarity: 'legendary',
     effects: [
@@ -902,7 +902,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'warlords_reckoning',
     name: "Warlord's Reckoning",
     description: 'Your first shot each fight lands +35% harder, a crit has a 50% chance to strip a loaded cannonball, and you deal +22% to bosses AND non-bosses alike. When you open, the account is already settled.',
-    image: null,
+    image: '/forge_warlordsreckoning.png',
     emoji: '⚔️',
     rarity: 'legendary',
     effects: [
