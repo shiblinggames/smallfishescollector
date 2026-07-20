@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { hapticTap } from '@/lib/haptics'
+import { BADGE_MAP } from '@/lib/badges'
 
 const PAGE_TINTS: [string, string][] = [
   ['/tavern',      'rgba(180,120,30,0.10)'],
@@ -157,9 +158,10 @@ export default function MobileTabBar() {
   )
   // Any trawl whose cycle has finished → pulse the Fishing tab.
   const trawlReady = trawls.some(t => new Date(t.ends_at).getTime() <= voyageNow)
-  // Any earned-but-unclaimed badge reward → pulse the Badges tab.
+  // Earned-but-unclaimed badge rewards → a count on the Badges tab. Filter to
+  // KNOWN badge ids so a stale/removed id can't inflate the number.
   const claimedSet = new Set(badgeIds.claimed)
-  const hasUnclaimedBadges = badgeIds.unlocked.some(b => !claimedSet.has(b))
+  const unclaimedBadges = badgeIds.unlocked.filter(b => BADGE_MAP[b] && !claimedSet.has(b)).length
 
   if (pathname === '/' || pathname === '/login') return null
   const tint = PAGE_TINTS.find(([p]) => pathname === p || pathname.startsWith(p + '/'))?.[1]
@@ -182,8 +184,10 @@ export default function MobileTabBar() {
     >
       {LINKS.map(({ href, label, icon }) => {
         const active = pathname === href || pathname.startsWith(href + '/')
-        const badge = href === '/expeditions' && voyageBadge ? true : null
-        const pulse = (href === '/fishing' && trawlReady) || (href === '/badges' && hasUnclaimedBadges)
+        const badge = href === '/badges' && unclaimedBadges > 0 ? unclaimedBadges
+                    : href === '/expeditions' && voyageBadge ? true
+                    : null
+        const pulse = href === '/fishing' && trawlReady
         return (
           <Link
             key={href}

@@ -6,6 +6,7 @@ import AnnouncementBanner from './AnnouncementBanner'
 import CharacterAvatar from './CharacterAvatar'
 import MailInbox from './MailInbox'
 import { getMailUnreadCount } from '@/app/actions/mail'
+import { BADGE_MAP } from '@/lib/badges'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -103,6 +104,9 @@ export default function Nav({ doubloons, gems }: { packsAvailable?: number; doub
   const [avatarBorder, setAvatarBorder]     = useState<string | null>(() => readNavCache('avatar_border'))
   const [isAdmin, setIsAdmin]               = useState<boolean>(() => readNavCache('is_admin') === 'true')
   const [mailUnread, setMailUnread]         = useState<number>(() => Number(readNavCache('mail_unread')) || 0)
+  // Badges whose doubloon reward is earned but not yet claimed — the "N ready
+  // to claim" count on the Badges nav item.
+  const [claimableBadges, setClaimableBadges] = useState<number>(() => Number(readNavCache('badge_claims')) || 0)
   // Only render the mail icon once we know the user is signed in (same
   // gate the currency widgets use). isSignedIn flips true the first time
   // fetchBadge resolves a user.
@@ -119,7 +123,7 @@ export default function Nav({ doubloons, gems }: { packsAvailable?: number; doub
       if (!user) return
       setIsSignedIn(true)
       Promise.all([
-        supabase.from('profiles').select('character_color, equipped_hat, avatar_bg_color, avatar_border_color, is_admin, doubloons, gems').eq('id', user.id).single(),
+        supabase.from('profiles').select('character_color, equipped_hat, avatar_bg_color, avatar_border_color, is_admin, doubloons, gems, unlocked_badges, claimed_badge_rewards').eq('id', user.id).single(),
         supabase.from('daily_voyages').select('created_at, duration_ms').eq('user_id', user.id).eq('status', 'pending'),
         // Unread mail via the SERVER helper so the pip respects the SAME
         // visibility as the inbox (targeting + join-date + evergreen). The old
@@ -166,6 +170,14 @@ export default function Nav({ doubloons, gems }: { packsAvailable?: number; doub
         setVoyageBadge(hasReadyVoyage)
         setMailUnread(mailUnreadCount)
         writeNavCache('mail_unread', mailUnreadCount > 0 ? String(mailUnreadCount) : null)
+        // Ready-to-claim badge rewards: unlocked (and known) minus already-claimed.
+        // Reads STORED unlocked_badges — a level/count badge only counts once it's
+        // been reconciled in, which is the honest "waiting for you" set.
+        const unlockedB = (profile?.unlocked_badges as string[] | null) ?? []
+        const claimedB = new Set((profile?.claimed_badge_rewards as string[] | null) ?? [])
+        const claimable = unlockedB.filter(id => BADGE_MAP[id] && !claimedB.has(id)).length
+        setClaimableBadges(claimable)
+        writeNavCache('badge_claims', claimable > 0 ? String(claimable) : null)
       }).catch(() => {})
     })
   }, [])
@@ -231,6 +243,15 @@ export default function Nav({ doubloons, gems }: { packsAvailable?: number; doub
     window.addEventListener('gems-changed', handleGemsChanged)
     return () => window.removeEventListener('gems-changed', handleGemsChanged)
   }, [])
+
+  // A badge earned (BadgeWatcher) or a reward claimed (AchievementsClient) fires
+  // `badges-changed` → re-read so the Badges nav count updates the moment it
+  // changes, not only on the next route switch.
+  useEffect(() => {
+    const h = () => fetchBadge()
+    window.addEventListener('badges-changed', h)
+    return () => window.removeEventListener('badges-changed', h)
+  }, [fetchBadge])
 
   // Close on outside tap
   useEffect(() => {
@@ -340,7 +361,7 @@ export default function Nav({ doubloons, gems }: { packsAvailable?: number; doub
   ]
 
   const desktopOnlyLinks = [
-    { href: '/badges',       label: 'Badges',        badge: null },
+    { href: '/badges',       label: 'Badges',        badge: claimableBadges || null },
     { href: '/achievements', label: "Captain's Log", badge: null },
     { href: '/social',       label: 'Social',        badge: null },
   ]
