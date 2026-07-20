@@ -890,6 +890,9 @@ export const GALAXY_HULL_SKIN_ID = 'galaxy_hull'
 export const GALAXY_HULL_CHEST_TIER = 5   // deepest chest, mirrors the Golden Hull
 export const GHOST_HULL_SKIN_ID = 'dons_ghost_hull'
 export const GHOST_HULL_CHEST_TIER = 4    // hardcore, mirrors the Bad Blood Hull
+// Don's Gauntlet item chase — rolls from any chest like the Davy cannons, on the
+// same odds curve. Never drop in Davy's; the Davy cannons never drop in Don's.
+export const DONS_GAUNTLET_ITEM_IDS = ['opening_statement', 'made_man']
 export const BLOOD_CANNON_ITEM_ID = 'davys_blood_cannon'
 export const BLOOD_CANNON_CHEST_TIER = 3
 
@@ -928,7 +931,10 @@ export function chestOdds(opts: {
   const out: ChestOdd[] = []
 
   if (isDon) {
-    // Don's Gauntlet: its own two hulls, no cannons, no Davy skins.
+    // Don's Gauntlet: its own two items + two hulls. No Davy loot.
+    for (const id of DONS_GAUNTLET_ITEM_IDS) {
+      if (!ownedItems.includes(id)) out.push({ id, name: CHEST_DROP_NAMES[id] ?? id, kind: 'item', chance: cannon })
+    }
     if (tier >= GALAXY_HULL_CHEST_TIER && !ownedSkins.includes(GALAXY_HULL_SKIN_ID)) {
       out.push({ id: GALAXY_HULL_SKIN_ID, name: 'Galaxy Hull', kind: 'skin', chance: skin })
     }
@@ -964,6 +970,8 @@ export function chestOdds(opts: {
 const CHEST_DROP_NAMES: Record<string, string> = {
   davys_heavy_cannon: "Davy's Heavy Cannon",
   davys_hand_cannon:  "Davy's Hand Cannon",
+  opening_statement:  'Opening Statement',
+  made_man:           'Made Man',
 }
 
 // ── Curses — the Locker's Pressure ────────────────────────────────────────────

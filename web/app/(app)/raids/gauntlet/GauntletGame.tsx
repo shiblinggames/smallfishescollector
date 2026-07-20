@@ -4076,7 +4076,7 @@ function GauntletReward({ r, recap, onBack, don }: { r: RewardOk; recap: { ships
                   {item.image
                     // eslint-disable-next-line @next/next/no-img-element
                     ? <img src={item.image} alt="" style={{ width: 42, height: 42, objectFit: 'contain', flexShrink: 0 }} />
-                    : null}
+                    : <span style={{ width: 42, fontSize: '1.9rem', lineHeight: 1, textAlign: 'center', flexShrink: 0 }}>{item.emoji}</span>}
                   <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
                     <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#e8c879' }}>Rare drop · equip from Manage Ship</p>
                     <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f5ecd6', lineHeight: 1.1 }}>{item.name}</p>
@@ -4780,8 +4780,23 @@ function LootModal({ mode, don, onClose }: { mode: 'normal' | 'hardcore'; don?: 
     const s = getShipSkin(id)
     return s ? { id: s.id, name: s.name, img: s.imageByTier?.[6], tag, desc: s.description, how, hardcoreOnly } : null
   }
+  // Raid-item tile — emoji fallback while art is pending (image null).
+  const itemDrop = (id: string, tag: string, how: string, hardcoreOnly = false): HaulDrop | null => {
+    const it = getRaidItem(id)
+    if (!it) return null
+    return {
+      id: it.id, name: it.name,
+      img: it.image ?? undefined,
+      icon: it.image ? undefined : <span style={{ fontSize: '1.9rem', lineHeight: 1 }}>{it.emoji}</span>,
+      tag, desc: it.description, how, hardcoreOnly,
+    }
+  }
   const chase: HaulDrop[] = (don
     ? [
+        itemDrop('opening_statement', 'Rare from any chest',
+          'A rare roll in any cash-out chest. The odds climb the deeper you bank.'),
+        itemDrop('made_man', 'Rare from any chest',
+          'A rare roll in any cash-out chest. The odds climb the deeper you bank.'),
         skinDrop('galaxy_hull', 'Deepest chest only',
           "Only rolls from the deepest Don's Gauntlet chest. Man-o-War hulls only."),
         skinDrop('dons_ghost_hull', 'Hardcore only',

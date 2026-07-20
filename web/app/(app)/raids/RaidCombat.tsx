@@ -3753,8 +3753,14 @@ export default function RaidCombat({
           // Statuses: what YOU deal (weaken ↓ / enrage ↑) × what the ENEMY
           // takes (feeble ↑ / fortify ↓) — the Ch4 pipeline's damage hooks.
           const statusOutMult = pStatus.dmgDealtMult * eStatus.dmgTakenMult
+          // Opening Statement (item): the FIRST shot of the fight lands harder.
+          // shotsThisFightRef was already bumped for this shot at aim-lock, so the
+          // opener reads as === 1. Every later shot is untouched.
+          const firstShotMult = shotsThisFightRef.current === 1
+            ? getActiveEffects(liveItems).filter(e => e.type === 'first_shot_mult').reduce((a, e) => a * e.value, 1)
+            : 1
           const mult = actionBaseMult * bossMult * nonbossMult * rampMult * aimItemMult * classDamageMult
-                       * tide.dmgMult * tideActionMult * tideBossMult * critTideMult * lowHpMult * noncritTideMult * frozenMult * volleyRampMult * critStreakMult * vengeanceMult * statusOutMult
+                       * tide.dmgMult * tideActionMult * tideBossMult * critTideMult * lowHpMult * noncritTideMult * frozenMult * volleyRampMult * critStreakMult * vengeanceMult * statusOutMult * firstShotMult
           dmg = Math.floor(rollShotDamage(lockedAimResult ?? 'miss', shipMinDamage, totalPower, mods.damagePct) * mult)
           if (isVolley) volleyCountRef.current += 1   // this volley is now "fired" — the next ramps further
           // Enemy themed defense: crustacean carapace soaks a flat % off every
@@ -4364,6 +4370,19 @@ export default function RaidCombat({
             stepLines.push(`The sea anchor holds — the blow is cut (${before} → ${dmg}).`)
             anchorReductionRef.current = null
             anchorConsumed = true
+          }
+          // Made Man (item): no single hit can take more than max_hit_pct of your
+          // MAX HP. Caps the blow here — after mitigation, before the shield soaks
+          // it — so a burst / ultimate gets defanged while chip damage is left
+          // alone. Multiple sources take the tightest (lowest) cap.
+          const hitCapPct = getActiveEffects(liveItems).filter(e => e.type === 'max_hit_pct').reduce((a, e) => Math.min(a, e.value), 1)
+          if (hitCapPct < 1 && dmg > 0) {
+            const ceil = Math.max(1, Math.round(playerHpMax * hitCapPct))
+            if (dmg > ceil) {
+              const before = dmg
+              dmg = ceil
+              stepLines.push(`Made Man — no blow lands that clean on you (${before} → ${dmg}).`)
+            }
           }
           // Shield pool — soaks from the pool before HP. Seeded by the Stormward
           // boon at fight start and/or topped up by the Abyssal Tide ability;

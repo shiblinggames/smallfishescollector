@@ -27,6 +27,9 @@ export type RaidEffectType =
   | 'weaken_on_hit'         // value = 0-1 chance to WEAKEN the enemy (it deals less damage)
   | 'corrode_on_hit'        // value = 0-1 chance to CORRODE it (its BARRIER takes amplified damage). The Ch4 answer to the Ch4 wall.
   | 'feeble_on_hit'         // value = 0-1 chance to make it FEEBLE (it takes more damage). Legendary rack only.
+  // ── Don's Gauntlet chase — mechanics the roster never had ─────────────────
+  | 'first_shot_mult'       // value = damage multiplier applied ONLY to the FIRST shot you fire each fight (Opening Statement). Nothing else rewards the opener. Multiplies onto the normal shot math.
+  | 'max_hit_pct'           // value = 0-1 cap: no single incoming hit can take more than this fraction of your MAX HP (Made Man). A per-hit ceiling, not a flat reduction — defangs burst/ultimates, leaves chip damage untouched. Multiple sources take the LOWEST (tightest) cap.
 
 export interface RaidEffect {
   type: RaidEffectType
@@ -379,6 +382,28 @@ export const RAID_ITEMS: RaidItemDef[] = [
     rarity: 'legendary',
     effects: [{ type: 'lifesteal_pct', value: 0.08 }, { type: 'nonboss_damage_mult', value: 1.17 }],
     source: "Forged from Davy's Blood + Hand Cannon",
+  },
+  // ── Don's Gauntlet chase — its own two items, mechanics the roster never had.
+  //    Art PENDING (emoji fallback for now, like the Abyssal tier-3 items). ──────
+  {
+    id: 'opening_statement',
+    name: 'Opening Statement',
+    description: 'Your FIRST shot of every fight lands for +120% damage — every shot after is normal. Lead with a loaded volley and make an example of whoever steps up first.',
+    image: null,
+    emoji: '🎯',
+    rarity: 'legendary',
+    effects: [{ type: 'first_shot_mult', value: 2.2 }],
+    source: "Don's Gauntlet",
+  },
+  {
+    id: 'made_man',
+    name: 'Made Man',
+    description: 'No single hit can take more than 25% of your max hull, no matter how heavy. Ultimates and big broadsides get defanged; the slow bleed still finds you. Nobody roughs up a made man that hard.',
+    image: null,
+    emoji: '🕴️',
+    rarity: 'legendary',
+    effects: [{ type: 'max_hit_pct', value: 0.25 }],
+    source: "Don's Gauntlet",
   },
   // ── Forge fusions (learned in The Forge, sacrificing both components) ────────
   // Offense fusions run at ~85% of each parent effect (they trade raw numbers for
