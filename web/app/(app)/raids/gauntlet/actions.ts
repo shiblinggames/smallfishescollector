@@ -938,6 +938,22 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
     }
   }
 
+  // Don's Gauntlet challenge feats — checked from the run's OWN snapshot at
+  // cash-out (curses carried, damage taken, and how the shots were loosed), so
+  // they can't be spoofed by a later run. One True Shot is derivable (max-hit
+  // stat) and lives in badgeConditions instead.
+  if (isDon && runSnapshot) {
+    const st = runSnapshot.stats
+    const curseCount = Object.keys(runSnapshot.curses ?? {}).length
+    const donFeats: string[] = []
+    if (st && st.shots >= 1 && st.shots === (st.megas ?? 0) && cd >= 10) donFeats.push('ultimate_only')
+    if (curseCount >= 5 && cd >= 30) donFeats.push('weight_of_green')
+    if (st && st.dmgTaken === 0 && cd >= 5) donFeats.push('untouched')
+    for (const id of donFeats) {
+      try { await grantBadgeDirect(user.id, id) } catch { /* best-effort */ }
+    }
+  }
+
   // Depth-milestone unlocks crossed by SURVIVING to this depth (cash-out only).
   // Hardcore surfaces its Drowned Fleet cosmetic unlocks here; normal surfaces
   // the standard depth unlocks. Same reward-screen shape for both.

@@ -163,20 +163,20 @@ const PLAN = [
   [22, 1, 0, 'six_aboard'],
   [22, 1, 1, 'expanded_armory'],
   [22, 1, 2, 'full_tackle_box'],
-  // Batch 23 — Don's Gauntlet (descent ladder + the two hulls).
+  // Batch 23 — Don's Gauntlet (descent spine + two hulls + a feat).
   [23, 0, 0, 'dons_descent'],
-  [23, 0, 1, 'into_the_green'],
-  [23, 0, 2, 'drowned_court'],
-  [23, 1, 0, 'dons_doorstep'],
-  [23, 1, 1, 'galaxy_hull_won'],
-  [23, 1, 2, 'dons_ghost_hull_won'],
-  // Batch 24 — The Abyssal Forge (forge + Locker mastery).
+  [23, 0, 1, 'dons_doorstep'],
+  [23, 0, 2, 'dons_reckoning'],
+  [23, 1, 0, 'galaxy_hull_won'],
+  [23, 1, 1, 'dons_ghost_hull_won'],
+  [23, 1, 2, 'one_true_shot'],
+  // Batch 24 — The Abyssal Forge (forge mastery + challenge feats).
   [24, 0, 0, 'abyssal_smith'],
   [24, 0, 1, 'abyssal_master'],
   [24, 0, 2, 'ghost_armory'],
-  [24, 1, 0, 'ghost_locker'],
-  [24, 1, 1, 'master_of_the_green'],
-  [24, 1, 2, 'dons_reckoning'],
+  [24, 1, 0, 'ultimate_only'],
+  [24, 1, 1, 'weight_of_green'],
+  [24, 1, 2, 'untouched'],
 ]
 
 let skipped = 0

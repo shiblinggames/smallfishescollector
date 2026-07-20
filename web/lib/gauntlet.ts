@@ -551,6 +551,7 @@ function drownedName(name: string): string {
 export interface GauntletRunStats {
   shots: number        // Fire / Volley / Mega actions loosed
   volleys: number      // of those, how many were Volleys
+  megas: number        // of those, how many were Mega ultimates (for the "only-Mega" feat)
   crits: number        // shots that landed as a critical
   dmgDealt: number     // total damage put on enemy hulls
   highestHit: number   // biggest single blow
@@ -561,7 +562,7 @@ export interface GauntletRunStats {
   dodgesLost: number   // dodges that failed (took the hit anyway)
 }
 export function emptyRunStats(): GauntletRunStats {
-  return { shots: 0, volleys: 0, crits: 0, dmgDealt: 0, highestHit: 0, dmgTaken: 0, dmgHealed: 0, dmgAbsorbed: 0, dodgesWon: 0, dodgesLost: 0 }
+  return { shots: 0, volleys: 0, megas: 0, crits: 0, dmgDealt: 0, highestHit: 0, dmgTaken: 0, dmgHealed: 0, dmgAbsorbed: 0, dodgesWon: 0, dodgesLost: 0 }
 }
 /** Fold a delta into a running stats total in place (highestHit takes the max). */
 export function addRunStats(s: GauntletRunStats, d: Partial<GauntletRunStats>): void {

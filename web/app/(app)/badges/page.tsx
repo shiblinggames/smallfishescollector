@@ -9,7 +9,7 @@ import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { reconcileBadges } from '@/app/(app)/achievements/badgeActions'
 import { crewLevelFromXP, CREW_MAX_LEVEL } from '@/lib/crewLevel'
 import { CREW_HALL_MAX_TIER } from '@/lib/crewHall'
-import { GAUNTLET_UPGRADES, upgradesForVariant, isUpgradeComingSoon } from '@/lib/gauntletUpgrades'
+import { GAUNTLET_UPGRADES } from '@/lib/gauntletUpgrades'
 import { FORGE_RECIPES, isForgedRaidItem, isAbyssalForgedItem, GAUNTLET2_BASE_ITEM_IDS } from '@/lib/raidItems'
 import { LEGENDARY_SLUGS_ALL, BASE_LEGENDARY_SLUGS, CONFLUENCE_COUNT, CHASE_SKIN_IDS, LEGENDARY_SKIN_SETS, CHALLENGE_RAID_IDS_ALL } from '@/lib/badgeConditions'
 import { BUYABLE_ROD_TIERS } from '@/lib/rods'
@@ -98,8 +98,6 @@ export default async function BadgesPage() {
   const abyssalTotal = FORGE_RECIPES.filter(r => r.tier === 3).length
   const donsGauntletDeepest = Number(profile?.dons_gauntlet_deepest ?? 0)
   const shipSkinsOwned = (profile?.ship_skins as string[] | null) ?? []
-  const donsUpgradesOwned = ((profile?.dons_gauntlet_upgrades as string[] | null) ?? []).length
-  const donsUpgradeTotal = upgradesForVariant('don').filter(u => !isUpgradeComingSoon(u.id)).length
   const ownsAllDonsItems = GAUNTLET2_BASE_ITEM_IDS.every(id => raidItems.includes(id))
   const forgeRecipesLearned = ((profile?.forge_recipes_learned as string[] | null) ?? []).length
   const hasUltimate = !!profile?.manowar_augment
@@ -325,24 +323,24 @@ export default async function BadgesPage() {
       accent: '#3fbf82',
       goals: [
         badgeGoal('dons_descent', 'The Green Beckons', "Cash out a Don's Gauntlet run", donsGauntletDeepest >= 1 ? 1 : 0, 1, '/raids', { binary: true }),
-        badgeGoal('into_the_green', 'Into the Green', "Descend to depth 10 in Don's Gauntlet", donsGauntletDeepest, 10, '/raids'),
-        badgeGoal('drowned_court', 'The Drowned Court', "Descend to depth 25 in Don's Gauntlet", donsGauntletDeepest, 25, '/raids'),
         badgeGoal('dons_doorstep', "The Don's Doorstep", "Descend to depth 50 in Don's Gauntlet", donsGauntletDeepest, 50, '/raids'),
+        badgeGoal('dons_reckoning', "The Don's Reckoning", "Descend to depth 75 in Don's Gauntlet", donsGauntletDeepest, 75, '/raids'),
         badgeGoal('galaxy_hull_won', 'The Sky in Her Hull', "Earn the Galaxy Hull from Don's Gauntlet", shipSkinsOwned.includes('galaxy_hull') ? 1 : 0, 1, '/raids', { binary: true }),
         badgeGoal('dons_ghost_hull_won', 'Ghost of the Court', "Earn the Don's Ghost Hull from Don's Gauntlet", shipSkinsOwned.includes('dons_ghost_hull') ? 1 : 0, 1, '/raids', { binary: true }),
+        badgeGoal('one_true_shot', 'One True Shot', 'Land a single Gauntlet hit for 4,000+', gauntletMaxHit, 4000, '/raids/gauntlet', { record: true }),
       ],
     },
     {
       title: 'The Abyssal Forge',
-      flavor: 'The deepest forge, and full command of the ghost fleet.',
+      flavor: 'The deepest forge, and the feats that flatter the ghost fleet.',
       accent: '#9d7bff',
       goals: [
         badgeGoal('abyssal_smith', 'The Abyssal Forge', 'Forge your first tier-3 Abyssal item', has('abyssal_smith') || abyssalOwned >= 1 ? 1 : 0, 1, '/expeditions', { binary: true }),
         badgeGoal('abyssal_master', 'Abyssal Master', 'Forge every Abyssal item', abyssalOwned, abyssalTotal, '/expeditions'),
         badgeGoal('ghost_armory', 'The Ghost Armory', "Own all three Don's Gauntlet items", ownsAllDonsItems ? 1 : 0, 1, '/expeditions', { binary: true }),
-        badgeGoal('ghost_locker', 'Ghost Fleet Locker', "Claim 6 Don's Gauntlet upgrades", donsUpgradesOwned, 6, '/raids'),
-        badgeGoal('master_of_the_green', 'Master of the Green', "Own every Don's Gauntlet upgrade", donsUpgradesOwned, donsUpgradeTotal, '/raids'),
-        badgeGoal('dons_reckoning', "The Don's Reckoning", "Descend to depth 75 in Don's Gauntlet", donsGauntletDeepest, 75, '/raids'),
+        badgeGoal('ultimate_only', 'The Long Reload', "Reach depth 10 in Don's Gauntlet firing only your Mega", has('ultimate_only') ? 1 : 0, 1, '/raids', { binary: true }),
+        badgeGoal('weight_of_green', 'The Weight of the Green', "Bank from depth 30 carrying 5+ curses", has('weight_of_green') ? 1 : 0, 1, '/raids', { binary: true }),
+        badgeGoal('untouched', 'Untouched', "Bank a Don's Gauntlet run from depth 5 without taking a hit", has('untouched') ? 1 : 0, 1, '/raids', { binary: true }),
       ],
     },
     {

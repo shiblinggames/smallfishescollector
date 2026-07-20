@@ -380,7 +380,7 @@ function getShotResult(pos: number, zoneCenter: number, critW: number = CRIT_W):
 /** Incremental combat telemetry — the host (Gauntlet) folds these deltas into a
  *  run-total for the summary + deepest-dive recap. Fields mirror GauntletRunStats. */
 export interface CombatStatDelta {
-  shots?: number; volleys?: number; crits?: number; dmgDealt?: number; highestHit?: number
+  shots?: number; volleys?: number; megas?: number; crits?: number; dmgDealt?: number; highestHit?: number
   dmgTaken?: number; dmgHealed?: number; dmgAbsorbed?: number; dodgesWon?: number; dodgesLost?: number
 }
 
@@ -4075,7 +4075,7 @@ export default function RaidCombat({
           }
           // Telemetry: a landed player shot (fire/volley/mega). dmg is the blow
           // the hitsplat shows; highestHit takes the max host-side.
-          onStat?.({ shots: 1, volleys: action === 'volley' ? 1 : 0, crits: lockedAimResult === 'critical' ? 1 : 0, dmgDealt: dmg, highestHit: dmg })
+          onStat?.({ shots: 1, volleys: action === 'volley' ? 1 : 0, megas: isMega ? 1 : 0, crits: lockedAimResult === 'critical' ? 1 : 0, dmgDealt: dmg, highestHit: dmg })
           // Lifesteal — heal a slice of the damage you deal. Two additive
           // sources: the Leviathan's Hunger boon (tide.lifestealPct) and Davy's
           // Blood Cannon raid item (lifesteal_pct effect). The step carries the

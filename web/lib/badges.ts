@@ -227,18 +227,20 @@ export const BADGES: Badge[] = [
   // ── The Abyssal Forge + Don's Gauntlet (art PENDING; dormant until Don's launches) ──
   // Two groups of six on the badges page: "Don's Gauntlet" (descent + hulls) and
   // "The Abyssal Forge" (forge + Locker mastery).
+  // Sheet 23 — Don's Gauntlet: descent spine + hulls + a feat.
   { id: 'dons_descent',    name: 'The Green Beckons',  description: "Cash out a Don's Gauntlet run",                   imageUrl: '/badges/dons_descent.png',    difficulty: 'seasoned'    },
-  { id: 'into_the_green',  name: 'Into the Green',     description: "Descend to depth 10 in Don's Gauntlet",           imageUrl: '/badges/into_the_green.png',  difficulty: 'veteran'     },
-  { id: 'drowned_court',   name: 'The Drowned Court',  description: "Descend to depth 25 in Don's Gauntlet",           imageUrl: '/badges/drowned_court.png',   difficulty: 'veteran'     },
   { id: 'dons_doorstep',   name: "The Don's Doorstep", description: "Descend to depth 50 in Don's Gauntlet",           imageUrl: '/badges/dons_doorstep.png',   difficulty: 'master'      },
+  { id: 'dons_reckoning',  name: "The Don's Reckoning", description: "Descend to depth 75 in Don's Gauntlet",          imageUrl: '/badges/dons_reckoning.png',  difficulty: 'grandmaster' },
   { id: 'galaxy_hull_won', name: 'The Sky in Her Hull', description: "Earn the Galaxy Hull from Don's Gauntlet",        imageUrl: '/badges/galaxy_hull_won.png', difficulty: 'veteran'     },
   { id: 'dons_ghost_hull_won', name: 'Ghost of the Court', description: "Earn the Don's Ghost Hull from Don's Gauntlet", imageUrl: '/badges/dons_ghost_hull_won.png', difficulty: 'veteran'  },
+  { id: 'one_true_shot',   name: 'One True Shot',      description: 'Land a single Gauntlet hit for 4,000+',           imageUrl: '/badges/one_true_shot.png',   difficulty: 'veteran'     },
+  // Sheet 24 — The Abyssal Forge: forge mastery + challenge feats.
   { id: 'abyssal_smith',   name: 'The Abyssal Forge',  description: 'Forge your first tier-3 Abyssal item',            imageUrl: '/badges/abyssal_smith.png',   difficulty: 'master'      },
   { id: 'abyssal_master',  name: 'Abyssal Master',     description: 'Forge every Abyssal item',                        imageUrl: '/badges/abyssal_master.png',  difficulty: 'grandmaster' },
   { id: 'ghost_armory',    name: 'The Ghost Armory',   description: "Own all three Don's Gauntlet items",              imageUrl: '/badges/ghost_armory.png',    difficulty: 'veteran'     },
-  { id: 'ghost_locker',    name: 'Ghost Fleet Locker', description: "Claim 6 Don's Gauntlet upgrades",                 imageUrl: '/badges/ghost_locker.png',    difficulty: 'seasoned'    },
-  { id: 'master_of_the_green', name: 'Master of the Green', description: "Own every Don's Gauntlet upgrade",           imageUrl: '/badges/master_of_the_green.png', difficulty: 'master'  },
-  { id: 'dons_reckoning',  name: "The Don's Reckoning", description: "Descend to depth 75 in Don's Gauntlet",          imageUrl: '/badges/dons_reckoning.png',  difficulty: 'grandmaster' },
+  { id: 'ultimate_only',   name: 'The Long Reload',    description: "Reach depth 10 in Don's Gauntlet firing only your Mega", imageUrl: '/badges/ultimate_only.png', difficulty: 'master'  },
+  { id: 'weight_of_green', name: 'The Weight of the Green', description: "Bank from depth 30 in Don's Gauntlet carrying 5+ curses", imageUrl: '/badges/weight_of_green.png', difficulty: 'master' },
+  { id: 'untouched',       name: 'Untouched',          description: "Bank a Don's Gauntlet run from depth 5 without taking a hit", imageUrl: '/badges/untouched.png', difficulty: 'veteran' },
 ]
 
 export const BADGE_MAP: Record<string, Badge> = Object.fromEntries(
