@@ -30,7 +30,7 @@ import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
 import { applyCrewEffects, resolveEffects, effectSummary, SCOPE_META } from '@/lib/crewEffects'
 import { RARITY_COLORS as CREW_RARITY_COLORS, RARITY_NAMES } from '@/lib/crewGen'
 import { RAID_ITEMS, getRaidItem, FORGE_RECIPES, conflictingRaidItems, isForgedRaidItem, isAbyssalForgedItem } from '@/lib/raidItems'
-import { PRISMATIC_TEXT, prismaticBorder, forgedBorderSoft, forgedTextSoft } from '@/lib/prismatic'
+import { PRISMATIC_TEXT, prismaticBorder, forgedBorderSoft, forgedTextSoft, ABYSSAL_EMBER_TEXT, abyssalEmberBorder } from '@/lib/prismatic'
 import ForgeBoard from './ForgeBoard'
 import { renameShip, buyShip } from '@/app/shipyard/actions'
 import { getXPProgress, navLevelBonuses, MAX_LEVEL, getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
@@ -1622,12 +1622,12 @@ export default function ShipHero({
                   / learned / ready / forged) so the whole collection reads at a
                   glance, forged ones kept as prismatic trophies. */}
               <div style={{ position: 'relative', textAlign: 'center', marginBottom: '1.15rem', paddingTop: 2 }}>
-                <div aria-hidden style={{ position: 'absolute', left: '50%', top: 8, width: 160, height: 104, transform: 'translateX(-50%)', background: forgeUnlocked ? 'radial-gradient(ellipse at center, rgba(255,140,60,0.2), rgba(197,139,255,0.1) 45%, transparent 72%)' : 'radial-gradient(ellipse at center, rgba(125,176,208,0.13), transparent 70%)', filter: 'blur(2px)', pointerEvents: 'none' }} />
-                <div style={{ position: 'relative', width: 60, height: 60, margin: '0 auto 8px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', ...(forgeUnlocked ? prismaticBorder('rgba(12,16,24,0.9)') : { background: 'rgba(18,28,40,0.6)', border: '1px solid rgba(125,176,208,0.3)' }) }}>
-                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={forgeUnlocked ? '#ffce8a' : '#8fb6d6'} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M4 10h9l3-3 4 1-2 4h-5" /><path d="M7 10v3a3 3 0 0 0 3 3h1" /><path d="M8 21h6" /><path d="M11 16v5" /></svg>
+                <div aria-hidden style={{ position: 'absolute', left: '50%', top: 8, width: 160, height: 104, transform: 'translateX(-50%)', background: abyssalUnlocked ? 'radial-gradient(ellipse at center, rgba(255,60,50,0.26), rgba(180,20,50,0.12) 44%, transparent 72%)' : forgeUnlocked ? 'radial-gradient(ellipse at center, rgba(255,140,60,0.2), rgba(197,139,255,0.1) 45%, transparent 72%)' : 'radial-gradient(ellipse at center, rgba(125,176,208,0.13), transparent 70%)', filter: 'blur(2px)', pointerEvents: 'none' }} />
+                <div style={{ position: 'relative', width: 60, height: 60, margin: '0 auto 8px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', ...(abyssalUnlocked ? abyssalEmberBorder('rgba(10,6,10,0.92)') : forgeUnlocked ? prismaticBorder('rgba(12,16,24,0.9)') : { background: 'rgba(18,28,40,0.6)', border: '1px solid rgba(125,176,208,0.3)' }) }}>
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={abyssalUnlocked ? '#ff7a5c' : forgeUnlocked ? '#ffce8a' : '#8fb6d6'} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M4 10h9l3-3 4 1-2 4h-5" /><path d="M7 10v3a3 3 0 0 0 3 3h1" /><path d="M8 21h6" /><path d="M11 16v5" /></svg>
                 </div>
-                <p className="font-cinzel font-800" style={{ fontSize: '1.5rem', lineHeight: 1.05, ...(forgeUnlocked ? PRISMATIC_TEXT : { color: '#d4ba78' }) }}>The Forge</p>
-                <p className="font-karla" style={{ fontSize: '0.72rem', color: '#9a948a', marginTop: 3, lineHeight: 1.4, maxWidth: 300, marginInline: 'auto' }}>Fuse two relics into one — both effects, a single slot.</p>
+                <p className="font-cinzel font-800" style={{ fontSize: '1.5rem', lineHeight: 1.05, ...(abyssalUnlocked ? ABYSSAL_EMBER_TEXT : forgeUnlocked ? PRISMATIC_TEXT : { color: '#d4ba78' }) }}>{abyssalUnlocked ? 'The Abyssal Forge' : 'The Forge'}</p>
+                <p className="font-karla" style={{ fontSize: '0.72rem', color: '#9a948a', marginTop: 3, lineHeight: 1.4, maxWidth: 320, marginInline: 'auto' }}>{abyssalUnlocked ? 'Fuse forged relics into Abyssal mounts — both effect sets, a single slot.' : 'Fuse two relics into one — both effects, a single slot.'}</p>
                 {forgeUnlocked && (
                   <button type="button" onClick={() => setShowForgeHelp(true)} className="font-karla font-700 uppercase tracking-[0.12em] tap"
                     style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.32rem 0.7rem', borderRadius: 999, fontSize: '0.54rem', color: '#c9a7ff', background: 'rgba(197,139,255,0.08)', border: '1px solid rgba(197,139,255,0.3)', cursor: 'pointer' }}>

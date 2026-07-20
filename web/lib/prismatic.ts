@@ -79,6 +79,31 @@ export const ABYSSAL_TEXT_SOFT: CSSProperties = {
   color: 'transparent',
 }
 
+// ── ABYSSAL FORGE — PAGE THEME (molten red/black) ────────────────────────────
+// The Abyssal Forge STATION chrome (tab title, icon, glow) runs a hotter, darker
+// prismatic than anything else: molten crimson bleeding into black. This is page
+// dressing that announces "you are standing in the endgame forge" — deliberately
+// separate from the ABYSSAL item treatment above (green/gold/violet), which stays
+// the rarity mark on the fused items themselves. Two jobs, two palettes.
+export const ABYSSAL_EMBER = 'linear-gradient(120deg, #24060c 0%, #b21734 16%, #ff5a3c 34%, #14040a 50%, #e0284a 66%, #7a0f1f 84%, #24060c 100%)'
+
+/** Gradient border + a red furnace glow — the icon ring on the Abyssal tab. */
+export const abyssalEmberBorder = (fill: string): CSSProperties => ({
+  background: `linear-gradient(${fill}, ${fill}) padding-box, ${ABYSSAL_EMBER} border-box`,
+  border: '2px solid transparent',
+  boxShadow: '0 0 20px rgba(224,40,74,0.42), inset 0 0 12px rgba(255,90,60,0.14)',
+})
+
+// Text sweep for the "The Abyssal Forge" title — kept BRIGHT (no near-black stops)
+// so every letter stays legible on the dark page; the black lives in the border
+// and glow, not the letterforms.
+export const ABYSSAL_EMBER_TEXT: CSSProperties = {
+  backgroundImage: 'linear-gradient(100deg, #ff9a6a 0%, #ff5a6a 30%, #ffb15c 52%, #ff4d55 74%, #ff7a5c 100%)',
+  WebkitBackgroundClip: 'text',
+  backgroundClip: 'text',
+  color: 'transparent',
+}
+
 // ── Tier-aware pickers ──────────────────────────────────────────────────────
 // Every forged item renders through these, so a call site just passes whether
 // it's the Abyssal tier instead of nesting a ternary per style object.

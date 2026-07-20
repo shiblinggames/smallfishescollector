@@ -33,17 +33,17 @@ import {
   forgeComponentIds, recipesUsingComponent, forgeOpportunityCost,
   recipeNeedsGauntlet2, GAUNTLET2_BASE_ITEM_IDS,
 } from '@/lib/raidItems'
-import { PRISMATIC, forgedBorderSoft, forgedTextSoft, ABYSSAL, ABYSSAL_TEXT, abyssalBorder } from '@/lib/prismatic'
+import { PRISMATIC, forgedBorderSoft, forgedTextSoft, ABYSSAL_EMBER_TEXT, abyssalEmberBorder } from '@/lib/prismatic'
 
 const GOLD = '#e8c879'
 const BLUE = '#7fd0ff'
 const GREEN = '#7fd49a'
 const AMBER = '#caa05a'
-const VIOLET = '#b9a8dc'
+const EMBER = '#ff7a5c'
 
-/** The board is split into these two tiers so the Abyssal (tier-3) fusions read
- *  as a clearly separate shelf below the standard forge. */
-const TIER_SECTIONS = [
+/** The two forge benches, surfaced as tabs. Abyssal (tier 3) is the endgame
+ *  bench — a locked teaser until you own the Abyssal Forge. */
+const TABS = [
   { tier: 2 as const, label: 'The Forge',         sub: 'Tier II',  abyssal: false },
   { tier: 3 as const, label: 'The Abyssal Forge', sub: 'Tier III', abyssal: true },
 ]
@@ -94,11 +94,18 @@ export default function ForgeBoard({
   onForgeTap: (resultId: string) => void
   onLearnTap: (resultId: string, cost: number) => void
 }) {
+  // Which forge you're looking at. The Abyssal (tier-3) tab only becomes a real
+  // destination once you own the Abyssal Forge; before that it's a locked teaser.
+  const [tab, setTab] = useState<2 | 3>(2)
   // Tapping a part you hold filters the board to what it can become.
   const [filterPart, setFilterPart] = useState<string | null>(null)
   // The open recipe. Everything a recipe has to say lives in here, so the board
   // itself stays a clean wall of medallions.
   const [open, setOpen] = useState<string | null>(null)
+  const abyssalTab = tab === 3
+
+  // A part selected on one tab means nothing on the other — clear it on switch.
+  useEffect(() => { setFilterPart(null) }, [tab])
 
   const owned = useMemo(() => new Set(ownedRaidItems), [ownedRaidItems])
   const learned = useMemo(() => new Set(learnedRecipes), [learnedRecipes])
@@ -126,27 +133,34 @@ export default function ForgeBoard({
       have: r.components.filter(c => owned.has(c)).length,
     })), [ownedRaidItems, learnedRecipes, abyssalUnlocked])   // eslint-disable-line react-hooks/exhaustive-deps
 
-  const ready = rows.filter(r => r.state === 'ready')
+  // Progress reads for the WHOLE collection (both tiers), so the top bar always
+  // shows how far the entire forge is, regardless of which tab is open.
   const forgedCount = rows.filter(r => r.state === 'forged').length
 
-  // The parts you actually hold that the forge wants. Sorted by how contested they
-  // are, because a part that feeds four recipes is the one worth thinking about.
+  // Everything below scopes to the ACTIVE tab's tier — the two forges are
+  // genuinely separate benches (Abyssal fuses forged tier-2 items).
+  const tierRows = rows.filter(r => (r.recipe.tier === 3) === abyssalTab)
+  const ready = tierRows.filter(r => r.state === 'ready')
+
+  // The parts you hold that THIS tier's unforged recipes want, sorted by how
+  // contested they are — a part feeding four recipes is the one to think about.
   const parts = useMemo(() => forgeComponentIds()
     .filter(id => owned.has(id))
-    .map(id => ({ id, feeds: recipesUsingComponent(id).filter(r => !owned.has(r.result)).length }))
+    .map(id => ({ id, feeds: recipesUsingComponent(id).filter(r => !owned.has(r.result) && (r.tier === 3) === abyssalTab).length }))
     .filter(p => p.feeds > 0)
-    .sort((a, b) => b.feeds - a.feeds), [ownedRaidItems])   // eslint-disable-line react-hooks/exhaustive-deps
+    .sort((a, b) => b.feeds - a.feeds), [ownedRaidItems, abyssalTab])   // eslint-disable-line react-hooks/exhaustive-deps
 
   const visible = filterPart
-    ? rows.filter(r => r.recipe.components.includes(filterPart))
-    : rows
+    ? tierRows.filter(r => r.recipe.components.includes(filterPart))
+    : tierRows
 
-  // Within a tier, group by state so it reads as "what can I do / what's next /
+  // Within the tier, group by state so it reads as "what can I do / what's next /
   // what's done" rather than an arbitrary ordering.
   const stateGroups = (items: typeof rows): { state: State; items: typeof rows }[] =>
     (['ready', 'gathering', 'locked', 'forged'] as State[])
       .map(s => ({ state: s, items: items.filter(r => r.state === s) }))
       .filter(g => g.items.length > 0)
+  const groups = stateGroups(visible)
 
   return (
     <>
@@ -165,42 +179,59 @@ export default function ForgeBoard({
           style={{ height: '100%', borderRadius: 999, background: PRISMATIC }} />
       </div>
 
-      {/* ── Abyssal Forge status — plainly, do you have the tier-3 upgrade? ── */}
-      {abyssalUnlocked ? (
-        <div style={{ ...abyssalBorder('rgba(13,18,26,0.7)'), borderRadius: 12, padding: '0.6rem 0.8rem', marginBottom: '1.1rem', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ flexShrink: 0, display: 'flex', color: '#7be0a3' }} aria-hidden>
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-          </span>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p className="font-cinzel font-800" style={{ fontSize: '0.94rem', lineHeight: 1.1, ...ABYSSAL_TEXT }}>Abyssal Forge Unlocked</p>
-            <p className="font-karla" style={{ fontSize: '0.74rem', color: '#a79fb8', lineHeight: 1.4, marginTop: 2 }}>Tier-3 fusion active — combine two forged items into one Abyssal mount.</p>
-          </div>
-        </div>
-      ) : (
-        <div style={{ background: 'rgba(157,123,255,0.06)', border: '1px solid rgba(157,123,255,0.22)', borderRadius: 12, padding: '0.6rem 0.8rem', marginBottom: '1.1rem', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ flexShrink: 0, display: 'flex', color: VIOLET }} aria-hidden>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-          </span>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', lineHeight: 1.1, color: VIOLET }}>Abyssal Forge Locked</p>
-            <p className="font-karla" style={{ fontSize: '0.74rem', color: '#8a8480', lineHeight: 1.4, marginTop: 2 }}>Claim the Abyssal Forge in Don’s Gauntlet Locker to unlock tier-3 fusion.</p>
-          </div>
-        </div>
-      )}
+      {/* ── The two benches, as tabs. Tier II (gold) and the Abyssal Tier III
+             (molten ember). The Abyssal tab is a dimmed, locked teaser until you
+             own the Abyssal Forge — so a player always knows the endgame bench
+             exists, and knows at a glance whether it's theirs yet. ──────────── */}
+      <div style={{ display: 'flex', gap: 6, padding: 4, borderRadius: 15, background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.08)', marginBottom: '1.15rem' }}>
+        {TABS.map(t => {
+          const active = tab === t.tier
+          const locked = t.abyssal && !abyssalUnlocked
+          return (
+            <motion.button key={t.tier} type="button"
+              onClick={() => { if (locked || active) return; vibrate([0, 16]); setTab(t.tier) }}
+              whileTap={locked || active ? undefined : { scale: 0.96 }}
+              className="tap"
+              aria-pressed={active}
+              style={{ position: 'relative', flex: 1, padding: '0.62rem 0.4rem', borderRadius: 12, border: 'none', background: 'transparent', cursor: locked ? 'not-allowed' : active ? 'default' : 'pointer', opacity: locked ? 0.55 : 1 }}>
+              {active && (
+                <motion.span layoutId="forgeTabHighlight" transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                  aria-hidden
+                  style={{ position: 'absolute', inset: 0, borderRadius: 12,
+                    ...(t.abyssal
+                      ? abyssalEmberBorder('rgba(28,8,12,0.92)')
+                      : { background: 'linear-gradient(180deg, rgba(232,200,121,0.22), rgba(232,200,121,0.06))', border: `1px solid ${GOLD}88`, boxShadow: `0 0 16px ${GOLD}1c` }) }} />
+              )}
+              <span style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                <span className="font-cinzel font-800" style={{ fontSize: '0.86rem', lineHeight: 1,
+                  ...(active ? (t.abyssal ? ABYSSAL_EMBER_TEXT : { color: '#f4dd9d' }) : { color: '#8a8480' }) }}>
+                  {t.label}
+                </span>
+                <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.5rem', color: active ? (t.abyssal ? EMBER : '#a08a5e') : '#6f6a63' }}>
+                  {locked && (
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                  )}
+                  {locked ? 'Locked' : t.sub}
+                </span>
+              </span>
+            </motion.button>
+          )
+        })}
+      </div>
 
       {/* ── 1. READY — the question most visits are actually asking ───────── */}
       {ready.length > 0 && (
         <div style={{ marginBottom: '1.2rem' }}>
-          <p className="font-karla font-800 uppercase tracking-[0.14em]" style={{ fontSize: '0.72rem', color: GOLD, marginBottom: 9 }}>
+          <p className="font-karla font-800 uppercase tracking-[0.14em]" style={{ fontSize: '0.72rem', color: abyssalTab ? EMBER : GOLD, marginBottom: 9 }}>
             Ready to Forge
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {ready.map(({ recipe }) => {
               const result = getRaidItem(recipe.result)!
-              // Abyssal-ready rows wear the tier-3 accent so they never masquerade
-              // as a standard gold forge.
+              // Abyssal-ready rows wear the molten tier-3 accent so they never
+              // masquerade as a standard gold forge.
               const abyssal = recipe.tier === 3
-              const AC = abyssal ? '#9d7bff' : GOLD
+              const AC = abyssal ? '#ff6a4d' : GOLD
               return (
                 <motion.button key={recipe.result} type="button" onClick={() => { vibrate([0, 14]); setOpen(recipe.result) }}
                   whileTap={{ scale: 0.985 }}
@@ -208,7 +239,7 @@ export default function ForgeBoard({
                   style={{
                     display: 'flex', alignItems: 'center', gap: 11, width: '100%', textAlign: 'left',
                     padding: '0.75rem 0.8rem', borderRadius: 14, cursor: 'pointer',
-                    background: abyssal ? 'linear-gradient(180deg, rgba(157,123,255,0.16), rgba(63,191,130,0.05))' : 'linear-gradient(180deg, rgba(232,200,121,0.16), rgba(232,200,121,0.05))',
+                    background: abyssal ? 'linear-gradient(180deg, rgba(255,90,60,0.16), rgba(120,20,40,0.05))' : 'linear-gradient(180deg, rgba(232,200,121,0.16), rgba(232,200,121,0.05))',
                     border: `1px solid ${AC}88`, boxShadow: `0 0 22px ${AC}1f`,
                   }}>
                   <span style={{ position: 'relative', flexShrink: 0, width: 44, height: 44, borderRadius: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.28)', border: `1px solid ${AC}55` }}>
@@ -278,71 +309,61 @@ export default function ForgeBoard({
         </div>
       )}
 
-      {/* ── 3. THE BOARD — split by tier (Tier II vs the Abyssal Tier III),
-             then grouped by state within each tier ────────────────────────── */}
-      {TIER_SECTIONS.map(sec => {
-        const tierItems = visible.filter(r => (r.recipe.tier === 3) === sec.abyssal)
-        if (tierItems.length === 0) return null
-        const tierForged = tierItems.filter(r => r.state === 'forged').length
-        return (
-          <div key={sec.tier} style={{ marginBottom: '1.3rem' }}>
-            {/* Tier header — the divider that separates standard forge from Abyssal. */}
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, marginBottom: 11, paddingBottom: 7, borderBottom: `1px solid ${sec.abyssal ? 'rgba(157,123,255,0.3)' : 'rgba(232,200,121,0.28)'}` }}>
-              <span className="font-cinzel font-800" style={{ fontSize: '1.02rem', lineHeight: 1, ...(sec.abyssal ? ABYSSAL_TEXT : { color: GOLD }) }}>{sec.label}</span>
-              <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.58rem', color: sec.abyssal ? VIOLET : '#a08a5e' }}>{sec.sub}</span>
-              <span className="font-karla font-700" style={{ marginLeft: 'auto', fontSize: '0.68rem', color: '#6f6a63' }}>{tierForged}/{tierItems.length}</span>
-            </div>
-            {stateGroups(tierItems).map(g => (
-              <div key={g.state} style={{ marginBottom: '1.1rem' }}>
-                <p className="font-karla font-800 uppercase tracking-[0.14em]" style={{ fontSize: '0.72rem', color: STATE_META[g.state].accent, marginBottom: 9 }}>
-                  {STATE_META[g.state].label} <span style={{ color: '#6f6a63' }}>{g.items.length}</span>
-                </p>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                  {g.items.map(({ recipe, state, have }) => {
-                    const result = getRaidItem(recipe.result)!
-                    const accent = STATE_META[state].accent
-                    const dim = state === 'locked'
-                    const abyssal = recipe.tier === 3
-                    return (
-                      <motion.button key={recipe.result} type="button"
-                        onClick={() => { vibrate([0, 12]); setOpen(recipe.result) }}
-                        whileTap={{ scale: 0.95 }}
-                        className="tap"
-                        style={{
-                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
-                          padding: '0.65rem 0.35rem 0.55rem', borderRadius: 13, cursor: 'pointer', minWidth: 0,
-                          ...(state === 'forged'
-                            ? forgedBorderSoft('rgba(14,18,26,0.92)', abyssal)
-                            : abyssal
-                              ? { background: state === 'ready' ? 'rgba(157,123,255,0.12)' : 'rgba(157,123,255,0.05)', border: `1px solid ${state === 'ready' ? 'rgba(157,123,255,0.6)' : 'rgba(157,123,255,0.24)'}` }
-                              : { background: state === 'ready' ? 'rgba(232,200,121,0.1)' : 'rgba(255,255,255,0.035)', border: `1px solid ${state === 'ready' ? `${GOLD}77` : 'rgba(255,255,255,0.1)'}` }),
-                        }}>
-                        <ItemArt id={recipe.result} size={44} dim={dim} />
-                        <span className="font-cinzel font-700" style={{ fontSize: '0.76rem', lineHeight: 1.2, textAlign: 'center', minHeight: '1.8rem',
-                          ...(state === 'forged' ? forgedTextSoft(abyssal) : { color: dim ? '#8a8480' : '#f0ede8' }) }}>
-                          {result.name}
-                        </span>
-                        {/* One glance tells you where this one stands. */}
-                        {state === 'forged' ? (
-                          <span style={{ display: 'flex', color: abyssal ? '#7be0a3' : '#c9a7ff' }}>
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
-                          </span>
-                        ) : state === 'locked' ? (
-                          <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: BLUE }}>{recipe.fathomCost} Fathoms</span>
-                        ) : (
-                          <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: accent }}>
-                            {state === 'ready' ? 'Ready' : `${have}/${recipe.components.length} parts`}
-                          </span>
-                        )}
-                      </motion.button>
-                    )
-                  })}
-                </div>
-              </div>
-            ))}
+      {/* ── 3. THE BOARD — the active bench's recipes, grouped by state ─────── */}
+      {groups.length === 0 ? (
+        <p className="font-karla" style={{ fontSize: '0.82rem', color: '#8a8480', lineHeight: 1.5, textAlign: 'center', padding: '1.4rem 0.5rem' }}>
+          {abyssalTab
+            ? 'No Abyssal recipes match. Forge tier-2 relics first — the Abyssal bench fuses two forged pieces into one.'
+            : 'Nothing here yet.'}
+        </p>
+      ) : groups.map(g => (
+        <div key={g.state} style={{ marginBottom: '1.1rem' }}>
+          <p className="font-karla font-800 uppercase tracking-[0.14em]" style={{ fontSize: '0.72rem', color: STATE_META[g.state].accent, marginBottom: 9 }}>
+            {STATE_META[g.state].label} <span style={{ color: '#6f6a63' }}>{g.items.length}</span>
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+            {g.items.map(({ recipe, state, have }) => {
+              const result = getRaidItem(recipe.result)!
+              const accent = STATE_META[state].accent
+              const dim = state === 'locked'
+              const abyssal = recipe.tier === 3
+              return (
+                <motion.button key={recipe.result} type="button"
+                  onClick={() => { vibrate([0, 12]); setOpen(recipe.result) }}
+                  whileTap={{ scale: 0.95 }}
+                  className="tap"
+                  style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+                    padding: '0.65rem 0.35rem 0.55rem', borderRadius: 13, cursor: 'pointer', minWidth: 0,
+                    ...(state === 'forged'
+                      ? forgedBorderSoft('rgba(14,18,26,0.92)', abyssal)
+                      : abyssal
+                        ? { background: state === 'ready' ? 'rgba(255,90,60,0.12)' : 'rgba(255,90,60,0.045)', border: `1px solid ${state === 'ready' ? 'rgba(255,106,77,0.6)' : 'rgba(255,106,77,0.22)'}` }
+                        : { background: state === 'ready' ? 'rgba(232,200,121,0.1)' : 'rgba(255,255,255,0.035)', border: `1px solid ${state === 'ready' ? `${GOLD}77` : 'rgba(255,255,255,0.1)'}` }),
+                  }}>
+                  <ItemArt id={recipe.result} size={44} dim={dim} />
+                  <span className="font-cinzel font-700" style={{ fontSize: '0.76rem', lineHeight: 1.2, textAlign: 'center', minHeight: '1.8rem',
+                    ...(state === 'forged' ? forgedTextSoft(abyssal) : { color: dim ? '#8a8480' : '#f0ede8' }) }}>
+                    {result.name}
+                  </span>
+                  {/* One glance tells you where this one stands. */}
+                  {state === 'forged' ? (
+                    <span style={{ display: 'flex', color: abyssal ? '#7be0a3' : '#c9a7ff' }}>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+                    </span>
+                  ) : state === 'locked' ? (
+                    <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: BLUE }}>{recipe.fathomCost} Fathoms</span>
+                  ) : (
+                    <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: accent }}>
+                      {state === 'ready' ? 'Ready' : `${have}/${recipe.components.length} parts`}
+                    </span>
+                  )}
+                </motion.button>
+              )
+            })}
           </div>
-        )
-      })}
+        </div>
+      ))}
 
       {/* ── 4. THE RECIPE SHEET — and what forging it costs you ───────────── */}
       <RecipeSheet
