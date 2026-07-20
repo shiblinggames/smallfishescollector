@@ -735,6 +735,15 @@ html, body {
 }
 .rod-glow-prismatic { animation: rod-glow-prismatic 4.2s linear infinite; }
 
+/* Abyssal (tier-3 forge) — a molten red/ember pulse, a clear step above the
+   prismatic tier-2 glow. Deep crimson breathing into hot ember. */
+@keyframes rod-glow-abyssal {
+  0%   { filter: drop-shadow(0 0 5px #ff5a3c) drop-shadow(0 0 20px #b91d3aaa); }
+  50%  { filter: drop-shadow(0 0 9px #ff7a4d) drop-shadow(0 0 28px #ff3b2eaa); }
+  100% { filter: drop-shadow(0 0 5px #ff5a3c) drop-shadow(0 0 20px #b91d3aaa); }
+}
+.rod-glow-abyssal { animation: rod-glow-abyssal 2.6s ease-in-out infinite; }
+
 /* ── Hardcore Gauntlet dread ──
    A blood vignette hung over the whole viewport while a hardcore run is live
    (toggled by GauntletGame via the .hardcore-gauntlet body class). Edge-only
@@ -901,6 +910,7 @@ body.hardcore-gauntlet::after {
 .pause-glows .rod-glow-tech,
 .pause-glows .rod-glow-forge,
 .pause-glows .rod-glow-prismatic,
+.pause-glows .rod-glow-abyssal,
 .pause-glows .hook-glow-chrome,
 .pause-glows .hook-glow-gilded,
 .pause-glows .hook-glow-arcane,

@@ -2675,15 +2675,17 @@ function ForgeAnimation({ compImages, result, accent, abyssal = false, ready, on
   const GREEN = '#3fbf82'
   const GOLD = '#ffd98a'
   const chrome = abyssal ? EMBER : accent
-  const CLASH_AT = abyssal ? 1150 : 900
-  const SLAM_AT = abyssal ? 1560 : 1180
+  // The Abyssal combine is deliberately slow — a long draw-in and hang before a
+  // weighty slam, so it reads as ceremony rather than a snap.
+  const CLASH_AT = abyssal ? 1750 : 900
+  const SLAM_AT = abyssal ? 2200 : 1180
 
   const [charging, setCharging] = useState(false)
   const [clashed, setClashed] = useState(false)
   const [slamDone, setSlamDone] = useState(false)
   const revealed = slamDone && ready
   useEffect(() => {
-    const tc = abyssal ? setTimeout(() => setCharging(true), 220) : null
+    const tc = abyssal ? setTimeout(() => setCharging(true), 320) : null
     const t1 = setTimeout(() => {
       setClashed(true)
       vibrate(abyssal ? [0, 60, 40, 95, 30, 70] : [0, 40, 35, 70])
@@ -2781,7 +2783,7 @@ function ForgeAnimation({ compImages, result, accent, abyssal = false, ready, on
             key={i} src={img ?? undefined} alt="" aria-hidden
             initial={{ x: i === 0 ? -150 : 150, opacity: 0, rotate: i === 0 ? -18 : 18 }}
             animate={clashed ? { x: 0, opacity: 0, scale: 0.55 } : { x: i === 0 ? (abyssal ? -58 : -52) : (abyssal ? 58 : 52), opacity: 1, rotate: 0, scale: 1 }}
-            transition={clashed ? { duration: abyssal ? 0.14 : 0.2, ease: 'easeIn' } : { duration: 0.85, ease: [0.4, 0, 0.7, 1] }}
+            transition={clashed ? { duration: abyssal ? 0.28 : 0.2, ease: 'easeIn' } : { duration: abyssal ? 1.35 : 0.85, ease: [0.4, 0, 0.7, 1] }}
             style={{ position: 'absolute', width: 92, height: 92, objectFit: 'contain', filter: abyssal ? `drop-shadow(0 0 12px ${EMBER}99) drop-shadow(0 4px 12px rgba(0,0,0,0.6))` : 'drop-shadow(0 4px 12px rgba(0,0,0,0.6))', willChange: 'transform, opacity' }}
           />
         ))}

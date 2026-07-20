@@ -10,7 +10,7 @@
 //    (no more cramped horizontal scroll strip).
 
 import { CrewPortrait, type ShowcaseCrew } from '@/components/CrewShowcase'
-import { getRaidItem, type RaidItemDef } from '@/lib/raidItems'
+import { getRaidItem, isAbyssalForgedItem, type RaidItemDef } from '@/lib/raidItems'
 
 // Bite-rarity → color / label (kept in sync with the profile pages).
 const RARITY_COLOR: Record<number, string> = {
@@ -115,12 +115,17 @@ const FORGED_BG = 'rgba(255,255,255,0.045)'
 const FORGED_BORDER = 'rgba(120,180,255,0.42)'
 const FORGED_GRADIENT = 'linear-gradient(90deg, #34d399, #22d3ee, #3b82f6, #8b5cf6, #ec4899)'
 const isForged = (d: RaidItemDef) => /^Forged from/i.test(d.source ?? '')
+// Tier-3 ABYSSAL fusions rank above everything and wear a molten red glow + an
+// "Abyssal" tag, so they never read as just another legendary.
+const ABYSSAL_BG = 'rgba(255,90,60,0.07)'
+const ABYSSAL_BORDER = 'rgba(255,90,60,0.42)'
+const ABYSSAL_GRADIENT = 'linear-gradient(90deg, #ff9a6a, #ff5a6a, #ffb15c, #ff4d55)'
 
 /** Arsenal — the raid + forge items a player has collected, as a rarity-sorted
- *  grid of relic tiles (forged/prismatic first, then rarest). Uses the
- *  raid_items ids already on the profile; unknown ids are dropped. */
+ *  grid of relic tiles (Abyssal first, then forged/prismatic, then rarest). Uses
+ *  the raid_items ids already on the profile; unknown ids are dropped. */
 export function RaidArsenal({ items }: { items: string[] }) {
-  const rankOf = (d: RaidItemDef) => (isForged(d) ? 6 : (ITEM_RARITY_RANK[d.rarity] ?? 0))
+  const rankOf = (d: RaidItemDef) => (isAbyssalForgedItem(d.id) ? 7 : isForged(d) ? 6 : (ITEM_RARITY_RANK[d.rarity] ?? 0))
   const defs = [...new Set(items)]
     .map(id => getRaidItem(id))
     .filter((d): d is RaidItemDef => !!d)
@@ -129,25 +134,31 @@ export function RaidArsenal({ items }: { items: string[] }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
       {defs.map(it => {
-        const forged = isForged(it)
+        const abyssal = isAbyssalForgedItem(it.id)
+        const forged = !abyssal && isForged(it)
+        const glowClass = abyssal ? 'rod-glow-abyssal' : forged ? 'rod-glow-prismatic' : undefined
         const c = ITEM_RARITY_COLOR[it.rarity] ?? '#94a3b8'
         return (
           <div key={it.id} style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
             padding: '0.75rem 0.5rem 0.6rem', borderRadius: 13, textAlign: 'center',
-            background: forged ? FORGED_BG : `${c}0e`, border: `1px solid ${forged ? FORGED_BORDER : `${c}33`}`,
+            background: abyssal ? ABYSSAL_BG : forged ? FORGED_BG : `${c}0e`,
+            border: `1px solid ${abyssal ? ABYSSAL_BORDER : forged ? FORGED_BORDER : `${c}33`}`,
+            boxShadow: abyssal ? '0 0 16px rgba(255,90,60,0.14)' : 'none',
           }}>
             <div style={{ height: 46, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {it.image
                 // eslint-disable-next-line @next/next/no-img-element
                 ? <img src={it.image} alt={it.name} loading="lazy" decoding="async"
-                    className={forged ? 'rod-glow-prismatic' : undefined}
-                    style={{ maxWidth: 44, maxHeight: 44, objectFit: 'contain', ...(forged ? {} : { filter: `drop-shadow(0 2px 7px ${c}66)` }) }}
+                    className={glowClass}
+                    style={{ maxWidth: 44, maxHeight: 44, objectFit: 'contain', ...(glowClass ? {} : { filter: `drop-shadow(0 2px 7px ${c}66)` }) }}
                     onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                : <span aria-hidden className={forged ? 'rod-glow-prismatic' : undefined} style={{ fontSize: '1.7rem', ...(forged ? {} : { filter: `drop-shadow(0 2px 6px ${c}55)` }) }}>{it.emoji}</span>}
+                : <span aria-hidden className={glowClass} style={{ fontSize: '1.7rem', ...(glowClass ? {} : { filter: `drop-shadow(0 2px 6px ${c}55)` }) }}>{it.emoji}</span>}
             </div>
             <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#e8e4dc', lineHeight: 1.15 }}>{it.name}</p>
-            {forged
+            {abyssal
+              ? <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.14em', backgroundImage: ABYSSAL_GRADIENT, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>Abyssal</span>
+              : forged
               ? <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.12em', backgroundImage: FORGED_GRADIENT, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>Forged</span>
               : <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.1em', color: c }}>{it.rarity}</span>}
           </div>
