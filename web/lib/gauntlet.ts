@@ -891,6 +891,9 @@ export const GALAXY_HULL_SKIN_ID = 'galaxy_hull'
 export const GALAXY_HULL_CHEST_TIER = 5   // deepest chest, mirrors the Golden Hull
 export const GHOST_HULL_SKIN_ID = 'dons_ghost_hull'
 export const GHOST_HULL_CHEST_TIER = 4    // NORMAL Don's drop, one chest tier below the Galaxy Hull
+// The Ghost Hull is the RARER of the two Don's hulls — it rolls at half the
+// normal skin chance (applied on top of the depth curve). Tunable in one place.
+export const GHOST_HULL_DROP_MULT = 0.5
 // Don's Gauntlet item chase — rolls from any chest like the Davy cannons, on the
 // same odds curve. Never drop in Davy's; the Davy cannons never drop in Don's.
 export const DONS_GAUNTLET_ITEM_IDS = ['opening_statement', 'made_man', 'the_shakedown']
@@ -940,7 +943,7 @@ export function chestOdds(opts: {
       out.push({ id: GALAXY_HULL_SKIN_ID, name: 'Galaxy Hull', kind: 'skin', chance: skin })
     }
     if (tier >= GHOST_HULL_CHEST_TIER && !ownedSkins.includes(GHOST_HULL_SKIN_ID)) {
-      out.push({ id: GHOST_HULL_SKIN_ID, name: "Don's Ghost Hull", kind: 'skin', chance: skin })
+      out.push({ id: GHOST_HULL_SKIN_ID, name: "Don's Ghost Hull", kind: 'skin', chance: m(chestSkinDropChance(payDepth) * GHOST_HULL_DROP_MULT) })
     }
     return out
   }
