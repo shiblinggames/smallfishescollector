@@ -15,7 +15,8 @@ import { getLevelFromXP as navLevelFromXP } from './expeditionLevel'
 import { crewLevelFromXP, CREW_MAX_LEVEL } from './crewLevel'
 import { CREW_HALL_MAX_TIER } from './crewHall'
 import { GAUNTLET_UPGRADES } from './gauntletUpgrades'
-import { FORGE_RECIPES, isForgedRaidItem, isAbyssalForgedItem } from './raidItems'
+import { FORGE_RECIPES, isForgedRaidItem, isAbyssalForgedItem, GAUNTLET2_BASE_ITEM_IDS } from './raidItems'
+import { upgradesForVariant, isUpgradeComingSoon } from './gauntletUpgrades'
 import { CREW_SKINS } from './crewSkins'
 import { BUYABLE_ROD_TIERS } from './rods'
 
@@ -109,6 +110,7 @@ export interface BadgeProfileFields {
   has_armory_expansion?: boolean | null
   // Don's Gauntlet (dormant until live).
   dons_gauntlet_deepest?: number | null
+  dons_gauntlet_upgrades?: string[] | null
 }
 
 export interface BadgeJoinData {
@@ -285,11 +287,16 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
     //    these sit dormant until that content is reachable). ──
     abyssal_smith:   raidItems.some(id => isAbyssalForgedItem(id)),
     abyssal_master:  raidItems.filter(id => isAbyssalForgedItem(id)).length >= FORGE_RECIPES.filter(r => r.tier === 3).length,
+    ghost_armory:    GAUNTLET2_BASE_ITEM_IDS.every(id => raidItems.includes(id)),
+    ghost_locker:    (p.dons_gauntlet_upgrades ?? []).length >= 6,
+    master_of_the_green: (p.dons_gauntlet_upgrades ?? []).length >= upgradesForVariant('don').filter(u => !isUpgradeComingSoon(u.id)).length,
     dons_descent:    Number(p.dons_gauntlet_deepest ?? 0) >= 1,
     into_the_green:  Number(p.dons_gauntlet_deepest ?? 0) >= 10,
     drowned_court:   Number(p.dons_gauntlet_deepest ?? 0) >= 25,
     dons_doorstep:   Number(p.dons_gauntlet_deepest ?? 0) >= 50,
+    dons_reckoning:  Number(p.dons_gauntlet_deepest ?? 0) >= 75,
     galaxy_hull_won: (p.ship_skins ?? []).includes('galaxy_hull'),
+    dons_ghost_hull_won: (p.ship_skins ?? []).includes('dons_ghost_hull'),
   }
 }
 
@@ -302,4 +309,4 @@ export function earnedBadgeIds(p: BadgeProfileFields, j: BadgeJoinData): string[
 
 /** Columns a query must select to feed badgeConditions(). */
 export const BADGE_PROFILE_COLUMNS =
-  'fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, ancient_catches, trophy_size_catches, prestige_levels, fishing_casts, fishing_double_catches, fishing_crates_opened, fishing_snags, fishing_jackpots, tide_run_beacons_smashed, tide_run_total_distance, is_premium, ship_tier, trawls_collected, unlocked_pets, gauntlet_upgrades, gauntlet_confluences_seen, gauntlet_runs_completed, gauntlet_fathoms_earned, gauntlet_max_hit, gauntlet_deepest_died, gauntlet_hc_deepest, gauntlet_hc_deepest_died, blood_gems_earned, completionist_effects, manowar_augment, ship_classes, forge_recipes_learned, raid_items, ship_skins, owned_crew_skins, equipped_crew_skins, has_sixth_berth, has_armory_expansion, dons_gauntlet_deepest'
+  'fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, ancient_catches, trophy_size_catches, prestige_levels, fishing_casts, fishing_double_catches, fishing_crates_opened, fishing_snags, fishing_jackpots, tide_run_beacons_smashed, tide_run_total_distance, is_premium, ship_tier, trawls_collected, unlocked_pets, gauntlet_upgrades, gauntlet_confluences_seen, gauntlet_runs_completed, gauntlet_fathoms_earned, gauntlet_max_hit, gauntlet_deepest_died, gauntlet_hc_deepest, gauntlet_hc_deepest_died, blood_gems_earned, completionist_effects, manowar_augment, ship_classes, forge_recipes_learned, raid_items, ship_skins, owned_crew_skins, equipped_crew_skins, has_sixth_berth, has_armory_expansion, dons_gauntlet_deepest, dons_gauntlet_upgrades'

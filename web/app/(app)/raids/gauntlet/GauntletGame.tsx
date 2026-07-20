@@ -4801,8 +4801,8 @@ function LootModal({ mode, don, onClose }: { mode: 'normal' | 'hardcore'; don?: 
           'A rare roll in any cash-out chest. The odds climb the deeper you bank.'),
         skinDrop('galaxy_hull', 'Deepest chest only',
           "Only rolls from the deepest Don's Gauntlet chest. Man-o-War hulls only."),
-        skinDrop('dons_ghost_hull', 'Hardcore only',
-          "A rare roll from the deeper Hardcore Don's chests. Man-o-War hulls only.", true),
+        skinDrop('dons_ghost_hull', 'Rare from any chest',
+          "A rare roll from the deeper Don's chests, one tier below the Galaxy Hull. Man-o-War hulls only."),
       ]
     : (() => {
         const heavy   = getRaidItem('davys_heavy_cannon')

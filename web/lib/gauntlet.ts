@@ -889,7 +889,7 @@ export const BLOOD_HULL_CHEST_TIER = 4
 export const GALAXY_HULL_SKIN_ID = 'galaxy_hull'
 export const GALAXY_HULL_CHEST_TIER = 5   // deepest chest, mirrors the Golden Hull
 export const GHOST_HULL_SKIN_ID = 'dons_ghost_hull'
-export const GHOST_HULL_CHEST_TIER = 4    // hardcore, mirrors the Bad Blood Hull
+export const GHOST_HULL_CHEST_TIER = 4    // NORMAL Don's drop, one chest tier below the Galaxy Hull
 // Don's Gauntlet item chase — rolls from any chest like the Davy cannons, on the
 // same odds curve. Never drop in Davy's; the Davy cannons never drop in Don's.
 export const DONS_GAUNTLET_ITEM_IDS = ['opening_statement', 'made_man', 'the_shakedown']
@@ -931,14 +931,14 @@ export function chestOdds(opts: {
   const out: ChestOdd[] = []
 
   if (isDon) {
-    // Don's Gauntlet: its own two items + two hulls. No Davy loot.
+    // Don's Gauntlet: its own two items + two hulls, both NORMAL drops. No Davy loot.
     for (const id of DONS_GAUNTLET_ITEM_IDS) {
       if (!ownedItems.includes(id)) out.push({ id, name: CHEST_DROP_NAMES[id] ?? id, kind: 'item', chance: cannon })
     }
     if (tier >= GALAXY_HULL_CHEST_TIER && !ownedSkins.includes(GALAXY_HULL_SKIN_ID)) {
       out.push({ id: GALAXY_HULL_SKIN_ID, name: 'Galaxy Hull', kind: 'skin', chance: skin })
     }
-    if (hardcore && tier >= GHOST_HULL_CHEST_TIER && !ownedSkins.includes(GHOST_HULL_SKIN_ID)) {
+    if (tier >= GHOST_HULL_CHEST_TIER && !ownedSkins.includes(GHOST_HULL_SKIN_ID)) {
       out.push({ id: GHOST_HULL_SKIN_ID, name: "Don's Ghost Hull", kind: 'skin', chance: skin })
     }
     return out

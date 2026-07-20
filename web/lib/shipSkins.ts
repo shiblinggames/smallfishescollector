@@ -169,14 +169,14 @@ export const SHIP_SKINS: ShipSkinDef[] = [
     },
   },
   {
-    // Don's Gauntlet HARDCORE chase — the ghost-fleet Man-o-War skin, the Don's
-    // equivalent of the Bad Blood Hull. Dormant until Don's hardcore goes live.
+    // Don's Gauntlet NORMAL chase — the ghost-fleet Man-o-War skin, dropped one
+    // chest tier below the Galaxy Hull (a second, slightly-earlier normal chase).
     id: 'dons_ghost_hull',
     name: "Don's Ghost Hull",
     description: 'The cold green of the drowned court, run up on a hull that should be at the bottom. The Don sails on. So do you.',
     filter: 'none',
     color: '#3fbf82',
-    source: "Hardcore drop · Don's Gauntlet",
+    source: "Rare drop · Don's Gauntlet",
     requiresShipTier: MANOWAR_SHIP_TIER,
     imageByTier: {
       6: '/donsghosthull.png',

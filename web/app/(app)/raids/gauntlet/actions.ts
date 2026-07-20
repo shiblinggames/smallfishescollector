@@ -764,13 +764,14 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   if (chest.tier >= normalHullTier && !ownedSkins.includes(normalHullId) && Math.random() < chestDrop(chestSkinDropChance(cd))) {
     droppedSkinId = normalHullId
   }
-  // The HARDCORE-only Man-o-War hull, variant-specific: Davy's Bad Blood Hull,
-  // Don's Ghost Hull (dormant until Don's hardcore goes live).
-  const hcHullId  = isDon ? GHOST_HULL_SKIN_ID : BLOOD_HULL_SKIN_ID
-  const hcHullTier = isDon ? GHOST_HULL_CHEST_TIER : BLOOD_HULL_CHEST_TIER
+  // The SECOND Man-o-War hull. Davy's = Bad Blood Hull (HARDCORE-only). Don's =
+  // Ghost Hull, a NORMAL drop one chest tier below the Galaxy Hull.
+  const secondHullId   = isDon ? GHOST_HULL_SKIN_ID : BLOOD_HULL_SKIN_ID
+  const secondHullTier = isDon ? GHOST_HULL_CHEST_TIER : BLOOD_HULL_CHEST_TIER
+  const secondHullNeedsHc = !isDon   // only Davy's Bad Blood is hardcore-gated
   let droppedHcSkinId: string | null = null
-  if (hc && chest.tier >= hcHullTier && !ownedSkins.includes(hcHullId) && Math.random() < chestDrop(chestSkinDropChance(cd))) {
-    droppedHcSkinId = hcHullId
+  if ((!secondHullNeedsHc || hc) && chest.tier >= secondHullTier && !ownedSkins.includes(secondHullId) && Math.random() < chestDrop(chestSkinDropChance(cd))) {
+    droppedHcSkinId = secondHullId
   }
   // Pitch Black Hull — the PRESSURE-exclusive drop (Davy's only). Needs hardcore,
   // a heavy board AND a deep bank, all on this one run: pressureSkinDropChance
