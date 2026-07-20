@@ -39,6 +39,10 @@ export type TideEffect =
   | { kind: 'fireDmgMult'; mult: number }
   /** Volley damage only. Does NOT affect base fire. Rewards volley-saving. */
   | { kind: 'volleyDmgMult'; mult: number }
+  /** MEGA damage only (the Man-o-War ultimate, 4 charges). Does NOT touch fire
+   *  or volley. Dead weight unless the player carries a Mega augment — offered
+   *  freely regardless (the draft's call), so the desc says so plainly. */
+  | { kind: 'megaDmgMult'; mult: number }
   /** Damage multiplier on NON-crit shots only (hit + graze). <1 = the
    *  "All or Nothing" curse: anything short of a gold crit hits soft. */
   | { kind: 'noncritDmgMult'; mult: number }
@@ -99,6 +103,17 @@ export type TideEffect =
   /** Confluence "Reaper's Tithe" (Executioner + Leviathan's Hunger): sinking a
    *  hull heals you `pctMaxHp` of THAT enemy's max HP. */
   | { kind: 'executeHeal'; pctMaxHp: number }
+  /** Don's boon "overkill heal": a killing blow that lands for MORE than the
+   *  hull had left heals you `pct` of that WASTED (overkill) damage. Only the
+   *  excess counts — a clean-to-zero kill heals nothing. Per-hit capped in
+   *  RaidCombat like lifesteal so a huge Mega can't refill the whole bar. */
+  | { kind: 'overkillHealPct'; pct: number }
+  // ── Charge-cost reducers (Don's synergies) ──────────────────────────────
+  /** Volley costs `n` fewer cannonballs (floored at 2). The volley cost synergy. */
+  | { kind: 'volleyCostReduction'; n: number }
+  /** Mega/ultimate costs `n` fewer cannonballs (floored at 3). The mega cost
+   *  synergy. Inert without a Mega augment. */
+  | { kind: 'megaCostReduction'; n: number }
   /** Confluence "Feed the Fire" (Wildfire + Leviathan's Hunger): each burn tick
    *  on an enemy also heals you `pctTick` of the tick's damage. */
   | { kind: 'burnTickHeal'; pctTick: number }
@@ -311,7 +326,7 @@ export function expireAfterFight(effects: TideEffect[]): TideEffect[] {
 // describeEffect) so any surface that lists effects can color them the same.
 export function effectTone(e: TideEffect): 'good' | 'bad' | 'neutral' {
   switch (e.kind) {
-    case 'damageMult': case 'fireDmgMult': case 'volleyDmgMult':
+    case 'damageMult': case 'fireDmgMult': case 'volleyDmgMult': case 'megaDmgMult':
     case 'bossDamageMult': case 'bossVolleyDmgMult': case 'critZoneScale':
     case 'critDmgMult': case 'noncritDmgMult':
       return e.mult > 1 ? 'good' : e.mult < 1 ? 'bad' : 'neutral'
@@ -351,6 +366,8 @@ export function effectTone(e: TideEffect): 'good' | 'bad' | 'neutral' {
     case 'aimClarity':          return 'good'
     case 'randomFightBuff':     return 'good'
     case 'abilityRefundChance': return 'good'
+    case 'overkillHealPct':     return e.pct > 0 ? 'good' : 'neutral'
+    case 'volleyCostReduction': case 'megaCostReduction': return e.n > 0 ? 'good' : 'neutral'
     case 'enemyUltimateBoost':  return 'bad'
     case 'enemyChargeSteal':    return 'bad'
     case 'enemyParry':          return 'bad'
@@ -941,6 +958,7 @@ export function describeEffect(e: TideEffect): string {
     case 'damageMult':            return `${pct(e.mult - 1)} damage all run`
     case 'fireDmgMult':           return `${pct(e.mult - 1)} Fire damage`
     case 'volleyDmgMult':         return `${pct(e.mult - 1)} Volley damage`
+    case 'megaDmgMult':           return `${pct(e.mult - 1)} Mega damage`
     case 'critChanceBonus':       return `${pct(e.chance)} crit chance`
     case 'critZoneScale':         return `Crit zone ${pct(e.mult - 1)} wider`
     case 'critDmgMult':           return `${pct(e.mult - 1)} critical damage`
@@ -954,6 +972,9 @@ export function describeEffect(e: TideEffect): string {
     case 'critExecute':           return `Crits sink hulls below ${Math.round(e.pct * 100)}% HP`
     case 'volleyRamp':            return `Each Volley this fight hits +${Math.round(e.perVolley * 100)}% harder`
     case 'executeHeal':           return `Sinking a hull heals ${Math.round(e.pctMaxHp * 100)}% of its max HP`
+    case 'overkillHealPct':       return `Heal ${Math.round(e.pct * 100)}% of overkill damage`
+    case 'volleyCostReduction':   return `Volley costs ${e.n} less cannonball${e.n === 1 ? '' : 's'}`
+    case 'megaCostReduction':     return `Mega costs ${e.n} less cannonball${e.n === 1 ? '' : 's'}`
     case 'burnTickHeal':          return `Burn ticks heal you ${Math.round(e.pctTick * 100)}% of the tick`
     case 'dodgeRefund':           return `A dodge refunds ${e.charges} cannonball${e.charges === 1 ? '' : 's'}`
     case 'retaliateBoost':        return `Reflected damage ×${e.mult.toFixed(1)}`

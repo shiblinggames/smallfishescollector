@@ -581,6 +581,10 @@ export default function RaidCombat({
     let dmgMult       = 1
     let fireDmgMult   = 1
     let volleyDmgMult = 1
+    let megaDmgMult   = 1   // Don's "Man-o-War's Wrath" boon — Mega only
+    let overkillHealPct = 0 // Don's overkill-heal boon
+    let volleyCostCut = 0   // Don's volley cost synergy (charges shaved off VOLLEY_COST)
+    let megaCostCut   = 0   // Don's mega cost synergy (charges shaved off MEGA_CHARGE_COST)
     let bossDmgMult   = 1
     let bossVolMult   = 1
     let critBonus     = 0
@@ -698,6 +702,10 @@ export default function RaidCombat({
         case 'damageMult':            dmgMult *= e.mult; break
         case 'fireDmgMult':           fireDmgMult *= e.mult; break
         case 'volleyDmgMult':         volleyDmgMult *= e.mult; break
+        case 'megaDmgMult':           megaDmgMult *= e.mult; break
+        case 'overkillHealPct':       overkillHealPct += e.pct; break
+        case 'volleyCostReduction':   volleyCostCut += e.n; break
+        case 'megaCostReduction':     megaCostCut += e.n; break
         case 'bossDamageMult':        bossDmgMult *= e.mult; break
         case 'bossVolleyDmgMult':     bossVolMult *= e.mult; break
         case 'critChanceBonus':       critBonus += e.chance; break
@@ -812,7 +820,7 @@ export default function RaidCombat({
     if (killDmgPerKill  > 0) dmgMult *= 1 + Math.min(killDmgCap,  killDmgPerKill  * Math.max(0, runKills))
     if (depthDmgPerDepth > 0) dmgMult *= 1 + Math.min(depthDmgCap, depthDmgPerDepth * Math.max(0, runDepth))
     return {
-      dmgMult, fireDmgMult, volleyDmgMult, bossDmgMult, bossVolMult,
+      dmgMult, fireDmgMult, volleyDmgMult, megaDmgMult, overkillHealPct, volleyCostCut, megaCostCut, bossDmgMult, bossVolMult,
       critBonus, critZoneMult, inDmgMult, inCritReduce,
       dodgeBonus, speedDelta,
       chargesStart, hpStartDelta, hpStartPct, everyFightHeal, everyFightHealPct,
@@ -2346,11 +2354,16 @@ export default function RaidCombat({
 
   // ─── Player action handlers ────────────────────────────────────────────────
 
+  // Effective charge costs, after Don's cost-cut synergies shave one off. Floored
+  // (volley never below 2, mega never below 3) so they can't collapse to a free
+  // shot. RaidCombat remounts per fight, so these stay fresh as boons stack.
+  const effVolleyCost = Math.max(2, VOLLEY_COST - tide.volleyCostCut)
+  const effMegaCost   = Math.max(3, MEGA_CHARGE_COST - tide.megaCostCut)
   const canFire   = playerCharges >= 1
-  const canVolley = playerCharges >= VOLLEY_COST
+  const canVolley = playerCharges >= effVolleyCost
   // Mega (Man-o-War augment): a full magazine of MEGA_CHARGE_COST (4). Reaching
   // 4 requires the Gauntlet Rack, so the augment is naturally gated behind it.
-  const canMega   = !!megaAugment && playerCharges >= MEGA_CHARGE_COST
+  const canMega   = !!megaAugment && playerCharges >= effMegaCost
   // Dodge has a 1-turn cooldown so it can't be spammed defensively.
   const canDodge  = lastPlayerAction !== 'dodge'
   // Reload no-ops at full magazine — the +1 (and any tide proc bonus)
@@ -3438,7 +3451,7 @@ export default function RaidCombat({
       // is loosed at the enemy.
       if (who === 'player' && decoyFumbleRef.current && (action === 'fire' || action === 'volley' || action === 'mega')) {
         decoyFumbleRef.current = false
-        const cost = action === 'mega' ? MEGA_CHARGE_COST : action === 'volley' ? VOLLEY_COST : 1
+        const cost = action === 'mega' ? effMegaCost : action === 'volley' ? effVolleyCost : 1
         pCharges = Math.max(0, pCharges - cost)
         const chip = Math.max(enemy.minDmg, Math.round(playerHpMax * 0.06))
         pHp = Math.max(1, pHp - chip)
@@ -3456,6 +3469,7 @@ export default function RaidCombat({
       let enemyHealOut: number | undefined
       let lifestealHealedOut = 0
       let lifestealLabel = ''   // which source drank the wound (boon vs Blood Cannon)
+      let overkillHealedOut = 0 // Don's overkill-heal boon, this shot
       let thermalBurstOut = 0    // Thermal Shock confluence: shatter burst this hit
       let shieldAbsorbedOut = 0  // Enemy barrier soak on the player's shot this step
       let carapaceSoaked = false
@@ -3617,7 +3631,7 @@ export default function RaidCombat({
           stepLines.push(who === 'player' ? `You brace, ready to dodge.` : `Enemy braces, ready to dodge.`)
         }
       } else if (action === 'fire' || action === 'volley' || action === 'mega' || action === 'ultimate') {
-        if (who === 'player') pCharges -= (action === 'mega' ? MEGA_CHARGE_COST : action === 'volley' ? VOLLEY_COST : 1)
+        if (who === 'player') pCharges -= (action === 'mega' ? effMegaCost : action === 'volley' ? effVolleyCost : 1)
         else                  eCharges = Math.max(0, eCharges - (action === 'ultimate' ? enemyMagazine : action === 'volley' ? VOLLEY_COST : 1))
 
         const isAttackerPlayer = who === 'player'
@@ -3662,9 +3676,12 @@ export default function RaidCombat({
           // Tide layer: dmgMult (broad), plus action-specific fire/volley
           // mults, plus boss-only mults stacked on top when isBoss.
           const isVolley = action === 'volley'
-          // The Mega is a heavy shot, so it rides the same Volley tide layers.
+          // The Mega is a heavy shot, so it rides the same Volley boss layers.
           const isVolleyLike = isVolley || isMega
-          const tideActionMult = isVolleyLike ? tide.volleyDmgMult : tide.fireDmgMult
+          // Per-action damage lane: Mega gets its OWN multiplier (Man-o-War's
+          // Wrath boon) so a volley-damage boon doesn't leak onto it and its own
+          // boon doesn't leak onto volleys. Volley uses volleyDmgMult, fire fire.
+          const tideActionMult = isMega ? tide.megaDmgMult : isVolley ? tide.volleyDmgMult : tide.fireDmgMult
           const tideBossMult = isBoss
             ? tide.bossDmgMult * (isVolleyLike ? tide.bossVolMult : 1)
             : 1
@@ -3985,6 +4002,10 @@ export default function RaidCombat({
           const preShield = enemyShieldRef.current
           const toHull = soakEnemyShield(dmg, piercing, tide.shieldPierceFrac)
           shieldAbsorbedOut = preShield - enemyShieldRef.current
+          // Overkill = the slice of this hull-hit that lands PAST the enemy's
+          // remaining HP (wasted damage). Don's overkill-heal boon reclaims some
+          // of it (applied in the heal block below). Captured before eHp clamps.
+          const overkillDmg = Math.max(0, toHull - eHp)
           eHp = Math.max(0, eHp - toHull)
           if (dmg > 0) onPlayerHit?.(dmg)
           // ── CRIT STRIP (The Court's Fang / The Don's Signet) ──────────────
@@ -4043,6 +4064,17 @@ export default function RaidCombat({
                 lifestealLabel = `${(lsId && getRaidItem(lsId)?.name) || "Davy's Blood Cannon"} drinks the wound`
               }
             }
+          }
+          // Overkill heal (Don's boon): reclaim a slice of the damage that
+          // landed past the sunk hull's HP. Same per-hit cap as lifesteal so a
+          // massive Mega overkill can't refill the whole bar in one shot.
+          if (overkillDmg > 0 && tide.overkillHealPct > 0 && pHp > 0) {
+            const raw = Math.max(1, Math.round(overkillDmg * tide.overkillHealPct))
+            const healed = Math.round(Math.min(Math.round(playerHpMax * LIFESTEAL_HEAL_MAXHP_CAP), raw) * tide.healMult)
+            const before = pHp
+            pHp = Math.min(healCap, pHp + healed)
+            overkillHealedOut = pHp - before
+            if (overkillHealedOut > 0) onStat?.({ dmgHealed: overkillHealedOut })
           }
           // Executioner (boon): the moment a hit drops the enemy to <= X% HP,
           // it's sunk outright (only when it actually landed + isn't already dead).
@@ -4268,6 +4300,7 @@ export default function RaidCombat({
           // Leviathan's Hunger heal line — pushed here so it follows the shot
           // it fed on, not before it.
           if (lifestealHealedOut > 0) stepLines.push(`${lifestealLabel || "Leviathan's Hunger drinks the wound"} — +${lifestealHealedOut} HP.`)
+          if (overkillHealedOut > 0) stepLines.push(`The kill spills over — you reclaim +${overkillHealedOut} HP from the overkill.`)
         } else {
           // The enemy's INTENDED hit, captured before ANY of the player's
           // mitigation/anchor/shield reduces it — Spiteful Wake reflects off
@@ -6575,6 +6608,8 @@ export default function RaidCombat({
             canVolley={canVolley}
             canMega={canMega}
             megaAugment={megaAugment}
+            volleyCost={effVolleyCost}
+            megaCost={effMegaCost}
             canDodge={canDodge}
             canReload={canReload}
             onSelect={selectAction}
@@ -9010,12 +9045,15 @@ export interface SpecialItem {
   onClick: () => void
 }
 
-function ActionMenu({ canFire, canVolley, canMega = false, megaAugment = null, canDodge, canReload, onSelect, disabled = false, highlightedAction = null, specialItems = [] }: {
+function ActionMenu({ canFire, canVolley, canMega = false, megaAugment = null, volleyCost = VOLLEY_COST, megaCost = MEGA_CHARGE_COST, canDodge, canReload, onSelect, disabled = false, highlightedAction = null, specialItems = [] }: {
   canFire: boolean
   canVolley: boolean
   /** Man-o-War Mega is available (augment owned + a full 4-charge magazine). */
   canMega?: boolean
   megaAugment?: ShipAugment | null
+  /** Effective charge costs after Don's cost-cut synergies (default the base). */
+  volleyCost?: number
+  megaCost?: number
   canDodge: boolean
   /** False when the magazine's already full — reload would be a wasted
    *  turn (any extra charge clamps off). Drives a "Full" label so the
@@ -9186,7 +9224,7 @@ function ActionMenu({ canFire, canVolley, canMega = false, megaAugment = null, c
               }}
             >
               <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#ffffff' }}>Volley</span>
-              <span className="font-karla" style={{ fontSize: '0.62rem', color: '#fbbf24' }}>3 ◆ · 2× dmg</span>
+              <span className="font-karla" style={{ fontSize: '0.62rem', color: '#fbbf24' }}>{volleyCost} ◆ · 2× dmg</span>
             </motion.button>
             {canMega && megaAugment && (
               <motion.button
@@ -9200,7 +9238,7 @@ function ActionMenu({ canFire, canVolley, canMega = false, megaAugment = null, c
                 }}
               >
                 <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#ffffff' }}>{megaAugment.name}</span>
-                <span className="font-karla" style={{ fontSize: '0.62rem', color: megaAugment.color }}>{MEGA_CHARGE_COST} ◆ · Mega</span>
+                <span className="font-karla" style={{ fontSize: '0.62rem', color: megaAugment.color }}>{megaCost} ◆ · Mega</span>
               </motion.button>
             )}
           </motion.div>

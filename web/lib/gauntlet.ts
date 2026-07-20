@@ -1606,6 +1606,16 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
     { desc: '25% chance a crew ability isn’t spent when used', detail: 'When you fire a crew ability, there’s a 25% chance it isn’t spent and stays ready for next turn.', effect: { kind: 'abilityRefundChance', chance: 0.25 } },
     { desc: '35% chance a crew ability isn’t spent when used', detail: 'When you fire a crew ability, there’s a 35% chance it isn’t spent and stays ready for next turn.', effect: { kind: 'abilityRefundChance', chance: 0.35 } },
   ] },
+  { id: 'blood_in_the_water', name: 'Blood in the Water', gauntlet: 'don', flavor: 'The deep hates a wasted kill. Strike harder than the hull can take, and it hands you back the difference.', rarity: 'rare', tiers: [
+    { desc: 'Heal 20% of overkill damage on a kill', detail: 'When a shot sinks a hull, any damage that lands PAST its remaining HP is overkill (normally wasted). You heal 20% of that overkill back to your ship. A clean shot that drops it exactly to zero heals nothing — the reward is for hitting hard enough to spill over. Each hit’s heal is capped so a huge Mega can’t refill your whole bar at once.', effect: { kind: 'overkillHealPct', pct: 0.20 } },
+    { desc: 'Heal 35% of overkill damage on a kill', detail: 'A kill spills over harder: you heal 35% of any overkill damage (the amount a killing blow lands past the hull’s remaining HP) back to your ship. Per-hit capped.', effect: { kind: 'overkillHealPct', pct: 0.35 } },
+    { desc: 'Heal 50% of overkill damage on a kill', detail: 'Half of every killing blow’s overkill comes back as hull. Land a massive shot on a wounded enemy and you top yourself off on the way through. Per-hit capped so one shot can’t full-heal you.', effect: { kind: 'overkillHealPct', pct: 0.50 } },
+  ] },
+  { id: 'manowars_wrath', name: "Man-o-War's Wrath", gauntlet: 'don', flavor: 'The big gun was already the last word. Now it argues.', rarity: 'legendary', tiers: [
+    { desc: '+22% Mega damage', detail: 'Your Mega — the Man-o-War ultimate that spends a full 4-charge magazine — hits 22% harder. Affects the Mega ONLY: your Fire and Volley are unchanged. This does nothing unless your ship carries a Mega augment (the Man-o-War ultimate weapon), so only take it if you can fire one.', effect: { kind: 'megaDmgMult', mult: 1.22 } },
+    { desc: '+38% Mega damage', detail: 'Your Mega ultimate hits 38% harder. Mega only — Fire and Volley unaffected. Requires a Mega augment to do anything.', effect: { kind: 'megaDmgMult', mult: 1.38 } },
+    { desc: '+58% Mega damage', detail: 'Your Mega ultimate hits 58% harder — the single biggest shot in your arsenal, turned up. Mega only. Requires a Mega augment to do anything.', effect: { kind: 'megaDmgMult', mult: 1.58 } },
+  ] },
 ]
 
 // Boon drafts fall on a ~every-2.5-depths cadence (alternating +2 / +3), up
@@ -2080,6 +2090,28 @@ export const CONFLUENCES: Confluence[] = [
     levels: [
       { desc: 'Stronger fight blessing; every 2nd shot is a guaranteed crit', effects: [{ kind: 'randomFightBuff', magnitude: 0.35 }, { kind: 'guaranteedCritEvery', n: 2 }] },
       { desc: 'Even stronger blessing; every 2nd shot crits', effects: [{ kind: 'randomFightBuff', magnitude: 0.50 }, { kind: 'guaranteedCritEvery', n: 2 }] },
+    ],
+  },
+  {
+    id: 'running_broadside', name: 'Running Broadside', gauntlet: 'don',
+    requires: [{ boonId: 'grapeshot' }, { boonId: 'powder_hoard' }],
+    flavor: 'Heavy shot and a deep rack. Your gunners learn to loose the big volley on a shorter count.',
+    detail: 'Your Volley costs one fewer cannonball — 2 instead of 3 — so you can loose it more often. On top of that, every Volley still hits harder (Grapeshot carries over).',
+    levels: [
+      { desc: 'Volley costs 2 charges instead of 3; +10% Volley damage', effects: [{ kind: 'volleyCostReduction', n: 1 }, { kind: 'volleyDmgMult', mult: 1.10 }] },
+      { desc: 'Volley costs 2; +20% Volley damage', effects: [{ kind: 'volleyCostReduction', n: 1 }, { kind: 'volleyDmgMult', mult: 1.20 }] },
+      { desc: 'Volley costs 2; +32% Volley damage', effects: [{ kind: 'volleyCostReduction', n: 1 }, { kind: 'volleyDmgMult', mult: 1.32 }] },
+    ],
+  },
+  {
+    id: 'hair_trigger', name: 'Hair Trigger', gauntlet: 'don',
+    requires: [{ boonId: 'manowars_wrath' }, { boonId: 'press_the_powder' }],
+    flavor: 'The big gun and a crew that never stops loading. The last word comes a beat sooner.',
+    detail: 'Your Mega — the Man-o-War ultimate — costs one fewer cannonball, 3 instead of 4, so it comes online a full charge sooner. It also hits harder still (Man-o-War’s Wrath carries over). Does nothing without a Mega augment.',
+    levels: [
+      { desc: 'Mega costs 3 charges instead of 4; +15% Mega damage', effects: [{ kind: 'megaCostReduction', n: 1 }, { kind: 'megaDmgMult', mult: 1.15 }] },
+      { desc: 'Mega costs 3; +26% Mega damage', effects: [{ kind: 'megaCostReduction', n: 1 }, { kind: 'megaDmgMult', mult: 1.26 }] },
+      { desc: 'Mega costs 3; +40% Mega damage', effects: [{ kind: 'megaCostReduction', n: 1 }, { kind: 'megaDmgMult', mult: 1.40 }] },
     ],
   },
 ]
