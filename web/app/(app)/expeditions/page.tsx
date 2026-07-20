@@ -145,7 +145,10 @@ async function ShipHeroSection() {
       raidRepairOwed={profile?.raid_repair_owed ?? 0}
       doubloons={profile?.doubloons ?? 0}
       shipClasses={(profile?.ship_classes as Record<string, string> | null) ?? {}}
-      gauntletUpgrades={(profile?.gauntlet_upgrades as string[] | null) ?? []}
+      gauntletUpgrades={[
+        ...((profile?.gauntlet_upgrades as string[] | null) ?? []),
+        ...((profile?.dons_gauntlet_upgrades as string[] | null) ?? []),
+      ]}
       gauntletFathoms={(profile?.gauntlet_fathoms as number | null) ?? 0}
       forgeRecipesLearned={(profile?.forge_recipes_learned as string[] | null) ?? []}
       hasSeenForgeIntro={profile?.has_seen_forge_intro === true}
@@ -389,7 +392,10 @@ async function ExpeditionHub() {
       gauntletOpen={gauntletOpen}
       donsGauntletOpen={donsGauntletOpen}
       gauntletResumable={gauntletResumable}
-      gauntletUpgrades={(profile?.gauntlet_upgrades as string[] | null) ?? []}
+      gauntletUpgrades={[
+        ...((profile?.gauntlet_upgrades as string[] | null) ?? []),
+        ...((profile?.dons_gauntlet_upgrades as string[] | null) ?? []),
+      ]}
       pvp={pvp}
     />
   )

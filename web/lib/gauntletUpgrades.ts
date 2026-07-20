@@ -354,6 +354,14 @@ export function hasForge(unlocked: string[] | null | undefined): boolean {
   return (unlocked ?? []).includes('forge')
 }
 
+/** The Abyssal Forge (Don's Ship & Shore): gates TIER-3 forging (fusing two
+ *  already-forged items). Account-scope, so read against the UNION of both
+ *  Lockers' upgrades — same as the other Don's account perks. Tier-2 forging
+ *  stays on hasForge. */
+export function hasAbyssalForge(unlocked: string[] | null | undefined): boolean {
+  return (unlocked ?? []).includes('dg_abyssal_forge')
+}
+
 /** Deep-Sea Plating (Don's account perk): +10% ship max HP in every raid +
  *  gauntlet dive. Read against the UNION of both Lockers' upgrades. */
 export function donsRaidHpMult(unlocked: string[] | null | undefined): number {

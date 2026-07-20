@@ -71,8 +71,10 @@ function ItemArt({ id, size, dim = false }: { id: string; size: number; dim?: bo
 export default function ForgeBoard({
   ownedRaidItems, learnedRecipes, fathomsNow,
   forging, forgeArmed, learning, learnArmed,
-  onForgeTap, onLearnTap,
+  onForgeTap, onLearnTap, abyssalUnlocked = false,
 }: {
+  /** Owns Don's Abyssal Forge? Tier-3 recipes are hidden entirely until then. */
+  abyssalUnlocked?: boolean
   ownedRaidItems: string[]
   learnedRecipes: string[]
   fathomsNow: number
@@ -99,11 +101,15 @@ export default function ForgeBoard({
     return recipe.components.every(c => owned.has(c)) ? 'ready' : 'gathering'
   }
 
-  const rows = useMemo(() => FORGE_RECIPES.map(r => ({
-    recipe: r,
-    state: stateOf(r.result),
-    have: r.components.filter(c => owned.has(c)).length,
-  })), [ownedRaidItems, learnedRecipes])   // eslint-disable-line react-hooks/exhaustive-deps
+  const rows = useMemo(() => FORGE_RECIPES
+    // Tier-3 Abyssal recipes stay invisible until Don's Abyssal Forge is owned,
+    // so the board never shows recipes the player has no path to learn.
+    .filter(r => r.tier !== 3 || abyssalUnlocked)
+    .map(r => ({
+      recipe: r,
+      state: stateOf(r.result),
+      have: r.components.filter(c => owned.has(c)).length,
+    })), [ownedRaidItems, learnedRecipes, abyssalUnlocked])   // eslint-disable-line react-hooks/exhaustive-deps
 
   const ready = rows.filter(r => r.state === 'ready')
   const forgedCount = rows.filter(r => r.state === 'forged').length

@@ -11,7 +11,7 @@ import { SIXTH_BERTH_COST, ARMORY_EXPANSION_COST } from '@/lib/shipBerth'
 import { getShipAugment, AUGMENT_COST, RETOOL_COST, SCHEMATICS_COST, ULTIMATE_BUILD_MS, canBuildUltimate, parseAugmentBuild, isBuildComplete, type ShipAugmentBuild } from '@/lib/shipAugments'
 import { getShipSkin, canEquipShipSkin } from '@/lib/shipSkins'
 import { settleUltimateBuild } from '@/lib/ultimateBuild'
-import { hasForge, bonusChargeSlots } from '@/lib/gauntletUpgrades'
+import { hasForge, hasAbyssalForge, bonusChargeSlots } from '@/lib/gauntletUpgrades'
 
 // ── Crew picker ───────────────────────────────────────────────────────────────
 
@@ -154,11 +154,19 @@ export async function forgeRaidItem(resultId: string): Promise<{ ok: true; raidI
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('raid_items, equipped_raid_items, gauntlet_upgrades, forge_recipes_learned')
+    .select('raid_items, equipped_raid_items, gauntlet_upgrades, dons_gauntlet_upgrades, forge_recipes_learned')
     .eq('id', user.id)
     .single()
-  // The Forge is a major Gauntlet (Fathom) unlock — server-enforce it.
-  if (!hasForge((profile?.gauntlet_upgrades as string[] | null) ?? [])) {
+  // The Forge is a major Gauntlet (Fathom) unlock — server-enforce it. Tier-3
+  // (Abyssal) recipes ride Don's separate unlock instead; account-scope perks
+  // apply from EITHER Locker, so both checks read the union.
+  const forgeUpgrades = [
+    ...((profile?.gauntlet_upgrades as string[] | null) ?? []),
+    ...((profile?.dons_gauntlet_upgrades as string[] | null) ?? []),
+  ]
+  if (recipe.tier === 3) {
+    if (!hasAbyssalForge(forgeUpgrades)) return { error: 'The Abyssal Forge is locked. Unlock it in Don’s Gauntlet.' }
+  } else if (!hasForge(forgeUpgrades)) {
     return { error: 'The Forge is locked. Unlock it in the Davy Jones Gauntlet.' }
   }
   // Recipe must be learned first (learnForgeRecipe spends the Fathoms).
@@ -189,10 +197,16 @@ export async function learnForgeRecipe(resultId: string): Promise<{ ok: true; fa
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_upgrades, gauntlet_fathoms, forge_recipes_learned, raid_items')
+    .select('gauntlet_upgrades, dons_gauntlet_upgrades, gauntlet_fathoms, forge_recipes_learned, raid_items')
     .eq('id', user.id)
     .single()
-  if (!hasForge((profile?.gauntlet_upgrades as string[] | null) ?? [])) {
+  const learnUpgrades = [
+    ...((profile?.gauntlet_upgrades as string[] | null) ?? []),
+    ...((profile?.dons_gauntlet_upgrades as string[] | null) ?? []),
+  ]
+  if (recipe.tier === 3) {
+    if (!hasAbyssalForge(learnUpgrades)) return { error: 'The Abyssal Forge is locked. Unlock it in Don’s Gauntlet.' }
+  } else if (!hasForge(learnUpgrades)) {
     return { error: 'The Forge is locked. Unlock it in the Davy Jones Gauntlet.' }
   }
   const learned = (profile?.forge_recipes_learned as string[] | null) ?? []

@@ -23,7 +23,7 @@ import SixthBerthPanel from './SixthBerthPanel'
 import ArmoryExpansionPanel from './ArmoryExpansionPanel'
 import { IconCrate } from '@/components/GameIcons'
 import { getShipAugment, type ShipAugmentId } from '@/lib/shipAugments'
-import { bonusChargeSlots, hasForge } from '@/lib/gauntletUpgrades'
+import { bonusChargeSlots, hasForge, hasAbyssalForge } from '@/lib/gauntletUpgrades'
 import PopupShell from '@/components/PopupShell'
 import { assignToVoyage, benchCrew } from '@/app/(app)/crew/actions'
 import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
@@ -509,6 +509,9 @@ export default function ShipHero({
   const showUltimate = chapter3Cleared || isAdmin
   // The Forge is a major Gauntlet (Fathom) unlock — locked → a teaser, not the recipes.
   const forgeUnlocked = hasForge(gauntletUpgrades)
+  // Tier-3 (Abyssal) recipes ride Don's separate unlock. Until it's owned the
+  // board hides them entirely rather than dangling recipes nobody can learn.
+  const abyssalUnlocked = hasAbyssalForge(gauntletUpgrades)
   const forgeUpg = getGauntletUpgrade('forge')
 
   // Manage Ship section tab. Loadout (the battle decision) first; Ship
@@ -1649,6 +1652,7 @@ export default function ShipHero({
                    with what you can forge NOW, then your parts and what each one
                    can become, then the whole collection as a wall of medallions. */
                 <ForgeBoard
+                  abyssalUnlocked={abyssalUnlocked}
                   ownedRaidItems={ownedRaidItems}
                   learnedRecipes={learnedRecipes}
                   fathomsNow={fathomsNow}

@@ -662,6 +662,74 @@ export const RAID_ITEMS: RaidItemDef[] = [
     ],
     source: "Forged from the Gunner's Sight + Reinforced Hull",
   },
+
+  // ══ TIER 3 — THE ABYSSAL FORGE ══════════════════════════════════════════════
+  // Forged from two TIER-2 fusions, so each one carries what four base items
+  // once did, in a single mount. They are deliberately tuned to roughly the SUM
+  // of their two parents rather than an inflated multiple: the payoff is slot
+  // efficiency (two items in one), not raw number growth. They STACK (no shared
+  // family) — the limiter is the destructive forge chain behind each one.
+  // Art pending: image null falls back to the emoji until the PNGs land.
+  {
+    id: 'leviathans_cannon',
+    name: "Leviathan's Cannon",
+    image: null,
+    description: '+30% damage to bosses, your damage climbs +4% every turn of a fight, and +13% critical damage with a softened non-crit penalty. The siege gun and the warlord’s piece welded into one barrel.',
+    emoji: '🐋',
+    rarity: 'legendary',
+    effects: [
+      { type: 'boss_damage_mult',     value: 1.30 },
+      { type: 'ramp_damage_per_turn', value: 0.04 },
+      { type: 'crit_damage_mult',     value: 1.13 },
+      { type: 'noncrit_damage_mult',  value: 0.90 },
+    ],
+    source: "Abyssal Forge: Siege Cannon + Warlord's Cannon",
+  },
+  {
+    id: 'aegis_of_the_deep',
+    name: 'Aegis of the Deep',
+    image: null,
+    description: '+15% max HP, cuts incoming enemy fire by 25%, and on a successful dodge a 50% chance to deflect 75% of the shot back at the attacker. Nothing the deep throws reaches the hull clean.',
+    emoji: '🛡️',
+    rarity: 'legendary',
+    effects: [
+      { type: 'max_hp_mult',          value: 1.15 },
+      { type: 'incoming_damage_mult', value: 0.75 },
+      { type: 'parry_chance',         value: 0.50 },
+      { type: 'parry_reflect_pct',    value: 0.75 },
+    ],
+    source: 'Abyssal Forge: Ironclad Bulwark + Deflector Plate',
+  },
+  {
+    id: 'drowned_crown',
+    name: 'Drowned Crown',
+    image: null,
+    description: '+17% damage to bosses AND non-boss enemies, +15% max HP, and once per raid a killing blow leaves you at 1 HP instead of sinking. The crown that will not be taken.',
+    emoji: '👑',
+    rarity: 'legendary',
+    effects: [
+      { type: 'boss_damage_mult',    value: 1.17 },
+      { type: 'nonboss_damage_mult', value: 1.17 },
+      { type: 'max_hp_mult',         value: 1.15 },
+      { type: 'lethal_save',         value: 1 },
+    ],
+    source: "Abyssal Forge: Marauder's Cannon + Last Bastion",
+  },
+  {
+    id: 'tempest_chronometer',
+    name: 'Tempest Chronometer',
+    image: null,
+    description: 'Adds a fifth of your Savvy to your turn-order roll, always opens each fight with a cannonball already loaded, and on a successful dodge a 50% chance to deflect 75% of the shot back. Strike first, and answer everything.',
+    emoji: '🌀',
+    rarity: 'legendary',
+    effects: [
+      { type: 'speed_roll_nav_pct',  value: 0.20 },
+      { type: 'start_charge_chance', value: 1.00 },
+      { type: 'parry_chance',        value: 0.50 },
+      { type: 'parry_reflect_pct',   value: 0.75 },
+    ],
+    source: "Abyssal Forge: Vanguard's Chronometer + Riposte Chronometer",
+  },
 ]
 
 // ── Forge recipes ─────────────────────────────────────────────────────────────
@@ -677,6 +745,10 @@ export interface ForgeRecipe {
   /** Fathoms to LEARN the recipe before it can be forged (the meta sink). Once
    *  learned it's permanent; forging then only needs the components. */
   fathomCost: number
+  /** Forge tier. Omitted = 2 (the ordinary forge, unlocked by the Davy Locker's
+   *  `forge` upgrade). 3 = THE ABYSSAL FORGE: its components are themselves
+   *  tier-2 fusions, and it's gated on Don's `dg_abyssal_forge` unlock instead. */
+  tier?: 2 | 3
 }
 
 // The forge web: components are shared across recipes (e.g. Davy's Heavy feeds
@@ -711,6 +783,14 @@ export const FORGE_RECIPES: ForgeRecipe[] = [
   { components: ['incendiary_cannonball', 'frozen_cannonball'],    result: 'emberfrost_cannonball', fathomCost: 150 },
   { components: ['quartermasters_anchor', 'navigators_compass'],   result: 'deadmans_bearing',  fathomCost: 150 },
   { components: ['gunners_sight', 'reinforced_hull'],              result: 'heavy_gunners_sight',   fathomCost: 150 },
+  // ── TIER 3, THE ABYSSAL FORGE (gated on Don's `dg_abyssal_forge` unlock, not
+  //    the ordinary `forge`). Components are themselves tier-2 fusions, so each
+  //    one consumes four base items' worth of forging. Parents are DISJOINT
+  //    across the four recipes, so each Abyssal is its own build identity. ──────
+  { components: ['siege_cannon', 'warlords_cannon'],                    result: 'leviathans_cannon',   fathomCost: 250, tier: 3 },
+  { components: ['ironclad_bulwark', 'deflector_plate'],                result: 'aegis_of_the_deep',   fathomCost: 250, tier: 3 },
+  { components: ['marauders_cannon', 'last_bastion'],                   result: 'drowned_crown',       fathomCost: 250, tier: 3 },
+  { components: ['vanguards_chronometer', 'riposte_chronometer'],       result: 'tempest_chronometer', fathomCost: 250, tier: 3 },
 ]
 
 export function getForgeRecipe(resultId: string): ForgeRecipe | undefined {
@@ -802,6 +882,13 @@ export function cacheComponentsMissing(components: string[], ownedItems: string[
 export function isForgedRaidItem(id: string): boolean {
   return FORGE_RECIPES.some(r => r.result === id)
 }
+/** Tier-3 ABYSSAL fusion? Needed as its own predicate because a tier-3 result
+ *  also passes isForgedRaidItem (it IS a recipe result) — callers that want to
+ *  distinguish the two tiers (the fancier border, the Abyssal-Forge gate) must
+ *  check this FIRST. */
+export function isAbyssalForgedItem(id: string): boolean {
+  return getForgeRecipe(id)?.tier === 3
+}
 
 /** Ownership EXPANDED through the forge: everything in raid_items, plus every
  *  component that was CONSUMED into a fusion the player owns (recursively, so
@@ -866,8 +953,21 @@ export function conflictingFamilyItems(itemId: string, equippedIds: string[]): s
 export function fusionExcludedItems(resultId: string): string[] {
   const recipe = getForgeRecipe(resultId)
   if (!recipe) return []
-  const ids = new Set<string>(recipe.components)
-  const fams = new Set(recipe.components.map(c => getRaidItem(c)?.family).filter(Boolean) as string[])
+  // Walk the FULL ancestor chain, not just the direct components. A tier-3
+  // Abyssal fusion is forged from tier-2 fusions, which are themselves forged
+  // from tier-1 items — so stopping one level down would let a player refarm a
+  // GRANDPARENT and equip it beside the tier-3 that already contains its stats
+  // (the exact double-dip this exclusion exists to prevent). Cycle-safe.
+  const ids = new Set<string>()
+  const queue = [...recipe.components]
+  while (queue.length) {
+    const id = queue.pop()!
+    if (ids.has(id)) continue
+    ids.add(id)
+    const sub = getForgeRecipe(id)
+    if (sub) queue.push(...sub.components)
+  }
+  const fams = new Set([...ids].map(c => getRaidItem(c)?.family).filter(Boolean) as string[])
   if (fams.size) for (const it of RAID_ITEMS) if (it.family && fams.has(it.family)) ids.add(it.id)
   return [...ids]
 }
