@@ -29,7 +29,8 @@ export type RaidEffectType =
   | 'feeble_on_hit'         // value = 0-1 chance to make it FEEBLE (it takes more damage). Legendary rack only.
   // ── Don's Gauntlet chase — mechanics the roster never had ─────────────────
   | 'first_shot_mult'       // value = damage multiplier applied ONLY to the FIRST shot you fire each fight (Opening Statement). Nothing else rewards the opener. Multiplies onto the normal shot math.
-  | 'max_hit_pct'           // value = 0-1 cap: no single incoming hit can take more than this fraction of your MAX HP (Made Man). A per-hit ceiling, not a flat reduction — defangs burst/ultimates, leaves chip damage untouched. Multiple sources take the LOWEST (tightest) cap.
+  | 'max_hit_pct'           // value = 0-1 cap: a single incoming hit exceeding this fraction of your MAX HP CAN be knocked down to it (Made Man). A per-hit ceiling, not a flat reduction. Paired with max_hit_chance for the proc odds; multiple caps take the LOWEST (tightest).
+  | 'max_hit_chance'        // value = 0-1 chance the max_hit_pct cap actually triggers on a hit that exceeds it. Absent = always (1). Made Man rolls this so a big blow only SOMETIMES gets capped.
   | 'afflicted_damage_mult' // value = damage multiplier vs an enemy that ALREADY carries any status/affliction (burning, frozen, weakened, corroded, feeble, slowed, marked…) at the moment you hit (The Shakedown). The proc that FIRST applies a status lands after this hit, so the bonus kicks in from the next hit on. Rewards a status/elemental build.
 
 export interface RaidEffect {
@@ -389,21 +390,21 @@ export const RAID_ITEMS: RaidItemDef[] = [
   {
     id: 'opening_statement',
     name: 'Opening Statement',
-    description: 'Your FIRST shot of every fight lands for +120% damage — every shot after is normal. Lead with a loaded volley and make an example of whoever steps up first.',
+    description: 'Your FIRST shot of every fight lands for +30% damage — every shot after is normal. Lead with a loaded volley or Mega and make an example of whoever steps up first.',
     image: null,
     emoji: '🎯',
     rarity: 'legendary',
-    effects: [{ type: 'first_shot_mult', value: 2.2 }],
+    effects: [{ type: 'first_shot_mult', value: 1.3 }],
     source: "Don's Gauntlet",
   },
   {
     id: 'made_man',
     name: 'Made Man',
-    description: 'No single hit can take more than 25% of your max hull, no matter how heavy. Ultimates and big broadsides get defanged; the slow bleed still finds you. Nobody roughs up a made man that hard.',
+    description: 'When a single hit would take more than 25% of your max hull, there is a 50% chance it is knocked back down to 25% — a coin-flip that defangs the heaviest blows. Nobody roughs up a made man clean every time.',
     image: null,
     emoji: '🕴️',
     rarity: 'legendary',
-    effects: [{ type: 'max_hit_pct', value: 0.25 }],
+    effects: [{ type: 'max_hit_pct', value: 0.25 }, { type: 'max_hit_chance', value: 0.5 }],
     source: "Don's Gauntlet",
   },
   {

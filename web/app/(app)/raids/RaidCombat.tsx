@@ -4379,17 +4379,20 @@ export default function RaidCombat({
             anchorReductionRef.current = null
             anchorConsumed = true
           }
-          // Made Man (item): no single hit can take more than max_hit_pct of your
-          // MAX HP. Caps the blow here — after mitigation, before the shield soaks
-          // it — so a burst / ultimate gets defanged while chip damage is left
-          // alone. Multiple sources take the tightest (lowest) cap.
-          const hitCapPct = getActiveEffects(liveItems).filter(e => e.type === 'max_hit_pct').reduce((a, e) => Math.min(a, e.value), 1)
+          // Made Man (item): a single hit exceeding max_hit_pct of your MAX HP has
+          // a max_hit_chance shot at being knocked down to that ceiling. Rolled
+          // after mitigation, before the shield soaks it, so a burst / ultimate
+          // gets defanged HALF the time while chip damage is left alone. Multiple
+          // caps take the tightest (lowest); the chance defaults to always (1).
+          const madeManItems = getActiveEffects(liveItems)
+          const hitCapPct = madeManItems.filter(e => e.type === 'max_hit_pct').reduce((a, e) => Math.min(a, e.value), 1)
           if (hitCapPct < 1 && dmg > 0) {
             const ceil = Math.max(1, Math.round(playerHpMax * hitCapPct))
-            if (dmg > ceil) {
+            const capChance = madeManItems.filter(e => e.type === 'max_hit_chance').reduce((a, e) => Math.max(a, e.value), 0) || 1
+            if (dmg > ceil && Math.random() < capChance) {
               const before = dmg
               dmg = ceil
-              stepLines.push(`Made Man — no blow lands that clean on you (${before} → ${dmg}).`)
+              stepLines.push(`Made Man — the blow can't land clean on you (${before} → ${dmg}).`)
             }
           }
           // Shield pool — soaks from the pool before HP. Seeded by the Stormward
