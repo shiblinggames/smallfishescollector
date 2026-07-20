@@ -697,6 +697,83 @@ export function playForgeSfx(descend = false): void {
   } catch {}
 }
 
+/** The ABYSSAL forge strike — a deliberate step above playForgeSfx for tier-3
+ *  fusions. Same metallic clang DNA, but bigger: a low sub-bass swell for weight,
+ *  a fuller rising chord, a double-layer clang, and a crystalline shimmer tail
+ *  that rings out as the Abyssal item is revealed. Fully synthesized, sfxOut. */
+export function playAbyssalForgeSfx(): void {
+  if (!audioCtx) return
+  const out = sfxOut(); if (!out) return
+  try {
+    if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {})
+    const ctx = audioCtx
+    const t0 = ctx.currentTime
+
+    // Sub-bass swell — the deep of the abyss taking the blow. Sweeps up, then
+    // settles, giving the strike real body under the metallic clang.
+    const sub = ctx.createOscillator()
+    const subG = ctx.createGain()
+    sub.type = 'sawtooth'
+    sub.frequency.setValueAtTime(52, t0)
+    sub.frequency.exponentialRampToValueAtTime(96, t0 + 0.18)
+    sub.frequency.exponentialRampToValueAtTime(44, t0 + 0.9)
+    const subLp = ctx.createBiquadFilter()
+    subLp.type = 'lowpass'; subLp.frequency.value = 240
+    subG.gain.setValueAtTime(0.0001, t0)
+    subG.gain.exponentialRampToValueAtTime(0.3, t0 + 0.03)
+    subG.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.95)
+    sub.connect(subLp).connect(subG).connect(out)
+    sub.start(t0); sub.stop(t0 + 1.0)
+
+    // Rising chord — fuller than the standard triad (adds the octave partial).
+    const root = 659.25 // E5
+    ;[1, 1.5, 2, 3].forEach((mult, i) => {
+      const osc = ctx.createOscillator()
+      const g = ctx.createGain()
+      osc.type = i === 0 ? 'triangle' : 'sine'
+      osc.frequency.value = root * mult
+      const peak = 0.24 / (i + 1)
+      const start = t0 + i * 0.05
+      g.gain.setValueAtTime(0.0001, start)
+      g.gain.exponentialRampToValueAtTime(peak, start + 0.014)
+      g.gain.exponentialRampToValueAtTime(0.0001, start + 0.7)
+      osc.connect(g).connect(out)
+      osc.start(start); osc.stop(start + 0.75)
+    })
+
+    // Double-layer clang — a low body thud + a bright ting, for a bigger strike.
+    ;[{ f: 1500, q: 0.7, gain: 0.14, dur: 0.16 }, { f: 4200, q: 0.9, gain: 0.13, dur: 0.1 }].forEach(({ f, q, gain, dur }) => {
+      const noise = ctx.createBufferSource()
+      const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate)
+      const data = buf.getChannelData(0)
+      for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length)
+      noise.buffer = buf
+      const bp = ctx.createBiquadFilter()
+      bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = q
+      const ng = ctx.createGain()
+      ng.gain.setValueAtTime(gain, t0)
+      ng.gain.exponentialRampToValueAtTime(0.0001, t0 + dur + 0.02)
+      noise.connect(bp).connect(ng).connect(out)
+      noise.start(t0); noise.stop(t0 + dur + 0.03)
+    })
+
+    // Shimmer tail — a crystalline arpeggio that rings out AFTER the strike, the
+    // iridescent Abyssal sheen made audible.
+    ;[1318.5, 1975.5, 2637].forEach((f, i) => {   // E6, B6, E7
+      const osc = ctx.createOscillator()
+      const g = ctx.createGain()
+      osc.type = 'sine'
+      osc.frequency.value = f
+      const start = t0 + 0.34 + i * 0.075
+      g.gain.setValueAtTime(0.0001, start)
+      g.gain.exponentialRampToValueAtTime(0.09 / (i + 1), start + 0.02)
+      g.gain.exponentialRampToValueAtTime(0.0001, start + 0.55)
+      osc.connect(g).connect(out)
+      osc.start(start); osc.stop(start + 0.6)
+    })
+  } catch {}
+}
+
 /** Renown point spend — a short crystalline two-note "ting" for allocating a
  *  banked Renown point. Deliberately light + quick so rapid clicks feel tactile
  *  rather than fatiguing. Fully synthesized. Routed through sfxOut. */

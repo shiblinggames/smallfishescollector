@@ -30,7 +30,7 @@ import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
 import { applyCrewEffects, resolveEffects, effectSummary, SCOPE_META } from '@/lib/crewEffects'
 import { RARITY_COLORS as CREW_RARITY_COLORS, RARITY_NAMES } from '@/lib/crewGen'
 import { RAID_ITEMS, getRaidItem, FORGE_RECIPES, conflictingRaidItems, isForgedRaidItem, isAbyssalForgedItem } from '@/lib/raidItems'
-import { PRISMATIC_TEXT, prismaticBorder, forgedBorderSoft, forgedTextSoft, ABYSSAL_EMBER_TEXT, abyssalEmberBorder } from '@/lib/prismatic'
+import { PRISMATIC_TEXT, prismaticBorder, forgedBorderSoft, forgedTextSoft, ABYSSAL_EMBER_TEXT, abyssalEmberBorder, ABYSSAL } from '@/lib/prismatic'
 import ForgeBoard from './ForgeBoard'
 import { renameShip, buyShip } from '@/app/shipyard/actions'
 import { getXPProgress, navLevelBonuses, MAX_LEVEL, getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
@@ -771,7 +771,7 @@ export default function ShipHero({
   // The cinematic forge overlay: holds the two component images + the result
   // while the merge animation plays. `forgeReady` flips once the server forge
   // lands so the reveal can settle on confirmed success.
-  const [forgeFx, setForgeFx] = useState<{ compImages: (string | null)[]; result: { name: string; image: string | null }; accent: string } | null>(null)
+  const [forgeFx, setForgeFx] = useState<{ compImages: (string | null)[]; result: { name: string; image: string | null }; accent: string; abyssal: boolean } | null>(null)
   const [forgeReady, setForgeReady] = useState(false)
   // Recipe learning (the Fathom sink). Mirror the server props into state for
   // optimistic updates, resyncing if the server sends fresh props (admin grants,
@@ -841,6 +841,7 @@ export default function ShipHero({
         compImages: recipe.components.map(id => getRaidItem(id)?.image ?? null),
         result: { name: result.name, image: result.image ?? null },
         accent: (ITEM_RARITY_COLOR as Record<string, string>)[result.rarity] ?? '#f0c040',
+        abyssal: recipe.tier === 3,
       })
       vibrate(16)   // confirm tick; the clash haptic + SFX fire in the animation
     }
@@ -2381,6 +2382,7 @@ export default function ShipHero({
           compImages={forgeFx.compImages}
           result={forgeFx.result}
           accent={forgeFx.accent}
+          abyssal={forgeFx.abyssal}
           ready={forgeReady}
           onDone={() => { setForgeFx(null); router.refresh() }}
         />,
@@ -2655,87 +2657,145 @@ function RecipeUnlockedOverlay({ name, image, onDone }: { name: string; image: s
 // Cinematic raid-item forge. The component artworks fly in from the sides and
 // collide; a flash + ember burst fires; then the forged item springs out with
 // rays and a name reveal. Auto-reveals once `ready` (the server forge landed).
-function ForgeAnimation({ compImages, result, accent, ready, onDone }: {
+function ForgeAnimation({ compImages, result, accent, abyssal = false, ready, onDone }: {
   compImages: (string | null)[]
   result: { name: string; image: string | null }
   accent: string
+  /** Tier-3 Abyssal fusion — plays the elevated, longer, molten variant. */
+  abyssal?: boolean
   ready: boolean
   onDone: () => void
 }) {
   // merge (components fly in) → clash (collision flash/sparks) → reveal (forged
   // item out). Reveal waits for the slam to finish AND the server to confirm,
-  // so a fast server never skips the clash beat.
+  // so a fast server never skips the clash beat. The Abyssal path adds a CHARGE
+  // beat before the clash (energy drawn inward) and dresses every stage in the
+  // molten ember palette so a tier-3 forge reads as a clear step above.
+  const EMBER = '#ff5a3c'
+  const GREEN = '#3fbf82'
+  const chrome = abyssal ? EMBER : accent
+  const CLASH_AT = abyssal ? 1220 : 900
+  const SLAM_AT = abyssal ? 1520 : 1180
+
+  const [charging, setCharging] = useState(false)
   const [clashed, setClashed] = useState(false)
   const [slamDone, setSlamDone] = useState(false)
   const revealed = slamDone && ready
   useEffect(() => {
+    const tc = abyssal ? setTimeout(() => setCharging(true), 240) : null
     const t1 = setTimeout(() => {
       setClashed(true)
-      vibrate([0, 40, 35, 70])
-      import('@/lib/fishingMusic').then(m => m.playForgeSfx(false)).catch(() => {})
-    }, 900)
-    const t2 = setTimeout(() => setSlamDone(true), 1180)
-    return () => { clearTimeout(t1); clearTimeout(t2) }
-  }, [])
-  const sparks = useMemo(() => Array.from({ length: 18 }, (_, n) => {
-    const ang = (Math.PI * 2 * n) / 18 + (n % 2) * 0.3
-    const dist = 70 + (n % 4) * 22
-    return { x: Math.cos(ang) * dist, y: Math.sin(ang) * dist, size: 3 + (n % 3), dur: 0.5 + (n % 4) * 0.12, warm: n % 3 !== 0 }
-  }), [])
+      vibrate(abyssal ? [0, 60, 40, 95, 30, 70] : [0, 40, 35, 70])
+      import('@/lib/fishingMusic').then(m => (abyssal ? m.playAbyssalForgeSfx() : m.playForgeSfx(false))).catch(() => {})
+    }, CLASH_AT)
+    const t2 = setTimeout(() => setSlamDone(true), SLAM_AT)
+    return () => { if (tc) clearTimeout(tc); clearTimeout(t1); clearTimeout(t2) }
+  }, [])   // eslint-disable-line react-hooks/exhaustive-deps
+
+  const sparkCount = abyssal ? 30 : 18
+  const sparks = useMemo(() => Array.from({ length: sparkCount }, (_, n) => {
+    const ang = (Math.PI * 2 * n) / sparkCount + (n % 2) * 0.3
+    const dist = (abyssal ? 88 : 70) + (n % 4) * 24
+    // Abyssal sparks cycle ember → gold → abyssal-green; the standard forge is warm only.
+    const tone = abyssal ? (n % 3) : (n % 3 === 0 ? 0 : 1)
+    return { x: Math.cos(ang) * dist, y: Math.sin(ang) * dist, size: 3 + (n % 3), dur: 0.5 + (n % 4) * 0.13, tone }
+  }), [sparkCount, abyssal])
+  const sparkColor = (tone: number) => (tone === 0 ? EMBER : tone === 1 ? '#ffd27a' : GREEN)
+
+  // Inward-streaming motes while the Abyssal forge draws its charge.
+  const gatherMotes = useMemo(() => (abyssal ? Array.from({ length: 16 }, (_, n) => {
+    const ang = (Math.PI * 2 * n) / 16 + (n % 3) * 0.4
+    const dist = 120 + (n % 5) * 16
+    return { x: Math.cos(ang) * dist, y: Math.sin(ang) * dist, size: 2 + (n % 3), dur: 0.7 + (n % 4) * 0.12, delay: (n % 6) * 0.09, green: n % 2 === 0 }
+  }) : []), [abyssal])
+
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      style={{ position: 'fixed', inset: 0, zIndex: 1500, background: 'rgba(3,6,11,0.9)', backdropFilter: 'blur(5px)', WebkitBackdropFilter: 'blur(5px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}
+      style={{ position: 'fixed', inset: 0, zIndex: 1500, background: abyssal ? 'radial-gradient(ellipse at center, rgba(24,4,10,0.94), rgba(2,4,8,0.96))' : 'rgba(3,6,11,0.9)', backdropFilter: 'blur(5px)', WebkitBackdropFilter: 'blur(5px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}
     >
-      <p className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.3em', color: `${accent}cc`, marginBottom: 24 }}>
-        {revealed ? 'Forged' : 'The Forge'}
+      {/* Abyssal full-bleed ember flash on the strike. */}
+      {abyssal && clashed && (
+        <motion.div aria-hidden initial={{ opacity: 0.6 }} animate={{ opacity: 0 }} transition={{ duration: 0.6, ease: 'easeOut' }}
+          style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at center, ${EMBER}44, transparent 60%)`, pointerEvents: 'none' }} />
+      )}
+
+      <p className="font-karla font-800 uppercase" style={{ fontSize: abyssal ? '0.64rem' : '0.6rem', letterSpacing: '0.3em', color: `${chrome}dd`, marginBottom: 24, textShadow: abyssal ? `0 0 18px ${EMBER}88` : 'none' }}>
+        {abyssal ? (revealed ? 'Forged in the Abyss' : 'The Abyssal Forge') : (revealed ? 'Forged' : 'The Forge')}
       </p>
 
       <div style={{ position: 'relative', width: 240, height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {/* Abyssal charge — a pulsing core + motes drawn inward before the strike. */}
+        {abyssal && charging && !clashed && (
+          <>
+            <motion.div aria-hidden initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: [0.2, 0.6, 0.2], scale: [0.8, 1.2, 0.8] }} transition={{ duration: 0.7, repeat: Infinity, ease: 'easeInOut' }}
+              style={{ position: 'absolute', width: 150, height: 150, borderRadius: '50%', background: `radial-gradient(circle, ${EMBER}3a, transparent 70%)`, filter: 'blur(3px)' }} />
+            {gatherMotes.map((m, n) => (
+              <motion.div key={`g${n}`} aria-hidden
+                initial={{ x: m.x, y: m.y, opacity: 0, scale: 0.5 }}
+                animate={{ x: 0, y: 0, opacity: [0, 0.95, 0], scale: 0.2 }}
+                transition={{ duration: m.dur, repeat: Infinity, delay: m.delay, ease: 'easeIn' }}
+                style={{ position: 'absolute', width: m.size, height: m.size, borderRadius: '50%', background: m.green ? GREEN : EMBER, boxShadow: `0 0 6px ${m.green ? GREEN : EMBER}` }} />
+            ))}
+          </>
+        )}
+
         {/* Clash flash */}
         {clashed && (
-          <motion.div aria-hidden initial={{ scale: 0.3, opacity: 1 }} animate={{ scale: 2.6, opacity: 0 }} transition={{ duration: 0.5, ease: 'easeOut' }}
-            style={{ position: 'absolute', width: 120, height: 120, borderRadius: '50%', background: `radial-gradient(circle, #fff 0%, ${accent}cc 36%, transparent 72%)` }} />
+          <motion.div aria-hidden initial={{ scale: 0.3, opacity: 1 }} animate={{ scale: abyssal ? 3.2 : 2.6, opacity: 0 }} transition={{ duration: abyssal ? 0.6 : 0.5, ease: 'easeOut' }}
+            style={{ position: 'absolute', width: 120, height: 120, borderRadius: '50%', background: `radial-gradient(circle, #fff 0%, ${chrome}cc 36%, transparent 72%)` }} />
         )}
+        {/* Abyssal double shockwave — an ember ring and an abyss-green ring. */}
+        {abyssal && clashed && [EMBER, GREEN].map((c, i) => (
+          <motion.div key={`sw${i}`} aria-hidden initial={{ scale: 0.25, opacity: 0.85 }} animate={{ scale: 3, opacity: 0 }} transition={{ duration: 0.66, delay: i * 0.09, ease: 'easeOut' }}
+            style={{ position: 'absolute', width: 130, height: 130, borderRadius: '50%', border: `2px solid ${c}`, boxShadow: `0 0 18px ${c}77` }} />
+        ))}
         {/* Ember burst */}
         {clashed && sparks.map((s, n) => (
           <motion.div key={n} aria-hidden initial={{ x: 0, y: 0, opacity: 1, scale: 1 }} animate={{ x: s.x, y: s.y, opacity: 0, scale: 0.3 }} transition={{ duration: s.dur, ease: 'easeOut' }}
-            style={{ position: 'absolute', width: s.size, height: s.size, borderRadius: '50%', background: s.warm ? '#ffd27a' : accent, boxShadow: `0 0 6px ${s.warm ? '#ff9a3c' : accent}` }} />
+            style={{ position: 'absolute', width: s.size, height: s.size, borderRadius: '50%', background: sparkColor(s.tone), boxShadow: `0 0 6px ${sparkColor(s.tone)}` }} />
         ))}
 
-        {/* Components fly in + collide, then vanish */}
+        {/* Components fly in + collide, then vanish. Abyssal ones burn ember as
+            the charge builds. */}
         {!revealed && compImages.map((img, i) => (
           <motion.img
             key={i} src={img ?? undefined} alt="" aria-hidden
             initial={{ x: i === 0 ? -150 : 150, opacity: 0, rotate: i === 0 ? -18 : 18 }}
-            animate={clashed ? { x: 0, opacity: 0, scale: 0.6 } : { x: i === 0 ? -52 : 52, opacity: 1, rotate: 0 }}
-            transition={clashed ? { duration: 0.2, ease: 'easeIn' } : { duration: 0.85, ease: [0.4, 0, 0.7, 1] }}
-            style={{ position: 'absolute', width: 92, height: 92, objectFit: 'contain', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.6))' }}
+            animate={clashed ? { x: 0, opacity: 0, scale: 0.6 } : { x: i === 0 ? -52 : 52, opacity: 1, rotate: 0, scale: abyssal && charging ? [1, 1.07, 1] : 1 }}
+            transition={clashed ? { duration: 0.2, ease: 'easeIn' } : { x: { duration: 0.85, ease: [0.4, 0, 0.7, 1] }, opacity: { duration: 0.85 }, rotate: { duration: 0.85 }, scale: { duration: 0.6, repeat: abyssal && charging ? Infinity : 0 } }}
+            style={{ position: 'absolute', width: 92, height: 92, objectFit: 'contain', filter: abyssal ? `drop-shadow(0 0 10px ${EMBER}88) drop-shadow(0 4px 12px rgba(0,0,0,0.6))` : 'drop-shadow(0 4px 12px rgba(0,0,0,0.6))' }}
           />
         ))}
 
         {/* The forged item erupts out */}
         {revealed && (
           <>
-            <motion.div aria-hidden initial={{ opacity: 0, scale: 0.5, rotate: 0 }} animate={{ opacity: 0.5, scale: 1, rotate: 360 }}
-              transition={{ opacity: { duration: 0.5 }, scale: { duration: 0.6 }, rotate: { duration: 22, repeat: Infinity, ease: 'linear' } }}
-              style={{ position: 'absolute', width: 300, height: 300, borderRadius: '50%', background: `conic-gradient(from 0deg, ${accent}00, ${accent}44, ${accent}00, ${accent}44, ${accent}00, ${accent}44, ${accent}00)` }} />
+            {/* Abyssal reveal wears the full iridescent ABYSSAL sweep + an ember
+                under-halo; the standard forge keeps its single-accent conic ring. */}
+            <motion.div aria-hidden initial={{ opacity: 0, scale: 0.5, rotate: 0 }} animate={{ opacity: abyssal ? 0.62 : 0.5, scale: 1, rotate: 360 }}
+              transition={{ opacity: { duration: 0.5 }, scale: { duration: 0.6 }, rotate: { duration: abyssal ? 16 : 22, repeat: Infinity, ease: 'linear' } }}
+              style={{ position: 'absolute', width: abyssal ? 330 : 300, height: abyssal ? 330 : 300, borderRadius: '50%', background: abyssal ? ABYSSAL : `conic-gradient(from 0deg, ${accent}00, ${accent}44, ${accent}00, ${accent}44, ${accent}00, ${accent}44, ${accent}00)`, WebkitMaskImage: abyssal ? 'radial-gradient(circle, transparent 40%, #000 52%, #000 66%, transparent 72%)' : undefined, maskImage: abyssal ? 'radial-gradient(circle, transparent 40%, #000 52%, #000 66%, transparent 72%)' : undefined }} />
+            {abyssal && (
+              <motion.div aria-hidden initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: [0.35, 0.7, 0.35], scale: [1, 1.12, 1] }} transition={{ opacity: { duration: 2.2, repeat: Infinity }, scale: { duration: 2.2, repeat: Infinity } }}
+                style={{ position: 'absolute', width: 220, height: 220, borderRadius: '50%', background: `radial-gradient(circle, ${EMBER}33, transparent 68%)`, filter: 'blur(4px)' }} />
+            )}
             {result.image ? (
               <motion.img
                 src={result.image} alt={result.name}
-                initial={{ scale: 0.3, opacity: 0, y: 10 }} animate={{ scale: [0.3, 1.18, 1], opacity: 1, y: 0 }}
-                transition={{ duration: 0.55, ease: [0.22, 1.3, 0.4, 1] }}
-                style={{ position: 'relative', width: 132, height: 132, objectFit: 'contain', filter: `drop-shadow(0 0 28px ${accent}aa) drop-shadow(0 6px 14px rgba(0,0,0,0.6))` }}
+                initial={{ scale: 0.3, opacity: 0, y: 10 }} animate={{ scale: abyssal ? [0.3, 1.26, 1] : [0.3, 1.18, 1], opacity: 1, y: 0 }}
+                transition={{ duration: abyssal ? 0.62 : 0.55, ease: [0.22, 1.3, 0.4, 1] }}
+                style={{ position: 'relative', width: abyssal ? 140 : 132, height: abyssal ? 140 : 132, objectFit: 'contain', filter: abyssal ? `drop-shadow(0 0 30px ${EMBER}bb) drop-shadow(0 0 52px ${GREEN}66) drop-shadow(0 6px 16px rgba(0,0,0,0.7))` : `drop-shadow(0 0 28px ${accent}aa) drop-shadow(0 6px 14px rgba(0,0,0,0.6))` }}
               />
             ) : (
               // Art pending — a forged-medallion placeholder (accent ring + anvil)
               // so the reveal reads clean until the fused-item sprite lands.
               <motion.div
-                initial={{ scale: 0.3, opacity: 0, y: 10 }} animate={{ scale: [0.3, 1.18, 1], opacity: 1, y: 0 }}
-                transition={{ duration: 0.55, ease: [0.22, 1.3, 0.4, 1] }}
-                style={{ position: 'relative', width: 132, height: 132, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `radial-gradient(circle, ${accent}2e, rgba(6,10,16,0.65) 72%)`, border: `2px solid ${accent}88`, filter: `drop-shadow(0 0 28px ${accent}aa)` }}
+                initial={{ scale: 0.3, opacity: 0, y: 10 }} animate={{ scale: abyssal ? [0.3, 1.26, 1] : [0.3, 1.18, 1], opacity: 1, y: 0 }}
+                transition={{ duration: abyssal ? 0.62 : 0.55, ease: [0.22, 1.3, 0.4, 1] }}
+                style={{ position: 'relative', width: 132, height: 132, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `radial-gradient(circle, ${chrome}2e, rgba(6,10,16,0.65) 72%)`, border: `2px solid ${chrome}88`, filter: `drop-shadow(0 0 28px ${chrome}aa)` }}
               >
-                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke={chrome} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                   <path d="M4 10h9l3-3 4 1-2 4h-5" /><path d="M7 10v3a3 3 0 0 0 3 3h1" /><path d="M8 21h6" /><path d="M11 16v5" />
                 </svg>
               </motion.div>
@@ -2746,14 +2806,17 @@ function ForgeAnimation({ compImages, result, accent, ready, onDone }: {
 
       {revealed ? (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} style={{ textAlign: 'center', marginTop: 18 }}>
-          <p className="font-cinzel font-800" style={{ fontSize: '1.35rem', color: accent, lineHeight: 1.1, textShadow: `0 0 22px ${accent}66` }}>{result.name}</p>
+          {abyssal && (
+            <p className="font-karla font-800 uppercase tracking-[0.2em]" style={{ fontSize: '0.5rem', color: `${EMBER}dd`, marginBottom: 5 }}>Tier III · Abyssal</p>
+          )}
+          <p className="font-cinzel font-800" style={{ fontSize: abyssal ? '1.5rem' : '1.35rem', color: chrome, lineHeight: 1.1, textShadow: abyssal ? `0 0 24px ${EMBER}88, 0 0 40px ${GREEN}44` : `0 0 22px ${accent}66` }}>{result.name}</p>
           <button onClick={onDone} className="font-cinzel font-700 uppercase tracking-[0.1em] tap"
-            style={{ marginTop: 20, padding: '0.7rem 1.7rem', borderRadius: 12, background: `${accent}26`, border: `1px solid ${accent}66`, color: accent, fontSize: '0.8rem', cursor: 'pointer' }}>
+            style={{ marginTop: 20, padding: '0.7rem 1.7rem', borderRadius: 12, background: `${chrome}26`, border: `1px solid ${chrome}66`, color: chrome, fontSize: '0.8rem', cursor: 'pointer', boxShadow: abyssal ? `0 0 20px ${EMBER}33` : 'none' }}>
             Claim it
           </button>
         </motion.div>
       ) : (
-        <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#8a8480', marginTop: 18 }}>Hammering it into one…</p>
+        <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#8a8480', marginTop: 18 }}>{abyssal ? 'The abyss takes them both…' : 'Hammering it into one…'}</p>
       )}
     </motion.div>
   )
