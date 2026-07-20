@@ -4,26 +4,32 @@
 // actions.ts); the fight engine is the shared RaidCombat, hosted by GauntletGame.
 
 import { redirect } from 'next/navigation'
+import { createAdminClient } from '@/lib/supabase/admin'
 import GauntletGame from './GauntletGame'
 import { getRaidPlayerStats } from '../actions'
 import { getGauntletDailyState, getGauntletLeaderboard } from './actions'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
-import { gauntletUnlocked } from '@/lib/gauntlet'
+import { gauntletUnlocked, donsGauntletUnlocked } from '@/lib/gauntlet'
 
 export default async function GauntletPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
 
-  const [profile, stats, daily, leaderboard] = await Promise.all([
+  const admin = createAdminClient()
+  const [profile, stats, daily, leaderboard, throneRes] = await Promise.all([
     getCurrentProfile(),
     getRaidPlayerStats(user.id),
     getGauntletDailyState(),
     getGauntletLeaderboard(),
+    admin.from('raid_completions').select('id').eq('user_id', user.id).eq('raid_id', 'the_throne').limit(1).maybeSingle(),
   ])
 
   // Locked until GAUNTLET_LIVE flips (then: cleared Chapter 2). Admins always.
   const clearedNodes = (profile?.raid_node_progress as { cleared?: string[] } | null)?.cleared ?? []
   if (!gauntletUnlocked({ isAdmin: profile?.is_admin, clearedNodes })) redirect('/expeditions')
+
+  // Show the switcher only if Don's Gauntlet is ALSO unlocked for this player.
+  const donsUnlocked = donsGauntletUnlocked({ isAdmin: profile?.is_admin, throneCleared: !!throneRes.data })
 
   if ((profile?.raid_repair_owed ?? 0) > 0) redirect('/expeditions')
 
@@ -31,6 +37,7 @@ export default async function GauntletPage() {
     <main className="min-h-screen pt-6">
       <div className="px-3 pb-12 max-w-xl mx-auto">
         <GauntletGame
+          otherGauntletUnlocked={donsUnlocked}
           shipImageUrl={stats.shipImageUrl}
           shipName={stats.shipName}
           username={stats.username}

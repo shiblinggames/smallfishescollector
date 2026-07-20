@@ -92,6 +92,9 @@ export interface GauntletGameProps {
    *  Gauntlet route passes 'don'. Threaded into startGauntletRun so the server
    *  tags the run + routes its records. */
   variant?: GauntletVariant
+  /** Whether the OTHER gauntlet is also unlocked for this player. When true, the
+   *  intro shows a switcher next to the title to hop to the other one. */
+  otherGauntletUnlocked?: boolean
   shipImageUrl: string
   shipName: string
   username: string | null
@@ -438,6 +441,8 @@ export default function GauntletGame(props: GauntletGameProps) {
   const [merchantStock, setMerchantStock] = useState<MerchantItemKind[]>([])
   const [merchantSold, setMerchantSold] = useState<Set<MerchantItemKind>>(new Set())
   const [merchantBuying, setMerchantBuying] = useState<MerchantItemKind | null>(null)
+  // Intro-only gauntlet switcher (shown when the OTHER gauntlet is also unlocked).
+  const [switcherOpen, setSwitcherOpen] = useState(false)
   // Banked Fathoms, mirrored so a shrine wager can update it live without a
   // refetch (Fathoms only change here or at cashout/Locker, all of which resync).
   const [fathomsNow, setFathomsNow] = useState(props.fathoms)
@@ -1829,10 +1834,58 @@ export default function GauntletGame(props: GauntletGameProps) {
             position: 'relative', zIndex: 1, maxWidth: 460, margin: '0 auto',
             paddingTop: 6, paddingLeft: '0.85rem', paddingRight: '0.85rem', textAlign: 'center',
           }}>
-          {/* Title */}
-          <h1 className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f3ead2', lineHeight: 1.08, marginTop: 8, textShadow: '0 0 22px rgba(240,192,64,0.3)' }}>
-            {gauntletTitle}
-          </h1>
+          {/* Title — a dropdown switcher when the player has BOTH gauntlets
+              unlocked, otherwise a plain heading. */}
+          {props.otherGauntletUnlocked ? (
+            <div style={{ position: 'relative', display: 'inline-block', marginTop: 8 }}>
+              <button type="button" onClick={() => setSwitcherOpen(o => !o)} className="tap"
+                aria-haspopup="menu" aria-expanded={switcherOpen}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px' }}>
+                <h1 className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f3ead2', lineHeight: 1.08, textShadow: '0 0 22px rgba(240,192,64,0.3)' }}>
+                  {gauntletTitle}
+                </h1>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={AC} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden
+                  style={{ transform: switcherOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.18s', opacity: 0.9 }}>
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </button>
+              {switcherOpen && (() => {
+                const otherIsDon = !isDonG
+                const otherName = otherIsDon ? "Don's Gauntlet" : 'Davy Jones Gauntlet'
+                const otherRoute = otherIsDon ? '/raids/dons-gauntlet' : '/raids/gauntlet'
+                const otherAC = otherIsDon ? KRAKEN : TEAL
+                return (
+                  <>
+                    {/* outside-tap backdrop */}
+                    <div onClick={() => setSwitcherOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
+                    <div role="menu" style={{
+                      position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', marginTop: 6, zIndex: 41,
+                      minWidth: 210, padding: 5, borderRadius: 12,
+                      background: 'rgba(10,15,20,0.97)', border: `1px solid ${AC}44`, boxShadow: '0 12px 34px rgba(0,0,0,0.6)',
+                    }}>
+                      {/* current — marked, not navigable */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.55rem 0.7rem', borderRadius: 9, background: `${AC}18` }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={AC} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M20 6L9 17l-5-5" /></svg>
+                        <span className="font-cinzel font-700" style={{ flex: 1, fontSize: '0.9rem', color: '#f3ead2', textAlign: 'left' }}>{gauntletTitle}</span>
+                        <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.1em', color: AC }}>Here</span>
+                      </div>
+                      {/* the other — navigates */}
+                      <button type="button" onClick={() => { setSwitcherOpen(false); router.push(otherRoute) }} className="tap"
+                        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '0.55rem 0.7rem', marginTop: 3, borderRadius: 9, background: 'none', border: 'none', cursor: 'pointer' }}>
+                        <span aria-hidden style={{ width: 8, height: 8, borderRadius: '50%', background: otherAC, boxShadow: `0 0 8px ${otherAC}`, flexShrink: 0 }} />
+                        <span className="font-cinzel font-700" style={{ flex: 1, fontSize: '0.9rem', color: '#d8e0dc', textAlign: 'left' }}>{otherName}</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8a948e" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M9 18l6-6-6-6" /></svg>
+                      </button>
+                    </div>
+                  </>
+                )
+              })()}
+            </div>
+          ) : (
+            <h1 className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f3ead2', lineHeight: 1.08, marginTop: 8, textShadow: '0 0 22px rgba(240,192,64,0.3)' }}>
+              {gauntletTitle}
+            </h1>
+          )}
 
           {/* The maw — the hole you drop into */}
           <div style={{ position: 'relative', width: 148, height: 148, margin: '12px auto 4px' }}>

@@ -10,7 +10,7 @@ import GauntletGame from '../gauntlet/GauntletGame'
 import { getRaidPlayerStats } from '../actions'
 import { getGauntletDailyState } from '../gauntlet/actions'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
-import { donsGauntletUnlocked } from '@/lib/gauntlet'
+import { donsGauntletUnlocked, gauntletUnlocked } from '@/lib/gauntlet'
 
 export default async function DonsGauntletPage() {
   const user = await getCurrentUser()
@@ -29,11 +29,16 @@ export default async function DonsGauntletPage() {
   if (!donsGauntletUnlocked({ isAdmin: profile?.is_admin, throneCleared: !!throneRes.data })) redirect('/expeditions')
   if ((profile?.raid_repair_owed ?? 0) > 0) redirect('/expeditions')
 
+  // Show the switcher only if Davy's Gauntlet is ALSO unlocked (cleared Ch2).
+  const clearedNodes = (profile?.raid_node_progress as { cleared?: string[] } | null)?.cleared ?? []
+  const davyUnlocked = gauntletUnlocked({ isAdmin: profile?.is_admin, clearedNodes })
+
   return (
     <main className="min-h-screen pt-6">
       <div className="px-3 pb-12 max-w-xl mx-auto">
         <GauntletGame
           variant="don"
+          otherGauntletUnlocked={davyUnlocked}
           shipImageUrl={stats.shipImageUrl}
           shipName={stats.shipName}
           username={stats.username}
