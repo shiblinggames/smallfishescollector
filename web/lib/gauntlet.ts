@@ -1699,6 +1699,19 @@ export function drawBoons(n: number, owned: Record<string, number> = {}, luckMul
   return out
 }
 
+/** Blood Oath (Don's Locker): pick one boon to seed a run with at tier 1. Draws
+ *  from the variant's Common/Rare pool only — never a free Legendary (too swingy
+ *  a gift) and never a Mega-gated boon (dead without the augment). Returns a
+ *  family id, or null if the pool is somehow empty. Kept deterministic-free (uses
+ *  Math.random) since it only runs once at run start, host-side. */
+export function pickBloodOathBoon(variant: GauntletVariant = 'davy'): string | null {
+  const MEGA_GATED = new Set(['manowars_wrath'])
+  const pool = GAUNTLET_BOONS.filter(fam =>
+    inGauntletPool(fam.gauntlet, variant) && boonRarity(fam) !== 'legendary' && !MEGA_GATED.has(fam.id))
+  if (pool.length === 0) return null
+  return pool[Math.floor(Math.random() * pool.length)].id
+}
+
 /** Resolve the active TideEffect for each boon the player currently holds —
  *  the HIGHEST tier only, since a higher tier replaces the lower. Feeds the
  *  combat effect pipeline. */

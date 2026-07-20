@@ -259,6 +259,10 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
   { id: 'dg_haul',         name: 'Pieces of Eight',  description: 'Bank 20% more doubloons every time you cash out a dive.',                          depthRequired: 12, cost: 210, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_xp',           name: 'Deep Ledger',      description: 'Earn 25% more Nav XP every time you cash out a dive.',                             depthRequired: 14, cost: 300, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_second_wind',  name: 'Second Wind',      description: 'Once per run, the deep spits you back up: the blow that would sink you leaves you at 25% HP instead.', depthRequired: 15, cost: 360, scope: 'gauntlet', gauntlet: 'don' },
+  // ── Bespoke to Don's — no Davy equivalent. Risk/reward + build-shaping. ──────
+  { id: 'dg_loan_shark',   name: 'Loan Shark',       description: 'Sign the Don’s terms: deal 25% MORE damage for the whole dive, but take 12% more from every hit. The debt always comes due. Stacks with your other damage and plate.', depthRequired: 0, cost: 200, scope: 'gauntlet', gauntlet: 'don' },
+  { id: 'dg_blood_oath',   name: 'Blood Oath',       description: 'Swear in before you dive: start every run already holding one random boon, a favor from the deep to build on from the first fight.', depthRequired: 4, cost: 280, scope: 'gauntlet', gauntlet: 'don' },
+  { id: 'dg_consigliere',  name: 'Consigliere',      description: 'The Don whispers in your ear. Synergy offers — confluences and convergences — surface on far more of your power drafts, so you actually build toward them.', depthRequired: 6, cost: 300, scope: 'gauntlet', gauntlet: 'don' },
   // ── Ship & Shore (scope 'account'/'world') — permanent topside power. ────────
   { id: 'dg_deep_plating',   name: 'Deep-Sea Plating',   description: 'The Don’s shipwrights re-hull you in pressure-forged plate: 10% more ship max HP in EVERY raid and gauntlet dive, forever.', depthRequired: 10, cost: 320, scope: 'account', category: 'raids', gauntlet: 'don' },
   { id: 'dg_ghost_ordnance', name: 'Ghost Ordnance',     description: 'His gunners re-bore your cannons to the ghost-fleet pattern: your guns hit 8% harder in EVERY raid and gauntlet dive, forever.', depthRequired: 14, cost: 380, scope: 'account', category: 'raids', gauntlet: 'don' },
@@ -462,20 +466,30 @@ export function gauntletSkipsFirstCurse(unlocked: string[] | null | undefined): 
  *  1 + pct/100, so -10 → ×0.9 incoming). */
 export function gauntletDamageTakenMod(unlocked: string[] | null | undefined): number {
   const u = unlocked ?? []
-  if (u.includes('dg_armor_3')) return -25   // Spectral Plate III (Don's)
-  if (u.includes('dg_armor_2')) return -18   // Spectral Plate II
-  if (u.includes('dg_armor')) return -12     // Spectral Plate I
-  return u.includes('iron_hide') ? -10 : 0
+  let base = u.includes('dg_armor_3') ? -25   // Spectral Plate III (Don's)
+           : u.includes('dg_armor_2') ? -18   // Spectral Plate II
+           : u.includes('dg_armor')   ? -12   // Spectral Plate I
+           : u.includes('iron_hide')  ? -10   // Iron Hide (Davy)
+           : 0
+  // Loan Shark (Don's): the debt side of the pact — +12% damage taken, stacking
+  // ON TOP of any plate (partially eats it, or +12 from nothing).
+  if (u.includes('dg_loan_shark')) base += 12
+  return base
 }
 
 /** Gunner's Eye (Davy) / Ghost Gunners I-III (Don's, tiered): bonus damage %
  *  DEALT during Gauntlet runs (into runRaidMods). */
 export function gauntletDamageMod(unlocked: string[] | null | undefined): number {
   const u = unlocked ?? []
-  if (u.includes('dg_power_3')) return 30   // Ghost Gunners III (Don's)
-  if (u.includes('dg_power_2')) return 20   // Ghost Gunners II
-  if (u.includes('dg_power')) return 12     // Ghost Gunners I
-  return u.includes('gunners_eye') ? 10 : 0
+  let base = u.includes('dg_power_3') ? 30   // Ghost Gunners III (Don's)
+           : u.includes('dg_power_2') ? 20   // Ghost Gunners II
+           : u.includes('dg_power')   ? 12   // Ghost Gunners I
+           : u.includes('gunners_eye') ? 10  // Gunner's Eye (Davy)
+           : 0
+  // Loan Shark (Don's): the payout side of the pact — +25% damage dealt, stacking
+  // ON TOP of Ghost Gunners.
+  if (u.includes('dg_loan_shark')) base += 25
+  return base
 }
 
 /** Vigor (Davy) / Bloodward I-III (Don's, tiered): fraction of max HP restored
@@ -522,4 +536,16 @@ export function gauntletBoonFilters(unlocked: string[] | null | undefined): numb
   const u = unlocked ?? []
   if (u.includes('dg_boon_filter_2')) return 2
   return u.includes('dg_boon_filter') ? 1 : 0
+}
+
+/** Consigliere (Don's): multiplier on the synergy (confluence/convergence) offer
+ *  chance. Folds into the run's confluenceOfferMult so synergy cards surface far
+ *  more often. 1 = untouched. */
+export function gauntletSynergyOfferMult(unlocked: string[] | null | undefined): number {
+  return (unlocked ?? []).includes('dg_consigliere') ? 2.2 : 1
+}
+
+/** Blood Oath (Don's): start every dive already holding one random boon. */
+export function gauntletHasBloodOath(unlocked: string[] | null | undefined): boolean {
+  return (unlocked ?? []).includes('dg_blood_oath')
 }

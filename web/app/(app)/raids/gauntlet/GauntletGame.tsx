@@ -22,7 +22,7 @@ import { crewLevelFromXP } from '@/lib/crewLevel'
 import {
   generateFight, advanceRollState, chestForDepth, gauntletXpForDepth,
   isCurseDepth, drawCurse, curseEffects, curseHpDrain, curseSilenceCount, curseTierLabel, GAUNTLET_CURSES,
-  isBoonDepth, drawBoons, boonEffects, hpBoonMult, boonTierLabel, GAUNTLET_BOONS, BOON_RARITY_META, boonRarity,
+  isBoonDepth, drawBoons, boonEffects, hpBoonMult, boonTierLabel, GAUNTLET_BOONS, BOON_RARITY_META, boonRarity, pickBloodOathBoon,
   confluenceEffects, activeConfluences, eligibleConfluences, drawConfluenceOffer, confluenceLevel, confluenceDescAt, confluenceHintsFor, CONFLUENCES, type Confluence, type ConfluenceOffer,
   convergenceEffects, activeConvergences, drawConvergenceOffer, convergenceDescAt, CONVERGENCES,
   REPRIEVE_MIN_DEPTH, REPRIEVE_CHANCE, drawReprieve, type Reprieve,
@@ -36,7 +36,7 @@ import GauntletTermsPanel from './GauntletTermsPanel'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, setGauntletUpgradeActive, markGauntletIntroSeen, recordGauntletHit, wagerGauntletFathoms, markConfluencesSeen, checkpointGauntletRun, pauseGauntletRun, resumeGauntletRun, buyBaitWithFathoms, rollDavyOffer } from './actions'
 import { offerCoinMult, offerChestMult, offerCopy, offerTakenLine, type DavyOffer } from '@/lib/gauntletOffer'
 import { FATHOM_BAITS } from '@/lib/bait'
-import { upgradesForVariant, getGauntletUpgrade, upgradeTierInfo, romanTier, COMING_SOON_UPGRADES, activeGauntletUpgrades, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck, gauntletBoonRerolls, gauntletCurseRerolls, gauntletBoonFilters, gauntletStartAnchorSaves } from '@/lib/gauntletUpgrades'
+import { upgradesForVariant, getGauntletUpgrade, upgradeTierInfo, romanTier, COMING_SOON_UPGRADES, activeGauntletUpgrades, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck, gauntletBoonRerolls, gauntletCurseRerolls, gauntletBoonFilters, gauntletSynergyOfferMult, gauntletHasBloodOath, gauntletStartAnchorSaves } from '@/lib/gauntletUpgrades'
 import { type ShipAugment } from '@/lib/shipAugments'
 import { getSpecialItem } from '@/lib/specialItems'
 import { buySpecialItem } from '@/app/(app)/fishing/actions'
@@ -672,7 +672,11 @@ export default function GauntletGame(props: GauntletGameProps) {
       // run" bug.
       silencedCrewIdsRef.current = []
       setPendingCurse(null)
-      setBoonTiers({}); setConfluencesTaken([]); setPendingBoons(null); setPendingConfluence(null); setPendingReprieve(null); offeredConfluenceIdsRef.current = new Set()
+      // Blood Oath (Don's): open the run already holding one random boon. Seed
+      // boonTiers before the reset settles so combat + the boon tracker see it
+      // from the first fight. Non-legendary, non-Mega-gated (see pickBloodOathBoon).
+      const oathBoon = gauntletHasBloodOath(activeUpgrades) ? pickBloodOathBoon(props.variant) : null
+      setBoonTiers(oathBoon ? { [oathBoon]: 1 } : {}); setConfluencesTaken([]); setPendingBoons(null); setPendingConfluence(null); setPendingReprieve(null); offeredConfluenceIdsRef.current = new Set()
       bannedBoonsRef.current = new Set(); setFiltersLeft(gauntletBoonFilters(activeUpgrades))
       setConfluenceUnlocked(null); setConfluenceBanner(null); setCurseShed(null)
       nextShrineRef.current = SHRINE_FIRST_DEPTH; setShrineCoin(null); setShrineFlipping(false); setBoonFromShrine(false)
@@ -1244,11 +1248,13 @@ export default function GauntletGame(props: GauntletGameProps) {
   // priority when you qualify for one, otherwise the ordinary confluence roll.
   // Both share the pity/offered set (ids are distinct namespaces).
   function rollSynergyOffer(): ConfluenceOffer | null {
+    // Consigliere (Don's) folds into the run's synergy-offer chance.
+    const synMult = termFxRef.current.confluenceOfferMult * gauntletSynergyOfferMult(activeUpgrades)
     if (props.variant === 'don') {
-      const cv = drawConvergenceOffer(boonTiers, confluencesTaken, convergencesTaken, offeredConfluenceIdsRef.current, termFxRef.current.confluenceOfferMult, props.variant)
+      const cv = drawConvergenceOffer(boonTiers, confluencesTaken, convergencesTaken, offeredConfluenceIdsRef.current, synMult, props.variant)
       if (cv) return cv
     }
-    return drawConfluenceOffer(boonTiers, confluencesTaken, offeredConfluenceIdsRef.current, termFxRef.current.confluenceOfferMult, props.variant)
+    return drawConfluenceOffer(boonTiers, confluencesTaken, offeredConfluenceIdsRef.current, synMult, props.variant)
   }
 
   // Draft a confluence (or convergence) instead of a boon this round (the
