@@ -33,7 +33,7 @@ import {
   forgeComponentIds, recipesUsingComponent, forgeOpportunityCost,
   recipeNeedsGauntlet2, GAUNTLET2_BASE_ITEM_IDS,
 } from '@/lib/raidItems'
-import { PRISMATIC, forgedBorderSoft, forgedTextSoft, ABYSSAL_EMBER_TEXT, abyssalEmberBorder } from '@/lib/prismatic'
+import { PRISMATIC, forgedBorderSoft, forgedTextSoft, ABYSSAL_EMBER, ABYSSAL_EMBER_TEXT, abyssalEmberBorder } from '@/lib/prismatic'
 
 const GOLD = '#e8c879'
 const BLUE = '#7fd0ff'
@@ -176,7 +176,7 @@ export default function ForgeBoard({
       <div style={{ height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden', marginBottom: '1.1rem' }}>
         <motion.div initial={false} animate={{ width: `${Math.round((forgedCount / rows.length) * 100)}%` }}
           transition={{ type: 'spring', stiffness: 200, damping: 30 }}
-          style={{ height: '100%', borderRadius: 999, background: PRISMATIC }} />
+          style={{ height: '100%', borderRadius: 999, background: abyssalUnlocked ? ABYSSAL_EMBER : PRISMATIC }} />
       </div>
 
       {/* ── The two benches, as tabs. Tier II (gold) and the Abyssal Tier III
@@ -424,12 +424,16 @@ function RecipeSheet({
         const canAfford = fathomsNow >= recipe.fathomCost
         const accent = STATE_META[state].accent
         const abyssal = recipe.tier === 3
+        // Once you're looking at an Abyssal (tier-3) recipe, the whole sheet wears
+        // the molten ember theme — border, icon ring, state label and the primary
+        // action all shift off the standard gold/blue chrome.
+        const themeAccent = abyssal ? EMBER : accent
 
         return (
           <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={onClose}
-              style={{ position: 'fixed', inset: 0, zIndex: 1400, background: 'rgba(4,7,12,0.72)', backdropFilter: 'blur(3px)' }} />
+              style={{ position: 'fixed', inset: 0, zIndex: 1400, background: abyssal ? 'rgba(10,3,6,0.76)' : 'rgba(4,7,12,0.72)', backdropFilter: 'blur(3px)' }} />
             <motion.div
               initial={{ opacity: 0, y: 26 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 26 }}
               transition={{ type: 'spring', stiffness: 340, damping: 32 }}
@@ -438,20 +442,26 @@ function RecipeSheet({
                 maxHeight: '86dvh', overflowY: 'auto', overscrollBehavior: 'contain',
                 borderTopLeftRadius: 20, borderTopRightRadius: 20,
                 padding: '1.1rem 1rem calc(env(safe-area-inset-bottom, 0px) + 1.2rem)',
-                background: 'linear-gradient(180deg, #141a24 0%, #0b0f16 100%)',
-                borderTop: `1px solid ${accent}55`,
+                background: abyssal ? 'linear-gradient(180deg, #1d0b11 0%, #08050a 100%)' : 'linear-gradient(180deg, #141a24 0%, #0b0f16 100%)',
+                borderTop: `1px solid ${abyssal ? `${EMBER}77` : `${accent}55`}`,
+                boxShadow: abyssal ? '0 -10px 34px -10px rgba(255,90,60,0.3)' : 'none',
               }}>
               {/* grab handle */}
-              <div aria-hidden style={{ width: 38, height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.18)', margin: '0 auto 12px' }} />
+              <div aria-hidden style={{ width: 38, height: 4, borderRadius: 999, background: abyssal ? 'rgba(255,120,90,0.45)' : 'rgba(255,255,255,0.18)', margin: '0 auto 12px' }} />
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span style={{ flexShrink: 0, width: 58, height: 58, borderRadius: 13, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  ...(state === 'forged' ? forgedBorderSoft('rgba(16,20,28,0.95)', abyssal) : { background: 'rgba(255,255,255,0.05)', border: `1px solid ${accent}55` }) }}>
+                  ...(state === 'forged' ? forgedBorderSoft('rgba(16,20,28,0.95)', abyssal) : { background: abyssal ? 'rgba(255,90,60,0.08)' : 'rgba(255,255,255,0.05)', border: `1px solid ${themeAccent}55` }) }}>
                   <ItemArt id={resultId} size={44} />
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p className="font-cinzel font-800" style={{ fontSize: '1.35rem', lineHeight: 1.12, ...(state === 'forged' ? forgedTextSoft(abyssal) : { color: '#f7efd8' }) }}>{result.name}</p>
-                  <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.66rem', color: accent, marginTop: 4 }}>{STATE_META[state].label}</p>
+                  <p className="font-cinzel font-800" style={{ fontSize: '1.35rem', lineHeight: 1.12, ...(state === 'forged' ? forgedTextSoft(abyssal) : { color: abyssal ? '#ffe4d6' : '#f7efd8' }) }}>{result.name}</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 4 }}>
+                    <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.66rem', color: abyssal ? themeAccent : accent }}>{STATE_META[state].label}</p>
+                    {abyssal && (
+                      <span className="font-karla font-800 uppercase tracking-[0.12em]" style={{ fontSize: '0.5rem', color: EMBER, background: `${EMBER}1c`, border: `1px solid ${EMBER}55`, borderRadius: 999, padding: '0.14rem 0.42rem' }}>Abyssal · Tier III</span>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -527,9 +537,12 @@ function RecipeSheet({
                   <button type="button" onClick={() => onLearnTap(resultId, recipe.fathomCost)} disabled={!canAfford || isLearning}
                     className="font-cinzel font-700 uppercase tracking-[0.08em] tap"
                     style={{ width: '100%', padding: '0.95rem', borderRadius: 12, fontSize: '1rem',
-                      background: !canAfford ? 'rgba(255,255,255,0.04)' : armedLearn ? 'linear-gradient(180deg, rgba(248,140,90,0.34), rgba(196,90,60,0.16))' : 'linear-gradient(180deg, rgba(127,208,255,0.26), rgba(90,150,196,0.12))',
-                      border: `1px solid ${!canAfford ? 'rgba(255,255,255,0.16)' : armedLearn ? 'rgba(248,140,90,0.7)' : `${BLUE}8c`}`,
-                      color: !canAfford ? '#8a8480' : armedLearn ? '#ffd0b0' : '#cfeaff',
+                      background: !canAfford ? 'rgba(255,255,255,0.04)'
+                        : armedLearn ? 'linear-gradient(180deg, rgba(248,140,90,0.34), rgba(196,90,60,0.16))'
+                        : abyssal ? 'linear-gradient(180deg, rgba(255,90,60,0.26), rgba(120,20,40,0.12))'
+                        : 'linear-gradient(180deg, rgba(127,208,255,0.26), rgba(90,150,196,0.12))',
+                      border: `1px solid ${!canAfford ? 'rgba(255,255,255,0.16)' : armedLearn ? 'rgba(248,140,90,0.7)' : abyssal ? `${EMBER}99` : `${BLUE}8c`}`,
+                      color: !canAfford ? '#8a8480' : armedLearn ? '#ffd0b0' : abyssal ? '#ffd8c8' : '#cfeaff',
                       cursor: (!canAfford || isLearning) ? 'default' : 'pointer' }}>
                     {isLearning ? 'Learning…'
                       : !canAfford ? `Need ${recipe.fathomCost} Fathoms, you have ${fathomsNow}`
@@ -540,9 +553,11 @@ function RecipeSheet({
                   <button type="button" onClick={() => { onForgeTap(resultId); if (armed) onClose() }} disabled={busy}
                     className="font-cinzel font-700 uppercase tracking-[0.08em] tap"
                     style={{ width: '100%', padding: '0.95rem', borderRadius: 12, fontSize: '1rem',
-                      background: armed ? 'linear-gradient(180deg, rgba(248,140,90,0.34), rgba(196,90,60,0.16))' : 'linear-gradient(180deg, rgba(232,200,121,0.3), rgba(196,169,106,0.14))',
-                      border: `1px solid ${armed ? 'rgba(248,140,90,0.7)' : `${GOLD}99`}`,
-                      color: armed ? '#ffd0b0' : '#f0d695', cursor: busy ? 'default' : 'pointer' }}>
+                      background: armed ? (abyssal ? 'linear-gradient(180deg, rgba(255,120,80,0.42), rgba(196,50,40,0.2))' : 'linear-gradient(180deg, rgba(248,140,90,0.34), rgba(196,90,60,0.16))')
+                        : abyssal ? 'linear-gradient(180deg, rgba(255,90,60,0.28), rgba(80,12,24,0.14))'
+                        : 'linear-gradient(180deg, rgba(232,200,121,0.3), rgba(196,169,106,0.14))',
+                      border: `1px solid ${armed ? (abyssal ? 'rgba(255,120,80,0.8)' : 'rgba(248,140,90,0.7)') : abyssal ? `${EMBER}aa` : `${GOLD}99`}`,
+                      color: armed ? '#ffd0b0' : abyssal ? '#ffcdb8' : '#f0d695', cursor: busy ? 'default' : 'pointer' }}>
                     {busy ? 'Forging…' : armed ? 'Tap again to spend the parts' : `Forge ${result.name}`}
                   </button>
                 ) : (

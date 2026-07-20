@@ -1631,7 +1631,7 @@ export default function ShipHero({
                 <p className="font-karla" style={{ fontSize: '0.72rem', color: '#9a948a', marginTop: 3, lineHeight: 1.4, maxWidth: 320, marginInline: 'auto' }}>{abyssalUnlocked ? 'Fuse forged relics into Abyssal mounts — both effect sets, a single slot.' : 'Fuse two relics into one — both effects, a single slot.'}</p>
                 {forgeUnlocked && (
                   <button type="button" onClick={() => setShowForgeHelp(true)} className="font-karla font-700 uppercase tracking-[0.12em] tap"
-                    style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.32rem 0.7rem', borderRadius: 999, fontSize: '0.54rem', color: '#c9a7ff', background: 'rgba(197,139,255,0.08)', border: '1px solid rgba(197,139,255,0.3)', cursor: 'pointer' }}>
+                    style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.32rem 0.7rem', borderRadius: 999, fontSize: '0.54rem', color: abyssalUnlocked ? '#ff9a7c' : '#c9a7ff', background: abyssalUnlocked ? 'rgba(255,90,60,0.09)' : 'rgba(197,139,255,0.08)', border: `1px solid ${abyssalUnlocked ? 'rgba(255,90,60,0.32)' : 'rgba(197,139,255,0.3)'}`, cursor: 'pointer' }}>
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="12" r="9" /><path d="M12 16v-4" /><path d="M12 8h.01" /></svg>
                     How it works
                   </button>
