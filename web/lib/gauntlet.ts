@@ -83,8 +83,9 @@ export function gauntletUnlocked(opts: { isAdmin?: boolean | null; clearedNodes?
 // theme/boon-pool all key off the variant. See project_dons_gauntlet_plan.
 export type GauntletVariant = 'davy' | 'don'
 
-// Master switch (mirrors GAUNTLET_LIVE). Admin-only until this flips true.
-export const DONS_GAUNTLET_LIVE = false
+// Master switch (mirrors GAUNTLET_LIVE). LIVE since 2026-07-20 — open to any
+// captain who has beaten Don Finleone (the_throne clear = all of Chapter 4).
+export const DONS_GAUNTLET_LIVE = true
 /** Has this player unlocked Don's Gauntlet? Admins always; everyone else only
  *  once it's live AND they've finished the campaign (beat Don Finleone = the
  *  `the_throne` raid clear), NOT a node clear like the classic gauntlet. */

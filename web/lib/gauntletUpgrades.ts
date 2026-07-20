@@ -355,8 +355,9 @@ export function activeGauntletUpgrades(
 
 /** Upgrade ids that are built but NOT live for players yet — surfaced in the
  *  shop with a Coming Soon lock (no price, can't buy) and rejected at claim
- *  time. One source of truth for the client card + the server guard. */
-export const COMING_SOON_UPGRADES = new Set<string>(['dg_abyssal_forge'])
+ *  time. One source of truth for the client card + the server guard.
+ *  (The Abyssal Forge went live with Don's Gauntlet on 2026-07-20.) */
+export const COMING_SOON_UPGRADES = new Set<string>([])
 
 export function isUpgradeComingSoon(id: string): boolean {
   return COMING_SOON_UPGRADES.has(id)
