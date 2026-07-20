@@ -31,7 +31,7 @@ import { lockBodyScroll } from '@/lib/bodyScrollLock'
 import {
   FORGE_RECIPES, getRaidItem, getForgeRecipe, cacheComponentsMissing,
   forgeComponentIds, recipesUsingComponent, forgeOpportunityCost,
-  recipeNeedsGauntlet2, GAUNTLET2_BASE_ITEM_IDS,
+  recipeNeedsGauntlet2, GAUNTLET2_BASE_ITEM_IDS, isAbyssalForgedItem,
 } from '@/lib/raidItems'
 import { PRISMATIC, forgedBorderSoft, forgedTextSoft, ABYSSAL_EMBER, ABYSSAL_EMBER_TEXT, abyssalEmberBorder } from '@/lib/prismatic'
 
@@ -66,13 +66,16 @@ function IconCrate({ size = 16 }: { size?: number }) {
   )
 }
 
-/** An item's art, or the crate fallback. Never an emoji. */
+/** An item's art, or the crate fallback. Never an emoji. Tier-3 Abyssal items
+ *  carry the same molten red glow they wear on the profile arsenal. */
 function ItemArt({ id, size, dim = false }: { id: string; size: number; dim?: boolean }) {
   const def = getRaidItem(id)
+  const abyssalGlow = !dim && isAbyssalForgedItem(id)
   if (def?.image) {
     // eslint-disable-next-line @next/next/no-img-element
     return <img src={def.image} alt="" loading="lazy" decoding="async"
-      style={{ width: size, height: size, objectFit: 'contain', opacity: dim ? 0.4 : 1, filter: dim ? 'grayscale(1)' : 'none' }} />
+      className={abyssalGlow ? 'rod-glow-abyssal' : undefined}
+      style={{ width: size, height: size, objectFit: 'contain', opacity: dim ? 0.4 : 1, ...(abyssalGlow ? {} : { filter: dim ? 'grayscale(1)' : 'none' }) }} />
   }
   return <span style={{ color: '#c4a96a', opacity: dim ? 0.4 : 1, display: 'flex' }}><IconCrate size={Math.round(size * 0.7)} /></span>
 }

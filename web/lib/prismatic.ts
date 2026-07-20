@@ -104,11 +104,24 @@ export const ABYSSAL_EMBER_TEXT: CSSProperties = {
   color: 'transparent',
 }
 
+// ── Abyssal ITEM treatment (molten red) ──────────────────────────────────────
+// The tile/row treatment for a tier-3 Abyssal item wherever it renders — forge
+// board, ship loadout, profile arsenal. Deliberately the SAME everywhere: an
+// ember border + a soft red glow, paired with the rod-glow-abyssal art pulse and
+// ABYSSAL_EMBER_TEXT name. (Replaces the old green/gold/violet ABYSSAL_SOFT look;
+// the red identity now runs through every surface.)
+export const ABYSSAL_ITEM_GLOW = '0 0 15px rgba(255,90,60,0.16)'
+export const abyssalItemSoft = (fill: string): CSSProperties => ({
+  background: fill,
+  border: '1px solid rgba(255,90,60,0.45)',
+  boxShadow: ABYSSAL_ITEM_GLOW,
+})
+
 // ── Tier-aware pickers ──────────────────────────────────────────────────────
 // Every forged item renders through these, so a call site just passes whether
 // it's the Abyssal tier instead of nesting a ternary per style object.
 export const forgedBorderSoft = (fill: string, abyssal = false): CSSProperties =>
-  (abyssal ? abyssalBorderSoft(fill) : prismaticBorderSoft(fill))
+  (abyssal ? abyssalItemSoft(fill) : prismaticBorderSoft(fill))
 
 export const forgedTextSoft = (abyssal = false): CSSProperties =>
-  (abyssal ? ABYSSAL_TEXT_SOFT : PRISMATIC_TEXT_SOFT)
+  (abyssal ? ABYSSAL_EMBER_TEXT : PRISMATIC_TEXT_SOFT)

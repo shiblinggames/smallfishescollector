@@ -1511,12 +1511,12 @@ export default function ShipHero({
                         type="button"
                         onClick={() => toggleItem(itemId)}
                         aria-label={`${def.name}, equipped. Tap to remove.`}
-                        style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, padding: '0.6rem 0.7rem', borderRadius: 12, textAlign: 'left', cursor: 'pointer', ...(forged ? { ...forgedBorderSoft('rgba(14,18,26,0.92)', abyssal), boxShadow: abyssal ? '0 0 14px rgba(63,191,130,0.26)' : '0 0 12px rgba(150,140,180,0.18)' } : { background: `${color}1c`, border: `1.5px solid ${color}88`, boxShadow: `0 0 14px ${color}1f` }) }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, padding: '0.6rem 0.7rem', borderRadius: 12, textAlign: 'left', cursor: 'pointer', ...(forged ? { ...forgedBorderSoft('rgba(14,18,26,0.92)', abyssal), boxShadow: abyssal ? '0 0 14px rgba(255,90,60,0.26)' : '0 0 12px rgba(150,140,180,0.18)' } : { background: `${color}1c`, border: `1.5px solid ${color}88`, boxShadow: `0 0 14px ${color}1f` }) }}
                       >
                         <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', ...(forged ? forgedBorderSoft('rgba(20,24,32,0.9)', abyssal) : { background: `${color}12`, border: `1px solid ${color}40` }) }}>
                           {def.image
                             // eslint-disable-next-line @next/next/no-img-element
-                            ? <img src={def.image} alt="" loading="lazy" decoding="async" style={{ width: 30, height: 30, objectFit: 'contain' }} />
+                            ? <img src={def.image} alt="" loading="lazy" decoding="async" className={abyssal ? 'rod-glow-abyssal' : undefined} style={{ width: 30, height: 30, objectFit: 'contain' }} />
                             : <span style={{ fontSize: '1.4rem', lineHeight: 1, color, display: 'flex' }}><IconCrate size={22} /></span>}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
@@ -1580,12 +1580,12 @@ export default function ShipHero({
                                 onClick={blocked ? undefined : () => toggleItem(itemId)}
                                 disabled={blocked}
                                 aria-label={blocked ? `${def.name}. Hull full, free a slot first.` : wouldSwap ? `${def.name}. Tap to swap for ${swapNames.join(', ')}.` : `${def.name}. Tap to equip.`}
-                                style={{ borderRadius: 12, padding: '0.7rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.8rem', cursor: blocked ? 'not-allowed' : 'pointer', width: '100%', textAlign: 'left', opacity: blocked ? 0.42 : 1, transition: 'opacity 0.15s', ...(forged ? { ...forgedBorderSoft('rgba(14,18,26,0.9)', abyssal), boxShadow: abyssal ? '0 0 13px rgba(63,191,130,0.24)' : '0 0 11px rgba(150,140,180,0.16)' } : { background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.1)' }) }}
+                                style={{ borderRadius: 12, padding: '0.7rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.8rem', cursor: blocked ? 'not-allowed' : 'pointer', width: '100%', textAlign: 'left', opacity: blocked ? 0.42 : 1, transition: 'opacity 0.15s', ...(forged ? { ...forgedBorderSoft('rgba(14,18,26,0.9)', abyssal), boxShadow: abyssal ? '0 0 13px rgba(255,90,60,0.24)' : '0 0 11px rgba(150,140,180,0.16)' } : { background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.1)' }) }}
                               >
                                 <div style={{ flexShrink: 0, width: 46, height: 46, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', ...(forged ? forgedBorderSoft('rgba(20,24,32,0.9)', abyssal) : { background: `${color}12`, border: `1px solid ${color}40` }) }}>
                                   {def.image ? (
                                     /* eslint-disable-next-line @next/next/no-img-element */
-                                    <img src={def.image} alt="" loading="lazy" decoding="async" style={{ width: 33, height: 33, objectFit: 'contain' }} />
+                                    <img src={def.image} alt="" loading="lazy" decoding="async" className={abyssal ? 'rod-glow-abyssal' : undefined} style={{ width: 33, height: 33, objectFit: 'contain' }} />
                                   ) : (
                                     <span style={{ fontSize: '1.55rem', lineHeight: 1, color, display: 'flex' }}><IconCrate size={25} /></span>
                                   )}
