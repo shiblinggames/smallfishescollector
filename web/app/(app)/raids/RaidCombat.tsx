@@ -6805,6 +6805,8 @@ export default function RaidCombat({
             equippedRaidItems={equippedRaidItems}
             shipClasses={shipClasses}
             damagePct={mods.damagePct}
+            megaAugment={megaAugment}
+            megaCost={effMegaCost}
             tideEffects={tideEffects}
             effectLabels={runDepth > 0 ? { good: 'Boons', bad: 'Curses' } : { good: 'Buffs', bad: 'Penalties' }}
             conditions={[
@@ -6944,6 +6946,7 @@ function PlayerStatsPopup({
   shipName, shipImageUrl, shipFilter, playerHp, playerHpMax,
   shipMinDamage, shipSpeed, totalPower, totalNavigation, totalFortune,
   isBoss, equippedRaidItems, shipClasses = {}, damagePct = 0,
+  megaAugment = null, megaCost = MEGA_CHARGE_COST,
   tideEffects = [],
   effectLabels = { good: 'Buffs', bad: 'Penalties' },
   conditions = [],
@@ -6965,6 +6968,11 @@ function PlayerStatsPopup({
    *  player can see which classes are buffing them mid-fight. */
   shipClasses?: Record<string, string>
   damagePct?: number
+  /** The player's Man-o-War ultimate (Mega), if built — surfaced as its own
+   *  "Ultimate" section, the player-side twin of the enemy's Special/Ultimate. */
+  megaAugment?: ShipAugment | null
+  /** Effective Mega charge cost (after Don's cost-cut synergies). */
+  megaCost?: number
   /** Mid-raid Tide effects currently in play. Listed in the Ledger
    *  as friendly one-liners (see lib/tides.describeEffect) so the
    *  player can see what their picks are doing. Hidden when empty. */
@@ -7181,6 +7189,34 @@ function PlayerStatsPopup({
                   {classNames.join(' · ')}
                 </p>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Ultimate — the player's Man-o-War Mega, the signature move that
+            mirrors the boss's own Special/Ultimate in the enemy Ledger. Only
+            shown when one is built. Themed in the augment's own accent. */}
+        {megaAugment && (
+          <div style={{ marginTop: 16 }}>
+            {sectionHeading('Ultimate', megaAugment.color)}
+            <div style={{
+              padding: '0.75rem 0.8rem',
+              background: `${megaAugment.color}12`,
+              border: `1px solid ${megaAugment.color}44`,
+              borderRadius: 12,
+              boxShadow: `0 0 16px ${megaAugment.color}18`,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                <p className="font-cinzel font-800" style={{ flex: 1, minWidth: 0, fontSize: '1rem', color: megaAugment.color, lineHeight: 1.1 }}>
+                  {megaAugment.name} <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: 'rgba(240,237,232,0.5)' }}>Mega</span>
+                </p>
+                <span className="font-karla font-800" style={{ flexShrink: 0, fontSize: '0.72rem', color: megaAugment.color, background: `${megaAugment.color}1e`, border: `1px solid ${megaAugment.color}55`, borderRadius: 999, padding: '0.2rem 0.55rem' }}>
+                  {megaCost} ◆ · {megaAugment.megaMult}× dmg
+                </span>
+              </div>
+              <p className="font-karla" style={{ fontSize: '0.76rem', color: 'rgba(240,237,232,0.72)', lineHeight: 1.4, marginTop: 6 }}>
+                {megaAugment.identity} {megaAugment.tagline}
+              </p>
             </div>
           </div>
         )}
