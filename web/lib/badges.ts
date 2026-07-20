@@ -224,6 +224,14 @@ export const BADGES: Badge[] = [
   { id: 'six_aboard',      name: 'Six Aboard',         description: 'Add the Sixth Berth to your ship',                imageUrl: '/badges/six_aboard.png',      difficulty: 'seasoned' },
   { id: 'expanded_armory', name: 'Expanded Armory',    description: 'Bolt the Expanded Armory onto your deck',         imageUrl: '/badges/expanded_armory.png', difficulty: 'seasoned' },
   { id: 'full_tackle_box', name: 'Full Tackle Box',    description: 'Own every rod money can buy',                     imageUrl: '/badges/full_tackle_box.png', difficulty: 'master'   },
+  // ── The Abyssal Forge + Don's Gauntlet (art PENDING; dormant until Don's launches) ──
+  { id: 'abyssal_smith',   name: 'The Abyssal Forge',  description: 'Forge your first tier-3 Abyssal item',            imageUrl: '/badges/abyssal_smith.png',   difficulty: 'master'      },
+  { id: 'abyssal_master',  name: 'Abyssal Master',     description: 'Forge every Abyssal item',                        imageUrl: '/badges/abyssal_master.png',  difficulty: 'grandmaster' },
+  { id: 'dons_descent',    name: 'The Green Beckons',  description: "Cash out a Don's Gauntlet run",                   imageUrl: '/badges/dons_descent.png',    difficulty: 'seasoned'    },
+  { id: 'into_the_green',  name: 'Into the Green',     description: "Descend to depth 10 in Don's Gauntlet",           imageUrl: '/badges/into_the_green.png',  difficulty: 'veteran'     },
+  { id: 'drowned_court',   name: 'The Drowned Court',  description: "Descend to depth 25 in Don's Gauntlet",           imageUrl: '/badges/drowned_court.png',   difficulty: 'master'      },
+  { id: 'dons_doorstep',   name: "The Don's Doorstep", description: "Descend to depth 50 in Don's Gauntlet",           imageUrl: '/badges/dons_doorstep.png',   difficulty: 'grandmaster' },
+  { id: 'galaxy_hull_won', name: 'The Sky in Her Hull', description: "Earn the Galaxy Hull from Don's Gauntlet",        imageUrl: '/badges/galaxy_hull_won.png', difficulty: 'veteran'     },
 ]
 
 export const BADGE_MAP: Record<string, Badge> = Object.fromEntries(
