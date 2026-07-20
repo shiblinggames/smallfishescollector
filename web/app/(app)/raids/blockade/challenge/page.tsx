@@ -47,6 +47,7 @@ export default async function BlockadeChallengeRaidPage() {
             equippedItems={stats.equippedRaidItems}
             ownedRaidItems={stats.ownedRaidItems}
             classDamageMult={stats.classDamageMult}
+            legendaryLootMult={stats.legendaryLootMult}
             classDoubloonMult={stats.classDoubloonMult}
             shipClasses={stats.shipClasses}
             equippedRepairKit={stats.equippedRepairKit}

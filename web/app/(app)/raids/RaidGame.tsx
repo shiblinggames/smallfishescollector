@@ -37,7 +37,11 @@ type ShotResult = 'miss' | 'graze' | 'hit' | 'critical' | null
  *  the weight pool before rolling. Used to skip ship skins + raid
  *  items the player already owns so they always get something new
  *  (or fall through to a currency slot if every unique is owned). */
-function rollLootIndex(loot: RaidLootItem[], excludedIds: Set<string> = new Set(), uniqueShare?: number): number {
+function rollLootIndex(loot: RaidLootItem[], excludedIds: Set<string> = new Set(), uniqueShare?: number, legendaryMult = 1): number {
+  // Kingpin's Cut (Don's account perk): legendary-rarity rows carry extra weight,
+  // so they surface `legendaryMult`× more often within the unique pick. Applied to
+  // BOTH roll paths below. Non-legendary rows keep weight 1×.
+  const wt = (l: RaidLootItem): number => l.weight * (l.rarity === 'legendary' ? legendaryMult : 1)
   // FIXED-SHARE crates (BossRaidConfig.uniqueShare). Two-stage: `uniqueShare` of the
   // time you get one of the uniques you're still missing, otherwise currency. Without
   // this, dropping owned uniques out of the pool shrinks their share as you complete
@@ -52,7 +56,7 @@ function rollLootIndex(loot: RaidLootItem[], excludedIds: Set<string> = new Set(
     const uniques: { idx: number; weight: number }[] = []
     const currency: { idx: number; weight: number }[] = []
     loot.forEach((l, idx) => {
-      if (isUniqueLoot(l)) { if (!excludedIds.has(l.id)) uniques.push({ idx, weight: l.weight }) }
+      if (isUniqueLoot(l)) { if (!excludedIds.has(l.id)) uniques.push({ idx, weight: wt(l) }) }
       else currency.push({ idx, weight: l.weight })
     })
     // Own everything already, or a table with no currency: fall through to whichever
@@ -66,7 +70,7 @@ function rollLootIndex(loot: RaidLootItem[], excludedIds: Set<string> = new Set(
   const pool: { idx: number; weight: number }[] = []
   for (let i = 0; i < loot.length; i++) {
     if (excludedIds.has(loot[i].id)) continue
-    pool.push({ idx: i, weight: loot[i].weight })
+    pool.push({ idx: i, weight: wt(loot[i]) })
   }
   // Edge case: every slot excluded (shouldn't happen in practice since
   // currency slots are never excluded). Fall back to a plain roll.
@@ -390,6 +394,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   playerCharacterColor, playerEquippedHat,
   playerAvatarBg, playerAvatarBorder,
   raidMods, bonusChargeSlots = 0, manowarAugment = null,
+  legendaryLootMult = 1,
 }: {
   config: BossRaidConfig
   shipImageUrl: string
@@ -429,6 +434,9 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   bonusChargeSlots?: number
   /** Man-o-War volley augment (or null). */
   manowarAugment?: ShipAugment | null
+  /** Kingpin's Cut (Don's Locker perk): legendary boss-drop weight multiplier
+   *  in the loot roll. 1 = no perk, 1.5 = +50% legendary drop rate. */
+  legendaryLootMult?: number
 }) {
   const router            = useRouter()
   const shipSkinDef       = equippedShipSkin ? getShipSkin(equippedShipSkin) : undefined
@@ -1190,7 +1198,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
         setWinGold(gold); setWinXP(xp)
         // Roll loot + dollar amount up front so the stage can pre-position
         // the slot before the player taps Loot Chest.
-        const final = rollLootIndex(config.loot, ownedUniqueIds, config.uniqueShare)
+        const final = rollLootIndex(config.loot, ownedUniqueIds, config.uniqueShare, legendaryLootMult)
         const base  = Math.floor(Math.random() * 301 + 300)
         // Tide doubloonsAtRaidEnd: sum all run-active deltas onto the
         // raw base BEFORE fortune scales it. Net result lands in the

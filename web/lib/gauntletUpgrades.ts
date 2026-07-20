@@ -267,9 +267,27 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
   { id: 'dg_consigliere',  name: 'Consigliere',      description: 'The Don whispers in your ear. Synergy offers — confluences and convergences — surface on far more of your power drafts, so you actually build toward them.', depthRequired: 6, cost: 300, scope: 'gauntlet', gauntlet: 'don' },
   // ── Ship & Shore (scope 'account'/'world') — permanent topside power. ────────
   { id: 'dg_deep_plating',   name: 'Deep-Sea Plating',   description: 'The Don’s shipwrights re-hull you in pressure-forged plate: 10% more ship max HP in EVERY raid and gauntlet dive, forever.', depthRequired: 10, cost: 320, scope: 'account', category: 'raids', gauntlet: 'don' },
+  { id: 'dg_daily_tribute',  name: 'The Don’s Tribute',  description: 'The family looks after its own. Claim 10 Fathoms free from the Locker, once every day — a standing tribute from the deep.', depthRequired: 8, cost: 220, scope: 'account', category: 'raids', gauntlet: 'don' },
+  { id: 'dg_kingpin_cut',    name: 'Kingpin’s Cut',      description: 'The Don marks the finest hauls for you: legendary boss-drop items fall 50% more often from every raid crate, forever.', depthRequired: 12, cost: 420, scope: 'account', category: 'raids', gauntlet: 'don' },
+  { id: 'dg_crimson_tithe',  name: 'Crimson Tithe',      description: 'The Don takes his cut in blood, and hands you a bigger one: earn 15% more Blood Gems from every Hardcore dive you survive.', depthRequired: 16, cost: 360, scope: 'account', category: 'raids', gauntlet: 'don' },
   { id: 'dg_master_catcher', name: 'Relentless Catcher', description: 'Upgrades your Tireless Catcher: the Auto Catcher now reels in epic fish on its own too, on top of rares. Legendaries and the Ancient Deep still want your hand.', depthRequired: 18, cost: 330, scope: 'world', category: 'fishing', gauntlet: 'don', requires: 'tireless_catcher' },
-  { id: 'dg_abyssal_forge', name: 'The Abyssal Forge', description: 'Fuse two forged raid items into one tier-3 Abyssal item, carrying both effect sets in a single mount. The endgame forge.', depthRequired: 20, cost: 700, scope: 'account', category: 'raids', gauntlet: 'don' },
+  { id: 'dg_abyssal_forge', name: 'The Abyssal Forge', description: 'Fuse two forged raid items into one tier-3 Abyssal item, carrying both effect sets in a single mount. The endgame forge.', depthRequired: 20, cost: 700, scope: 'account', category: 'raids', gauntlet: 'don', requires: 'forge' },
 ]
+
+/** Kingpin's Cut (Don's account perk): legendary-rarity boss-drop items fall 50%
+ *  more often. Read against the UNION of both Lockers' upgrades — it's a topside
+ *  permanent, not a run perk. Applied client-side in the raid loot roll. */
+export const DONS_DAILY_TRIBUTE_ID = 'dg_daily_tribute'
+/** Fathoms handed out per daily claim of The Don's Tribute. */
+export const DONS_DAILY_TRIBUTE_AMOUNT = 10
+export function donsLegendaryLootMult(unlocked: string[] | null | undefined): number {
+  return (unlocked ?? []).includes('dg_kingpin_cut') ? 1.5 : 1
+}
+
+/** Crimson Tithe (Don's account perk): +15% Blood Gems from any Hardcore dive. */
+export function donsBloodGemMult(unlocked: string[] | null | undefined): number {
+  return (unlocked ?? []).includes('dg_crimson_tithe') ? 1.15 : 1
+}
 
 /** The upgrades sold in a given Gauntlet's Locker. Davy's = untagged; Don's =
  *  `gauntlet: 'don'`. A run/shop only ever sees its own variant's catalog. */

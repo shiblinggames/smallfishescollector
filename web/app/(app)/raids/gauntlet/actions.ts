@@ -18,7 +18,7 @@ import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
 import { termPressure, pressureGemMult, pressureFeats, pressureSkinDropChance, resolveTerms, PRESSURE_SKIN_ID, getTerm, type SignedTerms } from '@/lib/gauntletTerms'
 import { grantBadgeDirect } from '@/lib/badgeGrant'
 import { GOLD_HULL_SKIN_ID, GOLD_HULL_CHEST_TIER, BLOOD_HULL_SKIN_ID, BLOOD_HULL_CHEST_TIER, GALAXY_HULL_SKIN_ID, GALAXY_HULL_CHEST_TIER, GHOST_HULL_SKIN_ID, GHOST_HULL_CHEST_TIER, GHOST_HULL_DROP_MULT, DONS_GAUNTLET_ITEM_IDS, BLOOD_CANNON_ITEM_ID, BLOOD_CANNON_CHEST_TIER, maxPotForDepth, chestForDepth, chestCannonDropChance, chestSkinDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_REWARD_DEPTH_CAP, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, gauntletXpForDepth, gauntletCrewXp, DONS_CHEST_GEM_MULT, CONFLUENCES, hardcoreUnlocked, HARDCORE_LIVE, HARDCORE_UNLOCKS, HARDCORE_RUNS_PER_DAY, HC_FATHOMS_MULT, HC_SURVIVOR_XP_MULT, bloodGemsForDepth, coerceRunStats, chestOdds, type GauntletRunSnapshot, type GauntletRunState, type GauntletVariant } from '@/lib/gauntlet'
-import { getGauntletUpgrade, isUpgradeComingSoon, isToggleableUpgrade, activeGauntletUpgrades, gauntletHaulMult, gauntletXpMult, gauntletFathomsMult } from '@/lib/gauntletUpgrades'
+import { getGauntletUpgrade, isUpgradeComingSoon, isToggleableUpgrade, activeGauntletUpgrades, gauntletHaulMult, gauntletXpMult, gauntletFathomsMult, donsBloodGemMult, DONS_DAILY_TRIBUTE_ID, DONS_DAILY_TRIBUTE_AMOUNT } from '@/lib/gauntletUpgrades'
 import { DAVY_FORGE } from '@/lib/raidItems'
 import {
   rollOffer, offerCoinMult, offerFathomMult, offerChestMult,
@@ -80,32 +80,70 @@ function sanitizeRunSnapshot(snap: unknown, depth: number): GauntletRunSnapshot 
 
 /** State for the Locker Upgrades panel: the player's deepest run, Fathoms purse,
  *  and which upgrades they've already claimed. */
-export async function getGauntletUpgradeState(variant: GauntletVariant = 'davy'): Promise<{ deepest: number; fathoms: number; owned: string[]; ownedAll: string[]; off: string[]; hasAutoCatcher: boolean; hasAutoCaster: boolean }> {
+export async function getGauntletUpgradeState(variant: GauntletVariant = 'davy'): Promise<{ deepest: number; fathoms: number; owned: string[]; ownedAll: string[]; off: string[]; hasAutoCatcher: boolean; hasAutoCaster: boolean; tributeReady: boolean }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { deepest: 0, fathoms: 0, owned: [], ownedAll: [], off: [], hasAutoCatcher: false, hasAutoCaster: false }
+  if (!user) return { deepest: 0, fathoms: 0, owned: [], ownedAll: [], off: [], hasAutoCatcher: false, hasAutoCaster: false, tributeReady: false }
   const isDon = variant === 'don'
   const admin = createAdminClient()
   const { data } = await admin
     .from('profiles')
     // Fathoms are the ONE shared purse; the deepest gate + owned/off sets are
     // per-variant (Don's has its own bespoke tree in dons_gauntlet_upgrades).
-    .select('gauntlet_deepest, dons_gauntlet_deepest, gauntlet_fathoms, gauntlet_upgrades, gauntlet_upgrades_off, dons_gauntlet_upgrades, dons_gauntlet_upgrades_off, has_auto_catcher, has_auto_caster')
+    .select('gauntlet_deepest, dons_gauntlet_deepest, gauntlet_fathoms, gauntlet_upgrades, gauntlet_upgrades_off, dons_gauntlet_upgrades, dons_gauntlet_upgrades_off, has_auto_catcher, has_auto_caster, dons_stipend_claimed_at')
     .eq('id', user.id)
     .single()
   const davyOwned = (data?.gauntlet_upgrades as string[] | null) ?? []
   const donOwned = (data?.dons_gauntlet_upgrades as string[] | null) ?? []
+  const ownedAll = [...davyOwned, ...donOwned]
   return {
     deepest: ((isDon ? data?.dons_gauntlet_deepest : data?.gauntlet_deepest) as number | null) ?? 0,
     fathoms: (data?.gauntlet_fathoms as number | null) ?? 0,
     owned: isDon ? donOwned : davyOwned,
     // Union across BOTH Lockers — for cross-Locker prereqs (a Don's upgrade that
     // requires a Davy's one) the Card checks ownership here.
-    ownedAll: [...davyOwned, ...donOwned],
+    ownedAll,
     off: ((isDon ? data?.dons_gauntlet_upgrades_off : data?.gauntlet_upgrades_off) as string[] | null) ?? [],
     hasAutoCatcher: data?.has_auto_catcher === true,
     hasAutoCaster: data?.has_auto_caster === true,
+    // The Don's Tribute — owned AND not yet collected on this UTC day.
+    tributeReady: ownedAll.includes(DONS_DAILY_TRIBUTE_ID) && !stipendClaimedToday(data?.dons_stipend_claimed_at as string | null),
   }
+}
+
+/** True if the daily tribute was already claimed on the current UTC day. */
+function stipendClaimedToday(claimedAt: string | null | undefined): boolean {
+  if (!claimedAt) return false
+  return new Date(claimedAt).toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10)
+}
+
+/** Claim The Don's Tribute — a free 10 Fathoms, once per UTC day, for owners of
+ *  the dg_daily_tribute Locker perk. Server-authoritative: validates ownership
+ *  and the once-a-day gate, then credits the shared Fathoms purse. */
+export async function claimDailyTribute(): Promise<{ ok: true; fathoms: number } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not signed in.' }
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('gauntlet_upgrades, dons_gauntlet_upgrades, gauntlet_fathoms, dons_stipend_claimed_at')
+    .eq('id', user.id)
+    .single()
+  if (!profile) return { error: 'Profile not found.' }
+  const ownedAll = [
+    ...((profile.gauntlet_upgrades as string[] | null) ?? []),
+    ...((profile.dons_gauntlet_upgrades as string[] | null) ?? []),
+  ]
+  if (!ownedAll.includes(DONS_DAILY_TRIBUTE_ID)) return { error: 'You haven’t earned the Don’s Tribute.' }
+  if (stipendClaimedToday(profile.dons_stipend_claimed_at as string | null)) return { error: 'You’ve already collected today’s tribute. Back tomorrow.' }
+
+  const fathoms = ((profile.gauntlet_fathoms as number | null) ?? 0) + DONS_DAILY_TRIBUTE_AMOUNT
+  await admin
+    .from('profiles')
+    .update({ gauntlet_fathoms: fathoms, dons_stipend_claimed_at: new Date().toISOString() })
+    .eq('id', user.id)
+  return { ok: true, fathoms }
 }
 
 /** Switch an owned Run Upgrade on or off. Only gauntlet-scope upgrades toggle
@@ -801,8 +839,14 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   // signing the whole board and farming short shallow dives pays nothing — you
   // have to be deep AND heavy. (runPressure is derived above, beside the skin rolls.)
   const gemMult = pressureGemMult(runPressure, payDepth)
+  // Crimson Tithe (Don's account perk) — +15% Blood Gems from any Hardcore dive.
+  // Account permanent, so read the UNION of both Lockers' owned upgrades.
+  const accountUpgrades = [
+    ...((profile.gauntlet_upgrades as string[] | null) ?? []),
+    ...((profile.dons_gauntlet_upgrades as string[] | null) ?? []),
+  ]
   const baseBloodGems   = hc ? bloodGemsForDepth(payDepth, Math.random()) : 0
-  const earnedBloodGems = Math.round(baseBloodGems * gemMult)
+  const earnedBloodGems = Math.round(baseBloodGems * gemMult * donsBloodGemMult(accountUpgrades))
   const newBloodGems    = ((profile.blood_gems as number | null) ?? 0) + earnedBloodGems
 
   const classPicks = (profile.ship_classes as Record<string, string> | null) ?? {}

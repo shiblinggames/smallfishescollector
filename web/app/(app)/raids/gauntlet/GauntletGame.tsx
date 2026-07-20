@@ -33,12 +33,12 @@ import {
   type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot, type GauntletRunState, type GauntletRunStats, chestOdds, type GauntletVariant } from '@/lib/gauntlet'
 import { GAUNTLET_TERMS, TERM_GROUP_META, resolveTerms, termPressure, termTideEffects, pressureGemMult, pressureDepthFactor, NO_TERM_EFFECTS, PRESSURE_CAP, PRESSURE_DEPTH_FLOOR, PRESSURE_DEPTH_FULL, PRESSURE_SKIN_THRESHOLD, PRESSURE_SKIN_DEPTH, PRESSURE_SKIN_ID, MAX_AVAILABLE_PRESSURE, type SignedTerms } from '@/lib/gauntletTerms'
 import GauntletTermsPanel from './GauntletTermsPanel'
-import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, setGauntletUpgradeActive, markGauntletIntroSeen, recordGauntletHit, wagerGauntletFathoms, markConfluencesSeen, checkpointGauntletRun, pauseGauntletRun, resumeGauntletRun, buyBaitWithFathoms, rollDavyOffer, buyMerchantItem } from './actions'
+import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, setGauntletUpgradeActive, markGauntletIntroSeen, recordGauntletHit, wagerGauntletFathoms, markConfluencesSeen, checkpointGauntletRun, pauseGauntletRun, resumeGauntletRun, buyBaitWithFathoms, rollDavyOffer, buyMerchantItem, claimDailyTribute } from './actions'
 import { MERCHANT_ITEMS, rollMerchantStock, type MerchantItemKind } from '@/lib/gauntletMerchant'
 import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
 import { offerCoinMult, offerChestMult, offerCopy, offerTakenLine, type DavyOffer } from '@/lib/gauntletOffer'
 import { FATHOM_BAITS } from '@/lib/bait'
-import { upgradesForVariant, getGauntletUpgrade, upgradeTierInfo, romanTier, COMING_SOON_UPGRADES, activeGauntletUpgrades, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck, gauntletBoonRerolls, gauntletCurseRerolls, gauntletBoonFilters, gauntletSynergyOfferMult, gauntletHasBloodOath, gauntletStartAnchorSaves } from '@/lib/gauntletUpgrades'
+import { upgradesForVariant, getGauntletUpgrade, upgradeTierInfo, romanTier, COMING_SOON_UPGRADES, activeGauntletUpgrades, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck, gauntletBoonRerolls, gauntletCurseRerolls, gauntletBoonFilters, gauntletSynergyOfferMult, gauntletHasBloodOath, gauntletStartAnchorSaves, DONS_DAILY_TRIBUTE_AMOUNT } from '@/lib/gauntletUpgrades'
 import { type ShipAugment } from '@/lib/shipAugments'
 import { getSpecialItem } from '@/lib/specialItems'
 import { buySpecialItem } from '@/app/(app)/fishing/actions'
@@ -5031,7 +5031,7 @@ function CannonballRackDemo() {
 // "Hauled to Shore" (scope account/world + the Auto Catcher special item — power
 // for the wider game). Server-validated on claim (depth + cost + prereq + no
 // double); the panel just reflects state and disables what you can't take yet.
-type LockerState = { deepest: number; fathoms: number; owned: string[]; ownedAll: string[]; off: string[]; hasAutoCatcher: boolean; hasAutoCaster: boolean }
+type LockerState = { deepest: number; fathoms: number; owned: string[]; ownedAll: string[]; off: string[]; hasAutoCatcher: boolean; hasAutoCaster: boolean; tributeReady: boolean }
 /** A purchasable row in the Locker — either a Gauntlet upgrade or a special
  *  item (the Auto Catcher) — normalized so both render through one card. */
 type ShopEntry = {
@@ -5098,6 +5098,19 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
       onClaimed?.(res.owned)
       vibrate([0, 30, 50, 40])
     }
+  }
+
+  // The Don's Tribute — claim the free daily 10 Fathoms. Once per UTC day,
+  // server-gated. Optimistically bumps the purse + hides the button on success.
+  const [claimingTribute, setClaimingTribute] = useState(false)
+  async function claimTribute() {
+    if (claimingTribute) return
+    setClaimingTribute(true); setErr(null)
+    const res = await claimDailyTribute()
+    setClaimingTribute(false)
+    if ('error' in res) { setErr(res.error); return }
+    setState(s => (s ? { ...s, fathoms: res.fathoms, tributeReady: false } : s))
+    vibrate([0, 30, 50, 40])
   }
 
   // Fathoms → lures. Repeatable (consumable), unlike the one-time upgrades.
@@ -5246,6 +5259,24 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
               <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.52rem', color: `${AC}cc` }}>Your Fathoms</span>
               <span className="font-cinzel font-800" style={{ fontSize: '1.2rem', color: AC }}>{fmt(state.fathoms)}</span>
             </div>
+
+            {/* The Don's Tribute — a free daily 10 Fathoms for perk owners. Shown
+                only when it's owned AND uncollected today; disappears once taken. */}
+            {state.tributeReady && (
+              <button
+                type="button"
+                onClick={claimTribute}
+                disabled={claimingTribute}
+                className="tap"
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, width: '100%', margin: '8px 0 0', padding: '0.6rem 0.85rem', borderRadius: 12, background: `${GOLD}14`, border: `1px solid ${GOLD}55`, boxShadow: `0 0 16px ${GOLD}14`, cursor: claimingTribute ? 'default' : 'pointer' }}
+              >
+                <span style={{ textAlign: 'left' }}>
+                  <span className="font-cinzel font-700" style={{ display: 'block', fontSize: '0.82rem', color: '#f4e2b0', lineHeight: 1.1 }}>The Don’s Tribute</span>
+                  <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.46rem', color: `${GOLD}cc` }}>Free · resets daily</span>
+                </span>
+                <span className="font-cinzel font-800" style={{ fontSize: '0.92rem', color: GOLD, flexShrink: 0 }}>{claimingTribute ? '…' : `+${DONS_DAILY_TRIBUTE_AMOUNT}`}</span>
+              </button>
+            )}
 
             {/* Your loadout. Run Upgrades render as a switchboard — each owned
                 perk carries an on/off toggle so a player can leave, say,

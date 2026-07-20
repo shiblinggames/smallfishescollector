@@ -13,7 +13,7 @@ import { getShipSkin } from '@/lib/shipSkins'
 import { computeRaidMap } from '@/lib/raidMap'
 import { buildClearedSet } from '@/lib/raidProgress'
 import { getRaidConfigById, raidLootIds, ITEM_GRANTS, MAX_CRATE_BASE_DOUBLOONS } from '@/lib/raidRegistry'
-import { bonusChargeSlots, gauntletRepairHealMult, donsRaidHpMult } from '@/lib/gauntletUpgrades'
+import { bonusChargeSlots, gauntletRepairHealMult, donsRaidHpMult, donsLegendaryLootMult } from '@/lib/gauntletUpgrades'
 import { getShipAugment, MANOWAR_TIER, type ShipAugment } from '@/lib/shipAugments'
 import { settleUltimateBuild } from '@/lib/ultimateBuild'
 
@@ -67,6 +67,9 @@ export interface RaidPlayerStats {
    *  baked into playerHPMax + shipSpeed below. */
   classDamageMult: number
   classDoubloonMult: number
+  /** Kingpin's Cut (Don's Locker perk): legendary boss-drop weight multiplier
+   *  for the raid loot roll (1 = none, 1.5 = +50%). */
+  legendaryLootMult: number
   /** Raw chapter -> classId picks. Threaded to the in-fight stats popup
    *  so the player can see WHICH classes are modifying their ship,
    *  not just the aggregated multiplier. */
@@ -190,6 +193,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
     equippedRaidItems:    equippedItems,
     ownedRaidItems:       (profile?.raid_items as string[] | null) ?? [],
     classDamageMult:      classEffects.damageMult * navRenown.damageMult,
+    legendaryLootMult:    donsLegendaryLootMult(accountUpgrades),
     classDoubloonMult:    classEffects.doubloonMult,
     shipClasses:          shipClassPicks,
     equippedRepairKit:    (profile?.equipped_repair_kit as string | null) ?? 'basic_repair_kit',
