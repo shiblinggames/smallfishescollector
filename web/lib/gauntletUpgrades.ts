@@ -244,7 +244,6 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
   { id: 'dg_fathoms',      name: 'Spoils of the Deep', description: 'Earn 40% more Fathoms from every dive, win or lose. Grab it early and the grind speeds up.', depthRequired: 0, cost: 150, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_reroll_boon',  name: 'Rechamber',        description: 'Once per power draft, throw the offered boons back and draw three fresh ones.',  depthRequired: 0,  cost: 175, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_reroll_curse', name: 'Break the Hex',    description: "Once per curse the Locker lays on you, throw it back and force a different one. Could be milder, could be worse.", depthRequired: 0, cost: 190, scope: 'gauntlet', gauntlet: 'don' },
-  { id: 'dg_curse_ward',   name: 'Saltbound',        description: 'Ward your hull against the Locker’s worst. Every named curse it lays on you lands one tier weaker — a deepening comes in mild, and a base curse is never fully lifted. The Crush of the deep still tightens.', depthRequired: 8, cost: 280, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_boon_filter',  name: 'Blacklist',        description: 'Once per dive, banish one offered boon for good — mark it on any power draft and it never surfaces again for the rest of the run. Cut the dead weight so the good draws come up more often.', depthRequired: 0, cost: 200, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_boon_filter_2', name: 'Blacklist II',    description: 'Banish up to two boons per dive instead of one. Shape the pool harder toward the build you want.', depthRequired: 8, cost: 320, scope: 'gauntlet', gauntlet: 'don', requires: 'dg_boon_filter' },
   { id: 'dg_armor',        name: 'Spectral Plate',   description: 'Take 12% less damage from every enemy for the whole dive.',                       depthRequired: 0,  cost: 210, scope: 'gauntlet', gauntlet: 'don' },
@@ -551,10 +550,4 @@ export function gauntletSynergyOfferMult(unlocked: string[] | null | undefined):
 /** Blood Oath (Don's): start every dive already holding one random boon. */
 export function gauntletHasBloodOath(unlocked: string[] | null | undefined): boolean {
   return (unlocked ?? []).includes('dg_blood_oath')
-}
-
-/** Saltbound (Don's): named curses land one tier weaker (drawCurse floors the
- *  reduced tier at 1; The Crush's deep-bend escalation is left untouched). */
-export function gauntletCurseWard(unlocked: string[] | null | undefined): boolean {
-  return (unlocked ?? []).includes('dg_curse_ward')
 }

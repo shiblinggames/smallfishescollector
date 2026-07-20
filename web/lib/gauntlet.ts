@@ -1306,7 +1306,7 @@ export function isCurseDepth(depth: number, frequencyMult = 1): boolean {
 /** Pick the next curse the Locker imposes. Eligible = a fresh tier-1 curse you
  *  don't have, OR (from CURSE_TIER2_DEPTH on) a tier-2 deepening of one you do.
  *  Uniform random among eligible; null if none remain. */
-export function drawCurse(curseTiers: Record<string, number>, depth: number, startsAtWorst = false, variant: GauntletVariant = 'davy', weaken = false): CurseOffer | null {
+export function drawCurse(curseTiers: Record<string, number>, depth: number, startsAtWorst = false, variant: GauntletVariant = 'davy'): CurseOffer | null {
   // The Crush never enters the normal pool — it's the fallback pressure once
   // every named curse is spent (and only in the deep band).
   const eligible = GAUNTLET_CURSES
@@ -1318,11 +1318,7 @@ export function drawCurse(curseTiers: Record<string, number>, depth: number, sta
     const c = drawn.c
     // Loose Tongue II (a signed Term): a fresh curse lands straight at its
     // nastier tier instead of building up to it.
-    const rolled = startsAtWorst ? Math.min(c.tiers.length, Math.max(drawn.next, 2)) : drawn.next
-    // Saltbound (Don's upgrade): named curses come in one tier weaker, floored at
-    // tier 1 (never fully lifted). The Crush branch below is left untouched, so
-    // the deep-bend pressure wall still escalates.
-    const next = weaken ? Math.max(1, rolled - 1) : rolled
+    const next = startsAtWorst ? Math.min(c.tiers.length, Math.max(drawn.next, 2)) : drawn.next
     const t = c.tiers[next - 1]
     return { id: c.id, name: c.name, flavor: c.flavor, tier: next, desc: t.desc, detail: t.detail, effects: t.effects, hpDrainPct: t.hpDrainPct, silenceCrew: t.silenceCrew, isUpgrade: next > 1 }
   }

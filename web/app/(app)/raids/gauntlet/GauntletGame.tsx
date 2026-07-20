@@ -37,7 +37,7 @@ import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpg
 import { MERCHANT_ITEMS, rollMerchantStock, type MerchantItemKind } from '@/lib/gauntletMerchant'
 import { offerCoinMult, offerChestMult, offerCopy, offerTakenLine, type DavyOffer } from '@/lib/gauntletOffer'
 import { FATHOM_BAITS } from '@/lib/bait'
-import { upgradesForVariant, getGauntletUpgrade, upgradeTierInfo, romanTier, COMING_SOON_UPGRADES, activeGauntletUpgrades, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck, gauntletBoonRerolls, gauntletCurseRerolls, gauntletBoonFilters, gauntletSynergyOfferMult, gauntletHasBloodOath, gauntletCurseWard, gauntletStartAnchorSaves } from '@/lib/gauntletUpgrades'
+import { upgradesForVariant, getGauntletUpgrade, upgradeTierInfo, romanTier, COMING_SOON_UPGRADES, activeGauntletUpgrades, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck, gauntletBoonRerolls, gauntletCurseRerolls, gauntletBoonFilters, gauntletSynergyOfferMult, gauntletHasBloodOath, gauntletStartAnchorSaves } from '@/lib/gauntletUpgrades'
 import { type ShipAugment } from '@/lib/shipAugments'
 import { getSpecialItem } from '@/lib/specialItems'
 import { buySpecialItem } from '@/app/(app)/fishing/actions'
@@ -1121,7 +1121,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     const skipFirstCurse = atCurseDepth && !calmBeforeUsedRef.current && gauntletSkipsFirstCurse(activeUpgrades)
     if (skipFirstCurse) calmBeforeUsedRef.current = true
     const curse = (atCurseDepth && !skipFirstCurse)
-      ? drawCurse(curseTiersRef.current, nextDepth, termFxRef.current.curseStartsAtWorst, props.variant, gauntletCurseWard(activeUpgrades))   // null once the curse pool is spent
+      ? drawCurse(curseTiersRef.current, nextDepth, termFxRef.current.curseStartsAtWorst, props.variant)   // null once the curse pool is spent
       : null
     // Draw the boons up front so an exhausted pool ([] when every family is
     // maxed) falls through to the breather instead of an empty draft screen.
@@ -1420,9 +1420,9 @@ export default function GauntletGame(props: GauntletGameProps) {
   function rerollCurse() {
     if (curseRerollsLeft <= 0 || !pendingCurse) return
     const depth = curseDepthRef.current
-    let next = drawCurse(curseTiersRef.current, depth, termFxRef.current.curseStartsAtWorst, props.variant, gauntletCurseWard(activeUpgrades))
+    let next = drawCurse(curseTiersRef.current, depth, termFxRef.current.curseStartsAtWorst, props.variant)
     for (let i = 0; i < 6 && next && next.id === pendingCurse.id && next.tier === pendingCurse.tier; i++) {
-      next = drawCurse(curseTiersRef.current, depth, termFxRef.current.curseStartsAtWorst, props.variant, gauntletCurseWard(activeUpgrades))
+      next = drawCurse(curseTiersRef.current, depth, termFxRef.current.curseStartsAtWorst, props.variant)
     }
     if (next) setPendingCurse(next)
     setCurseRerollsLeft(r => r - 1)
