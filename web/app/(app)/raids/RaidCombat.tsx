@@ -263,6 +263,17 @@ function enemySpecialDesc(s: NonNullable<BroadsideEnemy['special']>): string {
   }
 }
 
+// Player-facing description of an active AIM affliction (the Raid-8 aim-bar
+// attacks — Iron Etiquette's "hardened", plus decoys / squall). Surfaced in the
+// stats-popup conditions + the HP-bar chip row when one is on you.
+function aimAfflictionDesc(kind: AimAttackId, passes: number): string {
+  const n = `${passes} shot${passes === 1 ? '' : 's'}`
+  if (kind === 'decoys')   return `False gold blooms across your aim bar for your next ${n}. Lock a decoy band and the shot misfires — only the true mark scores.`
+  if (kind === 'hardened') return `Your aim lock is plated for your next ${n} — the first tap only cracks it, so it takes two taps to land a shot instead of one.`
+  return `Your aim needle is gusted mid-sweep for your next ${n}, dragging the mark off line as you aim.`
+}
+const AIM_AFFLICTION_COLOR = '#a78bfa'
+
 /** Plain-English description of an enemy ULTIMATE (raid-8). It spends a full
  *  magazine for one authored, non-crit blow scaled by `mult`. */
 function enemyUltimateDesc(u: NonNullable<BroadsideEnemy['ultimate']>): string {
@@ -6562,6 +6573,7 @@ export default function RaidCombat({
               ...(vengeanceWardTurns > 0 ? [{ key: 'ward', color: '#d1495b', tone: 'buff' as const, turns: vengeanceWardTurns, title: `Vengeance Ward — a killing blow in the next ${vengeanceWardTurns} turn${vengeanceWardTurns === 1 ? '' : 's'} is cheated. Let it run out and it is wasted.` }] : []),
               ...(playerBurning ? [{ key: 'burn', color: '#fb923c', title: 'Ablaze — burning each turn (a crew heal puts it out)' }] : []),
               ...(playerFrozen ? [{ key: 'freeze', color: '#7dd3fc', title: 'Frozen — your turn is skipped' }] : []),
+              ...(aimAffliction ? [{ key: 'aim', color: AIM_AFFLICTION_COLOR, tone: 'debuff' as const, turns: aimAfflictionRef.current?.passes, title: `${aimAffliction.name} — ${aimAfflictionDesc(aimAffliction.kind, aimAfflictionRef.current?.passes ?? 0)}` }] : []),
             ]} />
           </div>
         </motion.button>
@@ -6813,6 +6825,9 @@ export default function RaidCombat({
               ...statusConditions(playerStatuses),
               ...(playerBurning ? [{ key: 'burn', name: 'Ablaze', color: BURN_COLOR, turns: playerBurnRef.current.turns, desc: `Your ship is on fire — it loses ${playerBurnRef.current.dmg} HP at the end of each of your turns. Any crew heal douses the flames.` }] : []),
               ...(playerFrozen ? [{ key: 'freeze', name: 'Frozen', color: FREEZE_COLOR, desc: 'Your ship is iced over — your next turn is skipped, and you cannot weave aside from incoming shots while frozen.' }] : []),
+              // Aim-bar afflictions (Iron Etiquette's hardened lock, decoys, squall).
+              // Count is in "shots" not turns, so the desc carries it (no `turns`).
+              ...(aimAffliction ? [{ key: 'aim', name: aimAffliction.name, color: AIM_AFFLICTION_COLOR, desc: aimAfflictionDesc(aimAffliction.kind, aimAfflictionRef.current?.passes ?? 0) }] : []),
             ]}
             onClose={() => setShowStats(false)}
           />
@@ -8182,6 +8197,7 @@ function StatusGlyph({ icon, size = 10 }: { icon: string; size?: number }) {
     case 'snare':   return P('M12 7.2v12.3M8.3 10h7.4M5 13.6c.5 3.7 3.3 5.9 7 5.9s6.5-2.2 7-5.9', <circle cx="12" cy="4.8" r="2" />) // anchor
     case 'aegis':   return P('M4 6.5h16v11H4z', <path d="M4 12h16M9 6.5V12M15 12v5.5" />)                // brick wall
     case 'ward':    return P('M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z', <path d="M12 8v6M9.2 10.4h5.6" />) // shield + cross (Laz's ward)
+    case 'aim':     return P('M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4', <circle cx="12" cy="12" r="4.5" />) // crosshair (aim afflictions)
     default:        return P('M12 5v14M5 12h14')
   }
 }
