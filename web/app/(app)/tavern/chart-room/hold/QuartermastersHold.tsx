@@ -274,13 +274,17 @@ export default function QuartermastersHold({ initial }: { initial: HoldState }) 
               onClick={() => pickDifficulty(d)}
               style={{
                 padding: '0.5rem 0.55rem', borderRadius: 11, cursor: 'pointer',
-                background: isSel ? `${meta.accent}26` : 'linear-gradient(180deg, rgba(34,27,14,0.88), rgba(16,12,7,0.9))',
-                border: `1.5px solid ${isSel ? meta.accent : 'rgba(196,169,106,0.32)'}`,
-                boxShadow: isSel ? `0 2px 10px ${meta.accent}33` : '0 2px 8px rgba(0,0,0,0.35)',
+                // Selected = an OPAQUE dark panel with a strong accent tint (was a
+                // translucent wash that vanished against the page's background art).
+                background: isSel
+                  ? `linear-gradient(180deg, ${meta.accent}59 0%, rgba(20,15,8,0.96) 100%)`
+                  : 'linear-gradient(180deg, rgba(34,27,14,0.92), rgba(16,12,7,0.94))',
+                border: `${isSel ? 2 : 1.5}px solid ${isSel ? meta.accent : 'rgba(196,169,106,0.32)'}`,
+                boxShadow: isSel ? `0 2px 12px ${meta.accent}55` : '0 2px 8px rgba(0,0,0,0.35)',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
               }}
             >
-              <span className="font-cinzel font-700" style={{ fontSize: '0.84rem', color: isSel ? meta.accent : '#f0e8d2' }}>
+              <span className="font-cinzel font-700" style={{ fontSize: '0.84rem', color: isSel ? '#fff7e6' : '#f0e8d2' }}>
                 {meta.label}
               </span>
               <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: isSolved ? meta.accent : '#a89e86' }}>
@@ -289,16 +293,6 @@ export default function QuartermastersHold({ initial }: { initial: HoldState }) 
             </button>
           )
         })}
-      </div>
-
-      {/* Selected hold context */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <span className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: selMeta.accent }}>
-          {selMeta.label}
-        </span>
-        <span className="font-karla" style={{ fontSize: '0.62rem', color: '#8f8672' }}>
-          · {selMeta.givens} lots pre-stowed · {selMeta.payout} ⟡
-        </span>
       </div>
 
       {/* Board */}
@@ -394,12 +388,13 @@ export default function QuartermastersHold({ initial }: { initial: HoldState }) 
                   className="font-cinzel font-700"
                   style={{
                     position: 'relative', aspectRatio: '1 / 1', borderRadius: 8,
-                    background: done ? 'rgba(255,255,255,0.02)' : 'rgba(240,192,64,0.1)',
-                    border: `1px solid ${done ? 'rgba(255,255,255,0.06)' : 'rgba(240,192,64,0.32)'}`,
-                    color: done ? '#5a5650' : '#f4ecd8',
+                    // Opaque panels so the digits stay legible over the page's art.
+                    background: done ? 'rgba(22,16,9,0.88)' : 'linear-gradient(180deg, rgba(60,46,20,0.95), rgba(34,25,12,0.96))',
+                    border: `1px solid ${done ? 'rgba(196,169,106,0.2)' : 'rgba(240,192,64,0.6)'}`,
+                    color: done ? '#6a6152' : '#f9f0d8',
                     fontSize: '1.1rem',
                     cursor: selCell === null ? 'default' : 'pointer',
-                    opacity: selCell === null ? 0.55 : 1,
+                    opacity: selCell === null ? 0.7 : 1,
                   }}
                 >
                   {d}
@@ -418,9 +413,9 @@ export default function QuartermastersHold({ initial }: { initial: HoldState }) 
               className="font-karla font-700 uppercase"
               style={{
                 padding: '0.62rem', borderRadius: 10, letterSpacing: '0.08em', fontSize: '0.68rem', cursor: 'pointer',
-                background: notesMode ? 'rgba(31,95,201,0.22)' : 'rgba(255,255,255,0.04)',
-                border: `1px solid ${notesMode ? ENTRY : 'rgba(255,255,255,0.14)'}`,
-                color: notesMode ? '#a8c8ff' : '#c4bba6',
+                background: notesMode ? 'linear-gradient(180deg, rgba(31,95,201,0.5), rgba(18,40,80,0.92))' : 'rgba(32,24,13,0.92)',
+                border: `1px solid ${notesMode ? ENTRY : 'rgba(196,169,106,0.36)'}`,
+                color: notesMode ? '#cfe1ff' : '#d8cdb2',
               }}
             >
               Pencil {notesMode ? 'On' : 'Off'}
@@ -431,8 +426,8 @@ export default function QuartermastersHold({ initial }: { initial: HoldState }) 
               className="font-karla font-700 uppercase"
               style={{
                 padding: '0.62rem', borderRadius: 10, letterSpacing: '0.08em', fontSize: '0.68rem',
-                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.14)', color: '#c4bba6',
-                cursor: selCell === null ? 'default' : 'pointer', opacity: selCell === null ? 0.55 : 1,
+                background: 'rgba(32,24,13,0.92)', border: '1px solid rgba(196,169,106,0.36)', color: '#d8cdb2',
+                cursor: selCell === null ? 'default' : 'pointer', opacity: selCell === null ? 0.6 : 1,
               }}
             >
               Erase
@@ -446,7 +441,7 @@ export default function QuartermastersHold({ initial }: { initial: HoldState }) 
               className="font-karla font-700 uppercase"
               style={{
                 padding: '0.72rem', borderRadius: 10, letterSpacing: '0.08em', fontSize: '0.68rem',
-                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(196,169,106,0.34)', color: '#e0d2ad',
+                background: 'rgba(32,24,13,0.92)', border: '1px solid rgba(196,169,106,0.5)', color: '#eaddb8',
                 cursor: isPending ? 'default' : 'pointer',
               }}
             >
@@ -460,9 +455,9 @@ export default function QuartermastersHold({ initial }: { initial: HoldState }) 
               className="font-cinzel font-700"
               style={{
                 padding: '0.72rem', borderRadius: 10, fontSize: '0.88rem',
-                background: isFull ? 'rgba(52,211,153,0.18)' : 'rgba(255,255,255,0.03)',
-                border: `1px solid ${isFull ? '#34d399' : 'rgba(255,255,255,0.1)'}`,
-                color: isFull ? '#8ef0c0' : '#6a6660',
+                background: isFull ? 'linear-gradient(180deg, rgba(52,211,153,0.4), rgba(14,54,40,0.95))' : 'rgba(24,20,12,0.9)',
+                border: `1px solid ${isFull ? '#34d399' : 'rgba(196,169,106,0.24)'}`,
+                color: isFull ? '#c8ffe6' : '#8a8272',
                 cursor: isPending || !isFull ? 'default' : 'pointer',
               }}
             >

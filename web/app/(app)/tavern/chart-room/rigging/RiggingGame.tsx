@@ -185,15 +185,6 @@ export default function RiggingGame({ initial }: { initial: RiggingState }) {
         </span>
       </div>
 
-      {/* Points readout */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap',
-        padding: '0.45rem 0.7rem', borderRadius: 10,
-        background: 'rgba(196,169,106,0.08)', border: '1px solid rgba(196,169,106,0.22)',
-      }}>
-        <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: '#e6d8b4' }}>{puzzlePoints} charting pts</span>
-      </div>
-
       <p className="font-karla" style={{ fontSize: '0.74rem', color: '#cfc6b0', lineHeight: 1.5, textAlign: 'center' }}>
         Drag a rope from each cleat to its match. Cover every plank, no rope crossing another. Rig the whole deck for +{initial.reward} charting points.
       </p>
@@ -214,13 +205,17 @@ export default function RiggingGame({ initial }: { initial: RiggingState }) {
           boxShadow: 'inset 0 0 0 2px #20160d, inset 0 0 0 5px rgba(185,138,62,0.5), 0 8px 22px rgba(0,0,0,0.5), inset 0 0 22px rgba(0,0,0,0.5)',
         }}
       >
-        {/* Ship's-deck planking: long boards (horizontal caulk seams), faint
-            butt joints between columns, wood grain, lit from above. */}
+        {/* Ship's-deck grid: a clear cell lattice (so you can read how far each
+            rope travels) carved into a wood deck — dark grooves with a faint lit
+            edge, both directions, plus a little grain. */}
         <div aria-hidden style={{
           position: 'absolute', inset: 7, borderRadius: 7, pointerEvents: 'none',
           background: [
-            `repeating-linear-gradient(0deg, transparent 0 calc(${100 / rows}% - 1.5px), rgba(0,0,0,0.5) calc(${100 / rows}% - 1.5px) ${100 / rows}%)`,
-            `repeating-linear-gradient(90deg, transparent 0 calc(${100 / cols}% - 1px), rgba(0,0,0,0.22) calc(${100 / cols}% - 1px) ${100 / cols}%)`,
+            // vertical grooves at every column boundary + a light edge for depth
+            `repeating-linear-gradient(90deg, rgba(0,0,0,0.55) 0 1.6px, rgba(255,238,205,0.07) 1.6px 2.6px, transparent 2.6px ${100 / cols}%)`,
+            // horizontal grooves at every row boundary + light edge
+            `repeating-linear-gradient(0deg, rgba(0,0,0,0.55) 0 1.6px, rgba(255,238,205,0.07) 1.6px 2.6px, transparent 2.6px ${100 / rows}%)`,
+            // faint plank grain
             'repeating-linear-gradient(90deg, rgba(255,240,210,0.035) 0 2px, transparent 2px 11px)',
             'linear-gradient(180deg, #553a23 0%, #3c2917 60%, #2e2011 100%)',
           ].join(', '),

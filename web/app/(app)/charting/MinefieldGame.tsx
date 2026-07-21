@@ -240,11 +240,6 @@ export default function Minefield({ initial }: { initial: MinefieldState }) {
         </div>
       </div>
 
-      {/* Charting points readout */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap', padding: '0.4rem 0.7rem', borderRadius: 10, background: 'rgba(196,169,106,0.08)', border: '1px solid rgba(196,169,106,0.22)' }}>
-        <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: '#e6d8b4' }}>{puzzlePoints} charting pts</span>
-      </div>
-
       {/* Board */}
       <motion.div
         onContextMenu={e => e.preventDefault()}

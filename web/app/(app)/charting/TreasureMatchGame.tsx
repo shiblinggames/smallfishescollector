@@ -354,7 +354,8 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
           return (
             <div key={t.points} style={{
               textAlign: 'center', borderRadius: 9, padding: compact ? '0.3rem 0.1rem' : '0.38rem 0.1rem',
-              background: lit ? `linear-gradient(180deg, ${GOLD}3a, ${GOLD}1c)` : isNext ? 'rgba(60,48,22,0.85)' : 'rgba(14,11,6,0.82)',
+              // Opaque panels so the tiers stay legible over the page's background art.
+              background: lit ? `linear-gradient(180deg, ${GOLD}5e 0%, rgba(38,28,10,0.95) 100%)` : isNext ? 'rgba(58,46,20,0.95)' : 'rgba(16,12,7,0.92)',
               border: `1.5px solid ${lit ? `${GOLD}c0` : isNext ? `${GOLD}66` : 'rgba(196,169,106,0.22)'}`,
               boxShadow: lit ? `0 0 10px ${GOLD}40` : 'none',
               transition: 'background 0.25s, border-color 0.25s, box-shadow 0.25s',
@@ -412,10 +413,6 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
 
       {/* Tier ladder */}
       <TierLadder />
-
-      <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#d2c8ae', lineHeight: 1.45, textAlign: 'center', textShadow: '0 1px 3px rgba(0,0,0,0.7)' }}>
-        Bigger haul = more charting points, up to {MATCH_MAX_POINTS}/5. Line up 5 to clear a whole color. Out of moves? Retry the same board for a better run.
-      </p>
 
       {/* Board */}
       <div
