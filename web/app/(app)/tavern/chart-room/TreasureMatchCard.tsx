@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion'
 import ScenicCard from '../ScenicCard'
-import { MATCH_TOKENS, gemSurface, GEM_BEVEL } from '@/app/(app)/charting/constants'
+import { MATCH_TOKENS } from '@/app/(app)/charting/constants'
 
 const GOLD = '#f0c040'
 // Token indices laid out 3×3 — uses the SAME crew fish art + tints as the
@@ -37,15 +37,7 @@ export default function TreasureMatchCard({ status, reward }: { status: 'active'
               transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut', delay: (i % 5) * 0.35 }}
               style={{ width: 30, height: 30, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
-              <div aria-hidden style={{
-                position: 'absolute', inset: 0,
-                clipPath: tok.clip || undefined,
-                borderRadius: tok.clip ? 0 : 7,
-                background: gemSurface(tok.color),
-                filter: GEM_BEVEL,
-              }} />
-              <div aria-hidden style={{ position: 'absolute', left: tok.glint?.left ?? '21%', top: tok.glint?.top ?? '15%', width: '22%', height: '22%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 70%)' }} />
-              <img src={tok.img} alt="" draggable={false} style={{ position: 'relative', width: '66%', height: '66%', objectFit: 'contain', transform: tok.nudge ? `translateY(${tok.nudge}%)` : undefined }} />
+              <img src={tok.img} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             </motion.div>
           )
         })}

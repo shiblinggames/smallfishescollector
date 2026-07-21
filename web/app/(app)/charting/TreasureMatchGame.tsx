@@ -14,7 +14,7 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { submitMatch } from './actions'
 import { makeRng, initialBoard, resolveSwap, hasValidMove, reshuffle, areAdjacent, WILD } from './treasureMatch'
-import { MATCH_TOKENS, MATCH_TIERS, MATCH_MAX_POINTS, pointsForScore, nextMatchTier, gemSurface, GEM_BEVEL, type MatchState } from './constants'
+import { MATCH_TOKENS, MATCH_TIERS, MATCH_MAX_POINTS, pointsForScore, nextMatchTier, type MatchState } from './constants'
 import ChartingNav from '@/components/ChartingNav'
 
 const GOLD = '#f0c040'
@@ -30,32 +30,27 @@ interface Particle { id: number; x: number; y: number; dx: number; dy: number; c
 interface RunResult { score: number; best: number; tier: number; pointsWon: number; maxed: boolean }
 
 // One board cell, memoized so a cascade tick only re-renders the handful of
-// tiles whose state actually changed (was: all 49 reconciling + repainting
-// stacked drop-shadows every setState). No `transition: filter` either — those
-// re-rasterize the drop-shadows every frame; the glow snaps in instead.
+// tiles whose state actually changed. Each normal tile is now a SINGLE baked
+// gem <img> (shading/facets/bevel are in the pixels) — no runtime gradients,
+// clip-paths, or stacked drop-shadow filters, which is what used to make the
+// board lag on every cascade. Only the transient state adds a lightweight glow.
 type Tok = typeof MATCH_TOKENS[number]
 const Tile = memo(function Tile({ tok, isWild, isSel, isPop, isDrop, isCommit, isInvalid, fall }: {
   tok: Tok; isWild: boolean; isSel: boolean; isPop: boolean; isDrop: boolean; isCommit: boolean; isInvalid: boolean; fall: number
 }) {
-  const gemBg = isWild ? WILD_RAINBOW : isInvalid ? gemSurface('#d6392a') : gemSurface(tok.color)
-  const gemGlow = isWild
-    ? `${GEM_BEVEL} drop-shadow(0 0 8px ${GOLD}cc)`
-    : isCommit
-    ? `${GEM_BEVEL} drop-shadow(0 0 8px #fff) drop-shadow(0 0 15px ${tok.color}) brightness(1.16) saturate(1.15)`
-    : isSel ? `${GEM_BEVEL} drop-shadow(0 0 9px ${tok.color}) brightness(1.1)`
-    : isInvalid ? `${GEM_BEVEL} drop-shadow(0 0 7px #d6392a)`
-    : GEM_BEVEL
+  // Single glow, applied only when the tile is in a transient state (the resting
+  // state carries no filter at all, so 40+ idle tiles cost nothing to paint).
+  const glow = isCommit
+    ? `drop-shadow(0 0 7px #fff) drop-shadow(0 0 13px ${tok.color}) brightness(1.12)`
+    : isSel ? `drop-shadow(0 0 8px ${tok.color}) brightness(1.08)`
+    : isInvalid ? `drop-shadow(0 0 7px #d6392a) brightness(1.05)`
+    : undefined
   return (
     <div style={{
       pointerEvents: 'none', position: 'relative', aspectRatio: '1 / 1',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       transform: isCommit ? 'scale(1.16)' : isSel ? 'scale(1.08)' : 'scale(1)',
       zIndex: isCommit ? 2 : undefined,
-      // NB: no `will-change` here — promoting a tile to its own GPU layer the
-      // instant it drops made the gem bevel's white top rim-light render as a
-      // sharp line in the gap ("white lines before they hop"). Transform-only
-      // animations are GPU-composited regardless, so we lose ~nothing by
-      // letting the browser promote them itself.
       transition: 'transform 0.13s cubic-bezier(.34,1.56,.64,1)',
       // `--tmf` = how many cells this tile actually fell, so tmSlide starts it
       // at the right height.
@@ -65,28 +60,22 @@ const Tile = memo(function Tile({ tok, isWild, isSel, isPop, isDrop, isCommit, i
         : isWild ? 'tmWildPulse 1.8s ease-in-out infinite'
         : undefined,
     } as CSSProperties}>
-      {/* Wild = a clean glossy rainbow ORB (circle), not a star — reads clearly
-          as the "any color" color bomb. Normal tiles keep their shaped gem. */}
-      <div aria-hidden style={{
-        position: 'absolute', inset: 0,
-        clipPath: isWild ? undefined : (tok.clip || undefined),
-        borderRadius: isWild ? '50%' : (tok.clip ? 0 : '24%'),
-        background: gemBg, filter: gemGlow,
-      }} />
       {isWild ? (
-        // Glossy sphere highlight so the rainbow reads as a shiny orb.
+        // Wild = a clean glossy rainbow ORB (the "any color" color bomb), kept
+        // as CSS since it's at most one tile on the board at a time.
         <div aria-hidden style={{
-          position: 'absolute', inset: 0, borderRadius: '50%', pointerEvents: 'none',
-          background: 'radial-gradient(circle at 34% 27%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.12) 24%, transparent 48%), radial-gradient(circle at 50% 50%, transparent 56%, rgba(0,0,0,0.28) 100%)',
-        }} />
-      ) : (
-        <>
-          <div aria-hidden style={{
-            position: 'absolute', left: tok.glint?.left ?? '21%', top: tok.glint?.top ?? '16%', width: '20%', height: '20%', borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 70%)', pointerEvents: 'none',
+          position: 'absolute', inset: '4%', borderRadius: '50%',
+          background: WILD_RAINBOW, filter: `drop-shadow(0 0 8px ${GOLD}cc)`,
+        }}>
+          <div style={{
+            position: 'absolute', inset: 0, borderRadius: '50%',
+            background: 'radial-gradient(circle at 34% 27%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.12) 24%, transparent 48%), radial-gradient(circle at 50% 50%, transparent 56%, rgba(0,0,0,0.28) 100%)',
           }} />
-          <img src={tok.img} alt="" draggable={false} style={{ position: 'relative', width: '70%', height: '70%', objectFit: 'contain', pointerEvents: 'none', transform: tok.nudge ? `translateY(${tok.nudge}%)` : undefined, filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.62))' }} />
-        </>
+        </div>
+      ) : (
+        <img src={tok.img} alt="" draggable={false} style={{
+          width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none', filter: glow,
+        }} />
       )}
     </div>
   )
@@ -180,7 +169,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
       const ctr = cellCenter(i)
       if (!ctr) continue
       const color = (MATCH_TOKENS[boardRef.current[i]] ?? MATCH_TOKENS[0]).color
-      const n = 5
+      const n = 3
       for (let k = 0; k < n; k++) {
         const ang = (k / n) * Math.PI * 2 + Math.random() * 0.9
         const dist = 36 + Math.random() * 52
