@@ -21,40 +21,21 @@ export default function ChartRoomHubCard() {
       {/* Warm lamp halo */}
       <motion.div
         aria-hidden
-        animate={{ opacity: [0.3, 0.5, 0.34, 0.48, 0.3] }}
+        animate={{ opacity: [0.34, 0.52, 0.36, 0.5, 0.34] }}
         transition={{ duration: 5.4, repeat: Infinity, ease: 'easeInOut' }}
         style={{
-          position: 'absolute', top: 0, left: '50%', translateX: '-50%',
-          width: 260, height: 150,
-          background: 'radial-gradient(ellipse at center, rgba(240,190,90,0.26) 0%, transparent 70%)',
+          position: 'absolute', top: 4, left: '50%', translateX: '-50%',
+          width: 240, height: 140,
+          background: 'radial-gradient(ellipse at center, rgba(240,190,90,0.24) 0%, transparent 70%)',
           pointerEvents: 'none',
         }}
       />
-      {/* Ruled chart grid */}
-      <div
-        aria-hidden
-        style={{
-          position: 'absolute', inset: 0,
-          backgroundImage: `linear-gradient(${GOLD}1f 1px, transparent 1px), linear-gradient(90deg, ${GOLD}1f 1px, transparent 1px)`,
-          backgroundSize: '26px 26px',
-          maskImage: 'radial-gradient(ellipse 80% 80% at 50% 35%, black 30%, transparent 75%)',
-          WebkitMaskImage: 'radial-gradient(ellipse 80% 80% at 50% 35%, black 30%, transparent 75%)',
-          pointerEvents: 'none',
-        }}
-      />
-      {/* Drifting compass rose */}
-      <motion.span
-        aria-hidden
-        animate={{ rotate: [0, 360] }}
-        transition={{ duration: 90, repeat: Infinity, ease: 'linear' }}
-        style={{
-          position: 'absolute', top: 30, left: '50%', translateX: '-50%',
-          fontSize: '3.6rem', lineHeight: 1, opacity: 0.5,
-          filter: 'drop-shadow(0 3px 8px rgba(0,0,0,0.5))',
-        }}
-      >
-        🧭
-      </motion.span>
+      {/* The chart + sextant art, drifting gently. */}
+      <motion.div aria-hidden animate={{ y: [0, -4, 0, 3, 0] }} transition={{ duration: 6.4, repeat: Infinity, ease: 'easeInOut' }}
+        style={{ position: 'absolute', top: 8, left: '50%', x: '-50%', pointerEvents: 'none' }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/chartingicon.webp" alt="" draggable={false} style={{ height: 128, width: 'auto', display: 'block', objectFit: 'contain', filter: 'drop-shadow(0 5px 12px rgba(0,0,0,0.5))' }} />
+      </motion.div>
     </ScenicCard>
   )
 }

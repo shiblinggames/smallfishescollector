@@ -34,61 +34,14 @@ export default function ContestsHubCard({ hasNew = false }: { hasNew?: boolean }
           New
         </motion.span>
       )}
-      {/* Trophy glow */}
-      <div
-        aria-hidden
-        style={{
-          position: 'absolute',
-          top: 14,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: 150,
-          height: 110,
-          background: 'radial-gradient(ellipse at center, rgba(240,192,64,0.26) 0%, transparent 65%)',
-          pointerEvents: 'none',
-        }}
-      />
-      {/* The trophy, bobbing gently. */}
-      <motion.span
-        aria-hidden
-        animate={{ y: [0, -5, 0, 3, 0] }}
-        transition={{ duration: 5.6, repeat: Infinity, ease: 'easeInOut' }}
-        style={{
-          position: 'absolute',
-          left: '50%', top: 24,
-          x: '-50%',
-          fontSize: '3rem',
-          lineHeight: 1,
-          textShadow: '0 2px 12px rgba(0,0,0,0.7), 0 0 22px rgba(240,192,64,0.5)',
-          pointerEvents: 'none',
-        }}
-      >
-        🏆
-      </motion.span>
-      {/* Two small medals flanking, slower bob. */}
-      {[
-        { left: '26%', top: 58, emoji: '🥈', delay: 0.7, dur: 6.2 },
-        { left: '74%', top: 58, emoji: '🥉', delay: 1.5, dur: 6.6 },
-      ].map((m, i) => (
-        <motion.span
-          key={i}
-          aria-hidden
-          animate={{ y: [0, -4, 0, 2, 0] }}
-          transition={{ duration: m.dur, repeat: Infinity, ease: 'easeInOut', delay: m.delay }}
-          style={{
-            position: 'absolute',
-            left: m.left, top: m.top,
-            x: '-50%',
-            fontSize: '1.5rem',
-            lineHeight: 1,
-            opacity: 0.9,
-            textShadow: '0 2px 8px rgba(0,0,0,0.6)',
-            pointerEvents: 'none',
-          }}
-        >
-          {m.emoji}
-        </motion.span>
-      ))}
+      {/* Warm halo behind the art */}
+      <div aria-hidden style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', width: 170, height: 120, background: 'radial-gradient(ellipse at center, rgba(240,192,64,0.24) 0%, transparent 68%)', pointerEvents: 'none' }} />
+      {/* Trophy art, bobbing gently. */}
+      <motion.div aria-hidden animate={{ y: [0, -4, 0, 3, 0] }} transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+        style={{ position: 'absolute', top: 6, left: '50%', x: '-50%', pointerEvents: 'none' }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/contestsicon.webp" alt="" draggable={false} style={{ height: 130, width: 'auto', display: 'block', objectFit: 'contain', filter: 'drop-shadow(0 5px 12px rgba(0,0,0,0.55))' }} />
+      </motion.div>
     </ScenicCard>
   )
 }
