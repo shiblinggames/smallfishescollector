@@ -148,6 +148,7 @@ export function rollContractOffer(depth: number, rng: () => number = Math.random
 // grant, boon draft, curse and status paths already in the gauntlet).
 export type ContractReward =
   | { kind: 'plunder'; n: number }   // doubloons straight into the run pot
+  | { kind: 'hullBoost'; pct: number }  // +pct max hull for the rest of the run (compounds)
   | { kind: 'boonDraft' }
   | { kind: 'fullHeal' }
 
@@ -186,7 +187,10 @@ export function buildContractOffer(kind: ContractKind, stake: ContractStake, dep
   // clean job sometimes patches you up.
   const reward: ContractReward =
     stake === 3 && rng() < 0.5 ? { kind: 'boonDraft' }
-    : rng() < 0.18 ? { kind: 'fullHeal' }
+    // A run-wide hull boost — the compounding, always-worth-it reward. Scales a
+    // little with stake; keeps the greed loop leaning toward taking the job.
+    : rng() < 0.3 ? { kind: 'hullBoost', pct: 0.1 + 0.05 * stake }
+    : rng() < 0.22 ? { kind: 'fullHeal' }
     : { kind: 'plunder', n: plunderReward(stake, depth) }
   // Penalty — docked pay, a wound, or (at the big score) a curse for the run.
   const penalty: ContractPenalty =
@@ -209,6 +213,7 @@ export const STAKE_LABEL: Record<ContractStake, string> = {
 export function describeReward(r: ContractReward): string {
   switch (r.kind) {
     case 'plunder':   return `+${r.n.toLocaleString()} ⟡ plunder`
+    case 'hullBoost': return `+${Math.round(r.pct * 100)}% max hull, rest of run`
     case 'boonDraft': return 'A free power draft'
     case 'fullHeal':  return 'Patched to full hull'
   }

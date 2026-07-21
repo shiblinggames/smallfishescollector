@@ -500,6 +500,10 @@ export default function GauntletGame(props: GauntletGameProps) {
   const contractFactsRef = useRef<ContractFightFacts | null>(null)
   // The resolved job (win/loss) held for the result beat.
   const [contractResult, setContractResult] = useState<{ offer: ContractOffer; cleared: boolean } | null>(null)
+  // Run-wide max-hull multiplier a cleared hull-boost contract stacks onto. Folds
+  // into hpMax below; the hpMax heal-on-increase effect tops the player up by the
+  // gained ceiling for free. Reset to 1 at run start.
+  const [contractHullMult, setContractHullMult] = useState(1)
   function takeContract(offer: ContractOffer) {
     activeContractRef.current = offer
     setContractChip(offer)
@@ -573,7 +577,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   const curDepthForHp = fight?.depth ?? (rollStateRef.current.cleared + skipOffset + 1)
   // Deep Draft (a signed Term) lowers the CEILING, so every heal tops you up to
   // the smaller number. Applied before the boon scaling.
-  const hpMax = Math.round(baseHpMax * termFx.maxHpPct * hpBoonMult(runEffects, curDepthForHp, rollStateRef.current.cleared))
+  const hpMax = Math.round(baseHpMax * termFx.maxHpPct * hpBoonMult(runEffects, curDepthForHp, rollStateRef.current.cleared) * contractHullMult)
   const prevHpMaxRef = useRef(hpMax)
   useEffect(() => {
     const delta = hpMax - prevHpMaxRef.current
@@ -741,6 +745,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       // dive's first fight or flash a stale chip.
       activeContractRef.current = null; contractFactsRef.current = null
       setContractChip(null); setContractOffer(null); setContractResult(null)
+      setContractHullMult(1)
       // No Mercy (a signed Term): the Anchor does not hold. The first blow that
       // would sink you, sinks you.
       anchorSavesLeftRef.current = fx.noLethalSaves ? 0 : getActiveEffects(props.equippedItems)
@@ -1180,6 +1185,9 @@ export default function GauntletGame(props: GauntletGameProps) {
       } else if (r.kind === 'fullHeal') {
         playerHPRef.current = hpMax
         setPlayerHP(hpMax)
+      } else if (r.kind === 'hullBoost') {
+        // Raise the run-wide ceiling; the hpMax effect heals by the increase.
+        setContractHullMult(m => m * (1 + r.pct))
       }
     } else {
       const p = offer.penalty
