@@ -429,10 +429,53 @@ function donBossReviveCount(depth: number): number {
   return depth < 15 ? 0 : depth < 30 ? 1 : 2
 }
 
-// ── The Don apex — the rare, once-per-run set-piece (Don's Gauntlet only) ──────
-const APEX_MIN_DEPTH = 30    // no apex before here
-const APEX_CHANCE    = 0.06  // per eligible fight (fires at most once per run)
-const APEX_HP_MULT   = 3.6   // heavier than a normal boss (2.8)
+// ── Don Finleone's rises — the placed milestone set-pieces (Don's Gauntlet) ────
+// Don Finleone the BOSS (distinct from Don's Ghost, the donsgauntlet.png host who
+// presides over the whole run) no longer rolls randomly. He rises at fixed
+// milestone depths: a first meeting, escalating returns, and the throne at the
+// bottom. Each is built on the depth curve so they climb in menace. These depths
+// are the descent's landmarks — the rest of the dark is quieter for them.
+export const DON_RISE_DEPTHS = [20, 42, 60, 85]
+const APEX_HP_MULT = 3.6   // heavier than a normal boss (2.8)
+
+/** Which rise this depth is (0-based), or -1 if it isn't a Don rise. */
+export function donRiseIndex(depth: number): number {
+  return DON_RISE_DEPTHS.indexOf(depth)
+}
+
+/** Telegraph copy for a Don rise — his voice climbs from wary host to the throne.
+ *  Mob-boss menace, sea-cold, no em-dashes. Falls back to the throne line past
+ *  the last listed rise (defensive; rises only fire on DON_RISE_DEPTHS). */
+export function donRiseCopy(depth: number): { eyebrow: string; title: string; sublabel: string; line: string } {
+  const i = donRiseIndex(depth)
+  const throne = {
+    eyebrow: 'The Court Falls Silent',
+    title: 'Don Finleone, The Throne',
+    sublabel: `Depth ${depth} · The Throne`,
+    line: 'This is the bottom, captain. My table, my terms, my Family all around you. You came all this way to be counted with them. Sit.',
+  }
+  switch (i) {
+    case 0: return {
+      eyebrow: 'The Green Goes Still',
+      title: 'Don Finleone Rises',
+      sublabel: `Depth ${depth} · The Don`,
+      line: 'So you are the one rattling around my green. Bold, coming down to my table without an invitation. Let me get a look at you.',
+    }
+    case 1: return {
+      eyebrow: 'He Comes Back Up',
+      title: 'Don Finleone Rises',
+      sublabel: `Depth ${depth} · The Don Returns`,
+      line: 'You put the Don down once. Down here, captain, nobody stays down. And I have a long memory for a face.',
+    }
+    case 2: return {
+      eyebrow: 'The Green Closes Its Fist',
+      title: 'Don Finleone Rises',
+      sublabel: `Depth ${depth} · The Reckoning`,
+      line: 'Still coming? The green runs out of patience long before I do. This deep, the water works for the Family.',
+    }
+    default: return throne
+  }
+}
 
 // Cap a check's self-damage consequence — the near-lethal ones assume a PLANNED
 // raid crew; a fixed gauntlet party needs them survivable.
@@ -654,8 +697,8 @@ export interface GauntletFight {
   enemy: BroadsideEnemy
   isBoss: boolean
   isElite: boolean
-  /** The Don apex — a rare once-per-run set-piece (Don's Gauntlet). Counts as a
-   *  boss; the flag lets the host telegraph it + the roll-state mark it fired. */
+  /** A Don Finleone rise — a placed milestone set-piece (Don's Gauntlet, at
+   *  DON_RISE_DEPTHS). Counts as a boss; the flag drives his rise telegraph. */
   isApex?: boolean
   affix?: AffixDef
   /** What this round adds to the pot when cleared. */
@@ -669,7 +712,8 @@ export interface GauntletRollState {
   cleared: number
   prevWasBoss: boolean
   roundsSinceBoss: number
-  /** Don's Gauntlet: has the Don apex already fired this run? (once per run) */
+  /** Vestigial — Don's rises are now placed at fixed depths (DON_RISE_DEPTHS),
+   *  not a once-per-run roll. Kept so persisted/resumed run states still parse. */
   apexDone?: boolean
 }
 
@@ -703,10 +747,11 @@ export function generateFight(state: GauntletRollState, skipOffset = 0, terms: T
   // to the pot (the HUD pot must never show money the cash-out won't pay).
   const paying = rewardDepth <= GAUNTLET_REWARD_DEPTH_CAP
 
-  // The Don apex — a rare, once-per-run set-piece past a deep floor (Don's
-  // Gauntlet only). Not in the random boss pool; counts as a boss (ability
-  // refresh + boss pot). Takes priority over the normal boss roll when it fires.
-  if (variant === 'don' && !state.apexDone && depth >= APEX_MIN_DEPTH && !state.prevWasBoss && Math.random() < APEX_CHANCE) {
+  // Don Finleone's rises — placed at fixed milestone depths (Don's Gauntlet only),
+  // NOT a random roll. Guaranteed at those depths (no prevWasBoss gate: a landmark
+  // must land), and it takes priority over every other spawn. Not in the random
+  // boss pool; counts as a boss (ability refresh + boss pot).
+  if (variant === 'don' && DON_RISE_DEPTHS.includes(depth)) {
     return { enemy: buildDonApex(depth), isBoss: true, isApex: true, isElite: false, potContribution: paying ? roundContribution(rewardDepth, true, variant) : 0, depth }
   }
 

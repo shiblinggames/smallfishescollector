@@ -27,7 +27,7 @@ import {
   convergenceEffects, activeConvergences, drawConvergenceOffer, convergenceDescAt, CONVERGENCES,
   REPRIEVE_MIN_DEPTH, REPRIEVE_CHANCE, drawReprieve, type Reprieve,
   // Davy's Terms — the chosen, structural difficulty layer (hardcore only).
-  DROWNED_FILTER, GHOST_FILTER, bandForDepth, gauntletTaunt,
+  DROWNED_FILTER, GHOST_FILTER, bandForDepth, gauntletTaunt, donRiseCopy,
   GAUNTLET_COOLDOWN_HOURS, HARDCORE_RUNS_PER_DAY, HC_UNLOCK_DEPTH, GAUNTLET_REWARD_DEPTH_CAP,
   emptyRunStats, addRunStats, coerceRunStats,
   type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot, type GauntletRunState, type GauntletRunStats, chestOdds, type GauntletVariant } from '@/lib/gauntlet'
@@ -3894,9 +3894,12 @@ export default function GauntletGame(props: GauntletGameProps) {
     // First depth OF a band = a real arrival — the name gets the loud cut.
     const bandEntry = band.minDepth === d && d > 1
 
-    // The Don apex (Don's Gauntlet only, rare + deep): his rise gets its OWN
-    // telegraph so you feel him coming, not just meet a big boss mid-descent.
+    // Don Finleone's rise (Don's Gauntlet, placed at milestone depths): his OWN
+    // telegraph so you feel him coming, not just meet a big boss mid-descent. Copy
+    // climbs by rise (first meeting → returns → the throne). Shows his FACE, not
+    // the ghost-host key art, so the boss reads as distinct from the presiding Ghost.
     if (fight?.isApex) {
+      const rise = donRiseCopy(d)
       return (
         <>
           <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
@@ -3906,19 +3909,19 @@ export default function GauntletGame(props: GauntletGameProps) {
               <motion.div aria-hidden animate={{ scale: [1, 1.12, 1], opacity: [0.5, 0.85, 0.5] }} transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
                 style={{ position: 'absolute', inset: -30, borderRadius: '50%', background: `radial-gradient(circle, ${KRAKEN}44 0%, ${KRAKEN_DEEP}22 45%, transparent 72%)` }} />
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <motion.img src={heroImg} alt="" loading="eager" decoding="async"
+              <motion.img src="/raid8_donfinleone.png" alt="" loading="eager" decoding="async"
                 animate={{ y: [0, -6, 0] }} transition={{ duration: 3.4, repeat: Infinity, ease: 'easeInOut' }}
-                style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', filter: `drop-shadow(0 12px 34px rgba(0,0,0,0.85)) drop-shadow(0 0 26px ${KRAKEN}66)` }} />
+                style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%', filter: `drop-shadow(0 12px 34px rgba(0,0,0,0.85)) drop-shadow(0 0 26px ${KRAKEN}66)` }} />
             </motion.div>
             <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
-              className="font-karla font-800 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.36em', color: KRAKEN, marginTop: 16, textShadow: `0 0 18px ${KRAKEN}88` }}>The Court Falls Silent</motion.p>
+              className="font-karla font-800 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.36em', color: KRAKEN, marginTop: 16, textShadow: `0 0 18px ${KRAKEN}88` }}>{rise.eyebrow}</motion.p>
             <motion.p initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.36, type: 'spring', stiffness: 210, damping: 17 }}
-              className="font-cinzel font-800" style={{ fontSize: '2.3rem', color: '#eafff2', lineHeight: 1.04, marginTop: 8, textShadow: `0 2px 12px rgba(0,0,0,0.7), 0 0 30px ${KRAKEN}55` }}>Don Finleone Rises</motion.p>
+              className="font-cinzel font-800" style={{ fontSize: '2.3rem', color: '#eafff2', lineHeight: 1.04, marginTop: 8, textShadow: `0 2px 12px rgba(0,0,0,0.7), 0 0 30px ${KRAKEN}55` }}>{rise.title}</motion.p>
             <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
-              className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: KRAKEN, marginTop: 6, letterSpacing: '0.06em' }}>Depth {d} · The Apex</motion.p>
+              className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: KRAKEN, marginTop: 6, letterSpacing: '0.06em' }}>{rise.sublabel}</motion.p>
             <motion.p initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.72, duration: 0.5 }}
               className="font-karla" style={{ maxWidth: 330, fontSize: '0.8rem', fontStyle: 'italic', color: 'rgba(63,191,130,0.9)', lineHeight: 1.5, marginTop: 16 }}>
-              &ldquo;You sank my whole Family to reach me, captain. Come and be counted with them.&rdquo;
+              &ldquo;{rise.line}&rdquo;
               <span className="font-karla font-700 uppercase tracking-[0.16em]" style={{ display: 'block', fontSize: '0.5rem', color: 'rgba(63,191,130,0.6)', marginTop: 6 }}>Don Finleone</span>
             </motion.p>
           </div>
