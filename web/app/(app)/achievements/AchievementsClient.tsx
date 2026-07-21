@@ -94,6 +94,19 @@ export default function AchievementsClient({ groups }: Props) {
   // they earned without hunting down the category list. Richest reward first.
   const claimableSorted = [...claimable].sort((a, b) => (b.reward ?? 0) - (a.reward ?? 0))
 
+  // The 10 scarcest colors any captain flies — sorted by global rarity (only
+  // badges at least one player holds; ties broken toward the harder tier).
+  const rarest = useMemo(
+    () => allGoals
+      .filter(g => g.rarityPct != null)
+      .sort((a, b) => (a.rarityPct! - b.rarityPct!)
+        || (TIER_ORDER.indexOf((b.difficulty ?? 'rookie') as BadgeDifficulty) - TIER_ORDER.indexOf((a.difficulty ?? 'rookie') as BadgeDifficulty)))
+      .slice(0, 10),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [allGoals],
+  )
+  const rarityColor = (r?: number) => (r == null ? '#8a8480' : r < 1 ? '#c9a7ff' : r < 5 ? GOLD : '#6fb2d8')
+
   // Claim-status filter — only meaningful for reward-bearing badges. "Unclaimed"
   // is every badge whose reward is still owed (earned-but-unclaimed AND still in
   // progress); "claimed" is the banked shelf. Non-badge journey goals fall out
@@ -245,6 +258,34 @@ export default function AchievementsClient({ groups }: Props) {
               <GoalRow key={`ready-${g.id}`} g={g} groupAccent={GOLD} claimed={false} busy={busy === g.id}
                 onClaim={from => claimOne(g.id, from)} onOpen={() => setDetailGoal(g)} />
             ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── Rarest in the Fleet: the scarcest badges across all captains, by
+            global unlock %. Filter-independent; tap one to open its detail
+            card. ─────────────────────────────────────────────────────────── */}
+      {rarest.length > 0 && (
+        <section style={{ marginBottom: 20 }}>
+          <SectionHeader accent="#c9a7ff" title="Rarest in the Fleet" flavor="The scarcest colors any captain flies." />
+          <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 6, WebkitOverflowScrolling: 'touch' }}>
+            {rarest.map(g => {
+              const rc = rarityColor(g.rarityPct)
+              const pctLabel = g.rarityPct == null ? '—' : `${g.rarityPct < 0.1 ? '<0.1' : g.rarityPct.toFixed(1)}%`
+              return (
+                <button key={`rare-${g.id}`} type="button" onClick={() => setDetailGoal(g)} className="tap"
+                  style={{ flexShrink: 0, width: 104, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '0.7rem 0.5rem 0.6rem', borderRadius: 14, cursor: 'pointer', background: `${rc}12`, border: `1px solid ${rc}44` }}>
+                  <div style={{ width: 56, height: 56, display: 'grid', placeItems: 'center' }}>
+                    {g.badgeImage
+                      ? <img src={g.badgeImage} alt="" style={{ width: 54, height: 54, objectFit: 'contain', filter: g.done ? 'drop-shadow(0 2px 5px rgba(0,0,0,0.5))' : 'grayscale(1)', opacity: g.done ? 1 : 0.4 }}
+                          onError={e => { const el = e.target as HTMLImageElement; el.style.display = 'none'; const p = el.parentElement; if (p) p.innerHTML = `<span style="display:block;width:44px;height:44px;border-radius:50%;border:3px solid ${rc}"></span>` }} />
+                      : <span style={{ display: 'block', width: 44, height: 44, borderRadius: '50%', border: `3px solid ${rc}` }} />}
+                  </div>
+                  <span className="font-cinzel font-700" style={{ fontSize: '0.64rem', color: '#f0ede8', lineHeight: 1.15, textAlign: 'center', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', minHeight: '1.5rem' }}>{g.label}</span>
+                  <span className="font-karla font-800" style={{ fontSize: '0.6rem', color: rc, background: `${rc}1c`, border: `1px solid ${rc}55`, borderRadius: 999, padding: '0.14rem 0.5rem', fontVariantNumeric: 'tabular-nums' }}>{pctLabel}</span>
+                </button>
+              )
+            })}
           </div>
         </section>
       )}
