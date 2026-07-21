@@ -288,7 +288,7 @@ export default function AchievementsClient({ groups }: Props) {
                           onError={e => { const el = e.target as HTMLImageElement; el.style.display = 'none'; const p = el.parentElement; if (p) p.innerHTML = `<span style="display:block;width:44px;height:44px;border-radius:50%;border:3px solid ${rc}"></span>` }} />
                       : <span style={{ display: 'block', width: 44, height: 44, borderRadius: '50%', border: `3px solid ${rc}` }} />}
                   </div>
-                  <span className="font-cinzel font-700" style={{ fontSize: '0.64rem', color: '#f0ede8', lineHeight: 1.15, textAlign: 'center', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', minHeight: '1.5rem' }}>{g.label}</span>
+                  <span className="font-cinzel font-700" style={{ fontSize: '0.64rem', color: '#f0ede8', lineHeight: 1.15, textAlign: 'center', width: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.label}</span>
                   <span className="font-karla font-800" style={{ fontSize: '0.6rem', color: rc, background: `${rc}1c`, border: `1px solid ${rc}55`, borderRadius: 999, padding: '0.14rem 0.5rem', fontVariantNumeric: 'tabular-nums' }}>{pctLabel}</span>
                 </button>
               )
