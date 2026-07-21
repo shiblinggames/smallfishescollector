@@ -22,7 +22,7 @@ import { DEFAULT_AVATAR_BG_COLOR, DEFAULT_AVATAR_BORDER_COLOR } from '@/lib/avat
 import { getProfileBackground } from '@/lib/profileBackgrounds'
 import AncientBgEffect from '@/components/AncientBgEffect'
 import { StatTile, CoinAmount } from '@/components/ProfileStats'
-import { RarestCatchesTrophy, FeaturedCrew, RaidArsenal } from '@/components/ProfileShowcase'
+import { RarestCatchesTrophy, FeaturedCrew, RaidArsenal, GoldenMounts, type GoldenMount } from '@/components/ProfileShowcase'
 import type { CareerStats } from '@/lib/careerStats'
 
 export interface VoyageEntry {
@@ -59,6 +59,7 @@ interface Props {
   stats: Stats
   gear: Gear
   rarestFish: { id: number; name: string; bite_rarity: number; habitat?: string }[]
+  goldenMounts: GoldenMount[]
   equippedBoat?: string | null
   equippedHat?: string | null
   equippedPet?: string | null
@@ -116,7 +117,7 @@ function LevelChip({ color, label, value }: { color: string; label: string; valu
   )
 }
 
-export default function ProfileClient({ username, showcaseCrew, voyages, stats, gear, rarestFish, raidItemIds = [], equippedShipSkin, isPremium, isOwnProfile, isInCrew: initialIsInCrew, characterColor = 'default', equippedSpecialId, equippedBadges = [], equippedBoat = null, equippedHat = null, equippedPet = null, avatarBg = null, avatarBorder = null, profileBg = null, career }: Props) {
+export default function ProfileClient({ username, showcaseCrew, voyages, stats, gear, rarestFish, goldenMounts, raidItemIds = [], equippedShipSkin, isPremium, isOwnProfile, isInCrew: initialIsInCrew, characterColor = 'default', equippedSpecialId, equippedBadges = [], equippedBoat = null, equippedHat = null, equippedPet = null, avatarBg = null, avatarBorder = null, profileBg = null, career }: Props) {
   const [inCrew, setInCrew] = useState(initialIsInCrew ?? false)
   const [crewPending, startCrewTransition] = useTransition()
   const [expandedVoyage, setExpandedVoyage] = useState<number | null>(null)
@@ -469,6 +470,14 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
             <div>
               <SectionLabel>Rarest Catches</SectionLabel>
               <RarestCatchesTrophy fish={rarestFish} />
+            </div>
+          )}
+
+          {/* Golden Mounts — the gilded trophy wall */}
+          {goldenMounts.length > 0 && (
+            <div>
+              <SectionLabel color="#fbcc4a" flavor="One-in-a-thousand perfect catches, mounted for good.">Golden Catch</SectionLabel>
+              <GoldenMounts fish={goldenMounts} />
             </div>
           )}
 

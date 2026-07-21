@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { CrewPortrait } from '@/components/CrewShowcase'
-import { RarestCatchesTrophy, FeaturedCrew, RaidArsenal } from '@/components/ProfileShowcase'
+import { RarestCatchesTrophy, FeaturedCrew, RaidArsenal, GoldenMounts, type GoldenMount } from '@/components/ProfileShowcase'
 import type { CrewMember } from '@/app/(app)/crew/actions'
 import type { BorderStyle, ArtEffect } from '@/lib/types'
 import { updateUsername, updateShowcaseCrew, updateCharacterColor, updateAvatarColors, purchaseCharacterColor, purchaseAvatarSpecial, updateProfileBg } from '@/app/(app)/u/actions'
@@ -51,6 +51,7 @@ interface Props {
   hookTier: number
   equippedSpecialId: string | null
   rarestFish: { id: number; name: string; bite_rarity: number; habitat?: string }[]
+  goldenMounts: GoldenMount[]
   raidItemIds: string[]
   ancientTrophies: { id: number; name: string }[]
   equippedBoat: string | null
@@ -376,6 +377,7 @@ export default function ProfileClient({
   hookTier,
   equippedSpecialId,
   rarestFish,
+  goldenMounts,
   raidItemIds,
   ancientTrophies,
   equippedBoat,
@@ -1089,6 +1091,14 @@ export default function ProfileClient({
             <div>
               <SectionLabel>Rarest Catches</SectionLabel>
               <RarestCatchesTrophy fish={rarestFish} />
+            </div>
+          )}
+
+          {/* Golden Mounts — the gilded trophy wall */}
+          {goldenMounts.length > 0 && (
+            <div>
+              <SectionLabel color="#fbcc4a" flavor="One-in-a-thousand perfect catches, mounted for good.">Golden Catch</SectionLabel>
+              <GoldenMounts fish={goldenMounts} />
             </div>
           )}
 

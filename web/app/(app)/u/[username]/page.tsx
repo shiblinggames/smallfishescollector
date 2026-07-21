@@ -43,6 +43,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     crewRowData,
     voyagesData,
     { data: careerAgg },
+    { data: goldenRows },
   ] = await Promise.all([
     // Featured crew first; if the player hasn't picked anyone, fall
     // back to whoever's currently on the ship so the section is
@@ -91,7 +92,18 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
       .limit(10),
 
     admin.rpc('career_stats', { uid: profile.id }),
+
+    // Mounted golden catches — the gilded trophy wall (biggest first).
+    admin.from('shiny_catches')
+      .select('id, size_in, fish_species(id, name, bite_rarity, habitat)')
+      .eq('user_id', profile.id)
+      .eq('status', 'mounted')
+      .order('size_in', { ascending: false, nullsFirst: false }),
   ])
+
+  const goldenMounts = ((goldenRows ?? []) as any[])
+    .map(r => (r.fish_species ? { id: r.fish_species.id, name: r.fish_species.name, bite_rarity: r.fish_species.bite_rarity, habitat: r.fish_species.habitat, size_in: r.size_in } : null))
+    .filter(Boolean) as { id: number; name: string; bite_rarity: number; habitat?: string; size_in?: number | null }[]
 
   // Build the crew showcase. Player's explicit pick preserves their
   // saved order; the fallback (assigned crew) is already ordered by
@@ -155,6 +167,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
             shipName: profile.ship_name ?? null,
           }}
           rarestFish={rarestFish}
+          goldenMounts={goldenMounts}
           ownedSpecialIds={[
             ...(profile.has_tide_turner ? ['tide_turner'] : []),
             ...(profile.has_phantom_hook ? ['phantom_hook'] : []),

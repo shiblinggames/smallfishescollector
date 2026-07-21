@@ -23,6 +23,7 @@ export default async function ProfilePage() {
     { data: rarestFishRows },
     { data: allFishSpecies },
     { data: careerAgg },
+    { data: goldenRows },
   ] = await Promise.all([
     getCurrentProfile(),
     getCrewRoster(),
@@ -37,11 +38,21 @@ export default async function ProfilePage() {
     // Career aggregates (fish sold, voyage loot, raids, fastest raid) in one
     // SQL round-trip via the career_stats() function.
     admin.rpc('career_stats', { uid: user.id }),
+    // Mounted golden catches — the gilded trophy wall (biggest first).
+    admin.from('shiny_catches')
+      .select('id, size_in, fish_species(id, name, bite_rarity, habitat)')
+      .eq('user_id', user.id)
+      .eq('status', 'mounted')
+      .order('size_in', { ascending: false, nullsFirst: false }),
   ])
 
   const rarestFish = ((rarestFishRows ?? []) as any[])
     .map(r => r.fish_species)
     .filter(Boolean) as { id: number; name: string; bite_rarity: number; habitat?: string }[]
+
+  const goldenMounts = ((goldenRows ?? []) as any[])
+    .map(r => (r.fish_species ? { id: r.fish_species.id, name: r.fish_species.name, bite_rarity: r.fish_species.bite_rarity, habitat: r.fish_species.habitat, size_in: r.size_in } : null))
+    .filter(Boolean) as { id: number; name: string; bite_rarity: number; habitat?: string; size_in?: number | null }[]
 
   const ancientIds = ((profile?.ancient_catches as number[] | null) ?? [])
   const ancientIdSet = new Set(ancientIds)
@@ -97,6 +108,7 @@ export default async function ProfilePage() {
           hookTier={profile?.hook_tier ?? 0}
           equippedSpecialId={(profile?.equipped_special as string | null) ?? null}
           rarestFish={rarestFish}
+          goldenMounts={goldenMounts}
           raidItemIds={(profile?.raid_items as string[] | null) ?? []}
           ancientTrophies={ancientTrophies}
           characterColor={profile?.character_color ?? 'default'}

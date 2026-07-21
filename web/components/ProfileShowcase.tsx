@@ -11,6 +11,7 @@
 
 import { CrewPortrait, type ShowcaseCrew } from '@/components/CrewShowcase'
 import { getRaidItem, isAbyssalForgedItem, type RaidItemDef } from '@/lib/raidItems'
+import { SHINY_THEME, SHINY_FISH_FILTER } from '@/lib/shiny'
 
 // Bite-rarity → color / label (kept in sync with the profile pages).
 const RARITY_COLOR: Record<number, string> = {
@@ -99,6 +100,71 @@ export function RarestCatchesTrophy({ fish }: { fish: RarestFish[] }) {
           })}
         </div>
       )}
+    </div>
+  )
+}
+
+// ── Golden mounts — the gilded trophy wall ──────────────────────────────────
+export interface GoldenMount {
+  id: number
+  name: string
+  bite_rarity: number
+  habitat?: string
+  size_in?: number | null
+}
+
+const GOLD = SHINY_THEME.primary        // #fbcc4a
+const GOLD_DEEP = SHINY_THEME.secondary // #f0a020
+
+/** A player's MOUNTED golden catches, shown off as a gilded trophy wall. Capped
+ *  to the biggest `cap`, with a "+N" tile for the rest. Renders nothing when
+ *  the player has mounted no goldens. Same gold chrome as the catch moment. */
+export function GoldenMounts({ fish, cap = 9 }: { fish: GoldenMount[]; cap?: number }) {
+  if (!fish || fish.length === 0) return null
+  const shown = fish.slice(0, cap)
+  const more = fish.length - shown.length
+  return (
+    <div style={{
+      position: 'relative', borderRadius: 18, overflow: 'hidden',
+      padding: '0.95rem 0.85rem 1rem',
+      background: `radial-gradient(ellipse at 50% 0%, ${GOLD}22 0%, rgba(9,7,3,0.5) 62%)`,
+      border: `1px solid ${GOLD}48`,
+      boxShadow: `0 0 32px ${GOLD}1c, inset 0 0 44px ${GOLD}0e`,
+    }}>
+      <div className="flex items-center justify-center" style={{ gap: 6, marginBottom: 13 }}>
+        <svg width="11" height="11" viewBox="0 0 24 24" fill={GOLD} aria-hidden><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
+        <span className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.2em', color: GOLD }}>Golden Catch</span>
+        <span className="font-karla font-700" style={{ fontSize: '0.56rem', color: `${GOLD_DEEP}cc` }}>· {fish.length}</span>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(94px, 1fr))', gap: 9 }}>
+        {shown.map(f => (
+          <div key={f.id} style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+            padding: '0.7rem 0.4rem 0.6rem', borderRadius: 13, textAlign: 'center',
+            background: `linear-gradient(180deg, ${GOLD}18, rgba(0,0,0,0.3))`,
+            border: `1px solid ${GOLD}44`, boxShadow: `inset 0 1px 0 ${GOLD}33`,
+          }}>
+            <div style={{ height: 52, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={fishImageUrl(f.name)} alt={`Golden ${f.name}`} loading="lazy" decoding="async"
+                style={{ maxWidth: 58, maxHeight: 50, objectFit: 'contain', filter: SHINY_FISH_FILTER }}
+                onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+            </div>
+            <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: SHINY_THEME.text, lineHeight: 1.15 }}>{f.name}</p>
+            {f.size_in != null && f.size_in > 0 && (
+              <span className="font-karla font-700" style={{ fontSize: '0.56rem', color: GOLD_DEEP, fontVariantNumeric: 'tabular-nums' }}>{f.size_in.toFixed(1)} in</span>
+            )}
+          </div>
+        ))}
+        {more > 0 && (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 96,
+            borderRadius: 13, background: `${GOLD}0f`, border: `1px dashed ${GOLD}4a`,
+          }}>
+            <span className="font-karla font-800" style={{ fontSize: '0.85rem', color: GOLD }}>+{more}</span>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
