@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
+import { getCurrentUser } from '@/lib/userData'
 import { getHoldState } from './actions'
 import QuartermastersHold from './QuartermastersHold'
 
@@ -7,7 +7,7 @@ export default async function QuartermastersHoldPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
 
-  const [profile, state] = await Promise.all([getCurrentProfile(), getHoldState()])
+  const state = await getHoldState()
 
   return (
     <main className="min-h-screen pb-24 sm:pb-0">
@@ -19,7 +19,7 @@ export default async function QuartermastersHoldPage() {
             </p>
           </div>
         ) : (
-          <QuartermastersHold initial={state} doubloons={profile?.doubloons ?? 0} />
+          <QuartermastersHold initial={state} />
         )}
       </div>
     </main>

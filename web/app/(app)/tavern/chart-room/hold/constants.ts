@@ -4,10 +4,12 @@
 //
 // Theme: a 9x9 cargo hold split into nine 3x3 bays. Pack it so no deck
 // (row), hull section (column), or bay carries two of the same cargo lot
-// (1-9). Classic sudoku rules under a manifest skin. One hold a WEEK: the
-// player locks one difficulty Monday→Sunday (made weekly 2026-06-14).
+// (1-9). Classic sudoku rules under a manifest skin. FOUR holds a week
+// (difficulty 1-4), all open — solve any or all; each banks its difficulty
+// in charting points. All four refresh every Monday (no more one-per-week
+// lock, 2026-07-21).
 
-export const HOLD_DIFFICULTIES = ['easy', 'medium', 'hard'] as const
+export const HOLD_DIFFICULTIES = ['easy', 'medium', 'hard', 'extreme'] as const
 export type HoldDifficulty = (typeof HOLD_DIFFICULTIES)[number]
 
 /** Monday (UTC) of the current week — the key the weekly board +
@@ -32,22 +34,20 @@ export interface HoldDifficultyMeta {
   accent: string
 }
 
-// Clue counts give three honestly distinct solves; all are generated
-// with a guaranteed-unique solution so they're always fair. Payouts
-// climb with difficulty; a clean sweep of all three banks ~435 ⟡,
-// in the same neighborhood as the Parlor board's 300/day.
+// Four honestly-distinct solves (difficulty 1-4), each with a guaranteed-
+// unique solution so they're always fair. Charting points = the difficulty
+// number (1/2/3/4); doubloon payouts climb alongside. Solve all four in a
+// week to bank the full 10 points (+ a clean-sweep doubloon haul).
 export const HOLD_META: Record<HoldDifficulty, HoldDifficultyMeta> = {
-  easy:   { key: 'easy',   label: 'Skiff',       givens: 40, payout: 40,  points: 1, accent: '#34d399' },
-  medium: { key: 'medium', label: 'Galleon',     givens: 32, payout: 90,  points: 2, accent: '#60a5fa' },
-  hard:   { key: 'hard',   label: 'Dreadnought', givens: 28, payout: 160, points: 4, accent: '#f0743a' },
+  easy:    { key: 'easy',    label: 'Skiff',       givens: 44, payout: 40,  points: 1, accent: '#34d399' },
+  medium:  { key: 'medium',  label: 'Galleon',     givens: 36, payout: 80,  points: 2, accent: '#60a5fa' },
+  hard:    { key: 'hard',    label: 'Dreadnought', givens: 30, payout: 130, points: 3, accent: '#f0743a' },
+  extreme: { key: 'extreme', label: 'Man-o-War',   givens: 26, payout: 200, points: 4, accent: '#c084fc' },
 }
 
 /** Bonus for solving a hold with no tally (check/hint) used, as a
  *  fraction of the base payout. Rounded to a whole doubloon. */
 export const CLEAN_BONUS_FRACTION = 0.5
-
-/** Extra puzzle point for a clean (no-tally) solve. */
-export const CLEAN_POINT_BONUS = 1
 
 export function cleanBonus(difficulty: HoldDifficulty): number {
   return Math.round(HOLD_META[difficulty].payout * CLEAN_BONUS_FRACTION)
@@ -58,9 +58,10 @@ export function holdPayout(difficulty: HoldDifficulty, clean: boolean): number {
   return HOLD_META[difficulty].payout + (clean ? cleanBonus(difficulty) : 0)
 }
 
-/** Puzzle points a solve banks (base + clean bonus point). */
-export function holdPoints(difficulty: HoldDifficulty, clean: boolean): number {
-  return HOLD_META[difficulty].points + (clean ? CLEAN_POINT_BONUS : 0)
+/** Charting points a solve banks — the difficulty number (1-4). Clean
+ *  affects only the doubloon bonus, not points. */
+export function holdPoints(difficulty: HoldDifficulty): number {
+  return HOLD_META[difficulty].points
 }
 
 // ── Board encoding ──────────────────────────────────────────────────
@@ -96,17 +97,11 @@ export interface HoldPuzzleClient {
 
 export interface HoldState {
   date: string
+  /** All four holds — every one is open; solve any or all. */
   puzzles: HoldPuzzleClient[]
   doubloonsAwarded: number
-  /** The difficulty the player committed to today; null = not yet
-   *  chosen. One hold a day — once set, the others are closed. */
-  lockedDifficulty: HoldDifficulty | null
   /** Lifetime puzzle points banked from the puzzles. */
   puzzlePoints: number
-}
-
-export interface LockHoldResult {
-  lockedDifficulty: HoldDifficulty
 }
 
 /** Result of a "tally" — the player asks the quartermaster to check the

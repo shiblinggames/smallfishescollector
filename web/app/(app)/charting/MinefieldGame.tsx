@@ -17,7 +17,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import BackButton from '@/components/BackButton'
+import ChartingNav from '@/components/ChartingNav'
 import { motion, AnimatePresence } from 'framer-motion'
 import { revealCell, toggleFlag } from './minefieldActions'
 import { neighborsOf } from './minefield'
@@ -215,20 +215,12 @@ export default function Minefield({ initial }: { initial: MinefieldState }) {
 
   return (
     <div style={{ maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <BackButton href="/tavern/chart-room" label="Charting" />
-        </div>
-        <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f4ecd8', textAlign: 'center', whiteSpace: 'nowrap' }}>
-          The Minefield
-        </p>
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', justifyContent: 'flex-end' }}>
-          <button onClick={() => { haptic(8); setHelp(true) }} aria-label="How to play" className="font-cinzel font-700"
-            style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, padding: 0, background: 'rgba(196,169,106,0.12)', border: '1px solid rgba(196,169,106,0.4)', color: GOLD, cursor: 'pointer', fontSize: '0.9rem', lineHeight: 1 }}>
-            ?
-          </button>
-        </div>
+      <ChartingNav title="The Minefield" backHref="/tavern/chart-room" backLabel="Charting" points={puzzlePoints} />
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: -4 }}>
+        <button onClick={() => { haptic(8); setHelp(true) }} className="font-karla font-700 tap" aria-label="How to play"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0.24rem 0.6rem', borderRadius: 999, background: 'rgba(196,169,106,0.12)', border: '1px solid rgba(196,169,106,0.4)', color: GOLD, cursor: 'pointer', fontSize: '0.6rem' }}>
+          ? How to play
+        </button>
       </div>
 
       {/* Instrument HUD — mines left + wrecks, styled like a ship's panel */}

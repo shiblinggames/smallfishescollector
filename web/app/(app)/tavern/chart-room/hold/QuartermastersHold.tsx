@@ -2,20 +2,19 @@
 
 // The Quartermaster's Hold — a 9x9 cargo-manifest sudoku. Pack the hold
 // so no deck (row), hull section (column), or bay (3x3) carries two of
-// the same lot. ONE hold a day: pick a difficulty (Skiff / Galleon /
-// Dreadnought), lock it in, and stow it. Solving pays doubloons (+ a
-// clean bonus for no tally) AND banks permanent puzzle points toward the
-// World Chart. Server-authoritative: the solution never
-// reaches this client.
+// the same lot. FOUR holds a week now (Skiff / Galleon / Dreadnought /
+// Man-o-War), all open — play them in any order, stow any or all. Solving
+// pays doubloons (+ a clean bonus for no tally) AND banks permanent
+// charting points toward the World Chart. Server-authoritative: the
+// solution never reaches this client.
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
-import BackButton from '@/components/BackButton'
+import ChartingNav from '@/components/ChartingNav'
 import { motion, AnimatePresence } from 'framer-motion'
-import BalanceTicker from '../../trivia/BalanceTicker'
-import { lockHold, saveHoldProgress, tallyHold, submitHold } from './actions'
+import { saveHoldProgress, tallyHold, submitHold } from './actions'
 import {
-  HOLD_DIFFICULTIES, HOLD_META, HOLD_SIZE, holdPayout, holdPoints,
+  HOLD_DIFFICULTIES, HOLD_META, HOLD_SIZE, holdPayout,
   type HoldDifficulty, type HoldState, type HoldPuzzleClient,
 } from './constants'
 
@@ -26,6 +25,7 @@ const WRONG = '#c0392b'
 const CONFLICT = '#d98a2b'
 
 type Board = { entries: string[]; notes: number[][] }
+type SolvedResult = { doubloons: number; clean: boolean }
 
 function boardFromGivens(givens: string, progress: string | null): Board {
   const src = progress ?? givens
@@ -52,31 +52,42 @@ const UNITS: number[][] = (() => {
   return u
 })()
 
-export default function QuartermastersHold({ initial, doubloons }: { initial: HoldState; doubloons: number }) {
+export default function QuartermastersHold({ initial }: { initial: HoldState }) {
   const puzzleMap = useMemo(() => {
     const m = {} as Record<HoldDifficulty, HoldPuzzleClient>
     for (const p of initial.puzzles) m[p.difficulty] = p
     return m
   }, [initial])
 
-  const [locked, setLocked] = useState<HoldDifficulty | null>(initial.lockedDifficulty)
-  const [pendingChoice, setPendingChoice] = useState<HoldDifficulty | null>(null)
-  const [board, setBoard] = useState<Board | null>(() => {
-    if (!initial.lockedDifficulty) return null
-    const p = puzzleMap[initial.lockedDifficulty]
-    return boardFromGivens(p.givens, p.progress)
-  })
-  const [solved, setSolved] = useState<{ doubloons: number; clean: boolean } | null>(
-    initial.lockedDifficulty ? (puzzleMap[initial.lockedDifficulty].solved) : null,
+  // Which hold is on the bench right now — freely switchable. Default to
+  // the first unsolved hold, else the first difficulty (all stowed).
+  const [selected, setSelected] = useState<HoldDifficulty>(
+    () => HOLD_DIFFICULTIES.find(d => !puzzleMap[d].solved) ?? HOLD_DIFFICULTIES[0],
   )
-  const [hints, setHints] = useState(initial.lockedDifficulty ? puzzleMap[initial.lockedDifficulty].hintsUsed : 0)
 
-  const [selected, setSelected] = useState<number | null>(null)
+  // Per-difficulty working boards, solved results, and tally counts — kept
+  // for all four so switching tabs preserves each hold's state.
+  const [boards, setBoards] = useState<Record<HoldDifficulty, Board>>(() => {
+    const m = {} as Record<HoldDifficulty, Board>
+    for (const d of HOLD_DIFFICULTIES) m[d] = boardFromGivens(puzzleMap[d].givens, puzzleMap[d].progress)
+    return m
+  })
+  const [solvedMap, setSolvedMap] = useState<Record<HoldDifficulty, SolvedResult | null>>(() => {
+    const m = {} as Record<HoldDifficulty, SolvedResult | null>
+    for (const d of HOLD_DIFFICULTIES) m[d] = puzzleMap[d].solved
+    return m
+  })
+  const [hintsMap, setHintsMap] = useState<Record<HoldDifficulty, number>>(() => {
+    const m = {} as Record<HoldDifficulty, number>
+    for (const d of HOLD_DIFFICULTIES) m[d] = puzzleMap[d].hintsUsed
+    return m
+  })
+
+  const [selCell, setSelCell] = useState<number | null>(null)
   const [notesMode, setNotesMode] = useState(false)
   const [wrong, setWrong] = useState<boolean[] | null>(null)
   const [popIdx, setPopIdx] = useState<number | null>(null)
   const [flashCells, setFlashCells] = useState<Set<number>>(new Set())
-  const [balance, setBalance] = useState(doubloons)
   const [puzzlePoints, setPuzzlePoints] = useState(initial.puzzlePoints)
   const [message, setMessage] = useState<string | null>(null)
   const [win, setWin] = useState<{ doubloons: number; clean: boolean; points: number } | null>(null)
@@ -84,14 +95,16 @@ export default function QuartermastersHold({ initial, doubloons }: { initial: Ho
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => { setMounted(true) }, [])
-  useEffect(() => { setBalance(doubloons) }, [doubloons])
 
-  const puzzle = locked ? puzzleMap[locked] : null
-  const givens = puzzle?.givens ?? ''
+  const puzzle = puzzleMap[selected]
+  const givens = puzzle.givens
+  const board = boards[selected]
+  const solved = solvedMap[selected]
+  const hints = hintsMap[selected]
   const isGiven = useCallback((i: number) => givens[i] !== '.', [givens])
-  const entries = board?.entries ?? []
+  const entries = board.entries
   const boardStr = entries.map(c => c || '.').join('')
-  const isFull = board !== null && !boardStr.includes('.')
+  const isFull = !boardStr.includes('.')
   const cleanStill = hints === 0
 
   // Merged value at a cell (given or player entry).
@@ -101,7 +114,6 @@ export default function QuartermastersHold({ initial, doubloons }: { initial: Ho
   // column, or box. Instant feedback so a mistake reads immediately.
   const conflicts = useMemo(() => {
     const bad = new Set<number>()
-    if (!board) return bad
     for (const unit of UNITS) {
       const seen = new Map<string, number[]>()
       for (const i of unit) {
@@ -113,13 +125,14 @@ export default function QuartermastersHold({ initial, doubloons }: { initial: Ho
       for (const arr of seen.values()) if (arr.length > 1) arr.forEach(i => bad.add(i))
     }
     return bad
-  }, [board, entries, givens])
+  }, [entries, givens])
 
   // Flash a unit gold the moment it's completed correctly (full + no
-  // duplicates). Subtle, localized juice per the house rules.
+  // duplicates). Subtle, localized juice per the house rules. Suppressed
+  // on a tab switch so an already-complete unit doesn't flash on load.
   const completedRef = useRef<Set<number>>(new Set())
+  const skipFlashRef = useRef(false)
   useEffect(() => {
-    if (!board) return
     const nowComplete = new Set<number>()
     UNITS.forEach((unit, idx) => {
       const vals = unit.map(i => (givens[i] !== '.' ? givens[i] : entries[i]))
@@ -128,31 +141,43 @@ export default function QuartermastersHold({ initial, doubloons }: { initial: Ho
     const fresh: number[] = []
     nowComplete.forEach(idx => { if (!completedRef.current.has(idx)) fresh.push(...UNITS[idx]) })
     completedRef.current = nowComplete
+    if (skipFlashRef.current) { skipFlashRef.current = false; return }
     if (fresh.length) {
       const set = new Set(fresh)
       setFlashCells(set)
       const t = setTimeout(() => setFlashCells(new Set()), 620)
       return () => clearTimeout(t)
     }
-  }, [board, entries, givens])
+  }, [entries, givens])
 
-  // Autosave (debounced).
+  // Autosave (debounced) — keyed to the hold on the bench.
   useEffect(() => {
-    if (!locked || solved || !board) return
-    const t = setTimeout(() => { void saveHoldProgress(locked, boardStr) }, 800)
+    if (solved) return
+    const t = setTimeout(() => { void saveHoldProgress(selected, boardStr) }, 800)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [boardStr, locked, solved])
+  }, [boardStr, selected, solved])
+
+  function pickDifficulty(d: HoldDifficulty) {
+    if (d === selected) return
+    skipFlashRef.current = true
+    setSelected(d)
+    setSelCell(null)
+    setWrong(null)
+    setMessage(null)
+    setNotesMode(false)
+    setFlashCells(new Set())
+  }
 
   function mutateBoard(fn: (b: Board) => Board) {
-    setBoard(prev => (prev ? fn(prev) : prev))
+    setBoards(prev => ({ ...prev, [selected]: fn(prev[selected]) }))
     setWrong(null)
     setMessage(null)
   }
 
   function placeDigit(d: number) {
-    if (selected === null || !board || isGiven(selected) || solved) return
-    const i = selected
+    if (selCell === null || isGiven(selCell) || solved) return
+    const i = selCell
     if (notesMode) {
       if (entries[i]) return
       mutateBoard(b => {
@@ -182,8 +207,8 @@ export default function QuartermastersHold({ initial, doubloons }: { initial: Ho
   }
 
   function erase() {
-    if (selected === null || !board || isGiven(selected) || solved) return
-    const i = selected
+    if (selCell === null || isGiven(selCell) || solved) return
+    const i = selCell
     mutateBoard(b => {
       const entries2 = b.entries.slice(); entries2[i] = ''
       const notes = b.notes.map(n => n.slice()); notes[i] = []
@@ -191,50 +216,33 @@ export default function QuartermastersHold({ initial, doubloons }: { initial: Ho
     })
   }
 
-  function confirmLock() {
-    if (!pendingChoice || isPending) return
-    const choice = pendingChoice
-    startTransition(async () => {
-      const r = await lockHold(choice)
-      if ('error' in r) { setMessage(r.error); setPendingChoice(null); return }
-      setLocked(r.lockedDifficulty)
-      const p = puzzleMap[r.lockedDifficulty]
-      setBoard(boardFromGivens(p.givens, p.progress))
-      setSolved(p.solved)
-      setHints(p.hintsUsed)
-      setPendingChoice(null)
-      setSelected(null)
-    })
-  }
-
   function doTally() {
-    if (isPending || solved || !locked) return
+    if (isPending || solved) return
     setMessage(null)
     startTransition(async () => {
-      const r = await tallyHold(locked, boardStr)
+      const r = await tallyHold(selected, boardStr)
       if ('error' in r) { setMessage(r.error); return }
       setWrong(r.wrong)
-      setHints(r.hintsUsed)
+      setHintsMap(prev => ({ ...prev, [selected]: r.hintsUsed }))
       const n = r.wrong.filter(Boolean).length
       setMessage(n === 0 ? 'Manifest checks out so far — no bad cargo.' : `${n} lot${n > 1 ? 's' : ''} stowed wrong. (Tally used — clean bonus forfeit.)`)
     })
   }
 
   function doSubmit() {
-    if (isPending || solved || !isFull || !locked) return
+    if (isPending || solved || !isFull) return
     setMessage(null)
     startTransition(async () => {
-      const r = await submitHold(locked, boardStr)
+      const r = await submitHold(selected, boardStr)
       if ('error' in r) { setMessage(r.error); return }
       if (!r.correct) {
         setWrong(r.wrong ?? null)
         setMessage('She lists — some lots are stowed wrong. Find them and try again.')
         return
       }
-      setSolved({ doubloons: r.doubloonsWon, clean: r.clean })
+      setSolvedMap(prev => ({ ...prev, [selected]: { doubloons: r.doubloonsWon, clean: r.clean } }))
       setPuzzlePoints(r.newPuzzlePoints)
       if (r.newDoubloons !== null) {
-        setBalance(prev => prev + r.doubloonsWon)
         window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.newDoubloons }))
       }
       setWin({ doubloons: r.doubloonsWon, clean: r.clean, points: r.pointsWon })
@@ -247,273 +255,224 @@ export default function QuartermastersHold({ initial, doubloons }: { initial: Ho
     return c
   }, [valAt])
 
-  const selVal = selected !== null ? valAt(selected) : ''
+  const selVal = selCell !== null ? valAt(selCell) : ''
+  const selMeta = HOLD_META[selected]
 
   return (
     <div style={{ maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <BackButton href="/tavern/chart-room" label="Charting" />
-        </div>
-        <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f4ecd8', textAlign: 'center', whiteSpace: 'nowrap', textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>
-          The Hold
-        </p>
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', justifyContent: 'flex-end' }}>
-          <BalanceTicker value={balance} glyph="⟡" color={GOLD} />
-        </div>
+      <ChartingNav title="The Hold" backHref="/tavern/chart-room" backLabel="Charting" points={puzzlePoints} />
+
+      {/* Difficulty picker — all four holds open, tap to switch. No lock. */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+        {HOLD_DIFFICULTIES.map(d => {
+          const meta = HOLD_META[d]
+          const isSel = selected === d
+          const isSolved = !!solvedMap[d]
+          return (
+            <button
+              key={d}
+              onClick={() => pickDifficulty(d)}
+              style={{
+                padding: '0.5rem 0.55rem', borderRadius: 11, cursor: 'pointer',
+                background: isSel ? `${meta.accent}26` : 'linear-gradient(180deg, rgba(34,27,14,0.88), rgba(16,12,7,0.9))',
+                border: `1.5px solid ${isSel ? meta.accent : 'rgba(196,169,106,0.32)'}`,
+                boxShadow: isSel ? `0 2px 10px ${meta.accent}33` : '0 2px 8px rgba(0,0,0,0.35)',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+              }}
+            >
+              <span className="font-cinzel font-700" style={{ fontSize: '0.84rem', color: isSel ? meta.accent : '#f0e8d2' }}>
+                {meta.label}
+              </span>
+              <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: isSolved ? meta.accent : '#a89e86' }}>
+                {isSolved ? `✓ Stowed · ${meta.points} pt${meta.points > 1 ? 's' : ''}` : `${meta.points} pt${meta.points > 1 ? 's' : ''}`}
+              </span>
+            </button>
+          )
+        })}
       </div>
 
-      {/* Charting-points readout — solid panel so it reads over the painted
-          background. */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap',
-        padding: '0.55rem 0.8rem', borderRadius: 11,
-        background: 'linear-gradient(180deg, rgba(40,32,16,0.92), rgba(18,14,8,0.94))', border: '1px solid rgba(196,169,106,0.45)',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.45)',
-      }}>
-        <span className="font-karla font-700" style={{ fontSize: '0.74rem', color: '#f0e2bd' }}>
-          {puzzlePoints} charting pts
+      {/* Selected hold context */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <span className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: selMeta.accent }}>
+          {selMeta.label}
+        </span>
+        <span className="font-karla" style={{ fontSize: '0.62rem', color: '#8f8672' }}>
+          · {selMeta.givens} lots pre-stowed · {selMeta.payout} ⟡
         </span>
       </div>
 
-      {/* ── No hold locked: choose today's ── */}
-      {!locked ? (
-        <>
-          <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: '#dccfb4', lineHeight: 1.55, textAlign: 'center', textShadow: '0 1px 3px rgba(0,0,0,0.7)' }}>
-            Choose one hold to stow this week. The other two close till Monday — harder holds pay more doubloons and more charting points.
+      {/* Board */}
+      <div style={{
+        position: 'relative',
+        width: 'min(92vw, 396px)', aspectRatio: '1 / 1', margin: '0 auto',
+        display: 'grid', gridTemplateColumns: 'repeat(9, 1fr)',
+        background: 'linear-gradient(180deg, #f3e9cf 0%, #e9dcba 100%)',
+        border: `2.5px solid ${INK}`, borderRadius: 8, overflow: 'hidden',
+        boxShadow: '0 6px 18px rgba(0,0,0,0.45)',
+      }}>
+        {Array.from({ length: 81 }).map((_, i) => {
+          const given = isGiven(i)
+          const val = given ? givens[i] : entries[i]
+          const isSel = selCell === i
+          const peer = selCell !== null && !isSel && (rowOf(selCell) === rowOf(i) || colOf(selCell) === colOf(i) || boxOf(selCell) === boxOf(i))
+          const sameVal = !!selVal && val === selVal
+          const isWrong = wrong?.[i]
+          const isConflict = !isWrong && conflicts.has(i)
+          const flash = flashCells.has(i)
+          const cell = board.notes[i]
+          const bg = isWrong ? 'rgba(192,57,43,0.28)'
+            : flash ? 'rgba(240,192,64,0.55)'
+            : isSel ? 'rgba(240,192,64,0.42)'
+            : isConflict ? 'rgba(217,138,43,0.22)'
+            : sameVal ? 'rgba(31,95,201,0.18)'
+            : peer ? 'rgba(28,20,10,0.08)'
+            : 'transparent'
+          return (
+            <div
+              key={i}
+              onClick={() => { if (!solved) setSelCell(i) }}
+              style={{
+                position: 'relative',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                borderRight: `${colOf(i) % 3 === 2 && colOf(i) !== 8 ? 2 : 0.5}px solid ${colOf(i) % 3 === 2 && colOf(i) !== 8 ? INK : 'rgba(28,20,10,0.32)'}`,
+                borderBottom: `${rowOf(i) % 3 === 2 && rowOf(i) !== 8 ? 2 : 0.5}px solid ${rowOf(i) % 3 === 2 && rowOf(i) !== 8 ? INK : 'rgba(28,20,10,0.32)'}`,
+                background: bg,
+                transition: 'background 0.18s',
+                cursor: solved ? 'default' : 'pointer',
+              }}
+            >
+              {val ? (
+                <span
+                  className="font-cinzel"
+                  style={{
+                    fontSize: 'clamp(1rem, 4.7vw, 1.45rem)',
+                    fontWeight: given ? 800 : 600,
+                    color: isWrong ? WRONG : isConflict ? CONFLICT : given ? INK : ENTRY,
+                    transform: popIdx === i ? 'scale(1.28)' : 'scale(1)',
+                    transition: 'transform 0.16s cubic-bezier(.34,1.7,.5,1)',
+                  }}
+                >
+                  {val}
+                </span>
+              ) : cell.length > 0 ? (
+                <div style={{ position: 'absolute', inset: 2, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridTemplateRows: 'repeat(3, 1fr)' }}>
+                  {Array.from({ length: 9 }).map((__, n) => (
+                    <span key={n} className="font-karla font-700" style={{ fontSize: 'clamp(0.42rem, 1.8vw, 0.6rem)', color: 'rgba(28,20,10,0.62)', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>
+                      {cell.includes(n + 1) ? n + 1 : ''}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          )
+        })}
+      </div>
+
+      {solved ? (
+        <div style={{
+          textAlign: 'center', padding: '0.9rem',
+          background: `${GOLD}16`, border: `1px solid ${GOLD}4d`, borderRadius: 12,
+        }}>
+          <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: GOLD }}>{selMeta.label} stowed</p>
+          <p className="font-karla" style={{ fontSize: '0.74rem', color: '#cfc6b0', marginTop: 4, lineHeight: 1.5 }}>
+            {solved.clean ? 'Stowed clean. ' : ''}The quartermaster paid {solved.doubloons} ⟡. Your charting points stand at {puzzlePoints}. Pick another hold up top, or come back Monday for fresh cargo.
           </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {HOLD_DIFFICULTIES.map(d => {
-              const meta = HOLD_META[d]
-              const sel = pendingChoice === d
+        </div>
+      ) : (
+        <>
+          {/* Number pad with remaining counts */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(9, 1fr)', gap: 4 }}>
+            {Array.from({ length: 9 }).map((_, n) => {
+              const d = n + 1
+              const remaining = 9 - (placedCounts[String(d)] ?? 0)
+              const done = remaining <= 0
               return (
                 <button
                   key={d}
-                  onClick={() => setPendingChoice(sel ? null : d)}
-                  style={{
-                    textAlign: 'left', padding: '0.85rem 1rem', borderRadius: 14, cursor: 'pointer',
-                    background: sel ? `${meta.accent}26` : 'linear-gradient(180deg, rgba(34,27,14,0.88), rgba(16,12,7,0.9))',
-                    border: `1.5px solid ${sel ? meta.accent : 'rgba(196,169,106,0.38)'}`,
-                    boxShadow: '0 2px 9px rgba(0,0,0,0.4)',
-                    display: 'flex', alignItems: 'center', gap: 12,
-                  }}
-                >
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: sel ? meta.accent : '#f0e8d2' }}>{meta.label}</p>
-                    <p className="font-karla" style={{ fontSize: '0.66rem', color: '#a89e86', marginTop: 2 }}>
-                      {meta.givens} lots pre-stowed · {d === 'easy' ? 'gentle' : d === 'medium' ? 'a real puzzle' : 'for hardened minds'}
-                    </p>
-                  </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: GOLD }}>{meta.payout} ⟡</p>
-                    <p className="font-karla font-700" style={{ fontSize: '0.62rem', color: meta.accent, marginTop: 2 }}>+{meta.points} pts</p>
-                  </div>
-                </button>
-              )
-            })}
-          </div>
-          {pendingChoice && (
-            <button
-              onClick={confirmLock}
-              disabled={isPending}
-              className="font-cinzel font-700"
-              style={{
-                padding: '0.8rem', borderRadius: 12, fontSize: '0.9rem', cursor: isPending ? 'default' : 'pointer',
-                background: 'rgba(47,111,214,0.18)', border: '1px solid rgba(120,170,255,0.45)', color: '#bcd4ff',
-              }}
-            >
-              Lock in the {HOLD_META[pendingChoice].label} for the week
-            </button>
-          )}
-          {message && <p className="font-karla" style={{ fontSize: '0.7rem', color: '#d98a8a', textAlign: 'center' }}>{message}</p>}
-        </>
-      ) : (
-        <>
-          {/* Locked difficulty banner */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-            <span className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: HOLD_META[locked].accent }}>
-              {HOLD_META[locked].label}
-            </span>
-            <span className="font-karla" style={{ fontSize: '0.62rem', color: '#8f8672' }}>
-              · this week&apos;s hold
-            </span>
-          </div>
-
-          {/* Board */}
-          <div style={{
-            position: 'relative',
-            width: 'min(92vw, 396px)', aspectRatio: '1 / 1', margin: '0 auto',
-            display: 'grid', gridTemplateColumns: 'repeat(9, 1fr)',
-            background: 'linear-gradient(180deg, #f3e9cf 0%, #e9dcba 100%)',
-            border: `2.5px solid ${INK}`, borderRadius: 8, overflow: 'hidden',
-            boxShadow: '0 6px 18px rgba(0,0,0,0.45)',
-          }}>
-            {Array.from({ length: 81 }).map((_, i) => {
-              const given = isGiven(i)
-              const val = given ? givens[i] : entries[i]
-              const isSel = selected === i
-              const peer = selected !== null && !isSel && (rowOf(selected) === rowOf(i) || colOf(selected) === colOf(i) || boxOf(selected) === boxOf(i))
-              const sameVal = !!selVal && val === selVal
-              const isWrong = wrong?.[i]
-              const isConflict = !isWrong && conflicts.has(i)
-              const flash = flashCells.has(i)
-              const cell = board!.notes[i]
-              const bg = isWrong ? 'rgba(192,57,43,0.28)'
-                : flash ? 'rgba(240,192,64,0.55)'
-                : isSel ? 'rgba(240,192,64,0.42)'
-                : isConflict ? 'rgba(217,138,43,0.22)'
-                : sameVal ? 'rgba(31,95,201,0.18)'
-                : peer ? 'rgba(28,20,10,0.08)'
-                : 'transparent'
-              return (
-                <div
-                  key={i}
-                  onClick={() => { if (!solved) setSelected(i) }}
-                  style={{
-                    position: 'relative',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    borderRight: `${colOf(i) % 3 === 2 && colOf(i) !== 8 ? 2 : 0.5}px solid ${colOf(i) % 3 === 2 && colOf(i) !== 8 ? INK : 'rgba(28,20,10,0.32)'}`,
-                    borderBottom: `${rowOf(i) % 3 === 2 && rowOf(i) !== 8 ? 2 : 0.5}px solid ${rowOf(i) % 3 === 2 && rowOf(i) !== 8 ? INK : 'rgba(28,20,10,0.32)'}`,
-                    background: bg,
-                    transition: 'background 0.18s',
-                    cursor: solved ? 'default' : 'pointer',
-                  }}
-                >
-                  {val ? (
-                    <span
-                      className="font-cinzel"
-                      style={{
-                        fontSize: 'clamp(1rem, 4.7vw, 1.45rem)',
-                        fontWeight: given ? 800 : 600,
-                        color: isWrong ? WRONG : isConflict ? CONFLICT : given ? INK : ENTRY,
-                        transform: popIdx === i ? 'scale(1.28)' : 'scale(1)',
-                        transition: 'transform 0.16s cubic-bezier(.34,1.7,.5,1)',
-                      }}
-                    >
-                      {val}
-                    </span>
-                  ) : cell.length > 0 ? (
-                    <div style={{ position: 'absolute', inset: 2, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridTemplateRows: 'repeat(3, 1fr)' }}>
-                      {Array.from({ length: 9 }).map((__, n) => (
-                        <span key={n} className="font-karla font-700" style={{ fontSize: 'clamp(0.42rem, 1.8vw, 0.6rem)', color: 'rgba(28,20,10,0.62)', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>
-                          {cell.includes(n + 1) ? n + 1 : ''}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              )
-            })}
-          </div>
-
-          {solved ? (
-            <div style={{
-              textAlign: 'center', padding: '0.9rem',
-              background: `${GOLD}16`, border: `1px solid ${GOLD}4d`, borderRadius: 12,
-            }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: GOLD }}>Hold stowed</p>
-              <p className="font-karla" style={{ fontSize: '0.74rem', color: '#cfc6b0', marginTop: 4, lineHeight: 1.5 }}>
-                {solved.clean ? 'Stowed clean. ' : ''}The quartermaster paid {solved.doubloons} ⟡. Your charting points stand at {puzzlePoints}. Fresh hold next Monday.
-              </p>
-            </div>
-          ) : (
-            <>
-              {/* Number pad with remaining counts */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(9, 1fr)', gap: 4 }}>
-                {Array.from({ length: 9 }).map((_, n) => {
-                  const d = n + 1
-                  const remaining = 9 - (placedCounts[String(d)] ?? 0)
-                  const done = remaining <= 0
-                  return (
-                    <button
-                      key={d}
-                      onClick={() => placeDigit(d)}
-                      disabled={selected === null}
-                      className="font-cinzel font-700"
-                      style={{
-                        position: 'relative', aspectRatio: '1 / 1', borderRadius: 8,
-                        background: done ? 'rgba(255,255,255,0.02)' : 'rgba(240,192,64,0.1)',
-                        border: `1px solid ${done ? 'rgba(255,255,255,0.06)' : 'rgba(240,192,64,0.32)'}`,
-                        color: done ? '#5a5650' : '#f4ecd8',
-                        fontSize: '1.1rem',
-                        cursor: selected === null ? 'default' : 'pointer',
-                        opacity: selected === null ? 0.55 : 1,
-                      }}
-                    >
-                      {d}
-                      {!done && (
-                        <span className="font-karla font-700" style={{ position: 'absolute', bottom: 1, right: 3, fontSize: '0.46rem', color: 'rgba(240,192,64,0.7)' }}>{remaining}</span>
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-
-              {/* Tools */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
-                <button
-                  onClick={() => setNotesMode(m => !m)}
-                  className="font-karla font-700 uppercase"
-                  style={{
-                    padding: '0.62rem', borderRadius: 10, letterSpacing: '0.08em', fontSize: '0.68rem', cursor: 'pointer',
-                    background: notesMode ? 'rgba(31,95,201,0.22)' : 'rgba(255,255,255,0.04)',
-                    border: `1px solid ${notesMode ? ENTRY : 'rgba(255,255,255,0.14)'}`,
-                    color: notesMode ? '#a8c8ff' : '#c4bba6',
-                  }}
-                >
-                  Pencil {notesMode ? 'On' : 'Off'}
-                </button>
-                <button
-                  onClick={erase}
-                  disabled={selected === null}
-                  className="font-karla font-700 uppercase"
-                  style={{
-                    padding: '0.62rem', borderRadius: 10, letterSpacing: '0.08em', fontSize: '0.68rem',
-                    background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.14)', color: '#c4bba6',
-                    cursor: selected === null ? 'default' : 'pointer', opacity: selected === null ? 0.55 : 1,
-                  }}
-                >
-                  Erase
-                </button>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 8 }}>
-                <button
-                  onClick={doTally}
-                  disabled={isPending}
-                  className="font-karla font-700 uppercase"
-                  style={{
-                    padding: '0.72rem', borderRadius: 10, letterSpacing: '0.08em', fontSize: '0.68rem',
-                    background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(196,169,106,0.34)', color: '#e0d2ad',
-                    cursor: isPending ? 'default' : 'pointer',
-                  }}
-                >
-                  Tally Cargo
-                </button>
-                <motion.button
-                  onClick={doSubmit}
-                  disabled={isPending || !isFull}
-                  animate={isFull ? { boxShadow: ['0 0 0px rgba(52,211,153,0)', '0 0 14px rgba(52,211,153,0.5)', '0 0 0px rgba(52,211,153,0)'] } : {}}
-                  transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+                  onClick={() => placeDigit(d)}
+                  disabled={selCell === null}
                   className="font-cinzel font-700"
                   style={{
-                    padding: '0.72rem', borderRadius: 10, fontSize: '0.88rem',
-                    background: isFull ? 'rgba(52,211,153,0.18)' : 'rgba(255,255,255,0.03)',
-                    border: `1px solid ${isFull ? '#34d399' : 'rgba(255,255,255,0.1)'}`,
-                    color: isFull ? '#8ef0c0' : '#6a6660',
-                    cursor: isPending || !isFull ? 'default' : 'pointer',
+                    position: 'relative', aspectRatio: '1 / 1', borderRadius: 8,
+                    background: done ? 'rgba(255,255,255,0.02)' : 'rgba(240,192,64,0.1)',
+                    border: `1px solid ${done ? 'rgba(255,255,255,0.06)' : 'rgba(240,192,64,0.32)'}`,
+                    color: done ? '#5a5650' : '#f4ecd8',
+                    fontSize: '1.1rem',
+                    cursor: selCell === null ? 'default' : 'pointer',
+                    opacity: selCell === null ? 0.55 : 1,
                   }}
                 >
-                  Stow the Hold
-                </motion.button>
-              </div>
+                  {d}
+                  {!done && (
+                    <span className="font-karla font-700" style={{ position: 'absolute', bottom: 1, right: 3, fontSize: '0.46rem', color: 'rgba(240,192,64,0.7)' }}>{remaining}</span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
 
-              <p className="font-karla" style={{ fontSize: '0.66rem', color: message ? '#e0b48a' : (cleanStill ? '#7bbf7b' : '#a89e86'), textAlign: 'center', minHeight: '1rem', lineHeight: 1.4 }}>
-                {message ?? (cleanStill ? `Stow it clean (no tally) for +${holdPayout(locked, true) - HOLD_META[locked].payout} ⟡ and +1 charting point.` : 'Tally used this hold — clean bonus forfeit.')}
-              </p>
-            </>
-          )}
+          {/* Tools */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+            <button
+              onClick={() => setNotesMode(m => !m)}
+              className="font-karla font-700 uppercase"
+              style={{
+                padding: '0.62rem', borderRadius: 10, letterSpacing: '0.08em', fontSize: '0.68rem', cursor: 'pointer',
+                background: notesMode ? 'rgba(31,95,201,0.22)' : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${notesMode ? ENTRY : 'rgba(255,255,255,0.14)'}`,
+                color: notesMode ? '#a8c8ff' : '#c4bba6',
+              }}
+            >
+              Pencil {notesMode ? 'On' : 'Off'}
+            </button>
+            <button
+              onClick={erase}
+              disabled={selCell === null}
+              className="font-karla font-700 uppercase"
+              style={{
+                padding: '0.62rem', borderRadius: 10, letterSpacing: '0.08em', fontSize: '0.68rem',
+                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.14)', color: '#c4bba6',
+                cursor: selCell === null ? 'default' : 'pointer', opacity: selCell === null ? 0.55 : 1,
+              }}
+            >
+              Erase
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 8 }}>
+            <button
+              onClick={doTally}
+              disabled={isPending}
+              className="font-karla font-700 uppercase"
+              style={{
+                padding: '0.72rem', borderRadius: 10, letterSpacing: '0.08em', fontSize: '0.68rem',
+                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(196,169,106,0.34)', color: '#e0d2ad',
+                cursor: isPending ? 'default' : 'pointer',
+              }}
+            >
+              Tally Cargo
+            </button>
+            <motion.button
+              onClick={doSubmit}
+              disabled={isPending || !isFull}
+              animate={isFull ? { boxShadow: ['0 0 0px rgba(52,211,153,0)', '0 0 14px rgba(52,211,153,0.5)', '0 0 0px rgba(52,211,153,0)'] } : {}}
+              transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+              className="font-cinzel font-700"
+              style={{
+                padding: '0.72rem', borderRadius: 10, fontSize: '0.88rem',
+                background: isFull ? 'rgba(52,211,153,0.18)' : 'rgba(255,255,255,0.03)',
+                border: `1px solid ${isFull ? '#34d399' : 'rgba(255,255,255,0.1)'}`,
+                color: isFull ? '#8ef0c0' : '#6a6660',
+                cursor: isPending || !isFull ? 'default' : 'pointer',
+              }}
+            >
+              Stow the Hold
+            </motion.button>
+          </div>
+
+          <p className="font-karla" style={{ fontSize: '0.66rem', color: message ? '#e0b48a' : (cleanStill ? '#7bbf7b' : '#a89e86'), textAlign: 'center', minHeight: '1rem', lineHeight: 1.4 }}>
+            {message ?? (cleanStill ? `Stow it clean (no tally) for +${holdPayout(selected, true) - HOLD_META[selected].payout} ⟡.` : 'Tally used this hold — clean bonus forfeit.')}
+          </p>
         </>
       )}
 

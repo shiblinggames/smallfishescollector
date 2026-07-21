@@ -2,11 +2,11 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { HOLD_DIFFICULTIES, HOLD_META, holdWeekStr, type HoldDifficulty } from './constants'
 import { generatePuzzle, type SudokuPuzzle } from './sudoku'
 
-// The Hold generator — three fresh sudoku a WEEK (easy / medium / hard),
-// generated ALGORITHMICALLY (no Claude) via the pure engine in ./sudoku
-// and cached in daily_sudoku (the `date` column holds the week's Monday).
-// Same cache-fetch / generate-on-miss / fall-back-to-latest shape as the
-// trivia games.
+// The Hold generator — FOUR fresh sudoku a week (Skiff / Galleon /
+// Dreadnought / Man-o-War), generated ALGORITHMICALLY (no Claude) via the
+// pure engine in ./sudoku and cached in daily_sudoku (the `date` column
+// holds the week's Monday). Same cache-fetch / generate-on-miss /
+// fall-back-to-latest shape as the trivia games.
 //
 // Every puzzle has a guaranteed-unique solution (see sudoku.dig). The
 // solution is stored alongside the givens but is SERVER-ONLY; the
@@ -16,11 +16,18 @@ export type { SudokuPuzzle } from './sudoku'
 export type SudokuSet = Record<HoldDifficulty, SudokuPuzzle>
 
 function generateSet(): SudokuSet {
-  return {
-    easy: generatePuzzle(HOLD_META.easy.givens),
-    medium: generatePuzzle(HOLD_META.medium.givens),
-    hard: generatePuzzle(HOLD_META.hard.givens),
-  }
+  return Object.fromEntries(
+    HOLD_DIFFICULTIES.map(d => [d, generatePuzzle(HOLD_META[d].givens)]),
+  ) as SudokuSet
+}
+
+/** A cached row is stale if it predates a difficulty (e.g. the week the
+ *  4th hold was added), so it must be regenerated to include all four. */
+function hasAllDifficulties(set: unknown): set is SudokuSet {
+  return !!set && HOLD_DIFFICULTIES.every(d => {
+    const p = (set as Record<string, unknown>)[d] as { givens?: string } | undefined
+    return typeof p?.givens === 'string'
+  })
 }
 
 export async function getThisWeeksSudoku(): Promise<SudokuSet | null> {
@@ -33,7 +40,7 @@ export async function getThisWeeksSudoku(): Promise<SudokuSet | null> {
     .eq('date', week)
     .single()
 
-  if (cached) return cached.puzzles as SudokuSet
+  if (cached && hasAllDifficulties(cached.puzzles)) return cached.puzzles as SudokuSet
 
   try {
     const puzzles = generateSet()
@@ -43,7 +50,9 @@ export async function getThisWeeksSudoku(): Promise<SudokuSet | null> {
         throw new Error(`Bad puzzle for ${d}`)
       }
     }
-    await admin.from('daily_sudoku').insert({ date: week, puzzles })
+    // upsert (not insert) so a stale current-week row is overwritten with the
+    // full four-difficulty set.
+    await admin.from('daily_sudoku').upsert({ date: week, puzzles })
     return puzzles
   } catch (err) {
     console.error('[the-hold] generation failed:', err)

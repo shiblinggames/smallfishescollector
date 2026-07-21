@@ -10,11 +10,10 @@ import TreasureMatchCard from './TreasureMatchCard'
 import MinefieldCard from './MinefieldCard'
 import RiggingCard from './RiggingCard'
 import WorldChartCard from './WorldChartCard'
-import BackButton from '@/components/BackButton'
+import ChartingNav from '@/components/ChartingNav'
 
-export default function ChartRoomLobby({ doubloons, holdStatus, holdDoubloonsToday, matchStatus, matchReward, minefieldStatus, minefieldReward, riggingStatus, riggingReward, puzzlePoints, chartingClaimed, isMember }: {
-  doubloons: number
-  holdStatus: 'open' | 'locked' | 'done'
+export default function ChartRoomLobby({ holdSolved, holdDoubloonsToday, matchStatus, matchReward, minefieldStatus, minefieldReward, riggingStatus, riggingReward, puzzlePoints, chartingClaimed, isMember }: {
+  holdSolved: number
   holdDoubloonsToday: number
   matchStatus: 'active' | 'cleared'
   matchReward: number
@@ -28,20 +27,7 @@ export default function ChartRoomLobby({ doubloons, holdStatus, holdDoubloonsTod
 }) {
   return (
     <div style={{ maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
-      {/* Header — side rails get equal flex so the title sits centered. */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <BackButton href="/tavern" label="Tavern" />
-        </div>
-        <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0e8d0', textAlign: 'center', whiteSpace: 'nowrap' }}>
-          Charting
-        </p>
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', justifyContent: 'flex-end' }}>
-          <span className="font-karla" style={{ fontSize: '0.58rem', color: '#7a7672', whiteSpace: 'nowrap' }}>
-            {doubloons.toLocaleString()} ⟡
-          </span>
-        </div>
-      </div>
+      <ChartingNav title="Charting" backHref="/tavern" backLabel="Tavern" points={puzzlePoints} />
 
       <p className="font-karla" style={{ fontSize: '0.8rem', color: '#c2b9a4', lineHeight: 1.55, textAlign: 'center' }}>
         A quiet corner for steady minds. Four puzzles, fresh every week.
@@ -51,7 +37,7 @@ export default function ChartRoomLobby({ doubloons, holdStatus, holdDoubloonsTod
       <WorldChartCard points={puzzlePoints} claimed={chartingClaimed} />
 
       <div className="grid grid-cols-2 gap-3">
-        <HoldCard status={holdStatus} doubloonsToday={holdDoubloonsToday} />
+        <HoldCard solvedCount={holdSolved} doubloonsToday={holdDoubloonsToday} />
         <TreasureMatchCard status={matchStatus} reward={matchReward} />
         <MinefieldCard status={minefieldStatus} reward={minefieldReward} />
         <RiggingCard status={riggingStatus} reward={riggingReward} isMember={isMember} />

@@ -8,8 +8,8 @@
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useRouter } from 'next/navigation'
 import { GEM_GLYPH } from '@/lib/bossRaids'
+import ChartingNav from '@/components/ChartingNav'
 import {
   landmarkViews, gemsBanked, nextLandmark, LANDMARKS,
   WORLD_CHART_FULL_POINTS, WORLD_CHART_GRAND_TOTAL,
@@ -29,7 +29,6 @@ function vibrate(p: number | number[]) {
 type Paid = { gems: number; bonus: number; completed: boolean }
 
 export default function WorldChartClient({ points, claimed: claimed0 }: { points: number; claimed: number[] }) {
-  const router = useRouter()
   const [claimed, setClaimed] = useState<number[]>(claimed0)
   const [active, setActive] = useState<LandmarkView | null>(null)   // the discovery being celebrated
   const [claimingId, setClaimingId] = useState<number | null>(null)
@@ -73,23 +72,15 @@ export default function WorldChartClient({ points, claimed: claimed0 }: { points
     <main className="min-h-screen" style={{ background: 'radial-gradient(ellipse at 50% -10%, #16202e 0%, #0a0f16 60%)' }}>
       <div style={{ maxWidth: 600, margin: '0 auto', padding: '0.9rem 0.9rem calc(env(safe-area-inset-bottom) + 5rem)' }}>
 
-        {/* Top bar */}
-        <div className="flex items-center gap-2" style={{ marginBottom: 14 }}>
-          <button onClick={() => router.push('/tavern/chart-room')} className="font-karla font-700 tap"
-            style={{ padding: '0.5rem 0.7rem', borderRadius: 10, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.14)', color: '#d4cec2', fontSize: '0.82rem' }}>
-            ‹ Chart Room
-          </button>
-          <div style={{ flex: 1 }} />
-          <span className="font-karla font-800" style={{ fontSize: '0.92rem', color: GEM, fontVariantNumeric: 'tabular-nums' }}>{GEM_GLYPH} {gemsHave.toLocaleString()} / {WORLD_CHART_GRAND_TOTAL.toLocaleString()}</span>
+        <div style={{ marginBottom: 14 }}>
+          <ChartingNav title="The World Chart" backHref="/tavern/chart-room" backLabel="Charting" points={points} />
         </div>
 
         {/* ── Progress ── */}
         <div style={{ padding: '0.85rem 1rem', borderRadius: 14, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', marginBottom: 16 }}>
           <div className="flex items-baseline justify-between" style={{ marginBottom: 8 }}>
             <span className="font-cinzel font-800" style={{ fontSize: '1.1rem', color: '#f4ecd8' }}>{foundCount} <span style={{ color: '#8a857c', fontSize: '0.86rem' }}>/ {LANDMARKS.length} landmarks</span></span>
-            <span className="font-karla font-800" style={{ fontSize: '0.92rem', color: GOLD, fontVariantNumeric: 'tabular-nums' }}>
-              {next ? `${points} / ${next.threshold} pts` : `${points} pts`}
-            </span>
+            <span className="font-karla font-800" style={{ fontSize: '0.92rem', color: GEM, fontVariantNumeric: 'tabular-nums' }}>{GEM_GLYPH} {gemsHave.toLocaleString()} / {WORLD_CHART_GRAND_TOTAL.toLocaleString()}</span>
           </div>
           <div style={{ height: 12, borderRadius: 999, background: 'rgba(0,0,0,0.4)', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
             <div style={{ width: `${Math.min(100, (points / WORLD_CHART_FULL_POINTS) * 100)}%`, height: '100%', background: `linear-gradient(90deg, ${GOLD}, #ffe9a8)`, boxShadow: `0 0 14px ${GOLD}aa` }} />

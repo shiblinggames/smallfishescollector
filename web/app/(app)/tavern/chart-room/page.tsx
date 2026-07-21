@@ -17,9 +17,7 @@ export default async function ChartRoomPage() {
 
   const [profile, hold, mtch, mine, rig] = await Promise.all([getCurrentProfile(), getHoldState(), getMatchState(), getMinefieldState(), getRiggingState()])
 
-  const solvedToday = 'error' in hold ? false : hold.puzzles.some(p => p.solved)
-  const holdStatus: 'open' | 'locked' | 'done' =
-    'error' in hold ? 'open' : solvedToday ? 'done' : hold.lockedDifficulty ? 'locked' : 'open'
+  const holdSolved = 'error' in hold ? 0 : hold.puzzles.filter(p => p.solved).length
   const holdDoubloonsToday = 'error' in hold ? 0 : hold.doubloonsAwarded
 
   const matchStatus: 'active' | 'cleared' = 'error' in mtch ? 'active' : mtch.status
@@ -41,8 +39,7 @@ export default async function ChartRoomPage() {
         <main className="min-h-screen pb-24 sm:pb-0">
           <div className="px-4 pt-6 pb-12">
             <ChartRoomLobby
-              doubloons={profile?.doubloons ?? 0}
-              holdStatus={holdStatus}
+              holdSolved={holdSolved}
               holdDoubloonsToday={holdDoubloonsToday}
               matchStatus={matchStatus}
               matchReward={matchReward}

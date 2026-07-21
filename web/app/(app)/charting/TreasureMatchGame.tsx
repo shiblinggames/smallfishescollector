@@ -15,7 +15,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { submitMatch } from './actions'
 import { makeRng, initialBoard, resolveSwap, hasValidMove, reshuffle, areAdjacent, WILD } from './treasureMatch'
 import { MATCH_TOKENS, MATCH_TIERS, MATCH_MAX_POINTS, pointsForScore, nextMatchTier, gemSurface, GEM_BEVEL, type MatchState } from './constants'
-import BackButton from '@/components/BackButton'
+import ChartingNav from '@/components/ChartingNav'
 
 const GOLD = '#f0c040'
 const GREEN = '#7bf0b0'
@@ -386,14 +386,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
 
   return (
     <div style={{ maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <BackButton href="/tavern/chart-room" label="Charting" />
-        </div>
-        <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f4ecd8', textAlign: 'center', whiteSpace: 'nowrap', textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>Treasure Match</p>
-        <div style={{ flex: 1, minWidth: 0 }} />
-      </div>
+      <ChartingNav title="Treasure Match" backHref="/tavern/chart-room" backLabel="Charting" points={puzzlePoints} />
 
       {/* Bold HUD — Moves + Score. Solid dark panels so the readout stays
           legible over the painted background. */}

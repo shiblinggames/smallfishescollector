@@ -4,11 +4,11 @@
 // solutions only ever live server-side; the client receives givens
 // only, and every tally / submit is judged here.
 //
-// One hold a day: the player LOCKS one difficulty (lockHold), then plays
-// only that one. Solving it pays doubloons (difficulty + clean bonus)
-// AND banks puzzle points (permanent, accumulate toward the World
-// Chart). Types live in ./constants
-// ('use server' files silently drop non-async exports at build).
+// FOUR holds a week, all open: the player can play + solve any or all of
+// the four difficulties independently (no lock). Each solve pays doubloons
+// (difficulty + clean bonus) AND banks its difficulty in charting points
+// (1-4, permanent, accumulate toward the World Chart). Types live in
+// ./constants ('use server' files silently drop non-async exports at build).
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -25,7 +25,6 @@ import {
   type HoldDifficulty,
   type HoldState,
   type HoldPuzzleClient,
-  type LockHoldResult,
   type TallyHoldResult,
   type SubmitHoldResult,
 } from './constants'
@@ -37,10 +36,9 @@ interface AttemptRow {
   progress: Partial<Record<HoldDifficulty, ProgressEntry>>
   solved: Partial<Record<HoldDifficulty, SolvedEntry>>
   doubloons_awarded: number
-  locked_difficulty: HoldDifficulty | null
 }
 
-const ATTEMPT_COLS = 'progress, solved, doubloons_awarded, locked_difficulty'
+const ATTEMPT_COLS = 'progress, solved, doubloons_awarded'
 
 // The period key for the Hold is the week's Monday (made weekly
 // 2026-06-14); the `date` column on daily_sudoku / sudoku_attempts holds
@@ -50,7 +48,7 @@ function todayStr(): string {
 }
 
 function emptyAttempt(): AttemptRow {
-  return { progress: {}, solved: {}, doubloons_awarded: 0, locked_difficulty: null }
+  return { progress: {}, solved: {}, doubloons_awarded: 0 }
 }
 
 async function loadAttempt(userId: string, today: string): Promise<AttemptRow> {
@@ -99,44 +97,8 @@ export async function getHoldState(): Promise<HoldState | { error: string }> {
     date: today,
     puzzles: out,
     doubloonsAwarded: attempt.doubloons_awarded,
-    lockedDifficulty: attempt.locked_difficulty,
     puzzlePoints: points,
   }
-}
-
-/** Commit to one difficulty as today's hold. The other two stay closed
- *  until midnight. Idempotent for the same pick; rejects a switch. */
-export async function lockHold(difficulty: HoldDifficulty): Promise<LockHoldResult | { error: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not authenticated' }
-  if (!isHoldDifficulty(difficulty)) return { error: 'Unknown hold' }
-
-  const today = todayStr()
-  const attempt = await loadAttempt(user.id, today)
-  if (attempt.locked_difficulty) {
-    if (attempt.locked_difficulty !== difficulty) {
-      return { error: "You already chose this week's hold. Come back next week for a fresh manifest." }
-    }
-    return { lockedDifficulty: attempt.locked_difficulty }
-  }
-
-  const admin = createAdminClient()
-  await admin.from('sudoku_attempts').upsert({
-    user_id: user.id, date: today,
-    progress: attempt.progress, solved: attempt.solved,
-    doubloons_awarded: attempt.doubloons_awarded,
-    locked_difficulty: difficulty,
-    updated_at: new Date().toISOString(),
-  })
-  return { lockedDifficulty: difficulty }
-}
-
-/** Guard: a difficulty can only be played once it's the locked one. */
-function lockGuard(attempt: AttemptRow, difficulty: HoldDifficulty): string | null {
-  if (!attempt.locked_difficulty) return 'Choose this week’s hold first'
-  if (attempt.locked_difficulty !== difficulty) return 'That hold is closed this week'
-  return null
 }
 
 /** Persist in-flight entries so the player can resume. Lightweight:
@@ -154,8 +116,6 @@ export async function saveHoldProgress(
   const admin = createAdminClient()
   const today = todayStr()
   const attempt = await loadAttempt(user.id, today)
-  const guard = lockGuard(attempt, difficulty)
-  if (guard) return { error: guard }
   if (attempt.solved[difficulty]) return { ok: true } // already banked
 
   const prevHints = attempt.progress[difficulty]?.hints ?? 0
@@ -163,7 +123,6 @@ export async function saveHoldProgress(
   await admin.from('sudoku_attempts').upsert({
     user_id: user.id, date: today,
     progress, solved: attempt.solved, doubloons_awarded: attempt.doubloons_awarded,
-    locked_difficulty: attempt.locked_difficulty,
     updated_at: new Date().toISOString(),
   })
   return { ok: true }
@@ -184,8 +143,6 @@ export async function tallyHold(
   const today = todayStr()
   const [puzzles, attempt] = await Promise.all([getThisWeeksSudoku(), loadAttempt(user.id, today)])
   if (!puzzles) return { error: 'No holds available' }
-  const guard = lockGuard(attempt, difficulty)
-  if (guard) return { error: guard }
 
   const solution = puzzles[difficulty].solution
   const wrong = new Array(HOLD_CELLS).fill(false)
@@ -199,7 +156,6 @@ export async function tallyHold(
   await admin.from('sudoku_attempts').upsert({
     user_id: user.id, date: today,
     progress, solved: attempt.solved, doubloons_awarded: attempt.doubloons_awarded,
-    locked_difficulty: attempt.locked_difficulty,
     updated_at: new Date().toISOString(),
   })
 
@@ -223,8 +179,6 @@ export async function submitHold(
     createAdminClient().from('profiles').select('doubloons, puzzle_points').eq('id', user.id).single(),
   ])
   if (!puzzles) return { error: 'No holds available' }
-  const guard = lockGuard(attempt, difficulty)
-  if (guard) return { error: guard }
   if (attempt.solved[difficulty]) return { error: 'This hold is already stowed' }
 
   const { givens, solution } = puzzles[difficulty]
@@ -245,7 +199,6 @@ export async function submitHold(
     await admin.from('sudoku_attempts').upsert({
       user_id: user.id, date: today,
       progress, solved: attempt.solved, doubloons_awarded: attempt.doubloons_awarded,
-      locked_difficulty: attempt.locked_difficulty,
       updated_at: new Date().toISOString(),
     })
     return {
@@ -254,10 +207,10 @@ export async function submitHold(
     }
   }
 
-  // Correct + first solve today → pay doubloons + bank puzzle points.
+  // Correct + first solve this week → pay doubloons + bank puzzle points.
   const clean = (attempt.progress[difficulty]?.hints ?? 0) === 0
   const doubloonsWon = holdPayout(difficulty, clean)
-  const pointsWon = holdPoints(difficulty, clean)
+  const pointsWon = holdPoints(difficulty)
   const totalAwarded = attempt.doubloons_awarded + doubloonsWon
   const oldDoubloons = profile?.doubloons ?? 0
   const oldPoints = profile?.puzzle_points ?? 0
@@ -277,7 +230,6 @@ export async function submitHold(
     admin.from('sudoku_attempts').upsert({
       user_id: user.id, date: today,
       progress, solved, doubloons_awarded: totalAwarded,
-      locked_difficulty: attempt.locked_difficulty,
       updated_at: new Date().toISOString(),
     }),
     admin.from('profiles').update({ doubloons: newDoubloons, puzzle_points: newPuzzlePoints }).eq('id', user.id),

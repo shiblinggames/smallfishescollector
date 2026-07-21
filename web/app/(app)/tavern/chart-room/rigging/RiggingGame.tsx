@@ -12,7 +12,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
-import BackButton from '@/components/BackButton'
+import ChartingNav from '@/components/ChartingNav'
 import { motion, AnimatePresence } from 'framer-motion'
 import { saveRiggingPaths, submitRigging } from './actions'
 import { isSolved, neighborsOf } from './rigging'
@@ -178,19 +178,11 @@ export default function RiggingGame({ initial }: { initial: RiggingState }) {
 
   return (
     <div style={{ maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <BackButton href="/tavern/chart-room" label="Charting" />
-        </div>
-        <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f4ecd8', textAlign: 'center', whiteSpace: 'nowrap' }}>
-          Lay the Rigging
-        </p>
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', justifyContent: 'flex-end' }}>
-          <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: cleared ? GOLD : '#8f8672', whiteSpace: 'nowrap' }}>
-            {cleared ? 'Rigged' : `${connected}/${pairs.length} ropes`}
-          </span>
-        </div>
+      <ChartingNav title="Lay the Rigging" backHref="/tavern/chart-room" backLabel="Charting" points={puzzlePoints} />
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: -4 }}>
+        <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: cleared ? GOLD : '#8f8672', whiteSpace: 'nowrap' }}>
+          {cleared ? 'Rigged' : `${connected}/${pairs.length} ropes`}
+        </span>
       </div>
 
       {/* Points readout */}

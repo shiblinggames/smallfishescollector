@@ -5,15 +5,14 @@ import ScenicCard from '../ScenicCard'
 
 const GOLD = '#f0c040'
 
-/** Door card for The Quartermaster's Hold inside the Chart Room lobby.
- *  Parchment manifest scene: a faint cargo grid with a few lit lots and
- *  a slow drifting glow, so it reads as a half-stowed hold. Shows the
- *  day's progress chip (N/3 holds stowed + ⟡ banked). */
-export default function HoldCard({ status, doubloonsToday }: { status: 'open' | 'locked' | 'done'; doubloonsToday: number }) {
-  const chip = status === 'done' ? `Done · +${doubloonsToday} ⟡`
-    : status === 'locked' ? 'In progress'
-    : 'New hold'
-  const chipLit = status === 'done'
+/** Door card for The Hold inside the Chart Room lobby. Parchment manifest
+ *  scene: a faint cargo grid with a few lit lots and a slow drifting glow.
+ *  Shows the week's progress chip (N/4 holds stowed + ⟡ banked). */
+export default function HoldCard({ solvedCount, doubloonsToday }: { solvedCount: number; doubloonsToday: number }) {
+  const chip = solvedCount >= 4 ? `All 4 stowed · +${doubloonsToday} ⟡`
+    : solvedCount > 0 ? `${solvedCount}/4 stowed`
+    : '4 new holds'
+  const chipLit = solvedCount >= 4
   return (
     <ScenicCard
       href="/tavern/chart-room/hold"
