@@ -112,9 +112,9 @@ export const BADGES: Badge[] = [
   { id: 'quartermaster',  name: 'Quartermaster',      description: 'Bank 40 charting points',                         imageUrl: '/badges/quartermaster.png',  difficulty: 'rookie'   },
   { id: 'den_magnate',    name: 'Chartwright',        description: 'Bank 80 charting points',                         imageUrl: '/badges/den_magnate.png',    difficulty: 'seasoned' },
   { id: 'uncharted_no_more', name: 'Uncharted No More', description: 'Chart seven World Chart landmarks',             imageUrl: '/badges/uncharted_no_more.png', difficulty: 'seasoned' },
-  { id: 'fully_laden',    name: 'Fully Laden',        description: 'Solve a Man-o-War hold (the hardest sudoku)',      imageUrl: '/badges/fully_laden.png',    difficulty: 'veteran'  },
-  { id: 'the_long_watch', name: 'The Long Watch',     description: 'Bank 500 charting points',                        imageUrl: '/badges/the_long_watch.png', difficulty: 'veteran'  },
-  { id: 'clean_manifest', name: 'Clean Manifest',     description: 'Stow all four holds in a single week',             imageUrl: '/badges/clean_manifest.png', difficulty: 'master'   },
+  { id: 'fully_laden',    name: 'Fully Laden',        description: 'Solve a Man-o-War hold (the hardest sudoku)',      imageUrl: '/badges/fully_laden.png',    difficulty: 'seasoned' },
+  { id: 'the_long_watch', name: 'The Long Watch',     description: 'Bank 500 charting points',                        imageUrl: '/badges/the_long_watch.png', difficulty: 'master'   },
+  { id: 'clean_manifest', name: 'Clean Manifest',     description: 'Stow all four holds in a single week',             imageUrl: '/badges/clean_manifest.png', difficulty: 'veteran'  },
   { id: 'master_cartographer', name: 'Master Cartographer', description: 'Chart the entire World Chart (all 13 landmarks)', imageUrl: '/badges/master_cartographer.png', difficulty: 'grandmaster' },
 
   // ── The Den & records ────────────────────────────────────────────────────
