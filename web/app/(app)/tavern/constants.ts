@@ -1,3 +1,6 @@
+import { getLevelFromXP as fishingLevelFromXp } from '@/lib/fishingLevel'
+import { getLevelFromXP as navLevelFromXp } from '@/lib/expeditionLevel'
+
 // Crown & Anchor constants (SYMBOLS, DAILY_CAP, MAX_BET, MIN_BET) were
 // removed 2026-06-06 when C&A was retired in favor of Blackjack. The
 // Blackjack equivalents (BJ_*) are defined below.
@@ -95,51 +98,39 @@ export const SLOTS_JACKPOT_FEED_PCT = 0.10
 // buy-in surface. Chips churn freely between games without re-hitting
 // the cap; cash-out converts everything back to doubloons and ends the
 // session (per-game session nets reset). Per-game WAGER bands stay below.
-export const CASINO_DAILY_CAP = 5000   // base doubloons/day; raised by puzzle points (denDailyCap)
+export const CASINO_DAILY_CAP = 2000   // base doubloons/day (the floor; see denDailyCap)
 // Smaller-increment buy-in ladder (was 100→5000). Lower entries for casual
 // top-ups; the lobby's Max button covers "buy my whole remaining limit" so the
 // presets don't need to climb all the way to the cap.
 export const CASINO_BUY_IN_PRESETS = [25, 50, 100, 250, 500, 1000] as const
 export const CASINO_BUY_IN_MIN = 10
 
-// Puzzle-points → Den daily buy-in cap. Cumulative points from solving
-// The Quartermaster's Hold (Chart Room) permanently raise how many
-// doubloons a player can commit to the Den per day. Steady curve: a
-// regular solver tops out in ~4-5 weeks. The cap is the ONLY thing
-// points buy — they're not spent. Tune the ladder here.
-export const DEN_PURSE_TIERS = [
-  { points: 0,  cap: 5000 },
-  { points: 15, cap: 6000 },
-  { points: 40, cap: 7500 },
-  { points: 80, cap: 10000 },
-] as const
+// Den daily buy-in cap — driven by your CAPTAIN'S RANK, i.e. the combined total
+// of your Fishing + Navigation level. It's a Captain perk: non-Captains sit flat
+// at the base until they upgrade. Captains climb linearly from the base to
+// DEN_CAP_MAX as their total level rises to DEN_CAP_MAX_LEVEL (Fishing 100 + Nav
+// 100). Charting points NO LONGER touch the Den (they feed the World Chart now).
+export const DEN_CAP_BASE = 2000        // starting cap + the flat non-Captain cap
+export const DEN_CAP_MAX = 20000        // Captain cap at max total level
+export const DEN_CAP_MAX_LEVEL = 200    // Fishing 100 + Nav 100
 
-/** Flat Den daily buy-in cap for NON-members — the puzzle-point ladder is a
- *  member perk, so non-members sit at a hard 2,000 ⟡/day regardless of points. */
-export const DEN_CAP_NONMEMBER = 2000
-
-/** The shared Den daily buy-in cap. Members climb the puzzle-point ladder
- *  (5k → 10k); non-members are capped flat at DEN_CAP_NONMEMBER. `isMember`
- *  defaults to true so the Chart Room's "puzzle points unlock this cap"
- *  feedback shows the member ladder (the cap is a member perk); the casino
- *  trio passes the player's real membership so the live limit is correct. */
-export function denDailyCap(puzzlePoints: number, isMember: boolean = true): number {
-  if (!isMember) return DEN_CAP_NONMEMBER
-  let cap: number = DEN_PURSE_TIERS[0].cap
-  for (const t of DEN_PURSE_TIERS) if ((puzzlePoints ?? 0) >= t.points) cap = t.cap
-  return cap
+/** The shared Den daily buy-in cap for a given combined Fishing+Nav level.
+ *  Non-Captains are held flat at DEN_CAP_BASE; Captains scale to DEN_CAP_MAX. */
+export function denDailyCap(totalLevel: number, isCaptain: boolean): number {
+  if (!isCaptain) return DEN_CAP_BASE
+  const t = Math.max(0, Math.min(DEN_CAP_MAX_LEVEL, totalLevel ?? 0))
+  return Math.round(DEN_CAP_BASE + (DEN_CAP_MAX - DEN_CAP_BASE) * (t / DEN_CAP_MAX_LEVEL))
 }
 
-/** The next tier a player is climbing toward, or null at the top. */
-export function nextDenTier(puzzlePoints: number): { points: number; cap: number } | null {
-  for (const t of DEN_PURSE_TIERS) if ((puzzlePoints ?? 0) < t.points) return { points: t.points, cap: t.cap }
-  return null
+/** Den cap straight from the raw XP columns (fishing_xp + expedition_xp). */
+export function denCapFromXp(fishingXp: number, expeditionXp: number, isCaptain: boolean): number {
+  return denDailyCap(fishingLevelFromXp(fishingXp ?? 0) + navLevelFromXp(expeditionXp ?? 0), isCaptain)
 }
 
-// A single buy-in can be as large as the top tier's cap (high-tier
-// players buy in big in one go); the per-call amount is still bounded by
-// the player's effective cap + remaining at enforcement time.
-export const CASINO_BUY_IN_MAX = DEN_PURSE_TIERS[DEN_PURSE_TIERS.length - 1].cap
+// A single buy-in can be as large as the top cap (high-rank players buy in big in
+// one go); the per-call amount is still bounded by the player's effective cap +
+// remaining at enforcement time.
+export const CASINO_BUY_IN_MAX = DEN_CAP_MAX
 
 // ─── Blackjack ───────────────────────────────────────────────────────────────
 // Same wager band as Fish Slots so the tavern reads coherently. Wagers

@@ -7,7 +7,7 @@
 // numbers (mines bordering a tile), flag the mines, clear every safe
 // tile. Hit a mine and she's lost — but the week's board resets and you
 // try again (unlimited retries). First clear of the week banks puzzle
-// points toward the Den purse. No doubloons.
+// points toward the World Chart. No doubloons.
 
 export const MINEFIELD_COLS = 9
 export const MINEFIELD_ROWS = 12
@@ -47,9 +47,8 @@ export interface MinefieldState {
   pointsAwarded: number
   /** The reward for a first clear. */
   reward: number
-  /** Lifetime puzzle points + the Den perk they buy (for the readout). */
+  /** Lifetime puzzle points (for the readout). */
   puzzlePoints: number
-  denCap: number
 }
 
 export interface RevealResult {

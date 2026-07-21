@@ -7,7 +7,7 @@
 // One seeded board a week (shared puzzle), unlimited retries. Engine runs
 // client-side; the server tiers the score + banks the delta authoritatively.
 
-import { memo, useMemo, useRef, useState, useEffect, type CSSProperties } from 'react'
+import { memo, useRef, useState, useEffect, type CSSProperties } from 'react'
 import { vibrate as haptic } from '@/lib/haptics'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
@@ -15,7 +15,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { submitMatch } from './actions'
 import { makeRng, initialBoard, resolveSwap, hasValidMove, reshuffle, areAdjacent, WILD } from './treasureMatch'
 import { MATCH_TOKENS, MATCH_TIERS, MATCH_MAX_POINTS, pointsForScore, nextMatchTier, gemSurface, GEM_BEVEL, type MatchState } from './constants'
-import { denDailyCap, nextDenTier } from '@/app/(app)/tavern/constants'
 import BackButton from '@/components/BackButton'
 
 const GOLD = '#f0c040'
@@ -28,7 +27,7 @@ const WILD_RAINBOW = 'conic-gradient(from 210deg at 50% 50%, #ff7e1c, #ffd028, #
 const wait = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
 
 interface Particle { id: number; x: number; y: number; dx: number; dy: number; color: string; size: number }
-interface RunResult { score: number; best: number; tier: number; pointsWon: number; maxed: boolean; capUp: number | null }
+interface RunResult { score: number; best: number; tier: number; pointsWon: number; maxed: boolean }
 
 // One board cell, memoized so a cascade tick only re-renders the handful of
 // tiles whose state actually changed (was: all 49 reconciling + repainting
@@ -129,7 +128,6 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
   const [banked, setBanked] = useState(initial.pointsAwarded)
   const [message, setMessage] = useState<string | null>(null)
   const [puzzlePoints, setPuzzlePoints] = useState(initial.puzzlePoints)
-  const [denCap, setDenCap] = useState(initial.denCap)
   const [result, setResult] = useState<RunResult | null>(null)
   const [mounted, setMounted] = useState(false)
   // Juice
@@ -157,7 +155,6 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
 
   useEffect(() => { setMounted(true) }, [])
 
-  const denNext = useMemo(() => nextDenTier(puzzlePoints), [puzzlePoints])
   const cleared = status === 'cleared'
   const displayBest = Math.max(score, bestScore)
   const liveTier = pointsForScore(score)
@@ -217,14 +214,14 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
   async function endRun(finalScore: number, perfect: boolean) {
     const r = await submitMatch(finalScore)
     if ('error' in r) {
-      setResult({ score: finalScore, best: Math.max(finalScore, bestRef.current), tier: pointsForScore(Math.max(finalScore, bestRef.current)), pointsWon: 0, maxed: perfect, capUp: null })
+      setResult({ score: finalScore, best: Math.max(finalScore, bestRef.current), tier: pointsForScore(Math.max(finalScore, bestRef.current)), pointsWon: 0, maxed: perfect })
       return
     }
     setBestScore(r.bestScore); bestRef.current = r.bestScore
     setBanked(r.tier); shownTierRef.current = Math.max(shownTierRef.current, r.tier)
-    if (r.newPuzzlePoints !== null) { setPuzzlePoints(r.newPuzzlePoints); setDenCap(denDailyCap(r.newPuzzlePoints)) }
+    if (r.newPuzzlePoints !== null) setPuzzlePoints(r.newPuzzlePoints)
     if (r.maxed) setStatus('cleared')
-    setResult({ score: finalScore, best: r.bestScore, tier: r.tier, pointsWon: r.pointsWon, maxed: r.maxed, capUp: r.capAfter > r.capBefore ? r.capAfter : null })
+    setResult({ score: finalScore, best: r.bestScore, tier: r.tier, pointsWon: r.pointsWon, maxed: r.maxed })
   }
 
   async function attemptSwap(a: number, b: number) {
@@ -493,7 +490,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
       <p className="font-karla" style={{ fontSize: '0.62rem', color: '#8f8672', textAlign: 'center' }}>
         {cleared
           ? `Maxed ${MATCH_MAX_POINTS}/5 this week — fresh board Monday.`
-          : message ?? `Best ${displayBest.toLocaleString()} · ${banked}/5 banked · Den purse ${denCap.toLocaleString()} ⟡/day${denNext ? ` · ${denNext.points - puzzlePoints} to ${denNext.cap.toLocaleString()}` : ''}`}
+          : message ?? `Best ${displayBest.toLocaleString()} · ${banked}/5 banked`}
       </p>
 
       {/* Full-screen combo burst — viewport-centered, max impact. Keyed so the
@@ -615,12 +612,6 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
                 {result.pointsWon > 0
                   ? <p className="font-karla font-700" style={{ fontSize: '0.8rem', color: GOLD, marginTop: 2 }}>+{result.pointsWon} banked just now</p>
                   : <p className="font-karla" style={{ fontSize: '0.72rem', color: '#9a9078', marginTop: 2 }}>{result.maxed ? 'Maxed out for the week.' : 'Beat your best to bank more.'}</p>}
-
-                {result.capUp !== null && (
-                  <motion.p initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.25, type: 'spring', stiffness: 300 }} className="font-cinzel font-700" style={{ marginTop: 12, padding: '0.5rem 0.7rem', borderRadius: 10, fontSize: '0.78rem', color: GOLD, background: `${GOLD}18`, border: `1px solid ${GOLD}55` }}>
-                    Den purse raised to {result.capUp.toLocaleString()} ⟡/day!
-                  </motion.p>
-                )}
 
                 <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
                   {!result.maxed && (

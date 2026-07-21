@@ -9,7 +9,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getThisWeeksMatch } from './generate'
-import { denDailyCap } from '@/app/(app)/tavern/constants'
 import {
   MATCH_TARGET, MATCH_MAX_POINTS, matchWeekStr, pointsForScore,
   type MatchState, type SubmitMatchResult,
@@ -66,7 +65,6 @@ export async function getMatchState(): Promise<MatchState | { error: string }> {
     bestScore: attempt.best_score,
     pointsAwarded: attempt.points_awarded,
     puzzlePoints: points,
-    denCap: denDailyCap(points),
   }
 }
 
@@ -95,7 +93,6 @@ export async function submitMatch(score: number): Promise<SubmitMatchResult | { 
   const tier = pointsForScore(bestScore)               // 0-5 for the best score
   const delta = Math.max(0, tier - attempt.points_awarded) // never claw back
   const maxed = tier >= MATCH_MAX_POINTS
-  const capBefore = denDailyCap(oldPoints)
 
   if (delta <= 0) {
     // No new tier reached — just persist the (possibly improved) best score.
@@ -106,7 +103,7 @@ export async function submitMatch(score: number): Promise<SubmitMatchResult | { 
       points_awarded: attempt.points_awarded,
       updated_at: new Date().toISOString(),
     })
-    return { bestScore, tier, pointsWon: 0, maxed, newPuzzlePoints: null, capBefore, capAfter: capBefore }
+    return { bestScore, tier, pointsWon: 0, maxed, newPuzzlePoints: null }
   }
 
   const newPuzzlePoints = oldPoints + delta
@@ -123,7 +120,5 @@ export async function submitMatch(score: number): Promise<SubmitMatchResult | { 
   return {
     bestScore, tier, pointsWon: delta, maxed,
     newPuzzlePoints,
-    capBefore,
-    capAfter: denDailyCap(newPuzzlePoints),
   }
 }

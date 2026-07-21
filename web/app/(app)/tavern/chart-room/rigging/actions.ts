@@ -3,14 +3,13 @@
 // Lay the Rigging — server-authoritative. The board is solvable by
 // construction; the player draws ropes client-side and the full solve is
 // validated here (isSolved) before any points are banked. First clear of
-// the week banks RIGGING_POINTS puzzle points toward the Den purse.
+// the week banks RIGGING_POINTS puzzle points toward the World Chart.
 // Types live in ./constants ('use server' strips non-async exports).
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getThisWeeksRigging } from './generate'
 import { isSolved } from './rigging'
-import { denDailyCap } from '@/app/(app)/tavern/constants'
 import {
   RIGGING_POINTS, riggingWeekStr,
   type RiggingState, type SubmitRiggingResult,
@@ -63,7 +62,6 @@ export async function getRiggingState(): Promise<RiggingState | { error: string 
     pointsAwarded: attempt.points_awarded,
     reward: RIGGING_POINTS,
     puzzlePoints: points,
-    denCap: denDailyCap(points),
   }
 }
 
@@ -110,7 +108,7 @@ export async function submitRigging(paths: Record<number, number[]>): Promise<Su
       paths, status: attempt.status, points_awarded: attempt.points_awarded,
       updated_at: new Date().toISOString(),
     })
-    return { solved: false, pointsWon: 0, newPuzzlePoints: null, capBefore: denDailyCap(oldPoints), capAfter: denDailyCap(oldPoints) }
+    return { solved: false, pointsWon: 0, newPuzzlePoints: null }
   }
 
   // Already banked this week? Mark cleared, no double pay.
@@ -119,7 +117,7 @@ export async function submitRigging(paths: Record<number, number[]>): Promise<Su
       user_id: user.id, week, paths, status: 'cleared', points_awarded: attempt.points_awarded,
       updated_at: new Date().toISOString(),
     })
-    return { solved: true, pointsWon: 0, newPuzzlePoints: null, capBefore: denDailyCap(oldPoints), capAfter: denDailyCap(oldPoints) }
+    return { solved: true, pointsWon: 0, newPuzzlePoints: null }
   }
 
   const newPuzzlePoints = oldPoints + RIGGING_POINTS
@@ -135,7 +133,5 @@ export async function submitRigging(paths: Record<number, number[]>): Promise<Su
     solved: true,
     pointsWon: RIGGING_POINTS,
     newPuzzlePoints,
-    capBefore: denDailyCap(oldPoints),
-    capAfter: denDailyCap(newPuzzlePoints),
   }
 }

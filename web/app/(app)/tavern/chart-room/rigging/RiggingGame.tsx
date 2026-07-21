@@ -5,7 +5,7 @@
 // another. Ropes render as glowing SVG cords through the cell centers;
 // cleats are glossy knobs; connecting a pair snaps taut with a pulse +
 // haptic. Solve it (all pairs joined + every plank covered) to bank
-// puzzle points toward your Den purse. One board a week.
+// puzzle points toward the World Chart. One board a week.
 //
 // Server-authoritative: the solve is re-validated in submitRigging
 // before any points are paid; the board ships only the endpoint pairs.
@@ -17,7 +17,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { saveRiggingPaths, submitRigging } from './actions'
 import { isSolved, neighborsOf } from './rigging'
 import { RIGGING_PALETTE, type RiggingState } from './constants'
-import { denDailyCap, nextDenTier } from '@/app/(app)/tavern/constants'
 import { vibrate as haptic } from '@/lib/haptics'
 
 const GOLD = '#f0c040'
@@ -44,10 +43,9 @@ export default function RiggingGame({ initial }: { initial: RiggingState }) {
   const activeRef = useRef<number | null>(null)
   const [status, setStatus] = useState(initial.status)
   const [puzzlePoints, setPuzzlePoints] = useState(initial.puzzlePoints)
-  const [denCap, setDenCap] = useState(initial.denCap)
   const [flash, setFlash] = useState<{ color: number; key: number } | null>(null)
   const flashKey = useRef(0)
-  const [win, setWin] = useState<{ points: number; capUp: number | null } | null>(null)
+  const [win, setWin] = useState<{ points: number } | null>(null)
   const [mounted, setMounted] = useState(false)
   const [, startTransition] = useTransition()
   const gridRef = useRef<HTMLDivElement | null>(null)
@@ -155,10 +153,9 @@ export default function RiggingGame({ initial }: { initial: RiggingState }) {
           setStatus('cleared')
           if (r.newPuzzlePoints !== null) {
             setPuzzlePoints(r.newPuzzlePoints)
-            setDenCap(denDailyCap(r.newPuzzlePoints))
-            setWin({ points: r.pointsWon, capUp: r.capAfter > r.capBefore ? r.capAfter : null })
+            setWin({ points: r.pointsWon })
           } else if (r.pointsWon > 0) {
-            setWin({ points: r.pointsWon, capUp: null })
+            setWin({ points: r.pointsWon })
           }
         }
       })
@@ -175,7 +172,6 @@ export default function RiggingGame({ initial }: { initial: RiggingState }) {
     saveTimer.current = setTimeout(() => { void saveRiggingPaths({}) }, 400)
   }
 
-  const nextTier = useMemo(() => nextDenTier(puzzlePoints), [puzzlePoints])
   const boardW = `min(96vw, ${cols * 46}px)`
   const cx = (cell: number) => (cell % cols) + 0.5
   const cy = (cell: number) => Math.floor(cell / cols) + 0.5
@@ -204,9 +200,6 @@ export default function RiggingGame({ initial }: { initial: RiggingState }) {
         background: 'rgba(196,169,106,0.08)', border: '1px solid rgba(196,169,106,0.22)',
       }}>
         <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: '#e6d8b4' }}>{puzzlePoints} charting pts</span>
-        <span style={{ color: '#6a6258' }}>·</span>
-        <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: GOLD }}>Den purse {denCap.toLocaleString()} ⟡/day</span>
-        {nextTier && <span className="font-karla" style={{ fontSize: '0.62rem', color: '#9a9078' }}>({nextTier.points - puzzlePoints} → {nextTier.cap.toLocaleString()} ⟡)</span>}
       </div>
 
       <p className="font-karla" style={{ fontSize: '0.74rem', color: '#cfc6b0', lineHeight: 1.5, textAlign: 'center' }}>
@@ -340,15 +333,6 @@ export default function RiggingGame({ initial }: { initial: RiggingState }) {
                   Every line run true, every plank under rope. She&apos;s ready to sail.
                 </p>
                 <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#7bbf7b', marginTop: 14 }}>+{win.points} charting points</p>
-                {win.capUp !== null && (
-                  <motion.p
-                    initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.25, type: 'spring', stiffness: 300 }}
-                    className="font-cinzel font-700"
-                    style={{ marginTop: 12, padding: '0.5rem 0.7rem', borderRadius: 10, fontSize: '0.78rem', color: GOLD, background: `${GOLD}18`, border: `1px solid ${GOLD}55` }}
-                  >
-                    Den purse raised to {win.capUp.toLocaleString()} ⟡/day!
-                  </motion.p>
-                )}
                 <button
                   onClick={() => setWin(null)}
                   className="font-karla font-700 uppercase"

@@ -10,7 +10,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { buyInCasino, cashOutCasino } from './actions'
 import type { CasinoWallet, CasinoSessionNets, DenLeaderboards } from './types'
-import { CASINO_BUY_IN_PRESETS, CASINO_BUY_IN_MAX, DEN_PURSE_TIERS } from '../constants'
+import { CASINO_BUY_IN_PRESETS, CASINO_BUY_IN_MAX, DEN_CAP_MAX } from '../constants'
 import BlackjackHubCard from '../BlackjackHubCard'
 import FishSlotsCard from '../FishSlotsCard'
 import RouletteHubCard from '../RouletteHubCard'
@@ -21,8 +21,6 @@ import BackButton from '@/components/BackButton'
 import ResetCountdown from '@/components/ResetCountdown'
 
 const GOLD = '#f0c040'
-const MEMBER_START_CAP = DEN_PURSE_TIERS[0].cap
-const MEMBER_MAX_CAP = DEN_PURSE_TIERS[DEN_PURSE_TIERS.length - 1].cap
 
 const DEN_TABS = [
   { key: 'overall',   label: 'Overall' },
@@ -318,6 +316,12 @@ export default function CasinoLobby({ initial, jackpotPot, denBoards }: {
             ? <>{dailyRemaining.toLocaleString()} ⟡ of today&apos;s {dailyCap.toLocaleString()} ⟡ buy-in cap left · <ResetCountdown prefix="resets in" /></>
             : <>Daily buy-in cap reached · <ResetCountdown prefix="resets in" style={{ color: GOLD }} /></>}
         </p>
+        {/* What raises the purse (Captains only) — replaces the old puzzle-point line. */}
+        {initial.isMember && dailyCap < DEN_CAP_MAX && (
+          <p className="font-karla" style={{ fontSize: '0.56rem', color: '#6a655f', marginTop: 3, textAlign: 'center' }}>
+            Level Fishing + Navigation to raise your purse, up to {DEN_CAP_MAX.toLocaleString()} ⟡/day.
+          </p>
+        )}
 
         {/* Non-member cap upsell — only once they've actually HIT today's
             buy-in cap (not before). At that moment "Captains play more" is a
@@ -325,7 +329,7 @@ export default function CasinoLobby({ initial, jackpotPot, denBoards }: {
         {!initial.isMember && dailyRemaining <= 0 && (
           <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
             <span className="font-karla" style={{ fontSize: '0.6rem', color: '#9a907c', textAlign: 'center' }}>
-              Captains play up to <span className="font-700" style={{ color: GOLD }}>{MEMBER_MAX_CAP.toLocaleString()} ⟡</span>/day
+              Captains play up to <span className="font-700" style={{ color: GOLD }}>{DEN_CAP_MAX.toLocaleString()} ⟡</span>/day as they level
             </span>
             <BecomeCaptainButton style={{ padding: '0.4rem 0.85rem', fontSize: '0.72rem' }} />
           </div>

@@ -6,14 +6,13 @@
 //
 // One hold a day: the player LOCKS one difficulty (lockHold), then plays
 // only that one. Solving it pays doubloons (difficulty + clean bonus)
-// AND banks puzzle points (permanent, accumulate toward the Den purse
-// tiers in tavern/constants denDailyCap). Types live in ./constants
+// AND banks puzzle points (permanent, accumulate toward the World
+// Chart). Types live in ./constants
 // ('use server' files silently drop non-async exports at build).
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getThisWeeksSudoku } from './generate'
-import { denDailyCap, nextDenTier } from '../../constants'
 import {
   HOLD_DIFFICULTIES,
   HOLD_META,
@@ -102,8 +101,6 @@ export async function getHoldState(): Promise<HoldState | { error: string }> {
     doubloonsAwarded: attempt.doubloons_awarded,
     lockedDifficulty: attempt.locked_difficulty,
     puzzlePoints: points,
-    denCap: denDailyCap(points),
-    nextTier: nextDenTier(points),
   }
 }
 
@@ -254,7 +251,6 @@ export async function submitHold(
     return {
       correct: false, wrong, doubloonsWon: 0, clean: false, newDoubloons: null,
       pointsWon: 0, newPuzzlePoints: (profile?.puzzle_points ?? 0),
-      capBefore: denDailyCap(profile?.puzzle_points ?? 0), capAfter: denDailyCap(profile?.puzzle_points ?? 0),
     }
   }
 
@@ -267,8 +263,6 @@ export async function submitHold(
   const oldPoints = profile?.puzzle_points ?? 0
   const newDoubloons = oldDoubloons + doubloonsWon
   const newPuzzlePoints = oldPoints + pointsWon
-  const capBefore = denDailyCap(oldPoints)
-  const capAfter = denDailyCap(newPuzzlePoints)
 
   const solved = {
     ...attempt.solved,
@@ -296,6 +290,6 @@ export async function submitHold(
 
   return {
     correct: true, doubloonsWon, clean, newDoubloons,
-    pointsWon, newPuzzlePoints, capBefore, capAfter,
+    pointsWon, newPuzzlePoints,
   }
 }

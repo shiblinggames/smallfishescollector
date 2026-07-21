@@ -27,7 +27,7 @@ export interface HoldDifficultyMeta {
   /** Base doubloons for the first solve of the day. */
   payout: number
   /** Puzzle points banked on solve (harder = more). Points are permanent
-   *  and accumulate toward the Den purse tiers (see tavern denDailyCap). */
+   *  and accumulate toward the World Chart. */
   points: number
   accent: string
 }
@@ -101,10 +101,8 @@ export interface HoldState {
   /** The difficulty the player committed to today; null = not yet
    *  chosen. One hold a day — once set, the others are closed. */
   lockedDifficulty: HoldDifficulty | null
-  /** Lifetime puzzle points + the Den purse perk they currently buy. */
+  /** Lifetime puzzle points banked from the puzzles. */
   puzzlePoints: number
-  denCap: number
-  nextTier: { points: number; cap: number } | null
 }
 
 export interface LockHoldResult {
@@ -129,10 +127,7 @@ export interface SubmitHoldResult {
   /** Wallet total after the payout, null when nothing was won — the
    *  client forwards it to the Nav's doubloons-changed listener. */
   newDoubloons: number | null
-  /** Puzzle points banked by this solve + the player's new lifetime
-   *  total, and whether crossing it raised the Den purse cap. */
+  /** Puzzle points banked by this solve + the player's new lifetime total. */
   pointsWon: number
   newPuzzlePoints: number
-  capBefore: number
-  capAfter: number
 }

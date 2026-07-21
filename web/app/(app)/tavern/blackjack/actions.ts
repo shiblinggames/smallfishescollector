@@ -8,7 +8,7 @@ import {
   dealerPlay, settleHand, settleInsurance, cardRank,
   type Card, type SettledHand, type HandOutcome,
 } from '@/lib/blackjack'
-import { BJ_MIN_BET, BJ_MAX_BET, denDailyCap } from '../constants'
+import { BJ_MIN_BET, BJ_MAX_BET, denCapFromXp } from '../constants'
 import { isPremiumActive } from '@/lib/premium'
 import { grantBadgeDirect } from '@/lib/badgeGrant'
 
@@ -69,7 +69,7 @@ export interface ClientState {
   canStand: boolean
   canDouble: boolean
   canSplit: boolean
-  dailyCap: number              // effective shared cap = denDailyCap(puzzle_points)
+  dailyCap: number              // effective shared Den cap (Fishing+Nav level, Captain-scaled)
   dailyRemaining: number        // doubloons still allowed to buy in today (shared casino cap)
   chips: number                 // shared casino chip balance (post-this-hand)
   doubloons: number             // doubloons balance (off-table)
@@ -88,7 +88,7 @@ export interface SettleResult {
   netDelta: number              // total change in chips across the hand
   newChips: number              // shared casino chip balance post-settle
   doubloons: number             // doubloons balance (unchanged by hand-level actions)
-  dailyCap: number              // effective shared cap = denDailyCap(puzzle_points)
+  dailyCap: number              // effective shared Den cap (Fishing+Nav level, Captain-scaled)
   dailyWagered: number          // sum of today's shared casino buy-ins
   sessionBuyIns: number         // shared casino session buy-ins (post-settle)
   sessionNet: number            // blackjack's session net post-settle
@@ -117,12 +117,12 @@ async function getDailyBuyInTotal(userId: string): Promise<number> {
   return (data ?? []).reduce((sum, r) => sum + (r.amount as number), 0)
 }
 
-/** Effective shared Den daily cap for this player — members climb the
- *  puzzle-point ladder; non-members sit at the flat 2,000 ⟡/day cap. */
+/** Effective shared Den daily cap for this player — Captains climb it with their
+ *  combined Fishing+Nav level; non-Captains sit at the flat 2,000 ⟡/day cap. */
 async function getDenCap(userId: string): Promise<number> {
   const admin = createAdminClient()
-  const { data } = await admin.from('profiles').select('puzzle_points, is_premium, premium_expires_at').eq('id', userId).single()
-  return denDailyCap((data?.puzzle_points as number | null) ?? 0, isPremiumActive(data))
+  const { data } = await admin.from('profiles').select('fishing_xp, expedition_xp, is_premium, premium_expires_at').eq('id', userId).single()
+  return denCapFromXp((data?.fishing_xp as number | null) ?? 0, (data?.expedition_xp as number | null) ?? 0, isPremiumActive(data))
 }
 
 export async function getDailyWagered(): Promise<number> {

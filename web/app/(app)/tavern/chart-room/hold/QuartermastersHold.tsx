@@ -4,8 +4,8 @@
 // so no deck (row), hull section (column), or bay (3x3) carries two of
 // the same lot. ONE hold a day: pick a difficulty (Skiff / Galleon /
 // Dreadnought), lock it in, and stow it. Solving pays doubloons (+ a
-// clean bonus for no tally) AND banks permanent puzzle points that raise
-// your Den gambling purse. Server-authoritative: the solution never
+// clean bonus for no tally) AND banks permanent puzzle points toward the
+// World Chart. Server-authoritative: the solution never
 // reaches this client.
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react'
@@ -78,9 +78,8 @@ export default function QuartermastersHold({ initial, doubloons }: { initial: Ho
   const [flashCells, setFlashCells] = useState<Set<number>>(new Set())
   const [balance, setBalance] = useState(doubloons)
   const [puzzlePoints, setPuzzlePoints] = useState(initial.puzzlePoints)
-  const [denCap, setDenCap] = useState(initial.denCap)
   const [message, setMessage] = useState<string | null>(null)
-  const [win, setWin] = useState<{ doubloons: number; clean: boolean; points: number; capUp: number | null } | null>(null)
+  const [win, setWin] = useState<{ doubloons: number; clean: boolean; points: number } | null>(null)
   const [mounted, setMounted] = useState(false)
   const [isPending, startTransition] = useTransition()
 
@@ -234,12 +233,11 @@ export default function QuartermastersHold({ initial, doubloons }: { initial: Ho
       }
       setSolved({ doubloons: r.doubloonsWon, clean: r.clean })
       setPuzzlePoints(r.newPuzzlePoints)
-      setDenCap(r.capAfter)
       if (r.newDoubloons !== null) {
         setBalance(prev => prev + r.doubloonsWon)
         window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.newDoubloons }))
       }
-      setWin({ doubloons: r.doubloonsWon, clean: r.clean, points: r.pointsWon, capUp: r.capAfter > r.capBefore ? r.capAfter : null })
+      setWin({ doubloons: r.doubloonsWon, clean: r.clean, points: r.pointsWon })
     })
   }
 
@@ -266,8 +264,8 @@ export default function QuartermastersHold({ initial, doubloons }: { initial: Ho
         </div>
       </div>
 
-      {/* Puzzle-points / Den purse perk readout — solid panel so it reads
-          over the painted background. */}
+      {/* Charting-points readout — solid panel so it reads over the painted
+          background. */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap',
         padding: '0.55rem 0.8rem', borderRadius: 11,
@@ -277,15 +275,6 @@ export default function QuartermastersHold({ initial, doubloons }: { initial: Ho
         <span className="font-karla font-700" style={{ fontSize: '0.74rem', color: '#f0e2bd' }}>
           {puzzlePoints} charting pts
         </span>
-        <span style={{ color: '#8a8068' }}>·</span>
-        <span className="font-karla font-700" style={{ fontSize: '0.74rem', color: GOLD }}>
-          Den purse {denCap.toLocaleString()} ⟡/day
-        </span>
-        {initial.nextTier && puzzlePoints < initial.nextTier.points && (
-          <span className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#b3a886' }}>
-            ({initial.nextTier.points - puzzlePoints} pts → {initial.nextTier.cap.toLocaleString()} ⟡)
-          </span>
-        )}
       </div>
 
       {/* ── No hold locked: choose today's ── */}
@@ -553,15 +542,6 @@ export default function QuartermastersHold({ initial, doubloons }: { initial: Ho
                 </p>
                 <p className="font-cinzel font-700" style={{ fontSize: '1.6rem', color: '#f4ecd8', marginTop: 14 }}>+{win.doubloons} ⟡</p>
                 <p className="font-karla font-700" style={{ fontSize: '0.8rem', color: '#7bbf7b', marginTop: 6 }}>+{win.points} charting point{win.points > 1 ? 's' : ''}</p>
-                {win.capUp !== null && (
-                  <motion.p
-                    initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.25, type: 'spring', stiffness: 300 }}
-                    className="font-cinzel font-700"
-                    style={{ marginTop: 12, padding: '0.5rem 0.7rem', borderRadius: 10, fontSize: '0.78rem', color: GOLD, background: `${GOLD}18`, border: `1px solid ${GOLD}55` }}
-                  >
-                    Den purse raised to {win.capUp.toLocaleString()} ⟡/day!
-                  </motion.p>
-                )}
                 <button
                   onClick={() => setWin(null)}
                   className="font-karla font-700 uppercase"

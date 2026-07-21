@@ -13,7 +13,7 @@ export interface CasinoWallet {
   doubloons: number           // off-table currency
   sessionBuyIns: number       // doubloons committed since the session started
   dailyBoughtIn: number       // today's buy-ins (casino_buy_ins sum)
-  dailyCap: number            // effective daily cap = denDailyCap(puzzle_points)
+  dailyCap: number            // effective daily Den cap (Fishing+Nav level, Captain-scaled)
   dailyRemaining: number      // dailyCap - dailyBoughtIn
   sessionNets: CasinoSessionNets   // per-game win/loss since the session started
   isMember: boolean           // Captain? non-members are flat-capped → upsell

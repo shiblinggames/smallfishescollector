@@ -4,14 +4,13 @@
 // here; the client learns a tile is a mine ONLY by busting on it (and a
 // bust resets the board, so it can't be farmed for intel). Every reveal
 // is judged + flood-filled server-side. First clear of the week banks
-// puzzle points (toward the Den purse); unlimited retries, no doubloons.
+// puzzle points (toward the World Chart); unlimited retries, no doubloons.
 // Types live in ./minefieldConstants ('use server' strips non-async exports).
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getThisWeeksMinefield, type MinefieldLayout } from './minefieldGenerate'
 import { floodReveal, adjacentMineCount, safeCellCount } from './minefield'
-import { denDailyCap } from '@/app/(app)/tavern/constants'
 import {
   MINEFIELD_POINTS, minefieldWeekStr,
   type MinefieldState, type RevealResult, type RevealedTile,
@@ -90,7 +89,6 @@ export async function getMinefieldState(): Promise<MinefieldState | { error: str
     pointsAwarded: a.points_awarded,
     reward: MINEFIELD_POINTS,
     puzzlePoints: points,
-    denCap: denDailyCap(points),
   }
 }
 

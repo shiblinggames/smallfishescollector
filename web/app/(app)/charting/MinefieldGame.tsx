@@ -11,18 +11,17 @@
 // Sweep a harbor of drifting sea mines: open water, read the soundings (mines
 // bordering a tile), flag the mines, clear every safe tile. Strike a mine and
 // she's lost — but the week's board resets and you try again. First clear of
-// the week banks charting points toward your Den purse. Server-authoritative:
+// the week banks charting points toward the World Chart. Server-authoritative:
 // the mine layout never reaches this client (you learn a mine only by busting
 // on it, and a bust resets the board, so it can't be farmed for intel).
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import BackButton from '@/components/BackButton'
 import { motion, AnimatePresence } from 'framer-motion'
 import { revealCell, toggleFlag } from './minefieldActions'
 import { neighborsOf } from './minefield'
 import { type MinefieldState } from './minefieldConstants'
-import { denDailyCap, nextDenTier } from '@/app/(app)/tavern/constants'
 import { vibrate as haptic } from '@/lib/haptics'
 
 const GOLD = '#f0c040'
@@ -66,12 +65,11 @@ export default function Minefield({ initial }: { initial: MinefieldState }) {
   const [status, setStatus] = useState(initial.status)
   const [busts, setBusts] = useState(initial.busts)
   const [puzzlePoints, setPuzzlePoints] = useState(initial.puzzlePoints)
-  const [denCap, setDenCap] = useState(initial.denCap)
   const [flagMode, setFlagMode] = useState(false)
   const [boom, setBoom] = useState(false)
   const [mineAt, setMineAt] = useState<number | null>(null)
   const [message, setMessage] = useState<string | null>(null)
-  const [win, setWin] = useState<{ points: number; capUp: number | null } | null>(null)
+  const [win, setWin] = useState<{ points: number } | null>(null)
   const [help, setHelp] = useState(false)
   const [mounted, setMounted] = useState(false)
   const busy = useRef(false)
@@ -98,16 +96,8 @@ export default function Minefield({ initial }: { initial: MinefieldState }) {
   }, [])
 
   const handleWin = useCallback((points: number, newPuzzlePoints: number | null) => {
-    if (newPuzzlePoints !== null) {
-      // Both caps derive from the server's point totals, so no stale state.
-      const capBefore = denDailyCap(newPuzzlePoints - points)
-      const capAfter = denDailyCap(newPuzzlePoints)
-      setPuzzlePoints(newPuzzlePoints)
-      setDenCap(capAfter)
-      setWin({ points, capUp: capAfter > capBefore ? capAfter : null })
-    } else {
-      setWin({ points, capUp: null })
-    }
+    if (newPuzzlePoints !== null) setPuzzlePoints(newPuzzlePoints)
+    setWin({ points })
     haptic([0, 40, 45, 90])
   }, [])
 
@@ -220,8 +210,6 @@ export default function Minefield({ initial }: { initial: MinefieldState }) {
     setPressedIdx(null)
   }
 
-  const nextTier = useMemo(() => nextDenTier(puzzlePoints), [puzzlePoints])
-
   // Board sized off a fixed tile target so it fits any phone but stays tappable.
   const boardW = `min(95vw, ${cols * 44}px)`
 
@@ -260,16 +248,9 @@ export default function Minefield({ initial }: { initial: MinefieldState }) {
         </div>
       </div>
 
-      {/* Charting points / Den purse readout */}
+      {/* Charting points readout */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap', padding: '0.4rem 0.7rem', borderRadius: 10, background: 'rgba(196,169,106,0.08)', border: '1px solid rgba(196,169,106,0.22)' }}>
         <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: '#e6d8b4' }}>{puzzlePoints} charting pts</span>
-        <span style={{ color: '#6a6258' }}>·</span>
-        <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: GOLD }}>Den purse {denCap.toLocaleString()} ⟡/day</span>
-        {nextTier && (
-          <span className="font-karla" style={{ fontSize: '0.62rem', color: '#9a9078' }}>
-            ({nextTier.points - puzzlePoints} → {nextTier.cap.toLocaleString()} ⟡)
-          </span>
-        )}
       </div>
 
       {/* Board */}
@@ -414,12 +395,6 @@ export default function Minefield({ initial }: { initial: MinefieldState }) {
                   Every mine charted, every safe tile swept. Fine navigating, captain.
                 </p>
                 <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#7bbf7b', marginTop: 14 }}>+{win.points} charting points</p>
-                {win.capUp !== null && (
-                  <motion.p initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.25, type: 'spring', stiffness: 300 }} className="font-cinzel font-700"
-                    style={{ marginTop: 12, padding: '0.5rem 0.7rem', borderRadius: 10, fontSize: '0.78rem', color: GOLD, background: `${GOLD}18`, border: `1px solid ${GOLD}55` }}>
-                    Den purse raised to {win.capUp.toLocaleString()} ⟡/day!
-                  </motion.p>
-                )}
                 <button onClick={() => setWin(null)} className="font-karla font-700 uppercase"
                   style={{ marginTop: 18, padding: '0.6rem 1.6rem', borderRadius: 10, letterSpacing: '0.1em', fontSize: '0.66rem', background: 'rgba(47,111,214,0.18)', border: '1px solid rgba(120,170,255,0.4)', color: '#bcd4ff', cursor: 'pointer' }}>
                   Back to the Deck

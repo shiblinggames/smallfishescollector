@@ -121,7 +121,6 @@ export interface MatchState {
   bestScore: number
   pointsAwarded: number          // charting points already banked this week (0-5)
   puzzlePoints: number
-  denCap: number
 }
 
 export interface SubmitMatchResult {
@@ -130,6 +129,4 @@ export interface SubmitMatchResult {
   pointsWon: number       // charting points added to the profile this call (the delta)
   maxed: boolean          // tier === MATCH_MAX_POINTS
   newPuzzlePoints: number | null
-  capBefore: number
-  capAfter: number
 }
