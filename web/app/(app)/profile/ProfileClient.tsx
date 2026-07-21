@@ -1394,22 +1394,23 @@ export default function ProfileClient({
                         aria-label={`Character ${c.name}${!isUnlocked ? ' (locked)' : ''}`}
                         style={{ flex: '0 0 auto', background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, appearance: 'none', WebkitAppearance: 'none' }}
                       >
-                        <div style={{
-                          width: 76, height: 76, borderRadius: '50%', overflow: 'hidden', position: 'relative',
-                          backgroundImage: `url(${sprites.rest})`,
-                          backgroundSize: '420% auto', backgroundPosition: '60% 68%', backgroundRepeat: 'no-repeat',
-                          border: isActive ? '2.5px solid #f0c040' : '1px solid rgba(255,255,255,0.18)',
-                          boxShadow: isActive ? '0 0 12px rgba(240,192,64,0.4)' : 'none',
-                          opacity: isUnlocked ? 1 : 0.5,
-                        }}>
+                        <div style={{ position: 'relative', width: 76, height: 76 }}>
+                          <div style={{
+                            width: 76, height: 76, borderRadius: '50%', overflow: 'hidden',
+                            backgroundImage: `url(${sprites.rest})`,
+                            backgroundSize: '420% auto', backgroundPosition: '60% 68%', backgroundRepeat: 'no-repeat',
+                            border: isActive ? '2.5px solid #f0c040' : '1px solid rgba(255,255,255,0.18)',
+                            boxShadow: isActive ? '0 0 12px rgba(240,192,64,0.4)' : 'none',
+                            opacity: isUnlocked ? 1 : 0.5,
+                          }} />
                           {!isUnlocked && (
-                            <div style={{ position: 'absolute', right: 2, bottom: 2, width: 18, height: 18, borderRadius: '50%', background: 'rgba(0,0,0,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="2.4" strokeLinecap="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                            <div style={{ position: 'absolute', right: 0, bottom: 2, width: 22, height: 22, borderRadius: '50%', background: 'rgba(12,14,18,0.96)', border: '2px solid #0a0f18', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2.4" strokeLinecap="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
                             </div>
                           )}
                           {isActive && (
-                            <div style={{ position: 'absolute', right: 2, bottom: 2, width: 18, height: 18, borderRadius: '50%', background: '#f0c040', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#1a1206" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                            <div style={{ position: 'absolute', right: 0, bottom: 2, width: 22, height: 22, borderRadius: '50%', background: '#f0c040', border: '2px solid #0a0f18', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#1a1206" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
                             </div>
                           )}
                         </div>
