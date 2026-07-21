@@ -3,7 +3,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
-import { CHARACTER_COLORS, earnedLevelColors } from '@/lib/characters'
+import { CHARACTER_COLORS, earnedLevelColors, earnedAchievementColors, ACHIEVEMENT_COLORS } from '@/lib/characters'
+import { getUserAchievementPoints } from '@/lib/achievementPoints'
 import { ALLOWED_BG_HEXES, ALLOWED_BORDER_HEXES, isPremiumBg, isPremiumBorder, getAvatarSpecial, AVATAR_SPECIALS } from '@/lib/avatarColors'
 import { isPremiumActive } from '@/lib/premium'
 import { getLevelFromXP } from '@/lib/fishingLevel'
@@ -137,12 +138,18 @@ export async function updateCharacterColor(colorId: string): Promise<{ error?: s
       // valid — allow it and persist the unlock so it sticks. Anything else is
       // genuinely locked.
       const prestige = (profile?.prestige_levels as Record<string, number> | null) ?? {}
-      const earned = earnedLevelColors({
+      let earned = earnedLevelColors({
         fishingLevel: getLevelFromXP((profile?.fishing_xp as number | null) ?? 0),
         navLevel:     navLevelFromXP((profile?.expedition_xp as number | null) ?? 0),
         maxPrestige:  Math.max(0, ...Object.values(prestige)),
-      }, unlocked)
-      if (!earned.includes(colorId)) return { error: 'Color not unlocked' }
+      }, unlocked).includes(colorId)
+      // Achievement-gated colors (e.g. Galaxy at 300 pts) — the score is derived
+      // from badges, so compute it live only when the requested color needs it.
+      if (!earned && ACHIEVEMENT_COLORS.some(a => a.id === colorId)) {
+        const pts = await getUserAchievementPoints(admin, user.id)
+        earned = earnedAchievementColors(pts, unlocked).includes(colorId)
+      }
+      if (!earned) return { error: 'Color not unlocked' }
       await admin.from('profiles').update({ unlocked_character_colors: [...unlocked, colorId] }).eq('id', user.id)
     }
   }

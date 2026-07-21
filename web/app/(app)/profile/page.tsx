@@ -5,7 +5,8 @@ import { getCrewRoster } from '@/app/(app)/crew/actions'
 import { getShip } from '@/lib/ships'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getLevelFromXP as getExpeditionLevel } from '@/lib/expeditionLevel'
-import { CHARACTER_COLORS, earnedLevelColors } from '@/lib/characters'
+import { CHARACTER_COLORS, earnedLevelColors, earnedAchievementColors } from '@/lib/characters'
+import { getUserAchievementPoints } from '@/lib/achievementPoints'
 import { isPremiumActive } from '@/lib/premium'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import type { CareerStats, CareerAggregates } from '@/lib/careerStats'
@@ -77,13 +78,15 @@ export default async function ProfilePage() {
   const expeditionLevel = getExpeditionLevel(profile?.expedition_xp ?? 0)
   const storedColors = (profile?.unlocked_character_colors as string[] | null) ?? []
   const prestigeLevels = (profile?.prestige_levels as Record<string, number> | null) ?? {}
-  // Union in any level-gated color the player has EARNED but whose grant hook
-  // missed (e.g. crossed Nav 50 via raids) so the picker shows it unlocked;
-  // equipping it persists the unlock server-side (see updateCharacterColor).
+  // Union in any level-gated or achievement-gated color the player has EARNED
+  // but whose grant never persisted, so the picker shows it unlocked; equipping
+  // it persists the unlock server-side (see updateCharacterColor).
+  const achievementPoints = await getUserAchievementPoints(admin, user.id)
   const unlockedColors = [
     ...CHARACTER_COLORS.filter(c => c.free).map(c => c.id),
     ...storedColors,
     ...earnedLevelColors({ fishingLevel: level, navLevel: expeditionLevel, maxPrestige: Math.max(0, ...Object.values(prestigeLevels)) }, storedColors),
+    ...earnedAchievementColors(achievementPoints, storedColors),
   ]
   const isPremium = isPremiumActive(profile)
 

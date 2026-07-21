@@ -24,7 +24,24 @@ export const CHARACTER_COLORS: CharacterColor[] = [
   { id: 'ice',      name: 'Ice',      free: false, unlockHint: 'Reach Fishing Level 75' },
   { id: 'lavender', name: 'Lavender', free: false, unlockHint: 'Rare drop from fishing crates' },
   { id: 'storm',    name: 'Storm',    free: false, unlockHint: 'Rare drop from fishing crates' },
+  { id: 'galaxy',   name: 'Galaxy',   free: false, unlockHint: 'Reach 300 achievement points' },
 ]
+
+/** Character colors earned by hitting an Achievement Points threshold. Kept
+ *  separate from LEVEL_COLORS because the gating stat (summed badge points) is
+ *  derived, not a plain profile column — see lib/achievementPoints. */
+export const ACHIEVEMENT_COLORS: { id: string; points: number }[] = [
+  { id: 'galaxy', points: 300 },
+]
+
+/** Achievement-gated colors the player has earned (>= threshold) but doesn't
+ *  own yet. STATE-based + idempotent, mirroring {@link earnedLevelColors}. */
+export function earnedAchievementColors(achievementPoints: number, unlocked: string[] = []): string[] {
+  return ACHIEVEMENT_COLORS
+    .filter(c => !unlocked.includes(c.id))
+    .filter(c => achievementPoints >= c.points)
+    .map(c => c.id)
+}
 
 /** Character colors earned purely by reaching a stat threshold. Single source
  *  of truth so display, equip-validation, and the per-action grant hooks all

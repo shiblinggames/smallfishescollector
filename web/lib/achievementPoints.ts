@@ -83,3 +83,31 @@ export async function getAchievementPointsBoard(admin: Admin, userId: string): P
   const myIdx = rows.findIndex(r => r.user_id === userId)
   return { top, myScore: myIdx >= 0 ? rows[myIdx].score : null, myRank: myIdx >= 0 ? myIdx + 1 : null }
 }
+
+/** One player's LIVE achievement-points score (same union(stored, derived)
+ *  badge scoring as the board, scoped to a single user). Used to gate the
+ *  achievement-earned character colors (e.g. Galaxy at 300). */
+export async function getUserAchievementPoints(admin: Admin, userId: string): Promise<number> {
+  const [{ data: profile }, { data: raidRows }, { data: crewRows }, { count: voyageCount }, { count: collectionCount }, { data: rodRows }] = await Promise.all([
+    admin.from('profiles').select(`unlocked_badges, ${BADGE_PROFILE_COLUMNS}`).eq('id', userId).single(),
+    admin.from('raid_completions').select('raid_id, elapsed_ms').eq('user_id', userId),
+    admin.from('user_crew').select('xp, died_at, cards(slug)').eq('user_id', userId),
+    admin.from('daily_voyages').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('status', 'revealed'),
+    admin.from('fish_collection').select('id', { count: 'exact', head: true }).eq('user_id', userId),
+    admin.from('rod_inventory').select('rod_tier').eq('user_id', userId),
+  ])
+  if (!profile) return 0
+  const p = profile as unknown as BadgeProfileFields & { unlocked_badges: string[] | null }
+  const crew = (crewRows ?? []) as unknown as Array<{ xp: number | null; died_at: string | null; cards: { slug: string | null } | null }>
+  const derived = earnedBadgeIds(p, {
+    raids: (raidRows ?? []) as Array<{ raid_id: string; elapsed_ms: number | null }>,
+    crew: crew.map(c => ({ xp: c.xp, died_at: c.died_at, slug: c.cards?.slug ?? null })),
+    voyageCount: voyageCount ?? 0,
+    collectionCount: collectionCount ?? 0,
+    rodTiers: (rodRows ?? []).map(r => r.rod_tier),
+  })
+  const all = new Set<string>([...(p.unlocked_badges ?? []), ...derived])
+  let score = 0
+  for (const id of all) score += badgePoints(id)
+  return score
+}
