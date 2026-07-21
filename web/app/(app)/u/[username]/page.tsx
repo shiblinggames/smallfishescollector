@@ -93,17 +93,19 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
 
     admin.rpc('career_stats', { uid: profile.id }),
 
-    // Mounted golden catches — the gilded trophy wall (biggest first).
-    admin.from('shiny_catches')
-      .select('id, size_in, fish_species(id, name, bite_rarity, habitat)')
+    // Mounted golden catches — the gilded trophy wall. Source of truth is
+    // fish_collection.is_golden (exactly what the collection log shows golden),
+    // rarest first.
+    admin.from('fish_collection')
+      .select('fish_species(id, name, bite_rarity, habitat)')
       .eq('user_id', profile.id)
-      .eq('status', 'mounted')
-      .order('size_in', { ascending: false, nullsFirst: false }),
+      .eq('is_golden', true)
+      .order('fish_species(bite_rarity)', { ascending: false }),
   ])
 
   const goldenMounts = ((goldenRows ?? []) as any[])
-    .map(r => (r.fish_species ? { id: r.fish_species.id, name: r.fish_species.name, bite_rarity: r.fish_species.bite_rarity, habitat: r.fish_species.habitat, size_in: r.size_in } : null))
-    .filter(Boolean) as { id: number; name: string; bite_rarity: number; habitat?: string; size_in?: number | null }[]
+    .map(r => r.fish_species)
+    .filter(Boolean) as { id: number; name: string; bite_rarity: number; habitat?: string }[]
 
   // Build the crew showcase. Player's explicit pick preserves their
   // saved order; the fallback (assigned crew) is already ordered by

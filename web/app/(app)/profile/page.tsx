@@ -38,12 +38,14 @@ export default async function ProfilePage() {
     // Career aggregates (fish sold, voyage loot, raids, fastest raid) in one
     // SQL round-trip via the career_stats() function.
     admin.rpc('career_stats', { uid: user.id }),
-    // Mounted golden catches — the gilded trophy wall (biggest first).
-    admin.from('shiny_catches')
-      .select('id, size_in, fish_species(id, name, bite_rarity, habitat)')
+    // Mounted golden catches — the gilded trophy wall. Source of truth is
+    // fish_collection.is_golden (exactly what the collection log shows golden),
+    // rarest first.
+    admin.from('fish_collection')
+      .select('fish_species(id, name, bite_rarity, habitat)')
       .eq('user_id', user.id)
-      .eq('status', 'mounted')
-      .order('size_in', { ascending: false, nullsFirst: false }),
+      .eq('is_golden', true)
+      .order('fish_species(bite_rarity)', { ascending: false }),
   ])
 
   const rarestFish = ((rarestFishRows ?? []) as any[])
@@ -51,8 +53,8 @@ export default async function ProfilePage() {
     .filter(Boolean) as { id: number; name: string; bite_rarity: number; habitat?: string }[]
 
   const goldenMounts = ((goldenRows ?? []) as any[])
-    .map(r => (r.fish_species ? { id: r.fish_species.id, name: r.fish_species.name, bite_rarity: r.fish_species.bite_rarity, habitat: r.fish_species.habitat, size_in: r.size_in } : null))
-    .filter(Boolean) as { id: number; name: string; bite_rarity: number; habitat?: string; size_in?: number | null }[]
+    .map(r => r.fish_species)
+    .filter(Boolean) as { id: number; name: string; bite_rarity: number; habitat?: string }[]
 
   const ancientIds = ((profile?.ancient_catches as number[] | null) ?? [])
   const ancientIdSet = new Set(ancientIds)
