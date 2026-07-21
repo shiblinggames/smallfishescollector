@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useTransition, useCallback, useId, useMemo } from 'react'
+import { useState, useEffect, useTransition, useCallback, useId, useMemo, createContext, useContext } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
@@ -45,6 +45,19 @@ const MOOD_CONFIG: Record<string, { color: string; bg: string; border: string; l
 const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0)
 const pctOf = (now: number, prev: number) => (prev > 0 ? ((now - prev) / prev) * 100 : 0)
 const fmtPct = (p: number) => `${p >= 0 ? '+' : ''}${p.toFixed(1)}%`
+
+// How a fish's green/red marker is decided. 'movement' = the most recent tick
+// (up/down since last update); 'normal' = whether the CURRENT price is above or
+// below this fish's usual price (multiplier is centred on 1.0 = normal), which is
+// what a seller actually cares about. A 1% dip can still leave a fish well above
+// its normal value — that's the whole reason for the toggle.
+type MarketMode = 'movement' | 'normal'
+const MarketModeCtx = createContext<MarketMode>('movement')
+function marketSignal(e: MarketFishEntry, mode: MarketMode): { up: boolean; pct: number } {
+  if (mode === 'normal') return { up: e.multiplier >= 1, pct: (e.multiplier - 1) * 100 }
+  const pct = pctOf(e.multiplier, e.prev_multiplier)
+  return { up: pct >= 0, pct }
+}
 
 function ChangeArrow({ up }: { up: boolean }) {
   return (
@@ -134,8 +147,7 @@ function HoldingRow({ entry, fee, onOpen, onQuickSell, selling }: {
   onQuickSell: (e: MarketFishEntry) => void
   selling: boolean
 }) {
-  const pct = pctOf(entry.multiplier, entry.prev_multiplier)
-  const up = pct >= 0
+  const { up, pct } = marketSignal(entry, useContext(MarketModeCtx))
   const priceEach = Math.floor(entry.sell_value * entry.multiplier * fee)
   const value = priceEach * entry.quantity
   const rColor = RARITY_COLOR[entry.bite_rarity] ?? '#9ca3af'
@@ -189,8 +201,7 @@ function HoldingRow({ entry, fee, onOpen, onQuickSell, selling }: {
 
 // ── Browse row (discovered, not held) ────────────────────────────────────
 function BrowseRow({ entry }: { entry: MarketFishEntry }) {
-  const pct = pctOf(entry.multiplier, entry.prev_multiplier)
-  const up = pct >= 0
+  const { up, pct } = marketSignal(entry, useContext(MarketModeCtx))
   const price = Math.floor(entry.sell_value * entry.multiplier * 0.97)
   const hColor = HABITAT_COLOR[entry.habitat] ?? '#888'
   const rColor = RARITY_COLOR[entry.bite_rarity] ?? '#9ca3af'
@@ -249,8 +260,8 @@ function TradeSheet({ entry, fee, selling, onSell, onClose }: {
 }) {
   const [qtyStr, setQtyStr] = useState(String(entry.quantity))
   const qty = Math.max(1, Math.min(entry.quantity, parseInt(qtyStr, 10) || 1))
-  const pct = pctOf(entry.multiplier, entry.prev_multiplier)
-  const up = pct >= 0
+  const mode = useContext(MarketModeCtx)
+  const { up, pct } = marketSignal(entry, mode)
   const priceEach = Math.floor(entry.sell_value * entry.multiplier * fee)
   const proceeds = priceEach * qty
   const allHistory = [...entry.history, entry.multiplier]
@@ -318,7 +329,7 @@ function TradeSheet({ entry, fee, selling, onSell, onClose }: {
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
             <p className="font-karla font-700" style={{ fontSize: '1.5rem', color: '#fff', lineHeight: 1, ...TNUM }}>{priceEach.toLocaleString()} <span style={{ fontSize: '0.85rem', color: '#9a9488' }}>⟡</span></p>
             <p className="font-karla font-700 flex items-center justify-end gap-1 mt-1" style={{ fontSize: '0.72rem', color: up ? UP : DOWN, ...TNUM }}>
-              <ChangeArrow up={up} />{fmtPct(pct)} <span className="font-karla font-400" style={{ color: '#6a6764' }}>vs last tick</span>
+              <ChangeArrow up={up} />{fmtPct(pct)} <span className="font-karla font-400" style={{ color: '#6a6764' }}>{mode === 'normal' ? 'vs normal' : 'vs last tick'}</span>
             </p>
           </div>
         </div>
@@ -489,6 +500,17 @@ export default function MarketClient({
 
   // ── Browse: sort + filter ──
   const [sortKey, setSortKey] = useState<'value' | 'change' | 'name'>('value')
+  // How the red/green markers are decided (persisted per device). Defaults to the
+  // familiar 'movement' so nothing changes unless the seller opts in.
+  const [colorMode, setColorMode] = useState<MarketMode>('movement')
+  useEffect(() => {
+    const s = localStorage.getItem('market_color_mode')
+    if (s === 'normal' || s === 'movement') setColorMode(s)
+  }, [])
+  const pickColorMode = (m: MarketMode) => {
+    setColorMode(m)
+    try { localStorage.setItem('market_color_mode', m) } catch { /* private mode */ }
+  }
   const [habitatFilter, setHabitatFilter] = useState<string | null>(null)
   const ownedIds = new Set(portfolio.map(e => e.fish_id))
   const browseAll = useMemo(() => {
@@ -496,10 +518,10 @@ export default function MarketClient({
     if (habitatFilter) list = list.filter(e => e.habitat === habitatFilter)
     const sorted = [...list]
     if (sortKey === 'value') sorted.sort((a, b) => b.sell_value * b.multiplier - a.sell_value * a.multiplier)
-    else if (sortKey === 'change') sorted.sort((a, b) => pctOf(b.multiplier, b.prev_multiplier) - pctOf(a.multiplier, a.prev_multiplier))
+    else if (sortKey === 'change') sorted.sort((a, b) => marketSignal(b, colorMode).pct - marketSignal(a, colorMode).pct)
     else sorted.sort((a, b) => a.name.localeCompare(b.name))
     return sorted
-  }, [allMarket, ownedIds, habitatFilter, sortKey])
+  }, [allMarket, ownedIds, habitatFilter, sortKey, colorMode])
   const browseList = browseExpanded ? browseAll : browseAll.slice(0, 10)
   const habitatsPresent = useMemo(() => [...new Set(allMarket.map(e => e.habitat))], [allMarket])
 
@@ -512,6 +534,7 @@ export default function MarketClient({
   }, [allMarket])
 
   return (
+    <MarketModeCtx.Provider value={colorMode}>
     <main className="min-h-screen pb-24 sm:pb-0">
       <div className="px-5 pt-5 max-w-lg mx-auto flex flex-col gap-4 pb-10">
 
@@ -537,6 +560,23 @@ export default function MarketClient({
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
             <p className="font-karla font-500" style={{ fontSize: '0.54rem', color: '#6a6764' }}>Next update</p>
             <p className="font-karla font-700" style={{ fontSize: '0.95rem', color: '#f0ede8', ...TNUM }}>{countdown}</p>
+          </div>
+        </div>
+
+        {/* ── Ticker color mode ── what the red/green markers mean. */}
+        <div className="flex items-center justify-between gap-2" style={{ marginTop: -8 }}>
+          <span className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#7a7774', lineHeight: 1.3 }}>
+            Color by{' '}
+            <span style={{ color: '#a09a90' }}>{colorMode === 'normal' ? 'above / below normal price' : 'change since last tick'}</span>
+          </span>
+          <div className="flex flex-shrink-0" style={{ borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.16)' }}>
+            {([['movement', 'Recent'], ['normal', 'vs Normal']] as const).map(([m, lbl], i) => (
+              <button key={m} onClick={() => pickColorMode(m)} className="font-karla font-700 uppercase tracking-[0.05em] tap"
+                style={{ fontSize: '0.56rem', padding: '0.34rem 0.62rem', borderLeft: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.14)',
+                  background: colorMode === m ? 'rgba(240,192,64,0.22)' : 'rgba(28,32,40,0.95)', color: colorMode === m ? GOLD : '#b8b4ac', cursor: 'pointer' }}>
+                {lbl}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -739,6 +779,7 @@ export default function MarketClient({
         </div>
       )}
     </main>
+    </MarketModeCtx.Provider>
   )
 }
 
