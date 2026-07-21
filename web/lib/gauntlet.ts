@@ -30,6 +30,7 @@ import {
 } from './raidChallenge'
 import { AFFIXES, ALL_AFFIX_IDS, ELITE_HP_MULT, ELITE_DMG_MULT, rollAffix, rollSecondAffix, mergeAffixes, type AffixDef } from './raidAffixes'
 import { type TideEffect } from './tides'
+import { type ChosenMark } from './gauntletMarks'
 import { NO_TERM_EFFECTS, type TermEffects, PRESSURE_SKIN_ID, pressureSkinDropChance } from './gauntletTerms'
 import { CHEST_ODDS_CAP } from './gauntletOffer'
 
@@ -443,12 +444,9 @@ export function donRiseIndex(depth: number): number {
   return DON_RISE_DEPTHS.indexOf(depth)
 }
 
-// Mark of the Don — the stacking trophy for putting him down. Each Don you beat,
-// you take a piece of him: a permanent run-wide buff that stacks across the rises.
-// Beat all four and you reach the throne a Don-slayer. (damagePct is added into
-// runRaidMods; hull is a multiplier folded into hpMax.)
-export const MARK_DMG_PCT  = 6     // +6 damagePct per Mark
-export const MARK_HULL_PCT = 0.05  // +5% max hull per Mark
+// Mark of the Don — the stacking trophy for putting him down. On each fall the
+// player CHOOSES one of two Marks (offense/defense bundles); see lib/gauntletMarks
+// for the categories, roll, and the TideEffect[] they emit into the run.
 
 /** Victory copy when a Don rise is beaten — his voice bleeding out, climbing to a
  *  real fall at the throne. Mob-boss menace, sea-cold, no em-dashes. */
@@ -732,9 +730,9 @@ export interface GauntletRunState {
   nextMerchant?: number
   /** Calm Before already waved off the first curse milestone */
   calmBeforeUsed: boolean
-  /** Marks of the Don earned this run — the stacking landmark buff (Don's only).
-   *  Optional so pre-Mark saves resume cleanly. */
-  marksOfTheDon?: number
+  /** Marks of the Don taken this run — the chosen stacking landmark bundles
+   *  (Don's only). Optional so pre-Mark saves resume cleanly. */
+  marks?: ChosenMark[]
   /** Run-wide max-hull multiplier from cleared hull-boost contracts (Don's only).
    *  Optional so pre-contract saves resume cleanly. */
   contractHullMult?: number
