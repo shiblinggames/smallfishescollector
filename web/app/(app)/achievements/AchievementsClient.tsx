@@ -65,6 +65,8 @@ export default function AchievementsClient({ groups }: Props) {
   const [tierFilter, setTierFilter] = useState<Filter>('all')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [detailGoal, setDetailGoal] = useState<JourneyGoal | null>(null)
+  // Category sections collapse by default (all closed) so the board opens short.
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set())
   const [, startTransition] = useTransition()
   const [mounted, setMounted] = useState(false)
   useEffect(() => { setMounted(true) }, [])
@@ -127,6 +129,17 @@ export default function AchievementsClient({ groups }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [groups, categoryFilter, tierFilter, statusFilter, claimedIds],
   )
+
+  // Any active filter means the player is hunting — force every visible section
+  // open so results aren't hidden behind a collapsed header.
+  const filtersActive = categoryFilter !== 'all' || tierFilter !== 'all' || statusFilter !== 'all'
+  const allOpen = visibleGroups.length > 0 && visibleGroups.every(g => openGroups.has(g.title))
+  function toggleGroup(title: string) {
+    setOpenGroups(prev => { const n = new Set(prev); if (n.has(title)) n.delete(title); else n.add(title); return n })
+  }
+  function toggleAll() {
+    setOpenGroups(allOpen ? new Set() : new Set(visibleGroups.map(g => g.title)))
+  }
 
   const notifyDoubloons = (n: number) => window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: n }))
 
@@ -210,13 +223,6 @@ export default function AchievementsClient({ groups }: Props) {
                 {earnedBadges} of {badgeGoals.length} colors flown
               </span>
             </div>
-            <p className="font-karla" style={{ fontSize: '0.74rem', color: 'rgba(230,215,180,0.55)', fontStyle: 'italic', marginTop: 4 }}>
-              {earnedBadges === 0
-                ? 'A bare mast, for now. The sea keeps a list.'
-                : earnedBadges >= badgeGoals.length
-                ? 'Every color the sea has, flying from one mast. Absurd. Magnificent.'
-                : proudest ? `Proudest of the lot: ${proudest.label}.` : 'The sea keeps the list. You fly the proof.'}
-            </p>
           </div>
         </div>
 
@@ -252,7 +258,7 @@ export default function AchievementsClient({ groups }: Props) {
             get claimed. ─────────────────────────────────────────────────────── */}
       {claimableSorted.length > 0 && (
         <section style={{ marginBottom: 20 }}>
-          <SectionHeader accent={GOLD} title={`Ready to Claim · ${claimableSorted.length}`} flavor="Earned and owed. The purser is waiting." />
+          <SectionHeader accent={GOLD} title={`Ready to Claim · ${claimableSorted.length}`} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {claimableSorted.map(g => (
               <GoalRow key={`ready-${g.id}`} g={g} groupAccent={GOLD} claimed={false} busy={busy === g.id}
@@ -267,7 +273,7 @@ export default function AchievementsClient({ groups }: Props) {
             card. ─────────────────────────────────────────────────────────── */}
       {rarest.length > 0 && (
         <section style={{ marginBottom: 20 }}>
-          <SectionHeader accent="#c9a7ff" title="Rarest in the Fleet" flavor="The scarcest colors any captain flies." />
+          <SectionHeader accent="#c9a7ff" title="Rarest in the Fleet" />
           <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 6, WebkitOverflowScrolling: 'touch' }}>
             {rarest.map(g => {
               const rc = rarityColor(g.rarityPct)
@@ -300,7 +306,7 @@ export default function AchievementsClient({ groups }: Props) {
 
       {/* Claim status — a segmented toggle so it reads as one control, not a
           third dropdown crowding the row. */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 18 }}>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
         {([
           ['all', 'All', badgeGoals.length],
           ['unclaimed', 'Unclaimed', unclaimedCount],
@@ -323,22 +329,51 @@ export default function AchievementsClient({ groups }: Props) {
         })}
       </div>
 
-      {/* ── Goal groups ────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-        {visibleGroups.map(group => (
-          <section key={group.title}>
-            <SectionHeader
-              accent={group.accent} title={group.title} flavor={group.flavor}
-              count={`${group.goals.filter(g => g.done).length} / ${group.goals.length}`}
-            />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {group.goals.map(g => (
-                <GoalRow key={g.id} g={g} groupAccent={group.accent} claimed={claimedIds.has(g.id)} busy={busy === g.id}
-                  onClaim={from => claimOne(g.id, from)} onOpen={() => setDetailGoal(g)} />
-              ))}
-            </div>
-          </section>
-        ))}
+      {/* Open the whole board or tuck it away — hidden while filtering (every
+          section is already forced open then). */}
+      {!filtersActive && visibleGroups.length > 0 && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}>
+          <button type="button" onClick={toggleAll} className="font-karla font-700 uppercase tracking-[0.1em]"
+            style={{ background: 'none', border: 'none', color: '#b6a98c', fontSize: '0.6rem', cursor: 'pointer', padding: '2px 4px' }}>
+            {allOpen ? 'Collapse all' : 'Expand all'}
+          </button>
+        </div>
+      )}
+
+      {/* ── Goal groups — collapsible category sections ────────────────────── */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {visibleGroups.map(group => {
+          const expanded = filtersActive || openGroups.has(group.title)
+          const doneN = group.goals.filter(g => g.done).length
+          return (
+            <section key={group.title}>
+              {/* Tap-to-toggle header — accent title, chart rule, earned tally,
+                  and a chevron. Non-interactive while a filter is on. */}
+              <button type="button" onClick={() => { if (!filtersActive) toggleGroup(group.title) }} aria-expanded={expanded}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', padding: '0.3rem 0', cursor: filtersActive ? 'default' : 'pointer', textAlign: 'left' }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: group.accent, letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>{group.title}</p>
+                <span aria-hidden style={{ flex: 1, height: 1, background: `linear-gradient(90deg, ${group.accent}66, transparent)` }} />
+                <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: 'rgba(240,237,232,0.5)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{doneN} / {group.goals.length}</span>
+                {!filtersActive && (
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={group.accent} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden
+                    style={{ flexShrink: 0, transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', opacity: 0.85 }}><path d="M6 9l6 6 6-6" /></svg>
+                )}
+              </button>
+              <AnimatePresence initial={false}>
+                {expanded && (
+                  <motion.div key="body" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.22, ease: 'easeOut' }} style={{ overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 6 }}>
+                      {group.goals.map(g => (
+                        <GoalRow key={g.id} g={g} groupAccent={group.accent} claimed={claimedIds.has(g.id)} busy={busy === g.id}
+                          onClaim={from => claimOne(g.id, from)} onOpen={() => setDetailGoal(g)} />
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </section>
+          )
+        })}
         {visibleGroups.length === 0 && (
           <p className="font-karla" style={{ fontSize: '0.9rem', color: 'rgba(240,237,232,0.5)', textAlign: 'center', padding: '2rem 0', fontStyle: 'italic' }}>
             No colors match that tack. Ease off the filters and look again.
@@ -493,9 +528,9 @@ export default function AchievementsClient({ groups }: Props) {
 //    with the group's earned tally at the far end and one line of ship's-voice
 //    flavor beneath. This is most of the page's "warmth" — copy + craft, not
 //    chrome. ──────────────────────────────────────────────────────────────────
-function SectionHeader({ accent, title, flavor, count }: { accent: string; title: string; flavor?: string; count?: string }) {
+function SectionHeader({ accent, title, count }: { accent: string; title: string; count?: string }) {
   return (
-    <div style={{ marginBottom: 11 }}>
+    <div style={{ marginBottom: 10 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: accent, letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>{title}</p>
         <span aria-hidden style={{ flex: 1, height: 1, background: `linear-gradient(90deg, ${accent}66, transparent)` }} />
@@ -503,9 +538,6 @@ function SectionHeader({ accent, title, flavor, count }: { accent: string; title
           <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: 'rgba(240,237,232,0.5)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{count}</span>
         )}
       </div>
-      {flavor && (
-        <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(230,215,180,0.48)', fontStyle: 'italic', marginTop: 3 }}>{flavor}</p>
-      )}
     </div>
   )
 }
