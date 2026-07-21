@@ -34,6 +34,7 @@ import {
 import { GAUNTLET_TERMS, TERM_GROUP_META, resolveTerms, termPressure, termTideEffects, pressureGemMult, pressureDepthFactor, NO_TERM_EFFECTS, PRESSURE_CAP, PRESSURE_DEPTH_FLOOR, PRESSURE_DEPTH_FULL, PRESSURE_SKIN_THRESHOLD, PRESSURE_SKIN_DEPTH, PRESSURE_SKIN_ID, MAX_AVAILABLE_PRESSURE, type SignedTerms } from '@/lib/gauntletTerms'
 import GauntletTermsPanel from './GauntletTermsPanel'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, setGauntletUpgradeActive, markGauntletIntroSeen, recordGauntletHit, wagerGauntletFathoms, markConfluencesSeen, checkpointGauntletRun, pauseGauntletRun, resumeGauntletRun, buyBaitWithFathoms, rollDavyOffer, buyMerchantItem, claimDailyTribute } from './actions'
+import { rollContractOffer, buildContractOffer, CONTRACTS, STAKE_LABEL, describeReward, describePenalty, type ContractKind, type ContractOffer, type ContractStake } from '@/lib/gauntletContracts'
 import { MERCHANT_ITEMS, rollMerchantStock, type MerchantItemKind } from '@/lib/gauntletMerchant'
 import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
 import { offerCoinMult, offerChestMult, offerCopy, offerTakenLine, type DavyOffer } from '@/lib/gauntletOffer'
@@ -50,7 +51,7 @@ import { getXPProgress, MAX_LEVEL } from '@/lib/expeditionLevel'
 import { renownLevel } from '@/lib/renown'
 import RenownUpOverlay, { type RenownUpInfo } from '@/components/RenownUpOverlay'
 
-type Phase = 'intro' | 'usedup' | 'resume' | 'paused' | 'descending' | 'fighting' | 'curse' | 'boon' | 'shrine' | 'merchant' | 'between' | 'reward' | 'dead'
+type Phase = 'intro' | 'usedup' | 'resume' | 'paused' | 'descending' | 'fighting' | 'curse' | 'boon' | 'shrine' | 'merchant' | 'contract' | 'between' | 'reward' | 'dead'
 
 type CashResult = Awaited<ReturnType<typeof cashOutGauntlet>>
 
@@ -483,6 +484,26 @@ export default function GauntletGame(props: GauntletGameProps) {
   // The deepest-run recap, per mode (Normal or Hardcore). Holds the snapshot to
   // show + whether it's a hardcore run (drives the modal's theming).
   const [recapRun, setRecapRun] = useState<{ hardcore: boolean } | null>(null)
+
+  // ── Don's Contracts — chance-based "jobs" offered on the way down (Don's
+  // only). The offer (3 pre-built stakes) shows on the 'contract' phase; taking
+  // one stores it as the active contract that rides the NEXT fight. See
+  // lib/gauntletContracts. Combat tracking + resolution land in a later pass.
+  const [contractOffer, setContractOffer] = useState<{ kind: ContractKind; offers: ContractOffer[] } | null>(null)
+  // The job you took, riding the next fight. A ref (read at descend + combat
+  // hand-off, later increments); a HUD chip lands with the combat wiring.
+  const activeContractRef = useRef<ContractOffer | null>(null)
+  function takeContract(offer: ContractOffer) {
+    activeContractRef.current = offer
+    vibrate([0, 25, 30, 25])
+    setContractOffer(null)
+    setPhase('descending')
+  }
+  function walkContract() {
+    vibrate([0, 12])
+    setContractOffer(null)
+    setPhase('descending')
+  }
   // Mid-fight bail-out guard. The ← button is easy to mis-tap, and leaving a
   // live run forfeits the whole pot — so confirm first.
   const [confirmLeave, setConfirmLeave] = useState(false)
@@ -561,7 +582,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   // tab close with the browser's native prompt. Active across the whole run
   // (every in-fight + interstitial phase) so the Back sentinel is pushed once.
   const runLive = phase === 'descending' || phase === 'fighting'
-    || phase === 'curse' || phase === 'boon' || phase === 'shrine' || phase === 'merchant' || phase === 'between'
+    || phase === 'curse' || phase === 'boon' || phase === 'shrine' || phase === 'merchant' || phase === 'contract' || phase === 'between'
   useEffect(() => {
     if (!runLive) return
     window.history.pushState(null, '', window.location.href) // Back sentinel
@@ -1624,6 +1645,18 @@ export default function GauntletGame(props: GauntletGameProps) {
     crewRefreshedRef.current = false
     setFight(next)
     setOffer(null)   // no deal. The server counts this as a refusal and sweetens the next one.
+    // Don's Contracts — a chance-based "job" on the hull you're diving into.
+    // Additive: this fires at the descend (after every other between-fight beat),
+    // so it never replaces a boon/curse/market. One active contract at a time.
+    if (isDonG && !activeContractRef.current) {
+      const cd = rollStateRef.current.cleared + skipOffset + 1
+      const kind = rollContractOffer(cd)
+      if (kind) {
+        setContractOffer({ kind, offers: ([1, 2, 3] as ContractStake[]).map(s => buildContractOffer(kind, s, cd)) })
+        setPhase('contract')
+        return
+      }
+    }
     setPhase('descending')
   }
 
@@ -2626,6 +2659,62 @@ export default function GauntletGame(props: GauntletGameProps) {
   }
 
   // ── Between rounds: cash out or push on ──────────────────────────────────
+  if (phase === 'contract' && contractOffer) {
+    const def = CONTRACTS[contractOffer.kind]
+    const MC = '#3fbf82'   // Don's court green
+    return (
+      <>
+        <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
+        <div style={{ position: 'relative', zIndex: 1, maxWidth: 440, margin: '0 auto', padding: '12px 0.95rem', textAlign: 'center', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)' }}>
+          <motion.p initial={{ opacity: 0, letterSpacing: '0.5em' }} animate={{ opacity: 1, letterSpacing: '0.28em' }} transition={{ duration: 0.8 }}
+            className="font-karla font-800 uppercase" style={{ fontSize: '0.66rem', color: MC, marginTop: 16, textShadow: `0 0 16px ${MC}55` }}>
+            The Don Has a Job
+          </motion.p>
+          <motion.div initial={{ opacity: 0, y: -14, scale: 0.85 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            style={{ position: 'relative', width: 92, height: 92, margin: '14px auto 4px' }}>
+            <div aria-hidden style={{ position: 'absolute', inset: -14, borderRadius: '50%', background: `radial-gradient(circle, ${MC}3a 0%, transparent 66%)`, animation: 'gauntPulse 3.4s ease-in-out infinite' }} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/raid8_donfinleone.png" alt="" loading="eager" decoding="async"
+              style={{ position: 'relative', width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', border: `1.5px solid ${MC}aa`, filter: `drop-shadow(0 6px 20px ${MC}55)` }} />
+          </motion.div>
+          <motion.h1 initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1, type: 'spring', stiffness: 220, damping: 18 }}
+            className="font-cinzel font-800" style={{ fontSize: '1.7rem', color: '#e7f6ee', lineHeight: 1.06, marginTop: 4, textShadow: `0 0 24px ${MC}44` }}>
+            {def.name}
+          </motion.h1>
+          <p className="font-karla" style={{ fontSize: '0.9rem', fontStyle: 'italic', color: 'rgba(206,232,220,0.7)', lineHeight: 1.5, marginTop: 8, padding: '0 0.3rem' }}>
+            &ldquo;{def.job}&rdquo;
+          </p>
+          <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#8a948e', lineHeight: 1.5, marginTop: 10, padding: '0 0.5rem' }}>
+            It rides your next dive. Clear it, get paid. Blow it, the Don collects. Once you take it, you&apos;re in.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: 16, textAlign: 'left' }}>
+            {contractOffer.offers.map((offer, i) => (
+              <motion.button key={offer.stake} type="button"
+                initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.14 + i * 0.07 }}
+                whileTap={{ scale: 0.98 }} onClick={() => takeContract(offer)} className="tap"
+                style={{ position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 6, padding: '0.75rem 0.85rem', borderRadius: 14, cursor: 'pointer', background: `linear-gradient(120deg, ${MC}1a, rgba(0,0,0,0.28))`, border: `1px solid ${MC}55` }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+                  <span className="font-cinzel font-800 uppercase tracking-[0.06em]" style={{ fontSize: '0.8rem', color: MC }}>{STAKE_LABEL[offer.stake]}</span>
+                  <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#8a948e' }}>{def.goal(offer.param)}</span>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: '#7fe0a8', background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.3)', borderRadius: 999, padding: '0.16rem 0.5rem' }}>▲ {describeReward(offer.reward)}</span>
+                  <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: '#f8a5a5', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 999, padding: '0.16rem 0.5rem' }}>▼ {describePenalty(offer.penalty)}</span>
+                </div>
+              </motion.button>
+            ))}
+          </div>
+
+          <button type="button" onClick={walkContract} className="font-karla font-700 tap"
+            style={{ width: '100%', marginTop: 12, padding: '0.7rem', borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', color: '#b0aaa0', cursor: 'pointer', fontSize: '0.82rem' }}>
+            Walk away
+          </button>
+        </div>
+      </>
+    )
+  }
+
   if (phase === 'between') {
     const cleared = rollStateRef.current.cleared
     // Display depth is the COMBAT depth (Veteran's Start shifts it up); chest +
