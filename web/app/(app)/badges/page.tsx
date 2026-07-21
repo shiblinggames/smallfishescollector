@@ -65,6 +65,7 @@ export default async function BadgesPage() {
   const gauntletFathoms = Number(profile?.gauntlet_fathoms ?? 0)
   const pvpWins = Number(profile?.pvp_wins ?? 0)
   const puzzlePoints = Number(profile?.puzzle_points ?? 0)
+  const chartedLandmarks = ((profile?.charting_landmarks_claimed as number[] | null) ?? []).length
   const highestRaidDmg = Number(profile?.highest_raid_damage ?? 0)
   const totalPerfects = Number(profile?.total_perfects ?? 0)
   const doubleCatches = Number(profile?.fishing_double_catches ?? 0)
@@ -364,8 +365,14 @@ export default async function BadgesPage() {
       flavor: 'For the thinkers among the deckhands.',
       accent: '#c4a96a',
       goals: [
+        badgeGoal('landfall', 'Landfall', 'Chart your first World Chart landmark', chartedLandmarks >= 1 ? 1 : 0, 1, '/charting/world-chart', { binary: true }),
         badgeGoal('quartermaster', 'Quartermaster', 'Bank 40 charting points', puzzlePoints, 40, '/tavern/chart-room'),
-        badgeGoal('den_magnate', 'Den Magnate', 'Bank 80 charting points (top the Den purse)', puzzlePoints, 80, '/tavern/chart-room'),
+        badgeGoal('den_magnate', 'Chartwright', 'Bank 80 charting points', puzzlePoints, 80, '/tavern/chart-room'),
+        badgeGoal('uncharted_no_more', 'Uncharted No More', 'Chart seven World Chart landmarks', chartedLandmarks, 7, '/charting/world-chart'),
+        badgeGoal('fully_laden', 'Fully Laden', 'Solve a Man-o-War hold (the hardest sudoku)', has('fully_laden') ? 1 : 0, 1, '/tavern/chart-room/hold', { binary: true }),
+        badgeGoal('the_long_watch', 'The Long Watch', 'Bank 500 charting points', puzzlePoints, 500, '/tavern/chart-room'),
+        badgeGoal('clean_manifest', 'Clean Manifest', 'Stow all four holds in a single week', has('clean_manifest') ? 1 : 0, 1, '/tavern/chart-room/hold', { binary: true }),
+        badgeGoal('master_cartographer', 'Master Cartographer', 'Chart the entire World Chart (all 13 landmarks)', chartedLandmarks, 13, '/charting/world-chart'),
       ],
     },
     {
