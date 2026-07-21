@@ -69,8 +69,8 @@ function report(label, weights, pairs, triples = TRIPLES) {
   console.log(`  3-hook bonus: 1-in-${Math.round(1 / r.bonusProb)}`)
 }
 
-// LIVE config (913c74bd retune)
-report('LIVE (catfish 6, pair 15x)', { common: 45, rare: 20, legendary: 9, catfish: 6, anchor: 20 }, { rare: 1.5, legendary: 5, catfish: 15 })
+// LIVE config (2026-07-21 retune: catfish 9 / whale 7, pair 3x)
+report('LIVE (catfish 9, whale 7, pair 3x)', { common: 46, rare: 20, legendary: 7, catfish: 9, anchor: 18 }, { rare: 1.5, legendary: 5, catfish: 3 }, { common: 4, rare: 12, legendary: 60, anchor: 0 })
 
 // Small-population candidates — sardine triple bumped to 4x to give the
 // RTP back that the sardine weight cut takes away.
@@ -91,3 +91,11 @@ report('B: marlin pair 2→1.5',                      W, { rare: 1.5, legendary:
 report('C: sardine triple 4→3',                     W, { rare: 2,   legendary: 5, catfish: 3 }, T3)
 report('D: catfish pair 3→2.5 + marlin 2→1.5',      W, { rare: 1.5, legendary: 5, catfish: 2.5 }, T4)
 report('E: catfish 3→2 + marlin 2→1.5 (firmer)',    W, { rare: 1.5, legendary: 5, catfish: 2 }, T4)
+
+// ── 2026-07-21: catfish jackpot + Blue Whale triple felt too frequent. Rarer
+//    both by trimming their weights into the sardine (near-miss) pile.
+console.log('\n\n######## 2026-07-21 — make the big triples rarer ########')
+report('CURRENT LIVE (F)',                 { common: 39, rare: 20, legendary: 9, catfish: 14, anchor: 18 }, { rare: 1.5, legendary: 5, catfish: 3 }, T4)
+report('P1: catfish 14→9, whale 9→7',      { common: 46, rare: 20, legendary: 7, catfish: 9,  anchor: 18 }, { rare: 1.5, legendary: 5, catfish: 3 }, T4)
+report('P2: catfish 14→10, whale 9→7',     { common: 44, rare: 20, legendary: 7, catfish: 10, anchor: 19 }, { rare: 1.5, legendary: 5, catfish: 3 }, T4)
+report('P3: catfish 14→8, whale 9→6',      { common: 48, rare: 20, legendary: 6, catfish: 8,  anchor: 18 }, { rare: 1.5, legendary: 5, catfish: 3 }, T4)

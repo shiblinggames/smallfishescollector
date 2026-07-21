@@ -49,10 +49,14 @@ export const SLOT_SYMBOLS_LIST: {
   weight: number
   label: string
 }[] = [
-  { id: 'common',    filename: 'Sardine_v2.png',  color: '#8a8880', weight: 39, label: 'Sardine' },
+  // 2026-07-21: catfish 14→9 + Blue Whale 9→7 (freed weight → sardine). The two
+  // big triples felt too frequent: catfish jackpot 1-in-364 → 1-in-1,372, Blue
+  // Whale triple 1-in-1,372 → 1-in-2,915. Total RTP holds ~96.9% (the pot-fed
+  // jackpot just grows bigger between rarer hits). Re-verified with slots-rtp.mjs.
+  { id: 'common',    filename: 'Sardine_v2.png',  color: '#8a8880', weight: 46, label: 'Sardine' },
   { id: 'rare',      filename: 'Blue_Marlin.png', color: '#60a5fa', weight: 20, label: 'Blue Marlin' },
-  { id: 'legendary', filename: 'Blue_Whale_v2.png', color: '#a78bfa', weight: 9, label: 'Blue Whale' },
-  { id: 'catfish',   filename: 'Catfish.png',      color: '#f0c040', weight: 14, label: 'Catfish' },
+  { id: 'legendary', filename: 'Blue_Whale_v2.png', color: '#a78bfa', weight: 7, label: 'Blue Whale' },
+  { id: 'catfish',   filename: 'Catfish.png',      color: '#f0c040', weight: 9, label: 'Catfish' },
   { id: 'anchor',                                   color: '#34d399', weight: 18, label: 'Hook' },
 ]
 
