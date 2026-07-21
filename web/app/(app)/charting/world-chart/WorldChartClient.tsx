@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { GEM_GLYPH } from '@/lib/bossRaids'
 import {
-  landmarkViews, gemsBanked, nextLandmark, isFullyCharted, LANDMARKS,
+  landmarkViews, gemsBanked, nextLandmark, LANDMARKS,
   WORLD_CHART_FULL_POINTS, WORLD_CHART_GRAND_TOTAL,
   type LandmarkView,
 } from '@/lib/worldChart'
@@ -41,7 +41,6 @@ export default function WorldChartClient({ points, claimed: claimed0 }: { points
   const foundCount = views.filter(v => v.revealed).length
   const gemsHave = gemsBanked(claimed)
   const next = nextLandmark(points)
-  const fullyCharted = isFullyCharted(claimed)
 
   useEffect(() => {
     if (!active && paid == null && pending.length > 0) setActive(pending[0])
@@ -82,17 +81,6 @@ export default function WorldChartClient({ points, claimed: claimed0 }: { points
           </button>
           <div style={{ flex: 1 }} />
           <span className="font-karla font-800" style={{ fontSize: '0.92rem', color: GEM, fontVariantNumeric: 'tabular-nums' }}>{GEM_GLYPH} {gemsHave.toLocaleString()} / {WORLD_CHART_GRAND_TOTAL.toLocaleString()}</span>
-        </div>
-
-        {/* ── Hero header ── */}
-        <div style={{ textAlign: 'center', marginBottom: 16 }}>
-          <p className="font-karla font-800 uppercase" style={{ fontSize: '0.66rem', letterSpacing: '0.3em', color: GOLD, textShadow: `0 0 18px ${GOLD}55` }}>The Chart Room</p>
-          <h1 className="font-cinzel font-800" style={{ fontSize: '2.5rem', color: '#f6eeda', lineHeight: 1.02, marginTop: 4, textShadow: `0 2px 14px rgba(0,0,0,0.6), 0 0 30px ${GOLD}22` }}>The World Chart</h1>
-          <p className="font-karla" style={{ fontSize: '0.92rem', color: 'rgba(206,218,228,0.72)', marginTop: 6, lineHeight: 1.45, maxWidth: 420, marginInline: 'auto' }}>
-            {fullyCharted
-              ? 'Every fathom charted. You sail as a Master Cartographer.'
-              : 'Solve the Chart Room puzzles to burn back the fog and uncover the sea.'}
-          </p>
         </div>
 
         {/* ── Progress ── */}
