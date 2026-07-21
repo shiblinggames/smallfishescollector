@@ -1,6 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import { createPortal } from 'react-dom'
 import { type TideEvent, type TideChoice, type TideEffect, describeEffect, effectTone } from '@/lib/tides'
 
 // ─── Tide event / Don's gift ────────────────────────────────────────────────
@@ -75,7 +76,11 @@ interface Props {
 
 export default function TideModal({ tide, onPicked, theme = 'tide' }: Props) {
   const p = THEMES[theme]
-  return (
+  // Portal to <body>: the modal is position:fixed, but an animated/transformed
+  // ancestor in the raid tree would otherwise re-anchor it (top clipped, taps
+  // land wrong). Rendering at the body root keeps it truly viewport-fixed.
+  if (typeof document === 'undefined') return null
+  return createPortal(
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -177,7 +182,8 @@ export default function TideModal({ tide, onPicked, theme = 'tide' }: Props) {
           ))}
         </div>
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body,
   )
 }
 
