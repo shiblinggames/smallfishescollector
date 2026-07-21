@@ -26,6 +26,7 @@ export const CHARACTER_COLORS: CharacterColor[] = [
   { id: 'storm',    name: 'Storm',    free: false, unlockHint: 'Rare drop from fishing crates' },
   { id: 'galaxy',   name: 'Galaxy',   free: false, unlockHint: 'Reach 300 achievement points' },
   { id: 'crystal',  name: 'Crystal',  free: false, unlockHint: 'Max out — Fishing 100 and Navigation 100' },
+  { id: 'ethereal', name: 'Ethereal', free: false, unlockHint: 'Reach 350 achievement points' },
   { id: 'lava',     name: 'Lava',     free: false, unlockHint: '500 ◆', gemPrice: 500 },
 ]
 
@@ -34,6 +35,7 @@ export const CHARACTER_COLORS: CharacterColor[] = [
  *  derived, not a plain profile column — see lib/achievementPoints. */
 export const ACHIEVEMENT_COLORS: { id: string; points: number }[] = [
   { id: 'galaxy', points: 300 },
+  { id: 'ethereal', points: 350 },
 ]
 
 /** Achievement-gated colors the player has earned (>= threshold) but doesn't
