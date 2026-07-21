@@ -10,7 +10,6 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { getLevelFromXP as fishingLevelFromXP } from '@/lib/fishingLevel'
-import { fishingColorsToGrant } from '@/lib/characters'
 import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import { applyLevelBonuses, crewLevelFromXP } from '@/lib/crewLevel'
 import { netTraitStats } from '@/lib/crewEffects'
@@ -204,12 +203,11 @@ export async function collectTrawl(zone: string): Promise<CollectTrawlResult | {
     fish.push(names.splice(Math.floor(Math.random() * names.length), 1)[0])
   }
 
-  // A trawl can cross a fishing-level color threshold (Forest @ 50, Ice @ 75)
-  // just like a catch can — grant state-based so the unlock fires either way.
-  const currentUnlocked = (profile?.unlocked_character_colors as string[] | null) ?? []
-  const colorsToAdd = fishingColorsToGrant(fishingLevelFromXP(newFishingXP), currentUnlocked)
+  // A trawl can cross a fishing-level color threshold (Forest @ 50, Ice @ 75),
+  // but we DON'T grant it here — the color shows unlocked live via the earned
+  // union, and the fishing screen's skin-unlock watcher grants + announces it
+  // on the next visit (so a trawl crossing gets the same toast a catch does).
   const profileUpdate: Record<string, unknown> = { fishing_xp: newFishingXP, doubloons: newDoubloons }
-  if (colorsToAdd.length > 0) profileUpdate.unlocked_character_colors = [...currentUnlocked, ...colorsToAdd]
 
   const z = TRAWL_ZONE_BY_KEY[zone]
   await Promise.all([

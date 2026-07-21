@@ -95,8 +95,10 @@ export default async function FishingPage() {
   // crossed Nav 50 via raids without the voyage grant firing). Equipping one
   // persists the unlock server-side. Mirrors the profile page.
   const storedColors = (profile?.unlocked_character_colors as string[] | null) ?? []
-  const unlockedCharacterColors = [
-    ...storedColors,
+  // Earned but not yet persisted (level/combo/achievement). These both feed the
+  // picker's unlocked set AND drive the one-time "Skin Unlocked" toast on mount;
+  // the client persists them via persistEarnedSkins so they don't re-announce.
+  const newlyUnlockedSkins = [
     ...earnedLevelColors({
       fishingLevel: fishLevelFromXP(profile?.fishing_xp ?? 0),
       navLevel:     navLevelFromXP(profile?.expedition_xp ?? 0),
@@ -104,6 +106,7 @@ export default async function FishingPage() {
     }, storedColors),
     ...earnedAchievementColors(await achievementPointsPromise, storedColors),
   ]
+  const unlockedCharacterColors = [...storedColors, ...newlyUnlockedSkins]
 
   // Per-zone summary stats for the zone selector cards (avg sell value, avg
   // catch XP, top catch). Ancient Deep trophies pay 3× XP (see actions.ts).
@@ -251,6 +254,7 @@ export default async function FishingPage() {
           ancientCatches={(profile?.ancient_catches as number[] | null) ?? []}
           characterColor={characterColor}
           unlockedCharacterColors={unlockedCharacterColors}
+          newlyUnlockedSkins={newlyUnlockedSkins}
           equippedBadges={(profile?.equipped_badges as string[] | null) ?? []}
           marketMultipliers={marketMultipliers}
           isPremium={isPremium}

@@ -158,6 +158,42 @@ export async function updateCharacterColor(colorId: string): Promise<{ error?: s
   return {}
 }
 
+/** Persist any earned-but-ungranted colors (level/combo/achievement) so they
+ *  stop re-announcing. Server re-validates each id authoritatively before
+ *  storing it. Cheap in the common case (no candidates → single query, no
+ *  achievement-points compute unless an achievement color is actually pending).
+ *  Returns the ids it genuinely granted, for the client to celebrate. */
+export async function persistEarnedSkins(ids: string[]): Promise<{ granted: string[] }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { granted: [] }
+  const candidates = Array.from(new Set((ids ?? []).filter(id => typeof id === 'string')))
+  if (candidates.length === 0) return { granted: [] }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles')
+    .select('unlocked_character_colors, fishing_xp, expedition_xp, prestige_levels').eq('id', user.id).single()
+  const stored = (profile?.unlocked_character_colors as string[] | null) ?? []
+  const prestige = (profile?.prestige_levels as Record<string, number> | null) ?? {}
+
+  // earnedLevelColors already excludes anything in `stored`, so its output is
+  // exactly the level/combo colors this player has earned but not yet stored.
+  const earnedLevel = new Set(earnedLevelColors({
+    fishingLevel: getLevelFromXP((profile?.fishing_xp as number | null) ?? 0),
+    navLevel:     navLevelFromXP((profile?.expedition_xp as number | null) ?? 0),
+    maxPrestige:  Math.max(0, ...Object.values(prestige)),
+  }, stored))
+  const needsAch = candidates.some(id => ACHIEVEMENT_COLORS.some(a => a.id === id))
+  const earnedAch = needsAch
+    ? new Set(earnedAchievementColors(await getUserAchievementPoints(admin, user.id), stored))
+    : new Set<string>()
+
+  const granted = candidates.filter(id => !stored.includes(id) && (earnedLevel.has(id) || earnedAch.has(id)))
+  if (granted.length === 0) return { granted: [] }
+  await admin.from('profiles').update({ unlocked_character_colors: [...stored, ...granted] }).eq('id', user.id)
+  return { granted }
+}
+
 /** Save the player's avatar background + border color choices.
  *  - Either field can be null (= unset; resolves to the shared defaults).
  *  - The special value 'none' means transparent.

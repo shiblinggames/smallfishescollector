@@ -31,7 +31,7 @@ import { gauntletAutoCatchMaxRarity } from '@/lib/gauntletUpgrades'
 import { setFishingMusicMuted, playPerfectSfx, playCastSfx, playCast2Sfx, startDialLoop, stopDialLoop, getFishingSfxMuted, setFishingSfxMuted } from '@/lib/fishingMusic'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { zoneRewardDoubloons } from '@/lib/zoneRewards'
-import { updateCharacterColor } from '@/app/(app)/u/actions'
+import { updateCharacterColor, persistEarnedSkins } from '@/app/(app)/u/actions'
 import { equipBadge, unequipBadge } from '@/app/(app)/achievements/badgeActions'
 import { BADGES, BADGE_MAP, BADGE_SLOT_POSITIONS } from '@/lib/badges'
 
@@ -3298,7 +3298,7 @@ export default function FishingGame({
   selectedZone: initialZone, onBack, activeSession, zoneRewardsClaimed,
   initialDailyChallenge, onDailyChallengeChange,
   hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, gauntletUpgrades, hasPerfectedSigil,
-  initialPrestigeLevels, initialAncientCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges,
+  initialPrestigeLevels, initialAncientCatches, characterColor, unlockedCharacterColors, newlyUnlockedSkins, equippedBadges, unlockedBadges,
   marketMultipliers, isPremium, initialEquippedBoat, initialUnlockedBoats, onBoatStateChange,
   initialEquippedHat, initialUnlockedHats, onHatStateChange,
   initialEquippedPet, initialUnlockedPets, onPetStateChange,
@@ -3362,6 +3362,7 @@ export default function FishingGame({
   initialAncientCatches: number[]
   characterColor: string
   unlockedCharacterColors: string[]
+  newlyUnlockedSkins: string[]
   equippedBadges: string[]
   unlockedBadges: string[]
   marketMultipliers: Record<number, number>
@@ -3653,6 +3654,25 @@ export default function FishingGame({
   const [claimingZone, setClaimingZone] = useState<string | null>(null)
   const [zoneClaimToast, setZoneClaimToast] = useState<{ zone: string; earned: number } | null>(null)
   const [skinUnlockToast, setSkinUnlockToast] = useState<string | null>(null)
+  // One-time celebration for skins earned but never announced — the endgame
+  // gates (achievement points, both-tracks-maxed) and trawl-driven level
+  // crossings grant silently. The list arrives pre-validated from the server
+  // page; we toast each once, then persist so it never re-fires.
+  useEffect(() => {
+    if (!newlyUnlockedSkins || newlyUnlockedSkins.length === 0) return
+    void persistEarnedSkins(newlyUnlockedSkins).catch(() => {})
+    const queue = [...newlyUnlockedSkins]
+    let idx = 0
+    const timers: ReturnType<typeof setTimeout>[] = []
+    const showNext = () => {
+      if (idx >= queue.length) { setSkinUnlockToast(null); return }
+      setSkinUnlockToast(queue[idx]); idx++
+      timers.push(setTimeout(showNext, 5000))
+    }
+    timers.push(setTimeout(showNext, 900)) // let the screen settle first
+    return () => timers.forEach(clearTimeout)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const [prestigeLevels, setPrestigeLevels] = useState<Record<string, number>>(initialPrestigeLevels)
   const [prestigingZone, setPrestigingZone] = useState<string | null>(null)
   // The prestige ceremony overlay — the stamp-slam moment after a prestige
@@ -8344,8 +8364,7 @@ export default function FishingGame({
       <AnimatePresence>
         {skinUnlockToast && (() => {
           const skinColor = getCharSrc(skinUnlockToast)
-          const SKIN_NAMES: Record<string, string> = { default: 'Green', gray: 'Gray', blue: 'Blue', pink: 'Pink', sand: 'Sand', sky: 'Sky', golden: 'Golden', forest: 'Forest', mint: 'Mint' }
-          const skinName = SKIN_NAMES[skinUnlockToast] ?? skinUnlockToast
+          const skinName = CHARACTER_COLORS.find(c => c.id === skinUnlockToast)?.name ?? skinUnlockToast
           return (
             <motion.div key="skin-unlock-toast"
               initial={{ opacity: 0, scale: 0.88, y: 30 }}
