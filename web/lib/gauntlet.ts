@@ -487,10 +487,14 @@ function softenCheckConsequence(check: BossMechanicCheck, maxPct: number): BossM
   return check
 }
 
-/** Build the Don Finleone apex: THE_THRONE boss on the G2 curve at a heavier
- *  mult, cut to 3 SIGNATURE phases (The Court opener → The Maw → The Last Bite)
- *  and keeping only the two BOOKEND checks (Court + Last Bite), both softened.
- *  The 3 middle phases (Blood in the Water / Sounding / Undertow) are dropped. */
+/** Build a Don Finleone rise: THE_THRONE boss on the G2 curve at a heavier mult,
+ *  with a phase count that CLIMBS by rise. First meeting = 3 phases (The Court
+ *  opener + his first 2 revives), then +1 revive per rise, capping at his full
+ *  6-phase throne fight (opener + all 5 revives) at the deepest marker. Phases are
+ *  his real sequence in order (Maw → Blood in the Water → The Sounding → The
+ *  Undertow → The Last Bite), so each rise shows more of the real fight than the
+ *  last. Checks stay softened BOOKENDS: the opener + the finale (this fight's last
+ *  phase); the phases between are spectacle, no forced answer. */
 function buildDonApex(depth: number): BroadsideEnemy {
   const src = THE_THRONE.enemies.don_finleone
   const hp  = Math.round(mobHp2(depth) * APEX_HP_MULT)
@@ -498,14 +502,16 @@ function buildDonApex(depth: number): BroadsideEnemy {
   const max = Math.round(mobMaxDmg2(depth) * BOSS_DMG_MULT)
   const accuracy = Math.round(18 + depth * 1.4) + 3
   const srcPhases = src.phases ?? []
-  const maw  = srcPhases[0]                    // The Mask Drops / The Maw (spectacle)
-  const last = srcPhases[srcPhases.length - 1] // The Last Bite (finale)
-  const phases: BossPhase[] = []
-  if (maw)  phases.push({ ...maw, check: undefined })   // the megalodon reveal, no forced answer
-  if (last) phases.push({ ...last, check: last.check ? softenCheckConsequence(last.check, 0.5) : undefined })
+  // rise 0 → 2 revives (3 phases total), +1 per rise, capped at all his revives.
+  const idx = Math.max(0, donRiseIndex(depth))
+  const reviveCount = Math.min(srcPhases.length, 2 + idx)
+  const phases: BossPhase[] = srcPhases.slice(0, reviveCount).map((p, i, arr) => {
+    const isFinale = i === arr.length - 1   // keep this fight's finale check (softened), strip the rest
+    return { ...p, check: isFinale && p.check ? softenCheckConsequence(p.check, 0.5) : undefined }
+  })
   return {
     ...src,
-    name: 'Don Finleone',   // the apex keeps his name (recognizable — the telegraph is HIM)
+    name: 'Don Finleone',   // the rise keeps his name (recognizable — the telegraph is HIM)
     hpBase: hp, minDmg: Math.max(1, min), maxDmg: Math.max(min + 1, max), accuracy,
     openingCheck: src.openingCheck ? softenCheckConsequence(src.openingCheck, 0.45) : undefined,
     phases: phases.length ? phases : undefined,
