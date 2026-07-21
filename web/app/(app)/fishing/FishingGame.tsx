@@ -3286,7 +3286,7 @@ type FishSpeciesBasic = { id: number; name: string; scientific_name: string; fun
 
 export default function FishingGame({
   hookTier: initialHookTier, rodTier, reelTier: initialReelTier, lineTier,
-  initialDoubloons, initialFathoms, initialFishingXP, initialBait, initialLastUsedBait, initialInventory,
+  initialDoubloons, initialGems, initialFathoms, initialFishingXP, initialBait, initialLastUsedBait, initialInventory,
   fishHoldTier: initialFishHoldTier,
   ownedRods: initialOwnedRods,
   initialCompletionistEffects,
@@ -3310,6 +3310,7 @@ export default function FishingGame({
   reelTier: number
   lineTier: number
   initialDoubloons: number
+  initialGems: number
   initialFathoms: number
   initialFishingXP: number
   initialBait: BaitItem[]
@@ -3551,6 +3552,14 @@ export default function FishingGame({
   const baitDraggedRef = useRef(false)
   const [inventory, setInventory]   = useState<InventoryItem[]>(initialInventory)
   const [doubloons, setDoubloons]   = useState(initialDoubloons)
+  const [gems, setGems]             = useState(initialGems)
+  // Keep the local gem balance in step with gem changes fired anywhere (crate
+  // rewards, purchases) so the boat picker's affordability stays accurate.
+  useEffect(() => {
+    const onGems = (e: Event) => { const d = (e as CustomEvent).detail; if (typeof d === 'number') setGems(d) }
+    window.addEventListener('gems-changed', onGems)
+    return () => window.removeEventListener('gems-changed', onGems)
+  }, [])
   const [fathoms, setFathoms]       = useState(initialFathoms)
   // Perfected Sigil payout — gold coins arc from the catch result area
   // up to the Nav's doubloon pill (tagged data-doubloon-pill) so the
@@ -9468,6 +9477,7 @@ export default function FishingGame({
                 }
               }}
               doubloons={doubloons}
+              gems={gems}
               equippedBoat={equippedBoat}
               unlockedBoats={unlockedBoats}
               onEquipBoat={async (id) => {
@@ -9482,8 +9492,14 @@ export default function FishingGame({
                   setUnlockedBoats(newUnlocked)
                   setEquippedBoat(id)
                   onBoatStateChange?.(id, newUnlocked)
-                  setDoubloons(res.doubloons)
-                  window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+                  if (typeof res.doubloons === 'number') {
+                    setDoubloons(res.doubloons)
+                    window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+                  }
+                  if (typeof res.gems === 'number') {
+                    setGems(res.gems)
+                    window.dispatchEvent(new CustomEvent('gems-changed', { detail: res.gems }))
+                  }
                 }
               }}
               equippedHat={equippedHat}

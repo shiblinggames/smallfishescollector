@@ -28,6 +28,11 @@ export interface BoatDef {
    *  'ash'  = Charcoal's dark smoulder (also darkens the sprite).
    *  'gold' = Golden's warm aura — same subtle amount as ash, no darken. */
   glowType?: 'ash' | 'gold'
+  /** Gem price in the shop (premium boats). Takes precedence over `cost`. */
+  gemPrice?: number
+  /** Earned (not bought) once the player reaches this Achievement Points total.
+   *  Mirrors the achievement-gated character skins. */
+  achievementPoints?: number
 }
 
 /** Default "Driftwood" — no overlay; uses the base sprite's boat. */
@@ -147,7 +152,76 @@ export const BOATS: BoatDef[] = [
     positions: SHARED_POSITIONS,
     glow: true,
   },
+  {
+    id: 'fire',
+    name: 'Fire',
+    color: '#ff7a1a',
+    cost: 0,
+    gemPrice: 750,
+    restImageUrl: '/boat_fire_rest.png',
+    castImageUrl: '/boat_fire_cast.png',
+    positions: SHARED_POSITIONS,
+  },
+  {
+    id: 'ice',
+    name: 'Ice',
+    color: '#a4dcf2',
+    cost: 0,
+    gemPrice: 750,
+    restImageUrl: '/boat_ice_rest.png',
+    castImageUrl: '/boat_ice_cast.png',
+    positions: SHARED_POSITIONS,
+  },
+  {
+    id: 'jetblack',
+    name: 'Jet Black',
+    color: '#1b1b20',
+    cost: 0,
+    gemPrice: 500,
+    restImageUrl: '/boat_jetblack_rest.png',
+    castImageUrl: '/boat_jetblack_cast.png',
+    positions: SHARED_POSITIONS,
+  },
+  {
+    id: 'chromium',
+    name: 'Chromium',
+    color: '#c4c8cc',
+    cost: 1_000_000,
+    restImageUrl: '/boat_chromium_rest.png',
+    castImageUrl: '/boat_chromium_cast.png',
+    positions: SHARED_POSITIONS,
+  },
+  {
+    id: 'celestial',
+    name: 'Celestial',
+    color: '#b0a8e0',
+    cost: 0,
+    achievementPoints: 325,
+    restImageUrl: '/boat_celestial_rest.png',
+    castImageUrl: '/boat_celestial_cast.png',
+    positions: SHARED_POSITIONS,
+  },
+  {
+    id: 'abyssal',
+    name: 'Abyssal',
+    color: '#3a2f5a',
+    cost: 0,
+    achievementPoints: 275,
+    restImageUrl: '/boat_abyssal_rest.png',
+    castImageUrl: '/boat_abyssal_cast.png',
+    positions: SHARED_POSITIONS,
+  },
 ]
+
+/** Achievement-gated boats the player has earned (>= threshold) but doesn't own
+ *  yet. STATE-based + idempotent, mirroring the character-color helper. */
+export function earnedAchievementBoats(achievementPoints: number, unlocked: string[] = []): string[] {
+  return BOATS
+    .filter(b => typeof b.achievementPoints === 'number')
+    .filter(b => !unlocked.includes(b.id))
+    .filter(b => achievementPoints >= (b.achievementPoints as number))
+    .map(b => b.id)
+}
 
 export const BOAT_MAP: Record<string, BoatDef> = Object.fromEntries(BOATS.map(b => [b.id, b]))
 

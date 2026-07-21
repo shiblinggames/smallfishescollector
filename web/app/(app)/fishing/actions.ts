@@ -1671,14 +1671,27 @@ export async function equipBoat(boatId: string | null): Promise<{ ok: true } | {
   const admin = createAdminClient()
   if (boatId !== null) {
     const { data: profile } = await admin.from('profiles').select('unlocked_boats').eq('id', user.id).single()
-    const unlocked = (profile?.unlocked_boats as string[] | null) ?? []
-    if (!unlocked.includes(boatId)) return { error: 'Boat not unlocked' }
+    let unlocked = (profile?.unlocked_boats as string[] | null) ?? []
+    if (!unlocked.includes(boatId)) {
+      // Self-heal an achievement-earned boat the player hasn't stored yet
+      // (mirrors updateCharacterColor). Anything else is genuinely locked.
+      const { BOAT_MAP } = await import('@/lib/boats')
+      const def = BOAT_MAP[boatId]
+      if (def && typeof def.achievementPoints === 'number') {
+        const { getUserAchievementPoints } = await import('@/lib/achievementPoints')
+        if (await getUserAchievementPoints(admin, user.id) >= def.achievementPoints) {
+          await admin.from('profiles').update({ unlocked_boats: [...unlocked, boatId] }).eq('id', user.id)
+          unlocked = [...unlocked, boatId]
+        }
+      }
+      if (!unlocked.includes(boatId)) return { error: 'Boat not unlocked' }
+    }
   }
   await admin.from('profiles').update({ equipped_boat: boatId }).eq('id', user.id)
   return { ok: true }
 }
 
-export async function buyBoat(boatId: string): Promise<{ ok: true; doubloons: number } | { error: string }> {
+export async function buyBoat(boatId: string): Promise<{ ok: true; doubloons?: number; gems?: number } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
@@ -1687,26 +1700,29 @@ export async function buyBoat(boatId: string): Promise<{ ok: true; doubloons: nu
   const def = BOAT_MAP[boatId]
   if (!def) return { error: 'Unknown boat' }
   if (def.crateOnly) return { error: 'This boat is only found in crates' }
+  if (typeof def.achievementPoints === 'number') return { error: 'This boat is earned, not bought' }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles').select('doubloons, unlocked_boats').eq('id', user.id).single()
+  const useGems = typeof def.gemPrice === 'number' && def.gemPrice > 0
+  const price = useGems ? def.gemPrice! : def.cost
+  const { data: profile } = await admin.from('profiles').select('doubloons, gems, unlocked_boats').eq('id', user.id).single()
   if (!profile) return { error: 'Profile not found' }
   const unlocked = (profile.unlocked_boats as string[] | null) ?? []
   if (unlocked.includes(boatId)) return { error: 'Already owned' }
-  if ((profile.doubloons ?? 0) < def.cost) return { error: 'Not enough doubloons' }
+  const balance = useGems ? (profile.gems ?? 0) : (profile.doubloons ?? 0)
+  if (balance < price) return { error: useGems ? 'Not enough gems' : 'Not enough doubloons' }
+  const newBalance = balance - price
 
-  const newDoubloons = (profile.doubloons ?? 0) - def.cost
-  await admin.from('profiles').update({
-    doubloons: newDoubloons,
-    unlocked_boats: [...unlocked, boatId],
-    equipped_boat: boatId,
-  }).eq('id', user.id)
-  await admin.from('doubloon_transactions').insert({
+  const update: Record<string, unknown> = { unlocked_boats: [...unlocked, boatId], equipped_boat: boatId }
+  if (useGems) update.gems = newBalance
+  else update.doubloons = newBalance
+  await admin.from('profiles').update(update).eq('id', user.id)
+  await admin.from(useGems ? 'gem_transactions' : 'doubloon_transactions').insert({
     user_id: user.id,
-    amount: -def.cost,
+    amount: -price,
     reason: `Bought ${def.name} boat`,
   })
-  return { ok: true, doubloons: newDoubloons }
+  return useGems ? { ok: true, gems: newBalance } : { ok: true, doubloons: newBalance }
 }
 
 export async function equipHat(hatId: string | null): Promise<{ ok: true } | { error: string }> {

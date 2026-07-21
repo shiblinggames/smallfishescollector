@@ -8,7 +8,7 @@ import { getCharacterSprites, earnedLevelColors, earnedAchievementColors } from 
 import { getUserAchievementPoints } from '@/lib/achievementPoints'
 import { getLevelFromXP as fishLevelFromXP } from '@/lib/fishingLevel'
 import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
-import { getBoat } from '@/lib/boats'
+import { getBoat, earnedAchievementBoats } from '@/lib/boats'
 import { getHat } from '@/lib/hats'
 import { getRod } from '@/lib/rods'
 import { getReel } from '@/lib/reels'
@@ -98,15 +98,20 @@ export default async function FishingPage() {
   // Earned but not yet persisted (level/combo/achievement). These both feed the
   // picker's unlocked set AND drive the one-time "Skin Unlocked" toast on mount;
   // the client persists them via persistEarnedSkins so they don't re-announce.
+  const achievementPoints = await achievementPointsPromise
   const newlyUnlockedSkins = [
     ...earnedLevelColors({
       fishingLevel: fishLevelFromXP(profile?.fishing_xp ?? 0),
       navLevel:     navLevelFromXP(profile?.expedition_xp ?? 0),
       maxPrestige:  Math.max(0, ...Object.values((profile?.prestige_levels as Record<string, number> | null) ?? {})),
     }, storedColors),
-    ...earnedAchievementColors(await achievementPointsPromise, storedColors),
+    ...earnedAchievementColors(achievementPoints, storedColors),
   ]
   const unlockedCharacterColors = [...storedColors, ...newlyUnlockedSkins]
+  // Same treatment for achievement-earned boats (Celestial/Abyssal): union them
+  // into the picker's unlocked set so they show earned; equipping persists it.
+  const storedBoats = (profile?.unlocked_boats as string[] | null) ?? []
+  const unlockedBoats = [...storedBoats, ...earnedAchievementBoats(achievementPoints, storedBoats)]
 
   // Per-zone summary stats for the zone selector cards (avg sell value, avg
   // catch XP, top catch). Ancient Deep trophies pay 3× XP (see actions.ts).
@@ -200,6 +205,7 @@ export default async function FishingPage() {
           reelTier={profile?.reel_tier ?? 0}
           lineTier={profile?.line_tier ?? 0}
           initialDoubloons={profile?.doubloons ?? 0}
+          initialGems={profile?.gems ?? 0}
           initialFathoms={profile?.gauntlet_fathoms ?? 0}
           initialFishingXP={profile?.fishing_xp ?? 0}
           initialBait={baitInventory ?? []}
@@ -259,7 +265,7 @@ export default async function FishingPage() {
           marketMultipliers={marketMultipliers}
           isPremium={isPremium}
           equippedBoat={(profile?.equipped_boat as string | null) ?? null}
-          unlockedBoats={(profile?.unlocked_boats as string[] | null) ?? []}
+          unlockedBoats={unlockedBoats}
           equippedHat={(profile?.equipped_hat as string | null) ?? null}
           unlockedHats={(profile?.unlocked_hats as string[] | null) ?? []}
           equippedPet={(profile?.equipped_pet as string | null) ?? null}

@@ -690,7 +690,7 @@ export default function GearScreen({
   reelTier, hookTier, lineTier, onBuyReel, onBuyHook,
   rodHasAffordable, reelHasAffordable, hookHasAffordable,
   characterColor, charSrc, equippedBadges, unlockedCharacterColors, unlockedBadges, onUpdateColor, onEquipBadge,
-  equippedBoat, unlockedBoats, onEquipBoat, onBuyBoat, doubloons,
+  equippedBoat, unlockedBoats, onEquipBoat, onBuyBoat, doubloons, gems,
   equippedHat, unlockedHats, onEquipHat, onBuyHat,
   equippedPet, unlockedPets, onEquipPet,
   hasTideTurner, tideTurnerSkipsLeft, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, hasPerfectedSigil,
@@ -747,6 +747,7 @@ export default function GearScreen({
   unlockedPets: string[]
   onEquipPet: (id: string | null) => void
   doubloons: number
+  gems: number
   hasTideTurner: boolean
   tideTurnerSkipsLeft: number
   hasPhantomHook: boolean
@@ -789,7 +790,7 @@ export default function GearScreen({
   // Transient confirmation banner for cosmetic purchases. Clears itself after
   // 2.5s so the player gets a clear "you bought + equipped X" moment instead
   // of the menu silently closing.
-  const [cosmeticToast, setCosmeticToast] = useState<{ id: number; name: string; color: string; cost: number } | null>(null)
+  const [cosmeticToast, setCosmeticToast] = useState<{ id: number; name: string; color: string; cost: number; currency?: 'doubloons' | 'gems' } | null>(null)
   useEffect(() => {
     if (!cosmeticToast) return
     const t = setTimeout(() => setCosmeticToast(null), 2500)
@@ -800,9 +801,9 @@ export default function GearScreen({
   // timestamp so re-buys of the same slot retrigger). Each GearSlot reads
   // its own pulseKey via `pulseKeys[slot]` and animates when it changes.
   const [pulseKeys, setPulseKeys] = useState<Partial<Record<SlotKey, number>>>({})
-  function flashPurchase(name: string, color: string, cost: number, slot?: SlotKey) {
+  function flashPurchase(name: string, color: string, cost: number, slot?: SlotKey, currency?: 'doubloons' | 'gems') {
     const stamp = Date.now()
-    setCosmeticToast({ id: stamp, name, color, cost })
+    setCosmeticToast({ id: stamp, name, color, cost, currency })
     if (slot) setPulseKeys(prev => ({ ...prev, [slot]: stamp }))
   }
 
@@ -833,7 +834,7 @@ export default function GearScreen({
     /** Currency the cost is denominated in. Defaults to doubloons (⟡). Fathoms
      *  (the Gauntlet currency) skip the local doubloon-affordability check —
      *  the server enforces the balance and returns its own error. */
-    currency?: 'doubloons' | 'fathoms'
+    currency?: 'doubloons' | 'fathoms' | 'gems'
   } | null>(null)
   const [confirming, setConfirming] = useState(false)
 
@@ -1290,7 +1291,7 @@ export default function GearScreen({
                             ✓ Bought <span style={{ color: cosmeticToast.color }}>{cosmeticToast.name}</span> — now equipped
                           </p>
                           <p className="font-karla font-700" style={{ fontSize: '0.66rem', color: cosmeticToast.color }}>
-                            −{cosmeticToast.cost.toLocaleString()} ⟡
+                            −{cosmeticToast.cost.toLocaleString()} {cosmeticToast.currency === 'gems' ? '◆' : '⟡'}
                           </p>
                         </motion.div>
                       )}
@@ -1921,7 +1922,7 @@ export default function GearScreen({
                             ✓ Upgraded to <span style={{ color: cosmeticToast.color }}>{cosmeticToast.name}</span>
                           </p>
                           <p className="font-karla font-700" style={{ fontSize: '0.66rem', color: cosmeticToast.color }}>
-                            −{cosmeticToast.cost.toLocaleString()} ⟡
+                            −{cosmeticToast.cost.toLocaleString()} {cosmeticToast.currency === 'gems' ? '◆' : '⟡'}
                           </p>
                         </motion.div>
                       )}
@@ -2056,7 +2057,7 @@ export default function GearScreen({
                             ✓ Upgraded to <span style={{ color: cosmeticToast.color }}>{cosmeticToast.name}</span>
                           </p>
                           <p className="font-karla font-700" style={{ fontSize: '0.66rem', color: cosmeticToast.color }}>
-                            −{cosmeticToast.cost.toLocaleString()} ⟡
+                            −{cosmeticToast.cost.toLocaleString()} {cosmeticToast.currency === 'gems' ? '◆' : '⟡'}
                           </p>
                         </motion.div>
                       )}
@@ -2408,14 +2409,18 @@ export default function GearScreen({
                     const renderBoatCard = (b: typeof BOATS[number]) => {
                       const owned = unlockedBoats.includes(b.id)
                       const isEquipped = equippedBoat === b.id
-                      const canAfford = doubloons >= b.cost
+                      const isAchievement = typeof b.achievementPoints === 'number'
+                      const useGems = typeof b.gemPrice === 'number' && b.gemPrice > 0
+                      const price = useGems ? (b.gemPrice as number) : b.cost
+                      const canAfford = !isAchievement && (useGems ? gems >= price : doubloons >= price)
                       const tappable = isEquipped ? false : (owned || canAfford)
                       const onTap = () => {
                         if (isEquipped) return
-                        if (owned) onEquipBoat(b.id)
-                        else if (canAfford) setPendingPurchase({
-                          name: b.name, color: b.color, cost: b.cost,
-                          onConfirm: () => { onBuyBoat(b.id); flashPurchase(b.name, b.color, b.cost, 'appearance') },
+                        if (owned) { onEquipBoat(b.id); return }
+                        if (isAchievement) return // earned via achievement points, not bought
+                        if (canAfford) setPendingPurchase({
+                          name: b.name, color: b.color, cost: price, currency: useGems ? 'gems' : 'doubloons',
+                          onConfirm: () => { onBuyBoat(b.id); flashPurchase(b.name, b.color, price, 'appearance', useGems ? 'gems' : 'doubloons') },
                         })
                       }
                       return (
@@ -2468,18 +2473,23 @@ export default function GearScreen({
                             <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: b.color }}>✓ Equipped</span>
                           ) : owned ? (
                             <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#4ade80' }}>Owned · Tap to equip</span>
+                          ) : isAchievement ? (
+                            <span className="font-karla font-700" style={{ fontSize: '0.5rem', color: '#c4a86a', textAlign: 'center', lineHeight: 1.2 }}>
+                              {b.achievementPoints} ach. pts
+                            </span>
                           ) : (
-                            <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: canAfford ? b.color : '#f0c040' }}>
-                              {b.cost.toLocaleString()} ⟡
+                            <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: canAfford ? b.color : (useGems ? '#a78bfa' : '#f0c040') }}>
+                              {price.toLocaleString()} {useGems ? '◆' : '⟡'}
                             </span>
                           )}
                         </button>
                       )
                     }
-                    // Starter = the free Driftwood default. Earned = crate drops
-                    // the player owns. Purchased = boats you buy with doubloons.
-                    const earnedBoats = BOATS.filter(b => b.crateOnly && unlockedBoats.includes(b.id))
-                    const purchasedBoats = BOATS.filter(b => !b.crateOnly)
+                    // Starter = the free Driftwood default. Earned = owned crate
+                    // drops + achievement-gated boats (shown locked until earned).
+                    // Purchased = boats you buy with doubloons or gems.
+                    const earnedBoats = BOATS.filter(b => (b.crateOnly && unlockedBoats.includes(b.id)) || typeof b.achievementPoints === 'number')
+                    const purchasedBoats = BOATS.filter(b => !b.crateOnly && typeof b.achievementPoints !== 'number')
                     const groupLabel = { fontSize: '0.56rem', color: '#8a8272', letterSpacing: '0.12em', marginTop: 2 } as const
                     return (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -2932,7 +2942,7 @@ export default function GearScreen({
                 const isSell = pendingPurchase.kind === 'sell'
                 const unaffordable = !isSell && pendingPurchase.affordable === false
                 const need = Math.max(0, pendingPurchase.cost - doubloons)
-                const unit = pendingPurchase.currency === 'fathoms' ? ' Fathoms' : ' ⟡'
+                const unit = pendingPurchase.currency === 'fathoms' ? ' Fathoms' : pendingPurchase.currency === 'gems' ? ' ◆' : ' ⟡'
                 const ctaBg     = isSell ? 'rgba(196,169,106,0.18)' : 'rgba(96,165,250,0.16)'
                 const ctaBorder = isSell ? 'rgba(196,169,106,0.6)'  : 'rgba(96,165,250,0.55)'
                 const ctaColor  = isSell ? '#f0d695'                : '#cfe2ff'
