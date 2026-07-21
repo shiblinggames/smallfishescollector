@@ -689,27 +689,38 @@ export default function DailyVoyagePanel({
                               <IconLock size={12} /> {comingSoonRoute ? 'Coming soon' : shipLockedRoute ? 'Requires a Sloop or better' : `Unlocks at Expedition Lv ${minLevel}`}
                             </span>
                           </div>
-                        ) : (
-                          <button
-                            onClick={handleSend}
-                            disabled={isPending || savedCrew.length < minCrew}
-                            style={{
-                              width: '100%',
-                              background: isPending || savedCrew.length < minCrew
-                                ? 'rgba(80,100,160,0.08)'
-                                : `linear-gradient(135deg, ${rco.color}33 0%, ${rco.color}18 100%)`,
-                              border: `1px solid ${savedCrew.length >= minCrew ? rco.color + '66' : 'rgba(255,255,255,0.08)'}`,
-                              borderRadius: 8, padding: '0.45rem 1rem',
-                              color: isPending || savedCrew.length < minCrew ? 'rgba(255,255,255,0.18)' : rco.color,
-                              cursor: isPending || savedCrew.length < minCrew ? 'default' : 'pointer',
-                              transition: 'all 0.15s',
-                              boxShadow: savedCrew.length >= minCrew && !isPending ? `0 0 12px ${rco.color}22` : 'none',
-                            }}
-                            className="font-cinzel font-700 uppercase tracking-[0.12em]"
-                          >
-                            <span style={{ fontSize: '0.78rem' }}>{isPending ? 'Sending…' : 'Set Sail'}</span>
-                          </button>
-                        )}
+                        ) : (() => {
+                          // Three clearly-distinct states so a READY button never
+                          // reads as disabled: a bold filled CTA when you can sail,
+                          // a dimmed "working" fill while sending, a muted slab only
+                          // when the crew genuinely can't go.
+                          const ready = !isPending && savedCrew.length >= minCrew
+                          return (
+                            <motion.button
+                              onClick={handleSend}
+                              disabled={isPending || savedCrew.length < minCrew}
+                              whileTap={ready ? { scale: 0.96 } : undefined}
+                              animate={ready ? { boxShadow: [
+                                `0 3px 13px ${rco.color}3d, inset 0 1px 0 rgba(255,255,255,0.35)`,
+                                `0 4px 22px ${rco.color}82, inset 0 1px 0 rgba(255,255,255,0.35)`,
+                                `0 3px 13px ${rco.color}3d, inset 0 1px 0 rgba(255,255,255,0.35)`,
+                              ] } : {}}
+                              transition={ready ? { duration: 2.4, repeat: Infinity, ease: 'easeInOut' } : {}}
+                              style={{
+                                width: '100%', borderRadius: 10, padding: '0.62rem 1rem',
+                                transition: 'background 0.15s, opacity 0.15s, border-color 0.15s',
+                                ...(ready
+                                  ? { background: `linear-gradient(180deg, ${rco.color} 0%, ${rco.color}d0 100%)`, border: `1px solid ${rco.color}`, color: '#0d1410', cursor: 'pointer' }
+                                  : isPending
+                                    ? { background: `linear-gradient(180deg, ${rco.color}aa 0%, ${rco.color}70 100%)`, border: `1px solid ${rco.color}88`, color: 'rgba(13,20,16,0.72)', cursor: 'default', boxShadow: 'none' }
+                                    : { background: 'rgba(80,100,120,0.10)', border: '1px solid rgba(255,255,255,0.09)', color: 'rgba(255,255,255,0.34)', cursor: 'default', boxShadow: 'none' }),
+                              }}
+                              className="font-cinzel font-800 uppercase tracking-[0.12em]"
+                            >
+                              <span style={{ fontSize: '0.85rem' }}>{isPending ? 'Sending…' : 'Set Sail'}</span>
+                            </motion.button>
+                          )
+                        })()}
                       </div>
                     </div>
                   )
