@@ -1433,6 +1433,20 @@ export default function RaidCombat({
   const checkArmKeyRef = useRef(0)
   const checkArmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => () => { if (checkArmTimerRef.current) clearTimeout(checkArmTimerRef.current) }, [])
+
+  // Hit-stop: a white impact-flash over the whole stage on a heavy landing (crit
+  // / Mega / kill). Punctuates the ~70ms still-hold already baked into the crit
+  // shake so the blow reads with real weight.
+  const [impactFlash, setImpactFlash] = useState<{ key: number; strong: boolean } | null>(null)
+  const impactFlashKeyRef = useRef(0)
+  const impactFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const fireImpactFlash = useCallback((strong: boolean) => {
+    impactFlashKeyRef.current += 1
+    setImpactFlash({ key: impactFlashKeyRef.current, strong })
+    if (impactFlashTimerRef.current) clearTimeout(impactFlashTimerRef.current)
+    impactFlashTimerRef.current = setTimeout(() => setImpactFlash(null), strong ? 220 : 150)
+  }, [])
+  useEffect(() => () => { if (impactFlashTimerRef.current) clearTimeout(impactFlashTimerRef.current) }, [])
   // Center-screen callout for a boon PROC (Counter-Battery). Same lane as the
   // check flash but themed to the boon's color.
   const [boonFlash, setBoonFlash] = useState<{ label: string; sub?: string; color: string; key: number } | null>(null)
@@ -1697,21 +1711,25 @@ export default function RaidCombat({
   const cameraShake = useCallback((kind: 'crit' | 'volley' | 'nuke') => {
     if (kind === 'nuke') {
       // Heaviest shake — the silo impact. Bigger throw, longer settle, a real heave.
+      fireImpactFlash(true)
       stageShakeCtrl.start({
         x:     [0, 0, -13, 12, -10, 8, -6, 4, -2, 0],
         y:     [0, 0, 6, -5, 4, -3, 2, -1, 0, 0],
-        scale: [1, 1, 1.055, 0.992, 1.03, 0.996, 1.015, 1, 1, 1],
-        transition: { duration: 0.72, times: [0, 0.12, 0.26, 0.4, 0.52, 0.64, 0.76, 0.86, 0.94, 1], ease: 'easeOut' },
+        scale: [1, 1.06, 1.055, 0.992, 1.03, 0.996, 1.015, 1, 1, 1],
+        transition: { duration: 0.72, times: [0, 0.14, 0.28, 0.4, 0.52, 0.64, 0.76, 0.86, 0.94, 1], ease: 'easeOut' },
       })
       return
     }
     if (kind === 'crit') {
+      // A real hit-stop: punch in and HOLD the frozen zoom for ~90ms (the flash
+      // lands on it) before the jolt shakes it off.
+      fireImpactFlash(false)
       stageShakeCtrl.start({
         x:     [0, 0, -7, 6, -5, 3, -2, 0],
         y:     [0, 0, 3, -2, 2, -1, 0, 0],
-        scale: [1, 1, 1.03, 0.997, 1.012, 1, 1, 1],
-        // The first two keyframes sit still (the hit-stop hold) before the jolt.
-        transition: { duration: 0.4, times: [0, 0.18, 0.32, 0.46, 0.6, 0.74, 0.88, 1], ease: 'easeOut' },
+        scale: [1, 1.045, 1.045, 0.997, 1.012, 1, 1, 1],
+        // First two keyframes hold the punched-in zoom (the hit-stop) before the jolt.
+        transition: { duration: 0.44, times: [0, 0.2, 0.42, 0.54, 0.66, 0.8, 0.9, 1], ease: 'easeOut' },
       })
     } else {
       stageShakeCtrl.start({
@@ -1720,7 +1738,7 @@ export default function RaidCombat({
         transition: { duration: 0.26, ease: 'easeOut' },
       })
     }
-  }, [stageShakeCtrl])
+  }, [stageShakeCtrl, fireImpactFlash])
   useEffect(() => {
     if (enemyShakeKey === 0) return
     if (enemyShakeKind === 'crit') {
@@ -2916,6 +2934,7 @@ export default function RaidCombat({
       // XP messages and the kill callback fire on the same schedule the
       // cannon-fire path uses.
       setSubPhase('done')
+      fireImpactFlash(true)   // kill-blow impact
       setEnemySinking(true)
       setTimeout(() => setResolveLog(prev => [...prev, `You sank the ${enemy.name}!`]), 200)
       let cbDelay = 1000
@@ -4753,6 +4772,7 @@ export default function RaidCombat({
             // Sink animation: ~1.3s fall + fade, lined up with the kill
             // log + onEnemyDefeated cbDelay below so the ship is gone
             // by the time the loot/next-enemy beat fires.
+            fireImpactFlash(true)   // kill-blow impact
             setEnemySinking(true)
             setTimeout(() => setResolveLog(prev => [...prev, `You sank the ${enemy.name}!`]), 200)
             let cbDelay = 1000
@@ -5309,6 +5329,19 @@ export default function RaidCombat({
                                       'linear-gradient(180deg, #1e3a5f 0%, #234567 30%, #2a5274 40%, #0a1c2e 100%)',
         overflow: 'hidden',
       }}>
+        {/* Hit-stop impact flash — a quick white bloom over the stage on a heavy
+            landing (crit / Mega / kill), lit via 'screen' so it brightens the
+            scene rather than whiting it out. Sells the frozen beat of the hit. */}
+        {impactFlash && (
+          <motion.div key={`impact-${impactFlash.key}`} aria-hidden
+            initial={{ opacity: impactFlash.strong ? 0.5 : 0.32 }}
+            animate={{ opacity: 0 }}
+            transition={{ duration: impactFlash.strong ? 0.24 : 0.15, ease: 'easeOut' }}
+            style={{ position: 'absolute', inset: 0, zIndex: 9, pointerEvents: 'none', mixBlendMode: 'screen',
+              background: impactFlash.strong
+                ? 'radial-gradient(ellipse at center, rgba(255,255,255,0.92), rgba(255,214,150,0.5) 46%, transparent 78%)'
+                : 'radial-gradient(ellipse at center, rgba(255,255,255,0.82), transparent 72%)' }} />
+        )}
         {/* Fishing-zone backdrop — when the raid opts into a `zone`, we paint the
             matching fishing background image (a static JPG, no per-frame animation)
             plus a readability scrim, and skip the whole procedural scene below. A
@@ -8492,32 +8525,62 @@ function HitsplatOverlay({ text, color, big, volley }: { text: string; color: st
       ? `${ring}, 0 2px 5px rgba(0,0,0,0.55), 0 0 11px ${color}, 0 0 20px rgba(255,150,60,0.7)`
       : `${ring}, 0 1px 4px rgba(0,0,0,0.55), 0 0 9px ${color}99`
   return (
-    <motion.div
-      // Crits + volleys punch IN (start oversized, settle to 1); normal hits
-      // grow in. Monotonic scale = no overshoot bounce that reads as flicker.
-      // x:'-50%' is the centering offset (NOT a static `transform`, which FM
-      // would clobber once it animates scale/y).
-      initial={{ opacity: 0, x: '-50%', y: 2, scale: big ? 1.55 : isVolley ? 1.3 : 0.55 }}
-      animate={{ opacity: 1, x: '-50%', y: big ? -38 : -30, scale: 1 }}
-      exit={{ opacity: 0, x: '-50%', y: big ? -60 : -48, scale: big ? 1.1 : 0.92 }}
-      transition={{
-        opacity: { duration: 0.14 },
-        y:       { duration: 0.34, ease: [0.22, 1, 0.36, 1] },
-        scale:   { duration: big ? 0.2 : isVolley ? 0.22 : 0.26, ease: [0.2, 1.1, 0.4, 1] },
-      }}
-      style={{
-        position: 'absolute', left: '50%', top: '38%',
-        pointerEvents: 'none', zIndex: 10,
-        color,
-        fontFamily: 'var(--font-cinzel)', fontWeight: 800,
-        fontStyle: big ? 'italic' : 'normal',
-        fontSize: `${fontPx}px`, lineHeight: 1, letterSpacing: isVolley ? '0.02em' : '0.01em',
-        textShadow: glow,
-        whiteSpace: 'nowrap',
-      }}
-    >
-      {text}
-    </motion.div>
+    <>
+      {/* Crit haymaker gets an MMO-style burst behind it — a star pop, an
+          expanding ring, and radiating sparks in the number's color. */}
+      {big && <CritFlare color={color} />}
+      <motion.div
+        // Crits + volleys punch IN (start oversized, settle to 1); normal hits
+        // grow in. Monotonic scale = no overshoot bounce that reads as flicker.
+        // x:'-50%' is the centering offset (NOT a static `transform`, which FM
+        // would clobber once it animates scale/y). Crits add a quick rotate-punch.
+        initial={{ opacity: 0, x: '-50%', y: 2, scale: big ? 1.62 : isVolley ? 1.3 : 0.55, rotate: big ? -7 : 0 }}
+        animate={{ opacity: 1, x: '-50%', y: big ? -38 : -30, scale: 1, rotate: 0 }}
+        exit={{ opacity: 0, x: '-50%', y: big ? -60 : -48, scale: big ? 1.1 : 0.92 }}
+        transition={{
+          opacity: { duration: 0.14 },
+          y:       { duration: 0.34, ease: [0.22, 1, 0.36, 1] },
+          scale:   { duration: big ? 0.2 : isVolley ? 0.22 : 0.26, ease: [0.2, 1.1, 0.4, 1] },
+          rotate:  { duration: 0.28, ease: [0.2, 1.15, 0.4, 1] },
+        }}
+        style={{
+          position: 'absolute', left: '50%', top: '38%',
+          pointerEvents: 'none', zIndex: 10,
+          color,
+          fontFamily: 'var(--font-cinzel)', fontWeight: 800,
+          fontStyle: big ? 'italic' : 'normal',
+          fontSize: `${fontPx}px`, lineHeight: 1, letterSpacing: isVolley ? '0.02em' : '0.01em',
+          textShadow: glow,
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {text}
+      </motion.div>
+    </>
+  )
+}
+
+// Crit burst — a star flash, an expanding ring, and radiating sparks centered on
+// the number's anchor. Purely decorative; unmounts with its parent hitsplat.
+function CritFlare({ color }: { color: string }) {
+  const sparks = useMemo(() => Array.from({ length: 10 }, (_, i) => {
+    const ang = (Math.PI * 2 * i) / 10 + (i % 2) * 0.32
+    const dist = 30 + (i % 3) * 13
+    return { x: Math.cos(ang) * dist, y: Math.sin(ang) * dist, size: 3 + (i % 2) * 2, dur: 0.42 + (i % 3) * 0.09 }
+  }), [])
+  return (
+    <div aria-hidden style={{ position: 'absolute', left: '50%', top: '38%', zIndex: 9, pointerEvents: 'none' }}>
+      {/* expanding shock ring */}
+      <motion.span initial={{ scale: 0.4, opacity: 0.85 }} animate={{ scale: 2.5, opacity: 0 }} transition={{ duration: 0.5, ease: 'easeOut' }}
+        style={{ position: 'absolute', left: -26, top: -26, width: 52, height: 52, borderRadius: '50%', border: `2px solid ${color}`, boxShadow: `0 0 12px ${color}` }} />
+      {/* white core star */}
+      <motion.span initial={{ scale: 0.3, opacity: 1 }} animate={{ scale: 1.5, opacity: 0 }} transition={{ duration: 0.32, ease: 'easeOut' }}
+        style={{ position: 'absolute', left: -4, top: -4, width: 8, height: 8, borderRadius: '50%', background: '#fff', boxShadow: `0 0 10px #fff, 0 0 20px ${color}` }} />
+      {sparks.map((s, i) => (
+        <motion.span key={i} initial={{ x: 0, y: 0, opacity: 1, scale: 1 }} animate={{ x: s.x, y: s.y, opacity: 0, scale: 0.3 }} transition={{ duration: s.dur, ease: 'easeOut' }}
+          style={{ position: 'absolute', left: 0, top: 0, width: s.size, height: s.size, borderRadius: '50%', background: color, boxShadow: `0 0 6px ${color}` }} />
+      ))}
+    </div>
   )
 }
 
