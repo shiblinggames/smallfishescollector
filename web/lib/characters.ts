@@ -30,6 +30,7 @@ export const CHARACTER_COLORS: CharacterColor[] = [
   { id: 'lava',     name: 'Lava',     free: false, unlockHint: '500 ◆', gemPrice: 500 },
   { id: 'gilded',   name: 'Gilded',   free: false, unlockHint: '1,000,000 ⟡', price: 1_000_000 },
   { id: 'frozen',   name: 'Frozen',   free: false, unlockHint: '500 ◆', gemPrice: 500 },
+  { id: 'spectral', name: 'Spectral', free: false, unlockHint: '750 ◆', gemPrice: 750 },
 ]
 
 /** Character colors earned by hitting an Achievement Points threshold. Kept
