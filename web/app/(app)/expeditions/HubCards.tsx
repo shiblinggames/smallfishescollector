@@ -817,91 +817,86 @@ export default function HubCards({
             </button>
           </div>
 
-          {/* ── Davy Jones — the original descent ── */}
-          <motion.button type="button"
-            initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.06 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => { vibrate([0, 16]); setModal(null); router.push('/raids/gauntlet') }}
-            className="tap"
-            style={{
-              position: 'relative', overflow: 'hidden', width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-              padding: '0.8rem', borderRadius: 15, cursor: 'pointer', textAlign: 'left',
-              background: `linear-gradient(120deg, ${DAVY_AC}1e, rgba(0,0,0,0.24))`,
-              border: `1px solid ${DAVY_AC}66`, boxShadow: `0 0 18px ${DAVY_AC}12`,
-            }}>
-            <span style={{ position: 'relative', flexShrink: 0, width: 54, height: 54, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span aria-hidden style={{ position: 'absolute', inset: -4, borderRadius: '50%', background: `radial-gradient(circle, ${DAVY_AC}55, transparent 70%)` }} />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/davyjones.png" alt="" loading="lazy" decoding="async"
-                style={{ position: 'relative', width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', border: `1.5px solid ${DAVY_AC}aa`, background: 'rgba(0,0,0,0.35)' }} />
-            </span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: '#f0ede8', lineHeight: 1.1 }}>Davy Jones Gauntlet</p>
-              <p className="font-karla font-500" style={{ fontSize: '0.64rem', color: '#a8b0c4', lineHeight: 1.35, marginTop: 3 }}>
-                Fight down the deep. Every win fattens one pot; cash out or sink with it.
-              </p>
-            </div>
-            {gauntletResumable
-              ? <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ flexShrink: 0, fontSize: '0.5rem', color: '#04120f', background: DAVY_AC, borderRadius: 999, padding: '0.26rem 0.55rem', whiteSpace: 'nowrap' }}>Resume ›</span>
-              : <motion.span aria-hidden animate={{ x: [0, 3, 0] }} transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }} style={{ flexShrink: 0, display: 'flex', color: DAVY_AC }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
-                </motion.span>}
-          </motion.button>
-
-          {/* ── Don's Gauntlet — Gauntlet II, ghost of Don Finleone. A "Coming
-              Soon" tease until the door is open, then a live descent. ── */}
-          {donsGauntletOpen ? (
+          {/* Two art-forward cards, side by side — the boss portrait is the
+              centerpiece, name + tagline + CTA below. */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            {/* ── Davy Jones — the original descent ── */}
             <motion.button type="button"
-              initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.13 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => { vibrate([0, 16]); setModal(null); router.push('/raids/dons-gauntlet') }}
+              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06, type: 'spring', stiffness: 380, damping: 28 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => { vibrate([0, 16]); setModal(null); router.push('/raids/gauntlet') }}
               className="tap"
               style={{
-                position: 'relative', overflow: 'hidden', marginTop: 10, width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-                padding: '0.8rem', borderRadius: 15, textAlign: 'left', cursor: 'pointer',
-                background: `linear-gradient(120deg, ${DON_AC}22, rgba(0,0,0,0.26))`,
-                border: `1px solid ${DON_AC}66`, boxShadow: `0 0 18px ${DON_AC}14`,
+                position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
+                padding: '0.95rem 0.7rem 0.85rem', borderRadius: 16, cursor: 'pointer',
+                background: `linear-gradient(180deg, ${DAVY_AC}20, rgba(0,0,0,0.32))`,
+                border: `1px solid ${DAVY_AC}66`, boxShadow: `0 0 22px ${DAVY_AC}14`,
               }}>
-              <span style={{ position: 'relative', flexShrink: 0, width: 54, height: 54, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span aria-hidden style={{ position: 'absolute', inset: -4, borderRadius: '50%', background: `radial-gradient(circle, ${DON_AC}55, transparent 70%)` }} />
+              <div style={{ position: 'relative', width: '100%', height: 128, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 9 }}>
+                <div aria-hidden style={{ position: 'absolute', width: 138, height: 138, borderRadius: '50%', background: `radial-gradient(circle, ${DAVY_AC}4a, transparent 68%)`, filter: 'blur(3px)' }} />
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/donsgauntlet.png" alt="" loading="lazy" decoding="async"
-                  style={{ position: 'relative', width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', border: `1.5px solid ${DON_AC}aa`, background: 'rgba(0,0,0,0.35)' }} />
-              </span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: '#f0ede8', lineHeight: 1.1 }}>Don&apos;s Gauntlet</p>
-                <p className="font-karla font-500" style={{ fontSize: '0.64rem', color: '#a9c6b6', lineHeight: 1.35, marginTop: 3 }}>
-                  The don went down with the deep, and his ghost is still collecting. Descend into the darker gauntlet.
-                </p>
+                <img src="/davyjones.png" alt="" loading="eager" decoding="async"
+                  style={{ position: 'relative', maxWidth: '94%', maxHeight: 126, objectFit: 'contain', filter: `drop-shadow(0 8px 20px ${DAVY_AC}4d) drop-shadow(0 4px 10px rgba(0,0,0,0.6))` }} />
               </div>
-              <motion.span aria-hidden animate={{ x: [0, 3, 0] }} transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }} style={{ flexShrink: 0, display: 'flex', color: DON_AC }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
-              </motion.span>
+              <p className="font-cinzel font-800" style={{ fontSize: '0.98rem', color: '#f0ede8', lineHeight: 1.08 }}>Davy Jones</p>
+              <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: `${DAVY_AC}dd`, marginTop: 3, lineHeight: 1.3 }}>The original descent</p>
+              <span className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{ marginTop: 11, display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.56rem', color: gauntletResumable ? '#04120f' : DAVY_AC, background: gauntletResumable ? DAVY_AC : `${DAVY_AC}1e`, border: `1px solid ${DAVY_AC}66`, borderRadius: 999, padding: '0.34rem 0.8rem' }}>
+                {gauntletResumable ? 'Resume' : 'Descend'}
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M9 18l6-6-6-6" /></svg>
+              </span>
             </motion.button>
-          ) : (
-            <motion.div aria-disabled
-              initial={{ opacity: 0, x: -10 }} animate={{ opacity: 0.72, x: 0 }} transition={{ delay: 0.13 }}
-              style={{
-                marginTop: 10, width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-                padding: '0.8rem', borderRadius: 15, textAlign: 'left', cursor: 'default',
-                background: `linear-gradient(120deg, ${DON_AC}12, rgba(0,0,0,0.26))`,
-                border: `1px solid ${DON_AC}3a`,
-              }}>
-              <span style={{ position: 'relative', flexShrink: 0, width: 54, height: 54, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span aria-hidden style={{ position: 'absolute', inset: -4, borderRadius: '50%', background: `radial-gradient(circle, ${DON_AC}30, transparent 70%)` }} />
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/donsgauntlet.png" alt="" loading="lazy" decoding="async"
-                  style={{ position: 'relative', width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', border: `1.5px solid ${DON_AC}55`, background: 'rgba(0,0,0,0.35)', filter: 'grayscale(0.4)' }} />
-              </span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: '#dcece4', lineHeight: 1.1 }}>Don&apos;s Gauntlet</p>
-                <p className="font-karla font-500" style={{ fontSize: '0.64rem', color: '#9db9ab', lineHeight: 1.35, marginTop: 3 }}>
-                  The don went down with the deep, and his ghost is still collecting. A darker gauntlet stirs below.
-                </p>
-              </div>
-              <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ flexShrink: 0, fontSize: '0.5rem', color: '#7fd9a8', background: 'rgba(36,116,78,0.24)', border: '1px solid rgba(36,116,78,0.55)', borderRadius: 999, padding: '0.25rem 0.5rem', whiteSpace: 'nowrap' }}>Coming Soon</span>
-            </motion.div>
-          )}
+
+            {/* ── Don's Gauntlet — Gauntlet II. Live descent, or a Coming-Soon
+                tease until the door is open. ── */}
+            {donsGauntletOpen ? (
+              <motion.button type="button"
+                initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14, type: 'spring', stiffness: 380, damping: 28 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => { vibrate([0, 16]); setModal(null); router.push('/raids/dons-gauntlet') }}
+                className="tap"
+                style={{
+                  position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
+                  padding: '0.95rem 0.7rem 0.85rem', borderRadius: 16, cursor: 'pointer',
+                  background: `linear-gradient(180deg, ${DON_AC}24, rgba(0,0,0,0.34))`,
+                  border: `1px solid ${DON_AC}66`, boxShadow: `0 0 22px ${DON_AC}16`,
+                }}>
+                <div style={{ position: 'relative', width: '100%', height: 128, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 9 }}>
+                  <div aria-hidden style={{ position: 'absolute', width: 138, height: 138, borderRadius: '50%', background: `radial-gradient(circle, ${DON_AC}4a, transparent 68%)`, filter: 'blur(3px)' }} />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/donsgauntlet.png" alt="" loading="eager" decoding="async"
+                    style={{ position: 'relative', maxWidth: '94%', maxHeight: 126, objectFit: 'contain', filter: `drop-shadow(0 8px 20px ${DON_AC}4d) drop-shadow(0 4px 10px rgba(0,0,0,0.6))` }} />
+                </div>
+                <p className="font-cinzel font-800" style={{ fontSize: '0.98rem', color: '#f0ede8', lineHeight: 1.08 }}>Don&apos;s Gauntlet</p>
+                <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: `${DON_AC}dd`, marginTop: 3, lineHeight: 1.3 }}>The endgame descent</p>
+                <span className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{ marginTop: 11, display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.56rem', color: DON_AC, background: `${DON_AC}1e`, border: `1px solid ${DON_AC}66`, borderRadius: 999, padding: '0.34rem 0.8rem' }}>
+                  Descend
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M9 18l6-6-6-6" /></svg>
+                </span>
+              </motion.button>
+            ) : (
+              <motion.div aria-disabled
+                initial={{ opacity: 0, y: 12 }} animate={{ opacity: 0.78, y: 0 }} transition={{ delay: 0.14, type: 'spring', stiffness: 380, damping: 28 }}
+                style={{
+                  position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
+                  padding: '0.95rem 0.7rem 0.85rem', borderRadius: 16, cursor: 'default',
+                  background: `linear-gradient(180deg, ${DON_AC}12, rgba(0,0,0,0.34))`,
+                  border: `1px solid ${DON_AC}3a`,
+                }}>
+                <div style={{ position: 'relative', width: '100%', height: 128, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 9 }}>
+                  <div aria-hidden style={{ position: 'absolute', width: 138, height: 138, borderRadius: '50%', background: `radial-gradient(circle, ${DON_AC}2a, transparent 68%)`, filter: 'blur(3px)' }} />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/donsgauntlet.png" alt="" loading="lazy" decoding="async"
+                    style={{ position: 'relative', maxWidth: '94%', maxHeight: 126, objectFit: 'contain', filter: 'grayscale(0.45) drop-shadow(0 4px 10px rgba(0,0,0,0.55))' }} />
+                </div>
+                <p className="font-cinzel font-800" style={{ fontSize: '0.98rem', color: '#dcece4', lineHeight: 1.08 }}>Don&apos;s Gauntlet</p>
+                <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#9db9ab', marginTop: 3, lineHeight: 1.3 }}>A darker gauntlet stirs below</p>
+                <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ marginTop: 11, display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.52rem', color: '#7fd9a8', background: 'rgba(36,116,78,0.22)', border: '1px solid rgba(36,116,78,0.5)', borderRadius: 999, padding: '0.32rem 0.75rem' }}>
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                  Coming Soon
+                </span>
+              </motion.div>
+            )}
+          </div>
         </motion.div>
       </PopupShell>
 
