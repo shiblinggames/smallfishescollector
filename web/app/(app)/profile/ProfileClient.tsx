@@ -1370,61 +1370,72 @@ export default function ProfileClient({
             <p className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', color: '#7a9bc4', letterSpacing: '0.14em', marginBottom: 6 }}>
               Character
             </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8, marginBottom: 14 }}>
-              {CHARACTER_COLORS.map(c => {
-                const sprites = getCharacterSprites(c.id)
-                const isActive = characterColor === c.id
-                const isUnlocked = unlockedColors.includes(c.id)
-                return (
-                  <button
-                    key={`char-${c.id}`}
-                    type="button"
-                    disabled={colorSaving}
-                    onClick={async () => {
-                      if (!isUnlocked) {
-                        if (c.price || c.gemPrice) {
-                          setPurchaseError(null)
-                          setPurchasePrompt({
-                            kind: 'skin',
-                            id: c.id,
-                            name: c.name,
-                            price: (c.gemPrice ?? c.price)!,
-                            currency: c.gemPrice ? 'gems' : 'doubloons',
-                          })
-                        } else {
-                          flashLockMsg(c.unlockHint ? `${c.name} — ${c.unlockHint}` : `${c.name} — locked`)
-                        }
-                        return
-                      }
-                      if (isActive) return
-                      setColorSaving(true)
-                      setCharacterColor(c.id)
-                      await updateCharacterColor(c.id)
-                      setColorSaving(false)
-                    }}
-                    aria-label={`Character ${c.name}${!isUnlocked ? ' (locked)' : ''}`}
-                    title={isUnlocked ? c.name : `${c.name} — ${c.unlockHint ?? 'locked'}`}
-                    style={{
-                      width: '100%', aspectRatio: '1 / 1',
-                      borderRadius: '50%', overflow: 'hidden',
-                      backgroundImage: `url(${sprites.rest})`,
-                      backgroundSize: '420% auto', backgroundPosition: '60% 68%',
-                      backgroundRepeat: 'no-repeat',
-                      border: isActive ? '2px solid #f0c040' : '1px solid rgba(255,255,255,0.18)',
-                      boxShadow: isActive ? '0 0 10px rgba(240,192,64,0.35)' : 'none',
-                      cursor: colorSaving ? 'default' : 'pointer',
-                      padding: 0,
-                      opacity: !isUnlocked ? 0.55 : 1,
-                      position: 'relative',
-                      appearance: 'none',
-                      WebkitAppearance: 'none',
-                    }}
-                  >
-                    {!isUnlocked && <LockBadge />}
-                  </button>
-                )
-              })}
-            </div>
+            {/* Grouped: earned through play (incl. free starters) vs bought with currency. */}
+            {([
+              { label: 'Earned', items: CHARACTER_COLORS.filter(c => !(c.price || c.gemPrice)) },
+              { label: 'Purchased', items: CHARACTER_COLORS.filter(c => !!(c.price || c.gemPrice)) },
+            ] as const).map(group => group.items.length === 0 ? null : (
+              <div key={`char-grp-${group.label}`} style={{ marginBottom: 12 }}>
+                <p className="font-karla font-600 uppercase" style={{ fontSize: '0.56rem', color: '#8a8272', letterSpacing: '0.12em', marginBottom: 5 }}>
+                  {group.label}
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8 }}>
+                  {group.items.map(c => {
+                    const sprites = getCharacterSprites(c.id)
+                    const isActive = characterColor === c.id
+                    const isUnlocked = unlockedColors.includes(c.id)
+                    return (
+                      <button
+                        key={`char-${c.id}`}
+                        type="button"
+                        disabled={colorSaving}
+                        onClick={async () => {
+                          if (!isUnlocked) {
+                            if (c.price || c.gemPrice) {
+                              setPurchaseError(null)
+                              setPurchasePrompt({
+                                kind: 'skin',
+                                id: c.id,
+                                name: c.name,
+                                price: (c.gemPrice ?? c.price)!,
+                                currency: c.gemPrice ? 'gems' : 'doubloons',
+                              })
+                            } else {
+                              flashLockMsg(c.unlockHint ? `${c.name} — ${c.unlockHint}` : `${c.name} — locked`)
+                            }
+                            return
+                          }
+                          if (isActive) return
+                          setColorSaving(true)
+                          setCharacterColor(c.id)
+                          await updateCharacterColor(c.id)
+                          setColorSaving(false)
+                        }}
+                        aria-label={`Character ${c.name}${!isUnlocked ? ' (locked)' : ''}`}
+                        title={isUnlocked ? c.name : `${c.name} — ${c.unlockHint ?? 'locked'}`}
+                        style={{
+                          width: '100%', aspectRatio: '1 / 1',
+                          borderRadius: '50%', overflow: 'hidden',
+                          backgroundImage: `url(${sprites.rest})`,
+                          backgroundSize: '420% auto', backgroundPosition: '60% 68%',
+                          backgroundRepeat: 'no-repeat',
+                          border: isActive ? '2px solid #f0c040' : '1px solid rgba(255,255,255,0.18)',
+                          boxShadow: isActive ? '0 0 10px rgba(240,192,64,0.35)' : 'none',
+                          cursor: colorSaving ? 'default' : 'pointer',
+                          padding: 0,
+                          opacity: !isUnlocked ? 0.55 : 1,
+                          position: 'relative',
+                          appearance: 'none',
+                          WebkitAppearance: 'none',
+                        }}
+                      >
+                        {!isUnlocked && <LockBadge />}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
             </>)}
 
             {lookTab === 'avatar' && (<>

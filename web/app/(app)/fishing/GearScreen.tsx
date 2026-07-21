@@ -2386,49 +2386,10 @@ export default function GearScreen({
                   )}
 
                   {/* ── Boat tab body ── */}
-                  {appearanceTab === 'boat' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#bda05a' }}>Boat Colors</p>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                    {/* Default — no overlay */}
-                    {(() => {
-                      const isEquipped = !equippedBoat
-                      return (
-                        <button
-                          key="default"
-                          onClick={() => { if (!isEquipped) onEquipBoat(null) }}
-                          className="font-karla font-700"
-                          style={{
-                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                            padding: '0.6rem 0.4rem 0.5rem',
-                            borderRadius: 10,
-                            background: isEquipped ? `${DEFAULT_BOAT_COLOR}1f` : 'rgba(4,10,18,0.72)',
-                            border: `1px solid ${isEquipped ? DEFAULT_BOAT_COLOR + '90' : 'rgba(255,255,255,0.09)'}`,
-                            boxShadow: isEquipped ? `0 0 14px ${DEFAULT_BOAT_COLOR}33` : 'none',
-                            cursor: isEquipped ? 'default' : 'pointer',
-                            position: 'relative',
-                          }}
-                        >
-                          <div style={{
-                            position: 'relative',
-                            width: 48, height: 48, overflow: 'hidden',
-                          }}>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src="/boat_default_rest.png" alt="" loading="lazy" decoding="async" style={{
-                              width: '170%', height: 'auto', display: 'block',
-                              position: 'absolute', top: '50%', left: '50%',
-                              transform: 'translate(-50%, -50%)',
-                            }} />
-                          </div>
-                          <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: '#f0ede8', lineHeight: 1.1, textAlign: 'center' }}>Driftwood</p>
-                          {isEquipped
-                            ? <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: DEFAULT_BOAT_COLOR }}>✓ Equipped</span>
-                            : <span className="font-karla font-600" style={{ fontSize: '0.52rem', color: '#5a5856' }}>Default</span>
-                          }
-                        </button>
-                      )
-                    })()}
-                    {BOATS.filter(b => !b.crateOnly || unlockedBoats.includes(b.id)).map(b => {
+                  {appearanceTab === 'boat' && (() => {
+                    // Card renderer shared by both groups so the boat button JSX
+                    // lives in one place.
+                    const renderBoatCard = (b: typeof BOATS[number]) => {
                       const owned = unlockedBoats.includes(b.id)
                       const isEquipped = equippedBoat === b.id
                       const canAfford = doubloons >= b.cost
@@ -2498,11 +2459,70 @@ export default function GearScreen({
                           )}
                         </button>
                       )
-                    })}
-                  </div>
+                    }
+                    // Earned = crate drops the player owns (+ the free Driftwood
+                    // default). Purchased = boats you buy with doubloons.
+                    const earnedBoats = BOATS.filter(b => b.crateOnly && unlockedBoats.includes(b.id))
+                    const purchasedBoats = BOATS.filter(b => !b.crateOnly)
+                    const groupLabel = { fontSize: '0.56rem', color: '#8a8272', letterSpacing: '0.12em', marginTop: 2 } as const
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#bda05a' }}>Boat Colors</p>
 
-                </div>
-              )}
+                        <p className="font-karla font-600 uppercase" style={groupLabel}>Earned</p>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                          {/* Default — the free Driftwood boat (no overlay) */}
+                          {(() => {
+                            const isEquipped = !equippedBoat
+                            return (
+                              <button
+                                key="default"
+                                onClick={() => { if (!isEquipped) onEquipBoat(null) }}
+                                className="font-karla font-700"
+                                style={{
+                                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                                  padding: '0.6rem 0.4rem 0.5rem',
+                                  borderRadius: 10,
+                                  background: isEquipped ? `${DEFAULT_BOAT_COLOR}1f` : 'rgba(4,10,18,0.72)',
+                                  border: `1px solid ${isEquipped ? DEFAULT_BOAT_COLOR + '90' : 'rgba(255,255,255,0.09)'}`,
+                                  boxShadow: isEquipped ? `0 0 14px ${DEFAULT_BOAT_COLOR}33` : 'none',
+                                  cursor: isEquipped ? 'default' : 'pointer',
+                                  position: 'relative',
+                                }}
+                              >
+                                <div style={{
+                                  position: 'relative',
+                                  width: 48, height: 48, overflow: 'hidden',
+                                }}>
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src="/boat_default_rest.png" alt="" loading="lazy" decoding="async" style={{
+                                    width: '170%', height: 'auto', display: 'block',
+                                    position: 'absolute', top: '50%', left: '50%',
+                                    transform: 'translate(-50%, -50%)',
+                                  }} />
+                                </div>
+                                <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: '#f0ede8', lineHeight: 1.1, textAlign: 'center' }}>Driftwood</p>
+                                {isEquipped
+                                  ? <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: DEFAULT_BOAT_COLOR }}>✓ Equipped</span>
+                                  : <span className="font-karla font-600" style={{ fontSize: '0.52rem', color: '#5a5856' }}>Default</span>
+                                }
+                              </button>
+                            )
+                          })()}
+                          {earnedBoats.map(renderBoatCard)}
+                        </div>
+
+                        {purchasedBoats.length > 0 && (
+                          <>
+                            <p className="font-karla font-600 uppercase" style={groupLabel}>Purchased</p>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                              {purchasedBoats.map(renderBoatCard)}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )
+                  })()}
 
               {/* ── Hat tab body ── */}
                   {appearanceTab === 'hat' && (
