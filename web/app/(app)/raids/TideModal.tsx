@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { createPortal } from 'react-dom'
+import { vibrate } from '@/lib/haptics'
 import { type TideEvent, type TideChoice, type TideEffect, describeEffect, effectTone } from '@/lib/tides'
 
 // ─── Tide event / Don's gift ────────────────────────────────────────────────
@@ -198,10 +199,13 @@ function CurrentBand({ choice, index, palette: p, onPick }: { choice: TideChoice
   return (
     <motion.button
       initial={{ opacity: 0, x: -14 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: 0.14 + index * 0.08, duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-      whileTap={{ scale: 0.985 }}
-      onClick={onPick}
+      // Entrance keeps its own timing (inline) so the snappy spring below only
+      // governs the hover/press gestures — an immediate, springy tactile feel.
+      animate={{ opacity: 1, x: 0, transition: { delay: 0.14 + index * 0.08, duration: 0.32, ease: [0.22, 1, 0.36, 1] } }}
+      whileHover={{ scale: 1.012, filter: 'brightness(1.08)' }}
+      whileTap={{ scale: 0.955, filter: 'brightness(1.22)' }}
+      transition={{ type: 'spring', stiffness: 520, damping: 28, mass: 0.5 }}
+      onClick={() => { vibrate([0, 18]); onPick() }}
       className="tap"
       style={{
         position: 'relative',
