@@ -187,9 +187,10 @@ export function buildContractOffer(kind: ContractKind, stake: ContractStake, dep
   // clean job sometimes patches you up.
   const reward: ContractReward =
     stake === 3 && rng() < 0.5 ? { kind: 'boonDraft' }
-    // A run-wide hull boost — the compounding, always-worth-it reward. Scales a
-    // little with stake; keeps the greed loop leaning toward taking the job.
-    : rng() < 0.3 ? { kind: 'hullBoost', pct: 0.1 + 0.05 * stake }
+    // A run-wide hull boost — the compounding, always-worth-it reward. Flat 15%:
+    // it stacks multiplicatively over a run, so it starts conservative (easy to
+    // bump after playtest). Keeps the greed loop leaning toward taking the job.
+    : rng() < 0.3 ? { kind: 'hullBoost', pct: 0.15 }
     : rng() < 0.22 ? { kind: 'fullHeal' }
     : { kind: 'plunder', n: plunderReward(stake, depth) }
   // Penalty — docked pay, a wound, or (at the big score) a curse for the run.
