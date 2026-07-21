@@ -155,7 +155,8 @@ export type ContractReward =
 export type ContractPenalty =
   | { kind: 'plunderLose'; n: number }  // doubloons docked from the run pot
   | { kind: 'curse' }
-  | { kind: 'hpLossPct'; pct: number }
+  | { kind: 'hpLossPct'; pct: number }  // one-time hit to CURRENT hull
+  | { kind: 'hullCut'; pct: number }    // -pct MAX hull for the rest of the run (mirror of hullBoost)
 
 /** A concrete offer: the job, the stake the player took, the resolved goal
  *  param, and the reward/penalty riding on it. Stored on the run state until
@@ -194,8 +195,11 @@ export function buildContractOffer(kind: ContractKind, stake: ContractStake, dep
     : rng() < 0.22 ? { kind: 'fullHeal' }
     : { kind: 'plunder', n: plunderReward(stake, depth) }
   // Penalty — docked pay, a wound, or (at the big score) a curse for the run.
+  // The run-wide hull CUT (mirror of the boost) compounds, so it stays small and
+  // only rides the heavier stakes; conservative start, easy to bump post-playtest.
   const penalty: ContractPenalty =
     stake === 3 && rng() < 0.5 ? { kind: 'curse' }
+    : stake >= 2 && rng() < 0.3 ? { kind: 'hullCut', pct: 0.08 }
     : rng() < 0.4 ? { kind: 'hpLossPct', pct: Math.min(0.4, 0.1 + 0.06 * stake) }
     : { kind: 'plunderLose', n: plunderPenalty(stake, depth) }
   return { kind, stake, param, reward, penalty }
@@ -225,5 +229,6 @@ export function describePenalty(p: ContractPenalty): string {
     case 'plunderLose': return `Lose ${p.n.toLocaleString()} ⟡ plunder`
     case 'curse':       return 'A curse for the rest of the run'
     case 'hpLossPct':   return `Lose ${Math.round(p.pct * 100)}% of your hull`
+    case 'hullCut':     return `-${Math.round(p.pct * 100)}% max hull, rest of run`
   }
 }

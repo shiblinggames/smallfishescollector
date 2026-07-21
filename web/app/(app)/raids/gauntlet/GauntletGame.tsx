@@ -577,13 +577,17 @@ export default function GauntletGame(props: GauntletGameProps) {
   const curDepthForHp = fight?.depth ?? (rollStateRef.current.cleared + skipOffset + 1)
   // Deep Draft (a signed Term) lowers the CEILING, so every heal tops you up to
   // the smaller number. Applied before the boon scaling.
-  const hpMax = Math.round(baseHpMax * termFx.maxHpPct * hpBoonMult(runEffects, curDepthForHp, rollStateRef.current.cleared) * contractHullMult)
+  const hpMax = Math.max(1, Math.round(baseHpMax * termFx.maxHpPct * hpBoonMult(runEffects, curDepthForHp, rollStateRef.current.cleared) * contractHullMult))
   const prevHpMaxRef = useRef(hpMax)
   useEffect(() => {
     const delta = hpMax - prevHpMaxRef.current
     if (delta > 0) {
       playerHPRef.current = Math.min(hpMax, playerHPRef.current + delta)
       setPlayerHP(playerHPRef.current)
+    } else if (delta < 0 && playerHPRef.current > hpMax) {
+      // Ceiling dropped (a contract hull cut) — clamp current hull down to it.
+      playerHPRef.current = hpMax
+      setPlayerHP(hpMax)
     }
     prevHpMaxRef.current = hpMax
   }, [hpMax])
@@ -1198,6 +1202,9 @@ export default function GauntletGame(props: GauntletGameProps) {
         const nh = Math.max(1, Math.round(playerHPRef.current * (1 - p.pct)))
         playerHPRef.current = nh
         setPlayerHP(nh)
+      } else if (p.kind === 'hullCut') {
+        // Lower the run-wide ceiling; the hpMax effect clamps current hull down.
+        setContractHullMult(m => m * (1 - p.pct))
       }
     }
   }
