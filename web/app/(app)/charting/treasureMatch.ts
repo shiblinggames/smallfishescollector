@@ -22,7 +22,9 @@ const ix = (r: number, c: number, cols: number) => r * cols + c
 
 // Compass wildcard sentinel. Sits OUTSIDE the 0..nTypes-1 range and below 0 so
 // the `>= 0` guards in findMatches treat it as inert (it never forms a natural
-// match); it only does something when swapped (resolveSwap detonates a color).
+// match on its own). It only acts when SWAPPED: it adopts the swapped gem's
+// colour to complete a line (a plain wildcard — it does NOT clear a whole
+// colour; a straight line of 5+ does that now).
 export const WILD = -2
 
 function randType(rng: () => number, nTypes: number): number {
@@ -160,9 +162,12 @@ function pickSpawn(run: number[], a: number, b: number): number {
   return run[Math.floor(run.length / 2)]
 }
 
-// The match → clear → collapse loop. Every run of 4+ leaves ONE cell behind as
-// a Compass instead of clearing it. a/b bias the spawn toward the swapped cells
-// on the first pass.
+// The match → clear → collapse loop. Run length decides the payoff:
+//   • 5+ in a straight line  → clears that gem's WHOLE colour (the old Compass
+//     detonation, now earned by a big line).
+//   • exactly 4             → leaves ONE cell behind as a Compass wildcard.
+//   • 3                     → normal clear.
+// a/b bias the Compass spawn toward the swapped cells on the first pass.
 function runCascades(
   start: number[], cols: number, rows: number, nTypes: number, rng: () => number,
   wildChance: number, a: number, b: number, startCascade: number,
@@ -172,17 +177,25 @@ function runCascades(
   let cur = start
   let cascade = startCascade
   while (true) {
-    const matched = findMatches(cur, cols, rows)
-    if (matched.length === 0) break
+    const runs = findRuns(cur, cols, rows)
+    if (runs.length === 0) break
+    // A straight line of 5+ marks its colour for a full-board wipe.
+    const wipeColors = new Set<number>()
+    for (const run of runs) if (run.length >= 5) wipeColors.add(cur[run[0]])
+    // A line of exactly 4 (whose colour isn't being wiped) leaves a Compass.
     const spawns = new Set<number>()
-    for (const run of findRuns(cur, cols, rows)) {
-      if (run.length >= 4) spawns.add(pickSpawn(run, cascade === startCascade ? a : -1, cascade === startCascade ? b : -1))
+    for (const run of runs) {
+      if (run.length === 4 && !wipeColors.has(cur[run[0]])) {
+        spawns.add(pickSpawn(run, cascade === startCascade ? a : -1, cascade === startCascade ? b : -1))
+      }
     }
-    const cleared = matched.filter(i => !spawns.has(i))
+    const clearedSet = new Set<number>(findMatches(cur, cols, rows))
+    if (wipeColors.size) for (let i = 0; i < cur.length; i++) if (wipeColors.has(cur[i])) clearedSet.add(i)
+    const cleared = [...clearedSet].filter(i => !spawns.has(i))
     const gained = cleared.length * 10 * cascade
     totalGained += gained
     const withWilds = cur.slice()
-    for (const s of spawns) withWilds[s] = WILD // a 4-of-a-kind leaves a Compass
+    for (const s of spawns) withWilds[s] = WILD
     const resultBoard = collapseAndRefill(withWilds, cleared, cols, rows, rng, nTypes, wildChance)
     steps.push({ cleared, gained, resultBoard })
     cur = resultBoard
@@ -198,27 +211,21 @@ export function resolveSwap(
 ): ResolveResult | null {
   if (!areAdjacent(a, b, cols)) return null
 
-  // ── Compass wildcard detonation ──
-  // Swapping a Compass against a normal gem clears EVERY gem of that gem's
-  // color (plus the Compass), then cascades. Two Compasses have no color to
-  // lock onto → treated as an invalid swap.
+  // ── Compass wildcard ──
+  // Swapping a Compass against a normal gem makes it ADOPT that gem's colour, so
+  // it can complete a 3+ line at the swap. If that forms no match it's an
+  // invalid swap (like any other). Two Compasses have no colour to adopt.
   const aWild = board[a] === WILD, bWild = board[b] === WILD
   if (aWild || bWild) {
     if (aWild && bWild) return null
     const target = aWild ? board[b] : board[a]
     if (target < 0) return null
-    const detonated: number[] = []
-    for (let i = 0; i < board.length; i++) if (board[i] === target) detonated.push(i)
-    detonated.push(aWild ? a : b) // the Compass pops too
-    const result0 = collapseAndRefill(board, detonated, cols, rows, rng, nTypes, wildChance)
-    const gained0 = detonated.length * 10
-    const rest = runCascades(result0, cols, rows, nTypes, rng, wildChance, -1, -1, 2)
-    return {
-      swapped: board,
-      steps: [{ cleared: detonated, gained: gained0, resultBoard: result0 }, ...rest.steps],
-      totalGained: gained0 + rest.totalGained,
-      finalBoard: rest.finalBoard,
-    }
+    const substituted = board.slice()
+    substituted[a] = target
+    substituted[b] = target
+    const r = runCascades(substituted, cols, rows, nTypes, rng, wildChance, a, b, 1)
+    if (r.steps.length === 0) return null // wildcard completed no line → invalid
+    return { swapped: substituted, steps: r.steps, totalGained: r.totalGained, finalBoard: r.finalBoard }
   }
 
   const swapped = swap(board, a, b)
@@ -230,11 +237,25 @@ export function resolveSwap(
 /** Is there any swap that would create a match? Used to detect a dead
  *  board so it can be reshuffled. */
 export function hasValidMove(board: number[], cols: number, rows: number): boolean {
-  if (board.includes(WILD)) return true // a Compass can always be detonated
   for (let i = 0; i < board.length; i++) {
     const r = Math.floor(i / cols), c = i % cols
     if (c < cols - 1) { const s = swap(board, i, i + 1); if (findMatches(s, cols, rows).length) return true }
     if (r < rows - 1) { const s = swap(board, i, i + cols); if (findMatches(s, cols, rows).length) return true }
+  }
+  // A Compass can complete a line by adopting a neighbour's colour — test that
+  // substitution so a board with a usable wildcard isn't judged dead.
+  for (let i = 0; i < board.length; i++) {
+    if (board[i] !== WILD) continue
+    const r = Math.floor(i / cols), c = i % cols
+    const nbrs: number[] = []
+    if (c > 0) nbrs.push(i - 1); if (c < cols - 1) nbrs.push(i + 1)
+    if (r > 0) nbrs.push(i - cols); if (r < rows - 1) nbrs.push(i + cols)
+    for (const nb of nbrs) {
+      const x = board[nb]
+      if (x < 0) continue
+      const s = board.slice(); s[i] = x; s[nb] = x
+      if (findMatches(s, cols, rows).length) return true
+    }
   }
   return false
 }

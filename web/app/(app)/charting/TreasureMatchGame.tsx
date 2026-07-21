@@ -57,19 +57,19 @@ const Tile = memo(function Tile({ tok, isWild, isSel, isPop, isDrop, isCommit, i
       ['--tmf' as string]: isDrop ? String(fall) : undefined,
       animation: isPop ? 'tmPop 0.19s ease forwards'
         : isDrop ? 'tmSlide 0.2s cubic-bezier(.2,.7,.4,1)'
-        : isWild ? 'tmWildPulse 1.8s ease-in-out infinite'
         : undefined,
     } as CSSProperties}>
       {isWild ? (
-        // Wild = a clean glossy rainbow ORB (the "any color" color bomb), kept
-        // as CSS since it's at most one tile on the board at a time.
+        // Wild = a calm prismatic gem, rounded and STATIC (no pulse, no glow) —
+        // it's a plain wildcard now, so it shouldn't shout over the board.
         <div aria-hidden style={{
-          position: 'absolute', inset: '4%', borderRadius: '50%',
-          background: WILD_RAINBOW, filter: `drop-shadow(0 0 8px ${GOLD}cc)`,
+          position: 'absolute', inset: '6%', borderRadius: '24%',
+          background: WILD_RAINBOW, opacity: 0.92,
+          boxShadow: 'inset 0 0 0 2px rgba(240,192,64,0.6), inset 0 -3px 7px rgba(0,0,0,0.35)',
         }}>
           <div style={{
-            position: 'absolute', inset: 0, borderRadius: '50%',
-            background: 'radial-gradient(circle at 34% 27%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.12) 24%, transparent 48%), radial-gradient(circle at 50% 50%, transparent 56%, rgba(0,0,0,0.28) 100%)',
+            position: 'absolute', inset: 0, borderRadius: '24%',
+            background: 'radial-gradient(circle at 32% 24%, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.1) 26%, transparent 50%)',
           }} />
         </div>
       ) : (
@@ -122,7 +122,6 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
   // Juice
   const [particles, setParticles] = useState<Particle[]>([])
   const [combo, setCombo] = useState<{ level: number; key: number } | null>(null)
-  const [bomb, setBomb] = useState<{ key: number } | null>(null)
   const [tierUp, setTierUp] = useState<{ points: number; key: number } | null>(null)
   const [dropping, setDropping] = useState<Set<number>>(new Set())
   const [dropFall, setDropFall] = useState<number[]>([])
@@ -195,7 +194,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
     movesRef.current = initial.moves; setMovesLeft(initial.moves)
     shownTierRef.current = banked
     setSelected(null); setPopping(new Set()); setCommitted(null); setDropping(new Set()); setDropFall([])
-    setCombo(null); setBomb(null); setTierUp(null); setFlash(null); setResult(null); setMessage(null); setParticles([])
+    setCombo(null); setTierUp(null); setFlash(null); setResult(null); setMessage(null); setParticles([])
   }
 
   // Run ended (out of moves, or hit the top tier). Server tiers the best
@@ -216,14 +215,14 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
   async function attemptSwap(a: number, b: number) {
     if (busyRef.current) return
     const cur = boardRef.current
-    const isDetonation = cur[a] === WILD || cur[b] === WILD
+    const usedWild = cur[a] === WILD || cur[b] === WILD
     const res = resolveSwap(cur, a, b, cols, rows, types, rngRef.current, WILD_DROP_CHANCE)
     setSelected(null)
     if (!res) { setInvalid([a, b]); haptic(10); await wait(230); setInvalid(null); return }
 
     busyRef.current = true
-    setCombo(null); setBomb(null); setTierUp(null) // reset last move's callouts so this move restarts clean
-    if (isDetonation) { setBomb({ key: pid.current++ }); haptic([0, 45, 35, 70]) }
+    setCombo(null); setTierUp(null) // reset last move's callouts so this move restarts clean
+    if (usedWild) haptic([0, 20, 30, 24]) // a soft flourish for playing the wildcard
     const newMoves = movesRef.current - 1
     movesRef.current = newMoves; setMovesLeft(newMoves)
 
@@ -415,7 +414,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
       <TierLadder />
 
       <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#d2c8ae', lineHeight: 1.45, textAlign: 'center', textShadow: '0 1px 3px rgba(0,0,0,0.7)' }}>
-        Bigger haul = more charting points, up to {MATCH_MAX_POINTS}/5. Out of moves? Retry the same board for a better run.
+        Bigger haul = more charting points, up to {MATCH_MAX_POINTS}/5. Line up 5 to clear a whole color. Out of moves? Retry the same board for a better run.
       </p>
 
       {/* Board */}
@@ -465,8 +464,8 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
       </div>
 
       {!cleared && board.includes(WILD) && (
-        <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: GOLD, textAlign: 'center', textShadow: `0 0 10px ${GOLD}66`, animation: 'tmWildPulse 1.8s ease-in-out infinite' }}>
-          ✦ A Compass dropped in — swap it onto any treasure to clear that whole color.
+        <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: GOLD, textAlign: 'center', textShadow: `0 0 10px ${GOLD}66` }}>
+          A Compass is wild — swap it beside matching treasures to complete a line.
         </p>
       )}
       <p className="font-karla" style={{ fontSize: '0.62rem', color: '#8f8672', textAlign: 'center' }}>
@@ -501,35 +500,6 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
                   {combo.level >= 5 ? 'Plundered!' : 'Chain!'}
                 </span>
               )}
-            </div>
-          </div>
-        ) : null,
-        document.body,
-      )}
-
-      {/* Compass detonation burst — fires when a wildcard clears a whole color. */}
-      {mounted && createPortal(
-        bomb ? (
-          <div key={bomb.key} aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 8800, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ position: 'absolute', width: 'min(135vw, 760px)', height: 'min(135vw, 760px)', borderRadius: '50%', animation: 'tmComboFlash 0.9s ease-out forwards', background: 'radial-gradient(circle, rgba(255,255,255,0.34) 0%, rgba(240,192,64,0.2) 34%, transparent 66%)' }} />
-            {/* Rainbow shockwave RING (masked to a band) — reads as a deliberate
-                color-bomb burst, not a full-screen rainbow wash. */}
-            <div style={{
-              position: 'absolute', width: 'min(120vw, 680px)', height: 'min(120vw, 680px)', borderRadius: '50%',
-              animation: 'tmComboBurst 0.9s cubic-bezier(.2,.8,.3,1) forwards', background: WILD_RAINBOW, opacity: 0.85,
-              WebkitMaskImage: 'radial-gradient(circle, transparent 40%, #000 48%, #000 58%, transparent 68%)',
-              maskImage: 'radial-gradient(circle, transparent 40%, #000 48%, #000 58%, transparent 68%)',
-            }} />
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', animation: 'tmComboBurst 0.9s cubic-bezier(.2,.8,.3,1) forwards', transformOrigin: 'center' }}>
-              <span className="font-cinzel font-700" style={{
-                fontSize: 'clamp(3rem, 19vw, 7rem)', lineHeight: 0.9, color: '#fff', letterSpacing: '0.01em',
-                textShadow: `0 0 22px ${GOLD}, 0 0 50px ${GOLD}cc, 0 4px 12px rgba(0,0,0,0.9)`, WebkitTextStroke: `1.5px ${GOLD}`,
-              }}>
-                COMPASS
-              </span>
-              <span className="font-karla font-700 uppercase" style={{ marginTop: 6, fontSize: 'clamp(0.85rem, 4.6vw, 1.4rem)', letterSpacing: '0.26em', color: '#fff', textShadow: `0 0 14px ${GOLD}, 0 2px 6px rgba(0,0,0,0.9)` }}>
-                Color bomb!
-              </span>
             </div>
           </div>
         ) : null,
