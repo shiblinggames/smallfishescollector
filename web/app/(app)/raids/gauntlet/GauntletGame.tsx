@@ -1925,12 +1925,19 @@ export default function GauntletGame(props: GauntletGameProps) {
             </h1>
           )}
 
-          {/* The maw — the hole you drop into */}
-          <div style={{ position: 'relative', width: 148, height: 148, margin: '12px auto 4px' }}>
+          {/* The maw — the hole you drop into. Depth-ping rings pulse out of it
+              and the whole thing breathes, so it reads as alive and pulling you
+              down rather than a static crest. */}
+          <div style={{ position: 'relative', width: 162, height: 162, margin: '14px auto 4px' }}>
+            {/* sonar rings emanating from the deep */}
+            {[0, 1.4, 2.8].map((d, i) => (
+              <span key={i} aria-hidden style={{ position: 'absolute', left: '50%', top: '50%', width: 128, height: 128, marginLeft: -64, marginTop: -64, borderRadius: '50%', border: `1.5px solid ${AC}`, boxShadow: `0 0 12px ${AC}55`, opacity: 0, animation: `gauntRing 4.2s ${d}s ease-out infinite` }} />
+            ))}
+            {/* ambient glow */}
             <div style={{ position: 'absolute', inset: -20, borderRadius: '50%', background: `radial-gradient(circle, rgba(240,192,64,0.26) 0%, ${isDonG ? 'rgba(63,191,130,0.14)' : 'rgba(94,234,212,0.12)'} 42%, transparent 70%)`, animation: 'gauntPulse 4.2s ease-in-out infinite' }} />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={heroImg} alt="" loading="eager" decoding="async"
-              style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', filter: 'drop-shadow(0 10px 32px rgba(0,0,0,0.75))', animation: 'gauntDrift 6s ease-in-out infinite' }} />
+              style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', filter: 'drop-shadow(0 10px 32px rgba(0,0,0,0.75))', animation: 'gauntMaw 6s ease-in-out infinite' }} />
           </div>
 
           {/* ── TIER 1 · The one action ───────────────────────────
@@ -5485,6 +5492,8 @@ const ABYSS_KEYFRAMES = `
 @keyframes gauntRise { 0% { transform: translateY(0); opacity: 0 } 12% { opacity: 0.55 } 88% { opacity: 0.4 } 100% { transform: translateY(-360px); opacity: 0 } }
 @keyframes gauntPulse { 0%, 100% { opacity: 0.38; transform: scale(1) } 50% { opacity: 0.78; transform: scale(1.07) } }
 @keyframes gauntDrift { 0%, 100% { transform: translateY(0) } 50% { transform: translateY(-7px) } }
+@keyframes gauntMaw { 0%, 100% { transform: translateY(0) scale(1) } 50% { transform: translateY(-8px) scale(1.035) } }
+@keyframes gauntRing { 0% { transform: scale(0.42); opacity: 0 } 16% { opacity: 0.55 } 100% { transform: scale(1.85); opacity: 0 } }
 @keyframes gauntShaft { 0%, 100% { opacity: 0.14 } 50% { opacity: 0.3 } }
 @keyframes gauntCta { 0%, 100% { box-shadow: 0 0 0 1px rgba(240,192,64,0.5), 0 0 20px rgba(240,192,64,0.22) } 50% { box-shadow: 0 0 0 1px rgba(240,192,64,0.75), 0 0 34px rgba(240,192,64,0.42) } }
 `
