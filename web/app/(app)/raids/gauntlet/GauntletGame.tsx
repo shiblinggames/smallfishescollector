@@ -1940,6 +1940,18 @@ export default function GauntletGame(props: GauntletGameProps) {
               style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', filter: 'drop-shadow(0 10px 32px rgba(0,0,0,0.75))', animation: 'gauntMaw 6s ease-in-out infinite' }} />
           </div>
 
+          {/* Hero stat — how deep you've gone. The personal mark the whole screen
+              is really about, right under the maw. */}
+          <div style={{ marginTop: 2 }}>
+            <p className="font-karla font-800 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.26em', color: `${AC}bb` }}>Your deepest descent</p>
+            {props.deepest > 0
+              ? <p className="font-cinzel font-800" style={{ fontSize: '1.7rem', lineHeight: 1.05, color: '#f3ead2', marginTop: 1 }}>
+                  <span style={{ fontSize: '0.72rem', color: '#8a857c', letterSpacing: '0.04em' }}>DEPTH </span>
+                  <span style={{ color: AC, textShadow: `0 0 20px ${AC}66` }}>{props.deepest}</span>
+                </p>
+              : <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: '#8a857c', marginTop: 3, fontStyle: 'italic' }}>Uncharted. Your first dive awaits.</p>}
+          </div>
+
           {/* ── TIER 1 · The one action ───────────────────────────
               Compact currencies then Descend, so starting a run sits
               right under the maw with nothing competing above it. */}
@@ -1971,8 +1983,11 @@ export default function GauntletGame(props: GauntletGameProps) {
               in. Each card also shows that mode's deepest diver — the mark to
               beat. */}
           <div style={{ marginTop: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, padding: '0 0.15rem' }}>
-              <span className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.2em', color: '#8a857c' }}>Choose Your Descent</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 9, padding: '0 0.15rem' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+                <span aria-hidden style={{ width: 14, height: 2, borderRadius: 2, background: `${AC}aa` }} />
+                <span className="font-karla font-800 uppercase" style={{ fontSize: '0.52rem', letterSpacing: '0.2em', color: '#9a948a' }}>Choose Your Descent</span>
+              </span>
               <LeaderboardModal boards={['gauntletDepth', 'gauntletHardcore', 'gauntletBigHit']} title="The Gauntlet" label="Full ranks"
                 triggerStyle={{ background: 'none', border: 'none', color: '#9a948a', padding: 0, fontSize: '0.55rem', letterSpacing: '0.04em' }} />
             </div>
@@ -2003,24 +2018,30 @@ export default function GauntletGame(props: GauntletGameProps) {
                 return cards.map(c => (
                   <div key={c.key} style={{
                     position: 'relative', display: 'flex', flexDirection: 'column', minWidth: 0, borderRadius: 15, overflow: 'hidden',
-                    background: `linear-gradient(180deg, ${c.color}1e 0%, ${c.color}09 58%, rgba(8,13,22,0.35) 100%)`,
-                    border: `1px solid ${c.color}${c.enabled ? '4a' : '22'}`,
+                    // A doorway into the dark: accent light up top pooling into a
+                    // black shaft at the bottom you're about to drop through.
+                    background: `radial-gradient(ellipse 130% 78% at 50% 118%, rgba(0,0,0,0.62), transparent 58%), linear-gradient(180deg, ${c.color}28 0%, ${c.color}0c 52%, rgba(5,9,16,0.55) 100%)`,
+                    border: `1px solid ${c.color}${c.enabled ? '5a' : '22'}`,
+                    boxShadow: c.enabled ? `0 0 22px ${c.color}1e, inset 0 1px 0 ${c.color}33` : 'none',
                     opacity: c.enabled ? 1 : 0.6,
                   }}>
+                    {/* faint threshold line at the top of the doorway */}
+                    <span aria-hidden style={{ position: 'absolute', top: 0, left: '14%', right: '14%', height: 1, background: `linear-gradient(90deg, transparent, ${c.color}${c.enabled ? '88' : '44'}, transparent)` }} />
                     <motion.button
                       onClick={c.enabled ? c.onClick : undefined}
                       disabled={!c.enabled}
                       whileTap={c.enabled ? { scale: 0.97 } : undefined}
                       className="tap"
-                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '1rem 0.55rem 0.85rem', background: 'none', border: 'none', textAlign: 'center', minWidth: 0, cursor: c.enabled ? 'pointer' : 'default', color: 'inherit' }}>
-                      {/* Descend indicator — a bobbing down-arrow that reads as the tap target */}
+                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, padding: '1.1rem 0.55rem 0.9rem', background: 'none', border: 'none', textAlign: 'center', minWidth: 0, cursor: c.enabled ? 'pointer' : 'default', color: 'inherit' }}>
+                      {/* Descend indicator — a bobbing double-chevron in a glowing
+                          well that reads as the mouth you drop through */}
                       <motion.div aria-hidden
-                        animate={c.enabled ? { y: [0, 3, 0] } : {}}
+                        animate={c.enabled ? { y: [0, 4, 0] } : {}}
                         transition={c.enabled ? { duration: 1.7, repeat: Infinity, ease: 'easeInOut' } : undefined}
-                        style={{ width: 48, height: 48, borderRadius: '50%', background: `radial-gradient(circle at 42% 32%, ${c.color}55, ${c.color}10)`, border: `1.5px solid ${c.color}${c.enabled ? 'b0' : '55'}`, boxShadow: c.enabled ? `0 0 20px ${c.color}4a` : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: c.color }}>
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 5l6 6 6-6M6 12l6 6 6-6" /></svg>
+                        style={{ position: 'relative', width: 52, height: 52, borderRadius: '50%', background: `radial-gradient(circle at 50% 38%, ${c.color}66, ${c.color}0c 70%)`, border: `1.5px solid ${c.color}${c.enabled ? 'c0' : '55'}`, boxShadow: c.enabled ? `0 0 26px ${c.color}55, inset 0 0 14px ${c.color}22` : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: c.color }}>
+                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 5l6 6 6-6M6 12l6 6 6-6" /></svg>
                       </motion.div>
-                      <span className="font-cinzel font-800 uppercase" style={{ fontSize: '1rem', letterSpacing: '0.04em', color: c.color, lineHeight: 1 }}>{c.label}</span>
+                      <span className="font-cinzel font-800 uppercase" style={{ fontSize: '1.05rem', letterSpacing: '0.05em', color: c.color, lineHeight: 1, textShadow: c.enabled ? `0 0 16px ${c.color}44` : 'none' }}>{c.label}</span>
                       {!c.enabled && c.disabledNote && (
                         <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.08em', color: `${c.color}cc` }}>{c.disabledNote}</span>
                       )}
@@ -2073,8 +2094,11 @@ export default function GauntletGame(props: GauntletGameProps) {
           {/* ── TIER 3 · The Locker — shops + guides, one weight down ──
               Two shops as tiles, then muted guide links. Nothing here
               competes with Descend. */}
-          <div style={{ marginTop: 18, textAlign: 'left' }}>
-            <p className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.2em', color: '#8a857c', marginBottom: 8, paddingLeft: 2 }}>The Locker</p>
+          <div style={{ marginTop: 20, textAlign: 'left' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 9, paddingLeft: 2 }}>
+              <span aria-hidden style={{ width: 14, height: 2, borderRadius: 2, background: `${GOLD}aa` }} />
+              <span className="font-karla font-800 uppercase" style={{ fontSize: '0.52rem', letterSpacing: '0.2em', color: '#9a948a' }}>The Locker</span>
+            </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <ActionTile
                 color="#c4a0e8"
@@ -5495,6 +5519,7 @@ const ABYSS_KEYFRAMES = `
 @keyframes gauntMaw { 0%, 100% { transform: translateY(0) scale(1) } 50% { transform: translateY(-8px) scale(1.035) } }
 @keyframes gauntRing { 0% { transform: scale(0.42); opacity: 0 } 16% { opacity: 0.55 } 100% { transform: scale(1.85); opacity: 0 } }
 @keyframes gauntShaft { 0%, 100% { opacity: 0.14 } 50% { opacity: 0.3 } }
+@keyframes gauntFog { 0%, 100% { transform: translateX(-5%) scale(1.05); opacity: 0.4 } 50% { transform: translateX(5%) scale(1.14); opacity: 0.72 } }
 @keyframes gauntCta { 0%, 100% { box-shadow: 0 0 0 1px rgba(240,192,64,0.5), 0 0 20px rgba(240,192,64,0.22) } 50% { box-shadow: 0 0 0 1px rgba(240,192,64,0.75), 0 0 34px rgba(240,192,64,0.42) } }
 `
 
@@ -5511,6 +5536,11 @@ const MOTES = [
   { left: 90, size: 2, dur: 10, delay: 5 },
   { left: 7,  size: 2, dur: 14, delay: 6 },
   { left: 58, size: 2, dur: 9,  delay: 7 },
+  { left: 17, size: 3, dur: 11, delay: 3.5 },
+  { left: 38, size: 2, dur: 13, delay: 8 },
+  { left: 68, size: 3, dur: 10, delay: 4.5 },
+  { left: 84, size: 2, dur: 12, delay: 9 },
+  { left: 48, size: 4, dur: 8.5, delay: 6.5 },
 ]
 
 // Gold shockwave rings off a legendary boon card as it flips open.
@@ -5591,9 +5621,13 @@ function AbyssBackdrop({ hardcore, don }: { hardcore?: boolean; don?: boolean })
         position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden',
         background: bg,
       }}>
+        {/* Drifting fog banks — slow, soft, so the deep feels like it's moving. */}
+        <div style={{ position: 'absolute', top: '4%', left: '-10%', width: '70%', height: '55%', filter: 'blur(34px)', background: `radial-gradient(ellipse at center, ${shaft}, transparent 70%)`, animation: 'gauntFog 19s ease-in-out infinite' }} />
+        <div style={{ position: 'absolute', bottom: '2%', right: '-12%', width: '75%', height: '52%', filter: 'blur(38px)', background: `radial-gradient(ellipse at center, ${shaft2}, transparent 72%)`, animation: 'gauntFog 24s ease-in-out infinite reverse', animationDelay: '3s' }} />
         {/* God-rays from the surface */}
         <div style={{ position: 'absolute', top: '-12%', left: '20%', width: 130, height: '95%', transform: 'rotate(9deg)', filter: 'blur(10px)', background: `linear-gradient(to bottom, ${shaft}, transparent 68%)`, animation: 'gauntShaft 7s ease-in-out infinite' }} />
         <div style={{ position: 'absolute', top: '-12%', left: '62%', width: 100, height: '95%', transform: 'rotate(-7deg)', filter: 'blur(10px)', background: `linear-gradient(to bottom, ${shaft2}, transparent 64%)`, animation: 'gauntShaft 9s ease-in-out infinite', animationDelay: '1.5s' }} />
+        <div style={{ position: 'absolute', top: '-12%', left: '40%', width: 72, height: '90%', transform: 'rotate(3deg)', filter: 'blur(12px)', background: `linear-gradient(to bottom, ${shaft2}, transparent 60%)`, animation: 'gauntShaft 11s ease-in-out infinite', animationDelay: '3.5s' }} />
         {/* Motes rising from the deep */}
         {MOTES.map((m, i) => (
           <div key={i} style={{
