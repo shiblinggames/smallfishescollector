@@ -25,7 +25,9 @@ export interface Landmark {
 }
 
 export const WORLD_CHART_FULL_POINTS = 1000
-export const WORLD_CHART_TOTAL_GEMS = 3000
+export const WORLD_CHART_TOTAL_GEMS = 3000                 // sum of the 13 landmark payouts
+export const WORLD_CHART_COMPLETION_BONUS = 2000           // extra on charting the WHOLE sea
+export const WORLD_CHART_GRAND_TOTAL = WORLD_CHART_TOTAL_GEMS + WORLD_CHART_COMPLETION_BONUS // 5000
 
 // The thirteen, in discovery order. Coordinates read off /chartingmap.webp.
 export const LANDMARKS: Landmark[] = [
@@ -69,10 +71,21 @@ export function pendingDiscoveries(points: number, claimedIds: number[]): Landma
   return landmarkViews(points, claimedIds).filter(v => v.claimable)
 }
 
-/** Gems already banked (sum of claimed landmark payouts). */
+/** Gems already banked from claimed landmarks (excludes the completion bonus). */
 export function gemsClaimed(claimedIds: number[]): number {
   const claimed = new Set(claimedIds)
   return LANDMARKS.filter(l => claimed.has(l.id)).reduce((s, l) => s + l.gems, 0)
+}
+
+/** Every landmark charted? (drives the completion bonus + Master Cartographer.) */
+export function isFullyCharted(claimedIds: number[]): boolean {
+  const claimed = new Set(claimedIds)
+  return LANDMARKS.every(l => claimed.has(l.id))
+}
+
+/** Total gems banked including the 2000 completion bonus once the sea is fully charted. */
+export function gemsBanked(claimedIds: number[]): number {
+  return gemsClaimed(claimedIds) + (isFullyCharted(claimedIds) ? WORLD_CHART_COMPLETION_BONUS : 0)
 }
 
 /** How much of the sea is charted, 0-1, by discovered landmark count. */

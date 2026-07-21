@@ -6,7 +6,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { LANDMARKS } from '@/lib/worldChart'
+import { LANDMARKS, WORLD_CHART_COMPLETION_BONUS } from '@/lib/worldChart'
 
 export async function getWorldChartState(): Promise<{ points: number; claimed: number[] }> {
   const supabase = await createClient()
@@ -29,7 +29,7 @@ export async function getWorldChartState(): Promise<{ points: number; claimed: n
 /** Collect a discovered landmark's gems. Pays once; re-validates the threshold
  *  and the claimed set server-side so the client can't forge a payout. */
 export async function claimLandmark(landmarkId: number): Promise<
-  { ok: true; gems: number; awarded: number; claimed: number[] } | { error: string }
+  { ok: true; gems: number; awarded: number; bonus: number; completed: boolean; claimed: number[] } | { error: string }
 > {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -53,16 +53,24 @@ export async function claimLandmark(landmarkId: number): Promise<
   if (claimed.includes(landmarkId)) return { error: 'Already claimed' }
 
   const newClaimed = [...claimed, landmarkId]
-  const newGems = ((profile.gems as number | null) ?? 0) + landmark.gems
+  // Completing the LAST landmark (bringing the count to all 13) pays the
+  // one-time completion bonus on top — a crossing that can only happen once.
+  const completed = newClaimed.length === LANDMARKS.length
+  const bonus = completed ? WORLD_CHART_COMPLETION_BONUS : 0
+  const awarded = landmark.gems + bonus
+  const newGems = ((profile.gems as number | null) ?? 0) + awarded
 
   await Promise.all([
     admin.from('profiles').update({ charting_landmarks_claimed: newClaimed, gems: newGems }).eq('id', user.id),
-    admin.from('gem_transactions').insert({
-      user_id: user.id,
-      amount: landmark.gems,
-      reason: `World Chart: ${landmark.name}`,
-    }),
+    admin.from('gem_transactions').insert(
+      completed
+        ? [
+            { user_id: user.id, amount: landmark.gems, reason: `World Chart: ${landmark.name}` },
+            { user_id: user.id, amount: bonus, reason: 'World Chart: fully charted' },
+          ]
+        : [{ user_id: user.id, amount: landmark.gems, reason: `World Chart: ${landmark.name}` }],
+    ),
   ])
 
-  return { ok: true, gems: newGems, awarded: landmark.gems, claimed: newClaimed }
+  return { ok: true, gems: newGems, awarded, bonus, completed, claimed: newClaimed }
 }
