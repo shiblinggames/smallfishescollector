@@ -59,6 +59,7 @@ import { motion, AnimatePresence, useAnimation } from 'framer-motion'
 import { BroadsideEnemy, EnemyAction, type AimAttackId, type BossMechanicCheck, type MechanicResponse } from '@/lib/bossRaids'
 import { raidDamageProfile, type RaidMods } from '@/lib/expeditions'
 import { MEGA_CHARGE_COST, RAILGUN_GRAZE_PCT, type ShipAugment } from '@/lib/shipAugments'
+import { getCheckTutorialSeen, markCheckTutorialSeen } from './checkTutorialActions'
 import { applyStatus, statusMods, tickStatuses, cleanseStatuses, STATUS_DEFS, type ActiveStatus, type StatusId } from '@/lib/statuses'
 import { CannonShotBurst, ImpactBurst, RailgunBeam, NukeMissile, NukeBlast } from './megaFx'
 import { getActiveEffects, getRaidItem, getActivatableItem } from '@/lib/raidItems'
@@ -1431,6 +1432,36 @@ export default function RaidCombat({
   // Cannonade (boon): the live crit streak, mirrored to state (off the step,
   // in playStep) so the heat rim + badge on the player hull track it.
   const [cannonadeStacks, setCannonadeStacks] = useState(0)
+
+  // ── First-time mechanic-check tutorial ─────────────────────────────────
+  // The first telegraphed boss check blindsided players — especially Don's
+  // opening volley, which arms at fight start and resolves before anyone knew
+  // a crew ability answers it. A one-shot blocking explainer fires on the first
+  // check a player ever faces, then never again (has_seen_check_tutorial).
+  // Combat is turn-based, so the armed check just waits behind the modal.
+  const [checkTutorialSeen, setCheckTutorialSeen] = useState<boolean | null>(null)
+  const [showCheckTutorial, setShowCheckTutorial] = useState(false)
+  const checkTutorialFiredRef = useRef(false)
+  useEffect(() => {
+    if (!isBoss) { setCheckTutorialSeen(true); return }   // only bosses carry checks
+    let alive = true
+    getCheckTutorialSeen()
+      .then(v => { if (alive) setCheckTutorialSeen(v) })
+      .catch(() => { if (alive) setCheckTutorialSeen(true) })
+    return () => { alive = false }
+  }, [isBoss])
+  useEffect(() => {
+    if (pendingCheck && checkTutorialSeen === false && !checkTutorialFiredRef.current) {
+      checkTutorialFiredRef.current = true
+      setShowCheckTutorial(true)
+    }
+  }, [pendingCheck, checkTutorialSeen])
+  function dismissCheckTutorial() {
+    setShowCheckTutorial(false)
+    setCheckTutorialSeen(true)
+    void markCheckTutorialSeen().catch(() => {})
+  }
+
   // Arm the check that opens a phase (called from both revival paths).
   function armMechanicCheck(check: BossMechanicCheck | undefined) {
     if (!check) return
@@ -6281,6 +6312,40 @@ export default function RaidCombat({
               <p className="font-karla font-700" style={{ fontSize: '0.56rem', color: '#ffe9b0', lineHeight: 1.3, textAlign: 'center', marginTop: 1 }}>{crewCounterCue(pendingCheck.responses)}</p>
             </div>
           </div>
+        )}
+
+        {/* First-time mechanic-check tutorial — a blocking explainer the first
+            time a check arms (e.g. Don's opening). Teaches "telegraphed move →
+            answer with a crew ability" so the first hit isn't a blind loss. */}
+        {showCheckTutorial && pendingCheck && typeof document !== 'undefined' && createPortal(
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', inset: 0, zIndex: 3000, background: 'rgba(6,3,3,0.82)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem' }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ type: 'spring', stiffness: 360, damping: 26 }}
+              style={{ width: '100%', maxWidth: 360, textAlign: 'center', borderRadius: 18, padding: '1.4rem 1.25rem 1.25rem', background: 'linear-gradient(180deg, #2a0e0e 0%, #140708 100%)', border: '1px solid rgba(248,113,113,0.55)', boxShadow: '0 20px 60px rgba(0,0,0,0.7), inset 0 1px 0 rgba(248,113,113,0.14)' }}
+            >
+              <div style={{ width: 46, height: 46, margin: '0 auto 10px', borderRadius: '50%', display: 'grid', placeItems: 'center', background: 'rgba(248,113,113,0.14)', border: '1px solid rgba(248,113,113,0.55)' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fca5a5" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 9v4" /><path d="M12 17h.01" /><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /></svg>
+              </div>
+              <p className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.26em', color: '#fca5a5' }}>A Telegraphed Attack</p>
+              <p className="font-cinzel font-800" style={{ fontSize: '1.3rem', color: '#ffe4e0', lineHeight: 1.12, marginTop: 5 }}>{enemy.name} is winding up {pendingCheck.name}</p>
+              <p className="font-karla" style={{ fontSize: '0.86rem', color: 'rgba(255,225,225,0.82)', lineHeight: 1.55, marginTop: 12 }}>
+                A move like this <strong style={{ color: '#ffd7d7' }}>lands on its own</strong> unless your crew answers it. Before the countdown at the top runs out, <strong style={{ color: '#ffe9b0' }}>fire a crew ability</strong> to counter it.
+              </p>
+              <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(255,225,225,0.6)', lineHeight: 1.5, marginTop: 10 }}>
+                Miss the window and you take the hit. Working out <em>which</em> ability fits is on you — the banner tells you what kind.
+              </p>
+              <button type="button" onClick={dismissCheckTutorial}
+                className="font-cinzel font-700 uppercase tracking-[0.08em] tap"
+                style={{ width: '100%', marginTop: 18, padding: '0.85rem', borderRadius: 12, fontSize: '0.92rem', background: 'linear-gradient(180deg, rgba(248,113,113,0.32), rgba(180,40,40,0.18))', border: '1px solid rgba(248,113,113,0.7)', color: '#ffe0e0', cursor: 'pointer' }}>
+                Got it — brace the crew
+              </button>
+            </motion.div>
+          </motion.div>,
+          document.body,
         )}
 
         {/* Mechanic-check RESULT — unmistakable green "Countered!" or red
