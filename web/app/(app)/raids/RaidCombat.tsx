@@ -60,6 +60,7 @@ import { BroadsideEnemy, EnemyAction, type AimAttackId, type BossMechanicCheck, 
 import { raidDamageProfile, type RaidMods } from '@/lib/expeditions'
 import { MEGA_CHARGE_COST, RAILGUN_GRAZE_PCT, type ShipAugment } from '@/lib/shipAugments'
 import { getCheckTutorialSeen, markCheckTutorialSeen } from './checkTutorialActions'
+import type { ContractFightFacts } from '@/lib/gauntletContracts'
 import { applyStatus, statusMods, tickStatuses, cleanseStatuses, STATUS_DEFS, type ActiveStatus, type StatusId } from '@/lib/statuses'
 import { CannonShotBurst, ImpactBurst, RailgunBeam, NukeMissile, NukeBlast } from './megaFx'
 import { getActiveEffects, getRaidItem, getActivatableItem } from '@/lib/raidItems'
@@ -476,6 +477,9 @@ export interface RaidCombatProps {
   onDamageTaken?: () => void
   onShotResolved?: (isCrit: boolean) => void
   onNoShotKill?: () => void
+  /** Don's Gauntlet Contracts: the per-fight facts a contract is judged against,
+   *  fired ONCE at a win (before onEnemyDefeated). Only the gauntlet passes it. */
+  onContractFacts?: (f: ContractFightFacts) => void
   /** Quartermaster's Anchor: when true, the next killing blow leaves the
    *  player at 1 HP instead of sinking (raids only — wired by RaidGame,
    *  never PracticeRaidGame). `onAnchorSave` fires once when consumed so
@@ -568,7 +572,7 @@ export default function RaidCombat({
   equippedRepairKit,
   killReward,
   onEnemyDefeated, onPlayerDefeated, onLeave, onPlayerHit, onStat,
-  onDamageTaken, onShotResolved, onNoShotKill,
+  onDamageTaken, onShotResolved, onNoShotKill, onContractFacts,
   initialCharges = 0,
   runKills = 0, runDepth = 0,
   anchorSaveAvailable = false, onAnchorSave,
@@ -1094,6 +1098,33 @@ export default function RaidCombat({
   // fired a shot NOR used an ability (a pure riposte / DoT kill).
   const shotsThisFightRef = useRef(0)
   const abilityUsedThisFightRef = useRef(false)
+  // Don's Contract facts — per-fight tallies (reset per mount like the above).
+  // fires is DERIVED at hand-off (shots - volleys - megas) so a mis-typed shot
+  // can't land in two buckets.
+  const contractFactsRef = useRef({ shots: 0, crits: 0, volleys: 0, megas: 0, crewAbilities: 0, dodges: 0, nonSpecialHitsTaken: 0 })
+  // Don's Gauntlet CONTRACTS: hand the per-fight facts to the parent the instant
+  // this hull sinks, once per mount (RaidCombat mounts fresh per gauntlet fight,
+  // so the ref is already scoped to this fight). Only the gauntlet passes the
+  // callback; campaign raids leave it undefined and this is a no-op. Fired at
+  // BOTH win dispatch points, guarded so a double-path can't double-report.
+  const contractFactsSentRef = useRef(false)
+  const emitContractFacts = () => {
+    if (contractFactsSentRef.current || !onContractFacts) return
+    contractFactsSentRef.current = true
+    const cf = contractFactsRef.current
+    onContractFacts({
+      won: true,
+      turns: turnRef.current,
+      shots: cf.shots,
+      crits: cf.crits,
+      fires: Math.max(0, cf.shots - cf.volleys - cf.megas),
+      volleys: cf.volleys,
+      megas: cf.megas,
+      crewAbilities: cf.crewAbilities,
+      dodges: cf.dodges,
+      nonSpecialHitsTaken: cf.nonSpecialHitsTaken,
+    })
+  }
   // "Iron Ruse" needs to know if the ship ever lost HP. Rather than tag every
   // damage site (many, and fragile), watch the HP state for any drop — this
   // catches every source (turn hits, mechanic checks, flares, DoT) in one spot
@@ -2475,6 +2506,7 @@ export default function RaidCombat({
     // nothing double-fires while the crew is being called on.
     setOneAbilityUsedThisTurn(true)
     abilityUsedThisFightRef.current = true
+    contractFactsRef.current.crewAbilities++
     onAbilityFired?.(crew.id)
     vibrate(18)
     // Second Calling (boon): a chance the ability isn't spent — the effect still
@@ -2949,6 +2981,7 @@ export default function RaidCombat({
       // Sank a BOSS with no shot fired AND no crew ability used — a pure
       // riposte / DoT kill. (Non-boss mobs + ability kills don't qualify.)
       if (isBoss && shotsThisFightRef.current === 0 && !abilityUsedThisFightRef.current) onNoShotKill?.()
+      emitContractFacts()
       setTimeout(() => onEnemyDefeated(playerHpRef.current, playerChargesRef.current), cbDelay)
     }
   }
@@ -3013,6 +3046,8 @@ export default function RaidCombat({
     }
 
     setPlayerAction(action)
+    // Contract facts: the Dodge action taken (the FINAL action, post-confusion).
+    if (action === 'dodge') contractFactsRef.current.dodges++
     if (action === 'fire' || action === 'volley' || action === 'mega') {
       // Reset aim positions and indicator styling, then begin aiming
       firePosRef.current = 0; fireDirRef.current = 1
@@ -3998,7 +4033,7 @@ export default function RaidCombat({
             splatColor = '#38bdf8'
             // Telemetry: enemy dodged YOUR shot (still a shot fired) vs YOU
             // slipped the enemy's shot (a won dodge).
-            if (isAttackerPlayer) onStat?.({ shots: 1, volleys: action === 'volley' ? 1 : 0, crits: lockedAimResult === 'critical' ? 1 : 0 })
+            if (isAttackerPlayer) { onStat?.({ shots: 1, volleys: action === 'volley' ? 1 : 0, crits: lockedAimResult === 'critical' ? 1 : 0 }); const cf = contractFactsRef.current; cf.shots++; if (action === 'volley') cf.volleys++; if (isMega) cf.megas++; if (lockedAimResult === 'critical') cf.crits++ }
             else onStat?.({ dodgesWon: 1 })
             // Untouchable confluence: slipping an enemy shot hands you back a
             // cannonball (only when it's the PLAYER who dodged).
@@ -4140,6 +4175,7 @@ export default function RaidCombat({
           // Telemetry: a landed player shot (fire/volley/mega). dmg is the blow
           // the hitsplat shows; highestHit takes the max host-side.
           onStat?.({ shots: 1, volleys: action === 'volley' ? 1 : 0, megas: isMega ? 1 : 0, crits: lockedAimResult === 'critical' ? 1 : 0, dmgDealt: dmg, highestHit: dmg })
+          { const cf = contractFactsRef.current; cf.shots++; if (action === 'volley') cf.volleys++; if (isMega) cf.megas++; if (lockedAimResult === 'critical') cf.crits++ }
           // Lifesteal — heal a slice of the damage you deal. Two additive
           // sources: the Leviathan's Hunger boon (tide.lifestealPct) and Davy's
           // Blood Cannon raid item (lifesteal_pct effect). The step carries the
@@ -4467,6 +4503,11 @@ export default function RaidCombat({
           shieldChanged = true
           if (dmg > 0) onStat?.({ dmgTaken: dmg })
           pHp = Math.max(0, pHp - dmg)
+          // Contract facts (Not a Scratch): only a NORMAL offensive shot that
+          // lands damage counts — telegraphed specials/ultimates are excepted.
+          if (dmg > 0 && (action === 'fire' || action === 'volley' || action === 'mega')) {
+            contractFactsRef.current.nonSpecialHitsTaken++
+          }
           // ── SHARK'S BITE (Raid 8 shared mechanic) ─────────────────────────
           // Don Finleone's court doesn't just hurt you, it disarms you: a shot
           // that actually connects (dmg > 0 — a dodge/brace or a full shield
@@ -4786,6 +4827,7 @@ export default function RaidCombat({
             }
             // Sank without firing a shot this fight (riposte / crew ability / DoT).
             if (shotsThisFightRef.current === 0) onNoShotKill?.()
+            emitContractFacts()
             setTimeout(() => onEnemyDefeated(pHp, pCharges), cbDelay)
             return
           }
