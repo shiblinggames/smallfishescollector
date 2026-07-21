@@ -432,17 +432,12 @@ export default async function BadgesPage() {
     <>
       <main className="min-h-screen pt-8">
         <div className="px-6 max-w-2xl mx-auto pb-16">
-          <div className="mb-6">
-            <div className="flex items-baseline justify-between gap-3">
-              <h1 className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.5rem' }}>Badges</h1>
-              {/* Story moved out of here — a quiet link back to the Captain's Log. */}
-              <Link href="/achievements" className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#b6a98c', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-                Captain&apos;s Log →
-              </Link>
-            </div>
-            <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(230,215,180,0.55)', fontStyle: 'italic', marginTop: 3 }}>
-              Every color you have earned, and every one the sea still owes you.
-            </p>
+          <div className="mb-4 flex items-baseline justify-between gap-3">
+            <h1 className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.5rem' }}>Badges</h1>
+            {/* Story moved out of here — a quiet link back to the Captain's Log. */}
+            <Link href="/achievements" className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#b6a98c', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+              Captain&apos;s Log →
+            </Link>
           </div>
 
           <AchievementsClient groups={groups} doneCount={doneCount} totalCount={allGoals.length} />
