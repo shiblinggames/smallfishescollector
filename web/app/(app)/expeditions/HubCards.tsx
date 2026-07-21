@@ -7,7 +7,9 @@
 // item / crew detail editors.
 
 import { useState, useEffect, useTransition } from 'react'
+import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
+import { vibrate } from '@/lib/haptics'
 import PopupShell from '@/components/PopupShell'
 import { RAID_ITEMS } from '@/lib/raidItems'
 import { IconLock, IconCrate } from '@/components/GameIcons'
@@ -230,6 +232,10 @@ export default function HubCards({
   const vAcc = VOYAGE_ACCENT[voyages.status]
   const pvpAccent = '#d0716a'
   const gauntletAccent = '#7a8fc9'
+  // Each gauntlet wears its own identity inside the chooser: Davy's teal,
+  // Don's kraken-green (matches the gauntlet screens + switcher).
+  const DAVY_AC = '#5eead4'
+  const DON_AC = '#3fbf82'
 
   // Item equip / unequip used to live here as an optimistic toggle backing
   // the nested 'Equip items' modal. Both were removed when the prep modal
@@ -789,7 +795,9 @@ export default function HubCards({
       {/* ── Gauntlets modal — entry hub for the push-your-luck gauntlets.
           Davy Jones is the first; more slot in later. Admin-only for now. ── */}
       <PopupShell open={modal === 'gauntlets'} onClose={() => setModal(null)}>
-        <div role="dialog" aria-modal onClick={e => e.stopPropagation()}
+        <motion.div role="dialog" aria-modal onClick={e => e.stopPropagation()}
+          initial={{ opacity: 0, scale: 0.94, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 6 }}
+          transition={{ type: 'spring', stiffness: 380, damping: 30 }}
           style={{
             margin: 'auto', width: '100%', maxWidth: 420,
             background: 'linear-gradient(180deg, #0c1222 0%, #06080f 100%)',
@@ -798,82 +806,103 @@ export default function HubCards({
             boxShadow: '0 20px 60px rgba(0,0,0,0.7)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <div>
               <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.5rem', color: `${gauntletAccent}aa` }}>Push your luck</p>
-              <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f4ecd8' }}>Gauntlets</p>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f4ecd8' }}>Choose your gauntlet</p>
             </div>
             <button type="button" onClick={() => setModal(null)} aria-label="Close"
               style={{ width: 30, height: 30, borderRadius: '50%', padding: 0, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
             </button>
           </div>
-          <button type="button"
-            onClick={() => { setModal(null); router.push('/raids/gauntlet') }}
+
+          {/* ── Davy Jones — the original descent ── */}
+          <motion.button type="button"
+            initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.06 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => { vibrate([0, 16]); setModal(null); router.push('/raids/gauntlet') }}
+            className="tap"
             style={{
-              width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-              padding: '0.75rem', borderRadius: 14, cursor: 'pointer', textAlign: 'left',
-              background: `linear-gradient(180deg, ${gauntletAccent}1c, rgba(0,0,0,0.2))`,
-              border: `1px solid ${gauntletAccent}55`,
+              position: 'relative', overflow: 'hidden', width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+              padding: '0.8rem', borderRadius: 15, cursor: 'pointer', textAlign: 'left',
+              background: `linear-gradient(120deg, ${DAVY_AC}1e, rgba(0,0,0,0.24))`,
+              border: `1px solid ${DAVY_AC}66`, boxShadow: `0 0 18px ${DAVY_AC}12`,
             }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/davyjones.png" alt="" loading="lazy" decoding="async"
-              style={{ width: 52, height: 52, objectFit: 'contain', flexShrink: 0, filter: `drop-shadow(0 3px 10px ${gauntletAccent}55)` }} />
+            <span style={{ position: 'relative', flexShrink: 0, width: 54, height: 54, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span aria-hidden style={{ position: 'absolute', inset: -4, borderRadius: '50%', background: `radial-gradient(circle, ${DAVY_AC}55, transparent 70%)` }} />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/davyjones.png" alt="" loading="lazy" decoding="async"
+                style={{ position: 'relative', width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', border: `1.5px solid ${DAVY_AC}aa`, background: 'rgba(0,0,0,0.35)' }} />
+            </span>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0ede8', lineHeight: 1.1 }}>The Davy Jones Gauntlet</p>
-              <p className="font-karla font-500" style={{ fontSize: '0.66rem', color: '#a8b0c4', lineHeight: 1.35, marginTop: 2 }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: '#f0ede8', lineHeight: 1.1 }}>Davy Jones Gauntlet</p>
+              <p className="font-karla font-500" style={{ fontSize: '0.64rem', color: '#a8b0c4', lineHeight: 1.35, marginTop: 3 }}>
                 Fight down the deep. Every win fattens one pot; cash out or sink with it.
               </p>
             </div>
             {gauntletResumable
-              ? <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ flexShrink: 0, fontSize: '0.5rem', color: '#0c0f14', background: gauntletAccent, borderRadius: 999, padding: '0.25rem 0.55rem', whiteSpace: 'nowrap' }}>Resume ›</span>
-              : <span aria-hidden className="font-karla font-700" style={{ flexShrink: 0, color: gauntletAccent, fontSize: '1rem' }}>›</span>}
-          </button>
+              ? <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ flexShrink: 0, fontSize: '0.5rem', color: '#04120f', background: DAVY_AC, borderRadius: 999, padding: '0.26rem 0.55rem', whiteSpace: 'nowrap' }}>Resume ›</span>
+              : <motion.span aria-hidden animate={{ x: [0, 3, 0] }} transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }} style={{ flexShrink: 0, display: 'flex', color: DAVY_AC }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
+                </motion.span>}
+          </motion.button>
 
-          {/* Don's Gauntlet — Gauntlet II, led by the ghost of Don Finleone.
-              A "Coming Soon" tease until it goes live; once the door is open
-              (admins now, everyone post-launch) it becomes a live link. */}
+          {/* ── Don's Gauntlet — Gauntlet II, ghost of Don Finleone. A "Coming
+              Soon" tease until the door is open, then a live descent. ── */}
           {donsGauntletOpen ? (
-            <button type="button"
-              onClick={() => { setModal(null); router.push('/raids/dons-gauntlet') }}
+            <motion.button type="button"
+              initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.13 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => { vibrate([0, 16]); setModal(null); router.push('/raids/dons-gauntlet') }}
+              className="tap"
               style={{
-                marginTop: 10, width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-                padding: '0.75rem', borderRadius: 14, textAlign: 'left', cursor: 'pointer',
-                background: 'linear-gradient(180deg, rgba(36,116,78,0.22), rgba(0,0,0,0.25))',
-                border: '1px solid rgba(36,116,78,0.6)',
+                position: 'relative', overflow: 'hidden', marginTop: 10, width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                padding: '0.8rem', borderRadius: 15, textAlign: 'left', cursor: 'pointer',
+                background: `linear-gradient(120deg, ${DON_AC}22, rgba(0,0,0,0.26))`,
+                border: `1px solid ${DON_AC}66`, boxShadow: `0 0 18px ${DON_AC}14`,
               }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/donsgauntlet.png" alt="" loading="lazy" decoding="async"
-                style={{ width: 52, height: 52, objectFit: 'contain', flexShrink: 0, filter: 'drop-shadow(0 3px 10px rgba(36,116,78,0.5))' }} />
+              <span style={{ position: 'relative', flexShrink: 0, width: 54, height: 54, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span aria-hidden style={{ position: 'absolute', inset: -4, borderRadius: '50%', background: `radial-gradient(circle, ${DON_AC}55, transparent 70%)` }} />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/donsgauntlet.png" alt="" loading="lazy" decoding="async"
+                  style={{ position: 'relative', width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', border: `1.5px solid ${DON_AC}aa`, background: 'rgba(0,0,0,0.35)' }} />
+              </span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0ede8', lineHeight: 1.1 }}>Don&apos;s Gauntlet</p>
-                <p className="font-karla font-500" style={{ fontSize: '0.66rem', color: '#a9c6b6', lineHeight: 1.35, marginTop: 2 }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: '#f0ede8', lineHeight: 1.1 }}>Don&apos;s Gauntlet</p>
+                <p className="font-karla font-500" style={{ fontSize: '0.64rem', color: '#a9c6b6', lineHeight: 1.35, marginTop: 3 }}>
                   The don went down with the deep, and his ghost is still collecting. Descend into the darker gauntlet.
                 </p>
               </div>
-              <span aria-hidden className="font-karla font-700" style={{ flexShrink: 0, color: '#7fd9a8', fontSize: '1rem' }}>›</span>
-            </button>
+              <motion.span aria-hidden animate={{ x: [0, 3, 0] }} transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }} style={{ flexShrink: 0, display: 'flex', color: DON_AC }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
+              </motion.span>
+            </motion.button>
           ) : (
-            <div aria-disabled
+            <motion.div aria-disabled
+              initial={{ opacity: 0, x: -10 }} animate={{ opacity: 0.72, x: 0 }} transition={{ delay: 0.13 }}
               style={{
                 marginTop: 10, width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-                padding: '0.75rem', borderRadius: 14, textAlign: 'left', cursor: 'default', opacity: 0.72,
-                background: 'linear-gradient(180deg, rgba(36,116,78,0.14), rgba(0,0,0,0.25))',
-                border: '1px solid rgba(36,116,78,0.4)',
+                padding: '0.8rem', borderRadius: 15, textAlign: 'left', cursor: 'default',
+                background: `linear-gradient(120deg, ${DON_AC}12, rgba(0,0,0,0.26))`,
+                border: `1px solid ${DON_AC}3a`,
               }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/donsgauntlet.png" alt="" loading="lazy" decoding="async"
-                style={{ width: 52, height: 52, objectFit: 'contain', flexShrink: 0, filter: 'grayscale(0.35) drop-shadow(0 3px 10px rgba(36,116,78,0.45))' }} />
+              <span style={{ position: 'relative', flexShrink: 0, width: 54, height: 54, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span aria-hidden style={{ position: 'absolute', inset: -4, borderRadius: '50%', background: `radial-gradient(circle, ${DON_AC}30, transparent 70%)` }} />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/donsgauntlet.png" alt="" loading="lazy" decoding="async"
+                  style={{ position: 'relative', width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', border: `1.5px solid ${DON_AC}55`, background: 'rgba(0,0,0,0.35)', filter: 'grayscale(0.4)' }} />
+              </span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#dcece4', lineHeight: 1.1 }}>Don&apos;s Gauntlet</p>
-                <p className="font-karla font-500" style={{ fontSize: '0.66rem', color: '#9db9ab', lineHeight: 1.35, marginTop: 2 }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: '#dcece4', lineHeight: 1.1 }}>Don&apos;s Gauntlet</p>
+                <p className="font-karla font-500" style={{ fontSize: '0.64rem', color: '#9db9ab', lineHeight: 1.35, marginTop: 3 }}>
                   The don went down with the deep, and his ghost is still collecting. A darker gauntlet stirs below.
                 </p>
               </div>
               <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ flexShrink: 0, fontSize: '0.5rem', color: '#7fd9a8', background: 'rgba(36,116,78,0.24)', border: '1px solid rgba(36,116,78,0.55)', borderRadius: 999, padding: '0.25rem 0.5rem', whiteSpace: 'nowrap' }}>Coming Soon</span>
-            </div>
+            </motion.div>
           )}
-        </div>
+        </motion.div>
       </PopupShell>
 
       {/* Crew + items are now both managed OUTSIDE the prep modal:
