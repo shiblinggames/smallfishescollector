@@ -16,7 +16,7 @@ export const CHARACTER_COLORS: CharacterColor[] = [
   { id: 'pink',    name: 'Pink',   free: true  },
   { id: 'sand',    name: 'Sand',   free: false, unlockHint: 'Reach Prestige 3 in any zone' },
   { id: 'sky',     name: 'Sky',    free: false, unlockHint: 'Reach Navigation Level 50' },
-  { id: 'golden',  name: 'Golden', free: false, unlockHint: '1,000,000 ⟡', price: 1_000_000 },
+  { id: 'golden',  name: 'Golden', free: false, unlockHint: '100,000 ⟡', price: 100_000 },
   { id: 'forest',  name: 'Forest', free: false, unlockHint: 'Reach Fishing Level 50' },
   { id: 'mint',    name: 'Mint',   free: false, unlockHint: 'Rare drop from fishing crates' },
   { id: 'autumn',  name: 'Autumn', free: false, unlockHint: '250 ◆', gemPrice: 250 },
@@ -28,6 +28,7 @@ export const CHARACTER_COLORS: CharacterColor[] = [
   { id: 'crystal',  name: 'Crystal',  free: false, unlockHint: 'Max out — Fishing 100 and Navigation 100' },
   { id: 'ethereal', name: 'Ethereal', free: false, unlockHint: 'Reach 350 achievement points' },
   { id: 'lava',     name: 'Lava',     free: false, unlockHint: '500 ◆', gemPrice: 500 },
+  { id: 'gilded',   name: 'Gilded',   free: false, unlockHint: '1,000,000 ⟡', price: 1_000_000 },
 ]
 
 /** Character colors earned by hitting an Achievement Points threshold. Kept
