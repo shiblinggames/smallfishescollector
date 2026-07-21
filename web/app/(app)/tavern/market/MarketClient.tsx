@@ -436,11 +436,27 @@ export default function MarketClient({
   const mood = MOOD_CONFIG[marketState.mood] ?? MOOD_CONFIG.calm
   const fee = isPremium ? 1.0 : 0.97
 
-  // Hero totals + "vs last tick" change.
+  // How the red/green markers are decided (persisted per device). Defaults to
+  // 'normal' — most sellers care whether a price beats the fish's usual value,
+  // not the last tick's wiggle.
+  const [colorMode, setColorMode] = useState<MarketMode>('normal')
+  useEffect(() => {
+    const s = localStorage.getItem('market_color_mode')
+    if (s === 'normal' || s === 'movement') setColorMode(s)
+  }, [])
+  const pickColorMode = (m: MarketMode) => {
+    setColorMode(m)
+    try { localStorage.setItem('market_color_mode', m) } catch { /* private mode */ }
+  }
+
+  // Hero totals — colored by the same toggle. 'movement' = vs last tick; 'normal'
+  // = vs what the whole hold is worth at NORMAL prices (every multiplier at 1.0).
   const totalMarketValue = portfolio.reduce((s, e) => s + Math.floor(e.sell_value * e.multiplier * fee) * e.quantity, 0)
   const prevValue = portfolio.reduce((s, e) => s + Math.floor(e.sell_value * e.prev_multiplier * fee) * e.quantity, 0)
-  const heroDelta = totalMarketValue - prevValue
-  const heroPct = pctOf(totalMarketValue, prevValue)
+  const normalValue = portfolio.reduce((s, e) => s + Math.floor(e.sell_value * fee) * e.quantity, 0)
+  const heroBase = colorMode === 'normal' ? normalValue : prevValue
+  const heroDelta = totalMarketValue - heroBase
+  const heroPct = pctOf(totalMarketValue, heroBase)
   const heroUp = heroDelta >= 0
   const totalCount = portfolio.reduce((s, e) => s + e.quantity, 0)
   const heroCurve = useMemo(() => [...portfolioCurve(portfolio, fee), totalMarketValue], [portfolio, fee, totalMarketValue])
@@ -500,17 +516,6 @@ export default function MarketClient({
 
   // ── Browse: sort + filter ──
   const [sortKey, setSortKey] = useState<'value' | 'change' | 'name'>('value')
-  // How the red/green markers are decided (persisted per device). Defaults to the
-  // familiar 'movement' so nothing changes unless the seller opts in.
-  const [colorMode, setColorMode] = useState<MarketMode>('movement')
-  useEffect(() => {
-    const s = localStorage.getItem('market_color_mode')
-    if (s === 'normal' || s === 'movement') setColorMode(s)
-  }, [])
-  const pickColorMode = (m: MarketMode) => {
-    setColorMode(m)
-    try { localStorage.setItem('market_color_mode', m) } catch { /* private mode */ }
-  }
   const [habitatFilter, setHabitatFilter] = useState<string | null>(null)
   const ownedIds = new Set(portfolio.map(e => e.fish_id))
   const browseAll = useMemo(() => {
@@ -563,20 +568,27 @@ export default function MarketClient({
           </div>
         </div>
 
-        {/* ── Ticker color mode ── what the red/green markers mean. */}
-        <div className="flex items-center justify-between gap-2" style={{ marginTop: -8 }}>
-          <span className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#7a7774', lineHeight: 1.3 }}>
-            Color by{' '}
-            <span style={{ color: '#a09a90' }}>{colorMode === 'normal' ? 'above / below normal price' : 'change since last tick'}</span>
-          </span>
-          <div className="flex flex-shrink-0" style={{ borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.16)' }}>
-            {([['movement', 'Recent'], ['normal', 'vs Normal']] as const).map(([m, lbl], i) => (
-              <button key={m} onClick={() => pickColorMode(m)} className="font-karla font-700 uppercase tracking-[0.05em] tap"
-                style={{ fontSize: '0.56rem', padding: '0.34rem 0.62rem', borderLeft: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.14)',
-                  background: colorMode === m ? 'rgba(240,192,64,0.22)' : 'rgba(28,32,40,0.95)', color: colorMode === m ? GOLD : '#b8b4ac', cursor: 'pointer' }}>
-                {lbl}
-              </button>
-            ))}
+        {/* ── Ticker color mode ── prominent so sellers know what red/green means. */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: -4 }}>
+          <div className="flex items-center justify-between">
+            <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.62rem', color: '#9a9488' }}>Ticker Colors</span>
+            <span className="font-karla font-600 flex items-center gap-1" style={{ fontSize: '0.58rem', color: '#8a857c' }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: UP, flexShrink: 0 }} />
+              {colorMode === 'normal' ? 'above normal price' : 'up since last tick'}
+            </span>
+          </div>
+          <div className="flex w-full" style={{ borderRadius: 11, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.18)' }}>
+            {([['normal', 'vs Normal'], ['movement', 'Recent']] as const).map(([m, lbl], i) => {
+              const active = colorMode === m
+              return (
+                <button key={m} onClick={() => pickColorMode(m)} className="font-cinzel font-700 uppercase tracking-[0.07em] tap"
+                  style={{ flex: 1, fontSize: '0.74rem', padding: '0.62rem 0.5rem', borderLeft: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.14)',
+                    background: active ? 'rgba(240,192,64,0.2)' : 'rgba(28,32,40,0.92)', color: active ? GOLD : '#9a958c',
+                    cursor: 'pointer', boxShadow: active ? 'inset 0 0 0 1px rgba(240,192,64,0.45)' : 'none', transition: 'background 0.12s, color 0.12s' }}>
+                  {lbl}
+                </button>
+              )
+            })}
           </div>
         </div>
 
@@ -595,7 +607,7 @@ export default function MarketClient({
               <span className="font-karla font-700 flex items-center gap-1" style={{ fontSize: '0.82rem', color: heroUp ? UP : DOWN, ...TNUM }}>
                 <ChangeArrow up={heroUp} />{heroUp ? '+' : ''}{heroDelta.toLocaleString()} ⟡ ({fmtPct(heroPct)})
               </span>
-              <span className="font-karla font-400" style={{ fontSize: '0.66rem', color: '#6a6764' }}>vs last tick</span>
+              <span className="font-karla font-400" style={{ fontSize: '0.66rem', color: '#6a6764' }}>{colorMode === 'normal' ? 'vs normal value' : 'vs last tick'}</span>
             </div>
             <div style={{ margin: '0.6rem -0.3rem 0.3rem' }}>
               <Sparkline data={heroCurve} up={heroUp} height={56} fill />
