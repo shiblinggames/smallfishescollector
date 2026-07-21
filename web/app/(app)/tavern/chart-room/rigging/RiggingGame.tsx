@@ -209,20 +209,37 @@ export default function RiggingGame({ initial }: { initial: RiggingState }) {
           position: 'relative', width: boardW, aspectRatio: '1 / 1', margin: '0 auto', touchAction: 'none',
           borderRadius: 14, padding: 7,
           background: 'linear-gradient(180deg, #241a0e 0%, #140d06 100%)',
-          border: '2px solid rgba(196,169,106,0.4)',
-          boxShadow: '0 8px 22px rgba(0,0,0,0.5), inset 0 0 24px rgba(0,0,0,0.45)',
+          border: 'none',
+          // iron liner + brass band frame, so the deck sits in a fitting
+          boxShadow: 'inset 0 0 0 2px #20160d, inset 0 0 0 5px rgba(185,138,62,0.5), 0 8px 22px rgba(0,0,0,0.5), inset 0 0 22px rgba(0,0,0,0.5)',
         }}
       >
-        {/* Plank grid backdrop */}
-        <div aria-hidden style={{ position: 'absolute', inset: 7, display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 2, pointerEvents: 'none' }}>
-          {Array.from({ length: total }).map((_, i) => (
-            <div key={i} style={{ borderRadius: 5, background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(196,169,106,0.1)' }} />
-          ))}
-        </div>
+        {/* Ship's-deck planking: long boards (horizontal caulk seams), faint
+            butt joints between columns, wood grain, lit from above. */}
+        <div aria-hidden style={{
+          position: 'absolute', inset: 7, borderRadius: 7, pointerEvents: 'none',
+          background: [
+            `repeating-linear-gradient(0deg, transparent 0 calc(${100 / rows}% - 1.5px), rgba(0,0,0,0.5) calc(${100 / rows}% - 1.5px) ${100 / rows}%)`,
+            `repeating-linear-gradient(90deg, transparent 0 calc(${100 / cols}% - 1px), rgba(0,0,0,0.22) calc(${100 / cols}% - 1px) ${100 / cols}%)`,
+            'repeating-linear-gradient(90deg, rgba(255,240,210,0.035) 0 2px, transparent 2px 11px)',
+            'linear-gradient(180deg, #553a23 0%, #3c2917 60%, #2e2011 100%)',
+          ].join(', '),
+          boxShadow: 'inset 0 0 18px rgba(0,0,0,0.55)',
+        }} />
 
         {/* Rope + cleat overlay */}
         <svg aria-hidden viewBox={`0 0 ${cols} ${rows}`} preserveAspectRatio="none"
           style={{ position: 'absolute', inset: 7, width: `calc(100% - 14px)`, height: `calc(100% - 14px)`, pointerEvents: 'none', overflow: 'visible' }}>
+          {/* rope shadows (own pass, under every rope) — grounds the line on the deck */}
+          {pairs.map(p => {
+            const path = paths[p.color]
+            if (!path || path.length < 2) return null
+            const pts = path.map(c => `${cx(c)},${cy(c)}`).join(' ')
+            return (
+              <polyline key={`sh-${p.color}`} points={pts} fill="none" stroke="rgba(0,0,0,0.45)" strokeWidth={0.34}
+                strokeLinecap="round" strokeLinejoin="round" transform="translate(0.07 0.1)" style={{ filter: 'blur(0.07px)' }} />
+            )
+          })}
           {/* ropes */}
           {pairs.map(p => {
             const path = paths[p.color]
@@ -234,32 +251,38 @@ export default function RiggingGame({ initial }: { initial: RiggingState }) {
             return (
               <g key={p.color}>
                 {(isAct || done) && (
-                  <polyline points={pts} fill="none" stroke={col} strokeWidth={0.66} strokeLinecap="round" strokeLinejoin="round" opacity={isAct ? 0.42 : 0.28} style={{ filter: 'blur(0.05px)' }} />
+                  <polyline points={pts} fill="none" stroke={col} strokeWidth={0.56} strokeLinecap="round" strokeLinejoin="round" opacity={isAct ? 0.26 : 0.16} style={{ filter: 'blur(0.06px)' }} />
                 )}
-                {/* dark rope edge — gives the cord an outline + depth */}
-                <polyline points={pts} fill="none" stroke="rgba(0,0,0,0.5)" strokeWidth={0.5} strokeLinecap="round" strokeLinejoin="round" opacity={done ? 0.95 : 0.8} />
-                {/* rope body in the pair color */}
-                <polyline points={pts} fill="none" stroke={col} strokeWidth={0.4} strokeLinecap="round" strokeLinejoin="round" opacity={done ? 1 : 0.92} />
-                {/* twisted-hemp texture: dark bands + offset light strands read
-                    as the diagonal twist of a laid rope */}
-                <polyline points={pts} fill="none" stroke="rgba(0,0,0,0.34)" strokeWidth={0.4} strokeLinecap="butt" strokeLinejoin="round" strokeDasharray="0.085 0.17" opacity={done ? 0.7 : 0.5} />
-                <polyline points={pts} fill="none" stroke="rgba(255,255,255,0.26)" strokeWidth={0.4} strokeLinecap="butt" strokeLinejoin="round" strokeDasharray="0.04 0.215" strokeDashoffset="0.12" opacity={done ? 0.6 : 0.42} />
-                {/* top sheen — rounds the cord */}
-                <polyline points={pts} fill="none" stroke="#ffffff" strokeWidth={0.09} strokeLinecap="round" strokeLinejoin="round" opacity={0.2} />
+                {/* dark edge — gives the cord an outline + depth */}
+                <polyline points={pts} fill="none" stroke="rgba(0,0,0,0.55)" strokeWidth={0.4} strokeLinecap="round" strokeLinejoin="round" opacity={done ? 0.95 : 0.82} />
+                {/* solid cord in the pair color */}
+                <polyline points={pts} fill="none" stroke={col} strokeWidth={0.3} strokeLinecap="round" strokeLinejoin="round" opacity={done ? 1 : 0.92} />
               </g>
             )
           })}
-          {/* cleats */}
+          {/* anchors — a brass rope grommet set into an iron socket on the
+              deck, its eye filled with the pair color. Reads as a rigging
+              fitting rather than a glossy game-token dot. */}
           {pairs.map(p => {
             const col = RIGGING_PALETTE[p.color]
             const done = isConnected(p.color)
-            return [p.a, p.b].map((cell, idx) => (
-              <g key={`${p.color}-${idx}`}>
-                {done && <circle cx={cx(cell)} cy={cy(cell)} r={0.44} fill="none" stroke={col} strokeWidth={0.06} opacity={0.7} />}
-                <circle cx={cx(cell)} cy={cy(cell)} r={0.34} fill={col} stroke="rgba(0,0,0,0.3)" strokeWidth={0.04} />
-                <circle cx={cx(cell) - 0.08} cy={cy(cell) - 0.09} r={0.11} fill="#ffffff" opacity={0.55} />
-              </g>
-            ))
+            return [p.a, p.b].map((cell, idx) => {
+              const X = cx(cell), Y = cy(cell)
+              return (
+                <g key={`${p.color}-${idx}`}>
+                  {done && <circle cx={X} cy={Y} r={0.44} fill="none" stroke={col} strokeWidth={0.045} opacity={0.6} />}
+                  {/* soft seat shadow + iron socket */}
+                  <circle cx={X} cy={Y} r={0.4} fill="rgba(0,0,0,0.4)" />
+                  <circle cx={X} cy={Y} r={0.36} fill="#1c130b" />
+                  {/* brass ring */}
+                  <circle cx={X} cy={Y} r={0.3} fill="none" stroke="#b98a3e" strokeWidth={0.08} opacity={0.9} />
+                  <circle cx={X} cy={Y} r={0.3} fill="none" stroke="rgba(0,0,0,0.35)" strokeWidth={0.02} />
+                  {/* pair-color eye + highlight */}
+                  <circle cx={X} cy={Y} r={0.18} fill={col} stroke="rgba(0,0,0,0.4)" strokeWidth={0.03} />
+                  <circle cx={X - 0.05} cy={Y - 0.06} r={0.05} fill="#ffffff" opacity={0.35} />
+                </g>
+              )
+            })
           })}
           {/* active head marker */}
           {active !== null && paths[active] && paths[active].length > 0 && (() => {

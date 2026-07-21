@@ -17,9 +17,11 @@ export const RIGGING_COLORS = 8
  *  the Minefield — a weekly bonus toward the World Chart). */
 export const RIGGING_POINTS = 5
 
-/** Rope colors by index (must be >= RIGGING_COLORS). Readable on the
- *  dark deck grid. */
-export const RIGGING_PALETTE = ['#e0524e', '#4f9bd0', '#46b46e', '#f0c040', '#a87bd0', '#e0894e', '#e070b0', '#5ad0c0'] as const
+/** Rope colors by index (must be >= RIGGING_COLORS). Weathered, treasure-
+ *  toned pirate palette — blood crimson, doubloon gold, verdigris, ocean
+ *  blue, wine, bottle green, burnt rust, old hemp — all readable on the
+ *  dark deck grid and distinct from one another for the flow puzzle. */
+export const RIGGING_PALETTE = ['#c1463b', '#d6a636', '#358f86', '#3d76a2', '#8a5a9c', '#5f9245', '#c06e2e', '#c2b083'] as const
 
 /** Monday (UTC) of the current week — the weekly key. */
 export function riggingWeekStr(now = new Date()): string {
