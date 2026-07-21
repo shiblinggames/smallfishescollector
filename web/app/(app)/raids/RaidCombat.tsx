@@ -8510,7 +8510,7 @@ function HitsplatOverlay({ text, color, big, volley }: { text: string; color: st
   // Outline via a tight 8-way dark shadow ring (smoother on serif glyphs than
   // WebkitTextStroke, which blobs on Cinzel's thin strokes), then a colored
   // glow + soft drop for depth.
-  const o = big ? 1.3 : isVolley ? 1.15 : 1
+  const o = big ? 0.9 : isVolley ? 0.8 : 0.7
   const ring = [
     `${o}px ${o}px 0 #0b0e14`, `-${o}px ${o}px 0 #0b0e14`,
     `${o}px -${o}px 0 #0b0e14`, `-${o}px -${o}px 0 #0b0e14`,
