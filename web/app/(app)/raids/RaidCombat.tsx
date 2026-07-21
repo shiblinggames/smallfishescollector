@@ -2679,9 +2679,10 @@ export default function RaidCombat({
           setLastPlayerAction(null)
           refreshed = true
         }
-        // Legendary breadth (Don Finleone checks): reading the blow means you are
-        // ready for it — foresight answers both a "defend" and a "disrupt" check.
-        noteCheckResponse('brace'); noteCheckResponse('snare')
+        // Legendary breadth (Don Finleone checks): foreseeing the enemy's whole
+        // hand means you're ready for ANY of it — the Oracle answers every check
+        // category (brace / shield / heal / snare / burst).
+        noteCheckResponse('brace'); noteCheckResponse('shield'); noteCheckResponse('heal'); noteCheckResponse('snare'); noteCheckResponse('burst')
         const nice = (a: EnemyAction) => a === 'fire' ? 'Fire' : a === 'volley' ? 'Volley' : a === 'reload' ? 'Reload' : a === 'mega' ? 'Mega' : a === 'repair' ? 'Repair' : a === 'special' ? (enemy.special?.name ?? 'Special') : a === 'ultimate' ? (enemy.ultimate?.name ?? 'Ultimate') : 'Dodge'
         setResolveLog(prev => [...prev, `${crew.name} reads the tide — the enemy will ${moves.map(nice).join(', then ')}.${refreshed ? ' Your dodge is ready again.' : ''}`])
         break

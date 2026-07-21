@@ -27,6 +27,10 @@ export const CLASS_RESPONSES: Partial<Record<CrewClass, MechanicResponse[]>> = {
   snare:        ['snare'],
   leviathan:    ['burst'],
   blitz:        ['burst'],
+  // The Oracle (Dole) foresees the enemy's whole hand — reading any blow means
+  // you're ready for it, so it answers EVERY check category. Matches the
+  // in-combat noteCheckResponse breadth in RaidCombat.
+  foresight:    ['brace', 'shield', 'heal', 'snare', 'burst'],
 }
 
 export interface RaidMuster {
