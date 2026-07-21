@@ -108,8 +108,14 @@ export const BADGES: Badge[] = [
   { id: 'duelist',        name: 'Duelist',            description: 'Win 25 ship duels',                               imageUrl: '/badges/duelist.png',        difficulty: 'veteran'  },
 
   // ── The Chart Room ───────────────────────────────────────────────────────
+  { id: 'landfall',       name: 'Landfall',           description: 'Chart your first World Chart landmark',            imageUrl: '/badges/landfall.png',       difficulty: 'rookie'   },
   { id: 'quartermaster',  name: 'Quartermaster',      description: 'Bank 40 charting points',                         imageUrl: '/badges/quartermaster.png',  difficulty: 'rookie'   },
-  { id: 'den_magnate',    name: 'Den Magnate',        description: 'Bank enough charting points to top the Den purse', imageUrl: '/badges/den_magnate.png',   difficulty: 'seasoned' },
+  { id: 'den_magnate',    name: 'Chartwright',        description: 'Bank 80 charting points',                         imageUrl: '/badges/den_magnate.png',    difficulty: 'seasoned' },
+  { id: 'uncharted_no_more', name: 'Uncharted No More', description: 'Chart seven World Chart landmarks',             imageUrl: '/badges/uncharted_no_more.png', difficulty: 'seasoned' },
+  { id: 'fully_laden',    name: 'Fully Laden',        description: 'Solve a Man-o-War hold (the hardest sudoku)',      imageUrl: '/badges/fully_laden.png',    difficulty: 'veteran'  },
+  { id: 'the_long_watch', name: 'The Long Watch',     description: 'Bank 500 charting points',                        imageUrl: '/badges/the_long_watch.png', difficulty: 'veteran'  },
+  { id: 'clean_manifest', name: 'Clean Manifest',     description: 'Stow all four holds in a single week',             imageUrl: '/badges/clean_manifest.png', difficulty: 'master'   },
+  { id: 'master_cartographer', name: 'Master Cartographer', description: 'Chart the entire World Chart (all 13 landmarks)', imageUrl: '/badges/master_cartographer.png', difficulty: 'grandmaster' },
 
   // ── The Den & records ────────────────────────────────────────────────────
   { id: 'catfish_jackpot', name: 'Catfish Jackpot',   description: 'Win the slots Catfish Jackpot',                   imageUrl: '/badges/catfish_jackpot.png', difficulty: 'seasoned' },
@@ -304,8 +310,14 @@ export const BADGE_DETAIL: Record<string, string> = {
   first_blood:      'Win your first ship duel against another captain.',
   brawler:          'Win 10 ship duels.',
   duelist:          'Win 25 ship duels — a feared name on the ladder.',
+  landfall:         'Chart your first landmark on the World Chart. The fog parts, and the sea starts to fill in.',
   quartermaster:    'Bank 40 charting points from the Chart Room puzzles.',
-  den_magnate:      'Bank 80 charting points — enough to push the Den buy-in cap to its maximum.',
+  den_magnate:      'Bank 80 charting points from the Chart Room puzzles.',
+  uncharted_no_more:'Chart seven of the thirteen World Chart landmarks — past the halfway mark of the sea.',
+  fully_laden:      'Solve a Man-o-War hold, the hardest cargo manifest in the Chart Room.',
+  the_long_watch:   'Bank 500 charting points. A patient hand at the puzzles, week after week.',
+  clean_manifest:   'Stow all four holds — Skiff, Galleon, Dreadnought, and Man-o-War — in a single week.',
+  master_cartographer: 'Chart the entire World Chart, all thirteen landmarks. The whole sea is yours, Master Cartographer.',
   catfish_jackpot:  'Hit the global Catfish Jackpot on the slots. Three catfish on one spin, and the whole pot is yours.',
   tide_runner:      'Reach 300m in a single Tide Run.',
   tide_champion:    'Reach 500m in a single Tide Run — contest-winning distance.',

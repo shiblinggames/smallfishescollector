@@ -69,6 +69,7 @@ export interface BadgeProfileFields {
   highest_raid_damage?: number | null
   pvp_wins?: number | null
   puzzle_points?: number | null
+  charting_landmarks_claimed?: number[] | null
   tide_run_best_distance?: number | string | null
   gauntlet_deepest?: number | null
   gauntlet_fathoms?: number | null
@@ -148,6 +149,7 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
   const doubloons = Number(p.doubloons ?? 0)
   const tideBest = Number(p.tide_run_best_distance ?? 0)
   const puzzlePoints = Number(p.puzzle_points ?? 0)
+  const chartedLandmarks = ((p.charting_landmarks_claimed as number[] | null) ?? []).length
   const recruits = Number(p.lifetime_recruits ?? 0)
   // Crew skins owned / equipped (for the skin badges).
   const ownedSkins = new Set(p.owned_crew_skins ?? [])
@@ -192,7 +194,11 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
     brawler:        pvpWins >= 10,
     duelist:        pvpWins >= 25,
     quartermaster:  puzzlePoints >= 40,
-    den_magnate:    puzzlePoints >= 80,
+    den_magnate:    puzzlePoints >= 80,   // "Chartwright" (display name); condition unchanged
+    the_long_watch: puzzlePoints >= 500,
+    landfall:          chartedLandmarks >= 1,
+    uncharted_no_more: chartedLandmarks >= 7,
+    master_cartographer: chartedLandmarks >= 13,
     tide_runner:    tideBest >= 300,
     tide_champion:  tideBest >= 500,
     tide_master:    tideBest >= 750,
@@ -305,4 +311,4 @@ export function earnedBadgeIds(p: BadgeProfileFields, j: BadgeJoinData): string[
 
 /** Columns a query must select to feed badgeConditions(). */
 export const BADGE_PROFILE_COLUMNS =
-  'fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, ancient_catches, trophy_size_catches, prestige_levels, fishing_casts, fishing_double_catches, fishing_crates_opened, fishing_snags, fishing_jackpots, tide_run_beacons_smashed, tide_run_total_distance, is_premium, ship_tier, trawls_collected, unlocked_pets, gauntlet_upgrades, gauntlet_confluences_seen, gauntlet_runs_completed, gauntlet_fathoms_earned, gauntlet_max_hit, gauntlet_deepest_died, gauntlet_hc_deepest, gauntlet_hc_deepest_died, blood_gems_earned, completionist_effects, manowar_augment, ship_classes, forge_recipes_learned, raid_items, ship_skins, owned_crew_skins, equipped_crew_skins, has_sixth_berth, has_armory_expansion, dons_gauntlet_deepest'
+  'fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, charting_landmarks_claimed, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, ancient_catches, trophy_size_catches, prestige_levels, fishing_casts, fishing_double_catches, fishing_crates_opened, fishing_snags, fishing_jackpots, tide_run_beacons_smashed, tide_run_total_distance, is_premium, ship_tier, trawls_collected, unlocked_pets, gauntlet_upgrades, gauntlet_confluences_seen, gauntlet_runs_completed, gauntlet_fathoms_earned, gauntlet_max_hit, gauntlet_deepest_died, gauntlet_hc_deepest, gauntlet_hc_deepest_died, blood_gems_earned, completionist_effects, manowar_augment, ship_classes, forge_recipes_learned, raid_items, ship_skins, owned_crew_skins, equipped_crew_skins, has_sixth_berth, has_armory_expansion, dons_gauntlet_deepest'

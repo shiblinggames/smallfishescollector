@@ -6,6 +6,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { grantBadgeDirect } from '@/lib/badgeGrant'
 import { LANDMARKS, WORLD_CHART_COMPLETION_BONUS } from '@/lib/worldChart'
 
 export async function getWorldChartState(): Promise<{ points: number; claimed: number[] }> {
@@ -71,6 +72,11 @@ export async function claimLandmark(landmarkId: number): Promise<
         : [{ user_id: user.id, amount: landmark.gems, reason: `World Chart: ${landmark.name}` }],
     ),
   ])
+
+  // Badge hooks (also covered by the derive, but grant now for an immediate unlock).
+  grantBadgeDirect(user.id, 'landfall').catch(() => {})
+  if (newClaimed.length >= 7) grantBadgeDirect(user.id, 'uncharted_no_more').catch(() => {})
+  if (completed) grantBadgeDirect(user.id, 'master_cartographer').catch(() => {})
 
   return { ok: true, gems: newGems, awarded, bonus, completed, claimed: newClaimed }
 }

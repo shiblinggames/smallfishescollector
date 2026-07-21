@@ -12,6 +12,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { grantBadgeDirect } from '@/lib/badgeGrant'
 import { getThisWeeksSudoku } from './generate'
 import {
   HOLD_DIFFICULTIES,
@@ -239,6 +240,11 @@ export async function submitHold(
       reason: `The Hold: ${HOLD_META[difficulty].label}${clean ? ' (clean)' : ''}`,
     }),
   ])
+
+  // Badge hooks (can't be derived from stored state — weekly, one-shot feats):
+  // Ship of the Line = solve the hardest hold; Clean Manifest = all four this week.
+  if (difficulty === 'extreme') grantBadgeDirect(user.id, 'fully_laden').catch(() => {})
+  if (Object.keys(solved).length === HOLD_DIFFICULTIES.length) grantBadgeDirect(user.id, 'clean_manifest').catch(() => {})
 
   return {
     correct: true, doubloonsWon, clean, newDoubloons,
