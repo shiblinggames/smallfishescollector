@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
+import { vibrate } from '@/lib/haptics'
 import { isCombatNode, chapterForNode, RAID_CHAPTERS, musterSceneLines, type RaidChapter, type RaidNodeDrop, type RaidNodeView } from '@/lib/raidMap'
 import type { RaidRecords } from './raidMapActions'
 import { RARITY_COLOR, GEM_GLYPH, GEM_COLOR } from '@/lib/bossRaids'
@@ -1340,55 +1341,56 @@ function NodeDetailSheet({
             <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#7a7875', marginBottom: '0.55rem' }}>
               {cleared ? 'You Chose' : 'Choose One'}
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {node.choice.items.map(itemId => {
+            {/* Two loot cards side by side — the item art is the centerpiece,
+                rarity-tinted, with the pick as a themed CTA below. */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              {node.choice.items.map((itemId, i) => {
                 const item = getRaidItem(itemId)
                 if (!item) return null
                 const owned = ownedRaidItems.includes(itemId)
                 const rc = RARITY_COLOR[item.rarity] ?? '#9ca3af'
-                const dimmed = cleared && !owned
-                return (
-                  <div key={itemId} style={{
-                    display: 'flex', flexDirection: 'column', gap: 8,
-                    background: cleared && owned ? `${rc}1f` : 'rgba(255,255,255,0.03)',
-                    border: `1px solid ${cleared && owned ? `${rc}80` : `${rc}26`}`,
-                    borderRadius: 10, padding: '0.7rem 0.75rem',
-                    opacity: dimmed ? 0.45 : 1,
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                      <div style={{ width: 30, height: 30, borderRadius: 7, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${rc}1a`, fontSize: '1rem', overflow: 'hidden' }}>
-                        {item.image
-                          // eslint-disable-next-line @next/next/no-img-element
-                          ? <img src={item.image} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                          : <span style={{ color: rc, display: 'flex' }}><IconCrate size={16} /></span>}
-                      </div>
-                      <span className="font-cinzel font-700" style={{ flex: 1, minWidth: 0, fontSize: '0.84rem', color: '#f0ede8' }}>{item.name}</span>
-                      {cleared && owned && (
-                        <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.55rem', color: rc, background: `${rc}1c`, border: `1px solid ${rc}40`, borderRadius: 5, padding: '0.2rem 0.45rem', flexShrink: 0 }}>Chosen ✓</span>
-                      )}
-                      {cleared && !owned && (
-                        <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.55rem', color: '#6a6764', flexShrink: 0 }}>Gone</span>
-                      )}
+                const chosenHere = cleared && owned
+                const goneHere = cleared && !owned
+                const canChoose = !cleared && !locked && !pending
+                const cardStyle = {
+                  position: 'relative' as const, overflow: 'hidden' as const, display: 'flex', flexDirection: 'column' as const,
+                  alignItems: 'center', textAlign: 'center' as const, padding: '0.9rem 0.7rem 0.85rem', borderRadius: 15,
+                  background: chosenHere ? `${rc}24` : `linear-gradient(180deg, ${rc}16, rgba(0,0,0,0.3))`,
+                  border: `1px solid ${chosenHere ? `${rc}88` : `${rc}44`}`,
+                  boxShadow: chosenHere ? `0 0 22px ${rc}1f` : 'none',
+                  cursor: !cleared ? (locked ? 'not-allowed' : 'pointer') : 'default',
+                }
+                const inner = (
+                  <>
+                    <div style={{ position: 'relative', width: '100%', height: 98, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+                      <div aria-hidden style={{ position: 'absolute', width: 108, height: 108, borderRadius: '50%', background: `radial-gradient(circle, ${rc}42, transparent 68%)`, filter: 'blur(2px)' }} />
+                      {item.image
+                        // eslint-disable-next-line @next/next/no-img-element
+                        ? <img src={item.image} alt="" loading="lazy" decoding="async" style={{ position: 'relative', maxWidth: '84%', maxHeight: 96, objectFit: 'contain', filter: `drop-shadow(0 6px 15px ${rc}4d) drop-shadow(0 3px 8px rgba(0,0,0,0.55))` }} />
+                        : <span style={{ position: 'relative', color: rc, display: 'flex' }}><IconCrate size={46} /></span>}
                     </div>
-                    <span className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.62)', lineHeight: 1.45 }}>{item.description}</span>
-                    {!cleared && (
-                      <button
-                        onClick={() => chooseItem(itemId)}
-                        disabled={pending || locked}
-                        className="font-cinzel font-700 uppercase tracking-[0.06em]"
-                        style={{
-                          marginTop: 2, padding: '0.6rem', borderRadius: 9,
-                          fontSize: '0.82rem',
-                          background: locked ? 'rgba(255,255,255,0.06)' : `${rc}26`,
-                          border: `1px solid ${locked ? 'rgba(255,255,255,0.1)' : `${rc}66`}`,
-                          color: locked ? '#5a5856' : rc,
-                          cursor: pending ? 'wait' : locked ? 'not-allowed' : 'pointer',
-                        }}
-                      >
-                        {pending ? '…' : locked ? 'Locked' : `Choose ${item.name}`}
-                      </button>
+                    <p className="font-cinzel font-800" style={{ fontSize: '0.9rem', color: '#f0ede8', lineHeight: 1.1 }}>{item.name}</p>
+                    <p className="font-karla" style={{ fontSize: '0.66rem', color: 'rgba(240,237,232,0.6)', lineHeight: 1.4, marginTop: 4, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</p>
+                    {chosenHere ? (
+                      <span className="font-karla font-800 uppercase tracking-[0.1em]" style={{ marginTop: 10, fontSize: '0.55rem', color: rc, background: `${rc}22`, border: `1px solid ${rc}66`, borderRadius: 999, padding: '0.28rem 0.7rem' }}>Chosen ✓</span>
+                    ) : goneHere ? (
+                      <span className="font-karla font-800 uppercase tracking-[0.1em]" style={{ marginTop: 10, fontSize: '0.55rem', color: '#6a6764', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 999, padding: '0.28rem 0.7rem' }}>Gone</span>
+                    ) : (
+                      <span className="font-cinzel font-700 uppercase tracking-[0.06em]" style={{ marginTop: 11, display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.6rem', color: locked ? '#5a5856' : rc, background: locked ? 'rgba(255,255,255,0.05)' : `${rc}22`, border: `1px solid ${locked ? 'rgba(255,255,255,0.12)' : `${rc}66`}`, borderRadius: 999, padding: '0.32rem 0.85rem' }}>
+                        {pending ? '…' : locked ? <><IconLock size={11} /> Locked</> : 'Choose'}
+                      </span>
                     )}
-                  </div>
+                  </>
+                )
+                const entrance = { initial: { opacity: 0, y: 12 }, animate: { opacity: goneHere ? 0.5 : 1, y: 0 }, transition: { delay: 0.05 + i * 0.07, type: 'spring' as const, stiffness: 380, damping: 28 } }
+                return cleared ? (
+                  <motion.div key={itemId} {...entrance} style={cardStyle}>{inner}</motion.div>
+                ) : (
+                  <motion.button key={itemId} type="button" {...entrance}
+                    onClick={() => { if (canChoose) { vibrate([0, 16]); chooseItem(itemId) } }}
+                    disabled={pending || locked}
+                    whileTap={canChoose ? { scale: 0.97 } : undefined}
+                    className="tap" style={cardStyle}>{inner}</motion.button>
                 )
               })}
             </div>
@@ -1768,30 +1770,33 @@ function NodeDetailSheet({
                 {chosen ? 'You Chose' : 'Pick a Class'}
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {offered.map(cls => {
+                {offered.map((cls, i) => {
                   const isChosen = chosen?.id === cls.id
                   const dimmed = !!chosen && !isChosen
-                  return (
-                    <div key={cls.id} style={{
-                      display: 'flex', alignItems: 'center', gap: '0.85rem',
-                      background: isChosen ? `${cls.color}1f` : 'rgba(255,255,255,0.03)',
-                      border: `1px solid ${isChosen ? `${cls.color}80` : `${cls.color}26`}`,
-                      borderRadius: 12, padding: '0.85rem 0.95rem',
-                      opacity: dimmed ? 0.4 : 1,
-                    }}>
-                      {/* Class icon — plain unicode glyph (same style as
-                          Helmsman's lozenge) inside a tinted circle. */}
-                      <div style={{ width: 40, height: 40, borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${cls.color}1a`, border: `1px solid ${cls.color}40`, fontSize: '1.5rem', color: cls.color, lineHeight: 1 }}>
-                        {cls.emoji}
-                      </div>
-                      {/* Name + tagline + bullets stack. Bigger fonts so
-                          the picker is easier to read at a glance. */}
+                  const c = cls.color
+                  const canChoose = !chosen && !locked && !pending
+                  const cardStyle = {
+                    position: 'relative' as const, overflow: 'hidden' as const, display: 'flex', alignItems: 'center', gap: '0.85rem',
+                    padding: '0.85rem 0.95rem', borderRadius: 14, textAlign: 'left' as const, width: '100%',
+                    background: isChosen ? `${c}22` : `linear-gradient(120deg, ${c}18, rgba(0,0,0,0.24))`,
+                    border: `1px solid ${isChosen ? `${c}88` : `${c}3a`}`,
+                    boxShadow: isChosen ? `0 0 20px ${c}1c` : 'none',
+                    opacity: dimmed ? 0.42 : 1,
+                    cursor: !chosen ? (locked ? 'not-allowed' : 'pointer') : 'default',
+                  }
+                  const inner = (
+                    <>
+                      {/* Class glyph in a glowing themed medallion. */}
+                      <span style={{ position: 'relative', flexShrink: 0, width: 56, height: 56, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span aria-hidden style={{ position: 'absolute', inset: -3, borderRadius: '50%', background: `radial-gradient(circle, ${c}55, transparent 70%)` }} />
+                        <span style={{ position: 'relative', width: 52, height: 52, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${c}1a`, border: `1.5px solid ${c}70`, fontSize: '1.7rem', color: c, lineHeight: 1 }}>{cls.emoji}</span>
+                      </span>
                       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
                         <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0ede8', lineHeight: 1.15 }}>{cls.name}</p>
                         <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(240,237,232,0.62)', lineHeight: 1.35, fontStyle: 'italic' }}>{cls.tagline}</p>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 2 }}>
-                          {cls.bullets.map((b, i) => (
-                            <span key={i} className="font-karla font-700 uppercase tracking-[0.05em]" style={{
+                          {cls.bullets.map((b, bi) => (
+                            <span key={bi} className="font-karla font-700 uppercase tracking-[0.05em]" style={{
                               fontSize: '0.66rem',
                               color: b.positive ? '#7adf9a' : '#f08a8a',
                               background: b.positive ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)',
@@ -1803,38 +1808,33 @@ function NodeDetailSheet({
                           ))}
                         </div>
                       </div>
-                      {/* Right-side action: circle "Choose" button while
-                          picking, or a checkmark badge on the chosen card.
-                          Replaces the old full-width CTA below the card. */}
+                      {/* Right cue: check medallion on the chosen card, else a
+                          nudging chevron (or lock) inviting the tap. */}
                       {isChosen ? (
-                        <div style={{
-                          width: 52, height: 52, flexShrink: 0, borderRadius: '50%',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          background: `${cls.color}1c`, border: `2px solid ${cls.color}`,
-                        }}>
-                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={cls.color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+                        <div style={{ width: 46, height: 46, flexShrink: 0, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${c}1c`, border: `2px solid ${c}` }}>
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
                         </div>
                       ) : !chosen ? (
-                        <button
-                          onClick={() => chooseClass(cls.id)}
-                          disabled={pending || locked}
-                          aria-label={`Pick ${cls.name}`}
-                          className="font-cinzel font-700 uppercase tracking-[0.04em]"
-                          style={{
-                            width: 52, height: 52, flexShrink: 0, borderRadius: '50%',
-                            background: locked ? 'rgba(255,255,255,0.04)' : `${cls.color}26`,
-                            border: `2px solid ${locked ? 'rgba(255,255,255,0.1)' : `${cls.color}99`}`,
-                            color: locked ? '#5a5856' : cls.color,
-                            fontSize: '0.6rem',
-                            cursor: pending ? 'wait' : locked ? 'not-allowed' : 'pointer',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            padding: 0, touchAction: 'manipulation',
-                          }}
-                        >
-                          {pending ? '…' : locked ? <IconLock size={16} /> : 'Choose'}
-                        </button>
+                        locked ? (
+                          <span style={{ flexShrink: 0, display: 'flex', color: '#5a5856' }}><IconLock size={16} /></span>
+                        ) : (
+                          <motion.span aria-hidden animate={{ x: [0, 3, 0] }} transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }} style={{ flexShrink: 0, display: 'flex', color: c }}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
+                          </motion.span>
+                        )
                       ) : null}
-                    </div>
+                    </>
+                  )
+                  const entrance = { initial: { opacity: 0, y: 10 }, animate: { opacity: dimmed ? 0.42 : 1, y: 0 }, transition: { delay: 0.05 + i * 0.07, type: 'spring' as const, stiffness: 380, damping: 28 } }
+                  return chosen ? (
+                    <motion.div key={cls.id} {...entrance} style={cardStyle}>{inner}</motion.div>
+                  ) : (
+                    <motion.button key={cls.id} type="button" {...entrance}
+                      onClick={() => { if (canChoose) { vibrate([0, 16]); chooseClass(cls.id) } }}
+                      disabled={pending || locked}
+                      whileTap={canChoose ? { scale: 0.985 } : undefined}
+                      aria-label={`Pick ${cls.name}`}
+                      className="tap" style={cardStyle}>{inner}</motion.button>
                   )
                 })}
               </div>
