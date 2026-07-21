@@ -1426,6 +1426,13 @@ export default function RaidCombat({
   // Center-screen result callout the instant a check resolves — green "Countered!"
   // or red "<name> hits!" so success/failure is unmistakable.
   const [checkResultFlash, setCheckResultFlash] = useState<{ ok: boolean; label: string; key: number } | null>(null)
+  // Center-screen ARM callout the instant a check arms — a loud "answer with a
+  // crew ability" so the telegraph (incl. Don's phase-1 opening) is impossible
+  // to miss, even for players past the one-time tutorial.
+  const [checkArmFlash, setCheckArmFlash] = useState<{ label: string; key: number } | null>(null)
+  const checkArmKeyRef = useRef(0)
+  const checkArmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => () => { if (checkArmTimerRef.current) clearTimeout(checkArmTimerRef.current) }, [])
   // Center-screen callout for a boon PROC (Counter-Battery). Same lane as the
   // check flash but themed to the boon's color.
   const [boonFlash, setBoonFlash] = useState<{ label: string; sub?: string; color: string; key: number } | null>(null)
@@ -1473,6 +1480,12 @@ export default function RaidCombat({
     // purpose — the player figures out the answer by trial and error).
     setResolveLog(prev => [...prev, `⚠ ${check.telegraph}`])
     setPendingCheck({ name: check.name, telegraph: check.telegraph, turnsLeft: check.chargeTurns, responses: check.responses })
+    // Loud center callout so the incoming check reads instantly — the top banner
+    // is easy to miss mid-fight, especially the phase-1 opening.
+    checkArmKeyRef.current += 1
+    setCheckArmFlash({ label: check.name, key: checkArmKeyRef.current })
+    if (checkArmTimerRef.current) clearTimeout(checkArmTimerRef.current)
+    checkArmTimerRef.current = setTimeout(() => setCheckArmFlash(null), 1900)
   }
   // Flag an ability answer if a check is live. brace/shield/snare are flagged
   // HERE (produced during the window) as well as read live at resolve, so a
@@ -6346,6 +6359,17 @@ export default function RaidCombat({
             </motion.div>
           </motion.div>,
           document.body,
+        )}
+
+        {/* Mechanic-check ARM — a loud heads-up the instant a check arms, so the
+            "answer this with a crew ability" beat can't be missed (phase 1 too). */}
+        {checkArmFlash && (
+          <motion.div key={`checkarm-${checkArmFlash.key}`} initial={{ opacity: 0, scale: 0.6, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.28, ease: 'easeOut' }}
+            style={{ position: 'absolute', inset: 0, zIndex: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, transform: 'translateY(-16%)', pointerEvents: 'none' }}>
+            <p className="font-karla font-800 uppercase tracking-[0.24em]" style={{ fontSize: '0.6rem', color: '#fca5a5', textShadow: '0 0 12px rgba(239,68,68,0.85)' }}>Telegraphed Attack</p>
+            <p className="font-cinzel font-800 uppercase tracking-[0.1em]" style={{ fontSize: '1.5rem', color: '#ffe0e0', textAlign: 'center', lineHeight: 1.05, textShadow: '0 0 18px rgba(239,68,68,0.9), 0 0 44px rgba(239,68,68,0.5)' }}>{checkArmFlash.label}</p>
+            <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: '#ffe9b0', textAlign: 'center', textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>Answer with a crew ability!</p>
+          </motion.div>
         )}
 
         {/* Mechanic-check RESULT — unmistakable green "Countered!" or red
