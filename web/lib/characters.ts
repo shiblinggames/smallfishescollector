@@ -25,6 +25,7 @@ export const CHARACTER_COLORS: CharacterColor[] = [
   { id: 'lavender', name: 'Lavender', free: false, unlockHint: 'Rare drop from fishing crates' },
   { id: 'storm',    name: 'Storm',    free: false, unlockHint: 'Rare drop from fishing crates' },
   { id: 'galaxy',   name: 'Galaxy',   free: false, unlockHint: 'Reach 300 achievement points' },
+  { id: 'crystal',  name: 'Crystal',  free: false, unlockHint: 'Max out — Fishing 100 and Navigation 100' },
 ]
 
 /** Character colors earned by hitting an Achievement Points threshold. Kept
@@ -55,6 +56,14 @@ export const LEVEL_COLORS: { id: string; stat: 'fishing' | 'nav' | 'prestige'; l
   { id: 'sand',   stat: 'prestige', level: 3  },
 ]
 
+type LevelStats = { fishingLevel: number; navLevel: number; maxPrestige: number }
+
+/** Colors gated on MULTIPLE stats at once (kept separate from the single-stat
+ *  LEVEL_COLORS so the AND is explicit). Crystal = fully maxed (both 100). */
+export const COMBO_COLORS: { id: string; test: (s: LevelStats) => boolean }[] = [
+  { id: 'crystal', test: s => s.fishingLevel >= 100 && s.navLevel >= 100 },
+]
+
 /** Which level-gated colors a player has EARNED but doesn't own yet, given
  *  their current stats. STATE-based + idempotent (the `!unlocked.includes`
  *  guard), so it self-heals anyone who crossed a threshold via a path whose
@@ -62,13 +71,18 @@ export const LEVEL_COLORS: { id: string; stat: 'fishing' | 'nav' | 'prestige'; l
  *  before the color existed. Used for display union, equip validation, and the
  *  grant hooks alike. */
 export function earnedLevelColors(
-  stats: { fishingLevel: number; navLevel: number; maxPrestige: number },
+  stats: LevelStats,
   unlocked: string[] = [],
 ): string[] {
-  return LEVEL_COLORS
+  const fromLevel = LEVEL_COLORS
     .filter(c => !unlocked.includes(c.id))
     .filter(c => (c.stat === 'fishing' ? stats.fishingLevel : c.stat === 'nav' ? stats.navLevel : stats.maxPrestige) >= c.level)
     .map(c => c.id)
+  const fromCombo = COMBO_COLORS
+    .filter(c => !unlocked.includes(c.id))
+    .filter(c => c.test(stats))
+    .map(c => c.id)
+  return [...fromLevel, ...fromCombo]
 }
 
 /** Fishing-only slice of {@link earnedLevelColors} for the catch + trawl XP
