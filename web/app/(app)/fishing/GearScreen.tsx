@@ -2339,51 +2339,67 @@ export default function GearScreen({
                   </div>
 
                   {/* ── Skin tab body ── */}
-                  {appearanceTab === 'skin' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#d0cdc8' }}>Character Color</p>
-                      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                        {CHARACTER_COLORS.map(c => {
-                          const sprites = getCharacterSprites(c.id)
-                          const isActive = characterColor === c.id
-                          const isUnlocked = c.free || unlockedCharacterColors.includes(c.id)
-                          return (
-                            <button
-                              key={c.id}
-                              onClick={() => {
-                                if (!isUnlocked) return
-                                if (isActive) return
-                                onUpdateColor(c.id)
-                              }}
-                              style={{ background: 'none', border: 'none', cursor: isUnlocked ? 'pointer' : 'default', padding: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
-                            >
-                              <div style={{
-                                width: 48, height: 48, borderRadius: '50%', overflow: 'hidden',
-                                backgroundImage: `url(${sprites.rest})`,
-                                backgroundSize: '420% auto', backgroundPosition: '60% 68%', backgroundRepeat: 'no-repeat',
-                                border: isActive ? '2px solid #60a5fa' : '2px solid rgba(255,255,255,0.12)',
-                                boxShadow: isActive ? '0 0 10px rgba(96,165,250,0.4)' : 'none',
-                                position: 'relative',
-                                opacity: isUnlocked ? 1 : 0.35,
-                              }}>
-                                {!isUnlocked && (
-                                  <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.52)', borderRadius: '50%' }}>
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round">
-                                      <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                                    </svg>
-                                  </div>
-                                )}
+                  {appearanceTab === 'skin' && (() => {
+                    // Shared swatch renderer so the card JSX lives in one place.
+                    const renderSkinCard = (c: typeof CHARACTER_COLORS[number]) => {
+                      const sprites = getCharacterSprites(c.id)
+                      const isActive = characterColor === c.id
+                      const isUnlocked = c.free || unlockedCharacterColors.includes(c.id)
+                      return (
+                        <button
+                          key={c.id}
+                          onClick={() => {
+                            if (!isUnlocked) return
+                            if (isActive) return
+                            onUpdateColor(c.id)
+                          }}
+                          style={{ background: 'none', border: 'none', cursor: isUnlocked ? 'pointer' : 'default', padding: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
+                        >
+                          <div style={{
+                            width: 48, height: 48, borderRadius: '50%', overflow: 'hidden',
+                            backgroundImage: `url(${sprites.rest})`,
+                            backgroundSize: '420% auto', backgroundPosition: '60% 68%', backgroundRepeat: 'no-repeat',
+                            border: isActive ? '2px solid #60a5fa' : '2px solid rgba(255,255,255,0.12)',
+                            boxShadow: isActive ? '0 0 10px rgba(96,165,250,0.4)' : 'none',
+                            position: 'relative',
+                            opacity: isUnlocked ? 1 : 0.35,
+                          }}>
+                            {!isUnlocked && (
+                              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.52)', borderRadius: '50%' }}>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round">
+                                  <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                                </svg>
                               </div>
-                              <p className="font-karla font-600" style={{ fontSize: '0.55rem', color: isActive ? '#60a5fa' : isUnlocked ? '#6a6764' : '#3a3835' }}>{c.name}</p>
-                              {!isUnlocked && c.unlockHint && (
-                                <p className="font-karla font-300" style={{ fontSize: '0.48rem', color: '#4a4845', textAlign: 'center', lineHeight: 1.3, maxWidth: 52 }}>{c.unlockHint}</p>
-                              )}
-                            </button>
-                          )
-                        })}
+                            )}
+                          </div>
+                          <p className="font-karla font-600" style={{ fontSize: '0.55rem', color: isActive ? '#60a5fa' : isUnlocked ? '#6a6764' : '#3a3835' }}>{c.name}</p>
+                          {!isUnlocked && c.unlockHint && (
+                            <p className="font-karla font-300" style={{ fontSize: '0.48rem', color: '#4a4845', textAlign: 'center', lineHeight: 1.3, maxWidth: 52 }}>{c.unlockHint}</p>
+                          )}
+                        </button>
+                      )
+                    }
+                    // Same 3 groups as the profile picker.
+                    const groups = [
+                      { label: 'Starter', items: CHARACTER_COLORS.filter(c => c.free) },
+                      { label: 'Earned', items: CHARACTER_COLORS.filter(c => !c.free && !(c.price || c.gemPrice)) },
+                      { label: 'Purchased', items: CHARACTER_COLORS.filter(c => !!(c.price || c.gemPrice)) },
+                    ]
+                    const groupLabel = { fontSize: '0.56rem', color: '#8a8272', letterSpacing: '0.12em', marginTop: 2 } as const
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#d0cdc8' }}>Character Color</p>
+                        {groups.map(g => g.items.length === 0 ? null : (
+                          <div key={g.label} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            <p className="font-karla font-600 uppercase" style={groupLabel}>{g.label}</p>
+                            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                              {g.items.map(renderSkinCard)}
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    </div>
-                  )}
+                    )
+                  })()}
 
                   {/* ── Boat tab body ── */}
                   {appearanceTab === 'boat' && (() => {
