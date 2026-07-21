@@ -15,7 +15,7 @@ import { vibrate } from '@/lib/haptics'
 import ForgeRodEmblem from './ForgeRodEmblem'
 import { IconAnchor } from '@/components/GameIcons'
 import { BAITS } from '@/lib/bait'
-import { BOATS, DEFAULT_BOAT_COLOR, boatGlowClass, BOAT_ASH_DARKEN } from '@/lib/boats'
+import { BOATS, DEFAULT_BOAT_COLOR, boatGlowClass, BOAT_ASH_DARKEN, getBoat } from '@/lib/boats'
 import { HATS } from '@/lib/hats'
 import { BADGE_MAP, BADGES } from '@/lib/badges'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
@@ -689,7 +689,7 @@ export default function GearScreen({
   completionistEffects, hasForgedBefore, onCompletionistEffectsChange,
   reelTier, hookTier, lineTier, onBuyReel, onBuyHook,
   rodHasAffordable, reelHasAffordable, hookHasAffordable,
-  characterColor, charSrc, equippedBadges, unlockedCharacterColors, unlockedBadges, onUpdateColor, onEquipBadge,
+  characterColor, charSrc, equippedBadges, unlockedCharacterColors, unlockedBadges, onUpdateColor, onBuyColor, onEquipBadge,
   equippedBoat, unlockedBoats, onEquipBoat, onBuyBoat, doubloons, gems,
   equippedHat, unlockedHats, onEquipHat, onBuyHat,
   equippedPet, unlockedPets, onEquipPet,
@@ -734,6 +734,7 @@ export default function GearScreen({
   unlockedCharacterColors: string[]
   unlockedBadges: string[]
   onUpdateColor: (colorId: string) => void
+  onBuyColor: (colorId: string) => Promise<{ ok: true } | { error: string }>
   onEquipBadge: (id: string, slot?: 0 | 1 | 2) => void
   equippedBoat: string | null
   unlockedBoats: string[]
@@ -791,6 +792,9 @@ export default function GearScreen({
   // 2.5s so the player gets a clear "you bought + equipped X" moment instead
   // of the menu silently closing.
   const [cosmeticToast, setCosmeticToast] = useState<{ id: number; name: string; color: string; cost: number; currency?: 'doubloons' | 'gems' } | null>(null)
+  // Tapping a skin/boat thumbnail opens a detail modal (equip / buy / how-to-unlock).
+  const [cosmeticDetail, setCosmeticDetail] = useState<{ kind: 'skin' | 'boat'; id: string } | null>(null)
+  const [detailBusy, setDetailBusy] = useState(false)
   useEffect(() => {
     if (!cosmeticToast) return
     const t = setTimeout(() => setCosmeticToast(null), 2500)
@@ -2341,46 +2345,40 @@ export default function GearScreen({
 
                   {/* ── Skin tab body ── */}
                   {appearanceTab === 'skin' && (() => {
-                    // Shared swatch renderer so the card JSX lives in one place.
-                    const renderSkinCard = (c: typeof CHARACTER_COLORS[number]) => {
+                    // Bigger thumbnail; tap opens the detail modal (equip / buy /
+                    // how-to-unlock) rather than acting inline.
+                    const renderSkinThumb = (c: typeof CHARACTER_COLORS[number]) => {
                       const sprites = getCharacterSprites(c.id)
                       const isActive = characterColor === c.id
                       const isUnlocked = c.free || unlockedCharacterColors.includes(c.id)
                       return (
                         <button
                           key={c.id}
-                          onClick={() => {
-                            if (!isUnlocked) return
-                            if (isActive) return
-                            onUpdateColor(c.id)
-                          }}
-                          style={{ background: 'none', border: 'none', cursor: isUnlocked ? 'pointer' : 'default', padding: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
+                          onClick={() => setCosmeticDetail({ kind: 'skin', id: c.id })}
+                          style={{ flex: '0 0 auto', background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}
                         >
                           <div style={{
-                            width: 48, height: 48, borderRadius: '50%', overflow: 'hidden',
-                            backgroundImage: `url(${sprites.rest})`,
-                            backgroundSize: '420% auto', backgroundPosition: '60% 68%', backgroundRepeat: 'no-repeat',
-                            border: isActive ? '2px solid #60a5fa' : '2px solid rgba(255,255,255,0.12)',
-                            boxShadow: isActive ? '0 0 10px rgba(96,165,250,0.4)' : 'none',
-                            position: 'relative',
-                            opacity: isUnlocked ? 1 : 0.35,
+                            width: 76, height: 76, borderRadius: '50%', overflow: 'hidden', position: 'relative',
+                            backgroundImage: `url(${sprites.rest})`, backgroundSize: '420% auto', backgroundPosition: '60% 68%', backgroundRepeat: 'no-repeat',
+                            border: isActive ? '2.5px solid #60a5fa' : '2px solid rgba(255,255,255,0.14)',
+                            boxShadow: isActive ? '0 0 12px rgba(96,165,250,0.45)' : 'none',
+                            opacity: isUnlocked ? 1 : 0.5,
                           }}>
                             {!isUnlocked && (
-                              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.52)', borderRadius: '50%' }}>
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round">
-                                  <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                                </svg>
+                              <div style={{ position: 'absolute', right: 2, bottom: 2, width: 18, height: 18, borderRadius: '50%', background: 'rgba(0,0,0,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="2.4" strokeLinecap="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                              </div>
+                            )}
+                            {isActive && (
+                              <div style={{ position: 'absolute', right: 2, bottom: 2, width: 18, height: 18, borderRadius: '50%', background: '#60a5fa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
                               </div>
                             )}
                           </div>
-                          <p className="font-karla font-600" style={{ fontSize: '0.55rem', color: isActive ? '#60a5fa' : isUnlocked ? '#6a6764' : '#3a3835' }}>{c.name}</p>
-                          {!isUnlocked && c.unlockHint && (
-                            <p className="font-karla font-300" style={{ fontSize: '0.48rem', color: '#4a4845', textAlign: 'center', lineHeight: 1.3, maxWidth: 52 }}>{c.unlockHint}</p>
-                          )}
+                          <p className="font-karla font-600" style={{ fontSize: '0.56rem', color: isActive ? '#60a5fa' : '#8a877e', maxWidth: 84, textAlign: 'center', whiteSpace: 'nowrap' }}>{c.name}</p>
                         </button>
                       )
                     }
-                    // Same 3 groups as the profile picker.
                     const groups = [
                       { label: 'Starter', items: CHARACTER_COLORS.filter(c => c.free) },
                       { label: 'Earned', items: CHARACTER_COLORS.filter(c => !c.free && !(c.price || c.gemPrice)) },
@@ -2388,13 +2386,13 @@ export default function GearScreen({
                     ]
                     const groupLabel = { fontSize: '0.56rem', color: '#8a8272', letterSpacing: '0.12em', marginTop: 2 } as const
                     return (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                         <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#d0cdc8' }}>Character Color</p>
                         {groups.map(g => g.items.length === 0 ? null : (
                           <div key={g.label} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                             <p className="font-karla font-600 uppercase" style={groupLabel}>{g.label}</p>
-                            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                              {g.items.map(renderSkinCard)}
+                            <div className="hide-scrollbar" style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4, scrollSnapType: 'x proximity' }}>
+                              {g.items.map(renderSkinThumb)}
                             </div>
                           </div>
                         ))}
@@ -2404,154 +2402,87 @@ export default function GearScreen({
 
                   {/* ── Boat tab body ── */}
                   {appearanceTab === 'boat' && (() => {
-                    // Card renderer shared by both groups so the boat button JSX
-                    // lives in one place.
-                    const renderBoatCard = (b: typeof BOATS[number]) => {
+                    const renderBoatThumb = (b: typeof BOATS[number]) => {
                       const owned = unlockedBoats.includes(b.id)
                       const isEquipped = equippedBoat === b.id
-                      const isAchievement = typeof b.achievementPoints === 'number'
-                      const useGems = typeof b.gemPrice === 'number' && b.gemPrice > 0
-                      const price = useGems ? (b.gemPrice as number) : b.cost
-                      const canAfford = !isAchievement && (useGems ? gems >= price : doubloons >= price)
-                      const tappable = isEquipped ? false : (owned || canAfford)
-                      const onTap = () => {
-                        if (isEquipped) return
-                        if (owned) { onEquipBoat(b.id); return }
-                        if (isAchievement) return // earned via achievement points, not bought
-                        if (canAfford) setPendingPurchase({
-                          name: b.name, color: b.color, cost: price, currency: useGems ? 'gems' : 'doubloons',
-                          onConfirm: () => { onBuyBoat(b.id); flashPurchase(b.name, b.color, price, 'appearance', useGems ? 'gems' : 'doubloons') },
-                        })
-                      }
                       return (
                         <button
                           key={b.id}
-                          onClick={onTap}
-                          disabled={!tappable}
-                          className="font-karla font-700"
-                          style={{
-                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                            padding: '0.6rem 0.4rem 0.5rem',
-                            borderRadius: 10,
-                            background: isEquipped ? `${b.color}1f` : 'rgba(4,10,18,0.72)',
-                            border: `1px solid ${isEquipped ? b.color + '90' : owned ? 'rgba(255,255,255,0.09)' : `${b.color}30`}`,
-                            boxShadow: isEquipped ? `0 0 14px ${b.color}33` : 'none',
-                            cursor: tappable ? 'pointer' : 'default',
-                            opacity: !owned && !canAfford ? 0.72 : 1,
-                            position: 'relative',
-                          }}
+                          onClick={() => setCosmeticDetail({ kind: 'boat', id: b.id })}
+                          style={{ flex: '0 0 auto', background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}
                         >
-                          {/* Wrapper hosts the decorative halo for glow boats
-                              alongside the clipped thumbnail. Drop-shadow
-                              filters on the thumbnail itself get cut off by
-                              the 48x48 overflow:hidden, so the halo lives
-                              outside that clip. */}
-                          <div style={{ position: 'relative', width: 48, height: 48 }}>
+                          <div style={{
+                            position: 'relative', width: 104, height: 58, borderRadius: 12,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            background: isEquipped ? `${b.color}1f` : 'rgba(4,10,18,0.6)',
+                            border: `2px solid ${isEquipped ? b.color + '90' : 'rgba(255,255,255,0.12)'}`,
+                            boxShadow: isEquipped ? `0 0 14px ${b.color}33` : 'none',
+                            opacity: owned ? 1 : 0.5,
+                          }}>
                             {b.glow && <div className="boat-glow-halo" aria-hidden />}
-                            <div style={{
-                              position: 'relative',
-                              width: 48, height: 48, overflow: 'hidden',
-                              zIndex: 1,
-                            }}>
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={b.restImageUrl}
-                                alt=""
-                                loading="lazy"
-                                decoding="async"
-                                style={{
-                                  width: '170%', height: 'auto', display: 'block',
-                                  position: 'absolute', top: '50%', left: '50%',
-                                  transform: 'translate(-50%, -50%)',
-                                  filter: b.glowType === 'ash' ? BOAT_ASH_DARKEN : undefined,
-                                }}
-                              />
-                            </div>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={b.restImageUrl} alt="" loading="lazy" decoding="async"
+                              style={{ position: 'relative', zIndex: 1, maxWidth: '86%', maxHeight: '86%', objectFit: 'contain', filter: b.glowType === 'ash' ? BOAT_ASH_DARKEN : undefined }} />
+                            {!owned && (
+                              <div style={{ position: 'absolute', right: 4, bottom: 4, width: 18, height: 18, borderRadius: '50%', background: 'rgba(0,0,0,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
+                                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="2.4" strokeLinecap="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                              </div>
+                            )}
+                            {isEquipped && (
+                              <div style={{ position: 'absolute', right: 4, bottom: 4, width: 18, height: 18, borderRadius: '50%', background: b.color, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                              </div>
+                            )}
                           </div>
-                          <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: owned ? '#f0ede8' : '#a0a09a', lineHeight: 1.1, textAlign: 'center' }}>{b.name}</p>
-                          {isEquipped ? (
-                            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: b.color }}>✓ Equipped</span>
-                          ) : owned ? (
-                            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#4ade80' }}>Owned · Tap to equip</span>
-                          ) : isAchievement ? (
-                            <span className="font-karla font-700" style={{ fontSize: '0.5rem', color: '#c4a86a', textAlign: 'center', lineHeight: 1.2 }}>
-                              {b.achievementPoints} ach. pts
-                            </span>
-                          ) : (
-                            <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: canAfford ? b.color : (useGems ? '#a78bfa' : '#f0c040') }}>
-                              {price.toLocaleString()} {useGems ? '◆' : '⟡'}
-                            </span>
-                          )}
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.6rem', color: owned ? '#f0ede8' : '#8a877e', textAlign: 'center', whiteSpace: 'nowrap' }}>{b.name}</p>
                         </button>
                       )
                     }
-                    // Starter = the free Driftwood default. Earned = owned crate
-                    // drops + achievement-gated boats (shown locked until earned).
-                    // Purchased = boats you buy with doubloons or gems.
                     const earnedBoats = BOATS.filter(b => (b.crateOnly && unlockedBoats.includes(b.id)) || typeof b.achievementPoints === 'number')
                     const purchasedBoats = BOATS.filter(b => !b.crateOnly && typeof b.achievementPoints !== 'number')
                     const groupLabel = { fontSize: '0.56rem', color: '#8a8272', letterSpacing: '0.12em', marginTop: 2 } as const
+                    const rowStyle: React.CSSProperties = { display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4 }
+                    const driftEquipped = !equippedBoat
                     return (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                         <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#bda05a' }}>Boat Colors</p>
 
                         <p className="font-karla font-600 uppercase" style={groupLabel}>Starter</p>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                          {/* Default — the free Driftwood boat (no overlay) */}
-                          {(() => {
-                            const isEquipped = !equippedBoat
-                            return (
-                              <button
-                                key="default"
-                                onClick={() => { if (!isEquipped) onEquipBoat(null) }}
-                                className="font-karla font-700"
-                                style={{
-                                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                                  padding: '0.6rem 0.4rem 0.5rem',
-                                  borderRadius: 10,
-                                  background: isEquipped ? `${DEFAULT_BOAT_COLOR}1f` : 'rgba(4,10,18,0.72)',
-                                  border: `1px solid ${isEquipped ? DEFAULT_BOAT_COLOR + '90' : 'rgba(255,255,255,0.09)'}`,
-                                  boxShadow: isEquipped ? `0 0 14px ${DEFAULT_BOAT_COLOR}33` : 'none',
-                                  cursor: isEquipped ? 'default' : 'pointer',
-                                  position: 'relative',
-                                }}
-                              >
-                                <div style={{
-                                  position: 'relative',
-                                  width: 48, height: 48, overflow: 'hidden',
-                                }}>
-                                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                                  <img src="/boat_default_rest.png" alt="" loading="lazy" decoding="async" style={{
-                                    width: '170%', height: 'auto', display: 'block',
-                                    position: 'absolute', top: '50%', left: '50%',
-                                    transform: 'translate(-50%, -50%)',
-                                  }} />
+                        <div style={rowStyle}>
+                          <button
+                            onClick={() => setCosmeticDetail({ kind: 'boat', id: 'driftwood' })}
+                            style={{ flex: '0 0 auto', background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}
+                          >
+                            <div style={{
+                              position: 'relative', width: 104, height: 58, borderRadius: 12,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              background: driftEquipped ? `${DEFAULT_BOAT_COLOR}1f` : 'rgba(4,10,18,0.6)',
+                              border: `2px solid ${driftEquipped ? DEFAULT_BOAT_COLOR + '90' : 'rgba(255,255,255,0.12)'}`,
+                              boxShadow: driftEquipped ? `0 0 14px ${DEFAULT_BOAT_COLOR}33` : 'none',
+                            }}>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src="/boat_default_rest.png" alt="" style={{ maxWidth: '86%', maxHeight: '86%', objectFit: 'contain' }} />
+                              {driftEquipped && (
+                                <div style={{ position: 'absolute', right: 4, bottom: 4, width: 18, height: 18, borderRadius: '50%', background: DEFAULT_BOAT_COLOR, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
                                 </div>
-                                <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: '#f0ede8', lineHeight: 1.1, textAlign: 'center' }}>Driftwood</p>
-                                {isEquipped
-                                  ? <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: DEFAULT_BOAT_COLOR }}>✓ Equipped</span>
-                                  : <span className="font-karla font-600" style={{ fontSize: '0.52rem', color: '#5a5856' }}>Default</span>
-                                }
-                              </button>
-                            )
-                          })()}
+                              )}
+                            </div>
+                            <p className="font-cinzel font-700" style={{ fontSize: '0.6rem', color: '#f0ede8', textAlign: 'center' }}>Driftwood</p>
+                          </button>
                         </div>
 
                         {earnedBoats.length > 0 && (
                           <>
                             <p className="font-karla font-600 uppercase" style={groupLabel}>Earned</p>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                              {earnedBoats.map(renderBoatCard)}
-                            </div>
+                            <div style={rowStyle}>{earnedBoats.map(renderBoatThumb)}</div>
                           </>
                         )}
 
                         {purchasedBoats.length > 0 && (
                           <>
                             <p className="font-karla font-600 uppercase" style={groupLabel}>Purchased</p>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                              {purchasedBoats.map(renderBoatCard)}
-                            </div>
+                            <div style={rowStyle}>{purchasedBoats.map(renderBoatThumb)}</div>
                           </>
                         )}
                       </div>
@@ -2908,6 +2839,122 @@ export default function GearScreen({
            sheet, so a confirm left in the normal tree at zIndex 100 rendered behind it. */}
       {mounted && createPortal(
       <AnimatePresence>
+        {cosmeticDetail && (() => {
+          type Info = {
+            kind: 'skin' | 'boat'; id: string; name: string; accent: string
+            owned: boolean; equipped: boolean; purchasable: boolean
+            price?: number; currency?: 'gems' | 'doubloons'; unlockHint?: string
+            skinRest?: string; boatImg?: string; boatGlow?: boolean; boatAsh?: boolean
+          }
+          let info: Info | null = null
+          if (cosmeticDetail.kind === 'skin') {
+            const c = CHARACTER_COLORS.find(x => x.id === cosmeticDetail.id)
+            if (c) {
+              const owned = c.free || unlockedCharacterColors.includes(c.id)
+              info = {
+                kind: 'skin', id: c.id, name: c.name, accent: '#60a5fa',
+                owned, equipped: characterColor === c.id,
+                price: c.gemPrice ?? c.price, currency: c.gemPrice ? 'gems' : 'doubloons',
+                purchasable: !owned && !!(c.price || c.gemPrice), unlockHint: c.unlockHint,
+                skinRest: getCharacterSprites(c.id).rest,
+              }
+            }
+          } else if (cosmeticDetail.id === 'driftwood') {
+            info = { kind: 'boat', id: 'driftwood', name: 'Driftwood', accent: DEFAULT_BOAT_COLOR, owned: true, equipped: !equippedBoat, purchasable: false, boatImg: '/boat_default_rest.png' }
+          } else {
+            const b = getBoat(cosmeticDetail.id)
+            if (b) {
+              const owned = unlockedBoats.includes(b.id)
+              const isAch = typeof b.achievementPoints === 'number'
+              info = {
+                kind: 'boat', id: b.id, name: b.name, accent: b.color,
+                owned, equipped: equippedBoat === b.id,
+                price: b.gemPrice ?? (b.cost || undefined), currency: b.gemPrice ? 'gems' : 'doubloons',
+                purchasable: !owned && !isAch && !b.crateOnly && !!(b.gemPrice || b.cost),
+                unlockHint: isAch ? `Reach ${b.achievementPoints} achievement points` : b.crateOnly ? 'Found only in fishing crates' : undefined,
+                boatImg: b.restImageUrl, boatGlow: b.glow, boatAsh: b.glowType === 'ash',
+              }
+            }
+          }
+          if (!info) return null
+          const i = info
+          const glyph = i.currency === 'gems' ? '◆' : '⟡'
+          const bal = i.currency === 'gems' ? gems : doubloons
+          const canAfford = i.price != null && bal >= i.price
+          const close = () => { if (!detailBusy) setCosmeticDetail(null) }
+          const doEquip = () => {
+            if (i.kind === 'skin') onUpdateColor(i.id)
+            else onEquipBoat(i.id === 'driftwood' ? null : i.id)
+            setCosmeticDetail(null)
+          }
+          const doBuy = async () => {
+            if (detailBusy) return
+            setDetailBusy(true)
+            if (i.kind === 'skin') {
+              const res = await onBuyColor(i.id)
+              setDetailBusy(false)
+              if (!('error' in res)) setCosmeticDetail(null)
+            } else {
+              onBuyBoat(i.id)
+              flashPurchase(i.name, i.accent, i.price!, 'appearance', i.currency)
+              setDetailBusy(false)
+              setCosmeticDetail(null)
+            }
+          }
+          return (
+            <motion.div key="cosmetic-detail"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.16 }}
+              onClick={close}
+              style={{ position: 'fixed', inset: 0, zIndex: 320, background: 'rgba(0,0,0,0.74)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem' }}
+            >
+              <motion.div
+                initial={{ scale: 0.9, y: 14 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.92, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 380, damping: 26 }}
+                onClick={e => e.stopPropagation()}
+                style={{
+                  width: '100%', maxWidth: 300, textAlign: 'center', padding: '1.5rem 1.4rem', borderRadius: 20,
+                  background: 'linear-gradient(160deg, rgba(12,18,28,0.99) 0%, rgba(6,10,16,0.99) 100%)',
+                  border: `1px solid ${i.accent}55`, borderTop: `3px solid ${i.accent}`,
+                  boxShadow: `0 20px 70px rgba(0,0,0,0.6), 0 0 40px ${i.accent}18`,
+                }}
+              >
+                {i.kind === 'skin' ? (
+                  <div style={{ width: 120, height: 120, borderRadius: '50%', margin: '0 auto 0.9rem', backgroundImage: `url(${i.skinRest})`, backgroundSize: '420% auto', backgroundPosition: '60% 68%', backgroundRepeat: 'no-repeat', border: `2px solid ${i.accent}66`, boxShadow: `0 0 26px ${i.accent}33` }} />
+                ) : (
+                  <div style={{ position: 'relative', width: 210, height: 100, margin: '0 auto 0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {i.boatGlow && <div className="boat-glow-halo" aria-hidden />}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={i.boatImg} alt="" style={{ position: 'relative', zIndex: 1, maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', filter: i.boatAsh ? BOAT_ASH_DARKEN : 'drop-shadow(0 4px 16px rgba(0,0,0,0.5))' }} />
+                  </div>
+                )}
+                <p className="font-cinzel font-700" style={{ fontSize: '1.35rem', color: i.accent, lineHeight: 1.1, marginBottom: '1rem' }}>{i.name}</p>
+
+                {i.equipped ? (
+                  <div className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.72rem', color: '#4ade80', padding: '0.7rem', borderRadius: 12, background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.35)' }}>✓ Equipped</div>
+                ) : i.owned ? (
+                  <button onClick={doEquip} className="font-cinzel font-700" style={{ width: '100%', padding: '0.72rem', borderRadius: 12, fontSize: '0.9rem', cursor: 'pointer', background: 'rgba(96,165,250,0.16)', border: '1px solid rgba(96,165,250,0.55)', color: '#cfe2ff' }}>Equip</button>
+                ) : i.purchasable ? (
+                  canAfford ? (
+                    <button onClick={doBuy} disabled={detailBusy} className="font-cinzel font-700" style={{ width: '100%', padding: '0.72rem', borderRadius: 12, fontSize: '0.9rem', cursor: detailBusy ? 'default' : 'pointer', background: 'rgba(96,165,250,0.16)', border: '1px solid rgba(96,165,250,0.55)', color: '#cfe2ff' }}>
+                      {detailBusy ? 'Buying…' : `Buy for ${i.price!.toLocaleString()} ${glyph}`}
+                    </button>
+                  ) : (
+                    <div className="font-karla font-700" style={{ padding: '0.72rem', borderRadius: 12, fontSize: '0.78rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', color: '#c99' }}>
+                      Need {(i.price! - bal).toLocaleString()} more {glyph}
+                    </div>
+                  )
+                ) : (
+                  <div style={{ padding: '0.8rem', borderRadius: 12, background: 'rgba(196,169,106,0.08)', border: '1px solid rgba(196,169,106,0.28)' }}>
+                    <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: 'rgba(196,169,106,0.75)', marginBottom: '0.4rem' }}>How to unlock</p>
+                    <p className="font-karla font-600" style={{ fontSize: '0.82rem', color: '#e0d2ad', lineHeight: 1.4 }}>{i.unlockHint ?? 'Locked'}</p>
+                  </div>
+                )}
+
+                <p className="font-karla font-400" style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.22)', marginTop: '0.9rem' }}>Tap anywhere to close</p>
+              </motion.div>
+            </motion.div>
+          )
+        })()}
         {pendingPurchase && (
           <motion.div
             key="confirm"

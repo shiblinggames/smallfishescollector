@@ -31,7 +31,7 @@ import { gauntletAutoCatchMaxRarity } from '@/lib/gauntletUpgrades'
 import { setFishingMusicMuted, playPerfectSfx, playCastSfx, playCast2Sfx, startDialLoop, stopDialLoop, getFishingSfxMuted, setFishingSfxMuted } from '@/lib/fishingMusic'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { zoneRewardDoubloons } from '@/lib/zoneRewards'
-import { updateCharacterColor, persistEarnedSkins, persistEarnedBoats } from '@/app/(app)/u/actions'
+import { updateCharacterColor, purchaseCharacterColor, persistEarnedSkins, persistEarnedBoats } from '@/app/(app)/u/actions'
 import { equipBadge, unequipBadge } from '@/app/(app)/achievements/badgeActions'
 import { BADGES, BADGE_MAP, BADGE_SLOT_POSITIONS } from '@/lib/badges'
 
@@ -3391,6 +3391,7 @@ export default function FishingGame({
 }) {
 
   const [localCharacterColor, setLocalCharacterColor] = useState(characterColor)
+  const [localUnlockedColors, setLocalUnlockedColors] = useState(unlockedCharacterColors)
   const [equippedBoat, setEquippedBoat] = useState<string | null>(initialEquippedBoat)
   const [unlockedBoats, setUnlockedBoats] = useState<string[]>(initialUnlockedBoats)
   const boatDef = getBoat(equippedBoat)
@@ -9505,11 +9506,23 @@ export default function FishingGame({
               characterColor={localCharacterColor}
               charSrc={charSrc}
               equippedBadges={localEquippedBadges}
-              unlockedCharacterColors={unlockedCharacterColors}
+              unlockedCharacterColors={localUnlockedColors}
               unlockedBadges={unlockedBadges}
               onUpdateColor={async (colorId) => {
                 setLocalCharacterColor(colorId)
                 await updateCharacterColor(colorId)
+              }}
+              onBuyColor={async (colorId) => {
+                const res = await purchaseCharacterColor(colorId)
+                if ('error' in res) return { error: res.error }
+                setLocalUnlockedColors(res.unlockedColors)
+                setDoubloons(res.doubloons)
+                setGems(res.gems)
+                window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+                window.dispatchEvent(new CustomEvent('gems-changed', { detail: res.gems }))
+                setLocalCharacterColor(colorId) // wear it right away
+                await updateCharacterColor(colorId)
+                return { ok: true }
               }}
               onEquipBadge={async (id, slot) => {
                 const currentSlots = localEquippedBadges.slice()
