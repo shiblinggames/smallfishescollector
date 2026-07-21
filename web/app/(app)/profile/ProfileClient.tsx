@@ -407,6 +407,7 @@ export default function ProfileClient({
   const [modalOpen, setModalOpen] = useState(false)
   const [characterColor, setCharacterColor] = useState(initialCharacterColor)
   const [colorSaving, setColorSaving] = useState(false)
+  const [skinDetail, setSkinDetail] = useState<string | null>(null) // tapped skin id → detail modal
   const [unlockedColors, setUnlockedColors] = useState<string[]>(initialUnlockedColors)
   const [unlockedSpecials, setUnlockedSpecials] = useState<string[]>(initialUnlockedSpecials)
   const [doubloons, setDoubloons] = useState(initialDoubloons)
@@ -1380,7 +1381,7 @@ export default function ProfileClient({
                 <p className="font-karla font-600 uppercase" style={{ fontSize: '0.56rem', color: '#8a8272', letterSpacing: '0.12em', marginBottom: 5 }}>
                   {group.label}
                 </p>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8 }}>
+                <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4 }}>
                   {group.items.map(c => {
                     const sprites = getCharacterSprites(c.id)
                     const isActive = characterColor === c.id
@@ -1389,48 +1390,30 @@ export default function ProfileClient({
                       <button
                         key={`char-${c.id}`}
                         type="button"
-                        disabled={colorSaving}
-                        onClick={async () => {
-                          if (!isUnlocked) {
-                            if (c.price || c.gemPrice) {
-                              setPurchaseError(null)
-                              setPurchasePrompt({
-                                kind: 'skin',
-                                id: c.id,
-                                name: c.name,
-                                price: (c.gemPrice ?? c.price)!,
-                                currency: c.gemPrice ? 'gems' : 'doubloons',
-                              })
-                            } else {
-                              flashLockMsg(c.unlockHint ? `${c.name} — ${c.unlockHint}` : `${c.name} — locked`)
-                            }
-                            return
-                          }
-                          if (isActive) return
-                          setColorSaving(true)
-                          setCharacterColor(c.id)
-                          await updateCharacterColor(c.id)
-                          setColorSaving(false)
-                        }}
+                        onClick={() => setSkinDetail(c.id)}
                         aria-label={`Character ${c.name}${!isUnlocked ? ' (locked)' : ''}`}
-                        title={isUnlocked ? c.name : `${c.name} — ${c.unlockHint ?? 'locked'}`}
-                        style={{
-                          width: '100%', aspectRatio: '1 / 1',
-                          borderRadius: '50%', overflow: 'hidden',
-                          backgroundImage: `url(${sprites.rest})`,
-                          backgroundSize: '420% auto', backgroundPosition: '60% 68%',
-                          backgroundRepeat: 'no-repeat',
-                          border: isActive ? '2px solid #f0c040' : '1px solid rgba(255,255,255,0.18)',
-                          boxShadow: isActive ? '0 0 10px rgba(240,192,64,0.35)' : 'none',
-                          cursor: colorSaving ? 'default' : 'pointer',
-                          padding: 0,
-                          opacity: !isUnlocked ? 0.55 : 1,
-                          position: 'relative',
-                          appearance: 'none',
-                          WebkitAppearance: 'none',
-                        }}
+                        style={{ flex: '0 0 auto', background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, appearance: 'none', WebkitAppearance: 'none' }}
                       >
-                        {!isUnlocked && <LockBadge />}
+                        <div style={{
+                          width: 76, height: 76, borderRadius: '50%', overflow: 'hidden', position: 'relative',
+                          backgroundImage: `url(${sprites.rest})`,
+                          backgroundSize: '420% auto', backgroundPosition: '60% 68%', backgroundRepeat: 'no-repeat',
+                          border: isActive ? '2.5px solid #f0c040' : '1px solid rgba(255,255,255,0.18)',
+                          boxShadow: isActive ? '0 0 12px rgba(240,192,64,0.4)' : 'none',
+                          opacity: isUnlocked ? 1 : 0.5,
+                        }}>
+                          {!isUnlocked && (
+                            <div style={{ position: 'absolute', right: 2, bottom: 2, width: 18, height: 18, borderRadius: '50%', background: 'rgba(0,0,0,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="2.4" strokeLinecap="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                            </div>
+                          )}
+                          {isActive && (
+                            <div style={{ position: 'absolute', right: 2, bottom: 2, width: 18, height: 18, borderRadius: '50%', background: '#f0c040', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#1a1206" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                            </div>
+                          )}
+                        </div>
+                        <p className="font-karla font-600" style={{ fontSize: '0.56rem', color: isActive ? '#f0c040' : '#8a877e', maxWidth: 84, textAlign: 'center', whiteSpace: 'nowrap' }}>{c.name}</p>
                       </button>
                     )
                   })}
@@ -1724,6 +1707,38 @@ export default function ProfileClient({
       </PopupShell>
 
       {/* ── Purchase confirmation ── */}
+      {/* Skin detail — tap a thumbnail to equip, buy, or see how it unlocks. */}
+      <PopupShell open={!!skinDetail} onClose={() => setSkinDetail(null)} zIndex={115} backdropColor="rgba(2,5,10,0.8)">
+        {skinDetail && (() => {
+          const c = CHARACTER_COLORS.find(x => x.id === skinDetail)
+          if (!c) return null
+          const sprites = getCharacterSprites(c.id)
+          const owned = unlockedColors.includes(c.id)
+          const equipped = characterColor === c.id
+          const purchasable = !owned && !!(c.price || c.gemPrice)
+          const price = c.gemPrice ?? c.price
+          const glyph = c.gemPrice ? '◆' : '⟡'
+          return (
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ width: 120, height: 120, borderRadius: '50%', margin: '0 auto 0.9rem', backgroundImage: `url(${sprites.rest})`, backgroundSize: '420% auto', backgroundPosition: '60% 68%', backgroundRepeat: 'no-repeat', border: '2px solid rgba(240,192,64,0.4)', boxShadow: '0 0 26px rgba(240,192,64,0.22)' }} />
+              <p className="font-cinzel font-700" style={{ fontSize: '1.35rem', color: '#f0c040', marginBottom: '1rem' }}>{c.name}</p>
+              {equipped ? (
+                <div className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.72rem', color: '#4ade80', padding: '0.7rem', borderRadius: 12, background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.35)' }}>✓ Equipped</div>
+              ) : owned ? (
+                <button onClick={async () => { setColorSaving(true); setCharacterColor(c.id); setSkinDetail(null); await updateCharacterColor(c.id); setColorSaving(false) }} className="font-cinzel font-700" style={{ width: '100%', padding: '0.72rem', borderRadius: 12, fontSize: '0.9rem', cursor: 'pointer', background: 'rgba(96,165,250,0.16)', border: '1px solid rgba(96,165,250,0.55)', color: '#cfe2ff' }}>Equip</button>
+              ) : purchasable ? (
+                <button onClick={() => { setSkinDetail(null); setPurchaseError(null); setPurchasePrompt({ kind: 'skin', id: c.id, name: c.name, price: price!, currency: c.gemPrice ? 'gems' : 'doubloons' }) }} className="font-cinzel font-700" style={{ width: '100%', padding: '0.72rem', borderRadius: 12, fontSize: '0.9rem', cursor: 'pointer', background: 'rgba(96,165,250,0.16)', border: '1px solid rgba(96,165,250,0.55)', color: '#cfe2ff' }}>Buy for {price!.toLocaleString()} {glyph}</button>
+              ) : (
+                <div style={{ padding: '0.8rem', borderRadius: 12, background: 'rgba(196,169,106,0.08)', border: '1px solid rgba(196,169,106,0.28)' }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: 'rgba(196,169,106,0.75)', marginBottom: '0.4rem' }}>How to unlock</p>
+                  <p className="font-karla font-600" style={{ fontSize: '0.82rem', color: '#e0d2ad', lineHeight: 1.4 }}>{c.unlockHint ?? 'Locked'}</p>
+                </div>
+              )}
+            </div>
+          )
+        })()}
+      </PopupShell>
+
       <PopupShell open={!!purchasePrompt} onClose={() => { if (!purchasing) setPurchasePrompt(null) }} zIndex={120} backdropColor="rgba(2,5,10,0.8)">
         {purchasePrompt && (
           <div
