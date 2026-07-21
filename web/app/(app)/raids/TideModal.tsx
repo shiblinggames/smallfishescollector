@@ -90,7 +90,10 @@ export default function TideModal({ tide, onPicked, theme = 'tide' }: Props) {
         position: 'fixed', inset: 0, zIndex: 1200,
         background: p.bg,
         backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
-        display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
+        // Centered so the event sits balanced on the flooded screen instead of
+        // pinned to the bottom with a dead top half. The waves stay anchored to
+        // the bottom edge as atmosphere.
+        display: 'flex', flexDirection: 'column', justifyContent: 'center',
         padding: '1.15rem',
         overflow: 'hidden',
       }}
