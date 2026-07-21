@@ -47,6 +47,16 @@ const SHARED_POSITIONS: Record<BoatFrame, BoatPos> = {
   cast: { top: 77, left: 37, width: 55, rotate: 0 },
 }
 
+// Fire's flames make its trimmed sheet taller than a plain hull (191 vs ~146),
+// so at the shared width it renders taller and sinks below the character. Nudge
+// it up per frame by the extra rendered height so the hull re-seats. (Computed;
+// fine-tune on /fishing-test if the flames still sit slightly off.)
+const FIRE_POSITIONS: Record<BoatFrame, BoatPos> = {
+  rest: { top: 73.5, left: 31, width: 55, rotate: 0 },
+  wait: { top: 69.5, left: 38, width: 55, rotate: 0 },
+  cast: { top: 72.8, left: 37, width: 55, rotate: 0 },
+}
+
 export const BOATS: BoatDef[] = [
   {
     id: 'oak',
@@ -160,7 +170,7 @@ export const BOATS: BoatDef[] = [
     gemPrice: 750,
     restImageUrl: '/boat_fire_rest.png',
     castImageUrl: '/boat_fire_cast.png',
-    positions: SHARED_POSITIONS,
+    positions: FIRE_POSITIONS,
   },
   {
     id: 'ice',

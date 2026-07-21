@@ -31,7 +31,7 @@ import { gauntletAutoCatchMaxRarity } from '@/lib/gauntletUpgrades'
 import { setFishingMusicMuted, playPerfectSfx, playCastSfx, playCast2Sfx, startDialLoop, stopDialLoop, getFishingSfxMuted, setFishingSfxMuted } from '@/lib/fishingMusic'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { zoneRewardDoubloons } from '@/lib/zoneRewards'
-import { updateCharacterColor, persistEarnedSkins } from '@/app/(app)/u/actions'
+import { updateCharacterColor, persistEarnedSkins, persistEarnedBoats } from '@/app/(app)/u/actions'
 import { equipBadge, unequipBadge } from '@/app/(app)/achievements/badgeActions'
 import { BADGES, BADGE_MAP, BADGE_SLOT_POSITIONS } from '@/lib/badges'
 
@@ -3298,7 +3298,7 @@ export default function FishingGame({
   selectedZone: initialZone, onBack, activeSession, zoneRewardsClaimed,
   initialDailyChallenge, onDailyChallengeChange,
   hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, gauntletUpgrades, hasPerfectedSigil,
-  initialPrestigeLevels, initialAncientCatches, characterColor, unlockedCharacterColors, newlyUnlockedSkins, equippedBadges, unlockedBadges,
+  initialPrestigeLevels, initialAncientCatches, characterColor, unlockedCharacterColors, newlyUnlockedSkins, newlyUnlockedBoats, equippedBadges, unlockedBadges,
   marketMultipliers, isPremium, initialEquippedBoat, initialUnlockedBoats, onBoatStateChange,
   initialEquippedHat, initialUnlockedHats, onHatStateChange,
   initialEquippedPet, initialUnlockedPets, onPetStateChange,
@@ -3364,6 +3364,7 @@ export default function FishingGame({
   characterColor: string
   unlockedCharacterColors: string[]
   newlyUnlockedSkins: string[]
+  newlyUnlockedBoats: string[]
   equippedBadges: string[]
   unlockedBadges: string[]
   marketMultipliers: Record<number, number>
@@ -3679,6 +3680,23 @@ export default function FishingGame({
       timers.push(setTimeout(showNext, 5000))
     }
     timers.push(setTimeout(showNext, 900)) // let the screen settle first
+    return () => timers.forEach(clearTimeout)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  // Same one-time celebration for achievement-earned boats (Celestial/Abyssal).
+  const [boatUnlockToast, setBoatUnlockToast] = useState<string | null>(null)
+  useEffect(() => {
+    if (!newlyUnlockedBoats || newlyUnlockedBoats.length === 0) return
+    void persistEarnedBoats(newlyUnlockedBoats).catch(() => {})
+    const queue = [...newlyUnlockedBoats]
+    let idx = 0
+    const timers: ReturnType<typeof setTimeout>[] = []
+    const showNext = () => {
+      if (idx >= queue.length) { setBoatUnlockToast(null); return }
+      setBoatUnlockToast(queue[idx]); idx++
+      timers.push(setTimeout(showNext, 5000))
+    }
+    timers.push(setTimeout(showNext, 1400)) // stagger after any skin toast
     return () => timers.forEach(clearTimeout)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -8415,6 +8433,53 @@ export default function FishingGame({
                 </p>
                 <p className="font-karla font-400" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', marginBottom: '1rem' }}>
                   New character color available
+                </p>
+                <p className="font-karla font-400" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.2)' }}>Tap anywhere to close</p>
+              </div>
+            </motion.div>
+          )
+        })()}
+
+        {boatUnlockToast && (() => {
+          const boat = getBoat(boatUnlockToast)
+          if (!boat) return null
+          return (
+            <motion.div key="boat-unlock-toast"
+              initial={{ opacity: 0, scale: 0.88, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 20 }}
+              transition={{ type: 'spring', stiffness: 380, damping: 22 }}
+              style={{
+                position: 'absolute', inset: 0, zIndex: 40,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'rgba(3,8,16,0.82)', backdropFilter: 'blur(6px)',
+              }}
+              onClick={() => setBoatUnlockToast(null)}
+            >
+              <div style={{
+                background: 'linear-gradient(145deg, rgba(20,14,6,0.98) 0%, rgba(120,90,40,0.28) 100%)',
+                border: '1px solid rgba(240,192,64,0.35)',
+                borderTop: '3px solid rgba(240,192,64,0.7)',
+                borderRadius: 20, padding: '2rem 2.5rem',
+                textAlign: 'center', maxWidth: 300,
+                boxShadow: '0 0 60px rgba(240,192,64,0.16), 0 0 120px rgba(240,192,64,0.07)',
+              }}>
+                <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.52rem', color: 'rgba(240,192,64,0.75)', marginBottom: '0.75rem' }}>
+                  Boat Unlocked
+                </p>
+                <motion.div
+                  initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 18, delay: 0.1 }}
+                  style={{ width: 180, height: 76, margin: '0 auto 1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={boat.restImageUrl} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', filter: 'drop-shadow(0 4px 18px rgba(0,0,0,0.55))' }} />
+                </motion.div>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: '#f0c040', textShadow: '0 0 24px rgba(240,192,64,0.55)', marginBottom: '0.3rem', lineHeight: 1.1 }}>
+                  {boat.name}
+                </p>
+                <p className="font-karla font-400" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', marginBottom: '1rem' }}>
+                  New boat available
                 </p>
                 <p className="font-karla font-400" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.2)' }}>Tap anywhere to close</p>
               </div>

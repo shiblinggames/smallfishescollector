@@ -111,7 +111,8 @@ export default async function FishingPage() {
   // Same treatment for achievement-earned boats (Celestial/Abyssal): union them
   // into the picker's unlocked set so they show earned; equipping persists it.
   const storedBoats = (profile?.unlocked_boats as string[] | null) ?? []
-  const unlockedBoats = [...storedBoats, ...earnedAchievementBoats(achievementPoints, storedBoats)]
+  const newlyUnlockedBoats = earnedAchievementBoats(achievementPoints, storedBoats)
+  const unlockedBoats = [...storedBoats, ...newlyUnlockedBoats]
 
   // Per-zone summary stats for the zone selector cards (avg sell value, avg
   // catch XP, top catch). Ancient Deep trophies pay 3× XP (see actions.ts).
@@ -266,6 +267,7 @@ export default async function FishingPage() {
           isPremium={isPremium}
           equippedBoat={(profile?.equipped_boat as string | null) ?? null}
           unlockedBoats={unlockedBoats}
+          newlyUnlockedBoats={newlyUnlockedBoats}
           equippedHat={(profile?.equipped_hat as string | null) ?? null}
           unlockedHats={(profile?.unlocked_hats as string[] | null) ?? []}
           equippedPet={(profile?.equipped_pet as string | null) ?? null}

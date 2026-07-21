@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { CHARACTER_COLORS, earnedLevelColors, earnedAchievementColors, ACHIEVEMENT_COLORS } from '@/lib/characters'
+import { earnedAchievementBoats } from '@/lib/boats'
 import { getUserAchievementPoints } from '@/lib/achievementPoints'
 import { ALLOWED_BG_HEXES, ALLOWED_BORDER_HEXES, isPremiumBg, isPremiumBorder, getAvatarSpecial, AVATAR_SPECIALS } from '@/lib/avatarColors'
 import { isPremiumActive } from '@/lib/premium'
@@ -191,6 +192,26 @@ export async function persistEarnedSkins(ids: string[]): Promise<{ granted: stri
   const granted = candidates.filter(id => !stored.includes(id) && (earnedLevel.has(id) || earnedAch.has(id)))
   if (granted.length === 0) return { granted: [] }
   await admin.from('profiles').update({ unlocked_character_colors: [...stored, ...granted] }).eq('id', user.id)
+  return { granted }
+}
+
+/** Boat equivalent of {@link persistEarnedSkins} — persists achievement-earned
+ *  boats (Celestial/Abyssal) so they stop re-announcing. Re-validates the AP
+ *  threshold server-side. Returns the ids it genuinely granted. */
+export async function persistEarnedBoats(ids: string[]): Promise<{ granted: string[] }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { granted: [] }
+  const candidates = Array.from(new Set((ids ?? []).filter(id => typeof id === 'string')))
+  if (candidates.length === 0) return { granted: [] }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles').select('unlocked_boats').eq('id', user.id).single()
+  const stored = (profile?.unlocked_boats as string[] | null) ?? []
+  const earned = new Set(earnedAchievementBoats(await getUserAchievementPoints(admin, user.id), stored))
+  const granted = candidates.filter(id => !stored.includes(id) && earned.has(id))
+  if (granted.length === 0) return { granted: [] }
+  await admin.from('profiles').update({ unlocked_boats: [...stored, ...granted] }).eq('id', user.id)
   return { granted }
 }
 
