@@ -51,6 +51,7 @@ export default async function ChartRoomPage() {
               riggingStatus={riggingStatus}
               riggingReward={riggingReward}
               puzzlePoints={puzzlePoints}
+              chartingClaimed={(profile?.charting_landmarks_claimed as number[] | null) ?? []}
               isMember={isPremiumActive(profile)}
             />
           </div>

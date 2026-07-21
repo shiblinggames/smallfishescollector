@@ -9,13 +9,14 @@ import HoldCard from './HoldCard'
 import TreasureMatchCard from './TreasureMatchCard'
 import MinefieldCard from './MinefieldCard'
 import RiggingCard from './RiggingCard'
+import WorldChartCard from './WorldChartCard'
 import { DEN_PURSE_TIERS, DEN_CAP_NONMEMBER } from '../constants'
 import BecomeCaptainButton from '@/components/BecomeCaptainButton'
 import BackButton from '@/components/BackButton'
 
 const GOLD = '#f0c040'
 
-export default function ChartRoomLobby({ doubloons, holdStatus, holdDoubloonsToday, matchStatus, matchReward, minefieldStatus, minefieldReward, riggingStatus, riggingReward, puzzlePoints, isMember }: {
+export default function ChartRoomLobby({ doubloons, holdStatus, holdDoubloonsToday, matchStatus, matchReward, minefieldStatus, minefieldReward, riggingStatus, riggingReward, puzzlePoints, chartingClaimed, isMember }: {
   doubloons: number
   holdStatus: 'open' | 'locked' | 'done'
   holdDoubloonsToday: number
@@ -26,6 +27,7 @@ export default function ChartRoomLobby({ doubloons, holdStatus, holdDoubloonsTod
   riggingStatus: 'active' | 'cleared'
   riggingReward: number
   puzzlePoints: number
+  chartingClaimed: number[]
   isMember: boolean
 }) {
   // Index of the highest tier the player's points reach. For members this IS
@@ -55,6 +57,9 @@ export default function ChartRoomLobby({ doubloons, holdStatus, holdDoubloonsTod
       <p className="font-karla" style={{ fontSize: '0.8rem', color: '#c2b9a4', lineHeight: 1.55, textAlign: 'center' }}>
         A quiet corner for steady minds. Four puzzles, fresh every week.
       </p>
+
+      {/* The World Chart — the collectible the puzzles feed toward. */}
+      <WorldChartCard points={puzzlePoints} claimed={chartingClaimed} />
 
       {/* Den-purse progress — compact. Points (from the puzzles) raise
           your daily casino buy-in cap; the chips show the ladder. */}
