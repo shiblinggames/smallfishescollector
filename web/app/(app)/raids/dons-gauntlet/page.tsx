@@ -72,6 +72,8 @@ export default async function DonsGauntletPage() {
           deepest={daily.deepest}
           deepestRun={daily.deepestRun}
           hcDeepestRun={daily.hcDeepestRun}
+          lastRun={daily.lastRun}
+          hcLastRun={daily.hcLastRun}
           fathoms={daily.fathoms}
           available={daily.available}
           nextAt={daily.nextAt}

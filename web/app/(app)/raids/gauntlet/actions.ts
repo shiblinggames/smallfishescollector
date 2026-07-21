@@ -369,16 +369,16 @@ export async function getGauntletLeaderboard(): Promise<{
 
 /** Whether the player can start a run now (cooldown elapsed) + their lifetime
  *  deepest + when the next run unlocks (ISO, null when available now). */
-export async function getGauntletDailyState(variant: GauntletVariant = 'davy'): Promise<{ available: boolean; deepest: number; fathoms: number; nextAt: string | null; deepestRun: GauntletRunSnapshot | null; hcDeepestRun: GauntletRunSnapshot | null; resumeState: GauntletRunState | null; resumePaused: boolean; hardcoreUnlocked: boolean; hardcoreLive: boolean; hcDeepest: number; hcRunsLeft: number; runHardcore: boolean; runTerms: SignedTerms | null }> {
+export async function getGauntletDailyState(variant: GauntletVariant = 'davy'): Promise<{ available: boolean; deepest: number; fathoms: number; nextAt: string | null; deepestRun: GauntletRunSnapshot | null; hcDeepestRun: GauntletRunSnapshot | null; lastRun: GauntletRunSnapshot | null; hcLastRun: GauntletRunSnapshot | null; resumeState: GauntletRunState | null; resumePaused: boolean; hardcoreUnlocked: boolean; hardcoreLive: boolean; hcDeepest: number; hcRunsLeft: number; runHardcore: boolean; runTerms: SignedTerms | null }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { available: false, deepest: 0, fathoms: 0, nextAt: null, deepestRun: null, hcDeepestRun: null, resumeState: null, resumePaused: false, hardcoreUnlocked: false, hardcoreLive: HARDCORE_LIVE, hcDeepest: 0, hcRunsLeft: 0, runHardcore: false, runTerms: null }
+  if (!user) return { available: false, deepest: 0, fathoms: 0, nextAt: null, deepestRun: null, hcDeepestRun: null, lastRun: null, hcLastRun: null, resumeState: null, resumePaused: false, hardcoreUnlocked: false, hardcoreLive: HARDCORE_LIVE, hcDeepest: 0, hcRunsLeft: 0, runHardcore: false, runTerms: null }
 
   const isDon = variant === 'don'
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_last_run_at, gauntlet_deepest, gauntlet_fathoms, gauntlet_deepest_run, gauntlet_hc_deepest_run, is_admin, gauntlet_run_open, gauntlet_run_state, gauntlet_resumes_used, gauntlet_run_paused, gauntlet_hc_deepest, gauntlet_run_hardcore, gauntlet_hc_last_run_at, gauntlet_hc_runs_today, raid_node_progress, gauntlet_run_terms, gauntlet_run_variant, dons_gauntlet_deepest, dons_gauntlet_deepest_run')
+    .select('gauntlet_last_run_at, gauntlet_deepest, gauntlet_fathoms, gauntlet_deepest_run, gauntlet_hc_deepest_run, gauntlet_last_run, gauntlet_hc_last_run, dons_gauntlet_last_run, is_admin, gauntlet_run_open, gauntlet_run_state, gauntlet_resumes_used, gauntlet_run_paused, gauntlet_hc_deepest, gauntlet_run_hardcore, gauntlet_hc_last_run_at, gauntlet_hc_runs_today, raid_node_progress, gauntlet_run_terms, gauntlet_run_variant, dons_gauntlet_deepest, dons_gauntlet_deepest_run')
     .eq('id', user.id)
     .single()
   // "One run at a time": a resume only belongs to THIS gauntlet if the open run's
@@ -418,6 +418,8 @@ export async function getGauntletDailyState(variant: GauntletVariant = 'davy'): 
     nextAt: available ? null : new Date(nextMs).toISOString(),
     deepestRun: (isDon ? (profile?.dons_gauntlet_deepest_run as GauntletRunSnapshot | null) : (profile?.gauntlet_deepest_run as GauntletRunSnapshot | null)) ?? null,
     hcDeepestRun: (profile?.gauntlet_hc_deepest_run as GauntletRunSnapshot | null) ?? null,
+    lastRun: (isDon ? (profile?.dons_gauntlet_last_run as GauntletRunSnapshot | null) : (profile?.gauntlet_last_run as GauntletRunSnapshot | null)) ?? null,
+    hcLastRun: (profile?.gauntlet_hc_last_run as GauntletRunSnapshot | null) ?? null,
     resumeState,
     resumePaused,
     // Hardcore is a DON'S fast-follow — not built yet, so force it off on the
@@ -902,6 +904,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
         ? { gauntlet_hc_best_depth: cd, gauntlet_hc_best_depth_ms: runMs, gauntlet_hc_best_depth_at: new Date().toISOString() }
         : hcFasterSame ? { gauntlet_hc_best_depth_ms: runMs } : {}),
       ...(cd > prevHcDeepest ? { gauntlet_hc_deepest_run: sanitizeRunSnapshot(runSnapshot, cd) } : {}),
+      ...(runSnapshot ? { gauntlet_hc_last_run: sanitizeRunSnapshot(runSnapshot, cd) } : {}),   // most recent cash-out, always
     }
   } else if (isDon) {
     // Don's Gauntlet — its OWN records / leaderboard (never touches Davy's, and
@@ -916,6 +919,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
         ? { dons_gauntlet_best_depth: cd, dons_gauntlet_best_depth_ms: runMs, dons_gauntlet_best_depth_at: new Date().toISOString() }
         : fasterSame ? { dons_gauntlet_best_depth_ms: runMs } : {}),
       ...(cd > prevDeepest ? { dons_gauntlet_deepest_run: sanitizeRunSnapshot(runSnapshot, cd) } : {}),
+      ...(runSnapshot ? { dons_gauntlet_last_run: sanitizeRunSnapshot(runSnapshot, cd) } : {}),   // most recent cash-out, always
     }
   } else {
     const prevBestDep = (profile.gauntlet_best_depth as number | null) ?? 0
@@ -934,6 +938,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
         : fasterSame ? { gauntlet_best_depth_ms: runMs } : {}),
       ...(contestActive && cd > prevContestDep ? { gauntlet_contest_depth: cd, gauntlet_contest_depth_at: new Date().toISOString() } : {}),
       ...(cd > prevDeepest ? { gauntlet_deepest_run: sanitizeRunSnapshot(runSnapshot, cd) } : {}),
+      ...(runSnapshot ? { gauntlet_last_run: sanitizeRunSnapshot(runSnapshot, cd) } : {}),   // most recent cash-out, always
     }
   }
 

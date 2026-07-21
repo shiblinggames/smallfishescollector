@@ -140,6 +140,10 @@ export interface GauntletGameProps {
   deepestRun: GauntletRunSnapshot | null
   /** Snapshot of the deepest HARDCORE run, for the Hardcore card's recap. */
   hcDeepestRun: GauntletRunSnapshot | null
+  /** Snapshot of the MOST RECENT cash-out (normal + hardcore) — the recap
+   *  modal's "Last" tab. Null until the first cash-out. */
+  lastRun: GauntletRunSnapshot | null
+  hcLastRun: GauntletRunSnapshot | null
   /** Fathoms balance — the Gauntlet's meta-currency, spent in the Locker. */
   fathoms: number
   /** Blood Gems balance — the premium Hardcore currency. */
@@ -478,7 +482,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   // Deepest-run recap modal (boons/curses/tides of the record dive).
   // The deepest-run recap, per mode (Normal or Hardcore). Holds the snapshot to
   // show + whether it's a hardcore run (drives the modal's theming).
-  const [recapRun, setRecapRun] = useState<{ run: GauntletRunSnapshot; hardcore: boolean } | null>(null)
+  const [recapRun, setRecapRun] = useState<{ hardcore: boolean } | null>(null)
   // Mid-fight bail-out guard. The ← button is easy to mis-tap, and leaving a
   // live run forfeits the whole pot — so confirm first.
   const [confirmLeave, setConfirmLeave] = useState(false)
@@ -1965,7 +1969,7 @@ export default function GauntletGame(props: GauntletGameProps) {
               </>
             )
             return canRecap ? (
-              <button type="button" onClick={() => { vibrate([0, 12]); setRecapRun({ run: props.deepestRun!, hardcore: false }) }}
+              <button type="button" onClick={() => { vibrate([0, 12]); setRecapRun({ hardcore: false }) }}
                 aria-label="View your deepest run" className="tap"
                 style={{ marginTop: 2, background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'inline-flex', flexDirection: 'column', alignItems: 'center' }}>
                 {inner}
@@ -2072,7 +2076,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                     {/* Deepest footer — your best above the global #1, aligned for
                         readability. Normal taps to the recap. */}
                     <button
-                      onClick={c.recap ? () => setRecapRun({ run: c.recap!, hardcore: c.key === 'hardcore' }) : undefined}
+                      onClick={c.recap ? () => setRecapRun({ hardcore: c.key === 'hardcore' }) : undefined}
                       className={c.recap ? 'tap' : undefined}
                       aria-label={c.recap ? 'Recap your deepest run' : undefined}
                       style={{ width: '100%', marginTop: 'auto', padding: '0.52rem 0.6rem 0.55rem', background: c.recap ? `${c.color}0d` : 'none', border: 'none', borderTop: `1px solid ${c.color}22`, cursor: c.recap ? 'pointer' : 'default', minWidth: 0 }}>
@@ -2184,7 +2188,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         {lootMode && <LootModal mode={lootMode} don={isDonG} onClose={() => setLootMode(null)} />}
         {infoCurrency && <CurrencyInfoModal kind={infoCurrency} don={isDonG} onClose={() => setInfoCurrency(null)} />}
         {synergiesOpen && <SynergiesModal owned={boonTiers} seen={seenConfluences} taken={confluencesTaken} onClose={() => setSynergiesOpen(false)} />}
-        {recapRun && <DeepestRunModal run={recapRun.run} hardcore={recapRun.hardcore} don={isDonG} onClose={() => setRecapRun(null)} />}
+        {recapRun && <DeepestRunModal best={recapRun.hardcore ? props.hcDeepestRun : props.deepestRun} last={recapRun.hardcore ? props.hcLastRun : props.lastRun} hardcore={recapRun.hardcore} don={isDonG} onClose={() => setRecapRun(null)} />}
         {shopSection && <LockerUpgradesModal section={shopSection} variant={props.variant ?? 'davy'} onClose={() => setShopSection(null)} onClaimed={(owned) => { setUpgrades(owned); setBonusSlots(bonusChargeSlots(owned)) }} onToggled={setUpgradesOff} />}
         {descentModals}
       </>
@@ -4434,9 +4438,15 @@ function RunRecap({ depth, shipsSunk, maxHit, boonTiers, curseTiers, confluences
 // Tapping the "Deepest Descent" chip opens this: the boons, curses, and tides
 // the player carried on their record dive, resolved from the stored id→tier
 // snapshot against the live boon/curse tables.
-function DeepestRunModal({ run, hardcore = false, don, onClose }: { run: GauntletRunSnapshot; hardcore?: boolean; don?: boolean; onClose: () => void }) {
+function DeepestRunModal({ best, last, hardcore = false, don, onClose }: { best: GauntletRunSnapshot | null; last: GauntletRunSnapshot | null; hardcore?: boolean; don?: boolean; onClose: () => void }) {
   const AC = don ? KRAKEN : TEAL
   const accent = hardcore ? '#e0555a' : GOLD
+  // Best vs Last toggle — only offered when a distinct last run exists (older
+  // players have no last-run snapshot until their next cash-out).
+  const hasBoth = !!best && !!last && best.at !== last.at
+  const [tab, setTab] = useState<'best' | 'last'>('best')
+  const run = (tab === 'best' ? best : last) ?? best ?? last
+  if (!run) return null
   const boons = Object.entries(run.boons ?? {})
     .map(([id, tier]) => ({ fam: GAUNTLET_BOONS.find(b => b.id === id), tier }))
     .filter((x): x is { fam: NonNullable<typeof x.fam>; tier: number } => !!x.fam && x.tier >= 1)
@@ -4467,10 +4477,24 @@ function DeepestRunModal({ run, hardcore = false, don, onClose }: { run: Gauntle
         <div style={{ width: 50, height: 50, margin: '0 auto 8px', borderRadius: '50%', background: `${accent}1c`, border: `1px solid ${accent}5c`, boxShadow: `0 0 22px ${accent}2a`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="5" r="2.4" /><path d="M12 7.4V21" /><path d="M5 13H3a9 9 0 0 0 18 0h-2" /><path d="M8 11h8" /></svg>
         </div>
-        <p className="font-karla font-800 uppercase tracking-[0.24em]" style={{ fontSize: '0.54rem', color: `${accent}cc` }}>Your Deepest {hardcore ? 'Hardcore ' : ''}Dive</p>
+        <p className="font-karla font-800 uppercase tracking-[0.24em]" style={{ fontSize: '0.54rem', color: `${accent}cc` }}>Your {tab === 'best' ? 'Deepest' : 'Last'} {hardcore ? 'Hardcore ' : ''}Dive</p>
         <p className="font-cinzel font-800" style={{ fontSize: '2.3rem', color: accent, lineHeight: 1.02, marginTop: 3, textShadow: `0 0 26px ${accent}44` }}>
           Depth {run.depth}
         </p>
+        {/* Best / Last toggle */}
+        {hasBoth && (
+          <div style={{ display: 'inline-flex', gap: 4, marginTop: 10, padding: 3, borderRadius: 999, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)' }}>
+            {([['best', 'Deepest'], ['last', 'Last']] as const).map(([val, label]) => {
+              const on = tab === val
+              return (
+                <button key={val} type="button" onClick={() => { vibrate([0, 10]); setTab(val) }} className="tap"
+                  style={{ padding: '0.28rem 0.85rem', borderRadius: 999, border: 'none', cursor: 'pointer', background: on ? `${accent}26` : 'transparent' }}>
+                  <span className="font-karla font-800 uppercase tracking-[0.1em]" style={{ fontSize: '0.55rem', color: on ? accent : '#8a857c' }}>{label}</span>
+                </button>
+              )
+            })}
+          </div>
+        )}
         {/* Stat strip — the run at a glance */}
         <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 6, marginTop: 11 }}>
           {([
