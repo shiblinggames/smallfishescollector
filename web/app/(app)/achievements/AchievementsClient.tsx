@@ -65,8 +65,9 @@ export default function AchievementsClient({ groups }: Props) {
   const [tierFilter, setTierFilter] = useState<Filter>('all')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [detailGoal, setDetailGoal] = useState<JourneyGoal | null>(null)
-  // Category sections collapse by default (all closed) so the board opens short.
-  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set())
+  // Category sections start expanded; players can collapse ones they've cleared
+  // (or use Collapse all) to shorten the board.
+  const [openGroups, setOpenGroups] = useState<Set<string>>(() => new Set(groups.map(g => g.title)))
   const [, startTransition] = useTransition()
   const [mounted, setMounted] = useState(false)
   useEffect(() => { setMounted(true) }, [])
