@@ -4,7 +4,8 @@ import FishingPageClient from './FishingPageClient'
 import { getActiveChallengeSession } from '@/app/(app)/social/challengeActions'
 import { getDailyChallenge } from './dailyChallengeActions'
 import { isPremiumActive } from '@/lib/premium'
-import { getCharacterSprites, earnedLevelColors } from '@/lib/characters'
+import { getCharacterSprites, earnedLevelColors, earnedAchievementColors } from '@/lib/characters'
+import { getUserAchievementPoints } from '@/lib/achievementPoints'
 import { getLevelFromXP as fishLevelFromXP } from '@/lib/fishingLevel'
 import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import { getBoat } from '@/lib/boats'
@@ -20,6 +21,9 @@ export default async function FishingPage() {
   if (!user) redirect('/login')
 
   const admin = createAdminClient()
+  // Kicked off now so it overlaps the page's other queries (this page is hot).
+  // Gates the achievement-earned skins (Galaxy/Ethereal) in the picker.
+  const achievementPointsPromise = getUserAchievementPoints(admin, user.id)
 
   // Profile comes from the request-scoped cached loader (lib/userData.ts) so
   // any other server component in this render that needs profile shares this
@@ -98,6 +102,7 @@ export default async function FishingPage() {
       navLevel:     navLevelFromXP(profile?.expedition_xp ?? 0),
       maxPrestige:  Math.max(0, ...Object.values((profile?.prestige_levels as Record<string, number> | null) ?? {})),
     }, storedColors),
+    ...earnedAchievementColors(await achievementPointsPromise, storedColors),
   ]
 
   // Per-zone summary stats for the zone selector cards (avg sell value, avg
