@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { isPremiumActive } from '@/lib/premium'
+import { getCurrentProfile } from '@/lib/userData'
 import TackleShopClient from './TackleShopClient'
 
 export default async function TackleShopPage() {
@@ -11,8 +12,12 @@ export default async function TackleShopPage() {
 
   const admin = createAdminClient()
 
-  const [{ data: profile }, { data: baitInventory }, { data: rodRows }, { data: collRows }, { count: totalSpecies }] = await Promise.all([
-    supabase.from('profiles').select('hook_tier, rod_tier, reel_tier, line_tier, doubloons, packs_available, gems, fishing_xp, is_premium, premium_expires_at, ancient_catches').eq('id', user.id).single(),
+  // Profile via the service-role cached loader, NOT the RLS client: an
+  // RLS `.single()` can transiently return null while the auth session is
+  // refreshing, which collapsed `rod_tier ?? 0` to Bamboo and showed the
+  // wrong equipped rod. Every other read on this page already uses admin.
+  const [profile, { data: baitInventory }, { data: rodRows }, { data: collRows }, { count: totalSpecies }] = await Promise.all([
+    getCurrentProfile(),
     admin.from('bait_inventory').select('bait_type, quantity').eq('user_id', user.id),
     admin.from('rod_inventory').select('rod_tier').eq('user_id', user.id),
     admin.from('fish_collection').select('fish_id').eq('user_id', user.id),
