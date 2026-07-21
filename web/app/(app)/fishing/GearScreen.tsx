@@ -2460,8 +2460,8 @@ export default function GearScreen({
                         </button>
                       )
                     }
-                    // Earned = crate drops the player owns (+ the free Driftwood
-                    // default). Purchased = boats you buy with doubloons.
+                    // Starter = the free Driftwood default. Earned = crate drops
+                    // the player owns. Purchased = boats you buy with doubloons.
                     const earnedBoats = BOATS.filter(b => b.crateOnly && unlockedBoats.includes(b.id))
                     const purchasedBoats = BOATS.filter(b => !b.crateOnly)
                     const groupLabel = { fontSize: '0.56rem', color: '#8a8272', letterSpacing: '0.12em', marginTop: 2 } as const
@@ -2469,7 +2469,7 @@ export default function GearScreen({
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#bda05a' }}>Boat Colors</p>
 
-                        <p className="font-karla font-600 uppercase" style={groupLabel}>Earned</p>
+                        <p className="font-karla font-600 uppercase" style={groupLabel}>Starter</p>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
                           {/* Default — the free Driftwood boat (no overlay) */}
                           {(() => {
@@ -2509,8 +2509,16 @@ export default function GearScreen({
                               </button>
                             )
                           })()}
-                          {earnedBoats.map(renderBoatCard)}
                         </div>
+
+                        {earnedBoats.length > 0 && (
+                          <>
+                            <p className="font-karla font-600 uppercase" style={groupLabel}>Earned</p>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                              {earnedBoats.map(renderBoatCard)}
+                            </div>
+                          </>
+                        )}
 
                         {purchasedBoats.length > 0 && (
                           <>

@@ -1370,9 +1370,10 @@ export default function ProfileClient({
             <p className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', color: '#7a9bc4', letterSpacing: '0.14em', marginBottom: 6 }}>
               Character
             </p>
-            {/* Grouped: earned through play (incl. free starters) vs bought with currency. */}
+            {/* Grouped: free starters · earned through play · bought with currency. */}
             {([
-              { label: 'Earned', items: CHARACTER_COLORS.filter(c => !(c.price || c.gemPrice)) },
+              { label: 'Starter', items: CHARACTER_COLORS.filter(c => c.free) },
+              { label: 'Earned', items: CHARACTER_COLORS.filter(c => !c.free && !(c.price || c.gemPrice)) },
               { label: 'Purchased', items: CHARACTER_COLORS.filter(c => !!(c.price || c.gemPrice)) },
             ] as const).map(group => group.items.length === 0 ? null : (
               <div key={`char-grp-${group.label}`} style={{ marginBottom: 12 }}>

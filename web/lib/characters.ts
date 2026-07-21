@@ -26,6 +26,7 @@ export const CHARACTER_COLORS: CharacterColor[] = [
   { id: 'storm',    name: 'Storm',    free: false, unlockHint: 'Rare drop from fishing crates' },
   { id: 'galaxy',   name: 'Galaxy',   free: false, unlockHint: 'Reach 300 achievement points' },
   { id: 'crystal',  name: 'Crystal',  free: false, unlockHint: 'Max out — Fishing 100 and Navigation 100' },
+  { id: 'lava',     name: 'Lava',     free: false, unlockHint: '500 ◆', gemPrice: 500 },
 ]
 
 /** Character colors earned by hitting an Achievement Points threshold. Kept
