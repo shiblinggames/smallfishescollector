@@ -1941,16 +1941,39 @@ export default function GauntletGame(props: GauntletGameProps) {
           </div>
 
           {/* Hero stat — how deep you've gone. The personal mark the whole screen
-              is really about, right under the maw. */}
-          <div style={{ marginTop: 2 }}>
-            <p className="font-karla font-800 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.26em', color: `${AC}bb` }}>Your deepest descent</p>
-            {props.deepest > 0
-              ? <p className="font-cinzel font-800" style={{ fontSize: '1.7rem', lineHeight: 1.05, color: '#f3ead2', marginTop: 1 }}>
-                  <span style={{ fontSize: '0.72rem', color: '#8a857c', letterSpacing: '0.04em' }}>DEPTH </span>
-                  <span style={{ color: AC, textShadow: `0 0 20px ${AC}66` }}>{props.deepest}</span>
-                </p>
-              : <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: '#8a857c', marginTop: 3, fontStyle: 'italic' }}>Uncharted. Your first dive awaits.</p>}
-          </div>
+              is really about, right under the maw. Taps to the full run recap
+              (boons, curses, tides) when a deepest run is on record. */}
+          {(() => {
+            const canRecap = !!props.deepestRun && props.deepest > 0
+            const inner = (
+              <>
+                <p className="font-karla font-800 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.26em', color: `${AC}bb` }}>Your deepest descent</p>
+                {props.deepest > 0
+                  ? <>
+                      <p className="font-cinzel font-800" style={{ fontSize: '1.7rem', lineHeight: 1.05, color: '#f3ead2', marginTop: 1 }}>
+                        <span style={{ fontSize: '0.72rem', color: '#8a857c', letterSpacing: '0.04em' }}>DEPTH </span>
+                        <span style={{ color: AC, textShadow: `0 0 20px ${AC}66` }}>{props.deepest}</span>
+                      </p>
+                      {canRecap && (
+                        <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.5rem', color: `${AC}cc`, marginTop: 3 }}>
+                          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" /></svg>
+                          View run
+                        </span>
+                      )}
+                    </>
+                  : <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: '#8a857c', marginTop: 3, fontStyle: 'italic' }}>Uncharted. Your first dive awaits.</p>}
+              </>
+            )
+            return canRecap ? (
+              <button type="button" onClick={() => { vibrate([0, 12]); setRecapRun({ run: props.deepestRun!, hardcore: false }) }}
+                aria-label="View your deepest run" className="tap"
+                style={{ marginTop: 2, background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'inline-flex', flexDirection: 'column', alignItems: 'center' }}>
+                {inner}
+              </button>
+            ) : (
+              <div style={{ marginTop: 2 }}>{inner}</div>
+            )
+          })()}
 
           {/* ── TIER 1 · The one action ───────────────────────────
               Compact currencies then Descend, so starting a run sits
