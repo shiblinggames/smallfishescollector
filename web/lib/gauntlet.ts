@@ -732,6 +732,12 @@ export interface GauntletRunState {
   nextMerchant?: number
   /** Calm Before already waved off the first curse milestone */
   calmBeforeUsed: boolean
+  /** Marks of the Don earned this run — the stacking landmark buff (Don's only).
+   *  Optional so pre-Mark saves resume cleanly. */
+  marksOfTheDon?: number
+  /** Run-wide max-hull multiplier from cleared hull-boost contracts (Don's only).
+   *  Optional so pre-contract saves resume cleanly. */
+  contractHullMult?: number
 }
 
 export interface GauntletFight {

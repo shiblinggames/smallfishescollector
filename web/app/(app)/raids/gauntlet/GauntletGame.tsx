@@ -1691,6 +1691,8 @@ export default function GauntletGame(props: GauntletGameProps) {
       nextShrine: nextShrineRef.current,
       nextMerchant: nextMerchantRef.current,
       calmBeforeUsed: calmBeforeUsedRef.current,
+      marksOfTheDon,
+      contractHullMult,
     }
   }
 
@@ -1703,7 +1705,11 @@ export default function GauntletGame(props: GauntletGameProps) {
     // effect sees no delta (s.hp was already saved against that max).
     {
       const restoredEffects = [...boonEffects(s.boonTiers), ...confluenceEffects(s.boonTiers, s.confluencesTaken ?? []), ...convergenceEffects(s.boonTiers, s.confluencesTaken ?? [], s.convergencesTaken ?? []), ...curseEffects(s.curseTiers)]
-      prevHpMaxRef.current = Math.round(baseHpMax * termFxRef.current.maxHpPct * hpBoonMult(restoredEffects, s.cleared + skipOffset + 1, s.cleared))
+      // Include the Mark + contract hull multipliers so the restored ceiling
+      // MATCHES the resumed hpMax — else the heal-on-increase effect would see a
+      // phantom delta and top the player up for free on resume.
+      const markHull = (1 + (s.marksOfTheDon ?? 0) * MARK_HULL_PCT) * (s.contractHullMult ?? 1)
+      prevHpMaxRef.current = Math.max(1, Math.round(baseHpMax * termFxRef.current.maxHpPct * hpBoonMult(restoredEffects, s.cleared + skipOffset + 1, s.cleared) * markHull))
     }
     potRef.current = s.pot; setPot(s.pot)
     setBossesDefeated(s.bossesDefeated)
@@ -1721,6 +1727,9 @@ export default function GauntletGame(props: GauntletGameProps) {
     nextShrineRef.current = s.nextShrine
     nextMerchantRef.current = s.nextMerchant ?? MERCHANT_FIRST_DEPTH
     calmBeforeUsedRef.current = s.calmBeforeUsed
+    setMarksOfTheDon(s.marksOfTheDon ?? 0)
+    setContractHullMult(s.contractHullMult ?? 1)
+    pendingDonFallRef.current = null
     // Transient state rebuilt fresh at the breather.
     peekFightRef.current = null; setPeekFight(null)
     crewRefreshedRef.current = false; setFightOpensRefreshed(false)
