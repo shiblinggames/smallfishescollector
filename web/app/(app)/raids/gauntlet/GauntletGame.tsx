@@ -34,7 +34,7 @@ import {
 import { GAUNTLET_TERMS, TERM_GROUP_META, resolveTerms, termPressure, termTideEffects, pressureGemMult, pressureDepthFactor, NO_TERM_EFFECTS, PRESSURE_CAP, PRESSURE_DEPTH_FLOOR, PRESSURE_DEPTH_FULL, PRESSURE_SKIN_THRESHOLD, PRESSURE_SKIN_DEPTH, PRESSURE_SKIN_ID, MAX_AVAILABLE_PRESSURE, type SignedTerms } from '@/lib/gauntletTerms'
 import GauntletTermsPanel from './GauntletTermsPanel'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, setGauntletUpgradeActive, markGauntletIntroSeen, recordGauntletHit, wagerGauntletFathoms, markConfluencesSeen, checkpointGauntletRun, pauseGauntletRun, resumeGauntletRun, buyBaitWithFathoms, rollDavyOffer, buyMerchantItem, claimDailyTribute } from './actions'
-import { rollContractOffer, buildContractOffer, CONTRACTS, STAKE_LABEL, describeReward, describePenalty, type ContractKind, type ContractOffer, type ContractStake } from '@/lib/gauntletContracts'
+import { rollContractOffer, buildContractOffer, checkContract, CONTRACTS, STAKE_LABEL, describeReward, describePenalty, type ContractKind, type ContractOffer, type ContractStake, type ContractFightFacts } from '@/lib/gauntletContracts'
 import { MERCHANT_ITEMS, rollMerchantStock, type MerchantItemKind } from '@/lib/gauntletMerchant'
 import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
 import { offerCoinMult, offerChestMult, offerCopy, offerTakenLine, type DavyOffer } from '@/lib/gauntletOffer'
@@ -51,7 +51,7 @@ import { getXPProgress, MAX_LEVEL } from '@/lib/expeditionLevel'
 import { renownLevel } from '@/lib/renown'
 import RenownUpOverlay, { type RenownUpInfo } from '@/components/RenownUpOverlay'
 
-type Phase = 'intro' | 'usedup' | 'resume' | 'paused' | 'descending' | 'fighting' | 'curse' | 'boon' | 'shrine' | 'merchant' | 'contract' | 'between' | 'reward' | 'dead'
+type Phase = 'intro' | 'usedup' | 'resume' | 'paused' | 'descending' | 'fighting' | 'curse' | 'boon' | 'shrine' | 'merchant' | 'contract' | 'contract_result' | 'between' | 'reward' | 'dead'
 
 type CashResult = Awaited<ReturnType<typeof cashOutGauntlet>>
 
@@ -490,11 +490,20 @@ export default function GauntletGame(props: GauntletGameProps) {
   // one stores it as the active contract that rides the NEXT fight. See
   // lib/gauntletContracts. Combat tracking + resolution land in a later pass.
   const [contractOffer, setContractOffer] = useState<{ kind: ContractKind; offers: ContractOffer[] } | null>(null)
-  // The job you took, riding the next fight. A ref (read at descend + combat
-  // hand-off, later increments); a HUD chip lands with the combat wiring.
+  // The job you took, riding the next fight. The REF is the source of truth read
+  // in handleEnemyDefeated (a combat callback — a ref dodges its stale closure);
+  // the STATE mirror drives the live HUD chip during the contracted fight.
   const activeContractRef = useRef<ContractOffer | null>(null)
+  const [contractChip, setContractChip] = useState<ContractOffer | null>(null)
+  // Facts the combat engine reports the instant the contracted hull sinks
+  // (onContractFacts fires just before onEnemyDefeated). Judged in resolution.
+  const contractFactsRef = useRef<ContractFightFacts | null>(null)
+  // The resolved job (win/loss) held for the result beat.
+  const [contractResult, setContractResult] = useState<{ offer: ContractOffer; cleared: boolean } | null>(null)
   function takeContract(offer: ContractOffer) {
     activeContractRef.current = offer
+    setContractChip(offer)
+    contractFactsRef.current = null
     vibrate([0, 25, 30, 25])
     setContractOffer(null)
     setPhase('descending')
@@ -582,7 +591,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   // tab close with the browser's native prompt. Active across the whole run
   // (every in-fight + interstitial phase) so the Back sentinel is pushed once.
   const runLive = phase === 'descending' || phase === 'fighting'
-    || phase === 'curse' || phase === 'boon' || phase === 'shrine' || phase === 'merchant' || phase === 'contract' || phase === 'between'
+    || phase === 'curse' || phase === 'boon' || phase === 'shrine' || phase === 'merchant' || phase === 'contract' || phase === 'contract_result' || phase === 'between'
   useEffect(() => {
     if (!runLive) return
     window.history.pushState(null, '', window.location.href) // Back sentinel
@@ -728,6 +737,10 @@ export default function GauntletGame(props: GauntletGameProps) {
       peekFightRef.current = null; setPeekFight(null)
       crewRefreshedRef.current = false; setFightOpensRefreshed(false)
       calmBeforeUsedRef.current = false
+      // Clear any contract left dangling by a sunk run so it can't ride the next
+      // dive's first fight or flash a stale chip.
+      activeContractRef.current = null; contractFactsRef.current = null
+      setContractChip(null); setContractOffer(null); setContractResult(null)
       // No Mercy (a signed Term): the Anchor does not hold. The first blow that
       // would sink you, sinks you.
       anchorSavesLeftRef.current = fx.noLethalSaves ? 0 : getActiveEffects(props.equippedItems)
@@ -1116,7 +1129,6 @@ export default function GauntletGame(props: GauntletGameProps) {
     if (f.isBoss) setBossesDefeated(b => b + 1)
 
     rollStateRef.current = advanceRollState(rollStateRef.current, f)
-    const clearedNow = rollStateRef.current.cleared
     // Run ribbon: log the boss fall at the depth it happened.
     if (f.isBoss) runEventsRef.current.push({ depth: f.depth, kind: 'boss' })
 
@@ -1131,13 +1143,100 @@ export default function GauntletGame(props: GauntletGameProps) {
       setUsedAbilityIds(new Set(silencedCrewIdsRef.current)); crewRefreshedRef.current = true
     }
 
+    // Don's Gauntlet CONTRACT resolution — a job that rode this fight is judged
+    // here, BEFORE any normal depth event, so its beat lands first. Cleared out
+    // the instant it resolves (win or lose), so it can never double-fire.
+    const contract = activeContractRef.current
+    if (contract) {
+      activeContractRef.current = null
+      setContractChip(null)
+      const facts = contractFactsRef.current
+      contractFactsRef.current = null
+      // No facts (shouldn't happen — combat reports before this) → treat as a
+      // wash: no reward, no penalty, contract simply expires.
+      const cleared = !!facts && checkContract(contract, facts)
+      resolveContractOutcome(contract, cleared)   // pot/HP applied now; screens deferred to Continue
+      setContractResult({ offer: contract, cleared })
+      vibrate(cleared ? [0, 40, 60, 120] : [0, 120, 40, 120])
+      setPhase('contract_result')
+      return
+    }
+
+    proceedAfterFight()
+  }
+
+  // Apply a contract's immediate (pot / hull) outcome. The two screen-driven
+  // outcomes — a won boon draft, a lost curse — are deferred to the result
+  // screen's Continue (they hijack the boon/curse UI). A lost hull hit can never
+  // be lethal: you already won the fight, so it floors at 1.
+  function resolveContractOutcome(offer: ContractOffer, cleared: boolean) {
+    if (cleared) {
+      const r = offer.reward
+      if (r.kind === 'plunder') {
+        // The result screen shows the "+N plunder" beat itself; no DepthBar is
+        // mounted here, so skip the float (it'd stray onto the next fight).
+        potRef.current += r.n
+        setPot(potRef.current)
+      } else if (r.kind === 'fullHeal') {
+        playerHPRef.current = hpMax
+        setPlayerHP(hpMax)
+      }
+    } else {
+      const p = offer.penalty
+      if (p.kind === 'plunderLose') {
+        potRef.current = Math.max(0, potRef.current - p.n)
+        setPot(potRef.current)
+      } else if (p.kind === 'hpLossPct') {
+        const nh = Math.max(1, Math.round(playerHPRef.current * (1 - p.pct)))
+        playerHPRef.current = nh
+        setPlayerHP(nh)
+      }
+    }
+  }
+
+  // Leave the contract result beat. A won boon draft / a lost curse hijack the
+  // very next screen (they need the pick UI); everything else already landed, so
+  // fall through to the normal depth routing.
+  function contractResultContinue() {
+    const res = contractResult
+    setContractResult(null)
+    if (res && res.cleared && res.offer.reward.kind === 'boonDraft') {
+      const draft = drawBoons(termFxRef.current.boonPicks, boonTiers, gauntletBoonLuck(activeUpgrades), termFxRef.current.commonSkew, props.variant, bannedBoonsRef.current)
+      if (draft.length > 0) {
+        setPendingBoons(draft)
+        setDraftGen(g => g + 1)
+        setBoonFromShrine(true)
+        setRerollsLeft(gauntletBoonRerolls(activeUpgrades))
+        setPendingConfluence(null)
+        setPendingReprieve(null)
+        setPhase('boon')
+        return
+      }
+    } else if (res && !res.cleared && res.offer.penalty.kind === 'curse') {
+      const depth = rollStateRef.current.cleared + 1 + skipOffset
+      const curse = drawCurse(curseTiersRef.current, depth, termFxRef.current.curseStartsAtWorst, props.variant)
+      if (curse) {
+        curseDepthRef.current = depth
+        setPendingCurse(curse)
+        setCurseRerollsLeft(gauntletCurseRerolls(activeUpgrades))
+        setPhase('curse')
+        return
+      }
+    }
+    proceedAfterFight()
+  }
+
+  // The between-fights routing: curse milestone → boon draft → shrine → merchant
+  // → breather. Split out of handleEnemyDefeated so a contract result can run
+  // first and then hand back here. Recomputes the combat depth from the refs.
+  function proceedAfterFight() {
     // Curse milestone (descend INTO a CURSE_DEPTH) and boon draft (INTO a
     // BOON_DEPTH). They sit on different depths so the run alternates toll and
     // gift. Calm Before lets the FIRST curse milestone pass uncursed — the
     // player descends curse-free until the second. The curse/boon both-fire
     // branch below is kept defensive in case the two ever share a depth.
     // Combat depth (Veteran's Start shifts the boon/curse cadence up too).
-    const nextDepth = clearedNow + 1 + skipOffset
+    const nextDepth = rollStateRef.current.cleared + 1 + skipOffset
     // isCurseDepth / isBoonDepth carry the cadence PAST the fixed schedule
     // (every few depths forever) so deep runs keep stacking rules.
     const atCurseDepth = isCurseDepth(nextDepth, termFxRef.current.curseFrequencyMult)
@@ -2715,6 +2814,50 @@ export default function GauntletGame(props: GauntletGameProps) {
     )
   }
 
+  if (phase === 'contract_result' && contractResult) {
+    const def = CONTRACTS[contractResult.offer.kind]
+    const won = contractResult.cleared
+    const MC = won ? '#3fbf82' : '#f8716b'   // paid green / broken-deal red
+    return (
+      <>
+        <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
+        <div style={{ position: 'relative', zIndex: 1, maxWidth: 420, margin: '0 auto', padding: '12px 0.95rem', textAlign: 'center', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)' }}>
+          <motion.p initial={{ opacity: 0, letterSpacing: '0.5em' }} animate={{ opacity: 1, letterSpacing: '0.28em' }} transition={{ duration: 0.7 }}
+            className="font-karla font-800 uppercase" style={{ fontSize: '0.66rem', color: MC, marginTop: 22, textShadow: `0 0 16px ${MC}55` }}>
+            {won ? 'Contract Cleared' : 'Contract Broken'}
+          </motion.p>
+          <motion.div initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+            style={{ position: 'relative', width: 96, height: 96, margin: '16px auto 6px' }}>
+            <div aria-hidden style={{ position: 'absolute', inset: -16, borderRadius: '50%', background: `radial-gradient(circle, ${MC}44 0%, transparent 66%)`, animation: 'gauntPulse 3s ease-in-out infinite' }} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/raid8_donfinleone.png" alt="" loading="eager" decoding="async"
+              style={{ position: 'relative', width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', border: `1.5px solid ${MC}cc`, filter: `drop-shadow(0 6px 22px ${MC}66)`, ...(won ? {} : { filter: `grayscale(0.4) drop-shadow(0 6px 22px ${MC}66)` }) }} />
+          </motion.div>
+          <motion.h1 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
+            className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#e7f6ee', lineHeight: 1.08, marginTop: 4 }}>
+            {def.name}
+          </motion.h1>
+          <p className="font-karla" style={{ fontSize: '0.9rem', fontStyle: 'italic', color: 'rgba(206,232,220,0.72)', lineHeight: 1.5, marginTop: 10, padding: '0 0.4rem' }}>
+            &ldquo;{won ? 'Clean work. Here’s your cut.' : 'You gave me your word. Now you’ll pay it.'}&rdquo;
+          </p>
+          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.18, type: 'spring', stiffness: 240, damping: 16 }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 18, padding: '0.6rem 1.1rem', borderRadius: 999,
+              background: won ? 'rgba(74,222,128,0.12)' : 'rgba(248,113,113,0.12)', border: `1px solid ${MC}66` }}>
+            <span className="font-cinzel font-800 uppercase tracking-[0.06em]" style={{ fontSize: '0.95rem', color: won ? '#7fe0a8' : '#f8a5a5' }}>
+              {won ? `▲ ${describeReward(contractResult.offer.reward)}` : `▼ ${describePenalty(contractResult.offer.penalty)}`}
+            </span>
+          </motion.div>
+          <motion.button initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32 }}
+            whileTap={{ scale: 0.97 }} type="button" onClick={() => { vibrate([0, 15]); contractResultContinue() }}
+            className="font-cinzel font-800 uppercase tracking-[0.06em] tap"
+            style={{ width: '100%', marginTop: 24, padding: '1rem', borderRadius: 14, fontSize: '1rem', color: '#e7f6ee', background: `linear-gradient(180deg, ${MC}2e, ${MC}10)`, border: `1px solid ${MC}66`, cursor: 'pointer' }}>
+            Onward
+          </motion.button>
+        </div>
+      </>
+    )
+  }
+
   if (phase === 'between') {
     const cleared = rollStateRef.current.cleared
     // Display depth is the COMBAT depth (Veteran's Start shifts it up); chest +
@@ -3845,6 +3988,14 @@ export default function GauntletGame(props: GauntletGameProps) {
         <div className="gauntlet-depthbar" style={{ width: '100%', flexShrink: 0, marginBottom: 2 }}>
           <DepthBar depth={fight.depth} pot={pot} isBoss={fight.isBoss} isElite={fight.isElite} affixName={fight.affix?.name} curses={Object.keys(curseTiers).length} isHardcore={hardcoreRun} potGain={potGain} uncharted={uncharted} pressure={hardcoreRun ? pressure : 0} signedTerms={hardcoreRun ? signedTerms : {}} />
         </div>
+        {/* Don's contract riding this fight — the job's condition, kept in view. */}
+        {contractChip && (
+          <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="font-karla font-700"
+            style={{ position: 'relative', zIndex: 6, width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '0.38rem 0.7rem', marginBottom: 3, borderRadius: 10, background: 'linear-gradient(120deg, rgba(63,191,130,0.16), rgba(0,0,0,0.24))', border: '1px solid rgba(63,191,130,0.4)' }}>
+            <span className="font-cinzel font-800 uppercase tracking-[0.05em]" style={{ fontSize: '0.58rem', color: '#3fbf82', whiteSpace: 'nowrap' }}>Job · {CONTRACTS[contractChip.kind].name}</span>
+            <span style={{ fontSize: '0.62rem', color: 'rgba(214,230,222,0.82)', lineHeight: 1.2 }}>{CONTRACTS[contractChip.kind].goal(contractChip.param)}</span>
+          </motion.div>
+        )}
         <div style={{ width: '100%' }}>
           <RaidCombat
             key={`gauntlet-r${fight.depth}`}
@@ -3879,6 +4030,9 @@ export default function GauntletGame(props: GauntletGameProps) {
             shipClasses={props.shipClasses}
             equippedRepairKit={props.equippedRepairKit}
             onEnemyDefeated={handleEnemyDefeated}
+            // Don's contract: combat hands over the per-fight facts the instant
+            // this hull sinks, just before onEnemyDefeated resolves the job.
+            onContractFacts={(f) => { contractFactsRef.current = f }}
             runKills={rollStateRef.current.cleared}
             runDepth={fight.depth}
             initialCharges={carriedChargesRef.current}

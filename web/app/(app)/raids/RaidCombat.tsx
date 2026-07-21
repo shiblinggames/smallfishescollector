@@ -3098,6 +3098,9 @@ export default function RaidCombat({
       decoyFumbleRef.current = true
       // A locked shot, even a dud — counts as firing, and it's not a crit.
       shotsThisFightRef.current++
+      // Contract facts: a fired shot (dud → never a crit). Counted at the fire
+      // point, not the damage site, so a miss/graze still counts the shot.
+      { const cf = contractFactsRef.current; cf.shots++; if (playerAction === 'volley') cf.volleys++; else if (playerAction === 'mega') cf.megas++ }
       onShotResolved?.(false)
       if (indicatorRef.current) {
         indicatorRef.current.style.left = `calc(${firePosRef.current * 100}% - 2px)`
@@ -3166,6 +3169,10 @@ export default function RaidCombat({
     // Telemetry: a locked shot (post crit-upgrade). "Dead Reckoning" wants every
     // shot to be a crit; "Not a Shot Fired" wants zero shots taken all fight.
     shotsThisFightRef.current++
+    // Contract facts: every fired shot + its weapon + whether it crit. Counted
+    // here (the fire point), so a miss/graze counts toward shots but not crits —
+    // Dead-Eye needs a miss to fail it, weapon-only jobs need every shot seen.
+    { const cf = contractFactsRef.current; cf.shots++; if (playerAction === 'volley') cf.volleys++; else if (playerAction === 'mega') cf.megas++; if (res === 'critical') cf.crits++ }
     onShotResolved?.(res === 'critical')
     setAimResult(res)
     setCritFreeze(true)  // freezes the aim bar at the lock position regardless of result
@@ -4033,7 +4040,7 @@ export default function RaidCombat({
             splatColor = '#38bdf8'
             // Telemetry: enemy dodged YOUR shot (still a shot fired) vs YOU
             // slipped the enemy's shot (a won dodge).
-            if (isAttackerPlayer) { onStat?.({ shots: 1, volleys: action === 'volley' ? 1 : 0, crits: lockedAimResult === 'critical' ? 1 : 0 }); const cf = contractFactsRef.current; cf.shots++; if (action === 'volley') cf.volleys++; if (isMega) cf.megas++; if (lockedAimResult === 'critical') cf.crits++ }
+            if (isAttackerPlayer) onStat?.({ shots: 1, volleys: action === 'volley' ? 1 : 0, crits: lockedAimResult === 'critical' ? 1 : 0 })
             else onStat?.({ dodgesWon: 1 })
             // Untouchable confluence: slipping an enemy shot hands you back a
             // cannonball (only when it's the PLAYER who dodged).
@@ -4175,7 +4182,6 @@ export default function RaidCombat({
           // Telemetry: a landed player shot (fire/volley/mega). dmg is the blow
           // the hitsplat shows; highestHit takes the max host-side.
           onStat?.({ shots: 1, volleys: action === 'volley' ? 1 : 0, megas: isMega ? 1 : 0, crits: lockedAimResult === 'critical' ? 1 : 0, dmgDealt: dmg, highestHit: dmg })
-          { const cf = contractFactsRef.current; cf.shots++; if (action === 'volley') cf.volleys++; if (isMega) cf.megas++; if (lockedAimResult === 'critical') cf.crits++ }
           // Lifesteal — heal a slice of the damage you deal. Two additive
           // sources: the Leviathan's Hunger boon (tide.lifestealPct) and Davy's
           // Blood Cannon raid item (lifesteal_pct effect). The step carries the

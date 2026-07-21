@@ -32,11 +32,13 @@ export interface ContractFightFacts {
   won: boolean
   /** Rounds elapsed. */
   turns: number
-  /** Damaging player shots fired (fire + volley locks); Mega counted in `megas`. */
+  /** Every aimed shot fired (fire + volley + Mega), counted at the lock — a
+   *  miss or graze still counts. `volleys`/`megas` are subsets; `fires` is the
+   *  remainder. */
   shots: number
-  /** Of `shots`, how many landed critical. */
+  /** Of `shots`, how many locked critical. */
   crits: number
-  /** Single fire shots. */
+  /** Single fire shots (derived: shots − volleys − megas). */
   fires: number
   /** Volley shots. */
   volleys: number
@@ -145,12 +147,12 @@ export function rollContractOffer(depth: number, rng: () => number = Math.random
 // Descriptors the application layer maps to real effects (the same Fathoms
 // grant, boon draft, curse and status paths already in the gauntlet).
 export type ContractReward =
-  | { kind: 'fathoms'; n: number }
+  | { kind: 'plunder'; n: number }   // doubloons straight into the run pot
   | { kind: 'boonDraft' }
   | { kind: 'fullHeal' }
 
 export type ContractPenalty =
-  | { kind: 'fathomsLose'; n: number }
+  | { kind: 'plunderLose'; n: number }  // doubloons docked from the run pot
   | { kind: 'curse' }
   | { kind: 'hpLossPct'; pct: number }
 
@@ -165,12 +167,16 @@ export interface ContractOffer {
   penalty: ContractPenalty
 }
 
-// Fathoms in play scale with stake and depth.
-function fathomsReward(stake: ContractStake, depth: number): number {
-  return Math.round((30 + depth * 4) * stake)
+// Plunder (pot doubloons) in play scales with stake and depth, pitched at
+// roughly a boss round's contribution at the current depth (Don's pot runs
+// ×1.5, mirrored here) so a job is worth the risk without warping the run.
+// Kept as its own formula so this module stays decoupled from the pot economy.
+function plunderReward(stake: ContractStake, depth: number): number {
+  const roundish = (80 + 50 * Math.min(depth, 20)) * 1.5
+  return Math.round(roundish * (0.4 + 0.3 * stake))
 }
-function fathomsPenalty(stake: ContractStake, depth: number): number {
-  return Math.round(fathomsReward(stake, depth) * 0.7)
+function plunderPenalty(stake: ContractStake, depth: number): number {
+  return Math.round(plunderReward(stake, depth) * 0.7)
 }
 
 /** Build the offer for a chosen job + stake at the current depth. */
@@ -181,12 +187,12 @@ export function buildContractOffer(kind: ContractKind, stake: ContractStake, dep
   const reward: ContractReward =
     stake === 3 && rng() < 0.5 ? { kind: 'boonDraft' }
     : rng() < 0.18 ? { kind: 'fullHeal' }
-    : { kind: 'fathoms', n: fathomsReward(stake, depth) }
+    : { kind: 'plunder', n: plunderReward(stake, depth) }
   // Penalty — docked pay, a wound, or (at the big score) a curse for the run.
   const penalty: ContractPenalty =
     stake === 3 && rng() < 0.5 ? { kind: 'curse' }
     : rng() < 0.4 ? { kind: 'hpLossPct', pct: Math.min(0.4, 0.1 + 0.06 * stake) }
-    : { kind: 'fathomsLose', n: fathomsPenalty(stake, depth) }
+    : { kind: 'plunderLose', n: plunderPenalty(stake, depth) }
   return { kind, stake, param, reward, penalty }
 }
 
@@ -202,7 +208,7 @@ export const STAKE_LABEL: Record<ContractStake, string> = {
 
 export function describeReward(r: ContractReward): string {
   switch (r.kind) {
-    case 'fathoms':   return `+${r.n} Fathoms`
+    case 'plunder':   return `+${r.n.toLocaleString()} ⟡ plunder`
     case 'boonDraft': return 'A free power draft'
     case 'fullHeal':  return 'Patched to full hull'
   }
@@ -210,7 +216,7 @@ export function describeReward(r: ContractReward): string {
 
 export function describePenalty(p: ContractPenalty): string {
   switch (p.kind) {
-    case 'fathomsLose': return `Lose ${p.n} Fathoms`
+    case 'plunderLose': return `Lose ${p.n.toLocaleString()} ⟡ plunder`
     case 'curse':       return 'A curse for the rest of the run'
     case 'hpLossPct':   return `Lose ${Math.round(p.pct * 100)}% of your hull`
   }
