@@ -27,7 +27,7 @@ export default async function BadgesPage() {
   // Profile via the request-scoped cached loader (lib/userData.ts).
   // reconcileBadges runs first-class so any newly-met condition is granted on
   // visit (and its return is the authoritative unlocked list).
-  const [profile, collectionRes, speciesRes, voyageCountRes, unlocked, raidComplRes, crewRes, rodRes] = await Promise.all([
+  const [profile, collectionRes, speciesRes, voyageCountRes, unlocked, raidComplRes, crewRes, rodRes, rarityRes] = await Promise.all([
     getCurrentProfile(),
     admin.from('fish_collection').select('fish_id').eq('user_id', user.id),
     admin.from('fish_species').select('id, habitat'),
@@ -36,10 +36,15 @@ export default async function BadgesPage() {
     admin.from('raid_completions').select('raid_id, elapsed_ms').eq('user_id', user.id),
     admin.from('user_crew').select('xp, died_at, cards(slug)').eq('user_id', user.id),
     admin.from('rod_inventory').select('rod_tier').eq('user_id', user.id),
+    // Global badge rarity (Steam-style % of players who've unlocked each badge).
+    admin.rpc('get_badge_rarity'),
   ])
 
   // ── Derive everything from existing data — no new columns ────────────────
   const has = (id: string) => unlocked.includes(id)
+  const badgeRarity = new Map<string, number>(
+    ((rarityRes.data ?? []) as { badge_id: string; pct: number }[]).map(r => [r.badge_id, r.pct]),
+  )
 
   const raids = (raidComplRes.data ?? []) as { raid_id: string; elapsed_ms: number | null }[]
   const raidIds = new Set<string>(raids.map(r => r.raid_id))
@@ -156,6 +161,7 @@ export default async function BadgesPage() {
       reward: badgeReward(badgeId),
       claimed: claimed.has(badgeId),
       detail: badgeDetail(badgeId),
+      rarityPct: badgeRarity.get(badgeId),
     }
   }
 

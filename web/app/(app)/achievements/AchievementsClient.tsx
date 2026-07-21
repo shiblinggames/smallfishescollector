@@ -23,6 +23,9 @@ export interface JourneyGoal {
   reward?: number
   claimed?: boolean
   detail?: string
+  /** Global rarity — % of active players who've unlocked this badge. Undefined
+   *  means no one has earned it yet. */
+  rarityPct?: number
 }
 
 export interface JourneyGroup {
@@ -363,6 +366,37 @@ export default function AchievementsClient({ groups }: Props) {
                       {isClaimed ? 'Earned · reward claimed' : reward > 0 ? 'Earned · reward ready' : 'Earned'}
                     </p>
                   )}
+
+                  {/* Global rarity — how many captains across the fleet hold this
+                      color (Steam-style). A themed bar + a "Rare find" flair for
+                      the scarce ones. */}
+                  {(() => {
+                    const r = g.rarityPct
+                    const rare = r != null && r < 5
+                    const veryRare = r != null && r < 1
+                    const barPct = r == null ? 0 : Math.max(2, Math.min(100, r))
+                    const fill = veryRare ? '#c9a7ff' : rare ? GOLD : '#6fb2d8'
+                    const label = r == null
+                      ? 'No captain has claimed this yet'
+                      : `${r < 0.1 ? '<0.1' : r.toFixed(1)}% of captains have earned this`
+                    return (
+                      <div style={{ marginTop: 16, textAlign: 'left' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                          <span className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.14em', color: 'rgba(240,237,232,0.5)' }}>Global rarity</span>
+                          {(rare || r == null) && (
+                            <span className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.1em', color: veryRare || r == null ? '#c9a7ff' : GOLD, background: `${veryRare || r == null ? '#c9a7ff' : GOLD}1c`, border: `1px solid ${veryRare || r == null ? '#c9a7ff' : GOLD}55`, borderRadius: 999, padding: '0.14rem 0.42rem' }}>
+                              {r == null ? 'Unclaimed' : veryRare ? 'One in a hundred' : 'Rare find'}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ height: 7, borderRadius: 4, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
+                          <motion.div initial={{ width: 0 }} animate={{ width: `${barPct}%` }} transition={{ type: 'spring', stiffness: 160, damping: 26, delay: 0.1 }}
+                            style={{ height: '100%', background: fill, borderRadius: 4 }} />
+                        </div>
+                        <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.6)', marginTop: 6, fontVariantNumeric: 'tabular-nums' }}>{label}</p>
+                      </div>
+                    )
+                  })()}
 
                   {/* Actions */}
                   <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
