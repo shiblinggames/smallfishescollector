@@ -1837,52 +1837,87 @@ export default function GauntletGame(props: GauntletGameProps) {
             position: 'relative', zIndex: 1, maxWidth: 460, margin: '0 auto',
             paddingTop: 6, paddingLeft: '0.85rem', paddingRight: '0.85rem', textAlign: 'center',
           }}>
-          {/* Title — a dropdown switcher when the player has BOTH gauntlets
-              unlocked, otherwise a plain heading. */}
+          {/* Title — a rich picker when the player has BOTH gauntlets unlocked,
+              otherwise a plain heading. */}
           {props.otherGauntletUnlocked ? (
             <div style={{ position: 'relative', display: 'inline-block', marginTop: 8 }}>
-              <button type="button" onClick={() => setSwitcherOpen(o => !o)} className="tap"
+              <button type="button" onClick={() => { vibrate([0, 12]); setSwitcherOpen(o => !o) }} className="tap"
                 aria-haspopup="menu" aria-expanded={switcherOpen}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px' }}>
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 9, background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px' }}>
                 <h1 className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f3ead2', lineHeight: 1.08, textShadow: '0 0 22px rgba(240,192,64,0.3)' }}>
                   {gauntletTitle}
                 </h1>
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={AC} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden
-                  style={{ transform: switcherOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.18s', opacity: 0.9 }}>
-                  <path d="M6 9l6 6 6-6" />
-                </svg>
+                {/* a themed control chip so the title clearly reads as switchable */}
+                <motion.span aria-hidden
+                  animate={switcherOpen ? {} : { boxShadow: [`0 0 0px ${AC}00`, `0 0 12px ${AC}55`, `0 0 0px ${AC}00`] }}
+                  transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
+                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, borderRadius: '50%', background: `${AC}1c`, border: `1px solid ${AC}66` }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={AC} strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"
+                    style={{ transform: switcherOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </motion.span>
               </button>
-              {switcherOpen && (() => {
-                const otherIsDon = !isDonG
-                const otherName = otherIsDon ? "Don's Gauntlet" : 'Davy Jones Gauntlet'
-                const otherRoute = otherIsDon ? '/raids/dons-gauntlet' : '/raids/gauntlet'
-                const otherAC = otherIsDon ? KRAKEN : TEAL
-                return (
-                  <>
-                    {/* outside-tap backdrop */}
-                    <div onClick={() => setSwitcherOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
-                    <div role="menu" style={{
-                      position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', marginTop: 6, zIndex: 41,
-                      minWidth: 210, padding: 5, borderRadius: 12,
-                      background: 'rgba(10,15,20,0.97)', border: `1px solid ${AC}44`, boxShadow: '0 12px 34px rgba(0,0,0,0.6)',
-                    }}>
-                      {/* current — marked, not navigable */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.55rem 0.7rem', borderRadius: 9, background: `${AC}18` }}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={AC} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M20 6L9 17l-5-5" /></svg>
-                        <span className="font-cinzel font-700" style={{ flex: 1, fontSize: '0.9rem', color: '#f3ead2', textAlign: 'left' }}>{gauntletTitle}</span>
-                        <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.1em', color: AC }}>Here</span>
+              <AnimatePresence>
+                {switcherOpen && (() => {
+                  const GS = [
+                    { id: 'davy', name: 'Davy Jones Gauntlet', route: '/raids/gauntlet',      img: MAW_IMG,          ac: TEAL,   tag: 'The original descent' },
+                    { id: 'don',  name: "Don's Gauntlet",      route: '/raids/dons-gauntlet', img: '/donsgauntlet.png', ac: KRAKEN, tag: 'The endgame descent' },
+                  ]
+                  const currentId = isDonG ? 'don' : 'davy'
+                  return (
+                    <>
+                      {/* outside-tap backdrop */}
+                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        onClick={() => setSwitcherOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 40, background: 'rgba(3,6,10,0.55)', backdropFilter: 'blur(2px)' }} />
+                      {/* centering wrapper stays static so the menu's own scale/opacity
+                          animation never clobbers the translateX(-50%). */}
+                      <div style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', marginTop: 10, zIndex: 41 }}>
+                        <motion.div role="menu"
+                          initial={{ opacity: 0, y: -10, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -8, scale: 0.94 }}
+                          transition={{ type: 'spring', stiffness: 440, damping: 30 }}
+                          style={{ transformOrigin: 'top center', width: 296, padding: 9, borderRadius: 18,
+                            background: 'linear-gradient(180deg, rgba(15,21,28,0.99), rgba(8,11,15,0.99))', border: `1px solid ${AC}44`, boxShadow: `0 20px 48px rgba(0,0,0,0.66), 0 0 0 1px rgba(255,255,255,0.02)` }}>
+                          <p className="font-karla font-800 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: '#8a948e', textAlign: 'center', margin: '2px 0 9px' }}>Choose your gauntlet</p>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {GS.map((g, i) => {
+                              const here = g.id === currentId
+                              return (
+                                <motion.button key={g.id} type="button"
+                                  initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.05 + i * 0.07 }}
+                                  onClick={here ? undefined : () => { vibrate([0, 16]); setSwitcherOpen(false); router.push(g.route) }}
+                                  disabled={here}
+                                  whileTap={here ? undefined : { scale: 0.97 }}
+                                  className="tap"
+                                  style={{ position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', gap: 11, width: '100%', textAlign: 'left', padding: '0.62rem 0.7rem', borderRadius: 13, cursor: here ? 'default' : 'pointer',
+                                    background: here ? `${g.ac}16` : 'rgba(255,255,255,0.028)', border: `1px solid ${here ? `${g.ac}66` : 'rgba(255,255,255,0.09)'}` }}>
+                                  {/* hero portrait with a themed glow ring */}
+                                  <span style={{ position: 'relative', flexShrink: 0, width: 48, height: 48, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <span aria-hidden style={{ position: 'absolute', inset: -3, borderRadius: '50%', background: `radial-gradient(circle, ${g.ac}4d, transparent 70%)` }} />
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={g.img} alt="" loading="lazy" decoding="async" style={{ position: 'relative', width: 46, height: 46, borderRadius: '50%', objectFit: 'cover', border: `1.5px solid ${g.ac}99`, background: 'rgba(0,0,0,0.35)' }} />
+                                  </span>
+                                  <span style={{ flex: 1, minWidth: 0 }}>
+                                    <span className="font-cinzel font-700 truncate" style={{ display: 'block', fontSize: '0.94rem', color: here ? '#f3ead2' : '#e4ece8', lineHeight: 1.1 }}>{g.name}</span>
+                                    <span className="font-karla font-600" style={{ display: 'block', fontSize: '0.62rem', color: `${g.ac}cc`, marginTop: 2 }}>{g.tag}</span>
+                                  </span>
+                                  {here ? (
+                                    <span className="font-karla font-800 uppercase tracking-[0.1em]" style={{ flexShrink: 0, fontSize: '0.48rem', color: g.ac, background: `${g.ac}20`, border: `1px solid ${g.ac}55`, borderRadius: 999, padding: '0.18rem 0.45rem' }}>Here</span>
+                                  ) : (
+                                    <motion.span aria-hidden animate={{ x: [0, 3, 0] }} transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }} style={{ flexShrink: 0, display: 'flex', color: g.ac }}>
+                                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
+                                    </motion.span>
+                                  )}
+                                </motion.button>
+                              )
+                            })}
+                          </div>
+                        </motion.div>
                       </div>
-                      {/* the other — navigates */}
-                      <button type="button" onClick={() => { setSwitcherOpen(false); router.push(otherRoute) }} className="tap"
-                        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '0.55rem 0.7rem', marginTop: 3, borderRadius: 9, background: 'none', border: 'none', cursor: 'pointer' }}>
-                        <span aria-hidden style={{ width: 8, height: 8, borderRadius: '50%', background: otherAC, boxShadow: `0 0 8px ${otherAC}`, flexShrink: 0 }} />
-                        <span className="font-cinzel font-700" style={{ flex: 1, fontSize: '0.9rem', color: '#d8e0dc', textAlign: 'left' }}>{otherName}</span>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8a948e" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M9 18l6-6-6-6" /></svg>
-                      </button>
-                    </div>
-                  </>
-                )
-              })()}
+                    </>
+                  )
+                })()}
+              </AnimatePresence>
             </div>
           ) : (
             <h1 className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f3ead2', lineHeight: 1.08, marginTop: 8, textShadow: '0 0 22px rgba(240,192,64,0.3)' }}>
