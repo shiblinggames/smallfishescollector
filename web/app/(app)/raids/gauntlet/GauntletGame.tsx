@@ -27,7 +27,7 @@ import {
   convergenceEffects, activeConvergences, drawConvergenceOffer, convergenceDescAt, CONVERGENCES,
   REPRIEVE_MIN_DEPTH, REPRIEVE_CHANCE, drawReprieve, type Reprieve,
   // Davy's Terms — the chosen, structural difficulty layer (hardcore only).
-  DROWNED_FILTER, GHOST_FILTER, bandForDepth, gauntletTaunt, donRiseCopy,
+  DROWNED_FILTER, GHOST_FILTER, bandForDepth, gauntletTaunt, donRiseCopy, donFallCopy, donRiseIndex, DON_RISE_DEPTHS, MARK_DMG_PCT, MARK_HULL_PCT,
   GAUNTLET_COOLDOWN_HOURS, HARDCORE_RUNS_PER_DAY, HC_UNLOCK_DEPTH, GAUNTLET_REWARD_DEPTH_CAP,
   emptyRunStats, addRunStats, coerceRunStats,
   type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot, type GauntletRunState, type GauntletRunStats, chestOdds, type GauntletVariant } from '@/lib/gauntlet'
@@ -51,7 +51,7 @@ import { getXPProgress, MAX_LEVEL } from '@/lib/expeditionLevel'
 import { renownLevel } from '@/lib/renown'
 import RenownUpOverlay, { type RenownUpInfo } from '@/components/RenownUpOverlay'
 
-type Phase = 'intro' | 'usedup' | 'resume' | 'paused' | 'descending' | 'fighting' | 'curse' | 'boon' | 'shrine' | 'merchant' | 'contract' | 'contract_result' | 'between' | 'reward' | 'dead'
+type Phase = 'intro' | 'usedup' | 'resume' | 'paused' | 'descending' | 'fighting' | 'curse' | 'boon' | 'shrine' | 'merchant' | 'contract' | 'contract_result' | 'don_fallen' | 'between' | 'reward' | 'dead'
 
 type CashResult = Awaited<ReturnType<typeof cashOutGauntlet>>
 
@@ -235,12 +235,15 @@ export default function GauntletGame(props: GauntletGameProps) {
   // cadence, displayed depth). Rewards stay on the cleared count, so the head
   // start never inflates pot / chests / Fathoms / record.
   const skipOffset = gauntletSkipOffset(activeUpgrades)
+  // Marks of the Don — the stacking trophy for beating him at a milestone. Each
+  // Mark permanently buffs the run (damage here, hull folded into hpMax below).
+  const [marksOfTheDon, setMarksOfTheDon] = useState(0)
   // Run Upgrades that fold into the combat mods: Iron Hide (−damage taken) +
-  // Gunner's Eye (+damage dealt).
+  // Gunner's Eye (+damage dealt). Marks of the Don add flat damagePct on top.
   const runRaidMods = {
     ...props.raidMods,
     damageTakenPct: (props.raidMods.damageTakenPct ?? 0) + gauntletDamageTakenMod(activeUpgrades),
-    damagePct: (props.raidMods.damagePct ?? 0) + gauntletDamageMod(activeUpgrades),
+    damagePct: (props.raidMods.damagePct ?? 0) + gauntletDamageMod(activeUpgrades) + marksOfTheDon * MARK_DMG_PCT,
   }
 
   // A resumable crashed run takes priority over the intro/cooldown screens — the
@@ -504,6 +507,11 @@ export default function GauntletGame(props: GauntletGameProps) {
   // into hpMax below; the hpMax heal-on-increase effect tops the player up by the
   // gained ceiling for free. Reset to 1 at run start.
   const [contractHullMult, setContractHullMult] = useState(1)
+  // The "Don Finleone Falls" victory beat holds the rise index it's showing. The
+  // ref is set at the kill (survives the contract-first ordering) and consumed at
+  // the top of proceedAfterFight so the beat runs after any contract result.
+  const [donFallen, setDonFallen] = useState<number | null>(null)
+  const pendingDonFallRef = useRef<number | null>(null)
   function takeContract(offer: ContractOffer) {
     activeContractRef.current = offer
     setContractChip(offer)
@@ -577,7 +585,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   const curDepthForHp = fight?.depth ?? (rollStateRef.current.cleared + skipOffset + 1)
   // Deep Draft (a signed Term) lowers the CEILING, so every heal tops you up to
   // the smaller number. Applied before the boon scaling.
-  const hpMax = Math.max(1, Math.round(baseHpMax * termFx.maxHpPct * hpBoonMult(runEffects, curDepthForHp, rollStateRef.current.cleared) * contractHullMult))
+  const hpMax = Math.max(1, Math.round(baseHpMax * termFx.maxHpPct * hpBoonMult(runEffects, curDepthForHp, rollStateRef.current.cleared) * contractHullMult * (1 + marksOfTheDon * MARK_HULL_PCT)))
   const prevHpMaxRef = useRef(hpMax)
   useEffect(() => {
     const delta = hpMax - prevHpMaxRef.current
@@ -599,7 +607,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   // tab close with the browser's native prompt. Active across the whole run
   // (every in-fight + interstitial phase) so the Back sentinel is pushed once.
   const runLive = phase === 'descending' || phase === 'fighting'
-    || phase === 'curse' || phase === 'boon' || phase === 'shrine' || phase === 'merchant' || phase === 'contract' || phase === 'contract_result' || phase === 'between'
+    || phase === 'curse' || phase === 'boon' || phase === 'shrine' || phase === 'merchant' || phase === 'contract' || phase === 'contract_result' || phase === 'don_fallen' || phase === 'between'
   useEffect(() => {
     if (!runLive) return
     window.history.pushState(null, '', window.location.href) // Back sentinel
@@ -750,6 +758,8 @@ export default function GauntletGame(props: GauntletGameProps) {
       activeContractRef.current = null; contractFactsRef.current = null
       setContractChip(null); setContractOffer(null); setContractResult(null)
       setContractHullMult(1)
+      // Fresh run: no Marks earned, no pending Don beat.
+      setMarksOfTheDon(0); setDonFallen(null); pendingDonFallRef.current = null
       // No Mercy (a signed Term): the Anchor does not hold. The first blow that
       // would sink you, sinks you.
       anchorSavesLeftRef.current = fx.noLethalSaves ? 0 : getActiveEffects(props.equippedItems)
@@ -1152,6 +1162,14 @@ export default function GauntletGame(props: GauntletGameProps) {
       setUsedAbilityIds(new Set(silencedCrewIdsRef.current)); crewRefreshedRef.current = true
     }
 
+    // A Don Finleone rise just fell — take the Mark now (permanent run buff) and
+    // queue his "Falls" beat. The ref survives the contract-first ordering below;
+    // proceedAfterFight consumes it, so the beat lands after any contract result.
+    if (f.isApex) {
+      setMarksOfTheDon(m => m + 1)
+      pendingDonFallRef.current = f.depth
+    }
+
     // Don's Gauntlet CONTRACT resolution — a job that rode this fight is judged
     // here, BEFORE any normal depth event, so its beat lands first. Cleared out
     // the instant it resolves (win or lose), so it can never double-fire.
@@ -1241,10 +1259,39 @@ export default function GauntletGame(props: GauntletGameProps) {
     proceedAfterFight()
   }
 
+  // Leave the "Don Finleone Falls" beat: hand the player a guaranteed power draft
+  // (the Mark itself already applied at the kill), then continue. If the boon pool
+  // is dry, fall straight through to the normal routing.
+  function donFallenContinue() {
+    setDonFallen(null)
+    const draft = drawBoons(termFxRef.current.boonPicks, boonTiers, gauntletBoonLuck(activeUpgrades), termFxRef.current.commonSkew, props.variant, bannedBoonsRef.current)
+    if (draft.length > 0) {
+      setPendingBoons(draft)
+      setDraftGen(g => g + 1)
+      setBoonFromShrine(true)
+      setRerollsLeft(gauntletBoonRerolls(activeUpgrades))
+      setPendingConfluence(null)
+      setPendingReprieve(null)
+      setPhase('boon')
+      return
+    }
+    proceedAfterFight()
+  }
+
   // The between-fights routing: curse milestone → boon draft → shrine → merchant
   // → breather. Split out of handleEnemyDefeated so a contract result can run
   // first and then hand back here. Recomputes the combat depth from the refs.
   function proceedAfterFight() {
+    // A Don rise just fell — his "Falls" victory beat takes priority over every
+    // normal depth event (consumed once; the Mark already applied at the kill).
+    if (pendingDonFallRef.current != null) {
+      const fallDepth = pendingDonFallRef.current
+      pendingDonFallRef.current = null
+      setDonFallen(fallDepth)
+      vibrate([0, 60, 40, 120, 40, 200])
+      setPhase('don_fallen')
+      return
+    }
     // Curse milestone (descend INTO a CURSE_DEPTH) and boon draft (INTO a
     // BOON_DEPTH). They sit on different depths so the run alternates toll and
     // gift. Calm Before lets the FIRST curse milestone pass uncursed — the
@@ -2873,6 +2920,59 @@ export default function GauntletGame(props: GauntletGameProps) {
     )
   }
 
+  // ── Don Finleone Falls — the landmark victory beat + Mark reveal ────────────
+  if (phase === 'don_fallen' && donFallen != null) {
+    const fall = donFallCopy(donFallen)
+    const isThrone = donRiseIndex(donFallen) === DON_RISE_DEPTHS.length - 1
+    const AK = isThrone ? '#f0c040' : KRAKEN   // the throne pays out in gold; the rest in his green
+    const dmgPct = marksOfTheDon * MARK_DMG_PCT
+    const hullPct = Math.round(marksOfTheDon * MARK_HULL_PCT * 100)
+    return (
+      <>
+        <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
+        <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 120% 82% at 50% 56%, ${AK}30 0%, ${AK}10 42%, transparent 72%)` }} />
+        <div style={{ position: 'relative', zIndex: 1, minHeight: '62vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '1.6rem 1.1rem', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)' }}>
+          {/* His face, sinking + dimmed — he's going down. The throne clear glints gold. */}
+          <motion.div initial={{ opacity: 0.95, scale: 1, y: 0, rotate: 0 }} animate={{ opacity: isThrone ? 1 : 0.62, scale: 0.9, y: 26, rotate: isThrone ? 0 : -5 }} transition={{ duration: 1.5, ease: 'easeIn' }}
+            style={{ position: 'relative', width: 150, height: 150 }}>
+            <div aria-hidden style={{ position: 'absolute', inset: -18, borderRadius: '50%', background: `radial-gradient(circle, ${AK}3a 0%, transparent 66%)` }} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/raid8_donfinleone.png" alt="" loading="eager" decoding="async"
+              style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%', filter: isThrone ? `drop-shadow(0 10px 30px ${AK}66)` : 'grayscale(0.5) brightness(0.7) drop-shadow(0 10px 30px rgba(0,0,0,0.8))' }} />
+          </motion.div>
+          <motion.p initial={{ opacity: 0, letterSpacing: '0.5em' }} animate={{ opacity: 1, letterSpacing: '0.34em' }} transition={{ delay: 0.5, duration: 0.7 }}
+            className="font-karla font-800 uppercase" style={{ fontSize: '0.62rem', color: AK, marginTop: 20, textShadow: `0 0 18px ${AK}88` }}>{fall.eyebrow}</motion.p>
+          <motion.p initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.62, type: 'spring', stiffness: 200, damping: 16 }}
+            className="font-cinzel font-800" style={{ fontSize: '2rem', color: '#eafff2', lineHeight: 1.05, marginTop: 8, textShadow: `0 2px 12px rgba(0,0,0,0.7), 0 0 28px ${AK}55` }}>{fall.title}</motion.p>
+          <motion.p initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.85, duration: 0.5 }}
+            className="font-karla" style={{ maxWidth: 340, fontSize: '0.82rem', fontStyle: 'italic', color: 'rgba(206,232,220,0.82)', lineHeight: 1.5, marginTop: 12 }}>
+            &ldquo;{fall.line}&rdquo;
+            <span className="font-karla font-700 uppercase tracking-[0.16em]" style={{ display: 'block', fontSize: '0.5rem', color: 'rgba(206,232,220,0.5)', marginTop: 6 }}>Don Finleone</span>
+          </motion.p>
+
+          {/* The Mark reveal — a trophy card that pops in with the cumulative buff. */}
+          <motion.div initial={{ opacity: 0, scale: 0.8, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ delay: 1.15, type: 'spring', stiffness: 240, damping: 15 }}
+            style={{ marginTop: 22, padding: '0.85rem 1.15rem', borderRadius: 16, background: `linear-gradient(150deg, ${AK}22, rgba(0,0,0,0.32))`, border: `1px solid ${AK}77`, boxShadow: `0 0 26px ${AK}33` }}>
+            <p className="font-cinzel font-800 uppercase" style={{ fontSize: '0.9rem', letterSpacing: '0.08em', color: AK, textShadow: `0 0 14px ${AK}66` }}>
+              Mark of the Don{marksOfTheDon > 1 ? ` ×${marksOfTheDon}` : ''}
+            </p>
+            <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: 'rgba(230,244,236,0.9)', marginTop: 4 }}>
+              +{dmgPct}% damage · +{hullPct}% max hull
+              <span className="font-karla" style={{ display: 'block', fontSize: '0.6rem', color: 'rgba(206,232,220,0.55)', marginTop: 3 }}>Carried for the rest of the run.</span>
+            </p>
+          </motion.div>
+
+          <motion.button initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.5 }}
+            whileTap={{ scale: 0.97 }} type="button" onClick={() => { vibrate([0, 18]); donFallenContinue() }}
+            className="font-cinzel font-800 uppercase tracking-[0.06em] tap"
+            style={{ width: '100%', maxWidth: 360, marginTop: 22, padding: '1rem', borderRadius: 14, fontSize: '1rem', color: '#0c1512', background: `linear-gradient(180deg, ${AK}, ${AK}bb)`, border: `1px solid ${AK}`, cursor: 'pointer', boxShadow: `0 0 22px ${AK}44` }}>
+            Claim your prize
+          </motion.button>
+        </div>
+      </>
+    )
+  }
+
   if (phase === 'between') {
     const cleared = rollStateRef.current.cleared
     // Display depth is the COMBAT depth (Veteran's Start shifts it up); chest +
@@ -4006,6 +4106,14 @@ export default function GauntletGame(props: GauntletGameProps) {
         <div className="gauntlet-depthbar" style={{ width: '100%', flexShrink: 0, marginBottom: 2 }}>
           <DepthBar depth={fight.depth} pot={pot} isBoss={fight.isBoss} isElite={fight.isElite} affixName={fight.affix?.name} curses={Object.keys(curseTiers).length} isHardcore={hardcoreRun} potGain={potGain} uncharted={uncharted} pressure={hardcoreRun ? pressure : 0} signedTerms={hardcoreRun ? signedTerms : {}} />
         </div>
+        {/* Marks of the Don — the stacking trophy, kept in view so the earned power reads. */}
+        {marksOfTheDon > 0 && (
+          <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="font-karla font-700"
+            style={{ position: 'relative', zIndex: 6, alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 7, padding: '0.28rem 0.6rem', marginBottom: 3, borderRadius: 999, background: 'linear-gradient(120deg, rgba(240,192,64,0.16), rgba(0,0,0,0.24))', border: '1px solid rgba(240,192,64,0.45)' }}>
+            <span className="font-cinzel font-800 uppercase tracking-[0.05em]" style={{ fontSize: '0.56rem', color: '#f0c040', whiteSpace: 'nowrap' }}>Mark of the Don ×{marksOfTheDon}</span>
+            <span style={{ fontSize: '0.58rem', color: 'rgba(240,225,190,0.8)', whiteSpace: 'nowrap' }}>+{marksOfTheDon * MARK_DMG_PCT}% dmg · +{Math.round(marksOfTheDon * MARK_HULL_PCT * 100)}% hull</span>
+          </motion.div>
+        )}
         {/* Don's contract riding this fight — the job's condition, kept in view. */}
         {contractChip && (
           <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="font-karla font-700"

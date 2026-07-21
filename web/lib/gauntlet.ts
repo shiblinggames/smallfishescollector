@@ -443,6 +443,41 @@ export function donRiseIndex(depth: number): number {
   return DON_RISE_DEPTHS.indexOf(depth)
 }
 
+// Mark of the Don — the stacking trophy for putting him down. Each Don you beat,
+// you take a piece of him: a permanent run-wide buff that stacks across the rises.
+// Beat all four and you reach the throne a Don-slayer. (damagePct is added into
+// runRaidMods; hull is a multiplier folded into hpMax.)
+export const MARK_DMG_PCT  = 6     // +6 damagePct per Mark
+export const MARK_HULL_PCT = 0.05  // +5% max hull per Mark
+
+/** Victory copy when a Don rise is beaten — his voice bleeding out, climbing to a
+ *  real fall at the throne. Mob-boss menace, sea-cold, no em-dashes. */
+export function donFallCopy(depth: number): { eyebrow: string; title: string; line: string } {
+  const i = donRiseIndex(depth)
+  switch (i) {
+    case 0: return {
+      eyebrow: 'The Green Recoils',
+      title: 'Don Finleone Falls',
+      line: 'You are better than my Family ever knew, captain. But down here I always come back. Deeper, and hungrier.',
+    }
+    case 1: return {
+      eyebrow: 'He Sinks Again',
+      title: 'Don Finleone Falls',
+      line: 'Twice now. The green has a long memory, and I have a longer one. This is not the last table we sit at.',
+    }
+    case 2: return {
+      eyebrow: 'The Court Reels',
+      title: 'Don Finleone Falls',
+      line: 'Still standing. Fine. What my guns cannot do, the bottom will. Come down and let it finish you.',
+    }
+    default: return {
+      eyebrow: 'The Throne Goes Dark',
+      title: 'The Don Is Undone',
+      line: 'So. The throne is yours to look at. Take your piece of me and get out of my green, while the green still lets you.',
+    }
+  }
+}
+
 /** Telegraph copy for a Don rise — his voice climbs from wary host to the throne.
  *  Mob-boss menace, sea-cold, no em-dashes. Falls back to the throne line past
  *  the last listed rise (defensive; rises only fire on DON_RISE_DEPTHS). */
