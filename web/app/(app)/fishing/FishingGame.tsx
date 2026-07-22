@@ -364,7 +364,7 @@ const WAIT_MESSAGES: Record<ZoneKey, string[]> = {
     "Something's down there.",
     "It's cold. and quiet.",
     "You're in bigger fish territory now.",
-    "Tip: snag zones hit harder down here — upgrade your line.",
+    "Tip: snags strike more often down here — a stronger line fends them off.",
     "Tip: chain perfects for bonus XP — it compounds fast.",
     "Your reel matters a lot down here.",
     "Tip: some rods have special abilities — worth a look at the tackle shop.",
@@ -452,10 +452,12 @@ const SKIN_TIPS = [
   "Tip: reach Fishing Level 50 to unlock the Forest character color.",
   "Tip: prestige any zone 3 times to unlock the Sand character color.",
   "Tip: reach Navigation Level 50 on voyages to unlock the Sky character color.",
-  "Tip: the Golden character color can be bought for 1,000,000 doubloons from your profile.",
+  "Tip: the Golden character color costs 100,000 doubloons; Gilded runs 1,000,000.",
   "Tip: open fishing crates for a rare chance to find the Mint character color.",
   "Tip: reach Fishing Level 75 to unlock the Ice character color.",
-  "Tip: the Autumn and Ruby character colors can be bought with gems from your profile.",
+  "Tip: several character colors, like Autumn and Ruby, can be bought with gems from your profile.",
+  "Tip: reach 300 achievement points to unlock the Galaxy character color.",
+  "Tip: max out both Fishing and Navigation to Level 100 to unlock the Crystal character color.",
 ]
 
 // General mechanics tips. Always in the pool (no unlock condition), so
@@ -463,7 +465,7 @@ const SKIN_TIPS = [
 // same voice as the zone wait-messages. Verify any number against the
 // source before adding — stale tips are worse than no tip.
 const GENERAL_TIPS = [
-  "Tip: prestige a zone and every catch there earns +10% XP per prestige level — forever.",
+  "Tip: prestige a zone for +10% catch XP per level there, up to +50% at Prestige 5.",
   "Tip: a zone's completion reward grows each time you prestige it, up to double at Prestige 5.",
   "Tip: quick-sell pays 75%. Liquidate your whole hold for 87% an hour later, or work the market for the best price.",
   "Tip: each hook tier widens your catch zone by 3°. It adds up fast.",
@@ -479,7 +481,7 @@ const GENERAL_TIPS = [
   "Tip: keep an eye out for Finn — a rival angler who shows up to challenge you.",
   "Tip: upgrade your fish hold so a good run doesn't fill up and stall.",
   "Tip: Ancient Deep trophies never enter your hold. They go straight to your wall.",
-  "Tip: equip a boat and hat from the gear screen to customize your fisher.",
+  "Tip: equip a boat, hat, and pet from the gear screen to customize your fisher.",
   "Tip: a perfect catch keeps your streak alive, and the bonus XP compounds.",
   "Tip: your perfect streak carries over when you leave between casts. Bail on a hooked fish and it breaks.",
   "Tip: recruit a crew at the Crew Hall, then send them on voyages and raids for loot and rare gear.",
@@ -490,7 +492,7 @@ const GENERAL_TIPS = [
   "Tip: on a Trawl, a crew's Savvy grows the XP it brings back and Fortune grows the doubloons. Match the crew to what you need.",
   "Tip: you can run several Trawls at once, one per zone you've unlocked. Passive XP and gold while you cast or while you're away.",
   // Fish size / records.
-  "Tip: every catch rolls a size. Land a Large or a Trophy and it earns a place in your records.",
+  "Tip: every catch rolls a size, and your biggest of each species is kept as a personal best.",
   // New doubloon-earning rooms in the tavern.
   "Tip: the Parlor's daily trivia and weekly Pirate King ladder pay straight doubloons. Easy gold between casts.",
   // Charting — puzzles + the World Chart.
