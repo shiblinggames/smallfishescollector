@@ -114,42 +114,11 @@ async function fetchPerfectStreak(admin: Admin, userId: string) {
 // Ties broken by latest raid_completions.completed_at ASC. Mirrors
 // fetchRaidProgressBoard in /leaderboard/page.tsx.
 async function fetchRaidProgress(admin: Admin, userId: string) {
-  const { data: profiles } = await admin
-    .from('profiles')
-    .select('id, username, raid_node_progress, has_completed_practice_raid')
-    .eq('is_admin', false)
-  if (!profiles || profiles.length === 0) return { top: [] as LeaderboardEntry[], myScore: null as number | null, myRank: null as number | null }
-
-  const { data: completions } = await admin
-    .from('raid_completions')
-    .select('user_id, raid_id, completed_at')
-  const lastByUser = new Map<string, string>()
-  const raidsByUser = new Map<string, Set<string>>()
-  for (const c of (completions ?? []) as Array<{ user_id: string; raid_id: string; completed_at: string }>) {
-    const prev = lastByUser.get(c.user_id)
-    if (!prev || c.completed_at > prev) lastByUser.set(c.user_id, c.completed_at)
-    const set = raidsByUser.get(c.user_id) ?? new Set<string>()
-    set.add(c.raid_id)
-    raidsByUser.set(c.user_id, set)
-  }
-
-  type Row = LeaderboardEntry & { lastAt: string | null }
-  const rows: Row[] = []
-  for (const p of profiles as Array<{ id: string; username: string | null; raid_node_progress: { cleared?: string[] } | null; has_completed_practice_raid: boolean | null }>) {
-    const clearedCount = Array.isArray(p.raid_node_progress?.cleared) ? p.raid_node_progress!.cleared!.length : 0
-    const bossCount = raidsByUser.get(p.id)?.size ?? 0
-    const skirmish = p.has_completed_practice_raid ? 1 : 0
-    const score = clearedCount + bossCount + skirmish
-    if (score > 0) rows.push({ user_id: p.id, username: p.username ?? '', score, lastAt: lastByUser.get(p.id) ?? null })
-  }
-  rows.sort((a, b) => {
-    if (b.score !== a.score) return b.score - a.score
-    if (a.lastAt && b.lastAt) return a.lastAt < b.lastAt ? -1 : a.lastAt > b.lastAt ? 1 : 0
-    if (a.lastAt) return -1
-    if (b.lastAt) return 1
-    return 0
-  })
-  const top: LeaderboardEntry[] = rows.slice(0, 50).map(r => ({ user_id: r.user_id, username: r.username, score: r.score }))
+  // Scored + ranked in SQL (raid_progress_board), same as the /leaderboard page —
+  // no longer pulls every profile + every raid_completion to rank in JS.
+  const { data } = await admin.rpc('raid_progress_board')
+  const rows = (data ?? []) as Array<{ user_id: string; username: string | null; score: number }>
+  const top: LeaderboardEntry[] = rows.slice(0, 50).map(r => ({ user_id: r.user_id, username: r.username ?? '', score: r.score }))
   const myIdx = rows.findIndex(r => r.user_id === userId)
   return { top, myScore: myIdx >= 0 ? rows[myIdx].score : null, myRank: myIdx >= 0 ? myIdx + 1 : null }
 }
