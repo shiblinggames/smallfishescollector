@@ -1306,6 +1306,7 @@ export async function sellFish(
     admin.from('doubloon_transactions').insert({
       user_id: user.id, amount: earned, reason: 'Sold fish (quick-sell)',
     }),
+    admin.rpc('bump_profile_stat', { uid: user.id, col: 'fish_sold_doubloons', n: earned }),
     ...(newDoubloons >= 1_000_000 ? [grantBadgeDirect(user.id, 'deep_pockets')] : []),
   ])
 
@@ -1368,6 +1369,7 @@ export async function quickSellAllFish(): Promise<
     admin.from('doubloon_transactions').insert({
       user_id: user.id, amount: totalEarned, reason: `Sold ${totalFishSold} fish (quick-sell)`,
     }),
+    admin.rpc('bump_profile_stat', { uid: user.id, col: 'fish_sold_doubloons', n: totalEarned }),
     ...(newDoubloons >= 1_000_000 ? [grantBadgeDirect(user.id, 'deep_pockets')] : []),
   ])
 

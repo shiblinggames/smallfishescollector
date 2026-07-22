@@ -18,6 +18,7 @@ import { GAUNTLET_UPGRADES } from './gauntletUpgrades'
 import { FORGE_RECIPES, isForgedRaidItem, isAbyssalForgedItem, GAUNTLET2_BASE_ITEM_IDS } from './raidItems'
 import { CREW_SKINS } from './crewSkins'
 import { BUYABLE_ROD_TIERS } from './rods'
+import { SHIP_SKINS } from './shipSkins'
 
 // Chase-skin ids (the animated legendary skins) — for "The Chase".
 export const CHASE_SKIN_IDS = new Set(CREW_SKINS.filter(s => s.chase).map(s => s.id))
@@ -76,6 +77,8 @@ export interface BadgeProfileFields {
   ancient_catches?: number[] | null   // the ≤6 Ancient Deep giants (Megalodon etc.)
   trophy_size_catches?: number | null  // lifetime count of Trophy-SIZE catches
   prestige_levels?: Record<string, number> | null
+  finn_wins?: number | null
+  fish_sold_doubloons?: number | null
   fishing_casts?: number | null
   fishing_double_catches?: number | null
   fishing_crates_opened?: number | null
@@ -118,6 +121,7 @@ export interface BadgeJoinData {
   voyageCount: number       // revealed daily_voyages
   collectionCount: number   // fish_collection rows
   rodTiers: number[]        // rod_inventory rod_tier values (owned rods)
+  goldenCount: number       // shiny_catches rows (lifetime goldens caught)
 }
 
 /** Map of badge id → whether its derivable condition is met. */
@@ -230,6 +234,36 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
     first_haul:     Number(p.trawls_collected ?? 0) >= 1,
     steady_nets:    Number(p.trawls_collected ?? 0) >= 25,
     deep_trawler:   Number(p.trawls_collected ?? 0) >= 100,
+    // ── 2026-07 fishing expansion (24 badges) ──
+    // Rookie
+    wet_behind_ears: fishLvl >= 25,
+    beginners_luck: Number(p.fishing_crates_opened ?? 0) >= 1,
+    struck_gold:    j.goldenCount >= 1,
+    // Seasoned
+    old_hand:       fishLvl >= 50,
+    crate_expectations: Number(p.fishing_crates_opened ?? 0) >= 250,
+    a_real_keeper:  Number(p.trophy_size_catches ?? 0) >= 10,
+    full_stringer:  (p.unlocked_pets ?? []).length >= 3,
+    one_upped:      Number(p.finn_wins ?? 0) >= 1,
+    fresh_coat:     (p.ship_skins ?? []).length >= 1,
+    // Veteran
+    twice_the_haul: Number(p.fishing_double_catches ?? 0) >= 500,
+    menagerie:      (p.unlocked_pets ?? []).length >= 5,
+    fishmonger:     Number(p.fish_sold_doubloons ?? 0) >= 250_000,
+    net_positive:   Number(p.trawls_collected ?? 0) >= 500,
+    // Master
+    crack_shot:     Number(p.total_perfects ?? 0) >= 2500,
+    salvage_rights: Number(p.fishing_crates_opened ?? 0) >= 1000,
+    high_water_mark: PRESTIGE_ZONES.some(z => (prestige[z] ?? 0) >= 5),
+    fish_baron:     Number(p.fish_sold_doubloons ?? 0) >= 1_000_000,
+    hoard_of_gold:  j.goldenCount >= 10,
+    finns_rival:    Number(p.finn_wins ?? 0) >= 10,
+    // Grandmaster
+    in_the_flow:    streak >= 30,
+    eagle_eyed:     Number(p.total_perfects ?? 0) >= 5000,
+    el_dorado:      j.goldenCount >= 25,
+    the_better_angler: Number(p.finn_wins ?? 0) >= 25,
+    full_drydock:   SHIP_SKINS.every(s => (p.ship_skins ?? []).includes(s.id)),
     // ── 2026-07 expansion (Gauntlet + endgame) ──
     // Descent (depth 5 = into_the_deep, depth 10 = davy_jones, already above).
     first_descent:  gauntletDeepest >= 1,
@@ -311,4 +345,4 @@ export function earnedBadgeIds(p: BadgeProfileFields, j: BadgeJoinData): string[
 
 /** Columns a query must select to feed badgeConditions(). */
 export const BADGE_PROFILE_COLUMNS =
-  'fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, charting_landmarks_claimed, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, ancient_catches, trophy_size_catches, prestige_levels, fishing_casts, fishing_double_catches, fishing_crates_opened, fishing_snags, fishing_jackpots, tide_run_beacons_smashed, tide_run_total_distance, is_premium, ship_tier, trawls_collected, unlocked_pets, gauntlet_upgrades, gauntlet_confluences_seen, gauntlet_runs_completed, gauntlet_fathoms_earned, gauntlet_max_hit, gauntlet_deepest_died, gauntlet_hc_deepest, gauntlet_hc_deepest_died, blood_gems_earned, completionist_effects, manowar_augment, ship_classes, forge_recipes_learned, raid_items, ship_skins, owned_crew_skins, equipped_crew_skins, has_sixth_berth, has_armory_expansion, dons_gauntlet_deepest'
+  'fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, charting_landmarks_claimed, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, ancient_catches, trophy_size_catches, prestige_levels, finn_wins, fish_sold_doubloons, fishing_casts, fishing_double_catches, fishing_crates_opened, fishing_snags, fishing_jackpots, tide_run_beacons_smashed, tide_run_total_distance, is_premium, ship_tier, trawls_collected, unlocked_pets, gauntlet_upgrades, gauntlet_confluences_seen, gauntlet_runs_completed, gauntlet_fathoms_earned, gauntlet_max_hit, gauntlet_deepest_died, gauntlet_hc_deepest, gauntlet_hc_deepest_died, blood_gems_earned, completionist_effects, manowar_augment, ship_classes, forge_recipes_learned, raid_items, ship_skins, owned_crew_skins, equipped_crew_skins, has_sixth_berth, has_armory_expansion, dons_gauntlet_deepest'

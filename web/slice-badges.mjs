@@ -177,6 +177,34 @@ const PLAN = [
   [24, 1, 0, 'ultimate_only'],
   [24, 1, 1, 'weight_of_green'],
   [24, 1, 2, 'untouched'],
+  // Batch 26 — Fishing expansion I: Skill & Levels.
+  [26, 0, 0, 'wet_behind_ears'],
+  [26, 0, 1, 'old_hand'],
+  [26, 0, 2, 'in_the_flow'],
+  [26, 1, 0, 'crack_shot'],
+  [26, 1, 1, 'eagle_eyed'],
+  [26, 1, 2, 'high_water_mark'],
+  // Batch 27 — Fishing expansion II: Goldens & the Rival (Finn).
+  [27, 0, 0, 'struck_gold'],
+  [27, 0, 1, 'hoard_of_gold'],
+  [27, 0, 2, 'el_dorado'],
+  [27, 1, 0, 'one_upped'],
+  [27, 1, 1, 'finns_rival'],
+  [27, 1, 2, 'the_better_angler'],
+  // Batch 28 — Fishing expansion III: Haul & Hoard.
+  [28, 0, 0, 'beginners_luck'],
+  [28, 0, 1, 'crate_expectations'],
+  [28, 0, 2, 'salvage_rights'],
+  [28, 1, 0, 'twice_the_haul'],
+  [28, 1, 1, 'a_real_keeper'],
+  [28, 1, 2, 'net_positive'],
+  // Batch 29 — Fishing expansion IV: Companions, Coin & Fleet.
+  [29, 0, 0, 'full_stringer'],
+  [29, 0, 1, 'menagerie'],
+  [29, 0, 2, 'fishmonger'],
+  [29, 1, 0, 'fish_baron'],
+  [29, 1, 1, 'fresh_coat'],
+  [29, 1, 2, 'full_drydock'],
 ]
 
 let skipped = 0

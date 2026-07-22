@@ -42,6 +42,7 @@ export async function settlePendingSales(
       amount: totalCredit,
       reason: `Pending sale${matured.length === 1 ? '' : 's'} settled`,
     }),
+    db.rpc('bump_profile_stat', { uid: userId, col: 'fish_sold_doubloons', n: totalCredit }),
   ])
 
   return totalCredit
@@ -200,6 +201,7 @@ export async function marketSellFish(
     admin.from('doubloon_transactions').insert({
       user_id: user.id, amount: earned, reason: 'Sold fish (market)',
     }),
+    admin.rpc('bump_profile_stat', { uid: user.id, col: 'fish_sold_doubloons', n: earned }),
   ])
 
   return { earned, doubloons: newDoubloons }

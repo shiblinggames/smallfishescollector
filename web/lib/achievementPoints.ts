@@ -29,13 +29,14 @@ export interface AchievementPointsBoard {
 }
 
 export async function getAchievementPointsBoard(admin: Admin, userId: string): Promise<AchievementPointsBoard> {
-  const [{ data: profiles }, { data: raidRows }, { data: crewRows }, { data: voyageRows }, { data: collectionRows }, { data: rodRows }] = await Promise.all([
+  const [{ data: profiles }, { data: raidRows }, { data: crewRows }, { data: voyageRows }, { data: collectionRows }, { data: rodRows }, { data: goldenRows }] = await Promise.all([
     admin.from('profiles').select(`id, username, unlocked_badges, ${BADGE_PROFILE_COLUMNS}`).eq('is_admin', false),
     admin.from('raid_completions').select('user_id, raid_id, elapsed_ms'),
     admin.from('user_crew').select('user_id, xp, died_at, cards(slug)'),
     admin.from('daily_voyages').select('user_id').eq('status', 'revealed'),
     admin.from('fish_collection').select('user_id'),
     admin.from('rod_inventory').select('user_id, rod_tier'),
+    admin.from('shiny_catches').select('user_id'),
   ])
 
   // Bucket the joined rows by user so each player's conditions compute in memory.
@@ -56,6 +57,8 @@ export async function getAchievementPointsBoard(admin: Admin, userId: string): P
   for (const v of (voyageRows ?? []) as Array<{ user_id: string }>) voyageBy.set(v.user_id, (voyageBy.get(v.user_id) ?? 0) + 1)
   const collectionBy = new Map<string, number>()
   for (const f of (collectionRows ?? []) as Array<{ user_id: string }>) collectionBy.set(f.user_id, (collectionBy.get(f.user_id) ?? 0) + 1)
+  const goldenBy = new Map<string, number>()
+  for (const g of (goldenRows ?? []) as Array<{ user_id: string }>) goldenBy.set(g.user_id, (goldenBy.get(g.user_id) ?? 0) + 1)
   const rodsBy = new Map<string, number[]>()
   for (const r of (rodRows ?? []) as Array<{ user_id: string; rod_tier: number }>) {
     const arr = rodsBy.get(r.user_id) ?? []
@@ -71,6 +74,7 @@ export async function getAchievementPointsBoard(admin: Admin, userId: string): P
       voyageCount: voyageBy.get(p.id) ?? 0,
       collectionCount: collectionBy.get(p.id) ?? 0,
       rodTiers: rodsBy.get(p.id) ?? [],
+      goldenCount: goldenBy.get(p.id) ?? 0,
     })
     const all = new Set<string>([...(p.unlocked_badges ?? []), ...derived])
     let score = 0
@@ -88,13 +92,14 @@ export async function getAchievementPointsBoard(admin: Admin, userId: string): P
  *  badge scoring as the board, scoped to a single user). Used to gate the
  *  achievement-earned character colors (e.g. Galaxy at 300). */
 export async function getUserAchievementPoints(admin: Admin, userId: string): Promise<number> {
-  const [{ data: profile }, { data: raidRows }, { data: crewRows }, { count: voyageCount }, { count: collectionCount }, { data: rodRows }] = await Promise.all([
+  const [{ data: profile }, { data: raidRows }, { data: crewRows }, { count: voyageCount }, { count: collectionCount }, { data: rodRows }, { count: goldenCount }] = await Promise.all([
     admin.from('profiles').select(`unlocked_badges, ${BADGE_PROFILE_COLUMNS}`).eq('id', userId).single(),
     admin.from('raid_completions').select('raid_id, elapsed_ms').eq('user_id', userId),
     admin.from('user_crew').select('xp, died_at, cards(slug)').eq('user_id', userId),
     admin.from('daily_voyages').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('status', 'revealed'),
     admin.from('fish_collection').select('id', { count: 'exact', head: true }).eq('user_id', userId),
     admin.from('rod_inventory').select('rod_tier').eq('user_id', userId),
+    admin.from('shiny_catches').select('id', { count: 'exact', head: true }).eq('user_id', userId),
   ])
   if (!profile) return 0
   const p = profile as unknown as BadgeProfileFields & { unlocked_badges: string[] | null }
@@ -105,6 +110,7 @@ export async function getUserAchievementPoints(admin: Admin, userId: string): Pr
     voyageCount: voyageCount ?? 0,
     collectionCount: collectionCount ?? 0,
     rodTiers: (rodRows ?? []).map(r => r.rod_tier),
+    goldenCount: goldenCount ?? 0,
   })
   const all = new Set<string>([...(p.unlocked_badges ?? []), ...derived])
   let score = 0

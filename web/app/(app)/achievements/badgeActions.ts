@@ -18,13 +18,14 @@ export async function reconcileBadges(): Promise<string[]> {
   if (!user) return []
 
   const admin = createAdminClient()
-  const [{ data: profile }, { data: raidRows }, { data: crewRows }, { count: voyageCount }, { count: collectionCount }, { data: rodRows }] = await Promise.all([
+  const [{ data: profile }, { data: raidRows }, { data: crewRows }, { count: voyageCount }, { count: collectionCount }, { data: rodRows }, { count: goldenCount }] = await Promise.all([
     admin.from('profiles').select(`unlocked_badges, ${BADGE_PROFILE_COLUMNS}`).eq('id', user.id).single(),
     admin.from('raid_completions').select('raid_id, elapsed_ms').eq('user_id', user.id),
     admin.from('user_crew').select('xp, died_at, cards(slug)').eq('user_id', user.id),
     admin.from('daily_voyages').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'revealed'),
     admin.from('fish_collection').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
     admin.from('rod_inventory').select('rod_tier').eq('user_id', user.id),
+    admin.from('shiny_catches').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
   ])
   if (!profile) return []
 
@@ -37,6 +38,7 @@ export async function reconcileBadges(): Promise<string[]> {
     voyageCount: voyageCount ?? 0,
     collectionCount: collectionCount ?? 0,
     rodTiers: ((rodRows ?? []) as { rod_tier: number }[]).map(r => r.rod_tier),
+    goldenCount: goldenCount ?? 0,
   })
 
   const toGrant = derived.filter(id => !have.has(id))

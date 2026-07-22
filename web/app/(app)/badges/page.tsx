@@ -13,6 +13,7 @@ import { GAUNTLET_UPGRADES } from '@/lib/gauntletUpgrades'
 import { FORGE_RECIPES, isForgedRaidItem, isAbyssalForgedItem, GAUNTLET2_BASE_ITEM_IDS } from '@/lib/raidItems'
 import { LEGENDARY_SLUGS_ALL, BASE_LEGENDARY_SLUGS, CONFLUENCE_COUNT, CHASE_SKIN_IDS, LEGENDARY_SKIN_SETS, CHALLENGE_RAID_IDS_ALL } from '@/lib/badgeConditions'
 import { BUYABLE_ROD_TIERS } from '@/lib/rods'
+import { SHIP_SKINS } from '@/lib/shipSkins'
 
 const ZONES = ['shallows', 'open_waters', 'deep', 'abyss'] as const
 const CHALLENGE_RAID_IDS = ['corsairs_reckoning_challenge', 'captain_krust_challenge', 'cartographer_challenge', 'tollmasters_cut_challenge']
@@ -27,7 +28,7 @@ export default async function BadgesPage() {
   // Profile via the request-scoped cached loader (lib/userData.ts).
   // reconcileBadges runs first-class so any newly-met condition is granted on
   // visit (and its return is the authoritative unlocked list).
-  const [profile, collectionRes, speciesRes, voyageCountRes, unlocked, raidComplRes, crewRes, rodRes, rarityRes] = await Promise.all([
+  const [profile, collectionRes, speciesRes, voyageCountRes, unlocked, raidComplRes, crewRes, rodRes, rarityRes, goldenRes] = await Promise.all([
     getCurrentProfile(),
     admin.from('fish_collection').select('fish_id').eq('user_id', user.id),
     admin.from('fish_species').select('id, habitat'),
@@ -38,6 +39,8 @@ export default async function BadgesPage() {
     admin.from('rod_inventory').select('rod_tier').eq('user_id', user.id),
     // Global badge rarity (Steam-style % of players who've unlocked each badge).
     admin.rpc('get_badge_rarity'),
+    // Lifetime goldens caught (one row per golden) — powers the golden badges.
+    admin.from('shiny_catches').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
   ])
 
   // ── Derive everything from existing data — no new columns ────────────────
@@ -122,6 +125,12 @@ export default async function BadgesPage() {
   const prestige = (profile?.prestige_levels as Record<string, number> | null) ?? {}
   const prestigedZones = ZONES.filter(z => (prestige[z] ?? 0) >= 1).length
   const totalStars = ZONES.reduce((s, z) => s + Math.min(5, prestige[z] ?? 0), 0)
+  const topZonePrestige = Math.min(5, Math.max(0, ...ZONES.map(z => prestige[z] ?? 0)))
+  const goldenCount = goldenRes.count ?? 0
+  const finnWins = Number(profile?.finn_wins ?? 0)
+  const fishSold = Number(profile?.fish_sold_doubloons ?? 0)
+  const boatSkinsOwned = ((profile?.ship_skins as string[] | null) ?? []).length
+  const ownsAllBoatSkins = SHIP_SKINS.every(s => ((profile?.ship_skins as string[] | null) ?? []).includes(s.id))
 
   const ancientsCaught = ((profile?.ancient_catches as number[] | null) ?? []).length
   const trophySizeCatches = Number(profile?.trophy_size_catches ?? 0)
@@ -174,14 +183,20 @@ export default async function BadgesPage() {
       goals: [
         badgeGoal('prestige_i', 'Prestige I', 'Reach Prestige in any fishing zone', totalStars > 0 ? 1 : 0, 1, '/fishing', { binary: true }),
         badgeGoal('trophy_catch', 'Trophy Catch', 'Land a Trophy-tier fish', has('trophy_catch') ? 1 : 0, 1, '/fishing', { binary: true }),
+        badgeGoal('wet_behind_ears', 'Wet Behind the Ears', 'Reach Fishing Level 25', fishLevel, 25, '/fishing'),
+        badgeGoal('old_hand', 'Old Hand', 'Reach Fishing Level 50', fishLevel, 50, '/fishing'),
+        badgeGoal('master_angler', 'Master Angler', 'Reach Fishing Level 100', fishLevel, 100, '/fishing'),
         badgeGoal('unbroken', 'Unbroken', 'Land 10 perfect catches in a row', streakBest, 10, '/fishing'),
         badgeGoal('relentless', 'Relentless', 'Land 15 perfect catches in a row', streakBest, 15, '/fishing'),
         badgeGoal('untouchable', 'Untouchable', 'Land 20 perfect catches in a row', streakBest, 20, '/fishing'),
+        badgeGoal('in_the_flow', 'In the Flow', 'Land 30 perfect catches in a row', streakBest, 30, '/fishing'),
         badgeGoal('sure_shot', 'Sure Shot', 'Land 250 perfect catches all-time', totalPerfects, 250, '/fishing'),
         badgeGoal('dead_eye', 'Dead-Eye', 'Land 1,000 perfect catches all-time', totalPerfects, 1000, '/fishing'),
-        badgeGoal('master_angler', 'Master Angler', 'Reach Fishing Level 100', fishLevel, 100, '/fishing'),
+        badgeGoal('crack_shot', 'Crack Shot', 'Land 2,500 perfect catches all-time', totalPerfects, 2500, '/fishing'),
+        badgeGoal('eagle_eyed', 'Eagle-Eyed', 'Land 5,000 perfect catches all-time', totalPerfects, 5000, '/fishing'),
         badgeGoal('full_tackle_box', 'Full Tackle Box', 'Own every rod money can buy', buyableRodsOwned, BUYABLE_ROD_TIERS.length, '/marketplace/tackle-shop'),
         badgeGoal('zone_legend', 'Zone Legend', 'Reach Prestige in all 4 zones', prestigedZones, 4, '/fishing'),
+        badgeGoal('high_water_mark', 'High Water Mark', 'Reach Max Prestige in any fishing zone', topZonePrestige, 5, '/fishing'),
         badgeGoal('prestige_stars', 'Prestige Stars', 'Earn all 20 prestige stars (5 per zone)', totalStars, 20, '/fishing'),
         badgeGoal('completionist_rod', 'The Completionist', 'Claim the Completionist Rod', has('completionist_rod') ? 1 : 0, 1, '/marketplace/tackle-shop', { binary: true }),
         badgeGoal('fully_rigged', 'Fully Rigged', 'Forge all 3 effects into the Completionist Rod', rodEffectsCount, 3, '/fishing'),
@@ -193,14 +208,32 @@ export default async function BadgesPage() {
       flavor: 'The strange and stubborn things that happen out on the water.',
       accent: '#34d399',
       goals: [
+        // Goldens — the rarest catch (one row per golden in shiny_catches).
+        badgeGoal('struck_gold', 'Struck Gold', 'Catch your first golden fish', goldenCount, 1, '/fishing', { binary: true }),
+        badgeGoal('hoard_of_gold', 'Hoard of Gold', 'Catch 10 golden fish', goldenCount, 10, '/fishing'),
+        badgeGoal('el_dorado', 'El Dorado', 'Catch 25 golden fish', goldenCount, 25, '/fishing'),
+        // Finn — the roaming rival's perfect/speed challenges out on the water.
+        badgeGoal('one_upped', 'One-Upped', 'Win a challenge against Finn', finnWins, 1, '/fishing', { binary: true }),
+        badgeGoal('finns_rival', "Finn's Rival", 'Win 10 challenges against Finn', finnWins, 10, '/fishing'),
+        badgeGoal('the_better_angler', 'The Better Angler', 'Win 25 challenges against Finn', finnWins, 25, '/fishing'),
+        // Fish sold — lifetime doubloons hauled in at market.
+        badgeGoal('fishmonger', 'Fishmonger', 'Sell 250,000 doubloons of fish', fishSold, 250_000, '/fishing'),
+        badgeGoal('fish_baron', 'Fish Baron', 'Sell 1,000,000 doubloons of fish', fishSold, 1_000_000, '/fishing'),
+        // Doubles + snags + pets + crates.
         badgeGoal('got_away', 'The One That Got Away', 'Lose 50 fish to snapped lines', snags, 50, '/fishing'),
         badgeGoal('two_for_the_pot', 'Two for the Pot', 'Reel in a double catch', doubleCatches, 1, '/fishing', { binary: true }),
         badgeGoal('two_fisted', 'Two-Fisted', 'Land 100 double catches', doubleCatches, 100, '/fishing'),
+        badgeGoal('twice_the_haul', 'Twice the Haul', 'Land 500 double catches', doubleCatches, 500, '/fishing'),
         badgeGoal('saltlung', 'Saltlung', 'Cast your line 1,000 times', casts, 1000, '/fishing'),
         badgeGoal('salted_through', 'Salted Through', 'Cast your line 10,000 times', casts, 10_000, '/fishing'),
         badgeGoal('crate_digger', 'Crate Digger', 'Open 50 supply crates', cratesOpened, 50, '/fishing'),
+        badgeGoal('beginners_luck', "Beginner's Luck", 'Open your first supply crate', cratesOpened, 1, '/fishing', { binary: true }),
+        badgeGoal('crate_expectations', 'Crate Expectations', 'Open 250 supply crates', cratesOpened, 250, '/fishing'),
+        badgeGoal('salvage_rights', 'Salvage Rights', 'Open 1,000 supply crates', cratesOpened, 1000, '/fishing'),
         badgeGoal('reel_lucky', 'Reel Lucky', 'Hit a fishing jackpot', jackpots, 1, '/fishing', { binary: true }),
         badgeGoal('friend_at_sea', 'A Friend at Sea', 'Earn your first fishing pet', petsOwned, 1, '/fishing', { binary: true }),
+        badgeGoal('full_stringer', 'Full Stringer', 'Keep 3 fishing pets at once', petsOwned, 3, '/fishing'),
+        badgeGoal('menagerie', 'The Menagerie', 'Keep 5 fishing pets at once', petsOwned, 5, '/fishing'),
       ],
     },
     {
@@ -211,6 +244,7 @@ export default async function BadgesPage() {
         badgeGoal('half_the_sea', 'Half the Sea', 'Catch 50 fish species', collectionCount, 50, '/fishing'),
         badgeGoal('hundred_fins', 'A Hundred Fins', 'Catch 100 fish species', collectionCount, 100, '/fishing'),
         badgeGoal('ancient_ones', 'Ancient Ones', 'Catch all 6 Ancient Deep giants', ancientsCaught, 6, '/fishing'),
+        badgeGoal('a_real_keeper', 'A Real Keeper', 'Land 10 Trophy-size catches', trophySizeCatches, 10, '/fishing'),
         badgeGoal('trophy_hunter', 'Trophy Hunter', 'Land 25 Trophy-size catches', trophySizeCatches, 25, '/fishing'),
         badgeGoal('full_collection', 'Full Collection', `Catch every fish species (${collected}/${speciesTotal})`, collected, speciesTotal, '/fishing'),
       ],
@@ -263,6 +297,8 @@ export default async function BadgesPage() {
         badgeGoal('quick_draw', 'Quick Draw', 'Clear any raid in under 1:00', fastestAnyRaid <= 60_000 ? 1 : 0, 1, '/raids', { binary: true }),
         badgeGoal('mark_of_mastery', 'Mark of Mastery', 'Reach a Mark III ship class', hasMarkIII ? 1 : 0, 1, '/raids', { binary: true }),
         badgeGoal('ship_of_the_line', 'Ship of the Line', 'Own the Man-o-War', shipTier, 6, '/shipyard', { binary: true }),
+        badgeGoal('fresh_coat', 'Fresh Coat', 'Own a boat skin', boatSkinsOwned, 1, '/expeditions'),
+        badgeGoal('full_drydock', 'Full Drydock', `Own every boat skin (${boatSkinsOwned}/${SHIP_SKINS.length})`, ownsAllBoatSkins ? SHIP_SKINS.length : boatSkinsOwned, SHIP_SKINS.length, '/expeditions'),
         badgeGoal('six_aboard', 'Six Aboard', 'Add the Sixth Berth to your ship', hasSixthBerth ? 1 : 0, 1, '/expeditions', { binary: true }),
         badgeGoal('expanded_armory', 'Expanded Armory', 'Bolt on the Expanded Armory mount', hasArmoryExpansion ? 1 : 0, 1, '/expeditions', { binary: true }),
         badgeGoal('weapon_of_legend', 'Weapon of Legend', 'Build your Man-o-War ultimate', hasUltimate ? 1 : 0, 1, '/expeditions', { binary: true }),
@@ -393,6 +429,7 @@ export default async function BadgesPage() {
         badgeGoal('first_haul', 'First Haul', 'Collect your first trawl', trawlsCollected, 1, '/fishing', { binary: true }),
         badgeGoal('steady_nets', 'Steady Nets', 'Collect 25 trawls', trawlsCollected, 25, '/fishing'),
         badgeGoal('deep_trawler', 'Deep Trawler', 'Collect 100 trawls', trawlsCollected, 100, '/fishing'),
+        badgeGoal('net_positive', 'Net Positive', 'Collect 500 trawls', trawlsCollected, 500, '/fishing'),
       ],
     },
     {
