@@ -493,7 +493,22 @@ const GENERAL_TIPS = [
   "Tip: every catch rolls a size. Land a Large or a Trophy and it earns a place in your records.",
   // New doubloon-earning rooms in the tavern.
   "Tip: the Parlor's daily trivia and weekly Pirate King ladder pay straight doubloons. Easy gold between casts.",
-  "Tip: Charting hides daily puzzles that bank doubloons for the patient. Good for a break between casts.",
+  // Charting — puzzles + the World Chart.
+  "Tip: solve Charting's four weekly puzzles in the tavern to earn charting points.",
+  "Tip: charting points uncover the World Chart, and each landmark you reveal pays out gems.",
+  // Captain's Log / achievements.
+  "Tip: your Captain's Log tracks every badge and milestone you earn. See what to chase next.",
+  // The Den (casino) + slots jackpot.
+  "Tip: the tavern's Den has Blackjack, Roulette, and Slots, all sharing one chip purse.",
+  "Tip: land three catfish on the tavern slots to win the whole Catfish Jackpot.",
+  // Expeditions endgame — Gauntlet, Renown, Forge.
+  "Tip: clear Chapter 2 to unlock the Davy Jones Gauntlet, then dive deep for a growing pot.",
+  "Tip: past Level 100, spare XP becomes Renown: points you spend on small permanent boosts.",
+  "Tip: fuse raid items together in the Forge to craft stronger, unique gear.",
+  // Crew skins + contests + leaderboards.
+  "Tip: legendary crew can wear rare gem skins, dazzling variants you unlock with gems.",
+  "Tip: Contests are limited-time races. Hit the goal first to claim a one-of-a-kind prize.",
+  "Tip: check the leaderboards to see how your fishing, voyages, and raids stack up.",
 ]
 
 type TipContext = { hasTideTurner: boolean; hasPhantomHook: boolean; hasAutoCaster: boolean }
