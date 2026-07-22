@@ -846,8 +846,9 @@ export default function HubCards({
               </span>
             </motion.button>
 
-            {/* ── Don's Gauntlet — Gauntlet II. Live descent, or a Coming-Soon
-                tease until the door is open. ── */}
+            {/* ── Don's Gauntlet — Gauntlet II. Live descent once the Don's
+                beaten; until then a locked card that points the way (the raid
+                IS shipped, so it says "Defeat the Don", not "Coming Soon"). ── */}
             {donsGauntletOpen ? (
               <motion.button type="button"
                 initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14, type: 'spring', stiffness: 380, damping: 28 }}
@@ -889,10 +890,10 @@ export default function HubCards({
                     style={{ position: 'relative', maxWidth: '94%', maxHeight: 126, objectFit: 'contain', filter: 'grayscale(0.45) drop-shadow(0 4px 10px rgba(0,0,0,0.55))' }} />
                 </div>
                 <p className="font-cinzel font-800" style={{ fontSize: '0.98rem', color: '#dcece4', lineHeight: 1.08 }}>Don&apos;s Gauntlet</p>
-                <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#9db9ab', marginTop: 3, lineHeight: 1.3 }}>A darker gauntlet stirs below</p>
-                <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ marginTop: 11, display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.52rem', color: '#7fd9a8', background: 'rgba(36,116,78,0.22)', border: '1px solid rgba(36,116,78,0.5)', borderRadius: 999, padding: '0.32rem 0.75rem' }}>
+                <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#9db9ab', marginTop: 3, lineHeight: 1.3 }}>Beat Don Finleone at the Throne to descend</p>
+                <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ marginTop: 11, display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.52rem', color: `${DON_AC}cc`, background: `${DON_AC}1e`, border: `1px solid ${DON_AC}55`, borderRadius: 999, padding: '0.32rem 0.75rem' }}>
                   <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-                  Coming Soon
+                  Defeat the Don
                 </span>
               </motion.div>
             )}
