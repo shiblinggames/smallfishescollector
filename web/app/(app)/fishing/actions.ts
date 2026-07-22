@@ -720,7 +720,8 @@ export async function reelIn(
   const newAbyssStreak = isAbyssPerfect ? (profile.fishing_abyss_streak ?? 0) + 1 : 0
   const prestigeLevels = (profile.prestige_levels as Record<string, number> | null) ?? {}
   const zonePrestige = prestigeLevels[fish.habitat] ?? 0
-  const prestigeXPMult = 1 + zonePrestige * 0.10
+  // +10% catch XP per prestige, capped at P5 (+50%) to match the zone reward cap.
+  const prestigeXPMult = 1 + Math.min(zonePrestige, 5) * 0.10
   // Perfect Rod doubles XP on perfect catches (incl. the streak bonus, so
   // it scales with streaks). Non-perfect catches are unaffected.
   const perfectXpMult = result === 'perfect' ? (reelRod.perfectXpMult ?? 1) : 1
