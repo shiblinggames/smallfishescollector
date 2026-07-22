@@ -344,6 +344,17 @@ export default function ZoneLanding({
                           {HABITAT_TAGLINE[zone]}
                         </p>
 
+                        {/* Tap affordance — a pulsing "Fish Here" pill so it reads
+                            clearly as a button you can enter, not just a mural.
+                            Decorative (pointer-events off); the whole band taps. */}
+                        <motion.div aria-hidden
+                          animate={{ boxShadow: [`0 0 0px ${color}00`, `0 0 15px ${color}70`, `0 0 0px ${color}00`] }}
+                          transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+                          style={{ alignSelf: 'flex-start', marginTop: 11, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.36rem 0.8rem', borderRadius: 999, background: 'rgba(3,9,16,0.6)', border: `1.5px solid ${color}`, pointerEvents: 'none' }}>
+                          <span className="font-karla font-800 uppercase" style={{ fontSize: '0.64rem', letterSpacing: '0.1em', color }}>Fish Here</span>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h13" /><path d="m12 6 6 6-6 6" /></svg>
+                        </motion.div>
+
                         {/* Quiet standing line: collection + prestige, and a
                             Details tap that reveals the catch numbers. */}
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 11 }}>
