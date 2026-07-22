@@ -322,6 +322,30 @@ function SpecialIcon({ color }: { color: string }) {
   )
 }
 
+// A compact key for the owned / equipped / locked badges used across the
+// skin + boat pickers, so the at-a-glance states are self-explanatory.
+function CosmeticLegend() {
+  const CheckDot = ({ bg, stroke }: { bg: string; stroke: string }) => (
+    <span style={{ display: 'inline-flex', width: 15, height: 15, borderRadius: '50%', background: bg, border: '1.5px solid #0a0f18', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="3.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+    </span>
+  )
+  const item = { display: 'inline-flex', alignItems: 'center', gap: 4 } as const
+  const txt = { fontSize: '0.56rem', color: '#8a877e' } as const
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', margin: '-2px 0 2px' }}>
+      <span style={item}><CheckDot bg="rgba(14,22,16,0.96)" stroke="#5fce8a" /><span className="font-karla font-600" style={txt}>Owned</span></span>
+      <span style={item}><CheckDot bg="#60a5fa" stroke="#fff" /><span className="font-karla font-600" style={txt}>Equipped</span></span>
+      <span style={item}>
+        <span style={{ display: 'inline-flex', width: 15, height: 15, borderRadius: '50%', background: 'rgba(12,14,18,0.96)', border: '1.5px solid #0a0f18', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2.6" strokeLinecap="round"><rect x="4" y="11" width="16" height="9" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
+        </span>
+        <span className="font-karla font-600" style={txt}>Locked</span>
+      </span>
+    </div>
+  )
+}
+
 function SpecialItemRow({
   item, owned, isEquipped, tideTurnerSkipsLeft, lockReason,
   onEquip, onRequestBuy,
@@ -2361,13 +2385,21 @@ export default function GearScreen({
                             <div style={{
                               width: 76, height: 76, borderRadius: '50%', overflow: 'hidden',
                               backgroundImage: `url(${sprites.rest})`, backgroundSize: '420% auto', backgroundPosition: '60% 68%', backgroundRepeat: 'no-repeat',
-                              border: isActive ? '2.5px solid #60a5fa' : '2px solid rgba(255,255,255,0.14)',
+                              border: isActive ? '2.5px solid #60a5fa' : isUnlocked ? '2px solid rgba(255,255,255,0.22)' : '2px dashed rgba(255,255,255,0.14)',
                               boxShadow: isActive ? '0 0 12px rgba(96,165,250,0.45)' : 'none',
-                              opacity: isUnlocked ? 1 : 0.5,
+                              // Locked reads unmistakably inert: desaturated + dimmed.
+                              opacity: isUnlocked ? 1 : 0.4,
+                              filter: isUnlocked ? undefined : 'grayscale(1)',
                             }} />
                             {!isUnlocked && (
                               <div style={{ position: 'absolute', right: 0, bottom: 2, width: 22, height: 22, borderRadius: '50%', background: 'rgba(12,14,18,0.96)', border: '2px solid #0a0f18', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2.4" strokeLinecap="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                              </div>
+                            )}
+                            {/* Owned but not equipped — a muted green tick affirms it's yours. */}
+                            {isUnlocked && !isActive && !c.free && (
+                              <div style={{ position: 'absolute', right: 0, bottom: 2, width: 19, height: 19, borderRadius: '50%', background: 'rgba(14,22,16,0.96)', border: '2px solid #0a0f18', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
+                                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#5fce8a" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
                               </div>
                             )}
                             {isActive && (
@@ -2376,7 +2408,7 @@ export default function GearScreen({
                               </div>
                             )}
                           </div>
-                          <p className="font-karla font-600" style={{ fontSize: '0.56rem', color: isActive ? '#60a5fa' : '#8a877e', maxWidth: 84, textAlign: 'center', whiteSpace: 'nowrap' }}>{c.name}</p>
+                          <p className="font-karla font-600" style={{ fontSize: '0.56rem', color: isActive ? '#60a5fa' : isUnlocked ? '#b6b2aa' : '#6a675f', maxWidth: 84, textAlign: 'center', whiteSpace: 'nowrap' }}>{c.name}</p>
                         </button>
                       )
                     }
@@ -2389,11 +2421,15 @@ export default function GearScreen({
                     return (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                         <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#d0cdc8' }}>Character Color</p>
+                        <CosmeticLegend />
                         {groups.map(g => g.items.length === 0 ? null : (
                           <div key={g.label} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                             <p className="font-karla font-600 uppercase" style={groupLabel}>{g.label}</p>
                             <div className="hide-scrollbar" style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4, scrollSnapType: 'x proximity' }}>
-                              {g.items.map(renderSkinThumb)}
+                              {/* Owned first, locked after — your skins lead each row. */}
+                              {[...g.items]
+                                .sort((a, b) => Number(b.free || unlockedCharacterColors.includes(b.id)) - Number(a.free || unlockedCharacterColors.includes(a.id)))
+                                .map(renderSkinThumb)}
                             </div>
                           </div>
                         ))}
@@ -2416,17 +2452,24 @@ export default function GearScreen({
                             position: 'relative', width: 104, height: 58, borderRadius: 12,
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             background: isEquipped ? `${b.color}1f` : 'rgba(4,10,18,0.6)',
-                            border: `2px solid ${isEquipped ? b.color + '90' : 'rgba(255,255,255,0.12)'}`,
+                            border: isEquipped ? `2px solid ${b.color}90` : owned ? '2px solid rgba(255,255,255,0.2)' : '2px dashed rgba(255,255,255,0.12)',
                             boxShadow: isEquipped ? `0 0 14px ${b.color}33` : 'none',
-                            opacity: owned ? 1 : 0.5,
+                            // Locked reads unmistakably inert: desaturated + dimmed.
+                            opacity: owned ? 1 : 0.4,
                           }}>
-                            {b.glow && <div className="boat-glow-halo" aria-hidden />}
+                            {b.glow && owned && <div className="boat-glow-halo" aria-hidden />}
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={b.restImageUrl} alt="" loading="lazy" decoding="async"
-                              style={{ position: 'relative', zIndex: 1, maxWidth: '86%', maxHeight: '86%', objectFit: 'contain', filter: b.glowType === 'ash' ? BOAT_ASH_DARKEN : undefined }} />
+                              style={{ position: 'relative', zIndex: 1, maxWidth: '86%', maxHeight: '86%', objectFit: 'contain', filter: !owned ? 'grayscale(1)' : b.glowType === 'ash' ? BOAT_ASH_DARKEN : undefined }} />
                             {!owned && (
                               <div style={{ position: 'absolute', right: 3, bottom: 3, width: 22, height: 22, borderRadius: '50%', background: 'rgba(12,14,18,0.96)', border: '2px solid #0a0f18', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2, boxShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2.4" strokeLinecap="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                              </div>
+                            )}
+                            {/* Owned but not equipped — a muted green tick affirms it's yours. */}
+                            {owned && !isEquipped && (
+                              <div style={{ position: 'absolute', right: 3, bottom: 3, width: 19, height: 19, borderRadius: '50%', background: 'rgba(14,22,16,0.96)', border: '2px solid #0a0f18', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2, boxShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
+                                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#5fce8a" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
                               </div>
                             )}
                             {isEquipped && (
@@ -2435,18 +2478,22 @@ export default function GearScreen({
                               </div>
                             )}
                           </div>
-                          <p className="font-cinzel font-700" style={{ fontSize: '0.6rem', color: owned ? '#f0ede8' : '#8a877e', textAlign: 'center', whiteSpace: 'nowrap' }}>{b.name}</p>
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.6rem', color: isEquipped ? '#f0ede8' : owned ? '#c8c4bc' : '#6a675f', textAlign: 'center', whiteSpace: 'nowrap' }}>{b.name}</p>
                         </button>
                       )
                     }
-                    const earnedBoats = BOATS.filter(b => (b.crateOnly && unlockedBoats.includes(b.id)) || typeof b.achievementPoints === 'number')
-                    const purchasedBoats = BOATS.filter(b => !b.crateOnly && typeof b.achievementPoints !== 'number')
+                    // Owned first within each group so your boats lead the row.
+                    const byOwnedFirst = (a: typeof BOATS[number], c: typeof BOATS[number]) =>
+                      Number(unlockedBoats.includes(c.id)) - Number(unlockedBoats.includes(a.id))
+                    const earnedBoats = BOATS.filter(b => (b.crateOnly && unlockedBoats.includes(b.id)) || typeof b.achievementPoints === 'number').sort(byOwnedFirst)
+                    const purchasedBoats = BOATS.filter(b => !b.crateOnly && typeof b.achievementPoints !== 'number').sort(byOwnedFirst)
                     const groupLabel = { fontSize: '0.56rem', color: '#8a8272', letterSpacing: '0.12em', marginTop: 2 } as const
                     const rowStyle: React.CSSProperties = { display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4 }
                     const driftEquipped = !equippedBoat
                     return (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                         <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#bda05a' }}>Boat Colors</p>
+                        <CosmeticLegend />
 
                         <p className="font-karla font-600 uppercase" style={groupLabel}>Starter</p>
                         <div style={rowStyle}>
@@ -2463,6 +2510,11 @@ export default function GearScreen({
                             }}>
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img src="/boat_default_rest.png" alt="" style={{ maxWidth: '86%', maxHeight: '86%', objectFit: 'contain' }} />
+                              {!driftEquipped && (
+                                <div style={{ position: 'absolute', right: 3, bottom: 3, width: 19, height: 19, borderRadius: '50%', background: 'rgba(14,22,16,0.96)', border: '2px solid #0a0f18', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
+                                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#5fce8a" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                                </div>
+                              )}
                               {driftEquipped && (
                                 <div style={{ position: 'absolute', right: 3, bottom: 3, width: 22, height: 22, borderRadius: '50%', background: DEFAULT_BOAT_COLOR, border: '2px solid #0a0f18', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
                                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
