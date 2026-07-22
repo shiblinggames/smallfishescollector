@@ -272,7 +272,7 @@ export default function ZoneLanding({
               into band, a shared darkness overlay deepens toward the bottom,
               and the sounding line down the right edge marks the fathoms.
               One continuous descent, surface to the Ancient Deep. */}
-          <div style={{ position: 'relative', borderRadius: 18, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 12px 36px rgba(0,0,0,0.55)' }}>
+          <div style={{ position: 'relative', flexShrink: 0, borderRadius: 18, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 12px 36px rgba(0,0,0,0.55)' }}>
             {ZONES.map((zone, i) => {
               const minLevel = ZONE_MIN_LEVEL[zone] ?? 1
               // Ancient Deep needs Fishing 75 AND Chapter 3 cleared (or grandfathered).
