@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ZONE_MIN_LEVEL } from './zoneData'
+import { ZONE_MIN_LEVEL, ZONE_WAIT_BASE, BASE_CRATE_CHANCE, zoneDiamondShare, zonePetPerCrate } from './zoneData'
 import { updateUsername } from '@/app/(app)/u/actions'
 import LeaderboardModal from '@/components/LeaderboardModal'
 import FisherPose from '@/components/FisherPose'
-import { PRESTIGE_MAX, goldenBoostPct } from '@/lib/zoneRewards'
+import { PRESTIGE_MAX, goldenBoostPct, goldenBoostMult } from '@/lib/zoneRewards'
+import { SHINY_ODDS } from '@/lib/shiny'
 
 const AUTO_NAME_RE = /^crew_[0-9a-f]{5}$/
 const DISMISSED_KEY = 'sf_username_prompt_dismissed'
@@ -107,14 +108,13 @@ function PrestigeMark({ level }: { level: number }) {
   )
 }
 
-/* Slim inline stat — value + tiny label, no box. The zone art does the
-   talking; stats sit quietly on the bottom scrim. */
-function ZoneStatInline({ label, value, color }: { label: string; value: string; color: string }) {
+/* One label/value row in the expanded Details panel. */
+function DetailStat({ label, value, accent }: { label: string; value: string; accent?: string }) {
   return (
-    <p className="font-karla" style={{ lineHeight: 1, whiteSpace: 'nowrap' }}>
-      <span className="font-cinzel font-700" style={{ fontSize: '1.08rem', color }}>{value}</span>
-      <span className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.65)', marginLeft: 6 }}>{label}</span>
-    </p>
+    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+      <span className="font-karla font-600" style={{ fontSize: '0.64rem', color: 'rgba(255,255,255,0.58)', whiteSpace: 'nowrap' }}>{label}</span>
+      <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: accent ?? 'rgba(255,255,255,0.92)', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{value}</span>
+    </div>
   )
 }
 
@@ -389,28 +389,52 @@ export default function ZoneLanding({
                           </button>
                         </div>
 
-                        {/* Tap-to-see strip — difficulty + catch value, hidden by
+                        {/* Tap-to-see panel — the full zone read: difficulty, bite
+                            wait, per-hour rates, crate/pet/golden odds. Hidden by
                             default so the water stays clean. */}
                         <AnimatePresence initial={false}>
-                          {detailsFor === zone && (
-                            <motion.div
-                              key="details"
-                              initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                              transition={{ duration: 0.22, ease: 'easeOut' }}
-                              style={{ overflow: 'hidden' }}
-                            >
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 9, paddingTop: 9, borderTop: '1px solid rgba(255,255,255,0.15)', textShadow: '0 1px 4px rgba(0,0,0,0.95)' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
-                                  <WaveMarks n={difficulty} color={color} />
-                                  <span className="font-karla font-600" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.85)', whiteSpace: 'nowrap' }}>{diffLabel}</span>
+                          {detailsFor === zone && (() => {
+                            const [zMin, zMax] = ZONE_WAIT_BASE[zone] ?? [5000, 20000]
+                            // Representative wait: commons dominate the bite pool, so
+                            // the typical wait sits toward the fast end of the band.
+                            // Add a few seconds of dial/reel to make it a full cycle.
+                            const cycleSec = (zMin + 0.3 * (zMax - zMin)) / 1000 + 4
+                            const perHr = 3600 / cycleSec
+                            const doubPerHr = Math.round((perHr * stats.avgValue) / 100) * 100
+                            const xpPerHr = Math.round((perHr * stats.avgXp) / 10) * 10
+                            const noCrates = zone === 'ancient_deep'
+                            const goldenOdds = Math.round(SHINY_ODDS / goldenBoostMult(goldenBoosts[zone] ?? 0))
+                            const round1 = (v: number) => (v * 100).toFixed(1)
+                            return (
+                              <motion.div
+                                key="details"
+                                initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.22, ease: 'easeOut' }}
+                                style={{ overflow: 'hidden' }}
+                              >
+                                <div style={{ marginTop: 9, padding: '9px 11px 10px', borderRadius: 12, background: 'rgba(2,6,12,0.42)', border: '1px solid rgba(255,255,255,0.1)', textShadow: '0 1px 3px rgba(0,0,0,0.85)' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 9 }}>
+                                    <WaveMarks n={difficulty} color={color} />
+                                    <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.9)', whiteSpace: 'nowrap' }}>{diffLabel}</span>
+                                  </div>
+                                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 18, rowGap: 7 }}>
+                                    <DetailStat label="Bite wait" value={`${Math.round(zMin / 1000)}–${Math.round(zMax / 1000)}s`} />
+                                    <DetailStat label="Golden" value={`1 in ${goldenOdds.toLocaleString()}`} accent="#f0c040" />
+                                    <DetailStat label="Doubloons / hr" value={`~${doubPerHr.toLocaleString()} ⟡`} accent="#f0c040" />
+                                    <DetailStat label="XP / hr" value={`~${xpPerHr.toLocaleString()}`} accent="#7dd3fc" />
+                                    <DetailStat label="Avg catch" value={`${stats.avgValue.toLocaleString()} ⟡`} />
+                                    <DetailStat label="Top catch" value={`${stats.topValue.toLocaleString()} ⟡`} accent="#f59e0b" />
+                                    <DetailStat label="Crate / cast" value={noCrates ? 'None' : `~${Math.round(BASE_CRATE_CHANCE * 100)}%`} />
+                                    <DetailStat label="Diamond crate" value={noCrates ? '—' : `${Math.round(zoneDiamondShare(zone) * 100)}%`} />
+                                    <DetailStat label="Pet / crate" value={noCrates ? 'None' : `${round1(zonePetPerCrate(zone))}%`} />
+                                  </div>
+                                  <p className="font-karla" style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.42)', fontStyle: 'italic', marginTop: 8, lineHeight: 1.4 }}>
+                                    Rates estimated at base gear. Faster bites and better crates come with your rod, bait, and level.
+                                  </p>
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-                                  <ZoneStatInline label="Avg" value={`${stats.avgValue.toLocaleString()} ⟡`} color="#f0c040" />
-                                  <ZoneStatInline label="Top" value={`${stats.topValue.toLocaleString()} ⟡`} color="#f59e0b" />
-                                </div>
-                              </div>
-                            </motion.div>
-                          )}
+                              </motion.div>
+                            )
+                          })()}
                         </AnimatePresence>
                       </>
                     ) : (

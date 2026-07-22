@@ -38,16 +38,9 @@ export type FishSpecies = {
   length_max_in?: number | null
 }
 
-import { ZONE_RARITY_RATES, ZONE_MIN_LEVEL } from './zoneData'
+import { ZONE_RARITY_RATES, ZONE_MIN_LEVEL, ZONE_WAIT_BASE, ZONE_CRATE_TIERS } from './zoneData'
 
 // Wait time: zone sets the range, catch_score positions within it (higher score = longer wait)
-const ZONE_WAIT_BASE: Record<string, [number, number]> = {
-  shallows:    [3000,  12000],
-  open_waters: [5000,  20000],
-  deep:        [8000,  35000],
-  abyss:       [12000, 45000],
-  ancient_deep: [45000, 120000],
-}
 function fishWaitMs(catchScore: number, habitat: string, baitType: string, fishingLevel: number, renownWaitMult = 1): number {
   const [zMin, zMax] = ZONE_WAIT_BASE[habitat] ?? [5000, 20000]
   const frac = Math.max(0, Math.min(1, (catchScore - 8) / 90))
@@ -161,13 +154,6 @@ type PendingCast = {
   jackpotMult: number      // server-rolled YOLO jackpot (1 = none)
   doubleCatch: boolean     // server-rolled double catch
   castAt: number
-}
-
-const ZONE_CRATE_TIERS: Record<string, Record<CrateTier, number>> = {
-  shallows:    { wooden: 80, metal: 10, gold: 7,  diamond: 3  },
-  open_waters: { wooden: 60, metal: 20, gold: 12, diamond: 8  },
-  deep:        { wooden: 35, metal: 30, gold: 20, diamond: 15 },
-  abyss:       { wooden: 15, metal: 25, gold: 35, diamond: 25 },
 }
 
 function rollCrateTier(habitat: string): CrateTier {
