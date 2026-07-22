@@ -53,7 +53,6 @@ export default function BoardPicker({
           boxShadow: `0 0 14px ${meta.accent}1f`,
         }}
       >
-        <div aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: meta.accent, borderRadius: '12px 0 0 12px' }} />
         <span aria-hidden style={{ fontSize: '1rem', lineHeight: 1 }}>🏆</span>
         <p className="font-cinzel font-700" style={{ flex: 1, minWidth: 0, fontSize: '1rem', color: '#f2efe8', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{meta.label}</p>
         {activeRank != null && (
