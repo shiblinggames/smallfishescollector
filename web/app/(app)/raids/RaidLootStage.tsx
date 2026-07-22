@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { type BroadsideEnemy, type RaidLootItem, RARITY_COLOR, GEM_GLYPH, GEM_COLOR } from '@/lib/bossRaids'
+import type { RaidClearTimes } from './actions'
 import { getShipSkin } from '@/lib/shipSkins'
 import { vibrate } from '@/lib/haptics'
 import { playChestSfx, playChestCreakSfx } from '@/lib/fishingMusic'
@@ -13,6 +14,9 @@ const GOLD = '#f0c040'
 interface Props {
   /** The boss that was just defeated — used for kill narration only. */
   boss: BroadsideEnemy
+  /** This run's clear time (ms) and the record context, for the victory panel. */
+  clearTimeMs?: number | null
+  clearTimes?: RaidClearTimes | null
   /** Doubloons + XP earned from the kill itself. */
   killGold: number
   killXP: number
@@ -53,6 +57,23 @@ const RARITY_TIER: Record<string, number> = { common: 1, uncommon: 2, rare: 3, e
 
 function fmtGold(n: number): string {
   return n.toLocaleString()
+}
+
+/** ms → "2:34" over a minute, "48.3s" under. */
+function fmtTime(ms: number): string {
+  const totalSec = ms / 1000
+  const m = Math.floor(totalSec / 60)
+  const s = Math.floor(totalSec % 60)
+  return m > 0 ? `${m}:${String(s).padStart(2, '0')}` : `${(Math.round(totalSec * 10) / 10).toFixed(1)}s`
+}
+
+function TimeRow({ label, value, accent, strong }: { label: string; value: string; accent?: string; strong?: boolean }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10, padding: '0.28rem 0' }}>
+      <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.54rem', color: '#9a948a' }}>{label}</span>
+      <span className={strong ? 'font-cinzel font-800' : 'font-karla font-700'} style={{ fontSize: strong ? '1.05rem' : '0.82rem', color: accent ?? '#f3ede2', whiteSpace: 'nowrap', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', fontVariantNumeric: 'tabular-nums' }}>{value}</span>
+    </div>
+  )
 }
 
 // ── Shared reveal vocabulary with the Davy Jones Gauntlet cash-out ───────────
@@ -121,6 +142,7 @@ const ANTICIPATION_MS = 750
 export default function RaidLootStage(props: Props) {
   const {
     boss, killGold, killXP,
+    clearTimeMs, clearTimes,
     loot, slotFinal, lootAmount, fortuneMult, clearBonusXp = 0,
     shipImageUrl,
     onClaim, claiming = false,
@@ -268,6 +290,28 @@ export default function RaidLootStage(props: Props) {
                 <RewardLine label="Doubloons" to={totalDoubloons} suffix=" ⟡" color={GOLD} delay={0.2} run={counting} />
                 <RewardLine label="Nav XP" to={totalNavXp} color="#4ade80" delay={0.32} run={counting} />
               </div>
+
+              {/* Clear time — this run vs your best vs the global record */}
+              {clearTimeMs != null && (
+                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.44, duration: 0.35 }}
+                  style={{ marginTop: 12, textAlign: 'left', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(125,211,252,0.3)', borderRadius: 14, padding: '0.5rem 0.85rem 0.6rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+                    <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#7dd3fc' }}>Clear Time</span>
+                    {clearTimes?.isGlobalBest ? (
+                      <span className="font-karla font-800 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#1a1205', background: 'linear-gradient(90deg,#ffe08a,#f0c040)', borderRadius: 999, padding: '0.14rem 0.5rem' }}>World Record!</span>
+                    ) : clearTimes?.isPersonalBest ? (
+                      <span className="font-karla font-800 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#7dd3fc', border: '1px solid rgba(125,211,252,0.55)', borderRadius: 999, padding: '0.12rem 0.5rem' }}>New Best!</span>
+                    ) : null}
+                  </div>
+                  <TimeRow label="This run" value={fmtTime(clearTimeMs)} accent="#bfe6ff" strong />
+                  {clearTimes && (
+                    <>
+                      <TimeRow label="Your best" value={fmtTime(clearTimes.yourBestMs)} />
+                      <TimeRow label="Global best" value={clearTimes.globalBestMs != null ? `${fmtTime(clearTimes.globalBestMs)}${clearTimes.globalBestUsername ? ` · ${clearTimes.globalBestUsername}` : ''}` : '—'} accent={GOLD} />
+                    </>
+                  )}
+                </motion.div>
+              )}
 
               {/* Crew XP — the end-of-mission "who grew" beat */}
               {crewGains.length > 0 && (

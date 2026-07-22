@@ -261,21 +261,79 @@ export async function repairShip(): Promise<
 }
 
 
+/** Clear-time summary returned by recordRaidClear for the victory screen. */
+export interface RaidClearTimes {
+  yourBestMs: number
+  /** Fastest non-admin clear of this raid (null if none). */
+  globalBestMs: number | null
+  globalBestUsername: string
+  isPersonalBest: boolean
+  isGlobalBest: boolean
+}
+
 /** Record a raid clear the MOMENT the boss dies — independent of the
  *  loot-claim flow. Previously the raid_completions insert was bundled
  *  inside claimRaidLoot(); any failure (network blip, player closing
  *  the tab on the victory screen, etc.) silently dropped the clear and
- *  the next story node stayed locked. Fire-and-forget; loot grant
- *  remains in claimRaidLoot. */
-export async function recordRaidClear(raidId: string, elapsedMs: number): Promise<void> {
-  if (!raidId || !Number.isFinite(elapsedMs) || elapsedMs <= 0) return
+ *  the next story node stayed locked. Fire-and-forget for the guarded
+ *  fallback callers; the boss-death caller captures the returned times to
+ *  show "this run vs your best vs global best" on the victory screen.
+ *  Previous bests are read BEFORE the insert so a new record can be flagged. */
+export async function recordRaidClear(raidId: string, elapsedMs: number): Promise<RaidClearTimes | null> {
+  if (!raidId || !Number.isFinite(elapsedMs) || elapsedMs <= 0) return null
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return
+  if (!user) return null
   const admin = createAdminClient()
-  await admin
-    .from('raid_completions')
-    .insert({ user_id: user.id, elapsed_ms: Math.floor(elapsedMs), raid_id: raidId })
+  const ms = Math.floor(elapsedMs)
+
+  // Who am I (username + admin flag — admins don't count toward the global record).
+  const { data: me } = await admin.from('profiles').select('username, is_admin').eq('id', user.id).single()
+  const myName = (me?.username as string | null) ?? ''
+  const iAmAdmin = me?.is_admin === true
+
+  // Previous bests BEFORE inserting this run.
+  const { data: myRows } = await admin
+    .from('raid_completions').select('elapsed_ms')
+    .eq('raid_id', raidId).eq('user_id', user.id)
+    .order('elapsed_ms', { ascending: true }).limit(1)
+  const prevMyBest = (myRows?.[0]?.elapsed_ms as number | undefined) ?? null
+
+  // Global previous best = fastest NON-admin clear. Small table, so pull the
+  // ordered rows + resolve usernames/admin in one extra query.
+  const { data: allRows } = await admin
+    .from('raid_completions').select('user_id, elapsed_ms')
+    .eq('raid_id', raidId).order('elapsed_ms', { ascending: true })
+  const uids = Array.from(new Set((allRows ?? []).map((r: { user_id: string }) => r.user_id)))
+  const { data: profs } = uids.length
+    ? await admin.from('profiles').select('id, username, is_admin').in('id', uids)
+    : { data: [] as { id: string; username: string | null; is_admin: boolean | null }[] }
+  const pMap = new Map((profs ?? []).map((p: { id: string; username: string | null; is_admin: boolean | null }) => [p.id, p]))
+  let prevGlobalBest: number | null = null
+  let prevGlobalUser = ''
+  for (const r of (allRows ?? []) as { user_id: string; elapsed_ms: number }[]) {
+    const p = pMap.get(r.user_id)
+    if (p && !p.is_admin) { prevGlobalBest = r.elapsed_ms; prevGlobalUser = p.username ?? ''; break }
+  }
+
+  // Insert this run.
+  await admin.from('raid_completions').insert({ user_id: user.id, elapsed_ms: ms, raid_id: raidId })
+
+  const yourBestMs = prevMyBest == null ? ms : Math.min(prevMyBest, ms)
+  const isPersonalBest = prevMyBest == null || ms < prevMyBest
+
+  let globalBestMs = prevGlobalBest
+  let globalBestUsername = prevGlobalUser
+  let isGlobalBest = false
+  if (!iAmAdmin) {
+    if (prevGlobalBest == null || ms < prevGlobalBest) {
+      globalBestMs = ms
+      globalBestUsername = myName
+      isGlobalBest = true
+    }
+  }
+
+  return { yourBestMs, globalBestMs, globalBestUsername, isPersonalBest, isGlobalBest }
 }
 
 /** Record a single hit the player landed, keeping profiles.highest_raid_damage

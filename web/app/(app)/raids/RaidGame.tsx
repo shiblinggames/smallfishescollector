@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { claimRaidLoot, reportRaidSink, recordRaidHit, recordRaidClear } from './actions'
+import { claimRaidLoot, reportRaidSink, recordRaidHit, recordRaidClear, type RaidClearTimes } from './actions'
 import { awardRaidKill } from './raidXPActions'
 import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
 import { getShipSkin } from '@/lib/shipSkins'
@@ -616,6 +616,9 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   const [lootAmount, setLootAmount]     = useState(0)
   const [lootBase, setLootBase]         = useState(0)
   const [lootClaimed, setLootClaimed]   = useState(false)
+  // Clear time for the victory screen: this run + your best + global best.
+  const [clearTimeMs, setClearTimeMs]   = useState<number | null>(null)
+  const [clearTimes, setClearTimes]     = useState<RaidClearTimes | null>(null)
   // Pre-rolled loot index (set at boss kill), shown directly by RaidLootStage.
   const [slotFinal, setSlotFinal]     = useState(0)
   const [pHitsplat, setPHitsplat]       = useState({ key: 0, text: '', color: '', big: false })
@@ -1252,14 +1255,17 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
         // the loot screen or the loot grant failed. Fire-and-forget,
         // guarded by clearRecordedRef so we never insert twice for
         // the same run.
+        const clearElapsedMs = performance.now() - raidStartTimeRef.current
+        setClearTimeMs(clearElapsedMs)   // this run's time, for the victory screen
         if (!clearRecordedRef.current) {
           clearRecordedRef.current = true
-          const clearElapsedMs = performance.now() - raidStartTimeRef.current
-          recordRaidClear(config.raidId, clearElapsedMs).catch(() => {
-            // If the insert fails, clear the guard so the loot-claim
-            // path can still try once as a fallback.
-            clearRecordedRef.current = false
-          })
+          recordRaidClear(config.raidId, clearElapsedMs)
+            .then(t => { if (t) setClearTimes(t) })
+            .catch(() => {
+              // If the insert fails, clear the guard so the loot-claim
+              // path can still try once as a fallback.
+              clearRecordedRef.current = false
+            })
         }
         // Grant the crate loot NOW (boss is dead) so it can never be lost if the
         // player closes the app on the loot screen before tapping Collect — the
@@ -1869,6 +1875,8 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
         <div style={{ width: '100%', padding: '0 0.5rem', flexShrink: 0 }}>
           <RaidLootStage
             boss={bossEnemy}
+            clearTimeMs={clearTimeMs}
+            clearTimes={clearTimes}
             killGold={winGold}
             killXP={winXP}
             clearBonusXp={bonusCallout ?? 0}
