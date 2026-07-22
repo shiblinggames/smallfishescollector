@@ -14,7 +14,7 @@ import { fishingColorsToGrant } from '@/lib/characters'
 import { getLineForSpeciesCount } from '@/lib/lines'
 import { getSpecialItem } from '@/lib/specialItems'
 import { getEffectiveDailyChallenges, getTodayUTC, challengeIncrement } from '@/lib/dailyChallenges'
-import { zoneRewardDoubloons } from '@/lib/zoneRewards'
+import { zoneRewardDoubloons, PRESTIGE_MAX } from '@/lib/zoneRewards'
 import { rollFishSize, type FishSizeTier } from '@/lib/fishSize'
 import { rollShiny, SHINY_SELL_MULT } from '@/lib/shiny'
 import { CRATE_PET_CHANCE, rollPet } from '@/lib/pets'
@@ -1537,6 +1537,10 @@ export async function prestigeZone(zone: string): Promise<{ prestigeLevel: numbe
   if ((caughtCount ?? 0) < zoneIds.length) return { error: 'Zone not complete' }
 
   const currentLevels = (profile.prestige_levels as Record<string, number> | null) ?? {}
+  // Prestige caps at 5 ("Max Prestige"). Both rewards (doubloons + catch XP)
+  // already stop scaling at P5, so past it is a rewardless treadmill — we hard
+  // stop there instead.
+  if ((currentLevels[zone] ?? 0) >= PRESTIGE_MAX) return { error: 'Already at Max Prestige' }
   const newLevel = (currentLevels[zone] ?? 0) + 1
   const newLevels = { ...currentLevels, [zone]: newLevel }
 

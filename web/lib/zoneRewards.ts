@@ -3,6 +3,10 @@
 // capped at P5 = 2× base). Players claim the reward each prestige loop, so
 // this is the per-claim amount, not a one-time bounty.
 
+// Prestige caps here ("Max Prestige" = 5 stars). Both rewards stop scaling at
+// this level, so it's the hard ceiling too. Shared by the server action + UI.
+export const PRESTIGE_MAX = 5
+
 export const ZONE_REWARD_BASE: Record<string, number> = {
   shallows:    5000,
   open_waters: 10000,

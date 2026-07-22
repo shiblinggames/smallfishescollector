@@ -6,6 +6,7 @@ import { ZONE_MIN_LEVEL } from './zoneData'
 import { updateUsername } from '@/app/(app)/u/actions'
 import LeaderboardModal from '@/components/LeaderboardModal'
 import FisherPose from '@/components/FisherPose'
+import { PRESTIGE_MAX } from '@/lib/zoneRewards'
 
 const AUTO_NAME_RE = /^crew_[0-9a-f]{5}$/
 const DISMISSED_KEY = 'sf_username_prompt_dismissed'
@@ -79,20 +80,29 @@ function WaveMarks({ n, color, dim }: { n: number; color: string; dim?: boolean 
   )
 }
 
-/* Prestige standing as a small star + count, tiered bronze/silver/gold/prismatic
-   — the badge treatment, without the pill chrome. */
+/* Prestige standing as a row of five stars filled by level. At the cap all five
+   light gold with a "Max Prestige" flourish — the earned finish line. */
 function PrestigeMark({ level }: { level: number }) {
-  const prismatic = level >= 7
-  const tc = level >= 5 ? '#f0c040' : level >= 3 ? '#d7dee8' : '#e0a96d'
+  const isMax = level >= PRESTIGE_MAX
+  const GOLD = '#f0c040'
   return (
-    <span className="font-karla font-700" style={{
-      display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0, fontSize: '0.74rem', whiteSpace: 'nowrap',
-      ...(prismatic
-        ? { backgroundImage: 'linear-gradient(90deg,#7dd3fc,#f0c040,#f472b6,#a78bfa)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }
-        : { color: tc, textShadow: '0 1px 4px rgba(0,0,0,0.9)' }),
-    }}>
-      <svg width="11" height="11" viewBox="0 0 24 24" fill={prismatic ? '#f0c040' : tc} stroke="none" aria-hidden><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" /></svg>
-      Prestige {level}
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0, whiteSpace: 'nowrap' }}>
+      <span style={{ display: 'inline-flex', gap: 1.5 }}>
+        {Array.from({ length: PRESTIGE_MAX }).map((_, i) => (
+          <svg key={i} width="10" height="10" viewBox="0 0 24 24" aria-hidden
+            fill={i < level ? GOLD : 'rgba(255,255,255,0.24)'}
+            style={{ filter: i < level ? `drop-shadow(0 0 3px ${GOLD}bb)` : 'none' }}>
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" />
+          </svg>
+        ))}
+      </span>
+      {isMax && (
+        <span className="font-karla font-800 uppercase" style={{
+          fontSize: '0.58rem', letterSpacing: '0.08em',
+          backgroundImage: 'linear-gradient(90deg,#fff2c8,#f0c040,#ffe9a8)',
+          WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
+        }}>Max</span>
+      )}
     </span>
   )
 }
@@ -231,7 +241,7 @@ export default function ZoneLanding({
               </p>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0" style={{ paddingBottom: 3 }}>
-              <LeaderboardModal boards={['perfectStreak', 'fishingLevel', 'totalPrestige']} title="Fishing Leaderboard" />
+              <LeaderboardModal boards={['perfectStreak', 'fishingLevel']} title="Fishing Leaderboard" />
               <button
                 onClick={() => setModalOpen(true)}
                 aria-label="How fishing works"
