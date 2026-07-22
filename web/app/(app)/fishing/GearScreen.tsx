@@ -806,18 +806,15 @@ export default function GearScreen({
   useEffect(() => { if (openSlot !== 'badge') setSelectedBadgeSlot(null) }, [openSlot])
   useEffect(() => { if (openSlot !== 'rod') setRodView('owned') }, [openSlot])
   const [appearanceTab, setAppearanceTab] = useState<AppearanceTab>('skin')
-  // Pet sub-tab — Pets grid is split by species (Parrots / Monkeys)
-  // so the list stays readable as new species ship. Sub-tab state
-  // lives at the parent so the player's choice persists when they
-  // bounce between the outer tabs.
-  const [petSpeciesTab, setPetSpeciesTab] = useState<'parrot' | 'monkey' | 'seal'>('parrot')
+  // Pets no longer use species sub-tabs — each species gets its own
+  // horizontal scrollable row, all visible at once.
 
   // Transient confirmation banner for cosmetic purchases. Clears itself after
   // 2.5s so the player gets a clear "you bought + equipped X" moment instead
   // of the menu silently closing.
   const [cosmeticToast, setCosmeticToast] = useState<{ id: number; name: string; color: string; cost: number; currency?: 'doubloons' | 'gems' } | null>(null)
-  // Tapping a skin/boat thumbnail opens a detail modal (equip / buy / how-to-unlock).
-  const [cosmeticDetail, setCosmeticDetail] = useState<{ kind: 'skin' | 'boat'; id: string } | null>(null)
+  // Tapping a skin/boat/hat/pet thumbnail opens a detail modal (equip / buy / how-to-unlock).
+  const [cosmeticDetail, setCosmeticDetail] = useState<{ kind: 'skin' | 'boat' | 'hat' | 'pet'; id: string } | null>(null)
   const [detailBusy, setDetailBusy] = useState(false)
   useEffect(() => {
     if (!cosmeticToast) return
@@ -2543,258 +2540,188 @@ export default function GearScreen({
                   })()}
 
               {/* ── Hat tab body ── */}
-                  {appearanceTab === 'hat' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#bda05a' }}>Hat Color</p>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                    {/* None — no bandana */}
-                    {(() => {
-                      const isEquipped = !equippedHat
-                      const noneColor = '#6a6764'
-                      return (
-                        <button
-                          key="none"
-                          onClick={() => { if (!isEquipped) onEquipHat(null) }}
-                          className="font-karla font-700"
-                          style={{
-                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                            padding: '0.6rem 0.4rem 0.5rem',
-                            borderRadius: 10,
-                            background: isEquipped ? `${noneColor}1f` : 'rgba(4,10,18,0.72)',
-                            border: `1px solid ${isEquipped ? noneColor + '90' : 'rgba(255,255,255,0.09)'}`,
-                            boxShadow: isEquipped ? `0 0 14px ${noneColor}33` : 'none',
-                            cursor: isEquipped ? 'default' : 'pointer',
-                            position: 'relative',
-                          }}
-                        >
-                          <div style={{
-                            width: 48, height: 48,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          }}>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src="/defaulthat_rest.png"
-                              alt="Default"
-                              loading="lazy"
-                              decoding="async"
-                              style={{ width: 38, height: 38, objectFit: 'contain' }}
-                            />
-                          </div>
-                          <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: '#f0ede8', lineHeight: 1.1, textAlign: 'center' }}>Default</p>
-                          {isEquipped
-                            ? <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: noneColor }}>✓ Equipped</span>
-                            : <span className="font-karla font-600" style={{ fontSize: '0.52rem', color: '#5a5856' }}>Built-in</span>
-                          }
-                        </button>
-                      )
-                    })()}
-                    {HATS.filter(h => !h.crateOnly || unlockedHats.includes(h.id)).map(h => {
+                  {appearanceTab === 'hat' && (() => {
+                    const renderHatThumb = (h: typeof HATS[number]) => {
                       const owned = unlockedHats.includes(h.id)
                       const isEquipped = equippedHat === h.id
-                      const canAfford = doubloons >= h.cost
-                      const tappable = isEquipped ? false : (owned || canAfford)
-                      const onTap = () => {
-                        if (isEquipped) return
-                        if (owned) onEquipHat(h.id)
-                        else if (canAfford) setPendingPurchase({
-                          name: `${h.name} Bandana`, color: h.color, cost: h.cost,
-                          onConfirm: () => { onBuyHat(h.id); flashPurchase(`${h.name} Bandana`, h.color, h.cost, 'appearance') },
-                        })
-                      }
                       return (
                         <button
                           key={h.id}
-                          onClick={onTap}
-                          disabled={!tappable}
-                          className="font-karla font-700"
-                          style={{
-                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                            padding: '0.6rem 0.4rem 0.5rem',
-                            borderRadius: 10,
-                            background: isEquipped ? `${h.color}1f` : 'rgba(4,10,18,0.72)',
-                            border: `1px solid ${isEquipped ? h.color + '90' : owned ? 'rgba(255,255,255,0.09)' : `${h.color}30`}`,
-                            boxShadow: isEquipped ? `0 0 14px ${h.color}33` : 'none',
-                            cursor: tappable ? 'pointer' : 'default',
-                            opacity: !owned && !canAfford ? 0.72 : 1,
-                            position: 'relative',
-                          }}
+                          onClick={() => setCosmeticDetail({ kind: 'hat', id: h.id })}
+                          style={{ flex: '0 0 auto', background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}
                         >
                           <div style={{
-                            width: 48, height: 48,
+                            position: 'relative', width: 88, height: 66, borderRadius: 12,
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            background: isEquipped ? `${h.color}1f` : 'rgba(4,10,18,0.6)',
+                            border: isEquipped ? `2px solid ${h.color}90` : owned ? '2px solid rgba(255,255,255,0.2)' : '2px dashed rgba(255,255,255,0.12)',
+                            boxShadow: isEquipped ? `0 0 14px ${h.color}33` : 'none',
+                            opacity: owned ? 1 : 0.4,
                           }}>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={h.restImageUrl}
-                              alt={h.name}
-                              loading="lazy"
-                              decoding="async"
-                              style={{ width: 38, height: 38, objectFit: 'contain' }}
-                            />
+                            <img src={h.restImageUrl} alt="" loading="lazy" decoding="async"
+                              style={{ width: 42, height: 42, objectFit: 'contain', filter: owned ? undefined : 'grayscale(1)' }} />
+                            {!owned && (
+                              <div style={{ position: 'absolute', right: 3, bottom: 3, width: 22, height: 22, borderRadius: '50%', background: 'rgba(12,14,18,0.96)', border: '2px solid #0a0f18', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2, boxShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2.4" strokeLinecap="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                              </div>
+                            )}
+                            {owned && !isEquipped && (
+                              <div style={{ position: 'absolute', right: 3, bottom: 3, width: 19, height: 19, borderRadius: '50%', background: 'rgba(14,22,16,0.96)', border: '2px solid #0a0f18', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2, boxShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
+                                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#5fce8a" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                              </div>
+                            )}
+                            {isEquipped && (
+                              <div style={{ position: 'absolute', right: 3, bottom: 3, width: 22, height: 22, borderRadius: '50%', background: h.color, border: '2px solid #0a0f18', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2, boxShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                              </div>
+                            )}
                           </div>
-                          <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: owned ? '#f0ede8' : '#a0a09a', lineHeight: 1.1, textAlign: 'center' }}>{h.name}</p>
-                          {isEquipped ? (
-                            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: h.color }}>✓ Equipped</span>
-                          ) : owned ? (
-                            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#4ade80' }}>Owned · Tap to equip</span>
-                          ) : (
-                            <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: canAfford ? h.color : '#f0c040' }}>
-                              {h.cost.toLocaleString()} ⟡
-                            </span>
-                          )}
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.6rem', color: isEquipped ? '#f0ede8' : owned ? '#c8c4bc' : '#6a675f', textAlign: 'center', whiteSpace: 'nowrap' }}>{h.name}</p>
                         </button>
                       )
-                    })}
-                  </div>
-                </div>
-              )}
+                    }
+                    const hats = HATS.filter(h => !h.crateOnly || unlockedHats.includes(h.id))
+                      .sort((a, b) => Number(unlockedHats.includes(b.id)) - Number(unlockedHats.includes(a.id)))
+                    const defaultEquipped = !equippedHat
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#bda05a' }}>Hat Color</p>
+                        <CosmeticLegend />
+                        <div className="hide-scrollbar" style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4 }}>
+                          {/* Default (no bandana) — built-in, tap to take the hat off. */}
+                          <button
+                            onClick={() => { if (!defaultEquipped) onEquipHat(null) }}
+                            style={{ flex: '0 0 auto', background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}
+                          >
+                            <div style={{
+                              position: 'relative', width: 88, height: 66, borderRadius: 12,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              background: defaultEquipped ? 'rgba(106,103,100,0.18)' : 'rgba(4,10,18,0.6)',
+                              border: defaultEquipped ? '2px solid rgba(160,157,150,0.7)' : '2px solid rgba(255,255,255,0.2)',
+                            }}>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src="/defaulthat_rest.png" alt="" style={{ width: 42, height: 42, objectFit: 'contain' }} />
+                              {!defaultEquipped && (
+                                <div style={{ position: 'absolute', right: 3, bottom: 3, width: 19, height: 19, borderRadius: '50%', background: 'rgba(14,22,16,0.96)', border: '2px solid #0a0f18', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
+                                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#5fce8a" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                                </div>
+                              )}
+                              {defaultEquipped && (
+                                <div style={{ position: 'absolute', right: 3, bottom: 3, width: 22, height: 22, borderRadius: '50%', background: '#6a6764', border: '2px solid #0a0f18', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
+                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                                </div>
+                              )}
+                            </div>
+                            <p className="font-cinzel font-700" style={{ fontSize: '0.6rem', color: '#c8c4bc', textAlign: 'center', whiteSpace: 'nowrap' }}>Default</p>
+                          </button>
+                          {hats.map(renderHatThumb)}
+                        </div>
+                      </div>
+                    )
+                  })()}
 
                   {/* ── Pet tab body ── */}
-                  {appearanceTab === 'pet' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#a78bfa' }}>Pets</p>
-                      <p className="font-karla font-300" style={{ fontSize: '0.66rem', color: '#7a7268', lineHeight: 1.4 }}>
-                        Pets are a rare drop from crates — the golden variants are the trophies. Tap to equip; tap the equipped one to put it away.
-                      </p>
-                      {/* Species sub-tabs — add a new entry to this
-                          array when a new species ships. Owned counts
-                          on each tab give the player a quick "what do
-                          I have here?" read without drilling in. */}
-                      <div style={{
-                        display: 'flex', gap: 4, padding: 3,
-                        background: 'rgba(0,0,0,0.4)', borderRadius: 10,
-                        border: '1px solid rgba(255,255,255,0.06)',
-                      }}>
-                        {([
-                          { key: 'parrot', label: 'Parrots' },
-                          { key: 'monkey', label: 'Monkeys' },
-                          { key: 'seal',   label: 'Seals'   },
-                        ] as const).map(t => {
-                          const speciesPets = PETS.filter(p => p.species === t.key)
-                          const ownedHere = speciesPets.filter(p => unlockedPets.includes(p.id)).length
-                          const total = speciesPets.length
-                          const active = petSpeciesTab === t.key
-                          return (
-                            <button
-                              key={t.key}
-                              onClick={() => setPetSpeciesTab(t.key)}
-                              className="font-karla font-700 uppercase tracking-[0.12em]"
-                              style={{
-                                flex: 1, padding: '0.45rem 0',
-                                background: active ? 'rgba(167,139,250,0.16)' : 'transparent',
-                                border: `1px solid ${active ? 'rgba(167,139,250,0.55)' : 'transparent'}`,
-                                borderRadius: 8,
-                                color: active ? '#c4b5fd' : 'rgba(255,255,255,0.55)',
-                                fontSize: '0.62rem',
-                                cursor: 'pointer',
-                                transition: 'all 0.14s',
-                              }}
-                            >
-                              {t.label} <span style={{ opacity: 0.65, fontWeight: 600 }}>· {ownedHere}/{total}</span>
-                            </button>
-                          )
-                        })}
-                      </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                        {/* "None" — unequip pet */}
-                        {(() => {
-                          const isEquipped = !equippedPet
-                          const noneColor = '#6a6764'
-                          return (
-                            <button
-                              key="none"
-                              onClick={() => { if (!isEquipped) onEquipPet(null) }}
-                              className="font-karla font-700"
-                              style={{
-                                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                                padding: '0.6rem 0.4rem 0.5rem',
-                                borderRadius: 10,
-                                background: isEquipped ? `${noneColor}1f` : 'rgba(4,10,18,0.72)',
-                                border: `1px solid ${isEquipped ? noneColor + '90' : 'rgba(255,255,255,0.09)'}`,
-                                boxShadow: isEquipped ? `0 0 14px ${noneColor}33` : 'none',
-                                cursor: isEquipped ? 'default' : 'pointer',
-                                position: 'relative',
-                              }}
-                            >
-                              <div style={{
-                                width: 48, height: 48,
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              }}>
-                                <span style={{ fontSize: '1.4rem', color: '#3a3835' }}>—</span>
+                  {appearanceTab === 'pet' && (() => {
+                    // Locked pets render as dark silhouettes so the golden variants
+                    // stay a mystery until landed; owned show full colour + green tick.
+                    const renderPetThumb = (p: typeof PETS[number]) => {
+                      const owned = unlockedPets.includes(p.id)
+                      const isEquipped = equippedPet === p.id
+                      return (
+                        <button
+                          key={p.id}
+                          onClick={() => setCosmeticDetail({ kind: 'pet', id: p.id })}
+                          style={{ flex: '0 0 auto', background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}
+                        >
+                          <div style={{
+                            position: 'relative', width: 84, height: 76, borderRadius: 12,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            background: isEquipped ? `${p.accentColor}1f` : 'rgba(4,10,18,0.6)',
+                            border: isEquipped ? `2px solid ${p.accentColor}90` : owned ? '2px solid rgba(255,255,255,0.2)' : '2px dashed rgba(255,255,255,0.12)',
+                            boxShadow: isEquipped ? `0 0 14px ${p.accentColor}33` : 'none',
+                            opacity: owned ? 1 : 0.55,
+                          }}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={p.restImageUrl} alt="" loading="lazy" decoding="async"
+                              style={{ width: 52, height: 52, objectFit: 'contain', filter: owned ? `drop-shadow(0 0 6px ${p.accentColor}55)` : 'grayscale(1) brightness(0.25)' }} />
+                            {!owned && (
+                              <div style={{ position: 'absolute', right: 3, bottom: 3, width: 22, height: 22, borderRadius: '50%', background: 'rgba(12,14,18,0.96)', border: '2px solid #0a0f18', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2, boxShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2.4" strokeLinecap="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
                               </div>
-                              <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: '#f0ede8', lineHeight: 1.1, textAlign: 'center' }}>None</p>
-                              {isEquipped
-                                ? <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: noneColor }}>✓ Equipped</span>
-                                : <span className="font-karla font-600" style={{ fontSize: '0.52rem', color: '#5a5856' }}>No pet</span>
-                              }
-                            </button>
-                          )
-                        })()}
-                        {/* All pets in the registry — locked ones rendered as
-                            silhouettes so the player sees what they're chasing
-                            without revealing the actual colors (gold parrot
-                            stays mysterious until they land it). */}
-                        {PETS.filter(p => p.species === petSpeciesTab).map(p => {
-                          const owned = unlockedPets.includes(p.id)
-                          const isEquipped = equippedPet === p.id
-                          const tappable = owned
-                          const onTap = () => {
-                            if (!owned) return
-                            if (isEquipped) onEquipPet(null)
-                            else onEquipPet(p.id)
-                          }
-                          return (
-                            <button
-                              key={p.id}
-                              onClick={onTap}
-                              disabled={!tappable}
-                              className="font-karla font-700"
-                              style={{
-                                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                                padding: '0.6rem 0.4rem 0.5rem',
-                                borderRadius: 10,
-                                background: isEquipped ? `${p.accentColor}1f` : 'rgba(4,10,18,0.72)',
-                                border: `1px solid ${isEquipped ? p.accentColor + '90' : owned ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.05)'}`,
-                                boxShadow: isEquipped ? `0 0 14px ${p.accentColor}33` : 'none',
-                                cursor: tappable ? 'pointer' : 'default',
-                                opacity: owned ? 1 : 0.55,
-                                position: 'relative',
-                              }}
-                            >
-                              <div style={{
-                                width: 48, height: 48,
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              }}>
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
-                                  src={p.restImageUrl}
-                                  alt={p.name}
-                                  loading="lazy"
-                                  decoding="async"
-                                  style={{
-                                    width: 42, height: 42, objectFit: 'contain',
-                                    filter: owned
-                                      ? `drop-shadow(0 0 6px ${p.accentColor}55)`
-                                      : 'grayscale(1) brightness(0.25)',
-                                  }}
-                                />
+                            )}
+                            {owned && !isEquipped && (
+                              <div style={{ position: 'absolute', right: 3, bottom: 3, width: 19, height: 19, borderRadius: '50%', background: 'rgba(14,22,16,0.96)', border: '2px solid #0a0f18', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2, boxShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
+                                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#5fce8a" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
                               </div>
-                              <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: owned ? '#f0ede8' : '#5a5856', lineHeight: 1.1, textAlign: 'center' }}>
-                                {owned ? p.name.replace(/ (Parrot|Monkey)$/, '') : '???'}
-                              </p>
-                              {isEquipped ? (
-                                <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: p.accentColor }}>✓ Equipped</span>
-                              ) : owned ? (
-                                <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#4ade80' }}>Tap to equip</span>
-                              ) : (
-                                <span className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: '#5a5856' }}>Locked</span>
+                            )}
+                            {isEquipped && (
+                              <div style={{ position: 'absolute', right: 3, bottom: 3, width: 22, height: 22, borderRadius: '50%', background: p.accentColor, border: '2px solid #0a0f18', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2, boxShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                              </div>
+                            )}
+                          </div>
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.6rem', color: isEquipped ? '#f0ede8' : owned ? '#c8c4bc' : '#6a675f', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                            {owned ? p.name.replace(/ (Parrot|Monkey|Seal)$/, '') : '???'}
+                          </p>
+                        </button>
+                      )
+                    }
+                    const species = [
+                      { key: 'parrot', label: 'Parrots' },
+                      { key: 'monkey', label: 'Monkeys' },
+                      { key: 'seal',   label: 'Seals'   },
+                    ] as const
+                    const groupLabel = { fontSize: '0.56rem', color: '#8a8272', letterSpacing: '0.12em', marginTop: 2 } as const
+                    const rowStyle: React.CSSProperties = { display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4 }
+                    const noneEquipped = !equippedPet
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#a78bfa' }}>Pets</p>
+                        <p className="font-karla font-300" style={{ fontSize: '0.66rem', color: '#7a7268', lineHeight: 1.4 }}>
+                          Pets are a rare drop from crates — the golden variants are the trophies. Tap one to equip, or tap the equipped pet to put it away.
+                        </p>
+                        <CosmeticLegend />
+
+                        {/* None — unequip. Its own short row up top. */}
+                        <div className="hide-scrollbar" style={rowStyle}>
+                          <button
+                            onClick={() => { if (!noneEquipped) onEquipPet(null) }}
+                            style={{ flex: '0 0 auto', background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}
+                          >
+                            <div style={{
+                              position: 'relative', width: 84, height: 76, borderRadius: 12,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              background: noneEquipped ? 'rgba(106,103,100,0.18)' : 'rgba(4,10,18,0.6)',
+                              border: noneEquipped ? '2px solid rgba(160,157,150,0.7)' : '2px solid rgba(255,255,255,0.2)',
+                            }}>
+                              <span style={{ fontSize: '1.6rem', color: '#3a3835' }}>—</span>
+                              {noneEquipped && (
+                                <div style={{ position: 'absolute', right: 3, bottom: 3, width: 22, height: 22, borderRadius: '50%', background: '#6a6764', border: '2px solid #0a0f18', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
+                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                                </div>
                               )}
-                            </button>
+                            </div>
+                            <p className="font-cinzel font-700" style={{ fontSize: '0.6rem', color: '#c8c4bc', textAlign: 'center', whiteSpace: 'nowrap' }}>None</p>
+                          </button>
+                        </div>
+
+                        {/* One horizontal row per species, owned first. */}
+                        {species.map(s => {
+                          const list = PETS.filter(p => p.species === s.key)
+                            .sort((a, b) => Number(unlockedPets.includes(b.id)) - Number(unlockedPets.includes(a.id)))
+                          if (list.length === 0) return null
+                          const ownedHere = list.filter(p => unlockedPets.includes(p.id)).length
+                          return (
+                            <div key={s.key} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                              <p className="font-karla font-600 uppercase" style={groupLabel}>{s.label} <span style={{ opacity: 0.7 }}>· {ownedHere}/{list.length}</span></p>
+                              <div className="hide-scrollbar" style={rowStyle}>{list.map(renderPetThumb)}</div>
+                            </div>
                           )
                         })}
                       </div>
-                    </div>
-                  )}
+                    )
+                  })()}
 
                 </div>
               )}
@@ -2894,10 +2821,11 @@ export default function GearScreen({
       <AnimatePresence>
         {cosmeticDetail && (() => {
           type Info = {
-            kind: 'skin' | 'boat'; id: string; name: string; accent: string
+            kind: 'skin' | 'boat' | 'hat' | 'pet'; id: string; name: string; accent: string
             owned: boolean; equipped: boolean; purchasable: boolean
             price?: number; currency?: 'gems' | 'doubloons'; unlockHint?: string
             skinRest?: string; boatImg?: string; boatGlow?: boolean; boatAsh?: boolean
+            itemImg?: string; mystery?: boolean
           }
           let info: Info | null = null
           if (cosmeticDetail.kind === 'skin') {
@@ -2910,6 +2838,31 @@ export default function GearScreen({
                 price: c.gemPrice ?? c.price, currency: c.gemPrice ? 'gems' : 'doubloons',
                 purchasable: !owned && !!(c.price || c.gemPrice), unlockHint: c.unlockHint,
                 skinRest: getCharacterSprites(c.id).rest,
+              }
+            }
+          } else if (cosmeticDetail.kind === 'hat') {
+            const h = HATS.find(x => x.id === cosmeticDetail.id)
+            if (h) {
+              const owned = unlockedHats.includes(h.id)
+              info = {
+                kind: 'hat', id: h.id, name: `${h.name} Bandana`, accent: h.color,
+                owned, equipped: equippedHat === h.id,
+                price: h.cost || undefined, currency: 'doubloons',
+                purchasable: !owned && !h.crateOnly && h.cost > 0,
+                unlockHint: h.crateOnly ? 'Found only in fishing crates' : undefined,
+                itemImg: h.restImageUrl,
+              }
+            }
+          } else if (cosmeticDetail.kind === 'pet') {
+            const p = PETS.find(x => x.id === cosmeticDetail.id)
+            if (p) {
+              const owned = unlockedPets.includes(p.id)
+              info = {
+                // Neutral accent while locked so the gold/rare hues stay a surprise.
+                kind: 'pet', id: p.id, name: owned ? p.name : '???', accent: owned ? p.accentColor : '#8a8578',
+                owned, equipped: equippedPet === p.id, purchasable: false,
+                unlockHint: 'A rare find in fishing crates — golden variants are the trophies.',
+                itemImg: p.restImageUrl, mystery: !owned,
               }
             }
           } else if (cosmeticDetail.id === 'driftwood') {
@@ -2937,6 +2890,8 @@ export default function GearScreen({
           const close = () => { if (!detailBusy) setCosmeticDetail(null) }
           const doEquip = () => {
             if (i.kind === 'skin') onUpdateColor(i.id)
+            else if (i.kind === 'hat') onEquipHat(i.id)
+            else if (i.kind === 'pet') onEquipPet(i.id)
             else onEquipBoat(i.id === 'driftwood' ? null : i.id)
             setCosmeticDetail(null)
           }
@@ -2947,6 +2902,11 @@ export default function GearScreen({
               const res = await onBuyColor(i.id)
               setDetailBusy(false)
               if (!('error' in res)) setCosmeticDetail(null)
+            } else if (i.kind === 'hat') {
+              onBuyHat(i.id)
+              flashPurchase(i.name, i.accent, i.price!, 'appearance', 'doubloons')
+              setDetailBusy(false)
+              setCosmeticDetail(null)
             } else {
               onBuyBoat(i.id)
               flashPurchase(i.name, i.accent, i.price!, 'appearance', i.currency)
@@ -2973,11 +2933,17 @@ export default function GearScreen({
               >
                 {i.kind === 'skin' ? (
                   <div style={{ width: 120, height: 120, borderRadius: '50%', margin: '0 auto 0.9rem', backgroundImage: `url(${i.skinRest})`, backgroundSize: '420% auto', backgroundPosition: '60% 68%', backgroundRepeat: 'no-repeat', border: `2px solid ${i.accent}66`, boxShadow: `0 0 26px ${i.accent}33` }} />
-                ) : (
+                ) : i.kind === 'boat' ? (
                   <div style={{ position: 'relative', width: 210, height: 100, margin: '0 auto 0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {i.boatGlow && <div className="boat-glow-halo" aria-hidden />}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={i.boatImg} alt="" style={{ position: 'relative', zIndex: 1, maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', filter: i.boatAsh ? BOAT_ASH_DARKEN : 'drop-shadow(0 4px 16px rgba(0,0,0,0.5))' }} />
+                  </div>
+                ) : (
+                  // Hat / pet — a centred image; locked pets stay a dark silhouette.
+                  <div style={{ width: 120, height: 110, margin: '0 auto 0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={i.itemImg} alt="" style={{ maxWidth: '78%', maxHeight: '78%', objectFit: 'contain', filter: i.mystery ? 'grayscale(1) brightness(0.25)' : `drop-shadow(0 0 12px ${i.accent}55)` }} />
                   </div>
                 )}
                 <p className="font-cinzel font-700" style={{ fontSize: '1.35rem', color: i.accent, lineHeight: 1.1, marginBottom: '1rem' }}>{i.name}</p>
