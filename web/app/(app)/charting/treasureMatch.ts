@@ -92,6 +92,22 @@ export function swap(board: number[], a: number, b: number): number[] {
   return next
 }
 
+/** The colour a Compass (wildcard) should BECOME at `pos` so it completes a
+ *  line there — the colour that makes `pos` part of the biggest run, or null if
+ *  no colour matches. This is what makes the Compass a true wildcard: dropped
+ *  next to any two matching gems it joins them, whatever it was swapped with. */
+export function wildColorFor(board: number[], pos: number, cols: number, rows: number, nTypes: number): number | null {
+  let best: number | null = null
+  let bestCount = 0
+  for (let c = 0; c < nTypes; c++) {
+    const b = board.slice()
+    b[pos] = c
+    const m = findMatches(b, cols, rows)
+    if (m.includes(pos) && m.length > bestCount) { bestCount = m.length; best = c }
+  }
+  return best
+}
+
 /** Clear the given cells, drop everything above down, refill the top
  *  from the rng. Returns a new board. */
 export function collapseAndRefill(board: number[], cleared: number[], cols: number, rows: number, rng: () => number, nTypes: number, wildChance = 0): number[] {
@@ -212,20 +228,23 @@ export function resolveSwap(
   if (!areAdjacent(a, b, cols)) return null
 
   // ── Compass wildcard ──
-  // Swapping a Compass against a normal gem makes it ADOPT that gem's colour, so
-  // it can complete a 3+ line at the swap. If that forms no match it's an
-  // invalid swap (like any other). Two Compasses have no colour to adopt.
+  // Swap the Compass onto the target cell; it then becomes whatever colour
+  // completes a line THERE (a true wildcard — it doesn't just copy the gem it
+  // was swapped with, so you can slide it into a gap next to any pair). The
+  // gem it displaced may also match on its own. No match at all → invalid.
   const aWild = board[a] === WILD, bWild = board[b] === WILD
   if (aWild || bWild) {
     if (aWild && bWild) return null
-    const target = aWild ? board[b] : board[a]
-    if (target < 0) return null
-    const substituted = board.slice()
-    substituted[a] = target
-    substituted[b] = target
-    const r = runCascades(substituted, cols, rows, nTypes, rng, wildChance, a, b, 1)
-    if (r.steps.length === 0) return null // wildcard completed no line → invalid
-    return { swapped: substituted, steps: r.steps, totalGained: r.totalGained, finalBoard: r.finalBoard }
+    const wildPos = aWild ? a : b
+    const gemPos = aWild ? b : a
+    if (board[gemPos] < 0) return null
+    const swapped = swap(board, wildPos, gemPos) // Compass now sits at gemPos
+    const wc = wildColorFor(swapped, gemPos, cols, rows, nTypes)
+    const filled = swapped.slice()
+    if (wc !== null) filled[gemPos] = wc
+    const r = runCascades(filled, cols, rows, nTypes, rng, wildChance, gemPos, wildPos, 1)
+    if (r.steps.length === 0) return null // couldn't complete any line → invalid
+    return { swapped: filled, steps: r.steps, totalGained: r.totalGained, finalBoard: r.finalBoard }
   }
 
   const swapped = swap(board, a, b)
@@ -242,8 +261,10 @@ export function hasValidMove(board: number[], cols: number, rows: number): boole
     if (c < cols - 1) { const s = swap(board, i, i + 1); if (findMatches(s, cols, rows).length) return true }
     if (r < rows - 1) { const s = swap(board, i, i + cols); if (findMatches(s, cols, rows).length) return true }
   }
-  // A Compass can complete a line by adopting a neighbour's colour — test that
-  // substitution so a board with a usable wildcard isn't judged dead.
+  // A Compass can complete a line by landing on a neighbour cell and becoming
+  // whatever colour matches there — test that so a board with a usable wildcard
+  // isn't judged dead.
+  const nTypes = Math.max(0, ...board.filter(v => v >= 0)) + 1
   for (let i = 0; i < board.length; i++) {
     if (board[i] !== WILD) continue
     const r = Math.floor(i / cols), c = i % cols
@@ -251,10 +272,10 @@ export function hasValidMove(board: number[], cols: number, rows: number): boole
     if (c > 0) nbrs.push(i - 1); if (c < cols - 1) nbrs.push(i + 1)
     if (r > 0) nbrs.push(i - cols); if (r < rows - 1) nbrs.push(i + cols)
     for (const nb of nbrs) {
-      const x = board[nb]
-      if (x < 0) continue
-      const s = board.slice(); s[i] = x; s[nb] = x
-      if (findMatches(s, cols, rows).length) return true
+      if (board[nb] < 0) continue
+      const s = swap(board, i, nb) // Compass moves onto nb
+      if (wildColorFor(s, nb, cols, rows, nTypes) !== null) return true
+      if (findMatches(s, cols, rows).length) return true // displaced gem matches
     }
   }
   return false
