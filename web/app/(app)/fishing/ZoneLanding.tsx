@@ -261,7 +261,7 @@ export default function ZoneLanding({
             const atMax = xp.level >= 100
             const toNext = atMax ? 0 : xp.xpForLevel - xp.xpInLevel
             return (
-              <div className="flex items-center" style={{ flexShrink: 0, gap: 12, height: 68, padding: '0 0.9rem', borderBottom: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 8px 16px -8px rgba(0,0,0,0.5)' }}>
+              <div className="flex items-center" style={{ flexShrink: 0, gap: 12, padding: '1.05rem 0.9rem 0.85rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                 {/* Level medallion */}
                 <div style={{ position: 'relative', width: 46, height: 46, flexShrink: 0, borderRadius: '50%', background: 'conic-gradient(from 210deg, #e0a94a, #fff2c8, #f0c040, #c48a2a, #e0a94a)', padding: 2, boxShadow: '0 0 14px rgba(240,192,64,0.3)' }}>
                   <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: 'radial-gradient(circle at 50% 32%, #1a2837, #0a121c)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(0,0,0,0.4)' }}>
