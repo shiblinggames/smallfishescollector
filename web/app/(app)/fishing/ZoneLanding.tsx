@@ -261,7 +261,7 @@ export default function ZoneLanding({
             const atMax = xp.level >= 100
             const toNext = atMax ? 0 : xp.xpForLevel - xp.xpInLevel
             return (
-              <div className="flex items-center" style={{ flexShrink: 0, gap: 12, padding: '0.7rem 0.9rem', borderBottom: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 8px 16px -8px rgba(0,0,0,0.5)' }}>
+              <div className="flex items-center" style={{ flexShrink: 0, gap: 12, height: 68, padding: '0 0.9rem', borderBottom: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 8px 16px -8px rgba(0,0,0,0.5)' }}>
                 {/* Level medallion */}
                 <div style={{ position: 'relative', width: 46, height: 46, flexShrink: 0, borderRadius: '50%', background: 'conic-gradient(from 210deg, #e0a94a, #fff2c8, #f0c040, #c48a2a, #e0a94a)', padding: 2, boxShadow: '0 0 14px rgba(240,192,64,0.3)' }}>
                   <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: 'radial-gradient(circle at 50% 32%, #1a2837, #0a121c)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(0,0,0,0.4)' }}>
@@ -269,31 +269,11 @@ export default function ZoneLanding({
                   </div>
                 </div>
 
-                {/* Label row + XP bar */}
-                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <div className="flex items-center justify-between">
-                    <span className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.22em', color: 'rgba(196,169,106,0.92)' }}>
-                      Fishing
-                    </span>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <LeaderboardModal boards={['perfectStreak', 'fishingLevel']} title="Fishing Leaderboard" />
-                      <button
-                        onClick={() => setModalOpen(true)}
-                        aria-label="How fishing works"
-                        style={{
-                          width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
-                          background: 'rgba(255,255,255,0.08)',
-                          border: '1px solid rgba(255,255,255,0.18)',
-                          color: 'rgba(255,255,255,0.6)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          cursor: 'pointer', touchAction: 'manipulation',
-                          fontSize: '0.75rem', fontFamily: 'serif', fontStyle: 'italic', fontWeight: 700,
-                        }}
-                      >
-                        i
-                      </button>
-                    </div>
-                  </div>
+                {/* Label + XP bar (its own centered block) */}
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 6 }}>
+                  <span className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.22em', color: 'rgba(196,169,106,0.92)' }}>
+                    Fishing
+                  </span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{ flex: 1, height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.12)', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' }}>
                       <div style={{ width: `${Math.round(xp.progress * 100)}%`, height: '100%', borderRadius: 999, background: 'linear-gradient(90deg, #c4a96a, #f0c040)', boxShadow: '0 0 8px rgba(240,192,64,0.5)' }} />
@@ -302,6 +282,26 @@ export default function ZoneLanding({
                       {atMax ? 'Max Level' : `${toNext.toLocaleString()} XP to Lv ${xp.level + 1}`}
                     </span>
                   </div>
+                </div>
+
+                {/* Ranks + guide, centered against the whole bar */}
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <LeaderboardModal boards={['perfectStreak', 'fishingLevel']} title="Fishing Leaderboard" />
+                  <button
+                    onClick={() => setModalOpen(true)}
+                    aria-label="How fishing works"
+                    style={{
+                      width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(255,255,255,0.18)',
+                      color: 'rgba(255,255,255,0.6)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', touchAction: 'manipulation',
+                      fontSize: '0.75rem', fontFamily: 'serif', fontStyle: 'italic', fontWeight: 700,
+                    }}
+                  >
+                    i
+                  </button>
                 </div>
               </div>
             )
