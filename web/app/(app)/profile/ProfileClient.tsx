@@ -1719,10 +1719,20 @@ export default function ProfileClient({
           const purchasable = !owned && !!(c.price || c.gemPrice)
           const price = c.gemPrice ?? c.price
           const glyph = c.gemPrice ? '◆' : '⟡'
+          const ACCENT = '#60a5fa'
           return (
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ width: 120, height: 120, borderRadius: '50%', margin: '0 auto 0.9rem', backgroundImage: `url(${sprites.rest})`, backgroundSize: '420% auto', backgroundPosition: '60% 68%', backgroundRepeat: 'no-repeat', border: '2px solid rgba(240,192,64,0.4)', boxShadow: '0 0 26px rgba(240,192,64,0.22)' }} />
-              <p className="font-cinzel font-700" style={{ fontSize: '1.35rem', color: '#f0c040', marginBottom: '1rem' }}>{c.name}</p>
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{
+                margin: 'auto', width: '100%', maxWidth: 300, textAlign: 'center',
+                padding: '1.5rem 1.4rem', borderRadius: 20,
+                background: 'linear-gradient(160deg, rgba(12,18,28,0.99) 0%, rgba(6,10,16,0.99) 100%)',
+                border: `1px solid ${ACCENT}55`, borderTop: `3px solid ${ACCENT}`,
+                boxShadow: `0 20px 70px rgba(0,0,0,0.6), 0 0 40px ${ACCENT}18`,
+              }}
+            >
+              <div style={{ width: 120, height: 120, borderRadius: '50%', margin: '0 auto 0.9rem', backgroundImage: `url(${sprites.rest})`, backgroundSize: '420% auto', backgroundPosition: '60% 68%', backgroundRepeat: 'no-repeat', border: `2px solid ${ACCENT}66`, boxShadow: `0 0 26px ${ACCENT}33` }} />
+              <p className="font-cinzel font-700" style={{ fontSize: '1.35rem', color: ACCENT, lineHeight: 1.1, marginBottom: '1rem' }}>{c.name}</p>
               {equipped ? (
                 <div className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.72rem', color: '#4ade80', padding: '0.7rem', borderRadius: 12, background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.35)' }}>✓ Equipped</div>
               ) : owned ? (
@@ -1735,6 +1745,7 @@ export default function ProfileClient({
                   <p className="font-karla font-600" style={{ fontSize: '0.82rem', color: '#e0d2ad', lineHeight: 1.4 }}>{c.unlockHint ?? 'Locked'}</p>
                 </div>
               )}
+              <p className="font-karla font-400" style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.22)', marginTop: '0.9rem' }}>Tap anywhere to close</p>
             </div>
           )
         })()}
