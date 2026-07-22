@@ -255,17 +255,17 @@ export default function ZoneLanding({
         <div style={{ position: 'relative', zIndex: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
           {/* Header — stays put as you dive; who you are on the water + ranks.
               One compact row: FISHING label + Level, baseline-aligned. */}
-          <div className="flex items-center justify-between" style={{ flexShrink: 0, padding: '0.7rem 0.9rem', borderBottom: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 8px 16px -8px rgba(0,0,0,0.5)' }}>
+          <div className="flex items-center justify-between" style={{ flexShrink: 0, minHeight: 52, padding: '0 0.9rem', borderBottom: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 8px 16px -8px rgba(0,0,0,0.5)' }}>
             <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
               <span className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.2em', color: 'rgba(196,169,106,0.9)' }}>
                 Fishing
               </span>
               <span aria-hidden style={{ width: 1, height: 18, background: 'rgba(255,255,255,0.16)' }} />
-              <span className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: '#f0ede8', lineHeight: 1 }}>
+              <span className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: '#f0ede8', lineHeight: 1.1 }}>
                 Level {fishingLevel}
               </span>
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0" style={{ paddingBottom: 3 }}>
+            <div className="flex items-center gap-2 flex-shrink-0">
               <LeaderboardModal boards={['perfectStreak', 'fishingLevel']} title="Fishing Leaderboard" />
               <button
                 onClick={() => setModalOpen(true)}
