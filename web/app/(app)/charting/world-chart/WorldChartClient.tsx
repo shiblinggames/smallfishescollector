@@ -7,6 +7,7 @@
 // from points; the gem claim is server-authoritative.
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { GEM_GLYPH } from '@/lib/bossRaids'
 import ChartingNav from '@/components/ChartingNav'
@@ -35,6 +36,15 @@ export default function WorldChartClient({ points, claimed: claimed0 }: { points
   const [paid, setPaid] = useState<Paid | null>(null)               // gems just paid → drives the cascade
   const [info, setInfo] = useState<LandmarkView | null>(null)       // a charted landmark tapped to re-read
   const [dismissed, setDismissed] = useState<Set<number>>(new Set()) // ids whose claim errored — don't auto-reopen
+  // Both overlays are position:fixed but render deep inside the app shell,
+  // which sits under a transformed/contained ancestor — that ancestor becomes
+  // their containing block, so "fixed" anchors to it (bottom half of the
+  // screen, flickering with the page transition) instead of the viewport.
+  // Portal them to <body> so they always cover the true viewport.
+  // See [[feedback_transform_breaks_fixed_positioning]]. Matches the sibling
+  // charting games (TreasureMatch, Minefield).
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
 
   const views = useMemo(() => landmarkViews(points, claimed), [points, claimed])
   const pending = useMemo(() => views.filter(v => v.claimable), [views])
@@ -162,41 +172,47 @@ export default function WorldChartClient({ points, claimed: claimed0 }: { points
         </p>
       </div>
 
-      {/* ── Discovery cinematic ── */}
-      {/* mode="wait": when claiming one landmark auto-advances to the next
+      {/* ── Discovery cinematic ── (portaled to <body> — see mounted note above)
+          mode="wait": when claiming one landmark auto-advances to the next
           (multiple discovered at once), the outgoing celebration fully exits
           before the next enters — no two cinematics stacked/cross-fading. */}
-      <AnimatePresence mode="wait">
-        {active && (
-          <DiscoveryCinematic
-            key={active.id}
-            lm={active}
-            claiming={claimingId === active.id}
-            paid={claimingId === active.id ? paid : null}
-            onClaim={() => doClaim(active)}
-          />
-        )}
-      </AnimatePresence>
+      {mounted && createPortal(
+        <AnimatePresence mode="wait">
+          {active && (
+            <DiscoveryCinematic
+              key={active.id}
+              lm={active}
+              claiming={claimingId === active.id}
+              paid={claimingId === active.id ? paid : null}
+              onClaim={() => doClaim(active)}
+            />
+          )}
+        </AnimatePresence>,
+        document.body,
+      )}
 
-      {/* ── Charted-landmark info popup ── */}
-      <AnimatePresence>
-        {info && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            onClick={() => setInfo(null)}
-            style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(4,7,11,0.72)', padding: '0 0.9rem calc(env(safe-area-inset-bottom) + 1rem)' }}>
-            <motion.div initial={{ y: 40 }} animate={{ y: 0 }} exit={{ y: 40 }} onClick={e => e.stopPropagation()}
-              style={{ width: '100%', maxWidth: 460, borderRadius: 20, overflow: 'hidden', border: `1px solid ${GOLD}55`, background: 'linear-gradient(180deg, rgba(24,30,40,0.98), rgba(12,16,22,0.98))', boxShadow: `0 -10px 40px rgba(0,0,0,0.6)` }}>
-              <Porthole lm={info} />
-              <div style={{ padding: '1rem 1.2rem 1.35rem', textAlign: 'center' }}>
-                <p className="font-karla font-800 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.22em', color: GOLD }}>Charted</p>
-                <h2 className="font-cinzel font-800" style={{ fontSize: '1.6rem', color: '#f4ecd8', marginTop: 4 }}>{info.name}</h2>
-                <p className="font-karla" style={{ fontSize: '0.92rem', fontStyle: 'italic', color: 'rgba(206,218,228,0.8)', lineHeight: 1.5, marginTop: 10 }}>&ldquo;{info.lore}&rdquo;</p>
-                <span className="font-karla font-800" style={{ display: 'inline-block', marginTop: 14, fontSize: '0.78rem', color: GEM }}>{GEM_GLYPH} {info.gems} claimed</span>
-              </div>
+      {/* ── Charted-landmark info popup ── (portaled to <body>) */}
+      {mounted && createPortal(
+        <AnimatePresence>
+          {info && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setInfo(null)}
+              style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(4,7,11,0.72)', padding: '0 0.9rem calc(env(safe-area-inset-bottom) + 1rem)' }}>
+              <motion.div initial={{ y: 40 }} animate={{ y: 0 }} exit={{ y: 40 }} onClick={e => e.stopPropagation()}
+                style={{ width: '100%', maxWidth: 460, borderRadius: 20, overflow: 'hidden', border: `1px solid ${GOLD}55`, background: 'linear-gradient(180deg, rgba(24,30,40,0.98), rgba(12,16,22,0.98))', boxShadow: `0 -10px 40px rgba(0,0,0,0.6)` }}>
+                <Porthole lm={info} />
+                <div style={{ padding: '1rem 1.2rem 1.35rem', textAlign: 'center' }}>
+                  <p className="font-karla font-800 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.22em', color: GOLD }}>Charted</p>
+                  <h2 className="font-cinzel font-800" style={{ fontSize: '1.6rem', color: '#f4ecd8', marginTop: 4 }}>{info.name}</h2>
+                  <p className="font-karla" style={{ fontSize: '0.92rem', fontStyle: 'italic', color: 'rgba(206,218,228,0.8)', lineHeight: 1.5, marginTop: 10 }}>&ldquo;{info.lore}&rdquo;</p>
+                  <span className="font-karla font-800" style={{ display: 'inline-block', marginTop: 14, fontSize: '0.78rem', color: GEM }}>{GEM_GLYPH} {info.gems} claimed</span>
+                </div>
+              </motion.div>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>,
+        document.body,
+      )}
     </main>
   )
 }
