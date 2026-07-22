@@ -1102,6 +1102,10 @@ const CRATE_COSMETIC_POOL = [
   { kind: 'boat' as const, id: 'offwhite',  name: 'Offwhite',  imageUrl: '/boat_offwhite_rest.png' },
   { kind: 'hat'  as const, id: 'black',     name: 'Black',     imageUrl: '/hat_black_rest.png'     },
   { kind: 'hat'  as const, id: 'gray',      name: 'Gray',      imageUrl: '/hat_gray_rest.png'      },
+  { kind: 'hat'  as const, id: 'golden',    name: 'Golden',    imageUrl: '/hat_golden_rest.png'    },
+  { kind: 'hat'  as const, id: 'cheetah',   name: 'Cheetah',   imageUrl: '/hat_cheetah_rest.png'   },
+  { kind: 'hat'  as const, id: 'fuego',     name: 'Fuego',     imageUrl: '/hat_fuego_rest.png'     },
+  { kind: 'hat'  as const, id: 'spotted',   name: 'Spotted',   imageUrl: '/hat_spotted_rest.png'   },
 ]
 
 export type CrateLoot =
