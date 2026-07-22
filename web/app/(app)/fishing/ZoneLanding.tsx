@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ZONE_MIN_LEVEL } from './zoneData'
 import { updateUsername } from '@/app/(app)/u/actions'
 import LeaderboardModal from '@/components/LeaderboardModal'
+import FisherPose from '@/components/FisherPose'
 
 const AUTO_NAME_RE = /^crew_[0-9a-f]{5}$/
 const DISMISSED_KEY = 'sf_username_prompt_dismissed'
@@ -140,6 +141,7 @@ const HOW_IT_WORKS = [
 
 export default function ZoneLanding({
   fishingLevel, fishingXP, username, zoneStats, zoneCollection, prestigeLevels, ancientDeepUnlocked, onSelect,
+  currentZone, characterColor, equippedHat, equippedBoat, equippedPet, rodTier, reelTier, hookTier,
 }: {
   fishingLevel: number
   fishingXP: number
@@ -151,6 +153,15 @@ export default function ZoneLanding({
   /** Ancient Deep is gated on Fishing 75 AND clearing Chapter 3 (or grandfathered). */
   ancientDeepUnlocked: boolean
   onSelect: (zone: ZoneKey) => void
+  /** The zone the player last fished — its panel shows their fisher composite. */
+  currentZone: ZoneKey | null
+  characterColor: string
+  equippedHat: string | null
+  equippedBoat: string | null
+  equippedPet: string | null
+  rodTier: number
+  reelTier: number
+  hookTier: number
 }) {
   const [modalOpen, setModalOpen] = useState(false)
   // Which zone's Details strip is open (accordion — one at a time). Keeps the
@@ -274,8 +285,9 @@ export default function ZoneLanding({
                   style={{
                     position: 'relative', overflow: 'hidden',
                     // Big immersive panels — you scroll through them to dive from
-                    // the bright surface down to the Ancient Deep.
-                    minHeight: accessible ? 300 : 190,
+                    // the bright surface down to the Ancient Deep. The zone you're
+                    // currently fishing gets extra height for your fisher up top.
+                    minHeight: accessible ? (zone === currentZone ? 348 : 300) : 190,
                     scrollSnapAlign: 'start',
                     cursor: accessible ? 'pointer' : 'default',
                     WebkitTapHighlightColor: 'transparent',
@@ -302,6 +314,27 @@ export default function ZoneLanding({
                   {/* Seam — each band surfaces out of the one above it. */}
                   {i > 0 && (
                     <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 20, background: 'linear-gradient(180deg, rgba(2,4,10,0.6), rgba(2,4,10,0))', pointerEvents: 'none' }} />
+                  )}
+
+                  {/* Your fisher, right where you last cast — the player's boat +
+                      character + gear composite drifts in the water of the zone
+                      they're currently fishing. Decorative, never eats the tap. */}
+                  {accessible && zone === currentZone && (
+                    <div aria-hidden style={{
+                      position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)',
+                      width: 178, zIndex: 1, pointerEvents: 'none',
+                      filter: 'drop-shadow(0 10px 16px rgba(0,10,25,0.6))',
+                    }}>
+                      <FisherPose
+                        characterColor={characterColor}
+                        equippedHat={equippedHat}
+                        equippedBoat={equippedBoat}
+                        equippedPet={equippedPet}
+                        rodTier={rodTier}
+                        reelTier={reelTier}
+                        hookTier={hookTier}
+                      />
+                    </div>
                   )}
 
                   {/* Content — the zone name + mood ride the lower third like a

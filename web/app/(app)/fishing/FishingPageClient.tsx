@@ -34,6 +34,11 @@ const FishingGame = dynamic(() => import('./FishingGame'), {
 })
 
 const LAST_ZONE_KEY = 'fishing_last_zone'
+// The zone you last fished — kept even after you return to the selector, so the
+// selector can show your fisher drifting in that zone's panel. Unlike
+// LAST_ZONE_KEY it is NOT cleared on goBack (that key controls reload-resume;
+// this one is purely "where were you last").
+const CURRENT_ZONE_KEY = 'fishing_current_zone'
 
 type BaitItem = { bait_type: string; quantity: number }
 type InventoryItem = {
@@ -202,8 +207,21 @@ export default function FishingPageClient({
     return ok ? saved : null
   })
 
+  // Where the player last cast — survives returning to the selector so their
+  // fisher shows in that zone's panel. Validated so a now-locked zone (e.g.
+  // Ancient Deep before Ch3) doesn't try to render there.
+  const [currentZone, setCurrentZone] = useState<ZoneKey | null>(() => {
+    if (typeof window === 'undefined') return null
+    const saved = localStorage.getItem(CURRENT_ZONE_KEY) as ZoneKey | null
+    if (!saved) return null
+    const ok = fishingLevel >= (ZONE_MIN_LEVEL[saved] ?? 1) && (saved !== 'ancient_deep' || ancientDeepUnlocked)
+    return ok ? saved : null
+  })
+
   function selectZone(zone: ZoneKey) {
     localStorage.setItem(LAST_ZONE_KEY, zone)
+    localStorage.setItem(CURRENT_ZONE_KEY, zone)
+    setCurrentZone(zone)
     setSelectedZone(zone)
   }
 
@@ -239,6 +257,14 @@ export default function FishingPageClient({
         prestigeLevels={prestigeLevels}
         ancientDeepUnlocked={ancientDeepUnlocked}
         onSelect={selectZone}
+        currentZone={currentZone}
+        characterColor={characterColor}
+        equippedHat={persistedEquippedHat}
+        equippedBoat={persistedEquippedBoat}
+        equippedPet={persistedEquippedPet}
+        rodTier={rodTier}
+        reelTier={reelTier}
+        hookTier={hookTier}
       />
     )
   }
