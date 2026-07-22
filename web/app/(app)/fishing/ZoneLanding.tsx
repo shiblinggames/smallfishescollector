@@ -240,12 +240,12 @@ export default function ZoneLanding({
 
           {/* Scroll area — only the zones scroll (header stays pinned). Gentle
               y-snap so each dive settles on a zone. */}
-          <div ref={scrollRef} onScroll={syncScrollCue} style={{ flex: 1, minHeight: 0, overflowY: 'auto', scrollSnapType: 'y proximity', padding: '0.5rem 0.9rem 1.5rem' }}>
+          <div ref={scrollRef} onScroll={syncScrollCue} style={{ flex: 1, minHeight: 0, overflowY: 'auto', scrollSnapType: 'y proximity', scrollPaddingTop: '1.6rem', padding: '0.5rem 0.9rem 1.5rem' }}>
 
           {/* The descent — each zone is a large circular node on a path, linked
               to the next one down. Scroll to dive from the bright surface to the
               Ancient Deep. */}
-          <div style={{ position: 'relative', paddingTop: 20, paddingBottom: 12 }}>
+          <div style={{ position: 'relative', paddingTop: 30, paddingBottom: 12 }}>
             {ZONES.map((zone, i) => {
               const minLevel = ZONE_MIN_LEVEL[zone] ?? 1
               // Ancient Deep needs Fishing 75 AND Chapter 3 cleared (or grandfathered).
@@ -299,7 +299,7 @@ export default function ZoneLanding({
                     {/* Your fisher — sits at the base of the node, OUTSIDE the disc's
                         round clip so the boat is never cut off. */}
                     {isCurrent && (
-                      <div aria-hidden style={{ position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)', width: '48%', zIndex: 2, pointerEvents: 'none', filter: 'drop-shadow(0 6px 12px rgba(0,10,25,0.65))' }}>
+                      <div aria-hidden style={{ position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)', width: '48%', zIndex: 2, pointerEvents: 'none', filter: 'drop-shadow(0 6px 12px rgba(0,10,25,0.65))' }}>
                         <FisherPose characterColor={characterColor} equippedHat={equippedHat} equippedBoat={equippedBoat} equippedPet={equippedPet} rodTier={rodTier} reelTier={reelTier} hookTier={hookTier} />
                       </div>
                     )}
@@ -310,7 +310,7 @@ export default function ZoneLanding({
                         {HABITAT_LABEL[zone]}
                       </p>
                       {isCurrent && (
-                        <p className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.16em', color, marginTop: 4, textShadow: '0 1px 4px rgba(0,0,0,0.95)' }}>You are here</p>
+                        <span className="font-karla font-800 uppercase" style={{ marginTop: 6, padding: '0.12rem 0.5rem', borderRadius: 999, background: 'rgba(2,6,12,0.72)', border: `1px solid ${color}`, fontSize: '0.5rem', letterSpacing: '0.14em', color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>You are here</span>
                       )}
                     </div>
                   </motion.div>
