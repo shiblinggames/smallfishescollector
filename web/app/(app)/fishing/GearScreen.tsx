@@ -2374,6 +2374,11 @@ export default function GearScreen({
                     })}
                   </div>
 
+                  {/* Stable-height scroll window: switching Skin/Hat/Boat/Pet no
+                      longer resizes the sheet — all four render in the same box,
+                      and a taller tab just scrolls inside it. */}
+                  <div className="hide-scrollbar" style={{ height: '46vh', overflowY: 'auto', overscrollBehavior: 'contain' }}>
+
                   {/* ── Skin tab body ── */}
                   {appearanceTab === 'skin' && (() => {
                     // Bigger thumbnail; tap opens the detail modal (equip / buy /
@@ -2421,7 +2426,7 @@ export default function GearScreen({
                     }
                     const groups = [
                       { label: 'Starter', items: CHARACTER_COLORS.filter(c => c.free) },
-                      { label: 'Earned', items: CHARACTER_COLORS.filter(c => !c.free && !(c.price || c.gemPrice)) },
+                      { label: 'Earnable', items: CHARACTER_COLORS.filter(c => !c.free && !(c.price || c.gemPrice)) },
                       { label: 'Purchasable', items: CHARACTER_COLORS.filter(c => !!(c.price || c.gemPrice)) },
                     ]
                     const groupLabel = { fontSize: '0.56rem', color: '#8a8272', letterSpacing: '0.12em', marginTop: 2 } as const
@@ -2535,7 +2540,7 @@ export default function GearScreen({
 
                         {earnedBoats.length > 0 && (
                           <>
-                            <p className="font-karla font-600 uppercase" style={groupLabel}>Earned</p>
+                            <p className="font-karla font-600 uppercase" style={groupLabel}>Earnable</p>
                             <div style={rowStyle}>{earnedBoats.map(renderBoatThumb)}</div>
                           </>
                         )}
@@ -2638,7 +2643,7 @@ export default function GearScreen({
 
                         {earnedHats.length > 0 && (
                           <>
-                            <p className="font-karla font-600 uppercase" style={groupLabel}>Earned</p>
+                            <p className="font-karla font-600 uppercase" style={groupLabel}>Earnable</p>
                             <div className="hide-scrollbar" style={rowStyle}>{earnedHats.map(renderHatThumb)}</div>
                           </>
                         )}
@@ -2754,6 +2759,8 @@ export default function GearScreen({
                       </div>
                     )
                   })()}
+
+                  </div>
 
                 </div>
               )}

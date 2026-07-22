@@ -1374,7 +1374,7 @@ export default function ProfileClient({
             {/* Grouped: free starters · earned through play · bought with currency. */}
             {([
               { label: 'Starter', items: CHARACTER_COLORS.filter(c => c.free) },
-              { label: 'Earned', items: CHARACTER_COLORS.filter(c => !c.free && !(c.price || c.gemPrice)) },
+              { label: 'Earnable', items: CHARACTER_COLORS.filter(c => !c.free && !(c.price || c.gemPrice)) },
               { label: 'Purchasable', items: CHARACTER_COLORS.filter(c => !!(c.price || c.gemPrice)) },
             ] as const).map(group => group.items.length === 0 ? null : (
               <div key={`char-grp-${group.label}`} style={{ marginBottom: 12 }}>

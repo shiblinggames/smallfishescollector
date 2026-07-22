@@ -9500,7 +9500,10 @@ export default function FishingGame({
               borderTop: '1px solid rgba(255,255,255,0.09)',
               borderRadius: '18px 18px 0 0',
               padding: '0 1rem 2rem',
-              maxHeight: '82vh', overflowY: 'auto', overscrollBehavior: 'contain',
+              // Fixed height (not content-sized) so switching Loadout/Shop/Stats
+              // doesn't resize the drawer — the tallest tab sets it, shorter tabs
+              // scroll within the same box.
+              height: '82vh', overflowY: 'auto', overscrollBehavior: 'contain',
               willChange: 'transform',
             }}
           >
