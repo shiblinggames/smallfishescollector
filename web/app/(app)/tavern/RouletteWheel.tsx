@@ -97,33 +97,43 @@ export const DECEL_MS = 5200
 const BALL_TRACK_R = 96
 const BALL_REST_R  = 78
 
-/** Ball radius over normalized decel time t (0..1): ride the track for
- *  60%, fall into the pocket ring, one kick back off the pocket wall,
- *  settle. Piecewise quad ease per segment. */
+// Ball tuning. The ball rides the rim for BALL_DROP_T of the decel, then
+// releases and settles. DECEL_EASE_P is the angular ease-out exponent (lower
+// = gentler, longer glide). ENTRY_V is the target hand-off orbit speed, kept
+// just under the wind-up's 770°/s so the ball never SPEEDS UP at the hand-off
+// (the old code jumped 770→830, which read as a hitch). RATTLE_C/RATTLE_W are
+// the damping + frequency of the drop's damped oscillation.
+const BALL_DROP_T   = 0.62
+const DECEL_EASE_P  = 2.6
+const ENTRY_V       = 730
+const RATTLE_C      = 4.2
+const RATTLE_W      = 8.6
+
+/** Ball radius over normalized decel time t (0..1). Rides the track, then
+ *  releases as a DAMPED OSCILLATOR that settles from the rim to the pocket
+ *  ring: it leaves the track with zero radial velocity (smooth release, not a
+ *  snap), overshoots inward a couple of times — the rattle — and eases to rest
+ *  at BALL_REST_R. g(0)=1, g'(0)=0 by construction, so the drop onset is
+ *  velocity-continuous with the constant-radius ride. */
 function ballRadiusAt(t: number): number {
-  const seg = (t0: number, t1: number, r0: number, r1: number, ease: (x: number) => number) => {
-    const x = (t - t0) / (t1 - t0)
-    return r0 + (r1 - r0) * ease(x)
-  }
-  if (t < 0.6)  return BALL_TRACK_R
-  if (t < 0.72) return seg(0.6, 0.72, BALL_TRACK_R, 72, x => x * x)
-  if (t < 0.82) return seg(0.72, 0.82, 72, 86, x => 1 - (1 - x) * (1 - x))
-  if (t < 0.92) return seg(0.82, 0.92, 86, 76, x => x * x)
-  return seg(0.92, 1, 76, BALL_REST_R, x => 1 - (1 - x) * (1 - x))
+  if (t < BALL_DROP_T) return BALL_TRACK_R
+  const u = (t - BALL_DROP_T) / (1 - BALL_DROP_T)
+  const g = Math.exp(-RATTLE_C * u) * (Math.cos(RATTLE_W * u) + (RATTLE_C / RATTLE_W) * Math.sin(RATTLE_W * u))
+  return BALL_REST_R + (BALL_TRACK_R - BALL_REST_R) * g
+}
+
+/** A small angular rattle that rides along with the radial bounces (the ball
+ *  clipping frets as it drops), decaying to zero so the landing angle stays
+ *  exact. Same decay/frequency as the radial oscillator so they read as one
+ *  event, not two. */
+function ballAngleWobble(t: number, amp: number): number {
+  if (t < BALL_DROP_T) return 0
+  const u = (t - BALL_DROP_T) / (1 - BALL_DROP_T)
+  return amp * Math.exp(-RATTLE_C * u) * Math.sin(RATTLE_W * u)
 }
 
 // Number of ghost dots in the motion trail behind the ball.
 const TRAIL_LEN = 4
-
-/** Pocket-fret deflection: a sharp angular hop that relaxes back to
- *  the base curve — the ball clipping a fret lip and getting knocked
- *  on. Sharp attack (pow < 1 skews the sine peak early), zero at both
- *  ends so the landing angle is untouched. */
-function fretKick(t: number, t0: number, w: number, amp: number): number {
-  if (t < t0 || t > t0 + w) return 0
-  const x = (t - t0) / w
-  return amp * Math.sin(Math.PI * Math.pow(x, 0.55))
-}
 
 export default function RouletteWheel({ phase, winner, size = 340 }: {
   /** 'idle' = at rest, 'spinning' = wind-up + decel motion, 'landed' =
@@ -164,8 +174,7 @@ export default function RouletteWheel({ phase, winner, size = 340 }: {
     angle0: 0,           // angle at decel start
     angleEnd: 0,         // decel target (≡ 0 mod 360)
     radius0: BALL_REST_R,
-    k1: 0,               // fret-deflection amplitudes (set per spin)
-    k2: 0,
+    wob: 0,              // angular rattle amplitude (deg, set per spin)
     hist: [] as [number, number][],   // recent painted positions (trail)
   })
 
@@ -259,19 +268,16 @@ export default function RouletteWheel({ phase, winner, size = 340 }: {
           a.radius = a.radius0 + (BALL_TRACK_R - a.radius0) * (1 - (1 - t) * (1 - t))
           paintBall(a.angle, a.radius, 770)
         } else if (a.mode === 'decel') {
-          // Ease-out-cubic on the orbit (gentler than the wheel's
-          // quint, so the ball is visibly still creeping when it
-          // leaves the track) + piecewise radial drop-bounce-settle,
-          // plus two fret deflections in the final stretch: a backward
-          // hop off the first pocket lip it hits (t≈0.70, right as the
-          // radial drop lands), then a forward knock during the
-          // descent (t≈0.85). Both relax to zero so the landing angle
-          // is exact.
+          // Orbit eases out with exponent DECEL_EASE_P (gentler than the
+          // wheel's quint, so the ball is visibly still creeping when it
+          // leaves the track), starting at ~the wind-up speed so there's no
+          // hitch. Radius follows the damped-oscillator drop, and a small
+          // decaying angular wobble rides the same rattle — all relaxing to
+          // zero so the landing angle stays exact.
           const prevAngle = a.angle
           const t = Math.min(1, (now - a.t0) / DECEL_MS)
-          a.angle = a.angle0 + (a.angleEnd - a.angle0) * (1 - (1 - t) ** 3)
-            + fretKick(t, 0.70, 0.12, a.k1)
-            + fretKick(t, 0.85, 0.09, a.k2)
+          a.angle = a.angle0 + (a.angleEnd - a.angle0) * (1 - (1 - t) ** DECEL_EASE_P)
+            + ballAngleWobble(t, a.wob)
           a.radius = ballRadiusAt(t)
           const speed = dt > 0 ? Math.abs(a.angle - prevAngle) / dt : 0
           paintBall(a.angle, a.radius, speed)
@@ -290,24 +296,20 @@ export default function RouletteWheel({ phase, winner, size = 340 }: {
       }
       a.raf = requestAnimationFrame(loop)
     } else if (phase === 'spinning' && winner !== null && a.mode === 'windup') {
-      // Hand off to decel: finish at angle ≡ 0 (top) after at least 4
-      // more CCW turns, timed to bottom out with the wheel at DECEL_MS.
-      // 4 turns over 5.2s starts the cubic ease at ~830°/s — right at
-      // the wind-up's 770°/s, so the ball glides into the slowdown
-      // instead of visibly braking, then spends the long middle stretch
-      // audibly dying down on the rim before the drop.
+      // Hand off to decel. Travel is derived from the target ENTRY_V so the
+      // ease starts at ~the wind-up speed (no speed-up hitch) regardless of
+      // where the wind-up happened to end; the target is then snapped to a
+      // TOP position (angle ≡ 0 mod 360) so the winning pocket meets the
+      // pointer. The ball then glides down and rattles into the pocket.
       a.mode = 'decel'
       a.t0 = performance.now()
       a.angle0 = a.angle
-      const norm = ((a.angle % 360) + 360) % 360
-      a.angleEnd = a.angle - norm - 1440
       a.radius0 = a.radius
-      // Fret-deflection amplitudes, varied per spin off the winning
-      // number so consecutive spins don't replay the identical rattle.
-      // Ball travels CCW (angle decreasing): positive = backward hop
-      // against travel, negative = knocked onward.
-      a.k1 = 3.2 + (winner % 4) * 0.8
-      a.k2 = -(2.0 + (winner % 3) * 0.7)
+      const idealTravel = ENTRY_V * (DECEL_MS / 1000) / DECEL_EASE_P
+      a.angleEnd = Math.round((a.angle - idealTravel) / 360) * 360
+      // Per-spin rattle amplitude (deg), varied off the winner so consecutive
+      // spins don't replay an identical bounce.
+      a.wob = 2.0 + (winner % 5) * 0.6
     }
   }, [phase, winner])
 
