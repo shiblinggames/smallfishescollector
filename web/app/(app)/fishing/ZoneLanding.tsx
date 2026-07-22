@@ -238,7 +238,7 @@ export default function ZoneLanding({
         <div style={{ position: 'relative', zIndex: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
           {/* Header — stays put as you dive; who you are on the water + ranks.
               One compact row: FISHING label + Level, baseline-aligned. */}
-          <div className="flex items-center justify-between" style={{ flexShrink: 0, padding: '0.85rem 0.9rem 0.65rem', borderBottom: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 8px 16px -8px rgba(0,0,0,0.5)' }}>
+          <div className="flex items-center justify-between" style={{ flexShrink: 0, padding: '0.7rem 0.9rem', borderBottom: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 8px 16px -8px rgba(0,0,0,0.5)' }}>
             <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
               <span className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.2em', color: 'rgba(196,169,106,0.9)' }}>
                 Fishing
