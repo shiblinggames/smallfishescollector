@@ -1375,7 +1375,7 @@ export default function ProfileClient({
             {([
               { label: 'Starter', items: CHARACTER_COLORS.filter(c => c.free) },
               { label: 'Earned', items: CHARACTER_COLORS.filter(c => !c.free && !(c.price || c.gemPrice)) },
-              { label: 'Purchased', items: CHARACTER_COLORS.filter(c => !!(c.price || c.gemPrice)) },
+              { label: 'Purchasable', items: CHARACTER_COLORS.filter(c => !!(c.price || c.gemPrice)) },
             ] as const).map(group => group.items.length === 0 ? null : (
               <div key={`char-grp-${group.label}`} style={{ marginBottom: 12 }}>
                 <p className="font-karla font-600 uppercase" style={{ fontSize: '0.56rem', color: '#8a8272', letterSpacing: '0.12em', marginBottom: 5 }}>

@@ -2422,7 +2422,7 @@ export default function GearScreen({
                     const groups = [
                       { label: 'Starter', items: CHARACTER_COLORS.filter(c => c.free) },
                       { label: 'Earned', items: CHARACTER_COLORS.filter(c => !c.free && !(c.price || c.gemPrice)) },
-                      { label: 'Purchased', items: CHARACTER_COLORS.filter(c => !!(c.price || c.gemPrice)) },
+                      { label: 'Purchasable', items: CHARACTER_COLORS.filter(c => !!(c.price || c.gemPrice)) },
                     ]
                     const groupLabel = { fontSize: '0.56rem', color: '#8a8272', letterSpacing: '0.12em', marginTop: 2 } as const
                     return (
@@ -2493,7 +2493,7 @@ export default function GearScreen({
                     const byOwnedFirst = (a: typeof BOATS[number], c: typeof BOATS[number]) =>
                       Number(unlockedBoats.includes(c.id)) - Number(unlockedBoats.includes(a.id))
                     const earnedBoats = BOATS.filter(b => (b.crateOnly && unlockedBoats.includes(b.id)) || typeof b.achievementPoints === 'number').sort(byOwnedFirst)
-                    const purchasedBoats = BOATS.filter(b => !b.crateOnly && typeof b.achievementPoints !== 'number').sort(byOwnedFirst)
+                    const purchasableBoats = BOATS.filter(b => !b.crateOnly && typeof b.achievementPoints !== 'number').sort(byOwnedFirst)
                     const groupLabel = { fontSize: '0.56rem', color: '#8a8272', letterSpacing: '0.12em', marginTop: 2 } as const
                     const rowStyle: React.CSSProperties = { display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4 }
                     const driftEquipped = !equippedBoat
@@ -2539,10 +2539,10 @@ export default function GearScreen({
                           </>
                         )}
 
-                        {purchasedBoats.length > 0 && (
+                        {purchasableBoats.length > 0 && (
                           <>
-                            <p className="font-karla font-600 uppercase" style={groupLabel}>Purchased</p>
-                            <div style={rowStyle}>{purchasedBoats.map(renderBoatThumb)}</div>
+                            <p className="font-karla font-600 uppercase" style={groupLabel}>Purchasable</p>
+                            <div style={rowStyle}>{purchasableBoats.map(renderBoatThumb)}</div>
                           </>
                         )}
                       </div>
@@ -2591,14 +2591,21 @@ export default function GearScreen({
                         </button>
                       )
                     }
-                    const hats = HATS.filter(h => !h.crateOnly || unlockedHats.includes(h.id))
-                      .sort((a, b) => Number(unlockedHats.includes(b.id)) - Number(unlockedHats.includes(a.id)))
+                    // Owned first within each group so your bandanas lead the row.
+                    const byOwnedFirst = (a: typeof HATS[number], b: typeof HATS[number]) =>
+                      Number(unlockedHats.includes(b.id)) - Number(unlockedHats.includes(a.id))
+                    // Earned = crate-only chases (hidden until landed); Purchasable = shop colors.
+                    const earnedHats = HATS.filter(h => h.crateOnly && unlockedHats.includes(h.id)).sort(byOwnedFirst)
+                    const purchasableHats = HATS.filter(h => !h.crateOnly && h.cost > 0).sort(byOwnedFirst)
+                    const groupLabel = { fontSize: '0.56rem', color: '#8a8272', letterSpacing: '0.12em', marginTop: 2 } as const
+                    const rowStyle: React.CSSProperties = { display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4 }
                     const defaultEquipped = !equippedHat
                     return (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                         <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#bda05a' }}>Hat Color</p>
                         <CosmeticLegend />
-                        <div className="hide-scrollbar" style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4 }}>
+                        <p className="font-karla font-600 uppercase" style={groupLabel}>Starter</p>
+                        <div className="hide-scrollbar" style={rowStyle}>
                           {/* Default (no bandana) — built-in, tap to take the hat off. */}
                           <button
                             onClick={() => { if (!defaultEquipped) onEquipHat(null) }}
@@ -2625,8 +2632,21 @@ export default function GearScreen({
                             </div>
                             <p className="font-cinzel font-700" style={{ fontSize: '0.6rem', color: '#c8c4bc', textAlign: 'center', whiteSpace: 'nowrap' }}>Default</p>
                           </button>
-                          {hats.map(renderHatThumb)}
                         </div>
+
+                        {earnedHats.length > 0 && (
+                          <>
+                            <p className="font-karla font-600 uppercase" style={groupLabel}>Earned</p>
+                            <div className="hide-scrollbar" style={rowStyle}>{earnedHats.map(renderHatThumb)}</div>
+                          </>
+                        )}
+
+                        {purchasableHats.length > 0 && (
+                          <>
+                            <p className="font-karla font-600 uppercase" style={groupLabel}>Purchasable</p>
+                            <div className="hide-scrollbar" style={rowStyle}>{purchasableHats.map(renderHatThumb)}</div>
+                          </>
+                        )}
                       </div>
                     )
                   })()}
