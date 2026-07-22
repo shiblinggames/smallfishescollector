@@ -374,7 +374,7 @@ export default function ZoneLanding({
                             {prestige > 0 && <PrestigeMark level={prestige} />}
                             {(goldenBoosts[zone] ?? 0) > 0 && (
                               <span className="font-karla font-800" style={{ flexShrink: 0, fontSize: '0.6rem', color: '#f0c040', letterSpacing: '0.04em', whiteSpace: 'nowrap', textShadow: '0 0 6px rgba(240,192,64,0.5)' }}>
-                                ✦ +{goldenBoostPct(goldenBoosts[zone] ?? 0)}% Gold
+                                ✦ +{goldenBoostPct(goldenBoosts[zone] ?? 0)}% Goldens
                               </span>
                             )}
                           </div>

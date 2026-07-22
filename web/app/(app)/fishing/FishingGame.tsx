@@ -8675,7 +8675,7 @@ export default function FishingGame({
                           )}
                           {(goldenBoosts[zone] ?? 0) > 0 && (
                             <span className="font-karla font-700" style={{ fontSize: '0.5rem', color: '#f0c040', letterSpacing: '0.06em', textShadow: '0 0 6px rgba(240,192,64,0.5)', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                              ✦ +{goldenBoostPct(goldenBoosts[zone] ?? 0)}% GOLD
+                              ✦ +{goldenBoostPct(goldenBoosts[zone] ?? 0)}% GOLDENS
                             </span>
                           )}
                           {newInZone > 0 && (
@@ -8848,7 +8848,7 @@ export default function FishingGame({
                             onClick={e => { e.stopPropagation(); setConfirmPrestigeZone(zone) }}
                             className="font-karla font-700 uppercase tracking-[0.12em] w-full"
                             style={{ position: 'relative', fontSize: '0.66rem', color: '#1a1205', padding: '0.42rem 1rem', background: 'linear-gradient(135deg,#ffe08a,#f0c040)', border: '1px solid #f0c040', borderRadius: 8, boxShadow: '0 0 14px rgba(240,192,64,0.4), inset 0 1px 0 rgba(255,255,255,0.3)' }}
-                          >✦ Wipe for +{goldenBoostPct(1)}% Golden</button>
+                          >✦ Wipe for +{goldenBoostPct(1)}% Goldens</button>
                         </div>
                       ) : (
                         <div>
@@ -11577,7 +11577,7 @@ function PrestigeCeremonyOverlay({ zone, level, goldenBoost, skinName, onDone }:
         {isGolden && (
           <motion.p initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.5, type: 'spring', stiffness: 300, damping: 15 }}
             className="font-cinzel font-800" style={{ fontSize: '2.1rem', marginTop: 14, lineHeight: 1, backgroundImage: 'linear-gradient(90deg,#fff2c8,#f0c040,#ffe9a8)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', textShadow: '0 0 22px rgba(240,192,64,0.4)' }}>
-            +{goldenBoostPct(goldenBoost)}% Golden
+            +{goldenBoostPct(goldenBoost)}% Goldens
           </motion.p>
         )}
         <motion.p initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}
@@ -11602,7 +11602,7 @@ function PrestigeCeremonyOverlay({ zone, level, goldenBoost, skinName, onDone }:
           type="button" onClick={onDone}
           className="font-cinzel font-700 uppercase tracking-[0.14em] tap"
           style={{ marginTop: 20, width: '100%', padding: '12px 0', borderRadius: 12, fontSize: '0.76rem', color: '#0c0f14', background: `linear-gradient(180deg, ${color}, ${color}cc)`, border: 'none', cursor: 'pointer', boxShadow: `0 0 22px ${color}55` }}>
-          {isGolden ? 'Back to the gold' : isMax ? 'Wear it with pride' : 'Back to the water'}
+          {isGolden ? 'Keep hunting goldens' : isMax ? 'Wear it with pride' : 'Back to the water'}
         </motion.button>
       </div>
     </motion.div>
