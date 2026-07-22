@@ -233,6 +233,12 @@ export function earnedAchievementBoats(achievementPoints: number, unlocked: stri
     .map(b => b.id)
 }
 
+/** Ids of the achievement-gated boats — lets callers cheaply check whether an
+ *  achievement-points lookup is even needed before running one. */
+export const ACHIEVEMENT_BOAT_IDS = new Set(
+  BOATS.filter(b => typeof b.achievementPoints === 'number').map(b => b.id),
+)
+
 export const BOAT_MAP: Record<string, BoatDef> = Object.fromEntries(BOATS.map(b => [b.id, b]))
 
 export function getBoat(id: string | null | undefined): BoatDef | null {

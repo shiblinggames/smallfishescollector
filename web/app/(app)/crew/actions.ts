@@ -124,14 +124,25 @@ function utcDate(): string {
   return new Date().toISOString().slice(0, 10) // YYYY-MM-DD in UTC
 }
 
+type CardRow = { id: number; name: string; filename: string; slug: string; power: number; dodge: number; fortune: number }
+// The `cards` catalog is static game data (no runtime writes — only changes on
+// deploy), yet loadCards is called several times PER request (getCrewState,
+// applyAssignment ×N in crewTheDeck, recruit, reroll…). Cache the raw read at
+// module scope (fetched once per warm instance) but rebuild byGroup/meta fresh on
+// every call so no caller can mutate shared state.
+let _cardCatalog: CardRow[] | null = null
+
 /** Catalog → portrait pool by group + a lookup for name/filename. Laz the
  *  Coelacanth is a normal legendary in the pool (fully released 2026-07-07 — no
  *  longer Hardcore-discovery-gated). */
 async function loadCards(admin: ReturnType<typeof createAdminClient>) {
-  const { data } = await admin.from('cards').select('id, name, filename, slug, power, dodge, fortune')
+  if (!_cardCatalog) {
+    const { data } = await admin.from('cards').select('id, name, filename, slug, power, dodge, fortune')
+    _cardCatalog = (data ?? []) as CardRow[]
+  }
   const byGroup: Record<CrewRarity, number[]> = { 1: [], 2: [], 3: [], 4: [] }
   const meta = new Map<number, CardMeta>()
-  for (const c of ((data ?? []) as { id: number; name: string; filename: string; slug: string; power: number; dodge: number; fortune: number }[])) {
+  for (const c of _cardCatalog) {
     meta.set(c.id, { name: c.name, filename: c.filename, slug: c.slug, power: c.power, dodge: c.dodge, fortune: c.fortune })
     const g = groupForSlug(c.slug)
     if (g) byGroup[g].push(c.id)

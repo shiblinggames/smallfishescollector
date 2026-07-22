@@ -47,38 +47,22 @@ const cachedTrawlingCrewIds = cache(async (): Promise<number[]> => {
   return ((data ?? []) as { crew_id: number }[]).map(r => r.crew_id)
 })
 
-// Has the player cleared Chapter 3 (beaten the Quartermaster)? That reveal
-// unlocks the ultimate-weapon build surface on the ship screen.
-const cachedChapter3Cleared = cache(async (): Promise<boolean> => {
+// The three ship-screen reveal gates (Ch3 Quartermaster → ultimate build; Raid 7
+// Blockade → Sixth Berth; Raid 8 Throne → Expanded Armory) all ask "has this user
+// cleared raid X". One `.in()` query answers all three; the boolean helpers below
+// read from this shared (per-request cached) set instead of each hitting the DB.
+const cachedShipRevealClears = cache(async (): Promise<Set<string>> => {
   const user = await getCurrentUser()
-  if (!user) return false
+  if (!user) return new Set()
   const admin = createAdminClient()
   const { data } = await admin.from('raid_completions')
-    .select('id').eq('user_id', user.id).eq('raid_id', 'the_quartermaster').limit(1).maybeSingle()
-  return !!data
+    .select('raid_id').eq('user_id', user.id)
+    .in('raid_id', ['the_quartermaster', 'the_blockade', 'the_throne'])
+  return new Set(((data ?? []) as { raid_id: string }[]).map(r => r.raid_id))
 })
-
-// Has the player beaten Raid 7 (the Blockade)? That clear reveals the Sixth
-// Berth purchase on the ship screen.
-const cachedBlockadeCleared = cache(async (): Promise<boolean> => {
-  const user = await getCurrentUser()
-  if (!user) return false
-  const admin = createAdminClient()
-  const { data } = await admin.from('raid_completions')
-    .select('id').eq('user_id', user.id).eq('raid_id', 'the_blockade').limit(1).maybeSingle()
-  return !!data
-})
-
-// Has the player beaten Raid 8 (the Throne / Don Finleone)? That clear reveals
-// the Expanded Armory purchase on the ship screen.
-const cachedThroneCleared = cache(async (): Promise<boolean> => {
-  const user = await getCurrentUser()
-  if (!user) return false
-  const admin = createAdminClient()
-  const { data } = await admin.from('raid_completions')
-    .select('id').eq('user_id', user.id).eq('raid_id', 'the_throne').limit(1).maybeSingle()
-  return !!data
-})
+const cachedChapter3Cleared = cache(async (): Promise<boolean> => (await cachedShipRevealClears()).has('the_quartermaster'))
+const cachedBlockadeCleared = cache(async (): Promise<boolean> => (await cachedShipRevealClears()).has('the_blockade'))
+const cachedThroneCleared   = cache(async (): Promise<boolean> => (await cachedShipRevealClears()).has('the_throne'))
 
 /** How many raids the captain has actually finished. Drives Captain's Orders, which
  *  cannot know "have you ever won a fight" from the roster alone. */

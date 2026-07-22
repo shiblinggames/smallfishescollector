@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { CHARACTER_COLORS, earnedLevelColors, earnedAchievementColors, ACHIEVEMENT_COLORS } from '@/lib/characters'
-import { earnedAchievementBoats } from '@/lib/boats'
+import { earnedAchievementBoats, ACHIEVEMENT_BOAT_IDS } from '@/lib/boats'
 import { getUserAchievementPoints } from '@/lib/achievementPoints'
 import { ALLOWED_BG_HEXES, ALLOWED_BORDER_HEXES, isPremiumBg, isPremiumBorder, getAvatarSpecial, AVATAR_SPECIALS } from '@/lib/avatarColors'
 import { isPremiumActive } from '@/lib/premium'
@@ -208,7 +208,14 @@ export async function persistEarnedBoats(ids: string[]): Promise<{ granted: stri
   const admin = createAdminClient()
   const { data: profile } = await admin.from('profiles').select('unlocked_boats').eq('id', user.id).single()
   const stored = (profile?.unlocked_boats as string[] | null) ?? []
-  const earned = new Set(earnedAchievementBoats(await getUserAchievementPoints(admin, user.id), stored))
+  // Only the achievement-gated boats (Celestial/Abyssal) are grantable here, so
+  // skip the 7-query achievement-points lookup entirely when no candidate is one
+  // (the common case — crate/purchased boats never reach this branch). Mirrors
+  // the needsAch gate in persistEarnedSkins.
+  const needsAch = candidates.some(id => ACHIEVEMENT_BOAT_IDS.has(id))
+  const earned = needsAch
+    ? new Set(earnedAchievementBoats(await getUserAchievementPoints(admin, user.id), stored))
+    : new Set<string>()
   const granted = candidates.filter(id => !stored.includes(id) && earned.has(id))
   if (granted.length === 0) return { granted: [] }
   await admin.from('profiles').update({ unlocked_boats: [...stored, ...granted] }).eq('id', user.id)
