@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useTransition } from 'react'
+import { useState, useEffect, useRef, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ZONE_MIN_LEVEL, ZONE_WAIT_BASE, BASE_CRATE_CHANCE, zoneDiamondShare, zonePetPerCrate } from './zoneData'
 import { updateUsername } from '@/app/(app)/u/actions'
@@ -179,6 +179,17 @@ export default function ZoneLanding({
   // Which zone's Details strip is open (accordion — one at a time). Keeps the
   // numbers off the water until asked for.
   const [detailsFor, setDetailsFor] = useState<ZoneKey | null>(null)
+  // Scroll cue — a glowing chevron that invites you to dive deeper, hidden once
+  // you've reached the bottom (or if the column already fits without scrolling).
+  const scrollRef = useRef<HTMLDivElement | null>(null)
+  const [showScrollCue, setShowScrollCue] = useState(false)
+  const syncScrollCue = () => {
+    const el = scrollRef.current
+    if (!el) return
+    const atEnd = el.scrollTop + el.clientHeight >= el.scrollHeight - 24
+    setShowScrollCue(!atEnd && el.scrollHeight > el.clientHeight + 8)
+  }
+  useEffect(() => { syncScrollCue() }, [])
 
   const showUsernamePrompt = AUTO_NAME_RE.test(username) && fishingXP >= XP_THRESHOLD
   const [usernamePromptOpen, setUsernamePromptOpen] = useState(false)
@@ -223,17 +234,10 @@ export default function ZoneLanding({
             no boxed chrome; the five zone scenes carry all the art. */}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, #0b1a29 0%, #071220 32%, #04090f 68%, #020307 100%)' }} />
 
-        {/* Content — the scroll container. Gentle y-snap so each dive settles
-            on a zone without fighting a free scroll. */}
-        <div style={{
-          position: 'relative', zIndex: 1, height: '100%',
-          display: 'flex', flexDirection: 'column',
-          padding: '1.1rem 0.9rem 1.5rem',
-          overflowY: 'auto',
-          scrollSnapType: 'y proximity',
-        }}>
-          {/* Header — just who you are on the water: your fishing level. */}
-          <div className="flex items-end justify-between mb-3">
+        {/* Content shell — header pinned up top, only the zones scroll beneath. */}
+        <div style={{ position: 'relative', zIndex: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
+          {/* Header — stays put as you dive; who you are on the water + ranks. */}
+          <div className="flex items-end justify-between" style={{ flexShrink: 0, padding: '1.1rem 0.9rem 0.7rem', borderBottom: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 8px 16px -8px rgba(0,0,0,0.5)' }}>
             <div style={{ minWidth: 0 }}>
               <p className="font-karla font-700 uppercase tracking-[0.22em]" style={{ fontSize: '0.66rem', color: 'rgba(196,169,106,0.85)' }}>
                 Fishing
@@ -261,6 +265,10 @@ export default function ZoneLanding({
               </button>
             </div>
           </div>
+
+          {/* Scroll area — only the zones scroll (header stays pinned). Gentle
+              y-snap so each dive settles on a zone. */}
+          <div ref={scrollRef} onScroll={syncScrollCue} style={{ flex: 1, minHeight: 0, overflowY: 'auto', scrollSnapType: 'y proximity', padding: '0.5rem 0.9rem 1.5rem' }}>
 
           {/* The water column — five contiguous bands of sea, no boxes, no
               gaps. Each band is that zone's painted scene; seams blend band
@@ -466,6 +474,25 @@ export default function ZoneLanding({
             {/* The sounding line — a plumb line down the right edge. */}
             <div aria-hidden style={{ position: 'absolute', top: 12, bottom: 12, right: 12, width: 1, background: 'linear-gradient(180deg, rgba(255,255,255,0.32), rgba(255,255,255,0.04))', pointerEvents: 'none' }} />
           </div>
+          </div>
+
+          {/* Scroll cue — a glowing, bobbing double chevron over the bottom edge,
+              telling players there's more water to dive into. Fades once you've
+              reached the deep (or if the column already fits). */}
+          <AnimatePresence>
+            {showScrollCue && (
+              <motion.div aria-hidden
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                style={{ position: 'absolute', left: '50%', bottom: 12, transform: 'translateX(-50%)', zIndex: 4, pointerEvents: 'none' }}>
+                <motion.div
+                  animate={{ y: [0, 5, 0], boxShadow: ['0 0 8px rgba(125,211,252,0.35)', '0 0 18px rgba(125,211,252,0.75)', '0 0 8px rgba(125,211,252,0.35)'] }}
+                  transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                  style={{ width: 36, height: 36, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(4,10,18,0.72)', border: '1px solid rgba(125,211,252,0.6)' }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7dd3fc" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="m6 5 6 6 6-6" /><path d="m6 12 6 6 6-6" /></svg>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
         </div>
 
