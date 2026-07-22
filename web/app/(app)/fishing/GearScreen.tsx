@@ -2635,16 +2635,16 @@ export default function GearScreen({
                           style={{ flex: '0 0 auto', background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}
                         >
                           <div style={{
-                            position: 'relative', width: 84, height: 76, borderRadius: 12,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            position: 'relative', width: 84, height: 76, borderRadius: 12, overflow: 'hidden',
                             background: isEquipped ? `${p.accentColor}1f` : 'rgba(4,10,18,0.6)',
                             border: isEquipped ? `2px solid ${p.accentColor}90` : owned ? '2px solid rgba(255,255,255,0.2)' : '2px dashed rgba(255,255,255,0.12)',
                             boxShadow: isEquipped ? `0 0 14px ${p.accentColor}33` : 'none',
                             opacity: owned ? 1 : 0.55,
                           }}>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={p.restImageUrl} alt="" loading="lazy" decoding="async"
-                              style={{ width: 52, height: 52, objectFit: 'contain', filter: owned ? `drop-shadow(0 0 6px ${p.accentColor}55)` : 'grayscale(1) brightness(0.25)' }} />
+                            {/* The pet art sits in a small patch of a big transparent
+                                canvas; crop+zoom into it so the creature fills the tile
+                                (the source stays untouched for the in-game overlay). */}
+                            <div aria-hidden style={{ position: 'absolute', inset: 0, backgroundImage: `url(${p.restImageUrl})`, backgroundSize: '220%', backgroundPosition: '50% 45%', backgroundRepeat: 'no-repeat', filter: owned ? undefined : 'grayscale(1) brightness(0.28)' }} />
                             {!owned && (
                               <div style={{ position: 'absolute', right: 3, bottom: 3, width: 22, height: 22, borderRadius: '50%', background: 'rgba(12,14,18,0.96)', border: '2px solid #0a0f18', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2, boxShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2.4" strokeLinecap="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
@@ -2939,11 +2939,18 @@ export default function GearScreen({
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={i.boatImg} alt="" style={{ position: 'relative', zIndex: 1, maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', filter: i.boatAsh ? BOAT_ASH_DARKEN : 'drop-shadow(0 4px 16px rgba(0,0,0,0.5))' }} />
                   </div>
+                ) : i.kind === 'pet' ? (
+                  // Pet art occupies a small patch of a big transparent canvas —
+                  // crop+zoom into it so the creature reads large; locked stays a
+                  // dark silhouette. Source is untouched (in-game overlay needs it).
+                  <div style={{ position: 'relative', width: 150, height: 132, margin: '0 auto 0.9rem', borderRadius: 16, overflow: 'hidden', border: `1px solid ${i.accent}30`, background: 'rgba(4,10,18,0.5)' }}>
+                    <div aria-hidden style={{ position: 'absolute', inset: 0, backgroundImage: `url(${i.itemImg})`, backgroundSize: '210%', backgroundPosition: '50% 45%', backgroundRepeat: 'no-repeat', filter: i.mystery ? 'grayscale(1) brightness(0.25)' : undefined }} />
+                  </div>
                 ) : (
-                  // Hat / pet — a centred image; locked pets stay a dark silhouette.
+                  // Hat — a centred image (its art is already tightly framed).
                   <div style={{ width: 120, height: 110, margin: '0 auto 0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={i.itemImg} alt="" style={{ maxWidth: '78%', maxHeight: '78%', objectFit: 'contain', filter: i.mystery ? 'grayscale(1) brightness(0.25)' : `drop-shadow(0 0 12px ${i.accent}55)` }} />
+                    <img src={i.itemImg} alt="" style={{ maxWidth: '78%', maxHeight: '78%', objectFit: 'contain', filter: `drop-shadow(0 0 12px ${i.accent}55)` }} />
                   </div>
                 )}
                 <p className="font-cinzel font-700" style={{ fontSize: '1.35rem', color: i.accent, lineHeight: 1.1, marginBottom: '1rem' }}>{i.name}</p>
