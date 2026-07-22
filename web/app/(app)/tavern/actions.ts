@@ -81,15 +81,16 @@ export async function getSlotStats(): Promise<SlotStats> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { spins: 0, net: 0, biggestWin: 0 }
   const admin = createAdminClient()
-  const { data } = await admin
-    .from('slot_spins')
-    .select('wager, payout')
-    .eq('user_id', user.id)
-  const rows = data ?? []
-  const spins = rows.length
-  const net = rows.reduce((s, r) => s + (r.payout - r.wager), 0)
-  const biggestWin = rows.reduce((max, r) => Math.max(max, r.payout - r.wager), 0)
-  return { spins, net, biggestWin }
+  // Aggregate in the DB — a plain SELECT is capped at PostgREST's default 1000
+  // rows, which made the panel stick at 1000 spins with a wrong net for anyone
+  // who'd spun more than that.
+  const { data } = await admin.rpc('get_slot_stats', { uid: user.id })
+  const row = (Array.isArray(data) ? data[0] : data) as { spins: number; net: number; biggest_win: number } | null | undefined
+  return {
+    spins: Number(row?.spins ?? 0),
+    net: Number(row?.net ?? 0),
+    biggestWin: Number(row?.biggest_win ?? 0),
+  }
 }
 
 export async function spinSlots(wager: number): Promise<SlotSpinResult | { error: string }> {
