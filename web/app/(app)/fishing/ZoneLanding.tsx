@@ -35,15 +35,6 @@ const HABITAT_TAGLINE: Record<string, string> = {
   ancient_deep: 'Before time. Beyond depth.',
 }
 
-// Chart depths for the sounding line down the right edge — flavor, not math.
-// Plain feet: "ftm" (fathoms) read as jargon nobody knew.
-const ZONE_FATHOMS: Record<string, string> = {
-  shallows:    '12 ft',
-  open_waters: '60 ft',
-  deep:        '240 ft',
-  abyss:       '600 ft',
-  ancient_deep: 'no chart',
-}
 
 const ZONE_DIFFICULTY: Record<string, number> = {
   shallows:    1,
@@ -87,25 +78,6 @@ function WaveMarks({ n, color, dim }: { n: number; color: string; dim?: boolean 
   )
 }
 
-/* A small brass sounding dial for the band corner. The needle sinks lower the
-   deeper (harder) the water, so depth reads at a glance without a stat block. */
-function DepthGauge({ depth, difficulty, color, dim }: { depth: string; difficulty: number; color: string; dim?: boolean }) {
-  const ang = (-60 + ((difficulty - 1) / 4) * 180) * Math.PI / 180
-  const ex = 12 + 5.6 * Math.cos(ang), ey = 12 + 5.6 * Math.sin(ang)
-  const stroke = dim ? 'rgba(255,255,255,0.4)' : color
-  return (
-    <div style={{ position: 'absolute', top: 10, right: 12, zIndex: 3, display: 'flex', alignItems: 'center', gap: 6, pointerEvents: 'none' }}>
-      <span className="font-cinzel font-700" style={{ fontSize: '0.62rem', letterSpacing: '0.05em', color: dim ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.88)', textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>{depth}</span>
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.8))' }}>
-        <circle cx="12" cy="12" r="9.2" stroke={stroke} strokeWidth="1.5" opacity="0.85" />
-        <path d="M12 2.8v2.4M12 21.2v-2.4M2.8 12h2.4M21.2 12h-2.4" stroke={stroke} strokeWidth="1.3" strokeLinecap="round" opacity="0.6" />
-        <line x1="12" y1="12" x2={ex} y2={ey} stroke={stroke} strokeWidth="1.8" strokeLinecap="round" />
-        <circle cx="12" cy="12" r="1.5" fill={stroke} />
-      </svg>
-    </div>
-  )
-}
-
 /* Prestige standing as a small star + count, tiered bronze/silver/gold/prismatic
    — the badge treatment, without the pill chrome. */
 function PrestigeMark({ level }: { level: number }) {
@@ -113,12 +85,12 @@ function PrestigeMark({ level }: { level: number }) {
   const tc = level >= 5 ? '#f0c040' : level >= 3 ? '#d7dee8' : '#e0a96d'
   return (
     <span className="font-karla font-700" style={{
-      display: 'inline-flex', alignItems: 'center', gap: 3, flexShrink: 0, fontSize: '0.6rem', whiteSpace: 'nowrap',
+      display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0, fontSize: '0.74rem', whiteSpace: 'nowrap',
       ...(prismatic
         ? { backgroundImage: 'linear-gradient(90deg,#7dd3fc,#f0c040,#f472b6,#a78bfa)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }
         : { color: tc, textShadow: '0 1px 4px rgba(0,0,0,0.9)' }),
     }}>
-      <svg width="9" height="9" viewBox="0 0 24 24" fill={prismatic ? '#f0c040' : tc} stroke="none" aria-hidden><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" /></svg>
+      <svg width="11" height="11" viewBox="0 0 24 24" fill={prismatic ? '#f0c040' : tc} stroke="none" aria-hidden><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" /></svg>
       Prestige {level}
     </span>
   )
@@ -129,8 +101,8 @@ function PrestigeMark({ level }: { level: number }) {
 function ZoneStatInline({ label, value, color }: { label: string; value: string; color: string }) {
   return (
     <p className="font-karla" style={{ lineHeight: 1, whiteSpace: 'nowrap' }}>
-      <span className="font-cinzel font-700" style={{ fontSize: '0.95rem', color }}>{value}</span>
-      <span className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.65)', marginLeft: 6 }}>{label}</span>
+      <span className="font-cinzel font-700" style={{ fontSize: '1.08rem', color }}>{value}</span>
+      <span className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.65)', marginLeft: 6 }}>{label}</span>
     </p>
   )
 }
@@ -240,10 +212,10 @@ export default function ZoneLanding({
           {/* Header — just who you are on the water: your fishing level. */}
           <div className="flex items-end justify-between mb-3">
             <div style={{ minWidth: 0 }}>
-              <p className="font-karla font-700 uppercase tracking-[0.22em]" style={{ fontSize: '0.56rem', color: 'rgba(196,169,106,0.85)' }}>
+              <p className="font-karla font-700 uppercase tracking-[0.22em]" style={{ fontSize: '0.66rem', color: 'rgba(196,169,106,0.85)' }}>
                 Fishing
               </p>
-              <p className="font-cinzel font-700" style={{ fontSize: '1.35rem', color: '#f0ede8', lineHeight: 1.15, marginTop: 2 }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.6rem', color: '#f0ede8', lineHeight: 1.15, marginTop: 2 }}>
                 Level {fishingLevel}
               </p>
             </div>
@@ -284,7 +256,6 @@ export default function ZoneLanding({
               const col = zoneCollection[zone] ?? { caught: 0, total: 0 }
               const colDone = col.total > 0 && col.caught >= col.total
               const prestige = prestigeLevels[zone] ?? 0
-              const isRecommended = accessible && ZONES.filter(z => fishingLevel >= (ZONE_MIN_LEVEL[z] ?? 1) && (z !== 'ancient_deep' || ancientDeepUnlocked)).slice(-1)[0] === zone
 
               return (
                 <motion.div
@@ -333,42 +304,26 @@ export default function ZoneLanding({
                     <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 20, background: 'linear-gradient(180deg, rgba(2,4,10,0.6), rgba(2,4,10,0))', pointerEvents: 'none' }} />
                   )}
 
-                  {/* Depth gauge — a small brass sounding dial, top-right. Its
-                      needle sinks lower the deeper (harder) the water. */}
-                  <DepthGauge depth={ZONE_FATHOMS[zone]} difficulty={difficulty} color={color} dim={!accessible} />
-
-                  {/* Recommended water — a soft glow ring on the band itself
-                      instead of a badge; the light says "start here" quietly. */}
-                  {isRecommended && (
-                    <div aria-hidden style={{ position: 'absolute', inset: 0, boxShadow: `inset 0 0 0 1.5px ${color}80, inset 0 0 32px ${color}2e`, pointerEvents: 'none', zIndex: 2 }} />
-                  )}
-
                   {/* Content — the zone name + mood ride the lower third like a
-                      title card; the numbers stay off the water behind a Details
-                      tap. The last band gets extra bottom padding to clear the
-                      column's rounded clip + descent overlay. */}
-                  <div style={{ position: 'relative', zIndex: 1, minHeight: 'inherit', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: `0.9rem 1.05rem ${i === ZONES.length - 1 ? '1.25rem' : '1rem'}` }}>
+                      title card. The last band gets extra bottom padding to clear
+                      the column's rounded clip + descent overlay. */}
+                  <div style={{ position: 'relative', zIndex: 1, minHeight: 'inherit', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: `0.9rem 1.15rem ${i === ZONES.length - 1 ? '1.4rem' : '1.15rem'}` }}>
                     {accessible ? (
                       <>
-                        {isRecommended && (
-                          <p className="font-karla font-700 italic" style={{ fontSize: '0.6rem', color, letterSpacing: '0.03em', marginBottom: 3, textShadow: '0 1px 5px rgba(0,0,0,0.95)' }}>
-                            Recommended water
-                          </p>
-                        )}
-                        <p className="font-cinzel font-700"
-                          style={{ fontSize: '1.85rem', color: '#f7f4ee', letterSpacing: '0.04em', lineHeight: 1.02, textShadow: '0 1px 14px rgba(0,0,0,0.9)' }}>
+                        <p className="font-cinzel font-800"
+                          style={{ fontSize: '2.4rem', color: '#fdf7e8', letterSpacing: '0.01em', lineHeight: 1.0, textShadow: `0 2px 4px rgba(0,0,0,0.75), 0 2px 26px rgba(0,0,0,0.85), 0 0 30px ${color}66` }}>
                           {HABITAT_LABEL[zone]}
                         </p>
-                        <p className="font-karla font-300 italic"
-                          style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.84)', marginTop: 4, textShadow: '0 1px 6px rgba(0,0,0,0.95)' }}>
+                        <p className="font-karla font-400 italic"
+                          style={{ fontSize: '1.02rem', color: 'rgba(255,255,255,0.9)', marginTop: 7, textShadow: '0 1px 8px rgba(0,0,0,0.95)' }}>
                           {HABITAT_TAGLINE[zone]}
                         </p>
 
                         {/* Quiet standing line: collection + prestige, and a
                             Details tap that reveals the catch numbers. */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 9 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
-                            <span className="font-karla font-600" style={{ fontSize: '0.66rem', color: colDone ? '#f0c040' : 'rgba(255,255,255,0.82)', whiteSpace: 'nowrap', textShadow: '0 1px 4px rgba(0,0,0,0.95)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 11 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+                            <span className="font-karla font-600" style={{ fontSize: '0.8rem', color: colDone ? '#f0c040' : 'rgba(255,255,255,0.85)', whiteSpace: 'nowrap', textShadow: '0 1px 4px rgba(0,0,0,0.95)' }}>
                               {colDone ? '✦ all charted' : `${col.caught} of ${col.total} logged`}
                             </span>
                             {prestige > 0 && <PrestigeMark level={prestige} />}
@@ -377,10 +332,10 @@ export default function ZoneLanding({
                             onClick={(e) => { e.stopPropagation(); setDetailsFor(d => (d === zone ? null : zone)) }}
                             aria-label={`${HABITAT_LABEL[zone]} catch details`}
                             className="font-karla font-600"
-                            style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', padding: '3px 0 3px 8px', color: 'rgba(255,255,255,0.68)', fontSize: '0.6rem', textShadow: '0 1px 4px rgba(0,0,0,0.95)' }}
+                            style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', padding: '3px 0 3px 10px', color: 'rgba(255,255,255,0.72)', fontSize: '0.74rem', textShadow: '0 1px 4px rgba(0,0,0,0.95)' }}
                           >
                             Details
-                            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ transform: detailsFor === zone ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}><path d="m6 9 6 6 6-6" /></svg>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ transform: detailsFor === zone ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}><path d="m6 9 6 6 6-6" /></svg>
                           </button>
                         </div>
 
@@ -394,10 +349,10 @@ export default function ZoneLanding({
                               transition={{ duration: 0.22, ease: 'easeOut' }}
                               style={{ overflow: 'hidden' }}
                             >
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.15)', textShadow: '0 1px 4px rgba(0,0,0,0.95)' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 9, paddingTop: 9, borderTop: '1px solid rgba(255,255,255,0.15)', textShadow: '0 1px 4px rgba(0,0,0,0.95)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
                                   <WaveMarks n={difficulty} color={color} />
-                                  <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.85)', whiteSpace: 'nowrap' }}>{diffLabel}</span>
+                                  <span className="font-karla font-600" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.85)', whiteSpace: 'nowrap' }}>{diffLabel}</span>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
                                   <ZoneStatInline label="Avg" value={`${stats.avgValue.toLocaleString()} ⟡`} color="#f0c040" />
@@ -410,17 +365,17 @@ export default function ZoneLanding({
                       </>
                     ) : (
                       <>
-                        <p className="font-cinzel font-700"
-                          style={{ fontSize: '1.55rem', color: 'rgba(255,255,255,0.46)', letterSpacing: '0.04em', lineHeight: 1.02, textShadow: '0 1px 10px rgba(0,0,0,0.8)' }}>
+                        <p className="font-cinzel font-800"
+                          style={{ fontSize: '2rem', color: 'rgba(253,247,232,0.5)', letterSpacing: '0.01em', lineHeight: 1.0, textShadow: '0 2px 12px rgba(0,0,0,0.85)' }}>
                           {HABITAT_LABEL[zone]}
                         </p>
-                        <p className="font-karla font-300 italic"
-                          style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)', marginTop: 4, textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>
+                        <p className="font-karla font-400 italic"
+                          style={{ fontSize: '0.92rem', color: 'rgba(255,255,255,0.42)', marginTop: 6, textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>
                           {HABITAT_TAGLINE[zone]}
                         </p>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 9 }}>
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="2.2" strokeLinecap="round" aria-hidden><rect x="4" y="11" width="16" height="9" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
-                          <span className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.62)', whiteSpace: 'nowrap', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 11 }}>
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2.2" strokeLinecap="round" aria-hidden><rect x="4" y="11" width="16" height="9" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
+                          <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.66)', whiteSpace: 'nowrap', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>
                             {zone === 'ancient_deep' && fishingLevel >= minLevel ? 'Clear Chapter 3 to enter' : `Unlocks at Level ${minLevel}`}
                           </span>
                         </div>
