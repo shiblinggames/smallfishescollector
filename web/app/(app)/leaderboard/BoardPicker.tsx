@@ -55,10 +55,7 @@ export default function BoardPicker({
       >
         <div aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: meta.accent, borderRadius: '12px 0 0 12px' }} />
         <span aria-hidden style={{ fontSize: '1rem', lineHeight: 1 }}>🏆</span>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.2em', color: 'rgba(255,255,255,0.42)' }}>Leaderboard</p>
-          <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: '#f2efe8', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{meta.label}</p>
-        </div>
+        <p className="font-cinzel font-700" style={{ flex: 1, minWidth: 0, fontSize: '1rem', color: '#f2efe8', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{meta.label}</p>
         {activeRank != null && (
           <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: activePodium ?? '#9a9488', flexShrink: 0 }}>Rank {activeRank}</span>
         )}

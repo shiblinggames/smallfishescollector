@@ -205,9 +205,6 @@ export default async function LeaderboardPage() {
         <div className="px-6 max-w-xl mx-auto">
           <div style={{ marginBottom: '1.1rem' }}>
             <h1 className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: '#f0ede8' }}>Leaderboards</h1>
-            <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(230,215,180,0.55)', fontStyle: 'italic', marginTop: 3 }}>
-              The names the harbor remembers. Climb, and it will remember yours.
-            </p>
           </div>
           <LeaderboardClient
             fishing={fishingData.top}
