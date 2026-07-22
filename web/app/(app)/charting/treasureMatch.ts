@@ -20,11 +20,10 @@ export function makeRng(seed: number): () => number {
 
 const ix = (r: number, c: number, cols: number) => r * cols + c
 
-// Compass wildcard sentinel. Sits OUTSIDE the 0..nTypes-1 range and below 0 so
-// the `>= 0` guards in findMatches treat it as inert (it never forms a natural
-// match on its own). It only acts when SWAPPED: it adopts the swapped gem's
-// colour to complete a line (a plain wildcard — it does NOT clear a whole
-// colour; a straight line of 5+ does that now).
+// Compass wildcard sentinel. Sits below 0 so plain colour comparisons skip it,
+// but findColorRuns counts it toward WHATEVER colour surrounds it — so a Compass
+// auto-completes any line of 3+ it lands inside (via a swap or a cascade drop).
+// It does NOT clear a whole colour; a straight line of 5+ does that.
 export const WILD = -2
 
 function randType(rng: () => number, nTypes: number): number {
@@ -58,31 +57,43 @@ export function areAdjacent(a: number, b: number, cols: number): boolean {
   return (ra === rb && Math.abs(ca - cb) === 1) || (ca === cb && Math.abs(ra - rb) === 1)
 }
 
-/** Indices that are part of any horizontal or vertical run of 3+. */
+export interface ColorRun { cells: number[]; color: number; hasWild: boolean }
+
+/** Maximal horizontal/vertical runs (length ≥ 3) in which every cell is either
+ *  one colour C or a Compass (WILD), containing at least one real C. Because a
+ *  Compass counts toward whichever colour surrounds it, a Compass that lands
+ *  INSIDE a line of same-colour gems auto-completes it. `color` is the run's
+ *  colour; `hasWild` flags a run that already contains a Compass. */
+export function findColorRuns(board: number[], cols: number, rows: number): ColorRun[] {
+  const runs: ColorRun[] = []
+  const colors = new Set<number>()
+  for (const v of board) if (v >= 0) colors.add(v)
+
+  const scan = (line: number[]) => {
+    for (const color of colors) {
+      let run: number[] = []
+      for (let k = 0; k <= line.length; k++) {
+        const v = k < line.length ? board[line[k]] : -99
+        if (v === color || v === WILD) {
+          run.push(line[k])
+        } else {
+          if (run.length >= 3 && run.some(idx => board[idx] === color)) {
+            runs.push({ cells: run.slice(), color, hasWild: run.some(idx => board[idx] === WILD) })
+          }
+          run = []
+        }
+      }
+    }
+  }
+  for (let r = 0; r < rows; r++) { const line: number[] = []; for (let c = 0; c < cols; c++) line.push(ix(r, c, cols)); scan(line) }
+  for (let c = 0; c < cols; c++) { const line: number[] = []; for (let r = 0; r < rows; r++) line.push(ix(r, c, cols)); scan(line) }
+  return runs
+}
+
+/** Indices that are part of any run of 3+ (a Compass counts as a wildcard). */
 export function findMatches(board: number[], cols: number, rows: number): number[] {
   const hit = new Set<number>()
-  // rows
-  for (let r = 0; r < rows; r++) {
-    let runStart = 0
-    for (let c = 1; c <= cols; c++) {
-      const same = c < cols && board[ix(r, c, cols)] === board[ix(r, runStart, cols)] && board[ix(r, c, cols)] >= 0
-      if (!same) {
-        if (c - runStart >= 3) for (let k = runStart; k < c; k++) hit.add(ix(r, k, cols))
-        runStart = c
-      }
-    }
-  }
-  // cols
-  for (let c = 0; c < cols; c++) {
-    let runStart = 0
-    for (let r = 1; r <= rows; r++) {
-      const same = r < rows && board[ix(r, c, cols)] === board[ix(runStart, c, cols)] && board[ix(r, c, cols)] >= 0
-      if (!same) {
-        if (r - runStart >= 3) for (let k = runStart; k < r; k++) hit.add(ix(k, c, cols))
-        runStart = r
-      }
-    }
-  }
+  for (const run of findColorRuns(board, cols, rows)) for (const i of run.cells) hit.add(i)
   return [...hit]
 }
 
@@ -90,22 +101,6 @@ export function swap(board: number[], a: number, b: number): number[] {
   const next = board.slice()
   ;[next[a], next[b]] = [next[b], next[a]]
   return next
-}
-
-/** The colour a Compass (wildcard) should BECOME at `pos` so it completes a
- *  line there — the colour that makes `pos` part of the biggest run, or null if
- *  no colour matches. This is what makes the Compass a true wildcard: dropped
- *  next to any two matching gems it joins them, whatever it was swapped with. */
-export function wildColorFor(board: number[], pos: number, cols: number, rows: number, nTypes: number): number | null {
-  let best: number | null = null
-  let bestCount = 0
-  for (let c = 0; c < nTypes; c++) {
-    const b = board.slice()
-    b[pos] = c
-    const m = findMatches(b, cols, rows)
-    if (m.includes(pos) && m.length > bestCount) { bestCount = m.length; best = c }
-  }
-  return best
 }
 
 /** Clear the given cells, drop everything above down, refill the top
@@ -143,33 +138,6 @@ export interface ResolveResult {
 /** Attempt a swap. Returns null if the swap makes no match (invalid —
  *  the UI swaps back). Otherwise resolves all cascades and returns the
  *  animation steps + score. */
-/** Maximal horizontal/vertical runs of 3+ same-type (non-wild) cells. Used to
- *  spot a 4-of-a-kind so we can leave a Compass behind. */
-export function findRuns(board: number[], cols: number, rows: number): number[][] {
-  const runs: number[][] = []
-  for (let r = 0; r < rows; r++) {
-    let runStart = 0
-    for (let c = 1; c <= cols; c++) {
-      const same = c < cols && board[ix(r, c, cols)] === board[ix(r, runStart, cols)] && board[ix(r, c, cols)] >= 0
-      if (!same) {
-        if (c - runStart >= 3) { const cells: number[] = []; for (let k = runStart; k < c; k++) cells.push(ix(r, k, cols)); runs.push(cells) }
-        runStart = c
-      }
-    }
-  }
-  for (let c = 0; c < cols; c++) {
-    let runStart = 0
-    for (let r = 1; r <= rows; r++) {
-      const same = r < rows && board[ix(r, c, cols)] === board[ix(runStart, c, cols)] && board[ix(r, c, cols)] >= 0
-      if (!same) {
-        if (r - runStart >= 3) { const cells: number[] = []; for (let k = runStart; k < r; k++) cells.push(ix(k, c, cols)); runs.push(cells) }
-        runStart = r
-      }
-    }
-  }
-  return runs
-}
-
 // Where a 4+ run leaves its Compass — prefer a swapped cell (so it appears
 // where the player acted), else the run's middle.
 function pickSpawn(run: number[], a: number, b: number): number {
@@ -193,19 +161,21 @@ function runCascades(
   let cur = start
   let cascade = startCascade
   while (true) {
-    const runs = findRuns(cur, cols, rows)
+    const runs = findColorRuns(cur, cols, rows)
     if (runs.length === 0) break
     // A straight line of 5+ marks its colour for a full-board wipe.
     const wipeColors = new Set<number>()
-    for (const run of runs) if (run.length >= 5) wipeColors.add(cur[run[0]])
-    // A line of exactly 4 (whose colour isn't being wiped) leaves a Compass.
+    for (const run of runs) if (run.cells.length >= 5) wipeColors.add(run.color)
+    // A plain line of exactly 4 (no Compass already in it, colour not being
+    // wiped) leaves a Compass behind.
     const spawns = new Set<number>()
     for (const run of runs) {
-      if (run.length === 4 && !wipeColors.has(cur[run[0]])) {
-        spawns.add(pickSpawn(run, cascade === startCascade ? a : -1, cascade === startCascade ? b : -1))
+      if (run.cells.length === 4 && !run.hasWild && !wipeColors.has(run.color)) {
+        spawns.add(pickSpawn(run.cells, cascade === startCascade ? a : -1, cascade === startCascade ? b : -1))
       }
     }
-    const clearedSet = new Set<number>(findMatches(cur, cols, rows))
+    const clearedSet = new Set<number>()
+    for (const run of runs) for (const i of run.cells) clearedSet.add(i)
     if (wipeColors.size) for (let i = 0; i < cur.length; i++) if (wipeColors.has(cur[i])) clearedSet.add(i)
     const cleared = [...clearedSet].filter(i => !spawns.has(i))
     const gained = cleared.length * 10 * cascade
@@ -227,26 +197,10 @@ export function resolveSwap(
 ): ResolveResult | null {
   if (!areAdjacent(a, b, cols)) return null
 
-  // ── Compass wildcard ──
-  // Swap the Compass onto the target cell; it then becomes whatever colour
-  // completes a line THERE (a true wildcard — it doesn't just copy the gem it
-  // was swapped with, so you can slide it into a gap next to any pair). The
-  // gem it displaced may also match on its own. No match at all → invalid.
-  const aWild = board[a] === WILD, bWild = board[b] === WILD
-  if (aWild || bWild) {
-    if (aWild && bWild) return null
-    const wildPos = aWild ? a : b
-    const gemPos = aWild ? b : a
-    if (board[gemPos] < 0) return null
-    const swapped = swap(board, wildPos, gemPos) // Compass now sits at gemPos
-    const wc = wildColorFor(swapped, gemPos, cols, rows, nTypes)
-    const filled = swapped.slice()
-    if (wc !== null) filled[gemPos] = wc
-    const r = runCascades(filled, cols, rows, nTypes, rng, wildChance, gemPos, wildPos, 1)
-    if (r.steps.length === 0) return null // couldn't complete any line → invalid
-    return { swapped: filled, steps: r.steps, totalGained: r.totalGained, finalBoard: r.finalBoard }
-  }
-
+  // A Compass is a wildcard everywhere (findColorRuns counts it toward whatever
+  // colour surrounds it), so a swapped Compass is handled by the normal path
+  // too: swap it next to a pair and it lands in the run and clears. A swap that
+  // forms no match — Compass or not — is invalid.
   const swapped = swap(board, a, b)
   const r = runCascades(swapped, cols, rows, nTypes, rng, wildChance, a, b, 1)
   if (r.steps.length === 0) return null // no match → invalid move
@@ -256,27 +210,12 @@ export function resolveSwap(
 /** Is there any swap that would create a match? Used to detect a dead
  *  board so it can be reshuffled. */
 export function hasValidMove(board: number[], cols: number, rows: number): boolean {
+  // findMatches is Compass-aware, so this single adjacent-swap sweep also finds
+  // moves that use a Compass (sliding it next to a pair completes a line).
   for (let i = 0; i < board.length; i++) {
     const r = Math.floor(i / cols), c = i % cols
     if (c < cols - 1) { const s = swap(board, i, i + 1); if (findMatches(s, cols, rows).length) return true }
     if (r < rows - 1) { const s = swap(board, i, i + cols); if (findMatches(s, cols, rows).length) return true }
-  }
-  // A Compass can complete a line by landing on a neighbour cell and becoming
-  // whatever colour matches there — test that so a board with a usable wildcard
-  // isn't judged dead.
-  const nTypes = Math.max(0, ...board.filter(v => v >= 0)) + 1
-  for (let i = 0; i < board.length; i++) {
-    if (board[i] !== WILD) continue
-    const r = Math.floor(i / cols), c = i % cols
-    const nbrs: number[] = []
-    if (c > 0) nbrs.push(i - 1); if (c < cols - 1) nbrs.push(i + 1)
-    if (r > 0) nbrs.push(i - cols); if (r < rows - 1) nbrs.push(i + cols)
-    for (const nb of nbrs) {
-      if (board[nb] < 0) continue
-      const s = swap(board, i, nb) // Compass moves onto nb
-      if (wildColorFor(s, nb, cols, rows, nTypes) !== null) return true
-      if (findMatches(s, cols, rows).length) return true // displaced gem matches
-    }
   }
   return false
 }
