@@ -236,15 +236,17 @@ export default function ZoneLanding({
 
         {/* Content shell — header pinned up top, only the zones scroll beneath. */}
         <div style={{ position: 'relative', zIndex: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
-          {/* Header — stays put as you dive; who you are on the water + ranks. */}
-          <div className="flex items-end justify-between" style={{ flexShrink: 0, padding: '1.1rem 0.9rem 0.7rem', borderBottom: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 8px 16px -8px rgba(0,0,0,0.5)' }}>
-            <div style={{ minWidth: 0 }}>
-              <p className="font-karla font-700 uppercase tracking-[0.22em]" style={{ fontSize: '0.66rem', color: 'rgba(196,169,106,0.85)' }}>
+          {/* Header — stays put as you dive; who you are on the water + ranks.
+              One compact row: FISHING label + Level, baseline-aligned. */}
+          <div className="flex items-center justify-between" style={{ flexShrink: 0, padding: '0.85rem 0.9rem 0.65rem', borderBottom: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 8px 16px -8px rgba(0,0,0,0.5)' }}>
+            <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.2em', color: 'rgba(196,169,106,0.9)' }}>
                 Fishing
-              </p>
-              <p className="font-cinzel font-700" style={{ fontSize: '1.6rem', color: '#f0ede8', lineHeight: 1.15, marginTop: 2 }}>
+              </span>
+              <span aria-hidden style={{ width: 1, height: 18, background: 'rgba(255,255,255,0.16)' }} />
+              <span className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: '#f0ede8', lineHeight: 1 }}>
                 Level {fishingLevel}
-              </p>
+              </span>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0" style={{ paddingBottom: 3 }}>
               <LeaderboardModal boards={['perfectStreak', 'fishingLevel']} title="Fishing Leaderboard" />
@@ -471,8 +473,6 @@ export default function ZoneLanding({
             {/* Shared descent darkening — one continuous fall into the dark,
                 laid over every band so the column reads as one body of water. */}
             <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(180deg, rgba(2,4,10,0) 0%, rgba(2,4,10,0.1) 45%, rgba(2,3,8,0.38) 100%)' }} />
-            {/* The sounding line — a plumb line down the right edge. */}
-            <div aria-hidden style={{ position: 'absolute', top: 12, bottom: 12, right: 12, width: 1, background: 'linear-gradient(180deg, rgba(255,255,255,0.32), rgba(255,255,255,0.04))', pointerEvents: 'none' }} />
           </div>
           </div>
 
