@@ -34,6 +34,7 @@ export default function WorldChartClient({ points, claimed: claimed0 }: { points
   const [claimingId, setClaimingId] = useState<number | null>(null)
   const [paid, setPaid] = useState<Paid | null>(null)               // gems just paid → drives the cascade
   const [info, setInfo] = useState<LandmarkView | null>(null)       // a charted landmark tapped to re-read
+  const [dismissed, setDismissed] = useState<Set<number>>(new Set()) // ids whose claim errored — don't auto-reopen
 
   const views = useMemo(() => landmarkViews(points, claimed), [points, claimed])
   const pending = useMemo(() => views.filter(v => v.claimable), [views])
@@ -42,8 +43,13 @@ export default function WorldChartClient({ points, claimed: claimed0 }: { points
   const next = nextLandmark(points)
 
   useEffect(() => {
-    if (!active && paid == null && pending.length > 0) setActive(pending[0])
-  }, [active, paid, pending])
+    // Auto-open the next unclaimed discovery — but skip any whose claim just
+    // errored, so a failed claim can't instantly reopen the same landmark and
+    // replay the whole cinematic in a loop. (Tapping its beacon still reopens it.)
+    if (active || paid != null) return
+    const nextUp = pending.find(v => !dismissed.has(v.id))
+    if (nextUp) setActive(nextUp)
+  }, [active, paid, pending, dismissed])
 
   const doClaim = useCallback(async (lm: LandmarkView) => {
     if (claimingId != null) return
@@ -63,8 +69,12 @@ export default function WorldChartClient({ points, claimed: claimed0 }: { points
         setActive(stillPending[0] ?? null)
       }, res.completed ? 3200 : 1750)
     } else {
+      // Claim failed (double-claim race, stale points, transient network).
+      // Close the cinematic and mark it dismissed so the auto-open effect
+      // doesn't immediately reopen + replay it. The beacon stays tappable.
       setClaimingId(null)
       setActive(null)
+      setDismissed(d => new Set(d).add(lm.id))
     }
   }, [claimingId, points])
 
@@ -153,7 +163,10 @@ export default function WorldChartClient({ points, claimed: claimed0 }: { points
       </div>
 
       {/* ── Discovery cinematic ── */}
-      <AnimatePresence>
+      {/* mode="wait": when claiming one landmark auto-advances to the next
+          (multiple discovered at once), the outgoing celebration fully exits
+          before the next enters — no two cinematics stacked/cross-fading. */}
+      <AnimatePresence mode="wait">
         {active && (
           <DiscoveryCinematic
             key={active.id}
