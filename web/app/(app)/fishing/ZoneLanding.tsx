@@ -228,12 +228,14 @@ export default function ZoneLanding({
             no boxed chrome; the five zone scenes carry all the art. */}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, #0b1a29 0%, #071220 32%, #04090f 68%, #020307 100%)' }} />
 
-        {/* Content */}
+        {/* Content — the scroll container. Gentle y-snap so each dive settles
+            on a zone without fighting a free scroll. */}
         <div style={{
           position: 'relative', zIndex: 1, height: '100%',
           display: 'flex', flexDirection: 'column',
           padding: '1.1rem 0.9rem 1.5rem',
           overflowY: 'auto',
+          scrollSnapType: 'y proximity',
         }}>
           {/* Header — just who you are on the water: your fishing level. */}
           <div className="flex items-end justify-between mb-3">
@@ -300,7 +302,10 @@ export default function ZoneLanding({
                   onClick={() => accessible && onSelect(zone)}
                   style={{
                     position: 'relative', overflow: 'hidden',
-                    minHeight: accessible ? 152 : 80,
+                    // Big immersive panels — you scroll through them to dive from
+                    // the bright surface down to the Ancient Deep.
+                    minHeight: accessible ? 300 : 190,
+                    scrollSnapAlign: 'start',
                     cursor: accessible ? 'pointer' : 'default',
                     WebkitTapHighlightColor: 'transparent',
                     touchAction: 'manipulation',
@@ -342,7 +347,7 @@ export default function ZoneLanding({
                       title card; the numbers stay off the water behind a Details
                       tap. The last band gets extra bottom padding to clear the
                       column's rounded clip + descent overlay. */}
-                  <div style={{ position: 'relative', zIndex: 1, minHeight: 'inherit', display: 'flex', flexDirection: 'column', justifyContent: accessible ? 'flex-end' : 'center', padding: accessible ? `0.9rem 1.05rem ${i === ZONES.length - 1 ? '1.25rem' : '1rem'}` : '0 1.05rem' }}>
+                  <div style={{ position: 'relative', zIndex: 1, minHeight: 'inherit', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: `0.9rem 1.05rem ${i === ZONES.length - 1 ? '1.25rem' : '1rem'}` }}>
                     {accessible ? (
                       <>
                         {isRecommended && (
@@ -351,11 +356,11 @@ export default function ZoneLanding({
                           </p>
                         )}
                         <p className="font-cinzel font-700"
-                          style={{ fontSize: '1.55rem', color: '#f7f4ee', letterSpacing: '0.04em', lineHeight: 1.02, textShadow: '0 1px 12px rgba(0,0,0,0.9)' }}>
+                          style={{ fontSize: '1.85rem', color: '#f7f4ee', letterSpacing: '0.04em', lineHeight: 1.02, textShadow: '0 1px 14px rgba(0,0,0,0.9)' }}>
                           {HABITAT_LABEL[zone]}
                         </p>
                         <p className="font-karla font-300 italic"
-                          style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.82)', marginTop: 3, textShadow: '0 1px 6px rgba(0,0,0,0.95)' }}>
+                          style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.84)', marginTop: 4, textShadow: '0 1px 6px rgba(0,0,0,0.95)' }}>
                           {HABITAT_TAGLINE[zone]}
                         </p>
 
@@ -404,18 +409,22 @@ export default function ZoneLanding({
                         </AnimatePresence>
                       </>
                     ) : (
-                      <div className="flex items-center justify-between" style={{ paddingRight: 52 }}>
+                      <>
                         <p className="font-cinzel font-700"
-                          style={{ fontSize: '1.2rem', color: 'rgba(255,255,255,0.42)', letterSpacing: '0.03em', lineHeight: 1 }}>
+                          style={{ fontSize: '1.55rem', color: 'rgba(255,255,255,0.46)', letterSpacing: '0.04em', lineHeight: 1.02, textShadow: '0 1px 10px rgba(0,0,0,0.8)' }}>
                           {HABITAT_LABEL[zone]}
                         </p>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2.2" strokeLinecap="round" aria-hidden><rect x="4" y="11" width="16" height="9" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
-                          <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.6)', whiteSpace: 'nowrap' }}>
-                            {zone === 'ancient_deep' && fishingLevel >= minLevel ? 'Clear Chapter 3' : `Level ${minLevel}`}
+                        <p className="font-karla font-300 italic"
+                          style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)', marginTop: 4, textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>
+                          {HABITAT_TAGLINE[zone]}
+                        </p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 9 }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="2.2" strokeLinecap="round" aria-hidden><rect x="4" y="11" width="16" height="9" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
+                          <span className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.62)', whiteSpace: 'nowrap', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>
+                            {zone === 'ancient_deep' && fishingLevel >= minLevel ? 'Clear Chapter 3 to enter' : `Unlocks at Level ${minLevel}`}
                           </span>
                         </div>
-                      </div>
+                      </>
                     )}
                   </div>
                 </motion.div>
