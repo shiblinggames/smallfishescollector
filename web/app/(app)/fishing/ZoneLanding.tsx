@@ -118,34 +118,51 @@ function DetailStat({ label, value, accent }: { label: string; value: string; ac
   )
 }
 
-const HOW_IT_WORKS = [
+const HOW_IT_WORKS: { color: string; title: string; body: string; icon: React.ReactNode }[] = [
   {
-    title: 'Cast & Wait',
-    body: 'Each cast uses one bait. A fish is selected the moment you cast — rarer fish take longer to bite. Better rod and bait reduce the wait. You can fish as much as you have bait for.',
+    color: '#60a5fa', title: 'Cast & wait',
+    body: 'Each cast spends one bait. Your fish is set the instant you cast, and rarer fish take longer to bite. A better rod and bait shorten the wait.',
+    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 21c7-1 12-6 15-15" /><path d="M19 6l1-3 -3 1" /><circle cx="7" cy="18" r="1.4" fill="currentColor" stroke="none" /></svg>,
   },
   {
-    title: 'Reel In',
-    body: 'When the rod dips, a spinning dial appears. Hit the green catch zone to land the fish, or the gold perfect zone to land it and get a chance to save your bait.',
+    color: '#4ade80', title: 'Reel it in',
+    body: 'When the rod dips, a dial spins. Tap while the needle is in the green band to land the fish. Nail the gold band for a Perfect, with a chance to save your bait.',
+    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 12l4.5-2.5" /><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" /></svg>,
   },
   {
-    title: 'Fish Speed',
-    body: "Harder fish make the dial spin faster and are trickier to time. Upgrading your reel slows the dial down across the board.",
+    color: '#fb923c', title: 'Catch fire',
+    body: 'Chain Perfect catches to set your line ablaze. Each one stacks bonus XP that keeps growing. Bail on a hooked fish and the streak resets.',
+    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2c.5 3 3 4.2 3 7.5a3 3 0 0 1-1.2 2.4c.1-1.2-.4-2.2-1.3-2.9.2 1.9-.9 2.7-1.8 3.6-.9.9-1.9 1.9-1.9 3.6a5.2 5.2 0 0 0 10.4 0c0-4.4-3.6-6-3.4-10.2C13.9 4.6 13.2 3.1 12 2z" /></svg>,
   },
   {
-    title: 'Zone Conditions',
-    body: 'Deeper zones have stronger currents — the dial speeds up and reverses direction more often, and the catch window shrinks. The same fish is significantly harder to land from the Abyss than the Shallows.',
+    color: '#a78bfa', title: 'Deeper, tougher',
+    body: 'Deeper zones spin the dial faster, flip its direction more often, and shrink the green band. The same fish is far harder to land in the Abyss than the Shallows.',
+    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 5l6 6 6-6" /><path d="M6 13l6 6 6-6" /></svg>,
   },
   {
-    title: 'Snag Zones',
-    body: 'Red zones on the dial snag your line — you lose the fish and your bait. Upgrade your line to shrink them.',
+    color: '#f87171', title: 'Watch for snags',
+    body: 'Red bands on the dial snag your line: you lose the fish and the bait. A stronger line shrinks them.',
+    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l9 16H3z" /><path d="M12 9v5" /><path d="M12 17h.01" /></svg>,
   },
   {
-    title: 'Fish Hold',
-    body: "When your hold is full you can't cast — sell some catch from the Hold drawer to make room. You can also upgrade the hold for more capacity right from the Hold drawer on the fishing screen.",
+    color: '#2dd4bf', title: 'Crates & pets',
+    body: 'Casts can pull up sunken crates, from Wooden to Diamond, and the better ones run deeper. They hold doubloons, gear, and the rare pet.',
+    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 8l9-4 9 4v8l-9 4-9-4z" /><path d="M3 8l9 4 9-4" /><path d="M12 12v8" /></svg>,
   },
   {
-    title: 'Gear Summary',
-    body: 'Rod → faster bites. Reel → slows the dial. Hook → widens the catch zone. Line → shrinks snag zones. Bait → faster bites + wider catch zone. Ship → fish hold capacity.',
+    color: '#94a3b8', title: 'Mind your hold',
+    body: 'Every catch fills your hold. When it is full you cannot cast, so sell from the Hold drawer or upgrade its size to keep going.',
+    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="8" width="18" height="12" rx="1.5" /><path d="M3 12h18" /><rect x="10" y="11" width="4" height="3" rx="0.5" /></svg>,
+  },
+  {
+    color: '#c4a96a', title: 'Your gear',
+    body: 'Rod: faster bites. Reel: slower dial. Hook: wider green band. Line: smaller snags. Bait: faster bites and a wider band.',
+    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3.2" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1" /></svg>,
+  },
+  {
+    color: '#f0c040', title: 'Complete & prestige',
+    body: 'Catch every fish in a zone for a one-time reward. Prestige to reset the log and earn more, up to Max Prestige. Past that, each wipe adds a permanent golden-catch boost.',
+    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" /></svg>,
   },
 ]
 
@@ -580,53 +597,50 @@ export default function ZoneLanding({
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 transition={{ duration: 0.18 }}
                 onClick={() => setModalOpen(false)}
-                style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 50 }}
+                style={{ position: 'absolute', inset: 0, background: 'rgba(2,6,12,0.82)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', zIndex: 50 }}
               />
               <motion.div
                 key="modal"
-                initial={{ opacity: 0, y: 16, scale: 0.97 }}
+                initial={{ opacity: 0, y: 18, scale: 0.96 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 10, scale: 0.97 }}
-                transition={{ duration: 0.2, ease: 'easeOut' }}
+                exit={{ opacity: 0, y: 12, scale: 0.97 }}
+                transition={{ type: 'spring', stiffness: 260, damping: 24 }}
                 style={{
-                  position: 'absolute', top: '10%', left: '1rem', right: '1rem',
-                  background: 'linear-gradient(180deg, #241a10 0%, #140d07 100%)',
-                  border: '1px solid rgba(255,255,255,0.14)',
-                  borderRadius: 18,
+                  position: 'absolute', top: '7%', left: '1rem', right: '1rem', maxWidth: 440, margin: '0 auto',
+                  background: 'linear-gradient(180deg, #101c2c 0%, #070d16 100%)',
+                  border: '1px solid rgba(96,165,250,0.22)',
+                  borderRadius: 20,
                   zIndex: 51,
-                  maxHeight: '78%',
+                  maxHeight: '84%',
                   display: 'flex', flexDirection: 'column',
                   overflow: 'hidden',
+                  boxShadow: '0 24px 70px rgba(0,0,0,0.6), 0 0 44px rgba(96,165,250,0.1)',
                 }}
               >
-                {/* Modal header */}
-                <div className="flex items-center justify-between" style={{ padding: '1rem 1.1rem 0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                  <p className="font-cinzel font-700 uppercase tracking-[0.15em]" style={{ fontSize: '0.82rem', color: '#f0ede8' }}>
-                    How Fishing Works
-                  </p>
+                {/* Header */}
+                <div style={{ position: 'relative', padding: '1.15rem 1.15rem 0.9rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                   <button
                     onClick={() => setModalOpen(false)}
                     aria-label="Close"
-                    style={{ color: 'rgba(255,255,255,0.45)', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none', padding: '0.15rem 0.3rem', display: 'flex' }}
+                    style={{ position: 'absolute', top: 12, right: 12, width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
                   </button>
+                  <p className="font-karla font-700 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.26em', color: 'rgba(196,169,106,0.9)' }}>Field Guide</p>
+                  <p className="font-cinzel font-800" style={{ fontSize: '1.32rem', color: '#f4f1ea', lineHeight: 1.1, marginTop: 4 }}>How Fishing Works</p>
                 </div>
 
-                {/* Modal body */}
-                <div style={{ overflowY: 'auto', padding: '0.9rem 1.1rem 1.1rem' }}>
-                  <div className="flex flex-col gap-4">
-                    {HOW_IT_WORKS.map(({ title, body }) => (
-                      <div key={title}>
-                        <p className="font-karla font-700 mb-1" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.88)' }}>
-                          {title}
-                        </p>
-                        <p className="font-karla font-300" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.55 }}>
-                          {body}
-                        </p>
+                {/* Body — one icon row per rule. */}
+                <div style={{ overflowY: 'auto', overscrollBehavior: 'contain', padding: '0.85rem 1rem 1.15rem', display: 'flex', flexDirection: 'column', gap: 9 }}>
+                  {HOW_IT_WORKS.map(({ color, title, body, icon }) => (
+                    <div key={title} style={{ display: 'flex', gap: 11, alignItems: 'flex-start', padding: '0.68rem 0.75rem', borderRadius: 13, background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                      <div style={{ flexShrink: 0, width: 34, height: 34, borderRadius: 9, background: `${color}1e`, border: `1px solid ${color}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', color }}>{icon}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#f2efe8', lineHeight: 1.15 }}>{title}</p>
+                        <p className="font-karla" style={{ fontSize: '0.75rem', color: 'rgba(226,232,240,0.66)', lineHeight: 1.5, marginTop: 3 }}>{body}</p>
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
                 </div>
               </motion.div>
             </>
