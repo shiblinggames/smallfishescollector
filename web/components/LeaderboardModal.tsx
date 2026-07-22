@@ -7,8 +7,9 @@
 import { useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { LeaderboardSection, BOARD_META, type BoardKey } from '@/app/(app)/leaderboard/boardUI'
+import { LeaderboardSection, BOARD_META, groupBoards, type BoardKey } from '@/app/(app)/leaderboard/boardUI'
 import { getLeaderboardBoards, type LeaderboardBoardsResult } from '@/app/(app)/leaderboard/actions'
+import BoardPicker from '@/app/(app)/leaderboard/BoardPicker'
 
 export default function LeaderboardModal({
   boards,
@@ -90,8 +91,16 @@ export default function LeaderboardModal({
           </button>
         </div>
 
-        {/* Board tabs (only when this section owns more than one) */}
-        {boards.length > 1 && (
+        {/* Board selector. A few boards → simple tabs; many → the grouped
+            dropdown so the sheet header never gets crowded. */}
+        {boards.length > 4 ? (
+          <BoardPicker
+            groups={groupBoards(boards)}
+            active={activeTab}
+            onSelect={setActiveTab}
+            rankOf={(k) => data?.myRanks[k] ?? null}
+          />
+        ) : boards.length > 1 ? (
           <div style={{ display: 'grid', gridTemplateColumns: `repeat(${boards.length}, 1fr)`, gap: 6, marginBottom: '1rem' }}>
             {boards.map(key => {
               const b = BOARD_META[key]
@@ -117,7 +126,7 @@ export default function LeaderboardModal({
               )
             })}
           </div>
-        )}
+        ) : null}
 
         {err ? (
           <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: '#f08a8a', textAlign: 'center', padding: '2rem 0' }}>{err}</p>

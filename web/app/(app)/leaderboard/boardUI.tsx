@@ -87,6 +87,27 @@ export const BOARD_META: Record<BoardKey, {
   achievementPoints: { label: 'Achievement Points', accent: '#e6b94a', unit: n => `${n.toLocaleString()}`, subUnit: n => `point${n === 1 ? '' : 's'}` },
 }
 
+/** Canonical grouping of every board into a category — the single source of
+ *  truth for the scalable board picker. Add a new board here (once) and it
+ *  slots into the dropdown everywhere. */
+export const LEADERBOARD_SECTIONS: { label: string; boards: BoardKey[] }[] = [
+  { label: 'Achievements', boards: ['achievementPoints'] },
+  { label: 'Fishing',      boards: ['perfectStreak', 'fishingLevel'] },
+  { label: 'Expeditions',  boards: ['raidProgress', 'expedition', 'gauntletDepth', 'gauntletHardcore', 'gauntletBigHit'] },
+  { label: 'Charting',     boards: ['chartingPoints'] },
+  { label: 'Tavern',       boards: ['tideRun'] },
+  { label: 'The Den',      boards: ['blackjack', 'fishSlots', 'roulette'] },
+]
+
+/** Group a subset of boards into their sections (order preserved, empty
+ *  sections dropped) — feeds the picker on both the page and the modal. */
+export function groupBoards(boards: BoardKey[]): { label: string; boards: BoardKey[] }[] {
+  const want = new Set(boards)
+  return LEADERBOARD_SECTIONS
+    .map(s => ({ label: s.label, boards: s.boards.filter(b => want.has(b)) }))
+    .filter(s => s.boards.length > 0)
+}
+
 const AVATAR_COLORS = ['#0e7490', '#0d9488', '#7c3aed', '#b45309', '#0369a1', '#be185d']
 function avatarColor(str: string) {
   let h = 0
