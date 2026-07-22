@@ -1156,11 +1156,14 @@ export async function buyBaitWithFathoms(baitType: string): Promise<
   return { ok: true, fathoms: newFathoms, added: bundle, baitType }
 }
 
-/** Mark the first-time explainer as seen so it doesn't auto-open again. */
-export async function markGauntletIntroSeen(): Promise<void> {
+/** Mark the first-time explainer as seen so it doesn't auto-open again. Each
+ *  Gauntlet tracks its own flag — Don's has a different explainer, so seeing
+ *  Davy's must not suppress the Don's one (and vice versa). */
+export async function markGauntletIntroSeen(variant: GauntletVariant = 'davy'): Promise<void> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
   const admin = createAdminClient()
-  await admin.from('profiles').update({ has_seen_gauntlet_intro: true }).eq('id', user.id)
+  const col = variant === 'don' ? 'has_seen_dons_gauntlet_intro' : 'has_seen_gauntlet_intro'
+  await admin.from('profiles').update({ [col]: true }).eq('id', user.id)
 }

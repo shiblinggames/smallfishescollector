@@ -79,9 +79,10 @@ export default async function DonsGauntletPage() {
           nextAt={daily.nextAt}
           resumeState={daily.resumeState}
           resumePaused={daily.resumePaused}
-          // Slice-0 stub: skip the (Davy-themed) intro on the Don's route; its own
-          // intro + hero art come with the theme slice.
-          hasSeenIntro={true}
+          // Don's Gauntlet has its OWN how-it-works modal (Don art + copy that
+          // teases the new layers), tracked by its own flag so it auto-opens
+          // once here independently of whether Davy's was ever seen.
+          hasSeenIntro={profile?.has_seen_dons_gauntlet_intro === true}
           topDescender={null}
           // Hardcore is a Don's fast-follow — off for now.
           hardcoreUnlocked={false}

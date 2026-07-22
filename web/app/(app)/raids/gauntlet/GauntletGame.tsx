@@ -691,7 +691,7 @@ export default function GauntletGame(props: GauntletGameProps) {
 
   function dismissIntro() {
     setIntroOpen(false)
-    if (!props.hasSeenIntro) markGauntletIntroSeen().catch(() => {})
+    if (!props.hasSeenIntro) markGauntletIntroSeen(props.variant).catch(() => {})
   }
 
   /** Tear down the pre-dive surfaces. Called only once the run's fate is known,
@@ -2401,7 +2401,7 @@ export default function GauntletGame(props: GauntletGameProps) {
 
           <BackLink router={router} label="Not today" />
         </div>
-        {introOpen && <GauntletIntroModal onClose={dismissIntro} firstTime={!props.hasSeenIntro} />}
+        {introOpen && <GauntletIntroModal variant={props.variant} onClose={dismissIntro} firstTime={!props.hasSeenIntro} />}
         {lootMode && <LootModal mode={lootMode} don={isDonG} onClose={() => setLootMode(null)} />}
         {infoCurrency && <CurrencyInfoModal kind={infoCurrency} don={isDonG} onClose={() => setInfoCurrency(null)} />}
         {synergiesOpen && <SynergiesModal owned={boonTiers} seen={seenConfluences} taken={confluencesTaken} onClose={() => setSynergiesOpen(false)} />}
@@ -5542,30 +5542,58 @@ function ActionTile({ color, icon, label, line, primary, disabled, onClick }: {
 
 // ── First-time explainer ──────────────────────────────────────────────────────
 // A short, noob-proof "how this works" for the Gauntlet. Auto-opens once;
-// reopenable via "How it works".
-function GauntletIntroModal({ onClose, firstTime }: { onClose: () => void; firstTime: boolean }) {
-  const steps: { color: string; title: string; text: string; icon: React.ReactNode }[] = [
-    { color: TEAL, title: 'Descend the Locker', text: 'Fight ship after ship. Each depth hits harder.', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 5l6 6 6-6" /><path d="M6 13l6 6 6-6" /></svg> },
-    { color: '#8b9cff', title: 'Powers and curses', text: 'Between fights you draft a boon for the whole dive. Go deep enough and the Locker forces curses on you too.', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l2.1 5.6L20 9.2l-4.4 3.6L17 19l-5-3.4L7 19l1.4-6.2L4 9.2l5.9-1.6z" /></svg> },
-    { color: '#b98bff', title: 'Synergies', text: 'Hold the right pair of boons and a synergy surfaces as a card in a draft — take it instead of a boon. It lasts the whole dive and levels up as you deepen its two boons.', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></svg> },
-    { color: GOLD, title: 'One pot grows', text: 'Every ship you sink swells a single pot of doubloons and Nav XP.', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="6.5" rx="7" ry="2.6" /><path d="M5 6.5v5c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6v-5" /><path d="M5 11.5v5c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6v-5" /></svg> },
-    { color: '#f87171', title: 'Cash out or sink', text: 'Bank the pot whenever you like. Go under first and it all sinks with you.', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a8 8 0 0 0-8 8c0 4 3 7 7 8 4-1 7-4 7-8a8 8 0 0 0-8-8z" /><circle cx="9" cy="10" r="1.4" fill="#120a12" /><circle cx="15" cy="10" r="1.4" fill="#120a12" /></svg> },
-    { color: TEAL, title: 'Fathoms to spend', text: 'Each dive also pays Fathoms, win or lose — spend them in the Run Upgrades and Ship & Shore shops.', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="8.5" /><path d="M7 10.6c1.2-1 2.3-1 3.5 0s2.3 1 3.5 0 2.1-0.9 2.8-0.4" /><path d="M7 14c1.2-1 2.3-1 3.5 0s2.3 1 3.5 0 2.1-0.9 2.8-0.4" /></svg> },
+// reopenable via "How it works". Variant-aware: Don's Gauntlet gets his own
+// portrait, kraken-green theme, and copy that TEASES its new layers
+// (Convergences, the Don's Mark, the shadier market) without spoiling them.
+function GauntletIntroModal({ variant, onClose, firstTime }: { variant?: GauntletVariant; onClose: () => void; firstTime: boolean }) {
+  const isDon = variant === 'don'
+  const AC = isDon ? KRAKEN : TEAL
+  const heroImg = isDon ? '/donsgauntlet.png' : MAW_IMG
+  const eyebrow = isDon ? "The Don's Gauntlet" : 'The Davy Jones Gauntlet'
+
+  // Shared icons so the two step lists read consistently.
+  const ChevIcon = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 5l6 6 6-6" /><path d="M6 13l6 6 6-6" /></svg>
+  const StarIcon = <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l2.1 5.6L20 9.2l-4.4 3.6L17 19l-5-3.4L7 19l1.4-6.2L4 9.2l5.9-1.6z" /></svg>
+  const CubeIcon = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></svg>
+  const PotIcon = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="6.5" rx="7" ry="2.6" /><path d="M5 6.5v5c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6v-5" /><path d="M5 11.5v5c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6v-5" /></svg>
+  const SkullIcon = <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a8 8 0 0 0-8 8c0 4 3 7 7 8 4-1 7-4 7-8a8 8 0 0 0-8-8z" /><circle cx="9" cy="10" r="1.4" fill="#120a12" /><circle cx="15" cy="10" r="1.4" fill="#120a12" /></svg>
+  const WaveIcon = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="8.5" /><path d="M7 10.6c1.2-1 2.3-1 3.5 0s2.3 1 3.5 0 2.1-0.9 2.8-0.4" /><path d="M7 14c1.2-1 2.3-1 3.5 0s2.3 1 3.5 0 2.1-0.9 2.8-0.4" /></svg>
+  const CrownIcon = <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M3 8l4 3.5L12 5l5 6.5L21 8l-1.8 11H4.8z" /></svg>
+
+  const davySteps: { color: string; title: string; text: string; icon: React.ReactNode }[] = [
+    { color: TEAL, title: 'Descend the Locker', text: 'Fight ship after ship. Each depth hits harder.', icon: ChevIcon },
+    { color: '#8b9cff', title: 'Powers and curses', text: 'Between fights you draft a boon for the whole dive. Go deep enough and the Locker forces curses on you too.', icon: StarIcon },
+    { color: '#b98bff', title: 'Synergies', text: 'Hold the right pair of boons and a synergy surfaces as a card in a draft — take it instead of a boon. It lasts the whole dive and levels up as you deepen its two boons.', icon: CubeIcon },
+    { color: GOLD, title: 'One pot grows', text: 'Every ship you sink swells a single pot of doubloons and Nav XP.', icon: PotIcon },
+    { color: '#f87171', title: 'Cash out or sink', text: 'Bank the pot whenever you like. Go under first and it all sinks with you.', icon: SkullIcon },
+    { color: TEAL, title: 'Fathoms to spend', text: 'Each dive also pays Fathoms, win or lose — spend them in the Run Upgrades and Ship & Shore shops.', icon: WaveIcon },
   ]
+  // Don's list: the core loop still applies, reskinned to his abyss, with new
+  // layers named but left mysterious (no numbers, no mechanics — you find out
+  // by descending).
+  const donSteps: { color: string; title: string; text: string; icon: React.ReactNode }[] = [
+    { color: KRAKEN, title: 'Descend the deep', text: "Fight ship after ship of the Don's own fleet. Every depth cuts deeper than the last.", icon: ChevIcon },
+    { color: '#8b9cff', title: 'Powers and curses', text: 'Between fights you draft a boon for the whole dive. Push deep enough and the dark forces curses on you too.', icon: StarIcon },
+    { color: '#b98bff', title: 'Convergences', text: 'The right boons fuse into a synergy — and down in the Don’s water, synergies themselves can converge into something greater still.', icon: CubeIcon },
+    { color: GOLD, title: 'The Don descends with you', text: 'He does not wait at the bottom. Meet Don Finleone in the deep, and best him to take his Mark.', icon: CrownIcon },
+    { color: '#f87171', title: 'Cash out or sink', text: 'One pot of doubloons and Nav XP swells with every kill. Bank it whenever you like — go under first and it all sinks with you.', icon: SkullIcon },
+    { color: KRAKEN, title: 'Fathoms and darker deals', text: "Every dive pays Fathoms for the Don's own Locker of upgrades — and a shadier market prowls these waters, dealing in things Davy never stocked.", icon: WaveIcon },
+  ]
+  const steps = isDon ? donSteps : davySteps
   return (
     <ModalScrim zIndex={1400} onClose={onClose} bg="rgba(2,6,12,0.88)" blur="blur(5px)">
       <motion.div initial={{ opacity: 0, y: 18, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 250, damping: 23 }}
         onClick={e => e.stopPropagation()}
-        style={{ position: 'relative', width: '100%', maxWidth: 420, borderRadius: 20, background: 'linear-gradient(180deg, rgba(12,18,30,0.99), rgba(6,9,16,0.99))', border: `1px solid ${TEAL}3a`, boxShadow: `0 0 50px ${TEAL}22, 0 18px 50px rgba(0,0,0,0.65)`, padding: '1.3rem 1.15rem 1.15rem', textAlign: 'center' }}>
+        style={{ position: 'relative', width: '100%', maxWidth: 420, borderRadius: 20, background: 'linear-gradient(180deg, rgba(12,18,30,0.99), rgba(6,9,16,0.99))', border: `1px solid ${AC}3a`, boxShadow: `0 0 50px ${AC}22, 0 18px 50px rgba(0,0,0,0.65)`, padding: '1.3rem 1.15rem 1.15rem', textAlign: 'center' }}>
         <button onClick={onClose} aria-label="Close" className="tap" style={{ position: 'absolute', top: 10, right: 10, zIndex: 2, width: 30, height: 30, borderRadius: '50%', padding: 0, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden><path d="M18 6L6 18M6 6l12 12" /></svg>
         </button>
         <div style={{ position: 'relative', width: 92, height: 92, margin: '0 auto 6px' }}>
-          <div style={{ position: 'absolute', inset: -14, borderRadius: '50%', background: `radial-gradient(circle, ${GOLD}22 0%, ${TEAL}12 45%, transparent 72%)`, animation: 'gauntPulse 3.6s ease-in-out infinite' }} />
+          <div style={{ position: 'absolute', inset: -14, borderRadius: '50%', background: `radial-gradient(circle, ${GOLD}22 0%, ${AC}12 45%, transparent 72%)`, animation: 'gauntPulse 3.6s ease-in-out infinite' }} />
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={MAW_IMG} alt="" loading="eager" decoding="async" style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', filter: 'drop-shadow(0 6px 18px rgba(0,0,0,0.7))' }} />
+          <img src={heroImg} alt="" loading="eager" decoding="async" style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', filter: 'drop-shadow(0 6px 18px rgba(0,0,0,0.7))' }} />
         </div>
-        <p className="font-karla font-700 uppercase" style={{ fontSize: '0.55rem', letterSpacing: '0.3em', color: TEAL }}>The Davy Jones Gauntlet</p>
+        <p className="font-karla font-700 uppercase" style={{ fontSize: '0.55rem', letterSpacing: '0.3em', color: AC }}>{eyebrow}</p>
         <p className="font-cinzel font-800" style={{ fontSize: '1.4rem', color: '#f3ead2', lineHeight: 1.1, marginTop: 5 }}>How the descent works</p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: 16, textAlign: 'left' }}>
@@ -5582,7 +5610,7 @@ function GauntletIntroModal({ onClose, firstTime }: { onClose: () => void; first
 
         <button onClick={onClose} className="font-cinzel font-800 uppercase tracking-[0.08em] tap"
           style={{ marginTop: 18, width: '100%', padding: '0.95rem', borderRadius: 13, fontSize: '0.95rem', color: GOLD, background: `linear-gradient(180deg, ${GOLD}26, ${GOLD}0f)`, border: `1px solid ${GOLD}66`, cursor: 'pointer' }}>
-          {firstTime ? 'Into the Locker' : 'Got it'}
+          {firstTime ? (isDon ? 'Into the deep' : 'Into the Locker') : 'Got it'}
         </button>
       </motion.div>
     </ModalScrim>
