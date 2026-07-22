@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ZONE_MIN_LEVEL, ZONE_WAIT_BASE, BASE_CRATE_CHANCE, zoneDiamondShare, zonePetPerCrate } from './zoneData'
 import { updateUsername } from '@/app/(app)/u/actions'
-import LeaderboardModal from '@/components/LeaderboardModal'
 import FisherPose from '@/components/FisherPose'
 import { PRESTIGE_MAX, goldenBoostPct, goldenBoostMult } from '@/lib/zoneRewards'
 import { SHINY_ODDS } from '@/lib/shiny'
@@ -119,54 +118,6 @@ function DetailStat({ label, value, accent }: { label: string; value: string; ac
   )
 }
 
-const HOW_IT_WORKS: { color: string; title: string; body: string; icon: React.ReactNode }[] = [
-  {
-    color: '#60a5fa', title: 'Cast & wait',
-    body: 'Each cast spends one bait. Your fish is set the instant you cast, and rarer fish take longer to bite. A better rod and bait shorten the wait.',
-    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 21c7-1 12-6 15-15" /><path d="M19 6l1-3 -3 1" /><circle cx="7" cy="18" r="1.4" fill="currentColor" stroke="none" /></svg>,
-  },
-  {
-    color: '#4ade80', title: 'Reel it in',
-    body: 'When the rod dips, a dial spins. Tap while the needle is in the green band to land the fish. Nail the gold band for a Perfect, with a chance to save your bait.',
-    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 12l4.5-2.5" /><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" /></svg>,
-  },
-  {
-    color: '#fb923c', title: 'Catch fire',
-    body: 'Chain Perfect catches to set your line ablaze. Each one stacks bonus XP that keeps growing. Bail on a hooked fish and the streak resets.',
-    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2c.5 3 3 4.2 3 7.5a3 3 0 0 1-1.2 2.4c.1-1.2-.4-2.2-1.3-2.9.2 1.9-.9 2.7-1.8 3.6-.9.9-1.9 1.9-1.9 3.6a5.2 5.2 0 0 0 10.4 0c0-4.4-3.6-6-3.4-10.2C13.9 4.6 13.2 3.1 12 2z" /></svg>,
-  },
-  {
-    color: '#a78bfa', title: 'Deeper, tougher',
-    body: 'Deeper zones spin the dial faster, flip its direction more often, and shrink the green band. The same fish is far harder to land in the Abyss than the Shallows.',
-    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 5l6 6 6-6" /><path d="M6 13l6 6 6-6" /></svg>,
-  },
-  {
-    color: '#f87171', title: 'Watch for snags',
-    body: 'Red bands on the dial snag your line: you lose the fish and the bait. A stronger line shrinks them.',
-    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l9 16H3z" /><path d="M12 9v5" /><path d="M12 17h.01" /></svg>,
-  },
-  {
-    color: '#2dd4bf', title: 'Crates & pets',
-    body: 'Casts can pull up sunken crates, from Wooden to Diamond, and the better ones run deeper. They hold doubloons, gear, and the rare pet.',
-    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 8l9-4 9 4v8l-9 4-9-4z" /><path d="M3 8l9 4 9-4" /><path d="M12 12v8" /></svg>,
-  },
-  {
-    color: '#94a3b8', title: 'Mind your hold',
-    body: 'Every catch fills your hold. When it is full you cannot cast, so sell from the Hold drawer or upgrade its size to keep going.',
-    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="8" width="18" height="12" rx="1.5" /><path d="M3 12h18" /><rect x="10" y="11" width="4" height="3" rx="0.5" /></svg>,
-  },
-  {
-    color: '#c4a96a', title: 'Your gear',
-    body: 'Rod: faster bites. Reel: slower dial. Hook: wider green band. Line: smaller snags. Bait: faster bites and a wider band.',
-    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3.2" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1" /></svg>,
-  },
-  {
-    color: '#f0c040', title: 'Complete & prestige',
-    body: 'Catch every fish in a zone for a one-time reward. Prestige to reset the log and earn more, up to Max Prestige. Past that, each wipe adds a permanent golden-catch boost.',
-    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" /></svg>,
-  },
-]
-
 export default function ZoneLanding({
   fishingLevel, fishingXP, username, zoneStats, zoneCollection, prestigeLevels, goldenBoosts, ancientDeepUnlocked, onSelect,
   currentZone, characterColor, equippedHat, equippedBoat, equippedPet, rodTier, reelTier, hookTier,
@@ -193,7 +144,6 @@ export default function ZoneLanding({
   reelTier: number
   hookTier: number
 }) {
-  const [modalOpen, setModalOpen] = useState(false)
   // Which zone's Details strip is open (accordion — one at a time). Keeps the
   // numbers off the water until asked for.
   const [detailsFor, setDetailsFor] = useState<ZoneKey | null>(null)
@@ -284,25 +234,6 @@ export default function ZoneLanding({
                   </div>
                 </div>
 
-                {/* Ranks + guide, centered against the whole bar */}
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <LeaderboardModal boards={['perfectStreak', 'fishingLevel']} title="Fishing Leaderboard" />
-                  <button
-                    onClick={() => setModalOpen(true)}
-                    aria-label="How fishing works"
-                    style={{
-                      width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
-                      background: 'rgba(255,255,255,0.08)',
-                      border: '1px solid rgba(255,255,255,0.18)',
-                      color: 'rgba(255,255,255,0.6)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      cursor: 'pointer', touchAction: 'manipulation',
-                      fontSize: '0.75rem', fontFamily: 'serif', fontStyle: 'italic', fontWeight: 700,
-                    }}
-                  >
-                    i
-                  </button>
-                </div>
               </div>
             )
           })()}
@@ -461,7 +392,7 @@ export default function ZoneLanding({
                                 transition={{ duration: 0.22, ease: 'easeOut' }}
                                 style={{ overflow: 'hidden' }}
                               >
-                                <div style={{ marginTop: 9, padding: '9px 11px 10px', borderRadius: 12, background: 'rgba(2,6,12,0.42)', border: '1px solid rgba(255,255,255,0.1)', textShadow: '0 1px 3px rgba(0,0,0,0.85)' }}>
+                                <div style={{ marginTop: 9, padding: '10px 12px 11px', borderRadius: 12, background: 'rgba(3,8,14,0.92)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)', border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 6px 20px rgba(0,0,0,0.45)' }}>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 9 }}>
                                     <WaveMarks n={difficulty} color={color} />
                                     <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.9)', whiteSpace: 'nowrap' }}>{diffLabel}</span>
@@ -610,64 +541,6 @@ export default function ZoneLanding({
           )}
         </AnimatePresence>
 
-        {/* Info modal */}
-        <AnimatePresence>
-          {modalOpen && (
-            <>
-              <motion.div
-                key="backdrop"
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                transition={{ duration: 0.18 }}
-                onClick={() => setModalOpen(false)}
-                style={{ position: 'absolute', inset: 0, background: 'rgba(2,6,12,0.82)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', zIndex: 50 }}
-              />
-              <motion.div
-                key="modal"
-                initial={{ opacity: 0, y: 18, scale: 0.96 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 12, scale: 0.97 }}
-                transition={{ type: 'spring', stiffness: 260, damping: 24 }}
-                style={{
-                  position: 'absolute', top: '7%', left: '1rem', right: '1rem', maxWidth: 440, margin: '0 auto',
-                  background: 'linear-gradient(180deg, #101c2c 0%, #070d16 100%)',
-                  border: '1px solid rgba(96,165,250,0.22)',
-                  borderRadius: 20,
-                  zIndex: 51,
-                  maxHeight: '84%',
-                  display: 'flex', flexDirection: 'column',
-                  overflow: 'hidden',
-                  boxShadow: '0 24px 70px rgba(0,0,0,0.6), 0 0 44px rgba(96,165,250,0.1)',
-                }}
-              >
-                {/* Header */}
-                <div style={{ position: 'relative', padding: '1.15rem 1.15rem 0.9rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                  <button
-                    onClick={() => setModalOpen(false)}
-                    aria-label="Close"
-                    style={{ position: 'absolute', top: 12, right: 12, width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                  >
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
-                  </button>
-                  <p className="font-karla font-700 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.26em', color: 'rgba(196,169,106,0.9)' }}>Field Guide</p>
-                  <p className="font-cinzel font-800" style={{ fontSize: '1.32rem', color: '#f4f1ea', lineHeight: 1.1, marginTop: 4 }}>How Fishing Works</p>
-                </div>
-
-                {/* Body — one icon row per rule. */}
-                <div style={{ overflowY: 'auto', overscrollBehavior: 'contain', padding: '0.85rem 1rem 1.15rem', display: 'flex', flexDirection: 'column', gap: 9 }}>
-                  {HOW_IT_WORKS.map(({ color, title, body, icon }) => (
-                    <div key={title} style={{ display: 'flex', gap: 11, alignItems: 'flex-start', padding: '0.68rem 0.75rem', borderRadius: 13, background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                      <div style={{ flexShrink: 0, width: 34, height: 34, borderRadius: 9, background: `${color}1e`, border: `1px solid ${color}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', color }}>{icon}</div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#f2efe8', lineHeight: 1.15 }}>{title}</p>
-                        <p className="font-karla" style={{ fontSize: '0.75rem', color: 'rgba(226,232,240,0.66)', lineHeight: 1.5, marginTop: 3 }}>{body}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
 
       </div>
     </div>
