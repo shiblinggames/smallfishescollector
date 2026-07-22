@@ -335,25 +335,30 @@ export default function ZoneLanding({
                   <div style={{ position: 'relative', zIndex: 1, minHeight: 'inherit', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: `0.9rem 1.15rem ${i === ZONES.length - 1 ? '1.4rem' : '1.15rem'}` }}>
                     {accessible ? (
                       <>
-                        <p className="font-cinzel font-800"
-                          style={{ fontSize: '2.4rem', color: '#fdf7e8', letterSpacing: '0.01em', lineHeight: 1.0, textShadow: `0 2px 4px rgba(0,0,0,0.75), 0 2px 26px rgba(0,0,0,0.85), 0 0 30px ${color}66` }}>
-                          {HABITAT_LABEL[zone]}
-                        </p>
-                        <p className="font-karla font-400 italic"
-                          style={{ fontSize: '1.02rem', color: 'rgba(255,255,255,0.9)', marginTop: 7, textShadow: '0 1px 8px rgba(0,0,0,0.95)' }}>
-                          {HABITAT_TAGLINE[zone]}
-                        </p>
-
-                        {/* Tap affordance — a pulsing "Fish Here" pill so it reads
-                            clearly as a button you can enter, not just a mural.
-                            Decorative (pointer-events off); the whole band taps. */}
-                        <motion.div aria-hidden
-                          animate={{ boxShadow: [`0 0 0px ${color}00`, `0 0 15px ${color}70`, `0 0 0px ${color}00`] }}
-                          transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
-                          style={{ alignSelf: 'flex-start', marginTop: 11, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.36rem 0.8rem', borderRadius: 999, background: 'rgba(3,9,16,0.6)', border: `1.5px solid ${color}`, pointerEvents: 'none' }}>
-                          <span className="font-karla font-800 uppercase" style={{ fontSize: '0.64rem', letterSpacing: '0.1em', color }}>Fish Here</span>
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h13" /><path d="m12 6 6 6-6 6" /></svg>
-                        </motion.div>
+                        {/* Title + subtitle on the left, the "Fish Here" tap pill
+                            on the right, sharing one row. */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                          <div style={{ minWidth: 0 }}>
+                            <p className="font-cinzel font-800"
+                              style={{ fontSize: '2.4rem', color: '#fdf7e8', letterSpacing: '0.01em', lineHeight: 1.0, textShadow: `0 2px 4px rgba(0,0,0,0.75), 0 2px 26px rgba(0,0,0,0.85), 0 0 30px ${color}66` }}>
+                              {HABITAT_LABEL[zone]}
+                            </p>
+                            <p className="font-karla font-400 italic"
+                              style={{ fontSize: '1.02rem', color: 'rgba(255,255,255,0.9)', marginTop: 7, textShadow: '0 1px 8px rgba(0,0,0,0.95)' }}>
+                              {HABITAT_TAGLINE[zone]}
+                            </p>
+                          </div>
+                          {/* Tap affordance — a pulsing "Fish Here" pill so it reads
+                              clearly as a button. Decorative (pointer-events off);
+                              the whole band taps. */}
+                          <motion.div aria-hidden
+                            animate={{ boxShadow: [`0 0 0px ${color}00`, `0 0 15px ${color}70`, `0 0 0px ${color}00`] }}
+                            transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+                            style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.4rem 0.85rem', borderRadius: 999, background: 'rgba(3,9,16,0.6)', border: `1.5px solid ${color}`, pointerEvents: 'none' }}>
+                            <span className="font-karla font-800 uppercase" style={{ fontSize: '0.64rem', letterSpacing: '0.1em', color }}>Fish Here</span>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h13" /><path d="m12 6 6 6-6 6" /></svg>
+                          </motion.div>
+                        </div>
 
                         {/* Quiet standing line: collection + prestige, and a
                             Details tap that reveals the catch numbers. */}
