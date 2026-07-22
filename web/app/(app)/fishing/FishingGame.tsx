@@ -817,13 +817,16 @@ function DialSVG({
         {fireLevel >= 1 && (
           <motion.circle cx={CX} cy={CY} r={OUTER_R + 4} fill="none" stroke="#fbbf24"
             strokeWidth={fireLevel === 2 ? 2.5 : 2}
-            animate={{ strokeOpacity: fireLevel === 2 ? [0.3, 0.65, 0.3] : [0.25, 0.55, 0.25] }}
+            // opacity (not strokeOpacity): fill is none, so it looks identical but
+            // composites on the GPU instead of repainting the ring every frame for
+            // the whole duration of an on-fire streak.
+            animate={{ opacity: fireLevel === 2 ? [0.3, 0.65, 0.3] : [0.25, 0.55, 0.25] }}
             transition={{ duration: 1.0, repeat: Infinity, ease: 'easeInOut', delay: 0.2 }}
           />
         )}
         {fireLevel === 2 && (
           <motion.circle cx={CX} cy={CY} r={OUTER_R + 9} fill="none" stroke="#f97316" strokeWidth="10"
-            animate={{ strokeOpacity: [0.1, 0.28, 0.1] }}
+            animate={{ opacity: [0.1, 0.28, 0.1] }}
             transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
           />
         )}
@@ -1419,6 +1422,24 @@ function FishImg({ name, style }: { name: string; style?: React.CSSProperties })
 }
 
 // ─── ResultCard ───────────────────────────────────────────────────────────────
+
+// The bait wait-time readout. Isolated into its own component so its 100ms tick
+// re-renders ONLY this <p>, not the whole ~8k-line FishingGame tree (which it did
+// when the elapsed value lived in FishingGame state). Conditionally mounted per
+// cast, so it starts at 0.0 each time and clears its interval on catch.
+function WaitTimer() {
+  const [elapsedMs, setElapsedMs] = useState(0)
+  useEffect(() => {
+    const startedAt = Date.now()
+    const id = window.setInterval(() => setElapsedMs(Date.now() - startedAt), 100)
+    return () => clearInterval(id)
+  }, [])
+  return (
+    <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#8a8480', letterSpacing: '0.06em', marginTop: 6, fontVariantNumeric: 'tabular-nums' }}>
+      {(elapsedMs / 1000).toFixed(1)}s
+    </p>
+  )
+}
 
 function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, doubleCatch, gemEarned, perfectStreak = 1, streakBonusXP = 0, jackpotMultiplier, perfectXpMult = 1, ancientCount = 0, ancientTotal = 6, sizeIn, sizeMin, sizeMax, isPB, previousBest, isShiny = false }: {
   fish: FishSpecies
@@ -4038,7 +4059,6 @@ export default function FishingGame({
   // Cast→bite count-up state lives here; the useEffect that drives it
   // is below the castAnimDone declaration since it depends on that.
   const [showWaitTimer, setShowWaitTimer] = useState(initialShowWaitTimer)
-  const [waitElapsedMs, setWaitElapsedMs] = useState<number | null>(null)
   // Persist toggle changes to the profile (fire-and-forget). The toggle
   // itself updates local state immediately so the UI responds without
   // waiting for the round-trip.
@@ -4525,25 +4545,6 @@ export default function FishingGame({
     const t2 = setTimeout(() => setCastAnimDone(true), 1500)
     return () => { clearTimeout(t0); clearTimeout(t1); clearTimeout(t2) }
   }, [phase])
-
-  // Cast→bite count-up driver. Player-toggleable from the Gear modal's
-  // Preferences row. When on, the waiting pill shows elapsed seconds
-  // since the pill became visible (so it starts at 0.0 each cast, not
-  // mid-cast-animation). Deliberately a count-UP not a countdown — the
-  // endpoint stays mysterious; only the relative time tells you whether
-  // a bait is fast or slow.
-  useEffect(() => {
-    if (phase !== 'casting' || !castAnimDone || !showWaitTimer) {
-      setWaitElapsedMs(null)
-      return
-    }
-    const startedAt = Date.now()
-    setWaitElapsedMs(0)
-    const id = window.setInterval(() => {
-      setWaitElapsedMs(Date.now() - startedAt)
-    }, 100)
-    return () => clearInterval(id)
-  }, [phase, castAnimDone, showWaitTimer])
 
   // Needle animation during catching phase
   useEffect(() => {
@@ -7095,20 +7096,7 @@ export default function FishingGame({
                         <p className="font-karla font-600" style={{ fontSize: '1rem', color: '#e8e4de' }}>
                           {waitMessage}
                         </p>
-                        {showWaitTimer && waitElapsedMs !== null && (
-                          <p
-                            className="font-karla font-700"
-                            style={{
-                              fontSize: '0.7rem',
-                              color: '#8a8480',
-                              letterSpacing: '0.06em',
-                              marginTop: 6,
-                              fontVariantNumeric: 'tabular-nums',
-                            }}
-                          >
-                            {(waitElapsedMs / 1000).toFixed(1)}s
-                          </p>
-                        )}
+                        {showWaitTimer && phase === 'casting' && castAnimDone && <WaitTimer />}
                         <div style={{
                           position: 'absolute', bottom: -7, left: '50%',
                           transform: 'translateX(-50%) rotate(45deg)',
