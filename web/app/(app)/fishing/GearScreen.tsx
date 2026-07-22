@@ -2492,7 +2492,8 @@ export default function GearScreen({
                     // Owned first within each group so your boats lead the row.
                     const byOwnedFirst = (a: typeof BOATS[number], c: typeof BOATS[number]) =>
                       Number(unlockedBoats.includes(c.id)) - Number(unlockedBoats.includes(a.id))
-                    const earnedBoats = BOATS.filter(b => (b.crateOnly && unlockedBoats.includes(b.id)) || typeof b.achievementPoints === 'number').sort(byOwnedFirst)
+                    // Crate + achievement boats shown even when unowned, so players see the chase.
+                    const earnedBoats = BOATS.filter(b => b.crateOnly || typeof b.achievementPoints === 'number').sort(byOwnedFirst)
                     const purchasableBoats = BOATS.filter(b => !b.crateOnly && typeof b.achievementPoints !== 'number').sort(byOwnedFirst)
                     const groupLabel = { fontSize: '0.56rem', color: '#8a8272', letterSpacing: '0.12em', marginTop: 2 } as const
                     const rowStyle: React.CSSProperties = { display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4 }
@@ -2594,8 +2595,9 @@ export default function GearScreen({
                     // Owned first within each group so your bandanas lead the row.
                     const byOwnedFirst = (a: typeof HATS[number], b: typeof HATS[number]) =>
                       Number(unlockedHats.includes(b.id)) - Number(unlockedHats.includes(a.id))
-                    // Earned = crate-only chases (hidden until landed); Purchasable = shop colors.
-                    const earnedHats = HATS.filter(h => h.crateOnly && unlockedHats.includes(h.id)).sort(byOwnedFirst)
+                    // Earned = crate-only chases (shown locked so players see what's out
+                    // there); Purchasable = shop colors.
+                    const earnedHats = HATS.filter(h => h.crateOnly).sort(byOwnedFirst)
                     const purchasableHats = HATS.filter(h => !h.crateOnly && h.cost > 0).sort(byOwnedFirst)
                     const groupLabel = { fontSize: '0.56rem', color: '#8a8272', letterSpacing: '0.12em', marginTop: 2 } as const
                     const rowStyle: React.CSSProperties = { display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4 }
