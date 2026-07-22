@@ -495,8 +495,9 @@ export default function GauntletGame(props: GauntletGameProps) {
 
   // ── Don's Contracts — chance-based "jobs" offered on the way down (Don's
   // only). The offer (3 pre-built stakes) shows on the 'contract' phase; taking
-  // one stores it as the active contract that rides the NEXT fight. See
-  // lib/gauntletContracts. Combat tracking + resolution land in a later pass.
+  // one stores it as the active contract that rides the NEXT fight, then its
+  // combat facts are judged in resolution below (checkContract →
+  // resolveContractOutcome → 'contract_result'). See lib/gauntletContracts.
   const [contractOffer, setContractOffer] = useState<{ kind: ContractKind; offers: ContractOffer[] } | null>(null)
   // The job you took, riding the next fight. The REF is the source of truth read
   // in handleEnemyDefeated (a combat callback — a ref dodges its stale closure);
@@ -5559,6 +5560,7 @@ function GauntletIntroModal({ variant, onClose, firstTime }: { variant?: Gauntle
   const SkullIcon = <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a8 8 0 0 0-8 8c0 4 3 7 7 8 4-1 7-4 7-8a8 8 0 0 0-8-8z" /><circle cx="9" cy="10" r="1.4" fill="#120a12" /><circle cx="15" cy="10" r="1.4" fill="#120a12" /></svg>
   const WaveIcon = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="8.5" /><path d="M7 10.6c1.2-1 2.3-1 3.5 0s2.3 1 3.5 0 2.1-0.9 2.8-0.4" /><path d="M7 14c1.2-1 2.3-1 3.5 0s2.3 1 3.5 0 2.1-0.9 2.8-0.4" /></svg>
   const CrownIcon = <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M3 8l4 3.5L12 5l5 6.5L21 8l-1.8 11H4.8z" /></svg>
+  const ScrollIcon = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3h9a2 2 0 0 1 2 2v13a3 3 0 0 1-3 3H7a2 2 0 0 1-2-2V6" /><path d="M5 6a2 2 0 1 1 4 0v1H5z" /><path d="M9 9h7M9 12.5h7M9 16h4" /></svg>
 
   const davySteps: { color: string; title: string; text: string; icon: React.ReactNode }[] = [
     { color: TEAL, title: 'Descend the Locker', text: 'Fight ship after ship. Each depth hits harder.', icon: ChevIcon },
@@ -5576,6 +5578,7 @@ function GauntletIntroModal({ variant, onClose, firstTime }: { variant?: Gauntle
     { color: '#8b9cff', title: 'Powers and curses', text: 'Between fights you draft a boon for the whole dive. Push deep enough and the dark forces curses on you too.', icon: StarIcon },
     { color: '#b98bff', title: 'Convergences', text: 'The right boons fuse into a synergy — and down in the Don’s water, synergies themselves can converge into something greater still.', icon: CubeIcon },
     { color: GOLD, title: 'The Don descends with you', text: 'He does not wait at the bottom. Meet Don Finleone in the deep, and best him to take his Mark.', icon: CrownIcon },
+    { color: '#e0a34a', title: "The Don's contracts", text: 'On the way down he offers jobs. Take one and clear his terms for a prize — fail it and you pay the price.', icon: ScrollIcon },
     { color: '#f87171', title: 'Cash out or sink', text: 'One pot of doubloons and Nav XP swells with every kill. Bank it whenever you like — go under first and it all sinks with you.', icon: SkullIcon },
     { color: KRAKEN, title: 'Fathoms and darker deals', text: "Every dive pays Fathoms for the Don's own Locker of upgrades — and a shadier market prowls these waters, dealing in things Davy never stocked.", icon: WaveIcon },
   ]
