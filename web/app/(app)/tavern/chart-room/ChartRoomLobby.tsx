@@ -32,10 +32,6 @@ export default function ChartRoomLobby({ holdSolved, holdDoubloonsToday, matchSt
     <div style={{ maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
       <ChartingNav title="Charting" backHref="/tavern" backLabel="Tavern" points={puzzlePoints} />
 
-      <p className="font-karla" style={{ fontSize: '0.8rem', color: '#c2b9a4', lineHeight: 1.55, textAlign: 'center' }}>
-        A quiet corner for steady minds. Four puzzles, fresh every week.
-      </p>
-
       {/* The World Chart — the collectible the puzzles feed toward. */}
       <WorldChartCard points={puzzlePoints} claimed={chartingClaimed} />
 
