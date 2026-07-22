@@ -725,6 +725,8 @@ export default function GearScreen({
   showWaitTimer,
   onToggleShowWaitTimer,
   onClose,
+  autoOpenAppearance = false,
+  onAppearanceAutoOpened,
 }: {
   /** Golden boost % for the zone currently being fished (post-Max-Prestige wipes). */
   zoneGoldenBoostPct?: number
@@ -791,8 +793,22 @@ export default function GearScreen({
   showWaitTimer: boolean
   onToggleShowWaitTimer: (next: boolean) => void
   onClose: () => void
+  /** When true (e.g. arriving via a /fishing?gear=appearance deep link), open
+   *  straight to the Appearance picker on mount. */
+  autoOpenAppearance?: boolean
+  /** Fired once the auto-open has been consumed, so the parent can clear the
+   *  flag and not re-trigger on a later drawer re-open. */
+  onAppearanceAutoOpened?: () => void
 }) {
   const [openSlot, setOpenSlot] = useState<SlotKey | null>(null)
+  // Deep-link (mail CTA): open straight to the Appearance picker, then tell the
+  // parent to drop the flag so re-opening the drawer later doesn't force it again.
+  useEffect(() => {
+    if (!autoOpenAppearance) return
+    setOpenSlot('appearance')
+    onAppearanceAutoOpened?.()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpenAppearance])
   // The modal was doing five jobs in one scroll (gear grid, appearance, badges, the
   // shop link, a heavy stats card, a prefs toggle), which is why it felt overwhelming.
   // Three tabs, each with one job: LOADOUT (what you're using), SHOP (what you can buy),

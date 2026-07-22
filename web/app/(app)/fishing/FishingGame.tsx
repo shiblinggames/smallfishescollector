@@ -3675,6 +3675,21 @@ export default function FishingGame({
   const anyShopAffordable = rodHasAffordable || reelHasAffordable || hookHasAffordable
   const [holdOpen, setHoldOpen]         = useState(false)
   const [gearOpen, setGearOpen]         = useState(false)
+  // Deep-link to the Appearance picker (mail CTA: /fishing?gear=appearance).
+  // GearScreen consumes the flag on open and calls back to clear it.
+  const [gearAutoAppearance, setGearAutoAppearance] = useState(false)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('gear') !== 'appearance') return
+    setGearOpen(true)
+    setGearAutoAppearance(true)
+    // Strip the param so a refresh or later drawer re-open doesn't force it again.
+    params.delete('gear')
+    const qs = params.toString()
+    window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const [baitOpen, setBaitOpen]         = useState(false)
   const [collectionOpen, setCollectionOpen] = useState(false)
   const [uncheckedNewFishIds, setUncheckedNewFishIds] = useState<Set<number>>(new Set())
@@ -9514,6 +9529,8 @@ export default function FishingGame({
               <DrawerClose onClick={() => setGearOpen(false)} />
             </div>
             <GearScreen
+              autoOpenAppearance={gearAutoAppearance}
+              onAppearanceAutoOpened={() => setGearAutoAppearance(false)}
               baitInventory={baitInventory}
               selectedBait={selectedBait}
               onSelectBait={setSelectedBait}
