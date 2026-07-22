@@ -14,7 +14,7 @@ import { fishingColorsToGrant } from '@/lib/characters'
 import { getLineForSpeciesCount } from '@/lib/lines'
 import { getSpecialItem } from '@/lib/specialItems'
 import { getEffectiveDailyChallenges, getTodayUTC, challengeIncrement } from '@/lib/dailyChallenges'
-import { zoneRewardDoubloons, PRESTIGE_MAX } from '@/lib/zoneRewards'
+import { zoneRewardDoubloons, PRESTIGE_MAX, goldenBoostMult } from '@/lib/zoneRewards'
 import { rollFishSize, type FishSizeTier } from '@/lib/fishSize'
 import { rollShiny, SHINY_SELL_MULT } from '@/lib/shiny'
 import { CRATE_PET_CHANCE, rollPet } from '@/lib/pets'
@@ -491,7 +491,7 @@ export async function reelIn(
   }
 
   const [{ data: profile }, { data: holdRows }] = await Promise.all([
-    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, rod_tier, completionist_effects, fish_hold_tier, has_phantom_hook, has_perfected_sigil, equipped_special, line_tier, prestige_levels, ancient_catches, unlocked_character_colors, total_perfects, current_perfect_streak, highest_perfect_streak, force_shiny_next_perfect, force_shiny_always, fishing_renown_alloc, pending_cast').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, rod_tier, completionist_effects, fish_hold_tier, has_phantom_hook, has_perfected_sigil, equipped_special, line_tier, prestige_levels, ancient_catches, unlocked_character_colors, total_perfects, current_perfect_streak, highest_perfect_streak, force_shiny_next_perfect, force_shiny_always, fishing_renown_alloc, pending_cast, zone_golden_boost').eq('id', user.id).single(),
     admin.from('fish_inventory').select('quantity').eq('user_id', user.id),
   ])
 
@@ -631,7 +631,9 @@ export async function reelIn(
   const isPerfect = result === 'perfect'
   const forcedShinyOnce = !!profile.force_shiny_next_perfect && isPerfect
   const forcedShinyAlways = !!profile.force_shiny_always
-  const isShiny = forcedShinyOnce || forcedShinyAlways || rollShiny({ isPerfect, habitat: fish.habitat, sellValue: fish.sell_value ?? 0 })
+  // Golden boost: extra golden odds earned by wiping this zone past Max Prestige.
+  const goldenWipes = ((profile.zone_golden_boost as Record<string, number> | null) ?? {})[fish.habitat] ?? 0
+  const isShiny = forcedShinyOnce || forcedShinyAlways || rollShiny({ isPerfect, habitat: fish.habitat, sellValue: fish.sell_value ?? 0, oddsMult: goldenBoostMult(goldenWipes) })
 
   // Check if new species for bestiary
   const { data: existing } = await admin
@@ -1497,7 +1499,7 @@ export async function claimZoneReward(zone: string): Promise<{ doubloons: number
   return { doubloons: newDoubloons, earned }
 }
 
-export async function prestigeZone(zone: string): Promise<{ prestigeLevel: number; unlockedSkinId?: string } | { error: string }> {
+export async function prestigeZone(zone: string): Promise<{ prestigeLevel: number; goldenBoost?: number; unlockedSkinId?: string } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
@@ -1520,7 +1522,7 @@ export async function prestigeZone(zone: string): Promise<{ prestigeLevel: numbe
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('prestige_levels, zone_shallows_rewarded, zone_open_waters_rewarded, zone_deep_rewarded, zone_abyss_rewarded, unlocked_character_colors')
+    .select('prestige_levels, zone_golden_boost, zone_shallows_rewarded, zone_open_waters_rewarded, zone_deep_rewarded, zone_abyss_rewarded, unlocked_character_colors')
     .eq('id', user.id).single()
   if (!profile) return { error: 'Profile not found' }
   const rewardClaimed: Record<string, boolean | null> = {
@@ -1537,16 +1539,22 @@ export async function prestigeZone(zone: string): Promise<{ prestigeLevel: numbe
   if ((caughtCount ?? 0) < zoneIds.length) return { error: 'Zone not complete' }
 
   const currentLevels = (profile.prestige_levels as Record<string, number> | null) ?? {}
-  // Prestige caps at 5 ("Max Prestige"). Both rewards (doubloons + catch XP)
-  // already stop scaling at P5, so past it is a rewardless treadmill — we hard
-  // stop there instead.
-  if ((currentLevels[zone] ?? 0) >= PRESTIGE_MAX) return { error: 'Already at Max Prestige' }
-  const newLevel = (currentLevels[zone] ?? 0) + 1
+  const curLevel = currentLevels[zone] ?? 0
+  // Prestige caps at 5 ("Max Prestige"). At the cap a wipe no longer raises the
+  // level — instead it grants a permanent GOLDEN BOOST to this zone (higher
+  // golden/shiny odds here). Below the cap it's a normal level-up. Either way
+  // the catch log resets (goldens preserved) and the completion reward re-opens.
+  const atMax = curLevel >= PRESTIGE_MAX
+  const newLevel = atMax ? PRESTIGE_MAX : curLevel + 1
   const newLevels = { ...currentLevels, [zone]: newLevel }
+  const goldenBoosts = (profile.zone_golden_boost as Record<string, number> | null) ?? {}
+  const newGoldenBoost = (goldenBoosts[zone] ?? 0) + (atMax ? 1 : 0)
+  const newGoldenBoosts = atMax ? { ...goldenBoosts, [zone]: newGoldenBoost } : goldenBoosts
 
   // Sand skin: unlock when any zone reaches prestige 3
   let prestigeUnlockedSkin: string | undefined
   const profileUpdate: Record<string, unknown> = { prestige_levels: newLevels, [rewardCol]: false }
+  if (atMax) profileUpdate.zone_golden_boost = newGoldenBoosts
   const maxPrestige = Math.max(...Object.values(newLevels))
   if (maxPrestige >= 3) {
     const currentUnlocked = (profile.unlocked_character_colors as string[] | null) ?? []
@@ -1584,7 +1592,9 @@ export async function prestigeZone(zone: string): Promise<{ prestigeLevel: numbe
     ...(allZonesPrestiged ? [grantBadgeDirect(user.id, 'zone_legend')] : []),
   ])
 
-  return { prestigeLevel: newLevel, unlockedSkinId: prestigeUnlockedSkin }
+  return atMax
+    ? { prestigeLevel: PRESTIGE_MAX, goldenBoost: newGoldenBoost }
+    : { prestigeLevel: newLevel, unlockedSkinId: prestigeUnlockedSkin }
 }
 
 export async function useTideTurnerSkip(): Promise<{ ok: true; skipsLeft: number } | { error: string }> {

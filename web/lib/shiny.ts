@@ -77,12 +77,16 @@ export function rollShiny(opts: {
   isPerfect: boolean
   habitat: string
   sellValue: number
+  /** Golden-boost multiplier on the base odds (post-Max-Prestige wipes).
+   *  Defaults to 1 (unchanged). */
+  oddsMult?: number
 }): boolean {
   if (!opts.isPerfect) return false
   // Trophy fish skip shiny: they're already one-canonical-size mounts
   // and the gold/red 'Ancient' card treatment is the prize there.
   if (opts.sellValue === 0) return false
-  return Math.floor(Math.random() * SHINY_ODDS) === 0
+  // Base prob is 1/SHINY_ODDS; the golden boost scales it up multiplicatively.
+  return Math.random() * SHINY_ODDS < (opts.oddsMult ?? 1)
 }
 
 /** Sell value with the shiny multiplier applied. Pure helper. */

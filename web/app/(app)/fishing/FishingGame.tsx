@@ -30,7 +30,7 @@ import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
 import { gauntletAutoCatchMaxRarity } from '@/lib/gauntletUpgrades'
 import { setFishingMusicMuted, playPerfectSfx, playCastSfx, playCast2Sfx, startDialLoop, stopDialLoop, getFishingSfxMuted, setFishingSfxMuted } from '@/lib/fishingMusic'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
-import { zoneRewardDoubloons, PRESTIGE_MAX } from '@/lib/zoneRewards'
+import { zoneRewardDoubloons, PRESTIGE_MAX, goldenBoostPct } from '@/lib/zoneRewards'
 import { updateCharacterColor, purchaseCharacterColor, persistEarnedSkins, persistEarnedBoats } from '@/app/(app)/u/actions'
 import { equipBadge, unequipBadge } from '@/app/(app)/achievements/badgeActions'
 import { BADGES, BADGE_MAP, BADGE_SLOT_POSITIONS } from '@/lib/badges'
@@ -3315,7 +3315,7 @@ export default function FishingGame({
   selectedZone: initialZone, onBack, activeSession, zoneRewardsClaimed,
   initialDailyChallenge, onDailyChallengeChange,
   hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, gauntletUpgrades, hasPerfectedSigil,
-  initialPrestigeLevels, initialAncientCatches, characterColor, unlockedCharacterColors, newlyUnlockedSkins, newlyUnlockedBoats, equippedBadges, unlockedBadges,
+  initialPrestigeLevels, initialGoldenBoosts, initialAncientCatches, characterColor, unlockedCharacterColors, newlyUnlockedSkins, newlyUnlockedBoats, equippedBadges, unlockedBadges,
   marketMultipliers, isPremium, initialEquippedBoat, initialUnlockedBoats, onBoatStateChange,
   initialEquippedHat, initialUnlockedHats, onHatStateChange,
   initialEquippedPet, initialUnlockedPets, onPetStateChange,
@@ -3377,6 +3377,7 @@ export default function FishingGame({
   gauntletUpgrades: string[]
   hasPerfectedSigil: boolean
   initialPrestigeLevels: Record<string, number>
+  initialGoldenBoosts: Record<string, number>
   initialAncientCatches: number[]
   characterColor: string
   unlockedCharacterColors: string[]
@@ -3719,10 +3720,13 @@ export default function FishingGame({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   const [prestigeLevels, setPrestigeLevels] = useState<Record<string, number>>(initialPrestigeLevels)
+  // Per-zone golden boost (wipes past Max Prestige). Each wipe = +10% golden odds.
+  const [goldenBoosts, setGoldenBoosts] = useState<Record<string, number>>(initialGoldenBoosts)
   const [prestigingZone, setPrestigingZone] = useState<string | null>(null)
   // The prestige ceremony overlay — the stamp-slam moment after a prestige
-  // lands (zone, new level, and any colorway the milestone unlocked).
-  const [prestigeCeremony, setPrestigeCeremony] = useState<{ zone: string; level: number; skin: string | null } | null>(null)
+  // lands. `goldenBoost` set (in place of a level bump) when the wipe was a
+  // past-max golden-boost gain rather than a level-up.
+  const [prestigeCeremony, setPrestigeCeremony] = useState<{ zone: string; level: number; skin: string | null; goldenBoost?: number } | null>(null)
   const [confirmPrestigeZone, setConfirmPrestigeZone] = useState<string | null>(null)
   const [tappedFishId, setTappedFishId] = useState<number | null>(null)
   const [ancientCatches, setAncientCatches] = useState(() => new Set(initialAncientCatches))
@@ -6169,12 +6173,14 @@ export default function FishingGame({
     setPrestigingZone(null)
     if ('error' in result) { setConfirmPrestigeZone(null); return }
     // The ceremony carries the whole moment (incl. any unlocked colorway) —
-    // no separate skin toast on this path.
-    setPrestigeCeremony({ zone, level: result.prestigeLevel, skin: result.unlockedSkinId ?? null })
+    // no separate skin toast on this path. Past max, `goldenBoost` is the new
+    // wipe count and the level stays put — the ceremony crowns the boost instead.
+    setPrestigeCeremony({ zone, level: result.prestigeLevel, skin: result.unlockedSkinId ?? null, goldenBoost: result.goldenBoost })
     const zoneIds = new Set(allFishSpecies.filter(f => f.habitat === zone).map(f => f.id))
     setCaughtFishIds(prev => { const next = new Set(prev); zoneIds.forEach(id => next.delete(id)); return next })
     setClaimedZones(prev => ({ ...prev, [zone]: false }))
     setPrestigeLevels(prev => ({ ...prev, [zone]: result.prestigeLevel }))
+    if (result.goldenBoost !== undefined) setGoldenBoosts(prev => ({ ...prev, [zone]: result.goldenBoost! }))
     setConfirmPrestigeZone(null)
     window.dispatchEvent(new Event('badges-may-have-changed'))
   }
@@ -8399,6 +8405,7 @@ export default function FishingGame({
           <PrestigeCeremonyOverlay
             zone={prestigeCeremony.zone}
             level={prestigeCeremony.level}
+            goldenBoost={prestigeCeremony.goldenBoost}
             skinName={prestigeCeremony.skin ? prestigeCeremony.skin.charAt(0).toUpperCase() + prestigeCeremony.skin.slice(1) : null}
             onDone={() => setPrestigeCeremony(null)}
           />
@@ -8666,6 +8673,11 @@ export default function FishingGame({
                               ))}
                             </div>
                           )}
+                          {(goldenBoosts[zone] ?? 0) > 0 && (
+                            <span className="font-karla font-700" style={{ fontSize: '0.5rem', color: '#f0c040', letterSpacing: '0.06em', textShadow: '0 0 6px rgba(240,192,64,0.5)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                              ✦ +{goldenBoostPct(goldenBoosts[zone] ?? 0)}% GOLD
+                            </span>
+                          )}
                           {newInZone > 0 && (
                             <motion.span
                               animate={{ scale: [1, 1.08, 1] }}
@@ -8775,50 +8787,68 @@ export default function FishingGame({
                     }}>
                       {confirmPrestigeZone === zone ? (
                         <div>
-                          <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.62rem', color: zoneColor, marginBottom: '0.3rem' }}>
+                          <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.62rem', color: (prestigeLevels[zone] ?? 0) >= PRESTIGE_MAX ? '#f0c040' : zoneColor, marginBottom: '0.3rem' }}>
                             Are you sure?
                           </p>
-                          <p className="font-karla font-500" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.7)', marginBottom: '0.55rem', lineHeight: 1.4 }}>
-                            Your {HABITAT_LABEL[zone]} catch log resets (your <span style={{ color: '#f5c451', fontWeight: 700 }}>golden trophies stay</span>), but you&apos;ll permanently earn <span style={{ color: zoneColor, fontWeight: 700 }}>+{((prestigeLevels[zone] ?? 0) + 1) * 10}% XP</span> on every catch here. You can complete the collection again for another full reward.
-                          </p>
+                          {(prestigeLevels[zone] ?? 0) >= PRESTIGE_MAX ? (
+                            <p className="font-karla font-500" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.7)', marginBottom: '0.55rem', lineHeight: 1.4 }}>
+                              Wipe your {HABITAT_LABEL[zone]} catch log (your <span style={{ color: '#f5c451', fontWeight: 700 }}>golden trophies stay</span>) for a permanent <span style={{ color: '#f0c040', fontWeight: 700 }}>+{goldenBoostPct(1)}% golden catch chance</span> here, stacking on your current +{goldenBoostPct(goldenBoosts[zone] ?? 0)}%.
+                            </p>
+                          ) : (
+                            <p className="font-karla font-500" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.7)', marginBottom: '0.55rem', lineHeight: 1.4 }}>
+                              Your {HABITAT_LABEL[zone]} catch log resets (your <span style={{ color: '#f5c451', fontWeight: 700 }}>golden trophies stay</span>), but you&apos;ll permanently earn <span style={{ color: zoneColor, fontWeight: 700 }}>+{((prestigeLevels[zone] ?? 0) + 1) * 10}% XP</span> on every catch here. You can complete the collection again for another full reward.
+                            </p>
+                          )}
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => setConfirmPrestigeZone(null)}
                               className="font-karla font-600 uppercase tracking-[0.1em]"
                               style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', padding: '0.3rem 0.7rem', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 7 }}
                             >Cancel</button>
-                            <button
-                              onClick={() => handlePrestige(zone)}
-                              disabled={prestigingZone === zone}
-                              className="font-karla font-700 uppercase tracking-[0.1em]"
-                              style={{ fontSize: '0.62rem', color: '#fff', padding: '0.3rem 0.9rem', background: zoneColor + 'cc', border: `1px solid ${zoneColor}`, borderRadius: 7, boxShadow: `0 0 10px ${zoneColor}66` }}
-                            >{prestigingZone === zone ? '…' : 'Yes, Prestige!'}</button>
+                            {(() => {
+                              const gold = (prestigeLevels[zone] ?? 0) >= PRESTIGE_MAX
+                              const acc = gold ? '#f0c040' : zoneColor
+                              return (
+                                <button
+                                  onClick={() => handlePrestige(zone)}
+                                  disabled={prestigingZone === zone}
+                                  className="font-karla font-700 uppercase tracking-[0.1em]"
+                                  style={{ fontSize: '0.62rem', color: gold ? '#1a1205' : '#fff', padding: '0.3rem 0.9rem', background: gold ? acc : acc + 'cc', border: `1px solid ${acc}`, borderRadius: 7, boxShadow: `0 0 10px ${acc}66` }}
+                                >{prestigingZone === zone ? '…' : gold ? 'Yes, wipe for gold!' : 'Yes, Prestige!'}</button>
+                              )
+                            })()}
                           </div>
                         </div>
                       ) : (prestigeLevels[zone] ?? 0) >= PRESTIGE_MAX ? (
-                        // MAX PRESTIGE — the earned finish line. A crown of five
-                        // gold stars over a prismatic banner; no more to grind.
-                        <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 10, padding: '0.65rem 0.6rem 0.7rem', textAlign: 'center', background: 'linear-gradient(160deg, rgba(240,192,64,0.16), rgba(240,192,64,0.04))', border: '1px solid rgba(240,192,64,0.45)' }}>
-                          <motion.div aria-hidden
-                            animate={{ opacity: [0.3, 0.7, 0.3], scale: [1, 1.05, 1] }}
-                            transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
-                            style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 0%, rgba(240,192,64,0.28), transparent 70%)', pointerEvents: 'none' }} />
-                          <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', gap: 4, marginBottom: 5 }}>
+                        // MAX PRESTIGE — mastered. Further wipes no longer level up;
+                        // each buys a permanent GOLDEN BOOST (higher golden odds
+                        // here), the evergreen post-max chase.
+                        <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 10, padding: '0.6rem 0.6rem 0.65rem', textAlign: 'center', background: 'linear-gradient(160deg, rgba(240,192,64,0.16), rgba(240,192,64,0.04))', border: '1px solid rgba(240,192,64,0.45)' }}>
+                          <motion.div aria-hidden animate={{ opacity: [0.3, 0.7, 0.3] }} transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
+                            style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 0%, rgba(240,192,64,0.26), transparent 70%)', pointerEvents: 'none' }} />
+                          <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', gap: 4, marginBottom: 4 }}>
                             {Array.from({ length: PRESTIGE_MAX }).map((_, i) => (
-                              <motion.svg key={i} width="17" height="17" viewBox="0 0 24 24" fill="#f0c040"
-                                initial={{ scale: 0, rotate: -30 }} animate={{ scale: 1, rotate: 0 }}
-                                transition={{ delay: 0.05 * i, type: 'spring', stiffness: 320, damping: 14 }}
-                                style={{ filter: 'drop-shadow(0 0 6px #f0c040dd)', flexShrink: 0 }}>
+                              <svg key={i} width="15" height="15" viewBox="0 0 24 24" fill="#f0c040" style={{ filter: 'drop-shadow(0 0 5px #f0c040cc)', flexShrink: 0 }}>
                                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                              </motion.svg>
+                              </svg>
                             ))}
                           </div>
-                          <p className="font-cinzel font-800 uppercase" style={{ position: 'relative', fontSize: '0.82rem', letterSpacing: '0.18em', backgroundImage: 'linear-gradient(90deg,#fff2c8,#f0c040,#ffe9a8,#f0c040)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', textShadow: '0 0 14px rgba(240,192,64,0.35)' }}>
+                          <p className="font-cinzel font-800 uppercase" style={{ position: 'relative', fontSize: '0.78rem', letterSpacing: '0.16em', backgroundImage: 'linear-gradient(90deg,#fff2c8,#f0c040,#ffe9a8,#f0c040)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>
                             Max Prestige
                           </p>
-                          <p className="font-karla font-500" style={{ position: 'relative', fontSize: '0.64rem', color: 'rgba(255,235,190,0.72)', marginTop: 3, lineHeight: 1.35 }}>
-                            You&apos;ve mastered the {HABITAT_LABEL[zone]}. +50% catch XP, locked in for good.
+                          {(goldenBoosts[zone] ?? 0) > 0 && (
+                            <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ position: 'relative', fontSize: '0.6rem', color: '#f0c040', marginTop: 4 }}>
+                              ✦ Golden Boost +{goldenBoostPct(goldenBoosts[zone] ?? 0)}%
+                            </p>
+                          )}
+                          <p className="font-karla font-500" style={{ position: 'relative', fontSize: '0.62rem', color: 'rgba(255,235,190,0.7)', marginTop: 4, marginBottom: '0.5rem', lineHeight: 1.35 }}>
+                            Wipe again for a permanent <span style={{ color: '#f0c040', fontWeight: 700 }}>+{goldenBoostPct(1)}%</span> golden catch chance here.
                           </p>
+                          <button
+                            onClick={e => { e.stopPropagation(); setConfirmPrestigeZone(zone) }}
+                            className="font-karla font-700 uppercase tracking-[0.12em] w-full"
+                            style={{ position: 'relative', fontSize: '0.66rem', color: '#1a1205', padding: '0.42rem 1rem', background: 'linear-gradient(135deg,#ffe08a,#f0c040)', border: '1px solid #f0c040', borderRadius: 8, boxShadow: '0 0 14px rgba(240,192,64,0.4), inset 0 1px 0 rgba(255,255,255,0.3)' }}
+                          >✦ Wipe for +{goldenBoostPct(1)}% Golden</button>
                         </div>
                       ) : (
                         <div>
@@ -9655,6 +9685,7 @@ export default function FishingGame({
               gauntletDeepest={gauntletDeepest}
               hasPerfectedSigil={hasPerfectedSigil}
               fishingLevel={fishingLevel}
+              zoneGoldenBoostPct={goldenBoostPct(goldenBoosts[initialZone] ?? 0)}
               isPremium={isPremium}
               equippedSpecial={equippedSpecial}
               onEquipSpecial={async (itemId) => {
@@ -11471,23 +11502,28 @@ export default function FishingGame({
 // confirm dialog fizzle. The zone-colored ink stamp slams in (haptic lands
 // with it), the stars count the new level, and the promise is spelled out.
 // Tap anywhere or the button to go back to the water.
-function PrestigeCeremonyOverlay({ zone, level, skinName, onDone }: {
+function PrestigeCeremonyOverlay({ zone, level, goldenBoost, skinName, onDone }: {
   zone: string
   level: number
+  /** New golden-boost wipe count when this was a past-max wipe (level unchanged). */
+  goldenBoost?: number
   skinName: string | null
   onDone: () => void
 }) {
   const zColor = HABITAT_COLOR[zone] ?? '#f0c040'
   const label = HABITAT_LABEL[zone] ?? zone
-  // Hitting the cap is THE moment — a gold/prismatic crowning, distinct from a
-  // regular prestige, so it feels like a real mastery you earned.
-  const isMax = level >= PRESTIGE_MAX
-  const color = isMax ? '#f0c040' : zColor
+  // Three flavors: a normal level-up, hitting the cap (Max Prestige), and a
+  // past-max GOLDEN BOOST wipe. The latter two get the gold/prismatic crowning
+  // so they feel like real, earned milestones.
+  const isGolden = goldenBoost !== undefined
+  const isMax = !isGolden && level >= PRESTIGE_MAX
+  const grand = isMax || isGolden
+  const color = grand ? '#f0c040' : zColor
   useEffect(() => {
-    // A bigger, celebratory buzz when you top out the zone for good.
-    const t = setTimeout(() => vibrate(isMax ? [0, 70, 45, 70, 45, 160] : [0, 60, 50, 110]), 300)
+    // A bigger, celebratory buzz on the gold moments.
+    const t = setTimeout(() => vibrate(grand ? [0, 70, 45, 70, 45, 160] : [0, 60, 50, 110]), 300)
     return () => clearTimeout(t)
-  }, [isMax])
+  }, [grand])
   return (
     <motion.div key="prestige-ceremony"
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -11498,17 +11534,17 @@ function PrestigeCeremonyOverlay({ zone, level, skinName, onDone }: {
       }}
       onClick={onDone}
     >
-      {/* rising flecks — more, and gold, on a Max Prestige. */}
-      {Array.from({ length: isMax ? 26 : 14 }).map((_, i) => (
+      {/* rising flecks — more, and gold, on the crowning moments. */}
+      {Array.from({ length: grand ? 26 : 14 }).map((_, i) => (
         <motion.div key={i} aria-hidden
           initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: [0, 1, 0], y: isMax ? -140 : -90, x: (i % 2 ? 1 : -1) * (6 + (i * 5) % 40) }}
+          animate={{ opacity: [0, 1, 0], y: grand ? -140 : -90, x: (i % 2 ? 1 : -1) * (6 + (i * 5) % 40) }}
           transition={{ duration: 2.4 + (i % 3) * 0.5, delay: (i * 0.13) % 1.7, repeat: Infinity, ease: 'easeOut' }}
           style={{ position: 'absolute', left: `${(i * 29) % 100}%`, bottom: '14%', width: 4, height: 4, borderRadius: '50%', background: color, boxShadow: `0 0 8px ${color}` }} />
       ))}
       <div onClick={e => e.stopPropagation()} style={{ position: 'relative', textAlign: 'center', maxWidth: 320, width: '100%' }}>
         <p className="font-karla font-700 uppercase tracking-[0.24em]" style={{ fontSize: '0.56rem', color: `${color}cc`, marginBottom: 14 }}>
-          {isMax ? `${label} · Mastered` : label}
+          {isGolden ? `${label} · Golden Boost` : isMax ? `${label} · Mastered` : label}
         </p>
         {/* the ink stamp slams in */}
         <motion.div
@@ -11519,32 +11555,40 @@ function PrestigeCeremonyOverlay({ zone, level, skinName, onDone }: {
           style={{
             display: 'inline-block', padding: '0.55rem 1.15rem',
             border: `3px double ${color}`, borderRadius: 8,
-            fontSize: isMax ? '1.5rem' : '1.7rem', letterSpacing: '0.12em', lineHeight: 1,
+            fontSize: grand ? '1.5rem' : '1.7rem', letterSpacing: '0.12em', lineHeight: 1,
             textShadow: `0 0 22px ${color}66`, boxShadow: `0 0 34px ${color}2e, inset 0 0 18px ${color}18`,
-            ...(isMax
+            ...(grand
               ? { backgroundImage: 'linear-gradient(90deg,#fff2c8,#f0c040,#ffe9a8,#f0c040)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }
               : { color }),
           }}
         >
-          {isMax ? 'Max Prestige' : `Prestige ${level}`}
+          {isGolden ? 'Golden Boost' : isMax ? 'Max Prestige' : `Prestige ${level}`}
         </motion.div>
         <div style={{ display: 'flex', justifyContent: 'center', gap: 5, marginTop: 16 }}>
           {Array.from({ length: level }).map((_, i) => (
-            <motion.svg key={i} width={isMax ? 18 : 15} height={isMax ? 18 : 15} viewBox="0 0 24 24" fill={color}
+            <motion.svg key={i} width={grand ? 18 : 15} height={grand ? 18 : 15} viewBox="0 0 24 24" fill={color}
               initial={{ opacity: 0, scale: 0.3, y: 6 }} animate={{ opacity: 1, scale: 1, y: 0 }}
               transition={{ delay: 0.55 + i * 0.12, type: 'spring', stiffness: 420, damping: 18 }}
-              style={{ filter: `drop-shadow(0 0 ${isMax ? 7 : 5}px ${color})` }}>
+              style={{ filter: `drop-shadow(0 0 ${grand ? 7 : 5}px ${color})` }}>
               <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
             </motion.svg>
           ))}
         </div>
+        {isGolden && (
+          <motion.p initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.5, type: 'spring', stiffness: 300, damping: 15 }}
+            className="font-cinzel font-800" style={{ fontSize: '2.1rem', marginTop: 14, lineHeight: 1, backgroundImage: 'linear-gradient(90deg,#fff2c8,#f0c040,#ffe9a8)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', textShadow: '0 0 22px rgba(240,192,64,0.4)' }}>
+            +{goldenBoostPct(goldenBoost)}% Golden
+          </motion.p>
+        )}
         <motion.p initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}
           className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f5f2ec', marginTop: 16 }}>
-          {isMax ? `You've mastered the ${label}` : `+${level * 10}% XP on every ${label} catch, forever`}
+          {isGolden ? `Golden catches come easier in the ${label}` : isMax ? `You've mastered the ${label}` : `+${level * 10}% XP on every ${label} catch, forever`}
         </motion.p>
         <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9 }}
           className="font-karla" style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.5, marginTop: 8, fontStyle: 'italic' }}>
-          {isMax
+          {isGolden
+            ? 'Every wipe gilds these waters a little more. Keep going for richer golden odds — there is no ceiling.'
+            : isMax
             ? '+50% catch XP, locked in for good. Few captains ever fish these waters dry five times over.'
             : 'The log begins anew. Every fish in these waters is waiting to be caught again.'}
         </motion.p>
@@ -11558,7 +11602,7 @@ function PrestigeCeremonyOverlay({ zone, level, skinName, onDone }: {
           type="button" onClick={onDone}
           className="font-cinzel font-700 uppercase tracking-[0.14em] tap"
           style={{ marginTop: 20, width: '100%', padding: '12px 0', borderRadius: 12, fontSize: '0.76rem', color: '#0c0f14', background: `linear-gradient(180deg, ${color}, ${color}cc)`, border: 'none', cursor: 'pointer', boxShadow: `0 0 22px ${color}55` }}>
-          {isMax ? 'Wear it with pride' : 'Back to the water'}
+          {isGolden ? 'Back to the gold' : isMax ? 'Wear it with pride' : 'Back to the water'}
         </motion.button>
       </div>
     </motion.div>

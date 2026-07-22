@@ -54,7 +54,7 @@ export default function FishingPageClient({
   initialDoubloons, initialGems, initialFathoms, initialFishingXP, initialBait, initialLastUsedBait, initialInventory, uniqueSpeciesCaught, zoneStats, ancientDeepUnlocked,
   fishHoldTier, ownedRods, initialCompletionistEffects, initialHasForgedBefore, allFishSpecies, caughtFishIds, mountedFishIds, initialPersonalBests, initialCatchCounts, initialHighestPerfectStreak, initialPerfectStreak,
   hasSeenFishingTour, hasSeenFishingCatchTour, hasSeenFirstCatchCelebration, initialShowWaitTimer, activeSession, username, zoneRewardsClaimed,
-  initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, gauntletUpgrades, hasPerfectedSigil, prestigeLevels, ancientCatches, characterColor, unlockedCharacterColors, newlyUnlockedSkins, equippedBadges, unlockedBadges, marketMultipliers, isPremium, equippedBoat, unlockedBoats, newlyUnlockedBoats, equippedHat, unlockedHats, equippedPet, unlockedPets,
+  initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, gauntletUpgrades, hasPerfectedSigil, prestigeLevels, goldenBoosts, ancientCatches, characterColor, unlockedCharacterColors, newlyUnlockedSkins, equippedBadges, unlockedBadges, marketMultipliers, isPremium, equippedBoat, unlockedBoats, newlyUnlockedBoats, equippedHat, unlockedHats, equippedPet, unlockedPets,
   initialFinnEncounters, initialFinnWins, initialFinnSeenBeats, initialFinnRevealed, initialFinnLastOutcome,
   initialFishingRenownAlloc, seenFishingRenownIntro,
 }: {
@@ -101,6 +101,7 @@ export default function FishingPageClient({
   gauntletUpgrades: string[]
   hasPerfectedSigil: boolean
   prestigeLevels: Record<string, number>
+  goldenBoosts: Record<string, number>
   ancientCatches: number[]
   characterColor: string
   unlockedCharacterColors: string[]
@@ -255,6 +256,7 @@ export default function FishingPageClient({
         zoneStats={zoneStats}
         zoneCollection={zoneCollection}
         prestigeLevels={prestigeLevels}
+        goldenBoosts={goldenBoosts}
         ancientDeepUnlocked={ancientDeepUnlocked}
         onSelect={selectZone}
         currentZone={currentZone}
@@ -315,6 +317,7 @@ export default function FishingPageClient({
       gauntletUpgrades={gauntletUpgrades}
       hasPerfectedSigil={hasPerfectedSigil}
       initialPrestigeLevels={prestigeLevels}
+      initialGoldenBoosts={goldenBoosts}
       initialAncientCatches={ancientCatches}
       characterColor={characterColor}
       unlockedCharacterColors={unlockedCharacterColors}

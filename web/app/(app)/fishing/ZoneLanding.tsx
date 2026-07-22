@@ -6,7 +6,7 @@ import { ZONE_MIN_LEVEL } from './zoneData'
 import { updateUsername } from '@/app/(app)/u/actions'
 import LeaderboardModal from '@/components/LeaderboardModal'
 import FisherPose from '@/components/FisherPose'
-import { PRESTIGE_MAX } from '@/lib/zoneRewards'
+import { PRESTIGE_MAX, goldenBoostPct } from '@/lib/zoneRewards'
 
 const AUTO_NAME_RE = /^crew_[0-9a-f]{5}$/
 const DISMISSED_KEY = 'sf_username_prompt_dismissed'
@@ -150,7 +150,7 @@ const HOW_IT_WORKS = [
 ]
 
 export default function ZoneLanding({
-  fishingLevel, fishingXP, username, zoneStats, zoneCollection, prestigeLevels, ancientDeepUnlocked, onSelect,
+  fishingLevel, fishingXP, username, zoneStats, zoneCollection, prestigeLevels, goldenBoosts, ancientDeepUnlocked, onSelect,
   currentZone, characterColor, equippedHat, equippedBoat, equippedPet, rodTier, reelTier, hookTier,
 }: {
   fishingLevel: number
@@ -160,6 +160,8 @@ export default function ZoneLanding({
   /** Species caught vs zone total (this prestige cycle), every zone alike. */
   zoneCollection: Record<string, { caught: number; total: number }>
   prestigeLevels: Record<string, number>
+  /** Per-zone golden boost (wipes past Max Prestige) — +10% golden odds each. */
+  goldenBoosts: Record<string, number>
   /** Ancient Deep is gated on Fishing 75 AND clearing Chapter 3 (or grandfathered). */
   ancientDeepUnlocked: boolean
   onSelect: (zone: ZoneKey) => void
@@ -370,6 +372,11 @@ export default function ZoneLanding({
                               {colDone ? '✦ all charted' : `${col.caught} of ${col.total} logged`}
                             </span>
                             {prestige > 0 && <PrestigeMark level={prestige} />}
+                            {(goldenBoosts[zone] ?? 0) > 0 && (
+                              <span className="font-karla font-800" style={{ flexShrink: 0, fontSize: '0.6rem', color: '#f0c040', letterSpacing: '0.04em', whiteSpace: 'nowrap', textShadow: '0 0 6px rgba(240,192,64,0.5)' }}>
+                                ✦ +{goldenBoostPct(goldenBoosts[zone] ?? 0)}% Gold
+                              </span>
+                            )}
                           </div>
                           <button
                             onClick={(e) => { e.stopPropagation(); setDetailsFor(d => (d === zone ? null : zone)) }}

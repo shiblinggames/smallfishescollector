@@ -720,11 +720,14 @@ export default function GearScreen({
   hasTideTurner, tideTurnerSkipsLeft, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, hasPerfectedSigil,
   equippedSpecial, onEquipSpecial, onBuySpecialItem,
   fishingLevel,
+  zoneGoldenBoostPct = 0,
   isPremium,
   showWaitTimer,
   onToggleShowWaitTimer,
   onClose,
 }: {
+  /** Golden boost % for the zone currently being fished (post-Max-Prestige wipes). */
+  zoneGoldenBoostPct?: number
   baitInventory: BaitItem[]
   selectedBait: string
   onSelectBait: (type: string) => void
@@ -1158,6 +1161,13 @@ export default function GearScreen({
             color={reel.color}
             muted={dragPct === 0}
           />
+          {zoneGoldenBoostPct > 0 && (
+            <StatCell
+              label="Golden Boost"
+              value={`+${zoneGoldenBoostPct}%`}
+              color="#f0c040"
+            />
+          )}
           <StatCell
             label="Snag Zone"
             value={snagRedPct > 0 ? `−${snagRedPct}%` : 'Normal'}
