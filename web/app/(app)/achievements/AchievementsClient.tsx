@@ -65,9 +65,11 @@ export default function AchievementsClient({ groups }: Props) {
   const [tierFilter, setTierFilter] = useState<Filter>('all')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [detailGoal, setDetailGoal] = useState<JourneyGoal | null>(null)
-  // Category sections start expanded; players can collapse ones they've cleared
-  // (or use Collapse all) to shorten the board.
-  const [openGroups, setOpenGroups] = useState<Set<string>>(() => new Set(groups.map(g => g.title)))
+  // Category sections start COLLAPSED so the board mounts as a scannable index
+  // (each header still shows its N/total progress) instead of rendering all ~170
+  // goal rows at once. Players tap a section, or use "Expand all", to open them.
+  // An active filter force-expands matching goals (see `expanded` below).
+  const [openGroups, setOpenGroups] = useState<Set<string>>(() => new Set())
   const [, startTransition] = useTransition()
   const [mounted, setMounted] = useState(false)
   useEffect(() => { setMounted(true) }, [])
