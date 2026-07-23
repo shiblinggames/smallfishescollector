@@ -4,13 +4,22 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
 
+// The practice skirmish is a fixed tutorial: its enemies grant at most 45 XP /
+// 35 gold per kill. Clamp each call to a hair above that so this endpoint — which
+// never server-checks the "one-shot" flag its comment relies on, and so is
+// infinitely replayable — can only ever hand out tutorial-scale scraps.
+const PRACTICE_GRANT_MAX = 100
+
 export async function awardPracticeKill(
-  xp: number,
-  doubloons: number,
+  xpIn: number,
+  doubloonsIn: number,
 ): Promise<{ newExpeditionXP: number; newDoubloonTotal: number; crewXP: CrewXPGrant[] }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { newExpeditionXP: 0, newDoubloonTotal: 0, crewXP: [] }
+
+  const xp        = Math.max(0, Math.min(Math.floor(Number(xpIn)        || 0), PRACTICE_GRANT_MAX))
+  const doubloons = Math.max(0, Math.min(Math.floor(Number(doubloonsIn) || 0), PRACTICE_GRANT_MAX))
 
   const admin = createAdminClient()
   const { data: profile } = await admin

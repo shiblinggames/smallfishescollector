@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { EXPEDITION_SHIP_STATS, raidRepairCost, raidItemSlotsForTier, type RaidMods } from '@/lib/expeditions'
+import { EXPEDITION_SHIP_STATS, raidRepairCost, raidItemSlotsForTier, raidDamageProfile, type RaidMods } from '@/lib/expeditions'
 import { getLevelFromXP, navLevelBonuses } from '@/lib/expeditionLevel'
 import { loadDeployedParty } from '@/lib/crewData'
 import { resolveDeployedCrew } from '@/lib/crewResolve'
@@ -346,7 +346,26 @@ export async function recordRaidHit(dmg: number): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
   const admin = createAdminClient()
-  await admin.rpc('bump_raid_damage', { uid: user.id, dmg: Math.floor(dmg) })
+  const hit = Math.floor(dmg)
+
+  // Cheap backstop first: only a NEW personal best does any work (bump_raid_damage
+  // is a greatest() no-op otherwise), so legit hits never pay for the stats read.
+  const { data: prof } = await admin.from('profiles').select('highest_raid_damage').eq('id', user.id).single()
+  if (hit <= Number(prof?.highest_raid_damage ?? 0)) return
+
+  // "Biggest Hit" is client-reported (combat is client-side), so cap it to what
+  // THIS player's loadout could actually crit for. Recompute the real damage
+  // profile server-side and allow generous headroom for barrage sub-hits, mid-raid
+  // tide/affix damage buffs, and Fallout burn — a legit spike is never shaved, but
+  // a forged 300k on a build that tops out in the low thousands gets clamped. Badge
+  // gates top out at 500, well under any real raider's ceiling.
+  const stats = await getRaidPlayerStats(user.id)
+  const { critMax } = raidDamageProfile(stats.totalPower, stats.shipMinDamage, stats.raidMods?.damagePct ?? 0)
+  let ceiling = critMax * (stats.classDamageMult || 1)
+  if (stats.manowarAugment) ceiling *= stats.manowarAugment.megaMult
+  const cap = Math.max(500, Math.ceil(ceiling * 3))
+
+  await admin.rpc('bump_raid_damage', { uid: user.id, dmg: Math.min(hit, cap) })
 }
 
 export async function claimRaidLoot(

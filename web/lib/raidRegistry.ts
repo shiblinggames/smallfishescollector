@@ -52,6 +52,31 @@ export function raidLootIds(raidId: string): Set<string> {
  *  legitimate claim, while stopping anyone from simply asking for a billion. */
 export const MAX_CRATE_BASE_DOUBLOONS = 3000
 
+/** The most XP / gold a SINGLE kill-grant call can honestly be worth, used to
+ *  clamp what awardRaidKill / awardPracticeKill accept from the client. Raid
+ *  combat is client-side, so those endpoints are plain POSTs that trusted the
+ *  reported amount — a forged call could hand out any number (that's how a
+ *  cheater maxed five crew at ~750k XP each in one sitting).
+ *
+ *  A single legit call is at most a boss kill plus the 25% full-clear bonus, and
+ *  the bonus is 25% of the run's TOTAL kill XP, so no honest call can exceed the
+ *  whole run's kill total by much. We take the biggest run total across every
+ *  raid and add generous headroom for the bonus + any future captain multipliers.
+ *  Derived from the configs so it rises automatically when a bigger raid ships. */
+let _maxKillGrant: { xp: number; gold: number } | null = null
+export function maxLegitKillGrant(): { xp: number; gold: number } {
+  if (_maxKillGrant) return _maxKillGrant
+  let xp = 0, gold = 0
+  for (const r of ALL_RAIDS) {
+    let rx = 0, rg = 0
+    for (const k of Object.values(r.killRewards ?? {})) { rx += k.xp; rg += k.gold }
+    if (rx > xp) xp = rx
+    if (rg > gold) gold = rg
+  }
+  _maxKillGrant = { xp: Math.ceil(xp * 1.5), gold: Math.ceil(gold * 1.5) }
+  return _maxKillGrant
+}
+
 // ── WHAT EACH LOOT ID ACTUALLY GRANTS ────────────────────────────────────────
 // This used to live inside app/(app)/raids/actions.ts, which is a 'use server'
 // module. Non-async exports get STRIPPED out of those, so it could not be exported,

@@ -5,14 +5,23 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { navRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
+import { maxLegitKillGrant } from '@/lib/raidRegistry'
 
 export async function awardRaidKill(
-  xp: number,
-  doubloons: number,
+  xpIn: number,
+  doubloonsIn: number,
 ): Promise<{ newExpeditionXP: number; newDoubloonTotal: number; crewXP: CrewXPGrant[] }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { newExpeditionXP: 0, newDoubloonTotal: 0, crewXP: [] }
+
+  // Combat is client-side, so xp/doubloons arrive as hostile input. Clamp each to
+  // the most a single honest kill-grant can be worth (boss kill + full-clear
+  // bonus, headroom included) — a forged 750k call becomes one kill's worth. This
+  // is what stopped the crew-XP inflation exploit.
+  const cap = maxLegitKillGrant()
+  const xp        = Math.max(0, Math.min(Math.floor(Number(xpIn)        || 0), cap.xp))
+  const doubloons = Math.max(0, Math.min(Math.floor(Number(doubloonsIn) || 0), cap.gold))
 
   const admin = createAdminClient()
   const { data: profile } = await admin
