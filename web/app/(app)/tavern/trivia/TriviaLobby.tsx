@@ -18,16 +18,16 @@ export interface KingChip {
   doubloonsAwarded: number
 }
 
-export default function TriviaLobby({ doubloons, boardPlayedToday, boardPlayedThisWeek, doubloonsThisWeek, king, parlorStreak, parlorBestStreak }: {
+export default function TriviaLobby({ doubloons, boardPlayedToday, boardPlayedThisWeek, doubloonsThisWeek, king, parlorStreak, parlorPoints }: {
   doubloons: number
   boardPlayedToday: boolean
   boardPlayedThisWeek: number
   doubloonsThisWeek: number
   king: KingChip | null
   parlorStreak: number
-  parlorBestStreak: number
+  parlorPoints: number
 }) {
-  const { rank, next } = parlorRank(parlorBestStreak)
+  const { rank, next } = parlorRank(parlorPoints)
   const kingChipText = king === null ? null
     : king.status === 'crowned' ? `Crowned · +${king.doubloonsAwarded} ⟡`
     : king.status === 'walked' ? `Walked · +${king.doubloonsAwarded} ⟡`
@@ -65,7 +65,7 @@ export default function TriviaLobby({ doubloons, boardPlayedToday, boardPlayedTh
           <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.16em', color: '#a8a090' }}>Parlor Standing</p>
           <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: rank.color, lineHeight: 1.1, marginTop: 2, textShadow: `0 0 12px ${rank.color}66` }}>{rank.title}</p>
           <p className="font-karla" style={{ fontSize: '0.62rem', color: '#c2b9a4', marginTop: 3 }}>
-            Best streak {parlorBestStreak}{next ? <> · next: <span style={{ color: next.color }}>{next.title}</span> at {next.at} → <span style={{ color: '#c084fc' }}>+{next.gems} ◆</span></> : ' · top rank, all gems earned'}
+            {parlorPoints.toLocaleString()} pts{next ? <> · next: <span style={{ color: next.color }}>{next.title}</span> at {next.at} → <span style={{ color: '#c084fc' }}>+{next.gems} ◆</span></> : ' · top rank, all gems earned'}
           </p>
         </div>
         {parlorStreak > 0 && (

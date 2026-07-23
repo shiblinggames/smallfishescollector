@@ -47,7 +47,7 @@ export default async function TriviaPage() {
           doubloonsThisWeek={attempt?.doubloons_awarded ?? 0}
           king={king}
           parlorStreak={(profile?.parlor_streak as number | null) ?? 0}
-          parlorBestStreak={(profile?.parlor_best_streak as number | null) ?? 0}
+          parlorPoints={(profile?.parlor_points as number | null) ?? 0}
         />
       </div>
     </main>

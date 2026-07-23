@@ -20,6 +20,7 @@ import {
   categoryMeta,
   kingWeekStr,
   rankGemsTotalFor,
+  boardCardPoints,
   type CaptainsBoardState,
   type BoardTileClient,
   type AnswerTileResult,
@@ -207,7 +208,7 @@ export async function answerCaptainsTile(
   const [board, { data: attempt }, { data: profile }] = await Promise.all([
     getThisWeeksBoard(),
     admin.from('trivia_board_attempts').select(ATTEMPT_COLS).eq('user_id', user.id).eq('date', week).single(),
-    admin.from('profiles').select('doubloons, gems, parlor_streak, parlor_best_streak, parlor_rank_gems_awarded').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, gems, parlor_streak, parlor_best_streak, parlor_rank_gems_awarded, parlor_points').eq('id', user.id).single(),
   ])
   if (!board) return { error: 'No board available' }
 
@@ -236,11 +237,17 @@ export async function answerCaptainsTile(
   const brokeStreak = correct ? 0 : prevStreak
   const bestStreak = Math.max(prevBest, currentStreak)
 
-  // Gems flow from RANK-UPS now (escalating, one-time, like charting's landmarks).
-  // Pay the delta owed for every rank this new best streak has reached, gated by
+  // Parlor POINTS drive the rank (accumulate, never reset). A correct card scores
+  // its tier; a miss scores nothing (no penalty).
+  const prevPoints = (profile?.parlor_points as number | null) ?? 0
+  const pointsEarned = correct ? boardCardPoints(tile.tier) : 0
+  const newPoints = prevPoints + pointsEarned
+
+  // Gems flow from RANK-UPS (escalating, one-time, charting-style). Pay the delta
+  // owed for every rank the new point total has reached, gated by
   // parlor_rank_gems_awarded so each rank pays exactly once — ever.
   const prevRankGems = (profile?.parlor_rank_gems_awarded as number | null) ?? 0
-  const rankGemsTotal = rankGemsTotalFor(bestStreak)
+  const rankGemsTotal = rankGemsTotalFor(newPoints)
   const gemsWon = Math.max(0, rankGemsTotal - prevRankGems)
   const newGems = gemsWon > 0 ? (profile?.gems ?? 0) + gemsWon : null
 
@@ -260,6 +267,7 @@ export async function answerCaptainsTile(
     parlor_streak: currentStreak,
     parlor_best_streak: bestStreak,
     parlor_rank_gems_awarded: rankGemsTotal,
+    parlor_points: newPoints,
   }
   if (newDoubloons !== null) profilePatch.doubloons = newDoubloons
   if (newGems !== null) profilePatch.gems = newGems
@@ -290,5 +298,7 @@ export async function answerCaptainsTile(
     currentStreak,
     brokeStreak,
     bestStreak,
+    pointsEarned,
+    newPoints,
   }
 }

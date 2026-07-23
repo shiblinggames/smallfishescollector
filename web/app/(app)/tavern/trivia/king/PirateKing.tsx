@@ -376,9 +376,9 @@ export default function PirateKing({ initial, doubloons }: { initial: PirateKing
               {/* The host reacts to the answer + your Parlor streak. */}
               <div style={{ marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
                 <ParlorHost size={46} line={parlorHostReaction(result.correct, result.currentStreak, result.brokeStreak)} />
-                {result.currentStreak >= 2 && (
+                {result.pointsEarned > 0 && (
                   <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.1em', color: PARLOR.brass, textAlign: 'center', marginTop: 8 }}>
-                    {result.currentStreak} in a row{result.currentStreak >= 4 ? ' · on a heater' : ''}
+                    +{result.pointsEarned} pts toward your rank{result.currentStreak >= 4 ? ' · on a heater' : ''}
                   </p>
                 )}
                 {result.gemsWon > 0 && (

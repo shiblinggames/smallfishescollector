@@ -16,6 +16,8 @@ import {
   PIRATE_KING_PRIZES,
   PIRATE_KING_RUNGS,
   rankGemsTotalFor,
+  KING_RUNG_POINTS,
+  KING_CROWN_POINTS,
   kingHavenValue,
   kingWeekStr,
   type PirateKingState,
@@ -115,7 +117,7 @@ export async function answerKingRung(
       .select(ATTEMPT_COLS)
       .eq('user_id', user.id).eq('date', week)
       .single(),
-    admin.from('profiles').select('parlor_streak, parlor_best_streak, parlor_rank_gems_awarded').eq('id', user.id).single(),
+    admin.from('profiles').select('parlor_streak, parlor_best_streak, parlor_rank_gems_awarded, parlor_points').eq('id', user.id).single(),
   ])
   if (!ladder) return { error: 'No ladder available' }
 
@@ -154,8 +156,14 @@ export async function answerKingRung(
   const currentStreak = correct ? prevStreak + 1 : 0
   const brokeStreak = correct ? 0 : prevStreak
   const bestStreak = Math.max(prevBest, currentStreak)
+  // Parlor POINTS drive the rank (accumulate, never reset): each correct rung
+  // scores, and crowning the ladder adds a bonus. A wrong answer scores nothing.
+  const prevPoints = (prof?.parlor_points as number | null) ?? 0
+  const pointsEarned = correct ? KING_RUNG_POINTS + (status === 'crowned' ? KING_CROWN_POINTS : 0) : 0
+  const newPoints = prevPoints + pointsEarned
+
   const prevRankGems = (prof?.parlor_rank_gems_awarded as number | null) ?? 0
-  const rankGemsTotal = rankGemsTotalFor(bestStreak)
+  const rankGemsTotal = rankGemsTotalFor(newPoints)
   const gemsWon = Math.max(0, rankGemsTotal - prevRankGems)
 
   await admin.from('trivia_ladder_attempts').upsert({
@@ -177,7 +185,7 @@ export async function answerKingRung(
   const newGems = gemsWon > 0 ? await payGems(user.id, gemsWon) : null
 
   // Persist the shared streak + cumulative rank gems (column-only write).
-  await admin.from('profiles').update({ parlor_streak: currentStreak, parlor_best_streak: bestStreak, parlor_rank_gems_awarded: rankGemsTotal }).eq('id', user.id)
+  await admin.from('profiles').update({ parlor_streak: currentStreak, parlor_best_streak: bestStreak, parlor_rank_gems_awarded: rankGemsTotal, parlor_points: newPoints }).eq('id', user.id)
 
   // Badge hooks (best-effort): the crown, and the rung-7 stepping stone.
   if (status === 'crowned') { try { await grantBadgeDirect(user.id, 'crowned') } catch { /* best-effort */ } }
@@ -196,6 +204,8 @@ export async function answerKingRung(
     currentStreak,
     brokeStreak,
     bestStreak,
+    pointsEarned,
+    newPoints,
     next: status === 'active' ? stripQuestion(ladder[newRung], newRung, a.fifty) : null,
   }
 }

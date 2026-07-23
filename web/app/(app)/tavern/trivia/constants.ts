@@ -85,6 +85,9 @@ export interface AnswerTileResult {
   currentStreak: number
   brokeStreak: number
   bestStreak: number
+  /** Parlor points earned this answer + the new running total (drives the rank). */
+  pointsEarned: number
+  newPoints: number
 }
 
 // ── Parlor mastery: streak → rank ────────────────────────────────────
@@ -92,27 +95,32 @@ export interface AnswerTileResult {
 // breaks it. best_streak is the permanent record that sets your Parlor RANK, a
 // title you climb and show off. Prestige, not currency (no economy impact).
 export interface ParlorRank { at: number; title: string; color: string; gems: number }
-// Reaching a rank pays its `gems` ONCE (escalating, like charting's landmarks) —
-// this is the Parlor's whole gem source now. best_streak only rises, so it's a
-// one-time chase totalling 650 ◆ to Parlor Legend. Tunable here.
+// `at` is a POINT total (points accumulate from every correct answer and never
+// reset — charting-style). Reaching a rank pays its `gems` ONCE (escalating), so
+// it's a steady, always-forward chase totalling 650 ◆ to Parlor Legend. Tunable.
 export const PARLOR_RANKS: ParlorRank[] = [
-  { at: 0,  title: 'Greenhorn',     color: '#8a8478', gems: 0 },
-  { at: 3,  title: 'Card Hand',     color: '#7fd49a', gems: 25 },
-  { at: 6,  title: 'Sharp',         color: '#60a5fa', gems: 50 },
-  { at: 10, title: 'Cardsharp',     color: '#a78bfa', gems: 100 },
-  { at: 16, title: 'Parlor Master', color: '#f0c040', gems: 175 },
-  { at: 25, title: 'Parlor Legend', color: '#ff6b35', gems: 300 },
+  { at: 0,   title: 'Greenhorn',     color: '#8a8478', gems: 0 },
+  { at: 15,  title: 'Card Hand',     color: '#7fd49a', gems: 25 },
+  { at: 45,  title: 'Sharp',         color: '#60a5fa', gems: 50 },
+  { at: 110, title: 'Cardsharp',     color: '#a78bfa', gems: 100 },
+  { at: 220, title: 'Parlor Master', color: '#f0c040', gems: 175 },
+  { at: 400, title: 'Parlor Legend', color: '#ff6b35', gems: 300 },
 ]
-/** Current rank + the next rung (null if maxed) for an all-time best streak. */
-export function parlorRank(best: number): { rank: ParlorRank; next: ParlorRank | null } {
+// Points per activity — harder answers are worth more; nothing is lost on a miss.
+export function boardCardPoints(tier: number): number { return tier }   // tier 1/2/3
+export const KING_RUNG_POINTS = 2      // each correct rung
+export const KING_CROWN_POINTS = 10    // bonus for crowning the full ladder
+
+/** Current rank + the next rung (null if maxed) for an accumulated point total. */
+export function parlorRank(points: number): { rank: ParlorRank; next: ParlorRank | null } {
   let rank = PARLOR_RANKS[0]
-  for (const r of PARLOR_RANKS) if (best >= r.at) rank = r
+  for (const r of PARLOR_RANKS) if (points >= r.at) rank = r
   return { rank, next: PARLOR_RANKS[PARLOR_RANKS.indexOf(rank) + 1] ?? null }
 }
-/** Cumulative gems a player is OWED for every rank their best streak has reached
- *  — the servers pay `total - already_paid` so each rank pays exactly once. */
-export function rankGemsTotalFor(best: number): number {
-  return PARLOR_RANKS.reduce((sum, r) => sum + (best >= r.at ? r.gems : 0), 0)
+/** Cumulative gems a player is OWED for every rank their points have reached — the
+ *  servers pay `total - already_paid` so each rank pays exactly once. */
+export function rankGemsTotalFor(points: number): number {
+  return PARLOR_RANKS.reduce((sum, r) => sum + (points >= r.at ? r.gems : 0), 0)
 }
 /** The host's in-character reaction to an answer. Pure (client-safe); leans on
  *  the streak (or the one just broken) so it never feels canned. */
@@ -203,6 +211,9 @@ export interface AnswerKingResult {
   currentStreak: number
   brokeStreak: number
   bestStreak: number
+  /** Parlor points earned this answer + the new running total (drives the rank). */
+  pointsEarned: number
+  newPoints: number
   /** Next question if the run continues, already stripped. */
   next: KingQuestionClient | null
 }
