@@ -65,7 +65,7 @@ export default function TriviaLobby({ doubloons, boardPlayedToday, boardPlayedTh
           <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.16em', color: '#a8a090' }}>Parlor Standing</p>
           <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: rank.color, lineHeight: 1.1, marginTop: 2, textShadow: `0 0 12px ${rank.color}66` }}>{rank.title}</p>
           <p className="font-karla" style={{ fontSize: '0.62rem', color: '#c2b9a4', marginTop: 3 }}>
-            Best streak {parlorBestStreak}{next ? ` · ${next.title} at ${next.at}` : ' · top rank'}
+            Best streak {parlorBestStreak}{next ? <> · next: <span style={{ color: next.color }}>{next.title}</span> at {next.at} → <span style={{ color: '#c084fc' }}>+{next.gems} ◆</span></> : ' · top rank, all gems earned'}
           </p>
         </div>
         {parlorStreak > 0 && (
@@ -77,7 +77,7 @@ export default function TriviaLobby({ doubloons, boardPlayedToday, boardPlayedTh
       </div>
 
       <p className="font-karla" style={{ fontSize: '0.8rem', color: '#c2b9a4', lineHeight: 1.55, textAlign: 'center' }}>
-        Doubloons for a right answer — and <span style={{ color: '#c084fc' }}>gems ◆</span> for a clean board or the King&apos;s crown. Fresh every Monday.
+        Doubloons for a right answer — and <span style={{ color: '#c084fc' }}>gems ◆</span> every time you climb a Parlor rank. Fresh boards every Monday.
       </p>
 
       {/* The Captain's Board — live */}

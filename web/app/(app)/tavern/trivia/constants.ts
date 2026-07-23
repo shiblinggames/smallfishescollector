@@ -91,20 +91,28 @@ export interface AnswerTileResult {
 // ONE streak across both games — any correct answer continues it, any wrong one
 // breaks it. best_streak is the permanent record that sets your Parlor RANK, a
 // title you climb and show off. Prestige, not currency (no economy impact).
-export interface ParlorRank { at: number; title: string; color: string }
+export interface ParlorRank { at: number; title: string; color: string; gems: number }
+// Reaching a rank pays its `gems` ONCE (escalating, like charting's landmarks) —
+// this is the Parlor's whole gem source now. best_streak only rises, so it's a
+// one-time chase totalling 650 ◆ to Parlor Legend. Tunable here.
 export const PARLOR_RANKS: ParlorRank[] = [
-  { at: 0,  title: 'Greenhorn',     color: '#8a8478' },
-  { at: 3,  title: 'Card Hand',     color: '#7fd49a' },
-  { at: 6,  title: 'Sharp',         color: '#60a5fa' },
-  { at: 10, title: 'Cardsharp',     color: '#a78bfa' },
-  { at: 16, title: 'Parlor Master', color: '#f0c040' },
-  { at: 25, title: 'Parlor Legend', color: '#ff6b35' },
+  { at: 0,  title: 'Greenhorn',     color: '#8a8478', gems: 0 },
+  { at: 3,  title: 'Card Hand',     color: '#7fd49a', gems: 25 },
+  { at: 6,  title: 'Sharp',         color: '#60a5fa', gems: 50 },
+  { at: 10, title: 'Cardsharp',     color: '#a78bfa', gems: 100 },
+  { at: 16, title: 'Parlor Master', color: '#f0c040', gems: 175 },
+  { at: 25, title: 'Parlor Legend', color: '#ff6b35', gems: 300 },
 ]
 /** Current rank + the next rung (null if maxed) for an all-time best streak. */
 export function parlorRank(best: number): { rank: ParlorRank; next: ParlorRank | null } {
   let rank = PARLOR_RANKS[0]
   for (const r of PARLOR_RANKS) if (best >= r.at) rank = r
   return { rank, next: PARLOR_RANKS[PARLOR_RANKS.indexOf(rank) + 1] ?? null }
+}
+/** Cumulative gems a player is OWED for every rank their best streak has reached
+ *  — the servers pay `total - already_paid` so each rank pays exactly once. */
+export function rankGemsTotalFor(best: number): number {
+  return PARLOR_RANKS.reduce((sum, r) => sum + (best >= r.at ? r.gems : 0), 0)
 }
 /** The host's in-character reaction to an answer. Pure (client-safe); leans on
  *  the streak (or the one just broken) so it never feels canned. */
@@ -120,30 +128,6 @@ export function parlorHostReaction(correct: boolean, streak: number, broke = 0):
   const lines = ['Well read.', 'Sharp as a gaff hook.', 'The coin knows its master.', 'Clean as you like.']
   return lines[streak % lines.length]
 }
-
-// ── Parlor gem milestones (the premium draw) ─────────────────────────
-// Doubloons are the base payout; GEMS are the aspirational reward you can only
-// earn by playing WELL. Board: cumulative gem totals for cards answered correctly
-// across the week (delta-paid via trivia_board_attempts.gems_awarded, so crossing
-// a threshold pays only the difference). King: a crown banks a gem bonus on top of
-// the 1000 ⟡ crown. All tunable here.
-export const BOARD_GEM_MILESTONES: { correct: number; gems: number }[] = [
-  { correct: 3, gems: 5 },
-  { correct: 5, gems: 15 },
-  { correct: 7, gems: 40 },
-]
-/** Cumulative gem total earned for answering `correct` cards right this week. */
-export function boardGemTotalFor(correct: number): number {
-  let total = 0
-  for (const m of BOARD_GEM_MILESTONES) if (correct >= m.correct) total = m.gems
-  return total
-}
-/** The next gem milestone a player is chasing (null once maxed) — drives the
- *  "next gem at N correct" hint in the board UI. */
-export function nextBoardGemMilestone(correct: number): { correct: number; gems: number } | null {
-  return BOARD_GEM_MILESTONES.find(m => correct < m.correct) ?? null
-}
-export const PIRATE_KING_CROWN_GEMS = 75
 
 // ── Pirate King ─────────────────────────────────────────────────────
 // Millionaire-style ladder: ten rungs, prizes climb, answer wrong and

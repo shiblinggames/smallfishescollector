@@ -14,7 +14,6 @@ import { ParlorHost, CrownIcon, PARLOR } from '../ParlorArt'
 import {
   PIRATE_KING_PRIZES,
   PIRATE_KING_HAVENS,
-  PIRATE_KING_CROWN_GEMS,
   parlorHostReaction,
   kingHavenValue,
   type PirateKingState,
@@ -226,15 +225,8 @@ export default function PirateKing({ initial, doubloons }: { initial: PirateKing
                 </motion.div>
                 <p className="font-cinzel font-700" style={{ fontSize: '1.25rem', color: GOLD, letterSpacing: '0.04em', textShadow: `0 0 22px ${GOLD}77` }}>Pirate King</p>
                 <p className="font-karla" style={{ fontSize: '0.76rem', color: '#c8c0ae', lineHeight: 1.55, marginTop: 8 }}>
-                  All ten answered true. The crown, {doubloonsAwarded} ⟡, and a chest of gems are yours until the next ladder is rigged.
+                  All ten answered true. The crown and {doubloonsAwarded} ⟡ are yours until the next ladder is rigged — and a run like that sends your Parlor rank soaring.
                 </p>
-                <motion.p
-                  initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.35, type: 'spring', stiffness: 280, damping: 18 }}
-                  className="font-cinzel font-700"
-                  style={{ fontSize: '1.15rem', color: '#c084fc', marginTop: 10, textShadow: '0 0 18px rgba(192,132,252,0.55)' }}
-                >
-                  +{PIRATE_KING_CROWN_GEMS} ◆
-                </motion.p>
                 <div style={{ marginTop: 14, display: 'flex', justifyContent: 'center' }}>
                   <ParlorHost size={58} line="A perfect ladder. I've hosted a hundred captains and crowned a handful — you're one of them now." />
                 </div>
@@ -388,6 +380,12 @@ export default function PirateKing({ initial, doubloons }: { initial: PirateKing
                   <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.1em', color: PARLOR.brass, textAlign: 'center', marginTop: 8 }}>
                     {result.currentStreak} in a row{result.currentStreak >= 4 ? ' · on a heater' : ''}
                   </p>
+                )}
+                {result.gemsWon > 0 && (
+                  <motion.p initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: 'spring', stiffness: 300, damping: 18, delay: 0.15 }}
+                    className="font-cinzel font-700" style={{ fontSize: '0.92rem', textAlign: 'center', marginTop: 8, color: '#c084fc', textShadow: '0 0 14px rgba(192,132,252,0.55)' }}>
+                    Ranked up! +{result.gemsWon} ◆
+                  </motion.p>
                 )}
               </div>
               {result.correct ? (

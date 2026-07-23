@@ -17,7 +17,6 @@ import { ParlorHost, PARLOR } from '../ParlorArt'
 import {
   TRIVIA_CATEGORIES,
   categoryMeta,
-  nextBoardGemMilestone,
   parlorHostReaction,
   type CaptainsBoardState,
   type BoardTileClient,
@@ -156,22 +155,9 @@ export default function CaptainsBoard({ initial, doubloons }: { initial: Captain
         Twelve cards chalked fresh each Monday. {picksAllowed === 2 ? 'Captains play two a day' : 'Play one a day'} — pick a card and the clue is revealed; answer it for doubloons. The richer the card, the harder the question. Choose wisely.
       </p>
 
-      {/* Gem milestone — the premium draw. Correct cards this week build toward
-          gem payouts on top of the doubloons. */}
-      {(() => {
-        const correctThisWeek = tiles.filter(t => t.answered?.correct).length
-        const next = nextBoardGemMilestone(correctThisWeek)
-        return (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '0.4rem 0.7rem', borderRadius: 999, alignSelf: 'center', background: `${GEM_COLOR}12`, border: `1px solid ${GEM_COLOR}3a` }}>
-            <span style={{ color: GEM_COLOR, fontSize: '0.72rem' }}>◆</span>
-            <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: '#d8c8f0', letterSpacing: '0.02em' }}>
-              {next
-                ? <>{correctThisWeek} of {next.correct} correct — <span style={{ color: GEM_COLOR }}>+{next.gems} ◆</span> at {next.correct}</>
-                : <>Full marks — <span style={{ color: GEM_COLOR }}>max gems earned this week</span></>}
-            </span>
-          </div>
-        )
-      })()}
+      {/* Gems now come from climbing your Parlor rank (a right answer here or in
+          the King extends the shared streak) — the standing card in the lobby
+          tracks it. A correct card also pays doubloons below. */}
 
       {/* The board — a candlelit card table: wood + brass, warm glow from above. */}
       <div style={{
@@ -348,7 +334,7 @@ export default function CaptainsBoard({ initial, doubloons }: { initial: Captain
                       className="font-cinzel font-700"
                       style={{ fontSize: '0.86rem', textAlign: 'center', marginTop: 5, color: GEM_COLOR, textShadow: `0 0 14px ${GEM_COLOR}66` }}
                     >
-                      Milestone! +{result.gemsWon} ◆
+                      Ranked up! +{result.gemsWon} ◆
                     </motion.p>
                   )}
                   {shownExplanation && (

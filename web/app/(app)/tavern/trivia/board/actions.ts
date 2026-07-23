@@ -19,7 +19,7 @@ import {
   triviaTileKey,
   categoryMeta,
   kingWeekStr,
-  boardGemTotalFor,
+  rankGemsTotalFor,
   type CaptainsBoardState,
   type BoardTileClient,
   type AnswerTileResult,
@@ -207,7 +207,7 @@ export async function answerCaptainsTile(
   const [board, { data: attempt }, { data: profile }] = await Promise.all([
     getThisWeeksBoard(),
     admin.from('trivia_board_attempts').select(ATTEMPT_COLS).eq('user_id', user.id).eq('date', week).single(),
-    admin.from('profiles').select('doubloons, gems, parlor_streak, parlor_best_streak').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, gems, parlor_streak, parlor_best_streak, parlor_rank_gems_awarded').eq('id', user.id).single(),
   ])
   if (!board) return { error: 'No board available' }
 
@@ -228,14 +228,6 @@ export async function answerCaptainsTile(
   const newDoubloons = doubloonsWon > 0 ? (profile?.doubloons ?? 0) + doubloonsWon : null
   const newAnswers = { ...a.answers, [key]: { day: today, chosen: chosenIndex, correct } }
 
-  // Gem milestones — the premium draw. Count correct cards this week and pay the
-  // DELTA to the milestone total (so crossing a threshold pays once). gems_awarded
-  // stores the cumulative gems paid this week, gating repeats.
-  const correctCount = Object.values(newAnswers).filter(e => e.correct === true).length
-  const gemTotal = boardGemTotalFor(correctCount)
-  const gemsWon = Math.max(0, gemTotal - a.gems_awarded)
-  const newGems = gemsWon > 0 ? (profile?.gems ?? 0) + gemsWon : null
-
   // Parlor streak (shared with the King): a correct answer extends it, a wrong
   // one breaks it. best is the permanent record behind the rank.
   const prevStreak = (profile?.parlor_streak as number | null) ?? 0
@@ -244,6 +236,14 @@ export async function answerCaptainsTile(
   const brokeStreak = correct ? 0 : prevStreak
   const bestStreak = Math.max(prevBest, currentStreak)
 
+  // Gems flow from RANK-UPS now (escalating, one-time, like charting's landmarks).
+  // Pay the delta owed for every rank this new best streak has reached, gated by
+  // parlor_rank_gems_awarded so each rank pays exactly once — ever.
+  const prevRankGems = (profile?.parlor_rank_gems_awarded as number | null) ?? 0
+  const rankGemsTotal = rankGemsTotalFor(bestStreak)
+  const gemsWon = Math.max(0, rankGemsTotal - prevRankGems)
+  const newGems = gemsWon > 0 ? (profile?.gems ?? 0) + gemsWon : null
+
   const writes: PromiseLike<unknown>[] = [
     admin.from('trivia_board_attempts').upsert({
       user_id: user.id,
@@ -251,7 +251,7 @@ export async function answerCaptainsTile(
       category: null,
       answers: newAnswers,
       doubloons_awarded: totalAwarded,
-      gems_awarded: gemTotal,
+      gems_awarded: a.gems_awarded,   // dormant now — gems moved to rank-ups
     }),
   ]
   // ONE profiles patch — a correct answer can move both currencies at once, and
@@ -259,6 +259,7 @@ export async function answerCaptainsTile(
   const profilePatch: Record<string, number> = {
     parlor_streak: currentStreak,
     parlor_best_streak: bestStreak,
+    parlor_rank_gems_awarded: rankGemsTotal,
   }
   if (newDoubloons !== null) profilePatch.doubloons = newDoubloons
   if (newGems !== null) profilePatch.gems = newGems
