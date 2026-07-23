@@ -324,16 +324,24 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
 
   // Win-celebration juice
   const [coins, setCoins] = useState<{ id: number; dx: number; delay: number }[]>([])
-  const [edgeGlow, setEdgeGlow] = useState<{ key: number; big: boolean } | null>(null)
+  // tier 0 small (common/rare/pair) · 1 big (legendary) · 2 mega (catfish). The
+  // edge glow now carries the WINNING FISH'S colour at a per-tier intensity, so a
+  // Blue Whale win bathes the screen violet and a Catfish floods it gold — each
+  // win reads as its own size + identity instead of the old uniform gold pulse.
+  const [edgeGlow, setEdgeGlow] = useState<{ key: number; tier: number } | null>(null)
+  const [celebrateColor, setCelebrateColor] = useState('#f0c040')
+  // Colour of the "is the third reel gonna land?!" tension glow during a big pair
+  // hold; null when no hold is building. Cleared on settle.
+  const [holdTension, setHoldTension] = useState<string | null>(null)
   const fxId = useRef(0)
-  // Coin spill + screen-edge glow, scaled by win tier.
   function celebrateWin(sym: SlotSymbolId) {
-    const big = sym === 'catfish' || sym === 'legendary'
-    const n = sym === 'catfish' ? 20 : sym === 'legendary' ? 13 : sym === 'rare' ? 8 : 5
-    setCoins(Array.from({ length: n }, () => ({ id: fxId.current++, dx: (Math.random() * 2 - 1) * 72, delay: Math.random() * 0.18 })))
+    const tier = sym === 'catfish' ? 2 : sym === 'legendary' ? 1 : 0
+    const n = sym === 'catfish' ? 22 : sym === 'legendary' ? 14 : sym === 'rare' ? 9 : 6
+    setCelebrateColor(symColor(sym))
+    setCoins(Array.from({ length: n }, () => ({ id: fxId.current++, dx: (Math.random() * 2 - 1) * (tier === 2 ? 96 : 74), delay: Math.random() * 0.2 })))
     setTimeout(() => setCoins([]), 1300)
-    setEdgeGlow({ key: fxId.current++, big })
-    setTimeout(() => setEdgeGlow(null), big ? 1500 : 950)
+    setEdgeGlow({ key: fxId.current++, tier })
+    setTimeout(() => setEdgeGlow(null), tier === 2 ? 1600 : tier === 1 ? 1200 : 850)
   }
 
   // Celebration state
@@ -411,6 +419,7 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
     setShowResult(true)
     setSpinning(false)
     setPotTease(false)
+    setHoldTension(null)
   }
 
   function triggerWin(sym: SlotSymbolId, isBonus: boolean) {
@@ -454,6 +463,7 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
     setWonBonusReels(false)
     setWinSym(null)
     setJackpotShake(false)
+    setHoldTension(null)
     setSpinning(true)
     setMainRolling([true, true, true])
 
@@ -482,6 +492,14 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
       setTimeout(() => setPotTease(true), 1200 + 300)
     }
     const lastMainStop = stopReels(setMainRolling, 1200, 300, holdMs)
+
+    // Third-reel tension theatre: once the two matching reels have landed and the
+    // third is still spinning on a BIG pair (legendary/catfish), charge the reel
+    // window with the pair's colour so the "is it gonna land?!" beat is VISIBLE,
+    // not just a longer spin. Cleared on settle.
+    if (pairUp && (result.reels[0] === 'legendary' || result.reels[0] === 'catfish')) {
+      setTimeout(() => setHoldTension(symColor(result.reels[0])), 1550)
+    }
 
     if (result.bonus) {
       // Flash teal when all hooks have landed
@@ -621,6 +639,10 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
           16%  { opacity: 1; }
           100% { opacity: 0; }
         }
+        @keyframes hold-tension {
+          0%, 100% { filter: brightness(1); }
+          50% { filter: brightness(1.14); }
+        }
         @keyframes slot-coin {
           0%   { transform: translateY(0) scale(1); opacity: 1; }
           12%  { transform: translateY(-14px) scale(1.1); opacity: 1; }
@@ -641,14 +663,22 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
         }}
       />
 
-      {/* Win celebration — screen-edge gold glow (brighter for big wins). */}
-      {edgeGlow && (
-        <div key={edgeGlow.key} aria-hidden style={{
-          position: 'fixed', inset: 0, zIndex: 190, pointerEvents: 'none', opacity: 0,
-          boxShadow: `inset 0 0 ${edgeGlow.big ? 130 : 75}px ${edgeGlow.big ? 60 : 34}px rgba(240,192,64,${edgeGlow.big ? 0.5 : 0.32})`,
-          animation: `slot-edge-glow ${edgeGlow.big ? 1.5 : 0.95}s ease-out forwards`,
-        }} />
-      )}
+      {/* Win celebration — screen-edge glow in the winning fish's colour,
+          intensity scaled by tier (small pair → mega Catfish). */}
+      {edgeGlow && (() => {
+        const t = edgeGlow.tier
+        const spread = t === 2 ? 150 : t === 1 ? 110 : 72
+        const blur = t === 2 ? 68 : t === 1 ? 52 : 32
+        const alphaHex = t === 2 ? 'a0' : t === 1 ? '70' : '3d'
+        const dur = t === 2 ? 1.6 : t === 1 ? 1.2 : 0.9
+        return (
+          <div key={edgeGlow.key} aria-hidden style={{
+            position: 'fixed', inset: 0, zIndex: 190, pointerEvents: 'none', opacity: 0,
+            boxShadow: `inset 0 0 ${spread}px ${blur}px ${celebrateColor}${alphaHex}`,
+            animation: `slot-edge-glow ${dur}s ease-out forwards`,
+          }} />
+        )
+      })()}
 
       {/* Coin spill — erupts from the machine, flies up toward the chip purse. */}
       {coins.length > 0 && (
@@ -730,6 +760,8 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
               style={{
                 padding: '1.15rem 0.9rem',
                 background: 'radial-gradient(ellipse at 50% 0%, rgba(240,192,64,0.05) 0%, transparent 55%)',
+                boxShadow: holdTension ? `inset 0 0 44px 4px ${holdTension}55` : undefined,
+                animation: holdTension ? 'hold-tension 0.6s ease-in-out infinite' : undefined,
               }}
             >
               <div className="flex gap-2.5 sm:gap-4 justify-center">
