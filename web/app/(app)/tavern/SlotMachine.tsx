@@ -1162,7 +1162,7 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
                 <span className="font-cinzel font-700" style={{ fontSize: '0.74rem', color: '#f0c040', textShadow: '0 0 10px rgba(240,192,64,0.5)' }}>THE POT</span>
               </div>
               <p className="font-karla font-400" style={{ fontSize: '0.64rem', color: '#bfb392', lineHeight: 1.45, marginTop: 7 }}>
-                Every spin feeds the pot. Three catfish claims a share matching your bet — a full {SLOTS_MAX_BET} ⟡ bet takes it all.
+                Every spin feeds the pot. Three catfish (real only — wilds don&apos;t count) claims a share matching your bet; a full {SLOTS_MAX_BET} ⟡ bet takes it all.
               </p>
             </div>
 
@@ -1179,7 +1179,7 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
               <div className="flex items-center gap-2.5" style={{ marginTop: 8 }}>
                 <div style={{ width: 26, height: 26, flexShrink: 0 }}><SlotSymbolDisplay id="wild" /></div>
                 <p className="font-karla font-400 flex-1" style={{ fontSize: '0.64rem', color: '#e2c9f5', lineHeight: 1.4 }}>
-                  Pays <span className="font-700" style={{ color: '#f0abfc' }}>50% more</span>, and the Jellyfish surfaces — running <span className="font-700" style={{ color: '#f0abfc' }}>wild</span> for any fish. Bonus only.
+                  Pays <span className="font-700" style={{ color: '#f0abfc' }}>50% more</span>, and the Jellyfish surfaces — running <span className="font-700" style={{ color: '#f0abfc' }}>wild</span> for any fish <span className="font-700" style={{ color: '#f0c040' }}>except the Catfish jackpot</span>. Bonus only.
                 </p>
               </div>
               <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#8d8880', marginTop: 8, paddingTop: 7, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
