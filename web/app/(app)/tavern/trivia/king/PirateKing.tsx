@@ -10,6 +10,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { answerKingRung, spendKingFiftyFifty, walkKingAway } from './actions'
 import BalanceTicker from '../BalanceTicker'
+import { ParlorHost, CrownIcon } from '../ParlorArt'
 import {
   PIRATE_KING_PRIZES,
   PIRATE_KING_HAVENS,
@@ -187,6 +188,7 @@ export default function PirateKing({ initial, doubloons }: { initial: PirateKing
       {showSummary ? (
         /* ── Run over: the summary card ── */
         <div style={{
+          position: 'relative', overflow: 'hidden',
           background: 'linear-gradient(180deg, #1c1830 0%, #0d0c1c 100%)',
           border: `1px solid ${status === 'crowned' ? GOLD : 'rgba(167,139,250,0.3)'}66`,
           borderRadius: 16, padding: '1.6rem 1.1rem',
@@ -195,24 +197,34 @@ export default function PirateKing({ initial, doubloons }: { initial: PirateKing
         }}>
           {status === 'crowned' && (
             <>
-              <motion.p
-                animate={{ scale: [1, 1.08, 1] }}
-                transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-                style={{ fontSize: '2.2rem', marginBottom: 8 }}
-              >
-                👑
-              </motion.p>
-              <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: GOLD }}>Pirate King</p>
-              <p className="font-karla" style={{ fontSize: '0.76rem', color: '#c8c0ae', lineHeight: 1.55, marginTop: 8 }}>
-                All ten answered true. The crown, {doubloonsAwarded} ⟡, and a chest of gems are yours until the next ladder is rigged.
-              </p>
-              <motion.p
-                initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3, type: 'spring', stiffness: 280, damping: 18 }}
-                className="font-cinzel font-700"
-                style={{ fontSize: '1.05rem', color: '#c084fc', marginTop: 10, textShadow: '0 0 18px rgba(192,132,252,0.55)' }}
-              >
-                +{PIRATE_KING_CROWN_GEMS} ◆
-              </motion.p>
+              {/* Crowning spotlight — a golden shaft behind the crown. */}
+              <motion.div aria-hidden
+                initial={{ opacity: 0 }} animate={{ opacity: [0.5, 0.85, 0.5] }} transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                style={{ position: 'absolute', inset: 0, borderRadius: 16, pointerEvents: 'none', background: `radial-gradient(ellipse 70% 55% at 50% 12%, ${GOLD}2e, transparent 60%)` }} />
+              <div style={{ position: 'relative' }}>
+                <motion.div
+                  initial={{ scale: 0.4, opacity: 0, y: -6 }} animate={{ scale: 1, opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 240, damping: 14 }}
+                  style={{ display: 'inline-flex', marginBottom: 6 }}
+                >
+                  <motion.span animate={{ y: [0, -4, 0] }} transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }} style={{ display: 'inline-flex' }}>
+                    <CrownIcon size={54} color={GOLD} />
+                  </motion.span>
+                </motion.div>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.25rem', color: GOLD, letterSpacing: '0.04em', textShadow: `0 0 22px ${GOLD}77` }}>Pirate King</p>
+                <p className="font-karla" style={{ fontSize: '0.76rem', color: '#c8c0ae', lineHeight: 1.55, marginTop: 8 }}>
+                  All ten answered true. The crown, {doubloonsAwarded} ⟡, and a chest of gems are yours until the next ladder is rigged.
+                </p>
+                <motion.p
+                  initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.35, type: 'spring', stiffness: 280, damping: 18 }}
+                  className="font-cinzel font-700"
+                  style={{ fontSize: '1.15rem', color: '#c084fc', marginTop: 10, textShadow: '0 0 18px rgba(192,132,252,0.55)' }}
+                >
+                  +{PIRATE_KING_CROWN_GEMS} ◆
+                </motion.p>
+                <div style={{ marginTop: 14, display: 'flex', justifyContent: 'center' }}>
+                  <ParlorHost size={58} line="A perfect ladder. I've hosted a hundred captains and crowned a handful — you're one of them now." />
+                </div>
+              </div>
             </>
           )}
           {status === 'walked' && (

@@ -13,6 +13,7 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { answerCaptainsTile, playCaptainsCard } from './actions'
 import BalanceTicker from '../BalanceTicker'
+import { ParlorHost } from '../ParlorArt'
 import {
   TRIVIA_CATEGORIES,
   categoryMeta,
@@ -144,6 +145,10 @@ export default function CaptainsBoard({ initial, doubloons }: { initial: Captain
         <div style={{ flex: 1, minWidth: 0, display: 'flex', justifyContent: 'flex-end' }}>
           <BalanceTicker value={balance} glyph="⟡" color={DOUBLOON_COLOR} />
         </div>
+      </div>
+
+      <div style={{ padding: '0.1rem 0.1rem 0.2rem' }}>
+        <ParlorHost size={58} line={playedToday ? "Back tomorrow for your next card. The board keeps its secrets till then." : "Pick a card and I'll turn it over. Answer true and the coin — and the gems — are yours."} />
       </div>
 
       <p className="font-karla" style={{ fontSize: '0.8rem', color: '#c2b9a4', lineHeight: 1.55, textAlign: 'center' }}>

@@ -7,6 +7,7 @@
 import { motion } from 'framer-motion'
 import ScenicCard from '../ScenicCard'
 import BackButton from '@/components/BackButton'
+import { ParlorHost, CrownIcon } from './ParlorArt'
 import { TRIVIA_CATEGORIES, PIRATE_KING_RUNGS, type PirateKingStatus } from './constants'
 
 const GOLD = '#f0c040'
@@ -47,8 +48,13 @@ export default function TriviaLobby({ doubloons, boardPlayedToday, boardPlayedTh
         </div>
       </div>
 
+      {/* The host presides — a dashing crimson cavalier who runs the room. */}
+      <div style={{ padding: '0.2rem 0.2rem 0.1rem' }}>
+        <ParlorHost line="Welcome back to the Parlor. Sharpen your wits — the good stakes aren't just coin tonight." />
+      </div>
+
       <p className="font-karla" style={{ fontSize: '0.8rem', color: '#c2b9a4', lineHeight: 1.55, textAlign: 'center' }}>
-        Sharp wits earn doubloons — and <span style={{ color: '#c084fc' }}>gems ◆</span> for a clean board or the King&apos;s crown. Fresh every Monday.
+        Doubloons for a right answer — and <span style={{ color: '#c084fc' }}>gems ◆</span> for a clean board or the King&apos;s crown. Fresh every Monday.
       </p>
 
       {/* The Captain's Board — live */}
@@ -143,9 +149,9 @@ export default function TriviaLobby({ doubloons, boardPlayedToday, boardPlayedTh
           <motion.span
             animate={{ y: [0, -4, 0] }}
             transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
-            style={{ fontSize: '1.5rem', lineHeight: 1, marginLeft: 2, marginBottom: 38 }}
+            style={{ display: 'inline-flex', lineHeight: 1, marginLeft: 2, marginBottom: 38 }}
           >
-            👑
+            <CrownIcon size={26} color={GOLD} />
           </motion.span>
         </div>
         {/* Today's run chip */}
