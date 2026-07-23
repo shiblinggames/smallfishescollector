@@ -364,14 +364,26 @@ export async function recordRaidHit(dmg: number): Promise<void> {
   const { critMax } = raidDamageProfile(stats.totalPower, stats.shipMinDamage, stats.raidMods?.damagePct ?? 0)
   let ceiling = critMax * (stats.classDamageMult || 1)
   if (stats.manowarAugment) ceiling *= stats.manowarAugment.megaMult
-  const cap = Math.max(500, Math.ceil(ceiling * 3))
+  const base = Math.max(500, Math.ceil(ceiling))
 
-  // A hit past this player's own (headroomed) ceiling can't be real — flag it.
-  if (hit > cap) {
-    await flagAnomaly(admin, user.id, 'cap_trip:recordRaidHit', 3, { hit, cap, totalPower: stats.totalPower, hasUltimate: !!stats.manowarAugment })
+  // FLAG and CLAMP are decoupled so a legit stacked hit is never clipped. The
+  // reported hit can carry transient in-run buffs the base profile can't see —
+  // damage tides (~1.16-1.25 each) stacking with a mega crit and a frozen-brittle
+  // double can plausibly reach ~5x base. So:
+  //  - flag at 3x   → tells us about anything suspicious (sev 2, might be a real
+  //                   big stack; sev 3 once it's past the clamp = can't be real);
+  //  - clamp at 7x  → safely above the max legit stack, so a genuine peak is never
+  //                   cut, while an absurd forgery is still bounded.
+  // "Biggest Hit" is vanity (no economy/gating; badges cap at 500), so we err hard
+  // toward never clipping a real brag and rely on the flag to catch cheats.
+  const flagLine     = base * 3
+  const clampCeiling = base * 7
+  if (hit > flagLine) {
+    await flagAnomaly(admin, user.id, 'cap_trip:recordRaidHit', hit > clampCeiling ? 3 : 2,
+      { hit, flagLine, clampCeiling, totalPower: stats.totalPower, hasUltimate: !!stats.manowarAugment })
   }
 
-  await admin.rpc('bump_raid_damage', { uid: user.id, dmg: Math.min(hit, cap) })
+  await admin.rpc('bump_raid_damage', { uid: user.id, dmg: Math.min(hit, clampCeiling) })
 }
 
 export async function claimRaidLoot(
