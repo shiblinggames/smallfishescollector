@@ -52,13 +52,17 @@ export const SLOT_SYMBOLS_LIST: {
 }[] = [
   // 2026-07-21: catfish 14→9 + Blue Whale 9→7 (freed weight → sardine). The two
   // big triples felt too frequent: catfish jackpot 1-in-364 → 1-in-1,372, Blue
-  // Whale triple 1-in-1,372 → 1-in-2,915. Total RTP holds ~96.9% (the pot-fed
-  // jackpot just grows bigger between rarer hits). Re-verified with slots-rtp.mjs.
-  { id: 'common',    filename: 'Sardine_v2.png',    color: '#8a8880', weight: 46, bonusWeight: 40, label: 'Sardine' },
+  // Whale triple 1-in-1,372 → 1-in-2,915. Re-verified with slots-rtp.mjs.
+  // 2026-07-23: hook 18→24 (from sardine 46→40) to raise the bonus rate AND cut
+  // RTP in one move — the bonus round is now ~1-in-72 (was 1-in-171), and because
+  // extra hooks mostly add break-even refunds/dead reels (only 1.4% hit 3 hooks),
+  // total RTP drops 99.5%→95.5% at floor pot. Feed stays 10%; marlin/whale/catfish
+  // + jackpot odds (1-in-1,372) UNTOUCHED (only sardine↔hook moved).
+  { id: 'common',    filename: 'Sardine_v2.png',    color: '#8a8880', weight: 40, bonusWeight: 40, label: 'Sardine' },
   { id: 'rare',      filename: 'Blue_Marlin.png',   color: '#60a5fa', weight: 20, bonusWeight: 20, label: 'Blue Marlin' },
   { id: 'legendary', filename: 'Blue_Whale_v2.png', color: '#a78bfa', weight: 7,  bonusWeight: 8,  label: 'Blue Whale' },
   { id: 'catfish',   filename: 'Catfish.png',       color: '#f0c040', weight: 9,  bonusWeight: 8,  label: 'Catfish' },
-  { id: 'anchor',                                    color: '#34d399', weight: 18, bonusWeight: 0,  label: 'Hook' },
+  { id: 'anchor',                                    color: '#34d399', weight: 24, bonusWeight: 0,  label: 'Hook' },
   // Jellyfish WILD — bonus-round ONLY (base weight 0). Substitutes for the base
   // fish (common/rare/legendary) to complete a line; never the Catfish jackpot.
   // Pairs with SLOT_BONUS_MULT + the wild eval in actions.ts. RTP verified in

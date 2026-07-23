@@ -147,7 +147,9 @@ function reportWild(label, baseWeights, bonusWeights, pairs, triples, boost) {
   console.log(`TOTAL base RTP: ${(total * 100).toFixed(2)}%  (+10% feed = ${(total * 100 + 10).toFixed(2)}% total)`)
 }
 console.log('\n\n######## Jellyfish WILD bonus — SHIPPED config (base unchanged) ########')
-reportWild('LIVE: bonus wild 16, boost 1.5x',
-  { common: 46, rare: 20, legendary: 7, catfish: 9, anchor: 18 },
+// SHIPPED 2026-07-23: hook 18→24 (from sardine) — raises bonus rate to ~1-in-72
+// AND drops RTP to ~95.5% (more hooks = more break-even filler; see note above).
+reportWild('LIVE: hook 24, bonus wild 16, boost 1.5x',
+  { common: 40, rare: 20, legendary: 7, catfish: 9, anchor: 24 },
   { common: 40, rare: 20, legendary: 8, catfish: 8, wild: 16 },
   { rare: 1.5, legendary: 5, catfish: 3 }, T4, 1.5)
