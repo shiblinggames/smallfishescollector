@@ -70,6 +70,8 @@ export interface BadgeProfileFields {
   crew_hall_tier?: number | null
   lifetime_recruits?: number | null
   highest_raid_damage?: number | null
+  parlor_best_streak?: number | null
+  parlor_points?: number | null
   pvp_wins?: number | null
   puzzle_points?: number | null
   charting_landmarks_claimed?: number[] | null
@@ -151,6 +153,8 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
   const navLevel = navLevelFromXP(Number(p.expedition_xp ?? 0))
   const streak = Number(p.highest_perfect_streak ?? 0)
   const raidDmg = Number(p.highest_raid_damage ?? 0)
+  const parlorStreak = Number(p.parlor_best_streak ?? 0)   // best consecutive-correct run
+  const parlorPoints = Number(p.parlor_points ?? 0)         // accumulated Parlor rank points
   const pvpWins = Number(p.pvp_wins ?? 0)
   const doubloons = Number(p.doubloons ?? 0)
   const tideBest = Number(p.tide_run_best_distance ?? 0)
@@ -170,6 +174,15 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
     unbroken:       streak >= 10,
     relentless:     streak >= 15,
     untouchable:    streak >= 20,
+    // The Parlor (trivia) — hard streaks + rank milestones. Thresholds mirror
+    // PARLOR_RANKS point gates (Cardsharp 85, Kingpin 520, Parlor Legend 1000);
+    // hardcoded to avoid importing the heavy trivia constants here.
+    parlor_hot_hand:     parlorStreak >= 5,
+    parlor_sharpshooter: parlorStreak >= 10,
+    parlor_flawless:     parlorStreak >= 20,
+    parlor_cardsharp:    parlorPoints >= 85,
+    parlor_kingpin:      parlorPoints >= 520,
+    parlor_legend:       parlorPoints >= 1000,
     dead_eye:       Number(p.total_perfects ?? 0) >= 1000,
     half_the_sea:   j.collectionCount >= 50,
     baby_steps:     doubloons >= 100_000,
@@ -347,4 +360,4 @@ export function earnedBadgeIds(p: BadgeProfileFields, j: BadgeJoinData): string[
 
 /** Columns a query must select to feed badgeConditions(). */
 export const BADGE_PROFILE_COLUMNS =
-  'fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, charting_landmarks_claimed, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, ancient_catches, trophy_size_catches, prestige_levels, finn_wins, fish_sold_doubloons, fishing_casts, fishing_double_catches, fishing_crates_opened, fishing_snags, fishing_jackpots, tide_run_beacons_smashed, tide_run_total_distance, is_premium, ship_tier, trawls_collected, unlocked_pets, gauntlet_upgrades, gauntlet_confluences_seen, gauntlet_runs_completed, gauntlet_fathoms_earned, gauntlet_max_hit, gauntlet_deepest_died, gauntlet_hc_deepest, gauntlet_hc_deepest_died, blood_gems_earned, completionist_effects, manowar_augment, ship_classes, forge_recipes_learned, raid_items, ship_skins, owned_crew_skins, equipped_crew_skins, has_sixth_berth, has_armory_expansion, dons_gauntlet_deepest'
+  'fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, charting_landmarks_claimed, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, ancient_catches, trophy_size_catches, prestige_levels, finn_wins, fish_sold_doubloons, fishing_casts, fishing_double_catches, fishing_crates_opened, fishing_snags, fishing_jackpots, tide_run_beacons_smashed, tide_run_total_distance, is_premium, ship_tier, trawls_collected, unlocked_pets, gauntlet_upgrades, gauntlet_confluences_seen, gauntlet_runs_completed, gauntlet_fathoms_earned, gauntlet_max_hit, gauntlet_deepest_died, gauntlet_hc_deepest, gauntlet_hc_deepest_died, blood_gems_earned, completionist_effects, manowar_augment, ship_classes, forge_recipes_learned, raid_items, ship_skins, owned_crew_skins, equipped_crew_skins, has_sixth_berth, has_armory_expansion, dons_gauntlet_deepest, parlor_best_streak, parlor_points'

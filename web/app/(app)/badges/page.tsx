@@ -70,6 +70,8 @@ export default async function BadgesPage() {
   const puzzlePoints = Number(profile?.puzzle_points ?? 0)
   const chartedLandmarks = ((profile?.charting_landmarks_claimed as number[] | null) ?? []).length
   const highestRaidDmg = Number(profile?.highest_raid_damage ?? 0)
+  const parlorBestStreak = Number(profile?.parlor_best_streak ?? 0)
+  const parlorPoints = Number(profile?.parlor_points ?? 0)
   const totalPerfects = Number(profile?.total_perfects ?? 0)
   const doubleCatches = Number(profile?.fishing_double_catches ?? 0)
   const casts = Number(profile?.fishing_casts ?? 0)
@@ -419,6 +421,12 @@ export default async function BadgesPage() {
         badgeGoal('throne_in_sight', 'Throne in Sight', 'Reach rung 7 of the Pirate King ladder', has('throne_in_sight') ? 1 : 0, 1, '/tavern/trivia/king', { binary: true }),
         badgeGoal('crowned', 'Crowned', 'Make it all the way up the Pirate King ladder', has('crowned') ? 1 : 0, 1, '/tavern/trivia/king', { binary: true }),
         badgeGoal('clean_sweep', 'Clean Sweep', "Clear a Captain's Board, every answer correct", has('clean_sweep') ? 1 : 0, 1, '/tavern/trivia/board', { binary: true }),
+        badgeGoal('parlor_hot_hand', 'Hot Hand', 'Answer 5 Parlor questions in a row', parlorBestStreak, 5, '/tavern/trivia'),
+        badgeGoal('parlor_sharpshooter', 'Sharpshooter', 'Answer 10 Parlor questions in a row', parlorBestStreak, 10, '/tavern/trivia'),
+        badgeGoal('parlor_flawless', 'Flawless', 'Answer 20 Parlor questions in a row', parlorBestStreak, 20, '/tavern/trivia'),
+        badgeGoal('parlor_cardsharp', 'Cardsharp', 'Reach the Cardsharp rank (85 pts)', parlorPoints, 85, '/tavern/trivia'),
+        badgeGoal('parlor_kingpin', 'Kingpin', 'Reach the Kingpin rank (520 pts)', parlorPoints, 520, '/tavern/trivia'),
+        badgeGoal('parlor_legend', 'Parlor Legend', 'Reach the top Parlor rank (1,000 pts)', parlorPoints, 1000, '/tavern/trivia'),
       ],
     },
     {
