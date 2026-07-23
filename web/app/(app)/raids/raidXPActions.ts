@@ -6,6 +6,7 @@ import { aggregateShipClasses } from '@/lib/shipClasses'
 import { navRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
 import { maxLegitKillGrant } from '@/lib/raidRegistry'
+import { flagAnomaly } from '@/lib/anomaly'
 
 export async function awardRaidKill(
   xpIn: number,
@@ -20,10 +21,18 @@ export async function awardRaidKill(
   // bonus, headroom included) — a forged 750k call becomes one kill's worth. This
   // is what stopped the crew-XP inflation exploit.
   const cap = maxLegitKillGrant()
-  const xp        = Math.max(0, Math.min(Math.floor(Number(xpIn)        || 0), cap.xp))
-  const doubloons = Math.max(0, Math.min(Math.floor(Number(doubloonsIn) || 0), cap.gold))
+  const rawXp     = Math.max(0, Math.floor(Number(xpIn)        || 0))
+  const rawGold   = Math.max(0, Math.floor(Number(doubloonsIn) || 0))
+  const xp        = Math.min(rawXp,   cap.xp)
+  const doubloons = Math.min(rawGold, cap.gold)
 
   const admin = createAdminClient()
+
+  // A legit client never exceeds the legit ceiling, so a clamp = near-certain
+  // forgery. Flag it for admin review (advisory only, doesn't change the outcome).
+  if (rawXp > cap.xp || rawGold > cap.gold) {
+    await flagAnomaly(admin, user.id, 'cap_trip:awardRaidKill', 3, { rawXp, rawGold, capXp: cap.xp, capGold: cap.gold })
+  }
   const { data: profile } = await admin
     .from('profiles')
     .select('expedition_xp, doubloons, ship_classes, nav_renown_alloc')

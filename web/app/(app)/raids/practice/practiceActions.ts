@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
+import { flagAnomaly } from '@/lib/anomaly'
 
 // The practice skirmish is a fixed tutorial: its enemies grant at most 45 XP /
 // 35 gold per kill. Clamp each call to a hair above that so this endpoint — which
@@ -18,10 +19,18 @@ export async function awardPracticeKill(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { newExpeditionXP: 0, newDoubloonTotal: 0, crewXP: [] }
 
-  const xp        = Math.max(0, Math.min(Math.floor(Number(xpIn)        || 0), PRACTICE_GRANT_MAX))
-  const doubloons = Math.max(0, Math.min(Math.floor(Number(doubloonsIn) || 0), PRACTICE_GRANT_MAX))
+  const rawXp     = Math.max(0, Math.floor(Number(xpIn)        || 0))
+  const rawGold   = Math.max(0, Math.floor(Number(doubloonsIn) || 0))
+  const xp        = Math.min(rawXp,   PRACTICE_GRANT_MAX)
+  const doubloons = Math.min(rawGold, PRACTICE_GRANT_MAX)
 
   const admin = createAdminClient()
+
+  // Tutorial grants are tiny; anything over the cap is a forged call. Flag it.
+  if (rawXp > PRACTICE_GRANT_MAX || rawGold > PRACTICE_GRANT_MAX) {
+    await flagAnomaly(admin, user.id, 'cap_trip:awardPracticeKill', 3, { rawXp, rawGold, cap: PRACTICE_GRANT_MAX })
+  }
+
   const { data: profile } = await admin
     .from('profiles')
     .select('expedition_xp, doubloons')

@@ -22,17 +22,43 @@ export default async function DevStatsPage() {
   const { data: prof } = await admin.from('profiles').select('is_admin').eq('id', user.id).single()
   if (!prof?.is_admin) notFound()
 
-  const [{ data }, { data: trawlData }, { data: gauntletRows }] = await Promise.all([
+  const [{ data }, { data: trawlData }, { data: gauntletRows }, { data: flagRows }] = await Promise.all([
     admin.rpc('admin_stats'),
     admin.rpc('trawl_admin_stats'),
     admin.from('profiles')
       .select('username, gauntlet_deepest, gauntlet_best_depth, gauntlet_best_depth_ms, gauntlet_fathoms, gauntlet_upgrades')
       .eq('is_admin', false),
+    admin.from('anomaly_flags')
+      .select('user_id, kind, severity, detail, created_at')
+      .order('created_at', { ascending: false })
+      .limit(300),
   ])
   /* eslint-disable @typescript-eslint/no-explicit-any */
   const s = (data ?? {}) as any
   const t = (trawlData ?? {}) as any
   const byIf = (v: number, name: unknown) => (v > 0 ? (name as string) : null)
+
+  // ── Security flags — advisory anomaly signals (anomaly_flags). Aggregated per
+  // player so repeat trippers float to the top. A cap-trip is a near-certain
+  // forged call (a legit client can't exceed a legit ceiling). Advisory only.
+  type FlagRow = { user_id: string; kind: string; severity: number; detail: any; created_at: string }
+  const flagRowsArr = (flagRows ?? []) as FlagRow[]
+  const flagUserIds = [...new Set(flagRowsArr.map(f => f.user_id))]
+  const { data: flagUsers } = flagUserIds.length
+    ? await admin.from('profiles').select('id, username').in('id', flagUserIds)
+    : { data: [] as { id: string; username: string | null }[] }
+  const nameById = new Map((flagUsers ?? []).map((u: any) => [u.id as string, (u.username as string | null)]))
+  const flagByUser = new Map<string, { count: number; maxSev: number; kinds: Record<string, number> }>()
+  for (const f of flagRowsArr) {
+    const e = flagByUser.get(f.user_id) ?? { count: 0, maxSev: 0, kinds: {} }
+    e.count += 1
+    e.maxSev = Math.max(e.maxSev, f.severity)
+    e.kinds[f.kind] = (e.kinds[f.kind] ?? 0) + 1
+    flagByUser.set(f.user_id, e)
+  }
+  const flaggedUsers = [...flagByUser.entries()]
+    .map(([uid, e]) => ({ uid, name: nameById.get(uid) ?? uid.slice(0, 8), ...e }))
+    .sort((a, b) => b.maxSev - a.maxSev || b.count - a.count)
 
   // ── Davy Jones Gauntlet — computed in JS from the profile snapshot above
   // (no admin_stats RPC change needed). gauntlet_deepest = lifetime deepest incl.
@@ -358,6 +384,45 @@ export default async function DevStatsPage() {
         <p className="font-karla" style={{ fontSize: '0.92rem', color: '#b2aca3', marginBottom: 26 }}>
           Live cross-player aggregates across {fmt(s.players ?? 0)} players.
         </p>
+
+        {/* Security flags — advisory anomaly signals, review manually. Cap trips
+            are near-certain forgeries; this never auto-acts. */}
+        <div style={{
+          background: flaggedUsers.length ? 'rgba(60,12,12,0.5)' : 'rgba(8,20,14,0.45)',
+          border: `1px solid ${flaggedUsers.length ? 'rgba(248,113,113,0.4)' : 'rgba(52,211,153,0.28)'}`,
+          borderRadius: 16, padding: '1.2rem 1.3rem', marginBottom: 22,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: flaggedUsers.length ? 14 : 0 }}>
+            <span aria-hidden style={{ width: 4, height: 18, borderRadius: 2, background: flaggedUsers.length ? '#f87171' : '#34d399', flexShrink: 0 }} />
+            <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.82rem', color: '#e4e0d9' }}>
+              Security Flags{flaggedUsers.length ? ` · ${flagRowsArr.length} recent` : ''}
+            </p>
+          </div>
+          {flaggedUsers.length === 0 ? (
+            <p className="font-karla" style={{ fontSize: '0.9rem', color: '#7fd0a0' }}>No anomalies flagged — cap trips would surface here.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {flaggedUsers.map((u, i) => (
+                <div key={u.uid} style={{
+                  display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12,
+                  borderTop: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.07)',
+                  paddingTop: i === 0 ? 0 : 10, paddingBottom: 10,
+                }}>
+                  <div style={{ minWidth: 0 }}>
+                    <span className="font-karla font-700" style={{ fontSize: '0.98rem', color: u.maxSev >= 3 ? '#fca5a5' : '#e4e0d9' }}>{u.name}</span>
+                    <span className="font-karla" style={{ display: 'block', fontSize: '0.72rem', color: '#928d84', marginTop: 2 }}>
+                      {Object.entries(u.kinds).map(([k, n]) => `${k.replace('cap_trip:', '')} ×${n}`).join(' · ')}
+                    </span>
+                  </div>
+                  <span style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <span className="font-cinzel font-700" style={{ fontSize: '1.25rem', color: '#f87171' }}>{u.count}</span>
+                    <span className="font-karla" style={{ display: 'block', fontSize: '0.7rem', color: '#928d84', marginTop: 2 }}>sev {u.maxSev}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
           {sections.map(sec => (

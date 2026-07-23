@@ -16,6 +16,7 @@ import { getRaidConfigById, raidLootIds, ITEM_GRANTS, MAX_CRATE_BASE_DOUBLOONS }
 import { bonusChargeSlots, gauntletRepairHealMult, donsRaidHpMult, donsLegendaryLootMult } from '@/lib/gauntletUpgrades'
 import { getShipAugment, MANOWAR_TIER, type ShipAugment } from '@/lib/shipAugments'
 import { settleUltimateBuild } from '@/lib/ultimateBuild'
+import { flagAnomaly } from '@/lib/anomaly'
 
 const CARD_IMG_BASE = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/storage/v1/object/public/card-arts/'
 
@@ -364,6 +365,11 @@ export async function recordRaidHit(dmg: number): Promise<void> {
   let ceiling = critMax * (stats.classDamageMult || 1)
   if (stats.manowarAugment) ceiling *= stats.manowarAugment.megaMult
   const cap = Math.max(500, Math.ceil(ceiling * 3))
+
+  // A hit past this player's own (headroomed) ceiling can't be real — flag it.
+  if (hit > cap) {
+    await flagAnomaly(admin, user.id, 'cap_trip:recordRaidHit', 3, { hit, cap, totalPower: stats.totalPower, hasUltimate: !!stats.manowarAugment })
+  }
 
   await admin.rpc('bump_raid_damage', { uid: user.id, dmg: Math.min(hit, cap) })
 }
