@@ -22,6 +22,7 @@ const BONUS_IDS: SlotSymbolId[] = SLOT_SYMBOLS_LIST.filter((s) => s.bonusWeight 
 const WIN_LABEL: Record<SlotSymbolId, string> = {
   common:    'Full School!',
   rare:      'Marlin Run!',
+  shark:     'Shark Attack!',
   legendary: 'Whale of a Win!',
   catfish:   'JACKPOT!!',
   anchor:    'Bonus Spin!',
@@ -1137,7 +1138,7 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
             </div>
 
             {/* Fish — one row each, triple + pair together */}
-            {(['common', 'rare', 'legendary'] as const).map((id) => {
+            {(['common', 'rare', 'shark', 'legendary'] as const).map((id) => {
               const sym = SLOT_SYMBOLS_LIST.find((s) => s.id === id)!
               const pair = SLOT_PAIR_PAYOUTS[id]
               return (

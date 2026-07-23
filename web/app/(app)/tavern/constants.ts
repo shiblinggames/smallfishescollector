@@ -40,7 +40,7 @@ import { getLevelFromXP as navLevelFromXp } from '@/lib/expeditionLevel'
 // house eats the seed top-up only after big-bet claims since partial
 // claims leave the remainder in the pot.
 
-export type SlotSymbolId = 'common' | 'rare' | 'legendary' | 'catfish' | 'anchor' | 'wild'
+export type SlotSymbolId = 'common' | 'rare' | 'shark' | 'legendary' | 'catfish' | 'anchor' | 'wild'
 
 export const SLOT_SYMBOLS_LIST: {
   id: SlotSymbolId
@@ -58,11 +58,16 @@ export const SLOT_SYMBOLS_LIST: {
   // extra hooks mostly add break-even refunds/dead reels (only 1.4% hit 3 hooks),
   // total RTP drops 99.5%→95.5% at floor pot. Feed stays 10%; marlin/whale/catfish
   // + jackpot odds (1-in-1,372) UNTOUCHED (only sardine↔hook moved).
-  { id: 'common',    filename: 'Sardine_v2.png',    color: '#8a8880', weight: 40, bonusWeight: 40, label: 'Sardine' },
-  { id: 'rare',      filename: 'Blue_Marlin.png',   color: '#60a5fa', weight: 20, bonusWeight: 20, label: 'Blue Marlin' },
-  { id: 'legendary', filename: 'Blue_Whale_v2.png', color: '#a78bfa', weight: 7,  bonusWeight: 8,  label: 'Blue Whale' },
-  { id: 'catfish',   filename: 'Catfish.png',       color: '#f0c040', weight: 9,  bonusWeight: 8,  label: 'Catfish' },
-  { id: 'anchor',                                    color: '#34d399', weight: 24, bonusWeight: 0,  label: 'Hook' },
+  // 2026-07-23: added GREAT WHITE (shark) tier between marlin + whale — triple 28x
+  // (1-in-579), pair 3x, weight 12 taken from SARDINE (40→28). Fills the 12x→60x
+  // gap with a satisfying mid-big win. Marlin/whale/catfish/hook weights + jackpot
+  // + bonus odds all UNCHANGED. Total RTP ~95.7%. Re-verified slots-rtp.mjs.
+  { id: 'common',    filename: 'Sardine_v2.png',       color: '#8a8880', weight: 28, bonusWeight: 30, label: 'Sardine' },
+  { id: 'rare',      filename: 'Blue_Marlin.png',      color: '#60a5fa', weight: 20, bonusWeight: 18, label: 'Blue Marlin' },
+  { id: 'shark',     filename: 'Great_White_Shark.png', color: '#8ea6c4', weight: 12, bonusWeight: 12, label: 'Great White' },
+  { id: 'legendary', filename: 'Blue_Whale_v2.png',    color: '#a78bfa', weight: 7,  bonusWeight: 8,  label: 'Blue Whale' },
+  { id: 'catfish',   filename: 'Catfish.png',          color: '#f0c040', weight: 9,  bonusWeight: 8,  label: 'Catfish' },
+  { id: 'anchor',                                       color: '#34d399', weight: 24, bonusWeight: 0,  label: 'Hook' },
   // Jellyfish WILD — bonus-round ONLY (base weight 0). Substitutes for the base
   // fish (common/rare/legendary) to complete a line; never the Catfish jackpot.
   // Pairs with SLOT_BONUS_MULT + the wild eval in actions.ts. RTP verified in
@@ -75,6 +80,7 @@ export const SLOT_SYMBOLS_LIST: {
 export const SLOT_PAYOUTS: Record<SlotSymbolId, number> = {
   common:    4,
   rare:      12,
+  shark:     28, // mid-tier between marlin (12x) and whale (60x); 3-of-a-kind 1-in-579
   legendary: 60,
   catfish:   0,
   anchor:    0,
@@ -95,6 +101,7 @@ export const SLOT_PAIR_PAYOUTS: Partial<Record<SlotSymbolId, number>> = {
   // the trim spreads thin and is barely felt per hit. Catfish pair stays 3×.
   // Holds total RTP at ~96.8%.
   rare:      1.5,
+  shark:     3,   // between marlin pair (1.5x) and whale pair (5x)
   legendary: 5,
   catfish:   3,
 }

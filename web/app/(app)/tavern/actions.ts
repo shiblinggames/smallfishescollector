@@ -93,10 +93,11 @@ function evalBonusLine(rs: SlotSymbolId[]): { symbol: SlotSymbolId; kind: 'tripl
   const wilds = rs.filter(r => r === 'wild').length
   const nat = (s: SlotSymbolId) => rs.filter(r => r === s).length
   const opts: { symbol: SlotSymbolId; kind: 'triple' | 'pair'; mult: number }[] = []
-  for (const s of ['common', 'rare', 'legendary'] as const) {
+  for (const s of ['common', 'rare', 'shark', 'legendary'] as const) {
     if (nat(s) + wilds === 3) opts.push({ symbol: s, kind: 'triple', mult: SLOT_PAYOUTS[s] })
   }
   if (nat('legendary') + wilds >= 2 && SLOT_PAIR_PAYOUTS.legendary) opts.push({ symbol: 'legendary', kind: 'pair', mult: SLOT_PAIR_PAYOUTS.legendary })
+  if (nat('shark') + wilds >= 2 && SLOT_PAIR_PAYOUTS.shark) opts.push({ symbol: 'shark', kind: 'pair', mult: SLOT_PAIR_PAYOUTS.shark })
   if (nat('catfish') >= 2 && SLOT_PAIR_PAYOUTS.catfish) opts.push({ symbol: 'catfish', kind: 'pair', mult: SLOT_PAIR_PAYOUTS.catfish })
   if (nat('rare') + wilds >= 2 && SLOT_PAIR_PAYOUTS.rare) opts.push({ symbol: 'rare', kind: 'pair', mult: SLOT_PAIR_PAYOUTS.rare })
   if (opts.length === 0) return null

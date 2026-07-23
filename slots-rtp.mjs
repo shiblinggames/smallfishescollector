@@ -110,8 +110,9 @@ function bestBonusPay(reels, triples, pairs) {
   const wilds = reels.filter(r => r === 'wild').length
   const nat = s => reels.filter(r => r === s).length
   const opts = []
-  for (const s of ['common', 'rare', 'legendary']) if (nat(s) + wilds === 3) opts.push(triples[s])
+  for (const s of ['common', 'rare', 'shark', 'legendary']) if (nat(s) + wilds === 3) opts.push(triples[s])
   if (nat('legendary') + wilds >= 2) opts.push(pairs.legendary)
+  if (nat('shark') + wilds >= 2) opts.push(pairs.shark)
   if (nat('rare') + wilds >= 2) opts.push(pairs.rare)
   if (nat('catfish') >= 2) opts.push(pairs.catfish)
   return opts.length ? Math.max(...opts) : 0
@@ -147,9 +148,12 @@ function reportWild(label, baseWeights, bonusWeights, pairs, triples, boost) {
   console.log(`TOTAL base RTP: ${(total * 100).toFixed(2)}%  (+10% feed = ${(total * 100 + 10).toFixed(2)}% total)`)
 }
 console.log('\n\n######## Jellyfish WILD bonus — SHIPPED config (base unchanged) ########')
-// SHIPPED 2026-07-23: hook 18→24 (from sardine) — raises bonus rate to ~1-in-72
-// AND drops RTP to ~95.5% (more hooks = more break-even filler; see note above).
-reportWild('LIVE: hook 24, bonus wild 16, boost 1.5x',
-  { common: 40, rare: 20, legendary: 7, catfish: 9, anchor: 24 },
-  { common: 40, rare: 20, legendary: 8, catfish: 8, wild: 16 },
-  { rare: 1.5, legendary: 5, catfish: 3 }, T4, 1.5)
+// SHIPPED 2026-07-23: (a) hook 18→24 raised the bonus rate to ~1-in-72 + cut RTP;
+// (b) added the Great White (shark) tier — triple 28x (1-in-579), pair 3x, weight
+// 12 from sardine — filling the marlin(12x)→whale(60x) gap. Marlin/whale/catfish/
+// hook + jackpot + bonus odds all unchanged; total ~95.7%.
+reportWild('LIVE: shark tier + hook 24 + bonus wild 16, boost 1.5x',
+  { common: 28, rare: 20, shark: 12, legendary: 7, catfish: 9, anchor: 24 },
+  { common: 30, rare: 18, shark: 12, legendary: 8, catfish: 8, wild: 16 },
+  { rare: 1.5, shark: 3, legendary: 5, catfish: 3 },
+  { common: 4, rare: 12, shark: 28, legendary: 60 }, 1.5)
