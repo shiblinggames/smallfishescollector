@@ -993,6 +993,15 @@ export default function RaidCombat({
   // split as the anchor.
   const [abyssalShieldHp, setAbyssalShieldHp] = useState(0)
   const abyssalShieldRef = useRef(0)
+  // Typed breakdown of the SAME shield pool, so the bar can show WHERE the shield
+  // came from: the amber opening-BOON layer (Stormward/Deep Fortress/Last Bastion)
+  // vs the cyan CREW-ability layer (Abyssal Tide). boon + crew always == the total
+  // abyssalShieldRef; mirrored at the same grant/soak sites. Display only — the
+  // damage math still reads abyssalShieldRef.
+  const [boonShieldHp, setBoonShieldHp] = useState(0)
+  const boonShieldRef = useRef(0)
+  const [crewShieldHp, setCrewShieldHp] = useState(0)
+  const crewShieldRef = useRef(0)
   // Vengeance (Laz the Coelacanth-only legendary) — an ARMED ward, current-fight
   // only. When the ability fires we capture that crew's heal% + damage-buff% and
   // arm the ward. If a killing blow would land THIS fight while armed, we negate
@@ -1985,6 +1994,10 @@ export default function RaidCombat({
     if (fightShieldMaxRef.current > 0) {
       abyssalShieldRef.current = fightShieldMaxRef.current
       setAbyssalShieldHp(fightShieldMaxRef.current)
+      // Reforms the opening boon layer each fight (overwrites the total), so the
+      // crew layer resets to 0 to keep boon + crew == the total.
+      boonShieldRef.current = fightShieldMaxRef.current; setBoonShieldHp(fightShieldMaxRef.current)
+      crewShieldRef.current = 0; setCrewShieldHp(0)
     }
     setSubPhase('await_input')
     setPlayerAction(null); setEnemyAction(null); setAimResult(null); setFirstActor(null)
@@ -2643,6 +2656,7 @@ export default function RaidCombat({
         const shield = Math.round(playerHpMax * at.shieldPctMaxHp)
         setAbyssalShieldHp(prev => prev + shield)
         abyssalShieldRef.current += shield
+        crewShieldRef.current += shield; setCrewShieldHp(prev => prev + shield)   // crew-ability (cyan) layer
         if (at.cleanseDebuff) { setCleanseDebuffPending(true); cleansePlayerStatuses() }
         noteCheckResponse('heal'); noteCheckResponse('shield'); noteCheckResponse('brace'); dousePlayerBurnFromHeal()   // legendary breadth: the abyss answers heal, shield AND brace checks
         setPHitsplat({ key: ak + 1, text: `+${heal}`, color: chaseColor ?? '#5eead4', big: true })
@@ -3379,6 +3393,8 @@ export default function RaidCombat({
       // bars deplete in lockstep with the animation, not the instant the turn
       // resolves (which spoiled the incoming hit before it landed).
       pShield?: number
+      pBoonShield?: number
+      pCrewShield?: number
       eShield?: number
     }
 
@@ -3432,7 +3448,7 @@ export default function RaidCombat({
     // Snapshot both shield pools onto every step as it's pushed, so the display
     // can deplete them in lockstep with the animation (see syncPHp/syncEHp)
     // instead of the whole turn's soak landing the instant it resolves.
-    const pushStep = (s: Step) => { steps.push({ ...s, pShield: abyssalShieldRef.current, eShield: enemyShieldRef.current }) }
+    const pushStep = (s: Step) => { steps.push({ ...s, pShield: abyssalShieldRef.current, pBoonShield: boonShieldRef.current, pCrewShield: crewShieldRef.current, eShield: enemyShieldRef.current }) }
     // Barrier Regrowth curse: the enemy barrier reknits a slice of its full value
     // at the top of each round, BEFORE the player's shot lands — so a slow chip
     // never breaks through and the hull only takes damage once you burst the wall
@@ -3443,7 +3459,7 @@ export default function RaidCombat({
     }
     // HP appliers that ALSO settle the matching shield bar to this step's
     // snapshot. Used everywhere a step's HP is committed during playback.
-    const syncPHp = (step: Step) => { setPlayerHp(step.pHp); if (step.pShield != null) setAbyssalShieldHp(step.pShield) }
+    const syncPHp = (step: Step) => { setPlayerHp(step.pHp); if (step.pShield != null) setAbyssalShieldHp(step.pShield); if (step.pBoonShield != null) setBoonShieldHp(step.pBoonShield); if (step.pCrewShield != null) setCrewShieldHp(step.pCrewShield) }
     const syncEHp = (step: Step) => { setEnemyHp(step.eHp); if (step.eShield != null) setEnemyShieldHp(step.eShield) }
     // ── Player shield soak, one place ────────────────────────────────────────
     // Drain the player shield pool (Stormward boon / Abyssal Tide) BEFORE damage
@@ -3456,6 +3472,11 @@ export default function RaidCombat({
       if (abyssalShieldRef.current > 0 && amount > 0) {
         const soaked = Math.min(abyssalShieldRef.current, amount)
         abyssalShieldRef.current -= soaked
+        // Deplete the crew (cyan) layer first, the opening boon (amber) layer
+        // last, so the two coloured bar segments shrink in a readable order.
+        const fromCrew = Math.min(crewShieldRef.current, soaked)
+        crewShieldRef.current -= fromCrew
+        boonShieldRef.current = Math.max(0, boonShieldRef.current - (soaked - fromCrew))
         onStat?.({ dmgAbsorbed: soaked })
         lines.push(abyssalShieldRef.current > 0 ? `Your shield soaks ${soaked}.` : `Your shield soaks ${soaked} and shatters.`)
         return amount - soaked
@@ -6764,7 +6785,7 @@ export default function RaidCombat({
             </p>
             {/* Absorb shield (Abyssal Tide / Stormward) folds into the HP bar
                 as a cyan segment — one row, no stacked bar. */}
-            <HPBar current={playerHp} max={playerHpMax} accent={PLAYER_COLOR} compact shield={abyssalShieldHp} />
+            <HPBar current={playerHp} max={playerHpMax} accent={PLAYER_COLOR} compact shieldSegments={[{ hp: boonShieldHp, color: '#f5b94a', gradTo: '#e0972f' }, { hp: crewShieldHp, color: '#7dd3fc', gradTo: '#5eead4' }]} />
             <ChargesRow charges={playerCharges} max={playerMaxCharges} small readyGlow={canMega ? (megaAugment?.color ?? null) : null} />
             {/* Ch4 statuses + bespoke effect chips on YOUR hull. */}
             <StatusBadgesRow statuses={playerStatuses} bespoke={[
@@ -8301,12 +8322,19 @@ function CarapaceDeflect() {
 // barrier) renders as a distinct-colored segment filling the gap just past
 // the HP fill (reads as temporary bonus HP), plus a small inline chip on the
 // number line. No separate stacked bar — keeps the nameplate to one row.
-function HPBar({ current, max, accent, compact, shield = 0, shieldColor = '#7dd3fc', shieldGradTo = '#5eead4', hidden = false }: { current: number; max: number; accent: string; compact?: boolean; shield?: number; shieldColor?: string; shieldGradTo?: string; hidden?: boolean }) {
+function HPBar({ current, max, accent, compact, shield = 0, shieldColor = '#7dd3fc', shieldGradTo = '#5eead4', shieldSegments, hidden = false }: { current: number; max: number; accent: string; compact?: boolean; shield?: number; shieldColor?: string; shieldGradTo?: string; shieldSegments?: { hp: number; color: string; gradTo: string }[]; hidden?: boolean }) {
   const pct = hidden ? 0 : (max > 0 ? Math.max(0, Math.min(100, (current / max) * 100)) : 0)
-  // Cap the shield segment to the empty space so the bar never overflows; the
-  // true amount always shows on the chip even when the hull is full.
-  const shieldPct = max > 0 && shield > 0 ? Math.min(100 - pct, (shield / max) * 100) : 0
+  // Shield can be a single pool (enemy barrier) OR typed segments (the player's
+  // amber boon layer + cyan crew-ability layer), so each source reads distinctly.
+  const segs = (shieldSegments ?? (shield > 0 ? [{ hp: shield, color: shieldColor, gradTo: shieldGradTo }] : [])).filter(s => s.hp > 0)
+  const totalShield = segs.reduce((s, x) => s + x.hp, 0)
+  // Cap the whole shield strip to the empty hull space (scaling the segments
+  // together) so the bar never overflows; the chips still show the true amounts.
+  const availPct = Math.max(0, 100 - pct)
+  const rawPct = max > 0 ? (totalShield / max) * 100 : 0
+  const segScale = rawPct > availPct && rawPct > 0 ? availPct / rawPct : 1
   const h = compact ? 8 : 10
+  let off = pct
   return (
     <div>
       {!compact && (
@@ -8322,20 +8350,26 @@ function HPBar({ current, max, accent, compact, shield = 0, shieldColor = '#7dd3
         ) : (
           <>
             <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${pct}%`, background: accent, borderRadius: 4, transition: 'width 0.4s ease' }} />
-            {shieldPct > 0 && (
-              <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${pct}%`, width: `${shieldPct}%`, background: `linear-gradient(90deg, ${shieldColor}, ${shieldGradTo})`, boxShadow: `0 0 6px ${shieldColor}aa`, transition: 'width 0.35s ease, left 0.4s ease' }} />
-            )}
+            {segs.map((s, i) => {
+              const w = max > 0 ? (s.hp / max) * 100 * segScale : 0
+              const left = off; off += w
+              return <div key={i} style={{ position: 'absolute', top: 0, bottom: 0, left: `${left}%`, width: `${w}%`, background: `linear-gradient(90deg, ${s.color}, ${s.gradTo})`, boxShadow: `0 0 6px ${s.color}aa`, transition: 'width 0.35s ease, left 0.4s ease' }} />
+            })}
           </>
         )}
       </div>
       {compact && (
-        <div style={{ display: 'flex', justifyContent: shield > 0 ? 'space-between' : 'flex-end', alignItems: 'center', marginTop: 3 }}>
-          {shield > 0 && (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-              <svg width="9" height="9" viewBox="0 0 24 24" fill={shieldColor} aria-hidden style={{ filter: `drop-shadow(0 0 2px ${shieldColor})` }}>
-                <path d="M12 2 4 5v6c0 5 3.4 8.6 8 11 4.6-2.4 8-6 8-11V5z" />
-              </svg>
-              <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: shieldColor, lineHeight: 1 }}>{shield}</span>
+        <div style={{ display: 'flex', justifyContent: segs.length > 0 ? 'space-between' : 'flex-end', alignItems: 'center', marginTop: 3 }}>
+          {segs.length > 0 && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+              {segs.map((s, i) => (
+                <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill={s.color} aria-hidden style={{ filter: `drop-shadow(0 0 2px ${s.color})` }}>
+                    <path d="M12 2 4 5v6c0 5 3.4 8.6 8 11 4.6-2.4 8-6 8-11V5z" />
+                  </svg>
+                  <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: s.color, lineHeight: 1 }}>{s.hp}</span>
+                </span>
+              ))}
             </span>
           )}
           <p className="font-karla font-700" style={{ fontSize: '0.8rem', color: hidden ? '#8a95aa' : accent }}>{hidden ? '???' : `${current}/${max}`}</p>
