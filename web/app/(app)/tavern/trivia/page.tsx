@@ -41,7 +41,6 @@ export default async function TriviaPage() {
     <main className="min-h-screen pb-24 sm:pb-0">
       <div className="px-4 pt-6 pb-12">
         <TriviaLobby
-          doubloons={profile?.doubloons ?? 0}
           boardPlayedToday={boardPlayedToday}
           boardPlayedThisWeek={boardPlayedThisWeek}
           doubloonsThisWeek={attempt?.doubloons_awarded ?? 0}

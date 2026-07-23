@@ -6,6 +6,7 @@
 // Parlor in ONE line by pointing HOST_ART at any other card-arts/<file>.png.
 
 import { motion } from 'framer-motion'
+import { useEffect, useRef, useState } from 'react'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 export const HOST_ART = `${SUPABASE_URL}/storage/v1/object/public/card-arts/Lionfish_crimsoncavalier.png`
@@ -20,6 +21,38 @@ export const PARLOR = {
   brass: '#c9a24a',
   brassDim: 'rgba(201,162,74,0.42)',
   candle: '#f0c86a',
+}
+
+/** The Parlor points readout for every game header — clear + legible, and it
+ *  counts up with a warm glow whenever points are earned. Replaces the old
+ *  doubloon balance in the header on all three Parlor screens. */
+export function ParlorPointsTicker({ value }: { value: number }) {
+  const [shown, setShown] = useState(value)
+  const [glow, setGlow] = useState(false)
+  const fromRef = useRef(value)
+  useEffect(() => {
+    const from = fromRef.current
+    if (from === value) return
+    fromRef.current = value
+    if (value < from) { setShown(value); return }   // resets snap silently
+    setGlow(true)
+    const start = performance.now(), dur = 850
+    let raf = 0
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / dur)
+      setShown(Math.round(from + (value - from) * (1 - Math.pow(1 - t, 3))))
+      if (t < 1) raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    const g = setTimeout(() => setGlow(false), dur + 300)
+    return () => { cancelAnimationFrame(raf); clearTimeout(g) }
+  }, [value])
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 4, whiteSpace: 'nowrap', transform: glow ? 'scale(1.08)' : 'scale(1)', transformOrigin: 'right center', transition: 'transform 0.3s' }}>
+      <span className="font-cinzel font-700" style={{ fontSize: '1rem', lineHeight: 1, color: glow ? PARLOR.candle : '#f0e8d0', textShadow: glow ? `0 0 12px ${PARLOR.candle}88` : 'none', transition: 'color 0.3s, text-shadow 0.3s', fontVariantNumeric: 'tabular-nums' }}>{shown.toLocaleString()}</span>
+      <span className="font-karla font-700 uppercase" style={{ fontSize: '0.52rem', letterSpacing: '0.12em', color: glow ? PARLOR.candle : '#a8a090', transition: 'color 0.3s' }}>pts</span>
+    </span>
+  )
 }
 
 /** A warm candlelight vignette to lay over a surface (pointer-events none). Give

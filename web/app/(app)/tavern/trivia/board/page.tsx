@@ -19,7 +19,7 @@ export default async function CaptainsBoardPage() {
             </p>
           </div>
         ) : (
-          <CaptainsBoard initial={state} doubloons={profile?.doubloons ?? 0} />
+          <CaptainsBoard initial={state} parlorPoints={(profile?.parlor_points as number | null) ?? 0} />
         )}
       </div>
     </main>

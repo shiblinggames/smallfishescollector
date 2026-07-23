@@ -12,8 +12,7 @@ import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { answerCaptainsTile, playCaptainsCard } from './actions'
-import BalanceTicker from '../BalanceTicker'
-import { ParlorHost, PARLOR } from '../ParlorArt'
+import { ParlorHost, PARLOR, ParlorPointsTicker } from '../ParlorArt'
 import {
   TRIVIA_CATEGORIES,
   categoryMeta,
@@ -26,14 +25,14 @@ import {
 const DOUBLOON_COLOR = '#f0c040'
 const GEM_COLOR = '#c084fc'
 
-export default function CaptainsBoard({ initial, doubloons }: { initial: CaptainsBoardState; doubloons: number }) {
+export default function CaptainsBoard({ initial, parlorPoints }: { initial: CaptainsBoardState; parlorPoints: number }) {
   const [tiles, setTiles] = useState<BoardTileClient[]>(initial.tiles)
   const [playedToday, setPlayedToday] = useState(initial.playedToday)
   const [picksAllowed, setPicksAllowed] = useState(initial.picksAllowed)
   const [picksToday, setPicksToday] = useState(initial.picksToday)
   const [committedKey, setCommittedKey] = useState<string | null>(initial.committedKey)
   const [doubloonsAwarded, setDoubloonsAwarded] = useState(initial.doubloonsAwarded)
-  const [balance, setBalance] = useState(doubloons)
+  const [points, setPoints] = useState(parlorPoints)
   const [pendingPlay, setPendingPlay] = useState<string | null>(null)
   const [openKey, setOpenKey] = useState<string | null>(null)
   const [result, setResult] = useState<AnswerTileResult | null>(null)
@@ -62,7 +61,7 @@ export default function CaptainsBoard({ initial, doubloons }: { initial: Captain
     setCommittedKey(initial.committedKey)
     setDoubloonsAwarded(initial.doubloonsAwarded)
   }, [initial])
-  useEffect(() => { setBalance(doubloons) }, [doubloons])
+  useEffect(() => { setPoints(parlorPoints) }, [parlorPoints])
 
   const openTile = openKey ? tiles.find(t => t.key === openKey) ?? null : null
   const answeredCount = tiles.filter(t => t.answered).length
@@ -106,7 +105,7 @@ export default function CaptainsBoard({ initial, doubloons }: { initial: Captain
       setResult(r)
       setDoubloonsAwarded(r.totalAwarded)
       setCommittedKey(null)
-      if (r.doubloonsWon > 0) setBalance(prev => prev + r.doubloonsWon)
+      setPoints(r.newPoints)
       if (r.newDoubloons !== null) {
         window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.newDoubloons }))
       }
@@ -143,7 +142,7 @@ export default function CaptainsBoard({ initial, doubloons }: { initial: Captain
           The Captain&apos;s Board
         </p>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', justifyContent: 'flex-end' }}>
-          <BalanceTicker value={balance} glyph="⟡" color={DOUBLOON_COLOR} />
+          <ParlorPointsTicker value={points} />
         </div>
       </div>
 

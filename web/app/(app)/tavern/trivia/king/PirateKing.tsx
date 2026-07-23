@@ -9,8 +9,7 @@ import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { answerKingRung, spendKingFiftyFifty, walkKingAway } from './actions'
-import BalanceTicker from '../BalanceTicker'
-import { ParlorHost, CrownIcon, PARLOR } from '../ParlorArt'
+import { ParlorHost, CrownIcon, PARLOR, ParlorPointsTicker } from '../ParlorArt'
 import {
   PIRATE_KING_PRIZES,
   PIRATE_KING_HAVENS,
@@ -24,11 +23,11 @@ import {
 
 const GOLD = '#f0c040'
 
-export default function PirateKing({ initial, doubloons }: { initial: PirateKingState; doubloons: number }) {
+export default function PirateKing({ initial, parlorPoints }: { initial: PirateKingState; parlorPoints: number }) {
   const [status, setStatus] = useState<PirateKingStatus>(initial.status)
   const [rung, setRung] = useState(initial.rung)
   const [doubloonsAwarded, setDoubloonsAwarded] = useState(initial.doubloonsAwarded)
-  const [balance, setBalance] = useState(doubloons)
+  const [points, setPoints] = useState(parlorPoints)
   const [fiftyUsed, setFiftyUsed] = useState(initial.fiftyUsed)
   const [current, setCurrent] = useState<KingQuestionClient | null>(initial.current)
   const [result, setResult] = useState<AnswerKingResult | null>(null)
@@ -49,7 +48,7 @@ export default function PirateKing({ initial, doubloons }: { initial: PirateKing
     setChosen(null)
     setWalkConfirm(false)
   }, [initial])
-  useEffect(() => { setBalance(doubloons) }, [doubloons])
+  useEffect(() => { setPoints(parlorPoints) }, [parlorPoints])
 
   const resolved = result !== null
   // While a result is up, `rung` already advanced; the question on
@@ -72,10 +71,10 @@ export default function PirateKing({ initial, doubloons }: { initial: PirateKing
       setStatus(r.status)
       setRung(r.rung)
       setDoubloonsAwarded(r.doubloonsAwarded)
-      // Payouts land only at terminal states; tick the purse up then
-      // and keep the Nav header in step.
+      // Parlor points tick up on every right answer, not just at the end.
+      setPoints(r.newPoints)
+      // Payouts land only at terminal states; tick the Nav purse then.
       if (r.newDoubloons !== null) {
-        setBalance(prev => prev + r.doubloonsAwarded)
         window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.newDoubloons }))
       }
       // The crown also banks gems — tick the Nav's gem purse.
@@ -114,7 +113,6 @@ export default function PirateKing({ initial, doubloons }: { initial: PirateKing
       setStatus('walked')
       setDoubloonsAwarded(r.doubloonsAwarded)
       if (r.newDoubloons !== null) {
-        setBalance(prev => prev + r.doubloonsAwarded)
         window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.newDoubloons }))
       }
       setResult(null)
@@ -140,7 +138,7 @@ export default function PirateKing({ initial, doubloons }: { initial: PirateKing
           Pirate King
         </p>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', justifyContent: 'flex-end' }}>
-          <BalanceTicker value={balance} glyph="⟡" color={GOLD} />
+          <ParlorPointsTicker value={points} />
         </div>
       </div>
 

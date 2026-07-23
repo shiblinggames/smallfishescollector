@@ -7,7 +7,7 @@
 import { motion } from 'framer-motion'
 import ScenicCard from '../ScenicCard'
 import BackButton from '@/components/BackButton'
-import { ParlorHost, CrownIcon } from './ParlorArt'
+import { ParlorHost, CrownIcon, ParlorPointsTicker } from './ParlorArt'
 import { TRIVIA_CATEGORIES, PIRATE_KING_RUNGS, parlorRank, type PirateKingStatus } from './constants'
 
 const GOLD = '#f0c040'
@@ -18,8 +18,7 @@ export interface KingChip {
   doubloonsAwarded: number
 }
 
-export default function TriviaLobby({ doubloons, boardPlayedToday, boardPlayedThisWeek, doubloonsThisWeek, king, parlorStreak, parlorPoints }: {
-  doubloons: number
+export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, doubloonsThisWeek, king, parlorStreak, parlorPoints }: {
   boardPlayedToday: boolean
   boardPlayedThisWeek: number
   doubloonsThisWeek: number
@@ -45,9 +44,7 @@ export default function TriviaLobby({ doubloons, boardPlayedToday, boardPlayedTh
           The Parlor
         </p>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', justifyContent: 'flex-end' }}>
-          <span className="font-karla" style={{ fontSize: '0.58rem', color: '#7a7672', whiteSpace: 'nowrap' }}>
-            {doubloons.toLocaleString()} ⟡
-          </span>
+          <ParlorPointsTicker value={parlorPoints} />
         </div>
       </div>
 

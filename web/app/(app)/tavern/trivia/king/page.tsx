@@ -19,7 +19,7 @@ export default async function PirateKingPage() {
             </p>
           </div>
         ) : (
-          <PirateKing initial={state} doubloons={profile?.doubloons ?? 0} />
+          <PirateKing initial={state} parlorPoints={(profile?.parlor_points as number | null) ?? 0} />
         )}
       </div>
     </main>
