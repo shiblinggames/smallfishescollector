@@ -109,12 +109,13 @@ export async function answerKingRung(
   const admin = createAdminClient()
   const week = kingWeekStr()
 
-  const [ladder, { data: attempt }] = await Promise.all([
+  const [ladder, { data: attempt }, { data: prof }] = await Promise.all([
     getThisWeeksLadder(),
     admin.from('trivia_ladder_attempts')
       .select(ATTEMPT_COLS)
       .eq('user_id', user.id).eq('date', week)
       .single(),
+    admin.from('profiles').select('parlor_streak, parlor_best_streak').eq('id', user.id).single(),
   ])
   if (!ladder) return { error: 'No ladder available' }
 
@@ -167,6 +168,15 @@ export async function answerKingRung(
     newDoubloons = await payOut(user.id, won, `Pirate King: fell to the haven at ${won} ⟡`)
   }
 
+  // Parlor streak (shared with the Board): a right answer extends it, a bust
+  // breaks it. Own column-only write, sequential after the payouts.
+  const prevStreak = (prof?.parlor_streak as number | null) ?? 0
+  const prevBest = (prof?.parlor_best_streak as number | null) ?? 0
+  const currentStreak = correct ? prevStreak + 1 : 0
+  const brokeStreak = correct ? 0 : prevStreak
+  const bestStreak = Math.max(prevBest, currentStreak)
+  await admin.from('profiles').update({ parlor_streak: currentStreak, parlor_best_streak: bestStreak }).eq('id', user.id)
+
   // Badge hooks (best-effort): the crown, and the rung-7 stepping stone.
   if (status === 'crowned') { try { await grantBadgeDirect(user.id, 'crowned') } catch { /* best-effort */ } }
   if (newRung >= 7) { try { await grantBadgeDirect(user.id, 'throne_in_sight') } catch { /* best-effort */ } }
@@ -181,6 +191,9 @@ export async function answerKingRung(
     newDoubloons,
     gemsWon,
     newGems,
+    currentStreak,
+    brokeStreak,
+    bestStreak,
     next: status === 'active' ? stripQuestion(ladder[newRung], newRung, a.fifty) : null,
   }
 }

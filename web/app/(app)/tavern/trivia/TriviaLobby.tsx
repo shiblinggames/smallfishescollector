@@ -8,7 +8,7 @@ import { motion } from 'framer-motion'
 import ScenicCard from '../ScenicCard'
 import BackButton from '@/components/BackButton'
 import { ParlorHost, CrownIcon } from './ParlorArt'
-import { TRIVIA_CATEGORIES, PIRATE_KING_RUNGS, type PirateKingStatus } from './constants'
+import { TRIVIA_CATEGORIES, PIRATE_KING_RUNGS, parlorRank, type PirateKingStatus } from './constants'
 
 const GOLD = '#f0c040'
 
@@ -18,13 +18,16 @@ export interface KingChip {
   doubloonsAwarded: number
 }
 
-export default function TriviaLobby({ doubloons, boardPlayedToday, boardPlayedThisWeek, doubloonsThisWeek, king }: {
+export default function TriviaLobby({ doubloons, boardPlayedToday, boardPlayedThisWeek, doubloonsThisWeek, king, parlorStreak, parlorBestStreak }: {
   doubloons: number
   boardPlayedToday: boolean
   boardPlayedThisWeek: number
   doubloonsThisWeek: number
   king: KingChip | null
+  parlorStreak: number
+  parlorBestStreak: number
 }) {
+  const { rank, next } = parlorRank(parlorBestStreak)
   const kingChipText = king === null ? null
     : king.status === 'crowned' ? `Crowned · +${king.doubloonsAwarded} ⟡`
     : king.status === 'walked' ? `Walked · +${king.doubloonsAwarded} ⟡`
@@ -51,6 +54,24 @@ export default function TriviaLobby({ doubloons, boardPlayedToday, boardPlayedTh
       {/* The host presides — a dashing crimson cavalier who runs the room. */}
       <div style={{ padding: '0.2rem 0.2rem 0.1rem' }}>
         <ParlorHost line="Welcome back to the Parlor. Sharpen your wits — the good stakes aren't just coin tonight." />
+      </div>
+
+      {/* Parlor Standing — the mastery rank you climb by answering right across
+          both games. One streak, one record, one title to show off. */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '0.7rem 0.9rem', borderRadius: 14, background: `linear-gradient(180deg, ${rank.color}14, rgba(10,8,6,0.55))`, border: `1px solid ${rank.color}44` }}>
+        <div style={{ minWidth: 0 }}>
+          <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.16em', color: '#8a8478' }}>Parlor Standing</p>
+          <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: rank.color, lineHeight: 1.1, marginTop: 2, textShadow: `0 0 14px ${rank.color}44` }}>{rank.title}</p>
+          <p className="font-karla" style={{ fontSize: '0.6rem', color: '#9a9488', marginTop: 3 }}>
+            Best streak {parlorBestStreak}{next ? ` · ${next.title} at ${next.at}` : ' · top rank'}
+          </p>
+        </div>
+        {parlorStreak > 0 && (
+          <div style={{ textAlign: 'center', flexShrink: 0 }}>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: GOLD, lineHeight: 1, textShadow: `0 0 14px ${GOLD}55` }}>{parlorStreak}</p>
+            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.1em', color: '#8a8478', marginTop: 2 }}>on a roll</p>
+          </div>
+        )}
       </div>
 
       <p className="font-karla" style={{ fontSize: '0.8rem', color: '#c2b9a4', lineHeight: 1.55, textAlign: 'center' }}>

@@ -18,6 +18,7 @@ import {
   TRIVIA_CATEGORIES,
   categoryMeta,
   nextBoardGemMilestone,
+  parlorHostReaction,
   type CaptainsBoardState,
   type BoardTileClient,
   type AnswerTileResult,
@@ -354,6 +355,17 @@ export default function CaptainsBoard({ initial, doubloons }: { initial: Captain
                     <p className="font-karla" style={{ fontSize: '0.74rem', color: '#a09988', lineHeight: 1.5, textAlign: 'center', marginTop: 6 }}>
                       {shownExplanation}
                     </p>
+                  )}
+                  {/* The host reacts to the answer + your running streak. */}
+                  {result && (
+                    <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                      <ParlorHost size={46} line={parlorHostReaction(result.correct, result.currentStreak, result.brokeStreak)} />
+                      {result.currentStreak >= 2 && (
+                        <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.1em', color: PARLOR.brass, textAlign: 'center', marginTop: 8 }}>
+                          {result.currentStreak} in a row{result.currentStreak >= 4 ? ' · on a heater' : ''}
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
               )}

@@ -207,7 +207,7 @@ export async function answerCaptainsTile(
   const [board, { data: attempt }, { data: profile }] = await Promise.all([
     getThisWeeksBoard(),
     admin.from('trivia_board_attempts').select(ATTEMPT_COLS).eq('user_id', user.id).eq('date', week).single(),
-    admin.from('profiles').select('doubloons, gems').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, gems, parlor_streak, parlor_best_streak').eq('id', user.id).single(),
   ])
   if (!board) return { error: 'No board available' }
 
@@ -236,6 +236,14 @@ export async function answerCaptainsTile(
   const gemsWon = Math.max(0, gemTotal - a.gems_awarded)
   const newGems = gemsWon > 0 ? (profile?.gems ?? 0) + gemsWon : null
 
+  // Parlor streak (shared with the King): a correct answer extends it, a wrong
+  // one breaks it. best is the permanent record behind the rank.
+  const prevStreak = (profile?.parlor_streak as number | null) ?? 0
+  const prevBest = (profile?.parlor_best_streak as number | null) ?? 0
+  const currentStreak = correct ? prevStreak + 1 : 0
+  const brokeStreak = correct ? 0 : prevStreak
+  const bestStreak = Math.max(prevBest, currentStreak)
+
   const writes: PromiseLike<unknown>[] = [
     admin.from('trivia_board_attempts').upsert({
       user_id: user.id,
@@ -248,12 +256,13 @@ export async function answerCaptainsTile(
   ]
   // ONE profiles patch — a correct answer can move both currencies at once, and
   // two concurrent updates to the same row would clobber each other.
-  const profilePatch: Record<string, number> = {}
+  const profilePatch: Record<string, number> = {
+    parlor_streak: currentStreak,
+    parlor_best_streak: bestStreak,
+  }
   if (newDoubloons !== null) profilePatch.doubloons = newDoubloons
   if (newGems !== null) profilePatch.gems = newGems
-  if (Object.keys(profilePatch).length > 0) {
-    writes.push(admin.from('profiles').update(profilePatch).eq('id', user.id))
-  }
+  writes.push(admin.from('profiles').update(profilePatch).eq('id', user.id))
   if (newDoubloons !== null) {
     writes.push(admin.from('doubloon_transactions').insert({
       user_id: user.id,
@@ -277,5 +286,8 @@ export async function answerCaptainsTile(
     newDoubloons,
     gemsWon,
     newGems,
+    currentStreak,
+    brokeStreak,
+    bestStreak,
   }
 }

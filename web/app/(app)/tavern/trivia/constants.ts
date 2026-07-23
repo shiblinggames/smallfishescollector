@@ -80,6 +80,45 @@ export interface AnswerTileResult {
    *  (0 if none), + the new gem total for the gems-changed dispatch. */
   gemsWon: number
   newGems: number | null
+  /** Parlor streak after this answer (0 if wrong), the streak it BROKE (>0 only
+   *  on a wrong answer that ended a run), and the all-time best. */
+  currentStreak: number
+  brokeStreak: number
+  bestStreak: number
+}
+
+// ── Parlor mastery: streak → rank ────────────────────────────────────
+// ONE streak across both games — any correct answer continues it, any wrong one
+// breaks it. best_streak is the permanent record that sets your Parlor RANK, a
+// title you climb and show off. Prestige, not currency (no economy impact).
+export interface ParlorRank { at: number; title: string; color: string }
+export const PARLOR_RANKS: ParlorRank[] = [
+  { at: 0,  title: 'Greenhorn',     color: '#8a8478' },
+  { at: 3,  title: 'Card Hand',     color: '#7fd49a' },
+  { at: 6,  title: 'Sharp',         color: '#60a5fa' },
+  { at: 10, title: 'Cardsharp',     color: '#a78bfa' },
+  { at: 16, title: 'Parlor Master', color: '#f0c040' },
+  { at: 25, title: 'Parlor Legend', color: '#ff6b35' },
+]
+/** Current rank + the next rung (null if maxed) for an all-time best streak. */
+export function parlorRank(best: number): { rank: ParlorRank; next: ParlorRank | null } {
+  let rank = PARLOR_RANKS[0]
+  for (const r of PARLOR_RANKS) if (best >= r.at) rank = r
+  return { rank, next: PARLOR_RANKS[PARLOR_RANKS.indexOf(rank) + 1] ?? null }
+}
+/** The host's in-character reaction to an answer. Pure (client-safe); leans on
+ *  the streak (or the one just broken) so it never feels canned. */
+export function parlorHostReaction(correct: boolean, streak: number, broke = 0): string {
+  if (!correct) {
+    if (broke >= 8) return `${broke} straight, gone in a heartbeat. The parlor giveth, the parlor taketh.`
+    if (broke >= 4) return `There goes a fine run — back to nothing. Steady the hand.`
+    return 'Cold water. Shake it off and pick again.'
+  }
+  if (streak >= 12) return "The whole room's holding its breath. Don't you dare blink."
+  if (streak >= 8)  return `${streak} in a row — you're on a proper heater now.`
+  if (streak >= 4)  return `${streak} straight. The house is starting to sweat.`
+  const lines = ['Well read.', 'Sharp as a gaff hook.', 'The coin knows its master.', 'Clean as you like.']
+  return lines[streak % lines.length]
 }
 
 // ── Parlor gem milestones (the premium draw) ─────────────────────────
@@ -175,6 +214,11 @@ export interface AnswerKingResult {
    *  total for the gems-changed dispatch. */
   gemsWon: number
   newGems: number | null
+  /** Parlor streak after this answer (0 if wrong), the streak it BROKE, and the
+   *  all-time best — shared with the Captain's Board. */
+  currentStreak: number
+  brokeStreak: number
+  bestStreak: number
   /** Next question if the run continues, already stripped. */
   next: KingQuestionClient | null
 }

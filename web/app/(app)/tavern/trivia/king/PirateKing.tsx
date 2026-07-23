@@ -15,6 +15,7 @@ import {
   PIRATE_KING_PRIZES,
   PIRATE_KING_HAVENS,
   PIRATE_KING_CROWN_GEMS,
+  parlorHostReaction,
   kingHavenValue,
   type PirateKingState,
   type PirateKingStatus,
@@ -380,6 +381,15 @@ export default function PirateKing({ initial, doubloons }: { initial: PirateKing
           ) : (
             /* Result panel */
             <div style={{ marginTop: 12 }}>
+              {/* The host reacts to the answer + your Parlor streak. */}
+              <div style={{ marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                <ParlorHost size={46} line={parlorHostReaction(result.correct, result.currentStreak, result.brokeStreak)} />
+                {result.currentStreak >= 2 && (
+                  <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.1em', color: PARLOR.brass, textAlign: 'center', marginTop: 8 }}>
+                    {result.currentStreak} in a row{result.currentStreak >= 4 ? ' · on a heater' : ''}
+                  </p>
+                )}
+              </div>
               {result.correct ? (
                 <>
                   <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', textAlign: 'center', color: '#7fd49a' }}>
