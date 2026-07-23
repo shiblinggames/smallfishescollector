@@ -21,6 +21,7 @@ import {
   kingWeekStr,
   boardCardPoints,
   parlorRank,
+  triviaTimedOut,
   type CaptainsBoardState,
   type BoardTileClient,
   type AnswerTileResult,
@@ -28,7 +29,7 @@ import {
 
 /** Per-card record. `chosen`/`correct` are absent while the card is committed
  *  (revealed) but not yet answered. `day` is the date it was committed. */
-interface AnswerEntry { day: string; chosen?: number; correct?: boolean }
+interface AnswerEntry { day: string; chosen?: number; correct?: boolean; revealedAt?: string }
 interface AttemptRow {
   answers: Record<string, AnswerEntry>
   doubloons_awarded: number
@@ -119,6 +120,8 @@ export async function getCaptainsBoardState(): Promise<CaptainsBoardState | { er
     picksToday: picks,
     playedToday: picks >= picksAllowed,
     committedKey,
+    committedAt: committedKey ? (a.answers[committedKey]?.revealedAt ?? null) : null,
+    serverNow: new Date().toISOString(),
     doubloonsAwarded: a.doubloons_awarded,
   }
 }
@@ -157,6 +160,8 @@ export async function playCaptainsCard(key: string): Promise<CaptainsBoardState 
       picksToday: picks,
       playedToday: picks >= picksAllowed,
       committedKey: key,
+      committedAt: answers[key]?.revealedAt ?? null,
+      serverNow: new Date().toISOString(),
       doubloonsAwarded: a.doubloons_awarded,
     }
   }
@@ -172,7 +177,10 @@ export async function playCaptainsCard(key: string): Promise<CaptainsBoardState 
   const tile = board.find(t => triviaTileKey(t.category, t.tier) === key)
   if (!tile) return { error: 'Unknown card' }
 
-  answers[key] = { day: today }
+  // Stamp the reveal time: this is the answer clock's start. A resume/refresh hits
+  // the idempotent branch above and keeps this original stamp (no timer reset).
+  const revealedAt = new Date().toISOString()
+  answers[key] = { day: today, revealedAt }
   await admin.from('trivia_board_attempts').upsert({
     user_id: user.id,
     date: week,
@@ -188,6 +196,8 @@ export async function playCaptainsCard(key: string): Promise<CaptainsBoardState 
     picksToday: picks + 1,
     playedToday: (picks + 1) >= picksAllowed,
     committedKey: key,
+    committedAt: revealedAt,
+    serverNow: new Date().toISOString(),
     doubloonsAwarded: a.doubloons_awarded,
   }
 }
@@ -199,7 +209,8 @@ export async function answerCaptainsTile(
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not authenticated' }
-  if (typeof chosenIndex !== 'number' || chosenIndex < 0 || chosenIndex > 3) return { error: 'Invalid answer' }
+  // -1 is the client's "timed out, no answer" sentinel; 0-3 is a real pick.
+  if (typeof chosenIndex !== 'number' || chosenIndex < -1 || chosenIndex > 3) return { error: 'Invalid answer' }
 
   const admin = createAdminClient()
   const week = kingWeekStr()
@@ -222,12 +233,17 @@ export async function answerCaptainsTile(
   const tile = board.find(t => triviaTileKey(t.category, t.tier) === key)
   if (!tile) return { error: 'Unknown card' }
 
-  const correct = chosenIndex === tile.correct_index
+  // Answer timer: the clock started when the card was revealed (entry.revealedAt).
+  // A late answer or the -1 timeout sentinel is a miss; judged server-side so a
+  // doctored client can't beat the clock or stall on a lookup after a reload. A
+  // MISSING stamp is grandfathered (a card committed before the timer shipped).
+  const timedOut = chosenIndex === -1 || (entry.revealedAt != null && triviaTimedOut(entry.revealedAt, Date.now()))
+  const correct = !timedOut && chosenIndex === tile.correct_index
   const value = TRIVIA_TIER_VALUES[tile.tier - 1]
   const doubloonsWon = correct ? value : 0
   const totalAwarded = a.doubloons_awarded + doubloonsWon
   const newDoubloons = doubloonsWon > 0 ? (profile?.doubloons ?? 0) + doubloonsWon : null
-  const newAnswers = { ...a.answers, [key]: { day: today, chosen: chosenIndex, correct } }
+  const newAnswers = { ...a.answers, [key]: { day: today, chosen: chosenIndex, correct, revealedAt: entry.revealedAt } }
 
   // Parlor streak (shared with the King): a correct answer extends it, a wrong
   // one breaks it. best is the permanent record behind the rank.
@@ -285,6 +301,7 @@ export async function answerCaptainsTile(
 
   return {
     correct,
+    timedOut,
     correctIndex: tile.correct_index,
     explanation: tile.explanation,
     doubloonsWon,

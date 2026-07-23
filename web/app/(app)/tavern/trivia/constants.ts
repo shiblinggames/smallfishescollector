@@ -25,6 +25,22 @@ export const TRIVIA_TIER_VALUES = [50, 100, 200] as const
 
 export const TRIVIA_TIERS = [1, 2, 3] as const
 
+// ── Answer timer (anti-lookup) ──────────────────────────────────────
+// A question can't be looked up in time if you're on a clock. The timer starts
+// SERVER-SIDE the moment a question is revealed (the board commit / the King
+// reveal), and the server rejects any answer that lands after the limit — a
+// client countdown can't be trusted alone. Reloading never resets the clock
+// (the reveal timestamp is stored), so you can't stall on a lookup. GRACE covers
+// network + clock skew so an honest last-second answer isn't unfairly voided.
+export const TRIVIA_ANSWER_SECONDS = 20
+export const TRIVIA_TIMER_GRACE_MS = 4000
+/** True once a reveal timestamp is older than the limit (+ grace). serverNow and
+ *  revealedAt are ISO strings from the server; kept pure so both sides can call it. */
+export function triviaTimedOut(revealedAt: string | null, now: number): boolean {
+  if (!revealedAt) return true
+  return now - new Date(revealedAt).getTime() > TRIVIA_ANSWER_SECONDS * 1000 + TRIVIA_TIMER_GRACE_MS
+}
+
 export function triviaTileKey(category: TriviaCategoryKey, tier: number): string {
   return `${category}-${tier}`
 }
@@ -64,11 +80,20 @@ export interface CaptainsBoardState {
   /** The card committed today but not yet answered — the resume target so
    *  a refresh reopens the same question. null when nothing is pending. */
   committedKey: string | null
+  /** When the committed card's question was revealed (ISO), for the answer timer;
+   *  null when nothing is pending. Paired with serverNow so the client can show an
+   *  accurate countdown even after a reload. */
+  committedAt: string | null
+  /** The server's clock at state-fetch time (ISO) — the countdown's zero point. */
+  serverNow: string
   doubloonsAwarded: number
 }
 
 export interface AnswerTileResult {
   correct: boolean
+  /** The answer landed after the timer ran out (server-judged) — shown as
+   *  "Time's up" and counted as a miss. */
+  timedOut: boolean
   correctIndex: number
   explanation: string
   doubloonsWon: number
@@ -235,12 +260,28 @@ export interface PirateKingState {
   rung: number
   doubloonsAwarded: number
   fiftyUsed: boolean
-  /** Present only while status is 'active'. */
+  /** The current rung's question — only present when the run is active AND the
+   *  rung has been REVEALED (the clock is running / resuming). null means the
+   *  player must reveal it first (which starts the timer). */
   current: KingQuestionClient | null
+  /** When the current rung was revealed (ISO), or null if not revealed yet. */
+  startedAt: string | null
+  /** The server's clock at fetch time (ISO) — the countdown's zero point. */
+  serverNow: string
+}
+
+/** Question served + timer stamped when a rung is revealed (startKingRung). */
+export interface KingRevealResult {
+  current: KingQuestionClient
+  startedAt: string
+  serverNow: string
 }
 
 export interface AnswerKingResult {
   correct: boolean
+  /** The answer landed after the timer ran out (server-judged) — a timeout busts
+   *  the run just like a wrong answer, shown as "Time's up". */
+  timedOut: boolean
   correctIndex: number
   explanation: string
   status: PirateKingStatus
@@ -264,8 +305,9 @@ export interface AnswerKingResult {
   /** True when this answer pushed the point total into a NEW rank — cue to tell the
    *  player a reward is waiting to collect in the Parlor lobby. */
   rankedUp: boolean
-  /** Next question if the run continues, already stripped. */
-  next: KingQuestionClient | null
+  // No `next` here on purpose: the next rung's question is only served (and its
+  // clock started) by startKingRung when the player chooses to climb, so it can't
+  // be read ahead of the timer.
 }
 
 // ── Spin the Capstan (Wheel-of-Fortune phrase puzzle) ───────────────

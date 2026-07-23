@@ -8,11 +8,12 @@
 import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { answerKingRung, spendKingFiftyFifty, walkKingAway } from './actions'
+import { answerKingRung, startKingRung, spendKingFiftyFifty, walkKingAway } from './actions'
 import { ParlorHost, CrownIcon, PARLOR, ParlorPointsTicker } from '../ParlorArt'
 import {
   PIRATE_KING_PRIZES,
   PIRATE_KING_HAVENS,
+  TRIVIA_ANSWER_SECONDS,
   parlorHostReaction,
   kingHavenValue,
   type PirateKingState,
@@ -22,6 +23,13 @@ import {
 } from '../constants'
 
 const GOLD = '#f0c040'
+
+/** Project the server's remaining time onto the client clock: elapsed is measured
+ *  server-side (serverNow − startedAt) so clock skew can't cheat or void a run. */
+function deadlineFrom(startedAt: string, serverNow: string): number {
+  const elapsed = new Date(serverNow).getTime() - new Date(startedAt).getTime()
+  return Date.now() + Math.max(0, TRIVIA_ANSWER_SECONDS * 1000 - elapsed)
+}
 
 export default function PirateKing({ initial, parlorPoints }: { initial: PirateKingState; parlorPoints: number }) {
   const [status, setStatus] = useState<PirateKingStatus>(initial.status)
@@ -34,6 +42,10 @@ export default function PirateKing({ initial, parlorPoints }: { initial: PirateK
   const [chosen, setChosen] = useState<number | null>(null)
   const [walkConfirm, setWalkConfirm] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [deadline, setDeadline] = useState<number | null>(
+    initial.current && initial.startedAt ? deadlineFrom(initial.startedAt, initial.serverNow) : null,
+  )
+  const [secondsLeft, setSecondsLeft] = useState(TRIVIA_ANSWER_SECONDS)
   const [isPending, startTransition] = useTransition()
 
   // Server prop changes (midnight rollover, another tab played) must
@@ -47,8 +59,27 @@ export default function PirateKing({ initial, parlorPoints }: { initial: PirateK
     setResult(null)
     setChosen(null)
     setWalkConfirm(false)
+    setDeadline(initial.current && initial.startedAt ? deadlineFrom(initial.startedAt, initial.serverNow) : null)
   }, [initial])
   useEffect(() => { setPoints(parlorPoints) }, [parlorPoints])
+
+  const resolvedNow = result !== null
+  // The answer countdown. Ticks while a question is up and unanswered; on zero it
+  // auto-submits the timeout sentinel (the server is the real judge either way).
+  useEffect(() => {
+    if (deadline === null || resolvedNow || current === null) return
+    let fired = false
+    const tick = () => {
+      const ms = deadline - Date.now()
+      setSecondsLeft(Math.max(0, Math.ceil(ms / 1000)))
+      if (ms <= 0 && !fired) { fired = true; submitAnswer(-1) }
+    }
+    tick()
+    const id = setInterval(tick, 250)
+    return () => clearInterval(id)
+    // submitAnswer is stable for the life of a question (rung fixed until answered).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deadline, resolvedNow, current])
 
   const resolved = result !== null
   // While a result is up, `rung` already advanced; the question on
@@ -58,12 +89,14 @@ export default function PirateKing({ initial, parlorPoints }: { initial: PirateK
   const banked = rung >= 1 ? PIRATE_KING_PRIZES[rung - 1] : 0
   const havenIfWrong = kingHavenValue(questionRung)
 
-  function pickOption(idx: number) {
+  // idx 0-3 is a real pick; -1 is the timeout sentinel (auto-fired at zero).
+  function submitAnswer(idx: number) {
     if (!current || isPending || resolved || status !== 'active') return
-    if (current.removed.includes(idx)) return
+    if (idx >= 0 && current.removed.includes(idx)) return
     setError(null)
     setWalkConfirm(false)
-    setChosen(idx)
+    setChosen(idx >= 0 ? idx : null)
+    setDeadline(null)   // stop the clock the instant we commit
     startTransition(async () => {
       const r = await answerKingRung(rung, idx)
       if ('error' in r) { setError(r.error); setChosen(null); return }
@@ -83,13 +116,30 @@ export default function PirateKing({ initial, parlorPoints }: { initial: PirateK
       }
     })
   }
+  const pickOption = submitAnswer
+
+  // Reveal the current rung's question — this starts the server clock, so the
+  // question is never on screen without the timer running (no pre-reading + look up).
+  function reveal() {
+    if (isPending || status !== 'active') return
+    setError(null)
+    startTransition(async () => {
+      const r = await startKingRung()
+      if ('error' in r) { setError(r.error); return }
+      setChosen(null)
+      setResult(null)
+      setCurrent(r.current)
+      setDeadline(deadlineFrom(r.startedAt, r.serverNow))
+    })
+  }
 
   function climbOn() {
-    if (!result?.next) return
-    setCurrent(result.next)
     setResult(null)
     setChosen(null)
     setWalkConfirm(false)
+    setCurrent(null)
+    setDeadline(null)
+    reveal()   // serve + time the next rung's question (never pre-delivered)
   }
 
   function spendFifty() {
@@ -269,7 +319,7 @@ export default function PirateKing({ initial, parlorPoints }: { initial: PirateK
             Back to the Parlor
           </Link>
         </div>
-      ) : current && (
+      ) : current ? (
         /* ── The question card ── */
         <div style={{
           background: `radial-gradient(ellipse 92% 46% at 50% 0%, rgba(240,200,106,0.07), transparent 60%), linear-gradient(180deg, ${PARLOR.wood} 0%, ${PARLOR.woodDeep} 100%)`,
@@ -285,6 +335,9 @@ export default function PirateKing({ initial, parlorPoints }: { initial: PirateK
               {prize} ⟡
             </p>
           </div>
+
+          {/* Answer countdown — a draining bar + seconds. Turns red in the last 5s. */}
+          {!resolved && <CountdownBar secondsLeft={secondsLeft} />}
 
           <p className="font-karla font-700" style={{ fontSize: '0.95rem', color: '#f0ede8', lineHeight: 1.45, marginBottom: 14 }}>
             {current.question}
@@ -449,7 +502,7 @@ export default function PirateKing({ initial, parlorPoints }: { initial: PirateK
               ) : (
                 <>
                   <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', textAlign: 'center', color: '#e07070' }}>
-                    The run is sunk.
+                    {result.timedOut ? 'Time ran out. The run is sunk.' : 'The run is sunk.'}
                   </p>
                   {result.explanation && (
                     <p className="font-karla" style={{ fontSize: '0.74rem', color: '#a09988', lineHeight: 1.5, textAlign: 'center', marginTop: 6 }}>
@@ -481,15 +534,71 @@ export default function PirateKing({ initial, parlorPoints }: { initial: PirateK
             </div>
           )}
         </div>
+      ) : (
+        /* ── Reveal prompt: the question is hidden until you start the clock ── */
+        <div style={{
+          background: `radial-gradient(ellipse 92% 46% at 50% 0%, rgba(240,200,106,0.07), transparent 60%), linear-gradient(180deg, ${PARLOR.wood} 0%, ${PARLOR.woodDeep} 100%)`,
+          border: `1px solid ${GOLD}55`, borderRadius: 16, padding: '1.6rem 1.1rem', textAlign: 'center',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)',
+        }}>
+          <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.14em', color: GOLD }}>
+            Question {rung + 1} of {PIRATE_KING_PRIZES.length} · {prize} ⟡
+          </p>
+          <p className="font-karla" style={{ fontSize: '0.8rem', color: '#c8c0ae', lineHeight: 1.55, margin: '10px auto 0', maxWidth: 320 }}>
+            The clock starts the moment you reveal it. You have {TRIVIA_ANSWER_SECONDS} seconds to answer, so trust your gut.
+          </p>
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={reveal}
+            className="font-cinzel font-700"
+            style={{
+              marginTop: 16, padding: '0.75rem 1.8rem', borderRadius: 12, cursor: isPending ? 'default' : 'pointer',
+              background: `linear-gradient(180deg, ${PARLOR.candle}, ${GOLD})`, border: 'none', color: '#160f06', fontSize: '0.92rem',
+              boxShadow: `0 8px 22px ${GOLD}44`,
+            }}
+          >
+            {isPending ? 'Revealing…' : rung === 0 ? 'Reveal the first question' : 'Reveal question'}
+          </button>
+          {rung >= 1 && (
+            <button
+              type="button" disabled={isPending} onClick={walk}
+              className="font-karla font-700 uppercase tracking-[0.08em]"
+              style={{ display: 'block', width: '100%', marginTop: 10, padding: '0.6rem 0', borderRadius: 12, background: 'rgba(122,142,196,0.12)', border: '1px solid rgba(122,142,196,0.45)', color: '#aebde0', fontSize: '0.62rem', cursor: 'pointer' }}
+            >
+              {walkConfirm ? `Tap again to walk with ${banked} ⟡` : `Walk with ${banked} ⟡`}
+            </button>
+          )}
+          {error && <p className="font-karla" style={{ fontSize: '0.72rem', color: '#f08a8a', marginTop: 10 }}>{error}</p>}
+        </div>
       )}
 
-      {status === 'active' && !resolved && (
+      {status === 'active' && !resolved && current && (
         <p className="font-karla" style={{ fontSize: '0.64rem', color: '#7a7470', textAlign: 'center', letterSpacing: '0.04em' }}>
           {havenIfWrong > 0
             ? `Miss here and the haven keeps ${havenIfWrong} ⟡ for you.`
             : 'No haven yet. Miss here and nothing is banked.'}
         </p>
       )}
+    </div>
+  )
+}
+
+/** Draining answer-timer bar + seconds readout; goes red in the final 5 seconds. */
+function CountdownBar({ secondsLeft }: { secondsLeft: number }) {
+  const pct = Math.max(0, Math.min(1, secondsLeft / TRIVIA_ANSWER_SECONDS))
+  const danger = secondsLeft <= 5
+  const color = danger ? '#e0655a' : GOLD
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+      <div style={{ flex: 1, height: 6, borderRadius: 999, background: 'rgba(0,0,0,0.4)', overflow: 'hidden' }}>
+        <motion.div
+          animate={danger ? { opacity: [1, 0.5, 1] } : { opacity: 1 }}
+          transition={danger ? { duration: 0.7, repeat: Infinity } : { duration: 0.2 }}
+          style={{ height: '100%', width: `${pct * 100}%`, background: color, borderRadius: 999, transition: 'width 0.25s linear, background 0.3s', boxShadow: `0 0 8px ${color}88` }}
+        />
+      </div>
+      <span className="font-cinzel font-700" style={{ fontSize: '0.8rem', color, minWidth: 26, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{secondsLeft}s</span>
     </div>
   )
 }

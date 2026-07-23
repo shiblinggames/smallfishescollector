@@ -15,6 +15,7 @@ import { answerCaptainsTile, playCaptainsCard } from './actions'
 import { ParlorHost, PARLOR, ParlorPointsTicker } from '../ParlorArt'
 import {
   TRIVIA_CATEGORIES,
+  TRIVIA_ANSWER_SECONDS,
   categoryMeta,
   parlorHostReaction,
   type CaptainsBoardState,
@@ -24,6 +25,14 @@ import {
 
 const DOUBLOON_COLOR = '#f0c040'
 const GEM_COLOR = '#c084fc'
+const DANGER = '#e0655a'
+
+/** Project the server's remaining time onto the client clock: elapsed is measured
+ *  server-side (serverNow − revealedAt) so clock skew can't cheat or void it. */
+function deadlineFrom(revealedAt: string, serverNow: string): number {
+  const elapsed = new Date(serverNow).getTime() - new Date(revealedAt).getTime()
+  return Date.now() + Math.max(0, TRIVIA_ANSWER_SECONDS * 1000 - elapsed)
+}
 
 export default function CaptainsBoard({ initial, parlorPoints }: { initial: CaptainsBoardState; parlorPoints: number }) {
   const [tiles, setTiles] = useState<BoardTileClient[]>(initial.tiles)
@@ -39,6 +48,10 @@ export default function CaptainsBoard({ initial, parlorPoints }: { initial: Capt
   const [chosen, setChosen] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
+  const [deadline, setDeadline] = useState<number | null>(
+    initial.committedKey && initial.committedAt ? deadlineFrom(initial.committedAt, initial.serverNow) : null,
+  )
+  const [secondsLeft, setSecondsLeft] = useState(TRIVIA_ANSWER_SECONDS)
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => { setMounted(true) }, [])
@@ -60,6 +73,7 @@ export default function CaptainsBoard({ initial, parlorPoints }: { initial: Capt
     setPicksToday(initial.picksToday)
     setCommittedKey(initial.committedKey)
     setDoubloonsAwarded(initial.doubloonsAwarded)
+    setDeadline(initial.committedKey && initial.committedAt ? deadlineFrom(initial.committedAt, initial.serverNow) : null)
   }, [initial])
   useEffect(() => { setPoints(parlorPoints) }, [parlorPoints])
 
@@ -83,6 +97,7 @@ export default function CaptainsBoard({ initial, parlorPoints }: { initial: Capt
       setOpenKey(key)          // straight into the question
       setResult(null)
       setChosen(null)
+      setDeadline(r.committedAt ? deadlineFrom(r.committedAt, r.serverNow) : null)  // start the clock
     })
   }
 
@@ -95,10 +110,12 @@ export default function CaptainsBoard({ initial, parlorPoints }: { initial: Capt
     setPendingPlay(prev => prev === tile.key ? null : tile.key)                             // propose to play
   }
 
+  // idx 0-3 is a real pick; -1 is the timeout sentinel (auto-fired at zero).
   function pickOption(idx: number) {
     if (!openTile || isPending || result || openTile.answered) return
     setError(null)
-    setChosen(idx)
+    setChosen(idx >= 0 ? idx : null)
+    setDeadline(null)   // stop the clock the instant we commit
     startTransition(async () => {
       const r = await answerCaptainsTile(openTile.key, idx)
       if ('error' in r) { setError(r.error); setChosen(null); return }
@@ -129,6 +146,24 @@ export default function CaptainsBoard({ initial, parlorPoints }: { initial: Capt
   const shownExplanation = result?.explanation ?? viewAnswered?.explanation ?? null
   const resolved = result !== null || viewAnswered !== null
   const pendingMeta = pendingPlay ? tiles.find(t => t.key === pendingPlay) : null
+
+  // Answer countdown for the open, revealed, unanswered card. Auto-submits the
+  // timeout sentinel at zero (the server judges the time either way).
+  useEffect(() => {
+    const live = openTile && openTile.question && !resolved && !openTile.answered && deadline !== null
+    if (!live) return
+    let fired = false
+    const tick = () => {
+      const ms = deadline - Date.now()
+      setSecondsLeft(Math.max(0, Math.ceil(ms / 1000)))
+      if (ms <= 0 && !fired) { fired = true; pickOption(-1) }
+    }
+    tick()
+    const id = setInterval(tick, 250)
+    return () => clearInterval(id)
+    // pickOption is stable while a card is open (openTile.key fixed until answered).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openKey, resolved, deadline, openTile?.question])
 
   return (
     <div style={{ maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
@@ -236,7 +271,7 @@ export default function CaptainsBoard({ initial, parlorPoints }: { initial: Capt
             Play <span style={{ color: categoryMeta(pendingMeta.category).color }}>{categoryMeta(pendingMeta.category).label}</span> for {pendingMeta.value} ⟡?
           </p>
           <p className="font-karla" style={{ fontSize: '0.66rem', color: '#8a8478', textAlign: 'center', marginTop: 4 }}>
-            This reveals the clue and is your card for today.
+            This reveals the clue and is your card for today. You&apos;ll have {TRIVIA_ANSWER_SECONDS} seconds to answer.
           </p>
           <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
             <button type="button" onClick={() => setPendingPlay(null)} className="font-karla font-700 uppercase tracking-[0.08em]"
@@ -294,9 +329,23 @@ export default function CaptainsBoard({ initial, parlorPoints }: { initial: Capt
                 </p>
               </div>
 
-              <p className="font-karla font-700" style={{ fontSize: '0.95rem', color: '#f0ede8', lineHeight: 1.45, marginBottom: 14 }}>
+              <p className="font-karla font-700" style={{ fontSize: '0.95rem', color: '#f0ede8', lineHeight: 1.45, marginBottom: resolved ? 14 : 12 }}>
                 {openTile.question}
               </p>
+
+              {/* Answer countdown — drains while you decide; red in the last 5s. */}
+              {!resolved && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                  <div style={{ flex: 1, height: 6, borderRadius: 999, background: 'rgba(0,0,0,0.4)', overflow: 'hidden' }}>
+                    <motion.div
+                      animate={secondsLeft <= 5 ? { opacity: [1, 0.5, 1] } : { opacity: 1 }}
+                      transition={secondsLeft <= 5 ? { duration: 0.7, repeat: Infinity } : { duration: 0.2 }}
+                      style={{ height: '100%', width: `${Math.max(0, Math.min(1, secondsLeft / TRIVIA_ANSWER_SECONDS)) * 100}%`, background: secondsLeft <= 5 ? DANGER : DOUBLOON_COLOR, borderRadius: 999, transition: 'width 0.25s linear, background 0.3s', boxShadow: `0 0 8px ${(secondsLeft <= 5 ? DANGER : DOUBLOON_COLOR)}88` }}
+                    />
+                  </div>
+                  <span className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: secondsLeft <= 5 ? DANGER : DOUBLOON_COLOR, minWidth: 26, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{secondsLeft}s</span>
+                </div>
+              )}
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {openTile.options.map((opt, idx) => {
@@ -325,7 +374,7 @@ export default function CaptainsBoard({ initial, parlorPoints }: { initial: Capt
               {resolved && (
                 <div style={{ marginTop: 12 }}>
                   <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', textAlign: 'center', color: (result?.correct ?? viewAnswered?.correct) ? '#7fd49a' : '#e07070' }}>
-                    {(result?.correct ?? viewAnswered?.correct) ? `Well answered. +${openTile.value} ⟡` : 'Scuttled.'}
+                    {(result?.correct ?? viewAnswered?.correct) ? `Well answered. +${openTile.value} ⟡` : result?.timedOut ? "Time's up." : 'Scuttled.'}
                   </p>
                   {result?.rankedUp && (
                     <motion.p

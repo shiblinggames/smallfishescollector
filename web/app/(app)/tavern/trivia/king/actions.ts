@@ -20,9 +20,11 @@ import {
   parlorRank,
   kingHavenValue,
   kingWeekStr,
+  triviaTimedOut,
   type PirateKingState,
   type PirateKingStatus,
   type KingQuestionClient,
+  type KingRevealResult,
   type AnswerKingResult,
 } from '../constants'
 
@@ -31,9 +33,12 @@ interface AttemptRow {
   status: PirateKingStatus
   fifty: { rung: number; removed: number[] } | null
   doubloons_awarded: number
+  /** When the current rung was revealed (ISO), or null if not revealed yet — the
+   *  answer-timer clock. */
+  current_started_at: string | null
 }
 
-const ATTEMPT_COLS = 'rung, status, fifty, doubloons_awarded'
+const ATTEMPT_COLS = 'rung, status, fifty, doubloons_awarded, current_started_at'
 
 function stripQuestion(q: GeneratedRung, rung: number, fifty: AttemptRow['fifty']): KingQuestionClient {
   return {
@@ -76,15 +81,62 @@ export async function getPirateKingState(): Promise<PirateKingState | { error: s
   ])
   if (!ladder) return { error: 'No ladder available right now. Try again in a moment.' }
 
-  const a = (attempt as AttemptRow | null) ?? { rung: 0, status: 'active' as const, fifty: null, doubloons_awarded: 0 }
+  const a = (attempt as AttemptRow | null) ?? { rung: 0, status: 'active' as const, fifty: null, doubloons_awarded: 0, current_started_at: null }
 
+  // The current rung's question is only handed back once it's been REVEALED (its
+  // clock is running / this is a mid-question refresh). If not revealed yet, the
+  // client shows the reveal prompt — startKingRung serves it and starts the timer.
+  const revealed = a.status === 'active' && a.current_started_at !== null
   return {
     date: week,
     status: a.status,
     rung: a.rung,
     doubloonsAwarded: a.doubloons_awarded,
     fiftyUsed: a.fifty !== null,
-    current: a.status === 'active' ? stripQuestion(ladder[a.rung], a.rung, a.fifty) : null,
+    current: revealed ? stripQuestion(ladder[a.rung], a.rung, a.fifty) : null,
+    startedAt: revealed ? a.current_started_at : null,
+    serverNow: new Date().toISOString(),
+  }
+}
+
+/** Reveal the current rung's question and start its answer clock. Idempotent: a
+ *  reload during a revealed question returns the same startedAt (the clock never
+ *  resets, so you can't stall on a lookup). */
+export async function startKingRung(): Promise<KingRevealResult | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const admin = createAdminClient()
+  const week = kingWeekStr()
+
+  const [ladder, { data: attempt }] = await Promise.all([
+    getThisWeeksLadder(),
+    admin.from('trivia_ladder_attempts').select(ATTEMPT_COLS).eq('user_id', user.id).eq('date', week).single(),
+  ])
+  if (!ladder) return { error: 'No ladder available' }
+
+  const a = (attempt as AttemptRow | null) ?? { rung: 0, status: 'active' as const, fifty: null, doubloons_awarded: 0, current_started_at: null }
+  if (a.status !== 'active') return { error: 'The run is over for this week' }
+
+  // Only stamp on the FIRST reveal of this rung; a reload keeps the original clock.
+  const startedAt = a.current_started_at ?? new Date().toISOString()
+  if (a.current_started_at === null) {
+    await admin.from('trivia_ladder_attempts').upsert({
+      user_id: user.id,
+      date: week,
+      rung: a.rung,
+      status: 'active',
+      fifty: a.fifty,
+      doubloons_awarded: a.doubloons_awarded,
+      current_started_at: startedAt,
+    })
+  }
+
+  return {
+    current: stripQuestion(ladder[a.rung], a.rung, a.fifty),
+    startedAt,
+    serverNow: new Date().toISOString(),
   }
 }
 
@@ -95,7 +147,8 @@ export async function answerKingRung(
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not authenticated' }
-  if (typeof chosenIndex !== 'number' || chosenIndex < 0 || chosenIndex > 3) {
+  // -1 is the client's "timed out, no answer" sentinel; 0-3 is a real pick.
+  if (typeof chosenIndex !== 'number' || chosenIndex < -1 || chosenIndex > 3) {
     return { error: 'Invalid answer' }
   }
 
@@ -112,7 +165,7 @@ export async function answerKingRung(
   ])
   if (!ladder) return { error: 'No ladder available' }
 
-  const a = (attempt as AttemptRow | null) ?? { rung: 0, status: 'active' as const, fifty: null, doubloons_awarded: 0 }
+  const a = (attempt as AttemptRow | null) ?? { rung: 0, status: 'active' as const, fifty: null, doubloons_awarded: 0, current_started_at: null }
   if (a.status !== 'active') return { error: 'The run is over for this week' }
   // Stale client / double submit guard: the answer must target the
   // rung the server says is current.
@@ -122,8 +175,13 @@ export async function answerKingRung(
     return { error: 'That option was struck by the 50/50' }
   }
 
+  // Answer timer: the clock started when the rung was revealed (current_started_at).
+  // A late answer or the -1 timeout sentinel is a miss. A MISSING stamp is
+  // grandfathered (a run mid-question at deploy) — safe, since the question can't be
+  // fetched without startKingRung stamping the clock, so this can't skip the timer.
+  const timedOut = chosenIndex === -1 || (a.current_started_at != null && triviaTimedOut(a.current_started_at, Date.now()))
   const q = ladder[rung]
-  const correct = chosenIndex === q.correct_index
+  const correct = !timedOut && chosenIndex === q.correct_index
 
   let status: PirateKingStatus
   let newRung: number
@@ -166,6 +224,8 @@ export async function answerKingRung(
     fifty: a.fifty,
     doubloons_awarded: status === 'active' ? 0 : won,
     gems_awarded: gemsWon,
+    // The climbed-to rung is NOT revealed yet — its clock starts on startKingRung.
+    current_started_at: null,
   })
 
   let newDoubloons: number | null = null
@@ -184,6 +244,7 @@ export async function answerKingRung(
 
   return {
     correct,
+    timedOut,
     correctIndex: q.correct_index,
     explanation: q.explanation,
     status,
@@ -198,7 +259,6 @@ export async function answerKingRung(
     pointsEarned,
     newPoints,
     rankedUp,
-    next: status === 'active' ? stripQuestion(ladder[newRung], newRung, a.fifty) : null,
   }
 }
 
@@ -221,7 +281,7 @@ export async function spendKingFiftyFifty(): Promise<{ removed: number[] } | { e
   ])
   if (!ladder) return { error: 'No ladder available' }
 
-  const a = (attempt as AttemptRow | null) ?? { rung: 0, status: 'active' as const, fifty: null, doubloons_awarded: 0 }
+  const a = (attempt as AttemptRow | null) ?? { rung: 0, status: 'active' as const, fifty: null, doubloons_awarded: 0, current_started_at: null }
   if (a.status !== 'active') return { error: 'The run is over for this week' }
   if (a.fifty) return { error: 'The 50/50 is already spent' }
 
@@ -238,6 +298,8 @@ export async function spendKingFiftyFifty(): Promise<{ removed: number[] } | { e
     status: 'active',
     fifty: { rung: a.rung, removed },
     doubloons_awarded: 0,
+    // Using the lifeline does NOT reset the clock — you're still on this question.
+    current_started_at: a.current_started_at,
   })
 
   return { removed }
@@ -269,6 +331,7 @@ export async function walkKingAway(): Promise<{ status: 'walked'; doubloonsAward
     status: 'walked',
     fifty: a.fifty,
     doubloons_awarded: won,
+    current_started_at: null,
   })
   const newDoubloons = await payOut(user.id, won, `Pirate King: walked at rung ${a.rung} with ${won} ⟡`)
 
