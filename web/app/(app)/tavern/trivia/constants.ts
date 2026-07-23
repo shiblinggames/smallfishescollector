@@ -97,14 +97,19 @@ export interface AnswerTileResult {
 export interface ParlorRank { at: number; title: string; color: string; gems: number }
 // `at` is a POINT total (points accumulate from every correct answer and never
 // reset — charting-style). Reaching a rank pays its `gems` ONCE (escalating), so
-// it's a steady, always-forward chase totalling 650 ◆ to Parlor Legend. Tunable.
+// it's a steady, always-forward chase totalling 3000 ◆ to Parlor Legend — the same
+// gem scale as the World Chart, deliberately a long grind with legs. Tunable here.
 export const PARLOR_RANKS: ParlorRank[] = [
-  { at: 0,   title: 'Greenhorn',     color: '#8a8478', gems: 0 },
-  { at: 15,  title: 'Card Hand',     color: '#7fd49a', gems: 25 },
-  { at: 45,  title: 'Sharp',         color: '#60a5fa', gems: 50 },
-  { at: 110, title: 'Cardsharp',     color: '#a78bfa', gems: 100 },
-  { at: 220, title: 'Parlor Master', color: '#f0c040', gems: 175 },
-  { at: 400, title: 'Parlor Legend', color: '#ff6b35', gems: 300 },
+  { at: 0,    title: 'Greenhorn',     color: '#8a8478', gems: 0 },
+  { at: 15,   title: 'Card Hand',     color: '#7fd49a', gems: 25 },
+  { at: 40,   title: 'Sharp',         color: '#60a5fa', gems: 50 },
+  { at: 85,   title: 'Cardsharp',     color: '#a78bfa', gems: 100 },
+  { at: 150,  title: 'Rounder',       color: '#f0abfc', gems: 150 },
+  { at: 240,  title: 'Parlor Master', color: '#f0c040', gems: 225 },
+  { at: 360,  title: 'High Roller',   color: '#ffa94d', gems: 325 },
+  { at: 520,  title: 'Kingpin',       color: '#ff6b35', gems: 450 },
+  { at: 720,  title: 'Grandee',       color: '#ff3b47', gems: 675 },
+  { at: 1000, title: 'Parlor Legend', color: '#e879f9', gems: 1000 },
 ]
 // Points per activity — harder answers are worth more; nothing is lost on a miss.
 export function boardCardPoints(tier: number): number { return tier }   // tier 1/2/3
