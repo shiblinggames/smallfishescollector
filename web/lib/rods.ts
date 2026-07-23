@@ -128,7 +128,13 @@ export const RODS: RodDef[] = [
   {
     tier: 10, name: 'Legendary Rod', cost: 200000, minLevel: 60,
     description: 'Forged from the mast of a sunken galleon. 40% faster bites — the rarest fish cannot resist.',
-    color: '#ff6b35', rarityBonus: 1.50, biteIntervalMs: 2280, catchZoneBonus: 0,
+    // rarityBonus 1.50 → 0.80 (2026-07-23): at 1.50 this was the ONLY rod that
+    // shifted the rarity curve (tier-5 ×7 weight), and since prestige is gated on
+    // catching every species, it was a ~3.3x accelerant on the rarest-fish
+    // bottleneck with zero competition. 0.80 keeps it the best rare rod (~2.6x)
+    // without being a mandatory god-rod. Also softens its trophy-chance multiplier
+    // (1+bonus*4: ×7 → ×4.2). Tunable here — single source of truth.
+    color: '#ff6b35', rarityBonus: 0.80, biteIntervalMs: 2280, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
     slug: 'rod_legendary', glow: true, glowType: 'fire',
   },
