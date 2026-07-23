@@ -3,6 +3,13 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { TIDE_CHAMPION_CONTEST_ID, TIDE_CHAMPION_GOAL_M, TIDE_CHAMPION_PRIZE_CODE } from '@/lib/contests'
+import { flagAnomaly } from '@/lib/anomaly'
+
+// A great run smashes tens of beacons (they only spawn past 75m, spaced hundreds
+// of world-px apart). This isn't a payout CAP — Tide Run income is uncapped by
+// design — it's purely the line past which a beacon count can't be a real run, so
+// we FLAG it for review without touching the (intentionally uncapped) reward.
+const TIDE_RUN_PLAUSIBLE_BEACONS = 500
 
 /**
  * Record the player's distance for the all-time best (leaderboard). Only
@@ -141,6 +148,13 @@ export async function awardTideRunBeacons(beacons: number): Promise<AwardTideRun
       .eq('id', user.id)
       .single()
     if (!profile) return { error: 'Profile not found' }
+
+    // Beacon count is client-authored (combat runs client-side), so an implausible
+    // count is a forged/replayed call. We DON'T clamp the payout (uncapped by
+    // design), just flag it — the real fix is the phase-2 server run token.
+    if (smashed > TIDE_RUN_PLAUSIBLE_BEACONS) {
+      await flagAnomaly(admin, user.id, 'implausible:tideRunBeacons', smashed > 5000 ? 3 : 2, { beacons: smashed })
+    }
 
     const doubloonsEarned = smashed * DOUBLOONS_PER_BEACON
     const newDoubloons = (profile.doubloons ?? 0) + doubloonsEarned
