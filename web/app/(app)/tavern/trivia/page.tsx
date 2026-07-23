@@ -11,7 +11,7 @@ export default async function TriviaPage() {
 
   const today = new Date().toISOString().split('T')[0]
   const admin = createAdminClient()
-  const [profile, { data: attempt }, { data: kingAttempt }] = await Promise.all([
+  const [profile, { data: attempt }, { data: kingAttempt }, { data: capstanAttempt }] = await Promise.all([
     getCurrentProfile(),
     // Board is weekly now (keyed by the Monday week-start, like the ladder).
     admin.from('trivia_board_attempts')
@@ -22,6 +22,10 @@ export default async function TriviaPage() {
       .select('rung, status, doubloons_awarded')
       .eq('user_id', user.id).eq('date', kingWeekStr())
       .single(),
+    admin.from('trivia_capstan_attempts')
+      .select('runs')
+      .eq('user_id', user.id).eq('date', kingWeekStr())
+      .single(),
   ])
 
   const boardAnswers = (attempt?.answers as Record<string, { day?: string; chosen?: number }> | null) ?? {}
@@ -29,6 +33,8 @@ export default async function TriviaPage() {
   const boardPicksToday = Object.values(boardAnswers).filter(a => a.day === today).length
   const boardPlayedToday = boardPicksToday >= picksAllowed
   const boardPlayedThisWeek = Object.values(boardAnswers).filter(a => a.chosen !== undefined).length
+  const capstanRuns = (capstanAttempt?.runs as Record<string, { status?: string }> | null) ?? {}
+  const capstanSolved = Object.values(capstanRuns).filter(r => r.status === 'solved').length
   const king: KingChip | null = kingAttempt
     ? {
         status: kingAttempt.status as PirateKingStatus,
@@ -48,6 +54,8 @@ export default async function TriviaPage() {
           parlorStreak={(profile?.parlor_streak as number | null) ?? 0}
           parlorPoints={(profile?.parlor_points as number | null) ?? 0}
           parlorRankGemsClaimed={(profile?.parlor_rank_gems_awarded as number | null) ?? 0}
+          isCaptain={isPremiumActive(profile)}
+          capstanSolved={capstanSolved}
         />
       </div>
     </main>

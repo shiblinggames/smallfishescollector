@@ -10,6 +10,7 @@ import BackButton from '@/components/BackButton'
 import { ParlorHost, CrownIcon, ParlorPointsTicker } from './ParlorArt'
 import ParlorClaim from './ParlorClaim'
 import ParlorStanding from './ParlorStanding'
+import CapstanCard from './CapstanCard'
 import { TRIVIA_CATEGORIES, PIRATE_KING_RUNGS, type PirateKingStatus } from './constants'
 
 const GOLD = '#f0c040'
@@ -20,7 +21,7 @@ export interface KingChip {
   doubloonsAwarded: number
 }
 
-export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, doubloonsThisWeek, king, parlorStreak, parlorPoints, parlorRankGemsClaimed }: {
+export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, doubloonsThisWeek, king, parlorStreak, parlorPoints, parlorRankGemsClaimed, isCaptain, capstanSolved }: {
   boardPlayedToday: boolean
   boardPlayedThisWeek: number
   doubloonsThisWeek: number
@@ -28,6 +29,8 @@ export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, dou
   parlorStreak: number
   parlorPoints: number
   parlorRankGemsClaimed: number
+  isCaptain: boolean
+  capstanSolved: number
 }) {
   const kingChipText = king === null ? null
     : king.status === 'crowned' ? `Crowned · +${king.doubloonsAwarded} ⟡`
@@ -181,38 +184,11 @@ export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, dou
         )}
       </ScenicCard>
 
-      {/* Coming soon shelf */}
-      <div
-        style={{
-          position: 'relative', height: 92, borderRadius: 18, overflow: 'hidden',
-          background: 'linear-gradient(180deg, #15131f 0%, #0b0a12 100%)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          padding: '0.9rem 0.85rem',
-          opacity: 0.82,
-        }}
-      >
-        <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#b8b2a4' }}>Spin the Capstan</p>
-        <p className="font-karla" style={{ fontSize: '0.66rem', color: '#6f6b66', lineHeight: 1.45, marginTop: 4 }}>
-          Spin for stakes, call your letters, solve the phrase. A Captain-only game.
-        </p>
-        <span
-          className="font-karla font-700 uppercase"
-          style={{
-            position: 'absolute', top: 12, right: 12,
-            fontSize: '0.54rem', letterSpacing: '0.1em', whiteSpace: 'nowrap',
-            color: GOLD,
-            border: `1px solid ${GOLD}55`,
-            borderRadius: 999, padding: '0.22rem 0.6rem',
-            display: 'inline-flex', alignItems: 'center', gap: 4,
-          }}
-        >
-          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2.6" strokeLinecap="round"><rect x="4" y="11" width="16" height="9" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
-          Captains · Soon
-        </span>
-      </div>
+      {/* Spin the Capstan — live, Captain-only */}
+      <CapstanCard isMember={isCaptain} solved={capstanSolved} />
 
       <p className="font-karla" style={{ fontSize: '0.6rem', color: '#5a5248', textAlign: 'center', lineHeight: 1.5 }}>
-        Both the board and the King&apos;s ladder are rigged fresh each Monday. Play one board card a day; winnings land instantly.
+        The board and the King&apos;s ladder are rigged fresh each Monday; the Capstan hides three new phrases. Winnings land instantly.
       </p>
     </div>
   )

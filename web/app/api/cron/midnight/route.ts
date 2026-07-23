@@ -5,6 +5,7 @@ import { getThisWeeksSudoku } from '@/app/(app)/tavern/chart-room/hold/generate'
 import { getThisWeeksMatch } from '@/app/(app)/charting/generate'
 import { getThisWeeksMinefield } from '@/app/(app)/charting/minefieldGenerate'
 import { getThisWeeksRigging } from '@/app/(app)/tavern/chart-room/rigging/generate'
+import { getThisWeeksCapstan } from '@/app/(app)/tavern/trivia/capstan/generate'
 
 export const maxDuration = 60
 
@@ -26,6 +27,7 @@ export async function GET(req: NextRequest) {
   const match = await Promise.allSettled([getThisWeeksMatch()]).then(r => r[0])
   const minefield = await Promise.allSettled([getThisWeeksMinefield()]).then(r => r[0])
   const rigging = await Promise.allSettled([getThisWeeksRigging()]).then(r => r[0])
+  const capstan = await Promise.allSettled([getThisWeeksCapstan()]).then(r => r[0])
 
   return NextResponse.json({
     board: board.status === 'fulfilled' ? 'ok' : 'failed',
@@ -34,5 +36,6 @@ export async function GET(req: NextRequest) {
     match: match.status === 'fulfilled' ? 'ok' : 'failed',
     minefield: minefield.status === 'fulfilled' ? 'ok' : 'failed',
     rigging: rigging.status === 'fulfilled' ? 'ok' : 'failed',
+    capstan: capstan.status === 'fulfilled' ? 'ok' : 'failed',
   })
 }

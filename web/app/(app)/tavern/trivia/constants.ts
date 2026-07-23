@@ -264,3 +264,115 @@ export interface AnswerKingResult {
   /** Next question if the run continues, already stripped. */
   next: KingQuestionClient | null
 }
+
+// ── Spin the Capstan (Wheel-of-Fortune phrase puzzle) ───────────────
+// Captain-only. A WEEKLY SET OF 3 nautical phrases, solved at your own pace. You
+// spin the capstan for a doubloon value, call consonants (value × occurrences into
+// your round bank), buy vowels, and solve to bank it. HAZARD wedges add the tension:
+// Overboard wipes the round bank, Lose a Turn costs a strike. Three strikes and the
+// puzzle is lost to the deep. The phrase never reaches an unsolved client — the
+// server sends a masked length pattern. All tunable here.
+
+export const CAPSTAN_PUZZLES_PER_WEEK = 3
+export const CAPSTAN_MAX_STRIKES = 3
+export const CAPSTAN_VOWEL_COST = 250            // ⟡ drawn from the round bank per vowel
+export const CAPSTAN_VOWELS = ['A', 'E', 'I', 'O', 'U'] as const
+
+export const CAPSTAN_CATEGORIES = ['Ship & Sail', 'Sea Legend', 'Pirate Saying', 'Fish Tale', 'Old Salt'] as const
+export type CapstanCategory = (typeof CAPSTAN_CATEGORIES)[number]
+
+/** The wheel. Value wedges + hazards; the server rolls uniformly across this array
+ *  and the client animates the capstan to the returned index. */
+export type CapstanWedge = number | 'overboard' | 'lose_turn'
+export const CAPSTAN_WHEEL: CapstanWedge[] = [
+  250, 400, 150, 'overboard', 500, 300, 'lose_turn', 350,
+  200, 650, 300, 'overboard', 450, 800, 'lose_turn', 250,
+]
+
+/** Parlor points a solved puzzle grants toward the shared rank — a base plus a
+ *  clean (no-strike) bonus. Kept in line with the Board (1-3/card) and King. */
+export const CAPSTAN_SOLVE_POINTS = 3
+export const CAPSTAN_CLEAN_BONUS = 2
+export function capstanSolvePoints(strikes: number): number {
+  return CAPSTAN_SOLVE_POINTS + (strikes === 0 ? CAPSTAN_CLEAN_BONUS : 0)
+}
+
+export function isCapstanVowel(ch: string): boolean {
+  return (CAPSTAN_VOWELS as readonly string[]).includes(ch.toUpperCase())
+}
+
+/** Normalize a phrase or a solve guess: uppercase, letters + spaces only, collapse
+ *  runs of whitespace. Both the stored phrase and a player's guess pass through this
+ *  so the compare is punctuation/spacing-proof. */
+export function normalizeCapstan(s: string): string {
+  return s.toUpperCase().replace(/[^A-Z ]/g, '').replace(/\s+/g, ' ').trim()
+}
+
+/** Build the masked length pattern the client renders while a puzzle is unsolved:
+ *  each word → an array of cells, each cell the revealed uppercase letter or null
+ *  for a still-hidden slot. Spaces separate the word arrays and never leak letters. */
+export function capstanMask(phrase: string, called: string[]): (string | null)[][] {
+  const up = new Set(called.map(c => c.toUpperCase()))
+  return normalizeCapstan(phrase).split(' ').map(word =>
+    word.split('').map(ch => (up.has(ch) ? ch : null)),
+  )
+}
+
+export type CapstanStatus = 'active' | 'solved' | 'failed'
+
+/** One puzzle as the client sees it — the full phrase is null until solved/failed. */
+export interface CapstanPuzzleClient {
+  index: number
+  category: string
+  /** Masked length pattern (words → cells). Never contains an unrevealed letter. */
+  mask: (string | null)[][]
+  called: string[]
+  bank: number
+  strikes: number
+  status: CapstanStatus
+  /** The value the last spin landed on, awaiting a consonant call. null = must spin
+   *  (or a hazard was just resolved). */
+  pendingValue: number | null
+  /** Revealed only once the puzzle is solved or lost. */
+  phrase: string | null
+  /** Doubloons banked on solve (0 until then / on a loss). */
+  earned: number
+}
+
+export interface CapstanState {
+  /** Week-start Monday this set belongs to. */
+  date: string
+  puzzles: CapstanPuzzleClient[]
+  /** Doubloons banked across the week's set (all solved puzzles). */
+  doubloonsAwarded: number
+}
+
+/** Outcome of a spin: 'value' arms a consonant call; the hazards resolve immediately. */
+export type CapstanSpinOutcome = 'value' | 'overboard' | 'lose_turn'
+
+export interface CapstanSpinResult {
+  wedgeIndex: number
+  wedge: CapstanWedge
+  outcome: CapstanSpinOutcome
+  puzzle: CapstanPuzzleClient
+}
+
+export interface CapstanLetterResult {
+  /** The consonant/vowel outcome: how many times it appeared (0 = a miss). */
+  letter: string
+  count: number
+  /** Doubloons added to the bank this call (consonant only). */
+  gained: number
+  puzzle: CapstanPuzzleClient
+}
+
+export interface CapstanSolveResult {
+  correct: boolean
+  puzzle: CapstanPuzzleClient
+  /** Present only on a winning solve. */
+  earned: number
+  newDoubloons: number | null
+  pointsEarned: number
+  newPoints: number
+  rankedUp: boolean
+}
