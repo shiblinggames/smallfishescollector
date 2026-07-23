@@ -427,8 +427,13 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
     if (isBonus) setWonBonusReels(true)
     else setWonMainReels(true)
     setWinSym(sym)
-    setFlashColor(color)
-    setFlashKey((k) => k + 1)
+    // Full-screen flash only for the big hits (Whale / Catfish) so frequent small
+    // wins stay calm and the big ones pop by contrast — small wins still get the
+    // tinted edge glow, coin spill, and reel pop from celebrateWin.
+    if (sym === 'legendary' || sym === 'catfish') {
+      setFlashColor(color)
+      setFlashKey((k) => k + 1)
+    }
     celebrateWin(sym)
     // Win haptic — escalates with payout tier. Catfish gets the
     // longest, most punchy pattern; common is just a confirming pulse.
@@ -521,10 +526,7 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
           const b = result.bonus!
           if (b.outcome === 'jackpot') triggerJackpot(true, 'You', b.payout)
           else if (b.outcome === 'win') triggerWin(b.reels[0], true)
-          else if (b.outcome === 'pair' && b.matchedSymbol) {
-            setFlashColor(symColor(b.matchedSymbol))
-            setFlashKey((k) => k + 1)
-          }
+          // bonus pair: no screen flash — the result banner shows the pair.
           settle(result)
         }, lastBonusStop + 200)
 
@@ -542,17 +544,14 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
       }, lastMainStop + 150)
     } else if (result.outcome === 'refund') {
       setTimeout(() => {
-        setFlashColor('#34d399')
-        setFlashKey((k) => k + 1)
+        // No screen flash — the teal reel glow + "Refund!" banner carry it.
         settle(result)
       }, lastMainStop + 150)
     } else if (result.outcome === 'pair_win') {
       setTimeout(() => {
-        if (result.matchedSymbol) {
-          setFlashColor(symColor(result.matchedSymbol))
-          setFlashKey((k) => k + 1)
-          haptic([30, 30, 50])
-        }
+        // Calm: matched-pair reel glow + "{Fish} Pair!" banner + a light haptic,
+        // no screen flash for these frequent small wins.
+        if (result.matchedSymbol) haptic([30, 30, 50])
         settle(result)
       }, lastMainStop + 150)
     } else {
