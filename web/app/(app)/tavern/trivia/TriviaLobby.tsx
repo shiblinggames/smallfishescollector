@@ -58,18 +58,20 @@ export default function TriviaLobby({ doubloons, boardPlayedToday, boardPlayedTh
 
       {/* Parlor Standing — the mastery rank you climb by answering right across
           both games. One streak, one record, one title to show off. */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '0.7rem 0.9rem', borderRadius: 14, background: `linear-gradient(180deg, ${rank.color}14, rgba(10,8,6,0.55))`, border: `1px solid ${rank.color}44` }}>
-        <div style={{ minWidth: 0 }}>
-          <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.16em', color: '#8a8478' }}>Parlor Standing</p>
-          <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: rank.color, lineHeight: 1.1, marginTop: 2, textShadow: `0 0 14px ${rank.color}44` }}>{rank.title}</p>
-          <p className="font-karla" style={{ fontSize: '0.6rem', color: '#9a9488', marginTop: 3 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '0.75rem 0.9rem', borderRadius: 14, background: 'linear-gradient(180deg, #201a12 0%, #120d08 100%)', border: '1px solid rgba(201,162,74,0.4)', boxShadow: '0 6px 18px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)' }}>
+        {/* bright rank-coloured rail so the tier reads even at grey ranks */}
+        <span aria-hidden style={{ width: 4, alignSelf: 'stretch', borderRadius: 3, background: rank.color, boxShadow: `0 0 10px ${rank.color}` }} />
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.16em', color: '#a8a090' }}>Parlor Standing</p>
+          <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: rank.color, lineHeight: 1.1, marginTop: 2, textShadow: `0 0 12px ${rank.color}66` }}>{rank.title}</p>
+          <p className="font-karla" style={{ fontSize: '0.62rem', color: '#c2b9a4', marginTop: 3 }}>
             Best streak {parlorBestStreak}{next ? ` · ${next.title} at ${next.at}` : ' · top rank'}
           </p>
         </div>
         {parlorStreak > 0 && (
           <div style={{ textAlign: 'center', flexShrink: 0 }}>
-            <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: GOLD, lineHeight: 1, textShadow: `0 0 14px ${GOLD}55` }}>{parlorStreak}</p>
-            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.1em', color: '#8a8478', marginTop: 2 }}>on a roll</p>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: GOLD, lineHeight: 1, textShadow: `0 0 14px ${GOLD}66` }}>{parlorStreak}</p>
+            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.1em', color: '#a8a090', marginTop: 2 }}>on a roll</p>
           </div>
         )}
       </div>
