@@ -339,9 +339,12 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
   // win reads as its own size + identity instead of the old uniform gold pulse.
   const [edgeGlow, setEdgeGlow] = useState<{ key: number; tier: number } | null>(null)
   const [celebrateColor, setCelebrateColor] = useState('#f0c040')
-  // Colour of the "is the third reel gonna land?!" tension glow during a big pair
-  // hold; null when no hold is building. Cleared on settle.
-  const [holdTension, setHoldTension] = useState<string | null>(null)
+  // The "is the third reel gonna land?!" tension glow that charges the reel
+  // window while the last reel is still spinning on a matching pair. Carries the
+  // pair's colour + whether to run the STRONG version (big pairs + two-hooks-
+  // chasing-the-bonus). null when no hold is building. Cleared as the outcome
+  // resolves.
+  const [holdTension, setHoldTension] = useState<{ color: string; strong: boolean } | null>(null)
   const fxId = useRef(0)
   function celebrateWin(sym: SlotSymbolId) {
     const tier = sym === 'catfish' ? 2 : sym === 'legendary' ? 1 : 0
@@ -498,26 +501,38 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
     // pair of catfish on deck means the POT is live, so the third reel
     // spins agonizingly long while the jackpot marquee pulses.
     const pairUp = result.reels[0] === result.reels[1]
+    // Two hooks on the first two reels = the last reel is ONE hook from the
+    // Jellyfish bonus. Charge it like a big pair so the near-bonus beat lands.
+    // (A full 3-hook bonus flows through here too — it gets the same violet
+    // build-up before the third hook drops.)
+    const twoHooksUp = pairUp && result.reels[0] === 'anchor'
+    const bigPair = pairUp && (result.reels[0] === 'legendary' || result.reels[0] === 'catfish')
     const holdMs = !pairUp ? 0
       : result.reels[0] === 'catfish' ? 1600
-      : result.reels[0] === 'legendary' ? 1100
+      : (result.reels[0] === 'legendary' || twoHooksUp) ? 1100
       : 750
     if (pairUp && result.reels[0] === 'catfish') {
       setTimeout(() => setPotTease(true), 1200 + 300)
     }
     const lastMainStop = stopReels(setMainRolling, 1200, 300, holdMs)
 
-    // Third-reel tension theatre: once the two matching reels have landed and the
-    // third is still spinning on a BIG pair (legendary/catfish), charge the reel
-    // window with the pair's colour so the "is it gonna land?!" beat is VISIBLE,
-    // not just a longer spin. Cleared on settle.
-    if (pairUp && (result.reels[0] === 'legendary' || result.reels[0] === 'catfish')) {
-      setTimeout(() => setHoldTension(symColor(result.reels[0])), 1550)
+    // Third-reel tension theatre: whenever the first two reels land matching and
+    // the last is still spinning, charge the reel window so the "is it gonna
+    // land?!" beat is VISIBLE — every pair earns it now (a Sardine near-miss or a
+    // Marlin pair should tease too), tinted the pair's colour and scaled by
+    // stakes. Two hooks glow bonus-violet because they chase the Jellyfish round.
+    // Cleared as the outcome resolves (settle, or when the bonus opens).
+    if (pairUp) {
+      const color = twoHooksUp ? '#e879f9' : symColor(result.reels[0])
+      const strong = bigPair || twoHooksUp
+      setTimeout(() => { setHoldTension({ color, strong }); if (strong) haptic(20) }, 1550)
     }
 
     if (result.bonus) {
-      // Flash teal when all hooks have landed
+      // Flash teal when all hooks have landed — the near-bonus tension paid off,
+      // so drop the base-window glow before the bonus bay takes over.
       setTimeout(() => {
+        setHoldTension(null)
         setFlashColor('#34d399')
         setFlashKey((k) => k + 1)
       }, lastMainStop + 150)
@@ -772,8 +787,8 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
               style={{
                 padding: '1.15rem 0.9rem',
                 background: 'radial-gradient(ellipse at 50% 0%, rgba(240,192,64,0.05) 0%, transparent 55%)',
-                boxShadow: holdTension ? `inset 0 0 44px 4px ${holdTension}55` : undefined,
-                animation: holdTension ? 'hold-tension 0.6s ease-in-out infinite' : undefined,
+                boxShadow: holdTension ? `inset 0 0 ${holdTension.strong ? 44 : 26}px ${holdTension.strong ? 4 : 2}px ${holdTension.color}${holdTension.strong ? '55' : '33'}` : undefined,
+                animation: holdTension ? `hold-tension ${holdTension.strong ? 0.5 : 0.72}s ease-in-out infinite` : undefined,
               }}
             >
               <div className="flex gap-2.5 sm:gap-4 justify-center">
@@ -903,11 +918,11 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
                   </div>
                 ) : showResult && lastResult?.outcome === 'refund' ? (
                   <div style={{ animation: 'result-rise 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards', textAlign: 'center' }}>
-                    <p className="font-cinzel font-700 tracking-wide" style={{ fontSize: '1.1rem', color: '#34d399', textShadow: '0 0 24px #34d39960', letterSpacing: '0.04em', lineHeight: 1.1 }}>
-                      2 Hooks · Refund!
+                    <p className="font-cinzel font-700 tracking-wide" style={{ fontSize: '1.1rem', color: '#f0abfc', textShadow: '0 0 24px rgba(232,121,249,0.45)', letterSpacing: '0.04em', lineHeight: 1.1 }}>
+                      One Hook from the Bonus!
                     </p>
                     <p className="font-karla font-400 mt-1" style={{ fontSize: '0.85rem', color: '#34d399' }}>
-                      Wager returned
+                      2 hooks · wager returned
                     </p>
                   </div>
                 ) : showResult && (lastResult?.outcome === 'pair_win' || (lastResult?.outcome === 'bonus' && lastResult.bonus?.outcome === 'pair')) ? (() => {
@@ -937,6 +952,13 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
                   </div>
                 ) : showResult && lastResult?.outcome === 'bonus' && lastResult.net === 0 ? (
                   <p className="font-karla font-400 text-sm" style={{ color: '#34d399' }}>Bonus spin, no extra catch this time</p>
+                ) : showResult && lastResult && reels.filter((r) => r === 'anchor').length >= 1 ? (
+                  // A lone hook landed on an otherwise-dead spin — reframe the near
+                  // miss as a nibble instead of a silent loss (calm, no FX).
+                  <div style={{ textAlign: 'center' }}>
+                    <p className="font-karla font-600" style={{ fontSize: '0.9rem', color: '#5eb894', letterSpacing: '0.02em' }}>A nibble…</p>
+                    <p className="font-karla font-400 text-[#8d8880] text-xs" style={{ marginTop: 2 }}>{lastResult.net.toLocaleString()} ⟡</p>
+                  </div>
                 ) : showResult && lastResult ? (
                   <p className="font-karla font-400 text-[#8d8880] text-sm">{lastResult.net.toLocaleString()} ⟡</p>
                 ) : (
