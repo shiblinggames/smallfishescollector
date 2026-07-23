@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { HOOKS, hookGlowClass } from '@/lib/hooks'
-import { RODS, rodGlowClass, isCaptainRod, COMPLETIONIST_TIER } from '@/lib/rods'
+import { RODS, rodGlowClass, isCaptainRod, rodSpeedPct, COMPLETIONIST_TIER } from '@/lib/rods'
 import { openMembership } from '@/components/MembershipModal'
 import { REELS } from '@/lib/reels'
 import { LINES } from '@/lib/lines'
@@ -749,7 +749,7 @@ export default function TackleShopClient({
                 const isBuying = buyingRod === rod.tier && isPending
                 const isEquipping = equippingRod === rod.tier && isPending
                 const c = rod.color
-                const speedPct = Math.round((3800 - rod.biteIntervalMs) / 3800 * 100)
+                const speedPct = rodSpeedPct(rod)
 
                 const effects: string[] = []
                 if (rod.doubleCatchChance >= 1) effects.push('Always double catch')

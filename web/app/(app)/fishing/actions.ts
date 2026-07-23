@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getBait } from '@/lib/bait'
-import { getRod, getEffectiveRod, COMPLETIONIST_TIER, COMPLETIONIST_MAX_EFFECTS, REFORGE_COST, rodHasUniqueEffect, jackpotChanceForZone } from '@/lib/rods'
+import { getRod, getEffectiveRod, COMPLETIONIST_TIER, COMPLETIONIST_MAX_EFFECTS, REFORGE_COST, rodHasUniqueEffect, jackpotChanceForZone, rodWaitMult } from '@/lib/rods'
 import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
 import { rewardsOwed, type LevelReward } from '@/lib/levelRewards'
 import { grantBadgeDirect } from '@/lib/badgeGrant'
@@ -41,7 +41,7 @@ export type FishSpecies = {
 import { ZONE_RARITY_RATES, ZONE_MIN_LEVEL, ZONE_WAIT_BASE, ZONE_CRATE_TIERS } from './zoneData'
 
 // Wait time: zone sets the range, catch_score positions within it (higher score = longer wait)
-function fishWaitMs(catchScore: number, habitat: string, baitType: string, fishingLevel: number, renownWaitMult = 1): number {
+function fishWaitMs(catchScore: number, habitat: string, baitType: string, fishingLevel: number, renownWaitMult = 1, rodMult = 1): number {
   const [zMin, zMax] = ZONE_WAIT_BASE[habitat] ?? [5000, 20000]
   const frac = Math.max(0, Math.min(1, (catchScore - 8) / 90))
   const base = zMin + frac * (zMax - zMin)
@@ -53,7 +53,7 @@ function fishWaitMs(catchScore: number, habitat: string, baitType: string, fishi
   // worm-baited cast in that zone to a flat 60s and erasing the bait
   // choice the player just made. 3s floor stays as a sanity check
   // against negative-wait pathologies from stacked future buffs.
-  return Math.max(3000, Math.round(base * baitMult * levelMult * renownWaitMult))
+  return Math.max(3000, Math.round(base * baitMult * levelMult * renownWaitMult * rodMult))
 }
 
 // Two-stage fish selection:
@@ -342,7 +342,7 @@ export async function castLine(baitType: string, habitat: string): Promise<
   } else {
     fish = tierWeightedPick(pool, habitat, rod.rarityBonus + eventRarityBonus)
   }
-  let waitMs = fishWaitMs(fish.catch_score, habitat, baitType, fishingLevel, renownWaitMult)
+  let waitMs = fishWaitMs(fish.catch_score, habitat, baitType, fishingLevel, renownWaitMult, rodWaitMult(rod))
 
   // Lightsaber Rod — "Lightspeed": a chance the bite is near-instant. This is
   // the only rod stat that actually changes the bite wait (biteIntervalMs is

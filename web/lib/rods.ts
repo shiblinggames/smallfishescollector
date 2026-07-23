@@ -78,7 +78,7 @@ export const RODS: RodDef[] = [
   },
   {
     tier: 3, name: 'Reef Guard', cost: 8000, minLevel: 12,
-    description: 'Responsive and fast. Fish bite 15% quicker than the baseline.',
+    description: 'Responsive and fast. Bites come a little quicker than the baseline.',
     color: '#34d399', rarityBonus: 0, biteIntervalMs: 3230, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
     slug: 'rod_reefguard',
@@ -92,14 +92,14 @@ export const RODS: RodDef[] = [
   },
   {
     tier: 5, name: 'Moonwood Staff', cost: 14000, minLevel: 20,
-    description: 'Carved from driftwood blessed by a full moon. Bites 10% faster with a wider catch window.',
+    description: 'Carved from driftwood blessed by a full moon. Quicker bites and a wider catch window.',
     color: '#a78bfa', rarityBonus: 0, biteIntervalMs: 3420, catchZoneBonus: 10,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
     slug: 'rod_moonwood', glow: true, glowType: 'moon',
   },
   {
     tier: 6, name: 'Graphite Rod', cost: 22000, minLevel: 28,
-    description: 'Lightweight and stiff. Fish bite 25% faster than baseline.',
+    description: 'Lightweight and stiff. Noticeably quicker bites.',
     color: '#64748b', rarityBonus: 0, biteIntervalMs: 2850, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
     slug: 'rod_graphite',
@@ -113,21 +113,21 @@ export const RODS: RodDef[] = [
   },
   {
     tier: 8, name: 'Carbon Rod', cost: 60000, minLevel: 42,
-    description: 'Precision-engineered. Bites come 35% faster than baseline.',
+    description: 'Precision-engineered for quick, snappy bites.',
     color: '#4ade80', rarityBonus: 0, biteIntervalMs: 2470, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
     slug: 'rod_carbon', glow: true, glowType: 'tech',
   },
   {
     tier: 9, name: 'Deep Diver', cost: 90000, minLevel: 48,
-    description: 'Built for the abyss. 38% faster bites and a wide catch window.',
+    description: 'Built for the abyss. Fast bites and a wide catch window.',
     color: '#22d3ee', rarityBonus: 0, biteIntervalMs: 2356, catchZoneBonus: 13,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
     slug: 'rod_deepdiver',
   },
   {
     tier: 10, name: 'Legendary Rod', cost: 200000, minLevel: 60,
-    description: 'Forged from the mast of a sunken galleon. 40% faster bites — the rarest fish cannot resist.',
+    description: 'Forged from the mast of a sunken galleon. Faster bites, and the rarest fish cannot resist.',
     // rarityBonus 1.50 → 0.80 (2026-07-23): at 1.50 this was the ONLY rod that
     // shifted the rarity curve (tier-5 ×7 weight), and since prestige is gated on
     // catching every species, it was a ~3.3x accelerant on the rarest-fish
@@ -214,6 +214,28 @@ export const RODS: RodDef[] = [
 
 export function getRod(tier: number): RodDef {
   return RODS.find(r => r.tier === tier) ?? RODS[0]
+}
+
+// ── Bite speed (made real 2026-07-23, but deliberately gentle) ────────────────
+// biteIntervalMs was DISPLAY-ONLY for years — the wait calc never read it, so
+// every "X% faster bites" claim was fiction. Rather than delete the claims (which
+// leaves 3 rods with no effect at all), we make a FRACTION of the display speed
+// real. Only a quarter lands, so a rod nudges bite wait without competing with the
+// two real speed levers: BAIT stays primary (best bait -45%), then fishing level
+// (-33%), then the rod (top rod ~-10%). Tune the whole system with this one knob.
+export const ROD_WAIT_SCALE = 0.25
+
+/** Multiplier a rod applies to the base bite wait (<1 = faster, >1 = slower).
+ *  A quarter of the rod's display speed, railed so no rod can rival bait/level. */
+export function rodWaitMult(rod: RodDef): number {
+  const implied = (3800 - rod.biteIntervalMs) / 3800   // + faster · - slower
+  return Math.max(0.85, Math.min(1.10, 1 - ROD_WAIT_SCALE * implied))
+}
+
+/** The REAL speed a rod gives as a signed % (positive = faster). Drives the
+ *  shop/gear display so the shown number matches what actually happens now. */
+export function rodSpeedPct(rod: RodDef): number {
+  return Math.round((1 - rodWaitMult(rod)) * 100)
 }
 
 /** Tiers of every rod that can be BOUGHT — excludes the free Bamboo starter

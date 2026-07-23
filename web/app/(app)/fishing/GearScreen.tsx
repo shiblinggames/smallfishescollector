@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getHook, HOOKS, hookGlowClass } from '@/lib/hooks'
-import { getEffectiveRod, RODS, rodGlowClass, isCaptainRod, rodHasUniqueEffect, rodEffectLabel, COMPLETIONIST_TIER, COMPLETIONIST_MAX_EFFECTS, REFORGE_COST } from '@/lib/rods'
+import { getEffectiveRod, RODS, rodGlowClass, isCaptainRod, rodHasUniqueEffect, rodEffectLabel, rodSpeedPct, COMPLETIONIST_TIER, COMPLETIONIST_MAX_EFFECTS, REFORGE_COST } from '@/lib/rods'
 import { openMembership } from '@/components/MembershipModal'
 import { getReel, REELS } from '@/lib/reels'
 import { fishingGearLevelReq } from '@/lib/gearGating'
@@ -59,7 +59,7 @@ function rodTagline(r: typeof RODS[number]): string {
   if ((r.perfectXpMult ?? 1) > 1)      parts.push(`${r.perfectXpMult}× perfect XP`)
   if (r.wormhole)                      parts.push('Wormhole reroll')
   if ((r.instantBiteChance ?? 0) > 0)  parts.push(`${Math.round(r.instantBiteChance! * 100)}% instant bite`)
-  const speedPct = Math.round((3800 - r.biteIntervalMs) / 3800 * 100)
+  const speedPct = rodSpeedPct(r)
   if (speedPct > 0)                    parts.push(`${speedPct}% faster`)
   if (r.catchZoneBonus > 0)            parts.push(`+${r.catchZoneBonus}° zone`)
   if (parts.length === 0) return 'Base rod'
@@ -130,7 +130,7 @@ function StatBullet({ value, help, color }: { value: string; help: string; color
 // rare bias / jackpot / crate luring only affect outcomes.
 function rodStatLines(r: typeof RODS[number]): Array<{ title: string; value: string; help: string }> {
   const lines: Array<{ title: string; value: string; help: string }> = []
-  const speedPct = Math.round((3800 - r.biteIntervalMs) / 3800 * 100)
+  const speedPct = rodSpeedPct(r)
   if (speedPct > 0) {
     lines.push({ title: 'Bite Speed', value: `${speedPct}% faster`, help: 'less waiting between casts' })
   } else if (speedPct < 0) {
@@ -206,8 +206,8 @@ function rodStatDeltas(current: typeof RODS[number], next: typeof RODS[number]):
   }
   // Bite speed: lower biteIntervalMs is faster (better). Express the speed
   // as % faster than base so the player sees an intuitive "30% → 45%".
-  const curSpeed = Math.round((3800 - current.biteIntervalMs) / 3800 * 100)
-  const nxtSpeed = Math.round((3800 - next.biteIntervalMs) / 3800 * 100)
+  const curSpeed = rodSpeedPct(current)
+  const nxtSpeed = rodSpeedPct(next)
   pushIfChanged('Bite Speed', curSpeed, nxtSpeed,
     curSpeed === 0 ? 'Base' : `${curSpeed}% fast`,
     nxtSpeed === 0 ? 'Base' : `${nxtSpeed}% fast`)

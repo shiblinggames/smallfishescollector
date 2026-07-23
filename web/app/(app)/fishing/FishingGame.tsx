@@ -69,7 +69,7 @@ import GearUnlockRow from '@/components/GearUnlockRow'
 import { formatFishLength, tierForLength, TIER_COLOR, type FishSizeTier } from '@/lib/fishSize'
 import { SHINY_FISH_FILTER, SHINY_THEME, SHINY_SELL_MULT, pickShinyMessage } from '@/lib/shiny'
 import { getHook, HOOKS, hookGlowClass } from '@/lib/hooks'
-import { getRod, getEffectiveRod, RODS, rodGlowClass, type RodDef } from '@/lib/rods'
+import { getRod, getEffectiveRod, RODS, rodGlowClass, rodSpeedPct, type RodDef } from '@/lib/rods'
 import { vibrate, hapticTap } from '@/lib/haptics'
 import { getReel, REELS } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
@@ -1019,7 +1019,7 @@ function UnifiedGearDrawer({
                   <div className="flex flex-col gap-1.5">
                     {ownedRodDefs.map(r => {
                       const isEquipped = r.tier === equippedRodTier
-                      const speedPct = Math.round((3800 - r.biteIntervalMs) / 3800 * 100)
+                      const speedPct = rodSpeedPct(r)
                       const hasSpecial = r.doubleCatchChance > 0 || r.retryOnMissChance > 0 || r.snagImmune || r.perfectZoneBonus > 0 || r.rarityBonus > 0 || (r.jackpotChance ?? 0) > 0 || r.wormhole || (r.instantBiteChance ?? 0) > 0 || (r.crateChanceMult ?? 1) > 1 || (r.perfectXpMult ?? 1) > 1
                       return (
                         <div key={r.tier} style={{
