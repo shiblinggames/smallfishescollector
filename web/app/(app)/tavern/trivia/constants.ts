@@ -32,7 +32,7 @@ export const TRIVIA_TIERS = [1, 2, 3] as const
 // client countdown can't be trusted alone. Reloading never resets the clock
 // (the reveal timestamp is stored), so you can't stall on a lookup. GRACE covers
 // network + clock skew so an honest last-second answer isn't unfairly voided.
-export const TRIVIA_ANSWER_SECONDS = 20
+export const TRIVIA_ANSWER_SECONDS = 15
 export const TRIVIA_TIMER_GRACE_MS = 4000
 /** True once a reveal timestamp is older than the limit (+ grace). serverNow and
  *  revealedAt are ISO strings from the server; kept pure so both sides can call it. */
