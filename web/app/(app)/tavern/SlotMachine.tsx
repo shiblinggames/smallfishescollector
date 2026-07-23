@@ -13,7 +13,11 @@ import { useAnimatedNumber } from './useAnimatedNumber'
 import { vibrate as haptic } from '@/lib/haptics'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
-const ALL_IDS: SlotSymbolId[] = SLOT_SYMBOLS_LIST.map((s) => s.id)
+// Base-game reel strip (fish + hook) vs. the bonus strip (fish + the Jellyfish
+// wild, no hook). Each reel's runway uses the pool it can actually land, so the
+// wild never flickers past in the base game.
+const BASE_IDS: SlotSymbolId[] = SLOT_SYMBOLS_LIST.filter((s) => s.weight > 0).map((s) => s.id)
+const BONUS_IDS: SlotSymbolId[] = SLOT_SYMBOLS_LIST.filter((s) => s.bonusWeight > 0).map((s) => s.id)
 
 const WIN_LABEL: Record<SlotSymbolId, string> = {
   common:    'Full School!',
@@ -21,6 +25,7 @@ const WIN_LABEL: Record<SlotSymbolId, string> = {
   legendary: 'Whale of a Win!',
   catfish:   'JACKPOT!!',
   anchor:    'Bonus Spin!',
+  wild:      'Jellyfish Wild!',
 }
 
 function symColor(id: SlotSymbolId) {
@@ -103,11 +108,14 @@ function PotTicker({ value }: { value: number }) {
 }
 
 // Each reel stops independently — no delay prop needed
-function Reel({ symbol, rolling, won, winColor, winDelayMs = 0, nearMiss, nearMissOdd, matchColor, onLand }: {
+function Reel({ symbol, rolling, won, winColor, winDelayMs = 0, nearMiss, nearMissOdd, matchColor, onLand, pool = BASE_IDS }: {
   symbol: SlotSymbolId
   rolling: boolean
   won: boolean
   winColor?: string
+  /** The symbol runway this reel scrolls through — base reels use BASE_IDS,
+   *  bonus reels use BONUS_IDS (which includes the Jellyfish wild). */
+  pool?: SlotSymbolId[]
   /** Stagger the win-pop animation per reel so the row reads left-to-right
    *  instead of all three landing simultaneously. Casino feel: line traces. */
   winDelayMs?: number
@@ -130,8 +138,8 @@ function Reel({ symbol, rolling, won, winColor, winDelayMs = 0, nearMiss, nearMi
   const [isSpinning, setIsSpinning] = useState(false)
   const [landedSym, setLandedSym] = useState<SlotSymbolId>(symbol)
 
-  const LEN = ALL_IDS.length
-  const strip = useMemo(() => [...ALL_IDS, ...ALL_IDS, ...ALL_IDS], [])
+  const LEN = pool.length
+  const strip = useMemo(() => [...pool, ...pool, ...pool], [pool])
   const setY = (px: number) => { if (stripRef.current) stripRef.current.style.transform = `translateY(${-px}px)` }
 
   // Keep tile height in sync with the (responsive) reel window.
@@ -139,7 +147,7 @@ function Reel({ symbol, rolling, won, winColor, winDelayMs = 0, nearMiss, nearMi
     const measure = () => {
       if (!winRef.current) return
       tileHRef.current = winRef.current.clientHeight
-      if (!isSpinning) { posRef.current = ALL_IDS.indexOf(landedSym) * tileHRef.current; setY(posRef.current) }
+      if (!isSpinning) { posRef.current = pool.indexOf(landedSym) * tileHRef.current; setY(posRef.current) }
     }
     measure()
     const ro = new ResizeObserver(measure)
@@ -169,7 +177,7 @@ function Reel({ symbol, rolling, won, winColor, winDelayMs = 0, nearMiss, nearMi
     // Not rolling:
     if (!startedRef.current) {
       // Never spun — just place the target instantly (no settle animation).
-      posRef.current = ALL_IDS.indexOf(symbol) * tileH
+      posRef.current = pool.indexOf(symbol) * tileH
       if (stripRef.current) stripRef.current.style.transition = 'none'
       setY(posRef.current)
       setLandedSym(symbol)
@@ -181,7 +189,7 @@ function Reel({ symbol, rolling, won, winColor, winDelayMs = 0, nearMiss, nearMi
     const p0 = posRef.current % (LEN * tileH)
     if (stripRef.current) { stripRef.current.style.transition = 'none' }
     setY(p0)
-    const ti = ALL_IDS.indexOf(symbol)
+    const ti = pool.indexOf(symbol)
     const finalPos = (LEN + ti) * tileH
     posRef.current = finalPos
     const raf = requestAnimationFrame(() => {
@@ -525,7 +533,7 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
         setTimeout(() => {
           const b = result.bonus!
           if (b.outcome === 'jackpot') triggerJackpot(true, 'You', b.payout)
-          else if (b.outcome === 'win') triggerWin(b.reels[0], true)
+          else if (b.outcome === 'win') triggerWin(b.matchedSymbol ?? b.reels[0], true)
           // bonus pair: no screen flash — the result banner shows the pair.
           settle(result)
         }, lastBonusStop + 200)
@@ -641,6 +649,10 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
         @keyframes hold-tension {
           0%, 100% { filter: brightness(1); }
           50% { filter: brightness(1.14); }
+        }
+        @keyframes bonus-open {
+          0% { opacity: 0; transform: scale(0.92) translateY(10px); }
+          100% { opacity: 1; transform: scale(1) translateY(0); }
         }
         @keyframes slot-coin {
           0%   { transform: translateY(0) scale(1); opacity: 1; }
@@ -786,17 +798,29 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
                 ))}
               </div>
 
-              {/* Bonus spin reels, inside the cabinet */}
+              {/* Bonus round — its own "charged" premium bay: a violet/fuchsia
+                  (jellyfish) frame vs. the base wood, a 50%-MORE banner, the
+                  Jellyfish wild in the runway, and a pop-in flourish on open. */}
               {showBonus && (
-                <div className="flex flex-col items-center gap-3 w-full" style={{ marginTop: '1rem' }}>
-                  <div style={{
-                    background: 'rgba(52,211,153,0.12)',
-                    border: '1px solid rgba(52,211,153,0.35)',
-                    borderRadius: 10,
-                    padding: '4px 16px',
-                  }}>
-                    <p className="font-cinzel font-700 tracking-wide" style={{ color: '#34d399', fontSize: '0.85rem' }}>
-                      ⚓ Bonus Spin!
+                <div className="flex flex-col items-center gap-3 w-full" style={{
+                  marginTop: '1rem',
+                  background: 'linear-gradient(180deg, rgba(232,121,249,0.13) 0%, rgba(167,139,250,0.06) 60%, transparent 100%)',
+                  border: '1px solid rgba(232,121,249,0.4)',
+                  borderRadius: 16,
+                  padding: '0.85rem 0.6rem',
+                  boxShadow: '0 0 30px rgba(232,121,249,0.18), inset 0 1px 0 rgba(255,255,255,0.06)',
+                  animation: 'bonus-open 0.5s cubic-bezier(0.34,1.56,0.64,1)',
+                }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <p className="font-cinzel font-700 tracking-wide" style={{
+                      color: '#f0abfc', fontSize: '1rem', letterSpacing: '0.06em',
+                      textShadow: '0 0 18px rgba(232,121,249,0.7)',
+                      animation: 'glow-pulse 1.6s ease-in-out infinite',
+                    }}>
+                      ✦ BONUS ROUND ✦
+                    </p>
+                    <p className="font-karla font-800 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.16em', color: '#fde68a', marginTop: 3 }}>
+                      Pays 50% more · Jellyfish runs wild
                     </p>
                   </div>
                   <div className="flex gap-2.5 sm:gap-4 justify-center">
@@ -804,6 +828,7 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
                       <Reel
                         key={i}
                         symbol={sym}
+                        pool={BONUS_IDS}
                         rolling={bonusRolling[i]}
                         won={wonBonusReels}
                         winColor={wonBonusReels ? winColor : undefined}
@@ -865,11 +890,15 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
                     {/* catfish's multiplier is 0 (its triple normally pays the
                         pot); only shown for the admin big-win fallback, so hide
                         the misleading "0× your bet" line. */}
-                    {SLOT_PAYOUTS[winSym] > 0 && (
+                    {lastResult?.outcome === 'bonus' ? (
+                      <p className="font-karla font-700 text-xs mt-1" style={{ color: '#f0abfc', letterSpacing: '0.04em' }}>
+                        Bonus round · paid 50% more
+                      </p>
+                    ) : SLOT_PAYOUTS[winSym] > 0 ? (
                       <p className="font-karla font-400 text-[#b3ada2] text-xs mt-1">
                         {SLOT_PAYOUTS[winSym]}× your bet
                       </p>
-                    )}
+                    ) : null}
                   </div>
                 ) : showResult && lastResult?.outcome === 'refund' ? (
                   <div style={{ animation: 'result-rise 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards', textAlign: 'center' }}>

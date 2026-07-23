@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { grantBadgeDirect } from '@/lib/badgeGrant'
-import { SLOT_SYMBOLS_LIST, SLOT_PAYOUTS, SLOT_PAIR_PAYOUTS, SLOTS_MIN_BET, SLOTS_MAX_BET, SLOTS_JACKPOT_FEED_PCT } from './constants'
+import { SLOT_SYMBOLS_LIST, SLOT_PAYOUTS, SLOT_PAIR_PAYOUTS, SLOTS_MIN_BET, SLOTS_MAX_BET, SLOTS_JACKPOT_FEED_PCT, SLOT_BONUS_MULT } from './constants'
 import type { SlotSymbolId } from './constants'
 
 // Crown & Anchor was retired 2026-06-06 — replaced by Blackjack
@@ -68,6 +68,39 @@ function slotWeightedRandom(): SlotSymbolId {
 
 function slotRollReels(): SlotSymbolId[] {
   return [slotWeightedRandom(), slotWeightedRandom(), slotWeightedRandom()]
+}
+
+// ── Bonus round: its own richer pool (base fish + Jellyfish WILD, no hook) ──
+function slotBonusWeightedRandom(): SlotSymbolId {
+  const total = SLOT_SYMBOLS_LIST.reduce((s, sym) => s + sym.bonusWeight, 0)
+  let r = Math.random() * total
+  for (const sym of SLOT_SYMBOLS_LIST) {
+    r -= sym.bonusWeight
+    if (r <= 0) return sym.id
+  }
+  return SLOT_SYMBOLS_LIST[SLOT_SYMBOLS_LIST.length - 1].id
+}
+function slotRollBonusReels(): SlotSymbolId[] {
+  return [slotBonusWeightedRandom(), slotBonusWeightedRandom(), slotBonusWeightedRandom()]
+}
+
+// Best-paying bonus line with Jellyfish WILD substitution. The wild stands in for
+// common/rare/legendary (NEVER catfish/jackpot). Returns the resolved fish + its
+// base multiplier + triple/pair, or null for no win. Caller applies the bonus
+// boost (SLOT_BONUS_MULT). Enumerating all options + taking the max means a
+// generous case like 2 wilds + 1 fish correctly pays the best line available.
+function evalBonusLine(rs: SlotSymbolId[]): { symbol: SlotSymbolId; kind: 'triple' | 'pair'; mult: number } | null {
+  const wilds = rs.filter(r => r === 'wild').length
+  const nat = (s: SlotSymbolId) => rs.filter(r => r === s).length
+  const opts: { symbol: SlotSymbolId; kind: 'triple' | 'pair'; mult: number }[] = []
+  for (const s of ['common', 'rare', 'legendary'] as const) {
+    if (nat(s) + wilds === 3) opts.push({ symbol: s, kind: 'triple', mult: SLOT_PAYOUTS[s] })
+  }
+  if (nat('legendary') + wilds >= 2 && SLOT_PAIR_PAYOUTS.legendary) opts.push({ symbol: 'legendary', kind: 'pair', mult: SLOT_PAIR_PAYOUTS.legendary })
+  if (nat('catfish') >= 2 && SLOT_PAIR_PAYOUTS.catfish) opts.push({ symbol: 'catfish', kind: 'pair', mult: SLOT_PAIR_PAYOUTS.catfish })
+  if (nat('rare') + wilds >= 2 && SLOT_PAIR_PAYOUTS.rare) opts.push({ symbol: 'rare', kind: 'pair', mult: SLOT_PAIR_PAYOUTS.rare })
+  if (opts.length === 0) return null
+  return opts.reduce((best, o) => (o.mult > best.mult ? o : best))
 }
 
 export interface SlotStats {
@@ -171,27 +204,30 @@ export async function spinSlots(wager: number): Promise<SlotSpinResult | { error
   let jackpotWin: number | undefined
 
   if (allSame && a === 'anchor') {
-    // 3 hooks → free bonus spin. The bonus roll pays triples and pairs
-    // like a normal spin (no hook lines, no nested bonus) — and yes, a
-    // natural 3-catfish bonus roll takes the jackpot.
+    // 3 hooks → the "charged" bonus round. It rolls its OWN richer pool (base
+    // fish + the Jellyfish WILD, no hook), the wild substitutes to complete a
+    // line, and every fish win pays 50% MORE (SLOT_BONUS_MULT). A NATURAL
+    // 3-catfish bonus roll still takes the jackpot (the wild can't complete it).
     outcome = 'bonus'
-    const bonusReels = slotRollReels()
+    const bonusReels = slotRollBonusReels()
     const [ba, bb, bc] = bonusReels
-    const bonusAllSame = ba === bb && bb === bc
-    const bonusPair = pairSymbol(bonusReels)
-    if (bonusAllSame && ba === 'catfish' && !isAdmin) {
+    const bonusNaturalCatfish = ba === 'catfish' && bb === 'catfish' && bc === 'catfish'
+    if (bonusNaturalCatfish && !isAdmin) {
       const share = await claimJackpot()
       jackpotWin = share
       bonus = { reels: bonusReels, outcome: 'jackpot', payout: share }
-    } else if (bonusAllSame && ba === 'catfish') {
-      // Admin catfish triple → big win, no pot claim.
-      bonus = { reels: bonusReels, outcome: 'win', payout: wager * SLOT_PAYOUTS.legendary }
-    } else if (bonusAllSame && ba !== 'anchor') {
-      bonus = { reels: bonusReels, outcome: 'win', payout: wager * SLOT_PAYOUTS[ba] }
-    } else if (bonusPair && SLOT_PAIR_PAYOUTS[bonusPair]) {
-      bonus = { reels: bonusReels, outcome: 'pair', payout: Math.floor(wager * SLOT_PAIR_PAYOUTS[bonusPair]!), matchedSymbol: bonusPair }
+    } else if (bonusNaturalCatfish) {
+      // Admin catfish triple → big win (boosted like any bonus win), pot untouched.
+      bonus = { reels: bonusReels, outcome: 'win', payout: Math.floor(wager * SLOT_PAYOUTS.legendary * SLOT_BONUS_MULT), matchedSymbol: 'catfish' }
     } else {
-      bonus = { reels: bonusReels, outcome: 'lose', payout: 0 }
+      const line = evalBonusLine(bonusReels)
+      if (line && line.kind === 'triple') {
+        bonus = { reels: bonusReels, outcome: 'win', payout: Math.floor(wager * line.mult * SLOT_BONUS_MULT), matchedSymbol: line.symbol }
+      } else if (line && line.kind === 'pair') {
+        bonus = { reels: bonusReels, outcome: 'pair', payout: Math.floor(wager * line.mult * SLOT_BONUS_MULT), matchedSymbol: line.symbol }
+      } else {
+        bonus = { reels: bonusReels, outcome: 'lose', payout: 0 }
+      }
     }
     payout = wager + bonus.payout
   } else if (allSame && a === 'catfish' && !isAdmin) {

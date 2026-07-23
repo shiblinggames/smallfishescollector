@@ -40,24 +40,30 @@ import { getLevelFromXP as navLevelFromXp } from '@/lib/expeditionLevel'
 // house eats the seed top-up only after big-bet claims since partial
 // claims leave the remainder in the pot.
 
-export type SlotSymbolId = 'common' | 'rare' | 'legendary' | 'catfish' | 'anchor'
+export type SlotSymbolId = 'common' | 'rare' | 'legendary' | 'catfish' | 'anchor' | 'wild'
 
 export const SLOT_SYMBOLS_LIST: {
   id: SlotSymbolId
   filename?: string
   color: string
-  weight: number
+  weight: number       // base-game reel weight (0 = never rolls in the base game)
+  bonusWeight: number  // bonus-round reel weight (0 = never rolls in the bonus)
   label: string
 }[] = [
   // 2026-07-21: catfish 14→9 + Blue Whale 9→7 (freed weight → sardine). The two
   // big triples felt too frequent: catfish jackpot 1-in-364 → 1-in-1,372, Blue
   // Whale triple 1-in-1,372 → 1-in-2,915. Total RTP holds ~96.9% (the pot-fed
   // jackpot just grows bigger between rarer hits). Re-verified with slots-rtp.mjs.
-  { id: 'common',    filename: 'Sardine_v2.png',  color: '#8a8880', weight: 46, label: 'Sardine' },
-  { id: 'rare',      filename: 'Blue_Marlin.png', color: '#60a5fa', weight: 20, label: 'Blue Marlin' },
-  { id: 'legendary', filename: 'Blue_Whale_v2.png', color: '#a78bfa', weight: 7, label: 'Blue Whale' },
-  { id: 'catfish',   filename: 'Catfish.png',      color: '#f0c040', weight: 9, label: 'Catfish' },
-  { id: 'anchor',                                   color: '#34d399', weight: 18, label: 'Hook' },
+  { id: 'common',    filename: 'Sardine_v2.png',    color: '#8a8880', weight: 46, bonusWeight: 40, label: 'Sardine' },
+  { id: 'rare',      filename: 'Blue_Marlin.png',   color: '#60a5fa', weight: 20, bonusWeight: 20, label: 'Blue Marlin' },
+  { id: 'legendary', filename: 'Blue_Whale_v2.png', color: '#a78bfa', weight: 7,  bonusWeight: 8,  label: 'Blue Whale' },
+  { id: 'catfish',   filename: 'Catfish.png',       color: '#f0c040', weight: 9,  bonusWeight: 8,  label: 'Catfish' },
+  { id: 'anchor',                                    color: '#34d399', weight: 18, bonusWeight: 0,  label: 'Hook' },
+  // Jellyfish WILD — bonus-round ONLY (base weight 0). Substitutes for the base
+  // fish (common/rare/legendary) to complete a line; never the Catfish jackpot.
+  // Pairs with SLOT_BONUS_MULT + the wild eval in actions.ts. RTP verified in
+  // slots-rtp.mjs (Jellyfish Wild section): total ~99.5% at floor pot.
+  { id: 'wild',      filename: 'Jellyfish.png',     color: '#e879f9', weight: 0,  bonusWeight: 16, label: 'Jellyfish' },
 ]
 
 // 3-of-a-kind. Catfish is 0 here because a natural catfish triple pays
@@ -68,7 +74,13 @@ export const SLOT_PAYOUTS: Record<SlotSymbolId, number> = {
   legendary: 60,
   catfish:   0,
   anchor:    0,
+  wild:      0, // the wild has no line of its own — it substitutes for the fish
 }
+
+// The bonus round is the "charged" premium round: every fish win pays 50% MORE.
+// Applied to bonus triple + pair payouts in actions.ts (NOT the progressive pot
+// jackpot). RTP re-verified in slots-rtp.mjs after adding this.
+export const SLOT_BONUS_MULT = 1.5
 
 // Pair payouts: exactly 2 matching fish, third reel anything (a single
 // hook included). Sardine pairs pay nothing — they read as a near-miss

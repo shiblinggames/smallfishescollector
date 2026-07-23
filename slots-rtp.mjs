@@ -99,3 +99,55 @@ report('CURRENT LIVE (F)',                 { common: 39, rare: 20, legendary: 9,
 report('P1: catfish 14→9, whale 9→7',      { common: 46, rare: 20, legendary: 7, catfish: 9,  anchor: 18 }, { rare: 1.5, legendary: 5, catfish: 3 }, T4)
 report('P2: catfish 14→10, whale 9→7',     { common: 44, rare: 20, legendary: 7, catfish: 10, anchor: 19 }, { rare: 1.5, legendary: 5, catfish: 3 }, T4)
 report('P3: catfish 14→8, whale 9→6',      { common: 48, rare: 20, legendary: 6, catfish: 8,  anchor: 18 }, { rare: 1.5, legendary: 5, catfish: 3 }, T4)
+
+// ── 2026-07 Jellyfish WILD bonus round (base game UNCHANGED) ─────────────────
+// Only the bonus round changes: its own reel pool (base fish + Jellyfish wild,
+// NO hook), the wild substitutes for common/rare/legendary (never catfish /
+// jackpot), and every bonus fish win pays SLOT_BONUS_MULT (1.5x = 50% more).
+// bonusProb (3 hooks on the BASE pool) is unchanged, so base RTP is identical;
+// this only shifts the (rare, ~1-in-171, free) bonus slice.
+function bestBonusPay(reels, triples, pairs) {
+  const wilds = reels.filter(r => r === 'wild').length
+  const nat = s => reels.filter(r => r === s).length
+  const opts = []
+  for (const s of ['common', 'rare', 'legendary']) if (nat(s) + wilds === 3) opts.push(triples[s])
+  if (nat('legendary') + wilds >= 2) opts.push(pairs.legendary)
+  if (nat('rare') + wilds >= 2) opts.push(pairs.rare)
+  if (nat('catfish') >= 2) opts.push(pairs.catfish)
+  return opts.length ? Math.max(...opts) : 0
+}
+function reportWild(label, baseWeights, bonusWeights, pairs, triples, boost) {
+  const tot = Object.values(baseWeights).reduce((a, b) => a + b, 0)
+  const p = {}; for (const k in baseWeights) p[k] = baseWeights[k] / tot
+  const syms = Object.keys(baseWeights)
+  let baseNoBonus = 0, bonusProb = 0
+  for (const a of syms) for (const b of syms) for (const c of syms) {
+    const prob = p[a] * p[b] * p[c], r = [a, b, c], h = r.filter(x => x === 'anchor').length
+    if (h === 3) { bonusProb += prob; continue }
+    if (a === b && b === c) { if (a === 'catfish') continue; baseNoBonus += prob * triples[a]; continue }
+    if (h === 2) { baseNoBonus += prob * 1; continue }
+    const fish = r.filter(x => x !== 'anchor'), cn = {}
+    for (const f of fish) cn[f] = (cn[f] || 0) + 1
+    const ps = Object.keys(cn).find(k => cn[k] === 2)
+    if (ps && pairs[ps] !== undefined) baseNoBonus += prob * pairs[ps]
+  }
+  const bt = Object.values(bonusWeights).reduce((a, b) => a + b, 0)
+  const bp = {}; for (const k in bonusWeights) bp[k] = bonusWeights[k] / bt
+  const bsyms = Object.keys(bonusWeights)
+  let ev = 0
+  for (const a of bsyms) for (const b of bsyms) for (const c of bsyms) {
+    const prob = bp[a] * bp[b] * bp[c], r = [a, b, c]
+    if (a === 'catfish' && b === 'catfish' && c === 'catfish') continue // jackpot, from pot
+    ev += prob * bestBonusPay(r, triples, pairs) * boost
+  }
+  const total = baseNoBonus + bonusProb * ev
+  console.log(`\n=== ${label} ===`)
+  console.log(`bonus weights: ${JSON.stringify(bonusWeights)}  boost: ${boost}x`)
+  console.log(`bonus: 1-in-${Math.round(1 / bonusProb)} · bonus EV (wild+boost): ${ev.toFixed(2)}x (was ~0.78x) · adds ${(bonusProb * ev * 100).toFixed(2)}pp`)
+  console.log(`TOTAL base RTP: ${(total * 100).toFixed(2)}%  (+10% feed = ${(total * 100 + 10).toFixed(2)}% total)`)
+}
+console.log('\n\n######## Jellyfish WILD bonus — SHIPPED config (base unchanged) ########')
+reportWild('LIVE: bonus wild 16, boost 1.5x',
+  { common: 46, rare: 20, legendary: 7, catfish: 9, anchor: 18 },
+  { common: 40, rare: 20, legendary: 8, catfish: 8, wild: 16 },
+  { rare: 1.5, legendary: 5, catfish: 3 }, T4, 1.5)
