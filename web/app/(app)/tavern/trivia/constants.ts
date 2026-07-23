@@ -115,9 +115,12 @@ export const PARLOR_RANKS: ParlorRank[] = [
   { at: 1000, title: 'Parlor Legend', color: '#e879f9', gems: 1000 },
 ]
 // Points per activity — harder answers are worth more; nothing is lost on a miss.
-export function boardCardPoints(tier: number): number { return tier }   // tier 1/2/3
-export const KING_RUNG_POINTS = 2      // each correct rung
-export const KING_CROWN_POINTS = 10    // bonus for crowning the full ladder
+// Tuned so EACH game's weekly MAX lands in a tight 15-20 band, keeping the climb to
+// Parlor Legend a long grind: Board 20 (all 12 cards), King 18 (crowned run), Capstan
+// 15 (three clean solves). Doubloon payouts are separate and still scale by tier/rung.
+export function boardCardPoints(tier: number): number { return Math.min(tier, 2) }  // 1/2/2 → 20 over the 12-card board
+export const KING_RUNG_POINTS = 1      // each correct rung (×10 rungs = 10)
+export const KING_CROWN_POINTS = 8     // bonus for crowning the full ladder → 18 max
 
 /** Current rank + the next rung (null if maxed) for an accumulated point total. */
 export function parlorRank(points: number): { rank: ParlorRank; next: ParlorRank | null } {
