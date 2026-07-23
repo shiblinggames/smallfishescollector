@@ -15,9 +15,9 @@ import { getThisWeeksLadder, type GeneratedRung } from './generate'
 import {
   PIRATE_KING_PRIZES,
   PIRATE_KING_RUNGS,
-  rankGemsTotalFor,
   KING_RUNG_POINTS,
   KING_CROWN_POINTS,
+  parlorRank,
   kingHavenValue,
   kingWeekStr,
   type PirateKingState,
@@ -59,15 +59,6 @@ async function payOut(userId: string, amount: number, reason: string): Promise<n
 
 /** Grants gems (the crown bonus) and returns the new gem total, null if none.
  *  Sequential after payOut so the two profile writes never clobber each other. */
-async function payGems(userId: string, amount: number): Promise<number | null> {
-  if (amount <= 0) return null
-  const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles').select('gems').eq('id', userId).single()
-  const newTotal = (profile?.gems ?? 0) + amount
-  await admin.from('profiles').update({ gems: newTotal }).eq('id', userId)
-  return newTotal
-}
-
 export async function getPirateKingState(): Promise<PirateKingState | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -148,9 +139,8 @@ export async function answerKingRung(
   }
 
   // Parlor streak (shared with the Board): a right answer extends it, a bust
-  // breaks it — and crossing a RANK pays escalating gems (the whole gem source
-  // now). Rank gems are delta-paid vs parlor_rank_gems_awarded, so each rank pays
-  // once ever, whether the board or the King crossed it.
+  // breaks it. Points accumulate toward the shared rank; the gems for a reached
+  // rank are COLLECTED later in the lobby (claimParlorRank), not paid here.
   const prevStreak = (prof?.parlor_streak as number | null) ?? 0
   const prevBest = (prof?.parlor_best_streak as number | null) ?? 0
   const currentStreak = correct ? prevStreak + 1 : 0
@@ -161,10 +151,12 @@ export async function answerKingRung(
   const prevPoints = (prof?.parlor_points as number | null) ?? 0
   const pointsEarned = correct ? KING_RUNG_POINTS + (status === 'crowned' ? KING_CROWN_POINTS : 0) : 0
   const newPoints = prevPoints + pointsEarned
+  const rankedUp = parlorRank(prevPoints).rank.title !== parlorRank(newPoints).rank.title
 
-  const prevRankGems = (prof?.parlor_rank_gems_awarded as number | null) ?? 0
-  const rankGemsTotal = rankGemsTotalFor(newPoints)
-  const gemsWon = Math.max(0, rankGemsTotal - prevRankGems)
+  // Gems are NOT paid here any more — reaching a rank makes it CLAIMABLE in the
+  // Parlor lobby (see claimParlorRank). Rungs only bank points now.
+  const gemsWon = 0
+  const newGems: number | null = null
 
   await admin.from('trivia_ladder_attempts').upsert({
     user_id: user.id,
@@ -182,10 +174,9 @@ export async function answerKingRung(
   } else if (status === 'busted' && won > 0) {
     newDoubloons = await payOut(user.id, won, `Pirate King: fell to the haven at ${won} ⟡`)
   }
-  const newGems = gemsWon > 0 ? await payGems(user.id, gemsWon) : null
 
-  // Persist the shared streak + cumulative rank gems (column-only write).
-  await admin.from('profiles').update({ parlor_streak: currentStreak, parlor_best_streak: bestStreak, parlor_rank_gems_awarded: rankGemsTotal, parlor_points: newPoints }).eq('id', user.id)
+  // Persist the shared streak + points (column-only write).
+  await admin.from('profiles').update({ parlor_streak: currentStreak, parlor_best_streak: bestStreak, parlor_points: newPoints }).eq('id', user.id)
 
   // Badge hooks (best-effort): the crown, and the rung-7 stepping stone.
   if (status === 'crowned') { try { await grantBadgeDirect(user.id, 'crowned') } catch { /* best-effort */ } }
@@ -206,6 +197,7 @@ export async function answerKingRung(
     bestStreak,
     pointsEarned,
     newPoints,
+    rankedUp,
     next: status === 'active' ? stripQuestion(ladder[newRung], newRung, a.fifty) : null,
   }
 }

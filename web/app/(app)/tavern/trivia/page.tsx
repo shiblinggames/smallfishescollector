@@ -47,6 +47,7 @@ export default async function TriviaPage() {
           king={king}
           parlorStreak={(profile?.parlor_streak as number | null) ?? 0}
           parlorPoints={(profile?.parlor_points as number | null) ?? 0}
+          parlorRankGemsClaimed={(profile?.parlor_rank_gems_awarded as number | null) ?? 0}
         />
       </div>
     </main>

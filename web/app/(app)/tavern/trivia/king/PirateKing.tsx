@@ -379,10 +379,10 @@ export default function PirateKing({ initial, parlorPoints }: { initial: PirateK
                     +{result.pointsEarned} pts toward your rank{result.currentStreak >= 4 ? ' · on a heater' : ''}
                   </p>
                 )}
-                {result.gemsWon > 0 && (
+                {result.rankedUp && (
                   <motion.p initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: 'spring', stiffness: 300, damping: 18, delay: 0.15 }}
                     className="font-cinzel font-700" style={{ fontSize: '0.92rem', textAlign: 'center', marginTop: 8, color: '#c084fc', textShadow: '0 0 14px rgba(192,132,252,0.55)' }}>
-                    Ranked up! +{result.gemsWon} ◆
+                    New rank reached — collect your gems in the Parlor
                   </motion.p>
                 )}
               </div>

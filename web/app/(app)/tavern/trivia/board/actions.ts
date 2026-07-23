@@ -19,8 +19,8 @@ import {
   triviaTileKey,
   categoryMeta,
   kingWeekStr,
-  rankGemsTotalFor,
   boardCardPoints,
+  parlorRank,
   type CaptainsBoardState,
   type BoardTileClient,
   type AnswerTileResult,
@@ -242,14 +242,13 @@ export async function answerCaptainsTile(
   const prevPoints = (profile?.parlor_points as number | null) ?? 0
   const pointsEarned = correct ? boardCardPoints(tile.tier) : 0
   const newPoints = prevPoints + pointsEarned
+  const rankedUp = parlorRank(prevPoints).rank.title !== parlorRank(newPoints).rank.title
 
-  // Gems flow from RANK-UPS (escalating, one-time, charting-style). Pay the delta
-  // owed for every rank the new point total has reached, gated by
-  // parlor_rank_gems_awarded so each rank pays exactly once — ever.
-  const prevRankGems = (profile?.parlor_rank_gems_awarded as number | null) ?? 0
-  const rankGemsTotal = rankGemsTotalFor(newPoints)
-  const gemsWon = Math.max(0, rankGemsTotal - prevRankGems)
-  const newGems = gemsWon > 0 ? (profile?.gems ?? 0) + gemsWon : null
+  // Gems are NOT paid here any more. Reaching a rank makes it CLAIMABLE in the
+  // Parlor lobby, where the player collects it in a satisfying one-tap deposit
+  // (see claimParlorRank). A right answer only banks points now.
+  const gemsWon = 0
+  const newGems: number | null = null
 
   const writes: PromiseLike<unknown>[] = [
     admin.from('trivia_board_attempts').upsert({
@@ -266,11 +265,9 @@ export async function answerCaptainsTile(
   const profilePatch: Record<string, number> = {
     parlor_streak: currentStreak,
     parlor_best_streak: bestStreak,
-    parlor_rank_gems_awarded: rankGemsTotal,
     parlor_points: newPoints,
   }
   if (newDoubloons !== null) profilePatch.doubloons = newDoubloons
-  if (newGems !== null) profilePatch.gems = newGems
   writes.push(admin.from('profiles').update(profilePatch).eq('id', user.id))
   if (newDoubloons !== null) {
     writes.push(admin.from('doubloon_transactions').insert({
@@ -300,5 +297,6 @@ export async function answerCaptainsTile(
     bestStreak,
     pointsEarned,
     newPoints,
+    rankedUp,
   }
 }

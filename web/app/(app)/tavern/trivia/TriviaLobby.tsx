@@ -8,6 +8,7 @@ import { motion } from 'framer-motion'
 import ScenicCard from '../ScenicCard'
 import BackButton from '@/components/BackButton'
 import { ParlorHost, CrownIcon, ParlorPointsTicker } from './ParlorArt'
+import ParlorClaim from './ParlorClaim'
 import { TRIVIA_CATEGORIES, PIRATE_KING_RUNGS, parlorRank, type PirateKingStatus } from './constants'
 
 const GOLD = '#f0c040'
@@ -18,13 +19,14 @@ export interface KingChip {
   doubloonsAwarded: number
 }
 
-export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, doubloonsThisWeek, king, parlorStreak, parlorPoints }: {
+export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, doubloonsThisWeek, king, parlorStreak, parlorPoints, parlorRankGemsClaimed }: {
   boardPlayedToday: boolean
   boardPlayedThisWeek: number
   doubloonsThisWeek: number
   king: KingChip | null
   parlorStreak: number
   parlorPoints: number
+  parlorRankGemsClaimed: number
 }) {
   const { rank, next } = parlorRank(parlorPoints)
   const kingChipText = king === null ? null
@@ -73,8 +75,11 @@ export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, dou
         )}
       </div>
 
+      {/* Collect any ranks your points have reached — the interactive gem claim. */}
+      <ParlorClaim points={parlorPoints} claimedGems={parlorRankGemsClaimed} />
+
       <p className="font-karla" style={{ fontSize: '0.8rem', color: '#c2b9a4', lineHeight: 1.55, textAlign: 'center' }}>
-        Doubloons for a right answer — and <span style={{ color: '#c084fc' }}>gems ◆</span> every time you climb a Parlor rank. Fresh boards every Monday.
+        Doubloons for a right answer — and <span style={{ color: '#c084fc' }}>gems ◆</span> to collect each time you climb a Parlor rank. Fresh boards every Monday.
       </p>
 
       {/* The Captain's Board — live */}

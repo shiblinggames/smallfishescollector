@@ -88,6 +88,9 @@ export interface AnswerTileResult {
   /** Parlor points earned this answer + the new running total (drives the rank). */
   pointsEarned: number
   newPoints: number
+  /** True when this answer pushed the point total into a NEW rank — the cue to
+   *  tell the player a reward is waiting to collect in the Parlor lobby. */
+  rankedUp: boolean
 }
 
 // ── Parlor mastery: streak → rank ────────────────────────────────────
@@ -123,9 +126,45 @@ export function parlorRank(points: number): { rank: ParlorRank; next: ParlorRank
   return { rank, next: PARLOR_RANKS[PARLOR_RANKS.indexOf(rank) + 1] ?? null }
 }
 /** Cumulative gems a player is OWED for every rank their points have reached — the
- *  servers pay `total - already_paid` so each rank pays exactly once. */
+ *  claim action pays `total - already_claimed` so each rank pays exactly once. */
 export function rankGemsTotalFor(points: number): number {
   return PARLOR_RANKS.reduce((sum, r) => sum + (points >= r.at ? r.gems : 0), 0)
+}
+
+// ── Manual rank claims (charting-style) ─────────────────────────────
+// Gems are NOT auto-paid on a right answer any more. Points accumulate; when they
+// cross a rank you must CLAIM it — a satisfying, one-rank-at-a-time deposit. The
+// profiles column `parlor_rank_gems_awarded` holds the running total of gems ALREADY
+// claimed; since every rank's gem value is positive, that running sum lands exactly
+// on a rank boundary, so `cum > claimed` cleanly flags a reached-but-unclaimed rank.
+
+/** The next single rank a player can claim (lowest reached-but-unpaid), or null.
+ *  `cumGems` is the new `parlor_rank_gems_awarded` value once this rank is claimed. */
+export function nextClaimableParlorRank(points: number, claimedGems: number): { rank: ParlorRank; index: number; cumGems: number } | null {
+  let cum = 0
+  for (let i = 0; i < PARLOR_RANKS.length; i++) {
+    const r = PARLOR_RANKS[i]
+    cum += r.gems
+    if (r.gems > 0 && points >= r.at && cum > claimedGems) return { rank: r, index: i, cumGems: cum }
+  }
+  return null
+}
+
+/** Every rank sitting unclaimed right now — its length drives the "N to claim"
+ *  badge/pulse; the sum of their gems is what's waiting in the pot. */
+export function claimableParlorRanks(points: number, claimedGems: number): ParlorRank[] {
+  const out: ParlorRank[] = []
+  let cum = 0
+  for (const r of PARLOR_RANKS) {
+    cum += r.gems
+    if (r.gems > 0 && points >= r.at && cum > claimedGems) out.push(r)
+  }
+  return out
+}
+
+/** Total gems waiting to be claimed for the point total, given what's been claimed. */
+export function claimableGemsTotal(points: number, claimedGems: number): number {
+  return Math.max(0, rankGemsTotalFor(points) - claimedGems)
 }
 /** The host's in-character reaction to an answer. Pure (client-safe); leans on
  *  the streak (or the one just broken) so it never feels canned. */
@@ -219,6 +258,9 @@ export interface AnswerKingResult {
   /** Parlor points earned this answer + the new running total (drives the rank). */
   pointsEarned: number
   newPoints: number
+  /** True when this answer pushed the point total into a NEW rank — cue to tell the
+   *  player a reward is waiting to collect in the Parlor lobby. */
+  rankedUp: boolean
   /** Next question if the run continues, already stripped. */
   next: KingQuestionClient | null
 }

@@ -327,13 +327,13 @@ export default function CaptainsBoard({ initial, parlorPoints }: { initial: Capt
                   <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', textAlign: 'center', color: (result?.correct ?? viewAnswered?.correct) ? '#7fd49a' : '#e07070' }}>
                     {(result?.correct ?? viewAnswered?.correct) ? `Well answered. +${openTile.value} ⟡` : 'Scuttled.'}
                   </p>
-                  {result && result.gemsWon > 0 && (
+                  {result?.rankedUp && (
                     <motion.p
                       initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: 'spring', stiffness: 300, damping: 18, delay: 0.15 }}
                       className="font-cinzel font-700"
                       style={{ fontSize: '0.86rem', textAlign: 'center', marginTop: 5, color: GEM_COLOR, textShadow: `0 0 14px ${GEM_COLOR}66` }}
                     >
-                      Ranked up! +{result.gemsWon} ◆
+                      New rank reached — collect your gems in the Parlor
                     </motion.p>
                   )}
                   {shownExplanation && (
