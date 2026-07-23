@@ -241,9 +241,10 @@ export default function CaptainsBoard({ initial, doubloons }: { initial: Captain
       {/* Play-this-card confirm */}
       {pendingMeta && !playedToday && (
         <div style={{
-          background: 'linear-gradient(180deg, #1a1830 0%, #0d0c1c 100%)',
+          background: `linear-gradient(180deg, ${PARLOR.wood} 0%, ${PARLOR.woodDeep} 100%)`,
           border: `1px solid ${categoryMeta(pendingMeta.category).color}66`,
           borderRadius: 14, padding: '0.85rem 0.9rem',
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
         }}>
           <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#e8e2d4', textAlign: 'center' }}>
             Play <span style={{ color: categoryMeta(pendingMeta.category).color }}>{categoryMeta(pendingMeta.category).label}</span> for {pendingMeta.value} ⟡?
@@ -281,13 +282,14 @@ export default function CaptainsBoard({ initial, doubloons }: { initial: Captain
       {mounted && openTile && openTile.question && openTile.options && createPortal(
         <AnimatePresence>
           <motion.div key="trivia-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(2,4,10,0.78)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.2rem' }}
+            style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(2,4,10,0.78)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.2rem', perspective: 1400 }}
             onClick={resolved ? closeModal : undefined}
           >
-            <motion.div initial={{ y: 18, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 18, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+            {/* The card turns face-up — a Y-axis flip as the host reveals the clue. */}
+            <motion.div initial={{ rotateY: -82, opacity: 0 }} animate={{ rotateY: 0, opacity: 1 }} exit={{ rotateY: 34, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 240, damping: 26 }}
               onClick={e => e.stopPropagation()}
-              style={{ position: 'relative', width: '100%', maxWidth: 420, maxHeight: '82vh', overflowY: 'auto', background: 'linear-gradient(180deg, #1a1830 0%, #0d0c1c 100%)', border: `1px solid ${categoryMeta(openTile.category).color}66`, borderRadius: 18, padding: '1.2rem 1.1rem 1.1rem', boxShadow: '0 18px 50px rgba(0,0,0,0.6)' }}
+              style={{ position: 'relative', transformOrigin: '50% 50%', width: '100%', maxWidth: 420, maxHeight: '82vh', overflowY: 'auto', background: `radial-gradient(ellipse 92% 46% at 50% 0%, rgba(240,200,106,0.08), transparent 60%), linear-gradient(180deg, ${PARLOR.wood} 0%, ${PARLOR.woodDeep} 100%)`, border: `1px solid ${categoryMeta(openTile.category).color}66`, borderRadius: 18, padding: '1.2rem 1.1rem 1.1rem', boxShadow: '0 18px 50px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.05)' }}
             >
               {/* Close — X top-right once resolved (replaces the old full-width
                   "Back to the Board" bottom button; scrim-tap also dismisses). */}

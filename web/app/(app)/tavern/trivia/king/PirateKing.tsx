@@ -202,8 +202,8 @@ export default function PirateKing({ initial, doubloons }: { initial: PirateKing
         /* ── Run over: the summary card ── */
         <div style={{
           position: 'relative', overflow: 'hidden',
-          background: 'linear-gradient(180deg, #1c1830 0%, #0d0c1c 100%)',
-          border: `1px solid ${status === 'crowned' ? GOLD : 'rgba(167,139,250,0.3)'}66`,
+          background: `radial-gradient(ellipse 90% 55% at 50% 0%, rgba(240,200,106,0.09), transparent 60%), linear-gradient(180deg, ${PARLOR.wood} 0%, ${PARLOR.woodDeep} 100%)`,
+          border: `1px solid ${status === 'crowned' ? GOLD : PARLOR.brassDim}`,
           borderRadius: 16, padding: '1.6rem 1.1rem',
           textAlign: 'center',
           boxShadow: '0 10px 30px rgba(0,0,0,0.45)',
@@ -281,10 +281,10 @@ export default function PirateKing({ initial, doubloons }: { initial: PirateKing
       ) : current && (
         /* ── The question card ── */
         <div style={{
-          background: 'linear-gradient(180deg, #1a1830 0%, #0d0c1c 100%)',
+          background: `radial-gradient(ellipse 92% 46% at 50% 0%, rgba(240,200,106,0.07), transparent 60%), linear-gradient(180deg, ${PARLOR.wood} 0%, ${PARLOR.woodDeep} 100%)`,
           border: `1px solid ${GOLD}55`,
           borderRadius: 16, padding: '1.1rem 1rem 1rem',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.45)',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.14em', color: GOLD }}>
