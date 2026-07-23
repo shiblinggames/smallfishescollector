@@ -17,6 +17,7 @@ interface MyScores {
   perfectStreak: number | null
   tideRun: number | null
   chartingPoints: number | null
+  parlorPoints: number | null
   fishSlots: number | null
   blackjack: number | null
   roulette: number | null
@@ -30,6 +31,7 @@ interface MyRanks {
   perfectStreak: number | null
   tideRun: number | null
   chartingPoints: number | null
+  parlorPoints: number | null
   fishSlots: number | null
   blackjack: number | null
   roulette: number | null
@@ -43,6 +45,7 @@ interface Props {
   perfectStreak: LeaderboardEntry[]
   tideRun: LeaderboardEntry[]
   chartingPoints: LeaderboardEntry[]
+  parlorPoints: LeaderboardEntry[]
   fishSlots: LeaderboardEntry[]
   blackjack: LeaderboardEntry[]
   roulette: LeaderboardEntry[]
@@ -60,10 +63,10 @@ interface Props {
 // LEADERBOARD_SECTIONS, and it appears here automatically).
 const AVAILABLE_BOARDS: BoardKey[] = [
   'achievementPoints', 'perfectStreak', 'fishingLevel', 'raidProgress',
-  'expedition', 'chartingPoints', 'tideRun', 'blackjack', 'fishSlots', 'roulette',
+  'expedition', 'chartingPoints', 'parlorPoints', 'tideRun', 'blackjack', 'fishSlots', 'roulette',
 ]
 
-export default function LeaderboardClient({ fishing, perfectStreak, tideRun, chartingPoints, fishSlots, blackjack, roulette, expedition, raidProgress, achievementPoints, myScores, myRanks, currentUserId, avatars }: Props) {
+export default function LeaderboardClient({ fishing, perfectStreak, tideRun, chartingPoints, parlorPoints, fishSlots, blackjack, roulette, expedition, raidProgress, achievementPoints, myScores, myRanks, currentUserId, avatars }: Props) {
   const [activeTab, setActiveTab] = useState<BoardKey>('achievementPoints')
 
   // BoardKey → its data array + the player's score/rank for that board.
@@ -72,6 +75,7 @@ export default function LeaderboardClient({ fishing, perfectStreak, tideRun, cha
     : k === 'perfectStreak' ? perfectStreak
     : k === 'tideRun' ? tideRun
     : k === 'chartingPoints' ? chartingPoints
+    : k === 'parlorPoints' ? parlorPoints
     : k === 'fishSlots' ? fishSlots
     : k === 'blackjack' ? blackjack
     : k === 'roulette' ? roulette
@@ -83,6 +87,7 @@ export default function LeaderboardClient({ fishing, perfectStreak, tideRun, cha
     : k === 'perfectStreak' ? myScores.perfectStreak
     : k === 'tideRun' ? myScores.tideRun
     : k === 'chartingPoints' ? myScores.chartingPoints
+    : k === 'parlorPoints' ? myScores.parlorPoints
     : k === 'fishSlots' ? myScores.fishSlots
     : k === 'blackjack' ? myScores.blackjack
     : k === 'roulette' ? myScores.roulette
@@ -94,6 +99,7 @@ export default function LeaderboardClient({ fishing, perfectStreak, tideRun, cha
     : k === 'perfectStreak' ? myRanks.perfectStreak
     : k === 'tideRun' ? myRanks.tideRun
     : k === 'chartingPoints' ? myRanks.chartingPoints
+    : k === 'parlorPoints' ? myRanks.parlorPoints
     : k === 'fishSlots' ? myRanks.fishSlots
     : k === 'blackjack' ? myRanks.blackjack
     : k === 'roulette' ? myRanks.roulette

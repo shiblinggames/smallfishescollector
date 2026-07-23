@@ -88,6 +88,23 @@ async function fetchChartingPointsBoard(admin: ReturnType<typeof createAdminClie
   return { top, myScore: myIdx >= 0 ? rows[myIdx].score : null, myRank: myIdx >= 0 ? myIdx + 1 : null }
 }
 
+// Parlor Points: cumulative parlor points banked across The Parlor (Captain's
+// Board + Pirate King + Spin the Capstan), stored in profiles.parlor_points.
+// Highest total wins; ties broken by username ASC. Same shape as charting points.
+async function fetchParlorPointsBoard(admin: ReturnType<typeof createAdminClient>, userId: string) {
+  const { data: profiles } = await admin
+    .from('profiles')
+    .select('id, username, parlor_points')
+    .eq('is_admin', false)
+    .gt('parlor_points', 0)
+  const rows: LeaderboardEntry[] = ((profiles ?? []) as Array<{ id: string; username: string | null; parlor_points: number | null }>)
+    .map(p => ({ user_id: p.id, username: p.username ?? '', score: p.parlor_points ?? 0 }))
+  rows.sort((a, b) => b.score - a.score || (a.username < b.username ? -1 : a.username > b.username ? 1 : 0))
+  const top = rows.slice(0, 50)
+  const myIdx = rows.findIndex(r => r.user_id === userId)
+  return { top, myScore: myIdx >= 0 ? rows[myIdx].score : null, myRank: myIdx >= 0 ? myIdx + 1 : null }
+}
+
 async function fetchPerfectStreakBoard(admin: ReturnType<typeof createAdminClient>, userId: string) {
   const [{ data: top }, { data: me }] = await Promise.all([
     admin.from('leaderboard_perfect_streak')
@@ -112,12 +129,13 @@ export default async function LeaderboardPage() {
 
   const admin = createAdminClient()
 
-  const [profile, fishingData, perfectStreakData, tideRunData, chartingPointsData, fishSlotsData, blackjackData, rouletteData, expeditionData, raidProgressData, achievementPointsData] = await Promise.all([
+  const [profile, fishingData, perfectStreakData, tideRunData, chartingPointsData, parlorPointsData, fishSlotsData, blackjackData, rouletteData, expeditionData, raidProgressData, achievementPointsData] = await Promise.all([
     admin.from('profiles').select('packs_available, doubloons, gems').eq('id', user.id).single(),
     fetchBoard(admin, 'leaderboard_fishing', user.id),
     fetchPerfectStreakBoard(admin, user.id),
     fetchBoard(admin, 'leaderboard_tide_run', user.id),
     fetchChartingPointsBoard(admin, user.id),
+    fetchParlorPointsBoard(admin, user.id),
     fetchBoard(admin, 'leaderboard_fish_slots', user.id),
     fetchBoard(admin, 'leaderboard_blackjack', user.id),
     fetchBoard(admin, 'leaderboard_roulette', user.id),
@@ -135,6 +153,7 @@ export default async function LeaderboardPage() {
     ...perfectStreakData.top.map(e => e.user_id),
     ...tideRunData.top.map(e => e.user_id),
     ...chartingPointsData.top.map(e => e.user_id),
+    ...parlorPointsData.top.map(e => e.user_id),
     ...fishSlotsData.top.map(e => e.user_id),
     ...blackjackData.top.map(e => e.user_id),
     ...rouletteData.top.map(e => e.user_id),
@@ -181,6 +200,7 @@ export default async function LeaderboardPage() {
             perfectStreak={perfectStreakData.top}
             tideRun={tideRunData.top}
             chartingPoints={chartingPointsData.top}
+            parlorPoints={parlorPointsData.top}
             fishSlots={fishSlotsData.top}
             blackjack={blackjackData.top}
             roulette={rouletteData.top}
@@ -192,6 +212,7 @@ export default async function LeaderboardPage() {
               perfectStreak: perfectStreakData.myScore,
               tideRun: tideRunData.myScore,
               chartingPoints: chartingPointsData.myScore,
+              parlorPoints: parlorPointsData.myScore,
               fishSlots: fishSlotsData.myScore,
               blackjack: blackjackData.myScore,
               roulette: rouletteData.myScore,
@@ -204,6 +225,7 @@ export default async function LeaderboardPage() {
               perfectStreak: perfectStreakData.myRank,
               tideRun: tideRunData.myRank,
               chartingPoints: chartingPointsData.myRank,
+              parlorPoints: parlorPointsData.myRank,
               fishSlots: fishSlotsData.myRank,
               blackjack: blackjackData.myRank,
               roulette: rouletteData.myRank,

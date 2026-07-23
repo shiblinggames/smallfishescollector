@@ -140,6 +140,23 @@ async function fetchChartingPoints(admin: Admin, userId: string) {
   return { top, myScore: myIdx >= 0 ? rows[myIdx].score : null, myRank: myIdx >= 0 ? myIdx + 1 : null }
 }
 
+// Parlor Points: cumulative parlor points (The Parlor trivia hub) from
+// profiles.parlor_points. Same live-computed shape as fetchChartingPoints —
+// highest total wins, ties broken by username ASC.
+async function fetchParlorPoints(admin: Admin, userId: string) {
+  const { data: profiles } = await admin
+    .from('profiles')
+    .select('id, username, parlor_points')
+    .eq('is_admin', false)
+    .gt('parlor_points', 0)
+  const rows: LeaderboardEntry[] = ((profiles ?? []) as Array<{ id: string; username: string | null; parlor_points: number | null }>)
+    .map(p => ({ user_id: p.id, username: p.username ?? '', score: p.parlor_points ?? 0 }))
+  rows.sort((a, b) => b.score - a.score || (a.username < b.username ? -1 : a.username > b.username ? 1 : 0))
+  const top = rows.slice(0, 50)
+  const myIdx = rows.findIndex(r => r.user_id === userId)
+  return { top, myScore: myIdx >= 0 ? rows[myIdx].score : null, myRank: myIdx >= 0 ? myIdx + 1 : null }
+}
+
 // Total Prestige board retired 2026-07-22 when prestige was capped at 5 ("Max
 // Prestige") — an infinite ladder no longer made sense.
 
@@ -168,6 +185,7 @@ export async function getLeaderboardBoards(
     if (key === 'perfectStreak')      res = await fetchPerfectStreak(admin, user.id)
     else if (key === 'raidProgress')  res = await fetchRaidProgress(admin, user.id)
     else if (key === 'chartingPoints') res = await fetchChartingPoints(admin, user.id)
+    else if (key === 'parlorPoints')  res = await fetchParlorPoints(admin, user.id)
     else if (key === 'achievementPoints') res = await getAchievementPointsBoard(admin, user.id)
     else if (key === 'gauntletDepth') res = await fetchGauntlet(admin, user.id)
     else if (key === 'gauntletHardcore') res = await fetchGauntlet(admin, user.id, 'leaderboard_gauntlet_hardcore')

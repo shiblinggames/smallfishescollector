@@ -21,7 +21,9 @@ export interface KingChip {
   doubloonsAwarded: number
 }
 
-export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, doubloonsThisWeek, king, parlorStreak, parlorPoints, parlorRankGemsClaimed, isCaptain, capstanSolved }: {
+const MEDAL = ['#f0c040', '#c9d2dc', '#cd7f32'] // gold · silver · bronze
+
+export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, doubloonsThisWeek, king, parlorStreak, parlorPoints, parlorRankGemsClaimed, isCaptain, capstanSolved, topParlor }: {
   boardPlayedToday: boolean
   boardPlayedThisWeek: number
   doubloonsThisWeek: number
@@ -31,6 +33,7 @@ export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, dou
   parlorRankGemsClaimed: number
   isCaptain: boolean
   capstanSolved: number
+  topParlor: { username: string; points: number }[]
 }) {
   const kingChipText = king === null ? null
     : king.status === 'crowned' ? `Crowned · +${king.doubloonsAwarded} ⟡`
@@ -186,6 +189,24 @@ export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, dou
 
       {/* Spin the Capstan — live, Captain-only */}
       <CapstanCard isMember={isCaptain} solved={capstanSolved} />
+
+      {/* Top of the Parlor — the three deepest banks of parlor points. */}
+      {topParlor.length > 0 && (
+        <div style={{ borderRadius: 14, padding: '0.75rem 0.9rem 0.6rem', background: 'rgba(20,14,7,0.6)', border: '1px solid rgba(201,162,74,0.28)' }}>
+          <p className="font-cinzel font-700" style={{ fontSize: '0.74rem', color: '#e6d8b4', textAlign: 'center', letterSpacing: '0.02em', marginBottom: 8 }}>
+            Top of the Parlor
+          </p>
+          {topParlor.map((r, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '0.34rem 0.1rem', borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+              <span className="font-cinzel font-700" style={{ width: 18, textAlign: 'center', fontSize: '0.82rem', color: MEDAL[i] }}>{i + 1}</span>
+              <span className="font-karla font-600" style={{ flex: 1, minWidth: 0, fontSize: '0.8rem', color: '#d8cdb2', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.username}</span>
+              <span className="font-karla font-700 flex items-center" style={{ gap: 4, fontSize: '0.78rem', color: MEDAL[i], whiteSpace: 'nowrap' }}>
+                {r.points.toLocaleString()} <span style={{ fontSize: '0.62rem', color: '#a8a090' }}>pts</span>
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <p className="font-karla" style={{ fontSize: '0.6rem', color: '#5a5248', textAlign: 'center', lineHeight: 1.5 }}>
         The board and the King&apos;s ladder are rigged fresh each Monday; the Capstan hides three new phrases. Winnings land instantly.

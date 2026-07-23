@@ -11,7 +11,7 @@ export default async function TriviaPage() {
 
   const today = new Date().toISOString().split('T')[0]
   const admin = createAdminClient()
-  const [profile, { data: attempt }, { data: kingAttempt }, { data: capstanAttempt }] = await Promise.all([
+  const [profile, { data: attempt }, { data: kingAttempt }, { data: capstanAttempt }, { data: topParlorRows }] = await Promise.all([
     getCurrentProfile(),
     // Board is weekly now (keyed by the Monday week-start, like the ladder).
     admin.from('trivia_board_attempts')
@@ -26,6 +26,11 @@ export default async function TriviaPage() {
       .select('runs')
       .eq('user_id', user.id).eq('date', kingWeekStr())
       .single(),
+    // Top three Parlor-point banks for the lobby leaderboard.
+    admin.from('profiles')
+      .select('username, parlor_points')
+      .eq('is_admin', false).gt('parlor_points', 0)
+      .order('parlor_points', { ascending: false }).limit(3),
   ])
 
   const boardAnswers = (attempt?.answers as Record<string, { day?: string; chosen?: number }> | null) ?? {}
@@ -35,6 +40,8 @@ export default async function TriviaPage() {
   const boardPlayedThisWeek = Object.values(boardAnswers).filter(a => a.chosen !== undefined).length
   const capstanRuns = (capstanAttempt?.runs as Record<string, { status?: string }> | null) ?? {}
   const capstanSolved = Object.values(capstanRuns).filter(r => r.status === 'solved').length
+  const topParlor = ((topParlorRows ?? []) as { username: string | null; parlor_points: number | null }[])
+    .map(r => ({ username: r.username ?? 'Captain', points: Number(r.parlor_points ?? 0) }))
   const king: KingChip | null = kingAttempt
     ? {
         status: kingAttempt.status as PirateKingStatus,
@@ -56,6 +63,7 @@ export default async function TriviaPage() {
           parlorRankGemsClaimed={(profile?.parlor_rank_gems_awarded as number | null) ?? 0}
           isCaptain={isPremiumActive(profile)}
           capstanSolved={capstanSolved}
+          topParlor={topParlor}
         />
       </div>
     </main>
