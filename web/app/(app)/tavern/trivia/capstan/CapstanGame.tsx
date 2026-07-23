@@ -473,13 +473,13 @@ function PickerSheet({ title, children, onClose }: { title: string; children: Re
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       onClick={onClose}
-      style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: 16, background: 'rgba(6,4,12,0.72)', backdropFilter: 'blur(3px)' }}
+      style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, background: 'rgba(6,4,12,0.72)', backdropFilter: 'blur(3px)' }}
     >
       <motion.div
-        initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
-        transition={{ type: 'spring', stiffness: 320, damping: 30 }}
+        initial={{ scale: 0.9, y: 14, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+        transition={{ type: 'spring', stiffness: 320, damping: 26 }}
         onClick={e => e.stopPropagation()}
-        style={{ width: '100%', maxWidth: 420, borderRadius: 18, padding: '1rem 1rem 1.2rem', background: 'linear-gradient(180deg, #241a12, #130d08)', border: `1px solid ${PARLOR.brass}55`, boxShadow: '0 -10px 40px rgba(0,0,0,0.5)' }}
+        style={{ width: '100%', maxWidth: 420, borderRadius: 18, padding: '1.1rem 1rem 1.2rem', background: 'linear-gradient(180deg, #241a12, #130d08)', border: `1px solid ${PARLOR.brass}55`, boxShadow: '0 24px 60px rgba(0,0,0,0.55)' }}
       >
         <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#f0e8d0', textAlign: 'center', marginBottom: 12 }}>{title}</p>
         {children}
