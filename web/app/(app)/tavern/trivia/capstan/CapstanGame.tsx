@@ -16,6 +16,7 @@ import {
   CAPSTAN_VOWEL_COST,
   CAPSTAN_MAX_STRIKES,
   CAPSTAN_VOWELS,
+  capstanSolvePoints,
   type CapstanState,
   type CapstanPuzzleClient,
 } from '../constants'
@@ -88,6 +89,8 @@ function PuzzleSelect({ puzzles, onPick }: { puzzles: CapstanPuzzleClient[]; onP
       {puzzles.map(p => {
         const done = p.status !== 'active'
         const started = p.called.length > 0 || p.strikes > 0 || p.bank > 0
+        const solved = p.status === 'solved'
+        const points = solved ? capstanSolvePoints(p.strikes) : 0
         return (
           <button
             key={p.index}
@@ -96,22 +99,31 @@ function PuzzleSelect({ puzzles, onPick }: { puzzles: CapstanPuzzleClient[]; onP
             style={{
               width: '100%', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12,
               padding: '0.85rem 0.95rem', borderRadius: 14,
-              background: 'linear-gradient(180deg, #241a12 0%, #130d08 100%)',
-              border: `1px solid ${p.status === 'solved' ? `${GOLD}77` : p.status === 'failed' ? 'rgba(217,97,79,0.5)' : 'rgba(201,162,74,0.4)'}`,
+              background: solved ? `linear-gradient(180deg, ${GOLD}1e 0%, #130d08 70%)` : 'linear-gradient(180deg, #241a12 0%, #130d08 100%)',
+              border: `1px solid ${solved ? `${GOLD}88` : p.status === 'failed' ? 'rgba(217,97,79,0.5)' : 'rgba(201,162,74,0.4)'}`,
+              boxShadow: solved ? `0 0 16px ${GOLD}22, inset 0 1px 0 rgba(255,255,255,0.05)` : 'none',
               opacity: p.status === 'failed' ? 0.8 : 1,
             }}
           >
-            <span aria-hidden style={{ flexShrink: 0, width: 40, height: 40, borderRadius: '50%', display: 'grid', placeItems: 'center', background: 'radial-gradient(circle at 50% 35%, #3a2c16, #12100a 92%)', border: `1.5px solid ${PARLOR.brass}` }}>
-              <CapstanGlyph size={22} />
+            <span aria-hidden style={{
+              flexShrink: 0, width: 40, height: 40, borderRadius: '50%', display: 'grid', placeItems: 'center',
+              background: solved ? `radial-gradient(circle at 50% 35%, ${GOLD}, #6b4e12 92%)` : 'radial-gradient(circle at 50% 35%, #3a2c16, #12100a 92%)',
+              border: `1.5px solid ${solved ? GOLD : PARLOR.brass}`,
+              boxShadow: solved ? `0 0 12px ${GOLD}66` : 'none',
+            }}>
+              {solved ? <CheckIcon size={22} /> : p.status === 'failed' ? <XIcon size={20} /> : <CapstanGlyph size={22} />}
             </span>
             <span style={{ minWidth: 0, flex: 1 }}>
               <span className="font-karla font-700 uppercase" style={{ display: 'block', fontSize: '0.5rem', letterSpacing: '0.16em', color: '#a8a090' }}>{p.category}</span>
-              <span className="font-cinzel font-700" style={{ display: 'block', fontSize: '0.98rem', color: '#f0e8d0', marginTop: 1 }}>
-                {p.status === 'solved' ? 'Solved' : p.status === 'failed' ? 'Lost to the deep' : started ? 'In progress' : 'Ready to play'}
+              <span className="font-cinzel font-700" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.98rem', color: solved ? GOLD : p.status === 'failed' ? HAZARD : '#f0e8d0', marginTop: 1 }}>
+                {solved ? 'Solved' : p.status === 'failed' ? 'Lost to the deep' : started ? 'In progress' : 'Ready to play'}
+                {solved && (
+                  <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.08em', color: '#160f06', background: GOLD, borderRadius: 999, padding: '0.1rem 0.4rem' }}>Done</span>
+                )}
               </span>
               <span className="font-karla" style={{ display: 'block', fontSize: '0.62rem', color: '#c2b9a4', marginTop: 1 }}>
-                {p.status === 'solved'
-                  ? <>Banked <span style={{ color: GOLD }}>{p.earned.toLocaleString()} ⟡</span></>
+                {solved
+                  ? <>Banked <span style={{ color: GOLD }}>{p.earned.toLocaleString()} ⟡</span> · <span style={{ color: PARLOR.candle }}>+{points} pts</span></>
                   : p.status === 'failed'
                     ? 'No reward'
                     : <>{p.mask.length} words · {p.mask.reduce((n, w) => n + w.length, 0)} letters</>}
@@ -490,13 +502,24 @@ function PickerSheet({ title, children, onClose }: { title: string; children: Re
 
 function ResultPanel({ puzzle, onBack }: { puzzle: CapstanPuzzleClient; onBack: () => void }) {
   const solved = puzzle.status === 'solved'
+  const points = solved ? capstanSolvePoints(puzzle.strikes) : 0
   return (
-    <div style={{ textAlign: 'center', padding: '0.5rem 0 0.2rem' }}>
-      <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: solved ? GOLD : HAZARD }}>
-        {solved ? `Solved — +${puzzle.earned.toLocaleString()} ⟡` : 'Lost to the deep'}
-      </p>
+    <div style={{ textAlign: 'center', padding: '0.6rem 0 0.2rem' }}>
+      {solved ? (
+        <>
+          <span aria-hidden style={{ display: 'inline-grid', placeItems: 'center', width: 52, height: 52, borderRadius: '50%', background: `radial-gradient(circle at 50% 35%, ${GOLD}, #6b4e12 92%)`, border: `2px solid ${GOLD}`, boxShadow: `0 0 20px ${GOLD}66`, marginBottom: 8 }}>
+            <CheckIcon size={30} />
+          </span>
+          <p className="font-cinzel font-800" style={{ fontSize: '1.15rem', color: GOLD, textShadow: `0 0 16px ${GOLD}55` }}>Solved</p>
+          <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: '#e7dcc4', marginTop: 2 }}>
+            Banked <span style={{ color: GOLD }}>{puzzle.earned.toLocaleString()} ⟡</span> · <span style={{ color: PARLOR.candle }}>+{points} pts toward your rank</span>
+          </p>
+        </>
+      ) : (
+        <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: HAZARD }}>Lost to the deep</p>
+      )}
       {puzzle.phrase && (
-        <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#f0e8d0', marginTop: 6, letterSpacing: '0.04em' }}>{puzzle.phrase}</p>
+        <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#f0e8d0', marginTop: 8, letterSpacing: '0.04em' }}>{puzzle.phrase}</p>
       )}
       <button onClick={onBack} className="font-cinzel font-700" style={{ marginTop: 14, padding: '0.6rem 1.4rem', borderRadius: 12, background: 'linear-gradient(180deg, #2c2011, #1a130b)', border: `1px solid ${PARLOR.brass}55`, color: '#f0e8d0', fontSize: '0.82rem', cursor: 'pointer' }}>
         Back to the puzzles
@@ -537,6 +560,22 @@ function WinOverlay({ puzzle, win, onClose }: { puzzle: CapstanPuzzleClient; win
         </button>
       </motion.div>
     </motion.div>
+  )
+}
+
+function CheckIcon({ size = 22 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M5 12.5 L10 17.5 L19 7" stroke="#160f06" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function XIcon({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M7 7 L17 17 M17 7 L7 17" stroke={HAZARD} strokeWidth="2.6" strokeLinecap="round" />
+    </svg>
   )
 }
 
