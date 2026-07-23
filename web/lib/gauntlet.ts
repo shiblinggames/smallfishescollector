@@ -99,7 +99,7 @@ export function donsGauntletUnlocked(opts: { isAdmin?: boolean | null; throneCle
 // recycled Davy pool is left untagged (draws in both), and G2-only entries are
 // tagged 'don' (never surface in Davy). The draw fns filter by the run's variant.
 export type GauntletTag = GauntletVariant | 'both'
-function inGauntletPool(tag: GauntletTag | undefined, variant: GauntletVariant): boolean {
+export function inGauntletPool(tag: GauntletTag | undefined, variant: GauntletVariant): boolean {
   return !tag || tag === 'both' || tag === variant
 }
 

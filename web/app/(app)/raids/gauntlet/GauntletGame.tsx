@@ -23,7 +23,7 @@ import {
   generateFight, advanceRollState, chestForDepth, gauntletXpForDepth,
   isCurseDepth, drawCurse, curseEffects, curseHpDrain, curseSilenceCount, curseTierLabel, GAUNTLET_CURSES,
   isBoonDepth, drawBoons, boonEffects, hpBoonMult, boonTierLabel, GAUNTLET_BOONS, BOON_RARITY_META, boonRarity, pickBloodOathBoon,
-  confluenceEffects, activeConfluences, eligibleConfluences, drawConfluenceOffer, confluenceLevel, confluenceDescAt, confluenceHintsFor, CONFLUENCES, type Confluence, type ConfluenceOffer,
+  confluenceEffects, activeConfluences, eligibleConfluences, drawConfluenceOffer, confluenceLevel, confluenceDescAt, confluenceHintsFor, CONFLUENCES, inGauntletPool, type Confluence, type ConfluenceOffer,
   convergenceEffects, activeConvergences, drawConvergenceOffer, convergenceDescAt, CONVERGENCES,
   REPRIEVE_MIN_DEPTH, REPRIEVE_CHANCE, drawReprieve, type Reprieve,
   // Davy's Terms — the chosen, structural difficulty layer (hardcore only).
@@ -2405,7 +2405,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         {introOpen && <GauntletIntroModal variant={props.variant} onClose={dismissIntro} firstTime={!props.hasSeenIntro} />}
         {lootMode && <LootModal mode={lootMode} don={isDonG} onClose={() => setLootMode(null)} />}
         {infoCurrency && <CurrencyInfoModal kind={infoCurrency} don={isDonG} onClose={() => setInfoCurrency(null)} />}
-        {synergiesOpen && <SynergiesModal owned={boonTiers} seen={seenConfluences} taken={confluencesTaken} onClose={() => setSynergiesOpen(false)} />}
+        {synergiesOpen && <SynergiesModal owned={boonTiers} seen={seenConfluences} taken={confluencesTaken} variant={props.variant ?? 'davy'} onClose={() => setSynergiesOpen(false)} />}
         {recapRun && <DeepestRunModal best={recapRun.hardcore ? props.hcDeepestRun : props.deepestRun} last={recapRun.hardcore ? props.hcLastRun : props.lastRun} hardcore={recapRun.hardcore} don={isDonG} onClose={() => setRecapRun(null)} />}
         {shopSection && <LockerUpgradesModal section={shopSection} variant={props.variant ?? 'davy'} onClose={() => setShopSection(null)} onClaimed={(owned) => { setUpgrades(owned); setBonusSlots(bonusChargeSlots(owned)) }} onToggled={setUpgradesOff} />}
         {descentModals}
@@ -3459,7 +3459,7 @@ export default function GauntletGame(props: GauntletGameProps) {
 
         {detailModal}
         {exitModal}
-        {synergiesOpen && <SynergiesModal owned={boonTiers} seen={seenConfluences} taken={confluencesTaken} onClose={() => setSynergiesOpen(false)} />}
+        {synergiesOpen && <SynergiesModal owned={boonTiers} seen={seenConfluences} taken={confluencesTaken} variant={props.variant ?? 'davy'} onClose={() => setSynergiesOpen(false)} />}
         {/* Claim & Leave confirm — a light guard so you never bank + end the run
             on a misfire. Shows exactly what walks away with you. */}
         {confirmClaim && (
@@ -4001,7 +4001,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         </div>
         {detailModal}
         {exitModal}
-        {synergiesOpen && <SynergiesModal owned={boonTiers} seen={seenConfluences} taken={confluencesTaken} onClose={() => setSynergiesOpen(false)} />}
+        {synergiesOpen && <SynergiesModal owned={boonTiers} seen={seenConfluences} taken={confluencesTaken} variant={props.variant ?? 'davy'} onClose={() => setSynergiesOpen(false)} />}
       </>
     )
   }
@@ -5099,16 +5099,20 @@ function DeepestRunModal({ best, last, hardcore = false, don, onClose }: { best:
 // shows as a silhouetted "undiscovered" row (no name, boons, or effect), and
 // reveals permanently the first time you unlock it in a dive. The chase is the
 // point — you find them by experimenting, then they stay in your codex.
-function SynergiesModal({ owned, seen, taken = [], onClose }: { owned: Record<string, number>; seen: string[]; taken?: string[]; onClose: () => void }) {
+function SynergiesModal({ owned, seen, taken = [], variant = 'davy', onClose }: { owned: Record<string, number>; seen: string[]; taken?: string[]; variant?: GauntletVariant; onClose: () => void }) {
   const GLD = '#f5b94a'
   const SYN = '#b98bff'
   const seenSet = new Set(seen)
   const takenSet = new Set(taken)
   const ROMAN = ['', 'I', 'II', 'III']
+  // Scope the codex to THIS gauntlet's pool: Davy shows only the Davy synergies
+  // (untagged = both), Don's shows those PLUS its own 'don'-tagged ones — same
+  // filter the draw uses, so the codex matches what you can actually roll here.
+  const pool = CONFLUENCES.filter(c => inGauntletPool(c.gauntlet, variant))
   // Build each entry with its status, then float the lit ones to the top so the
   // codex reads as progress: Active → Available → discovered-but-dormant → the
   // silhouettes you're still chasing.
-  const entries = CONFLUENCES.map(c => {
+  const entries = pool.map(c => {
     const lvl = confluenceLevel(c, owned)
     const qualifies = lvl >= 1
     const on = takenSet.has(c.id) && qualifies
@@ -5121,7 +5125,7 @@ function SynergiesModal({ owned, seen, taken = [], onClose }: { owned: Record<st
   entries.sort((a, b) => rank[a.status] - rank[b.status])
   const found = entries.filter(e => e.status !== 'hidden').length
   const activeCount = entries.filter(e => e.status === 'active').length
-  const pctFound = found / CONFLUENCES.length
+  const pctFound = found / (pool.length || 1)
 
   // The level ladder — three diamonds, filled to `level`, so every card wears
   // its progress and there's always a visible rung left to chase.
@@ -5151,7 +5155,7 @@ function SynergiesModal({ owned, seen, taken = [], onClose }: { owned: Record<st
         <div style={{ marginTop: 11 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
             <span className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: '#9a948a' }}>Discovered</span>
-            <span className="font-cinzel font-800" style={{ fontSize: '0.76rem', color: GLD }}>{found}<span style={{ color: 'rgba(255,255,255,0.32)' }}> / {CONFLUENCES.length}</span></span>
+            <span className="font-cinzel font-800" style={{ fontSize: '0.76rem', color: GLD }}>{found}<span style={{ color: 'rgba(255,255,255,0.32)' }}> / {pool.length}</span></span>
           </div>
           <div style={{ height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
             <motion.div initial={{ width: 0 }} animate={{ width: `${Math.round(pctFound * 100)}%` }} transition={{ duration: 0.8, ease: 'easeOut' }}
