@@ -13,7 +13,7 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { answerCaptainsTile, playCaptainsCard } from './actions'
 import BalanceTicker from '../BalanceTicker'
-import { ParlorHost } from '../ParlorArt'
+import { ParlorHost, PARLOR } from '../ParlorArt'
 import {
   TRIVIA_CATEGORIES,
   categoryMeta,
@@ -172,13 +172,13 @@ export default function CaptainsBoard({ initial, doubloons }: { initial: Captain
         )
       })()}
 
-      {/* The board: 4 category columns × 3 cards */}
+      {/* The board — a candlelit card table: wood + brass, warm glow from above. */}
       <div style={{
-        background: 'linear-gradient(180deg, #16142a 0%, #0b0a18 100%)',
-        border: '1px solid rgba(167,139,250,0.25)',
+        background: `radial-gradient(ellipse 90% 55% at 50% 0%, rgba(240,200,106,0.08) 0%, transparent 58%), linear-gradient(180deg, ${PARLOR.wood} 0%, ${PARLOR.woodDark} 62%, ${PARLOR.woodDeep} 100%)`,
+        border: `1px solid ${PARLOR.brassDim}`,
         borderRadius: 16,
         padding: '0.9rem 0.7rem 1rem',
-        boxShadow: '0 10px 30px rgba(0,0,0,0.45)',
+        boxShadow: '0 12px 34px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05), inset 0 0 40px rgba(0,0,0,0.35)',
         display: 'grid',
         gridTemplateColumns: 'repeat(4, 1fr)',
         gap: 8,
@@ -218,7 +218,7 @@ export default function CaptainsBoard({ initial, doubloons }: { initial: Captain
                     background: a
                       ? a.correct ? 'rgba(52,211,153,0.1)' : 'rgba(224,112,112,0.06)'
                       : isCommitted ? `${cat.color}22`
-                      : 'rgba(167,139,250,0.08)',
+                      : 'linear-gradient(180deg, rgba(240,224,190,0.07), rgba(240,224,190,0.02))',
                     border: a
                       ? a.correct ? '1px solid rgba(52,211,153,0.4)' : '1px solid rgba(224,112,112,0.25)'
                       : isCommitted || isProposed ? `1px solid ${cat.color}`

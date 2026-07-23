@@ -11,6 +11,23 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 export const HOST_ART = `${SUPABASE_URL}/storage/v1/object/public/card-arts/Lionfish_crimsoncavalier.png`
 export const HOST_GLOW = '#c9a24a'
 
+// Candlelit wood + brass — the same cabinet language as the Den next door, so
+// the Parlor reads as a real tavern room, not a flat panel. Shared by all screens.
+export const PARLOR = {
+  wood: '#241a10',
+  woodDark: '#15100a',
+  woodDeep: '#0c0906',
+  brass: '#c9a24a',
+  brassDim: 'rgba(201,162,74,0.42)',
+  candle: '#f0c86a',
+}
+
+/** A warm candlelight vignette to lay over a surface (pointer-events none). Give
+ *  the parent position:relative + overflow:hidden. */
+export function CandleGlow({ from = '50% 0%', color = 'rgba(240,200,106,0.10)' }: { from?: string; color?: string }) {
+  return <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 80% 60% at ${from}, ${color} 0%, transparent 62%)` }} />
+}
+
 /** A drawn crown — replaces the 👑 emoji (iOS emoji presentation + the
  *  no-emoji-icons rule). Fill + rim in the accent colour. */
 export function CrownIcon({ size = 24, color = '#f0c040' }: { size?: number; color?: string }) {

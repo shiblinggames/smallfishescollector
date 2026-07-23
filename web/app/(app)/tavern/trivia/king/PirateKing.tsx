@@ -10,7 +10,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { answerKingRung, spendKingFiftyFifty, walkKingAway } from './actions'
 import BalanceTicker from '../BalanceTicker'
-import { ParlorHost, CrownIcon } from '../ParlorArt'
+import { ParlorHost, CrownIcon, PARLOR } from '../ParlorArt'
 import {
   PIRATE_KING_PRIZES,
   PIRATE_KING_HAVENS,
@@ -148,27 +148,36 @@ export default function PirateKing({ initial, doubloons }: { initial: PirateKing
         One run a week. Ten questions, each worth more than the last. Walk away with your winnings any time, or climb on. A wrong answer drops you to the last haven.
       </p>
 
-      {/* Prize ladder strip */}
+      {/* Prize ladder — a candlelit brass rail; the live rung pulses harder the
+          higher the stakes climb. */}
       <div style={{
+        position: 'relative', overflow: 'hidden',
         display: 'flex', gap: 4,
-        background: 'linear-gradient(180deg, #1c160e 0%, #0f0c08 100%)',
-        border: '1px solid rgba(240,192,64,0.22)',
+        background: `radial-gradient(ellipse 80% 120% at 100% 50%, rgba(240,192,64,0.09), transparent 55%), linear-gradient(180deg, ${PARLOR.wood} 0%, ${PARLOR.woodDeep} 100%)`,
+        border: `1px solid ${PARLOR.brassDim}`,
         borderRadius: 12, padding: '0.5rem 0.45rem',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
       }}>
         {PIRATE_KING_PRIZES.map((p, i) => {
           const r = i + 1
           const passed = rung >= r
           const isCurrent = status === 'active' && !resolved && rung === i
           const isHaven = (PIRATE_KING_HAVENS as readonly number[]).includes(r)
+          // Tension climbs with the stakes: the live rung's pulse gets stronger
+          // and faster near the crown.
+          const tension = r / PIRATE_KING_PRIZES.length
+          const spread = Math.round(7 + tension * 15)
           return (
-            <div
+            <motion.div
               key={r}
               className="font-karla font-700"
+              animate={isCurrent ? { boxShadow: [`0 0 0px ${GOLD}00`, `0 0 ${spread}px ${GOLD}cc`, `0 0 0px ${GOLD}00`], scale: [1, 1.05, 1] } : undefined}
+              transition={isCurrent ? { duration: 1.6 - tension * 0.7, repeat: Infinity, ease: 'easeInOut' } : undefined}
               style={{
                 flex: 1, minWidth: 0, textAlign: 'center',
                 padding: '0.3rem 0', borderRadius: 7,
                 fontSize: '0.54rem', letterSpacing: '0.02em',
-                background: isCurrent ? 'rgba(240,192,64,0.18)'
+                background: isCurrent ? 'rgba(240,192,64,0.2)'
                   : passed ? 'rgba(52,211,153,0.1)'
                   : 'rgba(255,255,255,0.03)',
                 border: isCurrent ? `1px solid ${GOLD}`
@@ -179,8 +188,12 @@ export default function PirateKing({ initial, doubloons }: { initial: PirateKing
               }}
             >
               {p}
-              {isHaven && <span style={{ display: 'block', fontSize: '0.44rem', lineHeight: 1, marginTop: 1 }}>⚓</span>}
-            </div>
+              {isHaven && (
+                <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ display: 'block', margin: '1px auto 0' }}>
+                  <circle cx="12" cy="5" r="2" /><path d="M12 22V8M5 12a7 7 0 0 0 14 0M5 12H3m16 0h2" />
+                </svg>
+              )}
+            </motion.div>
           )
         })}
       </div>
