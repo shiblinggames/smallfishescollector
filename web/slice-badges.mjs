@@ -205,10 +205,21 @@ const PLAN = [
   [29, 1, 0, 'fish_baron'],
   [29, 1, 1, 'fresh_coat'],
   [29, 1, 2, 'full_drydock'],
+  // Batch 30 — The Parlor: hard streaks + rank milestones.
+  [30, 0, 0, 'parlor_hot_hand'],
+  [30, 0, 1, 'parlor_sharpshooter'],
+  [30, 0, 2, 'parlor_flawless'],
+  [30, 1, 0, 'parlor_cardsharp'],
+  [30, 1, 1, 'parlor_kingpin'],
+  [30, 1, 2, 'parlor_legend'],
 ]
 
+// Optional: `ONLY=30 node slice-badges.mjs` slices just that sheet (so re-running
+// for one new batch doesn't churn every existing badge).
+const ONLY = process.env.ONLY
 let skipped = 0
 for (const [batch, row, col, name] of PLAN) {
+  if (ONLY && String(batch) !== ONLY) { skipped++; continue }
   const src  = `public/badgebatch${batch}.png`
   // Skip sheets that haven't been uploaded yet (e.g. doing batches 1–7 first).
   if (!existsSync(src)) { skipped++; continue }
