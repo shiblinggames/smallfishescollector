@@ -2,14 +2,14 @@
 
 // Shared Parlor art: the HOST and a real crown icon (kills the 👑 emoji that
 // broke the no-emoji-icons rule). The host reuses an existing crew asset — the
-// Lionfish "Crimson Cavalier" skin, a dashing non-legendary emcee. Recast the
+// Blue Marlin "Aristocrat" skin, an old-money non-legendary emcee. Recast the
 // Parlor in ONE line by pointing HOST_ART at any other card-arts/<file>.png.
 
 import { motion } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
-export const HOST_ART = `${SUPABASE_URL}/storage/v1/object/public/card-arts/Lionfish_crimsoncavalier.png`
+export const HOST_ART = `${SUPABASE_URL}/storage/v1/object/public/card-arts/Blue_Marlin_aristocrat.png`
 export const HOST_GLOW = '#c9a24a'
 
 // Candlelit wood + brass — the same cabinet language as the Den next door, so
