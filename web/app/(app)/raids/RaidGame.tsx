@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { claimRaidLoot, reportRaidSink, recordRaidHit, recordRaidClear, type RaidClearTimes } from './actions'
+import { claimRaidLoot, reportRaidSink, recordRaidHit, recordRaidClear, startRaidRun, type RaidClearTimes } from './actions'
 import { awardRaidKill } from './raidXPActions'
 import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
 import { getShipSkin } from '@/lib/shipSkins'
@@ -740,6 +740,10 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     if (isBossRound(round, config.sequence.length)) zoneJitterRef.current = 1800 + Math.random() * 2200
   }, [])
 
+  // The current run's server token (minted at start). Threaded into every
+  // awardRaidKill so the server can bound this run's kills to its real mob count.
+  const runTokenRef = useRef<string | null>(null)
+
   const startGame = useCallback(() => {
     firePosRef.current      = 0; fireDirRef.current = 1
     zonePosRef.current      = 0.5; zoneDirRef.current = Math.random() < 0.5 ? 1 : -1
@@ -767,6 +771,12 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     resetEnemyForRound(0)
 
     raidStartTimeRef.current = performance.now()
+
+    // Mint this run's server token (fire-and-forget — it resolves well before the
+    // first kill). null on any hiccup, in which case awardRaidKill falls back to
+    // its capped path, so a token failure never blocks the raid.
+    runTokenRef.current = null
+    startRaidRun(config.raidId).then(r => { runTokenRef.current = r.token }).catch(() => {})
 
     phaseRef.current = 'playing'
     setPhase('playing')
@@ -798,7 +808,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     setPendingReprieve(false)
     pendingReprieveAdvanceRef.current = null
     reprieveFiredRef.current = false
-  }, [playerHPMax, resetEnemyForRound, config.tides])
+  }, [playerHPMax, resetEnemyForRound, config.tides, config.raidId])
 
   // Turn-based: no "OPEN FIRE" gate, so jump straight into combat on mount.
   // BUT — we must defer past the first paint, otherwise framer-motion content
@@ -1289,7 +1299,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
         const bonus = raidCompletionBonusXp(config)
         try {
           const before = navXPRef.current
-          const res = await awardRaidKill(xp + bonus, gold)
+          const res = await awardRaidKill(xp + bonus, gold, runTokenRef.current ?? undefined)
           mergeCrewXPGrants(res.crewXP)
           const killTotal = res.newExpeditionXP - bonus
           const oldLevel = getLevelFromXP(before)
@@ -1427,7 +1437,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     }
 
     let res: Awaited<ReturnType<typeof awardRaidKill>> | null = null
-    try { res = await awardRaidKill(xp, gold) } catch { /* save failed */ }
+    try { res = await awardRaidKill(xp, gold, runTokenRef.current ?? undefined) } catch { /* save failed */ }
     if (!res) { setTimeout(advanceToNext, 400); return }
     mergeCrewXPGrants(res.crewXP)
 
@@ -1464,7 +1474,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     if (isClaiming) return
     setIsClaiming(true)
     try {
-      const res = await awardRaidKill(winXP, winGold)
+      const res = await awardRaidKill(winXP, winGold, runTokenRef.current ?? undefined)
       mergeCrewXPGrants(res.crewXP)
       const oldLevel = getLevelFromXP(navXPRef.current)
       const newLevel = getLevelFromXP(res.newExpeditionXP)

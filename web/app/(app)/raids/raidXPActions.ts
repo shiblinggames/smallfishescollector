@@ -7,10 +7,12 @@ import { navRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
 import { maxLegitKillGrant } from '@/lib/raidRegistry'
 import { flagAnomaly } from '@/lib/anomaly'
+import { countRaidKill } from '@/lib/runToken'
 
 export async function awardRaidKill(
   xpIn: number,
   doubloonsIn: number,
+  token?: string,
 ): Promise<{ newExpeditionXP: number; newDoubloonTotal: number; crewXP: CrewXPGrant[] }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -32,6 +34,17 @@ export async function awardRaidKill(
   // forgery. Flag it for admin review (advisory only, doesn't change the outcome).
   if (rawXp > cap.xp || rawGold > cap.gold) {
     await flagAnomaly(admin, user.id, 'cap_trip:awardRaidKill', 3, { rawXp, rawGold, capXp: cap.xp, capGold: cap.gold })
+  }
+
+  // Run-token bound: the kill must fit its run's mob count (baked into the token
+  // at raid start). A rejected kill = the call was replayed past the run's real
+  // kills → grant nothing. No token (a raid started before this shipped, or the
+  // client not yet wired) falls through tolerantly — silently, since this fires
+  // per-kill and would otherwise flood the panel; the once-per-clear miss on
+  // recordRaidClear is where we watch adoption.
+  if (token && !(await countRaidKill(admin, user.id, token))) {
+    await flagAnomaly(admin, user.id, 'run_token:awardRaidKill_reject', 2, { token, rawXp, rawGold })
+    return { newExpeditionXP: 0, newDoubloonTotal: 0, crewXP: [] }
   }
   const { data: profile } = await admin
     .from('profiles')

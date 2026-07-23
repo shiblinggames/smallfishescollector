@@ -17,6 +17,7 @@ import { bonusChargeSlots, gauntletRepairHealMult, donsRaidHpMult, donsLegendary
 import { getShipAugment, MANOWAR_TIER, type ShipAugment } from '@/lib/shipAugments'
 import { settleUltimateBuild } from '@/lib/ultimateBuild'
 import { flagAnomaly } from '@/lib/anomaly'
+import { issueRunToken } from '@/lib/runToken'
 
 const CARD_IMG_BASE = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/storage/v1/object/public/card-arts/'
 
@@ -280,6 +281,24 @@ export interface RaidClearTimes {
  *  fallback callers; the boss-death caller captures the returned times to
  *  show "this run vs your best vs global best" on the victory screen.
  *  Previous bests are read BEFORE the insert so a new record can be flagged. */
+/** Mint a run token at raid START. The reward calls (awardRaidKill / recordRaidClear)
+ *  reference it so a run's rewards are bounded to its real mob count and its clear
+ *  can't be replayed. maxKills is baked in server-side from the raid's own sequence
+ *  (generous headroom for boss phases + tide-spawned enemies) so nothing on the
+ *  request path can inflate it. Returns { token: null } on any problem — the reward
+ *  calls then fall back to their capped path, so a token hiccup never blocks play. */
+export async function startRaidRun(raidId: string): Promise<{ token: string | null }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { token: null }
+  const config = getRaidConfigById(raidId)
+  if (!config) return { token: null }
+  const admin = createAdminClient()
+  const maxKills = config.sequence.length * 3 + 15
+  const token = await issueRunToken(admin, user.id, 'raid', { raidId, maxKills })
+  return { token }
+}
+
 export async function recordRaidClear(raidId: string, elapsedMs: number): Promise<RaidClearTimes | null> {
   if (!raidId || !Number.isFinite(elapsedMs) || elapsedMs <= 0) return null
   const supabase = await createClient()
