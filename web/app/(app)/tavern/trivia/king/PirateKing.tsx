@@ -13,6 +13,7 @@ import BalanceTicker from '../BalanceTicker'
 import {
   PIRATE_KING_PRIZES,
   PIRATE_KING_HAVENS,
+  PIRATE_KING_CROWN_GEMS,
   kingHavenValue,
   type PirateKingState,
   type PirateKingStatus,
@@ -75,6 +76,10 @@ export default function PirateKing({ initial, doubloons }: { initial: PirateKing
       if (r.newDoubloons !== null) {
         setBalance(prev => prev + r.doubloonsAwarded)
         window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.newDoubloons }))
+      }
+      // The crown also banks gems — tick the Nav's gem purse.
+      if (r.newGems !== null) {
+        window.dispatchEvent(new CustomEvent('gems-changed', { detail: r.newGems }))
       }
     })
   }
@@ -199,8 +204,15 @@ export default function PirateKing({ initial, doubloons }: { initial: PirateKing
               </motion.p>
               <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: GOLD }}>Pirate King</p>
               <p className="font-karla" style={{ fontSize: '0.76rem', color: '#c8c0ae', lineHeight: 1.55, marginTop: 8 }}>
-                All ten answered true. The crown and {doubloonsAwarded} ⟡ are yours until the next ladder is rigged.
+                All ten answered true. The crown, {doubloonsAwarded} ⟡, and a chest of gems are yours until the next ladder is rigged.
               </p>
+              <motion.p
+                initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3, type: 'spring', stiffness: 280, damping: 18 }}
+                className="font-cinzel font-700"
+                style={{ fontSize: '1.05rem', color: '#c084fc', marginTop: 10, textShadow: '0 0 18px rgba(192,132,252,0.55)' }}
+              >
+                +{PIRATE_KING_CROWN_GEMS} ◆
+              </motion.p>
             </>
           )}
           {status === 'walked' && (

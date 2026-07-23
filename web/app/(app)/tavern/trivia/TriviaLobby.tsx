@@ -48,7 +48,7 @@ export default function TriviaLobby({ doubloons, boardPlayedToday, boardPlayedTh
       </div>
 
       <p className="font-karla" style={{ fontSize: '0.8rem', color: '#c2b9a4', lineHeight: 1.55, textAlign: 'center' }}>
-        Sharp wits earn doubloons here. Fresh boards every Monday.
+        Sharp wits earn doubloons — and <span style={{ color: '#c084fc' }}>gems ◆</span> for a clean board or the King&apos;s crown. Fresh every Monday.
       </p>
 
       {/* The Captain's Board — live */}

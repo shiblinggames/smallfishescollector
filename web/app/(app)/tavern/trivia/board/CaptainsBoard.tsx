@@ -16,12 +16,14 @@ import BalanceTicker from '../BalanceTicker'
 import {
   TRIVIA_CATEGORIES,
   categoryMeta,
+  nextBoardGemMilestone,
   type CaptainsBoardState,
   type BoardTileClient,
   type AnswerTileResult,
 } from '../constants'
 
 const DOUBLOON_COLOR = '#f0c040'
+const GEM_COLOR = '#c084fc'
 
 export default function CaptainsBoard({ initial, doubloons }: { initial: CaptainsBoardState; doubloons: number }) {
   const [tiles, setTiles] = useState<BoardTileClient[]>(initial.tiles)
@@ -107,6 +109,9 @@ export default function CaptainsBoard({ initial, doubloons }: { initial: Captain
       if (r.newDoubloons !== null) {
         window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.newDoubloons }))
       }
+      if (r.newGems !== null) {
+        window.dispatchEvent(new CustomEvent('gems-changed', { detail: r.newGems }))
+      }
       setTiles(prev => prev.map(t => t.key === openTile.key
         ? { ...t, answered: { chosen: idx, correct: r.correct, correctIndex: r.correctIndex, explanation: r.explanation } }
         : t
@@ -144,6 +149,23 @@ export default function CaptainsBoard({ initial, doubloons }: { initial: Captain
       <p className="font-karla" style={{ fontSize: '0.8rem', color: '#c2b9a4', lineHeight: 1.55, textAlign: 'center' }}>
         Twelve cards chalked fresh each Monday. {picksAllowed === 2 ? 'Captains play two a day' : 'Play one a day'} — pick a card and the clue is revealed; answer it for doubloons. The richer the card, the harder the question. Choose wisely.
       </p>
+
+      {/* Gem milestone — the premium draw. Correct cards this week build toward
+          gem payouts on top of the doubloons. */}
+      {(() => {
+        const correctThisWeek = tiles.filter(t => t.answered?.correct).length
+        const next = nextBoardGemMilestone(correctThisWeek)
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '0.4rem 0.7rem', borderRadius: 999, alignSelf: 'center', background: `${GEM_COLOR}12`, border: `1px solid ${GEM_COLOR}3a` }}>
+            <span style={{ color: GEM_COLOR, fontSize: '0.72rem' }}>◆</span>
+            <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: '#d8c8f0', letterSpacing: '0.02em' }}>
+              {next
+                ? <>{correctThisWeek} of {next.correct} correct — <span style={{ color: GEM_COLOR }}>+{next.gems} ◆</span> at {next.correct}</>
+                : <>Full marks — <span style={{ color: GEM_COLOR }}>max gems earned this week</span></>}
+            </span>
+          </div>
+        )
+      })()}
 
       {/* The board: 4 category columns × 3 cards */}
       <div style={{
@@ -312,6 +334,15 @@ export default function CaptainsBoard({ initial, doubloons }: { initial: Captain
                   <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', textAlign: 'center', color: (result?.correct ?? viewAnswered?.correct) ? '#7fd49a' : '#e07070' }}>
                     {(result?.correct ?? viewAnswered?.correct) ? `Well answered. +${openTile.value} ⟡` : 'Scuttled.'}
                   </p>
+                  {result && result.gemsWon > 0 && (
+                    <motion.p
+                      initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: 'spring', stiffness: 300, damping: 18, delay: 0.15 }}
+                      className="font-cinzel font-700"
+                      style={{ fontSize: '0.86rem', textAlign: 'center', marginTop: 5, color: GEM_COLOR, textShadow: `0 0 14px ${GEM_COLOR}66` }}
+                    >
+                      Milestone! +{result.gemsWon} ◆
+                    </motion.p>
+                  )}
                   {shownExplanation && (
                     <p className="font-karla" style={{ fontSize: '0.74rem', color: '#a09988', lineHeight: 1.5, textAlign: 'center', marginTop: 6 }}>
                       {shownExplanation}

@@ -15,6 +15,7 @@ import { getThisWeeksLadder, type GeneratedRung } from './generate'
 import {
   PIRATE_KING_PRIZES,
   PIRATE_KING_RUNGS,
+  PIRATE_KING_CROWN_GEMS,
   kingHavenValue,
   kingWeekStr,
   type PirateKingState,
@@ -51,6 +52,17 @@ async function payOut(userId: string, amount: number, reason: string): Promise<n
     admin.from('profiles').update({ doubloons: newTotal }).eq('id', userId),
     admin.from('doubloon_transactions').insert({ user_id: userId, amount, reason }),
   ])
+  return newTotal
+}
+
+/** Grants gems (the crown bonus) and returns the new gem total, null if none.
+ *  Sequential after payOut so the two profile writes never clobber each other. */
+async function payGems(userId: string, amount: number): Promise<number | null> {
+  if (amount <= 0) return null
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles').select('gems').eq('id', userId).single()
+  const newTotal = (profile?.gems ?? 0) + amount
+  await admin.from('profiles').update({ gems: newTotal }).eq('id', userId)
   return newTotal
 }
 
@@ -132,6 +144,10 @@ export async function answerKingRung(
     won = kingHavenValue(rung)
   }
 
+  // The crown (all 10 rungs) also banks a gem bonus — the Parlor's premium prize.
+  // Idempotent by the status !== 'active' guard above, so it pays exactly once.
+  const gemsWon = status === 'crowned' ? PIRATE_KING_CROWN_GEMS : 0
+
   await admin.from('trivia_ladder_attempts').upsert({
     user_id: user.id,
     date: week,
@@ -139,11 +155,14 @@ export async function answerKingRung(
     status,
     fifty: a.fifty,
     doubloons_awarded: status === 'active' ? 0 : won,
+    gems_awarded: gemsWon,
   })
 
   let newDoubloons: number | null = null
+  let newGems: number | null = null
   if (status === 'crowned') {
     newDoubloons = await payOut(user.id, won, `Pirate King: crowned, all ${PIRATE_KING_RUNGS} questions`)
+    newGems = await payGems(user.id, gemsWon)
   } else if (status === 'busted' && won > 0) {
     newDoubloons = await payOut(user.id, won, `Pirate King: fell to the haven at ${won} ⟡`)
   }
@@ -160,6 +179,8 @@ export async function answerKingRung(
     rung: newRung,
     doubloonsAwarded: status === 'active' ? 0 : won,
     newDoubloons,
+    gemsWon,
+    newGems,
     next: status === 'active' ? stripQuestion(ladder[newRung], newRung, a.fifty) : null,
   }
 }

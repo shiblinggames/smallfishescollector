@@ -19,6 +19,7 @@ import {
   triviaTileKey,
   categoryMeta,
   kingWeekStr,
+  boardGemTotalFor,
   type CaptainsBoardState,
   type BoardTileClient,
   type AnswerTileResult,
@@ -30,9 +31,10 @@ interface AnswerEntry { day: string; chosen?: number; correct?: boolean }
 interface AttemptRow {
   answers: Record<string, AnswerEntry>
   doubloons_awarded: number
+  gems_awarded: number
 }
 
-const ATTEMPT_COLS = 'answers, doubloons_awarded'
+const ATTEMPT_COLS = 'answers, doubloons_awarded, gems_awarded'
 
 function todayStr(): string {
   return new Date().toISOString().split('T')[0]
@@ -105,7 +107,7 @@ export async function getCaptainsBoardState(): Promise<CaptainsBoardState | { er
   ])
   if (!board) return { error: 'No board available right now. Try again in a moment.' }
 
-  const a = (attempt as AttemptRow | null) ?? { answers: {}, doubloons_awarded: 0 }
+  const a = (attempt as AttemptRow | null) ?? { answers: {}, doubloons_awarded: 0, gems_awarded: 0 }
   const committedKey = committedKeyToday(a.answers, today)
   const picks = playsToday(a.answers, today)
 
@@ -139,7 +141,7 @@ export async function playCaptainsCard(key: string): Promise<CaptainsBoardState 
   ])
   if (!board) return { error: 'No board available' }
 
-  const a = (attempt as AttemptRow | null) ?? { answers: {}, doubloons_awarded: 0 }
+  const a = (attempt as AttemptRow | null) ?? { answers: {}, doubloons_awarded: 0, gems_awarded: 0 }
   const answers = { ...a.answers }
   const picks = playsToday(answers, today)
 
@@ -205,11 +207,11 @@ export async function answerCaptainsTile(
   const [board, { data: attempt }, { data: profile }] = await Promise.all([
     getThisWeeksBoard(),
     admin.from('trivia_board_attempts').select(ATTEMPT_COLS).eq('user_id', user.id).eq('date', week).single(),
-    admin.from('profiles').select('doubloons').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, gems').eq('id', user.id).single(),
   ])
   if (!board) return { error: 'No board available' }
 
-  const a = (attempt as AttemptRow | null) ?? { answers: {}, doubloons_awarded: 0 }
+  const a = (attempt as AttemptRow | null) ?? { answers: {}, doubloons_awarded: 0, gems_awarded: 0 }
   const entry = a.answers[key]
   // You can only answer the card you committed TODAY, and only once — a card
   // committed on a past day is forfeited (anti-cheat: no looking it up overnight).
@@ -226,6 +228,14 @@ export async function answerCaptainsTile(
   const newDoubloons = doubloonsWon > 0 ? (profile?.doubloons ?? 0) + doubloonsWon : null
   const newAnswers = { ...a.answers, [key]: { day: today, chosen: chosenIndex, correct } }
 
+  // Gem milestones — the premium draw. Count correct cards this week and pay the
+  // DELTA to the milestone total (so crossing a threshold pays once). gems_awarded
+  // stores the cumulative gems paid this week, gating repeats.
+  const correctCount = Object.values(newAnswers).filter(e => e.correct === true).length
+  const gemTotal = boardGemTotalFor(correctCount)
+  const gemsWon = Math.max(0, gemTotal - a.gems_awarded)
+  const newGems = gemsWon > 0 ? (profile?.gems ?? 0) + gemsWon : null
+
   const writes: PromiseLike<unknown>[] = [
     admin.from('trivia_board_attempts').upsert({
       user_id: user.id,
@@ -233,10 +243,18 @@ export async function answerCaptainsTile(
       category: null,
       answers: newAnswers,
       doubloons_awarded: totalAwarded,
+      gems_awarded: gemTotal,
     }),
   ]
+  // ONE profiles patch — a correct answer can move both currencies at once, and
+  // two concurrent updates to the same row would clobber each other.
+  const profilePatch: Record<string, number> = {}
+  if (newDoubloons !== null) profilePatch.doubloons = newDoubloons
+  if (newGems !== null) profilePatch.gems = newGems
+  if (Object.keys(profilePatch).length > 0) {
+    writes.push(admin.from('profiles').update(profilePatch).eq('id', user.id))
+  }
   if (newDoubloons !== null) {
-    writes.push(admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id))
     writes.push(admin.from('doubloon_transactions').insert({
       user_id: user.id,
       amount: doubloonsWon,
@@ -257,5 +275,7 @@ export async function answerCaptainsTile(
     doubloonsWon,
     totalAwarded,
     newDoubloons,
+    gemsWon,
+    newGems,
   }
 }

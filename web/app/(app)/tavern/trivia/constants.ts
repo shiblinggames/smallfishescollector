@@ -76,7 +76,35 @@ export interface AnswerTileResult {
   /** Wallet total after the payout, null when nothing was won — the
    *  client forwards it to the Nav's doubloons-changed listener. */
   newDoubloons: number | null
+  /** Gems won this answer when a weekly correct-answer milestone was crossed
+   *  (0 if none), + the new gem total for the gems-changed dispatch. */
+  gemsWon: number
+  newGems: number | null
 }
+
+// ── Parlor gem milestones (the premium draw) ─────────────────────────
+// Doubloons are the base payout; GEMS are the aspirational reward you can only
+// earn by playing WELL. Board: cumulative gem totals for cards answered correctly
+// across the week (delta-paid via trivia_board_attempts.gems_awarded, so crossing
+// a threshold pays only the difference). King: a crown banks a gem bonus on top of
+// the 1000 ⟡ crown. All tunable here.
+export const BOARD_GEM_MILESTONES: { correct: number; gems: number }[] = [
+  { correct: 3, gems: 5 },
+  { correct: 5, gems: 15 },
+  { correct: 7, gems: 40 },
+]
+/** Cumulative gem total earned for answering `correct` cards right this week. */
+export function boardGemTotalFor(correct: number): number {
+  let total = 0
+  for (const m of BOARD_GEM_MILESTONES) if (correct >= m.correct) total = m.gems
+  return total
+}
+/** The next gem milestone a player is chasing (null once maxed) — drives the
+ *  "next gem at N correct" hint in the board UI. */
+export function nextBoardGemMilestone(correct: number): { correct: number; gems: number } | null {
+  return BOARD_GEM_MILESTONES.find(m => correct < m.correct) ?? null
+}
+export const PIRATE_KING_CROWN_GEMS = 75
 
 // ── Pirate King ─────────────────────────────────────────────────────
 // Millionaire-style ladder: ten rungs, prizes climb, answer wrong and
@@ -143,6 +171,10 @@ export interface AnswerKingResult {
   /** Wallet total after a terminal payout, null when nothing paid —
    *  the client forwards it to the Nav's doubloons-changed listener. */
   newDoubloons: number | null
+  /** Crown gem bonus (0 unless this answer crowned the run) + the new gem
+   *  total for the gems-changed dispatch. */
+  gemsWon: number
+  newGems: number | null
   /** Next question if the run continues, already stripped. */
   next: KingQuestionClient | null
 }
