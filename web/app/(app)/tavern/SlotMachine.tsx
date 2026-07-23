@@ -1101,29 +1101,24 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
             </div>
           </div>
 
-          {/* Stats */}
+          {/* Stats — accent cards */}
           {stats.spins > 0 && (
-            <div className="w-full rounded-xl overflow-hidden" style={{ background: 'rgba(8,8,6,0.82)', border: '1px solid rgba(255,255,255,0.16)' }}>
-              <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#8d8880] px-4 pt-3 pb-2" style={{ fontSize: '0.6rem' }}>
-                Your Stats
-              </p>
-              <div className="grid grid-cols-3" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
-                <div className="flex flex-col items-center py-3 px-2" style={{ borderRight: '1px solid rgba(255,255,255,0.12)' }}>
-                  <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1rem' }}>{stats.spins.toLocaleString()}</p>
-                  <p className="font-karla text-[#8d8880] mt-0.5" style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Spins</p>
-                </div>
-                <div className="flex flex-col items-center py-3 px-2" style={{ borderRight: '1px solid rgba(255,255,255,0.12)' }}>
-                  <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: stats.net >= 0 ? '#4ade80' : '#f87171' }}>
-                    {stats.net >= 0 ? '+' : ''}{stats.net.toLocaleString()}
-                  </p>
-                  <p className="font-karla text-[#8d8880] mt-0.5" style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Net ⟡</p>
-                </div>
-                <div className="flex flex-col items-center py-3 px-2">
-                  <p className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '1rem' }}>
-                    {stats.biggestWin > 0 ? `+${stats.biggestWin.toLocaleString()}` : '—'}
-                  </p>
-                  <p className="font-karla text-[#8d8880] mt-0.5" style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Best Win</p>
-                </div>
+            <div className="w-full">
+              <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.6rem', color: '#8d8880', marginBottom: 8, paddingLeft: 2 }}>Your Stats</p>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { label: 'Spins', value: stats.spins.toLocaleString(), color: '#e6dcc8', tint: 'rgba(255,255,255,0.05)' },
+                  { label: 'Net ⟡', value: `${stats.net >= 0 ? '+' : ''}${stats.net.toLocaleString()}`, color: stats.net >= 0 ? '#4ade80' : '#f87171', tint: stats.net >= 0 ? 'rgba(74,222,128,0.13)' : 'rgba(248,113,113,0.13)' },
+                  { label: 'Best Win', value: stats.biggestWin > 0 ? `+${stats.biggestWin.toLocaleString()}` : '—', color: '#f0c040', tint: 'rgba(240,192,64,0.13)' },
+                ]).map((s) => (
+                  <div key={s.label} className="rounded-xl px-2 py-3 flex flex-col items-center justify-center" style={{
+                    background: `linear-gradient(180deg, ${s.tint} 0%, rgba(8,8,6,0.85) 75%)`,
+                    border: '1px solid rgba(255,255,255,0.14)',
+                  }}>
+                    <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: s.color, lineHeight: 1.05, fontVariantNumeric: 'tabular-nums', textAlign: 'center' }}>{s.value}</p>
+                    <p className="font-karla font-600 uppercase" style={{ fontSize: '0.53rem', letterSpacing: '0.1em', color: '#8d8880', marginTop: 5, textAlign: 'center' }}>{s.label}</p>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -1132,62 +1127,62 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
         {/* ── Right: payout table ── */}
         <div className="w-full mt-6 sm:mt-0 sm:w-64 flex-shrink-0">
           <div className="w-full rounded-xl overflow-hidden" style={{ background: 'rgba(8,8,6,0.82)', border: '1px solid rgba(255,255,255,0.16)' }}>
-            {/* 3-of-a-kind */}
-            <p className="font-karla font-700 uppercase tracking-[0.12em] px-4 pt-3 pb-2" style={{ fontSize: '0.68rem', color: '#b0ada8' }}>
-              3 of a Kind
-            </p>
-            {SLOT_SYMBOLS_LIST.filter((s) => s.id !== 'anchor').map((sym) => (
-              <div key={sym.id} className="flex items-center gap-3 px-4 py-2.5" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
-                <div style={{ width: 30, height: 30, flexShrink: 0 }}>
-                  <SlotSymbolDisplay id={sym.id} />
-                </div>
-                <span className="font-karla font-500 flex-1" style={{ fontSize: '0.88rem', color: '#d0cdc8' }}>{sym.label}</span>
-                {sym.id === 'catfish' ? (
-                  <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#f0c040', textShadow: '0 0 12px rgba(240,192,64,0.5)' }}>THE POT</span>
-                ) : (
-                  <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: sym.color }}>{SLOT_PAYOUTS[sym.id]}×</span>
-                )}
+            {/* Header + column labels */}
+            <div className="flex items-baseline justify-between px-4 pt-3.5 pb-2.5">
+              <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.72rem', color: '#e6dcc8' }}>Paytable</p>
+              <div className="flex" style={{ gap: 12 }}>
+                <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.1em', color: '#8d8880', width: 34, textAlign: 'right' }}>Three</span>
+                <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.1em', color: '#8d8880', width: 34, textAlign: 'right' }}>Pair</span>
               </div>
-            ))}
-            {/* Pairs */}
-            <p className="font-karla font-700 uppercase tracking-[0.12em] px-4 pt-3 pb-2" style={{ fontSize: '0.68rem', color: '#b0ada8', borderTop: '1px solid rgba(255,255,255,0.12)' }}>
-              Any Pair
-            </p>
-            {SLOT_SYMBOLS_LIST.filter((s) => s.id !== 'anchor').map((sym) => {
-              const mult = SLOT_PAIR_PAYOUTS[sym.id]
-              if (!mult) return null
+            </div>
+
+            {/* Fish — one row each, triple + pair together */}
+            {(['common', 'rare', 'legendary'] as const).map((id) => {
+              const sym = SLOT_SYMBOLS_LIST.find((s) => s.id === id)!
+              const pair = SLOT_PAIR_PAYOUTS[id]
               return (
-                <div key={sym.id} className="flex items-center gap-3 px-4 py-2.5" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
-                  <div style={{ width: 30, height: 30, flexShrink: 0 }}>
-                    <SlotSymbolDisplay id={sym.id} />
-                  </div>
-                  <span className="font-karla font-500 flex-1" style={{ fontSize: '0.88rem', color: '#d0cdc8' }}>{sym.label}</span>
-                  <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: sym.color }}>{mult}×</span>
+                <div key={id} className="flex items-center px-4 py-2" style={{ gap: 12, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                  <div style={{ width: 30, height: 30, flexShrink: 0 }}><SlotSymbolDisplay id={id} /></div>
+                  <span className="font-karla font-500 flex-1" style={{ fontSize: '0.84rem', color: '#d0cdc8' }}>{sym.label}</span>
+                  <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: sym.color, width: 34, textAlign: 'right' }}>{SLOT_PAYOUTS[id]}×</span>
+                  <span className="font-cinzel font-600" style={{ fontSize: '0.82rem', color: pair ? sym.color : '#57534b', width: 34, textAlign: 'right', opacity: pair ? 0.9 : 1 }}>{pair ? `${pair}×` : '—'}</span>
                 </div>
               )
             })}
-            {/* Hooks */}
-            <p className="font-karla font-700 uppercase tracking-[0.12em] px-4 pt-3 pb-2" style={{ fontSize: '0.68rem', color: '#b0ada8', borderTop: '1px solid rgba(255,255,255,0.12)' }}>
-              Hooks
-            </p>
-            <div className="flex items-center gap-3 px-4 py-2.5" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
-              <div style={{ width: 30, height: 30, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
-                <HookImage size={14} /><HookImage size={14} />
+
+            {/* Catfish → the jackpot (gold callout) */}
+            <div className="mx-3 mt-3 mb-2.5 rounded-lg px-3 py-2.5" style={{ background: 'linear-gradient(180deg, rgba(240,192,64,0.15) 0%, rgba(240,192,64,0.04) 100%)', border: '1px solid rgba(240,192,64,0.32)' }}>
+              <div className="flex items-center gap-2.5">
+                <div style={{ width: 30, height: 30, flexShrink: 0 }}><SlotSymbolDisplay id="catfish" /></div>
+                <div className="flex-1">
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.86rem', color: '#f0c040', lineHeight: 1.1 }}>Catfish Jackpot</p>
+                  <p className="font-karla font-500" style={{ fontSize: '0.58rem', color: '#bfa96a', letterSpacing: '0.02em' }}>Pair pays 3×</p>
+                </div>
+                <span className="font-cinzel font-700" style={{ fontSize: '0.74rem', color: '#f0c040', textShadow: '0 0 10px rgba(240,192,64,0.5)' }}>THE POT</span>
               </div>
-              <span className="font-karla font-500 flex-1" style={{ fontSize: '0.88rem', color: '#d0cdc8' }}>2 Hooks</span>
-              <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#34d399' }}>Refund</span>
+              <p className="font-karla font-400" style={{ fontSize: '0.64rem', color: '#bfb392', lineHeight: 1.45, marginTop: 7 }}>
+                Every spin feeds the pot. Three catfish claims a share matching your bet — a full {SLOTS_MAX_BET} ⟡ bet takes it all.
+              </p>
             </div>
-            <div className="flex items-center gap-3 px-4 py-2.5" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
-              <div style={{ width: 30, height: 30, flexShrink: 0 }}>
-                <HookImage size={30} />
+
+            {/* 3 hooks → the bonus round (fuchsia callout) */}
+            <div className="mx-3 mb-3 rounded-lg px-3 py-2.5" style={{ background: 'linear-gradient(180deg, rgba(232,121,249,0.15) 0%, rgba(167,139,250,0.05) 100%)', border: '1px solid rgba(232,121,249,0.35)' }}>
+              <div className="flex items-center gap-2.5">
+                <div style={{ width: 30, height: 30, flexShrink: 0 }}><HookImage size={28} /></div>
+                <div className="flex-1">
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.86rem', color: '#f0abfc', lineHeight: 1.1 }}>Bonus Spin</p>
+                  <p className="font-karla font-500" style={{ fontSize: '0.58rem', color: '#c9a9db', letterSpacing: '0.02em' }}>Land 3 hooks</p>
+                </div>
+                <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#f0abfc', textShadow: '0 0 10px rgba(232,121,249,0.6)' }}>+50%</span>
               </div>
-              <span className="font-karla font-500 flex-1" style={{ fontSize: '0.88rem', color: '#d0cdc8' }}>3 Hooks</span>
-              <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#34d399' }}>Free Spin</span>
-            </div>
-            {/* Jackpot rules */}
-            <div className="px-4 py-3" style={{ borderTop: '1px solid rgba(255,255,255,0.12)', background: 'rgba(240,192,64,0.05)' }}>
-              <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#bfb392', lineHeight: 1.5 }}>
-                Every spin feeds the Catfish Jackpot. Land three catfish to claim a share matching your bet: a full {SLOTS_MAX_BET} ⟡ bet takes the whole pot.
+              <div className="flex items-center gap-2.5" style={{ marginTop: 8 }}>
+                <div style={{ width: 26, height: 26, flexShrink: 0 }}><SlotSymbolDisplay id="wild" /></div>
+                <p className="font-karla font-400 flex-1" style={{ fontSize: '0.64rem', color: '#e2c9f5', lineHeight: 1.4 }}>
+                  Pays <span className="font-700" style={{ color: '#f0abfc' }}>50% more</span>, and the Jellyfish surfaces — running <span className="font-700" style={{ color: '#f0abfc' }}>wild</span> for any fish. Bonus only.
+                </p>
+              </div>
+              <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#8d8880', marginTop: 8, paddingTop: 7, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                <span style={{ color: '#34d399', fontWeight: 700 }}>2 hooks</span> → your wager refunded
               </p>
             </div>
           </div>
