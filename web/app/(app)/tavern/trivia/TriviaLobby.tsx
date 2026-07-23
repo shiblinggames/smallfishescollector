@@ -9,7 +9,8 @@ import ScenicCard from '../ScenicCard'
 import BackButton from '@/components/BackButton'
 import { ParlorHost, CrownIcon, ParlorPointsTicker } from './ParlorArt'
 import ParlorClaim from './ParlorClaim'
-import { TRIVIA_CATEGORIES, PIRATE_KING_RUNGS, parlorRank, type PirateKingStatus } from './constants'
+import ParlorStanding from './ParlorStanding'
+import { TRIVIA_CATEGORIES, PIRATE_KING_RUNGS, type PirateKingStatus } from './constants'
 
 const GOLD = '#f0c040'
 
@@ -28,7 +29,6 @@ export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, dou
   parlorPoints: number
   parlorRankGemsClaimed: number
 }) {
-  const { rank, next } = parlorRank(parlorPoints)
   const kingChipText = king === null ? null
     : king.status === 'crowned' ? `Crowned · +${king.doubloonsAwarded} ⟡`
     : king.status === 'walked' ? `Walked · +${king.doubloonsAwarded} ⟡`
@@ -55,25 +55,9 @@ export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, dou
         <ParlorHost line="Welcome back to the Parlor. Sharpen your wits — the good stakes aren't just coin tonight." />
       </div>
 
-      {/* Parlor Standing — the mastery rank you climb by answering right across
-          both games. One streak, one record, one title to show off. */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '0.75rem 0.9rem', borderRadius: 14, background: 'linear-gradient(180deg, #201a12 0%, #120d08 100%)', border: '1px solid rgba(201,162,74,0.4)', boxShadow: '0 6px 18px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)' }}>
-        {/* bright rank-coloured rail so the tier reads even at grey ranks */}
-        <span aria-hidden style={{ width: 4, alignSelf: 'stretch', borderRadius: 3, background: rank.color, boxShadow: `0 0 10px ${rank.color}` }} />
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.16em', color: '#a8a090' }}>Parlor Standing</p>
-          <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: rank.color, lineHeight: 1.1, marginTop: 2, textShadow: `0 0 12px ${rank.color}66` }}>{rank.title}</p>
-          <p className="font-karla" style={{ fontSize: '0.62rem', color: '#c2b9a4', marginTop: 3 }}>
-            {parlorPoints.toLocaleString()} pts{next ? <> · next: <span style={{ color: next.color }}>{next.title}</span> at {next.at} → <span style={{ color: '#c084fc' }}>+{next.gems} ◆</span></> : ' · top rank, all gems earned'}
-          </p>
-        </div>
-        {parlorStreak > 0 && (
-          <div style={{ textAlign: 'center', flexShrink: 0 }}>
-            <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: GOLD, lineHeight: 1, textShadow: `0 0 14px ${GOLD}66` }}>{parlorStreak}</p>
-            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.1em', color: '#a8a090', marginTop: 2 }}>on a roll</p>
-          </div>
-        )}
-      </div>
+      {/* Parlor Standing — the mastery rank you climb across both games. Points
+          fill an XP bar toward the next rank; tap to see the whole ladder. */}
+      <ParlorStanding points={parlorPoints} streak={parlorStreak} claimedGems={parlorRankGemsClaimed} />
 
       {/* Collect any ranks your points have reached — the interactive gem claim. */}
       <ParlorClaim points={parlorPoints} claimedGems={parlorRankGemsClaimed} />
