@@ -403,7 +403,7 @@ export const FINN_ANCIENT_BEATS: Record<number, FinnAncientBeat> = {
       { text: "*Mosasaurus.* The sea-dragon every old chart drew a hard border around.", pause: 250 },
       { text: "Turns out that border was the only honest ink on the page." },
       { text: "Every soul who chased these is a name cut in stone now. Every one but you.", pause: 400 },
-      { text: "That is not luck. Luck drowned a long way back. You are something the water wants." },
+      { text: "That was never luck. Luck drowned a long way back. You are something the water wants." },
     ],
   },
   // 147 — Basilosaurus
