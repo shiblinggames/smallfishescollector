@@ -216,7 +216,7 @@ export const RODS: RodDef[] = [
     slug: 'rod_lightsaber', glow: true, glowType: 'saber',
   },
   {
-    tier: 20, name: 'Locked-In Rod', cost: 350000, minLevel: 75,
+    tier: 20, name: "Yoon's Locked-In Rod", cost: 350000, minLevel: 75,
     description: 'Rewards a hot hand. Chain perfect catches to LOCK IN: 3 in a row quickens your bites, 5 lands a triple haul every catch, and 10 drives the line into a rare-fish frenzy. Hold the streak to keep it all — one miss and you start over.',
     // Baseline is a plain, capable rod; ALL of the power comes from the streak
     // stages (lockedInState), applied server-side off current_perfect_streak.
@@ -225,9 +225,7 @@ export const RODS: RodDef[] = [
     lockedIn: true,
     // Glow is dynamic (cyan→gold→prismatic by streak) and driven client-side; the
     // static glowType is the streak-0 baseline.
-    // TODO(art): PLACEHOLDER sprite — using rod_galaxy until Kong's rod_lockedin
-    // 3-pose PNG lands. Swap to slug: 'rod_lockedin' + run slice-rod.mjs/slice-thumb.mjs.
-    slug: 'rod_galaxy', glow: true, glowType: 'lockedin',
+    slug: 'rod_yoons', glow: true, glowType: 'lockedin',
   },
 ]
 
