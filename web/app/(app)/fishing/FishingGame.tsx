@@ -4470,14 +4470,12 @@ export default function FishingGame({
   // paints all three tells directly, same pattern as the needle
   // transform + drift rotation above.
   const zoneLabelRef     = useRef<HTMLParagraphElement | null>(null)
-  const retryFlashRef    = useRef(false)
   const catchingZonesRef = useRef<ZoneDef[]>([])
   const zoneRotationRef  = useRef(0)
   const lastZoneFromRef  = useRef<number>(NaN)
   const hookedFishRef   = useRef<{ fishId: number; catchDifficulty: number; crateTier?: 'wooden' | 'metal' | 'gold' | 'diamond'; jackpotMult?: number; doubleCatch?: boolean } | null>(null)
   const selectedBaitRef = useRef(selectedBait)
   useEffect(() => { phaseRef.current = phase }, [phase])
-  useEffect(() => { retryFlashRef.current = retryFlash }, [retryFlash])
 
   // When the gear drawer opens, mark currently-affordable upgrades as seen so
   // the green pulse dots stop nagging. Re-pulses once a NEW tier crosses into
@@ -4722,13 +4720,8 @@ export default function FishingGame({
             p.setAttribute('fill-opacity', String(op))
           })
         }
-        // Live zone label — skip while the Second Wind flash owns it.
-        const lbl = zoneLabelRef.current
-        if (lbl && !retryFlashRef.current) {
-          lbl.textContent = zNow.label ?? ''
-          lbl.style.color = zNow.color
-          lbl.style.textShadow = `0 0 10px ${zNow.color}60`
-        }
+        // (The live per-frame zone label was removed — it was visual noise; the
+        // needle colour + arc highlights already signal the current zone.)
       }
       animRef.current = requestAnimationFrame(tick)
     }
@@ -7222,7 +7215,11 @@ export default function FishingGame({
                       Reserved height kept tight so the dial has room to
                       render without clipping at the bottom. */}
                   <div style={{ minHeight: '1.05rem' }}>
-                    {(phase === 'reeling' || currentZone) && (
+                    {/* Status line during the reel-in / a Second Wind retry. The
+                        live per-frame ZONE label (Miss/Catch/Perfect) that used to
+                        show here while the needle spins was removed — it was hard to
+                        read and just visual noise. */}
+                    {(phase === 'reeling' || retryFlash) && (
                       <p ref={zoneLabelRef} className="font-cinzel font-700 uppercase tracking-[0.14em]"
                         style={{
                           fontSize: '0.7rem',
@@ -7238,7 +7235,7 @@ export default function FishingGame({
                             return `Stage ${bossStage - 1}/${maxStages}`
                           }
                           if (phase === 'reeling') return 'Reeling in…'
-                          return currentZone?.label ?? ''
+                          return ''
                         })()}
                       </p>
                     )}
