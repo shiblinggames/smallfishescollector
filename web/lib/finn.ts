@@ -438,8 +438,8 @@ export const FINN_ANCIENT_BEATS: Record<number, FinnAncientBeat> = {
       { text: "Years I stood at that black water, and it would not open for me. Not one inch. And you...", pause: 500 },
       { text: "You were exactly what it was waiting for. Exactly what *I* was waiting for.", pause: 200, fx: 'flash' },
       { text: "...", pause: 700 },
-      { text: "Listen to me. Ranting at the tide like a drowned prophet. Old rivals get sentimental.", pause: 300 },
-      { text: "Go on. Enjoy your wall of monsters. You have earned every last tooth of it." },
+      { text: "Never mind. Old rivals get sentimental.", pause: 300 },
+      { text: "Go on. Enjoy your wall of monsters." },
     ],
   },
 }
