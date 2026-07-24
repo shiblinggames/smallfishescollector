@@ -1561,7 +1561,7 @@ export const RAID_MAP: RaidNode[] = [
       { ...GUIDE.laz, text: "The Coffers. I know this harbor. I was counted and shelved here once, same as the plunder." },
       { ...GUIDE.laz, text: "The drowned market takes everything and files it as a debt. I am the one account it failed to close." },
       { ...GUIDE.laz, text: "Laz. When you crew up for the dark water, put my name at the top of the list. I know the way in, and I know exactly what it costs." },
-      { text: "He makes the offer like a thing already weighed, and leaves the choosing to you. Captains like Laz rarely have to ask twice.", pause: 400 },
+      { text: "He makes the offer like a thing already weighed, and leaves the choosing to you.", pause: 400 },
     ],
     detail: {
       description:
@@ -2166,7 +2166,7 @@ export const RAID_MAP: RaidNode[] = [
     scene: [
       { text: 'The lookout calls a spar on the drowned bar at the lip of the drop. Half-sunk, barnacled, settled off some wreck down the sunken channel. Nobody looks twice.' },
       { text: 'An hour on, the bosun notices it is still there. Same bar. Same angle. The tide has moved a foot and a half in that time and the spar *has not moved at all*.', pause: 700 },
-      { text: 'A spar drifts. A spar rolls with the water. This one is lying against the pull of the deep, and it is lying *very deliberately*.', pause: 600 },
+      { text: 'A spar drifts. A spar rolls with the water. This one is lying against the pull of the deep.', pause: 600 },
       { text: 'You watch it for a long minute. It does not move. Nothing about it moves. Then, without any part of it seeming to turn, you are aware that *it is facing you*.', pause: 1100, fx: 'shake' },
       { text: 'The blockade line is ahead. So is he. Remember this: when the water goes flat and nothing at all is happening, that is not nothing happening. *That is him deciding.*', pause: 800 },
       { ...GUIDE.kat, text: "A thing that doesn't move is a thing that's already decided you're food. I've pulled too many crews off too many decks not to know the look. Don't blink first, captain." },
