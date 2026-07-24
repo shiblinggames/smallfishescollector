@@ -3950,7 +3950,7 @@ export default function FishingGame({
     const t = setTimeout(() => setLowBaitMsg(null), 2500)
     return () => clearTimeout(t)
   }, [lowBaitMsg])
-  const [hookedFish, setHookedFish] = useState<{ fishId: number; catchDifficulty: number; biteRarity: number; crateTier?: 'wooden' | 'metal' | 'gold' | 'diamond'; jackpotMult?: number; doubleCatch?: boolean } | null>(null)
+  const [hookedFish, setHookedFish] = useState<{ fishId: number; catchDifficulty: number; biteRarity: number; crateTier?: 'wooden' | 'metal' | 'gold' | 'diamond'; jackpotMult?: number; doubleCatch?: boolean; catchQty?: number } | null>(null)
   // YOLO Rod jackpot celebration — set when a jackpot resolves, drives the
   // full-screen JackpotBoom overlay. Cleared on auto-dismiss / tap.
   const [jackpotBoom, setJackpotBoom] = useState<{ qty: number } | null>(null)
@@ -4473,7 +4473,7 @@ export default function FishingGame({
   const catchingZonesRef = useRef<ZoneDef[]>([])
   const zoneRotationRef  = useRef(0)
   const lastZoneFromRef  = useRef<number>(NaN)
-  const hookedFishRef   = useRef<{ fishId: number; catchDifficulty: number; crateTier?: 'wooden' | 'metal' | 'gold' | 'diamond'; jackpotMult?: number; doubleCatch?: boolean } | null>(null)
+  const hookedFishRef   = useRef<{ fishId: number; catchDifficulty: number; crateTier?: 'wooden' | 'metal' | 'gold' | 'diamond'; jackpotMult?: number; doubleCatch?: boolean; catchQty?: number } | null>(null)
   const selectedBaitRef = useRef(selectedBait)
   useEffect(() => { phaseRef.current = phase }, [phase])
 
@@ -4946,7 +4946,7 @@ export default function FishingGame({
 
       await new Promise(r => setTimeout(r, res.waitMs))
 
-      setHookedFish({ fishId: res.fishId, catchDifficulty: res.catchDifficulty, biteRarity: res.biteRarity, crateTier: res.crateTier, jackpotMult: res.jackpotMult, doubleCatch: res.doubleCatch })
+      setHookedFish({ fishId: res.fishId, catchDifficulty: res.catchDifficulty, biteRarity: res.biteRarity, crateTier: res.crateTier, jackpotMult: res.jackpotMult, doubleCatch: res.doubleCatch, catchQty: res.catchQty })
 
       // Lightsaber Lightspeed cue — the blade flashed the fish onto the line.
       if (res.instantBite) {
@@ -5654,7 +5654,7 @@ export default function FishingGame({
         }
         const currentHoldCount = inventory.reduce((s, i) => s + i.quantity, 0)
         // Mirror reelIn's priority: jackpot > Locked-In triple > double.
-        const lockedQty = (hookedFishRef.current as { catchQty?: number } | null)?.catchQty ?? 1
+        const lockedQty = hookedFishRef.current?.catchQty ?? 1
         const desiredQty = jackpotMultiplier > 1 ? jackpotMultiplier : (lockedQty > 1 ? lockedQty : (doubleCatch ? 2 : 1))
         const actualQty = Math.min(desiredQty, Math.max(0, holdCapacity - currentHoldCount))
         // jackpotMultiplier is the YOLO Rod's special ×N event — only set
