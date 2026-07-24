@@ -217,7 +217,7 @@ export const RODS: RodDef[] = [
   },
   {
     tier: 20, name: "Yoon's Locked-In Rod", cost: 350000, minLevel: 75,
-    description: 'Rewards a hot hand. Chain perfect catches to LOCK IN: 3 in a row quickens your bites, 5 lands a triple haul every catch, and 10 drives the line into a rare-fish frenzy. Hold the streak to keep it all — one miss and you start over.',
+    description: 'Rewards a hot hand. Chain perfect catches to LOCK IN: 3 in a row quickens your bites, 5 lands a triple haul on every catch, and 10 quickens them further into a rare-fish frenzy. Hold the streak to keep it all — one miss and you start over.',
     // Baseline is a plain, capable rod; ALL of the power comes from the streak
     // stages (lockedInState), applied server-side off current_perfect_streak.
     color: '#c084fc', rarityBonus: 0, biteIntervalMs: 3000, catchZoneBonus: 0,

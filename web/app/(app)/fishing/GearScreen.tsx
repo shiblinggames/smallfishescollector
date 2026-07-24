@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getHook, HOOKS, hookGlowClass } from '@/lib/hooks'
-import { getEffectiveRod, RODS, rodGlowClass, isCaptainRod, rodHasUniqueEffect, rodEffectLabel, rodSpeedPct, COMPLETIONIST_TIER, COMPLETIONIST_MAX_EFFECTS, REFORGE_COST } from '@/lib/rods'
+import { getEffectiveRod, RODS, rodGlowClass, isCaptainRod, rodHasUniqueEffect, rodEffectLabel, rodSpeedPct, LOCKED_IN, COMPLETIONIST_TIER, COMPLETIONIST_MAX_EFFECTS, REFORGE_COST } from '@/lib/rods'
 import { openMembership } from '@/components/MembershipModal'
 import { getReel, REELS } from '@/lib/reels'
 import { fishingGearLevelReq } from '@/lib/gearGating'
@@ -44,6 +44,9 @@ function ShopLink({ href, label, sub, color, onClick }: { href: string; label: s
 }
 
 function rodTagline(r: typeof RODS[number]): string {
+  // Locked-In Rod scales with your perfect streak, so no static trait fits — sum
+  // its identity instead (else it would read "Base rod").
+  if (r.lockedIn) return `Streak-powered · ×${LOCKED_IN.tripleQty} haul at ${LOCKED_IN.tripleStreak}`
   // Collect every active trait, then return the top 2 joined — rods like
   // the Legendary have both a rarity bonus AND a big speed boost, and the
   // tile was hiding the speed because the old code returned the first match.
@@ -130,6 +133,14 @@ function StatBullet({ value, help, color }: { value: string; help: string; color
 // rare bias / jackpot / crate luring only affect outcomes.
 function rodStatLines(r: typeof RODS[number]): Array<{ title: string; value: string; help: string }> {
   const lines: Array<{ title: string; value: string; help: string }> = []
+  // Locked-In Rod: its power is all streak-scaled, so show the three phases
+  // instead of the (baseline) static stats.
+  if (r.lockedIn) {
+    lines.push({ title: `Streak ${LOCKED_IN.speedStreak}`, value: `${Math.round((1 - LOCKED_IN.speedWaitMult) * 100)}% faster bites`, help: 'while you hold a 3-perfect streak' })
+    lines.push({ title: `Streak ${LOCKED_IN.tripleStreak}`, value: `×${LOCKED_IN.tripleQty} haul`, help: 'every catch lands three fish at a 5-streak' })
+    lines.push({ title: `Streak ${LOCKED_IN.frenzyStreak}`, value: `${Math.round((1 - LOCKED_IN.frenzyWaitMult) * 100)}% faster · +${Math.round(LOCKED_IN.frenzyRarityBonus * 100)}% rare`, help: 'fastest bites and a rare-fish bias at a 10-streak' })
+    return lines
+  }
   const speedPct = rodSpeedPct(r)
   if (speedPct > 0) {
     lines.push({ title: 'Bite Speed', value: `${speedPct}% faster`, help: 'less waiting between casts' })
@@ -977,6 +988,12 @@ export default function GearScreen({
   if (rod.snagImmune) specialBonuses.push({ label: 'Snag immune', color: rod.color })
   if ((rod.jackpotChance ?? 0) > 0) specialBonuses.push({ label: `×${rod.jackpotMultiplier} jackpot · odds rise in shallows`, color: rod.color })
   if (rod.rarityBonus > 0) specialBonuses.push({ label: `+${Math.round(rod.rarityBonus * 100)}% rare fish`, color: rod.color })
+  // Locked-In Rod: its three streak phases, coloured to match the rod glow.
+  if (rod.lockedIn) {
+    specialBonuses.push({ label: `Streak ${LOCKED_IN.speedStreak}: ${Math.round((1 - LOCKED_IN.speedWaitMult) * 100)}% faster bites`, color: '#22d3ee' })
+    specialBonuses.push({ label: `Streak ${LOCKED_IN.tripleStreak}: ×${LOCKED_IN.tripleQty} haul every catch`, color: '#f0c040' })
+    specialBonuses.push({ label: `Streak ${LOCKED_IN.frenzyStreak}: ${Math.round((1 - LOCKED_IN.frenzyWaitMult) * 100)}% faster + ${Math.round(LOCKED_IN.frenzyRarityBonus * 100)}% rare`, color: '#e879f9' })
+  }
   const levelBiteBonus = Math.round(((fishingLevel - 1) / 99) * 33)
   const baitBiteEffect = bait ? Math.round((1 - bait.waitMult) * 100) : 0
   const totalBiteEffect = baitBiteEffect + levelBiteBonus
