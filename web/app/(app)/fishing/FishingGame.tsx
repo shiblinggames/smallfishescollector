@@ -28,7 +28,7 @@ import { getPet, getPetOverlay } from '@/lib/pets'
 import { upgradeFishHold } from './holdActions'
 import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
 import { gauntletAutoCatchMaxRarity } from '@/lib/gauntletUpgrades'
-import { setFishingMusicMuted, playPerfectSfx, playCastSfx, playCast2Sfx, startDialLoop, stopDialLoop, getFishingSfxMuted, setFishingSfxMuted } from '@/lib/fishingMusic'
+import { setFishingMusicMuted, playPerfectSfx, playCastSfx, playCast2Sfx, playForgeSfx, startDialLoop, stopDialLoop, getFishingSfxMuted, setFishingSfxMuted } from '@/lib/fishingMusic'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { zoneRewardDoubloons, PRESTIGE_MAX, goldenBoostPct } from '@/lib/zoneRewards'
 import { updateCharacterColor, purchaseCharacterColor, persistEarnedSkins, persistEarnedBoats } from '@/app/(app)/u/actions'
@@ -3043,6 +3043,57 @@ function SpeedClock({ endsAt, paused = false }: { endsAt: number; paused?: boole
 //   - +N FISH counter ticks 0→qty with cubic ease-out
 //   - 16 coin glyphs erupt outward + up from center
 //   - 24 confetti squares rain from the top
+// A one-shot burst when a Locked-In Rod stage is crossed. Non-blocking (pointer-
+// events none, auto-dismiss) — it never steals a tap. Stage 3 (LOCKED IN) is a
+// bigger, prismatic, longer moment than the stage 1/2 mini-flashes.
+function LockedStageOverlay({ stage, onDone }: { stage: number; onDone: () => void }) {
+  const isLockedIn = stage >= 3
+  useEffect(() => {
+    const t = setTimeout(onDone, isLockedIn ? 1750 : 1050)
+    return () => clearTimeout(t)
+  }, [onDone, isLockedIn])
+
+  const color = stage >= 3 ? '#e879f9' : stage === 2 ? '#f0c040' : '#22d3ee'
+  const rgb   = stage >= 3 ? '232,121,249' : stage === 2 ? '240,192,64' : '34,211,238'
+  const label = stage >= 3 ? 'Locked In' : stage === 2 ? 'Triple Catch' : 'Fast Bites'
+  const sub   = stage >= 3 ? '−35% bites · ×3 haul · rare luck' : stage === 2 ? 'every catch brings three' : '−20% bite time'
+  const rings = isLockedIn ? 5 : 3
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      transition={{ duration: 0.16 }}
+      style={{ position: 'fixed', inset: 0, zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', overflow: 'hidden' }}
+    >
+      {/* LOCKED IN gets a radial colour flash behind the label. */}
+      {isLockedIn && (
+        <motion.div aria-hidden
+          initial={{ opacity: 0 }} animate={{ opacity: [0, 0.55, 0] }} transition={{ duration: 1.0, times: [0, 0.22, 1] }}
+          style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse 70% 55% at 50% 45%, rgba(${rgb},0.5) 0%, transparent 62%)` }} />
+      )}
+      {/* Expanding rings from center. */}
+      {Array.from({ length: rings }).map((_, i) => (
+        <motion.div key={i} aria-hidden
+          initial={{ scale: 0.3, opacity: 0.75 }}
+          animate={{ scale: (isLockedIn ? 3.6 : 2.6) - i * 0.4, opacity: 0 }}
+          transition={{ duration: isLockedIn ? 1.15 : 0.8, ease: 'easeOut', delay: i * 0.08 }}
+          style={{ position: 'absolute', width: 120, height: 120, borderRadius: 999, border: `2px solid rgba(${rgb},0.85)`, boxShadow: `0 0 20px rgba(${rgb},0.5)` }} />
+      ))}
+      {/* The label — springs in with a colour-matched glow. */}
+      <motion.div
+        initial={{ scale: 0.5, opacity: 0, y: 8 }}
+        animate={{ scale: [0.5, 1.16, 1], opacity: 1, y: 0 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+        className={`font-cinzel font-800 uppercase ${isLockedIn ? 'rod-glow-lockedin-3' : ''}`}
+        style={{ position: 'relative', textAlign: 'center', color, letterSpacing: '0.1em', textShadow: `0 0 ${isLockedIn ? 26 : 15}px ${color}, 0 2px 6px rgba(0,0,0,0.75)` }}
+      >
+        <div style={{ fontSize: isLockedIn ? '2.5rem' : '1.6rem', lineHeight: 1 }}>{label}</div>
+        <div className="font-karla font-700" style={{ fontSize: isLockedIn ? '0.74rem' : '0.66rem', color: '#f0e8d0', marginTop: 7, letterSpacing: '0.05em', textShadow: '0 1px 3px rgba(0,0,0,0.75)' }}>{sub}</div>
+      </motion.div>
+    </motion.div>
+  )
+}
+
 function JackpotBoomOverlay({ qty, onDone }: { qty: number; onDone: () => void }) {
   const [displayed, setDisplayed] = useState(0)
 
@@ -4088,6 +4139,22 @@ export default function FishingGame({
   // (stage 1 at 3 · 2 at 5 · 3/LOCKED IN at 10). Same pure helper the server uses.
   const locked = rod.lockedIn ? lockedInState(rod, perfectStreak) : null
   const rodGlow = locked && locked.stage > 0 ? `rod-glow-lockedin-${locked.stage}` : rodGlowClass(rod)
+  // A one-shot burst + colour flip when a NEW Locked-In stage is crossed. Stage 3
+  // (LOCKED IN) hits harder — bigger, a forge sting, a heavier haptic.
+  const [lockedFlash, setLockedFlash] = useState<{ stage: number; k: number } | null>(null)
+  const prevLockedStageRef = useRef(locked?.stage ?? 0)
+  const lockedFlashKeyRef = useRef(0)
+  useEffect(() => {
+    const stage = locked?.stage ?? 0
+    const prev = prevLockedStageRef.current
+    prevLockedStageRef.current = stage
+    if (stage > prev && stage >= 1) {
+      lockedFlashKeyRef.current += 1
+      setLockedFlash({ stage, k: lockedFlashKeyRef.current })
+      if (stage >= 3) { try { playForgeSfx() } catch { /* muted */ } vibrate([0, 60, 40, 90, 40, 170]) }
+      else { vibrate([0, 40, 30, 70]) }
+    }
+  }, [locked?.stage])
   // The perfect streak is server-authoritative (reelIn tracks + persists it and
   // returns the live value). The client mirrors it for display and reconciles
   // from each catch's response — see the catch handler below.
@@ -10380,6 +10447,18 @@ export default function FishingGame({
             key="jackpot-boom"
             qty={jackpotBoom.qty}
             onDone={() => setJackpotBoom(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── Locked-In Rod stage-up burst — cyan/gold/prismatic flash the moment a
+            new streak stage is crossed; LOCKED IN (stage 3) hits hardest. ── */}
+      <AnimatePresence>
+        {lockedFlash && (
+          <LockedStageOverlay
+            key={`locked-${lockedFlash.k}`}
+            stage={lockedFlash.stage}
+            onDone={() => setLockedFlash(null)}
           />
         )}
       </AnimatePresence>
