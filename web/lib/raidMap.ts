@@ -45,8 +45,8 @@ export function musterSceneLines(nodeId: string, report: MusterReport): SceneLin
   // the final door before the Don, where the whole point is a FULL crew.
   if (isLast) {
     lines.push({ text: 'The Gnash holds the aisle, the last door before the throne, and he will not give it up for a half-crewed deck. Dole runs the manifest one final time, and this time nobody jokes.' })
-    lines.push({ ...GUIDE.dole, text: 'Understand what we are counting for, captain. The don is not a thing you beat with one big gun and a lucky lock. He is the oldest, largest killer in this sea, with his whole court at his back. There is no carrying this on three good hands. Every berth has to pull.' })
-    lines.push({ ...GUIDE.laz, text: 'I have watched crews go into water like this a hand short. Not one of them came back up. Fill every seat, or do not go in at all.' })
+    lines.push({ ...GUIDE.dole, text: "Understand what we're counting for, captain. The don isn't a thing you beat with one big gun and a lucky lock. He's the oldest, largest killer in this sea, with his whole court at his back. There's no carrying this on three good hands. Every berth has to pull." })
+    lines.push({ ...GUIDE.laz, text: "I've watched crews go into water like this a hand short. Not one of them came back up. Fill every seat, or don't go in at all." })
   } else {
     lines.push({ text: "Sal Brackwater's clerk comes alongside with a wet ledger and counts your crew like livestock. He is not looking for guns. Dole leans over his shoulder and reads it back, ticking each hand as he goes." })
     lines.push({ ...GUIDE.dole, text: 'He wants hands that can DO something when the shooting starts. Sal will take your hull in his teeth and roll, and the only thing that stops that is a crew who can get between you and the blow.' })
@@ -57,10 +57,10 @@ export function musterSceneLines(nodeId: string, report: MusterReport): SceneLin
       // Crew count.
       lines.push(row.ok
         ? { ...GUIDE.dole, text: isLast
-            ? `Hands at the rail. ${row.met.join(', ')}. A full bench, every berth crewed. It is the one thing the don does not expect, and the only thing that beats him.`
-            : `Hands at the rail. ${row.met.join(', ')}. That is a crew. Tick.` }
+            ? `Hands at the rail. ${row.met.join(', ')}. A full bench, every berth crewed. It's the one thing the don doesn't expect, and the only thing that beats him.`
+            : `Hands at the rail. ${row.met.join(', ')}. That's a crew. Tick.` }
         : { ...GUIDE.dole, text: isLast
-            ? `The bench is thin, captain. Only ${row.met.length} standing. Against the don, an empty berth is a hole in your line, and he does not miss holes.`
+            ? `The bench is thin, captain. Only ${row.met.length} standing. Against the don, an empty berth is a hole in your line, and he doesn't miss holes.`
             : `The rail is thin, captain. Only ${row.met.length} standing, and the throne wants more hands than that.` })
     } else if (i === 1) {
       // Seasoning.
@@ -73,7 +73,7 @@ export function musterSceneLines(nodeId: string, report: MusterReport): SceneLin
       lines.push(row.ok
         ? { ...GUIDE.dole, text: `${ask}? ${row.met.join(', ')}. Aye. Tick.` }
         : { ...GUIDE.dole, text: isLast
-            ? `${ask}? ...No one on this deck. That is one thing the don can do that nobody aboard can answer, captain. He will find it, and he will end you on it.`
+            ? `${ask}? ...No one on this deck. That's one thing the don can do that nobody aboard can answer, captain. He'll find it, and he'll end you on it.`
             : `${ask}? ...No one on this deck. A hole in the line Sal will roll straight through.` })
     }
   })
@@ -88,10 +88,10 @@ export function musterSceneLines(nodeId: string, report: MusterReport): SceneLin
     }
   } else {
     if (isLast) {
-      lines.push({ ...GUIDE.dole, text: 'The bench is short a hand, captain, and against the don a missing hand is a hole he will find. The Gnash will not open the door, and I would not walk you through it if he did.' })
-      lines.push({ ...GUIDE.kat, text: 'This is the one fight in the whole sea you do not enter a hand short. Fill the berth from Manage Crew, then come back and we read it again.' })
+      lines.push({ ...GUIDE.dole, text: "The bench is short a hand, captain, and against the don a missing hand is a hole he'll find. The Gnash won't open the door, and I wouldn't walk you through it if he did." })
+      lines.push({ ...GUIDE.kat, text: "This is the one fight in the whole sea you don't enter a hand short. Fill the berth from Manage Crew, then come back and we read it again." })
     } else {
-      lines.push({ ...GUIDE.dole, text: 'The manifest is short a hand. The clerk will not pass a half-answered deck.' })
+      lines.push({ ...GUIDE.dole, text: "The manifest is short a hand. The clerk won't pass a half-answered deck." })
       lines.push({ ...GUIDE.kat, text: "Better we find the gap here than on Sal's teeth. Go and fill it, captain." })
     }
   }
@@ -759,11 +759,11 @@ export const RAID_MAP: RaidNode[] = [
       { ...GUIDE.doby, text: "Every reef on this coast has gone quiet, small fry. And a quiet sea is a sea with something wrong in it." },
       { text: "Barnacle Pete robs the small and the slow. Has done for years, all up and down this coast." },
       { text: "Little crews. Fishing folk. The odd unlucky angler. Anyone too small to swing back." },
-      { ...GUIDE.kat, text: "And here is the part that never sat right with me. Pete steals a fortune and stays poor as a barnacle." },
+      { ...GUIDE.kat, text: "And here's the part that never sat right with me. Pete steals a fortune and stays poor as a barnacle." },
       { speaker: 'A Passing Sailor', text: "Pete don't spend his haul. He delivers it." },
       { text: "Said once, by a sailor who knew better than to say it twice." },
       { text: "The rest sails off to *someone Pete would rather you never asked about*. So nobody asks.", pause: 700 },
-      { ...GUIDE.doby, text: "You have got a boat, a free afternoon, and no manners worth mentioning. Kat and I have sailed with worse. We are with you." },
+      { ...GUIDE.doby, text: "You've got a boat, a free afternoon, and no manners worth mentioning. Kat and I have sailed with worse. We're with you." },
       { speaker: 'Barnacle Pete', portrait: CORSAIRS_RECKONING.enemies.pete.portrait, text: "Broke, me? Couldn't rob a rockpool. Now mind yer business, guppy." },
       { ...GUIDE.kat, text: "Charming sort. Go shake him till the truth falls out of his coat, captain. But do it clever, not bare-knuckled." },
       { ...GUIDE.kat, text: "A ship is only as strong as her hull and her hands. Upgrade the ship when the coin allows, and sign on crew at the Crew Hall. A full deck wins the fights a lone captain loses." },
@@ -875,7 +875,7 @@ export const RAID_MAP: RaidNode[] = [
       { text: "And one word stamped on every page: *the Finndicate*.", pause: 800 },
       { speaker: 'Barnacle Pete', portrait: CORSAIRS_RECKONING.enemies.pete.portrait, text: "You think I keep the coin? Not a copper of it stays with me. Never has." },
       { ...GUIDE.kat, text: "So much for the kingpin. All that noise, and he was only ever another hand passing the plate up the line. Squeezed dry and tossed back, same as everyone he ever robbed." },
-      { ...GUIDE.doby, text: "The Finndicate. I have heard that name whispered in deep water, small fry, and never once by anything that lived to say it twice." },
+      { ...GUIDE.doby, text: "The Finndicate. I've heard that name whispered in deep water, small fry, and never once by anything that lived to say it twice." },
       { text: "And the coin never sits still. Page after page, every haul buys the same thing over and over, and not one line says what." },
       { text: "Under the ledgers there's a sealed letter. No name on it. Just two letters pressed into the wax: *C.K.*", pause: 700, insert: { kind: 'sealed-letter', wax: 'C.K.' } },
       { text: "The route's mostly burned away, but the heading held. Out past the Bilge Strait, into the cold." },
@@ -1053,11 +1053,11 @@ export const RAID_MAP: RaidNode[] = [
     image: '/raidlog.png',
     scene: [
       { text: "Krust's consignment burns to the waterline, and for the first time since the coast, the deck goes quiet." },
-      { ...GUIDE.kat, text: "Sit. Eat something. You have been running on spite and seawater for a week." },
+      { ...GUIDE.kat, text: "Sit. Eat something. You've been running on spite and seawater for a week." },
       { ...GUIDE.doby, text: "Let the captain stand, Kat. A hand who just put Captain Krust under has earned the view." },
       { ...GUIDE.mako, text: "That view being your name on every wanted board from here to the danger lines. You put us on the Finndicate's list today, captain." },
-      { ...GUIDE.mako, text: "For what it is worth, I have never eaten better than when something bigger was hunting me." },
-      { ...GUIDE.kat, text: "That is the most encouraging thing you have ever said, and it terrifies me." },
+      { ...GUIDE.mako, text: "For what it's worth, I've never eaten better than when something bigger was hunting me." },
+      { ...GUIDE.kat, text: "That's the most encouraging thing you've ever said, and it terrifies me." },
       { text: "Somewhere past the dark water, something large stops what it is doing to look your way.", pause: 700 },
       { text: "But that is tomorrow's heading. Tonight the crew is whole, and the grog is cold." },
     ],
@@ -1100,14 +1100,14 @@ export const RAID_MAP: RaidNode[] = [
     scene: [
       { text: "Krust's consignment is still smoking when the answer comes back. Not a fleet, not a bounty. One scrap of order-paper, and the cold understanding that somebody well above the freight desk has finally set down the ledgers to look at you." },
       { ...GUIDE.mako, text: "There it is. You wanted the Finndicate to notice you, captain. It noticed." },
-      { ...GUIDE.kat, text: "There is a difference between notice and this. Krust was a name. Whatever sets its books down to answer a name is the thing that stands over one." },
+      { ...GUIDE.kat, text: "There's a difference between notice and this. Krust was a name. Whatever sets its books down to answer a name is the thing that stands over one." },
       { ...GUIDE.doby, text: "Then read it out. What does a thing that size want badly enough to put in writing?" },
       { speaker: 'A Finndicate Order', text: "Danger-zone consignment. Priority freight. It will not open for him. Find the hands that it will.", pause: 500 },
       { text: "A shape you hadn't logged is already at the chart table, turning the scrap to the light like he is pricing it.", pause: 400 },
-      { ...GUIDE.dole, text: "Danger zones. Such a marvelous name. You only bother naming water that frightening when you are hiding something in it worth the fright." },
+      { ...GUIDE.dole, text: "Danger zones. Such a marvelous name. You only bother naming water that frightening when you're hiding something in it worth the fright." },
       { ...GUIDE.doby, text: "And who in the cold deep are you?" },
       { ...GUIDE.dole, text: "The navigator who read this before his tea went cold. Drowned captains couldn't. Dole. I know every current worth knowing and most of the ones that aren't." },
-      { ...GUIDE.dole, text: "The cipher was never the hard part, captain. It is who wrote it, and how much freight they will feed that water to keep it moving. When you muster hands for the danger line, you could do worse than one who has already been there." },
+      { ...GUIDE.dole, text: "The cipher was never the hard part, captain. It's who wrote it, and how much freight they'll feed that water to keep it moving. When you muster hands for the danger line, you could do worse than one who's already been there." },
       { ...GUIDE.mako, text: "Priority freight, worth every hull it eats. That is not cargo, captain. That is something they are afraid to stop carrying." },
       { text: "Dole sets the scrap down facing you, the heading already circled. You hadn't circled it.", pause: 400 },
     ],
@@ -1306,7 +1306,7 @@ export const RAID_MAP: RaidNode[] = [
       { ...GUIDE.doby, text: "Because he was never the place, small fry. Only the finger pointing at it." },
       { ...GUIDE.kat, text: "The crews out here have a name for that water. I have watched grown captains go quiet rather than say it twice." },
       { text: "The Gullet. Where the sea swallows everything down.", pause: 900, fx: 'shake' },
-      { ...GUIDE.dole, text: "The Gullet. Everyone says it like a curse. It is a current with excellent marketing." },
+      { ...GUIDE.dole, text: "The Gullet. Everyone says it like a curse. It's a current with excellent marketing." },
       { ...GUIDE.dole, text: "Three charts, one point of water, and not one agrees on the depth. That is not a warning, captain. It is an invitation with the address smudged." },
       { ...GUIDE.doby, text: "Whatever the Finndicate takes off the weak, it all ends up down that throat. And now so do we." },
       { text: "Dole has already inked a heading you had not thought to ask for.", pause: 400 },
@@ -1515,7 +1515,7 @@ export const RAID_MAP: RaidNode[] = [
       { ...GUIDE.dole, text: "Three of the Finndicate's captains on the bottom now, and every one of them pointed us further down. I do love a pattern." },
       { ...GUIDE.doby, text: "Patterns end somewhere, navigator. This one ends deep. I can feel it in the old bones." },
       { ...GUIDE.mako, text: "Deep is where the big things live. Suits me." },
-      { ...GUIDE.kat, text: "It suits none of you, and you all know it, and you are going anyway. Sit down and let me look at that arm before you bleed on my clean deck." },
+      { ...GUIDE.kat, text: "It suits none of you, and you all know it, and you're going anyway. Sit down and let me look at that arm before you bleed on my clean deck." },
       { text: "Past the drained throat, the water keeps going down, darker than any chart will admit. But that is tomorrow's heading.", pause: 700 },
       { text: "Tonight the crew is whole, one hand heavier than it was, and the grog is cold." },
     ],
@@ -1555,7 +1555,7 @@ export const RAID_MAP: RaidNode[] = [
     image: '/raidlog.png',
     scene: [
       { text: "Tollmaster Spet weighed every crate the Gullet swallowed and kept not a coin of it. His manifests all point the same way, past the throat, to a harbor no honest chart will name." },
-      { ...GUIDE.dole, text: "A market. A whole drowned market, where the sea's plunder gets counted, shelved, and sold back to the next captain fool enough to come up for it. They do not spend what they take, captain. They inventory it." },
+      { ...GUIDE.dole, text: "A market. A whole drowned market, where the sea's plunder gets counted, shelved, and sold back to the next captain fool enough to come up for it. They don't spend what they take, captain. They inventory it." },
       { ...GUIDE.doby, text: "I swam past this harbor once, long ago, and swore I never would again. A market that sells the drowned back to the living. Nothing good keeps its books this deep, small fry." },
       { text: "A broad shadow settles over the chart. Old scales, older eyes. A captain the sea was said to have kept, years back.", pause: 500 },
       { ...GUIDE.laz, text: "The Coffers. I know this harbor. I was counted and shelved here once, same as the plunder." },
@@ -1677,11 +1677,11 @@ export const RAID_MAP: RaidNode[] = [
       { speaker: 'The Quartermaster', portrait: THE_QUARTERMASTER.enemies.quartermaster.portrait, text: "Good pick. I'd have steered you to it myself. I always do." },
       { speaker: 'The Quartermaster', portrait: THE_QUARTERMASTER.enemies.quartermaster.portrait, text: "Every captain who sails into the Coffers gets kitted out right here at my counter. Then I watch how far they get." },
       { text: "The way he says it puts a cold coin in your gut. Like he's already seen *how your story ends*.", pause: 600 },
-      { ...GUIDE.kat, text: "I do not like him, captain. Anyone that glad to see you has already sold you to somebody. Keep a hand near your cutlass and your eyes on his." },
+      { ...GUIDE.kat, text: "I don't like him, captain. Anyone that glad to see you has already sold you to somebody. Keep a hand near your cutlass and your eyes on his." },
       { speaker: 'The Quartermaster', portrait: THE_QUARTERMASTER.enemies.quartermaster.portrait, text: "That admiral past the wall has never lost a fight. But every gun on your deck, you bought off me. Don't forget that, captain." },
       { text: "You want to ask whose side he's really on. Then the war-fleet swings around, and there's no more time for questions." },
       { text: "You'll come back to it later, once the admiral's on the harbor floor." },
-      { ...GUIDE.laz, text: "That smile. I have seen it on every shopkeeper who ever sold a captain the rope he hangs by." },
+      { ...GUIDE.laz, text: "That smile. I've seen it on every shopkeeper who ever sold a captain the rope he hangs by." },
       { ...GUIDE.laz, text: "Trust the guns, captain. Not the hand that sold them. When the fleet turns, hold the line and let him keep his questions." },
     ],
     detail: {
@@ -1955,16 +1955,16 @@ export const RAID_MAP: RaidNode[] = [
     image: '/raidlog.png',
     scene: [
       { text: "The Quartermaster's strongbox cracks, and the last of his ledgers spill across the deck. Not one of them argues with the others." },
-      { ...GUIDE.dole, text: "I have been adding this up since the coast, captain, and here is the sum. Pete fed Krust. Krust fed the Gullet. The Gullet fed this market. And every coin of it, all of it, runs up to one signature." },
+      { ...GUIDE.dole, text: "I've been adding this up since the coast, captain, and here's the sum. Pete fed Krust. Krust fed the Gullet. The Gullet fed this market. And every coin of it, all of it, runs up to one signature." },
       { ...GUIDE.laz, text: "Don Finleone. A megalodon the sea was said to have swallowed and thought better of. He runs the Coffers, and the Coffers ran everything." },
-      { ...GUIDE.mako, text: "The head of the whole Finndicate, and he sits at the bottom of the deepest water there is. I have wanted to bite something that size my whole life.", pause: 500 },
+      { ...GUIDE.mako, text: "The head of the whole Finndicate, and he sits at the bottom of the deepest water there is. I've wanted to bite something that size my whole life.", pause: 500 },
       { text: "The Coffers burn low, the Quartermaster's counter down to kindling, and for the first time since the harbor gate the deck goes quiet." },
       { ...GUIDE.kat, text: "You say the loveliest things right before I have to stitch you back together. Sit down, the pair of you." },
       { ...GUIDE.laz, text: "I knew a captain once who thought he was the biggest thing in the water. The water disagreed. It always does, in the end." },
-      { ...GUIDE.doby, text: "Cut the head and the whole body falls. That is the plan, is it not, navigator?" },
+      { ...GUIDE.doby, text: "Cut the head and the whole body falls. That's the plan, is it not, navigator?" },
       { ...GUIDE.dole, text: "It is. It should even be true." },
-      { ...GUIDE.doby, text: "There is a doubt in your voice." },
-      { ...GUIDE.dole, text: "There is a margin in my notes I cannot account for. A few sums that tie up to no name I have. But that is a worry for deeper water. Tonight, we won.", pause: 500 },
+      { ...GUIDE.doby, text: "There's a doubt in your voice." },
+      { ...GUIDE.dole, text: "There's a margin in my notes I can't account for. A few sums that tie up to no name I have. But that's a worry for deeper water. Tonight, we won.", pause: 500 },
       { text: "Past the last of the Coffers' light, the sea drops away toward the seat the don rules from. But that is tomorrow's heading.", pause: 700 },
       { text: "Tonight the crew is whole, one hand heavier still, and the grog is cold." },
     ],
@@ -2008,8 +2008,8 @@ export const RAID_MAP: RaidNode[] = [
       { ...GUIDE.doby, text: 'The last fathom. I was born in water like this, small fry. Black, and cold, and patient. It is the one part of the sea I have ever been afraid of.', pause: 400 },
       { ...GUIDE.doby, text: 'Good. Fear is how an old whale stays an old whale. Take us down.' },
       { text: 'You are not the only sail bound for the edge of the chart. One you do not know has been holding your distance since the Coffers, matching you turn for turn.', pause: 500 },
-      { ...GUIDE.mira, text: 'Don Finleone. The one bounty in this whole sea nobody is fool enough to chase. And here you are, sailing off the last sounding to do exactly that.' },
-      { ...GUIDE.mira, text: 'I do love a captain with no sense of self-preservation. It is the only kind worth following.' },
+      { ...GUIDE.mira, text: "Don Finleone. The one bounty in this whole sea nobody's fool enough to chase. And here you are, sailing off the last sounding to do exactly that." },
+      { ...GUIDE.mira, text: "I do love a captain with no sense of self-preservation. It's the only kind worth following." },
       { ...GUIDE.mira, text: 'Mira. I hunt the marks the smart money leaves alone. When you crew up for the deepest water, captain, put my name down. I want a good seat for this one.' },
       { text: 'She lets her sail settle in beside yours, unhurried, the way a thing does when it has already decided how the hunt ends.' },
     ],
@@ -2169,8 +2169,8 @@ export const RAID_MAP: RaidNode[] = [
       { text: 'A spar drifts. A spar rolls with the water. This one is lying against the pull of the deep, and it is lying *very deliberately*.', pause: 600 },
       { text: 'You watch it for a long minute. It does not move. Nothing about it moves. Then, without any part of it seeming to turn, you are aware that *it is facing you*.', pause: 1100, fx: 'shake' },
       { text: 'The blockade line is ahead. So is he. Remember this: when the water goes flat and nothing at all is happening, that is not nothing happening. *That is him deciding.*', pause: 800 },
-      { ...GUIDE.kat, text: "A thing that does not move is a thing that has already decided you are food. I have pulled too many crews off too many decks not to know the look. Do not blink first, captain." },
-      { ...GUIDE.mira, text: "A thing that lies perfectly still until the moment it doesn't. I know the type, captain. I am the type." },
+      { ...GUIDE.kat, text: "A thing that doesn't move is a thing that's already decided you're food. I've pulled too many crews off too many decks not to know the look. Don't blink first, captain." },
+      { ...GUIDE.mira, text: "A thing that lies perfectly still until the moment it doesn't. I know the type, captain. I'm the type." },
       { ...GUIDE.mira, text: "So when the water goes flat, don't wait to see what he decides. Make him answer what you decide instead." },
     ],
     sceneAccent: '#e8e4dc',
@@ -2254,12 +2254,12 @@ export const RAID_MAP: RaidNode[] = [
       { text: "The strongroom door gives with a groan, and Sal Brackwater's last secret spills out across the deck: ledgers stacked to the beam, every one filled in the same close, careful hand." },
       { ...GUIDE.dole, text: 'Give me a moment with these. Rates, tithes, tolls, drowned debts... and every column, every last one, runs down into the same pocket.' },
       { ...GUIDE.mako, text: 'Whose pocket?' },
-      { ...GUIDE.dole, text: 'One guess, and you will not need it. There has only ever been one name at the top of this water.' },
+      { ...GUIDE.dole, text: "One guess, and you won't need it. There's only ever been one name at the top of this water." },
       { ...GUIDE.doby, text: 'Finleone. Felt it in my gut a hundred leagues back. Another thing to hold it in his own ink, though.', pause: 400 },
-      { ...GUIDE.kat, text: 'Forty years I have watched good captains drown arguing whose fault the sea was. The don kept the answer in a ledger the whole time.' },
-      { ...GUIDE.dole, text: 'Here is a curiosity. One hand in the margins that is not his. Older, finer. Initials a few odd sums that tie to no account I can find.' },
+      { ...GUIDE.kat, text: "Forty years I've watched good captains drown arguing whose fault the sea was. The don kept the answer in a ledger the whole time." },
+      { ...GUIDE.dole, text: "Here's a curiosity. One hand in the margins that isn't his. Older, finer. Initials a few odd sums that tie to no account I can find." },
       { ...GUIDE.doby, text: 'Dead partner. Some debt he never troubled to close. Every old crook keeps a ghost or two in his columns. Leave it lie.' },
-      { ...GUIDE.laz, text: 'Then the books are done talking. He is at the end of them, on his throne, waiting. Let us go settle the account in person.', pause: 400 },
+      { ...GUIDE.laz, text: "Then the books are done talking. He's at the end of them, on his throne, waiting. Let us go settle the account in person.", pause: 400 },
     ],
     detail: {
       description:
@@ -2336,15 +2336,15 @@ export const RAID_MAP: RaidNode[] = [
     scene: [
       { text: "The last gate swings on silence and you slip into the don's own black water. No horns. No warning shot. Just the pressure of the deep and one lit flagship far ahead, ringed by its court." },
       { text: "Six hulls ride at anchor around it, arrayed like courtiers around a throne. Each flies the shark colors. Each, on any other water, would have been the thing you came to sink." },
-      { ...GUIDE.mira, text: "Look at them. A Render. A Reaper. The don's own Closer, by the scars on that one. Every single one a bounty I would have crossed an ocean for on its own. And they are only the DOOR, captain." },
-      { ...GUIDE.doby, text: "In a long life on this water I have never seen them gathered in one place. Every hull there is a shark whole fleets tell stories about to frighten one another quiet. The don did not hire this court, small fry. He collected it. The deadliest thing each dark corner of the sea ever spat out, all anchored in one room." },
-      { ...GUIDE.mako, text: "Six of the biggest killers in the sea, and one enormous one at the back of the room. Do you have any idea how long I have wanted a table set like this?" },
-      { ...GUIDE.kat, text: "Mako. That is not a table. That is the thing that eats the table, and everyone still sitting at it." },
-      { ...GUIDE.dole, text: "The Closer there has put down more captains than the other five combined, and every one of those five is an apex the whole trade gave up trying to touch. Which makes it curious that he is the one peeling off the line to greet us. A court does not send its deadliest just to say hello." },
+      { ...GUIDE.mira, text: "Look at them. A Render. A Reaper. The don's own Closer, by the scars on that one. Every single one a bounty I'd have crossed an ocean for on its own. And they're only the DOOR, captain." },
+      { ...GUIDE.doby, text: "In a long life on this water I've never seen them gathered in one place. Every hull there is a shark whole fleets tell stories about to frighten one another quiet. The don didn't hire this court, small fry. He collected it. The deadliest thing each dark corner of the sea ever spat out, all anchored in one room." },
+      { ...GUIDE.mako, text: "Six of the biggest killers in the sea, and one enormous one at the back of the room. Do you have any idea how long I've wanted a table set like this?" },
+      { ...GUIDE.kat, text: "Mako. That's not a table. That's the thing that eats the table, and everyone still sitting at it." },
+      { ...GUIDE.dole, text: "The Closer there has put down more captains than the other five combined, and every one of those five is an apex the whole trade gave up trying to touch. Which makes it curious that he's the one peeling off the line to greet us. A court doesn't send its deadliest just to say hello." },
       { text: "One hull glides out of the ring, unhurried, and stops across your bow. Close enough to read the old scars crossing his plating like a ledger of every captain he has closed.", pause: 500 },
       { speaker: 'The Closer', portrait: THE_THRONE.enemies.the_consigliere.portrait, text: "The don sends his regards, little captain. He has read your whole story. The barnacle. The old hauler. The market. The thing on the bar. A tidy little climb." },
       { speaker: 'The Closer', portrait: THE_THRONE.enemies.the_consigliere.portrait, text: "He wanted you to hear it from me, since I keep his accounts: you will not leave this water. The line for how you sink is already written, in his own hand. You are simply the last to read it.", pause: 500 },
-      { ...GUIDE.laz, text: "That is the same voice that read me my debt, a lifetime ago, in this exact water. Calm. Certain. Counting me closed before I had drawn a breath to argue." },
+      { ...GUIDE.laz, text: "That's the same voice that read me my debt, a lifetime ago, in this exact water. Calm. Certain. Counting me closed before I had drawn a breath to argue." },
       { ...GUIDE.laz, text: "It was wrong about me. I am still here." },
       { ...GUIDE.doby, text: "Then let it be wrong twice, small fry. The court can talk all it likes. We came to answer." },
       { text: "The Closer holds a moment longer, as if offering you the chance to turn. You do not. He slides back into the ring, and the court parts, an aisle of guns opening straight to the throne.", pause: 600 },
@@ -2400,15 +2400,15 @@ export const RAID_MAP: RaidNode[] = [
     sceneAccent: '#dc2626',
     scene: [
       { text: "You take the aisle. The court holds its fire and its formation, every gun tracking you in, and the lit flagship at the end grows from a lantern to a leviathan." },
-      { ...GUIDE.mako, text: "Bigger than the stories. Bigger than the Cartographer swore anything in this sea could get. I did not think I would ever be the small one at a table." },
-      { ...GUIDE.dole, text: "Everything ran up to him. Every debt, every drowned captain, every clever little sum I read off a dead captain's ledger. And here he is at the bottom of it all, exactly where the numbers said he would be. I do hate being right about a monster." },
-      { ...GUIDE.mira, text: "Hold your nerve. This is the mark no one in the trade will touch. Which means when he goes down, it is us who put him there. And no one else in the whole sea gets to say it." },
+      { ...GUIDE.mako, text: "Bigger than the stories. Bigger than the Cartographer swore anything in this sea could get. I didn't think I'd ever be the small one at a table." },
+      { ...GUIDE.dole, text: "Everything ran up to him. Every debt, every drowned captain, every clever little sum I read off a dead captain's ledger. And here he is at the bottom of it all, exactly where the numbers said he'd be. I do hate being right about a monster." },
+      { ...GUIDE.mira, text: "Hold your nerve. This is the mark no one in the trade will touch. Which means when he goes down, it's us who put him there. And no one else in the whole sea gets to say it." },
       { text: "Close enough to hail now, and the don, who has not stirred for the whole descent, finally lifts his vast head and regards you the way you would look at a coin you have already spent.", pause: 500, closeup: true },
       { speaker: 'Don Finleone', portrait: THE_THRONE.enemies.don_finleone.portrait, text: "All this way. Past my hauler, my market, my whole drowned family. I confess I am almost impressed, little captain." },
       { speaker: 'Don Finleone', portrait: THE_THRONE.enemies.don_finleone.portrait, text: "Almost. You have climbed the entire ladder to learn the one thing every captain learns too late: the ladder ends in a mouth. You will not beat me. Nothing in this water ever has. But come. Let me see how you sink.", pause: 700, fx: 'flash' },
       { ...GUIDE.kat, text: "Big words, for a fish." },
       { ...GUIDE.laz, text: "Let him talk, captain. The drowned always sound certain, right up until the water disagrees. And it always does, in the end." },
-      { ...GUIDE.doby, text: "You have the whole crew at your back and the biggest name in the sea in front of you. I have waited a long life to see a captain stand here. Take him." },
+      { ...GUIDE.doby, text: "You have the whole crew at your back and the biggest name in the sea in front of you. I've waited a long life to see a captain stand here. Take him." },
       { text: "Then the don falls still, stiller than a thing that size has any right to hold, and the court falls still with him. The whole black water holds its breath.", pause: 600 },
       { ...GUIDE.doby, text: "Steady, small fry. Something this old only goes quiet right before it moves.", pause: 400 },
     ],
@@ -2485,14 +2485,14 @@ export const RAID_MAP: RaidNode[] = [
       { text: 'The don was the biggest name in the sea. He was not your last fight.', pause: 900, closeup: true },
       { text: 'And the whole long chase turns over in your head and reads the other way. The strange cargo. The charts torn from drowned captains. The caches, the ledgers, every shipment the don bled the sea to move. None of it was ever about coin. It was one patient hand, a lifetime at it, trying to learn the one thing the sea will not tell: how to raise the giants of the deep. The don only ever wore the wanting.', pause: 700 },
       { text: 'Then the deep folds over it, and it is gone before you can be sure it was ever there at all.' },
-      { ...GUIDE.mira, text: 'Captain. Tell me you saw that too. ...No. Not tonight. Tonight the don is on the bottom, and that was us. The rest can keep till morning.' },
+      { ...GUIDE.mira, text: "Captain. Tell me you saw that too. ...No. Not tonight. Tonight the don's on the bottom, and that was us. The rest can keep till morning." },
       { text: 'The court settles to the seabed, and for the first time in four chapters, there is nothing ahead to point at. So the crew takes the longest watch of all. Together.', pause: 500 },
-      { ...GUIDE.doby, text: "I have sailed this sea longer than any of you have drawn breath, and I never once believed I would see the Finndicate on the bottom. Well done, small fry." },
-      { ...GUIDE.kat, text: "Do not let him fool you, captain. He is crying. Whales do that." },
+      { ...GUIDE.doby, text: "I've sailed this sea longer than any of you have drawn breath, and I never once believed I'd see the Finndicate on the bottom. Well done, small fry." },
+      { ...GUIDE.kat, text: "Don't let him fool you, captain. He's crying. Whales do that." },
       { ...GUIDE.mako, text: "The biggest bounty in the sea, collected, and I got to be there for it. I could get used to this crew." },
       { ...GUIDE.dole, text: "Four chapters, one drowned empire, and a debt the whole sea owed finally paid in full. The finest sum I ever balanced." },
-      { ...GUIDE.laz, text: "The drowned can rest now. All the captains the don fed to this water. That is worth more than any coin in his vault." },
-      { ...GUIDE.mira, text: "All of us, one impossible mark, and a captain with no sense of self-preservation. I have never had better odds in my life." },
+      { ...GUIDE.laz, text: "The drowned can rest now. All the captains the don fed to this water. That's worth more than any coin in his vault." },
+      { ...GUIDE.mira, text: "All of us, one impossible mark, and a captain with no sense of self-preservation. I've never had better odds in my life." },
       { text: "Tonight the crew is whole, the grog is cold, and the whole sea knows your name. Whatever waited out past the wreck can wait for morning.", pause: 600 },
     ],
     detail: {
