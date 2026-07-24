@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import ScenicCard from './ScenicCard'
+import { ResetPill } from '@/components/ResetCountdown'
 
 const GOLD = '#e3a857'
 
@@ -17,6 +18,7 @@ export default function ChartRoomHubCard() {
       title="Charting"
       gradient={['#3a2c14', '#221a0c', '#0f0a05']}
       accent={GOLD}
+      badge={<ResetPill kind="weekly" prefix="New puzzles in" accent="#f0dcae" />}
     >
       {/* Warm lamp halo */}
       <motion.div

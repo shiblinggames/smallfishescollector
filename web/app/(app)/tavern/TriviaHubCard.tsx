@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import ScenicCard from './ScenicCard'
+import { ResetPill } from '@/components/ResetCountdown'
 import { HOST_ART } from './trivia/ParlorArt'
 
 /** Tavern hub card for The Parlor — the single door into the trivia
@@ -15,6 +16,7 @@ export default function TriviaHubCard() {
       title="The Parlor"
       gradient={['#2a2050', '#191338', '#0c0a20']}
       accent={ACCENT}
+      badge={<ResetPill kind="weekly" prefix="New boards in" accent="#d9ccf7" />}
     >
       {/* Lantern halo behind the host */}
       <div aria-hidden style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', width: 180, height: 120, background: 'radial-gradient(ellipse at center, rgba(167,139,250,0.26) 0%, transparent 68%)', pointerEvents: 'none' }} />
