@@ -717,16 +717,24 @@ export async function reelIn(
 
   // Auto-upgrade line tier on new species unlock
   if (isNewSpecies) {
-    const [{ count: uniqueCount }, { count: totalCount }] = await Promise.all([
-      admin.from('fish_collection').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
-      admin.from('fish_species').select('*', { count: 'exact', head: true }).neq('habitat', 'ancient_deep'),
+    const [{ data: nonAncientSpecies }, { data: caughtRows }] = await Promise.all([
+      admin.from('fish_species').select('id').neq('habitat', 'ancient_deep'),
+      admin.from('fish_collection').select('fish_id').eq('user_id', user.id),
     ])
-    const unique = uniqueCount ?? 0
-    const newLineTier = getLineForSpeciesCount(unique).tier
+    const caughtIds = new Set(((caughtRows ?? []) as { fish_id: number }[]).map(r => r.fish_id))
+    // Line tier progresses on TOTAL species caught (Ancient Deep included).
+    const newLineTier = getLineForSpeciesCount(caughtIds.size).tier
     if (newLineTier > (profile?.line_tier ?? 0)) {
       await admin.from('profiles').update({ line_tier: newLineTier }).eq('id', user.id)
     }
-    if (unique >= (totalCount ?? Infinity)) await grantBadgeDirect(user.id, 'full_collection')
+    // Full Collection = every NON-ancient species landed. The Ancient Deep
+    // giants are a separate trophy hunt (their own badges), so they don't count
+    // here — matches the badges-page rule. Count only non-ancient species held.
+    const nonAncientIds = ((nonAncientSpecies ?? []) as { id: number }[]).map(s => s.id)
+    const nonAncientCaught = nonAncientIds.filter(id => caughtIds.has(id)).length
+    if (nonAncientIds.length > 0 && nonAncientCaught >= nonAncientIds.length) {
+      await grantBadgeDirect(user.id, 'full_collection')
+    }
   }
 
   // Track abyss streak for achievements
