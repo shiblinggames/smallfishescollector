@@ -1960,8 +1960,11 @@ function NodeDetailSheet({
                           // you need all six and 50% when you need one. Recompute against
                           // what this player actually holds, and say "Owned" for the rest
                           // rather than quoting odds on something that cannot drop.
-                          const chance = liveChance(d) ?? d.chance
                           const owned = !!d.id && ownedRaidItems.includes(d.id)
+                          // Say "Owned" on ANY raid you already hold the item on — not
+                          // just the uniqueShare crates liveChance covers — so every
+                          // boss + challenge node tells you what's already in your hold.
+                          const chance = owned ? 'Owned' : (liveChance(d) ?? d.chance)
                           return (
                             <button
                               type="button"
@@ -2084,7 +2087,7 @@ function NodeDetailSheet({
   // tapping a unique-drop chip inside the sheet opens this card without
   // closing the sheet itself. Both portal to <body> so they escape any
   // ancestor stacking context.
-  const dropModal = selectedDrop ? <DropDetailModal drop={selectedDrop} onClose={() => setSelectedDrop(null)} /> : null
+  const dropModal = selectedDrop ? <DropDetailModal drop={selectedDrop} owned={!!selectedDrop.id && ownedRaidItems.includes(selectedDrop.id)} onClose={() => setSelectedDrop(null)} /> : null
 
   // Dialogue scene — StoryScene portals itself to <body> (z-1100, above
   // the sheet). Story nodes, first read: final CTA fires the mark-read
@@ -2135,7 +2138,7 @@ function NodeDetailSheet({
 // addition to whatever the drop chip already had. Sits ABOVE the node
 // detail sheet (z-2000 vs sheet's z-1000); tapping the backdrop or the
 // X closes it without closing the underlying sheet.
-function DropDetailModal({ drop, onClose }: { drop: RaidNodeDrop; onClose: () => void }) {
+function DropDetailModal({ drop, owned, onClose }: { drop: RaidNodeDrop; owned: boolean; onClose: () => void }) {
   const rarityColor = drop.rarity ? RARITY_COLOR[drop.rarity] : '#9ca3af'
   const raidItem    = drop.raidItemId ? getRaidItem(drop.raidItemId)   : undefined
   const shipSkin    = drop.shipSkinId ? getShipSkin(drop.shipSkinId)   : undefined
@@ -2239,8 +2242,21 @@ function DropDetailModal({ drop, onClose }: { drop: RaidNodeDrop; onClose: () =>
           </p>
         )}
 
-        {/* Drop chance pill */}
-        {drop.chance && (
+        {/* Owned banner, else the drop-chance pill. */}
+        {owned ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <span className="font-karla font-700 uppercase tracking-[0.1em]"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                fontSize: '0.65rem', color: '#7fd49a',
+                background: 'rgba(127,212,154,0.14)', border: '1px solid rgba(127,212,154,0.5)',
+                borderRadius: 999, padding: '0.32rem 0.85rem',
+              }}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+              Owned · in your hold
+            </span>
+          </div>
+        ) : drop.chance ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <span className="font-karla font-700 uppercase tracking-[0.1em]"
               style={{
@@ -2251,7 +2267,7 @@ function DropDetailModal({ drop, onClose }: { drop: RaidNodeDrop; onClose: () =>
               {drop.chance} drop chance
             </span>
           </div>
-        )}
+        ) : null}
       </motion.div>
     </motion.div>
   )
