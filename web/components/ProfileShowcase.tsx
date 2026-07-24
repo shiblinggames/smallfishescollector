@@ -5,8 +5,8 @@
 // reads identically everywhere.
 //
 //  - RarestCatchesByZone: your top-3 rarest catches in EACH zone, laid out as a
-//    trophy room organized by depth (faint zone painting behind each card, the
-//    #1 catch mounted biggest). Sorted within a zone by rarity, then sell value.
+//    trophy room organized by depth on quiet uniform cards (the #1 catch mounted
+//    biggest). Sorted within a zone by rarity, then sell value.
 //  - FeaturedCrew: your flagship crew large up top, the rest as a gallery grid
 //    (no more cramped horizontal scroll strip).
 
@@ -40,15 +40,10 @@ function rarityMeta(fish: RarestFish): { color: string; label: string; ancient: 
   return { color: RARITY_COLOR[fish.bite_rarity] ?? '#94a3b8', label: RARITY_LABEL[fish.bite_rarity] ?? 'Common', ancient: false }
 }
 
-// Zone chrome — accent + faint zone painting, ordered by descending depth.
-// Accents mirror the fishing dial's DEPTHS; ancient_deep gets its own eldritch
-// magenta so it never reads as just another "deep".
-const ZONE_META: Record<string, { label: string; kicker: string; accent: string; bg: string }> = {
-  shallows:     { label: 'Shallows',     kicker: 'The Sunlit Reef', accent: '#60a5fa', bg: '/shallows.jpg' },
-  open_waters:  { label: 'Open Waters',  kicker: 'The Blue',        accent: '#34d399', bg: '/openwaters.jpg' },
-  deep:         { label: 'Deep',         kicker: 'The Twilight',    accent: '#a78bfa', bg: '/deep.jpg' },
-  abyss:        { label: 'Abyss',        kicker: 'The Midnight',    accent: '#f87171', bg: '/abyss.jpg' },
-  ancient_deep: { label: 'Ancient Deep', kicker: 'The Last Fathom', accent: '#e879f9', bg: '/ancient.jpg' },
+// Zones ordered by descending depth. Uniform card chrome — no per-zone accent
+// or backdrop (kept deliberately quiet); the rarity-colored fish carry the color.
+const ZONE_LABEL: Record<string, string> = {
+  shallows: 'Shallows', open_waters: 'Open Waters', deep: 'Deep', abyss: 'Abyss', ancient_deep: 'Ancient Deep',
 }
 const ZONE_ORDER = ['shallows', 'open_waters', 'deep', 'abyss', 'ancient_deep']
 
@@ -88,37 +83,17 @@ function TrophyTile({ fish, rank }: { fish: RarestFish; rank: number }) {
   )
 }
 
-/** A single zone card: faint painting backdrop + accent chrome + ranked podium. */
-function ZoneTrophyCard({ meta, top }: { meta: { label: string; kicker: string; accent: string; bg: string }; top: RarestFish[] }) {
-  const a = meta.accent
+/** A single zone card: uniform neutral chrome + the ranked podium. */
+function ZoneTrophyCard({ label, top }: { label: string; top: RarestFish[] }) {
   return (
     <div style={{
-      position: 'relative', borderRadius: 16, overflow: 'hidden',
-      border: `1px solid ${a}3a`, boxShadow: `0 0 24px ${a}14, inset 0 0 40px ${a}0b`,
+      borderRadius: 16, padding: '0.8rem 0.8rem 0.9rem',
+      background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.09)',
     }}>
-      {/* faint zone painting */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={meta.bg} alt="" aria-hidden loading="lazy" decoding="async"
-        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.17 }}
-        onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
-      {/* accent-tinted scrim for legibility */}
-      <div aria-hidden style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, ${a}22 0%, rgba(7,10,16,0.82) 56%, rgba(7,10,16,0.93) 100%)` }} />
-      <div style={{ position: 'relative', padding: '0.8rem 0.8rem 0.9rem' }}>
-        {/* header — zone identity left, "Rarest" star right */}
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span className="font-karla font-800 uppercase" style={{ fontSize: '0.44rem', letterSpacing: '0.22em', color: `${a}c0` }}>{meta.kicker}</span>
-            <span className="font-cinzel font-700" style={{ fontSize: '1.02rem', color: '#f2ede3', lineHeight: 1 }}>{meta.label}</span>
-          </div>
-          <span className="font-karla font-800 uppercase" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.46rem', letterSpacing: '0.16em', color: `${a}e0` }}>
-            <svg width="8" height="8" viewBox="0 0 24 24" fill={a} aria-hidden><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
-            Rarest
-          </span>
-        </div>
-        {/* podium — #1 biggest, then runners-up */}
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${top.length}, 1fr)`, gap: 8, alignItems: 'end' }}>
-          {top.map((f, i) => <TrophyTile key={f.id} fish={f} rank={i + 1} />)}
-        </div>
+      <p className="font-cinzel font-700" style={{ fontSize: '1.02rem', color: '#f2ede3', lineHeight: 1, marginBottom: 10 }}>{label}</p>
+      {/* podium — #1 biggest, then runners-up */}
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${top.length}, 1fr)`, gap: 8, alignItems: 'end' }}>
+        {top.map((f, i) => <TrophyTile key={f.id} fish={f} rank={i + 1} />)}
       </div>
     </div>
   )
@@ -132,14 +107,14 @@ export function RarestCatchesByZone({ fish }: { fish: RarestFish[] }) {
   const byZone: Record<string, RarestFish[]> = {}
   for (const f of fish) {
     const z = f.habitat ?? ''
-    if (!ZONE_META[z]) continue
+    if (!ZONE_LABEL[z]) continue
     ;(byZone[z] ||= []).push(f)
   }
   const zones = ZONE_ORDER
     .filter(z => byZone[z]?.length)
     .map(z => ({
       zone: z,
-      meta: ZONE_META[z],
+      label: ZONE_LABEL[z],
       top: byZone[z]
         .slice()
         .sort((x, y) => (y.bite_rarity - x.bite_rarity) || ((y.sell_value ?? 0) - (x.sell_value ?? 0)))
@@ -148,7 +123,7 @@ export function RarestCatchesByZone({ fish }: { fish: RarestFish[] }) {
   if (zones.length === 0) return null
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {zones.map(({ zone, meta, top }) => <ZoneTrophyCard key={zone} meta={meta} top={top} />)}
+      {zones.map(({ zone, label, top }) => <ZoneTrophyCard key={zone} label={label} top={top} />)}
     </div>
   )
 }
