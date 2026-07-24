@@ -880,10 +880,10 @@ export const RAID_MAP: RaidNode[] = [
       { text: "Under the ledgers there's a sealed letter. No name on it. Just two letters pressed into the wax: *C.K.*", pause: 700, insert: { kind: 'sealed-letter', wax: 'C.K.' } },
       { text: "The route's mostly burned away, but the heading held. Out past the Bilge Strait, into the cold." },
       { text: "Whoever C.K. is, the Finndicate trusts them with cargo by the holdful. And now you know which way it sails." },
-      { text: "A fin has been cutting your wake since the strongbox cracked. It closes the distance now, in no hurry at all.", pause: 500 },
+      { text: "A fin has been cutting your wake since the strongbox cracked. It closes the distance now, hungry and unbothered.", pause: 500 },
       { ...GUIDE.mako, text: "Bilge Strait, after one sealed letter. Most captains wouldn't sail that far on a hunch. Good thing neither of us is most captains." },
       { ...GUIDE.mako, text: "Mako. I don't waste myself in small water, and you just made yourself worth watching. Muster a crew and my name's on offer." },
-      { text: "No handshake. Sharks don't. He drifts back into the deep, unhurried, a shape you could call on when the water turns mean." },
+      { text: "No handshake. Sharks don't. He drifts back into the deep, all teeth and appetite, a shape you could call on when the water turns mean." },
     ],
     detail: {
       description:
@@ -1673,7 +1673,7 @@ export const RAID_MAP: RaidNode[] = [
     requiresNode: 'coffers_cache',
     image: '/raidlog.png',
     scene: [
-      { text: "You re-arm at the Quartermaster's Cache, the same stall that's kitted you out since the coast, while he watches from behind his counter in no hurry at all." },
+      { text: "You re-arm at the Quartermaster's Cache, the same stall that's kitted you out since the coast, while he watches from behind his counter, enjoying every moment of it." },
       { speaker: 'The Quartermaster', portrait: THE_QUARTERMASTER.enemies.quartermaster.portrait, text: "Good pick. I'd have steered you to it myself. I always do." },
       { speaker: 'The Quartermaster', portrait: THE_QUARTERMASTER.enemies.quartermaster.portrait, text: "Every captain who sails into the Coffers gets kitted out right here at my counter. Then I watch how far they get." },
       { text: "The way he says it puts a cold coin in your gut. Like he's already seen *how your story ends*.", pause: 600 },
@@ -2011,7 +2011,7 @@ export const RAID_MAP: RaidNode[] = [
       { ...GUIDE.mira, text: "Don Finleone. The one bounty in this whole sea nobody's fool enough to chase. And here you are, sailing off the last sounding to do exactly that." },
       { ...GUIDE.mira, text: "I do love a captain with no sense of self-preservation. It's the only kind worth following." },
       { ...GUIDE.mira, text: 'Mira. I hunt the marks the smart money leaves alone. When you crew up for the deepest water, put my name down. I want a good seat for this one.' },
-      { text: 'She lets her sail settle in beside yours, unhurried, the way a thing does when it has already decided how the hunt ends.' },
+      { text: "She lets her sail settle in beside yours like the hunt's already decided." },
     ],
     sceneAccent: '#6ea8d8',
     detail: {
@@ -2341,7 +2341,7 @@ export const RAID_MAP: RaidNode[] = [
       { ...GUIDE.mako, text: "Six of the biggest killers in the sea, and one enormous one at the back of the room. Do you have any idea how long I've wanted a table set like this?" },
       { ...GUIDE.kat, text: "Mako. That's not a table. That's the thing that eats the table, and everyone still sitting at it." },
       { ...GUIDE.dole, text: "The Closer there has put down more captains than the other five combined, and every one of those five is an apex the whole trade gave up trying to touch. Which makes it curious that he's the one peeling off the line to greet us. A court doesn't send its deadliest just to say hello." },
-      { text: "One hull glides out of the ring, unhurried, and stops across your bow. Close enough to read the old scars crossing his plating like a ledger of every captain he has closed.", pause: 500 },
+      { text: "One hull peels from the ring, all cold precision, and stops across your bow. Close enough to read the old scars crossing his plating like a ledger of every captain he has closed.", pause: 500 },
       { speaker: 'The Closer', portrait: THE_THRONE.enemies.the_consigliere.portrait, text: "The don sends his regards, little captain. He has read your whole story. The barnacle. The old hauler. The market. The thing on the bar. A tidy little climb." },
       { speaker: 'The Closer', portrait: THE_THRONE.enemies.the_consigliere.portrait, text: "He wanted you to hear it from me, since I keep his accounts: you will not leave this water. The line for how you sink is already written, in his own hand. You are simply the last to read it.", pause: 500 },
       { ...GUIDE.laz, text: "That's the same voice that read me my debt, a lifetime ago, in this exact water. Calm. Certain. Counting me closed before I had drawn a breath to argue." },
