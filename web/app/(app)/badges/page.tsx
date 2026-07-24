@@ -7,6 +7,7 @@ import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import AchievementsClient, { type JourneyGroup, type JourneyGoal } from '@/app/(app)/achievements/AchievementsClient'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { reconcileBadges } from '@/app/(app)/achievements/badgeActions'
+import { grantBadgeDirect } from '@/lib/badgeGrant'
 import { crewLevelFromXP, CREW_MAX_LEVEL } from '@/lib/crewLevel'
 import { CREW_HALL_MAX_TIER } from '@/lib/crewHall'
 import { GAUNTLET_UPGRADES } from '@/lib/gauntletUpgrades'
@@ -145,6 +146,17 @@ export default async function BadgesPage() {
   const collectedIds = new Set(((collectionRes.data ?? []) as { fish_id: number }[]).map(r => r.fish_id))
   const collected = [...nonAncientIds].filter(id => collectedIds.has(id)).length
   const speciesTotal = nonAncientIds.size || 134
+
+  // Full Collection is normally granted by a hook the moment you land the last
+  // species (fishing reelIn). If the collection completed some other way — a
+  // catch that slipped the hook, or backfilled data — the badge stays out of
+  // unlocked_badges, so the page offers a claim that claim_badge_reward can
+  // never persist (it only pays UNLOCKED badges) and it reappears every visit.
+  // reconcileBadges deliberately doesn't derive it, so self-heal it right here.
+  if (collected >= speciesTotal && !unlocked.includes('full_collection')) {
+    await grantBadgeDirect(user.id, 'full_collection')
+    unlocked.push('full_collection')
+  }
 
   const voyagesDone = voyageCountRes.count ?? 0
   const streakBest = profile?.highest_perfect_streak ?? 0
