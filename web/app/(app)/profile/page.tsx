@@ -28,11 +28,11 @@ export default async function ProfilePage() {
   ] = await Promise.all([
     getCurrentProfile(),
     getCrewRoster(),
+    // ALL caught fish — the per-zone Rarest Catches showcase groups + ranks
+    // these client-side (top 3 per zone by rarity, then sell value).
     admin.from('fish_collection')
-      .select('fish_species(id, name, bite_rarity, habitat)')
-      .eq('user_id', user.id)
-      .order('fish_species(bite_rarity)', { ascending: false })
-      .limit(3),
+      .select('fish_species(id, name, bite_rarity, habitat, sell_value)')
+      .eq('user_id', user.id),
     // fish_species has ~140 rows — pulling id+name for the whole table is
     // cheaper than a second round-trip just to map trophy names by id.
     admin.from('fish_species').select('id, name'),
@@ -51,7 +51,7 @@ export default async function ProfilePage() {
 
   const rarestFish = ((rarestFishRows ?? []) as any[])
     .map(r => r.fish_species)
-    .filter(Boolean) as { id: number; name: string; bite_rarity: number; habitat?: string }[]
+    .filter(Boolean) as { id: number; name: string; bite_rarity: number; habitat?: string; sell_value?: number }[]
 
   const goldenMounts = ((goldenRows ?? []) as any[])
     .map(r => r.fish_species)

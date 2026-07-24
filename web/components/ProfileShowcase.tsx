@@ -4,8 +4,9 @@
 // (owner /profile + public /u/[username]). Both render these so the flex
 // reads identically everywhere.
 //
-//  - RarestCatchesTrophy: your single rarest catch as a big HERO trophy, the
-//    rest on a shelf below.
+//  - RarestCatchesByZone: your top-3 rarest catches in EACH zone, laid out as a
+//    trophy room organized by depth (faint zone painting behind each card, the
+//    #1 catch mounted biggest). Sorted within a zone by rarity, then sell value.
 //  - FeaturedCrew: your flagship crew large up top, the rest as a gallery grid
 //    (no more cramped horizontal scroll strip).
 
@@ -26,6 +27,7 @@ export interface RarestFish {
   name: string
   bite_rarity: number
   habitat?: string
+  sell_value?: number
 }
 
 function fishImageUrl(name: string) {
@@ -38,68 +40,115 @@ function rarityMeta(fish: RarestFish): { color: string; label: string; ancient: 
   return { color: RARITY_COLOR[fish.bite_rarity] ?? '#94a3b8', label: RARITY_LABEL[fish.bite_rarity] ?? 'Common', ancient: false }
 }
 
-/** The rarest catch as a HERO trophy + a shelf of runners-up. */
-export function RarestCatchesTrophy({ fish }: { fish: RarestFish[] }) {
-  if (!fish || fish.length === 0) return null
-  const [hero, ...rest] = fish
-  const hm = rarityMeta(hero)
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      {/* ── Hero trophy ── */}
-      <div style={{
-        position: 'relative', borderRadius: 18, overflow: 'hidden', textAlign: 'center',
-        padding: '0.9rem 1rem 1.15rem',
-        background: `radial-gradient(ellipse at 50% 16%, ${hm.color}26 0%, rgba(6,10,18,0.55) 66%)`,
-        border: `1px solid ${hm.color}4a`,
-        boxShadow: `0 0 34px ${hm.color}20, inset 0 0 42px ${hm.color}0e`,
-      }}>
-        {/* Rarest ribbon */}
-        <span className="font-karla font-800 uppercase" style={{
-          display: 'inline-flex', alignItems: 'center', gap: 5, marginBottom: 4,
-          fontSize: '0.5rem', letterSpacing: '0.2em', color: hm.color,
-        }}>
-          <svg width="9" height="9" viewBox="0 0 24 24" fill={hm.color} stroke="none" aria-hidden><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
-          Rarest Catch
-        </span>
-        {/* Fish */}
-        <div style={{ height: 122, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '2px 0 8px' }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={fishImageUrl(hero.name)} alt={hero.name} loading="lazy" decoding="async"
-            style={{ maxWidth: 168, maxHeight: 118, objectFit: 'contain', filter: `drop-shadow(0 4px 16px ${hm.color}88)` }}
-            onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
-        </div>
-        <p className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: '#f4efe6', lineHeight: 1.08 }}>{hero.name}</p>
-        <span className="font-karla font-700 uppercase" style={{
-          display: 'inline-block', marginTop: 8, padding: '0.22rem 0.7rem', borderRadius: 999,
-          fontSize: '0.58rem', letterSpacing: '0.14em', color: hm.color,
-          background: `${hm.color}18`, border: `1px solid ${hm.color}45`,
-        }}>{hm.label}</span>
-      </div>
+// Zone chrome — accent + faint zone painting, ordered by descending depth.
+// Accents mirror the fishing dial's DEPTHS; ancient_deep gets its own eldritch
+// magenta so it never reads as just another "deep".
+const ZONE_META: Record<string, { label: string; kicker: string; accent: string; bg: string }> = {
+  shallows:     { label: 'Shallows',     kicker: 'The Sunlit Reef', accent: '#60a5fa', bg: '/shallows.jpg' },
+  open_waters:  { label: 'Open Waters',  kicker: 'The Blue',        accent: '#34d399', bg: '/openwaters.jpg' },
+  deep:         { label: 'Deep',         kicker: 'The Twilight',    accent: '#a78bfa', bg: '/deep.jpg' },
+  abyss:        { label: 'Abyss',        kicker: 'The Midnight',    accent: '#f87171', bg: '/abyss.jpg' },
+  ancient_deep: { label: 'Ancient Deep', kicker: 'The Last Fathom', accent: '#e879f9', bg: '/ancient.jpg' },
+}
+const ZONE_ORDER = ['shallows', 'open_waters', 'deep', 'abyss', 'ancient_deep']
 
-      {/* ── Shelf — runners-up ── */}
-      {rest.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${rest.length}, 1fr)`, gap: 8 }}>
-          {rest.map(f => {
-            const m = rarityMeta(f)
-            return (
-              <div key={f.id} style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
-                padding: '0.7rem 0.5rem 0.6rem', borderRadius: 13, textAlign: 'center',
-                background: `${m.color}0e`, border: `1px solid ${m.color}33`,
-              }}>
-                <div style={{ height: 46, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={fishImageUrl(f.name)} alt={f.name} loading="lazy" decoding="async"
-                    style={{ maxWidth: 44, maxHeight: 44, objectFit: 'contain', filter: `drop-shadow(0 2px 7px ${m.color}66)` }}
-                    onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                </div>
-                <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#e8e4dc', lineHeight: 1.15 }}>{f.name}</p>
-                <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.1em', color: m.color }}>{m.label}</span>
-              </div>
-            )
-          })}
-        </div>
+/** One zone's trophy plaque: the 3 rarest catches, #1 mounted biggest. */
+function TrophyTile({ fish, rank }: { fish: RarestFish; rank: number }) {
+  const m = rarityMeta(fish)
+  const c = m.color
+  const top = rank === 1
+  return (
+    <div style={{
+      position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+      padding: `${top ? '0.9rem' : '0.75rem'} 0.4rem 0.6rem`, borderRadius: 12, textAlign: 'center',
+      background: top ? `linear-gradient(180deg, ${c}26, rgba(0,0,0,0.32))` : `${c}10`,
+      border: `1px solid ${top ? `${c}66` : `${c}30`}`,
+      boxShadow: top ? `0 0 18px ${c}30, inset 0 1px 0 ${c}33` : 'none',
+    }}>
+      {/* rank chip — encodes the rarity→sell ordering; #1 wears gold */}
+      <span className="font-karla font-800" aria-hidden style={{
+        position: 'absolute', top: 5, left: 5, width: 15, height: 15, borderRadius: 999,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.5rem', lineHeight: 1,
+        color: top ? '#1a1206' : '#cbd3df',
+        background: top ? GOLD : 'rgba(255,255,255,0.1)',
+        border: top ? 'none' : '1px solid rgba(255,255,255,0.18)',
+      }}>{rank}</span>
+      <div style={{ height: top ? 64 : 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={fishImageUrl(fish.name)} alt={fish.name} loading="lazy" decoding="async"
+          style={{ maxWidth: top ? 80 : 58, maxHeight: top ? 60 : 46, objectFit: 'contain', filter: `drop-shadow(0 3px 10px ${c}80)` }}
+          onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+      </div>
+      <p className="font-cinzel font-700" style={{ fontSize: top ? '0.76rem' : '0.64rem', color: '#f0ebe1', lineHeight: 1.12 }}>{fish.name}</p>
+      <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.1em', color: c }}>{m.label}</span>
+      {fish.sell_value != null && fish.sell_value > 0 && (
+        <span className="font-karla font-700" style={{ fontSize: '0.54rem', color: '#e8c96a', fontVariantNumeric: 'tabular-nums' }}>⟡ {fish.sell_value.toLocaleString()}</span>
       )}
+    </div>
+  )
+}
+
+/** A single zone card: faint painting backdrop + accent chrome + ranked podium. */
+function ZoneTrophyCard({ meta, top }: { meta: { label: string; kicker: string; accent: string; bg: string }; top: RarestFish[] }) {
+  const a = meta.accent
+  return (
+    <div style={{
+      position: 'relative', borderRadius: 16, overflow: 'hidden',
+      border: `1px solid ${a}3a`, boxShadow: `0 0 24px ${a}14, inset 0 0 40px ${a}0b`,
+    }}>
+      {/* faint zone painting */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={meta.bg} alt="" aria-hidden loading="lazy" decoding="async"
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.17 }}
+        onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+      {/* accent-tinted scrim for legibility */}
+      <div aria-hidden style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, ${a}22 0%, rgba(7,10,16,0.82) 56%, rgba(7,10,16,0.93) 100%)` }} />
+      <div style={{ position: 'relative', padding: '0.8rem 0.8rem 0.9rem' }}>
+        {/* header — zone identity left, "Rarest" star right */}
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span className="font-karla font-800 uppercase" style={{ fontSize: '0.44rem', letterSpacing: '0.22em', color: `${a}c0` }}>{meta.kicker}</span>
+            <span className="font-cinzel font-700" style={{ fontSize: '1.02rem', color: '#f2ede3', lineHeight: 1 }}>{meta.label}</span>
+          </div>
+          <span className="font-karla font-800 uppercase" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.46rem', letterSpacing: '0.16em', color: `${a}e0` }}>
+            <svg width="8" height="8" viewBox="0 0 24 24" fill={a} aria-hidden><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
+            Rarest
+          </span>
+        </div>
+        {/* podium — #1 biggest, then runners-up */}
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${top.length}, 1fr)`, gap: 8, alignItems: 'end' }}>
+          {top.map((f, i) => <TrophyTile key={f.id} fish={f} rank={i + 1} />)}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** Top-3 rarest catches in EACH zone the player has fished — a trophy room by
+ *  depth. Within a zone, sorted by rarity, then doubloon sell value. Zones with
+ *  no catches are omitted. Pass the player's FULL caught-fish list. */
+export function RarestCatchesByZone({ fish }: { fish: RarestFish[] }) {
+  if (!fish || fish.length === 0) return null
+  const byZone: Record<string, RarestFish[]> = {}
+  for (const f of fish) {
+    const z = f.habitat ?? ''
+    if (!ZONE_META[z]) continue
+    ;(byZone[z] ||= []).push(f)
+  }
+  const zones = ZONE_ORDER
+    .filter(z => byZone[z]?.length)
+    .map(z => ({
+      zone: z,
+      meta: ZONE_META[z],
+      top: byZone[z]
+        .slice()
+        .sort((x, y) => (y.bite_rarity - x.bite_rarity) || ((y.sell_value ?? 0) - (x.sell_value ?? 0)))
+        .slice(0, 3),
+    }))
+  if (zones.length === 0) return null
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {zones.map(({ zone, meta, top }) => <ZoneTrophyCard key={zone} meta={meta} top={top} />)}
     </div>
   )
 }

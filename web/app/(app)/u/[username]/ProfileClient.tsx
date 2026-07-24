@@ -22,7 +22,7 @@ import { DEFAULT_AVATAR_BG_COLOR, DEFAULT_AVATAR_BORDER_COLOR } from '@/lib/avat
 import { getProfileBackground } from '@/lib/profileBackgrounds'
 import AncientBgEffect from '@/components/AncientBgEffect'
 import { StatTile, CoinAmount } from '@/components/ProfileStats'
-import { RarestCatchesTrophy, FeaturedCrew, RaidArsenal, GoldenMounts, type GoldenMount } from '@/components/ProfileShowcase'
+import { RarestCatchesByZone, FeaturedCrew, RaidArsenal, GoldenMounts, type GoldenMount } from '@/components/ProfileShowcase'
 import type { CareerStats } from '@/lib/careerStats'
 
 export interface VoyageEntry {
@@ -58,7 +58,7 @@ interface Props {
   showcaseCrew: ShowcaseCrew[]
   stats: Stats
   gear: Gear
-  rarestFish: { id: number; name: string; bite_rarity: number; habitat?: string }[]
+  rarestFish: { id: number; name: string; bite_rarity: number; habitat?: string; sell_value?: number }[]
   goldenMounts: GoldenMount[]
   equippedBoat?: string | null
   equippedHat?: string | null
@@ -465,11 +465,11 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
           )}
           </div>
 
-          {/* Rarest Catches — trophy hero + shelf */}
+          {/* Rarest Catches — top 3 per zone, a trophy room by depth */}
           {rarestFish.length > 0 && (
             <div>
-              <SectionLabel>Rarest Catches</SectionLabel>
-              <RarestCatchesTrophy fish={rarestFish} />
+              <SectionLabel flavor="The three rarest trophies from every water they've fished.">Rarest Catches</SectionLabel>
+              <RarestCatchesByZone fish={rarestFish} />
             </div>
           )}
 

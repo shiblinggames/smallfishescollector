@@ -72,11 +72,11 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
 
     admin.from('fish_collection').select('fish_id', { count: 'exact', head: true }).eq('user_id', profile.id),
 
+    // ALL caught fish — the per-zone Rarest Catches showcase groups + ranks
+    // these client-side (top 3 per zone by rarity, then sell value).
     admin.from('fish_collection')
-      .select('fish_species(id, name, bite_rarity, habitat)')
-      .eq('user_id', profile.id)
-      .order('fish_species(bite_rarity)', { ascending: false })
-      .limit(3),
+      .select('fish_species(id, name, bite_rarity, habitat, sell_value)')
+      .eq('user_id', profile.id),
 
     user ? admin.from('profiles').select('packs_available, doubloons, gems').eq('id', user.id).single() : Promise.resolve({ data: null }),
 
@@ -130,8 +130,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
 
   const rarestFish = ((rarestFishData.data ?? []) as any[])
     .map(r => r.fish_species)
-    .filter(Boolean)
-    .slice(0, 3) as { id: number; name: string; bite_rarity: number; habitat?: string }[]
+    .filter(Boolean) as { id: number; name: string; bite_rarity: number; habitat?: string; sell_value?: number }[]
 
   const agg = (careerAgg ?? {}) as Partial<CareerAggregates>
   const career: CareerStats = {
