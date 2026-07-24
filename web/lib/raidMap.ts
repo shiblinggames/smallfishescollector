@@ -2120,13 +2120,13 @@ export const RAID_MAP: RaidNode[] = [
     // told once, in a place where it cost them nothing to learn.
     id: 'thing_on_the_bar', type: 'story',
     label: 'The Thing on the Bar',
-    flavor: 'Something long and low lies on the mud bar off the point. The lookout calls it a fallen spar and goes back to his knots. It is still there an hour later, in exactly the same place, and it has not moved once.',
+    flavor: 'Something long and low lies on the drowned bar, where the last sunken channel spills over into the deep. The lookout calls it a fallen spar and goes back to his knots. It is still there an hour later, in exactly the same place, and it has not moved once.',
     bridge: 'The spar was not a spar. It was waiting, and it was in no hurry at all.',
     requiresNode: 'blockade_muster',
     scene: [
-      { text: 'The lookout calls a spar on the mud bar off the point. Half-sunk, barnacled, drifted down from some wreck upriver. Nobody looks twice.' },
+      { text: 'The lookout calls a spar on the drowned bar at the lip of the drop. Half-sunk, barnacled, settled off some wreck down the sunken channel. Nobody looks twice.' },
       { text: 'An hour on, the bosun notices it is still there. Same bar. Same angle. The tide has moved a foot and a half in that time and the spar *has not moved at all*.', pause: 700 },
-      { text: 'A spar drifts. A spar rolls with the water. This one is lying against the current, and it is lying *very deliberately*.', pause: 600 },
+      { text: 'A spar drifts. A spar rolls with the water. This one is lying against the pull of the deep, and it is lying *very deliberately*.', pause: 600 },
       { text: 'You watch it for a long minute. It does not move. Nothing about it moves. Then, without any part of it seeming to turn, you are aware that *it is facing you*.', pause: 1100, fx: 'shake' },
       { text: 'The blockade line is ahead. So is he. Remember this: when the water goes flat and nothing at all is happening, that is not nothing happening. *That is him deciding.*', pause: 800 },
       { ...GUIDE.kat, text: "A thing that does not move is a thing that has already decided you are food. I have pulled too many crews off too many decks not to know the look. Do not blink first, captain." },
@@ -2136,10 +2136,10 @@ export const RAID_MAP: RaidNode[] = [
     sceneAccent: '#e8e4dc',
     detail: {
       description:
-        "A spar on the mud bar that does not drift, does not roll, and does not move with the tide. Watch it long enough and you understand it is not wreckage. It is waiting.\n\nRemember the shape of it: when the water goes flat and nothing seems to be happening, that is Sal deciding.",
+        "A spar on the drowned bar that does not drift, does not roll, and does not move with the tide. Watch it long enough and you understand it is not wreckage. It is waiting.\n\nRemember the shape of it: when the water goes flat and nothing seems to be happening, that is Sal deciding.",
       dropsNote: 'The tell, learned for free instead of the hard way.',
       ctaLabel: 'Watch It →',
-      summary: 'A spar on the mud bar that never drifted. It was not a spar, and it had been watching for some time.',
+      summary: 'A spar on the drowned bar that never drifted. It was not a spar, and it had been watching for some time.',
     },
   },
   {
@@ -2302,7 +2302,7 @@ export const RAID_MAP: RaidNode[] = [
       { ...GUIDE.kat, text: "Mako. That is not a table. That is the thing that eats the table, and everyone still sitting at it." },
       { ...GUIDE.dole, text: "The Closer there has put down more captains than the other five combined, and every one of those five is an apex the whole trade gave up trying to touch. Which makes it curious that he is the one peeling off the line to greet us. A court does not send its deadliest just to say hello." },
       { text: "One hull glides out of the ring, unhurried, and stops across your bow. Close enough to read the old scars crossing his plating like a ledger of every captain he has closed.", pause: 500 },
-      { speaker: 'The Closer', portrait: THE_THRONE.enemies.the_consigliere.portrait, text: "The don sends his regards, little captain. He has read your whole story. The barnacle. The old hauler. The market. The thing in the estuary. A tidy little climb." },
+      { speaker: 'The Closer', portrait: THE_THRONE.enemies.the_consigliere.portrait, text: "The don sends his regards, little captain. He has read your whole story. The barnacle. The old hauler. The market. The thing on the bar. A tidy little climb." },
       { speaker: 'The Closer', portrait: THE_THRONE.enemies.the_consigliere.portrait, text: "He wanted you to hear it from me, since I keep his accounts: you will not leave this water. The line for how you sink is already written, in his own hand. You are simply the last to read it.", pause: 500 },
       { ...GUIDE.laz, text: "That is the same voice that read me my debt, a lifetime ago, in this exact water. Calm. Certain. Counting me closed before I had drawn a breath to argue." },
       { ...GUIDE.laz, text: "It was wrong about me. I am still here." },

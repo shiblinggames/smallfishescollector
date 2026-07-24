@@ -25,8 +25,17 @@ export default async function CaptainsLogPage() {
     .filter(v => v.status === 'cleared')
     .map(v => {
       const n = v.node
+      // Recap badge bucket. Combat (skirmish/raid), milestone, and berth (a
+      // ship-refit "Port of Call") are their own kinds; EVERYTHING ELSE carries
+      // narrative — story, muster, event, class pick, puzzle, fork, dice — so it
+      // reads as "Story" instead of being mislabeled "Port of Call" by a
+      // catch-all (musters and the cartographer_reveal event were showing as
+      // shops).
       const kind: 'story' | 'combat' | 'milestone' | 'shop' =
-        n.type === 'story' ? 'story' : isCombatNode(n.type) ? 'combat' : n.type === 'milestone' ? 'milestone' : 'shop'
+        isCombatNode(n.type) ? 'combat'
+          : n.type === 'milestone' ? 'milestone'
+          : n.type === 'berth' ? 'shop'
+          : 'story'
       return { label: n.label, kind, lines: [n.bridge ?? n.flavor], image: n.image ?? null }
     })
   const raidNextView = raidViews.find(v => v.status === 'available')
