@@ -6806,6 +6806,10 @@ export default function RaidCombat({
               // presence whatsoever before now: you spent your legendary and got
               // nothing back until it either saved you or died with the enemy.
               ...(vengeanceWardTurns > 0 ? [{ key: 'ward', color: '#d1495b', tone: 'buff' as const, turns: vengeanceWardTurns, title: `Vengeance Ward — a killing blow in the next ${vengeanceWardTurns} turn${vengeanceWardTurns === 1 ? '' : 's'} is cheated. Let it run out and it is wasted.` }] : []),
+              // Anchor brace — a one-hit damage CUT (not a shield pool), so it
+              // gets its OWN steel chip + iron-clamp icon, distinct from the
+              // shield glyphs and the cyan/amber shield-pool bar segments.
+              ...((anchorReductionPct ?? 0) > 0 ? [{ key: 'brace', color: '#9eb0cd', tone: 'buff' as const, title: `Braced — the next hit against you is cut by ${Math.round((anchorReductionPct ?? 0) * 100)}%` }] : []),
               ...(playerBurning ? [{ key: 'burn', color: '#fb923c', title: 'Ablaze — burning each turn (a crew heal puts it out)' }] : []),
               ...(playerFrozen ? [{ key: 'freeze', color: '#7dd3fc', title: 'Frozen — your turn is skipped' }] : []),
               ...(aimAffliction ? [{ key: 'aim', color: AIM_AFFLICTION_COLOR, tone: 'debuff' as const, turns: aimAfflictionRef.current?.passes, title: `${aimAffliction.name} — ${aimAfflictionDesc(aimAffliction.kind, aimAfflictionRef.current?.passes ?? 0)}` }] : []),
@@ -8446,6 +8450,7 @@ function StatusGlyph({ icon, size = 10 }: { icon: string; size?: number }) {
     case 'aegis':   return P('M4 6.5h16v11H4z', <path d="M4 12h16M9 6.5V12M15 12v5.5" />)                // brick wall
     case 'ward':    return P('M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z', <path d="M12 8v6M9.2 10.4h5.6" />) // shield + cross (Laz's ward)
     case 'aim':     return P('M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4', <circle cx="12" cy="12" r="4.5" />) // crosshair (aim afflictions)
+    case 'brace':   return P('M9 5H5V9M15 5H19V9M19 15V19H15M9 19H5V15')                                  // iron-clamp corner brackets (Anchor brace — a damage cut, not a shield)
     default:        return P('M12 5v14M5 12h14')
   }
 }
