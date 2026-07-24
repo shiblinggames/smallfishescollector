@@ -761,7 +761,7 @@ export const RAID_MAP: RaidNode[] = [
       { text: "Little crews. Fishing folk. The odd unlucky angler. Anyone too small to swing back." },
       { ...GUIDE.kat, text: "And here's the part that never sat right with me. Pete steals a fortune and stays poor as a barnacle." },
       { speaker: 'A Passing Sailor', text: "Pete don't spend his haul. He delivers it." },
-      { text: "Said once, by a sailor who knew better than to say it twice." },
+      { text: "Said once, by a sailor who never said it again." },
       { text: "The rest sails off to *someone Pete would rather you never asked about*. So nobody asks.", pause: 700 },
       { ...GUIDE.doby, text: "You've got a boat, a free afternoon, and no manners worth mentioning. Kat and I have sailed with worse. We're with you." },
       { speaker: 'Barnacle Pete', portrait: CORSAIRS_RECKONING.enemies.pete.portrait, text: "Broke, me? Couldn't rob a rockpool. Now mind yer business, guppy." },
@@ -776,7 +776,7 @@ export const RAID_MAP: RaidNode[] = [
         {
           emoji: '📜',
           label: "Captain's Logbook, Fragment I",
-          sublabel: "\"Pete don't spend his haul. He delivers it.\" Said once, by a sailor who knew better than to say it twice.",
+          sublabel: "\"Pete don't spend his haul. He delivers it.\" Said once, by a sailor who never said it again.",
           rarity: 'common',
         },
       ],
@@ -1304,7 +1304,7 @@ export const RAID_MAP: RaidNode[] = [
       { text: "The Cartographer's charts and Krust's beacon map finally point the same way, and the old charts leave that spot blank. No depth, no name. Just a warning nobody bothered to finish writing." },
       { ...GUIDE.mako, text: "The Cartographer folded like a wet chart. And still every line he ever drew runs to the same place. Down." },
       { ...GUIDE.doby, text: "Because he was never the place, small fry. Only the finger pointing at it." },
-      { ...GUIDE.kat, text: "The crews out here have a name for that water. I have watched grown captains go quiet rather than say it twice." },
+      { ...GUIDE.kat, text: "The crews out here have a name for that water. I've watched grown captains find something else to look at rather than give it to me." },
       { text: "The Gullet. Where the sea swallows everything down.", pause: 900, fx: 'shake' },
       { ...GUIDE.dole, text: "The Gullet. Everyone says it like a curse. It's a current with excellent marketing." },
       { ...GUIDE.dole, text: "Three charts, one point of water, and no two agree on the depth. Warnings are cheaper than that. Somebody wants this water unvisited." },
@@ -1314,7 +1314,7 @@ export const RAID_MAP: RaidNode[] = [
     sceneAccent: '#8fa76b',
     detail: {
       description:
-        "The Cartographer's charts and Krust's beacon map finally agree: every freight lane bends to one drowned anchorage far past the danger line, the place the old charts leave blank with only a warning. The crews call it the Gullet, and they don't say it twice. Whatever the Finndicate takes off the weak gets swallowed down there, and that's exactly where you're bound.",
+        "The Cartographer's charts and Krust's beacon map finally agree: every freight lane bends to one drowned anchorage far past the danger line, the place the old charts leave blank with only a warning. The crews call it the Gullet, and say it as little as they can. Whatever the Finndicate takes off the weak gets swallowed down there, and that's exactly where you're bound.",
       drops: [
         { emoji: '📜', label: "Captain's Logbook, Fragment VI", sublabel: "\"Nothing the Finndicate takes ever gets spent. It just gets swallowed.\"", rarity: 'uncommon' },
       ],
