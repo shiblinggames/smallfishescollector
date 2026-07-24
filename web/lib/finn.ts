@@ -334,10 +334,11 @@ export const FINN_REVEAL_BEAT: FinnBeat = {
     "First trophy up out of the Ancient Deep. In one piece. You actually did it.",
     "Listen to me. Whatever you think you're holding, you're holding less than half of it.",
     "There are five more down there. Five. And I need every one of them landed.",
-    "...need. Strong word, for a captain who's meant to be your rival. Let's call it want.",
+    "...need. Poor word for a rival. Let's call it want.",
     "I have spent more of my life on that black water than I will ever tell you, and not once did it open for me. Not once.",
     "It's opening for you.",
     "So here's the new bet, the only one that ever mattered. You and me. All six.",
+    "I didn't come to this dock to fish, if you must know. I came to find someone who could. Took longer than I'd have liked.",
     "Don't ask me why. Just fish.",
   ],
 }
@@ -546,7 +547,6 @@ export const FINN_EPILOGUE_LORE_LINES: string[] = [
   "I've burned more rigs on that deep than you've owned in your life. Never kept a single bite.",
   "The deep knows who it'll allow down. I'm not on its list. You might be.",
   "Six trophies in one hand. You've no notion what that unlocks. You will.",
-  "I didn't come to this dock to fish, if you must know. I came to find someone who could. Took longer than I'd have liked.",
 ]
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
