@@ -13,6 +13,12 @@ import { snapshotLoadout } from '@/lib/shipBattle/loadout'
 import { isPvpTester } from '@/lib/shipBattle/access'
 import { resolveRound, lastActionOf, defaultFx, type BattleLoadout, type BattleMove, type BattleAbility, type BattleFx, type BattleAction, type ShotResult, type RoundStep } from '@/lib/shipBattle/resolver'
 
+// Broadsides (PvP) is PARKED — "Coming Soon" to everyone (2026-07-23). Every
+// mutating duel action refuses while this is false, so no new duels can start or
+// advance even via a direct API call. Flip to true to bring PvP back.
+const PVP_ENABLED = false
+const PVP_CLOSED = { error: 'Broadsides is coming soon.' } as const
+
 type Side = 'challenger' | 'opponent'
 
 // Presence: a captain counts as "online" if they pinged a duel surface within
@@ -63,6 +69,7 @@ async function authUser() {
 
 // ── Create ────────────────────────────────────────────────────────────────
 export async function createShipBattle(opponentUsername: string): Promise<{ id: string } | { error: string }> {
+  if (!PVP_ENABLED) return PVP_CLOSED
   const user = await authUser()
   if (!user) return { error: 'Unauthorized' }
   const admin = createAdminClient()
@@ -110,6 +117,7 @@ export async function createShipBattle(opponentUsername: string): Promise<{ id: 
 
 // ── Accept / Decline ────────────────────────────────────────────────────────
 export async function acceptShipBattle(id: string): Promise<{ ok: true } | { error: string }> {
+  if (!PVP_ENABLED) return PVP_CLOSED
   const user = await authUser()
   if (!user) return { error: 'Unauthorized' }
   const admin = createAdminClient()
@@ -147,6 +155,7 @@ export async function acceptShipBattle(id: string): Promise<{ ok: true } | { err
 }
 
 export async function declineShipBattle(id: string): Promise<{ ok: true } | { error: string }> {
+  if (!PVP_ENABLED) return PVP_CLOSED
   const user = await authUser()
   if (!user) return { error: 'Unauthorized' }
   const admin = createAdminClient()
@@ -162,6 +171,7 @@ export async function declineShipBattle(id: string): Promise<{ ok: true } | { er
 
 // ── Submit a move (resolves the round when both are in) ──────────────────────
 export async function submitBattleMove(id: string, action: BattleAction, aimResult?: ShotResult, ability?: BattleAbility): Promise<{ ok: true; resolved: boolean } | { error: string }> {
+  if (!PVP_ENABLED) return PVP_CLOSED
   const user = await authUser()
   if (!user) return { error: 'Unauthorized' }
   const admin = createAdminClient()

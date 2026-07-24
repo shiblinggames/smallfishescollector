@@ -22,7 +22,6 @@ import { settleUltimateBuild } from '@/lib/ultimateBuild'
 import { SkeletonBox } from '@/components/Skeleton'
 import type { VoyageHistoryEntry } from './VoyageHistory'
 import { getShipBattles } from '@/app/(app)/social/shipBattleActions'
-import { isPvpTester } from '@/lib/shipBattle/access'
 import { getCrew } from '@/app/(app)/social/actions'
 
 // Streaming pattern: the page paints its shell + Nav as soon as the profile
@@ -225,11 +224,11 @@ async function ExpeditionHub() {
     cachedVoyageHistory(),
   ])
 
-  // PvP + Gauntlets hub cards are locked as "Coming Soon" for the public. The
-  // PvP door opens for admins AND the duel testers (isPvpTester); everyone else
-  // sees it locked. Only fetch the PvP duel state when the door is open.
-  const isAdmin = profile?.is_admin === true
-  const canPvp = isAdmin || isPvpTester(profile?.username)
+  // Broadsides (PvP) is PARKED — "Coming Soon" to EVERYONE now (2026-07-23),
+  // admins + duel testers included. Flip back to `isAdmin || isPvpTester(...)`
+  // when the feature returns. The mutating duel actions are blocked server-side
+  // too (shipBattleActions.PVP_ENABLED), so this is a UI + API lock, not just a hide.
+  const canPvp = false
   const pvp = canPvp
     ? await (async () => {
         const [{ battles, wins, losses }, friends] = await Promise.all([getShipBattles(), getCrew()])

@@ -155,7 +155,7 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
   const raidDmg = Number(p.highest_raid_damage ?? 0)
   const parlorStreak = Number(p.parlor_best_streak ?? 0)   // best consecutive-correct run
   const parlorPoints = Number(p.parlor_points ?? 0)         // accumulated Parlor rank points
-  const pvpWins = Number(p.pvp_wins ?? 0)
+  // pvpWins retired 2026-07-23 with the Broadsides badges (PvP parked).
   const doubloons = Number(p.doubloons ?? 0)
   const tideBest = Number(p.tide_run_best_distance ?? 0)
   const puzzlePoints = Number(p.puzzle_points ?? 0)
@@ -209,9 +209,12 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
     two_for_the_pot: Number(p.fishing_double_catches ?? 0) >= 1,
     saltlung:       Number(p.fishing_casts ?? 0) >= 1000,
     crate_digger:   Number(p.fishing_crates_opened ?? 0) >= 50,
-    first_blood:    pvpWins >= 1,
-    brawler:        pvpWins >= 10,
-    duelist:        pvpWins >= 25,
+    // Broadsides (PvP) PARKED 2026-07-23 — reconcile no longer grants these, so
+    // they can't come back after the SQL wipe. Restore with the feature (pvp_wins
+    // data is preserved, so re-enabling will re-grant past winners).
+    // first_blood:    pvpWins >= 1,
+    // brawler:        pvpWins >= 10,
+    // duelist:        pvpWins >= 25,
     quartermaster:  puzzlePoints >= 40,
     den_magnate:    puzzlePoints >= 80,   // "Chartwright" (display name); condition unchanged
     the_long_watch: puzzlePoints >= 500,

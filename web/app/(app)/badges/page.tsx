@@ -66,7 +66,7 @@ export default async function BadgesPage() {
   const recruits = Number(profile?.lifetime_recruits ?? 0)
   const gauntletDeepest = Number(profile?.gauntlet_deepest ?? 0)
   const gauntletFathoms = Number(profile?.gauntlet_fathoms ?? 0)
-  const pvpWins = Number(profile?.pvp_wins ?? 0)
+  // pvpWins retired 2026-07-23 with the Broadsides section (PvP parked).
   const puzzlePoints = Number(profile?.puzzle_points ?? 0)
   const chartedLandmarks = ((profile?.charting_landmarks_claimed as number[] | null) ?? []).length
   const highestRaidDmg = Number(profile?.highest_raid_damage ?? 0)
@@ -388,16 +388,17 @@ export default async function BadgesPage() {
         badgeGoal('untouched', 'Untouched', "Bank a Don's Gauntlet run from depth 5 without taking a hit", has('untouched') ? 1 : 0, 1, '/raids', { binary: true }),
       ],
     },
-    {
-      title: 'Broadsides',
-      flavor: 'Captain against captain, gun against gun.',
-      accent: '#f87171',
-      goals: [
-        badgeGoal('first_blood', 'First Blood', 'Win a ship duel', pvpWins, 1, '/expeditions'),
-        badgeGoal('brawler', 'Broadside Brawler', 'Win 10 ship duels', pvpWins, 10, '/expeditions'),
-        badgeGoal('duelist', 'Duelist', 'Win 25 ship duels', pvpWins, 25, '/expeditions'),
-      ],
-    },
+    // Broadsides (PvP) section PARKED 2026-07-23 — restore with the feature.
+    // {
+    //   title: 'Broadsides',
+    //   flavor: 'Captain against captain, gun against gun.',
+    //   accent: '#f87171',
+    //   goals: [
+    //     badgeGoal('first_blood', 'First Blood', 'Win a ship duel', pvpWins, 1, '/expeditions'),
+    //     badgeGoal('brawler', 'Broadside Brawler', 'Win 10 ship duels', pvpWins, 10, '/expeditions'),
+    //     badgeGoal('duelist', 'Duelist', 'Win 25 ship duels', pvpWins, 25, '/expeditions'),
+    //   ],
+    // },
     {
       title: 'The Chart Room',
       flavor: 'For the thinkers among the deckhands.',

@@ -102,10 +102,10 @@ export const BADGES: Badge[] = [
   // Repointed from the retired "Davy Jones' Victor" (old Locker raid).
   { id: 'davy_jones',     name: "Davy Jones' Locker", description: 'Descend to depth 10 in the Gauntlet',             imageUrl: '/badges/davy_jones.png',     difficulty: 'veteran'  },
 
-  // ── Broadsides (PvP) ─────────────────────────────────────────────────────
-  { id: 'first_blood',    name: 'First Blood',        description: 'Win a ship duel',                                 imageUrl: '/badges/first_blood.png',    difficulty: 'rookie'   },
-  { id: 'brawler',        name: 'Broadside Brawler',  description: 'Win 10 ship duels',                               imageUrl: '/badges/brawler.png',        difficulty: 'seasoned' },
-  { id: 'duelist',        name: 'Duelist',            description: 'Win 25 ship duels',                               imageUrl: '/badges/duelist.png',        difficulty: 'veteran'  },
+  // ── Broadsides (PvP) — PARKED 2026-07-23; restore these three with the feature.
+  // { id: 'first_blood',    name: 'First Blood',        description: 'Win a ship duel',                                 imageUrl: '/badges/first_blood.png',    difficulty: 'rookie'   },
+  // { id: 'brawler',        name: 'Broadside Brawler',  description: 'Win 10 ship duels',                               imageUrl: '/badges/brawler.png',        difficulty: 'seasoned' },
+  // { id: 'duelist',        name: 'Duelist',            description: 'Win 25 ship duels',                               imageUrl: '/badges/duelist.png',        difficulty: 'veteran'  },
 
   // ── The Chart Room ───────────────────────────────────────────────────────
   { id: 'landfall',       name: 'Landfall',           description: 'Chart your first World Chart landmark',            imageUrl: '/badges/landfall.png',       difficulty: 'rookie'   },
@@ -342,9 +342,10 @@ export const BADGE_DETAIL: Record<string, string> = {
   into_the_deep:    'Descend to depth 5 in the Davy Jones Gauntlet on a single run.',
   fathomless:       'Bank 500 Fathoms across all your Gauntlet runs.',
   davy_jones:       'Reach depth 10 in the Gauntlet — about as deep as anyone has gone.',
-  first_blood:      'Win your first ship duel against another captain.',
-  brawler:          'Win 10 ship duels.',
-  duelist:          'Win 25 ship duels — a feared name on the ladder.',
+  // Broadsides (PvP) lore — PARKED 2026-07-23; restore with the feature.
+  // first_blood:      'Win your first ship duel against another captain.',
+  // brawler:          'Win 10 ship duels.',
+  // duelist:          'Win 25 ship duels — a feared name on the ladder.',
   landfall:         'Chart your first landmark on the World Chart. The fog parts, and the sea starts to fill in.',
   quartermaster:    'Bank 40 charting points from the Chart Room puzzles.',
   den_magnate:      'Bank 80 charting points from the Chart Room puzzles.',
