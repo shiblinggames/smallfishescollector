@@ -648,6 +648,7 @@ function NodeDetailSheet({
   doubloons,
   navLevel,
   ownedRaidItems,
+  ownedShipSkins,
   equippedRaidItems,
   shipClasses,
   raidRecords,
@@ -663,6 +664,7 @@ function NodeDetailSheet({
   doubloons: number
   navLevel: number
   ownedRaidItems: string[]
+  ownedShipSkins: string[]
   equippedRaidItems: string[]
   shipClasses: Record<string, string>
   raidRecords: RaidRecords | null
@@ -1907,12 +1909,19 @@ function NodeDetailSheet({
               // The sheet knows what the player owns, so it can just tell the truth.
               const cfg = node.raidId ? getRaidConfigById(node.raidId) : undefined
               const share = cfg?.uniqueShare
+              // Ownership spans BOTH raid_items AND ship_skins — a hull drop is
+              // "owned" via profiles.ship_skins (its shipSkinId), never raid_items,
+              // so an items-only check silently missed every ship-skin drop.
+              const dropOwned = (d: RaidNodeDrop): boolean =>
+                (!!d.id && ownedRaidItems.includes(d.id)) || (!!d.shipSkinId && ownedShipSkins.includes(d.shipSkinId))
+              const lootOwned = (l: { id: string; shipSkinId?: string }): boolean =>
+                ownedRaidItems.includes(l.id) || (!!l.shipSkinId && ownedShipSkins.includes(l.shipSkinId))
               const liveChance = (d: RaidNodeDrop): string | undefined => {
                 if (share == null || !cfg || !d.id) return undefined
                 const row = cfg.loot.find(l => l.id === d.id)
                 if (!row || !isUniqueLoot(row)) return undefined
-                if (ownedRaidItems.includes(d.id)) return 'Owned'
-                const missing = cfg.loot.filter(l => isUniqueLoot(l) && !ownedRaidItems.includes(l.id))
+                if (dropOwned(d)) return 'Owned'
+                const missing = cfg.loot.filter(l => isUniqueLoot(l) && !lootOwned(l))
                 const totalW = missing.reduce((a, l) => a + l.weight, 0)
                 if (totalW <= 0) return undefined
                 return `${Math.round(share * (row.weight / totalW) * 100)}%`
@@ -1960,7 +1969,7 @@ function NodeDetailSheet({
                           // you need all six and 50% when you need one. Recompute against
                           // what this player actually holds, and say "Owned" for the rest
                           // rather than quoting odds on something that cannot drop.
-                          const owned = !!d.id && ownedRaidItems.includes(d.id)
+                          const owned = dropOwned(d)
                           // Say "Owned" on ANY raid you already hold the item on — not
                           // just the uniqueShare crates liveChance covers — so every
                           // boss + challenge node tells you what's already in your hold.
@@ -2087,7 +2096,7 @@ function NodeDetailSheet({
   // tapping a unique-drop chip inside the sheet opens this card without
   // closing the sheet itself. Both portal to <body> so they escape any
   // ancestor stacking context.
-  const dropModal = selectedDrop ? <DropDetailModal drop={selectedDrop} owned={!!selectedDrop.id && ownedRaidItems.includes(selectedDrop.id)} onClose={() => setSelectedDrop(null)} /> : null
+  const dropModal = selectedDrop ? <DropDetailModal drop={selectedDrop} owned={(!!selectedDrop.id && ownedRaidItems.includes(selectedDrop.id)) || (!!selectedDrop.shipSkinId && ownedShipSkins.includes(selectedDrop.shipSkinId))} onClose={() => setSelectedDrop(null)} /> : null
 
   // Dialogue scene — StoryScene portals itself to <body> (z-1100, above
   // the sheet). Story nodes, first read: final CTA fires the mark-read
@@ -2823,7 +2832,7 @@ function RepairBlockedModal({
 
 /* ─────────────────────── Collapsible section ─────────────────── */
 
-export default function RaidsSection({ views, doubloons, navLevel, playerShipImage, raidRecords, repairOwed, ownedRaidItems, equippedRaidItems, shipClasses, seenChapterUnlocks, seenUltimateUnlock, raidNodeChoices, topRaidProgress, hasSixthBerth = false, hasArmoryExpansion = false, musterParty = [] }: { views: RaidNodeView[]; doubloons: number; navLevel: number; playerShipImage?: string; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[]; equippedRaidItems: string[]; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; seenUltimateUnlock: boolean; raidNodeChoices: Record<string, string>; topRaidProgress: { username: string; score: number } | null; hasSixthBerth?: boolean; hasArmoryExpansion?: boolean; musterParty?: MusterCrew[] }) {
+export default function RaidsSection({ views, doubloons, navLevel, playerShipImage, raidRecords, repairOwed, ownedRaidItems, ownedShipSkins = [], equippedRaidItems, shipClasses, seenChapterUnlocks, seenUltimateUnlock, raidNodeChoices, topRaidProgress, hasSixthBerth = false, hasArmoryExpansion = false, musterParty = [] }: { views: RaidNodeView[]; doubloons: number; navLevel: number; playerShipImage?: string; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[]; ownedShipSkins?: string[]; equippedRaidItems: string[]; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; seenUltimateUnlock: boolean; raidNodeChoices: Record<string, string>; topRaidProgress: { username: string; score: number } | null; hasSixthBerth?: boolean; hasArmoryExpansion?: boolean; musterParty?: MusterCrew[] }) {
   const [open, setOpen] = useState(true)
   const [selected, setSelected] = useState<RaidNodeView | null>(null)
   // Per-chapter manual toggle overrides. Membership means the player
@@ -3163,6 +3172,7 @@ export default function RaidsSection({ views, doubloons, navLevel, playerShipIma
             doubloons={doubloons}
             navLevel={navLevel}
             ownedRaidItems={ownedRaidItems}
+            ownedShipSkins={ownedShipSkins}
             equippedRaidItems={equippedRaidItems}
             shipClasses={shipClasses}
             raidRecords={selected.node.type === 'raid' && selected.node.raidId ? raidRecords[selected.node.raidId] ?? null : null}
