@@ -34,6 +34,11 @@ export interface RodDef {
   // blade. Applied server-side in castLine by clamping waitMs. This is the only
   // rod stat that actually changes bite timing (biteIntervalMs is display-only).
   instantBiteChance?: number
+  // Streak-scaling "Locked-In Rod": its power grows with the player's live
+  // perfect streak (see lockedInState below). Applied server-side off
+  // profiles.current_perfect_streak, cheat-proof; the client reads the same pure
+  // helper for the glow/HUD. One miss resets the streak → the rod drops to base.
+  lockedIn?: boolean
   // 3-pose sprite slug. Loads /{slug}_rest.png / _wait.png / _cast.png.
   // Every rod's source sheet is sliced into raw quadrants by web/slice-rod.mjs
   // so a single CHAR_ROD_OVERLAY position applies to all of them.
@@ -43,7 +48,7 @@ export interface RodDef {
   // Theme of the glow effect. Driven by per-keyframe CSS in globals.css
   // (rod-glow-fire / sparkle / electric for marquee rods; moon / tech as
   // subtler accents). Falls back to the generic .rod-glow pulse when omitted.
-  glowType?: 'fire' | 'sparkle' | 'electric' | 'moon' | 'tech' | 'galaxy' | 'saber' | 'forge' | 'prismatic'
+  glowType?: 'fire' | 'sparkle' | 'electric' | 'moon' | 'tech' | 'galaxy' | 'saber' | 'forge' | 'prismatic' | 'lockedin'
 }
 
 // Resolve the CSS class for a rod's glow aura. Single source of truth so
@@ -210,7 +215,56 @@ export const RODS: RodDef[] = [
     instantBiteChance: 0.35,
     slug: 'rod_lightsaber', glow: true, glowType: 'saber',
   },
+  {
+    tier: 20, name: 'Locked-In Rod', cost: 350000, minLevel: 75,
+    description: 'Rewards a hot hand. Chain perfect catches to LOCK IN: 3 in a row quickens your bites, 5 lands a triple haul every catch, and 10 drives the line into a rare-fish frenzy. Hold the streak to keep it all — one miss and you start over.',
+    // Baseline is a plain, capable rod; ALL of the power comes from the streak
+    // stages (lockedInState), applied server-side off current_perfect_streak.
+    color: '#c084fc', rarityBonus: 0, biteIntervalMs: 3000, catchZoneBonus: 0,
+    doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
+    lockedIn: true,
+    // Glow is dynamic (cyan→gold→prismatic by streak) and driven client-side; the
+    // static glowType is the streak-0 baseline.
+    // TODO(art): PLACEHOLDER sprite — using rod_galaxy until Kong's rod_lockedin
+    // 3-pose PNG lands. Swap to slug: 'rod_lockedin' + run slice-rod.mjs/slice-thumb.mjs.
+    slug: 'rod_galaxy', glow: true, glowType: 'lockedin',
+  },
 ]
+
+// ── The Locked-In Rod's streak stages ───────────────────────────────────────
+// Pure + shared: the SERVER applies these off profiles.current_perfect_streak at
+// cast time (cheat-proof), and the CLIENT calls the same helper off its mirrored
+// streak to drive the glow, the "LOCKED IN" HUD, and the triple-catch treatment.
+// Effects are cumulative and held only while the streak holds; a miss resets the
+// streak to 0 and the rod drops straight back to baseline. Tunable in ONE place.
+export const LOCKED_IN = {
+  speedStreak:   3,     // stage 1: faster bites
+  speedWaitMult: 0.80,  //          −20% bite wait
+  tripleStreak:  5,     // stage 2: guaranteed triple haul
+  tripleQty:     3,
+  frenzyStreak:  10,    // stage 3: −35% bite wait + rare-fish bias
+  frenzyWaitMult: 0.65,
+  frenzyRarityBonus: 1.0,
+} as const
+
+export interface LockedInState {
+  stage: 0 | 1 | 2 | 3   // 0 base · 1 speed · 2 +triple · 3 +frenzy (LOCKED IN)
+  waitMult: number       // rod bite-wait multiplier from the streak (1 = base)
+  catchQty: number       // guaranteed fish per catch (1, or 3 at stage 2+)
+  rarityBonus: number    // added to the rod's rarity bias (0 until stage 3)
+}
+
+/** The Locked-In Rod's active effects at a given live perfect streak. Identity
+ *  (stage 0, no bonuses) for any other rod, or below the first threshold. */
+export function lockedInState(rod: RodDef | { lockedIn?: boolean }, streak: number): LockedInState {
+  const base: LockedInState = { stage: 0, waitMult: 1, catchQty: 1, rarityBonus: 0 }
+  if (!rod?.lockedIn) return base
+  let s = base
+  if (streak >= LOCKED_IN.speedStreak)  s = { ...s, stage: 1, waitMult: LOCKED_IN.speedWaitMult }
+  if (streak >= LOCKED_IN.tripleStreak) s = { ...s, stage: 2, catchQty: LOCKED_IN.tripleQty }
+  if (streak >= LOCKED_IN.frenzyStreak) s = { ...s, stage: 3, waitMult: LOCKED_IN.frenzyWaitMult, rarityBonus: LOCKED_IN.frenzyRarityBonus }
+  return s
+}
 
 export function getRod(tier: number): RodDef {
   return RODS.find(r => r.tier === tier) ?? RODS[0]

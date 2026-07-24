@@ -735,6 +735,36 @@ html, body {
 }
 .rod-glow-prismatic { animation: rod-glow-prismatic 4.2s linear infinite; }
 
+/* The Locked-In Rod — its glow escalates by streak stage. Stage 0 = a faint
+   violet base; stage 1 (streak 3, Fast Bites) = electric cyan, quick pulse;
+   stage 2 (streak 5, Triple Catch) = rich gold; stage 3 (streak 10, LOCKED IN)
+   = a fast prismatic frenzy. Each stage is visibly a step brighter + faster. */
+@keyframes rod-glow-lockedin {
+  0%, 100% { filter: drop-shadow(0 0 3px #c084fc88) drop-shadow(0 0 10px #a855f755); }
+  50%      { filter: drop-shadow(0 0 5px #c084fc) drop-shadow(0 0 14px #a855f766); }
+}
+.rod-glow-lockedin { animation: rod-glow-lockedin 3.6s ease-in-out infinite; }
+
+@keyframes rod-glow-lockedin-1 {
+  0%, 100% { filter: drop-shadow(0 0 4px #67e8f9) drop-shadow(0 0 16px #22d3ee88); }
+  40%      { filter: drop-shadow(0 0 8px #a5f3fc) drop-shadow(0 0 26px #06b6d4); }
+}
+.rod-glow-lockedin-1 { animation: rod-glow-lockedin-1 1.5s ease-in-out infinite; }
+
+@keyframes rod-glow-lockedin-2 {
+  0%, 100% { filter: drop-shadow(0 0 5px #ffe08a) drop-shadow(0 0 18px #f0b90b99); }
+  40%      { filter: drop-shadow(0 0 10px #fff1b8) drop-shadow(0 0 30px #f0c040); }
+}
+.rod-glow-lockedin-2 { animation: rod-glow-lockedin-2 1.4s ease-in-out infinite; }
+
+@keyframes rod-glow-lockedin-3 {
+  0%   { filter: drop-shadow(0 0 6px #67e8f9) drop-shadow(0 0 22px #22d3eeaa); }
+  33%  { filter: drop-shadow(0 0 6px #f0c040) drop-shadow(0 0 22px #f0b90baa); }
+  66%  { filter: drop-shadow(0 0 6px #e879f9) drop-shadow(0 0 22px #c084fcaa); }
+  100% { filter: drop-shadow(0 0 6px #67e8f9) drop-shadow(0 0 22px #22d3eeaa); }
+}
+.rod-glow-lockedin-3 { animation: rod-glow-lockedin-3 2.0s linear infinite; }
+
 /* Abyssal (tier-3 forge) — a molten red/ember pulse, a clear step above the
    prismatic tier-2 glow. Deep crimson breathing into hot ember. */
 @keyframes rod-glow-abyssal {

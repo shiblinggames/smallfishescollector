@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getBait } from '@/lib/bait'
-import { getRod, getEffectiveRod, COMPLETIONIST_TIER, COMPLETIONIST_MAX_EFFECTS, REFORGE_COST, rodHasUniqueEffect, jackpotChanceForZone, rodWaitMult } from '@/lib/rods'
+import { getRod, getEffectiveRod, COMPLETIONIST_TIER, COMPLETIONIST_MAX_EFFECTS, REFORGE_COST, rodHasUniqueEffect, jackpotChanceForZone, rodWaitMult, lockedInState } from '@/lib/rods'
 import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
 import { rewardsOwed, type LevelReward } from '@/lib/levelRewards'
 import { grantBadgeDirect } from '@/lib/badgeGrant'
@@ -153,6 +153,7 @@ type PendingCast = {
   crateTier?: CrateTier    // present only for crate casts
   jackpotMult: number      // server-rolled YOLO jackpot (1 = none)
   doubleCatch: boolean     // server-rolled double catch
+  catchQty?: number        // Locked-In Rod guaranteed haul (3 at streak 5+); overrides double
   castAt: number
 }
 
@@ -167,7 +168,7 @@ function rollCrateTier(habitat: string): CrateTier {
 }
 
 export async function castLine(baitType: string, habitat: string): Promise<
-  | { fishId: number; catchDifficulty: number; biteRarity: number; waitMs: number; crateTier?: CrateTier; baitRemaining?: number; instantBite?: boolean; jackpotMult?: number; doubleCatch?: boolean }
+  | { fishId: number; catchDifficulty: number; biteRarity: number; waitMs: number; crateTier?: CrateTier; baitRemaining?: number; instantBite?: boolean; jackpotMult?: number; doubleCatch?: boolean; catchQty?: number; lockedStage?: number }
   | { error: string }
 > {
   const supabase = await createClient()
@@ -178,7 +179,7 @@ export async function castLine(baitType: string, habitat: string): Promise<
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('rod_tier, completionist_effects, hook_tier, fishing_xp, fish_hold_tier, ancient_catches, active_event, catch_pending, fishing_renown_alloc, has_ancient_deep_access')
+    .select('rod_tier, completionist_effects, hook_tier, fishing_xp, fish_hold_tier, ancient_catches, active_event, catch_pending, fishing_renown_alloc, has_ancient_deep_access, current_perfect_streak')
     .eq('id', user.id)
     .single()
 
@@ -273,6 +274,13 @@ export async function castLine(baitType: string, habitat: string): Promise<
 
   const rod = getEffectiveRod(profile.rod_tier ?? 0, profile.completionist_effects as number[] | null)
 
+  // Locked-In Rod: this cast's power scales with the streak the player has BUILT.
+  // If the previous cast was abandoned (catch_pending already set), the streak is
+  // about to be reset to 0 below — so this cast sees 0 too. Cheat-proof: the streak
+  // is the server's own current_perfect_streak, never a client value.
+  const castStreak = profile.catch_pending ? 0 : ((profile as { current_perfect_streak?: number }).current_perfect_streak ?? 0)
+  const locked = lockedInState(rod, castStreak)
+
   // Crate encounter: 2% chance (× rod.crateChanceMult — Treasure Rod = 2×).
   // Rolled up-front so the in-flight flag below can skip crates — they're
   // streak-neutral, so bailing on a crate cast never breaks a streak.
@@ -326,7 +334,7 @@ export async function castLine(baitType: string, habitat: string): Promise<
     const trophyPool  = pool.filter(f => (f.sell_value ?? 0) === 0)   // uncaught trophies (lure casts only)
     const regularPool = pool.filter(f => (f.sell_value ?? 0) > 0)
     const baseTrophyChance = baitType === 'golden' ? 0.20 : baitType === 'luminous' ? 0.15 : 0
-    const trophyChance = Math.min(0.95, baseTrophyChance * (1 + (rod.rarityBonus + eventRarityBonus) * 4))
+    const trophyChance = Math.min(0.95, baseTrophyChance * (1 + (rod.rarityBonus + eventRarityBonus + locked.rarityBonus) * 4))
     if (ALWAYS_ANCIENT_TROPHY && trophyPool.length > 0) {
       // Test account: always the lowest-id uncaught giant, so they surface in a
       // predictable order (144→148, then Megalodon once the gate opens).
@@ -334,15 +342,17 @@ export async function castLine(baitType: string, habitat: string): Promise<
     } else if (trophyPool.length > 0 && Math.random() < trophyChance) {
       fish = trophyPool[Math.floor(Math.random() * trophyPool.length)]
     } else if (regularPool.length > 0) {
-      fish = tierWeightedPick(regularPool, habitat, rod.rarityBonus + eventRarityBonus)
+      fish = tierWeightedPick(regularPool, habitat, rod.rarityBonus + eventRarityBonus + locked.rarityBonus)
     } else {
       // Regulars somehow exhausted — hand back a trophy so the cast still lands.
       fish = trophyPool[Math.floor(Math.random() * trophyPool.length)]
     }
   } else {
-    fish = tierWeightedPick(pool, habitat, rod.rarityBonus + eventRarityBonus)
+    fish = tierWeightedPick(pool, habitat, rod.rarityBonus + eventRarityBonus + locked.rarityBonus)
   }
-  let waitMs = fishWaitMs(fish.catch_score, habitat, baitType, fishingLevel, renownWaitMult, rodWaitMult(rod))
+  // Locked-In quickens bites at streak 3+ (−20%) / 10+ (−35%); take the faster of
+  // the rod's base speed and the streak stage.
+  let waitMs = fishWaitMs(fish.catch_score, habitat, baitType, fishingLevel, renownWaitMult, Math.min(rodWaitMult(rod), locked.waitMult))
 
   // Lightsaber Rod — "Lightspeed": a chance the bite is near-instant. This is
   // the only rod stat that actually changes the bite wait (biteIntervalMs is
@@ -367,10 +377,11 @@ export async function castLine(baitType: string, habitat: string): Promise<
   const rolledDoubleCatch = !jackpotHit && !isAncientTrophyRoll && canDoubleHere
     && (rod.doubleCatchChance ?? 0) > 0 && Math.random() < (rod.doubleCatchChance ?? 0)
 
-  const token: PendingCast = { fishId: fish.id, habitat, baitType, jackpotMult: rolledJackpotMult, doubleCatch: rolledDoubleCatch, castAt: Date.now() }
+  const lockedQty = locked.catchQty > 1 ? locked.catchQty : undefined
+  const token: PendingCast = { fishId: fish.id, habitat, baitType, jackpotMult: rolledJackpotMult, doubleCatch: rolledDoubleCatch, catchQty: lockedQty, castAt: Date.now() }
   await admin.from('profiles').update({ pending_cast: token }).eq('id', user.id)
 
-  return { fishId: fish.id, catchDifficulty: fish.catch_difficulty, biteRarity: fish.bite_rarity, waitMs, baitRemaining: !noBait && baitRow ? baitRow.quantity - 1 : undefined, instantBite, jackpotMult: rolledJackpotMult, doubleCatch: rolledDoubleCatch }
+  return { fishId: fish.id, catchDifficulty: fish.catch_difficulty, biteRarity: fish.bite_rarity, waitMs, baitRemaining: !noBait && baitRow ? baitRow.quantity - 1 : undefined, instantBite, jackpotMult: rolledJackpotMult, doubleCatch: rolledDoubleCatch, catchQty: lockedQty, lockedStage: locked.stage }
 }
 
 const CRATE_FISH_ID = -1
@@ -437,6 +448,9 @@ export async function reelIn(
        *  ever sees this — everyone else gets undefined/false. Triggers
        *  the win celebration overlay client-side. */
       firstAncientCatch?: boolean
+      /** Number of fish this catch actually banked (Locked-In triple / double /
+       *  jackpot, clamped to hold space). 1 for a normal catch. */
+      catchQty?: number
     }
   | { caught: false }
   | { error: string }
@@ -503,6 +517,7 @@ export async function reelIn(
   fishId = token.fishId
   doubleCatch = token.doubleCatch
   jackpotMultiplier = token.jackpotMult
+  const lockedCatchQty = token.catchQty ?? 1   // Locked-In Rod guaranteed haul (3 at streak 5+)
 
   const { data: fish } = await admin.from('fish_species').select('*').eq('id', fishId).single()
   if (!fish) return { error: 'Data not found' }
@@ -666,7 +681,9 @@ export async function reelIn(
   // Jackpot takes priority over a double-catch (they never stack). Matters for a
   // forged Completionist Rod carrying BOTH YOLO + Millionaire's — else the
   // always-double would swallow the ×100 jackpot.
-  const desired = isShiny ? 1 : (effectiveJackpotMult > 1 ? effectiveJackpotMult : (effectiveDoubleCatch ? 2 : 1))
+  // Locked-In triple ranks between jackpot and double: a jackpot rod still wins on
+  // a forged Completionist, but the guaranteed triple beats a mere double.
+  const desired = isShiny ? 1 : (effectiveJackpotMult > 1 ? effectiveJackpotMult : (lockedCatchQty > 1 ? lockedCatchQty : (effectiveDoubleCatch ? 2 : 1)))
   const catchQty = isShiny ? 1 : Math.min(desired, Math.max(0, holdCapacity - currentHoldCount))
 
   const { data: invRow } = await admin
@@ -957,6 +974,7 @@ export async function reelIn(
     sigilBonus,
     newDoubloons: sigilBonus > 0 ? newDoubloons : undefined,
     wormhole: wormholeAvail,
+    catchQty,
   }
 }
 

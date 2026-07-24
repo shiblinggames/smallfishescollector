@@ -69,7 +69,7 @@ import GearUnlockRow from '@/components/GearUnlockRow'
 import { formatFishLength, tierForLength, TIER_COLOR, type FishSizeTier } from '@/lib/fishSize'
 import { SHINY_FISH_FILTER, SHINY_THEME, SHINY_SELL_MULT, pickShinyMessage } from '@/lib/shiny'
 import { getHook, HOOKS, hookGlowClass } from '@/lib/hooks'
-import { getRod, getEffectiveRod, RODS, rodGlowClass, rodSpeedPct, type RodDef } from '@/lib/rods'
+import { getRod, getEffectiveRod, RODS, rodGlowClass, rodSpeedPct, lockedInState, type RodDef } from '@/lib/rods'
 import { vibrate, hapticTap } from '@/lib/haptics'
 import { getReel, REELS } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
@@ -1441,7 +1441,7 @@ function WaitTimer() {
   )
 }
 
-function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, doubleCatch, gemEarned, perfectStreak = 1, streakBonusXP = 0, jackpotMultiplier, perfectXpMult = 1, ancientCount = 0, ancientTotal = 6, sizeIn, sizeMin, sizeMax, isPB, previousBest, isShiny = false }: {
+function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, doubleCatch, gemEarned, perfectStreak = 1, streakBonusXP = 0, jackpotMultiplier, perfectXpMult = 1, lockedStage = 0, catchQty = 1, ancientCount = 0, ancientTotal = 6, sizeIn, sizeMin, sizeMax, isPB, previousBest, isShiny = false }: {
   fish: FishSpecies
   baitSaved: boolean
   isNewSpecies: boolean
@@ -1453,6 +1453,10 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
   streakBonusXP?: number
   jackpotMultiplier?: number
   perfectXpMult?: number
+  /** Locked-In Rod active stage this catch (0 base · 1 speed · 2 +triple · 3 LOCKED IN). */
+  lockedStage?: number
+  /** Fish actually banked this catch (3 on a Locked-In triple). */
+  catchQty?: number
   ancientCount?: number
   ancientTotal?: number
   // ── Per-catch size variance (lib/fishSize) ──
@@ -1648,7 +1652,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
           accent chrome as before, just at ~32px tall instead of ~80px.
           Size-tier pills (Trophy / Large) and the PB pill render first so
           they catch the eye on the dopamine moments. */}
-      {(isPerfect || (jackpotMultiplier && jackpotMultiplier > 1) || doubleCatch || gemEarned) && (
+      {(isPerfect || (jackpotMultiplier && jackpotMultiplier > 1) || doubleCatch || gemEarned || lockedStage > 0 || catchQty > 1) && (
         <div className="mb-2 flex flex-wrap items-center justify-center gap-1.5">
           {isPerfect && (() => {
             const isOnFire = perfectStreak >= 3
@@ -1721,6 +1725,50 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
               }}
             >
               ×{perfectXpMult} XP
+            </motion.div>
+          )}
+
+          {/* Locked-In Rod — the active stage this catch. Cyan (speed) → gold
+              (triple) → prismatic (LOCKED IN), matching the rod glow. */}
+          {lockedStage > 0 && (() => {
+            const c = lockedStage >= 3 ? '#e879f9' : lockedStage === 2 ? '#f0c040' : '#22d3ee'
+            const rgb = lockedStage >= 3 ? '232,121,249' : lockedStage === 2 ? '240,192,64' : '34,211,238'
+            const label = lockedStage >= 3 ? 'Locked In' : lockedStage === 2 ? 'Locked In · Triple' : 'Locked In · Fast'
+            return (
+              <motion.div
+                initial={{ opacity: 0, y: -6, scale: 0.92 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 22 }}
+                className="font-karla font-700 uppercase"
+                style={{
+                  background: `linear-gradient(180deg, rgba(${rgb},0.22) 0%, rgba(${rgb},0.06) 100%), #0d1320`,
+                  border: `1px solid rgba(${rgb},0.5)`, borderTop: `1px solid rgba(${rgb},0.82)`,
+                  borderRadius: 999, padding: '0.36rem 0.72rem', fontSize: '0.62rem',
+                  letterSpacing: '0.14em', color: c,
+                  display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap',
+                  boxShadow: `0 0 ${8 + lockedStage * 4}px rgba(${rgb},0.32)`,
+                }}
+              >
+                <IconFlame size={11} /> {label}
+              </motion.div>
+            )
+          })()}
+
+          {/* Locked-In triple haul (guaranteed ×3 at streak 5+). */}
+          {catchQty > 1 && !doubleCatch && (!jackpotMultiplier || jackpotMultiplier <= 1) && (
+            <motion.div
+              initial={{ opacity: 0, y: -6, scale: 0.92 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 22 }}
+              className="font-karla font-700 uppercase"
+              style={{
+                background: 'linear-gradient(180deg, rgba(240,192,64,0.22) 0%, rgba(240,192,64,0.06) 100%), #1a1304',
+                border: '1px solid rgba(240,192,64,0.5)', borderTop: '1px solid rgba(240,192,64,0.82)',
+                borderRadius: 999, padding: '0.36rem 0.72rem', fontSize: '0.62rem',
+                letterSpacing: '0.12em', color: '#f0c040',
+                display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap',
+                boxShadow: '0 0 12px rgba(240,192,64,0.24)',
+              }}
+            >
+              ×{catchQty} Haul
             </motion.div>
           )}
 
@@ -3951,6 +3999,8 @@ export default function FishingGame({
     /** Galaxy Rod — this catch can be rerolled once through the Wormhole.
      *  Cleared the moment the player uses it (one-shot). */
     wormhole?: boolean
+    /** Fish actually banked this catch (3 on a Locked-In triple). */
+    catchQty?: number
   } | null>(null)
   const [rerollingWormhole, setRerollingWormhole] = useState(false)
   // Lock-out for golden catches. The card's entrance + burst + ring waves
@@ -4034,6 +4084,10 @@ export default function FishingGame({
   } | null>(null)
   const [perfectStreak, setPerfectStreak] = useState(initialPerfectStreak)
   const [highestPerfectStreak, setHighestPerfectStreak] = useState(initialHighestPerfectStreak)
+  // Locked-In Rod: its effects + glow escalate with the live perfect streak
+  // (stage 1 at 3 · 2 at 5 · 3/LOCKED IN at 10). Same pure helper the server uses.
+  const locked = rod.lockedIn ? lockedInState(rod, perfectStreak) : null
+  const rodGlow = locked && locked.stage > 0 ? `rod-glow-lockedin-${locked.stage}` : rodGlowClass(rod)
   // The perfect streak is server-authoritative (reelIn tracks + persists it and
   // returns the live value). The client mirrors it for display and reconciles
   // from each catch's response — see the catch handler below.
@@ -5586,7 +5640,9 @@ export default function FishingGame({
           }
         }
         const currentHoldCount = inventory.reduce((s, i) => s + i.quantity, 0)
-        const desiredQty = doubleCatch ? 2 : jackpotMultiplier
+        // Mirror reelIn's priority: jackpot > Locked-In triple > double.
+        const lockedQty = (hookedFishRef.current as { catchQty?: number } | null)?.catchQty ?? 1
+        const desiredQty = jackpotMultiplier > 1 ? jackpotMultiplier : (lockedQty > 1 ? lockedQty : (doubleCatch ? 2 : 1))
         const actualQty = Math.min(desiredQty, Math.max(0, holdCapacity - currentHoldCount))
         // jackpotMultiplier is the YOLO Rod's special ×N event — only set
         // it when the YOLO jackpot actually triggered. Double catches go
@@ -5614,6 +5670,7 @@ export default function FishingGame({
           shinyId: (res as { shinyId?: number }).shinyId,
           alreadyMounted: (res as { alreadyMounted?: boolean }).alreadyMounted ?? false,
           wormhole: (res as { wormhole?: boolean }).wormhole ?? false,
+          catchQty: actualQty,
         })
         // YOLO Rod jackpot — fire the full-screen celebration overlay on top
         // of the result card. Renders particles + a slamming "JACKPOT"
@@ -6624,7 +6681,7 @@ export default function FishingGame({
                   <img
                     src={`/${rod.slug}_${f}.png`}
                     alt=""
-                    className={rodGlowClass(rod)}
+                    className={rodGlow}
                     style={{
                       position: 'absolute', top: `${rc.top}%`, left: `${rc.left}%`,
                       width: `${rc.width}%`,
@@ -6636,7 +6693,7 @@ export default function FishingGame({
                     } as React.CSSProperties}
                   />
                 ) : rod.imageUrl && (
-                  <img src={rod.imageUrl} alt="" className={rodGlowClass(rod)} style={{
+                  <img src={rod.imageUrl} alt="" className={rodGlow} style={{
                     position: 'absolute', top: `${rc.top}%`, left: `${rc.left}%`,
                     width: `${rc.width}%`,
                     transform: `rotate(${rc.rotate}deg)`,
@@ -7457,6 +7514,8 @@ export default function FishingGame({
                       streakBonusXP={catchResult.streakBonusXP}
                       jackpotMultiplier={catchResult.jackpotMultiplier}
                       perfectXpMult={catchResult.perfectXpMult}
+                      lockedStage={rod.lockedIn ? lockedInState(rod, catchResult.perfectStreak ?? 0).stage : 0}
+                      catchQty={catchResult.catchQty}
                       ancientCount={ancientCatches.size}
                       ancientTotal={allFishSpecies.filter(f => f.habitat === 'ancient_deep' && (f.sell_value ?? 0) === 0).length || 6}
                       sizeIn={catchResult.sizeIn}
