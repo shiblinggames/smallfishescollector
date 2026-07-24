@@ -474,7 +474,7 @@ export async function pauseGauntletRun(state: GauntletRunState): Promise<{ ok: b
 /** Pick a run back up. A PAUSED run (deliberate) resumes without limit and doesn't
  *  touch the crash budget. A CRASHED run spends its single server-owned resume.
  *  Refuses if there's no open run, no checkpoint, or a crash resume is spent. */
-export async function resumeGauntletRun(): Promise<{ ok: false } | { ok: true; state: GauntletRunState }> {
+export async function resumeGauntletRun(): Promise<{ ok: false } | { ok: true; state: GauntletRunState; offer: DavyOffer | null }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { ok: false }
@@ -482,24 +482,29 @@ export async function resumeGauntletRun(): Promise<{ ok: false } | { ok: true; s
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_run_open, gauntlet_run_state, gauntlet_resumes_used, gauntlet_run_paused')
+    // gauntlet_run_offer rides along: a live Davy's Offer lives in its OWN column
+    // (not the run-state checkpoint), so a resume that only restored the state
+    // dropped it — the offer vanished on any leave-and-resume. Hand it back.
+    .select('gauntlet_run_open, gauntlet_run_state, gauntlet_resumes_used, gauntlet_run_paused, gauntlet_run_offer')
     .eq('id', user.id).single()
 
   const state = (profile?.gauntlet_run_state as GauntletRunState | null) ?? null
   if (profile?.gauntlet_run_open !== true || !state) return { ok: false }
 
+  const offer = ((profile?.gauntlet_run_offer as OfferState | null) ?? EMPTY_OFFER_STATE).live
+
   if (profile?.gauntlet_run_paused === true) {
     // Deliberate pause: unlimited, no crash budget spent. Clear the flag — the run
     // is live again (a later disconnect from here is a normal crash resume).
     await admin.from('profiles').update({ gauntlet_run_paused: false }).eq('id', user.id)
-    return { ok: true, state }
+    return { ok: true, state, offer }
   }
 
   // Crash resume: one per run, server-owned counter (ignores any client value).
   const used = (profile?.gauntlet_resumes_used as number | null) ?? 0
   if (used >= 1) return { ok: false }
   await admin.from('profiles').update({ gauntlet_resumes_used: used + 1 }).eq('id', user.id)
-  return { ok: true, state }
+  return { ok: true, state, offer }
 }
 
 /** Consume the run attempt (start the cooldown) and open a run. Starting (not

@@ -1761,8 +1761,10 @@ export default function GauntletGame(props: GauntletGameProps) {
     if (resuming || !props.resumeState) return
     setResuming(true)
     resumeGauntletRun().then(res => {
-      if (res.ok) applyCheckpoint(res.state)
-      else setPhase(props.available ? 'intro' : 'usedup') // already spent / raced
+      if (res.ok) {
+        applyCheckpoint(res.state)
+        setOffer(res.offer) // restore a live Davy's Offer so it survives leave-and-resume
+      } else setPhase(props.available ? 'intro' : 'usedup') // already spent / raced
     }).finally(() => setResuming(false))
   }
   // Deliberate pause at a breather: save + step away. Unlimited, never risks the
