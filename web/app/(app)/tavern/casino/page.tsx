@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { unstable_cache } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { getCasinoState } from './actions'
 import { getSlotsJackpot } from '../actions'
@@ -62,6 +63,15 @@ async function getDenLeaderboards(): Promise<DenLeaderboards> {
   return out
 }
 
+// High Rollers strip is identical for everyone and shifts slowly — cache it
+// across requests so the casino lobby isn't 4 board reads + an avatar query per
+// view. Wallet + jackpot below stay live/uncached.
+const getCachedDenLeaderboards = unstable_cache(
+  getDenLeaderboards,
+  ['casino-den-leaderboards'],
+  { revalidate: 60, tags: ['leaderboards'] },
+)
+
 export default async function CasinoPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -72,7 +82,7 @@ export default async function CasinoPage() {
   const [wallet, jackpot, denBoards] = await Promise.all([
     getCasinoState(),
     getSlotsJackpot(),
-    getDenLeaderboards(),
+    getCachedDenLeaderboards(),
   ])
 
   return (
