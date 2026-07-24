@@ -157,22 +157,22 @@ html, body {
   font-size: 0.82rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #241701;
-  background: linear-gradient(180deg, #f6c84e 0%, #e0a82e 100%);
-  border: 1px solid #f7d878;
+  color: #ffdb7a;
+  background: linear-gradient(180deg, rgba(240,200,80,0.22) 0%, rgba(224,168,46,0.13) 100%);
+  border: 1px solid rgba(240,200,80,0.55);
   border-radius: 12px;
   padding: 0.7rem 1.6rem;
   text-decoration: none;
   text-align: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.35), 0 0 14px rgba(240,192,64,0.18);
-  transition: transform 0.18s, box-shadow 0.18s, opacity 0.18s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3), 0 0 14px rgba(240,192,64,0.12), inset 0 1px 0 rgba(255,240,200,0.12);
+  transition: transform 0.18s, box-shadow 0.18s, opacity 0.18s, background 0.18s, border-color 0.18s;
   cursor: pointer;
 }
-.btn-gold:hover  { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,0.4), 0 0 22px rgba(240,192,64,0.32); }
+.btn-gold:hover  { transform: translateY(-1px); background: linear-gradient(180deg, rgba(240,200,80,0.3) 0%, rgba(224,168,46,0.2) 100%); border-color: rgba(240,200,80,0.8); box-shadow: 0 4px 14px rgba(0,0,0,0.4), 0 0 24px rgba(240,192,64,0.28), inset 0 1px 0 rgba(255,240,200,0.16); }
 /* Pressed state — on touch, :hover never fires, so without this the
    button gives zero visual acknowledgment of the tap. Sits AFTER :hover
    so the press wins while both match. Short transition keeps it crisp. */
-.btn-gold:active { transform: translateY(1px) scale(0.985); box-shadow: 0 1px 4px rgba(0,0,0,0.35), 0 0 10px rgba(240,192,64,0.14); transition-duration: 0.06s; }
+.btn-gold:active { transform: translateY(1px) scale(0.985); box-shadow: 0 1px 4px rgba(0,0,0,0.35), 0 0 10px rgba(240,192,64,0.12); transition-duration: 0.06s; }
 .btn-gold:disabled, .btn-gold[disabled] { opacity: 0.45; pointer-events: none; }
 
 .btn-ghost {

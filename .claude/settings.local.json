@@ -101,7 +101,9 @@
       "PowerShell($repo=\"C:\\\\Users\\\\Kong\\\\Projects\\\\shiblinggames\\\\smallfishes\"; git -C $repo add -A -- web; git -C $repo commit -q -m \"Crew roster: drop the bordered wrapper box + helper blurb so the party sections aren't squished\"; \"COMMIT_EXIT=$LASTEXITCODE\"; git -C $repo push origin master; \"PUSH_EXIT=$LASTEXITCODE\")",
       "PowerShell(Set-Location \"C:\\\\Users\\\\Kong\\\\Projects\\\\shiblinggames\\\\smallfishes\\\\web\"; npx tsc --noEmit 2>&1 | Select-Object -First 30; \"EXIT=$LASTEXITCODE\")",
       "mcp__supabase__execute_sql",
-      "mcp__supabase__apply_migration"
+      "mcp__supabase__apply_migration",
+      "Skill(artifact-design)",
+      "Skill(artifact-design:*)"
     ]
   }
 }

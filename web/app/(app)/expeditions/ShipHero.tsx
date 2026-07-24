@@ -1028,7 +1028,7 @@ export default function ShipHero({
                       <motion.span
                         animate={{ scale: [1, 1.12, 1] }}
                         transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
-                        style={{ fontSize: '0.52rem', color: '#0a0f1c', background: '#f0c040', borderRadius: 999, padding: '2px 6px', fontWeight: 800 }}>{navRenownAvailable} spend</motion.span>
+                        style={{ fontSize: '0.52rem', color: '#ffdb7a', background: 'rgba(240,200,80,0.18)', border: '1px solid rgba(240,200,80,0.5)', borderRadius: 999, padding: '2px 6px', fontWeight: 800 }}>{navRenownAvailable} spend</motion.span>
                     )}
                   </span>
                 ) : (
