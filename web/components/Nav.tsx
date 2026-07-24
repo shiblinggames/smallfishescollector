@@ -55,6 +55,14 @@ const ICON_ADD_HOME = (
 // on the first paint after a tab switch (instead of flashing the default
 // while supabase round-trips). Keys are namespaced under `nav:` so they
 // don't collide with anything else stored client-side.
+// Min gap between Nav badge refreshes. fetchBadge fires on every route change
+// AND every tab-foreground; without this a burst of navigations = 3 DB reads
+// each, per user. The data (avatar/currency/mail/voyage/badge pips) isn't
+// time-critical and currency also self-heals via the *-changed events, so
+// coalescing to at most one refresh per this window is invisible. Real badge
+// changes pass { force: true } to bypass it.
+const NAV_REFRESH_MIN_MS = 10_000
+
 function readNavCache(key: string): string | null {
   if (typeof window === 'undefined') return null
   try {
@@ -111,8 +119,13 @@ export default function Nav({ doubloons, gems }: { packsAvailable?: number; doub
   // gate the currency widgets use). isSignedIn flips true the first time
   // fetchBadge resolves a user.
   const [isSignedIn, setIsSignedIn]         = useState<boolean>(false)
+  // Timestamp of the last badge refresh — throttles the route-change/focus storm.
+  const lastBadgeFetchRef = useRef(0)
 
-  const fetchBadge = useCallback(() => {
+  const fetchBadge = useCallback((opts?: { force?: boolean }) => {
+    const now = Date.now()
+    if (!opts?.force && now - lastBadgeFetchRef.current < NAV_REFRESH_MIN_MS) return
+    lastBadgeFetchRef.current = now
     const supabase = createClient()
     // getSession() reads the locally-cached session — no auth-server
     // roundtrip like getUser(). The id here only scopes SELECTs that RLS
@@ -248,7 +261,7 @@ export default function Nav({ doubloons, gems }: { packsAvailable?: number; doub
   // `badges-changed` → re-read so the Badges nav count updates the moment it
   // changes, not only on the next route switch.
   useEffect(() => {
-    const h = () => fetchBadge()
+    const h = () => fetchBadge({ force: true })
     window.addEventListener('badges-changed', h)
     return () => window.removeEventListener('badges-changed', h)
   }, [fetchBadge])
