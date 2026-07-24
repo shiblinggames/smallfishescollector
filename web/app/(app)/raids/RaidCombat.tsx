@@ -6323,9 +6323,11 @@ export default function RaidCombat({
                   <DodgeWhoosh key={`dw-${dodgeFx.key}`} image={shipImageUrl} dir="left" />
                 )}
               </AnimatePresence>
-              {/* Brace glint — a cyan shield dome breathes over the hull while
-                  an Anchor cut or Abyssal shield is queued, and clears when the
-                  resolver consumes it. */}
+              {/* Brace glint — a shield dome breathes over the hull while an
+                  Anchor cut or Abyssal shield is queued, and clears when the
+                  resolver consumes it. STEEL dome = an Anchor brace (a one-hit
+                  damage CUT, no HP pool); CYAN dome = a shield HP pool
+                  (Abyssal/crew) — so a reduction never reads as a shield pool. */}
               {((anchorReductionPct ?? 0) > 0 || abyssalShieldHp > 0) && (
                 <motion.div
                   aria-hidden
@@ -6342,7 +6344,11 @@ export default function RaidCombat({
                     // pulsing opacity stays on the GPU for free.
                     position: 'absolute', inset: '-7%', borderRadius: '50%',
                     pointerEvents: 'none', zIndex: 2,
-                    background: 'radial-gradient(ellipse 72% 104% at 74% 50%, rgba(125,211,252,0.55) 0%, rgba(94,234,212,0.22) 46%, transparent 72%)',
+                    background: abyssalShieldHp <= 0 && (anchorReductionPct ?? 0) > 0
+                      // Steel — an Anchor brace with no shield pool behind it.
+                      ? 'radial-gradient(ellipse 72% 104% at 74% 50%, rgba(158,176,205,0.6) 0%, rgba(120,140,175,0.24) 46%, transparent 72%)'
+                      // Cyan — a shield HP pool is up.
+                      : 'radial-gradient(ellipse 72% 104% at 74% 50%, rgba(125,211,252,0.55) 0%, rgba(94,234,212,0.22) 46%, transparent 72%)',
                   }}
                 />
               )}
@@ -8970,7 +8976,7 @@ function PlayerStatusAura({ kind = 'heal', color: colorOverride }: { kind?: 'hea
     tide:   { color: '#5eead4', mote: '#a7f3e8' },
     aim:    { color: '#fbbf24', mote: '#fde68a' },
     charge: { color: '#f5c542', mote: '#ffe9a8' },
-    brace:  { color: '#93c5fd', mote: '#dbeafe' },
+    brace:  { color: '#9eb0cd', mote: '#d6deec' },   // steel/iron — a damage-CUT brace, distinct from the cyan shield POOLS
   } as const
   const color = colorOverride ?? CFG[kind].color
   const mote = colorOverride ?? CFG[kind].mote
