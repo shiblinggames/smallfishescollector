@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { unstable_cache } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getLevelFromXP as getExpeditionLevel } from '@/lib/expeditionLevel'
@@ -61,8 +62,17 @@ async function loadHighlights(): Promise<LeaderboardHighlight[]> {
   return out
 }
 
+// The top entry of each board is identical for every player and changes only
+// when someone beats a record — cache it across requests so the Tavern header
+// isn't 6 DB reads per view. ≤60s stale on a "who's #1" ticker is invisible.
+const getCachedHighlights = unstable_cache(
+  loadHighlights,
+  ['tavern-leaderboard-highlights'],
+  { revalidate: 60, tags: ['leaderboards'] },
+)
+
 export default async function TavernLeaderboardsCard() {
-  const highlights = await loadHighlights()
+  const highlights = await getCachedHighlights()
 
   return (
     <Link

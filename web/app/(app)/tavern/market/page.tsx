@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import MarketClient from './MarketClient'
 import MarketIntroModal from './MarketIntroModal'
 import { isPremiumActive } from '@/lib/premium'
+import { getCachedFishMarketFull } from '@/lib/fishMarket'
 
 export type MarketFishEntry = {
   fish_id: number
@@ -42,10 +43,10 @@ export default async function MarketPage() {
     quantity: number
   }
 
-  const [{ data: profile }, marketRes, inventoryRes, stateRes, collectionRes] = await Promise.all([
+  const [{ data: profile }, market, inventoryRes, stateRes, collectionRes] = await Promise.all([
     supabase.from('profiles').select('packs_available, doubloons, gems, is_premium, premium_expires_at, has_seen_market_intro').eq('id', user.id).single(),
-    admin.from('fish_market')
-      .select('fish_id, multiplier, prev_multiplier, history, fish_species(id, name, habitat, bite_rarity, sell_value)'),
+    // Shared market snapshot from the cross-request cache (lib/fishMarket).
+    getCachedFishMarketFull(),
     admin.from('fish_inventory')
       .select('fish_id, quantity')
       .eq('user_id', user.id)
@@ -61,7 +62,7 @@ export default async function MarketPage() {
 
   const discoveredIds = new Set((collectionRes.data ?? []).map(r => r.fish_id))
 
-  const allMarket: MarketFishEntry[] = ((marketRes.data ?? []) as unknown as MarketRow[])
+  const allMarket: MarketFishEntry[] = market
     .filter(r => r.fish_species != null)
     .map(r => ({
       fish_id: r.fish_id,

@@ -34,3 +34,26 @@ export const getCachedFishMarket = unstable_cache(
   ['fish-market-display'],
   { revalidate: 60, tags: ['fish_market'] },
 )
+
+// Fuller shape for the /tavern/market screen — adds the price `history` and the
+// extra species fields that board needs. Same public/shared data, same cache
+// tag; separate entry so the hot light read above stays lean.
+export type CachedMarketRowFull = {
+  fish_id: number
+  multiplier: number
+  prev_multiplier: number
+  history: number[] | null
+  fish_species: { id: number; name: string; habitat: string; bite_rarity: number; sell_value: number } | null
+}
+
+export const getCachedFishMarketFull = unstable_cache(
+  async (): Promise<CachedMarketRowFull[]> => {
+    const admin = createAdminClient()
+    const { data } = await admin
+      .from('fish_market')
+      .select('fish_id, multiplier, prev_multiplier, history, fish_species(id, name, habitat, bite_rarity, sell_value)')
+    return (data ?? []) as unknown as CachedMarketRowFull[]
+  },
+  ['fish-market-full'],
+  { revalidate: 60, tags: ['fish_market'] },
+)
