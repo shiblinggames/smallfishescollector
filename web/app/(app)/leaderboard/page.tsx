@@ -141,7 +141,7 @@ export default async function LeaderboardPage() {
     fetchBoard(admin, 'leaderboard_roulette', user.id),
     fetchBoard(admin, 'leaderboard_expedition', user.id),
     fetchRaidProgressBoard(admin, user.id),
-    getAchievementPointsBoard(admin, user.id),
+    getAchievementPointsBoard(user.id),
   ])
 
   // Fetch avatar data (character_color + equipped_hat) for every user that

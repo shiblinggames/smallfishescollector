@@ -81,7 +81,7 @@ export default async function ProfilePage() {
   // Union in any level-gated or achievement-gated color the player has EARNED
   // but whose grant never persisted, so the picker shows it unlocked; equipping
   // it persists the unlock server-side (see updateCharacterColor).
-  const achievementPoints = await getUserAchievementPoints(admin, user.id)
+  const achievementPoints = await getUserAchievementPoints(user.id)
   const unlockedColors = [
     ...CHARACTER_COLORS.filter(c => c.free).map(c => c.id),
     ...storedColors,

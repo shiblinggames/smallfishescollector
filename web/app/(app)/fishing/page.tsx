@@ -25,7 +25,7 @@ export default async function FishingPage() {
   const admin = createAdminClient()
   // Kicked off now so it overlaps the page's other queries (this page is hot).
   // Gates the achievement-earned skins (Galaxy/Ethereal) in the picker.
-  const achievementPointsPromise = getUserAchievementPoints(admin, user.id)
+  const achievementPointsPromise = getUserAchievementPoints(user.id)
 
   // Profile comes from the request-scoped cached loader (lib/userData.ts) so
   // any other server component in this render that needs profile shares this

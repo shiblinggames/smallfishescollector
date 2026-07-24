@@ -186,7 +186,7 @@ export async function getLeaderboardBoards(
     else if (key === 'raidProgress')  res = await fetchRaidProgress(admin, user.id)
     else if (key === 'chartingPoints') res = await fetchChartingPoints(admin, user.id)
     else if (key === 'parlorPoints')  res = await fetchParlorPoints(admin, user.id)
-    else if (key === 'achievementPoints') res = await getAchievementPointsBoard(admin, user.id)
+    else if (key === 'achievementPoints') res = await getAchievementPointsBoard(user.id)
     else if (key === 'gauntletDepth') res = await fetchGauntlet(admin, user.id)
     else if (key === 'gauntletHardcore') res = await fetchGauntlet(admin, user.id, 'leaderboard_gauntlet_hardcore')
     else {

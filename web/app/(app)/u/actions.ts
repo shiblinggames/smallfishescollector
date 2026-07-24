@@ -147,7 +147,7 @@ export async function updateCharacterColor(colorId: string): Promise<{ error?: s
       // Achievement-gated colors (e.g. Galaxy at 300 pts) — the score is derived
       // from badges, so compute it live only when the requested color needs it.
       if (!earned && ACHIEVEMENT_COLORS.some(a => a.id === colorId)) {
-        const pts = await getUserAchievementPoints(admin, user.id)
+        const pts = await getUserAchievementPoints(user.id)
         earned = earnedAchievementColors(pts, unlocked).includes(colorId)
       }
       if (!earned) return { error: 'Color not unlocked' }
@@ -186,7 +186,7 @@ export async function persistEarnedSkins(ids: string[]): Promise<{ granted: stri
   }, stored))
   const needsAch = candidates.some(id => ACHIEVEMENT_COLORS.some(a => a.id === id))
   const earnedAch = needsAch
-    ? new Set(earnedAchievementColors(await getUserAchievementPoints(admin, user.id), stored))
+    ? new Set(earnedAchievementColors(await getUserAchievementPoints(user.id), stored))
     : new Set<string>()
 
   const granted = candidates.filter(id => !stored.includes(id) && (earnedLevel.has(id) || earnedAch.has(id)))
@@ -214,7 +214,7 @@ export async function persistEarnedBoats(ids: string[]): Promise<{ granted: stri
   // the needsAch gate in persistEarnedSkins.
   const needsAch = candidates.some(id => ACHIEVEMENT_BOAT_IDS.has(id))
   const earned = needsAch
-    ? new Set(earnedAchievementBoats(await getUserAchievementPoints(admin, user.id), stored))
+    ? new Set(earnedAchievementBoats(await getUserAchievementPoints(user.id), stored))
     : new Set<string>()
   const granted = candidates.filter(id => !stored.includes(id) && earned.has(id))
   if (granted.length === 0) return { granted: [] }

@@ -1721,7 +1721,7 @@ export async function equipBoat(boatId: string | null): Promise<{ ok: true } | {
       const def = BOAT_MAP[boatId]
       if (def && typeof def.achievementPoints === 'number') {
         const { getUserAchievementPoints } = await import('@/lib/achievementPoints')
-        if (await getUserAchievementPoints(admin, user.id) >= def.achievementPoints) {
+        if (await getUserAchievementPoints(user.id) >= def.achievementPoints) {
           await admin.from('profiles').update({ unlocked_boats: [...unlocked, boatId] }).eq('id', user.id)
           unlocked = [...unlocked, boatId]
         }
