@@ -32,8 +32,8 @@ function wedgeLabel(w: (typeof CAPSTAN_WHEEL)[number]): string {
   return w === 'overboard' ? 'OVER' : w === 'lose_turn' ? 'LOSE' : String(w)
 }
 function wedgeFill(w: (typeof CAPSTAN_WHEEL)[number], i: number): string {
-  if (w === 'overboard' || w === 'lose_turn') return '#3a1512'
-  return i % 2 === 0 ? '#2c2011' : '#3a2c16'
+  if (w === 'overboard' || w === 'lose_turn') return '#4a1a14'
+  return i % 2 === 0 ? '#3a2b16' : '#4a3720'
 }
 
 export default function CapstanGame({ initial, parlorPoints }: { initial: CapstanState; parlorPoints: number }) {
@@ -290,7 +290,7 @@ function PuzzlePlay({ puzzle, onBack, onUpdate, onPoints, onDoubloons }: {
           {/* Actions */}
           {awaitingConsonant ? (
             <div>
-              <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.14em', color: '#a8a090', textAlign: 'center', marginBottom: 6 }}>
+              <p className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.12em', color: '#e0cf9e', textAlign: 'center', marginBottom: 8 }}>
                 Call a consonant · {puzzle.pendingValue} ⟡ each
               </p>
               <LetterGrid
@@ -411,7 +411,10 @@ function Wheel({ rot, onSettled, spinning }: { rot: number; onSettled: () => voi
             <g key={i}>
               <path d={`M${cx} ${cy} L${x1} ${y1} A${R} ${R} 0 0 1 ${x2} ${y2} Z`} fill={wedgeFill(w, i)} stroke="#0c0906" strokeWidth="0.8" />
               <text
-                x={lx} y={ly} fill={hazard ? HAZARD : GOLD} fontSize={hazard ? 7 : 9} fontWeight="700"
+                x={lx} y={ly}
+                fill={hazard ? '#ffab9d' : '#f8eed4'}
+                stroke="#0c0906" strokeWidth={0.9} paintOrder="stroke"
+                fontSize={hazard ? 8.5 : 11} fontWeight="800"
                 textAnchor="middle" dominantBaseline="central"
                 transform={`rotate(${i * PER} ${lx} ${ly})`}
                 style={{ fontFamily: 'var(--font-cinzel), serif' }}
@@ -445,11 +448,13 @@ function LetterGrid({ letters, disabled, busy, onPick, wide }: { letters: string
             disabled={off || busy}
             className="font-cinzel font-700"
             style={{
-              aspectRatio: '1', borderRadius: 8, fontSize: '0.95rem',
+              aspectRatio: '1', borderRadius: 8, fontSize: '1.12rem', fontWeight: 800,
               cursor: off || busy ? 'default' : 'pointer',
-              color: off ? '#4a4238' : '#f0e8d0',
-              background: off ? 'rgba(255,255,255,0.02)' : 'linear-gradient(180deg, #2c2011, #1a130b)',
-              border: `1px solid ${off ? 'rgba(255,255,255,0.05)' : `${PARLOR.brass}55`}`,
+              color: off ? '#6a5f4c' : '#fbf3dd',
+              background: off ? 'rgba(255,255,255,0.02)' : 'linear-gradient(180deg, #4a381d, #2c2011)',
+              border: `1px solid ${off ? 'rgba(255,255,255,0.06)' : '#b58b3e'}`,
+              boxShadow: off ? 'none' : 'inset 0 1px 0 rgba(255,255,255,0.08)',
+              textShadow: off ? 'none' : '0 1px 2px rgba(0,0,0,0.5)',
             }}
           >
             {l}
@@ -468,11 +473,13 @@ function ActionBtn({ label, onClick, disabled, primary, full }: { label: string;
       className="font-cinzel font-700"
       style={{
         flex: full ? undefined : 1, width: full ? '100%' : undefined, marginTop: full ? 10 : 0,
-        padding: '0.7rem 0.5rem', borderRadius: 12, fontSize: '0.86rem',
+        padding: '0.72rem 0.5rem', borderRadius: 12, fontSize: '0.9rem', fontWeight: 800,
         cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.5 : 1,
-        color: primary ? '#160f06' : '#f0e8d0',
-        background: primary ? `linear-gradient(180deg, ${PARLOR.candle}, ${PARLOR.brass})` : 'linear-gradient(180deg, #2c2011, #1a130b)',
-        border: `1px solid ${PARLOR.brass}${primary ? '' : '55'}`,
+        color: primary ? '#160f06' : '#fbf3dd',
+        background: primary ? `linear-gradient(180deg, ${PARLOR.candle}, ${PARLOR.brass})` : 'linear-gradient(180deg, #4a381d, #2c2011)',
+        border: `1px solid ${primary ? PARLOR.brass : '#b58b3e'}`,
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
+        textShadow: primary ? 'none' : '0 1px 2px rgba(0,0,0,0.5)',
       }}
     >
       {label}

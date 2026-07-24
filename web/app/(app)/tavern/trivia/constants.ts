@@ -329,9 +329,11 @@ export type CapstanCategory = (typeof CAPSTAN_CATEGORIES)[number]
 /** The wheel. Value wedges + hazards; the server rolls uniformly across this array
  *  and the client animates the capstan to the returned index. */
 export type CapstanWedge = number | 'overboard' | 'lose_turn'
+// One Overboard and one Lose a Turn, sat roughly opposite each other; the rest are
+// value wedges. The server rolls uniformly across this array.
 export const CAPSTAN_WHEEL: CapstanWedge[] = [
-  250, 400, 150, 'overboard', 500, 300, 'lose_turn', 350,
-  200, 650, 300, 'overboard', 450, 800, 'lose_turn', 250,
+  250, 400, 150, 'overboard', 500, 300, 350, 200,
+  650, 300, 450, 'lose_turn', 800, 250, 550, 150,
 ]
 
 /** Parlor points a solved puzzle grants toward the shared rank — a base plus a
