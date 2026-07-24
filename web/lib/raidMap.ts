@@ -931,6 +931,7 @@ export const RAID_MAP: RaidNode[] = [
       { speaker: 'The Fence', portrait: CAPTAIN_KRUST.enemies.krust.portrait, text: "Never once asked whose name's on a manifest. Stayed afloat a whole lifetime for exactly that reason." },
       { text: "Nothing like Pete, this one. He doesn't rob the small. He moves cargo, on time, in bulk." },
       { speaker: 'The Fence', text: "No kingpin, mind. Krust answers upward, same as every other fish in this sea." },
+      { speaker: 'The Fence', text: "Take his cargo off him, captain. Do the trade a favor. I do enjoy watching a hungry captain find out how far up this thing goes." },
       { speaker: 'The Fence', text: "But C.K. don't lose cargo. Lose his cargo, and you find out why.", pause: 500 },
       { text: "A name at last. The Finndicate's freight has a face, and the face keeps a schedule." },
       { text: "His consignment's on the cold water right now." },
