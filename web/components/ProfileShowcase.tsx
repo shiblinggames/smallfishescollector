@@ -15,8 +15,8 @@ import { getRaidItem, isAbyssalForgedItem, type RaidItemDef } from '@/lib/raidIt
 import { SHINY_THEME, SHINY_FISH_FILTER } from '@/lib/shiny'
 import { PRESTIGE_MAX } from '@/lib/zoneRewards'
 
-// Prestige badge chrome (mirrors the fishing zone strip's gold treatment).
-const PRESTIGE_GOLD = '#f0c040'
+// Prestige badge chrome — translucent tinted gold (no solid fill; max is set
+// apart by a brighter gold + soft glow, staying in theme with the rest).
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V']
 
 // Bite-rarity → color / label (kept in sync with the profile pages).
@@ -69,9 +69,9 @@ function TrophyTile({ fish, rank }: { fish: RarestFish; rank: number }) {
       <span className="font-karla font-800" aria-hidden style={{
         position: 'absolute', top: 5, left: 5, width: 15, height: 15, borderRadius: 999,
         display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.5rem', lineHeight: 1,
-        color: top ? '#1a1206' : '#cbd3df',
-        background: top ? GOLD : 'rgba(255,255,255,0.1)',
-        border: top ? 'none' : '1px solid rgba(255,255,255,0.18)',
+        color: top ? '#ffdb7a' : '#cbd3df',
+        background: top ? 'rgba(240,200,80,0.18)' : 'rgba(255,255,255,0.1)',
+        border: `1px solid ${top ? 'rgba(240,200,80,0.6)' : 'rgba(255,255,255,0.18)'}`,
       }}>{rank}</span>
       <div style={{ height: top ? 64 : 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -103,11 +103,12 @@ function ZoneTrophyCard({ label, prestige, top }: { label: string; prestige: num
           <span className="font-karla font-800 uppercase" style={{
             display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap',
             padding: '0.2rem 0.5rem', borderRadius: 999, fontSize: '0.5rem', letterSpacing: '0.12em',
-            color: maxed ? '#1c1405' : '#f0d68a',
-            background: maxed ? PRESTIGE_GOLD : 'rgba(240,200,80,0.14)',
-            border: `1px solid ${maxed ? PRESTIGE_GOLD : 'rgba(240,200,80,0.4)'}`,
+            color: maxed ? '#ffdb7a' : '#f0d68a',
+            background: maxed ? 'rgba(240,200,80,0.2)' : 'rgba(240,200,80,0.13)',
+            border: `1px solid ${maxed ? 'rgba(240,200,80,0.7)' : 'rgba(240,200,80,0.4)'}`,
+            boxShadow: maxed ? '0 0 10px rgba(240,200,80,0.28)' : 'none',
           }}>
-            <svg width="8" height="8" viewBox="0 0 24 24" fill={maxed ? '#1c1405' : '#f0d68a'} aria-hidden><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
+            <svg width="8" height="8" viewBox="0 0 24 24" fill={maxed ? '#ffdb7a' : '#f0d68a'} aria-hidden><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
             {maxed ? 'Max Prestige' : `Prestige ${ROMAN[prestige] ?? prestige}`}
           </span>
         )}
