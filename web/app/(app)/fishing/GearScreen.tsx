@@ -970,9 +970,10 @@ export default function GearScreen({
   const inventoryMap = Object.fromEntries(baitInventory.map(b => [b.bait_type, b.quantity]))
   const ownedRodDefs = RODS.filter(r => (r.cost === 0 && !r.earnedOnly) || ownedRods.includes(r.tier))
 
-  // Completionist forge: does the player own it, and which of their owned rods
-  // can donate a unique effect. Drives the forge panel rendered in the rod tab.
-  const ownsCompletionist = ownedRods.includes(COMPLETIONIST_TIER)
+  // Completionist forge: only surfaced when the Completionist is the EQUIPPED rod
+  // (no point cluttering the rod tab with the forge bench while another rod is in
+  // hand). Equipped implies owned. forgeableRods = owned rods that can donate.
+  const completionistEquipped = rod.tier === COMPLETIONIST_TIER
   const forgeableRods = ownedRodDefs.filter(rodHasUniqueEffect)
 
   const dragPct    = Math.round((1 - reel.needleSpeedMultiplier) * 100)
@@ -1371,7 +1372,7 @@ export default function GearScreen({
                         reconfigurable, non-destructive. Tapping a rod toggles it
                         in/out of the loadout (capped at COMPLETIONIST_MAX_EFFECTS)
                         and persists via onCompletionistEffectsChange. */}
-                    {ownsCompletionist && (() => {
+                    {completionistEquipped && (() => {
                       const filled = stagedEffects.length
                       const auraT = filled / COMPLETIONIST_MAX_EFFECTS // 0..1 power level
                       return (
