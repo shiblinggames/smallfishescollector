@@ -1887,6 +1887,8 @@ export const RAID_MAP: RaidNode[] = [
       { speaker: 'The Quartermaster', portrait: THE_QUARTERMASTER.enemies.quartermaster.portrait, text: "Every account in that book closes the same way, captain, and every one settles up to the don. Finleone likes his ledgers tidy. Yours is the one line I have left open." },
       { ...GUIDE.laz, text: "I know this book. My name is a few pages up, and the line for how I sank was filled in long ago." },
       { ...GUIDE.laz, text: "They were wrong. I have read this ledger from the other side of it. Let me be the one to see his account closed the right way." },
+      { speaker: 'The Quartermaster', portrait: THE_QUARTERMASTER.enemies.quartermaster.portrait, text: "You think Finleone stocked these shelves? Somebody stocked *him*. Somebody who never once came down here to collect." },
+      { ...GUIDE.laz, text: "He's stalling. Close the account." },
     ],
     detail: {
       description:
