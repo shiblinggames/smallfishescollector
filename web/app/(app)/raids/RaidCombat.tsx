@@ -6323,34 +6323,41 @@ export default function RaidCombat({
                   <DodgeWhoosh key={`dw-${dodgeFx.key}`} image={shipImageUrl} dir="left" />
                 )}
               </AnimatePresence>
-              {/* Brace glint — a shield dome breathes over the hull while an
-                  Anchor cut or Abyssal shield is queued, and clears when the
-                  resolver consumes it. STEEL dome = an Anchor brace (a one-hit
-                  damage CUT, no HP pool); CYAN dome = a shield HP pool
-                  (Abyssal/crew) — so a reduction never reads as a shield pool. */}
-              {((anchorReductionPct ?? 0) > 0 || abyssalShieldHp > 0) && (
+              {/* Defensive-cue overlays that differ by SILHOUETTE as well as
+                  color. A shield HP POOL (Abyssal/crew) is a soft round CYAN
+                  bubble; an Anchor BRACE (a one-hit damage cut, no pool) is a
+                  STEEL angular bracket frame clamping the hull — so a reduction
+                  reads as bracing, never as a shield pool. Both pulse OPACITY
+                  ONLY (no mixBlendMode/blur — these persist many turns and a
+                  blend layer re-composites the whole stage every pulse frame:
+                  "everything lags after Abyssal Tide"). */}
+              {abyssalShieldHp > 0 && (
                 <motion.div
                   aria-hidden
                   initial={{ opacity: 0.32 }}
-                  // Frozen static during aiming (mixBlend re-composite starves the aim RAF).
                   animate={subPhase === 'aiming' ? { opacity: 0.5 } : { opacity: [0.32, 0.62, 0.32] }}
                   transition={subPhase === 'aiming' ? { duration: 0.2 } : { duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
                   style={{
-                    // NO mixBlendMode here: this dome PERSISTS for the life of
-                    // the shield (many turns on a Tidecaller cast), and a
-                    // blend layer forces the whole stage to re-composite every
-                    // frame of the infinite pulse — reported as "everything
-                    // lags after Abyssal Tide". A plain translucent gradient
-                    // pulsing opacity stays on the GPU for free.
                     position: 'absolute', inset: '-7%', borderRadius: '50%',
                     pointerEvents: 'none', zIndex: 2,
-                    background: abyssalShieldHp <= 0 && (anchorReductionPct ?? 0) > 0
-                      // Steel — an Anchor brace with no shield pool behind it.
-                      ? 'radial-gradient(ellipse 72% 104% at 74% 50%, rgba(158,176,205,0.6) 0%, rgba(120,140,175,0.24) 46%, transparent 72%)'
-                      // Cyan — a shield HP pool is up.
-                      : 'radial-gradient(ellipse 72% 104% at 74% 50%, rgba(125,211,252,0.55) 0%, rgba(94,234,212,0.22) 46%, transparent 72%)',
+                    background: 'radial-gradient(ellipse 72% 104% at 74% 50%, rgba(125,211,252,0.55) 0%, rgba(94,234,212,0.22) 46%, transparent 72%)',
                   }}
                 />
+              )}
+              {abyssalShieldHp <= 0 && (anchorReductionPct ?? 0) > 0 && (
+                <motion.div
+                  aria-hidden
+                  initial={{ opacity: 0.4 }}
+                  animate={subPhase === 'aiming' ? { opacity: 0.62 } : { opacity: [0.4, 0.72, 0.4] }}
+                  transition={subPhase === 'aiming' ? { duration: 0.2 } : { duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                  style={{ position: 'absolute', inset: '-3%', pointerEvents: 'none', zIndex: 2 }}
+                >
+                  {/* Steel iron-brace brackets — 4 corners clamping the hull. */}
+                  <div style={{ position: 'absolute', top: 0, left: 0, width: 20, height: 20, borderTop: '3px solid rgba(158,176,205,0.92)', borderLeft: '3px solid rgba(158,176,205,0.92)', boxShadow: '0 0 9px rgba(158,176,205,0.6)' }} />
+                  <div style={{ position: 'absolute', top: 0, right: 0, width: 20, height: 20, borderTop: '3px solid rgba(158,176,205,0.92)', borderRight: '3px solid rgba(158,176,205,0.92)', boxShadow: '0 0 9px rgba(158,176,205,0.6)' }} />
+                  <div style={{ position: 'absolute', bottom: 0, left: 0, width: 20, height: 20, borderBottom: '3px solid rgba(158,176,205,0.92)', borderLeft: '3px solid rgba(158,176,205,0.92)', boxShadow: '0 0 9px rgba(158,176,205,0.6)' }} />
+                  <div style={{ position: 'absolute', bottom: 0, right: 0, width: 20, height: 20, borderBottom: '3px solid rgba(158,176,205,0.92)', borderRight: '3px solid rgba(158,176,205,0.92)', boxShadow: '0 0 9px rgba(158,176,205,0.6)' }} />
+                </motion.div>
               )}
             </motion.div>
             <AnimatePresence>
@@ -9005,8 +9012,10 @@ function PlayerStatusAura({ kind = 'heal', color: colorOverride }: { kind?: 'hea
         position: 'absolute', inset: '-6%', borderRadius: '46%', mixBlendMode: 'screen',
         background: `radial-gradient(ellipse at center, ${color}${reticle ? '55' : '99'} 0%, ${color}3a 44%, transparent 72%)`,
       }} />
-      {/* Shield / bulwark ring — snaps in for tide + brace. */}
-      {ring && (
+      {/* A round bulwark ring snaps OUT for a shield pool (tide). The brace
+          instead clamps steel corner brackets INWARD (an iron clamp), so a
+          damage-cut reads as bracing by SHAPE, not as a shield bubble. */}
+      {ring && kind !== 'brace' && (
         <motion.div
           initial={{ scale: 0.4, opacity: 0.9 }} animate={{ scale: 1.45, opacity: 0 }}
           transition={{ duration: 0.7, ease: 'easeOut' }}
@@ -9015,6 +9024,18 @@ function PlayerStatusAura({ kind = 'heal', color: colorOverride }: { kind?: 'hea
             border: `2.5px solid ${color}`, boxShadow: `0 0 18px ${color}aa, inset 0 0 12px ${color}66`,
           }}
         />
+      )}
+      {kind === 'brace' && (
+        <motion.div
+          initial={{ scale: 1.4, opacity: 0 }} animate={{ scale: 1, opacity: [0, 1, 1, 0] }}
+          transition={{ duration: 0.8, times: [0, 0.2, 0.7, 1], ease: 'easeOut' }}
+          style={{ position: 'absolute', inset: '9%', pointerEvents: 'none' }}
+        >
+          <div style={{ position: 'absolute', top: 0, left: 0, width: 17, height: 17, borderTop: `3px solid ${color}`, borderLeft: `3px solid ${color}`, boxShadow: `0 0 12px ${color}aa` }} />
+          <div style={{ position: 'absolute', top: 0, right: 0, width: 17, height: 17, borderTop: `3px solid ${color}`, borderRight: `3px solid ${color}`, boxShadow: `0 0 12px ${color}aa` }} />
+          <div style={{ position: 'absolute', bottom: 0, left: 0, width: 17, height: 17, borderBottom: `3px solid ${color}`, borderLeft: `3px solid ${color}`, boxShadow: `0 0 12px ${color}aa` }} />
+          <div style={{ position: 'absolute', bottom: 0, right: 0, width: 17, height: 17, borderBottom: `3px solid ${color}`, borderRight: `3px solid ${color}`, boxShadow: `0 0 12px ${color}aa` }} />
+        </motion.div>
       )}
       {/* Aim reticle — a crosshair that snaps down onto the guns. */}
       {reticle && (
