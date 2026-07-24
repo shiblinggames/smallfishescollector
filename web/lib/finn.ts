@@ -192,7 +192,7 @@ export const FINN_ENCOUNTER_BEATS: FinnBeat[] = [
   {
     id: 'e37', milestone: 37, track: 'encounter',
     lines: [
-      "There's a steadiness in you under all that mess. That's the rare part. That's the part I've been looking f—",
+      "There's a steadiness in you under all that mess. That's the rare part. That's the part I've been looking f-",
       "...the part worth beating. Forget it. Cast.",
     ],
   },
@@ -294,7 +294,7 @@ export const FINN_WIN_BEATS: FinnBeat[] = [
   {
     id: 'w30', milestone: 30, track: 'win',
     lines: [
-      "Thirty wins. Most people don't last thirty casts.",
+      "Thirty wins. Most anglers don't last thirty casts.",
       "...I won't call you my equal. But I'll quit calling you 'kid.'",
       "Spend that sparingly.",
     ],

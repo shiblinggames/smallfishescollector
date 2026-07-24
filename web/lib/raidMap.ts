@@ -81,7 +81,7 @@ export function musterSceneLines(nodeId: string, report: MusterReport): SceneLin
   if (report.passed) {
     if (isLast) {
       lines.push({ ...GUIDE.dole, text: 'Every berth crewed, every gap closed. THIS is the crew that takes a don, captain. Not one big gun and a prayer. A full, complete deck, every hand pulling its weight.' })
-      lines.push({ ...GUIDE.mira, text: 'Six of us against the biggest mark in the sea. I like those odds better than I have any right to. Open the door.' })
+      lines.push({ ...GUIDE.mira, text: 'All of us against the biggest mark in the sea. I like those odds better than I have any right to. Open the door.' })
     } else {
       lines.push({ ...GUIDE.dole, text: 'Every line answered. A full, ugly, dangerous crew, and every hand can DO something when the guns start. The clerk has no cause to send us home.' })
       lines.push({ ...GUIDE.mira, text: 'Then stop admiring your own handwriting and wave us through.' })
@@ -726,7 +726,7 @@ export const RAID_MAP: RaidNode[] = [
       { text: "The rest sails off to *someone Pete would rather you never asked about*. So nobody asks.", pause: 700 },
       { ...GUIDE.doby, text: "You have got a boat, a free afternoon, and no manners worth mentioning. Kat and I have sailed with worse. We are with you." },
       { speaker: 'Barnacle Pete', portrait: CORSAIRS_RECKONING.enemies.pete.portrait, text: "Broke, me? Couldn't rob a rockpool. Now mind yer business, guppy." },
-      { ...GUIDE.kat, text: "Charming man. Go shake him till the truth falls out of his coat, captain. But do it clever, not bare-knuckled." },
+      { ...GUIDE.kat, text: "Charming sort. Go shake him till the truth falls out of his coat, captain. But do it clever, not bare-knuckled." },
       { ...GUIDE.kat, text: "A ship is only as strong as her hull and her hands. Upgrade the ship when the coin allows, and sign on crew at the Crew Hall. A full deck wins the fights a lone captain loses." },
       { ...GUIDE.doby, text: "Then point us at the reef. Time Pete's Raiders learned who they picked a fight with." },
     ],
@@ -1052,7 +1052,11 @@ export const RAID_MAP: RaidNode[] = [
     label: 'The Finndicate Takes Notice',
     flavor: "Krust's on the seabed, and for the first time the Finndicate feels the hole you've torn in its side.",
     bridge: "They run a special class of freight through water they'll only call the danger zones. Whatever it is, it's worth more to them than the ships it keeps eating.",
-    requiresNode: 'krust',
+    // Gate on the Ch I class pick (not the boss) so the Ch I closer + pick sit
+    // BETWEEN this opener and Krust's death — otherwise chapter_1_close and this
+    // node both unlock at once, an effective back-to-back story beat. Matches
+    // how Ch II/III openers gate on their class pick.
+    requiresNode: 'chapter_1_class',
     image: '/raidlog.png',
     scene: [
       { text: "Krust's consignment is still smoking when the answer comes back. Not a fleet, not a bounty. One scrap of order-paper, and the cold understanding that somebody well above the freight desk has finally set down the ledgers to look at you." },
@@ -1634,7 +1638,7 @@ export const RAID_MAP: RaidNode[] = [
       { speaker: 'The Quartermaster', portrait: THE_QUARTERMASTER.enemies.quartermaster.portrait, text: "Good pick. I'd have steered you to it myself. I always do." },
       { speaker: 'The Quartermaster', portrait: THE_QUARTERMASTER.enemies.quartermaster.portrait, text: "Every captain who sails into the Coffers gets kitted out right here at my counter. Then I watch how far they get." },
       { text: "The way he says it puts a cold coin in your gut. Like he's already seen *how your story ends*.", pause: 600 },
-      { ...GUIDE.kat, text: "I do not like him, captain. A man that glad to see you has already sold you to somebody. Keep a hand near your cutlass and your eyes on his." },
+      { ...GUIDE.kat, text: "I do not like him, captain. Anyone that glad to see you has already sold you to somebody. Keep a hand near your cutlass and your eyes on his." },
       { speaker: 'The Quartermaster', portrait: THE_QUARTERMASTER.enemies.quartermaster.portrait, text: "That admiral past the wall has never lost a fight. But every gun on your deck, you bought off me. Don't forget that, captain." },
       { text: "You want to ask whose side he's really on. Then the war-fleet swings around, and there's no more time for questions." },
       { text: "You'll come back to it later, once the admiral's on the harbor floor." },
@@ -2084,7 +2088,7 @@ export const RAID_MAP: RaidNode[] = [
     // Boss-only, re-runnable, gated on having beaten him alive in his challenge.
     id: 'the_quartermasters_ghost',   type: 'raid',
     label: "The Quartermaster's Ghost",
-    flavor: "The gun-deck is exactly as he left it, and so is he. Dead men keep better books than living ones, and he never did stop counting what you owe.",
+    flavor: "The gun-deck is exactly as he left it, and so is he. The drowned keep better books than the living, and he never did stop counting what you owe.",
     bridge: "The ghost keeps his counter open. Whatever you left in the Caches, and whatever you have melted down since, he still has it, and he will hand it over as many times as you can put him down.",
     // He opens once the CLERK has passed you. The muster is where the game finally
     // says out loud that checks are answered with crew abilities, and the Ghost is
@@ -2213,7 +2217,7 @@ export const RAID_MAP: RaidNode[] = [
       { ...GUIDE.mako, text: 'Whose pocket?' },
       { ...GUIDE.dole, text: 'One guess, and you will not need it. There has only ever been one name at the top of this water.' },
       { ...GUIDE.doby, text: 'Finleone. Felt it in my gut a hundred leagues back. Another thing to hold it in his own ink, though.', pause: 400 },
-      { ...GUIDE.kat, text: 'Forty years I have watched good captains drown arguing whose fault the sea was. Man kept the answer in a ledger the whole time.' },
+      { ...GUIDE.kat, text: 'Forty years I have watched good captains drown arguing whose fault the sea was. The don kept the answer in a ledger the whole time.' },
       { ...GUIDE.dole, text: 'Here is a curiosity. One hand in the margins that is not his. Older, finer. Initials a few odd sums that tie to no account I can find.' },
       { ...GUIDE.doby, text: 'Dead partner. Some debt he never troubled to close. Every old crook keeps a ghost or two in his columns. Leave it lie.' },
       { ...GUIDE.laz, text: 'Then the books are done talking. He is at the end of them, on his throne, waiting. Let us go settle the account in person.', pause: 400 },
@@ -2358,7 +2362,7 @@ export const RAID_MAP: RaidNode[] = [
     scene: [
       { text: "You take the aisle. The court holds its fire and its formation, every gun tracking you in, and the lit flagship at the end grows from a lantern to a leviathan." },
       { ...GUIDE.mako, text: "Bigger than the stories. Bigger than the Cartographer swore anything in this sea could get. I did not think I would ever be the small one at a table." },
-      { ...GUIDE.dole, text: "Everything ran up to him. Every debt, every drowned captain, every clever little sum I read off a dead man's ledger. And here he is at the bottom of it all, exactly where the numbers said he would be. I do hate being right about a monster." },
+      { ...GUIDE.dole, text: "Everything ran up to him. Every debt, every drowned captain, every clever little sum I read off a dead captain's ledger. And here he is at the bottom of it all, exactly where the numbers said he would be. I do hate being right about a monster." },
       { ...GUIDE.mira, text: "Hold your nerve. This is the mark no one in the trade will touch. Which means when he goes down, it is us who put him there. And no one else in the whole sea gets to say it." },
       { text: "Close enough to hail now, and the don, who has not stirred for the whole descent, finally lifts his vast head and regards you the way you would look at a coin you have already spent.", pause: 500, closeup: true },
       { speaker: 'Don Finleone', portrait: THE_THRONE.enemies.don_finleone.portrait, text: "All this way. Past my hauler, my market, my whole drowned family. I confess I am almost impressed, little captain." },
@@ -2449,7 +2453,7 @@ export const RAID_MAP: RaidNode[] = [
       { ...GUIDE.mako, text: "The biggest bounty in the sea, collected, and I got to be there for it. I could get used to this crew." },
       { ...GUIDE.dole, text: "Four chapters, one drowned empire, and a debt the whole sea owed finally paid in full. The finest sum I ever balanced." },
       { ...GUIDE.laz, text: "The drowned can rest now. All the captains the don fed to this water. That is worth more than any coin in his vault." },
-      { ...GUIDE.mira, text: "Six of us, one impossible mark, and a captain with no sense of self-preservation. I have never had better odds in my life." },
+      { ...GUIDE.mira, text: "All of us, one impossible mark, and a captain with no sense of self-preservation. I have never had better odds in my life." },
       { text: "Tonight the crew is whole, the grog is cold, and the whole sea knows your name. Whatever waited out past the wreck can wait for morning.", pause: 600 },
     ],
     detail: {
