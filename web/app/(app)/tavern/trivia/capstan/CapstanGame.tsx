@@ -49,7 +49,11 @@ export default function CapstanGame({ initial, parlorPoints }: { initial: Capsta
     <div style={{ maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <BackButton href="/tavern/trivia" label="Parlor" />
+          {/* On the main Capstan page the back exits to the Parlor; inside a puzzle
+              it only steps back to the Capstan puzzle list. */}
+          {active === null
+            ? <BackButton href="/tavern/trivia" label="Parlor" />
+            : <BackChip label="Capstan" onClick={() => setActiveIndex(null)} />}
         </div>
         <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0e8d0', textAlign: 'center', whiteSpace: 'nowrap' }}>
           Spin the Capstan
@@ -72,6 +76,33 @@ export default function CapstanGame({ initial, parlorPoints }: { initial: Capsta
         />
       )}
     </div>
+  )
+}
+
+/** A back button that runs an onClick (steps back to the puzzle list) instead of
+ *  navigating — matches BackButton's pill so the header reads consistently. */
+function BackChip({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <motion.button
+      whileTap={{ scale: 0.9 }} whileHover={{ y: -1 }}
+      transition={{ type: 'spring', stiffness: 600, damping: 22 }}
+      onClick={onClick}
+      aria-label={`Back to ${label}`}
+      className="font-karla font-700 uppercase"
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 5,
+        padding: '0.42rem 0.72rem 0.42rem 0.55rem', borderRadius: 999,
+        fontSize: '0.6rem', letterSpacing: '0.1em', color: '#e3d8bc',
+        background: 'linear-gradient(180deg, rgba(40,32,17,0.9) 0%, rgba(20,15,8,0.92) 100%)',
+        border: '1px solid rgba(196,169,106,0.5)', cursor: 'pointer', whiteSpace: 'nowrap',
+        boxShadow: '0 2px 9px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06)',
+      }}
+    >
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f0c040" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <path d="M15 18l-6-6 6-6" />
+      </svg>
+      {label}
+    </motion.button>
   )
 }
 
@@ -237,10 +268,6 @@ function PuzzlePlay({ puzzle, onBack, onUpdate, onPoints, onDoubloons }: {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-      <button onClick={onBack} className="font-karla font-700 uppercase" style={{ alignSelf: 'flex-start', fontSize: '0.55rem', letterSpacing: '0.12em', color: '#a8a090', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-        ‹ All three puzzles
-      </button>
-
       {/* Phrase board — the category sits inside it as a header, above the tiles */}
       <PhraseBoard mask={puzzle.mask} category={puzzle.category} />
 
