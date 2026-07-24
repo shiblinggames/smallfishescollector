@@ -241,10 +241,8 @@ function PuzzlePlay({ puzzle, onBack, onUpdate, onPoints, onDoubloons }: {
         ‹ All three puzzles
       </button>
 
-      <p className="font-karla font-700 uppercase" style={{ fontSize: '0.52rem', letterSpacing: '0.18em', color: PARLOR.brass, textAlign: 'center' }}>{puzzle.category}</p>
-
-      {/* Phrase board */}
-      <PhraseBoard mask={puzzle.mask} />
+      {/* Phrase board — the category sits inside it as a header, above the tiles */}
+      <PhraseBoard mask={puzzle.mask} category={puzzle.category} />
 
       {/* Bank + strikes */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.1rem 0.2rem' }}>
@@ -356,9 +354,14 @@ function PuzzlePlay({ puzzle, onBack, onUpdate, onPoints, onDoubloons }: {
 }
 
 // ── Pieces ──────────────────────────────────────────────────────────
-function PhraseBoard({ mask }: { mask: (string | null)[][] }) {
+function PhraseBoard({ mask, category }: { mask: (string | null)[][]; category: string }) {
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '10px 14px', padding: '0.9rem 0.7rem', borderRadius: 14, background: 'linear-gradient(180deg, #1a130b, #0e0a06)', border: `1px solid ${PARLOR.brass}33` }}>
+    <div style={{ borderRadius: 14, background: 'linear-gradient(180deg, #1a130b, #0e0a06)', border: `1px solid ${PARLOR.brass}44`, overflow: 'hidden' }}>
+      {/* Category header — the clue's topic, banded across the top of the board. */}
+      <div style={{ padding: '0.5rem 0.7rem', textAlign: 'center', background: `linear-gradient(180deg, ${PARLOR.brass}22, transparent)`, borderBottom: `1px solid ${PARLOR.brass}33` }}>
+        <span className="font-cinzel font-700 uppercase" style={{ fontSize: '0.66rem', letterSpacing: '0.18em', color: PARLOR.candle, textShadow: `0 1px 2px rgba(0,0,0,0.5)` }}>{category}</span>
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '10px 14px', padding: '0.9rem 0.7rem' }}>
       {mask.map((word, wi) => (
         <span key={wi} style={{ display: 'flex', gap: 4 }}>
           {word.map((cell, ci) => (
@@ -378,6 +381,7 @@ function PhraseBoard({ mask }: { mask: (string | null)[][] }) {
           ))}
         </span>
       ))}
+      </div>
     </div>
   )
 }
