@@ -1441,7 +1441,7 @@ function WaitTimer() {
   )
 }
 
-function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, doubleCatch, gemEarned, perfectStreak = 1, streakBonusXP = 0, jackpotMultiplier, perfectXpMult = 1, lockedStage = 0, catchQty = 1, ancientCount = 0, ancientTotal = 6, sizeIn, sizeMin, sizeMax, isPB, previousBest, isShiny = false }: {
+function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, doubleCatch, gemEarned, perfectStreak = 1, streakBonusXP = 0, jackpotMultiplier, perfectXpMult = 1, lockedStage = 0, catchQty = 1, ancientCount = 0, ancientTotal = 6, sizeIn, sizeMin, sizeMax, isPB, previousBest, isShiny = false, deepStirs = false }: {
   fish: FishSpecies
   baitSaved: boolean
   isNewSpecies: boolean
@@ -1471,6 +1471,9 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
    *  the gold/amber palette and the fish image gets the SHINY_FISH_FILTER
    *  so the entire result moment reads as premium. */
   isShiny?: boolean
+  /** Ancient Deep: rare, subtle omen line nudging toward a rarer lure without
+   *  naming it — shown only on a common-bait catch while trophies remain. */
+  deepStirs?: boolean
 }) {
   // 'Ancient' card treatment is the red boss palette + heavy
   // burst / ominous chrome reserved for the 6 trophies. The 12 new
@@ -2403,6 +2406,16 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
             }}>
             {isShiny ? `Golden ${fish.name}` : fish.name}
           </p>
+
+          {/* Ancient Deep breadcrumb — a rare, faint omen on a common-bait catch
+              while giants remain. Deliberately vague: it never names the lure,
+              only that something down there did not rise. Pairs with the lures'
+              own "the oldest things rise for its shine" flavor. */}
+          {deepStirs && (
+            <p className="font-karla italic text-center" style={{ fontSize: '0.62rem', color: 'rgba(192,132,252,0.72)', lineHeight: 1.4, marginTop: '-0.15rem', marginBottom: '0.5rem' }}>
+              Something vast stirred in the black below, and did not rise.
+            </p>
+          )}
 
           {/* Ornate gold divider — only on shiny. Reads as a holographic
               card's section break with two flanking diamond dots. */}
@@ -4001,6 +4014,9 @@ export default function FishingGame({
     wormhole?: boolean
     /** Fish actually banked this catch (3 on a Locked-In triple). */
     catchQty?: number
+    /** Ancient Deep: a rare, subtle omen line hinting the giants want a rarer
+     *  lure — shown only on a common-bait catch while trophies remain. */
+    deepStirs?: boolean
   } | null>(null)
   const [rerollingWormhole, setRerollingWormhole] = useState(false)
   // Lock-out for golden catches. The card's entrance + burst + ring waves
@@ -5684,6 +5700,7 @@ export default function FishingGame({
           alreadyMounted: (res as { alreadyMounted?: boolean }).alreadyMounted ?? false,
           wormhole: (res as { wormhole?: boolean }).wormhole ?? false,
           catchQty: actualQty,
+          deepStirs: (res as { deepStirs?: boolean }).deepStirs ?? false,
         })
         // YOLO Rod jackpot — fire the full-screen celebration overlay on top
         // of the result card. Renders particles + a slamming "JACKPOT"
@@ -7544,6 +7561,7 @@ export default function FishingGame({
                       isPB={catchResult.isPB}
                       previousBest={catchResult.previousBest}
                       isShiny={catchResult.isShiny}
+                      deepStirs={catchResult.deepStirs}
                     />
                     )}
                     {/* Galaxy Rod — Wormhole reroll. One-shot, opt-in gamble. */}

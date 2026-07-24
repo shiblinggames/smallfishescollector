@@ -460,6 +460,11 @@ export async function reelIn(
       /** Number of fish this catch actually banked (Locked-In triple / double /
        *  jackpot, clamped to hold space). 1 for a normal catch. */
       catchQty?: number
+      /** Ancient Deep only: a RARE, subtle omen shown when a regular is landed
+       *  on common bait while giants remain uncaught — a faint sense that
+       *  something larger passed. Deliberately vague (never names the lure); a
+       *  breadcrumb toward the trophies, pairing with the lures' own flavor. */
+      deepStirs?: boolean
     }
   | { caught: false }
   | { error: string }
@@ -968,11 +973,22 @@ export async function reelIn(
     { onConflict: 'user_id,date' },
   )
 
+  // Ancient Deep breadcrumb (see `deepStirs` in the return type): on a regular
+  // landed with common bait while giants remain uncaught, RARELY let a faint
+  // omen through. Never on the lures (that player already knows), never once all
+  // 6 giants are on the wall. Deliberately rare + vague so it reads as ambience,
+  // not a tutorial.
+  const deepStirs = fish.habitat === 'ancient_deep'
+    && baitType !== 'luminous' && baitType !== 'golden'
+    && (((profile.ancient_catches as number[] | null) ?? []).length < 6)
+    && Math.random() < 0.14
+
   return {
     caught: true,
     fish: fish as FishSpecies,
     baitSaved,
     isNewSpecies,
+    deepStirs,
     xpGained,
     newXP,
     dailyProgress: newP,
