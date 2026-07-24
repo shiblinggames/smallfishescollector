@@ -15,6 +15,7 @@ import { getReel } from '@/lib/reels'
 import { catchXP } from '@/lib/fishingLevel'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { getCachedFishMarket } from '@/lib/fishMarket'
+import { getCachedFishSpecies } from '@/lib/fishSpecies'
 import type { ZoneStat } from './ZoneLanding'
 
 export default async function FishingPage() {
@@ -37,7 +38,7 @@ export default async function FishingPage() {
     { data: fishInventory },
     { count: uniqueSpeciesCaught },
     { data: rodRows },
-    { data: allSpecies },
+    allSpecies,
     { data: collectionRows },
     marketRows,
     { data: pbRows },
@@ -59,9 +60,8 @@ export default async function FishingPage() {
     admin.from('rod_inventory')
       .select('rod_tier')
       .eq('user_id', user.id),
-    admin.from('fish_species')
-      .select('id, name, scientific_name, fun_fact, habitat, bite_rarity, sell_value, catch_difficulty, length_min_in, length_max_in')
-      .order('bite_rarity'),
+    // Static species reference data, served from the long-TTL cache.
+    getCachedFishSpecies(),
     admin.from('fish_collection')
       .select('fish_id, is_golden, catch_count')
       .eq('user_id', user.id),
