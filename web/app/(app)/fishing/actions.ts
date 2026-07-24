@@ -179,7 +179,7 @@ export async function castLine(baitType: string, habitat: string): Promise<
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('rod_tier, completionist_effects, hook_tier, fishing_xp, fish_hold_tier, ancient_catches, active_event, catch_pending, fishing_renown_alloc, has_ancient_deep_access, current_perfect_streak')
+    .select('rod_tier, completionist_effects, hook_tier, fishing_xp, fish_hold_tier, ancient_catches, active_event, catch_pending, fishing_renown_alloc, has_ancient_deep_access, current_perfect_streak, current_streak_zone')
     .eq('id', user.id)
     .single()
 
@@ -274,11 +274,20 @@ export async function castLine(baitType: string, habitat: string): Promise<
 
   const rod = getEffectiveRod(profile.rod_tier ?? 0, profile.completionist_effects as number[] | null)
 
+  // A perfect streak is bound to the ZONE it was built in — fishing a different
+  // zone breaks it, so you can't farm a cheap streak in the Shallows and cash the
+  // bonuses (streak XP, the Locked-In Rod) in a hard zone. Returning to the SAME
+  // zone keeps it (the intended no-FOMO behaviour). current_streak_zone is stamped
+  // each cast below; on the first cast the streak is 0 so there's nothing to break.
+  const prevStreak = (profile as { current_perfect_streak?: number }).current_perfect_streak ?? 0
+  const streakZone = (profile as { current_streak_zone?: string | null }).current_streak_zone
+  const zoneChanged = prevStreak > 0 && !!streakZone && streakZone !== habitat
+
   // Locked-In Rod: this cast's power scales with the streak the player has BUILT.
-  // If the previous cast was abandoned (catch_pending already set), the streak is
-  // about to be reset to 0 below — so this cast sees 0 too. Cheat-proof: the streak
+  // If the previous cast was abandoned (catch_pending) OR the zone changed, the
+  // streak is reset to 0 below — so this cast sees 0 too. Cheat-proof: the streak
   // is the server's own current_perfect_streak, never a client value.
-  const castStreak = profile.catch_pending ? 0 : ((profile as { current_perfect_streak?: number }).current_perfect_streak ?? 0)
+  const castStreak = (profile.catch_pending || zoneChanged) ? 0 : prevStreak
   const locked = lockedInState(rod, castStreak)
 
   // Crate encounter: 2% chance (× rod.crateChanceMult — Treasure Rod = 2×).
@@ -293,8 +302,8 @@ export async function castLine(baitType: string, habitat: string): Promise<
   // breaks the perfect streak just like a miss — no cheesing it by bailing on
   // fish you don't like. Fire-and-forget — the multi-second gap before reelIn
   // means it always commits first; a failure mustn't block the cast result.
-  const castUpdate: Record<string, unknown> = { last_used_bait: baitType, catch_pending: !isCrate }
-  if (profile.catch_pending) castUpdate.current_perfect_streak = 0
+  const castUpdate: Record<string, unknown> = { last_used_bait: baitType, catch_pending: !isCrate, current_streak_zone: habitat }
+  if (profile.catch_pending || zoneChanged) castUpdate.current_perfect_streak = 0
   void admin.from('profiles').update(castUpdate).eq('id', user.id).then(() => {}, () => {})
 
   // Lifetime "Lines Cast" career stat — bump once per committed cast (covers

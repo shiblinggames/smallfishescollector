@@ -52,7 +52,7 @@ type FishSpeciesBasic = { id: number; name: string; scientific_name: string; fun
 export default function FishingPageClient({
   hookTier, rodTier, reelTier, lineTier,
   initialDoubloons, initialGems, initialFathoms, initialFishingXP, initialBait, initialLastUsedBait, initialInventory, uniqueSpeciesCaught, zoneStats, ancientDeepUnlocked,
-  fishHoldTier, ownedRods, initialCompletionistEffects, initialHasForgedBefore, allFishSpecies, caughtFishIds, mountedFishIds, initialPersonalBests, initialCatchCounts, initialHighestPerfectStreak, initialPerfectStreak,
+  fishHoldTier, ownedRods, initialCompletionistEffects, initialHasForgedBefore, allFishSpecies, caughtFishIds, mountedFishIds, initialPersonalBests, initialCatchCounts, initialHighestPerfectStreak, initialPerfectStreak, initialStreakZone,
   hasSeenFishingTour, hasSeenFishingCatchTour, hasSeenFirstCatchCelebration, initialShowWaitTimer, activeSession, username, zoneRewardsClaimed,
   initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, gauntletUpgrades, hasPerfectedSigil, prestigeLevels, goldenBoosts, ancientCatches, characterColor, unlockedCharacterColors, newlyUnlockedSkins, equippedBadges, unlockedBadges, marketMultipliers, isPremium, equippedBoat, unlockedBoats, newlyUnlockedBoats, equippedHat, unlockedHats, equippedPet, unlockedPets,
   initialFinnEncounters, initialFinnWins, initialFinnSeenBeats, initialFinnRevealed, initialFinnLastOutcome,
@@ -83,6 +83,7 @@ export default function FishingPageClient({
   initialCatchCounts: Record<number, number>
   initialHighestPerfectStreak: number
   initialPerfectStreak: number
+  initialStreakZone: string | null
   hasSeenFishingTour: boolean
   hasSeenFishingCatchTour: boolean
   hasSeenFirstCatchCelebration: boolean
@@ -296,7 +297,7 @@ export default function FishingPageClient({
       initialPersonalBests={initialPersonalBests}
       initialCatchCounts={initialCatchCounts}
       initialHighestPerfectStreak={initialHighestPerfectStreak}
-      initialPerfectStreak={initialPerfectStreak}
+      initialPerfectStreak={initialStreakZone && initialStreakZone !== selectedZone ? 0 : initialPerfectStreak}
       hasSeenFishingTour={hasSeenFishingTour}
       hasSeenFishingCatchTour={hasSeenFishingCatchTour}
       hasSeenFirstCatchCelebration={hasSeenFirstCatchCelebration}
