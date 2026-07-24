@@ -942,17 +942,42 @@ export async function crewTheDeck(pullFromVoyages = false): Promise<
     // what "best" means yet — that is the whole point of the button.
     .sort((a, b) => (b.rarity - a.rarity) || ((b.power + b.dodge + b.fortune) - (a.power + a.dodge + a.fortune)))
 
-  let assigned = 0
+  // The "at sea" locks that applyAssignment would re-check per pick — fetch them
+  // ONCE: crew committed to a launched (pending) voyage, and crew out on a trawl.
+  // Neither can be pulled onto the raid deck. (The roster already guarantees
+  // ownership + alive + the one-of-each-card / empty-slot invariants, so the rest
+  // of applyAssignment's per-call guard + profile read + state rebuild is
+  // redundant here.)
+  const [{ data: pendingVoyage }, { data: trawlRows }] = await Promise.all([
+    admin.from('daily_voyages').select('crew_variant_ids').eq('user_id', user.id).eq('status', 'pending').maybeSingle(),
+    admin.from('trawls').select('crew_id').eq('user_id', user.id),
+  ])
+  const atSea = new Set<number>(
+    Array.isArray((pendingVoyage as any)?.crew_variant_ids) ? (pendingVoyage as any).crew_variant_ids as number[] : [],
+  )
+  const onTrawl = new Set<number>(
+    ((trawlRows ?? []) as { crew_id: number | null }[]).map(t => t.crew_id).filter((v): v is number => v != null),
+  )
+
+  // Pick best-available per empty slot (all in memory), skipping locked crew.
   const used = new Set<number>()
+  const placements: { crewId: number; slot: number }[] = []
   for (const slot of empty) {
-    const pick = pool.find(c => !used.has(c.id) && !aboardCards.has(c.cardId))
+    const pick = pool.find(c => !used.has(c.id) && !aboardCards.has(c.cardId) && !atSea.has(c.id) && !onTrawl.has(c.id))
     if (!pick) break
     used.add(pick.id)
     aboardCards.add(pick.cardId)
-    const res = await applyAssignment(user.id, pick.id, 'raid', slot)
-    if ('error' in res) continue
-    assigned++
+    placements.push({ crewId: pick.id, slot })
   }
+
+  // One UPDATE per placement, in parallel — distinct rows + distinct empty slots,
+  // duplicates already filtered, so no collisions. Writing voyage_slot=null +
+  // raid_slot=slot together satisfies the one-track-null CHECK in a single write.
+  // Then rebuild state ONCE (vs applyAssignment's per-iteration rebuild).
+  await Promise.all(placements.map(p =>
+    admin.from('user_crew').update({ voyage_slot: null, raid_slot: p.slot }).eq('id', p.crewId).eq('user_id', user.id),
+  ))
+  const assigned = placements.length
 
   const state = await getCrewState()
   if (!state) return { error: 'Failed to load crew' }
