@@ -51,6 +51,7 @@ interface Props {
   hookTier: number
   equippedSpecialId: string | null
   rarestFish: { id: number; name: string; bite_rarity: number; habitat?: string; sell_value?: number }[]
+  prestigeLevels: Record<string, number>
   goldenMounts: GoldenMount[]
   raidItemIds: string[]
   ancientTrophies: { id: number; name: string }[]
@@ -377,6 +378,7 @@ export default function ProfileClient({
   hookTier,
   equippedSpecialId,
   rarestFish,
+  prestigeLevels,
   goldenMounts,
   raidItemIds,
   ancientTrophies,
@@ -1091,7 +1093,7 @@ export default function ProfileClient({
           {rarestFish.length > 0 && (
             <div>
               <SectionLabel flavor="Your three rarest trophies from every water you've fished.">Rarest Catches</SectionLabel>
-              <RarestCatchesByZone fish={rarestFish} />
+              <RarestCatchesByZone fish={rarestFish} prestige={prestigeLevels} />
             </div>
           )}
 

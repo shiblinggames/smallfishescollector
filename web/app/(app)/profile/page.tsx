@@ -113,6 +113,7 @@ export default async function ProfilePage() {
           hookTier={profile?.hook_tier ?? 0}
           equippedSpecialId={(profile?.equipped_special as string | null) ?? null}
           rarestFish={rarestFish}
+          prestigeLevels={(profile?.prestige_levels as Record<string, number> | null) ?? {}}
           goldenMounts={goldenMounts}
           raidItemIds={(profile?.raid_items as string[] | null) ?? []}
           ancientTrophies={ancientTrophies}

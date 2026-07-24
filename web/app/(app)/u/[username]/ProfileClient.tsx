@@ -59,6 +59,7 @@ interface Props {
   stats: Stats
   gear: Gear
   rarestFish: { id: number; name: string; bite_rarity: number; habitat?: string; sell_value?: number }[]
+  prestigeLevels: Record<string, number>
   goldenMounts: GoldenMount[]
   equippedBoat?: string | null
   equippedHat?: string | null
@@ -117,7 +118,7 @@ function LevelChip({ color, label, value }: { color: string; label: string; valu
   )
 }
 
-export default function ProfileClient({ username, showcaseCrew, voyages, stats, gear, rarestFish, goldenMounts, raidItemIds = [], equippedShipSkin, isPremium, isOwnProfile, isInCrew: initialIsInCrew, characterColor = 'default', equippedSpecialId, equippedBadges = [], equippedBoat = null, equippedHat = null, equippedPet = null, avatarBg = null, avatarBorder = null, profileBg = null, career }: Props) {
+export default function ProfileClient({ username, showcaseCrew, voyages, stats, gear, rarestFish, prestigeLevels, goldenMounts, raidItemIds = [], equippedShipSkin, isPremium, isOwnProfile, isInCrew: initialIsInCrew, characterColor = 'default', equippedSpecialId, equippedBadges = [], equippedBoat = null, equippedHat = null, equippedPet = null, avatarBg = null, avatarBorder = null, profileBg = null, career }: Props) {
   const [inCrew, setInCrew] = useState(initialIsInCrew ?? false)
   const [crewPending, startCrewTransition] = useTransition()
   const [expandedVoyage, setExpandedVoyage] = useState<number | null>(null)
@@ -469,7 +470,7 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
           {rarestFish.length > 0 && (
             <div>
               <SectionLabel flavor="The three rarest trophies from every water they've fished.">Rarest Catches</SectionLabel>
-              <RarestCatchesByZone fish={rarestFish} />
+              <RarestCatchesByZone fish={rarestFish} prestige={prestigeLevels} />
             </div>
           )}
 

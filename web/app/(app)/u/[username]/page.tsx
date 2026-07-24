@@ -168,6 +168,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
             shipName: profile.ship_name ?? null,
           }}
           rarestFish={rarestFish}
+          prestigeLevels={(profile.prestige_levels as Record<string, number> | null) ?? {}}
           goldenMounts={goldenMounts}
           ownedSpecialIds={[
             ...(profile.has_tide_turner ? ['tide_turner'] : []),

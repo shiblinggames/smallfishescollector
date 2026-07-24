@@ -13,6 +13,11 @@
 import { CrewPortrait, type ShowcaseCrew } from '@/components/CrewShowcase'
 import { getRaidItem, isAbyssalForgedItem, type RaidItemDef } from '@/lib/raidItems'
 import { SHINY_THEME, SHINY_FISH_FILTER } from '@/lib/shiny'
+import { PRESTIGE_MAX } from '@/lib/zoneRewards'
+
+// Prestige badge chrome (mirrors the fishing zone strip's gold treatment).
+const PRESTIGE_GOLD = '#f0c040'
+const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V']
 
 // Bite-rarity → color / label (kept in sync with the profile pages).
 const RARITY_COLOR: Record<number, string> = {
@@ -83,14 +88,30 @@ function TrophyTile({ fish, rank }: { fish: RarestFish; rank: number }) {
   )
 }
 
-/** A single zone card: uniform neutral chrome + the ranked podium. */
-function ZoneTrophyCard({ label, top }: { label: string; top: RarestFish[] }) {
+/** A single zone card: uniform neutral chrome + the ranked podium. Shows the
+ *  player's prestige level for the zone (gold pill, "Max Prestige" at the cap). */
+function ZoneTrophyCard({ label, prestige, top }: { label: string; prestige: number; top: RarestFish[] }) {
+  const maxed = prestige >= PRESTIGE_MAX
   return (
     <div style={{
       borderRadius: 16, padding: '0.8rem 0.8rem 0.9rem',
       background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.09)',
     }}>
-      <p className="font-cinzel font-700" style={{ fontSize: '1.02rem', color: '#f2ede3', lineHeight: 1, marginBottom: 10 }}>{label}</p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}>
+        <p className="font-cinzel font-700" style={{ fontSize: '1.02rem', color: '#f2ede3', lineHeight: 1 }}>{label}</p>
+        {prestige >= 1 && (
+          <span className="font-karla font-800 uppercase" style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap',
+            padding: '0.2rem 0.5rem', borderRadius: 999, fontSize: '0.5rem', letterSpacing: '0.12em',
+            color: maxed ? '#1c1405' : '#f0d68a',
+            background: maxed ? PRESTIGE_GOLD : 'rgba(240,200,80,0.14)',
+            border: `1px solid ${maxed ? PRESTIGE_GOLD : 'rgba(240,200,80,0.4)'}`,
+          }}>
+            <svg width="8" height="8" viewBox="0 0 24 24" fill={maxed ? '#1c1405' : '#f0d68a'} aria-hidden><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
+            {maxed ? 'Max Prestige' : `Prestige ${ROMAN[prestige] ?? prestige}`}
+          </span>
+        )}
+      </div>
       {/* podium — #1 biggest, then runners-up */}
       <div style={{ display: 'grid', gridTemplateColumns: `repeat(${top.length}, 1fr)`, gap: 8, alignItems: 'end' }}>
         {top.map((f, i) => <TrophyTile key={f.id} fish={f} rank={i + 1} />)}
@@ -102,7 +123,7 @@ function ZoneTrophyCard({ label, top }: { label: string; top: RarestFish[] }) {
 /** Top-3 rarest catches in EACH zone the player has fished — a trophy room by
  *  depth. Within a zone, sorted by rarity, then doubloon sell value. Zones with
  *  no catches are omitted. Pass the player's FULL caught-fish list. */
-export function RarestCatchesByZone({ fish }: { fish: RarestFish[] }) {
+export function RarestCatchesByZone({ fish, prestige }: { fish: RarestFish[]; prestige?: Record<string, number> }) {
   if (!fish || fish.length === 0) return null
   const byZone: Record<string, RarestFish[]> = {}
   for (const f of fish) {
@@ -115,6 +136,7 @@ export function RarestCatchesByZone({ fish }: { fish: RarestFish[] }) {
     .map(z => ({
       zone: z,
       label: ZONE_LABEL[z],
+      level: prestige?.[z] ?? 0,
       top: byZone[z]
         .slice()
         .sort((x, y) => (y.bite_rarity - x.bite_rarity) || ((y.sell_value ?? 0) - (x.sell_value ?? 0)))
@@ -123,7 +145,7 @@ export function RarestCatchesByZone({ fish }: { fish: RarestFish[] }) {
   if (zones.length === 0) return null
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {zones.map(({ zone, label, top }) => <ZoneTrophyCard key={zone} label={label} top={top} />)}
+      {zones.map(({ zone, label, level, top }) => <ZoneTrophyCard key={zone} label={label} prestige={level} top={top} />)}
     </div>
   )
 }
