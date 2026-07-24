@@ -7067,6 +7067,9 @@ export default function RaidCombat({
               // Aim-bar afflictions (Iron Etiquette's hardened lock, decoys, squall).
               // Count is in "shots" not turns, so the desc carries it (no `turns`).
               ...(aimAffliction ? [{ key: 'aim', name: aimAffliction.name, color: AIM_AFFLICTION_COLOR, desc: aimAfflictionDesc(aimAffliction.kind, aimAfflictionRef.current?.passes ?? 0) }] : []),
+              // Anchor brace — mirrors the status chip so the stats popup explains
+              // it alongside burns/freezes. A one-hit damage cut, not a pool.
+              ...((anchorReductionPct ?? 0) > 0 ? [{ key: 'brace', name: 'Braced', color: '#9eb0cd', desc: `The next hit against you is cut by ${Math.round((anchorReductionPct ?? 0) * 100)}%. It holds for one blow, then it is spent.` }] : []),
             ]}
             onClose={() => setShowStats(false)}
           />
