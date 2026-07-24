@@ -3043,55 +3043,6 @@ function SpeedClock({ endsAt, paused = false }: { endsAt: number; paused?: boole
 //   - +N FISH counter ticks 0→qty with cubic ease-out
 //   - 16 coin glyphs erupt outward + up from center
 //   - 24 confetti squares rain from the top
-// A particle burst that erupts FROM the rod when it locks into a new stage — a
-// white-hot core flash + shockwave rings + sparks flying out in the stage colour.
-// Anchored at a zero-size point (its parent div at the rod); children centre on it.
-function RodStageBurst({ stage }: { stage: number }) {
-  const isMax = stage >= 3
-  const color = stage >= 3 ? '#e879f9' : stage === 2 ? '#f0c040' : '#22d3ee'
-  const rgb   = stage >= 3 ? '232,121,249' : stage === 2 ? '240,192,64' : '34,211,238'
-  const dur = isMax ? 0.72 : 0.55
-  const sparkN = isMax ? 16 : 11
-  const rings = isMax ? 3 : 2
-  return (
-    <>
-      {/* white-hot core flash */}
-      <motion.div
-        initial={{ scale: 0.2, opacity: 1 }}
-        animate={{ scale: isMax ? 2.4 : 1.7, opacity: 0 }}
-        transition={{ duration: isMax ? 0.42 : 0.32, ease: 'easeOut' }}
-        style={{ position: 'absolute', left: -34, top: -34, width: 68, height: 68, borderRadius: '50%', background: `radial-gradient(circle, #fff 0%, ${color} 40%, transparent 72%)`, filter: 'blur(1px)' }}
-      />
-      {/* shockwave rings */}
-      {Array.from({ length: rings }).map((_, i) => {
-        const sz = isMax ? 210 : 150
-        return (
-          <motion.div key={`r${i}`}
-            initial={{ scale: 0.18, opacity: 0.85 }}
-            animate={{ scale: 1, opacity: 0 }}
-            transition={{ duration: dur, ease: 'easeOut', delay: i * 0.08 }}
-            style={{ position: 'absolute', left: -sz / 2, top: -sz / 2, width: sz, height: sz, borderRadius: '50%', border: `2px solid rgba(${rgb},0.9)`, boxShadow: `0 0 16px rgba(${rgb},0.6)` }}
-          />
-        )
-      })}
-      {/* sparks flying outward */}
-      {Array.from({ length: sparkN }).map((_, i) => {
-        const a = (i / sparkN) * Math.PI * 2 + (isMax ? 0.2 : 0)
-        const d = (isMax ? 120 : 84) + (i % 3) * 16
-        const s = 4 + (i % 2) * 2
-        return (
-          <motion.span key={`s${i}`}
-            initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
-            animate={{ x: Math.cos(a) * d, y: Math.sin(a) * d, opacity: 0, scale: 0.2 }}
-            transition={{ duration: dur, ease: [0.15, 0.7, 0.3, 1] }}
-            style={{ position: 'absolute', left: -s / 2, top: -s / 2, width: s, height: s, borderRadius: '50%', background: color, boxShadow: `0 0 8px ${color}` }}
-          />
-        )
-      })}
-    </>
-  )
-}
-
 function JackpotBoomOverlay({ qty, onDone }: { qty: number; onDone: () => void }) {
   const [displayed, setDisplayed] = useState(0)
 
@@ -4153,7 +4104,7 @@ export default function FishingGame({
       setRodBurstStage(stage)
       if (stage >= 3) { try { playForgeSfx() } catch { /* muted */ } vibrate([0, 60, 40, 90, 40, 170]) }
       else { vibrate([0, 40, 30, 70]) }
-      const t = setTimeout(() => setRodBurstStage(0), stage >= 3 ? 1100 : 760)
+      const t = setTimeout(() => setRodBurstStage(0), stage >= 3 ? 1150 : 860)
       return () => clearTimeout(t)
     }
   }, [locked?.stage])
@@ -6754,8 +6705,10 @@ export default function FishingGame({
                     // A physical scale-punch on the visible frame each stage-up —
                     // framer composes the static rotate (style) with the scale
                     // (animate) so the rod kicks as it flashes into the new mode.
-                    animate={visible && rodBurstStage > 0 ? { scale: [1, rodBurstStage >= 3 ? 1.4 : 1.28, 1] } : { scale: 1 }}
-                    transition={{ duration: rodBurstStage >= 3 ? 0.6 : 0.45, ease: [0.15, 0.9, 0.3, 1] }}
+                    // Scale-punch synced to the glow's pop (~50% of the burst) so
+                    // the rod kicks exactly as its glow flips to the new colour.
+                    animate={visible && rodBurstStage > 0 ? { scale: [1, 1.06, rodBurstStage >= 3 ? 1.34 : 1.24, 1] } : { scale: 1 }}
+                    transition={{ duration: rodBurstStage >= 3 ? 1.0 : 0.78, ease: 'easeOut', times: [0, 0.36, 0.52, 1] }}
                     style={{
                       position: 'absolute', top: `${rc.top}%`, left: `${rc.left}%`,
                       width: `${rc.width}%`,
@@ -6775,15 +6728,6 @@ export default function FishingGame({
                     pointerEvents: 'none',
                     ...(rod.glow ? { ['--rod-glow-color' as string]: rod.color } : {}),
                   } as React.CSSProperties} />
-                )}
-                {/* Locked-In stage-up eruption — bursts from the rod the instant
-                    it shifts mode. Zero-size anchor at the rod; the burst centres
-                    on it. Only on the visible frame, re-keyed per stage. */}
-                {visible && rodBurstStage > 0 && (
-                  <div key={`rodburst-${rodBurstStage}`} aria-hidden
-                    style={{ position: 'absolute', top: `${rc.top + 12}%`, left: `${rc.left + rc.width * 0.5}%`, width: 0, height: 0, pointerEvents: 'none', zIndex: 6 }}>
-                    <RodStageBurst stage={rodBurstStage} />
-                  </div>
                 )}
                 {/* Reel — sits on the rod handle. Same per-frame coords
                     work for every reel tier because all 9 source images
