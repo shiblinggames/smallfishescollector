@@ -718,32 +718,32 @@ export function chapterForNode(nodeId: string): RaidChapter {
 export const SCENE_BACKDROPS: Record<string, string> = {
   // Chapter I — the coast
   intro: '/scenes/reef-coast.jpg',
-  syndicate: '/scenes/reef-coast.jpg',
+  syndicate: '/scenes/strongbox-deck.jpg',       // strongbox cracked, a fin in the wake
   bilge_milestone: '/scenes/cold-strait.jpg',
-  krust_reveal: '/scenes/cold-strait.jpg',
+  krust_reveal: '/scenes/smugglers-cove.jpg',    // the Fence's hidden berth
   chapter_1_close: '/scenes/deck-night.jpg',
   // Chapter II — the strait and the Gullet
-  finndicate_notice: '/scenes/cold-strait.jpg',
+  finndicate_notice: '/scenes/chart-table.jpg',  // the order-paper on the chart table
   cartographer_reveal: '/scenes/cold-strait.jpg',
   gullet_heading: '/scenes/the-gullet.jpg',
-  gullet_bones: '/scenes/the-gullet.jpg',
-  scout_debt: '/scenes/the-gullet.jpg',
-  chapter_2_close: '/scenes/deck-night.jpg',
+  gullet_bones: '/scenes/wrecked-freighter.jpg', // the snagged freighter
+  scout_debt: '/scenes/gullet-mouth-fog.jpg',    // the fog at the mouth
+  chapter_2_close: '/scenes/deck-night-2.jpg',   // moonlit deck variant
   // Chapter III — the Coffers
   coffers_heading: '/scenes/drowned-market.jpg',
-  coffers_keeper: '/scenes/drowned-market.jpg',
-  quartermaster_turn: '/scenes/drowned-market.jpg',
-  coffers_strongbox: '/scenes/drowned-market.jpg',
+  coffers_keeper: '/scenes/quartermaster-cache.jpg',
+  quartermaster_turn: '/scenes/quartermaster-cache.jpg',
+  coffers_strongbox: '/scenes/counting-house.jpg',
   coffers_ledger: '/scenes/vault-shelves.jpg',
-  chapter_3_close: '/scenes/deck-night.jpg',
+  chapter_3_close: '/scenes/deck-dawn.jpg',      // pre-dawn deck variant
   // Chapter IV — the last fathom
   throne_heading: '/scenes/last-fathom.jpg',
   blockade_muster: '/scenes/last-fathom.jpg',
-  thing_on_the_bar: '/scenes/last-fathom.jpg',
-  crooked_ledger: '/scenes/vault-shelves.jpg',
+  thing_on_the_bar: '/scenes/thing-on-the-bar.jpg',
+  crooked_ledger: '/scenes/sal-strongroom.jpg',  // ledgers stacked to the beam
   the_drowned_court: '/scenes/drowned-court.jpg',
   the_last_muster: '/scenes/drowned-court.jpg',
-  within_hail: '/scenes/drowned-court.jpg',
+  within_hail: '/scenes/the-throne.jpg',         // Don's flagship looming close
   chapter_4_close: '/scenes/deck-night.jpg',
 }
 
