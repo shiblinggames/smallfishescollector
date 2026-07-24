@@ -7215,11 +7215,10 @@ export default function FishingGame({
                       Reserved height kept tight so the dial has room to
                       render without clipping at the bottom. */}
                   <div style={{ minHeight: '1.05rem' }}>
-                    {/* Status line during the reel-in / a Second Wind retry. The
-                        live per-frame ZONE label (Miss/Catch/Perfect) that used to
-                        show here while the needle spins was removed — it was hard to
-                        read and just visual noise. */}
-                    {(phase === 'reeling' || retryFlash) && (
+                    {/* Only the meaningful beats show here now — the boss stage
+                        progress and the Second Wind retry flash. The live zone
+                        label AND the "Reeling in…" filler were removed as noise. */}
+                    {(retryFlash || (phase === 'reeling' && bossStageCleared)) && (
                       <p ref={zoneLabelRef} className="font-cinzel font-700 uppercase tracking-[0.14em]"
                         style={{
                           fontSize: '0.7rem',
@@ -7229,13 +7228,9 @@ export default function FishingGame({
                         }}>
                         {(() => {
                           if (retryFlash) return 'Second Wind!'
-                          if (phase === 'reeling' && bossStageCleared) {
-                            const name = allFishSpecies.find(f => f.id === hookedFishRef.current?.fishId)?.name ?? ''
-                            const maxStages = BOSS_CONFIG[name]?.phases ?? 2
-                            return `Stage ${bossStage - 1}/${maxStages}`
-                          }
-                          if (phase === 'reeling') return 'Reeling in…'
-                          return ''
+                          const name = allFishSpecies.find(f => f.id === hookedFishRef.current?.fishId)?.name ?? ''
+                          const maxStages = BOSS_CONFIG[name]?.phases ?? 2
+                          return `Stage ${bossStage - 1}/${maxStages}`
                         })()}
                       </p>
                     )}
