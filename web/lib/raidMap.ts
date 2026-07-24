@@ -44,9 +44,9 @@ export function musterSceneLines(nodeId: string, report: MusterReport): SceneLin
   // Blockade is a clerk skimming for useful hands before Sal; the Last Muster is
   // the final door before the Don, where the whole point is a FULL crew.
   if (isLast) {
-    lines.push({ text: 'The Gnash holds the aisle, the last door before the throne, and he will not give it up for a half-crewed deck. Dole runs the manifest one final time, and this time nobody jokes.' })
-    lines.push({ ...GUIDE.dole, text: "Understand what we're counting for. The don isn't a thing you beat with one big gun and a lucky lock. He's the oldest, largest killer in this sea, with his whole court at his back. There's no carrying this on three good hands. Every berth has to pull." })
-    lines.push({ ...GUIDE.laz, text: "I've watched crews go into water like this a hand short. Not one of them came back up. Fill every seat, or don't go in at all." })
+    lines.push({ text: 'The Gnash holds the last aisle before the throne. He does not speak. He counts the deck, then counts it again.' })
+    lines.push({ ...GUIDE.dole, text: "Same manifest as the last door. Only this time it's the don behind it, and his whole court with him." })
+    lines.push({ ...GUIDE.laz, text: "Every seat filled, or we turn around in this water. I've done the other thing." })
   } else {
     lines.push({ text: "Sal Brackwater's clerk comes alongside with a wet ledger and counts your crew like livestock. He is not looking for guns. Dole leans over his shoulder and reads it back, ticking each hand as he goes." })
     lines.push({ ...GUIDE.dole, text: 'He wants hands that can DO something when the shooting starts. Sal will take your hull in his teeth and roll, and the only thing that stops that is a crew who can get between you and the blow.' })
@@ -80,8 +80,8 @@ export function musterSceneLines(nodeId: string, report: MusterReport): SceneLin
 
   if (report.passed) {
     if (isLast) {
-      lines.push({ ...GUIDE.dole, text: 'Every berth crewed, every gap closed. THIS is the crew that takes a don. Not one big gun and a prayer. A full deck, and every hand on it with a job it can do when the shooting starts.' })
-      lines.push({ ...GUIDE.mira, text: 'All of us against the biggest mark in the sea. I like those odds better than I have any right to. Open the door.' })
+      lines.push({ ...GUIDE.dole, text: 'Every berth crewed. Every gap closed. This is the crew that takes a don.' })
+      lines.push({ ...GUIDE.mira, text: 'All of us against the biggest mark in the sea. Open it.' })
     } else {
       lines.push({ ...GUIDE.dole, text: 'Every line answered. A full, ugly, dangerous crew, and every hand can DO something when the guns start. The clerk has no cause to send us home.' })
       lines.push({ ...GUIDE.mira, text: 'Then stop admiring your own handwriting and wave us through.' })
