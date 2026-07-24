@@ -14,6 +14,7 @@ import { getRod } from '@/lib/rods'
 import { getReel } from '@/lib/reels'
 import { catchXP } from '@/lib/fishingLevel'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
+import { getCachedFishMarket } from '@/lib/fishMarket'
 import type { ZoneStat } from './ZoneLanding'
 
 export default async function FishingPage() {
@@ -38,7 +39,7 @@ export default async function FishingPage() {
     { data: rodRows },
     { data: allSpecies },
     { data: collectionRows },
-    { data: marketRows },
+    marketRows,
     { data: pbRows },
     { data: ch3Row },
   ] = await Promise.all([
@@ -64,8 +65,9 @@ export default async function FishingPage() {
     admin.from('fish_collection')
       .select('fish_id, is_golden, catch_count')
       .eq('user_id', user.id),
-    admin.from('fish_market')
-      .select('fish_id, multiplier'),
+    // Fish market is public + shared; served from the cross-request cache
+    // (lib/fishMarket) so the hot fishing screen isn't a DB read per view.
+    getCachedFishMarket(),
     // Personal-best lengths per species — read-only seed for the collection
     // drawer. New PBs during the session are updated client-side in state so
     // the drawer reflects them without a page refresh.

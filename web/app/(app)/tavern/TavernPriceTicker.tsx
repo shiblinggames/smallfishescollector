@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUser } from '@/lib/userData'
+import { getCachedFishMarket } from '@/lib/fishMarket'
 import PriceTickerScroll, { type TickerItem } from './PriceTickerScroll'
 
 // Thin fish-price ticker that sits directly under the leaderboard strip on the
@@ -24,15 +25,15 @@ export default async function TavernPriceTicker() {
   if (!user) return null
 
   const admin = createAdminClient()
-  const [marketRes, collectionRes] = await Promise.all([
-    admin.from('fish_market').select('fish_id, multiplier, prev_multiplier, fish_species(name, sell_value)'),
+  const [market, collectionRes] = await Promise.all([
+    getCachedFishMarket(),
     admin.from('fish_collection').select('fish_id').eq('user_id', user.id),
   ])
 
   const discovered = new Set((collectionRes.data ?? []).map(r => r.fish_id))
   if (discovered.size === 0) return null
 
-  const items: TickerItem[] = ((marketRes.data ?? []) as unknown as MarketRow[])
+  const items: TickerItem[] = (market as unknown as MarketRow[])
     .filter(r => r.fish_species != null && discovered.has(r.fish_id))
     .map(r => {
       const mult = Number(r.multiplier)
