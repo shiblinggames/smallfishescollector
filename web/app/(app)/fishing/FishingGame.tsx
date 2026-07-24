@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useTransition, useMemo, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { motion, AnimatePresence, useDragControls } from 'framer-motion'
+import { motion, AnimatePresence, useDragControls, type MotionStyle } from 'framer-motion'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { castLine, reelIn, reelCrate, rerollWormhole, quickSellAllFish, markFishingTourSeen, markFishingCatchTourSeen, markFirstCatchCelebrationSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipPet, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, sellGoldenTrophy, mountGoldenTrophy, setCompletionistEffects as saveCompletionistEffects, setShowWaitTimer as persistShowWaitTimer, claimFishingLevelRewards, type FishSpecies } from './actions'
@@ -4153,7 +4153,7 @@ export default function FishingGame({
       setRodBurstStage(stage)
       if (stage >= 3) { try { playForgeSfx() } catch { /* muted */ } vibrate([0, 60, 40, 90, 40, 170]) }
       else { vibrate([0, 40, 30, 70]) }
-      const t = setTimeout(() => setRodBurstStage(0), stage >= 3 ? 900 : 640)
+      const t = setTimeout(() => setRodBurstStage(0), stage >= 3 ? 1100 : 760)
       return () => clearTimeout(t)
     }
   }, [locked?.stage])
@@ -6747,19 +6747,24 @@ export default function FishingGame({
                     overrides Tailwind's preflight which would otherwise cap
                     the rod img at 100% of its parent. */}
                 {rod.slug ? (
-                  <img
+                  <motion.img
                     src={`/${rod.slug}_${f}.png`}
                     alt=""
                     className={rodGlow}
+                    // A physical scale-punch on the visible frame each stage-up —
+                    // framer composes the static rotate (style) with the scale
+                    // (animate) so the rod kicks as it flashes into the new mode.
+                    animate={visible && rodBurstStage > 0 ? { scale: [1, rodBurstStage >= 3 ? 1.4 : 1.28, 1] } : { scale: 1 }}
+                    transition={{ duration: rodBurstStage >= 3 ? 0.6 : 0.45, ease: [0.15, 0.9, 0.3, 1] }}
                     style={{
                       position: 'absolute', top: `${rc.top}%`, left: `${rc.left}%`,
                       width: `${rc.width}%`,
-                      transform: `rotate(${rc.rotate}deg)`,
+                      rotate: rc.rotate,
                       transformOrigin: 'center center',
                       pointerEvents: 'none',
                       maxWidth: 'none',
                       ...(rod.glow ? { ['--rod-glow-color' as string]: rod.color } : {}),
-                    } as React.CSSProperties}
+                    } as MotionStyle}
                   />
                 ) : rod.imageUrl && (
                   <img src={rod.imageUrl} alt="" className={rodGlow} style={{
