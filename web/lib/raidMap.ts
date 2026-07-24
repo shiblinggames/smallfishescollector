@@ -44,7 +44,7 @@ export function musterSceneLines(nodeId: string, report: MusterReport): SceneLin
   // Blockade is a clerk skimming for useful hands before Sal; the Last Muster is
   // the final door before the Don, where the whole point is a FULL crew.
   if (isLast) {
-    lines.push({ text: 'The Gnash holds the aisle, the last door before the throne, and he will not shift it for a half-manned deck. Dole runs the manifest one final time, and this time nobody jokes.' })
+    lines.push({ text: 'The Gnash holds the aisle, the last door before the throne, and he will not give it up for a half-crewed deck. Dole runs the manifest one final time, and this time nobody jokes.' })
     lines.push({ ...GUIDE.dole, text: 'Understand what we are counting for, captain. The don is not a thing you beat with one big gun and a lucky lock. He is the oldest, largest killer in this sea, with his whole court at his back. There is no carrying this on three good hands. Every berth has to pull.' })
     lines.push({ ...GUIDE.laz, text: 'I have watched crews go into water like this a hand short. Not one of them came back up. Fill every seat, or do not go in at all.' })
   } else {
@@ -80,7 +80,7 @@ export function musterSceneLines(nodeId: string, report: MusterReport): SceneLin
 
   if (report.passed) {
     if (isLast) {
-      lines.push({ ...GUIDE.dole, text: 'Every berth crewed, every gap closed. THIS is the crew that takes a don, captain. Not one big gun and a prayer. A full, complete deck, every hand pulling its weight.' })
+      lines.push({ ...GUIDE.dole, text: 'Every berth crewed, every gap closed. THIS is the crew that takes a don, captain. Not one big gun and a prayer. A full deck, and every hand on it with a job it can do when the shooting starts.' })
       lines.push({ ...GUIDE.mira, text: 'All of us against the biggest mark in the sea. I like those odds better than I have any right to. Open the door.' })
     } else {
       lines.push({ ...GUIDE.dole, text: 'Every line answered. A full, ugly, dangerous crew, and every hand can DO something when the guns start. The clerk has no cause to send us home.' })
@@ -842,8 +842,7 @@ export const RAID_MAP: RaidNode[] = [
       { text: "The route's mostly burned away, but the heading held. Out past the Bilge Strait, into the cold." },
       { text: "Whoever C.K. is, the Finndicate trusts them with cargo by the holdful. And now you know which way it sails." },
       { text: "A fin has been cutting your wake since the strongbox cracked. It closes the distance now, in no hurry at all.", pause: 500 },
-      { ...GUIDE.mako, text: "Bilge Strait, after one sealed letter. Most captains wouldn't sail that far on a hunch." },
-      { ...GUIDE.mako, text: "Good thing I'm not most captains. Turns out neither are you." },
+      { ...GUIDE.mako, text: "Bilge Strait, after one sealed letter. Most captains wouldn't sail that far on a hunch. Good thing neither of us is most captains." },
       { ...GUIDE.mako, text: "Mako. I don't waste myself in small water, and you just made yourself worth watching. Muster a crew and my name's on offer." },
       { text: "No handshake. Sharks don't. He drifts back into the deep, unhurried, a shape you could call on when the water turns mean." },
     ],
@@ -1067,7 +1066,7 @@ export const RAID_MAP: RaidNode[] = [
       { text: "A shape you hadn't logged is already at the chart table, turning the scrap to the light like he is pricing it.", pause: 400 },
       { ...GUIDE.dole, text: "Danger zones. Such a marvelous name. You only bother naming water that frightening when you are hiding something in it worth the fright." },
       { ...GUIDE.doby, text: "And who in the cold deep are you?" },
-      { ...GUIDE.dole, text: "The navigator who read this before his tea went cold. Three dead captains couldn't. Dole. I know every current worth knowing and most of the ones that aren't." },
+      { ...GUIDE.dole, text: "The navigator who read this before his tea went cold. Drowned captains couldn't. Dole. I know every current worth knowing and most of the ones that aren't." },
       { ...GUIDE.dole, text: "The cipher was never the hard part, captain. It is who wrote it, and how much freight they will feed that water to keep it moving. When you muster hands for the danger line, you could do worse than one who has already been there." },
       { ...GUIDE.mako, text: "Priority freight, worth every hull it eats. That is not cargo, captain. That is something they are afraid to stop carrying." },
       { text: "Dole sets the scrap down facing you, the heading already circled. You hadn't circled it.", pause: 400 },
@@ -1847,7 +1846,7 @@ export const RAID_MAP: RaidNode[] = [
       { text: "Your name's near the bottom, in fresh ink. The line for how you sank is still blank.", pause: 700 },
       { speaker: 'The Quartermaster', portrait: THE_QUARTERMASTER.enemies.quartermaster.portrait, text: "Every account in that book closes the same way, captain, and every one settles up to the don. Finleone likes his ledgers tidy. Yours is the one line I have left open." },
       { ...GUIDE.laz, text: "I know this book. My name is a few pages up, and the line for how I sank was filled in long ago." },
-      { ...GUIDE.laz, text: "They were wrong. I have read this ledger from the other side of it, captain. Sign me on, and I will see his account closed the right way." },
+      { ...GUIDE.laz, text: "They were wrong. I have read this ledger from the other side of it, captain. Let me be the one to see his account closed the right way." },
     ],
     detail: {
       description:
@@ -2328,7 +2327,7 @@ export const RAID_MAP: RaidNode[] = [
     // finale story beats.
     id: 'the_last_muster',   type: 'muster',
     label: 'The Last Muster',
-    flavor: "The court parts, but one hull holds the aisle: the don's doorman, The Gnash, counting your deck before it lets you through. The don does not admit a half-manned crew to his table.",
+    flavor: "The court parts, but one hull holds the aisle: the don's doorman, The Gnash, counting your deck before it lets you through. The don does not admit a half-crewed deck to his table.",
     bridge: "The Gnash slides aside, unimpressed. Nothing stands between you and the throne now but open water.",
     requiresNode: 'the_drowned_court',
     muster: {
@@ -2439,7 +2438,7 @@ export const RAID_MAP: RaidNode[] = [
     image: '/raidlog.png',
     sceneAccent: '#a78bfa',
     scene: [
-      { text: 'The megalodon goes down the way an empire does. Slow, and then all at once.' },
+      { text: 'The megalodon goes down the way an empire does. A long time proud, and then no time at all.' },
       { text: 'The court scatters, the colors strike, and a hundred years of drowned debts sink to the bottom with the don who collected them.', pause: 500 },
       { text: "Then, out past the wreck, where the don's water spills over into the true deep, the black surface stirs. Something is watching the ruin you made, and it was never once in his court.", pause: 700 },
       { text: 'It rises just enough to throw a shape against the dark: a figure, rod-straight and easy, a stance you would almost swear you had seen before, on sunnier water, over a far shorter line.', pause: 400, fx: 'flash', insert: { kind: 'finn-silhouette' } },

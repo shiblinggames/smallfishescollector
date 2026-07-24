@@ -423,7 +423,7 @@ export const FINN_ANCIENT_BEATS: Record<number, FinnAncientBeat> = {
       { text: "*Shastasaurus.* The largest thing that ever drew breath in salt water, and it is on your hook.", pause: 300 },
       { text: "The others all swore these were stories. Easier than admitting they were out of reach." },
       { text: "They were never out of yours. The deep keeps handing you what it kept from me.", pause: 450 },
-      { text: "...from everyone. Keep at it. You are nearer the end than you think." },
+      { text: "...from everyone. So keep pulling, captain. I mean to see just how far those hands of yours can reach." },
     ],
   },
   // 143 — Megalodon (ALWAYS last — the crack)
