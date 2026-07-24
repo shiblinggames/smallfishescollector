@@ -21,7 +21,7 @@ import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import CharacterAvatar from '@/components/CharacterAvatar'
-import { TypedBody, Letterbox, LivingFrame, FlashOut, useTypewriter, lineHaptic, prefersReducedMotion } from '@/components/cutscene'
+import { TypedBody, Letterbox, LivingFrame, FlashOut, SceneBackdrop, useTypewriter, lineHaptic, prefersReducedMotion } from '@/components/cutscene'
 import { FINN_NAME, FINN_AVATAR, type FinnAncientBeat, type FinnSceneLine } from '@/lib/finn'
 
 // Owns the per-character reveal. Re-renders on every keystroke, but only paints the
@@ -89,6 +89,10 @@ export default function FinnScene({ beat, onComplete }: {
   // the avatar or the 15 living-frame motion nodes — and the breathing loop never
   // restarts. This is the bulk of the perf win.
   const livingFrame = useMemo(() => <LivingFrame accent={ACCENT} reduced={reduced} />, [ACCENT, reduced])
+  // The giants come up out of the black deep, so every ancient beat plays over the
+  // last-fathom backdrop. Memoized so the per-keystroke re-renders never restart its
+  // slow push-in (same perf reasoning as the frame + bust).
+  const backdrop = useMemo(() => <SceneBackdrop src="/scenes/last-fathom.jpg" reduced={reduced} />, [reduced])
   const bust = useMemo(() => (
     // Mirror lives on a STATIC wrapper — framer animates the scale/y above, so a
     // scaleX(-1) up there would be clobbered by its generated transform.
@@ -116,6 +120,7 @@ export default function FinnScene({ beat, onComplete }: {
         WebkitTapHighlightColor: 'transparent', userSelect: 'none',
       }}
     >
+      {backdrop}
       {livingFrame}
       <AnimatePresence><FlashOut k={flash} /></AnimatePresence>
       <Letterbox />

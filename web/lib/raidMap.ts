@@ -708,6 +708,45 @@ export function chapterForNode(nodeId: string): RaidChapter {
   return RAID_CHAPTERS[RAID_CHAPTERS.length - 1]
 }
 
+/**
+ * Painterly establishing backdrops behind a node's story scene, keyed by node id
+ * (art in public/scenes). Soft, muted, dark-at-the-bottom so the dialogue plate and
+ * character busts stay legible. Several places are reused across the beats that share
+ * them. A node with no entry here plays on the plain dark gradient, exactly as before.
+ * Edit freely, node by node.
+ */
+export const SCENE_BACKDROPS: Record<string, string> = {
+  // Chapter I — the coast
+  intro: '/scenes/reef-coast.jpg',
+  syndicate: '/scenes/reef-coast.jpg',
+  bilge_milestone: '/scenes/cold-strait.jpg',
+  krust_reveal: '/scenes/cold-strait.jpg',
+  chapter_1_close: '/scenes/deck-night.jpg',
+  // Chapter II — the strait and the Gullet
+  finndicate_notice: '/scenes/cold-strait.jpg',
+  cartographer_reveal: '/scenes/cold-strait.jpg',
+  gullet_heading: '/scenes/the-gullet.jpg',
+  gullet_bones: '/scenes/the-gullet.jpg',
+  scout_debt: '/scenes/the-gullet.jpg',
+  chapter_2_close: '/scenes/deck-night.jpg',
+  // Chapter III — the Coffers
+  coffers_heading: '/scenes/drowned-market.jpg',
+  coffers_keeper: '/scenes/drowned-market.jpg',
+  quartermaster_turn: '/scenes/drowned-market.jpg',
+  coffers_strongbox: '/scenes/drowned-market.jpg',
+  coffers_ledger: '/scenes/vault-shelves.jpg',
+  chapter_3_close: '/scenes/deck-night.jpg',
+  // Chapter IV — the last fathom
+  throne_heading: '/scenes/last-fathom.jpg',
+  blockade_muster: '/scenes/last-fathom.jpg',
+  thing_on_the_bar: '/scenes/last-fathom.jpg',
+  crooked_ledger: '/scenes/vault-shelves.jpg',
+  the_drowned_court: '/scenes/drowned-court.jpg',
+  the_last_muster: '/scenes/drowned-court.jpg',
+  within_hail: '/scenes/drowned-court.jpg',
+  chapter_4_close: '/scenes/deck-night.jpg',
+}
+
 export const RAID_MAP: RaidNode[] = [
   {
     id: 'intro',

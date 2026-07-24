@@ -82,7 +82,10 @@ export default function FinnEncounter({
             onClick={handleBackdropClick}
             style={{
               position: 'fixed', inset: 0, zIndex: 100, cursor: 'pointer',
-              background: 'rgba(0,0,0,0.55)',
+              // Finn is the rival at the dock, so his card floats over a veiled
+              // dusk-dock painting rather than a flat dim. Heavily scrimmed so the
+              // card stays the focus and the interruption reads clearly.
+              background: 'linear-gradient(180deg, rgba(6,10,18,0.66) 0%, rgba(6,10,18,0.72) 100%), url(/scenes/dock-dusk.jpg) center/cover no-repeat',
               backdropFilter: 'blur(2px)',
               WebkitBackdropFilter: 'blur(2px)',
             }}

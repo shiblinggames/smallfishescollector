@@ -30,7 +30,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { GOLD, TypedBody, Letterbox, LivingFrame, FlashOut, SceneProgress, InsertShot, useTypewriter, lineHaptic, prefersReducedMotion } from '@/components/cutscene'
+import { GOLD, TypedBody, Letterbox, LivingFrame, FlashOut, SceneProgress, InsertShot, SceneBackdrop, useTypewriter, lineHaptic, prefersReducedMotion } from '@/components/cutscene'
 import type { SceneLine } from '@/lib/raidMap'
 
 /** Who is on stage, and where. Two slots: a conversation, not a crowd. */
@@ -64,13 +64,15 @@ function stageAt(lines: SceneLine[], idx: number): { left: StageChar | null; rig
   return { left, right }
 }
 
-export default function StoryScene({ title, lines, ctaLabel, pending, accent, onComplete, onSkip }: {
+export default function StoryScene({ title, lines, ctaLabel, pending, accent, background, onComplete, onSkip }: {
   title: string
   lines: SceneLine[]
   ctaLabel: string
   pending?: boolean
   /** The scene's color temperature (node.sceneAccent). Gold when unset. */
   accent?: string
+  /** Optional painterly establishing backdrop (public/scenes/*). Plain dark when unset. */
+  background?: string
   onComplete: () => void
   onSkip: () => void
 }) {
@@ -188,6 +190,10 @@ export default function StoryScene({ title, lines, ctaLabel, pending, accent, on
         WebkitTapHighlightColor: 'transparent', userSelect: 'none',
       }}
     >
+      {/* Painterly establishing backdrop (when the node sets one), sitting at the
+          very back below the frame and cast. */}
+      {background && <SceneBackdrop src={background} reduced={reduced} />}
+
       {/* The frame is alive (push-in + motes + breathing vignette), the flash on
           an earned beat, and the letterbox — all from the shared cutscene kit so
           story nodes, boss dialogue and Finn read as one film. */}

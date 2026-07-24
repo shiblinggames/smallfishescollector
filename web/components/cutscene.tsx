@@ -23,6 +23,30 @@ export function prefersReducedMotion(): boolean {
   return typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 }
 
+/**
+ * A soft painterly establishing backdrop behind a scene (public/scenes/*). Full-bleed
+ * cover image, a slow Ken-Burns push-in so it is never a photograph, and a legibility
+ * scrim that darkens the top (under the title bar) and the bottom (under the dialogue
+ * plate) while keeping the middle readable. Sits at the very back, below the
+ * LivingFrame and the cast; scenes without one keep the plain dark gradient.
+ */
+export function SceneBackdrop({ src, reduced }: { src: string; reduced?: boolean }) {
+  return (
+    <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <motion.img
+        src={src} alt="" decoding="async"
+        initial={{ scale: reduced ? 1.06 : 1.05 }}
+        animate={{ scale: reduced ? 1.06 : 1.15 }}
+        transition={{ duration: 32, ease: 'easeOut' }}
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}
+      />
+      <div style={{ position: 'absolute', inset: 0, background:
+        'linear-gradient(180deg, rgba(4,4,7,0.86) 0%, rgba(4,4,7,0.40) 16%, rgba(4,4,7,0.30) 40%, rgba(4,4,7,0.34) 56%, rgba(4,4,7,0.64) 76%, rgba(4,4,7,0.93) 100%)' }} />
+    </div>
+  )
+}
+
 /** *Emphasis* → the scene's accent. A writer's hammer. */
 export function renderEmphasis(text: string, accent: string) {
   return text.split(/(\*[^*]+\*)/g).map((seg, i) =>

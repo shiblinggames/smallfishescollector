@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { vibrate } from '@/lib/haptics'
-import { isCombatNode, chapterForNode, RAID_CHAPTERS, musterSceneLines, type RaidChapter, type RaidNodeDrop, type RaidNodeView } from '@/lib/raidMap'
+import { isCombatNode, chapterForNode, RAID_CHAPTERS, musterSceneLines, SCENE_BACKDROPS, type RaidChapter, type RaidNodeDrop, type RaidNodeView } from '@/lib/raidMap'
 import type { RaidRecords } from './raidMapActions'
 import { RARITY_COLOR, GEM_GLYPH, GEM_COLOR } from '@/lib/bossRaids'
 import { getRaidItem } from '@/lib/raidItems'
@@ -2131,6 +2131,7 @@ function NodeDetailSheet({
       ctaLabel={sceneCta}
       pending={pending}
       accent={node.sceneAccent}
+      background={SCENE_BACKDROPS[node.id]}
       onComplete={finishScene}
       onSkip={finishScene}
     />
