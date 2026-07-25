@@ -121,25 +121,30 @@ const VOYAGE_ACCENT: Record<VoyageStatus, { fg: string; bg: string; bd: string }
   returned: { fg: '#4ade80', bg: 'rgba(74,222,128,0.12)',  bd: 'rgba(74,222,128,0.4)'   },
 }
 
-// Second-row hub card (PvP / Gauntlets). Smaller than the Campaign /
-// Voyages cards — art + title + one line + a status footer. When `locked`
-// it dims, drops its tap handler, and shows a "Coming Soon" lock instead of
-// the open affordance.
-function SideHubCard({ accent, image, title, desc, locked, onClick, tag, lockLabel = 'Coming Soon', cta = 'Open ›' }: {
+// Art-forward scenic tile — the redesigned hub card. A painterly scene fills the
+// whole tile, with the title + one live status line over a bottom scrim. Locked
+// tiles dim + grayscale and show a lock label instead of the status. Optional:
+// a corner tag ('Resume'), a pulsing status dot (voyage sailing/returned), and a
+// bottom progress bar (voyage in flight). All four hub cards share this now, so
+// the row reads as one set of places rather than mixed flat panels.
+function ExpeditionTile({
+  bgImage, accent, title, status, statusColor, sub, subLock,
+  locked = false, lockLabel = 'Coming Soon', tag, onClick, progress, dot, glow,
+}: {
+  bgImage: string
   accent: string
-  image: string
   title: string
-  desc: string
-  locked: boolean
-  onClick?: () => void
-  /** Optional corner ribbon (e.g. 'NEW') — shown when the card is available. */
-  tag?: string
-  /** Footer text when locked. Defaults to 'Coming Soon'; a released-but-gated
-   *  card (e.g. the Gauntlet) overrides it with the unlock requirement. */
+  status: string
+  statusColor?: string
+  sub?: string | null
+  subLock?: boolean
+  locked?: boolean
   lockLabel?: string
-  /** Footer call-to-action when available. Defaults to 'Open ›'; the Gauntlet
-   *  swaps to 'Resume ›' when a run is waiting to be picked back up. */
-  cta?: string
+  tag?: string
+  onClick?: () => void
+  progress?: number | null
+  dot?: 'returned' | 'sailing' | null
+  glow?: boolean
 }) {
   return (
     <button
@@ -147,46 +152,48 @@ function SideHubCard({ accent, image, title, desc, locked, onClick, tag, lockLab
       onClick={locked ? undefined : onClick}
       disabled={locked}
       style={{
-        position: 'relative', overflow: 'hidden',
-        background: 'rgba(6,12,20,0.92)',
-        border: `1px solid ${accent}${locked ? '22' : '30'}`,
-        borderTop: `1px solid ${accent}${locked ? '38' : '55'}`,
-        borderRadius: 18, padding: '0.85rem 0.85rem 0.9rem',
+        position: 'relative', overflow: 'hidden', width: '100%',
+        height: 152, borderRadius: 18, padding: 0,
+        border: `1px solid ${accent}${locked ? '30' : '80'}`,
+        borderTop: `1px solid ${accent}${locked ? '4a' : 'e0'}`,
+        boxShadow: glow ? `0 0 18px ${accent}30` : undefined,
         cursor: locked ? 'default' : 'pointer', textAlign: 'left',
-        display: 'flex', flexDirection: 'column',
-        opacity: locked ? 0.92 : 1,
+        opacity: locked ? 0.94 : 1,
       }}
     >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={bgImage} alt="" aria-hidden loading="lazy" decoding="async"
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: locked ? 'grayscale(0.5) brightness(0.68)' : undefined }} />
+      {/* Bottom scrim so the title + status read over the art. */}
+      <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 100, background: 'linear-gradient(180deg, transparent 0%, rgba(6,12,20,0.72) 45%, rgba(6,12,20,0.96) 100%)' }} />
       {tag && !locked && (
-        <span className="font-karla font-700 uppercase tracking-[0.16em]" style={{
-          position: 'absolute', top: 9, right: 9, zIndex: 2,
-          padding: '2px 7px', borderRadius: 999, fontSize: '0.44rem',
-          color: accent, background: `${accent}1c`, border: `1px solid ${accent}55`,
-        }}>{tag}</span>
+        <span className="font-karla font-700 uppercase tracking-[0.16em]" style={{ position: 'absolute', top: 9, right: 9, zIndex: 2, padding: '2px 7px', borderRadius: 999, fontSize: '0.44rem', color: '#04120f', background: accent, border: `1px solid ${accent}` }}>{tag}</span>
       )}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 56, marginBottom: 8 }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={image} alt="" loading="lazy" decoding="async"
-          style={{ width: '100%', height: 54, objectFit: 'contain', filter: `drop-shadow(0 4px 14px ${accent}40)${locked ? ' grayscale(0.55)' : ''}`, opacity: locked ? 0.7 : 1 }} />
-      </div>
-      <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#ffffff', lineHeight: 1.1, marginBottom: 6 }}>{title}</p>
-      <p className="font-karla font-500" style={{ fontSize: '0.72rem', color: '#b8b0a0', lineHeight: 1.4, marginBottom: 10 }}>
-        {desc}
-      </p>
-      <div style={{ marginTop: 'auto', paddingTop: 8, borderTop: `1px solid ${accent}1c` }}>
+      {dot && !tag && (
+        <span aria-hidden style={{ position: 'absolute', top: 10, right: 10, width: 9, height: 9, borderRadius: 9, background: dot === 'returned' ? '#4ade80' : accent, boxShadow: dot === 'returned' ? '0 0 8px rgba(74,222,128,0.75)' : `0 0 8px ${accent}b0`, animation: 'shop-pulse 1.6s ease-in-out infinite' }} />
+      )}
+      <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '0 0.85rem 0.8rem' }}>
+        <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#ffffff', lineHeight: 1.1, textShadow: `0 2px 6px rgba(0,0,0,0.8), 0 0 14px ${accent}44` }}>{title}</p>
         {locked ? (
-          <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.6rem', color: '#8a8680' }}>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
-            </svg>
-            {lockLabel}
+          <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.58rem', color: '#cfcac2', marginTop: 4, textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>
+            <IconLock size={10} /> {lockLabel}
           </p>
         ) : (
-          <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: accent }}>
-            {cta}
-          </p>
+          <>
+            <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: statusColor ?? accent, lineHeight: 1.3, marginTop: 3, textShadow: '0 1px 4px rgba(0,0,0,0.95)' }}>{status}</p>
+            {sub && (
+              <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#c2beb6', lineHeight: 1.3, marginTop: 1, textShadow: '0 1px 3px rgba(0,0,0,0.95)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                {subLock && <IconLock size={9} />}{sub}
+              </p>
+            )}
+          </>
         )}
       </div>
+      {progress != null && (
+        <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 3, background: 'rgba(0,0,0,0.5)' }}>
+          <div style={{ width: `${Math.round(progress * 100)}%`, height: '100%', background: `linear-gradient(90deg, ${accent}, ${accent}cc)`, boxShadow: `0 0 6px ${accent}`, transition: 'width 0.5s' }} />
+        </div>
+      )}
     </button>
   )
 }
@@ -319,128 +326,42 @@ export default function HubCards({
         />
       )}
 
-      {/* ── Hub cards (2-col) ─────────────────────────────────────── */}
+      {/* ── Hub cards — art-forward scenic tiles, uniform 2×2 ──────────
+          Each tile is a painterly scene + title + live status over a
+          bottom scrim. Campaign / Voyages are the core loops; PvP +
+          Gauntlets sit below at the same size. All open their prep modal. */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: '1.2rem' }}>
-        <button
-          type="button"
+        <ExpeditionTile
+          bgImage="/exp-campaign.jpg" accent={campaignAccent} title="Campaign"
+          status={campaign.nextNodeName ? `Next: ${campaign.nextNodeName}` : 'All cleared'}
+          statusColor="#f0e0b0"
+          sub={campaign.nextNodeLocked ? campaign.nextNodeLockReason : null}
+          subLock={campaign.nextNodeLocked}
           onClick={() => setModal('campaign')}
-          style={{
-            background: 'rgba(6,12,20,0.92)',
-            border: `1px solid ${campaignAccent}30`,
-            borderTop: `1px solid ${campaignAccent}55`,
-            borderRadius: 18, padding: '0.85rem 0.85rem 0.95rem',
-            cursor: 'pointer', textAlign: 'left',
-            display: 'flex', flexDirection: 'column',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 60, marginBottom: 8 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={campaign.nextNodeImage ?? '/raidlog.png'} alt=""
-              loading="lazy" decoding="async"
-              style={{ width: '100%', height: 58, objectFit: 'contain', filter: `drop-shadow(0 4px 14px ${campaignAccent}40)` }} />
-          </div>
-          <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#ffffff', lineHeight: 1.1, marginBottom: 6 }}>Campaign</p>
-          <p className="font-karla font-500" style={{ fontSize: '0.72rem', color: '#b8b0a0', lineHeight: 1.4, marginBottom: 10 }}>
-            The story mode. You fight every battle yourself, raid by raid, for items and chapters.
-          </p>
-          <div style={{ marginTop: 'auto', paddingTop: 8, borderTop: `1px solid ${campaignAccent}1c` }}>
-            <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#e8d8a8', lineHeight: 1.3 }}>
-              {campaign.nextNodeName ? `Next: ${campaign.nextNodeName}` : 'All cleared'}
-            </p>
-            {campaign.nextNodeLocked && campaign.nextNodeLockReason && (
-              <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#a8896a', lineHeight: 1.3, marginTop: 2 }}>
-                <IconLock size={10} /> {campaign.nextNodeLockReason}
-              </p>
-            )}
-          </div>
-        </button>
-
-        <button
-          type="button"
+        />
+        <ExpeditionTile
+          bgImage="/exp-voyages.jpg" accent={vAcc.fg} title="Voyages"
+          status={voyages.statusLabel} statusColor={vAcc.fg}
+          sub={voyages.routeName}
+          glow={voyages.status === 'sailing' || voyages.status === 'returned'}
+          dot={voyages.status === 'returned' ? 'returned' : voyages.status === 'sailing' ? 'sailing' : null}
+          progress={voyages.status === 'sailing' ? voyages.progress : null}
           onClick={() => setModal('voyages')}
-          style={{
-            background: voyages.status === 'sailing'
-              ? `linear-gradient(180deg, ${vAcc.fg}1c 0%, rgba(6,12,20,0.92) 60%)`
-              : 'rgba(6,12,20,0.92)',
-            border: `1px solid ${voyages.status === 'sailing' ? `${vAcc.fg}80` : vAcc.bd}`,
-            borderTop: `1px solid ${voyages.status === 'sailing' ? vAcc.fg : `${vAcc.fg}55`}`,
-            boxShadow: voyages.status === 'sailing' ? `0 0 18px ${vAcc.fg}30` : undefined,
-            borderRadius: 18, padding: '0.85rem 0.85rem 0.95rem',
-            cursor: 'pointer', textAlign: 'left',
-            display: 'flex', flexDirection: 'column', position: 'relative',
-            overflow: 'hidden',
-          }}
-        >
-          {(voyages.status === 'returned' || voyages.status === 'sailing') && (
-            <span aria-hidden style={{
-              position: 'absolute', top: 8, right: 8, width: 9, height: 9, borderRadius: 9,
-              background: voyages.status === 'returned' ? '#4ade80' : vAcc.fg,
-              boxShadow: voyages.status === 'returned'
-                ? '0 0 8px rgba(74,222,128,0.7)'
-                : `0 0 8px ${vAcc.fg}b0`,
-              animation: 'shop-pulse 1.6s ease-in-out infinite',
-            }} />
-          )}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 60, marginBottom: 8 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/voyagemap.png" alt=""
-              loading="lazy" decoding="async"
-              className={voyages.status === 'sailing' ? 'voyage-card-bob' : undefined}
-              style={{ width: '100%', height: 58, objectFit: 'contain', filter: `drop-shadow(0 4px 14px ${vAcc.fg}${voyages.status === 'sailing' ? '90' : '50'})` }} />
-          </div>
-          <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#ffffff', lineHeight: 1.1, marginBottom: 6 }}>Voyages</p>
-          <p className="font-karla font-500" style={{ fontSize: '0.72rem', color: '#b8b0a0', lineHeight: 1.4, marginBottom: 10 }}>
-            Passive income. Your crew sail without you and bring back doubloons, gems and Nav XP.
-          </p>
-          <div style={{ marginTop: 'auto', paddingTop: 8, borderTop: `1px solid ${vAcc.fg}1c` }}>
-            <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: vAcc.fg, lineHeight: 1.3 }}>
-              {voyages.statusLabel}
-            </p>
-            {voyages.routeName && (
-              <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#7a7672', lineHeight: 1.3, marginTop: 2 }}>
-                {voyages.routeName}
-              </p>
-            )}
-          </div>
-          {/* Voyage-in-progress bar — anchored to the bottom edge of the
-              card so the player can see how close the crew is to returning
-              at a glance, no modal open required. */}
-          {voyages.status === 'sailing' && voyages.progress != null && (
-            <div aria-hidden style={{
-              position: 'absolute', left: 0, right: 0, bottom: 0,
-              height: 3, background: 'rgba(0,0,0,0.5)',
-            }}>
-              <div style={{
-                width: `${Math.round(voyages.progress * 100)}%`, height: '100%',
-                background: `linear-gradient(90deg, ${vAcc.fg}, ${vAcc.fg}cc)`,
-                boxShadow: `0 0 6px ${vAcc.fg}`,
-                transition: 'width 0.5s',
-              }} />
-            </div>
-          )}
-        </button>
-
-        {/* ── Row 2: PvP (under Campaign) + Gauntlets (under Voyages).
-            PvP opens for admins + duel testers (canPvp); Gauntlets for
-            gauntletOpen. Everyone else sees a "Coming Soon" lock. ───────── */}
-        <SideHubCard
-          accent={pvpAccent}
-          image="/reefraider.png"
-          title="PvP"
-          desc="Trade broadsides with other captains. Climb the duelist ladder."
-          locked={!canPvp}
+        />
+        {/* PvP opens for admins + duel testers (canPvp); Gauntlets for
+            gauntletOpen. Everyone else sees a locked tile. */}
+        <ExpeditionTile
+          bgImage="/exp-pvp.jpg" accent={pvpAccent} title="PvP"
+          status="Open ›" statusColor={pvpAccent}
+          locked={!canPvp} lockLabel="Coming Soon"
           onClick={canPvp ? () => setModal('pvp') : undefined}
         />
-        <SideHubCard
-          accent={gauntletAccent}
-          image="/davyjones.png"
-          title="Gauntlets"
-          desc="Push your luck down a gauntlet for one swelling pot. Bank it or sink."
-          locked={!gauntletOpen}
-          onClick={gauntletOpen ? () => setModal('gauntlets') : undefined}
-          lockLabel="Clear Chapter 2"
+        <ExpeditionTile
+          bgImage="/exp-gauntlets.jpg" accent={gauntletAccent} title="Gauntlets"
+          status={gauntletResumable ? 'Resume ›' : 'Choose ›'} statusColor={gauntletAccent}
+          locked={!gauntletOpen} lockLabel="Clear Chapter 2"
           tag={gauntletResumable ? 'Resume' : undefined}
-          cta={gauntletResumable ? 'Resume ›' : 'Choose ›'}
+          onClick={gauntletOpen ? () => setModal('gauntlets') : undefined}
         />
       </div>
 
