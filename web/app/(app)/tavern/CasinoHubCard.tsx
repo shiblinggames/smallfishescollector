@@ -29,6 +29,7 @@ export default function CasinoHubCard({ capped = false }: { capped?: boolean }) 
       title="The Den"
       gradient={['#4a1212', '#2a0808', '#100404']}
       accent="#c63838"
+      bgImage="/den-bg.jpg"
       badge={capped ? <ResetPill kind="daily" prefix="Cap resets in" accent="#f3c6c6" /> : undefined}
     >
       {/* Velvet sheen — felt lit from above, slow pulse. */}

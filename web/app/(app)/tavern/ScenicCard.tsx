@@ -28,6 +28,11 @@ interface Props {
   /** Optional status pill rendered top-center over the art (e.g. a reset
    *  countdown once a daily reward is claimed / a cap is reached). */
   badge?: React.ReactNode
+  /** Optional full-bleed painterly backdrop (a hand-painted "place" for the
+   *  card), rendered behind `children` and clipped to the card. The gradient
+   *  stays as the base tint / fallback; scenes layer their animated props on
+   *  top for depth. Compose these DARK in the lower third so the title reads. */
+  bgImage?: string
   /** Bespoke scene art rendered absolute inside the card. ScenicCard
    *  owns the gradient bg, border, bottom scrim, title, and tap feel
    *  — scenes just supply the illustration + animation. */
@@ -39,7 +44,7 @@ interface Props {
  *  by default (168px tall, fills its grid cell). Pass `external` to
  *  navigate via <a target="_blank"> instead of next/navigation
  *  router.push — used by the marketplace's Shopify links. */
-export default function ScenicCard({ href, title, gradient, accent, height = 168, external, onActivate, badge, children }: Props) {
+export default function ScenicCard({ href, title, gradient, accent, height = 168, external, onActivate, badge, bgImage, children }: Props) {
   const router = useRouter()
   const handleActivate = () => {
     if (onActivate) { onActivate(); return }
@@ -70,6 +75,19 @@ export default function ScenicCard({ href, title, gradient, accent, height = 168
         boxShadow: `0 4px 12px rgba(0,0,0,0.4), 0 0 18px ${accent}1a`,
       }}
     >
+      {/* Painterly backdrop — full-bleed behind everything, clipped by the
+          card's overflow:hidden. Sits over the gradient (its base tint) with
+          the animated scene props + scrim + title layering on top. */}
+      {bgImage && (
+        <img
+          src={bgImage}
+          alt=""
+          aria-hidden
+          loading="lazy"
+          decoding="async"
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }}
+        />
+      )}
       {children}
       {/* Status pill — top-center over the art (reset countdown, etc.). */}
       {badge && (
