@@ -6356,9 +6356,11 @@ export default function RaidCombat({
                   initial={{ opacity: 0.4 }}
                   animate={subPhase === 'aiming' ? { opacity: 0.62 } : { opacity: [0.4, 0.72, 0.4] }}
                   transition={subPhase === 'aiming' ? { duration: 0.2 } : { duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
-                  style={{ position: 'absolute', inset: '-3%', pointerEvents: 'none', zIndex: 2 }}
+                  style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 2 }}
                 >
-                  {/* Steel iron-brace brackets — 4 corners clamping the hull. */}
+                  {/* Steel iron-brace brackets — 4 corners clamping the hull. Sit
+                      flush at the hull-box corners (inset 0), never outside it, so
+                      the left pair can't overhang the stage edge and get clipped. */}
                   <div style={{ position: 'absolute', top: 0, left: 0, width: 20, height: 20, borderTop: '3px solid rgba(158,176,205,0.92)', borderLeft: '3px solid rgba(158,176,205,0.92)', boxShadow: '0 0 9px rgba(158,176,205,0.6)' }} />
                   <div style={{ position: 'absolute', top: 0, right: 0, width: 20, height: 20, borderTop: '3px solid rgba(158,176,205,0.92)', borderRight: '3px solid rgba(158,176,205,0.92)', boxShadow: '0 0 9px rgba(158,176,205,0.6)' }} />
                   <div style={{ position: 'absolute', bottom: 0, left: 0, width: 20, height: 20, borderBottom: '3px solid rgba(158,176,205,0.92)', borderLeft: '3px solid rgba(158,176,205,0.92)', boxShadow: '0 0 9px rgba(158,176,205,0.6)' }} />
