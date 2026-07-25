@@ -8,7 +8,7 @@ import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import GauntletGame from '../gauntlet/GauntletGame'
 import { getRaidPlayerStats } from '../actions'
-import { getGauntletDailyState } from '../gauntlet/actions'
+import { getGauntletDailyState, getGauntletLeaderboard } from '../gauntlet/actions'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { donsGauntletUnlocked, gauntletUnlocked } from '@/lib/gauntlet'
 
@@ -17,10 +17,11 @@ export default async function DonsGauntletPage() {
   if (!user) redirect('/login')
 
   const admin = createAdminClient()
-  const [profile, stats, daily, throneRes] = await Promise.all([
+  const [profile, stats, daily, leaderboard, throneRes] = await Promise.all([
     getCurrentProfile(),
     getRaidPlayerStats(user.id),
     getGauntletDailyState('don'),
+    getGauntletLeaderboard('don'),
     admin.from('raid_completions').select('id').eq('user_id', user.id).eq('raid_id', 'the_throne').limit(1).maybeSingle(),
   ])
 
@@ -83,7 +84,7 @@ export default async function DonsGauntletPage() {
           // teases the new layers), tracked by its own flag so it auto-opens
           // once here independently of whether Davy's was ever seen.
           hasSeenIntro={profile?.has_seen_dons_gauntlet_intro === true}
-          topDescender={null}
+          topDescender={leaderboard.top}
           // Hardcore is a Don's fast-follow — off for now.
           hardcoreUnlocked={false}
           hardcoreLive={false}

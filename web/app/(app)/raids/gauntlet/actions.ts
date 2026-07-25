@@ -319,15 +319,17 @@ export async function markConfluencesSeen(ids: string[]): Promise<{ ok: boolean 
 
 /** The single deepest run across all captains + this player's own deepest.
  *  Surfaced on the gauntlet map node. */
-export async function getGauntletLeaderboard(): Promise<{
+export async function getGauntletLeaderboard(variant: GauntletVariant = 'davy'): Promise<{
   top: { name: string; depth: number } | null
   mine: number
-  /** #1 on the hardcore-only Drowned Ledger + this player's hardcore best. */
+  /** #1 on the hardcore-only Drowned Ledger + this player's hardcore best.
+   *  Don's Gauntlet has no hardcore board yet (fast-follow), so both stay null/0. */
   hardcoreTop: { name: string; depth: number } | null
   hardcoreMine: number
 }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  const isDon = variant === 'don'
 
   const admin = createAdminClient()
   // #1 deepest CASHED-OUT descent (the leaderboard views exclude deaths +
@@ -341,24 +343,26 @@ export async function getGauntletLeaderboard(): Promise<{
     .order('time_ms', { ascending: true })
     .limit(1)
     .maybeSingle()
-  const [{ data: top }, { data: hcTop }] = await Promise.all([
-    topQuery('leaderboard_gauntlet'),
-    topQuery('leaderboard_gauntlet_hardcore'),
+  const [{ data: top }, hc] = await Promise.all([
+    topQuery(isDon ? 'leaderboard_dons_gauntlet' : 'leaderboard_gauntlet'),
+    isDon ? null : topQuery('leaderboard_gauntlet_hardcore'),
   ])
+  const hcTop = hc?.data ?? null
 
   let mine = 0
   let hardcoreMine = 0
   if (user) {
     const { data: me } = await admin
       .from('profiles')
-      .select('gauntlet_deepest, gauntlet_hc_deepest')
+      .select('gauntlet_deepest, gauntlet_hc_deepest, dons_gauntlet_deepest')
       .eq('id', user.id)
       .single()
-    mine = (me?.gauntlet_deepest as number | null) ?? 0
-    hardcoreMine = (me?.gauntlet_hc_deepest as number | null) ?? 0
+    mine = ((isDon ? me?.dons_gauntlet_deepest : me?.gauntlet_deepest) as number | null) ?? 0
+    hardcoreMine = isDon ? 0 : ((me?.gauntlet_hc_deepest as number | null) ?? 0)
   }
 
-  const asTop = (row: typeof top) => row ? { name: (row.username as string | null) ?? 'A captain', depth: Number(row.score) } : null
+  const asTop = (row: { username?: string | null; score?: number | string } | null) =>
+    row ? { name: (row.username as string | null) ?? 'A captain', depth: Number(row.score) } : null
   return {
     top: asTop(top),
     mine,

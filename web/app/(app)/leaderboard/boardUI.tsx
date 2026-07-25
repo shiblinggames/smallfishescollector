@@ -30,7 +30,7 @@ export interface LeaderboardEntry {
 export type BoardKey =
   | 'fishingLevel' | 'perfectStreak' | 'tideRun' | 'chartingPoints'
   | 'fishSlots' | 'blackjack' | 'roulette' | 'expedition' | 'raidProgress'
-  | 'gauntletDepth' | 'gauntletHardcore' | 'gauntletBigHit' | 'achievementPoints'
+  | 'gauntletDepth' | 'gauntletHardcore' | 'gauntletBigHit' | 'gauntletDonsDepth' | 'achievementPoints'
   | 'parlorPoints'
 
 export type AvatarMap = Record<string, {
@@ -85,6 +85,7 @@ export const BOARD_META: Record<BoardKey, {
   gauntletDepth: { label: 'Deepest Descent', accent: '#5eead4', unit: n => `Depth ${n}`,                  subUnit: () => 'cashed out' },
   gauntletHardcore: { label: 'Hardcore Gauntlet', accent: '#e0555a', unit: n => `Depth ${n}`,             subUnit: () => 'hardcore' },
   gauntletBigHit:{ label: 'Biggest Hit',     accent: '#f87171', unit: n => `${n.toLocaleString()}`,       subUnit: () => 'in one blow' },
+  gauntletDonsDepth: { label: "Don's Gauntlet", accent: '#3fbf82', unit: n => `Depth ${n}`,               subUnit: () => 'cashed out' },
   achievementPoints: { label: 'Achievement Points', accent: '#e6b94a', unit: n => `${n.toLocaleString()}`, subUnit: n => `point${n === 1 ? '' : 's'}` },
   parlorPoints:  { label: 'Parlor Points',  accent: '#b46fd4', unit: n => `${n.toLocaleString()}`,       subUnit: n => `parlor point${n === 1 ? '' : 's'}` },
 }
@@ -95,7 +96,7 @@ export const BOARD_META: Record<BoardKey, {
 export const LEADERBOARD_SECTIONS: { label: string; boards: BoardKey[] }[] = [
   { label: 'Achievements', boards: ['achievementPoints'] },
   { label: 'Fishing',      boards: ['perfectStreak', 'fishingLevel'] },
-  { label: 'Expeditions',  boards: ['raidProgress', 'expedition', 'gauntletDepth', 'gauntletHardcore', 'gauntletBigHit'] },
+  { label: 'Expeditions',  boards: ['raidProgress', 'expedition', 'gauntletDepth', 'gauntletHardcore', 'gauntletDonsDepth', 'gauntletBigHit'] },
   { label: 'Charting',     boards: ['chartingPoints'] },
   { label: 'The Parlor',   boards: ['parlorPoints'] },
   { label: 'Tavern',       boards: ['tideRun'] },

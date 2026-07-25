@@ -2235,7 +2235,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                 <span aria-hidden style={{ width: 14, height: 2, borderRadius: 2, background: `${AC}aa` }} />
                 <span className="font-karla font-800 uppercase" style={{ fontSize: '0.52rem', letterSpacing: '0.2em', color: '#9a948a' }}>Choose Your Descent</span>
               </span>
-              <LeaderboardModal boards={['gauntletDepth', 'gauntletHardcore', 'gauntletBigHit']} title="The Gauntlet" label="Full ranks"
+              <LeaderboardModal boards={isDonG ? ['gauntletDonsDepth'] : ['gauntletDepth', 'gauntletHardcore', 'gauntletBigHit']} title={isDonG ? "Don's Gauntlet" : 'The Gauntlet'} label="Full ranks"
                 triggerStyle={{ background: 'none', border: 'none', color: '#9a948a', padding: 0, fontSize: '0.55rem', letterSpacing: '0.04em' }} />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>

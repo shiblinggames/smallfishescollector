@@ -189,6 +189,7 @@ export async function getLeaderboardBoards(
     else if (key === 'achievementPoints') res = await getAchievementPointsBoard(user.id)
     else if (key === 'gauntletDepth') res = await fetchGauntlet(admin, user.id)
     else if (key === 'gauntletHardcore') res = await fetchGauntlet(admin, user.id, 'leaderboard_gauntlet_hardcore')
+    else if (key === 'gauntletDonsDepth') res = await fetchGauntlet(admin, user.id, 'leaderboard_dons_gauntlet')
     else {
       const view = VIEW_BY_KEY[key]
       if (!view) return
