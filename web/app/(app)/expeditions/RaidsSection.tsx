@@ -305,7 +305,7 @@ function RaidMap({
         background: [
           'radial-gradient(ellipse 80% 60% at 50% 38%, rgba(196,169,106,0.12) 0%, transparent 70%)',
           'radial-gradient(ellipse 120% 92% at 50% 50%, transparent 52%, rgba(6,5,4,0.5) 100%)',
-          'linear-gradient(180deg, rgba(30,21,11,0.28) 0%, rgba(20,14,7,0.46) 100%)',
+          'linear-gradient(180deg, rgba(24,17,9,0.46) 0%, rgba(15,10,6,0.64) 100%)',
           'url(/parchment-map.jpg) center / cover no-repeat',
         ].join(', '),
         border: '1px solid rgba(196,169,106,0.22)',
@@ -473,9 +473,9 @@ function RaidMap({
                 background: locked
                   ? 'radial-gradient(circle at 35% 30%, #14110d, #0a0907)'
                   : cleared
-                    ? `radial-gradient(circle at 35% 30%, ${accent}22, ${accent}0a)`
+                    ? `radial-gradient(circle at 35% 30%, ${accent}2c, #100c07)`
                     : `radial-gradient(circle at 35% 30%, ${accent}26, #0c0a08)`,
-                border: `2px solid ${locked ? 'rgba(255,255,255,0.08)' : cleared ? `${accent}66` : accent}`,
+                border: `2px solid ${locked ? 'rgba(255,255,255,0.14)' : cleared ? `${accent}99` : accent}`,
                 boxShadow: locked
                   ? 'none'
                   : cleared
@@ -488,7 +488,7 @@ function RaidMap({
                 // Beacon (chapter-end destination) pulls further back to
                 // ~0.32 so it reads as "distant" against the lit current
                 // node — but still legible as a landmark.
-                opacity: isBeacon ? 0.32 : locked || raidBlocked ? 0.6 : cleared ? 0.62 : 1,
+                opacity: isBeacon ? 0.42 : locked || raidBlocked ? 0.66 : cleared ? 0.82 : 1,
                 // The pulse animation drives box-shadow; let it own the prop.
                 ...(isCurrent && interactive ? { boxShadow: undefined } : {}),
                 touchAction: 'manipulation',
@@ -572,7 +572,7 @@ function RaidMap({
                 }}
               >
                 <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', lineHeight: 1.5, color: '#f5f2ec', textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>
-                  <span style={{ background: 'rgba(6,5,4,0.55)', borderRadius: 6, padding: '1px 7px', boxDecorationBreak: 'clone', WebkitBoxDecorationBreak: 'clone' }}>
+                  <span style={{ background: 'rgba(6,5,4,0.74)', borderRadius: 6, padding: '1px 7px', boxDecorationBreak: 'clone', WebkitBoxDecorationBreak: 'clone' }}>
                     {node.label}
                   </span>
                 </p>
@@ -599,12 +599,12 @@ function RaidMap({
                 }}
               >
                 <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', lineHeight: 1.45, color: '#d8d4ce', textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>
-                  <span style={{ background: 'rgba(6,5,4,0.55)', borderRadius: 6, padding: '1px 7px', boxDecorationBreak: 'clone', WebkitBoxDecorationBreak: 'clone' }}>
+                  <span style={{ background: 'rgba(6,5,4,0.74)', borderRadius: 6, padding: '1px 7px', boxDecorationBreak: 'clone', WebkitBoxDecorationBreak: 'clone' }}>
                     {node.label}
                   </span>
                 </p>
                 <p className="font-karla font-600" style={{ fontSize: '0.6rem', lineHeight: 1.35, color: '#c4a96a', marginTop: 4, textShadow: '0 1px 2px rgba(0,0,0,0.9)' }}>
-                  <span style={{ background: 'rgba(6,5,4,0.55)', borderRadius: 5, padding: '1px 6px', boxDecorationBreak: 'clone', WebkitBoxDecorationBreak: 'clone' }}>
+                  <span style={{ background: 'rgba(6,5,4,0.74)', borderRadius: 5, padding: '1px 6px', boxDecorationBreak: 'clone', WebkitBoxDecorationBreak: 'clone' }}>
                     <IconLock size={10} /> {lockReason}
                   </span>
                 </p>
