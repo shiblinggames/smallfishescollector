@@ -526,6 +526,8 @@ export default function ShipHero({
   // Tapped an EQUIPPED loadout slot: open a detail modal (effect + Unequip)
   // instead of removing it outright. Holds the equipped item id being viewed.
   const [itemDetail, setItemDetail] = useState<string | null>(null)
+  // The at-a-glance "Active Loadout" summary — every equipped item + effect.
+  const [effectsOpen, setEffectsOpen] = useState(false)
 
   // Gold "new raid item" nudge on the Manage Ship column — mirrors the
   // crew level-up dot. An owned raid item that is neither equipped nor
@@ -1500,6 +1502,18 @@ export default function ShipHero({
                 <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
                 <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.56rem', color: '#c4b078' }}>{equippedItems.length}/{raidItemSlots} slots</span>
               </div>
+              {/* At-a-glance summary of every active item + what it does. */}
+              {equippedItems.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setEffectsOpen(true)}
+                  className="font-karla font-700 uppercase tracking-[0.12em]"
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, width: '100%', padding: '0.55rem', marginBottom: '1rem', borderRadius: 10, fontSize: '0.56rem', color: '#c8d2e0', background: 'rgba(120,140,170,0.1)', border: '1px solid rgba(120,140,170,0.28)', cursor: 'pointer' }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" /></svg>
+                  Active effects summary
+                </button>
+              )}
               <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(raidItemSlots, 2)}, minmax(0, 1fr))`, gap: 8, marginBottom: '1.6rem' }}>
                 {Array.from({ length: raidItemSlots }, (_, i) => {
                   const itemId = equippedItems[i]
@@ -2233,6 +2247,52 @@ export default function ShipHero({
                 <button type="button" onClick={() => setItemDetail(null)} className="font-cinzel font-700 uppercase tracking-[0.06em]" style={{ flex: 1, padding: '0.72rem', borderRadius: 11, fontSize: '0.8rem', color: '#c8d2e0', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', cursor: 'pointer' }}>Close</button>
                 <button type="button" onClick={() => { toggleItem(itemDetail); setItemDetail(null) }} className="font-cinzel font-700 uppercase tracking-[0.06em]" style={{ flex: 1, padding: '0.72rem', borderRadius: 11, fontSize: '0.8rem', color: '#e0c078', background: 'rgba(196,176,120,0.14)', border: '1px solid rgba(196,176,120,0.42)', cursor: 'pointer' }}>Unequip</button>
               </div>
+            </motion.div>
+          )
+        })()}
+      </PopupShell>
+
+      {/* Active Loadout summary — a clean, at-a-glance list of every equipped
+          item and its effect, opened from the Battle Loadout header. */}
+      <PopupShell open={effectsOpen} onClose={() => setEffectsOpen(false)}>
+        {effectsOpen && (() => {
+          const items = equippedItems.map(id => getRaidItem(id)).filter((d): d is NonNullable<ReturnType<typeof getRaidItem>> => !!d)
+          return (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 4 }} transition={{ duration: 0.18 }}
+              style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 420, background: 'rgba(8,14,24,0.98)', borderRadius: 18, padding: '1.5rem 1.15rem 1.2rem', maxHeight: '88vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', boxShadow: '0 0 30px rgba(120,140,170,0.16)' }}
+            >
+              <button onClick={() => setEffectsOpen(false)} aria-label="Close" style={{ position: 'absolute', top: 6, right: 8, zIndex: 6, color: 'rgba(255,255,255,0.55)', fontSize: '1.2rem', lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem 0.4rem' }}>✕</button>
+              <div style={{ textAlign: 'center', marginBottom: '1.1rem' }}>
+                <p className="font-cinzel font-800" style={{ fontSize: '1.1rem', color: '#f0ede8' }}>Active Loadout</p>
+                <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.5rem', color: '#8794a6', marginTop: 3 }}>{items.length} of {raidItemSlots} mount{raidItemSlots === 1 ? '' : 's'} in use</p>
+              </div>
+              {items.length === 0 ? (
+                <p className="font-karla text-center" style={{ fontSize: '0.8rem', color: '#7a7470', fontStyle: 'italic', padding: '1rem 0' }}>Nothing equipped yet.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  {items.map((def, idx) => {
+                    const color = RARITY_ITEM_COLOR[def.rarity]
+                    const forged = isForgedRaidItem(def.id)
+                    const abyssal = isAbyssalForgedItem(def.id)
+                    return (
+                      <div key={def.id} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '0.8rem 0', borderTop: idx > 0 ? '1px solid rgba(255,255,255,0.07)' : 'none' }}>
+                        <div style={{ width: 38, height: 38, flexShrink: 0, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', ...(forged ? forgedBorderSoft('rgba(20,24,32,0.9)', abyssal) : { background: `${color}12`, border: `1px solid ${color}40` }) }}>
+                          {def.image
+                            // eslint-disable-next-line @next/next/no-img-element
+                            ? <img src={def.image} alt="" loading="lazy" decoding="async" className={abyssal ? 'rod-glow-abyssal' : undefined} style={{ width: 28, height: 28, objectFit: 'contain' }} />
+                            : <span style={{ color, display: 'flex' }}><IconCrate size={20} /></span>}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.86rem', lineHeight: 1.2, ...(forged ? forgedTextSoft(abyssal) : { color }) }}>{def.name}</p>
+                          <p className="font-karla" style={{ fontSize: '0.76rem', color: '#b8b2a8', lineHeight: 1.5, marginTop: 2 }}>{def.description}</p>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+              <button type="button" onClick={() => setEffectsOpen(false)} className="font-cinzel font-700 uppercase tracking-[0.06em]" style={{ width: '100%', marginTop: '1.2rem', padding: '0.72rem', borderRadius: 11, fontSize: '0.8rem', color: '#c8d2e0', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', cursor: 'pointer' }}>Close</button>
             </motion.div>
           )
         })()}
