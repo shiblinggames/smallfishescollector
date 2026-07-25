@@ -6178,6 +6178,10 @@ function AbyssBackdrop({ hardcore, don }: { hardcore?: boolean; don?: boolean })
     : mode === 'don'
     ? 'radial-gradient(ellipse at 50% 42%, transparent 44%, rgba(4,32,20,0.5) 82%, rgba(1,10,6,0.85) 100%)'
     : 'radial-gradient(ellipse at 50% 42%, transparent 48%, rgba(0,0,0,0.6) 100%)'
+  // Custom painted abyss for the two live gauntlets. Hardcore keeps the pure
+  // blood-red CSS abyss (Blood Gems own the red). The animated fog / god-rays /
+  // motes / vignette below layer OVER the painting so it still breathes.
+  const bgImg = mode === 'don' ? '/dons-gauntlet-bg.jpg' : mode === 'base' ? '/davy-gauntlet-bg.jpg' : null
   return (
     <>
       <style>{ABYSS_KEYFRAMES}</style>
@@ -6185,6 +6189,11 @@ function AbyssBackdrop({ hardcore, don }: { hardcore?: boolean; don?: boolean })
         position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden',
         background: bg,
       }}>
+        {/* Painted abyss base (Davy / Don) under a dark tint so the meta panels
+            still read; the animated layers below drift over it. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        {bgImg && <img src={bgImg} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
+        {bgImg && <div style={{ position: 'absolute', inset: 0, background: 'rgba(2,6,12,0.42)' }} />}
         {/* Drifting fog banks — slow, soft, so the deep feels like it's moving. */}
         <div style={{ position: 'absolute', top: '4%', left: '-10%', width: '70%', height: '55%', filter: 'blur(34px)', background: `radial-gradient(ellipse at center, ${shaft}, transparent 70%)`, animation: 'gauntFog 19s ease-in-out infinite' }} />
         <div style={{ position: 'absolute', bottom: '2%', right: '-12%', width: '75%', height: '52%', filter: 'blur(38px)', background: `radial-gradient(ellipse at center, ${shaft2}, transparent 72%)`, animation: 'gauntFog 24s ease-in-out infinite reverse', animationDelay: '3s' }} />
