@@ -973,7 +973,7 @@ export default function ShipHero({
             (which is where the player edits it). Splitting the hero
             this way also gives the crew side an actual visual presence
             (a face) instead of a button floating on its own. */}
-        <div style={{ position: 'relative', padding: '1.1rem 1rem 1rem' }}>
+        <div style={{ position: 'relative', padding: '1.1rem 0 1rem' }}>
 
           {/* Nav level + XP — full-width bar across the card (mirrors the
               fishing screen's XPBarDisplay): big level number on the left,
@@ -1060,7 +1060,7 @@ export default function ShipHero({
             position: 'relative',
             display: 'grid', gridTemplateColumns: '1fr 1fr',
             alignItems: 'stretch',
-            gap: 14, marginTop: '0.9rem',
+            gap: 12, marginTop: '0.9rem',
           }}>
             {/* Left col — crew lineup. Up to 3 roster members posed
                 in a V: front[0] anchors bottom-center, back[1] peeks
