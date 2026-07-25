@@ -918,8 +918,15 @@ export default function ShipHero({
   return (
     <>
       {/* ── Ship hero card ── */}
+      {/* Painterly harbor backdrop (a single "your vessel at port" scene) under
+          a dark tint so the XP bar, crew face, ship sprite + Manage buttons all
+          read over it. In-flow content paints above the element's own
+          background, so nothing inside needs restructuring. */}
       <div style={{
-        background: 'rgba(6,8,12,0.82)',
+        background: [
+          'linear-gradient(180deg, rgba(6,8,12,0.5) 0%, rgba(6,8,12,0.42) 55%, rgba(6,8,12,0.64) 100%)',
+          'url(/exp-hero-bg.jpg) center / cover no-repeat',
+        ].join(', '),
         border: '1px solid rgba(255,255,255,0.1)',
         borderRadius: 20,
         marginBottom: '1.5rem',

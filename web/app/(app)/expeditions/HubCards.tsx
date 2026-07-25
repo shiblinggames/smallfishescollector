@@ -287,33 +287,11 @@ export default function HubCards({
 
   return (
     <>
-      {/* Onboarding TEACHES then latches. The Opportunity strip REMINDS, forever.
-          They never both show: Orders returns null once every task is done, and the
-          strip is gated on that same latch, so the top-of-page slot transitions cleanly
-          from "learn the game" to "here's what's worth your time today." */}
-      {captainsOrdersDone ? (
-        <OpportunityStrip
-          onAction={onOpportunity}
-          state={{
-            repairOwed: campaign.repairOwed,
-            voyageStatus: voyages.status,
-            voyageRewardDoubloons: readyVoyage?.total_doubloons ?? 0,
-            voyageRewardGems: readyVoyage?.total_gems ?? 0,
-            canVoyage: roster.some(c => c.voyageSlot != null) || roster.some(c => c.raidSlot == null && c.voyageSlot == null),
-            freeRecruitAvailable,
-            nextNodeName: campaign.nextNodeName,
-            nextNodeIsFight: campaign.nextNodeKind === 'raid' || campaign.nextNodeKind === 'challenge',
-            nextNodeLocked: campaign.nextNodeLocked,
-            raidCrewAboard: roster.filter(c => c.raidSlot != null).length,
-            crewOwned: roster.length,
-            challengeName,
-            unequippedItems: Math.max(0, ownedRaidItems.length - equippedRaidItems.length),
-            itemSlotsFree: Math.max(0, raidItemSlots - equippedRaidItems.length),
-            gems,
-            canAffordNewSkin,
-          }}
-        />
-      ) : (
+      {/* First-time onboarding checklist only. The persistent "Opportunity"
+          strip that used to sit here once onboarding latched was removed — it
+          wasn't pulling its weight. Orders still latches off for good once every
+          task is done, so past that the top-of-page slot is simply empty. */}
+      {!captainsOrdersDone && (
         <CaptainsOrders
           onAction={onOrder}
           alreadyDone={captainsOrdersDone}
