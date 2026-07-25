@@ -1977,15 +1977,16 @@ export const CONFLUENCES: Confluence[] = [
     ],
   },
   {
-    id: 'untouchable',
-    name: 'Untouchable',
+    id: 'untouchable',   // legacy id; renamed Weather Gauge in the speed split so
+                         // Following Sea's synergy pays off in Initiative, not dodge
+    name: 'Weather Gauge',
     requires: [{ boonId: 'following_sea' }, { boonId: 'ghostward' }],
-    flavor: 'You are never where the shot lands, and the wind hands you back your powder.',
-    detail: 'Your dodges succeed more often, and every enemy shot you successfully slip loads free cannonball(s) into your magazine — dodging becomes offense, not just survival.',
+    flavor: 'Hold the wind and you hold the fight. You choose the moment, and the first broadside is yours.',
+    detail: 'You seize the opening far more often, and when you take the first shot, there is a chance to loose a second broadside before the enemy can answer.',
     levels: [
-      { desc: 'Dodges succeed +8% more; slipping a shot loads 1 free cannonball', effects: [{ kind: 'dodgeRefund', charges: 1 }, { kind: 'dodgeBonus', chance: 0.08, scope: 'allRemaining' }] },
-      { desc: 'Dodges succeed +16% more; slipping a shot loads 1 free cannonball', effects: [{ kind: 'dodgeRefund', charges: 1 }, { kind: 'dodgeBonus', chance: 0.16, scope: 'allRemaining' }] },
-      { desc: 'Dodges succeed +24% more; slipping a shot loads 2 free cannonballs', effects: [{ kind: 'dodgeRefund', charges: 2 }, { kind: 'dodgeBonus', chance: 0.24, scope: 'allRemaining' }] },
+      { desc: 'Take the opening +25%; opening shot 20% to strike twice', effects: [{ kind: 'firstStrikeChance', chance: 0.25 }, { kind: 'doubleStrikeOnFirst', chance: 0.20 }] },
+      { desc: 'Take the opening +35%; opening shot 30% to strike twice', effects: [{ kind: 'firstStrikeChance', chance: 0.35 }, { kind: 'doubleStrikeOnFirst', chance: 0.30 }] },
+      { desc: 'Take the opening +50%; opening shot 40% to strike twice', effects: [{ kind: 'firstStrikeChance', chance: 0.50 }, { kind: 'doubleStrikeOnFirst', chance: 0.40 }] },
     ],
   },
   {
@@ -2180,11 +2181,11 @@ export const CONFLUENCES: Confluence[] = [
     id: 'hobble', name: 'Hobble', gauntlet: 'don',
     requires: [{ boonId: 'chainshot' }, { boonId: 'following_sea' }],
     flavor: 'Snare their rigging, ride their wake. They lumber; you dance.',
-    detail: 'A slowed hull can’t chase you: your hits Slow harder, and you slip their shots more often for the rest of the run.',
+    detail: 'A slowed hull can’t keep the pace: your hits Slow harder, and when you take the opening there is a chance to strike twice before they answer.',
     levels: [
-      { desc: 'Extra Slow on hit; +8% dodge', effects: [{ kind: 'statusOnHit', status: 'slowed', chance: 0.40, magnitude: 2, turns: 2 }, { kind: 'dodgeBonus', chance: 0.08, scope: 'allRemaining' }] },
-      { desc: 'Bigger Slow on hit; +14% dodge', effects: [{ kind: 'statusOnHit', status: 'slowed', chance: 0.50, magnitude: 3, turns: 3 }, { kind: 'dodgeBonus', chance: 0.14, scope: 'allRemaining' }] },
-      { desc: 'Heavy Slow on hit; +20% dodge', effects: [{ kind: 'statusOnHit', status: 'slowed', chance: 0.60, magnitude: 3, turns: 3 }, { kind: 'dodgeBonus', chance: 0.20, scope: 'allRemaining' }] },
+      { desc: 'Extra Slow on hit; opening shot 15% to strike twice', effects: [{ kind: 'statusOnHit', status: 'slowed', chance: 0.40, magnitude: 2, turns: 2 }, { kind: 'doubleStrikeOnFirst', chance: 0.15 }] },
+      { desc: 'Bigger Slow on hit; opening shot 22% to strike twice', effects: [{ kind: 'statusOnHit', status: 'slowed', chance: 0.50, magnitude: 3, turns: 3 }, { kind: 'doubleStrikeOnFirst', chance: 0.22 }] },
+      { desc: 'Heavy Slow on hit; opening shot 30% to strike twice', effects: [{ kind: 'statusOnHit', status: 'slowed', chance: 0.60, magnitude: 3, turns: 3 }, { kind: 'doubleStrikeOnFirst', chance: 0.30 }] },
     ],
   },
   {

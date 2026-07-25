@@ -165,6 +165,12 @@ export type TideEffect =
    *  (Navigation). `_fights` is a runtime countdown for the next2Fights scope
    *  (set by expireAfterFight); leave it unset in the pool. */
   | { kind: 'speedDelta'; n: number; scope: 'next2Fights' | 'allRemaining'; _fights?: number }
+  /** Weather Gauge confluence: flat % chance each fight to seize the opening
+   *  (auto-win turn order), over and above the Initiative roll. */
+  | { kind: 'firstStrikeChance'; chance: number }
+  /** Weather Gauge / Hobble confluences: when you WIN a turn's opening and land a
+   *  shot, % chance it strikes a second time (excludes the Mega). */
+  | { kind: 'doubleStrikeOnFirst'; chance: number }
   // ── Boss-specific ───────────────────────────────────────────────
   /** Player damage multiplier vs the boss only. */
   | { kind: 'bossDamageMult'; mult: number }
@@ -355,6 +361,8 @@ export function effectTone(e: TideEffect): 'good' | 'bad' | 'neutral' {
       return e.mult < 1 ? 'good' : e.mult > 1 ? 'bad' : 'neutral'
     case 'critChanceBonus': case 'incomingCritReduction': case 'dodgeBonus':
       return e.chance > 0 ? 'good' : e.chance < 0 ? 'bad' : 'neutral'
+    case 'firstStrikeChance': case 'doubleStrikeOnFirst':
+      return e.chance > 0 ? 'good' : 'neutral'
     case 'instantHeal': case 'startOfFightHeal':
     case 'startHpDelta': case 'speedDelta': case 'doubloonsAtRaidEnd':
       return e.n > 0 ? 'good' : e.n < 0 ? 'bad' : 'neutral'
@@ -1033,8 +1041,10 @@ export function describeEffect(e: TideEffect): string {
     case 'guaranteedDodge':       return `${e.n} guaranteed dodge${e.n === 1 ? '' : 's'}`
     case 'speedDelta': {
       const scope = e.scope === 'allRemaining' ? 'all run' : 'next 2 fights'
-      return `${e.n >= 0 ? '+' : ''}${e.n} ship speed, ${scope}`
+      return `${e.n >= 0 ? '+' : ''}${e.n} Initiative, ${scope}`
     }
+    case 'firstStrikeChance':     return `${Math.round(e.chance * 100)}% to seize the opening (go first)`
+    case 'doubleStrikeOnFirst':   return `Your opening shot: ${Math.round(e.chance * 100)}% to strike twice`
     case 'bossDamageMult':        return `${pct(e.mult - 1)} damage to boss`
     case 'bossVolleyDmgMult':     return `${pct(e.mult - 1)} Volley damage to boss`
     case 'enemyHpScale': {

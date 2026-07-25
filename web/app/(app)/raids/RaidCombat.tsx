@@ -649,12 +649,17 @@ export default function RaidCombat({
     let critExecutePct = 0
     let volleyRampPct  = 0
     // More confluences: Reaper's Tithe (heal on sinking a hull), Feed the Fire
-    // (burn ticks heal you), Untouchable (dodge refunds charges), Iron Tempest
-    // (reflected damage multiplier).
+    // (burn ticks heal you), Iron Tempest (reflected damage multiplier). The
+    // dodgeRefund plumbing below is idle since Weather Gauge (was Untouchable)
+    // moved off dodge — kept wired for reuse.
     let executeHealPct    = 0
     let burnTickHealPct   = 0
     let dodgeRefundCharges = 0
     let retaliateBoostMult = 1
+    // Weather Gauge / Hobble confluences: chance to seize the opening (auto-win
+    // turn order) + chance to strike twice when you go first.
+    let firstStrikeChance = 0
+    let doubleStrikeChance = 0
     // All-or-Nothing curse: damage mult on non-crit shots (hit + graze).
     let noncritDmgMult = 1
     let healMult = 1
@@ -745,6 +750,8 @@ export default function RaidCombat({
         case 'incomingCritReduction': inCritReduce += e.chance; break
         case 'dodgeBonus':            dodgeBonus += e.chance; break
         case 'speedDelta':            speedDelta += e.n; break
+        case 'firstStrikeChance':     firstStrikeChance = Math.max(firstStrikeChance, e.chance); break
+        case 'doubleStrikeOnFirst':   doubleStrikeChance = Math.max(doubleStrikeChance, e.chance); break
         case 'startCharges':          chargesStart += e.n; break
         case 'startHpDelta':
           // Apply nextFight scope at every mount; boss scope only on boss.
@@ -843,7 +850,7 @@ export default function RaidCombat({
     return {
       dmgMult, fireDmgMult, volleyDmgMult, megaDmgMult, overkillHealPct, volleyCostCut, megaCostCut, bossDmgMult, bossVolMult,
       critBonus, critZoneMult, inDmgMult, inCritReduce,
-      dodgeBonus, speedDelta,
+      dodgeBonus, speedDelta, firstStrikeChance, doubleStrikeChance,
       chargesStart, hpStartDelta, hpStartPct, everyFightHeal, everyFightHealPct,
       reloadProc, guaranteedDodgeBank,
       enemyHpScaleMult, enemyChargesDelta,
@@ -3268,9 +3275,12 @@ export default function RaidCombat({
     // guarantee like before — just much better odds of going first.
     // Slowed on the enemy drags its roll the same way.
     const eSpeedRoll = rollInitiative(Math.max(1, enemy.shipSpeed + statusMods(enemyStatusesRef.current).speedDelta)) + (affix?.speedBonus ?? 0)
-    // First Strike crew effect always wins (player effect overrides any
-    // enemy speed bonus, no matter how high).
-    const first: Actor = mods.firstStrike
+    // First Strike crew effect always wins (player effect overrides any enemy
+    // speed bonus, no matter how high). Failing that, the Weather Gauge
+    // confluence gets a flat chance to seize the opening outright, over and
+    // above the Initiative roll.
+    const seizedOpening = !mods.firstStrike && tide.firstStrikeChance > 0 && Math.random() < tide.firstStrikeChance
+    const first: Actor = (mods.firstStrike || seizedOpening)
       ? 'player'
       : (pSpeedRoll >= eSpeedRoll ? 'player' : 'enemy')
     setFirstActor(first)
@@ -3898,8 +3908,17 @@ export default function RaidCombat({
           const afflictedMult = enemyAfflicted
             ? getActiveEffects(liveItems).filter(e => e.type === 'afflicted_damage_mult').reduce((a, e) => a * e.value, 1)
             : 1
+          // Weather Gauge / Hobble confluences: your OPENING shot only (first shot
+          // of the fight, === 1 like firstShotMult) — if you seized the opening
+          // (first === 'player') and it lands, a chance it strikes twice. Excludes
+          // the Mega and whiffs. A full second helping, folded into the mult.
+          const doubleStruck = shotsThisFightRef.current === 1 && first === 'player' && !isMega
+            && (lockedAimResult ?? 'miss') !== 'miss'
+            && tide.doubleStrikeChance > 0 && Math.random() < tide.doubleStrikeChance
+          const doubleStrikeMult = doubleStruck ? 2 : 1
           const mult = actionBaseMult * bossMult * nonbossMult * rampMult * aimItemMult * classDamageMult
-                       * tide.dmgMult * tideActionMult * tideBossMult * critTideMult * lowHpMult * noncritTideMult * frozenMult * volleyRampMult * critStreakMult * vengeanceMult * statusOutMult * firstShotMult * afflictedMult
+                       * tide.dmgMult * tideActionMult * tideBossMult * critTideMult * lowHpMult * noncritTideMult * frozenMult * volleyRampMult * critStreakMult * vengeanceMult * statusOutMult * firstShotMult * afflictedMult * doubleStrikeMult
+          if (doubleStruck) stepLines.push(`Weather Gauge! You take the opening and the shot lands twice.`)
           dmg = Math.floor(rollShotDamage(lockedAimResult ?? 'miss', shipMinDamage, totalPower, mods.damagePct) * mult)
           if (isVolley) volleyCountRef.current += 1   // this volley is now "fired" — the next ramps further
           // Enemy themed defense: crustacean carapace soaks a flat % off every
@@ -4067,7 +4086,7 @@ export default function RaidCombat({
             // slipped the enemy's shot (a won dodge).
             if (isAttackerPlayer) onStat?.({ shots: 1, volleys: action === 'volley' ? 1 : 0, crits: lockedAimResult === 'critical' ? 1 : 0 })
             else onStat?.({ dodgesWon: 1 })
-            // Untouchable confluence: slipping an enemy shot hands you back a
+            // dodgeRefund (currently no producer): slipping an enemy shot hands you back a
             // cannonball (only when it's the PLAYER who dodged).
             if (!isAttackerPlayer && tide.dodgeRefundCharges > 0) {
               const refund = Math.min(playerMaxCharges - pCharges, tide.dodgeRefundCharges)
