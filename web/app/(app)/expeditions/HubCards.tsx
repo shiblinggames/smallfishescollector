@@ -430,7 +430,7 @@ export default function HubCards({
               style={{
                 position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
                 padding: '0.95rem 0.7rem 0.85rem', borderRadius: 16, cursor: 'pointer',
-                background: `linear-gradient(180deg, ${DAVY_AC}20, rgba(0,0,0,0.32))`,
+                background: `linear-gradient(180deg, ${DAVY_AC}26 0%, rgba(2,6,12,0.5) 45%, rgba(2,6,12,0.82) 100%), url(/davy-gauntlet-bg.jpg) center / cover`,
                 border: `1px solid ${DAVY_AC}66`, boxShadow: `0 0 22px ${DAVY_AC}14`,
               }}>
               <div style={{ position: 'relative', width: '100%', height: 128, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 9 }}>
@@ -459,7 +459,7 @@ export default function HubCards({
                 style={{
                   position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
                   padding: '0.95rem 0.7rem 0.85rem', borderRadius: 16, cursor: 'pointer',
-                  background: `linear-gradient(180deg, ${DON_AC}24, rgba(0,0,0,0.34))`,
+                  background: `linear-gradient(180deg, ${DON_AC}28 0%, rgba(2,6,12,0.5) 45%, rgba(2,6,12,0.82) 100%), url(/dons-gauntlet-bg.jpg) center / cover`,
                   border: `1px solid ${DON_AC}66`, boxShadow: `0 0 22px ${DON_AC}16`,
                 }}>
                 <div style={{ position: 'relative', width: '100%', height: 128, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 9 }}>
@@ -481,7 +481,7 @@ export default function HubCards({
                 style={{
                   position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
                   padding: '0.95rem 0.7rem 0.85rem', borderRadius: 16, cursor: 'default',
-                  background: `linear-gradient(180deg, ${DON_AC}12, rgba(0,0,0,0.34))`,
+                  background: `linear-gradient(180deg, rgba(2,6,12,0.62) 0%, rgba(2,6,12,0.72) 55%, rgba(2,6,12,0.9) 100%), url(/dons-gauntlet-bg.jpg) center / cover`,
                   border: `1px solid ${DON_AC}3a`,
                 }}>
                 <div style={{ position: 'relative', width: '100%', height: 128, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 9 }}>
