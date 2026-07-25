@@ -2266,8 +2266,11 @@ export default function GauntletGame(props: GauntletGameProps) {
                   <div key={c.key} style={{
                     position: 'relative', display: 'flex', flexDirection: 'column', minWidth: 0, borderRadius: 15, overflow: 'hidden',
                     // A doorway into the dark: accent light up top pooling into a
-                    // black shaft at the bottom you're about to drop through.
-                    background: `radial-gradient(ellipse 130% 78% at 50% 118%, rgba(0,0,0,0.62), transparent 58%), linear-gradient(180deg, ${c.color}28 0%, ${c.color}0c 52%, rgba(5,9,16,0.55) 100%)`,
+                    // black shaft at the bottom you're about to drop through. Kept
+                    // solid enough through the middle/bottom that the label + depth
+                    // stats read over the painted abyss behind (was ~55% at the
+                    // base, which the busy backdrop washed out).
+                    background: `radial-gradient(ellipse 130% 78% at 50% 118%, rgba(0,0,0,0.66), transparent 56%), linear-gradient(180deg, ${c.color}2a 0%, rgba(8,13,22,0.74) 46%, rgba(5,9,16,0.92) 100%)`,
                     border: `1px solid ${c.color}${c.enabled ? '5a' : '22'}`,
                     boxShadow: c.enabled ? `0 0 22px ${c.color}1e, inset 0 1px 0 ${c.color}33` : 'none',
                     opacity: c.enabled ? 1 : 0.6,
@@ -2370,7 +2373,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                 { label: 'How it works',  onClick: () => setIntroOpen(true),     icon: <><circle cx="12" cy="12" r="9" /><path d="M9.6 9a2.4 2.4 0 1 1 3.4 2.2c-.7.4-1 .8-1 1.6" /><path d="M12 17h.01" /></> },
               ] as const).map(({ label, onClick, icon }) => (
                 <button key={label} onClick={onClick} className="tap"
-                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '0.55rem 0.3rem', borderRadius: 11, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#c9c2b6', cursor: 'pointer' }}>
+                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '0.55rem 0.3rem', borderRadius: 11, background: 'rgba(10,14,22,0.5)', border: '1px solid rgba(255,255,255,0.1)', color: '#c9c2b6', cursor: 'pointer' }}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0 }}>{icon}</svg>
                   <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.53rem', whiteSpace: 'nowrap' }}>{label}</span>
                 </button>
@@ -5535,8 +5538,8 @@ function ActionTile({ color, icon, label, line, primary, disabled, onClick }: {
         flex: 1, minWidth: 0, padding: '0.95rem 0.25rem 0.8rem', borderRadius: 14,
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, textAlign: 'center',
         cursor: disabled ? 'wait' : 'pointer',
-        background: primary ? `linear-gradient(180deg, ${color}2e, ${color}10)` : `${color}10`,
-        border: `1px solid ${color}${primary ? '70' : '38'}`,
+        background: primary ? `linear-gradient(180deg, ${color}2e, ${color}12)` : `linear-gradient(180deg, ${color}1e 0%, rgba(8,12,20,0.62) 100%)`,
+        border: `1px solid ${color}${primary ? '70' : '3e'}`,
         boxShadow: primary ? `0 0 22px ${color}1f` : 'none',
         animation: primary && !disabled ? 'gauntCta 2.6s ease-in-out infinite' : 'none',
       }}>
