@@ -149,7 +149,8 @@ export interface BroadsideEnemy {
   hpBase: number
   minDmg: number
   maxDmg: number
-  /** Ship speed: used in the speed roll for turn order, dodge roll, and aim-bar target speed. */
+  /** Ship speed (enemy Initiative): turn-order roll, its own dodge roll, and
+   *  aim-bar target speed. Enemies have no player-style Initiative/Evasion split. */
   shipSpeed: number
   /** Gunnery accuracy. A flat bonus added to this enemy's roll to land a shot
    *  through the PLAYER's dodge. The player's dodge roll adds their FULL nav
@@ -1533,7 +1534,8 @@ export const THE_BLOCKADE: BossRaidConfig = {
     },
     netter: {
       // THE MANGROVE. SLOWED debut. Roots fouled through your rigging and rudder cut
-      // your speed, so you lose turn-order rolls and slip fewer shots while it lasts.
+      // your Initiative, so you lose turn-order rolls and land fewer shots on a
+      // dodging enemy while it lasts (your Evasion dodge and aim are untouched).
       // The estuary's own net, and it does not need throwing.
       id: 'netter', name: 'The Mangrove', hpBase: 330, minDmg: 22, maxDmg: 36,
       shipSpeed: 6, actionMs: 3800,

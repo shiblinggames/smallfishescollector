@@ -1155,8 +1155,8 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
     name: 'Becalmed',
     flavor: 'The wind died at this depth. Your ship answers the wheel a beat too slow.',
     tiers: [
-      { desc: '-3 ship speed', detail: 'Your ship is 3 slower. Speed decides who fires first each turn and how fast your aim bar sweeps, so you will act after the enemy more often and have less time to line up a shot.', effects: [{ kind: 'speedDelta', n: -3, scope: 'allRemaining' }] },
-      { desc: '-5 ship speed', detail: 'The calm thickens. Your ship is 5 slower now, ceding the first shot far more often.', effects: [{ kind: 'speedDelta', n: -5, scope: 'allRemaining' }] },
+      { desc: '-3 Initiative', detail: 'Your ship is 3 slower off the mark. Initiative decides who fires first, so you will act after the enemy more often and be harder-pressed to flee. (Your dodge and aim ride on Evasion, so they hold steady.)', effects: [{ kind: 'speedDelta', n: -3, scope: 'allRemaining' }] },
+      { desc: '-5 Initiative', detail: 'The calm thickens. Your ship is 5 slower now, ceding the first shot far more often.', effects: [{ kind: 'speedDelta', n: -5, scope: 'allRemaining' }] },
     ],
   },
   {
@@ -1583,9 +1583,9 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
     { desc: '36% chance a Reload loads 2 cannonballs', detail: 'Each time you Reload, there’s a 36% chance a second cannonball is loaded for free.', effect: { kind: 'reloadProc', chance: 0.36, bonusCharges: 1 } },
   ] },
   { id: 'following_sea', name: 'Following Sea', flavor: 'The current finally runs with you.', rarity: 'rare', tiers: [
-    { desc: '+2 ship speed', detail: 'Your ship is 2 faster: you act first more often and slip more enemy shots when you dodge.', effect: { kind: 'speedDelta', n: 2, scope: 'allRemaining' } },
-    { desc: '+4 ship speed', detail: 'Your ship is 4 faster: you act first more often and slip more enemy shots when you dodge.', effect: { kind: 'speedDelta', n: 4, scope: 'allRemaining' } },
-    { desc: '+7 ship speed', detail: 'Your ship is 7 faster: you act first far more often and slip far more enemy shots when you dodge.', effect: { kind: 'speedDelta', n: 7, scope: 'allRemaining' } },
+    { desc: '+2 Initiative', detail: '+2 Initiative: you fire first more often, land more shots on a dodging enemy, and slip away faster when you flee. (Dodging incoming fire is Evasion — your Navigation — not this.)', effect: { kind: 'speedDelta', n: 2, scope: 'allRemaining' } },
+    { desc: '+4 Initiative', detail: '+4 Initiative: you fire first more often, land more shots on a dodging enemy, and slip away faster when you flee. (Dodging incoming fire is Evasion — your Navigation — not this.)', effect: { kind: 'speedDelta', n: 4, scope: 'allRemaining' } },
+    { desc: '+7 Initiative', detail: '+7 Initiative: you fire first far more often, land far more shots on dodging enemies, and slip away far faster when you flee. (Dodging incoming fire is Evasion — your Navigation — not this.)', effect: { kind: 'speedDelta', n: 7, scope: 'allRemaining' } },
   ] },
   { id: 'bilge_pump', name: 'Bilge Pump', flavor: 'Patch the seams in the lull before the next gun.', tiers: [
     { desc: 'Heal 5% max HP each fight', detail: 'At the start of every fight, your ship repairs 5% of its maximum HP. Scales with your hull, so it keeps mattering as you go deeper.', effect: { kind: 'startOfFightHealPct', pctMax: 0.05 } },

@@ -160,9 +160,10 @@ export type TideEffect =
   | { kind: 'dodgeBonus'; chance: number; scope: 'nextFight' | 'allRemaining' }
   /** Bonus successful dodges (no roll needed) usable on upcoming turns. */
   | { kind: 'guaranteedDodge'; n: number }
-  /** +/- player ship speed for turn order + aim-bar speed.
-   *  `_fights` is a runtime countdown for the next2Fights scope (set by
-   *  expireAfterFight); leave it unset in the pool. */
+  /** +/- player Initiative (hull speed): turn order + fleeing only. Post-split it
+   *  does NOT touch the aim bar or the player's dodge — those ride on Evasion
+   *  (Navigation). `_fights` is a runtime countdown for the next2Fights scope
+   *  (set by expireAfterFight); leave it unset in the pool. */
   | { kind: 'speedDelta'; n: number; scope: 'next2Fights' | 'allRemaining'; _fights?: number }
   // ── Boss-specific ───────────────────────────────────────────────
   /** Player damage multiplier vs the boss only. */
@@ -845,7 +846,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'ride_out',
         label: 'Ride it out',
-        description: '+2 ship speed all run (turn order and aim). The hard heel into the swell strains the seams. Take 12% more damage all run.',
+        description: '+2 Initiative all run (fire first and flee more reliably). The hard heel into the swell strains the seams. Take 12% more damage all run.',
         effects: [
           { kind: 'speedDelta', n: 2, scope: 'allRemaining' },
           { kind: 'incomingDmgMult', mult: 1.12, scope: 'allRemaining' },

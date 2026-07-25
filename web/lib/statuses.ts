@@ -88,7 +88,9 @@ export interface StatusMods {
   dmgDealtMult: number
   /** Multiplier on damage THIS side takes (feeble ↑, fortify ↓). Floor 0.1. */
   dmgTakenMult: number
-  /** Flat speed delta (slowed) — turn-order + dodge rolls only, NOT the aim bar. */
+  /** Flat Initiative delta (slowed/hasted). Turn-order rolls + the attacker's roll
+   *  to land on a dodging defender. NOT the aim bar, and NOT the player's own
+   *  Evasion (Navigation) dodge. */
   speedDelta: number
   /** Special abilities locked this round. */
   silenced: boolean

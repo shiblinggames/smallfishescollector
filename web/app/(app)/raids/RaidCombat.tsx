@@ -299,14 +299,15 @@ function rollShotDamage(res: ShotResult, shipMinDamage: number, totalPower: numb
   return Math.floor(Math.random() * grazeMax) + 1
 }
 
-function rollSpeed(shipSpeed: number, navigation: number) {
-  // Speed roll uses 1d30 (not d20 like dodge) — deliberately more random
-  // than dodge so even a high-Compass build can't fully eliminate
-  // turn-order swing. A +10 advantage that won 94% of the time on d20
-  // now wins ~77% on d30; a +5 advantage drops from 81% to 64%. Tuned
-  // 2026-05-29 alongside the Compass nerf (0.25 → 0.20) to flatten
-  // late-game determinism without invalidating speed-built captains.
-  return (Math.floor(Math.random() * 30) + 1) + shipSpeed + Math.floor(navigation / 10)
+function rollInitiative(initiative: number) {
+  // Turn order (post-split): 1d20 + INITIATIVE (hull speed + speed boons), and
+  // nothing else. Navigation no longer feeds turn order — it's the Evasion stat
+  // now (dodge + aim). The 1d20 spread is tuned so a few points of Initiative,
+  // or a +2/+4/+7 speed boon, meaningfully move who fires first without making
+  // it fully deterministic (roughly: +2 edge ~57%, +5 ~68%, +9 ~85%). The
+  // Navigator's Compass stays the one opt-in exception: as a VISIBLE equipped
+  // item it still folds a slice of Navigation into the player's roll (call site).
+  return (Math.floor(Math.random() * 20) + 1) + initiative
 }
 function rollDodge(shipSpeed: number, navigation: number) {
   return d20() + shipSpeed + navigation
@@ -1859,12 +1860,12 @@ export default function RaidCombat({
   // (RaidGame intercepts those and signals via fleeSignal). pendingFleeNavRef
   // holds where to go on a clean getaway so success honors where the player
   // was trying to head.
-  // Nav divisor mirrors rollSpeed's nav/10 (tight d20 numbers, no late-game
-  // determinism); tide speedDelta folds into effective speed same as the
-  // turn-order roll. Tune DC base / boss penalty here.
+  // Fleeing is INITIATIVE (hull speed + speed boons), matching the turn-order
+  // roll — Navigation no longer helps you run (that's Evasion: dodge + aim).
+  // tide speedDelta folds into effective speed same as the turn-order roll.
+  // Tune DC base / boss penalty here.
   const fleeSpeed    = Math.max(1, shipSpeed + tide.speedDelta)
-  const fleeNavBonus = Math.floor(totalNavigation / 10)
-  const fleeBonus    = fleeSpeed + fleeNavBonus
+  const fleeBonus    = fleeSpeed
   const fleeDC       = 10 + enemy.shipSpeed + (isBoss ? 3 : 0)
   // The one number the player sees: the die face they need. Clamped 2–20
   // because a natural 1 always fails and a natural 20 always escapes.
@@ -3262,11 +3263,11 @@ export default function RaidCombat({
     // can't make the player un-act-able. (Statuses read from the refs — this
     // runs at action-pick time, outside resolveTurn's snapshot.)
     const tideAdjustedSpeed = Math.max(1, shipSpeed + tide.speedDelta + statusMods(playerStatusesRef.current).speedDelta)
-    const pSpeedRoll = rollSpeed(tideAdjustedSpeed, totalNavigation) + Math.floor(totalNavigation * compassNavPct)
+    const pSpeedRoll = rollInitiative(tideAdjustedSpeed) + Math.floor(totalNavigation * compassNavPct)
     // Fleet affix on the enemy: flat bonus to its speed roll. Not a
     // guarantee like before — just much better odds of going first.
     // Slowed on the enemy drags its roll the same way.
-    const eSpeedRoll = rollSpeed(Math.max(1, enemy.shipSpeed + statusMods(enemyStatusesRef.current).speedDelta), 0) + (affix?.speedBonus ?? 0)
+    const eSpeedRoll = rollInitiative(Math.max(1, enemy.shipSpeed + statusMods(enemyStatusesRef.current).speedDelta)) + (affix?.speedBonus ?? 0)
     // First Strike crew effect always wins (player effect overrides any
     // enemy speed bonus, no matter how high).
     const first: Actor = mods.firstStrike
@@ -3792,16 +3793,19 @@ export default function RaidCombat({
         // this shot. megaMult replaces the volley's flat ×2.
         const isMega  = action === 'mega'
         const megaAug = isMega ? megaAugment : null
-        // The player's effective ship speed folds in tide.speedDelta (Following
-        // Sea boon, Becalmed curse, etc.) AND the Slowed status, so speed
-        // swings make you nimbler/clumsier in the dodge contest too — not just
-        // turn order. Floored at 1 so a heavy drop can't invert the roll.
-        // Enemy speed folds its own Slowed the same way.
+        // Post-split dodge contest. The PLAYER'S defensive dodge is pure EVASION
+        // (Navigation, added via defenderNav) — hull speed + boons no longer help
+        // you weave aside (that's Initiative now: turn order + fleeing). But your
+        // OFFENSIVE agility (playerDodgeSpeed = hull + boons) still helps your
+        // shot track a dodging enemy. The enemy has no Evasion stat, so its hull
+        // speed doubles as its nimbleness both ways. Floored at 1 so a heavy drop
+        // can't invert the roll; enemy folds its own Slowed the same way.
         const playerDodgeSpeed = Math.max(1, shipSpeed + tide.speedDelta + pStatus.speedDelta)
         const enemyDodgeSpeed  = Math.max(1, enemy.shipSpeed + eStatus.speedDelta)
         const attackerSpeed  = isAttackerPlayer ? playerDodgeSpeed : enemyDodgeSpeed
         const defenderAction = isAttackerPlayer ? eAction          : pAction
-        const defenderSpeed  = isAttackerPlayer ? enemyDodgeSpeed  : playerDodgeSpeed
+        // Player defending → 0 hull; the dodge rides on Evasion (defenderNav) alone.
+        const defenderSpeed  = isAttackerPlayer ? enemyDodgeSpeed  : 0
         const defenderNav    = isAttackerPlayer ? 0                : totalNavigation
         // Repossession: drop the reclaimed item from the per-shot effect reads
         // for this fight (null ref = unchanged list, so every other raid is
@@ -7253,15 +7257,16 @@ function PlayerStatsPopup({
   // Single source of truth — mirrors rollShotDamage, incl. crew damage effects.
   const { hitMin, powerMax, critMax } = raidDamageProfile(totalPower, shipMinDamage, damagePct)
   const critMin   = shipMinDamage * 2
-  // Combined "maneuver" stat — Ship Speed and Navigation both feed into how
-  // nimble the ship is in fights, so they're summed into one Speed score.
-  const speed   = shipSpeed + totalNavigation
-
+  // Split maneuver stats: INITIATIVE (hull speed + speed boons) decides turn
+  // order, fleeing, and landing shots on a dodging enemy; EVASION (Navigation)
+  // decides dodging incoming fire and steadier aim. Each has one job now — so a
+  // speed boon and an enemy's speed both read clearly against yours.
   const rows: { label: string; value: string; hint: string; color: string }[] = [
-    { label: 'Damage',      value: `${hitMin}–${powerMax}`,        hint: 'normal-hit damage range',         color: '#f87171' },
-    { label: 'Crit Damage', value: `${critMin}–${critMax}`,        hint: 'damage on a critical lock',       color: '#fbbf24' },
-    { label: 'Speed',       value: String(speed),                  hint: 'turn order, dodge, evasion',      color: '#60a5fa' },
-    { label: 'Fortune',     value: String(totalFortune),           hint: 'better odds at rare loot',        color: '#f0c040' },
+    { label: 'Damage',      value: `${hitMin}–${powerMax}`,        hint: 'normal-hit damage range',             color: '#f87171' },
+    { label: 'Crit Damage', value: `${critMin}–${critMax}`,        hint: 'damage on a critical lock',           color: '#fbbf24' },
+    { label: 'Initiative',  value: String(shipSpeed),              hint: 'fire first · land on dodgers · flee', color: '#60a5fa' },
+    { label: 'Evasion',     value: String(totalNavigation),        hint: 'dodge incoming fire · steadier aim',  color: '#5eead4' },
+    { label: 'Fortune',     value: String(totalFortune),           hint: 'better odds at rare loot',            color: '#f0c040' },
   ]
 
   // Equipped Items — every raid item the player has on, surfaced as its own
@@ -7580,7 +7585,7 @@ function EnemyStatsPopup({
     { label: 'HP',          value: `${currentHp} / ${maxHp}`,          hint: 'remaining / total hull',         color: '#86efac' },
     { label: 'Damage',      value: `${enemy.minDmg}–${enemy.maxDmg}`,  hint: 'per normal shot',                color: '#f87171' },
     { label: 'Volley',      value: `${minVolley}–${maxVolley}`,        hint: '3-charge heavy shot',            color: '#fb923c' },
-    { label: 'Speed',       value: String(enemy.shipSpeed),            hint: 'turn order',                     color: '#60a5fa' },
+    { label: 'Initiative',  value: String(enemy.shipSpeed),            hint: 'turn order · its own dodge',     color: '#60a5fa' },
     { label: 'Crit Chance', value: `${critPct}%`,                      hint: `${minCrit}–${maxCrit} on crit`,  color: '#fbbf24' },
   ]
 

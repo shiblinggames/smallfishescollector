@@ -281,8 +281,9 @@ export function computeCombatRating(
   const critRate = (raidMods?.critPct ?? 0) / 100
   const offense  = Math.round(avgHit * (1 + critRate))
 
-  // Dodge is the real secondary: in live combat it buys turn order, action speed
-  // and dodge success — modelled as effective HP (scaled to reachable totals so
+  // Dodge (Navigation) is the real secondary: in live combat it's your Evasion —
+  // dodging incoming fire and steadier aim (turn order is Initiative now, a
+  // separate stat) — modelled as effective HP (scaled to reachable totals so
   // it matters mid-game). Fortune is utility in raids (repair-kit heals + loot),
   // so it folds in as a small sustain nudge, not raw combat power.
   const dodgeBoost = Math.min(totalDodge / 120, 0.5)
