@@ -7594,16 +7594,28 @@ export default function FishingGame({
                     )}
                     </>
                   ) : missResult ? (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-6">
-                      <p className="font-cinzel font-700 mb-1"
-                        style={{ fontSize: '1rem', color: missResult === 'penalty' ? '#f87171' : '#64748b' }}>
-                        {missResult === 'penalty' ? 'Snagged!' : 'No catch'}
-                      </p>
-                      {missResult !== 'penalty' && (
-                        <p className="font-karla font-400" style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-                          The fish slipped away.
+                    <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="text-center" style={{ padding: '1.1rem 0' }}>
+                      {/* Dark translucent plate so the muted miss text reads against
+                          the water backdrop; border tints red on a snag. */}
+                      <div style={{
+                        display: 'inline-block', padding: '0.65rem 1.4rem', borderRadius: 14,
+                        background: 'linear-gradient(180deg, rgba(12,16,22,0.82), rgba(8,11,16,0.9))',
+                        border: `1px solid ${missResult === 'penalty' ? 'rgba(248,113,113,0.5)' : 'rgba(148,163,184,0.34)'}`,
+                        boxShadow: '0 6px 24px rgba(0,0,0,0.45)',
+                        backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
+                      }}>
+                        <p className="font-cinzel font-700"
+                          style={{ fontSize: '1rem', marginBottom: missResult !== 'penalty' ? 2 : 0,
+                            color: missResult === 'penalty' ? '#f87171' : '#dbe3ee',
+                            textShadow: '0 1px 3px rgba(0,0,0,0.6)' }}>
+                          {missResult === 'penalty' ? 'Snagged!' : 'No catch'}
                         </p>
-                      )}
+                        {missResult !== 'penalty' && (
+                          <p className="font-karla font-400" style={{ fontSize: '0.75rem', color: '#aeb9c9', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
+                            The fish slipped away.
+                          </p>
+                        )}
+                      </div>
                     </motion.div>
                   ) : null}
 
