@@ -269,15 +269,19 @@ export default function HubCards({
     })
   }
 
+  // Campaign now surfaces the story map as a full-screen overlay
+  // (CampaignMapOverlay listens for this) instead of the old ready-check modal.
+  const openCampaignMap = () => window.dispatchEvent(new CustomEvent('expedition:open-campaign-map'))
+
   const onOrder = (a: OrderAction) => {
-    if (a === 'campaign') setModal('campaign')
+    if (a === 'campaign') openCampaignMap()
     else if (a === 'voyages') setModal('voyages')
     else if (a === 'loadout') window.dispatchEvent(new CustomEvent('expedition:open-loadout'))
   }
   // The Opportunity strip's actions are a superset — modals, routes (Link handles
   // those itself), and loadout via event.
   const onOpportunity = (a: OpportunityAction) => {
-    if (a.kind === 'modal') setModal(a.modal)
+    if (a.kind === 'modal') { if (a.modal === 'campaign') openCampaignMap(); else setModal(a.modal) }
     else if (a.kind === 'event') window.dispatchEvent(new CustomEvent(a.event))
   }
 
@@ -337,7 +341,7 @@ export default function HubCards({
           statusColor="#f0e0b0"
           sub={campaign.nextNodeLocked ? campaign.nextNodeLockReason : null}
           subLock={campaign.nextNodeLocked}
-          onClick={() => setModal('campaign')}
+          onClick={openCampaignMap}
         />
         <ExpeditionTile
           bgImage="/exp-voyages.jpg" accent={vAcc.fg} title="Voyages"
@@ -364,245 +368,6 @@ export default function HubCards({
           onClick={gauntletOpen ? () => setModal('gauntlets') : undefined}
         />
       </div>
-
-      {/* ── Campaign prep modal ────────────────────────────────────── */}
-      <PopupShell open={modal === 'campaign'} onClose={() => setModal(null)}>
-        <div role="dialog" aria-modal onClick={e => e.stopPropagation()}
-          style={{
-            margin: 'auto', width: '100%', maxWidth: 400,
-            background: 'linear-gradient(180deg, #1a1408 0%, #0a0807 100%)',
-            border: `1px solid ${campaignAccent}55`,
-            borderRadius: 20, padding: '1.1rem 1rem 1rem',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.7)',
-            // The modal must never run off the screen. Cap it to the viewport and let the
-            // BODY scroll, so the header and the Begin button stay put and reachable no
-            // matter how much sits between them.
-            display: 'flex', flexDirection: 'column',
-            maxHeight: 'calc(100dvh - 2rem)',
-          }}
-        >
-          <p className="font-karla font-700 uppercase tracking-[0.18em] text-center"
-            style={{ fontSize: '0.55rem', color: `${campaignAccent}aa`, marginBottom: 4 }}>
-            Campaign · The Sunken Hand
-          </p>
-          <p className="font-cinzel font-700 text-center"
-            style={{ fontSize: '1.1rem', color: '#f0e8d0', marginBottom: 10 }}>
-            {campaign.nextNodeName ?? 'Story complete'}
-          </p>
-
-          {/* Everything between the title and the buttons scrolls. */}
-          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain', margin: '0 -0.25rem', padding: '0 0.25rem' }}>
-          <PrepStats s={prepStats} accent={campaignAccent} />
-
-          {campaign.nextNodeName && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 14 }}>
-              {/* Repair row — only renders when the ship owes repair.
-                  Inline Pay & Repair button pays from doubloons; on
-                  success the parent re-renders with repairOwed = 0
-                  and this row disappears. */}
-              {campaign.repairOwed > 0 && (
-                <RepairRow
-                  owed={campaign.repairOwed}
-                  doubloons={doubloons}
-                  busy={repairing}
-                  error={repairErr}
-                  onRepair={doRepair}
-                />
-              )}
-              {/* Crew display — read-only confirmation of who's on the
-                  RAID track (raidSlot). Reads from raidSlot, not
-                  voyageSlot, so the campaign modal stops mirroring the
-                  voyage party (which was the original 'wrong crew shown'
-                  bug). Editing happens on /crew; the 'Manage ›' link
-                  inside the view is the canonical path off this modal. */}
-              {(() => {
-                // Read the RAID slot, never the voyage one. Reading the wrong slot is
-                // what used to show the voyage party on the campaign modal.
-                const crewSlots: (CrewMember | null)[] = Array(shipCrewSlots).fill(null)
-                for (const c of roster) {
-                  if (c.raidSlot != null && c.raidSlot >= 0 && c.raidSlot < shipCrewSlots) crewSlots[c.raidSlot] = c
-                }
-                const itemDefs = equippedRaidItems
-                  .map(id => RAID_ITEMS.find(i => i.id === id) ?? null)
-                  .filter((d): d is (typeof RAID_ITEMS)[number] => !!d)
-                const itemSlots: ((typeof RAID_ITEMS)[number] | null)[] = Array(raidItemSlots).fill(null)
-                itemDefs.slice(0, raidItemSlots).forEach((d, i) => { itemSlots[i] = d })
-                const aboardNow  = crewSlots.filter(Boolean).length
-                const onVoyageNow = roster.filter(c => c.voyageSlot != null).length
-                const ashoreNow   = roster.filter(c => c.raidSlot == null && c.voyageSlot == null).length
-                return (
-                  <>
-                    {/* ── SAILING ALONE ─────────────────────────────────────
-                        The empty deck used to be a quiet "Crew 0/5" that a new captain
-                        had no reason to read as fatal. It is the loudest thing on the
-                        screen now, it says WHY (their crew is on the voyage track, and
-                        the two tracks are exclusive), and it offers the one tap that
-                        fixes it. */}
-                    {aboardNow === 0 && (
-                      <div style={{
-                        marginBottom: 10, padding: '0.8rem 0.85rem', borderRadius: 12, textAlign: 'left',
-                        background: 'linear-gradient(180deg, rgba(220,38,38,0.18), rgba(140,20,20,0.06))',
-                        border: '1px solid rgba(239,68,68,0.55)',
-                      }}>
-                        <p className="font-cinzel font-800 uppercase tracking-[0.06em]" style={{ fontSize: '0.86rem', color: '#fca5a5' }}>
-                          You are sailing alone
-                        </p>
-                        <p className="font-karla" style={{ fontSize: '0.76rem', color: '#f0cfcf', lineHeight: 1.45, marginTop: 4 }}>
-                          {ashoreNow > 0
-                            ? `All ${shipCrewSlots} crew slots are empty and you have ${ashoreNow} crew ashore. A raid without a crew is a losing fight.`
-                            : onVoyageNow > 0
-                              ? `All ${shipCrewSlots} crew slots are empty. Your ${onVoyageNow} crew are on the VOYAGE track, and a crew can only sail one track at a time.`
-                              : 'You have no crew. Recruit at the Crew Hall before you sail into a fight.'}
-                        </p>
-                        {(ashoreNow > 0 || onVoyageNow > 0) && (
-                          <button
-                            type="button"
-                            disabled={crewing}
-                            onClick={async () => {
-                              setCrewing(true); setCrewMsg(null)
-                              const res = await crewTheDeck(ashoreNow === 0)
-                              setCrewing(false)
-                              if ('error' in res) { setCrewMsg(res.error); return }
-                              setCrewMsg(res.assigned > 0
-                                ? `${res.assigned} crew aboard. Weigh anchor.`
-                                : 'No crew free to bring aboard.')
-                              router.refresh()
-                            }}
-                            className="font-cinzel font-800 uppercase tracking-[0.06em] tap"
-                            style={{
-                              width: '100%', marginTop: 9, padding: '0.7rem', borderRadius: 10, fontSize: '0.86rem',
-                              color: '#1a0f0f', background: 'linear-gradient(180deg, #fca5a5, #ef4444)',
-                              border: '1px solid #ef4444', cursor: crewing ? 'wait' : 'pointer',
-                            }}>
-                            {crewing ? 'Mustering…'
-                              : ashoreNow > 0 ? 'Crew the Deck'
-                              : 'Recall Crew from Voyages'}
-                          </button>
-                        )}
-                        {ashoreNow === 0 && onVoyageNow === 0 && (
-                          <Link href="/crew" className="font-cinzel font-800 uppercase tracking-[0.06em] tap"
-                            style={{
-                              display: 'block', width: '100%', marginTop: 9, padding: '0.7rem', borderRadius: 10,
-                              fontSize: '0.86rem', textAlign: 'center',
-                              color: '#1a0f0f', background: 'linear-gradient(180deg, #fca5a5, #ef4444)',
-                              border: '1px solid #ef4444',
-                            }}>
-                            Go to the Crew Hall
-                          </Link>
-                        )}
-                        {crewMsg && (
-                          <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#fde68a', marginTop: 7 }}>{crewMsg}</p>
-                        )}
-                      </div>
-                    )}
-
-                    <PrepLoadoutRow
-                      label="Raid Crew" filled={aboardNow} total={shipCrewSlots}
-                      accent={campaignAccent} href="/crew?tab=roster&filter=raid"
-                    >
-                      {crewSlots.map((c, i) => <PrepCrewDot key={i} card={c} captain={i === 0} i={i} total={crewSlots.length} />)}
-                    </PrepLoadoutRow>
-
-                    {/* The OTHER roster. A captain who has assigned their crew to voyages
-                        believes their crew is assigned, and they are right — just not to
-                        this. Showing both makes the trade visible instead of a trap. */}
-                    {onVoyageNow > 0 && (
-                      <p className="font-karla" style={{ fontSize: '0.66rem', color: '#8a8680', lineHeight: 1.4, margin: '-2px 0 8px' }}>
-                        {onVoyageNow} more crew are out on the <strong style={{ color: '#a8a29a' }}>voyage</strong> track. A crew sails one track or the other, never both.
-                      </p>
-                    )}
-                    <PrepLoadoutRow
-                      label="Items" filled={itemDefs.length} total={raidItemSlots}
-                      accent={campaignAccent}
-                      onManage={() => {
-                        // Close first, or the Loadout drawer mounts BEHIND this modal and
-                        // the player sees nothing happen.
-                        setModal(null)
-                        window.dispatchEvent(new CustomEvent('expedition:open-loadout'))
-                      }}
-                    >
-                      {itemSlots.map((d, i) => <PrepItemDot key={i} def={d} i={i} total={itemSlots.length} />)}
-                    </PrepLoadoutRow>
-                  </>
-                )
-              })()}
-              {campaign.nextNodeLocked && (
-                <PrepRow
-                  label="Node locked"
-                  detail={campaign.nextNodeLockReason ?? 'Locked'}
-                  ok={false}
-                  disabled
-                />
-              )}
-            </div>
-          )}
-
-          </div>
-
-          <div style={{ display: 'flex', gap: 8, flexShrink: 0, paddingTop: 10 }}>
-            <button
-              type="button"
-              onClick={() => setModal(null)}
-              className="font-karla font-700 uppercase tracking-[0.08em]"
-              style={{
-                flex: 1, padding: '0.7rem 0',
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.15)',
-                color: 'rgba(240,237,232,0.6)',
-                borderRadius: 12, fontSize: '0.7rem', cursor: 'pointer',
-              }}
-            >
-              Cancel
-            </button>
-            {(() => {
-              // ── SAILING ALONE ────────────────────────────────────────────
-              // The steepest leak in the game. voyage_slot and raid_slot are MUTUALLY
-              // EXCLUSIVE, so a captain who put their crew on voyages (which everyone
-              // finds first, because voyages are passive and forgiving) has an EMPTY
-              // raid deck and no idea. The modal showed them "Crew 0/5" and cheerfully
-              // let them sail. Every player who beat Raid 1 had 4-6 raid crew; every
-              // player who stalled had 0-2. One had run 23 voyages and never once put a
-              // soul in a raid slot.
-              //
-              // A story node is not a fight, so it is still allowed through — being
-              // blocked from READING is nonsense. A FIGHT is barred.
-              const aboard = roster.filter(c => c.raidSlot != null).length
-              const isFight = campaign.nextNodeKind === 'raid' || campaign.nextNodeKind === 'challenge'
-              const sailingAlone = aboard === 0 && isFight
-
-              const beginBlocked =
-                !campaign.nextNodeId ||
-                campaign.nextNodeLocked ||
-                campaign.repairOwed > 0 ||
-                sailingAlone
-              const beginLabel =
-                !campaign.nextNodeId   ? 'Story Complete'
-                : campaign.nextNodeLocked ? (campaign.nextNodeLockReason ?? 'Node Locked')
-                : campaign.repairOwed > 0 ? 'Repair Ship First'
-                : sailingAlone ? 'Crew Your Ship First'
-                : 'Begin →'
-              return (
-                <button
-                  type="button"
-                  onClick={beginNextNode}
-                  disabled={beginBlocked}
-                  className="font-karla font-700 uppercase tracking-[0.08em]"
-                  style={{
-                    flex: 2, padding: '0.7rem 0',
-                    background: beginBlocked ? 'rgba(255,255,255,0.04)' : `${campaignAccent}1c`,
-                    border: `1px solid ${beginBlocked ? 'rgba(255,255,255,0.12)' : `${campaignAccent}66`}`,
-                    color: beginBlocked ? '#5a5856' : campaignAccent,
-                    borderRadius: 12, fontSize: '0.7rem',
-                    cursor: beginBlocked ? 'default' : 'pointer',
-                  }}
-                >
-                  {beginLabel}
-                </button>
-              )
-            })()}
-          </div>
-        </div>
-      </PopupShell>
 
       {/* ── Voyages prep modal ─────────────────────────────────────── */}
       {/* The old standalone DailyVoyagePanel section under the hub

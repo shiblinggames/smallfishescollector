@@ -1824,12 +1824,17 @@ export default function ShipHero({
                   <button
                     type="button"
                     onClick={() => {
-                      const id = loadoutMode === 'campaign' ? 'chapter-map' : 'voyage-panel'
                       closeLoadout()
-                      setTimeout(() => {
-                        const el = document.getElementById(id)
-                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                      }, 240)
+                      // Campaign map is a full-screen overlay now — surface it
+                      // instead of scrolling to an inline section that's gone.
+                      if (loadoutMode === 'campaign') {
+                        setTimeout(() => window.dispatchEvent(new CustomEvent('expedition:open-campaign-map')), 240)
+                      } else {
+                        setTimeout(() => {
+                          const el = document.getElementById('voyage-panel')
+                          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                        }, 240)
+                      }
                     }}
                     className="font-karla font-700 uppercase tracking-[0.1em]"
                     style={{

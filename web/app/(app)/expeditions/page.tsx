@@ -8,6 +8,7 @@ import { getShipSkin } from '@/lib/shipSkins'
 import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
 import { getXPProgress, navLevelBonuses } from '@/lib/expeditionLevel'
 import RaidsSection from './RaidsSection'
+import CampaignMapOverlay from './CampaignMapOverlay'
 import ShipHero from './ShipHero'
 import ExpeditionsTour from './ExpeditionsTour'
 import HubCards from './HubCards'
@@ -442,12 +443,17 @@ export default async function ExpeditionsPage() {
                 Voyages card opens it in-modal with the full panel
                 (route pick, crew slots, ship-out, claim). */}
 
-            {/* Story map (RaidsSection) — id="chapter-map" lives on its own
-                wrapper inside RaidsSection. Section label was renamed
-                "Raids" → "Story" inline. */}
-            <Suspense fallback={<SkeletonBox height={86} radius={12} />}>
-              <RaidsMapSection />
-            </Suspense>
+            {/* Story map — no longer an always-on section at the bottom. It
+                surfaces as a full-screen overlay when the Campaign hub card is
+                tapped (CampaignMapOverlay listens for
+                'expedition:open-campaign-map'). The server still renders the map
+                here so its data is ready the instant the overlay opens; the
+                overlay mounts the map subtree only while it's open. */}
+            <CampaignMapOverlay>
+              <Suspense fallback={<SkeletonBox height={86} radius={12} />}>
+                <RaidsMapSection />
+              </Suspense>
+            </CampaignMapOverlay>
 
             <div className="pb-16" />
           </div>
