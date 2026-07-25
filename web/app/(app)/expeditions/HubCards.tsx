@@ -301,7 +301,10 @@ export default function HubCards({
             // baked into PopupShell's paddingBottom, so the bottom of
             // the modal always lands above the tab bar.
             margin: 'auto', width: '100%', maxWidth: 480,
-            background: 'linear-gradient(180deg, #0c1828 0%, #050a14 100%)',
+            // Custom voyage backdrop — a ship crossing the dusk sea — under a
+            // tint that stays light behind the header and darkens for the dense
+            // route/crew panel below so it reads.
+            background: `linear-gradient(180deg, rgba(6,12,22,0.5) 0%, rgba(6,11,20,0.72) 32%, rgba(5,9,16,0.9) 100%), url(/voyages-modal-bg.jpg) center / cover no-repeat`,
             border: `1px solid ${vAcc.bd}`,
             borderRadius: 20,
             boxShadow: '0 20px 60px rgba(0,0,0,0.7)',
