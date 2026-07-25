@@ -16,9 +16,13 @@
 // closed panel.
 
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 
 export default function CampaignMapOverlay({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false)
+  // The portal target (document.body) only exists after mount — guard SSR.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
 
   useEffect(() => {
     const onOpen = () => setOpen(true)
@@ -33,9 +37,12 @@ export default function CampaignMapOverlay({ children }: { children: React.React
     return () => window.removeEventListener('keydown', onKey)
   }, [open])
 
-  if (!open) return null
+  if (!open || !mounted) return null
 
-  return (
+  // Portal to <body> so the overlay escapes the page's `zIndex: 1` content
+  // stacking context. Otherwise the fixed Nav header (a root-level z50 sibling)
+  // paints OVER the top of the overlay and clips the close button.
+  return createPortal(
     <div
       role="dialog"
       aria-modal
@@ -91,6 +98,7 @@ export default function CampaignMapOverlay({ children }: { children: React.React
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
