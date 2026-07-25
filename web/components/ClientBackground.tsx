@@ -10,6 +10,10 @@ type BgConfig = { src: string; overlay: string }
 const TAV = 'rgba(0,0,0,0.32) 0%, rgba(0,0,0,0.45) 50%, rgba(0,0,0,0.64) 100%'
 
 const ROUTE_BG: [string, BgConfig][] = [
+  // Each gauntlet gets its own themed abyss. More specific than the generic
+  // /raids backdrop, so they MUST sit above it — startsWith takes the first hit.
+  ['/raids/dons-gauntlet',     { src: '/dons-gauntlet-bg.jpg',      overlay: 'rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.52) 50%, rgba(0,0,0,0.8) 100%' }],
+  ['/raids/gauntlet',          { src: '/davy-gauntlet-bg.jpg',      overlay: 'rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.52) 50%, rgba(0,0,0,0.8) 100%' }],
   ['/raids',                   { src: '/raid1background.jpg',        overlay: 'rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.50) 50%, rgba(0,0,0,0.75) 100%' }],
   ['/leaderboard',             { src: '/leaderboardbackground.jpeg', overlay: 'rgba(0,0,0,0.52) 0%, rgba(0,0,0,0.68) 50%, rgba(0,0,0,0.88) 100%' }],
   ['/packs',                   { src: '/crewopeningbackground.jpg', overlay: 'rgba(0,0,0,0.52) 0%, rgba(0,0,0,0.65) 50%, rgba(0,0,0,0.88) 100%' }],
