@@ -20,6 +20,7 @@ export default function TreasureMatchCard({ status, reward }: { status: 'active'
       title="Treasure Match"
       gradient={['#3a2a12', '#231908', '#100a04']}
       accent="#d4a544"
+      bgImage="/treasurematch-bg.jpg"
     >
       <motion.div
         aria-hidden

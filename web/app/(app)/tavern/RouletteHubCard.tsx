@@ -17,6 +17,7 @@ export default function RouletteHubCard() {
       title="Fish Roulette"
       gradient={[FELT_GREEN, '#06241a', '#02110b']}
       accent="#f0c040"
+      bgImage="/roulette-bg.jpg"
     >
       {/* Felt sheen — soft green-gold halo. */}
       <motion.div

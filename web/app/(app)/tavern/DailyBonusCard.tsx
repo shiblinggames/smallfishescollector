@@ -15,6 +15,7 @@ export default function DailyBonusCard({ claimed = false }: { claimed?: boolean 
       title="Login Bonus"
       gradient={['#3a2a0e', '#1f160a', '#0e0a06']}
       accent="#f0c040"
+      bgImage="/dailybonus-bg.jpg"
       badge={claimed ? <ResetPill kind="daily" accent="#f0e0b0" /> : undefined}
     >
       {/* Radial gold halo behind the chest — pulses on a slow loop to

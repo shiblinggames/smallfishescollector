@@ -13,6 +13,7 @@ export default function FishSlotsCard({ jackpotPot }: { jackpotPot?: number }) {
       title="Fish Slots"
       gradient={['#2c1a4a', '#170e2c', '#0a0518']}
       accent="#a78bfa"
+      bgImage="/slots-bg.jpg"
     >
       {jackpotPot !== undefined && (
         <div

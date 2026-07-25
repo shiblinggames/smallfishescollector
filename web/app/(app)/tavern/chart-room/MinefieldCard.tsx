@@ -16,6 +16,7 @@ export default function MinefieldCard({ status, reward }: { status: 'active' | '
       title="The Minefield"
       gradient={['#123042', '#0b2030', '#06121c']}
       accent="#4f9bd0"
+      bgImage="/minefield-bg.jpg"
     >
       {/* Lantern sweep over the water */}
       <motion.div

@@ -21,6 +21,7 @@ export default function RiggingCard({ status, reward, isMember }: { status: 'act
       title="Lay the Rigging"
       gradient={['#4a3320', '#2e2011', '#12100a']}
       accent="#b98a3e"
+      bgImage="/rigging-bg.jpg"
       onActivate={isMember ? undefined : openMembership}
     >
       <svg aria-hidden viewBox="0 0 120 90" style={{ position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)', width: 120, height: 90, opacity: isMember ? 1 : 0.4, filter: isMember ? undefined : 'grayscale(0.6)' }}>

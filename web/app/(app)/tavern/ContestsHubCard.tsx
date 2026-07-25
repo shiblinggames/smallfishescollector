@@ -13,6 +13,7 @@ export default function ContestsHubCard({ hasNew = false }: { hasNew?: boolean }
       title="Contests"
       gradient={['#3a2e12', '#241b0c', '#100c06']}
       accent="#f0c040"
+      bgImage="/contests-bg.jpg"
     >
       {/* "New" pulse — shows until the player opens the Contests page (cleared
           by markContestsSeen). Re-arm by resetting has_seen_contests when a new

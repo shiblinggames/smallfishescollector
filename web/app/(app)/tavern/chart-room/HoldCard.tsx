@@ -19,6 +19,7 @@ export default function HoldCard({ solvedCount, doubloonsToday }: { solvedCount:
       title="The Hold"
       gradient={['#3a2f14', '#221a0c', '#100a04']}
       accent="#c4a96a"
+      bgImage="/hold-bg.jpg"
     >
       {/* Lantern wash over the manifest */}
       <motion.div

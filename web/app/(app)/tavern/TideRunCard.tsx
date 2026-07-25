@@ -14,6 +14,7 @@ export default function TideRunCard() {
       title="Tide Run"
       gradient={['#1e3a52', '#0e2236', '#060f1c']}
       accent="#5da7d4"
+      bgImage="/tiderun-bg.jpg"
     >
       {/* Distant horizon glow — soft warm-blue band suggesting the
           line where sky meets sea. Pure decoration behind the boat. */}

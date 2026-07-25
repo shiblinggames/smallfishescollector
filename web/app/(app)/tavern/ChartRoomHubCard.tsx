@@ -18,6 +18,7 @@ export default function ChartRoomHubCard() {
       title="Charting"
       gradient={['#3a2c14', '#221a0c', '#0f0a05']}
       accent={GOLD}
+      bgImage="/charting-bg.jpg"
       badge={<ResetPill kind="weekly" prefix="New puzzles in" accent="#f0dcae" />}
     >
       {/* Warm lamp halo */}

@@ -15,6 +15,7 @@ export default function BlackjackHubCard() {
       title="Blackjack"
       gradient={['#4a1212', '#2a0808', '#100404']}
       accent="#c63838"
+      bgImage="/blackjack-bg.jpg"
     >
       {/* Velvet sheen — the central red glow that feels like felt
           lit from above. Subtle pulse so the card doesn't look dead. */}

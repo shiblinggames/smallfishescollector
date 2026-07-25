@@ -78,6 +78,7 @@ export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, dou
         title="The Captain's Board"
         gradient={['#241f48', '#161230', '#0a0818']}
         accent="#a78bfa"
+        bgImage="/captainsboard-bg.jpg"
       >
         {/* Mini board scene: a 4x3 grid of glowing category tiles. */}
         <div
@@ -134,6 +135,7 @@ export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, dou
         title="Pirate King"
         gradient={['#3a2c10', '#221a0c', '#0e0a06']}
         accent={GOLD}
+        bgImage="/pirateking-bg.jpg"
       >
         {/* Mini ladder scene: prize rungs climbing to a crown. */}
         <div

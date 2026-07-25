@@ -16,6 +16,7 @@ export default function TriviaHubCard() {
       title="The Parlor"
       gradient={['#2a2050', '#191338', '#0c0a20']}
       accent={ACCENT}
+      bgImage="/parlor-bg.jpg"
       badge={<ResetPill kind="weekly" prefix="New boards in" accent="#d9ccf7" />}
     >
       {/* Lantern halo behind the host */}

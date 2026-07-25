@@ -19,6 +19,7 @@ export default function CapstanCard({ isMember, solved }: { isMember: boolean; s
       title="Spin the Capstan"
       gradient={['#3a2c10', '#221a0c', '#0e0a06']}
       accent={BRASS}
+      bgImage="/capstan-bg.jpg"
       onActivate={isMember ? undefined : openMembership}
     >
       {/* the turning capstan */}
