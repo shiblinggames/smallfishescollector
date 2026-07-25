@@ -2068,7 +2068,7 @@ export default function GauntletGame(props: GauntletGameProps) {
               <button type="button" onClick={() => { vibrate([0, 12]); setSwitcherOpen(o => !o) }} className="tap"
                 aria-haspopup="menu" aria-expanded={switcherOpen}
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 9, background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px' }}>
-                <h1 className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f3ead2', lineHeight: 1.08, textShadow: '0 0 22px rgba(240,192,64,0.3)' }}>
+                <h1 className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f3ead2', lineHeight: 1.08, textShadow: '0 2px 10px rgba(0,0,0,0.9), 0 0 22px rgba(240,192,64,0.3)' }}>
                   {gauntletTitle}
                 </h1>
                 {/* a themed control chip so the title clearly reads as switchable */}
@@ -2144,7 +2144,7 @@ export default function GauntletGame(props: GauntletGameProps) {
               </AnimatePresence>
             </div>
           ) : (
-            <h1 className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f3ead2', lineHeight: 1.08, marginTop: 8, textShadow: '0 0 22px rgba(240,192,64,0.3)' }}>
+            <h1 className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f3ead2', lineHeight: 1.08, marginTop: 8, textShadow: '0 2px 10px rgba(0,0,0,0.9), 0 0 22px rgba(240,192,64,0.3)' }}>
               {gauntletTitle}
             </h1>
           )}
@@ -2176,7 +2176,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                   ? <>
                       <p className="font-cinzel font-800" style={{ fontSize: '1.7rem', lineHeight: 1.05, color: '#f3ead2', marginTop: 1 }}>
                         <span style={{ fontSize: '0.72rem', color: '#8a857c', letterSpacing: '0.04em' }}>DEPTH </span>
-                        <span style={{ color: AC, textShadow: `0 0 20px ${AC}66` }}>{props.deepest}</span>
+                        <span style={{ color: AC, textShadow: `0 2px 8px rgba(0,0,0,0.9), 0 0 20px ${AC}66` }}>{props.deepest}</span>
                       </p>
                       {canRecap && (
                         <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.5rem', color: `${AC}cc`, marginTop: 3 }}>
@@ -2205,7 +2205,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 8 }}>
             <button onClick={() => setInfoCurrency('fathoms')} title="What are Fathoms?"
               className="active:scale-95"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.3rem 0.7rem 0.3rem 0.55rem', borderRadius: 999, background: `${AC}1f`, border: `1px solid ${AC}55`, cursor: 'pointer', transition: 'transform 0.08s' }}>
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.3rem 0.7rem 0.3rem 0.55rem', borderRadius: 999, background: `linear-gradient(180deg, ${AC}22, rgba(6,10,16,0.6))`, border: `1px solid ${AC}55`, cursor: 'pointer', transition: 'transform 0.08s' }}>
               {/* Anchor = Fathoms (depth). */}
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={AC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="5" r="2" /><path d="M12 7v13" /><path d="M5 12H3a9 9 0 0 0 18 0h-2" /><path d="M8 10h8" /></svg>
               <span className="font-cinzel font-800" style={{ fontSize: '0.95rem', color: AC, lineHeight: 1 }}>{fmt(fathomsNow)}</span>
@@ -2328,7 +2328,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                 { m: 'hardcore' as const, color: '#e0555a', label: 'What Hardcore drops' },
               ]).map(({ m, color, label }) => (
                 <button key={m} onClick={() => setLootMode(m)} className="tap"
-                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '0.42rem 0.4rem', borderRadius: 10, background: `${color}0e`, border: `1px solid ${color}30`, color: `${color}dd`, cursor: 'pointer', minWidth: 0 }}>
+                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '0.42rem 0.4rem', borderRadius: 10, background: `linear-gradient(180deg, ${color}18, rgba(6,10,16,0.55))`, border: `1px solid ${color}3a`, color: `${color}dd`, cursor: 'pointer', minWidth: 0 }}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0 }}><path d="M3 9.5 4 7a1.6 1.6 0 0 1 1.5-1h13A1.6 1.6 0 0 1 20 7l1 2.5" /><rect x="3" y="9.5" width="18" height="9.5" rx="1.6" /><path d="M3 13.2h18" /></svg>
                   <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
                 </button>
@@ -6196,7 +6196,7 @@ function AbyssBackdrop({ hardcore, don }: { hardcore?: boolean; don?: boolean })
             still read; the animated layers below drift over it. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         {bgImg && <img src={bgImg} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
-        {bgImg && <div style={{ position: 'absolute', inset: 0, background: 'rgba(2,6,12,0.42)' }} />}
+        {bgImg && <div style={{ position: 'absolute', inset: 0, background: 'rgba(2,6,12,0.54)' }} />}
         {/* Drifting fog banks — slow, soft, so the deep feels like it's moving. */}
         <div style={{ position: 'absolute', top: '4%', left: '-10%', width: '70%', height: '55%', filter: 'blur(34px)', background: `radial-gradient(ellipse at center, ${shaft}, transparent 70%)`, animation: 'gauntFog 19s ease-in-out infinite' }} />
         <div style={{ position: 'absolute', bottom: '2%', right: '-12%', width: '75%', height: '52%', filter: 'blur(38px)', background: `radial-gradient(ellipse at center, ${shaft2}, transparent 72%)`, animation: 'gauntFog 24s ease-in-out infinite reverse', animationDelay: '3s' }} />
