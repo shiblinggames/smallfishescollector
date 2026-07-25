@@ -4505,6 +4505,12 @@ export default function RaidCombat({
             stepLines.push(`The sea anchor holds — the blow is cut (${before} → ${dmg}).`)
             anchorReductionRef.current = null
             anchorConsumed = true
+          } else if (anchorReductionRef.current != null && dmg > 0 && enemyCrit && !anchorAbsorbsCritsRef.current) {
+            // A crit punches through the base anchor (only the Lv100 anchor cuts
+            // crits). The brace is NOT spent — it's saved for the next blow — so
+            // say so out loud, or a full-damage crit with the Braced chip still
+            // showing reads as a broken ability.
+            stepLines.push(`A critical hit punches clean through the sea anchor. The brace holds for the next blow.`)
           }
           // Dampener Plate (item, id made_man): a single hit exceeding max_hit_pct of your MAX HP has
           // a max_hit_chance shot at being knocked down to that ceiling. Rolled
@@ -6809,7 +6815,7 @@ export default function RaidCombat({
               // Anchor brace — a one-hit damage CUT (not a shield pool), so it
               // gets its OWN steel chip + iron-clamp icon, distinct from the
               // shield glyphs and the cyan/amber shield-pool bar segments.
-              ...((anchorReductionPct ?? 0) > 0 ? [{ key: 'brace', color: '#9eb0cd', tone: 'buff' as const, title: `Braced — the next hit against you is cut by ${Math.round((anchorReductionPct ?? 0) * 100)}%` }] : []),
+              ...((anchorReductionPct ?? 0) > 0 ? [{ key: 'brace', color: '#9eb0cd', tone: 'buff' as const, title: `Braced — the next hit is cut ${Math.round((anchorReductionPct ?? 0) * 100)}% (one blow, softens not blocks; crits punch through)` }] : []),
               ...(playerBurning ? [{ key: 'burn', color: '#fb923c', title: 'Ablaze — burning each turn (a crew heal puts it out)' }] : []),
               ...(playerFrozen ? [{ key: 'freeze', color: '#7dd3fc', title: 'Frozen — your turn is skipped' }] : []),
               ...(aimAffliction ? [{ key: 'aim', color: AIM_AFFLICTION_COLOR, tone: 'debuff' as const, turns: aimAfflictionRef.current?.passes, title: `${aimAffliction.name} — ${aimAfflictionDesc(aimAffliction.kind, aimAfflictionRef.current?.passes ?? 0)}` }] : []),
@@ -7069,7 +7075,7 @@ export default function RaidCombat({
               ...(aimAffliction ? [{ key: 'aim', name: aimAffliction.name, color: AIM_AFFLICTION_COLOR, desc: aimAfflictionDesc(aimAffliction.kind, aimAfflictionRef.current?.passes ?? 0) }] : []),
               // Anchor brace — mirrors the status chip so the stats popup explains
               // it alongside burns/freezes. A one-hit damage cut, not a pool.
-              ...((anchorReductionPct ?? 0) > 0 ? [{ key: 'brace', name: 'Braced', color: '#9eb0cd', desc: `The next hit against you is cut by ${Math.round((anchorReductionPct ?? 0) * 100)}%. It holds for one blow, then it is spent.` }] : []),
+              ...((anchorReductionPct ?? 0) > 0 ? [{ key: 'brace', name: 'Braced', color: '#9eb0cd', desc: `The next hit against you is cut by ${Math.round((anchorReductionPct ?? 0) * 100)}%, then it is spent. It softens a blow rather than blocking it, so you still take reduced damage — and a critical hit punches straight through.` }] : []),
             ]}
             onClose={() => setShowStats(false)}
           />
