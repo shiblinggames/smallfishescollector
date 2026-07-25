@@ -917,20 +917,12 @@ export default function ShipHero({
 
   return (
     <>
-      {/* ── Ship hero card ── */}
-      {/* Painterly harbor backdrop (a single "your vessel at port" scene) under
-          a dark tint so the XP bar, crew face, ship sprite + Manage buttons all
-          read over it. In-flow content paints above the element's own
-          background, so nothing inside needs restructuring. */}
+      {/* ── Ship hero — NO card container. Its contents (Nav XP bar, crew
+          lineup, ship sprite, and the two Manage pills) float directly on the
+          page's epic seascape background. A soft dark pool behind the content
+          (below) lifts legibility without a hard card edge. ── */}
       <div style={{
-        background: [
-          'linear-gradient(180deg, rgba(6,8,12,0.5) 0%, rgba(6,8,12,0.42) 55%, rgba(6,8,12,0.64) 100%)',
-          'url(/exp-hero-bg.jpg) center / cover no-repeat',
-        ].join(', '),
-        border: '1px solid rgba(255,255,255,0.1)',
-        borderRadius: 20,
         marginBottom: '1.5rem',
-        overflow: 'hidden',
       }}>
         {/* ── Sunk: repair banner ── */}
         {raidRepairOwed > 0 && (
@@ -982,8 +974,10 @@ export default function ShipHero({
             this way also gives the crew side an actual visual presence
             (a face) instead of a button floating on its own. */}
         <div style={{ position: 'relative', padding: '1.1rem 1rem 1rem' }}>
-          {/* Soft sea-glow backdrop for cohesion */}
-          <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse 75% 60% at 50% 42%, rgba(60,110,180,0.16) 0%, rgba(10,16,28,0) 70%)' }} />
+          {/* Soft dark pool behind the floating hero content — lifts the ship,
+              crew lineup + Manage pills off the bright epic sky without a hard
+              card, fading out so the seascape still reads around the edges. */}
+          <div aria-hidden style={{ position: 'absolute', inset: '-12px -10px', pointerEvents: 'none', background: 'radial-gradient(ellipse 82% 80% at 50% 48%, rgba(6,10,18,0.62) 0%, rgba(6,10,18,0.28) 62%, rgba(6,10,18,0) 100%)' }} />
 
           {/* Nav level + XP — full-width bar across the card (mirrors the
               fishing screen's XPBarDisplay): big level number on the left,
@@ -1183,6 +1177,7 @@ export default function ShipHero({
                 padding: '0.3rem 0.75rem', borderRadius: 999,
                 background: 'rgba(125,160,216,0.10)',
                 border: '1px solid rgba(125,160,216,0.3)',
+                textShadow: '0 1px 4px rgba(0,0,0,0.75)',
                 transition: 'background 0.15s, border-color 0.15s',
               }}>
                 Manage Crew
@@ -1256,6 +1251,7 @@ export default function ShipHero({
                 padding: '0.3rem 0.75rem', borderRadius: 999,
                 background: 'rgba(125,160,216,0.10)',
                 border: '1px solid rgba(125,160,216,0.3)',
+                textShadow: '0 1px 4px rgba(0,0,0,0.75)',
                 transition: 'background 0.15s, border-color 0.15s',
               }}>
                 Manage Ship

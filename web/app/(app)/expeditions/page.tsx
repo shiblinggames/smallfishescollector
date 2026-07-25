@@ -394,13 +394,15 @@ export default async function ExpeditionsPage() {
       <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/expedition-background.jpg"
+          src="/expedition-epic-bg.jpg"
           alt=""
           style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }}
         />
+        {/* Lighter at the top so the epic seascape shows behind the floating
+            Ship Hero, darkening toward the middle where the opaque hub tiles sit. */}
         <div style={{
           position: 'absolute', inset: 0,
-          background: 'linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.75) 50%, rgba(0,0,0,0.92) 100%)',
+          background: 'linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.72) 46%, rgba(0,0,0,0.92) 100%)',
         }} />
       </div>
 
