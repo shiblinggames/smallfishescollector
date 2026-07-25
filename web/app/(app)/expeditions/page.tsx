@@ -310,27 +310,16 @@ async function ExpeditionHub() {
     .filter(sk => !ownedSkinIds.has(sk.id))
     .reduce((min, sk) => Math.min(min, sk.gemCost), Infinity)
   const canAffordNewSkin = gems >= cheapestUnownedSkin
-  const prepStats = {
-    hull:    rp.playerHPMax,
-    hitMin:  dmg.hitMin,
-    hitMax:  Math.round(dmg.powerMax * rp.classDamageMult),
-    crit:    Math.round(dmg.critMax * rp.classDamageMult),
-    dodge:   rp.totalDodge,
-    fortune: rp.totalFortune,
-    speed:   rp.shipSpeed,
-  }
 
   return (
     <HubCards
       campaign={campaign}
       voyages={voyages}
-      doubloons={profile?.doubloons ?? 0}
       ownedRaidItems={ownedRaidItems}
       equippedRaidItems={equippedRaidItems}
       raidItemSlots={raidItemSlotsForTier(shipTier) + slotBonus.itemSlots + (profile?.has_armory_expansion === true ? 1 : 0)}
       roster={roster}
       shipCrewSlots={shipStats.crewSlots}
-      prepStats={prepStats}
       // Full DailyVoyagePanel-needed props — voyage panel was promoted
       // into the Voyages hub modal so it's no longer rendered inline.
       shipTier={shipTier}

@@ -6,28 +6,18 @@
 // equip, all without leaving the modal. Nested PopupShells handle the
 // item / crew detail editors.
 
-import { useState, useEffect, useTransition } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { vibrate } from '@/lib/haptics'
 import PopupShell from '@/components/PopupShell'
-import { RAID_ITEMS } from '@/lib/raidItems'
-import { IconLock, IconCrate } from '@/components/GameIcons'
-import { RARITY_COLOR } from '@/lib/variants'
-import { repairShip } from '@/app/(app)/raids/actions'
-import Link from 'next/link'
+import { IconLock } from '@/components/GameIcons'
 import CaptainsOrders, { type OrderAction } from './CaptainsOrders'
-import OpportunityStrip from './OpportunityStrip'
-import { type OpportunityAction } from '@/lib/expeditionOpportunities'
 import type { CrewMember } from '@/app/(app)/crew/actions'
-import { crewTheDeck } from '@/app/(app)/crew/actions'
-import { RARITY_COLORS as CREW_RARITY_COLORS } from '@/lib/crewGen'
 import DailyVoyagePanel from './DailyVoyagePanel'
 import ShipDuels from './ShipDuels'
 import type { ShipBattleSummary } from '@/app/(app)/social/shipBattleActions'
 import type { CrewMember as SocialCrewMember } from '@/app/(app)/social/actions'
-
-const CREW_IMG_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/storage/v1/object/public/card-arts/'
 import type { DailyVoyage } from './voyageActions'
 import type { VoyageHistoryEntry } from './VoyageHistory'
 
@@ -59,25 +49,11 @@ export type VoyageCardData = {
 interface Props {
   campaign: CampaignCardData
   voyages: VoyageCardData
-  doubloons: number
   ownedRaidItems: string[]
   equippedRaidItems: string[]
   raidItemSlots: number
   roster: CrewMember[]
   shipCrewSlots: number
-  // Live readiness numbers (mirrors ShipHero's loadout math). Surfaced
-  // inside the prep modals so the player sees what they're committing
-  // with before tapping Begin / Set Sail.
-  /** The numbers the RAID actually fights with. Not a score. */
-  prepStats: {
-    hull: number
-    hitMin: number
-    hitMax: number
-    crit: number
-    dodge: number
-    fortune: number
-    speed: number
-  }
   // DailyVoyagePanel-required props. The panel used to render inline
   // below the hub; now lives inside the Voyages modal so the data
   // pipes through here.
@@ -199,10 +175,9 @@ function ExpeditionTile({
 }
 
 export default function HubCards({
-  campaign, voyages, doubloons,
+  campaign, voyages,
   ownedRaidItems, equippedRaidItems, raidItemSlots,
   roster, shipCrewSlots,
-  prepStats,
   shipTier, todayVoyage, readyVoyage, expeditionXP, voyageHistory,
   canPvp, gauntletOpen, donsGauntletOpen, gauntletResumable, gauntletUpgrades, pvp,
   raidsCleared, captainsOrdersDone,
@@ -210,9 +185,6 @@ export default function HubCards({
 }: Props) {
   const router = useRouter()
   const [modal, setModal] = useState<null | 'campaign' | 'voyages' | 'pvp' | 'gauntlets'>(null)
-  const [crewing, setCrewing] = useState(false)
-  const [crewMsg, setCrewMsg] = useState<string | null>(null)
-  const [, startTransition] = useTransition()
 
   // Esc closes the open prep modal. (Used to also handle a nested items
   // editor modal; that was removed when the prep modals became read-only
@@ -227,14 +199,6 @@ export default function HubCards({
     return () => window.removeEventListener('keydown', onKey)
   }, [modal])
 
-  // Begin → open the current node's detail sheet directly (no map
-  // detour). RaidsSection listens for this and gates on repair-block.
-  function beginNextNode() {
-    if (!campaign.nextNodeId) return
-    setModal(null)
-    window.dispatchEvent(new CustomEvent('expedition:open-node', { detail: { nodeId: campaign.nextNodeId } }))
-  }
-
   const campaignAccent = '#c4a96a'
   const vAcc = VOYAGE_ACCENT[voyages.status]
   const pvpAccent = '#d0716a'
@@ -244,31 +208,6 @@ export default function HubCards({
   const DAVY_AC = '#5eead4'
   const DON_AC = '#3fbf82'
 
-  // Item equip / unequip used to live here as an optimistic toggle backing
-  // the nested 'Equip items' modal. Both were removed when the prep modal
-  // became read-only confirmation — items are still managed via the
-  // Loadout drawer (ShipHero's Manage Ship button), which keeps that
-  // toggle logic in one place. saveEquippedRaidItems is no longer
-  // imported by this file.
-
-  // ── Repair — guarded by canAfford; after success the parent
-  //    re-derives campaign.repairOwed (going to 0) on refresh.
-  const [repairing, setRepairing] = useState(false)
-  const [repairErr, setRepairErr] = useState<string | null>(null)
-  function doRepair() {
-    if (repairing) return
-    setRepairErr(null)
-    setRepairing(true)
-    startTransition(async () => {
-      try {
-        const res = await repairShip()
-        if ('error' in res) { setRepairErr(res.error); return }
-        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
-        router.refresh()
-      } finally { setRepairing(false) }
-    })
-  }
-
   // Campaign now surfaces the story map as a full-screen overlay
   // (CampaignMapOverlay listens for this) instead of the old ready-check modal.
   const openCampaignMap = () => window.dispatchEvent(new CustomEvent('expedition:open-campaign-map'))
@@ -277,12 +216,6 @@ export default function HubCards({
     if (a === 'campaign') openCampaignMap()
     else if (a === 'voyages') setModal('voyages')
     else if (a === 'loadout') window.dispatchEvent(new CustomEvent('expedition:open-loadout'))
-  }
-  // The Opportunity strip's actions are a superset — modals, routes (Link handles
-  // those itself), and loadout via event.
-  const onOpportunity = (a: OpportunityAction) => {
-    if (a.kind === 'modal') { if (a.modal === 'campaign') openCampaignMap(); else setModal(a.modal) }
-    else if (a.kind === 'event') window.dispatchEvent(new CustomEvent(a.event))
   }
 
   return (
@@ -575,270 +508,3 @@ export default function HubCards({
   )
 }
 
-// ── Stats block ───────────────────────────────────────────────────────
-// Compact readiness card surfaced at the top of each prep modal. Big
-// score tile (Raid Score for campaign, Voyage Score for voyages) with
-// rank title, plus a 3-column ship-stats strip (HP / Speed / DMG) so
-// the player sees the hull they're committing alongside their score.
-// Voyage Score / Raid Score banners used to live atop this block. Removed
-// 2026-06-08 — both were confusing players who didn't have a clear mental
-// model for the 0-100 nautical ladder. Concrete ship stats (HP / Speed /
-// DMG) stay because they're literal and actionable. score / scoreLabel /
-// scoreColor props stay on the type for API stability but are ignored.
-// ── THE NUMBERS YOU ACTUALLY FIGHT WITH ──────────────────────────────────────
-// This block has now been wrong twice. First it showed HP / Speed / DMG straight
-// off the BARE HULL, which ignores crew, items, classes and Renown — a captain
-// with five level-100 legendaries read the same as one with an empty deck. Then it
-// showed a Raid Score / Offense / Defense, which are 0-100 inventions benchmarked
-// against a constant, and mean nothing to anyone.
-//
-// These are the real values. They come out of getRaidPlayerStats — the very
-// function the raid screen calls — so what you read here is exactly what walks into
-// the fight. Hull is post-items, post-classes, post-Renown. The damage range is the
-// real roll, with the crit you can actually land on it.
-function PrepStats({ s, accent }: {
-  s: { hull: number; hitMin: number; hitMax: number; crit: number; dodge: number; fortune: number; speed: number }
-  accent: string
-}) {
-  const tile = (label: string, value: string, sub?: string, color?: string) => (
-    <div key={label} style={{
-      flex: 1, minWidth: 0, padding: '0.5rem 0.4rem', borderRadius: 10,
-      background: 'rgba(0,0,0,0.34)', border: '1px solid rgba(255,255,255,0.08)', textAlign: 'center',
-    }}>
-      <p className="font-karla font-700 uppercase tracking-[0.13em]" style={{ fontSize: '0.46rem', color: '#8a8680' }}>{label}</p>
-      <p className="font-cinzel font-800 truncate" style={{ fontSize: '0.92rem', color: color ?? '#f3ede0', marginTop: 2 }}>{value}</p>
-      {sub && <p className="font-karla font-600" style={{ fontSize: '0.5rem', color: '#7a7672', marginTop: 1 }}>{sub}</p>}
-    </div>
-  )
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
-      <div style={{ display: 'flex', gap: 6 }}>
-        {tile('Hull', String(s.hull), 'max HP', '#7fd49a')}
-        {tile('Damage', `${s.hitMin}–${s.hitMax}`, `crit ${s.crit}`, accent)}
-      </div>
-      <div style={{ display: 'flex', gap: 6 }}>
-        {tile('Dodge', String(s.dodge))}
-        {tile('Fortune', String(s.fortune))}
-        {tile('Speed', String(s.speed))}
-      </div>
-    </div>
-  )
-}
-
-// ── LOADOUT ROW ──────────────────────────────────────────────────────────────
-// Crew and items were two separate tall blocks, each with its own border, its own
-// padding and its own "Manage ›" link. On a 400px modal that is most of the height
-// spent saying very little.
-//
-// One primitive now does both: a label with the count that matters (5/6, 3/4), a
-// tight strip of the actual faces or icons, and one Manage link. Empty slots are
-// dashed circles, so "I forgot someone" is visible without reading a word. Same
-// shape twice reads faster than two bespoke layouts.
-function PrepLoadoutRow({ label, filled, total, children, accent, onManage, href }: {
-  label: string
-  filled: number
-  total: number
-  children: React.ReactNode
-  accent: string
-  onManage?: () => void
-  href?: string
-}) {
-  const short = filled < total
-  const empty = filled === 0
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: 9,
-      padding: '0.5rem 0.6rem', borderRadius: 10,
-      background: 'rgba(0,0,0,0.32)',
-      border: `1px solid ${empty ? 'rgba(248,113,113,0.32)' : short ? 'rgba(232,200,121,0.26)' : 'rgba(74,222,128,0.24)'}`,
-    }}>
-      <div style={{ flexShrink: 0, minWidth: 52 }}>
-        <p className="font-karla font-700 uppercase tracking-[0.13em]" style={{ fontSize: '0.46rem', color: '#8a8680' }}>{label}</p>
-        <p className="font-cinzel font-700" style={{ fontSize: '0.8rem', marginTop: 1, color: empty ? '#f87171' : short ? '#e8c879' : '#7fd49a' }}>
-          {filled}<span style={{ color: '#6a6764' }}>/{total}</span>
-        </p>
-      </div>
-
-      {/* The strip. Portraits OVERLAP rather than sit side by side, so the row's width
-          is bounded no matter how many slots a ship carries — six crew, eight items, it
-          makes no difference. Nothing to overflow, nothing to scroll, and it reads as a
-          stack of people rather than a queue of them. */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center' }}>
-        {children}
-      </div>
-
-      {href ? (
-        <a href={href} onClick={e => e.stopPropagation()} className="font-karla font-700 uppercase tracking-[0.08em]"
-          style={{ flexShrink: 0, fontSize: '0.55rem', color: accent, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-          Manage <span style={{ fontSize: '0.72rem', lineHeight: 1 }}>›</span>
-        </a>
-      ) : (
-        <button type="button" onClick={onManage} className="font-karla font-700 uppercase tracking-[0.08em]"
-          style={{ flexShrink: 0, fontSize: '0.55rem', color: accent, background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-          Manage <span style={{ fontSize: '0.72rem', lineHeight: 1 }}>›</span>
-        </button>
-      )}
-    </div>
-  )
-}
-
-const DOT = 27
-/** Overlap so the strip's width can never run away from the row. Earlier slots sit ON
- *  TOP, which keeps the captain (slot 0) unobscured — he is the one you look for. */
-function stackStyle(i: number, total: number): React.CSSProperties {
-  return { flexShrink: 0, marginLeft: i === 0 ? 0 : -9, zIndex: total - i, position: 'relative' }
-}
-
-/** A crew face, or a dashed hole where one should be. The captain wears a gold ring. */
-function PrepCrewDot({ card, captain, i, total }: { card: CrewMember | null; captain: boolean; i: number; total: number }) {
-  const rc = card ? (CREW_RARITY_COLORS[card.rarity as 1 | 2 | 3 | 4] ?? '#6a6764') : '#6a6764'
-  const ring = card ? (captain ? '#f0c040' : rc) : (captain ? 'rgba(240,192,64,0.35)' : 'rgba(255,255,255,0.22)')
-  const base: React.CSSProperties = {
-    ...stackStyle(i, total),
-    width: DOT, height: DOT, borderRadius: '50%',
-    // A ring the same color as the row's backdrop, so overlapping portraits read as
-    // separate discs instead of one smeared blob.
-    boxShadow: '0 0 0 2px rgba(10,8,7,0.95)',
-  }
-  if (!card) {
-    return <div aria-label="Empty crew slot" style={{ ...base, border: `1.5px dashed ${ring}`, background: 'rgba(6,9,16,0.55)' }} />
-  }
-  return (
-    <div title={captain ? `Captain: ${card.name}` : card.name}
-      style={{ ...base, overflow: 'hidden', border: `1.5px solid ${ring}`, background: 'rgba(6,9,16,0.85)' }}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={CREW_IMG_BASE + card.filename} alt="" loading="lazy" decoding="async"
-        style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} />
-    </div>
-  )
-}
-
-/** An equipped item, or a dashed hole. */
-function PrepItemDot({ def, i, total }: { def: (typeof RAID_ITEMS)[number] | null; i: number; total: number }) {
-  const rc = def ? (RARITY_COLOR[def.rarity] ?? '#9ca3af') : '#9ca3af'
-  const base: React.CSSProperties = {
-    ...stackStyle(i, total),
-    width: DOT, height: DOT, borderRadius: 8,
-    boxShadow: '0 0 0 2px rgba(10,8,7,0.95)',
-  }
-  if (!def) {
-    return <div aria-label="Empty item slot" style={{ ...base, border: '1.5px dashed rgba(255,255,255,0.22)', background: 'rgba(6,9,16,0.55)' }} />
-  }
-  return (
-    <div title={def.name} style={{
-      ...base, overflow: 'hidden',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      border: `1.5px solid ${rc}77`, background: `${rc}22`,
-    }}>
-      {def.image
-        // eslint-disable-next-line @next/next/no-img-element
-        ? <img src={def.image} alt="" loading="lazy" decoding="async" style={{ width: '86%', height: '86%', objectFit: 'contain' }} />
-        : <span style={{ color: rc, display: 'flex' }}><IconCrate size={14} /></span>}
-    </div>
-  )
-}
-
-
-function PrepRow({ label, detail, ok, onClick, disabled }: {
-  label: string
-  detail: string
-  ok: boolean
-  onClick?: () => void
-  disabled?: boolean
-}) {
-  const interactive = !!onClick && !disabled
-  return (
-    <button
-      type="button"
-      onClick={interactive ? onClick : undefined}
-      disabled={!interactive}
-      style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        gap: 10,
-        padding: '0.6rem 0.85rem', borderRadius: 10,
-        background: 'rgba(0,0,0,0.32)',
-        border: `1px solid ${ok ? 'rgba(74,222,128,0.24)' : 'rgba(248,113,113,0.28)'}`,
-        cursor: interactive ? 'pointer' : 'default',
-        opacity: disabled ? 0.6 : 1,
-        textAlign: 'left',
-        width: '100%',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-        <span aria-hidden style={{
-          width: 16, height: 16, borderRadius: 999,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: ok ? 'rgba(74,222,128,0.18)' : 'rgba(248,113,113,0.18)',
-          color: ok ? '#4ade80' : '#f87171',
-          fontSize: '0.7rem', fontWeight: 700, lineHeight: 1,
-        }}>{ok ? '✓' : '!'}</span>
-        <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#d0cdc8' }}>{label}</p>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <p className="font-karla" style={{ fontSize: '0.66rem', color: ok ? '#86efac' : '#fca5a5' }}>{detail}</p>
-        {interactive && (
-          <span aria-hidden style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.8rem' }}>›</span>
-        )}
-      </div>
-    </button>
-  )
-}
-
-// ── Repair row ────────────────────────────────────────────────────────
-// Dedicated row for ship-repair because the action button is inline.
-// Hides itself entirely when there's no debt (parent gates the render).
-function RepairRow({ owed, doubloons, busy, error, onRepair }: {
-  owed: number
-  doubloons: number
-  busy: boolean
-  error: string | null
-  onRepair: () => void
-}) {
-  const canAfford = doubloons >= owed
-  return (
-    <div style={{
-      padding: '0.7rem 0.85rem', borderRadius: 10,
-      background: 'rgba(248,113,113,0.06)',
-      border: '1px solid rgba(248,113,113,0.28)',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 7 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-          <span aria-hidden style={{
-            width: 16, height: 16, borderRadius: 999,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'rgba(248,113,113,0.18)', color: '#f87171',
-            fontSize: '0.7rem', fontWeight: 700, lineHeight: 1,
-          }}>!</span>
-          <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#fca5a5' }}>Ship damaged</p>
-        </div>
-        <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#fca5a5' }}>
-          {owed.toLocaleString()} ⟡
-        </p>
-      </div>
-      <button
-        type="button"
-        onClick={onRepair}
-        disabled={!canAfford || busy}
-        className="font-karla font-700 uppercase tracking-[0.1em]"
-        style={{
-          width: '100%', padding: '0.55rem 0',
-          borderRadius: 9,
-          background: canAfford ? 'rgba(74,222,128,0.16)' : 'rgba(255,255,255,0.04)',
-          border: `1px solid ${canAfford ? 'rgba(74,222,128,0.55)' : 'rgba(255,255,255,0.12)'}`,
-          color: canAfford ? '#4ade80' : '#5a5856',
-          fontSize: '0.62rem',
-          cursor: canAfford && !busy ? 'pointer' : 'default',
-          opacity: busy ? 0.65 : 1,
-        }}
-      >
-        {busy ? 'Repairing…' : canAfford ? `Pay & Repair · ${owed.toLocaleString()} ⟡` : "Can't afford"}
-      </button>
-      {error && (
-        <p className="font-karla font-600 mt-2"
-          style={{ fontSize: '0.6rem', color: '#f87171', textAlign: 'center' }}>
-          {error}
-        </p>
-      )}
-    </div>
-  )
-}
