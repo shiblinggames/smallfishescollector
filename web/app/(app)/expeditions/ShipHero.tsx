@@ -1059,7 +1059,7 @@ export default function ShipHero({
           <div style={{
             position: 'relative',
             display: 'grid', gridTemplateColumns: '1fr 1fr',
-            alignItems: 'end',
+            alignItems: 'stretch',
             gap: 14, marginTop: '0.9rem',
           }}>
             {/* Left col — crew lineup. Up to 3 roster members posed
@@ -1073,14 +1073,21 @@ export default function ShipHero({
                 alignItems:end keeps the bottom flush with the ship
                 column. */}
             <Link href="/crew" className="hub-manage-tap" style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+              position: 'relative', overflow: 'hidden',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 8,
+              height: 144, borderRadius: 16,
+              border: '1px solid rgba(125,160,216,0.4)', borderTop: '1px solid rgba(125,160,216,0.7)',
+              padding: '0 0.5rem 0.7rem',
               textDecoration: 'none',
               cursor: 'pointer',
               WebkitTapHighlightColor: 'transparent',
             }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/manage-crew-bg.jpg" alt="" aria-hidden loading="lazy" decoding="async" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }} />
+              <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 0, background: 'linear-gradient(180deg, rgba(6,10,18,0.32) 0%, rgba(6,10,18,0.22) 42%, rgba(6,10,18,0.9) 100%)' }} />
               <div style={{
                 height: 56, width: '100%',
-                position: 'relative',
+                position: 'relative', zIndex: 1,
               }}>
                 {featuredCrewTrio.length === 0 ? (
                   // Empty roster — silhouette placeholder centered in
@@ -1168,7 +1175,7 @@ export default function ShipHero({
                   .hub-manage-pill (see globals.css). */}
               <p className="font-karla font-700 uppercase tracking-[0.08em] hub-manage-pill" style={{
                 fontSize: '0.7rem', color: '#9ec6ff',
-                position: 'relative',
+                position: 'relative', zIndex: 1,
                 display: 'inline-flex', alignItems: 'center', gap: 5,
                 padding: '0.3rem 0.75rem', borderRadius: 999,
                 background: 'rgba(125,160,216,0.10)',
@@ -1213,14 +1220,22 @@ export default function ShipHero({
               onClick={() => setLoadoutOpen(true)}
               className="hub-manage-tap"
               style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                background: 'transparent', border: 'none', padding: 0,
+                position: 'relative', overflow: 'hidden',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 8,
+                height: 144, borderRadius: 16,
+                border: '1px solid rgba(125,160,216,0.4)', borderTop: '1px solid rgba(125,160,216,0.7)',
+                padding: '0 0.5rem 0.7rem',
+                background: 'transparent',
                 cursor: 'pointer',
                 WebkitTapHighlightColor: 'transparent',
               }}
             >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/manage-ship-bg.jpg" alt="" aria-hidden loading="lazy" decoding="async" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }} />
+              <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 0, background: 'linear-gradient(180deg, rgba(6,10,18,0.32) 0%, rgba(6,10,18,0.22) 42%, rgba(6,10,18,0.9) 100%)' }} />
               <div style={{
                 height: 56, width: '100%',
+                position: 'relative', zIndex: 1,
                 display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
               }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1242,7 +1257,7 @@ export default function ShipHero({
                   columns read as buttons. */}
               <p className="font-karla font-700 uppercase tracking-[0.08em] hub-manage-pill" style={{
                 fontSize: '0.7rem', color: '#9ec6ff',
-                position: 'relative',
+                position: 'relative', zIndex: 1,
                 display: 'inline-flex', alignItems: 'center', gap: 5,
                 padding: '0.3rem 0.75rem', borderRadius: 999,
                 background: 'rgba(125,160,216,0.10)',
