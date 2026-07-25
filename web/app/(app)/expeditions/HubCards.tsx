@@ -85,6 +85,10 @@ interface Props {
   /** A saved Gauntlet run is waiting (paused or crash-resumable) — the card
    *  swaps its CTA to "Resume" so the player knows to pick it back up. */
   gauntletResumable?: boolean
+  /** Which gauntlet the open run belongs to — drives the correct card's Resume
+   *  CTA. A single flag used to light Davy's card even for a Don run. */
+  davyResumable?: boolean
+  donsResumable?: boolean
   /** Claimed Gauntlet Locker Upgrade ids — drives the voyage panel's truthful
    *  Safe Passage / Swift Sails surfacing. */
   gauntletUpgrades: string[]
@@ -179,7 +183,7 @@ export default function HubCards({
   ownedRaidItems, equippedRaidItems, raidItemSlots,
   roster, shipCrewSlots,
   shipTier, todayVoyage, readyVoyage, expeditionXP, voyageHistory,
-  canPvp, gauntletOpen, donsGauntletOpen, gauntletResumable, gauntletUpgrades, pvp,
+  canPvp, gauntletOpen, donsGauntletOpen, gauntletResumable, davyResumable, donsResumable, gauntletUpgrades, pvp,
   raidsCleared, captainsOrdersDone,
   gems, freeRecruitAvailable, canAffordNewSkin, challengeName,
 }: Props) {
@@ -437,8 +441,8 @@ export default function HubCards({
               </div>
               <p className="font-cinzel font-800" style={{ fontSize: '0.98rem', color: '#f0ede8', lineHeight: 1.08 }}>Davy Jones</p>
               <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: `${DAVY_AC}dd`, marginTop: 3, lineHeight: 1.3 }}>The original descent</p>
-              <span className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{ marginTop: 11, display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.56rem', color: gauntletResumable ? '#04120f' : DAVY_AC, background: gauntletResumable ? DAVY_AC : `${DAVY_AC}1e`, border: `1px solid ${DAVY_AC}66`, borderRadius: 999, padding: '0.34rem 0.8rem' }}>
-                {gauntletResumable ? 'Resume' : 'Descend'}
+              <span className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{ marginTop: 11, display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.56rem', color: davyResumable ? '#04120f' : DAVY_AC, background: davyResumable ? DAVY_AC : `${DAVY_AC}1e`, border: `1px solid ${DAVY_AC}66`, borderRadius: 999, padding: '0.34rem 0.8rem' }}>
+                {davyResumable ? 'Resume' : 'Descend'}
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M9 18l6-6-6-6" /></svg>
               </span>
             </motion.button>
@@ -466,8 +470,8 @@ export default function HubCards({
                 </div>
                 <p className="font-cinzel font-800" style={{ fontSize: '0.98rem', color: '#f0ede8', lineHeight: 1.08 }}>Don&apos;s Gauntlet</p>
                 <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: `${DON_AC}dd`, marginTop: 3, lineHeight: 1.3 }}>The endgame descent</p>
-                <span className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{ marginTop: 11, display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.56rem', color: DON_AC, background: `${DON_AC}1e`, border: `1px solid ${DON_AC}66`, borderRadius: 999, padding: '0.34rem 0.8rem' }}>
-                  Descend
+                <span className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{ marginTop: 11, display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.56rem', color: donsResumable ? '#04120f' : DON_AC, background: donsResumable ? DON_AC : `${DON_AC}1e`, border: `1px solid ${DON_AC}66`, borderRadius: 999, padding: '0.34rem 0.8rem' }}>
+                  {donsResumable ? 'Resume' : 'Descend'}
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M9 18l6-6-6-6" /></svg>
                 </span>
               </motion.button>

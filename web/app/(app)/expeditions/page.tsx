@@ -265,7 +265,14 @@ async function ExpeditionHub() {
   const donsGauntletOpen = donsGauntletUnlocked({ isAdmin: profile?.is_admin, throneCleared: clearedViews.some(v => v.node.id === 'the_throne') })
   // A saved run is waiting to be picked back up — mirrors getGauntletDailyState's
   // resumeState gate (paused = unlimited, or a crash resume still in the bank).
-  const gauntletResumable = profile?.gauntlet_run_open === true
+  // A saved run is variant-specific — gauntlet_run_variant says whether the open
+  // run belongs to Davy's or Don's. Surface Resume on the RIGHT card. (The old
+  // single flag lit Davy's card even for a Don run — the "reversed resume" bug.)
+  const gauntletRunOpen = profile?.gauntlet_run_open === true
+  const gauntletRunVariant = profile?.gauntlet_run_variant as string | null
+  const gauntletResumable = gauntletRunOpen                                  // hub tile: any open run
+  const davyResumable = gauntletRunOpen && gauntletRunVariant !== 'don'
+  const donsResumable = gauntletRunOpen && gauntletRunVariant === 'don'
     && !!profile?.gauntlet_run_state
     && (profile?.gauntlet_run_paused === true || ((profile?.gauntlet_resumes_used as number | null) ?? 0) < 1)
   const equippedRaidItems = (profile?.equipped_raid_items as string[] | null) ?? []
@@ -337,6 +344,8 @@ async function ExpeditionHub() {
       gauntletOpen={gauntletOpen}
       donsGauntletOpen={donsGauntletOpen}
       gauntletResumable={gauntletResumable}
+      davyResumable={davyResumable}
+      donsResumable={donsResumable}
       gauntletUpgrades={[
         ...((profile?.gauntlet_upgrades as string[] | null) ?? []),
         ...((profile?.dons_gauntlet_upgrades as string[] | null) ?? []),
