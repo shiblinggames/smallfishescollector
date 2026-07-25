@@ -295,16 +295,18 @@ function RaidMap({
     <div
       style={{
         position: 'relative', width: '100%', height,
-        // Parchment / sea-chart backdrop: warm sepia base, a soft cream
-        // top-down lift in the center, and a subtle vignette at the
-        // edges so the chart reads as a thing you're holding rather
-        // than a panel floating on a black page. Tuned to stay dark
-        // enough that the parchment-gold tokens + lit route still
-        // pop against it (the dark wrapper sits around this).
+        // Parchment / sea-chart backdrop: a real hand-painted weathered-
+        // parchment texture (water stains, foxing, fold creases, darkened
+        // frayed edges) as the base, under a warm-dark tint + a soft gold
+        // center lift + an edge vignette. The tint keeps it dark enough that
+        // the parchment-gold tokens + lit route still pop, while the texture
+        // reads through so the chart looks like an actual aged page rather
+        // than a flat panel. cover fills any chapter height without stretch.
         background: [
-          'radial-gradient(ellipse 80% 60% at 50% 38%, rgba(196,169,106,0.10) 0%, transparent 70%)',
-          'radial-gradient(ellipse 120% 90% at 50% 50%, transparent 55%, rgba(6,5,4,0.45) 100%)',
-          'linear-gradient(180deg, rgba(48,36,18,0.35) 0%, rgba(28,20,10,0.55) 100%)',
+          'radial-gradient(ellipse 80% 60% at 50% 38%, rgba(196,169,106,0.12) 0%, transparent 70%)',
+          'radial-gradient(ellipse 120% 92% at 50% 50%, transparent 52%, rgba(6,5,4,0.5) 100%)',
+          'linear-gradient(180deg, rgba(30,21,11,0.28) 0%, rgba(20,14,7,0.46) 100%)',
+          'url(/parchment-map.jpg) center / cover no-repeat',
         ].join(', '),
         border: '1px solid rgba(196,169,106,0.22)',
         borderRadius: 12,
