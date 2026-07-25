@@ -974,10 +974,6 @@ export default function ShipHero({
             this way also gives the crew side an actual visual presence
             (a face) instead of a button floating on its own. */}
         <div style={{ position: 'relative', padding: '1.1rem 1rem 1rem' }}>
-          {/* Soft dark pool behind the floating hero content — lifts the ship,
-              crew lineup + Manage pills off the bright epic sky without a hard
-              card, fading out so the seascape still reads around the edges. */}
-          <div aria-hidden style={{ position: 'absolute', inset: '-12px -10px', pointerEvents: 'none', background: 'radial-gradient(ellipse 82% 80% at 50% 48%, rgba(6,10,18,0.62) 0%, rgba(6,10,18,0.28) 62%, rgba(6,10,18,0) 100%)' }} />
 
           {/* Nav level + XP — full-width bar across the card (mirrors the
               fishing screen's XPBarDisplay): big level number on the left,
