@@ -1497,7 +1497,7 @@ export default function ShipHero({
                 <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
                 <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.56rem', color: '#c4b078' }}>{equippedItems.length}/{raidItemSlots} slots</span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(raidItemSlots, 2)}, minmax(0, 1fr))`, gap: 8, marginBottom: '1.6rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: '1.6rem' }}>
                 {Array.from({ length: raidItemSlots }, (_, i) => {
                   const itemId = equippedItems[i]
                   const def = itemId ? getRaidItem(itemId) : null
@@ -1510,24 +1510,29 @@ export default function ShipHero({
                         key={i}
                         type="button"
                         onClick={() => toggleItem(itemId)}
-                        aria-label={`${def.name}, equipped. Tap to remove.`}
-                        style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, padding: '0.6rem 0.7rem', borderRadius: 12, textAlign: 'left', cursor: 'pointer', ...(forged ? { ...forgedBorderSoft('rgba(14,18,26,0.92)', abyssal), boxShadow: abyssal ? '0 0 14px rgba(255,90,60,0.26)' : '0 0 12px rgba(150,140,180,0.18)' } : { background: `${color}1c`, border: `1.5px solid ${color}88`, boxShadow: `0 0 14px ${color}1f` }) }}
+                        aria-label={`${def.name}, equipped. ${def.description} Tap to remove.`}
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, width: '100%', padding: '0.6rem 0.75rem', borderRadius: 12, textAlign: 'left', cursor: 'pointer', ...(forged ? { ...forgedBorderSoft('rgba(14,18,26,0.92)', abyssal), boxShadow: abyssal ? '0 0 14px rgba(255,90,60,0.26)' : '0 0 12px rgba(150,140,180,0.18)' } : { background: `${color}1c`, border: `1.5px solid ${color}88`, boxShadow: `0 0 14px ${color}1f` }) }}
                       >
-                        <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', ...(forged ? forgedBorderSoft('rgba(20,24,32,0.9)', abyssal) : { background: `${color}12`, border: `1px solid ${color}40` }) }}>
+                        <div style={{ width: 44, height: 44, flexShrink: 0, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', ...(forged ? forgedBorderSoft('rgba(20,24,32,0.9)', abyssal) : { background: `${color}12`, border: `1px solid ${color}40` }) }}>
                           {def.image
                             // eslint-disable-next-line @next/next/no-img-element
-                            ? <img src={def.image} alt="" loading="lazy" decoding="async" className={abyssal ? 'rod-glow-abyssal' : undefined} style={{ width: 30, height: 30, objectFit: 'contain' }} />
+                            ? <img src={def.image} alt="" loading="lazy" decoding="async" className={abyssal ? 'rod-glow-abyssal' : undefined} style={{ width: 33, height: 33, objectFit: 'contain' }} />
                             : <span style={{ fontSize: '1.4rem', lineHeight: 1, color, display: 'flex' }}><IconCrate size={22} /></span>}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.8rem', ...(forged ? forgedTextSoft(abyssal) : { color }) }}>{def.name}</p>
-                          <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: '#9a948a' }}>Tap to remove</span>
+                          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+                            <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.82rem', minWidth: 0, ...(forged ? forgedTextSoft(abyssal) : { color }) }}>{def.name}</p>
+                            <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.48rem', color: '#9a948a', flexShrink: 0 }}>Tap to remove</span>
+                          </div>
+                          {/* The item's power, shown inline so the ACTIVE loadout's
+                              effects read at a glance — no unequipping to Inventory. */}
+                          <p className="font-karla" style={{ fontSize: '0.7rem', color: '#8a8480', lineHeight: 1.4, marginTop: 2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{def.description}</p>
                         </div>
                       </button>
                     )
                   }
                   return (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 64, padding: '0.6rem', borderRadius: 12, border: '1.5px dashed rgba(255,255,255,0.16)', background: 'rgba(255,255,255,0.02)' }}>
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 52, padding: '0.6rem', borderRadius: 12, border: '1.5px dashed rgba(255,255,255,0.16)', background: 'rgba(255,255,255,0.02)' }}>
                       <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.56rem', color: '#6a6764' }}>Empty slot</span>
                     </div>
                   )
