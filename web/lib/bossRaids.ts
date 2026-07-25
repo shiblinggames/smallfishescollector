@@ -136,7 +136,7 @@ export interface BossMechanicCheck {
     | { kind: 'enemyHealPctMaxHp'; value: number }   // boss heals value × its own max HP
     | { kind: 'burnDot'; pctPerTurn: number; turns: number }  // sets you ablaze: pctPerTurn × maxHP per turn for `turns`; any crew heal clears it (can wipe if ignored)
     // Ch4 status pipeline: a lingering PLAYER debuff (feeble = +dmg taken, weaken =
-    // −dmg dealt, slowed = −turn-order/dodge), with an optional instant chip of
+    // −dmg dealt, slowed = −turn-order/fleeing), with an optional instant chip of
     // damage. A less instantly-lethal, more TEXTURED fail than a flat one-shot;
     // a Mender cleanse can lift it. Magnitude follows the status: feeble/weaken =
     // fraction (0.3 = 30%), slowed = flat speed points.
@@ -149,18 +149,18 @@ export interface BroadsideEnemy {
   hpBase: number
   minDmg: number
   maxDmg: number
-  /** Ship speed (enemy Initiative): turn-order roll, its own dodge roll, and
-   *  aim-bar target speed. Enemies have no player-style Initiative/Evasion split. */
+  /** Ship speed (enemy Initiative): turn-order roll + aim-bar target speed. The
+   *  enemy's DODGE contest is driven by its `accuracy`, not this — hull is
+   *  Initiative-only, mirroring the player (Navigation is the player's dodge). */
   shipSpeed: number
-  /** Gunnery accuracy. A flat bonus added to this enemy's roll to land a shot
-   *  through the PLAYER's dodge. The player's dodge roll adds their FULL nav
-   *  (15-40+), so without this a single-digit ship speed could never punch
-   *  through dodge and every dodge was a free 0. Size it to the navigation a
-   *  player realistically has by the time they reach this enemy: accuracy ≈
-   *  (their nav) − ~6 lands a clean dodge ~77% of the time, with the rest
-   *  grazing for 50%. Higher = harder to dodge, lower = easier. Default 0 =
-   *  no help (old behavior, dodge ≈ free). Only matters on the turns the enemy
-   *  fires at a dodging player; ignored everywhere else. */
+  /** Gunnery accuracy — this enemy's SOLE number in the dodge contest (hull is
+   *  Initiative-only now and folded in here at generation). It is rolled BOTH
+   *  ways: `d20 + accuracy` when the enemy fires at a dodging player, AND
+   *  `d20 + accuracy` when the enemy itself dodges the player's shot — each
+   *  against the player's `d20 + Navigation`. Size it to the nav a player has by
+   *  this enemy: accuracy ≈ (their nav) − ~6 lands a clean dodge ~77% of the
+   *  time, the rest grazing for 50%. Higher = harder to dodge / better dodger.
+   *  Default 0 = dodge ≈ free. */
   accuracy?: number
   /** Chapter-4 magazine: how many cannonballs this enemy can BANK (default 3).
    *  Volley cost stays 3 everywhere. A 4-slot enemy carries a buffer ball, so
@@ -435,10 +435,11 @@ export interface BossRaidConfig {
   /** Baseline gunnery accuracy for EVERY enemy in this raid (see
    *  BroadsideEnemy.accuracy). Set once per raid, sized to the navigation a
    *  player has by the time they reach it, so dodge stays a strong read
-   *  (~75-80% clean) instead of a free 0. Within the raid, faster ships are
-   *  naturally harder to dodge (their shipSpeed is also in the roll), so one
-   *  number gives a built-in spread. An individual enemy can still override
-   *  with its own `accuracy`. Undefined = 0 (dodge ≈ free, pre-2026-06 behavior). */
+   *  (~75-80% clean) instead of a free 0. Within the raid, faster ships stay
+   *  naturally harder to dodge — each enemy's shipSpeed is folded into its
+   *  accuracy at generation, so one number still gives a built-in spread. An
+   *  individual enemy can override with its own `accuracy`. Undefined = 0
+   *  (dodge ≈ free, pre-2026-06 behavior). */
   enemyAccuracy?: number
 }
 
@@ -1534,8 +1535,8 @@ export const THE_BLOCKADE: BossRaidConfig = {
     },
     netter: {
       // THE MANGROVE. SLOWED debut. Roots fouled through your rigging and rudder cut
-      // your Initiative, so you lose turn-order rolls and land fewer shots on a
-      // dodging enemy while it lasts (your Evasion dodge and aim are untouched).
+      // your Initiative, so you lose turn-order rolls and are harder-pressed to flee
+      // while it lasts (your dodge and aim ride on Evasion, untouched).
       // The estuary's own net, and it does not need throwing.
       id: 'netter', name: 'The Mangrove', hpBase: 330, minDmg: 22, maxDmg: 36,
       shipSpeed: 6, actionMs: 3800,

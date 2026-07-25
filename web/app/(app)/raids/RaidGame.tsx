@@ -1572,8 +1572,11 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
               : rolledAffix
             // Stamp the raid's baseline gunnery accuracy onto the enemy (a
             // per-enemy `accuracy` still wins if set), so the dodge contest can
-            // actually land shots through a high-nav captain's dodge.
-            const enemyWithAccuracy = { ...baseEnemy, accuracy: baseEnemy.accuracy ?? config.enemyAccuracy ?? 0 }
+            // actually land shots through a high-nav captain's dodge. Hull is
+            // folded in here: post-split the dodge contest is accuracy-only (no
+            // hull term), so adding shipSpeed preserves the enemy's old
+            // hull+accuracy total exactly.
+            const enemyWithAccuracy = { ...baseEnemy, accuracy: (baseEnemy.accuracy ?? config.enemyAccuracy ?? 0) + baseEnemy.shipSpeed }
             const enemyForCombat = (rolledAffix && !bakedAffix)
               ? buildEliteEnemy(enemyWithAccuracy)
               : enemyWithAccuracy

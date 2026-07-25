@@ -3803,20 +3803,18 @@ export default function RaidCombat({
         // this shot. megaMult replaces the volley's flat ×2.
         const isMega  = action === 'mega'
         const megaAug = isMega ? megaAugment : null
-        // Post-split dodge contest. The PLAYER'S defensive dodge is pure EVASION
-        // (Navigation, added via defenderNav) — hull speed + boons no longer help
-        // you weave aside (that's Initiative now: turn order + fleeing). But your
-        // OFFENSIVE agility (playerDodgeSpeed = hull + boons) still helps your
-        // shot track a dodging enemy. The enemy has no Evasion stat, so its hull
-        // speed doubles as its nimbleness both ways. Floored at 1 so a heavy drop
-        // can't invert the roll; enemy folds its own Slowed the same way.
-        const playerDodgeSpeed = Math.max(1, shipSpeed + tide.speedDelta + pStatus.speedDelta)
-        const enemyDodgeSpeed  = Math.max(1, enemy.shipSpeed + eStatus.speedDelta)
-        const attackerSpeed  = isAttackerPlayer ? playerDodgeSpeed : enemyDodgeSpeed
-        const defenderAction = isAttackerPlayer ? eAction          : pAction
-        // Player defending → 0 hull; the dodge rides on Evasion (defenderNav) alone.
-        const defenderSpeed  = isAttackerPlayer ? enemyDodgeSpeed  : 0
-        const defenderNav    = isAttackerPlayer ? 0                : totalNavigation
+        // Symmetric dodge contest — hull is Initiative-only for BOTH sides now, so
+        // each ship brings ONE agility number: the player's is EVASION (Navigation),
+        // the enemy's is its gunnery ACCURACY (which folds its hull in at generation
+        // — see scaleToCurve / buildDonApex / the raid accuracy stamp). Whoever
+        // shoots rolls d20 + their number against the dodger's d20 + theirs, both
+        // directions. Slow/haste (speedDelta) no longer touch this — Initiative only.
+        const playerDodgeStat = totalNavigation
+        const enemyDodgeStat  = Math.max(0, enemy.accuracy ?? 0)
+        const attackerSpeed  = isAttackerPlayer ? playerDodgeStat : enemyDodgeStat
+        const defenderAction = isAttackerPlayer ? eAction         : pAction
+        const defenderSpeed  = isAttackerPlayer ? enemyDodgeStat  : playerDodgeStat
+        const defenderNav    = 0
         // Repossession: drop the reclaimed item from the per-shot effect reads
         // for this fight (null ref = unchanged list, so every other raid is
         // untouched). Fight-start stats above keep the full list intentionally.
@@ -4047,16 +4045,13 @@ export default function RaidCombat({
             guaranteedDodgeLeftRef.current -= 1
             dodged = true
           } else {
-            // Enemy accuracy closes the dodge gap. The player's dodge roll adds
-            // their FULL navigation (15-40+), so without this a single-digit
-            // enemy speed could never land a shot through dodge — it was a free
-            // 0. `enemy.accuracy` is the gunnery rating authored per enemy (sized
-            // to the nav a player has by that raid), added only when the ENEMY
-            // fires at a dodging player. The reverse contest (player attacking a
-            // dodging enemy) keeps accuracy 0 — already a fair ~50/50.
-            const attackerAccuracy = playerDefending ? (enemy.accuracy ?? 0) : 0
+            // Symmetric contest: each side already carries its full agility in
+            // attackerSpeed / defenderSpeed (player = Navigation, enemy = accuracy
+            // with hull folded in), so the extra accuracy arg is 0 both ways. This
+            // is now the SAME roll whether the enemy fires at a dodging player or
+            // the player fires at a dodging enemy — no side-specific bonus.
             const def = rollDodge(defenderSpeed, defenderNav)
-            const atk = rollAttackerVsDodge(attackerSpeed, attackerAccuracy)
+            const atk = rollAttackerVsDodge(attackerSpeed, 0)
             dodged = def >= atk
             // See-through-the-feint (Tell-Tale Glass / Admiral's Eye): when the
             // ENEMY would dodge the player's shot, anti-evasion items get ONE
@@ -7283,8 +7278,8 @@ function PlayerStatsPopup({
   const rows: { label: string; value: string; hint: string; color: string }[] = [
     { label: 'Damage',      value: `${hitMin}–${powerMax}`,        hint: 'normal-hit damage range',             color: '#f87171' },
     { label: 'Crit Damage', value: `${critMin}–${critMax}`,        hint: 'damage on a critical lock',           color: '#fbbf24' },
-    { label: 'Initiative',  value: String(shipSpeed),              hint: 'fire first · land on dodgers · flee', color: '#60a5fa' },
-    { label: 'Evasion',     value: String(totalNavigation),        hint: 'dodge incoming fire · steadier aim',  color: '#5eead4' },
+    { label: 'Initiative',  value: String(shipSpeed),              hint: 'fire first · flee',                    color: '#60a5fa' },
+    { label: 'Evasion',     value: String(totalNavigation),        hint: 'dodge · land on dodgers · steadier aim', color: '#5eead4' },
     { label: 'Fortune',     value: String(totalFortune),           hint: 'better odds at rare loot',            color: '#f0c040' },
   ]
 
@@ -7604,7 +7599,7 @@ function EnemyStatsPopup({
     { label: 'HP',          value: `${currentHp} / ${maxHp}`,          hint: 'remaining / total hull',         color: '#86efac' },
     { label: 'Damage',      value: `${enemy.minDmg}–${enemy.maxDmg}`,  hint: 'per normal shot',                color: '#f87171' },
     { label: 'Volley',      value: `${minVolley}–${maxVolley}`,        hint: '3-charge heavy shot',            color: '#fb923c' },
-    { label: 'Initiative',  value: String(enemy.shipSpeed),            hint: 'turn order · its own dodge',     color: '#60a5fa' },
+    { label: 'Initiative',  value: String(enemy.shipSpeed),            hint: 'turn order',                     color: '#60a5fa' },
     { label: 'Crit Chance', value: `${critPct}%`,                      hint: `${minCrit}–${maxCrit} on crit`,  color: '#fbbf24' },
   ]
 

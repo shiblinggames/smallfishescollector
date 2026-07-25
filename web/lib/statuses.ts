@@ -4,8 +4,8 @@
 // abilities inflict them on enemies, and Gauntlet 2 boons/curses draw on the
 // same vocabulary. Locked roster + rules (2026-07-11):
 //
-//   Debuffs: weaken (−dmg dealt) · feeble (+dmg taken) · slowed (−speed:
-//   turn-order + dodge rolls) · silence (special abilities locked) ·
+//   Debuffs: weaken (−dmg dealt) · feeble (+dmg taken) · slowed (−Initiative:
+//   turn order + fleeing) · silence (special abilities locked) ·
 //   corrode (shield takes amplified damage).
 //   Buffs:   fortify (−dmg taken) · enrage (+dmg dealt) · regen (heal/turn).
 //
@@ -47,7 +47,7 @@ export const STATUS_DEFS: Record<StatusId, StatusDef> = {
   weaken:  { name: 'Weakened',  tone: 'debuff', glyph: '↓', color: '#f0a05a', describe: m => `deals ${pct(m)} less damage` },
   feeble:  { name: 'Feeble',    tone: 'debuff', glyph: '✚', color: '#f47c7c', describe: m => `takes ${pct(m)} more damage` },
   marked:  { name: 'Marked',    tone: 'debuff', glyph: '◎', color: '#f43f5e', describe: m => `marked for death — takes ${pct(m)} more damage from all sources` },
-  slowed:  { name: 'Slowed',    tone: 'debuff', glyph: '⌛', color: '#8fb4e0', describe: m => `${m} slower (turn order + dodging)` },
+  slowed:  { name: 'Slowed',    tone: 'debuff', glyph: '⌛', color: '#8fb4e0', describe: m => `${m} slower (turn order)` },
   silence: { name: 'Silenced',  tone: 'debuff', glyph: '✕', color: '#c084fc', describe: () => 'special abilities are locked' },
   corrode: { name: 'Corroded',  tone: 'debuff', glyph: '≋', color: '#a3e635', describe: m => `its shield takes ${pct(m)} more damage` },
   fortify: { name: 'Fortified', tone: 'buff',   glyph: '▲', color: '#5eead4', describe: m => `takes ${pct(m)} less damage` },
@@ -88,9 +88,9 @@ export interface StatusMods {
   dmgDealtMult: number
   /** Multiplier on damage THIS side takes (feeble ↑, fortify ↓). Floor 0.1. */
   dmgTakenMult: number
-  /** Flat Initiative delta (slowed/hasted). Turn-order rolls + the attacker's roll
-   *  to land on a dodging defender. NOT the aim bar, and NOT the player's own
-   *  Evasion (Navigation) dodge. */
+  /** Flat Initiative delta (slowed/hasted). Turn order + fleeing ONLY. Post-split
+   *  it does not touch the aim bar or the dodge contest — dodging is Navigation
+   *  vs the enemy's accuracy, with no speed term on either side. */
   speedDelta: number
   /** Special abilities locked this round. */
   silenced: boolean

@@ -533,7 +533,7 @@ function buildDonApex(depth: number): BroadsideEnemy {
   const hp  = Math.round(mobHp2(depth) * APEX_HP_MULT)
   const min = Math.round(mobMinDmg2(depth) * BOSS_DMG_MULT)
   const max = Math.round(mobMaxDmg2(depth) * BOSS_DMG_MULT)
-  const accuracy = Math.round(18 + depth * 1.4) + 3
+  const accuracy = Math.round(18 + depth * 1.4) + 3 + src.shipSpeed   // + hull: dodge contest is accuracy-only now
   const srcPhases = src.phases ?? []
   // rise 0 → 2 revives (3 phases total), +1 per rise, capped at all his revives.
   const idx = Math.max(0, donRiseIndex(depth))
@@ -567,7 +567,7 @@ function buildCloser(depth: number): BroadsideEnemy {
     name: ghostName(src.name),   // "The Spectral Closer"
     hpBase: Math.round(mobHp2(depth) * MINI_BOSS_HP_MULT),
     minDmg: Math.max(1, min), maxDmg: Math.max(min + 1, max),
-    accuracy: Math.round(18 + depth * 1.4) + 2,
+    accuracy: Math.round(18 + depth * 1.4) + 2 + src.shipSpeed,   // + hull: dodge contest is accuracy-only now
     // Keep his single false-defeat revive (check stripped — his phase2 has none anyway).
     phase2: src.phase2 ? { ...src.phase2, check: undefined } : undefined,
     phases: undefined,
@@ -595,7 +595,7 @@ function scaleToCurve(src: BroadsideEnemy, depth: number, isBoss: boolean, varia
   // the source enemy would fall behind). Gauntlet players are already post-
   // Chapter-2, so this opens near the late-raid band (~24) and ramps. Bosses
   // shoot a touch straighter. See BroadsideEnemy.accuracy for the dodge math.
-  const accuracy = Math.round(18 + depth * 1.4) + (isBoss ? 3 : 0)
+  const accuracy = Math.round(18 + depth * 1.4) + (isBoss ? 3 : 0) + src.shipSpeed   // + hull: dodge contest is accuracy-only now
   const out: BroadsideEnemy = { ...src, name: (don ? ghostName : drownedName)(src.name), hpBase: hp, minDmg: Math.max(1, min), maxDmg: Math.max(min + 1, max), accuracy }
   if (isBoss) {
     if (don) {
@@ -1583,9 +1583,9 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
     { desc: '36% chance a Reload loads 2 cannonballs', detail: 'Each time you Reload, there’s a 36% chance a second cannonball is loaded for free.', effect: { kind: 'reloadProc', chance: 0.36, bonusCharges: 1 } },
   ] },
   { id: 'following_sea', name: 'Following Sea', flavor: 'The current finally runs with you.', rarity: 'rare', tiers: [
-    { desc: '+2 Initiative', detail: '+2 Initiative: you fire first more often, land more shots on a dodging enemy, and slip away faster when you flee. (Dodging incoming fire is Evasion — your Navigation — not this.)', effect: { kind: 'speedDelta', n: 2, scope: 'allRemaining' } },
-    { desc: '+4 Initiative', detail: '+4 Initiative: you fire first more often, land more shots on a dodging enemy, and slip away faster when you flee. (Dodging incoming fire is Evasion — your Navigation — not this.)', effect: { kind: 'speedDelta', n: 4, scope: 'allRemaining' } },
-    { desc: '+7 Initiative', detail: '+7 Initiative: you fire first far more often, land far more shots on dodging enemies, and slip away far faster when you flee. (Dodging incoming fire is Evasion — your Navigation — not this.)', effect: { kind: 'speedDelta', n: 7, scope: 'allRemaining' } },
+    { desc: '+2 Initiative', detail: '+2 Initiative: you fire first more often and slip away faster when you flee. (Dodging and landing shots on a dodging enemy are both Evasion — your Navigation — not this.)', effect: { kind: 'speedDelta', n: 2, scope: 'allRemaining' } },
+    { desc: '+4 Initiative', detail: '+4 Initiative: you fire first more often and slip away faster when you flee. (Dodging and landing shots on a dodging enemy are both Evasion — your Navigation — not this.)', effect: { kind: 'speedDelta', n: 4, scope: 'allRemaining' } },
+    { desc: '+7 Initiative', detail: '+7 Initiative: you fire first far more often and slip away far faster when you flee. (Dodging and landing shots on a dodging enemy are both Evasion — your Navigation — not this.)', effect: { kind: 'speedDelta', n: 7, scope: 'allRemaining' } },
   ] },
   { id: 'bilge_pump', name: 'Bilge Pump', flavor: 'Patch the seams in the lull before the next gun.', tiers: [
     { desc: 'Heal 5% max HP each fight', detail: 'At the start of every fight, your ship repairs 5% of its maximum HP. Scales with your hull, so it keeps mattering as you go deeper.', effect: { kind: 'startOfFightHealPct', pctMax: 0.05 } },
@@ -1701,9 +1701,9 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
     { desc: '55% on a hit to make the enemy Feeble (+25% damage taken, 3 rounds)', detail: 'Whenever you land a hit, there is a 55% chance the enemy turns Feeble — it takes 25% more damage from everything for the next 3 rounds.', effect: { kind: 'statusOnHit', status: 'feeble', chance: 0.55, magnitude: 0.25, turns: 3 } },
   ] },
   { id: 'chainshot', name: 'Chainshot', gauntlet: 'don', flavor: 'Linked iron fouls their rigging. A snarled hull is a slow hull.', tiers: [
-    { desc: '30% on a hit to Slow the enemy (2 rounds)', detail: 'Whenever you land a hit, there is a 30% chance the enemy is Slowed for 2 rounds — it acts later in the round and dodges worse.', effect: { kind: 'statusOnHit', status: 'slowed', chance: 0.30, magnitude: 2, turns: 2 } },
-    { desc: '45% on a hit to Slow the enemy (2 rounds)', detail: 'Whenever you land a hit, there is a 45% chance the enemy is Slowed for 2 rounds — it acts later in the round and dodges worse.', effect: { kind: 'statusOnHit', status: 'slowed', chance: 0.45, magnitude: 2, turns: 2 } },
-    { desc: '60% on a hit to heavily Slow the enemy (3 rounds)', detail: 'Whenever you land a hit, there is a 60% chance the enemy is heavily Slowed for 3 rounds — it acts later in the round and dodges much worse.', effect: { kind: 'statusOnHit', status: 'slowed', chance: 0.60, magnitude: 3, turns: 3 } },
+    { desc: '30% on a hit to Slow the enemy (2 rounds)', detail: 'Whenever you land a hit, there is a 30% chance the enemy is Slowed for 2 rounds — it acts later in the round, ceding you the opening more often.', effect: { kind: 'statusOnHit', status: 'slowed', chance: 0.30, magnitude: 2, turns: 2 } },
+    { desc: '45% on a hit to Slow the enemy (2 rounds)', detail: 'Whenever you land a hit, there is a 45% chance the enemy is Slowed for 2 rounds — it acts later in the round, ceding you the opening more often.', effect: { kind: 'statusOnHit', status: 'slowed', chance: 0.45, magnitude: 2, turns: 2 } },
+    { desc: '60% on a hit to heavily Slow the enemy (3 rounds)', detail: 'Whenever you land a hit, there is a 60% chance the enemy is heavily Slowed for 3 rounds — it acts later in the round, ceding you the opening far more often.', effect: { kind: 'statusOnHit', status: 'slowed', chance: 0.60, magnitude: 3, turns: 3 } },
   ] },
   { id: 'hexshot', name: 'Hexshot', gauntlet: 'don', flavor: 'A cursed round saps the fight out of whatever it strikes.', tiers: [
     { desc: '30% on a hit to Weaken the enemy (−15% damage dealt, 2 rounds)', detail: 'Whenever you land a hit, there is a 30% chance the enemy is Weakened — its own hits deal 15% less damage for the next 2 rounds.', effect: { kind: 'statusOnHit', status: 'weaken', chance: 0.30, magnitude: 0.15, turns: 2 } },
