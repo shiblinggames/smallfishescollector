@@ -1807,7 +1807,7 @@ export const THE_THRONE: BossRaidConfig = {
     },
     don_finleone: {
       // DON FINLEONE. The fake-final boss. Phase 1: the don at his table,
-      // False Court decoys + The Deep Verdict ultimate. Phase 2 the mask
+      // Court of Crowns decoys + The Deep Verdict ultimate. Phase 2 the mask
       // drops (MEGALODON) and The Maw check arms; phase 3 is the frenzy,
       // closed by The Sounding (blast or jam him out of the dive, or eat a
       // near-lethal breach). Kills reveal nothing. The margin does.
@@ -1825,7 +1825,7 @@ export const THE_THRONE: BossRaidConfig = {
       id: 'don_finleone', name: 'Don Finleone', hpBase: 880, minDmg: 30, maxDmg: 50,
       shipSpeed: 9, actionMs: 4000,
       magazineSize: 4, shieldPct: 0.30, chargeBiteChance: 0.35, startCharges: 2,
-      special: { name: 'The Don’s Court', aimAttack: 'decoys', aimPasses: 2, line: 'The court closes around the throne. A dozen crowns, and only one that bleeds.' },
+      special: { name: 'Court of Crowns', aimAttack: 'decoys', aimPasses: 2, line: 'The court closes around the throne. A dozen crowns, and only one that bleeds.' },
       ultimate: { name: 'The Deep Verdict', mult: 2.8, line: 'The don passes sentence, and the water carries it out.' },
       pattern: ['special', 'fire', 'reload', 'reload', 'ultimate', 'dodge', 'fire', 'reload'],
       critChance: 0.15,
@@ -1840,7 +1840,7 @@ export const THE_THRONE: BossRaidConfig = {
         consequence: { kind: 'damagePctMaxHp', value: 0.55 },
       },
       phases: [
-        { revivePct: 0.72, damageMult: 1.25, badge: 'The Mask Drops',
+        { revivePct: 0.72, damageMult: 1.25, badge: 'The Maw',
           pattern: ['special', 'fire', 'reload', 'reload', 'ultimate', 'volley', 'dodge', 'reload'],
           dialogueLine: 'You came for a don. The deep sent you something older. Look at the WIDTH of what you’ve been bargaining with.',
           check: {
