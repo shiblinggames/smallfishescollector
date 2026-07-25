@@ -400,17 +400,15 @@ export default function HubCards({
           initial={{ opacity: 0, scale: 0.94, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 6 }}
           transition={{ type: 'spring', stiffness: 380, damping: 30 }}
           style={{
+            // No modal container — the two gauntlet cards (each with its own
+            // abyss art) float directly on the PopupShell backdrop.
             margin: 'auto', width: '100%', maxWidth: 420,
-            background: 'linear-gradient(180deg, #0c1222 0%, #06080f 100%)',
-            border: `1px solid ${gauntletAccent}55`,
-            borderRadius: 20, padding: '1rem',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.7)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <div>
-              <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.5rem', color: `${gauntletAccent}aa` }}>Push your luck</p>
-              <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f4ecd8' }}>Choose your gauntlet</p>
+              <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.5rem', color: `${gauntletAccent}dd`, textShadow: '0 1px 5px rgba(0,0,0,0.85)' }}>Push your luck</p>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f4ecd8', textShadow: '0 2px 8px rgba(0,0,0,0.85)' }}>Choose your gauntlet</p>
             </div>
             <button type="button" onClick={() => setModal(null)} aria-label="Close"
               style={{ width: 30, height: 30, borderRadius: '50%', padding: 0, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
