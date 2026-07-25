@@ -1660,7 +1660,14 @@ export async function useTideTurnerSkip(): Promise<{ ok: true; skipsLeft: number
   if (usedToday >= 3) return { error: 'No skips remaining today' }
 
   const newUsed = usedToday + 1
-  await admin.from('profiles').update({ tide_turner_used: newUsed, tide_turner_date: todayStr }).eq('id', user.id)
+  // RELEASE the hooked fish as a SANCTIONED skip: clear the pending catch so the
+  // next cast doesn't trip castLine's anti-bail reset (a lingering catch_pending
+  // zeroes current_perfect_streak on the following cast). Crucially we do NOT
+  // touch current_perfect_streak here — skipping a fish WITHOUT breaking the
+  // streak is the Tide Turner's entire purpose.
+  await admin.from('profiles')
+    .update({ tide_turner_used: newUsed, tide_turner_date: todayStr, catch_pending: false, pending_cast: null })
+    .eq('id', user.id)
   return { ok: true, skipsLeft: 3 - newUsed }
 }
 
