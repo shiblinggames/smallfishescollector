@@ -471,10 +471,10 @@ export const RAID_ZONE_BG: Record<NonNullable<BossRaidConfig['zone']>, string> =
 // Per-raid campaign battle backdrop, keyed to each boss's story LOCATION, so
 // every campaign raid reads as its own place (Pete's sunset cove, the Tollmaster's
 // strait, Ruse's black-market harbor, the Don's abyssal throne, etc.) instead of
-// the five shared zone photos above. RaidGame prefers this by raidId and falls
-// back to RAID_ZONE_BG for anything not listed (challenge/side variants like the
-// Quartermaster's Ghost, the practice skirmish).
-export const RAID_BOSS_BG: Record<string, string> = {
+// the five shared zone photos above. Used for the raid's MOB fights. RaidGame
+// prefers this by raidId and falls back to RAID_ZONE_BG for anything not listed
+// (challenge/side variants like the Quartermaster's Ghost, the practice skirmish).
+export const RAID_LOCATION_BG: Record<string, string> = {
   corsairs_reckoning: '/raid-corsairs-reckoning.jpg', // Barnacle Pete — sunset Shallows cove
   captain_krust:      '/raid-krust.jpg',              // Captain Krust — overcast shipping shoals
   cartographer:       '/raid-cartographer.jpg',       // The Cartographer — the Sounding Fog
@@ -483,6 +483,22 @@ export const RAID_BOSS_BG: Record<string, string> = {
   the_quartermaster:  '/raid-quartermaster.jpg',      // The Quartermaster — storm fortress-vault
   the_blockade:       '/raid-blockade.jpg',           // Sal Brackwater — the brackish estuary
   the_throne:         '/raid-throne.jpg',             // Don Finleone — the Ancient Deep throne
+}
+
+// The BOSS-fight variant of each location — the same place escalated for the
+// final showdown: dramatic weather + the boss threat looming (Pete's flagship in
+// a burning-sunset storm, the Quartermaster's fortress up close, Sal rising from
+// the swamp, the Finleone megalodon over the throne). RaidGame uses this on the
+// boss round only, falling through to RAID_LOCATION_BG for a raid without one.
+export const RAID_BOSS_BG: Record<string, string> = {
+  corsairs_reckoning: '/raid-corsairs-reckoning-boss.jpg',
+  captain_krust:      '/raid-krust-boss.jpg',
+  cartographer:       '/raid-cartographer-boss.jpg',
+  tollmasters_cut:    '/raid-tollmaster-boss.jpg',
+  coffers_fleet:      '/raid-harbor-fleet-boss.jpg',
+  the_quartermaster:  '/raid-quartermaster-boss.jpg',
+  the_blockade:       '/raid-blockade-boss.jpg',
+  the_throne:         '/raid-throne-boss.jpg',
 }
 
 export const CORSAIRS_RECKONING: BossRaidConfig = {

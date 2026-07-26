@@ -13,7 +13,7 @@ import { raidDamageProfile, type RaidMods } from '@/lib/expeditions'
 import { crewLevelFromXP, CREW_MAX_LEVEL } from '@/lib/crewLevel'
 import { type ShipAugment } from '@/lib/shipAugments'
 import {
-  BossRaidConfig, BroadsideEnemy, RaidLootItem, RARITY_COLOR, raidCompletionBonusXp, RAID_ZONE_BG, RAID_BOSS_BG,
+  BossRaidConfig, BroadsideEnemy, RaidLootItem, RARITY_COLOR, raidCompletionBonusXp, RAID_ZONE_BG, RAID_LOCATION_BG, RAID_BOSS_BG,
 } from '@/lib/bossRaids'
 import { isChallengeRaidId } from '@/lib/raidChallenge'
 import { AFFIXES, ELITE_HP_MULT, ELITE_DMG_MULT, rollAffix, rollSecondAffix, mergeAffixes, rollEliteSlots, type AffixDef, type AffixId } from '@/lib/raidAffixes'
@@ -1508,9 +1508,13 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
 
   // ─── Playing phase: render the new turn-based combat ──────────────────────
   if (phase === 'playing') {
-    // Per-raid battle backdrop, keyed to the boss's story location; falls back to
-    // the shared zone photo for challenge/side variants and the practice skirmish.
-    const raidBg = RAID_BOSS_BG[config.raidId] ?? (config.zone ? RAID_ZONE_BG[config.zone] : null)
+    // Per-raid battle backdrop: the boss round gets the escalated boss-fight
+    // scene; mob rounds get the raid's location scene; both fall back to the
+    // shared zone photo for challenge/side variants and the practice skirmish.
+    const raidBg =
+      (isBoss ? RAID_BOSS_BG[config.raidId] : undefined)
+      ?? RAID_LOCATION_BG[config.raidId]
+      ?? (config.zone ? RAID_ZONE_BG[config.zone] : null)
     return (
       <>
       {/* Full-screen battle backdrop — the raid's location painted across the
