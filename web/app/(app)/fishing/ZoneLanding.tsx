@@ -198,10 +198,14 @@ export default function ZoneLanding({
       style={{ background: '#08121c', zIndex: 40, display: 'flex', justifyContent: 'center' }}>
       <div className="relative w-full max-w-md overflow-hidden" style={{ height: '100%' }}>
 
-        {/* Deep-water backdrop — the page IS the water column: surface
-            light up top, abyssal black at the bottom. No photo underlay,
-            no boxed chrome; the five zone scenes carry all the art. */}
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, #0b1a29 0%, #071220 32%, #04090f 68%, #020307 100%)' }} />
+        {/* Deep-water backdrop — a painted water column (sunlit surface + god-rays
+            up top, abyssal black at the bottom) under a soft tonal ramp so the
+            header + zone nodes stay legible while the scene reads through. */}
+        <div aria-hidden style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/fishing-zones-bg.jpg" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(5,14,22,0.3) 0%, rgba(4,10,16,0.42) 42%, rgba(2,6,10,0.66) 100%)' }} />
+        </div>
 
         {/* Content shell — header pinned up top, only the zones scroll beneath. */}
         <div style={{ position: 'relative', zIndex: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
