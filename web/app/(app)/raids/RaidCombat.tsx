@@ -6179,31 +6179,11 @@ export default function RaidCombat({
               style={{
                 width: '100%', display: 'block', position: 'relative', zIndex: 1,
                 transform: 'scaleX(-1)',  // face the player
-                filter: [
-                  'drop-shadow(0 3px 6px rgba(0,0,0,0.35))',
-                  // Three-layer violet halo for elites: a punchy inner
-                  // glow at the hull edge, a mid-radius bloom, and a soft
-                  // outer wash. Each drop-shadow respects the PNG alpha
-                  // so the whole stack reads as light coming OFF the ship.
-                  ...(isElite && !isBoss ? [
-                    'drop-shadow(0 0 6px rgba(167,139,250,1))',
-                    'drop-shadow(0 0 16px rgba(167,139,250,0.75))',
-                    'drop-shadow(0 0 32px rgba(167,139,250,0.4))',
-                  ] : []),
-                  // Same three-layer treatment in crimson for phase-2
-                  // bosses — the persistent "wounded and dangerous"
-                  // halo. Overrides the boss's normal warm tint below
-                  // because the red is the new headline visual.
-                  ...(enemyPhase >= 2 ? [
-                    'drop-shadow(0 0 7px rgba(239,68,68,1))',
-                    'drop-shadow(0 0 18px rgba(239,68,68,0.8))',
-                    'drop-shadow(0 0 36px rgba(239,68,68,0.45))',
-                  ] : []),
-                  isBoss ? 'hue-rotate(20deg) brightness(0.95)' : 'hue-rotate(180deg) brightness(0.85)',
-                  // Gauntlet "drowned" wash — layered last so reused raid
-                  // enemies read as cold, spectral Locker creatures.
-                  ...(enemyArtFilter ? [enemyArtFilter] : []),
-                ].join(' '),
+                // Just a grounding drop-shadow now. The elite (violet) +
+                // wounded-boss (crimson) halos, the boss/non-boss hue-rotate hull
+                // tint, and the gauntlet drowned/ghost wash were all removed —
+                // enemy art shows in its natural colour.
+                filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.35))',
                 pointerEvents: 'none',
               }}
             />
