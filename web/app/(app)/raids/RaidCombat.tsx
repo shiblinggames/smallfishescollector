@@ -5399,14 +5399,33 @@ export default function RaidCombat({
   return (
     <div style={{
       display: 'flex', flexDirection: 'column',
-      // Frameless + ONE continuous backdrop: the per-raid gradient lives on the
-      // container so it spans the stage AND the (translucent) control deck below,
-      // reading as a single scene with no boxed-in frame. Same layout + width cap.
+      position: 'relative',
+      // Frameless + ONE continuous backdrop: the per-raid gradient (and a zone
+      // image, if set) live on the CONTAINER so they span the stage AND the
+      // translucent control deck below — one scene, no boxed-in frame.
       background: stageGradient,
       overflow: 'hidden',
       maxWidth: 580, margin: '0 auto',
       width: '100%',
     }}>
+      {/* Zone image backdrop (a fishing-zone photo, or the Gauntlet's abyss) — on
+          the CONTAINER so it's the single background behind the ships AND the
+          control deck, not a boxed layer inside the stage. */}
+      {zoneBg && (
+        <>
+          <div aria-hidden style={{
+            position: 'absolute', inset: 0, zIndex: 0,
+            backgroundImage: `url(${zoneBg})`,
+            backgroundSize: 'cover', backgroundPosition: '50% 8%',
+            filter: zoneFilter, pointerEvents: 'none',
+          }} />
+          <div aria-hidden style={{
+            position: 'absolute', inset: 0, zIndex: 0,
+            background: 'linear-gradient(180deg, rgba(4,8,14,0.16) 0%, rgba(4,8,14,0.16) 20%, rgba(4,8,14,0.26) 46%, rgba(4,8,14,0.42) 72%, rgba(3,5,10,0.72) 100%)',
+            pointerEvents: 'none',
+          }} />
+        </>
+      )}
       {/* Battle stage — ocean scene with ships and HP boxes.
           flex:1 lets it grow into available vertical space on tall phones.
           minHeight is the floor on short viewports — the single-row action
@@ -5424,8 +5443,11 @@ export default function RaidCombat({
         // overcast open ocean, the Cartographer's Sounding Fog — instead
         // of the same dusk seascape every fight. Default ('dusk') keeps
         // the original warm look for any caller that doesn't opt in
-        // (e.g. the practice skirmish).
-        background: stageGradient,
+        // (e.g. the practice skirmish). The gradient + any zone image now live on
+        // the CONTAINER (so they span the control deck too); the stage is
+        // transparent and just holds the scene + ships over that shared backdrop.
+        background: 'transparent',
+        zIndex: 1,
         overflow: 'hidden',
       }}>
         {/* Hit-stop impact flash — a quick white bloom over the stage on a heavy
@@ -5441,40 +5463,6 @@ export default function RaidCombat({
                 ? 'radial-gradient(ellipse at center, rgba(255,255,255,0.92), rgba(255,214,150,0.5) 46%, transparent 78%)'
                 : 'radial-gradient(ellipse at center, rgba(255,255,255,0.82), transparent 72%)' }} />
         )}
-        {/* Fishing-zone backdrop — when the raid opts into a `zone`, we paint the
-            matching fishing background image (a static JPG, no per-frame animation)
-            plus a readability scrim, and skip the whole procedural scene below. A
-            top + bottom dark gradient keeps the header, Leave button, HP bars and
-            aim bar legible over the photo while leaving the sky mostly clear. */}
-        {zoneBg && (
-          <>
-            <div aria-hidden style={{
-              position: 'absolute', inset: 0,
-              backgroundImage: `url(${zoneBg})`,
-              backgroundSize: 'cover',
-              // Vertical anchor into the tall backdrop strip (sky + horizon live
-              // in the top ~7%, then a long ocean gradient). 0% ('top') shows too
-              // much sky and floats the ships above the horizon; 50% ('center')
-              // lands mid-strip and shows only open ocean. ~8% keeps the horizon
-              // high with a slim sky band, so ships sit on water. Tune this one
-              // number if a zone wants more/less sky.
-              backgroundPosition: '50% 8%',
-              filter: zoneFilter,
-              pointerEvents: 'none',
-            }} />
-            <div aria-hidden style={{
-              // MONOTONIC top→bottom darkening. An earlier scrim lightened to a
-              // bright window mid-stage then darkened again; on a dark backdrop
-              // (the Gauntlet abyss) those two transitions read as hard edges —
-              // a lit "box" around the enemy ship and a dark box-top above the
-              // player card. A smooth, always-increasing ramp has no bands: sky
-              // stays visible up top, the water eases down, cards keep contrast.
-              background: 'linear-gradient(180deg, rgba(4,8,14,0.16) 0%, rgba(4,8,14,0.16) 20%, rgba(4,8,14,0.26) 46%, rgba(4,8,14,0.42) 72%, rgba(3,5,10,0.72) 100%)',
-              pointerEvents: 'none',
-            }} />
-          </>
-        )}
-
         {/* ── Atmospheric backdrop ─────────────────────────────────────────
             Sun/sky/clouds/water all swap based on `atmosphere`. Each
             variant is a self-contained fragment so the parts (sun
@@ -6864,8 +6852,9 @@ export default function RaidCombat({
           aim minigame to a body portal; matching heights lets it sit
           inline where the player's eye already is. */}
       <div style={{
-        // Translucent so the container backdrop reads through — one continuous
-        // scene, no solid control slab and no divider frame.
+        position: 'relative', zIndex: 1,
+        // Translucent so the container backdrop (gradient + any zone image) reads
+        // through — one continuous scene, no solid control slab, no divider frame.
         background: 'linear-gradient(180deg, rgba(4,8,14,0.42) 0%, rgba(3,6,12,0.72) 100%)',
         padding: '0.7rem 0.85rem 0.95rem',
         display: 'flex', flexDirection: 'column', gap: 8,
