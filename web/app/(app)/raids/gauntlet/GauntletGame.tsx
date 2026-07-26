@@ -4123,6 +4123,13 @@ export default function GauntletGame(props: GauntletGameProps) {
     // The gloom's HUE deepens with the band — cold blue up top, violet on the
     // Leviathan's Road, blood-dark in the Crush — so depth reads in the room.
     const gloomHue = fight.depth >= 60 ? '40,6,10' : fight.depth >= 42 ? '22,8,32' : '3,9,18'
+    // Boss fights (including the Don apex) get a more dramatic backdrop — a
+    // colossal threat looming on the horizon — vs the standard sea between fights.
+    const battleBg = hardcoreRun
+      ? (fight.isBoss ? '/hc-gauntlet-boss.jpg' : '/hc-gauntlet-battle.jpg')
+      : isDonG
+        ? (fight.isBoss ? '/dons-gauntlet-boss.jpg' : '/dons-gauntlet-battle.jpg')
+        : (fight.isBoss ? '/davy-gauntlet-boss.jpg' : '/davy-gauntlet-battle.jpg')
     return (
       <>
       {/* Full-screen battle backdrop — ONE scene behind the whole fight, keyed to
@@ -4136,7 +4143,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           (transparentBackdrop) so this shows through — no boxed second image. */}
       <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={hardcoreRun ? '/hc-gauntlet-battle.jpg' : isDonG ? '/dons-gauntlet-battle.jpg' : '/davy-gauntlet-battle.jpg'} alt=""
+        <img src={battleBg} alt=""
           style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }} />
         <div style={{ position: 'absolute', inset: 0, background: hardcoreRun
           ? 'linear-gradient(to bottom, rgba(28,2,4,0.24) 0%, rgba(22,1,3,0.44) 46%, rgba(8,0,1,0.82) 100%)'
