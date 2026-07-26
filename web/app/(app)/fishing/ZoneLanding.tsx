@@ -210,30 +210,29 @@ export default function ZoneLanding({
             const xp = getXPProgress(fishingXP)
             const atMax = xp.level >= 100
             const toNext = atMax ? 0 : xp.xpForLevel - xp.xpInLevel
+            const c = '#f0c040'   // fishing gold (mirrors the raids' green NAV bar)
             return (
-              <div className="flex items-center" style={{ flexShrink: 0, gap: 12, padding: '1.05rem 0.9rem 0.85rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                {/* Level medallion */}
-                <div style={{ position: 'relative', width: 46, height: 46, flexShrink: 0, borderRadius: '50%', background: 'conic-gradient(from 210deg, #e0a94a, #fff2c8, #f0c040, #c48a2a, #e0a94a)', padding: 2, boxShadow: '0 0 14px rgba(240,192,64,0.3)' }}>
-                  <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: 'radial-gradient(circle at 50% 32%, #1a2837, #0a121c)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(0,0,0,0.4)' }}>
-                    <span className="font-cinzel font-800" style={{ fontSize: xp.level >= 100 ? '0.95rem' : '1.18rem', color: '#f6e6b0', lineHeight: 1, textShadow: '0 1px 3px rgba(0,0,0,0.7)' }}>{xp.level}</span>
+              <div style={{ flexShrink: 0, padding: '0.85rem 0.9rem 0.7rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                {/* Fishing level bar — mirrors the raids' NavLevelBar pill (gold):
+                    an inline FISH · level chip, a thin animated fill, xp-to-next. */}
+                <div className="flex items-center gap-2" style={{ background: 'rgba(4,10,18,0.72)', border: `1px solid ${c}30`, borderRadius: 16, padding: '0.4rem 0.8rem' }}>
+                  <div className="shrink-0 flex items-baseline gap-1">
+                    <span className="font-karla font-600" style={{ fontSize: '0.44rem', color: c + 'cc', letterSpacing: '0.08em' }}>FISH</span>
+                    <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: c, lineHeight: 1 }}>{xp.level}</span>
                   </div>
-                </div>
-
-                {/* Label + XP bar (its own centered block) */}
-                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 6 }}>
-                  <span className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.22em', color: 'rgba(196,169,106,0.92)' }}>
-                    Fishing
-                  </span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ flex: 1, height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.12)', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' }}>
-                      <div style={{ width: `${Math.round(xp.progress * 100)}%`, height: '100%', borderRadius: 999, background: 'linear-gradient(90deg, #c4a96a, #f0c040)', boxShadow: '0 0 8px rgba(240,192,64,0.5)' }} />
-                    </div>
-                    <span className="font-karla font-600" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.58)', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
-                      {atMax ? 'Max Level' : `${toNext.toLocaleString()} XP to Lv ${xp.level + 1}`}
-                    </span>
+                  <div style={{ flex: 1, height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                    <motion.div
+                      key={xp.level}
+                      style={{ height: '100%', borderRadius: 999, background: `linear-gradient(90deg, ${c}88 0%, ${c} 100%)`, boxShadow: `0 0 8px ${c}70` }}
+                      initial={{ width: '0%' }}
+                      animate={{ width: `${atMax ? 100 : xp.progress * 100}%` }}
+                      transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+                    />
                   </div>
+                  <p className="font-karla font-600 shrink-0" style={{ fontSize: '0.55rem', color: atMax ? c : 'rgba(255,255,255,0.55)', lineHeight: 1, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+                    {atMax ? 'MAX' : `${toNext.toLocaleString()} xp`}
+                  </p>
                 </div>
-
               </div>
             )
           })()}
