@@ -4123,13 +4123,15 @@ export default function GauntletGame(props: GauntletGameProps) {
     // The gloom's HUE deepens with the band — cold blue up top, violet on the
     // Leviathan's Road, blood-dark in the Crush — so depth reads in the room.
     const gloomHue = fight.depth >= 60 ? '40,6,10' : fight.depth >= 42 ? '22,8,32' : '3,9,18'
-    // Boss fights (including the Don apex) get a more dramatic backdrop — a
-    // colossal threat looming on the horizon — vs the standard sea between fights.
-    const battleBg = hardcoreRun
-      ? (fight.isBoss ? '/hc-gauntlet-boss.jpg' : '/hc-gauntlet-battle.jpg')
+    // Backdrop escalates with the fight: the Don apex (Finleone) gets its own
+    // unique tableau; else boss > elite > standard sea, keyed to the run.
+    const battleBg = fight.isApex
+      ? '/dons-apex-battle.jpg'
+      : hardcoreRun
+      ? (fight.isBoss ? '/hc-gauntlet-boss.jpg' : fight.isElite ? '/hc-gauntlet-elite.jpg' : '/hc-gauntlet-battle.jpg')
       : isDonG
-        ? (fight.isBoss ? '/dons-gauntlet-boss.jpg' : '/dons-gauntlet-battle.jpg')
-        : (fight.isBoss ? '/davy-gauntlet-boss.jpg' : '/davy-gauntlet-battle.jpg')
+        ? (fight.isBoss ? '/dons-gauntlet-boss.jpg' : fight.isElite ? '/dons-gauntlet-elite.jpg' : '/dons-gauntlet-battle.jpg')
+        : (fight.isBoss ? '/davy-gauntlet-boss.jpg' : fight.isElite ? '/davy-gauntlet-elite.jpg' : '/davy-gauntlet-battle.jpg')
     return (
       <>
       {/* Full-screen battle backdrop — ONE scene behind the whole fight, keyed to
