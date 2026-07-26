@@ -4123,17 +4123,23 @@ export default function GauntletGame(props: GauntletGameProps) {
     const gloomHue = fight.depth >= 60 ? '40,6,10' : fight.depth >= 42 ? '22,8,32' : '3,9,18'
     return (
       <>
-      {/* Full-screen abyss backdrop — ONE scene behind the whole fight. Same
-          approach as raids: the page lives inside PageTransition's z-index:1
-          layer (above the app-level /raids ClientBackground), so a fixed layer at
-          zIndex -1 still covers that page image while sitting BEHIND the in-flow
-          combat and leaving the fixed overlays untouched. RaidCombat's container
-          is transparent (transparentBackdrop) so this shows through — no boxed
-          abyss over a different page image. */}
+      {/* Full-screen battle backdrop — ONE scene behind the whole fight, keyed to
+          the run: Davy's spectral teal maelstrom-sea, Don's kraken-green drowned
+          court at sea. Hardcore bathes either one blood-red (muted image + crimson
+          scrim), matching AbyssBackdrop's mode split. Same stacking as raids: the
+          page lives inside PageTransition's z-index:1 layer (above the app-level
+          /raids ClientBackground), so a fixed layer at zIndex -1 still covers that
+          page image while sitting BEHIND the in-flow combat and leaving the fixed
+          overlays untouched. RaidCombat's container is transparent
+          (transparentBackdrop) so this shows through — no boxed second image. */}
       <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/abyss.jpg" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block', filter: hardcoreRun ? undefined : GAUNTLET_ABYSS_FILTER }} />
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(4,8,14,0.3) 0%, rgba(4,8,14,0.48) 46%, rgba(3,5,10,0.78) 100%)' }} />
+        <img src={isDonG ? '/dons-gauntlet-battle.jpg' : '/davy-gauntlet-battle.jpg'} alt=""
+          style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block',
+            filter: hardcoreRun ? 'saturate(0.38) brightness(0.62) contrast(1.04)' : undefined }} />
+        <div style={{ position: 'absolute', inset: 0, background: hardcoreRun
+          ? 'linear-gradient(to bottom, rgba(64,6,10,0.44) 0%, rgba(40,3,6,0.58) 46%, rgba(10,1,2,0.86) 100%)'
+          : 'linear-gradient(to bottom, rgba(3,9,11,0.26) 0%, rgba(3,9,11,0.44) 46%, rgba(2,6,8,0.8) 100%)' }} />
       </div>
       <div className="raid-combat-region flex flex-col items-center gap-2 select-none"
         style={{ position: 'relative', userSelect: 'none', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 48px)' }}>
