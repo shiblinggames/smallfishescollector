@@ -4158,7 +4158,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             background: `radial-gradient(ellipse 116% 96% at 50% 44%, transparent 56%, rgba(${gloomHue},${gloom}) 100%)` }} />
         )}
         <div className="gauntlet-depthbar" style={{ width: '100%', flexShrink: 0, marginBottom: 2 }}>
-          <DepthBar depth={fight.depth} pot={pot} isBoss={fight.isBoss} isElite={fight.isElite} affixName={fight.affix?.name} curses={Object.keys(curseTiers).length} isHardcore={hardcoreRun} potGain={potGain} uncharted={uncharted} pressure={hardcoreRun ? pressure : 0} signedTerms={hardcoreRun ? signedTerms : {}} />
+          <DepthBar depth={fight.depth} pot={pot} isBoss={fight.isBoss} isElite={fight.isElite} affixName={fight.affix?.name} curses={Object.keys(curseTiers).length} isHardcore={hardcoreRun} potGain={potGain} uncharted={uncharted} pressure={hardcoreRun ? pressure : 0} signedTerms={hardcoreRun ? signedTerms : {}} contract={contractChip} />
         </div>
         {/* Marks of the Don — the stacking trophies, kept in view so earned power reads. */}
         {markCount > 0 && (
@@ -4170,14 +4170,9 @@ export default function GauntletGame(props: GauntletGameProps) {
             </span>
           </motion.div>
         )}
-        {/* Don's contract riding this fight — the job's condition, kept in view. */}
-        {contractChip && (
-          <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="font-karla font-700"
-            style={{ position: 'relative', zIndex: 6, width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '0.38rem 0.7rem', marginBottom: 3, borderRadius: 10, background: 'linear-gradient(120deg, rgba(63,191,130,0.16), rgba(0,0,0,0.24))', border: '1px solid rgba(63,191,130,0.4)' }}>
-            <span className="font-cinzel font-800 uppercase tracking-[0.05em]" style={{ fontSize: '0.58rem', color: '#3fbf82', whiteSpace: 'nowrap' }}>Job · {CONTRACTS[contractChip.kind].name}</span>
-            <span style={{ fontSize: '0.62rem', color: 'rgba(214,230,222,0.82)', lineHeight: 1.2 }}>{CONTRACTS[contractChip.kind].goal(contractChip.param)}</span>
-          </motion.div>
-        )}
+        {/* The active job now lives as a flashing icon in the DepthBar header
+            (tap it for full job details) instead of a banner here — a banner
+            shifted the whole combat stage down every time you took a job. */}
         <div style={{ width: '100%' }}>
           <RaidCombat
             key={`gauntlet-r${fight.depth}`}
@@ -6326,7 +6321,7 @@ function BackLink({ router, label, primary, onClick }: { router: ReturnType<type
   )
 }
 
-function DepthBar({ depth, pot, isBoss, isElite, affixName, curses, isHardcore, potGain, uncharted, pressure = 0, signedTerms = {} }: { depth: number; pot: number; isBoss: boolean; isElite: boolean; affixName?: string; curses: number; isHardcore?: boolean; potGain?: { amount: number; key: number; boss: boolean } | null; uncharted?: boolean; pressure?: number; signedTerms?: SignedTerms }) {
+function DepthBar({ depth, pot, isBoss, isElite, affixName, curses, isHardcore, potGain, uncharted, pressure = 0, signedTerms = {}, contract = null }: { depth: number; pot: number; isBoss: boolean; isElite: boolean; affixName?: string; curses: number; isHardcore?: boolean; potGain?: { amount: number; key: number; boss: boolean } | null; uncharted?: boolean; pressure?: number; signedTerms?: SignedTerms; contract?: ContractOffer | null }) {
   // The bar shows only the ESSENTIALS on one immovable row; tapping it opens
   // the detail panel (full affix names, exact pot, curse count, hardcore
   // note). Long dual-affix names + fat pots used to wrap the flex row and
@@ -6360,6 +6355,17 @@ function DepthBar({ depth, pot, isBoss, isElite, affixName, curses, isHardcore, 
           <span className="font-karla font-600" style={{ fontSize: '0.46rem', color: GOLD + 'bb', letterSpacing: '0.1em', textShadow: uncharted ? `0 0 8px ${GOLD}88` : undefined }}>{uncharted ? 'UNCHARTED' : 'DEPTH'}</span>
           <span className="font-cinzel font-800" style={{ fontSize: '1rem', color: GOLD, lineHeight: 1 }}>{depth}</span>
           {tag && <span className="font-cinzel font-700" style={{ fontSize: '0.56rem', color: tagColor, letterSpacing: '0.06em' }}>{tag}</span>}
+          {/* Active job — a pulsing briefcase so a taken contract reads at a glance
+              WITHOUT a banner shoving the combat stage down. Tap the bar for the
+              full job (goal, reward, penalty) in the detail panel below. */}
+          {contract && (
+            <motion.span aria-label="Active job — tap for details" title="Active job"
+              animate={{ opacity: [1, 0.4, 1] }}
+              transition={{ duration: 1.25, repeat: Infinity, ease: 'easeInOut' }}
+              style={{ alignSelf: 'center', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 17, height: 17, borderRadius: 5, color: '#3fbf82', background: 'rgba(63,191,130,0.18)', border: '1px solid rgba(63,191,130,0.55)', boxShadow: '0 0 8px rgba(63,191,130,0.5)', flexShrink: 0 }}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="7" width="18" height="13" rx="2" /><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+            </motion.span>
+          )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {isHardcore && (
@@ -6427,6 +6433,23 @@ function DepthBar({ depth, pot, isBoss, isElite, affixName, curses, isHardcore, 
             </p>
             {isHardcore && (
               <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#fca5a5' }}>Hardcore — your crew die for good if you sink.</p>
+            )}
+
+            {/* Active job (Don's contract) riding this fight — the goal, the
+                reward for clearing it and the penalty for blowing it. Surfaced
+                here (tap the bar) instead of a stage-shifting banner. */}
+            {contract && (
+              <div style={{ marginTop: 4, paddingTop: 7, borderTop: '1px solid rgba(63,191,130,0.28)' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#3fbf82' }}>Job · {CONTRACTS[contract.kind].name}</p>
+                  <p className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#8a948e', whiteSpace: 'nowrap' }}>{STAKE_LABEL[contract.stake]}</p>
+                </div>
+                <p className="font-karla" style={{ fontSize: '0.68rem', color: '#cfc9bf', marginTop: 3, lineHeight: 1.35 }}>{CONTRACTS[contract.kind].goal(contract.param)}</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                  <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: '#7fe0a8', background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.3)', borderRadius: 999, padding: '0.16rem 0.5rem' }}>▲ {describeReward(contract.reward)}</span>
+                  <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: '#f8a5a5', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 999, padding: '0.16rem 0.5rem' }}>▼ {describePenalty(contract.penalty)}</span>
+                </div>
+              </div>
             )}
 
             {/* DAVY'S TERMS — the one-row bar only has space for the Pressure
