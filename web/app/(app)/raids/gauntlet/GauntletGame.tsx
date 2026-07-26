@@ -2490,7 +2490,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     const CRIMSON = isDonG ? '#2ea86a' : '#ef4444'
     return (
       <>
-        <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
+        {hardcoreRun ? <HcSeaBackdrop /> : <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />}
         {/* Death wash bleeding up from the deep, over the abyss. */}
         <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 120% 75% at 50% 112%, ${CRIMSON}24 0%, ${CRIMSON}10 34%, transparent 66%)` }} />
         <div style={{
@@ -4523,7 +4523,7 @@ function GauntletReward({ r, recap, onBack, don }: { r: RewardOk; recap: { ships
 
   return (
     <>
-      <AbyssBackdrop hardcore={r.hardcore} don={don} />
+      {r.hardcore ? <HcSeaBackdrop /> : <AbyssBackdrop hardcore={r.hardcore} don={don} />}
       <RenownUpOverlay info={renownUp} onDismiss={() => setRenownUp(null)} />
       <div style={{
         position: 'relative', zIndex: 1, maxWidth: 440, margin: '0 auto',
@@ -6181,6 +6181,20 @@ function BoonSparks() {
             borderRadius: '50%', background: p.color, boxShadow: `0 0 6px ${p.color}, 0 0 12px ${p.color}88`,
           }} />
       ))}
+    </div>
+  )
+}
+
+// Hardcore end-of-run backdrop (claim + death screens): the painted blood-red
+// battle sea, shown with only a LIGHT scrim (no heavy AbyssBackdrop tint) so the
+// scene reads vibrant behind the reward chest / death beat. Same art the hardcore
+// fights use, so the whole run reads as one place.
+function HcSeaBackdrop() {
+  return (
+    <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/hc-gauntlet-battle.jpg" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(8,1,2,0.16) 0%, rgba(6,1,2,0.32) 50%, rgba(4,0,1,0.62) 100%)' }} />
     </div>
   )
 }
