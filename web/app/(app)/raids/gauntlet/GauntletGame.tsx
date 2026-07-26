@@ -4158,21 +4158,11 @@ export default function GauntletGame(props: GauntletGameProps) {
             background: `radial-gradient(ellipse 116% 96% at 50% 44%, transparent 56%, rgba(${gloomHue},${gloom}) 100%)` }} />
         )}
         <div className="gauntlet-depthbar" style={{ width: '100%', flexShrink: 0, marginBottom: 2 }}>
-          <DepthBar depth={fight.depth} pot={pot} isBoss={fight.isBoss} isElite={fight.isElite} affixName={fight.affix?.name} curses={Object.keys(curseTiers).length} isHardcore={hardcoreRun} potGain={potGain} uncharted={uncharted} pressure={hardcoreRun ? pressure : 0} signedTerms={hardcoreRun ? signedTerms : {}} contract={contractChip} />
+          <DepthBar depth={fight.depth} pot={pot} isBoss={fight.isBoss} isElite={fight.isElite} affixName={fight.affix?.name} curses={Object.keys(curseTiers).length} isHardcore={hardcoreRun} potGain={potGain} uncharted={uncharted} pressure={hardcoreRun ? pressure : 0} signedTerms={hardcoreRun ? signedTerms : {}} contract={contractChip} marks={marks} />
         </div>
-        {/* Marks of the Don — the stacking trophies, kept in view so earned power reads. */}
-        {markCount > 0 && (
-          <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="font-karla font-700"
-            style={{ position: 'relative', zIndex: 6, alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 7, padding: '0.28rem 0.6rem', marginBottom: 3, borderRadius: 999, background: 'linear-gradient(120deg, rgba(240,192,64,0.16), rgba(0,0,0,0.24))', border: '1px solid rgba(240,192,64,0.45)' }}>
-            <span className="font-cinzel font-800 uppercase tracking-[0.05em]" style={{ fontSize: '0.56rem', color: '#f0c040', whiteSpace: 'nowrap' }}>Don's Marks ×{markCount}</span>
-            <span style={{ fontSize: '0.58rem', color: 'rgba(240,225,190,0.78)', whiteSpace: 'nowrap' }}>
-              {marks.filter(m => m.type === 'shark').length}▲ Shark · {marks.filter(m => m.type === 'whale').length}◆ Whale
-            </span>
-          </motion.div>
-        )}
-        {/* The active job now lives as a flashing icon in the DepthBar header
-            (tap it for full job details) instead of a banner here — a banner
-            shifted the whole combat stage down every time you took a job. */}
+        {/* Everything the run carries (job, Don's Marks, terms, curses) now lives
+            IN the DepthBar header + its tap-for-details panel, so nothing above the
+            combat can shift the stage down mid-fight. */}
         <div style={{ width: '100%' }}>
           <RaidCombat
             key={`gauntlet-r${fight.depth}`}
@@ -6321,7 +6311,9 @@ function BackLink({ router, label, primary, onClick }: { router: ReturnType<type
   )
 }
 
-function DepthBar({ depth, pot, isBoss, isElite, affixName, curses, isHardcore, potGain, uncharted, pressure = 0, signedTerms = {}, contract = null }: { depth: number; pot: number; isBoss: boolean; isElite: boolean; affixName?: string; curses: number; isHardcore?: boolean; potGain?: { amount: number; key: number; boss: boolean } | null; uncharted?: boolean; pressure?: number; signedTerms?: SignedTerms; contract?: ContractOffer | null }) {
+function DepthBar({ depth, pot, isBoss, isElite, affixName, curses, isHardcore, potGain, uncharted, pressure = 0, signedTerms = {}, contract = null, marks = [] }: { depth: number; pot: number; isBoss: boolean; isElite: boolean; affixName?: string; curses: number; isHardcore?: boolean; potGain?: { amount: number; key: number; boss: boolean } | null; uncharted?: boolean; pressure?: number; signedTerms?: SignedTerms; contract?: ContractOffer | null; marks?: ChosenMark[] }) {
+  const sharkMarks = marks.filter(m => m.type === 'shark').length
+  const whaleMarks = marks.filter(m => m.type === 'whale').length
   // The bar shows only the ESSENTIALS on one immovable row; tapping it opens
   // the detail panel (full affix names, exact pot, curse count, hardcore
   // note). Long dual-affix names + fat pots used to wrap the flex row and
@@ -6390,6 +6382,14 @@ function DepthBar({ depth, pot, isBoss, isElite, affixName, curses, isHardcore, 
               <span className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#f0c040', lineHeight: 1 }}>{pressure}</span>
             </span>
           )}
+          {/* Don's Marks earned this run — a count here, the shark/whale breakdown
+              + every buff in the tap panel below (was a separate banner). */}
+          {marks.length > 0 && (
+            <span className="flex items-baseline gap-1">
+              <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', color: '#e0a94a99', letterSpacing: '0.08em' }}>MARKS</span>
+              <span className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#e0a94a', lineHeight: 1 }}>{marks.length}</span>
+            </span>
+          )}
           <span className="flex items-baseline gap-1" style={{ position: 'relative' }}>
             <span className="font-karla font-600" style={{ fontSize: '0.46rem', color: '#9a948a', letterSpacing: '0.08em' }}>POT</span>
             {/* keyed by the gain so each kill re-pops the number */}
@@ -6448,6 +6448,29 @@ function DepthBar({ depth, pot, isBoss, isElite, affixName, curses, isHardcore, 
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
                   <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: '#7fe0a8', background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.3)', borderRadius: 999, padding: '0.16rem 0.5rem' }}>▲ {describeReward(contract.reward)}</span>
                   <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: '#f8a5a5', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 999, padding: '0.16rem 0.5rem' }}>▼ {describePenalty(contract.penalty)}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Don's Marks — the trophies earned this run and every buff each is
+                granting, shark (offense) + whale (defense). */}
+            {marks.length > 0 && (
+              <div style={{ marginTop: 4, paddingTop: 7, borderTop: '1px solid rgba(224,169,74,0.28)' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#e0a94a' }}>Don&rsquo;s Marks &times;{marks.length}</p>
+                  <p className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#8a847a', whiteSpace: 'nowrap' }}>{sharkMarks} Shark &middot; {whaleMarks} Whale</p>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 6 }}>
+                  {marks.flatMap((m, mi) => m.buffs.map((b, bi) => (
+                    <span key={`${mi}-${bi}`} className="font-karla font-700"
+                      style={{ fontSize: '0.58rem',
+                        color: m.type === 'shark' ? '#f0b78a' : '#8fd0d8',
+                        background: m.type === 'shark' ? 'rgba(240,150,90,0.1)' : 'rgba(120,200,215,0.1)',
+                        border: `1px solid ${m.type === 'shark' ? 'rgba(240,150,90,0.3)' : 'rgba(120,200,215,0.3)'}`,
+                        borderRadius: 999, padding: '0.16rem 0.5rem' }}>
+                      {describeBuff(b)}
+                    </span>
+                  )))}
                 </div>
               </div>
             )}
