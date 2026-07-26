@@ -2663,7 +2663,7 @@ export default function GauntletGame(props: GauntletGameProps) {
 
               {/* Davy's Coin — double-or-nothing on your banked Fathoms */}
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-                style={{ marginTop: 18, padding: '0.9rem 1rem 1rem', borderRadius: 16, background: `linear-gradient(180deg, ${GOLD}22, rgba(8,13,22,0.6) 82%)`, border: `1.5px solid ${GOLD}88`, boxShadow: `0 0 22px ${GOLD}20`, textAlign: 'left' }}>
+                style={{ marginTop: 18, padding: '0.9rem 1rem 1rem', borderRadius: 16, background: `linear-gradient(180deg, ${GOLD}26, rgba(7,12,19,0.9) 60%)`, border: `1.5px solid ${GOLD}88`, boxShadow: `0 0 22px ${GOLD}20`, textAlign: 'left' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="1.8" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="9" /><path d="M12 7v10M9.5 9.5h3.2a1.8 1.8 0 0 1 0 3.6H9.5h3.5a1.8 1.8 0 0 1 0 3.6H9.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                   <p className="font-cinzel font-800" style={{ flex: 1, fontSize: '1.05rem', color: '#f5d98a' }}>Davy&apos;s Coin</p>
@@ -2812,7 +2812,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                   style={{
                     position: 'relative', overflow: 'hidden', width: '100%', textAlign: 'left',
                     padding: '0.85rem 1rem 0.85rem 1.1rem', borderRadius: 16,
-                    background: sold ? 'rgba(255,255,255,0.03)' : `linear-gradient(180deg, ${item.color}1e, rgba(8,14,20,0.6) 80%)`,
+                    background: sold ? 'rgba(255,255,255,0.03)' : `linear-gradient(180deg, ${item.color}24, rgba(7,12,19,0.9) 62%)`,
                     border: `1.5px solid ${sold ? 'rgba(255,255,255,0.12)' : `${item.color}${afford ? '88' : '44'}`}`,
                     color: '#eaf5f0', cursor: blocked ? 'default' : 'pointer', opacity: sold ? 0.5 : afford ? 1 : 0.72,
                   }}>
@@ -2883,7 +2883,7 @@ export default function GauntletGame(props: GauntletGameProps) {
               <motion.button key={offer.stake} type="button"
                 initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.14 + i * 0.07 }}
                 whileTap={{ scale: 0.98 }} onClick={() => takeContract(offer)} className="tap"
-                style={{ position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 6, padding: '0.75rem 0.85rem', borderRadius: 14, cursor: 'pointer', background: `linear-gradient(120deg, ${MC}1a, rgba(0,0,0,0.28))`, border: `1px solid ${MC}55` }}>
+                style={{ position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 6, padding: '0.75rem 0.85rem', borderRadius: 14, cursor: 'pointer', background: `linear-gradient(120deg, ${MC}24, rgba(7,12,19,0.88))`, border: `1px solid ${MC}66` }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
                   <span className="font-cinzel font-800 uppercase tracking-[0.06em]" style={{ fontSize: '0.8rem', color: MC }}>{STAKE_LABEL[offer.stake]}</span>
                   <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#8a948e' }}>{def.goal(offer.param)}</span>
@@ -3078,7 +3078,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                 {/* Reveal card — a dark backing plate keeps the text readable on
                     top of the burst + backdrop. */}
                 <motion.div initial={{ scale: 0.6, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} transition={{ delay: 0.12, type: 'spring', stiffness: 220, damping: 16 }}
-                  style={{ position: 'relative', padding: '1.3rem 1.5rem 1.4rem', borderRadius: 18, background: 'rgba(8,13,22,0.66)', border: `1px solid ${GLD}55`, boxShadow: `0 0 44px ${GLD}22, 0 12px 40px rgba(0,0,0,0.6)`, backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}>
+                  style={{ position: 'relative', padding: '1.3rem 1.5rem 1.4rem', borderRadius: 18, background: 'rgba(7,12,19,0.82)', border: `1px solid ${GLD}55`, boxShadow: `0 0 44px ${GLD}22, 0 12px 40px rgba(0,0,0,0.6)`, backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}>
                   <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke={GLD} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ filter: `drop-shadow(0 0 14px ${GLD}aa)` }}><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></svg>
                   <p className="font-karla font-800 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.32em', color: GLD, marginTop: 10, textShadow: `0 0 16px ${GLD}88` }}>{confluenceBanner.isConvergence ? 'Convergence Forged' : confluenceBanner.discovered ? 'New Synergy Discovered' : confluenceBanner.isNew ? 'Synergy Unlocked' : `Synergy Deepened · ${['', 'I', 'II', 'III'][confluenceBanner.level] ?? ''}`}</p>
                   <p className="font-cinzel font-800" style={{ fontSize: '2.1rem', lineHeight: 1.05, color: '#fff3d6', marginTop: 6, textShadow: `0 2px 10px rgba(0,0,0,0.7), 0 0 30px ${GLD}66` }}>{confluenceBanner.name}</p>
@@ -3559,8 +3559,8 @@ export default function GauntletGame(props: GauntletGameProps) {
           <button onClick={() => applyCurse(c)} className="font-cinzel font-800 uppercase tracking-[0.08em] tap"
             style={{
               marginTop: 22, width: '100%', padding: '1.1rem', borderRadius: 14, fontSize: '1.12rem',
-              color: '#ffe0e0', background: `linear-gradient(180deg, ${CRIM}33, ${CRIM}10)`,
-              border: `1px solid ${CRIM}77`, cursor: 'pointer',
+              color: '#ffe0e0', background: `linear-gradient(180deg, ${CRIM}3a 0%, rgba(22,6,8,0.86) 70%)`,
+              border: `1px solid ${CRIM}88`, cursor: 'pointer',
               boxShadow: `0 0 28px ${CRIM}2e`,
             }}>
             Bear It · Descend
@@ -3695,7 +3695,9 @@ export default function GauntletGame(props: GauntletGameProps) {
                   style={{
                     position: 'relative', textAlign: 'left', overflow: 'hidden', width: '100%',
                     padding: '0.9rem 1rem 0.9rem 1.2rem', borderRadius: 16,
-                    background: `linear-gradient(180deg, ${rm.color}28 0%, rgba(8,14,22,0.62) 74%)`,
+                    // Firm dark base so the card reads over the detailed backdrop;
+                    // the rarity tint stays as an accent up top.
+                    background: `linear-gradient(180deg, ${rm.color}30 0%, rgba(7,12,19,0.9) 58%)`,
                     border: `1.5px solid ${rm.color}${legendary ? 'dd' : rare ? '99' : '66'}`,
                     color: '#eef7f4', cursor: 'pointer',
                     boxShadow: legendary ? `0 0 40px ${rm.color}5a, inset 0 0 38px ${rm.color}1c`
@@ -4409,7 +4411,7 @@ function MarkChoice({ offer, searing, taken, onChoose }: {
                 transition={{ duration: 0.5 }} className="tap"
                 style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
                   padding: '1rem 0.65rem', borderRadius: 18, cursor: searing ? 'default' : 'pointer',
-                  background: `linear-gradient(170deg, ${c.accent}22, rgba(0,0,0,0.4))`,
+                  background: `linear-gradient(170deg, ${c.accent}2a, rgba(7,12,19,0.88))`,
                   border: `1.5px solid ${isChosen ? c.accent : c.accent + '66'}`,
                   boxShadow: isChosen ? `0 0 42px ${c.accent}66, inset 0 0 30px ${c.accent}22` : `0 0 18px ${c.accent}18` }}>
                 <motion.div animate={isChosen ? { scale: [1, 1.28, 1.12], rotate: [0, -5, 0] } : {}} transition={{ duration: 0.8 }}
@@ -6233,7 +6235,12 @@ function AbyssBackdrop({ hardcore, don }: { hardcore?: boolean; don?: boolean })
             still read; the animated layers below drift over it. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         {bgImg && <img src={bgImg} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
-        {bgImg && <div style={{ position: 'absolute', inset: 0, background: 'rgba(2,6,12,0.54)' }} />}
+        {bgImg && <div style={{ position: 'absolute', inset: 0, background: 'rgba(2,6,12,0.66)' }} />}
+        {/* Extra darkening through the middle band, where the choice screens'
+            menus + text sit — the painted art is brightest dead-center, so a soft
+            central scrim keeps translucent cards legible without muddying the
+            edges of the scene. */}
+        {bgImg && <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 92% 82% at 50% 46%, rgba(2,5,10,0.34) 0%, rgba(2,5,10,0.14) 46%, transparent 72%)' }} />}
         {/* Drifting fog banks — slow, soft, so the deep feels like it's moving. */}
         <div style={{ position: 'absolute', top: '4%', left: '-10%', width: '70%', height: '55%', filter: 'blur(34px)', background: `radial-gradient(ellipse at center, ${shaft}, transparent 70%)`, animation: 'gauntFog 19s ease-in-out infinite' }} />
         <div style={{ position: 'absolute', bottom: '2%', right: '-12%', width: '75%', height: '52%', filter: 'blur(38px)', background: `radial-gradient(ellipse at center, ${shaft2}, transparent 72%)`, animation: 'gauntFog 24s ease-in-out infinite reverse', animationDelay: '3s' }} />
