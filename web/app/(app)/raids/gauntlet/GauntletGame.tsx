@@ -4122,6 +4122,19 @@ export default function GauntletGame(props: GauntletGameProps) {
     // Leviathan's Road, blood-dark in the Crush — so depth reads in the room.
     const gloomHue = fight.depth >= 60 ? '40,6,10' : fight.depth >= 42 ? '22,8,32' : '3,9,18'
     return (
+      <>
+      {/* Full-screen abyss backdrop — ONE scene behind the whole fight. Same
+          approach as raids: the page lives inside PageTransition's z-index:1
+          layer (above the app-level /raids ClientBackground), so a fixed layer at
+          zIndex -1 still covers that page image while sitting BEHIND the in-flow
+          combat and leaving the fixed overlays untouched. RaidCombat's container
+          is transparent (transparentBackdrop) so this shows through — no boxed
+          abyss over a different page image. */}
+      <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none' }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/abyss.jpg" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block', filter: hardcoreRun ? undefined : GAUNTLET_ABYSS_FILTER }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(4,8,14,0.3) 0%, rgba(4,8,14,0.48) 46%, rgba(3,5,10,0.78) 100%)' }} />
+      </div>
       <div className="raid-combat-region flex flex-col items-center gap-2 select-none"
         style={{ position: 'relative', userSelect: 'none', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 48px)' }}>
         {gloom > 0.02 && (
@@ -4156,6 +4169,10 @@ export default function GauntletGame(props: GauntletGameProps) {
             atmosphere={atmosphereForDepth(fight.depth)}
             zoneBg="/abyss.jpg"
             zoneFilter={hardcoreRun ? undefined : GAUNTLET_ABYSS_FILTER}
+            // The abyss is painted full-screen behind the whole fight (below), so
+            // RaidCombat's container stays transparent and that one scene shows
+            // through — no boxed abyss on top of the app's /raids page image.
+            transparentBackdrop
             enemyArtFilter={props.variant === 'don' ? GHOST_FILTER : DROWNED_FILTER}
             bonusChargeSlots={bonusSlots}
             anchorSaveAvailable={anchorSavesLeftRef.current > 0}
@@ -4220,6 +4237,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         </div>
         {exitModal}
       </div>
+      </>
     )
   }
 
