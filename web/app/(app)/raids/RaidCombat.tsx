@@ -5387,9 +5387,10 @@ export default function RaidCombat({
   return (
     <div style={{
       display: 'flex', flexDirection: 'column',
+      // Frameless: the bordered/rounded container chrome is gone so the fight
+      // reads as part of the page rather than a boxed-in panel. Same layout
+      // (stage over the control deck), same width cap — just no visible frame.
       background: '#04080e',
-      border: '2px solid #2a3548',
-      borderRadius: 18,
       overflow: 'hidden',
       maxWidth: 580, margin: '0 auto',
       width: '100%',
