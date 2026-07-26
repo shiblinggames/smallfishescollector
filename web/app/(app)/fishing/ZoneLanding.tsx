@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ZONE_MIN_LEVEL, ZONE_WAIT_BASE, BASE_CRATE_CHANCE, zoneDiamondShare, zonePetPerCrate } from './zoneData'
 import { updateUsername } from '@/app/(app)/u/actions'
 import FisherPose from '@/components/FisherPose'
+import { StatLevelBar } from '@/components/StatLevelBar'
 import { PRESTIGE_MAX, goldenBoostPct, goldenBoostMult } from '@/lib/zoneRewards'
 import { SHINY_ODDS } from '@/lib/shiny'
 import { getXPProgress } from '@/lib/fishingLevel'
@@ -210,29 +211,11 @@ export default function ZoneLanding({
             const xp = getXPProgress(fishingXP)
             const atMax = xp.level >= 100
             const toNext = atMax ? 0 : xp.xpForLevel - xp.xpInLevel
-            const c = '#f0c040'   // fishing gold (mirrors the raids' green NAV bar)
             return (
               <div style={{ flexShrink: 0, padding: '0.85rem 0.9rem 0.7rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                {/* Fishing level bar — mirrors the raids' NavLevelBar pill (gold):
-                    an inline FISH · level chip, a thin animated fill, xp-to-next. */}
-                <div className="flex items-center gap-2" style={{ background: 'rgba(4,10,18,0.72)', border: `1px solid ${c}30`, borderRadius: 16, padding: '0.4rem 0.8rem' }}>
-                  <div className="shrink-0 flex items-baseline gap-1">
-                    <span className="font-karla font-600" style={{ fontSize: '0.44rem', color: c + 'cc', letterSpacing: '0.08em' }}>FISH</span>
-                    <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: c, lineHeight: 1 }}>{xp.level}</span>
-                  </div>
-                  <div style={{ flex: 1, height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
-                    <motion.div
-                      key={xp.level}
-                      style={{ height: '100%', borderRadius: 999, background: `linear-gradient(90deg, ${c}88 0%, ${c} 100%)`, boxShadow: `0 0 8px ${c}70` }}
-                      initial={{ width: '0%' }}
-                      animate={{ width: `${atMax ? 100 : xp.progress * 100}%` }}
-                      transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-                    />
-                  </div>
-                  <p className="font-karla font-600 shrink-0" style={{ fontSize: '0.55rem', color: atMax ? c : 'rgba(255,255,255,0.55)', lineHeight: 1, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
-                    {atMax ? 'MAX' : `${toNext.toLocaleString()} xp`}
-                  </p>
-                </div>
+                {/* Fishing level bar — the SAME shared pill as the raids' Nav bar,
+                    just gold + FISH instead of green + NAV. */}
+                <StatLevelBar level={xp.level} progress={xp.progress} toGo={toNext} isMax={atMax} accent="#f0c040" label="FISH" />
               </div>
             )
           })()}
