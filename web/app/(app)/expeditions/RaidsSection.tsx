@@ -65,8 +65,8 @@ function formatRaidMs(ms: number): string {
 // at 36/64 (and a slight 32/68 nudge every fourth row for rhythm) give a
 // calm, readable lean without losing the "sea chart" feel.
 const COLS = [36, 64, 32, 68]
-const ROW = 84           // vertical pitch between node centers
-const TOKEN = 72         // layout/max token diameter (drives spacing + viewBox)
+const ROW = 98           // vertical pitch between node centers
+const TOKEN = 86         // layout/max token diameter (drives spacing + viewBox)
 const PAD_TOP = 18
 // Bigger than PAD_TOP because the current-node label sits BELOW its
 // token (~30-40px tall for one or two lines). On every row except the
@@ -81,8 +81,12 @@ const PAD_BOTTOM = 52
 // headline of the run is visually heavier, but the difference is small
 // enough that it doesn't break the rhythm. Side-branch challenge nodes
 // stay smaller (SIDE_BRANCH_SIZE below) because they're optional detours.
-const NODE_SIZE = 56
-const BOSS_NODE_SIZE = 62
+// Sized for the full-screen campaign overlay (max-width 520). The map used
+// to sit inline in a narrow card where 56px tokens read fine; on the wider
+// full-screen chart they looked like small beads with lots of dead space
+// around them, so the whole chain got bumped up a notch.
+const NODE_SIZE = 68
+const BOSS_NODE_SIZE = 76
 
 function nodeSizeFor(type: string): number {
   return type === 'raid' ? BOSS_NODE_SIZE : NODE_SIZE
@@ -93,7 +97,7 @@ function nodeSizeFor(type: string): number {
 // signals "harder version of the same fight" — the portrait inside is the
 // SAME as the parent's, so a red ring + red pulsing glow does the work of
 // telling the player "danger version" without changing the image.
-const SIDE_BRANCH_SIZE = 40
+const SIDE_BRANCH_SIZE = 50
 const SIDE_BRANCH_ACCENT = '#ef4444'
 
 function NodeGlyph({ type, color, size = 22 }: { type: string; color: string; size?: number }) {
