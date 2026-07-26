@@ -2864,7 +2864,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             style={{ position: 'relative', width: 92, height: 92, margin: '14px auto 4px' }}>
             <div aria-hidden style={{ position: 'absolute', inset: -14, borderRadius: '50%', background: `radial-gradient(circle, ${MC}3a 0%, transparent 66%)`, animation: 'gauntPulse 3.4s ease-in-out infinite' }} />
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/raid8_donfinleone.png" alt="" loading="eager" decoding="async"
+            <img src="/donsgauntlet.png" alt="" loading="eager" decoding="async"
               style={{ position: 'relative', width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', border: `1.5px solid ${MC}aa`, filter: `drop-shadow(0 6px 20px ${MC}55)` }} />
           </motion.div>
           <motion.h1 initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1, type: 'spring', stiffness: 220, damping: 18 }}
@@ -2921,7 +2921,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             style={{ position: 'relative', width: 96, height: 96, margin: '16px auto 6px' }}>
             <div aria-hidden style={{ position: 'absolute', inset: -16, borderRadius: '50%', background: `radial-gradient(circle, ${MC}44 0%, transparent 66%)`, animation: 'gauntPulse 3s ease-in-out infinite' }} />
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/raid8_donfinleone.png" alt="" loading="eager" decoding="async"
+            <img src="/donsgauntlet.png" alt="" loading="eager" decoding="async"
               style={{ position: 'relative', width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', border: `1.5px solid ${MC}cc`, filter: `drop-shadow(0 6px 22px ${MC}66)`, ...(won ? {} : { filter: `grayscale(0.4) drop-shadow(0 6px 22px ${MC}66)` }) }} />
           </motion.div>
           <motion.h1 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
