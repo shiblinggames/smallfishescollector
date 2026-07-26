@@ -23,7 +23,7 @@
 //                      trophy shelf instead of entries buried down a list.
 //   4. THE COST      — open a recipe and it tells you, plainly, what forging it
 //                      spends and what that closes off.
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createPortal } from 'react-dom'
 import { vibrate } from '@/lib/haptics'
@@ -111,6 +111,19 @@ export default function ForgeBoard({
   // instead of the recipe-by-recipe bench.
   const [planning, setPlanning] = useState(false)
   const [planTargets, setPlanTargets] = useState<Set<string>>(new Set())
+  // Remember the last plan between visits — a build plan is a long-horizon farm,
+  // so losing it on every page load is friction. localStorage (not a DB column)
+  // because it's a private, device-local convenience, not shared game state.
+  const PLAN_KEY = 'abyssalPlanTargets'
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(PLAN_KEY)
+      if (raw) { const ids = JSON.parse(raw); if (Array.isArray(ids)) setPlanTargets(new Set(ids.filter((x): x is string => typeof x === 'string'))) }
+    } catch { /* private mode / disabled storage — just start empty */ }
+  }, [])
+  useEffect(() => {
+    try { localStorage.setItem(PLAN_KEY, JSON.stringify([...planTargets])) } catch { /* ignore */ }
+  }, [planTargets])
   // The open recipe. Everything a recipe has to say lives in here, so the board
   // itself stays a clean wall of medallions.
   const [open, setOpen] = useState<string | null>(null)
@@ -267,6 +280,7 @@ export default function ForgeBoard({
           targets={planTargets}
           onToggleTarget={id => { vibrate([0, 12]); setPlanTargets(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n }) }}
           onClear={() => { vibrate([0, 10]); setPlanTargets(new Set()) }}
+          onOpenRecipe={id => setOpen(id)}
         />
       ) : (<>
       {/* ── 1. READY — the question most visits are actually asking ───────── */}
@@ -637,7 +651,7 @@ function RecipeSheet({
 // farm (grouped by where the drops come from), the forges, and the Fathoms.
 function AbyssalPlanner({
   recipes, ownedRaidItems, learnedRecipes, fathomsNow, raidItemSlots,
-  targets, onToggleTarget, onClear,
+  targets, onToggleTarget, onClear, onOpenRecipe,
 }: {
   recipes: ForgeRecipe[]
   ownedRaidItems: string[]
@@ -647,9 +661,25 @@ function AbyssalPlanner({
   targets: Set<string>
   onToggleTarget: (id: string) => void
   onClear: () => void
+  onOpenRecipe: (id: string) => void
 }) {
   const owned = useMemo(() => new Set(ownedRaidItems), [ownedRaidItems])
-  const chosen = useMemo(() => recipes.filter(r => targets.has(r.result)).map(r => r.result), [recipes, targets])
+  // A forged Abyssal is already yours, so it drops out of the farm even if it
+  // lingered in a saved plan — the totals only count what you still have to build.
+  const chosen = useMemo(() => recipes.filter(r => targets.has(r.result) && !owned.has(r.result)).map(r => r.result), [recipes, targets, owned])
+
+  // Long-press a medallion to open its full recipe sheet; a short tap toggles it
+  // into the plan (or, for a forged one, just opens the sheet). Tracked on a ref
+  // so the press timer and the "fired" guard survive re-renders.
+  const press = useRef<{ timer: ReturnType<typeof setTimeout> | null; fired: boolean; x: number; y: number }>({ timer: null, fired: false, x: 0, y: 0 })
+  const endPress = () => { if (press.current.timer) { clearTimeout(press.current.timer); press.current.timer = null } }
+  const startPress = (id: string, e: React.PointerEvent) => {
+    press.current.fired = false; press.current.x = e.clientX; press.current.y = e.clientY
+    press.current.timer = setTimeout(() => { press.current.fired = true; vibrate([0, 24]); onOpenRecipe(id) }, 450)
+  }
+  const movePress = (e: React.PointerEvent) => {
+    if (press.current.timer && (Math.abs(e.clientX - press.current.x) > 10 || Math.abs(e.clientY - press.current.y) > 10)) endPress()
+  }
   const plan = useMemo(() => planAbyssalBuild(chosen, learnedRecipes), [chosen, learnedRecipes])
 
   // Base drops grouped by where they drop. Key normalises "The X" / "X" so a
@@ -680,7 +710,7 @@ function AbyssalPlanner({
   return (
     <div>
       <p className="font-karla" style={{ fontSize: '0.86rem', color: '#b4ada2', lineHeight: 1.5, marginBottom: 12 }}>
-        Pick the Abyssals you&apos;re chasing. Every one stacks in a loadout, so there are no bad combos — the planner just totals the whole farm behind them.
+        Pick the Abyssals you&apos;re chasing. Every one stacks in a loadout, so there are no bad combos — the planner just totals the whole farm behind them. <span style={{ color: '#8a8480' }}>Tap to add, hold to inspect the recipe.</span>
       </p>
 
       {/* Selectable Abyssal medallions */}
@@ -688,18 +718,28 @@ function AbyssalPlanner({
         {recipes.map(r => {
           const def = getRaidItem(r.result)!
           const forged = owned.has(r.result)
-          const on = targets.has(r.result)
+          const on = targets.has(r.result) && !forged
           return (
             <motion.button key={r.result} type="button"
-              onClick={() => { if (!forged) onToggleTarget(r.result) }}
-              whileTap={forged ? undefined : { scale: 0.95 }}
+              onPointerDown={e => startPress(r.result, e)}
+              onPointerUp={endPress}
+              onPointerLeave={endPress}
+              onPointerCancel={endPress}
+              onPointerMove={movePress}
+              onClick={() => {
+                // A long-press already fired — swallow the trailing click so it
+                // doesn't also toggle the target.
+                if (press.current.fired) { press.current.fired = false; return }
+                if (forged) { onOpenRecipe(r.result); return }
+                onToggleTarget(r.result)
+              }}
+              whileTap={{ scale: 0.95 }}
               className="tap"
               aria-pressed={on}
-              disabled={forged}
               style={{
                 position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
                 padding: '0.6rem 0.35rem 0.5rem', borderRadius: 13, minWidth: 0,
-                cursor: forged ? 'default' : 'pointer', opacity: forged ? 0.62 : 1,
+                cursor: 'pointer', opacity: forged ? 0.62 : 1, touchAction: 'manipulation',
                 background: on ? 'rgba(255,90,60,0.14)' : 'rgba(255,255,255,0.035)',
                 border: `1px solid ${on ? `${EMBER}aa` : 'rgba(255,255,255,0.1)'}`,
                 transition: 'background 0.14s, border-color 0.14s',
