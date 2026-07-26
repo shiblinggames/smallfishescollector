@@ -406,7 +406,14 @@ const DEEP_BEND_START_2 = 48
 function deepBend2(depth: number): number {
   return depth > DEEP_BEND_START_2 ? Math.pow(DEEP_BEND_RATE, depth - DEEP_BEND_START_2) : 1
 }
-function mobHp2(depth: number)    { return Math.round((350 + depth * 30) * deepBend2(depth)) }
+// 2026-07-26 — EARLY-DEPTH HP NERF. The old (350 + 30·d) intercept made the
+// shallow end a slog: Ch3/4 enemies are tanky by nature, so depths 1-15 dragged.
+// Dropped the intercept (350 → 255) and nudged the slope (30 → 32) so the two
+// curves cross right at the deep-bend start (~depth 48). Net: the early stages
+// shed ~15-24% HP while the deep record band (48+) is left untouched.
+//   d1  380 → 287 (-24%)   d5  500 → 415 (-17%)   d10 650 → 575 (-12%)
+//   d20 950 → 895 (-6%)    d30 1250 → 1215 (-3%)  d47 ~unchanged
+function mobHp2(depth: number)    { return Math.round((255 + depth * 32) * deepBend2(depth)) }
 // Damage: retuned 2026-07-18 after playtest — Ch3/4 enemies already hit hard from
 // depth 1, so the base is lower and the slope FLATTER than Davy's (they start
 // strong, they don't need a steep ramp on top). HP curve unchanged.
