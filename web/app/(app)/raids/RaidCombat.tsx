@@ -5384,13 +5384,25 @@ export default function RaidCombat({
   const enemyTilt  = (enemySinking || enemyHpPctLive >= 35) ? 0 : Math.min(6, ((35 - enemyHpPctLive) / 35) * 6)
   const playerTilt = playerHpPctLive >= 35 ? 0 : -Math.min(6, ((35 - playerHpPctLive) / 35) * 6)
 
+  // Per-raid sky/sea gradient, hoisted so it can back BOTH the stage and the
+  // (translucent) control deck as one continuous scene — see the container +
+  // control-deck backgrounds below.
+  const stageGradient =
+    atmosphere === 'fog'      ? 'linear-gradient(180deg, #4a5566 0%, #58687a 30%, #6a7888 40%, #18222e 100%)' :
+    atmosphere === 'sunset'   ? 'linear-gradient(180deg, #2a1838 0%, #6e2840 16%, #c84a28 34%, #d96a38 44%, #1a0a12 100%)' :
+    atmosphere === 'overcast' ? 'linear-gradient(180deg, #38485a 0%, #485868 30%, #546675 40%, #0a121a 100%)' :
+    atmosphere === 'harbor'   ? 'linear-gradient(180deg, #2b3f39 0%, #35514a 28%, #3d5e54 40%, #071310 100%)' :
+    atmosphere === 'vault'    ? 'linear-gradient(180deg, #0e1330 0%, #171d42 30%, #1e234e 40%, #04050e 100%)' :
+    atmosphere === 'brackwater' ? 'linear-gradient(180deg, #2b2a1e 0%, #454029 26%, #5c5133 40%, #100f08 100%)' :
+                                'linear-gradient(180deg, #1e3a5f 0%, #234567 30%, #2a5274 40%, #0a1c2e 100%)'
+
   return (
     <div style={{
       display: 'flex', flexDirection: 'column',
-      // Frameless: the bordered/rounded container chrome is gone so the fight
-      // reads as part of the page rather than a boxed-in panel. Same layout
-      // (stage over the control deck), same width cap — just no visible frame.
-      background: '#04080e',
+      // Frameless + ONE continuous backdrop: the per-raid gradient lives on the
+      // container so it spans the stage AND the (translucent) control deck below,
+      // reading as a single scene with no boxed-in frame. Same layout + width cap.
+      background: stageGradient,
       overflow: 'hidden',
       maxWidth: 580, margin: '0 auto',
       width: '100%',
@@ -5413,14 +5425,7 @@ export default function RaidCombat({
         // of the same dusk seascape every fight. Default ('dusk') keeps
         // the original warm look for any caller that doesn't opt in
         // (e.g. the practice skirmish).
-        background:
-          atmosphere === 'fog'      ? 'linear-gradient(180deg, #4a5566 0%, #58687a 30%, #6a7888 40%, #18222e 100%)' :
-          atmosphere === 'sunset'   ? 'linear-gradient(180deg, #2a1838 0%, #6e2840 16%, #c84a28 34%, #d96a38 44%, #1a0a12 100%)' :
-          atmosphere === 'overcast' ? 'linear-gradient(180deg, #38485a 0%, #485868 30%, #546675 40%, #0a121a 100%)' :
-          atmosphere === 'harbor'   ? 'linear-gradient(180deg, #2b3f39 0%, #35514a 28%, #3d5e54 40%, #071310 100%)' :
-          atmosphere === 'vault'    ? 'linear-gradient(180deg, #0e1330 0%, #171d42 30%, #1e234e 40%, #04050e 100%)' :
-          atmosphere === 'brackwater' ? 'linear-gradient(180deg, #2b2a1e 0%, #454029 26%, #5c5133 40%, #100f08 100%)' :
-                                      'linear-gradient(180deg, #1e3a5f 0%, #234567 30%, #2a5274 40%, #0a1c2e 100%)',
+        background: stageGradient,
         overflow: 'hidden',
       }}>
         {/* Hit-stop impact flash — a quick white bloom over the stage on a heavy
@@ -6859,8 +6864,9 @@ export default function RaidCombat({
           aim minigame to a body portal; matching heights lets it sit
           inline where the player's eye already is. */}
       <div style={{
-        background: '#060c14',
-        borderTop: '2px solid #2a3548',
+        // Translucent so the container backdrop reads through — one continuous
+        // scene, no solid control slab and no divider frame.
+        background: 'linear-gradient(180deg, rgba(4,8,14,0.42) 0%, rgba(3,6,12,0.72) 100%)',
         padding: '0.7rem 0.85rem 0.95rem',
         display: 'flex', flexDirection: 'column', gap: 8,
       }}>
