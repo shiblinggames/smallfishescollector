@@ -163,7 +163,9 @@ function ContestCard({ def, view, decided }: { def: ContestDef; view: ContestVie
               ))}
             </div>
             <p className="font-karla" style={{ fontSize: '0.7rem', color: '#7a756c', marginTop: 11, textAlign: 'center' }}>
-              {def.endsAt
+              {def.resolutionNote
+                ? def.resolutionNote
+                : def.endsAt
                 ? 'The deepest run on the board when the clock runs out takes the prize.'
                 : `No champion yet. First to ${def.board?.goal != null ? formatContestScore(def.board, def.board.goal) : 'the mark'} takes the prize.`}
             </p>

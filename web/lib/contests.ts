@@ -12,10 +12,15 @@
 export type ContestStatus = 'active' | 'completed'
 
 export interface ContestBoard {
-  /** profiles column the race is run on (live top-3 standings). */
-  statColumn: string
+  /** profiles column the race is run on (live top-3 standings). Omitted when
+   *  `computed` is set (the score isn't a stored column). */
+  statColumn?: string
   /** tiebreak column — first to reach the score ranks higher. */
-  tiebreakColumn: string
+  tiebreakColumn?: string
+  /** Score comes from a LIVE computation, not a profiles column (e.g. achievement
+   *  points summed from earned badges). getContestsView branches on this to build
+   *  standings from the matching board helper instead of a `statColumn` query. */
+  computed?: 'achievement_points'
   /** Target to win, for "first to X" races. Omitted for deadline/leaderboard
    *  contests (`endsAt`), where the highest score when the clock runs out wins. */
   goal?: number
@@ -43,9 +48,25 @@ export interface ContestDef {
    *  (not "first to X") — the UI shows a countdown + a ranked board, and the
    *  winner is resolved by the dev at the deadline (bespoke prize). */
   endsAt?: string
+  /** The bottom "how the winner is decided" line. Overrides the default
+   *  deadline / first-to-X copy — used when the resolution doesn't fit either
+   *  (e.g. "most points when the beta ends", no fixed date). */
+  resolutionNote?: string
 }
 
 export const CONTESTS: ContestDef[] = [
+  {
+    id: 'achievement_points_beta',
+    name: 'The Decorated Captain',
+    tagline: 'Every badge in your Captain’s Log is worth points. The captain carrying the most achievement points when the beta closes out takes the final prize. Chase every feat, fill every page.',
+    goalLabel: 'Most achievement points when beta ends',
+    prize: 'A free custom item, your own one-of-a-kind cosmetic',
+    prizeCode: 'ACHIEVEMENT-POINTS-BETA',
+    status: 'active',
+    accent: '#a78bfa',
+    board: { computed: 'achievement_points', unit: ' pts' },
+    resolutionNote: 'The captain with the most achievement points when the beta ends takes the prize.',
+  },
   {
     id: 'gauntlet_deepest_30d',
     name: 'The Deepest Descent',
