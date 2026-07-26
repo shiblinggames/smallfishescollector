@@ -1095,6 +1095,65 @@ export function isAbyssalForgedItem(id: string): boolean {
   return getForgeRecipe(id)?.tier === 3
 }
 
+// ── ABYSSAL BUILD PLANNER ───────────────────────────────────────────────────
+// The forge board answers "what can I forge right now?", one recipe at a time.
+// The planner answers the OTHER question: "I want THESE Abyssals — what does the
+// whole farm look like?" A tier-3 Abyssal is two tier-2 fusions, each two base
+// drops, so the flat recipe never shows the four drops actually behind it. These
+// pure helpers expand a set of targets all the way down to base drops (with
+// multiplicity — forging is destructive, so two builds sharing a part each need
+// their own copy).
+
+/** Every BASE item consumed to forge `resultId` from scratch, with multiplicity.
+ *  Recurses through intermediate fusions until it hits items that aren't
+ *  themselves a recipe result (the true drops). */
+export function forgeBaseLeaves(resultId: string): string[] {
+  const r = getForgeRecipe(resultId)
+  if (!r) return [resultId]
+  return r.components.flatMap(forgeBaseLeaves)
+}
+
+/** Every recipe that must be FORGED to build `resultId` from base parts — the
+ *  target itself plus every intermediate fusion, with multiplicity (a shared
+ *  intermediate is forged once per parent that needs it). */
+export function forgeSubRecipeIds(resultId: string): string[] {
+  const r = getForgeRecipe(resultId)
+  if (!r) return []
+  return [resultId, ...r.components.flatMap(forgeSubRecipeIds)]
+}
+
+export interface AbyssalPlan {
+  targets: string[]
+  /** Base drops to farm: id → total quantity across all targets. */
+  baseQty: Record<string, number>
+  /** Recipes to forge: id → how many times (target + intermediates). */
+  forgeCount: Record<string, number>
+  /** Distinct recipes not yet learned — what Fathoms actually get spent on. */
+  learnRecipeIds: string[]
+  fathomCost: number
+  baseTotal: number
+  forgeTotal: number
+}
+
+/** Aggregate the full farm for a set of target results. `learnedRecipes` bills
+ *  the Fathom cost only for recipes the player still needs to learn. */
+export function planAbyssalBuild(targetIds: string[], learnedRecipes: string[] = []): AbyssalPlan {
+  const baseQty: Record<string, number> = {}
+  const forgeCount: Record<string, number> = {}
+  for (const t of targetIds) {
+    for (const b of forgeBaseLeaves(t)) baseQty[b] = (baseQty[b] || 0) + 1
+    for (const f of forgeSubRecipeIds(t)) forgeCount[f] = (forgeCount[f] || 0) + 1
+  }
+  const learned = new Set(learnedRecipes)
+  const learnRecipeIds = Object.keys(forgeCount).filter(id => !learned.has(id))
+  const fathomCost = learnRecipeIds.reduce((s, id) => s + (getForgeRecipe(id)?.fathomCost ?? 0), 0)
+  return {
+    targets: targetIds, baseQty, forgeCount, learnRecipeIds, fathomCost,
+    baseTotal: Object.values(baseQty).reduce((a, b) => a + b, 0),
+    forgeTotal: Object.values(forgeCount).reduce((a, b) => a + b, 0),
+  }
+}
+
 /** Ownership EXPANDED through the forge: everything in raid_items, plus every
  *  component that was CONSUMED into a fusion the player owns (recursively, so
  *  future fusion-of-fusion tiers expand too). The forge is destructive — a

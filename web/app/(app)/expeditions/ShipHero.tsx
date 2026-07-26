@@ -1672,6 +1672,7 @@ export default function ShipHero({
                    can become, then the whole collection as a wall of medallions. */
                 <ForgeBoard
                   abyssalUnlocked={abyssalUnlocked}
+                  raidItemSlots={raidItemSlots}
                   ownedRaidItems={ownedRaidItems}
                   learnedRecipes={learnedRecipes}
                   fathomsNow={fathomsNow}

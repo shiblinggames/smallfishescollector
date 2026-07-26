@@ -32,6 +32,7 @@ import {
   FORGE_RECIPES, getRaidItem, getForgeRecipe, cacheComponentsMissing,
   forgeComponentIds, recipesUsingComponent, forgeOpportunityCost,
   recipeNeedsGauntlet2, GAUNTLET2_BASE_ITEM_IDS, isAbyssalForgedItem,
+  planAbyssalBuild, type ForgeRecipe,
 } from '@/lib/raidItems'
 import { PRISMATIC, forgedBorderSoft, forgedTextSoft, ABYSSAL_EMBER, ABYSSAL_EMBER_TEXT, abyssalEmberBorder } from '@/lib/prismatic'
 
@@ -83,7 +84,7 @@ function ItemArt({ id, size, dim = false }: { id: string; size: number; dim?: bo
 export default function ForgeBoard({
   ownedRaidItems, learnedRecipes, fathomsNow,
   forging, forgeArmed, learning, learnArmed,
-  onForgeTap, onLearnTap, abyssalUnlocked = false,
+  onForgeTap, onLearnTap, abyssalUnlocked = false, raidItemSlots = 4,
 }: {
   /** Owns Don's Abyssal Forge? Tier-3 recipes are hidden entirely until then. */
   abyssalUnlocked?: boolean
@@ -96,19 +97,28 @@ export default function ForgeBoard({
   learnArmed: string | null
   onForgeTap: (resultId: string) => void
   onLearnTap: (resultId: string, cost: number) => void
+  /** How many raid items the captain can equip at once — the planner's mount
+   *  check. Purely informational: you can BUILD every Abyssal regardless. */
+  raidItemSlots?: number
 }) {
   // Which forge you're looking at. The Abyssal (tier-3) tab only becomes a real
   // destination once you own the Abyssal Forge; before that it's a locked teaser.
   const [tab, setTab] = useState<2 | 3>(2)
   // Tapping a part you hold filters the board to what it can become.
   const [filterPart, setFilterPart] = useState<string | null>(null)
+  // Abyssal tab only: "Plan a Build" mode. Pick target Abyssals and see the
+  // whole recursive farm (base drops by source, forges, Fathoms, mount check)
+  // instead of the recipe-by-recipe bench.
+  const [planning, setPlanning] = useState(false)
+  const [planTargets, setPlanTargets] = useState<Set<string>>(new Set())
   // The open recipe. Everything a recipe has to say lives in here, so the board
   // itself stays a clean wall of medallions.
   const [open, setOpen] = useState<string | null>(null)
   const abyssalTab = tab === 3
 
   // A part selected on one tab means nothing on the other — clear it on switch.
-  useEffect(() => { setFilterPart(null) }, [tab])
+  // Plan mode is Abyssal-only, so drop it when you leave that bench.
+  useEffect(() => { setFilterPart(null); if (tab !== 3) setPlanning(false) }, [tab])
 
   const owned = useMemo(() => new Set(ownedRaidItems), [ownedRaidItems])
   const learned = useMemo(() => new Set(learnedRecipes), [learnedRecipes])
@@ -222,6 +232,43 @@ export default function ForgeBoard({
         })}
       </div>
 
+      {/* ── Abyssal-only: the "Plan a Build" toggle. The bench answers "what
+             can I forge now?"; the planner answers "what does building THESE
+             Abyssals actually take?" ─────────────────────────────────────── */}
+      {abyssalTab && (
+        <button type="button"
+          onClick={() => { vibrate([0, 14]); setPlanning(p => !p) }}
+          className="tap"
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            width: '100%', marginBottom: '1.15rem', padding: '0.7rem', borderRadius: 12, cursor: 'pointer',
+            background: planning ? 'rgba(255,255,255,0.04)' : 'linear-gradient(180deg, rgba(255,90,60,0.16), rgba(120,20,40,0.05))',
+            border: `1px solid ${planning ? 'rgba(255,255,255,0.16)' : `${EMBER}77`}`,
+            color: planning ? '#c8c2b8' : '#ffcdb8',
+          }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            {planning
+              ? <path d="M19 12H5M12 19l-7-7 7-7" />
+              : <><path d="M9 3H5a2 2 0 0 0-2 2v4M15 3h4a2 2 0 0 1 2 2v4M9 21H5a2 2 0 0 1-2-2v-4M15 21h4a2 2 0 0 0 2-2v-4" /><path d="M12 8v8M8 12h8" /></>}
+          </svg>
+          <span className="font-cinzel font-700" style={{ fontSize: '0.92rem' }}>
+            {planning ? 'Back to the bench' : 'Plan a Build'}
+          </span>
+        </button>
+      )}
+
+      {abyssalTab && planning ? (
+        <AbyssalPlanner
+          recipes={tierRows.map(r => r.recipe)}
+          ownedRaidItems={ownedRaidItems}
+          learnedRecipes={learnedRecipes}
+          fathomsNow={fathomsNow}
+          raidItemSlots={raidItemSlots}
+          targets={planTargets}
+          onToggleTarget={id => { vibrate([0, 12]); setPlanTargets(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n }) }}
+          onClear={() => { vibrate([0, 10]); setPlanTargets(new Set()) }}
+        />
+      ) : (<>
       {/* ── 1. READY — the question most visits are actually asking ───────── */}
       {ready.length > 0 && (
         <div style={{ marginBottom: '1.2rem' }}>
@@ -367,6 +414,7 @@ export default function ForgeBoard({
           </div>
         </div>
       ))}
+      </>)}
 
       {/* ── 4. THE RECIPE SHEET — and what forging it costs you ───────────── */}
       <RecipeSheet
@@ -580,5 +628,184 @@ function RecipeSheet({
       })()}
     </AnimatePresence>,
     document.body,
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// THE ABYSSAL PLANNER — target-first, not recipe-first. Pick the Abyssals you're
+// chasing; it expands each one down to its four base drops and totals the whole
+// farm (grouped by where the drops come from), the forges, and the Fathoms.
+function AbyssalPlanner({
+  recipes, ownedRaidItems, learnedRecipes, fathomsNow, raidItemSlots,
+  targets, onToggleTarget, onClear,
+}: {
+  recipes: ForgeRecipe[]
+  ownedRaidItems: string[]
+  learnedRecipes: string[]
+  fathomsNow: number
+  raidItemSlots: number
+  targets: Set<string>
+  onToggleTarget: (id: string) => void
+  onClear: () => void
+}) {
+  const owned = useMemo(() => new Set(ownedRaidItems), [ownedRaidItems])
+  const chosen = useMemo(() => recipes.filter(r => targets.has(r.result)).map(r => r.result), [recipes, targets])
+  const plan = useMemo(() => planAbyssalBuild(chosen, learnedRecipes), [chosen, learnedRecipes])
+
+  // Base drops grouped by where they drop. Key normalises "The X" / "X" so a
+  // single source doesn't split into two headers.
+  const norm = (s: string) => s.replace(/^the\s+/i, '').toLowerCase()
+  const groups = useMemo(() => {
+    const g: Record<string, { label: string; items: { id: string; qty: number }[] }> = {}
+    for (const [id, qty] of Object.entries(plan.baseQty)) {
+      const raw = getRaidItem(id)?.source ?? 'Unknown source'
+      const k = norm(raw)
+      if (!g[k]) g[k] = { label: raw, items: [] }
+      g[k].items.push({ id, qty })
+    }
+    const total = (o: { items: { qty: number }[] }) => o.items.reduce((a, b) => a + b.qty, 0)
+    return Object.values(g)
+      .map(o => ({ ...o, total: total(o), items: o.items.sort((a, b) => b.qty - a.qty || (getRaidItem(a.id)?.name ?? '').localeCompare(getRaidItem(b.id)?.name ?? '')) }))
+      .sort((a, b) => b.total - a.total || a.label.localeCompare(b.label))
+  }, [plan])
+
+  const maxQ = Math.max(1, ...Object.values(plan.baseQty))
+  const t3 = chosen.length
+  const t2 = plan.forgeTotal - t3
+  const shared = Object.entries(plan.forgeCount)
+    .filter(([, c]) => c > 1)
+    .map(([id, c]) => `${getRaidItem(id)?.name} ×${c}`)
+  const overMount = t3 > raidItemSlots
+
+  return (
+    <div>
+      <p className="font-karla" style={{ fontSize: '0.86rem', color: '#b4ada2', lineHeight: 1.5, marginBottom: 12 }}>
+        Pick the Abyssals you&apos;re chasing. Every one stacks in a loadout, so there are no bad combos — the planner just totals the whole farm behind them.
+      </p>
+
+      {/* Selectable Abyssal medallions */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: '1.1rem' }}>
+        {recipes.map(r => {
+          const def = getRaidItem(r.result)!
+          const forged = owned.has(r.result)
+          const on = targets.has(r.result)
+          return (
+            <motion.button key={r.result} type="button"
+              onClick={() => { if (!forged) onToggleTarget(r.result) }}
+              whileTap={forged ? undefined : { scale: 0.95 }}
+              className="tap"
+              aria-pressed={on}
+              disabled={forged}
+              style={{
+                position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+                padding: '0.6rem 0.35rem 0.5rem', borderRadius: 13, minWidth: 0,
+                cursor: forged ? 'default' : 'pointer', opacity: forged ? 0.62 : 1,
+                background: on ? 'rgba(255,90,60,0.14)' : 'rgba(255,255,255,0.035)',
+                border: `1px solid ${on ? `${EMBER}aa` : 'rgba(255,255,255,0.1)'}`,
+                transition: 'background 0.14s, border-color 0.14s',
+              }}>
+              <ItemArt id={r.result} size={40} dim={forged && !on} />
+              <span className="font-cinzel font-700" style={{ fontSize: '0.72rem', lineHeight: 1.18, textAlign: 'center', minHeight: '1.7rem', color: on ? '#ffcdb8' : '#e9e4da' }}>
+                {def.name}
+              </span>
+              {forged ? (
+                <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.55rem', color: '#7be0a3' }}>Forged</span>
+              ) : (
+                <span aria-hidden style={{
+                  width: 17, height: 17, borderRadius: '50%', display: 'grid', placeItems: 'center',
+                  border: `1.5px solid ${on ? EMBER : 'rgba(255,255,255,0.18)'}`,
+                  background: on ? EMBER : 'transparent', color: on ? '#2a0d08' : 'transparent',
+                }}>
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+                </span>
+              )}
+            </motion.button>
+          )
+        })}
+      </div>
+
+      {chosen.length === 0 ? (
+        <p className="font-karla" style={{ fontSize: '0.84rem', color: '#8a8480', lineHeight: 1.5, textAlign: 'center', padding: '1.2rem 0.5rem' }}>
+          Tap an Abyssal above to see exactly what it takes to forge.
+        </p>
+      ) : (
+        <>
+          {/* Summary tiles */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+            {[
+              { v: `${t3}`, l: 'Abyssals' },
+              { v: `${plan.baseTotal}`, l: 'Drops to farm' },
+              { v: `${t2}+${t3}`, l: 'Tier-2 + Abyssal forges' },
+              { v: `${plan.fathomCost}`, l: 'Fathoms to learn' },
+            ].map(s => (
+              <div key={s.l} style={{ flex: '1 1 108px', background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 11, padding: '0.6rem 0.7rem' }}>
+                <p className="font-cinzel font-800" style={{ fontSize: '1.4rem', lineHeight: 1, color: '#ffcdb8' }}>{s.v}</p>
+                <p className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.54rem', color: '#8a8480', marginTop: 5 }}>{s.l}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Fathom affordability + mount check */}
+          <p className="font-karla" style={{ fontSize: '0.76rem', color: fathomsNow >= plan.fathomCost ? GREEN : AMBER, marginBottom: overMount || shared.length ? 8 : 14 }}>
+            {plan.fathomCost === 0 ? 'Every recipe already learned — just the drops to go.'
+              : fathomsNow >= plan.fathomCost ? `You hold ${fathomsNow} Fathoms — enough to learn all ${plan.learnRecipeIds.length} recipe${plan.learnRecipeIds.length > 1 ? 's' : ''}.`
+              : `Learning the ${plan.learnRecipeIds.length} recipe${plan.learnRecipeIds.length > 1 ? 's' : ''} costs ${plan.fathomCost} Fathoms; you have ${fathomsNow}.`}
+          </p>
+          <p className="font-karla" style={{ fontSize: '0.78rem', lineHeight: 1.5, color: overMount ? AMBER : '#7be0a3', marginBottom: shared.length ? 8 : 14 }}>
+            {overMount
+              ? `⚑ ${t3} Abyssals but only ${raidItemSlots} mounts — build them all, you'll just swap which ${raidItemSlots} you fly per fight.`
+              : `✓ All ${t3} fit your ${raidItemSlots} mounts — the whole set can ride at once.`}
+          </p>
+          {shared.length > 0 && (
+            <p className="font-karla" style={{ fontSize: '0.78rem', lineHeight: 1.5, color: AMBER, background: `${AMBER}12`, border: `1px solid ${AMBER}3a`, borderRadius: 9, padding: '0.55rem 0.7rem', marginBottom: 14 }}>
+              ⚑ {shared.join(', ')} forged more than once — a shared parent means a fresh copy per Abyssal, farmed from scratch each time.
+            </p>
+          )}
+
+          {/* Drops to farm, grouped by source */}
+          <p className="font-karla font-800 uppercase tracking-[0.14em]" style={{ fontSize: '0.68rem', color: EMBER, marginBottom: 11 }}>
+            Drops to farm — {plan.baseTotal} total
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
+            {groups.map(g => (
+              <div key={g.label}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8, paddingBottom: 5, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                  <span className="font-karla font-700" style={{ fontSize: '0.76rem', color: '#a9d0dd' }}>{g.label}</span>
+                  <span className="font-karla" style={{ fontSize: '0.62rem', color: '#6f6a63', marginLeft: 'auto' }}>{g.total} drop{g.total > 1 ? 's' : ''}</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {g.items.map(({ id, qty }) => {
+                    const def = getRaidItem(id)
+                    const have = owned.has(id)
+                    return (
+                      <div key={id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#ffce8a', background: 'rgba(232,200,121,0.1)', border: `1px solid ${GOLD}44`, borderRadius: 7, padding: '2px 8px', minWidth: 36, textAlign: 'center' }}>×{qty}</span>
+                        <span style={{ flexShrink: 0, width: 26, height: 26, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.25)' }}>
+                          <ItemArt id={id} size={20} />
+                        </span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: '#e6e1d6', display: 'flex', alignItems: 'baseline', gap: 7 }}>
+                            {def?.name}
+                            {have && <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.56rem', color: GREEN }}>aboard</span>}
+                          </p>
+                          <div style={{ height: 4, borderRadius: 3, background: 'rgba(0,0,0,0.4)', overflow: 'hidden', marginTop: 4 }}>
+                            <div style={{ height: '100%', width: `${Math.round(qty / maxQ * 100)}%`, borderRadius: 3, background: `linear-gradient(90deg, ${GOLD}88, ${GOLD})` }} />
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <button type="button" onClick={onClear} className="font-karla font-700 tap"
+            style={{ width: '100%', marginTop: 18, padding: '0.6rem', background: 'none', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, color: '#8a8480', fontSize: '0.82rem', cursor: 'pointer' }}>
+            Clear selection
+          </button>
+        </>
+      )}
+    </div>
   )
 }
