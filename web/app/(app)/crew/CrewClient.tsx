@@ -1281,7 +1281,12 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#07060a', color: '#f0ede8', padding: '1.25rem 1rem 4rem' }}>
+    // Transparent so the painted crew-quarters backdrop (ClientBackground /crew)
+    // shows through. `position: relative` with NO numeric z-index lifts the page
+    // above the fixed z0 backdrop via DOM order WITHOUT creating a stacking
+    // context — so the inline fixed modals below (e.g. the hall-upgrade sheet)
+    // still stack over the Nav exactly as before.
+    <div style={{ minHeight: '100vh', background: 'transparent', position: 'relative', color: '#f0ede8', padding: '1.25rem 1rem 4rem' }}>
       <div style={{ maxWidth: 980, margin: '0 auto' }}>
 
         {/* Header — title + roster count chip. Gems + Nav level live in
