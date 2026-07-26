@@ -13,7 +13,8 @@ const ROUTE_BG: [string, BgConfig][] = [
   // Gauntlet routes render their own painted abyss inside GauntletGame's
   // AbyssBackdrop (which sits over this layer), so they're intentionally NOT here.
   ['/raids',                   { src: '/raid1background.jpg',        overlay: 'rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.50) 50%, rgba(0,0,0,0.75) 100%' }],
-  ['/leaderboard',             { src: '/leaderboardbackground.jpeg', overlay: 'rgba(0,0,0,0.52) 0%, rgba(0,0,0,0.68) 50%, rgba(0,0,0,0.88) 100%' }],
+  ['/leaderboard',             { src: '/leaderboard-bg.jpg',         overlay: 'rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.66) 50%, rgba(0,0,0,0.9) 100%' }],
+  ['/badges',                  { src: '/badges-bg.jpg',             overlay: 'rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.66) 50%, rgba(0,0,0,0.9) 100%' }],
   ['/packs',                   { src: '/crewopeningbackground.jpg', overlay: 'rgba(0,0,0,0.52) 0%, rgba(0,0,0,0.65) 50%, rgba(0,0,0,0.88) 100%' }],
   // Tavern — one warm, hand-painted "place" per section. Ordered specific →
   // general: startsWith takes the FIRST match, so every sub-route must sit
