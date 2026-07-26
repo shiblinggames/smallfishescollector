@@ -53,7 +53,7 @@ export const CONTESTS: ContestDef[] = [
     goalLabel: 'Deepest Gauntlet run by July 25',
     prize: 'A free custom item — your own one-of-a-kind cosmetic',
     prizeCode: 'GAUNTLET-DEEPEST-30D',
-    status: 'active',
+    status: 'completed',   // resolved 2026-07-26 — shortbus_vip, depth 96
     accent: '#2dd4bf',
     endsAt: '2026-07-25T23:59:00.000Z',
     board: {
