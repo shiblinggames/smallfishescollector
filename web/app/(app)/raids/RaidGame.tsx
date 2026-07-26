@@ -1509,6 +1509,23 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   // ─── Playing phase: render the new turn-based combat ──────────────────────
   if (phase === 'playing') {
     return (
+      <>
+      {/* Full-screen zone backdrop — the raid's zone photo painted across the
+          WHOLE screen (fixed), so it reads as the single battle backdrop and
+          RaidCombat's container stays transparent (transparentBackdrop) to sit
+          directly on it — no boxed second image over a different page image.
+          zIndex -1: the whole page already lives inside PageTransition's
+          `position:relative; zIndex:1` layer, which sits ABOVE the app-level
+          ClientBackground (/raid1background). So even at -1 this covers that page
+          image, while sitting BEHIND the in-flow combat content (no lifting
+          needed) and leaving the fixed combat overlays untouched. */}
+      {config.zone && (
+        <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={RAID_ZONE_BG[config.zone]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(4,8,14,0.4) 0%, rgba(4,8,14,0.56) 46%, rgba(3,5,10,0.82) 100%)' }} />
+        </div>
+      )}
       <div className="raid-combat-region flex flex-col items-center gap-2 select-none" style={{
         userSelect: 'none',
         // Breathing gap so the bottom action buttons clear the fixed
@@ -1586,6 +1603,10 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 enemy={enemyForCombat}
                 atmosphere={config.atmosphere}
                 zoneBg={config.zone ? RAID_ZONE_BG[config.zone] : undefined}
+                // The zone photo is painted full-screen behind the whole combat
+                // region (below), so RaidCombat's own container stays transparent
+                // and that single backdrop shows through — no boxed second image.
+                transparentBackdrop={!!config.zone}
                 affix={eliteAffix}
                 isElite={!!eliteAffix}
                 isBoss={isBoss}
@@ -1860,6 +1881,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
           )}
         </AnimatePresence>
       </div>
+      </>
     )
   }
 

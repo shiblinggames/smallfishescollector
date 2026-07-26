@@ -525,6 +525,13 @@ export interface RaidCombatProps {
    *  it apart from the campaign's abyss raids. Hardcore leaves it unset so its
    *  red vignette reads clean. */
   zoneFilter?: string
+  /** The CALLER paints a full-screen backdrop behind the combat (e.g. a raid's
+   *  zone photo, spanning the whole screen from RaidGame). When true, RaidCombat
+   *  renders its own container fully TRANSPARENT — no boxed zone image, no
+   *  stage gradient, no procedural atmosphere — so that single backdrop shows
+   *  through behind the ships AND the control deck. The ships/HP/log keep their
+   *  own translucent backings for legibility. */
+  transparentBackdrop?: boolean
   /** Crew abilities pipeline. crewMembers carries id/slug/xp/name/portrait
    *  so RaidCombat can derive each crew's class + current milestone via
    *  lib/crewClasses. usedAbilityIds is the per-raid cooldown owned by
@@ -582,6 +589,7 @@ export default function RaidCombat({
   atmosphere = 'dusk',
   zoneBg,
   zoneFilter,
+  transparentBackdrop = false,
   crewMembers = [], usedAbilityIds, abilitiesRefreshed = false, onAbilityFired,
   usedRaidItemIds, onRaidItemUsed, onRefreshAbility,
   usedAbilitySub = 'Already used this raid.', openingNote,
@@ -5402,16 +5410,19 @@ export default function RaidCombat({
       position: 'relative',
       // Frameless + ONE continuous backdrop: the per-raid gradient (and a zone
       // image, if set) live on the CONTAINER so they span the stage AND the
-      // translucent control deck below — one scene, no boxed-in frame.
-      background: stageGradient,
+      // translucent control deck below — one scene, no boxed-in frame. When the
+      // caller paints a full-screen backdrop (transparentBackdrop), the container
+      // goes fully transparent so that single scene shows through instead.
+      background: transparentBackdrop ? 'transparent' : stageGradient,
       overflow: 'hidden',
       maxWidth: 580, margin: '0 auto',
       width: '100%',
     }}>
       {/* Zone image backdrop (a fishing-zone photo, or the Gauntlet's abyss) — on
           the CONTAINER so it's the single background behind the ships AND the
-          control deck, not a boxed layer inside the stage. */}
-      {zoneBg && (
+          control deck, not a boxed layer inside the stage. Skipped when the caller
+          owns a full-screen backdrop (raids paint the zone photo screen-wide). */}
+      {!transparentBackdrop && zoneBg && (
         <>
           <div aria-hidden style={{
             position: 'absolute', inset: 0, zIndex: 0,
@@ -5472,7 +5483,7 @@ export default function RaidCombat({
             dusk as default fall-through. Skipped entirely when a zone
             image is set — that raid uses the fishing backdrop instead. */}
 
-        {!zoneBg && (atmosphere === 'fog' ? (
+        {!transparentBackdrop && !zoneBg && (atmosphere === 'fog' ? (
           <>
             {/* Sun behind the Sounding Fog — barely a disc, just a cool
                 pale glow where the sun should be. No pulse — the fog
