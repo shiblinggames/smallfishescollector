@@ -1312,7 +1312,14 @@ export default function ShipHero({
                 left: 'max(0px, calc(50% - 240px))',
                 right: 'max(0px, calc(50% - 240px))',
                 zIndex: 101,
-                background: '#060c14',
+                // Painted captain's war-cabin backdrop (fixed behind the drawer)
+                // under a dark scrim so the dense loadout UI stays legible. Solid
+                // colour fallback while the image loads.
+                backgroundColor: '#060c14',
+                backgroundImage: 'linear-gradient(180deg, rgba(6,10,18,0.68) 0%, rgba(5,8,14,0.8) 46%, rgba(3,5,9,0.92) 100%), url(/ship-loadout-bg.jpg)',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center top',
+                backgroundRepeat: 'no-repeat',
                 borderTop: '1px solid rgba(255,255,255,0.12)',
                 borderRadius: '18px 18px 0 0',
                 display: 'flex', flexDirection: 'column',
