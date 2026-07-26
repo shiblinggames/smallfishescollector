@@ -394,10 +394,12 @@ export default function TackleShopClient({
                   position: 'relative',
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
                   padding: '1rem 0.5rem 0.75rem', borderRadius: 14, cursor: 'pointer', minWidth: 0,
-                  // Translucent, the Forge way — now that the PAGE is a flat dark surface
-                  // (no photo behind it), a subtle wash reads as a clean lift, not mud.
-                  background: ready ? 'rgba(240,192,64,0.1)' : 'rgba(255,255,255,0.04)',
-                  border: `1px solid ${ready ? 'rgba(240,192,64,0.65)' : 'rgba(255,255,255,0.1)'}`,
+                  overflow: 'hidden',
+                  // Each category now has its own painterly backdrop; a dark scrim
+                  // (warmer when the item is ready-to-buy) keeps the item art +
+                  // label + status readable over it.
+                  background: `linear-gradient(180deg, ${ready ? 'rgba(240,192,64,0.16)' : 'rgba(6,10,18,0.26)'} 0%, rgba(6,10,18,0.44) 44%, rgba(6,10,18,0.92) 100%), url(/tackle-${s.key}-bg.jpg) center / cover`,
+                  border: `1px solid ${ready ? 'rgba(240,192,64,0.65)' : 'rgba(255,255,255,0.14)'}`,
                   boxShadow: ready ? '0 0 18px rgba(240,192,64,0.12)' : 'none',
                 }}>
                 {/* Art sits DIRECTLY on the tile, like the Forge. The old nested black
@@ -412,7 +414,7 @@ export default function TackleShopClient({
                   <motion.span aria-hidden animate={{ opacity: [0.2, 0.6, 0.2] }} transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
                     style={{ position: 'absolute', top: 7, right: 8, width: 6, height: 6, borderRadius: 999, background: '#f0c040', boxShadow: '0 0 8px #f0c040', pointerEvents: 'none' }} />
                 )}
-                <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0ede8', lineHeight: 1.1 }}>{s.label}</p>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0ede8', lineHeight: 1.1, textShadow: '0 2px 6px rgba(0,0,0,0.85)' }}>{s.label}</p>
                 {/* One clean status line, centred, coloured by state — the forge tell. */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, maxWidth: '100%' }}>
                   <span aria-hidden style={{ flexShrink: 0, width: 5, height: 5, borderRadius: 999, background: pip.color }} />

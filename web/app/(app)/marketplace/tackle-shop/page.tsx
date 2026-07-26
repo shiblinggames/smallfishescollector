@@ -34,10 +34,14 @@ export default async function TackleShopPage() {
 
   return (
     <>
-      {/* A solid dark PAGE, not pure black. The shop's translucent cards need a dark
-          surface to sit on the way the Forge's do — on raw black a subtle wash reads as
-          nothing. This is the surface; the cards lift off it. */}
-      <main className="min-h-screen pb-24 sm:pb-0 pt-6" style={{ background: '#0b0f18' }}>
+      {/* Painterly bait-and-tackle shop backdrop, under a dark overlay so the
+          category cards (each with its own art now) still lift off a dark surface. */}
+      <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/tackle-shop-page-bg.jpg" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(6,9,14,0.6) 0%, rgba(6,9,14,0.8) 42%, rgba(6,9,14,0.94) 100%)' }} />
+      </div>
+      <main className="min-h-screen pb-24 sm:pb-0 pt-6" style={{ position: 'relative', zIndex: 1 }}>
         <TackleShopClient
           hookTier={profile?.hook_tier ?? 0}
           equippedRod={profile?.rod_tier ?? 0}
