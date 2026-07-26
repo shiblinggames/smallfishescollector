@@ -127,10 +127,16 @@ function ExpeditionTile({
   glow?: boolean
 }) {
   return (
-    <button
+    <motion.button
       type="button"
-      onClick={locked ? undefined : onClick}
+      onClick={locked ? undefined : () => { vibrate([0, 14]); onClick?.() }}
       disabled={locked}
+      // Match the Manage Crew/Ship cards' tactile press: a quick scale-down on
+      // tap (0.94, same as .hub-manage-tap), a whisper of lift on hover, a soft
+      // haptic tick on release, and a spring so it snaps back with life.
+      whileTap={locked ? undefined : { scale: 0.94 }}
+      whileHover={locked ? undefined : { scale: 1.015 }}
+      transition={{ type: 'spring', stiffness: 520, damping: 30 }}
       style={{
         position: 'relative', overflow: 'hidden', width: '100%',
         height: 152, borderRadius: 18, padding: 0,
@@ -139,6 +145,7 @@ function ExpeditionTile({
         boxShadow: glow ? `0 0 18px ${accent}30` : undefined,
         cursor: locked ? 'default' : 'pointer', textAlign: 'left',
         opacity: locked ? 0.94 : 1,
+        WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation',
       }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -174,7 +181,7 @@ function ExpeditionTile({
           <div style={{ width: `${Math.round(progress * 100)}%`, height: '100%', background: `linear-gradient(90deg, ${accent}, ${accent}cc)`, boxShadow: `0 0 6px ${accent}`, transition: 'width 0.5s' }} />
         </div>
       )}
-    </button>
+    </motion.button>
   )
 }
 
