@@ -468,6 +468,23 @@ export const RAID_ZONE_BG: Record<NonNullable<BossRaidConfig['zone']>, string> =
   ancient_deep: '/ancient.jpg',
 }
 
+// Per-raid campaign battle backdrop, keyed to each boss's story LOCATION, so
+// every campaign raid reads as its own place (Pete's sunset cove, the Tollmaster's
+// strait, Ruse's black-market harbor, the Don's abyssal throne, etc.) instead of
+// the five shared zone photos above. RaidGame prefers this by raidId and falls
+// back to RAID_ZONE_BG for anything not listed (challenge/side variants like the
+// Quartermaster's Ghost, the practice skirmish).
+export const RAID_BOSS_BG: Record<string, string> = {
+  corsairs_reckoning: '/raid-corsairs-reckoning.jpg', // Barnacle Pete — sunset Shallows cove
+  captain_krust:      '/raid-krust.jpg',              // Captain Krust — overcast shipping shoals
+  cartographer:       '/raid-cartographer.jpg',       // The Cartographer — the Sounding Fog
+  tollmasters_cut:    '/raid-tollmaster.jpg',         // Tollmaster Spet — the toll-chain strait
+  coffers_fleet:      '/raid-harbor-fleet.jpg',       // Admiral Ruse — the black-market harbor
+  the_quartermaster:  '/raid-quartermaster.jpg',      // The Quartermaster — storm fortress-vault
+  the_blockade:       '/raid-blockade.jpg',           // Sal Brackwater — the brackish estuary
+  the_throne:         '/raid-throne.jpg',             // Don Finleone — the Ancient Deep throne
+}
+
 export const CORSAIRS_RECKONING: BossRaidConfig = {
   raidId: 'corsairs_reckoning',
   enemyAccuracy: 4,

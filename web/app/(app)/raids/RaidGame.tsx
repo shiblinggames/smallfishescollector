@@ -13,7 +13,7 @@ import { raidDamageProfile, type RaidMods } from '@/lib/expeditions'
 import { crewLevelFromXP, CREW_MAX_LEVEL } from '@/lib/crewLevel'
 import { type ShipAugment } from '@/lib/shipAugments'
 import {
-  BossRaidConfig, BroadsideEnemy, RaidLootItem, RARITY_COLOR, raidCompletionBonusXp, RAID_ZONE_BG,
+  BossRaidConfig, BroadsideEnemy, RaidLootItem, RARITY_COLOR, raidCompletionBonusXp, RAID_ZONE_BG, RAID_BOSS_BG,
 } from '@/lib/bossRaids'
 import { isChallengeRaidId } from '@/lib/raidChallenge'
 import { AFFIXES, ELITE_HP_MULT, ELITE_DMG_MULT, rollAffix, rollSecondAffix, mergeAffixes, rollEliteSlots, type AffixDef, type AffixId } from '@/lib/raidAffixes'
@@ -1508,9 +1508,12 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
 
   // ─── Playing phase: render the new turn-based combat ──────────────────────
   if (phase === 'playing') {
+    // Per-raid battle backdrop, keyed to the boss's story location; falls back to
+    // the shared zone photo for challenge/side variants and the practice skirmish.
+    const raidBg = RAID_BOSS_BG[config.raidId] ?? (config.zone ? RAID_ZONE_BG[config.zone] : null)
     return (
       <>
-      {/* Full-screen zone backdrop — the raid's zone photo painted across the
+      {/* Full-screen battle backdrop — the raid's location painted across the
           WHOLE screen (fixed), so it reads as the single battle backdrop and
           RaidCombat's container stays transparent (transparentBackdrop) to sit
           directly on it — no boxed second image over a different page image.
@@ -1519,10 +1522,10 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
           ClientBackground (/raid1background). So even at -1 this covers that page
           image, while sitting BEHIND the in-flow combat content (no lifting
           needed) and leaving the fixed combat overlays untouched. */}
-      {config.zone && (
+      {raidBg && (
         <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={RAID_ZONE_BG[config.zone]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }} />
+          <img src={raidBg} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }} />
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(4,8,14,0.4) 0%, rgba(4,8,14,0.56) 46%, rgba(3,5,10,0.82) 100%)' }} />
         </div>
       )}
@@ -1603,10 +1606,11 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 enemy={enemyForCombat}
                 atmosphere={config.atmosphere}
                 zoneBg={config.zone ? RAID_ZONE_BG[config.zone] : undefined}
-                // The zone photo is painted full-screen behind the whole combat
-                // region (below), so RaidCombat's own container stays transparent
-                // and that single backdrop shows through — no boxed second image.
-                transparentBackdrop={!!config.zone}
+                // The raid's location backdrop is painted full-screen behind the
+                // whole combat region (above), so RaidCombat's own container stays
+                // transparent and that single backdrop shows through — no boxed
+                // second image.
+                transparentBackdrop={!!raidBg}
                 affix={eliteAffix}
                 isElite={!!eliteAffix}
                 isBoss={isBoss}
