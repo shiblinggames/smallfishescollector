@@ -69,7 +69,6 @@ import { getRepairKit, rollRepairKitHeal, repairKitRange } from '@/lib/repairKit
 import { classForSlug, CLASSES, currentMilestone, type AnyClassDef } from '@/lib/crewClasses'
 import { getCrewSkinByFilename } from '@/lib/crewSkins'
 import { ChaseSkinFx } from '@/components/ChaseSkinFx'
-import { hasChaseSummon, ChaseSummonStage } from '@/components/ChaseSummonFx'
 import { crewLevelFromXP } from '@/lib/crewLevel'
 import { type AffixDef } from '@/lib/raidAffixes'
 import { getShipClass, aggregateShipClasses } from '@/lib/shipClasses'
@@ -9178,11 +9177,6 @@ const AbilitySummonFx = memo(function AbilitySummonFx({ label, name, color, imag
   // behind a smaller portrait, a white impact flash lands on arrival, and the
   // ABILITY NAME slams up huge underneath so it reads as an RPG summon.
   const HOLD: number[] = [0, 0.09, 0.78, 0.9]   // transform-settle timing (opacity is driven by the wrapper below)
-  // A chase skin with a BESPOKE summon (ChaseSummonFx) owns its whole center
-  // stage — its own entrance for the crew art + signature attack FX. When one
-  // exists we skip the shared rune-ring/light-ray conjure entirely so it reads
-  // as a completely different summon, not the same one recoloured.
-  const bespoke = !!chase && hasChaseSummon(skinId)
   return (
     <motion.div
       aria-hidden
@@ -9207,9 +9201,6 @@ const AbilitySummonFx = memo(function AbilitySummonFx({ label, name, color, imag
       {/* Near-opaque dark + color-wash backdrop so the summon takes over. */}
       <div style={{ position: 'absolute', inset: 0, opacity: 0.92, background: `radial-gradient(ellipse 75% 65% at 50% 46%, ${color}30 0%, rgba(1,3,8,0.96) 60%)` }} />
 
-      {/* Shared conjure (light rays + rune ring + arrival flashes) — skipped
-          when a bespoke chase summon owns the stage. */}
-      {!bespoke && (<>
       {/* Rotating light rays fanning out behind the crew (conic gradient). */}
       <motion.div
         initial={{ scale: 0.4, rotate: -30 }}
@@ -9254,16 +9245,12 @@ const AbilitySummonFx = memo(function AbilitySummonFx({ label, name, color, imag
           style={{ position: 'absolute', top: '43%', width: 320, height: 320, marginTop: -160, borderRadius: '50%', background: `radial-gradient(circle, #fffbe8ee 0%, ${color}77 34%, transparent 68%)`, pointerEvents: 'none' }}
         />
       )}
-      </>)}
 
       {/* The crew — JUST the art, no card frame. A colored glow (drop-shadow)
           instead of a border/background so it reads as summoning the character,
-          not flashing a card. Overshoot scale-in for impact. For a bespoke chase
-          summon, ChaseSummonStage owns the crew's entrance + signature attack
-          instead of this shared scale-in. */}
-      {bespoke ? (
-        <ChaseSummonStage skinId={skinId ?? null} color={color} image={image} name={name} />
-      ) : (
+          not flashing a card. Overshoot scale-in for impact. A chase skin's
+          signature FX (lightning, tentacles, spectrum, reticle) plays right
+          over the character. */}
       <motion.div
         initial={{ scale: 1.34, y: 10 }}
         animate={{ scale: [1.34, 1, 1, 1], y: [10, 0, 0, 0] }}
@@ -9285,7 +9272,6 @@ const AbilitySummonFx = memo(function AbilitySummonFx({ label, name, color, imag
           <div style={{ fontSize: '3.4rem', color, filter: `drop-shadow(0 0 22px ${color})`, display: 'flex' }}><IconAnchor size={54} /></div>
         )}
       </motion.div>
-      )}
 
       {/* Small crew name, then the BIG ability name slamming up underneath. */}
       <motion.div
