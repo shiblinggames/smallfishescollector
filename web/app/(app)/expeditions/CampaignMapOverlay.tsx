@@ -49,7 +49,11 @@ export default function CampaignMapOverlay({ children }: { children: React.React
       style={{
         position: 'fixed', inset: 0, zIndex: 111,
         display: 'flex', flexDirection: 'column',
-        background: 'linear-gradient(180deg, #0b0806 0%, #060504 100%)',
+        // Campaign scene backdrop for the whole overlay, under a heavy scrim so
+        // the map + node cards stay legible. Painted on the fixed root (not the
+        // scrolling body), so it holds still behind the map without the iOS jank
+        // of background-attachment: fixed.
+        background: 'linear-gradient(180deg, rgba(11,8,6,0.93) 0%, rgba(6,5,4,0.96) 55%, rgba(6,5,4,0.99) 100%), url(/exp-campaign.jpg) top center / cover no-repeat',
       }}
     >
       {/* Fixed header — always-reachable close, even down a long chapter map. */}

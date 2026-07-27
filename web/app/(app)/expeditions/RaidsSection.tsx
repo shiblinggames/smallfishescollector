@@ -3346,12 +3346,7 @@ export default function RaidsSection({ views, doubloons, navLevel, playerShipIma
   return (
     <div id="chapter-map" style={{ marginBottom: '1.5rem', scrollMarginTop: 90 }}>
       {(
-        <div style={{
-          background: 'linear-gradient(180deg, rgba(9,14,22,0.93) 0%, rgba(7,11,17,0.95) 40%, rgba(6,10,16,0.97) 100%), url(/exp-campaign.jpg) top center / cover no-repeat',
-          border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: 16,
-          padding: '0.9rem 0.75rem',
-        }}>
+        <div>
           {/* Journey ↔ Bosses. Journey = the story map (the chapters below).
               Bosses = a farm deck: every boss card with Fight + Challenge one
               tap away, its drops, and your best clear time. */}
