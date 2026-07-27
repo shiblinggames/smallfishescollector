@@ -2858,8 +2858,8 @@ function ViewToggle({ view, onChange }: { view: 'journey' | 'bosses'; onChange: 
               border: `1px solid ${on ? 'rgba(196,169,106,0.42)' : 'transparent'}`,
               background: on ? 'rgba(196,169,106,0.14)' : 'transparent',
               boxShadow: on ? '0 0 16px rgba(196,169,106,0.12)' : 'none' }}>
-            <span className="font-cinzel font-700 uppercase" style={{ display: 'block', fontSize: '0.82rem', letterSpacing: '0.1em', color: on ? '#f0ede8' : '#8a857c' }}>{o.label}</span>
-            <span className="font-karla font-600 uppercase" style={{ display: 'block', fontSize: '0.5rem', letterSpacing: '0.06em', marginTop: 2, color: on ? '#c4a96a' : '#615e5a' }}>{o.sub}</span>
+            <span className="font-cinzel font-700 uppercase" style={{ display: 'block', fontSize: '0.95rem', letterSpacing: '0.1em', color: on ? '#f0ede8' : '#8a857c' }}>{o.label}</span>
+            <span className="font-karla font-600 uppercase" style={{ display: 'block', fontSize: '0.58rem', letterSpacing: '0.06em', marginTop: 2, color: on ? '#c4a96a' : '#615e5a' }}>{o.sub}</span>
           </button>
         )
       })}
@@ -2896,7 +2896,7 @@ function BossesView({ views, raidRecords, repairOwed, onSelect, onRepairBlocked 
       {groups.map(g => (
         <div key={g.chapter.id}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '1rem 2px 0.7rem' }}>
-            <span className="font-cinzel font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.2em', color: '#8a857c', whiteSpace: 'nowrap' }}>Chapter {g.chapter.romanNumeral} · {g.chapter.title}</span>
+            <span className="font-cinzel font-700 uppercase" style={{ fontSize: '0.74rem', letterSpacing: '0.18em', color: '#a1988a', whiteSpace: 'nowrap' }}>Chapter {g.chapter.romanNumeral} · {g.chapter.title}</span>
             <span aria-hidden style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, rgba(255,255,255,0.1), transparent)' }} />
           </div>
           {g.bosses.map(v => (
@@ -2952,7 +2952,7 @@ function BossCard({ view, challenge, rec, isNext, repairOwed, onEnter, onRepairB
             opacity: locked ? 0.26 : cleared ? 0.4 : 0.58, filter: locked ? 'grayscale(1)' : cleared ? 'grayscale(0.5)' : 'none' }} />
       )}
       <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(6,12,20,0.32) 0%, rgba(6,12,20,0.72) 46%, rgba(6,12,20,0.97) 100%)' }} />
-      <span className="font-karla font-700 uppercase" style={{ position: 'absolute', top: 11, right: 11, zIndex: 2, fontSize: '0.44rem', letterSpacing: '0.14em', padding: '0.24rem 0.5rem', borderRadius: 999,
+      <span className="font-karla font-700 uppercase" style={{ position: 'absolute', top: 11, right: 11, zIndex: 2, fontSize: '0.56rem', letterSpacing: '0.13em', padding: '0.28rem 0.6rem', borderRadius: 999,
         ...(cleared ? { color: '#8ff0c0', background: 'rgba(74,222,128,0.13)', border: '1px solid rgba(74,222,128,0.4)' }
           : isNext ? { color: '#08120f', background: 'rgba(94,234,212,0.9)', boxShadow: '0 0 14px rgba(94,234,212,0.4)' }
           : locked ? { color: '#8a857c', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }
@@ -2970,14 +2970,14 @@ function BossCard({ view, challenge, rec, isNext, repairOwed, onEnter, onRepairB
             <span aria-hidden style={{ position: 'absolute', inset: 0, borderRadius: 13, border: `1px solid ${accent}88` }} />
           </div>
           <div style={{ flex: 1, minWidth: 0, paddingTop: 1 }}>
-            <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', lineHeight: 1.08, color: locked ? '#9a948a' : '#fff', textShadow: `0 2px 6px rgba(0,0,0,0.85), 0 0 14px ${accent}30` }}>{node.label}</p>
-            <p className="font-karla" style={{ fontSize: '0.64rem', color: '#c7c0b4', marginTop: 3, textShadow: '0 1px 4px rgba(0,0,0,0.9)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>{node.flavor}</p>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.22rem', lineHeight: 1.08, color: locked ? '#9a948a' : '#fff', textShadow: `0 2px 6px rgba(0,0,0,0.85), 0 0 14px ${accent}30` }}>{node.label}</p>
+            <p className="font-karla" style={{ fontSize: '0.82rem', color: '#c7c0b4', marginTop: 3, textShadow: '0 1px 4px rgba(0,0,0,0.9)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{node.flavor}</p>
           </div>
         </div>
 
         {locked ? (
-          <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#8a857c', marginTop: 11, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <IconLock size={11} /> {view.lockReason ?? 'Locked'}
+          <p className="font-karla font-600" style={{ fontSize: '0.76rem', color: '#8a857c', marginTop: 11, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <IconLock size={13} /> {view.lockReason ?? 'Locked'}
           </p>
         ) : (
           <>
@@ -2986,10 +2986,10 @@ function BossCard({ view, challenge, rec, isNext, repairOwed, onEnter, onRepairB
                 {drops.map(d => {
                   const rc = (d.rarity && RARITY_COLOR[d.rarity]) || '#c4a96a'
                   return (
-                    <span key={d.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.56rem', color: '#e7dcc4', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 999, padding: '0.16rem 0.5rem 0.16rem 0.24rem' }}>
+                    <span key={d.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.68rem', color: '#e7dcc4', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 999, padding: '0.2rem 0.6rem 0.2rem 0.3rem' }}>
                       {d.image ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={d.image} alt="" style={{ width: 15, height: 15, objectFit: 'contain', borderRadius: 4 }} />
+                        <img src={d.image} alt="" style={{ width: 18, height: 18, objectFit: 'contain', borderRadius: 4 }} />
                       ) : (
                         <span style={{ width: 11, height: 11, borderRadius: 3, background: rc, boxShadow: `0 0 6px ${rc}` }} />
                       )}
@@ -3000,7 +3000,7 @@ function BossCard({ view, challenge, rec, isNext, repairOwed, onEnter, onRepairB
               </div>
             )}
             {(best || fleetBest) && (
-              <div style={{ display: 'flex', gap: 14, marginTop: 9, fontSize: '0.56rem', color: '#8a857c' }}>
+              <div style={{ display: 'flex', gap: 16, marginTop: 10, fontSize: '0.68rem', color: '#8a857c' }}>
                 {best && <span>Your best <b style={{ color: '#dcd2bd', fontVariantNumeric: 'tabular-nums' }}>{best}</b></span>}
                 {fleetBest && <span>Fleet <b style={{ color: '#dcd2bd', fontVariantNumeric: 'tabular-nums' }}>{fleetBest}</b></span>}
               </div>
@@ -3009,7 +3009,7 @@ function BossCard({ view, challenge, rec, isNext, repairOwed, onEnter, onRepairB
               <button type="button" className="tap"
                 onClick={e => { e.stopPropagation(); if (!node.route) return; if (blocked) { onRepairBlocked(); return } vibrate([0, 16, 30, 24]); onEnter(node.route) }}
                 style={{ flex: 1, borderRadius: 12, padding: '0.65rem 0', cursor: 'pointer', border: `1px solid ${accent}b0`, background: `${accent}26`, color: '#f0ede8' }}>
-                <span className="font-cinzel font-700 uppercase" style={{ fontSize: '0.76rem', letterSpacing: '0.08em' }}>{cleared ? 'Raid Again' : 'Fight'}</span>
+                <span className="font-cinzel font-700 uppercase" style={{ fontSize: '0.92rem', letterSpacing: '0.08em' }}>{cleared ? 'Raid Again' : 'Fight'}</span>
               </button>
               {challenge && (
                 <button type="button" disabled={!chAvailable} className="tap"
@@ -3017,8 +3017,8 @@ function BossCard({ view, challenge, rec, isNext, repairOwed, onEnter, onRepairB
                   style={{ flex: 1, borderRadius: 12, padding: '0.5rem 0', cursor: chAvailable ? 'pointer' : 'default', lineHeight: 1.05,
                     border: `1px solid ${chAvailable ? 'rgba(208,113,106,0.55)' : 'rgba(255,255,255,0.1)'}`,
                     background: chAvailable ? 'rgba(208,113,106,0.14)' : 'rgba(255,255,255,0.04)', color: chAvailable ? '#ffd9cd' : '#6a6764' }}>
-                  <span className="font-cinzel font-700 uppercase" style={{ display: 'block', fontSize: '0.72rem', letterSpacing: '0.08em' }}>{chCleared ? 'Challenge ✓' : 'Challenge'}</span>
-                  <span className="font-karla font-600" style={{ display: 'block', fontSize: '0.44rem', letterSpacing: '0.04em', opacity: 0.85, marginTop: 1 }}>{chAvailable ? '2× loot · +50% HP' : 'clear first'}</span>
+                  <span className="font-cinzel font-700 uppercase" style={{ display: 'block', fontSize: '0.88rem', letterSpacing: '0.08em' }}>{chCleared ? 'Challenge ✓' : 'Challenge'}</span>
+                  <span className="font-karla font-600" style={{ display: 'block', fontSize: '0.54rem', letterSpacing: '0.04em', opacity: 0.85, marginTop: 2 }}>{chAvailable ? '2× loot · +50% HP' : 'clear first'}</span>
                 </button>
               )}
             </div>
@@ -3098,17 +3098,17 @@ function JourneyChapter({ views, onSelect }: { views: RaidNodeView[]; onSelect: 
             </span>
             {combat ? (
               <span style={{ flex: 1, minWidth: 0, position: 'relative', borderRadius: 13, padding: '8px 11px', background: isCurrent ? 'rgba(94,234,212,0.06)' : isSide ? 'rgba(239,68,68,0.05)' : 'rgba(255,255,255,0.03)', border: `1px solid ${accent}${locked ? '2a' : '4d'}`, boxShadow: isCurrent ? `0 0 18px ${accent}14` : 'none' }}>
-                {isCurrent && <span className="font-karla font-700 uppercase" style={{ position: 'absolute', top: -8, left: 12, fontSize: '0.4rem', letterSpacing: '0.12em', color: '#08120f', background: 'rgba(94,234,212,0.92)', padding: '2px 6px', borderRadius: 999, boxShadow: '0 0 12px rgba(94,234,212,0.4)' }}>You are here</span>}
+                {isCurrent && <span className="font-karla font-700 uppercase" style={{ position: 'absolute', top: -9, left: 12, fontSize: '0.5rem', letterSpacing: '0.12em', color: '#08120f', background: 'rgba(94,234,212,0.92)', padding: '2px 7px', borderRadius: 999, boxShadow: '0 0 12px rgba(94,234,212,0.4)' }}>You are here</span>}
                 <span style={{ display: 'flex', alignItems: 'baseline', gap: 7 }}>
-                  <span className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: locked ? '#9a948a' : '#fff', lineHeight: 1.1 }}>{node.label}</span>
-                  {isSide && <span className="font-karla font-700 uppercase" style={{ fontSize: '0.4rem', letterSpacing: '0.1em', color: SIDE_BRANCH_ACCENT, border: `1px solid ${SIDE_BRANCH_ACCENT}66`, borderRadius: 999, padding: '1px 5px' }}>Challenge</span>}
+                  <span className="font-cinzel font-700" style={{ fontSize: '1.06rem', color: locked ? '#9a948a' : '#fff', lineHeight: 1.1 }}>{node.label}</span>
+                  {isSide && <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.1em', color: SIDE_BRANCH_ACCENT, border: `1px solid ${SIDE_BRANCH_ACCENT}66`, borderRadius: 999, padding: '1px 6px' }}>Challenge</span>}
                 </span>
-                <span className="font-karla" style={{ display: 'block', fontSize: '0.6rem', color: '#a49d90', marginTop: 2, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{node.flavor}</span>
+                <span className="font-karla" style={{ display: 'block', fontSize: '0.74rem', color: '#a49d90', marginTop: 2, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{node.flavor}</span>
               </span>
             ) : (
               <span style={{ flex: 1, minWidth: 0 }}>
-                <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: locked ? '#8a857c' : cleared ? '#b0a99b' : '#d8d0c0' }}>{node.label}</span>
-                <span className="font-karla font-600 uppercase" style={{ display: 'block', fontSize: '0.44rem', letterSpacing: '0.1em', color: '#6a6764', marginTop: 1 }}>{beacon ? "Chapter's end" : nodeTypeLabel(node.type)}</span>
+                <span className="font-karla font-700" style={{ fontSize: '0.86rem', color: locked ? '#8a857c' : cleared ? '#b0a99b' : '#d8d0c0' }}>{node.label}</span>
+                <span className="font-karla font-600 uppercase" style={{ display: 'block', fontSize: '0.54rem', letterSpacing: '0.1em', color: '#6a6764', marginTop: 2 }}>{beacon ? "Chapter's end" : nodeTypeLabel(node.type)}</span>
               </span>
             )}
           </button>
@@ -3117,7 +3117,7 @@ function JourneyChapter({ views, onSelect }: { views: RaidNodeView[]; onSelect: 
       {anyFogged && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginTop: 2 }}>
           <span aria-hidden style={{ flex: '0 0 44px', textAlign: 'center', color: '#4f4a42', fontSize: '1rem' }}>⋯</span>
-          <span className="font-karla" style={{ fontSize: '0.6rem', color: '#5b5449', fontStyle: 'italic' }}>uncharted waters ahead</span>
+          <span className="font-karla" style={{ fontSize: '0.72rem', color: '#5b5449', fontStyle: 'italic' }}>uncharted waters ahead</span>
         </div>
       )}
     </div>
