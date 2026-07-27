@@ -17,19 +17,20 @@ import { SHIP_SKINS } from '@/lib/shipSkins'
 import { getRepairKit, repairKitRange, nextRepairKit } from '@/lib/repairKits'
 import { getGauntletUpgrade } from '@/lib/gauntletUpgrades'
 import { buyRepairKit } from './repairKitActions'
-import { equipShipSkin, saveEquippedRaidItems, forgeRaidItem, learnForgeRecipe, markForgeIntroSeen } from './actions'
+import { equipShipSkin, saveEquippedRaidItems, forgeRaidItem, learnForgeRecipe, markForgeIntroSeen, startAbyssalConversion, claimAbyssalConversion } from './actions'
 import UltimateBuildPanel from './UltimateBuildPanel'
 import SixthBerthPanel from './SixthBerthPanel'
 import ArmoryExpansionPanel from './ArmoryExpansionPanel'
 import { IconCrate } from '@/components/GameIcons'
 import { getShipAugment, type ShipAugmentId } from '@/lib/shipAugments'
-import { bonusChargeSlots, hasForge, hasAbyssalForge } from '@/lib/gauntletUpgrades'
+import { bonusChargeSlots, hasForge, hasAbyssalForge, hasAbyssalAccelerator } from '@/lib/gauntletUpgrades'
+import { ABYSSAL_ACCEL_GEM_COST, isConversionReady, type AbyssalConversion } from '@/lib/abyssalAccelerator'
 import PopupShell from '@/components/PopupShell'
 import { assignToVoyage, benchCrew } from '@/app/(app)/crew/actions'
 import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
 import { applyCrewEffects, resolveEffects, effectSummary, SCOPE_META } from '@/lib/crewEffects'
 import { RARITY_COLORS as CREW_RARITY_COLORS, RARITY_NAMES } from '@/lib/crewGen'
-import { RAID_ITEMS, getRaidItem, FORGE_RECIPES, conflictingRaidItems, isForgedRaidItem, isAbyssalForgedItem } from '@/lib/raidItems'
+import { RAID_ITEMS, getRaidItem, FORGE_RECIPES, conflictingRaidItems, isForgedRaidItem, isAbyssalForgedItem, isConvertibleEpic, legendaryForEpic } from '@/lib/raidItems'
 import { PRISMATIC_TEXT, prismaticBorder, forgedBorderSoft, forgedTextSoft, ABYSSAL_EMBER_TEXT, abyssalEmberBorder } from '@/lib/prismatic'
 import ForgeBoard from './ForgeBoard'
 import { renameShip, buyShip } from '@/app/shipyard/actions'
@@ -215,6 +216,11 @@ interface Props {
   gauntletUpgrades?: string[]
   /** Banked Fathoms — spent to LEARN forge recipes here. */
   gauntletFathoms?: number
+  /** Gems — spent to charge the Abyssal Accelerator. */
+  gems?: number
+  /** The Abyssal Accelerator conversion in flight ({ epicId, legendaryId,
+   *  completesAt }), or null when idle. */
+  abyssalConversion?: AbyssalConversion | null
   /** Forge recipe result-ids the player has already learned. */
   forgeRecipesLearned?: string[]
   /** Whether the one-time "Forge Awakens" celebration has already played. */
@@ -333,6 +339,8 @@ export default function ShipHero({
   shipClasses,
   gauntletUpgrades = [],
   gauntletFathoms = 0,
+  gems: initialGems = 0,
+  abyssalConversion: initialConversion = null,
   forgeRecipesLearned = [],
   hasSeenForgeIntro = true,
   manowarAugment: initialManowarAugment = null,
@@ -512,6 +520,9 @@ export default function ShipHero({
   // Tier-3 (Abyssal) recipes ride Don's separate unlock. Until it's owned the
   // board hides them entirely rather than dangling recipes nobody can learn.
   const abyssalUnlocked = hasAbyssalForge(gauntletUpgrades)
+  // The Abyssal Accelerator (epic→legendary transmutation bench) rides its own
+  // Don's unlock on top of the Abyssal Forge.
+  const acceleratorUnlocked = hasAbyssalAccelerator(gauntletUpgrades)
   const forgeUpg = getGauntletUpgrade('forge')
 
   // Manage Ship section tab. Loadout (the battle decision) first; Ship
@@ -778,6 +789,15 @@ export default function ShipHero({
   // lands so the reveal can settle on confirmed success.
   const [forgeFx, setForgeFx] = useState<{ compImages: (string | null)[]; result: { name: string; image: string | null }; accent: string; abyssal: boolean } | null>(null)
   const [forgeReady, setForgeReady] = useState(false)
+  // ── Abyssal Accelerator (epic→legendary transmutation) ──────────────────────
+  // Single-slot 24h conversion, mirrored from the server prop with an optimistic
+  // resync; the claim reveal reuses the ForgeAnimation overlay.
+  const [conversion, setConversion] = useState<AbyssalConversion | null>(initialConversion)
+  useEffect(() => { setConversion(initialConversion) }, [initialConversion])
+  const [gemsNow, setGemsNow] = useState(initialGems)
+  useEffect(() => { setGemsNow(initialGems) }, [initialGems])
+  const [converting, setConverting] = useState(false)
+  const [claimingConv, setClaimingConv] = useState(false)
   // Recipe learning (the Fathom sink). Mirror the server props into state for
   // optimistic updates, resyncing if the server sends fresh props (admin grants,
   // a Gauntlet run banking Fathoms, etc.) — see [[feedback-usestate-prop-sync]].
@@ -855,6 +875,48 @@ export default function ShipHero({
       setForging(null)
       if ('error' in res) { setForgeFx(null); return }
       setForgeReady(true)
+    })
+  }
+
+  // Charge the Accelerator with an owned epic → starts the 24h transmutation.
+  function onStartConvert(epicId: string) {
+    if (converting || conversion || !acceleratorUnlocked) return
+    if (!legendaryForEpic(epicId) || gemsNow < ABYSSAL_ACCEL_GEM_COST) return
+    setConverting(true)
+    vibrate([0, 14, 40, 22])
+    startTransition(async () => {
+      const res = await startAbyssalConversion(epicId)
+      setConverting(false)
+      if ('error' in res) return
+      setConversion(res.conversion)
+      setGemsNow(res.gems)
+      window.dispatchEvent(new CustomEvent('gems-changed', { detail: res.gems }))
+      vibrate([0, 30, 40, 60])
+      router.refresh()   // resync ownedRaidItems (the epic was consumed)
+    })
+  }
+
+  // Claim a finished conversion → reuse the ForgeAnimation for the reveal.
+  function onClaimConvert() {
+    if (claimingConv || !conversion || !isConversionReady(conversion, Date.now())) return
+    setClaimingConv(true)
+    const epicImg = getRaidItem(conversion.epicId)?.image ?? null
+    const legendary = getRaidItem(conversion.legendaryId)
+    startTransition(async () => {
+      const res = await claimAbyssalConversion()
+      setClaimingConv(false)
+      if ('error' in res) return
+      setConversion(null)
+      if (legendary) {
+        setForgeFx({
+          compImages: [epicImg],
+          result: { name: legendary.name, image: legendary.image ?? null },
+          accent: (ITEM_RARITY_COLOR as Record<string, string>)[legendary.rarity] ?? '#f0c040',
+          abyssal: true,
+        })
+        setForgeReady(true)   // claim already resolved server-side — reveal straight away
+      }
+      vibrate([14, 46, 22, 60])
     })
   }
 
@@ -1709,6 +1771,13 @@ export default function ShipHero({
                   learnArmed={learnArmed}
                   onForgeTap={onForgeTap}
                   onLearnTap={onLearnTap}
+                  acceleratorUnlocked={acceleratorUnlocked}
+                  conversion={conversion}
+                  gemsNow={gemsNow}
+                  convertBusy={converting}
+                  claimBusy={claimingConv}
+                  onStartConvert={onStartConvert}
+                  onClaimConvert={onClaimConvert}
                 />
               )}
 

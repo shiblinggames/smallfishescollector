@@ -23,7 +23,7 @@
 //                      trophy shelf instead of entries buried down a list.
 //   4. THE COST      — open a recipe and it tells you, plainly, what forging it
 //                      spends and what that closes off.
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createPortal } from 'react-dom'
 import { vibrate } from '@/lib/haptics'
@@ -32,9 +32,12 @@ import {
   FORGE_RECIPES, getRaidItem, getForgeRecipe, cacheComponentsMissing,
   forgeComponentIds, recipesUsingComponent, forgeOpportunityCost,
   recipeNeedsGauntlet2, GAUNTLET2_BASE_ITEM_IDS, isAbyssalForgedItem,
-  planAbyssalBuild, type ForgeRecipe,
+  planAbyssalBuild, isConvertibleEpic, legendaryForEpic, type ForgeRecipe,
 } from '@/lib/raidItems'
 import { PRISMATIC, forgedBorderSoft, forgedTextSoft, ABYSSAL_EMBER, ABYSSAL_EMBER_TEXT, abyssalEmberBorder } from '@/lib/prismatic'
+import { ABYSSAL_ACCEL_MS, ABYSSAL_ACCEL_GEM_COST, isConversionReady, type AbyssalConversion } from '@/lib/abyssalAccelerator'
+
+const GEM_PURPLE = '#c9a7ff'
 
 const GOLD = '#e8c879'
 const BLUE = '#7fd0ff'
@@ -85,6 +88,8 @@ export default function ForgeBoard({
   ownedRaidItems, learnedRecipes, fathomsNow,
   forging, forgeArmed, learning, learnArmed,
   onForgeTap, onLearnTap, abyssalUnlocked = false, raidItemSlots = 4,
+  acceleratorUnlocked = false, conversion = null, gemsNow = 0,
+  convertBusy = false, claimBusy = false, onStartConvert, onClaimConvert,
 }: {
   /** Owns Don's Abyssal Forge? Tier-3 recipes are hidden entirely until then. */
   abyssalUnlocked?: boolean
@@ -100,6 +105,14 @@ export default function ForgeBoard({
   /** How many raid items the captain can equip at once — the planner's mount
    *  check. Purely informational: you can BUILD every Abyssal regardless. */
   raidItemSlots?: number
+  /** The Abyssal Accelerator (epic→legendary transmutation bench) unlock + slot. */
+  acceleratorUnlocked?: boolean
+  conversion?: AbyssalConversion | null
+  gemsNow?: number
+  convertBusy?: boolean
+  claimBusy?: boolean
+  onStartConvert?: (epicId: string) => void
+  onClaimConvert?: () => void
 }) {
   // Which forge you're looking at. The Abyssal (tier-3) tab only becomes a real
   // destination once you own the Abyssal Forge; before that it's a locked teaser.
@@ -283,6 +296,19 @@ export default function ForgeBoard({
           onOpenRecipe={id => setOpen(id)}
         />
       ) : (<>
+      {/* ── The Abyssal Accelerator — epic→legendary transmutation bench ──── */}
+      {abyssalTab && (
+        <AbyssalAcceleratorPanel
+          unlocked={acceleratorUnlocked}
+          ownedRaidItems={ownedRaidItems}
+          conversion={conversion}
+          gemsNow={gemsNow}
+          convertBusy={convertBusy}
+          claimBusy={claimBusy}
+          onStartConvert={onStartConvert}
+          onClaimConvert={onClaimConvert}
+        />
+      )}
       {/* ── 1. READY — the question most visits are actually asking ───────── */}
       {ready.length > 0 && (
         <div style={{ marginBottom: '1.2rem' }}>
@@ -446,6 +472,212 @@ export default function ForgeBoard({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ── THE ABYSSAL ACCELERATOR ──────────────────────────────────────────────────
+// Epic→legendary transmutation bench (a Don's Ship & Shore unlock). Lives on the
+// Abyssal tab. Three states: idle picker, charging (24h countdown), ready-to-claim.
+const GEM_GLYPH = '◆'
+
+function fmtCountdown(ms: number): string {
+  if (ms <= 0) return 'ready'
+  const s = Math.floor(ms / 1000)
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60
+  if (h > 0) return `${h}h ${m}m`
+  if (m > 0) return `${m}m ${sec}s`
+  return `${sec}s`
+}
+
+/** The accelerator's molten core — an ember orb with a turning ring + orbiting
+ *  motes, optionally with an item suspended inside. `intensity` scales the life. */
+function AccelCore({ size, intensity, art }: { size: number; intensity: 'idle' | 'active' | 'ready'; art?: string | null }) {
+  const active = intensity !== 'idle'
+  const motes = active ? 8 : 0
+  return (
+    <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
+      <motion.div
+        animate={active ? { scale: [1, 1.12, 1], opacity: [0.8, 1, 0.8] } : { scale: [1, 1.05, 1], opacity: [0.5, 0.68, 0.5] }}
+        transition={{ duration: intensity === 'ready' ? 1.1 : active ? 1.6 : 2.6, repeat: Infinity, ease: 'easeInOut' }}
+        style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: `radial-gradient(circle, #ffffff 0%, ${EMBER}cc 26%, ${EMBER}44 52%, transparent 74%)`, boxShadow: `0 0 ${active ? 26 : 12}px ${EMBER}${active ? 'aa' : '55'}` }}
+      />
+      <motion.div
+        animate={{ rotate: 360 }}
+        transition={{ duration: intensity === 'ready' ? 6 : 15, repeat: Infinity, ease: 'linear' }}
+        style={{ position: 'absolute', inset: size * 0.09, borderRadius: '50%', border: `1.5px dashed ${EMBER}88`, opacity: active ? 0.7 : 0.38 }}
+      />
+      {Array.from({ length: motes }).map((_, i) => (
+        <motion.div key={i}
+          initial={{ rotate: (i / motes) * 360 }}
+          animate={{ rotate: (i / motes) * 360 + 360 }}
+          transition={{ duration: 3 + (i % 3), repeat: Infinity, ease: 'linear' }}
+          style={{ position: 'absolute', inset: 0 }}
+        >
+          <div style={{ position: 'absolute', left: '50%', top: '3%', width: 4, height: 4, marginLeft: -2, borderRadius: '50%', background: EMBER, boxShadow: `0 0 6px ${EMBER}` }} />
+        </motion.div>
+      ))}
+      {art && (
+        <motion.img src={art} alt="" aria-hidden decoding="async"
+          animate={active ? { y: [0, -3, 0], scale: intensity === 'ready' ? [1, 1.06, 1] : [1, 1.02, 1] } : {}}
+          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+          style={{ position: 'absolute', inset: '22%', width: '56%', height: '56%', objectFit: 'contain', filter: `drop-shadow(0 0 8px ${EMBER}bb)`, zIndex: 1 }}
+        />
+      )}
+    </div>
+  )
+}
+
+function AbyssalAcceleratorPanel({ unlocked, ownedRaidItems, conversion, gemsNow, convertBusy, claimBusy, onStartConvert, onClaimConvert }: {
+  unlocked: boolean
+  ownedRaidItems: string[]
+  conversion: AbyssalConversion | null
+  gemsNow: number
+  convertBusy: boolean
+  claimBusy: boolean
+  onStartConvert?: (epicId: string) => void
+  onClaimConvert?: () => void
+}) {
+  const [now, setNow] = useState(() => Date.now())
+  const [picked, setPicked] = useState<string | null>(null)
+  const convertibleEpics = useMemo(() => ownedRaidItems.filter(isConvertibleEpic), [ownedRaidItems])
+  const ready = conversion ? isConversionReady(conversion, now) : false
+
+  // Tick the countdown once a second while a conversion is charging.
+  useEffect(() => {
+    if (!conversion || ready) return
+    const id = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [conversion, ready])
+  // Drop a picked epic that's no longer owned (e.g. after a refresh).
+  useEffect(() => { if (picked && !convertibleEpics.includes(picked)) setPicked(null) }, [convertibleEpics, picked])
+
+  const shell = (children: ReactNode) => (
+    <div style={{ marginBottom: '1.3rem', borderRadius: 16, padding: '0.95rem', position: 'relative', overflow: 'hidden', ...abyssalEmberBorder('rgba(14,7,9,0.94)') }}>
+      <div aria-hidden style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse 120% 80% at 50% -10%, ${EMBER}18, transparent 60%)`, pointerEvents: 'none' }} />
+      <div style={{ position: 'relative' }}>{children}</div>
+    </div>
+  )
+
+  const Header = (
+    <div style={{ textAlign: 'center', marginBottom: 12 }}>
+      <p className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.28em', color: `${EMBER}cc` }}>Tier III · Transmutation</p>
+      <p className="font-cinzel font-800" style={{ fontSize: '1.15rem', lineHeight: 1.1, marginTop: 3, ...ABYSSAL_EMBER_TEXT }}>The Abyssal Accelerator</p>
+    </div>
+  )
+
+  // Locked teaser.
+  if (!unlocked) {
+    return shell(
+      <>
+        {Header}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 11, opacity: 0.74 }}>
+          <AccelCore size={42} intensity="idle" />
+          <p className="font-karla" style={{ fontSize: '0.72rem', color: '#cbb6a2', lineHeight: 1.45 }}>
+            Transmute an epic boss drop into its legendary chase version. Unlock <span style={{ color: '#ffcdb8', fontWeight: 700 }}>The Abyssal Accelerator</span> in Don’s Gauntlet (Ship &amp; Shore).
+          </p>
+        </div>
+      </>
+    )
+  }
+
+  // A conversion is in flight — charging or ready.
+  if (conversion) {
+    const epic = getRaidItem(conversion.epicId)
+    const legendary = getRaidItem(conversion.legendaryId)
+    const remain = new Date(conversion.completesAt).getTime() - now
+    const progress = Math.max(0, Math.min(1, 1 - remain / ABYSSAL_ACCEL_MS))
+    return shell(
+      <>
+        {Header}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ opacity: 0.4 }}><ItemArt id={conversion.epicId} size={38} dim /></div>
+            <AccelCore size={92} intensity={ready ? 'ready' : 'active'} art={legendary?.image ?? null} />
+            <div style={{ opacity: ready ? 1 : 0.5 }}><ItemArt id={conversion.legendaryId} size={38} /></div>
+          </div>
+          {ready ? (
+            <>
+              <p className="font-cinzel font-800" style={{ fontSize: '0.95rem', color: '#ffe0b0', textShadow: `0 0 14px ${EMBER}66` }}>Transmutation complete</p>
+              <motion.button type="button" disabled={claimBusy} onClick={() => { vibrate([0, 20, 40, 60]); onClaimConvert?.() }} className="tap"
+                animate={{ boxShadow: [`0 0 0px ${EMBER}00`, `0 0 22px ${EMBER}66`, `0 0 0px ${EMBER}00`] }}
+                transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                style={{ width: '100%', padding: '0.8rem', borderRadius: 12, cursor: claimBusy ? 'default' : 'pointer', background: `linear-gradient(180deg, ${EMBER}33, ${EMBER}14)`, border: `1px solid ${EMBER}99`, color: '#ffe6d2' }}>
+                <span className="font-cinzel font-800" style={{ fontSize: '0.95rem' }}>{claimBusy ? 'Claiming…' : `Claim ${legendary?.name ?? 'the legendary'}`}</span>
+              </motion.button>
+            </>
+          ) : (
+            <>
+              <div style={{ width: '100%', height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                <div style={{ width: `${progress * 100}%`, height: '100%', background: `linear-gradient(90deg, ${EMBER}, #ffd0a0)`, boxShadow: `0 0 8px ${EMBER}`, transition: 'width 1s linear' }} />
+              </div>
+              <p className="font-karla font-700" style={{ fontSize: '0.76rem', color: '#e8c9b4', textAlign: 'center' }}>
+                Transmuting {epic?.name ?? 'the item'} → <span style={{ color: '#ffe0b0' }}>{legendary?.name ?? 'legendary'}</span>
+              </p>
+              <p className="font-karla font-800 uppercase tracking-[0.14em]" style={{ fontSize: '0.62rem', color: `${EMBER}dd` }}>Ready in {fmtCountdown(remain)}</p>
+            </>
+          )}
+        </div>
+      </>
+    )
+  }
+
+  // Idle — pick an epic to charge.
+  const canAfford = gemsNow >= ABYSSAL_ACCEL_GEM_COST
+  const pickedLegendaryId = picked ? legendaryForEpic(picked) : null
+  return shell(
+    <>
+      {Header}
+      <p className="font-karla" style={{ fontSize: '0.68rem', color: '#b7a596', textAlign: 'center', lineHeight: 1.45, marginBottom: 12 }}>
+        Charge it with gems and feed it an epic boss drop. In 24 hours, claim that item’s legendary chase version.
+      </p>
+      {convertibleEpics.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '0.5rem 0' }}>
+          <div style={{ display: 'flex', justifyContent: 'center' }}><AccelCore size={54} intensity="idle" /></div>
+          <p className="font-karla" style={{ fontSize: '0.72rem', color: '#a99a8c', marginTop: 8 }}>No epic boss drops to transmute. Land one from a raid, then bring it here.</p>
+        </div>
+      ) : (
+        <>
+          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, marginBottom: 12 }}>
+            {convertibleEpics.map(id => {
+              const sel = picked === id
+              const item = getRaidItem(id)
+              return (
+                <button key={id} type="button" onClick={() => { vibrate([0, 10]); setPicked(sel ? null : id) }} className="tap"
+                  style={{ flexShrink: 0, width: 66, padding: '0.5rem 0.3rem', borderRadius: 12, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                    background: sel ? `${EMBER}1e` : 'rgba(255,255,255,0.04)', border: `1px solid ${sel ? `${EMBER}88` : 'rgba(255,255,255,0.1)'}`, boxShadow: sel ? `0 0 14px ${EMBER}33` : 'none' }}>
+                  <ItemArt id={id} size={34} />
+                  <span className="font-karla font-600" style={{ fontSize: '0.5rem', color: sel ? '#ffcdb8' : '#b0a698', textAlign: 'center', lineHeight: 1.1, height: '1.7em', overflow: 'hidden' }}>{item?.name}</span>
+                </button>
+              )
+            })}
+          </div>
+          {picked && pickedLegendaryId ? (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 11 }}>
+                <ItemArt id={picked} size={44} />
+                <AccelCore size={58} intensity="idle" />
+                <div style={{ opacity: 0.9 }}><ItemArt id={pickedLegendaryId} size={44} /></div>
+              </div>
+              <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#e8c9b4', textAlign: 'center', marginBottom: 10 }}>
+                {getRaidItem(picked)?.name} → <span style={{ color: '#ffe0b0' }}>{getRaidItem(pickedLegendaryId)?.name}</span>
+              </p>
+              <button type="button" disabled={!canAfford || convertBusy} onClick={() => { vibrate([0, 16, 40, 24]); onStartConvert?.(picked) }} className="tap"
+                style={{ width: '100%', padding: '0.78rem', borderRadius: 12, cursor: canAfford && !convertBusy ? 'pointer' : 'default',
+                  background: canAfford ? `linear-gradient(180deg, ${EMBER}2e, ${EMBER}12)` : 'rgba(255,255,255,0.05)', border: `1px solid ${canAfford ? `${EMBER}88` : 'rgba(255,255,255,0.12)'}`, color: canAfford ? '#ffe0cc' : '#8a8078' }}>
+                <span className="font-cinzel font-800" style={{ fontSize: '0.92rem' }}>
+                  {convertBusy ? 'Charging…' : canAfford
+                    ? <>Charge · <span style={{ color: GEM_PURPLE }}>{ABYSSAL_ACCEL_GEM_COST} {GEM_GLYPH}</span></>
+                    : <>Need {ABYSSAL_ACCEL_GEM_COST} <span style={{ color: GEM_PURPLE }}>{GEM_GLYPH}</span></>}
+                </span>
+              </button>
+              <p className="font-karla" style={{ fontSize: '0.56rem', color: '#8f8378', textAlign: 'center', marginTop: 7 }}>Consumes the epic · takes 24 hours · one at a time</p>
+            </>
+          ) : (
+            <p className="font-karla" style={{ fontSize: '0.64rem', color: '#8f8378', textAlign: 'center' }}>Tap an epic above to transmute it.</p>
+          )}
+        </>
+      )}
+    </>
+  )
+}
+
 function RecipeSheet({
   resultId, onClose, ownedRaidItems, state, fathomsNow,
   forging, forgeArmed, learning, learnArmed, onForgeTap, onLearnTap,

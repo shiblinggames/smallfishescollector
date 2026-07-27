@@ -1095,6 +1095,32 @@ export function isAbyssalForgedItem(id: string): boolean {
   return getForgeRecipe(id)?.tier === 3
 }
 
+// ── EPIC → LEGENDARY (the Abyssal Accelerator) ──────────────────────────────
+// Every boss signature drop has an EPIC and a LEGENDARY "chase" grade sharing a
+// `family` (so the two never stack). The Abyssal Accelerator transmutes the epic
+// into its legendary counterpart. This is the canonical pairing — keep in sync
+// with the item defs above and the loot tables in lib/bossRaids.ts.
+export const EPIC_TO_LEGENDARY: Record<string, string> = {
+  corsair_cannon:          'corsair_prime_cannon',
+  krusts_carapace:         'captains_carapace',
+  cartographers_astrolabe: 'captains_astrolabe',
+  spets_primer:            'tollmasters_primer',
+  tell_tale_glass:         'admirals_eye',
+  war_drum:                'thunder_drum',
+  court_fang:              'dons_signet',
+  chain_shot:              'brackwater_rack',
+}
+
+/** The legendary an epic boss item transmutes into, or null if it has none. */
+export function legendaryForEpic(id: string): string | null {
+  return EPIC_TO_LEGENDARY[id] ?? null
+}
+
+/** True if this item is an epic boss drop the Accelerator can transmute. */
+export function isConvertibleEpic(id: string): boolean {
+  return id in EPIC_TO_LEGENDARY
+}
+
 // ── ABYSSAL BUILD PLANNER ───────────────────────────────────────────────────
 // The forge board answers "what can I forge right now?", one recipe at a time.
 // The planner answers the OTHER question: "I want THESE Abyssals — what does the

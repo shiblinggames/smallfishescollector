@@ -272,6 +272,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
   { id: 'dg_crimson_tithe',  name: 'Crimson Tithe',      description: 'The Don takes his cut in blood, and hands you a bigger one: earn 15% more Blood Gems from every Hardcore dive you survive.', depthRequired: 16, cost: 360, scope: 'account', category: 'raids', gauntlet: 'don' },
   { id: 'dg_master_catcher', name: 'Relentless Catcher', description: 'Upgrades your Tireless Catcher: the Auto Catcher now reels in epic fish on its own too, on top of rares. Legendaries and the Ancient Deep still want your hand.', depthRequired: 18, cost: 330, scope: 'world', category: 'fishing', gauntlet: 'don', requires: 'tireless_catcher' },
   { id: 'dg_abyssal_forge', name: 'The Abyssal Forge', description: 'Fuse two forged raid items into one tier-3 Abyssal item, carrying both effect sets in a single mount. The endgame forge.', depthRequired: 8, cost: 700, scope: 'account', category: 'raids', gauntlet: 'don', requires: 'forge' },
+  { id: 'dg_abyssal_accel', name: 'The Abyssal Accelerator', description: 'Bolts a transmutation bench onto the Abyssal Forge: charge it with gems, feed it an owned EPIC boss drop, and 24 hours later claim that item’s LEGENDARY chase counterpart. Stop grinding the same fight for the rare roll.', depthRequired: 14, cost: 500, scope: 'account', category: 'raids', gauntlet: 'don', requires: 'dg_abyssal_forge' },
 ]
 
 /** Kingpin's Cut (Don's account perk): legendary-rarity boss-drop items drop
@@ -387,6 +388,13 @@ export function hasForge(unlocked: string[] | null | undefined): boolean {
  *  stays on hasForge. */
 export function hasAbyssalForge(unlocked: string[] | null | undefined): boolean {
   return (unlocked ?? []).includes('dg_abyssal_forge')
+}
+
+/** The Abyssal Accelerator (Don's Ship & Shore, requires the Abyssal Forge):
+ *  unlocks the epic→legendary transmutation bench. Account-scope → read the
+ *  UNION of both Lockers, same as every other Don's account perk. */
+export function hasAbyssalAccelerator(unlocked: string[] | null | undefined): boolean {
+  return (unlocked ?? []).includes('dg_abyssal_accel')
 }
 
 /** Deep-Sea Plating (Don's account perk): +10% ship max HP in every raid +

@@ -4,14 +4,15 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { RARITY_TIERS } from '@/lib/variants'
 import { applyVariantBoosts, raidItemSlotsForTier } from '@/lib/expeditions'
-import { getForgeRecipe, dedupeRaidItems } from '@/lib/raidItems'
+import { getForgeRecipe, dedupeRaidItems, legendaryForEpic } from '@/lib/raidItems'
+import { ABYSSAL_ACCEL_MS, ABYSSAL_ACCEL_GEM_COST, parseAbyssalConversion, isConversionReady, type AbyssalConversion } from '@/lib/abyssalAccelerator'
 import { classSlotBonuses } from '@/lib/shipClasses'
 import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import { SIXTH_BERTH_COST, ARMORY_EXPANSION_COST } from '@/lib/shipBerth'
 import { getShipAugment, AUGMENT_COST, RETOOL_COST, SCHEMATICS_COST, ULTIMATE_BUILD_MS, canBuildUltimate, parseAugmentBuild, isBuildComplete, type ShipAugmentBuild } from '@/lib/shipAugments'
 import { getShipSkin, canEquipShipSkin } from '@/lib/shipSkins'
 import { settleUltimateBuild } from '@/lib/ultimateBuild'
-import { hasForge, hasAbyssalForge, bonusChargeSlots } from '@/lib/gauntletUpgrades'
+import { hasForge, hasAbyssalForge, hasAbyssalAccelerator, bonusChargeSlots } from '@/lib/gauntletUpgrades'
 
 // ── Crew picker ───────────────────────────────────────────────────────────────
 
@@ -218,6 +219,102 @@ export async function learnForgeRecipe(resultId: string): Promise<{ ok: true; fa
   const newLearned = [...learned, resultId]
   await admin.from('profiles').update({ gauntlet_fathoms: newFathoms, forge_recipes_learned: newLearned }).eq('id', user.id)
   return { ok: true, fathoms: newFathoms, learned: newLearned }
+}
+
+/** Charge the Abyssal Accelerator: spend gems, consume an owned EPIC boss item,
+ *  and start a 24h transmutation into its LEGENDARY chase counterpart. One slot
+ *  — a conditional write on the still-null slot blocks a double-charge race.
+ *  Requires Don's Abyssal Forge AND the Abyssal Accelerator (account-scope, so
+ *  the checks read the union of both Lockers). */
+export async function startAbyssalConversion(epicId: string): Promise<
+  { ok: true; conversion: AbyssalConversion; gems: number; raidItems: string[] } | { error: string }
+> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+  const legendaryId = legendaryForEpic(epicId)
+  if (!legendaryId) return { error: 'That item can’t be transmuted.' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('raid_items, equipped_raid_items, gauntlet_upgrades, dons_gauntlet_upgrades, gems, abyssal_conversion')
+    .eq('id', user.id)
+    .single()
+  if (!profile) return { error: 'Profile not found.' }
+
+  const upgrades = [
+    ...((profile.gauntlet_upgrades as string[] | null) ?? []),
+    ...((profile.dons_gauntlet_upgrades as string[] | null) ?? []),
+  ]
+  if (!hasAbyssalForge(upgrades) || !hasAbyssalAccelerator(upgrades)) {
+    return { error: 'The Abyssal Accelerator is locked. Unlock it in Don’s Gauntlet.' }
+  }
+  if (parseAbyssalConversion(profile.abyssal_conversion)) {
+    return { error: 'The Accelerator is already running. Claim it first.' }
+  }
+  const owned = (profile.raid_items as string[] | null) ?? []
+  if (!owned.includes(epicId)) return { error: 'You don’t own that item.' }
+  if (owned.includes(legendaryId)) return { error: 'You already own the legendary version.' }
+  const gems = (profile.gems as number | null) ?? 0
+  if (gems < ABYSSAL_ACCEL_GEM_COST) return { error: `Not enough gems — charging costs ${ABYSSAL_ACCEL_GEM_COST}.` }
+
+  const conversion: AbyssalConversion = {
+    epicId, legendaryId,
+    completesAt: new Date(Date.now() + ABYSSAL_ACCEL_MS).toISOString(),
+  }
+  const newGems = gems - ABYSSAL_ACCEL_GEM_COST
+  const newOwned = owned.filter(id => id !== epicId)
+  const equipped = ((profile.equipped_raid_items as string[] | null) ?? []).filter(id => id !== epicId)
+
+  // Guard the write on the slot STILL being null so a fast double-tap (or two
+  // tabs) can't charge two conversions or double-spend the epic + gems.
+  const { data: updated } = await admin
+    .from('profiles')
+    .update({ abyssal_conversion: conversion, gems: newGems, raid_items: newOwned, equipped_raid_items: equipped })
+    .eq('id', user.id)
+    .is('abyssal_conversion', null)
+    .select('id')
+    .maybeSingle()
+  if (!updated) return { error: 'The Accelerator is already running. Claim it first.' }
+
+  await admin.from('gem_transactions').insert({ user_id: user.id, amount: -ABYSSAL_ACCEL_GEM_COST, reason: 'Charged the Abyssal Accelerator' })
+  return { ok: true, conversion, gems: newGems, raidItems: newOwned }
+}
+
+/** Claim a finished Abyssal Accelerator run: add the legendary to the hold and
+ *  clear the slot. Player-triggered (a "Claim" tap, not settle-on-read), guarded
+ *  against a double-claim. */
+export async function claimAbyssalConversion(): Promise<
+  { ok: true; legendaryId: string; raidItems: string[] } | { error: string }
+> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('raid_items, abyssal_conversion')
+    .eq('id', user.id)
+    .single()
+  const conversion = parseAbyssalConversion(profile?.abyssal_conversion)
+  if (!conversion) return { error: 'Nothing to claim.' }
+  if (!isConversionReady(conversion, Date.now())) return { error: 'It’s still transmuting.' }
+
+  const owned = (profile?.raid_items as string[] | null) ?? []
+  const newOwned = owned.includes(conversion.legendaryId) ? owned : [...owned, conversion.legendaryId]
+
+  const { data: updated } = await admin
+    .from('profiles')
+    .update({ raid_items: newOwned, abyssal_conversion: null })
+    .eq('id', user.id)
+    .not('abyssal_conversion', 'is', null)
+    .select('id')
+    .maybeSingle()
+  if (!updated) return { error: 'Already claimed.' }
+
+  return { ok: true, legendaryId: conversion.legendaryId, raidItems: newOwned }
 }
 
 /** Mark the one-time "The Forge Awakens" celebration as seen (fires the first

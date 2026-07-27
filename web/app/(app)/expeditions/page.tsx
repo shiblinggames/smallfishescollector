@@ -20,6 +20,7 @@ import { getDailyVoyageState } from './voyageActions'
 import { getRaidMapView } from './raidMapActions'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { settleUltimateBuild } from '@/lib/ultimateBuild'
+import { parseAbyssalConversion } from '@/lib/abyssalAccelerator'
 import { SkeletonBox } from '@/components/Skeleton'
 import type { VoyageHistoryEntry } from './VoyageHistory'
 import { getShipBattles } from '@/app/(app)/social/shipBattleActions'
@@ -134,6 +135,8 @@ async function ShipHeroSection() {
         ...((profile?.dons_gauntlet_upgrades as string[] | null) ?? []),
       ]}
       gauntletFathoms={(profile?.gauntlet_fathoms as number | null) ?? 0}
+      gems={(profile?.gems as number | null) ?? 0}
+      abyssalConversion={parseAbyssalConversion(profile?.abyssal_conversion)}
       forgeRecipesLearned={(profile?.forge_recipes_learned as string[] | null) ?? []}
       hasSeenForgeIntro={profile?.has_seen_forge_intro === true}
       manowarAugment={activeAugment}
