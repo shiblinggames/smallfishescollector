@@ -139,7 +139,7 @@ function ExpeditionTile({
       transition={{ type: 'spring', stiffness: 520, damping: 30 }}
       style={{
         position: 'relative', overflow: 'hidden', width: '100%',
-        height: 152, borderRadius: 18, padding: 0,
+        height: 200, borderRadius: 18, padding: 0,
         border: `1px solid ${accent}${locked ? '30' : '80'}`,
         borderTop: `1px solid ${accent}${locked ? '4a' : 'e0'}`,
         boxShadow: glow ? `0 0 18px ${accent}30` : undefined,
