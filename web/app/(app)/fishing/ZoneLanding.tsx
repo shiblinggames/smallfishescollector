@@ -226,7 +226,7 @@ export default function ZoneLanding({
 
           {/* Scroll area — only the zones scroll (header stays pinned). Gentle
               y-snap so each dive settles on a zone. */}
-          <div ref={scrollRef} onScroll={syncScrollCue} style={{ flex: 1, minHeight: 0, overflowY: 'auto', scrollSnapType: 'y proximity', scrollPaddingTop: '1.6rem', padding: '0.5rem 0.9rem 1.5rem' }}>
+          <div ref={scrollRef} onScroll={syncScrollCue} style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', scrollSnapType: 'y proximity', scrollPaddingTop: '1.6rem', padding: '0.5rem 0.9rem 1.5rem' }}>
 
           {/* The descent — each zone is a large circular node on a path, linked
               to the next one down. Scroll to dive from the bright surface to the
@@ -270,7 +270,7 @@ export default function ZoneLanding({
                     )}
                     {/* Your fisher — sits right under the zone name. */}
                     {isCurrent && (
-                      <div aria-hidden style={{ width: 168, marginTop: 8, pointerEvents: 'none', filter: 'drop-shadow(0 8px 14px rgba(0,10,25,0.65))' }}>
+                      <div aria-hidden style={{ width: 140, marginTop: 8, pointerEvents: 'none', filter: 'drop-shadow(0 8px 14px rgba(0,10,25,0.65))' }}>
                         <FisherPose characterColor={characterColor} equippedHat={equippedHat} equippedBoat={equippedBoat} equippedPet={equippedPet} rodTier={rodTier} reelTier={reelTier} hookTier={hookTier} />
                       </div>
                     )}
