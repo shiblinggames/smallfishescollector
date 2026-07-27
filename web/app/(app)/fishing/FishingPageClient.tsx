@@ -268,6 +268,7 @@ export default function FishingPageClient({
         rodTier={rodTier}
         reelTier={reelTier}
         hookTier={hookTier}
+        initialFishingRenownAlloc={initialFishingRenownAlloc}
       />
     )
   }

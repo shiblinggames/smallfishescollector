@@ -1038,15 +1038,11 @@ export default function ShipHero({
             (a face) instead of a button floating on its own. */}
         <div style={{ position: 'relative', padding: '1.1rem 0 1rem' }}>
 
-          {/* Section header — shared with the fishing zone selector's "Fishing"
-              header (LevelSectionHeader) so the two never drift apart. */}
-          <LevelSectionHeader label="Navigation" />
-
-          {/* Nav level + XP — full-width bar across the card (mirrors the
-              fishing screen's XPBarDisplay): big level number on the left,
-              the progress bar stretching the card width, XP-to-next on the
-              right. Whole row is the tap target for the Nav-level info
-              modal (captain bonuses + next-level carrot). */}
+          {/* Nav level header + XP bar — the WHOLE block is one tap target: the
+              Nav-level info modal (captain stats) below max, the Renown board at
+              max. The "Navigation" header shares LevelSectionHeader with the
+              fishing zone selector so the two tops read as a set. (Bar mirrors
+              the fishing screen's XPBarDisplay.) */}
           {(() => {
             const atMax = xpProgress.level >= MAX_LEVEL
             const rn = atMax ? renownProgress('nav', expeditionXP) : null
@@ -1063,8 +1059,8 @@ export default function ShipHero({
                 transition={hasNavPoints ? { duration: 1.6, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.3 }}
                 style={{
                   position: 'relative',
-                  display: 'flex', alignItems: 'center', gap: 10, width: '100%',
-                  padding: '0.3rem 0.35rem', borderRadius: 12,
+                  display: 'flex', flexDirection: 'column', alignItems: 'stretch', width: '100%',
+                  padding: '0.25rem 0.35rem 0.35rem', borderRadius: 12,
                   background: hasNavPoints ? 'rgba(240,192,64,0.06)' : 'transparent',
                   border: `1px solid ${hasNavPoints ? 'rgba(240,192,64,0.4)' : 'transparent'}`,
                   color: 'inherit', cursor: 'pointer',
@@ -1073,6 +1069,8 @@ export default function ShipHero({
                 onMouseEnter={e => { e.currentTarget.style.background = hasNavPoints ? 'rgba(240,192,64,0.12)' : 'rgba(125,160,216,0.08)'; e.currentTarget.style.borderColor = hasNavPoints ? 'rgba(240,192,64,0.6)' : 'rgba(125,160,216,0.22)' }}
                 onMouseLeave={e => { e.currentTarget.style.background = hasNavPoints ? 'rgba(240,192,64,0.06)' : 'transparent'; e.currentTarget.style.borderColor = hasNavPoints ? 'rgba(240,192,64,0.4)' : 'transparent' }}
               >
+                <LevelSectionHeader label="Navigation" />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}>
                 <div className="shrink-0" style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
                   <span className="font-karla font-600" style={{ fontSize: '0.55rem', color: '#7da0d8bb', letterSpacing: '0.08em' }}>LV</span>
                   <span className="font-cinzel font-700" style={{ fontSize: '1.55rem', color: '#7da0d8', lineHeight: 1 }}>{xpProgress.level}</span>
@@ -1106,6 +1104,7 @@ export default function ShipHero({
                     {`${toGo.toLocaleString()} xp`}
                   </span>
                 )}
+                </div>
               </motion.button>
             )
           })()}

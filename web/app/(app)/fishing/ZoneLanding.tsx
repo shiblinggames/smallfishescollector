@@ -6,6 +6,9 @@ import { ZONE_MIN_LEVEL, ZONE_WAIT_BASE, BASE_CRATE_CHANCE, zoneDiamondShare, zo
 import { updateUsername } from '@/app/(app)/u/actions'
 import FisherPose from '@/components/FisherPose'
 import { LevelSectionHeader } from '@/components/LevelSectionHeader'
+import RenownPanel from '@/components/RenownPanel'
+import { renownLevel, spentPoints, type RenownAlloc } from '@/lib/renown'
+import type { RenownState } from '@/app/(app)/actions/renown'
 import { PRESTIGE_MAX, goldenBoostPct, goldenBoostMult } from '@/lib/zoneRewards'
 import { SHINY_ODDS } from '@/lib/shiny'
 import { getXPProgress } from '@/lib/fishingLevel'
@@ -122,6 +125,7 @@ function DetailStat({ label, value, accent }: { label: string; value: string; ac
 export default function ZoneLanding({
   fishingLevel, fishingXP, username, zoneStats, zoneCollection, prestigeLevels, goldenBoosts, ancientDeepUnlocked, onSelect,
   currentZone, characterColor, equippedHat, equippedBoat, equippedPet, rodTier, reelTier, hookTier,
+  initialFishingRenownAlloc,
 }: {
   fishingLevel: number
   fishingXP: number
@@ -144,10 +148,26 @@ export default function ZoneLanding({
   rodTier: number
   reelTier: number
   hookTier: number
+  /** Persisted Fishing Renown allocations ({} when none) — powers the Renown
+   *  board opened by tapping the level header. */
+  initialFishingRenownAlloc?: RenownAlloc | null
 }) {
   // Which zone's Details strip is open (accordion — one at a time). Keeps the
   // numbers off the water until asked for.
   const [detailsFor, setDetailsFor] = useState<ZoneKey | null>(null)
+
+  // Fishing Renown (post-100). Level derives live from fishingXP; tapping the
+  // level header opens the board. Alloc mirrors to local state so the board
+  // stays in sync if the player spends a point and reopens it.
+  const [fishingRenownAlloc, setFishingRenownAlloc] = useState<RenownAlloc>(initialFishingRenownAlloc ?? {})
+  const [renownOpen, setRenownOpen] = useState(false)
+  const fishingRenownLevel = renownLevel('fishing', fishingXP)
+  const fishingRenownState: RenownState = {
+    skill: 'fishing', level: fishingRenownLevel,
+    spent: spentPoints('fishing', fishingRenownAlloc),
+    available: Math.max(0, fishingRenownLevel - spentPoints('fishing', fishingRenownAlloc)),
+    alloc: fishingRenownAlloc,
+  }
   // Scroll cue — a glowing chevron that invites you to dive deeper, hidden once
   // you've reached the bottom (or if the column already fits without scrolling).
   const scrollRef = useRef<HTMLDivElement | null>(null)
@@ -207,22 +227,31 @@ export default function ZoneLanding({
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(5,14,22,0.3) 0%, rgba(4,10,16,0.42) 42%, rgba(2,6,10,0.66) 100%)' }} />
         </div>
 
-        {/* Content shell — header pinned up top, only the zones scroll beneath. */}
+        {/* Content shell — the level header scrolls WITH the zones now (no longer
+            pinned to the top). */}
         <div style={{ position: 'relative', zIndex: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
-          {/* Header — a level medallion + XP-to-next bar, with ranks + guide on
-              the right. Stays pinned as you dive. */}
+          {/* Scroll area — header + zones scroll together. Free scroll (no snap)
+              so the big scene cards glide past naturally. */}
+          <div ref={scrollRef} onScroll={syncScrollCue} style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch', padding: '0 0.9rem 1.5rem' }}>
+
+          {/* Fishing level header + XP bar — the WHOLE block is one tap target
+              for the Fishing Renown board. The "Fishing" header shares
+              LevelSectionHeader with the expeditions "Navigation" header, and the
+              bar mirrors the ShipHero nav bar. */}
           {(() => {
             const xp = getXPProgress(fishingXP)
             const atMax = xp.level >= 100
             const toNext = atMax ? 0 : xp.xpForLevel - xp.xpInLevel
             return (
-              <div style={{ flexShrink: 0, padding: '2.5rem 0.9rem 0.7rem' }}>
-                {/* Section header — shared with the expeditions "Navigation"
-                    header (LevelSectionHeader) so the two never drift apart. */}
+              <button
+                type="button"
+                onClick={() => setRenownOpen(true)}
+                aria-label="View Fishing Renown"
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', width: '100%', textAlign: 'left', background: 'none', border: '1px solid transparent', borderRadius: 12, cursor: 'pointer', padding: '1.5rem 0.35rem 0.5rem', WebkitTapHighlightColor: 'transparent' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(125,160,216,0.08)'; e.currentTarget.style.borderColor = 'rgba(125,160,216,0.22)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.borderColor = 'transparent' }}
+              >
                 <LevelSectionHeader label="Fishing" />
-                {/* Fishing level bar — mirrors the expeditions page nav-level bar
-                    (ShipHero): LV + big number on the left, a full-width fill, and
-                    xp-to-next on the right. Same sizing, colours, and spacing. */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '0.3rem 0' }}>
                   <div className="shrink-0" style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
                     <span className="font-karla font-600" style={{ fontSize: '0.55rem', color: '#7da0d8bb', letterSpacing: '0.08em' }}>LV</span>
@@ -241,13 +270,9 @@ export default function ZoneLanding({
                     {atMax ? 'MAX' : `${toNext.toLocaleString()} xp`}
                   </span>
                 </div>
-              </div>
+              </button>
             )
           })()}
-
-          {/* Scroll area — only the zones scroll (header stays pinned). Free
-              scroll (no snap) so the big scene cards glide past naturally. */}
-          <div ref={scrollRef} onScroll={syncScrollCue} style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch', padding: '0.5rem 0.9rem 1.5rem' }}>
 
           {/* The descent — each zone is a large circular node on a path, linked
               to the next one down. Scroll to dive from the bright surface to the
@@ -437,6 +462,15 @@ export default function ZoneLanding({
             )
           })()}
         </AnimatePresence>
+
+        {/* Fishing Renown board — opened by tapping the level header. */}
+        <RenownPanel
+          open={renownOpen}
+          onClose={() => setRenownOpen(false)}
+          skill="fishing"
+          initial={fishingRenownState}
+          onChange={s => setFishingRenownAlloc(s.alloc)}
+        />
 
         {/* Username prompt modal */}
         <AnimatePresence>

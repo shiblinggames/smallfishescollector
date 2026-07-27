@@ -4,7 +4,7 @@
 // read as one matched set. One source, so they never drift apart.
 export function LevelSectionHeader({ label }: { label: string }) {
   return (
-    <p className="font-cinzel font-700" style={{ textAlign: 'center', marginBottom: 8, fontSize: '0.92rem', letterSpacing: '0.06em', color: '#e2e9f3' }}>
+    <p className="font-cinzel font-700" style={{ textAlign: 'center', marginBottom: 9, fontSize: '1.5rem', letterSpacing: '0.04em', color: '#eef2f8' }}>
       {label}
     </p>
   )
