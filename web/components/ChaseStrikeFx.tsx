@@ -121,6 +121,91 @@ export function TempestStrikeFx({ color, shots, interval }: { color: string; sho
   )
 }
 
+/** Fossil (Laz) — an ancient ward sealing around YOUR ship. Vengeance arms a
+ *  revive ward, so this is a slow, deliberate seal: two counter-rotating rings of
+ *  runic glyphs (his stone astrolabe-relic) converge and LOCK around the hull, a
+ *  sepia-amber aureole tightens, primordial motes rise, and the ward flashes as
+ *  it locks in. Rendered over the player ship. */
+export function FossilWardFx({ color }: { color: string }) {
+  const CREAM = '#ead6a6'
+  const LOCK = 0.55   // moment the ward seals (s)
+  return (
+    <div aria-hidden style={{ position: 'absolute', inset: '-35% -25%', pointerEvents: 'none', zIndex: 6, overflow: 'visible' }}>
+      {/* Sepia/amber haze rising with the seal. */}
+      {[{ c: color, l: 46, t: 54, s: 74, d: 0 }, { c: CREAM, l: 56, t: 60, s: 58, d: 0.15 }].map((h, i) => (
+        <motion.div key={`hz-${i}`}
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={{ opacity: [0, 0.5, 0.4, 0], scale: [0.6, 1, 1.05, 1.12] }}
+          transition={{ duration: 1.5, delay: h.d, times: [0, 0.32, 0.72, 1], ease: 'easeOut' }}
+          style={{ position: 'absolute', left: `${h.l}%`, top: `${h.t}%`, width: `${h.s}%`, height: `${h.s}%`, marginLeft: `-${h.s / 2}%`, marginTop: `-${h.s / 2}%`, borderRadius: '50%', background: `radial-gradient(circle, ${h.c}55 0%, ${h.c}1e 44%, transparent 72%)` }}
+        />
+      ))}
+
+      {/* Counter-rotating glyph rings converging + locking around the hull. */}
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', left: '13%', top: '50%', width: '74%', height: '56%' }}>
+        <motion.g
+          initial={{ opacity: 0, scale: 1.5, rotate: -40 }}
+          animate={{ opacity: [0, 0.9, 0.85, 0], scale: [1.5, 1, 1, 1.05], rotate: [-40, 0, 3, 10] }}
+          transition={{ duration: 1.5, times: [0, 0.35, 0.72, 1], ease: 'easeOut' }}
+          style={{ transformOrigin: '50% 50%' }}
+        >
+          <circle cx="50" cy="50" r="40" fill="none" stroke={CREAM} strokeWidth="1" strokeDasharray="2 5" vectorEffect="non-scaling-stroke" />
+          {Array.from({ length: 12 }).map((_, k) => (
+            <line key={k} x1="50" y1="8" x2="50" y2={k % 2 ? 14 : 11} stroke={k % 2 ? color : CREAM} strokeWidth="1.4" vectorEffect="non-scaling-stroke" transform={`rotate(${k * 30} 50 50)`} />
+          ))}
+        </motion.g>
+        <motion.g
+          initial={{ opacity: 0, scale: 1.7, rotate: 40 }}
+          animate={{ opacity: [0, 0.9, 0.8, 0], scale: [1.7, 1, 1, 1.05], rotate: [40, 0, -3, -8] }}
+          transition={{ duration: 1.5, times: [0, 0.4, 0.72, 1], ease: 'easeOut' }}
+          style={{ transformOrigin: '50% 50%' }}
+        >
+          <circle cx="50" cy="50" r="29" fill="none" stroke={color} strokeWidth="1.4" strokeDasharray="1 6" vectorEffect="non-scaling-stroke" />
+          {Array.from({ length: 8 }).map((_, k) => (
+            <line key={k} x1="50" y1="21" x2="50" y2="26" stroke={k % 2 ? CREAM : color} strokeWidth="1.2" vectorEffect="non-scaling-stroke" transform={`rotate(${k * 45} 50 50)`} />
+          ))}
+        </motion.g>
+      </svg>
+
+      {/* Amber aureole tightening as the ward takes hold. */}
+      <motion.div
+        initial={{ opacity: 0, scale: 1.6, rotate: -20 }}
+        animate={{ opacity: [0, 0.35, 0.28, 0], scale: [1.6, 1, 1, 1.08], rotate: [-20, 6, 8, 14] }}
+        transition={{ duration: 1.5, times: [0, 0.4, 0.72, 1], ease: 'easeOut' }}
+        style={{ position: 'absolute', left: '50%', top: '58%', width: 320, height: 320, marginLeft: -160, marginTop: -160, borderRadius: '50%', background: `repeating-conic-gradient(from 0deg, ${color}00 0deg, ${color}2a 8deg, ${color}00 18deg)` }}
+      />
+
+      {/* Seal flash + lock ring when the ward snaps shut. */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.3 }}
+        animate={{ opacity: [0, 0.9, 0], scale: [0.3, 1.9, 2.4] }}
+        transition={{ duration: 0.6, delay: LOCK, ease: 'easeOut' }}
+        style={{ position: 'absolute', left: '50%', top: '58%', width: 190, height: 190, marginLeft: -95, marginTop: -95, borderRadius: '50%', background: `radial-gradient(circle, #fff6e0 0%, ${color}aa 32%, transparent 66%)` }}
+      />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.6 }}
+        animate={{ opacity: [0, 0.85, 0], scale: [0.6, 1.7, 2.1] }}
+        transition={{ duration: 0.6, delay: LOCK + 0.02, ease: 'easeOut' }}
+        style={{ position: 'absolute', left: '50%', top: '58%', width: 160, height: 160, marginLeft: -80, marginTop: -80, borderRadius: '50%', border: `2px solid ${color}`, boxShadow: `0 0 16px ${color}` }}
+      />
+
+      {/* Primordial motes rising through the seal. */}
+      {Array.from({ length: 12 }).map((_, i) => {
+        const left = 12 + ((i * 71) / 12) % 76
+        const c = i % 2 ? CREAM : color
+        return (
+          <motion.div key={`mote-${i}`}
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: [0, 0.9, 0], y: [30, -44] }}
+            transition={{ duration: 1.2 + (i % 4) * 0.2, delay: 0.2 + (i % 6) * 0.1, ease: 'easeOut' }}
+            style={{ position: 'absolute', left: `${left}%`, top: '78%', width: 3 + (i % 3), height: 3 + (i % 3), borderRadius: '50%', background: c, boxShadow: `0 0 5px ${c}` }}
+          />
+        )
+      })}
+    </div>
+  )
+}
+
 /** Galaxy (Catfish) — a cosmic surge over YOUR ship. Tidecaller heals + shields,
  *  so this is restorative, not violent: a nebula blooms over the hull, a starfield
  *  kindles, a translucent galactic shield-dome forms around the ship, and healing

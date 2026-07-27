@@ -69,7 +69,7 @@ import { getRepairKit, rollRepairKitHeal, repairKitRange } from '@/lib/repairKit
 import { classForSlug, CLASSES, currentMilestone, type AnyClassDef } from '@/lib/crewClasses'
 import { getCrewSkinByFilename } from '@/lib/crewSkins'
 import { ChaseSkinFx } from '@/components/ChaseSkinFx'
-import { TempestStrikeFx, LeviathanStrikeFx, RequiemMarkFx, GalaxySurgeFx } from '@/components/ChaseStrikeFx'
+import { TempestStrikeFx, LeviathanStrikeFx, RequiemMarkFx, GalaxySurgeFx, FossilWardFx } from '@/components/ChaseStrikeFx'
 import { crewLevelFromXP } from '@/lib/crewLevel'
 import { type AffixDef } from '@/lib/raidAffixes'
 import { getShipClass, aggregateShipClasses } from '@/lib/shipClasses'
@@ -1297,7 +1297,7 @@ export default function RaidCombat({
   // lightning storm during Blitz). Mounted for the ability's duration, then null.
   const [enemyStrikeFx, setEnemyStrikeFx] = useState<{ key: number; kind: 'tempest' | 'leviathan' | 'requiem'; color: string; shots?: number; interval?: number } | null>(null)
   // Bespoke chase-skin ability FX over the PLAYER hull (heal/shield/ward abilities).
-  const [playerStrikeFx, setPlayerStrikeFx] = useState<{ key: number; kind: 'galaxy'; color: string } | null>(null)
+  const [playerStrikeFx, setPlayerStrikeFx] = useState<{ key: number; kind: 'galaxy' | 'ward'; color: string } | null>(null)
   const [critFlash, setCritFlash]     = useState(false)
   // Brief red wash when the boss flips to phase 2 (challenge-mode Pete).
   // Same shape as critFlash — fixed full-screen radial gradient, ~400ms.
@@ -2871,6 +2871,13 @@ export default function RaidCombat({
         vengeanceBuffPctRef.current = vg.dmgBuffPct
         vengeanceCleanseRef.current = !!vg.cleanseDebuff
         noteCheckResponse('brace'); noteCheckResponse('shield')   // legendary breadth: a ward that cheats a killing blow answers both brace AND shield checks
+        // Fossil (Laz's chase skin): an ancient stone-and-amber ward seals around
+        // your hull as it's armed — counter-rotating glyph rings locking in.
+        if (chaseSkinId === 'coelacanth_fossil') {
+          const wk = Date.now()
+          setPlayerStrikeFx({ key: wk, kind: 'ward', color: chaseColor ?? '#c8a45c' })
+          playStepChainRef.current.push(setTimeout(() => setPlayerStrikeFx(s => (s && s.key === wk ? null : s)), 1650))
+        }
         setResolveLog(prev => [...prev, `${crew.name} girds your ship with a vengeance ward. Fall within ${VENGEANCE_WARD_TURNS} turns and it strikes back.`])
         break
       }
@@ -6392,6 +6399,9 @@ export default function RaidCombat({
               {/* Bespoke chase-skin ability FX over the player hull (Catfish's Galaxy surge) */}
               {playerStrikeFx?.kind === 'galaxy' && (
                 <GalaxySurgeFx key={`gsf-${playerStrikeFx.key}`} color={playerStrikeFx.color} />
+              )}
+              {playerStrikeFx?.kind === 'ward' && (
+                <FossilWardFx key={`fwf-${playerStrikeFx.key}`} color={playerStrikeFx.color} />
               )}
               {/* Lethal-save burst — Quartermaster's Anchor catches a killing blow */}
               {anchorSaveFx > 0 && <AnchorSaveBurst key={`asf-${anchorSaveFx}`} />}
