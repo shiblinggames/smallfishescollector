@@ -649,8 +649,18 @@ function RaidMap({
 // load re-gates, and Skip is one tap.
 const seenIntroScenes = new Set<string>()
 
+// A simple atmospheric backdrop for a non-boss node pop-up: the chapter's
+// location art (borrowed from that chapter's boss), so a chapter's node sheets
+// share a consistent scene, echoing the boss cards' custom backdrops.
+function sheetChapterBg(nodeId: string, views: RaidNodeView[]): string | undefined {
+  const cid = chapterForNode(nodeId).id
+  const boss = views.find(v => v.node.type === 'raid' && !v.node.sideBranch && chapterForNode(v.node.id).id === cid)
+  return boss?.node.raidId ? (RAID_LOCATION_BG[boss.node.raidId] ?? RAID_BOSS_BG[boss.node.raidId]) : undefined
+}
+
 function NodeDetailSheet({
   view,
+  backdrop,
   doubloons,
   navLevel,
   ownedRaidItems,
@@ -667,6 +677,9 @@ function NodeDetailSheet({
   onClose,
 }: {
   view: RaidNodeView
+  /** A simple atmospheric backdrop for the sheet (the node's scene backdrop, or
+   *  its chapter's location). Layered under a dark scrim so content stays legible. */
+  backdrop?: string
   doubloons: number
   navLevel: number
   ownedRaidItems: string[]
@@ -1148,7 +1161,9 @@ function NodeDetailSheet({
           width: '100%', maxWidth: 480,
           maxHeight: '100%', overflowY: 'auto', WebkitOverflowScrolling: 'touch',
           overscrollBehavior: 'contain',
-          background: 'linear-gradient(180deg, #14110d 0%, #0a0807 100%)',
+          background: backdrop
+            ? `linear-gradient(180deg, rgba(10,9,7,0.7) 0%, rgba(10,9,7,0.9) 42%, rgba(9,8,6,0.98) 100%), url(${backdrop}) top center / cover no-repeat`
+            : 'linear-gradient(180deg, #14110d 0%, #0a0807 100%)',
           border: `1px solid ${accent}33`,
           borderBottom: 'none',
           borderRadius: '20px 20px 0 0',
@@ -3192,6 +3207,7 @@ function JourneyChapter({ views, onSelect }: { views: RaidNodeView[]; onSelect: 
 
 export default function RaidsSection({ views, doubloons, navLevel, playerShipImage, raidRecords, repairOwed, ownedRaidItems, ownedShipSkins = [], equippedRaidItems, shipClasses, seenChapterUnlocks, seenUltimateUnlock, raidNodeChoices, topRaidProgress, hasSixthBerth = false, hasArmoryExpansion = false, musterParty = [] }: { views: RaidNodeView[]; doubloons: number; navLevel: number; playerShipImage?: string; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[]; ownedShipSkins?: string[]; equippedRaidItems: string[]; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; seenUltimateUnlock: boolean; raidNodeChoices: Record<string, string>; topRaidProgress: { username: string; score: number } | null; hasSixthBerth?: boolean; hasArmoryExpansion?: boolean; musterParty?: MusterCrew[] }) {
   const [open, setOpen] = useState(true)
+  const router = useRouter()
   // Journey (the story map) vs Bosses (a farm deck — every boss with Fight +
   // Challenge one tap away). Journey stays the default for the narrative.
   const [view, setView] = useState<'journey' | 'bosses'>('journey')
@@ -3525,17 +3541,42 @@ export default function RaidsSection({ views, doubloons, navLevel, playerShipIma
       )}
 
       <AnimatePresence>
-        {selected && (
+        {selected && (selected.node.type === 'raid' ? (() => {
+          // Boss raid node → the same art-forward fight modal as the Bosses tab
+          // (portrait + backdrop + drops + Normal/Challenge). A challenge
+          // side-node opens its parent boss's modal (which carries both modes).
+          const mainBoss = selected.node.sideBranch
+            ? (views.find(v => v.node.id === selected.node.sideBranch!.parentId) ?? selected)
+            : selected
+          const challenge = views.find(c => c.node.sideBranch?.parentId === mainBoss.node.id) ?? null
+          const nextBossId = views.find(v => v.node.type === 'raid' && !v.node.sideBranch && v.status === 'available')?.node.id ?? null
+          return (
+            <BossFightModal
+              key={mainBoss.node.id}
+              boss={mainBoss}
+              challenge={challenge}
+              rec={mainBoss.node.raidId ? raidRecords[mainBoss.node.raidId] ?? null : null}
+              ownedRaidItems={ownedRaidItems}
+              ownedShipSkins={ownedShipSkins}
+              isNext={mainBoss.node.id === nextBossId}
+              repairOwed={repairOwed}
+              onEnter={r => router.push(r)}
+              onRepairBlocked={() => setRepairPromptOpen(true)}
+              onClose={() => setSelected(null)}
+            />
+          )
+        })() : (
           <NodeDetailSheet
             key={selected.node.id}
             view={selected}
+            backdrop={SCENE_BACKDROPS[selected.node.id] ?? sheetChapterBg(selected.node.id, views)}
             doubloons={doubloons}
             navLevel={navLevel}
             ownedRaidItems={ownedRaidItems}
             ownedShipSkins={ownedShipSkins}
             equippedRaidItems={equippedRaidItems}
             shipClasses={shipClasses}
-            raidRecords={selected.node.type === 'raid' && selected.node.raidId ? raidRecords[selected.node.raidId] ?? null : null}
+            raidRecords={null}
             pickedEventChoiceId={raidNodeChoices[selected.node.id]}
             allNodeChoices={raidNodeChoices}
             clearedNodeIds={new Set(views.filter(v => v.status === 'cleared').map(v => v.node.id))}
@@ -3544,7 +3585,7 @@ export default function RaidsSection({ views, doubloons, navLevel, playerShipIma
             musterParty={musterParty}
             onClose={() => setSelected(null)}
           />
-        )}
+        ))}
       </AnimatePresence>
 
       {/* Chapter-unlock celebration. Fires once per chapter per
