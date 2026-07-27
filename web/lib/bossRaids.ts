@@ -723,17 +723,18 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
   // table with doubled special rates in raidChallenge.ts.
   loot: [
     // 70% currency
-    { id: 'doubloons_600',     label: '+600 ⟡',                image: '/smallpile.png',          emoji: '🪙',       rarity: 'common',    weight: 28 },
+    { id: 'doubloons_600',     label: '+600 ⟡',                image: '/smallpile.png',          emoji: '🪙',       rarity: 'common',    weight: 32 },
     { id: 'doubloons_1200',    label: '+1,200 ⟡',              image: '/dailybonus.png',         emoji: '💰',       rarity: 'uncommon',  weight: 20 },
     { id: 'gems_50',           label: '50 Gems',                image: null,                      emoji: GEM_GLYPH,  rarity: 'rare',      weight: 15 },
     { id: 'pack_2',            label: '200 Gems',               image: null,                      emoji: GEM_GLYPH,  rarity: 'epic',      weight: 5  },
-    // 30% special drops. Finndicate Hull is the shared chapter-1
-    // trophy skin and stays at the same 3% as Pete drops it; the
-    // 4 weight points freed up move into Krust's Carapace, which keeps
-    // the 70/30 currency/special split intact. Challenge variant
-    // doubles the hull rate to 6% in raidChallenge.ts.
+    // Special drops. Signature epic (Krust's Carapace) sits at the standard
+    // 20% every campaign raid uses, with the Legendary chase (Captain's
+    // Carapace) at 5%. Finndicate Hull is the shared chapter-1 trophy skin at
+    // 3%. The 4 weight points freed by normalizing the carapace from 24% went
+    // back into currency so the table still totals 100. Challenge variant
+    // doubles the special rates in raidChallenge.ts.
     { id: 'finndicate_hull',   label: 'Finndicate Hull',        image: null,                      emoji: '🚢',       rarity: 'epic',      weight: 3,  shipSkinId: 'finndicate_hull' },
-    { id: 'krusts_carapace',   label: "Krust's Carapace",       image: '/captainshull.png',       emoji: '🛡️',      rarity: 'epic',      weight: 24 },
+    { id: 'krusts_carapace',   label: "Krust's Carapace",       image: '/captainshull.png',       emoji: '🛡️',      rarity: 'epic',      weight: 20 },
     { id: 'captains_carapace', label: "Captain's Carapace",     image: '/captainscarapace.png',   emoji: '🛡️',      rarity: 'legendary', weight: 5  },
   ],
   killRewards: {
