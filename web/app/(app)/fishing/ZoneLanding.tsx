@@ -161,6 +161,12 @@ export default function ZoneLanding({
   // stays in sync if the player spends a point and reopens it.
   const [fishingRenownAlloc, setFishingRenownAlloc] = useState<RenownAlloc>(initialFishingRenownAlloc ?? {})
   const [renownOpen, setRenownOpen] = useState(false)
+  // Blink the level bar when there's a reason to tap it — a new level you
+  // haven't opened it to view, or an unspent Renown point. "Seen" level is
+  // remembered per device (localStorage, same pattern as the username prompt
+  // in this file), cleared on tap.
+  const [fishLevelSeen, setFishLevelSeen] = useState(999)
+  useEffect(() => { setFishLevelSeen(Number(localStorage.getItem('sf_fish_level_seen') || 0)) }, [])
   const fishingRenownLevel = renownLevel('fishing', fishingXP)
   const fishingRenownState: RenownState = {
     skill: 'fishing', level: fishingRenownLevel,
@@ -242,14 +248,22 @@ export default function ZoneLanding({
             const xp = getXPProgress(fishingXP)
             const atMax = xp.level >= 100
             const toNext = atMax ? 0 : xp.xpForLevel - xp.xpInLevel
+            // Blink while there's a reason to tap: an unspent Renown point (gold)
+            // or a new level not yet viewed (blue). Clears on tap / when spent.
+            const renownAvail = fishingRenownState.available
+            const pulse = renownAvail > 0 || xp.level > fishLevelSeen
+            const pc = renownAvail > 0 ? '#f0c040' : '#7da0d8'
+            const markSeen = () => { setFishLevelSeen(xp.level); try { localStorage.setItem('sf_fish_level_seen', String(xp.level)) } catch {} }
             return (
-              <button
+              <motion.button
                 type="button"
-                onClick={() => setRenownOpen(true)}
+                onClick={() => { markSeen(); setRenownOpen(true) }}
                 aria-label="View Fishing Renown"
-                style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', width: '100%', textAlign: 'left', background: 'none', border: '1px solid transparent', borderRadius: 12, cursor: 'pointer', padding: '1.5rem 0.35rem 0.5rem', WebkitTapHighlightColor: 'transparent' }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(125,160,216,0.08)'; e.currentTarget.style.borderColor = 'rgba(125,160,216,0.22)' }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.borderColor = 'transparent' }}
+                animate={pulse ? { boxShadow: [`0 0 0px ${pc}00`, `0 0 16px ${pc}aa`, `0 0 0px ${pc}00`] } : { boxShadow: `0 0 0px ${pc}00` }}
+                transition={pulse ? { duration: 1.6, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.3 }}
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', width: '100%', textAlign: 'left', background: pulse ? `${pc}12` : 'none', border: `1px solid ${pulse ? pc + '55' : 'transparent'}`, borderRadius: 12, cursor: 'pointer', padding: '1.5rem 0.35rem 0.5rem', WebkitTapHighlightColor: 'transparent' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(125,160,216,0.12)'; e.currentTarget.style.borderColor = 'rgba(125,160,216,0.3)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = pulse ? `${pc}12` : 'none'; e.currentTarget.style.borderColor = pulse ? pc + '55' : 'transparent' }}
               >
                 <LevelSectionHeader label="Fishing" />
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '0.3rem 0' }}>
@@ -270,7 +284,7 @@ export default function ZoneLanding({
                     {atMax ? 'MAX' : `${toNext.toLocaleString()} xp`}
                   </span>
                 </div>
-              </button>
+              </motion.button>
             )
           })()}
 

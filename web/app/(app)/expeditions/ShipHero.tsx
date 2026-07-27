@@ -369,6 +369,11 @@ export default function ShipHero({
     spent: spentPoints('nav', navRenownAllocState),
     available: navRenownAvailable, alloc: navRenownAllocState,
   }
+  // Blink the nav bar when there's a reason to tap it — a new Nav level not yet
+  // viewed (blue), or an unspent Renown point (gold). "Seen" level is remembered
+  // per device, cleared on tap.
+  const [navLevelSeen, setNavLevelSeen] = useState(999)
+  useEffect(() => { setNavLevelSeen(Number(localStorage.getItem('sf_nav_level_seen') || 0)) }, [])
   // One-time "reached Nav 100, meet Renown" intro. The hub is always visited,
   // so showing it here on mount catches both existing maxed captains and anyone
   // who just crossed 100 out in a raid or voyage.
@@ -1049,25 +1054,29 @@ export default function ShipHero({
             const fillPct = atMax ? (rn ? rn.progress * 100 : 100) : xpProgress.progress * 100
             const toGo = Math.max(0, xpProgress.xpForLevel - xpProgress.xpInLevel)
             const hasNavPoints = atMax && navRenownAvailable > 0
+            const hasUnseenLevel = xpProgress.level > navLevelSeen
+            const pulse = hasNavPoints || hasUnseenLevel
+            const pc = hasNavPoints ? '#f0c040' : '#7da0d8'
+            const markSeen = () => { setNavLevelSeen(xpProgress.level); try { localStorage.setItem('sf_nav_level_seen', String(xpProgress.level)) } catch {} }
             return (
               <motion.button
                 type="button"
-                onClick={() => (atMax ? setRenownOpen(true) : setNavInfoOpen(true))}
+                onClick={() => { markSeen(); (atMax ? setRenownOpen(true) : setNavInfoOpen(true)) }}
                 aria-label={atMax ? 'Open Navigation Renown' : 'Show navigation level info'}
                 className="font-karla font-600"
-                animate={hasNavPoints ? { boxShadow: ['0 0 0px #f0c04000', '0 0 16px #f0c040aa', '0 0 0px #f0c04000'] } : { boxShadow: '0 0 0px #f0c04000' }}
-                transition={hasNavPoints ? { duration: 1.6, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.3 }}
+                animate={pulse ? { boxShadow: [`0 0 0px ${pc}00`, `0 0 16px ${pc}aa`, `0 0 0px ${pc}00`] } : { boxShadow: `0 0 0px ${pc}00` }}
+                transition={pulse ? { duration: 1.6, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.3 }}
                 style={{
                   position: 'relative',
                   display: 'flex', flexDirection: 'column', alignItems: 'stretch', width: '100%',
                   padding: '0.25rem 0.35rem 0.35rem', borderRadius: 12,
-                  background: hasNavPoints ? 'rgba(240,192,64,0.06)' : 'transparent',
-                  border: `1px solid ${hasNavPoints ? 'rgba(240,192,64,0.4)' : 'transparent'}`,
+                  background: pulse ? `${pc}12` : 'transparent',
+                  border: `1px solid ${pulse ? pc + '66' : 'transparent'}`,
                   color: 'inherit', cursor: 'pointer',
                   transition: 'background 0.15s, border-color 0.15s',
                 }}
-                onMouseEnter={e => { e.currentTarget.style.background = hasNavPoints ? 'rgba(240,192,64,0.12)' : 'rgba(125,160,216,0.08)'; e.currentTarget.style.borderColor = hasNavPoints ? 'rgba(240,192,64,0.6)' : 'rgba(125,160,216,0.22)' }}
-                onMouseLeave={e => { e.currentTarget.style.background = hasNavPoints ? 'rgba(240,192,64,0.06)' : 'transparent'; e.currentTarget.style.borderColor = hasNavPoints ? 'rgba(240,192,64,0.4)' : 'transparent' }}
+                onMouseEnter={e => { e.currentTarget.style.background = pulse ? `${pc}1f` : 'rgba(125,160,216,0.08)'; e.currentTarget.style.borderColor = pulse ? pc + '99' : 'rgba(125,160,216,0.22)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = pulse ? `${pc}12` : 'transparent'; e.currentTarget.style.borderColor = pulse ? pc + '66' : 'transparent' }}
               >
                 <LevelSectionHeader label="Navigation" />
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}>
