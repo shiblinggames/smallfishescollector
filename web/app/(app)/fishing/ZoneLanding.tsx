@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ZONE_MIN_LEVEL, ZONE_WAIT_BASE, BASE_CRATE_CHANCE, zoneDiamondShare, zonePetPerCrate } from './zoneData'
 import { updateUsername } from '@/app/(app)/u/actions'
 import FisherPose from '@/components/FisherPose'
+import { LevelSectionHeader } from '@/components/LevelSectionHeader'
 import { PRESTIGE_MAX, goldenBoostPct, goldenBoostMult } from '@/lib/zoneRewards'
 import { SHINY_ODDS } from '@/lib/shiny'
 import { getXPProgress } from '@/lib/fishingLevel'
@@ -216,12 +217,9 @@ export default function ZoneLanding({
             const toNext = atMax ? 0 : xp.xpForLevel - xp.xpInLevel
             return (
               <div style={{ flexShrink: 0, padding: '2.5rem 0.9rem 0.7rem' }}>
-                {/* Section header — matches the expeditions page "Navigation"
-                    header sitting above its nav-level bar. */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 9, paddingLeft: 2 }}>
-                  <span aria-hidden style={{ width: 3, height: 14, borderRadius: 2, background: 'linear-gradient(180deg,#9ab8e0,#5a7db0)', boxShadow: '0 0 8px rgba(125,160,216,0.5)' }} />
-                  <span className="font-cinzel font-700" style={{ fontSize: '0.92rem', letterSpacing: '0.06em', color: '#e2e9f3' }}>Fishing</span>
-                </div>
+                {/* Section header — shared with the expeditions "Navigation"
+                    header (LevelSectionHeader) so the two never drift apart. */}
+                <LevelSectionHeader label="Fishing" />
                 {/* Fishing level bar — mirrors the expeditions page nav-level bar
                     (ShipHero): LV + big number on the left, a full-width fill, and
                     xp-to-next on the right. Same sizing, colours, and spacing. */}
