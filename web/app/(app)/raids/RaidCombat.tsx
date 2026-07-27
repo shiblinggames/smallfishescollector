@@ -69,7 +69,7 @@ import { getRepairKit, rollRepairKitHeal, repairKitRange } from '@/lib/repairKit
 import { classForSlug, CLASSES, currentMilestone, type AnyClassDef } from '@/lib/crewClasses'
 import { getCrewSkinByFilename } from '@/lib/crewSkins'
 import { ChaseSkinFx } from '@/components/ChaseSkinFx'
-import { TempestStrikeFx, LeviathanStrikeFx } from '@/components/ChaseStrikeFx'
+import { TempestStrikeFx, LeviathanStrikeFx, RequiemMarkFx } from '@/components/ChaseStrikeFx'
 import { crewLevelFromXP } from '@/lib/crewLevel'
 import { type AffixDef } from '@/lib/raidAffixes'
 import { getShipClass, aggregateShipClasses } from '@/lib/shipClasses'
@@ -1295,7 +1295,7 @@ export default function RaidCombat({
   const [barrageSplats, setBarrageSplats] = useState<{ key: number; text: string; dx: number; crit?: boolean; color?: string }[]>([])
   // Bespoke chase-skin ability-effect FX over the enemy hull (e.g. Mako's Tempest
   // lightning storm during Blitz). Mounted for the ability's duration, then null.
-  const [enemyStrikeFx, setEnemyStrikeFx] = useState<{ key: number; kind: 'tempest' | 'leviathan'; color: string; shots?: number; interval?: number } | null>(null)
+  const [enemyStrikeFx, setEnemyStrikeFx] = useState<{ key: number; kind: 'tempest' | 'leviathan' | 'requiem'; color: string; shots?: number; interval?: number } | null>(null)
   const [critFlash, setCritFlash]     = useState(false)
   // Brief red wash when the boss flips to phase 2 (challenge-mode Pete).
   // Same shape as critFlash — fixed full-screen radial gradient, ~400ms.
@@ -2874,6 +2874,13 @@ export default function RaidCombat({
         applyEnemyStatus('marked', rq.markMag, rq.markTurns)
         if (rq.pierceShield) markPierceTurnsRef.current = rq.markTurns
         noteCheckResponse('snare'); noteCheckResponse('burst')   // legendary breadth: marking him for the kill answers a disrupt AND a "hit hard" check
+        // The Idol (Mira's chase skin): brand a bespoke death-mark sigil onto the
+        // enemy hull as it's marked — the lasting `marked` aura carries on after.
+        if (chaseSkinId === 'moorish_idol_idol') {
+          const rk = Date.now()
+          setEnemyStrikeFx({ key: rk, kind: 'requiem', color: chaseColor ?? '#ff4d7d' })
+          playStepChainRef.current.push(setTimeout(() => setEnemyStrikeFx(s => (s && s.key === rk ? null : s)), 1400))
+        }
         setEHitsplat({ key: ak + 1, text: 'MARKED', color: chaseColor ?? '#f43f5e', big: true })
         setTimeout(() => setEHitsplat(null), 900)
         const dur = `${rq.markTurns} turn${rq.markTurns === 1 ? '' : 's'}`
@@ -6260,6 +6267,9 @@ export default function RaidCombat({
             )}
             {enemyStrikeFx?.kind === 'leviathan' && (
               <LeviathanStrikeFx key={`lsf-${enemyStrikeFx.key}`} color={enemyStrikeFx.color} />
+            )}
+            {enemyStrikeFx?.kind === 'requiem' && (
+              <RequiemMarkFx key={`rmf-${enemyStrikeFx.key}`} color={enemyStrikeFx.color} />
             )}
             {/* Thermal Shock confluence — the ice+fire shatter detonation */}
             <AnimatePresence>

@@ -121,6 +121,76 @@ export function TempestStrikeFx({ color, shots, interval }: { color: string; sho
   )
 }
 
+/** The Idol (Mira) — a death-mark. Requiem deals no damage; it BRANDS the enemy.
+ *  A gilded gaze-beam falls onto the target, an aureole of rays tightens, and a
+ *  sacred rose-and-gold sigil seals onto the hull with a searing flash, an eye
+ *  opening at its heart. The lasting `marked` aura carries on after this seals. */
+export function RequiemMarkFx({ color }: { color: string }) {
+  const GOLD = '#f5c542'
+  const SEAL = 0.5   // moment the sigil locks + sears (s)
+  return (
+    <div aria-hidden style={{ position: 'absolute', inset: '-55% -28% -20% -28%', pointerEvents: 'none', zIndex: 6 }}>
+      {/* Gilded gaze-beam falling onto the mark from above. */}
+      <motion.div
+        initial={{ opacity: 0, scaleY: 0.4 }}
+        animate={{ opacity: [0, 0.7, 0.55, 0], scaleY: [0.4, 1, 1, 1] }}
+        transition={{ duration: 1.35, times: [0, 0.35, 0.75, 1], ease: 'easeOut' }}
+        style={{ position: 'absolute', left: '50%', top: 0, width: '20%', height: '78%', marginLeft: '-10%', transformOrigin: '50% 0%',
+          background: `linear-gradient(180deg, ${GOLD}00 0%, ${GOLD}55 20%, ${color}44 70%, transparent 100%)` }}
+      />
+
+      {/* Aureole of rays tightening onto the target as the seal forms. */}
+      <motion.div
+        initial={{ opacity: 0, scale: 1.7, rotate: -24 }}
+        animate={{ opacity: [0, 0.4, 0.3, 0], scale: [1.7, 1, 1, 1.1], rotate: [-24, 6, 10, 18] }}
+        transition={{ duration: 1.35, times: [0, 0.4, 0.75, 1], ease: 'easeOut' }}
+        style={{ position: 'absolute', left: '50%', top: '62%', width: 340, height: 340, marginLeft: -170, marginTop: -170, borderRadius: '50%',
+          background: `repeating-conic-gradient(from 0deg, ${GOLD}00 0deg, ${GOLD}30 7deg, ${GOLD}00 17deg)` }}
+      />
+
+      {/* The sacred sigil sealing onto the hull — converges in + slow-turns, an
+          eye opening at its heart. */}
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', left: '10%', top: '46%', width: '80%', height: '52%' }}>
+        <motion.g
+          initial={{ opacity: 0, scale: 1.55, rotate: -35 }}
+          animate={{ opacity: [0, 1, 0.95, 0.85, 0], scale: [1.55, 1, 1, 1, 1.06], rotate: [-35, 0, 2, 4, 12] }}
+          transition={{ duration: 1.35, times: [0, 0.38, 0.6, 0.85, 1], ease: 'easeOut' }}
+          style={{ transformOrigin: '50% 50%' }}
+        >
+          <circle cx="50" cy="50" r="40" fill="none" stroke={GOLD} strokeWidth="1" strokeDasharray="2 4" vectorEffect="non-scaling-stroke" />
+          <circle cx="50" cy="50" r="30" fill="none" stroke={color} strokeWidth="1.4" vectorEffect="non-scaling-stroke" />
+          {Array.from({ length: 12 }).map((_, k) => (
+            <line key={k} x1="50" y1="8" x2="50" y2={k % 2 ? 15 : 12} stroke={k % 2 ? color : GOLD} strokeWidth="1.4" vectorEffect="non-scaling-stroke" transform={`rotate(${k * 30} 50 50)`} />
+          ))}
+          {/* Six-point star bounding the eye. */}
+          {[0, 60, 120].map(a => (
+            <line key={a} x1="50" y1="30" x2="50" y2="70" stroke={GOLD} strokeWidth="1.2" vectorEffect="non-scaling-stroke" transform={`rotate(${a} 50 50)`} opacity={0.8} />
+          ))}
+          {/* The eye at the heart — a rose lens with a bright pupil. */}
+          <ellipse cx="50" cy="50" rx="12" ry="6.5" fill="none" stroke={color} strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
+          <circle cx="50" cy="50" r="3" fill={color} />
+        </motion.g>
+      </svg>
+
+      {/* Searing flash as the mark locks in. */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.3 }}
+        animate={{ opacity: [0, 1, 0], scale: [0.3, 2, 2.7] }}
+        transition={{ duration: 0.55, delay: SEAL, ease: 'easeOut' }}
+        style={{ position: 'absolute', left: '50%', top: '72%', width: 190, height: 190, marginLeft: -95, marginTop: -95, borderRadius: '50%',
+          background: `radial-gradient(circle, #ffffff 0%, ${GOLD}bb 28%, ${color}66 48%, transparent 70%)` }}
+      />
+      {/* Shield-crack ring — the mark lays the hull open (pierce at cap). */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.5 }}
+        animate={{ opacity: [0, 0.9, 0], scale: [0.5, 1.8, 2.3] }}
+        transition={{ duration: 0.6, delay: SEAL + 0.02, ease: 'easeOut' }}
+        style={{ position: 'absolute', left: '50%', top: '72%', width: 150, height: 150, marginLeft: -75, marginTop: -75, borderRadius: '50%', border: `2px solid ${color}`, boxShadow: `0 0 16px ${color}` }}
+      />
+    </div>
+  )
+}
+
 /** Hunter's Bane (Doby) — the apex predator's killing blow. A targeting reticle
  *  snaps a lock onto the enemy, then one devastating strike detonates on the
  *  hull: a blood-red charge implodes, a white core detonates, shock rings blow
