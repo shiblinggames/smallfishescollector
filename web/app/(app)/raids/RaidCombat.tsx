@@ -2228,10 +2228,13 @@ export default function RaidCombat({
       if (critFreezeRef.current) { rafRef.current = requestAnimationFrame(tick); return }
       const frames = dt / 16.67
 
-      // Squall (raid-8 affliction): the needle's sweep speed surges and dies
-      // on a slow sine, so timing by rhythm alone fails — you have to watch
-      // the needle itself. Judgment is untouched (position sampled at tap).
-      const gust = squallActive ? 1 + 0.55 * Math.sin(now / 340 + squallPhaseRef.current) : 1
+      // Squall (raid-8 affliction, Kingmaker's Gale): the needle's sweep speed
+      // surges and dies on a slow sine, so timing by rhythm alone fails — you
+      // have to watch the needle itself. Judgment is untouched (position
+      // sampled at tap). Eased from ±0.55 @ 340ms to a gentler, slower swing so
+      // the gusts read as trackable rather than a whip (was landing too hard on
+      // top of The Gorge's 2.6x zone speed).
+      const gust = squallActive ? 1 + 0.38 * Math.sin(now / 440 + squallPhaseRef.current) : 1
       firePosRef.current += NEEDLE_SPEED * gust * frames * fireDirRef.current
       if (firePosRef.current >= 1) { firePosRef.current = 1; fireDirRef.current = -1 }
       if (firePosRef.current <= 0) { firePosRef.current = 0; fireDirRef.current = 1 }
