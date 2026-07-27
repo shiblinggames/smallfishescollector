@@ -342,6 +342,83 @@ export function RequiemMarkFx({ color }: { color: string }) {
   )
 }
 
+/** Kraken Hunter (Dole) — an abyssal scry over the enemy. Oracle reveals the
+ *  enemy's next moves, so this reads as reading them from the deep: a teal
+ *  scrying eye opens over the target, sonar rings pulse out scanning it, a runic
+ *  ring turns, and bubbles + caustic light rise from the abyss. Over the enemy. */
+export function KrakenOracleFx({ color }: { color: string }) {
+  const OPEN = 0.4   // moment the eye opens + the read lands (s)
+  return (
+    <div aria-hidden style={{ position: 'absolute', inset: '-35% -25%', pointerEvents: 'none', zIndex: 6, overflow: 'visible' }}>
+      {/* Abyssal caustic haze drifting over the target. */}
+      {[{ l: 48, t: 54, s: 76, d: 0 }, { l: 60, t: 60, s: 56, d: 0.2 }].map((h, i) => (
+        <motion.div key={`hz-${i}`}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0, 0.5, 0.4, 0] }}
+          transition={{ duration: 1.4, delay: h.d, times: [0, 0.3, 0.7, 1], ease: 'easeInOut' }}
+          style={{ position: 'absolute', left: `${h.l}%`, top: `${h.t}%`, width: `${h.s}%`, height: `${h.s}%`, marginLeft: `-${h.s / 2}%`, marginTop: `-${h.s / 2}%`, borderRadius: '50%', background: `radial-gradient(circle, ${color}55 0%, ${color}1e 44%, transparent 72%)` }}
+        />
+      ))}
+
+      {/* Sonar rings pulsing outward — scanning the enemy. */}
+      {[0, 0.18, 0.36, 0.54].map((d, i) => (
+        <motion.div key={`son-${i}`}
+          initial={{ opacity: 0, scale: 0.2 }}
+          animate={{ opacity: [0, 0.7, 0], scale: [0.2, 2.6, 3.2] }}
+          transition={{ duration: 1, delay: 0.15 + d, ease: 'easeOut' }}
+          style={{ position: 'absolute', left: '50%', top: '56%', width: 150, height: 150, marginLeft: -75, marginTop: -75, borderRadius: '50%', border: `2px solid ${color}`, boxShadow: `0 0 12px ${color}` }}
+        />
+      ))}
+
+      {/* Slow-turning scrying rune ring. */}
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', left: '18%', top: '50%', width: '64%', height: '52%' }}>
+        <motion.g
+          initial={{ opacity: 0, scale: 1.5, rotate: -30 }}
+          animate={{ opacity: [0, 0.9, 0.85, 0], scale: [1.5, 1, 1, 1.06], rotate: [-30, 10, 14, 24] }}
+          transition={{ duration: 1.4, times: [0, 0.35, 0.72, 1], ease: 'easeOut' }}
+          style={{ transformOrigin: '50% 50%' }}
+        >
+          <circle cx="50" cy="50" r="38" fill="none" stroke={color} strokeWidth="1" strokeDasharray="2 5" vectorEffect="non-scaling-stroke" />
+          {Array.from({ length: 8 }).map((_, k) => (
+            <line key={k} x1="50" y1="10" x2="50" y2="16" stroke={color} strokeWidth="1.3" vectorEffect="non-scaling-stroke" transform={`rotate(${k * 45} 50 50)`} />
+          ))}
+        </motion.g>
+      </svg>
+
+      {/* The abyssal eye opening — a teal lens with a dark pupil that reads the mark. */}
+      <motion.div
+        initial={{ opacity: 0, scaleY: 0.08 }}
+        animate={{ opacity: [0, 1, 0.9, 0], scaleY: [0.08, 1, 1, 1] }}
+        transition={{ duration: 1.4, delay: OPEN, times: [0, 0.2, 0.7, 1], ease: 'easeOut' }}
+        style={{ position: 'absolute', left: '50%', top: '56%', width: 74, height: 40, marginLeft: -37, marginTop: -20, borderRadius: '50%', border: `2px solid ${color}`, background: `radial-gradient(ellipse at 50% 50%, #ffffff 0%, ${color}aa 30%, ${color}33 55%, transparent 76%)`, boxShadow: `0 0 20px ${color}` }}
+      >
+        <div style={{ position: 'absolute', left: '50%', top: '50%', width: 11, height: 11, marginLeft: -5.5, marginTop: -5.5, borderRadius: '50%', background: '#04121a', boxShadow: `0 0 8px ${color}` }} />
+      </motion.div>
+
+      {/* Reveal flash as the read lands. */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.3 }}
+        animate={{ opacity: [0, 0.8, 0], scale: [0.3, 1.8, 2.3] }}
+        transition={{ duration: 0.55, delay: OPEN, ease: 'easeOut' }}
+        style={{ position: 'absolute', left: '50%', top: '56%', width: 180, height: 180, marginLeft: -90, marginTop: -90, borderRadius: '50%', background: `radial-gradient(circle, #ffffff 0%, ${color}88 32%, transparent 66%)` }}
+      />
+
+      {/* Bubbles rising from the abyss. */}
+      {Array.from({ length: 12 }).map((_, i) => {
+        const left = 12 + ((i * 71) / 12) % 76
+        return (
+          <motion.div key={`b-${i}`}
+            initial={{ opacity: 0, y: 34 }}
+            animate={{ opacity: [0, 0.8, 0], y: [34, -46] }}
+            transition={{ duration: 1.2 + (i % 4) * 0.2, delay: 0.1 + (i % 6) * 0.1, ease: 'easeOut' }}
+            style={{ position: 'absolute', left: `${left}%`, top: '80%', width: 3 + (i % 3), height: 3 + (i % 3), borderRadius: '50%', border: `1px solid ${color}bb`, background: `${color}22`, boxShadow: `0 0 4px ${color}99` }}
+          />
+        )
+      })}
+    </div>
+  )
+}
+
 /** Hunter's Bane (Doby) — the apex predator's killing blow. A targeting reticle
  *  snaps a lock onto the enemy, then one devastating strike detonates on the
  *  hull: a blood-red charge implodes, a white core detonates, shock rings blow

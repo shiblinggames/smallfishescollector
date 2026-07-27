@@ -69,7 +69,7 @@ import { getRepairKit, rollRepairKitHeal, repairKitRange } from '@/lib/repairKit
 import { classForSlug, CLASSES, currentMilestone, type AnyClassDef } from '@/lib/crewClasses'
 import { getCrewSkinByFilename } from '@/lib/crewSkins'
 import { ChaseSkinFx } from '@/components/ChaseSkinFx'
-import { TempestStrikeFx, LeviathanStrikeFx, RequiemMarkFx, GalaxySurgeFx, FossilWardFx } from '@/components/ChaseStrikeFx'
+import { TempestStrikeFx, LeviathanStrikeFx, RequiemMarkFx, GalaxySurgeFx, FossilWardFx, KrakenOracleFx } from '@/components/ChaseStrikeFx'
 import { crewLevelFromXP } from '@/lib/crewLevel'
 import { type AffixDef } from '@/lib/raidAffixes'
 import { getShipClass, aggregateShipClasses } from '@/lib/shipClasses'
@@ -1295,7 +1295,7 @@ export default function RaidCombat({
   const [barrageSplats, setBarrageSplats] = useState<{ key: number; text: string; dx: number; crit?: boolean; color?: string }[]>([])
   // Bespoke chase-skin ability-effect FX over the enemy hull (e.g. Mako's Tempest
   // lightning storm during Blitz). Mounted for the ability's duration, then null.
-  const [enemyStrikeFx, setEnemyStrikeFx] = useState<{ key: number; kind: 'tempest' | 'leviathan' | 'requiem'; color: string; shots?: number; interval?: number } | null>(null)
+  const [enemyStrikeFx, setEnemyStrikeFx] = useState<{ key: number; kind: 'tempest' | 'leviathan' | 'requiem' | 'oracle'; color: string; shots?: number; interval?: number } | null>(null)
   // Bespoke chase-skin ability FX over the PLAYER hull (heal/shield/ward abilities).
   const [playerStrikeFx, setPlayerStrikeFx] = useState<{ key: number; kind: 'galaxy' | 'ward'; color: string } | null>(null)
   const [critFlash, setCritFlash]     = useState(false)
@@ -2844,6 +2844,13 @@ export default function RaidCombat({
         foresightMovesLeftRef.current = Math.max(1, fm.revealMoves)
         const moves = predictEnemyMoves(fm.revealMoves)
         setForeseenMoves(moves)
+        // Kraken Hunter (Dole's chase skin): an abyssal scry reads the enemy — a
+        // teal eye opens over the target and sonar rings scan it as the moves surface.
+        if (chaseSkinId === 'dole_krakenhunter') {
+          const ok = Date.now()
+          setEnemyStrikeFx({ key: ok, kind: 'oracle', color: chaseColor ?? '#2dd4bf' })
+          playStepChainRef.current.push(setTimeout(() => setEnemyStrikeFx(s => (s && s.key === ok ? null : s)), 1500))
+        }
         // Dodge refresh — clear the one-turn dodge cooldown so a player who
         // dodged last turn can slip the shot they just foresaw.
         let refreshed = false
@@ -6286,6 +6293,9 @@ export default function RaidCombat({
             )}
             {enemyStrikeFx?.kind === 'requiem' && (
               <RequiemMarkFx key={`rmf-${enemyStrikeFx.key}`} color={enemyStrikeFx.color} />
+            )}
+            {enemyStrikeFx?.kind === 'oracle' && (
+              <KrakenOracleFx key={`kof-${enemyStrikeFx.key}`} color={enemyStrikeFx.color} />
             )}
             {/* Thermal Shock confluence — the ice+fire shatter detonation */}
             <AnimatePresence>
