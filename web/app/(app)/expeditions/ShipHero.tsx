@@ -1197,8 +1197,8 @@ export default function ShipHero({
                         loading="lazy"
                         decoding="async"
                         style={{
-                          position: 'absolute', left: '8%', bottom: 0,
-                          height: 38, width: 'auto', maxWidth: '45%',
+                          position: 'absolute', left: '18%', bottom: 0,
+                          height: 46, width: 'auto', maxWidth: '42%',
                           objectFit: 'contain',
                           opacity: 0.72,
                           filter: 'brightness(0.78) saturate(0.85) drop-shadow(0 2px 6px rgba(0,0,0,0.5))',
@@ -1216,8 +1216,8 @@ export default function ShipHero({
                         loading="lazy"
                         decoding="async"
                         style={{
-                          position: 'absolute', right: '8%', bottom: 0,
-                          height: 38, width: 'auto', maxWidth: '45%',
+                          position: 'absolute', right: '18%', bottom: 0,
+                          height: 46, width: 'auto', maxWidth: '42%',
                           objectFit: 'contain',
                           opacity: 0.72,
                           filter: 'brightness(0.78) saturate(0.85) drop-shadow(0 2px 6px rgba(0,0,0,0.5))',
@@ -1236,7 +1236,7 @@ export default function ShipHero({
                       style={{
                         position: 'absolute', left: '50%', bottom: 0,
                         transform: 'translateX(-50%)',
-                        height: 54, width: 'auto', maxWidth: '60%',
+                        height: 62, width: 'auto', maxWidth: '58%',
                         objectFit: 'contain',
                         filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.6))',
                         zIndex: 2,
@@ -1323,9 +1323,9 @@ export default function ShipHero({
                   loading="lazy"
                   decoding="async"
                   style={{
-                    height: 85, width: 'auto', maxWidth: '100%',
+                    height: 74, width: 'auto', maxWidth: '100%',
                     objectFit: 'contain',
-                    transform: 'translateY(17px)',
+                    transform: 'translateY(15px)',
                     filter: skinFilter,
                     transition: 'filter 0.3s ease',
                   }}
