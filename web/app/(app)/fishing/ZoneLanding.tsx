@@ -237,7 +237,6 @@ export default function ZoneLanding({
               // Ancient Deep needs Fishing 75 AND Chapter 3 cleared (or grandfathered).
               const accessible = fishingLevel >= minLevel && (zone !== 'ancient_deep' || ancientDeepUnlocked)
               const color = HABITAT_COLOR[zone]
-              const prevColor = i > 0 ? HABITAT_COLOR[ZONES[i - 1]] : color
               const difficulty = ZONE_DIFFICULTY[zone]
               const diffLabel = ZONE_DIFFICULTY_LABEL[zone]
               const stats = zoneStats[zone] ?? { avgValue: 0, avgXp: 0, topValue: 0, count: 0 }
@@ -249,56 +248,32 @@ export default function ZoneLanding({
 
               return (
                 <div key={zone} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', scrollSnapAlign: 'start' }}>
-                  {/* Connector down from the node above — the path linking them. */}
-                  {i > 0 && (
-                    <div aria-hidden style={{ width: 4, height: 34, borderRadius: 2, marginBottom: 6, background: `linear-gradient(180deg, ${prevColor}, ${color})`, opacity: accessible ? 0.85 : 0.32, boxShadow: accessible ? `0 0 8px ${color}55` : 'none' }} />
-                  )}
-
-                  {/* The node — a big circular window into the zone */}
+                  {/* Zone name + your boat, floating directly on the page's shared
+                      water backdrop — no circular disc, no per-zone art window.
+                      Keeps the centered name + the fisher underneath it. */}
                   <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.3, delay: i * 0.06, scale: { type: 'spring', stiffness: 420, damping: 26, delay: 0 } }}
-                    whileTap={accessible ? { scale: 0.96 } : undefined}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.32, delay: i * 0.06 }}
+                    whileTap={accessible ? { scale: 0.97 } : undefined}
                     onClick={enter}
-                    style={{ position: 'relative', width: 200, height: 200, flexShrink: 0, cursor: accessible ? 'pointer' : 'default', WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation' }}
+                    style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: i > 0 ? 30 : 4, cursor: accessible ? 'pointer' : 'default', WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation' }}
                   >
-                    {/* Pulsing halo — signals a tappable node */}
-                    {accessible && (
-                      <motion.div aria-hidden
-                        animate={{ opacity: [0.3, 0.7, 0.3], scale: [1, 1.045, 1] }}
-                        transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-                        style={{ position: 'absolute', inset: -5, borderRadius: '50%', boxShadow: `0 0 24px ${color}70`, border: `1px solid ${color}55`, pointerEvents: 'none' }} />
-                    )}
-                    {/* Art disc — clips the art to the circle. */}
-                    <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', overflow: 'hidden', border: `3px solid ${accessible ? color : 'rgba(255,255,255,0.16)'}`, boxShadow: accessible ? '0 10px 28px rgba(0,0,0,0.5), inset 0 0 34px rgba(0,0,0,0.4)' : 'inset 0 0 30px rgba(0,0,0,0.7)' }}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={ZONE_BG[zone]} alt="" className={accessible ? 'zone-art-drift' : undefined} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: accessible ? 'none' : 'grayscale(0.9) brightness(0.34)', ...(accessible ? { animationDuration: `${22 + i * 4}s`, animationDelay: `-${i * 9}s` } : {}) }} />
-                      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 50% 44%, transparent 40%, rgba(2,6,12,0.9) 100%)' }} />
+                    <p className="font-cinzel font-800" style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: '1.9rem', textAlign: 'center', color: accessible ? '#fdf7e8' : 'rgba(253,247,232,0.5)', lineHeight: 1.05, textShadow: `0 2px 6px rgba(0,0,0,0.95), 0 0 16px rgba(0,0,0,0.85), 0 0 26px ${color}77` }}>
                       {!accessible && (
-                        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="1.8" strokeLinecap="round"><rect x="4" y="11" width="16" height="9" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
-                        </div>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(253,247,232,0.5)" strokeWidth="1.8" strokeLinecap="round" style={{ flexShrink: 0 }}><rect x="4" y="11" width="16" height="9" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
                       )}
-                    </div>
-
-                    {/* Your fisher — sits at the base of the node, OUTSIDE the disc's
-                        round clip so the boat is never cut off. */}
+                      {HABITAT_LABEL[zone]}
+                    </p>
                     {isCurrent && (
-                      <div aria-hidden style={{ position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)', width: '48%', zIndex: 2, pointerEvents: 'none', filter: 'drop-shadow(0 6px 12px rgba(0,10,25,0.65))' }}>
+                      <span className="font-karla font-800 uppercase" style={{ marginTop: 7, padding: '0.14rem 0.55rem', borderRadius: 999, background: 'rgba(2,6,12,0.72)', border: `1px solid ${color}`, fontSize: '0.5rem', letterSpacing: '0.14em', color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>You are here</span>
+                    )}
+                    {/* Your fisher — sits right under the zone name. */}
+                    {isCurrent && (
+                      <div aria-hidden style={{ width: 168, marginTop: 8, pointerEvents: 'none', filter: 'drop-shadow(0 8px 14px rgba(0,10,25,0.65))' }}>
                         <FisherPose characterColor={characterColor} equippedHat={equippedHat} equippedBoat={equippedBoat} equippedPet={equippedPet} rodTier={rodTier} reelTier={reelTier} hookTier={hookTier} />
                       </div>
                     )}
-
-                    {/* Zone name — centered in the node, above the fisher. */}
-                    <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 14px', zIndex: 3, pointerEvents: 'none' }}>
-                      <p className="font-cinzel font-800" style={{ fontSize: '1.5rem', textAlign: 'center', color: accessible ? '#fdf7e8' : 'rgba(253,247,232,0.5)', lineHeight: 1.05, textShadow: `0 2px 6px rgba(0,0,0,0.95), 0 0 16px rgba(0,0,0,0.85), 0 0 24px ${color}66` }}>
-                        {HABITAT_LABEL[zone]}
-                      </p>
-                      {isCurrent && (
-                        <span className="font-karla font-800 uppercase" style={{ marginTop: 6, padding: '0.12rem 0.5rem', borderRadius: 999, background: 'rgba(2,6,12,0.72)', border: `1px solid ${color}`, fontSize: '0.5rem', letterSpacing: '0.14em', color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>You are here</span>
-                      )}
-                    </div>
                   </motion.div>
 
                   {/* Info under the node */}
