@@ -215,7 +215,7 @@ export default function ZoneLanding({
             const atMax = xp.level >= 100
             const toNext = atMax ? 0 : xp.xpForLevel - xp.xpInLevel
             return (
-              <div style={{ flexShrink: 0, padding: '1rem 0.9rem 0.6rem' }}>
+              <div style={{ flexShrink: 0, padding: '2.5rem 0.9rem 0.7rem' }}>
                 {/* Fishing level bar — mirrors the expeditions page nav-level bar
                     (ShipHero): LV + big number on the left, a full-width fill, and
                     xp-to-next on the right. Same sizing, colours, and spacing. */}
