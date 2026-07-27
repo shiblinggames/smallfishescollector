@@ -2735,24 +2735,23 @@ export default function RaidCombat({
         const huntersBane = chaseSkinId === 'doby_huntersbane'
         if (huntersBane) {
           setEnemyStrikeFx({ key: lk, kind: 'leviathan', color: chaseColor ?? '#dc2626' })
-          playStepChainRef.current.push(setTimeout(() => setEnemyStrikeFx(s => (s && s.key === lk ? null : s)), 1500))
+          vibrate([0, 18, 55, 28])   // rising charge rumble as the strike winds up
+          playStepChainRef.current.push(setTimeout(() => setEnemyStrikeFx(s => (s && s.key === lk ? null : s)), 1400))
         } else {
           setCannonShot({ key: lk, kind: 'crit' })
           playStepChainRef.current.push(setTimeout(() => setCannonShot(null), 240))
         }
+        // Hunter's Bane lands its damage + heave at the DETONATION (after the
+        // charge), not immediately — so the big blast and the number hit together.
+        const hitDelay = huntersBane ? 580 : 210
         playStepChainRef.current.push(setTimeout(() => {
           if (!huntersBane) setEnemyImpact({ key: lk + 1, kind: 'crit' })
           cameraShake('crit')
-          vibrate(chaseColor ? [0, 70, 45, 110] : [0, 55, 40, 90])
+          vibrate(huntersBane ? [0, 90, 40, 130] : chaseColor ? [0, 70, 45, 110] : [0, 55, 40, 90])
           applyAbilityDamage(dmg, `${crew.name} lands a leviathan salvo for ${dmg}${bigGame ? ' — big-game strike!' : '!'}`, 'crit', false, chaseColor ?? undefined)
           if (!huntersBane) playStepChainRef.current.push(setTimeout(() => setEnemyImpact(null), 700))
-          // Hunter's Bane aftershock — a second heave + haptic on the follow-up
-          // boom so the bespoke strike lands longer and punchier.
-          if (huntersBane) {
-            playStepChainRef.current.push(setTimeout(() => { cameraShake('crit'); vibrate([0, 60, 40, 95]) }, 300))
-          }
           // A second delayed thud for any OTHER (future) chase skin on Doby;
-          // Hunter's Bane's bespoke strike above already carries the weight.
+          // Hunter's Bane's bespoke strike already carries the weight.
           if (chaseColor && !huntersBane) {
             playStepChainRef.current.push(setTimeout(() => {
               setEnemyImpact({ key: lk + 2, kind: 'crit' })
@@ -2760,7 +2759,7 @@ export default function RaidCombat({
               playStepChainRef.current.push(setTimeout(() => setEnemyImpact(null), 500))
             }, 150))
           }
-        }, 210))
+        }, hitDelay))
         break
       }
       case 'blitz': {

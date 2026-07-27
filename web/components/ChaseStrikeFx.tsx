@@ -454,28 +454,32 @@ export function KrakenOracleFx({ color }: { color: string }) {
   )
 }
 
-/** Hunter's Bane (Doby) — the apex predator's killing blow. A targeting reticle
- *  snaps a lock onto the enemy, then one devastating strike detonates on the
- *  hull: a blood-red charge implodes, a white core detonates, shock rings blow
- *  out, and a ring of fangs radiates from the impact. One heavy hit, not a
- *  barrage — matched to Leviathan's single-shell cadence. */
+/** Hunter's Bane (Doby) — the apex predator's killing blow. A reticle snaps a
+ *  lock onto the enemy while a blood-red charge GATHERS and tightens to a hot
+ *  point (a dramatic wind-up), then ONE massive strike detonates on the hull: a
+ *  huge white-to-red blast, shock rings, and a wide ring of fangs. One heavy
+ *  hit — no aftershock. */
 export function LeviathanStrikeFx({ color }: { color: string }) {
-  const STRIKE = 0.22   // detonation moment (s) — aligned to the salvo's damage beat
-  // Reticle corner brackets that snap inward onto the mark.
+  const STRIKE = 0.58   // the single devastating hit (s) — lands after a long charge
   const corners: React.CSSProperties[] = [
     { top: 0, left: 0, borderTop: `3px solid ${color}`, borderLeft: `3px solid ${color}` },
     { top: 0, right: 0, borderTop: `3px solid ${color}`, borderRight: `3px solid ${color}` },
     { bottom: 0, left: 0, borderBottom: `3px solid ${color}`, borderLeft: `3px solid ${color}` },
     { bottom: 0, right: 0, borderBottom: `3px solid ${color}`, borderRight: `3px solid ${color}` },
   ]
-  const fangs = Array.from({ length: 12 }, (_, i) => i * 30)
+  const fangs = Array.from({ length: 14 }, (_, i) => Math.round((i * 360) / 14))
+  // Energy motes pulled in from a ring as the strike charges.
+  const motes = Array.from({ length: 12 }, (_, i) => {
+    const a = (i / 12) * Math.PI * 2
+    return { ox: Math.round(Math.cos(a) * 135), oy: Math.round(Math.sin(a) * 135), d: (i % 5) * 0.04 }
+  })
   return (
-    <div aria-hidden style={{ position: 'absolute', inset: '-35% -25%', pointerEvents: 'none', zIndex: 6 }}>
-      {/* Reticle lock snapping onto the mark, then gone on the strike. */}
+    <div aria-hidden style={{ position: 'absolute', inset: '-42% -30%', pointerEvents: 'none', zIndex: 6 }}>
+      {/* Reticle lock — snaps on, HOLDS locked through the charge, snaps out on the blow. */}
       <motion.div
-        initial={{ opacity: 0, scale: 1.5, rotate: -12 }}
-        animate={{ opacity: [0, 0.9, 0.9, 0], scale: [1.5, 0.94, 0.94, 0.82], rotate: [-12, 0, 0, 4] }}
-        transition={{ duration: STRIKE + 0.12, times: [0, 0.55, 0.82, 1], ease: 'easeOut' }}
+        initial={{ opacity: 0, scale: 1.6, rotate: -14 }}
+        animate={{ opacity: [0, 0.95, 0.95, 0.95, 0], scale: [1.6, 0.98, 0.93, 0.9, 0.8], rotate: [-14, 0, 0, 0, 8] }}
+        transition={{ duration: STRIKE + 0.06, times: [0, 0.28, 0.62, 0.94, 1], ease: 'easeOut' }}
         style={{ position: 'absolute', left: '50%', top: '50%', width: '52%', height: '52%', marginLeft: '-26%', marginTop: '-26%' }}
       >
         {corners.map((c, i) => (
@@ -483,50 +487,59 @@ export function LeviathanStrikeFx({ color }: { color: string }) {
         ))}
       </motion.div>
 
-      {/* Blood-red charge that implodes into the center just before impact. */}
-      <motion.div
-        initial={{ opacity: 0, scale: 1.35 }}
-        animate={{ opacity: [0, 0.75, 0], scale: [1.35, 0.28, 0.1] }}
-        transition={{ duration: STRIKE, times: [0, 0.72, 1], ease: 'easeIn' }}
-        style={{ position: 'absolute', left: '50%', top: '50%', width: 140, height: 140, marginLeft: -70, marginTop: -70, borderRadius: '50%', background: `radial-gradient(circle, ${color}ee 0%, ${color}55 46%, transparent 72%)` }}
-      />
-
-      {/* Detonation flash — white core blowing to blood-red, big + heavy. */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.2 }}
-        animate={{ opacity: [0, 1, 0], scale: [0.2, 2.8, 3.7] }}
-        transition={{ duration: 0.55, delay: STRIKE, ease: 'easeOut' }}
-        style={{ position: 'absolute', left: '50%', top: '50%', width: 265, height: 265, marginLeft: -132, marginTop: -132, borderRadius: '50%', background: `radial-gradient(circle, #ffffff 0%, ${color}cc 34%, transparent 68%)` }}
-      />
-      {/* Aftershock — a second heavier boom rolls out a beat later. */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.3 }}
-        animate={{ opacity: [0, 0.9, 0], scale: [0.3, 2.5, 3.3] }}
-        transition={{ duration: 0.6, delay: STRIKE + 0.3, ease: 'easeOut' }}
-        style={{ position: 'absolute', left: '50%', top: '50%', width: 235, height: 235, marginLeft: -117, marginTop: -117, borderRadius: '50%', background: `radial-gradient(circle, #ffffff 0%, ${color}bb 30%, transparent 66%)` }}
-      />
-
-      {/* Shock rings blowing out from the impact — two waves, primary + aftershock. */}
-      {[0, 0.09, 0.18, 0.34, 0.44].map((d, i) => (
-        <motion.div key={`ring-${i}`}
-          initial={{ opacity: 0, scale: 0.2 }}
-          animate={{ opacity: [0, 0.85, 0], scale: [0.2, 3, 4] }}
-          transition={{ duration: 0.66, delay: STRIKE + d, ease: 'easeOut' }}
-          style={{ position: 'absolute', left: '50%', top: '50%', width: 180, height: 180, marginLeft: -90, marginTop: -90, borderRadius: '50%', border: `3px solid ${color}`, boxShadow: `0 0 18px ${color}` }}
+      {/* Converging energy motes — pulled inward as the strike charges. */}
+      {motes.map((mt, i) => (
+        <motion.div key={`mote-${i}`}
+          initial={{ opacity: 0, x: mt.ox, y: mt.oy }}
+          animate={{ opacity: [0, 0.9, 0.9, 0], x: [mt.ox, mt.ox * 0.5, 0, 0], y: [mt.oy, mt.oy * 0.5, 0, 0] }}
+          transition={{ duration: STRIKE, delay: 0.1 + mt.d, times: [0, 0.35, 0.88, 1], ease: 'easeIn' }}
+          style={{ position: 'absolute', left: '50%', top: '50%', width: 6, height: 6, marginLeft: -3, marginTop: -3, borderRadius: '50%', background: color, boxShadow: `0 0 8px ${color}, 0 0 14px ${color}` }}
         />
       ))}
 
-      {/* Rings of fangs radiating from the impact — a big burst on the blow, a
-          second offset burst on the aftershock. */}
-      {[{ d: STRIKE + 0.02, h: '32%', off: 0 }, { d: STRIKE + 0.3, h: '24%', off: 15 }].map((burst, b) => (
-        fangs.map((ang, i) => (
-          <motion.div key={`fang-${b}-${i}`}
-            initial={{ opacity: 0, scaleY: 0.15 }}
-            animate={{ opacity: [0, 1, 0], scaleY: [0.15, 1, 0.5] }}
-            transition={{ duration: 0.44, delay: burst.d, ease: 'easeOut' }}
-            style={{ position: 'absolute', left: '50%', top: '50%', width: 7, height: burst.h, marginLeft: -3.5, transformOrigin: '50% 0%', transform: `rotate(${ang + burst.off}deg)`, background: `linear-gradient(${color}, ${color}00)`, borderRadius: 3, boxShadow: `0 0 6px ${color}` }}
-          />
-        ))
+      {/* Charging telegraph ring contracting inward onto the mark. */}
+      <motion.div
+        initial={{ opacity: 0, scale: 2.6 }}
+        animate={{ opacity: [0, 0.6, 0.85, 0], scale: [2.6, 1.4, 0.55, 0.3] }}
+        transition={{ duration: STRIKE, times: [0, 0.3, 0.9, 1], ease: 'easeIn' }}
+        style={{ position: 'absolute', left: '50%', top: '50%', width: 150, height: 150, marginLeft: -75, marginTop: -75, borderRadius: '50%', border: `2px dashed ${color}`, boxShadow: `0 0 14px ${color}` }}
+      />
+
+      {/* Blood-red charge core — gathers + intensifies, then tightens to a hot
+          point the instant before it detonates (the wind-up). */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.3 }}
+        animate={{ opacity: [0, 0.4, 0.8, 1, 0], scale: [0.3, 1.2, 0.85, 0.35, 0.15] }}
+        transition={{ duration: STRIKE, times: [0, 0.4, 0.72, 0.93, 1], ease: 'easeIn' }}
+        style={{ position: 'absolute', left: '50%', top: '50%', width: 160, height: 160, marginLeft: -80, marginTop: -80, borderRadius: '50%', background: `radial-gradient(circle, #ffffff 0%, ${color}ee 34%, ${color}44 60%, transparent 76%)` }}
+      />
+
+      {/* THE detonation — one massive white-to-red blast. No aftershock. */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.2 }}
+        animate={{ opacity: [0, 1, 0], scale: [0.2, 3.6, 4.6] }}
+        transition={{ duration: 0.62, delay: STRIKE, ease: 'easeOut' }}
+        style={{ position: 'absolute', left: '50%', top: '50%', width: 340, height: 340, marginLeft: -170, marginTop: -170, borderRadius: '50%', background: `radial-gradient(circle, #ffffff 0%, ${color}cc 32%, transparent 66%)` }}
+      />
+
+      {/* Shock rings — one big wave. */}
+      {[0, 0.08, 0.16].map((d, i) => (
+        <motion.div key={`ring-${i}`}
+          initial={{ opacity: 0, scale: 0.2 }}
+          animate={{ opacity: [0, 0.9, 0], scale: [0.2, 3.8, 4.8] }}
+          transition={{ duration: 0.72, delay: STRIKE + d, ease: 'easeOut' }}
+          style={{ position: 'absolute', left: '50%', top: '50%', width: 200, height: 200, marginLeft: -100, marginTop: -100, borderRadius: '50%', border: `3px solid ${color}`, boxShadow: `0 0 20px ${color}` }}
+        />
+      ))}
+
+      {/* One wide ring of fangs radiating from the blow. */}
+      {fangs.map((ang, i) => (
+        <motion.div key={`fang-${i}`}
+          initial={{ opacity: 0, scaleY: 0.15 }}
+          animate={{ opacity: [0, 1, 0], scaleY: [0.15, 1, 0.5] }}
+          transition={{ duration: 0.5, delay: STRIKE + 0.02, ease: 'easeOut' }}
+          style={{ position: 'absolute', left: '50%', top: '50%', width: 8, height: '38%', marginLeft: -4, transformOrigin: '50% 0%', transform: `rotate(${ang}deg)`, background: `linear-gradient(${color}, ${color}00)`, borderRadius: 4, boxShadow: `0 0 7px ${color}` }}
+        />
       ))}
     </div>
   )
