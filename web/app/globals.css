@@ -1404,9 +1404,9 @@ body.hardcore-gauntlet::after {
 .raid-fog-mid  { animation: raid-fog-drift-mid  31s ease-in-out infinite alternate; }
 .raid-fog-fast { animation: raid-fog-drift-fast 24s ease-in-out infinite alternate; }
 
-/* ── Expeditions page zoom ── */
-.expeditions-content        { zoom: 1.35; }
-@media (min-width: 640px)   { .expeditions-content { zoom: 1.4; } }
+/* ── Expeditions page zoom (REMOVED) ── the page-wide zoom:1.35/1.4 was
+   dropped so the expeditions top reads at the same scale as the fishing zone
+   selector. The .expeditions-content class is kept as a harmless hook. */
 
 /* ── Pack card responsive size ── */
 .pack-card-size { width: 100%; aspect-ratio: 5 / 7; }
