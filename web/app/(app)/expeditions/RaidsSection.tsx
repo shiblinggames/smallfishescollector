@@ -158,6 +158,9 @@ function nodeTypeLabel(type: string): string {
     case 'fork':       return 'Crossroads'
     case 'reclaim':    return 'Vault'
     case 'berth':      return 'Refit'
+    case 'dps_check':  return 'Gate'
+    case 'muster':     return 'Muster'
+    case 'dice':       return 'Gamble'
     default:           return type
   }
 }
