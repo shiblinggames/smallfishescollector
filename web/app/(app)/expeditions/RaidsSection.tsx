@@ -2937,13 +2937,14 @@ function BossTile({ view, isNext, onOpen }: { view: RaidNodeView; isNext: boolea
   return (
     <button type="button" onClick={onOpen} className="tap"
       style={{ position: 'relative', aspectRatio: '4 / 5', borderRadius: 16, overflow: 'hidden', cursor: 'pointer', padding: 0,
-        border: `1px solid ${accent}${locked ? '3a' : '99'}`, background: '#0c1119',
+        border: `1px solid ${accent}${locked ? '3a' : '99'}`,
+        background: cleared ? '#0c1119' : 'radial-gradient(circle at 50% 34%, #1a2636 0%, #0a0f16 72%)',
         boxShadow: isNext ? `0 0 0 1px ${accent}40, 0 0 22px ${accent}22` : '0 6px 18px rgba(0,0,0,0.42)' }}>
       {node.image && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={node.image} alt={bossName} loading="lazy" decoding="async"
+        <img src={node.image} alt={cleared ? bossName : 'Undiscovered boss'} loading="lazy" decoding="async"
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: '50% 16%',
-            filter: locked ? 'grayscale(1) brightness(0.45)' : cleared ? 'grayscale(0.28) brightness(0.82)' : 'none' }} />
+            filter: cleared ? 'grayscale(0.28) brightness(0.82)' : 'brightness(0)' }} />
       )}
       <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(6,10,16,0) 42%, rgba(6,10,16,0.9) 100%)' }} />
       {cleared && (
@@ -2956,7 +2957,7 @@ function BossTile({ view, isNext, onOpen }: { view: RaidNodeView; isNext: boolea
       )}
       {locked && <span aria-hidden style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}><IconLock size={26} /></span>}
       <span style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '0.45rem 0.55rem 0.55rem' }}>
-        <span className="font-cinzel font-700" style={{ display: 'block', fontSize: '0.98rem', lineHeight: 1.06, color: locked ? '#9a948a' : '#fff', textShadow: '0 2px 7px rgba(0,0,0,0.95)' }}>{bossName}</span>
+        <span className="font-cinzel font-700" style={{ display: 'block', fontSize: '0.98rem', lineHeight: 1.06, color: cleared ? '#fff' : '#8f887c', letterSpacing: cleared ? undefined : '0.15em', textShadow: '0 2px 7px rgba(0,0,0,0.95)' }}>{cleared ? bossName : '???'}</span>
       </span>
     </button>
   )
@@ -2995,18 +2996,18 @@ function BossFightModal({ boss, challenge, rec, ownedRaidItems, ownedShipSkins, 
         <div style={{ position: 'relative', height: 230 }}>
           {backdrop && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={backdrop} alt="" aria-hidden style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.5, filter: locked ? 'grayscale(1) brightness(0.6)' : undefined }} />
+            <img src={backdrop} alt="" aria-hidden style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: cleared ? 0.5 : 0.3, filter: cleared ? undefined : 'grayscale(1) brightness(0.55)' }} />
           )}
           {node.image && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={node.image} alt={bossName} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 28%', filter: locked ? 'grayscale(1) brightness(0.6) drop-shadow(0 8px 22px rgba(0,0,0,0.6))' : 'drop-shadow(0 8px 22px rgba(0,0,0,0.6))' }} />
+            <img src={node.image} alt={cleared ? bossName : 'Undiscovered boss'} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 28%', filter: cleared ? 'drop-shadow(0 8px 22px rgba(0,0,0,0.6))' : 'brightness(0) drop-shadow(0 8px 22px rgba(0,0,0,0.6))' }} />
           )}
           <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(6,10,16,0.2) 0%, rgba(6,10,16,0.12) 52%, rgba(10,17,25,0.98) 100%)' }} />
           <button type="button" onClick={onClose} aria-label="Close" style={{ position: 'absolute', top: 12, right: 12, width: 32, height: 32, borderRadius: '50%', padding: 0, background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.18)', color: '#e6e0d4', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
           </button>
           <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '0 1.1rem 0.6rem', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10 }}>
-            <p className="font-cinzel font-800" style={{ fontSize: '1.55rem', lineHeight: 1.05, color: '#fff', textShadow: `0 2px 10px rgba(0,0,0,0.9), 0 0 20px ${accent}30` }}>{bossName}</p>
+            <p className="font-cinzel font-800" style={{ fontSize: '1.55rem', lineHeight: 1.05, color: cleared ? '#fff' : '#c8c1b3', letterSpacing: cleared ? undefined : '0.14em', textShadow: `0 2px 10px rgba(0,0,0,0.9), 0 0 20px ${accent}30` }}>{cleared ? bossName : '???'}</p>
             <span className="font-karla font-700 uppercase" style={{ flexShrink: 0, fontSize: '0.5rem', letterSpacing: '0.12em', padding: '0.26rem 0.6rem', borderRadius: 999, marginBottom: 5,
               ...(cleared ? { color: '#8ff0c0', background: 'rgba(74,222,128,0.14)', border: '1px solid rgba(74,222,128,0.45)' }
                 : isNext ? { color: '#08120f', background: 'rgba(94,234,212,0.92)' }
