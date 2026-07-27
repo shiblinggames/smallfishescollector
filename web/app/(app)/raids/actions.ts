@@ -70,7 +70,7 @@ export interface RaidPlayerStats {
   classDamageMult: number
   classDoubloonMult: number
   /** Kingpin's Cut (Don's Locker perk): legendary boss-drop weight multiplier
-   *  for the raid loot roll (1 = none, 1.5 = +50%). */
+   *  for the raid loot roll (1 = none, 2 = 2x). */
   legendaryLootMult: number
   /** Raw chapter -> classId picks. Threaded to the in-fight stats popup
    *  so the player can see WHICH classes are modifying their ship,

@@ -408,7 +408,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   /** Man-o-War volley augment (or null). */
   manowarAugment?: ShipAugment | null
   /** Kingpin's Cut (Don's Locker perk): legendary boss-drop weight multiplier
-   *  in the loot roll. 1 = no perk, 1.5 = +50% legendary drop rate. */
+   *  in the loot roll. 1 = no perk, 2 = 2x legendary drop rate. */
   legendaryLootMult?: number
 }) {
   const router            = useRouter()
