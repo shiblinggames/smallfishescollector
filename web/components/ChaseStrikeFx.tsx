@@ -128,7 +128,7 @@ export function TempestStrikeFx({ color, shots, interval }: { color: string; sho
  *  it locks in. Rendered over the player ship. */
 export function FossilWardFx({ color }: { color: string }) {
   const CREAM = '#ead6a6'
-  const LOCK = 0.55   // moment the ward seals (s)
+  const LOCK = 0.62   // moment the ward seals (s)
   return (
     <div aria-hidden style={{ position: 'absolute', inset: '-35% -25%', pointerEvents: 'none', zIndex: 6, overflow: 'visible' }}>
       {/* Sepia/amber haze rising with the seal. */}
@@ -136,7 +136,7 @@ export function FossilWardFx({ color }: { color: string }) {
         <motion.div key={`hz-${i}`}
           initial={{ opacity: 0, scale: 0.6 }}
           animate={{ opacity: [0, 0.5, 0.4, 0], scale: [0.6, 1, 1.05, 1.12] }}
-          transition={{ duration: 1.5, delay: h.d, times: [0, 0.32, 0.72, 1], ease: 'easeOut' }}
+          transition={{ duration: 1.95, delay: h.d, times: [0, 0.26, 0.84, 1], ease: 'easeOut' }}
           style={{ position: 'absolute', left: `${h.l}%`, top: `${h.t}%`, width: `${h.s}%`, height: `${h.s}%`, marginLeft: `-${h.s / 2}%`, marginTop: `-${h.s / 2}%`, borderRadius: '50%', background: `radial-gradient(circle, ${h.c}55 0%, ${h.c}1e 44%, transparent 72%)` }}
         />
       ))}
@@ -146,7 +146,7 @@ export function FossilWardFx({ color }: { color: string }) {
         <motion.g
           initial={{ opacity: 0, scale: 1.5, rotate: -40 }}
           animate={{ opacity: [0, 0.9, 0.85, 0], scale: [1.5, 1, 1, 1.05], rotate: [-40, 0, 3, 10] }}
-          transition={{ duration: 1.5, times: [0, 0.35, 0.72, 1], ease: 'easeOut' }}
+          transition={{ duration: 1.95, times: [0, 0.28, 0.84, 1], ease: 'easeOut' }}
           style={{ transformOrigin: '50% 50%' }}
         >
           <circle cx="50" cy="50" r="40" fill="none" stroke={CREAM} strokeWidth="1" strokeDasharray="2 5" vectorEffect="non-scaling-stroke" />
@@ -157,7 +157,7 @@ export function FossilWardFx({ color }: { color: string }) {
         <motion.g
           initial={{ opacity: 0, scale: 1.7, rotate: 40 }}
           animate={{ opacity: [0, 0.9, 0.8, 0], scale: [1.7, 1, 1, 1.05], rotate: [40, 0, -3, -8] }}
-          transition={{ duration: 1.5, times: [0, 0.4, 0.72, 1], ease: 'easeOut' }}
+          transition={{ duration: 1.95, times: [0, 0.3, 0.84, 1], ease: 'easeOut' }}
           style={{ transformOrigin: '50% 50%' }}
         >
           <circle cx="50" cy="50" r="29" fill="none" stroke={color} strokeWidth="1.4" strokeDasharray="1 6" vectorEffect="non-scaling-stroke" />
@@ -212,59 +212,94 @@ export function FossilWardFx({ color }: { color: string }) {
  *  motes rise through it. Rendered over the player ship. */
 export function GalaxySurgeFx({ color }: { color: string }) {
   const CYAN = '#4dc9ff'
-  const stars: [number, number][] = [[24, 26], [70, 22], [44, 40], [80, 54], [18, 56], [58, 66], [36, 78], [86, 38], [14, 40], [64, 84]]
+  const MAG = '#c56bff'
+  const stars: [number, number, number][] = [
+    [24, 26, 1], [70, 22, 1.2], [44, 40, 0.8], [80, 54, 1], [18, 56, 1.1], [58, 66, 0.9], [36, 78, 1.2], [86, 38, 0.8],
+    [14, 40, 1], [64, 84, 1], [50, 30, 0.7], [30, 62, 0.9], [76, 70, 1.1], [40, 20, 0.8], [90, 60, 0.9], [22, 74, 1],
+  ]
+  const shooters = [{ top: 24, delay: 0.35, dur: 0.9 }, { top: 50, delay: 0.62, dur: 1.05 }, { top: 70, delay: 0.98, dur: 1.0 }]
   return (
-    <div aria-hidden style={{ position: 'absolute', inset: '-35% -25%', pointerEvents: 'none', zIndex: 6, overflow: 'visible' }}>
-      {/* Nebula bloom swirling up over the hull. */}
-      {[{ c: color, l: 42, t: 46, s: 78, d: 0 }, { c: CYAN, l: 62, t: 56, s: 62, d: 0.12 }, { c: '#b17dff', l: 48, t: 66, s: 60, d: 0.2 }].map((n, i) => (
+    <div aria-hidden style={{ position: 'absolute', inset: '-42% -30%', pointerEvents: 'none', zIndex: 6, overflow: 'visible' }}>
+      {/* Big swirling multi-hue nebula blooming up over the hull. */}
+      {[{ c: color, l: 42, t: 48, s: 98, d: 0 }, { c: CYAN, l: 60, t: 56, s: 80, d: 0.1 }, { c: MAG, l: 46, t: 64, s: 74, d: 0.18 }, { c: color, l: 54, t: 42, s: 64, d: 0.26 }].map((n, i) => (
         <motion.div key={`neb-${i}`}
-          initial={{ opacity: 0, scale: 0.5 }}
-          animate={{ opacity: [0, 0.6, 0.45, 0], scale: [0.5, 1, 1.08, 1.16] }}
-          transition={{ duration: 1.4, delay: n.d, times: [0, 0.32, 0.7, 1], ease: 'easeOut' }}
+          initial={{ opacity: 0, scale: 0.5, rotate: -20 }}
+          animate={{ opacity: [0, 0.7, 0.55, 0], scale: [0.5, 1, 1.12, 1.22], rotate: [-20, 8, 16, 24] }}
+          transition={{ duration: 1.6, delay: n.d, times: [0, 0.3, 0.7, 1], ease: 'easeOut' }}
           style={{ position: 'absolute', left: `${n.l}%`, top: `${n.t}%`, width: `${n.s}%`, height: `${n.s}%`, marginLeft: `-${n.s / 2}%`, marginTop: `-${n.s / 2}%`, borderRadius: '50%',
-            background: `radial-gradient(circle, ${n.c}66 0%, ${n.c}22 44%, transparent 72%)` }}
+            background: `radial-gradient(circle, ${n.c}80 0%, ${n.c}30 42%, transparent 70%)` }}
         />
       ))}
 
-      {/* Galactic shield-dome forming around the ship — a ring + faint fill that
-          scales in and settles (the shield the ability grants). */}
+      {/* Spiral galaxy disc — a tilted, slow-turning arm-swirl (the galactic
+          centrepiece). Outer holds the disc tilt, inner turns the arms. */}
+      <div style={{ position: 'absolute', left: '50%', top: '56%', width: '90%', height: '90%', marginLeft: '-45%', marginTop: '-45%', transformOrigin: '50% 50%', transform: 'perspective(620px) rotateX(58deg)' }}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.4, rotate: -70 }}
+          animate={{ opacity: [0, 0.62, 0.5, 0], scale: [0.4, 1.05, 1.18, 1.3], rotate: [-70, 30, 60, 84] }}
+          transition={{ duration: 1.6, times: [0, 0.32, 0.72, 1], ease: 'easeOut' }}
+          style={{ width: '100%', height: '100%', borderRadius: '50%',
+            background: `conic-gradient(from 0deg, ${color}00, ${color}66 12%, ${CYAN}3a 26%, ${color}00 42%, ${MAG}66 60%, ${color}00 78%, ${CYAN}4a 92%, ${color}00)`,
+            WebkitMaskImage: 'radial-gradient(circle, #000 0%, #000 32%, transparent 72%)', maskImage: 'radial-gradient(circle, #000 0%, #000 32%, transparent 72%)' }}
+        />
+      </div>
+
+      {/* Bright galactic core. */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.3 }}
+        animate={{ opacity: [0, 1, 0.7, 0], scale: [0.3, 1, 1.12, 1.3] }}
+        transition={{ duration: 1.5, times: [0, 0.24, 0.7, 1], ease: 'easeOut' }}
+        style={{ position: 'absolute', left: '50%', top: '56%', width: 96, height: 96, marginLeft: -48, marginTop: -48, borderRadius: '50%', background: `radial-gradient(circle, #ffffff 0%, ${color}cc 32%, ${MAG}55 60%, transparent 78%)`, boxShadow: `0 0 44px ${color}` }}
+      />
+
+      {/* Galactic shield-dome forming around the ship — the shield it grants. */}
       <motion.div
         initial={{ opacity: 0, scale: 0.55 }}
         animate={{ opacity: [0, 0.9, 0.7, 0], scale: [0.55, 1.04, 1, 1.05] }}
-        transition={{ duration: 1.4, times: [0, 0.3, 0.72, 1], ease: [0.2, 0.9, 0.3, 1] }}
-        style={{ position: 'absolute', left: '50%', top: '58%', width: '74%', height: '62%', marginLeft: '-37%', marginTop: '-31%', borderRadius: '50%',
-          border: `2px solid ${CYAN}`, boxShadow: `0 0 22px ${color}88, inset 0 0 30px ${color}55`,
-          background: `radial-gradient(ellipse at 50% 45%, ${color}18 0%, ${CYAN}10 55%, transparent 78%)` }}
+        transition={{ duration: 1.6, times: [0, 0.3, 0.72, 1], ease: [0.2, 0.9, 0.3, 1] }}
+        style={{ position: 'absolute', left: '50%', top: '58%', width: '76%', height: '64%', marginLeft: '-38%', marginTop: '-32%', borderRadius: '50%',
+          border: `2px solid ${CYAN}`, boxShadow: `0 0 24px ${color}88, inset 0 0 34px ${color}55`,
+          background: `radial-gradient(ellipse at 50% 45%, ${color}1c 0%, ${CYAN}10 55%, transparent 78%)` }}
       />
 
-      {/* Surge flash + expanding ring as the tide answers. */}
+      {/* Surge flash. */}
       <motion.div
         initial={{ opacity: 0, scale: 0.3 }}
-        animate={{ opacity: [0, 0.85, 0], scale: [0.3, 1.8, 2.3] }}
-        transition={{ duration: 0.6, delay: 0.28, ease: 'easeOut' }}
-        style={{ position: 'absolute', left: '50%', top: '58%', width: 200, height: 200, marginLeft: -100, marginTop: -100, borderRadius: '50%', background: `radial-gradient(circle, #ffffff 0%, ${color}88 34%, transparent 68%)` }}
+        animate={{ opacity: [0, 0.9, 0], scale: [0.3, 2, 2.6] }}
+        transition={{ duration: 0.6, delay: 0.26, ease: 'easeOut' }}
+        style={{ position: 'absolute', left: '50%', top: '56%', width: 220, height: 220, marginLeft: -110, marginTop: -110, borderRadius: '50%', background: `radial-gradient(circle, #ffffff 0%, ${color}88 34%, transparent 68%)` }}
       />
 
-      {/* Twinkling starfield. */}
-      {stars.map(([l, t], i) => (
+      {/* Dense twinkling starfield. */}
+      {stars.map(([l, t, sm], i) => (
         <motion.div key={`star-${i}`}
-          initial={{ opacity: 0, scale: 0.4 }}
-          animate={{ opacity: [0, 1, 0.4, 0], scale: [0.4, 1, 1, 0.7] }}
-          transition={{ duration: 1.2, delay: 0.2 + (i % 5) * 0.12, ease: 'easeInOut' }}
-          style={{ position: 'absolute', left: `${l}%`, top: `${t}%`, width: 5, height: 5, marginLeft: -2.5, marginTop: -2.5, background: '#ffffff', borderRadius: 1, boxShadow: `0 0 4px #fff, 0 0 9px ${color}` }}
+          initial={{ opacity: 0, scale: 0.3 }}
+          animate={{ opacity: [0, 1, 0.4, 0], scale: [0.3, 1, 1, 0.7] }}
+          transition={{ duration: 1.35, delay: 0.15 + (i % 6) * 0.1, ease: 'easeInOut' }}
+          style={{ position: 'absolute', left: `${l}%`, top: `${t}%`, width: 5 * sm, height: 5 * sm, marginLeft: -2.5 * sm, marginTop: -2.5 * sm, background: '#ffffff', borderRadius: 1, boxShadow: `0 0 4px #fff, 0 0 9px ${color}` }}
+        />
+      ))}
+
+      {/* Shooting stars streaking across. */}
+      {shooters.map((s, i) => (
+        <motion.div key={`shoot-${i}`}
+          initial={{ opacity: 0, x: '-12%' }}
+          animate={{ opacity: [0, 1, 0], x: ['-12%', '92%'] }}
+          transition={{ duration: s.dur, delay: s.delay, ease: 'easeOut' }}
+          style={{ position: 'absolute', left: 0, top: `${s.top}%`, width: '44%', height: 2.5, borderRadius: 2, background: `linear-gradient(90deg, transparent, ${CYAN}cc, #ffffff)`, boxShadow: `0 0 8px ${color}` }}
         />
       ))}
 
       {/* Healing motes rising through the surge. */}
-      {Array.from({ length: 12 }).map((_, i) => {
-        const left = 12 + ((i * 71) / 12) % 76
-        const c = i % 2 ? CYAN : color
+      {Array.from({ length: 14 }).map((_, i) => {
+        const left = 10 + ((i * 71) / 14) % 80
+        const c = i % 3 === 0 ? MAG : i % 2 ? CYAN : color
         return (
           <motion.div key={`mote-${i}`}
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: [0, 0.9, 0], y: [30, -46] }}
-            transition={{ duration: 1.1 + (i % 4) * 0.2, delay: 0.15 + (i % 6) * 0.1, ease: 'easeOut' }}
-            style={{ position: 'absolute', left: `${left}%`, top: '78%', width: 3 + (i % 3), height: 3 + (i % 3), borderRadius: '50%', background: c, boxShadow: `0 0 5px ${c}` }}
+            initial={{ opacity: 0, y: 32 }}
+            animate={{ opacity: [0, 0.9, 0], y: [32, -50] }}
+            transition={{ duration: 1.2 + (i % 4) * 0.2, delay: 0.15 + (i % 6) * 0.1, ease: 'easeOut' }}
+            style={{ position: 'absolute', left: `${left}%`, top: '80%', width: 3 + (i % 3), height: 3 + (i % 3), borderRadius: '50%', background: c, boxShadow: `0 0 5px ${c}` }}
           />
         )
       })}
@@ -456,32 +491,42 @@ export function LeviathanStrikeFx({ color }: { color: string }) {
         style={{ position: 'absolute', left: '50%', top: '50%', width: 140, height: 140, marginLeft: -70, marginTop: -70, borderRadius: '50%', background: `radial-gradient(circle, ${color}ee 0%, ${color}55 46%, transparent 72%)` }}
       />
 
-      {/* Detonation flash — white core blowing to blood-red. */}
+      {/* Detonation flash — white core blowing to blood-red, big + heavy. */}
       <motion.div
         initial={{ opacity: 0, scale: 0.2 }}
-        animate={{ opacity: [0, 1, 0], scale: [0.2, 2.3, 3.1] }}
-        transition={{ duration: 0.5, delay: STRIKE, ease: 'easeOut' }}
-        style={{ position: 'absolute', left: '50%', top: '50%', width: 210, height: 210, marginLeft: -105, marginTop: -105, borderRadius: '50%', background: `radial-gradient(circle, #ffffff 0%, ${color}cc 34%, transparent 68%)` }}
+        animate={{ opacity: [0, 1, 0], scale: [0.2, 2.8, 3.7] }}
+        transition={{ duration: 0.55, delay: STRIKE, ease: 'easeOut' }}
+        style={{ position: 'absolute', left: '50%', top: '50%', width: 265, height: 265, marginLeft: -132, marginTop: -132, borderRadius: '50%', background: `radial-gradient(circle, #ffffff 0%, ${color}cc 34%, transparent 68%)` }}
+      />
+      {/* Aftershock — a second heavier boom rolls out a beat later. */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.3 }}
+        animate={{ opacity: [0, 0.9, 0], scale: [0.3, 2.5, 3.3] }}
+        transition={{ duration: 0.6, delay: STRIKE + 0.3, ease: 'easeOut' }}
+        style={{ position: 'absolute', left: '50%', top: '50%', width: 235, height: 235, marginLeft: -117, marginTop: -117, borderRadius: '50%', background: `radial-gradient(circle, #ffffff 0%, ${color}bb 30%, transparent 66%)` }}
       />
 
-      {/* Shock rings blowing out from the impact. */}
-      {[0, 0.09, 0.18].map((d, i) => (
+      {/* Shock rings blowing out from the impact — two waves, primary + aftershock. */}
+      {[0, 0.09, 0.18, 0.34, 0.44].map((d, i) => (
         <motion.div key={`ring-${i}`}
           initial={{ opacity: 0, scale: 0.2 }}
-          animate={{ opacity: [0, 0.85, 0], scale: [0.2, 2.7, 3.6] }}
-          transition={{ duration: 0.62, delay: STRIKE + d, ease: 'easeOut' }}
-          style={{ position: 'absolute', left: '50%', top: '50%', width: 170, height: 170, marginLeft: -85, marginTop: -85, borderRadius: '50%', border: `3px solid ${color}`, boxShadow: `0 0 18px ${color}` }}
+          animate={{ opacity: [0, 0.85, 0], scale: [0.2, 3, 4] }}
+          transition={{ duration: 0.66, delay: STRIKE + d, ease: 'easeOut' }}
+          style={{ position: 'absolute', left: '50%', top: '50%', width: 180, height: 180, marginLeft: -90, marginTop: -90, borderRadius: '50%', border: `3px solid ${color}`, boxShadow: `0 0 18px ${color}` }}
         />
       ))}
 
-      {/* Ring of fangs radiating from the impact point. */}
-      {fangs.map((ang, i) => (
-        <motion.div key={`fang-${i}`}
-          initial={{ opacity: 0, scaleY: 0.15 }}
-          animate={{ opacity: [0, 1, 0], scaleY: [0.15, 1, 0.5] }}
-          transition={{ duration: 0.42, delay: STRIKE + 0.02, ease: 'easeOut' }}
-          style={{ position: 'absolute', left: '50%', top: '50%', width: 6, height: '26%', marginLeft: -3, transformOrigin: '50% 0%', transform: `rotate(${ang}deg)`, background: `linear-gradient(${color}, ${color}00)`, borderRadius: 3, boxShadow: `0 0 6px ${color}` }}
-        />
+      {/* Rings of fangs radiating from the impact — a big burst on the blow, a
+          second offset burst on the aftershock. */}
+      {[{ d: STRIKE + 0.02, h: '32%', off: 0 }, { d: STRIKE + 0.3, h: '24%', off: 15 }].map((burst, b) => (
+        fangs.map((ang, i) => (
+          <motion.div key={`fang-${b}-${i}`}
+            initial={{ opacity: 0, scaleY: 0.15 }}
+            animate={{ opacity: [0, 1, 0], scaleY: [0.15, 1, 0.5] }}
+            transition={{ duration: 0.44, delay: burst.d, ease: 'easeOut' }}
+            style={{ position: 'absolute', left: '50%', top: '50%', width: 7, height: burst.h, marginLeft: -3.5, transformOrigin: '50% 0%', transform: `rotate(${ang + burst.off}deg)`, background: `linear-gradient(${color}, ${color}00)`, borderRadius: 3, boxShadow: `0 0 6px ${color}` }}
+          />
+        ))
       ))}
     </div>
   )

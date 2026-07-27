@@ -2698,7 +2698,7 @@ export default function RaidCombat({
         if (chaseSkinId === 'catfish_galaxy') {
           const gk = Date.now()
           setPlayerStrikeFx({ key: gk, kind: 'galaxy', color: chaseColor ?? '#8b7bf0' })
-          playStepChainRef.current.push(setTimeout(() => setPlayerStrikeFx(s => (s && s.key === gk ? null : s)), 1550))
+          playStepChainRef.current.push(setTimeout(() => setPlayerStrikeFx(s => (s && s.key === gk ? null : s)), 1750))
         }
         setPHitsplat({ key: ak + 1, text: `+${heal}`, color: chaseColor ?? '#5eead4', big: true })
         setTimeout(() => setPHitsplat(null), 900)
@@ -2735,7 +2735,7 @@ export default function RaidCombat({
         const huntersBane = chaseSkinId === 'doby_huntersbane'
         if (huntersBane) {
           setEnemyStrikeFx({ key: lk, kind: 'leviathan', color: chaseColor ?? '#dc2626' })
-          playStepChainRef.current.push(setTimeout(() => setEnemyStrikeFx(s => (s && s.key === lk ? null : s)), 1100))
+          playStepChainRef.current.push(setTimeout(() => setEnemyStrikeFx(s => (s && s.key === lk ? null : s)), 1500))
         } else {
           setCannonShot({ key: lk, kind: 'crit' })
           playStepChainRef.current.push(setTimeout(() => setCannonShot(null), 240))
@@ -2746,6 +2746,11 @@ export default function RaidCombat({
           vibrate(chaseColor ? [0, 70, 45, 110] : [0, 55, 40, 90])
           applyAbilityDamage(dmg, `${crew.name} lands a leviathan salvo for ${dmg}${bigGame ? ' — big-game strike!' : '!'}`, 'crit', false, chaseColor ?? undefined)
           if (!huntersBane) playStepChainRef.current.push(setTimeout(() => setEnemyImpact(null), 700))
+          // Hunter's Bane aftershock — a second heave + haptic on the follow-up
+          // boom so the bespoke strike lands longer and punchier.
+          if (huntersBane) {
+            playStepChainRef.current.push(setTimeout(() => { cameraShake('crit'); vibrate([0, 60, 40, 95]) }, 300))
+          }
           // A second delayed thud for any OTHER (future) chase skin on Doby;
           // Hunter's Bane's bespoke strike above already carries the weight.
           if (chaseColor && !huntersBane) {
@@ -2883,7 +2888,7 @@ export default function RaidCombat({
         if (chaseSkinId === 'coelacanth_fossil') {
           const wk = Date.now()
           setPlayerStrikeFx({ key: wk, kind: 'ward', color: chaseColor ?? '#c8a45c' })
-          playStepChainRef.current.push(setTimeout(() => setPlayerStrikeFx(s => (s && s.key === wk ? null : s)), 1650))
+          playStepChainRef.current.push(setTimeout(() => setPlayerStrikeFx(s => (s && s.key === wk ? null : s)), 2100))
         }
         setResolveLog(prev => [...prev, `${crew.name} girds your ship with a vengeance ward. Fall within ${VENGEANCE_WARD_TURNS} turns and it strikes back.`])
         break
