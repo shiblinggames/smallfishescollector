@@ -2867,8 +2867,11 @@ function ViewToggle({ view, onChange }: { view: 'journey' | 'bosses'; onChange: 
   )
 }
 
-function BossesView({ views, repairOwed, onRepairBlocked }: {
+function BossesView({ views, raidRecords, ownedRaidItems, ownedShipSkins, repairOwed, onRepairBlocked }: {
   views: RaidNodeView[]
+  raidRecords: Record<string, RaidRecords>
+  ownedRaidItems: string[]
+  ownedShipSkins: string[]
   repairOwed: number
   onRepairBlocked: () => void
 }) {
@@ -2902,6 +2905,9 @@ function BossesView({ views, repairOwed, onRepairBlocked }: {
         <BossFightModal
           boss={modalBoss}
           challenge={challengeOf(modalBoss)}
+          rec={modalBoss.node.raidId ? raidRecords[modalBoss.node.raidId] ?? null : null}
+          ownedRaidItems={ownedRaidItems}
+          ownedShipSkins={ownedShipSkins}
           isNext={modalBoss.node.id === nextUpId}
           repairOwed={repairOwed}
           onEnter={r => router.push(r)}
@@ -2958,9 +2964,12 @@ function BossTile({ view, isNext, onOpen }: { view: RaidNodeView; isNext: boolea
 
 // The boss fight modal — opens on a tile tap. Shows the big portrait, the drops,
 // and the choice of Fight (normal) vs Challenge. Portaled + backdrop-dismissable.
-function BossFightModal({ boss, challenge, isNext, repairOwed, onEnter, onRepairBlocked, onClose }: {
+function BossFightModal({ boss, challenge, rec, ownedRaidItems, ownedShipSkins, isNext, repairOwed, onEnter, onRepairBlocked, onClose }: {
   boss: RaidNodeView
   challenge: RaidNodeView | null
+  rec: RaidRecords | null
+  ownedRaidItems: string[]
+  ownedShipSkins: string[]
   isNext: boolean
   repairOwed: number
   onEnter: (route: string) => void
@@ -3014,20 +3023,38 @@ function BossFightModal({ boss, challenge, isNext, repairOwed, onEnter, onRepair
               <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 16 }}>
                 {drops.map(d => {
                   const rc = (d.rarity && RARITY_COLOR[d.rarity]) || '#c4a96a'
+                  const owned = !!(d.raidItemId && ownedRaidItems.includes(d.raidItemId)) || !!(d.shipSkinId && ownedShipSkins.includes(d.shipSkinId))
                   return (
-                    <span key={d.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.72rem', color: '#e7dcc4', background: 'rgba(255,255,255,0.06)', border: `1px solid ${rc}44`, borderRadius: 999, padding: '0.24rem 0.7rem 0.24rem 0.34rem' }}>
+                    <span key={d.id} title={owned ? 'Owned' : undefined} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.72rem', color: owned ? '#a2d9b6' : '#e7dcc4', background: owned ? 'rgba(74,222,128,0.1)' : 'rgba(255,255,255,0.06)', border: `1px solid ${owned ? 'rgba(74,222,128,0.4)' : `${rc}44`}`, borderRadius: 999, padding: '0.24rem 0.7rem 0.24rem 0.34rem' }}>
                       {d.image ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={d.image} alt="" style={{ width: 20, height: 20, objectFit: 'contain', borderRadius: 4 }} />
+                        <img src={d.image} alt="" style={{ width: 20, height: 20, objectFit: 'contain', borderRadius: 4, opacity: owned ? 0.85 : 1 }} />
                       ) : (
                         <span style={{ width: 12, height: 12, borderRadius: 3, background: rc, boxShadow: `0 0 6px ${rc}` }} />
                       )}
                       {d.label}
+                      {owned && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 1 }}><path d="M5 12l4 4 10-10" /></svg>}
                     </span>
                   )
                 })}
               </div>
             </>
+          )}
+          {rec && (
+            <div style={{ display: 'flex', gap: 20, marginBottom: 16 }}>
+              <div>
+                <p className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.16em', color: '#8a857c', marginBottom: 2 }}>Your best</p>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: rec.yourBestMs != null ? '#e6dcc4' : '#6a6764', fontVariantNumeric: 'tabular-nums' }}>{rec.yourBestMs != null ? formatRaidMs(rec.yourBestMs) : '—'}</p>
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <p className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.16em', color: '#8a857c', marginBottom: 2 }}>Fastest clear</p>
+                {rec.fastestMs > 0 ? (
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#e6dcc4', fontVariantNumeric: 'tabular-nums', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{formatRaidMs(rec.fastestMs)} <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#8a857c' }}>· {rec.fastestUsername}</span></p>
+                ) : (
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#6a6764' }}>—</p>
+                )}
+              </div>
+            </div>
           )}
           {locked ? (
             <p className="font-karla font-600" style={{ fontSize: '0.8rem', color: '#8a857c', display: 'flex', alignItems: 'center', gap: 7, padding: '0.4rem 0' }}>
@@ -3335,7 +3362,7 @@ export default function RaidsSection({ views, doubloons, navLevel, playerShipIma
               tap away, its drops, and your best clear time. */}
           <ViewToggle view={view} onChange={setView} />
           {view === 'bosses' ? (
-            <BossesView views={views} repairOwed={repairOwed} onRepairBlocked={() => setRepairPromptOpen(true)} />
+            <BossesView views={views} raidRecords={raidRecords} ownedRaidItems={ownedRaidItems} ownedShipSkins={ownedShipSkins} repairOwed={repairOwed} onRepairBlocked={() => setRepairPromptOpen(true)} />
           ) : (() => {
             const groups = new Map<string, { chapter: RaidChapter; views: RaidNodeView[] }>()
             for (const v of views) {
