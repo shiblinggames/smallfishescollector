@@ -2897,7 +2897,7 @@ function BossesView({ views, raidRecords, ownedRaidItems, ownedShipSkins, repair
       {chapterOrder.map(cid => (
         <div key={cid} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           {byChapter.get(cid)!.map(v => (
-            <BossTile key={v.node.id} view={v} isNext={v.node.id === nextUpId} onOpen={() => { vibrate([0, 12]); setModalBoss(v) }} />
+            <BossTile key={v.node.id} view={v} isNext={v.node.id === nextUpId} challengeCleared={challengeOf(v)?.status === 'cleared'} onOpen={() => { vibrate([0, 12]); setModalBoss(v) }} />
           ))}
         </div>
       ))}
@@ -2928,7 +2928,7 @@ function bossNameOf(node: { raidId?: string; label: string }): string {
 
 // A single art-forward boss tile — a large portrait with the name over a bottom
 // scrim + a status marker. Tapping opens the BossFightModal.
-function BossTile({ view, isNext, onOpen }: { view: RaidNodeView; isNext: boolean; onOpen: () => void }) {
+function BossTile({ view, isNext, challengeCleared, onOpen }: { view: RaidNodeView; isNext: boolean; challengeCleared: boolean; onOpen: () => void }) {
   const node = view.node
   const bossName = bossNameOf(node)
   const cleared = view.status === 'cleared'
@@ -2948,8 +2948,16 @@ function BossTile({ view, isNext, onOpen }: { view: RaidNodeView; isNext: boolea
       )}
       <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(6,10,16,0) 42%, rgba(6,10,16,0.9) 100%)' }} />
       {cleared && (
-        <span aria-hidden style={{ position: 'absolute', top: 8, right: 8, width: 20, height: 20, borderRadius: '50%', background: '#2dd4aa', display: 'grid', placeItems: 'center', boxShadow: '0 0 10px rgba(45,212,170,0.6)' }}>
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#06110c" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l4 4 10-10" /></svg>
+        <span style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 4 }}>
+          {/* Normal cleared (teal) + Challenge cleared (crimson) — a boss can carry both. */}
+          <span title="Normal cleared" aria-label="Normal cleared" style={{ width: 20, height: 20, borderRadius: '50%', background: '#2dd4aa', display: 'grid', placeItems: 'center', boxShadow: '0 0 9px rgba(45,212,170,0.55)', border: '1.5px solid rgba(6,17,12,0.5)' }}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#06110c" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l4 4 10-10" /></svg>
+          </span>
+          {challengeCleared && (
+            <span title="Challenge cleared" aria-label="Challenge cleared" style={{ width: 20, height: 20, borderRadius: '50%', background: '#ff6a48', display: 'grid', placeItems: 'center', boxShadow: '0 0 9px rgba(255,106,72,0.55)', border: '1.5px solid rgba(22,6,4,0.5)' }}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#1a0705" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l4 4 10-10" /></svg>
+            </span>
+          )}
         </span>
       )}
       {isNext && (
