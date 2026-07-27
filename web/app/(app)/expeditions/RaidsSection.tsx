@@ -3345,49 +3345,7 @@ export default function RaidsSection({ views, doubloons, navLevel, playerShipIma
 
   return (
     <div id="chapter-map" style={{ marginBottom: '1.5rem', scrollMarginTop: 90 }}>
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="w-full"
-        style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-          marginBottom: open ? '0.7rem' : 0,
-        }}
-      >
-        <span style={{ display: 'flex', alignItems: 'baseline', gap: '0.55rem' }}>
-          <span className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#c4a96a', letterSpacing: '0.04em' }}>Story</span>
-          <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#6a6764' }}>{clearedCount}/{views.length} cleared</span>
-        </span>
-        <span style={{ display: 'flex', alignItems: 'baseline', gap: '0.45rem', flexShrink: 0 }}>
-          {topRaidProgress && (
-            // Fleet leader on the Raid Progress board — social proof in
-            // the section header. Compact "#1 username · N cleared"
-            // pill so the player sees the current high water mark
-            // without leaving the Expeditions tab.
-            <span
-              className="font-karla font-700"
-              style={{
-                fontSize: '0.62rem',
-                color: '#f0d695',
-                background: 'rgba(196,169,106,0.18)',
-                border: '1px solid rgba(196,169,106,0.55)',
-                padding: '0.2rem 0.6rem',
-                borderRadius: 999,
-                whiteSpace: 'nowrap',
-                letterSpacing: '0.04em',
-              }}
-            >
-              <span style={{ color: '#c4a96a', marginRight: 4 }}>#1</span>
-              {topRaidProgress.username}
-              <span style={{ color: 'rgba(240,214,149,0.55)', margin: '0 5px' }}>·</span>
-              {topRaidProgress.score} cleared
-            </span>
-          )}
-          <span style={{ color: '#6a6764', fontSize: '0.9rem', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▾</span>
-        </span>
-      </button>
-
-      {open && (
+      {(
         <div style={{
           background: 'linear-gradient(180deg, rgba(9,14,22,0.93) 0%, rgba(7,11,17,0.95) 40%, rgba(6,10,16,0.97) 100%), url(/exp-campaign.jpg) top center / cover no-repeat',
           border: '1px solid rgba(255,255,255,0.08)',
