@@ -2864,7 +2864,7 @@ function RepairBlockedModal({
 function ViewToggle({ view, onChange }: { view: 'journey' | 'bosses'; onChange: (v: 'journey' | 'bosses') => void }) {
   const opts = [
     { id: 'journey' as const, label: 'Journey', sub: 'the story arc' },
-    { id: 'bosses' as const, label: 'Bosses', sub: 'jump & farm' },
+    { id: 'bosses' as const, label: 'Bosses', sub: 'chase the drops' },
   ]
   return (
     <div style={{ display: 'flex', gap: 4, marginBottom: '1rem', padding: 4, borderRadius: 14, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
