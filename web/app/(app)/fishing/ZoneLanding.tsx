@@ -222,7 +222,7 @@ export default function ZoneLanding({
   return (
     <div className="fixed left-0 right-0 top-[44px] bottom-[60px] sm:top-[60px] sm:bottom-0"
       style={{ background: '#08121c', zIndex: 40, display: 'flex', justifyContent: 'center' }}>
-      <div className="relative w-full max-w-md overflow-hidden" style={{ height: '100%' }}>
+      <div className="relative w-full max-w-lg overflow-hidden" style={{ height: '100%' }}>
 
         {/* Deep-water backdrop — a painted water column (sunlit surface + god-rays
             up top, abyssal black at the bottom) under a soft tonal ramp so the
@@ -238,7 +238,7 @@ export default function ZoneLanding({
         <div style={{ position: 'relative', zIndex: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
           {/* Scroll area — header + zones scroll together. Free scroll (no snap)
               so the big scene cards glide past naturally. */}
-          <div ref={scrollRef} onScroll={syncScrollCue} style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch', padding: '0 0.9rem 1.5rem' }}>
+          <div ref={scrollRef} onScroll={syncScrollCue} style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch', padding: '2rem 0.9rem 1.5rem' }}>
 
           {/* Fishing level header + XP bar — the WHOLE block is one tap target
               for the Fishing Renown board. The "Fishing" header shares
@@ -261,7 +261,7 @@ export default function ZoneLanding({
                 aria-label="View Fishing Renown"
                 animate={pulse ? { boxShadow: [`0 0 0px ${pc}00`, `0 0 16px ${pc}aa`, `0 0 0px ${pc}00`] } : { boxShadow: `0 0 0px ${pc}00` }}
                 transition={pulse ? { duration: 1.6, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.3 }}
-                style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', width: '100%', textAlign: 'left', background: pulse ? `${pc}12` : 'none', border: `1px solid ${pulse ? pc + '55' : 'transparent'}`, borderRadius: 12, cursor: 'pointer', padding: '1.5rem 0.35rem 0.5rem', WebkitTapHighlightColor: 'transparent' }}
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', width: '100%', textAlign: 'left', background: pulse ? `${pc}12` : 'none', border: `1px solid ${pulse ? pc + '55' : 'transparent'}`, borderRadius: 12, cursor: 'pointer', padding: '0.25rem 0.35rem 0.35rem', WebkitTapHighlightColor: 'transparent' }}
                 onMouseEnter={e => { e.currentTarget.style.background = 'rgba(125,160,216,0.12)'; e.currentTarget.style.borderColor = 'rgba(125,160,216,0.3)' }}
                 onMouseLeave={e => { e.currentTarget.style.background = pulse ? `${pc}12` : 'none'; e.currentTarget.style.borderColor = pulse ? pc + '55' : 'transparent' }}
               >
