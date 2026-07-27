@@ -3377,7 +3377,7 @@ export default function RaidsSection({ views, doubloons, navLevel, playerShipIma
 
       {open && (
         <div style={{
-          background: 'linear-gradient(180deg, rgba(9,14,22,0.86) 0%, rgba(6,10,16,0.92) 100%)',
+          background: 'linear-gradient(180deg, rgba(9,14,22,0.93) 0%, rgba(7,11,17,0.95) 40%, rgba(6,10,16,0.97) 100%), url(/exp-campaign.jpg) top center / cover no-repeat',
           border: '1px solid rgba(255,255,255,0.08)',
           borderRadius: 16,
           padding: '0.9rem 0.75rem',
