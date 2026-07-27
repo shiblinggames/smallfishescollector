@@ -69,7 +69,7 @@ import { getRepairKit, rollRepairKitHeal, repairKitRange } from '@/lib/repairKit
 import { classForSlug, CLASSES, currentMilestone, type AnyClassDef } from '@/lib/crewClasses'
 import { getCrewSkinByFilename } from '@/lib/crewSkins'
 import { ChaseSkinFx } from '@/components/ChaseSkinFx'
-import { TempestStrikeFx, LeviathanStrikeFx, RequiemMarkFx } from '@/components/ChaseStrikeFx'
+import { TempestStrikeFx, LeviathanStrikeFx, RequiemMarkFx, GalaxySurgeFx } from '@/components/ChaseStrikeFx'
 import { crewLevelFromXP } from '@/lib/crewLevel'
 import { type AffixDef } from '@/lib/raidAffixes'
 import { getShipClass, aggregateShipClasses } from '@/lib/shipClasses'
@@ -1296,6 +1296,8 @@ export default function RaidCombat({
   // Bespoke chase-skin ability-effect FX over the enemy hull (e.g. Mako's Tempest
   // lightning storm during Blitz). Mounted for the ability's duration, then null.
   const [enemyStrikeFx, setEnemyStrikeFx] = useState<{ key: number; kind: 'tempest' | 'leviathan' | 'requiem'; color: string; shots?: number; interval?: number } | null>(null)
+  // Bespoke chase-skin ability FX over the PLAYER hull (heal/shield/ward abilities).
+  const [playerStrikeFx, setPlayerStrikeFx] = useState<{ key: number; kind: 'galaxy'; color: string } | null>(null)
   const [critFlash, setCritFlash]     = useState(false)
   // Brief red wash when the boss flips to phase 2 (challenge-mode Pete).
   // Same shape as critFlash — fixed full-screen radial gradient, ~400ms.
@@ -2115,7 +2117,7 @@ export default function RaidCombat({
       // resolveLog gets replaced wholesale and we don't want to clobber it.
       setResolveLog(prev => (prev.length === introLines.length && prev[0] === intro ? [...introLines, 'What will you do?'] : prev))
     }, 600)
-    setPHitsplat(null); setEHitsplat(null); setBarrageSplats([]); setAbilityCast(null); setAbilitySummon(null); setEnemyAura(null); setThermalShockFx(null); setEnemyStrikeFx(null)
+    setPHitsplat(null); setEHitsplat(null); setBarrageSplats([]); setAbilityCast(null); setAbilitySummon(null); setEnemyAura(null); setThermalShockFx(null); setEnemyStrikeFx(null); setPlayerStrikeFx(null)
     setEnemyMuzzle(null); setPlayerImpact(null); setPlayerAura(null); setDodgeFx(null)
     setEnemyBurning(false); setEnemyFrozen(false); setEnemyDeflect(0)
     setPlayerBurning(false); setPlayerFrozen(false)
@@ -2691,6 +2693,13 @@ export default function RaidCombat({
         crewShieldRef.current += shield; setCrewShieldHp(prev => prev + shield)   // crew-ability (cyan) layer
         if (at.cleanseDebuff) { setCleanseDebuffPending(true); cleansePlayerStatuses() }
         noteCheckResponse('heal'); noteCheckResponse('shield'); noteCheckResponse('brace'); dousePlayerBurnFromHeal()   // legendary breadth: the abyss answers heal, shield AND brace checks
+        // Galaxy (Catfish's chase skin): a cosmic surge blooms over your hull as
+        // the tide heals + shields — nebula, a galactic shield-dome, rising motes.
+        if (chaseSkinId === 'catfish_galaxy') {
+          const gk = Date.now()
+          setPlayerStrikeFx({ key: gk, kind: 'galaxy', color: chaseColor ?? '#8b7bf0' })
+          playStepChainRef.current.push(setTimeout(() => setPlayerStrikeFx(s => (s && s.key === gk ? null : s)), 1550))
+        }
         setPHitsplat({ key: ak + 1, text: `+${heal}`, color: chaseColor ?? '#5eead4', big: true })
         setTimeout(() => setPHitsplat(null), 900)
         setResolveLog(prev => [...prev, `${crew.name} calls the abyss: +${heal} HP, ${shield} HP shield.`])
@@ -6379,6 +6388,10 @@ export default function RaidCombat({
               {/* Impact spray when the enemy's shot lands on the player hull */}
               {playerImpact && (
                 <ImpactBurst key={`pi-${playerImpact.key}`} kind={playerImpact.kind} />
+              )}
+              {/* Bespoke chase-skin ability FX over the player hull (Catfish's Galaxy surge) */}
+              {playerStrikeFx?.kind === 'galaxy' && (
+                <GalaxySurgeFx key={`gsf-${playerStrikeFx.key}`} color={playerStrikeFx.color} />
               )}
               {/* Lethal-save burst — Quartermaster's Anchor catches a killing blow */}
               {anchorSaveFx > 0 && <AnchorSaveBurst key={`asf-${anchorSaveFx}`} />}

@@ -121,6 +121,72 @@ export function TempestStrikeFx({ color, shots, interval }: { color: string; sho
   )
 }
 
+/** Galaxy (Catfish) — a cosmic surge over YOUR ship. Tidecaller heals + shields,
+ *  so this is restorative, not violent: a nebula blooms over the hull, a starfield
+ *  kindles, a translucent galactic shield-dome forms around the ship, and healing
+ *  motes rise through it. Rendered over the player ship. */
+export function GalaxySurgeFx({ color }: { color: string }) {
+  const CYAN = '#4dc9ff'
+  const stars: [number, number][] = [[24, 26], [70, 22], [44, 40], [80, 54], [18, 56], [58, 66], [36, 78], [86, 38], [14, 40], [64, 84]]
+  return (
+    <div aria-hidden style={{ position: 'absolute', inset: '-35% -25%', pointerEvents: 'none', zIndex: 6, overflow: 'visible' }}>
+      {/* Nebula bloom swirling up over the hull. */}
+      {[{ c: color, l: 42, t: 46, s: 78, d: 0 }, { c: CYAN, l: 62, t: 56, s: 62, d: 0.12 }, { c: '#b17dff', l: 48, t: 66, s: 60, d: 0.2 }].map((n, i) => (
+        <motion.div key={`neb-${i}`}
+          initial={{ opacity: 0, scale: 0.5 }}
+          animate={{ opacity: [0, 0.6, 0.45, 0], scale: [0.5, 1, 1.08, 1.16] }}
+          transition={{ duration: 1.4, delay: n.d, times: [0, 0.32, 0.7, 1], ease: 'easeOut' }}
+          style={{ position: 'absolute', left: `${n.l}%`, top: `${n.t}%`, width: `${n.s}%`, height: `${n.s}%`, marginLeft: `-${n.s / 2}%`, marginTop: `-${n.s / 2}%`, borderRadius: '50%',
+            background: `radial-gradient(circle, ${n.c}66 0%, ${n.c}22 44%, transparent 72%)` }}
+        />
+      ))}
+
+      {/* Galactic shield-dome forming around the ship — a ring + faint fill that
+          scales in and settles (the shield the ability grants). */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.55 }}
+        animate={{ opacity: [0, 0.9, 0.7, 0], scale: [0.55, 1.04, 1, 1.05] }}
+        transition={{ duration: 1.4, times: [0, 0.3, 0.72, 1], ease: [0.2, 0.9, 0.3, 1] }}
+        style={{ position: 'absolute', left: '50%', top: '58%', width: '74%', height: '62%', marginLeft: '-37%', marginTop: '-31%', borderRadius: '50%',
+          border: `2px solid ${CYAN}`, boxShadow: `0 0 22px ${color}88, inset 0 0 30px ${color}55`,
+          background: `radial-gradient(ellipse at 50% 45%, ${color}18 0%, ${CYAN}10 55%, transparent 78%)` }}
+      />
+
+      {/* Surge flash + expanding ring as the tide answers. */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.3 }}
+        animate={{ opacity: [0, 0.85, 0], scale: [0.3, 1.8, 2.3] }}
+        transition={{ duration: 0.6, delay: 0.28, ease: 'easeOut' }}
+        style={{ position: 'absolute', left: '50%', top: '58%', width: 200, height: 200, marginLeft: -100, marginTop: -100, borderRadius: '50%', background: `radial-gradient(circle, #ffffff 0%, ${color}88 34%, transparent 68%)` }}
+      />
+
+      {/* Twinkling starfield. */}
+      {stars.map(([l, t], i) => (
+        <motion.div key={`star-${i}`}
+          initial={{ opacity: 0, scale: 0.4 }}
+          animate={{ opacity: [0, 1, 0.4, 0], scale: [0.4, 1, 1, 0.7] }}
+          transition={{ duration: 1.2, delay: 0.2 + (i % 5) * 0.12, ease: 'easeInOut' }}
+          style={{ position: 'absolute', left: `${l}%`, top: `${t}%`, width: 5, height: 5, marginLeft: -2.5, marginTop: -2.5, background: '#ffffff', borderRadius: 1, boxShadow: `0 0 4px #fff, 0 0 9px ${color}` }}
+        />
+      ))}
+
+      {/* Healing motes rising through the surge. */}
+      {Array.from({ length: 12 }).map((_, i) => {
+        const left = 12 + ((i * 71) / 12) % 76
+        const c = i % 2 ? CYAN : color
+        return (
+          <motion.div key={`mote-${i}`}
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: [0, 0.9, 0], y: [30, -46] }}
+            transition={{ duration: 1.1 + (i % 4) * 0.2, delay: 0.15 + (i % 6) * 0.1, ease: 'easeOut' }}
+            style={{ position: 'absolute', left: `${left}%`, top: '78%', width: 3 + (i % 3), height: 3 + (i % 3), borderRadius: '50%', background: c, boxShadow: `0 0 5px ${c}` }}
+          />
+        )
+      })}
+    </div>
+  )
+}
+
 /** The Idol (Mira) — a death-mark. Requiem deals no damage; it BRANDS the enemy.
  *  A gilded gaze-beam falls onto the target, an aureole of rays tightens, and a
  *  sacred rose-and-gold sigil seals onto the hull with a searing flash, an eye
