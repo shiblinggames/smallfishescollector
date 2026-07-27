@@ -176,7 +176,7 @@ export default function RenownPanel({ open, onClose, skill, initial, onChange }:
                 <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
                     <span className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#f0ede8' }}>{stat.name}</span>
-                    {active && (
+                    {active ? (
                       <motion.span
                         key={pts}                       /* re-mount → spring pop on change */
                         initial={{ scale: 1.5, opacity: 0.4 }}
@@ -187,6 +187,11 @@ export default function RenownPanel({ open, onClose, skill, initial, onChange }:
                       >
                         {formatRenownTotal(stat, pts)}
                       </motion.span>
+                    ) : (
+                      // Value preview before you invest — "+0.5% each" etc.
+                      <span className="font-karla font-600" style={{ fontSize: '0.66rem', color: `${stat.color}aa` }}>
+                        {formatRenownTotal(stat, 1)} each
+                      </span>
                     )}
                   </div>
                   <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>
