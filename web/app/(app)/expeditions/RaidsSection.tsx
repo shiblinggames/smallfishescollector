@@ -3064,18 +3064,18 @@ function BossFightModal({ boss, challenge, rec, ownedRaidItems, ownedShipSkins, 
             <div style={{ display: 'flex', gap: 10 }}>
               <button type="button" className="tap"
                 onClick={() => { if (!node.route) return; if (blocked) { onRepairBlocked(); return } vibrate([0, 16, 30, 24]); onEnter(node.route) }}
-                style={{ flex: 1, borderRadius: 13, padding: '0.85rem 0', cursor: 'pointer', border: `1px solid ${accent}b0`, background: `${accent}2a`, color: '#f4efe4' }}>
+                style={{ flex: 1, borderRadius: 13, padding: '0.85rem 0', textAlign: 'center', lineHeight: 1.15, cursor: 'pointer', border: `1px solid ${accent}b0`, background: `${accent}2a`, color: '#f4efe4' }}>
                 <span className="font-cinzel font-800 uppercase" style={{ display: 'block', fontSize: '1rem', letterSpacing: '0.08em' }}>Normal</span>
                 <span className="font-karla font-600" style={{ display: 'block', fontSize: '0.52rem', letterSpacing: '0.05em', opacity: 0.75, marginTop: 2 }}>standard loot</span>
               </button>
               {challenge && (
                 <button type="button" disabled={!chAvailable} className="tap"
                   onClick={() => { if (!chAvailable || !challenge.node.route) return; if (blocked) { onRepairBlocked(); return } vibrate([0, 16, 30, 24]); onEnter(challenge.node.route) }}
-                  style={{ flex: 1, borderRadius: 13, padding: '0.85rem 0', cursor: chAvailable ? 'pointer' : 'default', lineHeight: 1.05,
+                  style={{ flex: 1, borderRadius: 13, padding: '0.85rem 0', textAlign: 'center', lineHeight: 1.15, cursor: chAvailable ? 'pointer' : 'default',
                     border: `1px solid ${chAvailable ? 'rgba(208,113,106,0.6)' : 'rgba(255,255,255,0.1)'}`,
                     background: chAvailable ? 'rgba(208,113,106,0.16)' : 'rgba(255,255,255,0.04)', color: chAvailable ? '#ffd9cd' : '#6a6764' }}>
                   <span className="font-cinzel font-800 uppercase" style={{ display: 'block', fontSize: '1rem', letterSpacing: '0.08em' }}>{chCleared ? 'Challenge ✓' : 'Challenge'}</span>
-                  <span className="font-karla font-600" style={{ display: 'block', fontSize: '0.52rem', letterSpacing: '0.05em', opacity: 0.85, marginTop: 2 }}>{chAvailable ? '2× loot · +50% HP' : 'clear the raid first'}</span>
+                  <span className="font-karla font-600" style={{ display: 'block', fontSize: '0.52rem', letterSpacing: '0.05em', opacity: 0.85, marginTop: 2 }}>{chAvailable ? 'bonus loot' : 'clear the raid first'}</span>
                 </button>
               )}
             </div>
