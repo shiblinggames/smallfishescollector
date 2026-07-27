@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { vibrate } from '@/lib/haptics'
 import { isCombatNode, chapterForNode, RAID_CHAPTERS, musterSceneLines, SCENE_BACKDROPS, type RaidChapter, type RaidNodeDrop, type RaidNodeView } from '@/lib/raidMap'
 import type { RaidRecords } from './raidMapActions'
-import { RARITY_COLOR, GEM_GLYPH, GEM_COLOR } from '@/lib/bossRaids'
+import { RARITY_COLOR, GEM_GLYPH, GEM_COLOR, RAID_LOCATION_BG, RAID_BOSS_BG } from '@/lib/bossRaids'
 import { getRaidItem } from '@/lib/raidItems'
 import { getRaidConfigById } from '@/lib/raidRegistry'
 import { isUniqueLoot } from '@/lib/bossRaids'
@@ -2839,8 +2839,202 @@ function RepairBlockedModal({
 
 /* ─────────────────────── Collapsible section ─────────────────── */
 
+// ── Bosses (farm) view ──────────────────────────────────────────────────────
+// The other half of the campaign screen: a deck of boss cards grouped by
+// chapter, each with Fight + Challenge one tap away, its signature drops, and
+// your best clear time. Built for finished players farming specific fights.
+function ViewToggle({ view, onChange }: { view: 'journey' | 'bosses'; onChange: (v: 'journey' | 'bosses') => void }) {
+  const opts = [
+    { id: 'journey' as const, label: 'Journey', sub: 'the story arc' },
+    { id: 'bosses' as const, label: 'Bosses', sub: 'jump & farm' },
+  ]
+  return (
+    <div style={{ display: 'flex', gap: 4, marginBottom: '1rem', padding: 4, borderRadius: 14, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+      {opts.map(o => {
+        const on = view === o.id
+        return (
+          <button key={o.id} type="button" onClick={() => { if (!on) { vibrate([0, 12]); onChange(o.id) } }} className="tap"
+            style={{ flex: 1, borderRadius: 11, padding: '0.5rem 0', cursor: 'pointer', textAlign: 'center',
+              border: `1px solid ${on ? 'rgba(196,169,106,0.42)' : 'transparent'}`,
+              background: on ? 'rgba(196,169,106,0.14)' : 'transparent',
+              boxShadow: on ? '0 0 16px rgba(196,169,106,0.12)' : 'none' }}>
+            <span className="font-cinzel font-700 uppercase" style={{ display: 'block', fontSize: '0.82rem', letterSpacing: '0.1em', color: on ? '#f0ede8' : '#8a857c' }}>{o.label}</span>
+            <span className="font-karla font-600 uppercase" style={{ display: 'block', fontSize: '0.5rem', letterSpacing: '0.06em', marginTop: 2, color: on ? '#c4a96a' : '#615e5a' }}>{o.sub}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function BossesView({ views, raidRecords, repairOwed, onSelect, onRepairBlocked }: {
+  views: RaidNodeView[]
+  raidRecords: Record<string, RaidRecords>
+  repairOwed: number
+  onSelect: (v: RaidNodeView) => void
+  onRepairBlocked: () => void
+}) {
+  const router = useRouter()
+  // Main boss raids (challenge side-branches are folded into each card), grouped by chapter.
+  const bosses = views.filter(v => v.node.type === 'raid' && !v.node.sideBranch)
+  const groups: { chapter: RaidChapter; bosses: RaidNodeView[] }[] = []
+  for (const v of bosses) {
+    const c = chapterForNode(v.node.id)
+    let g = groups.find(x => x.chapter.id === c.id)
+    if (!g) { g = { chapter: c, bosses: [] }; groups.push(g) }
+    g.bosses.push(v)
+  }
+  groups.sort((a, b) => RAID_CHAPTERS.findIndex(c => c.id === a.chapter.id) - RAID_CHAPTERS.findIndex(c => c.id === b.chapter.id))
+  // Next-up = the first available (uncleared) boss — the current progression target.
+  const nextUpId = bosses.find(v => v.status === 'available')?.node.id ?? null
+
+  if (bosses.length === 0) {
+    return <p className="font-karla" style={{ fontSize: '0.75rem', color: '#8a857c', textAlign: 'center', padding: '1.5rem 0' }}>No boss raids charted yet.</p>
+  }
+  return (
+    <div>
+      {groups.map(g => (
+        <div key={g.chapter.id}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '1rem 2px 0.7rem' }}>
+            <span className="font-cinzel font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.2em', color: '#8a857c', whiteSpace: 'nowrap' }}>Chapter {g.chapter.romanNumeral} · {g.chapter.title}</span>
+            <span aria-hidden style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, rgba(255,255,255,0.1), transparent)' }} />
+          </div>
+          {g.bosses.map(v => (
+            <BossCard key={v.node.id}
+              view={v}
+              challenge={views.find(c => c.node.sideBranch?.parentId === v.node.id) ?? null}
+              rec={v.node.raidId ? raidRecords[v.node.raidId] ?? null : null}
+              isNext={v.node.id === nextUpId}
+              repairOwed={repairOwed}
+              onEnter={r => router.push(r)}
+              onRepairBlocked={onRepairBlocked}
+              onOpen={() => onSelect(v)}
+            />
+          ))}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function BossCard({ view, challenge, rec, isNext, repairOwed, onEnter, onRepairBlocked, onOpen }: {
+  view: RaidNodeView
+  challenge: RaidNodeView | null
+  rec: RaidRecords | null
+  isNext: boolean
+  repairOwed: number
+  onEnter: (route: string) => void
+  onRepairBlocked: () => void
+  onOpen: () => void
+}) {
+  const node = view.node
+  const cleared = view.status === 'cleared'
+  const locked = view.status === 'locked'
+  const accent = locked ? '#6a6764' : isNext ? '#5eead4' : '#c4a96a'
+  const backdrop = node.raidId ? (RAID_BOSS_BG[node.raidId] ?? RAID_LOCATION_BG[node.raidId]) : undefined
+  const drops = (node.detail?.drops ?? []).filter(d => (d.rarity === 'epic' || d.rarity === 'legendary') && (d.raidItemId || d.shipSkinId)).slice(0, 3)
+  const best = rec?.yourBestMs != null ? formatRaidMs(rec.yourBestMs) : null
+  const fleetBest = rec && rec.fastestMs > 0 ? formatRaidMs(rec.fastestMs) : null
+  const blocked = repairOwed > 0
+  const chAvailable = !!challenge && (challenge.status === 'available' || challenge.status === 'cleared')
+  const chCleared = challenge?.status === 'cleared'
+
+  return (
+    <div onClick={() => { vibrate([0, 10]); onOpen() }}
+      style={{ position: 'relative', borderRadius: 18, overflow: 'hidden', marginBottom: 14, cursor: 'pointer',
+        border: `1px solid ${accent}${locked ? '2e' : '80'}`, background: '#0a1119',
+        boxShadow: isNext ? `0 0 0 1px ${accent}30, 0 0 26px ${accent}18` : '0 10px 26px rgba(0,0,0,0.42)',
+        filter: locked ? 'saturate(0.5)' : undefined }}>
+      {backdrop && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={backdrop} alt="" aria-hidden loading="lazy" decoding="async"
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
+            opacity: locked ? 0.26 : cleared ? 0.4 : 0.58, filter: locked ? 'grayscale(1)' : cleared ? 'grayscale(0.5)' : 'none' }} />
+      )}
+      <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(6,12,20,0.32) 0%, rgba(6,12,20,0.72) 46%, rgba(6,12,20,0.97) 100%)' }} />
+      <span className="font-karla font-700 uppercase" style={{ position: 'absolute', top: 11, right: 11, zIndex: 2, fontSize: '0.44rem', letterSpacing: '0.14em', padding: '0.24rem 0.5rem', borderRadius: 999,
+        ...(cleared ? { color: '#8ff0c0', background: 'rgba(74,222,128,0.13)', border: '1px solid rgba(74,222,128,0.4)' }
+          : isNext ? { color: '#08120f', background: 'rgba(94,234,212,0.9)', boxShadow: '0 0 14px rgba(94,234,212,0.4)' }
+          : locked ? { color: '#8a857c', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }
+          : { color: '#c4a96a', background: 'rgba(196,169,106,0.14)', border: '1px solid rgba(196,169,106,0.4)' }) }}>
+        {cleared ? 'Cleared' : isNext ? 'Next up' : locked ? 'Locked' : 'Ready'}
+      </span>
+      <div style={{ position: 'relative', padding: '0.9rem 0.85rem 0.8rem' }}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+          <div style={{ position: 'relative', width: 58, height: 58, flexShrink: 0, borderRadius: 13, overflow: 'hidden', background: '#12202e', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+            {node.image && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={node.image} alt={node.label} loading="lazy" decoding="async"
+                style={{ width: '100%', height: '100%', objectFit: 'cover', filter: locked ? 'grayscale(1) brightness(0.6)' : undefined }} />
+            )}
+            <span aria-hidden style={{ position: 'absolute', inset: 0, borderRadius: 13, border: `1px solid ${accent}88` }} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0, paddingTop: 1 }}>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', lineHeight: 1.08, color: locked ? '#9a948a' : '#fff', textShadow: `0 2px 6px rgba(0,0,0,0.85), 0 0 14px ${accent}30` }}>{node.label}</p>
+            <p className="font-karla" style={{ fontSize: '0.64rem', color: '#c7c0b4', marginTop: 3, textShadow: '0 1px 4px rgba(0,0,0,0.9)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>{node.flavor}</p>
+          </div>
+        </div>
+
+        {locked ? (
+          <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#8a857c', marginTop: 11, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <IconLock size={11} /> {view.lockReason ?? 'Locked'}
+          </p>
+        ) : (
+          <>
+            {drops.length > 0 && (
+              <div style={{ display: 'flex', gap: 6, marginTop: 11, flexWrap: 'wrap' }}>
+                {drops.map(d => {
+                  const rc = (d.rarity && RARITY_COLOR[d.rarity]) || '#c4a96a'
+                  return (
+                    <span key={d.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.56rem', color: '#e7dcc4', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 999, padding: '0.16rem 0.5rem 0.16rem 0.24rem' }}>
+                      {d.image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={d.image} alt="" style={{ width: 15, height: 15, objectFit: 'contain', borderRadius: 4 }} />
+                      ) : (
+                        <span style={{ width: 11, height: 11, borderRadius: 3, background: rc, boxShadow: `0 0 6px ${rc}` }} />
+                      )}
+                      {d.label}
+                    </span>
+                  )
+                })}
+              </div>
+            )}
+            {(best || fleetBest) && (
+              <div style={{ display: 'flex', gap: 14, marginTop: 9, fontSize: '0.56rem', color: '#8a857c' }}>
+                {best && <span>Your best <b style={{ color: '#dcd2bd', fontVariantNumeric: 'tabular-nums' }}>{best}</b></span>}
+                {fleetBest && <span>Fleet <b style={{ color: '#dcd2bd', fontVariantNumeric: 'tabular-nums' }}>{fleetBest}</b></span>}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 9, marginTop: 12 }}>
+              <button type="button" className="tap"
+                onClick={e => { e.stopPropagation(); if (!node.route) return; if (blocked) { onRepairBlocked(); return } vibrate([0, 16, 30, 24]); onEnter(node.route) }}
+                style={{ flex: 1, borderRadius: 12, padding: '0.65rem 0', cursor: 'pointer', border: `1px solid ${accent}b0`, background: `${accent}26`, color: '#f0ede8' }}>
+                <span className="font-cinzel font-700 uppercase" style={{ fontSize: '0.76rem', letterSpacing: '0.08em' }}>{cleared ? 'Raid Again' : 'Fight'}</span>
+              </button>
+              {challenge && (
+                <button type="button" disabled={!chAvailable} className="tap"
+                  onClick={e => { e.stopPropagation(); if (!chAvailable || !challenge.node.route) return; if (blocked) { onRepairBlocked(); return } vibrate([0, 16, 30, 24]); onEnter(challenge.node.route) }}
+                  style={{ flex: 1, borderRadius: 12, padding: '0.5rem 0', cursor: chAvailable ? 'pointer' : 'default', lineHeight: 1.05,
+                    border: `1px solid ${chAvailable ? 'rgba(208,113,106,0.55)' : 'rgba(255,255,255,0.1)'}`,
+                    background: chAvailable ? 'rgba(208,113,106,0.14)' : 'rgba(255,255,255,0.04)', color: chAvailable ? '#ffd9cd' : '#6a6764' }}>
+                  <span className="font-cinzel font-700 uppercase" style={{ display: 'block', fontSize: '0.72rem', letterSpacing: '0.08em' }}>{chCleared ? 'Challenge ✓' : 'Challenge'}</span>
+                  <span className="font-karla font-600" style={{ display: 'block', fontSize: '0.44rem', letterSpacing: '0.04em', opacity: 0.85, marginTop: 1 }}>{chAvailable ? '2× loot · +50% HP' : 'clear first'}</span>
+                </button>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+      {!locked && <span aria-hidden style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 3, background: `linear-gradient(90deg, ${accent}, ${accent}66)`, boxShadow: `0 0 8px ${accent}80` }} />}
+    </div>
+  )
+}
+
 export default function RaidsSection({ views, doubloons, navLevel, playerShipImage, raidRecords, repairOwed, ownedRaidItems, ownedShipSkins = [], equippedRaidItems, shipClasses, seenChapterUnlocks, seenUltimateUnlock, raidNodeChoices, topRaidProgress, hasSixthBerth = false, hasArmoryExpansion = false, musterParty = [] }: { views: RaidNodeView[]; doubloons: number; navLevel: number; playerShipImage?: string; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[]; ownedShipSkins?: string[]; equippedRaidItems: string[]; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; seenUltimateUnlock: boolean; raidNodeChoices: Record<string, string>; topRaidProgress: { username: string; score: number } | null; hasSixthBerth?: boolean; hasArmoryExpansion?: boolean; musterParty?: MusterCrew[] }) {
   const [open, setOpen] = useState(true)
+  // Journey (the story map) vs Bosses (a farm deck — every boss with Fight +
+  // Challenge one tap away). Journey stays the default for the narrative.
+  const [view, setView] = useState<'journey' | 'bosses'>('journey')
   const [selected, setSelected] = useState<RaidNodeView | null>(null)
   // Per-chapter manual toggle overrides. Membership means the player
   // has flipped the default open/closed state for that chapter — works
@@ -3007,19 +3201,20 @@ export default function RaidsSection({ views, doubloons, navLevel, playerShipIma
 
       {open && (
         <div style={{
-          background: 'linear-gradient(135deg, rgba(28,20,10,0.72) 0%, rgba(18,14,6,0.82) 100%)',
-          border: '1px solid rgba(240,192,64,0.18)',
+          background: view === 'bosses'
+            ? 'linear-gradient(180deg, rgba(9,14,22,0.86) 0%, rgba(6,10,16,0.92) 100%)'
+            : 'linear-gradient(135deg, rgba(28,20,10,0.72) 0%, rgba(18,14,6,0.82) 100%)',
+          border: `1px solid ${view === 'bosses' ? 'rgba(255,255,255,0.08)' : 'rgba(240,192,64,0.18)'}`,
           borderRadius: 16,
           padding: '0.9rem 0.75rem',
         }}>
-          {/* Chapters render as separate, titled sections instead of one
-              continuous scroll. Each chapter is bound by RAID_CHAPTERS;
-              the views are partitioned in declaration order so a new
-              raid arc is just an RAID_MAP append + an RAID_CHAPTERS
-              boundary update. Cleared status is shown next to the
-              header so the player can see at a glance which chapters
-              they've finished. */}
-          {(() => {
+          {/* Journey ↔ Bosses. Journey = the story map (the chapters below).
+              Bosses = a farm deck: every boss card with Fight + Challenge one
+              tap away, its drops, and your best clear time. */}
+          <ViewToggle view={view} onChange={setView} />
+          {view === 'bosses' ? (
+            <BossesView views={views} raidRecords={raidRecords} repairOwed={repairOwed} onSelect={setSelected} onRepairBlocked={() => setRepairPromptOpen(true)} />
+          ) : (() => {
             const groups = new Map<string, { chapter: RaidChapter; views: RaidNodeView[] }>()
             for (const v of views) {
               const c = chapterForNode(v.node.id)
