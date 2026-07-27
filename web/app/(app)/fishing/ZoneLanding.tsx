@@ -216,6 +216,12 @@ export default function ZoneLanding({
             const toNext = atMax ? 0 : xp.xpForLevel - xp.xpInLevel
             return (
               <div style={{ flexShrink: 0, padding: '2.5rem 0.9rem 0.7rem' }}>
+                {/* Section header — matches the expeditions page "Navigation"
+                    header sitting above its nav-level bar. */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 9, paddingLeft: 2 }}>
+                  <span aria-hidden style={{ width: 3, height: 14, borderRadius: 2, background: 'linear-gradient(180deg,#9ab8e0,#5a7db0)', boxShadow: '0 0 8px rgba(125,160,216,0.5)' }} />
+                  <span className="font-cinzel font-700" style={{ fontSize: '0.92rem', letterSpacing: '0.06em', color: '#e2e9f3' }}>Fishing</span>
+                </div>
                 {/* Fishing level bar — mirrors the expeditions page nav-level bar
                     (ShipHero): LV + big number on the left, a full-width fill, and
                     xp-to-next on the right. Same sizing, colours, and spacing. */}

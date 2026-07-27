@@ -1037,6 +1037,13 @@ export default function ShipHero({
             (a face) instead of a button floating on its own. */}
         <div style={{ position: 'relative', padding: '1.1rem 0 1rem' }}>
 
+          {/* Section header — matches the fishing zone selector's "Fishing"
+              header sitting above its level bar. */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 9, paddingLeft: 2 }}>
+            <span aria-hidden style={{ width: 3, height: 14, borderRadius: 2, background: 'linear-gradient(180deg,#9ab8e0,#5a7db0)', boxShadow: '0 0 8px rgba(125,160,216,0.5)' }} />
+            <span className="font-cinzel font-700" style={{ fontSize: '0.92rem', letterSpacing: '0.06em', color: '#e2e9f3' }}>Navigation</span>
+          </div>
+
           {/* Nav level + XP — full-width bar across the card (mirrors the
               fishing screen's XPBarDisplay): big level number on the left,
               the progress bar stretching the card width, XP-to-next on the
