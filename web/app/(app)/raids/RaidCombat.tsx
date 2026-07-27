@@ -69,6 +69,7 @@ import { getRepairKit, rollRepairKitHeal, repairKitRange } from '@/lib/repairKit
 import { classForSlug, CLASSES, currentMilestone, type AnyClassDef } from '@/lib/crewClasses'
 import { getCrewSkinByFilename } from '@/lib/crewSkins'
 import { ChaseSkinFx } from '@/components/ChaseSkinFx'
+import { TempestStrikeFx } from '@/components/ChaseStrikeFx'
 import { crewLevelFromXP } from '@/lib/crewLevel'
 import { type AffixDef } from '@/lib/raidAffixes'
 import { getShipClass, aggregateShipClasses } from '@/lib/shipClasses'
@@ -1292,6 +1293,9 @@ export default function RaidCombat({
   // scattered across the hull, so the whole volley's numbers rack up (the single
   // eHitsplat can only show one at a time).
   const [barrageSplats, setBarrageSplats] = useState<{ key: number; text: string; dx: number; crit?: boolean; color?: string }[]>([])
+  // Bespoke chase-skin ability-effect FX over the enemy hull (e.g. Mako's Tempest
+  // lightning storm during Blitz). Mounted for the ability's duration, then null.
+  const [enemyStrikeFx, setEnemyStrikeFx] = useState<{ key: number; color: string; shots: number; interval: number } | null>(null)
   const [critFlash, setCritFlash]     = useState(false)
   // Brief red wash when the boss flips to phase 2 (challenge-mode Pete).
   // Same shape as critFlash — fixed full-screen radial gradient, ~400ms.
@@ -2111,7 +2115,7 @@ export default function RaidCombat({
       // resolveLog gets replaced wholesale and we don't want to clobber it.
       setResolveLog(prev => (prev.length === introLines.length && prev[0] === intro ? [...introLines, 'What will you do?'] : prev))
     }, 600)
-    setPHitsplat(null); setEHitsplat(null); setBarrageSplats([]); setAbilityCast(null); setAbilitySummon(null); setEnemyAura(null); setThermalShockFx(null)
+    setPHitsplat(null); setEHitsplat(null); setBarrageSplats([]); setAbilityCast(null); setAbilitySummon(null); setEnemyAura(null); setThermalShockFx(null); setEnemyStrikeFx(null)
     setEnemyMuzzle(null); setPlayerImpact(null); setPlayerAura(null); setDodgeFx(null)
     setEnemyBurning(false); setEnemyFrozen(false); setEnemyDeflect(0)
     setPlayerBurning(false); setPlayerFrozen(false)
@@ -2583,6 +2587,9 @@ export default function RaidCombat({
     // as the skin (Tempest's shots strike lightning-blue, Hunter's Bane's blow
     // lands blood-red, Galaxy's heal glows cosmic, etc.). null for base/regular.
     const chaseColor: string | null = summonSkin?.chase ? summonSkin.color : null
+    // Chase-skin id drives BESPOKE ability-effect FX (the upgraded thing that
+    // happens to the enemy), e.g. Mako's Tempest turns Blitz into a lightning storm.
+    const chaseSkinId: string | null = summonSkin?.chase ? summonSkin.id : null
     setAbilitySummon({ key: castKey, label: ABILITY_CAST_LABEL[def.id] ?? def.name, name: crew.name, color: summonColor, image: crew.imageUrl ?? null, chase: !!summonSkin?.chase, skinId: summonSkin?.id ?? null })
     setTimeout(() => setAbilitySummon(s => (s && s.key === castKey ? null : s)), SUMMON_TOTAL_MS)
 
@@ -2769,13 +2776,26 @@ export default function RaidCombat({
         // damage number, so the frenzy visibly chains the hits instead of one
         // lump landing at the end. Paced so each hit reads as its own blow.
         const INTERVAL = 200
+        // Tempest (Mako's chase skin): the barrage isn't cannon fire — it's a
+        // lightning STORM. Mount the bespoke strike FX over the enemy for the
+        // whole barrage; each shot below then skips the muzzle flash + generic
+        // impact burst (the descending bolts + hull flashes carry the visuals),
+        // keeping the damage, floating numbers, haptics and camera heave.
+        const tempest = chaseSkinId === 'mako_tempest'
+        if (tempest) {
+          const stormKey = Date.now()
+          setEnemyStrikeFx({ key: stormKey, color: chaseColor ?? '#38bdf8', shots: lastIdx + 1, interval: INTERVAL })
+          playStepChainRef.current.push(setTimeout(() => setEnemyStrikeFx(s => (s && s.key === stormKey ? null : s)), (lastIdx + 1) * INTERVAL + 900))
+        }
         for (let k = 0; k <= lastIdx; k++) {
           playStepChainRef.current.push(setTimeout(() => {
             const bk = Date.now() + k
-            setCannonShot({ key: bk, kind: isCrit ? 'crit' : 'normal' })
-            playStepChainRef.current.push(setTimeout(() => setCannonShot(null), 85))
-            setEnemyImpact({ key: bk + 300, kind: isCrit ? 'crit' : 'normal' })
-            playStepChainRef.current.push(setTimeout(() => setEnemyImpact(null), 150))
+            if (!tempest) {
+              setCannonShot({ key: bk, kind: isCrit ? 'crit' : 'normal' })
+              playStepChainRef.current.push(setTimeout(() => setCannonShot(null), 85))
+              setEnemyImpact({ key: bk + 300, kind: isCrit ? 'crit' : 'normal' })
+              playStepChainRef.current.push(setTimeout(() => setEnemyImpact(null), 150))
+            }
             vibrate(isCrit ? 16 : 9)
             // Each shot floats its OWN damage number, scattered across the hull so
             // the whole barrage's numbers read (not just the first). skipSplat on
@@ -6223,6 +6243,10 @@ export default function RaidCombat({
             {/* Explosion burst on impact — overlays the enemy hull */}
             {enemyImpact && (
               <ImpactBurst key={`ei-${enemyImpact.key}`} kind={enemyImpact.kind} />
+            )}
+            {/* Bespoke chase-skin ability strike (Mako's Tempest lightning storm) */}
+            {enemyStrikeFx && (
+              <TempestStrikeFx key={`tsf-${enemyStrikeFx.key}`} color={enemyStrikeFx.color} shots={enemyStrikeFx.shots} interval={enemyStrikeFx.interval} />
             )}
             {/* Thermal Shock confluence — the ice+fire shatter detonation */}
             <AnimatePresence>
