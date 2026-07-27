@@ -2204,10 +2204,16 @@ export default function RaidCombat({
       : forcedDecoys > 0
       ? forcedDecoys
       : tide.aimDecoys > 0 && Math.random() < DECOY_FIRE_CHANCE ? tide.aimDecoys : 0
+    // False Court (raid-8 'decoys' affliction) was reading as too strong: its
+    // fake bands drifted as fast as tide decoys on top of The Render's 2.5x
+    // zone speed, leaving no time to read the true lane. Drift the FORCED
+    // (False Court) bands far slower so the fake gold is trackable — the
+    // milder, occasional tide-decoy version keeps its original pace.
+    const decoySpeedMult = forcedDecoys > 0 ? 0.38 : 1
     decoyRunRef.current = Array.from({ length: nDecoys }, (_, k) => ({
       pos: dLo + (dHi - dLo) * (nDecoys === 1 ? 0.32 + Math.random() * 0.36 : k / (nDecoys - 1)),
       dir: k % 2 === 0 ? 1 : -1,
-      speed: 1.25 + (k % 2) * 0.55,
+      speed: (1.25 + (k % 2) * 0.55) * decoySpeedMult,
     }))
     decoyFumbleRef.current = false
     setActiveDecoys(nDecoys)
