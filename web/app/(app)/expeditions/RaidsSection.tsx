@@ -3030,6 +3030,100 @@ function BossCard({ view, challenge, rec, isNext, repairOwed, onEnter, onRepairB
   )
 }
 
+// A chapter's nodes as a clean vertical spine (replaces the serpentine map).
+// Combat nodes are mini boss cards; story/muster/puzzle beats are dots on the
+// spine; challenge side-branches indent as crimson detours. Preserves the old
+// progressive reveal (fog nodes far past the current one; the chapter's last
+// node shows as a faded beacon). Every tap opens the shared NodeDetailSheet.
+function JourneyChapter({ views, onSelect }: { views: RaidNodeView[]; onSelect: (v: RaidNodeView) => void }) {
+  const chainIdx = views.map((v, i) => (v.node.sideBranch ? -1 : i)).filter(i => i >= 0)
+  const currentIdx = views.findIndex(v => v.status === 'available' && !v.node.sideBranch)
+  const currentChainPos = currentIdx >= 0 ? chainIdx.indexOf(currentIdx) : -1
+  const lastChainPos = chainIdx.length - 1
+  const chainPosOf = (i: number): number => {
+    const v = views[i]
+    if (!v.node.sideBranch) return chainIdx.indexOf(i)
+    const p = views.findIndex(x => x.node.id === v.node.sideBranch!.parentId)
+    return p >= 0 ? chainIdx.indexOf(p) : 0
+  }
+  const visOf = (i: number): 'revealed' | 'fogged' | 'beacon' => {
+    const v = views[i]
+    if (v.status === 'cleared' || v.status === 'available') return 'revealed'
+    if (currentChainPos < 0) return 'revealed'
+    const pos = chainPosOf(i)
+    if (pos <= currentChainPos + REVEAL_AHEAD) return 'revealed'
+    if (!v.node.sideBranch && pos === lastChainPos) return 'beacon'
+    return 'fogged'
+  }
+  const rows = views.map((v, i) => ({ v, vis: visOf(i) })).filter(r => r.vis !== 'fogged')
+  const anyFogged = views.some((_, i) => visOf(i) === 'fogged')
+
+  return (
+    <div style={{ position: 'relative', padding: '2px 2px 4px' }}>
+      <div aria-hidden style={{ position: 'absolute', left: 22, top: 16, bottom: 18, width: 2, background: 'linear-gradient(180deg, rgba(196,169,106,0.5), rgba(196,169,106,0.1))' }} />
+      {rows.map(({ v, vis }) => {
+        const node = v.node
+        const cleared = v.status === 'cleared'
+        const beacon = vis === 'beacon'
+        const locked = v.status === 'locked' || beacon
+        const isCurrent = v.status === 'available' && !node.sideBranch
+        const isSide = !!node.sideBranch
+        const combat = isCombatNode(node.type)
+        const accent = beacon ? '#6a6764' : isSide ? SIDE_BRANCH_ACCENT : isCurrent ? '#5eead4' : '#c4a96a'
+        return (
+          <button key={node.id} type="button" onClick={() => { vibrate([0, 10]); onSelect(v) }} className="tap"
+            style={{ display: 'flex', alignItems: 'center', gap: 11, width: '100%', textAlign: 'left', background: 'none', border: 'none',
+              padding: combat ? '5px 0' : '3px 0', cursor: 'pointer', position: 'relative', paddingLeft: isSide ? 30 : 0, opacity: locked ? 0.64 : 1 }}>
+            <span style={{ flex: '0 0 44px', display: 'flex', justifyContent: 'center', position: 'relative', zIndex: 1 }}>
+              {combat ? (
+                <span style={{ position: 'relative', width: isSide ? 34 : 42, height: isSide ? 34 : 42, borderRadius: 11, overflow: 'hidden', background: '#12202e', boxShadow: '0 3px 10px rgba(0,0,0,0.5)' }}>
+                  {node.image && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={node.image} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: locked ? 'grayscale(1) brightness(0.6)' : cleared ? 'grayscale(0.4) brightness(0.85)' : undefined }} />
+                  )}
+                  <span aria-hidden style={{ position: 'absolute', inset: 0, borderRadius: 11, border: `2px solid ${accent}`, boxShadow: isCurrent ? `0 0 14px ${accent}66` : 'none' }} />
+                </span>
+              ) : (
+                <span style={{ width: 22, height: 22, borderRadius: '50%', display: 'grid', placeItems: 'center', background: cleared ? 'radial-gradient(circle,#2dd4aa,#0c3a30)' : '#0c1119', border: `2px solid ${cleared ? '#2dd4aa' : accent}` }}>
+                  {cleared
+                    ? <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#06110c" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l4 4 10-10" /></svg>
+                    : <NodeGlyph type={node.type} color={accent} size={11} />}
+                </span>
+              )}
+              {combat && cleared && (
+                <span aria-hidden style={{ position: 'absolute', right: 2, bottom: -2, width: 15, height: 15, borderRadius: '50%', background: '#2dd4aa', display: 'grid', placeItems: 'center', border: '2px solid #0a1119' }}>
+                  <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#06110c" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l4 4 10-10" /></svg>
+                </span>
+              )}
+            </span>
+            {combat ? (
+              <span style={{ flex: 1, minWidth: 0, position: 'relative', borderRadius: 13, padding: '8px 11px', background: isCurrent ? 'rgba(94,234,212,0.06)' : isSide ? 'rgba(239,68,68,0.05)' : 'rgba(255,255,255,0.03)', border: `1px solid ${accent}${locked ? '2a' : '4d'}`, boxShadow: isCurrent ? `0 0 18px ${accent}14` : 'none' }}>
+                {isCurrent && <span className="font-karla font-700 uppercase" style={{ position: 'absolute', top: -8, left: 12, fontSize: '0.4rem', letterSpacing: '0.12em', color: '#08120f', background: 'rgba(94,234,212,0.92)', padding: '2px 6px', borderRadius: 999, boxShadow: '0 0 12px rgba(94,234,212,0.4)' }}>You are here</span>}
+                <span style={{ display: 'flex', alignItems: 'baseline', gap: 7 }}>
+                  <span className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: locked ? '#9a948a' : '#fff', lineHeight: 1.1 }}>{node.label}</span>
+                  {isSide && <span className="font-karla font-700 uppercase" style={{ fontSize: '0.4rem', letterSpacing: '0.1em', color: SIDE_BRANCH_ACCENT, border: `1px solid ${SIDE_BRANCH_ACCENT}66`, borderRadius: 999, padding: '1px 5px' }}>Challenge</span>}
+                </span>
+                <span className="font-karla" style={{ display: 'block', fontSize: '0.6rem', color: '#a49d90', marginTop: 2, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{node.flavor}</span>
+              </span>
+            ) : (
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: locked ? '#8a857c' : cleared ? '#b0a99b' : '#d8d0c0' }}>{node.label}</span>
+                <span className="font-karla font-600 uppercase" style={{ display: 'block', fontSize: '0.44rem', letterSpacing: '0.1em', color: '#6a6764', marginTop: 1 }}>{beacon ? "Chapter's end" : nodeTypeLabel(node.type)}</span>
+              </span>
+            )}
+          </button>
+        )
+      })}
+      {anyFogged && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginTop: 2 }}>
+          <span aria-hidden style={{ flex: '0 0 44px', textAlign: 'center', color: '#4f4a42', fontSize: '1rem' }}>⋯</span>
+          <span className="font-karla" style={{ fontSize: '0.6rem', color: '#5b5449', fontStyle: 'italic' }}>uncharted waters ahead</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function RaidsSection({ views, doubloons, navLevel, playerShipImage, raidRecords, repairOwed, ownedRaidItems, ownedShipSkins = [], equippedRaidItems, shipClasses, seenChapterUnlocks, seenUltimateUnlock, raidNodeChoices, topRaidProgress, hasSixthBerth = false, hasArmoryExpansion = false, musterParty = [] }: { views: RaidNodeView[]; doubloons: number; navLevel: number; playerShipImage?: string; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[]; ownedShipSkins?: string[]; equippedRaidItems: string[]; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; seenUltimateUnlock: boolean; raidNodeChoices: Record<string, string>; topRaidProgress: { username: string; score: number } | null; hasSixthBerth?: boolean; hasArmoryExpansion?: boolean; musterParty?: MusterCrew[] }) {
   const [open, setOpen] = useState(true)
   // Journey (the story map) vs Bosses (a farm deck — every boss with Fight +
@@ -3201,10 +3295,8 @@ export default function RaidsSection({ views, doubloons, navLevel, playerShipIma
 
       {open && (
         <div style={{
-          background: view === 'bosses'
-            ? 'linear-gradient(180deg, rgba(9,14,22,0.86) 0%, rgba(6,10,16,0.92) 100%)'
-            : 'linear-gradient(135deg, rgba(28,20,10,0.72) 0%, rgba(18,14,6,0.82) 100%)',
-          border: `1px solid ${view === 'bosses' ? 'rgba(255,255,255,0.08)' : 'rgba(240,192,64,0.18)'}`,
+          background: 'linear-gradient(180deg, rgba(9,14,22,0.86) 0%, rgba(6,10,16,0.92) 100%)',
+          border: '1px solid rgba(255,255,255,0.08)',
           borderRadius: 16,
           padding: '0.9rem 0.75rem',
         }}>
@@ -3355,7 +3447,7 @@ export default function RaidsSection({ views, doubloons, navLevel, playerShipIma
                         transition={{ duration: 0.22, ease: 'easeOut' }}
                         style={{ overflow: 'hidden' }}
                       >
-                        <RaidMap views={bucket.views} doubloons={doubloons} playerShipImage={playerShipImage} onSelect={setSelected} onRepairBlocked={() => setRepairPromptOpen(true)} repairOwed={repairOwed} />
+                        <JourneyChapter views={bucket.views} onSelect={setSelected} />
                       </motion.div>
                     )}
                   </AnimatePresence>
