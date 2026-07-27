@@ -74,8 +74,8 @@ export function TempestStrikeFx({ color, shots, interval }: { color: string; sho
         {strikes.map(s => {
           const main = boltPath(s.cx, 4, s.hx, s.hy, s.big ? 8 : 5)
           const fork = s.big ? boltPath(s.hx + 3, s.hy - 22, s.hx + 12, s.hy - 6, 4) : null
-          const glowW = s.big ? 9 : 5
-          const coreW = s.big ? 3 : 1.6
+          const glowW = s.big ? 13 : 8
+          const coreW = s.big ? 4.5 : 2.6
           const strikeDur = s.big ? 0.5 : 0.34
           return (
             <motion.g key={s.k}
