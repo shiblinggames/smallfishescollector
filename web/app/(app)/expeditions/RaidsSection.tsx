@@ -2867,141 +2867,187 @@ function ViewToggle({ view, onChange }: { view: 'journey' | 'bosses'; onChange: 
   )
 }
 
-function BossesView({ views, repairOwed, onSelect, onRepairBlocked }: {
+function BossesView({ views, repairOwed, onRepairBlocked }: {
   views: RaidNodeView[]
   repairOwed: number
-  onSelect: (v: RaidNodeView) => void
   onRepairBlocked: () => void
 }) {
   const router = useRouter()
-  // Every boss raid in campaign order (views already come in RAID_MAP order), as
-  // a flat farm list — no chapter titles or descriptions, just the bosses + drops.
+  const [modalBoss, setModalBoss] = useState<RaidNodeView | null>(null)
+  // Boss raids grouped by chapter so each grid ROW pairs a chapter's two bosses.
   const bosses = views.filter(v => v.node.type === 'raid' && !v.node.sideBranch)
+  const byChapter = new Map<string, RaidNodeView[]>()
+  const chapterOrder: string[] = []
+  for (const v of bosses) {
+    const cid = chapterForNode(v.node.id).id
+    if (!byChapter.has(cid)) { byChapter.set(cid, []); chapterOrder.push(cid) }
+    byChapter.get(cid)!.push(v)
+  }
   const nextUpId = bosses.find(v => v.status === 'available')?.node.id ?? null
+  const challengeOf = (v: RaidNodeView) => views.find(c => c.node.sideBranch?.parentId === v.node.id) ?? null
 
   if (bosses.length === 0) {
     return <p className="font-karla" style={{ fontSize: '0.8rem', color: '#8a857c', textAlign: 'center', padding: '1.5rem 0' }}>No boss raids charted yet.</p>
   }
   return (
-    <div style={{ marginTop: 6 }}>
-      {bosses.map(v => (
-        <BossCard key={v.node.id}
-          view={v}
-          challenge={views.find(c => c.node.sideBranch?.parentId === v.node.id) ?? null}
-          isNext={v.node.id === nextUpId}
+    <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {chapterOrder.map(cid => (
+        <div key={cid} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          {byChapter.get(cid)!.map(v => (
+            <BossTile key={v.node.id} view={v} isNext={v.node.id === nextUpId} onOpen={() => { vibrate([0, 12]); setModalBoss(v) }} />
+          ))}
+        </div>
+      ))}
+      {modalBoss && (
+        <BossFightModal
+          boss={modalBoss}
+          challenge={challengeOf(modalBoss)}
+          isNext={modalBoss.node.id === nextUpId}
           repairOwed={repairOwed}
           onEnter={r => router.push(r)}
           onRepairBlocked={onRepairBlocked}
-          onOpen={() => onSelect(v)}
+          onClose={() => setModalBoss(null)}
         />
-      ))}
+      )}
     </div>
   )
 }
 
-function BossCard({ view, challenge, isNext, repairOwed, onEnter, onRepairBlocked, onOpen }: {
-  view: RaidNodeView
+// A single art-forward boss tile — a large portrait with the name over a bottom
+// scrim + a status marker. Tapping opens the BossFightModal.
+function BossTile({ view, isNext, onOpen }: { view: RaidNodeView; isNext: boolean; onOpen: () => void }) {
+  const node = view.node
+  const cleared = view.status === 'cleared'
+  const locked = view.status === 'locked'
+  const accent = locked ? '#4f4a42' : isNext ? '#5eead4' : '#c4a96a'
+  return (
+    <button type="button" onClick={onOpen} className="tap"
+      style={{ position: 'relative', aspectRatio: '4 / 5', borderRadius: 16, overflow: 'hidden', cursor: 'pointer', padding: 0,
+        border: `1px solid ${accent}${locked ? '3a' : '99'}`, background: '#0c1119',
+        boxShadow: isNext ? `0 0 0 1px ${accent}40, 0 0 22px ${accent}22` : '0 6px 18px rgba(0,0,0,0.42)' }}>
+      {node.image && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={node.image} alt={node.label} loading="lazy" decoding="async"
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: '50% 16%',
+            filter: locked ? 'grayscale(1) brightness(0.45)' : cleared ? 'grayscale(0.28) brightness(0.82)' : 'none' }} />
+      )}
+      <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(6,10,16,0) 42%, rgba(6,10,16,0.9) 100%)' }} />
+      {cleared && (
+        <span aria-hidden style={{ position: 'absolute', top: 8, right: 8, width: 20, height: 20, borderRadius: '50%', background: '#2dd4aa', display: 'grid', placeItems: 'center', boxShadow: '0 0 10px rgba(45,212,170,0.6)' }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#06110c" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l4 4 10-10" /></svg>
+        </span>
+      )}
+      {isNext && (
+        <span className="font-karla font-700 uppercase" style={{ position: 'absolute', top: 8, left: 8, fontSize: '0.5rem', letterSpacing: '0.1em', color: '#08120f', background: 'rgba(94,234,212,0.92)', padding: '2px 7px', borderRadius: 999, boxShadow: '0 0 12px rgba(94,234,212,0.45)' }}>Next</span>
+      )}
+      {locked && <span aria-hidden style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}><IconLock size={26} /></span>}
+      <span style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '0.45rem 0.55rem 0.55rem' }}>
+        <span className="font-cinzel font-700" style={{ display: 'block', fontSize: '0.98rem', lineHeight: 1.06, color: locked ? '#9a948a' : '#fff', textShadow: '0 2px 7px rgba(0,0,0,0.95)' }}>{node.label}</span>
+      </span>
+    </button>
+  )
+}
+
+// The boss fight modal — opens on a tile tap. Shows the big portrait, the drops,
+// and the choice of Fight (normal) vs Challenge. Portaled + backdrop-dismissable.
+function BossFightModal({ boss, challenge, isNext, repairOwed, onEnter, onRepairBlocked, onClose }: {
+  boss: RaidNodeView
   challenge: RaidNodeView | null
   isNext: boolean
   repairOwed: number
   onEnter: (route: string) => void
   onRepairBlocked: () => void
-  onOpen: () => void
+  onClose: () => void
 }) {
-  const node = view.node
-  const cleared = view.status === 'cleared'
-  const locked = view.status === 'locked'
+  const node = boss.node
+  const cleared = boss.status === 'cleared'
+  const locked = boss.status === 'locked'
   const accent = locked ? '#6a6764' : isNext ? '#5eead4' : '#c4a96a'
   const backdrop = node.raidId ? (RAID_BOSS_BG[node.raidId] ?? RAID_LOCATION_BG[node.raidId]) : undefined
-  const drops = (node.detail?.drops ?? []).filter(d => (d.rarity === 'epic' || d.rarity === 'legendary') && (d.raidItemId || d.shipSkinId)).slice(0, 3)
+  const drops = (node.detail?.drops ?? []).filter(d => (d.rarity === 'epic' || d.rarity === 'legendary') && (d.raidItemId || d.shipSkinId)).slice(0, 4)
   const blocked = repairOwed > 0
   const chAvailable = !!challenge && (challenge.status === 'available' || challenge.status === 'cleared')
   const chCleared = challenge?.status === 'cleared'
-  // Status chip lives INLINE next to the name (not an absolute top-right pill)
-  // so a long boss name can't run under it.
-  const statusStyle = cleared ? { color: '#8ff0c0', background: 'rgba(74,222,128,0.14)', border: '1px solid rgba(74,222,128,0.45)' }
-    : isNext ? { color: '#08120f', background: 'rgba(94,234,212,0.92)', boxShadow: '0 0 12px rgba(94,234,212,0.4)' }
-    : locked ? { color: '#8a857c', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }
-    : { color: '#c4a96a', background: 'rgba(196,169,106,0.14)', border: '1px solid rgba(196,169,106,0.4)' }
 
-  return (
-    <div onClick={() => { vibrate([0, 10]); onOpen() }}
-      style={{ position: 'relative', borderRadius: 18, overflow: 'hidden', marginBottom: 12, cursor: 'pointer',
-        border: `1px solid ${accent}${locked ? '2e' : '80'}`, background: '#0a1119',
-        boxShadow: isNext ? `0 0 0 1px ${accent}30, 0 0 26px ${accent}18` : '0 8px 22px rgba(0,0,0,0.4)',
-        filter: locked ? 'saturate(0.5)' : undefined }}>
-      {backdrop && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={backdrop} alt="" aria-hidden loading="lazy" decoding="async"
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
-            opacity: locked ? 0.26 : cleared ? 0.4 : 0.58, filter: locked ? 'grayscale(1)' : cleared ? 'grayscale(0.5)' : 'none' }} />
-      )}
-      <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(6,12,20,0.32) 0%, rgba(6,12,20,0.72) 46%, rgba(6,12,20,0.97) 100%)' }} />
-      <div style={{ position: 'relative', padding: '0.85rem 0.85rem 0.8rem' }}>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          <div style={{ position: 'relative', width: 56, height: 56, flexShrink: 0, borderRadius: 13, overflow: 'hidden', background: '#12202e', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
-            {node.image && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={node.image} alt={node.label} loading="lazy" decoding="async"
-                style={{ width: '100%', height: '100%', objectFit: 'cover', filter: locked ? 'grayscale(1) brightness(0.6)' : undefined }} />
-            )}
-            <span aria-hidden style={{ position: 'absolute', inset: 0, borderRadius: 13, border: `1px solid ${accent}88` }} />
+  return createPortal(
+    <motion.div onClick={onClose} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(4,7,12,0.82)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+      <motion.div onClick={e => e.stopPropagation()} initial={{ y: 60 }} animate={{ y: 0 }} transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        style={{ width: '100%', maxWidth: 440, background: '#0a1119', borderRadius: '22px 22px 0 0', overflow: 'hidden', border: `1px solid ${accent}55`, borderBottom: 'none', boxShadow: '0 -12px 50px rgba(0,0,0,0.6)' }}>
+        <div style={{ position: 'relative', height: 230 }}>
+          {backdrop && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={backdrop} alt="" aria-hidden style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.5, filter: locked ? 'grayscale(1) brightness(0.6)' : undefined }} />
+          )}
+          {node.image && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={node.image} alt={node.label} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 28%', filter: locked ? 'grayscale(1) brightness(0.6) drop-shadow(0 8px 22px rgba(0,0,0,0.6))' : 'drop-shadow(0 8px 22px rgba(0,0,0,0.6))' }} />
+          )}
+          <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(6,10,16,0.2) 0%, rgba(6,10,16,0.12) 52%, rgba(10,17,25,0.98) 100%)' }} />
+          <button type="button" onClick={onClose} aria-label="Close" style={{ position: 'absolute', top: 12, right: 12, width: 32, height: 32, borderRadius: '50%', padding: 0, background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.18)', color: '#e6e0d4', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+          <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '0 1.1rem 0.6rem', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10 }}>
+            <p className="font-cinzel font-800" style={{ fontSize: '1.55rem', lineHeight: 1.05, color: '#fff', textShadow: `0 2px 10px rgba(0,0,0,0.9), 0 0 20px ${accent}30` }}>{node.label}</p>
+            <span className="font-karla font-700 uppercase" style={{ flexShrink: 0, fontSize: '0.5rem', letterSpacing: '0.12em', padding: '0.26rem 0.6rem', borderRadius: 999, marginBottom: 5,
+              ...(cleared ? { color: '#8ff0c0', background: 'rgba(74,222,128,0.14)', border: '1px solid rgba(74,222,128,0.45)' }
+                : isNext ? { color: '#08120f', background: 'rgba(94,234,212,0.92)' }
+                : locked ? { color: '#8a857c', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }
+                : { color: '#c4a96a', background: 'rgba(196,169,106,0.16)', border: '1px solid rgba(196,169,106,0.4)' }) }}>
+              {cleared ? 'Cleared' : isNext ? 'Next up' : locked ? 'Locked' : 'Ready'}
+            </span>
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <p className="font-cinzel font-700" style={{ flex: 1, minWidth: 0, fontSize: '1.2rem', lineHeight: 1.1, color: locked ? '#9a948a' : '#fff', textShadow: `0 2px 6px rgba(0,0,0,0.85), 0 0 14px ${accent}30`, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{node.label}</p>
-              <span className="font-karla font-700 uppercase" style={{ flexShrink: 0, fontSize: '0.54rem', letterSpacing: '0.12em', padding: '0.26rem 0.58rem', borderRadius: 999, ...statusStyle }}>
-                {cleared ? 'Cleared' : isNext ? 'Next up' : locked ? 'Locked' : 'Ready'}
-              </span>
-            </div>
-            {!locked && drops.length > 0 && (
-              <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+        </div>
+        <div style={{ padding: '0.55rem 1.1rem 1.4rem' }}>
+          {drops.length > 0 && (
+            <>
+              <p className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.18em', color: '#8a857c', marginBottom: 8 }}>Drops</p>
+              <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 16 }}>
                 {drops.map(d => {
                   const rc = (d.rarity && RARITY_COLOR[d.rarity]) || '#c4a96a'
                   return (
-                    <span key={d.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.68rem', color: '#e7dcc4', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 999, padding: '0.2rem 0.6rem 0.2rem 0.3rem' }}>
+                    <span key={d.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.72rem', color: '#e7dcc4', background: 'rgba(255,255,255,0.06)', border: `1px solid ${rc}44`, borderRadius: 999, padding: '0.24rem 0.7rem 0.24rem 0.34rem' }}>
                       {d.image ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={d.image} alt="" style={{ width: 18, height: 18, objectFit: 'contain', borderRadius: 4 }} />
+                        <img src={d.image} alt="" style={{ width: 20, height: 20, objectFit: 'contain', borderRadius: 4 }} />
                       ) : (
-                        <span style={{ width: 11, height: 11, borderRadius: 3, background: rc, boxShadow: `0 0 6px ${rc}` }} />
+                        <span style={{ width: 12, height: 12, borderRadius: 3, background: rc, boxShadow: `0 0 6px ${rc}` }} />
                       )}
                       {d.label}
                     </span>
                   )
                 })}
               </div>
-            )}
-            {locked && (
-              <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#8a857c', marginTop: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <IconLock size={12} /> {view.lockReason ?? 'Locked'}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {!locked && (
-          <div style={{ display: 'flex', gap: 9, marginTop: 12 }}>
+            </>
+          )}
+          {locked ? (
+            <p className="font-karla font-600" style={{ fontSize: '0.8rem', color: '#8a857c', display: 'flex', alignItems: 'center', gap: 7, padding: '0.4rem 0' }}>
+              <IconLock size={15} /> {boss.lockReason ?? 'Locked'}
+            </p>
+          ) : (
+            <div style={{ display: 'flex', gap: 10 }}>
               <button type="button" className="tap"
-                onClick={e => { e.stopPropagation(); if (!node.route) return; if (blocked) { onRepairBlocked(); return } vibrate([0, 16, 30, 24]); onEnter(node.route) }}
-                style={{ flex: 1, borderRadius: 12, padding: '0.65rem 0', cursor: 'pointer', border: `1px solid ${accent}b0`, background: `${accent}26`, color: '#f0ede8' }}>
-                <span className="font-cinzel font-700 uppercase" style={{ fontSize: '0.92rem', letterSpacing: '0.08em' }}>{cleared ? 'Raid Again' : 'Fight'}</span>
+                onClick={() => { if (!node.route) return; if (blocked) { onRepairBlocked(); return } vibrate([0, 16, 30, 24]); onEnter(node.route) }}
+                style={{ flex: 1, borderRadius: 13, padding: '0.85rem 0', cursor: 'pointer', border: `1px solid ${accent}b0`, background: `${accent}2a`, color: '#f4efe4' }}>
+                <span className="font-cinzel font-800 uppercase" style={{ display: 'block', fontSize: '1rem', letterSpacing: '0.08em' }}>{cleared ? 'Raid Again' : 'Fight'}</span>
+                <span className="font-karla font-600" style={{ display: 'block', fontSize: '0.52rem', letterSpacing: '0.05em', opacity: 0.75, marginTop: 2 }}>Normal</span>
               </button>
               {challenge && (
                 <button type="button" disabled={!chAvailable} className="tap"
-                  onClick={e => { e.stopPropagation(); if (!chAvailable || !challenge.node.route) return; if (blocked) { onRepairBlocked(); return } vibrate([0, 16, 30, 24]); onEnter(challenge.node.route) }}
-                  style={{ flex: 1, borderRadius: 12, padding: '0.5rem 0', cursor: chAvailable ? 'pointer' : 'default', lineHeight: 1.05,
-                    border: `1px solid ${chAvailable ? 'rgba(208,113,106,0.55)' : 'rgba(255,255,255,0.1)'}`,
-                    background: chAvailable ? 'rgba(208,113,106,0.14)' : 'rgba(255,255,255,0.04)', color: chAvailable ? '#ffd9cd' : '#6a6764' }}>
-                  <span className="font-cinzel font-700 uppercase" style={{ display: 'block', fontSize: '0.88rem', letterSpacing: '0.08em' }}>{chCleared ? 'Challenge ✓' : 'Challenge'}</span>
-                  <span className="font-karla font-600" style={{ display: 'block', fontSize: '0.54rem', letterSpacing: '0.04em', opacity: 0.85, marginTop: 2 }}>{chAvailable ? '2× loot · +50% HP' : 'clear first'}</span>
+                  onClick={() => { if (!chAvailable || !challenge.node.route) return; if (blocked) { onRepairBlocked(); return } vibrate([0, 16, 30, 24]); onEnter(challenge.node.route) }}
+                  style={{ flex: 1, borderRadius: 13, padding: '0.85rem 0', cursor: chAvailable ? 'pointer' : 'default', lineHeight: 1.05,
+                    border: `1px solid ${chAvailable ? 'rgba(208,113,106,0.6)' : 'rgba(255,255,255,0.1)'}`,
+                    background: chAvailable ? 'rgba(208,113,106,0.16)' : 'rgba(255,255,255,0.04)', color: chAvailable ? '#ffd9cd' : '#6a6764' }}>
+                  <span className="font-cinzel font-800 uppercase" style={{ display: 'block', fontSize: '1rem', letterSpacing: '0.08em' }}>{chCleared ? 'Challenge ✓' : 'Challenge'}</span>
+                  <span className="font-karla font-600" style={{ display: 'block', fontSize: '0.52rem', letterSpacing: '0.05em', opacity: 0.85, marginTop: 2 }}>{chAvailable ? '2× loot · +50% HP' : 'clear the raid first'}</span>
                 </button>
               )}
             </div>
-        )}
-      </div>
-      {!locked && <span aria-hidden style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 3, background: `linear-gradient(90deg, ${accent}, ${accent}66)`, boxShadow: `0 0 8px ${accent}80` }} />}
-    </div>
+          )}
+        </div>
+      </motion.div>
+    </motion.div>,
+    document.body,
   )
 }
 
@@ -3280,7 +3326,7 @@ export default function RaidsSection({ views, doubloons, navLevel, playerShipIma
               tap away, its drops, and your best clear time. */}
           <ViewToggle view={view} onChange={setView} />
           {view === 'bosses' ? (
-            <BossesView views={views} repairOwed={repairOwed} onSelect={setSelected} onRepairBlocked={() => setRepairPromptOpen(true)} />
+            <BossesView views={views} repairOwed={repairOwed} onRepairBlocked={() => setRepairPromptOpen(true)} />
           ) : (() => {
             const groups = new Map<string, { chapter: RaidChapter; views: RaidNodeView[] }>()
             for (const v of views) {
