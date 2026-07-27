@@ -1203,7 +1203,7 @@ export default function ShipHero({
                 color: crewLevelUpNudge ? '#ffd96a' : 'rgba(230,225,215,0.82)',
                 textShadow: '0 1px 4px rgba(0,0,0,0.9)',
               }}>
-                {crewLevelUpNudge ? 'A hand leveled up' : `${roster.length} / ${shipStats.crewSlots} crew`}
+                {crewLevelUpNudge ? 'A hand leveled up' : `${roster.length} crew aboard`}
               </p>
             </Link>
 
