@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isPremiumActive } from '@/lib/premium'
 import { kingWeekStr } from '@/app/(app)/tavern/trivia/constants'
-import { reelCrate } from '@/app/(app)/fishing/actions'
+import { grantCrateLoot, type CrateLoot } from '@/lib/crateLoot'
 
 // Daily Bonus — three claims. Gems + bait reset daily; the crate is weekly.
 // Members get more of each: 150 vs 50 gems, chum vs worms, a gold crate vs a
@@ -71,10 +71,16 @@ export async function claimDailyBait(): Promise<{ claimed: boolean; baitType?: s
 
 /** Weekly free crate — gold for members, wooden for everyone else. Opens with
  *  the full fishing-crate loot table for its tier (doubloons / bait / cosmetic /
- *  pet) via the shared reelCrate roller. One per Monday-week. */
+ *  pet) via the shared grantCrateLoot roller. One per Monday-week.
+ *
+ *  Uses grantCrateLoot directly rather than reelCrate: reelCrate binds to a
+ *  fishing crate TOKEN (pending_cast, set only when you reel a crate mid-fishing)
+ *  and returns "No crate to open." without one — which silently gave the weekly
+ *  crate nothing while still burning the weekly claim. grantCrateLoot always
+ *  pays out, and the weekly stamp below is our anti-farm gate. */
 export async function claimWeeklyCrate(): Promise<
   | { claimed: false }
-  | { claimed: true; tier: 'wooden' | 'gold'; loot: Awaited<ReturnType<typeof reelCrate>> }
+  | { claimed: true; tier: 'wooden' | 'gold'; loot: CrateLoot }
 > {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -91,7 +97,7 @@ export async function claimWeeklyCrate(): Promise<
   await admin.from('profiles').update({ last_crate_claim_week: week }).eq('id', user.id)
 
   const tier: 'wooden' | 'gold' = isPremiumActive(profile) ? 'gold' : 'wooden'
-  const loot = await reelCrate('', tier)
+  const loot = await grantCrateLoot(admin, user.id, tier)
 
   return { claimed: true, tier, loot }
 }
