@@ -3065,8 +3065,8 @@ function BossFightModal({ boss, challenge, rec, ownedRaidItems, ownedShipSkins, 
               <button type="button" className="tap"
                 onClick={() => { if (!node.route) return; if (blocked) { onRepairBlocked(); return } vibrate([0, 16, 30, 24]); onEnter(node.route) }}
                 style={{ flex: 1, borderRadius: 13, padding: '0.85rem 0', cursor: 'pointer', border: `1px solid ${accent}b0`, background: `${accent}2a`, color: '#f4efe4' }}>
-                <span className="font-cinzel font-800 uppercase" style={{ display: 'block', fontSize: '1rem', letterSpacing: '0.08em' }}>{cleared ? 'Raid Again' : 'Fight'}</span>
-                <span className="font-karla font-600" style={{ display: 'block', fontSize: '0.52rem', letterSpacing: '0.05em', opacity: 0.75, marginTop: 2 }}>Normal</span>
+                <span className="font-cinzel font-800 uppercase" style={{ display: 'block', fontSize: '1rem', letterSpacing: '0.08em' }}>Normal</span>
+                <span className="font-karla font-600" style={{ display: 'block', fontSize: '0.52rem', letterSpacing: '0.05em', opacity: 0.75, marginTop: 2 }}>standard loot</span>
               </button>
               {challenge && (
                 <button type="button" disabled={!chAvailable} className="tap"
