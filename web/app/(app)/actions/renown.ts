@@ -77,3 +77,31 @@ export async function allocateRenown(skill: RenownSkill, statId: string): Promis
   await writeAlloc(admin, user.id, skill, next)
   return stateFrom(skill, xp, next)
 }
+
+/** Commit a whole batch of pending allocations at once (the panel stages a draft
+ *  and only persists on Confirm). Server-validated: only known stats accept
+ *  points, and the total can't exceed the player's banked points. */
+export async function commitRenown(skill: RenownSkill, delta: RenownAlloc): Promise<RenownState | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not signed in.' }
+
+  // Sanitize the incoming draft: known stats only, non-negative whole points.
+  const clean: RenownAlloc = {}
+  let total = 0
+  for (const [id, n] of Object.entries(delta ?? {})) {
+    if (!isRenownStat(skill, id)) continue
+    const p = Math.max(0, Math.floor(Number(n) || 0))
+    if (p > 0) { clean[id] = p; total += p }
+  }
+
+  const admin = createAdminClient()
+  const { xp, alloc } = await readRow(admin, user.id, skill)
+  if (total === 0) return stateFrom(skill, xp, alloc)
+  if (total > availablePoints(skill, xp, alloc)) return { error: 'Not enough Renown points.' }
+
+  const next: RenownAlloc = { ...alloc }
+  for (const [id, p] of Object.entries(clean)) next[id] = Math.max(0, Math.floor(alloc[id] ?? 0)) + p
+  await writeAlloc(admin, user.id, skill, next)
+  return stateFrom(skill, xp, next)
+}

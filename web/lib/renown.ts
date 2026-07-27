@@ -80,7 +80,10 @@ export type RenownAlloc = Record<string, number>
 export interface RenownStat {
   id: string
   name: string
+  /** Short flavor line under the name (the SOURCE of the effect). */
   blurb: string
+  /** The thing the number acts on, shown right after the value: '+1.5% doubloons'. */
+  unit: string
   /** per-point magnitude in the stat's own unit (see the effect resolvers). */
   perPoint: number
   /** how perPoint renders: 'pct' = ×100%, 'deg' = degrees, 'flat' = raw. */
@@ -89,17 +92,17 @@ export interface RenownStat {
 }
 
 export const FISHING_RENOWN_STATS: RenownStat[] = [
-  { id: 'bounty',    name: 'Bounty',    blurb: 'Every fish you sell fetches a better price at market.',       perPoint: 0.005, kind: 'pct',  color: '#f0c040' },
-  { id: 'wisdom',    name: 'Wisdom',    blurb: 'Land more Fishing XP from every catch you make.',              perPoint: 0.005, kind: 'pct',  color: '#5eead4' },
-  { id: 'patience',  name: 'Patience',  blurb: 'Fish come to the hook faster, so you cast more often.',        perPoint: 0.004, kind: 'pct',  color: '#60a5fa' },
-  { id: 'precision', name: 'Precision', blurb: 'Widens the green catch band on the dial, so more reels land.',  perPoint: 0.30,  kind: 'deg',  color: '#a78bfa' },
+  { id: 'bounty',    name: 'Bounty',    blurb: 'When you sell your catch at market.', unit: 'doubloons',  perPoint: 0.015, kind: 'pct',  color: '#f0c040' },
+  { id: 'wisdom',    name: 'Wisdom',    blurb: 'From every catch you land.',           unit: 'Fishing XP', perPoint: 0.02,  kind: 'pct',  color: '#5eead4' },
+  { id: 'patience',  name: 'Patience',  blurb: 'Fish take the hook sooner.',           unit: 'bite speed', perPoint: 0.004, kind: 'pct',  color: '#60a5fa' },
+  { id: 'precision', name: 'Precision', blurb: 'A wider green band on the dial.',       unit: 'catch zone', perPoint: 0.30,  kind: 'deg',  color: '#a78bfa' },
 ]
 
 export const NAV_RENOWN_STATS: RenownStat[] = [
-  { id: 'plunder', name: 'Plunder', blurb: 'Haul more doubloons from raids and the Gauntlet.',   perPoint: 0.005, kind: 'pct',  color: '#f0c040' },
-  { id: 'might',   name: 'Might',   blurb: 'Your broadsides hit harder in every raid.',           perPoint: 0.003, kind: 'pct',  color: '#f87171' },
-  { id: 'bulwark', name: 'Bulwark', blurb: 'Reinforces your captain with extra hull HP.',         perPoint: 2,     kind: 'flat', color: '#7dd3fc' },
-  { id: 'command', name: 'Command', blurb: 'Your whole crew earns more XP from every raid.',       perPoint: 0.005, kind: 'pct',  color: '#4ade80' },
+  { id: 'plunder', name: 'Plunder', blurb: 'From raids and the Gauntlet.', unit: 'doubloons',   perPoint: 0.015, kind: 'pct',  color: '#f0c040' },
+  { id: 'might',   name: 'Might',   blurb: 'Your broadsides in every raid.', unit: 'raid damage', perPoint: 0.005, kind: 'pct',  color: '#f87171' },
+  { id: 'bulwark', name: 'Bulwark', blurb: 'Extra HP on your captain.',      unit: 'hull',        perPoint: 3,     kind: 'flat', color: '#7dd3fc' },
+  { id: 'command', name: 'Command', blurb: 'For your whole crew, every raid.', unit: 'crew XP',   perPoint: 0.02,  kind: 'pct',  color: '#4ade80' },
 ]
 
 export function renownStats(skill: RenownSkill): RenownStat[] {

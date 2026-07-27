@@ -15,10 +15,10 @@ import PopupShell from '@/components/PopupShell'
 import { vibrate } from '@/lib/haptics'
 import { playRenownPointSfx } from '@/lib/fishingMusic'
 import {
-  renownStats, formatRenownTotal, spentPoints,
+  renownStats, formatRenownTotal,
   type RenownSkill, type RenownStat, type RenownAlloc,
 } from '@/lib/renown'
-import { allocateRenown, type RenownState } from '@/app/(app)/actions/renown'
+import { commitRenown, type RenownState } from '@/app/(app)/actions/renown'
 
 interface Props {
   open: boolean
@@ -42,38 +42,60 @@ export default function RenownPanel({ open, onClose, skill, initial, onChange }:
 
   const [state, setState] = useState<RenownState>(initial)
   const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  // Pending, UNSAVED allocations — points added this session that only persist
+  // when the player hits Confirm. Committed points live in `state.alloc`.
+  const [draft, setDraft] = useState<RenownAlloc>({})
   // Drives the per-stat "pop" — bump a stat's key so its value re-mounts and
   // springs. Also a short color-burst flag per stat id.
   const [burst, setBurst] = useState<string | null>(null)
 
   // Re-seed from the server-read state each time the panel opens — the derived
-  // Renown level can have grown (more banked points) while it was closed.
-  useEffect(() => { if (open) setState(initial) }, [open, initial])
+  // Renown level can have grown while it was closed — and drop any stale draft.
+  useEffect(() => { if (open) { setState(initial); setDraft({}); setErr(null) } }, [open, initial])
 
-  const available = state.available
+  const draftTotal = Object.values(draft).reduce((n, v) => n + (v || 0), 0)
+  const available = state.available - draftTotal   // banked points still free to stage
+  const has = available > 0
 
-  const onAllocate = useCallback(async (stat: RenownStat) => {
-    if (busy || available <= 0) return
-    // Optimistic — the point lands instantly; feel first, reconcile after.
-    setBusy(true)
-    setState(s => {
-      const alloc: RenownAlloc = { ...s.alloc, [stat.id]: (s.alloc[stat.id] ?? 0) + 1 }
-      return { ...s, alloc, spent: spentPoints(skill, alloc), available: s.available - 1 }
-    })
+  // Stage one point onto a stat (local only — nothing saves until Confirm).
+  const addDraft = useCallback((stat: RenownStat) => {
+    if (available <= 0) return
+    setErr(null)
+    setDraft(d => ({ ...d, [stat.id]: (d[stat.id] ?? 0) + 1 }))
     setBurst(stat.id)
     vibrate(12)
     playRenownPointSfx()
-    // Clear the burst after the animation so it can re-fire on the next click.
     setTimeout(() => setBurst(b => (b === stat.id ? null : b)), 320)
+  }, [available])
+
+  // Take a staged point back off (only pending points can be removed).
+  const removeDraft = useCallback((stat: RenownStat) => {
+    setDraft(d => {
+      const cur = d[stat.id] ?? 0
+      if (cur <= 0) return d
+      const next = { ...d, [stat.id]: cur - 1 }
+      if (next[stat.id] === 0) delete next[stat.id]
+      return next
+    })
+    vibrate(8)
+  }, [])
+
+  const clearDraft = useCallback(() => { setDraft({}); setErr(null) }, [])
+
+  // Persist the whole draft in one server call. Server re-validates the total.
+  const confirmDraft = useCallback(async () => {
+    if (busy || draftTotal <= 0) return
+    setBusy(true)
+    setErr(null)
     try {
-      const res = await allocateRenown(skill, stat.id)
-      if (res && !('error' in res)) { setState(res); onChange?.(res) }   // reconcile with server truth
+      const res = await commitRenown(skill, draft)
+      if (res && 'error' in res) { setErr(res.error) }
+      else if (res) { setState(res); setDraft({}); onChange?.(res); vibrate([10, 30, 14]) }
     } finally {
       setBusy(false)
     }
-  }, [busy, available, skill, onChange])
-
-  const has = available > 0
+  }, [busy, draftTotal, skill, draft, onChange])
 
   return (
     <PopupShell open={open} onClose={onClose}>
@@ -140,7 +162,9 @@ export default function RenownPanel({ open, onClose, skill, initial, onChange }:
         {/* Stat board — each stat is its own card. */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {stats.map(stat => {
-            const pts = state.alloc[stat.id] ?? 0
+            const committed = state.alloc[stat.id] ?? 0
+            const pending = draft[stat.id] ?? 0
+            const pts = committed + pending          // projected total if confirmed
             const canBuy = available > 0 && !busy
             const active = pts > 0
             return (
@@ -177,6 +201,7 @@ export default function RenownPanel({ open, onClose, skill, initial, onChange }:
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
                     <span className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#f0ede8' }}>{stat.name}</span>
                     {active ? (
+                      // Running total once invested — "+7.5% doubloons".
                       <motion.span
                         key={pts}                       /* re-mount → spring pop on change */
                         initial={{ scale: 1.5, opacity: 0.4 }}
@@ -185,12 +210,12 @@ export default function RenownPanel({ open, onClose, skill, initial, onChange }:
                         className="font-karla font-700"
                         style={{ fontSize: '0.74rem', color: stat.color, textShadow: `0 0 12px ${stat.color}66` }}
                       >
-                        {formatRenownTotal(stat, pts)}
+                        {formatRenownTotal(stat, pts)} {stat.unit}
                       </motion.span>
                     ) : (
-                      // Value preview before you invest — "+0.5% each" etc.
+                      // Per-point value before you invest — "+1.5% doubloons".
                       <span className="font-karla font-600" style={{ fontSize: '0.66rem', color: `${stat.color}aa` }}>
-                        {formatRenownTotal(stat, 1)} each
+                        {formatRenownTotal(stat, 1)} {stat.unit}
                       </span>
                     )}
                   </div>
@@ -199,15 +224,30 @@ export default function RenownPanel({ open, onClose, skill, initial, onChange }:
                   </p>
                 </div>
 
-                {/* Allocated count + the + button */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, position: 'relative' }}>
-                  <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: active ? stat.color : 'rgba(255,255,255,0.35)', minWidth: 18, textAlign: 'right' }}>
+                {/* Count + −/+ steppers. − only removes points staged this
+                    session (committed points are permanent). Nothing saves
+                    until Confirm below. */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, position: 'relative' }}>
+                  {pending > 0 && (
+                    <button
+                      onClick={() => removeDraft(stat)}
+                      aria-label={`Remove a staged point from ${stat.name}`}
+                      style={{
+                        width: 30, height: 30, borderRadius: 9, flexShrink: 0,
+                        display: 'grid', placeItems: 'center', fontSize: '1.15rem', lineHeight: 1, fontWeight: 700,
+                        background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.16)',
+                        color: 'rgba(255,255,255,0.6)', cursor: 'pointer',
+                      }}
+                    >−</button>
+                  )}
+                  <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: active ? stat.color : 'rgba(255,255,255,0.35)', minWidth: 14, textAlign: 'right' }}>
                     {pts}
+                    {pending > 0 && <span className="font-karla font-700" style={{ fontSize: '0.5rem', color: stat.color, marginLeft: 1, verticalAlign: 'super' }}>+{pending}</span>}
                   </span>
                   <button
-                    onClick={() => onAllocate(stat)}
+                    onClick={() => addDraft(stat)}
                     disabled={!canBuy}
-                    aria-label={`Add point to ${stat.name}`}
+                    aria-label={`Stage a point on ${stat.name}`}
                     style={{
                       width: 38, height: 38, borderRadius: 11, flexShrink: 0,
                       display: 'grid', placeItems: 'center',
@@ -225,9 +265,39 @@ export default function RenownPanel({ open, onClose, skill, initial, onChange }:
           })}
         </div>
 
-        <p className="font-karla font-400" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.32)', textAlign: 'center', marginTop: '1rem', letterSpacing: '0.03em' }}>
-          Points bank until you spend them. Allocation is permanent, so choose your build deliberately.
-        </p>
+        {err && (
+          <p className="font-karla font-600" style={{ fontSize: '0.64rem', color: '#f87171', textAlign: 'center', marginTop: '0.9rem' }}>{err}</p>
+        )}
+
+        {draftTotal > 0 ? (
+          <>
+            <p className="font-karla font-400" style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.42)', textAlign: 'center', marginTop: '0.9rem', letterSpacing: '0.03em' }}>
+              Not saved yet. Allocation is permanent once you confirm.
+            </p>
+            <div style={{ display: 'flex', gap: 8, marginTop: '0.55rem' }}>
+              <button
+                onClick={confirmDraft}
+                disabled={busy}
+                className="font-karla font-700 uppercase tracking-[0.1em]"
+                style={{ flex: 1, padding: '0.7rem', borderRadius: 12, fontSize: '0.72rem', background: `${meta.accent}26`, border: `1px solid ${meta.accent}88`, color: meta.accent, cursor: busy ? 'wait' : 'pointer', opacity: busy ? 0.6 : 1 }}
+              >
+                {busy ? 'Saving…' : `Confirm ${draftTotal} Point${draftTotal === 1 ? '' : 's'}`}
+              </button>
+              <button
+                onClick={clearDraft}
+                disabled={busy}
+                className="font-karla font-600"
+                style={{ padding: '0.7rem 1rem', borderRadius: 12, fontSize: '0.68rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.6)', cursor: busy ? 'default' : 'pointer' }}
+              >
+                Clear
+              </button>
+            </div>
+          </>
+        ) : (
+          <p className="font-karla font-400" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.32)', textAlign: 'center', marginTop: '1rem', letterSpacing: '0.03em' }}>
+            Points bank until you spend them. Allocation is permanent, so choose your build deliberately.
+          </p>
+        )}
       </motion.div>
     </PopupShell>
   )
