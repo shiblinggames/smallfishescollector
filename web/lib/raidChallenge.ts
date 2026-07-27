@@ -37,12 +37,12 @@ export const CHALLENGE_MODS = {
 } as const
 
 // Loot crate — EXACT, uniform rates for EVERY challenge raid (buildChallengeLoot
-// below). The non-legendary chase item lands at 40% and the legendary at 10% on
+// below). The non-legendary chase item lands at 40% and the legendary at 20% on
 // every raid, no exceptions. The trophy ship skin doubles its base normal rate;
 // currency fills the table to exactly 100 so the weights read straight as
 // percentages. One rule, applied everywhere — so new raids stay consistent for free.
 export const CHALLENGE_ITEM_PCT = 40
-export const CHALLENGE_LEGENDARY_PCT = 10
+export const CHALLENGE_LEGENDARY_PCT = 20
 
 /** Suffix appended to raid_id so challenge completions track separately
  *  in raid_completions (lets the Boss Records block on the challenge node
@@ -88,7 +88,7 @@ function lootCategory(item: RaidLootItem): 'doubloons' | 'gems' | 'unique' {
 
 /** Build a challenge-mode loot table from a base raid's loot with rates that are
  *  IDENTICAL across every raid: the non-legendary item(s) total 40%, the
- *  legendary(s) total 10%, each trophy ship skin doubles its base rate, and the
+ *  legendary(s) total 20%, each trophy ship skin doubles its base rate, and the
  *  currency rows fill whatever's left so the table sums to exactly 100 (weights =
  *  percentages). Centralised so current + future raids stay consistent for free;
  *  a raid can still bypass it by passing an explicit lootOverride below. */
@@ -117,7 +117,7 @@ function buildChallengeLoot(loot: RaidLootItem[]): RaidLootItem[] {
   const scaledCurrency = currency.map(r => ({ ...r, weight: Math.round(r.weight / currencyBase * currencyTarget) }))
 
   // Correct any rounding drift on the largest currency row so the table totals
-  // EXACTLY 100 — that's what pins the item to a true 40% and the legendary to 10%.
+  // EXACTLY 100 — that's what pins the item to a true 40% and the legendary to 20%.
   const total = specialTotal + scaledCurrency.reduce((a, r) => a + r.weight, 0)
   if (scaledCurrency.length && total !== 100) {
     const biggest = scaledCurrency.reduce((a, b) => (b.weight > a.weight ? b : a))
@@ -128,7 +128,7 @@ function buildChallengeLoot(loot: RaidLootItem[]): RaidLootItem[] {
 
 /** Build the challenge variant of a raid. Stat-scaled enemies, scaled
  *  per-kill payouts, suffixed raid_id, title prefixed with "Challenge:".
- *  Loot is built via buildChallengeLoot (exact 40%/10% rates, same for every
+ *  Loot is built via buildChallengeLoot (exact 40%/20% rates, same for every
  *  raid), but a raid can still override the whole table by passing `lootOverride`
  *  for a bespoke case. */
 export function buildChallengeRaid(base: BossRaidConfig, lootOverride?: BossRaidConfig['loot']): BossRaidConfig {
@@ -250,7 +250,7 @@ const SPET_PHASE2: NonNullable<BroadsideEnemy['phase2']> = {
 // plate, the Cartographer = fog-and-parry, Spet = doubled cadence; the Coffers
 // admiral + the Quartermaster inherit phase 2 from their base config, spread
 // through scaleEnemy). Loot comes from the shared exact-rate table
-// (buildChallengeLoot): 40% item / 10% legendary on EVERY raid.
+// (buildChallengeLoot): 40% item / 20% legendary on EVERY raid.
 export const CORSAIRS_RECKONING_CHALLENGE: BossRaidConfig = {
   ...withBossPhase2(buildChallengeRaid(CORSAIRS_RECKONING), 'pete', PETE_PHASE2),
   // Hard mode keeps the original 6-mob grind — only the NORMAL entry raid was
@@ -272,7 +272,7 @@ export const THE_TOLLMASTER_CHALLENGE: BossRaidConfig =
 
 // Chapter III. The Coffers admiral (Raid 5) + the Quartermaster (Raid 6, the
 // chapter finale) inherit decoys / repossession / phase 2 automatically through
-// scaleEnemy; loot rides the same shared 40%/10% table as every other raid.
+// scaleEnemy; loot rides the same shared 40%/20% table as every other raid.
 export const THE_COFFERS_FLEET_CHALLENGE: BossRaidConfig =
   buildChallengeRaid(THE_COFFERS_FLEET)
 // Challenge-only 5th phase for the Quartermaster — beyond "Empty Shelves" he
