@@ -657,7 +657,7 @@ export const RAID_CHAPTERS: RaidChapter[] = [
     id:         'sunken_hand',
     number:     2,
     romanNumeral: 'II',
-    title:      'The Sunken Hand',
+    title:      'A Bigger Fish',
     subtitle:   "The shadow you've been pulling at finally has a name.",
     // finndicate_notice → smugglers_chart → last_cache → cartographer_reveal →
     // cartographer → (the Gullet run) gullet_heading → gullet_cipher →
@@ -864,7 +864,7 @@ export const RAID_MAP: RaidNode[] = [
   {
     id: 'syndicate',
     type: 'story',
-    label: 'A Bigger Fish',
+    label: 'Up the Line',
     flavor: "Pete's books all point the same way and name the Finndicate. One sealed letter points further still, at somebody else.",
     bridge: "The letter's heading runs straight through the Bilge Strait. Want C.K.'s cargo? First you slip past the thugs who own that water.",
     requiresNode: 'pete',
