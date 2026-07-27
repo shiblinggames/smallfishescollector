@@ -237,9 +237,6 @@ export default function ZoneLanding({
               // Ancient Deep needs Fishing 75 AND Chapter 3 cleared (or grandfathered).
               const accessible = fishingLevel >= minLevel && (zone !== 'ancient_deep' || ancientDeepUnlocked)
               const color = HABITAT_COLOR[zone]
-              const difficulty = ZONE_DIFFICULTY[zone]
-              const diffLabel = ZONE_DIFFICULTY_LABEL[zone]
-              const stats = zoneStats[zone] ?? { avgValue: 0, avgXp: 0, topValue: 0, count: 0 }
               const col = zoneCollection[zone] ?? { caught: 0, total: 0 }
               const colDone = col.total > 0 && col.caught >= col.total
               const prestige = prestigeLevels[zone] ?? 0
@@ -295,21 +292,12 @@ export default function ZoneLanding({
                       </div>
                     )}
 
-                    {/* Name + tagline — bottom-left. */}
-                    <div style={{ position: 'absolute', left: 15, right: 15, bottom: 15, zIndex: 2, pointerEvents: 'none' }}>
-                      <p className="font-cinzel font-800" style={{ fontSize: '2.15rem', color: accessible ? '#fdf7e8' : 'rgba(253,247,232,0.55)', lineHeight: 1.0, textShadow: `0 2px 8px rgba(0,0,0,0.95), 0 0 20px ${color}66` }}>{HABITAT_LABEL[zone]}</p>
-                      <p className="font-karla font-400 italic" style={{ fontSize: '0.9rem', color: accessible ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.55)', marginTop: 3, textShadow: '0 1px 4px rgba(0,0,0,0.9)', lineHeight: 1.25 }}>
-                        {accessible ? HABITAT_TAGLINE[zone] : (zone === 'ancient_deep' && fishingLevel >= minLevel ? 'Clear Chapter 3 to enter' : `Unlocks at Level ${minLevel}`)}
-                      </p>
-                    </div>
-                  </motion.div>
-
-                  {/* Meta under the card — collection, prestige, catch details. */}
-                  {accessible && (
-                    <div style={{ marginTop: 11, width: '100%', maxWidth: 340, textAlign: 'center' }}>
-                        {/* Standing line: collection + prestige + golden boost. */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 10, marginTop: 8 }}>
-                          <span className="font-karla font-600" style={{ fontSize: '0.78rem', color: colDone ? '#f0c040' : 'rgba(255,255,255,0.82)', whiteSpace: 'nowrap' }}>
+                    {/* Standing (collection + prestige + goldens), name, tagline —
+                        bottom-left. Right edge kept clear for the (i) button. */}
+                    <div style={{ position: 'absolute', left: 15, right: 54, bottom: 15, zIndex: 2, pointerEvents: 'none' }}>
+                      {accessible && (
+                        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 9, marginBottom: 8 }}>
+                          <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: colDone ? '#f0c040' : 'rgba(255,255,255,0.9)', whiteSpace: 'nowrap', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>
                             {colDone ? '✦ all charted' : `${col.caught} of ${col.total} logged`}
                           </span>
                           {prestige > 0 && <PrestigeMark level={prestige} />}
@@ -319,64 +307,25 @@ export default function ZoneLanding({
                             </span>
                           )}
                         </div>
-
-                        {/* Details toggle. */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 10 }}>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setDetailsFor(d => (d === zone ? null : zone)) }}
-                            aria-label={`${HABITAT_LABEL[zone]} catch details`}
-                            className="font-karla font-600"
-                            style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', padding: '3px 4px', color: 'rgba(255,255,255,0.72)', fontSize: '0.74rem' }}
-                          >
-                            Details
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ transform: detailsFor === zone ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}><path d="m6 9 6 6 6-6" /></svg>
-                          </button>
-                        </div>
-
-                        {/* Tap-to-see panel — the full zone read. */}
-                        <AnimatePresence initial={false}>
-                          {detailsFor === zone && (() => {
-                            const [zMin, zMax] = ZONE_WAIT_BASE[zone] ?? [5000, 20000]
-                            const cycleSec = (zMin + 0.3 * (zMax - zMin)) / 1000 + 4
-                            const perHr = 3600 / cycleSec
-                            const doubPerHr = Math.round((perHr * stats.avgValue) / 100) * 100
-                            const xpPerHr = Math.round((perHr * stats.avgXp) / 10) * 10
-                            const noCrates = zone === 'ancient_deep'
-                            const goldenOdds = Math.round(SHINY_ODDS / goldenBoostMult(goldenBoosts[zone] ?? 0))
-                            const round1 = (v: number) => (v * 100).toFixed(1)
-                            return (
-                              <motion.div
-                                key="details"
-                                initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                                transition={{ duration: 0.22, ease: 'easeOut' }}
-                                style={{ overflow: 'hidden', textAlign: 'left' }}
-                              >
-                                <div style={{ marginTop: 11, padding: '10px 12px 11px', borderRadius: 12, background: 'rgba(3,8,14,0.92)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)', border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 6px 20px rgba(0,0,0,0.45)' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 9 }}>
-                                    <WaveMarks n={difficulty} color={color} />
-                                    <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.9)', whiteSpace: 'nowrap' }}>{diffLabel}</span>
-                                  </div>
-                                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 18, rowGap: 7 }}>
-                                    <DetailStat label="Bite wait" value={`${Math.round(zMin / 1000)}–${Math.round(zMax / 1000)}s`} />
-                                    <DetailStat label="Golden" value={`1 in ${goldenOdds.toLocaleString()}`} accent="#f0c040" />
-                                    <DetailStat label="Doubloons / hr" value={`~${doubPerHr.toLocaleString()} ⟡`} accent="#f0c040" />
-                                    <DetailStat label="XP / hr" value={`~${xpPerHr.toLocaleString()}`} accent="#7dd3fc" />
-                                    <DetailStat label="Avg catch" value={`${stats.avgValue.toLocaleString()} ⟡`} />
-                                    <DetailStat label="Top catch" value={`${stats.topValue.toLocaleString()} ⟡`} accent="#f59e0b" />
-                                    <DetailStat label="Crate / cast" value={noCrates ? 'None' : `~${Math.round(BASE_CRATE_CHANCE * 100)}%`} />
-                                    <DetailStat label="Diamond crate" value={noCrates ? '—' : `${Math.round(zoneDiamondShare(zone) * 100)}%`} />
-                                    <DetailStat label="Pet / crate" value={noCrates ? 'None' : `${round1(zonePetPerCrate(zone))}%`} />
-                                  </div>
-                                  <p className="font-karla" style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.42)', fontStyle: 'italic', marginTop: 8, lineHeight: 1.4 }}>
-                                    Rates estimated at base gear. Faster bites and better crates come with your rod, bait, and level.
-                                  </p>
-                                </div>
-                              </motion.div>
-                            )
-                          })()}
-                        </AnimatePresence>
+                      )}
+                      <p className="font-cinzel font-800" style={{ fontSize: '2.15rem', color: accessible ? '#fdf7e8' : 'rgba(253,247,232,0.55)', lineHeight: 1.0, textShadow: `0 2px 8px rgba(0,0,0,0.95), 0 0 20px ${color}66` }}>{HABITAT_LABEL[zone]}</p>
+                      <p className="font-karla font-400 italic" style={{ fontSize: '0.9rem', color: accessible ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.55)', marginTop: 3, textShadow: '0 1px 4px rgba(0,0,0,0.9)', lineHeight: 1.25 }}>
+                        {accessible ? HABITAT_TAGLINE[zone] : (zone === 'ancient_deep' && fishingLevel >= minLevel ? 'Clear Chapter 3 to enter' : `Unlocks at Level ${minLevel}`)}
+                      </p>
                     </div>
-                  )}
+
+                    {/* Catch-details (i) button — opens the stats modal. */}
+                    {accessible && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setDetailsFor(zone) }}
+                        aria-label={`${HABITAT_LABEL[zone]} catch details`}
+                        style={{ position: 'absolute', right: 12, bottom: 14, zIndex: 3, width: 32, height: 32, borderRadius: '50%', display: 'grid', placeItems: 'center', background: 'rgba(2,6,12,0.55)', border: `1px solid ${color}99`, color: '#fff', cursor: 'pointer', pointerEvents: 'auto', WebkitTapHighlightColor: 'transparent' }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 11v5" /><path d="M12 7.5h.01" /></svg>
+                      </button>
+                    )}
+                  </motion.div>
+
                 </div>
               )
             })}
@@ -402,6 +351,71 @@ export default function ZoneLanding({
           </AnimatePresence>
 
         </div>
+
+        {/* Zone catch-details modal — opened by a card's (i) button. */}
+        <AnimatePresence>
+          {detailsFor && (() => {
+            const zone = detailsFor
+            const dColor = HABITAT_COLOR[zone]
+            const dDifficulty = ZONE_DIFFICULTY[zone]
+            const dDiffLabel = ZONE_DIFFICULTY_LABEL[zone]
+            const dStats = zoneStats[zone] ?? { avgValue: 0, avgXp: 0, topValue: 0, count: 0 }
+            const [zMin, zMax] = ZONE_WAIT_BASE[zone] ?? [5000, 20000]
+            const cycleSec = (zMin + 0.3 * (zMax - zMin)) / 1000 + 4
+            const perHr = 3600 / cycleSec
+            const doubPerHr = Math.round((perHr * dStats.avgValue) / 100) * 100
+            const xpPerHr = Math.round((perHr * dStats.avgXp) / 10) * 10
+            const noCrates = zone === 'ancient_deep'
+            const goldenOdds = Math.round(SHINY_ODDS / goldenBoostMult(goldenBoosts[zone] ?? 0))
+            const round1 = (v: number) => (v * 100).toFixed(1)
+            return (
+              <>
+                <motion.div
+                  key="details-backdrop"
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  transition={{ duration: 0.18 }}
+                  onClick={() => setDetailsFor(null)}
+                  style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.72)', zIndex: 50 }}
+                />
+                <motion.div
+                  key="details-modal"
+                  initial={{ opacity: 0, y: 16, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.97 }}
+                  transition={{ duration: 0.22, ease: 'easeOut' }}
+                  style={{ position: 'absolute', left: '1rem', right: '1rem', top: '50%', transform: 'translateY(-50%)', background: 'linear-gradient(180deg, #0b141d 0%, #060b12 100%)', border: `1px solid ${dColor}55`, borderRadius: 18, zIndex: 51, padding: '1.1rem 1.15rem 1.2rem' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 13 }}>
+                    <div>
+                      <p className="font-cinzel font-800" style={{ fontSize: '1.35rem', color: '#fdf7e8', lineHeight: 1 }}>{HABITAT_LABEL[zone]}</p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 7 }}>
+                        <WaveMarks n={dDifficulty} color={dColor} />
+                        <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.8)', whiteSpace: 'nowrap' }}>{dDiffLabel}</span>
+                      </div>
+                    </div>
+                    <button onClick={() => setDetailsFor(null)} aria-label="Close" style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.18)', color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                    </button>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 18, rowGap: 9 }}>
+                    <DetailStat label="Bite wait" value={`${Math.round(zMin / 1000)}–${Math.round(zMax / 1000)}s`} />
+                    <DetailStat label="Golden" value={`1 in ${goldenOdds.toLocaleString()}`} accent="#f0c040" />
+                    <DetailStat label="Doubloons / hr" value={`~${doubPerHr.toLocaleString()} ⟡`} accent="#f0c040" />
+                    <DetailStat label="XP / hr" value={`~${xpPerHr.toLocaleString()}`} accent="#7dd3fc" />
+                    <DetailStat label="Avg catch" value={`${dStats.avgValue.toLocaleString()} ⟡`} />
+                    <DetailStat label="Top catch" value={`${dStats.topValue.toLocaleString()} ⟡`} accent="#f59e0b" />
+                    <DetailStat label="Crate / cast" value={noCrates ? 'None' : `~${Math.round(BASE_CRATE_CHANCE * 100)}%`} />
+                    <DetailStat label="Diamond crate" value={noCrates ? '—' : `${Math.round(zoneDiamondShare(zone) * 100)}%`} />
+                    <DetailStat label="Pet / crate" value={noCrates ? 'None' : `${round1(zonePetPerCrate(zone))}%`} />
+                  </div>
+                  <p className="font-karla" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.42)', fontStyle: 'italic', marginTop: 12, lineHeight: 1.4 }}>
+                    Rates estimated at base gear. Faster bites and better crates come with your rod, bait, and level.
+                  </p>
+                </motion.div>
+              </>
+            )
+          })()}
+        </AnimatePresence>
 
         {/* Username prompt modal */}
         <AnimatePresence>
