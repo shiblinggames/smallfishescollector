@@ -224,9 +224,9 @@ export default function ZoneLanding({
             )
           })()}
 
-          {/* Scroll area — only the zones scroll (header stays pinned). Gentle
-              y-snap so each dive settles on a zone. */}
-          <div ref={scrollRef} onScroll={syncScrollCue} style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', scrollSnapType: 'y proximity', scrollPaddingTop: '1.6rem', padding: '0.5rem 0.9rem 1.5rem' }}>
+          {/* Scroll area — only the zones scroll (header stays pinned). Free
+              scroll (no snap) so the big scene cards glide past naturally. */}
+          <div ref={scrollRef} onScroll={syncScrollCue} style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch', padding: '0.5rem 0.9rem 1.5rem' }}>
 
           {/* The descent — each zone is a large circular node on a path, linked
               to the next one down. Scroll to dive from the bright surface to the
@@ -247,7 +247,7 @@ export default function ZoneLanding({
               const enter = () => { if (accessible) onSelect(zone) }
 
               return (
-                <div key={zone} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', scrollSnapAlign: 'start' }}>
+                <div key={zone} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                   {/* Art-forward zone card — the zone's painted scene, full-bleed
                       and tappable, with the name + tagline and your boat riding on
                       it. The whole card is the button; the accent border, press
