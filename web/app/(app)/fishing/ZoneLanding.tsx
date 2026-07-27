@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ZONE_MIN_LEVEL, ZONE_WAIT_BASE, BASE_CRATE_CHANCE, zoneDiamondShare, zonePetPerCrate } from './zoneData'
 import { updateUsername } from '@/app/(app)/u/actions'
 import FisherPose from '@/components/FisherPose'
-import { StatLevelBar } from '@/components/StatLevelBar'
 import { PRESTIGE_MAX, goldenBoostPct, goldenBoostMult } from '@/lib/zoneRewards'
 import { SHINY_ODDS } from '@/lib/shiny'
 import { getXPProgress } from '@/lib/fishingLevel'
@@ -216,10 +215,28 @@ export default function ZoneLanding({
             const atMax = xp.level >= 100
             const toNext = atMax ? 0 : xp.xpForLevel - xp.xpInLevel
             return (
-              <div style={{ flexShrink: 0, padding: '0.85rem 0.9rem 0.7rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                {/* Fishing level bar — the SAME shared pill as the raids' Nav bar,
-                    just gold + FISH instead of green + NAV. */}
-                <StatLevelBar level={xp.level} progress={xp.progress} toGo={toNext} isMax={atMax} accent="#f0c040" label="FISH" />
+              <div style={{ flexShrink: 0, padding: '1rem 0.9rem 0.6rem' }}>
+                {/* Fishing level bar — mirrors the expeditions page nav-level bar
+                    (ShipHero): LV + big number on the left, a full-width fill, and
+                    xp-to-next on the right. Same sizing, colours, and spacing. */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '0.3rem 0' }}>
+                  <div className="shrink-0" style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                    <span className="font-karla font-600" style={{ fontSize: '0.55rem', color: '#7da0d8bb', letterSpacing: '0.08em' }}>LV</span>
+                    <span className="font-cinzel font-700" style={{ fontSize: '1.55rem', color: '#7da0d8', lineHeight: 1 }}>{xp.level}</span>
+                  </div>
+                  <div style={{ flex: 1, height: 8, borderRadius: 999, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                    <motion.div
+                      key={xp.level}
+                      initial={{ width: '0%' }}
+                      animate={{ width: `${atMax ? 100 : xp.progress * 100}%` }}
+                      transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+                      style={{ height: '100%', borderRadius: 999, background: 'linear-gradient(90deg, #4a6090 0%, #7da0d8 100%)', boxShadow: '0 0 10px #7da0d870' }}
+                    />
+                  </div>
+                  <span className="font-karla font-600 shrink-0" style={{ fontSize: '0.62rem', color: atMax ? '#7da0d8' : 'rgba(255,255,255,0.65)', textAlign: 'right', lineHeight: 1, whiteSpace: 'nowrap' }}>
+                    {atMax ? 'MAX' : `${toNext.toLocaleString()} xp`}
+                  </span>
+                </div>
               </div>
             )
           })()}
