@@ -92,7 +92,7 @@ export const FISHING_RENOWN_STATS: RenownStat[] = [
   { id: 'bounty',    name: 'Bounty',    blurb: 'Every fish you sell fetches a better price at market.',       perPoint: 0.005, kind: 'pct',  color: '#f0c040' },
   { id: 'wisdom',    name: 'Wisdom',    blurb: 'Land more Fishing XP from every catch you make.',              perPoint: 0.005, kind: 'pct',  color: '#5eead4' },
   { id: 'patience',  name: 'Patience',  blurb: 'Fish come to the hook faster, so you cast more often.',        perPoint: 0.004, kind: 'pct',  color: '#60a5fa' },
-  { id: 'precision', name: 'Precision', blurb: 'Widens the catch zone on the dial for easier perfect reels.',  perPoint: 0.30,  kind: 'deg',  color: '#a78bfa' },
+  { id: 'precision', name: 'Precision', blurb: 'Widens the green catch band on the dial, so more reels land.',  perPoint: 0.30,  kind: 'deg',  color: '#a78bfa' },
 ]
 
 export const NAV_RENOWN_STATS: RenownStat[] = [
