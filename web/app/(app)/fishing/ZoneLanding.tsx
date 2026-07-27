@@ -287,10 +287,10 @@ export default function ZoneLanding({
                       </span>
                     )}
 
-                    {/* Your boat — rides on the water at the bottom of the scene
-                        (current zone), sized up for the larger card. */}
+                    {/* Your boat — rides on the water, up near the horizon of the
+                        scene (current zone). Bigger + higher on the larger card. */}
                     {isCurrent && (
-                      <div aria-hidden style={{ position: 'absolute', right: 8, bottom: 44, width: 176, pointerEvents: 'none', filter: 'drop-shadow(0 10px 16px rgba(0,10,25,0.6))', zIndex: 1 }}>
+                      <div aria-hidden style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', bottom: '34%', width: 224, pointerEvents: 'none', filter: 'drop-shadow(0 10px 16px rgba(0,10,25,0.6))', zIndex: 1 }}>
                         <FisherPose characterColor={characterColor} equippedHat={equippedHat} equippedBoat={equippedBoat} equippedPet={equippedPet} rodTier={rodTier} reelTier={reelTier} hookTier={hookTier} />
                       </div>
                     )}
