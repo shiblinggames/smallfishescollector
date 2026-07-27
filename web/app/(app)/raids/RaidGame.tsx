@@ -15,7 +15,7 @@ import { type ShipAugment } from '@/lib/shipAugments'
 import {
   BossRaidConfig, BroadsideEnemy, RaidLootItem, RARITY_COLOR, raidCompletionBonusXp, RAID_ZONE_BG, RAID_LOCATION_BG, RAID_BOSS_BG,
 } from '@/lib/bossRaids'
-import { isChallengeRaidId } from '@/lib/raidChallenge'
+import { isChallengeRaidId, baseRaidIdOf } from '@/lib/raidChallenge'
 import { AFFIXES, ELITE_HP_MULT, ELITE_DMG_MULT, rollAffix, rollSecondAffix, mergeAffixes, rollEliteSlots, type AffixDef, type AffixId } from '@/lib/raidAffixes'
 import { isUniqueLoot } from '@/lib/bossRaids'
 import RaidCombat from './RaidCombat'
@@ -1484,9 +1484,13 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     // Per-raid battle backdrop: the boss round gets the escalated boss-fight
     // scene; mob rounds get the raid's location scene; both fall back to the
     // shared zone photo for challenge/side variants and the practice skirmish.
+    // Challenge raids carry a suffixed raidId (…_challenge); the custom
+    // location/boss backdrops are keyed by the BASE id, so resolve it first or
+    // challenge fights fall through to the procedural zone backdrop.
+    const bgRaidId = baseRaidIdOf(config.raidId)
     const raidBg =
-      (isBoss ? RAID_BOSS_BG[config.raidId] : undefined)
-      ?? RAID_LOCATION_BG[config.raidId]
+      (isBoss ? RAID_BOSS_BG[bgRaidId] : undefined)
+      ?? RAID_LOCATION_BG[bgRaidId]
       ?? (config.zone ? RAID_ZONE_BG[config.zone] : null)
     return (
       <>
