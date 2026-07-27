@@ -13,28 +13,64 @@ import { XP_TABLE as NAV_XP_TABLE, MAX_LEVEL as NAV_MAX } from './expeditionLeve
 
 export type RenownSkill = 'fishing' | 'nav'
 
-/** Flat XP between Renown levels (≈ the game's hardest single level). */
-export const RENOWN_XP_COST = 200_000
+// ── Renown XP curve (front-loaded, then a flat cap) ──────────────────────────
+// Past level 100, overflow XP earns Renown levels. The per-level cost RAMPS from
+// cheap up to a steady cap, so hitting 100 gives a satisfying BURST of points,
+// then settles into an endless steady drip (Diablo-paragon feel). Tune the three
+// knobs; everything else derives. `renownXpForLevel(n)` = XP to go from Renown
+// level n-1 to n.
+const RENOWN_BASE_COST = 50_000    // R1 cost — the first point comes fast
+const RENOWN_COST_STEP = 15_000    // +this per level while ramping
+const RENOWN_COST_CAP  = 200_000   // steady endless rate once ramped (~R11 on)
+// How many levels the linear ramp spans (the level whose cost first hits the cap
+// is the last ramp level). = 11 for the defaults above.
+const RENOWN_RAMP_LEVELS = Math.floor((RENOWN_COST_CAP - RENOWN_BASE_COST) / RENOWN_COST_STEP) + 1
 
 const MAX_LEVEL_XP: Record<RenownSkill, number> = {
   fishing: FISHING_XP_TABLE[FISHING_MAX - 1],
   nav:     NAV_XP_TABLE[NAV_MAX - 1],
 }
 
-/** Renown level = whole RENOWN_XP_COST chunks of XP earned PAST level 100. */
+/** XP to go from Renown level n-1 to n (n >= 1): ramps, then flat at the cap. */
+export function renownXpForLevel(n: number): number {
+  if (n <= 0) return 0
+  return Math.min(RENOWN_COST_CAP, RENOWN_BASE_COST + (n - 1) * RENOWN_COST_STEP)
+}
+
+/** Cumulative overflow XP (past level 100) needed to REACH Renown level n. */
+function renownCumXp(n: number): number {
+  if (n <= 0) return 0
+  const k = Math.min(n, RENOWN_RAMP_LEVELS)
+  // Arithmetic sum of the ramp: Σ_{i=1..k} (BASE + (i-1)·STEP).
+  let sum = k * RENOWN_BASE_COST + RENOWN_COST_STEP * (k * (k - 1) / 2)
+  if (n > RENOWN_RAMP_LEVELS) sum += (n - RENOWN_RAMP_LEVELS) * RENOWN_COST_CAP
+  return sum
+}
+
+/** Renown level = how many curve steps of overflow XP you've earned past 100. */
 export function renownLevel(skill: RenownSkill, xp: number): number {
-  const base = MAX_LEVEL_XP[skill]
-  if (xp <= base) return 0
-  return Math.floor((xp - base) / RENOWN_XP_COST)
+  const over = xp - MAX_LEVEL_XP[skill]
+  if (over <= 0) return 0
+  const rampTotal = renownCumXp(RENOWN_RAMP_LEVELS)
+  // Past the ramp it's a flat cap, so jump straight there.
+  if (over >= rampTotal) return RENOWN_RAMP_LEVELS + Math.floor((over - rampTotal) / RENOWN_COST_CAP)
+  // Inside the ramp — walk the (few) steps.
+  let lvl = 0
+  for (let k = 1; k <= RENOWN_RAMP_LEVELS; k++) {
+    if (renownCumXp(k) <= over) lvl = k
+    else break
+  }
+  return lvl
 }
 
 /** Progress within the current Renown level, for the mini bar. */
 export function renownProgress(skill: RenownSkill, xp: number): { level: number; into: number; span: number; progress: number } {
-  const base = MAX_LEVEL_XP[skill]
+  const over = xp - MAX_LEVEL_XP[skill]
   const level = renownLevel(skill, xp)
-  if (xp <= base) return { level: 0, into: 0, span: RENOWN_XP_COST, progress: 0 }
-  const into = xp - base - level * RENOWN_XP_COST
-  return { level, into, span: RENOWN_XP_COST, progress: Math.min(1, into / RENOWN_XP_COST) }
+  if (over <= 0) return { level: 0, into: 0, span: renownXpForLevel(1), progress: 0 }
+  const into = over - renownCumXp(level)
+  const span = renownXpForLevel(level + 1)
+  return { level, into, span, progress: span > 0 ? Math.min(1, into / span) : 1 }
 }
 
 // ── Stat boards ──────────────────────────────────────────────────────────────
