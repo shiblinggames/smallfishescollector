@@ -1195,6 +1195,16 @@ export default function ShipHero({
                   />
                 )}
               </p>
+              {/* Subtext — roster fill, or a nudge when a hand has leveled up.
+                  Reads like the hub tiles' status line, updates live. */}
+              <p className="font-karla font-600" style={{
+                position: 'relative', zIndex: 1, marginTop: 2, textAlign: 'center',
+                fontSize: '0.62rem', lineHeight: 1.3,
+                color: crewLevelUpNudge ? '#ffd96a' : 'rgba(230,225,215,0.82)',
+                textShadow: '0 1px 4px rgba(0,0,0,0.9)',
+              }}>
+                {crewLevelUpNudge ? 'A hand leveled up' : `${roster.length} / ${shipStats.crewSlots} crew`}
+              </p>
             </Link>
 
             {/* Right col — ship image + Manage Ship label. Whole
@@ -1269,6 +1279,16 @@ export default function ShipHero({
                     }}
                   />
                 )}
+              </p>
+              {/* Subtext — hull + loadout fill, or a nudge when there's
+                  unequipped gear to mount. Updates live as you equip. */}
+              <p className="font-karla font-600" style={{
+                position: 'relative', zIndex: 1, marginTop: 2, textAlign: 'center',
+                fontSize: '0.62rem', lineHeight: 1.3,
+                color: newRaidItems.size > 0 ? '#ffd96a' : 'rgba(230,225,215,0.82)',
+                textShadow: '0 1px 4px rgba(0,0,0,0.9)',
+              }}>
+                {newRaidItems.size > 0 ? 'New gear to mount' : `${shipStats.name} · ${equippedItems.length}/${raidItemSlots} mounted`}
               </p>
             </button>
           </div>
