@@ -7,7 +7,7 @@ import { updateUsername } from '@/app/(app)/u/actions'
 import FisherPose from '@/components/FisherPose'
 import { LevelSectionHeader } from '@/components/LevelSectionHeader'
 import RenownPanel from '@/components/RenownPanel'
-import { renownLevel, spentPoints, type RenownAlloc } from '@/lib/renown'
+import { renownLevel, renownProgress, spentPoints, type RenownAlloc } from '@/lib/renown'
 import type { RenownState } from '@/app/(app)/actions/renown'
 import { PRESTIGE_MAX, goldenBoostPct, goldenBoostMult } from '@/lib/zoneRewards'
 import { SHINY_ODDS } from '@/lib/shiny'
@@ -254,6 +254,11 @@ export default function ZoneLanding({
             const pulse = renownAvail > 0 || xp.level > fishLevelSeen
             const pc = renownAvail > 0 ? '#f0c040' : '#7da0d8'
             const markSeen = () => { setFishLevelSeen(xp.level); try { localStorage.setItem('sf_fish_level_seen', String(xp.level)) } catch {} }
+            // Past 100 the bar tracks progress to the next Renown level and shows
+            // the XP remaining to it (compact "45k").
+            const rn = atMax ? renownProgress('fishing', fishingXP) : null
+            const toNextRenown = rn ? rn.span - rn.into : 0
+            const renownXpLabel = toNextRenown >= 1000 ? `${Math.round(toNextRenown / 1000)}k` : `${toNextRenown}`
             return (
               <motion.button
                 type="button"
@@ -273,15 +278,15 @@ export default function ZoneLanding({
                   </div>
                   <div style={{ flex: 1, height: 8, borderRadius: 999, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
                     <motion.div
-                      key={xp.level}
+                      key={atMax ? `rn-${rn?.level ?? 0}` : xp.level}
                       initial={{ width: '0%' }}
-                      animate={{ width: `${atMax ? 100 : xp.progress * 100}%` }}
+                      animate={{ width: `${atMax ? (rn ? rn.progress * 100 : 100) : xp.progress * 100}%` }}
                       transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-                      style={{ height: '100%', borderRadius: 999, background: 'linear-gradient(90deg, #4a6090 0%, #7da0d8 100%)', boxShadow: '0 0 10px #7da0d870' }}
+                      style={{ height: '100%', borderRadius: 999, background: atMax ? 'linear-gradient(90deg, #a07a2a 0%, #f0c040 100%)' : 'linear-gradient(90deg, #4a6090 0%, #7da0d8 100%)', boxShadow: atMax ? '0 0 10px #f0c04070' : '0 0 10px #7da0d870' }}
                     />
                   </div>
-                  <span className="font-karla font-600 shrink-0" style={{ fontSize: '0.62rem', color: atMax ? '#7da0d8' : 'rgba(255,255,255,0.65)', textAlign: 'right', lineHeight: 1, whiteSpace: 'nowrap' }}>
-                    {atMax ? 'MAX' : `${toNext.toLocaleString()} xp`}
+                  <span className="font-karla font-600 shrink-0" style={{ fontSize: '0.62rem', color: atMax ? '#f0c040' : 'rgba(255,255,255,0.65)', textAlign: 'right', lineHeight: 1, whiteSpace: 'nowrap' }}>
+                    {atMax ? (rn ? `✦ R${rn.level} · ${renownXpLabel} xp` : 'MAX') : `${toNext.toLocaleString()} xp`}
                   </span>
                 </div>
               </motion.button>

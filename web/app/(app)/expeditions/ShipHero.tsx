@@ -1058,6 +1058,10 @@ export default function ShipHero({
             const pulse = hasNavPoints || hasUnseenLevel
             const pc = hasNavPoints ? '#f0c040' : '#7da0d8'
             const markSeen = () => { setNavLevelSeen(xpProgress.level); try { localStorage.setItem('sf_nav_level_seen', String(xpProgress.level)) } catch {} }
+            // XP remaining to the next Renown level (compact "45k"), shown at max
+            // when there are no points already waiting to spend.
+            const toNextRenown = rn ? rn.span - rn.into : 0
+            const renownXpLabel = toNextRenown >= 1000 ? `${Math.round(toNextRenown / 1000)}k` : `${toNextRenown}`
             return (
               <motion.button
                 type="button"
@@ -1100,11 +1104,13 @@ export default function ShipHero({
                 {atMax && rn ? (
                   <span className="font-karla font-700 shrink-0" style={{ fontSize: '0.62rem', color: '#f0c040', lineHeight: 1, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                     ✦ R{rn.level}
-                    {hasNavPoints && (
+                    {hasNavPoints ? (
                       <motion.span
                         animate={{ scale: [1, 1.12, 1] }}
                         transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
                         style={{ fontSize: '0.52rem', color: '#ffdb7a', background: 'rgba(240,200,80,0.18)', border: '1px solid rgba(240,200,80,0.5)', borderRadius: 999, padding: '2px 6px', fontWeight: 800 }}>{navRenownAvailable} spend</motion.span>
+                    ) : (
+                      <span style={{ fontWeight: 600, color: 'rgba(240,192,64,0.62)' }}>· {renownXpLabel} xp</span>
                     )}
                   </span>
                 ) : (
