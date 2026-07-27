@@ -248,40 +248,67 @@ export default function ZoneLanding({
 
               return (
                 <div key={zone} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', scrollSnapAlign: 'start' }}>
-                  {/* Zone name + your boat, floating directly on the page's shared
-                      water backdrop — no circular disc, no per-zone art window.
-                      Keeps the centered name + the fisher underneath it. */}
+                  {/* Art-forward zone card — the zone's painted scene, full-bleed
+                      and tappable, with the name + tagline and your boat riding on
+                      it. The whole card is the button; the accent border, press
+                      animation, and an enter chevron read as clickable. */}
                   <motion.div
-                    initial={{ opacity: 0, y: 10 }}
+                    initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.32, delay: i * 0.06 }}
-                    whileTap={accessible ? { scale: 0.97 } : undefined}
+                    transition={{ duration: 0.34, delay: i * 0.06 }}
+                    whileTap={accessible ? { scale: 0.975 } : undefined}
                     onClick={enter}
-                    style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: i > 0 ? 30 : 4, cursor: accessible ? 'pointer' : 'default', WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation' }}
+                    style={{
+                      position: 'relative', width: '100%', height: isCurrent ? 176 : 150,
+                      marginTop: i > 0 ? 16 : 2, borderRadius: 18, overflow: 'hidden',
+                      cursor: accessible ? 'pointer' : 'default',
+                      border: `${isCurrent ? 2 : 1.5}px solid ${accessible ? (isCurrent ? color : `${color}8c`) : 'rgba(255,255,255,0.14)'}`,
+                      boxShadow: isCurrent ? `0 10px 30px rgba(0,0,0,0.5), 0 0 22px ${color}44` : '0 8px 22px rgba(0,0,0,0.45)',
+                      WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation',
+                    }}
                   >
-                    <p className="font-cinzel font-800" style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: '1.9rem', textAlign: 'center', color: accessible ? '#fdf7e8' : 'rgba(253,247,232,0.5)', lineHeight: 1.05, textShadow: `0 2px 6px rgba(0,0,0,0.95), 0 0 16px rgba(0,0,0,0.85), 0 0 26px ${color}77` }}>
-                      {!accessible && (
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(253,247,232,0.5)" strokeWidth="1.8" strokeLinecap="round" style={{ flexShrink: 0 }}><rect x="4" y="11" width="16" height="9" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
-                      )}
-                      {HABITAT_LABEL[zone]}
-                    </p>
-                    {isCurrent && (
-                      <span className="font-karla font-800 uppercase" style={{ marginTop: 7, padding: '0.14rem 0.55rem', borderRadius: 999, background: 'rgba(2,6,12,0.72)', border: `1px solid ${color}`, fontSize: '0.5rem', letterSpacing: '0.14em', color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>You are here</span>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={ZONE_BG[zone]} alt="" className={accessible ? 'zone-art-drift' : undefined} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: accessible ? 'none' : 'grayscale(0.92) brightness(0.4)', ...(accessible ? { animationDuration: `${24 + i * 4}s`, animationDelay: `-${i * 9}s` } : {}) }} />
+                    <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(3,9,15,0.16) 0%, rgba(3,8,13,0.48) 50%, rgba(2,6,10,0.9) 100%)' }} />
+
+                    {/* Difficulty — top-left. */}
+                    <div style={{ position: 'absolute', top: 9, left: 10, display: 'flex', alignItems: 'center', gap: 6, padding: '3px 8px', borderRadius: 999, background: 'rgba(2,6,12,0.5)' }}>
+                      <WaveMarks n={difficulty} color={accessible ? color : 'rgba(255,255,255,0.4)'} dim={!accessible} />
+                      <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.06em', color: accessible ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.5)', whiteSpace: 'nowrap' }}>{diffLabel}</span>
+                    </div>
+
+                    {/* Top-right — current tag, enter chevron, or lock. */}
+                    {!accessible ? (
+                      <span aria-hidden style={{ position: 'absolute', top: 9, right: 10, display: 'grid', placeItems: 'center' }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.8" strokeLinecap="round"><rect x="4" y="11" width="16" height="9" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
+                      </span>
+                    ) : isCurrent ? (
+                      <span className="font-karla font-800 uppercase" style={{ position: 'absolute', top: 9, right: 10, padding: '0.14rem 0.5rem', borderRadius: 999, background: 'rgba(2,6,12,0.72)', border: `1px solid ${color}`, fontSize: '0.48rem', letterSpacing: '0.14em', color: '#fff' }}>You are here</span>
+                    ) : (
+                      <span aria-hidden style={{ position: 'absolute', top: 8, right: 8, width: 26, height: 26, borderRadius: '50%', display: 'grid', placeItems: 'center', background: 'rgba(2,6,12,0.5)', border: `1px solid ${color}99` }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="m9 6 6 6-6 6" /></svg>
+                      </span>
                     )}
-                    {/* Your fisher — sits right under the zone name. */}
+
+                    {/* Your boat — rides at the bottom-right of the scene (current zone). */}
                     {isCurrent && (
-                      <div aria-hidden style={{ width: 140, marginTop: 8, pointerEvents: 'none', filter: 'drop-shadow(0 8px 14px rgba(0,10,25,0.65))' }}>
+                      <div aria-hidden style={{ position: 'absolute', right: 4, bottom: -6, width: 128, pointerEvents: 'none', filter: 'drop-shadow(0 8px 12px rgba(0,10,25,0.6))', zIndex: 1 }}>
                         <FisherPose characterColor={characterColor} equippedHat={equippedHat} equippedBoat={equippedBoat} equippedPet={equippedPet} rodTier={rodTier} reelTier={reelTier} hookTier={hookTier} />
                       </div>
                     )}
+
+                    {/* Name + tagline — bottom-left. */}
+                    <div style={{ position: 'absolute', left: 13, right: isCurrent ? '44%' : 13, bottom: 11, zIndex: 2, pointerEvents: 'none' }}>
+                      <p className="font-cinzel font-800" style={{ fontSize: '1.65rem', color: accessible ? '#fdf7e8' : 'rgba(253,247,232,0.55)', lineHeight: 1.02, textShadow: `0 2px 6px rgba(0,0,0,0.95), 0 0 18px ${color}66` }}>{HABITAT_LABEL[zone]}</p>
+                      <p className="font-karla font-400 italic" style={{ fontSize: '0.78rem', color: accessible ? 'rgba(255,255,255,0.86)' : 'rgba(255,255,255,0.55)', marginTop: 2, textShadow: '0 1px 4px rgba(0,0,0,0.9)', lineHeight: 1.25 }}>
+                        {accessible ? HABITAT_TAGLINE[zone] : (zone === 'ancient_deep' && fishingLevel >= minLevel ? 'Clear Chapter 3 to enter' : `Unlocks at Level ${minLevel}`)}
+                      </p>
+                    </div>
                   </motion.div>
 
-                  {/* Info under the node */}
-                  <div style={{ marginTop: 12, width: '100%', maxWidth: 340, textAlign: 'center' }}>
-                    {accessible ? (
-                      <>
-                        <p className="font-karla font-400 italic" style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.82)' }}>{HABITAT_TAGLINE[zone]}</p>
-
+                  {/* Meta under the card — collection, prestige, catch details. */}
+                  {accessible && (
+                    <div style={{ marginTop: 11, width: '100%', maxWidth: 340, textAlign: 'center' }}>
                         {/* Standing line: collection + prestige + golden boost. */}
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 10, marginTop: 8 }}>
                           <span className="font-karla font-600" style={{ fontSize: '0.78rem', color: colDone ? '#f0c040' : 'rgba(255,255,255,0.82)', whiteSpace: 'nowrap' }}>
@@ -350,15 +377,8 @@ export default function ZoneLanding({
                             )
                           })()}
                         </AnimatePresence>
-                      </>
-                    ) : (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                        <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)', whiteSpace: 'nowrap' }}>
-                          {zone === 'ancient_deep' && fishingLevel >= minLevel ? 'Clear Chapter 3 to enter' : `Unlocks at Level ${minLevel}`}
-                        </span>
-                      </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               )
             })}
