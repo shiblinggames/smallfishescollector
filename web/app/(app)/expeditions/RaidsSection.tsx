@@ -3136,7 +3136,11 @@ function JourneyChapter({ views, onSelect }: { views: RaidNodeView[]; onSelect: 
     if (!v.node.sideBranch && pos === lastChainPos) return 'beacon'
     return 'fogged'
   }
-  const rows = views.map((v, i) => ({ v, vis: visOf(i) })).filter(r => r.vis !== 'fogged')
+  // Challenge nodes are side-branches off a boss — no longer their own banner;
+  // the boss banner's modal offers Normal/Challenge, so drop them from the spine.
+  const rows = views.map((v, i) => ({ v, vis: visOf(i) }))
+    .filter(r => r.vis !== 'fogged')
+    .filter(r => !(r.v.node.sideBranch && isCombatNode(r.v.node.type)))
   const anyFogged = views.some((_, i) => visOf(i) === 'fogged')
 
   return (
