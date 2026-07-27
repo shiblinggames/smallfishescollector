@@ -12,18 +12,45 @@
 
 import { motion } from 'framer-motion'
 
-// Jagged bolt path in the overlay's 0..100 box. `jag` is the zigzag amplitude;
-// segments alternate side to side so it reads as forked lightning, not a line.
-function boltPath(x1: number, y1: number, x2: number, y2: number, jag: number): string {
-  const segs = 4
-  let d = `M${x1},${y1}`
+// Deterministic pseudo-random 0..1 from a seed (no Math.random, so a bolt's
+// shape is stable across re-renders).
+function rand(seed: number): number {
+  const x = Math.sin(seed * 127.1) * 43758.5453
+  return x - Math.floor(x)
+}
+
+// Organic lightning channel in the overlay's 0..100 box — many short segments
+// with irregular horizontal jitter (largest mid-channel, tapering to the ends)
+// so it reads as a real bolt rather than a zigzag. `amp` = jitter amplitude,
+// `seed` varies the shape per bolt.
+function boltPath(x1: number, y1: number, x2: number, y2: number, amp: number, seed: number): string {
+  const segs = 9
+  let d = `M${x1.toFixed(1)},${y1.toFixed(1)}`
   for (let i = 1; i < segs; i++) {
     const t = i / segs
-    const x = x1 + (x2 - x1) * t + (i % 2 ? jag : -jag)
-    const y = y1 + (y2 - y1) * t
-    d += ` L${x.toFixed(1)},${y.toFixed(1)}`
+    const bx = x1 + (x2 - x1) * t
+    const by = y1 + (y2 - y1) * t
+    const taper = Math.max(0.2, 1 - Math.abs(t - 0.45) * 1.1)
+    const jx = (rand(seed + i * 1.7) * 2 - 1) * amp * taper
+    d += ` L${(bx + jx).toFixed(1)},${by.toFixed(1)}`
   }
-  return `${d} L${x2},${y2}`
+  return `${d} L${x2.toFixed(1)},${y2.toFixed(1)}`
+}
+
+// One or two branches forking off the main channel — each a shorter, thinner
+// offshoot starting partway down.
+function forkPaths(x1: number, y1: number, x2: number, y2: number, amp: number, seed: number): string[] {
+  const forks: string[] = []
+  for (let f = 0; f < 2; f++) {
+    const t = 0.38 + rand(seed + f * 5) * 0.34
+    const sx = x1 + (x2 - x1) * t
+    const sy = y1 + (y2 - y1) * t
+    const dir = rand(seed + f * 9) > 0.5 ? 1 : -1
+    const ex = sx + dir * (5 + rand(seed + f * 3) * 9)
+    const ey = sy + (5 + rand(seed + f * 2) * 9)
+    forks.push(boltPath(sx, sy, ex, ey, amp * 0.55, seed + f * 13))
+  }
+  return forks
 }
 
 /** Tempest (Mako) — a lightning storm raking the enemy hull. `shots` bolts fall
@@ -53,8 +80,8 @@ export function TempestStrikeFx({ color, shots, interval }: { color: string; sho
         initial={{ opacity: 0 }}
         animate={{ opacity: [0, 0.75, 0.5, 0.8, 0.55, 0] }}
         transition={{ duration: total, times: [0, 0.08, 0.3, 0.6, 0.85, 1], ease: 'easeInOut' }}
-        style={{ position: 'absolute', left: 0, right: 0, top: 0, height: '32%',
-          background: `radial-gradient(ellipse 70% 120% at 50% 0%, ${color}55 0%, rgba(3,8,20,0.85) 55%, transparent 100%)` }}
+        style={{ position: 'absolute', left: 0, right: 0, top: 0, height: '42%',
+          background: `radial-gradient(ellipse 76% 82% at 50% 0%, ${color}3a 0%, rgba(10,16,32,0.4) 34%, transparent 68%)` }}
       />
 
       {/* Persistent electric charge on the hull for the whole storm — a blue glow
@@ -72,27 +99,37 @@ export function TempestStrikeFx({ color, shots, interval }: { color: string; sho
           final strike is thicker and forks. */}
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
         {strikes.map(s => {
-          const main = boltPath(s.cx, 4, s.hx, s.hy, s.big ? 8 : 5)
-          const fork = s.big ? boltPath(s.hx + 3, s.hy - 22, s.hx + 12, s.hy - 6, 4) : null
-          const glowW = s.big ? 13 : 8
-          const coreW = s.big ? 4.5 : 2.6
+          const amp = s.big ? 9 : 6
+          const paths = [boltPath(s.cx, 4, s.hx, s.hy, amp, s.k + 1), ...forkPaths(s.cx, 4, s.hx, s.hy, amp, s.k + 1)]
+          const glowW = s.big ? 15 : 9
+          const coreW = s.big ? 3 : 1.8
           const strikeDur = s.big ? 0.5 : 0.34
+          const draw = { duration: 0.07, delay: s.delay, ease: 'easeIn' as const }
           return (
             <motion.g key={s.k}
               initial={{ opacity: 0 }}
               animate={{ opacity: s.big ? [0, 1, 0.4, 1, 0.5, 0] : [0, 1, 0.25, 0.85, 0] }}
               transition={{ duration: strikeDur, delay: s.delay, times: s.big ? [0, 0.12, 0.28, 0.42, 0.6, 1] : [0, 0.14, 0.34, 0.5, 1], ease: 'easeOut' }}
             >
-              {[main, fork].filter(Boolean).map((d, i) => (
-                <g key={i}>
-                  <motion.path d={d as string} fill="none" stroke={color} strokeWidth={glowW} opacity={0.5}
-                    strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"
-                    initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.08, delay: s.delay, ease: 'easeIn' }} />
-                  <motion.path d={d as string} fill="none" stroke="#ffffff" strokeWidth={coreW}
-                    strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"
-                    initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.08, delay: s.delay, ease: 'easeIn' }} />
-                </g>
-              ))}
+              {paths.map((d, i) => {
+                const fork = i > 0
+                // Three stacked strokes per channel: a wide soft colour halo, a
+                // brighter colour mid, and a thin white-hot core — reads as a
+                // glowing bolt with an incandescent filament, not a flat line.
+                return (
+                  <g key={i}>
+                    <motion.path d={d} fill="none" stroke={color} strokeWidth={fork ? glowW * 0.5 : glowW} opacity={0.2}
+                      strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"
+                      initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={draw} />
+                    <motion.path d={d} fill="none" stroke={color} strokeWidth={fork ? glowW * 0.24 : glowW * 0.42} opacity={0.85}
+                      strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"
+                      initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={draw} />
+                    <motion.path d={d} fill="none" stroke="#ffffff" strokeWidth={fork ? coreW * 0.6 : coreW}
+                      strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"
+                      initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={draw} />
+                  </g>
+                )
+              })}
             </motion.g>
           )
         })}
