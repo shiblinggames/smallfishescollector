@@ -91,6 +91,18 @@ export const FINN_SPEED_ZONE_MULT: Record<string, number> = {
 
 export type FinnTrack = 'encounter' | 'win' | 'reveal'
 
+/** One line of Finn dialogue with cinematic staging — shared by the encounter /
+ *  win / reveal beats AND the ancient-catch cutscenes. A typed line, an optional
+ *  silence held BEFORE it, and an optional frame effect for when the mask
+ *  flickers. `*word*` is rendered in his accent colour. */
+export interface FinnSceneLine {
+  text: string
+  /** Silence held BEFORE the line types — a beat, not a sentence. ms. */
+  pause?: number
+  /** 'flash' blows the frame out (the mask flickering); 'shake' rocks it. */
+  fx?: 'flash' | 'shake'
+}
+
 export interface FinnBeat {
   /** Stable string ID — recorded in profile.finn_seen_beats so each beat fires
    *  exactly once per player. Don't rename existing IDs; players who've
@@ -99,8 +111,9 @@ export interface FinnBeat {
   /** Threshold the player must reach for this beat to be eligible. */
   milestone: number
   track: FinnTrack
-  /** One screen of dialogue per array entry — player taps to advance. */
-  lines: string[]
+  /** Cinematic dialogue — one screen per entry, played with a typewriter,
+   *  timed pauses, italic emphasis, and the occasional mask-flicker. */
+  lines: FinnSceneLine[]
 }
 
 /** Encounter-track beats — fire when finn_encounters crosses milestone.
@@ -110,98 +123,110 @@ export const FINN_ENCOUNTER_BEATS: FinnBeat[] = [
   {
     id: 'e1', milestone: 1, track: 'encounter',
     lines: [
-      "Easy there. I've been watching you work that line a while now.",
-      "Name's Finn. Nobody reads this water like I do, and I've seen a lot of anglers come and go.",
-      "You've got a little promise. Promise is cheap. Let's see what yours is worth.",
+      { text: "Easy, now. Reel it in slow.", pause: 350 },
+      { text: "I've been watching that line of yours the better part of an hour. A line never lies about the hand on the far end of it." },
+      { text: "Finn. There's not a current on this whole coast I haven't read, and I've watched a hundred anglers strut down this dock and wash back up it empty." },
+      { text: "Yours sits different in the water. *Promise*, some would call it. Cheap word.", pause: 300 },
+      { text: "Let's see what the deep makes of you." },
     ],
   },
   {
     id: 'e3', milestone: 3, track: 'encounter',
     lines: [
-      "Back already. Didn't take you for the stubborn sort.",
-      "Quick hands. I'll give you that much and not a word more.",
+      { text: "Back already.", pause: 300 },
+      { text: "Didn't take you for the stubborn kind. Good. The water eats the other kind alive." },
+      { text: "Quick hands. I'll grant you that much, and not one word more." },
     ],
   },
   {
     id: 'e5', milestone: 5, track: 'encounter',
     lines: [
-      "There's water past the edge of your charts. Old water. The fish in it would swallow your best trophy whole.",
-      "Most anglers swear it isn't real. Easier than admitting it's out of their reach.",
-      "Take the bet. Let's see whether it's out of yours.",
+      { text: "There's water past the edge of every chart you own. *Old* water.", pause: 350 },
+      { text: "The fish down there would take your finest trophy for a minnow and swim off still hungry." },
+      { text: "Most anglers swear it isn't real. Easier than admitting it's simply out of their reach." },
+      { text: "Take the bet. Let's find out if it's out of yours." },
     ],
   },
   {
     id: 'e8', milestone: 8, track: 'encounter',
     lines: [
-      "The Ancient Deep. Past your trench, past your abyss, where the water turns to ink and the floor forgets to stop.",
-      "Six things worth pulling up live down there. Six. Not five, not seven.",
-      "Funny, the things a captain ends up counting.",
+      { text: "The Ancient Deep.", pause: 500 },
+      { text: "Past your trench, past your abyss, where the water turns to ink and the seafloor forgets to stop falling." },
+      { text: "Six things worth the pulling live down there. Six. Not five. Not seven.", pause: 300 },
+      { text: "Funny, the numbers a captain finds himself counting in the dark." },
     ],
   },
   {
     id: 'e12', milestone: 12, track: 'encounter',
     lines: [
-      "I've stood at the lip of that deep more nights than I'd ever admit to you.",
-      "Dropped a line straight down into the black. Every time, nothing. Like the water just hands it back.",
-      "Some doors only open for the right grip. Mine's never been it.",
+      { text: "I've stood at the lip of that deep more nights than I would ever admit to you.", pause: 300 },
+      { text: "Dropped a line straight down into the black. Every time, nothing. Like the water just hands it back up, polite as you please." },
+      { text: "Some doors only open for the right grip.", pause: 350 },
+      { text: "Mine has never once been it." },
     ],
   },
   {
     id: 'e15', milestone: 15, track: 'encounter',
     lines: [
-      "I've watched a hundred anglers strut down this dock. You're the hundred and first.",
-      "Most of them are noise. You're quieter. Steadier. The water doesn't seem to mind you.",
+      { text: "A hundred anglers I've watched come down this dock. You're the hundred and first." },
+      { text: "The rest were all noise. You're quieter. Steadier.", pause: 300 },
+      { text: "The water doesn't seem to mind you. I've learned to pay mind when it doesn't." },
     ],
   },
   {
     id: 'e20', milestone: 20, track: 'encounter',
     lines: [
-      "Hooked something down there once. Held it thirty seconds.",
-      "Then the line went slack, slow and gentle, like the deep was handing it back on purpose.",
-      "Like it knew whose hands were on the rod and decided no.",
+      { text: "Hooked something down there, once. Held it a full thirty seconds.", pause: 300 },
+      { text: "Then the line went slack. Slow. Gentle. Like the deep was handing it back on *purpose*." },
+      { text: "Like it knew whose hands were on the rod, and decided no.", pause: 400 },
     ],
   },
   {
     id: 'e25', milestone: 25, track: 'encounter',
     lines: [
-      "All six trophies, landed by one angler. You have any notion what that's worth? What it would open?",
-      "...course you don't. Keep fishing. You will.",
+      { text: "All six trophies. Landed by a single pair of hands.", pause: 300 },
+      { text: "You've any notion what that's worth? What a thing like that would *open*?" },
+      { text: "...course you don't. Keep fishing. You will." },
     ],
   },
   {
     id: 'e30', milestone: 30, track: 'encounter',
     lines: [
-      "Some waters take more than they give. The deep takes everything except the worthy.",
-      "So be worthy, and be quick about it. I've done enough waiting for one lifetime.",
+      { text: "Some waters take more than they ever give back." },
+      { text: "The Ancient Deep takes *everything*. Everything but the worthy.", pause: 350 },
+      { text: "So be worthy. And be quick about it. I've done enough waiting for one lifetime." },
     ],
   },
   {
     id: 'e32', milestone: 32, track: 'encounter',
     lines: [
-      "Long enough at this and you quit hooking. You start listening.",
-      "The water tells you what's coming up the line. Tells you what it is, if you shut up and let it.",
+      { text: "Long enough at this trade, you quit hooking. You start *listening*.", pause: 300 },
+      { text: "The water tells you what's coming up the line. Tells you exactly what it is, if you shut your mouth and let it." },
     ],
   },
   {
     id: 'e35', milestone: 35, track: 'encounter',
     lines: [
-      "Have you touched the Ancient Deep yet? Truly. Not the shallows of it.",
-      "...no. You haven't. I'd know. Take the bet, then. Off you go.",
+      { text: "Have you touched the Ancient Deep yet? Truly touched it. Not paddled the shallows of it.", pause: 350 },
+      { text: "...no. You haven't.", pause: 300 },
+      { text: "I'd know. I always know. Take the bet, then. Off with you." },
     ],
   },
   {
     id: 'e37', milestone: 37, track: 'encounter',
     lines: [
-      "There's a steadiness in you under all that mess. That's the rare part. That's the part I've been looking f-",
-      "...the part worth beating. Forget it. Cast.",
+      { text: "There's a steadiness in you, under all that mess. That's the rare part." },
+      { text: "That's the part I've been looking f—", pause: 250, fx: 'flash' },
+      { text: "...the part worth *beating*. Forget I said it. Cast." },
     ],
   },
   {
     id: 'e39', milestone: 39, track: 'encounter',
     lines: [
-      "You're the closest anyone's come. Closer than you'd believe.",
-      "Pull up all six and we'll both see what they're good for.",
-      "...we. Listen to me. Slip of an old tongue. Cast your line.",
+      { text: "You're the closest anyone has ever come. Closer than you would believe." },
+      { text: "Pull up all six, and we'll both finally see what they're good for." },
+      { text: "...*we*.", pause: 350, fx: 'flash' },
+      { text: "Slip of an old tongue. Cast your line." },
     ],
   },
 ]
@@ -212,113 +237,122 @@ export const FINN_ENCOUNTER_BEATS: FinnBeat[] = [
 export const FINN_WIN_BEATS: FinnBeat[] = [
   {
     id: 'w1', milestone: 1, track: 'win',
-    lines: ["Hmph. Beginner's luck. Don't go framing it."],
+    lines: [
+      { text: "Hmph. Beginner's luck.", pause: 250 },
+      { text: "Don't go framing it." },
+    ],
   },
   {
     id: 'w3', milestone: 3, track: 'win',
     lines: [
-      "Twice now. Twice.",
-      "...fine. You've got something. Try not to waste it.",
+      { text: "Twice now. *Twice.*", pause: 350 },
+      { text: "...all right. The water didn't hand you that. You took it. Try not to waste a thing you're willing to take." },
     ],
   },
   {
     id: 'w5', milestone: 5, track: 'win',
     lines: [
-      "Five times. Maybe you're not completely useless after all.",
-      "Don't let it swell your head. Plenty of water left in this ocean.",
+      { text: "Five times. Maybe you're not completely useless after all.", pause: 250 },
+      { text: "Don't let it swell your head. There's a whole ocean left, and most of it's meaner than me." },
     ],
   },
   {
     id: 'w8', milestone: 8, track: 'win',
     lines: [
-      "You're getting faster. I've noticed. I notice everything.",
-      "Most folk can't take me twice. You've done it eight.",
+      { text: "You're getting faster. I've noticed.", pause: 250 },
+      { text: "I notice everything. It's cost me more sleep than I'd care to say." },
+      { text: "Most folk can't take me twice. You've done it eight." },
     ],
   },
   {
     id: 'w10', milestone: 10, track: 'win',
     lines: [
-      "Patience and a steady hand. That's the whole trade, start to finish.",
-      "Took me half a lifetime to learn it. You're picking it up fast. Almost unfairly fast.",
+      { text: "Patience, and a steady hand. That's the whole trade, start to finish." },
+      { text: "Took me half a lifetime to learn it.", pause: 300 },
+      { text: "You're picking it up fast. Almost *unfairly* fast." },
     ],
   },
   {
     id: 'w12', milestone: 12, track: 'win',
     lines: [
-      "Where'd you learn to read water like that? You don't move like an inland kid.",
-      "...don't answer. I'd rather wonder.",
+      { text: "Where'd you learn to read water like that? You don't move like some inland kid who wandered down to the docks." },
+      { text: "...no. Don't answer.", pause: 300 },
+      { text: "I'd rather wonder." },
     ],
   },
   {
     id: 'w15', milestone: 15, track: 'win',
     lines: [
-      "Where do I come from? Ha. Nowhere you'll find on any chart you own.",
-      "And we'll be keeping it that way.",
+      { text: "Where do *I* come from? Ha." },
+      { text: "Nowhere you'll find inked on any chart you own.", pause: 300 },
+      { text: "And we'll be keeping it that way." },
     ],
   },
   {
     id: 'w18', milestone: 18, track: 'win',
     lines: [
-      "Two anglers walk into a tavern. One catches a fish. The other's me.",
-      "...you laughed. Good. I was starting to worry about you.",
+      { text: "Two anglers walk into a tavern. One of them catches a fish. The other one's me." },
+      { text: "...you laughed.", pause: 300 },
+      { text: "Good. I was starting to worry about you." },
     ],
   },
   {
     id: 'w20', milestone: 20, track: 'win',
     lines: [
-      "Patient on the entry, mean on the pull. That's how a body fishes the deep, if the deep allows it.",
-      "And I'm starting to think it just might allow you.",
+      { text: "Patient on the entry. *Mean* on the pull. That's how a body fishes the deep, if the deep allows it." },
+      { text: "And I'm starting to think it just might allow *you*." },
     ],
   },
   {
     id: 'w22', milestone: 22, track: 'win',
     lines: [
-      "I gave that deep ten years. Ten years of cold mornings and a slack line and silence.",
-      "You might wring more out of it in one season than I got from all of them.",
+      { text: "I gave that deep ten years. Ten years of cold mornings, a slack line, and silence.", pause: 350 },
+      { text: "You might wring more out of it in a single season than I got from every one of them." },
     ],
   },
   {
     id: 'w25', milestone: 25, track: 'win',
     lines: [
-      "The deep's taken things off me I don't put into words. Leave it where it lies.",
-      "Take the bet or don't.",
+      { text: "The deep has taken things off me I don't put into words.", pause: 350 },
+      { text: "Leave it where it lies. Take the bet, or don't." },
     ],
   },
   {
     id: 'w28', milestone: 28, track: 'win',
     lines: [
-      "That look you get locking onto a perfect, like the water slows down just for you.",
-      "I've only ever seen it on the kind of angler who can go where I can't.",
+      { text: "That look you get, locking onto a perfect. Like the water slows itself down just for you.", pause: 300 },
+      { text: "I've only ever seen it on the kind of angler who can go where I can't." },
     ],
   },
   {
     id: 'w30', milestone: 30, track: 'win',
     lines: [
-      "Thirty wins. Most anglers don't last thirty casts.",
-      "...I won't call you my equal. But I'll quit calling you 'kid.'",
-      "Spend that sparingly.",
+      { text: "Thirty wins. Most anglers don't last thirty *casts*.", pause: 300 },
+      { text: "...I won't call you my equal. But I'll quit calling you 'kid.'", pause: 250 },
+      { text: "Spend that sparingly. I don't hand it out twice." },
     ],
   },
   {
     id: 'w33', milestone: 33, track: 'win',
     lines: [
-      "Trick to the deep zones: don't pull at the bite. Pull at the breath right after.",
-      "A fish has to recover. Hit it in the recovery and it can't run.",
-      "...not that I told you anything.",
+      { text: "Trick to the deep zones: don't pull at the bite. Pull at the *breath* right after it." },
+      { text: "A fish has to recover. Hit it in the recovery and it can't run.", pause: 300 },
+      { text: "...not that I told you anything." },
     ],
   },
   {
     id: 'w36', milestone: 36, track: 'win',
     lines: [
-      "All these years working this dock. Waiting for the right line to come walking up it.",
-      "Didn't quite believe it ever would.",
+      { text: "All these years working this dock. Waiting for the right line to come walking up it.", pause: 350 },
+      { text: "Didn't quite believe it ever truly would." },
     ],
   },
   {
     id: 'w40', milestone: 40, track: 'win',
     lines: [
-      "Forty. You've taken everything I can teach from up here on the dock.",
-      "The rest, only the deep can teach you. So go and get it. ...for the both of us.",
+      { text: "Forty. You've taken everything I can teach you from up here on the dock." },
+      { text: "The rest, only the deep can teach. So go down and take it.", pause: 400 },
+      { text: "...for the both of us." },
     ],
   },
 ]
@@ -330,16 +364,17 @@ export const FINN_WIN_BEATS: FinnBeat[] = [
 export const FINN_REVEAL_BEAT: FinnBeat = {
   id: 'reveal', milestone: 0, track: 'reveal',
   lines: [
-    "...you did it.",
-    "First trophy up out of the Ancient Deep. In one piece. You actually did it.",
-    "Listen to me. Whatever you think you're holding, you're holding less than half of it.",
-    "There are five more down there. Five. And I need every one of them landed.",
-    "...need. Poor word for a rival. Let's call it want.",
-    "I have spent more of my life on that black water than I will ever tell you, and not once did it open for me. Not once.",
-    "It's opening for you.",
-    "So here's the new bet, the only one that ever mattered. You and me. All six.",
-    "I didn't come to this dock to fish, if you must know. I came to find someone who could. Took longer than I'd have liked.",
-    "Don't ask me why. Just fish.",
+    { text: "...you did it.", pause: 700 },
+    { text: "First trophy up out of the Ancient Deep. In one piece. You actually *did* it.", pause: 300 },
+    { text: "Listen to me. Whatever you think you're holding, you're holding less than half of it." },
+    { text: "There are five more down there. Five. And I need every last one of them landed." },
+    { text: "...*need*.", pause: 450 },
+    { text: "Poor word, for a rival. Let's call it *want* and leave it there." },
+    { text: "I have spent more of my life on that black water than I will ever tell you. Not once did it open for me. Not once.", pause: 400 },
+    { text: "It's opening for you.", pause: 400, fx: 'flash' },
+    { text: "So here's the new bet. The only one that ever mattered. You and me. All six." },
+    { text: "I didn't come to this dock to fish, if you must know. I came to find someone who *could*.", pause: 350 },
+    { text: "Took longer than I'd have liked. Don't ask me why. Just fish." },
   ],
 }
 
@@ -359,13 +394,6 @@ export const FINN_REVEAL_BEAT: FinnBeat = {
 // (id 143) is ALWAYS last (server-gated behind the other five), so its beat is the
 // one real crack: the rival act drops for a breath and something older shows,
 // then he covers it. Full reveal stays for the end-game merge.
-export interface FinnSceneLine {
-  text: string
-  /** Silence held BEFORE the line types — a beat, not a sentence. ms. */
-  pause?: number
-  /** 'flash' blows the frame out (the mask flickering); 'shake' rocks it. */
-  fx?: 'flash' | 'shake'
-}
 export interface FinnAncientBeat {
   /** Scene color temperature. Warm amber = the rival. Megalodon runs cold. */
   accent?: string

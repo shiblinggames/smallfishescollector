@@ -1,19 +1,22 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import CharacterAvatar from '@/components/CharacterAvatar'
-import { FINN_NAME, FINN_AVATAR } from '@/lib/finn'
+import { TypedBody, FlashOut, useTypewriter, lineHaptic, prefersReducedMotion } from '@/components/cutscene'
+import { FINN_NAME, FINN_AVATAR, type FinnSceneLine } from '@/lib/finn'
 
 /**
- * Finn's encounter overlay. Shows the rival's portrait + dialogue lines
- * (tap to advance), optionally followed by a challenge offer with
- * Accept/Pass buttons. Reused for offer, result, and reveal modes.
+ * Finn's encounter overlay. Shows the rival's portrait + cinematic dialogue
+ * (typewriter, timed pauses, *italic* emphasis, a frame-flicker when the mask
+ * slips — same kit as his ancient-catch cutscenes), optionally followed by a
+ * challenge offer with Accept/Pass buttons. Reused for offer, result, reveal.
  *
  * Portrait is mirrored (scaleX(-1)) so Finn faces the player.
  */
 
 type Mode = 'offer' | 'result' | 'reveal'
+const FINN_AMBER = '#c8a060'
 
 interface ChallengeOffer {
   type: 'perfect_streak' | 'speed_catch'
@@ -24,51 +27,80 @@ interface ChallengeOffer {
 
 interface Props {
   visible: boolean
-  lines: string[]
+  /** Plain strings (quips) or staged FinnSceneLines (beats) — normalized below. */
+  lines: (string | FinnSceneLine)[]
   mode: Mode
   challenge?: ChallengeOffer
-  /** When mode === 'result', controls the win/loss badge rendered above
-   *  the dialogue. Without this the result card looks identical to a
-   *  reveal/intro and the player can't tell at a glance which way the bet
-   *  went. */
   resultKind?: 'won' | 'lost'
-  /** Reward shown on the WON badge (e.g. "+150 ⟡"). Ignored for losses. */
   rewardText?: string
   onAccept?: () => void
   onPass?: () => void
   onDismiss?: () => void
 }
 
+// Owns the per-character reveal so a keystroke re-renders ONLY the text, not the
+// whole card. Reports typing/held up a handful of times per line (start, pause
+// end, done) so the parent can flip the tap affordance without re-rendering per
+// char. Mirrors FinnScene's TypewriterPlate.
+function TypedLine({ line, lineKey, accent, allText, reduced, onBegin, onState, finishRef }: {
+  line: FinnSceneLine
+  lineKey: number
+  accent: string
+  allText: string[]
+  reduced: boolean
+  onBegin: () => void
+  onState: (typing: boolean, held: boolean) => void
+  finishRef: React.MutableRefObject<() => void>
+}) {
+  const { shown, typing, held, finish } = useTypewriter(line.text, lineKey, { pause: line.pause, reduced, onBegin })
+  finishRef.current = finish
+  useEffect(() => { onState(typing, held) }, [typing, held, onState])
+  return <TypedBody all={allText} text={line.text} shown={shown} typing={typing} accent={accent} size="0.95rem" />
+}
+
 export default function FinnEncounter({
   visible, lines, mode, challenge, resultKind, rewardText, onAccept, onPass, onDismiss,
 }: Props) {
+  const reduced = useMemo(prefersReducedMotion, [])
+  // Normalize: plain quips become a single un-staged line.
+  const sceneLines: FinnSceneLine[] = useMemo(
+    () => lines.map(l => (typeof l === 'string' ? { text: l } : l)),
+    [lines],
+  )
+  const allText = useMemo(() => sceneLines.map(l => l.text), [sceneLines])
+
   const [index, setIndex] = useState(0)
-  // Reset line index whenever a new dialogue arrives. lines reference
-  // changes on every parent render, so use a stable content key.
-  const linesKey = lines.join('\n')
+  const [typing, setTyping] = useState(true)
+  const [held, setHeld] = useState(false)
+  const [flash, setFlash] = useState(0)
+  const finishRef = useRef<() => void>(() => {})
+
+  // Reset to the first line whenever a new dialogue arrives. lines reference
+  // changes on every parent render, so key on the content, not identity.
+  const linesKey = allText.join('\n')
   useEffect(() => { setIndex(0) }, [linesKey])
 
-  const isLast = index >= lines.length - 1
-  const line = lines[index] ?? ''
+  const isLast = index >= sceneLines.length - 1
+  const line = sceneLines[index] ?? { text: '' }
+  const shake = line.fx === 'shake' && !reduced && !held
 
+  const onState = useCallback((t: boolean, h: boolean) => { setTyping(t); setHeld(h) }, [])
+  const onBegin = () => {
+    if (line.fx === 'flash') setFlash(f => f + 1)
+    lineHaptic(line.fx, true)
+  }
+
+  // One tap finishes the typing line; the next advances. Never both.
   function advance() {
-    if (!isLast) {
-      setIndex(i => i + 1)
-      return
-    }
-    // Last line — different action per mode.
-    if (mode === 'offer') {
-      // Accept/Pass buttons handle dismissal in offer mode.
-      return
-    }
+    if (typing) { finishRef.current(); return }
+    if (!isLast) { setIndex(i => i + 1); return }
+    if (mode === 'offer') return   // Accept/Pass owns the dismissal
     onDismiss?.()
   }
 
-  // Reset to first line when overlay re-opens with new content.
-  // (React keys on AnimatePresence below should handle most cases, but this
-  // covers the prop-change-without-remount edge case.)
   function handleBackdropClick() {
-    if (mode === 'offer' && isLast) return  // require button choice
+    if (typing) { finishRef.current(); return }
+    if (mode === 'offer' && isLast) return  // require a button choice
     advance()
   }
 
@@ -82,9 +114,6 @@ export default function FinnEncounter({
             onClick={handleBackdropClick}
             style={{
               position: 'fixed', inset: 0, zIndex: 100, cursor: 'pointer',
-              // Finn is the rival at the dock, so his card floats over a veiled
-              // dusk-dock painting rather than a flat dim. Heavily scrimmed so the
-              // card stays the focus and the interruption reads clearly.
               background: 'linear-gradient(180deg, rgba(6,10,18,0.66) 0%, rgba(6,10,18,0.72) 100%), url(/scenes/dock-dusk.jpg) center/cover no-repeat',
               backdropFilter: 'blur(2px)',
               WebkitBackdropFilter: 'blur(2px)',
@@ -102,17 +131,23 @@ export default function FinnEncounter({
               top: '50%', left: '1rem', right: '1rem',
               transform: 'translateY(-50%)',
               maxWidth: 380, margin: '0 auto',
-              // Light-rival palette: maritime navy base with warm amber
-              // trim — same chrome family as the rest of the game's
-              // dialogue overlays. Drops the previous menacing red.
               background: 'linear-gradient(180deg, #0e1a2b 0%, #06101c 100%)',
               border: '1px solid rgba(200,168,80,0.32)',
               borderTop: '1px solid rgba(200,168,80,0.60)',
               borderRadius: 16,
               padding: '1.1rem 1.1rem 1rem',
               boxShadow: '0 20px 50px rgba(0,0,0,0.55)',
+              overflow: 'hidden',
             }}
           >
+            {/* Mask-flicker — a blown-out frame the instant a tell lands. */}
+            <AnimatePresence><FlashOut k={flash} /></AnimatePresence>
+
+            {/* The card content rocks on a 'shake' line. */}
+            <motion.div
+              animate={shake ? { x: [0, -7, 6, -4, 3, 0], y: [0, 3, -2, 0] } : { x: 0, y: 0 }}
+              transition={shake ? { duration: 0.42 } : { duration: 0.25 }}
+            >
             {/* Header — eyebrow + portrait + name */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '0.85rem' }}>
               <div style={{
@@ -143,9 +178,9 @@ export default function FinnEncounter({
                 </p>
               </div>
               {/* Progress dots when multi-line */}
-              {lines.length > 1 && (
+              {sceneLines.length > 1 && (
                 <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                  {lines.map((_, i) => (
+                  {sceneLines.map((_, i) => (
                     <span key={i} style={{
                       width: i === index ? 16 : 5, height: 4, borderRadius: 999,
                       background: i === index ? '#c8a060' : i < index ? 'rgba(200,168,80,0.45)' : 'rgba(255,255,255,0.18)',
@@ -156,9 +191,7 @@ export default function FinnEncounter({
               )}
             </div>
 
-            {/* Result outcome badge — only on win/loss screens, sits above
-                the dialogue so the player has an unambiguous read of which
-                way the bet went without parsing Finn's banter. */}
+            {/* Result outcome badge — win/loss screens only. */}
             {mode === 'result' && resultKind && (
               <motion.div
                 initial={{ opacity: 0, y: -4, scale: 0.94 }}
@@ -200,26 +233,15 @@ export default function FinnEncounter({
               </motion.div>
             )}
 
-            {/* Dialogue */}
-            <AnimatePresence mode="wait">
-              <motion.p
-                key={`line-${index}`}
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -2 }}
-                transition={{ duration: 0.20 }}
-                className="font-karla"
-                style={{
-                  fontSize: '0.95rem', color: '#f0ede8', lineHeight: 1.55,
-                  minHeight: '4.4rem',
-                  marginBottom: '0.85rem',
-                }}
-              >
-                {line}
-              </motion.p>
-            </AnimatePresence>
+            {/* Dialogue — typewriter with pauses + *italic* emphasis. */}
+            <div style={{ marginBottom: '0.85rem' }}>
+              <TypedLine
+                line={line} lineKey={index} accent={FINN_AMBER} allText={allText} reduced={reduced}
+                onBegin={onBegin} onState={onState} finishRef={finishRef}
+              />
+            </div>
 
-            {/* Challenge card — shown only on the LAST line of offer mode */}
+            {/* Challenge card — shown on the LAST line of offer mode. */}
             {mode === 'offer' && isLast && challenge && (
               <motion.div
                 initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
@@ -262,7 +284,7 @@ export default function FinnEncounter({
 
             {/* Buttons */}
             <div style={{ display: 'flex', gap: 8 }}>
-              {mode === 'offer' && isLast ? (
+              {mode === 'offer' && isLast && !typing ? (
                 <>
                   <button
                     onClick={() => onPass?.()}
@@ -309,18 +331,19 @@ export default function FinnEncounter({
                     cursor: 'pointer',
                   }}
                 >
-                  {isLast ? (mode === 'reveal' ? 'Go fishing' : 'Continue') : 'Next ›'}
+                  {typing ? 'Skip ▸' : isLast ? (mode === 'reveal' ? 'Go fishing' : 'Continue') : 'Next ›'}
                 </button>
               )}
             </div>
 
             {/* Tap-anywhere hint */}
-            {!isLast && (
+            {(!isLast || typing) && (
               <p className="font-karla font-400 uppercase tracking-[0.14em] text-center"
                 style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.32)', marginTop: '0.7rem' }}>
-                tap to advance
+                {typing ? 'tap to skip' : 'tap to advance'}
               </p>
             )}
+            </motion.div>
           </motion.div>
         </>
       )}

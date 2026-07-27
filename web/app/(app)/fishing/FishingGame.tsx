@@ -19,7 +19,7 @@ import {
   FINN_RETURN_AFTER_WIN, FINN_RETURN_AFTER_LOSS, FINN_RETURN_AFTER_PASS,
   pickFinnTier, pickChallengeType, pickRandomLine,
   findNextEncounterBeat, findNextWinBeat, finnAncientBeat,
-  type FinnChallengeType, type FinnAncientBeat,
+  type FinnChallengeType, type FinnAncientBeat, type FinnSceneLine,
 } from '@/lib/finn'
 import { liquidateAllFish } from '@/app/(app)/tavern/market/actions'
 import { BOATS, getBoat, boatGlowClass } from '@/lib/boats'
@@ -4084,7 +4084,7 @@ export default function FishingGame({
   // Overlay state — when set, FinnEncounter mounts with these props.
   const [finnOverlay, setFinnOverlay] = useState<{
     mode: 'offer' | 'result' | 'reveal'
-    lines: string[]
+    lines: (string | FinnSceneLine)[]
     challenge?: { type: FinnChallengeType; tier: 1 | 2 | 3; targetText: string; rewardText: string }
     pendingChallenge?: {
       type: FinnChallengeType
@@ -5110,7 +5110,7 @@ export default function FishingGame({
         default:       return null
       }
     })()
-    let lines: string[]
+    let lines: (string | FinnSceneLine)[]
     if (beat) {
       lines = [...beat.lines, pickRandomLine(offerPool)]
     } else if (finnRevealed && Math.random() < FINN_EPILOGUE_LORE_CHANCE) {
@@ -5181,7 +5181,7 @@ export default function FishingGame({
     const newWins = won ? finnWins + 1 : finnWins
     const winBeat = won ? findNextWinBeat(newWins, finnSeenBeats) : null
 
-    let lines: string[]
+    let lines: (string | FinnSceneLine)[]
     if (won) {
       if (winBeat) lines = winBeat.lines
       else lines = [pickRandomLine(finnRevealed ? FINN_EPILOGUE_WIN_LINES : FINN_WIN_LINES)]

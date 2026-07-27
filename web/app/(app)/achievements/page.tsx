@@ -17,7 +17,7 @@ export default async function CaptainsLogPage() {
   // ── Finn arc recap ───────────────────────────────────────────────────────
   const seenFinn = new Set((profile?.finn_seen_beats as string[] | null) ?? [])
   const finnRevealed = !!profile?.finn_revealed || seenFinn.has('reveal')
-  const finnEncounter = FINN_ENCOUNTER_BEATS.filter(b => seenFinn.has(b.id)).map(b => ({ id: b.id, lines: b.lines }))
+  const finnEncounter = FINN_ENCOUNTER_BEATS.filter(b => seenFinn.has(b.id)).map(b => ({ id: b.id, lines: b.lines.map(l => l.text) }))
 
   // ── Raid map recap ───────────────────────────────────────────────────────
   const raidViews = raidMap.views
@@ -47,7 +47,7 @@ export default async function CaptainsLogPage() {
     finn: {
       encounter: finnEncounter,
       revealed: finnRevealed,
-      revealLines: finnRevealed ? FINN_REVEAL_BEAT.lines : [],
+      revealLines: finnRevealed ? FINN_REVEAL_BEAT.lines.map(l => l.text) : [],
       discovered: finnEncounter.length + (finnRevealed ? 1 : 0),
       total: FINN_ENCOUNTER_BEATS.length + 1,
     },
