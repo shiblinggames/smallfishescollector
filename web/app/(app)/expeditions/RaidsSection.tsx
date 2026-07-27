@@ -2867,60 +2867,41 @@ function ViewToggle({ view, onChange }: { view: 'journey' | 'bosses'; onChange: 
   )
 }
 
-function BossesView({ views, raidRecords, repairOwed, onSelect, onRepairBlocked }: {
+function BossesView({ views, repairOwed, onSelect, onRepairBlocked }: {
   views: RaidNodeView[]
-  raidRecords: Record<string, RaidRecords>
   repairOwed: number
   onSelect: (v: RaidNodeView) => void
   onRepairBlocked: () => void
 }) {
   const router = useRouter()
-  // Main boss raids (challenge side-branches are folded into each card), grouped by chapter.
+  // Every boss raid in campaign order (views already come in RAID_MAP order), as
+  // a flat farm list — no chapter titles or descriptions, just the bosses + drops.
   const bosses = views.filter(v => v.node.type === 'raid' && !v.node.sideBranch)
-  const groups: { chapter: RaidChapter; bosses: RaidNodeView[] }[] = []
-  for (const v of bosses) {
-    const c = chapterForNode(v.node.id)
-    let g = groups.find(x => x.chapter.id === c.id)
-    if (!g) { g = { chapter: c, bosses: [] }; groups.push(g) }
-    g.bosses.push(v)
-  }
-  groups.sort((a, b) => RAID_CHAPTERS.findIndex(c => c.id === a.chapter.id) - RAID_CHAPTERS.findIndex(c => c.id === b.chapter.id))
-  // Next-up = the first available (uncleared) boss — the current progression target.
   const nextUpId = bosses.find(v => v.status === 'available')?.node.id ?? null
 
   if (bosses.length === 0) {
-    return <p className="font-karla" style={{ fontSize: '0.75rem', color: '#8a857c', textAlign: 'center', padding: '1.5rem 0' }}>No boss raids charted yet.</p>
+    return <p className="font-karla" style={{ fontSize: '0.8rem', color: '#8a857c', textAlign: 'center', padding: '1.5rem 0' }}>No boss raids charted yet.</p>
   }
   return (
-    <div>
-      {groups.map(g => (
-        <div key={g.chapter.id}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '1rem 2px 0.7rem' }}>
-            <span className="font-cinzel font-700 uppercase" style={{ fontSize: '0.74rem', letterSpacing: '0.18em', color: '#a1988a', whiteSpace: 'nowrap' }}>Chapter {g.chapter.romanNumeral} · {g.chapter.title}</span>
-            <span aria-hidden style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, rgba(255,255,255,0.1), transparent)' }} />
-          </div>
-          {g.bosses.map(v => (
-            <BossCard key={v.node.id}
-              view={v}
-              challenge={views.find(c => c.node.sideBranch?.parentId === v.node.id) ?? null}
-              rec={v.node.raidId ? raidRecords[v.node.raidId] ?? null : null}
-              isNext={v.node.id === nextUpId}
-              repairOwed={repairOwed}
-              onEnter={r => router.push(r)}
-              onRepairBlocked={onRepairBlocked}
-              onOpen={() => onSelect(v)}
-            />
-          ))}
-        </div>
+    <div style={{ marginTop: 6 }}>
+      {bosses.map(v => (
+        <BossCard key={v.node.id}
+          view={v}
+          challenge={views.find(c => c.node.sideBranch?.parentId === v.node.id) ?? null}
+          isNext={v.node.id === nextUpId}
+          repairOwed={repairOwed}
+          onEnter={r => router.push(r)}
+          onRepairBlocked={onRepairBlocked}
+          onOpen={() => onSelect(v)}
+        />
       ))}
     </div>
   )
 }
 
-function BossCard({ view, challenge, rec, isNext, repairOwed, onEnter, onRepairBlocked, onOpen }: {
+function BossCard({ view, challenge, isNext, repairOwed, onEnter, onRepairBlocked, onOpen }: {
   view: RaidNodeView
   challenge: RaidNodeView | null
-  rec: RaidRecords | null
   isNext: boolean
   repairOwed: number
   onEnter: (route: string) => void
@@ -2933,17 +2914,21 @@ function BossCard({ view, challenge, rec, isNext, repairOwed, onEnter, onRepairB
   const accent = locked ? '#6a6764' : isNext ? '#5eead4' : '#c4a96a'
   const backdrop = node.raidId ? (RAID_BOSS_BG[node.raidId] ?? RAID_LOCATION_BG[node.raidId]) : undefined
   const drops = (node.detail?.drops ?? []).filter(d => (d.rarity === 'epic' || d.rarity === 'legendary') && (d.raidItemId || d.shipSkinId)).slice(0, 3)
-  const best = rec?.yourBestMs != null ? formatRaidMs(rec.yourBestMs) : null
-  const fleetBest = rec && rec.fastestMs > 0 ? formatRaidMs(rec.fastestMs) : null
   const blocked = repairOwed > 0
   const chAvailable = !!challenge && (challenge.status === 'available' || challenge.status === 'cleared')
   const chCleared = challenge?.status === 'cleared'
+  // Status chip lives INLINE next to the name (not an absolute top-right pill)
+  // so a long boss name can't run under it.
+  const statusStyle = cleared ? { color: '#8ff0c0', background: 'rgba(74,222,128,0.14)', border: '1px solid rgba(74,222,128,0.45)' }
+    : isNext ? { color: '#08120f', background: 'rgba(94,234,212,0.92)', boxShadow: '0 0 12px rgba(94,234,212,0.4)' }
+    : locked ? { color: '#8a857c', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }
+    : { color: '#c4a96a', background: 'rgba(196,169,106,0.14)', border: '1px solid rgba(196,169,106,0.4)' }
 
   return (
     <div onClick={() => { vibrate([0, 10]); onOpen() }}
-      style={{ position: 'relative', borderRadius: 18, overflow: 'hidden', marginBottom: 14, cursor: 'pointer',
+      style={{ position: 'relative', borderRadius: 18, overflow: 'hidden', marginBottom: 12, cursor: 'pointer',
         border: `1px solid ${accent}${locked ? '2e' : '80'}`, background: '#0a1119',
-        boxShadow: isNext ? `0 0 0 1px ${accent}30, 0 0 26px ${accent}18` : '0 10px 26px rgba(0,0,0,0.42)',
+        boxShadow: isNext ? `0 0 0 1px ${accent}30, 0 0 26px ${accent}18` : '0 8px 22px rgba(0,0,0,0.4)',
         filter: locked ? 'saturate(0.5)' : undefined }}>
       {backdrop && (
         // eslint-disable-next-line @next/next/no-img-element
@@ -2952,16 +2937,9 @@ function BossCard({ view, challenge, rec, isNext, repairOwed, onEnter, onRepairB
             opacity: locked ? 0.26 : cleared ? 0.4 : 0.58, filter: locked ? 'grayscale(1)' : cleared ? 'grayscale(0.5)' : 'none' }} />
       )}
       <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(6,12,20,0.32) 0%, rgba(6,12,20,0.72) 46%, rgba(6,12,20,0.97) 100%)' }} />
-      <span className="font-karla font-700 uppercase" style={{ position: 'absolute', top: 11, right: 11, zIndex: 2, fontSize: '0.56rem', letterSpacing: '0.13em', padding: '0.28rem 0.6rem', borderRadius: 999,
-        ...(cleared ? { color: '#8ff0c0', background: 'rgba(74,222,128,0.13)', border: '1px solid rgba(74,222,128,0.4)' }
-          : isNext ? { color: '#08120f', background: 'rgba(94,234,212,0.9)', boxShadow: '0 0 14px rgba(94,234,212,0.4)' }
-          : locked ? { color: '#8a857c', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }
-          : { color: '#c4a96a', background: 'rgba(196,169,106,0.14)', border: '1px solid rgba(196,169,106,0.4)' }) }}>
-        {cleared ? 'Cleared' : isNext ? 'Next up' : locked ? 'Locked' : 'Ready'}
-      </span>
-      <div style={{ position: 'relative', padding: '0.9rem 0.85rem 0.8rem' }}>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-          <div style={{ position: 'relative', width: 58, height: 58, flexShrink: 0, borderRadius: 13, overflow: 'hidden', background: '#12202e', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+      <div style={{ position: 'relative', padding: '0.85rem 0.85rem 0.8rem' }}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <div style={{ position: 'relative', width: 56, height: 56, flexShrink: 0, borderRadius: 13, overflow: 'hidden', background: '#12202e', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
             {node.image && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={node.image} alt={node.label} loading="lazy" decoding="async"
@@ -2969,20 +2947,15 @@ function BossCard({ view, challenge, rec, isNext, repairOwed, onEnter, onRepairB
             )}
             <span aria-hidden style={{ position: 'absolute', inset: 0, borderRadius: 13, border: `1px solid ${accent}88` }} />
           </div>
-          <div style={{ flex: 1, minWidth: 0, paddingTop: 1 }}>
-            <p className="font-cinzel font-700" style={{ fontSize: '1.22rem', lineHeight: 1.08, color: locked ? '#9a948a' : '#fff', textShadow: `0 2px 6px rgba(0,0,0,0.85), 0 0 14px ${accent}30` }}>{node.label}</p>
-            <p className="font-karla" style={{ fontSize: '0.82rem', color: '#c7c0b4', marginTop: 3, textShadow: '0 1px 4px rgba(0,0,0,0.9)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{node.flavor}</p>
-          </div>
-        </div>
-
-        {locked ? (
-          <p className="font-karla font-600" style={{ fontSize: '0.76rem', color: '#8a857c', marginTop: 11, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <IconLock size={13} /> {view.lockReason ?? 'Locked'}
-          </p>
-        ) : (
-          <>
-            {drops.length > 0 && (
-              <div style={{ display: 'flex', gap: 6, marginTop: 11, flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <p className="font-cinzel font-700" style={{ flex: 1, minWidth: 0, fontSize: '1.2rem', lineHeight: 1.1, color: locked ? '#9a948a' : '#fff', textShadow: `0 2px 6px rgba(0,0,0,0.85), 0 0 14px ${accent}30`, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{node.label}</p>
+              <span className="font-karla font-700 uppercase" style={{ flexShrink: 0, fontSize: '0.54rem', letterSpacing: '0.12em', padding: '0.26rem 0.58rem', borderRadius: 999, ...statusStyle }}>
+                {cleared ? 'Cleared' : isNext ? 'Next up' : locked ? 'Locked' : 'Ready'}
+              </span>
+            </div>
+            {!locked && drops.length > 0 && (
+              <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
                 {drops.map(d => {
                   const rc = (d.rarity && RARITY_COLOR[d.rarity]) || '#c4a96a'
                   return (
@@ -2999,13 +2972,16 @@ function BossCard({ view, challenge, rec, isNext, repairOwed, onEnter, onRepairB
                 })}
               </div>
             )}
-            {(best || fleetBest) && (
-              <div style={{ display: 'flex', gap: 16, marginTop: 10, fontSize: '0.68rem', color: '#8a857c' }}>
-                {best && <span>Your best <b style={{ color: '#dcd2bd', fontVariantNumeric: 'tabular-nums' }}>{best}</b></span>}
-                {fleetBest && <span>Fleet <b style={{ color: '#dcd2bd', fontVariantNumeric: 'tabular-nums' }}>{fleetBest}</b></span>}
-              </div>
+            {locked && (
+              <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#8a857c', marginTop: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <IconLock size={12} /> {view.lockReason ?? 'Locked'}
+              </p>
             )}
-            <div style={{ display: 'flex', gap: 9, marginTop: 12 }}>
+          </div>
+        </div>
+
+        {!locked && (
+          <div style={{ display: 'flex', gap: 9, marginTop: 12 }}>
               <button type="button" className="tap"
                 onClick={e => { e.stopPropagation(); if (!node.route) return; if (blocked) { onRepairBlocked(); return } vibrate([0, 16, 30, 24]); onEnter(node.route) }}
                 style={{ flex: 1, borderRadius: 12, padding: '0.65rem 0', cursor: 'pointer', border: `1px solid ${accent}b0`, background: `${accent}26`, color: '#f0ede8' }}>
@@ -3022,7 +2998,6 @@ function BossCard({ view, challenge, rec, isNext, repairOwed, onEnter, onRepairB
                 </button>
               )}
             </div>
-          </>
         )}
       </div>
       {!locked && <span aria-hidden style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 3, background: `linear-gradient(90deg, ${accent}, ${accent}66)`, boxShadow: `0 0 8px ${accent}80` }} />}
@@ -3305,7 +3280,7 @@ export default function RaidsSection({ views, doubloons, navLevel, playerShipIma
               tap away, its drops, and your best clear time. */}
           <ViewToggle view={view} onChange={setView} />
           {view === 'bosses' ? (
-            <BossesView views={views} raidRecords={raidRecords} repairOwed={repairOwed} onSelect={setSelected} onRepairBlocked={() => setRepairPromptOpen(true)} />
+            <BossesView views={views} repairOwed={repairOwed} onSelect={setSelected} onRepairBlocked={() => setRepairPromptOpen(true)} />
           ) : (() => {
             const groups = new Map<string, { chapter: RaidChapter; views: RaidNodeView[] }>()
             for (const v of views) {
