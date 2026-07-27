@@ -2996,7 +2996,8 @@ export default function RaidCombat({
       // XP messages and the kill callback fire on the same schedule the
       // cannon-fire path uses.
       setSubPhase('done')
-      fireImpactFlash(true)   // kill-blow impact
+      // No white kill-flash — the explosion burst + sink animation carry the
+      // kill on their own (the flash read as a jarring whiteout on the sink).
       setEnemySinking(true)
       setTimeout(() => setResolveLog(prev => [...prev, `You sank the ${enemy.name}!`]), 200)
       let cbDelay = 1000
@@ -4872,7 +4873,8 @@ export default function RaidCombat({
             // Sink animation: ~1.3s fall + fade, lined up with the kill
             // log + onEnemyDefeated cbDelay below so the ship is gone
             // by the time the loot/next-enemy beat fires.
-            fireImpactFlash(true)   // kill-blow impact
+            // No white kill-flash — the explosion burst + sink animation
+            // carry the kill (the flash read as a jarring whiteout on the sink).
             setEnemySinking(true)
             setTimeout(() => setResolveLog(prev => [...prev, `You sank the ${enemy.name}!`]), 200)
             let cbDelay = 1000
