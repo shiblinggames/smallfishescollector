@@ -142,9 +142,10 @@ export async function activateEvent(type: string): Promise<{ ok: true } | { erro
 }
 
 // CrateTier + CrateLoot + the loot roller now live in @/lib/crateLoot (imported
-// above) so the weekly-crate action can share the roll without going through the
-// token-gated reelCrate. Re-exported for any existing importers of this module.
-export type { CrateTier, CrateLoot }
+// above). Do NOT re-export them from here: this is a 'use server' file, and a
+// non-async (type) export corrupts the server-action manifest for the whole
+// module — which broke castLine / reelIn / the trawl actions. Anything needing
+// these types imports them straight from @/lib/crateLoot.
 
 // Server-rolled outcome of a cast, persisted to profiles.pending_cast and
 // consumed one-shot by reelIn / reelCrate. The client can pass whatever it
