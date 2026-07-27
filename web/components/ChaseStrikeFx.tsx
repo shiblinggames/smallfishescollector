@@ -120,3 +120,71 @@ export function TempestStrikeFx({ color, shots, interval }: { color: string; sho
     </div>
   )
 }
+
+/** Hunter's Bane (Doby) — the apex predator's killing blow. A targeting reticle
+ *  snaps a lock onto the enemy, then one devastating strike detonates on the
+ *  hull: a blood-red charge implodes, a white core detonates, shock rings blow
+ *  out, and a ring of fangs radiates from the impact. One heavy hit, not a
+ *  barrage — matched to Leviathan's single-shell cadence. */
+export function LeviathanStrikeFx({ color }: { color: string }) {
+  const STRIKE = 0.22   // detonation moment (s) — aligned to the salvo's damage beat
+  // Reticle corner brackets that snap inward onto the mark.
+  const corners: React.CSSProperties[] = [
+    { top: 0, left: 0, borderTop: `3px solid ${color}`, borderLeft: `3px solid ${color}` },
+    { top: 0, right: 0, borderTop: `3px solid ${color}`, borderRight: `3px solid ${color}` },
+    { bottom: 0, left: 0, borderBottom: `3px solid ${color}`, borderLeft: `3px solid ${color}` },
+    { bottom: 0, right: 0, borderBottom: `3px solid ${color}`, borderRight: `3px solid ${color}` },
+  ]
+  const fangs = Array.from({ length: 12 }, (_, i) => i * 30)
+  return (
+    <div aria-hidden style={{ position: 'absolute', inset: '-35% -25%', pointerEvents: 'none', zIndex: 6 }}>
+      {/* Reticle lock snapping onto the mark, then gone on the strike. */}
+      <motion.div
+        initial={{ opacity: 0, scale: 1.5, rotate: -12 }}
+        animate={{ opacity: [0, 0.9, 0.9, 0], scale: [1.5, 0.94, 0.94, 0.82], rotate: [-12, 0, 0, 4] }}
+        transition={{ duration: STRIKE + 0.12, times: [0, 0.55, 0.82, 1], ease: 'easeOut' }}
+        style={{ position: 'absolute', left: '50%', top: '50%', width: '52%', height: '52%', marginLeft: '-26%', marginTop: '-26%' }}
+      >
+        {corners.map((c, i) => (
+          <div key={i} style={{ position: 'absolute', width: '28%', height: '28%', ...c }} />
+        ))}
+      </motion.div>
+
+      {/* Blood-red charge that implodes into the center just before impact. */}
+      <motion.div
+        initial={{ opacity: 0, scale: 1.35 }}
+        animate={{ opacity: [0, 0.75, 0], scale: [1.35, 0.28, 0.1] }}
+        transition={{ duration: STRIKE, times: [0, 0.72, 1], ease: 'easeIn' }}
+        style={{ position: 'absolute', left: '50%', top: '50%', width: 140, height: 140, marginLeft: -70, marginTop: -70, borderRadius: '50%', background: `radial-gradient(circle, ${color}ee 0%, ${color}55 46%, transparent 72%)` }}
+      />
+
+      {/* Detonation flash — white core blowing to blood-red. */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.2 }}
+        animate={{ opacity: [0, 1, 0], scale: [0.2, 2.3, 3.1] }}
+        transition={{ duration: 0.5, delay: STRIKE, ease: 'easeOut' }}
+        style={{ position: 'absolute', left: '50%', top: '50%', width: 210, height: 210, marginLeft: -105, marginTop: -105, borderRadius: '50%', background: `radial-gradient(circle, #ffffff 0%, ${color}cc 34%, transparent 68%)` }}
+      />
+
+      {/* Shock rings blowing out from the impact. */}
+      {[0, 0.09, 0.18].map((d, i) => (
+        <motion.div key={`ring-${i}`}
+          initial={{ opacity: 0, scale: 0.2 }}
+          animate={{ opacity: [0, 0.85, 0], scale: [0.2, 2.7, 3.6] }}
+          transition={{ duration: 0.62, delay: STRIKE + d, ease: 'easeOut' }}
+          style={{ position: 'absolute', left: '50%', top: '50%', width: 170, height: 170, marginLeft: -85, marginTop: -85, borderRadius: '50%', border: `3px solid ${color}`, boxShadow: `0 0 18px ${color}` }}
+        />
+      ))}
+
+      {/* Ring of fangs radiating from the impact point. */}
+      {fangs.map((ang, i) => (
+        <motion.div key={`fang-${i}`}
+          initial={{ opacity: 0, scaleY: 0.15 }}
+          animate={{ opacity: [0, 1, 0], scaleY: [0.15, 1, 0.5] }}
+          transition={{ duration: 0.42, delay: STRIKE + 0.02, ease: 'easeOut' }}
+          style={{ position: 'absolute', left: '50%', top: '50%', width: 6, height: '26%', marginLeft: -3, transformOrigin: '50% 0%', transform: `rotate(${ang}deg)`, background: `linear-gradient(${color}, ${color}00)`, borderRadius: 3, boxShadow: `0 0 6px ${color}` }}
+        />
+      ))}
+    </div>
+  )
+}

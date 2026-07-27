@@ -69,7 +69,7 @@ import { getRepairKit, rollRepairKitHeal, repairKitRange } from '@/lib/repairKit
 import { classForSlug, CLASSES, currentMilestone, type AnyClassDef } from '@/lib/crewClasses'
 import { getCrewSkinByFilename } from '@/lib/crewSkins'
 import { ChaseSkinFx } from '@/components/ChaseSkinFx'
-import { TempestStrikeFx } from '@/components/ChaseStrikeFx'
+import { TempestStrikeFx, LeviathanStrikeFx } from '@/components/ChaseStrikeFx'
 import { crewLevelFromXP } from '@/lib/crewLevel'
 import { type AffixDef } from '@/lib/raidAffixes'
 import { getShipClass, aggregateShipClasses } from '@/lib/shipClasses'
@@ -1295,7 +1295,7 @@ export default function RaidCombat({
   const [barrageSplats, setBarrageSplats] = useState<{ key: number; text: string; dx: number; crit?: boolean; color?: string }[]>([])
   // Bespoke chase-skin ability-effect FX over the enemy hull (e.g. Mako's Tempest
   // lightning storm during Blitz). Mounted for the ability's duration, then null.
-  const [enemyStrikeFx, setEnemyStrikeFx] = useState<{ key: number; color: string; shots: number; interval: number } | null>(null)
+  const [enemyStrikeFx, setEnemyStrikeFx] = useState<{ key: number; kind: 'tempest' | 'leviathan'; color: string; shots?: number; interval?: number } | null>(null)
   const [critFlash, setCritFlash]     = useState(false)
   // Brief red wash when the boss flips to phase 2 (challenge-mode Pete).
   // Same shape as critFlash — fixed full-screen radial gradient, ~400ms.
@@ -2719,17 +2719,27 @@ export default function RaidCombat({
         // Big-knock FX: a heavy muzzle flash, a beat as the shell crosses, then
         // a massive hull impact + full screen heave landing WITH the damage.
         const lk = Date.now()
-        setCannonShot({ key: lk, kind: 'crit' })
-        playStepChainRef.current.push(setTimeout(() => setCannonShot(null), 240))
+        // Hunter's Bane (Doby's chase skin): the salvo becomes an apex killing
+        // blow — a reticle lock, then a devastating detonation on the hull. The
+        // bespoke strike carries the visual, so skip the cannon shell + generic
+        // impact burst and keep the heavy shake, haptic and damage.
+        const huntersBane = chaseSkinId === 'doby_huntersbane'
+        if (huntersBane) {
+          setEnemyStrikeFx({ key: lk, kind: 'leviathan', color: chaseColor ?? '#dc2626' })
+          playStepChainRef.current.push(setTimeout(() => setEnemyStrikeFx(s => (s && s.key === lk ? null : s)), 1100))
+        } else {
+          setCannonShot({ key: lk, kind: 'crit' })
+          playStepChainRef.current.push(setTimeout(() => setCannonShot(null), 240))
+        }
         playStepChainRef.current.push(setTimeout(() => {
-          setEnemyImpact({ key: lk + 1, kind: 'crit' })
+          if (!huntersBane) setEnemyImpact({ key: lk + 1, kind: 'crit' })
           cameraShake('crit')
           vibrate(chaseColor ? [0, 70, 45, 110] : [0, 55, 40, 90])
           applyAbilityDamage(dmg, `${crew.name} lands a leviathan salvo for ${dmg}${bigGame ? ' — big-game strike!' : '!'}`, 'crit', false, chaseColor ?? undefined)
-          playStepChainRef.current.push(setTimeout(() => setEnemyImpact(null), 700))
-          // Hunter's Bane lands heavier — a second delayed thud + shake so the
-          // blow feels weighty, not just recolored.
-          if (chaseColor) {
+          if (!huntersBane) playStepChainRef.current.push(setTimeout(() => setEnemyImpact(null), 700))
+          // A second delayed thud for any OTHER (future) chase skin on Doby;
+          // Hunter's Bane's bespoke strike above already carries the weight.
+          if (chaseColor && !huntersBane) {
             playStepChainRef.current.push(setTimeout(() => {
               setEnemyImpact({ key: lk + 2, kind: 'crit' })
               cameraShake('crit')
@@ -2784,7 +2794,7 @@ export default function RaidCombat({
         const tempest = chaseSkinId === 'mako_tempest'
         if (tempest) {
           const stormKey = Date.now()
-          setEnemyStrikeFx({ key: stormKey, color: chaseColor ?? '#38bdf8', shots: lastIdx + 1, interval: INTERVAL })
+          setEnemyStrikeFx({ key: stormKey, kind: 'tempest', color: chaseColor ?? '#38bdf8', shots: lastIdx + 1, interval: INTERVAL })
           playStepChainRef.current.push(setTimeout(() => setEnemyStrikeFx(s => (s && s.key === stormKey ? null : s)), (lastIdx + 1) * INTERVAL + 900))
         }
         for (let k = 0; k <= lastIdx; k++) {
@@ -6244,9 +6254,12 @@ export default function RaidCombat({
             {enemyImpact && (
               <ImpactBurst key={`ei-${enemyImpact.key}`} kind={enemyImpact.kind} />
             )}
-            {/* Bespoke chase-skin ability strike (Mako's Tempest lightning storm) */}
-            {enemyStrikeFx && (
-              <TempestStrikeFx key={`tsf-${enemyStrikeFx.key}`} color={enemyStrikeFx.color} shots={enemyStrikeFx.shots} interval={enemyStrikeFx.interval} />
+            {/* Bespoke chase-skin ability strikes over the enemy hull. */}
+            {enemyStrikeFx?.kind === 'tempest' && (
+              <TempestStrikeFx key={`tsf-${enemyStrikeFx.key}`} color={enemyStrikeFx.color} shots={enemyStrikeFx.shots ?? 5} interval={enemyStrikeFx.interval ?? 200} />
+            )}
+            {enemyStrikeFx?.kind === 'leviathan' && (
+              <LeviathanStrikeFx key={`lsf-${enemyStrikeFx.key}`} color={enemyStrikeFx.color} />
             )}
             {/* Thermal Shock confluence — the ice+fire shatter detonation */}
             <AnimatePresence>
