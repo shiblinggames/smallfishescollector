@@ -69,7 +69,7 @@ export default function CampaignMapOverlay({ children }: { children: React.React
             Campaign
           </p>
           <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0e8d0' }}>
-            The Sunken Hand
+            The Sunken Hand Saga
           </p>
         </div>
         <button
