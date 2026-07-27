@@ -3157,13 +3157,9 @@ function JourneyChapter({ views, onSelect }: { views: RaidNodeView[]; onSelect: 
               padding: combat ? '5px 0' : '3px 0', cursor: 'pointer', position: 'relative', paddingLeft: isSide ? 30 : 0, opacity: locked ? 0.64 : 1 }}>
             <span style={{ flex: '0 0 44px', display: 'flex', justifyContent: 'center', position: 'relative', zIndex: 1 }}>
               {combat ? (
-                <span style={{ position: 'relative', width: isSide ? 34 : 42, height: isSide ? 34 : 42, borderRadius: 11, overflow: 'hidden', background: '#12202e', boxShadow: '0 3px 10px rgba(0,0,0,0.5)' }}>
-                  {node.image && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={node.image} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: locked ? 'grayscale(1) brightness(0.6)' : cleared ? 'grayscale(0.4) brightness(0.85)' : undefined }} />
-                  )}
-                  <span aria-hidden style={{ position: 'absolute', inset: 0, borderRadius: 11, border: `2px solid ${accent}`, boxShadow: isCurrent ? `0 0 14px ${accent}66` : 'none' }} />
-                </span>
+                // Combat nodes carry their art in the banner to the right, so the
+                // spine gets a small diamond waypoint instead of a duplicate thumb.
+                <span aria-hidden style={{ width: isSide ? 15 : 18, height: isSide ? 15 : 18, transform: 'rotate(45deg)', borderRadius: 4, background: cleared ? '#2dd4aa' : isCurrent ? '#5eead4' : '#0c1119', border: `2px solid ${accent}`, boxShadow: isCurrent ? `0 0 12px ${accent}` : '0 2px 6px rgba(0,0,0,0.5)' }} />
               ) : (
                 <span style={{ width: 22, height: 22, borderRadius: '50%', display: 'grid', placeItems: 'center', background: cleared ? 'radial-gradient(circle,#2dd4aa,#0c3a30)' : '#0c1119', border: `2px solid ${cleared ? '#2dd4aa' : accent}` }}>
                   {cleared
@@ -3171,20 +3167,29 @@ function JourneyChapter({ views, onSelect }: { views: RaidNodeView[]; onSelect: 
                     : <NodeGlyph type={node.type} color={accent} size={11} />}
                 </span>
               )}
-              {combat && cleared && (
-                <span aria-hidden style={{ position: 'absolute', right: 2, bottom: -2, width: 15, height: 15, borderRadius: '50%', background: '#2dd4aa', display: 'grid', placeItems: 'center', border: '2px solid #0a1119' }}>
-                  <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#06110c" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l4 4 10-10" /></svg>
-                </span>
-              )}
             </span>
             {combat ? (
-              <span style={{ flex: 1, minWidth: 0, position: 'relative', borderRadius: 13, padding: '8px 11px', background: isCurrent ? 'rgba(94,234,212,0.06)' : isSide ? 'rgba(239,68,68,0.05)' : 'rgba(255,255,255,0.03)', border: `1px solid ${accent}${locked ? '2a' : '4d'}`, boxShadow: isCurrent ? `0 0 18px ${accent}14` : 'none' }}>
-                {isCurrent && <span className="font-karla font-700 uppercase" style={{ position: 'absolute', top: -9, left: 12, fontSize: '0.5rem', letterSpacing: '0.12em', color: '#08120f', background: 'rgba(94,234,212,0.92)', padding: '2px 7px', borderRadius: 999, boxShadow: '0 0 12px rgba(94,234,212,0.4)' }}>You are here</span>}
-                <span style={{ display: 'flex', alignItems: 'baseline', gap: 7 }}>
-                  <span className="font-cinzel font-700" style={{ fontSize: '1.06rem', color: locked ? '#9a948a' : '#fff', lineHeight: 1.1 }}>{node.label}</span>
-                  {isSide && <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.1em', color: SIDE_BRANCH_ACCENT, border: `1px solid ${SIDE_BRANCH_ACCENT}66`, borderRadius: 999, padding: '1px 6px' }}>Challenge</span>}
+              // Art-forward banner: the boss portrait fills the card, name +
+              // flavor ride a left-to-right scrim so the art stays the hero.
+              <span style={{ flex: 1, minWidth: 0, position: 'relative', display: 'block', borderRadius: 14, overflow: 'hidden', height: isSide ? 66 : 84, background: '#0c141d', border: `1px solid ${accent}${locked ? '2a' : '55'}`, boxShadow: isCurrent ? `0 0 20px ${accent}22` : '0 5px 16px rgba(0,0,0,0.45)' }}>
+                {node.image && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={node.image} alt="" loading="lazy" decoding="async" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 26%', filter: locked ? 'grayscale(1) brightness(0.5)' : cleared ? 'grayscale(0.4) brightness(0.66)' : 'brightness(0.82)' }} />
+                )}
+                <span aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(6,10,16,0.94) 0%, rgba(6,10,16,0.6) 52%, rgba(6,10,16,0.2) 100%)' }} />
+                {isCurrent && <span className="font-karla font-700 uppercase" style={{ position: 'absolute', top: 8, right: 8, fontSize: '0.5rem', letterSpacing: '0.12em', color: '#08120f', background: 'rgba(94,234,212,0.92)', padding: '2px 7px', borderRadius: 999, boxShadow: '0 0 12px rgba(94,234,212,0.4)', zIndex: 2 }}>You are here</span>}
+                {cleared && !isCurrent && (
+                  <span aria-hidden style={{ position: 'absolute', top: 8, right: 8, width: 20, height: 20, borderRadius: '50%', background: isSide ? '#ff6a48' : '#2dd4aa', display: 'grid', placeItems: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.5)', zIndex: 2 }}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#06110c" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l4 4 10-10" /></svg>
+                  </span>
+                )}
+                <span style={{ position: 'absolute', left: 13, right: 12, bottom: 9, zIndex: 1 }}>
+                  <span style={{ display: 'flex', alignItems: 'baseline', gap: 7, flexWrap: 'wrap' }}>
+                    <span className="font-cinzel font-700" style={{ fontSize: isSide ? '1rem' : '1.16rem', color: locked ? '#b8b1a5' : '#fff', lineHeight: 1.05, textShadow: '0 2px 8px rgba(0,0,0,0.9)' }}>{node.label}</span>
+                    {isSide && <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.1em', color: '#fff', background: `${SIDE_BRANCH_ACCENT}cc`, borderRadius: 999, padding: '2px 7px' }}>Challenge</span>}
+                  </span>
+                  <span className="font-karla" style={{ display: 'block', fontSize: '0.76rem', color: 'rgba(233,226,214,0.82)', marginTop: 3, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>{node.flavor}</span>
                 </span>
-                <span className="font-karla" style={{ display: 'block', fontSize: '0.74rem', color: '#a49d90', marginTop: 2, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{node.flavor}</span>
               </span>
             ) : (
               <span style={{ flex: 1, minWidth: 0 }}>
