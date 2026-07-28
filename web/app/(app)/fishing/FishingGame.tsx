@@ -64,8 +64,8 @@ import { markRenownIntroSeen, type RenownState } from '@/app/(app)/actions/renow
 import RenownPanel from '@/components/RenownPanel'
 import RenownUpOverlay, { type RenownUpInfo } from '@/components/RenownUpOverlay'
 import RenownIntroOverlay from '@/components/RenownIntroOverlay'
-import GuideScene from '@/components/GuideScene'
-import { FISHING_INTRO_SCENE, FISHING_ACCENT } from '@/lib/onboardingScenes'
+import GuideCoach from '@/components/GuideCoach'
+import { GUIDES, FISHING_ACCENT } from '@/lib/onboardingScenes'
 import { fishingGearUnlockedBetween } from '@/lib/gearUnlocks'
 import GearUnlockRow from '@/components/GearUnlockRow'
 import { formatFishLength, tierForLength, TIER_COLOR, type FishSizeTier } from '@/lib/fishSize'
@@ -880,52 +880,6 @@ function DialSVG({
           />
         </svg>
       </div>
-    </div>
-  )
-}
-
-// ── Catch-dial demo (onboarding cutscene) ────────────────────────────────────
-// A self-contained, input-free catch dial for the fishing intro scene: the
-// needle sweeps, lands in the GREEN, then dead-centre for the GOLD Perfect, on
-// a loop. Reuses DialSVG — the needle renders straight from the `angle` prop
-// (no WAAPI needed), so we just animate `angle` through a scripted timeline.
-function DialDemo() {
-  const zones = useMemo(() => buildFishZones(2, 3, 1, 1, 10, 3), [])
-  const green = useMemo(() => zones.find(z => z.type === 'catch'), [zones])
-  const [angle, setAngle] = useState(CATCH_CENTER)
-  useEffect(() => {
-    const gStart = green ? green.from : CATCH_CENTER - 30
-    const gDeg   = green ? green.to - green.from : 30
-    const greenSpot = gStart + gDeg * 0.74          // inside the green, off the gold
-    // [ms, angle] keyframes: sweep, land+hold GREEN, sweep, land+hold GOLD, reset.
-    const KF: [number, number][] = [
-      [0, 38], [650, 158], [1300, 38],
-      [2000, greenSpot], [3050, greenSpot],
-      [3700, 156], [4400, CATCH_CENTER], [5650, CATCH_CENTER],
-      [6250, 38],
-    ]
-    const total = KF[KF.length - 1][0]
-    const ease = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2)
-    let raf = 0, start = 0
-    const loop = (ts: number) => {
-      if (!start) start = ts
-      const tt = (ts - start) % total
-      let i = 0
-      while (i < KF.length - 1 && KF[i + 1][0] <= tt) i++
-      const [t0, a0] = KF[i]
-      const [t1, a1] = KF[Math.min(i + 1, KF.length - 1)]
-      const f = t1 > t0 ? ease((tt - t0) / (t1 - t0)) : 1
-      setAngle(a0 + (a1 - a0) * f)
-      raf = requestAnimationFrame(loop)
-    }
-    raf = requestAnimationFrame(loop)
-    return () => cancelAnimationFrame(raf)
-  }, [green])
-  const opacity = (z: ZoneDef) =>
-    z.type === 'perfect' ? 1 : z.type === 'catch' ? 0.95 : z.type === 'penalty' ? 0.55 : 0.3
-  return (
-    <div style={{ width: 'min(56vw, 232px)', margin: '0 auto', pointerEvents: 'none', filter: 'drop-shadow(0 12px 30px rgba(0,0,0,0.6))' }}>
-      <DialSVG zones={zones} angle={angle} needleColor="#f5f7fa" zoneOpacityFn={opacity} />
     </div>
   )
 }
@@ -4190,8 +4144,12 @@ export default function FishingGame({
   const [tourStep, setTourStep] = useState<number | null>(null)
   const [catchTourStep, setCatchTourStep] = useState<number | null>(null)
   const catchTourShownRef = useRef(false)
-  // Cinematic Doby+Kat fishing intro (replaces the old plain positioned tour).
-  const [showFishingIntro, setShowFishingIntro] = useState(false)
+  // Contextual fishing coach-marks (Doby + Kat) — a tip appears over the LIVE
+  // game at the moment it matters (first cast, first bite) instead of a
+  // full-screen scene. `coach` = which tip is showing; the ref tracks whether
+  // we're still in the first-visit tour so tips fire once.
+  const [coach, setCoach] = useState<'cast' | 'dial' | null>(null)
+  const fishTourActiveRef = useRef(false)
   const [perfectFlash, setPerfectFlash] = useState(false)
   const [perfectBurstKey, setPerfectBurstKey] = useState(0)
   const [waitMessage, setWaitMessage] = useState('')
@@ -4644,12 +4602,25 @@ export default function FishingGame({
   }, [castNotice])
 
 
-  // First fishing visit → the cinematic Doby+Kat intro. It teaches casting, the
-  // dial (green/gold), selling for doubloons, and deeper zones in one scene, so
-  // the old plain positioned tour AND the separate catch-dial card are retired.
+  // First fishing visit → start the contextual coach flow with the "tap to cast"
+  // tip. The dial tip follows on the first bite; both are plain, one-line hints.
   useEffect(() => {
-    if (!hasSeenFishingTour) setShowFishingIntro(true)
+    if (!hasSeenFishingTour) { fishTourActiveRef.current = true; setCoach('cast') }
   }, [hasSeenFishingTour])
+
+  // Advance the coach flow off live game phases: cast → hide cast tip; a fish
+  // bites (hooked) → show the dial tip; the first catch attempt resolves
+  // (result) → clear it and mark the tour seen. Fires once (ref-gated).
+  useEffect(() => {
+    if (!fishTourActiveRef.current) return
+    if (phase === 'casting' && coach === 'cast') setCoach(null)
+    else if (phase === 'hooked' && coach !== 'dial') setCoach('dial')
+    else if (phase === 'result' && coach === 'dial') {
+      setCoach(null)
+      fishTourActiveRef.current = false
+      startTransition(async () => { await markFishingTourSeen() })
+    }
+  }, [phase, coach])
 
   // Character frame — drives which sprite is shown
   const [charFrame, setCharFrame] = useState<CharFrame>('rest')
@@ -8478,18 +8449,25 @@ export default function FishingGame({
         )}
       </AnimatePresence>
 
-      {/* ── Cinematic fishing intro (Doby + Kat) — first visit ── */}
-      {showFishingIntro && (
-        <GuideScene
-          title="How to Fish"
-          lines={FISHING_INTRO_SCENE}
-          ctaLabel="Start Fishing →"
-          accent={FISHING_ACCENT}
-          background="/shallows.jpg"
-          renderInsert={(insert) => insert.kind === 'dial-demo' ? <DialDemo /> : null}
-          onDone={() => { setShowFishingIntro(false); startTransition(async () => { await markFishingTourSeen() }) }}
-        />
-      )}
+      {/* ── Contextual fishing coach-marks (Doby + Kat) — first visit ──
+          Tips ride OVER the live game and fall through to it (pointer-events
+          none), so the player learns by doing. */}
+      <GuideCoach
+        show={coach === 'cast'}
+        portrait={GUIDES.doby.portrait}
+        speaker="Doby"
+        text="Tap anywhere to cast your line."
+        accent={FISHING_ACCENT}
+        placement="top"
+      />
+      <GuideCoach
+        show={coach === 'dial'}
+        portrait={GUIDES.kat.portrait}
+        speaker="Kat"
+        text="A fish is on. Stop the needle in the *green* to catch it, or the *gold* for a Perfect."
+        accent={FISHING_ACCENT}
+        placement="bottom"
+      />
 
       {/* ── Onboarding tour (legacy plain cards — retired, kept dead) ── */}
       <AnimatePresence>
