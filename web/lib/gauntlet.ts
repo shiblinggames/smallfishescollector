@@ -1557,7 +1557,7 @@ export interface GauntletBoon {
 export function boonRarity(fam: GauntletBoon): BoonRarity { return fam.rarity ?? 'common' }
 
 export const GAUNTLET_BOONS: GauntletBoon[] = [
-  { id: 'broadside_mastery', name: 'Broadside Mastery', flavor: 'Your gunners find their rhythm. Everything you fire bites harder.', rarity: 'rare', tiers: [
+  { id: 'broadside_mastery', image: '/gauntlet/boons/broadside_mastery.png', name: 'Broadside Mastery', flavor: 'Your gunners find their rhythm. Everything you fire bites harder.', rarity: 'rare', tiers: [
     { desc: '+10% all damage', detail: 'Every shot deals 10% more damage — both the single-shot Fire action and the Volley. It covers every shot you take, where the focused boons only buff one action for a bigger number.', effect: { kind: 'damageMult', mult: 1.10 } },
     { desc: '+22% all damage', detail: 'Every shot deals 22% more damage — both the single-shot Fire action and the Volley.', effect: { kind: 'damageMult', mult: 1.22 } },
     { desc: '+36% all damage', detail: 'Every shot deals 36% more damage — both the single-shot Fire action and the Volley.', effect: { kind: 'damageMult', mult: 1.36 } },
@@ -1567,12 +1567,12 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
     { desc: '+30% Fire damage', detail: 'The single-shot Fire action deals 30% more damage. Your Volley (the 3-charge double shot) is unaffected.', effect: { kind: 'fireDmgMult', mult: 1.30 } },
     { desc: '+48% Fire damage', detail: 'The single-shot Fire action deals 48% more damage. Your Volley (the 3-charge double shot) is unaffected.', effect: { kind: 'fireDmgMult', mult: 1.48 } },
   ] },
-  { id: 'grapeshot', name: 'Grapeshot', flavor: 'A scatter of iron off the rails. Your volleys shred.', tiers: [
+  { id: 'grapeshot', image: '/gauntlet/boons/grapeshot.png', name: 'Grapeshot', flavor: 'A scatter of iron off the rails. Your volleys shred.', tiers: [
     { desc: '+14% Volley damage', detail: 'Your Volley (the 3-charge double shot) deals 14% more damage. Single Fire shots are unaffected.', effect: { kind: 'volleyDmgMult', mult: 1.14 } },
     { desc: '+30% Volley damage', detail: 'Your Volley (the 3-charge double shot) deals 30% more damage. Single Fire shots are unaffected.', effect: { kind: 'volleyDmgMult', mult: 1.30 } },
     { desc: '+48% Volley damage', detail: 'Your Volley (the 3-charge double shot) deals 48% more damage. Single Fire shots are unaffected.', effect: { kind: 'volleyDmgMult', mult: 1.48 } },
   ] },
-  { id: 'dead_eye', name: 'Dead-Eye', flavor: 'You learn exactly where a hull wants to break.', tiers: [
+  { id: 'dead_eye', image: '/gauntlet/boons/dead_eye.png', name: 'Dead-Eye', flavor: 'You learn exactly where a hull wants to break.', tiers: [
     { desc: '8% chance a normal hit becomes a crit', detail: 'When you land a normal hit (the green zone on your aim bar), there’s an 8% chance it upgrades into a critical hit anyway — so you can crit even when you miss the gold band. Grazes don’t count.', effect: { kind: 'critChanceBonus', chance: 0.08 } },
     { desc: '16% chance a normal hit becomes a crit', detail: 'When you land a normal hit (the green zone), there’s a 16% chance it upgrades into a critical hit anyway. Grazes don’t count.', effect: { kind: 'critChanceBonus', chance: 0.16 } },
     { desc: '26% chance a normal hit becomes a crit', detail: 'When you land a normal hit (the green zone), there’s a 26% chance it upgrades into a critical hit anyway. Grazes don’t count.', effect: { kind: 'critChanceBonus', chance: 0.26 } },
@@ -1582,7 +1582,7 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
     { desc: 'Gold crit band 26% wider', detail: 'The gold "perfect shot" band on your aim bar is 26% wider.', effect: { kind: 'critZoneScale', mult: 1.26 } },
     { desc: 'Gold crit band 42% wider', detail: 'The gold "perfect shot" band on your aim bar is 42% wider.', effect: { kind: 'critZoneScale', mult: 1.42 } },
   ] },
-  { id: 'ironhide', name: 'Ironhide', flavor: 'Plates doubled along the waterline.', rarity: 'rare', tiers: [
+  { id: 'ironhide', image: '/gauntlet/boons/ironhide.png', name: 'Ironhide', flavor: 'Plates doubled along the waterline.', rarity: 'rare', tiers: [
     { desc: 'Take 12% less damage', detail: 'Every hit an enemy lands on you deals 12% less damage for the rest of the run.', effect: { kind: 'incomingDmgMult', mult: 0.88, scope: 'allRemaining' } },
     { desc: 'Take 22% less damage', detail: 'Every hit an enemy lands on you deals 22% less damage for the rest of the run.', effect: { kind: 'incomingDmgMult', mult: 0.78, scope: 'allRemaining' } },
     { desc: 'Take 34% less damage', detail: 'Every hit an enemy lands on you deals 34% less damage for the rest of the run.', effect: { kind: 'incomingDmgMult', mult: 0.66, scope: 'allRemaining' } },
@@ -1655,7 +1655,7 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
   //    it without the matching cannonball; with the cannonball the chances stack
   //    but RaidCombat caps the total at 20% so a specialist gets DEADLIER procs,
   //    not infinitely more frequent ones. Higher tiers add signature levers.
-  { id: 'permafrost', name: 'Permafrost', flavor: 'The cold off your guns finds the seams in their hull and holds it fast.', rarity: 'rare', tiers: [
+  { id: 'permafrost', image: '/gauntlet/boons/permafrost.png', name: 'Permafrost', flavor: 'The cold off your guns finds the seams in their hull and holds it fast.', rarity: 'rare', tiers: [
     { desc: '10% chance to freeze; frozen ships take +20%', detail: 'Each hit you land has a 10% chance to FREEZE the enemy — it loses its next turn — and you deal 20% more damage to a frozen ship. (Stacks with the Frozen Cannonball item, up to 20% total freeze chance.)', effect: { kind: 'iceAffinity', freezeChance: 0.10, frozenDmgMult: 1.20 } },
     { desc: '15% chance to freeze; frozen ships take +32%', detail: 'Freeze chance rises to 15% and frozen ships take 32% more damage. NEW — Brittle: a critical hit on a frozen ship shatters the ice for DOUBLE the frozen bonus.', effect: { kind: 'iceAffinity', freezeChance: 0.15, frozenDmgMult: 1.32, brittle: true } },
     { desc: '20% chance to freeze for 2 turns; frozen ships take +42%', detail: 'Freeze chance rises to 20%, frozen ships take 42% more, and Brittle stays. NEW — Deep Freeze: your freezes now last TWO skipped turns instead of one.', effect: { kind: 'iceAffinity', freezeChance: 0.20, frozenDmgMult: 1.42, brittle: true, deepFreeze: true } },
@@ -1688,7 +1688,7 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
     { desc: '+36% max HP', detail: 'Your maximum HP is 36% higher for the rest of the run.', effect: { kind: 'maxHpMult', mult: 1.36 } },
   ] },
   // ── LEGENDARY (rare; bigger, one-of-a-kind effects, fewer tiers) ────────────
-  { id: 'executioner', name: 'Executioner', flavor: "Below a certain mark, a hull is already gone — it just doesn't know it yet.", rarity: 'legendary', tiers: [
+  { id: 'executioner', image: '/gauntlet/boons/executioner.png', name: 'Executioner', flavor: "Below a certain mark, a hull is already gone — it just doesn't know it yet.", rarity: 'legendary', tiers: [
     { desc: 'Sink enemies below 5% HP', detail: 'The instant any hit drops an enemy to 5% of its health or lower, it is sunk outright — no need to chip out the last sliver.', effect: { kind: 'executeThreshold', pct: 0.05 } },
     { desc: 'Sink enemies below 8% HP', detail: 'The instant any hit drops an enemy to 8% of its health or lower, it is sunk outright.', effect: { kind: 'executeThreshold', pct: 0.08 } },
   ] },
@@ -1930,6 +1930,7 @@ export interface Confluence {
 export const CONFLUENCES: Confluence[] = [
   {
     id: 'thermal_shock',
+    image: '/gauntlet/synergies/thermal_shock.png',
     name: 'Thermal Shock',
     requires: [{ boonId: 'permafrost' }, { boonId: 'wildfire' }],
     flavor: 'Ice in the seams, fire on the deck. The hull cracks where the two meet.',
@@ -1942,6 +1943,7 @@ export const CONFLUENCES: Confluence[] = [
   },
   {
     id: 'coup_de_grace',
+    image: '/gauntlet/synergies/coup_de_grace.png',
     name: 'Coup de Grâce',
     requires: [{ boonId: 'executioner' }, { boonId: 'cold_fury' }],
     flavor: 'You know the killing mark, and when the shot rings true you find it every time.',
