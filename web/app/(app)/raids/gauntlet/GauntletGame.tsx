@@ -438,7 +438,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   // level (auto-dismisses); separate from the persistent breather highlight above.
   // Resolved name + desc so the same banner serves both confluences and the
   // Don's-only convergence meta-tier (isConvergence switches the label + tint).
-  const [confluenceBanner, setConfluenceBanner] = useState<{ name: string; desc: string; level: number; isNew: boolean; discovered: boolean; isConvergence?: boolean; key: number } | null>(null)
+  const [confluenceBanner, setConfluenceBanner] = useState<{ name: string; desc: string; level: number; isNew: boolean; discovered: boolean; isConvergence?: boolean; image?: string | null; key: number } | null>(null)
   // One-shot "Curse Shed" confirmation when a Shake the Curse reprieve clears one.
   const [curseShed, setCurseShed] = useState<{ name: string; key: number } | null>(null)
   // The Drowned Shrine — a wager node on a roughly fixed cadence. nextShrineRef
@@ -1557,7 +1557,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       setConvergencesTaken(prev => (prev.includes(offer.id) ? prev : [...prev, offer.id]))
       setPendingBoons(null); setPendingConfluence(null); setPendingReprieve(null)
       if (cv) {
-        setConfluenceBanner({ name: cv.name, desc: convergenceDescAt(cv, offer.level), level: offer.level, isNew: true, discovered: false, isConvergence: true, key: Date.now() })
+        setConfluenceBanner({ name: cv.name, desc: convergenceDescAt(cv, offer.level), level: offer.level, isNew: true, discovered: false, isConvergence: true, image: cv.image, key: Date.now() })
         vibrate([0, 55, 40, 90, 40, 150])
         import('@/lib/fishingMusic').then(m => m.playChestSfx(true)).catch(() => {})
       }
@@ -1578,7 +1578,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         setSeenConfluences(prev => (prev.includes(c.id) ? prev : [...prev, c.id]))
         markConfluencesSeen([c.id]).catch(() => {})
       }
-      setConfluenceBanner({ name: c.name, desc: confluenceDescAt(c, offer.level), level: offer.level, isNew: true, discovered, key: Date.now() })
+      setConfluenceBanner({ name: c.name, desc: confluenceDescAt(c, offer.level), level: offer.level, isNew: true, discovered, image: c.image, key: Date.now() })
       vibrate([0, 45, 40, 80, 40, 130])
       import('@/lib/fishingMusic').then(m => m.playChestSfx(true)).catch(() => {})
     }
@@ -3084,7 +3084,12 @@ export default function GauntletGame(props: GauntletGameProps) {
                     top of the burst + backdrop. */}
                 <motion.div initial={{ scale: 0.6, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} transition={{ delay: 0.12, type: 'spring', stiffness: 220, damping: 16 }}
                   style={{ position: 'relative', padding: '1.3rem 1.5rem 1.4rem', borderRadius: 18, background: 'rgba(7,12,19,0.82)', border: `1px solid ${GLD}55`, boxShadow: `0 0 44px ${GLD}22, 0 12px 40px rgba(0,0,0,0.6)`, backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}>
-                  <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke={GLD} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ filter: `drop-shadow(0 0 14px ${GLD}aa)` }}><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></svg>
+                  {confluenceBanner.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={confluenceBanner.image} alt="" decoding="async" style={{ display: 'block', width: 100, height: 100, objectFit: 'contain', margin: '0 auto', filter: `drop-shadow(0 3px 9px rgba(0,0,0,0.6)) drop-shadow(0 0 18px ${GLD}99)` }} />
+                  ) : (
+                    <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke={GLD} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ filter: `drop-shadow(0 0 14px ${GLD}aa)` }}><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></svg>
+                  )}
                   <p className="font-karla font-800 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.32em', color: GLD, marginTop: 10, textShadow: `0 0 16px ${GLD}88` }}>{confluenceBanner.isConvergence ? 'Convergence Forged' : confluenceBanner.discovered ? 'New Synergy Discovered' : confluenceBanner.isNew ? 'Synergy Unlocked' : `Synergy Deepened · ${['', 'I', 'II', 'III'][confluenceBanner.level] ?? ''}`}</p>
                   <p className="font-cinzel font-800" style={{ fontSize: '2.1rem', lineHeight: 1.05, color: '#fff3d6', marginTop: 6, textShadow: `0 2px 10px rgba(0,0,0,0.7), 0 0 30px ${GLD}66` }}>{confluenceBanner.name}</p>
                   <p className="font-karla" style={{ fontSize: '0.86rem', color: '#e7d5aa', marginTop: 8, lineHeight: 1.4, maxWidth: 300, marginInline: 'auto', textShadow: '0 1px 6px rgba(0,0,0,0.75)' }}>{confluenceBanner.desc}</p>
