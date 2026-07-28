@@ -1,9 +1,14 @@
 // ── Onboarding cutscene scripts ──────────────────────────────────────────────
 // The plain-text tour cards are being replaced by cinematic character scenes,
 // authored the same way the campaign story is: a list of SceneLine[] played
-// through StoryScene (bust + typewriter + letterbox + backdrop). Two always-
-// aboard voices mentor the player: Doby (the wise old whale) and Kat (the
-// skeptic medic). Wrap a word in *asterisks* to hit it in the scene accent.
+// through StoryScene (bust + typewriter + letterbox + backdrop). Doby and Kat
+// deliver the lines.
+//
+// VOICE (important): onboarding copy is PLAIN, clear, and concise — direct
+// instructions for brand-new players. NO pirate flavor, NO cryptic or moody
+// lines here. Save that voice for the Expeditions campaign story. Say exactly
+// what to do, in as few words as possible. Wrap a word in *asterisks* to hit it
+// in the scene accent (use it only on the key term the player must remember).
 
 import type { SceneLine } from '@/lib/raidMap'
 
@@ -22,15 +27,15 @@ const K = GUIDES.kat
 /** Accent temperature shared by the fishing-side onboarding scenes. */
 export const FISHING_ACCENT = '#5eb0e0'
 
-/** First-ever fishing visit — the whole loop in one cinematic beat: cast, the
- *  dial (green/gold), sell for doubloons, level into deeper water. */
+/** First-ever fishing visit. Plain, quick how-to: cast, the dial (green/gold),
+ *  sell for doubloons, level up to unlock new areas. */
 export const FISHING_INTRO_SCENE: SceneLine[] = [
-  { ...D, text: "Every reef on this coast has gone quiet, small fry. And a quiet sea is a sea with something *wrong* in it." },
-  { ...D, text: "But a captain still has to eat. So let me show you how we pull a living from this water.", pause: 200 },
-  { ...K, text: "Cast your line and wait. When a fish takes it, a dial spins up." },
-  { ...K, text: "Stop the needle in the *green* to land the fish. Stop it in the *gold* and you've hooked a Perfect. Cleaner catch, richer haul.", pause: 200, insert: { kind: 'dial-demo' } },
-  { ...D, text: "Everything you land sells for *doubloons* back at the Tavern. That coin is how a small crew becomes a feared one." },
-  { ...D, text: "Fish enough and you'll rise in rank, and *deeper waters* open to you. Bigger quarry, stranger things.", pause: 200 },
-  { ...K, text: "Start in the shallows. Don't go chasing the deep before you're ready for what's waiting down there." },
-  { ...D, text: "Now get a line in the water, captain. Let's see what's still biting." },
+  { ...D, text: "Welcome, Captain. Here's how fishing works. It's quick." },
+  { ...K, text: "Tap to cast your line, then wait for a fish to bite." },
+  { ...K, text: "When a fish bites, a dial appears with a moving needle." },
+  { ...K, text: "Stop the needle in the *green* to catch the fish. Land it in the *gold* for a Perfect, which is worth more.", insert: { kind: 'dial-demo' } },
+  { ...D, text: "Sell your catch for *doubloons*, then spend them on better rods, bait, and upgrades." },
+  { ...D, text: "Fishing raises your level. Higher levels unlock new areas to fish." },
+  { ...K, text: "You're starting in the *Shallows*. Deeper areas have bigger, tougher fish." },
+  { ...D, text: "That's it. Cast a line and give it a try." },
 ]

@@ -8481,9 +8481,9 @@ export default function FishingGame({
       {/* ── Cinematic fishing intro (Doby + Kat) — first visit ── */}
       {showFishingIntro && (
         <GuideScene
-          title="A Loose Thread"
+          title="How to Fish"
           lines={FISHING_INTRO_SCENE}
-          ctaLabel="Cast a Line →"
+          ctaLabel="Start Fishing →"
           accent={FISHING_ACCENT}
           background="/shallows.jpg"
           renderInsert={(insert) => insert.kind === 'dial-demo' ? <DialDemo /> : null}
