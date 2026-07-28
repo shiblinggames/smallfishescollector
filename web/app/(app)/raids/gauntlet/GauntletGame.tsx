@@ -472,7 +472,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   const [boonFromShrine, setBoonFromShrine] = useState(false)
   // Tapped boon/curse/confluence on the breather screen → details popup.
   const [detailEffect, setDetailEffect] = useState<
-    { kind: 'boon' | 'curse' | 'confluence'; name: string; desc: string; detail: string; flavor: string; count: number; maxTier?: number } | null
+    { kind: 'boon' | 'curse' | 'confluence'; name: string; desc: string; detail: string; flavor: string; count: number; maxTier?: number; image?: string | null } | null
   >(null)
   const [reward, setReward] = useState<CashResult | null>(null)
   const [resolving, setResolving] = useState(false)
@@ -1896,6 +1896,11 @@ export default function GauntletGame(props: GauntletGameProps) {
             <motion.div initial={{ opacity: 0, y: 14, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }} transition={{ type: 'spring', stiffness: 280, damping: 24 }}
               onClick={e => e.stopPropagation()}
               style={{ width: '100%', maxWidth: 360, borderRadius: 18, padding: '1.2rem 1.15rem 1.1rem', textAlign: 'center', background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${accent}55`, boxShadow: `0 0 44px ${accent}22, 0 18px 50px rgba(0,0,0,0.6)` }}>
+              {detailEffect.image && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={detailEffect.image} alt="" decoding="async"
+                  style={{ display: 'block', width: 78, height: 78, objectFit: 'contain', margin: '0 auto 9px', filter: `drop-shadow(0 2px 6px rgba(0,0,0,0.6)) drop-shadow(0 0 10px ${accent}66)` }} />
+              )}
               <p className="font-karla font-800 uppercase tracking-[0.22em]" style={{ fontSize: '0.58rem', color: `${accent}cc` }}>
                 {isConf ? 'A Synergy' : isBoon ? 'Your Power' : 'The Locker’s Curse'}
               </p>
@@ -3236,7 +3241,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                             const rc = BOON_RARITY_META[boonRarity(fam)].color
                             return (
                               <button key={fam.id} className="font-karla font-700 tap"
-                                onClick={() => setDetailEffect({ kind: 'boon', name: `${fam.name} ${boonTierLabel(tier)}`, desc: t.desc, detail: t.detail, flavor: fam.flavor, count: tier, maxTier: fam.tiers.length })}
+                                onClick={() => setDetailEffect({ kind: 'boon', name: `${fam.name} ${boonTierLabel(tier)}`, desc: t.desc, detail: t.detail, flavor: fam.flavor, count: tier, maxTier: fam.tiers.length, image: fam.image })}
                                 style={{ cursor: 'pointer', fontSize: '0.64rem', padding: '0.24rem 0.6rem', borderRadius: 999, background: `${rc}20`, border: `1px solid ${rc}66`, color: rc }}>
                                 {fam.name} {boonTierLabel(tier)}
                               </button>
@@ -3253,7 +3258,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                             const reqNames = c.requires.map(r => GAUNTLET_BOONS.find(b => b.id === r.boonId)?.name ?? r.boonId)
                             return (
                               <button key={c.id} className="font-karla font-700 tap"
-                                onClick={() => setDetailEffect({ kind: 'confluence', name: lvlLabel ? `${c.name} ${lvlLabel}` : c.name, desc: confluenceDescAt(c, lvl), detail: `${c.detail} Its level is the lower of your ${reqNames.join(' and ')} tiers, so deepen whichever is behind to level it up.`, flavor: c.flavor, count: 0 })}
+                                onClick={() => setDetailEffect({ kind: 'confluence', name: lvlLabel ? `${c.name} ${lvlLabel}` : c.name, desc: confluenceDescAt(c, lvl), detail: `${c.detail} Its level is the lower of your ${reqNames.join(' and ')} tiers, so deepen whichever is behind to level it up.`, flavor: c.flavor, count: 0, image: c.image })}
                                 style={{ cursor: 'pointer', fontSize: '0.64rem', padding: '0.24rem 0.6rem', borderRadius: 999, background: fresh ? `${GOLD}30` : `${GOLD}18`, border: `1px solid ${GOLD}${fresh ? 'aa' : '66'}`, color: '#fbe7c4', boxShadow: fresh ? `0 0 12px ${GOLD}66` : 'none' }}>
                                 {c.name} {lvlLabel}{fresh ? ' · NEW' : ''}
                               </button>
@@ -3755,7 +3760,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                     )}
                     <span
                       role="button" tabIndex={0} aria-label={`What ${b.name} does`}
-                      onClick={(e) => { e.stopPropagation(); setDetailEffect({ kind: 'boon', name: `${b.name} ${boonTierLabel(b.tier)}`, desc: b.desc, detail: b.detail, flavor: b.flavor, count: b.tier, maxTier }) }}
+                      onClick={(e) => { e.stopPropagation(); setDetailEffect({ kind: 'boon', name: `${b.name} ${boonTierLabel(b.tier)}`, desc: b.desc, detail: b.detail, flavor: b.flavor, count: b.tier, maxTier, image: boonImg }) }}
                       className="font-cinzel font-700 tap"
                       style={{ flexShrink: 0, width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.22)', color: 'rgba(255,255,255,0.72)', cursor: 'pointer', fontSize: '0.82rem', fontStyle: 'italic', lineHeight: 1 }}>
                       i
