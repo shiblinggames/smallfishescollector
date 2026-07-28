@@ -261,17 +261,24 @@ export default function TackleShopClient({
     return { key, label, color, imageUrl, owned, total: list.length, next: { name: next.name, cost: next.cost, levelReq: req }, state, detail }
   }
 
+  // The free Bamboo starter is never written to rod_inventory, so a player who's
+  // bought any rod has an ownedRods without tier 0 — which made Bamboo read as the
+  // cheapest "unowned" rod (a 0⟡ "ready to buy"). Treat any zero-cost, non-earned
+  // rod as always owned, matching the grid's owned rule (line ~744).
+  const ownedRodSet = new Set(ownedRods)
+  for (const r of RODS) if (r.cost === 0 && !r.earnedOnly) ownedRodSet.add(r.tier)
+
   const summaries: CategorySummary[] = [
     // RODS — a collection. Next buy = cheapest unowned, non-captain-locked rod.
     (() => {
       const buyable = RODS
-        .filter(r => !ownedRods.includes(r.tier) && !isCaptainRod(r) && r.tier !== COMPLETIONIST_TIER)
+        .filter(r => !ownedRodSet.has(r.tier) && !isCaptainRod(r) && r.tier !== COMPLETIONIST_TIER)
         .sort((a, b) => a.cost - b.cost)
       const next = buyable.find(r => fishingLevel >= gearReq(r) && doubloons >= r.cost)
         ?? buyable.find(r => fishingLevel >= gearReq(r))
         ?? buyable[0] ?? null
       const total = RODS.filter(r => r.tier !== COMPLETIONIST_TIER).length
-      const owned = ownedRods.filter(t => t !== COMPLETIONIST_TIER).length
+      const owned = RODS.filter(r => r.tier !== COMPLETIONIST_TIER && ownedRodSet.has(r.tier)).length
       if (!next) return { key: 'rod' as const, label: 'Rods', color: '#b8956a', imageUrl: '/rod_driftwood_thumb.png', owned, total, next: null, state: 'maxed' as GearState, detail: 'Every rod owned' }
       const req = gearReq(next), levelOk = fishingLevel >= req, canAfford = doubloons >= next.cost
       const state: GearState = !levelOk ? 'locked' : canAfford ? 'ready' : 'saving'
