@@ -1105,6 +1105,8 @@ export interface GauntletCurseTier {
 export interface GauntletCurse {
   id: string
   name: string
+  /** Icon art (magenta-keyed transparent PNG under /public/gauntlet/curses). */
+  image?: string | null
   /** Which gauntlet draws it. Omitted = both (the recycled Davy pool). */
   gauntlet?: GauntletTag
   /** One-line dread, shown on the curse interstitial (shared across tiers). */
@@ -1119,6 +1121,7 @@ export interface GauntletCurse {
 export interface CurseOffer {
   id: string
   name: string
+  image?: string | null
   flavor: string
   tier: number
   desc: string
@@ -1131,7 +1134,7 @@ export interface CurseOffer {
 
 export const GAUNTLET_CURSES: GauntletCurse[] = [
   {
-    id: 'crushing_depth',
+    id: 'crushing_depth', image: '/gauntlet/curses/crushing_depth.png',
     name: 'Crushing Depth',
     flavor: 'The water itself leans on your hull. Every fight begins a little closer to the breaking point.',
     tiers: [
@@ -1140,7 +1143,7 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
     ],
   },
   {
-    id: 'bloodthirst',
+    id: 'bloodthirst', image: '/gauntlet/curses/bloodthirst.png',
     name: 'Bloodthirst',
     flavor: 'The drowned smell your wake. Every gun down here is aimed to kill, not to warn.',
     tiers: [
@@ -1149,7 +1152,7 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
     ],
   },
   {
-    id: 'the_warding',
+    id: 'the_warding', image: '/gauntlet/curses/the_warding.png',
     name: 'The Warding',
     flavor: 'A cold light sheathes every hull down here. You have to break the barrier before you can break the ship.',
     tiers: [
@@ -1158,7 +1161,7 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
     ],
   },
   {
-    id: 'becalmed',
+    id: 'becalmed', image: '/gauntlet/curses/becalmed.png',
     name: 'Becalmed',
     flavor: 'The wind died at this depth. Your ship answers the wheel a beat too slow.',
     tiers: [
@@ -1167,7 +1170,7 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
     ],
   },
   {
-    id: 'murk',
+    id: 'murk', image: '/gauntlet/curses/murk.png',
     name: 'Murk',
     flavor: 'The dark closes over your sights. The perfect shot is a narrower thing now.',
     tiers: [
@@ -1177,7 +1180,7 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
   },
   // ── Aim-game disruptors — the deep messes with how you SHOOT, not just stats. ─
   {
-    id: 'sounding_fog',
+    id: 'sounding_fog', image: '/gauntlet/curses/sounding_fog.png',
     name: 'Sounding Fog',
     flavor: 'The water goes blind at this depth. You fire at shapes in the murk.',
     tiers: [
@@ -1186,7 +1189,7 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
     ],
   },
   {
-    id: 'shrouded_hull',
+    id: 'shrouded_hull', image: '/gauntlet/curses/shrouded_hull.png',
     name: 'Shrouded Hull',
     flavor: 'The enemy hull swims in and out of the murk. You never quite know how close it is to going under.',
     tiers: [
@@ -1195,7 +1198,7 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
     ],
   },
   {
-    id: 'shuttered_ports',
+    id: 'shuttered_ports', image: '/gauntlet/curses/shuttered_ports.png',
     name: 'Shuttered Ports',
     flavor: 'Their gun ports stay shut till the muzzles run out. No counting the shots they hold.',
     tiers: [
@@ -1204,7 +1207,7 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
     ],
   },
   {
-    id: 'racing_tide',
+    id: 'racing_tide', image: '/gauntlet/curses/racing_tide.png',
     name: 'Racing Tide',
     flavor: 'A fast current rips down the deck. The wheel will not hold still.',
     tiers: [
@@ -1219,7 +1222,7 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
     ],
   },
   {
-    id: 'roiling_sea',
+    id: 'roiling_sea', image: '/gauntlet/curses/roiling_sea.png',
     name: 'Roiling Sea',
     flavor: 'The sea heaves under you. Nothing you aim at stays where you left it.',
     tiers: [
@@ -1228,7 +1231,7 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
     ],
   },
   {
-    id: 'inkfall',
+    id: 'inkfall', image: '/gauntlet/curses/inkfall.png',
     name: 'Inkfall',
     flavor: 'Something vast empties its ink into the water, and the world goes black in lurches.',
     tiers: [
@@ -1238,7 +1241,7 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
   },
   // ── Stat / economy curses — the deep hits your numbers, not just your aim. ───
   {
-    id: 'waterlogged_powder',
+    id: 'waterlogged_powder', image: '/gauntlet/curses/waterlogged_powder.png',
     name: 'Waterlogged Powder',
     flavor: 'Seawater finds the magazine. Your guns cough where they used to roar.',
     tiers: [
@@ -1247,7 +1250,7 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
     ],
   },
   {
-    id: 'all_or_nothing',
+    id: 'all_or_nothing', image: '/gauntlet/curses/all_or_nothing.png',
     name: 'All or Nothing',
     flavor: 'The deep has no patience for a near miss. Land it true or do not bother.',
     tiers: [
@@ -1256,7 +1259,7 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
     ],
   },
   {
-    id: 'leaden_hands',
+    id: 'leaden_hands', image: '/gauntlet/curses/leaden_hands.png',
     name: 'Leaden Hands',
     flavor: 'Numb fingers, slow heave. The wheel comes around a moment too late.',
     tiers: [
@@ -1265,7 +1268,7 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
     ],
   },
   {
-    id: 'sharpshooters',
+    id: 'sharpshooters', image: '/gauntlet/curses/sharpshooters.png',
     name: 'Sharpshooters',
     flavor: 'They have done this longer than you have been alive, and they know exactly where to aim.',
     tiers: [
@@ -1274,7 +1277,7 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
     ],
   },
   {
-    id: 'barnacled_hull',
+    id: 'barnacled_hull', image: '/gauntlet/curses/barnacled_hull.png',
     name: 'Barnacled Hull',
     flavor: 'Crusted iron and dead coral. These ships have been sinking for a hundred years and still will not go under.',
     tiers: [
@@ -1283,7 +1286,7 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
     ],
   },
   {
-    id: 'loaded_guns',
+    id: 'loaded_guns', image: '/gauntlet/curses/loaded_guns.png',
     name: 'Loaded Guns',
     flavor: 'No warning shot, no parley. The drowned were aiming before you ever drew alongside.',
     tiers: [
@@ -1292,7 +1295,7 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
     ],
   },
   {
-    id: 'false_colours',
+    id: 'false_colours', image: '/gauntlet/curses/false_colours.png',
     name: 'False Colors',
     flavor: 'The drowned fly colors that are not their own. Half the targets out there are lies.',
     tiers: [
@@ -1301,7 +1304,7 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
     ],
   },
   {
-    id: 'drowned_whispers',
+    id: 'drowned_whispers', image: '/gauntlet/curses/drowned_whispers.png',
     name: 'Drowned Whispers',
     flavor: 'Voices well up from the deep with orders that are not yours, and a rattled crew obeys the wrong one.',
     // Tuned down 2026-07-04 (20/33 → 12/20): a scramble STEALS your turn (a
@@ -1314,7 +1317,7 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
     ],
   },
   {
-    id: 'dead_hands',
+    id: 'dead_hands', image: '/gauntlet/curses/dead_hands.png',
     name: 'Dead Hands',
     flavor: 'The cold creeps up the rigging and into your crew. The ones it takes never lift a gun again.',
     tiers: [
@@ -1330,7 +1333,7 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
     // curse milestones never dry up no matter how deep the run goes. The tier
     // ladder is generated: 15 stacks covers the every-3-depths cadence from
     // ~61 well past depth 100.
-    id: 'the_crush',
+    id: 'the_crush', image: '/gauntlet/curses/the_crush.png',
     name: 'The Crush',
     flavor: 'Past sixty fathoms there are no tricks left in the dark. There is only the weight.',
     tiers: Array.from({ length: 15 }, (_, i) => {
@@ -1346,7 +1349,7 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
 
   // ── Don's Gauntlet curses (gauntlet: 'don' — never surface in Davy's) ────────
   {
-    id: 'narrowed_sights', name: 'Narrowed Sights', gauntlet: 'don',
+    id: 'narrowed_sights', image: '/gauntlet/curses/narrowed_sights.png', name: 'Narrowed Sights', gauntlet: 'don',
     flavor: 'The green pinches your glass to a needle’s eye. The perfect shot all but vanishes.',
     tiers: [
       { desc: 'The gold crit band shrinks 30%', detail: 'The gold "perfect shot" band on your aim bar narrows by 30% for the rest of the run — crits are far harder to land because the target is simply smaller. Boons that widen the band still help.', effects: [{ kind: 'critZoneScale', mult: 0.70 }] as TideEffect[] },
@@ -1354,7 +1357,7 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
     ],
   },
   {
-    id: 'the_mark', name: 'The Mark', gauntlet: 'don',
+    id: 'the_mark', image: '/gauntlet/curses/the_mark.png', name: 'The Mark', gauntlet: 'don',
     flavor: 'The Don paints your hull before the bell. You start every fight already bleeding.',
     tiers: [
       { desc: 'Start every fight Feeble (+15% damage taken, 2 rounds)', detail: 'Every fight from now on opens with your ship already Feeble — you take 15% more damage from every hit for the first 2 rounds of each fight, until it wears off. Cleansing it (a Mender) clears it early.', effects: [{ kind: 'playerStartStatus', status: 'feeble', magnitude: 0.15, turns: 2 }] as TideEffect[] },
@@ -1362,7 +1365,7 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
     ],
   },
   {
-    id: 'the_verdict', name: 'The Verdict', gauntlet: 'don',
+    id: 'the_verdict', image: '/gauntlet/curses/the_verdict.png', name: 'The Verdict', gauntlet: 'don',
     flavor: 'The Don has already decided how this ends. His guns just carry out the sentence.',
     tiers: [
       { desc: 'Enemy ultimates hit +25% and charge faster', detail: 'Every enemy ultimate lands 25% harder, and their reloads have a good chance to load an extra charge — so the big blow comes sooner, and hurts more.', effects: [{ kind: 'enemyUltimateBoost', dmgMult: 1.25, chargeChance: 0.35 }] as TideEffect[] },
@@ -1370,7 +1373,7 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
     ],
   },
   {
-    id: 'cutpurse_tide', name: 'Cutpurse Tide', gauntlet: 'don',
+    id: 'cutpurse_tide', image: '/gauntlet/curses/cutpurse_tide.png', name: 'Cutpurse Tide', gauntlet: 'don',
     flavor: 'The green picks your pockets. Every hull down here reaches for your powder.',
     tiers: [
       { desc: 'Enemies rip your cannonballs on a +15% chance', detail: 'Every enemy — not just the sharks — gains a 15% chance on a landed hit to tear a loaded cannonball clean off your rack. Reload gets it back, but you lose the tempo.', effects: [{ kind: 'enemyChargeSteal', bonus: 0.15 }] as TideEffect[] },
@@ -1378,7 +1381,7 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
     ],
   },
   {
-    id: 'thornmail', name: 'Thornmail', gauntlet: 'don',
+    id: 'thornmail', image: '/gauntlet/curses/thornmail.png', name: 'Thornmail', gauntlet: 'don',
     flavor: 'The ghost fleet armours in cold iron that turns a shot the way a reef turns a wave.',
     tiers: [
       { desc: 'Enemies parry 15% of your shots (dealing nothing)', detail: 'Every enemy has a 15% chance to PARRY a shot you fire — it turns the blow aside entirely and takes no damage. Your Mega ultimate can never be parried.', effects: [{ kind: 'enemyParry', chance: 0.15 }] as TideEffect[] },
@@ -1386,7 +1389,7 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
     ],
   },
   {
-    id: 'the_tithe', name: 'The Tithe', gauntlet: 'don',
+    id: 'the_tithe', image: '/gauntlet/curses/the_tithe.png', name: 'The Tithe', gauntlet: 'don',
     flavor: 'Every wound they open on you, the green feeds straight back into their hull. You pay the tithe in blood.',
     tiers: [
       { desc: 'Enemies heal 15% of the damage they deal you', detail: 'Every hit an enemy lands on you heals it for 15% of that damage (never above its own full hull). A long fight against a Tithed enemy is a war of attrition you are losing.', effects: [{ kind: 'enemyLifesteal', pct: 0.15 }] as TideEffect[] },
@@ -1394,7 +1397,7 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
     ],
   },
   {
-    id: 'bloodscent', name: 'Bloodscent', gauntlet: 'don',
+    id: 'bloodscent', image: '/gauntlet/curses/bloodscent.png', name: 'Bloodscent', gauntlet: 'don',
     flavor: 'The green guides their gunners to your seams. Every hull down here shoots for the kill.',
     tiers: [
       { desc: 'Enemies crit you 15% more often', detail: 'Every enemy in the run gains a flat +15% chance to land a CRITICAL hit on you — the big, painful shots come far more often. Dodging still avoids them entirely.', effects: [{ kind: 'incomingCritReduction', chance: -0.15 }] as TideEffect[] },
@@ -1402,7 +1405,7 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
     ],
   },
   {
-    id: 'flare_storm', name: 'Flare Storm', gauntlet: 'don',
+    id: 'flare_storm', image: '/gauntlet/curses/flare_storm.png', name: 'Flare Storm', gauntlet: 'don',
     flavor: 'The green lights the whole sky. When the keeper’s crews throw flares, they come like a squall.',
     tiers: [
       { desc: 'Flare barrages come faster and hit 30% harder', detail: 'On any enemy that throws a Flare Barrage (the swat-the-flares, don’t-tap-the-red test), the fuses run tighter — flares resolve faster — and every flare you let through or feint you tap chips you for 30% more. Enemies with no flares are unaffected.', effects: [{ kind: 'flareStorm', fuseMult: 0.85, dmgMult: 1.30 }] as TideEffect[] },
@@ -1410,7 +1413,7 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
     ],
   },
   {
-    id: 'barrier_regrowth', name: 'Barrier Regrowth', gauntlet: 'don',
+    id: 'barrier_regrowth', image: '/gauntlet/curses/barrier_regrowth.png', name: 'Barrier Regrowth', gauntlet: 'don',
     flavor: 'Ghost-iron knits itself shut faster than you can peel it. Hit it all at once, or not at all.',
     tiers: [
       { desc: 'Enemies carry a 25% barrier that reknits 8% each round', detail: 'Every enemy starts each fight behind a barrier worth 25% of its hull, and at the top of every round the barrier reknits 8% of its full value before your shot lands. A slow chip never breaks through — you have to burst it open in one turn (burn bleeds through, the Railgun pierces it).', effects: [{ kind: 'enemyShield', pctMax: 0.25 }, { kind: 'barrierRegrow', pctMax: 0.08 }] as TideEffect[] },
@@ -1467,7 +1470,7 @@ export function drawCurse(curseTiers: Record<string, number>, depth: number, sta
     // nastier tier instead of building up to it.
     const next = startsAtWorst ? Math.min(c.tiers.length, Math.max(drawn.next, 2)) : drawn.next
     const t = c.tiers[next - 1]
-    return { id: c.id, name: c.name, flavor: c.flavor, tier: next, desc: t.desc, detail: t.detail, effects: t.effects, hpDrainPct: t.hpDrainPct, silenceCrew: t.silenceCrew, isUpgrade: next > 1 }
+    return { id: c.id, name: c.name, image: c.image ?? null, flavor: c.flavor, tier: next, desc: t.desc, detail: t.detail, effects: t.effects, hpDrainPct: t.hpDrainPct, silenceCrew: t.silenceCrew, isUpgrade: next > 1 }
   }
   // Pool spent: past the bend the Locker turns to raw pressure — The Crush,
   // one more fathom per curse milestone, effectively forever.
@@ -1476,7 +1479,7 @@ export function drawCurse(curseTiers: Record<string, number>, depth: number, sta
     const next = (curseTiers['the_crush'] ?? 0) + 1
     if (crush && next <= crush.tiers.length) {
       const t = crush.tiers[next - 1]
-      return { id: crush.id, name: crush.name, flavor: crush.flavor, tier: next, desc: t.desc, detail: t.detail, effects: t.effects, hpDrainPct: t.hpDrainPct, silenceCrew: t.silenceCrew, isUpgrade: next > 1 }
+      return { id: crush.id, name: crush.name, image: crush.image ?? null, flavor: crush.flavor, tier: next, desc: t.desc, detail: t.detail, effects: t.effects, hpDrainPct: t.hpDrainPct, silenceCrew: t.silenceCrew, isUpgrade: next > 1 }
     }
   }
   return null

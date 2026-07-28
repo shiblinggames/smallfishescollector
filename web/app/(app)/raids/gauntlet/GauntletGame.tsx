@@ -3531,15 +3531,23 @@ export default function GauntletGame(props: GauntletGameProps) {
             {c.isUpgrade ? 'The Locker Tightens Its Grip' : 'The Locker Curses You'}
           </motion.p>
 
-          {/* Skull sigil, sinking in from above like it's surfacing for you. */}
+          {/* Curse art, sinking in from above like it's surfacing for you.
+              Its own painted icon (matching the boon set) when we have one;
+              the drowned skull sigil is the fallback. */}
           <motion.div initial={{ opacity: 0, y: -32, scale: 0.7 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 1.05, ease: [0.22, 1, 0.36, 1] }}
             style={{ position: 'relative', width: 150, height: 150, margin: '18px auto 8px' }}>
             <div style={{ position: 'absolute', inset: -24, borderRadius: '50%', background: `radial-gradient(circle, ${CRIM}3c 0%, transparent 64%)`, animation: 'gauntPulse 3s ease-in-out infinite' }} />
-            <svg width="150" height="150" viewBox="0 0 24 24" fill={CRIM} style={{ position: 'relative', filter: `drop-shadow(0 8px 28px ${CRIM}66)` }} aria-hidden>
-              <path d="M12 2a8 8 0 0 0-8 8c0 2.5 1.2 4.2 2.8 5.4.4.3.7.8.7 1.3V18a1.6 1.6 0 0 0 1.6 1.6h.4l.5-1.6h-1l-.4-1.4h1.6L11 18l.5 1.6h1L13 18l.4-1.4H15l-.4 1.4h-1l.5 1.6h.4A1.6 1.6 0 0 0 16.1 18v-1.3c0-.5.3-1 .7-1.3C18.4 14.2 20 12.5 20 10a8 8 0 0 0-8-8Z" />
-              <circle cx="9" cy="10.5" r="1.7" fill="#0a0e16" />
-              <circle cx="15" cy="10.5" r="1.7" fill="#0a0e16" />
-            </svg>
+            {c.image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={c.image} alt="" loading="lazy" decoding="async"
+                style={{ position: 'relative', width: 150, height: 150, objectFit: 'contain', filter: `drop-shadow(0 8px 24px ${CRIM}66) drop-shadow(0 0 10px ${CRIM}55)` }} />
+            ) : (
+              <svg width="150" height="150" viewBox="0 0 24 24" fill={CRIM} style={{ position: 'relative', filter: `drop-shadow(0 8px 28px ${CRIM}66)` }} aria-hidden>
+                <path d="M12 2a8 8 0 0 0-8 8c0 2.5 1.2 4.2 2.8 5.4.4.3.7.8.7 1.3V18a1.6 1.6 0 0 0 1.6 1.6h.4l.5-1.6h-1l-.4-1.4h1.6L11 18l.5 1.6h1L13 18l.4-1.4H15l-.4 1.4h-1l.5 1.6h.4A1.6 1.6 0 0 0 16.1 18v-1.3c0-.5.3-1 .7-1.3C18.4 14.2 20 12.5 20 10a8 8 0 0 0-8-8Z" />
+                <circle cx="9" cy="10.5" r="1.7" fill="#0a0e16" />
+                <circle cx="15" cy="10.5" r="1.7" fill="#0a0e16" />
+              </svg>
+            )}
           </motion.div>
 
           <motion.h1 initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2, type: 'spring', stiffness: 220, damping: 18 }}
