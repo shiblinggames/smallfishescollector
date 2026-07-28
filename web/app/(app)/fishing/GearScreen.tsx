@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getHook, HOOKS, hookGlowClass } from '@/lib/hooks'
-import { getEffectiveRod, RODS, rodGlowClass, isCaptainRod, rodHasUniqueEffect, rodEffectLabel, rodSpeedPct, LOCKED_IN, COMPLETIONIST_TIER, COMPLETIONIST_MAX_EFFECTS, REFORGE_COST } from '@/lib/rods'
+import { getEffectiveRod, RODS, rodGlowClass, isCaptainRod, rodHasUniqueEffect, rodEffectLabel, rodSpeedPct, rodStatSplit, LOCKED_IN, COMPLETIONIST_TIER, COMPLETIONIST_MAX_EFFECTS, REFORGE_COST } from '@/lib/rods'
 import { openMembership } from '@/components/MembershipModal'
 import { getReel, REELS } from '@/lib/reels'
 import { fishingGearLevelReq } from '@/lib/gearGating'
@@ -131,59 +131,63 @@ function StatBullet({ value, help, color }: { value: string; help: string; color
 // for the equipped-rod detail header. Order is "what affects pacing
 // most first" — bite speed and catch zone matter on every single cast;
 // rare bias / jackpot / crate luring only affect outcomes.
-function rodStatLines(r: typeof RODS[number]): Array<{ title: string; value: string; help: string }> {
-  const lines: Array<{ title: string; value: string; help: string }> = []
+type RodStatLine = { title: string; value: string; help: string; group: 'base' | 'forged' }
+function rodStatLines(r: typeof RODS[number]): RodStatLine[] {
+  const lines: RodStatLine[] = []
+  // On the Completionist, proc effects are FORGED in from socketed rods, so tag
+  // them apart from its fixed master-tool base. Every other rod owns its procs.
+  const proc: 'base' | 'forged' = r.tier === COMPLETIONIST_TIER ? 'forged' : 'base'
   // Locked-In Rod: its power is all streak-scaled, so show the three phases
   // instead of the (baseline) static stats.
   if (r.lockedIn) {
-    lines.push({ title: `Streak ${LOCKED_IN.speedStreak}`, value: `${Math.round((1 - LOCKED_IN.speedWaitMult) * 100)}% faster bites`, help: 'while you hold a 3-perfect streak' })
-    lines.push({ title: `Streak ${LOCKED_IN.tripleStreak}`, value: `×${LOCKED_IN.tripleQty} haul`, help: 'every catch lands three fish at a 5-streak' })
-    lines.push({ title: `Streak ${LOCKED_IN.frenzyStreak}`, value: `${Math.round((1 - LOCKED_IN.frenzyWaitMult) * 100)}% faster · +${Math.round(LOCKED_IN.frenzyRarityBonus * 100)}% rare`, help: 'fastest bites and a rare-fish bias at a 10-streak' })
+    lines.push({ title: `Streak ${LOCKED_IN.speedStreak}`, value: `${Math.round((1 - LOCKED_IN.speedWaitMult) * 100)}% faster bites`, help: 'while you hold a 3-perfect streak', group: 'base' })
+    lines.push({ title: `Streak ${LOCKED_IN.tripleStreak}`, value: `×${LOCKED_IN.tripleQty} haul`, help: 'every catch lands three fish at a 5-streak', group: 'base' })
+    lines.push({ title: `Streak ${LOCKED_IN.frenzyStreak}`, value: `${Math.round((1 - LOCKED_IN.frenzyWaitMult) * 100)}% faster · +${Math.round(LOCKED_IN.frenzyRarityBonus * 100)}% rare`, help: 'fastest bites and a rare-fish bias at a 10-streak', group: 'base' })
     return lines
   }
   const speedPct = rodSpeedPct(r)
   if (speedPct > 0) {
-    lines.push({ title: 'Bite Speed', value: `${speedPct}% faster`, help: 'less waiting between casts' })
+    lines.push({ title: 'Bite Speed', value: `${speedPct}% faster`, help: 'less waiting between casts', group: 'base' })
   } else if (speedPct < 0) {
-    lines.push({ title: 'Bite Speed', value: `${-speedPct}% slower`, help: 'longer wait, made up by other bonuses' })
+    lines.push({ title: 'Bite Speed', value: `${-speedPct}% slower`, help: 'longer wait, made up by other bonuses', group: 'base' })
   }
   if (r.catchZoneBonus > 0) {
-    lines.push({ title: 'Catch Zone', value: `+${r.catchZoneBonus}°`, help: 'wider green band on the dial' })
+    lines.push({ title: 'Catch Zone', value: `+${r.catchZoneBonus}°`, help: 'wider green band on the dial', group: 'base' })
   }
   if (r.perfectZoneBonus > 0) {
-    lines.push({ title: 'Perfect Zone', value: `+${r.perfectZoneBonus}°`, help: 'bigger gold zone — easier Perfects' })
-  }
-  if (r.rarityBonus > 0) {
-    lines.push({ title: 'Rare Bias', value: `+${Math.round(r.rarityBonus * 100)}%`, help: 'more rares per bite' })
-  }
-  if (r.doubleCatchChance >= 1) {
-    lines.push({ title: 'Double Catch', value: 'Always', help: 'every catch lands two fish at once' })
-  } else if (r.doubleCatchChance > 0) {
-    lines.push({ title: 'Double Catch', value: `${Math.round(r.doubleCatchChance * 100)}% chance`, help: 'sometimes lands two at once' })
-  }
-  if (r.retryOnMissChance > 0) {
-    lines.push({ title: 'Miss Retry', value: `${Math.round(r.retryOnMissChance * 100)}% chance`, help: 'missed dial sometimes refires' })
+    lines.push({ title: 'Perfect Zone', value: `+${r.perfectZoneBonus}°`, help: 'bigger gold zone — easier Perfects', group: 'base' })
   }
   if (r.snagImmune) {
-    lines.push({ title: 'Snag Immune', value: 'Yes', help: 'red zones cost no extra bait' })
+    lines.push({ title: 'Snag Immune', value: 'Yes', help: 'red zones cost no extra bait', group: 'base' })
+  }
+  if (r.rarityBonus > 0) {
+    lines.push({ title: 'Rare Bias', value: `+${Math.round(r.rarityBonus * 100)}%`, help: 'more rares per bite', group: proc })
+  }
+  if (r.doubleCatchChance >= 1) {
+    lines.push({ title: 'Double Catch', value: 'Always', help: 'every catch lands two fish at once', group: proc })
+  } else if (r.doubleCatchChance > 0) {
+    lines.push({ title: 'Double Catch', value: `${Math.round(r.doubleCatchChance * 100)}% chance`, help: 'sometimes lands two at once', group: proc })
+  }
+  if (r.retryOnMissChance > 0) {
+    lines.push({ title: 'Miss Retry', value: `${Math.round(r.retryOnMissChance * 100)}% chance`, help: 'missed dial sometimes refires', group: proc })
   }
   if ((r.jackpotChance ?? 0) > 0) {
-    lines.push({ title: 'Jackpot', value: `×${r.jackpotMultiplier}`, help: 'rare chance at a huge haul — odds rise in shallower zones' })
+    lines.push({ title: 'Jackpot', value: `×${r.jackpotMultiplier}`, help: 'rare chance at a huge haul — odds rise in shallower zones', group: proc })
   }
   if ((r.crateChanceMult ?? 1) > 1) {
-    lines.push({ title: 'Crate Lure', value: `× ${r.crateChanceMult}`, help: 'more treasure crates per cast' })
+    lines.push({ title: 'Crate Lure', value: `× ${r.crateChanceMult}`, help: 'more treasure crates per cast', group: proc })
   }
   if ((r.perfectXpMult ?? 1) > 1) {
-    lines.push({ title: 'Perfect XP', value: `× ${r.perfectXpMult}`, help: 'Perfect catches grant double XP' })
+    lines.push({ title: 'Perfect XP', value: `× ${r.perfectXpMult}`, help: 'Perfect catches grant double XP', group: proc })
   }
   if (r.wormhole) {
-    lines.push({ title: 'Wormhole', value: 'Reroll', help: 'reroll any catch into another fish from the same zone — better or worse' })
+    lines.push({ title: 'Wormhole', value: 'Reroll', help: 'reroll any catch into another fish from the same zone — better or worse', group: proc })
   }
   if ((r.instantBiteChance ?? 0) > 0) {
-    lines.push({ title: 'Lightspeed', value: `${Math.round(r.instantBiteChance! * 100)}%`, help: 'chance a bite comes almost instantly' })
+    lines.push({ title: 'Lightspeed', value: `${Math.round(r.instantBiteChance! * 100)}%`, help: 'chance a bite comes almost instantly', group: proc })
   }
   if (lines.length === 0) {
-    lines.push({ title: 'Base Rod', value: '—', help: 'standard rod — no bonuses' })
+    lines.push({ title: 'Base Rod', value: '—', help: 'standard rod — no bonuses', group: 'base' })
   }
   return lines
 }
@@ -1471,6 +1475,35 @@ export default function GearScreen({
                           })}
                         </div>
 
+                        {/* Base vs forged — the fixed master-tool stats set apart from
+                            whatever the staged sockets fold in, updated live. */}
+                        {(() => {
+                          const staged = getEffectiveRod(COMPLETIONIST_TIER, stagedEffects)
+                          const { base, forged } = rodStatSplit(staged)
+                          return (
+                            <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                              <div>
+                                <p className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.14em', color: 'rgba(255,255,255,0.45)', marginBottom: 5 }}>Base tool</p>
+                                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                                  {base.map((l, i) => (
+                                    <span key={i} className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#cdd7e0', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 999, padding: '0.18rem 0.55rem' }}>{l}</span>
+                                  ))}
+                                </div>
+                              </div>
+                              <div>
+                                <p className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.14em', color: '#f3d98a', marginBottom: 5 }}>Forged in <span style={{ color: '#7a8aa0' }}>· {forged.length}/{COMPLETIONIST_MAX_EFFECTS}</span></p>
+                                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                                  {forged.length > 0 ? forged.map((l, i) => (
+                                    <span key={i} className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#f3d98a', background: 'rgba(232,200,74,0.12)', border: '1px solid rgba(232,200,74,0.4)', borderRadius: 999, padding: '0.18rem 0.55rem' }}>{l}</span>
+                                  )) : (
+                                    <span className="font-karla" style={{ fontSize: '0.62rem', color: '#6a7888', fontStyle: 'italic' }}>Empty — fold rods in below</span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })()}
+
                         <p className="font-karla" style={{ position: 'relative', fontSize: '0.68rem', color: '#9aa6b2', lineHeight: 1.45 }}>
                           Fold up to three of your rods&rsquo; effects into the Completionist. Your rods are never consumed. The first forge is free; re-forging later costs {REFORGE_COST.toLocaleString()} ⟡.
                         </p>
@@ -1650,11 +1683,32 @@ export default function GearScreen({
                               )
                             })()}
                           </div>
-                          <ul style={{ display: 'flex', flexDirection: 'column', gap: 5, listStyle: 'none', padding: 0, margin: 0 }}>
-                            {rodLines.map(l => (
-                              <StatBullet key={l.title} value={l.value} help={l.help} color={rod.color} />
-                            ))}
-                          </ul>
+                          {rod.tier === COMPLETIONIST_TIER ? (
+                            // Split the Completionist's fixed base from its forged-in effects.
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                              {([['base', 'Base tool', 'rgba(255,255,255,0.45)'], ['forged', 'Forged in', '#f3d98a']] as const).map(([g, heading, hc]) => {
+                                const group = rodLines.filter(l => l.group === g)
+                                return (
+                                  <div key={g}>
+                                    <p className="font-karla font-800 uppercase tracking-[0.14em]" style={{ fontSize: '0.54rem', color: hc, marginBottom: 6 }}>{heading}</p>
+                                    {group.length > 0 ? (
+                                      <ul style={{ display: 'flex', flexDirection: 'column', gap: 5, listStyle: 'none', padding: 0, margin: 0 }}>
+                                        {group.map(l => <StatBullet key={l.title} value={l.value} help={l.help} color={rod.color} />)}
+                                      </ul>
+                                    ) : (
+                                      <p className="font-karla" style={{ fontSize: '0.72rem', color: '#6a7888', fontStyle: 'italic' }}>Nothing forged in yet — fold rods in via the forge below.</p>
+                                    )}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          ) : (
+                            <ul style={{ display: 'flex', flexDirection: 'column', gap: 5, listStyle: 'none', padding: 0, margin: 0 }}>
+                              {rodLines.map(l => (
+                                <StatBullet key={l.title} value={l.value} help={l.help} color={rod.color} />
+                              ))}
+                            </ul>
+                          )}
                         </div>
 
                         {ownedCount > 1 && (

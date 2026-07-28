@@ -372,6 +372,36 @@ export function getEffectiveRod(tier: number, completionistEffects: number[] | n
   return resolveCompletionistRod(completionistEffects ?? [])
 }
 
+/** Split a rod's stat labels into its fixed BASE (speed / catch-zone / perfect-
+ *  zone / snag-immunity) and its proc effects. For the Completionist those procs
+ *  are FORGED IN from socketed rods, so the split reads as "base vs forged"; for
+ *  every other rod its procs are its own identity, so `forged` is empty and they
+ *  fold into `base`. One source of truth so every display groups it the same way. */
+export function rodStatSplit(rod: RodDef): { base: string[]; forged: string[] } {
+  const isComp = rod.tier === COMPLETIONIST_TIER
+  const base: string[] = []
+  const forged: string[] = []
+  const proc = isComp ? forged : base   // procs are "forged" only on the Completionist
+
+  const sp = rodSpeedPct(rod)
+  if (sp > 0) base.push(`${sp}% faster bites`)
+  if ((rod.catchZoneBonus ?? 0) > 0) base.push(`+${rod.catchZoneBonus}° catch zone`)
+  if ((rod.perfectZoneBonus ?? 0) > 0) base.push(`+${rod.perfectZoneBonus}° perfect zone`)
+  if (rod.snagImmune) base.push('Snag immune')
+
+  if ((rod.doubleCatchChance ?? 0) >= 1) proc.push('Always double catch')
+  else if ((rod.doubleCatchChance ?? 0) > 0) proc.push(`${Math.round(rod.doubleCatchChance! * 100)}% double catch`)
+  if ((rod.retryOnMissChance ?? 0) > 0) proc.push(`${Math.round(rod.retryOnMissChance! * 100)}% retry on miss`)
+  if ((rod.rarityBonus ?? 0) > 0) proc.push(`+${Math.round(rod.rarityBonus! * 100)}% rare bias`)
+  if ((rod.jackpotChance ?? 0) > 0) proc.push(`×${rod.jackpotMultiplier} jackpot`)
+  if ((rod.crateChanceMult ?? 1) > 1) proc.push(`${rod.crateChanceMult}× crate odds`)
+  if ((rod.perfectXpMult ?? 1) > 1) proc.push(`${rod.perfectXpMult}× perfect XP`)
+  if (rod.wormhole) proc.push('Wormhole reroll')
+  if ((rod.instantBiteChance ?? 0) > 0) proc.push(`${Math.round(rod.instantBiteChance! * 100)}% instant bite`)
+
+  return { base, forged }
+}
+
 // ── Captain-only rods ────────────────────────────────────────────────────────
 // The top end of the catalogue (anything in the cost >= 200k bracket) is
 // reserved for Captains. Deliberately keyed off the PRICE bracket, NOT each

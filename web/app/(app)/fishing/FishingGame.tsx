@@ -71,7 +71,7 @@ import GearUnlockRow from '@/components/GearUnlockRow'
 import { formatFishLength, tierForLength, TIER_COLOR, type FishSizeTier } from '@/lib/fishSize'
 import { SHINY_FISH_FILTER, SHINY_THEME, SHINY_SELL_MULT, pickShinyMessage } from '@/lib/shiny'
 import { getHook, HOOKS, hookGlowClass } from '@/lib/hooks'
-import { getRod, getEffectiveRod, RODS, rodGlowClass, rodSpeedPct, lockedInState, type RodDef } from '@/lib/rods'
+import { getRod, getEffectiveRod, RODS, rodGlowClass, rodSpeedPct, rodStatSplit, COMPLETIONIST_TIER, lockedInState, type RodDef } from '@/lib/rods'
 import { vibrate, hapticTap } from '@/lib/haptics'
 import { getReel, REELS } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
@@ -1044,21 +1044,39 @@ function UnifiedGearDrawer({
                         }}>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#f0ede8' }}>{r.name}</p>
-                            <div style={{ display: 'flex', gap: 3, marginTop: 3, flexWrap: 'wrap' }}>
-                              {r.doubleCatchChance > 0 && <StatPill label={r.doubleCatchChance >= 1 ? 'Always double catch' : `${Math.round(r.doubleCatchChance * 100)}% double catch`} color={r.color} />}
-                              {r.retryOnMissChance > 0 && <StatPill label={`${Math.round(r.retryOnMissChance * 100)}% miss retry`} color={r.color} />}
-                              {r.snagImmune && <StatPill label="Snag immune" color={r.color} />}
-                              {r.perfectZoneBonus > 0 && <StatPill label={`Perfect zone +${r.perfectZoneBonus}°`} color={r.color} />}
-                              {r.rarityBonus > 0 && <StatPill label={`+${Math.round(r.rarityBonus * 100)}% rare bias`} color={r.color} />}
-                              {(r.jackpotChance ?? 0) > 0 && <StatPill label={`×${r.jackpotMultiplier} jackpot · odds rise in shallows`} color={r.color} />}
-                              {(r.crateChanceMult ?? 1) > 1 && <StatPill label={`${r.crateChanceMult}× crate odds`} color={r.color} />}
-                              {(r.perfectXpMult ?? 1) > 1 && <StatPill label={`${r.perfectXpMult}× perfect XP`} color={r.color} />}
-                              {r.wormhole && <StatPill label="Wormhole reroll" color={r.color} />}
-                              {(r.instantBiteChance ?? 0) > 0 && <StatPill label={`${Math.round(r.instantBiteChance! * 100)}% instant bite`} color={r.color} />}
-                              {!hasSpecial && speedPct > 0 && <StatPill label={`${speedPct}% faster bites`} color={r.color} />}
-                              {!hasSpecial && speedPct <= 0 && r.catchZoneBonus > 0 && <StatPill label={`+${r.catchZoneBonus}° catch zone`} color={r.color} />}
-                              {!hasSpecial && speedPct <= 0 && r.catchZoneBonus === 0 && <StatPill label="Base rod" muted />}
-                            </div>
+                            {r.tier === COMPLETIONIST_TIER ? (() => {
+                              // The Completionist splits into its fixed master-tool BASE and the
+                              // effects FORGED in from socketed rods, so the two read apart.
+                              const { base, forged } = rodStatSplit(r)
+                              return (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4 }}>
+                                  <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
+                                    <span className="font-karla font-800 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.4)', marginRight: 1 }}>Base</span>
+                                    {base.map((l, i) => <StatPill key={i} label={l} color={r.color} />)}
+                                  </div>
+                                  <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
+                                    <span className="font-karla font-800 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.1em', color: '#f3d98a', marginRight: 1 }}>Forged</span>
+                                    {forged.length > 0 ? forged.map((l, i) => <StatPill key={i} label={l} color={r.color} />) : <StatPill label="Nothing forged in yet" muted />}
+                                  </div>
+                                </div>
+                              )
+                            })() : (
+                              <div style={{ display: 'flex', gap: 3, marginTop: 3, flexWrap: 'wrap' }}>
+                                {r.doubleCatchChance > 0 && <StatPill label={r.doubleCatchChance >= 1 ? 'Always double catch' : `${Math.round(r.doubleCatchChance * 100)}% double catch`} color={r.color} />}
+                                {r.retryOnMissChance > 0 && <StatPill label={`${Math.round(r.retryOnMissChance * 100)}% miss retry`} color={r.color} />}
+                                {r.snagImmune && <StatPill label="Snag immune" color={r.color} />}
+                                {r.perfectZoneBonus > 0 && <StatPill label={`Perfect zone +${r.perfectZoneBonus}°`} color={r.color} />}
+                                {r.rarityBonus > 0 && <StatPill label={`+${Math.round(r.rarityBonus * 100)}% rare bias`} color={r.color} />}
+                                {(r.jackpotChance ?? 0) > 0 && <StatPill label={`×${r.jackpotMultiplier} jackpot · odds rise in shallows`} color={r.color} />}
+                                {(r.crateChanceMult ?? 1) > 1 && <StatPill label={`${r.crateChanceMult}× crate odds`} color={r.color} />}
+                                {(r.perfectXpMult ?? 1) > 1 && <StatPill label={`${r.perfectXpMult}× perfect XP`} color={r.color} />}
+                                {r.wormhole && <StatPill label="Wormhole reroll" color={r.color} />}
+                                {(r.instantBiteChance ?? 0) > 0 && <StatPill label={`${Math.round(r.instantBiteChance! * 100)}% instant bite`} color={r.color} />}
+                                {!hasSpecial && speedPct > 0 && <StatPill label={`${speedPct}% faster bites`} color={r.color} />}
+                                {!hasSpecial && speedPct <= 0 && r.catchZoneBonus > 0 && <StatPill label={`+${r.catchZoneBonus}° catch zone`} color={r.color} />}
+                                {!hasSpecial && speedPct <= 0 && r.catchZoneBonus === 0 && <StatPill label="Base rod" muted />}
+                              </div>
+                            )}
                           </div>
                           {isEquipped
                             ? <span className="font-karla font-700" style={{ fontSize: '0.52rem', color: r.color, whiteSpace: 'nowrap' }}>✓ Equipped</span>
