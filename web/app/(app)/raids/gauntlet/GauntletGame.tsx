@@ -5152,20 +5152,28 @@ function BoonGlyph({ cat, size }: { cat: BoonCat; size: number }) {
 function BoonToken({ boonId, tier = 0, held, size = 32 }: { boonId: string; tier?: number; held?: boolean; size?: number }) {
   const b = GAUNTLET_BOONS.find(x => x.id === boonId)
   const rc = b ? BOON_RARITY_META[boonRarity(b)].color : '#8894a6'
+  const tierPip = held && tier > 0
+    ? <span className="font-cinzel font-800" style={{ position: 'absolute', bottom: -5, right: -5, minWidth: 13, height: 13, padding: '0 2px', borderRadius: 7, background: rc, color: '#0a0e14', fontSize: '0.5rem', lineHeight: '13px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.55)' }}>{['', 'I', 'II', 'III'][Math.min(tier, 3)]}</span>
+    : null
+  // With real art, the icon floats free like the forge board — no chip frame.
+  if (b?.image) {
+    return (
+      <span style={{ position: 'relative', flexShrink: 0, width: size, height: size, display: 'grid', placeItems: 'center' }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={b.image} alt="" loading="lazy" decoding="async"
+          style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: held ? 1 : 0.5, filter: held ? 'drop-shadow(0 1px 3px rgba(0,0,0,0.5))' : 'grayscale(0.85) drop-shadow(0 1px 2px rgba(0,0,0,0.4))' }} />
+        {tierPip}
+      </span>
+    )
+  }
+  // The category glyph keeps its framed chip so the small mark still reads.
   return (
     <span style={{ position: 'relative', flexShrink: 0, width: size, height: size, borderRadius: size * 0.26, display: 'grid', placeItems: 'center',
       background: held ? `${rc}22` : 'rgba(255,255,255,0.03)',
       border: `1.5px ${held ? 'solid' : 'dashed'} ${held ? rc : 'rgba(255,255,255,0.2)'}`,
       boxShadow: held ? `0 0 8px ${rc}44, inset 0 0 8px ${rc}1a` : 'none', opacity: held ? 1 : 0.6 }}>
-      {b?.image ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={b.image} alt="" loading="lazy" decoding="async" style={{ width: '82%', height: '82%', objectFit: 'contain', filter: held ? 'none' : 'grayscale(1)' }} />
-      ) : (
-        <BoonGlyph cat={boonCategory(boonId)} size={Math.round(size * 0.5)} />
-      )}
-      {held && tier > 0 && (
-        <span className="font-cinzel font-800" style={{ position: 'absolute', bottom: -5, right: -5, minWidth: 13, height: 13, padding: '0 2px', borderRadius: 7, background: rc, color: '#0a0e14', fontSize: '0.5rem', lineHeight: '13px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.55)' }}>{['', 'I', 'II', 'III'][Math.min(tier, 3)]}</span>
-      )}
+      <BoonGlyph cat={boonCategory(boonId)} size={Math.round(size * 0.5)} />
+      {tierPip}
     </span>
   )
 }
