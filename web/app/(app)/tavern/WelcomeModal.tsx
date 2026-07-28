@@ -2,6 +2,9 @@
 
 import { useEffect, useState, useTransition } from 'react'
 import StepTourModal, { type TourStep } from '@/components/StepTourModal'
+import GuideScene from '@/components/GuideScene'
+import { GUIDES } from '@/lib/onboardingScenes'
+import type { SceneLine } from '@/lib/raidMap'
 import { claimWelcomePack } from './welcomeActions'
 
 interface BeforeInstallPromptEvent extends Event {
@@ -9,22 +12,20 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
-// One welcome step. Players figure out crew + voyages + dailies as they
-// play; we don't need to pitch every system upfront. The install-as-app
-// step is appended below ONLY when the platform supports it.
-const BASE_STEPS: TourStep[] = [
-  {
-    color: '#60a5fa',
-    title: 'Welcome aboard!',
-    placement: 'center',
-    body: "Cast a line, sell your catch, build a crew. Tap around to explore.",
-  },
+// A short, warm welcome from the two guides — plain voice, no lore. Then (in a
+// browser, not a PWA) the "add to home screen" step. Finishing grants the
+// welcome pack + marks has_seen_welcome.
+const WELCOME_SCENE: SceneLine[] = [
+  { ...GUIDES.doby, text: "Welcome aboard, Captain! This is the Tavern, your home base." },
+  { ...GUIDES.kat,  text: "The plan is simple: catch fish, sell them for coin, and build up a crew." },
+  { ...GUIDES.doby, text: "We'll guide you as you go. Let's get started." },
 ]
 
 export default function WelcomeModal() {
   const [, startTransition] = useTransition()
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null)
   const [env, setEnv] = useState<{ standalone: boolean; ios: boolean; chromeIOS: boolean } | null>(null)
+  const [phase, setPhase] = useState<'scene' | 'install' | 'done'>('scene')
 
   useEffect(() => {
     const standalone =
@@ -42,38 +43,43 @@ export default function WelcomeModal() {
     return () => window.removeEventListener('beforeinstallprompt', handlePrompt)
   }, [])
 
-  function handleDone() {
+  function grantAndClose() {
+    setPhase('done')
     startTransition(async () => { await claimWelcomePack() })
   }
 
-  const steps: TourStep[] = [...BASE_STEPS]
-  // Browser-only: pitch installing as the final step. Never shown in a
-  // PWA (env.standalone). Android/desktop Chrome get the real native
-  // prompt via the captured beforeinstallprompt; iOS has no native
-  // prompt, so the body carries the short Share → Add to Home Screen
-  // instructions instead (the menu also keeps the full icon hint).
-  if (env && !env.standalone) {
-    const iosLine = env.chromeIOS
-      ? ' Tap the Share icon, then Add to Home Screen.'
-      : env.ios
-        ? ' Tap Share in Safari, then Add to Home Screen.'
-        : ' Find it in the menu under "Install the App".'
-    steps.push({
-      color: '#5ab4c8',
-      title: 'Add to home screen',
-      placement: 'center',
-      body: `Plays full-screen, faster, feels like a real game.${iosLine}`,
-      cta: deferred
-        ? {
-            label: 'Install App',
-            onClick: () => {
-              deferred.prompt()
-              deferred.userChoice.then(() => setDeferred(null))
-            },
-          }
-        : undefined,
-    })
+  // Browser-only "install as an app" step (never in a PWA). Android/desktop
+  // Chrome get the real native prompt; iOS gets the Share → Add to Home Screen
+  // instructions in the body.
+  const iosLine = env?.chromeIOS
+    ? ' Tap the Share icon, then Add to Home Screen.'
+    : env?.ios
+      ? ' Tap Share in Safari, then Add to Home Screen.'
+      : ' Find it in the menu under "Install the App".'
+  const installStep: TourStep | null = env && !env.standalone ? {
+    color: '#5ab4c8',
+    title: 'Add to home screen',
+    placement: 'center',
+    body: `Plays full-screen, faster, feels like a real game.${iosLine}`,
+    cta: deferred
+      ? { label: 'Install App', onClick: () => { deferred.prompt(); deferred.userChoice.then(() => setDeferred(null)) } }
+      : undefined,
+  } : null
+
+  if (phase === 'done') return null
+
+  if (phase === 'scene') {
+    return (
+      <GuideScene
+        title="Welcome"
+        lines={WELCOME_SCENE}
+        ctaLabel="Let's Go →"
+        accent="#60a5fa"
+        onDone={() => { if (installStep) setPhase('install'); else grantAndClose() }}
+      />
+    )
   }
 
-  return <StepTourModal steps={steps} onDone={handleDone} />
+  // phase === 'install'
+  return <StepTourModal steps={installStep ? [installStep] : []} onDone={grantAndClose} />
 }

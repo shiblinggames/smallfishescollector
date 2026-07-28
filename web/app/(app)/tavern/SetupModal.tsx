@@ -8,6 +8,22 @@ import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { AVATAR_PALETTE, NONE_VALUE } from '@/lib/avatarColors'
 import CharacterAvatar from '@/components/CharacterAvatar'
 import WelcomeModal from './WelcomeModal'
+import { GUIDES } from '@/lib/onboardingScenes'
+
+// A character bust + one plain guiding line, in place of the generic eyebrow +
+// title, so Doby/Kat walk the new captain through setup.
+function GuideHeader({ portrait, speaker, accent, line }: { portrait: string; speaker: string; accent: string; line: string }) {
+  return (
+    <div style={{ display: 'flex', gap: 11, alignItems: 'center', marginBottom: '1rem' }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={portrait} alt="" loading="lazy" style={{ width: 46, height: 46, borderRadius: 11, objectFit: 'cover', flexShrink: 0, border: `1px solid ${accent}66`, background: 'rgba(0,0,0,0.3)' }} />
+      <div style={{ minWidth: 0 }}>
+        <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.14em', color: accent, marginBottom: 2 }}>{speaker}</p>
+        <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#f0ede8', lineHeight: 1.15 }}>{line}</p>
+      </div>
+    </div>
+  )
+}
 
 type Step = 'username' | 'color' | 'avatar'
 
@@ -96,12 +112,7 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
               padding: '2rem 1.75rem',
             }}
           >
-            <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.52rem', color: '#60a5fa', marginBottom: '1.25rem' }}>
-              Small Fishes
-            </p>
-            <p className="font-cinzel font-700" style={{ fontSize: '1.35rem', color: '#f0ede8', lineHeight: 1.2, marginBottom: '0.5rem' }}>
-              Pick your captain name
-            </p>
+            <GuideHeader portrait={GUIDES.doby.portrait} speaker="Doby" accent="#60a5fa" line="Welcome aboard, Captain! First, what should we call you?" />
             <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#9aa0a6', marginBottom: '1.5rem', lineHeight: 1.55 }}>
               This is how other captains will see you — on the leaderboards, in raids, and around the tavern.
             </p>
@@ -185,12 +196,7 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
               padding: '2rem 1.75rem',
             }}
           >
-            <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.52rem', color: '#c8a870', marginBottom: '1.25rem' }}>
-              Small Fishes
-            </p>
-            <p className="font-cinzel font-700" style={{ fontSize: '1.35rem', color: '#f0ede8', lineHeight: 1.2, marginBottom: '0.5rem' }}>
-              Pick your character
-            </p>
+            <GuideHeader portrait={GUIDES.doby.portrait} speaker="Doby" accent="#c8a870" line="Now pick your look." />
             <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#6a6764', marginBottom: '1.5rem', lineHeight: 1.5 }}>
               Unlock more colors as you play.
             </p>
@@ -299,12 +305,7 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
               padding: '1.6rem 1.5rem 1.5rem',
             }}
           >
-            <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.52rem', color: '#f0c040', marginBottom: '1rem' }}>
-              Small Fishes
-            </p>
-            <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#f0ede8', lineHeight: 1.2, marginBottom: '0.4rem' }}>
-              Pick your avatar colors
-            </p>
+            <GuideHeader portrait={GUIDES.kat.portrait} speaker="Kat" accent="#f0c040" line="One last thing: your avatar colors." />
             <p className="font-karla font-400" style={{ fontSize: '0.7rem', color: '#6a6764', marginBottom: '1.1rem', lineHeight: 1.5 }}>
               Background and border around your character. Shows up everywhere you do.
             </p>
