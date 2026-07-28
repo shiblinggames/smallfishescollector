@@ -3735,53 +3735,78 @@ export default function GauntletGame(props: GauntletGameProps) {
                     transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut', delay: idx * 0.3 }}
                     style={{ position: 'absolute', inset: 0, borderRadius: 16, boxShadow: `inset 0 0 20px ${rm.color}66`, pointerEvents: 'none' }}
                   />
-                  {/* Row 1 — art thumb + name + tier, rarity pill inline, learn-more */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                    {boonImg && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={boonImg} alt="" loading="lazy" decoding="async"
-                        style={{ width: 46, height: 46, flexShrink: 0, objectFit: 'contain', filter: `drop-shadow(0 1px 4px rgba(0,0,0,0.55)) drop-shadow(0 0 6px ${rm.color}44)` }} />
-                    )}
-                    <p className="font-cinzel font-700" style={{ flex: 1, minWidth: 0, fontSize: '1.06rem', color: '#f4fbf9', lineHeight: 1.16 }}>
-                      {b.name} <span style={{ color: rm.color }}>{boonTierLabel(b.tier)}</span>
-                    </p>
-                    <span className="font-karla font-800 uppercase" style={{ flexShrink: 0, fontSize: '0.52rem', letterSpacing: '0.13em', color: legendary ? '#1a1206' : rm.color, background: legendary ? rm.color : `${rm.color}26`, border: `1px solid ${rm.color}`, borderRadius: 999, padding: '0.2rem 0.55rem', boxShadow: legendary ? `0 0 12px ${rm.color}88` : 'none' }}>
-                      {rm.label}
-                    </span>
-                    {/* Blacklist (Don's): banish this boon for the rest of the run.
-                        Only appears once the card is face-up and the player still
-                        has a ban to spend. Red-tinted so it reads as "remove", not
-                        "pick". stopPropagation keeps it from selecting the boon. */}
-                    {flipped && filtersLeft > 0 && (
-                      <span
-                        role="button" tabIndex={0} aria-label={`Banish ${b.name} for the rest of the run`}
-                        onClick={(e) => { e.stopPropagation(); banBoon(idx) }}
-                        className="tap"
-                        style={{ flexShrink: 0, width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(220,70,70,0.14)', border: '1px solid rgba(230,90,90,0.5)', color: '#f0a0a0', cursor: 'pointer', lineHeight: 1 }}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden>
-                          <circle cx="12" cy="12" r="9" /><line x1="5.6" y1="5.6" x2="18.4" y2="18.4" />
-                        </svg>
-                      </span>
-                    )}
-                    <span
-                      role="button" tabIndex={0} aria-label={`What ${b.name} does`}
-                      onClick={(e) => { e.stopPropagation(); setDetailEffect({ kind: 'boon', name: `${b.name} ${boonTierLabel(b.tier)}`, desc: b.desc, detail: b.detail, flavor: b.flavor, count: b.tier, maxTier, image: boonImg }) }}
-                      className="font-cinzel font-700 tap"
-                      style={{ flexShrink: 0, width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.22)', color: 'rgba(255,255,255,0.72)', cursor: 'pointer', fontSize: '0.82rem', fontStyle: 'italic', lineHeight: 1 }}>
-                      i
-                    </span>
-                  </div>
-                  {/* Row 2 — the power gained, green + clear (with the upgrade tag inline) */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 7, flexWrap: 'wrap' }}>
-                    <span aria-hidden style={{ fontSize: '0.92rem', color: '#86efac', lineHeight: 1 }}>▲</span>
-                    <span className="font-cinzel font-800" style={{ fontSize: '1.12rem', color: '#aef5c4', lineHeight: 1.1, textShadow: '0 0 14px rgba(74,222,128,0.4)' }}>
-                      {b.desc}
-                    </span>
-                    {b.upgrade && (
-                      <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.1em', color: '#f0d79a', background: 'rgba(217,176,102,0.18)', border: '1px solid rgba(217,176,102,0.55)', borderRadius: 999, padding: '0.16rem 0.45rem' }}>
-                        ↑ Upgrade
-                      </span>
-                    )}
+                  {/* Hero row — a big framed art medallion carries the card; the
+                      name + payoff sit beside it. Flavor moves to the info sheet
+                      and the synergy chips run full-width below, so the card stays
+                      tight and art-forward. */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    {/* Art medallion — the star of the card */}
+                    <div style={{
+                      position: 'relative', flexShrink: 0, width: 76, height: 76, borderRadius: 16,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: `radial-gradient(circle at 42% 34%, ${rm.color}33 0%, rgba(4,9,14,0.55) 74%)`,
+                      border: `1.5px solid ${rm.color}${legendary ? 'cc' : rare ? '88' : '5a'}`,
+                      boxShadow: `inset 0 0 16px ${rm.color}22, 0 4px 12px rgba(0,0,0,0.4)`,
+                    }}>
+                      {boonImg
+                        ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={boonImg} alt="" loading="lazy" decoding="async"
+                            style={{ width: 60, height: 60, objectFit: 'contain', filter: `drop-shadow(0 2px 5px rgba(0,0,0,0.6)) drop-shadow(0 0 7px ${rm.color}66)` }} />
+                        )
+                        : <span aria-hidden style={{ fontSize: '1.7rem', color: rm.color, lineHeight: 1 }}>✦</span>}
+                      {(legendary || rare) && (
+                        <motion.span aria-hidden animate={{ opacity: [0.3, 0.75, 0.3], scale: [1, 1.045, 1] }}
+                          transition={{ duration: legendary ? 1.8 : 2.6, repeat: Infinity, ease: 'easeInOut' }}
+                          style={{ position: 'absolute', inset: -2, borderRadius: 18, border: `1.5px solid ${rm.color}`, boxShadow: `0 0 14px ${rm.color}77`, pointerEvents: 'none' }} />
+                      )}
+                    </div>
+
+                    {/* Name + payoff */}
+                    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7 }}>
+                        <p className="font-cinzel font-700" style={{ flex: 1, minWidth: 0, fontSize: '1.04rem', color: '#f4fbf9', lineHeight: 1.14 }}>
+                          {b.name} <span style={{ color: rm.color }}>{boonTierLabel(b.tier)}</span>
+                        </p>
+                        <span className="font-karla font-800 uppercase" style={{ flexShrink: 0, fontSize: '0.52rem', letterSpacing: '0.13em', color: legendary ? '#1a1206' : rm.color, background: legendary ? rm.color : `${rm.color}26`, border: `1px solid ${rm.color}`, borderRadius: 999, padding: '0.2rem 0.55rem', boxShadow: legendary ? `0 0 12px ${rm.color}88` : 'none' }}>
+                          {rm.label}
+                        </span>
+                        {/* Blacklist (Don's): banish this boon for the rest of the run.
+                            Only appears once the card is face-up and the player still
+                            has a ban to spend. Red-tinted so it reads as "remove", not
+                            "pick". stopPropagation keeps it from selecting the boon. */}
+                        {flipped && filtersLeft > 0 && (
+                          <span
+                            role="button" tabIndex={0} aria-label={`Banish ${b.name} for the rest of the run`}
+                            onClick={(e) => { e.stopPropagation(); banBoon(idx) }}
+                            className="tap"
+                            style={{ flexShrink: 0, width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(220,70,70,0.14)', border: '1px solid rgba(230,90,90,0.5)', color: '#f0a0a0', cursor: 'pointer', lineHeight: 1 }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden>
+                              <circle cx="12" cy="12" r="9" /><line x1="5.6" y1="5.6" x2="18.4" y2="18.4" />
+                            </svg>
+                          </span>
+                        )}
+                        <span
+                          role="button" tabIndex={0} aria-label={`What ${b.name} does`}
+                          onClick={(e) => { e.stopPropagation(); setDetailEffect({ kind: 'boon', name: `${b.name} ${boonTierLabel(b.tier)}`, desc: b.desc, detail: b.detail, flavor: b.flavor, count: b.tier, maxTier, image: boonImg }) }}
+                          className="font-cinzel font-700 tap"
+                          style={{ flexShrink: 0, width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.22)', color: 'rgba(255,255,255,0.72)', cursor: 'pointer', fontSize: '0.82rem', fontStyle: 'italic', lineHeight: 1 }}>
+                          i
+                        </span>
+                      </div>
+                      {/* The power gained — the payoff, green + clear */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span aria-hidden style={{ fontSize: '0.85rem', color: '#86efac', lineHeight: 1 }}>▲</span>
+                        <span className="font-cinzel font-800" style={{ fontSize: '1.1rem', color: '#aef5c4', lineHeight: 1.1, textShadow: '0 0 14px rgba(74,222,128,0.4)' }}>
+                          {b.desc}
+                        </span>
+                        {b.upgrade && (
+                          <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.1em', color: '#f0d79a', background: 'rgba(217,176,102,0.18)', border: '1px solid rgba(217,176,102,0.55)', borderRadius: 999, padding: '0.16rem 0.45rem' }}>
+                            ↑ Upgrade
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                   {/* Row 2.5 — SYNERGY STEER. What this pick does to your
                       confluences, shown BEFORE you commit: 'unlocks' one you
@@ -3828,10 +3853,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                       </div>
                     )
                   })()}
-                  {/* Row 3 — flavor */}
-                  <p className="font-karla" style={{ fontSize: '0.8rem', color: 'rgba(231,246,242,0.6)', lineHeight: 1.4, fontStyle: 'italic', marginTop: 6 }}>
-                    {b.flavor}
-                  </p>
+                  {/* Flavor lives on the info sheet now — keeps the card tight. */}
                 </motion.button>
                 </motion.div>
 
@@ -3927,12 +3949,25 @@ export default function GauntletGame(props: GauntletGameProps) {
                     transition={{ duration: 2.4, repeat: Infinity, repeatDelay: 1.4, ease: 'easeInOut' }}
                     style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '45%', background: `linear-gradient(100deg, transparent, ${AC}3a, transparent)`, pointerEvents: 'none' }}
                   />
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                    {synImg && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={synImg} alt="" loading="lazy" decoding="async"
-                        style={{ width: 46, height: 46, flexShrink: 0, objectFit: 'contain', filter: `drop-shadow(0 1px 4px rgba(0,0,0,0.55)) drop-shadow(0 0 6px ${AC}55)` }} />
-                    )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+                    {/* Synergy medallion — matches the boon cards' hero art */}
+                    <div style={{
+                      position: 'relative', flexShrink: 0, width: 64, height: 64, borderRadius: 14,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: `radial-gradient(circle at 42% 34%, ${AC}33 0%, rgba(4,9,14,0.55) 74%)`,
+                      border: `1.5px solid ${AC}aa`, boxShadow: `inset 0 0 14px ${AC}26, 0 4px 12px rgba(0,0,0,0.4)`,
+                    }}>
+                      {synImg
+                        ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={synImg} alt="" loading="lazy" decoding="async"
+                            style={{ width: 50, height: 50, objectFit: 'contain', filter: `drop-shadow(0 2px 5px rgba(0,0,0,0.6)) drop-shadow(0 0 7px ${AC}66)` }} />
+                        )
+                        : <span aria-hidden style={{ fontSize: '1.5rem', color: AC, lineHeight: 1 }}>✦</span>}
+                      <motion.span aria-hidden animate={{ opacity: [0.3, 0.8, 0.3], scale: [1, 1.05, 1] }}
+                        transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                        style={{ position: 'absolute', inset: -2, borderRadius: 16, border: `1.5px solid ${AC}`, boxShadow: `0 0 14px ${AC}88`, pointerEvents: 'none' }} />
+                    </div>
                     <p className="font-cinzel font-700" style={{ flex: 1, minWidth: 0, fontSize: '1.06rem', color: '#f6f1ff', lineHeight: 1.16 }}>
                       {pendingConfluence.name} <span style={{ color: AC }}>{boonTierLabel(pendingConfluence.level)}</span>
                     </p>
