@@ -1548,6 +1548,9 @@ export interface GauntletBoon {
    *  applies — a higher tier replaces the lower, it doesn't stack on top.
    *  Legendaries run fewer, bigger tiers. */
   tiers: GauntletBoonTier[]
+  /** Optional icon art (transparent PNG). When set, the codex token renders it;
+   *  otherwise it falls back to the effect-category glyph. */
+  image?: string | null
 }
 
 /** A boon's rarity, defaulting to Common. */
@@ -1920,6 +1923,8 @@ export interface Confluence {
   detail: string
   /** Effects + summary per confluence level (1..3), index = level - 1. */
   levels: ConfluenceLevel[]
+  /** Optional crest art (transparent PNG). Falls back to the hex spark crest. */
+  image?: string | null
 }
 
 export const CONFLUENCES: Confluence[] = [
@@ -2440,6 +2445,8 @@ export interface Convergence {
   detail: string
   /** Effects + summary per level (1..3), index = level - 1. */
   levels: ConvergenceLevel[]
+  /** Optional crest art (transparent PNG). Falls back to the hex spark crest. */
+  image?: string | null
 }
 
 export const CONVERGENCES: Convergence[] = [

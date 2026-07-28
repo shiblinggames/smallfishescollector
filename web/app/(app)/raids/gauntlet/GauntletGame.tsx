@@ -5157,7 +5157,12 @@ function BoonToken({ boonId, tier = 0, held, size = 32 }: { boonId: string; tier
       background: held ? `${rc}22` : 'rgba(255,255,255,0.03)',
       border: `1.5px ${held ? 'solid' : 'dashed'} ${held ? rc : 'rgba(255,255,255,0.2)'}`,
       boxShadow: held ? `0 0 8px ${rc}44, inset 0 0 8px ${rc}1a` : 'none', opacity: held ? 1 : 0.6 }}>
-      <BoonGlyph cat={boonCategory(boonId)} size={Math.round(size * 0.5)} />
+      {b?.image ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={b.image} alt="" loading="lazy" decoding="async" style={{ width: '82%', height: '82%', objectFit: 'contain', filter: held ? 'none' : 'grayscale(1)' }} />
+      ) : (
+        <BoonGlyph cat={boonCategory(boonId)} size={Math.round(size * 0.5)} />
+      )}
       {held && tier > 0 && (
         <span className="font-cinzel font-800" style={{ position: 'absolute', bottom: -5, right: -5, minWidth: 13, height: 13, padding: '0 2px', borderRadius: 7, background: rc, color: '#0a0e14', fontSize: '0.5rem', lineHeight: '13px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.55)' }}>{['', 'I', 'II', 'III'][Math.min(tier, 3)]}</span>
       )}
@@ -5166,12 +5171,17 @@ function BoonToken({ boonId, tier = 0, held, size = 32 }: { boonId: string; tier
 }
 // A hexagon crest — a synergy shown as a component of a convergence, or the
 // result identity in a detail header.
-function MiniCrest({ size = 32, color, dim }: { size?: number; color: string; dim?: boolean }) {
+function MiniCrest({ size = 32, color, dim, image }: { size?: number; color: string; dim?: boolean; image?: string | null }) {
   const c = dim ? '#5a6472' : color
   return (
     <span style={{ position: 'relative', flexShrink: 0, width: size, height: size, display: 'grid', placeItems: 'center' }}>
       <svg width={size} height={size} viewBox="0 0 24 24" fill={`${c}1e`} stroke={c} strokeWidth="1.4" style={{ filter: dim ? 'none' : `drop-shadow(0 0 4px ${c}77)` }}><path d="M12 2 4 7v10l8 5 8-5V7z" /></svg>
-      <svg width={Math.round(size * 0.4)} height={Math.round(size * 0.4)} viewBox="0 0 24 24" fill={c} aria-hidden style={{ position: 'absolute' }}><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z" /></svg>
+      {image ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={image} alt="" loading="lazy" decoding="async" style={{ position: 'absolute', width: '58%', height: '58%', objectFit: 'contain', filter: dim ? 'grayscale(1)' : 'none' }} />
+      ) : (
+        <svg width={Math.round(size * 0.4)} height={Math.round(size * 0.4)} viewBox="0 0 24 24" fill={c} aria-hidden style={{ position: 'absolute' }}><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z" /></svg>
+      )}
     </span>
   )
 }
@@ -5414,7 +5424,7 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
                 <SynergyMedallion key={cv.id} name={cv.name} status={status} lvl={lvl} kraken
                   accent={status === 'active' ? KRAKEN : status === 'ready' ? SYN : NEED}
                   dim={!convMatchesTrace({ cv, parts, lvl, status })} onOpen={() => setOpenId(cv.id)}
-                  tokens={<><MiniCrest color={KRAKEN} dim={!parts[0].online} /><Fuse /><MiniCrest color={KRAKEN} dim={!parts[1].online} /></>} />
+                  tokens={<><MiniCrest color={KRAKEN} dim={!parts[0].online} image={CONFLUENCES.find(x => x.id === parts[0].id)?.image} /><Fuse /><MiniCrest color={KRAKEN} dim={!parts[1].online} image={CONFLUENCES.find(x => x.id === parts[1].id)?.image} /></>} />
               ))}
             </div>
           </>
@@ -5470,11 +5480,11 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
                     if (!discovered) return <MysteryMedallion key={cv.id} />
                     const parts = cv.requires.map(r => {
                       const c = CONFLUENCES.find(x => x.id === r.confluenceId)
-                      return { online: !!c && takenSet.has(c.id) && confluenceLevel(c, owned) >= 1 }
+                      return { online: !!c && takenSet.has(c.id) && confluenceLevel(c, owned) >= 1, image: c?.image }
                     })
                     return (
                       <SynergyMedallion key={cv.id} name={cv.name} status={activeNow ? 'active' : 'codex'} lvl={lvl} accent={activeNow ? KRAKEN : '#9aa7b4'} kraken onOpen={() => setOpenId(cv.id)}
-                        tokens={<><MiniCrest color={KRAKEN} dim={!parts[0].online} /><Fuse /><MiniCrest color={KRAKEN} dim={!parts[1].online} /></>} />
+                        tokens={<><MiniCrest color={KRAKEN} dim={!parts[0].online} image={parts[0].image} /><Fuse /><MiniCrest color={KRAKEN} dim={!parts[1].online} image={parts[1].image} /></>} />
                     )
                   })}
                 </div>
@@ -5499,6 +5509,7 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
           let name: string, accent: string, lvl: number, maxLvl: number, effectStr: string, detailStr: string, flavorStr: string, stateLabel: string, hint: string
           let comps: { node: React.ReactNode; name: string; held: boolean }[]
           let headTokens: React.ReactNode
+          let resultImage: string | null | undefined
 
           if (oc) {
             const parts = oc.requires.map(r => boonMeta(r.boonId))
@@ -5516,11 +5527,12 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
               : `Hold ${parts.map(p => p.name).join(' & ')} together to unlock it`
             comps = parts.map(p => ({ node: <BoonToken boonId={p.id} tier={p.tier} held={p.tier >= 1} size={34} />, name: p.name + (p.tier >= 1 ? ` ${ROMAN[Math.min(p.tier, 3)]}` : ''), held: p.tier >= 1 }))
             headTokens = <><BoonToken boonId={parts[0].id} tier={parts[0].tier} held={parts[0].tier >= 1} size={38} /><Fuse /><BoonToken boonId={parts[1].id} tier={parts[1].tier} held={parts[1].tier >= 1} size={38} /></>
+            resultImage = oc.image
           } else {
             const cv = ov!
             const parts = cv.requires.map(r => {
               const c = CONFLUENCES.find(x => x.id === r.confluenceId)
-              return { name: c?.name ?? r.confluenceId, online: !!c && takenSet.has(c.id) && confluenceLevel(c, owned) >= 1 }
+              return { name: c?.name ?? r.confluenceId, online: !!c && takenSet.has(c.id) && confluenceLevel(c, owned) >= 1, image: c?.image }
             })
             lvl = convergenceLevel(cv, owned, taken)
             const on = takenConvSet.has(cv.id) && lvl >= 1
@@ -5534,8 +5546,9 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
               : ready ? 'Both synergies online — draft it instead of a boon this round'
               : need1 ? `Bring ${parts.filter(p => !p.online).map(p => p.name).join(' & ')} online to unlock it`
               : `Bring ${parts.map(p => p.name).join(' & ')} online together to unlock it`
-            comps = parts.map(p => ({ node: <MiniCrest color={KRAKEN} dim={!p.online} size={34} />, name: p.name, held: p.online }))
-            headTokens = <><MiniCrest color={KRAKEN} dim={!parts[0].online} size={38} /><Fuse /><MiniCrest color={KRAKEN} dim={!parts[1].online} size={38} /></>
+            comps = parts.map(p => ({ node: <MiniCrest color={KRAKEN} dim={!p.online} size={34} image={p.image} />, name: p.name, held: p.online }))
+            headTokens = <><MiniCrest color={KRAKEN} dim={!parts[0].online} size={38} image={parts[0].image} /><Fuse /><MiniCrest color={KRAKEN} dim={!parts[1].online} size={38} image={parts[1].image} /></>
+            resultImage = cv.image
           }
 
           return createPortal(
@@ -5549,7 +5562,7 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, marginBottom: 12 }}>
                   {headTokens}
                   <span aria-hidden style={{ color: accent, fontSize: '1.05rem', margin: '0 2px' }}>→</span>
-                  <MiniCrest color={accent} size={44} />
+                  <MiniCrest color={accent} size={44} image={resultImage} />
                 </div>
                 <p className="font-cinzel font-800" style={{ fontSize: '1.35rem', lineHeight: 1.1, color: '#f4efe4', textAlign: 'center' }}>{name}</p>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 5 }}>
