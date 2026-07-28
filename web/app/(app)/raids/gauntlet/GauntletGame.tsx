@@ -3794,10 +3794,11 @@ export default function GauntletGame(props: GauntletGameProps) {
                           i
                         </span>
                       </div>
-                      {/* The power gained — the payoff, green + clear */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <span aria-hidden style={{ fontSize: '0.85rem', color: '#86efac', lineHeight: 1 }}>▲</span>
-                        <span className="font-cinzel font-800" style={{ fontSize: '1.1rem', color: '#aef5c4', lineHeight: 1.1, textShadow: '0 0 14px rgba(74,222,128,0.4)' }}>
+                      {/* The power gained — the payoff, green + clear. The green
+                          text alone signals the gain (no caret — it wrapped onto
+                          its own line on longer payoffs). */}
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
+                        <span className="font-cinzel font-800" style={{ fontSize: '1.1rem', color: '#aef5c4', lineHeight: 1.15, textShadow: '0 0 14px rgba(74,222,128,0.4)' }}>
                           {b.desc}
                         </span>
                         {b.upgrade && (
@@ -3976,9 +3977,8 @@ export default function GauntletGame(props: GauntletGameProps) {
                   <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.12em', color: `${AC}cc`, marginTop: 4 }}>
                     {pendingConfluence.halves[0]} + {pendingConfluence.halves[1]}
                   </p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 7 }}>
-                    <span aria-hidden style={{ fontSize: '0.92rem', color: AC, lineHeight: 1 }}>✦</span>
-                    <span className="font-cinzel font-800" style={{ fontSize: '1.06rem', color: '#e6d5ff', lineHeight: 1.12, textShadow: `0 0 14px ${AC}55` }}>{pendingConfluence.desc}</span>
+                  <div style={{ marginTop: 7 }}>
+                    <span className="font-cinzel font-800" style={{ fontSize: '1.06rem', color: '#e6d5ff', lineHeight: 1.16, textShadow: `0 0 14px ${AC}55` }}>{pendingConfluence.desc}</span>
                   </div>
                   {/* Plain-English mechanic explainer at the moment of decision —
                       more useful here than flavor (which still lives in the codex). */}
@@ -4020,9 +4020,8 @@ export default function GauntletGame(props: GauntletGameProps) {
                     <p className="font-cinzel font-700" style={{ flex: 1, minWidth: 0, fontSize: '1.06rem', color: '#f8f1e4', lineHeight: 1.16 }}>{pendingReprieve.name}</p>
                     <span className="font-karla font-800 uppercase" style={{ flexShrink: 0, fontSize: '0.52rem', letterSpacing: '0.13em', color: RELIEF, background: `${RELIEF}22`, border: `1px solid ${RELIEF}`, borderRadius: 999, padding: '0.2rem 0.55rem' }}>Reprieve</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 7 }}>
-                    <span aria-hidden style={{ fontSize: '0.92rem', color: RELIEF, lineHeight: 1 }}>✦</span>
-                    <span className="font-cinzel font-800" style={{ fontSize: '1.12rem', color: '#f3d9a6', lineHeight: 1.1, textShadow: `0 0 14px ${RELIEF}55` }}>{pendingReprieve.desc}</span>
+                  <div style={{ marginTop: 7 }}>
+                    <span className="font-cinzel font-800" style={{ fontSize: '1.12rem', color: '#f3d9a6', lineHeight: 1.15, textShadow: `0 0 14px ${RELIEF}55` }}>{pendingReprieve.desc}</span>
                   </div>
                   <p className="font-karla" style={{ fontSize: '0.8rem', color: 'rgba(246,239,226,0.6)', lineHeight: 1.4, fontStyle: 'italic', marginTop: 6 }}>{pendingReprieve.flavor}</p>
                   <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.1em', color: '#b89a6a', marginTop: 7 }}>You forgo the draft</p>
