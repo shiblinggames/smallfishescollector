@@ -26,6 +26,27 @@ const HookViewer3D = dynamic(() => import('./HookViewer3D'), { ssr: false })
 type BaitInventoryItem = { bait_type: string; quantity: number }
 type Section = 'bait' | 'hook' | 'rod' | 'reel' | 'line' | null
 
+// ── ROD FILTERS ──────────────────────────────────────────────────────────────
+// The rod wall is long, so let players narrow it by ownership and by the ONE
+// mechanic they're hunting for ("show me the faster-bite rods", "which have rare
+// bias"). Predicates mirror the effect-chip logic below, so a chip only appears
+// when at least one rod actually carries it.
+type RodDef = (typeof RODS)[number]
+const ROD_MECHANICS: { key: string; label: string; match: (r: RodDef) => boolean }[] = [
+  { key: 'speed',    label: 'Faster bites', match: r => rodSpeedPct(r) > 0 },
+  { key: 'rare',     label: 'Rare bias',    match: r => r.rarityBonus > 0 },
+  { key: 'double',   label: 'Double catch', match: r => r.doubleCatchChance > 0 },
+  { key: 'zone',     label: 'Catch zone',   match: r => r.catchZoneBonus > 0 },
+  { key: 'perfect',  label: 'Perfect zone', match: r => r.perfectZoneBonus > 0 },
+  { key: 'retry',    label: 'Miss retry',   match: r => r.retryOnMissChance > 0 },
+  { key: 'snag',     label: 'Snag immune',  match: r => !!r.snagImmune },
+  { key: 'jackpot',  label: 'Jackpot',      match: r => (r.jackpotChance ?? 0) > 0 },
+  { key: 'crate',    label: 'Crate odds',   match: r => (r.crateChanceMult ?? 1) > 1 },
+  { key: 'perfxp',   label: 'Perfect XP',   match: r => (r.perfectXpMult ?? 1) > 1 },
+  { key: 'instant',  label: 'Instant bite', match: r => (r.instantBiteChance ?? 0) > 0 },
+  { key: 'wormhole', label: 'Wormhole',     match: r => !!r.wormhole },
+]
+
 // ── THE SHOP AS A COLLECTION ─────────────────────────────────────────────────
 // Modelled on the Forge. The tackle shop used to be a wall of five tiles that told
 // you nothing until you drilled in: you had to open Rods to learn whether you could
@@ -102,6 +123,9 @@ export default function TackleShopClient({
   const [previewTier, setPreviewTier] = useState(initialHookTier)
   const [showCompModal, setShowCompModal] = useState(false)
   const [showClaimReveal, setShowClaimReveal] = useState(false)
+  // Rod list filters (ownership + a single mechanic).
+  const [rodOwnership, setRodOwnership] = useState<'all' | 'owned' | 'unowned'>('all')
+  const [rodMechanic, setRodMechanic] = useState<string | null>(null)
 
   const baitMap = Object.fromEntries(baitInventory.map(b => [b.bait_type, b.quantity]))
   const totalBait = Object.values(baitMap).reduce((a, b) => a + b, 0)
@@ -701,6 +725,19 @@ export default function TackleShopClient({
         const eligible = isLevelOk && isSpeciesOk && !compOwned
         const c = compRod.color
 
+        // The browsable rod ladder (Completionist is its own capstone card below),
+        // narrowed by the active ownership + mechanic filters.
+        const baseRods = [...RODS].filter(r => !r.earnedOnly).sort((a, b) => a.cost - b.cost)
+        const ownedCount = baseRods.filter(r => ownedRodSet.has(r.tier)).length
+        const availableMechanics = ROD_MECHANICS.filter(m => baseRods.some(m.match))
+        const activeMech = ROD_MECHANICS.find(m => m.key === rodMechanic) ?? null
+        const visibleRods = baseRods.filter(r => {
+          if (rodOwnership === 'owned' && !ownedRodSet.has(r.tier)) return false
+          if (rodOwnership === 'unowned' && ownedRodSet.has(r.tier)) return false
+          if (activeMech && !activeMech.match(r)) return false
+          return true
+        })
+
         return (
           <>
             {/* Completionist Rod modal */}
@@ -746,8 +783,56 @@ export default function TackleShopClient({
                 a distracting rainbow where the rods + effects were hard to read.
                 Each rod's color now shows ONLY as its art glow + a small
                 identity dot; the card chrome + chips are neutral. */}
+            {/* ── Rod filters ── ownership row + a horizontally-scrolling
+                mechanic row. Only mechanics some rod actually carries show up. */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {([
+                  ['all', 'All', baseRods.length],
+                  ['owned', 'Owned', ownedCount],
+                  ['unowned', 'Not owned', baseRods.length - ownedCount],
+                ] as const).map(([val, lbl, n]) => {
+                  const on = rodOwnership === val
+                  return (
+                    <button key={val} type="button"
+                      onClick={() => { hapticTap(); setRodOwnership(val) }}
+                      className="font-karla font-700 tap"
+                      style={{
+                        flex: 1, padding: '0.42rem 0.4rem', borderRadius: 9, cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, lineHeight: 1,
+                        fontSize: '0.66rem', letterSpacing: '0.03em',
+                        background: on ? 'rgba(184,149,106,0.22)' : 'rgba(255,255,255,0.04)',
+                        border: `1px solid ${on ? 'rgba(184,149,106,0.6)' : 'rgba(255,255,255,0.1)'}`,
+                        color: on ? '#e6cfa6' : '#8a857c',
+                      }}>
+                      {lbl}<span style={{ fontSize: '0.58rem', opacity: 0.7 }}>{n}</span>
+                    </button>
+                  )
+                })}
+              </div>
+              <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 3, scrollbarWidth: 'none' }}>
+                {[{ key: null as string | null, label: 'All abilities' }, ...availableMechanics].map(m => {
+                  const on = rodMechanic === m.key
+                  return (
+                    <button key={m.key ?? 'all'} type="button"
+                      onClick={() => { hapticTap(); setRodMechanic(m.key) }}
+                      className="font-karla font-600 tap"
+                      style={{
+                        flexShrink: 0, padding: '0.34rem 0.7rem', borderRadius: 999, cursor: 'pointer',
+                        fontSize: '0.64rem', whiteSpace: 'nowrap',
+                        background: on ? 'rgba(184,149,106,0.2)' : 'rgba(255,255,255,0.05)',
+                        border: `1px solid ${on ? 'rgba(184,149,106,0.55)' : 'rgba(255,255,255,0.11)'}`,
+                        color: on ? '#e8cfa8' : '#a49f95',
+                      }}>
+                      {m.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }} className="mb-4">
-              {[...RODS].filter(r => !r.earnedOnly).sort((a, b) => a.cost - b.cost).map(rod => {
+              {visibleRods.map(rod => {
                 const owned = (rod.cost === 0 && !rod.earnedOnly) || ownedRods.includes(rod.tier)
                 const isActive = rod.tier === equippedRod
                 const canAfford = doubloons >= rod.cost
@@ -881,6 +966,16 @@ export default function TackleShopClient({
                   </div>
                 )
               })}
+              {visibleRods.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '1.4rem 1rem' }}>
+                  <p className="font-karla font-600" style={{ fontSize: '0.8rem', color: '#8a857c' }}>No rods match these filters.</p>
+                  <button type="button" onClick={() => { hapticTap(); setRodOwnership('all'); setRodMechanic(null) }}
+                    className="font-karla font-700 tap"
+                    style={{ marginTop: 9, padding: '0.4rem 0.9rem', borderRadius: 8, background: 'rgba(184,149,106,0.18)', border: '1px solid rgba(184,149,106,0.5)', color: '#e8cfa8', fontSize: '0.7rem', cursor: 'pointer' }}>
+                    Clear filters
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Completionist Rod — the capstone trophy card at the bottom */}
