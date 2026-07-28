@@ -12,7 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { renderEmphasis } from '@/components/cutscene'
 
 export default function GuideCoach({
-  show, portrait, speaker, text, accent = '#5eb0e0', placement = 'bottom', offset, onClose, autoHideMs,
+  show, portrait, speaker, text, accent = '#5eb0e0', placement = 'bottom', offset, onClose, autoHideMs, onNext, nextLabel,
 }: {
   show: boolean
   portrait: string
@@ -28,6 +28,9 @@ export default function GuideCoach({
   onClose?: () => void
   /** Auto-hide after this many ms while shown, so a tip never lingers. */
   autoHideMs?: number
+  /** For a stepped walkthrough: shows a "Next →" button that advances. */
+  onNext?: () => void
+  nextLabel?: string
 }) {
   const top = placement === 'top'
   const edge = offset ?? (top
@@ -81,6 +84,15 @@ export default function GuideCoach({
                 {renderEmphasis(text, accent)}
               </p>
             </div>
+            {onNext && (
+              <button
+                onClick={onNext}
+                className="font-karla font-700 uppercase"
+                style={{ pointerEvents: 'auto', flexShrink: 0, alignSelf: 'center', padding: '0.5rem 0.75rem', borderRadius: 10, fontSize: '0.62rem', letterSpacing: '0.06em', background: `${accent}22`, border: `1px solid ${accent}77`, color: accent, cursor: 'pointer', whiteSpace: 'nowrap' }}
+              >
+                {nextLabel ?? 'Next →'}
+              </button>
+            )}
             {onClose && (
               <button
                 onClick={onClose}

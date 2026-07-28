@@ -82,6 +82,18 @@ import GearScreen from './GearScreen'
 
 type Phase = 'idle' | 'casting' | 'hooked' | 'catching' | 'reeling' | 'result'
 
+// Which action-bar tab a coach step flashes.
+type FlashTab = 'gear' | 'bait' | 'hold' | 'log'
+// Post-first-catch walkthrough: a stepped tour that flashes each action-bar tab
+// as it explains it, then covers XP/leveling. Plain, one line per step.
+const FISH_WALKTHROUGH: { portrait: string; speaker: string; text: string; flash: FlashTab | null }[] = [
+  { portrait: GUIDES.doby.portrait, speaker: 'Doby', text: "Nice catch! Buy items and equip gear in the *Gear & Shop* tab.", flash: 'gear' },
+  { portrait: GUIDES.kat.portrait,  speaker: 'Kat',  text: "Stock up on *bait* in the Bait tab. You need it to cast.", flash: 'bait' },
+  { portrait: GUIDES.kat.portrait,  speaker: 'Kat',  text: "Sell your fish and buy upgrades in the *Fish Hold* tab.", flash: 'hold' },
+  { portrait: GUIDES.doby.portrait, speaker: 'Doby', text: "Log every fish in the *Collection* tab. Complete a zone's fish for a bonus.", flash: 'log' },
+  { portrait: GUIDES.doby.portrait, speaker: 'Doby', text: "Every fish earns XP. Level up to unlock new areas and hit *milestone* bonuses.", flash: null },
+]
+
 type BaitItem = { bait_type: string; quantity: number }
 type InventoryItem = {
   fish_id: number
@@ -4150,6 +4162,10 @@ export default function FishingGame({
   // we're still in the first-visit tour so tips fire once.
   const [coach, setCoach] = useState<'cast' | 'dial' | null>(null)
   const fishTourActiveRef = useRef(false)
+  // Post-first-catch walkthrough (step index → FISH_WALKTHROUGH). The flashed
+  // action-bar tab is derived from the current step.
+  const [walkStep, setWalkStep] = useState<number | null>(null)
+  const flashTab: FlashTab | null = walkStep != null ? (FISH_WALKTHROUGH[walkStep]?.flash ?? null) : null
   const [perfectFlash, setPerfectFlash] = useState(false)
   const [perfectBurstKey, setPerfectBurstKey] = useState(0)
   const [waitMessage, setWaitMessage] = useState('')
@@ -5731,7 +5747,8 @@ export default function FishingGame({
         // fire-and-forget; the local disarm is the actual one-shot guard.
         if (firstCatchArmedRef.current) {
           firstCatchArmedRef.current = false
-          setFirstCatchCeleb(true)
+          setCoach(null)   // clear the dial tip
+          setWalkStep(0)   // kick off the post-first-catch walkthrough
           startTransition(() => { markFirstCatchCelebrationSeen().catch(() => {}) })
         }
         // Bump the live PB lookup so the collection drawer reflects the new
@@ -8137,6 +8154,7 @@ export default function FishingGame({
 
                 {/* Gear — circle thumbnail with pencil edit overlay */}
                 <button
+                  className={flashTab === 'gear' ? 'coach-flash' : undefined}
                   onClick={() => { setGearOpen(o => !o); setHoldOpen(false); setBaitOpen(false) }}
                   style={{
                     ...tile,
@@ -8203,6 +8221,7 @@ export default function FishingGame({
                   }
                   return (
                 <button
+                  className={flashTab === 'bait' ? 'coach-flash' : undefined}
                   onClick={() => { if (baitDraggedRef.current) { baitDraggedRef.current = false; return } setBaitOpen(o => !o); setGearOpen(false); setHoldOpen(false) }}
                   style={{
                     ...tile,
@@ -8257,6 +8276,7 @@ export default function FishingGame({
 
                 {/* Hold — fish icon + count */}
                 <button
+                  className={flashTab === 'hold' ? 'coach-flash' : undefined}
                   onClick={() => { setHoldOpen(o => !o); setGearOpen(false); setBaitOpen(false) }}
                   style={{
                     ...tile,
@@ -8301,6 +8321,7 @@ export default function FishingGame({
                   return (
                     <motion.button
                       key={freshCatchHook ?? 'logbook-tile'}
+                      className={flashTab === 'log' ? 'coach-flash' : undefined}
                       onClick={() => {
                         const opening = !collectionOpen
                         setCollectionOpen(o => !o)
@@ -8468,12 +8489,28 @@ export default function FishingGame({
         show={coach === 'dial'}
         portrait={GUIDES.kat.portrait}
         speaker="Kat"
-        text="A fish is on. Stop the needle in the *green* to catch it, or the *gold* for a Perfect."
+        text="A fish is on. Stop the needle in the *green* to catch it, or the *gold* for a Perfect. Perfects build a streak for bonus XP and can refund bait."
         accent={FISHING_ACCENT}
         placement="top"
-        autoHideMs={9000}
+        autoHideMs={11000}
         onClose={() => setCoach(null)}
       />
+      {/* Post-first-catch walkthrough — steps through each action-bar tab
+          (flashing it), then explains XP / leveling. */}
+      {walkStep != null && FISH_WALKTHROUGH[walkStep] && (
+        <GuideCoach
+          show
+          portrait={FISH_WALKTHROUGH[walkStep].portrait}
+          speaker={FISH_WALKTHROUGH[walkStep].speaker}
+          text={FISH_WALKTHROUGH[walkStep].text}
+          accent={FISHING_ACCENT}
+          placement="bottom"
+          offset="calc(env(safe-area-inset-bottom, 0px) + 150px)"
+          onNext={() => setWalkStep(s => (s != null && s < FISH_WALKTHROUGH.length - 1 ? s + 1 : null))}
+          nextLabel={walkStep >= FISH_WALKTHROUGH.length - 1 ? 'Got it' : 'Next →'}
+          onClose={() => setWalkStep(null)}
+        />
+      )}
 
       {/* ── Onboarding tour (legacy plain cards — retired, kept dead) ── */}
       <AnimatePresence>
