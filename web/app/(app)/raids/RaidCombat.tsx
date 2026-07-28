@@ -2021,6 +2021,15 @@ export default function RaidCombat({
       // crew layer resets to 0 to keep boon + crew == the total.
       boonShieldRef.current = fightShieldMaxRef.current; setBoonShieldHp(fightShieldMaxRef.current)
       crewShieldRef.current = 0; setCrewShieldHp(0)
+      // Opening Bulwark — the opening-shield synergies (Stormward / Last Bastion /
+      // Deep Fortress / Iron Tempest) reform your soak pool each fight. A gold
+      // bulwark ring snaps out as the fight opens so the defense is felt, not just
+      // silently present in the bar.
+      const bulwarkKey = Date.now()
+      setTimeout(() => {
+        setPlayerAura({ key: bulwarkKey, kind: 'tide', color: '#f5b94a' })
+        setTimeout(() => setPlayerAura(a => (a && a.key === bulwarkKey ? null : a)), 900)
+      }, 380)
     }
     setSubPhase('await_input')
     setPlayerAction(null); setEnemyAction(null); setAimResult(null); setFirstActor(null)
@@ -3484,6 +3493,9 @@ export default function RaidCombat({
       executed?: 'execute' | 'coup'
       // Reaper's Tithe: HP tithed back to you for the kill — a gold heal splat.
       titheHeal?: number
+      // Rattling Shot / Chainshot / the rack landed a debuff — fires an enemy
+      // status flare so a control build reads its hex/snare landing.
+      debuffApplied?: 'snared' | 'marked'
       // Cannonade (boon): the crit streak AFTER this landed player shot (0 = the
       // chain just broke). Drives the persistent heat rim + streak badge.
       cannonade?: number
@@ -3725,6 +3737,7 @@ export default function RaidCombat({
       let thermalBurstOut = 0    // Thermal Shock confluence: shatter burst this hit
       let executeKind: 'execute' | 'coup' | undefined   // Executioner / Coup de Grâce sank the hull this step
       let titheHealedOut = 0     // Reaper's Tithe: HP tithed back for the kill this step
+      let debuffApplied: 'snared' | 'marked' | undefined   // Rattling/Chainshot/the rack landed a debuff this hit
       let shieldAbsorbedOut = 0  // Enemy barrier soak on the player's shot this step
       let carapaceSoaked = false
       let aegisDownOut: 'shatter' | 'collapse' | undefined   // The Last Wall fell this step
@@ -4429,6 +4442,7 @@ export default function RaidCombat({
             for (const s of tide.statusOnHitList) {
               if (procRoll(s.chance)) {
                 applyEnemyStatus(s.status as StatusId, s.magnitude, s.turns)
+                debuffApplied = s.status === 'slowed' ? 'snared' : 'marked'
                 stepLines.push(`Your shot leaves the ${enemy.name} ${s.status === 'slowed' ? 'snared' : s.status}.`)
               }
             }
@@ -4462,6 +4476,7 @@ export default function RaidCombat({
                 applyEnemyStatus('feeble', CHAIN_SHOT_FEEBLE_PCT, CHAIN_SHOT_WEAKEN_TURNS)
                 landed.push(`Feeble (+${Math.round(CHAIN_SHOT_FEEBLE_PCT * 100)}% damage taken)`)
               }
+              debuffApplied = 'marked'
               stepLines.push(`The rack fires! Scrap iron rips through the ${enemy.name} — ${landed.join(', ')}, ${CHAIN_SHOT_WEAKEN_TURNS} rounds.`)
             }
           }
@@ -4780,6 +4795,7 @@ export default function RaidCombat({
         thermalShock: thermalBurstOut || undefined,
         executed: executeKind,
         titheHeal: titheHealedOut || undefined,
+        debuffApplied,
         cannonade: cannonadeStep,
         aegisDown: aegisDownOut,
       })
@@ -5323,6 +5339,16 @@ export default function RaidCombat({
                 playStepChainRef.current.push(setTimeout(() => { setCritFlash(false); setBoonFlash(bf => (bf && bf.key === xk ? null : bf)) }, 1400))
               }, 260))
             }
+            // Rattling Shot / Chainshot / the rack — a debuff-landed flare on the
+            // enemy hull so a control build sees its hex/snare take hold.
+            if (step.debuffApplied) {
+              const dk = Date.now() + i + 27
+              const kind = step.debuffApplied
+              playStepChainRef.current.push(setTimeout(() => {
+                setEnemyAura({ key: dk, kind })
+                playStepChainRef.current.push(setTimeout(() => setEnemyAura(a => (a && a.key === dk ? null : a)), 900))
+              }, 220))
+            }
             if (step.big || megaId === 'nuke' || megaId === 'railgun') {
               setCritFlash(true)
               setTimeout(() => setCritFlash(false), megaId === 'nuke' ? 640 : 380)
@@ -5345,8 +5371,9 @@ export default function RaidCombat({
             const tithed = step.titheHeal
             playStepChainRef.current.push(setTimeout(() => {
               setPHitsplat({ key: rk, text: `+${tithed}`, color: '#f5c542', big: true })
+              setPlayerAura({ key: rk + 1, kind: 'heal', color: '#f5c542' })
               vibrate([0, 30])
-              playStepChainRef.current.push(setTimeout(() => setPHitsplat(null), SPLAT_HOLD_MS))
+              playStepChainRef.current.push(setTimeout(() => { setPHitsplat(null); setPlayerAura(a => (a && a.key === rk + 1 ? null : a)) }, SPLAT_HOLD_MS))
             }, 340))
           }
         }, flightMs)
