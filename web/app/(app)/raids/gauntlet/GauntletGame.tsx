@@ -2410,7 +2410,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         {introOpen && <GauntletIntroModal variant={props.variant} onClose={dismissIntro} firstTime={!props.hasSeenIntro} />}
         {lootMode && <LootModal mode={lootMode} don={isDonG} onClose={() => setLootMode(null)} />}
         {infoCurrency && <CurrencyInfoModal kind={infoCurrency} don={isDonG} onClose={() => setInfoCurrency(null)} />}
-        {synergiesOpen && <SynergiesModal owned={boonTiers} taken={confluencesTaken} takenConv={convergencesTaken} variant={props.variant ?? 'davy'} onClose={() => setSynergiesOpen(false)} />}
+        {synergiesOpen && <SynergiesModal owned={boonTiers} seen={seenConfluences} taken={confluencesTaken} takenConv={convergencesTaken} variant={props.variant ?? 'davy'} onClose={() => setSynergiesOpen(false)} />}
         {recapRun && <DeepestRunModal best={recapRun.hardcore ? props.hcDeepestRun : props.deepestRun} last={recapRun.hardcore ? props.hcLastRun : props.lastRun} hardcore={recapRun.hardcore} don={isDonG} onClose={() => setRecapRun(null)} />}
         {shopSection && <LockerUpgradesModal section={shopSection} variant={props.variant ?? 'davy'} onClose={() => setShopSection(null)} onClaimed={(owned) => { setUpgrades(owned); setBonusSlots(bonusChargeSlots(owned)) }} onToggled={setUpgradesOff} />}
         {descentModals}
@@ -3464,7 +3464,7 @@ export default function GauntletGame(props: GauntletGameProps) {
 
         {detailModal}
         {exitModal}
-        {synergiesOpen && <SynergiesModal owned={boonTiers} taken={confluencesTaken} takenConv={convergencesTaken} variant={props.variant ?? 'davy'} onClose={() => setSynergiesOpen(false)} />}
+        {synergiesOpen && <SynergiesModal owned={boonTiers} seen={seenConfluences} taken={confluencesTaken} takenConv={convergencesTaken} variant={props.variant ?? 'davy'} onClose={() => setSynergiesOpen(false)} />}
         {/* Claim & Leave confirm — a light guard so you never bank + end the run
             on a misfire. Shows exactly what walks away with you. */}
         {confirmClaim && (
@@ -4008,7 +4008,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         </div>
         {detailModal}
         {exitModal}
-        {synergiesOpen && <SynergiesModal owned={boonTiers} taken={confluencesTaken} takenConv={convergencesTaken} variant={props.variant ?? 'davy'} onClose={() => setSynergiesOpen(false)} />}
+        {synergiesOpen && <SynergiesModal owned={boonTiers} seen={seenConfluences} taken={confluencesTaken} takenConv={convergencesTaken} variant={props.variant ?? 'davy'} onClose={() => setSynergiesOpen(false)} />}
       </>
     )
   }
@@ -5123,7 +5123,7 @@ function DeepestRunModal({ best, last, hardcore = false, don, onClose }: { best:
 // shows as a silhouetted "undiscovered" row (no name, boons, or effect), and
 // reveals permanently the first time you unlock it in a dive. The chase is the
 // point — you find them by experimenting, then they stay in your codex.
-function SynergiesModal({ owned, taken = [], takenConv = [], variant = 'davy', onClose }: { owned: Record<string, number>; seen?: string[]; taken?: string[]; takenConv?: string[]; variant?: GauntletVariant; onClose: () => void }) {
+function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant = 'davy', onClose }: { owned: Record<string, number>; seen?: string[]; taken?: string[]; takenConv?: string[]; variant?: GauntletVariant; onClose: () => void }) {
   const GLD = '#f5b94a'   // active
   const SYN = '#b98bff'   // ready (both halves held, not yet drafted)
   const NEED = '#5fa8c7'  // one away (hold one half)
@@ -5179,6 +5179,28 @@ function SynergiesModal({ owned, taken = [], takenConv = [], variant = 'davy', o
   const confMatchesTrace = (r: (typeof confRows)[number]) => !trace || r.parts.some(p => p.id === trace)
   const convMatchesTrace = (r: (typeof convRows)[number]) => !trace || r.parts.some(p => p.boonIds.includes(trace))
 
+  // ── Codex — the full catalog across runs. A "This Run / Codex" toggle switches
+  // between the personalized tree above and this reference view. Discovered
+  // entries (seen in a past run, or qualifying right now) read in full; the rest
+  // are locked silhouettes. Confluence discovery is persisted (gauntlet_confluences_seen);
+  // convergences have no store, so they reveal once BOTH their synergies are known.
+  const [view, setView] = useState<'run' | 'codex'>('run')
+  const seenSet = new Set(seen)
+  const codexConf = CONFLUENCES.filter(c => inGauntletPool(c.gauntlet, variant)).map(c => {
+    const lvl = confluenceLevel(c, owned)
+    const discovered = seenSet.has(c.id) || lvl >= 1
+    const activeNow = takenSet.has(c.id) && lvl >= 1
+    return { c, lvl, discovered, activeNow }
+  }).sort((a, b) => Number(b.discovered) - Number(a.discovered) || Number(b.activeNow) - Number(a.activeNow) || a.c.name.localeCompare(b.c.name))
+  const codexConv = CONVERGENCES.filter(cv => inGauntletPool(cv.gauntlet, variant)).map(cv => {
+    const lvl = convergenceLevel(cv, owned, taken)
+    const discovered = lvl >= 1 || cv.requires.every(r => seenSet.has(r.confluenceId))
+    const activeNow = takenConvSet.has(cv.id) && lvl >= 1
+    return { cv, lvl, discovered, activeNow }
+  }).sort((a, b) => Number(b.discovered) - Number(a.discovered) || Number(b.activeNow) - Number(a.activeNow) || a.cv.name.localeCompare(b.cv.name))
+  const codexTotal = codexConf.length + codexConv.length
+  const codexFound = codexConf.filter(e => e.discovered).length + codexConv.filter(e => e.discovered).length
+
   const Pips = ({ level, color, max = 3 }: { level: number; color: string; max?: number }) => (
     <span style={{ display: 'inline-flex', gap: 3, alignItems: 'center', flexShrink: 0 }} aria-hidden>
       {Array.from({ length: max }, (_, i) => i + 1).map(n => (
@@ -5229,16 +5251,29 @@ function SynergiesModal({ owned, taken = [], takenConv = [], variant = 'davy', o
         style={{ width: '100%', maxWidth: 440, maxHeight: '86vh', overflowY: 'auto', borderRadius: 18, background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${GLD}3a`, boxShadow: `0 0 44px ${GLD}1f, 0 18px 50px rgba(0,0,0,0.6)`, padding: '1.3rem 1.15rem 1.1rem' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
           <div style={{ minWidth: 0 }}>
-            <p className="font-karla font-700 uppercase tracking-[0.24em]" style={{ fontSize: '0.52rem', color: `${GLD}cc` }}>Your Build</p>
-            <p className="font-cinzel font-800" style={{ fontSize: '1.4rem', color: '#eafffb', lineHeight: 1.1, marginTop: 3 }}>Synergy Tree</p>
+            <p className="font-karla font-700 uppercase tracking-[0.24em]" style={{ fontSize: '0.52rem', color: `${GLD}cc` }}>{view === 'run' ? 'Your Build' : 'The Codex'}</p>
+            <p className="font-cinzel font-800" style={{ fontSize: '1.4rem', color: '#eafffb', lineHeight: 1.1, marginTop: 3 }}>{view === 'run' ? 'Synergy Tree' : 'All Synergies'}</p>
           </div>
           <button onClick={onClose} aria-label="Close" style={{ flexShrink: 0, width: 32, height: 32, borderRadius: '50%', padding: 0, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
           </button>
         </div>
 
+        {/* This Run (personalized tree) vs Codex (the full catalogue). */}
+        <div style={{ display: 'flex', gap: 4, marginTop: 12, padding: 4, background: 'rgba(0,0,0,0.3)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)' }}>
+          {([['run', 'This Run'], ['codex', 'Codex']] as ['run' | 'codex', string][]).map(([v, label]) => {
+            const on = view === v
+            return (
+              <button key={v} onClick={() => setView(v)} className="font-karla font-800 uppercase tracking-[0.08em] tap"
+                style={{ flex: 1, padding: '0.5rem 0', borderRadius: 9, fontSize: '0.62rem', cursor: 'pointer', border: `1px solid ${on ? `${GLD}66` : 'transparent'}`, background: on ? `linear-gradient(180deg, ${GLD}26, ${GLD}0c)` : 'transparent', color: on ? '#f4d79a' : '#8f97a2' }}>
+                {label}
+              </button>
+            )
+          })}
+        </div>
+
         {/* Status legend / count summary — what's shown, at a glance. */}
-        {anyRows && (
+        {view === 'run' && anyRows && (
           <div style={{ display: 'flex', gap: 7, marginTop: 11, flexWrap: 'wrap' }}>
             {([['active', 'Active'], ['ready', 'Ready'], ['need1', 'One away']] as [Status, string][]).map(([k, label]) => (
               <span key={k} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.56rem', padding: '0.22rem 0.5rem', borderRadius: 999, background: `${accentOf(k)}12`, border: `1px solid ${accentOf(k)}3a` }}>
@@ -5264,7 +5299,7 @@ function SynergiesModal({ owned, taken = [], takenConv = [], variant = 'davy', o
         </div>
 
         {/* Trace strip — tap a boon you hold to light every synergy it feeds. */}
-        {traceBoons.length > 1 && (
+        {view === 'run' && traceBoons.length > 1 && (
           <div style={{ marginTop: 13 }}>
             <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.5rem', color: '#9a948a', marginBottom: 6 }}>
               {trace ? 'Tracing — tap again to clear' : 'Tap a boon to trace it'}
@@ -5289,6 +5324,7 @@ function SynergiesModal({ owned, taken = [], takenConv = [], variant = 'davy', o
           </div>
         )}
 
+        {view === 'run' && (<>
         {/* ── Synergies (boon ⊕ boon) ── */}
         {confRows.length > 0 && (
           <p className="font-karla font-800 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: '#8f97a2', marginTop: 15, marginBottom: 2 }}>Synergies</p>
@@ -5383,8 +5419,107 @@ function SynergiesModal({ owned, taken = [], takenConv = [], variant = 'davy', o
         )}
 
         <p className="font-karla" style={{ fontSize: '0.6rem', color: '#5f6875', textAlign: 'center', lineHeight: 1.5, marginTop: 14 }}>
-          Only synergies you already hold a piece of are shown. More appear as you draft new boons.
+          Only synergies you already hold a piece of are shown. Switch to the Codex for the full catalogue.
         </p>
+        </>)}
+
+        {/* ── CODEX — the full catalogue across runs. Discovered entries read in
+             full; the rest are locked silhouettes you reveal by drafting them. ── */}
+        {view === 'codex' && (
+          <>
+            <div style={{ marginTop: 13 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
+                <span className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: '#9a948a' }}>Discovered</span>
+                <span className="font-cinzel font-800" style={{ fontSize: '0.76rem', color: GLD }}>{codexFound}<span style={{ color: 'rgba(255,255,255,0.32)' }}> / {codexTotal}</span></span>
+              </div>
+              <div style={{ height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
+                <motion.div initial={{ width: 0 }} animate={{ width: `${Math.round((codexFound / (codexTotal || 1)) * 100)}%` }} transition={{ duration: 0.8, ease: 'easeOut' }}
+                  style={{ height: '100%', borderRadius: 999, background: `linear-gradient(90deg, ${GLD}, #ffe6a8)`, boxShadow: `0 0 10px ${GLD}88` }} />
+              </div>
+            </div>
+
+            <p className="font-karla font-800 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: '#8f97a2', marginTop: 15, marginBottom: 2 }}>Synergies</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: 8 }}>
+              {codexConf.map(({ c, lvl, discovered, activeNow }) => {
+                if (!discovered) {
+                  return (
+                    <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 11, borderRadius: 14, padding: '0.85rem 0.9rem', background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.12)' }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#7d8794', letterSpacing: '0.16em' }}>? ? ?</p>
+                        <p className="font-karla" style={{ fontSize: '0.66rem', color: '#5f6875', lineHeight: 1.4, marginTop: 2 }}>An undiscovered synergy. Draft it in a dive to reveal it.</p>
+                      </div>
+                      <Pips level={0} color="#6b7280" />
+                    </div>
+                  )
+                }
+                const accent = activeNow ? GLD : '#9aa7b4'
+                return (
+                  <div key={c.id} style={{ position: 'relative', overflow: 'hidden', borderRadius: 14, padding: '0.75rem 0.85rem', background: activeNow ? `${GLD}16` : 'rgba(255,255,255,0.03)', border: `1px solid ${activeNow ? `${GLD}55` : 'rgba(255,255,255,0.09)'}` }}>
+                    <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: accent, boxShadow: activeNow ? `0 0 12px ${accent}` : 'none' }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></svg>
+                      <p className="font-cinzel font-800" style={{ flex: 1, minWidth: 0, fontSize: '0.98rem', color: activeNow ? '#fbe7c4' : '#dfe7ee', lineHeight: 1.12 }}>{c.name}</p>
+                      <Pips level={lvl} color={accent} max={c.levels.length} />
+                      {activeNow && <StatusBadge status="active" />}
+                    </div>
+                    <Recipe arrowColor={accent} parts={c.requires.map(r => { const m = boonMeta(r.boonId); return <Chip key={m.id} label={m.name} tier={m.tier} have color={m.color} /> })}>
+                      <span className="font-cinzel font-800" style={{ fontSize: '0.82rem', color: '#aef5c4', lineHeight: 1.2, textShadow: '0 0 12px rgba(74,222,128,0.3)' }}>{confluenceDescAt(c, Math.max(1, lvl))}</span>
+                    </Recipe>
+                    <p className="font-karla" style={{ fontSize: '0.7rem', color: 'rgba(230,240,236,0.62)', lineHeight: 1.45, marginTop: 6 }}>{c.detail}</p>
+                    <p className="font-karla" style={{ fontSize: '0.72rem', fontStyle: 'italic', color: 'rgba(245,242,236,0.45)', lineHeight: 1.4, marginTop: 6 }}>{c.flavor}</p>
+                  </div>
+                )
+              })}
+            </div>
+
+            {codexConv.length > 0 && (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 16, marginBottom: 2 }}>
+                  <p className="font-karla font-800 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: KRAKEN }}>Convergences</p>
+                  <span className="font-karla" style={{ fontSize: '0.5rem', color: '#7c8794' }}>two synergies fused</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: 8 }}>
+                  {codexConv.map(({ cv, lvl, discovered, activeNow }) => {
+                    if (!discovered) {
+                      return (
+                        <div key={cv.id} style={{ display: 'flex', alignItems: 'center', gap: 11, borderRadius: 14, padding: '0.85rem 0.9rem', background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.12)' }}>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#7d8794', letterSpacing: '0.16em' }}>? ? ?</p>
+                            <p className="font-karla" style={{ fontSize: '0.66rem', color: '#5f6875', lineHeight: 1.4, marginTop: 2 }}>An undiscovered convergence. Fuse two synergies in a dive to reveal it.</p>
+                          </div>
+                          <Pips level={0} color="#6b7280" />
+                        </div>
+                      )
+                    }
+                    const accent = activeNow ? KRAKEN : '#9aa7b4'
+                    return (
+                      <div key={cv.id} style={{ position: 'relative', overflow: 'hidden', borderRadius: 14, padding: '0.75rem 0.85rem', background: activeNow ? `${KRAKEN}1c` : 'rgba(255,255,255,0.03)', border: `1px solid ${activeNow ? `${KRAKEN}55` : 'rgba(255,255,255,0.09)'}` }}>
+                        <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: accent, boxShadow: activeNow ? `0 0 12px ${accent}` : 'none' }} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 2v20M2 12h20M5 5l14 14M19 5 5 19" /></svg>
+                          <p className="font-cinzel font-800" style={{ flex: 1, minWidth: 0, fontSize: '0.98rem', color: activeNow ? '#f0d7ff' : '#dfe7ee', lineHeight: 1.12 }}>{cv.name}</p>
+                          <Pips level={lvl} color={accent} max={cv.levels.length} />
+                          {activeNow && <span className="font-karla font-800 uppercase" style={{ flexShrink: 0, fontSize: '0.46rem', letterSpacing: '0.12em', color: '#12081a', background: KRAKEN, borderRadius: 999, padding: '0.16rem 0.44rem' }}>Active</span>}
+                        </div>
+                        <Recipe arrowColor={accent} parts={cv.requires.map(r => { const cc = CONFLUENCES.find(x => x.id === r.confluenceId); return <Chip key={r.confluenceId} label={cc?.name ?? r.confluenceId} have color={SYN} /> })}>
+                          <span className="font-cinzel font-800" style={{ fontSize: '0.82rem', color: '#e6c8ff', lineHeight: 1.2, textShadow: `0 0 12px ${KRAKEN}55` }}>{convergenceDescAt(cv, Math.max(1, lvl))}</span>
+                        </Recipe>
+                        <p className="font-karla" style={{ fontSize: '0.7rem', color: 'rgba(230,240,236,0.62)', lineHeight: 1.45, marginTop: 6 }}>{cv.detail}</p>
+                        <p className="font-karla" style={{ fontSize: '0.72rem', fontStyle: 'italic', color: 'rgba(245,242,236,0.45)', lineHeight: 1.4, marginTop: 6 }}>{cv.flavor}</p>
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
+            )}
+
+            <p className="font-karla" style={{ fontSize: '0.6rem', color: '#5f6875', textAlign: 'center', lineHeight: 1.5, marginTop: 14 }}>
+              The full catalogue for this Gauntlet. Locked entries reveal the first time you draft them in a dive.
+            </p>
+          </>
+        )}
       </motion.div>
     </ModalScrim>
   )
