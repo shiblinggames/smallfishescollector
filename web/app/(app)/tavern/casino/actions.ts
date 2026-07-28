@@ -167,3 +167,11 @@ export async function cashOutCasino(): Promise<CasinoCashOutResult | { error: st
   revalidatePath('/tavern')
   return { newDoubloons, cashedOut: chips }
 }
+
+// First-visit Den guide dismissal (see components/LobbyGuide).
+export async function markDenGuideSeen(): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  await createAdminClient().from('profiles').update({ has_seen_den_guide: true }).eq('id', user.id)
+}

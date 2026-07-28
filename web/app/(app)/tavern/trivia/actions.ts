@@ -71,3 +71,11 @@ export async function claimParlorRank(): Promise<ClaimParlorResult> {
     moreClaimable: !!more,
   }
 }
+
+// First-visit Parlor guide dismissal (see components/LobbyGuide).
+export async function markParlorGuideSeen(): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  await createAdminClient().from('profiles').update({ has_seen_parlor_guide: true }).eq('id', user.id)
+}

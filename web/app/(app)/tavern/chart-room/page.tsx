@@ -59,6 +59,7 @@ export default async function ChartRoomPage() {
               chartingClaimed={(profile?.charting_landmarks_claimed as number[] | null) ?? []}
               topCharters={topCharters}
               isMember={isPremiumActive(profile)}
+              hasSeenGuide={(profile?.has_seen_charting_guide as boolean | null) ?? false}
             />
           </div>
         </main>

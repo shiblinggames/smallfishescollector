@@ -19,8 +19,16 @@ import { Avatar } from '@/app/(app)/leaderboard/boardUI'
 import BecomeCaptainButton from '@/components/BecomeCaptainButton'
 import BackButton from '@/components/BackButton'
 import ResetCountdown from '@/components/ResetCountdown'
+import LobbyGuide, { type LobbyGuideStep } from '@/components/LobbyGuide'
+import { GUIDES } from '@/lib/onboardingScenes'
+import { markDenGuideSeen } from './actions'
 
 const GOLD = '#f0c040'
+
+const DEN_GUIDE: LobbyGuideStep[] = [
+  { coachId: 'den-wallet', ...GUIDES.doby, text: "Buy *chips* with your doubloons here. One purse plays every table, and you can cash out any time." },
+  { coachId: 'den-tables', ...GUIDES.kat, text: "*Blackjack, Slots, and Roulette* — spend your chips at any of them. Winnings ride until you cash out." },
+]
 
 const DEN_TABS = [
   { key: 'overall',   label: 'Overall' },
@@ -30,10 +38,11 @@ const DEN_TABS = [
 ] as const
 type DenTabKey = typeof DEN_TABS[number]['key']
 
-export default function CasinoLobby({ initial, jackpotPot, denBoards }: {
+export default function CasinoLobby({ initial, jackpotPot, denBoards, hasSeenGuide = true }: {
   initial: CasinoWallet
   jackpotPot: number
   denBoards: DenLeaderboards
+  hasSeenGuide?: boolean
 }) {
   const [chips, setChips] = useState(initial.chips)
   const [doubloons, setDoubloons] = useState(initial.doubloons)
@@ -132,7 +141,7 @@ export default function CasinoLobby({ initial, jackpotPot, denBoards }: {
 
       {/* Wallet panel — the shared purse. Same wood/brass family as the
           Blackjack table so the lobby reads as part of the card room. */}
-      <div style={{
+      <div data-coach="den-wallet" style={{
         background: 'linear-gradient(180deg, #1a1410 0%, #0b0908 100%)',
         border: '1px solid rgba(196,169,106,0.25)',
         borderRadius: 16,
@@ -341,7 +350,7 @@ export default function CasinoLobby({ initial, jackpotPot, denBoards }: {
       </div>
 
       {/* The tables */}
-      <div className="grid grid-cols-2 gap-3">
+      <div data-coach="den-tables" className="grid grid-cols-2 gap-3">
         <BlackjackHubCard />
         <FishSlotsCard jackpotPot={jackpotPot} />
         <RouletteHubCard />
@@ -430,6 +439,12 @@ export default function CasinoLobby({ initial, jackpotPot, denBoards }: {
       <p className="font-karla" style={{ fontSize: '0.6rem', color: '#5a5248', textAlign: 'center', lineHeight: 1.5 }}>
         One purse, every table. Session winnings track per game until you cash out.
       </p>
+
+      <LobbyGuide
+        show={!hasSeenGuide}
+        steps={DEN_GUIDE}
+        onSeen={() => { void markDenGuideSeen().catch(() => {}) }}
+      />
     </div>
   )
 }

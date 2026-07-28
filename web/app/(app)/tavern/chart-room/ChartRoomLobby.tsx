@@ -11,10 +11,18 @@ import MinefieldCard from './MinefieldCard'
 import RiggingCard from './RiggingCard'
 import WorldChartCard from './WorldChartCard'
 import ChartingNav from '@/components/ChartingNav'
+import LobbyGuide, { type LobbyGuideStep } from '@/components/LobbyGuide'
+import { GUIDES } from '@/lib/onboardingScenes'
+import { markChartingGuideSeen } from './actions'
 
 const MEDAL = ['#f0c040', '#c9d2dc', '#cd7f32'] // gold · silver · bronze
 
-export default function ChartRoomLobby({ holdSolved, holdDoubloonsToday, matchStatus, matchReward, minefieldStatus, minefieldReward, riggingStatus, riggingReward, puzzlePoints, chartingClaimed, topCharters, isMember }: {
+const CHARTING_GUIDE: LobbyGuideStep[] = [
+  { coachId: 'chart-puzzles', ...GUIDES.doby, text: "Four *puzzles*, fresh every Monday. Clear each one for doubloons and charting points." },
+  { coachId: 'chart-world', ...GUIDES.kat, text: "Charting points uncover *the World Chart* piece by piece, paying out gems as new places appear." },
+]
+
+export default function ChartRoomLobby({ holdSolved, holdDoubloonsToday, matchStatus, matchReward, minefieldStatus, minefieldReward, riggingStatus, riggingReward, puzzlePoints, chartingClaimed, topCharters, isMember, hasSeenGuide = true }: {
   holdSolved: number
   holdDoubloonsToday: number
   matchStatus: 'active' | 'cleared'
@@ -27,15 +35,18 @@ export default function ChartRoomLobby({ holdSolved, holdDoubloonsToday, matchSt
   chartingClaimed: number[]
   topCharters: { username: string; points: number }[]
   isMember: boolean
+  hasSeenGuide?: boolean
 }) {
   return (
     <div style={{ maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
       <ChartingNav title="Charting" backHref="/tavern" backLabel="Tavern" points={puzzlePoints} />
 
       {/* The World Chart — the collectible the puzzles feed toward. */}
-      <WorldChartCard points={puzzlePoints} claimed={chartingClaimed} />
+      <div data-coach="chart-world">
+        <WorldChartCard points={puzzlePoints} claimed={chartingClaimed} />
+      </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div data-coach="chart-puzzles" className="grid grid-cols-2 gap-3">
         <HoldCard solvedCount={holdSolved} doubloonsToday={holdDoubloonsToday} />
         <TreasureMatchCard status={matchStatus} reward={matchReward} />
         <MinefieldCard status={minefieldStatus} reward={minefieldReward} />
@@ -64,6 +75,12 @@ export default function ChartRoomLobby({ holdSolved, holdDoubloonsToday, matchSt
       <p className="font-karla" style={{ fontSize: '0.6rem', color: '#5a5248', textAlign: 'center', lineHeight: 1.5 }}>
         Fresh puzzles every Monday. Stow the hold clean for a bonus.
       </p>
+
+      <LobbyGuide
+        show={!hasSeenGuide}
+        steps={CHARTING_GUIDE}
+        onSeen={() => { void markChartingGuideSeen().catch(() => {}) }}
+      />
     </div>
   )
 }

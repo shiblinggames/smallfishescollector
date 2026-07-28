@@ -64,6 +64,7 @@ export default async function TriviaPage() {
           isCaptain={isPremiumActive(profile)}
           capstanSolved={capstanSolved}
           topParlor={topParlor}
+          hasSeenGuide={(profile?.has_seen_parlor_guide as boolean | null) ?? false}
         />
       </div>
     </main>

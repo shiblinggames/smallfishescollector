@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { unstable_cache } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { getCurrentProfile } from '@/lib/userData'
 import { getCasinoState } from './actions'
 import { getSlotsJackpot } from '../actions'
 import CasinoLobby from './CasinoLobby'
@@ -78,11 +79,12 @@ export default async function CasinoPage() {
   if (!user) redirect('/login')
 
   // Parallel: shared wallet snapshot + live jackpot pot (rides on the
-  // slots card) + the High Rollers strip.
-  const [wallet, jackpot, denBoards] = await Promise.all([
+  // slots card) + the High Rollers strip + the guide flag.
+  const [wallet, jackpot, denBoards, profile] = await Promise.all([
     getCasinoState(),
     getSlotsJackpot(),
     getCachedDenLeaderboards(),
+    getCurrentProfile(),
   ])
 
   return (
@@ -92,6 +94,7 @@ export default async function CasinoPage() {
           initial={wallet}
           jackpotPot={jackpot.pot}
           denBoards={denBoards}
+          hasSeenGuide={(profile?.has_seen_den_guide as boolean | null) ?? false}
         />
       </div>
     </main>

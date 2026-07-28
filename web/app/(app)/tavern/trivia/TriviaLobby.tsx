@@ -12,8 +12,17 @@ import ParlorClaim from './ParlorClaim'
 import ParlorStanding from './ParlorStanding'
 import CapstanCard from './CapstanCard'
 import { TRIVIA_CATEGORIES, PIRATE_KING_RUNGS, type PirateKingStatus } from './constants'
+import LobbyGuide, { type LobbyGuideStep } from '@/components/LobbyGuide'
+import { GUIDES } from '@/lib/onboardingScenes'
+import { markParlorGuideSeen } from './actions'
 
 const GOLD = '#f0c040'
+
+const PARLOR_GUIDE: LobbyGuideStep[] = [
+  { coachId: 'parlor-rank', ...GUIDES.kat, text: "Both games build one *Parlor rank*. Climb it to collect gems at every tier." },
+  { coachId: 'parlor-board', ...GUIDES.doby, text: "*The Captain's Board* gives you a trivia card a day. Right answers pay doubloons." },
+  { coachId: 'parlor-king', ...GUIDES.kat, text: "*Pirate King* is a weekly prize ladder. Climb the rungs, then cash out or risk it all for the crown." },
+]
 
 export interface KingChip {
   status: PirateKingStatus
@@ -23,7 +32,7 @@ export interface KingChip {
 
 const MEDAL = ['#f0c040', '#c9d2dc', '#cd7f32'] // gold · silver · bronze
 
-export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, doubloonsThisWeek, king, parlorStreak, parlorPoints, parlorRankGemsClaimed, isCaptain, capstanSolved, topParlor }: {
+export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, doubloonsThisWeek, king, parlorStreak, parlorPoints, parlorRankGemsClaimed, isCaptain, capstanSolved, topParlor, hasSeenGuide = true }: {
   boardPlayedToday: boolean
   boardPlayedThisWeek: number
   doubloonsThisWeek: number
@@ -34,6 +43,7 @@ export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, dou
   isCaptain: boolean
   capstanSolved: number
   topParlor: { username: string; points: number }[]
+  hasSeenGuide?: boolean
 }) {
   const kingChipText = king === null ? null
     : king.status === 'crowned' ? `Crowned · +${king.doubloonsAwarded} ⟡`
@@ -63,7 +73,9 @@ export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, dou
 
       {/* Parlor Standing — the mastery rank you climb across both games. Points
           fill an XP bar toward the next rank; tap to see the whole ladder. */}
-      <ParlorStanding points={parlorPoints} streak={parlorStreak} claimedGems={parlorRankGemsClaimed} />
+      <div data-coach="parlor-rank">
+        <ParlorStanding points={parlorPoints} streak={parlorStreak} claimedGems={parlorRankGemsClaimed} />
+      </div>
 
       {/* Collect any ranks your points have reached — the interactive gem claim. */}
       <ParlorClaim points={parlorPoints} claimedGems={parlorRankGemsClaimed} />
@@ -73,6 +85,7 @@ export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, dou
       </p>
 
       {/* The Captain's Board — live */}
+      <div data-coach="parlor-board">
       <ScenicCard
         href="/tavern/trivia/board"
         title="The Captain's Board"
@@ -128,8 +141,10 @@ export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, dou
             : 'Card ready'}
         </span>
       </ScenicCard>
+      </div>
 
       {/* Pirate King — live */}
+      <div data-coach="parlor-king">
       <ScenicCard
         href="/tavern/trivia/king"
         title="Pirate King"
@@ -188,6 +203,7 @@ export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, dou
           </span>
         )}
       </ScenicCard>
+      </div>
 
       {/* Spin the Capstan — live, Captain-only */}
       <CapstanCard isMember={isCaptain} solved={capstanSolved} />
@@ -213,6 +229,13 @@ export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, dou
       <p className="font-karla" style={{ fontSize: '0.6rem', color: '#5a5248', textAlign: 'center', lineHeight: 1.5 }}>
         The board and the King&apos;s ladder are rigged fresh each Monday; the Capstan hides three new phrases. Winnings land instantly.
       </p>
+
+      <LobbyGuide
+        show={!hasSeenGuide}
+        steps={PARLOR_GUIDE}
+        accent="#a78bfa"
+        onSeen={() => { void markParlorGuideSeen().catch(() => {}) }}
+      />
     </div>
   )
 }
