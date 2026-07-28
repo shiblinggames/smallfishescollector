@@ -5149,9 +5149,12 @@ function BoonGlyph({ cat, size }: { cat: BoonCat; size: number }) {
   const g = BOON_CAT_GLYPH[cat]
   return <svg width={size} height={size} viewBox="0 0 24 24" fill={g.color} aria-hidden style={{ filter: `drop-shadow(0 0 2px ${g.color}88)` }}><path d={g.d} /></svg>
 }
-function BoonToken({ boonId, tier = 0, held, size = 32 }: { boonId: string; tier?: number; held?: boolean; size?: number }) {
+function BoonToken({ boonId, tier = 0, held, full, size = 32 }: { boonId: string; tier?: number; held?: boolean; full?: boolean; size?: number }) {
   const b = GAUNTLET_BOONS.find(x => x.id === boonId)
   const rc = b ? BOON_RARITY_META[boonRarity(b)].color : '#8894a6'
+  // `full` = show it lit regardless of holdings (the Codex is a catalogue, not
+  // your current build, so it's never ghosted). `held` is the This-Run state.
+  const lit = held || full
   const tierPip = held && tier > 0
     ? <span className="font-cinzel font-800" style={{ position: 'absolute', bottom: -5, right: -5, minWidth: 13, height: 13, padding: '0 2px', borderRadius: 7, background: rc, color: '#0a0e14', fontSize: '0.5rem', lineHeight: '13px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.55)' }}>{['', 'I', 'II', 'III'][Math.min(tier, 3)]}</span>
     : null
@@ -5161,7 +5164,7 @@ function BoonToken({ boonId, tier = 0, held, size = 32 }: { boonId: string; tier
       <span style={{ position: 'relative', flexShrink: 0, width: size, height: size, display: 'grid', placeItems: 'center' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={b.image} alt="" loading="lazy" decoding="async"
-          style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: held ? 1 : 0.5, filter: held ? 'drop-shadow(0 1px 3px rgba(0,0,0,0.5))' : 'grayscale(0.85) drop-shadow(0 1px 2px rgba(0,0,0,0.4))' }} />
+          style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: lit ? 1 : 0.5, filter: lit ? 'drop-shadow(0 1px 3px rgba(0,0,0,0.5))' : 'grayscale(0.85) drop-shadow(0 1px 2px rgba(0,0,0,0.4))' }} />
         {tierPip}
       </span>
     )
@@ -5169,9 +5172,9 @@ function BoonToken({ boonId, tier = 0, held, size = 32 }: { boonId: string; tier
   // The category glyph keeps its framed chip so the small mark still reads.
   return (
     <span style={{ position: 'relative', flexShrink: 0, width: size, height: size, borderRadius: size * 0.26, display: 'grid', placeItems: 'center',
-      background: held ? `${rc}22` : 'rgba(255,255,255,0.03)',
-      border: `1.5px ${held ? 'solid' : 'dashed'} ${held ? rc : 'rgba(255,255,255,0.2)'}`,
-      boxShadow: held ? `0 0 8px ${rc}44, inset 0 0 8px ${rc}1a` : 'none', opacity: held ? 1 : 0.6 }}>
+      background: lit ? `${rc}22` : 'rgba(255,255,255,0.03)',
+      border: `1.5px ${lit ? 'solid' : 'dashed'} ${lit ? rc : 'rgba(255,255,255,0.2)'}`,
+      boxShadow: lit ? `0 0 8px ${rc}44, inset 0 0 8px ${rc}1a` : 'none', opacity: lit ? 1 : 0.6 }}>
       <BoonGlyph cat={boonCategory(boonId)} size={Math.round(size * 0.5)} />
       {tierPip}
     </span>
@@ -5472,7 +5475,7 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
                 const parts = c.requires.map(r => boonMeta(r.boonId))
                 return (
                   <SynergyMedallion key={c.id} name={c.name} status={activeNow ? 'active' : 'codex'} lvl={lvl} accent={activeNow ? GLD : '#9aa7b4'} onOpen={() => setOpenId(c.id)}
-                    tokens={<><BoonToken boonId={parts[0].id} tier={parts[0].tier} held={parts[0].tier >= 1} /><Fuse /><BoonToken boonId={parts[1].id} tier={parts[1].tier} held={parts[1].tier >= 1} /></>} />
+                    tokens={<><BoonToken boonId={parts[0].id} full /><Fuse /><BoonToken boonId={parts[1].id} full /></>} />
                 )
               })}
             </div>
@@ -5492,7 +5495,7 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
                     })
                     return (
                       <SynergyMedallion key={cv.id} name={cv.name} status={activeNow ? 'active' : 'codex'} lvl={lvl} accent={activeNow ? KRAKEN : '#9aa7b4'} kraken onOpen={() => setOpenId(cv.id)}
-                        tokens={<><MiniCrest color={KRAKEN} dim={!parts[0].online} image={parts[0].image} /><Fuse /><MiniCrest color={KRAKEN} dim={!parts[1].online} image={parts[1].image} /></>} />
+                        tokens={<><MiniCrest color={KRAKEN} image={parts[0].image} /><Fuse /><MiniCrest color={KRAKEN} image={parts[1].image} /></>} />
                     )
                   })}
                 </div>
@@ -5533,8 +5536,8 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
               : ready ? 'Both halves held — draft it instead of a boon this round'
               : need1 ? `Draft ${parts.filter(p => p.tier < 1).map(p => p.name).join(' & ')} to unlock it`
               : `Hold ${parts.map(p => p.name).join(' & ')} together to unlock it`
-            comps = parts.map(p => ({ node: <BoonToken boonId={p.id} tier={p.tier} held={p.tier >= 1} size={34} />, name: p.name + (p.tier >= 1 ? ` ${ROMAN[Math.min(p.tier, 3)]}` : ''), held: p.tier >= 1 }))
-            headTokens = <><BoonToken boonId={parts[0].id} tier={parts[0].tier} held={parts[0].tier >= 1} size={38} /><Fuse /><BoonToken boonId={parts[1].id} tier={parts[1].tier} held={parts[1].tier >= 1} size={38} /></>
+            comps = parts.map(p => ({ node: <BoonToken boonId={p.id} tier={p.tier} held={p.tier >= 1} full={view === 'codex'} size={34} />, name: p.name + (p.tier >= 1 ? ` ${ROMAN[Math.min(p.tier, 3)]}` : ''), held: p.tier >= 1 }))
+            headTokens = <><BoonToken boonId={parts[0].id} tier={parts[0].tier} held={parts[0].tier >= 1} full={view === 'codex'} size={38} /><Fuse /><BoonToken boonId={parts[1].id} tier={parts[1].tier} held={parts[1].tier >= 1} full={view === 'codex'} size={38} /></>
             resultImage = oc.image
           } else {
             const cv = ov!
@@ -5554,8 +5557,8 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
               : ready ? 'Both synergies online — draft it instead of a boon this round'
               : need1 ? `Bring ${parts.filter(p => !p.online).map(p => p.name).join(' & ')} online to unlock it`
               : `Bring ${parts.map(p => p.name).join(' & ')} online together to unlock it`
-            comps = parts.map(p => ({ node: <MiniCrest color={KRAKEN} dim={!p.online} size={34} image={p.image} />, name: p.name, held: p.online }))
-            headTokens = <><MiniCrest color={KRAKEN} dim={!parts[0].online} size={38} image={parts[0].image} /><Fuse /><MiniCrest color={KRAKEN} dim={!parts[1].online} size={38} image={parts[1].image} /></>
+            comps = parts.map(p => ({ node: <MiniCrest color={KRAKEN} dim={view === 'codex' ? false : !p.online} size={34} image={p.image} />, name: p.name, held: p.online }))
+            headTokens = <><MiniCrest color={KRAKEN} dim={view === 'codex' ? false : !parts[0].online} size={38} image={parts[0].image} /><Fuse /><MiniCrest color={KRAKEN} dim={view === 'codex' ? false : !parts[1].online} size={38} image={parts[1].image} /></>
             resultImage = cv.image
           }
 
