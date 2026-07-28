@@ -109,7 +109,7 @@ const VOYAGE_ACCENT: Record<VoyageStatus, { fg: string; bg: string; bd: string }
 // the row reads as one set of places rather than mixed flat panels.
 function ExpeditionTile({
   bgImage, accent, title, status, statusColor, sub, subLock,
-  locked = false, lockLabel = 'Coming Soon', tag, onClick, progress, dot, glow,
+  locked = false, lockLabel = 'Coming Soon', tag, onClick, progress, dot, glow, coachId,
 }: {
   bgImage: string
   accent: string
@@ -125,10 +125,13 @@ function ExpeditionTile({
   progress?: number | null
   dot?: 'returned' | 'sailing' | null
   glow?: boolean
+  /** Onboarding coach target id (data-coach) so the tour can flash this tile. */
+  coachId?: string
 }) {
   return (
     <motion.button
       type="button"
+      data-coach={coachId}
       onClick={locked ? undefined : () => { vibrate([0, 14]); onClick?.() }}
       disabled={locked}
       // Match the Manage Crew/Ship cards' tactile press: a quick scale-down on
@@ -258,6 +261,7 @@ export default function HubCards({
           Gauntlets sit below at the same size. All open their prep modal. */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: '1.2rem' }}>
         <ExpeditionTile
+          coachId="campaign"
           bgImage="/exp-campaign.jpg" accent={campaignAccent} title="Campaign"
           status={campaign.nextNodeName ? `Next: ${campaign.nextNodeName}` : 'All cleared'}
           statusColor="#f0e0b0"
@@ -266,6 +270,7 @@ export default function HubCards({
           onClick={openCampaignMap}
         />
         <ExpeditionTile
+          coachId="voyages"
           bgImage="/exp-voyages.jpg" accent={vAcc.fg} title="Voyages"
           status={voyages.statusLabel} statusColor={vAcc.fg}
           sub={voyages.routeName}

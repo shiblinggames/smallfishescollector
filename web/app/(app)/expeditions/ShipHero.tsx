@@ -1153,7 +1153,7 @@ export default function ShipHero({
                 back row tops out at 38 so nothing clips — grid
                 alignItems:end keeps the bottom flush with the ship
                 column. */}
-            <Link href="/crew" className="hub-manage-tap" style={{
+            <Link href="/crew" className="hub-manage-tap" data-coach="crew" style={{
               position: 'relative', overflow: 'hidden',
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 8,
               height: 144, borderRadius: 16,
@@ -1303,6 +1303,7 @@ export default function ShipHero({
             <button
               onClick={() => setLoadoutOpen(true)}
               className="hub-manage-tap"
+              data-coach="ship"
               style={{
                 position: 'relative', overflow: 'hidden',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 8,

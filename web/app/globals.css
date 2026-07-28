@@ -2010,18 +2010,20 @@ body.hardcore-gauntlet::after {
    Deliberately loud so a brand-new player can't miss which tab is meant. */
 @keyframes coach-flash-pulse {
   0%, 100% {
-    outline-color: rgba(94,176,224,0.6);
-    box-shadow: 0 0 10px 1px rgba(94,176,224,0.45);
+    outline-color: rgba(var(--coach-color), 0.6);
+    box-shadow: 0 0 10px 1px rgba(var(--coach-color), 0.45);
     transform: scale(1);
   }
   50% {
-    outline-color: rgba(126,203,255,1);
-    box-shadow: 0 0 30px 7px rgba(94,176,224,0.9), 0 0 60px 14px rgba(94,176,224,0.4);
-    transform: scale(1.08);
+    outline-color: rgba(var(--coach-hi, var(--coach-color)), 1);
+    box-shadow: 0 0 30px 7px rgba(var(--coach-color), 0.9), 0 0 60px 14px rgba(var(--coach-color), 0.4);
+    transform: scale(1.06);
   }
 }
 .coach-flash {
-  outline: 3px solid rgba(94,176,224,0.6);
+  --coach-color: 94, 176, 224;   /* default: fishing blue (r,g,b) — override via inline style */
+  --coach-hi: 126, 203, 255;
+  outline: 3px solid rgba(var(--coach-color), 0.6);
   outline-offset: 3px;
   border-radius: 12px;
   animation: coach-flash-pulse 0.9s ease-in-out infinite;
@@ -2029,8 +2031,10 @@ body.hardcore-gauntlet::after {
   z-index: 5;
 }
 @media (prefers-reduced-motion: reduce) {
-  .coach-flash { animation: none; outline: 3px solid rgba(126,203,255,1); box-shadow: 0 0 24px 5px rgba(94,176,224,0.7); }
+  .coach-flash { animation: none; outline: 3px solid rgba(var(--coach-hi, var(--coach-color)), 1); box-shadow: 0 0 24px 5px rgba(var(--coach-color), 0.7); }
 }
+/* Warm/gold flash variant — used on the expeditions page. */
+.coach-flash-gold { --coach-color: 240, 192, 64; --coach-hi: 255, 224, 140; }
 
 /* Captain's Log journal — illuminated-manuscript drop cap on the lead
    paragraph of the freshest story entry. Parchment-gold, Cinzel, floated

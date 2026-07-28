@@ -1,157 +1,71 @@
 'use client'
 
-import { useState, startTransition } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+// First-time Expeditions walkthrough. Contextual coach-marks (Doby + Kat) that
+// FLASH the real element each step describes — Manage Crew, Manage Ship, the
+// Campaign card, the Voyages card — rather than a blocking briefing modal. The
+// targets live in sibling components (ShipHero, HubCards) and carry a
+// data-coach="..." attribute; this tour highlights them by DOM lookup + scrolls
+// them into view. Plain, one line per step.
+
+import { useState, useEffect, startTransition } from 'react'
 import { markExpeditionsTourSeen } from './tourActions'
+import GuideCoach from '@/components/GuideCoach'
+import { GUIDES } from '@/lib/onboardingScenes'
 
-// First-time briefing for the Expeditions page. Mirrors the Skirmish tour
-// pattern: positioned cards with an arrow pointing at the actual panel
-// each step describes, lighter backdrop so the underlying UI is readable.
+const EXP_ACCENT = '#f0c040'
+type Target = 'crew' | 'ship' | 'campaign' | 'voyages' | null
 
-interface TourStep {
-  title: string
-  body: string
-  cardStyle: React.CSSProperties
-  arrowDir: 'up' | 'down' | 'none'
-  arrowAlign: 'left' | 'center' | 'right'
-}
-
-// Two steps: the loop split (voyages vs raids), then the loadout. The
-// old welcome-overview was redundant with the page itself, and the crew
-// callout merged into raids since both depend on it.
-const STEPS: TourStep[] = [
-  {
-    title: 'Voyages and Raids',
-    body: "Voyages earn for you in the background. Raids are ship battles for special loot.",
-    cardStyle: { top: '26%', left: '1rem', right: '1rem' },
-    arrowDir: 'down', arrowAlign: 'center',
-  },
-  {
-    title: 'Set your loadout',
-    body: "Tap View Loadout to pick your crew and ship. Stronger crew means bigger rewards.",
-    cardStyle: { top: '54%', left: '1rem', right: '1rem' },
-    arrowDir: 'up', arrowAlign: 'center',
-  },
+const STEPS: { portrait: string; speaker: string; text: string; target: Target }[] = [
+  { portrait: GUIDES.doby.portrait, speaker: 'Doby', text: "This is Expeditions. Send your crew out to earn loot and fight for glory.", target: null },
+  { portrait: GUIDES.doby.portrait, speaker: 'Doby', text: "Recruit and manage your *crew* here. You need them for everything.", target: 'crew' },
+  { portrait: GUIDES.kat.portrait,  speaker: 'Kat',  text: "Upgrade your *ship* and equip gear here.", target: 'ship' },
+  { portrait: GUIDES.doby.portrait, speaker: 'Doby', text: "Fight the story *Campaign* — turn-based raids for powerful loot.", target: 'campaign' },
+  { portrait: GUIDES.kat.portrait,  speaker: 'Kat',  text: "Send crew on *Voyages* — they earn in the background while you're away.", target: 'voyages' },
 ]
 
+function clearFlashes() {
+  document.querySelectorAll('.coach-flash').forEach(el => el.classList.remove('coach-flash', 'coach-flash-gold'))
+}
+
 export default function ExpeditionsTour({ hasSeen }: { hasSeen: boolean }) {
-  const [visible, setVisible] = useState(!hasSeen)
-  const [step, setStep] = useState(0)
+  const [step, setStep] = useState<number | null>(hasSeen ? null : 0)
 
-  function advance() {
-    if (step < STEPS.length - 1) setStep(s => s + 1)
-    else dismiss()
-  }
+  // Flash + scroll to the current step's target (DOM lookup — the targets live
+  // in sibling components). Re-runs each step; always cleans up.
+  useEffect(() => {
+    clearFlashes()
+    if (step == null) return
+    const target = STEPS[step].target
+    if (!target) return
+    const el = document.querySelector(`[data-coach="${target}"]`)
+    if (el) {
+      el.classList.add('coach-flash', 'coach-flash-gold')
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+    return clearFlashes
+  }, [step])
 
-  function dismiss() {
-    setVisible(false)
-    setStep(0)
+  if (step == null) return null
+
+  const finish = () => {
+    clearFlashes()
+    setStep(null)
     startTransition(() => { void markExpeditionsTourSeen() })
   }
+  const last = step >= STEPS.length - 1
 
   return (
-    <AnimatePresence>
-      {visible && (
-        <>
-          <motion.div
-            key="exp-tour-backdrop"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            onClick={advance}
-            style={{
-              position: 'fixed', inset: 0, zIndex: 100, cursor: 'pointer',
-              background: 'rgba(0,0,0,0.55)',
-            }}
-          />
-          <motion.div
-            key={`exp-tour-${step}`}
-            initial={{ opacity: 0, scale: 0.96, y: 4 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96, y: 4 }}
-            transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-            onClick={e => e.stopPropagation()}
-            style={{
-              position: 'fixed', zIndex: 101,
-              maxWidth: 360, margin: '0 auto',
-              background: '#0e1a2b',
-              border: '1px solid rgba(96,165,250,0.36)',
-              borderRadius: 14,
-              padding: '0.95rem 1.05rem 0.85rem',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.55)',
-              ...STEPS[step].cardStyle,
-            }}
-          >
-            {(() => {
-              const s = STEPS[step]
-              if (s.arrowDir === 'none') return null
-              const color = 'rgba(96,165,250,0.36)'
-              const base: React.CSSProperties = {
-                position: 'absolute', width: 12, height: 12, background: '#0e1a2b',
-                transform: 'rotate(45deg)',
-              }
-              const align =
-                s.arrowAlign === 'center' ? { left: '50%', marginLeft: -6 } :
-                s.arrowAlign === 'right'  ? { right: 28 } :
-                                            { left: 28 }
-              const pos: React.CSSProperties = s.arrowDir === 'up'
-                ? { top: -7, ...align }
-                : { bottom: -7, ...align }
-              const border: React.CSSProperties = s.arrowDir === 'up'
-                ? { borderTop: `1px solid ${color}`, borderLeft: `1px solid ${color}` }
-                : { borderBottom: `1px solid ${color}`, borderRight: `1px solid ${color}` }
-              return <div style={{ ...base, ...pos, ...border }} />
-            })()}
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
-              <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', color: '#7a9bc4', letterSpacing: '0.16em' }}>
-                Captain&rsquo;s Briefing
-              </p>
-              <div style={{ display: 'flex', gap: 4 }}>
-                {STEPS.map((_, i) => (
-                  <span key={i} style={{
-                    width: i === step ? 18 : 6, height: 5, borderRadius: 999,
-                    background: i === step ? '#60a5fa' : 'rgba(255,255,255,0.18)',
-                    transition: 'width 0.22s ease',
-                  }} />
-                ))}
-              </div>
-            </div>
-
-            <p className="font-cinzel font-700" style={{ fontSize: '1.02rem', color: '#f0ede8', marginBottom: '0.45rem', lineHeight: 1.2 }}>
-              {STEPS[step].title}
-            </p>
-            <p className="font-karla" style={{ fontSize: '0.92rem', color: 'rgba(240,237,232,0.85)', lineHeight: 1.55, marginBottom: '0.85rem' }}>
-              {STEPS[step].body}
-            </p>
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-              <button
-                onClick={e => { e.stopPropagation(); dismiss() }}
-                className="font-karla font-600 uppercase tracking-[0.08em]"
-                style={{
-                  fontSize: '0.68rem', cursor: 'pointer', touchAction: 'manipulation',
-                  color: 'rgba(240,237,232,0.5)',
-                  background: 'none', border: 'none', padding: '0.4rem 0.3rem',
-                }}
-              >
-                Skip
-              </button>
-              <button
-                onClick={e => { e.stopPropagation(); advance() }}
-                className="font-karla font-700 uppercase tracking-[0.1em]"
-                style={{
-                  fontSize: '0.78rem', cursor: 'pointer', touchAction: 'manipulation',
-                  color: '#0a1422',
-                  background: '#60a5fa',
-                  border: 'none', borderRadius: 10, padding: '0.58rem 1.15rem',
-                  boxShadow: '0 4px 14px rgba(96,165,250,0.35)',
-                }}
-              >
-                {step === STEPS.length - 1 ? 'Got it' : 'Next'}
-              </button>
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+    <GuideCoach
+      show
+      portrait={STEPS[step].portrait}
+      speaker={STEPS[step].speaker}
+      text={STEPS[step].text}
+      accent={EXP_ACCENT}
+      placement="bottom"
+      offset="calc(env(safe-area-inset-bottom, 0px) + 90px)"
+      onNext={() => { if (last) finish(); else setStep(s => (s ?? 0) + 1) }}
+      nextLabel={last ? 'Got it' : 'Next →'}
+      onClose={finish}
+    />
   )
 }
