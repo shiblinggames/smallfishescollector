@@ -21,6 +21,8 @@ export default function HoldCard({ solvedCount, doubloonsToday }: { solvedCount:
       accent="#c4a96a"
       bgImage="/hold-bg.jpg"
     >
+      {/* Soft dark ground so the faint cargo grid reads on the amber wash. */}
+      <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 66% 60% at 50% 34%, rgba(10,7,2,0.6) 0%, transparent 74%)', pointerEvents: 'none' }} />
       {/* Lantern wash over the manifest */}
       <motion.div
         aria-hidden
@@ -46,13 +48,13 @@ export default function HoldCard({ solvedCount, doubloonsToday }: { solvedCount:
           return (
             <motion.div
               key={i}
-              animate={lit ? { opacity: [0.4, 0.85, 0.4] } : undefined}
+              animate={lit ? { opacity: [0.7, 1, 0.7] } : undefined}
               transition={lit ? { duration: 3.4, repeat: Infinity, ease: 'easeInOut', delay: (i % 5) * 0.4 } : undefined}
               className="font-cinzel font-700"
               style={{
                 width: 11, height: 11, borderRadius: 2,
-                background: lit ? `${GOLD}22` : 'rgba(196,169,106,0.05)',
-                border: `0.5px solid ${lit ? `${GOLD}55` : 'rgba(196,169,106,0.18)'}`,
+                background: lit ? `${GOLD}44` : 'rgba(10,7,2,0.35)',
+                border: `0.5px solid ${lit ? `${GOLD}99` : 'rgba(196,169,106,0.3)'}`,
                 color: GOLD, fontSize: '0.42rem',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}

@@ -93,6 +93,8 @@ export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, dou
         accent="#a78bfa"
         bgImage="/captainsboard-bg.jpg"
       >
+        {/* Soft dark ground so the faint tiles read on the simpler wash. */}
+        <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 72% 56% at 50% 30%, rgba(8,6,22,0.62) 0%, transparent 72%)', pointerEvents: 'none' }} />
         {/* Mini board scene: a 4x3 grid of glowing category tiles. */}
         <div
           aria-hidden
@@ -107,13 +109,13 @@ export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, dou
             return (
               <motion.div
                 key={i}
-                animate={{ opacity: [0.45, 0.85, 0.45] }}
+                animate={{ opacity: [0.7, 1, 0.7] }}
                 transition={{ duration: 3.6, repeat: Infinity, ease: 'easeInOut', delay: (i % 5) * 0.45 }}
                 className="font-cinzel font-700"
                 style={{
                   height: 24, borderRadius: 6,
-                  background: `${cat.color}14`,
-                  border: `1px solid ${cat.color}50`,
+                  background: `${cat.color}30`,
+                  border: `1px solid ${cat.color}99`,
                   color: cat.color,
                   fontSize: '0.6rem',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -152,6 +154,8 @@ export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, dou
         accent={GOLD}
         bgImage="/pirateking-bg.jpg"
       >
+        {/* Soft dark ground so the gold rungs read on the gold wash. */}
+        <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 72% 56% at 50% 28%, rgba(14,9,3,0.6) 0%, transparent 72%)', pointerEvents: 'none' }} />
         {/* Mini ladder scene: prize rungs climbing to a crown. */}
         <div
           aria-hidden
@@ -168,9 +172,9 @@ export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, dou
               style={{
                 width: 44, height: 18 + i * 9,
                 borderRadius: 6,
-                background: `${GOLD}${i === 3 ? '26' : '12'}`,
-                border: `1px solid ${GOLD}${i === 3 ? '70' : '40'}`,
-                color: i === 3 ? GOLD : '#c2a050',
+                background: `${GOLD}${i === 3 ? '4a' : '2e'}`,
+                border: `1px solid ${GOLD}${i === 3 ? 'bb' : '88'}`,
+                color: i === 3 ? GOLD : '#e6c86a',
                 fontSize: '0.56rem',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
