@@ -8439,7 +8439,7 @@ export default function FishingGame({
           lines={FISHING_INTRO_SCENE}
           ctaLabel="Cast a Line →"
           accent={FISHING_ACCENT}
-          background="/scenes/reef-coast.jpg"
+          background="/shallows.jpg"
           onDone={() => { setShowFishingIntro(false); startTransition(async () => { await markFishingTourSeen() }) }}
         />
       )}
