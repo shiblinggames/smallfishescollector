@@ -5123,6 +5123,66 @@ function DeepestRunModal({ best, last, hardcore = false, don, onClose }: { best:
 // shows as a silhouetted "undiscovered" row (no name, boons, or effect), and
 // reveals permanently the first time you unlock it in a dive. The chase is the
 // point — you find them by experimenting, then they stay in your codex.
+// ── Synergy codex visuals ────────────────────────────────────────────────────
+// Boons and synergies carry no art, so give each boon a rarity-bordered TOKEN
+// with a category glyph read off its primary effect. The codex then reads as a
+// board of visual recipes — two component tokens fusing into a synergy — the way
+// the Abyssal Forge shows components, instead of a wall of text.
+type BoonCat = 'offense' | 'defense' | 'support' | 'control' | 'fortune'
+function boonCategory(boonId: string): BoonCat {
+  const b = GAUNTLET_BOONS.find(x => x.id === boonId)
+  const k = (b?.tiers?.[0]?.effect?.kind ?? '').toLowerCase()
+  if (/heal|lifesteal|tithe|regen|cleanse/.test(k)) return 'support'
+  if (/doubloon|plunder|loot|bounty|gold|fathom|favor|salvage|abyss/.test(k)) return 'fortune'
+  if (/freeze|ice|cold|perma|confuse|blackout|fog|decoy|chain|rattl|slow|stun|steal|hide|flare/.test(k)) return 'control'
+  if (/hull|shield|armor|incoming|dodge|block|fortress|bulwark|mitigat|parry|barrier|maxhp|counter|reinforc|deep|riposte/.test(k)) return 'defense'
+  return 'offense'
+}
+const BOON_CAT_GLYPH: Record<BoonCat, { color: string; d: string }> = {
+  offense: { color: '#ff8a5c', d: 'M12 2l2.6 6.8L21.5 11l-6.9 2.2L12 20l-2.6-6.8L2.5 11l6.9-2.2z' }, // spark
+  defense: { color: '#5fa8e0', d: 'M12 2.5l7.5 3.2v5.1c0 4.6-3.2 8-7.5 9.4-4.3-1.4-7.5-4.8-7.5-9.4V5.7z' }, // shield
+  support: { color: '#7fd49a', d: 'M10 3h4v7h7v4h-7v7h-4v-7H3v-4h7z' }, // cross
+  control: { color: '#7ecbff', d: 'M13 2L4 14h6l-1 8 9-12h-6z' }, // bolt
+  fortune: { color: '#f0c040', d: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm0 5.4a3.6 3.6 0 1 1 0 7.2 3.6 3.6 0 0 1 0-7.2z' }, // coin ring
+}
+function BoonGlyph({ cat, size }: { cat: BoonCat; size: number }) {
+  const g = BOON_CAT_GLYPH[cat]
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill={g.color} aria-hidden style={{ filter: `drop-shadow(0 0 2px ${g.color}88)` }}><path d={g.d} /></svg>
+}
+function BoonToken({ boonId, tier = 0, held, size = 32 }: { boonId: string; tier?: number; held?: boolean; size?: number }) {
+  const b = GAUNTLET_BOONS.find(x => x.id === boonId)
+  const rc = b ? BOON_RARITY_META[boonRarity(b)].color : '#8894a6'
+  return (
+    <span style={{ position: 'relative', flexShrink: 0, width: size, height: size, borderRadius: size * 0.26, display: 'grid', placeItems: 'center',
+      background: held ? `${rc}22` : 'rgba(255,255,255,0.03)',
+      border: `1.5px ${held ? 'solid' : 'dashed'} ${held ? rc : 'rgba(255,255,255,0.2)'}`,
+      boxShadow: held ? `0 0 8px ${rc}44, inset 0 0 8px ${rc}1a` : 'none', opacity: held ? 1 : 0.6 }}>
+      <BoonGlyph cat={boonCategory(boonId)} size={Math.round(size * 0.5)} />
+      {held && tier > 0 && (
+        <span className="font-cinzel font-800" style={{ position: 'absolute', bottom: -5, right: -5, minWidth: 13, height: 13, padding: '0 2px', borderRadius: 7, background: rc, color: '#0a0e14', fontSize: '0.5rem', lineHeight: '13px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.55)' }}>{['', 'I', 'II', 'III'][Math.min(tier, 3)]}</span>
+      )}
+    </span>
+  )
+}
+// A hexagon crest — a synergy shown as a component of a convergence, or the
+// result identity in a detail header.
+function MiniCrest({ size = 32, color, dim }: { size?: number; color: string; dim?: boolean }) {
+  const c = dim ? '#5a6472' : color
+  return (
+    <span style={{ position: 'relative', flexShrink: 0, width: size, height: size, display: 'grid', placeItems: 'center' }}>
+      <svg width={size} height={size} viewBox="0 0 24 24" fill={`${c}1e`} stroke={c} strokeWidth="1.4" style={{ filter: dim ? 'none' : `drop-shadow(0 0 4px ${c}77)` }}><path d="M12 2 4 7v10l8 5 8-5V7z" /></svg>
+      <svg width={Math.round(size * 0.4)} height={Math.round(size * 0.4)} viewBox="0 0 24 24" fill={c} aria-hidden style={{ position: 'absolute' }}><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z" /></svg>
+    </span>
+  )
+}
+function MysteryToken({ size = 32 }: { size?: number }) {
+  return (
+    <span style={{ flexShrink: 0, width: size, height: size, borderRadius: size * 0.26, display: 'grid', placeItems: 'center', background: 'rgba(255,255,255,0.02)', border: '1.5px dashed rgba(255,255,255,0.16)' }}>
+      <span className="font-cinzel font-800" style={{ color: '#6b7280', fontSize: size * 0.42 }}>?</span>
+    </span>
+  )
+}
+
 function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant = 'davy', onClose }: { owned: Record<string, number>; seen?: string[]; taken?: string[]; takenConv?: string[]; variant?: GauntletVariant; onClose: () => void }) {
   const GLD = '#f5b94a'   // active
   const SYN = '#b98bff'   // ready (both halves held, not yet drafted)
@@ -5185,6 +5245,8 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
   // are locked silhouettes. Confluence discovery is persisted (gauntlet_confluences_seen);
   // convergences have no store, so they reveal once BOTH their synergies are known.
   const [view, setView] = useState<'run' | 'codex'>('run')
+  // Tapped medallion → its detail sheet (a confluence OR convergence id).
+  const [openId, setOpenId] = useState<string | null>(null)
   const seenSet = new Set(seen)
   const codexConf = CONFLUENCES.filter(c => inGauntletPool(c.gauntlet, variant)).map(c => {
     const lvl = confluenceLevel(c, owned)
@@ -5209,38 +5271,41 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
     </span>
   )
 
-  const StatusBadge = ({ status }: { status: Status }) => {
-    const label = status === 'active' ? 'Active' : status === 'ready' ? 'Ready' : 'Need 1'
-    const bg = accentOf(status)
-    const fg = status === 'active' ? '#1a1206' : status === 'ready' ? '#1a1030' : '#04121a'
-    return <span className="font-karla font-800 uppercase" style={{ flexShrink: 0, fontSize: '0.46rem', letterSpacing: '0.12em', color: fg, background: bg, borderRadius: 999, padding: '0.16rem 0.44rem' }}>{label}</span>
+  const Fuse = () => <span aria-hidden style={{ color: '#7a8e8a', fontSize: '0.72rem' }}>⊕</span>
+
+  // One medallion — two component tokens fusing, the synergy name, and a compact
+  // state footer. Everything else (effect, how-it-works, flavor) waits behind a tap.
+  const SynergyMedallion = ({ name, status, lvl, accent, dim, onOpen, tokens, kraken }: { name: string; status: Status | 'codex'; lvl: number; accent: string; dim?: boolean; onOpen: () => void; tokens: React.ReactNode; kraken?: boolean }) => {
+    const activeBg = kraken ? `${KRAKEN}1c` : `${GLD}16`
+    const activeBorder = kraken ? `${KRAKEN}66` : `${GLD}66`
+    return (
+      <button type="button" onClick={onOpen} className="tap" style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, padding: '0.75rem 0.5rem 0.65rem', borderRadius: 14, cursor: 'pointer', minWidth: 0, position: 'relative', overflow: 'hidden',
+        opacity: dim ? 0.4 : 1, transition: 'opacity 0.2s',
+        background: status === 'active' ? activeBg : status === 'ready' ? `${SYN}10` : 'rgba(255,255,255,0.03)',
+        border: `1px solid ${status === 'active' ? activeBorder : status === 'ready' ? `${SYN}4a` : status === 'need1' ? `${NEED}30` : 'rgba(255,255,255,0.09)'}`,
+        boxShadow: status === 'active' ? `0 0 18px ${accent}22` : 'none' }}>
+        {status === 'active' && (
+          <motion.span aria-hidden initial={{ x: '-130%' }} animate={{ x: '190%' }} transition={{ duration: 3.6, repeat: Infinity, repeatDelay: 2.6, ease: 'easeInOut' }}
+            style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '40%', background: `linear-gradient(100deg, transparent, ${accent}26, transparent)`, pointerEvents: 'none' }} />
+        )}
+        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>{tokens}</span>
+        <span className="font-cinzel font-800" style={{ fontSize: '0.8rem', lineHeight: 1.12, textAlign: 'center', color: status === 'active' ? (kraken ? '#f0d7ff' : '#fbe7c4') : '#e4ebf2', minHeight: '1.9rem', display: 'flex', alignItems: 'center' }}>{name}</span>
+        {status === 'need1'
+          ? <span className="font-karla font-800 uppercase" style={{ fontSize: '0.48rem', letterSpacing: '0.1em', color: NEED }}>Need 1 more</span>
+          : status === 'codex'
+            ? <Pips level={lvl} color={accent} />
+            : <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Pips level={lvl} color={accent} /><span className="font-karla font-800 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.1em', color: accent }}>{status === 'active' ? 'Active' : 'Ready'}</span></span>}
+      </button>
+    )
   }
 
-  // An ingredient chip — a boon (confluence recipe) or a confluence (convergence
-  // recipe). Lit when you hold it, ghosted + dashed when you still need it.
-  const Chip = ({ label, tier, have, color }: { label: string; tier?: number; have: boolean; color: string }) => (
-    <span className="font-karla font-700" style={{
-      display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.66rem', borderRadius: 999, padding: '0.18rem 0.55rem',
-      color: have ? color : '#7c8794',
-      background: have ? `${color}1e` : 'transparent',
-      border: `1px ${have ? 'solid' : 'dashed'} ${have ? `${color}66` : 'rgba(255,255,255,0.2)'}`,
-      opacity: have ? 1 : 0.85,
-    }}>
-      {label}{have && tier ? <span style={{ opacity: 0.7 }}>{ROMAN[Math.min(tier, 3)]}</span> : null}
-      {!have && <span style={{ fontSize: '0.5rem', opacity: 0.75, letterSpacing: '0.06em' }}>· NEED</span>}
-    </span>
-  )
-
-  const Recipe = ({ parts, arrowColor, children }: { parts: React.ReactNode[]; arrowColor: string; children: React.ReactNode }) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
-      {parts.map((p, i) => (
-        <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          {i > 0 && <span aria-hidden style={{ color: '#7a8e8a', fontSize: '0.8rem' }}>⊕</span>}
-          {p}
-        </span>
-      ))}
-      <span aria-hidden style={{ color: arrowColor, fontSize: '0.9rem', margin: '0 1px' }}>→</span>
-      {children}
+  // Locked codex entry — a silhouette medallion teasing an undiscovered synergy.
+  const MysteryMedallion = () => (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, padding: '0.75rem 0.5rem 0.65rem', borderRadius: 14, background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.12)' }}>
+      <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><MysteryToken /><Fuse /><MysteryToken /></span>
+      <span className="font-cinzel font-800" style={{ fontSize: '0.8rem', color: '#7d8794', letterSpacing: '0.12em', minHeight: '1.9rem', display: 'flex', alignItems: 'center' }}>? ? ?</span>
+      <Pips level={0} color="#6b7280" />
     </div>
   )
 
@@ -5325,92 +5390,36 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
         )}
 
         {view === 'run' && (<>
-        {/* ── Synergies (boon ⊕ boon) ── */}
         {confRows.length > 0 && (
-          <p className="font-karla font-800 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: '#8f97a2', marginTop: 15, marginBottom: 2 }}>Synergies</p>
+          <p className="font-karla font-800 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: '#8f97a2', marginTop: 15, marginBottom: 8 }}>Synergies</p>
         )}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: 8 }}>
-          {confRows.map(({ c, parts, lvl, status }) => {
-            const accent = accentOf(status)
-            const dim = !confMatchesTrace({ c, parts, lvl, status })
-            const maxLvl = c.levels.length
-            let hint: string
-            if (status === 'active') hint = lvl >= maxLvl ? 'Fully deepened — maxed out' : `Deepen ${parts.filter(p => p.tier === lvl).map(p => p.name).join(' & ')} to reach ${ROMAN[lvl + 1]}`
-            else if (status === 'ready') hint = 'Both halves held — draft it instead of a boon'
-            else hint = `Draft ${parts.filter(p => p.tier < 1).map(p => p.name).join(' & ')} to unlock`
-            return (
-              <div key={c.id} style={{ position: 'relative', overflow: 'hidden', borderRadius: 14, padding: '0.75rem 0.85rem', transition: 'opacity 0.2s',
-                opacity: dim ? 0.34 : 1,
-                background: status === 'active' ? `${GLD}18` : status === 'ready' ? `${SYN}12` : 'rgba(255,255,255,0.03)',
-                border: `1px solid ${status === 'active' ? `${GLD}66` : status === 'ready' ? `${SYN}4a` : `${NEED}33`}`,
-                boxShadow: status === 'active' ? `0 0 22px ${GLD}22, inset 0 0 26px ${GLD}0e` : 'none' }}>
-                <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: accent, boxShadow: status !== 'need1' ? `0 0 12px ${accent}` : 'none' }} />
-                {status === 'active' && (
-                  <motion.span aria-hidden initial={{ x: '-130%' }} animate={{ x: '190%' }} transition={{ duration: 3.4, repeat: Infinity, repeatDelay: 2.4, ease: 'easeInOut' }}
-                    style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '42%', background: `linear-gradient(100deg, transparent, ${GLD}30, transparent)`, pointerEvents: 'none' }} />
-                )}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></svg>
-                  <p className="font-cinzel font-800" style={{ flex: 1, minWidth: 0, fontSize: '0.98rem', color: status === 'active' ? '#fbe7c4' : '#dfe7ee', lineHeight: 1.12 }}>{c.name}</p>
-                  <Pips level={status === 'need1' ? 0 : lvl} color={accent} max={maxLvl} />
-                  <StatusBadge status={status} />
-                </div>
-                <Recipe arrowColor={accent} parts={parts.map(p => <Chip key={p.id} label={p.name} tier={p.tier} have={p.tier >= 1} color={p.color} />)}>
-                  <span className="font-cinzel font-800" style={{ fontSize: '0.82rem', color: '#aef5c4', lineHeight: 1.2, textShadow: '0 0 12px rgba(74,222,128,0.3)' }}>{confluenceDescAt(c, Math.max(1, lvl))}</span>
-                </Recipe>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M7 13l5 5 5-5" /><path d="M7 6l5 5 5-5" /></svg>
-                  <p className="font-karla font-700" style={{ fontSize: '0.64rem', color: accent, lineHeight: 1.3 }}>{hint}</p>
-                </div>
-              </div>
-            )
-          })}
-        </div>
+        {confRows.length > 0 && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 9 }}>
+            {confRows.map(({ c, parts, lvl, status }) => (
+              <SynergyMedallion key={c.id} name={c.name} status={status} lvl={lvl} accent={accentOf(status)}
+                dim={!confMatchesTrace({ c, parts, lvl, status })} onOpen={() => setOpenId(c.id)}
+                tokens={<><BoonToken boonId={parts[0].id} tier={parts[0].tier} held={parts[0].tier >= 1} /><Fuse /><BoonToken boonId={parts[1].id} tier={parts[1].tier} held={parts[1].tier >= 1} /></>} />
+            ))}
+          </div>
+        )}
 
-        {/* ── Convergences (synergy ⊕ synergy) — Don's meta-tier ── */}
         {convRows.length > 0 && (
           <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 16, marginBottom: 2 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 16, marginBottom: 8 }}>
               <p className="font-karla font-800 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: KRAKEN }}>Convergences</p>
               <span className="font-karla" style={{ fontSize: '0.5rem', color: '#7c8794' }}>two synergies fused</span>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: 8 }}>
-              {convRows.map(({ cv, parts, lvl, status }) => {
-                const accent = status === 'active' ? KRAKEN : status === 'ready' ? SYN : NEED
-                const dim = !convMatchesTrace({ cv, parts, lvl, status })
-                const maxLvl = cv.levels.length
-                let hint: string
-                if (status === 'active') hint = lvl >= maxLvl ? 'Fully deepened — maxed out' : 'Deepen either synergy to level it up'
-                else if (status === 'ready') hint = 'Both synergies online — draft it instead of a boon'
-                else hint = `Bring ${parts.filter(p => !p.online).map(p => p.name).join(' & ')} online to unlock`
-                return (
-                  <div key={cv.id} style={{ position: 'relative', overflow: 'hidden', borderRadius: 14, padding: '0.75rem 0.85rem', transition: 'opacity 0.2s',
-                    opacity: dim ? 0.34 : 1,
-                    background: status === 'active' ? `${KRAKEN}1e` : 'rgba(255,255,255,0.03)',
-                    border: `1px solid ${status === 'active' ? `${KRAKEN}66` : status === 'ready' ? `${SYN}4a` : `${NEED}33`}`,
-                    boxShadow: status === 'active' ? `0 0 22px ${KRAKEN}2a, inset 0 0 26px ${KRAKEN}12` : 'none' }}>
-                    <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: accent, boxShadow: status !== 'need1' ? `0 0 12px ${accent}` : 'none' }} />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 2v20M2 12h20M5 5l14 14M19 5 5 19" /></svg>
-                      <p className="font-cinzel font-800" style={{ flex: 1, minWidth: 0, fontSize: '0.98rem', color: status === 'active' ? '#f0d7ff' : '#dfe7ee', lineHeight: 1.12 }}>{cv.name}</p>
-                      <Pips level={status === 'need1' ? 0 : lvl} color={accent} max={maxLvl} />
-                      <StatusBadge status={status} />
-                    </div>
-                    <Recipe arrowColor={accent} parts={parts.map(p => <Chip key={p.id} label={p.name} have={p.online} color={p.online ? SYN : NEED} />)}>
-                      <span className="font-cinzel font-800" style={{ fontSize: '0.82rem', color: '#e6c8ff', lineHeight: 1.2, textShadow: `0 0 12px ${KRAKEN}55` }}>{convergenceDescAt(cv, Math.max(1, lvl))}</span>
-                    </Recipe>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M7 13l5 5 5-5" /><path d="M7 6l5 5 5-5" /></svg>
-                      <p className="font-karla font-700" style={{ fontSize: '0.64rem', color: accent, lineHeight: 1.3 }}>{hint}</p>
-                    </div>
-                  </div>
-                )
-              })}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 9 }}>
+              {convRows.map(({ cv, parts, lvl, status }) => (
+                <SynergyMedallion key={cv.id} name={cv.name} status={status} lvl={lvl} kraken
+                  accent={status === 'active' ? KRAKEN : status === 'ready' ? SYN : NEED}
+                  dim={!convMatchesTrace({ cv, parts, lvl, status })} onOpen={() => setOpenId(cv.id)}
+                  tokens={<><MiniCrest color={KRAKEN} dim={!parts[0].online} /><Fuse /><MiniCrest color={KRAKEN} dim={!parts[1].online} /></>} />
+              ))}
             </div>
           </>
         )}
 
-        {/* Empty — you hold no piece of any synergy yet. */}
         {!anyRows && (
           <div style={{ marginTop: 16, borderRadius: 14, padding: '1.4rem 1rem', textAlign: 'center', background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.14)' }}>
             <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#c8d0da' }}>No synergies in reach yet</p>
@@ -5419,7 +5428,7 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
         )}
 
         <p className="font-karla" style={{ fontSize: '0.6rem', color: '#5f6875', textAlign: 'center', lineHeight: 1.5, marginTop: 14 }}>
-          Only synergies you already hold a piece of are shown. Switch to the Codex for the full catalogue.
+          Tap a synergy to see how it works. Switch to the Codex for the full catalogue.
         </p>
         </>)}
 
@@ -5438,37 +5447,14 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
               </div>
             </div>
 
-            <p className="font-karla font-800 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: '#8f97a2', marginTop: 15, marginBottom: 2 }}>Synergies</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: 8 }}>
+            <p className="font-karla font-800 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: '#8f97a2', marginTop: 15, marginBottom: 8 }}>Synergies</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 9 }}>
               {codexConf.map(({ c, lvl, discovered, activeNow }) => {
-                if (!discovered) {
-                  return (
-                    <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 11, borderRadius: 14, padding: '0.85rem 0.9rem', background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.12)' }}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#7d8794', letterSpacing: '0.16em' }}>? ? ?</p>
-                        <p className="font-karla" style={{ fontSize: '0.66rem', color: '#5f6875', lineHeight: 1.4, marginTop: 2 }}>An undiscovered synergy. Draft it in a dive to reveal it.</p>
-                      </div>
-                      <Pips level={0} color="#6b7280" />
-                    </div>
-                  )
-                }
-                const accent = activeNow ? GLD : '#9aa7b4'
+                if (!discovered) return <MysteryMedallion key={c.id} />
+                const parts = c.requires.map(r => boonMeta(r.boonId))
                 return (
-                  <div key={c.id} style={{ position: 'relative', overflow: 'hidden', borderRadius: 14, padding: '0.75rem 0.85rem', background: activeNow ? `${GLD}16` : 'rgba(255,255,255,0.03)', border: `1px solid ${activeNow ? `${GLD}55` : 'rgba(255,255,255,0.09)'}` }}>
-                    <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: accent, boxShadow: activeNow ? `0 0 12px ${accent}` : 'none' }} />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></svg>
-                      <p className="font-cinzel font-800" style={{ flex: 1, minWidth: 0, fontSize: '0.98rem', color: activeNow ? '#fbe7c4' : '#dfe7ee', lineHeight: 1.12 }}>{c.name}</p>
-                      <Pips level={lvl} color={accent} max={c.levels.length} />
-                      {activeNow && <StatusBadge status="active" />}
-                    </div>
-                    <Recipe arrowColor={accent} parts={c.requires.map(r => { const m = boonMeta(r.boonId); return <Chip key={m.id} label={m.name} tier={m.tier} have color={m.color} /> })}>
-                      <span className="font-cinzel font-800" style={{ fontSize: '0.82rem', color: '#aef5c4', lineHeight: 1.2, textShadow: '0 0 12px rgba(74,222,128,0.3)' }}>{confluenceDescAt(c, Math.max(1, lvl))}</span>
-                    </Recipe>
-                    <p className="font-karla" style={{ fontSize: '0.7rem', color: 'rgba(230,240,236,0.62)', lineHeight: 1.45, marginTop: 6 }}>{c.detail}</p>
-                    <p className="font-karla" style={{ fontSize: '0.72rem', fontStyle: 'italic', color: 'rgba(245,242,236,0.45)', lineHeight: 1.4, marginTop: 6 }}>{c.flavor}</p>
-                  </div>
+                  <SynergyMedallion key={c.id} name={c.name} status={activeNow ? 'active' : 'codex'} lvl={lvl} accent={activeNow ? GLD : '#9aa7b4'} onOpen={() => setOpenId(c.id)}
+                    tokens={<><BoonToken boonId={parts[0].id} tier={parts[0].tier} held={parts[0].tier >= 1} /><Fuse /><BoonToken boonId={parts[1].id} tier={parts[1].tier} held={parts[1].tier >= 1} /></>} />
                 )
               })}
             </div>
@@ -5479,36 +5465,16 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
                   <p className="font-karla font-800 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: KRAKEN }}>Convergences</p>
                   <span className="font-karla" style={{ fontSize: '0.5rem', color: '#7c8794' }}>two synergies fused</span>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: 8 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 9 }}>
                   {codexConv.map(({ cv, lvl, discovered, activeNow }) => {
-                    if (!discovered) {
-                      return (
-                        <div key={cv.id} style={{ display: 'flex', alignItems: 'center', gap: 11, borderRadius: 14, padding: '0.85rem 0.9rem', background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.12)' }}>
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#7d8794', letterSpacing: '0.16em' }}>? ? ?</p>
-                            <p className="font-karla" style={{ fontSize: '0.66rem', color: '#5f6875', lineHeight: 1.4, marginTop: 2 }}>An undiscovered convergence. Fuse two synergies in a dive to reveal it.</p>
-                          </div>
-                          <Pips level={0} color="#6b7280" />
-                        </div>
-                      )
-                    }
-                    const accent = activeNow ? KRAKEN : '#9aa7b4'
+                    if (!discovered) return <MysteryMedallion key={cv.id} />
+                    const parts = cv.requires.map(r => {
+                      const c = CONFLUENCES.find(x => x.id === r.confluenceId)
+                      return { online: !!c && takenSet.has(c.id) && confluenceLevel(c, owned) >= 1 }
+                    })
                     return (
-                      <div key={cv.id} style={{ position: 'relative', overflow: 'hidden', borderRadius: 14, padding: '0.75rem 0.85rem', background: activeNow ? `${KRAKEN}1c` : 'rgba(255,255,255,0.03)', border: `1px solid ${activeNow ? `${KRAKEN}55` : 'rgba(255,255,255,0.09)'}` }}>
-                        <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: accent, boxShadow: activeNow ? `0 0 12px ${accent}` : 'none' }} />
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 2v20M2 12h20M5 5l14 14M19 5 5 19" /></svg>
-                          <p className="font-cinzel font-800" style={{ flex: 1, minWidth: 0, fontSize: '0.98rem', color: activeNow ? '#f0d7ff' : '#dfe7ee', lineHeight: 1.12 }}>{cv.name}</p>
-                          <Pips level={lvl} color={accent} max={cv.levels.length} />
-                          {activeNow && <span className="font-karla font-800 uppercase" style={{ flexShrink: 0, fontSize: '0.46rem', letterSpacing: '0.12em', color: '#12081a', background: KRAKEN, borderRadius: 999, padding: '0.16rem 0.44rem' }}>Active</span>}
-                        </div>
-                        <Recipe arrowColor={accent} parts={cv.requires.map(r => { const cc = CONFLUENCES.find(x => x.id === r.confluenceId); return <Chip key={r.confluenceId} label={cc?.name ?? r.confluenceId} have color={SYN} /> })}>
-                          <span className="font-cinzel font-800" style={{ fontSize: '0.82rem', color: '#e6c8ff', lineHeight: 1.2, textShadow: `0 0 12px ${KRAKEN}55` }}>{convergenceDescAt(cv, Math.max(1, lvl))}</span>
-                        </Recipe>
-                        <p className="font-karla" style={{ fontSize: '0.7rem', color: 'rgba(230,240,236,0.62)', lineHeight: 1.45, marginTop: 6 }}>{cv.detail}</p>
-                        <p className="font-karla" style={{ fontSize: '0.72rem', fontStyle: 'italic', color: 'rgba(245,242,236,0.45)', lineHeight: 1.4, marginTop: 6 }}>{cv.flavor}</p>
-                      </div>
+                      <SynergyMedallion key={cv.id} name={cv.name} status={activeNow ? 'active' : 'codex'} lvl={lvl} accent={activeNow ? KRAKEN : '#9aa7b4'} kraken onOpen={() => setOpenId(cv.id)}
+                        tokens={<><MiniCrest color={KRAKEN} dim={!parts[0].online} /><Fuse /><MiniCrest color={KRAKEN} dim={!parts[1].online} /></>} />
                     )
                   })}
                 </div>
@@ -5520,6 +5486,111 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
             </p>
           </>
         )}
+
+        {/* ── Detail sheet — the recipe + everything it does, one tap deep. Portaled
+             to body so the modal's transform can't trap its fixed positioning. ── */}
+        {openId && (() => {
+          const oc = CONFLUENCES.find(c => c.id === openId)
+          const ov = oc ? null : CONVERGENCES.find(cv => cv.id === openId)
+          if (!oc && !ov) return null
+          const close = () => setOpenId(null)
+
+          // Normalise both kinds into one shape the sheet renders.
+          let name: string, accent: string, lvl: number, maxLvl: number, effectStr: string, detailStr: string, flavorStr: string, stateLabel: string, hint: string
+          let comps: { node: React.ReactNode; name: string; held: boolean }[]
+          let headTokens: React.ReactNode
+
+          if (oc) {
+            const parts = oc.requires.map(r => boonMeta(r.boonId))
+            lvl = confluenceLevel(oc, owned)
+            const on = takenSet.has(oc.id) && lvl >= 1
+            const ready = !on && lvl >= 1
+            const need1 = !on && lvl < 1 && parts.some(p => p.tier >= 1)
+            accent = on ? GLD : ready ? SYN : need1 ? NEED : '#9aa7b4'
+            maxLvl = oc.levels.length
+            name = oc.name; effectStr = confluenceDescAt(oc, Math.max(1, lvl)); detailStr = oc.detail; flavorStr = oc.flavor
+            stateLabel = on ? `Active · ${ROMAN[Math.min(lvl, maxLvl)] || 'I'}` : ready ? 'Ready to draft' : need1 ? 'One boon away' : 'Not held'
+            hint = on ? (lvl >= maxLvl ? 'Fully deepened — maxed out' : `Deepen ${parts.filter(p => p.tier === lvl).map(p => p.name).join(' & ')} to reach ${ROMAN[lvl + 1]}`)
+              : ready ? 'Both halves held — draft it instead of a boon this round'
+              : need1 ? `Draft ${parts.filter(p => p.tier < 1).map(p => p.name).join(' & ')} to unlock it`
+              : `Hold ${parts.map(p => p.name).join(' & ')} together to unlock it`
+            comps = parts.map(p => ({ node: <BoonToken boonId={p.id} tier={p.tier} held={p.tier >= 1} size={34} />, name: p.name + (p.tier >= 1 ? ` ${ROMAN[Math.min(p.tier, 3)]}` : ''), held: p.tier >= 1 }))
+            headTokens = <><BoonToken boonId={parts[0].id} tier={parts[0].tier} held={parts[0].tier >= 1} size={38} /><Fuse /><BoonToken boonId={parts[1].id} tier={parts[1].tier} held={parts[1].tier >= 1} size={38} /></>
+          } else {
+            const cv = ov!
+            const parts = cv.requires.map(r => {
+              const c = CONFLUENCES.find(x => x.id === r.confluenceId)
+              return { name: c?.name ?? r.confluenceId, online: !!c && takenSet.has(c.id) && confluenceLevel(c, owned) >= 1 }
+            })
+            lvl = convergenceLevel(cv, owned, taken)
+            const on = takenConvSet.has(cv.id) && lvl >= 1
+            const ready = !on && lvl >= 1
+            const need1 = !on && lvl < 1 && parts.some(p => p.online)
+            accent = on ? KRAKEN : ready ? SYN : need1 ? NEED : '#9aa7b4'
+            maxLvl = cv.levels.length
+            name = cv.name; effectStr = convergenceDescAt(cv, Math.max(1, lvl)); detailStr = cv.detail; flavorStr = cv.flavor
+            stateLabel = on ? `Active · ${ROMAN[Math.min(lvl, maxLvl)] || 'I'}` : ready ? 'Ready to draft' : need1 ? 'One synergy away' : 'Not online'
+            hint = on ? (lvl >= maxLvl ? 'Fully deepened — maxed out' : 'Deepen either synergy to level it up')
+              : ready ? 'Both synergies online — draft it instead of a boon this round'
+              : need1 ? `Bring ${parts.filter(p => !p.online).map(p => p.name).join(' & ')} online to unlock it`
+              : `Bring ${parts.map(p => p.name).join(' & ')} online together to unlock it`
+            comps = parts.map(p => ({ node: <MiniCrest color={KRAKEN} dim={!p.online} size={34} />, name: p.name, held: p.online }))
+            headTokens = <><MiniCrest color={KRAKEN} dim={!parts[0].online} size={38} /><Fuse /><MiniCrest color={KRAKEN} dim={!parts[1].online} size={38} /></>
+          }
+
+          return createPortal(
+            <motion.div onClick={close} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              style={{ position: 'fixed', inset: 0, zIndex: 1400, background: 'rgba(2,6,12,0.74)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+              <motion.div onClick={e => e.stopPropagation()} initial={{ y: 44 }} animate={{ y: 0 }} transition={{ type: 'spring', stiffness: 320, damping: 30 }}
+                style={{ width: '100%', maxWidth: 440, maxHeight: '86vh', overflowY: 'auto', background: 'linear-gradient(180deg, #141a24 0%, #0b0f16 100%)', borderRadius: '20px 20px 0 0', border: `1px solid ${accent}66`, borderBottom: 'none', boxShadow: `0 -12px 44px rgba(0,0,0,0.55)`, padding: '1rem 1.1rem calc(env(safe-area-inset-bottom, 0px) + 1.3rem)' }}>
+                <div aria-hidden style={{ width: 38, height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.18)', margin: '0 auto 14px' }} />
+
+                {/* The recipe, spelled out: components fuse into the synergy. */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, marginBottom: 12 }}>
+                  {headTokens}
+                  <span aria-hidden style={{ color: accent, fontSize: '1.05rem', margin: '0 2px' }}>→</span>
+                  <MiniCrest color={accent} size={44} />
+                </div>
+                <p className="font-cinzel font-800" style={{ fontSize: '1.35rem', lineHeight: 1.1, color: '#f4efe4', textAlign: 'center' }}>{name}</p>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 5 }}>
+                  <span className="font-karla font-800 uppercase tracking-[0.12em]" style={{ fontSize: '0.56rem', color: accent }}>{stateLabel}</span>
+                  <Pips level={lvl} color={accent} max={maxLvl} />
+                </div>
+
+                {/* What it does, at this level. */}
+                <div style={{ marginTop: 14, borderRadius: 12, padding: '0.7rem 0.85rem', background: `${accent}12`, border: `1px solid ${accent}33` }}>
+                  <p className="font-cinzel font-800" style={{ fontSize: '0.95rem', color: '#aef5c4', lineHeight: 1.3, textShadow: '0 0 12px rgba(74,222,128,0.25)' }}>{effectStr}</p>
+                  <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(230,240,236,0.7)', lineHeight: 1.5, marginTop: 7 }}>{detailStr}</p>
+                </div>
+
+                {/* Fused From — the components + whether you hold each. */}
+                <p className="font-karla font-800 uppercase tracking-[0.14em]" style={{ fontSize: '0.56rem', color: '#8a8480', margin: '14px 0 8px' }}>Fused From</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                  {comps.map((c, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.5rem 0.6rem', borderRadius: 11, background: c.held ? 'rgba(127,212,154,0.08)' : 'rgba(255,255,255,0.03)', border: `1px solid ${c.held ? 'rgba(127,212,154,0.32)' : 'rgba(255,255,255,0.1)'}` }}>
+                      {c.node}
+                      <p className="font-karla font-700" style={{ flex: 1, minWidth: 0, fontSize: '0.9rem', color: c.held ? '#e6e1d6' : '#9a948a' }}>{c.name}</p>
+                      <span className="font-karla font-800 uppercase tracking-[0.08em]" style={{ flexShrink: 0, fontSize: '0.56rem', color: c.held ? '#7fd49a' : '#7a7470' }}>{c.held ? 'Held' : 'Need'}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Next step + flavor. */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 12, padding: '0.55rem 0.7rem', borderRadius: 10, background: `${accent}0f`, border: `1px solid ${accent}2e` }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M7 13l5 5 5-5" /><path d="M7 6l5 5 5-5" /></svg>
+                  <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: accent, lineHeight: 1.35 }}>{hint}</p>
+                </div>
+                <p className="font-karla" style={{ fontSize: '0.76rem', fontStyle: 'italic', color: 'rgba(245,242,236,0.42)', lineHeight: 1.45, marginTop: 10, textAlign: 'center' }}>{flavorStr}</p>
+
+                <button type="button" onClick={close} className="font-karla font-800 uppercase tracking-[0.1em] tap"
+                  style={{ width: '100%', marginTop: 14, padding: '0.7rem 0', borderRadius: 11, fontSize: '0.7rem', cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', color: '#cfcabf' }}>
+                  Back to the board
+                </button>
+              </motion.div>
+            </motion.div>,
+            document.body,
+          )
+        })()}
       </motion.div>
     </ModalScrim>
   )
