@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { awardPracticeKill } from './practiceActions'
 import { markRaidTutorialSeen } from '../tutorialActions'
+import GuideCoach from '@/components/GuideCoach'
+import { GUIDES } from '@/lib/onboardingScenes'
 import { getShipSkin } from '@/lib/shipSkins'
 import { getXPProgress, getLevelFromXP, MAX_LEVEL } from '@/lib/expeditionLevel'
 import RaidCombat from '../RaidCombat'
@@ -284,47 +286,15 @@ function NavLevelBar({ xp }: { xp: number }) {
   )
 }
 
-// ── Tour steps ────────────────────────────────────────────────────────────────
-// First-time tutorial for the (now turn-based) raid combat. Modeled after the
-// fishing tour — each step positions its card to point at the actual UI
-// element it's describing, so the player can see what we mean as they read.
-// Tour fires DURING the fight (not before it) so the buttons / nameplates /
-// charges are visible underneath the dim backdrop.
-
-interface TourStep {
-  title: string
-  body: string
-  /** Absolute positioning of the card relative to the viewport. */
-  cardStyle: React.CSSProperties
-  /** Side of the card the arrow sticks out of. 'none' = centered card, no arrow. */
-  arrowDir: 'up' | 'down' | 'none'
-  arrowAlign: 'left' | 'center' | 'right'
-}
-
-// Three steps. The essential combat read: your moves, the aim minigame,
-// the enemy pattern + dodge. Skirmish-vs-raid framing, stats popup, and
-// the "faster ship goes first" detail are all discoverable through play
-// (the action log narrates each beat). Players who want depth can tap
-// their nameplate for stats anytime.
-const PRACTICE_TOUR: TourStep[] = [
-  {
-    title: 'Pick a move',
-    body: 'Reload loads a cannonball. Fire spends one. Volley spends three for double damage. Dodge avoids the next hit.',
-    cardStyle: { bottom: '32%', left: '1rem', right: '1rem' },
-    arrowDir: 'down', arrowAlign: 'center',
-  },
-  {
-    title: 'Lock the aim',
-    body: 'When you fire, tap to stop the marker in the green. Gold center is a critical.',
-    cardStyle: { bottom: '32%', left: '1rem', right: '1rem' },
-    arrowDir: 'down', arrowAlign: 'center',
-  },
-  {
-    title: 'Read the pattern',
-    body: 'Enemies follow a pattern. At 3 cannonballs they volley. Dodge that turn.',
-    cardStyle: { top: '32%', left: '1rem', right: '1rem' },
-    arrowDir: 'up', arrowAlign: 'left',
-  },
+// ── First-fight walkthrough ──────────────────────────────────────────────────
+// Doby + Kat coach-marks over the live practice fight (the reef skirmish),
+// matching the rest of onboarding: plain, one line per step. Combat basics —
+// the moves, the aim minigame, the enemy pattern. Everything else is
+// discoverable through play (the action log narrates each beat).
+const PRACTICE_WALKTHROUGH: { portrait: string; speaker: string; text: string }[] = [
+  { portrait: GUIDES.doby.portrait, speaker: 'Doby', text: "Each turn, pick a move below. *Reload* loads a shot, *Fire* spends one, *Volley* spends three for double damage, *Dodge* avoids the next hit." },
+  { portrait: GUIDES.kat.portrait,  speaker: 'Kat',  text: "When you Fire, tap to stop the marker in the *green*. The gold center is a critical hit." },
+  { portrait: GUIDES.doby.portrait, speaker: 'Doby', text: "Enemies follow a pattern. At three cannonballs they Volley — *Dodge* that turn to avoid it." },
 ]
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -958,119 +928,21 @@ export default function PracticeRaidGame({
           }}
         />
 
-        {/* ── First-time tour ─────────────────────────────────────────────
-            Layers on top of the live fight so each step's card can point
-            at the actual buttons / nameplates it describes. Backdrop is
-            light enough to leave the UI readable underneath. */}
-        <AnimatePresence>
-          {showTour && (
-            <>
-              <motion.div
-                key="practice-tour-backdrop"
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                onClick={() => {
-                  if (tourStep < PRACTICE_TOUR.length - 1) setTourStep(s => s + 1)
-                  else dismissTour()
-                }}
-                style={{
-                  position: 'fixed', inset: 0, zIndex: 100, cursor: 'pointer',
-                  background: 'rgba(0,0,0,0.55)',
-                }}
-              />
-              <motion.div
-                key={`practice-tour-${tourStep}`}
-                initial={{ opacity: 0, scale: 0.96, y: 4 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.96, y: 4 }}
-                transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-                onClick={e => e.stopPropagation()}
-                style={{
-                  position: 'fixed', zIndex: 101,
-                  maxWidth: 360, margin: '0 auto',
-                  background: '#0e1a2b',
-                  border: '1px solid rgba(96,165,250,0.36)',
-                  borderRadius: 14, padding: '0.95rem 1.05rem 0.85rem',
-                  boxShadow: '0 20px 40px rgba(0,0,0,0.55)',
-                  ...PRACTICE_TOUR[tourStep].cardStyle,
-                }}
-              >
-                {(() => {
-                  const step = PRACTICE_TOUR[tourStep]
-                  if (step.arrowDir === 'none') return null
-                  const color = 'rgba(96,165,250,0.36)'
-                  const base: React.CSSProperties = {
-                    position: 'absolute', width: 12, height: 12, background: '#0e1a2b',
-                    transform: 'rotate(45deg)',
-                  }
-                  const align =
-                    step.arrowAlign === 'center' ? { left: '50%', marginLeft: -6 } :
-                    step.arrowAlign === 'right'  ? { right: 28 } :
-                                                   { left: 28 }
-                  const pos: React.CSSProperties = step.arrowDir === 'up'
-                    ? { top: -7, ...align }
-                    : { bottom: -7, ...align }
-                  const border: React.CSSProperties = step.arrowDir === 'up'
-                    ? { borderTop: `1px solid ${color}`, borderLeft: `1px solid ${color}` }
-                    : { borderBottom: `1px solid ${color}`, borderRight: `1px solid ${color}` }
-                  return <div style={{ ...base, ...pos, ...border }} />
-                })()}
-
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
-                  <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', color: '#7a9bc4', letterSpacing: '0.16em' }}>
-                    Captain&rsquo;s Briefing
-                  </p>
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    {PRACTICE_TOUR.map((_, i) => (
-                      <span key={i} style={{
-                        width: i === tourStep ? 18 : 6, height: 5, borderRadius: 999,
-                        background: i === tourStep ? '#60a5fa' : 'rgba(255,255,255,0.18)',
-                        transition: 'width 0.22s ease',
-                      }} />
-                    ))}
-                  </div>
-                </div>
-
-                <p className="font-cinzel font-700" style={{ fontSize: '1.02rem', color: '#f0ede8', marginBottom: '0.45rem', lineHeight: 1.2 }}>
-                  {PRACTICE_TOUR[tourStep].title}
-                </p>
-                <p className="font-karla" style={{ fontSize: '0.92rem', color: 'rgba(240,237,232,0.85)', lineHeight: 1.55, marginBottom: '0.85rem' }}>
-                  {PRACTICE_TOUR[tourStep].body}
-                </p>
-
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                  <button
-                    onClick={e => { e.stopPropagation(); dismissTour() }}
-                    className="font-karla font-600 uppercase tracking-[0.08em]"
-                    style={{
-                      fontSize: '0.68rem', cursor: 'pointer', touchAction: 'manipulation',
-                      color: 'rgba(240,237,232,0.5)',
-                      background: 'none', border: 'none', padding: '0.4rem 0.3rem',
-                    }}
-                  >
-                    Skip
-                  </button>
-                  <button
-                    onClick={e => {
-                      e.stopPropagation()
-                      if (tourStep < PRACTICE_TOUR.length - 1) setTourStep(s => s + 1)
-                      else dismissTour()
-                    }}
-                    className="font-karla font-700 uppercase tracking-[0.1em]"
-                    style={{
-                      fontSize: '0.78rem', cursor: 'pointer', touchAction: 'manipulation',
-                      color: '#0a1422',
-                      background: '#60a5fa',
-                      border: 'none', borderRadius: 10, padding: '0.58rem 1.15rem',
-                      boxShadow: '0 4px 14px rgba(96,165,250,0.35)',
-                    }}
-                  >
-                    {tourStep === PRACTICE_TOUR.length - 1 ? 'Got it' : 'Next'}
-                  </button>
-                </div>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
+        {/* ── First-fight walkthrough (Doby + Kat) — over the live practice
+            fight. Placed at the top so the action buttons stay visible below. */}
+        {showTour && PRACTICE_WALKTHROUGH[tourStep] && (
+          <GuideCoach
+            show
+            portrait={PRACTICE_WALKTHROUGH[tourStep].portrait}
+            speaker={PRACTICE_WALKTHROUGH[tourStep].speaker}
+            text={PRACTICE_WALKTHROUGH[tourStep].text}
+            accent="#f0c040"
+            placement="top"
+            onNext={() => { if (tourStep >= PRACTICE_WALKTHROUGH.length - 1) dismissTour(); else setTourStep(s => s + 1) }}
+            nextLabel={tourStep >= PRACTICE_WALKTHROUGH.length - 1 ? 'Got it' : 'Next →'}
+            onClose={dismissTour}
+          />
+        )}
       </div>
     )
   }
