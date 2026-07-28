@@ -3666,7 +3666,9 @@ export default function GauntletGame(props: GauntletGameProps) {
               const rm = BOON_RARITY_META[b.rarity]
               const legendary = b.rarity === 'legendary'
               const rare = b.rarity === 'rare'
-              const maxTier = GAUNTLET_BOONS.find(f => f.id === b.id)?.tiers.length ?? 3
+              const fam = GAUNTLET_BOONS.find(f => f.id === b.id)
+              const maxTier = fam?.tiers.length ?? 3
+              const boonImg = fam?.image
               const ph = boonPhases[idx] ?? 'sealed'
               const flipped = ph === 'flipped'
               const charging = ph === 'charging'
@@ -3723,8 +3725,13 @@ export default function GauntletGame(props: GauntletGameProps) {
                     transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut', delay: idx * 0.3 }}
                     style={{ position: 'absolute', inset: 0, borderRadius: 16, boxShadow: `inset 0 0 20px ${rm.color}66`, pointerEvents: 'none' }}
                   />
-                  {/* Row 1 — name + tier, rarity pill inline, learn-more */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {/* Row 1 — art thumb + name + tier, rarity pill inline, learn-more */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                    {boonImg && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={boonImg} alt="" loading="lazy" decoding="async"
+                        style={{ width: 46, height: 46, flexShrink: 0, objectFit: 'contain', filter: `drop-shadow(0 1px 4px rgba(0,0,0,0.55)) drop-shadow(0 0 6px ${rm.color}44)` }} />
+                    )}
                     <p className="font-cinzel font-700" style={{ flex: 1, minWidth: 0, fontSize: '1.06rem', color: '#f4fbf9', lineHeight: 1.16 }}>
                       {b.name} <span style={{ color: rm.color }}>{boonTierLabel(b.tier)}</span>
                     </p>
@@ -3879,6 +3886,7 @@ export default function GauntletGame(props: GauntletGameProps) {
               // "forge a convergence" reads as a bigger moment than a synergy.
               const cvg = !!pendingConfluence.isConvergence
               const AC = cvg ? '#ff8a3d' : SYN
+              const synImg = (cvg ? CONVERGENCES : CONFLUENCES).find(x => x.id === pendingConfluence.id)?.image
               return (
               <>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '2px 2px' }}>
@@ -3909,7 +3917,12 @@ export default function GauntletGame(props: GauntletGameProps) {
                     transition={{ duration: 2.4, repeat: Infinity, repeatDelay: 1.4, ease: 'easeInOut' }}
                     style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '45%', background: `linear-gradient(100deg, transparent, ${AC}3a, transparent)`, pointerEvents: 'none' }}
                   />
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                    {synImg && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={synImg} alt="" loading="lazy" decoding="async"
+                        style={{ width: 46, height: 46, flexShrink: 0, objectFit: 'contain', filter: `drop-shadow(0 1px 4px rgba(0,0,0,0.55)) drop-shadow(0 0 6px ${AC}55)` }} />
+                    )}
                     <p className="font-cinzel font-700" style={{ flex: 1, minWidth: 0, fontSize: '1.06rem', color: '#f6f1ff', lineHeight: 1.16 }}>
                       {pendingConfluence.name} <span style={{ color: AC }}>{boonTierLabel(pendingConfluence.level)}</span>
                     </p>
