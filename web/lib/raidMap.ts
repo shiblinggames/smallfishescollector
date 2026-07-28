@@ -365,6 +365,7 @@ export type SceneInsert =
   | { kind: 'ledger-f' }                 // the patient F signing the margin
   | { kind: 'sealed-letter'; wax?: string } // a wax-sealed letter (wax = the initials pressed in it)
   | { kind: 'finn-silhouette' }          // a figure rising from the true deep. Finn's shape, blacked to a silhouette (the "not the final boss" sting; reuses his CharacterAvatar, no art)
+  | { kind: 'dial-demo' }                // a live catch-dial demo (needle landing green→gold). Rendered by a caller's renderInsert override (the fishing intro), not the shared InsertShot.
 
 /** One row in a node's "possible drops" panel. */
 export interface RaidNodeDrop {

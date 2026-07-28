@@ -6,16 +6,19 @@
 // <body>, so it sits above the page and the Nav. Both "finish the last line" and
 // "Skip" resolve to onDone (usually: mark the has_seen_* flag + close).
 
+import type { ReactNode } from 'react'
 import StoryScene from '@/app/(app)/expeditions/StoryScene'
-import type { SceneLine } from '@/lib/raidMap'
+import type { SceneLine, SceneInsert } from '@/lib/raidMap'
 
-export default function GuideScene({ title, lines, ctaLabel, accent, background, pending, onDone }: {
+export default function GuideScene({ title, lines, ctaLabel, accent, background, pending, renderInsert, onDone }: {
   title: string
   lines: SceneLine[]
   ctaLabel: string
   accent?: string
   background?: string
   pending?: boolean
+  /** Optional custom insert visual (e.g. a live dial demo). See StoryScene. */
+  renderInsert?: (insert: SceneInsert) => ReactNode
   onDone: () => void
 }) {
   return (
@@ -26,6 +29,7 @@ export default function GuideScene({ title, lines, ctaLabel, accent, background,
       accent={accent}
       background={background}
       pending={pending}
+      renderInsert={renderInsert}
       onComplete={onDone}
       onSkip={onDone}
     />

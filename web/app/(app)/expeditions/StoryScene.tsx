@@ -27,11 +27,11 @@
 // Portaled to document.body — Nav has translateZ(0) and the node sheet is itself a
 // fixed portal at z-1000, so the scene sits above both.
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { GOLD, TypedBody, Letterbox, LivingFrame, FlashOut, SceneProgress, InsertShot, SceneBackdrop, useTypewriter, lineHaptic, prefersReducedMotion } from '@/components/cutscene'
-import type { SceneLine } from '@/lib/raidMap'
+import type { SceneLine, SceneInsert } from '@/lib/raidMap'
 
 /** Who is on stage, and where. Two slots: a conversation, not a crowd. */
 interface StageChar { speaker: string; portrait: string }
@@ -64,7 +64,7 @@ function stageAt(lines: SceneLine[], idx: number): { left: StageChar | null; rig
   return { left, right }
 }
 
-export default function StoryScene({ title, lines, ctaLabel, pending, accent, background, onComplete, onSkip }: {
+export default function StoryScene({ title, lines, ctaLabel, pending, accent, background, renderInsert, onComplete, onSkip }: {
   title: string
   lines: SceneLine[]
   ctaLabel: string
@@ -73,6 +73,10 @@ export default function StoryScene({ title, lines, ctaLabel, pending, accent, ba
   accent?: string
   /** Optional painterly establishing backdrop (public/scenes/*). Plain dark when unset. */
   background?: string
+  /** Optional custom insert renderer — lets a caller supply its own insert-shot
+   *  visual (e.g. a live dial demo) without teaching the shared kit about it.
+   *  Return null to fall back to the built-in InsertShot for that kind. */
+  renderInsert?: (insert: SceneInsert) => ReactNode
   onComplete: () => void
   onSkip: () => void
 }) {
@@ -230,7 +234,7 @@ export default function StoryScene({ title, lines, ctaLabel, pending, accent, ba
         {insertActive && line?.insert && (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
             paddingBottom: hasCast ? '22%' : '8%', zIndex: 2, pointerEvents: 'none' }}>
-            <InsertShot kind={line.insert.kind} wax={'wax' in line.insert ? line.insert.wax : undefined} accent={ACCENT} reduced={reduced} />
+            {renderInsert?.(line.insert) ?? <InsertShot kind={line.insert.kind} wax={'wax' in line.insert ? line.insert.wax : undefined} accent={ACCENT} reduced={reduced} />}
           </div>
         )}
         {/* ── TITLE CARD — a scene with no cast. Words in the dark, nothing else. */}

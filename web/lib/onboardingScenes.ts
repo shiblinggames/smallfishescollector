@@ -28,7 +28,7 @@ export const FISHING_INTRO_SCENE: SceneLine[] = [
   { ...D, text: "Every reef on this coast has gone quiet, small fry. And a quiet sea is a sea with something *wrong* in it." },
   { ...D, text: "But a captain still has to eat. So let me show you how we pull a living from this water.", pause: 200 },
   { ...K, text: "Cast your line and wait. When a fish takes it, a dial spins up." },
-  { ...K, text: "Stop the needle in the *green* to land the fish. Stop it in the *gold* and you've hooked a Perfect. Cleaner catch, richer haul.", pause: 200 },
+  { ...K, text: "Stop the needle in the *green* to land the fish. Stop it in the *gold* and you've hooked a Perfect. Cleaner catch, richer haul.", pause: 200, insert: { kind: 'dial-demo' } },
   { ...D, text: "Everything you land sells for *doubloons* back at the Tavern. That coin is how a small crew becomes a feared one." },
   { ...D, text: "Fish enough and you'll rise in rank, and *deeper waters* open to you. Bigger quarry, stranger things.", pause: 200 },
   { ...K, text: "Start in the shallows. Don't go chasing the deep before you're ready for what's waiting down there." },

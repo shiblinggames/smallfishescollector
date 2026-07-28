@@ -884,6 +884,52 @@ function DialSVG({
   )
 }
 
+// ── Catch-dial demo (onboarding cutscene) ────────────────────────────────────
+// A self-contained, input-free catch dial for the fishing intro scene: the
+// needle sweeps, lands in the GREEN, then dead-centre for the GOLD Perfect, on
+// a loop. Reuses DialSVG — the needle renders straight from the `angle` prop
+// (no WAAPI needed), so we just animate `angle` through a scripted timeline.
+function DialDemo() {
+  const zones = useMemo(() => buildFishZones(2, 3, 1, 1, 10, 3), [])
+  const green = useMemo(() => zones.find(z => z.type === 'catch'), [zones])
+  const [angle, setAngle] = useState(CATCH_CENTER)
+  useEffect(() => {
+    const gStart = green ? green.from : CATCH_CENTER - 30
+    const gDeg   = green ? green.to - green.from : 30
+    const greenSpot = gStart + gDeg * 0.74          // inside the green, off the gold
+    // [ms, angle] keyframes: sweep, land+hold GREEN, sweep, land+hold GOLD, reset.
+    const KF: [number, number][] = [
+      [0, 38], [650, 158], [1300, 38],
+      [2000, greenSpot], [3050, greenSpot],
+      [3700, 156], [4400, CATCH_CENTER], [5650, CATCH_CENTER],
+      [6250, 38],
+    ]
+    const total = KF[KF.length - 1][0]
+    const ease = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2)
+    let raf = 0, start = 0
+    const loop = (ts: number) => {
+      if (!start) start = ts
+      const tt = (ts - start) % total
+      let i = 0
+      while (i < KF.length - 1 && KF[i + 1][0] <= tt) i++
+      const [t0, a0] = KF[i]
+      const [t1, a1] = KF[Math.min(i + 1, KF.length - 1)]
+      const f = t1 > t0 ? ease((tt - t0) / (t1 - t0)) : 1
+      setAngle(a0 + (a1 - a0) * f)
+      raf = requestAnimationFrame(loop)
+    }
+    raf = requestAnimationFrame(loop)
+    return () => cancelAnimationFrame(raf)
+  }, [green])
+  const opacity = (z: ZoneDef) =>
+    z.type === 'perfect' ? 1 : z.type === 'catch' ? 0.95 : z.type === 'penalty' ? 0.55 : 0.3
+  return (
+    <div style={{ width: 'min(56vw, 232px)', margin: '0 auto', pointerEvents: 'none', filter: 'drop-shadow(0 12px 30px rgba(0,0,0,0.6))' }}>
+      <DialSVG zones={zones} angle={angle} needleColor="#f5f7fa" zoneOpacityFn={opacity} />
+    </div>
+  )
+}
+
 // ─── UnifiedGearDrawer ───────────────────────────────────────────────────────
 
 // ── TACKLE SHOP LINK ─────────────────────────────────────────────────────────
@@ -8440,6 +8486,7 @@ export default function FishingGame({
           ctaLabel="Cast a Line →"
           accent={FISHING_ACCENT}
           background="/shallows.jpg"
+          renderInsert={(insert) => insert.kind === 'dial-demo' ? <DialDemo /> : null}
           onDone={() => { setShowFishingIntro(false); startTransition(async () => { await markFishingTourSeen() }) }}
         />
       )}
