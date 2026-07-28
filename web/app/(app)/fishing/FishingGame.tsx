@@ -64,6 +64,8 @@ import { markRenownIntroSeen, type RenownState } from '@/app/(app)/actions/renow
 import RenownPanel from '@/components/RenownPanel'
 import RenownUpOverlay, { type RenownUpInfo } from '@/components/RenownUpOverlay'
 import RenownIntroOverlay from '@/components/RenownIntroOverlay'
+import GuideScene from '@/components/GuideScene'
+import { FISHING_INTRO_SCENE, FISHING_ACCENT } from '@/lib/onboardingScenes'
 import { fishingGearUnlockedBetween } from '@/lib/gearUnlocks'
 import GearUnlockRow from '@/components/GearUnlockRow'
 import { formatFishLength, tierForLength, TIER_COLOR, type FishSizeTier } from '@/lib/fishSize'
@@ -4142,6 +4144,8 @@ export default function FishingGame({
   const [tourStep, setTourStep] = useState<number | null>(null)
   const [catchTourStep, setCatchTourStep] = useState<number | null>(null)
   const catchTourShownRef = useRef(false)
+  // Cinematic Doby+Kat fishing intro (replaces the old plain positioned tour).
+  const [showFishingIntro, setShowFishingIntro] = useState(false)
   const [perfectFlash, setPerfectFlash] = useState(false)
   const [perfectBurstKey, setPerfectBurstKey] = useState(0)
   const [waitMessage, setWaitMessage] = useState('')
@@ -4594,20 +4598,12 @@ export default function FishingGame({
   }, [castNotice])
 
 
+  // First fishing visit → the cinematic Doby+Kat intro. It teaches casting, the
+  // dial (green/gold), selling for doubloons, and deeper zones in one scene, so
+  // the old plain positioned tour AND the separate catch-dial card are retired.
   useEffect(() => {
-    if (!hasSeenFishingTour) setTourStep(0)
+    if (!hasSeenFishingTour) setShowFishingIntro(true)
   }, [hasSeenFishingTour])
-
-  useEffect(() => {
-    // Fire on 'hooked' (fish on line, player hasn't entered the dial yet)
-    // instead of 'catching' so the player reads "stop in the green" BEFORE
-    // the dial spins up. Previously the tour appeared mid-minigame and
-    // most first-time players had already lost their first hook by then.
-    if (phase === 'hooked' && !catchTourShownRef.current) {
-      catchTourShownRef.current = true
-      if (!hasSeenFishingCatchTour) setCatchTourStep(0)
-    }
-  }, [phase, hasSeenFishingCatchTour])
 
   // Character frame — drives which sprite is shown
   const [charFrame, setCharFrame] = useState<CharFrame>('rest')
@@ -8436,7 +8432,19 @@ export default function FishingGame({
         )}
       </AnimatePresence>
 
-      {/* ── Onboarding tour ── */}
+      {/* ── Cinematic fishing intro (Doby + Kat) — first visit ── */}
+      {showFishingIntro && (
+        <GuideScene
+          title="A Loose Thread"
+          lines={FISHING_INTRO_SCENE}
+          ctaLabel="Cast a Line →"
+          accent={FISHING_ACCENT}
+          background="/scenes/reef-coast.jpg"
+          onDone={() => { setShowFishingIntro(false); startTransition(async () => { await markFishingTourSeen() }) }}
+        />
+      )}
+
+      {/* ── Onboarding tour (legacy plain cards — retired, kept dead) ── */}
       <AnimatePresence>
         {tourStep !== null && !collectionOpen && !gearOpen && !baitOpen && !holdOpen && (
           <>
