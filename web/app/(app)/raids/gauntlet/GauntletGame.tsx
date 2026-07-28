@@ -3278,7 +3278,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                             const label = curseTierLabel(tier)
                             return (
                               <button key={c.id} className="font-karla font-700 tap"
-                                onClick={() => setDetailEffect({ kind: 'curse', name: label ? `${c.name} ${label}` : c.name, desc: t.desc, detail: t.detail, flavor: c.flavor, count: tier, maxTier: c.tiers.length })}
+                                onClick={() => setDetailEffect({ kind: 'curse', name: label ? `${c.name} ${label}` : c.name, desc: t.desc, detail: t.detail, flavor: c.flavor, count: tier, maxTier: c.tiers.length, image: c.image })}
                                 style={{ cursor: 'pointer', fontSize: '0.64rem', padding: '0.24rem 0.6rem', borderRadius: 999, background: 'rgba(248,113,113,0.14)', border: '1px solid rgba(248,113,113,0.42)', color: '#fca5a5' }}>
                                 {c.name}{label ? ` ${label}` : ''}
                               </button>
