@@ -36,7 +36,9 @@ export async function reconcileBadges(): Promise<string[]> {
     raids: (raidRows ?? []) as { raid_id: string; elapsed_ms: number | null }[],
     crew: crew.map(c => ({ xp: c.xp, died_at: c.died_at, slug: c.cards?.slug ?? null })),
     voyageCount: voyageCount ?? 0,
-    collectionCount: collectionCount ?? 0,
+    // Lifetime species (prestige-proof) drives the collection badges; fall back
+    // to the live count for any row the backfill hasn't reached.
+    collectionCount: Math.max(collectionCount ?? 0, Number((profile as BadgeProfileFields).lifetime_species_count ?? 0)),
     rodTiers: ((rodRows ?? []) as { rod_tier: number }[]).map(r => r.rod_tier),
     goldenCount: goldenCount ?? 0,
   })

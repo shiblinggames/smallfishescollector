@@ -509,7 +509,7 @@ export async function reelIn(
   }
 
   const [{ data: profile }, { data: holdRows }] = await Promise.all([
-    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, rod_tier, completionist_effects, fish_hold_tier, has_phantom_hook, has_perfected_sigil, equipped_special, line_tier, prestige_levels, ancient_catches, unlocked_character_colors, total_perfects, current_perfect_streak, highest_perfect_streak, force_shiny_next_perfect, force_shiny_always, fishing_renown_alloc, pending_cast, zone_golden_boost').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, rod_tier, completionist_effects, fish_hold_tier, has_phantom_hook, has_perfected_sigil, equipped_special, line_tier, prestige_levels, ancient_catches, unlocked_character_colors, total_perfects, current_perfect_streak, highest_perfect_streak, force_shiny_next_perfect, force_shiny_always, fishing_renown_alloc, pending_cast, zone_golden_boost, lifetime_species').eq('id', user.id).single(),
     admin.from('fish_inventory').select('quantity').eq('user_id', user.id),
   ])
 
@@ -731,16 +731,25 @@ export async function reelIn(
       admin.from('fish_collection').select('fish_id').eq('user_id', user.id),
     ])
     const caughtIds = new Set(((caughtRows ?? []) as { fish_id: number }[]).map(r => r.fish_id))
+    // Lifetime species set — only ever grows, so a prestige wipe can't set the
+    // collection badges back. Union the stored set with the current collection
+    // (self-heals any drift) and this catch, and persist it if it grew.
+    const storedLifetime = (profile?.lifetime_species as number[] | null) ?? []
+    const lifetimeSet = new Set<number>([...storedLifetime, ...caughtIds, fish.id])
+    if (lifetimeSet.size > storedLifetime.length) {
+      await admin.from('profiles').update({ lifetime_species: [...lifetimeSet] }).eq('id', user.id)
+    }
     // Line tier progresses on TOTAL species caught (Ancient Deep included).
-    const newLineTier = getLineForSpeciesCount(caughtIds.size).tier
+    const newLineTier = getLineForSpeciesCount(lifetimeSet.size).tier
     if (newLineTier > (profile?.line_tier ?? 0)) {
       await admin.from('profiles').update({ line_tier: newLineTier }).eq('id', user.id)
     }
     // Full Collection = every NON-ancient species landed. The Ancient Deep
     // giants are a separate trophy hunt (their own badges), so they don't count
-    // here — matches the badges-page rule. Count only non-ancient species held.
+    // here — matches the badges-page rule. Judged off the lifetime set so a
+    // prestige before the badge lands doesn't lock it out.
     const nonAncientIds = ((nonAncientSpecies ?? []) as { id: number }[]).map(s => s.id)
-    const nonAncientCaught = nonAncientIds.filter(id => caughtIds.has(id)).length
+    const nonAncientCaught = nonAncientIds.filter(id => lifetimeSet.has(id)).length
     if (nonAncientIds.length > 0 && nonAncientCaught >= nonAncientIds.length) {
       await grantBadgeDirect(user.id, 'full_collection')
     }
@@ -1029,7 +1038,7 @@ export async function rerollWormhole(): Promise<
   if (!user) return { error: 'Unauthorized' }
   const admin = createAdminClient()
 
-  const { data: profile } = await admin.from('profiles').select('rod_tier, completionist_effects, pending_reroll').eq('id', user.id).single()
+  const { data: profile } = await admin.from('profiles').select('rod_tier, completionist_effects, pending_reroll, lifetime_species').eq('id', user.id).single()
   const pending = (profile?.pending_reroll ?? null) as { fishId: number; qty: number; habitat: string } | null
   if (!pending) return { error: 'No catch to reroll.' }
 
@@ -1069,6 +1078,14 @@ export async function rerollWormhole(): Promise<
   const isNewSpecies = !collRow
   if (isNewSpecies) await admin.from('fish_collection').insert({ user_id: user.id, fish_id: newFish.id, catch_count: qty })
   else await admin.from('fish_collection').update({ catch_count: collRow.catch_count + qty, last_caught_at: new Date().toISOString() }).eq('user_id', user.id).eq('fish_id', newFish.id)
+
+  // Keep the prestige-proof lifetime set in sync (it only ever grows).
+  if (isNewSpecies) {
+    const storedLifetime = (profile?.lifetime_species as number[] | null) ?? []
+    if (!storedLifetime.includes(newFish.id)) {
+      await admin.from('profiles').update({ lifetime_species: [...storedLifetime, newFish.id] }).eq('id', user.id)
+    }
+  }
 
   // Size + PB for the new fish (mirrors the catch path; ancients excluded).
   const sizeMinIn = newFish.length_min_in == null ? null : Number(newFish.length_min_in)

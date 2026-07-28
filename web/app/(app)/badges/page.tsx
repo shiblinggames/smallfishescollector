@@ -61,7 +61,13 @@ export default async function BadgesPage() {
   const hasLostCrew = crew.some(c => c.died_at != null)
   const challengeCleared = CHALLENGE_RAID_IDS.filter(id => raidIds.has(id)).length
   const challengeClearedAll = CHALLENGE_RAID_IDS_ALL.filter(id => raidIds.has(id)).length
-  const collectionCount = (collectionRes.data ?? []).length
+  // Collection badges count LIFETIME distinct species (prestige-proof), unioned
+  // with the current collection as a floor so the backfill can never undercount.
+  const lifetimeSpeciesIds = new Set<number>([
+    ...(((profile?.lifetime_species as number[] | null) ?? [])),
+    ...((collectionRes.data ?? []) as { fish_id: number }[]).map(r => r.fish_id),
+  ])
+  const collectionCount = Math.max((collectionRes.data ?? []).length, lifetimeSpeciesIds.size)
 
   const crewHallTier = Number(profile?.crew_hall_tier ?? 0)
   const recruits = Number(profile?.lifetime_recruits ?? 0)
@@ -143,8 +149,7 @@ export default async function BadgesPage() {
       .filter(s => s.habitat !== 'ancient_deep')
       .map(s => s.id),
   )
-  const collectedIds = new Set(((collectionRes.data ?? []) as { fish_id: number }[]).map(r => r.fish_id))
-  const collected = [...nonAncientIds].filter(id => collectedIds.has(id)).length
+  const collected = [...nonAncientIds].filter(id => lifetimeSpeciesIds.has(id)).length
   const speciesTotal = nonAncientIds.size || 134
 
   // Full Collection is normally granted by a hook the moment you land the last

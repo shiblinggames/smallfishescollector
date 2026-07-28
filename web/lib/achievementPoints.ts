@@ -81,7 +81,8 @@ const getCachedAchievementRows = unstable_cache(
         raids: raidsBy.get(p.id) ?? [],
         crew: crewBy.get(p.id) ?? [],
         voyageCount: voyageBy.get(p.id) ?? 0,
-        collectionCount: collectionBy.get(p.id) ?? 0,
+        // Lifetime species (prestige-proof), with the live count as a floor.
+        collectionCount: Math.max(collectionBy.get(p.id) ?? 0, Number(p.lifetime_species_count ?? 0)),
         rodTiers: rodsBy.get(p.id) ?? [],
         goldenCount: goldenBy.get(p.id) ?? 0,
       })
@@ -128,7 +129,8 @@ const getCachedUserPoints = unstable_cache(
       raids: (raidRows ?? []) as Array<{ raid_id: string; elapsed_ms: number | null }>,
       crew: crew.map(c => ({ xp: c.xp, died_at: c.died_at, slug: c.cards?.slug ?? null })),
       voyageCount: voyageCount ?? 0,
-      collectionCount: collectionCount ?? 0,
+      // Lifetime species (prestige-proof), with the live count as a floor.
+      collectionCount: Math.max(collectionCount ?? 0, Number(p.lifetime_species_count ?? 0)),
       rodTiers: (rodRows ?? []).map(r => r.rod_tier),
       goldenCount: goldenCount ?? 0,
     })
