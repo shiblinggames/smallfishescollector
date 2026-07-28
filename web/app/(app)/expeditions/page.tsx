@@ -139,6 +139,7 @@ async function ShipHeroSection() {
       abyssalConversion={parseAbyssalConversion(profile?.abyssal_conversion)}
       forgeRecipesLearned={(profile?.forge_recipes_learned as string[] | null) ?? []}
       hasSeenForgeIntro={profile?.has_seen_forge_intro === true}
+      hasSeenShipGuide={profile?.has_seen_ship_guide === true}
       manowarAugment={activeAugment}
       manowarBuild={manowarBuild}
       manowarSchematics={profile?.manowar_schematics === true}

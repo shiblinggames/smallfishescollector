@@ -646,3 +646,11 @@ export async function markUltimateUnlockSeen(): Promise<void> {
   const admin = createAdminClient()
   await admin.from('profiles').update({ seen_ultimate_unlock: true }).eq('id', user.id)
 }
+
+/** Mark the first-time Manage Ship (loadout drawer) guide as seen. */
+export async function markShipGuideSeen(): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  await createAdminClient().from('profiles').update({ has_seen_ship_guide: true }).eq('id', user.id)
+}

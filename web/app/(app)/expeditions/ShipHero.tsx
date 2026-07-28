@@ -17,7 +17,7 @@ import { SHIP_SKINS } from '@/lib/shipSkins'
 import { getRepairKit, repairKitRange, nextRepairKit } from '@/lib/repairKits'
 import { getGauntletUpgrade } from '@/lib/gauntletUpgrades'
 import { buyRepairKit } from './repairKitActions'
-import { equipShipSkin, saveEquippedRaidItems, forgeRaidItem, learnForgeRecipe, markForgeIntroSeen, startAbyssalConversion, claimAbyssalConversion } from './actions'
+import { equipShipSkin, saveEquippedRaidItems, forgeRaidItem, learnForgeRecipe, markForgeIntroSeen, markShipGuideSeen, startAbyssalConversion, claimAbyssalConversion } from './actions'
 import UltimateBuildPanel from './UltimateBuildPanel'
 import SixthBerthPanel from './SixthBerthPanel'
 import ArmoryExpansionPanel from './ArmoryExpansionPanel'
@@ -39,6 +39,8 @@ import { renownLevel, renownProgress, spentPoints, type RenownAlloc } from '@/li
 import { markRenownIntroSeen, type RenownState } from '@/app/(app)/actions/renown'
 import RenownPanel from '@/components/RenownPanel'
 import { LevelSectionHeader } from '@/components/LevelSectionHeader'
+import GuideCoach from '@/components/GuideCoach'
+import { GUIDES } from '@/lib/onboardingScenes'
 import RenownIntroOverlay from '@/components/RenownIntroOverlay'
 import { crewLevelFromXP } from '@/lib/crewLevel'
 
@@ -226,6 +228,8 @@ interface Props {
   forgeRecipesLearned?: string[]
   /** Whether the one-time "Forge Awakens" celebration has already played. */
   hasSeenForgeIntro?: boolean
+  /** Whether the first-time Manage Ship (loadout) guide has already played. */
+  hasSeenShipGuide?: boolean
   /** The active (completed) Man-o-War ultimate id, or null. */
   manowarAugment?: string | null
   /** An ultimate build in progress ({ id, completesAt }), or null. */
@@ -344,6 +348,7 @@ export default function ShipHero({
   abyssalConversion: initialConversion = null,
   forgeRecipesLearned = [],
   hasSeenForgeIntro = true,
+  hasSeenShipGuide = true,
   manowarAugment: initialManowarAugment = null,
   manowarBuild = null,
   manowarSchematics = false,
@@ -855,6 +860,35 @@ export default function ShipHero({
       void markForgeIntroSeen().catch(() => {})
     }
   }, [loadoutTab, forgeUnlocked, seenForgeIntro])
+
+  // First-time Manage Ship guide — steps through the loadout tabs the first time
+  // the drawer opens, switching to and flashing each one. Forge step only if it's
+  // unlocked. Marked seen the moment it starts.
+  const shipGuideSteps = useMemo(() => {
+    const steps: { tab: 'loadout' | 'ship' | 'forge'; portrait: string; speaker: string; text: string }[] = [
+      { tab: 'loadout', portrait: GUIDES.doby.portrait, speaker: 'Doby', text: "The *Loadout* tab is your battle setup. Assign crew and equip raid items before a fight." },
+      { tab: 'ship',    portrait: GUIDES.kat.portrait,  speaker: 'Kat',  text: "The *Ship* tab is where you buy and upgrade your ship. A bigger ship means more crew slots and firepower." },
+    ]
+    if (forgeUnlocked) steps.push({ tab: 'forge', portrait: GUIDES.doby.portrait, speaker: 'Doby', text: "The *Forge* fuses two raid items into a single stronger one." })
+    return steps
+  }, [forgeUnlocked])
+  const [shipGuideStep, setShipGuideStep] = useState<number | null>(null)
+  const shipGuideFiredRef = useRef(false)
+  useEffect(() => {
+    if (loadoutOpen && !hasSeenShipGuide && !shipGuideFiredRef.current) {
+      shipGuideFiredRef.current = true
+      setShipGuideStep(0)
+      void markShipGuideSeen().catch(() => {})
+    }
+  }, [loadoutOpen, hasSeenShipGuide])
+  useEffect(() => { if (!loadoutOpen) setShipGuideStep(null) }, [loadoutOpen])
+  useEffect(() => {
+    if (shipGuideStep == null) return
+    const s = shipGuideSteps[shipGuideStep]
+    if (s) setLoadoutTab(s.tab)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shipGuideStep])
+  const flashLoadoutTab = shipGuideStep != null ? (shipGuideSteps[shipGuideStep]?.tab ?? null) : null
   function onForgeTap(resultId: string) {
     if (forging || !forgeUnlocked) return
     if (forgeArmed !== resultId) {
@@ -1576,7 +1610,7 @@ export default function ShipHero({
                       role="tab"
                       aria-selected={active}
                       onClick={() => setLoadoutTab(id)}
-                      className="font-cinzel font-700 uppercase tracking-[0.06em]"
+                      className={`font-cinzel font-700 uppercase tracking-[0.06em]${flashLoadoutTab === id ? ' coach-flash coach-flash-gold' : ''}`}
                       style={{
                         flex: 1, padding: '0.55rem', borderRadius: 9,
                         border: active ? '1px solid rgba(255,255,255,0.14)' : '1px solid transparent',
@@ -2189,6 +2223,23 @@ export default function ShipHero({
           )}
         </motion.div>
       </PopupShell>
+
+      {/* First-time Manage Ship guide (Doby + Kat) — flashes each loadout tab.
+          z above the drawer (101). */}
+      {shipGuideStep != null && shipGuideSteps[shipGuideStep] && (
+        <GuideCoach
+          show
+          portrait={shipGuideSteps[shipGuideStep].portrait}
+          speaker={shipGuideSteps[shipGuideStep].speaker}
+          text={shipGuideSteps[shipGuideStep].text}
+          accent="#f0c040"
+          placement="bottom"
+          z={200}
+          onNext={() => { if (shipGuideStep >= shipGuideSteps.length - 1) setShipGuideStep(null); else setShipGuideStep(s => (s ?? 0) + 1) }}
+          nextLabel={shipGuideStep >= shipGuideSteps.length - 1 ? 'Got it' : 'Next →'}
+          onClose={() => setShipGuideStep(null)}
+        />
+      )}
 
       {/* Navigation Renown board — opens from the Lv pill once Nav hits 100. */}
       <RenownPanel

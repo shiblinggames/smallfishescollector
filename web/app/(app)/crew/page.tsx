@@ -19,5 +19,7 @@ export default async function CrewManagementPage() {
   const state = await getCrewState()
   if (!state) notFound()
 
-  return <CrewClient initial={state} />
+  const { data: prof } = await supabase.from('profiles').select('has_seen_crew_guide').eq('id', user.id).single()
+
+  return <CrewClient initial={state} hasSeenGuide={(prof?.has_seen_crew_guide as boolean | null) ?? false} />
 }

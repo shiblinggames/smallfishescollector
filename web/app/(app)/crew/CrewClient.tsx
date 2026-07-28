@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   rerollBoard, recruitCrew, dismissCrew, getCrewGraveyard,
   assignToVoyage, assignToRaid, benchCrew, promoteToCaptain, renameCrew,
-  upgradeCrewHall, buyCrewSkin, equipCrewSkin, gambleBloodSkin,
+  upgradeCrewHall, buyCrewSkin, equipCrewSkin, gambleBloodSkin, markCrewGuideSeen,
   type CrewState, type BoardCandidate, type CrewMember, type CrewActionResult, type FallenCrew,
 } from './actions'
 import { BLOOD_REROLL_TIERS, BLOOD_SKIN_GAMBLE_COST } from '@/lib/gauntlet'
@@ -24,6 +24,16 @@ import { classForSlug, CLASSES, currentMilestone, nextMilestone, CLASS_UNLOCK_LE
 import { vibrate, hapticTap } from '@/lib/haptics'
 import SwipeAction from '@/components/SwipeAction'
 import { playChestSfx } from '@/lib/fishingMusic'
+import GuideCoach from '@/components/GuideCoach'
+import { GUIDES } from '@/lib/onboardingScenes'
+
+// First-time Crew Hall guide — flashes each core tab and says plainly what it's
+// for (advanced tabs like Blood / Fallen are left to discover).
+const CREW_GUIDE: { tab: 'recruits' | 'roster' | 'wardrobe'; portrait: string; speaker: string; text: string }[] = [
+  { tab: 'recruits', portrait: GUIDES.doby.portrait, speaker: 'Doby', text: "This is your Crew Hall. Sign on new hands in the *Recruit* tab. You get free picks that refresh over time." },
+  { tab: 'roster',   portrait: GUIDES.kat.portrait,  speaker: 'Kat',  text: "Your *Roster* is every crew member you own. They level up from expeditions, and you assign them to fights here." },
+  { tab: 'wardrobe', portrait: GUIDES.doby.portrait, speaker: 'Doby', text: "The *Skins* tab has cosmetic looks for your legendary crew. Purely for style." },
+]
 // TickingNumber + the local Stat helper were used by the removed
 // gems/nav/roster pill row in the header. Dropped along with them.
 
@@ -806,7 +816,7 @@ function FallenPanel({ crew }: { crew: FallenCrew }) {
 }
 
 // ── Page ─────────────────────────────────────────────────────────────────────
-export default function CrewClient({ initial }: { initial: CrewState }) {
+export default function CrewClient({ initial, hasSeenGuide = true }: { initial: CrewState; hasSeenGuide?: boolean }) {
   const [state, setState] = useState<CrewState>(initial)
   // Blood Gem skin gamble: null = closed, 'rolling' = suspense build-up,
   // 'revealed' = the won skin slams in. skinId set once the server returns it.
@@ -1012,6 +1022,21 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
     return t === 'recruits' || t === 'graveyard' || t === 'roster' || t === 'blood' || t === 'wardrobe' ? t : 'roster'
   })() as 'roster' | 'recruits' | 'graveyard' | 'blood' | 'wardrobe'
   const [activeTab, setActiveTab] = useState<'roster' | 'recruits' | 'graveyard' | 'blood' | 'wardrobe'>(initialTab)
+
+  // First-time Crew Hall guide: step through the core tabs, switching to and
+  // flashing each one. Marked seen at the end.
+  const [crewGuideStep, setCrewGuideStep] = useState<number | null>(null)
+  useEffect(() => { if (!hasSeenGuide) setCrewGuideStep(0) }, [hasSeenGuide])
+  useEffect(() => {
+    if (crewGuideStep == null) return
+    const s = CREW_GUIDE[crewGuideStep]
+    if (s) setActiveTab(s.tab)
+  }, [crewGuideStep])
+  const flashCrewTab = crewGuideStep != null ? (CREW_GUIDE[crewGuideStep]?.tab ?? null) : null
+  function finishCrewGuide() {
+    setCrewGuideStep(null)
+    void markCrewGuideSeen().catch(() => {})
+  }
   // "How the Blood Market works" help modal.
   const [showBloodHelp, setShowBloodHelp] = useState(false)
   const [graveyard, setGraveyard] = useState<FallenCrew[] | null>(null)
@@ -1322,6 +1347,22 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           </div>
         )}
 
+        {/* First-time Crew Hall guide (Doby + Kat) — flashes each core tab. */}
+        {crewGuideStep != null && CREW_GUIDE[crewGuideStep] && (
+          <GuideCoach
+            show
+            portrait={CREW_GUIDE[crewGuideStep].portrait}
+            speaker={CREW_GUIDE[crewGuideStep].speaker}
+            text={CREW_GUIDE[crewGuideStep].text}
+            accent="#f0c040"
+            placement="bottom"
+            offset="calc(env(safe-area-inset-bottom, 0px) + 90px)"
+            onNext={() => { if (crewGuideStep >= CREW_GUIDE.length - 1) finishCrewGuide(); else setCrewGuideStep(s => (s ?? 0) + 1) }}
+            nextLabel={crewGuideStep >= CREW_GUIDE.length - 1 ? 'Got it' : 'Next →'}
+            onClose={finishCrewGuide}
+          />
+        )}
+
         {/* Top-level navigation — deliberately NOT three identical tabs.
             Roster is the quiet "view your manifest" tab; Recruit always
             wears the gold action treatment so new players immediately know
@@ -1354,7 +1395,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                 return (
                   <button key={t.id} role="tab" aria-selected={active} aria-label={t.label}
                     onClick={() => setActiveTab(t.id)}
-                    className="font-cinzel font-700 uppercase"
+                    className={`font-cinzel font-700 uppercase${flashCrewTab === t.id ? ' coach-flash coach-flash-gold' : ''}`}
                     style={{
                       flex: '1 1 0', minWidth: 0, position: 'relative',
                       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,

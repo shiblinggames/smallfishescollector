@@ -983,3 +983,11 @@ export async function crewTheDeck(pullFromVoyages = false): Promise<
   if (!state) return { error: 'Failed to load crew' }
   return { assigned, stillEmpty: empty.length - assigned, onVoyages, state }
 }
+
+/** Mark the first-time Crew Hall guide as seen (tour-persistence convention). */
+export async function markCrewGuideSeen(): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  await createAdminClient().from('profiles').update({ has_seen_crew_guide: true }).eq('id', user.id)
+}

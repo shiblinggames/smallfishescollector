@@ -12,7 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { renderEmphasis } from '@/components/cutscene'
 
 export default function GuideCoach({
-  show, portrait, speaker, text, accent = '#5eb0e0', placement = 'bottom', offset, onClose, autoHideMs, onNext, nextLabel,
+  show, portrait, speaker, text, accent = '#5eb0e0', placement = 'bottom', offset, onClose, autoHideMs, onNext, nextLabel, z = 70,
 }: {
   show: boolean
   portrait: string
@@ -21,6 +21,8 @@ export default function GuideCoach({
   text: string
   accent?: string
   placement?: 'top' | 'bottom'
+  /** z-index. Bump above a drawer/modal the tip needs to sit over (default 70). */
+  z?: number
   /** Distance from the placement edge (raw CSS). Defaults clear the nav / the
    *  fishing action bar; override to tune per screen. */
   offset?: string
@@ -52,7 +54,7 @@ export default function GuideCoach({
       {show && (
         <div
           style={{
-            position: 'fixed', left: 0, right: 0, zIndex: 70,
+            position: 'fixed', left: 0, right: 0, zIndex: z,
             [top ? 'top' : 'bottom']: edge,
             display: 'flex', justifyContent: 'center', padding: '0 0.9rem',
             pointerEvents: 'none',   // taps fall through to the game
