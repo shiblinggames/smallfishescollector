@@ -4613,10 +4613,12 @@ export default function FishingGame({
   // (result) → clear it and mark the tour seen. Fires once (ref-gated).
   useEffect(() => {
     if (!fishTourActiveRef.current) return
-    if (phase === 'casting' && coach === 'cast') setCoach(null)
-    else if (phase === 'hooked' && coach !== 'dial') setCoach('dial')
-    else if (phase === 'result' && coach === 'dial') {
-      setCoach(null)
+    if (phase === 'casting' && coach === 'cast') {
+      setCoach(null)                       // they cast → hide the cast tip
+    } else if (phase === 'hooked' && coach !== 'dial') {
+      setCoach('dial')                     // a fish is on → show the dial tip
+      // They've cast and hooked — the loop's been taught. Complete the tour now
+      // so closing / auto-hiding the dial tip can't leave it un-marked.
       fishTourActiveRef.current = false
       startTransition(async () => { await markFishingTourSeen() })
     }
@@ -8459,6 +8461,8 @@ export default function FishingGame({
         text="Tap anywhere to cast your line."
         accent={FISHING_ACCENT}
         placement="top"
+        autoHideMs={9000}
+        onClose={() => setCoach(null)}
       />
       <GuideCoach
         show={coach === 'dial'}
@@ -8466,7 +8470,9 @@ export default function FishingGame({
         speaker="Kat"
         text="A fish is on. Stop the needle in the *green* to catch it, or the *gold* for a Perfect."
         accent={FISHING_ACCENT}
-        placement="bottom"
+        placement="top"
+        autoHideMs={9000}
+        onClose={() => setCoach(null)}
       />
 
       {/* ── Onboarding tour (legacy plain cards — retired, kept dead) ── */}

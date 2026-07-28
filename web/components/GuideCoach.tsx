@@ -4,13 +4,15 @@
 // OVER the live game at the moment it matters (first cast, first bite, ...). The
 // wrapper is pointer-events:none so taps pass straight through to the game — the
 // player keeps playing and the parent dismisses the tip when they do the thing.
-// Character-driven but plain: say exactly what to do in one line.
+// A × dismisses it manually; autoHideMs fades it after a while so it never
+// lingers. Character-driven but plain: say exactly what to do in one line.
 
+import { useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { renderEmphasis } from '@/components/cutscene'
 
 export default function GuideCoach({
-  show, portrait, speaker, text, accent = '#5eb0e0', placement = 'bottom', offset, onDismiss, dismissLabel = 'Got it',
+  show, portrait, speaker, text, accent = '#5eb0e0', placement = 'bottom', offset, onClose, autoHideMs,
 }: {
   show: boolean
   portrait: string
@@ -22,15 +24,26 @@ export default function GuideCoach({
   /** Distance from the placement edge (raw CSS). Defaults clear the nav / the
    *  fishing action bar; override to tune per screen. */
   offset?: string
-  /** When set, a small button appears to dismiss manually (else the tip is
-   *  purely auto-dismissed by the parent on a game event). */
-  onDismiss?: () => void
-  dismissLabel?: string
+  /** Manual dismiss (the × button). Also fired by autoHideMs. */
+  onClose?: () => void
+  /** Auto-hide after this many ms while shown, so a tip never lingers. */
+  autoHideMs?: number
 }) {
   const top = placement === 'top'
   const edge = offset ?? (top
     ? 'calc(env(safe-area-inset-top, 0px) + 96px)'
     : 'calc(env(safe-area-inset-bottom, 0px) + 128px)')
+
+  // Auto-hide timer. onClose is read through a ref so an inline arrow from the
+  // parent doesn't reset the timer every render.
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+  useEffect(() => {
+    if (!show || !autoHideMs) return
+    const t = setTimeout(() => onCloseRef.current?.(), autoHideMs)
+    return () => clearTimeout(t)
+  }, [show, autoHideMs])
+
   return (
     <AnimatePresence>
       {show && (
@@ -48,12 +61,14 @@ export default function GuideCoach({
             exit={{ opacity: 0, y: top ? -8 : 8, transition: { duration: 0.18 } }}
             transition={{ type: 'spring', stiffness: 420, damping: 30 }}
             style={{
+              position: 'relative',
               display: 'flex', alignItems: 'center', gap: 11,
               width: '100%', maxWidth: 430,
               background: 'linear-gradient(180deg, rgba(10,17,26,0.96) 0%, rgba(7,12,19,0.97) 100%)',
               border: `1px solid ${accent}55`,
               borderRadius: 16,
               padding: '0.7rem 0.85rem',
+              paddingRight: onClose ? '1.7rem' : '0.85rem',
               boxShadow: `0 12px 34px rgba(0,0,0,0.55), 0 0 20px ${accent}18`,
             }}
           >
@@ -66,13 +81,13 @@ export default function GuideCoach({
                 {renderEmphasis(text, accent)}
               </p>
             </div>
-            {onDismiss && (
+            {onClose && (
               <button
-                onClick={onDismiss}
-                className="font-karla font-700 uppercase"
-                style={{ pointerEvents: 'auto', flexShrink: 0, alignSelf: 'stretch', padding: '0 0.7rem', borderRadius: 10, fontSize: '0.6rem', letterSpacing: '0.08em', background: `${accent}22`, border: `1px solid ${accent}66`, color: accent, cursor: 'pointer' }}
+                onClick={onClose}
+                aria-label="Dismiss tip"
+                style={{ pointerEvents: 'auto', position: 'absolute', top: 5, right: 6, width: 22, height: 22, borderRadius: '50%', display: 'grid', placeItems: 'center', background: 'rgba(255,255,255,0.06)', border: 'none', color: 'rgba(255,255,255,0.55)', fontSize: '0.72rem', lineHeight: 1, cursor: 'pointer' }}
               >
-                {dismissLabel}
+                ✕
               </button>
             )}
           </motion.div>
