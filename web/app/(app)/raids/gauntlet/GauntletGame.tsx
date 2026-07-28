@@ -5184,15 +5184,21 @@ function BoonToken({ boonId, tier = 0, held, full, size = 32 }: { boonId: string
 // result identity in a detail header.
 function MiniCrest({ size = 32, color, dim, image }: { size?: number; color: string; dim?: boolean; image?: string | null }) {
   const c = dim ? '#5a6472' : color
+  // With real art, the crest floats free like the boon tokens — no hex frame.
+  if (image) {
+    return (
+      <span style={{ position: 'relative', flexShrink: 0, width: size, height: size, display: 'grid', placeItems: 'center' }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={image} alt="" loading="lazy" decoding="async"
+          style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: dim ? 0.5 : 1, filter: dim ? 'grayscale(0.85) drop-shadow(0 1px 2px rgba(0,0,0,0.4))' : 'drop-shadow(0 1px 3px rgba(0,0,0,0.5))' }} />
+      </span>
+    )
+  }
+  // Fallback: the hex spark crest for synergies without art yet.
   return (
     <span style={{ position: 'relative', flexShrink: 0, width: size, height: size, display: 'grid', placeItems: 'center' }}>
       <svg width={size} height={size} viewBox="0 0 24 24" fill={`${c}1e`} stroke={c} strokeWidth="1.4" style={{ filter: dim ? 'none' : `drop-shadow(0 0 4px ${c}77)` }}><path d="M12 2 4 7v10l8 5 8-5V7z" /></svg>
-      {image ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={image} alt="" loading="lazy" decoding="async" style={{ position: 'absolute', width: '58%', height: '58%', objectFit: 'contain', filter: dim ? 'grayscale(1)' : 'none' }} />
-      ) : (
-        <svg width={Math.round(size * 0.4)} height={Math.round(size * 0.4)} viewBox="0 0 24 24" fill={c} aria-hidden style={{ position: 'absolute' }}><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z" /></svg>
-      )}
+      <svg width={Math.round(size * 0.4)} height={Math.round(size * 0.4)} viewBox="0 0 24 24" fill={c} aria-hidden style={{ position: 'absolute' }}><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z" /></svg>
     </span>
   )
 }
