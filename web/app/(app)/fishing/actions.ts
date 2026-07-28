@@ -15,6 +15,7 @@ import { getLineForSpeciesCount } from '@/lib/lines'
 import { getSpecialItem } from '@/lib/specialItems'
 import { getEffectiveDailyChallenges, getTodayUTC, challengeIncrement } from '@/lib/dailyChallenges'
 import { zoneRewardDoubloons, PRESTIGE_MAX, goldenBoostMult } from '@/lib/zoneRewards'
+import { hasPrestigedAllZones } from '@/lib/collection'
 import { rollFishSize, type FishSizeTier } from '@/lib/fishSize'
 import { rollShiny, SHINY_SELL_MULT } from '@/lib/shiny'
 import { grantCrateLoot, type CrateTier, type CrateLoot } from '@/lib/crateLoot'
@@ -750,7 +751,8 @@ export async function reelIn(
     // prestige before the badge lands doesn't lock it out.
     const nonAncientIds = ((nonAncientSpecies ?? []) as { id: number }[]).map(s => s.id)
     const nonAncientCaught = nonAncientIds.filter(id => lifetimeSet.has(id)).length
-    if (nonAncientIds.length > 0 && nonAncientCaught >= nonAncientIds.length) {
+    // Prestiging all four zones proves the whole non-ancient set too (see lib/collection).
+    if ((nonAncientIds.length > 0 && nonAncientCaught >= nonAncientIds.length) || hasPrestigedAllZones(profile?.prestige_levels as Record<string, number> | null)) {
       await grantBadgeDirect(user.id, 'full_collection')
     }
   }
@@ -1489,7 +1491,9 @@ export async function prestigeZone(zone: string): Promise<{ prestigeLevel: numbe
       : Promise.resolve(),
     admin.from('profiles').update(profileUpdate).eq('id', user.id),
     grantBadgeDirect(user.id, 'prestige_i'),
-    ...(allZonesPrestiged ? [grantBadgeDirect(user.id, 'zone_legend')] : []),
+    // All four zones prestiged = every non-ancient species was landed to get here,
+    // so Full Collection is earned even if prior wipes emptied the live log.
+    ...(allZonesPrestiged ? [grantBadgeDirect(user.id, 'zone_legend'), grantBadgeDirect(user.id, 'full_collection')] : []),
   ])
 
   return atMax

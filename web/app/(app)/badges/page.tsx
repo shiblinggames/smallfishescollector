@@ -8,6 +8,7 @@ import AchievementsClient, { type JourneyGroup, type JourneyGoal } from '@/app/(
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { reconcileBadges } from '@/app/(app)/achievements/badgeActions'
 import { grantBadgeDirect } from '@/lib/badgeGrant'
+import { hasPrestigedAllZones } from '@/lib/collection'
 import { crewLevelFromXP, CREW_MAX_LEVEL } from '@/lib/crewLevel'
 import { CREW_HALL_MAX_TIER } from '@/lib/crewHall'
 import { GAUNTLET_UPGRADES } from '@/lib/gauntletUpgrades'
@@ -158,7 +159,10 @@ export default async function BadgesPage() {
   // unlocked_badges, so the page offers a claim that claim_badge_reward can
   // never persist (it only pays UNLOCKED badges) and it reappears every visit.
   // reconcileBadges deliberately doesn't derive it, so self-heal it right here.
-  if (collected >= speciesTotal && !unlocked.includes('full_collection')) {
+  // Prestige ≥1 in all four zones proves the whole non-ancient set was landed,
+  // so it unlocks Full Collection even if wipes emptied the live count.
+  const prestigedAll = hasPrestigedAllZones(prestige)
+  if ((collected >= speciesTotal || prestigedAll) && !unlocked.includes('full_collection')) {
     await grantBadgeDirect(user.id, 'full_collection')
     unlocked.push('full_collection')
   }
@@ -265,7 +269,7 @@ export default async function BadgesPage() {
         badgeGoal('ancient_ones', 'Ancient Ones', 'Catch all 6 Ancient Deep giants', ancientsCaught, 6, '/fishing'),
         badgeGoal('a_real_keeper', 'A Real Keeper', 'Land 10 Trophy-size catches', trophySizeCatches, 10, '/fishing'),
         badgeGoal('trophy_hunter', 'Trophy Hunter', 'Land 25 Trophy-size catches', trophySizeCatches, 25, '/fishing'),
-        badgeGoal('full_collection', 'Full Collection', `Catch every fish species (${collected}/${speciesTotal})`, collected, speciesTotal, '/fishing'),
+        badgeGoal('full_collection', 'Full Collection', `Catch every fish species (${prestigedAll ? speciesTotal : collected}/${speciesTotal})`, prestigedAll ? speciesTotal : collected, speciesTotal, '/fishing'),
       ],
     },
     {
