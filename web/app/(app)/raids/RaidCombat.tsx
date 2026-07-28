@@ -3479,6 +3479,11 @@ export default function RaidCombat({
       // Counter-Battery (boon): this step is the negated enemy shot — fires the
       // center "COUNTER-BATTERY" flash + a clash spark on the enemy.
       countered?: boolean
+      // Executioner / Coup de Grâce: this hit SANK the hull outright — fires the
+      // gold finishing-blow flash. 'coup' is the crit-execute (grander line).
+      executed?: 'execute' | 'coup'
+      // Reaper's Tithe: HP tithed back to you for the kill — a gold heal splat.
+      titheHeal?: number
       // Cannonade (boon): the crit streak AFTER this landed player shot (0 = the
       // chain just broke). Drives the persistent heat rim + streak badge.
       cannonade?: number
@@ -3718,6 +3723,8 @@ export default function RaidCombat({
       let lifestealLabel = ''   // which source drank the wound (boon vs Blood Cannon)
       let overkillHealedOut = 0 // Don's overkill-heal boon, this shot
       let thermalBurstOut = 0    // Thermal Shock confluence: shatter burst this hit
+      let executeKind: 'execute' | 'coup' | undefined   // Executioner / Coup de Grâce sank the hull this step
+      let titheHealedOut = 0     // Reaper's Tithe: HP tithed back for the kill this step
       let shieldAbsorbedOut = 0  // Enemy barrier soak on the player's shot this step
       let carapaceSoaked = false
       let aegisDownOut: 'shatter' | 'collapse' | undefined   // The Last Wall fell this step
@@ -4348,6 +4355,7 @@ export default function RaidCombat({
           // it's sunk outright (only when it actually landed + isn't already dead).
           if (dmg > 0 && eHp > 0 && tide.executeThreshold > 0 && eHp <= Math.ceil(enemyHpMaxRef.current * tide.executeThreshold)) {
             eHp = 0
+            executeKind = 'execute'
             stepLines.push(`Executioner! The ${enemy.name} drops past saving and is dragged under.`)
           }
           // Coup de Grâce confluence: a CRITICAL hit that leaves the hull wounded
@@ -4355,6 +4363,7 @@ export default function RaidCombat({
           // than the base Executioner, but only on a crit.
           if (dmg > 0 && eHp > 0 && lockedAimResult === 'critical' && tide.critExecutePct > 0 && eHp <= Math.ceil(enemyHpMaxRef.current * tide.critExecutePct)) {
             eHp = 0
+            executeKind = 'coup'
             stepLines.push(`Coup de Grâce! The crit finds the killing mark and the ${enemy.name} is gone.`)
           }
           // Reaper's Tithe confluence: sinking a hull heals you a slice of ITS
@@ -4368,7 +4377,7 @@ export default function RaidCombat({
               Math.round(enemyHpMaxRef.current * tide.executeHealPct),
               Math.round(playerHpMax * REAPER_HEAL_CAP_PCT),
             )
-            if (heal > 0) { pHp += heal; stepLines.push(`Reaper's Tithe! The deep tithes you ${heal} HP for the kill.`) }
+            if (heal > 0) { pHp += heal; titheHealedOut += heal; stepLines.push(`Reaper's Tithe! The deep tithes you ${heal} HP for the kill.`) }
           }
           // Incendiary / Frozen cannonball — 15% on-hit procs, only when the
           // shot actually landed and didn't already sink them. Burn refreshes
@@ -4478,7 +4487,7 @@ export default function RaidCombat({
             // execute/heal checks ran before the procs, so re-check here).
             if (eHp === 0 && tide.executeHealPct > 0 && pHp > 0 && !(enemyPhaseRef.current <= phaseList.length)) {
               const heal = Math.min(playerHpMax - pHp, Math.round(enemyHpMaxRef.current * tide.executeHealPct), Math.round(playerHpMax * REAPER_HEAL_CAP_PCT))
-              if (heal > 0) { pHp += heal; stepLines.push(`Reaper's Tithe! The deep tithes you ${heal} HP for the kill.`) }
+              if (heal > 0) { pHp += heal; titheHealedOut += heal; stepLines.push(`Reaper's Tithe! The deep tithes you ${heal} HP for the kill.`) }
             }
           }
           // Nuke Fallout: the blast always leaves the wreck burning (overwrites a
@@ -4769,6 +4778,8 @@ export default function RaidCombat({
         lifestealHeal: lifestealHealedOut || undefined,
         carapaceSoak: carapaceSoaked,
         thermalShock: thermalBurstOut || undefined,
+        executed: executeKind,
+        titheHeal: titheHealedOut || undefined,
         cannonade: cannonadeStep,
         aegisDown: aegisDownOut,
       })
@@ -5296,6 +5307,22 @@ export default function RaidCombat({
                 playStepChainRef.current.push(setTimeout(() => { setThermalShockFx(null); setEHitsplat(null) }, 760))
               }, 200))
             }
+            // Executioner / Coup de Grâce — the finishing blow. A beat after the
+            // hit lands: a gold center flash + hard impact, so a synergy kill
+            // reads as an earned execution, not just a hull hitting zero.
+            if (step.executed) {
+              const xk = Date.now() + i + 23
+              const coup = step.executed === 'coup'
+              playStepChainRef.current.push(setTimeout(() => {
+                setBoonFlash({ label: coup ? 'COUP DE GRÂCE' : 'EXECUTIONER', sub: coup ? 'The crit finds the killing mark' : 'Dropped past saving', color: '#f5c542', key: xk })
+                setCritFlash(true)
+                setEnemyImpact({ key: xk + 1, kind: 'crit' })
+                setEnemyShakeKind('crit'); setEnemyShakeKey(k => k + 1)
+                cameraShake('crit')
+                vibrate([0, 60, 40, 90])
+                playStepChainRef.current.push(setTimeout(() => { setCritFlash(false); setBoonFlash(bf => (bf && bf.key === xk ? null : bf)) }, 1400))
+              }, 260))
+            }
             if (step.big || megaId === 'nuke' || megaId === 'railgun') {
               setCritFlash(true)
               setTimeout(() => setCritFlash(false), megaId === 'nuke' ? 640 : 380)
@@ -5310,6 +5337,17 @@ export default function RaidCombat({
           if (step.lifestealHeal && step.lifestealHeal > 0) {
             setPHitsplat({ key: Date.now() + i + 5, text: `+${step.lifestealHeal}`, color: '#34d399' })
             setTimeout(() => setPHitsplat(null), SPLAT_HOLD_MS)
+          }
+          // Reaper's Tithe — a gold +HP splat on YOUR hull as the kill pays out,
+          // set apart from the green lifesteal drip so the tithe reads as its own.
+          if (step.titheHeal && step.titheHeal > 0) {
+            const rk = Date.now() + i + 6
+            const tithed = step.titheHeal
+            playStepChainRef.current.push(setTimeout(() => {
+              setPHitsplat({ key: rk, text: `+${tithed}`, color: '#f5c542', big: true })
+              vibrate([0, 30])
+              playStepChainRef.current.push(setTimeout(() => setPHitsplat(null), SPLAT_HOLD_MS))
+            }, 340))
           }
         }, flightMs)
       } else if (isAttack && step.who === 'enemy') {
