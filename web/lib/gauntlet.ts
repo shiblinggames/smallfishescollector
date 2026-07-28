@@ -1562,7 +1562,7 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
     { desc: '+22% all damage', detail: 'Every shot deals 22% more damage — both the single-shot Fire action and the Volley.', effect: { kind: 'damageMult', mult: 1.22 } },
     { desc: '+36% all damage', detail: 'Every shot deals 36% more damage — both the single-shot Fire action and the Volley.', effect: { kind: 'damageMult', mult: 1.36 } },
   ] },
-  { id: 'powder_and_shot', name: 'Powder & Shot', flavor: 'Dry powder, packed tight. Your single shots punch through.', tiers: [
+  { id: 'powder_and_shot', image: '/gauntlet/boons/powder_and_shot.png', name: 'Powder & Shot', flavor: 'Dry powder, packed tight. Your single shots punch through.', tiers: [
     { desc: '+14% Fire damage', detail: 'The single-shot Fire action deals 14% more damage. Your Volley (the 3-charge double shot) is unaffected.', effect: { kind: 'fireDmgMult', mult: 1.14 } },
     { desc: '+30% Fire damage', detail: 'The single-shot Fire action deals 30% more damage. Your Volley (the 3-charge double shot) is unaffected.', effect: { kind: 'fireDmgMult', mult: 1.30 } },
     { desc: '+48% Fire damage', detail: 'The single-shot Fire action deals 48% more damage. Your Volley (the 3-charge double shot) is unaffected.', effect: { kind: 'fireDmgMult', mult: 1.48 } },
@@ -1577,7 +1577,7 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
     { desc: '16% chance a normal hit becomes a crit', detail: 'When you land a normal hit (the green zone), there’s a 16% chance it upgrades into a critical hit anyway. Grazes don’t count.', effect: { kind: 'critChanceBonus', chance: 0.16 } },
     { desc: '26% chance a normal hit becomes a crit', detail: 'When you land a normal hit (the green zone), there’s a 26% chance it upgrades into a critical hit anyway. Grazes don’t count.', effect: { kind: 'critChanceBonus', chance: 0.26 } },
   ] },
-  { id: 'wide_sights', name: 'Wide Sights', flavor: 'The perfect shot stops being luck.', tiers: [
+  { id: 'wide_sights', image: '/gauntlet/boons/wide_sights.png', name: 'Wide Sights', flavor: 'The perfect shot stops being luck.', tiers: [
     { desc: 'Gold crit band 12% wider', detail: 'The gold "perfect shot" band on your aim bar is 12% wider, so landing a critical hit is easier.', effect: { kind: 'critZoneScale', mult: 1.12 } },
     { desc: 'Gold crit band 26% wider', detail: 'The gold "perfect shot" band on your aim bar is 26% wider.', effect: { kind: 'critZoneScale', mult: 1.26 } },
     { desc: 'Gold crit band 42% wider', detail: 'The gold "perfect shot" band on your aim bar is 42% wider.', effect: { kind: 'critZoneScale', mult: 1.42 } },
@@ -1587,65 +1587,65 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
     { desc: 'Take 22% less damage', detail: 'Every hit an enemy lands on you deals 22% less damage for the rest of the run.', effect: { kind: 'incomingDmgMult', mult: 0.78, scope: 'allRemaining' } },
     { desc: 'Take 34% less damage', detail: 'Every hit an enemy lands on you deals 34% less damage for the rest of the run.', effect: { kind: 'incomingDmgMult', mult: 0.66, scope: 'allRemaining' } },
   ] },
-  { id: 'press_the_powder', name: 'Press the Powder', flavor: 'Your crew loads like the deep is at their heels.', tiers: [
+  { id: 'press_the_powder', image: '/gauntlet/boons/press_the_powder.png', name: 'Press the Powder', flavor: 'Your crew loads like the deep is at their heels.', tiers: [
     { desc: '10% chance a Reload loads 2 cannonballs', detail: 'Each time you Reload, there’s a 10% chance a second cannonball is loaded for free on top of the usual one.', effect: { kind: 'reloadProc', chance: 0.10, bonusCharges: 1 } },
     { desc: '22% chance a Reload loads 2 cannonballs', detail: 'Each time you Reload, there’s a 22% chance a second cannonball is loaded for free.', effect: { kind: 'reloadProc', chance: 0.22, bonusCharges: 1 } },
     { desc: '36% chance a Reload loads 2 cannonballs', detail: 'Each time you Reload, there’s a 36% chance a second cannonball is loaded for free.', effect: { kind: 'reloadProc', chance: 0.36, bonusCharges: 1 } },
   ] },
-  { id: 'following_sea', name: 'Following Sea', flavor: 'The current finally runs with you.', rarity: 'rare', tiers: [
+  { id: 'following_sea', image: '/gauntlet/boons/following_sea.png', name: 'Following Sea', flavor: 'The current finally runs with you.', rarity: 'rare', tiers: [
     { desc: '+2 Initiative', detail: '+2 Initiative: you fire first more often and slip away faster when you flee. (Dodging and landing shots on a dodging enemy are both Evasion — your Navigation — not this.)', effect: { kind: 'speedDelta', n: 2, scope: 'allRemaining' } },
     { desc: '+4 Initiative', detail: '+4 Initiative: you fire first more often and slip away faster when you flee. (Dodging and landing shots on a dodging enemy are both Evasion — your Navigation — not this.)', effect: { kind: 'speedDelta', n: 4, scope: 'allRemaining' } },
     { desc: '+7 Initiative', detail: '+7 Initiative: you fire first far more often and slip away far faster when you flee. (Dodging and landing shots on a dodging enemy are both Evasion — your Navigation — not this.)', effect: { kind: 'speedDelta', n: 7, scope: 'allRemaining' } },
   ] },
-  { id: 'bilge_pump', name: 'Bilge Pump', flavor: 'Patch the seams in the lull before the next gun.', tiers: [
+  { id: 'bilge_pump', image: '/gauntlet/boons/bilge_pump.png', name: 'Bilge Pump', flavor: 'Patch the seams in the lull before the next gun.', tiers: [
     { desc: 'Heal 5% max HP each fight', detail: 'At the start of every fight, your ship repairs 5% of its maximum HP. Scales with your hull, so it keeps mattering as you go deeper.', effect: { kind: 'startOfFightHealPct', pctMax: 0.05 } },
     { desc: 'Heal 9% max HP each fight', detail: 'At the start of every fight, your ship repairs 9% of its maximum HP.', effect: { kind: 'startOfFightHealPct', pctMax: 0.09 } },
     { desc: 'Heal 14% max HP each fight', detail: 'At the start of every fight, your ship repairs 14% of its maximum HP.', effect: { kind: 'startOfFightHealPct', pctMax: 0.14 } },
   ] },
-  { id: 'ghostward', name: 'Ghostward', flavor: 'Salt and cold iron at the rails. The drowned aim wide.', tiers: [
+  { id: 'ghostward', image: '/gauntlet/boons/ghostward.png', name: 'Ghostward', flavor: 'Salt and cold iron at the rails. The drowned aim wide.', tiers: [
     { desc: 'Enemies crit 12% less', detail: 'Enemies are 12% less likely to land a critical hit on you.', effect: { kind: 'incomingCritReduction', chance: 0.12 } },
     { desc: 'Enemies crit 24% less', detail: 'Enemies are 24% less likely to land a critical hit on you.', effect: { kind: 'incomingCritReduction', chance: 0.24 } },
     { desc: 'Enemies crit 40% less', detail: 'Enemies are 40% less likely to land a critical hit on you.', effect: { kind: 'incomingCritReduction', chance: 0.40 } },
   ] },
   // ── RARE ───────────────────────────────────────────────────────────────────
-  { id: 'cold_fury', name: 'Cold Fury', flavor: 'When the shot lands true, it lands like the deep itself.', rarity: 'rare', tiers: [
+  { id: 'cold_fury', image: '/gauntlet/boons/cold_fury.png', name: 'Cold Fury', flavor: 'When the shot lands true, it lands like the deep itself.', rarity: 'rare', tiers: [
     { desc: '+17% critical damage', detail: 'Your critical hits deal 17% more damage. Stacks with Wide Sights / Dead-Eye landing more crits in the first place.', effect: { kind: 'critDmgMult', mult: 1.17 } },
     { desc: '+35% critical damage', detail: 'Your critical hits deal 35% more damage.', effect: { kind: 'critDmgMult', mult: 1.35 } },
     { desc: '+52% critical damage', detail: 'Your critical hits deal 52% more damage.', effect: { kind: 'critDmgMult', mult: 1.52 } },
   ] },
-  { id: 'giant_killer', name: 'Giant-Killer', flavor: 'The bigger the hull, the more of it to hit.', rarity: 'rare', tiers: [
+  { id: 'giant_killer', image: '/gauntlet/boons/giant_killer.png', name: 'Giant-Killer', flavor: 'The bigger the hull, the more of it to hit.', rarity: 'rare', tiers: [
     { desc: '+17% boss damage', detail: 'Deal 17% more damage to boss-depth ships. Regular enemies are unaffected.', effect: { kind: 'bossDamageMult', mult: 1.17 } },
     { desc: '+33% boss damage', detail: 'Deal 33% more damage to boss-depth ships. Regular enemies are unaffected.', effect: { kind: 'bossDamageMult', mult: 1.33 } },
     { desc: '+48% boss damage', detail: 'Deal 48% more damage to boss-depth ships. Regular enemies are unaffected.', effect: { kind: 'bossDamageMult', mult: 1.48 } },
   ] },
-  { id: 'spiteful_wake', name: 'Spiteful Wake', flavor: 'Strike the hull and the hull strikes back — and slip its shot and the sea flings your spite anyway.', rarity: 'rare', tiers: [
+  { id: 'spiteful_wake', image: '/gauntlet/boons/spiteful_wake.png', name: 'Spiteful Wake', flavor: 'Strike the hull and the hull strikes back — and slip its shot and the sea flings your spite anyway.', rarity: 'rare', tiers: [
     { desc: 'Enemies take back 18% of the hit they aim at you (12% if you dodge)', detail: "Whenever an enemy fires on you, it takes 18% of that shot's full damage right back — even if your armour or a shield soaks the blow. When you DODGE, the enemy still takes 12% of the damage it would have dealt. You punish them whether the hit lands or not.", effect: { kind: 'retaliatePct', pct: 0.18, dodgePct: 0.12 } },
     { desc: 'Enemies take back 30% of the hit they aim at you (15% if you dodge)', detail: "Enemies take back 30% of every shot's full damage (soaked or not), and 15% of any shot you dodge.", effect: { kind: 'retaliatePct', pct: 0.30, dodgePct: 0.15 } },
     { desc: 'Enemies take back 42% of the hit they aim at you (18% if you dodge)', detail: "Enemies take back 42% of every shot's full damage (soaked or not), and 18% of any shot you dodge.", effect: { kind: 'retaliatePct', pct: 0.42, dodgePct: 0.18 } },
   ] },
-  { id: 'wounded_fury', name: 'Wounded Fury', flavor: 'The closer to sinking, the harder your guns bite.', rarity: 'rare', tiers: [
+  { id: 'wounded_fury', image: '/gauntlet/boons/wounded_fury.png', name: 'Wounded Fury', flavor: 'The closer to sinking, the harder your guns bite.', rarity: 'rare', tiers: [
     { desc: 'Up to +17% damage as HP drops', detail: 'Your shots hit harder the lower your HP, scaling with missing health. At full HP nothing; right at the brink, +17%.', effect: { kind: 'lowHpDamage', maxBonus: 0.17 } },
     { desc: 'Up to +35% damage as HP drops', detail: 'Your shots hit harder the lower your HP, scaling with missing health. At full HP nothing; right at the brink, +35%.', effect: { kind: 'lowHpDamage', maxBonus: 0.35 } },
     { desc: 'Up to +52% damage as HP drops', detail: 'Your shots hit harder the lower your HP, scaling with missing health. At full HP nothing; right at the brink, +52%.', effect: { kind: 'lowHpDamage', maxBonus: 0.52 } },
   ] },
   // ── Momentum — damage that FEEDS on the run: kills stacked, depth dared,
   //    and clean crits chained. Each rewards a different way of pushing.
-  { id: 'rising_tide', name: 'Rising Tide', flavor: 'Every hull you send down feeds the swell behind you.', rarity: 'rare', tiers: [
+  { id: 'rising_tide', image: '/gauntlet/boons/rising_tide.png', name: 'Rising Tide', flavor: 'Every hull you send down feeds the swell behind you.', rarity: 'rare', tiers: [
     { desc: '+3% damage per enemy sunk (max +24%)', detail: 'Every enemy you sink this run permanently raises your damage by 3%, up to +24%. Counts every hull you have already sunk, and bosses count too. It never resets — the deeper you fight, the harder you hit.', effect: { kind: 'killStackDamage', perKill: 0.03, maxBonus: 0.24 } },
     { desc: '+4% damage per enemy sunk (max +36%)', detail: 'Every enemy you sink this run permanently raises your damage by 4%, up to +36%. Counts hulls already sunk and bosses. Never resets.', effect: { kind: 'killStackDamage', perKill: 0.04, maxBonus: 0.36 } },
     { desc: '+5% damage per enemy sunk (max +45%)', detail: 'Every enemy you sink this run permanently raises your damage by 5%, up to +45%. Counts hulls already sunk and bosses. Never resets.', effect: { kind: 'killStackDamage', perKill: 0.05, maxBonus: 0.45 } },
   ] },
-  { id: 'abyssal_bounty', name: 'Abyssal Bounty', flavor: 'The pressure of the deep loads every gun.', rarity: 'rare', tiers: [
+  { id: 'abyssal_bounty', image: '/gauntlet/boons/abyssal_bounty.png', name: 'Abyssal Bounty', flavor: 'The pressure of the deep loads every gun.', rarity: 'rare', tiers: [
     { desc: '+1.2% damage per depth (max +18%)', detail: 'Your damage rises with how deep you are — 1.2% for every depth you have reached, up to +18%. It scales live as you descend, and is full value the moment you take it.', effect: { kind: 'depthScaleDamage', perDepth: 0.012, maxBonus: 0.18 } },
     { desc: '+1.8% damage per depth (max +28%)', detail: 'Your damage rises with how deep you are — 1.8% for every depth reached, up to +28%. Scales live as you descend.', effect: { kind: 'depthScaleDamage', perDepth: 0.018, maxBonus: 0.28 } },
     { desc: '+2.4% damage per depth (max +38%)', detail: 'Your damage rises with how deep you are — 2.4% for every depth reached, up to +38%. Scales live as you descend.', effect: { kind: 'depthScaleDamage', perDepth: 0.024, maxBonus: 0.38 } },
   ] },
-  { id: 'cannonade', name: 'Cannonade', flavor: 'Land them clean and the guns never cool.', rarity: 'rare', tiers: [
+  { id: 'cannonade', image: '/gauntlet/boons/cannonade.png', name: 'Cannonade', flavor: 'Land them clean and the guns never cool.', rarity: 'rare', tiers: [
     { desc: '+6% damage per crit in a row (up to +30%)', detail: 'Every critical hit you land in a row adds +6% damage, stacking up to +30%. Landing any shot that is NOT a crit resets the streak to zero, and the streak starts fresh each fight.', effect: { kind: 'critStreakDamage', perStack: 0.06, maxStacks: 5 } },
     { desc: '+8% damage per crit in a row (up to +40%)', detail: 'Every critical hit in a row adds +8% damage, stacking up to +40%. Any non-crit shot resets the streak; it starts fresh each fight.', effect: { kind: 'critStreakDamage', perStack: 0.08, maxStacks: 5 } },
     { desc: '+10% damage per crit in a row (up to +60%)', detail: 'Every critical hit in a row adds +10% damage, stacking up to +60%. Any non-crit shot resets the streak; it starts fresh each fight.', effect: { kind: 'critStreakDamage', perStack: 0.10, maxStacks: 6 } },
   ] },
-  { id: 'counter_battery', name: 'Counter-Battery', flavor: 'Answer their broadside with yours — and let the sea swallow theirs.', rarity: 'rare', tiers: [
+  { id: 'counter_battery', image: '/gauntlet/boons/counter_battery.png', name: 'Counter-Battery', flavor: 'Answer their broadside with yours — and let the sea swallow theirs.', rarity: 'rare', tiers: [
     { desc: '20% to cancel their shot when you both fire', detail: 'When you Fire, Volley or Mega on the same turn the enemy fires or volleys AND your shot lands, you have a 20% chance to smash their shot out of the air — their attack is fully negated while yours still hits. A whiffed aim does not count.', effect: { kind: 'counterFireChance', chance: 0.20 } },
     { desc: '32% to cancel their shot when you both fire', detail: 'When you Fire, Volley or Mega on the same turn the enemy fires or volleys and your shot lands, you have a 32% chance to negate their attack while yours still hits.', effect: { kind: 'counterFireChance', chance: 0.32 } },
     { desc: '45% to cancel their shot when you both fire', detail: 'When you Fire, Volley or Mega on the same turn the enemy fires or volleys and your shot lands, you have a 45% chance to negate their attack while yours still hits.', effect: { kind: 'counterFireChance', chance: 0.45 } },
@@ -1660,7 +1660,7 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
     { desc: '15% chance to freeze; frozen ships take +32%', detail: 'Freeze chance rises to 15% and frozen ships take 32% more damage. NEW — Brittle: a critical hit on a frozen ship shatters the ice for DOUBLE the frozen bonus.', effect: { kind: 'iceAffinity', freezeChance: 0.15, frozenDmgMult: 1.32, brittle: true } },
     { desc: '20% chance to freeze for 2 turns; frozen ships take +42%', detail: 'Freeze chance rises to 20%, frozen ships take 42% more, and Brittle stays. NEW — Deep Freeze: your freezes now last TWO skipped turns instead of one.', effect: { kind: 'iceAffinity', freezeChance: 0.20, frozenDmgMult: 1.42, brittle: true, deepFreeze: true } },
   ] },
-  { id: 'wildfire', name: 'Wildfire', flavor: 'You set the sea alight and let it do the work the guns started.', rarity: 'rare', tiers: [
+  { id: 'wildfire', image: '/gauntlet/boons/wildfire.png', name: 'Wildfire', flavor: 'You set the sea alight and let it do the work the guns started.', rarity: 'rare', tiers: [
     { desc: '10% chance to set enemies on fire', detail: 'Each hit you land has a 10% chance to set the enemy ON FIRE — it takes damage at the start of each of its turns for 3 turns (each tick deals 13% of the hit that started the fire). Stacks with the Incendiary Cannonball item, up to 20% total burn chance.', effect: { kind: 'fireAffinity', burnChance: 0.10, burnTurnsBonus: 1, burnTickMult: 1.3 } },
     { desc: '15% chance to burn; hitting a burning ship rekindles it', detail: 'Burn chance rises to 15% and the fire ticks harder (16% of the hit). NEW — Reignite: hitting an already-burning ship resets the fire to full duration, so you can keep it burning as long as you keep landing shots.', effect: { kind: 'fireAffinity', burnChance: 0.15, burnTurnsBonus: 1, burnTickMult: 1.6, reignite: true } },
     { desc: '20% chance to burn for 4 turns; fires can flare for bonus bursts', detail: 'Burn chance rises to 20%, fires last 4 turns, ticks hit their ceiling (20% of the hit), and Reignite stays. NEW — Backdraft: each burn tick has a chance to flare up for a bonus burst of damage — the longer the fire cooks, the more it erupts.', effect: { kind: 'fireAffinity', burnChance: 0.20, burnTurnsBonus: 2, burnTickMult: 2.0, reignite: true, backdraft: true } },
@@ -1672,17 +1672,17 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
   //    Resolved by the Gauntlet HOST into the run's live max HP; each increase
   //    is healed to the player, so a deep-tank build gets a bigger bar AND
   //    passive sustain to survive the trades (which is what thorns needs).
-  { id: 'deep_hull', name: 'Deep Hull', flavor: 'The pressure of the deep packs your timbers tighter the further you fall.', rarity: 'rare', tiers: [
+  { id: 'deep_hull', image: '/gauntlet/boons/deep_hull.png', name: 'Deep Hull', flavor: 'The pressure of the deep packs your timbers tighter the further you fall.', rarity: 'rare', tiers: [
     { desc: '+0.8% max HP per depth (max +14%)', detail: 'Your maximum HP grows with how deep you are — 0.8% for every depth reached, up to +14%. It scales live as you descend, and each increase is healed to you.', effect: { kind: 'maxHpPerDepth', perDepth: 0.008, max: 0.14 } },
     { desc: '+1.6% max HP per depth (max +30%)', detail: 'Your maximum HP grows 1.6% for every depth reached, up to +30%. Scales live as you descend; each increase heals you by that much.', effect: { kind: 'maxHpPerDepth', perDepth: 0.016, max: 0.30 } },
     { desc: '+2.4% max HP per depth (max +48%)', detail: 'Your maximum HP grows 2.4% for every depth reached, up to +48%. Scales live as you descend; each increase heals you by that much.', effect: { kind: 'maxHpPerDepth', perDepth: 0.024, max: 0.48 } },
   ] },
-  { id: 'salvage_hull', name: 'Salvage Hull', flavor: 'Every wreck you leave, your crew strips for plating.', rarity: 'rare', tiers: [
+  { id: 'salvage_hull', image: '/gauntlet/boons/salvage_hull.png', name: 'Salvage Hull', flavor: 'Every wreck you leave, your crew strips for plating.', rarity: 'rare', tiers: [
     { desc: '+0.6% max HP per hull sunk (max +12%)', detail: 'Every enemy you sink this run permanently raises your maximum HP by 0.6%, up to +12%. Bosses count, it never resets, and each gain is healed to you.', effect: { kind: 'maxHpPerKill', perKill: 0.006, max: 0.12 } },
     { desc: '+1.2% max HP per hull sunk (max +26%)', detail: 'Every hull sunk raises your maximum HP by 1.2%, up to +26%. Never resets; each gain heals you by that much.', effect: { kind: 'maxHpPerKill', perKill: 0.012, max: 0.26 } },
     { desc: '+1.8% max HP per hull sunk (max +42%)', detail: 'Every hull sunk raises your maximum HP by 1.8%, up to +42%. Never resets; each gain heals you by that much.', effect: { kind: 'maxHpPerKill', perKill: 0.018, max: 0.42 } },
   ] },
-  { id: 'reinforced_hull', name: 'Reinforced Hull', flavor: 'Double plate along the keel. More ship to sink.', rarity: 'rare', tiers: [
+  { id: 'reinforced_hull', image: '/gauntlet/boons/reinforced_hull.png', name: 'Reinforced Hull', flavor: 'Double plate along the keel. More ship to sink.', rarity: 'rare', tiers: [
     { desc: '+8% max HP', detail: 'Your maximum HP is 8% higher for the rest of the run. It also makes every heal and shield that scales off your max HP bigger.', effect: { kind: 'maxHpMult', mult: 1.08 } },
     { desc: '+20% max HP', detail: 'Your maximum HP is 20% higher for the rest of the run.', effect: { kind: 'maxHpMult', mult: 1.20 } },
     { desc: '+36% max HP', detail: 'Your maximum HP is 36% higher for the rest of the run.', effect: { kind: 'maxHpMult', mult: 1.36 } },
@@ -1692,78 +1692,78 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
     { desc: 'Sink enemies below 5% HP', detail: 'The instant any hit drops an enemy to 5% of its health or lower, it is sunk outright — no need to chip out the last sliver.', effect: { kind: 'executeThreshold', pct: 0.05 } },
     { desc: 'Sink enemies below 8% HP', detail: 'The instant any hit drops an enemy to 8% of its health or lower, it is sunk outright.', effect: { kind: 'executeThreshold', pct: 0.08 } },
   ] },
-  { id: 'leviathans_hunger', name: "Leviathan's Hunger", flavor: 'Every wound you open, the deep drinks — and feeds it back to your hull.', rarity: 'legendary', tiers: [
+  { id: 'leviathans_hunger', image: '/gauntlet/boons/leviathans_hunger.png', name: "Leviathan's Hunger", flavor: 'Every wound you open, the deep drinks — and feeds it back to your hull.', rarity: 'legendary', tiers: [
     { desc: 'Heal 10% of the damage you deal', detail: 'Whenever you damage an enemy, your ship heals for 10% of that damage — the harder you hit, the more you heal. (A single hit can heal at most 20% of your max HP.)', effect: { kind: 'lifestealPct', pct: 0.10 } },
     { desc: 'Heal 15% of the damage you deal', detail: 'Whenever you damage an enemy, your ship heals for 15% of that damage. (A single hit can heal at most 20% of your max HP.)', effect: { kind: 'lifestealPct', pct: 0.15 } },
   ] },
-  { id: 'powder_hoard', name: 'Powder Hoard', flavor: "Whatever your crew doesn't spend, they keep racked for the next hull.", rarity: 'legendary', tiers: [
+  { id: 'powder_hoard', image: '/gauntlet/boons/powder_hoard.png', name: 'Powder Hoard', flavor: "Whatever your crew doesn't spend, they keep racked for the next hull.", rarity: 'legendary', tiers: [
     { desc: 'Carry up to 2 cannonballs over', detail: 'Cannonballs you leave unfired when a fight ends carry into the next one, up to 2 of them.', effect: { kind: 'chargeCarryover', cap: 2 } },
     { desc: 'Carry all cannonballs over', detail: 'Every cannonball you leave unfired when a fight ends carries into the next one, up to your full magazine.', effect: { kind: 'chargeCarryover', cap: 99 } },
   ] },
-  { id: 'stormward', name: 'Stormward', flavor: 'A ward of cold iron reforms before every gun. It eats the first blows so your hull never feels them.', rarity: 'legendary', tiers: [
+  { id: 'stormward', image: '/gauntlet/boons/stormward.png', name: 'Stormward', flavor: 'A ward of cold iron reforms before every gun. It eats the first blows so your hull never feels them.', rarity: 'legendary', tiers: [
     { desc: 'Shield 10% of max HP each fight', detail: 'Start every fight with a shield worth 10% of your max HP. It soaks incoming damage before your hull takes any, and reforms fresh each fight.', effect: { kind: 'fightShield', pctMax: 0.10 } },
     { desc: 'Shield 18% of max HP each fight', detail: 'Start every fight with a shield worth 18% of your max HP. It soaks incoming damage before your hull takes any, and reforms fresh each fight.', effect: { kind: 'fightShield', pctMax: 0.18 } },
   ] },
   // ── Don's Gauntlet boons (gauntlet: 'don' — the ghost fleet's on-hit hexes) ──
-  { id: 'rattling_shot', name: 'Rattling Shot', gauntlet: 'don', flavor: 'Your iron rattles a hull loose, and it flinches at every blow after.', rarity: 'rare', tiers: [
+  { id: 'rattling_shot', image: '/gauntlet/boons/rattling_shot.png', name: 'Rattling Shot', gauntlet: 'don', flavor: 'Your iron rattles a hull loose, and it flinches at every blow after.', rarity: 'rare', tiers: [
     { desc: '35% on a hit to make the enemy Feeble (+15% damage taken, 2 rounds)', detail: 'Whenever you land a hit, there is a 35% chance the enemy turns Feeble — it takes 15% more damage from everything for the next 2 rounds. Reapplying refreshes it rather than stacking.', effect: { kind: 'statusOnHit', status: 'feeble', chance: 0.35, magnitude: 0.15, turns: 2 } },
     { desc: '45% on a hit to make the enemy Feeble (+20% damage taken, 2 rounds)', detail: 'Whenever you land a hit, there is a 45% chance the enemy turns Feeble — it takes 20% more damage from everything for the next 2 rounds.', effect: { kind: 'statusOnHit', status: 'feeble', chance: 0.45, magnitude: 0.20, turns: 2 } },
     { desc: '55% on a hit to make the enemy Feeble (+25% damage taken, 3 rounds)', detail: 'Whenever you land a hit, there is a 55% chance the enemy turns Feeble — it takes 25% more damage from everything for the next 3 rounds.', effect: { kind: 'statusOnHit', status: 'feeble', chance: 0.55, magnitude: 0.25, turns: 3 } },
   ] },
-  { id: 'chainshot', name: 'Chainshot', gauntlet: 'don', flavor: 'Linked iron fouls their rigging. A snarled hull is a slow hull.', tiers: [
+  { id: 'chainshot', image: '/gauntlet/boons/chainshot.png', name: 'Chainshot', gauntlet: 'don', flavor: 'Linked iron fouls their rigging. A snarled hull is a slow hull.', tiers: [
     { desc: '30% on a hit to Slow the enemy (2 rounds)', detail: 'Whenever you land a hit, there is a 30% chance the enemy is Slowed for 2 rounds — it acts later in the round, ceding you the opening more often.', effect: { kind: 'statusOnHit', status: 'slowed', chance: 0.30, magnitude: 2, turns: 2 } },
     { desc: '45% on a hit to Slow the enemy (2 rounds)', detail: 'Whenever you land a hit, there is a 45% chance the enemy is Slowed for 2 rounds — it acts later in the round, ceding you the opening more often.', effect: { kind: 'statusOnHit', status: 'slowed', chance: 0.45, magnitude: 2, turns: 2 } },
     { desc: '60% on a hit to heavily Slow the enemy (3 rounds)', detail: 'Whenever you land a hit, there is a 60% chance the enemy is heavily Slowed for 3 rounds — it acts later in the round, ceding you the opening far more often.', effect: { kind: 'statusOnHit', status: 'slowed', chance: 0.60, magnitude: 3, turns: 3 } },
   ] },
-  { id: 'hexshot', name: 'Hexshot', gauntlet: 'don', flavor: 'A cursed round saps the fight out of whatever it strikes.', tiers: [
+  { id: 'hexshot', image: '/gauntlet/boons/hexshot.png', name: 'Hexshot', gauntlet: 'don', flavor: 'A cursed round saps the fight out of whatever it strikes.', tiers: [
     { desc: '30% on a hit to Weaken the enemy (−15% damage dealt, 2 rounds)', detail: 'Whenever you land a hit, there is a 30% chance the enemy is Weakened — its own hits deal 15% less damage for the next 2 rounds.', effect: { kind: 'statusOnHit', status: 'weaken', chance: 0.30, magnitude: 0.15, turns: 2 } },
     { desc: '45% on a hit to Weaken the enemy (−22% damage dealt, 2 rounds)', detail: 'Whenever you land a hit, there is a 45% chance the enemy is Weakened — its own hits deal 22% less damage for the next 2 rounds.', effect: { kind: 'statusOnHit', status: 'weaken', chance: 0.45, magnitude: 0.22, turns: 2 } },
     { desc: '60% on a hit to Weaken the enemy (−30% damage dealt, 3 rounds)', detail: 'Whenever you land a hit, there is a 60% chance the enemy is Weakened — its own hits deal 30% less damage for the next 3 rounds.', effect: { kind: 'statusOnHit', status: 'weaken', chance: 0.60, magnitude: 0.30, turns: 3 } },
   ] },
-  { id: 'armor_piercing', name: 'Armor-Piercing Shot', gauntlet: 'don', flavor: 'Ghost-iron finds the gap in any ward. Barriers are a suggestion.', rarity: 'rare', tiers: [
+  { id: 'armor_piercing', image: '/gauntlet/boons/armor_piercing.png', name: 'Armor-Piercing Shot', gauntlet: 'don', flavor: 'Ghost-iron finds the gap in any ward. Barriers are a suggestion.', rarity: 'rare', tiers: [
     { desc: 'Your shots ignore 35% of enemy barriers', detail: 'A slice of every shot you fire skips straight past an enemy barrier and hits the hull — 35% of the damage ignores the shield entirely. The hard counter to the Warding curse and the ghost fleet’s shielded hulls.', effect: { kind: 'shieldPierce', pct: 0.35 } },
     { desc: 'Your shots ignore 55% of enemy barriers', detail: '55% of every shot skips the barrier and hits the hull directly.', effect: { kind: 'shieldPierce', pct: 0.55 } },
     { desc: 'Your shots ignore 75% of enemy barriers', detail: '75% of every shot skips the barrier and hits the hull directly — barriers barely slow you.', effect: { kind: 'shieldPierce', pct: 0.75 } },
   ] },
-  { id: 'press_gang', name: 'Press-Gang', gauntlet: 'don', flavor: 'What’s theirs is yours. Rip the shot right off their deck and load it yourself.', rarity: 'rare', tiers: [
+  { id: 'press_gang', image: '/gauntlet/boons/press_gang.png', name: 'Press-Gang', gauntlet: 'don', flavor: 'What’s theirs is yours. Rip the shot right off their deck and load it yourself.', rarity: 'rare', tiers: [
     { desc: '20% on a hit to steal an enemy cannonball', detail: 'Whenever you land a hit, there’s a 20% chance you rip a loaded cannonball off the enemy and ram it into your own rack — you gain the shot, they lose it. Does nothing if your rack is already full or the enemy is empty.', effect: { kind: 'stealCharge', chance: 0.20 } },
     { desc: '30% on a hit to steal an enemy cannonball', detail: 'Whenever you land a hit, there’s a 30% chance you steal a loaded cannonball off the enemy into your own rack.', effect: { kind: 'stealCharge', chance: 0.30 } },
     { desc: '40% on a hit to steal an enemy cannonball', detail: 'Whenever you land a hit, there’s a 40% chance you steal a loaded cannonball off the enemy into your own rack.', effect: { kind: 'stealCharge', chance: 0.40 } },
   ] },
-  { id: 'loaded_for_bear', name: 'Loaded for Bear', gauntlet: 'don', flavor: 'Every so often your gunners pack a shot that simply cannot miss the mark.', tiers: [
+  { id: 'loaded_for_bear', image: '/gauntlet/boons/loaded_for_bear.png', name: 'Loaded for Bear', gauntlet: 'don', flavor: 'Every so often your gunners pack a shot that simply cannot miss the mark.', tiers: [
     { desc: 'Every 5th landed shot is a guaranteed crit', detail: 'Count your landed shots each fight — every 5th one is upgraded to a guaranteed critical hit. (A shot that whiffs on the count just doesn’t upgrade.)', effect: { kind: 'guaranteedCritEvery', n: 5 } },
     { desc: 'Every 4th landed shot is a guaranteed crit', detail: 'Every 4th landed shot each fight is upgraded to a guaranteed critical hit.', effect: { kind: 'guaranteedCritEvery', n: 4 } },
     { desc: 'Every 3rd landed shot is a guaranteed crit', detail: 'Every 3rd landed shot each fight is upgraded to a guaranteed critical hit.', effect: { kind: 'guaranteedCritEvery', n: 3 } },
   ] },
-  { id: 'krakens_grip', name: "Kraken's Grip", gauntlet: 'don', flavor: 'A landed shot calls the deep up around their hull — and the deep does not let go.', rarity: 'legendary', tiers: [
+  { id: 'krakens_grip', image: '/gauntlet/boons/krakens_grip.png', name: "Kraken's Grip", gauntlet: 'don', flavor: 'A landed shot calls the deep up around their hull — and the deep does not let go.', rarity: 'legendary', tiers: [
     { desc: '18% on a hit to STUN the enemy (skips its next turn)', detail: 'Whenever you land a hit, there’s an 18% chance the deep seizes the enemy — it loses its next turn entirely, exactly like a freeze. Bosses are not immune.', effect: { kind: 'stunOnHit', chance: 0.18, turns: 1 } },
     { desc: '26% on a hit to STUN the enemy for 2 turns', detail: 'Whenever you land a hit, there’s a 26% chance the deep seizes the enemy and holds it for its next TWO turns.', effect: { kind: 'stunOnHit', chance: 0.26, turns: 2 } },
   ] },
-  { id: 'cutlass_guard', name: 'Cutlass Guard', gauntlet: 'don', flavor: 'Meet the blow, turn it, and answer before they’ve recovered.', rarity: 'rare', tiers: [
+  { id: 'cutlass_guard', image: '/gauntlet/boons/cutlass_guard.png', name: 'Cutlass Guard', gauntlet: 'don', flavor: 'Meet the blow, turn it, and answer before they’ve recovered.', rarity: 'rare', tiers: [
     { desc: '20% to parry a hit (take nothing) and lash back 40%', detail: 'Every enemy blow that would land has a 20% chance to be PARRIED — you take no damage, and 40% of the hit it aimed at you is flung straight back. A parry counts as an avoided hit.', effect: { kind: 'parryChance', chance: 0.20, reflectPct: 0.40 } },
     { desc: '30% to parry a hit and lash back 55%', detail: 'Enemy blows have a 30% chance to be parried; you take nothing and reflect 55% of the intended hit.', effect: { kind: 'parryChance', chance: 0.30, reflectPct: 0.55 } },
     { desc: '40% to parry a hit and lash back 70%', detail: 'Enemy blows have a 40% chance to be parried; you take nothing and reflect 70% of the intended hit.', effect: { kind: 'parryChance', chance: 0.40, reflectPct: 0.70 } },
   ] },
-  { id: 'steady_sights', name: 'Steady Sights', gauntlet: 'don', flavor: 'The green can fog every glass in the fleet but yours.', tiers: [
+  { id: 'steady_sights', image: '/gauntlet/boons/steady_sights.png', name: 'Steady Sights', gauntlet: 'don', flavor: 'The green can fog every glass in the fleet but yours.', tiers: [
     { desc: 'Aim fog + blackout cut in half', detail: 'Any fog, mist, or blackout thrown over your aim bar (enemy Mist Veil, the ghost fleet, fog curses) is cut by 50% — your sight stays clearer than the fleet’s.', effect: { kind: 'aimClarity', reduce: 0.5 } },
     { desc: 'Aim fog + blackout cut 75%', detail: 'Aim fog, mist, and blackout are reduced by 75%.', effect: { kind: 'aimClarity', reduce: 0.75 } },
     { desc: 'Immune to aim fog, blackout AND decoys', detail: 'Nothing clouds your glass: aim fog, mist, and blackout are gone entirely, and false-target decoys never drift your bar.', effect: { kind: 'aimClarity', reduce: 1 } },
   ] },
-  { id: 'dons_favor', name: "The Don's Favor", gauntlet: 'don', flavor: 'The Don owes no one, but now and then the green smiles on you anyway. Never the same way twice.', rarity: 'legendary', tiers: [
+  { id: 'dons_favor', image: '/gauntlet/boons/dons_favor.png', name: "The Don's Favor", gauntlet: 'don', flavor: 'The Don owes no one, but now and then the green smiles on you anyway. Never the same way twice.', rarity: 'legendary', tiers: [
     { desc: 'Open each fight with a random blessing (Enrage / Fortify / Mending)', detail: 'At the start of EVERY fight you roll one of three blessings for the whole fight: ENRAGED (+25% damage dealt), FORTIFIED (−25% damage taken), or MENDING (heal a slice of your hull each round). Which one is always a surprise.', effect: { kind: 'randomFightBuff', magnitude: 0.25 } },
     { desc: 'A STRONGER random blessing each fight', detail: 'Every fight opens with a stronger random blessing: ENRAGED (+40% damage), FORTIFIED (−40% damage taken), or MENDING (a bigger heal each round).', effect: { kind: 'randomFightBuff', magnitude: 0.40 } },
   ] },
-  { id: 'second_calling', name: 'Second Calling', gauntlet: 'don', flavor: 'Some crews the deep just won’t let rest. Call them once, and the green calls them right back.', rarity: 'rare', tiers: [
+  { id: 'second_calling', image: '/gauntlet/boons/second_calling.png', name: 'Second Calling', gauntlet: 'don', flavor: 'Some crews the deep just won’t let rest. Call them once, and the green calls them right back.', rarity: 'rare', tiers: [
     { desc: '15% chance a crew ability isn’t spent when used', detail: 'When you fire a crew ability, there’s a 15% chance it ISN’T spent — the effect still happens, but the crew keeps their station and the ability is ready again next turn (one ability per turn still holds).', effect: { kind: 'abilityRefundChance', chance: 0.15 } },
     { desc: '25% chance a crew ability isn’t spent when used', detail: 'When you fire a crew ability, there’s a 25% chance it isn’t spent and stays ready for next turn.', effect: { kind: 'abilityRefundChance', chance: 0.25 } },
     { desc: '35% chance a crew ability isn’t spent when used', detail: 'When you fire a crew ability, there’s a 35% chance it isn’t spent and stays ready for next turn.', effect: { kind: 'abilityRefundChance', chance: 0.35 } },
   ] },
-  { id: 'blood_in_the_water', name: 'Blood in the Water', gauntlet: 'don', flavor: 'The deep hates a wasted kill. Strike harder than the hull can take, and it hands you back the difference.', rarity: 'rare', tiers: [
+  { id: 'blood_in_the_water', image: '/gauntlet/boons/blood_in_the_water.png', name: 'Blood in the Water', gauntlet: 'don', flavor: 'The deep hates a wasted kill. Strike harder than the hull can take, and it hands you back the difference.', rarity: 'rare', tiers: [
     { desc: 'Heal 20% of overkill damage on a kill', detail: 'When a shot sinks a hull, any damage that lands PAST its remaining HP is overkill (normally wasted). You heal 20% of that overkill back to your ship. A clean shot that drops it exactly to zero heals nothing — the reward is for hitting hard enough to spill over. Each hit’s heal is capped so a huge Mega can’t refill your whole bar at once.', effect: { kind: 'overkillHealPct', pct: 0.20 } },
     { desc: 'Heal 35% of overkill damage on a kill', detail: 'A kill spills over harder: you heal 35% of any overkill damage (the amount a killing blow lands past the hull’s remaining HP) back to your ship. Per-hit capped.', effect: { kind: 'overkillHealPct', pct: 0.35 } },
     { desc: 'Heal 50% of overkill damage on a kill', detail: 'Half of every killing blow’s overkill comes back as hull. Land a massive shot on a wounded enemy and you top yourself off on the way through. Per-hit capped so one shot can’t full-heal you.', effect: { kind: 'overkillHealPct', pct: 0.50 } },
   ] },
-  { id: 'manowars_wrath', name: "Man-o-War's Wrath", gauntlet: 'don', flavor: 'The big gun was already the last word. Now it argues.', rarity: 'legendary', tiers: [
+  { id: 'manowars_wrath', image: '/gauntlet/boons/manowars_wrath.png', name: "Man-o-War's Wrath", gauntlet: 'don', flavor: 'The big gun was already the last word. Now it argues.', rarity: 'legendary', tiers: [
     { desc: '+22% Mega damage', detail: 'Your Mega — the Man-o-War ultimate that spends a full 4-charge magazine — hits 22% harder. Affects the Mega ONLY: your Fire and Volley are unchanged. This does nothing unless your ship carries a Mega augment (the Man-o-War ultimate weapon), so only take it if you can fire one.', effect: { kind: 'megaDmgMult', mult: 1.22 } },
     { desc: '+38% Mega damage', detail: 'Your Mega ultimate hits 38% harder. Mega only — Fire and Volley unaffected. Requires a Mega augment to do anything.', effect: { kind: 'megaDmgMult', mult: 1.38 } },
     { desc: '+58% Mega damage', detail: 'Your Mega ultimate hits 58% harder — the single biggest shot in your arsenal, turned up. Mega only. Requires a Mega augment to do anything.', effect: { kind: 'megaDmgMult', mult: 1.58 } },
@@ -1956,6 +1956,7 @@ export const CONFLUENCES: Confluence[] = [
   },
   {
     id: 'hull_render',
+    image: '/gauntlet/synergies/hull_render.png',
     name: 'Hull Render',
     requires: [{ boonId: 'broadside_mastery' }, { boonId: 'grapeshot' }],
     flavor: 'Every gun on the rail, again and again, until the seams give. The deep loves a drummer.',
@@ -1968,6 +1969,7 @@ export const CONFLUENCES: Confluence[] = [
   },
   {
     id: 'reapers_tithe',
+    image: '/gauntlet/synergies/reapers_tithe.png',
     name: "Reaper's Tithe",
     requires: [{ boonId: 'executioner' }, { boonId: 'leviathans_hunger' }],
     flavor: 'Every hull you send down, the deep tithes back to you. Death feeds the killer.',
@@ -1980,6 +1982,7 @@ export const CONFLUENCES: Confluence[] = [
   },
   {
     id: 'feed_the_fire',
+    image: '/gauntlet/synergies/feed_the_fire.png',
     name: 'Feed the Fire',
     requires: [{ boonId: 'wildfire' }, { boonId: 'leviathans_hunger' }],
     flavor: 'The flames you set drink from the enemy and pour it into your hull.',
@@ -1991,7 +1994,7 @@ export const CONFLUENCES: Confluence[] = [
     ],
   },
   {
-    id: 'untouchable',   // legacy id; renamed Weather Gauge in the speed split so
+    id: 'untouchable', image: '/gauntlet/synergies/untouchable.png',   // legacy id; renamed Weather Gauge in the speed split so
                          // Following Sea's synergy pays off in Initiative, not dodge
     name: 'Weather Gauge',
     requires: [{ boonId: 'following_sea' }, { boonId: 'ghostward' }],
@@ -2005,6 +2008,7 @@ export const CONFLUENCES: Confluence[] = [
   },
   {
     id: 'iron_tempest',
+    image: '/gauntlet/synergies/iron_tempest.png',
     name: 'Iron Tempest',
     requires: [{ boonId: 'spiteful_wake' }, { boonId: 'ironhide' }],
     flavor: 'Plate over plate, and every blow that breaks on it is flung back twofold.',
@@ -2017,6 +2021,7 @@ export const CONFLUENCES: Confluence[] = [
   },
   {
     id: 'broadside_duel',
+    image: '/gauntlet/synergies/broadside_duel.png',
     name: 'Broadside Duel',
     requires: [{ boonId: 'cannonade' }, { boonId: 'counter_battery' }],
     flavor: 'Trade broadsides and win the exchange every time — their shot in the water, and the guns already coming back to bear.',
@@ -2029,6 +2034,7 @@ export const CONFLUENCES: Confluence[] = [
   },
   {
     id: 'return_to_sender',
+    image: '/gauntlet/synergies/return_to_sender.png',
     name: 'Return to Sender',
     requires: [{ boonId: 'counter_battery' }, { boonId: 'spiteful_wake' }],
     flavor: "Their own shell, caught mid-air and flung right back down their throat.",
@@ -2041,6 +2047,7 @@ export const CONFLUENCES: Confluence[] = [
   },
   {
     id: 'feeding_frenzy',
+    image: '/gauntlet/synergies/feeding_frenzy.png',
     name: 'Feeding Frenzy',
     requires: [{ boonId: 'rising_tide' }, { boonId: 'leviathans_hunger' }],
     flavor: 'The swell of the slain makes the deep drink deeper — every hull in your wake feeds the next wound.',
@@ -2053,6 +2060,7 @@ export const CONFLUENCES: Confluence[] = [
   },
   {
     id: 'bullseye',
+    image: '/gauntlet/synergies/bullseye.png',
     name: 'Bullseye',
     requires: [{ boonId: 'dead_eye' }, { boonId: 'wide_sights' }],
     flavor: 'Wide sights and a killer’s eye. The gold band stops being luck and starts being a habit.',
@@ -2065,6 +2073,7 @@ export const CONFLUENCES: Confluence[] = [
   },
   {
     id: 'deep_wake',
+    image: '/gauntlet/synergies/deep_wake.png',
     name: 'Deep Wake',
     requires: [{ boonId: 'rising_tide' }, { boonId: 'abyssal_bounty' }],
     flavor: 'The hulls in your wake and the weight of the deep pull in the same direction — down, and harder.',
@@ -2082,6 +2091,7 @@ export const CONFLUENCES: Confluence[] = [
   },
   {
     id: 'dreadnought',
+    image: '/gauntlet/synergies/dreadnought.png',
     name: 'Dreadnought',
     requires: [{ boonId: 'giant_killer' }, { boonId: 'grapeshot' }],
     flavor: 'The bigger the hull, the more of it to scatter your iron across. Bring the whole broadside.',
@@ -2094,6 +2104,7 @@ export const CONFLUENCES: Confluence[] = [
   },
   {
     id: 'last_bastion',
+    image: '/gauntlet/synergies/last_bastion.png',
     name: 'Last Bastion',
     requires: [{ boonId: 'stormward' }, { boonId: 'bilge_pump' }],
     flavor: 'A heavier ward, and hands quick on the seams. Nothing gets through that you can’t out-mend.',
@@ -2106,6 +2117,7 @@ export const CONFLUENCES: Confluence[] = [
   },
   {
     id: 'powder_keg',
+    image: '/gauntlet/synergies/powder_keg.png',
     name: 'Powder Keg',
     requires: [{ boonId: 'press_the_powder' }, { boonId: 'powder_hoard' }],
     flavor: 'A crew that never stops loading and never wastes a shell. The magazine is always full and always spilling over.',
@@ -2118,6 +2130,7 @@ export const CONFLUENCES: Confluence[] = [
   },
   {
     id: 'pressure_hull',
+    image: '/gauntlet/synergies/pressure_hull.png',
     name: 'Pressure Hull',
     requires: [{ boonId: 'abyssal_bounty' }, { boonId: 'ironhide' }],
     flavor: 'The same deep that loads your guns crushes down on theirs. The lower you go, the less they land.',
@@ -2130,6 +2143,7 @@ export const CONFLUENCES: Confluence[] = [
   },
   {
     id: 'field_repairs',
+    image: '/gauntlet/synergies/field_repairs.png',
     name: 'Field Repairs',
     requires: [{ boonId: 'reinforced_hull' }, { boonId: 'bilge_pump' }],
     flavor: 'A bigger hull and a crew who patch it like the deep is at their heels — and the seams hold water above the waterline.',
@@ -2142,6 +2156,7 @@ export const CONFLUENCES: Confluence[] = [
   },
   {
     id: 'engorge',
+    image: '/gauntlet/synergies/engorge.png',
     name: 'Engorge',
     requires: [{ boonId: 'salvage_hull' }, { boonId: 'leviathans_hunger' }],
     flavor: 'The deep drinks through every wound you open, and your hull swells past its own lines with the surfeit.',
@@ -2154,6 +2169,7 @@ export const CONFLUENCES: Confluence[] = [
   },
   {
     id: 'deep_fortress',
+    image: '/gauntlet/synergies/deep_fortress.png',
     name: 'Deep Fortress',
     requires: [{ boonId: 'deep_hull' }, { boonId: 'ironhide' }],
     flavor: 'The deeper hull and the doubled plate become one thing: a fortress the drowned break themselves on.',
@@ -2170,7 +2186,7 @@ export const CONFLUENCES: Confluence[] = [
   // ── Don's Gauntlet confluences (gauntlet: 'don' — fuse the ghost-fleet boons;
   //    each needs a 'don'-only half, so they can never surface in Davy's) ───────
   {
-    id: 'cripple', name: 'Cripple', gauntlet: 'don',
+    id: 'cripple', image: '/gauntlet/synergies/cripple.png', name: 'Cripple', gauntlet: 'don',
     requires: [{ boonId: 'rattling_shot' }, { boonId: 'chainshot' }],
     flavor: 'Feeble and snared at once. A hull that can neither hit nor run is just target practice.',
     detail: 'With both on-hit hexes running, your hits pile the control on — extra chances to Feeble AND Slow the enemy every shot — and you deal more damage while it flails.',
@@ -2181,7 +2197,7 @@ export const CONFLUENCES: Confluence[] = [
     ],
   },
   {
-    id: 'sapping_fire', name: 'Sapping Fire', gauntlet: 'don',
+    id: 'sapping_fire', image: '/gauntlet/synergies/sapping_fire.png', name: 'Sapping Fire', gauntlet: 'don',
     requires: [{ boonId: 'rattling_shot' }, { boonId: 'wildfire' }],
     flavor: 'Fire in the timbers and the fight bled out of them. They burn, and they buckle.',
     detail: 'A burning hull is a broken one: your hits carry an extra Feeble, and everything you fire lands harder while the fire eats them.',
@@ -2192,7 +2208,7 @@ export const CONFLUENCES: Confluence[] = [
     ],
   },
   {
-    id: 'hobble', name: 'Hobble', gauntlet: 'don',
+    id: 'hobble', image: '/gauntlet/synergies/hobble.png', name: 'Hobble', gauntlet: 'don',
     requires: [{ boonId: 'chainshot' }, { boonId: 'following_sea' }],
     flavor: 'Snare their rigging, ride their wake. They lumber; you dance.',
     detail: 'A slowed hull can’t keep the pace: your hits Slow harder, and when you take the opening there is a chance to strike twice before they answer.',
@@ -2203,7 +2219,7 @@ export const CONFLUENCES: Confluence[] = [
     ],
   },
   {
-    id: 'coring_shot', name: 'Coring Shot', gauntlet: 'don',
+    id: 'coring_shot', image: '/gauntlet/synergies/coring_shot.png', name: 'Coring Shot', gauntlet: 'don',
     requires: [{ boonId: 'armor_piercing' }, { boonId: 'cold_fury' }],
     flavor: 'A cold, hard round that finds the core through any ward and cracks it wide.',
     detail: 'Barriers stop meaning anything: nearly all of your shot skips the shield straight to the hull, and your critical hits land far harder.',
@@ -2214,7 +2230,7 @@ export const CONFLUENCES: Confluence[] = [
     ],
   },
   {
-    id: 'clear_skies', name: 'Clear Skies', gauntlet: 'don',
+    id: 'clear_skies', image: '/gauntlet/synergies/clear_skies.png', name: 'Clear Skies', gauntlet: 'don',
     requires: [{ boonId: 'steady_sights' }, { boonId: 'wide_sights' }],
     flavor: 'No fog, no lie, and a target you could hit blindfolded. So you don’t miss.',
     detail: 'Your glass is spotless AND your gold band is huge: nothing clouds your aim, and the perfect-shot window widens so crits come easy.',
@@ -2225,7 +2241,7 @@ export const CONFLUENCES: Confluence[] = [
     ],
   },
   {
-    id: 'riposte_wall', name: 'Riposte Wall', gauntlet: 'don',
+    id: 'riposte_wall', image: '/gauntlet/synergies/riposte_wall.png', name: 'Riposte Wall', gauntlet: 'don',
     requires: [{ boonId: 'cutlass_guard' }, { boonId: 'spiteful_wake' }],
     flavor: 'Turn the blow, and the sea turns it back twice as hard. Nothing that swings at you leaves whole.',
     detail: 'Parry AND thorns, reinforcing each other: you parry more often and reflect harder, and every hit you DO eat is flung back with more spite.',
@@ -2236,7 +2252,7 @@ export const CONFLUENCES: Confluence[] = [
     ],
   },
   {
-    id: 'prize_crew', name: 'Prize Crew', gauntlet: 'don',
+    id: 'prize_crew', image: '/gauntlet/synergies/prize_crew.png', name: 'Prize Crew', gauntlet: 'don',
     requires: [{ boonId: 'press_gang' }, { boonId: 'powder_hoard' }],
     flavor: 'What you take, you keep, and what you keep carries over. Their magazine becomes yours.',
     detail: 'A theft engine: you steal enemy cannonballs far more often, and you open every fight already loaded on top of Powder Hoard’s carryover.',
@@ -2246,7 +2262,7 @@ export const CONFLUENCES: Confluence[] = [
     ],
   },
   {
-    id: 'deep_terror', name: 'Deep Terror', gauntlet: 'don',
+    id: 'deep_terror', image: '/gauntlet/synergies/deep_terror.png', name: 'Deep Terror', gauntlet: 'don',
     requires: [{ boonId: 'krakens_grip' }, { boonId: 'permafrost' }],
     flavor: 'Frozen solid and seized by the deep. Some hulls never get another turn.',
     detail: 'Total lockdown: your hits stun far more often on top of Permafrost’s freezes, and a held hull takes extra damage while it can’t act.',
@@ -2256,7 +2272,7 @@ export const CONFLUENCES: Confluence[] = [
     ],
   },
   {
-    id: 'loaded_dice', name: 'Loaded Dice', gauntlet: 'don',
+    id: 'loaded_dice', image: '/gauntlet/synergies/loaded_dice.png', name: 'Loaded Dice', gauntlet: 'don',
     requires: [{ boonId: 'dons_favor' }, { boonId: 'loaded_for_bear' }],
     flavor: 'The Don’s luck and a gun that can’t miss the mark. The house always wins now.',
     detail: 'Every fight opens with a STRONGER random blessing, and your guaranteed-crit rhythm speeds up to every other shot.',
@@ -2266,7 +2282,7 @@ export const CONFLUENCES: Confluence[] = [
     ],
   },
   {
-    id: 'running_broadside', name: 'Running Broadside', gauntlet: 'don',
+    id: 'running_broadside', image: '/gauntlet/synergies/running_broadside.png', name: 'Running Broadside', gauntlet: 'don',
     requires: [{ boonId: 'grapeshot' }, { boonId: 'powder_hoard' }],
     flavor: 'Heavy shot and a deep rack. Your gunners learn to loose the big volley on a shorter count.',
     detail: 'Your Volley costs one fewer cannonball — 2 instead of 3 — so you can loose it more often. On top of that, every Volley still hits harder (Grapeshot carries over).',
@@ -2277,7 +2293,7 @@ export const CONFLUENCES: Confluence[] = [
     ],
   },
   {
-    id: 'hair_trigger', name: 'Hair Trigger', gauntlet: 'don',
+    id: 'hair_trigger', image: '/gauntlet/synergies/hair_trigger.png', name: 'Hair Trigger', gauntlet: 'don',
     requires: [{ boonId: 'manowars_wrath' }, { boonId: 'press_the_powder' }],
     flavor: 'The big gun and a crew that never stops loading. The last word comes a beat sooner.',
     detail: 'Your Mega — the Man-o-War ultimate — costs one fewer cannonball, 3 instead of 4, so it comes online a full charge sooner. It also hits harder still (Man-o-War’s Wrath carries over). Does nothing without a Mega augment.',
@@ -2454,6 +2470,7 @@ export interface Convergence {
 export const CONVERGENCES: Convergence[] = [
   {
     id: 'the_reckoning',
+    image: '/gauntlet/synergies/the_reckoning.png',
     name: 'The Reckoning',
     gauntlet: 'don',
     requires: [{ confluenceId: 'coup_de_grace' }, { confluenceId: 'bullseye' }],
@@ -2467,6 +2484,7 @@ export const CONVERGENCES: Convergence[] = [
   },
   {
     id: 'feast_of_the_deep',
+    image: '/gauntlet/synergies/feast_of_the_deep.png',
     name: 'Feast of the Deep',
     gauntlet: 'don',
     requires: [{ confluenceId: 'reapers_tithe' }, { confluenceId: 'feeding_frenzy' }],
@@ -2480,6 +2498,7 @@ export const CONVERGENCES: Convergence[] = [
   },
   {
     id: 'bulwark_of_the_abyss',
+    image: '/gauntlet/synergies/bulwark_of_the_abyss.png',
     name: 'Bulwark of the Abyss',
     gauntlet: 'don',
     requires: [{ confluenceId: 'pressure_hull' }, { confluenceId: 'deep_fortress' }],
@@ -2493,6 +2512,7 @@ export const CONVERGENCES: Convergence[] = [
   },
   {
     id: 'perfect_storm',
+    image: '/gauntlet/synergies/perfect_storm.png',
     name: 'Perfect Storm',
     gauntlet: 'don',
     requires: [{ confluenceId: 'untouchable' }, { confluenceId: 'iron_tempest' }],
@@ -2506,7 +2526,7 @@ export const CONVERGENCES: Convergence[] = [
   },
   // ── Convergences fusing the NEW Don's confluences (fully his meta-tier) ───────
   {
-    id: 'the_vise', name: 'The Vise', gauntlet: 'don',
+    id: 'the_vise', image: '/gauntlet/synergies/the_vise.png', name: 'The Vise', gauntlet: 'don',
     requires: [{ confluenceId: 'cripple' }, { confluenceId: 'deep_terror' }],
     flavor: 'Feeble, snared, frozen, seized — and then broken. Nothing that meets the vise gets another turn.',
     detail: 'The control capstone: on top of Cripple and Deep Terror, your hits pile on even more Slow, and a locked-down hull simply takes far more damage and crits far more often.',
@@ -2516,7 +2536,7 @@ export const CONVERGENCES: Convergence[] = [
     ],
   },
   {
-    id: 'executioners_court', name: "Executioner's Court", gauntlet: 'don',
+    id: 'executioners_court', image: '/gauntlet/synergies/executioners_court.png', name: "Executioner's Court", gauntlet: 'don',
     requires: [{ confluenceId: 'coring_shot' }, { confluenceId: 'loaded_dice' }],
     flavor: 'Barriers cored, luck loaded, and every clean shot a death sentence read aloud.',
     detail: 'The crit capstone: on top of Coring Shot and Loaded Dice, your critical hits deal even more, land even more often, and the gold band widens further.',
@@ -2526,7 +2546,7 @@ export const CONVERGENCES: Convergence[] = [
     ],
   },
   {
-    id: 'the_riptide', name: 'The Riptide', gauntlet: 'don',
+    id: 'the_riptide', image: '/gauntlet/synergies/the_riptide.png', name: 'The Riptide', gauntlet: 'don',
     requires: [{ confluenceId: 'riposte_wall' }, { confluenceId: 'hobble' }],
     flavor: 'Never where the blow falls, and the sea drags back everything they throw. You are the undertow.',
     detail: 'The evasion capstone: on top of Riposte Wall and Hobble, you slip more shots, take less from the ones that land, and throw more spite back.',
@@ -2537,7 +2557,7 @@ export const CONVERGENCES: Convergence[] = [
     ],
   },
   {
-    id: 'the_windfall', name: 'The Windfall', gauntlet: 'don',
+    id: 'the_windfall', image: '/gauntlet/synergies/the_windfall.png', name: 'The Windfall', gauntlet: 'don',
     requires: [{ confluenceId: 'prize_crew' }, { confluenceId: 'clear_skies' }],
     flavor: 'A full magazine, a clear glass, and a gold band you could not miss if you tried.',
     detail: 'The tempo capstone: on top of Prize Crew and Clear Skies, you open every fight with more shots loaded, and the perfect-shot window widens so crits come easy.',
