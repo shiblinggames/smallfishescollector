@@ -2123,7 +2123,7 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
       magazineSize: 4, shieldPct: 0.22, chargeBiteChance: 0.36, startCharges: 2,
       special: { name: 'Set the Hook', aimAttack: 'hardened', aimPasses: 2, line: 'He sets it the way he has set ten thousand of them, without looking, and your lane closes to a thread.' },
       ultimate: { name: 'The Long Line', mult: 2.8, line: 'All that patience, paid out at once.' },
-      pattern: ['fire', 'reload', 'special', 'reload', 'ultimate', 'dodge', 'fire', 'reload'],
+      pattern: ['fire', 'reload', 'special', 'reload', 'fire', 'reload', 'dodge', 'fire'],
       critChance: 0.15,
       image: '/enemy_finnship.png',
       portrait: '/finn_final.png',
@@ -2136,7 +2136,7 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
       phases: [
         // ── PHASE 2 — CATFISH. He patches himself and puts the plate up. ─────
         { revivePct: 1.0, damageMult: 1.08, badge: 'Old Armour',
-          pattern: ['special', 'reload', 'fire', 'reload', 'dodge', 'fire', 'reload', 'fire'],
+          pattern: ['special', 'reload', 'fire', 'reload', 'fire', 'reload', 'fire', 'reload', 'fire'],
           dialogueLine: 'Plate that outlived its own bones. Do you know how long I waited to wear this?',
           ability: {
             kind: 'abyssal_tide', name: 'Old Armour',
@@ -2145,7 +2145,7 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
           } },
         // ── PHASE 3 — MAKO. The frenzy. Many small teeth. ────────────────────
         { revivePct: 1.0, damageMult: 1.16, badge: 'Wake of the Drowned',
-          pattern: ['fire', 'special', 'reload', 'ultimate', 'reload', 'fire', 'volley', 'dodge'],
+          pattern: ['fire', 'reload', 'special', 'reload', 'fire', 'reload', 'fire', 'reload', 'fire'],
           dialogueLine: 'You have never once been fast enough. Let me show you what fast is.',
           ability: {
             kind: 'blitz', name: 'Wake of the Drowned',
@@ -2154,7 +2154,7 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
           } },
         // ── PHASE 4 — LAZ. He simply refuses to go down. ─────────────────────
         { revivePct: 1.0, damageMult: 1.24, badge: 'Still Going',
-          pattern: ['special', 'fire', 'reload', 'volley', 'reload', 'fire', 'ultimate', 'dodge'],
+          pattern: ['fire', 'reload', 'fire', 'reload', 'reload', 'reload', 'volley', 'reload', 'fire', 'special', 'reload', 'reload', 'fire'],
           dialogueLine: 'You have put more iron through me than most captains see in a lifetime. Look at me.',
           ability: {
             kind: 'vengeance', name: 'Still Going',
@@ -2163,7 +2163,7 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
           } },
         // ── PHASE 5 — MIRA. He marks you, and everything lands harder. ───────
         { revivePct: 1.0, damageMult: 1.32, badge: 'All That Tonnage',
-          pattern: ['ultimate', 'fire', 'volley', 'special', 'reload', 'fire', 'volley', 'reload'],
+          pattern: ['fire', 'reload', 'fire', 'reload', 'fire', 'reload', 'reload', 'reload', 'volley', 'reload', 'special', 'reload', 'fire'],
           dialogueLine: 'I have been reading you since your first cast. There is nothing left of you I have not written down.',
           ability: {
             kind: 'requiem', name: 'All That Tonnage',
@@ -2172,7 +2172,7 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
           } },
         // ── PHASE 6 — DOBY. The jaw. The last thing he has, and the biggest. ─
         { revivePct: 1.0, damageMult: 1.42, badge: 'The Borrowed Jaw',
-          pattern: ['ultimate', 'fire', 'volley', 'special', 'reload', 'fire', 'volley', 'ultimate'],
+          pattern: ['fire', 'reload', 'fire', 'reload', 'reload', 'reload', 'ultimate', 'reload', 'fire', 'reload', 'fire', 'special', 'reload', 'reload', 'reload', 'fire'],
           dialogueLine: 'One last ride, captain. You landed this one yourself. Let us see you do it twice.',
           ability: {
             kind: 'leviathan', name: 'The Borrowed Jaw',
