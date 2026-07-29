@@ -371,6 +371,7 @@ export type SceneInsert =
   | { kind: 'sealed-letter'; wax?: string } // a wax-sealed letter (wax = the initials pressed in it)
   | { kind: 'finn-silhouette' }          // a figure rising from the true deep. Finn's shape, blacked to a silhouette (the "not the final boss" sting; reuses his CharacterAvatar, no art)
   | { kind: 'finn-unmasked' }            // THE reveal: the same shape and stance, finally lit. The black drains out of him (no new art; pairs with finn-silhouette)
+  | { kind: 'finn-sinister' }            // THE turn: the dock-hand costume comes off and his true form stands up. Uses bespoke art (FINN_SINISTER_ART); falls back to his darkened sprite until that art lands
   | { kind: 'dial-demo' }                // a live catch-dial demo (needle landing green→gold). Rendered by a caller's renderInsert override (the fishing intro), not the shared InsertShot.
 
 /** One row in a node's "possible drops" panel. */
@@ -2604,23 +2605,36 @@ export const RAID_MAP: RaidNode[] = [
       { ...GUIDE.finn, text: "He was quoting me badly. The don thought the feeding was cargo. Powder, iron, hulls, whatever he could bleed the sea to shift, all of it hauled out here and dropped in the dark, year after year, trying to buy a door open." },
       { ...GUIDE.finn, text: "It never opened. Not for him. Not for me. Forty years I've put a line in that water and forty years it has looked back at me and closed. The deep does not care what you own, captain. It cares who it lets in." },
       { ...GUIDE.doby, text: "You were fishing for the ancients. All of it, the whole rotten sprawl of it, so you could pull the old ones up out of the dark. You have no idea what they are." },
-      { ...GUIDE.finn, text: "I've a far better idea than you, whale. I have been at this since before that captain of yours could hold a rod." },
-      { text: 'He says it kindly. That is the worst of it. He has said everything kindly since the first day you ever met him on a dock.', pause: 600 },
-      { ...GUIDE.finn, text: "So I stopped fishing for the deep. I went looking for someone the deep would open for. Took years. Then a nobody in a bad boat starts landing things off my dock that had no business on any line, and I thought: there. That one. That one it likes." },
+      // THE TURN. Everything before this is the rival off the dock. Everything
+      // after is what was wearing him. The warmth does not curdle slowly; it
+      // goes out all at once, like a lamp.
+      { text: 'And the grin goes.', pause: 900, closeup: true },
+      { text: 'Not slowly. Not the way a man stops finding a thing funny. It goes out all at once, and what is left behind it does not bother arranging itself into anything friendly.', pause: 800 },
+      { ...GUIDE.finn, text: "I know exactly what they are." },
+      { ...GUIDE.finn, text: "I have been at this since before your grandmother salted her first catch, and I have been patient the entire time. Do you understand what that costs. Forty years of smiling at fishermen." },
+      { text: 'The voice is the same voice. That is the wrong part. The same easy dockside voice you have heard a hundred mornings, saying this.', pause: 700 },
+      { ...GUIDE.finn, text: "So I stopped fishing for the deep and went looking for something the deep would open for. It took years. Then a nobody in a bad boat started landing things off my dock that had no business on any line." },
+      { ...GUIDE.finn, text: "You were not a rival. You were a tool I found on a beach, and I sharpened you for a decade." },
       { text: 'Every meeting. Every goad about deeper water. Every time he laughed at your boat and told you where the real fish were. A hand at your back the whole way down.', pause: 800, closeup: true },
-      { ...GUIDE.finn, text: "You thought a rod bought you that water. You bought it by gutting my house, one captain at a time. Every door you kicked down, I left unlocked. Every name you took off my board was a name I'd stopped needing. You cleared my own ranks for me and called it a campaign." },
-      { ...GUIDE.finn, text: "And then you went down there and landed all six, and carried them up into the light for me, one at a time, like the good hand you are. Thank you for that. Truly. I could not have done it without you, and I mean that in the way it sounds." },
-      { text: 'The line in his hands has been out this whole time. It goes down into water that has no bottom on any chart you own.', pause: 900, closeup: true },
-      { ...GUIDE.kat, text: "Captain. Whatever he's about to say next, we're not doing it." },
-      { ...GUIDE.finn, text: "Six trophies on your wall and the deep wide open behind them. That's the door, and you built it. Now step aside and let a man through it." },
-      { text: 'And there it is. The whole sea, four chapters of it, one long line paid out slow and patient with you on the end of it, and the tug you have felt since the first cast finally coming home.', pause: 700 },
-      { ...GUIDE.mira, text: "I collected marks for the worst people in this ocean and not one of them ever scared me. This one's smiling." },
-      { ...GUIDE.dole, text: "Every ledger I balanced for you led here. I should have seen the shape of it. Nothing in this sea ever added up except him." },
-      { ...GUIDE.mako, text: "Biggest bounty in the sea. Not the don after all. Him." },
-      { ...GUIDE.doby, text: "Captain. I have swum this water for four hundred years. If he opens that, none of us are the ones who close it." },
-      { text: 'Finn sets the rod down in the bottom of the boat, and for the first time since a dock a long time ago, he is not smiling.', pause: 800, closeup: true },
-      { ...GUIDE.finn, text: "One last ride, then. You and me and the deep, the way it was always going to end. Don't be late. You never are." },
-      { text: 'The good light holds. The water stays flat. Nothing sinks and nothing rises, and that is somehow worse than the don going down with his whole drowned court.', pause: 600 },
+      { ...GUIDE.finn, text: "You thought a rod bought you that water. You bought it by gutting my house, one captain at a time. Every door you kicked down, I left unlocked. Every name you took off my board was a name I had stopped needing." },
+      { ...GUIDE.finn, text: "You cleared my own ranks for me and called it a campaign. Then you went down where I cannot go, and you carried all six of them up into the light, one at a time, and set them on your wall like trophies. They were never trophies. They were keys." },
+      { text: 'The line in his hands has been out this whole time. It goes down into water that has no bottom on any chart you own, and it is drawn tight.', pause: 900, closeup: true },
+      { ...GUIDE.kat, text: "Captain. Whatever he's about to do next, we're not letting him." },
+      { ...GUIDE.finn, text: "Letting me." },
+      // THE TRANSFORMATION. The dock-hand shape was the costume, not the truth.
+      { text: 'He stands, and the small boat does not rock, because whatever is standing up in it stopped weighing what a man weighs a long time ago.', pause: 800 },
+      { text: 'The good light bends away from him. The flat water goes dark under the hull, and keeps going dark, out and out, until the ordinary morning you sailed into is gone and there is only the thing at the middle of it.', pause: 900, fx: 'flash', insert: { kind: 'finn-sinister' }, closeup: true },
+      { text: 'Forty years of a fisherman was the costume. This is what has been wearing it.', pause: 1000, closeup: true },
+      { ...GUIDE.mira, text: "I hunted the worst people in this ocean. Not one of them was ever a *what*." },
+      { ...GUIDE.dole, text: "Every ledger I balanced for you led here. Nothing in this sea ever added up except him, and now I see why. He was never in the arithmetic." },
+      { ...GUIDE.mako, text: "Biggest bounty in the sea. Not the don after all." },
+      { ...GUIDE.laz, text: "I have been drowned, captain. I know what the deep sounds like when it wants something. It sounds like him." },
+      { ...GUIDE.doby, text: "Four hundred years in this water and I have never seen that shape. If he opens the deep, there is nobody left who closes it." },
+      { ...GUIDE.finn, text: "Six keys on your wall and the door standing open behind them. Step aside." },
+      { text: 'And there it is. The whole sea, four chapters of it, one long line paid out slow and patient with you on the end of it, and the tug you have felt since the very first cast finally coming home.', pause: 700 },
+      { ...GUIDE.finn, text: "No. You will not. You have never once done the sensible thing, and I built ten years on that." },
+      { ...GUIDE.finn, text: "One last ride, then. You and me and the deep, the way it was always going to end. You will be on time. You always are." },
+      { text: 'The dark holds where the morning was. Nothing sinks and nothing rises, and that is somehow worse than the don going down with his whole drowned court.', pause: 600 },
       { text: 'You came out here for the last name on the board. You have had it since the beginning. He was on the dock the day you started.', pause: 700 },
     ],
     detail: {

@@ -239,6 +239,7 @@ export function InsertShot({ kind, wax, accent, reduced }: { kind: string; wax?:
   if (kind === 'sealed-letter') return <SealedLetterInsert wax={wax ?? ''} accent={accent} reduced={reduced} />
   if (kind === 'finn-silhouette') return <FinnSilhouetteInsert accent={accent} reduced={reduced} />
   if (kind === 'finn-unmasked') return <FinnUnmaskedInsert accent={accent} reduced={reduced} />
+  if (kind === 'finn-sinister') return <FinnSinisterInsert accent={accent} reduced={reduced} />
   return null
 }
 
@@ -305,6 +306,53 @@ function FinnUnmaskedInsert({ accent, reduced }: { accent: string; reduced?: boo
           transform: FINN_AVATAR.mirrored ? 'scaleX(-1)' : 'none' }} />
       <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, bottom: '9%', height: 2,
         background: `linear-gradient(90deg, transparent, ${accent}66, transparent)` }} />
+    </div>
+  )
+}
+
+/** Finn's TRUE form, the moment the dock-hand costume comes off.
+ *
+ *  ART SLOT: drop the piece at `/finn_sinister.png` in web/public and it is
+ *  live, no code change. Until then this gracefully falls back to his own
+ *  sprite pushed dark and cold, so the beat still plays rather than rendering a
+ *  hole. Swap FINN_SINISTER_ART if the filename differs, and if the reveal ends
+ *  up being a multi-stage transformation the array below is the place to grow
+ *  it (cross-fade the stages on the same timeline). */
+const FINN_SINISTER_ART = '/finn_sinister.png'
+
+function FinnSinisterInsert({ accent, reduced }: { accent: string; reduced?: boolean }) {
+  const fallback = getCharacterSprites(FINN_AVATAR.characterColor).rest
+  const [src, setSrc] = useState(FINN_SINISTER_ART)
+  const usingFallback = src !== FINN_SINISTER_ART
+  return (
+    <div style={{ position: 'relative', width: 'min(78vw, 320px)', aspectRatio: '1 / 1', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', overflow: 'hidden' }}>
+      {/* The light does not fall on him, it bends AWAY: the glow inverts to a
+          spreading dark that eats the ordinary morning he was standing in. */}
+      <motion.div aria-hidden
+        initial={{ opacity: 0, scale: 0.5 }}
+        animate={{ opacity: reduced ? 0.95 : [0, 0.85, 0.95], scale: reduced ? 1.5 : [0.5, 1.6, 1.9] }}
+        transition={{ duration: reduced ? 0.6 : 3.2, ease: 'easeOut' }}
+        style={{ position: 'absolute', left: '50%', top: '46%', width: '110%', aspectRatio: '1', transform: 'translate(-50%, -50%)', borderRadius: '50%',
+          background: 'radial-gradient(circle at 50% 48%, rgba(4,2,10,0.94) 0%, rgba(6,3,14,0.72) 46%, transparent 74%)' }} />
+      {/* a cold rim so the shape still separates from the dark it is making */}
+      <motion.div aria-hidden
+        initial={{ opacity: 0 }} animate={{ opacity: reduced ? 0.5 : [0, 0.65, 0.45] }}
+        transition={{ duration: reduced ? 0.5 : 3.2, ease: 'easeOut', delay: 0.3 }}
+        style={{ position: 'absolute', left: '50%', top: '46%', width: '72%', aspectRatio: '1', transform: 'translate(-50%, -50%)', borderRadius: '50%',
+          background: `radial-gradient(circle at 50% 45%, ${accent}66 0%, transparent 66%)`, filter: 'blur(10px)' }} />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <motion.img src={src} alt="" aria-hidden decoding="async"
+        onError={() => setSrc(fallback)}
+        initial={{ opacity: 0, scale: 0.94 }}
+        animate={{ opacity: 1, scale: reduced ? 1 : [0.94, 1.06, 1.02] }}
+        transition={{ opacity: { duration: 0.45 }, scale: { duration: reduced ? 0.4 : 3.2, ease: 'easeOut' } }}
+        style={{ position: 'relative', height: '94%', width: 'auto', objectFit: 'contain',
+          // The fallback is his ordinary sprite, so it needs pushing somewhere
+          // cold and wrong. Bespoke art is shown exactly as drawn.
+          transform: usingFallback && FINN_AVATAR.mirrored ? 'scaleX(-1)' : 'none',
+          filter: usingFallback
+            ? 'brightness(0.24) contrast(1.5) saturate(0.35) drop-shadow(0 0 22px rgba(0,0,0,0.9))'
+            : 'drop-shadow(0 0 26px rgba(0,0,0,0.8))' }} />
     </div>
   )
 }
