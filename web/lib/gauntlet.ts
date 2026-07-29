@@ -406,6 +406,18 @@ const DEEP_BEND_START_2 = 48
 function deepBend2(depth: number): number {
   return depth > DEEP_BEND_START_2 ? Math.pow(DEEP_BEND_RATE, depth - DEEP_BEND_START_2) : 1
 }
+// Early-depth damage grace (Don's Gauntlet) — 2026-07-28. Reaching the first Don
+// Finleone rise at depth 20 was a touch too spiky: HP was already cut hard, so
+// what ends early runs is incoming DAMAGE. Ease enemy damage in the 1-20 climb,
+// fading to full EXACTLY at depth 20 — so the depth-20 Don himself (built at
+// grace 1.0), the pot/kill pacing (HP untouched), and the deep record band all
+// stay put; only the run up to the first landmark gets a bit more forgiving.
+// 0.80 at depth 1 → 1.0 at depth 20 (linear).
+const EARLY_GRACE_END_2 = 20
+function earlyDmgGrace2(depth: number): number {
+  if (depth >= EARLY_GRACE_END_2) return 1
+  return 0.80 + 0.20 * ((depth - 1) / (EARLY_GRACE_END_2 - 1))
+}
 // 2026-07-26 — EARLY-DEPTH HP NERF (v2, deeper). The old (350 + 30·d) intercept
 // made the shallow end a slog: Ch3/4 enemies are tanky by nature, so depths 1-15
 // dragged. Dropped the intercept hard (350 → 170) and raised the slope (30 → 33)
@@ -417,8 +429,8 @@ function mobHp2(depth: number)    { return Math.round((170 + depth * 33) * deepB
 // Damage: retuned 2026-07-18 after playtest — Ch3/4 enemies already hit hard from
 // depth 1, so the base is lower and the slope FLATTER than Davy's (they start
 // strong, they don't need a steep ramp on top). HP curve unchanged.
-function mobMinDmg2(depth: number){ return Math.round((16 + depth * 2) * deepBend2(depth)) }
-function mobMaxDmg2(depth: number){ return Math.round((24 + depth * 3.2) * deepBend2(depth)) }
+function mobMinDmg2(depth: number){ return Math.round((16 + depth * 2) * deepBend2(depth) * earlyDmgGrace2(depth)) }
+function mobMaxDmg2(depth: number){ return Math.round((24 + depth * 3.2) * deepBend2(depth) * earlyDmgGrace2(depth)) }
 
 // The Don's ghost fleet — his drowned court + crews raised, washed a sickly,
 // scary KRAKEN GREEN (vs Davy's cold grey DROWNED_FILTER) and renamed "Spectral
