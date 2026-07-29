@@ -41,8 +41,9 @@ const GUIDE = {
   // AFTER the transformation. Same name on the plate, because he is still Finn
   // and that is the horror of it, but the face is the thing that stood up. Using
   // the dock-hand portrait for his closing lines would have quietly undone the
-  // beat that just played. Head-crop of the full piece, framed like the busts.
-  finnFinal: { speaker: 'Finn', portrait: '/finn_final_portrait.png' },
+  // beat that just played. The FULL piece, uncropped, so the plate shows the
+  // whole thing he became rather than just its head.
+  finnFinal: { speaker: 'Finn', portrait: '/finn_final.png' },
 } as const
 
 // A muster plays as a cutscene, not a static checklist: the crew read the
