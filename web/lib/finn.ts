@@ -216,7 +216,7 @@ export const FINN_ENCOUNTER_BEATS: FinnBeat[] = [
     id: 'e37', milestone: 37, track: 'encounter',
     lines: [
       { text: "There's a steadiness in you, under all that mess. That's the rare part." },
-      { text: "That's the part I've been looking f—", pause: 250, fx: 'flash' },
+      { text: "That's the part I've been looking f...", pause: 250, fx: 'flash' },
       { text: "...the part worth *beating*. Forget I said it. Cast." },
     ],
   },

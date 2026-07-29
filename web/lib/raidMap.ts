@@ -2006,7 +2006,7 @@ export const RAID_MAP: RaidNode[] = [
       description:
         "The Quartermaster's ledgers spill and settle the same way every time: up to one signature, Don Finleone, the megalodon who runs the Coffers and every Cache that feeds them. As far as any ledger in the market knows, he is the head of the Finndicate. Then the counter burns low and the crew takes a watch: Mako itching to bite something megalodon-sized, Kat threatening to stitch him for saying so, Laz grave over how big things end, and Dole unable to shake a margin in his notes that will not add up. A worry for deeper water. Tonight the crew is whole.",
       drops: [
-        { emoji: '📜', label: "Captain's Logbook, Fragment XI", sublabel: "\"Every debt in the market runs up to one name: Finleone. The head of the whole Finndicate.\"", rarity: 'rare' },
+        { emoji: '📜', label: "Captain's Logbook, Fragment XI", sublabel: "\"Every debt in the market runs up to one name: Finleone. Every ledger down here calls him the head of the whole Finndicate.\"", rarity: 'rare' },
       ],
       dropsNote: 'The don named at the top of every ledger, and the crew whole before the deep.',
       ctaLabel: 'Read the Ledgers →',
@@ -2291,15 +2291,22 @@ export const RAID_MAP: RaidNode[] = [
       { ...GUIDE.dole, text: "One guess, and you won't need it. There's only ever been one name at the top of this water." },
       { ...GUIDE.doby, text: 'Finleone. Felt it in my gut a hundred leagues back. Another thing to hold it in his own ink, though.', pause: 400 },
       { ...GUIDE.kat, text: "Forty years I've watched good captains drown arguing whose fault the sea was. The don kept the answer in a ledger the whole time." },
-      { ...GUIDE.dole, text: "Here's a curiosity. One hand in the margins that isn't his. Older, finer. Initials a few odd sums that tie to no account I can find." },
-      { ...GUIDE.doby, text: 'Dead partner. Some debt he never troubled to close. Every old crook keeps a ghost or two in his columns. Leave it lie.' },
+      { ...GUIDE.dole, text: "Now that is a curiosity. There's a second hand in these margins, and it isn't his. Older. Finer. Initials a few odd sums that tie to no account I can find anywhere in the book." },
+      // The letter goes on screen ONCE, as a shape, and nobody remarks on it. The
+      // finale's discovery beat (Mira reading an F off this page) needs the
+      // player's eye to have passed over it here and skipped it.
+      { text: 'One letter, looped small and patient at the bottom of a column, over and over, page after page.', pause: 500 },
+      // Mira dismisses it, because the finale has her quote this exact moment
+      // back at herself ("I told you it was a dead partner. I *swore* to you").
+      { ...GUIDE.mira, text: "Dead partner. Some debt he never troubled to close. Every old crook keeps a ghost or two in his columns, and none of them ever collect." },
+      { ...GUIDE.doby, text: 'Leave it lie. We have a don to put in the ground.' },
       { ...GUIDE.laz, text: "Then the books are done talking. He's at the end of them, on his throne, waiting. Let us go settle the account in person.", pause: 400 },
     ],
     detail: {
       description:
         "Sal Brackwater's strongroom gave up the don's ledgers, every column in Finleone's own hand. The debts all run down into one pocket: his. Dole finds one margin in an older hand nobody can place, initialling a few odd sums that tie to nothing. A dead partner's ghost, most like. Nothing between you and the throne now but one last lock.",
       drops: [
-        { emoji: '📜', label: "Captain's Logbook, Fragment XIII", sublabel: `"Every debt runs up to Finleone. He is the head of it all. The throne is ahead."`, rarity: 'rare' },
+        { emoji: '📜', label: "Captain's Logbook, Fragment XIII", sublabel: `"Every debt runs up to Finleone, and every book agrees he is the head of it. There is one margin that does not. The throne is ahead."`, rarity: 'rare' },
       ],
       dropsNote: "The don's whole empire, balanced to the coin in his own careful hand.",
       ctaLabel: 'Open the Ledgers →',
@@ -2513,11 +2520,18 @@ export const RAID_MAP: RaidNode[] = [
     sceneAccent: '#a78bfa',
     scene: [
       { text: 'The megalodon goes down the way an empire does. A long time proud, and then no time at all.' },
-      { text: 'The court scatters, the colors strike, and a hundred years of drowned debts sink to the bottom with the don who collected them.', pause: 500 },
+      // The don's last words. They are the whole hinge of the finale (its node is
+      // named for them), and they were never actually written down anywhere: the
+      // player was being asked to remember a line nobody ever said.
+      { text: 'He is still going down when he finds the breath for one more.', pause: 600 },
+      { ...GUIDE.doby, text: "Let him talk. Let the sea hear him say it." },
+      { speaker: 'Don Finleone', portrait: THE_THRONE.enemies.don_finleone.portrait, text: "You think you have taken something off me. I only ever held the knife, captain." },
+      { speaker: 'Don Finleone', portrait: THE_THRONE.enemies.don_finleone.portrait, text: "You have not met the Hand that sharpens it." },
+      { text: 'And then the court scatters, the colors strike, and generations of drowned debts sink to the bottom with the don who collected them.', pause: 500 },
       { text: "Then, out past the wreck, where the don's water spills over into the true deep, the black surface stirs. Something is watching the ruin you made, and it was never once in his court.", pause: 700 },
       { text: 'It rises just enough to throw a shape against the dark: a figure standing easy with one arm out over the water, a stance you would swear you had seen before on sunnier water, over a far shorter line.', pause: 400, fx: 'flash', insert: { kind: 'finn-silhouette' } },
       { text: 'The don was the biggest name in the sea. He was not your last fight.', pause: 900, closeup: true },
-      { text: 'And the whole long chase turns over in your head and reads the other way. The strange cargo. The charts torn from drowned captains. Every shipment the don bled the sea to move. None of it was ever about coin. It was one patient hand, a lifetime at it, trying to learn the one thing the sea will not tell: how to raise the giants of the deep. The don only ever wore the wanting. It was never his.', pause: 700 },
+      { text: 'And something in the shape of the whole chase shifts, the way a word you have said a thousand times goes strange in your mouth. You could not say what moved. Only that it did.', pause: 700 },
       { text: 'Then the deep folds over it, and it is gone before you can be sure it was ever there at all.' },
       { ...GUIDE.mira, text: "Captain. Tell me you saw that too. ...No. Not tonight. Tonight the don's on the bottom, and that was us. The rest can keep till morning." },
       { text: 'The court settles to the seabed, and for the first time in four chapters, there is nothing ahead to point at. So the crew takes the longest watch of all. Together.', pause: 500 },
