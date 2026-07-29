@@ -59,7 +59,7 @@ export async function getRaidMapView(): Promise<{ views: RaidNodeView[]; doubloo
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress, ship_classes, seen_chapter_unlocks, seen_ultimate_unlock, is_admin')
+    .select('doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress, ship_classes, seen_chapter_unlocks, seen_ultimate_unlock, is_admin, ancient_catches')
     .eq('id', user.id)
     .single()
 
@@ -79,7 +79,9 @@ export async function getRaidMapView(): Promise<{ views: RaidNodeView[]; doubloo
     loadRaidRecords(admin, user.id),
     loadMusterParty(admin, user.id),
   ])
-  return { views: computeRaidMap(cleared, doubloons, navLevel, isAdmin), doubloons, navLevel, raidRecords, shipClasses, seenChapterUnlocks, seenUltimateUnlock, raidNodeChoices, musterParty }
+  // Ancient Deep giants landed — feeds the One Last Ride gate (requiresAncients).
+  const ancientsCaught = ((profile?.ancient_catches as number[] | null) ?? []).length
+  return { views: computeRaidMap(cleared, doubloons, navLevel, isAdmin, ancientsCaught), doubloons, navLevel, raidRecords, shipClasses, seenChapterUnlocks, seenUltimateUnlock, raidNodeChoices, musterParty }
 }
 
 /** First-time celebration dismiss — appends the chapter id to

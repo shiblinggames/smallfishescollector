@@ -443,6 +443,12 @@ export interface RaidNode {
   previewWhenLocked?: boolean
   /** Optional extra gate: minimum Navigation level. */
   requiresNavLevel?: number
+  /** Optional extra gate: how many Ancient Deep giants you must have landed
+   *  (profiles.ancient_catches). THE cross-track bridge — the one gate that
+   *  makes the fishing arc and the raid arc mechanically inseparable, so the
+   *  last stop cannot be reached by a captain who never went down for the
+   *  giants. Enforced here for the map AND server-side on the route. */
+  requiresAncients?: number
   /** combat: route to the existing combat screen. */
   route?: string
   /** raid only: the BossRaidConfig.raidId this node maps to, so its
@@ -639,6 +645,11 @@ export interface RaidChapter {
   /** Last node id (inclusive) that belongs to this chapter. The next
    *  chapter starts at the next RAID_MAP entry after this one. */
   lastNodeId: string
+  /** A CODA, not a numbered chapter. Buckets its nodes apart from the chapter
+   *  before it (so the finale isn't swallowed into Chapter IV) while rendering
+   *  as a bare title — no "Chapter V" anywhere. One Last Ride is one node, not
+   *  an act. */
+  coda?: boolean
 }
 
 export const RAID_CHAPTERS: RaidChapter[] = [
@@ -692,6 +703,15 @@ export const RAID_CHAPTERS: RaidChapter[] = [
     // (Sal Brackwater) → crooked_ledger → Tumbler Lock puzzle → Raid 8
     // (Don Finleone) → chapter_4_close (Between Watches) → chapter_4_augment.
     lastNodeId: 'chapter_4_augment',
+  },
+  {
+    id:         'one_last_ride',
+    number:     5,
+    romanNumeral: '',          // a coda has no numeral; `coda` suppresses the label
+    title:      'One Last Ride',
+    subtitle:   'The don was never the top of it. Something has been waiting on you since the first cast.',
+    coda:       true,
+    lastNodeId: 'one_last_ride',
   },
 ]
 
@@ -2527,6 +2547,42 @@ export const RAID_MAP: RaidNode[] = [
       summary: "The don's shipwright owes you his freedom and pays it in iron: an extra RAID-ITEM MOUNT cut into your deck for a fortune, one more piece of gear working every fight. Buy it in Manage Ship.",
     },
   },
+  // ── ONE LAST RIDE ─────────────────────────────────────────────────────────
+  // The convergence. Not a chapter — ONE last stop that sits outside Chapter IV,
+  // after the don is in the ground and the shipwright has been paid. This is the
+  // node the whole cross-game twist has been walking toward: the Finndicate's
+  // real head is Finn, the fishing rival, and the only door to him is the one
+  // the player opened for him by landing all six Ancient Deep giants.
+  //
+  // Gated on `requiresAncients: 6` — the FIRST raid node in the game that reads
+  // the fishing track. That is the point: it cannot be reached from this map
+  // alone. Kept comingSoon while the reveal cutscene + Finn's boss config are
+  // built, so it reads as a promise on the horizon rather than a dead end
+  // (see [[finn-finndicate-twist]] — the convergence trilogy).
+  {
+    id: 'one_last_ride',
+    type: 'raid',
+    label: 'One Last Ride',
+    flavor:
+      'The don is in the ground and the sea is quiet, and the quiet is the wrongest thing about it. Something out past the wreck has been waiting on you the whole time, patient as a man with a line in the water.',
+    bridge: undefined,
+    requiresNode: 'chapter_4_augment',
+    requiresAncients: 6,
+    // Visible as a GOAL while locked: hiding it would hide the reason to go and
+    // land the giants in the first place.
+    previewWhenLocked: true,
+    comingSoon: true,
+    image: '/raidlog.png',
+    sceneAccent: '#a78bfa',
+    detail: {
+      description:
+        'Six giants came up out of the Ancient Deep on your line, and every one of them went somewhere. You never asked where.\n\nThe last stop is not on any chart the Finndicate kept. It opens for a captain who has been down where the old things sleep, and it opens for nobody else.',
+      dropsNote: 'The end of the Sunken Hand.',
+      ctaLabel: 'Coming Soon',
+      summary:
+        'The last stop past the don, and it only opens for a captain who has landed all six Ancient Deep giants.',
+    },
+  },
   // The Davy Jones Gauntlet used to sit here as a chapter-2 side branch.
   // It's now a permanent top-level entry point. The "Gauntlets" hub card
   // on the Expeditions page (HubCards.tsx). So it no longer lives in the
@@ -2552,6 +2608,8 @@ export function computeRaidMap(
   doubloons: number,
   navLevel: number,
   isAdmin = false,
+  /** How many Ancient Deep giants the player has landed — feeds requiresAncients. */
+  ancientsCaught = 0,
 ): RaidNodeView[] {
   // adminOnly nodes are hidden entirely for non-admins (the chain just ends
   // before them) while content is in review.
@@ -2569,12 +2627,18 @@ export function computeRaidMap(
     const prereqOk = !node.requiresNode || cleared.has(node.requiresNode)
     const gateOk = !node.requiresClearedNode || cleared.has(node.requiresClearedNode)
     const navOk = !node.requiresNavLevel || navLevel >= node.requiresNavLevel
-    if (!prereqOk || !gateOk || !navOk) {
+    // The Ancient Deep gate. Reported LAST and in its own words: this is not a
+    // progression wall the player can grind past on this map, it is a pointer at
+    // the other half of the game, so the reason has to say so plainly.
+    const ancientsOk = !node.requiresAncients || ancientsCaught >= node.requiresAncients
+    if (!prereqOk || !gateOk || !navOk || !ancientsOk) {
       const req = RAID_MAP.find(n => n.id === (prereqOk ? node.requiresClearedNode : node.requiresNode))
       const verb = req?.type === 'story' ? 'Read' : 'Clear'
       const reason = (!prereqOk || !gateOk)
         ? `${verb} ${req?.label ?? 'the previous stop'} first`
-        : `Reach Navigation Level ${node.requiresNavLevel}`
+        : !navOk
+          ? `Reach Navigation Level ${node.requiresNavLevel}`
+          : `Land all ${node.requiresAncients} Ancient Deep giants (${ancientsCaught}/${node.requiresAncients})`
       return { node, status: 'locked' as const, claimable: false, lockReason: reason }
     }
     const claimable = node.type === 'milestone' && !!node.milestone && doubloons >= node.milestone.amount

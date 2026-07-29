@@ -441,7 +441,7 @@ export async function claimRaidLoot(
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, gems, ship_skins, equipped_ship_skin, raid_items, ship_classes, has_completed_practice_raid, raid_node_progress, is_admin, expedition_xp')
+    .select('doubloons, gems, ship_skins, equipped_ship_skin, raid_items, ship_classes, has_completed_practice_raid, raid_node_progress, is_admin, expedition_xp, ancient_catches')
     .eq('id', user.id)
     .single()
   if (!profile) return { newShipSkins: [], newDoubloonTotal: 0, newRaidItems: [] }
@@ -452,7 +452,11 @@ export async function claimRaidLoot(
   //    them without ever beating the Quartermaster, or the game.
   const cleared = await buildClearedSet(admin, user.id, profile)
   const navLevel = getLevelFromXP((profile.expedition_xp as number | null) ?? 0)
-  const nodeView = computeRaidMap(cleared, profile.doubloons ?? 0, navLevel, profile.is_admin === true)
+  // The ancients count rides along so a requiresAncients node (One Last Ride)
+  // is unreachable here too — otherwise the finale's crate could be claimed by
+  // a captain who never went down for the giants.
+  const ancientsCaught = ((profile.ancient_catches as number[] | null) ?? []).length
+  const nodeView = computeRaidMap(cleared, profile.doubloons ?? 0, navLevel, profile.is_admin === true, ancientsCaught)
     .find(v => v.node.raidId === raidId)
   if (!nodeView || nodeView.status === 'locked') {
     return { newShipSkins: [], newDoubloonTotal: 0, newRaidItems: [] }

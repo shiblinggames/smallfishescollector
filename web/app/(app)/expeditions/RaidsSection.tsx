@@ -2416,7 +2416,7 @@ function ChapterUnlockOverlay({
             className="font-karla font-700 uppercase tracking-[0.22em]"
             style={{ fontSize: '0.56rem', color: '#4ade80', marginBottom: '0.65rem' }}
           >
-            ✓ Chapter {previousChapter.romanNumeral} Complete
+            ✓ {previousChapter.coda ? previousChapter.title : `Chapter ${previousChapter.romanNumeral}`} Complete
           </motion.p>
         )}
 
@@ -3516,7 +3516,7 @@ export default function RaidsSection({ views, doubloons, navLevel, playerShipIma
                   >
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
                       <span className="font-karla font-700 uppercase tracking-[0.22em]" style={{ fontSize: '0.58rem', color: chapterStarted ? MAIN_ACCENT : '#6a6764' }}>
-                        Chapter {c.romanNumeral}
+                        {c.coda ? c.title : `Chapter ${c.romanNumeral}`}
                       </span>
                       {chapterCleared && (
                         <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.55rem', color: '#4ade80' }}>
