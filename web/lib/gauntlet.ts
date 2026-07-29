@@ -429,6 +429,16 @@ function earlyHpGrace2(depth: number): number {
   if (depth >= EARLY_GRACE_END_2) return 1
   return 0.70 + 0.30 * ((depth - 1) / (EARLY_GRACE_END_2 - 1))
 }
+// Early-depth aim-bar grace (Don's Gauntlet) — 2026-07-29. Ease the enemy's OWN
+// aim disruption on the climb to the first Don rise: the Mist Veil fog
+// (aimFogDensity) and the racing target band / needle (zone + aim speed) that
+// the ghost fleet carries. Their signature aim kit still reads, it just doesn't
+// blind you at the shallow end; fades to full by depth 20. Elite AFFIXES and
+// Locker curses are separate sources and stay untouched. 0.70 at depth 1 → 1.0.
+function earlyAimGrace2(depth: number): number {
+  if (depth >= EARLY_GRACE_END_2) return 1
+  return 0.70 + 0.30 * ((depth - 1) / (EARLY_GRACE_END_2 - 1))
+}
 // 2026-07-26 — EARLY-DEPTH HP NERF (v2, deeper). The old (350 + 30·d) intercept
 // made the shallow end a slog: Ch3/4 enemies are tanky by nature, so depths 1-15
 // dragged. Dropped the intercept hard (350 → 170) and raised the slope (30 → 33)
@@ -627,6 +637,17 @@ function scaleToCurve(src: BroadsideEnemy, depth: number, isBoss: boolean, varia
   // shoot a touch straighter. See BroadsideEnemy.accuracy for the dodge math.
   const accuracy = Math.round(18 + depth * 1.4) + (isBoss ? 3 : 0) + src.shipSpeed   // + hull: dodge contest is accuracy-only now
   const out: BroadsideEnemy = { ...src, name: (don ? ghostName : drownedName)(src.name), hpBase: hp, minDmg: Math.max(1, min), maxDmg: Math.max(min + 1, max), accuracy }
+  // Early-depth aim-bar grace (Don's only): pull the enemy's own fog + fast-band
+  // kit back a bit in the 1-20 climb (the speed mults attenuate their EXCESS over
+  // 1, the fog density scales straight down). Fades to nothing by depth 20.
+  if (don) {
+    const ag = earlyAimGrace2(depth)
+    if (ag < 1) {
+      if (out.aimFogDensity) out.aimFogDensity = out.aimFogDensity * ag
+      if (out.aimSpeedMult && out.aimSpeedMult > 1) out.aimSpeedMult = 1 + (out.aimSpeedMult - 1) * ag
+      if (out.zoneSpeedMult && out.zoneSpeedMult > 1) out.zoneSpeedMult = 1 + (out.zoneSpeedMult - 1) * ag
+    }
+  }
   if (isBoss) {
     if (don) {
       // Random G2 bosses (Ruse/Quartermaster/Sal): KEEP their special/ultimate/
