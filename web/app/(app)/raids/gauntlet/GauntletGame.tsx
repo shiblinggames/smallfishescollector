@@ -2418,7 +2418,8 @@ export default function GauntletGame(props: GauntletGameProps) {
         {introOpen && <GauntletIntroModal variant={props.variant} onClose={dismissIntro} firstTime={!props.hasSeenIntro} />}
         {lootMode && <LootModal mode={lootMode} don={isDonG} onClose={() => setLootMode(null)} />}
         {infoCurrency && <CurrencyInfoModal kind={infoCurrency} don={isDonG} onClose={() => setInfoCurrency(null)} />}
-        {synergiesOpen && <SynergiesModal owned={boonTiers} seen={seenConfluences} taken={confluencesTaken} takenConv={convergencesTaken} variant={props.variant ?? 'davy'} onClose={() => setSynergiesOpen(false)} />}
+        {/* Home: no active run, so Codex-only (no "This Run" tab). */}
+        {synergiesOpen && <SynergiesModal owned={boonTiers} seen={seenConfluences} taken={confluencesTaken} takenConv={convergencesTaken} variant={props.variant ?? 'davy'} activeRun={false} onClose={() => setSynergiesOpen(false)} />}
         {recapRun && <DeepestRunModal best={recapRun.hardcore ? props.hcDeepestRun : props.deepestRun} last={recapRun.hardcore ? props.hcLastRun : props.lastRun} hardcore={recapRun.hardcore} don={isDonG} onClose={() => setRecapRun(null)} />}
         {shopSection && <LockerUpgradesModal section={shopSection} variant={props.variant ?? 'davy'} onClose={() => setShopSection(null)} onClaimed={(owned) => { setUpgrades(owned); setBonusSlots(bonusChargeSlots(owned)) }} onToggled={setUpgradesOff} />}
         {descentModals}
@@ -5283,7 +5284,7 @@ function MysteryToken({ size = 32 }: { size?: number }) {
   )
 }
 
-function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant = 'davy', onClose }: { owned: Record<string, number>; seen?: string[]; taken?: string[]; takenConv?: string[]; variant?: GauntletVariant; onClose: () => void }) {
+function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant = 'davy', activeRun = true, onClose }: { owned: Record<string, number>; seen?: string[]; taken?: string[]; takenConv?: string[]; variant?: GauntletVariant; activeRun?: boolean; onClose: () => void }) {
   const GLD = '#f5b94a'   // active
   const SYN = '#b98bff'   // ready (both halves held, not yet drafted)
   const NEED = '#5fa8c7'  // one away (hold one half)
@@ -5344,7 +5345,9 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
   // entries (seen in a past run, or qualifying right now) read in full; the rest
   // are locked silhouettes. Confluence discovery is persisted (gauntlet_confluences_seen);
   // convergences have no store, so they reveal once BOTH their synergies are known.
-  const [view, setView] = useState<'run' | 'codex'>('run')
+  // No active run (opened from the gauntlet home) → there's no "This Run" build
+  // to show, so it's Codex-only.
+  const [view, setView] = useState<'run' | 'codex'>(activeRun ? 'run' : 'codex')
   // Tapped medallion → its detail sheet (a confluence OR convergence id).
   const [openId, setOpenId] = useState<string | null>(null)
   const seenSet = new Set(seen)
@@ -5370,6 +5373,18 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
       ))}
     </span>
   )
+  // The diamonds are a synergy's POWER LEVEL (I–III). Once it's online we show the
+  // filled level + "Lv N"; before that the empty diamonds read as a mystery
+  // rating, so we say the ceiling in plain words instead ("Up to Lv III").
+  const LevelReadout = ({ level, max, color }: { level: number; max: number; color: string }) =>
+    level >= 1 ? (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+        <Pips level={level} color={color} max={max} />
+        <span className="font-karla font-800 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.08em', color, whiteSpace: 'nowrap' }}>Lv {ROMAN[Math.min(level, max)]}</span>
+      </span>
+    ) : (
+      <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.08em', color: '#8a8480', whiteSpace: 'nowrap' }}>Up to Lv {ROMAN[Math.min(max, 3)]}</span>
+    )
 
   const Fuse = () => <span aria-hidden style={{ color: '#7a8e8a', fontSize: '0.72rem' }}>⊕</span>
 
@@ -5394,8 +5409,8 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
         {status === 'need1'
           ? <span className="font-karla font-800 uppercase" style={{ fontSize: '0.48rem', letterSpacing: '0.1em', color: NEED }}>Need 1 more</span>
           : status === 'codex'
-            ? <Pips level={lvl} color={accent} />
-            : <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Pips level={lvl} color={accent} /><span className="font-karla font-800 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.1em', color: accent }}>{status === 'active' ? 'Active' : 'Ready'}</span></span>}
+            ? <LevelReadout level={lvl} max={3} color={accent} />
+            : <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><LevelReadout level={lvl} max={3} color={accent} /><span className="font-karla font-800 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.1em', color: accent }}>{status === 'active' ? 'Active' : 'Ready'}</span></span>}
       </button>
     )
   }
@@ -5405,7 +5420,7 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, padding: '0.75rem 0.5rem 0.65rem', borderRadius: 14, background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.12)' }}>
       <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><MysteryToken /><Fuse /><MysteryToken /></span>
       <span className="font-cinzel font-800" style={{ fontSize: '0.8rem', color: '#7d8794', letterSpacing: '0.12em', minHeight: '1.9rem', display: 'flex', alignItems: 'center' }}>? ? ?</span>
-      <Pips level={0} color="#6b7280" />
+      <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.08em', color: '#6b7280' }}>Undiscovered</span>
     </div>
   )
 
@@ -5427,18 +5442,21 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
           </button>
         </div>
 
-        {/* This Run (personalized tree) vs Codex (the full catalogue). */}
-        <div style={{ display: 'flex', gap: 4, marginTop: 12, padding: 4, background: 'rgba(0,0,0,0.3)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)' }}>
-          {([['run', 'This Run'], ['codex', 'Codex']] as ['run' | 'codex', string][]).map(([v, label]) => {
-            const on = view === v
-            return (
-              <button key={v} onClick={() => setView(v)} className="font-karla font-800 uppercase tracking-[0.08em] tap"
-                style={{ flex: 1, padding: '0.5rem 0', borderRadius: 9, fontSize: '0.62rem', cursor: 'pointer', border: `1px solid ${on ? `${GLD}66` : 'transparent'}`, background: on ? `linear-gradient(180deg, ${GLD}26, ${GLD}0c)` : 'transparent', color: on ? '#f4d79a' : '#8f97a2' }}>
-                {label}
-              </button>
-            )
-          })}
-        </div>
+        {/* This Run (personalized tree) vs Codex (the full catalogue). The tab
+            only appears mid-run — from the home there's no build to show. */}
+        {activeRun && (
+          <div style={{ display: 'flex', gap: 4, marginTop: 12, padding: 4, background: 'rgba(0,0,0,0.3)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)' }}>
+            {([['run', 'This Run'], ['codex', 'Codex']] as ['run' | 'codex', string][]).map(([v, label]) => {
+              const on = view === v
+              return (
+                <button key={v} onClick={() => setView(v)} className="font-karla font-800 uppercase tracking-[0.08em] tap"
+                  style={{ flex: 1, padding: '0.5rem 0', borderRadius: 9, fontSize: '0.62rem', cursor: 'pointer', border: `1px solid ${on ? `${GLD}66` : 'transparent'}`, background: on ? `linear-gradient(180deg, ${GLD}26, ${GLD}0c)` : 'transparent', color: on ? '#f4d79a' : '#8f97a2' }}>
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+        )}
 
         {/* Status legend / count summary — what's shown, at a glance. */}
         {view === 'run' && anyRows && (
@@ -5453,18 +5471,6 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
           </div>
         )}
 
-        {/* How they combine — the two rules that make the recipes legible. */}
-        <div style={{ marginTop: 12, borderRadius: 12, padding: '0.65rem 0.8rem', background: `${GLD}0d`, border: `1px solid ${GLD}30` }}>
-          {[
-            'Hold both halves and the synergy is offered as a draft card — take it instead of a boon.',
-            'Its level is the LOWER of its two halves — deepen the one that lags to level it up.',
-          ].map((line, i) => (
-            <div key={i} style={{ display: 'flex', gap: 7, marginTop: i === 0 ? 0 : 5 }}>
-              <span aria-hidden style={{ color: GLD, fontSize: '0.7rem', lineHeight: 1.5, flexShrink: 0 }}>◆</span>
-              <p className="font-karla" style={{ fontSize: '0.7rem', color: '#c8bfa8', lineHeight: 1.4 }}>{line}</p>
-            </div>
-          ))}
-        </div>
 
         {/* Trace strip — tap a boon you hold to light every synergy it feeds. */}
         {view === 'run' && traceBoons.length > 1 && (
@@ -5613,7 +5619,7 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
             accent = on ? GLD : ready ? SYN : need1 ? NEED : '#9aa7b4'
             maxLvl = oc.levels.length
             name = oc.name; effectStr = confluenceDescAt(oc, Math.max(1, lvl)); detailStr = oc.detail; flavorStr = oc.flavor
-            stateLabel = on ? `Active · ${ROMAN[Math.min(lvl, maxLvl)] || 'I'}` : ready ? 'Ready to draft' : need1 ? 'One boon away' : 'Not held'
+            stateLabel = on ? 'Active' : ready ? 'Ready to draft' : need1 ? 'One boon away' : 'Not held'
             hint = on ? (lvl >= maxLvl ? 'Fully deepened — maxed out' : `Deepen ${parts.filter(p => p.tier === lvl).map(p => p.name).join(' & ')} to reach ${ROMAN[lvl + 1]}`)
               : ready ? 'Both halves held — draft it instead of a boon this round'
               : need1 ? `Draft ${parts.filter(p => p.tier < 1).map(p => p.name).join(' & ')} to unlock it`
@@ -5634,7 +5640,7 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
             accent = on ? KRAKEN : ready ? SYN : need1 ? NEED : '#9aa7b4'
             maxLvl = cv.levels.length
             name = cv.name; effectStr = convergenceDescAt(cv, Math.max(1, lvl)); detailStr = cv.detail; flavorStr = cv.flavor
-            stateLabel = on ? `Active · ${ROMAN[Math.min(lvl, maxLvl)] || 'I'}` : ready ? 'Ready to draft' : need1 ? 'One synergy away' : 'Not online'
+            stateLabel = on ? 'Active' : ready ? 'Ready to draft' : need1 ? 'One synergy away' : 'Not online'
             hint = on ? (lvl >= maxLvl ? 'Fully deepened — maxed out' : 'Deepen either synergy to level it up')
               : ready ? 'Both synergies online — draft it instead of a boon this round'
               : need1 ? `Bring ${parts.filter(p => !p.online).map(p => p.name).join(' & ')} online to unlock it`
@@ -5660,7 +5666,7 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
                 <p className="font-cinzel font-800" style={{ fontSize: '1.35rem', lineHeight: 1.1, color: '#f4efe4', textAlign: 'center' }}>{name}</p>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 5 }}>
                   <span className="font-karla font-800 uppercase tracking-[0.12em]" style={{ fontSize: '0.56rem', color: accent }}>{stateLabel}</span>
-                  <Pips level={lvl} color={accent} max={maxLvl} />
+                  <LevelReadout level={lvl} max={maxLvl} color={accent} />
                 </div>
 
                 {/* What it does, at this level. */}
