@@ -2098,28 +2098,29 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
   zone: 'ancient_deep',
   enemies: {
     finn: {
-      // ONE OPPONENT, SIX PHASES. There is no sequence of mobs in front of him
-      // and no tap-to-continue between rounds: it is a single unbroken fight
-      // that changes character six times. Every phase he leans on a different
-      // stolen giant, and each giant maps to one of the six LEGENDARY crew
-      // classes, so the player is fighting their own toolkit pointed back at
-      // them. He calls them OFF-TURN, the way a player fires a crew ability and
-      // still takes their shot.
+      // ONE OPPONENT, SIX PHASES. No mob rounds in front of him and no
+      // tap-to-continue: a single unbroken fight that changes character six
+      // times, once per stolen giant.
       //
-      //   phase 1  The Long Reach     plesiosaurus  <- Dole,    foresight
-      //   phase 2  Old Armour         dunkleosteus  <- Catfish, abyssal_tide
-      //   phase 3  Wake of the Drowned mosasaurus   <- Mako,    blitz
-      //   phase 4  Still Going        basilosaurus  <- Laz,     vengeance
-      //   phase 5  All That Tonnage   shastasaurus  <- Mira,    requiem
-      //   phase 6  The Borrowed Jaw   megalodon     <- Doby,    leviathan
+      // DELIBERATELY NOT A CHECK BOSS. Don Finleone and the Cartographer are
+      // built on telegraphed moves you CANCEL with the right crew ability. Finn
+      // is the opposite idea and must not borrow that grammar: he simply USES
+      // crew abilities, the way the player does, off-turn and unprompted. There
+      // is nothing to answer and nothing to counter. You just have to out-fight
+      // someone holding your own toolkit. So: no openingCheck, no phase checks.
+      //
+      //   phase 1  From the Wrong Water  plesiosaurus  <- Dole,    foresight
+      //   phase 2  Old Armour            dunkleosteus  <- Catfish, abyssal_tide
+      //   phase 3  Wake of the Drowned   mosasaurus    <- Mako,    blitz
+      //   phase 4  Still Going           basilosaurus  <- Laz,     vengeance
+      //   phase 5  All That Tonnage      shastasaurus  <- Mira,    requiem
+      //   phase 6  The Borrowed Jaw      megalodon     <- Doby,    leviathan
       //
       // Megalodon lands LAST on purpose: it is the player's final catch of the
       // six, so it is also the last thing he throws.
       //
       // HP is EVEN, not a ramp. Each phase revives at a full bar of hpBase, so
-      // no phase is a formality and none is a wall. Six bars of 880 = 5280,
-      // which is where the old six-mob run plus boss (3920) lands once those
-      // fights are folded into him.
+      // no phase is a formality and none is a wall.
       id: 'finn', name: 'Finn', hpBase: 880, minDmg: 30, maxDmg: 50,
       shipSpeed: 11, actionMs: 4000,
       magazineSize: 4, shieldPct: 0.22, chargeBiteChance: 0.36, startCharges: 2,
@@ -2129,25 +2130,15 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
       critChance: 0.15,
       image: '/enemy_finnship.png',
       portrait: '/finn_final.png',
-      // PHASE 1's ability. DOLE: he reads you and slips the next shot.
+      // PHASE 1's ability. DOLE: he reads you, and slips what is coming.
       phaseAbility: {
         kind: 'foresight', name: 'From the Wrong Water',
         line: 'He surfaces the long neck of it in four places at once, and reads your deck off all four.',
         summonImage: '/fish/plesiosaurus.png', summonColor: '#a78bfa',
         everyTurns: 4, turns: 2,
       },
-      // He opens by doing to you exactly what he did to the giants.
-      openingCheck: {
-        id: 'the_first_cast', name: 'The First Cast', chargeTurns: 2,
-        telegraph: 'He puts a line in the water without hurrying, and the water goes tight all the way to your keel.',
-        hint: 'He is fishing YOU. Do not stand in it. Brace the hull, put a shield up, or foul his line before it sets.',
-        responses: ['brace', 'shield', 'snare'],
-        counteredLine: 'Your crew reads the tension and the hull comes off the hook before it sets.',
-        failLine: 'The line goes taut, and for a moment your whole ship is something being landed.',
-        consequence: { kind: 'damagePctMaxHp', value: 0.5 },
-      },
       phases: [
-        // ── PHASE 2 — CATFISH. He patches himself and puts plate up. ─────────
+        // ── PHASE 2 — CATFISH. He patches himself and puts the plate up. ─────
         { revivePct: 1.0, damageMult: 1.08, badge: 'Old Armour',
           pattern: ['special', 'reload', 'fire', 'reload', 'dodge', 'fire', 'reload', 'fire'],
           dialogueLine: 'Plate that outlived its own bones. Do you know how long I waited to wear this?',
@@ -2156,15 +2147,6 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
             line: 'The dunkleosteus plate closes over him, and the holes you put in him close with it.',
             summonImage: '/fish/dunkleosteus.png', summonColor: '#9fb2c8',
             everyTurns: 4, value: 0.14,
-          },
-          check: {
-            id: 'the_drag', name: 'The Drag', chargeTurns: 2,
-            telegraph: 'He leans back, and every line aboard your ship starts paying out at once.',
-            hint: 'He is playing you the way you play a fish: let you run, then take it all back. Foul the line to cut the tension, or hold the deck with a brace.',
-            responses: ['snare', 'brace'],
-            counteredLine: 'Your crew cuts the tension before he can take the slack back.',
-            failLine: 'He takes every inch of it back at once, and your deck goes out from under you.',
-            consequence: { kind: 'status', status: 'slowed', magnitude: 10, turns: 3, dmgPct: 0.3 },
           } },
         // ── PHASE 3 — MAKO. The frenzy. Many small teeth. ────────────────────
         { revivePct: 1.0, damageMult: 1.16, badge: 'Wake of the Drowned',
@@ -2175,53 +2157,26 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
             line: 'It runs the whole length of your hull without surfacing, and the sea leans after it.',
             summonImage: '/fish/mosasaurus.png', summonColor: '#67e8f9',
             everyTurns: 3, shots: 4, value: 0.3,
-          },
-          check: {
-            id: 'the_borrowed_jaw, name', name: 'The Cold Water', chargeTurns: 2,
-            telegraph: 'The water alongside goes cold enough to see, and something long is keeping pace under it.',
-            hint: 'It runs your flank before it turns in. Foul its line, brace for the turn, or put a shield on that side.',
-            responses: ['snare', 'brace', 'shield'],
-            counteredLine: 'Your crew reads the cold and the flank is closed before it turns in.',
-            failLine: 'It comes back down the line it left, faster than it went out.',
-            consequence: { kind: 'damagePctMaxHp', value: 0.55 },
           } },
         // ── PHASE 4 — LAZ. He simply refuses to go down. ─────────────────────
         { revivePct: 1.0, damageMult: 1.24, badge: 'Still Going',
           pattern: ['special', 'fire', 'reload', 'volley', 'reload', 'fire', 'ultimate', 'dodge'],
-          dialogueLine: 'You have put more iron through me than most captains see in a life. Look at me.',
+          dialogueLine: 'You have put more iron through me than most captains see in a lifetime. Look at me.',
           ability: {
             kind: 'vengeance', name: 'Still Going',
             line: 'You put a broadside clean through him and his heading does not change by a degree.',
             summonImage: '/fish/basilosaurus.png', summonColor: '#94a3b8',
-            everyTurns: 5, turns: 4,
-          },
-          check: {
-            id: 'the_long_patience', name: 'The Long Patience', chargeTurns: 3,
-            telegraph: 'He stops working the guns entirely and simply keeps coming, and the water in front of him starts to pile.',
-            hint: 'Nothing you shoot is stopping this one. Take the hit properly: brace the hull or heal through it.',
-            responses: ['brace', 'heal'],
-            counteredLine: 'Your crew sets the deck and takes the whole weight of it standing.',
-            failLine: 'The pile of water arrives first, and the rest of him arrives through it.',
-            consequence: { kind: 'status', status: 'feeble', magnitude: 0.35, turns: 4, dmgPct: 0.35 },
+            everyTurns: 5, turns: 3,
           } },
         // ── PHASE 5 — MIRA. He marks you, and everything lands harder. ───────
         { revivePct: 1.0, damageMult: 1.32, badge: 'All That Tonnage',
           pattern: ['ultimate', 'fire', 'volley', 'special', 'reload', 'fire', 'volley', 'reload'],
-          dialogueLine: 'I have been reading you since your first cast. There is nothing left of you I have not already written down.',
+          dialogueLine: 'I have been reading you since your first cast. There is nothing left of you I have not written down.',
           ability: {
             kind: 'requiem', name: 'All That Tonnage',
             line: 'The largest thing the sea ever grew settles over your water, and your deck cannot find level again.',
             summonImage: '/fish/shastasaurus.png', summonColor: '#7dd3fc',
             everyTurns: 4, turns: 3, value: 0.3,
-          },
-          check: {
-            id: 'displacement', name: 'Displacement', chargeTurns: 2,
-            telegraph: 'It does not attack. It occupies the water, and every wave you were riding stops being there.',
-            hint: 'There is nothing to shoot. Get the hull ready: brace it, shield it, or pull the ship out of the trough.',
-            responses: ['brace', 'shield', 'snare'],
-            counteredLine: 'Your crew rides the trough out and the deck comes back level.',
-            failLine: 'The sea goes out from under the keel and drops the whole ship into the hollow.',
-            consequence: { kind: 'damagePctMaxHp', value: 0.6 },
           } },
         // ── PHASE 6 — DOBY. The jaw. The last thing he has, and the biggest. ─
         { revivePct: 1.0, damageMult: 1.42, badge: 'The Borrowed Jaw',
@@ -2232,15 +2187,6 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
             line: 'The jaw closes on nothing at all, and the water it moves still breaks your deck open.',
             summonImage: '/fish/megalodon.png', summonColor: '#f87171',
             everyTurns: 3, value: 1.0,
-          },
-          check: {
-            id: 'the_last_cast', name: 'The Last Cast', chargeTurns: 2,
-            telegraph: 'He puts one more line in the water, and this one is not for your ship. It is for you.',
-            hint: 'Same opening he used, with everything he has behind it. Brace, shield, foul the line, or put the crew back on their feet first.',
-            responses: ['brace', 'shield', 'snare', 'heal'],
-            counteredLine: 'Your crew takes the line off you before it can set, one last time.',
-            failLine: 'It sets, and for a long moment you are the thing on the end of it.',
-            consequence: { kind: 'damagePctMaxHp', value: 0.85 },
           } },
       ],
     },
