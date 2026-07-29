@@ -2796,6 +2796,8 @@ export default function GauntletGame(props: GauntletGameProps) {
     return (
       <>
         <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
+        {/* Dark scrim so the stall + prices read over the busy abyss. */}
+        <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: 'linear-gradient(180deg, rgba(4,10,8,0.52) 0%, rgba(4,9,8,0.7) 52%, rgba(3,7,6,0.82) 100%)' }} />
         <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: [0.35, 0.6, 0.35] }} transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
           style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 130% 90% at 50% 0%, ${MC}1c 0%, ${MC}09 44%, transparent 72%)` }} />
         <div style={{
@@ -2818,9 +2820,17 @@ export default function GauntletGame(props: GauntletGameProps) {
             className="font-cinzel font-800" style={{ fontSize: '1.85rem', color: '#e7f6ee', lineHeight: 1.06, marginTop: 4, textShadow: `0 0 24px ${MC}44` }}>
             The Fence
           </motion.h1>
-          <p className="font-karla" style={{ fontSize: '0.88rem', fontStyle: 'italic', color: 'rgba(206,232,220,0.68)', lineHeight: 1.5, marginTop: 8, padding: '0 0.4rem' }}>
-            One of the Don&apos;s people, waiting in the dark with a crate and a grin. His goods are real. So is his price, in Fathoms.
+          <p className="font-karla" style={{ fontSize: '0.9rem', fontStyle: 'italic', color: 'rgba(214,236,226,0.9)', lineHeight: 1.5, marginTop: 8, padding: '0 0.4rem', textShadow: '0 1px 8px rgba(0,0,0,0.7)' }}>
+            One of the Don&apos;s people, waiting in the dark with a crate and a grin. His goods are real. So is his price, paid in Fathoms.
           </p>
+
+          {/* Your spendable Fathoms, front and centre — so the price on each
+              crate reads against what you can actually pay. */}
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 13, padding: '0.42rem 0.95rem', borderRadius: 999, background: `${MC}18`, border: `1px solid ${MC}5c`, boxShadow: `0 0 16px ${MC}22` }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={MC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="5" r="2" /><path d="M12 7v13" /><path d="M5 12H3a9 9 0 0 0 18 0h-2" /><path d="M8 10h8" /></svg>
+            <span className="font-cinzel font-800" style={{ fontSize: '1.1rem', color: '#eafff5' }}>{fmt(fathomsNow)}</span>
+            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.56rem', color: `${MC}dd` }}>Fathoms to spend</span>
+          </div>
 
           <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
             {merchantStock.map((id, i) => {
@@ -2837,22 +2847,28 @@ export default function GauntletGame(props: GauntletGameProps) {
                   style={{
                     position: 'relative', overflow: 'hidden', width: '100%', textAlign: 'left',
                     padding: '0.85rem 1rem 0.85rem 1.1rem', borderRadius: 16,
-                    background: sold ? 'rgba(255,255,255,0.03)' : `linear-gradient(180deg, ${item.color}24, rgba(7,12,19,0.9) 62%)`,
-                    border: `1.5px solid ${sold ? 'rgba(255,255,255,0.12)' : `${item.color}${afford ? '88' : '44'}`}`,
-                    color: '#eaf5f0', cursor: blocked ? 'default' : 'pointer', opacity: sold ? 0.5 : afford ? 1 : 0.72,
+                    background: sold ? 'rgba(255,255,255,0.03)' : `linear-gradient(180deg, ${item.color}22 0%, rgba(6,11,16,0.95) 58%)`,
+                    border: `1.5px solid ${sold ? 'rgba(255,255,255,0.12)' : `${item.color}${afford ? '9a' : '4a'}`}`,
+                    color: '#eaf5f0', cursor: blocked ? 'default' : 'pointer', opacity: sold ? 0.5 : afford ? 1 : 0.8,
+                    boxShadow: sold ? 'none' : '0 4px 14px rgba(0,0,0,0.4)',
                   }}>
                   <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 5, background: `linear-gradient(180deg, ${item.color}, ${item.color}22)` }} />
                   <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                    <p className="font-cinzel font-800" style={{ flex: 1, minWidth: 0, fontSize: '1.04rem', color: sold ? '#9aa39d' : item.color }}>{item.name}</p>
+                    <p className="font-cinzel font-800" style={{ flex: 1, minWidth: 0, fontSize: '1.06rem', color: sold ? '#9aa39d' : '#eafff5' }}>{item.name}</p>
                     {sold ? (
                       <span className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.12em', color: '#8a938d', background: 'rgba(255,255,255,0.08)', borderRadius: 999, padding: '0.22rem 0.6rem' }}>Sold</span>
                     ) : busy ? (
                       <span className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.12em', color: item.color }}>…</span>
                     ) : (
-                      <span className="font-cinzel font-800" style={{ flexShrink: 0, fontSize: '1.02rem', color: afford ? '#f5d98a' : '#e0888a' }}>{item.price} <span style={{ fontSize: '0.66rem' }}>F</span></span>
+                      <span style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.2rem 0.55rem', borderRadius: 999, background: afford ? 'rgba(240,192,64,0.12)' : 'rgba(224,136,138,0.12)', border: `1px solid ${afford ? 'rgba(240,192,64,0.4)' : 'rgba(224,136,138,0.4)'}` }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={afford ? '#f5d98a' : '#e0888a'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="5" r="2" /><path d="M12 7v13" /><path d="M5 12H3a9 9 0 0 0 18 0h-2" /><path d="M8 10h8" /></svg>
+                        <span className="font-cinzel font-800" style={{ fontSize: '1rem', color: afford ? '#f5d98a' : '#e0888a' }}>{item.price}</span>
+                        <span className="font-karla font-700 uppercase" style={{ fontSize: '0.48rem', letterSpacing: '0.08em', color: afford ? '#c9b06a' : '#b57779' }}>Fathoms</span>
+                      </span>
                     )}
                   </div>
-                  {!sold && <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(214,230,222,0.66)', lineHeight: 1.4, marginTop: 5 }}>{item.blurb}</p>}
+                  {!sold && <p className="font-karla" style={{ fontSize: '0.8rem', color: 'rgba(220,236,228,0.84)', lineHeight: 1.42, marginTop: 6 }}>{item.blurb}</p>}
+                  {!sold && !afford && <p className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#e0888a', marginTop: 5 }}>{item.price - fathomsNow} more Fathoms needed</p>}
                 </motion.button>
               )
             })}
