@@ -3063,6 +3063,11 @@ export default function GauntletGame(props: GauntletGameProps) {
     return (
       <>
         <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
+        {/* Calm the busy, moving abyss behind the breather. The bank-or-dive
+            decision + the smaller ledger text were washing out against the
+            animated backdrop; this flat dark scrim gives every line a steady,
+            readable ground. */}
+        <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: 'linear-gradient(180deg, rgba(4,8,14,0.52) 0%, rgba(4,8,14,0.7) 52%, rgba(3,6,12,0.82) 100%)' }} />
         {/* Synergy Unlocked — a one-shot fanfare overlay the moment a confluence
             comes online (the boon you just claimed completed a pair). */}
         <AnimatePresence>
@@ -3124,10 +3129,10 @@ export default function GauntletGame(props: GauntletGameProps) {
           {/* Depth + a line of voice. The "Catch Your Breath" eyebrow is gone: the
               screen IS the breather, and a label announcing that spent the most
               valuable line on the page saying nothing. */}
-          <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#ece5d7', marginTop: 14, lineHeight: 1.1 }}>
+          <p className="font-cinzel font-700" style={{ fontSize: '1.22rem', color: '#f4eee2', marginTop: 14, lineHeight: 1.1, textShadow: '0 2px 10px rgba(0,0,0,0.8)' }}>
             Depth {combatDepth} · {band.name}
           </p>
-          <p className="font-karla" style={{ fontSize: '0.82rem', fontStyle: 'italic', color: 'rgba(150,205,194,0.75)', lineHeight: 1.4, marginTop: 7, maxWidth: 340, marginInline: 'auto' }}>
+          <p className="font-karla" style={{ fontSize: '0.86rem', fontStyle: 'italic', color: 'rgba(184,222,213,0.92)', lineHeight: 1.4, marginTop: 7, maxWidth: 340, marginInline: 'auto', textShadow: '0 1px 8px rgba(0,0,0,0.75)' }}>
             &ldquo;{breathLine}&rdquo;
           </p>
 
@@ -3414,14 +3419,14 @@ export default function GauntletGame(props: GauntletGameProps) {
               const bankBarred = termFx.cashOutOnlyAfterBoss && !rollStateRef.current.prevWasBoss
               const diveBtn = (
                 <button onClick={pushOn} disabled={resolving} className="tap"
-                  style={{ width: '100%', height: '100%', minHeight: 92, padding: '0.75rem 0.6rem', borderRadius: 14,
-                    background: `linear-gradient(180deg, ${AC}26, ${AC}0c)`, border: `1px solid ${AC}88`,
+                  style={{ width: '100%', height: '100%', minHeight: 96, padding: '0.8rem 0.6rem', borderRadius: 14,
+                    background: `linear-gradient(180deg, ${AC}33 0%, rgba(6,10,16,0.9) 74%)`, border: `1px solid ${AC}a6`,
                     cursor: resolving ? 'wait' : 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={AC} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 5v14" /><path d="M19 12l-7 7-7-7" /></svg>
-                  <span className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ fontSize: '0.92rem', color: AC, lineHeight: 1.1 }}>Dive Deeper</span>
-                  <span className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#8fb8b0' }}>To depth {nextDepth}</span>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={AC} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 5v14" /><path d="M19 12l-7 7-7-7" /></svg>
+                  <span className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ fontSize: '1.02rem', color: '#d7fbf4', lineHeight: 1.1, textShadow: `0 0 12px ${AC}66` }}>Dive Deeper</span>
+                  <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#bfe4dc' }}>To depth {nextDepth}</span>
                   {previewDoubloons > 0 && (
-                    <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#9a857a', lineHeight: 1.25 }}>
+                    <span className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#d3a595', lineHeight: 1.25 }}>
                       {fmt(previewDoubloons)} ⟡ at risk
                     </span>
                   )}
@@ -3442,17 +3447,17 @@ export default function GauntletGame(props: GauntletGameProps) {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, alignItems: 'stretch' }}>
                   {/* SURFACE. Gold, and it points UP. */}
                   <button onClick={() => setConfirmClaim(true)} disabled={resolving} className="tap"
-                    style={{ width: '100%', minHeight: 92, padding: '0.75rem 0.6rem', borderRadius: 14,
-                      background: offer ? 'linear-gradient(180deg, rgba(201,167,255,0.30), rgba(140,90,220,0.10))' : `linear-gradient(180deg, ${GOLD}30, ${GOLD}0e)`,
-                      border: offer ? '1px solid rgba(201,167,255,0.75)' : `1px solid ${GOLD}88`,
+                    style={{ width: '100%', minHeight: 96, padding: '0.8rem 0.6rem', borderRadius: 14,
+                      background: offer ? 'linear-gradient(180deg, rgba(201,167,255,0.36) 0%, rgba(10,8,18,0.9) 74%)' : `linear-gradient(180deg, ${GOLD}38 0%, rgba(14,11,6,0.9) 74%)`,
+                      border: offer ? '1px solid rgba(201,167,255,0.9)' : `1px solid ${GOLD}a6`,
                       cursor: resolving ? 'wait' : 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
-                      boxShadow: offer ? '0 0 22px rgba(140,90,220,0.28)' : `0 0 20px ${GOLD}1e` }}>
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={offer ? '#c9a7ff' : GOLD} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 19V5" /><path d="M5 12l7-7 7 7" /></svg>
-                    <span className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ fontSize: '0.92rem', color: offer ? '#efe4ff' : '#f5d98a', lineHeight: 1.1 }}>
+                      boxShadow: offer ? '0 0 22px rgba(140,90,220,0.28)' : `0 0 20px ${GOLD}22` }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={offer ? '#c9a7ff' : GOLD} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 19V5" /><path d="M5 12l7-7 7 7" /></svg>
+                    <span className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ fontSize: '1.02rem', color: offer ? '#f2eaff' : '#f7dc8f', lineHeight: 1.1, textShadow: offer ? '0 0 12px rgba(201,167,255,0.5)' : `0 0 12px ${GOLD}55` }}>
                       {resolving ? '…' : offer ? 'Take the Deal' : 'Claim & Leave'}
                     </span>
-                    <span className="font-karla font-700" style={{ fontSize: '0.68rem', color: offer ? '#c9a7ff' : GOLD }}>{fmt(dealDoubloons)} ⟡</span>
-                    <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#9a948a', lineHeight: 1.25 }}>Surface with it</span>
+                    <span className="font-karla font-700" style={{ fontSize: '0.74rem', color: offer ? '#d8c2ff' : '#ffd98a' }}>{fmt(dealDoubloons)} ⟡</span>
+                    <span className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#c2bcaa', lineHeight: 1.25 }}>Surface with it</span>
                   </button>
                   {diveBtn}
                 </div>
