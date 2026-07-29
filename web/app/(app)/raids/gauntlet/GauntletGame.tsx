@@ -5229,7 +5229,7 @@ function BoonToken({ boonId, tier = 0, held, full, size = 32 }: { boonId: string
       <span style={{ position: 'relative', flexShrink: 0, width: size, height: size, display: 'grid', placeItems: 'center' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={b.image} alt="" loading="lazy" decoding="async"
-          style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: lit ? 1 : 0.5, filter: lit ? 'drop-shadow(0 1px 3px rgba(0,0,0,0.5))' : 'grayscale(0.85) drop-shadow(0 1px 2px rgba(0,0,0,0.4))' }} />
+          style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: lit ? 1 : 0.5, filter: lit ? 'none' : 'grayscale(0.85)' }} />
         {tierPip}
       </span>
     )
@@ -5255,7 +5255,7 @@ function MiniCrest({ size = 32, color, dim, image }: { size?: number; color: str
       <span style={{ position: 'relative', flexShrink: 0, width: size, height: size, display: 'grid', placeItems: 'center' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={image} alt="" loading="lazy" decoding="async"
-          style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: dim ? 0.5 : 1, filter: dim ? 'grayscale(0.85) drop-shadow(0 1px 2px rgba(0,0,0,0.4))' : 'drop-shadow(0 1px 3px rgba(0,0,0,0.5))' }} />
+          style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: dim ? 0.5 : 1, filter: dim ? 'grayscale(0.85)' : 'none' }} />
       </span>
     )
   }
@@ -5403,7 +5403,10 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
 
   return (
     <ModalScrim zIndex={1300} onClose={onClose}>
-      <motion.div initial={{ opacity: 0, y: 16, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 24 }}
+      {/* Open with opacity + a small translate only — no scale. Scaling this
+          card re-rasterizes its whole (art-heavy) subtree every frame, which
+          was the open-stutter. */}
+      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
         onClick={e => e.stopPropagation()}
         style={{ width: '100%', maxWidth: 440, maxHeight: '86vh', overflowY: 'auto', borderRadius: 18, background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${GLD}3a`, boxShadow: `0 0 44px ${GLD}1f, 0 18px 50px rgba(0,0,0,0.6)`, padding: '1.3rem 1.15rem 1.1rem' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
