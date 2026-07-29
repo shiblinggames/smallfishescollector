@@ -131,6 +131,10 @@ export interface BossPhase {
   check?: BossMechanicCheck
   /** The one crew-style ability this phase owns (see BossAbility). Off-turn. */
   ability?: BossAbility
+  /** Backdrop for this phase. When set, the battle stage cross-fades to it on
+   *  the transition, so the sea escalates with him instead of one backdrop
+   *  holding for the whole fight. Falls back to the raid-wide zone art. */
+  bgImage?: string
   /** AEGIS (Sal Brackwater, phase 3): the phase opens behind a wall that drinks
    *  EVERY shot whole (zero damage) until it breaks. A player Mega shatters
    *  it instantly (the intended discovery. Hints stay oblique); without one
@@ -232,6 +236,8 @@ export interface BroadsideEnemy {
   /** PHASE 1's crew-style ability (BossPhase.ability covers phases 2+, since
    *  the phases array starts at phase 2). Off-turn, same as those. */
   phaseAbility?: BossAbility
+  /** PHASE 1's backdrop, same reasoning as phaseAbility. */
+  phaseBgImage?: string
   /** Raid-8 ultimate, unleashed when the pattern hits an 'ultimate' slot AT A
    *  FULL MAGAZINE (short of full it degrades to reload and re-attempts). The
    *  full pips glow as the tell. The enemy-side mirror of the player's Mega. */
@@ -2135,6 +2141,7 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
       image: '/enemy_finnship.png',
       portrait: '/finn_final.png',
       // PHASE 1's ability. DOLE: he reads you, and slips what is coming.
+      phaseBgImage: '/finn_bg1.jpg',
       phaseAbility: {
         kind: 'foresight', name: 'From the Wrong Water',
         summonImage: '/fish/plesiosaurus.png', summonColor: '#a78bfa',
@@ -2143,6 +2150,7 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
       phases: [
         // ── PHASE 2 — CATFISH. He patches himself and puts the plate up. ─────
         { revivePct: 1.0, damageMult: 1.08, badge: 'Old Armour',
+          bgImage: '/finn_bg2.jpg',
           pattern: ['reload', 'fire', 'reload', 'fire', 'reload', 'fire', 'reload', 'fire'],
           dialogueLine: 'Plate that outlived its own bones. Do you know how long I waited to wear this?',
           ability: {
@@ -2152,6 +2160,7 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
           } },
         // ── PHASE 3 — MAKO. The frenzy. Many small teeth. ────────────────────
         { revivePct: 1.0, damageMult: 1.16, badge: 'Wake of the Drowned',
+          bgImage: '/finn_bg3.jpg',
           pattern: ['fire', 'reload', 'reload', 'fire', 'reload', 'fire', 'reload', 'fire'],
           dialogueLine: 'You have never once been fast enough. Let me show you what fast is.',
           ability: {
@@ -2161,6 +2170,7 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
           } },
         // ── PHASE 4 — LAZ. He simply refuses to go down. ─────────────────────
         { revivePct: 1.0, damageMult: 1.24, badge: 'Still Going',
+          bgImage: '/finn_bg4.jpg',
           pattern: ['fire', 'reload', 'fire', 'reload', 'reload', 'reload', 'volley', 'reload', 'fire', 'reload', 'reload', 'fire'],
           dialogueLine: 'You have put more iron through me than most captains see in a lifetime. Look at me.',
           ability: {
@@ -2170,6 +2180,7 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
           } },
         // ── PHASE 5 — MIRA. He marks you, and everything lands harder. ───────
         { revivePct: 1.0, damageMult: 1.32, badge: 'All That Tonnage',
+          bgImage: '/finn_bg5.jpg',
           pattern: ['fire', 'reload', 'fire', 'reload', 'fire', 'reload', 'reload', 'reload', 'volley', 'reload', 'reload', 'fire'],
           dialogueLine: 'I have been reading you since your first cast. There is nothing left of you I have not written down.',
           ability: {
@@ -2179,6 +2190,7 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
           } },
         // ── PHASE 6 — DOBY. The jaw. The last thing he has, and the biggest. ─
         { revivePct: 1.0, damageMult: 1.42, badge: 'The Borrowed Jaw',
+          bgImage: '/finn_bg6.jpg',
           pattern: ['fire', 'reload', 'fire', 'reload', 'reload', 'reload', 'ultimate', 'reload', 'fire', 'reload', 'fire', 'reload', 'reload', 'reload', 'fire'],
           dialogueLine: 'One last ride, captain. You landed this one yourself. Let us see you do it twice.',
           ability: {

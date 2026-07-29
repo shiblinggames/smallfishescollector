@@ -1563,6 +1563,15 @@ export default function RaidCombat({
   // classic phase2 boss just yields [] or [phase2], so all existing raids behave
   // exactly as before.
   const phaseList = useMemo(() => enemy.phases ?? (enemy.phase2 ? [enemy.phase2] : []), [enemy.phases, enemy.phase2])
+  // PER-PHASE BACKDROP. A boss whose sea never changes across six phases
+  // reads as one long fight; swapping the backdrop is what makes a transition
+  // feel like the ground moving. Derived from enemyPhase STATE (not the ref)
+  // so the swap actually re-renders, and it falls straight back to the
+  // raid-wide zone art for every boss that does not author one.
+  const phaseBg = enemyPhase >= 2
+    ? (phaseList[enemyPhase - 2]?.bgImage ?? enemy.phaseBgImage)
+    : enemy.phaseBgImage
+  const liveBg = phaseBg ?? zoneBg
   // ── The Last Wall (aegis — Sal Brackwater, phase 3) ──────────────────────────────
   // A phase can open behind a wall that drinks EVERY player blow whole. A Mega
   // shatters it outright (the discovery the fight wants the player to make);
@@ -5880,11 +5889,11 @@ export default function RaidCombat({
           the CONTAINER so it's the single background behind the ships AND the
           control deck, not a boxed layer inside the stage. Skipped when the caller
           owns a full-screen backdrop (raids paint the zone photo screen-wide). */}
-      {!transparentBackdrop && zoneBg && (
+      {!transparentBackdrop && liveBg && (
         <>
           <div aria-hidden style={{
             position: 'absolute', inset: 0, zIndex: 0,
-            backgroundImage: `url(${zoneBg})`,
+            backgroundImage: `url(${liveBg})`,
             backgroundSize: 'cover', backgroundPosition: '50% 8%',
             filter: zoneFilter, pointerEvents: 'none',
           }} />
@@ -5941,7 +5950,7 @@ export default function RaidCombat({
             dusk as default fall-through. Skipped entirely when a zone
             image is set — that raid uses the fishing backdrop instead. */}
 
-        {!transparentBackdrop && !zoneBg && (atmosphere === 'fog' ? (
+        {!transparentBackdrop && !liveBg && (atmosphere === 'fog' ? (
           <>
             {/* Sun behind the Sounding Fog — barely a disc, just a cool
                 pale glow where the sun should be. No pulse — the fog
@@ -9638,6 +9647,10 @@ function ShipStatusAura({ burning, frozen, paused }: { burning: boolean; frozen:
         @keyframes rc-heat     { 0%,100% { opacity: 0.16; } 50% { opacity: 0.34; } }
         /* Ice: a single slow glint sliding across the frozen shell. The shell
            itself does NOT pulse — stillness is the whole point. */
+        /* Phase backdrop swap: the new sea fades up over the old one. Slow
+           enough to feel like weather turning, not a cut. */
+        @keyframes rc-bg-in { from { opacity: 0 } to { opacity: 1 } }
+        .rc-bg-fade { animation: rc-bg-in 1.1s ease-out both; }
         @keyframes rc-ice-glint{ 0% { transform: translateX(-130%) skewX(-18deg); opacity: 0; } 18% { opacity: 0.75; } 52% { opacity: 0.75; } 100% { transform: translateX(190%) skewX(-18deg); opacity: 0; } }
       `}</style>
 
