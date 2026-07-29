@@ -357,13 +357,13 @@ function AncientHarvestInsert({ accent, reduced }: { accent: string; reduced?: b
 
 /** Finn's TRUE form, the moment the dock-hand costume comes off.
  *
- *  ART SLOT: drop the piece at `/finn_sinister.png` in web/public and it is
- *  live, no code change. Until then this gracefully falls back to his own
- *  sprite pushed dark and cold, so the beat still plays rather than rendering a
- *  hole. Swap FINN_SINISTER_ART if the filename differs, and if the reveal ends
- *  up being a multi-stage transformation the array below is the place to grow
- *  it (cross-fade the stages on the same timeline). */
-const FINN_SINISTER_ART = '/finn_sinister.png'
+ *  This is the bespoke art: crowned, plated, twin-axed, still wearing that
+ *  same grin. It stands in deliberate contrast to the plain dock-hand sprite
+ *  the scene opens on, which is why the reveal lands. The fallback below stays
+ *  wired in case the file ever goes missing, so the beat plays rather than
+ *  rendering a hole. If the transformation ever becomes multi-stage, this is
+ *  the place to grow it (cross-fade the stages on the same timeline). */
+const FINN_SINISTER_ART = '/finn_final.png'
 
 function FinnSinisterInsert({ accent, reduced }: { accent: string; reduced?: boolean }) {
   const fallback = FINN_PORTRAIT

@@ -38,6 +38,11 @@ const GUIDE = {
   // of dead sky above his head are cut, so he frames like the crew's busts
   // instead of sitting tiny in a mostly-empty box.
   finn: { speaker: 'Finn', portrait: '/finn_portrait.png' },
+  // AFTER the transformation. Same name on the plate, because he is still Finn
+  // and that is the horror of it, but the face is the thing that stood up. Using
+  // the dock-hand portrait for his closing lines would have quietly undone the
+  // beat that just played. Head-crop of the full piece, framed like the busts.
+  finnFinal: { speaker: 'Finn', portrait: '/finn_final_portrait.png' },
 } as const
 
 // A muster plays as a cutscene, not a static checklist: the crew read the
@@ -2667,9 +2672,9 @@ export const RAID_MAP: RaidNode[] = [
       { ...GUIDE.mira, text: "All this time we thought we had wiped the Finndicate off the sea. Every captain, every cache, every ledger. It was him. It was only ever him." },
       { ...GUIDE.laz, text: "I have been drowned, captain. I know what the deep feels like. It is standing in front of us." },
       { ...GUIDE.doby, text: "I have swum this sea longer than any of you have drawn breath, and I have never felt anything like that. There is nothing left in this ocean that can close this." },
-      { ...GUIDE.finn, text: "Six keys, and the door is open, and I am already through it. You did that. Remember that you did that." },
-      { ...GUIDE.finn, text: "You'll come after me. You have never once done the sensible thing, and I built all of this on it." },
-      { ...GUIDE.finn, text: "One last ride, then. You and me and the deep. You'll be on time. You always are." },
+      { ...GUIDE.finnFinal, text: "Six keys, and the door is open, and I am already through it. You did that. Remember that you did that." },
+      { ...GUIDE.finnFinal, text: "You'll come after me. You have never once done the sensible thing, and I built all of this on it." },
+      { ...GUIDE.finnFinal, text: "One last ride, then. You and me and the deep. You'll be on time. You always are." },
       { text: 'The dark holds where the morning was. Six grey shapes turn slow circles on the water.', pause: 600 },
       { text: 'You came out here for the last name on the board. You have had it since the day you started.', pause: 700 },
     ],

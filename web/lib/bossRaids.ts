@@ -2131,8 +2131,11 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
       ultimate: { name: 'The Long Line', mult: 3.0, line: 'All that patience, paid out at once.' },
       pattern: ['special', 'fire', 'reload', 'reload', 'ultimate', 'dodge', 'fire', 'reload'],
       critChance: 0.17,
-      image: '/finn_portrait.png',
-      portrait: '/finn_portrait.png',
+      // You fight the thing he TURNED INTO, not the dock hand he was pretending
+      // to be. Same art as the transformation insert, so the cutscene hands off
+      // to the fight without the subject changing.
+      image: '/finn_final.png',
+      portrait: '/finn_final.png',
       // He opens by doing to you exactly what he did to the giants.
       openingCheck: {
         id: 'the_first_cast', name: 'The First Cast', chargeTurns: 2,
