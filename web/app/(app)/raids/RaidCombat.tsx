@@ -468,6 +468,9 @@ export interface RaidCombatProps {
    *  Omitted outside the Gauntlet → the boons simply never appear. */
   runKills?: number
   runDepth?: number
+  /** Don's jobs cleared this run + the bonus each paid — surfaced in the battle
+   *  profile (Gauntlet only; omitted elsewhere). */
+  contractsWon?: { name: string; reward: string }[]
   /** Fires with each damage value the player lands, so the parent can track
    *  the biggest hit of the run (career stat). */
   onPlayerHit?: (dmg: number) => void
@@ -585,6 +588,7 @@ export default function RaidCombat({
   onDamageTaken, onShotResolved, onNoShotKill, onContractFacts,
   initialCharges = 0,
   runKills = 0, runDepth = 0,
+  contractsWon = [],
   anchorSaveAvailable = false, onAnchorSave,
   raidMods, riskyFlee = false, fleeSignal, fleeNav,
   tideEffects = [],
@@ -7234,6 +7238,7 @@ export default function RaidCombat({
             megaCost={effMegaCost}
             tideEffects={tideEffects}
             effectLabels={runDepth > 0 ? { good: 'Boons', bad: 'Curses' } : { good: 'Buffs', bad: 'Penalties' }}
+            contractsWon={contractsWon}
             conditions={[
               ...statusConditions(playerStatuses),
               ...(playerBurning ? [{ key: 'burn', name: 'Ablaze', color: BURN_COLOR, turns: playerBurnRef.current.turns, desc: `Your ship is on fire — it loses ${playerBurnRef.current.dmg} HP at the end of each of your turns. Any crew heal douses the flames.` }] : []),
@@ -7380,6 +7385,7 @@ function PlayerStatsPopup({
   megaAugment = null, megaCost = MEGA_CHARGE_COST,
   tideEffects = [],
   effectLabels = { good: 'Buffs', bad: 'Penalties' },
+  contractsWon = [],
   conditions = [],
   onClose,
 }: {
@@ -7411,6 +7417,8 @@ function PlayerStatsPopup({
   /** Headings for the good/bad run-effect groups — "Boons"/"Curses" in the
    *  Gauntlet, "Buffs"/"Penalties" for raid Tides. */
   effectLabels?: { good: string; bad: string }
+  /** Don's jobs cleared this run + the bonus each paid (Gauntlet only). */
+  contractsWon?: { name: string; reward: string }[]
   /** Active statuses + bespoke effects (burn/freeze) on the player right now,
    *  with full descriptions — the popup-side twin of the HP-bar chip row. */
   conditions?: ConditionItem[]
@@ -7697,6 +7705,21 @@ function PlayerStatsPopup({
           <div style={{ marginTop: 18, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', gap: 12 }}>
             {effectGroup(buffs.length > 1 ? `${effectLabels.good} · ${buffs.length}` : effectLabels.good, buffs, '#5eead4')}
             {effectGroup(penalties.length > 1 ? `${effectLabels.bad} · ${penalties.length}` : effectLabels.bad, penalties, '#f08a8a')}
+          </div>
+        )}
+
+        {/* ── Don's Jobs cleared this run + the bonus each paid. ── */}
+        {contractsWon.length > 0 && (
+          <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+            <p className="font-karla font-800 uppercase tracking-[0.16em]" style={{ fontSize: '0.55rem', color: '#5fd39a', marginBottom: 8 }}>Don&apos;s Jobs Cleared · {contractsWon.length}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {contractsWon.map((c, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, padding: '0.42rem 0.62rem', borderRadius: 9, background: 'rgba(63,191,130,0.08)', border: '1px solid rgba(63,191,130,0.28)' }}>
+                  <span className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#e6e1d6' }}>{c.name}</span>
+                  <span className="font-karla font-700" style={{ flexShrink: 0, fontSize: '0.74rem', color: '#8ff0bd' }}>▲ {c.reward}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </motion.div>

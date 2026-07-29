@@ -513,6 +513,11 @@ export default function GauntletGame(props: GauntletGameProps) {
   const contractFactsRef = useRef<ContractFightFacts | null>(null)
   // The resolved job (win/loss) held for the result beat.
   const [contractResult, setContractResult] = useState<{ offer: ContractOffer; cleared: boolean } | null>(null)
+  // Jobs cleared this run + the bonus each paid — shown on the battle profile
+  // and the end-of-run recap. Ref is the snapshot/combat source of truth; state
+  // mirror drives the profile render.
+  const contractsWonRef = useRef<{ name: string; reward: string }[]>([])
+  const [contractsWon, setContractsWon] = useState<{ name: string; reward: string }[]>([])
   // Run-wide max-hull multiplier a cleared hull-boost contract stacks onto. Folds
   // into hpMax below; the hpMax heal-on-increase effect tops the player up by the
   // gained ceiling for free. Reset to 1 at run start.
@@ -776,6 +781,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       activeContractRef.current = null; contractFactsRef.current = null
       setContractChip(null); setContractOffer(null); setContractResult(null)
       setContractHullMult(1)
+      contractsWonRef.current = []; setContractsWon([])
       // Fresh run: no Marks earned, no pending Don beat / offer.
       setMarks([]); setDonFallen(null); pendingDonFallRef.current = null
       setMarkOffer(null); setMarkSearing(null)
@@ -1215,6 +1221,9 @@ export default function GauntletGame(props: GauntletGameProps) {
   function resolveContractOutcome(offer: ContractOffer, cleared: boolean) {
     if (cleared) {
       const r = offer.reward
+      // Log the cleared job + what it paid, for the profile + recap.
+      contractsWonRef.current = [...contractsWonRef.current, { name: CONTRACTS[offer.kind].name, reward: describeReward(r) }]
+      setContractsWon(contractsWonRef.current)
       if (r.kind === 'plunder') {
         // The result screen shows the "+N plunder" beat itself; no DepthBar is
         // mounted here, so skip the float (it'd stray onto the next fight).
@@ -1683,6 +1692,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       boons: boonTiers,
       curses: curseTiers,
       stats: { ...runStatsRef.current },
+      contracts: contractsWonRef.current,
     }
   }
 
@@ -1714,6 +1724,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       calmBeforeUsed: calmBeforeUsedRef.current,
       marks,
       contractHullMult,
+      contractsWon: contractsWonRef.current,
     }
   }
 
@@ -1749,6 +1760,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     calmBeforeUsedRef.current = s.calmBeforeUsed
     setMarks(s.marks ?? [])
     setContractHullMult(s.contractHullMult ?? 1)
+    contractsWonRef.current = s.contractsWon ?? []; setContractsWon(contractsWonRef.current)
     pendingDonFallRef.current = null; setMarkOffer(null); setMarkSearing(null)
     // Transient state rebuilt fresh at the breather.
     peekFightRef.current = null; setPeekFight(null)
@@ -2487,7 +2499,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         </Shell>
       )
     }
-    return <GauntletReward r={r} recap={{ shipsSunk: rollStateRef.current.cleared, maxHit: runMaxHitRef.current, boonTiers, curseTiers, confluencesTaken, convergencesTaken, stats: runStatsRef.current, events: runEventsRef.current }} onBack={backToIntro} don={isDonG} />
+    return <GauntletReward r={r} recap={{ shipsSunk: rollStateRef.current.cleared, maxHit: runMaxHitRef.current, boonTiers, curseTiers, confluencesTaken, convergencesTaken, stats: runStatsRef.current, events: runEventsRef.current, contracts: contractsWon }} onBack={backToIntro} don={isDonG} />
   }
 
   // ── Dead ────────────────────────────────────────────────────────────────
@@ -2599,7 +2611,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           </motion.div>
 
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.62, duration: 0.4 }}>
-            <RunRecap depth={reached} shipsSunk={cleared} maxHit={runMaxHitRef.current} boonTiers={boonTiers} curseTiers={curseTiers} confluencesTaken={confluencesTaken} convergencesTaken={convergencesTaken} stats={runStatsRef.current} events={runEventsRef.current} don={isDonG} />
+            <RunRecap depth={reached} shipsSunk={cleared} maxHit={runMaxHitRef.current} boonTiers={boonTiers} curseTiers={curseTiers} confluencesTaken={confluencesTaken} convergencesTaken={convergencesTaken} stats={runStatsRef.current} events={runEventsRef.current} contracts={contractsWon} don={isDonG} />
           </motion.div>
 
           <div style={{ marginTop: 22 }}>
@@ -4292,6 +4304,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             affix={fight.affix}
             isElite={fight.isElite}
             isBoss={fight.isBoss}
+            contractsWon={contractsWon}
             shipImageUrl={props.shipImageUrl}
             shipFilter={shipFilter}
             shipName={props.shipName}
@@ -4556,7 +4569,7 @@ function MarkChoice({ offer, searing, taken, onChoose }: {
   )
 }
 
-function GauntletReward({ r, recap, onBack, don }: { r: RewardOk; recap: { shipsSunk: number; maxHit: number; boonTiers: Record<string, number>; curseTiers: Record<string, number>; confluencesTaken?: string[]; convergencesTaken?: string[]; stats?: GauntletRunStats; events?: RunEvent[] }; onBack: () => void; don?: boolean }) {
+function GauntletReward({ r, recap, onBack, don }: { r: RewardOk; recap: { shipsSunk: number; maxHit: number; boonTiers: Record<string, number>; curseTiers: Record<string, number>; confluencesTaken?: string[]; convergencesTaken?: string[]; stats?: GauntletRunStats; events?: RunEvent[]; contracts?: { name: string; reward: string }[] }; onBack: () => void; don?: boolean }) {
   const AC = don ? KRAKEN : TEAL   // Don's cash-out wears the kraken green
   // Three beats: closed -> opening (a wind-up rattle + creak) -> open (burst +
   // reveal). The anticipation phase makes the crack land as a payoff.
@@ -4837,7 +4850,7 @@ function GauntletReward({ r, recap, onBack, don }: { r: RewardOk; recap: { ships
 
             {counting && (
               <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9, duration: 0.4 }}>
-                <RunRecap depth={r.depth} shipsSunk={recap.shipsSunk} maxHit={recap.maxHit} boonTiers={recap.boonTiers} curseTiers={recap.curseTiers} confluencesTaken={recap.confluencesTaken} convergencesTaken={recap.convergencesTaken} stats={recap.stats} events={recap.events} don={don} />
+                <RunRecap depth={r.depth} shipsSunk={recap.shipsSunk} maxHit={recap.maxHit} boonTiers={recap.boonTiers} curseTiers={recap.curseTiers} confluencesTaken={recap.confluencesTaken} convergencesTaken={recap.convergencesTaken} stats={recap.stats} events={recap.events} contracts={recap.contracts} don={don} />
               </motion.div>
             )}
 
@@ -4966,10 +4979,10 @@ function RunRibbon({ events, depth }: { events: RunEvent[]; depth: number }) {
   )
 }
 
-function RunRecap({ depth, shipsSunk, maxHit, boonTiers, curseTiers, confluencesTaken = [], convergencesTaken = [], stats, events, don }: {
+function RunRecap({ depth, shipsSunk, maxHit, boonTiers, curseTiers, confluencesTaken = [], convergencesTaken = [], stats, events, contracts = [], don }: {
   depth: number; shipsSunk: number; maxHit: number
   boonTiers: Record<string, number>; curseTiers: Record<string, number>; confluencesTaken?: string[]; convergencesTaken?: string[]; stats?: GauntletRunStats
-  events?: RunEvent[]; don?: boolean
+  events?: RunEvent[]; contracts?: { name: string; reward: string }[]; don?: boolean
 }) {
   const AC = don ? KRAKEN : TEAL
   const boons = Object.entries(boonTiers)
@@ -5033,6 +5046,10 @@ function RunRecap({ depth, shipsSunk, maxHit, boonTiers, curseTiers, confluences
         <Chips title={`Powers · ${boons.length}`} color={AC}
           items={boons.map(({ fam, tier }) => ({ key: fam.id, label: `${fam.name} ${boonTierLabel(tier)}`.trim(), rc: BOON_RARITY_META[boonRarity(fam)].color }))} />
       )}
+      {contracts.length > 0 && (
+        <Chips title={`Don's Jobs · ${contracts.length}`} color="#3fbf82"
+          items={contracts.map((c, i) => ({ key: `${c.name}-${i}`, label: `${c.name} · ${c.reward}`, rc: '#3fbf82' }))} />
+      )}
       {confs.length > 0 && (
         <Chips title={`Synergies · ${confs.length}`} color="#f5b94a"
           items={confs.map(c => ({ key: c.id, label: c.name, rc: '#f5b94a' }))} />
@@ -5070,6 +5087,7 @@ function DeepestRunModal({ best, last, hardcore = false, don, onClose }: { best:
     .map(([id, tier]) => ({ c: GAUNTLET_CURSES.find(c => c.id === id), tier }))
     .filter((x): x is { c: NonNullable<typeof x.c>; tier: number } => !!x.c && x.tier >= 1)
   const tides = (run.tides ?? []).filter(t => t && t.title)
+  const contracts = run.contracts ?? []
 
   const Section = ({ title, color, children }: { title: string; color: string; children: React.ReactNode }) => (
     <div style={{ marginTop: 16, textAlign: 'left' }}>
@@ -5173,6 +5191,19 @@ function DeepestRunModal({ best, last, hardcore = false, don, onClose }: { best:
                   </div>
                 )
               })}
+            </div>
+          </Section>
+        )}
+
+        {contracts.length > 0 && (
+          <Section title="Don's Jobs" color="#3fbf82">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+              {contracts.map((c, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, padding: '0.5rem 0.65rem', borderRadius: 10, background: 'rgba(63,191,130,0.08)', border: '1px solid rgba(63,191,130,0.28)' }}>
+                  <span className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#e6e1d6' }}>{c.name}</span>
+                  <span className="font-karla font-700" style={{ flexShrink: 0, fontSize: '0.72rem', color: '#8ff0bd' }}>▲ {c.reward}</span>
+                </div>
+              ))}
             </div>
           </Section>
         )}

@@ -733,6 +733,9 @@ export interface GauntletRunSnapshot {
   tides?: { title: string; choice: string }[]
   /** Fun run telemetry (optional — old snapshots predate it). */
   stats?: GauntletRunStats
+  /** Don's jobs cleared this run + the bonus each paid (optional — old snapshots
+   *  predate it). */
+  contracts?: { name: string; reward: string }[]
   /** ISO timestamp, set server-side */
   at?: string
 }
@@ -787,6 +790,9 @@ export interface GauntletRunState {
   /** Run-wide max-hull multiplier from cleared hull-boost contracts (Don's only).
    *  Optional so pre-contract saves resume cleanly. */
   contractHullMult?: number
+  /** Don's jobs cleared this run + the bonus each paid, for the profile + recap
+   *  (Don's only; optional for old saves). */
+  contractsWon?: { name: string; reward: string }[]
 }
 
 export interface GauntletFight {
