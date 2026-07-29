@@ -107,8 +107,6 @@ export interface BossAbility {
    *  player's crew ability uses. */
   summonImage: string
   summonColor?: string
-  /** Fires every N enemy turns within the phase. Default 3. */
-  everyTurns?: number
   /** Kind-specific magnitude. leviathan/blitz: damage multiplier.
    *  abyssal_tide: fraction of max HP healed. requiem: bonus damage taken. */
   value?: number
@@ -2135,7 +2133,7 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
         kind: 'foresight', name: 'From the Wrong Water',
         line: 'He surfaces the long neck of it in four places at once, and reads your deck off all four.',
         summonImage: '/fish/plesiosaurus.png', summonColor: '#a78bfa',
-        everyTurns: 4, turns: 2,
+        turns: 2,
       },
       phases: [
         // ── PHASE 2 — CATFISH. He patches himself and puts the plate up. ─────
@@ -2146,7 +2144,7 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
             kind: 'abyssal_tide', name: 'Old Armour',
             line: 'The dunkleosteus plate closes over him, and the holes you put in him close with it.',
             summonImage: '/fish/dunkleosteus.png', summonColor: '#9fb2c8',
-            everyTurns: 4, value: 0.14,
+            value: 0.14,
           } },
         // ── PHASE 3 — MAKO. The frenzy. Many small teeth. ────────────────────
         { revivePct: 1.0, damageMult: 1.16, badge: 'Wake of the Drowned',
@@ -2156,7 +2154,7 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
             kind: 'blitz', name: 'Wake of the Drowned',
             line: 'It runs the whole length of your hull without surfacing, and the sea leans after it.',
             summonImage: '/fish/mosasaurus.png', summonColor: '#67e8f9',
-            everyTurns: 3, shots: 4, value: 0.3,
+            shots: 4, value: 0.3,
           } },
         // ── PHASE 4 — LAZ. He simply refuses to go down. ─────────────────────
         { revivePct: 1.0, damageMult: 1.24, badge: 'Still Going',
@@ -2166,7 +2164,7 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
             kind: 'vengeance', name: 'Still Going',
             line: 'You put a broadside clean through him and his heading does not change by a degree.',
             summonImage: '/fish/basilosaurus.png', summonColor: '#94a3b8',
-            everyTurns: 4, turns: 3,
+            turns: 3,
           } },
         // ── PHASE 5 — MIRA. He marks you, and everything lands harder. ───────
         { revivePct: 1.0, damageMult: 1.32, badge: 'All That Tonnage',
@@ -2176,7 +2174,7 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
             kind: 'requiem', name: 'All That Tonnage',
             line: 'The largest thing the sea ever grew settles over your water, and your deck cannot find level again.',
             summonImage: '/fish/shastasaurus.png', summonColor: '#7dd3fc',
-            everyTurns: 4, turns: 3, value: 0.3,
+            turns: 3, value: 0.3,
           } },
         // ── PHASE 6 — DOBY. The jaw. The last thing he has, and the biggest. ─
         { revivePct: 1.0, damageMult: 1.42, badge: 'The Borrowed Jaw',
@@ -2186,7 +2184,7 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
             kind: 'leviathan', name: 'The Borrowed Jaw',
             line: 'The jaw closes on nothing at all, and the water it moves still breaks your deck open.',
             summonImage: '/fish/megalodon.png', summonColor: '#f87171',
-            everyTurns: 3, value: 1.0,
+            value: 1.0,
           } },
       ],
     },

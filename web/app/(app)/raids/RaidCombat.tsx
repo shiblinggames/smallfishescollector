@@ -1523,6 +1523,8 @@ export default function RaidCombat({
   // OFF-TURN, alongside his action rather than instead of it. One ability
   // belongs to one phase (see BossAbility), so each phase plays differently.
   const bossAbilityTurnRef = useRef(0)        // enemy turns taken this phase
+  const bossAbilityUsedRef = useRef(false)    // spent it for this phase?
+  const bossAbilityOnRef   = useRef(0)        // which turn of the phase he casts
   const bossForesightRef   = useRef(0)        // turns he slips your shots
   const bossWardRef        = useRef(0)        // turns he refuses a killing blow
   const bossMarkRef        = useRef({ turns: 0, mult: 0 })  // you take extra damage
@@ -2245,7 +2247,7 @@ export default function RaidCombat({
     setEnemyMuzzle(null); setPlayerImpact(null); setPlayerAura(null); setDodgeFx(null)
     setEnemyBurning(false); setEnemyFrozen(false); setEnemyDeflect(0)
     setPlayerBurning(false); setPlayerFrozen(false)
-    enemyPatternIdxRef.current = 0; bossAbilityTurnRef.current = 0
+    enemyPatternIdxRef.current = 0; bossAbilityTurnRef.current = 0; bossAbilityUsedRef.current = false; bossAbilityOnRef.current = 0
     enemyFeintStreakRef.current = 0
     enemyDodgedLastTurnRef.current = false
     volleyCountRef.current = 0
@@ -3185,7 +3187,7 @@ export default function RaidCombat({
       if (enemyPhaseRef.current <= phaseList.length) {
         const nextCfg = phaseList[enemyPhaseRef.current - 1]
         enemyPhaseRef.current += 1
-        enemyPatternIdxRef.current = 0; bossAbilityTurnRef.current = 0
+        enemyPatternIdxRef.current = 0; bossAbilityTurnRef.current = 0; bossAbilityUsedRef.current = false; bossAbilityOnRef.current = 0
         enemyFeintStreakRef.current = 0
         const revivedHp = Math.max(1, Math.floor(enemyHpMaxRef.current * nextCfg.revivePct))
         setEnemyHp(revivedHp)
@@ -3834,13 +3836,14 @@ export default function RaidCombat({
         if (ab) {
           const bossPhaseDmgMult = enemyPhaseRef.current >= 2 && phaseList[enemyPhaseRef.current - 2]
             ? phaseList[enemyPhaseRef.current - 2].damageMult : 1
-          const every = ab.everyTurns ?? 3
           bossAbilityTurnRef.current++
-          // Fires on his Nth turn of the phase and every N after, NOT on the
-          // first. Opening a phase with a summon meant the phase-change callout
-          // and the ability landed on top of each other, and you ate the new
-          // giant before you had taken a single swing at the new bar.
-          if (bossAbilityTurnRef.current % every === 0) {
+          // ONCE PER PHASE, exactly like the player gets one use of a crew
+          // ability per fight. The turn is rolled from 2..4 the first time the
+          // phase ticks, so it never lands on turn 1 (the phase-change callout
+          // would collide with it) and is never quite predictable.
+          if (!bossAbilityOnRef.current) bossAbilityOnRef.current = 2 + Math.floor(Math.random() * 3)
+          if (!bossAbilityUsedRef.current && bossAbilityTurnRef.current >= bossAbilityOnRef.current) {
+            bossAbilityUsedRef.current = true
             const lines: string[] = [`${ab.name}! ${ab.line}`]
             let aSplatTarget: Actor | null = null
             let aSplatText = ''
@@ -5075,7 +5078,7 @@ export default function RaidCombat({
       ) {
         const nextCfg = phaseList[enemyPhaseRef.current - 1]   // the phase we rise into
         enemyPhaseRef.current += 1
-        enemyPatternIdxRef.current = 0; bossAbilityTurnRef.current = 0
+        enemyPatternIdxRef.current = 0; bossAbilityTurnRef.current = 0; bossAbilityUsedRef.current = false; bossAbilityOnRef.current = 0
         enemyFeintStreakRef.current = 0
         // The Last Wall arms at SIM time (next resolveTurn must see it); the
         // visual raises when the transition step PLAYS, via step.phaseAegis.
@@ -5211,7 +5214,7 @@ export default function RaidCombat({
             // the normal turn continuation below (no return).
             const nextCfg = phaseList[enemyPhaseRef.current - 1]
             enemyPhaseRef.current += 1
-            enemyPatternIdxRef.current = 0; bossAbilityTurnRef.current = 0
+            enemyPatternIdxRef.current = 0; bossAbilityTurnRef.current = 0; bossAbilityUsedRef.current = false; bossAbilityOnRef.current = 0
             enemyFeintStreakRef.current = 0
             const revivedHp = Math.max(1, Math.floor(enemyHpMaxRef.current * nextCfg.revivePct))
             eHp = revivedHp; enemyHpRef.current = revivedHp; setEnemyHp(revivedHp)
