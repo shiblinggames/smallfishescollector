@@ -82,18 +82,6 @@ export interface BossPhase {
   /** Optional telegraphed mechanic check that ARMS the instant this phase
    *  begins (answer it with the right crew play or eat the consequence). */
   check?: BossMechanicCheck
-  /** WHICH MINIGAME YOU FIGHT THIS PHASE ON.
-   *
-   *  'aim'  (default) = the raid aim bar, every other fight in the game.
-   *  'reel' = the FISHING dial. Your shot is judged by the catch dial instead:
-   *           land the needle in the gold to crit, green to hit, miss and the
-   *           shot is a dud. Only the Finn finale uses it, and only on some of
-   *           his phases, so the fight ALTERNATES between the two halves of the
-   *           game. He is an angler; the last chapter makes you out-fish him.
-   *
-   *  Reading this in RaidCombat swaps the aiming widget for the dial for the
-   *  duration of the phase. Everything else about the turn is unchanged. */
-  phaseMode?: 'aim' | 'reel'
   /** AEGIS (Sal Brackwater, phase 3): the phase opens behind a wall that drinks
    *  EVERY shot whole (zero damage) until it breaks. A player Mega shatters
    *  it instantly (the intended discovery. Hints stay oblique); without one
@@ -396,6 +384,21 @@ export interface BossRaidConfig {
   mergeRandomAffix?: boolean
   raidTitle: string
   bossDefeatedText: string
+  /** WHICH AIMING INSTRUMENT THIS WHOLE RAID IS FOUGHT ON.
+   *
+   *  'bar'  (default) = the linear raid aim bar. Every raid in the game.
+   *  'dial' = the FISHING dial, borrowed whole from the fishing game. The
+   *           mechanic is identical to the bar (a needle sweeps, you lock it
+   *           inside the band) but wrapped onto a circle, and the band is not an
+   *           abstract marker: it is the ENEMY SHIP, orbiting the dial. You are
+   *           tracking him around the compass and firing when you have him.
+   *
+   *  Only the Finn finale uses this. It is the mechanical half of the
+   *  convergence: he made the player his angler for the entire campaign, so the
+   *  last fight is fought on the angler's own instrument, and the player's
+   *  EQUIPPED ROD/HOOK/LINE widen the bands exactly as they do when fishing.
+   *  Every fishing hour the player has put in shows up here as a wider shot. */
+  aimStyle?: 'bar' | 'dial'
   enemies: Record<string, BroadsideEnemy>
   sequence: string[]   // non-boss enemy IDs in order; boss fires every sequence.length+1 rounds
   bossId: string
@@ -2012,11 +2015,17 @@ export function raidCompletionBonusXp(config: BossRaidConfig): number {
 // ── THE SUNKEN HAND — the true final boss ─────────────────────────────────────
 // Finn, wearing the power of all six Ancient Deep giants.
 //
-// THE CONVERGENCE: this is the only fight in the game that is played on BOTH
-// minigames. Finn's phases alternate `phaseMode` between 'aim' (the raid bar
-// every other boss is fought on) and 'reel' (the fishing catch dial). He spent
-// the whole campaign using the player as his angler; the last fight makes the
-// player out-fish him. Nothing else in the game reads the dial in combat.
+// THE CONVERGENCE: the whole fight is played on the FISHING DIAL (`aimStyle:
+// 'dial'`), the only raid in the game that is. The mechanic is not a fishing
+// minigame bolted on: it is raid combat, wrapped onto a circle. The needle
+// sweeps the dial the way it sweeps the aim bar, the hit and crit bands are the
+// same bands, and the thing you are trying to land the needle on is FINN'S SHIP
+// itself, orbiting the compass. You track him around and fire when you have him.
+//
+// The player's EQUIPPED ROD, HOOK AND LINE widen those bands exactly as they do
+// when fishing, so every hour spent on the fishing side of the game shows up
+// here as a wider shot at the final boss. He made the player his angler for the
+// entire campaign; the last fight happens on the angler's own instrument.
 //
 // THE SEQUENCE is the six husks he drained in The Hand That Sharpens It. They
 // came down on the water "grey and light and wrong", and he walks them at you
@@ -2028,6 +2037,8 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
   enemyAccuracy: 40,
   raidTitle: 'The Sunken Hand',
   bossDefeatedText: 'Finn Defeated',
+  // THE convergence: the entire fight is fought on the fishing dial.
+  aimStyle: 'dial',
   atmosphere: 'vault',
   zone: 'ancient_deep',
   enemies: {
@@ -2102,12 +2113,15 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
       portrait: '/fish/shastasaurus.png',
     },
     finn: {
-      // FINN. The fight alternates minigames by phase (see `phaseMode`):
-      //   opener  AIM  - he fights you like a captain, because he is showing off
-      //   phase 1 REEL - he stops pretending and fishes you
-      //   phase 2 AIM  - the stolen power surfaces and swings wild
-      //   phase 3 REEL - the deep runs him, and the dial goes cruel
-      //   phase 4 AIM  - what is left, holding on with both hands
+      // FINN. Fought entirely on the dial (see `aimStyle` on this config). His
+      // phases escalate by making the ORBIT harder to read rather than by
+      // switching instruments: he circles faster, the bands narrow, and the
+      // stolen power drags the whole dial around under him.
+      //   opener  The First Cast   - he fishes YOU, before a shot is fired
+      //   phase 1 The Angler       - he stops pretending to fight like a captain
+      //   phase 2 The Borrowed Jaw - the megalodon surfaces through him, uninvited
+      //   phase 3 The Deep Has Him - the sea is steering, and it is not on his side
+      //   phase 4 One Last Ride    - what is left of him, holding on with both hands
       // Every phase arms a check, like the don, but the ANSWER SETS differ so a
       // single ability cannot clear the fight.
       id: 'finn', name: 'Finn', hpBase: 1050, minDmg: 34, maxDmg: 55,
@@ -2131,7 +2145,7 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
       },
       phases: [
         // ── PHASE 1 — REEL. He stops fighting like a captain. ────────────────
-        { revivePct: 0.80, damageMult: 1.15, badge: 'The Angler', phaseMode: 'reel',
+        { revivePct: 0.80, damageMult: 1.15, badge: 'The Angler',
           pattern: ['special', 'fire', 'reload', 'reload', 'ultimate', 'fire', 'dodge', 'reload'],
           dialogueLine: 'You are doing it my way now. Guns and shouting. Let us do it YOUR way, captain, and see who is better at it.',
           check: {
@@ -2144,7 +2158,7 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
             consequence: { kind: 'status', status: 'slowed', magnitude: 10, turns: 3, dmgPct: 0.3 },
           } },
         // ── PHASE 2 — AIM. The stolen power surfaces on its own. ─────────────
-        { revivePct: 0.68, damageMult: 1.3, badge: 'The Borrowed Jaw', phaseMode: 'aim',
+        { revivePct: 0.68, damageMult: 1.3, badge: 'The Borrowed Jaw',
           pattern: ['fire', 'special', 'reload', 'ultimate', 'reload', 'fire', 'volley', 'dodge'],
           dialogueLine: 'Ah. There it is. It does that. Six of them in here, captain, and not one of them was asked.',
           check: {
@@ -2157,7 +2171,7 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
             consequence: { kind: 'damagePctMaxHp', value: 0.6 },
           } },
         // ── PHASE 3 — REEL. The deep is steering now. ────────────────────────
-        { revivePct: 0.55, damageMult: 1.45, badge: 'The Deep Has Him', phaseMode: 'reel',
+        { revivePct: 0.55, damageMult: 1.45, badge: 'The Deep Has Him',
           pattern: ['special', 'fire', 'ultimate', 'reload', 'volley', 'fire', 'reload', 'special'],
           dialogueLine: 'It is louder than I thought it would be. That is all. That is the only thing I did not plan for.',
           check: {
@@ -2170,7 +2184,7 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
             consequence: { kind: 'status', status: 'feeble', magnitude: 0.35, turns: 4, dmgPct: 0.35 },
           } },
         // ── PHASE 4 — AIM. What is left of him, holding on. ──────────────────
-        { revivePct: 0.4, damageMult: 1.6, badge: 'One Last Ride', phaseMode: 'aim',
+        { revivePct: 0.4, damageMult: 1.6, badge: 'One Last Ride',
           pattern: ['ultimate', 'fire', 'volley', 'special', 'reload', 'fire', 'volley', 'ultimate'],
           dialogueLine: 'Do not you DARE land me. Not you. I taught you every water you know.',
           check: {
