@@ -5530,15 +5530,16 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
   // The diamonds are a synergy's POWER LEVEL (I–III). Once it's online we show the
   // filled level + "Lv N"; before that the empty diamonds read as a mystery
   // rating, so we say the ceiling in plain words instead ("Up to Lv III").
+  // Level readout — pips + "Lv N" once it's actually online. Below that it shows
+  // nothing at all: an un-held synergy has no level, and spelling out its
+  // ceiling on every tile was clutter.
   const LevelReadout = ({ level, max, color }: { level: number; max: number; color: string }) =>
     level >= 1 ? (
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
         <Pips level={level} color={color} max={max} />
         <span className="font-karla font-800 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.08em', color, whiteSpace: 'nowrap' }}>Lv {ROMAN[Math.min(level, max)]}</span>
       </span>
-    ) : (
-      <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.08em', color: '#8a8480', whiteSpace: 'nowrap' }}>Up to Lv {ROMAN[Math.min(max, 3)]}</span>
-    )
+    ) : null
 
   const Fuse = () => <span aria-hidden style={{ color: '#7a8e8a', fontSize: '0.72rem' }}>⊕</span>
 
@@ -5572,7 +5573,7 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
   // Locked codex entry — a silhouette medallion teasing an undiscovered synergy.
   const MysteryMedallion = () => (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, padding: '0.75rem 0.5rem 0.65rem', borderRadius: 14, background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.12)' }}>
-      <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><MysteryToken /><Fuse /><MysteryToken /></span>
+      <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><MysteryToken size={52} /></span>
       <span className="font-cinzel font-800" style={{ fontSize: '0.8rem', color: '#7d8794', letterSpacing: '0.12em', minHeight: '1.9rem', display: 'flex', alignItems: 'center' }}>? ? ?</span>
       <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.08em', color: '#6b7280' }}>Undiscovered</span>
     </div>
@@ -5661,7 +5662,7 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
             {confRows.map(({ c, parts, lvl, status }) => (
               <SynergyMedallion key={c.id} name={c.name} status={status} lvl={lvl} accent={accentOf(status)}
                 dim={!confMatchesTrace({ c, parts, lvl, status })} onOpen={() => setOpenId(c.id)}
-                tokens={<><BoonToken boonId={parts[0].id} tier={parts[0].tier} held={parts[0].tier >= 1} /><Fuse /><BoonToken boonId={parts[1].id} tier={parts[1].tier} held={parts[1].tier >= 1} /></>} />
+                tokens={<MiniCrest color={accentOf(status)} size={52} image={c.image} />} />
             ))}
           </div>
         )}
@@ -5677,7 +5678,7 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
                 <SynergyMedallion key={cv.id} name={cv.name} status={status} lvl={lvl} kraken
                   accent={status === 'active' ? KRAKEN : status === 'ready' ? SYN : NEED}
                   dim={!convMatchesTrace({ cv, parts, lvl, status })} onOpen={() => setOpenId(cv.id)}
-                  tokens={<><MiniCrest color={KRAKEN} dim={!parts[0].online} image={CONFLUENCES.find(x => x.id === parts[0].id)?.image} /><Fuse /><MiniCrest color={KRAKEN} dim={!parts[1].online} image={CONFLUENCES.find(x => x.id === parts[1].id)?.image} /></>} />
+                  tokens={<MiniCrest color={KRAKEN} size={52} image={cv.image} />} />
               ))}
             </div>
           </>
@@ -5714,10 +5715,9 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 9 }}>
               {codexConf.map(({ c, lvl, discovered, activeNow }) => {
                 if (!discovered) return <MysteryMedallion key={c.id} />
-                const parts = c.requires.map(r => boonMeta(r.boonId))
                 return (
                   <SynergyMedallion key={c.id} name={c.name} status={activeNow ? 'active' : 'codex'} lvl={lvl} accent={activeNow ? GLD : '#9aa7b4'} onOpen={() => setOpenId(c.id)}
-                    tokens={<><BoonToken boonId={parts[0].id} full /><Fuse /><BoonToken boonId={parts[1].id} full /></>} />
+                    tokens={<MiniCrest color={activeNow ? GLD : '#9aa7b4'} size={52} image={c.image} />} />
                 )
               })}
             </div>
@@ -5731,13 +5731,9 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 9 }}>
                   {codexConv.map(({ cv, lvl, discovered, activeNow }) => {
                     if (!discovered) return <MysteryMedallion key={cv.id} />
-                    const parts = cv.requires.map(r => {
-                      const c = CONFLUENCES.find(x => x.id === r.confluenceId)
-                      return { online: !!c && takenSet.has(c.id) && confluenceLevel(c, owned) >= 1, image: c?.image }
-                    })
                     return (
                       <SynergyMedallion key={cv.id} name={cv.name} status={activeNow ? 'active' : 'codex'} lvl={lvl} accent={activeNow ? KRAKEN : '#9aa7b4'} kraken onOpen={() => setOpenId(cv.id)}
-                        tokens={<><MiniCrest color={KRAKEN} image={parts[0].image} /><Fuse /><MiniCrest color={KRAKEN} image={parts[1].image} /></>} />
+                        tokens={<MiniCrest color={activeNow ? KRAKEN : '#9aa7b4'} size={52} image={cv.image} />} />
                     )
                   })}
                 </div>
