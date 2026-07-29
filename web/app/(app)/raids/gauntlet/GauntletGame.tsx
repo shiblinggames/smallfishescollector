@@ -2055,6 +2055,10 @@ export default function GauntletGame(props: GauntletGameProps) {
     return (
       <>
         <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
+        {/* Calm the busy, moving abyss so the deepest-descent stat, the section
+            labels and the guide text read against a steady ground instead of
+            the shifting backdrop light. */}
+        <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: 'linear-gradient(180deg, rgba(4,8,14,0.5) 0%, rgba(4,8,14,0.68) 50%, rgba(3,6,12,0.8) 100%)' }} />
         {/* Just enough bottom pad to clear the fixed mobile tab bar (~58px):
             this + the global page footer below (~25px) lands "Not today" just
             above the bar. No safe-area inset (the bar already sits at bottom:0,
@@ -2176,7 +2180,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             const canRecap = !!props.deepestRun && props.deepest > 0
             const inner = (
               <>
-                <p className="font-karla font-800 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.26em', color: `${AC}bb` }}>Your deepest descent</p>
+                <p className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.26em', color: AC, textShadow: '0 1px 6px rgba(0,0,0,0.8)' }}>Your deepest descent</p>
                 {props.deepest > 0
                   ? <>
                       <p className="font-cinzel font-800" style={{ fontSize: '1.7rem', lineHeight: 1.05, color: '#f3ead2', marginTop: 1 }}>
@@ -2190,7 +2194,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                         </span>
                       )}
                     </>
-                  : <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: '#8a857c', marginTop: 3, fontStyle: 'italic' }}>Uncharted. Your first dive awaits.</p>}
+                  : <p className="font-karla font-600" style={{ fontSize: '0.82rem', color: '#b3ac9e', marginTop: 3, fontStyle: 'italic', textShadow: '0 1px 6px rgba(0,0,0,0.75)' }}>Uncharted. Your first dive awaits.</p>}
               </>
             )
             return canRecap ? (
@@ -2238,7 +2242,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 9, padding: '0 0.15rem' }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
                 <span aria-hidden style={{ width: 14, height: 2, borderRadius: 2, background: `${AC}aa` }} />
-                <span className="font-karla font-800 uppercase" style={{ fontSize: '0.52rem', letterSpacing: '0.2em', color: '#9a948a' }}>Choose Your Descent</span>
+                <span className="font-karla font-800 uppercase" style={{ fontSize: '0.55rem', letterSpacing: '0.2em', color: '#c2bcae', textShadow: '0 1px 5px rgba(0,0,0,0.7)' }}>Choose Your Descent</span>
               </span>
               <LeaderboardModal boards={isDonG ? ['gauntletDonsDepth'] : ['gauntletDepth', 'gauntletHardcore', 'gauntletBigHit']} title={isDonG ? "Don's Gauntlet" : 'The Gauntlet'} label="Full ranks"
                 triggerStyle={{ background: 'none', border: 'none', color: '#9a948a', padding: 0, fontSize: '0.55rem', letterSpacing: '0.04em' }} />
@@ -2340,7 +2344,7 @@ export default function GauntletGame(props: GauntletGameProps) {
               ))}
             </div>
             {GAUNTLET_COOLDOWN_HOURS > 0 && (
-              <p className="font-karla" style={{ fontSize: '0.66rem', color: '#7a766e', marginTop: 8, textAlign: 'center' }}>
+              <p className="font-karla" style={{ fontSize: '0.68rem', color: '#a29c90', marginTop: 8, textAlign: 'center', textShadow: '0 1px 5px rgba(0,0,0,0.7)' }}>
                 Each descent starts the {GAUNTLET_COOLDOWN_HOURS}-hour cooldown.
               </p>
             )}
@@ -2352,7 +2356,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           <div style={{ marginTop: 20, textAlign: 'left' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 9, paddingLeft: 2 }}>
               <span aria-hidden style={{ width: 14, height: 2, borderRadius: 2, background: `${GOLD}aa` }} />
-              <span className="font-karla font-800 uppercase" style={{ fontSize: '0.52rem', letterSpacing: '0.2em', color: '#9a948a' }}>The Locker</span>
+              <span className="font-karla font-800 uppercase" style={{ fontSize: '0.55rem', letterSpacing: '0.2em', color: '#c2bcae', textShadow: '0 1px 5px rgba(0,0,0,0.7)' }}>The Locker</span>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <ActionTile
