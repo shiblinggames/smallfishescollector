@@ -34,7 +34,7 @@ const GUIDE = {
   // the top of all of it. His plate uses his OWN character sprite (the same one
   // the Ch IV silhouette and the reveal shot are cut from), so the face on the
   // plate is the face a fishing player has been trading barbs with all along.
-  finn: { speaker: 'Finn', portrait: '/fishing_ruby_rest.png' },
+  finn: { speaker: 'Finn', portrait: '/fishing_ruby_rest.png', portraitFace: true },
 } as const
 
 // A muster plays as a cutscene, not a static checklist: the crew read the
@@ -343,6 +343,11 @@ export interface SceneLine {
   speaker?: string
   /** Portrait image path. Falls back to none (text-only line). */
   portrait?: string
+  /** The portrait is a full CHARACTER SPRITE, not a bust: crop it to the face.
+   *  The crew all have bust art, so `contain` frames them correctly; Finn is a
+   *  fishing character, and his sprite drawn to fit the same box renders him
+   *  boat and all at thumbnail size. Same crop CharacterAvatar uses. */
+  portraitFace?: boolean
   /**
    * The line. Wrap a word or phrase in *asterisks* to hit it. It renders in the
    * scene accent, so a writer can put weight on a word instead of hoping the reader
