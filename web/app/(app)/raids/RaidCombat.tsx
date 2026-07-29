@@ -1780,7 +1780,7 @@ export default function RaidCombat({
   // beat) + a tiny scale punch; volley is a smaller pure shake. Only crit /
   // volley fire it, per the juice rule (nothing screen-wide on normal hits).
   const stageShakeCtrl = useAnimation()
-  const cameraShake = useCallback((kind: 'crit' | 'volley' | 'nuke') => {
+  const cameraShake = useCallback((kind: 'crit' | 'volley' | 'nuke' | 'hit') => {
     if (kind === 'nuke') {
       // Heaviest shake — the silo impact. Bigger throw, longer settle, a real heave.
       fireImpactFlash(true)
@@ -1802,6 +1802,19 @@ export default function RaidCombat({
         scale: [1, 1.045, 1.045, 0.997, 1.012, 1, 1, 1],
         // First two keyframes hold the punched-in zoom (the hit-stop) before the jolt.
         transition: { duration: 0.44, times: [0, 0.2, 0.42, 0.54, 0.66, 0.8, 0.9, 1], ease: 'easeOut' },
+      })
+    } else if (kind === 'hit') {
+      // NORMAL hits used to get NO camera response at all — only crits and
+      // volleys did, which is why the most common attack in the game felt
+      // weightless. This is a hit-STOP, not a shake: a fast punch-in that HOLDS
+      // for ~70ms (the freeze frame that reads as "thunk"), then releases with a
+      // whisper of jolt. Deliberately tiny — it must stay invisible-but-felt on
+      // an action you take every turn (see the juice-subtlety rule).
+      stageShakeCtrl.start({
+        x:     [0, 0, -1.6, 1.2, 0],
+        y:     [0, 0, 0.8, -0.5, 0],
+        scale: [1, 1.016, 1.016, 1.004, 1],
+        transition: { duration: 0.3, times: [0, 0.14, 0.38, 0.7, 1], ease: 'easeOut' },
       })
     } else {
       stageShakeCtrl.start({
@@ -1829,21 +1842,26 @@ export default function RaidCombat({
         transition: { duration: 0.55 },
       })
     } else {
-      // hit-shake (0.45s)
+      // hit-shake (0.45s) — leads with a KNOCKBACK. The old curve oscillated
+      // symmetrically, which reads as "vibrating in place"; a real blow shoves
+      // the hull away from the shooter first (the player is to the left, so the
+      // enemy is driven right/+x), then it rocks back and settles. Asymmetry is
+      // what makes it read as taking the hit rather than buzzing.
       enemyShakeCtrl.start({
-        x:      [0, -6, 6, -4, 3, -1, 0],
-        rotate: [0, -1, 0.8, -0.5, 0.3, 0, 0],
-        transition: { duration: 0.45 },
+        x:      [0, 9, 7, -3, 2, -1, 0],
+        rotate: [0, 1.4, 1, -0.6, 0.3, 0, 0],
+        transition: { duration: 0.45, times: [0, 0.12, 0.3, 0.5, 0.7, 0.86, 1], ease: 'easeOut' },
       })
     }
   }, [enemyShakeKey, enemyShakeKind, enemyShakeCtrl])
   useEffect(() => {
     if (playerShakeKey === 0) return
-    // player-hit (0.5s)
+    // player-hit (0.5s) — same knockback read, mirrored: the enemy is to the
+    // right, so an incoming blow drives your hull left (-x) before it settles.
     playerShakeCtrl.start({
-      x:      [0, 9, -9, 6, -4, 2, 0],
-      rotate: [0, 1.2, -1.2, 0.8, -0.5, 0.2, 0],
-      transition: { duration: 0.5 },
+      x:      [0, -10, -7, 4, -2, 1, 0],
+      rotate: [0, -1.5, -1, 0.7, -0.3, 0, 0],
+      transition: { duration: 0.5, times: [0, 0.12, 0.3, 0.5, 0.7, 0.86, 1], ease: 'easeOut' },
     })
   }, [playerShakeKey, playerShakeCtrl])
   useEffect(() => {
@@ -5287,6 +5305,9 @@ export default function RaidCombat({
               setEnemyShakeKey(k => k + 1)
               if (heavy) cameraShake(megaId === 'nuke' ? 'nuke' : 'crit')
               else if (isVolleyShot) { cameraShake('volley'); vibrate([0, 22, 26, 30]) }
+              // A plain hit used to get NO camera beat — now it gets the tiny
+              // hit-stop so every landed shot has weight, not just crits.
+              else cameraShake('hit')
             }
             if (!isDodged && !seqBarrage) {
               if (step.carapaceSoak) {
@@ -5421,6 +5442,7 @@ export default function RaidCombat({
               setTimeout(() => setPlayerImpact(null), 700)
               if (step.big) cameraShake('crit')
               else if (eIsVolley) { cameraShake('volley'); vibrate([0, 22, 26, 30]) }
+              else cameraShake('hit')   // taking a plain hit gets the same weight
             }
             setTimeout(() => setPHitsplat(null), SPLAT_HOLD_MS)
           }
