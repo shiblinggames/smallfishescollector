@@ -17,7 +17,13 @@ export interface RodDef {
   doubleCatchChance: number  // chance to catch 2 fish on a successful catch (0–1)
   retryOnMissChance: number  // chance to retry the dial on miss or snag (0–1)
   snagImmune: boolean        // if true, snag zones count as miss — no extra bait lost
-  perfectZoneBonus: number   // degrees added to the perfect zone (base is 5°)
+  /** DEPRECATED, AND IT MUST STAY 0 ON EVERY ROD.
+   *  The perfect zone is deliberately the one width no gear touches: it is the
+   *  skill floor the whole fishing game is measured against, and a rod that
+   *  widened it would be buying accuracy rather than rewarding it. The
+   *  Completionist carried +3 here by oversight; that is gone. Kept on the type
+   *  only so the existing display/filter plumbing still compiles. */
+  perfectZoneBonus: number
   jackpotChance?: number     // chance to catch jackpotMultiplier fish at once (0–1)
   jackpotMultiplier?: number // how many fish on a jackpot hit
   crateChanceMult?: number   // multiplies the per-cast crate spawn chance (default 1)
@@ -181,7 +187,7 @@ export const RODS: RodDef[] = [
     // now it's a build-your-own capstone.
     slug: 'rod_completionist', glow: true, glowType: 'prismatic',
     color: '#e8c84a', rarityBonus: 0, biteIntervalMs: 2000, catchZoneBonus: 16,
-    doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: true, perfectZoneBonus: 3,
+    doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: true, perfectZoneBonus: 0,
   },
   {
     tier: 16, name: 'Treasure Rod', cost: 200000, minLevel: 64,

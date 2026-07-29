@@ -37,7 +37,6 @@ const ROD_MECHANICS: { key: string; label: string; match: (r: RodDef) => boolean
   { key: 'rare',     label: 'Rare bias',    match: r => r.rarityBonus > 0 },
   { key: 'double',   label: 'Double catch', match: r => r.doubleCatchChance > 0 },
   { key: 'zone',     label: 'Catch zone',   match: r => r.catchZoneBonus > 0 },
-  { key: 'perfect',  label: 'Perfect zone', match: r => r.perfectZoneBonus > 0 },
   { key: 'retry',    label: 'Miss retry',   match: r => r.retryOnMissChance > 0 },
   { key: 'snag',     label: 'Snag immune',  match: r => !!r.snagImmune },
   { key: 'jackpot',  label: 'Jackpot',      match: r => (r.jackpotChance ?? 0) > 0 },

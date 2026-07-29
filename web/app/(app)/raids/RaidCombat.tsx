@@ -1000,10 +1000,9 @@ export default function RaidCombat({
   // Applied to base and gear bonus alike, and to paint and judgment alike, so
   // the picture can never disagree with the verdict.
   const DIAL_BAND_SCALE = 0.42
-  const dialCritBonus = aimStyle === 'dial' ? (dialAim?.critBonus ?? 0) : 0
   const dialHitBonus  = aimStyle === 'dial' ? (dialAim?.hitBonus  ?? 0) : 0
   const bandScale = aimStyle === 'dial' ? DIAL_BAND_SCALE : 1
-  const liveCritW = (CRIT_W * tide.critZoneMult * (sharpshotBuff ? 1 + sharpshotBuff.multiplier : 1) + dialCritBonus) * bandScale
+  const liveCritW = CRIT_W * tide.critZoneMult * (sharpshotBuff ? 1 + sharpshotBuff.multiplier : 1) * bandScale
   // The hit + graze half-widths this fight actually uses. Bar fights get the
   // untouched constants; only the dial scales.
   const aimHitW   = (HIT_W + dialHitBonus) * bandScale

@@ -7,21 +7,23 @@ import { getEffectiveRod } from './rods'
  *  fishing zone widths are already authored in DEGREES, so a bonus worth +8° on
  *  the fishing dial is worth exactly +8° here. No re-tuning, no fudge factor.
  *
- *  Mapping (the two bands the player's gear actually controls when fishing):
+ *  Mapping:
  *    catch zone   <- hook tier + rod.catchZoneBonus    -> the HIT band
- *    perfect zone <- rod.perfectZoneBonus              -> the CRIT band
- *  Line penalty drives the SNAG zone, which raid combat has no analogue for,
- *  so it is deliberately ignored.
+ *
+ *  The CRIT band is deliberately NOT gear-widened. Its fishing counterpart is
+ *  the perfect zone, which no gear is allowed to touch (see RodDef), and the
+ *  same reasoning holds here: gear should buy you more chances at the crit, not
+ *  a bigger crit to aim at. Line penalty drives the SNAG zone, which raid
+ *  combat has no analogue for, so it is ignored too.
  *
  *  Returned values are normalised HALF-widths, matching HIT_W / CRIT_W in
  *  RaidCombat (bands are drawn and judged as centre ± width).
  */
 export interface DialAimBonus {
   hitBonus: number
-  critBonus: number
 }
 
-export const NO_DIAL_AIM_BONUS: DialAimBonus = { hitBonus: 0, critBonus: 0 }
+export const NO_DIAL_AIM_BONUS: DialAimBonus = { hitBonus: 0 }
 
 // Mirrors CATCH_BONUS_PER_TIER in app/(app)/fishing/depths.ts.
 const CATCH_BONUS_PER_TIER = 3
@@ -29,11 +31,10 @@ const CATCH_BONUS_PER_TIER = 3
 // degree is 1/360 of the dial.
 const degToHalfWidth = (deg: number) => deg / 2 / 360
 
-// Ceilings so a maxed angler cannot turn the final fight into a formality.
-// At the caps the hit band roughly doubles and the crit band roughly triples,
-// which is a real, felt reward without removing the need to aim.
+// Ceiling so a maxed angler cannot turn the final fight into a formality. At
+// the cap the hit band roughly doubles, which is a real, felt reward without
+// removing the need to aim.
 const MAX_HIT_BONUS = 0.055
-const MAX_CRIT_BONUS = 0.026
 
 export function dialAimBonus(
   rodTier: number,
@@ -42,9 +43,5 @@ export function dialAimBonus(
 ): DialAimBonus {
   const rod = getEffectiveRod(rodTier ?? 0, completionistEffects)
   const catchDeg = Math.max(0, Math.min(8, hookTier ?? 0)) * CATCH_BONUS_PER_TIER + (rod.catchZoneBonus ?? 0)
-  const perfectDeg = rod.perfectZoneBonus ?? 0
-  return {
-    hitBonus: Math.min(MAX_HIT_BONUS, degToHalfWidth(catchDeg)),
-    critBonus: Math.min(MAX_CRIT_BONUS, degToHalfWidth(perfectDeg)),
-  }
+  return { hitBonus: Math.min(MAX_HIT_BONUS, degToHalfWidth(catchDeg)) }
 }
