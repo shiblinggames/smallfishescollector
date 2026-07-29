@@ -2052,9 +2052,10 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
   zone: 'ancient_deep',
   enemies: {
     husk_megalodon: {
-      // The first husk. Pure jaw, no tricks: it teaches that these things are
-      // hollow and still hit like the sea itself.
-      id: 'husk_megalodon', name: 'The Stolen Jaw', hpBase: 420, minDmg: 26, maxDmg: 42,
+      // EVERY encounter in this raid is HIM: same name, same ship, same face on
+      // the plate. What changes is which stolen giant he leans on, which he calls
+      // up the way you call up your own crew. This first pass is pure jaw.
+      id: 'husk_megalodon', name: 'Finn', hpBase: 420, minDmg: 26, maxDmg: 42,
       shipSpeed: 7, actionMs: 3400,
       magazineSize: 4, shieldPct: 0.12, chargeBiteChance: 0.30,
       ultimate: { name: 'Nothing Left In It', mult: 2.5, line: 'The jaw closes on nothing at all, and the water it moves still breaks over your deck.' },
@@ -2064,8 +2065,8 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
       portrait: '/finn_final.png',
     },
     husk_dunkleosteus: {
-      // The armour husk. Plated to the eye, so the lesson is patience.
-      id: 'husk_dunkleosteus', name: 'The Stolen Plate', hpBase: 460, minDmg: 24, maxDmg: 38,
+      // He puts the dunkleosteus plate on. The lesson is patience.
+      id: 'husk_dunkleosteus', name: 'Finn', hpBase: 460, minDmg: 24, maxDmg: 38,
       shipSpeed: 6, actionMs: 3500,
       magazineSize: 4, shieldPct: 0.34, chargeBiteChance: 0.30,
       special: { name: 'Old Armour', aimAttack: 'hardened', aimPasses: 2, summonImage: '/fish/dunkleosteus.png', summonLabel: 'He calls on it', summonColor: '#9fb2c8', line: 'Plate that outlived its own bones grinds shut across every lane you want.' },
@@ -2075,8 +2076,8 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
       portrait: '/finn_final.png',
     },
     husk_mosasaurus: {
-      // The fast one. Punishes a slow lock.
-      id: 'husk_mosasaurus', name: 'The Stolen Coil', hpBase: 430, minDmg: 27, maxDmg: 44,
+      // He runs the mosasaurus. Punishes a slow lock.
+      id: 'husk_mosasaurus', name: 'Finn', hpBase: 430, minDmg: 27, maxDmg: 44,
       shipSpeed: 12, actionMs: 3100,
       magazineSize: 4, shieldPct: 0.14, chargeBiteChance: 0.38,
       special: { name: 'Wake of the Drowned', aimAttack: 'squall', aimPasses: 2, summonImage: '/fish/mosasaurus.png', summonLabel: 'He calls on it', summonColor: '#67e8f9', line: 'It runs the length of your hull without surfacing, and the whole sea leans after it.' },
@@ -2087,8 +2088,8 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
       portrait: '/finn_final.png',
     },
     husk_plesiosaurus: {
-      // The reach. Decoys: a long neck out of the dark from the wrong place.
-      id: 'husk_plesiosaurus', name: 'The Stolen Reach', hpBase: 440, minDmg: 25, maxDmg: 40,
+      // He reaches with the plesiosaurus: a long neck out of the wrong water.
+      id: 'husk_plesiosaurus', name: 'Finn', hpBase: 440, minDmg: 25, maxDmg: 40,
       shipSpeed: 9, actionMs: 3400,
       magazineSize: 4, shieldPct: 0.16, chargeBiteChance: 0.32,
       special: { name: 'From the Wrong Water', aimAttack: 'decoys', aimPasses: 2, summonImage: '/fish/plesiosaurus.png', summonLabel: 'He calls on it', summonColor: '#a78bfa', line: 'It surfaces four times in four places, and only one of them has anything behind it.' },
@@ -2098,8 +2099,8 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
       portrait: '/finn_final.png',
     },
     husk_basilosaurus: {
-      // The endurance husk. It simply will not stop coming.
-      id: 'husk_basilosaurus', name: 'The Stolen Patience', hpBase: 520, minDmg: 26, maxDmg: 41,
+      // Basilosaurus endurance. He simply will not stop coming.
+      id: 'husk_basilosaurus', name: 'Finn', hpBase: 520, minDmg: 26, maxDmg: 41,
       shipSpeed: 7, actionMs: 3600,
       magazineSize: 5, shieldPct: 0.22, chargeBiteChance: 0.34,
       special: { name: 'Still Going', status: 'weaken', magnitude: 0.2, turns: 2, target: 'player', summonImage: '/fish/basilosaurus.png', summonLabel: 'He calls on it', summonColor: '#94a3b8', line: 'You put a broadside through it and it keeps its heading, and something in your crew goes quiet.' },
@@ -2110,8 +2111,8 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
       portrait: '/finn_final.png',
     },
     husk_shastasaurus: {
-      // The biggest thing in the water, and the last door before him.
-      id: 'husk_shastasaurus', name: 'The Stolen Weight', hpBase: 600, minDmg: 29, maxDmg: 47,
+      // All the tonnage the shastasaurus had. The last door before the man himself.
+      id: 'husk_shastasaurus', name: 'Finn', hpBase: 600, minDmg: 29, maxDmg: 47,
       shipSpeed: 6, actionMs: 3700,
       magazineSize: 5, shieldPct: 0.30, chargeBiteChance: 0.36, startCharges: 1,
       special: { name: 'Displacement', aimAttack: 'squall', aimPasses: 3, summonImage: '/fish/shastasaurus.png', summonLabel: 'He calls on it', summonColor: '#7dd3fc', line: 'It does not attack. It simply occupies the water, and your deck cannot find level again.' },
