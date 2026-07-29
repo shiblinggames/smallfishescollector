@@ -30,6 +30,11 @@ const GUIDE = {
   dole: { speaker: 'Dole', portrait: CREW_ART('Dole.png') },
   laz:  { speaker: 'Laz',  portrait: CREW_ART('Coelacanth.png') },
   mira: { speaker: 'Mira', portrait: CREW_ART('Mira.png') },
+  // Not crew. The rival off the fishing dock, who turns out to be the name at
+  // the top of all of it. His plate uses his OWN character sprite (the same one
+  // the Ch IV silhouette and the reveal shot are cut from), so the face on the
+  // plate is the face a fishing player has been trading barbs with all along.
+  finn: { speaker: 'Finn', portrait: '/fishing_ruby_rest.png' },
 } as const
 
 // A muster plays as a cutscene, not a static checklist: the crew read the
@@ -365,6 +370,7 @@ export type SceneInsert =
   | { kind: 'ledger-f' }                 // the patient F signing the margin
   | { kind: 'sealed-letter'; wax?: string } // a wax-sealed letter (wax = the initials pressed in it)
   | { kind: 'finn-silhouette' }          // a figure rising from the true deep. Finn's shape, blacked to a silhouette (the "not the final boss" sting; reuses his CharacterAvatar, no art)
+  | { kind: 'finn-unmasked' }            // THE reveal: the same shape and stance, finally lit. The black drains out of him (no new art; pairs with finn-silhouette)
   | { kind: 'dial-demo' }                // a live catch-dial demo (needle landing green→gold). Rendered by a caller's renderInsert override (the fishing intro), not the shared InsertShot.
 
 /** One row in a node's "possible drops" panel. */
@@ -2582,9 +2588,48 @@ export const RAID_MAP: RaidNode[] = [
     comingSoon: true,
     image: '/raidlog.png',
     sceneAccent: '#a78bfa',
+    scene: [
+      { text: 'The sixth giant is on your wall, and the sea has been strange ever since. No pirates on the horizon. No fog where fog should not be. A whole ocean holding its breath, the way a room does when everyone in it already knows.' },
+      { text: 'The heading comes to you the way all of them did. A scrap of chart, a drowned captain, a name nobody will say. You have followed a hundred of these. This is the first one that was left for you on purpose.', pause: 500 },
+      { text: 'It is not a vault, or a court, or a fortress. It is a stretch of open water in the good light, the kind you would have fished on any ordinary morning of your life.', pause: 600 },
+      { text: 'And there is a small boat sitting on it, and a man in the small boat with a line in the water, and he does not turn around when you come alongside.', pause: 800 },
+      { ...GUIDE.finn, text: "Took you long enough. I'd about run out of water to wait on." },
+      { text: 'The light comes up off the swell and finds him, and the shape you saw rise past the don, the one you have not been able to put down since, stands up in a fishing boat and grins at you like it is a Tuesday.', pause: 900, fx: 'flash', insert: { kind: 'finn-unmasked' }, closeup: true },
+      { text: 'Finn.', pause: 1100, closeup: true },
+      { ...GUIDE.finn, text: "Finn-dicate. Say it out loud once and tell me you never heard it. Go on. Everyone hears it eventually, and never once before it's too late to matter." },
+      { ...GUIDE.mira, text: "Captain. That's the F. That's the margin off the crooked ledger, the one I said was a dead partner. He's been signing under all of it." },
+      { ...GUIDE.finn, text: "A dead partner. That's lovely, that is. I'll have that put on something." },
+      { text: 'And then the whole chase turns over. Pete, milked and delivering upward. Krust, who answered to someone above. The Cache that was a front. The don, who wore the wanting like it was his and died still swearing the family was never a family at all.', pause: 700 },
+      { ...GUIDE.laz, text: "The don said it at the end. It was never the family. It was the feeding. He was quoting someone. He was quoting you." },
+      { ...GUIDE.finn, text: "He was quoting me badly. The don thought the feeding was cargo. Powder, iron, hulls, whatever he could bleed the sea to shift, all of it hauled out here and dropped in the dark, year after year, trying to buy a door open." },
+      { ...GUIDE.finn, text: "It never opened. Not for him. Not for me. Forty years I've put a line in that water and forty years it has looked back at me and closed. The deep does not care what you own, captain. It cares who it lets in." },
+      { ...GUIDE.doby, text: "You were fishing for the ancients. All of it, the whole rotten sprawl of it, so you could pull the old ones up out of the dark. You have no idea what they are." },
+      { ...GUIDE.finn, text: "I've a far better idea than you, whale. I have been at this since before that captain of yours could hold a rod." },
+      { text: 'He says it kindly. That is the worst of it. He has said everything kindly since the first day you ever met him on a dock.', pause: 600 },
+      { ...GUIDE.finn, text: "So I stopped fishing for the deep. I went looking for someone the deep would open for. Took years. Then a nobody in a bad boat starts landing things off my dock that had no business on any line, and I thought: there. That one. That one it likes." },
+      { text: 'Every meeting. Every goad about deeper water. Every time he laughed at your boat and told you where the real fish were. A hand at your back the whole way down.', pause: 800, closeup: true },
+      { ...GUIDE.finn, text: "You thought a rod bought you that water. You bought it by gutting my house, one captain at a time. Every door you kicked down, I left unlocked. Every name you took off my board was a name I'd stopped needing. You cleared my own ranks for me and called it a campaign." },
+      { ...GUIDE.finn, text: "And then you went down there and landed all six, and carried them up into the light for me, one at a time, like the good hand you are. Thank you for that. Truly. I could not have done it without you, and I mean that in the way it sounds." },
+      { text: 'The line in his hands has been out this whole time. It goes down into water that has no bottom on any chart you own.', pause: 900, closeup: true },
+      { ...GUIDE.kat, text: "Captain. Whatever he's about to say next, we're not doing it." },
+      { ...GUIDE.finn, text: "Six trophies on your wall and the deep wide open behind them. That's the door, and you built it. Now step aside and let a man through it." },
+      { text: 'And there it is. The whole sea, four chapters of it, one long line paid out slow and patient with you on the end of it, and the tug you have felt since the first cast finally coming home.', pause: 700 },
+      { ...GUIDE.mira, text: "I collected marks for the worst people in this ocean and not one of them ever scared me. This one's smiling." },
+      { ...GUIDE.dole, text: "Every ledger I balanced for you led here. I should have seen the shape of it. Nothing in this sea ever added up except him." },
+      { ...GUIDE.mako, text: "Biggest bounty in the sea. Not the don after all. Him." },
+      { ...GUIDE.doby, text: "Captain. I have swum this water for four hundred years. If he opens that, none of us are the ones who close it." },
+      { text: 'Finn sets the rod down in the bottom of the boat, and for the first time since a dock a long time ago, he is not smiling.', pause: 800, closeup: true },
+      { ...GUIDE.finn, text: "One last ride, then. You and me and the deep, the way it was always going to end. Don't be late. You never are." },
+      { text: 'The good light holds. The water stays flat. Nothing sinks and nothing rises, and that is somehow worse than the don going down with his whole drowned court.', pause: 600 },
+      { text: 'You came out here for the last name on the board. You have had it since the beginning. He was on the dock the day you started.', pause: 700 },
+    ],
     detail: {
       description:
         'The last stop is not on any chart the Finndicate kept. It opens for a captain who has been down where the old things sleep, and it opens for nobody else.\n\nThat was always the point.',
+      drops: [
+        { emoji: '📜', label: "Captain's Logbook, Fragment XV", sublabel: '"Finn-dicate. Say it out loud once and tell me you never heard it. Everyone hears it eventually, and never once before it is too late to matter."', rarity: 'legendary' },
+      ],
+      dropsNote: 'The name at the top of the Sunken Hand, and what your six giants were really for.',
       ctaLabel: 'Coming Soon',
       summary:
         'What the six giants were really for. Opens only once every Ancient Deep trophy is on your wall.',

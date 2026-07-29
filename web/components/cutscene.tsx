@@ -238,6 +238,7 @@ export function InsertShot({ kind, wax, accent, reduced }: { kind: string; wax?:
   if (kind === 'ledger-f') return <LedgerFInsert accent={accent} reduced={reduced} />
   if (kind === 'sealed-letter') return <SealedLetterInsert wax={wax ?? ''} accent={accent} reduced={reduced} />
   if (kind === 'finn-silhouette') return <FinnSilhouetteInsert accent={accent} reduced={reduced} />
+  if (kind === 'finn-unmasked') return <FinnUnmaskedInsert accent={accent} reduced={reduced} />
   return null
 }
 
@@ -270,6 +271,38 @@ function FinnSilhouetteInsert({ accent, reduced }: { accent: string; reduced?: b
           transform: FINN_AVATAR.mirrored ? 'scaleX(-1)' : 'none',
           filter: 'brightness(0) drop-shadow(0 0 12px rgba(0,0,0,0.75))' }} />
       {/* the waterline the deep folds back over him */}
+      <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, bottom: '9%', height: 2,
+        background: `linear-gradient(90deg, transparent, ${accent}66, transparent)` }} />
+    </div>
+  )
+}
+
+/** THE reveal shot. Deliberately the SAME sprite and stance as the Ch IV
+ *  silhouette, so this reads as that shape finally lit rather than as a new
+ *  character walking on: the black drains out of him over a long beat while the
+ *  cold deep-water backlight warms to daylight. He was standing there the whole
+ *  time. Uses his existing sprite, so no new art. */
+function FinnUnmaskedInsert({ accent, reduced }: { accent: string; reduced?: boolean }) {
+  const sprite = getCharacterSprites(FINN_AVATAR.characterColor).rest
+  return (
+    <div style={{ position: 'relative', width: 'min(74vw, 300px)', aspectRatio: '1 / 1', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', overflow: 'hidden' }}>
+      {/* the light comes UP on him: cold abyss glow warming to open daylight */}
+      <motion.div aria-hidden
+        initial={{ opacity: 0.85, scale: 1 }}
+        animate={{ opacity: reduced ? 0.6 : [0.85, 0.55, 0.62], scale: reduced ? 1.1 : [1, 1.35, 1.28] }}
+        transition={{ duration: reduced ? 0.6 : 4.2, ease: 'easeOut' }}
+        style={{ position: 'absolute', left: '50%', top: '44%', width: '86%', aspectRatio: '1', transform: 'translate(-50%, -50%)', borderRadius: '50%',
+          background: `radial-gradient(circle at 50% 45%, ${accent}aa 0%, rgba(255,214,140,0.34) 44%, transparent 72%)`,
+          filter: 'blur(7px)' }} />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <motion.img src={sprite} alt="" aria-hidden decoding="async"
+        initial={{ opacity: 1, filter: 'brightness(0) drop-shadow(0 0 12px rgba(0,0,0,0.75))' }}
+        animate={{ filter: reduced
+          ? 'brightness(1) drop-shadow(0 0 14px rgba(0,0,0,0.5))'
+          : ['brightness(0) drop-shadow(0 0 12px rgba(0,0,0,0.75))', 'brightness(0.35) drop-shadow(0 0 13px rgba(0,0,0,0.6))', 'brightness(1) drop-shadow(0 0 14px rgba(0,0,0,0.5))'] }}
+        transition={{ duration: reduced ? 0.5 : 3.6, ease: 'easeInOut', times: reduced ? undefined : [0, 0.45, 1] }}
+        style={{ position: 'relative', height: '90%', width: 'auto', objectFit: 'contain',
+          transform: FINN_AVATAR.mirrored ? 'scaleX(-1)' : 'none' }} />
       <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, bottom: '9%', height: 2,
         background: `linear-gradient(90deg, transparent, ${accent}66, transparent)` }} />
     </div>
