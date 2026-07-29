@@ -3858,7 +3858,7 @@ export default function RaidCombat({
           if (!bossAbilityOnRef.current) bossAbilityOnRef.current = 2 + Math.floor(Math.random() * 3)
           if (!bossAbilityUsedRef.current && bossAbilityTurnRef.current >= bossAbilityOnRef.current) {
             bossAbilityUsedRef.current = true
-            const lines: string[] = [`${ab.name}! ${ab.line}`]
+            const lines: string[] = []
             let aSplatTarget: Actor | null = null
             let aSplatText = ''
             const aColor = ab.summonColor ?? '#c084fc'
@@ -3867,7 +3867,7 @@ export default function RaidCombat({
               const dmg = Math.max(1, Math.round(enemy.maxDmg * 1.5 * (ab.value ?? 1) * bossPhaseDmgMult))
               pHp = Math.max(0, pHp - dmg)
               aSplatTarget = 'player'; aSplatText = `-${dmg}`
-              lines.push(`A single shell, and it lands the way his do. ${dmg} damage.`)
+              lines.push(`${ab.name}: guaranteed crit, ${dmg} damage.`)
             } else if (ab.kind === 'blitz') {
               // MAKO: a barrage that bites harder the more wounded you are.
               const shots = ab.shots ?? 4
@@ -3878,7 +3878,7 @@ export default function RaidCombat({
               }
               pHp = Math.max(0, pHp - total)
               aSplatTarget = 'player'; aSplatText = `-${total}`
-              lines.push(`${shots} light hits, and they come faster as you bleed. ${total} damage.`)
+              lines.push(`${ab.name}: ${shots} fast hits, ${total} damage.`)
             } else if (ab.kind === 'abyssal_tide') {
               // CATFISH: he heals and puts plate up.
               const heal = Math.max(1, Math.round(enemyHpMaxRef.current * (ab.value ?? 0.14)))
@@ -3887,20 +3887,20 @@ export default function RaidCombat({
               enemyShieldRef.current += shield
               setEnemyShieldHp(enemyShieldRef.current)
               aSplatTarget = 'enemy'; aSplatText = `+${heal}`
-              lines.push(`He closes ${heal} of what you opened, and the plate goes back over it.`)
+              lines.push(`${ab.name}: heals ${heal}, gains ${shield} shield.`)
             } else if (ab.kind === 'foresight') {
               // DOLE: he reads you, and slips what is coming.
               bossForesightRef.current = ab.turns ?? 2
-              lines.push(`He is reading your deck now. Your next ${bossForesightRef.current} shots have to get past that.`)
+              lines.push(`${ab.name}: he dodges your next ${bossForesightRef.current} shots.`)
             } else if (ab.kind === 'vengeance') {
               // LAZ: he will not die to the next killing blow.
               bossWardRef.current = ab.turns ?? 4
-              lines.push(`Whatever you land in the next ${bossWardRef.current} turns, he does not go down to it.`)
+              lines.push(`${ab.name}: cannot be killed for ${bossWardRef.current} turns.`)
             } else if (ab.kind === 'requiem') {
               // MIRA: marked. Everything he throws lands harder.
               bossMarkRef.current = { turns: ab.turns ?? 3, mult: ab.value ?? 0.3 }
               aSplatTarget = 'player'; aSplatText = 'Marked'
-              lines.push(`You are marked. Everything he throws lands harder until it lapses.`)
+              lines.push(`${ab.name}: you are marked, +${Math.round(bossMarkRef.current.mult * 100)}% damage taken for ${bossMarkRef.current.turns} turns.`)
             }
             pushStep({
               who, action: 'reload', pHp, eHp, pCharges, eCharges,

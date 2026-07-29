@@ -102,7 +102,6 @@ export type BossAbilityKind =
 export interface BossAbility {
   kind: BossAbilityKind
   name: string
-  line: string
   /** The giant he is calling on. Plays through the same full-screen splash a
    *  player's crew ability uses. */
   summonImage: string
@@ -2131,7 +2130,6 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
       // PHASE 1's ability. DOLE: he reads you, and slips what is coming.
       phaseAbility: {
         kind: 'foresight', name: 'From the Wrong Water',
-        line: 'He surfaces the long neck of it in four places at once, and reads your deck off all four.',
         summonImage: '/fish/plesiosaurus.png', summonColor: '#a78bfa',
         turns: 2,
       },
@@ -2142,7 +2140,6 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
           dialogueLine: 'Plate that outlived its own bones. Do you know how long I waited to wear this?',
           ability: {
             kind: 'abyssal_tide', name: 'Old Armour',
-            line: 'The dunkleosteus plate closes over him, and the holes you put in him close with it.',
             summonImage: '/fish/dunkleosteus.png', summonColor: '#9fb2c8',
             value: 0.14,
           } },
@@ -2152,7 +2149,6 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
           dialogueLine: 'You have never once been fast enough. Let me show you what fast is.',
           ability: {
             kind: 'blitz', name: 'Wake of the Drowned',
-            line: 'It runs the whole length of your hull without surfacing, and the sea leans after it.',
             summonImage: '/fish/mosasaurus.png', summonColor: '#67e8f9',
             shots: 4, value: 0.3,
           } },
@@ -2162,7 +2158,6 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
           dialogueLine: 'You have put more iron through me than most captains see in a lifetime. Look at me.',
           ability: {
             kind: 'vengeance', name: 'Still Going',
-            line: 'You put a broadside clean through him and his heading does not change by a degree.',
             summonImage: '/fish/basilosaurus.png', summonColor: '#94a3b8',
             turns: 3,
           } },
@@ -2172,7 +2167,6 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
           dialogueLine: 'I have been reading you since your first cast. There is nothing left of you I have not written down.',
           ability: {
             kind: 'requiem', name: 'All That Tonnage',
-            line: 'The largest thing the sea ever grew settles over your water, and your deck cannot find level again.',
             summonImage: '/fish/shastasaurus.png', summonColor: '#7dd3fc',
             turns: 3, value: 0.3,
           } },
@@ -2182,7 +2176,6 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
           dialogueLine: 'One last ride, captain. You landed this one yourself. Let us see you do it twice.',
           ability: {
             kind: 'leviathan', name: 'The Borrowed Jaw',
-            line: 'The jaw closes on nothing at all, and the water it moves still breaks your deck open.',
             summonImage: '/fish/megalodon.png', summonColor: '#f87171',
             value: 1.0,
           } },
