@@ -266,9 +266,13 @@ export function DialSVG({
           {needleStyle === 'marker' ? (
             // Raid indicator: a short bar spanning the band annulus, so it reads
             // exactly like the aim bar's needle sweeping across the target.
+            // It is kept STRICTLY INSIDE the ring: inset a pixel at each end,
+            // and butt caps rather than round, because a round cap adds half
+            // the stroke width beyond the endpoint and that alone was enough to
+            // push the fat glow layer out over both black borders.
             <g style={perfectFlash ? { filter: 'drop-shadow(0 0 6px #fde68a)' } : undefined}>
-              <line x1={CX} y1={CY - OUTER_R - 4} x2={CX} y2={CY - INNER_R + 4} stroke={liveNeedleColor} strokeWidth={perfectFlash ? 11 : 9} strokeOpacity={perfectFlash ? 0.3 : 0.16} strokeLinecap="round" />
-              <line x1={CX} y1={CY - OUTER_R - 4} x2={CX} y2={CY - INNER_R + 4} stroke={liveNeedleColor} strokeWidth={perfectFlash ? 3.8 : 2.8} strokeLinecap="round" />
+              <line x1={CX} y1={CY - OUTER_R + 1} x2={CX} y2={CY - INNER_R - 1} stroke={liveNeedleColor} strokeWidth={perfectFlash ? 11 : 9} strokeOpacity={perfectFlash ? 0.3 : 0.16} strokeLinecap="butt" />
+              <line x1={CX} y1={CY - OUTER_R + 1} x2={CX} y2={CY - INNER_R - 1} stroke={liveNeedleColor} strokeWidth={perfectFlash ? 3.8 : 2.8} strokeLinecap="butt" />
             </g>
           ) : (
           <g style={perfectFlash ? { filter: 'drop-shadow(0 0 6px #fde68a)' } : undefined}>
