@@ -371,6 +371,9 @@ export default function GauntletGame(props: GauntletGameProps) {
   // Boons — drafted as TIERS (family id → highest tier owned, 1..3). Drafting a
   // higher tier replaces the lower; no infinite single-boon stacking.
   const [boonTiers, setBoonTiers] = useState<Record<string, number>>({})
+  // The boon Blood Oath seeded this run with (so the first descent can announce
+  // it — otherwise a boon you never drafted looks like a bug in the codex).
+  const [oathBoon, setOathBoon] = useState<string | null>(null)
   // ── Davy's Terms ──────────────────────────────────────────────────────────
   // Signed BEFORE a hardcore dive; they reshape the run (they are NOT curses —
   // curses stay the random mid-run layer and are untouched). termFx is the one
@@ -759,6 +762,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       // boonTiers before the reset settles so combat + the boon tracker see it
       // from the first fight. Non-legendary, non-Mega-gated (see pickBloodOathBoon).
       const oathBoon = gauntletHasBloodOath(activeUpgrades) ? pickBloodOathBoon(props.variant) : null
+      setOathBoon(oathBoon)
       setBoonTiers(oathBoon ? { [oathBoon]: 1 } : {}); setConfluencesTaken([]); setPendingBoons(null); setPendingConfluence(null); setPendingReprieve(null); offeredConfluenceIdsRef.current = new Set()
       bannedBoonsRef.current = new Set(); setFiltersLeft(gauntletBoonFilters(activeUpgrades))
       setConfluenceUnlocked(null); setConfluenceBanner(null); setCurseShed(null)
@@ -4154,6 +4158,21 @@ export default function GauntletGame(props: GauntletGameProps) {
             className="font-cinzel font-700" style={{ fontSize: bandEntry ? '1.2rem' : '0.92rem', color: bandEntry ? band.accent : '#cfc9bf', marginTop: 7, letterSpacing: '0.02em', textShadow: bandEntry ? `0 0 20px ${band.accent}66` : undefined }}>
             {band.name}
           </motion.p>
+          {/* Blood Oath (a Locker upgrade) opens the run already holding one
+              boon. Announce it on the first descent so a boon you never drafted
+              doesn't read as a bug when you open the codex. */}
+          {d === 1 && oathBoon && (() => {
+            const nm = GAUNTLET_BOONS.find(f => f.id === oathBoon)?.name
+            return nm ? (
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.42, duration: 0.5 }}
+                style={{ marginTop: 14, maxWidth: 320, padding: '0.5rem 0.9rem', borderRadius: 12, background: `${AC}12`, border: `1px solid ${AC}45`, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={AC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0 }}><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></svg>
+                <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#dfeee9', lineHeight: 1.35, textAlign: 'left' }}>
+                  <span className="font-800 uppercase tracking-[0.06em]" style={{ color: AC }}>Blood Oath</span> — you dive already holding <strong style={{ color: '#f4ecd8' }}>{nm} I</strong>.
+                </p>
+              </motion.div>
+            ) : null
+          })()}
           {/* Uncharted water — the record breaks HERE, mid-run, not at the
               cash-out screen. Fires once per run. */}
           {recordBeat && (
