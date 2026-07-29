@@ -2466,12 +2466,14 @@ export default function RaidCombat({
   // Kept sparse so it's a sharp twist, not a minefield.
   const flareFeintChance   = flareTier >= 3 ? 0.22 : 0
   // Heavier clustering from tier 2 up; fuses tighten as the tier climbs.
-  const flareClusterChance = flareTier >= 2 ? 0.42 : 0.24
+  const flareClusterChance = flareTier >= 2 ? 0.34 : 0.2
   // Challenge mode can tighten the fuse (flareFuseMult < 1 = faster) and hit
   // harder (flareDmgMult > 1) so the barrage is a real step up, not just stats.
   // Flare Storm curse folds in on top of the per-enemy tuning: a tighter fuse
   // (tide.flareFuseMult < 1) and hotter chip (tide.flareDmgMult > 1).
-  const flareFuseScale     = (flareTier >= 3 ? 0.82 : flareTier === 2 ? 0.95 : 1.15) * (enemy.flareFuseMult ?? 1) * tide.flareFuseMult
+  // Base fuse per tier — 2026 speed nerf (was 0.82 / 0.95 / 1.15): flares were a
+  // touch too fast at the fast end, so every tier gets a bit more time to tap.
+  const flareFuseScale     = (flareTier >= 3 ? 0.9 : flareTier === 2 ? 1.02 : 1.18) * (enemy.flareFuseMult ?? 1) * tide.flareFuseMult
   const flarePerMiss = Math.round(Math.max(Math.round(enemy.minDmg * 0.7), Math.round(playerHpMax * 0.032)) * (enemy.flareDmgMult ?? 1) * tide.flareDmgMult)
   // Tapping a live-shell feint hurts MORE than letting a flare through — the
   // whole point of the "don't tap the red" test is that grabbing one bites.
@@ -8369,7 +8371,7 @@ function FlareBarrage({ count, color, label, feintChance = 0, clusterChance = 0.
     const placed: { x: number; y: number; end: number }[] = []
     let t = 420
     for (let k = 0; k < count; k++) {
-      const fuse = (Math.max(460, 880 - k * 40) + Math.random() * 150) * fuseScale   // tighten as it goes
+      const fuse = (Math.max(560, 960 - k * 34) + Math.random() * 150) * fuseScale   // tighten as it goes (higher floor after the 2026 speed nerf)
       // Rejection-sample a spot clear of every flare still live at spawn time.
       // If the field is too crowded to fully separate, keep the roomiest pick.
       const alive = placed.filter(p => p.end > t)
@@ -8397,9 +8399,9 @@ function FlareBarrage({ count, color, label, feintChance = 0, clusterChance = 0.
       }, t))
       // Arrhythmic gap to the next spawn — cluster, lull, or normal.
       const r = Math.random()
-      const gap = r < clusterChance ? 115 + Math.random() * 85       // cluster (rapid back-to-back)
+      const gap = r < clusterChance ? 205 + Math.random() * 110      // cluster (back-to-back, but spaced enough to tap — 2026 nerf, was 115+85)
                 : r < clusterChance + 0.26 ? 770 + Math.random() * 280 // lull (a beat of calm)
-                : 350 + Math.random() * 230                          // normal
+                : 380 + Math.random() * 230                          // normal
       t += gap
     }
     return () => { timersRef.current.forEach(clearTimeout) }

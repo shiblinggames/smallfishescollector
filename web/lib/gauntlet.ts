@@ -1518,8 +1518,8 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
     id: 'flare_storm', image: '/gauntlet/curses/flare_storm.png', name: 'Flare Storm', gauntlet: 'don',
     flavor: 'The green lights the whole sky. When the keeper’s crews throw flares, they come like a squall.',
     tiers: [
-      { desc: 'Flare barrages come faster and hit 30% harder', detail: 'On any enemy that throws a Flare Barrage (the swat-the-flares, don’t-tap-the-red test), the fuses run tighter — flares resolve faster — and every flare you let through or feint you tap chips you for 30% more. Enemies with no flares are unaffected.', effects: [{ kind: 'flareStorm', fuseMult: 0.85, dmgMult: 1.30 }] as TideEffect[] },
-      { desc: 'Flare barrages come much faster and hit 55% harder', detail: 'The sky never darkens. Flare fuses run much tighter and each mistake chips you for 55% more. Only enemies that throw flares are affected — but this deep, plenty do.', effects: [{ kind: 'flareStorm', fuseMult: 0.70, dmgMult: 1.55 }] as TideEffect[] },
+      { desc: 'Flare barrages hit 30% harder and come a bit faster', detail: 'On any enemy that throws a Flare Barrage (the swat-the-flares, don’t-tap-the-red test), every flare you let through or feint you tap chips you for 30% more, and the fuses run a little tighter. Enemies with no flares are unaffected.', effects: [{ kind: 'flareStorm', fuseMult: 0.92, dmgMult: 1.30 }] as TideEffect[] },
+      { desc: 'Flare barrages hit 55% harder and come faster', detail: 'The sky never darkens. Each flare mistake chips you for 55% more, and the fuses run tighter. Only enemies that throw flares are affected — but this deep, plenty do.', effects: [{ kind: 'flareStorm', fuseMult: 0.83, dmgMult: 1.55 }] as TideEffect[] },
     ],
   },
   {
