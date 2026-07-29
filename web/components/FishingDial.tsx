@@ -270,9 +270,9 @@ export function DialSVG({
             // and butt caps rather than round, because a round cap adds half
             // the stroke width beyond the endpoint and that alone was enough to
             // push the fat glow layer out over both black borders.
-            <g style={perfectFlash ? { filter: 'drop-shadow(0 0 6px #fde68a)' } : undefined}>
-              <line x1={CX} y1={CY - OUTER_R + 1} x2={CX} y2={CY - INNER_R - 1} stroke={liveNeedleColor} strokeWidth={perfectFlash ? 11 : 9} strokeOpacity={perfectFlash ? 0.3 : 0.16} strokeLinecap="butt" />
-              <line x1={CX} y1={CY - OUTER_R + 1} x2={CX} y2={CY - INNER_R - 1} stroke={liveNeedleColor} strokeWidth={perfectFlash ? 3.8 : 2.8} strokeLinecap="butt" />
+            <g style={perfectFlash || snapAnim ? { filter: 'drop-shadow(0 0 7px ' + (perfectFlash ? '#fde68a' : liveNeedleColor) + ')' } : undefined}>
+              <line x1={CX} y1={CY - OUTER_R + 1} x2={CX} y2={CY - INNER_R - 1} stroke={liveNeedleColor} strokeWidth={perfectFlash ? 11 : snapAnim ? 13 : 9} strokeOpacity={perfectFlash ? 0.3 : snapAnim ? 0.42 : 0.16} strokeLinecap="butt" style={{ transition: 'stroke-width 0.16s ease-out, stroke-opacity 0.16s ease-out' }} />
+              <line x1={CX} y1={CY - OUTER_R + 1} x2={CX} y2={CY - INNER_R - 1} stroke={liveNeedleColor} strokeWidth={perfectFlash ? 3.8 : snapAnim ? 5.4 : 2.8} strokeLinecap="butt" style={{ transition: 'stroke-width 0.16s ease-out' }} />
             </g>
           ) : (
           <g style={perfectFlash ? { filter: 'drop-shadow(0 0 6px #fde68a)' } : undefined}>

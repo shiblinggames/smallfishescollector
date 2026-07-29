@@ -7107,6 +7107,11 @@ export default function RaidCombat({
         )}
 
         {/* Aim-result feedback during the lock freeze — critical gets the full fishing-perfect treatment */}
+        {(() => {
+        // The aim-result badges sit at zIndex 11 INSIDE the battle stage. The dial
+        // is a body portal at 1200, so on the dial they were drawn UNDERNEATH it
+        // and the CRITICAL callout never appeared at all.
+        const badges = (
         <AnimatePresence>
           {aimResult === 'critical' && critFreeze && (
             <motion.div
@@ -7298,6 +7303,13 @@ export default function RaidCombat({
             )
           })()}
         </AnimatePresence>
+        )
+        // On the dial, lift them out of the stage and over the overlay so the
+        // CRITICAL callout reads exactly as it does on the aim bar.
+        return onDial && typeof document !== 'undefined'
+          ? createPortal(<div style={{ position: 'fixed', inset: 0, zIndex: 1300, pointerEvents: 'none' }}>{badges}</div>, document.body)
+          : badges
+        })()}
 
         {/* Player HP box — bottom-right. Tap to open the Captain's Ledger
             (full stats + equipped raid items under "Special"). Kept minimal
