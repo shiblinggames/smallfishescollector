@@ -14,7 +14,9 @@ const ROUTE_BG: [string, BgConfig][] = [
   // AbyssBackdrop (which sits over this layer), so they're intentionally NOT here.
   ['/raids',                   { src: '/raid1background.jpg',        overlay: 'rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.50) 50%, rgba(0,0,0,0.75) 100%' }],
   ['/leaderboard',             { src: '/leaderboard-bg.jpg',         overlay: 'rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.66) 50%, rgba(0,0,0,0.9) 100%' }],
-  ['/badges',                  { src: '/badges-bg.jpg',             overlay: 'rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.66) 50%, rgba(0,0,0,0.9) 100%' }],
+  // Warmer, simpler wash now (not the dark medal-wall), so it needs a heavier
+  // overlay than most pages to keep the badge list + text readable over it.
+  ['/badges',                  { src: '/badges-bg.jpg',             overlay: 'rgba(0,0,0,0.68) 0%, rgba(0,0,0,0.8) 50%, rgba(0,0,0,0.94) 100%' }],
   ['/crew',                    { src: '/crew-bg.jpg',               overlay: 'rgba(0,0,0,0.74) 0%, rgba(0,0,0,0.84) 50%, rgba(0,0,0,0.95) 100%' }],
   ['/packs',                   { src: '/crewopeningbackground.jpg', overlay: 'rgba(0,0,0,0.52) 0%, rgba(0,0,0,0.65) 50%, rgba(0,0,0,0.88) 100%' }],
   // Tavern — one warm, hand-painted "place" per section. Ordered specific →
