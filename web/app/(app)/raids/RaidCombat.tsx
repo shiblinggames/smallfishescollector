@@ -1370,7 +1370,7 @@ export default function RaidCombat({
   const [restorePulse, setRestorePulse] = useState(0)
   // Enemy status aura — a themed glow over the enemy hull while a tide/raid-item
   // status (burn, freeze) procs on it, so those effects read on the ship itself.
-  const [enemyAura, setEnemyAura] = useState<{ key: number; kind: 'burn' | 'freeze' | 'snared' | 'foresee' | 'marked'; color?: string } | null>(null)
+  const [enemyAura, setEnemyAura] = useState<{ key: number; kind: 'burn' | 'freeze' | 'snared' | 'foresee' | 'marked' | 'stunned' | 'stolen'; color?: string } | null>(null)
   // Thermal Shock confluence detonation — an ice+fire shatter burst over the hull.
   const [thermalShockFx, setThermalShockFx] = useState<{ key: number } | null>(null)
   // Persistent status — the enemy keeps a low ember glow while burning and a
@@ -1392,7 +1392,7 @@ export default function RaidCombat({
   const [enemyDeflect, setEnemyDeflect] = useState(0)
   const [playerImpact, setPlayerImpact] = useState<{ key: number; kind: 'normal' | 'volley' | 'crit' } | null>(null)
   // Heal sparkle on the player hull (Mender / Abyssal Tide / repair kit).
-  const [playerAura, setPlayerAura] = useState<{ key: number; kind?: 'heal' | 'tide' | 'aim' | 'charge' | 'brace'; color?: string } | null>(null)
+  const [playerAura, setPlayerAura] = useState<{ key: number; kind?: 'heal' | 'tide' | 'aim' | 'charge' | 'brace' | 'parry'; color?: string } | null>(null)
   // Dodge whoosh — afterimage + speed lines on whichever ship slips a shot.
   const [dodgeFx, setDodgeFx] = useState<{ key: number; actor: Actor } | null>(null)
 
@@ -3506,7 +3506,11 @@ export default function RaidCombat({
       aegisDown?: 'shatter' | 'collapse'
       // Set when this hit lit an Incendiary / froze a Frozen cannonball, so the
       // enemy hull flares with the matching status aura the instant it lands.
-      procStatus?: 'burn' | 'freeze'
+      procStatus?: 'burn' | 'freeze' | 'stun'
+      /** Press-Gang ripped a loaded shot off the enemy onto your rack. */
+      stoleCharge?: boolean
+      /** Cutlass Guard turned an incoming blow aside (0 damage taken). */
+      parriedHit?: boolean
       // Burn turns remaining AFTER this tick (drives the persistent ember glow).
       burnTurnsLeft?: number
       // This step is the frozen-skip — the ice breaks after it (clears the tint).
@@ -3780,7 +3784,9 @@ export default function RaidCombat({
       let splatColor = '#ef4444'
       let enemyCrit = false
       let playerCritShot = false   // this step is a player CRITICAL (for crit_strip_charge items)
-      let procStatus: 'burn' | 'freeze' | undefined
+      let procStatus: 'burn' | 'freeze' | 'stun' | undefined
+      let stoleChargeOut = false
+      let parriedHitOut = false
       let reflectDmgOut: number | undefined
       let riposteDmgOut: number | undefined
       let enemyHealOut: number | undefined
@@ -4373,6 +4379,7 @@ export default function RaidCombat({
             stepLines.push(grabbed
               ? `Press-Gang! You rip a cannonball off the ${enemy.name} and ram it into your own rack.`
               : `Press-Gang! You rip a loaded cannonball off the ${enemy.name} — your rack is already full.`)
+            stoleChargeOut = true
           }
           // Telemetry: a landed player shot (fire/volley/mega). dmg is the blow
           // the hitsplat shows; highestHit takes the max host-side.
@@ -4506,7 +4513,10 @@ export default function RaidCombat({
               stepLines.push(tide.stunOnHitTurns > 1
                 ? `Kraken's Grip! The deep seizes the ${enemy.name} — it's held for its next two turns.`
                 : `Kraken's Grip! The deep seizes the ${enemy.name} — it loses its next turn.`)
-              procStatus = 'freeze'
+              // Its own concussive look — a stun skips a turn like a freeze, but
+              // it is a SEIZING, not an icing, and borrowing the frost visual
+              // made the two effects indistinguishable on screen.
+              procStatus = 'stun'
             }
             // THE RACK — a landed hit fires a SPREAD. One roll, and every round the
             // equipped rack carries lands together through the shared status pipeline.
@@ -4658,6 +4668,7 @@ export default function RaidCombat({
           let parried = false
           if (tide.parryChance > 0 && rawIncoming > 0 && Math.random() < tide.parryChance) {
             parried = true
+            parriedHitOut = true
             dmg = 0
             if (tide.parryReflectPct > 0 && eHp > 0) {
               const reflect = Math.max(1, Math.round(rawIncoming * tide.parryReflectPct))
@@ -4842,6 +4853,8 @@ export default function RaidCombat({
         big: (who === 'player' && lockedAimResult === 'critical') || (who === 'enemy' && enemyCrit),
         logLines: stepLines,
         procStatus,
+        stoleCharge: stoleChargeOut || undefined,
+        parriedHit: parriedHitOut || undefined,
         enemyHeal: enemyHealOut,
         lifestealHeal: lifestealHealedOut || undefined,
         carapaceSoak: carapaceSoaked,
@@ -5358,10 +5371,26 @@ export default function RaidCombat({
             // glow/tint that lingers until the burn ticks out / ice breaks.
             if (step.procStatus) {
               const ak = Date.now() + i + 7
-              setEnemyAura({ key: ak, kind: step.procStatus })
+              setEnemyAura({ key: ak, kind: step.procStatus === 'stun' ? 'stunned' : step.procStatus })
               setTimeout(() => setEnemyAura(a => (a && a.key === ak ? null : a)), 950)
               if (step.procStatus === 'burn') setEnemyBurning(true)
-              else setEnemyFrozen(true)
+              // A stun rides the freeze SKIP mechanically (same pending ref) but
+              // must not paint the ice shell — the aura above carries it.
+              else if (step.procStatus === 'freeze') setEnemyFrozen(true)
+              else { setEnemyShakeKind('crit'); setEnemyShakeKey(k => k + 1); vibrate([0, 40, 30, 55]) }
+            }
+            // Press-Gang — the shot is ripped off their rack and rammed into
+            // yours: a snatch-arc on them, a charge flare on you.
+            if (step.stoleCharge) {
+              const sk = Date.now() + i + 21
+              setEnemyAura({ key: sk, kind: 'stolen' })
+              setTimeout(() => setEnemyAura(a => (a && a.key === sk ? null : a)), 900)
+              setTimeout(() => {
+                const pk = Date.now() + i + 22
+                setPlayerAura({ key: pk, kind: 'charge' })
+                setTimeout(() => setPlayerAura(a => (a && a.key === pk ? null : a)), 850)
+                vibrate([0, 18, 24, 30])
+              }, 220)
             }
             // Thermal Shock confluence detonation — a beat AFTER the main hit so it
             // reads as a one-two: the shot lands, then the frozen hull shatters in
@@ -5458,6 +5487,15 @@ export default function RaidCombat({
           // ALSO sync enemy HP — Vampiric lifesteal lands in step.eHp on
           // an enemy-attacks step, so the heal needs a separate push.
           syncEHp(step)
+          // Cutlass Guard — the blow is TURNED. Fire the steel-parry flare in
+          // place of the usual impact; a hit you take zero from should read as
+          // a win, not as silence.
+          if (step.parriedHit) {
+            const qk = Date.now() + i + 23
+            setPlayerAura({ key: qk, kind: 'parry' })
+            setTimeout(() => setPlayerAura(a => (a && a.key === qk ? null : a)), 850)
+            vibrate([0, 26, 20, 40])
+          }
           if (step.splatTarget === 'player') {
             setPHitsplat({ key: Date.now() + i + 1, text: step.splatText, color: step.splatColor, big: step.big, volley: eIsVolley })
             if (!isDodged) {
@@ -9103,22 +9141,25 @@ function BarrageSplat({ text, dx, crit, color: colorProp }: { text: string; dx: 
 // Enemy status aura — a brief themed glow + drifting motes over the hull when
 // a burn or freeze status ticks. Burn = embers rising; freeze = cold rime
 // settling. Localized to the enemy ship, fades on its own.
-function EnemyStatusAura({ kind, color: colorOverride }: { kind: 'burn' | 'freeze' | 'snared' | 'foresee' | 'marked'; color?: string }) {
+function EnemyStatusAura({ kind, color: colorOverride }: { kind: 'burn' | 'freeze' | 'snared' | 'foresee' | 'marked' | 'stunned' | 'stolen'; color?: string }) {
   const burn = kind === 'burn'
   const snared = kind === 'snared'
   const foresee = kind === 'foresee'
   const marked = kind === 'marked'
-  const color = colorOverride ?? (burn ? '#fb923c' : snared ? '#d9b066' : foresee ? '#8b7bf0' : marked ? '#f43f5e' : '#7dd3fc')
-  const moteColor = colorOverride ?? (burn ? '#ffd27a' : snared ? '#f0d79a' : foresee ? '#cfc4ff' : marked ? '#ffa8b8' : '#e0f4ff')
-  const motes = useMemo(() => Array.from({ length: snared ? 8 : 6 }, (_, n) => ({
+  const stunned = kind === 'stunned'   // Kraken's Grip — a SEIZING, not an icing
+  const stolen  = kind === 'stolen'    // Press-Gang — shot ripped off its rack
+  const color = colorOverride ?? (burn ? '#fb923c' : snared ? '#d9b066' : foresee ? '#8b7bf0' : marked ? '#f43f5e' : stunned ? '#c9b6ff' : stolen ? '#f5c542' : '#7dd3fc')
+  const moteColor = colorOverride ?? (burn ? '#ffd27a' : snared ? '#f0d79a' : foresee ? '#cfc4ff' : marked ? '#ffa8b8' : stunned ? '#efe6ff' : stolen ? '#ffe9a8' : '#e0f4ff')
+  const motes = useMemo(() => Array.from({ length: snared ? 8 : stolen ? 7 : 6 }, (_, n) => ({
     // snare = motes clamp INWARD (a tightening net); burn rises, rime drifts down.
-    x: snared ? (Math.random() - 0.5) * 52 : (Math.random() - 0.5) * 46,
-    y: snared ? (Math.random() - 0.5) * 40 : (burn ? -1 : 1) * (12 + Math.random() * 26),
+    // stolen = they stream LEFT, off the enemy toward your rack.
+    x: stolen ? -(26 + Math.random() * 40) : snared ? (Math.random() - 0.5) * 52 : (Math.random() - 0.5) * 46,
+    y: stolen ? (Math.random() - 0.5) * 22 : snared ? (Math.random() - 0.5) * 40 : (burn ? -1 : 1) * (12 + Math.random() * 26),
     size: 3 + Math.random() * 3,
     delay: Math.random() * 0.12,
     dur: 0.6 + Math.random() * 0.3,
     inward: snared,
-  }) ), [burn, snared])
+  }) ), [burn, snared, stolen])
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -9132,6 +9173,36 @@ function EnemyStatusAura({ kind, color: colorOverride }: { kind: 'burn' | 'freez
         position: 'absolute', inset: '-6%', borderRadius: '46%', mixBlendMode: 'screen',
         background: `radial-gradient(ellipse at center, ${color}aa 0%, ${color}44 42%, transparent 70%)`,
       }} />
+      {/* Stunned — a hard concussive shock: one fast shockwave punching out,
+          then dazed sparks wheeling over the hull. Nothing icy about it, so a
+          stun can never be mistaken for a freeze. */}
+      {stunned && (
+        <>
+          <motion.div
+            initial={{ scale: 0.25, opacity: 0.95 }} animate={{ scale: 2.1, opacity: 0 }}
+            transition={{ duration: 0.42, ease: 'easeOut' }}
+            style={{ position: 'absolute', left: '50%', top: '48%', width: 62, height: 62, marginLeft: -31, marginTop: -31, borderRadius: '50%', border: `3px solid ${color}`, boxShadow: `0 0 22px ${color}` }}
+          />
+          {[0, 1, 2].map(n => (
+            <motion.span key={`st${n}`} aria-hidden
+              initial={{ rotate: n * 120, opacity: 0 }}
+              animate={{ rotate: n * 120 + 300, opacity: [0, 1, 1, 0] }}
+              transition={{ duration: 0.85, times: [0, 0.2, 0.7, 1], ease: 'linear' }}
+              style={{ position: 'absolute', left: '50%', top: '26%', width: 34, height: 34, marginLeft: -17, transformOrigin: '50% 120%' }}>
+              <span style={{ position: 'absolute', left: 0, top: 0, width: 7, height: 7, borderRadius: '50%', background: moteColor, boxShadow: `0 0 10px ${color}` }} />
+            </motion.span>
+          ))}
+        </>
+      )}
+      {/* Stolen — the rack is robbed: a snatch-arc whipping off toward your
+          side, with the shot motes streaming after it. */}
+      {stolen && (
+        <motion.div
+          initial={{ x: 6, opacity: 0 }} animate={{ x: -30, opacity: [0, 1, 0] }}
+          transition={{ duration: 0.6, times: [0, 0.3, 1], ease: 'easeOut' }}
+          style={{ position: 'absolute', left: '38%', top: '44%', width: 30, height: 12, borderRadius: '50%', border: `2px solid ${color}`, borderRightColor: 'transparent', borderTopColor: 'transparent', boxShadow: `0 0 14px ${color}aa` }}
+        />
+      )}
       {/* Foresee — concentric scan rings sweeping the enemy hull, like an eye
           opening to read its next move (Oracle). */}
       {foresee && [0, 1].map(n => (
@@ -9436,13 +9507,14 @@ function VengeanceEruptBurst() {
 //   aim    — an amber reticle that locks onto the guns (Sharpshot)
 //   charge — a gold flash + fast-rising powder sparks (Navigator)
 //   brace  — a steel bulwark ring + shimmer settling over the hull (Anchor)
-function PlayerStatusAura({ kind = 'heal', color: colorOverride }: { kind?: 'heal' | 'tide' | 'aim' | 'charge' | 'brace'; color?: string }) {
+function PlayerStatusAura({ kind = 'heal', color: colorOverride }: { kind?: 'heal' | 'tide' | 'aim' | 'charge' | 'brace' | 'parry'; color?: string }) {
   const CFG = {
     heal:   { color: '#4ade80', mote: '#bbf7d0' },
     tide:   { color: '#5eead4', mote: '#a7f3e8' },
     aim:    { color: '#fbbf24', mote: '#fde68a' },
     charge: { color: '#f5c542', mote: '#ffe9a8' },
     brace:  { color: '#9eb0cd', mote: '#d6deec' },   // steel/iron — a damage-CUT brace, distinct from the cyan shield POOLS
+    parry:  { color: '#e8eefc', mote: '#ffffff' },   // a bright steel TURN — the blow is deflected, not soaked
   } as const
   const color = colorOverride ?? CFG[kind].color
   const mote = colorOverride ?? CFG[kind].mote
@@ -9450,6 +9522,7 @@ function PlayerStatusAura({ kind = 'heal', color: colorOverride }: { kind?: 'hea
   const fast    = kind === 'charge'
   const ring    = kind === 'tide' || kind === 'brace'   // a shield / bulwark forming
   const reticle = kind === 'aim'
+  const parry   = kind === 'parry'   // steel turning the blow aside
   const moteCount = fast ? 8 : reticle ? 4 : 6
   const motes = useMemo(() => Array.from({ length: moteCount }, () => ({
     x: (Math.random() - 0.5) * (reticle ? 34 : 50),
@@ -9471,6 +9544,23 @@ function PlayerStatusAura({ kind = 'heal', color: colorOverride }: { kind?: 'hea
         position: 'absolute', inset: '-6%', borderRadius: '46%', mixBlendMode: 'screen',
         background: `radial-gradient(ellipse at center, ${color}${reticle ? '55' : '99'} 0%, ${color}3a 44%, transparent 72%)`,
       }} />
+      {/* Parry — a hard steel slash across the hull with a spark flare at the
+          point of contact. A DEFLECTION, so it's a struck angle, not the round
+          bubble a shield uses or the soft whoosh a dodge uses. */}
+      {parry && (
+        <>
+          <motion.div
+            initial={{ scaleX: 0.2, opacity: 0 }} animate={{ scaleX: 1, opacity: [0, 1, 0] }}
+            transition={{ duration: 0.42, times: [0, 0.25, 1], ease: 'easeOut' }}
+            style={{ position: 'absolute', left: '18%', right: '18%', top: '46%', height: 3, borderRadius: 2, transform: 'rotate(-28deg)', background: `linear-gradient(90deg, transparent, ${mote}, transparent)`, boxShadow: `0 0 16px ${color}` }}
+          />
+          <motion.div
+            initial={{ scale: 0.3, opacity: 1 }} animate={{ scale: 1.9, opacity: 0 }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+            style={{ position: 'absolute', left: '58%', top: '42%', width: 26, height: 26, marginLeft: -13, marginTop: -13, borderRadius: '50%', background: `radial-gradient(circle, ${mote} 0%, ${color}88 40%, transparent 72%)` }}
+          />
+        </>
+      )}
       {/* A round bulwark ring snaps OUT for a shield pool (tide). The brace
           instead clamps steel corner brackets INWARD (an iron clamp), so a
           damage-cut reads as bracing by SHAPE, not as a shield bubble. */}
