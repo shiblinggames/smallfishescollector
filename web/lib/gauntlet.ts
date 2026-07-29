@@ -418,6 +418,17 @@ function earlyDmgGrace2(depth: number): number {
   if (depth >= EARLY_GRACE_END_2) return 1
   return 0.80 + 0.20 * ((depth - 1) / (EARLY_GRACE_END_2 - 1))
 }
+// Early-depth HP grace (Don's Gauntlet) — 2026-07-28. Even after the -47% HP cut
+// the shallow end read as tanky: a depth-5 ELITE is base×1.5, so ~335 → 500+ HP
+// (and its barrier affix is a % of that — the "90 shield"). Ease base HP across
+// the 1-20 climb, fading to full EXACTLY at depth 20, so elites/bosses/barriers
+// all shrink proportionally on the way to the first Don rise while the landmark
+// itself (grace 1.0), pot/XP pacing (reward is depth-based, not HP), and the deep
+// record band stay untouched. 0.70 at depth 1 → 1.0 at depth 20 (linear).
+function earlyHpGrace2(depth: number): number {
+  if (depth >= EARLY_GRACE_END_2) return 1
+  return 0.70 + 0.30 * ((depth - 1) / (EARLY_GRACE_END_2 - 1))
+}
 // 2026-07-26 — EARLY-DEPTH HP NERF (v2, deeper). The old (350 + 30·d) intercept
 // made the shallow end a slog: Ch3/4 enemies are tanky by nature, so depths 1-15
 // dragged. Dropped the intercept hard (350 → 170) and raised the slope (30 → 33)
@@ -425,7 +436,7 @@ function earlyDmgGrace2(depth: number): number {
 // eases ~2%. Cumulative vs the original launch curve:
 //   d1  380 → 203 (-47%)   d5  500 → 335 (-33%)   d10 650 → 500 (-23%)
 //   d15 800 → 665 (-17%)   d20 950 → 830 (-13%)   d48 ~-2%
-function mobHp2(depth: number)    { return Math.round((170 + depth * 33) * deepBend2(depth)) }
+function mobHp2(depth: number)    { return Math.round((170 + depth * 33) * deepBend2(depth) * earlyHpGrace2(depth)) }
 // Damage: retuned 2026-07-18 after playtest — Ch3/4 enemies already hit hard from
 // depth 1, so the base is lower and the slope FLATTER than Davy's (they start
 // strong, they don't need a steep ramp on top). HP curve unchanged.
