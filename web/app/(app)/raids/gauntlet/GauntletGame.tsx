@@ -2868,6 +2868,8 @@ export default function GauntletGame(props: GauntletGameProps) {
     return (
       <>
         <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
+        {/* Calm the busy abyss so the job + its stakes read clearly. */}
+        <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: 'linear-gradient(180deg, rgba(4,10,8,0.5) 0%, rgba(4,9,8,0.7) 52%, rgba(3,7,6,0.82) 100%)' }} />
         <div style={{ position: 'relative', zIndex: 1, maxWidth: 440, margin: '0 auto', padding: '12px 0.95rem', textAlign: 'center', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)' }}>
           <motion.p initial={{ opacity: 0, letterSpacing: '0.5em' }} animate={{ opacity: 1, letterSpacing: '0.28em' }} transition={{ duration: 0.8 }}
             className="font-karla font-800 uppercase" style={{ fontSize: '0.66rem', color: MC, marginTop: 16, textShadow: `0 0 16px ${MC}55` }}>
@@ -2884,26 +2886,42 @@ export default function GauntletGame(props: GauntletGameProps) {
             className="font-cinzel font-800" style={{ fontSize: '1.7rem', color: '#e7f6ee', lineHeight: 1.06, marginTop: 4, textShadow: `0 0 24px ${MC}44` }}>
             {def.name}
           </motion.h1>
-          <p className="font-karla" style={{ fontSize: '0.9rem', fontStyle: 'italic', color: 'rgba(206,232,220,0.7)', lineHeight: 1.5, marginTop: 8, padding: '0 0.3rem' }}>
+          <p className="font-karla" style={{ fontSize: '0.92rem', fontStyle: 'italic', color: 'rgba(214,240,228,0.9)', lineHeight: 1.5, marginTop: 8, padding: '0 0.3rem', textShadow: '0 1px 8px rgba(0,0,0,0.7)' }}>
             &ldquo;{def.job}&rdquo;
           </p>
-          <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#8a948e', lineHeight: 1.5, marginTop: 10, padding: '0 0.5rem' }}>
+          <p className="font-karla font-600" style={{ fontSize: '0.74rem', color: '#a7b0aa', lineHeight: 1.5, marginTop: 10, padding: '0 0.5rem', textShadow: '0 1px 6px rgba(0,0,0,0.7)' }}>
             It rides your next dive. Clear it, get paid. Blow it, the Don collects. Once you take it, you&apos;re in.
           </p>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: 16, textAlign: 'left' }}>
+          {/* Same job, three ways to run it — the stake is the reward you play
+              for against the price of failing. That trade is the whole choice,
+              so it's the loud part of each card now. */}
+          <p className="font-karla font-800 uppercase tracking-[0.2em]" style={{ fontSize: '0.56rem', color: MC, marginTop: 16, marginBottom: 9, textShadow: '0 1px 6px rgba(0,0,0,0.7)' }}>
+            Pick your stakes
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, textAlign: 'left' }}>
             {contractOffer.offers.map((offer, i) => (
               <motion.button key={offer.stake} type="button"
                 initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.14 + i * 0.07 }}
                 whileTap={{ scale: 0.98 }} onClick={() => takeContract(offer)} className="tap"
-                style={{ position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 6, padding: '0.75rem 0.85rem', borderRadius: 14, cursor: 'pointer', background: `linear-gradient(120deg, ${MC}24, rgba(7,12,19,0.88))`, border: `1px solid ${MC}66` }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-                  <span className="font-cinzel font-800 uppercase tracking-[0.06em]" style={{ fontSize: '0.8rem', color: MC }}>{STAKE_LABEL[offer.stake]}</span>
-                  <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#8a948e' }}>{def.goal(offer.param)}</span>
+                style={{ position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 9, padding: '0.85rem 0.95rem 0.9rem 1.15rem', borderRadius: 14, cursor: 'pointer',
+                  background: `linear-gradient(180deg, ${MC}20 0%, rgba(6,11,16,0.95) 60%)`, border: `1px solid ${MC}7a`, boxShadow: `0 4px 16px rgba(0,0,0,0.42)` }}>
+                <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 5, background: `linear-gradient(180deg, ${MC}, ${MC}44)` }} />
+                {/* Stake name + this stake's exact target for the shared job. */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  <span className="font-cinzel font-800 uppercase tracking-[0.05em]" style={{ fontSize: '0.98rem', color: '#eafff5' }}>{STAKE_LABEL[offer.stake]}</span>
+                  <span className="font-karla font-700" style={{ flexShrink: 0, fontSize: '0.66rem', color: MC, background: `${MC}1e`, border: `1px solid ${MC}55`, borderRadius: 999, padding: '0.16rem 0.6rem' }}>{def.goal(offer.param)}</span>
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: '#7fe0a8', background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.3)', borderRadius: 999, padding: '0.16rem 0.5rem' }}>▲ {describeReward(offer.reward)}</span>
-                  <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: '#f8a5a5', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 999, padding: '0.16rem 0.5rem' }}>▼ {describePenalty(offer.penalty)}</span>
+                {/* Reward vs penalty — the real difference between the three. */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                    <span className="font-karla font-800 uppercase" style={{ flexShrink: 0, width: 52, fontSize: '0.52rem', letterSpacing: '0.08em', color: '#6fce97' }}>Reward</span>
+                    <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#aef5c4', lineHeight: 1.25 }}>{describeReward(offer.reward)}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                    <span className="font-karla font-800 uppercase" style={{ flexShrink: 0, width: 52, fontSize: '0.52rem', letterSpacing: '0.08em', color: '#e58a8a' }}>If failed</span>
+                    <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#f8a5a5', lineHeight: 1.25 }}>{describePenalty(offer.penalty)}</span>
+                  </div>
                 </div>
               </motion.button>
             ))}
