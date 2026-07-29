@@ -54,6 +54,7 @@
 //   mitigation (incomingDmgMult). Nothing "overrides"; it's one big multiply.
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { DialAimBonus } from '@/lib/dialAim'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence, useAnimation } from 'framer-motion'
 import { BroadsideEnemy, EnemyAction, RARITY_COLOR, type AimAttackId, type BossMechanicCheck, type MechanicResponse } from '@/lib/bossRaids'
@@ -367,11 +368,14 @@ const INDICATOR_SPEED = 0.006
 // static-zone restructure) all read wrong or changed the game. The
 // frozen frame IS the judgment; if it shows gold, the badge says gold.
 
-function getShotResult(pos: number, zoneCenter: number, critW: number = CRIT_W): ShotResult {
-  const grazeL = zoneCenter - HIT_W - GRAZE_W
-  const grazeR = zoneCenter + HIT_W + GRAZE_W
-  const hitL   = zoneCenter - HIT_W
-  const hitR   = zoneCenter + HIT_W
+function getShotResult(pos: number, zoneCenter: number, critW: number = CRIT_W, hitBonus = 0): ShotResult {
+  // hitBonus is the player's fishing gear widening the catch band. It is 0 for
+  // every aim-BAR fight, so those judge exactly as they always have.
+  const hitW   = HIT_W + hitBonus
+  const grazeL = zoneCenter - hitW - GRAZE_W
+  const grazeR = zoneCenter + hitW + GRAZE_W
+  const hitL   = zoneCenter - hitW
+  const hitR   = zoneCenter + hitW
   const critL  = zoneCenter - critW
   const critR  = zoneCenter + critW
   if (pos >= critL && pos <= critR)   return 'critical'
@@ -476,6 +480,9 @@ export interface RaidCombatProps {
    *  0..1 drivers, same judgment, wrapped onto a circle, with the enemy ship
    *  orbiting as the band. Only the Finn finale uses it. */
   aimStyle?: 'bar' | 'dial'
+  /** The player's FISHING gear, widening the dial's hit + crit bands by the
+   *  same degrees it widens the fishing dial. Ignored unless aimStyle 'dial'. */
+  dialAim?: DialAimBonus
   /** Gauntlet boons / curses held (with art) for the battle profile's Effects
    *  tab. Omitted outside the Gauntlet. */
   runBoons?: { id: string; name: string; tier: number; image?: string | null; desc: string; color: string }[]
@@ -599,6 +606,7 @@ export default function RaidCombat({
   runKills = 0, runDepth = 0,
   contractsWon = [],
   aimStyle = 'bar',
+  dialAim,
   runBoons, runCurses,
   anchorSaveAvailable = false, onAnchorSave,
   raidMods, riskyFlee = false, fleeSignal, fleeNav,
@@ -987,7 +995,11 @@ export default function RaidCombat({
   // the tick colored against base CRIT_W while lockShot judged the widened
   // band, so the needle could glow green at the lock moment yet resolve
   // critical. Ref mirror lets the RAF read it without restarting the tick.
-  const liveCritW = CRIT_W * tide.critZoneMult * (sharpshotBuff ? 1 + sharpshotBuff.multiplier : 1)
+  const dialCritBonus = aimStyle === 'dial' ? (dialAim?.critBonus ?? 0) : 0
+  const dialHitBonus  = aimStyle === 'dial' ? (dialAim?.hitBonus  ?? 0) : 0
+  const liveCritW = CRIT_W * tide.critZoneMult * (sharpshotBuff ? 1 + sharpshotBuff.multiplier : 1) + dialCritBonus
+  const dialHitBonusRef = useRef(dialHitBonus)
+  useEffect(() => { dialHitBonusRef.current = dialHitBonus }, [dialHitBonus])
   const liveCritWRef = useRef(liveCritW)
   useEffect(() => { liveCritWRef.current = liveCritW }, [liveCritW])
   // Width the shot was JUDGED at, captured in lockShot. The drawn band uses
@@ -2359,7 +2371,7 @@ export default function RaidCombat({
 
       if (indicatorRef.current) {
         paintNeedle(indicatorRef.current, firePosRef.current)
-        let zone = getShotResult(firePosRef.current, zonePosRef.current, liveCritWRef.current)
+        let zone = getShotResult(firePosRef.current, zonePosRef.current, liveCritWRef.current, dialHitBonusRef.current)
         // Rolling Plate: the gold tell tracks the SEAM, not the zone center.
         if (seamDrift > 0) {
           const seamC = zonePosRef.current + critSeamOffsetRef.current
@@ -10374,7 +10386,7 @@ function LogBox({ lines, turn }: { lines: string[]; turn: number }) {
 // from the shared constants), so every hour on the fishing side is a wider shot
 // at the final boss.
 function DialAimInline({
-  indicatorRef, zoneRef, flashRef, critW, sharpshotActive, enemyImage, enemyFilter, afflictionLabel, hardenedArmed,
+  indicatorRef, zoneRef, flashRef, critW, sharpshotActive, enemyImage, enemyFilter, afflictionLabel, hardenedArmed, hitBonus = 0,
 }: {
   indicatorRef: React.RefObject<HTMLDivElement | null>
   zoneRef:      React.RefObject<HTMLDivElement | null>
@@ -10385,11 +10397,14 @@ function DialAimInline({
   enemyFilter?: string
   afflictionLabel?: string | null
   hardenedArmed?: boolean
+  /** Fishing gear widening the hit band. Must match what getShotResult judges. */
+  hitBonus?: number
 }) {
   // Arc geometry. The dial is a ring; the bands are stroked arcs on it, sized
   // by the SAME normalised widths the bar uses so the two instruments are
   // mathematically the same fight.
   const R = 74, CX = 90, CY = 90
+  const hitW = HIT_W + hitBonus
   const CIRC = 2 * Math.PI * R
   // A 0..1 band half-width becomes a fraction of the circumference.
   const dash = (halfWidth: number) => `${CIRC * halfWidth * 2} ${CIRC}`
@@ -10427,10 +10442,10 @@ function DialAimInline({
             <g transform={ringTransform}>
               {/* graze (outermost tolerance) */}
               <circle cx={CX} cy={CY} r={R} fill="none" stroke="rgba(148,163,184,0.45)" strokeWidth="12"
-                strokeDasharray={dash(HIT_W + GRAZE_W)} strokeDashoffset={CIRC * (HIT_W + GRAZE_W)} strokeLinecap="butt" />
+                strokeDasharray={dash(hitW + GRAZE_W)} strokeDashoffset={CIRC * (hitW + GRAZE_W)} strokeLinecap="butt" />
               {/* hit */}
               <circle cx={CX} cy={CY} r={R} fill="none" stroke="rgba(74,222,128,0.75)" strokeWidth="12"
-                strokeDasharray={dash(HIT_W)} strokeDashoffset={CIRC * HIT_W} strokeLinecap="butt" />
+                strokeDasharray={dash(hitW)} strokeDashoffset={CIRC * hitW} strokeLinecap="butt" />
               {/* crit — widened by rod/hook/line and Sharpshot exactly as on the bar */}
               <circle cx={CX} cy={CY} r={R} fill="none" stroke={sharpshotActive ? '#fde68a' : '#fbbf24'} strokeWidth="12"
                 strokeDasharray={dash(critW)} strokeDashoffset={CIRC * critW} strokeLinecap="butt"

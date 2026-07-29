@@ -2694,6 +2694,7 @@ export const RAID_MAP: RaidNode[] = [
       'No ledger, no lieutenant, no don between you. Just the water, a long quiet line, and the angler on the other end of it who has been reeling the whole time.',
     requiresNode: 'the_hand_that_sharpens',
     raidId: THE_SUNKEN_HAND.raidId,
+    route: '/raids/sunken-hand',
     previewWhenLocked: true,
     comingSoon: true,
     image: '/raidlog.png',

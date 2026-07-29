@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { dialAimBonus, type DialAimBonus } from '@/lib/dialAim'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { EXPEDITION_SHIP_STATS, raidRepairCost, raidItemSlotsForTier, raidDamageProfile, type RaidMods } from '@/lib/expeditions'
 import { getLevelFromXP, navLevelBonuses } from '@/lib/expeditionLevel'
@@ -84,6 +85,9 @@ export interface RaidPlayerStats {
   /** The Man-o-War volley augment, resolved + gated on actually being on the
    *  Man-o-War (tier 6). Null otherwise — the Mega only exists on that hull. */
   manowarAugment: ShipAugment | null
+  /** Fishing gear widening the Finn dial's bands. Only the dial fight reads
+   *  this; every bar fight ignores it, so no existing raid changes. */
+  dialAim: DialAimBonus
 }
 
 export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStats> {
@@ -91,7 +95,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('ship_tier, saved_crew, ship_name, username, character_color, equipped_hat, avatar_bg_color, avatar_border_color, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, equipped_repair_kit, has_seen_raid_tutorial, expedition_xp, nav_renown_alloc, ship_classes, gauntlet_upgrades, dons_gauntlet_upgrades, manowar_augment, manowar_augment_build, has_sixth_berth, has_armory_expansion')
+    .select('ship_tier, saved_crew, ship_name, username, character_color, equipped_hat, avatar_bg_color, avatar_border_color, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, equipped_repair_kit, has_seen_raid_tutorial, expedition_xp, nav_renown_alloc, ship_classes, gauntlet_upgrades, dons_gauntlet_upgrades, manowar_augment, manowar_augment_build, has_sixth_berth, has_armory_expansion, rod_tier, hook_tier, completionist_effects')
     .eq('id', userId)
     .single()
 
@@ -171,6 +175,14 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
   // Shore perks (Deep-Sea Plating / Ghost Ordnance) read the union of both.
   const accountUpgrades = [...gauntletUpgrades, ...((profile?.dons_gauntlet_upgrades as string[] | null) ?? [])]
 
+  // The convergence: the finale is aimed on a dial, and the player's ROD and
+  // HOOK widen its bands by the same degrees they widen the fishing dial.
+  const dialAim = dialAimBonus(
+    (profile as { rod_tier?: number } | null)?.rod_tier ?? 0,
+    (profile as { hook_tier?: number } | null)?.hook_tier ?? 0,
+    (profile as { completionist_effects?: number[] } | null)?.completionist_effects ?? null,
+  )
+
   return {
     playerHPMax:      Math.round((ship.durability + navBonus.hp + navRenown.hullFlat) * hpMaxMult * classEffects.hpMult * donsRaidHpMult(accountUpgrades)),
     shipMinDamage:    ship.minDamage,
@@ -203,6 +215,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
     raidMods:             { ...resolved.raid, repairHealMult: gauntletRepairHealMult(gauntletUpgrades) },
     bonusChargeSlots:     bonusChargeSlots((profile?.gauntlet_upgrades as string[] | null) ?? []),
     manowarAugment:       shipTier === MANOWAR_TIER ? getShipAugment(activeAugmentId) : null,
+    dialAim,
   }
 }
 

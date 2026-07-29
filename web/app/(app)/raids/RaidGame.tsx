@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
+import type { DialAimBonus } from '@/lib/dialAim'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { claimRaidLoot, reportRaidSink, recordRaidHit, recordRaidClear, startRaidRun, type RaidClearTimes } from './actions'
@@ -368,8 +369,11 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   playerAvatarBg, playerAvatarBorder,
   raidMods, bonusChargeSlots = 0, manowarAugment = null,
   legendaryLootMult = 1,
+  dialAim,
 }: {
   config: BossRaidConfig
+  /** Fishing gear widening the dial bands. Only the Finn finale passes it. */
+  dialAim?: DialAimBonus
   shipImageUrl: string
   shipName: string
   username: string | null
@@ -1598,6 +1602,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 // 'dial' on the Finn finale: the whole fight is aimed on the
                 // fishing dial instead of the bar (see BossRaidConfig.aimStyle).
                 aimStyle={config.aimStyle}
+                dialAim={dialAim}
                 shipImageUrl={shipImageUrl}
                 shipFilter={shipFilter}
                 shipName={shipName}
