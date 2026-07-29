@@ -2559,28 +2559,55 @@ export const RAID_MAP: RaidNode[] = [
   // alone. Kept comingSoon while the reveal cutscene + Finn's boss config are
   // built, so it reads as a promise on the horizon rather than a dead end
   // (see [[finn-finndicate-twist]] — the convergence trilogy).
+  // THE REVEAL. Its own story node, and the one the ancients gate hangs on —
+  // landing the sixth giant should pay off with the TRUTH, not with a health
+  // bar. Label is Finleone's own dying line ("I only ever held the knife. You've
+  // not met the Hand that sharpens it"), so it reads as finally meeting the Hand
+  // without naming Finn on the map before you have read it.
+  // The scene[] + Logbook fragment land with the cutscene itself.
   {
-    id: 'one_last_ride',
-    type: 'raid',
-    label: 'One Last Ride',
+    id: 'the_hand_that_sharpens',
+    type: 'story',
+    label: 'The Hand That Sharpens It',
     flavor:
-      'The don is in the ground and the sea is quiet, and the quiet is the wrongest thing about it. Something out past the wreck has been waiting on you the whole time, patient as a man with a line in the water.',
-    bridge: undefined,
+      'Six giants came up out of the Ancient Deep on your line, and every one of them went somewhere. You never once asked where. The don said you had not met the Hand yet. He was right, and he was not warning you.',
+    bridge:
+      'The sea is very quiet now, and every quiet thing you ever pulled up out of the dark was a favour you did not know you were doing.',
     requiresNode: 'chapter_4_augment',
+    // THE cross-track gate: the reveal is what the six giants buy you.
     requiresAncients: 6,
-    // Visible as a GOAL while locked: hiding it would hide the reason to go and
-    // land the giants in the first place.
+    // Visible as a GOAL while locked — hiding it would hide the reason to go
+    // and land the giants in the first place.
     previewWhenLocked: true,
     comingSoon: true,
     image: '/raidlog.png',
     sceneAccent: '#a78bfa',
     detail: {
       description:
-        'Six giants came up out of the Ancient Deep on your line, and every one of them went somewhere. You never asked where.\n\nThe last stop is not on any chart the Finndicate kept. It opens for a captain who has been down where the old things sleep, and it opens for nobody else.',
-      dropsNote: 'The end of the Sunken Hand.',
+        'The last stop is not on any chart the Finndicate kept. It opens for a captain who has been down where the old things sleep, and it opens for nobody else.\n\nThat was always the point.',
       ctaLabel: 'Coming Soon',
       summary:
-        'The last stop past the don, and it only opens for a captain who has landed all six Ancient Deep giants.',
+        'What the six giants were really for. Opens only once every Ancient Deep trophy is on your wall.',
+    },
+  },
+  // THE FIGHT. Named for the saga itself: the Sunken Hand, at last, in person.
+  {
+    id: 'one_last_ride',
+    type: 'raid',
+    label: 'The Sunken Hand',
+    flavor:
+      'No ledger, no lieutenant, no don between you. Just the water, a long quiet line, and the man on the other end of it who has been reeling the whole time.',
+    requiresNode: 'the_hand_that_sharpens',
+    previewWhenLocked: true,
+    comingSoon: true,
+    image: '/raidlog.png',
+    sceneAccent: '#a78bfa',
+    detail: {
+      description:
+        'One last ride, captain. Everything the Sunken Hand ever took, and everything it opened for you, comes down to this water.',
+      dropsNote: 'The end of the Sunken Hand.',
+      ctaLabel: 'Coming Soon',
+      summary: 'The last fight. Read The Hand That Sharpens It first.',
     },
   },
   // The Davy Jones Gauntlet used to sit here as a chapter-2 side branch.
