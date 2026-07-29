@@ -495,6 +495,10 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   // boss. The round effect overwrites this on mount either way; this just stops
   // the first frame rendering an empty hull.
   const [enemyImage, setEnemyImage]     = useState(() => config.enemies[config.sequence[0]]?.image ?? config.enemies[config.bossId]?.image ?? '')
+  // Backdrop for the boss phase currently in play, reported up by RaidCombat.
+  // This component owns the fixed full-screen battle backdrop, so the swap has
+  // to happen HERE (RaidCombat runs with transparentBackdrop and paints none).
+  const [phaseBg, setPhaseBg] = useState<string | null>(null)
   const [enemyPortrait, setEnemyPortrait] = useState<string | null>(null)
   const [enemyCharges, setEnemyCharges]   = useState(0)
   const [enemyDodging, setEnemyDodging]   = useState(false)
@@ -1493,7 +1497,10 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     // challenge fights fall through to the procedural zone backdrop.
     const bgRaidId = baseRaidIdOf(config.raidId)
     const raidBg =
-      (isBoss ? RAID_BOSS_BG[bgRaidId] : undefined)
+      // A boss phase backdrop (Finn) outranks everything: it is the whole point
+      // that the sea changes under him as he escalates.
+      phaseBg
+      ?? (isBoss ? RAID_BOSS_BG[bgRaidId] : undefined)
       ?? RAID_LOCATION_BG[bgRaidId]
       ?? (config.zone ? RAID_ZONE_BG[config.zone] : null)
     return (
@@ -1507,10 +1514,15 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
           ClientBackground (/raid1background). So even at -1 this covers that page
           image, while sitting BEHIND the in-flow combat content (no lifting
           needed) and leaving the fixed combat overlays untouched. */}
+      {/* Phase backdrop cross-fade: the new sea comes up over the old, slow
+          enough to read as weather turning rather than a cut. */}
+      <style>{`@keyframes rg-bg-in { from { opacity: 0 } to { opacity: 1 } } .rg-bg-fade { animation: rg-bg-in 1.1s ease-out both; }`}</style>
       {raidBg && (
         <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none' }}>
+          {/* keyed on src so a phase swap mounts a NEW image and fades it up
+              over the old one instead of hard-cutting the sea */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={raidBg} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }} />
+          <img key={raidBg} src={raidBg} alt="" className="rg-bg-fade" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }} />
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(4,8,14,0.4) 0%, rgba(4,8,14,0.56) 46%, rgba(3,5,10,0.82) 100%)' }} />
         </div>
       )}
@@ -1603,6 +1615,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 // fishing dial instead of the bar (see BossRaidConfig.aimStyle).
                 aimStyle={config.aimStyle}
                 dialAim={dialAim}
+                onPhaseBg={setPhaseBg}
                 shipImageUrl={shipImageUrl}
                 shipFilter={shipFilter}
                 shipName={shipName}

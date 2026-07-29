@@ -483,6 +483,11 @@ export interface RaidCombatProps {
   /** The player's FISHING gear, widening the dial's hit + crit bands by the
    *  same degrees it widens the fishing dial. Ignored unless aimStyle 'dial'. */
   dialAim?: DialAimBonus
+  /** Fires when the active phase backdrop changes (BossPhase.bgImage). Raids
+   *  paint their backdrop as a FIXED full-screen layer in the PARENT and pass
+   *  transparentBackdrop, so RaidCombat cannot paint a phase backdrop itself:
+   *  it hands it up and the owner swaps it. */
+  onPhaseBg?: (src: string | null) => void
   /** Gauntlet boons / curses held (with art) for the battle profile's Effects
    *  tab. Omitted outside the Gauntlet. */
   runBoons?: { id: string; name: string; tier: number; image?: string | null; desc: string; color: string }[]
@@ -607,6 +612,7 @@ export default function RaidCombat({
   contractsWon = [],
   aimStyle = 'bar',
   dialAim,
+  onPhaseBg,
   runBoons, runCurses,
   anchorSaveAvailable = false, onAnchorSave,
   raidMods, riskyFlee = false, fleeSignal, fleeNav,
@@ -1572,6 +1578,8 @@ export default function RaidCombat({
     ? (phaseList[enemyPhase - 2]?.bgImage ?? enemy.phaseBgImage)
     : enemy.phaseBgImage
   const liveBg = phaseBg ?? zoneBg
+  // Hand the phase backdrop to whoever owns the full-screen layer.
+  useEffect(() => { onPhaseBg?.(phaseBg ?? null) }, [phaseBg, onPhaseBg])
   // ── The Last Wall (aegis — Sal Brackwater, phase 3) ──────────────────────────────
   // A phase can open behind a wall that drinks EVERY player blow whole. A Mega
   // shatters it outright (the discovery the fight wants the player to make);
