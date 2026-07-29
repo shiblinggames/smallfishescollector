@@ -2004,6 +2004,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     return (
       <>
         <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
+        <AbyssScrim />
         {/* Just enough bottom pad to clear the fixed mobile tab bar (~58px):
             this + the global page footer below (~25px) lands "Not today" just
             above the bar. No safe-area inset (the bar already sits at bottom:0,
@@ -2081,6 +2082,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     return (
       <>
         <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
+        <AbyssScrim />
         <div className="pb-10 sm:pb-6" style={{ position: 'relative', zIndex: 1, maxWidth: 460, margin: '0 auto', paddingTop: 6, paddingLeft: '0.85rem', paddingRight: '0.85rem', textAlign: 'center' }}>
           <div style={{ fontSize: '2.4rem', marginTop: 30 }} aria-hidden>⏸</div>
           <h1 className="font-cinzel font-800" style={{ fontSize: '1.6rem', color: '#f3ead2', lineHeight: 1.12, marginTop: 10, textShadow: '0 0 26px rgba(240,192,64,0.3)' }}>
@@ -2105,10 +2107,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     return (
       <>
         <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
-        {/* Calm the busy, moving abyss so the deepest-descent stat, the section
-            labels and the guide text read against a steady ground instead of
-            the shifting backdrop light. */}
-        <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: 'linear-gradient(180deg, rgba(4,8,14,0.5) 0%, rgba(4,8,14,0.68) 50%, rgba(3,6,12,0.8) 100%)' }} />
+        <AbyssScrim />
         {/* Just enough bottom pad to clear the fixed mobile tab bar (~58px):
             this + the global page footer below (~25px) lands "Not today" just
             above the bar. No safe-area inset (the bar already sits at bottom:0,
@@ -2549,6 +2548,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     return (
       <>
         {hardcoreRun ? <HcSeaBackdrop /> : <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />}
+        <AbyssScrim />
         {/* Death wash bleeding up from the deep, over the abyss. */}
         <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 120% 75% at 50% 112%, ${CRIMSON}24 0%, ${CRIMSON}10 34%, transparent 66%)` }} />
         <div style={{
@@ -2668,6 +2668,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     return (
       <>
         <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
+        <AbyssScrim />
         <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: [0.4, 0.7, 0.4] }} transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
           style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 130% 90% at 50% 0%, ${VIO}1f 0%, ${VIO}0a 42%, transparent 70%)` }} />
         <div style={{
@@ -2833,8 +2834,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     return (
       <>
         <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
-        {/* Dark scrim so the stall + prices read over the busy abyss. */}
-        <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: 'linear-gradient(180deg, rgba(4,10,8,0.52) 0%, rgba(4,9,8,0.7) 52%, rgba(3,7,6,0.82) 100%)' }} />
+        <AbyssScrim />
         <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: [0.35, 0.6, 0.35] }} transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
           style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 130% 90% at 50% 0%, ${MC}1c 0%, ${MC}09 44%, transparent 72%)` }} />
         <div style={{
@@ -2933,8 +2933,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     return (
       <>
         <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
-        {/* Calm the busy abyss so the job + its stakes read clearly. */}
-        <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: 'linear-gradient(180deg, rgba(4,10,8,0.5) 0%, rgba(4,9,8,0.7) 52%, rgba(3,7,6,0.82) 100%)' }} />
+        <AbyssScrim />
         <div style={{ position: 'relative', zIndex: 1, maxWidth: 440, margin: '0 auto', padding: '12px 0.95rem', textAlign: 'center', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)' }}>
           <motion.p initial={{ opacity: 0, letterSpacing: '0.5em' }} animate={{ opacity: 1, letterSpacing: '0.28em' }} transition={{ duration: 0.8 }}
             className="font-karla font-800 uppercase" style={{ fontSize: '0.66rem', color: MC, marginTop: 16, textShadow: `0 0 16px ${MC}55` }}>
@@ -3008,6 +3007,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     return (
       <>
         <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
+        <AbyssScrim />
         <div style={{ position: 'relative', zIndex: 1, maxWidth: 420, margin: '0 auto', padding: '12px 0.95rem', textAlign: 'center', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)' }}>
           <motion.p initial={{ opacity: 0, letterSpacing: '0.5em' }} animate={{ opacity: 1, letterSpacing: '0.28em' }} transition={{ duration: 0.7 }}
             className="font-karla font-800 uppercase" style={{ fontSize: '0.66rem', color: MC, marginTop: 22, textShadow: `0 0 16px ${MC}55` }}>
@@ -3053,6 +3053,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     return (
       <>
         <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
+        <AbyssScrim />
         <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 120% 82% at 50% 56%, ${AK}30 0%, ${AK}10 42%, transparent 72%)` }} />
         <div style={{ position: 'relative', zIndex: 1, minHeight: '62vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '1.6rem 1.1rem', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)' }}>
           {/* His face, sinking + dimmed — he's going down. The throne clear glints gold. */}
@@ -3154,11 +3155,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     return (
       <>
         <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
-        {/* Calm the busy, moving abyss behind the breather. The bank-or-dive
-            decision + the smaller ledger text were washing out against the
-            animated backdrop; this flat dark scrim gives every line a steady,
-            readable ground. */}
-        <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: 'linear-gradient(180deg, rgba(4,8,14,0.52) 0%, rgba(4,8,14,0.7) 52%, rgba(3,6,12,0.82) 100%)' }} />
+        <AbyssScrim />
         {/* Synergy Unlocked — a one-shot fanfare overlay the moment a confluence
             comes online (the boon you just claimed completed a pair). */}
         <AnimatePresence>
@@ -3634,6 +3631,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     return (
       <>
         <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
+        <AbyssScrim />
         {/* Crimson dread, bleeding up from the deep and breathing slowly. */}
         <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: [0.55, 0.9, 0.55] }} transition={{ duration: 4.2, repeat: Infinity, ease: 'easeInOut' }}
           style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 135% 95% at 50% 112%, ${CRIM}26 0%, ${CRIM}0d 40%, transparent 68%)` }} />
@@ -3724,6 +3722,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     return (
       <>
         <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
+        <AbyssScrim />
         {/* Teal "treasure surfacing" wash — the whole screen should read as a reward. */}
         <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6 }}
           style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 120% 66% at 50% 6%, ${AC}24 0%, ${AC}08 38%, transparent 64%)` }} />
@@ -4242,6 +4241,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       return (
         <>
           <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
+          <AbyssScrim />
           <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 120% 82% at 50% 58%, ${KRAKEN_DEEP}3a 0%, ${KRAKEN_DEEP}14 40%, transparent 70%)` }} />
           <div style={{ position: 'relative', zIndex: 1, minHeight: '62vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '2rem 1.2rem' }}>
             <motion.div initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 0.97, scale: 1 }} transition={{ duration: 1.4, ease: 'easeOut' }} style={{ position: 'relative', width: 190, height: 190 }}>
@@ -4270,6 +4270,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     return (
       <>
         <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
+        <AbyssScrim />
         <div style={{
           position: 'relative', zIndex: 1, minHeight: '60vh',
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -4750,9 +4751,7 @@ function GauntletReward({ r, recap, onBack, don }: { r: RewardOk; recap: { ships
   return (
     <>
       {r.hardcore ? <HcSeaBackdrop /> : <AbyssBackdrop hardcore={r.hardcore} don={don} />}
-      {/* Calm the backdrop so the haul copy + the reward cards read against it
-          (same treatment as the breather and the home). */}
-      <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: 'linear-gradient(180deg, rgba(4,8,14,0.52) 0%, rgba(4,8,14,0.7) 50%, rgba(3,6,12,0.84) 100%)' }} />
+      <AbyssScrim />
       <RenownUpOverlay info={renownUp} onDismiss={() => setRenownUp(null)} />
       <div style={{
         position: 'relative', zIndex: 1, maxWidth: 440, margin: '0 auto',
@@ -6869,6 +6868,21 @@ function HcSeaBackdrop() {
   )
 }
 
+/** Flat darkening layer that sits between the animated abyss and a screen's
+ *  content. The backdrop is busy and MOVES, so text and translucent cards laid
+ *  straight onto it wash in and out as it breathes. Every gauntlet screen pairs
+ *  its backdrop with one of these. Sits at zIndex 0 like the backdrop, so any
+ *  screen's own coloured wash (rendered after it) still paints on top, and
+ *  content at zIndex 1 stays above everything. */
+function AbyssScrim() {
+  return (
+    <div aria-hidden style={{
+      position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none',
+      background: 'linear-gradient(180deg, rgba(4,8,14,0.52) 0%, rgba(4,8,14,0.7) 50%, rgba(3,6,12,0.82) 100%)',
+    }} />
+  )
+}
+
 function AbyssBackdrop({ hardcore, don }: { hardcore?: boolean; don?: boolean }) {
   // Hardcore recolors the whole abyss blood-dark; Don's Gauntlet washes it a
   // scary kraken green (deep bile-green rays + motes, near-black green vignette).
@@ -6937,6 +6951,7 @@ function Shell({ children, wide, hardcore }: { children: React.ReactNode; wide?:
   return (
     <>
       <AbyssBackdrop hardcore={hardcore} />
+      <AbyssScrim />
       <div className="flex flex-col" style={{
         position: 'relative', zIndex: 1,
         maxWidth: wide ? 460 : 420, margin: '0 auto', padding: '12px 0.25rem',
