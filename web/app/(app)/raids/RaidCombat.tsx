@@ -56,7 +56,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence, useAnimation } from 'framer-motion'
-import { BroadsideEnemy, EnemyAction, type AimAttackId, type BossMechanicCheck, type MechanicResponse } from '@/lib/bossRaids'
+import { BroadsideEnemy, EnemyAction, RARITY_COLOR, type AimAttackId, type BossMechanicCheck, type MechanicResponse } from '@/lib/bossRaids'
 import { raidDamageProfile, type RaidMods } from '@/lib/expeditions'
 import { MEGA_CHARGE_COST, RAILGUN_GRAZE_PCT, type ShipAugment } from '@/lib/shipAugments'
 import { getCheckTutorialSeen, markCheckTutorialSeen } from './checkTutorialActions'
@@ -7591,10 +7591,14 @@ function PlayerStatsPopup({
         style={{
           position: 'relative',
           width: '100%', maxWidth: 380,
+          // Fixed size across tabs — the modal never jumps when you switch;
+          // a taller tab scrolls its own content instead of growing the card.
+          height: 'min(78vh, 560px)',
+          display: 'flex', flexDirection: 'column', overflow: 'hidden',
           background: 'linear-gradient(180deg, #0c1626 0%, #06101c 100%)',
           border: '1px solid rgba(96,165,250,0.18)',
           borderRadius: 20,
-          padding: '1.1rem 1rem 1.2rem',
+          padding: '1.1rem 1rem 0',
           boxShadow: '0 18px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.04) inset',
         }}
       >
@@ -7615,7 +7619,7 @@ function PlayerStatsPopup({
         </button>
 
         {/* Header — ship art + name. Right-padded so the name never runs under the X. */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, paddingRight: 32 }}>
+        <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, paddingRight: 32 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={shipImageUrl} alt="" style={{ width: 60, height: 60, objectFit: 'contain', flexShrink: 0, filter: `drop-shadow(0 3px 8px rgba(0,0,0,0.5))${shipFilter && shipFilter !== 'none' ? ` ${shipFilter}` : ''}` }} />
           <div style={{ minWidth: 0, flex: 1 }}>
@@ -7626,7 +7630,7 @@ function PlayerStatsPopup({
 
         {/* Tabs — group the sheet so it isn't one long scroll. */}
         {TABS.length > 1 && (
-          <div style={{ display: 'flex', gap: 4, padding: 3, marginBottom: 14, background: 'rgba(0,0,0,0.28)', borderRadius: 11, border: '1px solid rgba(255,255,255,0.07)' }}>
+          <div style={{ flexShrink: 0, display: 'flex', gap: 4, padding: 3, marginBottom: 14, background: 'rgba(0,0,0,0.28)', borderRadius: 11, border: '1px solid rgba(255,255,255,0.07)' }}>
             {TABS.map(t => {
               const on = activeTab === t.key
               return (
@@ -7642,6 +7646,9 @@ function PlayerStatsPopup({
           </div>
         )}
 
+        {/* Scrollable body — the header + tabs stay put, only the active tab's
+            content scrolls, so the modal keeps one fixed size. */}
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: '1.1rem' }}>
         {activeTab === 'stats' && (<>
         {/* Stat cards — 2-column grid feels less list-y and more dashboard-y. */}
         {sectionHeading('Combat', '#8fb4e0')}
@@ -7739,35 +7746,44 @@ function PlayerStatsPopup({
           <div style={{ marginTop: 16 }}>
             {sectionHeading(equippedItems.length > 1 ? `Equipped Items · ${equippedItems.length}` : 'Equipped Item', '#fbbf24')}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {equippedItems.map(item => (
+              {equippedItems.map(item => {
+                // Each item wears its own rarity colour (epic → violet, legendary
+                // → gold, etc.), the same scheme as raid loot — so a forged or
+                // abyssal legendary reads apart from a plain epic at a glance.
+                const c = RARITY_COLOR[item.rarity] ?? '#fbbf24'
+                return (
                 <div key={item.id} style={{
                   display: 'flex', alignItems: 'center', gap: 10,
                   padding: '0.65rem 0.75rem',
-                  background: 'rgba(251,191,36,0.06)',
-                  border: '1px solid rgba(251,191,36,0.22)',
+                  background: `${c}12`,
+                  border: `1px solid ${c}38`,
                   borderRadius: 12,
                 }}>
                   {/* Item glyph */}
                   <div style={{
                     width: 36, height: 36, flexShrink: 0,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: 'rgba(251,191,36,0.1)',
-                    border: '1px solid rgba(251,191,36,0.3)',
+                    background: `${c}1c`,
+                    border: `1px solid ${c}4d`,
                     borderRadius: 9,
                   }}>
                     {item.image ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={item.image} alt="" style={{ width: 28, height: 28, objectFit: 'contain' }} />
                     ) : (
-                      <span style={{ fontSize: '1.1rem', color: '#fbbf24', display: 'flex' }}><IconCrate size={18} /></span>
+                      <span style={{ fontSize: '1.1rem', color: c, display: 'flex' }}><IconCrate size={18} /></span>
                     )}
                   </div>
                   <div style={{ minWidth: 0, flex: 1 }}>
-                    <p className="font-karla font-700" style={{ fontSize: '0.85rem', color: '#fbbf24', lineHeight: 1.15, marginBottom: 2 }}>{item.name}</p>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 2 }}>
+                      <p className="font-karla font-700" style={{ minWidth: 0, fontSize: '0.85rem', color: c, lineHeight: 1.15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</p>
+                      <span className="font-karla font-800 uppercase" style={{ flexShrink: 0, fontSize: '0.46rem', letterSpacing: '0.09em', color: c, opacity: 0.85 }}>{item.rarity}</span>
+                    </div>
                     <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.68)', lineHeight: 1.35 }}>{item.description}</p>
                   </div>
                 </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         )}
@@ -7821,6 +7837,7 @@ function PlayerStatsPopup({
           </div>
         )}
         </>)}
+        </div>
       </motion.div>
       </div>
     </motion.div>,
