@@ -2714,7 +2714,7 @@ export default function RaidCombat({
     // to re-render (that was making Mako's Frenzy pop the art back in). The effect
     // fires only after that (SUMMON_LEAD_MS) on a clear stage, and a plain
     // tap-guard keeps blocking input across the whole window until it resolves.
-    const SUMMON_TOTAL_MS = 1960   // animated summon unmounts once it's faded
+    // SUMMON_TOTAL_MS is module-level now (playStep plays enemy summons too).
     const SUMMON_LEAD_MS  = 2140   // effect begins after the summon is fully gone
     const GUARD_MS        = 2320   // plain tap-blocker lifetime (covers the effect)
     setSummonGuard(true)
@@ -3836,7 +3836,11 @@ export default function RaidCombat({
             ? phaseList[enemyPhaseRef.current - 2].damageMult : 1
           const every = ab.everyTurns ?? 3
           bossAbilityTurnRef.current++
-          if (bossAbilityTurnRef.current % every === 1 || every === 1) {
+          // Fires on his Nth turn of the phase and every N after, NOT on the
+          // first. Opening a phase with a summon meant the phase-change callout
+          // and the ability landed on top of each other, and you ate the new
+          // giant before you had taken a single swing at the new bar.
+          if (bossAbilityTurnRef.current % every === 0) {
             const lines: string[] = [`${ab.name}! ${ab.line}`]
             let aSplatTarget: Actor | null = null
             let aSplatText = ''
@@ -5277,6 +5281,16 @@ export default function RaidCombat({
       }
 
       const step = steps[i]
+      // THE SUMMON. Unconditional and FIRST, because an ability step is shaped
+      // like a reload (no splat target, no attack FX) and so never reaches the
+      // attack-FX branches further down. Any step carrying a summon plays it.
+      if (step.summon) {
+        setAbilitySummon({
+          key: Date.now(), label: step.summon.label, name: step.summon.name,
+          color: step.summon.color, image: step.summon.image, chase: false, skinId: null,
+        })
+        playStepChainRef.current.push(setTimeout(() => setAbilitySummon(s => (s && s.image === step.summon?.image ? null : s)), SUMMON_TOTAL_MS))
+      }
       const isAttack  = step.action === 'fire' || step.action === 'volley' || step.action === 'mega' || step.action === 'ultimate'
       const isDodged  = isAttack && step.splatText === 'Dodged'
 
@@ -5552,18 +5566,6 @@ export default function RaidCombat({
                   vibrate([0, 70, 50, 130])
                 }
               }
-            }
-            // Incendiary lit / Frozen iced — flare the matching hull aura the
-            // instant the proc'd shot connects, and switch on the persistent
-            // glow/tint that lingers until the burn ticks out / ice breaks.
-            // Enemy summon: same component, same beat as a player ability, so
-            // Finn calling on a giant reads with the grammar the player
-            // already knows from their own crew.
-            if (step.summon) {
-              setAbilitySummon({
-                key: Date.now(), label: step.summon.label, name: step.summon.name,
-                color: step.summon.color, image: step.summon.image, chase: false, skinId: null,
-              })
             }
             if (step.procStatus) {
               const ak = Date.now() + i + 7
@@ -9934,6 +9936,9 @@ const ABILITY_CAST_LABEL: Record<string, string> = {
 // nothing should re-render it. Without this, a rapid burst of parent setState
 // during the deferred effect (e.g. Mako's Frenzy chain) re-renders this and
 // restarts its keyframe animations — the crew art visibly fades then pops back.
+// How long a summon splash lives, player-cast or enemy-cast.
+const SUMMON_TOTAL_MS = 1960
+
 const AbilitySummonFx = memo(function AbilitySummonFx({ label, name, color, image, chase, skinId }: { label: string; name: string; color: string; image: string | null; chase?: boolean; skinId?: string | null }) {
   // One ~1.45s pass: fast fade-in, a long hold, then fade-out (matches
   // SUMMON_TOTAL_MS). The crew is CONJURED — a rune ring + light rays sweep in

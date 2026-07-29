@@ -2166,7 +2166,7 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
             kind: 'vengeance', name: 'Still Going',
             line: 'You put a broadside clean through him and his heading does not change by a degree.',
             summonImage: '/fish/basilosaurus.png', summonColor: '#94a3b8',
-            everyTurns: 5, turns: 3,
+            everyTurns: 4, turns: 3,
           } },
         // ── PHASE 5 — MIRA. He marks you, and everything lands harder. ───────
         { revivePct: 1.0, damageMult: 1.32, badge: 'All That Tonnage',
