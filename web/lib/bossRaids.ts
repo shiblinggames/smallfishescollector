@@ -2125,7 +2125,10 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
       // no phase is a formality and none is a wall.
       id: 'finn', name: 'Finn', hpBase: 880, minDmg: 30, maxDmg: 50,
       shipSpeed: 11, actionMs: 4000,
-      magazineSize: 4, shieldPct: 0.22, chargeBiteChance: 0.36, startCharges: 2,
+      // No chargeBiteChance: Shark's Bite is the shared signature of Don
+      // Finleone's court, and Finn is not one of them. He was only carrying it
+      // because this config started life on the Don chassis.
+      magazineSize: 4, shieldPct: 0.22, startCharges: 2,
       ultimate: { name: 'The Long Line', mult: 2.8, line: 'All that patience, paid out at once.' },
       pattern: ['fire', 'reload', 'reload', 'fire', 'reload', 'dodge', 'fire'],
       critChance: 0.15,
