@@ -471,6 +471,11 @@ export interface RaidCombatProps {
   /** Don's jobs cleared this run + the bonus each paid — surfaced in the battle
    *  profile (Gauntlet only; omitted elsewhere). */
   contractsWon?: { name: string; reward: string }[]
+  /** Which instrument this raid is aimed on (BossRaidConfig.aimStyle).
+   *  'dial' swaps the linear aim bar for the fishing dial: same needle, same
+   *  0..1 drivers, same judgment, wrapped onto a circle, with the enemy ship
+   *  orbiting as the band. Only the Finn finale uses it. */
+  aimStyle?: 'bar' | 'dial'
   /** Gauntlet boons / curses held (with art) for the battle profile's Effects
    *  tab. Omitted outside the Gauntlet. */
   runBoons?: { id: string; name: string; tier: number; image?: string | null; desc: string; color: string }[]
@@ -593,6 +598,7 @@ export default function RaidCombat({
   initialCharges = 0,
   runKills = 0, runDepth = 0,
   contractsWon = [],
+  aimStyle = 'bar',
   runBoons, runCurses,
   anchorSaveAvailable = false, onAnchorSave,
   raidMods, riskyFlee = false, fleeSignal, fleeNav,
@@ -1403,6 +1409,31 @@ export default function RaidCombat({
   const zoneDirRef  = useRef(1)
   const indicatorRef = useRef<HTMLDivElement>(null)
   const zoneRef      = useRef<HTMLDivElement>(null)
+  // ── THE ONE PLACE LINEAR BECOMES POLAR ──────────────────────────────────────
+  // The aim mechanic is identical on the dial: the RAF, the 0..1 drivers
+  // (firePosRef / zonePosRef), the judgment in lockShot and the WYSIWYG freeze
+  // are all untouched. The ONLY difference is how those same numbers get
+  // painted, so every paint site goes through these two helpers. A position of
+  // 0..1 becomes 0..360 degrees; the band becomes an arc rotated to the same
+  // spot. That keeps the dial from ever disagreeing with the judgment, which is
+  // the whole point of the lock-in protocol.
+  const onDial = aimStyle === 'dial'
+  const paintNeedle = useCallback((el: HTMLDivElement | null, pos: number) => {
+    if (!el) return
+    if (onDial) el.style.transform = `rotate(${pos * 360}deg)`
+    else el.style.left = `calc(${pos * 100}% - 2px)`
+  }, [onDial])
+  const paintZone = useCallback((el: HTMLDivElement | null, center: number) => {
+    if (!el) return
+    if (onDial) {
+      // The arc's own width is baked into its SVG; it only needs rotating onto
+      // the enemy's current bearing.
+      el.style.transform = `rotate(${center * 360}deg)`
+    } else {
+      el.style.left = `${(center - HIT_W - GRAZE_W) * 100}%`
+      el.style.width = `${(HIT_W + GRAZE_W) * 2 * 100}%`
+    }
+  }, [onDial])
   const barFlashRef  = useRef<HTMLDivElement>(null)
   const rafRef       = useRef(0)
   // False Colors curse — drifting DECOY bands the player must NOT lock onto.
@@ -2327,7 +2358,7 @@ export default function RaidCombat({
       }
 
       if (indicatorRef.current) {
-        indicatorRef.current.style.left = `calc(${firePosRef.current * 100}% - 2px)`
+        paintNeedle(indicatorRef.current, firePosRef.current)
         let zone = getShotResult(firePosRef.current, zonePosRef.current, liveCritWRef.current)
         // Rolling Plate: the gold tell tracks the SEAM, not the zone center.
         if (seamDrift > 0) {
@@ -2343,8 +2374,7 @@ export default function RaidCombat({
         indicatorRef.current.style.background = bg
       }
       if (zoneRef.current) {
-        zoneRef.current.style.left = `${(zonePosRef.current - HIT_W - GRAZE_W) * 100}%`
-        zoneRef.current.style.width = `${(HIT_W + GRAZE_W) * 2 * 100}%`
+        paintZone(zoneRef.current, zonePosRef.current)
       }
 
       rafRef.current = requestAnimationFrame(tick)
@@ -3256,7 +3286,7 @@ export default function RaidCombat({
       { const cf = contractFactsRef.current; cf.shots++; if (playerAction === 'volley') cf.volleys++; else if (playerAction === 'mega') cf.megas++ }
       onShotResolved?.(false)
       if (indicatorRef.current) {
-        indicatorRef.current.style.left = `calc(${firePosRef.current * 100}% - 2px)`
+        paintNeedle(indicatorRef.current, firePosRef.current)
         indicatorRef.current.style.background = '#ef4444'
       }
       setAimResult('miss')
@@ -3293,7 +3323,7 @@ export default function RaidCombat({
     // the needle by the judged result — the freeze IS the judgment, so
     // the picture the player studies always matches the badge.
     if (indicatorRef.current) {
-      indicatorRef.current.style.left = `calc(${pos * 100}% - 2px)`
+      paintNeedle(indicatorRef.current, pos)
       indicatorRef.current.style.background =
         res === 'critical' ? '#fbbf24' :
         res === 'hit'      ? '#4ade80' :
@@ -3301,7 +3331,7 @@ export default function RaidCombat({
                              'rgba(255,255,255,0.4)'
     }
     if (zoneRef.current) {
-      zoneRef.current.style.left = `${(zoneCenter - HIT_W - GRAZE_W) * 100}%`
+      paintZone(zoneRef.current, zoneCenter)
     }
 
     // Consume one Sharpshot buff "shot left" regardless of outcome.
@@ -3350,7 +3380,11 @@ export default function RaidCombat({
       const w = res === 'critical' ? 10 : 7
       const glow = res === 'critical' ? '#fbbf24' : '#4ade80'
       indicatorRef.current.style.width = `${w}px`
-      indicatorRef.current.style.left = `calc(${pos * 100}% - ${w / 2}px)`
+      // On the bar the fattened needle has to be nudged left by half its new
+      // width to stay centered on `pos`. On the dial it rotates about its own
+      // pivot, so the rotation alone still points at the judged bearing.
+      if (onDial) paintNeedle(indicatorRef.current, pos)
+      else indicatorRef.current.style.left = `calc(${pos * 100}% - ${w / 2}px)`
       indicatorRef.current.style.boxShadow = `0 0 18px ${glow}, 0 0 36px ${glow}, 0 0 60px ${glow}66`
     }
 
@@ -7134,6 +7168,19 @@ export default function RaidCombat({
         display: 'flex', flexDirection: 'column', gap: 8,
       }}>
         {subPhase === 'aiming' ? (
+          /* THE FINN FINALE aims on the dial instead of the bar. Same refs, same
+             drivers, same judgment: only the instrument changes (see paintNeedle). */
+          onDial ? (
+            <DialAimInline
+              indicatorRef={indicatorRef} zoneRef={zoneRef} flashRef={barFlashRef}
+              critW={critFreeze ? lockedCritWRef.current : liveCritW}
+              sharpshotActive={!!sharpshotBuff && !critFreeze}
+              enemyImage={enemy.image}
+              enemyFilter={enemyArtFilter}
+              afflictionLabel={aimAffliction?.name ?? null}
+              hardenedArmed={hardenedArmed}
+            />
+          ) : (
           <AimBarInline
             indicatorRef={indicatorRef} zoneRef={zoneRef} flashRef={barFlashRef}
             // Enemy Mist Veil + any Gauntlet fog curse stack into one band.
@@ -7158,6 +7205,7 @@ export default function RaidCombat({
             // Rolling Plate — the RAF drives the gold band through this ref.
             critBandRef={critBandElRef}
           />
+          )
         ) : (
           <LogBox lines={resolveLog} turn={turn} />
         )}
@@ -10309,6 +10357,126 @@ function LogBox({ lines, turn }: { lines: string[]; turn: number }) {
 // shift. The actual aim bar is 44px; the surrounding chrome (Turn-
 // style header + centering + helper hint) fills the rest of the slot.
 // Pairs with InlineLockButton below.
+// ── THE DIAL ─────────────────────────────────────────────────────────────────
+// The Finn finale's aiming instrument, and the mechanical half of the whole
+// cross-game convergence.
+//
+// This is NOT a fishing minigame bolted onto a raid. It is the raid aim bar in
+// polar coordinates: same RAF, same 0..1 drivers, same judgment in lockShot,
+// same WYSIWYG freeze. `paintNeedle` / `paintZone` in the parent turn those same
+// numbers into rotations instead of offsets, which is why the frozen picture can
+// never disagree with the badge.
+//
+// The band is not an abstract marker either: the ENEMY SHIP rides it, orbiting
+// the compass, so the player is tracking Finn around the dial and firing when
+// they have him. The bands widen with the player's equipped rod/hook/line
+// exactly as they do when fishing (the parent feeds `critW`, and HIT/GRAZE come
+// from the shared constants), so every hour on the fishing side is a wider shot
+// at the final boss.
+function DialAimInline({
+  indicatorRef, zoneRef, flashRef, critW, sharpshotActive, enemyImage, enemyFilter, afflictionLabel, hardenedArmed,
+}: {
+  indicatorRef: React.RefObject<HTMLDivElement | null>
+  zoneRef:      React.RefObject<HTMLDivElement | null>
+  flashRef:     React.RefObject<HTMLDivElement | null>
+  critW: number
+  sharpshotActive?: boolean
+  enemyImage: string
+  enemyFilter?: string
+  afflictionLabel?: string | null
+  hardenedArmed?: boolean
+}) {
+  // Arc geometry. The dial is a ring; the bands are stroked arcs on it, sized
+  // by the SAME normalised widths the bar uses so the two instruments are
+  // mathematically the same fight.
+  const R = 74, CX = 90, CY = 90
+  const CIRC = 2 * Math.PI * R
+  // A 0..1 band half-width becomes a fraction of the circumference.
+  const dash = (halfWidth: number) => `${CIRC * halfWidth * 2} ${CIRC}`
+  // Rotate so 0 sits at 12 o'clock and the sweep runs clockwise, matching how
+  // the needle reads on the bar (left to right = clockwise).
+  const ringTransform = `rotate(-90 ${CX} ${CY})`
+  return (
+    <div style={{ position: 'relative', width: '100%', height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      {/* result flash, same element the bar uses */}
+      <div ref={flashRef} aria-hidden style={{ position: 'absolute', inset: 0, borderRadius: '50%', opacity: 0, pointerEvents: 'none', transition: 'opacity 0.18s' }} />
+
+      <div style={{ position: 'relative', width: 180, height: 180 }}>
+        <svg width="180" height="180" viewBox="0 0 180 180" style={{ position: 'absolute', inset: 0 }}>
+          {/* the compass face */}
+          <circle cx={CX} cy={CY} r={R} fill="rgba(4,10,16,0.55)" stroke="rgba(255,255,255,0.14)" strokeWidth="1.5" />
+          {/* bearing ticks, so the orbit is readable rather than abstract */}
+          {Array.from({ length: 24 }, (_, i) => {
+            const a = (i / 24) * Math.PI * 2 - Math.PI / 2
+            const r0 = i % 6 === 0 ? R - 9 : R - 5
+            return (
+              <line key={i}
+                x1={CX + Math.cos(a) * r0} y1={CY + Math.sin(a) * r0}
+                x2={CX + Math.cos(a) * R}  y2={CY + Math.sin(a) * R}
+                stroke="rgba(255,255,255,0.2)" strokeWidth={i % 6 === 0 ? 1.6 : 1} />
+            )
+          })}
+        </svg>
+
+        {/* ── THE BAND: graze + hit + crit arcs, rotated onto the enemy's
+             bearing by paintZone. Sits in its own rotating layer so one
+             transform moves the whole target. ── */}
+        <div ref={zoneRef} aria-hidden
+          style={{ position: 'absolute', inset: 0, transformOrigin: '50% 50%', willChange: 'transform' }}>
+          <svg width="180" height="180" viewBox="0 0 180 180" style={{ position: 'absolute', inset: 0, overflow: 'visible' }}>
+            <g transform={ringTransform}>
+              {/* graze (outermost tolerance) */}
+              <circle cx={CX} cy={CY} r={R} fill="none" stroke="rgba(148,163,184,0.45)" strokeWidth="12"
+                strokeDasharray={dash(HIT_W + GRAZE_W)} strokeDashoffset={CIRC * (HIT_W + GRAZE_W)} strokeLinecap="butt" />
+              {/* hit */}
+              <circle cx={CX} cy={CY} r={R} fill="none" stroke="rgba(74,222,128,0.75)" strokeWidth="12"
+                strokeDasharray={dash(HIT_W)} strokeDashoffset={CIRC * HIT_W} strokeLinecap="butt" />
+              {/* crit — widened by rod/hook/line and Sharpshot exactly as on the bar */}
+              <circle cx={CX} cy={CY} r={R} fill="none" stroke={sharpshotActive ? '#fde68a' : '#fbbf24'} strokeWidth="12"
+                strokeDasharray={dash(critW)} strokeDashoffset={CIRC * critW} strokeLinecap="butt"
+                style={sharpshotActive ? { filter: 'drop-shadow(0 0 6px #fbbf24)' } : undefined} />
+            </g>
+          </svg>
+          {/* Finn's ship rides the band. This is the thing you are tracking. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={enemyImage} alt="" aria-hidden decoding="async"
+            style={{
+              position: 'absolute', left: '50%', top: CY - R, width: 34, height: 34,
+              marginLeft: -17, marginTop: -17, objectFit: 'contain',
+              filter: `${enemyFilter && enemyFilter !== 'none' ? enemyFilter + ' ' : ''}drop-shadow(0 2px 8px rgba(0,0,0,0.7))`,
+            }} />
+        </div>
+
+        {/* ── THE NEEDLE: rotated by paintNeedle off the same firePosRef the bar
+             uses. Its own layer so the rotation composites cheaply. ── */}
+        <div ref={indicatorRef} aria-hidden
+          style={{ position: 'absolute', inset: 0, transformOrigin: '50% 50%', willChange: 'transform', background: 'transparent' }}>
+          <div style={{
+            position: 'absolute', left: '50%', top: CY - R - 8, width: 3, height: 26,
+            marginLeft: -1.5, borderRadius: 2, background: 'inherit',
+            boxShadow: '0 0 8px currentColor',
+          }} />
+        </div>
+
+        {/* centre cap */}
+        <div aria-hidden style={{ position: 'absolute', left: '50%', top: '50%', width: 12, height: 12, marginLeft: -6, marginTop: -6, borderRadius: '50%', background: 'rgba(255,255,255,0.5)', boxShadow: '0 0 10px rgba(255,255,255,0.35)' }} />
+
+        {hardenedArmed && (
+          <div className="font-karla font-800 uppercase" style={{ position: 'absolute', left: '50%', bottom: 6, transform: 'translateX(-50%)', fontSize: '0.5rem', letterSpacing: '0.14em', color: '#9fb2c8', whiteSpace: 'nowrap' }}>
+            Tap twice
+          </div>
+        )}
+      </div>
+
+      {afflictionLabel && (
+        <div className="font-karla font-800 uppercase" style={{ position: 'absolute', top: 2, left: '50%', transform: 'translateX(-50%)', fontSize: '0.5rem', letterSpacing: '0.14em', color: '#f0a0a0', whiteSpace: 'nowrap' }}>
+          {afflictionLabel}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, aimBlackout, critW, sharpshotActive, decoyCount, decoyElRefs, afflictionLabel, hardenedArmed, critBandRef }: {
   indicatorRef: React.RefObject<HTMLDivElement | null>
   zoneRef:      React.RefObject<HTMLDivElement | null>

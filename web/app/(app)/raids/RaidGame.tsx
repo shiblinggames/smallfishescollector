@@ -1595,6 +1595,9 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 affix={eliteAffix}
                 isElite={!!eliteAffix}
                 isBoss={isBoss}
+                // 'dial' on the Finn finale: the whole fight is aimed on the
+                // fishing dial instead of the bar (see BossRaidConfig.aimStyle).
+                aimStyle={config.aimStyle}
                 shipImageUrl={shipImageUrl}
                 shipFilter={shipFilter}
                 shipName={shipName}
