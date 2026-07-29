@@ -41,7 +41,7 @@ import { MERCHANT_ITEMS, rollMerchantStock, type MerchantItemKind } from '@/lib/
 import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
 import { offerCoinMult, offerChestMult, offerCopy, offerTakenLine, type DavyOffer } from '@/lib/gauntletOffer'
 import { FATHOM_BAITS } from '@/lib/bait'
-import { upgradesForVariant, getGauntletUpgrade, upgradeTierInfo, romanTier, COMING_SOON_UPGRADES, activeGauntletUpgrades, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck, gauntletBoonRerolls, gauntletCurseRerolls, gauntletBoonFilters, gauntletSynergyOfferMult, gauntletHasBloodOath, gauntletStartAnchorSaves, DONS_DAILY_TRIBUTE_AMOUNT } from '@/lib/gauntletUpgrades'
+import { upgradesForVariant, getGauntletUpgrade, upgradeTierInfo, romanTier, COMING_SOON_UPGRADES, activeGauntletUpgrades, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck, gauntletBoonRerolls, gauntletCurseRerolls, gauntletBoonFilters, gauntletSynergyOfferMult, gauntletHasBloodOath, gauntletStartAnchorSaves, gauntletFathomsMult, DONS_DAILY_TRIBUTE_AMOUNT } from '@/lib/gauntletUpgrades'
 import { type ShipAugment } from '@/lib/shipAugments'
 import { getSpecialItem } from '@/lib/specialItems'
 import { buySpecialItem } from '@/app/(app)/fishing/actions'
@@ -3249,43 +3249,56 @@ export default function GauntletGame(props: GauntletGameProps) {
               oddsMult: offerChest,
             })
             const sweetened = offerChest > 1
-            const Line = ({ label, value }: { label: string; value: string }) => (
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
-                <span className="font-karla font-600" style={{ fontSize: '0.74rem', color: '#8f8a80' }}>{label}</span>
-                <span className="font-cinzel font-700" style={{ fontSize: '0.86rem', color: '#e8e1d2' }}>{value}</span>
+            // Fathoms this dive would bank (the Fence tab already spent comes off
+            // it, mirroring the cash-out settle).
+            const previewFathoms = Math.max(0, Math.round(fathomsForDepth(cleared, props.variant ?? 'davy') * gauntletFathomsMult(activeUpgrades)) - fenceSpent)
+            // One compact cell per currency — the old hero was a 2.5rem number and
+            // a stacked ledger that ate half the screen to say three things.
+            const Cell = ({ label, value, color }: { label: string; value: string; color: string }) => (
+              <div style={{ flex: 1, minWidth: 0, padding: '0.5rem 0.3rem', borderRadius: 11, background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.08)', textAlign: 'center' }}>
+                <p className="font-cinzel font-800" style={{ fontSize: 'clamp(0.9rem, 4.2vw, 1.1rem)', color, lineHeight: 1, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{value}</p>
+                <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.46rem', color: '#8f8a80', marginTop: 4 }}>{label}</p>
               </div>
             )
             return (
-              <div style={{ marginTop: 15, padding: '1.15rem 1rem 1rem', borderRadius: 18,
-                background: `radial-gradient(ellipse at 50% 0%, ${GOLD}24 0%, rgba(8,13,22,0.6) 76%)`,
-                border: `1px solid ${GOLD}4a`, boxShadow: `inset 0 0 32px ${GOLD}12, 0 14px 40px rgba(0,0,0,0.5)` }}>
-                <p className="font-karla font-800 uppercase tracking-[0.2em]" style={{ fontSize: '0.58rem', color: `${GOLD}cc` }}>Your Haul If You Bank Now</p>
-                <p className="font-cinzel font-800" style={{ fontSize: '2.5rem', color: GOLD, lineHeight: 1.0, marginTop: 5, textShadow: `0 0 30px ${GOLD}55` }}>
-                  {fmt(dealDoubloons)} <span style={{ fontSize: '1.4rem' }}>⟡</span>
-                </p>
-
-                <div style={{ marginTop: 12, paddingTop: 11, borderTop: `1px solid ${GOLD}22`, textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <Line label="Nav XP" value={`+${fmt(previewXp)}`} />
-                  {chest.gems > 0 && <Line label="Gems" value={`+${chest.gems} ◆`} />}
-                  <Line label="Chest" value={`${hardcoreRun ? HARDCORE_CHEST_LABEL : chest.label}${chest.potMult > 1 ? ` ×${chest.potMult}` : ''}`} />
+              <div style={{ marginTop: 13, padding: '0.75rem 0.7rem', borderRadius: 16,
+                background: `radial-gradient(ellipse at 50% 0%, ${GOLD}1c 0%, rgba(8,13,22,0.6) 76%)`,
+                border: `1px solid ${GOLD}3a` }}>
+                <p className="font-karla font-800 uppercase tracking-[0.2em]" style={{ fontSize: '0.5rem', color: `${GOLD}cc`, marginBottom: 7 }}>Bank now and you take</p>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <Cell label="Doubloons" value={fmt(dealDoubloons)} color={GOLD} />
+                  <Cell label="Nav XP" value={`+${fmt(previewXp)}`} color="#7dd3fc" />
+                  <Cell label="Fathoms" value={`+${fmt(previewFathoms)}`} color={AC} />
+                  {chest.gems > 0 && <Cell label="Gems" value={`+${chest.gems}`} color="#c9a7ff" />}
                 </div>
 
-                {/* The chase, folded into the same card. Anything already owned is
-                    left out entirely rather than shown at 0%. */}
+                {/* The chase — icons + odds in one scrollable row, so what you're
+                    fishing for reads visually instead of as a text ledger. */}
                 {odds.length > 0 && (
-                  <div style={{ marginTop: 11, paddingTop: 11, borderTop: `1px solid ${GOLD}22`, textAlign: 'left' }}>
-                    <p className="font-karla font-800 uppercase tracking-[0.16em]" style={{ fontSize: '0.5rem', color: sweetened ? '#c9a7ff' : '#8f8a80', marginBottom: 7 }}>
+                  <div style={{ marginTop: 10, paddingTop: 9, borderTop: `1px solid ${GOLD}22` }}>
+                    <p className="font-karla font-800 uppercase tracking-[0.16em]" style={{ fontSize: '0.46rem', color: sweetened ? '#c9a7ff' : '#8f8a80', marginBottom: 6, textAlign: 'left' }}>
                       In the Chest{sweetened ? ` · Davy's ${offerChest}x` : ''}
                     </p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      {odds.map(o => (
-                        <div key={o.id} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
-                          <span className="font-karla font-600 truncate" style={{ minWidth: 0, fontSize: '0.74rem', color: '#8f8a80' }}>{o.name}</span>
-                          <span className="font-cinzel font-700" style={{ flexShrink: 0, fontSize: '0.86rem', color: sweetened ? '#c9a7ff' : '#e8e1d2' }}>
-                            {(o.chance * 100).toFixed(o.chance < 0.1 ? 1 : 0)}%
-                          </span>
-                        </div>
-                      ))}
+                    <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2, scrollbarWidth: 'none' }}>
+                      {odds.map(o => {
+                        const img = o.kind === 'skin'
+                          ? getShipSkin(o.id)?.imageByTier?.[6]
+                          : getRaidItem(o.id)?.image
+                        return (
+                          <div key={o.id} title={o.name} style={{ flexShrink: 0, width: 62, padding: '0.4rem 0.2rem 0.35rem', borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: `1px solid ${sweetened ? 'rgba(201,167,255,0.4)' : 'rgba(255,255,255,0.1)'}`, textAlign: 'center' }}>
+                            <div style={{ height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              {img
+                                // eslint-disable-next-line @next/next/no-img-element
+                                ? <img src={img} alt="" loading="lazy" decoding="async" style={{ maxWidth: 28, maxHeight: 30, objectFit: 'contain', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.55))' }} />
+                                : <span style={{ fontSize: '1rem', color: GOLD }}>◆</span>}
+                            </div>
+                            <p className="font-cinzel font-800" style={{ fontSize: '0.72rem', color: sweetened ? '#c9a7ff' : '#e8e1d2', lineHeight: 1, marginTop: 3 }}>
+                              {(o.chance * 100).toFixed(o.chance < 0.1 ? 1 : 0)}%
+                            </p>
+                            <p className="font-karla font-600 truncate" style={{ fontSize: '0.44rem', color: '#8f8a80', lineHeight: 1.2, marginTop: 2 }}>{o.name}</p>
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
                 )}
@@ -3509,11 +3522,18 @@ export default function GauntletGame(props: GauntletGameProps) {
             {(() => {
               const bankBarred = termFx.cashOutOnlyAfterBoss && !rollStateRef.current.prevWasBoss
               const diveBtn = (
-                <button onClick={pushOn} disabled={resolving} className="tap"
+                // Dive Deeper is the BECKONING option: it breathes, its chevron
+                // bobs downward, and it carries the accent glow — so the risky
+                // path pulls at you while Claim & Leave sits calm and solid.
+                <motion.button onClick={pushOn} disabled={resolving} className="tap"
+                  animate={resolving ? {} : { boxShadow: [`0 0 10px ${AC}22`, `0 0 26px ${AC}55`, `0 0 10px ${AC}22`] }}
+                  transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
                   style={{ width: '100%', height: '100%', minHeight: 96, padding: '0.8rem 0.6rem', borderRadius: 14,
-                    background: `linear-gradient(180deg, ${AC}33 0%, rgba(6,10,16,0.9) 74%)`, border: `1px solid ${AC}a6`,
+                    background: `linear-gradient(180deg, ${AC}3d 0%, rgba(6,10,16,0.9) 74%)`, border: `1.5px solid ${AC}c4`,
                     cursor: resolving ? 'wait' : 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={AC} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 5v14" /><path d="M19 12l-7 7-7-7" /></svg>
+                  <motion.span aria-hidden animate={resolving ? {} : { y: [0, 3, 0] }} transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }} style={{ display: 'flex' }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={AC} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 5v14" /><path d="M19 12l-7 7-7-7" /></svg>
+                  </motion.span>
                   <span className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ fontSize: '1.02rem', color: '#d7fbf4', lineHeight: 1.1, textShadow: `0 0 12px ${AC}66` }}>Dive Deeper</span>
                   <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#bfe4dc' }}>To depth {nextDepth}</span>
                   {previewDoubloons > 0 && (
@@ -3521,7 +3541,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                       {fmt(previewDoubloons)} ⟡ at risk
                     </span>
                   )}
-                </button>
+                </motion.button>
               )
               if (bankBarred) return (
                 <>
@@ -3559,9 +3579,9 @@ export default function GauntletGame(props: GauntletGameProps) {
           {/* Pause & step away — save the run and take a break. Unlimited, and it
               never risks the crew: the dive is held server-side and picks up right
               here. Deliberately quiet so it never competes with the dive/bank fork. */}
-          <button onClick={doPause} disabled={pausing || resolving} className="font-karla font-600 tap"
-            style={{ marginTop: 12, width: '100%', padding: '0.6rem', borderRadius: 11, fontSize: '0.72rem',
-              color: '#8a857c', background: 'transparent', border: '1px solid rgba(154,148,138,0.22)',
+          <button onClick={doPause} disabled={pausing || resolving} className="font-karla font-700 tap"
+            style={{ marginTop: 12, width: '100%', padding: '0.7rem', borderRadius: 11, fontSize: '0.78rem',
+              color: '#c8c2b6', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(200,194,182,0.4)',
               cursor: (pausing || resolving) ? 'wait' : 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden><path d="M8 5v14M16 5v14" /></svg>
             {pausing ? 'Saving…' : 'Pause & step away'}
