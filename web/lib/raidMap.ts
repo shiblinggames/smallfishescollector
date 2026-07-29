@@ -2616,7 +2616,7 @@ export const RAID_MAP: RaidNode[] = [
       { text: 'And you watch it land on her.', pause: 1000, closeup: true },
       { ...GUIDE.mira, text: "...Oh no. No, no, no. The F. The *Finn*dicate. It has had his name written on it the entire time." },
       { text: 'Nobody says anything at all for a moment.', pause: 900 },
-      { ...GUIDE.finn, text: "Took her longer than most. Not bad, though. Most never hear it until it is far too late to help them." },
+      { ...GUIDE.finn, text: "The lot of you. Chasing it up the ladder that whole way, and not one of you ever once said it out loud. Most never do. Not until it is far too late to help them." },
       // WHY. He wants them to understand exactly how it worked.
       { ...GUIDE.finn, text: "You want to know why. Everyone does, right at the end." },
       { ...GUIDE.finn, text: "The ancients. That is all any of it was ever for." },
