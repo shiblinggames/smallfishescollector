@@ -1029,6 +1029,16 @@ export default function RaidCombat({
   const boonShieldRef = useRef(0)
   const [crewShieldHp, setCrewShieldHp] = useState(0)
   const crewShieldRef = useRef(0)
+  // Shield soak flare + the PLAYBACK-time shield value it's diffed against (the
+  // refs above are already fully depleted by the resolve pass, so playback needs
+  // its own tracker to spot the drop as it paints).
+  const [shieldSoakFx, setShieldSoakFx] = useState<{ key: number } | null>(null)
+  const playedShieldRef = useRef<number | null>(null)
+  useEffect(() => {
+    if (!shieldSoakFx) return
+    const t = setTimeout(() => setShieldSoakFx(null), 520)
+    return () => clearTimeout(t)
+  }, [shieldSoakFx])
   // Vengeance (Laz the Coelacanth-only legendary) — an ARMED ward, current-fight
   // only. When the ability fires we capture that crew's heal% + damage-buff% and
   // arm the ward. If a killing blow would land THIS fight while armed, we negate
@@ -3599,7 +3609,21 @@ export default function RaidCombat({
     }
     // HP appliers that ALSO settle the matching shield bar to this step's
     // snapshot. Used everywhere a step's HP is committed during playback.
-    const syncPHp = (step: Step) => { setPlayerHp(step.pHp); if (step.pShield != null) setAbyssalShieldHp(step.pShield); if (step.pBoonShield != null) setBoonShieldHp(step.pBoonShield); if (step.pCrewShield != null) setCrewShieldHp(step.pCrewShield) }
+    const syncPHp = (step: Step) => {
+      setPlayerHp(step.pHp)
+      if (step.pShield != null) {
+        // Every on-screen application of player damage funnels through here, so
+        // it's the one place that reliably sees the shield DROP — fire the soak
+        // flare whenever it does, whatever soaked it.
+        if (playedShieldRef.current != null && step.pShield < playedShieldRef.current) {
+          setShieldSoakFx({ key: Date.now() + Math.random() })
+        }
+        playedShieldRef.current = step.pShield
+        setAbyssalShieldHp(step.pShield)
+      }
+      if (step.pBoonShield != null) setBoonShieldHp(step.pBoonShield)
+      if (step.pCrewShield != null) setCrewShieldHp(step.pCrewShield)
+    }
     const syncEHp = (step: Step) => { setEnemyHp(step.eHp); if (step.eShield != null) setEnemyShieldHp(step.eShield) }
     // ── Player shield soak, one place ────────────────────────────────────────
     // Drain the player shield pool (Stormward boon / Abyssal Tide) BEFORE damage
@@ -6541,32 +6565,38 @@ export default function RaidCombat({
                 // colour, so it read as backlight rather than protection.
                 <div aria-hidden style={{ position: 'absolute', inset: '-7%', borderRadius: '50%', pointerEvents: 'none', zIndex: 2, overflow: 'hidden' }}>
                   <style>{`
-                    @keyframes rc-shield-sheen { 0% { transform: translateX(-120%) skewX(-14deg); opacity: 0; } 20% { opacity: 0.6; } 55% { opacity: 0.6; } 100% { transform: translateX(200%) skewX(-14deg); opacity: 0; } }
-                    @keyframes rc-shield-rim   { 0%,100% { opacity: 0.6; } 50% { opacity: 0.95; } }
+                    @keyframes rc-shield-rim { 0%,100% { opacity: 0.55; } 50% { opacity: 0.82; } }
                   `}</style>
-                  {/* Dome body + hard rim — the edge is the whole read. */}
+                  {/* Just the dome + its rim. The lattice and travelling sheen
+                      were too busy for something that sits on screen the whole
+                      fight — the defined EDGE alone is what reads as a barrier. */}
                   <div style={{
                     position: 'absolute', inset: 0, borderRadius: '50%',
-                    background: 'radial-gradient(ellipse 72% 104% at 74% 50%, rgba(125,211,252,0.3) 0%, rgba(94,234,212,0.14) 52%, transparent 76%)',
-                    border: '1.5px solid rgba(150,225,255,0.7)',
-                    boxShadow: 'inset 0 0 26px rgba(125,211,252,0.4), 0 0 18px rgba(94,234,212,0.32)',
-                    animation: subPhase === 'aiming' ? 'none' : 'rc-shield-rim 1.9s ease-in-out infinite',
-                    opacity: subPhase === 'aiming' ? 0.8 : undefined,
+                    background: 'radial-gradient(ellipse 72% 104% at 74% 50%, rgba(125,211,252,0.22) 0%, rgba(94,234,212,0.1) 54%, transparent 78%)',
+                    border: '1.5px solid rgba(150,225,255,0.55)',
+                    boxShadow: 'inset 0 0 20px rgba(125,211,252,0.26), 0 0 12px rgba(94,234,212,0.2)',
+                    animation: subPhase === 'aiming' ? 'none' : 'rc-shield-rim 2.2s ease-in-out infinite',
+                    opacity: subPhase === 'aiming' ? 0.7 : undefined,
                   }} />
-                  {/* Hex lattice — the "energy field" texture, faint but present. */}
-                  <div style={{
-                    position: 'absolute', inset: 0, borderRadius: '50%', opacity: 0.3,
-                    backgroundImage: 'repeating-linear-gradient(60deg, rgba(160,235,255,0.5) 0 1px, transparent 1px 13px), repeating-linear-gradient(-60deg, rgba(160,235,255,0.5) 0 1px, transparent 1px 13px)',
-                  }} />
-                  {/* Sheen sweeping the surface — reads as a curved solid. */}
-                  {subPhase !== 'aiming' && (
-                    <span style={{
-                      position: 'absolute', top: 0, bottom: 0, left: 0, width: '34%',
-                      background: 'linear-gradient(100deg, transparent, rgba(210,245,255,0.42), transparent)',
-                      animation: 'rc-shield-sheen 2.8s ease-in-out infinite',
-                    }} />
-                  )}
                 </div>
+              )}
+              {/* Soak reaction — the barrier FLARES when it eats a hit. The
+                  quiet dome above is the resting state; this is the moment it
+                  actually does its job, so it's the loud one. */}
+              {shieldSoakFx && (
+                <motion.div
+                  key={shieldSoakFx.key}
+                  aria-hidden
+                  initial={{ opacity: 0.9, scale: 0.94 }}
+                  animate={{ opacity: 0, scale: 1.16 }}
+                  transition={{ duration: 0.5, ease: 'easeOut' }}
+                  style={{
+                    position: 'absolute', inset: '-7%', borderRadius: '50%', pointerEvents: 'none', zIndex: 3,
+                    border: '2.5px solid rgba(186,240,255,0.95)',
+                    boxShadow: '0 0 26px rgba(125,211,252,0.85), inset 0 0 34px rgba(150,225,255,0.6)',
+                    background: 'radial-gradient(ellipse at 74% 50%, rgba(186,240,255,0.3) 0%, transparent 68%)',
+                  }}
+                />
               )}
               {abyssalShieldHp <= 0 && (anchorReductionPct ?? 0) > 0 && (
                 <motion.div
