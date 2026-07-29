@@ -11,10 +11,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { vibrate } from '@/lib/haptics'
-import { getCharacterSprites } from '@/lib/characters'
 import { FINN_AVATAR } from '@/lib/finn'
 
 export const GOLD = '#f0c040'
+/** Finn, cropped to boat-and-fish: his raw fishing sprite carries a dangling
+ *  line off to the left and ~425px of empty sky above his head, which framed
+ *  him tiny in every shot he appeared in. Every Finn insert draws from this one
+ *  so the silhouette, the reveal and the sinister fallback all match. */
+const FINN_PORTRAIT = '/finn_portrait.png'
 const TYPE_MS = 22          // per character
 const PUNCT_MS = 190        // a line breathes where it should
 const COMMA_MS = 80
@@ -251,7 +255,7 @@ export function InsertShot({ kind, wax, accent, reduced }: { kind: string; wax?:
  *  everyone else. NO art added, and Finn is never named — the full reveal stays
  *  for the merge cutscene. See [[project_finn_finndicate_twist]]. */
 function FinnSilhouetteInsert({ accent, reduced }: { accent: string; reduced?: boolean }) {
-  const sprite = getCharacterSprites(FINN_AVATAR.characterColor).rest
+  const sprite = FINN_PORTRAIT
   return (
     <div style={{ position: 'relative', width: 'min(74vw, 300px)', aspectRatio: '1 / 1', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', overflow: 'hidden' }}>
       {/* cold deep-water backlight so the black shape separates from the scene */}
@@ -285,7 +289,7 @@ function FinnSilhouetteInsert({ accent, reduced }: { accent: string; reduced?: b
  *  cold deep-water backlight warms to daylight. He was standing there the whole
  *  time. Uses his existing sprite, so no new art. */
 function FinnUnmaskedInsert({ accent, reduced }: { accent: string; reduced?: boolean }) {
-  const sprite = getCharacterSprites(FINN_AVATAR.characterColor).rest
+  const sprite = FINN_PORTRAIT
   return (
     <div style={{ position: 'relative', width: 'min(74vw, 300px)', aspectRatio: '1 / 1', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', overflow: 'hidden' }}>
       {/* the light comes UP on him: cold abyss glow warming to open daylight */}
@@ -362,7 +366,7 @@ function AncientHarvestInsert({ accent, reduced }: { accent: string; reduced?: b
 const FINN_SINISTER_ART = '/finn_sinister.png'
 
 function FinnSinisterInsert({ accent, reduced }: { accent: string; reduced?: boolean }) {
-  const fallback = getCharacterSprites(FINN_AVATAR.characterColor).rest
+  const fallback = FINN_PORTRAIT
   const [src, setSrc] = useState(FINN_SINISTER_ART)
   const usingFallback = src !== FINN_SINISTER_ART
   return (
