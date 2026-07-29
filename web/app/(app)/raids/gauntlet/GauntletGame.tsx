@@ -5860,7 +5860,7 @@ function LootModal({ mode, don, onClose }: { mode: 'normal' | 'hardcore'; don?: 
       how: 'Spend them in the Locker on permanent upgrades that carry into every future dive.',
     },
     {
-      id: 'blood_gems', name: 'Blood Gems', tag: 'Hardcore only', hardcoreOnly: true,
+      id: 'blood_gems', name: 'Blood Gems', tag: 'Premium currency', hardcoreOnly: true,
       icon: GEM_ICON,
       desc: 'The premium currency, and the reason to risk the crew. Banked in your cash-out chest, never dropped anywhere else in the game.',
       how: `Survive and bank them. The deeper you go the more you carry up, and signing Davy\u2019s Terms multiplies them further.`,
@@ -5909,9 +5909,9 @@ function LootModal({ mode, don, onClose }: { mode: 'normal' | 'hardcore'; don?: 
             desc: hand.description, how: 'A rare roll in any cash-out chest. The odds climb the deeper you bank. Forge it with the Heavy to make the Grand Cannon.' },
           skinDrop('golden_gauntlet_hull', 'Deepest chest only',
             'Only rolls from Davy Jones\u2019 Locker, the deepest chest tier. Man-o-War hulls only.'),
-          bloodCn && { id: bloodCn.id, name: bloodCn.name, img: bloodCn.image, tag: 'Hardcore only', hardcoreOnly: true,
+          bloodCn && { id: bloodCn.id, name: bloodCn.name, img: bloodCn.image, tag: 'Rare from deeper chests', hardcoreOnly: true,
             desc: bloodCn.description, how: 'A rare roll from the deeper Hardcore chests. The only lifesteal in the game.' },
-          skinDrop('bad_blood_hull', 'Hardcore only',
+          skinDrop('bad_blood_hull', 'Rare from deeper chests',
             'A rare roll from the deeper Hardcore chests. Man-o-War hulls only.', true),
           skinDrop(PRESSURE_SKIN_ID, `${PRESSURE_SKIN_THRESHOLD}+ Pressure`,
             `The rarest thing in the Gauntlet. It is not won by diving deep, it is won by diving deep UNDER WEIGHT: a Hardcore cash-out carrying ${PRESSURE_SKIN_THRESHOLD}+ Pressure from Davy\u2019s Terms, banked from depth ${PRESSURE_SKIN_DEPTH} or deeper. Man-o-War hulls only.`, true),
@@ -5919,26 +5919,25 @@ function LootModal({ mode, don, onClose }: { mode: 'normal' | 'hardcore'; don?: 
       })()
   ).filter(Boolean) as HaulDrop[]
 
-  // On Normal, a Hardcore drop is shown but locked. That single grey tile does the
-  // job the "here is what Hardcore adds" paragraph was doing, without the paragraph.
+  // Each tab lists only what actually drops there (the mode filter runs at
+  // render), so tiles never need a "Hardcore only" lock/label anymore — the tab
+  // says it. Hardcore-exclusive drops keep a faint red border as a quiet tell.
   const Tile = ({ d, big }: { d: HaulDrop; big?: boolean }) => {
-    const locked = !hardcore && d.hardcoreOnly === true
     return (
       <button onClick={() => setDetail(d)} className="tap"
         style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, padding: big ? '0.75rem 0.4rem 0.6rem' : '0.6rem 0.35rem',
           borderRadius: 12, cursor: 'pointer', textAlign: 'center', width: '100%',
           background: 'rgba(255,255,255,0.035)',
           border: `1px solid ${d.hardcoreOnly ? `${HC_RED}44` : 'rgba(255,255,255,0.09)'}` }}>
-        <div style={{ height: big ? 52 : 40, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          filter: locked ? 'grayscale(1) brightness(0.5)' : 'drop-shadow(0 2px 5px rgba(0,0,0,0.55))', opacity: locked ? 0.75 : 1 }}>
+        <div style={{ height: big ? 52 : 40, display: 'flex', alignItems: 'center', justifyContent: 'center', filter: 'drop-shadow(0 2px 5px rgba(0,0,0,0.55))' }}>
           {d.img
             // eslint-disable-next-line @next/next/no-img-element
             ? <img src={d.img} alt="" loading="lazy" decoding="async" style={{ maxWidth: big ? 62 : 44, maxHeight: big ? 52 : 40, objectFit: 'contain' }} />
             : d.icon}
         </div>
-        <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: locked ? '#8d8781' : '#f2ede2', lineHeight: 1.12 }}>{d.name}</p>
+        <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#f2ede2', lineHeight: 1.12 }}>{d.name}</p>
         <p className="font-karla font-600" style={{ fontSize: '0.55rem', lineHeight: 1.2, color: d.hardcoreOnly ? `${HC_RED}dd` : '#7f7a72' }}>
-          {locked ? 'Hardcore only' : d.tag}
+          {d.tag}
         </p>
         {/* Drop-rate range for the chase items/skins (banked currencies have none). */}
         {(() => {
@@ -5978,12 +5977,7 @@ function LootModal({ mode, don, onClose }: { mode: 'normal' | 'hardcore'; don?: 
                   ? <img src={detail.img} alt="" style={{ maxWidth: 120, maxHeight: 92, objectFit: 'contain' }} />
                   : <div style={{ transform: 'scale(2)' }}>{detail.icon}</div>}
               </div>
-              {detail.hardcoreOnly && (
-                <span className="font-karla font-800 uppercase tracking-[0.16em]" style={{ marginTop: 10, fontSize: '0.5rem', color: HC_RED, background: `${HC_RED}16`, border: `1px solid ${HC_RED}55`, borderRadius: 999, padding: '0.2rem 0.55rem' }}>
-                  Hardcore only
-                </span>
-              )}
-              <p className="font-cinzel font-800" style={{ fontSize: '1.3rem', color: '#f2ede2', lineHeight: 1.12, marginTop: 9, textAlign: 'center' }}>{detail.name}</p>
+              <p className="font-cinzel font-800" style={{ fontSize: '1.3rem', color: '#f2ede2', lineHeight: 1.12, marginTop: 12, textAlign: 'center' }}>{detail.name}</p>
             </div>
             <p className="font-karla" style={{ fontSize: '0.82rem', color: '#b8b2a6', lineHeight: 1.55, marginTop: 11, textAlign: 'left' }}>{detail.desc}</p>
             <div style={{ marginTop: 11, padding: '0.7rem 0.8rem', borderRadius: 11, textAlign: 'left', background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.09)' }}>
@@ -6012,8 +6006,8 @@ function LootModal({ mode, don, onClose }: { mode: 'normal' | 'hardcore'; don?: 
               Tap anything to see how it drops and its odds by depth.
             </p>
 
-            {/* Normal / Hardcore toggle — Hardcore adds its own chases (shown
-                greyed on Normal), so let the reader flip between the two hauls. */}
+            {/* Normal / Hardcore toggle — each tab lists only what actually drops
+                on that mode (Hardcore adds its own chases). */}
             <div style={{ display: 'flex', gap: 5, marginTop: 10, padding: 4, background: 'rgba(0,0,0,0.3)', borderRadius: 11, border: '1px solid rgba(255,255,255,0.08)' }}>
               {(['normal', 'hardcore'] as const).map(mm => {
                 const on = viewMode === mm
@@ -6032,12 +6026,12 @@ function LootModal({ mode, don, onClose }: { mode: 'normal' | 'hardcore'; don?: 
 
             <SectionLabel>Every dive pays</SectionLabel>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
-              {banked.map(d => <Tile key={d.id} d={d} />)}
+              {banked.filter(d => hardcore || !d.hardcoreOnly).map(d => <Tile key={d.id} d={d} />)}
             </div>
 
             <SectionLabel>The chase</SectionLabel>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
-              {chase.map(d => <Tile key={d.id} d={d} big />)}
+              {chase.filter(d => hardcore || !d.hardcoreOnly).map(d => <Tile key={d.id} d={d} big />)}
             </div>
           </>
         )}
