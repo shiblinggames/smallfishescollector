@@ -2720,7 +2720,7 @@ export const RAID_MAP: RaidNode[] = [
     route: '/raids/sunken-hand',
     previewWhenLocked: true,
     comingSoon: true,
-    image: '/raidlog.png',
+    image: '/finn_final.png',
     sceneAccent: '#a78bfa',
     detail: {
       description:

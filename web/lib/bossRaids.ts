@@ -50,6 +50,15 @@ export interface EnemySpecial {
   /** How many of the player's aim passes the attack afflicts. Default 2. */
   aimPasses?: number
   line: string
+  /** SUMMON ART. When set, firing this special plays the same full-screen
+   *  splash a PLAYER crew ability plays, with this image. Built for Finn: he
+   *  absorbed the six giants, so he calls on them exactly the way you call on
+   *  your crew, and the player reads the grammar instantly because it is
+   *  their own. summonLabel is the small line above the name. */
+  summonImage?: string
+  summonLabel?: string
+  /** Accent for the splash. Defaults to the enemy-special purple. */
+  summonColor?: string
 }
 
 /** Raid-8 enemy ULTIMATE. The signature attack an enemy unleashes by spending
@@ -2045,72 +2054,72 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
     husk_megalodon: {
       // The first husk. Pure jaw, no tricks: it teaches that these things are
       // hollow and still hit like the sea itself.
-      id: 'husk_megalodon', name: 'The Hollow Jaw', hpBase: 420, minDmg: 26, maxDmg: 42,
+      id: 'husk_megalodon', name: 'The Stolen Jaw', hpBase: 420, minDmg: 26, maxDmg: 42,
       shipSpeed: 7, actionMs: 3400,
       magazineSize: 4, shieldPct: 0.12, chargeBiteChance: 0.30,
       ultimate: { name: 'Nothing Left In It', mult: 2.5, line: 'The jaw closes on nothing at all, and the water it moves still breaks over your deck.' },
       pattern: ['reload', 'fire', 'reload', 'reload', 'ultimate', 'dodge', 'fire', 'reload'],
       critChance: 0.14,
-      image: '/fish/megalodon.png',
-      portrait: '/fish/megalodon.png',
+      image: '/enemy_finnship.png',
+      portrait: '/finn_final.png',
     },
     husk_dunkleosteus: {
       // The armour husk. Plated to the eye, so the lesson is patience.
-      id: 'husk_dunkleosteus', name: 'The Plated Husk', hpBase: 460, minDmg: 24, maxDmg: 38,
+      id: 'husk_dunkleosteus', name: 'The Stolen Plate', hpBase: 460, minDmg: 24, maxDmg: 38,
       shipSpeed: 6, actionMs: 3500,
       magazineSize: 4, shieldPct: 0.34, chargeBiteChance: 0.30,
-      special: { name: 'Old Armour', aimAttack: 'hardened', aimPasses: 2, line: 'Plate that outlived its own bones grinds shut across every lane you want.' },
+      special: { name: 'Old Armour', aimAttack: 'hardened', aimPasses: 2, summonImage: '/fish/dunkleosteus.png', summonLabel: 'He calls on it', summonColor: '#9fb2c8', line: 'Plate that outlived its own bones grinds shut across every lane you want.' },
       pattern: ['special', 'reload', 'fire', 'reload', 'dodge', 'fire', 'reload', 'fire'],
       critChance: 0.12,
-      image: '/fish/dunkleosteus.png',
-      portrait: '/fish/dunkleosteus.png',
+      image: '/enemy_finnship.png',
+      portrait: '/finn_final.png',
     },
     husk_mosasaurus: {
       // The fast one. Punishes a slow lock.
-      id: 'husk_mosasaurus', name: 'The Cold Coil', hpBase: 430, minDmg: 27, maxDmg: 44,
+      id: 'husk_mosasaurus', name: 'The Stolen Coil', hpBase: 430, minDmg: 27, maxDmg: 44,
       shipSpeed: 12, actionMs: 3100,
       magazineSize: 4, shieldPct: 0.14, chargeBiteChance: 0.38,
-      special: { name: 'Wake of the Drowned', aimAttack: 'squall', aimPasses: 2, line: 'It runs the length of your hull without surfacing, and the whole sea leans after it.' },
+      special: { name: 'Wake of the Drowned', aimAttack: 'squall', aimPasses: 2, summonImage: '/fish/mosasaurus.png', summonLabel: 'He calls on it', summonColor: '#67e8f9', line: 'It runs the length of your hull without surfacing, and the whole sea leans after it.' },
       ultimate: { name: 'Coil and Close', mult: 2.6, line: 'It comes back down the line it left, faster than it went out.' },
       pattern: ['fire', 'special', 'reload', 'reload', 'ultimate', 'fire', 'dodge', 'reload'],
       critChance: 0.16,
-      image: '/fish/mosasaurus.png',
-      portrait: '/fish/mosasaurus.png',
+      image: '/enemy_finnship.png',
+      portrait: '/finn_final.png',
     },
     husk_plesiosaurus: {
       // The reach. Decoys: a long neck out of the dark from the wrong place.
-      id: 'husk_plesiosaurus', name: 'The Long Reach', hpBase: 440, minDmg: 25, maxDmg: 40,
+      id: 'husk_plesiosaurus', name: 'The Stolen Reach', hpBase: 440, minDmg: 25, maxDmg: 40,
       shipSpeed: 9, actionMs: 3400,
       magazineSize: 4, shieldPct: 0.16, chargeBiteChance: 0.32,
-      special: { name: 'From the Wrong Water', aimAttack: 'decoys', aimPasses: 2, line: 'It surfaces four times in four places, and only one of them has anything behind it.' },
+      special: { name: 'From the Wrong Water', aimAttack: 'decoys', aimPasses: 2, summonImage: '/fish/plesiosaurus.png', summonLabel: 'He calls on it', summonColor: '#a78bfa', line: 'It surfaces four times in four places, and only one of them has anything behind it.' },
       pattern: ['special', 'fire', 'reload', 'dodge', 'reload', 'fire', 'reload', 'fire'],
       critChance: 0.13,
-      image: '/fish/plesiosaurus.png',
-      portrait: '/fish/plesiosaurus.png',
+      image: '/enemy_finnship.png',
+      portrait: '/finn_final.png',
     },
     husk_basilosaurus: {
       // The endurance husk. It simply will not stop coming.
-      id: 'husk_basilosaurus', name: 'The Long Patience', hpBase: 520, minDmg: 26, maxDmg: 41,
+      id: 'husk_basilosaurus', name: 'The Stolen Patience', hpBase: 520, minDmg: 26, maxDmg: 41,
       shipSpeed: 7, actionMs: 3600,
       magazineSize: 5, shieldPct: 0.22, chargeBiteChance: 0.34,
-      special: { name: 'Still Going', status: 'weaken', magnitude: 0.2, turns: 2, target: 'player', line: 'You put a broadside through it and it keeps its heading, and something in your crew goes quiet.' },
+      special: { name: 'Still Going', status: 'weaken', magnitude: 0.2, turns: 2, target: 'player', summonImage: '/fish/basilosaurus.png', summonLabel: 'He calls on it', summonColor: '#94a3b8', line: 'You put a broadside through it and it keeps its heading, and something in your crew goes quiet.' },
       ultimate: { name: 'The Whole Length', mult: 2.7, line: 'It rolls its entire body through your water like a wall arriving.' },
       pattern: ['reload', 'fire', 'special', 'reload', 'reload', 'ultimate', 'fire', 'dodge'],
       critChance: 0.13,
-      image: '/fish/basilosaurus.png',
-      portrait: '/fish/basilosaurus.png',
+      image: '/enemy_finnship.png',
+      portrait: '/finn_final.png',
     },
     husk_shastasaurus: {
       // The biggest thing in the water, and the last door before him.
-      id: 'husk_shastasaurus', name: 'The Weight', hpBase: 600, minDmg: 29, maxDmg: 47,
+      id: 'husk_shastasaurus', name: 'The Stolen Weight', hpBase: 600, minDmg: 29, maxDmg: 47,
       shipSpeed: 6, actionMs: 3700,
       magazineSize: 5, shieldPct: 0.30, chargeBiteChance: 0.36, startCharges: 1,
-      special: { name: 'Displacement', aimAttack: 'squall', aimPasses: 3, line: 'It does not attack. It simply occupies the water, and your deck cannot find level again.' },
+      special: { name: 'Displacement', aimAttack: 'squall', aimPasses: 3, summonImage: '/fish/shastasaurus.png', summonLabel: 'He calls on it', summonColor: '#7dd3fc', line: 'It does not attack. It simply occupies the water, and your deck cannot find level again.' },
       ultimate: { name: 'All That Tonnage', mult: 2.9, line: 'The largest thing the sea ever grew falls on your bow.' },
       pattern: ['special', 'reload', 'reload', 'ultimate', 'fire', 'dodge', 'reload', 'fire'],
       critChance: 0.14,
-      image: '/fish/shastasaurus.png',
-      portrait: '/fish/shastasaurus.png',
+      image: '/enemy_finnship.png',
+      portrait: '/finn_final.png',
     },
     finn: {
       // FINN. Fought entirely on the dial (see `aimStyle` on this config). His
@@ -2127,14 +2136,14 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
       id: 'finn', name: 'Finn', hpBase: 1050, minDmg: 34, maxDmg: 55,
       shipSpeed: 11, actionMs: 4000,
       magazineSize: 4, shieldPct: 0.28, chargeBiteChance: 0.38, startCharges: 2,
-      special: { name: 'Set the Hook', aimAttack: 'hardened', aimPasses: 2, line: 'He sets it the way he has set ten thousand of them, without looking, and your lane closes to a thread.' },
+      special: { name: 'Set the Hook', aimAttack: 'hardened', aimPasses: 2, summonImage: '/fish/megalodon.png', summonLabel: 'He calls on it', summonColor: '#f87171', line: 'He sets it the way he has set ten thousand of them, without looking, and your lane closes to a thread.' },
       ultimate: { name: 'The Long Line', mult: 3.0, line: 'All that patience, paid out at once.' },
       pattern: ['special', 'fire', 'reload', 'reload', 'ultimate', 'dodge', 'fire', 'reload'],
       critChance: 0.17,
       // You fight the thing he TURNED INTO, not the dock hand he was pretending
       // to be. Same art as the transformation insert, so the cutscene hands off
       // to the fight without the subject changing.
-      image: '/finn_final.png',
+      image: '/enemy_finnship.png',
       portrait: '/finn_final.png',
       // He opens by doing to you exactly what he did to the giants.
       openingCheck: {

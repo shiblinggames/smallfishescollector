@@ -3586,6 +3586,9 @@ export default function RaidCombat({
       // Set when this hit lit an Incendiary / froze a Frozen cannonball, so the
       // enemy hull flares with the matching status aura the instant it lands.
       procStatus?: 'burn' | 'freeze' | 'stun'
+      /** An enemy special that CALLS ON something, played back through the
+       *  same splash the player crew abilities use. */
+      summon?: { name: string; label: string; color: string; image: string }
       /** Press-Gang ripped a loaded shot off the enemy onto your rack. */
       stoleCharge?: boolean
       /** Cutlass Guard turned an incoming blow aside (0 damage taken). */
@@ -3994,7 +3997,10 @@ export default function RaidCombat({
             who, action, pHp, eHp, pCharges, eCharges,
             splatTarget: 'player',
             splatText: sp.name,
-            splatColor: '#c084fc',
+            splatColor: sp.summonColor ?? '#c084fc',
+            summon: sp.summonImage
+              ? { name: sp.name, label: sp.summonLabel ?? '', color: sp.summonColor ?? '#c084fc', image: sp.summonImage }
+              : undefined,
             logLines: [
               `${sp.name}! ${sp.line}`,
               `${what} (next ${passes} shot${passes === 1 ? '' : 's'}.)`,
@@ -4017,6 +4023,9 @@ export default function RaidCombat({
             splatTarget: sp.target === 'player' ? 'player' : 'enemy',
             splatText: def?.name ?? sp.name,
             splatColor: def?.color ?? '#c084fc',
+            summon: sp.summonImage
+              ? { name: sp.name, label: sp.summonLabel ?? '', color: sp.summonColor ?? (def?.color ?? '#c084fc'), image: sp.summonImage }
+              : undefined,
             logLines: [
               `${sp.name}! ${sp.line}`,
               `${targetWord} ${def?.name ?? sp.status}${def ? ` — ${def.describe(magnitude)}` : ''} (${turns} turn${turns === 1 ? '' : 's'}).`,
@@ -5448,6 +5457,15 @@ export default function RaidCombat({
             // Incendiary lit / Frozen iced — flare the matching hull aura the
             // instant the proc'd shot connects, and switch on the persistent
             // glow/tint that lingers until the burn ticks out / ice breaks.
+            // Enemy summon: same component, same beat as a player ability, so
+            // Finn calling on a giant reads with the grammar the player
+            // already knows from their own crew.
+            if (step.summon) {
+              setAbilitySummon({
+                key: Date.now(), label: step.summon.label, name: step.summon.name,
+                color: step.summon.color, image: step.summon.image, chase: false, skinId: null,
+              })
+            }
             if (step.procStatus) {
               const ak = Date.now() + i + 7
               setEnemyAura({ key: ak, kind: step.procStatus === 'stun' ? 'stunned' : step.procStatus })
