@@ -6535,17 +6535,38 @@ export default function RaidCombat({
                   blend layer re-composites the whole stage every pulse frame:
                   "everything lags after Abyssal Tide"). */}
               {abyssalShieldHp > 0 && (
-                <motion.div
-                  aria-hidden
-                  initial={{ opacity: 0.32 }}
-                  animate={subPhase === 'aiming' ? { opacity: 0.5 } : { opacity: [0.32, 0.62, 0.32] }}
-                  transition={subPhase === 'aiming' ? { duration: 0.2 } : { duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-                  style={{
-                    position: 'absolute', inset: '-7%', borderRadius: '50%',
-                    pointerEvents: 'none', zIndex: 2,
-                    background: 'radial-gradient(ellipse 72% 104% at 74% 50%, rgba(125,211,252,0.55) 0%, rgba(94,234,212,0.22) 46%, transparent 72%)',
-                  }}
-                />
+                // A barrier is a SURFACE, not a glow: what sells it is a defined
+                // rim + an energy lattice + a sheen travelling over it. The old
+                // version was the same pulsing blob as burn/freeze in another
+                // colour, so it read as backlight rather than protection.
+                <div aria-hidden style={{ position: 'absolute', inset: '-7%', borderRadius: '50%', pointerEvents: 'none', zIndex: 2, overflow: 'hidden' }}>
+                  <style>{`
+                    @keyframes rc-shield-sheen { 0% { transform: translateX(-120%) skewX(-14deg); opacity: 0; } 20% { opacity: 0.6; } 55% { opacity: 0.6; } 100% { transform: translateX(200%) skewX(-14deg); opacity: 0; } }
+                    @keyframes rc-shield-rim   { 0%,100% { opacity: 0.6; } 50% { opacity: 0.95; } }
+                  `}</style>
+                  {/* Dome body + hard rim — the edge is the whole read. */}
+                  <div style={{
+                    position: 'absolute', inset: 0, borderRadius: '50%',
+                    background: 'radial-gradient(ellipse 72% 104% at 74% 50%, rgba(125,211,252,0.3) 0%, rgba(94,234,212,0.14) 52%, transparent 76%)',
+                    border: '1.5px solid rgba(150,225,255,0.7)',
+                    boxShadow: 'inset 0 0 26px rgba(125,211,252,0.4), 0 0 18px rgba(94,234,212,0.32)',
+                    animation: subPhase === 'aiming' ? 'none' : 'rc-shield-rim 1.9s ease-in-out infinite',
+                    opacity: subPhase === 'aiming' ? 0.8 : undefined,
+                  }} />
+                  {/* Hex lattice — the "energy field" texture, faint but present. */}
+                  <div style={{
+                    position: 'absolute', inset: 0, borderRadius: '50%', opacity: 0.3,
+                    backgroundImage: 'repeating-linear-gradient(60deg, rgba(160,235,255,0.5) 0 1px, transparent 1px 13px), repeating-linear-gradient(-60deg, rgba(160,235,255,0.5) 0 1px, transparent 1px 13px)',
+                  }} />
+                  {/* Sheen sweeping the surface — reads as a curved solid. */}
+                  {subPhase !== 'aiming' && (
+                    <span style={{
+                      position: 'absolute', top: 0, bottom: 0, left: 0, width: '34%',
+                      background: 'linear-gradient(100deg, transparent, rgba(210,245,255,0.42), transparent)',
+                      animation: 'rc-shield-sheen 2.8s ease-in-out infinite',
+                    }} />
+                  )}
+                </div>
               )}
               {abyssalShieldHp <= 0 && (anchorReductionPct ?? 0) > 0 && (
                 <motion.div
@@ -9214,28 +9235,87 @@ function ShipStatusAura({ burning, frozen, paused }: { burning: boolean; frozen:
   // composite, not per-frame. The aura still shows, it just stops breathing.
   return (
     <>
+      {/* Fire and ice are OPPOSITE materials and must not share a look. Fire is
+          chaotic, rising and irregular; ice is solid, crystalline and almost
+          perfectly still (frozen = stopped). Both were the same pulsing colour
+          blob before, which is what made them read as placeholder art.
+          Transform/opacity only, no blend modes (see the aim-RAF note above). */}
+      <style>{`
+        /* Flame tongues: prime-ish durations so the licks never re-sync — that
+           irregularity is what separates fire from a pulsing light. */
+        @keyframes rc-flame-a { 0%,100% { transform: scaleY(0.82) scaleX(1.04); opacity: 0.5; } 38% { transform: scaleY(1.22) scaleX(0.9); opacity: 0.92; } 61% { transform: scaleY(0.98) scaleX(1.08); opacity: 0.68; } }
+        @keyframes rc-flame-b { 0%,100% { transform: scaleY(1.12) scaleX(0.94); opacity: 0.78; } 45% { transform: scaleY(0.8) scaleX(1.1); opacity: 0.42; } 72% { transform: scaleY(1.18) scaleX(0.96); opacity: 0.85; } }
+        @keyframes rc-flame-c { 0%,100% { transform: scaleY(0.94) scaleX(1.0); opacity: 0.62; } 29% { transform: scaleY(1.3) scaleX(0.88); opacity: 0.95; } 66% { transform: scaleY(0.86) scaleX(1.06); opacity: 0.5; } }
+        /* Heat shimmer over the hull — the ship should look LIT, not just backed. */
+        @keyframes rc-heat     { 0%,100% { opacity: 0.16; } 50% { opacity: 0.34; } }
+        /* Ice: a single slow glint sliding across the frozen shell. The shell
+           itself does NOT pulse — stillness is the whole point. */
+        @keyframes rc-ice-glint{ 0% { transform: translateX(-130%) skewX(-18deg); opacity: 0; } 18% { opacity: 0.75; } 52% { opacity: 0.75; } 100% { transform: translateX(190%) skewX(-18deg); opacity: 0; } }
+      `}</style>
+
       {burning && (
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
-          <motion.div
-            aria-hidden
-            animate={paused ? { opacity: 0.4 } : { opacity: [0.22, 0.46, 0.22] }}
-            transition={paused ? { duration: 0.2 } : { duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
-            // No blend mode — this glow persists while burning; see the shield dome note.
-            style={{ position: 'absolute', inset: '-10% -4% -2%', borderRadius: '46%', background: 'radial-gradient(ellipse at 50% 82%, rgba(251,146,60,0.6) 0%, rgba(251,146,60,0.2) 46%, transparent 72%)' }}
-          />
-          {[0, 1, 2].map(n => (
-            <span key={n} className="rc-ember" style={{ left: `${36 + n * 13}%`, animationDelay: `${n * 0.55}s`, background: '#ffd27a' }} />
+          {/* Base heat pool at the waterline */}
+          <div aria-hidden style={{ position: 'absolute', inset: '-8% -4% -2%', borderRadius: '46%', background: 'radial-gradient(ellipse at 50% 84%, rgba(255,140,40,0.62) 0%, rgba(220,70,20,0.26) 44%, transparent 70%)', animation: paused ? 'none' : 'rc-heat 1.9s ease-in-out infinite', opacity: paused ? 0.3 : undefined }} />
+          {/* Three flame tongues along the hull, each on its own rhythm and
+              anchored at the base so they rise and taper like real licks. */}
+          {[
+            { left: '26%', w: 26, h: 46, anim: 'rc-flame-a', dur: '0.83s', hue: 'rgba(255,190,90,0.95)' },
+            { left: '47%', w: 32, h: 60, anim: 'rc-flame-b', dur: '1.07s', hue: 'rgba(255,150,50,0.95)' },
+            { left: '68%', w: 24, h: 40, anim: 'rc-flame-c', dur: '0.71s', hue: 'rgba(255,215,130,0.9)' },
+          ].map((f, n) => (
+            <span key={n} aria-hidden style={{
+              position: 'absolute', left: f.left, bottom: '6%', width: f.w, height: f.h,
+              marginLeft: -f.w / 2, transformOrigin: '50% 100%',
+              borderRadius: '50% 50% 46% 46% / 62% 62% 38% 38%',
+              background: `radial-gradient(ellipse at 50% 88%, ${f.hue} 0%, rgba(255,110,30,0.55) 42%, transparent 74%)`,
+              animation: paused ? 'none' : `${f.anim} ${f.dur} ease-in-out infinite`,
+              opacity: paused ? 0.6 : undefined,
+            }} />
+          ))}
+          {/* Embers — more of them, scattered and staggered. */}
+          {[0, 1, 2, 3, 4].map(n => (
+            <span key={n} className="rc-ember" style={{ left: `${22 + n * 14}%`, animationDelay: `${n * 0.42}s`, background: n % 2 ? '#ffd27a' : '#ff9d4d' }} />
           ))}
         </div>
       )}
+
       {frozen && (
-        <motion.div
-          aria-hidden
-          animate={paused ? { opacity: 0.55 } : { opacity: [0.4, 0.62, 0.4] }}
-          transition={paused ? { duration: 0.2 } : { duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-          // No blend mode — this glow persists while frozen; see the shield dome note.
-          style={{ position: 'absolute', inset: '-6%', borderRadius: '46%', zIndex: 3, pointerEvents: 'none', background: 'radial-gradient(ellipse at center, rgba(125,211,252,0.5) 0%, rgba(186,230,253,0.22) 45%, transparent 72%)' }}
-        />
+        <div style={{ position: 'absolute', inset: '-6%', zIndex: 3, pointerEvents: 'none', overflow: 'hidden', borderRadius: '46%' }}>
+          {/* The encasing shell — SOLID and static. A hard frosted rim is what
+              sells "encased in ice" where a soft glow never could. */}
+          <div aria-hidden style={{
+            position: 'absolute', inset: 0, borderRadius: '46%',
+            background: 'radial-gradient(ellipse at 50% 42%, rgba(186,230,253,0.34) 0%, rgba(125,211,252,0.2) 52%, rgba(56,189,248,0.12) 74%, transparent 88%)',
+            border: '1.5px solid rgba(191,238,255,0.55)',
+            boxShadow: 'inset 0 0 22px rgba(186,230,253,0.42), 0 0 16px rgba(125,211,252,0.34)',
+          }} />
+          {/* Crystal facets — angular shards over the hull. Angular geometry is
+              the read; a blob has no crystal in it. */}
+          {[
+            { left: '18%', top: '30%', w: 15, h: 34, rot: -22 },
+            { left: '38%', top: '16%', w: 11, h: 26, rot: 14 },
+            { left: '58%', top: '34%', w: 17, h: 40, rot: -9 },
+            { left: '74%', top: '20%', w: 10, h: 24, rot: 26 },
+            { left: '48%', top: '56%', w: 13, h: 28, rot: -33 },
+          ].map((s, n) => (
+            <span key={n} aria-hidden style={{
+              position: 'absolute', left: s.left, top: s.top, width: s.w, height: s.h,
+              transform: `rotate(${s.rot}deg)`,
+              clipPath: 'polygon(50% 0%, 100% 34%, 78% 100%, 22% 100%, 0% 34%)',
+              background: 'linear-gradient(150deg, rgba(233,250,255,0.8) 0%, rgba(147,220,255,0.45) 48%, rgba(56,189,248,0.24) 100%)',
+              boxShadow: '0 0 8px rgba(186,230,253,0.55)',
+            }} />
+          ))}
+          {/* One slow glint sliding across the ice — the only movement. */}
+          {!paused && (
+            <span aria-hidden style={{
+              position: 'absolute', top: 0, bottom: 0, left: 0, width: '38%',
+              background: 'linear-gradient(100deg, transparent, rgba(255,255,255,0.5), transparent)',
+              animation: 'rc-ice-glint 3.4s ease-in-out infinite',
+            }} />
+          )}
+        </div>
       )}
     </>
   )
