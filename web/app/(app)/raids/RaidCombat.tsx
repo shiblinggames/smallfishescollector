@@ -10621,26 +10621,29 @@ function LogBox({ lines, turn }: { lines: string[]; turn: number }) {
  *  wrap past 0/360; paintZone then rotates the whole group onto Finn's bearing,
  *  exactly the way fishing's drift mechanic rotates its zones. */
 function buildDialZones(critW: number, hitW: number, grazeW: number): ZoneDef[] {
+  // ONLY the band. The rest of the circle is deliberately left undrawn: the
+  // whole zones group rotates to track Finn, so filling the remainder with
+  // 'miss' arcs meant the ENTIRE ring spun and it read as the dial turning
+  // rather than a target moving along a fixed track. The bar has a static
+  // background with a band sliding over it, and this now matches.
   // A normalised half-width is a fraction of the whole dial.
   const graze = (hitW + grazeW) * 360
   const hit   = hitW * 360
   const crit  = Math.min(critW, hitW) * 360
   const C = 180
   return [
-    { from: 0,           to: C - graze,  type: 'miss',    label: 'Miss',     color: '#1e293b' },
     { from: C - graze,   to: C - hit,    type: 'penalty', label: 'Graze',    color: '#94a3b8' },
     { from: C - hit,     to: C - crit,   type: 'catch',   label: 'Hit',      color: '#4ade80' },
     { from: C - crit,    to: C + crit,   type: 'perfect', label: 'Critical', color: '#fbbf24' },
     { from: C + crit,    to: C + hit,    type: 'catch',   label: 'Hit',      color: '#4ade80' },
-    { from: C + hit,     to: C + graze,  type: 'penalty', label: 'Graze',    color: '#94a3b8' },
-    { from: C + graze,   to: 360,        type: 'miss',    label: 'Miss',     color: '#1e293b' },
+    { from: C + hit,     to: C + graze,  type: 'penalty', label: 'Graze',    color: '#94a3b8' },
   ]
 }
 
 // Steady opacity per band. Fishing dims whichever zone the needle is not in;
 // here the bands are the target itself, so they stay lit and readable.
 const DIAL_ZONE_OPACITY = (z: ZoneDef) =>
-  z.type === 'perfect' ? 0.95 : z.type === 'catch' ? 0.8 : z.type === 'penalty' ? 0.45 : 0.28
+  z.type === 'perfect' ? 0.95 : z.type === 'catch' ? 0.8 : z.type === 'penalty' ? 0.45 : 0
 
 function DialAimInline({
   indicatorRef, zonesGroupRef, shipRef, flashRef, critW, enemyImage, enemyFilter,
