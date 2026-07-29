@@ -7442,6 +7442,11 @@ function PlayerStatsPopup({
 }) {
   // Tabbed layout — Stats / Effects / Gear — so the sheet isn't one long wall.
   const [tab, setTab] = useState<'stats' | 'effects' | 'gear'>('stats')
+  // One scroll body is shared across tabs, so reset it to the top on every
+  // switch — otherwise switching to a shorter tab while scrolled down leaves it
+  // scrolled past its content (reads as blank).
+  const bodyScrollRef = useRef<HTMLDivElement>(null)
+  useEffect(() => { if (bodyScrollRef.current) bodyScrollRef.current.scrollTop = 0 }, [tab])
   // Single source of truth — mirrors rollShotDamage, incl. crew damage effects.
   const { hitMin, powerMax, critMax } = raidDamageProfile(totalPower, shipMinDamage, damagePct)
   const critMin   = shipMinDamage * 2
@@ -7648,7 +7653,7 @@ function PlayerStatsPopup({
 
         {/* Scrollable body — the header + tabs stay put, only the active tab's
             content scrolls, so the modal keeps one fixed size. */}
-        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: '1.1rem' }}>
+        <div ref={bodyScrollRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: '1.1rem' }}>
         {activeTab === 'stats' && (<>
         {/* Stat cards — 2-column grid feels less list-y and more dashboard-y. */}
         {sectionHeading('Combat', '#8fb4e0')}
