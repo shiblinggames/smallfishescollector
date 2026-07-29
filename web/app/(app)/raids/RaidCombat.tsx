@@ -370,19 +370,17 @@ const INDICATOR_SPEED = 0.006
 // static-zone restructure) all read wrong or changed the game. The
 // frozen frame IS the judgment; if it shows gold, the badge says gold.
 
-function getShotResult(pos: number, zoneCenter: number, critW: number = CRIT_W, hitBonus = 0): ShotResult {
-  // hitBonus is the player's fishing gear widening the catch band. It is 0 for
-  // every aim-BAR fight, so those judge exactly as they always have.
-  const hitW   = HIT_W + hitBonus
-  const grazeL = zoneCenter - hitW - GRAZE_W
-  const grazeR = zoneCenter + hitW + GRAZE_W
-  const hitL   = zoneCenter - hitW
-  const hitR   = zoneCenter + hitW
-  const critL  = zoneCenter - critW
-  const critR  = zoneCenter + critW
-  if (pos >= critL && pos <= critR)   return 'critical'
-  if (pos >= hitL  && pos <= hitR)    return 'hit'
-  if (pos >= grazeL && pos <= grazeR) return 'graze'
+function getShotResult(pos: number, zoneCenter: number, critW: number = CRIT_W, hitW: number = HIT_W, grazeW: number = GRAZE_W, wrap = false): ShotResult {
+  // Distance from the band's centre. Identical to the old L/R bound tests on a
+  // bar, but expressed as a distance so the DIAL can measure it the short way
+  // round: there, 0.99 and 0.01 are neighbours, and a linear compare would call
+  // a dead-centre shot across the seam a miss.
+  let d = pos - zoneCenter
+  if (wrap) d = ((d + 0.5) % 1 + 1) % 1 - 0.5
+  const a = Math.abs(d)
+  if (a <= critW)          return 'critical'
+  if (a <= hitW)           return 'hit'
+  if (a <= hitW + grazeW)  return 'graze'
   return 'miss'
 }
 
@@ -997,11 +995,23 @@ export default function RaidCombat({
   // the tick colored against base CRIT_W while lockShot judged the widened
   // band, so the needle could glow green at the lock moment yet resolve
   // critical. Ref mirror lets the RAF read it without restarting the tick.
+  // A band that reads fine as a slice of a straight bar looks enormous as a
+  // slice of a full circle, so the dial draws (and JUDGES) its bands tighter.
+  // Applied to base and gear bonus alike, and to paint and judgment alike, so
+  // the picture can never disagree with the verdict.
+  const DIAL_BAND_SCALE = 0.42
   const dialCritBonus = aimStyle === 'dial' ? (dialAim?.critBonus ?? 0) : 0
   const dialHitBonus  = aimStyle === 'dial' ? (dialAim?.hitBonus  ?? 0) : 0
-  const liveCritW = CRIT_W * tide.critZoneMult * (sharpshotBuff ? 1 + sharpshotBuff.multiplier : 1) + dialCritBonus
-  const dialHitBonusRef = useRef(dialHitBonus)
-  useEffect(() => { dialHitBonusRef.current = dialHitBonus }, [dialHitBonus])
+  const bandScale = aimStyle === 'dial' ? DIAL_BAND_SCALE : 1
+  const liveCritW = (CRIT_W * tide.critZoneMult * (sharpshotBuff ? 1 + sharpshotBuff.multiplier : 1) + dialCritBonus) * bandScale
+  // The hit + graze half-widths this fight actually uses. Bar fights get the
+  // untouched constants; only the dial scales.
+  const aimHitW   = (HIT_W + dialHitBonus) * bandScale
+  const aimGrazeW = GRAZE_W * bandScale
+  const aimHitWRef   = useRef(aimHitW)
+  const aimGrazeWRef = useRef(aimGrazeW)
+  useEffect(() => { aimHitWRef.current = aimHitW;   }, [aimHitW])
+  useEffect(() => { aimGrazeWRef.current = aimGrazeW }, [aimGrazeW])
   const liveCritWRef = useRef(liveCritW)
   useEffect(() => { liveCritWRef.current = liveCritW }, [liveCritW])
   // Width the shot was JUDGED at, captured in lockShot. The drawn band uses
@@ -2353,8 +2363,15 @@ export default function RaidCombat({
       if (firePosRef.current <= 0) { firePosRef.current = 0; fireDirRef.current = 1 }
 
       zonePosRef.current += ZONE_SPEED * frames * zoneDirRef.current
-      if (zonePosRef.current >= 1 - HIT_W - GRAZE_W) { zonePosRef.current = 1 - HIT_W - GRAZE_W; zoneDirRef.current = -1 }
-      if (zonePosRef.current <= HIT_W + GRAZE_W)     { zonePosRef.current = HIT_W + GRAZE_W;     zoneDirRef.current = 1 }
+      if (onDial) {
+        // A circle has no ends, so Finn ORBITS: 0..1 wraps instead of bouncing
+        // off the bar's edges. Without this he would patrol an arc and never
+        // cross the top of the dial, which reads as him avoiding a dead spot.
+        zonePosRef.current = (zonePosRef.current % 1 + 1) % 1
+      } else {
+        if (zonePosRef.current >= 1 - HIT_W - GRAZE_W) { zonePosRef.current = 1 - HIT_W - GRAZE_W; zoneDirRef.current = -1 }
+        if (zonePosRef.current <= HIT_W + GRAZE_W)     { zonePosRef.current = HIT_W + GRAZE_W;     zoneDirRef.current = 1 }
+      }
 
       // Rolling Plate: walk the seam inside the hit band, bouncing at the
       // edges, and paint the gold band at its live position.
@@ -2388,7 +2405,7 @@ export default function RaidCombat({
 
       if (indicatorRef.current) {
         paintNeedle(indicatorRef.current, firePosRef.current)
-        let zone = getShotResult(firePosRef.current, zonePosRef.current, liveCritWRef.current, dialHitBonusRef.current)
+        let zone = getShotResult(firePosRef.current, zonePosRef.current, liveCritWRef.current, aimHitWRef.current, aimGrazeWRef.current, onDial)
         // Rolling Plate: the gold tell tracks the SEAM, not the zone center.
         if (seamDrift > 0) {
           const seamC = zonePosRef.current + critSeamOffsetRef.current
@@ -3265,7 +3282,7 @@ export default function RaidCombat({
       firePosRef.current = 0; fireDirRef.current = 1
       zonePosRef.current = 0.3 + Math.random() * 0.4
       zoneDirRef.current = Math.random() < 0.5 ? -1 : 1
-      if (indicatorRef.current) {
+      if (indicatorRef.current && !onDial) {
         indicatorRef.current.style.width = '4px'
         indicatorRef.current.style.boxShadow = '0 0 8px rgba(255,255,255,0.6)'
         indicatorRef.current.style.transform = 'scaleY(1)'
@@ -3292,7 +3309,7 @@ export default function RaidCombat({
       setHardenedArmed(false)
       vibrate([0, 12, 26, 8])
       flashBar(barFlashRef.current, '#9fb2c8', 0.55)
-      snapIndicator(indicatorRef.current)
+      if (!onDial) snapIndicator(indicatorRef.current)
       return
     }
     // Freeze the RAF synchronously. The critFreezeRef mirror effect only
@@ -3320,7 +3337,7 @@ export default function RaidCombat({
       }
       setAimResult('miss')
       setCritFreeze(true)
-      snapIndicator(indicatorRef.current)
+      if (!onDial) snapIndicator(indicatorRef.current)
       flashBar(barFlashRef.current, '#ef4444', 0.5)
       vibrate([0, 50, 40, 70])
       setTimeout(() => { setCritFreeze(false); advanceToReveal(playerAction!, 'miss') }, 360)
@@ -3397,7 +3414,7 @@ export default function RaidCombat({
       res === 'hit'      ? '#4ade80' :
       res === 'graze'    ? '#94a3b8' :
                            '#6b7280'
-    snapIndicator(indicatorRef.current)
+    if (!onDial) snapIndicator(indicatorRef.current)
     flashBar(barFlashRef.current, flashColor, res === 'critical' ? 0.7 : res === 'hit' ? 0.55 : 0.35)
     // Indicator glow boost for hit/crit. Re-center the WIDENED needle on the
     // judged pos: it's anchored by `left` for a 4px needle (pos% − 2px), so
@@ -3405,7 +3422,7 @@ export default function RaidCombat({
     // center ~(w−4)/2 px right of the real hit point — which read as the crit
     // zone being offset right of the gold band. Offset left by half the new
     // width so the fat needle stays centered on `pos`.
-    if (indicatorRef.current && (res === 'hit' || res === 'critical')) {
+    if (indicatorRef.current && !onDial && (res === 'hit' || res === 'critical')) {
       const w = res === 'critical' ? 10 : 7
       const glow = res === 'critical' ? '#fbbf24' : '#4ade80'
       indicatorRef.current.style.width = `${w}px`
@@ -6812,12 +6829,14 @@ export default function RaidCombat({
         {onDial && subPhase === 'aiming' && typeof document !== 'undefined' && createPortal(
           <div style={{
             position: 'fixed', inset: 0, zIndex: 1200, pointerEvents: 'none',
-            display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
-            paddingTop: 'max(10vh, 64px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
+            {/* The scrim FADES OUT low on the screen so it never dims the Lock
+                Shot button sitting underneath it. The button is the one thing
+                the player has to see and hit while the dial is up. */}
             <div aria-hidden style={{
               position: 'absolute', inset: 0,
-              background: 'radial-gradient(ellipse at 50% 32%, rgba(6,12,22,0.72) 0%, rgba(2,5,10,0.92) 70%)',
+              background: 'radial-gradient(ellipse at 50% 44%, rgba(6,12,22,0.78) 0%, rgba(2,5,10,0.9) 55%, rgba(2,5,10,0) 88%)',
             }} />
             <div style={{ position: 'relative', width: '86%', maxWidth: 300 }}>
               <DialAimInline
@@ -6826,7 +6845,8 @@ export default function RaidCombat({
                 shipRef={dialShipRef}
                 flashRef={barFlashRef}
                 critW={critFreeze ? lockedCritWRef.current : liveCritW}
-                hitBonus={dialHitBonus}
+                hitW={aimHitW}
+                grazeW={aimGrazeW}
                 enemyImage={enemy.image}
                 enemyFilter={enemyArtFilter}
                 afflictionLabel={aimAffliction?.name ?? null}
@@ -10445,10 +10465,9 @@ function LogBox({ lines, turn }: { lines: string[]; turn: number }) {
 /** The raid's bands as fishing ZoneDefs. Built CENTRED ON 180° so no arc has to
  *  wrap past 0/360; paintZone then rotates the whole group onto Finn's bearing,
  *  exactly the way fishing's drift mechanic rotates its zones. */
-function buildDialZones(critW: number, hitBonus: number): ZoneDef[] {
-  const hitW = HIT_W + hitBonus
+function buildDialZones(critW: number, hitW: number, grazeW: number): ZoneDef[] {
   // A normalised half-width is a fraction of the whole dial.
-  const graze = (hitW + GRAZE_W) * 360
+  const graze = (hitW + grazeW) * 360
   const hit   = hitW * 360
   const crit  = Math.min(critW, hitW) * 360
   const C = 180
@@ -10470,7 +10489,7 @@ const DIAL_ZONE_OPACITY = (z: ZoneDef) =>
 
 function DialAimInline({
   indicatorRef, zonesGroupRef, shipRef, flashRef, critW, enemyImage, enemyFilter,
-  afflictionLabel, hardenedArmed, hitBonus = 0, firePos, zoneCenter,
+  afflictionLabel, hardenedArmed, hitW, grazeW, firePos, zoneCenter,
 }: {
   indicatorRef:  React.RefObject<HTMLDivElement | null>
   zonesGroupRef: React.RefObject<SVGGElement | null>
@@ -10481,14 +10500,17 @@ function DialAimInline({
   enemyFilter?: string
   afflictionLabel?: string | null
   hardenedArmed?: boolean
-  /** Fishing gear widening the hit band. Must match what getShotResult judges. */
-  hitBonus?: number
+  /** The band half-widths this fight judges at (gear bonus + dial scale
+   *  already applied). Drawing from the same numbers is what keeps the frozen
+   *  picture honest. */
+  hitW: number
+  grazeW: number
   /** Live ref reads, so any unrelated re-render paints the CURRENT position
    *  rather than snapping the needle or the band back to a stale one. */
   firePos: number
   zoneCenter: number
 }) {
-  const zones = useMemo(() => buildDialZones(critW, hitBonus), [critW, hitBonus])
+  const zones = useMemo(() => buildDialZones(critW, hitW, grazeW), [critW, hitW, grazeW])
   // Finn orbits at the middle of the band's radius.
   const orbitPct = ((OUTER_R + INNER_R) / 2 / 220) * 100
 
@@ -10510,6 +10532,7 @@ function DialAimInline({
         // on the very layer this ref points at, so it never costs a re-render.
         needleColor="currentColor"
         zoneOpacityFn={DIAL_ZONE_OPACITY}
+        needleStyle="marker"
       />
 
       {/* FINN, riding the band. Own layer, rotated to the same bearing as the

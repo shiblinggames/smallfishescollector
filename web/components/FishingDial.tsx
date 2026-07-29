@@ -45,7 +45,7 @@ export function arcPath(startDeg: number, endDeg: number): string {
 // ─── DialSVG ─────────────────────────────────────────────────────────────────
 
 export function DialSVG({
-  zones, angle, rotation = 0, needleColor, zoneOpacityFn, fireLevel = 0, snapKey = 0, perfectBurstKey = 0, ancientBoss = false, needleRef, zonesGroupRef,
+  zones, angle, rotation = 0, needleColor, zoneOpacityFn, fireLevel = 0, snapKey = 0, perfectBurstKey = 0, ancientBoss = false, needleRef, zonesGroupRef, needleStyle = 'hand',
 }: {
   zones: ZoneDef[]
   angle: number
@@ -68,6 +68,11 @@ export function DialSVG({
    *  rotate the arcs during the drift mechanic without forcing a
    *  React re-render every frame. */
   zonesGroupRef?: React.Ref<SVGGElement>
+  /** 'hand' (default) is fishing's clock hand, drawn from the hub outward.
+   *  'marker' is the RAID aim-bar's indicator: a short bar that rides inside
+   *  the ring, crossing only the band it is judging against. The finale uses
+   *  it so the instrument reads as raid combat, not as a reel. */
+  needleStyle?: 'hand' | 'marker'
 }) {
   const needleTipY  = CY - (INNER_R - 8)
   // Memoized on zones identity — DialSVG re-renders on every needle
@@ -258,15 +263,25 @@ export function DialSVG({
         transform: `rotate(${angle}deg)`,
       }}>
         <svg viewBox="0 0 220 220" width="100%" style={{ display: 'block', overflow: 'visible' }}>
+          {needleStyle === 'marker' ? (
+            // Raid indicator: a short bar spanning the band annulus, so it reads
+            // exactly like the aim bar's needle sweeping across the target.
+            <g style={perfectFlash ? { filter: 'drop-shadow(0 0 6px #fde68a)' } : undefined}>
+              <line x1={CX} y1={CY - OUTER_R - 4} x2={CX} y2={CY - INNER_R + 4} stroke={liveNeedleColor} strokeWidth={perfectFlash ? 11 : 9} strokeOpacity={perfectFlash ? 0.3 : 0.16} strokeLinecap="round" />
+              <line x1={CX} y1={CY - OUTER_R - 4} x2={CX} y2={CY - INNER_R + 4} stroke={liveNeedleColor} strokeWidth={perfectFlash ? 3.8 : 2.8} strokeLinecap="round" />
+            </g>
+          ) : (
           <g style={perfectFlash ? { filter: 'drop-shadow(0 0 6px #fde68a)' } : undefined}>
             <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={liveNeedleColor} strokeWidth={perfectFlash ? 12 : 10} strokeOpacity={perfectFlash ? 0.28 : 0.12} strokeLinecap="round" />
             <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={liveNeedleColor} strokeWidth={liveNeedleStroke} strokeLinecap="round" />
             <circle cx={CX} cy={needleTipY} r={liveTipRadius} fill={liveNeedleColor} />
           </g>
+          )}
         </svg>
       </div>
       {/* Hub overlay — above the needle overlay so the center joint stays
           covered (it sat after the needle in the old single-SVG paint order). */}
+      {needleStyle !== 'marker' && (
       <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
         <svg viewBox="0 0 220 220" width="100%" style={{ display: 'block' }}>
           <motion.circle cx={CX} cy={CY} r="8"
@@ -277,6 +292,7 @@ export function DialSVG({
           />
         </svg>
       </div>
+      )}
     </div>
   )
 }
