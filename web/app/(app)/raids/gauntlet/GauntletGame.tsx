@@ -30,6 +30,7 @@ import {
   DROWNED_FILTER, GHOST_FILTER, bandForDepth, gauntletTaunt, donRiseCopy, donFallCopy, donRiseIndex, DON_RISE_DEPTHS,
   GAUNTLET_COOLDOWN_HOURS, HARDCORE_RUNS_PER_DAY, HC_UNLOCK_DEPTH, GAUNTLET_REWARD_DEPTH_CAP,
   emptyRunStats, addRunStats, coerceRunStats,
+  dropOddsInfo, type DropOddsInfo,
   type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot, type GauntletRunState, type GauntletRunStats, chestOdds, type GauntletVariant } from '@/lib/gauntlet'
 import { GAUNTLET_TERMS, TERM_GROUP_META, resolveTerms, termPressure, termTideEffects, pressureGemMult, pressureDepthFactor, NO_TERM_EFFECTS, PRESSURE_CAP, PRESSURE_DEPTH_FLOOR, PRESSURE_DEPTH_FULL, PRESSURE_SKIN_THRESHOLD, PRESSURE_SKIN_DEPTH, PRESSURE_SKIN_ID, MAX_AVAILABLE_PRESSURE, type SignedTerms } from '@/lib/gauntletTerms'
 import GauntletTermsPanel from './GauntletTermsPanel'
@@ -5796,6 +5797,49 @@ function LootModal({ mode, don, onClose }: { mode: 'normal' | 'hardcore'; don?: 
   const accent = hardcore ? HC_RED : AC
   const [detail, setDetail] = useState<HaulDrop | null>(null)
 
+  // Drop-rate formatting: keep small odds honest (0.25%), one decimal in the
+  // 1-10 band (1.5%), whole numbers otherwise.
+  const fmtPct = (c: number): string => {
+    const p = c * 100
+    if (p <= 0) return '0%'
+    if (p < 1) return `${p.toFixed(2).replace(/0+$/, '').replace(/\.$/, '')}%`
+    if (p < 10 && Math.round(p) !== p) return `${p.toFixed(1)}%`
+    return `${Math.round(p)}%`
+  }
+  // The depth→odds reference for one chase drop: its range up top, the unlock
+  // gate if any, and the rate at the depths where it climbs (it maxes at 50).
+  const OddsBlock = ({ info }: { info: DropOddsInfo }) => {
+    const startD = info.unlockDepth > 1 ? info.unlockDepth : 10
+    const rows = Array.from(new Set([startD, 20, 30, 40, 50].filter(d => d >= startD))).sort((a, b) => a - b)
+    return (
+      <div style={{ marginTop: 11, padding: '0.7rem 0.8rem', borderRadius: 11, textAlign: 'left', background: `${GOLD}0d`, border: `1px solid ${GOLD}30` }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: info.unlockDepth > 1 ? 5 : 7 }}>
+          <p className="font-karla font-800 uppercase tracking-[0.16em]" style={{ fontSize: '0.5rem', color: `${GOLD}cc` }}>Drop odds by depth</p>
+          <span className="font-cinzel font-800" style={{ fontSize: '0.82rem', color: GOLD }}>{fmtPct(info.min)}–{fmtPct(info.max)}</span>
+        </div>
+        {info.unlockDepth > 1 && (
+          <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#c9a7ff', marginBottom: 7 }}>
+            Locked until you bank from depth {info.unlockDepth}.
+          </p>
+        )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {rows.map((d, i) => {
+            const isMax = i === rows.length - 1
+            return (
+              <div key={d} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+                <span className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#9a948a' }}>{isMax ? `Depth ${d}+` : `Depth ${d}`}</span>
+                <span className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: isMax ? GOLD : '#e8e1d2' }}>{fmtPct(info.chanceAt(d))}{isMax ? ' · max' : ''}</span>
+              </div>
+            )
+          })}
+        </div>
+        <p className="font-karla" style={{ fontSize: '0.64rem', color: '#8f8a80', lineHeight: 1.45, marginTop: 8 }}>
+          Each rolls on its own, only while unowned — the deeper you bank, the better the odds, maxing out at depth 50. Davy&apos;s Offer can raise them on the spot.
+        </p>
+      </div>
+    )
+  }
+
   const GEM_ICON = (
     <svg width="30" height="30" viewBox="0 0 24 24" aria-hidden><path d="M12 2s7 8.6 7 13a7 7 0 1 1-14 0c0-4.4 7-13 7-13z" fill="#d1394b" /><path d="M9.2 12.4a3.4 3.4 0 0 0-.2 4.2" stroke="#fff" strokeOpacity="0.55" strokeWidth="1.3" fill="none" strokeLinecap="round" /></svg>
   )
@@ -5895,6 +5939,15 @@ function LootModal({ mode, don, onClose }: { mode: 'normal' | 'hardcore'; don?: 
         <p className="font-karla font-600" style={{ fontSize: '0.55rem', lineHeight: 1.2, color: d.hardcoreOnly ? `${HC_RED}dd` : '#7f7a72' }}>
           {locked ? 'Hardcore only' : d.tag}
         </p>
+        {/* Drop-rate range for the chase items/skins (banked currencies have none). */}
+        {(() => {
+          const o = dropOddsInfo(d.id)
+          return o ? (
+            <span className="font-karla font-800" style={{ marginTop: 1, fontSize: '0.5rem', color: `${GOLD}dd`, background: `${GOLD}16`, border: `1px solid ${GOLD}40`, borderRadius: 999, padding: '0.08rem 0.4rem' }}>
+              {fmtPct(o.min)}–{fmtPct(o.max)}
+            </span>
+          ) : null
+        })()}
       </button>
     )
   }
@@ -5936,6 +5989,11 @@ function LootModal({ mode, don, onClose }: { mode: 'normal' | 'hardcore'; don?: 
               <p className="font-karla font-800 uppercase tracking-[0.16em]" style={{ fontSize: '0.5rem', color: '#7f7a72', marginBottom: 5 }}>How it drops</p>
               <p className="font-karla" style={{ fontSize: '0.78rem', color: '#c8c2b6', lineHeight: 1.5 }}>{detail.how}</p>
             </div>
+            {/* Depth→odds table for the chase drops (banked currencies have none). */}
+            {(() => {
+              const o = dropOddsInfo(detail.id)
+              return o ? <OddsBlock info={o} /> : null
+            })()}
           </motion.div>
         ) : (
           <>

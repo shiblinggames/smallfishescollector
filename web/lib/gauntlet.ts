@@ -1121,6 +1121,60 @@ const CHEST_DROP_NAMES: Record<string, string> = {
   the_shakedown:      'Carrion Sight',
 }
 
+// ── Per-drop odds curve, for the "how it drops" reference ─────────────────────
+// The Haul guide shows each chase drop's RANGE and how its odds climb by depth.
+// Those numbers must come from the SAME curves the cash-out rolls against (above),
+// so this maps each drop to its curve (item = cannon curve, skin = skin curve),
+// its chest-TIER gate (the depth it unlocks), and any per-drop rarity mult (the
+// Ghost Hull's half-rate). Ownership/hardcore/offer are NOT applied here — this
+// is the reference curve, not "your odds right now" (that's chestOdds).
+const DROP_ODDS_META: Record<string, { kind: 'item' | 'skin'; tierGate: number; mult: number }> = {
+  // Davy's chases
+  davys_heavy_cannon:   { kind: 'item', tierGate: 1,                       mult: 1 },
+  davys_hand_cannon:    { kind: 'item', tierGate: 1,                       mult: 1 },
+  davys_blood_cannon:   { kind: 'item', tierGate: BLOOD_CANNON_CHEST_TIER, mult: 1 },
+  golden_gauntlet_hull: { kind: 'skin', tierGate: GOLD_HULL_CHEST_TIER,    mult: 1 },
+  bad_blood_hull:       { kind: 'skin', tierGate: BLOOD_HULL_CHEST_TIER,   mult: 1 },
+  // Don's chases
+  opening_statement:    { kind: 'item', tierGate: 1,                       mult: 1 },
+  made_man:             { kind: 'item', tierGate: 1,                       mult: 1 },
+  the_shakedown:        { kind: 'item', tierGate: 1,                       mult: 1 },
+  galaxy_hull:          { kind: 'skin', tierGate: GALAXY_HULL_CHEST_TIER,  mult: 1 },
+  dons_ghost_hull:      { kind: 'skin', tierGate: GHOST_HULL_CHEST_TIER,   mult: GHOST_HULL_DROP_MULT },
+}
+
+export interface DropOddsInfo {
+  kind: 'item' | 'skin'
+  /** The cash-out depth this drop first becomes possible (its chest-tier gate). */
+  unlockDepth: number
+  /** Drop chance (0-1) at a given cash-out depth — 0 below the gate. */
+  chanceAt: (depth: number) => number
+  /** Range across the whole descent: at the unlock/floor, and at the depth cap. */
+  min: number
+  max: number
+}
+
+/** The depth→odds reference curve for a chase drop (item or skin), or null if the
+ *  id isn't a chase drop. Used by the Haul guide to show ranges + a depth table. */
+export function dropOddsInfo(id: string): DropOddsInfo | null {
+  const meta = DROP_ODDS_META[id]
+  if (!meta) return null
+  const unlockDepth = CHEST_TIERS.find(c => c.tier === meta.tierGate)?.minDepth ?? 0
+  const chanceAt = (depth: number): number => {
+    const pd = Math.min(Math.max(0, depth), GAUNTLET_REWARD_DEPTH_CAP)
+    if (chestForDepth(pd).tier < meta.tierGate) return 0
+    const base = meta.kind === 'item' ? chestCannonDropChance(pd) : chestSkinDropChance(pd)
+    return base * meta.mult
+  }
+  return {
+    kind: meta.kind,
+    unlockDepth,
+    chanceAt,
+    min: chanceAt(Math.max(1, unlockDepth)),
+    max: chanceAt(GAUNTLET_REWARD_DEPTH_CAP),
+  }
+}
+
 // ── Curses — the Locker's Pressure ────────────────────────────────────────────
 // The descent's escalating difficulty does NOT come from fatter HP bars; it
 // comes from rules. At each CURSE_DEPTH the Locker imposes one new curse, drawn
