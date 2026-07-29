@@ -1518,6 +1518,14 @@ export default function RaidCombat({
   useEffect(() => () => { playStepChainRef.current.forEach(clearTimeout) }, [])
 
   const enemyPatternIdxRef = useRef(0)
+  // ── FINN'S OWN CREW ABILITIES ────────────────────────────────────────────
+  // He calls on the giants he absorbed the way a player calls on their crew:
+  // OFF-TURN, alongside his action rather than instead of it. One ability
+  // belongs to one phase (see BossAbility), so each phase plays differently.
+  const bossAbilityTurnRef = useRef(0)        // enemy turns taken this phase
+  const bossForesightRef   = useRef(0)        // turns he slips your shots
+  const bossWardRef        = useRef(0)        // turns he refuses a killing blow
+  const bossMarkRef        = useRef({ turns: 0, mult: 0 })  // you take extra damage
   // Did the enemy ADVANCE its pattern slot this turn? pickEnemyAction leaves the
   // index put when it can't perform the slotted move (fire with no charges →
   // substitute reload, retry the SAME slot next turn). Foresight's revealed-move
@@ -2237,7 +2245,7 @@ export default function RaidCombat({
     setEnemyMuzzle(null); setPlayerImpact(null); setPlayerAura(null); setDodgeFx(null)
     setEnemyBurning(false); setEnemyFrozen(false); setEnemyDeflect(0)
     setPlayerBurning(false); setPlayerFrozen(false)
-    enemyPatternIdxRef.current = 0
+    enemyPatternIdxRef.current = 0; bossAbilityTurnRef.current = 0
     enemyFeintStreakRef.current = 0
     enemyDodgedLastTurnRef.current = false
     volleyCountRef.current = 0
@@ -2427,6 +2435,14 @@ export default function RaidCombat({
     rafRef.current = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(rafRef.current)
   }, [subPhase, enemy.shipSpeed, enemy.aimSpeedMult, enemy.zoneSpeedMult, totalNavigation, tide.aimSpeedMult, tide.zoneSpeedMult, affix?.zoneSpeedMult])
+
+  // LAZ'S WARD, his side of it. While it holds he cannot be put below 1 HP, so
+  // a killing blow becomes a survived one. Mirrors the player's Vengeance ward.
+  const wardFloor = useCallback((hp: number): number => {
+    if (hp > 0) return Math.max(0, hp)
+    if (bossWardRef.current > 0) return 1
+    return 0
+  }, [])
 
   // ─── Enemy AI: pick next action from pattern ───────────────────────────────
 
@@ -3169,7 +3185,7 @@ export default function RaidCombat({
       if (enemyPhaseRef.current <= phaseList.length) {
         const nextCfg = phaseList[enemyPhaseRef.current - 1]
         enemyPhaseRef.current += 1
-        enemyPatternIdxRef.current = 0
+        enemyPatternIdxRef.current = 0; bossAbilityTurnRef.current = 0
         enemyFeintStreakRef.current = 0
         const revivedHp = Math.max(1, Math.floor(enemyHpMaxRef.current * nextCfg.revivePct))
         setEnemyHp(revivedHp)
@@ -3760,7 +3776,7 @@ export default function RaidCombat({
       // Reignite kept refreshing the duration).
       const flare = tide.backdraft && Math.random() < BACKDRAFT_FLARE_CHANCE ? Math.round(tick * BACKDRAFT_FLARE_MULT) : 0
       const total = tick + flare
-      eHp = Math.max(0, eHp - total)
+      eHp = wardFloor(eHp - total)
       enemyBurnRef.current = { turns: enemyBurnRef.current.turns - 1, dmg: enemyBurnRef.current.dmg }
       // Feed the Fire confluence: the burn ticks also heal you a slice of itself.
       // Same per-tick MAX-HP cap as lifesteal — burn heal scales off damage the
@@ -3803,6 +3819,78 @@ export default function RaidCombat({
 
     for (const who of order) {
       if (pHp <= 0 || eHp <= 0) break
+      // ── HIS CREW ABILITY. Fires BEFORE his action and does not replace it,
+      // which is the whole point: a player fires an ability and still takes
+      // their shot, and now so does he. Cadence is per phase.
+      if (who === 'enemy' && !enemyFrozenRef.current) {
+        const ab = enemyPhaseRef.current >= 2
+          ? phaseList[enemyPhaseRef.current - 2]?.ability
+          : enemy.phaseAbility
+        // Lasting effects lapse on his own turns, so their stated duration is
+        // counted in HIS actions, the same way a player's buff counts in theirs.
+        if (bossForesightRef.current > 0) bossForesightRef.current--
+        if (bossWardRef.current > 0) bossWardRef.current--
+        if (bossMarkRef.current.turns > 0) bossMarkRef.current = { ...bossMarkRef.current, turns: bossMarkRef.current.turns - 1 }
+        if (ab) {
+          const bossPhaseDmgMult = enemyPhaseRef.current >= 2 && phaseList[enemyPhaseRef.current - 2]
+            ? phaseList[enemyPhaseRef.current - 2].damageMult : 1
+          const every = ab.everyTurns ?? 3
+          bossAbilityTurnRef.current++
+          if (bossAbilityTurnRef.current % every === 1 || every === 1) {
+            const lines: string[] = [`${ab.name}! ${ab.line}`]
+            let aSplatTarget: Actor | null = null
+            let aSplatText = ''
+            const aColor = ab.summonColor ?? '#c084fc'
+            if (ab.kind === 'leviathan') {
+              // DOBY: one heavy shot that always lands a full crit.
+              const dmg = Math.max(1, Math.round(enemy.maxDmg * 1.5 * (ab.value ?? 1) * bossPhaseDmgMult))
+              pHp = Math.max(0, pHp - dmg)
+              aSplatTarget = 'player'; aSplatText = `-${dmg}`
+              lines.push(`A single shell, and it lands the way his do. ${dmg} damage.`)
+            } else if (ab.kind === 'blitz') {
+              // MAKO: a barrage that bites harder the more wounded you are.
+              const shots = ab.shots ?? 4
+              const frenzy = 1 + (1 - pHp / Math.max(1, playerHpMax)) * (ab.value ?? 0.3)
+              let total = 0
+              for (let k = 0; k < shots; k++) {
+                total += Math.max(1, Math.round(enemy.minDmg * 0.42 * frenzy * bossPhaseDmgMult))
+              }
+              pHp = Math.max(0, pHp - total)
+              aSplatTarget = 'player'; aSplatText = `-${total}`
+              lines.push(`${shots} light hits, and they come faster as you bleed. ${total} damage.`)
+            } else if (ab.kind === 'abyssal_tide') {
+              // CATFISH: he heals and puts plate up.
+              const heal = Math.max(1, Math.round(enemyHpMaxRef.current * (ab.value ?? 0.14)))
+              eHp = Math.min(enemyHpMaxRef.current, eHp + heal)
+              const shield = Math.max(1, Math.round(enemyHpMaxRef.current * 0.08))
+              enemyShieldRef.current += shield
+              setEnemyShieldHp(enemyShieldRef.current)
+              aSplatTarget = 'enemy'; aSplatText = `+${heal}`
+              lines.push(`He closes ${heal} of what you opened, and the plate goes back over it.`)
+            } else if (ab.kind === 'foresight') {
+              // DOLE: he reads you, and slips what is coming.
+              bossForesightRef.current = ab.turns ?? 2
+              lines.push(`He is reading your deck now. Your next ${bossForesightRef.current} shots have to get past that.`)
+            } else if (ab.kind === 'vengeance') {
+              // LAZ: he will not die to the next killing blow.
+              bossWardRef.current = ab.turns ?? 4
+              lines.push(`Whatever you land in the next ${bossWardRef.current} turns, he does not go down to it.`)
+            } else if (ab.kind === 'requiem') {
+              // MIRA: marked. Everything he throws lands harder.
+              bossMarkRef.current = { turns: ab.turns ?? 3, mult: ab.value ?? 0.3 }
+              aSplatTarget = 'player'; aSplatText = 'Marked'
+              lines.push(`You are marked. Everything he throws lands harder until it lapses.`)
+            }
+            pushStep({
+              who, action: 'reload', pHp, eHp, pCharges, eCharges,
+              splatTarget: aSplatTarget, splatText: aSplatText, splatColor: aColor,
+              summon: { name: ab.name, label: 'He calls on it', color: aColor, image: ab.summonImage },
+              logLines: lines,
+            })
+            if (pHp <= 0 || eHp <= 0) break
+          }
+        }
+      }
       // Frozen Cannonball: the enemy loses this whole turn (skips before its
       // turn-start heal + action). This is the turn AFTER the proc; one turn,
       // then the ice breaks.
@@ -4234,6 +4322,12 @@ export default function RaidCombat({
           if (enemyPhaseRef.current >= 2 && phaseList[enemyPhaseRef.current - 2]) {
             dmg = Math.max(1, Math.floor(dmg * phaseList[enemyPhaseRef.current - 2].damageMult))
           }
+          // MARKED (his Mira ability). While it holds, everything he throws
+          // lands harder. Applied after the phase bump so it reads as a clean
+          // extra multiplier on an already-scaled shot.
+          if (who === 'enemy' && bossMarkRef.current.turns > 0) {
+            dmg = Math.max(1, Math.floor(dmg * (1 + bossMarkRef.current.mult)))
+          }
           // Enemy crit — flat chance per enemy, applied after the volley
           // multiplier. Players crit through aim-bar skill; enemies don't
           // have that, so the same outcome happens via RNG.
@@ -4290,7 +4384,12 @@ export default function RaidCombat({
           // one defending = the enemy is attacking = !isAttackerPlayer).
           const playerDefending = !isAttackerPlayer
           let dodged: boolean
-          if (playerDefending && guaranteedDodgeLeftRef.current > 0) {
+          // DOLE'S READ, his side of it. While Foresight holds he has already seen
+          // the shot coming, so he slips it outright. Only against the PLAYER's
+          // attack, so it never turns into free evasion on his own shots.
+          if (isAttackerPlayer && bossForesightRef.current > 0) {
+            dodged = true
+          } else if (playerDefending && guaranteedDodgeLeftRef.current > 0) {
             // guaranteedDodge token: auto-succeed, no roll, spend one.
             guaranteedDodgeLeftRef.current -= 1
             dodged = true
@@ -4342,7 +4441,7 @@ export default function RaidCombat({
             // have dealt, so the boon rewards dodging, not just eating hits.
             if (!isAttackerPlayer && tide.retaliateDodgePct > 0 && dmg > 0 && eHp > 0) {
               const spite = Math.max(1, Math.round(dmg * tide.retaliateDodgePct))
-              eHp = Math.max(0, eHp - soakEnemyShield(spite))
+              eHp = wardFloor(eHp - soakEnemyShield(spite))
               reflectDmgOut = (reflectDmgOut ?? 0) + spite
               stepLines.push(`Spiteful Wake — you slip the shot and the wake lashes back for ${spite}.`)
             }
@@ -4388,7 +4487,7 @@ export default function RaidCombat({
               const parryReflectPct  = parryEffects.filter(e => e.type === 'parry_reflect_pct').reduce((a, e) => Math.max(a, e.value), 0)
               if (parryChance > 0 && parryReflectPct > 0 && dmg > 0 && Math.random() < parryChance) {
                 const reflectDmg = Math.max(1, Math.floor(dmg * parryReflectPct))
-                eHp = Math.max(0, eHp - soakEnemyShield(reflectDmg))
+                eHp = wardFloor(eHp - soakEnemyShield(reflectDmg))
                 reflectDmgOut = reflectDmg
                 stepLines.push(`Riposte! You turn the shot back, slicing ${reflectDmg} into ${enemy.name}.`)
               }
@@ -4441,7 +4540,7 @@ export default function RaidCombat({
           // remaining HP (wasted damage). Don's overkill-heal boon reclaims some
           // of it (applied in the heal block below). Captured before eHp clamps.
           const overkillDmg = Math.max(0, toHull - eHp)
-          eHp = Math.max(0, eHp - toHull)
+          eHp = wardFloor(eHp - toHull)
           if (dmg > 0) onPlayerHit?.(dmg)
           // ── CRIT STRIP (The Court's Fang / The Don's Signet) ──────────────
           // The raid-8 mirror of the sharks' bite, aimed the other way: a landed
@@ -4643,7 +4742,7 @@ export default function RaidCombat({
             && enemyBurnRef.current.turns > 0
           ) {
             const burst = Math.max(1, Math.round(dmg * tide.thermalShockMult))
-            eHp = Math.max(0, eHp - soakEnemyShield(burst))
+            eHp = wardFloor(eHp - soakEnemyShield(burst))
             enemyFrozenRef.current = 0
             enemyFreezePendingRef.current = 0
             thermalBurstOut = burst
@@ -4760,7 +4859,7 @@ export default function RaidCombat({
             dmg = 0
             if (tide.parryReflectPct > 0 && eHp > 0) {
               const reflect = Math.max(1, Math.round(rawIncoming * tide.parryReflectPct))
-              eHp = Math.max(0, eHp - soakEnemyShield(reflect))
+              eHp = wardFloor(eHp - soakEnemyShield(reflect))
               stepLines.push(`Cutlass Guard! You turn the ${enemy.name}'s blow and lash back for ${reflect}.`)
             } else {
               stepLines.push(`Cutlass Guard! You turn the ${enemy.name}'s blow clean aside.`)
@@ -4843,7 +4942,7 @@ export default function RaidCombat({
           if (tide.retaliatePct > 0 && rawIncoming > 0 && eHp > 0 && !parried) {
             // Iron Tempest confluence multiplies the reflected damage.
             const thorns = Math.max(1, Math.round(rawIncoming * tide.retaliatePct * tide.retaliateBoostMult))
-            eHp = Math.max(0, eHp - soakEnemyShield(thorns))
+            eHp = wardFloor(eHp - soakEnemyShield(thorns))
             stepLines.push(tide.retaliateBoostMult > 1 ? `Iron Tempest! The blow is flung back for ${thorns}.` : `Spiteful Wake bites back for ${thorns}.`)
           }
           // Scorching / Glacial affixes: the elite's landed hit has a chance to
@@ -4972,7 +5071,7 @@ export default function RaidCombat({
       ) {
         const nextCfg = phaseList[enemyPhaseRef.current - 1]   // the phase we rise into
         enemyPhaseRef.current += 1
-        enemyPatternIdxRef.current = 0
+        enemyPatternIdxRef.current = 0; bossAbilityTurnRef.current = 0
         enemyFeintStreakRef.current = 0
         // The Last Wall arms at SIM time (next resolveTurn must see it); the
         // visual raises when the transition step PLAYS, via step.phaseAegis.
@@ -5108,7 +5207,7 @@ export default function RaidCombat({
             // the normal turn continuation below (no return).
             const nextCfg = phaseList[enemyPhaseRef.current - 1]
             enemyPhaseRef.current += 1
-            enemyPatternIdxRef.current = 0
+            enemyPatternIdxRef.current = 0; bossAbilityTurnRef.current = 0
             enemyFeintStreakRef.current = 0
             const revivedHp = Math.max(1, Math.floor(enemyHpMaxRef.current * nextCfg.revivePct))
             eHp = revivedHp; enemyHpRef.current = revivedHp; setEnemyHp(revivedHp)
