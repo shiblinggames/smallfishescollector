@@ -2374,8 +2374,15 @@ export default function RaidCombat({
       // top of The Gorge's 2.6x zone speed).
       const gust = squallActive ? 1 + 0.38 * Math.sin(now / 440 + squallPhaseRef.current) : 1
       firePosRef.current += NEEDLE_SPEED * gust * frames * fireDirRef.current
-      if (firePosRef.current >= 1) { firePosRef.current = 1; fireDirRef.current = -1 }
-      if (firePosRef.current <= 0) { firePosRef.current = 0; fireDirRef.current = 1 }
+      if (onDial) {
+        // A circle has no ends to bounce off. Bouncing here read as the needle
+        // REVERSING at 12 o'clock, which is exactly the thing the fishing dial
+        // never does. Wrap instead, so it orbits continuously like a reel.
+        firePosRef.current = (firePosRef.current % 1 + 1) % 1
+      } else {
+        if (firePosRef.current >= 1) { firePosRef.current = 1; fireDirRef.current = -1 }
+        if (firePosRef.current <= 0) { firePosRef.current = 0; fireDirRef.current = 1 }
+      }
 
       zonePosRef.current += ZONE_SPEED * frames * zoneDirRef.current
       if (onDial) {
