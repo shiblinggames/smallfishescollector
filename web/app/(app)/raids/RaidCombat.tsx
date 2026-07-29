@@ -1522,6 +1522,12 @@ export default function RaidCombat({
   // He calls on the giants he absorbed the way a player calls on their crew:
   // OFF-TURN, alongside his action rather than instead of it. One ability
   // belongs to one phase (see BossAbility), so each phase plays differently.
+  // DIAL LOCK FEEDBACK. DialSVG already ships the fishing reel-in feel: a hub
+  // pop + ripple on snapKey, and an arc flash + expanding ring + needle flare on
+  // perfectBurstKey. It is the same confirmed-good feedback the player knows
+  // from Reel In, so the finale uses it rather than inventing a second language.
+  const [dialSnapKey, setDialSnapKey] = useState(0)
+  const [dialBurstKey, setDialBurstKey] = useState(0)
   const bossAbilityTurnRef = useRef(0)        // enemy turns taken this phase
   const bossAbilityUsedRef = useRef(false)    // spent it for this phase?
   const bossAbilityOnRef   = useRef(0)        // which turn of the phase he casts
@@ -3421,6 +3427,14 @@ export default function RaidCombat({
     { const cf = contractFactsRef.current; cf.shots++; if (playerAction === 'volley') cf.volleys++; else if (playerAction === 'mega') cf.megas++; if (res === 'critical') cf.crits++ }
     onShotResolved?.(res === 'critical')
     setAimResult(res)
+    // On the dial the bar's snap/fatten pokes are off (they clobber the needle's
+    // rotation), so a lock would land with NO feedback at all. Hand it to
+    // DialSVG instead: snap on EVERY lock so the tap always answers, plus the
+    // full burst on a crit, which is the reel-in perfect the player knows.
+    if (onDial) {
+      setDialSnapKey(k => k + 1)
+      if (res === 'critical') setDialBurstKey(k => k + 1)
+    }
     setCritFreeze(true)  // freezes the aim bar at the lock position regardless of result
 
     // Punch the lock moment so it FEELS like a connection.
@@ -6974,6 +6988,8 @@ export default function RaidCombat({
                 hardenedArmed={hardenedArmed}
                 firePos={firePosRef.current}
                 zoneCenter={zonePosRef.current}
+                snapKey={dialSnapKey}
+                perfectBurstKey={dialBurstKey}
               />
             </div>
           </div>,
@@ -10613,7 +10629,7 @@ const DIAL_ZONE_OPACITY = (z: ZoneDef) =>
 
 function DialAimInline({
   indicatorRef, zonesGroupRef, shipRef, flashRef, critW, enemyImage, enemyFilter,
-  afflictionLabel, hardenedArmed, hitW, grazeW, firePos, zoneCenter,
+  afflictionLabel, hardenedArmed, hitW, grazeW, firePos, zoneCenter, snapKey, perfectBurstKey,
 }: {
   indicatorRef:  React.RefObject<HTMLDivElement | null>
   zonesGroupRef: React.RefObject<SVGGElement | null>
@@ -10633,6 +10649,10 @@ function DialAimInline({
    *  rather than snapping the needle or the band back to a stale one. */
   firePos: number
   zoneCenter: number
+  /** Reel-in feel, straight from the fishing dial: snap on every lock, full
+   *  burst on a crit. */
+  snapKey: number
+  perfectBurstKey: number
 }) {
   const zones = useMemo(() => buildDialZones(critW, hitW, grazeW), [critW, hitW, grazeW])
   // Finn orbits at the middle of the band's radius.
@@ -10657,6 +10677,8 @@ function DialAimInline({
         needleColor="currentColor"
         zoneOpacityFn={DIAL_ZONE_OPACITY}
         needleStyle="marker"
+        snapKey={snapKey}
+        perfectBurstKey={perfectBurstKey}
       />
 
       {/* FINN, riding the band. Own layer, rotated to the same bearing as the
