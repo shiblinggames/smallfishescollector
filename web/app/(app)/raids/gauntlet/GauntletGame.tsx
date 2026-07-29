@@ -2330,17 +2330,29 @@ export default function GauntletGame(props: GauntletGameProps) {
                 ))
               })()}
             </div>
-            {/* Per-mode loot guides — one under each card, so you can see exactly
-                what that descent drops before you commit. */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 8 }}>
+            {/* ── Reference band — the three things worth reading before a dive,
+                promoted out of the old tiny text links. Synergies especially is a
+                core mechanic, not a footnote; Rewards folds both mode loot guides
+                into one card (toggle lives inside). ── */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 10 }}>
               {([
-                { m: 'normal' as const, color: AC, label: 'What Normal drops' },
-                { m: 'hardcore' as const, color: '#e0555a', label: 'What Hardcore drops' },
-              ]).map(({ m, color, label }) => (
-                <button key={m} onClick={() => setLootMode(m)} className="tap"
-                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '0.42rem 0.4rem', borderRadius: 10, background: `linear-gradient(180deg, ${color}18, rgba(6,10,16,0.55))`, border: `1px solid ${color}3a`, color: `${color}dd`, cursor: 'pointer', minWidth: 0 }}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0 }}><path d="M3 9.5 4 7a1.6 1.6 0 0 1 1.5-1h13A1.6 1.6 0 0 1 20 7l1 2.5" /><rect x="3" y="9.5" width="18" height="9.5" rx="1.6" /><path d="M3 13.2h18" /></svg>
-                  <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+                { key: 'syn', title: 'Synergies', sub: 'Boons that fuse', color: '#b98bff', glow: true, onClick: () => setSynergiesOpen(true),
+                  icon: <><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></> },
+                { key: 'loot', title: 'Rewards', sub: 'Items · skins · odds', color: GOLD, glow: false, onClick: () => setLootMode('normal'),
+                  icon: <><path d="M3 9.5 4 7a1.6 1.6 0 0 1 1.5-1h13A1.6 1.6 0 0 1 20 7l1 2.5" /><rect x="3" y="9.5" width="18" height="9.5" rx="1.6" /><path d="M3 13.2h18" /></> },
+                { key: 'how', title: 'How it works', sub: 'The rules', color: '#8fb8b0', glow: false, onClick: () => setIntroOpen(true),
+                  icon: <><circle cx="12" cy="12" r="9" /><path d="M9.6 9a2.4 2.4 0 1 1 3.4 2.2c-.7.4-1 .8-1 1.6" /><path d="M12 17h.01" /></> },
+              ] as const).map(c => (
+                <button key={c.key} onClick={c.onClick} className="tap"
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '0.7rem 0.35rem 0.6rem', borderRadius: 13, cursor: 'pointer', minWidth: 0,
+                    background: `linear-gradient(180deg, ${c.color}1c 0%, rgba(8,12,20,0.66) 100%)`,
+                    border: `1px solid ${c.color}${c.glow ? '6e' : '3a'}`,
+                    boxShadow: c.glow ? `0 0 16px ${c.color}22` : 'none' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 10, flexShrink: 0, background: `${c.color}1e`, border: `1px solid ${c.color}55`, color: c.color }}>
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{c.icon}</svg>
+                  </span>
+                  <span className="font-cinzel font-800 uppercase" style={{ fontSize: '0.66rem', letterSpacing: '0.02em', color: '#f2ede2', lineHeight: 1.08, textAlign: 'center' }}>{c.title}</span>
+                  <span className="font-karla font-600" style={{ fontSize: '0.52rem', color: '#9a948a', lineHeight: 1.15, textAlign: 'center' }}>{c.sub}</span>
                 </button>
               ))}
             </div>
@@ -2374,20 +2386,6 @@ export default function GauntletGame(props: GauntletGameProps) {
                 line="Permanent power"
                 icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v15" /><path d="M5 11l7-4 7 4" /><path d="M4 14c1.6 2.5 4.5 4 8 4s6.4-1.5 8-4" /><path d="M9 5.5h6" /></svg>}
               />
-            </div>
-
-            {/* Guides — deliberately quieter than the shops above */}
-            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-              {([
-                { label: 'Synergies',     onClick: () => setSynergiesOpen(true), icon: <><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></> },
-                { label: 'How it works',  onClick: () => setIntroOpen(true),     icon: <><circle cx="12" cy="12" r="9" /><path d="M9.6 9a2.4 2.4 0 1 1 3.4 2.2c-.7.4-1 .8-1 1.6" /><path d="M12 17h.01" /></> },
-              ] as const).map(({ label, onClick, icon }) => (
-                <button key={label} onClick={onClick} className="tap"
-                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '0.55rem 0.3rem', borderRadius: 11, background: 'rgba(10,14,22,0.5)', border: '1px solid rgba(255,255,255,0.1)', color: '#c9c2b6', cursor: 'pointer' }}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0 }}>{icon}</svg>
-                  <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.53rem', whiteSpace: 'nowrap' }}>{label}</span>
-                </button>
-              ))}
             </div>
 
             {/* Active run perks — gauntlet-scoped upgrades in effect this dive.
@@ -5792,7 +5790,10 @@ interface HaulDrop {
 }
 
 function LootModal({ mode, don, onClose }: { mode: 'normal' | 'hardcore'; don?: boolean; onClose: () => void }) {
-  const hardcore = mode === 'hardcore'
+  // One entry, both modes: the Rewards card opens this and you flip Normal /
+  // Hardcore inside (Hardcore-only drops are still shown greyed on Normal).
+  const [viewMode, setViewMode] = useState<'normal' | 'hardcore'>(mode)
+  const hardcore = viewMode === 'hardcore'
   const AC = don ? KRAKEN : TEAL
   const accent = hardcore ? HC_RED : AC
   const [detail, setDetail] = useState<HaulDrop | null>(null)
@@ -6008,8 +6009,26 @@ function LootModal({ mode, don, onClose }: { mode: 'normal' | 'hardcore'; don?: 
             </div>
 
             <p className="font-karla" style={{ fontSize: '0.76rem', color: '#8f8a82', lineHeight: 1.45, marginTop: 8, textAlign: 'left' }}>
-              Tap anything to see how it drops.
+              Tap anything to see how it drops and its odds by depth.
             </p>
+
+            {/* Normal / Hardcore toggle — Hardcore adds its own chases (shown
+                greyed on Normal), so let the reader flip between the two hauls. */}
+            <div style={{ display: 'flex', gap: 5, marginTop: 10, padding: 4, background: 'rgba(0,0,0,0.3)', borderRadius: 11, border: '1px solid rgba(255,255,255,0.08)' }}>
+              {(['normal', 'hardcore'] as const).map(mm => {
+                const on = viewMode === mm
+                const c = mm === 'hardcore' ? HC_RED : AC
+                return (
+                  <button key={mm} onClick={() => setViewMode(mm)} className="font-karla font-800 uppercase tracking-[0.08em] tap"
+                    style={{ flex: 1, padding: '0.44rem 0', borderRadius: 8, fontSize: '0.62rem', cursor: 'pointer',
+                      border: `1px solid ${on ? `${c}66` : 'transparent'}`,
+                      background: on ? `linear-gradient(180deg, ${c}26, ${c}0c)` : 'transparent',
+                      color: on ? (mm === 'hardcore' ? '#ffb3b3' : '#bfeee6') : '#8f97a2' }}>
+                    {mm === 'hardcore' ? 'Hardcore' : 'Normal'}
+                  </button>
+                )
+              })}
+            </div>
 
             <SectionLabel>Every dive pays</SectionLabel>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
