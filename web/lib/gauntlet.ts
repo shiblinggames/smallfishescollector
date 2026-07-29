@@ -736,6 +736,9 @@ export interface GauntletRunSnapshot {
   /** Don's jobs cleared this run + the bonus each paid (optional — old snapshots
    *  predate it). */
   contracts?: { name: string; reward: string }[]
+  /** Fathoms spent at the Fence this run — the run-scoped Fence tab, subtracted
+   *  from the earned-Fathoms grant at cash-out/death (optional for old saves). */
+  fenceSpent?: number
   /** ISO timestamp, set server-side */
   at?: string
 }
@@ -793,6 +796,9 @@ export interface GauntletRunState {
   /** Don's jobs cleared this run + the bonus each paid, for the profile + recap
    *  (Don's only; optional for old saves). */
   contractsWon?: { name: string; reward: string }[]
+  /** Fathoms spent at the Fence so far this run (settled at cash-out; Don's only,
+   *  optional for old saves). */
+  fenceSpent?: number
 }
 
 export interface GauntletFight {

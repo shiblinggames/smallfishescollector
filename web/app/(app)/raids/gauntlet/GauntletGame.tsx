@@ -28,7 +28,7 @@ import {
   REPRIEVE_MIN_DEPTH, REPRIEVE_CHANCE, drawReprieve, type Reprieve,
   // Davy's Terms — the chosen, structural difficulty layer (hardcore only).
   DROWNED_FILTER, GHOST_FILTER, bandForDepth, gauntletTaunt, donRiseCopy, donFallCopy, donRiseIndex, DON_RISE_DEPTHS,
-  GAUNTLET_COOLDOWN_HOURS, HARDCORE_RUNS_PER_DAY, HC_UNLOCK_DEPTH, GAUNTLET_REWARD_DEPTH_CAP,
+  GAUNTLET_COOLDOWN_HOURS, HARDCORE_RUNS_PER_DAY, HC_UNLOCK_DEPTH, GAUNTLET_REWARD_DEPTH_CAP, fathomsForDepth,
   emptyRunStats, addRunStats, coerceRunStats,
   dropOddsInfo, type DropOddsInfo,
   type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot, type GauntletRunState, type GauntletRunStats, chestOdds, type GauntletVariant } from '@/lib/gauntlet'
@@ -459,6 +459,10 @@ export default function GauntletGame(props: GauntletGameProps) {
   const [merchantStock, setMerchantStock] = useState<MerchantItemKind[]>([])
   const [merchantSold, setMerchantSold] = useState<Set<MerchantItemKind>>(new Set())
   const [merchantBuying, setMerchantBuying] = useState<MerchantItemKind | null>(null)
+  // The Fence spends RUN-EARNED Fathoms (this dive's haul), not the banked purse.
+  // fenceSpent is the run tab, settled against the earned grant at cash-out.
+  const fenceSpentRef = useRef(0)
+  const [fenceSpent, setFenceSpent] = useState(0)
   // Intro-only gauntlet switcher (shown when the OTHER gauntlet is also unlocked).
   const [switcherOpen, setSwitcherOpen] = useState(false)
   // Banked Fathoms, mirrored so a shrine wager can update it live without a
@@ -773,6 +777,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       setConfluenceUnlocked(null); setConfluenceBanner(null); setCurseShed(null)
       nextShrineRef.current = SHRINE_FIRST_DEPTH; setShrineCoin(null); setShrineFlipping(false); setBoonFromShrine(false)
       nextMerchantRef.current = MERCHANT_FIRST_DEPTH; setMerchantStock([]); setMerchantSold(new Set()); setMerchantBuying(null)
+      fenceSpentRef.current = 0; setFenceSpent(0)
       peekFightRef.current = null; setPeekFight(null)
       crewRefreshedRef.current = false; setFightOpensRefreshed(false)
       calmBeforeUsedRef.current = false
@@ -1494,14 +1499,19 @@ export default function GauntletGame(props: GauntletGameProps) {
   async function buyMerchant(id: MerchantItemKind) {
     if (merchantBuying || merchantSold.has(id)) return
     const item = MERCHANT_ITEMS[id]
-    if (fathomsNow < item.price) return
+    // Pay from this dive's earned Fathoms (fathomsForDepth of the depth cleared
+    // so far) minus the tab already run up — never the banked purse.
+    const runFathoms = fathomsForDepth(rollStateRef.current.cleared, props.variant ?? 'davy')
+    if (runFathoms - fenceSpentRef.current < item.price) return
     // A Hex-Breaker with no curse to break is a wasted buy — block it defensively
     // (the card is filtered out of stock too, this is belt-and-braces).
     if (id === 'cleanse' && Object.keys(curseTiersRef.current).length === 0) return
     setMerchantBuying(id)
     const res = await buyMerchantItem(id)
     if ('error' in res) { setMerchantBuying(null); return }
-    setFathomsNow(res.fathoms)
+    // Run up the tab (settled against the earned grant at cash-out); the banked
+    // purse is untouched until then.
+    fenceSpentRef.current += item.price; setFenceSpent(fenceSpentRef.current)
     setMerchantSold(prev => { const n = new Set(prev); n.add(id); return n })
     setMerchantBuying(null)
     applyMerchantEffect(id)   // last — may switch phase (Contraband → draft)
@@ -1693,6 +1703,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       curses: curseTiers,
       stats: { ...runStatsRef.current },
       contracts: contractsWonRef.current,
+      fenceSpent: fenceSpentRef.current,
     }
   }
 
@@ -1725,6 +1736,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       marks,
       contractHullMult,
       contractsWon: contractsWonRef.current,
+      fenceSpent: fenceSpentRef.current,
     }
   }
 
@@ -1761,6 +1773,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     setMarks(s.marks ?? [])
     setContractHullMult(s.contractHullMult ?? 1)
     contractsWonRef.current = s.contractsWon ?? []; setContractsWon(contractsWonRef.current)
+    fenceSpentRef.current = s.fenceSpent ?? 0; setFenceSpent(fenceSpentRef.current)
     pendingDonFallRef.current = null; setMarkOffer(null); setMarkSearing(null)
     // Transient state rebuilt fresh at the breather.
     peekFightRef.current = null; setPeekFight(null)
@@ -2793,6 +2806,10 @@ export default function GauntletGame(props: GauntletGameProps) {
   // ── The Black Market (Don's mid-run shop) ────────────────────────────────
   if (phase === 'merchant') {
     const MC = '#3fbf82'   // ghost-market green
+    // The Fence spends this dive's earned Fathoms (grows as you sink ships), not
+    // the banked purse; the tab you've run up is already subtracted.
+    const runFathoms = fathomsForDepth(rollStateRef.current.cleared, props.variant ?? 'davy')
+    const spendable = Math.max(0, runFathoms - fenceSpent)
     return (
       <>
         <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
@@ -2828,15 +2845,15 @@ export default function GauntletGame(props: GauntletGameProps) {
               crate reads against what you can actually pay. */}
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 13, padding: '0.42rem 0.95rem', borderRadius: 999, background: `${MC}18`, border: `1px solid ${MC}5c`, boxShadow: `0 0 16px ${MC}22` }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={MC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="5" r="2" /><path d="M12 7v13" /><path d="M5 12H3a9 9 0 0 0 18 0h-2" /><path d="M8 10h8" /></svg>
-            <span className="font-cinzel font-800" style={{ fontSize: '1.1rem', color: '#eafff5' }}>{fmt(fathomsNow)}</span>
-            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.56rem', color: `${MC}dd` }}>Fathoms to spend</span>
+            <span className="font-cinzel font-800" style={{ fontSize: '1.1rem', color: '#eafff5' }}>{fmt(spendable)}</span>
+            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.56rem', color: `${MC}dd` }}>Fathoms earned this dive</span>
           </div>
 
           <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
             {merchantStock.map((id, i) => {
               const item = MERCHANT_ITEMS[id]
               const sold = merchantSold.has(id)
-              const afford = fathomsNow >= item.price
+              const afford = spendable >= item.price
               const busy = merchantBuying === id
               const blocked = sold || !afford || !!merchantBuying
               return (
@@ -2868,7 +2885,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                     )}
                   </div>
                   {!sold && <p className="font-karla" style={{ fontSize: '0.8rem', color: 'rgba(220,236,228,0.84)', lineHeight: 1.42, marginTop: 6 }}>{item.blurb}</p>}
-                  {!sold && !afford && <p className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#e0888a', marginTop: 5 }}>{item.price - fathomsNow} more Fathoms needed</p>}
+                  {!sold && !afford && <p className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#e0888a', marginTop: 5 }}>Earn {item.price - spendable} more Fathoms this dive to afford it</p>}
                 </motion.button>
               )
             })}
@@ -2881,7 +2898,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             Leave the Market
           </motion.button>
           <p className="font-karla font-700 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.14em', color: '#6f8a7e', marginTop: 14 }}>
-            Fathoms banked · {fmt(fathomsNow)} · Hull {playerHP}/{hpMax}
+            Spent here comes off this dive&apos;s haul, not your bank · Hull {playerHP}/{hpMax}
           </p>
         </div>
         {exitModal}

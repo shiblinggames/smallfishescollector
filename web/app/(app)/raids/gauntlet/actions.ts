@@ -265,14 +265,17 @@ export async function wagerGauntletFathoms(stake: number): Promise<
 }
 
 // The Black Market (Don's Gauntlet mid-run shop): spend FATHOMS on one item.
-// Server-authoritative like the shrine wager — the price is looked up from the
-// canonical catalog (never trusted from the client), the balance is checked and
-// deducted here, and the item's game EFFECT is applied client-side in run state.
+// The Fence spends RUN-EARNED Fathoms, not the banked purse: the price is a tab
+// tracked client-side against this dive's earnings (fathomsForDepth of the depth
+// cleared so far) and settled against the earned-Fathoms grant at cash-out/death
+// (see cashOutGauntlet / resolveGauntletDeath). So this call no longer touches
+// gauntlet_fathoms — it only validates a run is open + the item is real (the
+// item's EFFECT is applied client-side in run state). Price is still looked up
+// from the canonical catalog, never trusted from the client.
 export async function buyMerchantItem(itemId: string): Promise<
-  { ok: true; fathoms: number } | { error: string }
+  { ok: true } | { error: string }
 > {
-  const price = merchantPrice(itemId)
-  if (price == null) return { error: 'Unknown item.' }
+  if (merchantPrice(itemId) == null) return { error: 'Unknown item.' }
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -281,18 +284,13 @@ export async function buyMerchantItem(itemId: string): Promise<
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_fathoms, gauntlet_run_open')
+    .select('gauntlet_run_open')
     .eq('id', user.id)
     .single()
   if (!profile) return { error: 'Profile not found.' }
   if (!profile.gauntlet_run_open) return { error: 'No run in progress.' }
 
-  const balance = (profile.gauntlet_fathoms as number | null) ?? 0
-  if (balance < price) return { error: 'Not enough Fathoms.' }
-
-  const newFathoms = balance - price
-  await admin.from('profiles').update({ gauntlet_fathoms: newFathoms }).eq('id', user.id)
-  return { ok: true, fathoms: newFathoms }
+  return { ok: true }
 }
 
 // Record confluences the player has discovered (first unlocked), so the Synergies
@@ -879,7 +877,12 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   // contest / leaderboard below count the combat depth.
   // Hardcore now banks Fathoms at the SAME rate as normal (HC_*_MULT = 1); its
   // only added payout is Blood Gems above.
-  const earnedFathoms    = Math.round(fathomsForDepth(rd, variant) * gauntletFathomsMult(upgrades) * (hc ? HC_FATHOMS_MULT : 1) * offerFathomMult(offerTaken))
+  // Settle the Fence tab: Fathoms spent at the Fence this run come out of this
+  // dive's earned Fathoms (run-scoped), clamped so a purchase can never turn the
+  // grant negative or dip into the banked purse.
+  const grossFathoms     = Math.round(fathomsForDepth(rd, variant) * gauntletFathomsMult(upgrades) * (hc ? HC_FATHOMS_MULT : 1) * offerFathomMult(offerTaken))
+  const fenceSpent       = Math.max(0, Math.round(runSnapshot?.fenceSpent ?? 0))
+  const earnedFathoms    = Math.max(0, grossFathoms - fenceSpent)
   const newFathoms       = ((profile.gauntlet_fathoms as number | null) ?? 0) + earnedFathoms
   const newDoubloons     = (profile.doubloons ?? 0) + bankedDoubloons
   const newGems          = (profile.gems ?? 0) + gems
@@ -1056,7 +1059,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
  *  NOT touch your deepest record, the run recap, the leaderboard, the contest,
  *  or any depth-gated unlock — those advance only when you SURVIVE and cash out
  *  the depth (see cashOutGauntlet). Dying deep is not a shortcut to anything. */
-export async function resolveGauntletDeath(rewardDepth: number, combatDepth: number = rewardDepth, _runSnapshot?: GauntletRunSnapshot): Promise<{ ok: boolean; deepest: number; earnedFathoms: number; newFathoms: number; hardcore: boolean; fallenCount: number }> {
+export async function resolveGauntletDeath(rewardDepth: number, combatDepth: number = rewardDepth, runSnapshot?: GauntletRunSnapshot): Promise<{ ok: boolean; deepest: number; earnedFathoms: number; newFathoms: number; hardcore: boolean; fallenCount: number }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { ok: false, deepest: 0, earnedFathoms: 0, newFathoms: 0, hardcore: false, fallenCount: 0 }
@@ -1078,10 +1081,14 @@ export async function resolveGauntletDeath(rewardDepth: number, combatDepth: num
   // reward descending, not surviving (Lucky Locker boosts the payout). Veteran's
   // Start's head start is excluded here, same as on cash-out.
   const rd = Math.max(0, Math.min(MAX_GAUNTLET_DEPTH, Math.floor(rewardDepth)))
-  const earnedFathoms = Math.round(fathomsForDepth(rd, isDon ? 'don' : 'davy') * gauntletFathomsMult(activeGauntletUpgrades(
+  const grossFathoms = Math.round(fathomsForDepth(rd, isDon ? 'don' : 'davy') * gauntletFathomsMult(activeGauntletUpgrades(
     ((isDon ? profile.dons_gauntlet_upgrades : profile.gauntlet_upgrades) as string[] | null) ?? [],
     ((isDon ? profile.dons_gauntlet_upgrades_off : profile.gauntlet_upgrades_off) as string[] | null) ?? [],
   )))
+  // Settle the Fence tab (run-scoped) — spent Fathoms come out of this dive's
+  // earnings, clamped so a purchase can never dip into the banked purse.
+  const fenceSpent = Math.max(0, Math.round(runSnapshot?.fenceSpent ?? 0))
+  const earnedFathoms = Math.max(0, grossFathoms - fenceSpent)
   const newFathoms = ((profile.gauntlet_fathoms as number | null) ?? 0) + earnedFathoms
 
   const cd = Math.max(rd, Math.min(MAX_GAUNTLET_DEPTH, Math.floor(combatDepth)))
