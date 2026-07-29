@@ -9669,15 +9669,11 @@ function ShipStatusAura({ burning, frozen, paused }: { burning: boolean; frozen:
       )}
 
       {frozen && (
-        <div style={{ position: 'absolute', inset: '-6%', zIndex: 3, pointerEvents: 'none', overflow: 'hidden', borderRadius: '46%' }}>
-          {/* The encasing shell — SOLID and static. A hard frosted rim is what
-              sells "encased in ice" where a soft glow never could. */}
-          <div aria-hidden style={{
-            position: 'absolute', inset: 0, borderRadius: '46%',
-            background: 'radial-gradient(ellipse at 50% 42%, rgba(186,230,253,0.34) 0%, rgba(125,211,252,0.2) 52%, rgba(56,189,248,0.12) 74%, transparent 88%)',
-            border: '1.5px solid rgba(191,238,255,0.55)',
-            boxShadow: 'inset 0 0 22px rgba(186,230,253,0.42), 0 0 16px rgba(125,211,252,0.34)',
-          }} />
+        <div style={{ position: 'absolute', inset: '-6%', zIndex: 3, pointerEvents: 'none', overflow: 'hidden' }}>
+          {/* NO encasing shell. Ice reads better as the CRYSTALS alone: a
+              filled bubble over the hull hid the ship and looked like a
+              coloured blob, which is the thing the fire/ice pass set out to
+              get away from. The shards do the work. */}
           {/* Crystal facets — angular shards over the hull. Angular geometry is
               the read; a blob has no crystal in it. */}
           {[
