@@ -82,6 +82,18 @@ export interface BossPhase {
   /** Optional telegraphed mechanic check that ARMS the instant this phase
    *  begins (answer it with the right crew play or eat the consequence). */
   check?: BossMechanicCheck
+  /** WHICH MINIGAME YOU FIGHT THIS PHASE ON.
+   *
+   *  'aim'  (default) = the raid aim bar, every other fight in the game.
+   *  'reel' = the FISHING dial. Your shot is judged by the catch dial instead:
+   *           land the needle in the gold to crit, green to hit, miss and the
+   *           shot is a dud. Only the Finn finale uses it, and only on some of
+   *           his phases, so the fight ALTERNATES between the two halves of the
+   *           game. He is an angler; the last chapter makes you out-fish him.
+   *
+   *  Reading this in RaidCombat swaps the aiming widget for the dial for the
+   *  duration of the phase. Everything else about the turn is unchanged. */
+  phaseMode?: 'aim' | 'reel'
   /** AEGIS (Sal Brackwater, phase 3): the phase opens behind a wall that drinks
    *  EVERY shot whole (zero damage) until it breaks. A player Mega shatters
    *  it instantly (the intended discovery. Hints stay oblique); without one
@@ -1995,4 +2007,203 @@ export function raidKillXpTotal(config: BossRaidConfig): number {
 /** The full-clear bonus Nav XP (25% of the run's total kill XP). */
 export function raidCompletionBonusXp(config: BossRaidConfig): number {
   return Math.round(raidKillXpTotal(config) * RAID_COMPLETION_XP_BONUS)
+}
+
+// ── THE SUNKEN HAND — the true final boss ─────────────────────────────────────
+// Finn, wearing the power of all six Ancient Deep giants.
+//
+// THE CONVERGENCE: this is the only fight in the game that is played on BOTH
+// minigames. Finn's phases alternate `phaseMode` between 'aim' (the raid bar
+// every other boss is fought on) and 'reel' (the fishing catch dial). He spent
+// the whole campaign using the player as his angler; the last fight makes the
+// player out-fish him. Nothing else in the game reads the dial in combat.
+//
+// THE SEQUENCE is the six husks he drained in The Hand That Sharpens It. They
+// came down on the water "grey and light and wrong", and he walks them at you
+// one at a time. Each keeps the shape of the giant it was and none of its mind,
+// so they are big, slow and awful rather than clever. Art is placeholder (the
+// fish catalogue images); bespoke husk art is pending.
+export const THE_SUNKEN_HAND: BossRaidConfig = {
+  raidId: 'the_sunken_hand',
+  enemyAccuracy: 40,
+  raidTitle: 'The Sunken Hand',
+  bossDefeatedText: 'Finn Defeated',
+  atmosphere: 'vault',
+  zone: 'ancient_deep',
+  enemies: {
+    husk_megalodon: {
+      // The first husk. Pure jaw, no tricks: it teaches that these things are
+      // hollow and still hit like the sea itself.
+      id: 'husk_megalodon', name: 'The Hollow Jaw', hpBase: 420, minDmg: 26, maxDmg: 42,
+      shipSpeed: 7, actionMs: 3400,
+      magazineSize: 4, shieldPct: 0.12, chargeBiteChance: 0.30,
+      ultimate: { name: 'Nothing Left In It', mult: 2.5, line: 'The jaw closes on nothing at all, and the water it moves still breaks over your deck.' },
+      pattern: ['reload', 'fire', 'reload', 'reload', 'ultimate', 'dodge', 'fire', 'reload'],
+      critChance: 0.14,
+      image: '/fish/megalodon.png',
+      portrait: '/fish/megalodon.png',
+    },
+    husk_dunkleosteus: {
+      // The armour husk. Plated to the eye, so the lesson is patience.
+      id: 'husk_dunkleosteus', name: 'The Plated Husk', hpBase: 460, minDmg: 24, maxDmg: 38,
+      shipSpeed: 6, actionMs: 3500,
+      magazineSize: 4, shieldPct: 0.34, chargeBiteChance: 0.30,
+      special: { name: 'Old Armour', aimAttack: 'hardened', aimPasses: 2, line: 'Plate that outlived its own bones grinds shut across every lane you want.' },
+      pattern: ['special', 'reload', 'fire', 'reload', 'dodge', 'fire', 'reload', 'fire'],
+      critChance: 0.12,
+      image: '/fish/dunkleosteus.png',
+      portrait: '/fish/dunkleosteus.png',
+    },
+    husk_mosasaurus: {
+      // The fast one. Punishes a slow lock.
+      id: 'husk_mosasaurus', name: 'The Cold Coil', hpBase: 430, minDmg: 27, maxDmg: 44,
+      shipSpeed: 12, actionMs: 3100,
+      magazineSize: 4, shieldPct: 0.14, chargeBiteChance: 0.38,
+      special: { name: 'Wake of the Drowned', aimAttack: 'squall', aimPasses: 2, line: 'It runs the length of your hull without surfacing, and the whole sea leans after it.' },
+      ultimate: { name: 'Coil and Close', mult: 2.6, line: 'It comes back down the line it left, faster than it went out.' },
+      pattern: ['fire', 'special', 'reload', 'reload', 'ultimate', 'fire', 'dodge', 'reload'],
+      critChance: 0.16,
+      image: '/fish/mosasaurus.png',
+      portrait: '/fish/mosasaurus.png',
+    },
+    husk_plesiosaurus: {
+      // The reach. Decoys: a long neck out of the dark from the wrong place.
+      id: 'husk_plesiosaurus', name: 'The Long Reach', hpBase: 440, minDmg: 25, maxDmg: 40,
+      shipSpeed: 9, actionMs: 3400,
+      magazineSize: 4, shieldPct: 0.16, chargeBiteChance: 0.32,
+      special: { name: 'From the Wrong Water', aimAttack: 'decoys', aimPasses: 2, line: 'It surfaces four times in four places, and only one of them has anything behind it.' },
+      pattern: ['special', 'fire', 'reload', 'dodge', 'reload', 'fire', 'reload', 'fire'],
+      critChance: 0.13,
+      image: '/fish/plesiosaurus.png',
+      portrait: '/fish/plesiosaurus.png',
+    },
+    husk_basilosaurus: {
+      // The endurance husk. It simply will not stop coming.
+      id: 'husk_basilosaurus', name: 'The Long Patience', hpBase: 520, minDmg: 26, maxDmg: 41,
+      shipSpeed: 7, actionMs: 3600,
+      magazineSize: 5, shieldPct: 0.22, chargeBiteChance: 0.34,
+      special: { name: 'Still Going', status: 'weaken', magnitude: 0.2, turns: 2, target: 'player', line: 'You put a broadside through it and it keeps its heading, and something in your crew goes quiet.' },
+      ultimate: { name: 'The Whole Length', mult: 2.7, line: 'It rolls its entire body through your water like a wall arriving.' },
+      pattern: ['reload', 'fire', 'special', 'reload', 'reload', 'ultimate', 'fire', 'dodge'],
+      critChance: 0.13,
+      image: '/fish/basilosaurus.png',
+      portrait: '/fish/basilosaurus.png',
+    },
+    husk_shastasaurus: {
+      // The biggest thing in the water, and the last door before him.
+      id: 'husk_shastasaurus', name: 'The Weight', hpBase: 600, minDmg: 29, maxDmg: 47,
+      shipSpeed: 6, actionMs: 3700,
+      magazineSize: 5, shieldPct: 0.30, chargeBiteChance: 0.36, startCharges: 1,
+      special: { name: 'Displacement', aimAttack: 'squall', aimPasses: 3, line: 'It does not attack. It simply occupies the water, and your deck cannot find level again.' },
+      ultimate: { name: 'All That Tonnage', mult: 2.9, line: 'The largest thing the sea ever grew falls on your bow.' },
+      pattern: ['special', 'reload', 'reload', 'ultimate', 'fire', 'dodge', 'reload', 'fire'],
+      critChance: 0.14,
+      image: '/fish/shastasaurus.png',
+      portrait: '/fish/shastasaurus.png',
+    },
+    finn: {
+      // FINN. The fight alternates minigames by phase (see `phaseMode`):
+      //   opener  AIM  - he fights you like a captain, because he is showing off
+      //   phase 1 REEL - he stops pretending and fishes you
+      //   phase 2 AIM  - the stolen power surfaces and swings wild
+      //   phase 3 REEL - the deep runs him, and the dial goes cruel
+      //   phase 4 AIM  - what is left, holding on with both hands
+      // Every phase arms a check, like the don, but the ANSWER SETS differ so a
+      // single ability cannot clear the fight.
+      id: 'finn', name: 'Finn', hpBase: 1050, minDmg: 34, maxDmg: 55,
+      shipSpeed: 11, actionMs: 4000,
+      magazineSize: 4, shieldPct: 0.28, chargeBiteChance: 0.38, startCharges: 2,
+      special: { name: 'Set the Hook', aimAttack: 'hardened', aimPasses: 2, line: 'He sets it the way he has set ten thousand of them, without looking, and your lane closes to a thread.' },
+      ultimate: { name: 'The Long Line', mult: 3.0, line: 'All that patience, paid out at once.' },
+      pattern: ['special', 'fire', 'reload', 'reload', 'ultimate', 'dodge', 'fire', 'reload'],
+      critChance: 0.17,
+      image: '/finn_portrait.png',
+      portrait: '/finn_portrait.png',
+      // He opens by doing to you exactly what he did to the giants.
+      openingCheck: {
+        id: 'the_first_cast', name: 'The First Cast', chargeTurns: 2,
+        telegraph: 'He puts a line in the water without hurrying, and the water goes tight all the way to your keel.',
+        hint: 'He is fishing YOU. Do not stand in it. Brace the hull, put a shield up, or foul his line before it sets.',
+        responses: ['brace', 'shield', 'snare'],
+        counteredLine: 'Your crew reads the tension and the hull comes off the hook before it sets.',
+        failLine: 'The line goes taut, and for a moment your whole ship is something being landed.',
+        consequence: { kind: 'damagePctMaxHp', value: 0.5 },
+      },
+      phases: [
+        // ── PHASE 1 — REEL. He stops fighting like a captain. ────────────────
+        { revivePct: 0.80, damageMult: 1.15, badge: 'The Angler', phaseMode: 'reel',
+          pattern: ['special', 'fire', 'reload', 'reload', 'ultimate', 'fire', 'dodge', 'reload'],
+          dialogueLine: 'You are doing it my way now. Guns and shouting. Let us do it YOUR way, captain, and see who is better at it.',
+          check: {
+            id: 'the_drag', name: 'The Drag', chargeTurns: 2,
+            telegraph: 'He leans back, and every line aboard your ship starts paying out at once.',
+            hint: 'He is playing you the way you play a fish: let you run, then take it all back. Foul the line to cut the tension, or hold the deck with a brace.',
+            responses: ['snare', 'brace'],
+            counteredLine: 'Your crew cuts the tension before he can take the slack back.',
+            failLine: 'He takes every inch of it back at once, and your deck goes out from under you.',
+            consequence: { kind: 'status', status: 'slowed', magnitude: 10, turns: 3, dmgPct: 0.3 },
+          } },
+        // ── PHASE 2 — AIM. The stolen power surfaces on its own. ─────────────
+        { revivePct: 0.68, damageMult: 1.3, badge: 'The Borrowed Jaw', phaseMode: 'aim',
+          pattern: ['fire', 'special', 'reload', 'ultimate', 'reload', 'fire', 'volley', 'dodge'],
+          dialogueLine: 'Ah. There it is. It does that. Six of them in here, captain, and not one of them was asked.',
+          check: {
+            id: 'the_borrowed_jaw', name: 'The Borrowed Jaw', chargeTurns: 2,
+            telegraph: 'Something that is not Finn opens underneath the boat, far too wide, and he looks almost embarrassed about it.',
+            hint: 'That is the megalodon, wearing him. You cannot out-shoot a jaw. Get the hull out of the water it wants, or armour it.',
+            responses: ['snare', 'brace', 'shield'],
+            counteredLine: 'You are not where it closes, and it takes a mouthful of empty sea.',
+            failLine: 'It closes on the hull, and the whole ship rings like a struck bell.',
+            consequence: { kind: 'damagePctMaxHp', value: 0.6 },
+          } },
+        // ── PHASE 3 — REEL. The deep is steering now. ────────────────────────
+        { revivePct: 0.55, damageMult: 1.45, badge: 'The Deep Has Him', phaseMode: 'reel',
+          pattern: ['special', 'fire', 'ultimate', 'reload', 'volley', 'fire', 'reload', 'special'],
+          dialogueLine: 'It is louder than I thought it would be. That is all. That is the only thing I did not plan for.',
+          check: {
+            id: 'the_sounding_line', name: 'The Sounding Line', chargeTurns: 2,
+            telegraph: 'The water under you stops behaving like water, and starts behaving like something holding its breath.',
+            hint: 'The deep itself is answering him now. Nothing brute will do. Foul whatever it is reaching through, or mend what it is already taking.',
+            responses: ['snare', 'heal'],
+            counteredLine: 'Your crew breaks whatever he was about to be given, and the water lets go.',
+            failLine: 'The sea gives him something, and it comes out of your hull to do it.',
+            consequence: { kind: 'status', status: 'feeble', magnitude: 0.35, turns: 4, dmgPct: 0.35 },
+          } },
+        // ── PHASE 4 — AIM. What is left of him, holding on. ──────────────────
+        { revivePct: 0.4, damageMult: 1.6, badge: 'One Last Ride', phaseMode: 'aim',
+          pattern: ['ultimate', 'fire', 'volley', 'special', 'reload', 'fire', 'volley', 'ultimate'],
+          dialogueLine: 'Do not you DARE land me. Not you. I taught you every water you know.',
+          check: {
+            id: 'the_last_cast', name: 'The Last Cast', chargeTurns: 2,
+            telegraph: 'He gathers all of it, every giant and every year, into one throw at your waterline.',
+            hint: 'This is everything he has and everything he took. Answer it with everything you have: a wall, a big mend, or blow it apart before it lands.',
+            responses: ['shield', 'heal', 'burst', 'brace'],
+            counteredLine: 'Six giants and a lifetime of wanting, and your crew stands it off together.',
+            failLine: 'Everything he ever took arrives at once.',
+            consequence: { kind: 'damagePctMaxHp', value: 0.85 },
+          } },
+      ],
+    },
+  },
+  sequence: ['husk_megalodon', 'husk_dunkleosteus', 'husk_mosasaurus', 'husk_plesiosaurus', 'husk_basilosaurus', 'husk_shastasaurus'],
+  bossId: 'finn',
+  loot: [],
+  killRewards: {
+    husk_megalodon:    { gold: 900,  xp: 900 },
+    husk_dunkleosteus: { gold: 950,  xp: 950 },
+    husk_mosasaurus:   { gold: 1000, xp: 1000 },
+    husk_plesiosaurus: { gold: 1050, xp: 1050 },
+    husk_basilosaurus: { gold: 1150, xp: 1150 },
+    husk_shastasaurus: { gold: 1300, xp: 1300 },
+    finn:              { gold: 4000, xp: 5000 },
+  },
+  preFightDialogue: [
+    { speaker: 'narrator', text: 'The morning never comes back. Whatever he opened stays open, and the water you sail into is the colour of the inside of something.' },
+    { speaker: 'narrator', text: 'Six grey shapes are still turning slow circles out there. They start moving the moment your keel finds the dark.' },
+    { speaker: 'boss', text: 'You came. Of course you came. I would have been so disappointed.', pause: 500 },
+    { speaker: 'crew', ...CREW_SPEAKER.doby, text: 'Captain. Those are the six you landed. He is walking them at us.' },
+    { speaker: 'boss', text: 'They are not much on their own. Nothing is, without me. But you will have to come through every one of them to reach me, and I want you to look at each of them on the way.' },
+    { speaker: 'crew', ...CREW_SPEAKER.mira, text: 'He wants us tired. He wants us to see what he did with them first.' },
+    { speaker: 'boss', text: 'I want you to see what you brought me, captain. Then I want the rest of it. Guns out, or rods. Whichever you think will save you.', pause: 600, fx: 'shake' },
+  ],
 }
