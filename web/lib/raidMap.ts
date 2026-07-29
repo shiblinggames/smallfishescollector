@@ -1132,6 +1132,11 @@ export const RAID_MAP: RaidNode[] = [
     scene: [
       { text: "Krust's consignment is still smoking when the answer comes back. Not a fleet, not a bounty. One scrap of order-paper, and the cold understanding that somebody well above the freight desk has finally set down the ledgers to look at you." },
       { ...GUIDE.mako, text: "There it is. You wanted the Finndicate to notice you. It noticed." },
+      // Seeds Finn's "every door you kicked down, I left unlocked". Kat raises it,
+      // nobody picks it up, and the scene moves on: luck on first read, a
+      // confession on the second.
+      { ...GUIDE.kat, text: "Does it strike anyone else that Krust's cabin was wide open? Charts on the table, the whole network still pinned out. That's twice now a lock nobody turned." },
+      { ...GUIDE.mako, text: "That's called being good at this, Kat. Enjoy it." },
       { ...GUIDE.kat, text: "There's a difference between notice and this. Krust was a name. Whatever sets its books down to answer a name is the thing that stands over one." },
       { ...GUIDE.doby, text: "Then read it out. What does a thing that size want badly enough to put in writing?" },
       { speaker: 'A Finndicate Order', text: "Danger-zone consignment. Priority freight. It will not open for him. Find the hands that it will.", pause: 500 },
@@ -1338,7 +1343,7 @@ export const RAID_MAP: RaidNode[] = [
       { ...GUIDE.doby, text: "Because he was never the place, small fry. Only the finger pointing at it." },
       { ...GUIDE.kat, text: "The crews out here have a name for that water. I've watched grown captains find something else to look at rather than give it to me." },
       { text: "The Gullet. Where the sea swallows everything down.", pause: 900, fx: 'shake' },
-      { ...GUIDE.dole, text: "The Gullet. Everyone says it like a curse. It's a current with excellent marketing." },
+      { ...GUIDE.dole, text: "The Gullet. Everyone says it like a curse. It's a current with a very good reputation and very bad manners." },
       { ...GUIDE.dole, text: "Three charts, one point of water, and no two agree on the depth. Warnings are cheaper than that. Somebody wants this water unvisited." },
       { ...GUIDE.doby, text: "Whatever the Finndicate takes off the weak, it all ends up down that throat. And now so do we." },
       { text: "Dole has already inked a heading you had not thought to ask for.", pause: 400 },
@@ -1588,6 +1593,10 @@ export const RAID_MAP: RaidNode[] = [
     scene: [
       { text: "Tollmaster Spet weighed every crate the Gullet swallowed and kept not a coin of it. His manifests all point the same way, past the throat, to a harbor no honest chart will name." },
       { ...GUIDE.dole, text: "A market. A whole drowned market, where the sea's plunder gets counted, shelved, and sold back to the next captain fool enough to come up for it. They don't spend what they take. They inventory it." },
+      // The one bridge between Ch III's resale framing and the finale's "the
+      // whole syndicate was funding a hunt". Reads as a bookkeeper's grumble
+      // about overheads on first pass; on re-read it is the tackle-box budget.
+      { ...GUIDE.dole, text: "Though the sums do not sit right. A market that size takes in a great deal more than it ever sells, and the difference goes back out again on deep-water headings nobody bothers to log. Charts, sounding line, gear for water no crew should want. Somebody down here is outfitting for something." },
       { ...GUIDE.doby, text: "I swam past this harbor once, long ago, and swore I never would again. A market that sells the drowned back to the living. Nothing good keeps its books this deep." },
       { text: "A broad shadow settles over the chart. Old scales, older eyes. A captain the sea was said to have kept, years back.", pause: 500 },
       { ...GUIDE.laz, text: "The Coffers. I know this harbor. I was counted and shelved here once, same as the plunder." },
