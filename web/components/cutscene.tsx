@@ -240,6 +240,7 @@ export function InsertShot({ kind, wax, accent, reduced }: { kind: string; wax?:
   if (kind === 'finn-silhouette') return <FinnSilhouetteInsert accent={accent} reduced={reduced} />
   if (kind === 'finn-unmasked') return <FinnUnmaskedInsert accent={accent} reduced={reduced} />
   if (kind === 'finn-sinister') return <FinnSinisterInsert accent={accent} reduced={reduced} />
+  if (kind === 'ancient-harvest') return <AncientHarvestInsert accent={accent} reduced={reduced} />
   return null
 }
 
@@ -306,6 +307,46 @@ function FinnUnmaskedInsert({ accent, reduced }: { accent: string; reduced?: boo
           transform: FINN_AVATAR.mirrored ? 'scaleX(-1)' : 'none' }} />
       <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, bottom: '9%', height: 2,
         background: `linear-gradient(90deg, transparent, ${accent}66, transparent)` }} />
+    </div>
+  )
+}
+
+/** THE HARVEST. The six Ancient Deep giants the player spent the whole fishing
+ *  arc landing, arrayed and then drained: each one lights, then goes grey and
+ *  hollow as whatever was in it is pulled to the middle. This is the engine of
+ *  the transformation, so it plays BEFORE the sinister form and hands off to it.
+ *  Uses the existing catalogue art, no new assets. */
+const ANCIENT_GIANTS = [
+  '/fish/megalodon.png', '/fish/plesiosaurus.png', '/fish/dunkleosteus.png',
+  '/fish/mosasaurus.png', '/fish/basilosaurus.png', '/fish/shastasaurus.png',
+]
+
+function AncientHarvestInsert({ accent, reduced }: { accent: string; reduced?: boolean }) {
+  return (
+    <div style={{ position: 'relative', width: 'min(78vw, 320px)', aspectRatio: '1 / 1', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', alignContent: 'center', gap: 6, padding: 8 }}>
+      {/* the pull at the centre: everything in them goes here */}
+      <motion.div aria-hidden
+        initial={{ opacity: 0, scale: 0.2 }}
+        animate={{ opacity: reduced ? 0.9 : [0, 0.4, 1], scale: reduced ? 1 : [0.2, 0.7, 1.25] }}
+        transition={{ duration: reduced ? 0.6 : 4.4, ease: 'easeIn' }}
+        style={{ position: 'absolute', left: '50%', top: '50%', width: '62%', aspectRatio: '1', transform: 'translate(-50%, -50%)', borderRadius: '50%', zIndex: 2, pointerEvents: 'none',
+          background: `radial-gradient(circle at 50% 50%, #ffffff 0%, ${accent}cc 26%, ${accent}44 52%, transparent 74%)`,
+          filter: 'blur(5px)' }} />
+      {ANCIENT_GIANTS.map((src, n) => (
+        <motion.div key={src} style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          initial={{ opacity: 0.95 }}
+          // each giant lights in turn, then hollows out: colour drains, the
+          // shape stays. They are left on the water like empty shells.
+          animate={reduced
+            ? { opacity: 0.32, filter: 'grayscale(1) brightness(0.4)' }
+            : { opacity: [0.95, 1, 0.34], filter: ['grayscale(0) brightness(1)', `grayscale(0.2) brightness(1.5) drop-shadow(0 0 14px ${accent})`, 'grayscale(1) brightness(0.32)'] }}
+          transition={{ duration: reduced ? 0.5 : 3.4, delay: reduced ? 0 : 0.28 * n, times: reduced ? undefined : [0, 0.34, 1], ease: 'easeInOut' }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={src} alt="" aria-hidden decoding="async"
+            style={{ width: '100%', height: 'auto', objectFit: 'contain' }} />
+        </motion.div>
+      ))}
     </div>
   )
 }

@@ -376,6 +376,7 @@ export type SceneInsert =
   | { kind: 'sealed-letter'; wax?: string } // a wax-sealed letter (wax = the initials pressed in it)
   | { kind: 'finn-silhouette' }          // a figure rising from the true deep. Finn's shape, blacked to a silhouette (the "not the final boss" sting; reuses his CharacterAvatar, no art)
   | { kind: 'finn-unmasked' }            // THE reveal: the same shape and stance, finally lit. The black drains out of him (no new art; pairs with finn-silhouette)
+  | { kind: 'ancient-harvest' }          // the six Ancient Deep giants arrayed and DRAINED, their power pulled to the middle. The engine of Finn's transformation (existing catalogue art)
   | { kind: 'finn-sinister' }            // THE turn: the dock-hand costume comes off and his true form stands up. Uses bespoke art (FINN_SINISTER_ART); falls back to his darkened sprite until that art lands
   | { kind: 'dial-demo' }                // a live catch-dial demo (needle landing green→gold). Rendered by a caller's renderInsert override (the fishing intro), not the shared InsertShot.
 
@@ -2626,20 +2627,29 @@ export const RAID_MAP: RaidNode[] = [
       { text: 'The line in his hands has been out this whole time. It goes down into water that has no bottom on any chart you own, and it is drawn tight.', pause: 900, closeup: true },
       { ...GUIDE.kat, text: "Captain. Whatever he's about to do next, we're not letting him." },
       { ...GUIDE.finn, text: "Letting me." },
-      // THE TRANSFORMATION. The dock-hand shape was the costume, not the truth.
-      { text: 'He stands, and the small boat does not rock, because whatever is standing up in it stopped weighing what a man weighs a long time ago.', pause: 800 },
-      { text: 'The good light bends away from him. The flat water goes dark under the hull, and keeps going dark, out and out, until the ordinary morning you sailed into is gone and there is only the thing at the middle of it.', pause: 900, fx: 'flash', insert: { kind: 'finn-sinister' }, closeup: true },
-      { text: 'Forty years of a fisherman was the costume. This is what has been wearing it.', pause: 1000, closeup: true },
+      { ...GUIDE.finn, text: "You are carrying them, captain. You have carried them everywhere since the day you landed the last one. Did you never once wonder why they never rotted." },
+      // THE HARVEST. He does not ask. The six giants the player spent the whole
+      // fishing arc landing are taken and drained, and THAT is what makes him.
+      { text: 'He lifts one hand off the gunwale, and the six of them come up out of your hold on their own.', pause: 800 },
+      { text: 'Megalodon. Plesiosaurus. Dunkleosteus. Mosasaurus. Basilosaurus. Shastasaurus. Every impossible thing you ever pulled up out of the black, hanging in the air over flat water in the good morning light, exactly as heavy as they were the day they broke your line.', pause: 900, insert: { kind: 'ancient-harvest' } },
+      { text: 'Then, one at a time, in the order you caught them, they go out.', pause: 1000, closeup: true },
+      { text: 'Not devoured. Emptied. Whatever was in them, the old thing that made a fish into a giant and a giant into a legend, is drawn out in six long threads and it all goes to the same place.', pause: 900, fx: 'shake' },
+      { ...GUIDE.doby, text: "No. NO. Four hundred years those slept and you are DRINKING them." },
+      { text: 'The husks come down on the water like driftwood, grey and light and wrong, and drift apart on the swell. Six of the oldest things the sea ever made, and now they are litter.', pause: 800 },
+      // THE TRANSFORMATION, now CAUSED by the harvest.
+      { text: 'And Finn stands, and the small boat does not rock, because whatever is standing up in it stopped weighing what a man weighs about four seconds ago.', pause: 800 },
+      { text: 'The good light bends away from him. The flat water goes dark under the hull and keeps going dark, out and out, until the ordinary morning you sailed into is gone and there is only the thing at the middle of it.', pause: 900, fx: 'flash', insert: { kind: 'finn-sinister' }, closeup: true },
+      { text: 'Forty years of a fisherman was the costume. This is what has been wearing it, and now it has eaten six giants to put its own face on.', pause: 1000, closeup: true },
       { ...GUIDE.mira, text: "I hunted the worst people in this ocean. Not one of them was ever a *what*." },
       { ...GUIDE.dole, text: "Every ledger I balanced for you led here. Nothing in this sea ever added up except him, and now I see why. He was never in the arithmetic." },
       { ...GUIDE.mako, text: "Biggest bounty in the sea. Not the don after all." },
-      { ...GUIDE.laz, text: "I have been drowned, captain. I know what the deep sounds like when it wants something. It sounds like him." },
-      { ...GUIDE.doby, text: "Four hundred years in this water and I have never seen that shape. If he opens the deep, there is nobody left who closes it." },
-      { ...GUIDE.finn, text: "Six keys on your wall and the door standing open behind them. Step aside." },
+      { ...GUIDE.laz, text: "I have been drowned, captain. I know what the deep sounds like when it wants something. It is using his mouth." },
+      { ...GUIDE.doby, text: "Four hundred years in this water and I have never seen that shape. There is nobody left who closes this." },
+      { ...GUIDE.finn, text: "Six keys, and the door is open, and I am already through it. You did that. Remember that you did that." },
       { text: 'And there it is. The whole sea, four chapters of it, one long line paid out slow and patient with you on the end of it, and the tug you have felt since the very first cast finally coming home.', pause: 700 },
-      { ...GUIDE.finn, text: "No. You will not. You have never once done the sensible thing, and I built ten years on that." },
+      { ...GUIDE.finn, text: "You will come after me. You have never once done the sensible thing, and I built ten years on that." },
       { ...GUIDE.finn, text: "One last ride, then. You and me and the deep, the way it was always going to end. You will be on time. You always are." },
-      { text: 'The dark holds where the morning was. Nothing sinks and nothing rises, and that is somehow worse than the don going down with his whole drowned court.', pause: 600 },
+      { text: 'The dark holds where the morning was. Six grey shapes turn slow circles on the water, and that is somehow worse than the don going down with his whole drowned court.', pause: 600 },
       { text: 'You came out here for the last name on the board. You have had it since the beginning. He was on the dock the day you started.', pause: 700 },
     ],
     detail: {
