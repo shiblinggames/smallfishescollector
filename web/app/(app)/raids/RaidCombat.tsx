@@ -9772,12 +9772,63 @@ function AbilityCastFx({ label, name, color, image, emoji }: { label: string; na
 }
 
 // SVG glyphs for the circular action buttons (stroke = currentColor).
+// ── Action icons ─────────────────────────────────────────────────────────────
+// Hand-drawn in the game's nautical idiom rather than generic UI glyphs. The
+// old set was off-message in two places that mattered: FIRE was a flame (the
+// verb "discharge a cannon" drawn as the noun "combustion" — in a game whose
+// Ablaze status is literally rendered with flames), and RELOAD was the
+// universal browser-refresh arrow. These stay inline SVG on `currentColor` so
+// the per-state tinting (enabled / disabled / highlighted) still works, and
+// they're drawn chunky so they hold up at the 22px they render at.
 const ACTION_ICON: Record<'dodge' | 'special' | 'reload' | 'fire' | 'volley', React.ReactNode> = {
-  dodge: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l7 3v6c0 4.2-2.9 7.4-7 9-4.1-1.6-7-4.8-7-9V6l7-3z"/><path d="M9.5 12l1.8 1.8L15 9.8"/></svg>,
-  special: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l2.1 5.5L20 10l-5 3.6L16.5 20 12 16.4 7.5 20 9 13.6 4 10l5.9-1.5z"/></svg>,
-  reload: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>,
-  fire: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3c1 3-1.5 4.5-1.5 7A4.5 4.5 0 0 0 17 13c.4 3-1.6 8-5 8a5 5 0 0 1-5-5c0-3.6 3.5-5 5-13z"/></svg>,
-  volley: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="7" cy="9" r="2.4"/><circle cx="16" cy="7" r="2.4"/><circle cx="13" cy="16" r="2.4"/></svg>,
+  // Swerve — a hull cutting a serpentine wake away from the shot.
+  dodge: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3.5 19.5c3.5 0 4-6.5 8-6.5s4.5-5.5 8-5.5" />
+      <path d="M16.6 4.4 20 7.4l-3.2 2.8" />
+      <path d="M3 15.2c2 0 2.6-2.6 4.4-3.4" opacity="0.55" />
+    </svg>
+  ),
+  // Bosun's whistle — you pipe the crew to action; this menu IS the crew.
+  special: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2.8 12.2h7.6" />
+      <path d="M2.8 10v4.4" />
+      <circle cx="13.2" cy="14" r="3.1" />
+      <path d="M15.9 6.6a5.4 5.4 0 0 1 2.4 3.1" opacity="0.75" />
+      <path d="M17.6 3.6a8.8 8.8 0 0 1 3.6 4.9" opacity="0.5" />
+    </svg>
+  ),
+  // Shot pyramid — a stack of cannonballs on the deck. Unmistakably "ammo".
+  reload: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="7.4" r="2.6" />
+      <circle cx="7.6" cy="14.2" r="2.6" />
+      <circle cx="16.4" cy="14.2" r="2.6" />
+      <path d="M3.6 19.4h16.8" />
+    </svg>
+  ),
+  // Cannon firing — barrel, carriage wheel, muzzle blast. The ACT, not flame.
+  fire: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3.2 14.6h11.2" strokeWidth="3.4" />
+      <circle cx="6" cy="18.6" r="2.1" />
+      <path d="M17.4 14.6h3.4" />
+      <path d="M16.9 11.6l2.9-1.9" />
+      <path d="M16.9 17.6l2.9 1.9" />
+    </svg>
+  ),
+  // Volley — three shot in flight, speed trails behind them.
+  volley: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="17.2" cy="6.2" r="2.2" />
+      <circle cx="17.2" cy="12" r="2.2" />
+      <circle cx="17.2" cy="17.8" r="2.2" />
+      <path d="M3.4 6.2h9.4" />
+      <path d="M6.2 12h6.6" />
+      <path d="M3.4 17.8h9.4" />
+    </svg>
+  ),
 }
 
 function CircleBtn({ icon, label, color, enabled, highlighted, onClick, readyPulse }: {
