@@ -380,6 +380,7 @@ export type SceneInsert =
   | { kind: 'finn-silhouette' }          // a figure rising from the true deep. Finn's shape, blacked to a silhouette (the "not the final boss" sting; reuses his CharacterAvatar, no art)
   | { kind: 'finn-unmasked' }            // THE reveal: the same shape and stance, finally lit. The black drains out of him (no new art; pairs with finn-silhouette)
   | { kind: 'ancient-harvest' }          // the six Ancient Deep giants arrayed and DRAINED, their power pulled to the middle. The engine of Finn's transformation (existing catalogue art)
+  | { kind: 'finn-becoming' }            // the WARP: he shudders, drains to a silhouette, swells past his old size, cracks open with light and blows out to white. Hands off to finn-sinister
   | { kind: 'finn-sinister' }            // THE turn: the dock-hand costume comes off and his true form stands up. Uses bespoke art (FINN_SINISTER_ART); falls back to his darkened sprite until that art lands
   | { kind: 'dial-demo' }                // a live catch-dial demo (needle landing green→gold). Rendered by a caller's renderInsert override (the fishing intro), not the shared InsertShot.
 
@@ -2661,18 +2662,34 @@ export const RAID_MAP: RaidNode[] = [
       { ...GUIDE.kat, text: "Captain. Whatever he wants, he is not getting it." },
       { ...GUIDE.finn, text: "You're carrying them right now. Did you never wonder why they never rotted?" },
       { text: 'He lifts one hand, and the six of them come up out of your hold on their own.', pause: 800, insert: { kind: 'ancient-harvest' } },
+      { text: 'They hang in a ring around him, turning slow, the way they must have turned down in the dark.', pause: 850 },
       { text: 'Then, one at a time, in the order you caught them, the power goes out of them and into him.', pause: 900, fx: 'shake' },
       { ...GUIDE.doby, text: "He's ABSORBING them. Those slept down there before there were charts to leave them off, and he is taking every last thing they had." },
+      { text: 'The sea flattens. Every wave for a league around lies down at once, like the water is holding still to let it happen.', pause: 800, fx: 'shake' },
+      { ...GUIDE.mako, text: "The hold. Captain, the hold is EMPTY." },
       { text: 'What comes down on the water afterward is only the shape. Grey and light and wrong, like driftwood.', pause: 700 },
       { ...GUIDE.finn, text: "Finally." },
       { ...GUIDE.finn, text: "A lifetime of waiting. *Finally.* The power I have been longing for." },
-      { text: 'The light bends away from him. The morning goes dark from him outward.', pause: 900, fx: 'flash', insert: { kind: 'finn-sinister' }, closeup: true },
+      { text: 'Something goes wrong with the way he is standing there.', pause: 900, insert: { kind: 'finn-becoming' }, closeup: true },
+      { text: 'The colour drains out of him first. Then the shape starts to go, and what is left of it will not hold still.', pause: 1100, fx: 'shake', closeup: true },
+      { text: 'He gets bigger. Not all at once. The way a swell gets bigger, when you already know it is going to break over you.', pause: 1100, closeup: true },
+      { text: 'Light opens along him in cracks, like something inside is too big for the shell it borrowed.', pause: 1000, fx: 'flash', closeup: true },
+      { text: 'The morning goes white, and then it goes dark from him outward.', pause: 1000, fx: 'flash', insert: { kind: 'finn-sinister' }, closeup: true },
       { text: 'A lifetime of dockside angler was a costume. This is what was wearing it.', pause: 1000, closeup: true },
       { ...GUIDE.mako, text: "No... no, it can't be..." },
       { ...GUIDE.mira, text: "All this time we thought we had wiped the Finndicate off the sea. Every captain, every cache, every ledger. It was him. It was only ever him." },
       { ...GUIDE.laz, text: "I have been drowned, captain. I know what the deep feels like. It is standing in front of us." },
       { ...GUIDE.doby, text: "I have swum this sea longer than any of you have drawn breath, and I have never felt anything like that. There is nothing left in this ocean that can close this." },
+      { ...GUIDE.finnFinal, text: "Ah. There it is." },
+      { text: 'The water pulls back from the boat. Even the deep is giving him room.', pause: 800 },
+      { ...GUIDE.finnFinal, text: "Every cold thing at the bottom of this ocean answers to me now. I can feel the whole of it, all the way down, like it is sitting in my hands." },
       { ...GUIDE.finnFinal, text: "Six keys, and the door is open, and I am already through it. You did that. Remember that you did that." },
+      { ...GUIDE.finnFinal, text: "And I want it said plainly, in front of your whole crew, because you have earned the hearing of it." },
+      { ...GUIDE.finnFinal, text: "You hunted them. You hauled them up out of the dark one at a time. You carried them in your own hold and kept them safe for me the entire way." },
+      { ...GUIDE.kat, text: "Captain. Do not let him talk." },
+      { ...GUIDE.finnFinal, text: "The finest crew that ever put out of that harbour, and every hour of it went into earning me this. Thank you. Truly. You have my gratitude, for whatever you think that is worth out here." },
+      { ...GUIDE.laz, text: "He is thanking us." },
+      { ...GUIDE.finnFinal, text: "It was always going to be mine. You just did the rowing." },
       { ...GUIDE.finnFinal, text: "You'll come after me. You have never once done the sensible thing, and I built all of this on it." },
       { ...GUIDE.finnFinal, text: "One last ride, then. You and me and the deep. You'll be on time. You always are." },
       { text: 'The dark holds where the morning was. Six grey shapes turn slow circles on the water.', pause: 600 },

@@ -245,6 +245,7 @@ export function InsertShot({ kind, wax, accent, reduced }: { kind: string; wax?:
   if (kind === 'finn-unmasked') return <FinnUnmaskedInsert accent={accent} reduced={reduced} />
   if (kind === 'finn-sinister') return <FinnSinisterInsert accent={accent} reduced={reduced} />
   if (kind === 'ancient-harvest') return <AncientHarvestInsert accent={accent} reduced={reduced} />
+  if (kind === 'finn-becoming') return <FinnBecomingInsert accent={accent} reduced={reduced} />
   return null
 }
 
@@ -316,41 +317,137 @@ function FinnUnmaskedInsert({ accent, reduced }: { accent: string; reduced?: boo
 }
 
 /** THE HARVEST. The six Ancient Deep giants the player spent the whole fishing
- *  arc landing, arrayed and then drained: each one lights, then goes grey and
- *  hollow as whatever was in it is pulled to the middle. This is the engine of
- *  the transformation, so it plays BEFORE the sinister form and hands off to it.
- *  Uses the existing catalogue art, no new assets. */
+ *  arc landing, pulled out of the hold and emptied one at a time.
+ *
+ *  This is the biggest spectacle in the campaign and it should be: those six are
+ *  the hardest thing in the fishing track, and this beat turns the player's
+ *  proudest shelf into the villain's fuel. So it is not a grid that greys out.
+ *  They hang in a RING around him, and each in turn flares, throws everything it
+ *  has down a line into the middle, and is left drifting grey and hollow while
+ *  the core it fed grows brighter.
+ *
+ *  Staged on ONE clock (STEP seconds per giant), so streams, shockwaves, core
+ *  growth and husks all land on the same beat. Existing catalogue art, no new
+ *  assets.
+ *
+ *  Every element that MOVES is an inner motion node inside a plain positioned
+ *  wrapper. Centering lives on the wrapper as ordinary CSS; animating scale on
+ *  the same node would overwrite translate(-50%,-50%) and fling it off-centre. */
 const ANCIENT_GIANTS = [
   '/fish/megalodon.png', '/fish/plesiosaurus.png', '/fish/dunkleosteus.png',
   '/fish/mosasaurus.png', '/fish/basilosaurus.png', '/fish/shastasaurus.png',
 ]
+const HARVEST_STEP = 1.15
+const HARVEST_TOTAL = HARVEST_STEP * ANCIENT_GIANTS.length
+const HARVEST_RING = 33
 
 function AncientHarvestInsert({ accent, reduced }: { accent: string; reduced?: boolean }) {
+  const seats = ANCIENT_GIANTS.map((src, n) => {
+    const deg = (n / ANCIENT_GIANTS.length) * 360 - 90
+    const rad = (deg * Math.PI) / 180
+    return { src, deg, x: 50 + Math.cos(rad) * HARVEST_RING, y: 50 + Math.sin(rad) * HARVEST_RING }
+  })
+
+  // Reduced motion gets the END STATE, not the journey: a lit core and six
+  // husks. The story beat survives without anything moving.
+  if (reduced) {
+    return (
+      <div style={{ position: 'relative', width: 'min(84vw, 340px)', aspectRatio: '1 / 1' }}>
+        <div aria-hidden style={{
+          position: 'absolute', left: '50%', top: '50%', width: '54%', aspectRatio: '1',
+          transform: 'translate(-50%, -50%)', borderRadius: '50%',
+          background: `radial-gradient(circle, #ffffff 0%, ${accent}dd 30%, ${accent}33 60%, transparent 78%)`,
+          filter: 'blur(6px)',
+        }} />
+        {seats.map(s => (
+          <div key={s.src} style={{ position: 'absolute', left: `${s.x}%`, top: `${s.y}%`, width: '30%', transform: 'translate(-50%, -50%)' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={s.src} alt="" aria-hidden decoding="async"
+              style={{ width: '100%', objectFit: 'contain', filter: 'grayscale(1) brightness(0.34)', opacity: 0.4 }} />
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   return (
-    <div style={{ position: 'relative', width: 'min(78vw, 320px)', aspectRatio: '1 / 1', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', alignContent: 'center', gap: 6, padding: 8 }}>
-      {/* the pull at the centre: everything in them goes here */}
-      <motion.div aria-hidden
-        initial={{ opacity: 0, scale: 0.2 }}
-        animate={{ opacity: reduced ? 0.9 : [0, 0.4, 1], scale: reduced ? 1 : [0.2, 0.7, 1.25] }}
-        transition={{ duration: reduced ? 0.6 : 4.4, ease: 'easeIn' }}
-        style={{ position: 'absolute', left: '50%', top: '50%', width: '62%', aspectRatio: '1', transform: 'translate(-50%, -50%)', borderRadius: '50%', zIndex: 2, pointerEvents: 'none',
-          background: `radial-gradient(circle at 50% 50%, #ffffff 0%, ${accent}cc 26%, ${accent}44 52%, transparent 74%)`,
-          filter: 'blur(5px)' }} />
-      {ANCIENT_GIANTS.map((src, n) => (
-        <motion.div key={src} style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          initial={{ opacity: 0.95 }}
-          // each giant lights in turn, then hollows out: colour drains, the
-          // shape stays. They are left on the water like empty shells.
-          animate={reduced
-            ? { opacity: 0.32, filter: 'grayscale(1) brightness(0.4)' }
-            : { opacity: [0.95, 1, 0.34], filter: ['grayscale(0) brightness(1)', `grayscale(0.2) brightness(1.5) drop-shadow(0 0 14px ${accent})`, 'grayscale(1) brightness(0.32)'] }}
-          transition={{ duration: reduced ? 0.5 : 3.4, delay: reduced ? 0 : 0.28 * n, times: reduced ? undefined : [0, 0.34, 1], ease: 'easeInOut' }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={src} alt="" aria-hidden decoding="async"
-            style={{ width: '100%', height: 'auto', objectFit: 'contain' }} />
-        </motion.div>
-      ))}
+    <div style={{ position: 'relative', width: 'min(84vw, 340px)', aspectRatio: '1 / 1' }}>
+      {/* THE CORE — swells across the whole drain, so the thing being fed is
+          visibly bigger with every giant that goes into it. */}
+      <div aria-hidden style={{ position: 'absolute', left: '50%', top: '50%', width: '56%', aspectRatio: '1', transform: 'translate(-50%, -50%)', zIndex: 3 }}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.05 }}
+          animate={{ opacity: [0, 0.55, 0.8, 1], scale: [0.05, 0.42, 0.78, 1.18] }}
+          transition={{ duration: HARVEST_TOTAL, ease: 'easeIn', times: [0, 0.3, 0.65, 1] }}
+          style={{
+            width: '100%', height: '100%', borderRadius: '50%',
+            background: `radial-gradient(circle, #ffffff 0%, ${accent}dd 28%, ${accent}55 55%, transparent 76%)`,
+            filter: 'blur(6px)',
+          }} />
+      </div>
+      {/* A tight white heart, so the middle reads SOLID rather than as haze. */}
+      <div aria-hidden style={{ position: 'absolute', left: '50%', top: '50%', width: '17%', aspectRatio: '1', transform: 'translate(-50%, -50%)', zIndex: 4 }}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.1 }}
+          animate={{ opacity: [0, 0.7, 1], scale: [0.1, 0.5, 1] }}
+          transition={{ duration: HARVEST_TOTAL, ease: 'easeIn' }}
+          style={{ width: '100%', height: '100%', borderRadius: '50%', background: 'radial-gradient(circle, #ffffff 0%, #ffffffcc 45%, transparent 72%)', filter: 'blur(2px)' }} />
+      </div>
+
+      {seats.map((s, n) => {
+        const t0 = n * HARVEST_STEP
+        return (
+          <div key={s.src}>
+            {/* THE STREAM — pinned at the middle, rotated to point at this
+                giant, collapsing inward as the giant empties. */}
+            <div aria-hidden style={{
+              position: 'absolute', left: '50%', top: '50%', width: `${HARVEST_RING}%`, height: 3,
+              transformOrigin: '100% 50%', transform: `translateY(-50%) rotate(${s.deg}deg)`, zIndex: 2,
+            }}>
+              <motion.div
+                initial={{ opacity: 0, scaleX: 1 }}
+                animate={{ opacity: [0, 0.95, 0.9, 0], scaleX: [1, 1, 0.15, 0.05] }}
+                transition={{ duration: HARVEST_STEP * 1.5, delay: t0, ease: 'easeIn', times: [0, 0.18, 0.8, 1] }}
+                style={{ width: '100%', height: '100%', transformOrigin: '0% 50%', background: `linear-gradient(90deg, #ffffff, ${accent}, transparent)`, filter: 'blur(1px)' }} />
+            </div>
+
+            {/* THE GIANT — flares white-hot on its turn, then the colour goes
+                out of it and what is left is a shell. */}
+            <div style={{ position: 'absolute', left: `${s.x}%`, top: `${s.y}%`, width: '30%', transform: 'translate(-50%, -50%)', zIndex: 1 }}>
+              <motion.img
+                src={s.src} alt="" aria-hidden decoding="async"
+                initial={{ opacity: 0.95, scale: 1 }}
+                animate={{
+                  opacity: [0.95, 1, 1, 0.38],
+                  scale: [1, 1.16, 0.9, 0.97],
+                  filter: [
+                    'grayscale(0) brightness(1)',
+                    `grayscale(0) brightness(1.9) drop-shadow(0 0 18px ${accent})`,
+                    'grayscale(0.7) brightness(0.7)',
+                    'grayscale(1) brightness(0.3)',
+                  ],
+                }}
+                transition={{ duration: HARVEST_STEP * 2.2, delay: t0, ease: 'easeInOut', times: [0, 0.14, 0.55, 1] }}
+                style={{ width: '100%', objectFit: 'contain', display: 'block' }} />
+            </div>
+
+            {/* SHOCKWAVE — one per giant, fired as its power lands, so six
+                separate hits read as six. */}
+            <div aria-hidden style={{ position: 'absolute', left: '50%', top: '50%', width: '60%', aspectRatio: '1', transform: 'translate(-50%, -50%)', zIndex: 5, pointerEvents: 'none' }}>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.1 }}
+                animate={{ opacity: [0, 0.5, 0], scale: [0.1, 1.5, 2.1] }}
+                transition={{ duration: 1.1, delay: t0 + HARVEST_STEP * 0.55, ease: 'easeOut' }}
+                style={{ width: '100%', height: '100%', borderRadius: '50%', border: `2px solid ${accent}` }} />
+            </div>
+            <motion.div aria-hidden
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 0.22, 0] }}
+              transition={{ duration: 0.5, delay: t0 + HARVEST_STEP * 0.5, ease: 'easeOut' }}
+              style={{ position: 'absolute', inset: '-10%', borderRadius: '50%', zIndex: 6, pointerEvents: 'none', background: 'radial-gradient(circle, #ffffff 0%, transparent 62%)' }} />
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -401,6 +498,99 @@ function FinnSinisterInsert({ accent, reduced }: { accent: string; reduced?: boo
     </div>
   )
 }
+
+/** THE BECOMING. The warp itself, between the harvest and the form that walks
+ *  out of it.
+ *
+ *  The transformation used to be one cross-fade, which asked the player to
+ *  accept the biggest turn in the game as a dissolve. This gives it a shape:
+ *  he SHUDDERS, the colour drains until he is a silhouette, the silhouette
+ *  SWELLS past his old size, light cracks open along it, and the whole plate
+ *  blows to white. The final form resolves out of that blowout.
+ *
+ *  The white blowout at the seam is doing real work: the two pieces of art are
+ *  framed differently, and a straight cross-fade between them would read as a
+ *  swap. Nothing survives the white, so nothing has to line up. */
+const BECOMING_TOTAL = 5.2
+
+function FinnBecomingInsert({ accent, reduced }: { accent: string; reduced?: boolean }) {
+  if (reduced) {
+    return (
+      <div style={{ position: 'relative', width: 'min(78vw, 320px)', aspectRatio: '1 / 1', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', overflow: 'hidden' }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={FINN_SINISTER_ART} alt="" aria-hidden decoding="async"
+          style={{ height: '94%', width: 'auto', objectFit: 'contain', filter: 'drop-shadow(0 0 26px rgba(0,0,0,0.8))' }} />
+      </div>
+    )
+  }
+  return (
+    <div style={{ position: 'relative', width: 'min(78vw, 320px)', aspectRatio: '1 / 1', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', overflow: 'hidden' }}>
+      {/* STAGE 1 — the dock hand, shuddering, the colour going out of him and
+          the shape going black. He is still recognisably the angler right up
+          until he is not. */}
+      <motion.img
+        src={FINN_PORTRAIT} alt="" aria-hidden decoding="async"
+        initial={{ opacity: 1, scale: 1, x: 0 }}
+        animate={{
+          opacity: [1, 1, 1, 0],
+          scale: [1, 1.04, 1.3, 1.5],
+          x: [0, -3, 3, -2, 2, 0],
+          filter: [
+            'brightness(1) saturate(1)',
+            'brightness(0.6) saturate(0.5) contrast(1.3)',
+            'brightness(0) saturate(0)',
+            'brightness(0) saturate(0)',
+          ],
+        }}
+        transition={{
+          duration: BECOMING_TOTAL * 0.62, ease: 'easeIn',
+          opacity: { duration: BECOMING_TOTAL * 0.62, times: [0, 0.4, 0.8, 1] },
+          filter:  { duration: BECOMING_TOTAL * 0.62, times: [0, 0.35, 0.7, 1] },
+          scale:   { duration: BECOMING_TOTAL * 0.62, times: [0, 0.3, 0.72, 1] },
+          x:       { duration: 0.34, repeat: 8, ease: 'linear' },
+        }}
+        style={{ position: 'absolute', bottom: '3%', height: '92%', width: 'auto', objectFit: 'contain', zIndex: 2 }} />
+
+      {/* CRACKS — light opening along the silhouette just before it goes. Four
+          slivers rather than a neat radial burst, so it reads as something
+          splitting rather than a lens flare. */}
+      {[18, 74, 126, 202, 288, 331].map((deg, i) => (
+        <div key={deg} aria-hidden style={{ position: 'absolute', left: '50%', top: '52%', width: '46%', height: 2, transformOrigin: '0% 50%', transform: `rotate(${deg}deg)`, zIndex: 3 }}>
+          <motion.div
+            initial={{ opacity: 0, scaleX: 0 }}
+            animate={{ opacity: [0, 0.9, 0], scaleX: [0, 1, 1] }}
+            transition={{ duration: 1.1, delay: BECOMING_TOTAL * 0.34 + i * 0.09, ease: 'easeOut' }}
+            style={{ width: '100%', height: '100%', transformOrigin: '0% 50%', background: `linear-gradient(90deg, #ffffff, ${accent}, transparent)`, filter: 'blur(1px)' }} />
+        </div>
+      ))}
+
+      {/* THE BLOWOUT — the seam. Nothing survives it, so the two differently
+          framed pieces of art never have to line up. */}
+      <motion.div aria-hidden
+        initial={{ opacity: 0 }}
+        animate={{ opacity: [0, 0, 1, 0.25, 0] }}
+        transition={{ duration: BECOMING_TOTAL, ease: 'easeInOut', times: [0, 0.44, 0.58, 0.72, 0.9] }}
+        style={{ position: 'absolute', inset: '-20%', zIndex: 5, pointerEvents: 'none', background: `radial-gradient(circle at 50% 52%, #ffffff 0%, #ffffff 34%, ${accent}88 60%, transparent 78%)` }} />
+
+      {/* STAGE 2 — what walks out of it. Comes in oversized and settles, so he
+          reads as having GROWN rather than having been swapped. */}
+      <motion.img
+        src={FINN_SINISTER_ART} alt="" aria-hidden decoding="async"
+        initial={{ opacity: 0, scale: 1.42 }}
+        animate={{ opacity: [0, 0, 1, 1], scale: [1.42, 1.35, 1.06, 1] }}
+        transition={{ duration: BECOMING_TOTAL, ease: 'easeOut', times: [0, 0.52, 0.78, 1] }}
+        style={{ position: 'absolute', bottom: '3%', height: '94%', width: 'auto', objectFit: 'contain', zIndex: 4, filter: 'drop-shadow(0 0 26px rgba(0,0,0,0.85))' }} />
+
+      {/* The dark he brings with him, arriving after the light dies. */}
+      <motion.div aria-hidden
+        initial={{ opacity: 0 }}
+        animate={{ opacity: [0, 0, 0.85] }}
+        transition={{ duration: BECOMING_TOTAL, ease: 'easeIn', times: [0, 0.62, 1] }}
+        style={{ position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none', background: 'radial-gradient(circle at 50% 55%, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.45) 55%, transparent 80%)' }} />
+    </div>
+  )
+}
+
 
 function LedgerFInsert({ accent, reduced }: { accent: string; reduced?: boolean }) {
   return (
