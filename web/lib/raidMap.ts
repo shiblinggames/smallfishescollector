@@ -2630,7 +2630,7 @@ export const RAID_MAP: RaidNode[] = [
         { emoji: '📜', label: "Captain's Logbook, Fragment XV", sublabel: '"Finn-dicate. Say it out loud once and tell me you never heard it. Everyone hears it eventually, and never once before it is too late to matter."', rarity: 'legendary' },
       ],
       dropsNote: 'The name at the top of the Sunken Hand, and what your six giants were really for.',
-      ctaLabel: 'Coming Soon',
+      ctaLabel: 'Pull Alongside →',
       summary:
         'What the six giants were really for. Opens only once every Ancient Deep trophy is on your wall.',
     },
@@ -2689,11 +2689,13 @@ export function computeRaidMap(
     if (cleared.has(node.id)) {
       return { node, status: 'cleared' as const, claimable: false }
     }
-    // Coming-soon takes precedence over normal lock-reason resolution
-    //. The node is intentionally inaccessible while content lands,
-    // not blocked by player progression. Stays locked even when the
-    // player has met every prereq + Nav requirement.
-    if (node.comingSoon) {
+    // Coming-soon takes precedence over normal lock-reason resolution. The node
+    // is intentionally inaccessible while content lands, not blocked by player
+    // progression: it stays locked even when the player has met every prereq +
+    // Nav requirement. ADMINS PASS THROUGH, so unfinished content can be walked
+    // and reviewed in place (the same courtesy adminOnly already gives) while
+    // everyone else still sees "Coming soon".
+    if (node.comingSoon && !isAdmin) {
       return { node, status: 'locked' as const, claimable: false, lockReason: 'Coming soon' }
     }
     const prereqOk = !node.requiresNode || cleared.has(node.requiresNode)
