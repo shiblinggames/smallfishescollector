@@ -34,7 +34,7 @@ import { GOLD, TypedBody, Letterbox, LivingFrame, FlashOut, SceneProgress, Inser
 import type { SceneLine, SceneInsert } from '@/lib/raidMap'
 
 /** Who is on stage, and where. Two slots: a conversation, not a crowd. */
-interface StageChar { speaker: string; portrait: string; portraitFace?: boolean }
+interface StageChar { speaker: string; portrait: string }
 
 /**
  * Walk the scene up to `idx` and work out who is standing where. Deterministic, so
@@ -53,7 +53,7 @@ function stageAt(lines: SceneLine[], idx: number): { left: StageChar | null; rig
   for (let i = 0; i <= idx && i < lines.length; i++) {
     const l = lines[i]
     if (!l.speaker || !l.portrait) continue
-    const c: StageChar = { speaker: l.speaker, portrait: l.portrait, portraitFace: l.portraitFace }
+    const c: StageChar = { speaker: l.speaker, portrait: l.portrait }
     if (left?.speaker === l.speaker) { lastSpokeLeft = i; continue }
     if (right?.speaker === l.speaker) { lastSpokeRight = i; continue }
     if (!left) { left = c; lastSpokeLeft = i }
@@ -170,31 +170,14 @@ export default function StoryScene({ title, lines, ctaLabel, pending, accent, ba
           transition={{ duration: lit ? 3.4 : 4.8, repeat: Infinity, ease: 'easeInOut' }}
           style={{ width: '100%', height: '100%' }}
         >
-          {c.portraitFace ? (
-            // Sprite portrait: blow it up and pull the head into frame inside a
-            // clipped box, the same crop CharacterAvatar uses. Without this a
-            // fishing sprite renders boat-and-all at thumbnail size next to the
-            // crew's busts.
-            <div style={{
-              width: '100%', height: '100%', overflow: 'hidden', position: 'relative',
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={c.portrait} alt="" decoding="async"
+            style={{
+              width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'bottom',
               filter: lit
                 ? `drop-shadow(0 0 30px ${ACCENT}33) drop-shadow(0 12px 30px rgba(0,0,0,0.78))`
                 : 'drop-shadow(0 10px 24px rgba(0,0,0,0.7))',
-            }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={c.portrait} alt="" decoding="async"
-                style={{ position: 'absolute', width: '317%', left: '50%', top: '50%', transform: 'translate(-63%, -60%)', display: 'block' }} />
-            </div>
-          ) : (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={c.portrait} alt="" decoding="async"
-              style={{
-                width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'bottom',
-                filter: lit
-                  ? `drop-shadow(0 0 30px ${ACCENT}33) drop-shadow(0 12px 30px rgba(0,0,0,0.78))`
-                  : 'drop-shadow(0 10px 24px rgba(0,0,0,0.7))',
-              }} />
-          )}
+            }} />
         </motion.div>
       </motion.div>
     )
