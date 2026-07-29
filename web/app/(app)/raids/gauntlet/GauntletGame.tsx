@@ -347,6 +347,11 @@ export default function GauntletGame(props: GauntletGameProps) {
   // `filtersLeft` is the per-RUN ban budget remaining (drives the Ban button).
   const bannedBoonsRef = useRef<Set<string>>(new Set())
   const [filtersLeft, setFiltersLeft] = useState(0)
+  // Banish flow: arm the mode, then TAP a boon to pick it, then confirm. The old
+  // per-card ✕ was a 24px target sat on top of a full-card draft button, so a
+  // near-miss drafted the boon you were trying to bin.
+  const [banArmed, setBanArmed] = useState(false)
+  const [banConfirm, setBanConfirm] = useState<{ idx: number; name: string } | null>(null)
   // Salt Ward: rerolls left on the CURRENT imposed curse (set when it appears).
   const [curseRerollsLeft, setCurseRerollsLeft] = useState(0)
   // Depth the current curse was drawn at — so a Salt Ward reroll redraws at the
@@ -787,6 +792,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       setOathBoon(oathBoon)
       setBoonTiers(oathBoon ? { [oathBoon]: 1 } : {}); setConfluencesTaken([]); setPendingBoons(null); setPendingConfluence(null); setPendingReprieve(null); offeredConfluenceIdsRef.current = new Set()
       bannedBoonsRef.current = new Set(); setFiltersLeft(gauntletBoonFilters(activeUpgrades))
+      setBanArmed(false); setBanConfirm(null)
       setConfluenceUnlocked(null); setConfluenceBanner(null); setCurseShed(null)
       nextShrineRef.current = SHRINE_FIRST_DEPTH; setShrineCoin(null); setShrineFlipping(false); setBoonFromShrine(false)
       nextMerchantRef.current = MERCHANT_FIRST_DEPTH; setMerchantStock([]); setMerchantSold(new Set()); setMerchantBuying(null)
@@ -1653,6 +1659,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       return next
     })
     setFiltersLeft(n => n - 1)
+    setBanArmed(false); setBanConfirm(null)
     hapticTap()
   }
 
@@ -3799,17 +3806,26 @@ export default function GauntletGame(props: GauntletGameProps) {
                   whileHover={flipped ? { scale: 1.015 } : undefined}
                   transition={{ type: 'spring', stiffness: 480, damping: 26 }}
                   onPointerDown={flipped ? () => hapticTap() : undefined}
-                  onClick={() => { if (flipped) applyBoon(b) }}
+                  // Armed to banish: the whole card becomes the "bin this one"
+                  // target (and opens a confirm) instead of drafting it.
+                  onClick={() => {
+                    if (!flipped) return
+                    if (banArmed) { hapticTap(); setBanConfirm({ idx, name: b.name }); return }
+                    applyBoon(b)
+                  }}
                   className="tap"
                   style={{
                     position: 'relative', textAlign: 'left', overflow: 'hidden', width: '100%',
                     padding: '0.9rem 1rem 0.9rem 1.2rem', borderRadius: 16,
                     // Firm dark base so the card reads over the detailed backdrop;
                     // the rarity tint stays as an accent up top.
-                    background: `linear-gradient(180deg, ${rm.color}30 0%, rgba(7,12,19,0.9) 58%)`,
-                    border: `1.5px solid ${rm.color}${legendary ? 'dd' : rare ? '99' : '66'}`,
+                    background: banArmed
+                      ? 'linear-gradient(180deg, rgba(220,70,70,0.24) 0%, rgba(19,8,10,0.92) 58%)'
+                      : `linear-gradient(180deg, ${rm.color}30 0%, rgba(7,12,19,0.9) 58%)`,
+                    border: `1.5px solid ${banArmed ? 'rgba(240,120,120,0.85)' : `${rm.color}${legendary ? 'dd' : rare ? '99' : '66'}`}`,
                     color: '#eef7f4', cursor: 'pointer',
-                    boxShadow: legendary ? `0 0 40px ${rm.color}5a, inset 0 0 38px ${rm.color}1c`
+                    boxShadow: banArmed ? '0 0 22px rgba(220,70,70,0.35)'
+                             : legendary ? `0 0 40px ${rm.color}5a, inset 0 0 38px ${rm.color}1c`
                              : rare       ? `0 0 24px ${rm.color}36`
                              : `0 0 14px ${rm.color}20`,
                   }}
@@ -3868,21 +3884,6 @@ export default function GauntletGame(props: GauntletGameProps) {
                         <span className="font-karla font-800 uppercase" style={{ flexShrink: 0, fontSize: '0.52rem', letterSpacing: '0.13em', color: legendary ? '#1a1206' : rm.color, background: legendary ? rm.color : `${rm.color}26`, border: `1px solid ${rm.color}`, borderRadius: 999, padding: '0.2rem 0.55rem', boxShadow: legendary ? `0 0 12px ${rm.color}88` : 'none' }}>
                           {rm.label}
                         </span>
-                        {/* Blacklist (Don's): banish this boon for the rest of the run.
-                            Only appears once the card is face-up and the player still
-                            has a ban to spend. Red-tinted so it reads as "remove", not
-                            "pick". stopPropagation keeps it from selecting the boon. */}
-                        {flipped && filtersLeft > 0 && (
-                          <span
-                            role="button" tabIndex={0} aria-label={`Banish ${b.name} for the rest of the run`}
-                            onClick={(e) => { e.stopPropagation(); banBoon(idx) }}
-                            className="tap"
-                            style={{ flexShrink: 0, width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(220,70,70,0.14)', border: '1px solid rgba(230,90,90,0.5)', color: '#f0a0a0', cursor: 'pointer', lineHeight: 1 }}>
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden>
-                              <circle cx="12" cy="12" r="9" /><line x1="5.6" y1="5.6" x2="18.4" y2="18.4" />
-                            </svg>
-                          </span>
-                        )}
                         <span
                           role="button" tabIndex={0} aria-label={`What ${b.name} does`}
                           onClick={(e) => { e.stopPropagation(); setDetailEffect({ kind: 'boon', name: `${b.name} ${boonTierLabel(b.tier)}`, desc: b.desc, detail: b.detail, flavor: b.flavor, count: b.tier, maxTier, image: boonImg }) }}
@@ -3891,11 +3892,13 @@ export default function GauntletGame(props: GauntletGameProps) {
                           i
                         </span>
                       </div>
-                      {/* The power gained — the payoff, green + clear. The green
-                          text alone signals the gain (no caret — it wrapped onto
-                          its own line on longer payoffs). */}
+                      {/* The power gained — the payoff, green + clear. Set in
+                          Karla, not Cinzel: Cinzel is a Roman-CAPITALS face, so
+                          the effect line read as shouty all-caps at a size that
+                          out-weighed the boon's own name. Sentence case, a notch
+                          smaller than the title, still the green payoff. */}
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
-                        <span className="font-cinzel font-800" style={{ fontSize: '1.1rem', color: '#aef5c4', lineHeight: 1.15, textShadow: '0 0 14px rgba(74,222,128,0.4)' }}>
+                        <span className="font-karla font-700" style={{ fontSize: '0.92rem', color: '#aef5c4', lineHeight: 1.3, textShadow: '0 0 10px rgba(74,222,128,0.25)' }}>
                           {b.desc}
                         </span>
                         {b.upgrade && (
@@ -4135,13 +4138,26 @@ export default function GauntletGame(props: GauntletGameProps) {
               Reroll · {rerollsLeft} left
             </button>
           )}
-          {/* Blacklist hint — teaches the red ✕ on the cards and tracks the
-              per-run ban budget. Only while a ban is still available. */}
+          {/* Banish — arm the mode, then tap the boon you want gone (and confirm).
+              A proper button beats the old 24px ✕ that sat on top of a full-card
+              draft target. Only while a ban is still available. */}
           {filtersLeft > 0 && revealDone && (
-            <p className="font-karla" style={{ marginTop: rerollsLeft > 0 ? 9 : 16, fontSize: '0.62rem', color: 'rgba(240,160,160,0.82)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden><circle cx="12" cy="12" r="9" /><line x1="5.6" y1="5.6" x2="18.4" y2="18.4" /></svg>
-              Tap ✕ to banish a boon for the run · {filtersLeft} left
-            </p>
+            <div style={{ marginTop: rerollsLeft > 0 ? 9 : 16 }}>
+              <button onClick={() => { hapticTap(); setBanArmed(a => !a) }} className="font-karla font-700 uppercase tracking-[0.08em] tap"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '0.55rem 1.05rem', borderRadius: 999, fontSize: '0.64rem', cursor: 'pointer',
+                  color: banArmed ? '#ffd9d9' : '#f0a0a0',
+                  background: banArmed ? 'rgba(220,70,70,0.3)' : 'rgba(220,70,70,0.12)',
+                  border: `1px solid ${banArmed ? 'rgba(240,120,120,0.9)' : 'rgba(230,90,90,0.45)'}`,
+                  boxShadow: banArmed ? '0 0 18px rgba(220,70,70,0.35)' : 'none' }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden><circle cx="12" cy="12" r="9" /><line x1="5.6" y1="5.6" x2="18.4" y2="18.4" /></svg>
+                {banArmed ? 'Cancel' : `Remove a boon · ${filtersLeft} left`}
+              </button>
+              {banArmed && (
+                <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#f8b4b4', marginTop: 8, lineHeight: 1.4 }}>
+                  Tap the boon you want gone for the rest of the run.
+                </p>
+              )}
+            </div>
           )}
           {/* Codex access — review what a synergy does / what you're building
               toward right when you're deciding. Lights violet when one is on
@@ -4163,6 +4179,28 @@ export default function GauntletGame(props: GauntletGameProps) {
         {detailModal}
         {exitModal}
         {synergiesOpen && <SynergiesModal owned={boonTiers} seen={seenConfluences} taken={confluencesTaken} takenConv={convergencesTaken} variant={props.variant ?? 'davy'} onClose={() => setSynergiesOpen(false)} />}
+        {/* Banish confirm — spending a one-per-run charge deserves a beat. */}
+        {banConfirm && (
+          <ModalScrim zIndex={1320} onClose={() => setBanConfirm(null)}>
+            <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}
+              onClick={e => e.stopPropagation()}
+              style={{ width: '100%', maxWidth: 360, borderRadius: 18, padding: '1.3rem 1.15rem 1.15rem', textAlign: 'center', background: 'linear-gradient(180deg, rgba(26,12,14,0.99), rgba(12,7,8,0.99))', border: '1px solid rgba(240,120,120,0.5)', boxShadow: '0 0 44px rgba(220,70,70,0.22), 0 18px 50px rgba(0,0,0,0.6)' }}>
+              <p className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.24em', color: '#f0a0a0' }}>Banish a Power</p>
+              <p className="font-cinzel font-800" style={{ fontSize: '1.4rem', color: '#ffe4e4', lineHeight: 1.12, marginTop: 8 }}>{banConfirm.name}</p>
+              <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(245,225,225,0.8)', lineHeight: 1.5, marginTop: 11 }}>
+                Bin it for the rest of the dive — it never surfaces again, and a different power takes its place in this draft. Costs one of your {filtersLeft} banishes.
+              </p>
+              <button onClick={() => banBoon(banConfirm.idx)} className="font-cinzel font-800 uppercase tracking-[0.05em] tap"
+                style={{ width: '100%', marginTop: 16, padding: '0.9rem', borderRadius: 13, fontSize: '0.95rem', color: '#ffe4e4', background: 'linear-gradient(180deg, rgba(220,70,70,0.5), rgba(120,25,30,0.4))', border: '1px solid rgba(240,120,120,0.85)', cursor: 'pointer' }}>
+                Banish It
+              </button>
+              <button onClick={() => setBanConfirm(null)} className="font-karla font-600 tap"
+                style={{ marginTop: 11, background: 'none', border: 'none', color: '#9a948a', fontSize: '0.76rem', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}>
+                Keep it
+              </button>
+            </motion.div>
+          </ModalScrim>
+        )}
       </>
     )
   }
