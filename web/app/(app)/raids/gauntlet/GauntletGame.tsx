@@ -4750,6 +4750,9 @@ function GauntletReward({ r, recap, onBack, don }: { r: RewardOk; recap: { ships
   return (
     <>
       {r.hardcore ? <HcSeaBackdrop /> : <AbyssBackdrop hardcore={r.hardcore} don={don} />}
+      {/* Calm the backdrop so the haul copy + the reward cards read against it
+          (same treatment as the breather and the home). */}
+      <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: 'linear-gradient(180deg, rgba(4,8,14,0.52) 0%, rgba(4,8,14,0.7) 50%, rgba(3,6,12,0.84) 100%)' }} />
       <RenownUpOverlay info={renownUp} onDismiss={() => setRenownUp(null)} />
       <div style={{
         position: 'relative', zIndex: 1, maxWidth: 440, margin: '0 auto',
@@ -4791,7 +4794,7 @@ function GauntletReward({ r, recap, onBack, don }: { r: RewardOk; recap: { ships
             <p className="font-cinzel font-800" style={{ fontSize: '1.35rem', color: art.color, lineHeight: 1.1, marginTop: 4, textShadow: `0 0 22px ${art.color}44` }}>
               {chestLabel}
             </p>
-            <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#9a948a', marginTop: 5 }}>
+            <p className="font-karla font-600" style={{ fontSize: '0.76rem', color: '#c2bcae', marginTop: 5, textShadow: '0 1px 6px rgba(0,0,0,0.75)' }}>
               Hauled up from depth {r.depth}{r.chest.potMult > 1 ? ` · ×${r.chest.potMult} haul` : ''}
             </p>
             {/* You came back up under Davy's terms. Say what they were, and what
@@ -4839,7 +4842,7 @@ function GauntletReward({ r, recap, onBack, don }: { r: RewardOk; recap: { ships
               {chestLabel}
             </motion.p>
 
-            <div style={{ marginTop: 16, textAlign: 'left', background: 'rgba(0,0,0,0.3)', border: `1px solid ${GOLD}26`, borderRadius: 14, padding: '0.5rem 0.85rem 0.7rem' }}>
+            <div style={{ marginTop: 16, textAlign: 'left', background: 'rgba(6,10,16,0.86)', border: `1px solid ${GOLD}3a`, borderRadius: 14, padding: '0.5rem 0.85rem 0.7rem', boxShadow: '0 8px 26px rgba(0,0,0,0.45)' }}>
               <RewardLine label="Doubloons" to={r.bankedDoubloons} suffix=" ⟡" color={GOLD} delay={0.2} run={counting} />
               <RewardLine label="Nav XP" to={r.bankedXp} color="#4ade80" delay={0.32} run={counting} />
               {r.gems > 0 && <RewardLine label="Gems" to={r.gems} suffix=" ◆" color="#a78bfa" delay={0.44} run={counting} />}
@@ -4962,7 +4965,7 @@ function GauntletReward({ r, recap, onBack, don }: { r: RewardOk; recap: { ships
 
             <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}
               onClick={onBack} className="font-karla font-600 tap"
-              style={{ marginTop: 18, width: '100%', padding: '0.85rem', borderRadius: 12, fontSize: '0.85rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', color: '#cfc9bf', cursor: 'pointer' }}>
+              style={{ marginTop: 18, width: '100%', padding: '0.85rem', borderRadius: 12, fontSize: '0.88rem', background: 'rgba(10,16,24,0.8)', border: '1px solid rgba(255,255,255,0.28)', color: '#e4ded2', cursor: 'pointer' }}>
               Back to the map
             </motion.button>
           </>
@@ -5100,7 +5103,7 @@ function RunRecap({ depth, shipsSunk, maxHit, boonTiers, curseTiers, confluences
   const confs = activeConfluences(boonTiers, confluencesTaken)
   const convs = activeConvergences(boonTiers, confluencesTaken, convergencesTaken)
   const Stat = ({ label, value, color }: { label: string; value: string | number; color: string }) => (
-    <div style={{ flex: 1, minWidth: 0, boxSizing: 'border-box', padding: '0.62rem 0.35rem', borderRadius: 12, background: 'rgba(125,211,252,0.05)', border: '1px solid rgba(125,211,252,0.16)', textAlign: 'center', overflow: 'hidden' }}>
+    <div style={{ flex: 1, minWidth: 0, boxSizing: 'border-box', padding: '0.62rem 0.35rem', borderRadius: 12, background: 'rgba(8,14,22,0.82)', border: '1px solid rgba(125,211,252,0.26)', textAlign: 'center', overflow: 'hidden' }}>
       <p className="font-cinzel font-800" style={{ fontSize: 'clamp(0.95rem, 4.4vw, 1.22rem)', color, lineHeight: 1, textShadow: `0 0 16px ${color}33`, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{value}</p>
       <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#84939f', marginTop: 5 }}>{label}</p>
     </div>
