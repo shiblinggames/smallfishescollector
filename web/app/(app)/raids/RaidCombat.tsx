@@ -471,6 +471,10 @@ export interface RaidCombatProps {
   /** Don's jobs cleared this run + the bonus each paid — surfaced in the battle
    *  profile (Gauntlet only; omitted elsewhere). */
   contractsWon?: { name: string; reward: string }[]
+  /** Gauntlet boons / curses held (with art) for the battle profile's Effects
+   *  tab. Omitted outside the Gauntlet. */
+  runBoons?: { id: string; name: string; tier: number; image?: string | null; desc: string; color: string }[]
+  runCurses?: { id: string; name: string; tier: number; image?: string | null; desc: string; color: string }[]
   /** Fires with each damage value the player lands, so the parent can track
    *  the biggest hit of the run (career stat). */
   onPlayerHit?: (dmg: number) => void
@@ -589,6 +593,7 @@ export default function RaidCombat({
   initialCharges = 0,
   runKills = 0, runDepth = 0,
   contractsWon = [],
+  runBoons, runCurses,
   anchorSaveAvailable = false, onAnchorSave,
   raidMods, riskyFlee = false, fleeSignal, fleeNav,
   tideEffects = [],
@@ -7241,6 +7246,8 @@ export default function RaidCombat({
             tideEffects={tideEffects}
             effectLabels={runDepth > 0 ? { good: 'Boons', bad: 'Curses' } : { good: 'Buffs', bad: 'Penalties' }}
             contractsWon={contractsWon}
+            runBoons={runBoons}
+            runCurses={runCurses}
             conditions={[
               ...statusConditions(playerStatuses),
               ...(playerBurning ? [{ key: 'burn', name: 'Ablaze', color: BURN_COLOR, turns: playerBurnRef.current.turns, desc: `Your ship is on fire — it loses ${playerBurnRef.current.dmg} HP at the end of each of your turns. Any crew heal douses the flames.` }] : []),
@@ -7388,6 +7395,8 @@ function PlayerStatsPopup({
   tideEffects = [],
   effectLabels = { good: 'Buffs', bad: 'Penalties' },
   contractsWon = [],
+  runBoons,
+  runCurses,
   conditions = [],
   onClose,
 }: {
@@ -7421,11 +7430,18 @@ function PlayerStatsPopup({
   effectLabels?: { good: string; bad: string }
   /** Don's jobs cleared this run + the bonus each paid (Gauntlet only). */
   contractsWon?: { name: string; reward: string }[]
+  /** Gauntlet boons / curses the player holds, WITH art — rendered as icon
+   *  cards on the Effects tab (their presence marks a Gauntlet run). Omitted in
+   *  ordinary raids, which fall back to the text Buffs/Penalties list. */
+  runBoons?: { id: string; name: string; tier: number; image?: string | null; desc: string; color: string }[]
+  runCurses?: { id: string; name: string; tier: number; image?: string | null; desc: string; color: string }[]
   /** Active statuses + bespoke effects (burn/freeze) on the player right now,
    *  with full descriptions — the popup-side twin of the HP-bar chip row. */
   conditions?: ConditionItem[]
   onClose: () => void
 }) {
+  // Tabbed layout — Stats / Effects / Gear — so the sheet isn't one long wall.
+  const [tab, setTab] = useState<'stats' | 'effects' | 'gear'>('stats')
   // Single source of truth — mirrors rollShotDamage, incl. crew damage effects.
   const { hitMin, powerMax, critMax } = raidDamageProfile(totalPower, shipMinDamage, damagePct)
   const critMin   = shipMinDamage * 2
@@ -7503,6 +7519,41 @@ function PlayerStatsPopup({
     <p className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', color, letterSpacing: '0.16em', marginBottom: 8 }}>{text}</p>
   )
 
+  // ── Tabs ──────────────────────────────────────────────────────────────────
+  // A Gauntlet run (runBoons/runCurses passed) shows boons + curses as ICON
+  // cards; ordinary raids fall back to the text Buffs/Penalties list. Only tabs
+  // with content show; Stats is always present.
+  const isGauntlet = runBoons !== undefined || runCurses !== undefined
+  const boonList = runBoons ?? []
+  const curseList = runCurses ?? []
+  const hasGear = !!megaAugment || equippedItems.length > 0
+  const hasEffects = isGauntlet
+    ? (boonList.length + curseList.length + contractsWon.length) > 0
+    : (buffs.length + penalties.length + contractsWon.length) > 0
+  const TABS = ([
+    { key: 'stats' as const,   label: 'Stats',   show: true },
+    { key: 'effects' as const, label: 'Effects', show: hasEffects },
+    { key: 'gear' as const,    label: 'Gear',    show: hasGear },
+  ]).filter(t => t.show)
+  const activeTab = TABS.some(t => t.key === tab) ? tab : 'stats'
+  const ROMAN = ['', 'I', 'II', 'III']
+  // One boon/curse as an icon card — art + name + effect, so the run reads at a
+  // glance instead of as a wall of bullet text.
+  const runEffectCard = (it: NonNullable<typeof runBoons>[number], bad: boolean) => (
+    <div key={it.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.55rem 0.65rem', borderRadius: 11, background: `${it.color}12`, border: `1px solid ${it.color}33` }}>
+      <div style={{ width: 42, height: 42, flexShrink: 0, display: 'grid', placeItems: 'center', background: `${it.color}1a`, border: `1px solid ${it.color}44`, borderRadius: 10 }}>
+        {it.image
+          // eslint-disable-next-line @next/next/no-img-element
+          ? <img src={it.image} alt="" style={{ width: 36, height: 36, objectFit: 'contain' }} />
+          : <span style={{ color: it.color, fontSize: '1.05rem', lineHeight: 1 }}>{bad ? '▼' : '◆'}</span>}
+      </div>
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <p className="font-cinzel font-700" style={{ fontSize: '0.86rem', color: bad ? '#f4bcbc' : '#eef6f4', lineHeight: 1.12 }}>{it.name}{it.tier > 1 ? ` ${ROMAN[Math.min(it.tier, 3)]}` : ''}</p>
+        <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.7)', lineHeight: 1.32, marginTop: 2 }}>{it.desc}</p>
+      </div>
+    </div>
+  )
+
   if (typeof document === 'undefined') return null
 
   return createPortal(
@@ -7573,7 +7624,25 @@ function PlayerStatsPopup({
           </div>
         </div>
 
-        {/* ── Build (permanent): combat stats → classes → equipped gear ── */}
+        {/* Tabs — group the sheet so it isn't one long scroll. */}
+        {TABS.length > 1 && (
+          <div style={{ display: 'flex', gap: 4, padding: 3, marginBottom: 14, background: 'rgba(0,0,0,0.28)', borderRadius: 11, border: '1px solid rgba(255,255,255,0.07)' }}>
+            {TABS.map(t => {
+              const on = activeTab === t.key
+              return (
+                <button key={t.key} type="button" onClick={() => setTab(t.key)} className="font-karla font-800 uppercase tracking-[0.06em]"
+                  style={{ flex: 1, padding: '0.46rem 0.2rem', borderRadius: 8, fontSize: '0.62rem', cursor: 'pointer', whiteSpace: 'nowrap',
+                    border: `1px solid ${on ? 'rgba(96,165,250,0.5)' : 'transparent'}`,
+                    background: on ? 'linear-gradient(180deg, rgba(96,165,250,0.24), rgba(96,165,250,0.06))' : 'transparent',
+                    color: on ? '#cfe3ff' : '#8592a6' }}>
+                  {t.label}
+                </button>
+              )
+            })}
+          </div>
+        )}
+
+        {activeTab === 'stats' && (<>
         {/* Stat cards — 2-column grid feels less list-y and more dashboard-y. */}
         {sectionHeading('Combat', '#8fb4e0')}
         <div style={{
@@ -7634,7 +7703,9 @@ function PlayerStatsPopup({
             </div>
           </div>
         )}
+        </>)}
 
+        {activeTab === 'gear' && (<>
         {/* Ultimate — the player's Man-o-War Mega, the signature move that
             mirrors the boss's own Special/Ultimate in the enemy Ledger. Only
             shown when one is built. Themed in the augment's own accent. */}
@@ -7701,18 +7772,43 @@ function PlayerStatsPopup({
           </div>
         )}
 
-        {/* ── This run (temporary): boons then curses, under one divider so
-            they read apart from the permanent build above. ── */}
-        {(buffs.length > 0 || penalties.length > 0) && (
-          <div style={{ marginTop: 18, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {effectGroup(buffs.length > 1 ? `${effectLabels.good} · ${buffs.length}` : effectLabels.good, buffs, '#5eead4')}
-            {effectGroup(penalties.length > 1 ? `${effectLabels.bad} · ${penalties.length}` : effectLabels.bad, penalties, '#f08a8a')}
-          </div>
+        </>)}
+
+        {activeTab === 'effects' && (<>
+        {isGauntlet ? (
+          <>
+            {boonList.length > 0 && (
+              <div style={{ marginBottom: 14 }}>
+                {sectionHeading(boonList.length > 1 ? `Boons · ${boonList.length}` : 'Boon', '#5eead4')}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                  {boonList.map(b => runEffectCard(b, false))}
+                </div>
+              </div>
+            )}
+            {curseList.length > 0 && (
+              <div style={{ marginBottom: 14 }}>
+                {sectionHeading(curseList.length > 1 ? `Curses · ${curseList.length}` : 'Curse', '#f08a8a')}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                  {curseList.map(c => runEffectCard(c, true))}
+                </div>
+              </div>
+            )}
+            {boonList.length === 0 && curseList.length === 0 && contractsWon.length === 0 && (
+              <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(240,237,232,0.5)', textAlign: 'center', padding: '0.9rem 0' }}>No boons or curses yet — they surface between fights.</p>
+            )}
+          </>
+        ) : (
+          (buffs.length > 0 || penalties.length > 0) && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {effectGroup(buffs.length > 1 ? `${effectLabels.good} · ${buffs.length}` : effectLabels.good, buffs, '#5eead4')}
+              {effectGroup(penalties.length > 1 ? `${effectLabels.bad} · ${penalties.length}` : effectLabels.bad, penalties, '#f08a8a')}
+            </div>
+          )
         )}
 
-        {/* ── Don's Jobs cleared this run + the bonus each paid. ── */}
+        {/* Don's Jobs cleared this run + the bonus each paid. */}
         {contractsWon.length > 0 && (
-          <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+          <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
             <p className="font-karla font-800 uppercase tracking-[0.16em]" style={{ fontSize: '0.55rem', color: '#5fd39a', marginBottom: 8 }}>Don&apos;s Jobs Cleared · {contractsWon.length}</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {contractsWon.map((c, i) => (
@@ -7724,6 +7820,7 @@ function PlayerStatsPopup({
             </div>
           </div>
         )}
+        </>)}
       </motion.div>
       </div>
     </motion.div>,

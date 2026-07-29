@@ -626,6 +626,19 @@ export default function GauntletGame(props: GauntletGameProps) {
     prevHpMaxRef.current = hpMax
   }, [hpMax])
 
+  // Boons / curses held this run, resolved to {name, tier, image, desc, color}
+  // so the battle profile can render them as icon cards on its Effects tab.
+  const runBoonsList = Object.entries(boonTiers).flatMap(([id, tier]) => {
+    const fam = GAUNTLET_BOONS.find(b => b.id === id)
+    if (!fam || tier < 1) return []
+    return [{ id, name: fam.name, tier, image: fam.image, desc: fam.tiers[Math.min(tier, fam.tiers.length) - 1]?.desc ?? '', color: BOON_RARITY_META[boonRarity(fam)].color }]
+  })
+  const runCursesList = Object.entries(curseTiers).flatMap(([id, tier]) => {
+    const c = GAUNTLET_CURSES.find(x => x.id === id)
+    if (!c || tier < 1) return []
+    return [{ id, name: c.name, tier, image: c.image, desc: c.tiers[Math.min(tier, c.tiers.length) - 1]?.desc ?? '', color: '#f08a8a' }]
+  })
+
   // ── Mid-run exit guard ─────────────────────────────────────────────────────
   // Same shape as RaidGame's: any attempt to leave a live descent (tab bar, nav
   // link, browser Back) is intercepted and routed through the abandon confirm
@@ -4338,6 +4351,8 @@ export default function GauntletGame(props: GauntletGameProps) {
             isElite={fight.isElite}
             isBoss={fight.isBoss}
             contractsWon={contractsWon}
+            runBoons={runBoonsList}
+            runCurses={runCursesList}
             shipImageUrl={props.shipImageUrl}
             shipFilter={shipFilter}
             shipName={props.shipName}
