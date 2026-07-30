@@ -47,9 +47,12 @@ const EMBER = '#ff7a5c'
 
 /** The two forge benches, surfaced as tabs. Abyssal (tier 3) is the endgame
  *  bench — a locked teaser until you own the Abyssal Forge. */
+export type ForgeTab = 2 | 3 | 'accel'
+
 const TABS = [
-  { tier: 2 as const, label: 'The Forge',         sub: 'Tier II',  abyssal: false },
-  { tier: 3 as const, label: 'The Abyssal Forge', sub: 'Tier III', abyssal: true },
+  { tier: 2 as const,       label: 'The Forge',              sub: 'Tier II',  abyssal: false, accel: false },
+  { tier: 3 as const,       label: 'The Abyssal Forge',      sub: 'Tier III', abyssal: true,  accel: false },
+  { tier: 'accel' as const, label: 'The Accelerator',        sub: 'Tier III', abyssal: true,  accel: true  },
 ]
 
 /** The four states a recipe can be in, in the order the player cares about them. */
@@ -89,7 +92,7 @@ export default function ForgeBoard({
   forging, forgeArmed, learning, learnArmed,
   onForgeTap, onLearnTap, abyssalUnlocked = false, raidItemSlots = 4,
   acceleratorUnlocked = false, conversion = null, gemsNow = 0,
-  convertBusy = false, claimBusy = false, onStartConvert, onClaimConvert,
+  convertBusy = false, claimBusy = false, onStartConvert, onClaimConvert, onTabChange,
 }: {
   /** Owns Don's Abyssal Forge? Tier-3 recipes are hidden entirely until then. */
   abyssalUnlocked?: boolean
@@ -113,10 +116,12 @@ export default function ForgeBoard({
   claimBusy?: boolean
   onStartConvert?: (epicId: string) => void
   onClaimConvert?: () => void
+  /** Reports which bench is showing so the page hero can match it. */
+  onTabChange?: (tab: ForgeTab) => void
 }) {
   // Which forge you're looking at. The Abyssal (tier-3) tab only becomes a real
   // destination once you own the Abyssal Forge; before that it's a locked teaser.
-  const [tab, setTab] = useState<2 | 3>(2)
+  const [tab, setTab] = useState<ForgeTab>(2)
   // Tapping a part you hold filters the board to what it can become.
   const [filterPart, setFilterPart] = useState<string | null>(null)
   // Abyssal tab only: "Plan a Build" mode. Pick target Abyssals and see the
@@ -141,6 +146,10 @@ export default function ForgeBoard({
   // itself stays a clean wall of medallions.
   const [open, setOpen] = useState<string | null>(null)
   const abyssalTab = tab === 3
+  const accelTab = tab === 'accel'
+  // The parent owns the page hero (icon + title), so it needs to know which
+  // bench is showing. Fired on mount too, so the hero is right on first paint.
+  useEffect(() => { onTabChange?.(tab) }, [tab, onTabChange])
 
   // A part selected on one tab means nothing on the other — clear it on switch.
   // Plan mode is Abyssal-only, so drop it when you leave that bench.
@@ -178,7 +187,8 @@ export default function ForgeBoard({
 
   // Everything below scopes to the ACTIVE tab's tier — the two forges are
   // genuinely separate benches (Abyssal fuses forged tier-2 items).
-  const tierRows = rows.filter(r => (r.recipe.tier === 3) === abyssalTab)
+  // The Accelerator tab is not a recipe bench, so it has no rows at all.
+  const tierRows = accelTab ? [] : rows.filter(r => (r.recipe.tier === 3) === abyssalTab)
   const ready = tierRows.filter(r => r.state === 'ready')
 
   // The parts you hold that THIS tier's unforged recipes want, sorted by how
@@ -204,6 +214,8 @@ export default function ForgeBoard({
   return (
     <>
       {/* ── The pulse: how far along the whole collection is ─────────────── */}
+      {/* Recipe progress: meaningless on the Accelerator, which forges nothing. */}
+      {!accelTab && (<>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
         <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.72rem', color: '#b9b2a6' }}>
           Forged <span style={{ color: '#ffce8a' }}>{forgedCount}</span> / {rows.length}
@@ -217,6 +229,7 @@ export default function ForgeBoard({
           transition={{ type: 'spring', stiffness: 200, damping: 30 }}
           style={{ height: '100%', borderRadius: 999, background: abyssalUnlocked ? ABYSSAL_EMBER : PRISMATIC }} />
       </div>
+      </>)}
 
       {/* ── The two benches, as tabs. Tier II (gold) and the Abyssal Tier III
              (molten ember). The Abyssal tab is a dimmed, locked teaser until you
@@ -224,8 +237,8 @@ export default function ForgeBoard({
              exists, and knows at a glance whether it's theirs yet. ──────────── */}
       <div style={{ display: 'flex', gap: 6, padding: 4, borderRadius: 15, background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.08)', marginBottom: '1.15rem' }}>
         {TABS.map(t => {
-          const active = tab === t.tier
-          const locked = t.abyssal && !abyssalUnlocked
+            const active = tab === t.tier
+            const locked = t.accel ? !acceleratorUnlocked : (t.abyssal && !abyssalUnlocked)
           return (
             <motion.button key={t.tier} type="button"
               onClick={() => { if (locked || active) return; vibrate([0, 16]); setTab(t.tier) }}
@@ -296,8 +309,10 @@ export default function ForgeBoard({
           onOpenRecipe={id => setOpen(id)}
         />
       ) : (<>
-      {/* ── The Abyssal Accelerator — epic→legendary transmutation bench ──── */}
-      {abyssalTab && (
+      {/* ── The Abyssal Accelerator — its OWN bench now, not a panel bolted
+             to the bottom of the Abyssal tab. It is a different action (convert
+             one item over 24h) from fusing two, and it earns its own tab. ──── */}
+      {accelTab && (
         <AbyssalAcceleratorPanel
           unlocked={acceleratorUnlocked}
           ownedRaidItems={ownedRaidItems}

@@ -34,7 +34,7 @@ import { applyCrewEffects, resolveEffects, effectSummary, SCOPE_META } from '@/l
 import { RARITY_COLORS as CREW_RARITY_COLORS, RARITY_NAMES } from '@/lib/crewGen'
 import { RAID_ITEMS, getRaidItem, FORGE_RECIPES, forgeComponentIds, conflictingRaidItems, isForgedRaidItem, isAbyssalForgedItem, isConvertibleEpic, legendaryForEpic } from '@/lib/raidItems'
 import { PRISMATIC_TEXT, prismaticBorder, forgedBorderSoft, forgedTextSoft, ABYSSAL_EMBER_TEXT, abyssalEmberBorder, primevalBorder, PRIMEVAL_TEXT } from '@/lib/prismatic'
-import ForgeBoard from './ForgeBoard'
+import ForgeBoard, { type ForgeTab } from './ForgeBoard'
 import { renameShip, buyShip } from '@/app/shipyard/actions'
 import { getXPProgress, navLevelBonuses, MAX_LEVEL, getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import { renownLevel, renownProgress, spentPoints, type RenownAlloc } from '@/lib/renown'
@@ -1050,6 +1050,16 @@ export default function ShipHero({
   }
   const sectionBg = focus ? SECTION_BG[loadoutTab] : '/ship-loadout-bg.jpg'
 
+  // Which forge bench is showing. ForgeBoard owns the tabs; the hero above
+  // them lives here, so the tab reports up and the icon/title follow it.
+  const [forgeTab, setForgeTab] = useState<ForgeTab>(2)
+  const forgeMolten = forgeTab === 3 || forgeTab === 'accel'
+  const forgeHero = forgeTab === 'accel'
+    ? { icon: '/forge/accelerator.png', title: 'The Abyssal Accelerator', blurb: 'Feed it one epic relic and 24 hours. It gives back the legendary.' }
+    : forgeTab === 3
+      ? { icon: '/forge/abyssal_forge.png', title: 'The Abyssal Forge', blurb: 'Fuse forged relics into Abyssal mounts. Both effect sets, a single slot.' }
+      : { icon: '/forge/forge.png', title: 'The Forge', blurb: 'Fuse two relics into one. Both effects, a single slot.' }
+
   // How much forge STOCK you hold: owned items that actually feed a recipe.
   // A count you can act on beats a state word (open) that never changes.
   const forgeStock = useMemo(() => {
@@ -1447,7 +1457,7 @@ export default function ShipHero({
                 {focus ? (
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.7rem', flexWrap: 'wrap', minWidth: 0 }}>
                     <h1 className="font-pirata" style={{ fontSize: '1.7rem', letterSpacing: '0.03em', color: '#f0ede8' }}>
-                      {focus === 'ship' ? 'Ship Management' : focus === 'forge' ? 'The Forge' : 'Battle Loadout'}
+                      {focus === 'ship' ? 'Ship Management' : focus === 'forge' ? forgeHero.title : 'Battle Loadout'}
                     </h1>
                     {(() => {
                       const chip = focus === 'items' ? `${slotsFilled} / ${slotsTotal} mounted`
@@ -1887,20 +1897,20 @@ export default function ShipHero({
                   / learned / ready / forged) so the whole collection reads at a
                   glance, forged ones kept as prismatic trophies. */}
               <div style={{ position: 'relative', textAlign: 'center', marginBottom: '1.15rem', paddingTop: 2 }}>
-                <div aria-hidden style={{ position: 'absolute', left: '50%', top: 8, width: 160, height: 104, transform: 'translateX(-50%)', background: abyssalUnlocked ? 'radial-gradient(ellipse at center, rgba(255,60,50,0.26), rgba(180,20,50,0.12) 44%, transparent 72%)' : forgeUnlocked ? 'radial-gradient(ellipse at center, rgba(255,140,60,0.2), rgba(197,139,255,0.1) 45%, transparent 72%)' : 'radial-gradient(ellipse at center, rgba(125,176,208,0.13), transparent 70%)', filter: 'blur(2px)', pointerEvents: 'none' }} />
-                <div style={{ position: 'relative', width: 60, height: 60, margin: '0 auto 8px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', ...(abyssalUnlocked ? abyssalEmberBorder('rgba(10,6,10,0.92)') : forgeUnlocked ? prismaticBorder('rgba(12,16,24,0.9)') : { background: 'rgba(18,28,40,0.6)', border: '1px solid rgba(125,176,208,0.3)' }) }}>
+                <div aria-hidden style={{ position: 'absolute', left: '50%', top: 2, width: 230, height: 150, transform: 'translateX(-50%)', background: forgeMolten ? 'radial-gradient(ellipse at center, rgba(255,60,50,0.26), rgba(180,20,50,0.12) 44%, transparent 72%)' : forgeUnlocked ? 'radial-gradient(ellipse at center, rgba(255,140,60,0.2), rgba(197,139,255,0.1) 45%, transparent 72%)' : 'radial-gradient(ellipse at center, rgba(125,176,208,0.13), transparent 70%)', filter: 'blur(2px)', pointerEvents: 'none' }} />
+                <div style={{ position: 'relative', width: 116, height: 116, margin: '0 auto 10px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', ...(forgeMolten ? abyssalEmberBorder('rgba(10,6,10,0.92)') : forgeUnlocked ? prismaticBorder('rgba(12,16,24,0.9)') : { background: 'rgba(18,28,40,0.6)', border: '1px solid rgba(125,176,208,0.3)' }) }}>
                   {/* Painted icon rather than a line glyph, matching the boons.
                       The Abyssal tier gets its own molten anvil; locked reads as
                       the plain forge, drained. */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={abyssalUnlocked ? '/forge/abyssal_forge.png' : '/forge/forge.png'}
+                    src={forgeHero.icon}
                     alt="" aria-hidden decoding="async"
-                    style={{ width: 46, height: 46, objectFit: 'contain', filter: forgeUnlocked ? undefined : 'grayscale(0.85) brightness(0.62)' }}
+                    style={{ width: 94, height: 94, objectFit: 'contain', filter: forgeUnlocked ? undefined : 'grayscale(0.85) brightness(0.62)' }}
                   />
                 </div>
-                {!focus && (<p className="font-cinzel font-800" style={{ fontSize: '1.5rem', lineHeight: 1.05, ...(abyssalUnlocked ? ABYSSAL_EMBER_TEXT : forgeUnlocked ? PRISMATIC_TEXT : { color: '#d4ba78' }) }}>{abyssalUnlocked ? 'The Abyssal Forge' : 'The Forge'}</p>)}
-                <p className="font-karla" style={{ fontSize: '0.72rem', color: '#9a948a', marginTop: 3, lineHeight: 1.4, maxWidth: 320, marginInline: 'auto' }}>{abyssalUnlocked ? 'Fuse forged relics into Abyssal mounts — both effect sets, a single slot.' : 'Fuse two relics into one — both effects, a single slot.'}</p>
+                {!focus && (<p className="font-cinzel font-800" style={{ fontSize: '1.5rem', lineHeight: 1.05, ...(forgeMolten ? ABYSSAL_EMBER_TEXT : forgeUnlocked ? PRISMATIC_TEXT : { color: '#d4ba78' }) }}>{forgeHero.title}</p>)}
+                <p className="font-karla" style={{ fontSize: '0.72rem', color: '#9a948a', marginTop: 3, lineHeight: 1.4, maxWidth: 320, marginInline: 'auto' }}>{forgeHero.blurb}</p>
                 {forgeUnlocked && (
                   <button type="button" onClick={() => setShowForgeHelp(true)} className="font-karla font-700 uppercase tracking-[0.12em] tap"
                     style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.32rem 0.7rem', borderRadius: 999, fontSize: '0.54rem', color: abyssalUnlocked ? '#ff9a7c' : '#c9a7ff', background: abyssalUnlocked ? 'rgba(255,90,60,0.09)' : 'rgba(197,139,255,0.08)', border: `1px solid ${abyssalUnlocked ? 'rgba(255,90,60,0.32)' : 'rgba(197,139,255,0.3)'}`, cursor: 'pointer' }}>
@@ -1945,6 +1955,7 @@ export default function ShipHero({
                   claimBusy={claimingConv}
                   onStartConvert={onStartConvert}
                   onClaimConvert={onClaimConvert}
+                  onTabChange={setForgeTab}
                 />
               )}
 
