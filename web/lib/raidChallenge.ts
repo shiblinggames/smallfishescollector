@@ -97,8 +97,12 @@ function buildChallengeLoot(loot: RaidLootItem[]): RaidLootItem[] {
   const currency = loot.filter(l => lootCategory(l) !== 'unique')
   const uniques  = loot.filter(l => lootCategory(l) === 'unique')
   const skins       = uniques.filter(isSkin)
+  // ANCIENT is deliberately NOT folded into the flat item percentage. Those
+  // rates are hand-set to be the rarest in the game, and the generic 40% split
+  // would quadruple them. They double, the same as a trophy skin.
+  const ancients    = uniques.filter(l => !isSkin(l) && l.rarity === 'ancient')
   const legendaries = uniques.filter(l => !isSkin(l) && l.rarity === 'legendary')
-  const items       = uniques.filter(l => !isSkin(l) && l.rarity !== 'legendary')
+  const items       = uniques.filter(l => !isSkin(l) && l.rarity !== 'legendary' && l.rarity !== 'ancient')
 
   // Fixed-percentage specials (split evenly if a raid ever has more than one of a
   // kind). Trophy skin doubles its base rate — the established challenge cadence.
@@ -106,6 +110,7 @@ function buildChallengeLoot(loot: RaidLootItem[]): RaidLootItem[] {
     rows.map(r => ({ ...r, weight: Math.round((pct / Math.max(1, rows.length)) * 100) / 100 }))
   const specials = [
     ...skins.map(r => ({ ...r, weight: r.weight * 2 })),
+    ...ancients.map(r => ({ ...r, weight: r.weight * 2 })),
     ...splitEven(items, CHALLENGE_ITEM_PCT),
     ...splitEven(legendaries, CHALLENGE_LEGENDARY_PCT),
   ]
