@@ -1748,15 +1748,20 @@ export default function ShipHero({
                       <button type="button" onClick={() => setItemDetail(mountedFinale)}
                         aria-label={`${def.name}, mounted. Tap for its effect and an unmount option.`}
                         style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 0, padding: '0.5rem 0.35rem 0.45rem', borderRadius: 12, cursor: 'pointer', font: 'inherit', touchAction: 'manipulation', background: `${BRASS}14`, border: `1.5px solid ${BRASS}66` }}>
-                        <div style={{ width: '100%', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {/* The tier rides the ART as a corner chip. The line
+                            below belongs to the NAME, the same as every other
+                            filled cell, or this one reads as an item called
+                            "Tier I" sitting where its siblings say what they are. */}
+                        <div style={{ position: 'relative', width: '100%', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           {def.image
                             // eslint-disable-next-line @next/next/no-img-element
                             ? <img src={def.image} alt="" decoding="async" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', filter: `drop-shadow(0 3px 9px ${BRASS}66)` }} />
                             : <span style={{ fontSize: '1.3rem', lineHeight: 1 }}>{def.emoji}</span>}
+                          <span className="font-cinzel font-700" style={{ position: 'absolute', top: -2, right: -2, minWidth: 16, height: 16, padding: '0 3px', borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.5rem', letterSpacing: '0.03em', color: BRASS, background: 'rgba(10,8,4,0.88)', border: `1px solid ${BRASS}77` }}>
+                            {finnTierNumeral(finnItemLevel(borrowedJawXp))}
+                          </span>
                         </div>
-                        <span className="font-karla font-800 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: BRASS }}>
-                          Tier {finnTierNumeral(finnItemLevel(borrowedJawXp))}
-                        </span>
+                        <span className="font-karla font-600" style={{ display: 'block', width: '100%', fontSize: '0.58rem', lineHeight: 1.2, textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#cfc9c0' }}>{def.name}</span>
                       </button>
                     )
                   }
