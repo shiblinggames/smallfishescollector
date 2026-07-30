@@ -1519,7 +1519,11 @@ export default function ShipHero({
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
                 </button>
               </div>
-              <div style={{ flex: 1, overflowY: 'auto', overscrollBehavior: 'contain', padding: '1rem 1rem 6rem' }}>
+              {/* overflowX MUST be stated. With only overflowY set, CSS computes
+                  the other axis to 'auto' rather than 'visible', so the
+                  inventory rail's edge-to-edge bleed (a negative margin, wider
+                  than this box) made the whole drawer drag sideways. */}
+              <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', overscrollBehavior: 'contain', padding: '1rem 1rem 6rem' }}>
 
               {/* Launch-mode banner — only shows when the drawer was
                   opened from a hub modal with a mode. Tells the player
@@ -1831,7 +1835,7 @@ export default function ShipHero({
                       style={{
                         display: 'flex', gap: 8, overflowX: 'auto', overflowY: 'hidden',
                         scrollSnapType: 'x proximity', WebkitOverflowScrolling: 'touch',
-                        margin: '0 -1.1rem 1.6rem', padding: '0 1.1rem',
+                        margin: '0 -1rem 1.6rem', padding: '0 1rem',
                       }}
                     >
                       {owned.map(itemId => {
