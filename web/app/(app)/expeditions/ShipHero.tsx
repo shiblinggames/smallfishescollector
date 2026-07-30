@@ -559,6 +559,9 @@ export default function ShipHero({
   // Tapped an EQUIPPED loadout slot: open a detail modal (effect + Unequip)
   // instead of removing it outright. Holds the equipped item id being viewed.
   const [itemDetail, setItemDetail] = useState<string | null>(null)
+  // The locked mount explains itself on tap rather than wearing a label. A
+  // permanent caption on a slot most players will never fill is clutter.
+  const [mountNote, setMountNote] = useState(false)
   // The at-a-glance "Active Loadout" summary — every equipped item + effect.
   const [effectsOpen, setEffectsOpen] = useState(false)
 
@@ -1703,26 +1706,26 @@ export default function ShipHero({
                     </div>
                   )
                 })}
-                {/* HIS MOUNT. A real slot in the same grid, so it sits with the
-                    others instead of floating in its own panel, but brass-lined
-                    and restricted: only Finn's drop goes in it, and it never
-                    counts against the hull (see raidItemSlots above). */}
+                {/* THE EXTRA MOUNT. Drawn as a real cell in the same grid so it
+                    sits with its neighbours, but LOCKED until his gear is
+                    aboard. It explains itself on tap instead of carrying a
+                    caption, because a permanent label on a slot most players
+                    never fill is just clutter. */}
                 {hasSixthMount && (() => {
                   const jaw = ownedFinale[0] ?? null
                   const def = jaw ? getRaidItem(jaw) : null
-                  const on = !!mountedFinale
                   const BRASS = '#e0a44a'
-                  if (def && on) {
+                  if (def && mountedFinale) {
                     return (
-                      <button type="button" onClick={() => setItemDetail(mountedFinale!)}
+                      <button type="button" onClick={() => setItemDetail(mountedFinale)}
                         aria-label={`${def.name}, mounted. Tap for its effect and an unmount option.`}
                         style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, padding: '0.6rem 0.7rem', borderRadius: 12, textAlign: 'left', cursor: 'pointer', background: `${BRASS}1c`, border: `1.5px solid ${BRASS}88`, boxShadow: `0 0 14px ${BRASS}1f` }}>
-                        <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', background: `${BRASS}12`, border: `1px solid ${BRASS}40` }}>
+                        <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${BRASS}12`, border: `1px solid ${BRASS}40` }}>
                           <span style={{ fontSize: '1.3rem', lineHeight: 1 }}>{def.emoji}</span>
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.8rem', color: BRASS }}>{def.name}</p>
-                          <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: '#9a948a' }}>His mount · tap for details</span>
+                          <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: '#9a948a' }}>Tap for details</span>
                         </div>
                       </button>
                     )
@@ -1737,16 +1740,22 @@ export default function ShipHero({
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.78rem', color: BRASS }}>Mount {def.name}</p>
-                          <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: '#9a948a' }}>His mount</span>
+                          <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: '#9a948a' }}>Tap to mount</span>
                         </div>
                       </button>
                     )
                   }
                   return (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, minHeight: 64, padding: '0.6rem', borderRadius: 12, border: `1.5px dashed ${BRASS}44`, background: 'rgba(255,255,255,0.02)' }}>
-                      <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.56rem', color: BRASS }}>His mount</span>
-                      <span className="font-karla" style={{ fontSize: '0.5rem', color: '#6a6764' }}>Takes only his gear</span>
-                    </div>
+                    <button type="button" onClick={() => setMountNote(v => !v)}
+                      aria-label="Locked mount. Tap to see what it accepts."
+                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, minHeight: 64, padding: '0.6rem', borderRadius: 12, cursor: 'pointer', border: `1.5px dashed ${BRASS}44`, background: 'rgba(255,255,255,0.02)' }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={BRASS} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                        <rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" />
+                      </svg>
+                      {mountNote
+                        ? <span className="font-karla" style={{ fontSize: '0.52rem', lineHeight: 1.35, color: '#9a948a', textAlign: 'center' }}>Takes only The Borrowed Jaw, off Finn</span>
+                        : <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.54rem', color: BRASS }}>Locked</span>}
+                    </button>
                   )
                 })()}
               </div>
