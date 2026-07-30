@@ -6942,22 +6942,23 @@ export default function RaidCombat({
               <motion.div
                 key={rampBonusPct}
                 aria-hidden
-                initial={{ scale: 0.6, opacity: 0 }}
-                animate={{ scale: [0.6, 1.2, 1], opacity: 1 }}
+                initial={{ scale: 0.85, opacity: 0 }}
+                animate={{ scale: [0.85, 1.06, 1], opacity: 0.82 }}
                 transition={{ duration: 0.34, ease: 'easeOut' }}
                 style={{
-                  position: 'absolute', top: '2%', right: '8%', zIndex: 6, pointerEvents: 'none',
-                  display: 'inline-flex', alignItems: 'center', gap: 3,
-                  padding: '2px 7px 2px 5px', borderRadius: 999,
-                  background: `linear-gradient(180deg, ${heatColor}33, ${heatColor}14)`,
-                  border: `1px solid ${heatColor}`,
-                  boxShadow: `0 0 ${heatGlow}px ${heatColor}aa`,
+                  position: 'absolute', bottom: '2%', left: '3%', zIndex: 6, pointerEvents: 'none',
+                  display: 'inline-flex', alignItems: 'center', gap: 2,
+                  padding: '1px 5px 1px 4px', borderRadius: 999,
+                  background: 'rgba(6,10,16,0.55)',
+                  border: `1px solid ${heatColor}66`,
+                  boxShadow: `0 0 ${heatGlow}px ${heatColor}33`,
+                  opacity: 0.82,
                 }}
               >
-                <svg width="11" height="12" viewBox="0 0 24 24" fill={heatColor} stroke="none">
+                <svg width="9" height="10" viewBox="0 0 24 24" fill={heatColor} stroke="none">
                   <path d="M12 2c1 3-1.5 4.5-1.5 7A4.5 4.5 0 0 0 17 13c.4 3-1.6 8-5 8a5 5 0 0 1-5-5c0-3.6 3.5-5 5-13z" />
                 </svg>
-                <span className="font-cinzel font-800" style={{ fontSize: '0.62rem', color: heatColor, lineHeight: 1 }}>+{rampBonusPct}%</span>
+                <span className="font-cinzel font-800" style={{ fontSize: '0.55rem', color: heatColor, lineHeight: 1 }}>+{rampBonusPct}%</span>
               </motion.div>
             )
           })()}
