@@ -1877,7 +1877,10 @@ function NodeDetailSheet({
             renders on raid-type nodes with at least one populated record.
             Admins are excluded from "Fastest" so dev runs don't claim the
             top slot; "Your best" still shows for admins on their own sheet. */}
-        {node.type === 'raid' && raidRecords && (raidRecords.fastestMs > 0 || raidRecords.yourBestMs != null) && (
+        {/* Always shown on a raid node, even with nothing set yet. Hiding the
+            whole block on an unbeaten boss made its card a different HEIGHT to
+            every other one and quietly implied the fight had no records at all. */}
+        {node.type === 'raid' && (
           <div style={{ marginTop: '1.1rem' }}>
             <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#7a7875', marginBottom: '0.55rem' }}>Boss Records</p>
             <div style={{
@@ -1886,7 +1889,7 @@ function NodeDetailSheet({
               border: '1px solid rgba(200,168,64,0.2)',
               display: 'flex', flexDirection: 'column', gap: '0.4rem',
             }}>
-              {raidRecords.fastestMs > 0 && (
+              {raidRecords && raidRecords.fastestMs > 0 ? (
                 <div className="flex items-baseline justify-between" style={{ gap: 10 }}>
                   <div className="flex items-baseline" style={{ gap: 8, minWidth: 0 }}>
                     <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.55rem', color: '#c8a840' }}>Fastest</span>
@@ -1896,13 +1899,23 @@ function NodeDetailSheet({
                     {formatRaidMs(raidRecords.fastestMs)}
                   </span>
                 </div>
+              ) : (
+                <div className="flex items-baseline justify-between" style={{ gap: 10 }}>
+                  <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.55rem', color: '#c8a840' }}>Fastest</span>
+                  <span className="font-karla font-600" style={{ fontSize: '0.78rem', color: '#6d6a66' }}>No clears yet</span>
+                </div>
               )}
-              {raidRecords.yourBestMs != null && (
+              {raidRecords && raidRecords.yourBestMs != null ? (
                 <div className="flex items-baseline justify-between" style={{ gap: 10 }}>
                   <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.55rem', color: '#7da0d8' }}>Your best</span>
                   <span className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#cbd6e6', fontFeatureSettings: '"tnum"' }}>
                     {formatRaidMs(raidRecords.yourBestMs)}
                   </span>
+                </div>
+              ) : (
+                <div className="flex items-baseline justify-between" style={{ gap: 10 }}>
+                  <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.55rem', color: '#7da0d8' }}>Your best</span>
+                  <span className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#5f6772', fontFeatureSettings: '"tnum"' }}>{'\u2014'}</span>
                 </div>
               )}
             </div>

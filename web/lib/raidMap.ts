@@ -2732,7 +2732,10 @@ export const RAID_MAP: RaidNode[] = [
     detail: {
       description:
         'One last ride, captain. Everything the Sunken Hand ever took, and everything it opened for you, comes down to this water.',
-      dropsNote: 'The end of the Sunken Hand.',
+      enemies: ['Finn (six phases)'],
+      drops: lootDrops(THE_SUNKEN_HAND.loot),
+      clearReward: clearPayout(THE_SUNKEN_HAND),
+      dropsNote: 'Everything the six giants gave him, taken back off his hull.',
       ctaLabel: 'Coming Soon',
       summary: 'The last fight. Read The Hand That Sharpens It first.',
     },
