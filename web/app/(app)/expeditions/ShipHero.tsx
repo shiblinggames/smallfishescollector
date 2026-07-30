@@ -654,10 +654,13 @@ export default function ShipHero({
 
   const [, startTransition] = useTransition()
 
+  // Lock the page behind a SHEET only. On a focused route loadoutOpen is
+  // permanently true (the panel IS the page), so locking here would freeze the
+  // document and leave the whole screen unscrollable.
   useEffect(() => {
-    document.body.style.overflow = (loadoutOpen || sheetOpen) ? 'hidden' : ''
+    document.body.style.overflow = ((loadoutOpen && !focus) || sheetOpen) ? 'hidden' : ''
     return () => { document.body.style.overflow = '' }
-  }, [loadoutOpen, sheetOpen])
+  }, [loadoutOpen, sheetOpen, focus])
 
   // The hub-card modal dispatches 'expedition:open-loadout' when the
   // player taps "Open Prep" to commit to the next launch. We open the
@@ -1382,7 +1385,7 @@ export default function ShipHero({
                 borderTop: focus ? 'none' : '1px solid rgba(255,255,255,0.12)',
                 borderRadius: focus ? 0 : '18px 18px 0 0',
                 display: 'flex', flexDirection: 'column',
-                overflow: 'hidden',
+                overflow: focus ? 'visible' : 'hidden',
               }}
             >
               {!focus && <DrawerHandle controls={loadoutDragControls} />}
@@ -1445,7 +1448,12 @@ export default function ShipHero({
                   the other axis to 'auto' rather than 'visible', so the
                   inventory rail's edge-to-edge bleed (a negative margin, wider
                   than this box) made the whole drawer drag sideways. */}
-              <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', overscrollBehavior: 'contain', padding: '1rem 1rem 6rem' }}>
+              {/* On a ROUTE the document scrolls, so this stops being a scroll
+                  box. Both axes have to go visible together: set only one and
+                  CSS computes the other to auto, which re-creates the box. */}
+              <div style={focus
+                ? { padding: '0 1rem 6rem' }
+                : { flex: 1, overflowY: 'auto', overflowX: 'hidden', overscrollBehavior: 'contain', padding: '1rem 1rem 6rem' }}>
 
               {/* Launch-mode banner — only shows when the drawer was
                   opened from a hub modal with a mode. Tells the player
@@ -1766,7 +1774,7 @@ export default function ShipHero({
                       style={{
                         display: 'flex', gap: 8, overflowX: 'auto', overflowY: 'hidden',
                         scrollSnapType: 'x proximity', WebkitOverflowScrolling: 'touch',
-                        margin: '0 -1rem 1.6rem', padding: '0 1rem',
+                        ...(focus ? { marginBottom: '1.6rem' } : { margin: '0 -1rem 1.6rem', padding: '0 1rem' }),
                       }}
                     >
                       {owned.map(itemId => {
