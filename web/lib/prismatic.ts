@@ -125,3 +125,30 @@ export const forgedBorderSoft = (fill: string, abyssal = false): CSSProperties =
 
 export const forgedTextSoft = (abyssal = false): CSSProperties =>
   (abyssal ? ABYSSAL_EMBER_TEXT : PRISMATIC_TEXT_SOFT)
+
+// ── PRIMEVAL (The Sunken Hand) ───────────────────────────────────────────────
+// The two slots Finn's spoils live in: the hull MOUNT and the second fishing
+// SPECIAL. Neither takes an ordinary item, so neither should look like an
+// ordinary slot sitting empty. Same padding-box/border-box trick as the forge
+// treatments above, with a palette nothing else in the game spends: fossil bone
+// and old brass banded into the ancient crimson (#e0455a, the rarity colour),
+// well away from the prismatic pastels and the abyssal green-gold.
+export const PRIMEVAL = 'linear-gradient(118deg, #6d1c2a 0%, #e0455a 16%, #f2e2c6 34%, #e0a44a 52%, #c2394f 72%, #6d1c2a 100%)'
+
+/** The slot treatment. `dim` is the resting state for a slot that is unlocked
+ *  but empty: same identity, turned down, so an unfilled one still reads as
+ *  something waiting rather than something broken. */
+export const primevalBorder = (fill: string, dim = false): CSSProperties => ({
+  background: `linear-gradient(${fill}, ${fill}) padding-box, ${PRIMEVAL} border-box`,
+  border: '1.5px solid transparent',
+  boxShadow: dim
+    ? 'inset 0 0 14px rgba(224,69,90,0.10)'
+    : '0 0 15px rgba(224,69,90,0.22), inset 0 0 14px rgba(224,164,74,0.10)',
+})
+
+export const PRIMEVAL_TEXT: CSSProperties = {
+  backgroundImage: 'linear-gradient(105deg, #f0c9a8, #f2e2c6, #e8a0a8)',
+  WebkitBackgroundClip: 'text',
+  backgroundClip: 'text',
+  color: 'transparent',
+}

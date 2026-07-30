@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import { primevalBorder } from '@/lib/prismatic'
 import FinnChargePanel from '@/components/FinnChargePanel'
 import { FINN_ITEMS } from '@/lib/finnItems'
 import { createPortal } from 'react-dom'
@@ -493,7 +494,7 @@ function BaitIcon({ color }: { color: string }) {
 }
 
 function GearSlot({
-  label, image, icon, itemName, color, onClick, small, empty, glowClass, notify, pulseKey,
+  label, image, icon, itemName, color, onClick, small, empty, glowClass, notify, pulseKey, primeval,
 }: {
   label: string
   image?: string | null
@@ -510,6 +511,10 @@ function GearSlot({
   notify?: boolean
   /** Bump to retrigger a one-shot post-purchase pulse on this tile. */
   pulseKey?: number
+  /** THE SUNKEN HAND slot. Takes one item and nothing else, so it wears the
+   *  primeval border instead of the flat rarity tint every other slot uses. It
+   *  should not read as an ordinary slot that happens to be empty. */
+  primeval?: boolean
 }) {
   const glow = !!glowClass
   return (
@@ -531,8 +536,9 @@ function GearSlot({
       style={{
         position: 'relative',
         width: '100%',
-        border: `1px solid ${color}40`,
-        background: 'rgba(255,255,255,0.04)',
+        ...(primeval
+          ? primevalBorder('rgba(18,11,14,0.86)', empty)
+          : { border: `1px solid ${color}40`, background: 'rgba(255,255,255,0.04)' }),
         borderRadius: 20,
         padding: small ? '0.55rem 0.4rem' : '0.65rem 0.5rem',
         cursor: 'pointer',
@@ -1132,7 +1138,7 @@ export default function GearScreen({
             opens it; the panel behind it says what it accepts. */}
         {(() => {
           const seated = equippedSpecial2 ? SPECIAL_ITEMS.find(s => s.id === equippedSpecial2) : undefined
-          const REEL = '#6fd3c7'
+          const REEL = '#e0455a'   // ancient crimson, matching the hull mount + the rarity
           return (
             <GearSlot
               label="Special"
@@ -1144,6 +1150,7 @@ export default function GearScreen({
               color={hasDeepReel ? (seated ? seated.color : REEL) : '#4a4742'}
               onClick={() => setOpenSlot('special2')}
               empty={!seated}
+              primeval
             />
           )
         })()}

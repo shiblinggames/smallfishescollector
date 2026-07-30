@@ -33,7 +33,7 @@ import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
 import { applyCrewEffects, resolveEffects, effectSummary, SCOPE_META } from '@/lib/crewEffects'
 import { RARITY_COLORS as CREW_RARITY_COLORS, RARITY_NAMES } from '@/lib/crewGen'
 import { RAID_ITEMS, getRaidItem, FORGE_RECIPES, conflictingRaidItems, isForgedRaidItem, isAbyssalForgedItem, isConvertibleEpic, legendaryForEpic } from '@/lib/raidItems'
-import { PRISMATIC_TEXT, prismaticBorder, forgedBorderSoft, forgedTextSoft, ABYSSAL_EMBER_TEXT, abyssalEmberBorder } from '@/lib/prismatic'
+import { PRISMATIC_TEXT, prismaticBorder, forgedBorderSoft, forgedTextSoft, ABYSSAL_EMBER_TEXT, abyssalEmberBorder, primevalBorder, PRIMEVAL_TEXT } from '@/lib/prismatic'
 import ForgeBoard from './ForgeBoard'
 import { renameShip, buyShip } from '@/app/shipyard/actions'
 import { getXPProgress, navLevelBonuses, MAX_LEVEL, getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
@@ -1746,12 +1746,13 @@ export default function ShipHero({
                 {hasSixthMount && (() => {
                   const jaw = ownedFinale[0] ?? null
                   const def = jaw ? getRaidItem(jaw) : null
-                  const BRASS = '#e0a44a'
+                  const BRASS = '#e0a44a'         // the art's warm halo
+                  const ANCIENT = '#e0455a'      // the ancient rarity, matching the slot border
                   if (def && mountedFinale) {
                     return (
                       <button type="button" onClick={() => setItemDetail(mountedFinale)}
                         aria-label={`${def.name}, mounted. Tap for its effect and an unmount option.`}
-                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 0, padding: '0.5rem 0.35rem 0.45rem', borderRadius: 12, cursor: 'pointer', font: 'inherit', touchAction: 'manipulation', background: `${BRASS}14`, border: `1.5px solid ${BRASS}66` }}>
+                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 0, padding: '0.5rem 0.35rem 0.45rem', borderRadius: 12, cursor: 'pointer', font: 'inherit', touchAction: 'manipulation', ...primevalBorder('rgba(20,11,13,0.92)') }}>
                         {/* The tier rides the ART as a corner chip. The line
                             below belongs to the NAME, the same as every other
                             filled cell, or this one reads as an item called
@@ -1765,7 +1766,7 @@ export default function ShipHero({
                             {finnTierNumeral(finnItemLevel(borrowedJawXp))}
                           </span>
                         </div>
-                        <span className="font-karla font-600" style={{ display: 'block', width: '100%', fontSize: '0.58rem', lineHeight: 1.2, textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#cfc9c0' }}>{def.name}</span>
+                        <span className="font-karla font-600" style={{ display: 'block', width: '100%', fontSize: '0.58rem', lineHeight: 1.2, textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', ...PRIMEVAL_TEXT }}>{def.name}</span>
                       </button>
                     )
                   }
@@ -1773,27 +1774,27 @@ export default function ShipHero({
                     return (
                       <button type="button" onClick={() => toggleItem(def.id)}
                         aria-label={`Mount ${def.name}`}
-                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, minWidth: 0, minHeight: 84, padding: '0.5rem 0.35rem', borderRadius: 12, cursor: 'pointer', font: 'inherit', touchAction: 'manipulation', background: 'rgba(255,255,255,0.02)', border: `1.5px dashed ${BRASS}66` }}>
+                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, minWidth: 0, minHeight: 84, padding: '0.5rem 0.35rem', borderRadius: 12, cursor: 'pointer', font: 'inherit', touchAction: 'manipulation', ...primevalBorder('rgba(17,10,12,0.74)', true) }}>
                         <div style={{ width: '100%', height: 46, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           {def.image
                             // eslint-disable-next-line @next/next/no-img-element
                             ? <img src={def.image} alt="" decoding="async" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', opacity: 0.75 }} />
                             : <span style={{ fontSize: '1.3rem', lineHeight: 1, opacity: 0.7 }}>{def.emoji}</span>}
                         </div>
-                        <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: BRASS }}>Mount</span>
+                        <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: ANCIENT }}>Mount</span>
                       </button>
                     )
                   }
                   return (
                     <button type="button" onClick={() => setMountNote(v => !v)}
                       aria-label="Locked mount. Tap to see what it accepts."
-                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 84, padding: '0.5rem 0.35rem', borderRadius: 12, cursor: 'pointer', font: 'inherit', touchAction: 'manipulation', border: `1.5px dashed ${BRASS}44`, background: 'rgba(255,255,255,0.02)' }}>
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={BRASS} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 84, padding: '0.5rem 0.35rem', borderRadius: 12, cursor: 'pointer', font: 'inherit', touchAction: 'manipulation', ...primevalBorder('rgba(15,9,11,0.68)', true) }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={ANCIENT} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                         <rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" />
                       </svg>
                       {mountNote
                         ? <span className="font-karla" style={{ fontSize: '0.48rem', lineHeight: 1.3, color: '#9a948a', textAlign: 'center' }}>Takes only The Primeval Maw</span>
-                        : <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: BRASS }}>Locked</span>}
+                        : <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: ANCIENT }}>Locked</span>}
                     </button>
                   )
                 })()}
