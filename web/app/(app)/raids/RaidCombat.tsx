@@ -3255,6 +3255,12 @@ export default function RaidCombat({
         const revivedHp = Math.max(1, Math.floor(enemyHpMaxRef.current * nextCfg.revivePct))
         setEnemyHp(revivedHp)
         enemyHpRef.current = revivedHp
+        // HIS PLATE COMES BACK WITH HIM. enemy.shieldPct was applied ONCE at
+        // mount, so across a six-phase boss he got one shield for the whole
+        // fight and every later phase opened bare. Restoring it per phase is
+        // what makes armour a running theme he can then reinforce (Old Armour).
+        enemyShieldRef.current = enemyShieldMax
+        setEnemyShieldHp(enemyShieldMax)
         const n = enemyPhaseRef.current
         setEnemyPhase(n)
         setPhaseCallout(nextCfg.badge ?? `Phase ${n}`)
@@ -3945,7 +3951,7 @@ export default function RaidCombat({
               // CATFISH: he heals and puts plate up.
               const heal = Math.max(1, Math.round(enemyHpMaxRef.current * (ab.value ?? 0.14)))
               eHp = Math.min(enemyHpMaxRef.current, eHp + heal)
-              const shield = Math.max(1, Math.round(enemyHpMaxRef.current * 0.08))
+              const shield = Math.max(1, Math.round(enemyHpMaxRef.current * (ab.shieldValue ?? 0.08)))
               enemyShieldRef.current += shield
               setEnemyShieldHp(enemyShieldRef.current)
               aSplatTarget = 'enemy'; aSplatText = `+${heal}`
@@ -5294,6 +5300,12 @@ export default function RaidCombat({
             enemyFeintStreakRef.current = 0
             const revivedHp = Math.max(1, Math.floor(enemyHpMaxRef.current * nextCfg.revivePct))
             eHp = revivedHp; enemyHpRef.current = revivedHp; setEnemyHp(revivedHp)
+            // HIS PLATE COMES BACK WITH HIM. enemy.shieldPct was applied ONCE at
+            // mount, so across a six-phase boss he got one shield for the whole
+            // fight and every later phase opened bare. Restoring it per phase is
+            // what makes armour a running theme he can then reinforce (Old Armour).
+            enemyShieldRef.current = enemyShieldMax
+            setEnemyShieldHp(enemyShieldMax)
             const n = enemyPhaseRef.current
             setEnemyPhase(n)
             setPhaseCallout(nextCfg.badge ?? `Phase ${n}`)

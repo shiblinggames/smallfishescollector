@@ -111,6 +111,9 @@ export interface BossAbility {
   value?: number
   /** blitz only: how many light shots. */
   shots?: number
+  /** abyssal_tide only: shield granted, as a fraction of his max HP. The heal
+   *  lives in `value`. Defaults to 0.08. */
+  shieldValue?: number
   /** How many turns the effect lasts, where the kind is a lasting one
    *  (foresight / vengeance / requiem). Default 3. */
   turns?: number
@@ -2168,7 +2171,11 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
           ability: {
             kind: 'abyssal_tide', name: 'Old Armour',
             summonImage: '/fish/dunkleosteus.png', summonColor: '#9fb2c8',
-            value: 0.14,
+            // ARMOUR-led, not heal-led. The dunkleosteus is the plated giant
+            // and the ability is named for its plate, so the shield is the
+            // bigger half: 20% of his bar in plate, 10% in closed holes.
+            // Uncapped on purpose, so it goes BEYOND his baseline armour.
+            value: 0.10, shieldValue: 0.20,
           } },
         // ── PHASE 3 — MAKO. The frenzy. Many small teeth. ────────────────────
         { revivePct: 1.0, damageMult: 1.16, badge: 'Wake of the Drowned',
