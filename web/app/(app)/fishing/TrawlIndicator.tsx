@@ -181,6 +181,9 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
   const [coins, setCoins] = useState<{ id: number }[]>([])
   const [flashZone, setFlashZone] = useState<TrawlZoneKey | null>(null)
   const [sendingId, setSendingId] = useState<number | null>(null)
+  // Zone whose haul is in flight. Drives the "Collecting…" label so the tap
+  // reads as registered while the server action is still out.
+  const [collectingZone, setCollectingZone] = useState<TrawlZoneKey | null>(null)
   // Picker controls. XP leads because a trawl's headline reward is fishing XP.
   const [trawlSort, setTrawlSort] = useState<'xp' | 'doubloons'>('xp')
   const [trawlWho, setTrawlWho] = useState<'all' | 'free' | 'raid'>('all')
@@ -326,9 +329,12 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
 
   async function doCollect(zone: TrawlZoneKey) {
     if (busy) return
-    setBusy(true)
+    // Answer the tap NOW. The haul haptic below only fires once the server
+    // comes back, which left the press feeling dead for the whole round-trip —
+    // the same "immediate thunk" doDeploy already does on send.
+    setBusy(true); setCollectingZone(zone); haptic(10)
     const r = await collectTrawl(zone)
-    setBusy(false)
+    setBusy(false); setCollectingZone(null)
     if ('error' in r) return
     // Bigger hauls land with a heavier haptic + more coins flung to the purse.
     const tier = r.bumper
@@ -349,7 +355,10 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
     if (r.newFishingLevel > r.oldFishingLevel) {
       window.dispatchEvent(new CustomEvent('fishing-levelup-open'))
     }
-    void refresh()
+    // Refresh is DEFERRED to dismissReveal. Firing it here put a second server
+    // round-trip in flight just as the coins and the haul card started
+    // animating, and its setState re-rendered the whole panel mid-animation.
+    // The reveal covers the cards anyway, so nothing is stale on screen.
   }
 
   // Dismiss the haul card; if it was a level-up, hand off to FishingGame's
@@ -358,6 +367,8 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
   function dismissReveal() {
     const r = reveal
     setReveal(null)
+    // Now that the animation is done, pull the collected trawl out of state.
+    void refresh()
     if (r && r.newFishingLevel > r.oldFishingLevel) {
       window.dispatchEvent(new CustomEvent('fishing-levelup', { detail: { from: r.oldFishingLevel, to: r.newFishingLevel } }))
     }
@@ -479,7 +490,7 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                 // plate for legibility; filled gold for the standout Ready), not
                 // a full-width bordered header bar.
                 const status = {
-                  ready:    { c: '#fff1c8',     label: 'Tap to Collect',                filled: false, dot: false },
+                  ready:    { c: '#fff1c8',     label: collectingZone === z.key ? 'Hauling In…' : 'Tap to Collect', filled: false, dot: false },
                   running:  { c: theme.accent, label: `Fishing · ${fmtCountdown(ms)}`, filled: false, dot: true  },
                   sendable: { c: theme.accent, label: 'Tap to send crew',              filled: false, dot: false },
                   noslot:   { c: '#9a958c',    label: 'No free slot',                  filled: false, dot: false },
