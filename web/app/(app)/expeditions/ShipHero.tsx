@@ -1681,12 +1681,16 @@ export default function ShipHero({
                   Active effects summary
                 </button>
               )}
-              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(raidItemSlots, 2)}, minmax(0, 1fr))`, gap: 8, marginBottom: '1.6rem' }}>
+              {/* THREE across, so the full six read as two tidy rows instead of
+                  a tall stack of wide rows. Same art-first language as the
+                  inventory rail and the boss cards: the piece IS the tile, the
+                  name sits under it clipped to one line. */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, marginBottom: '1.6rem' }}>
                 {Array.from({ length: raidItemSlots }, (_, i) => {
                   const itemId = hullItems[i]
                   const def = itemId ? getRaidItem(itemId) : null
                   if (def && itemId) {
-                    const color = RARITY_ITEM_COLOR[def.rarity]
+                    const color = RARITY_ITEM_COLOR[def.rarity] ?? '#9ca3af'
                     const forged = isForgedRaidItem(itemId)
                     const abyssal = isAbyssalForgedItem(itemId)
                     return (
@@ -1695,18 +1699,15 @@ export default function ShipHero({
                         type="button"
                         onClick={() => setItemDetail(itemId)}
                         aria-label={`${def.name}, equipped. Tap for its effect and an unequip option.`}
-                        style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, padding: '0.6rem 0.7rem', borderRadius: 12, textAlign: 'left', cursor: 'pointer', ...(forged ? { ...forgedBorderSoft('rgba(14,18,26,0.92)', abyssal), boxShadow: abyssal ? '0 0 14px rgba(255,90,60,0.26)' : '0 0 12px rgba(150,140,180,0.18)' } : { background: `${color}1c`, border: `1.5px solid ${color}88`, boxShadow: `0 0 14px ${color}1f` }) }}
+                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 0, padding: '0.5rem 0.35rem 0.45rem', borderRadius: 12, cursor: 'pointer', font: 'inherit', touchAction: 'manipulation', ...(forged ? { ...forgedBorderSoft('rgba(14,18,26,0.92)', abyssal), boxShadow: abyssal ? '0 0 14px rgba(255,90,60,0.26)' : '0 0 12px rgba(150,140,180,0.18)' } : { background: `${color}14`, border: `1.5px solid ${color}66` }) }}
                       >
-                        <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', ...(forged ? forgedBorderSoft('rgba(20,24,32,0.9)', abyssal) : { background: `${color}12`, border: `1px solid ${color}40` }) }}>
+                        <div style={{ width: '100%', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           {def.image
                             // eslint-disable-next-line @next/next/no-img-element
-                            ? <img src={def.image} alt="" loading="lazy" decoding="async" className={abyssal ? 'rod-glow-abyssal' : undefined} style={{ width: 30, height: 30, objectFit: 'contain' }} />
-                            : <span style={{ fontSize: '1.4rem', lineHeight: 1, color, display: 'flex' }}><IconCrate size={22} /></span>}
+                            ? <img src={def.image} alt="" loading="lazy" decoding="async" className={abyssal ? 'rod-glow-abyssal' : undefined} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', filter: `drop-shadow(0 3px 9px ${color}66)` }} />
+                            : <span style={{ color, display: 'flex' }}><IconCrate size={26} /></span>}
                         </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.8rem', ...(forged ? forgedTextSoft(abyssal) : { color }) }}>{def.name}</p>
-                          <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: '#9a948a' }}>Tap for details</span>
-                        </div>
+                        <span className="font-karla font-600" style={{ display: 'block', width: '100%', fontSize: '0.58rem', lineHeight: 1.2, textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', ...(forged ? forgedTextSoft(abyssal) : { color: '#cfc9c0' }) }}>{def.name}</span>
                       </button>
                     )
                   }
@@ -1720,10 +1721,10 @@ export default function ShipHero({
                       type="button"
                       onClick={() => setPickerOpen(true)}
                       aria-label="Empty slot. Tap to choose an item to equip."
-                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 64, padding: '0.6rem', borderRadius: 12, border: '1.5px dashed rgba(255,255,255,0.16)', background: 'rgba(255,255,255,0.02)', cursor: 'pointer', font: 'inherit', touchAction: 'manipulation' }}
+                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5, minHeight: 84, padding: '0.5rem 0.35rem', borderRadius: 12, border: '1.5px dashed rgba(255,255,255,0.16)', background: 'rgba(255,255,255,0.02)', cursor: 'pointer', font: 'inherit', touchAction: 'manipulation' }}
                     >
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7d8894" strokeWidth="2.2" strokeLinecap="round" aria-hidden><path d="M12 5v14M5 12h14" /></svg>
-                      <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.54rem', color: '#7d8894' }}>Equip</span>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7d8894" strokeWidth="2.2" strokeLinecap="round" aria-hidden><path d="M12 5v14M5 12h14" /></svg>
+                      <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: '#7d8894' }}>Equip</span>
                     </button>
                   )
                 })}
@@ -1740,19 +1741,16 @@ export default function ShipHero({
                     return (
                       <button type="button" onClick={() => setItemDetail(mountedFinale)}
                         aria-label={`${def.name}, mounted. Tap for its effect and an unmount option.`}
-                        style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, padding: '0.6rem 0.7rem', borderRadius: 12, textAlign: 'left', cursor: 'pointer', background: `${BRASS}1c`, border: `1.5px solid ${BRASS}88`, boxShadow: `0 0 14px ${BRASS}1f` }}>
-                        <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${BRASS}12`, border: `1px solid ${BRASS}40` }}>
+                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 0, padding: '0.5rem 0.35rem 0.45rem', borderRadius: 12, cursor: 'pointer', font: 'inherit', touchAction: 'manipulation', background: `${BRASS}14`, border: `1.5px solid ${BRASS}66` }}>
+                        <div style={{ width: '100%', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           {def.image
                             // eslint-disable-next-line @next/next/no-img-element
-                            ? <img src={def.image} alt="" decoding="async" style={{ width: 32, height: 32, objectFit: 'contain' }} />
+                            ? <img src={def.image} alt="" decoding="async" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', filter: `drop-shadow(0 3px 9px ${BRASS}66)` }} />
                             : <span style={{ fontSize: '1.3rem', lineHeight: 1 }}>{def.emoji}</span>}
                         </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.8rem', color: BRASS }}>{def.name}</p>
-                          <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: '#9a948a' }}>
-                            Tier {finnTierNumeral(finnItemLevel(borrowedJawXp))} / {finnTierNumeral(FINN_ITEM_MAX_LEVEL)}
-                          </span>
-                        </div>
+                        <span className="font-karla font-800 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: BRASS }}>
+                          Tier {finnTierNumeral(finnItemLevel(borrowedJawXp))}
+                        </span>
                       </button>
                     )
                   }
@@ -1760,30 +1758,27 @@ export default function ShipHero({
                     return (
                       <button type="button" onClick={() => toggleItem(def.id)}
                         aria-label={`Mount ${def.name}`}
-                        style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, padding: '0.6rem 0.7rem', borderRadius: 12, textAlign: 'left', cursor: 'pointer', background: 'rgba(255,255,255,0.02)', border: `1.5px dashed ${BRASS}66` }}>
-                        <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${BRASS}0f`, border: `1px solid ${BRASS}33` }}>
+                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, minWidth: 0, minHeight: 84, padding: '0.5rem 0.35rem', borderRadius: 12, cursor: 'pointer', font: 'inherit', touchAction: 'manipulation', background: 'rgba(255,255,255,0.02)', border: `1.5px dashed ${BRASS}66` }}>
+                        <div style={{ width: '100%', height: 46, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           {def.image
                             // eslint-disable-next-line @next/next/no-img-element
-                            ? <img src={def.image} alt="" decoding="async" style={{ width: 32, height: 32, objectFit: 'contain', opacity: 0.75 }} />
+                            ? <img src={def.image} alt="" decoding="async" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', opacity: 0.75 }} />
                             : <span style={{ fontSize: '1.3rem', lineHeight: 1, opacity: 0.7 }}>{def.emoji}</span>}
                         </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.78rem', color: BRASS }}>Mount {def.name}</p>
-                          <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: '#9a948a' }}>Tap to mount</span>
-                        </div>
+                        <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: BRASS }}>Mount</span>
                       </button>
                     )
                   }
                   return (
                     <button type="button" onClick={() => setMountNote(v => !v)}
                       aria-label="Locked mount. Tap to see what it accepts."
-                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, minHeight: 64, padding: '0.6rem', borderRadius: 12, cursor: 'pointer', border: `1.5px dashed ${BRASS}44`, background: 'rgba(255,255,255,0.02)' }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={BRASS} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 84, padding: '0.5rem 0.35rem', borderRadius: 12, cursor: 'pointer', font: 'inherit', touchAction: 'manipulation', border: `1.5px dashed ${BRASS}44`, background: 'rgba(255,255,255,0.02)' }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={BRASS} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                         <rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" />
                       </svg>
                       {mountNote
-                        ? <span className="font-karla" style={{ fontSize: '0.52rem', lineHeight: 1.35, color: '#9a948a', textAlign: 'center' }}>Takes only The Primeval Maw, off Finn</span>
-                        : <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.54rem', color: BRASS }}>Locked</span>}
+                        ? <span className="font-karla" style={{ fontSize: '0.48rem', lineHeight: 1.3, color: '#9a948a', textAlign: 'center' }}>Takes only The Primeval Maw</span>
+                        : <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: BRASS }}>Locked</span>}
                     </button>
                   )
                 })()}
