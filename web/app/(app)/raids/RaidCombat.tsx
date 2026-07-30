@@ -995,24 +995,31 @@ export default function RaidCombat({
   // Sharpshot — next N shots have a wider crit zone. Consumed by a shot
   // landing (any of miss/graze/hit/critical — the buff applies *to* the roll).
   const [sharpshotBuff, setSharpshotBuff] = useState<{ multiplier: number; shotsLeft: number } | null>(null)
-  // Live crit half-width: CRIT_W scaled by tide critZoneScale and an active
-  // Sharpshot buff. ONE source of truth for the RAF tick's needle color,
-  // lockShot's judgment, and the gold band AimBarInline draws — previously
-  // the tick colored against base CRIT_W while lockShot judged the widened
-  // band, so the needle could glow green at the lock moment yet resolve
-  // critical. Ref mirror lets the RAF read it without restarting the tick.
-  // A band that reads fine as a slice of a straight bar looks enormous as a
-  // slice of a full circle, so the dial draws (and JUDGES) its bands tighter.
-  // Applied to base and gear bonus alike, and to paint and judgment alike, so
-  // the picture can never disagree with the verdict.
-  const DIAL_BAND_SCALE = 0.42
-  const dialHitBonus  = aimStyle === 'dial' ? (dialAim?.hitBonus  ?? 0) : 0
-  const bandScale = aimStyle === 'dial' ? DIAL_BAND_SCALE : 1
-  const liveCritW = CRIT_W * tide.critZoneMult * (sharpshotBuff ? 1 + sharpshotBuff.multiplier : 1) * bandScale
+  // Fishing gear widening the hit band, dial only (see lib/dialAim).
+  const dialHitBonus = aimStyle === 'dial' ? (dialAim?.hitBonus ?? 0) : 0
+  // BAND WIDTHS ON THE DIAL. A width that reads fine as a slice of a straight
+  // bar looks enormous as a slice of a full circle, so the dial scales its
+  // bands, and it scales HIT and CRIT SEPARATELY on purpose.
+  //
+  // The hit band is deliberately TIGHT: this is the last fight, and a shot
+  // that only clips him should feel like a near miss. The crit band is",
+  // deliberately NOT tightened with it. One shared scale (0.42) had squeezed
+  // the gold to 3.6 degrees, under HALF the bar's relative crit and 40%
+  // narrower than a fishing perfect, while the needle orbits continuously
+  // rather than bouncing in a bounded lane. That was unlandable, not hard.
+  //
+  // Result: gold 7.8 deg, green shoulder ~3.5 deg either side, grey graze out
+  // to 24 deg. Precision is rewarded and a sloppy lock barely scratches him.
+  // Applied to PAINT and JUDGMENT alike, so the picture cannot disagree.
+  const DIAL_HIT_SCALE  = 0.34
+  const DIAL_CRIT_SCALE = 0.90
+  const hitScale  = aimStyle === 'dial' ? DIAL_HIT_SCALE  : 1
+  const critScale = aimStyle === 'dial' ? DIAL_CRIT_SCALE : 1
+  const liveCritW = CRIT_W * tide.critZoneMult * (sharpshotBuff ? 1 + sharpshotBuff.multiplier : 1) * critScale
   // The hit + graze half-widths this fight actually uses. Bar fights get the
   // untouched constants; only the dial scales.
-  const aimHitW   = (HIT_W + dialHitBonus) * bandScale
-  const aimGrazeW = GRAZE_W * bandScale
+  const aimHitW   = (HIT_W + dialHitBonus) * hitScale
+  const aimGrazeW = GRAZE_W * hitScale
   const aimHitWRef   = useRef(aimHitW)
   const aimGrazeWRef = useRef(aimGrazeW)
   useEffect(() => { aimHitWRef.current = aimHitW;   }, [aimHitW])
