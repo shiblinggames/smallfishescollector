@@ -325,7 +325,31 @@ const SUNKEN_HAND_CHALLENGE_LOOT: RaidLootItem[] = [
   { id: 'pack_2',         label: '200 Gems', image: null,              emoji: '◆',  rarity: 'epic',     weight: 11 },
 ]
 
-export const THE_SUNKEN_HAND_CHALLENGE: BossRaidConfig = buildChallengeRaid(THE_SUNKEN_HAND, SUNKEN_HAND_CHALLENGE_LOOT)
+// The challenge finale turns his PLATE into the fight. Normal Finn wears 22%
+// of his hull in armour (194 on 880) — enough that the Perfect Streak pierce at
+// 5 is a nice bonus, not a demand: holding the chain all six phases only saves
+// about a fifth of the total damage. Here it is 90% of a hull that challenge
+// has already scaled to 1320, so he stands behind 1,188 plate that comes back
+// in full on every phase revive, with Old Armour still stacking +264 on top in
+// phase 2.
+//
+// That is the whole point. Brute-forcing him means chewing ~15,000 damage
+// across six phases; holding the streak to 5 ignores every point of plate and
+// cuts it to 7,920. The mechanic stops being a reward for good play and
+// becomes the only sane route through, which is what separates this from the
+// normal clear the player has already earned.
+//
+// Only the boss is re-plated — the scaled mobs keep buildChallengeRaid's
+// numbers, so the pressure lands on the fight that owns the mechanic.
+export const THE_SUNKEN_HAND_CHALLENGE: BossRaidConfig = (() => {
+  const base = buildChallengeRaid(THE_SUNKEN_HAND, SUNKEN_HAND_CHALLENGE_LOOT)
+  const finn = base.enemies.finn
+  if (!finn) return base
+  return {
+    ...base,
+    enemies: { ...base.enemies, finn: { ...finn, shieldPct: 0.90 } },
+  }
+})()
 
 export const THE_QUARTERMASTER_CHALLENGE: BossRaidConfig = (() => {
   const base = buildChallengeRaid(THE_QUARTERMASTER)
