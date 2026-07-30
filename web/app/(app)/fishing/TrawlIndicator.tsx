@@ -25,6 +25,36 @@ const GOLD = '#f0c040'
 const GREEN = '#7bf0b0'
 const BLUE = '#9fc0ef'
 const lastCrewKey = (z: string) => `trawl_last_crew_${z}`
+/** How many crew the picker shows before you ask for the rest. Two rows of the
+ *  3-across grid — enough to choose from without the wall of every hand you own,
+ *  which is what made the picker feel like homework once rosters got deep. */
+const CREW_PREVIEW = 6
+/** Per-zone most-recently-sent list, newest first. */
+const RECENT_MAX = 8
+
+function readRecentCrew(zone: string): number[] {
+  if (typeof localStorage === 'undefined') return []
+  try {
+    const raw = localStorage.getItem(lastCrewKey(zone))
+    if (!raw) return []
+    // Legacy value was a single bare id. Read it as a one-entry history rather
+    // than throwing away everyone's last-sent memory on upgrade.
+    if (!raw.startsWith('[')) {
+      const n = Number(raw)
+      return Number.isFinite(n) ? [n] : []
+    }
+    const arr: unknown = JSON.parse(raw)
+    return Array.isArray(arr) ? arr.filter((n): n is number => typeof n === 'number') : []
+  } catch { return [] }
+}
+
+function pushRecentCrew(zone: string, crewId: number) {
+  if (typeof localStorage === 'undefined') return
+  try {
+    const next = [crewId, ...readRecentCrew(zone).filter(id => id !== crewId)].slice(0, RECENT_MAX)
+    localStorage.setItem(lastCrewKey(zone), JSON.stringify(next))
+  } catch { /* no-op */ }
+}
 
 // Per-zone DEPTH palette so the zones read as distinct waters at a glance —
 // bright aqua shallows sinking to a violet abyss and a phosphorescent ancient
@@ -185,7 +215,10 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
   // reads as registered while the server action is still out.
   const [collectingZone, setCollectingZone] = useState<TrawlZoneKey | null>(null)
   // Picker controls. XP leads because a trawl's headline reward is fishing XP.
-  const [trawlSort, setTrawlSort] = useState<'xp' | 'doubloons'>('xp')
+  const [trawlSort, setTrawlSort] = useState<'xp' | 'doubloons' | 'recent'>('xp')
+  // The picker opens SHORT. Deep rosters turned choosing a hand into scanning
+  // a wall of near-identical cards; the rest are one tap away.
+  const [showAllCrew, setShowAllCrew] = useState(false)
   const [trawlWho, setTrawlWho] = useState<'all' | 'free' | 'raid'>('all')
   const [slotUnlock, setSlotUnlock] = useState<number | null>(null)
   const [slotInfo, setSlotInfo] = useState(false)
@@ -321,7 +354,7 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
     const r = await deployTrawl(zone, crewId)
     setBusy(false); setSendingId(null)
     if ('error' in r) { haptic([10, 40, 10]); return }
-    try { localStorage.setItem(lastCrewKey(zone), String(crewId)) } catch { /* no-op */ }
+    pushRecentCrew(zone, crewId)
     setState(r); setPicking(null); setNow(Date.now())
     // Pop-flash the zone that just got a crew so the change reads.
     setFlashZone(zone); setTimeout(() => setFlashZone(null), 850)
@@ -481,7 +514,7 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                 const wide = i === state.zones.length - 1 && state.zones.length % 2 === 1
                 const sendable = z.unlocked && !t && freeSlots > 0
                 const actionable = ready || sendable
-                const onTapCard = ready ? () => doCollect(z.key) : sendable ? () => { haptic(10); setPicking(z.key) } : undefined
+                const onTapCard = ready ? () => doCollect(z.key) : sendable ? () => { haptic(10); setShowAllCrew(false); setPicking(z.key) } : undefined
                 const theme = DEPTH_THEMES[z.key]
                 const glow = ready ? GOLD : running ? theme.accent : flashing ? theme.accent : undefined
                 const cardState: 'locked' | 'ready' | 'running' | 'sendable' | 'noslot' =
@@ -606,8 +639,14 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
   )
 
   // ── Crew picker — shows each crew's estimated yield FOR THIS ZONE ─────────
-  const lastId = picking ? Number((typeof localStorage !== 'undefined' && localStorage.getItem(lastCrewKey(picking))) || NaN) : NaN
+  const recentIds = picking ? readRecentCrew(picking) : []
+  const lastId = recentIds.length > 0 ? recentIds[0] : NaN
   const pickZone = picking ? state.zones.find(z => z.key === picking) : null
+  // QUICK SEND — the last hand you sent to THIS zone, if they're free again.
+  // Most trawl sends are the same crew to the same water, and that round trip
+  // was costing a scroll through the whole roster every cycle.
+  const quickCrew = picking ? state.freeCrew.find(c => c.id === lastId) ?? null : null
+  const quickEst = quickCrew && picking ? expectedTrawlHaul(picking, quickCrew.savvy, quickCrew.fortune) : null
   // Sorted by what the run actually PAYS, not by raw stats. Savvy and Fortune
   // convert at different rates per zone, so a stat sum never matched the
   // estimate printed on the tile and the top card was often not the best one.
@@ -615,9 +654,24 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
     ? state.freeCrew
         .filter(c => trawlWho === 'all' || (trawlWho === 'raid' ? c.inRaidParty === true : c.inRaidParty !== true))
         .map(c => ({ c, est: expectedTrawlHaul(picking, c.savvy, c.fortune) }))
-        .sort((a, b) => (trawlSort === 'doubloons' ? b.est.doubloons - a.est.doubloons : b.est.xp - a.est.xp))
+        .sort((a, b) => {
+          if (trawlSort === 'recent') {
+            // Sent-before first, newest first. Anyone never sent to this water
+            // sorts after them, and falls back to best XP among themselves.
+            const ai = recentIds.indexOf(a.c.id)
+            const bi = recentIds.indexOf(b.c.id)
+            if (ai !== bi) return (ai < 0 ? Infinity : ai) - (bi < 0 ? Infinity : bi)
+            return b.est.xp - a.est.xp
+          }
+          return trawlSort === 'doubloons' ? b.est.doubloons - a.est.doubloons : b.est.xp - a.est.xp
+        })
     : []
-  const orderedCrew = rankedCrew.map(r => r.c)
+  const allOrderedCrew = rankedCrew.map(r => r.c)
+  // Quick Send already offers the last hand above, so keep them out of the
+  // preview rather than showing the same crew twice in the first six.
+  const previewPool = quickCrew ? allOrderedCrew.filter(c => c.id !== quickCrew.id) : allOrderedCrew
+  const orderedCrew = showAllCrew ? previewPool : previewPool.slice(0, CREW_PREVIEW)
+  const hiddenCrewCount = previewPool.length - orderedCrew.length
   // Tag the strongest crew for each goal (Savvy → XP, Fortune → doubloons) so a
   // min-maxer can pick at a glance. Only when there's an actual choice to make.
   // Best-of tags rank the whole free crew, so filtering the list does not
@@ -639,6 +693,36 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
             <p className="font-karla" style={{ fontSize: '0.76rem', color: '#bcb29a', lineHeight: 1.45, margin: '4px 0 10px' }}>
               Locked at sea for the full <span style={{ color: '#e6dcc2' }}>{picking ? fmtTrawlDuration(picking) : ''}</span> cycle. <span style={{ color: BLUE }}>Savvy</span> earns fishing XP, <span style={{ color: GOLD }}>Fortune</span> earns doubloons.
             </p>
+            {/* QUICK SEND. The same hand goes back to the same water most
+                cycles, so that choice gets made once and repeated in a tap
+                instead of scrolling the roster again. Only shown when the crew
+                you last sent here is actually free again. */}
+            {quickCrew && quickEst && (
+              <motion.button
+                disabled={busy}
+                onClick={() => picking && doDeploy(picking, quickCrew.id)}
+                whileTap={{ scale: 0.98 }}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '0.55rem 0.7rem', marginBottom: 10, borderRadius: 13, textAlign: 'left',
+                  background: sendingId === quickCrew.id ? `${GREEN}22` : 'rgba(159,192,239,0.10)',
+                  border: `1px solid ${sendingId === quickCrew.id ? `${GREEN}88` : 'rgba(159,192,239,0.45)'}`,
+                  cursor: 'pointer', opacity: busy && sendingId !== quickCrew.id ? 0.5 : 1,
+                }}>
+                <Portrait crew={quickCrew} size={42} glow={sendingId === quickCrew.id ? GREEN : undefined} />
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span className="font-karla font-800 uppercase" style={{ display: 'block', fontSize: '0.52rem', letterSpacing: '0.1em', color: BLUE }}>
+                    {quickCrew.inRaidParty ? 'Send again · in raid party' : 'Send again'}
+                  </span>
+                  <span className="font-cinzel font-700" style={{ display: 'block', fontSize: '0.92rem', color: '#f4ecd8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {sendingId === quickCrew.id ? 'Sending…' : quickCrew.name}
+                  </span>
+                  <span className="font-karla font-600" style={{ display: 'block', fontSize: '0.62rem', color: '#a89e86', whiteSpace: 'nowrap' }}>
+                    ~<span style={{ color: GREEN }}>{quickEst.xp.toLocaleString()} xp</span> · ~<span style={{ color: GOLD }}>{quickEst.doubloons.toLocaleString()} ⟡</span>
+                  </span>
+                </span>
+              </motion.button>
+            )}
             {/* Controls. Sort by what you actually want out of the run, and
                 filter on the one thing that costs you something elsewhere. */}
             {state.freeCrew.length > 1 && (
@@ -647,6 +731,7 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                   { key: 'sort' as const, value: trawlSort, set: setTrawlSort as (v: string) => void, opts: [
                     { k: 'xp', label: 'Best XP', color: GREEN },
                     { k: 'doubloons', label: 'Best ⟡', color: GOLD },
+                    { k: 'recent', label: 'Recent', color: BLUE },
                   ] },
                   { key: 'who' as const, value: trawlWho, set: setTrawlWho as (v: string) => void, opts: [
                     { k: 'all', label: 'All', color: '#bcb29a' },
@@ -676,7 +761,7 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                 ))}
               </div>
             )}
-            {orderedCrew.length === 0 && (state.freeCrew.length === 0
+            {allOrderedCrew.length === 0 && !quickCrew && (state.freeCrew.length === 0
               ? <p className="font-karla" style={{ fontSize: '0.84rem', color: '#a89e86', textAlign: 'center', padding: '2rem 0' }}>No free crew — they&apos;re all at sea, raiding, or voyaging. Recruit more in the Crew Hall.</p>
               : <p className="font-karla" style={{ fontSize: '0.84rem', color: '#a89e86', textAlign: 'center', padding: '1.6rem 0' }}>No crew match that filter.</p>)}
             {/* Three across, art first — same language as the raid and voyage
@@ -726,7 +811,18 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                 )
               })}
             </div>
-            {orderedCrew.some(c => c.inRaidParty) && (
+            {hiddenCrewCount > 0 && (
+              <button type="button" onClick={() => setShowAllCrew(true)}
+                className="font-karla font-700 uppercase tracking-[0.08em]"
+                style={{
+                  width: '100%', marginTop: 8, padding: '0.5rem', borderRadius: 11,
+                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)',
+                  color: '#bcb29a', fontSize: '0.6rem', cursor: 'pointer', touchAction: 'manipulation',
+                }}>
+                Show {hiddenCrewCount} more {hiddenCrewCount === 1 ? 'hand' : 'hands'}
+              </button>
+            )}
+            {allOrderedCrew.some(c => c.inRaidParty) && (
               <p className="font-karla" style={{ fontSize: '0.68rem', color: '#e0a0a0', lineHeight: 1.45, marginTop: 12, textAlign: 'center' }}>
                 A hand marked <span style={{ color: '#e07c7c' }}>Raid</span> is in your raid party. Trawling locks them at sea for the whole cycle, so they will not be aboard for a raid until they are back.
               </p>
