@@ -88,7 +88,10 @@ function SpoilCore({ size, accent, intensity, art }: {
         transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
         style={{
           position: 'absolute', inset: '20%', width: '60%', height: '60%', objectFit: 'contain',
-          filter: cold ? 'grayscale(1) brightness(0.5)' : `drop-shadow(0 0 8px ${col}bb)`,
+          filter: cold
+            ? 'grayscale(1) brightness(0.42)'
+            : `grayscale(0.92) brightness(0.72) drop-shadow(0 0 7px ${col}55)`,
+          opacity: cold ? 0.5 : 0.62,
           zIndex: 1,
         }} />
     </div>
@@ -172,7 +175,7 @@ export default function SpoilsBoard({ freeSide, paidSide, doubloons, onDone }: {
                   </div>
                   <p className="font-karla" style={{ margin: '3px 0 0', fontSize: '0.68rem', lineHeight: 1.4, color: '#9a958c' }}>{s.blurb}</p>
                   <p className="font-karla font-700" style={{ margin: '4px 0 0', fontSize: '0.6rem', color: col }}>
-                    Fits only: {s.item}
+                    Holds {s.item}, still to be won off Finn
                   </p>
                 </div>
               </div>
