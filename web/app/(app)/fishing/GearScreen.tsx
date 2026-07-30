@@ -2538,7 +2538,7 @@ export default function GearScreen({
                   {/* Stable-height scroll window: switching Skin/Hat/Boat/Pet no
                       longer resizes the sheet — all four render in the same box,
                       and a taller tab just scrolls inside it. */}
-                  <div className="hide-scrollbar" style={{ height: '46vh', overflowY: 'auto', overscrollBehavior: 'contain' }}>
+                  <div className="scrollbar-hide" style={{ height: '46vh', overflowY: 'auto', overscrollBehavior: 'contain' }}>
 
                   {/* ── Skin tab body ── */}
                   {appearanceTab === 'skin' && (() => {
@@ -2598,7 +2598,7 @@ export default function GearScreen({
                         {groups.map(g => g.items.length === 0 ? null : (
                           <div key={g.label} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                             <p className="font-karla font-600 uppercase" style={groupLabel}>{g.label}</p>
-                            <div className="hide-scrollbar" style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4, scrollSnapType: 'x proximity' }}>
+                            <div className="scrollbar-hide" style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4, scrollSnapType: 'x proximity' }}>
                               {/* Owned first, locked after — your skins lead each row. */}
                               {[...g.items]
                                 .sort((a, b) => Number(b.free || unlockedCharacterColors.includes(b.id)) - Number(a.free || unlockedCharacterColors.includes(a.id)))
@@ -2773,7 +2773,7 @@ export default function GearScreen({
                         <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#bda05a' }}>Hat Color</p>
                         <CosmeticLegend />
                         <p className="font-karla font-600 uppercase" style={groupLabel}>Starter</p>
-                        <div className="hide-scrollbar" style={rowStyle}>
+                        <div className="scrollbar-hide" style={rowStyle}>
                           {/* Default (no bandana) — built-in, tap to take the hat off. */}
                           <button
                             onClick={() => { if (!defaultEquipped) onEquipHat(null) }}
@@ -2805,14 +2805,14 @@ export default function GearScreen({
                         {earnedHats.length > 0 && (
                           <>
                             <p className="font-karla font-600 uppercase" style={groupLabel}>Earnable</p>
-                            <div className="hide-scrollbar" style={rowStyle}>{earnedHats.map(renderHatThumb)}</div>
+                            <div className="scrollbar-hide" style={rowStyle}>{earnedHats.map(renderHatThumb)}</div>
                           </>
                         )}
 
                         {purchasableHats.length > 0 && (
                           <>
                             <p className="font-karla font-600 uppercase" style={groupLabel}>Purchasable</p>
-                            <div className="hide-scrollbar" style={rowStyle}>{purchasableHats.map(renderHatThumb)}</div>
+                            <div className="scrollbar-hide" style={rowStyle}>{purchasableHats.map(renderHatThumb)}</div>
                           </>
                         )}
                       </div>
@@ -2882,7 +2882,7 @@ export default function GearScreen({
                         <CosmeticLegend />
 
                         {/* None — unequip. Its own short row up top. */}
-                        <div className="hide-scrollbar" style={rowStyle}>
+                        <div className="scrollbar-hide" style={rowStyle}>
                           <button
                             onClick={() => { if (!noneEquipped) onEquipPet(null) }}
                             style={{ flex: '0 0 auto', background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}
@@ -2913,7 +2913,7 @@ export default function GearScreen({
                           return (
                             <div key={s.key} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                               <p className="font-karla font-600 uppercase" style={groupLabel}>{s.label} <span style={{ opacity: 0.7 }}>· {ownedHere}/{list.length}</span></p>
-                              <div className="hide-scrollbar" style={rowStyle}>{list.map(renderPetThumb)}</div>
+                              <div className="scrollbar-hide" style={rowStyle}>{list.map(renderPetThumb)}</div>
                             </div>
                           )
                         })}

@@ -2054,7 +2054,9 @@ function NodeDetailSheet({
                                   ? <span style={{ display: 'block', width: '100%', height: '100%', borderRadius: 4, background: d.swatch, filter: d.swatchFilter }} />
                                   : d.image
                                     // eslint-disable-next-line @next/next/no-img-element
-                                    ? <img src={d.image} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain', filter: d.imageFilter }} />
+                                    // A hull in a small SQUARE tile is mostly dead air, so it fills by cover
+                                    // (the midsection is what shows the skin's colour anyway).
+                                    ? <img src={d.image} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: d.shipSkinId ? 'cover' : 'contain', filter: d.imageFilter }} />
                                     : <span style={{ color: rc, display: 'flex' }}><IconCrate size={17} /></span>}
                               </span>
                               <span className="font-karla font-600 truncate" style={{ flex: 1, minWidth: 0, fontSize: '0.8rem', color: '#e8e2d8' }}>{d.label}</span>
@@ -2097,7 +2099,9 @@ function NodeDetailSheet({
                           ? <div style={{ width: '100%', height: '100%', background: d.swatch, filter: d.swatchFilter }} />
                           : d.image
                             // eslint-disable-next-line @next/next/no-img-element
-                            ? <img src={d.image} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain', filter: d.imageFilter }} />
+                            // A hull in a small SQUARE tile is mostly dead air, so it fills by cover
+                                    // (the midsection is what shows the skin's colour anyway).
+                                    ? <img src={d.image} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: d.shipSkinId ? 'cover' : 'contain', filter: d.imageFilter }} />
                             : d.emoji === GEM_GLYPH
                               ? <span className="font-cinzel" style={{ color: GEM_COLOR }}>{d.emoji}</span>
                               : <span style={{ color: rc, display: 'flex' }}><IconCrate size={14} /></span>}
@@ -2279,8 +2283,11 @@ function DropDetailModal({ drop, owned, onClose }: { drop: RaidNodeDrop; owned: 
 
         {/* Header: big icon + name + type + rarity */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, paddingRight: 24 }}>
+          {/* Hull sprites are ~16:9. In a square box they render barely half its
+              height with dead air above and below, so a hull gets a WIDE box and
+              fills it; everything else keeps the square. */}
           <div style={{
-            width: 64, height: 64, flexShrink: 0,
+            width: shipSkin ? 112 : 64, height: 64, flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: `${rarityColor}14`, border: `1px solid ${rarityColor}45`,
             borderRadius: 12, overflow: 'hidden',
@@ -2289,7 +2296,7 @@ function DropDetailModal({ drop, owned, onClose }: { drop: RaidNodeDrop; owned: 
               ? <span style={{ display: 'block', width: '100%', height: '100%', background: drop.swatch, filter: drop.swatchFilter }} />
               : drop.image
                 // eslint-disable-next-line @next/next/no-img-element
-                ? <img src={drop.image} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain', filter: drop.imageFilter, padding: 4 }} />
+                ? <img src={drop.image} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: shipSkin ? 'auto' : '100%', maxHeight: '100%', objectFit: 'contain', filter: drop.imageFilter, padding: shipSkin ? 2 : 4 }} />
                 : <span style={{ fontSize: '2rem', color: rarityColor, display: 'flex' }}><IconCrate size={32} /></span>}
           </div>
           <div style={{ minWidth: 0, flex: 1 }}>
@@ -3201,23 +3208,89 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
           {drops.length > 0 && (
             <>
               <p className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.18em', color: '#8a857c', marginBottom: 8 }}>Drops</p>
-              <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 16 }}>
+              {/* One fixed-height rail that scrolls sideways, so a boss with two
+                  drops and a boss with eight both read the same and neither
+                  reflows the sheet. The art is the tile; the name lives in the
+                  detail modal a tap away. */}
+              <div
+                className="scrollbar-hide"
+                style={{
+                  display: 'flex', gap: 8, marginBottom: 16,
+                  overflowX: 'auto', overflowY: 'hidden',
+                  scrollSnapType: 'x proximity',
+                  WebkitOverflowScrolling: 'touch',
+                  // Bleed to the sheet's edges so a scrollable rail visibly runs
+                  // off the side instead of stopping dead in the padding.
+                  margin: '0 -1.1rem 16px', padding: '0 1.1rem',
+                }}
+              >
                 {drops.map(d => {
                   const rc = (d.rarity && RARITY_COLOR[d.rarity]) || '#c4a96a'
                   const owned = dropOwned(d)
                   const chance = owned ? undefined : (liveChance(d) ?? d.chance)
+                  // Hull skins are ~16:9 sprites; item art is square. One 3:2 box
+                  // splits the difference, and each kind gets the fit that stops
+                  // it swimming in dead space: ships stretch to the full width,
+                  // square art fills the height.
+                  const isHull = !!d.shipSkinId
                   return (
-                    <button key={d.id ?? d.label} type="button" onClick={() => onDropTap(d)} aria-label={`${d.label}, details`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.72rem', color: owned ? '#a2d9b6' : '#e7dcc4', background: owned ? 'rgba(74,222,128,0.1)' : 'rgba(255,255,255,0.06)', border: `1px solid ${owned ? 'rgba(74,222,128,0.4)' : `${rc}44`}`, borderRadius: 999, padding: '0.24rem 0.7rem 0.24rem 0.34rem', cursor: 'pointer', font: 'inherit', touchAction: 'manipulation' }}>
-                      {d.image ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={d.image} alt="" style={{ width: 20, height: 20, objectFit: 'contain', borderRadius: 4, opacity: owned ? 0.85 : 1 }} />
-                      ) : (
-                        <span style={{ width: 12, height: 12, borderRadius: 3, background: rc, boxShadow: `0 0 6px ${rc}` }} />
-                      )}
-                      {d.label}
-                      {owned
-                        ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 1 }}><path d="M5 12l4 4 10-10" /></svg>
-                        : chance && <span className="font-karla font-800" style={{ marginLeft: 1, fontSize: '0.64rem', color: rc, fontVariantNumeric: 'tabular-nums' }}>{chance}</span>}
+                    <button
+                      key={d.id ?? d.label}
+                      type="button"
+                      onClick={() => onDropTap(d)}
+                      aria-label={`${d.label}${chance ? `, ${chance}` : ', owned'}, details`}
+                      style={{
+                        flex: '0 0 auto', width: 126, scrollSnapAlign: 'start',
+                        display: 'flex', flexDirection: 'column', gap: 5,
+                        padding: 0, background: 'none', border: 'none',
+                        cursor: 'pointer', font: 'inherit', touchAction: 'manipulation',
+                      }}
+                    >
+                      <div style={{
+                        position: 'relative', width: '100%', height: 84,
+                        borderRadius: 11, overflow: 'hidden',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: `linear-gradient(160deg, ${rc}1f 0%, rgba(8,13,20,0.85) 100%)`,
+                        border: `1px solid ${owned ? 'rgba(74,222,128,0.5)' : `${rc}55`}`,
+                        boxShadow: `inset 0 0 18px ${rc}14`,
+                      }}>
+                        {d.swatch
+                          ? <div style={{ width: '100%', height: '100%', background: d.swatch, filter: d.swatchFilter }} />
+                          : d.image
+                            // eslint-disable-next-line @next/next/no-img-element
+                            ? <img
+                                src={d.image}
+                                alt=""
+                                loading="lazy"
+                                decoding="async"
+                                style={{
+                                  width: isHull ? '100%' : 'auto',
+                                  height: isHull ? 'auto' : '100%',
+                                  maxWidth: '100%', maxHeight: '100%',
+                                  objectFit: 'contain',
+                                  filter: d.imageFilter,
+                                  opacity: owned ? 0.9 : 1,
+                                }}
+                              />
+                            : <span style={{ color: rc, display: 'flex' }}><IconCrate size={30} /></span>}
+                        {owned && (
+                          <span style={{
+                            position: 'absolute', top: 5, right: 5,
+                            width: 17, height: 17, borderRadius: '50%',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            background: 'rgba(10,20,14,0.86)', border: '1px solid rgba(74,222,128,0.65)',
+                          }}>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l4 4 10-10" /></svg>
+                          </span>
+                        )}
+                      </div>
+                      <span className="font-karla font-800 uppercase tracking-[0.08em]" style={{
+                        fontSize: '0.6rem', textAlign: 'center',
+                        color: owned ? '#7fd49a' : rc,
+                        fontVariantNumeric: 'tabular-nums',
+                      }}>
+                        {owned ? 'Owned' : (chance ?? 'Drop')}
+                      </span>
                     </button>
                   )
                 })}
