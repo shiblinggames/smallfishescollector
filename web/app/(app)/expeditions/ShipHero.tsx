@@ -255,6 +255,9 @@ interface Props {
   /** THE SIXTH MOUNT (Finn spoil). An EXTRA mount that takes exactly one
    *  item, his jaw, so it is deliberately not folded into raidItemSlots. */
   hasSixthMount?: boolean
+  /** Render ONE screen as a whole page instead of the hub: the Ship, Items or
+   *  Forge routes. Undefined on the hub itself, where this is a section. */
+  focus?: 'ship' | 'items' | 'forge'
   isAdmin?: boolean
   /** Persisted Navigation Renown allocations ({} when none). Renown LEVEL
    *  derives live from expeditionXP. */
@@ -369,6 +372,7 @@ export default function ShipHero({
   throneCleared = false,
   hasArmoryExpansion = false,
   hasSixthMount = false,
+  focus,
   isAdmin = false,
   navRenownAlloc = null,
   seenNavRenownIntro = true,
@@ -563,13 +567,15 @@ export default function ShipHero({
 
   // Manage Ship section tab. Loadout (the battle decision) first; Ship
   // (upgrade / class / repair) next; cosmetic Skins last.
-  const [loadoutTab, setLoadoutTab] = useState<'loadout' | 'ship' | 'forge'>('loadout')
+  // On a focused route the panel IS the page: it opens on that section and
+  // never closes.
+  const [loadoutTab, setLoadoutTab] = useState<'loadout' | 'ship' | 'forge'>(focus === 'items' ? 'loadout' : focus === 'forge' ? 'forge' : focus === 'ship' ? 'ship' : 'loadout')
 
   // Ship name state
   const [shipName, setShipName] = useState(initialShipName)
 
   // Modal state
-  const [loadoutOpen, setLoadoutOpen] = useState(false)
+  const [loadoutOpen, setLoadoutOpen] = useState(!!focus)
   // Tapped an EQUIPPED loadout slot: open a detail modal (effect + Unequip)
   // instead of removing it outright. Holds the equipped item id being viewed.
   const [itemDetail, setItemDetail] = useState<string | null>(null)
@@ -1050,6 +1056,9 @@ export default function ShipHero({
 
   return (
     <>
+      {/* The hub only renders when this is a SECTION. A focused route shows
+          one screen and nothing else. */}
+      {!focus && (<>
       {/* ── Ship hero — NO card container. Its contents (Nav XP bar, crew
           lineup, ship sprite, and the two Manage pills) float directly on the
           page's epic seascape background. A soft dark pool behind the content
@@ -1294,23 +1303,25 @@ export default function ShipHero({
                 WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation' as const,
                 width: '100%', font: 'inherit',
               }
-              if (row.key === 'crew') {
-                return <Link key={row.key} href="/crew" className="hub-manage-tap" data-coach="crew" style={style}>{inner}</Link>
+              // All four go to a real route now. Crew already had one; Ship,
+              // Items and Forge got theirs so the row behaves the same wherever
+              // it points, back button included.
+              const href = row.key === 'crew' ? '/crew' : `/expeditions/${row.key}`
+              if (row.locked) {
+                return (
+                  <div key={row.key} aria-label="Forge. Locked until you unlock it in the Gauntlet." style={style}>{inner}</div>
+                )
               }
-              const tab = row.key === 'items' ? 'loadout' : row.key === 'forge' ? 'forge' : 'ship'
               return (
-                <button
+                <Link
                   key={row.key}
-                  type="button"
-                  disabled={row.locked}
-                  onClick={row.locked ? undefined : () => { setLoadoutTab(tab); setLoadoutOpen(true) }}
-                  className={row.locked ? undefined : 'hub-manage-tap'}
-                  data-coach={row.key === 'ship' ? 'ship' : undefined}
-                  aria-label={row.locked ? 'Forge. Locked until you unlock it in the Gauntlet.' : undefined}
+                  href={href}
+                  className="hub-manage-tap"
+                  data-coach={row.key === 'crew' ? 'crew' : row.key === 'ship' ? 'ship' : undefined}
                   style={style}
                 >
                   {inner}
-                </button>
+                </Link>
               )
             })}
           </div>
@@ -1322,18 +1333,22 @@ export default function ShipHero({
             actually makes decisions (during prep, not at-a-glance). */}
 
       </div>
+      </>)}
 
       {/* ── Loadout drawer ── */}
       <AnimatePresence>
         {loadoutOpen && (
           <>
-            {/* Backdrop. z-index 100 to clear the page Nav (which is z:50). */}
+            {/* Backdrop. z-index 100 to clear the page Nav (which is z:50).
+                A focused route has nothing behind it to dim, and no dismiss. */}
+            {!focus && (
             <motion.div
               key="loadout-backdrop"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 100 }}
               onClick={closeLoadout}
             />
+            )}
 
             {/* Drawer. z-index 101 so the modal paints above the page Nav
                 (also z:50). Using explicit top + bottom (instead of maxHeight)
@@ -1344,16 +1359,18 @@ export default function ShipHero({
                 drawer up from below; at rest it occupies top:80 → bottom:0. */}
             <motion.div
               key="loadout-drawer"
-              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              initial={focus ? false : { y: '100%' }} animate={{ y: 0 }} exit={focus ? undefined : { y: '100%' }}
               transition={{ type: 'spring', stiffness: 380, damping: 36 }}
-              {...drawerDragProps(closeLoadout, loadoutDragControls)}
+              {...(focus ? {} : drawerDragProps(closeLoadout, loadoutDragControls))}
               style={{
-                position: 'fixed',
-                top: 'max(80px, env(safe-area-inset-top, 0px) + 20px)',
-                bottom: 0,
-                left: 'max(0px, calc(50% - 240px))',
-                right: 'max(0px, calc(50% - 240px))',
-                zIndex: 101,
+                ...(focus
+                  ? { position: 'relative' as const, minHeight: 'calc(100dvh - 44px)' }
+                  : { position: 'fixed' as const,
+                      top: 'max(80px, env(safe-area-inset-top, 0px) + 20px)',
+                      bottom: 0,
+                      left: 'max(0px, calc(50% - 240px))',
+                      right: 'max(0px, calc(50% - 240px))',
+                      zIndex: 101 }),
                 // Painted shipyard backdrop (fixed behind the drawer) under a dark
                 // scrim so the dense loadout UI stays legible over the light dawn
                 // sky. Solid colour fallback while the image loads.
@@ -1362,13 +1379,13 @@ export default function ShipHero({
                 backgroundSize: 'cover',
                 backgroundPosition: 'center top',
                 backgroundRepeat: 'no-repeat',
-                borderTop: '1px solid rgba(255,255,255,0.12)',
-                borderRadius: '18px 18px 0 0',
+                borderTop: focus ? 'none' : '1px solid rgba(255,255,255,0.12)',
+                borderRadius: focus ? 0 : '18px 18px 0 0',
                 display: 'flex', flexDirection: 'column',
                 overflow: 'hidden',
               }}
             >
-              <DrawerHandle controls={loadoutDragControls} />
+              {!focus && <DrawerHandle controls={loadoutDragControls} />}
               {/* Sticky header — outside the scroll container so the close
                   button never scrolls off-screen. */}
               <div style={{
@@ -1378,6 +1395,11 @@ export default function ShipHero({
                 borderBottom: '1px solid rgba(255,255,255,0.08)',
               }}>
                 <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.72rem', color: '#a8a39c' }}>{loadoutMode !== null ? 'Loadout' : loadoutTab === 'forge' ? 'Forge' : loadoutTab === 'ship' ? 'Ship' : 'Items'}</p>
+                {focus ? (
+                  <Link href="/expeditions" aria-label="Back to expeditions" style={{ color: '#e0ddd8', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: '50%', width: 32, height: 32, textDecoration: 'none' }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M15 18l-6-6 6-6" /></svg>
+                  </Link>
+                ) : (
                 <button
                   onClick={closeLoadout}
                   aria-label="Close loadout"
@@ -1393,6 +1415,7 @@ export default function ShipHero({
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
                 </button>
+                )}
               </div>
               {/* overflowX MUST be stated. With only overflowY set, CSS computes
                   the other axis to 'auto' rather than 'visible', so the

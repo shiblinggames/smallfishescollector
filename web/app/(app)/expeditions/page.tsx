@@ -12,6 +12,8 @@ import CampaignMapOverlay from './CampaignMapOverlay'
 import ShipHero from './ShipHero'
 import ExpeditionsTour from './ExpeditionsTour'
 import HubCards from './HubCards'
+import ShipHeroSection from './ShipHeroSection'
+import { cachedCrewRoster, cachedTrawlingCrewIds, cachedChapter3Cleared, cachedBlockadeCleared, cachedThroneCleared } from './hubData'
 import type { CampaignCardData, VoyageCardData, VoyageStatus } from './HubCards'
 import { gauntletUnlocked, donsGauntletUnlocked } from '@/lib/gauntlet'
 import { CREW_SKINS } from '@/lib/crewSkins'
@@ -34,36 +36,16 @@ import { getCrew } from '@/app/(app)/social/actions'
 // the query, the rest reuse the same in-flight promise. This means slow
 // sections (e.g. raid map) no longer block fast sections (e.g. ship hero).
 
-const cachedCrewRoster = cache(() => getCrewRoster())
 const cachedDailyVoyageState = cache(() => getDailyVoyageState())
 const cachedRaidMap = cache(() => getRaidMapView())
 
 // Crew currently out on a trawl — excluded from the ship loadout crew picker
 // (they're reserved at sea; the server would reject the assignment anyway).
-const cachedTrawlingCrewIds = cache(async (): Promise<number[]> => {
-  const user = await getCurrentUser()
-  if (!user) return []
-  const admin = createAdminClient()
-  const { data } = await admin.from('trawls').select('crew_id').eq('user_id', user.id)
-  return ((data ?? []) as { crew_id: number }[]).map(r => r.crew_id)
-})
 
 // The three ship-screen reveal gates (Ch3 Quartermaster → ultimate build; Raid 7
 // Blockade → Sixth Berth; Raid 8 Throne → Expanded Armory) all ask "has this user
 // cleared raid X". One `.in()` query answers all three; the boolean helpers below
 // read from this shared (per-request cached) set instead of each hitting the DB.
-const cachedShipRevealClears = cache(async (): Promise<Set<string>> => {
-  const user = await getCurrentUser()
-  if (!user) return new Set()
-  const admin = createAdminClient()
-  const { data } = await admin.from('raid_completions')
-    .select('raid_id').eq('user_id', user.id)
-    .in('raid_id', ['the_quartermaster', 'the_blockade', 'the_throne'])
-  return new Set(((data ?? []) as { raid_id: string }[]).map(r => r.raid_id))
-})
-const cachedChapter3Cleared = cache(async (): Promise<boolean> => (await cachedShipRevealClears()).has('the_quartermaster'))
-const cachedBlockadeCleared = cache(async (): Promise<boolean> => (await cachedShipRevealClears()).has('the_blockade'))
-const cachedThroneCleared   = cache(async (): Promise<boolean> => (await cachedShipRevealClears()).has('the_throne'))
 
 /** How many raids the captain has actually finished. Drives Captain's Orders, which
  *  cannot know "have you ever won a fight" from the roster alone. */
@@ -93,69 +75,6 @@ const cachedVoyageHistory = cache(async (): Promise<VoyageHistoryEntry[]> => {
 // ── Heavy sections — each one fetches its own data, in parallel, and streams
 //    in when ready. Shared loaders are deduped by React.cache.
 
-async function ShipHeroSection() {
-  const [profile, roster, trawlingCrewIds, chapter3Cleared, blockadeCleared, throneCleared] = await Promise.all([
-    getCurrentProfile(),
-    cachedCrewRoster(),
-    cachedTrawlingCrewIds(),
-    cachedChapter3Cleared(),
-    cachedBlockadeCleared(),
-    cachedThroneCleared(),
-  ])
-  const shipTier = profile?.ship_tier ?? 0
-  const baseShip = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
-  // The Sixth Berth widens the crew grid to six — fold it into the stats the
-  // roster + every downstream slot display reads.
-  const hasSixthBerth = profile?.has_sixth_berth === true
-  const shipStats = hasSixthBerth ? { ...baseShip, crewSlots: baseShip.crewSlots + 1 } : baseShip
-  // Promote a matured ultimate build into the active slot on load, so a weapon
-  // that finished while the player was away shows as live (and fires).
-  const { active: activeAugment, build: manowarBuild } = profile
-    ? await settleUltimateBuild(createAdminClient(), profile.id as string,
-        (profile.manowar_augment as string | null) ?? null, profile.manowar_augment_build ?? null)
-    : { active: null, build: null }
-  return (
-    <ShipHero
-      shipStats={shipStats}
-      shipName={(profile?.ship_name as string | null) ?? null}
-      expeditionXP={profile?.expedition_xp ?? 0}
-      equippedShipSkin={(profile?.equipped_ship_skin as string | null) ?? null}
-      shipSkins={(profile?.ship_skins as string[] | null) ?? []}
-      roster={roster}
-      trawlingCrewIds={trawlingCrewIds}
-      ownedRaidItems={(profile?.raid_items as string[] | null) ?? []}
-      borrowedJawXp={Number(profile?.borrowed_jaw_xp ?? 0)}
-      equippedRaidItems={(profile?.equipped_raid_items as string[] | null) ?? []}
-      equippedRepairKit={(profile?.equipped_repair_kit as string | null) ?? 'basic_repair_kit'}
-      ownedRepairKits={(profile?.owned_repair_kits as string[] | null) ?? ['basic_repair_kit']}
-      raidRepairOwed={profile?.raid_repair_owed ?? 0}
-      doubloons={profile?.doubloons ?? 0}
-      shipClasses={(profile?.ship_classes as Record<string, string> | null) ?? {}}
-      gauntletUpgrades={[
-        ...((profile?.gauntlet_upgrades as string[] | null) ?? []),
-        ...((profile?.dons_gauntlet_upgrades as string[] | null) ?? []),
-      ]}
-      gauntletFathoms={(profile?.gauntlet_fathoms as number | null) ?? 0}
-      gems={(profile?.gems as number | null) ?? 0}
-      abyssalConversion={parseAbyssalConversion(profile?.abyssal_conversion)}
-      forgeRecipesLearned={(profile?.forge_recipes_learned as string[] | null) ?? []}
-      hasSeenForgeIntro={profile?.has_seen_forge_intro === true}
-      hasSeenShipGuide={profile?.has_seen_ship_guide === true}
-      manowarAugment={activeAugment}
-      manowarBuild={manowarBuild}
-      manowarSchematics={profile?.manowar_schematics === true}
-      chapter3Cleared={chapter3Cleared}
-      blockadeCleared={blockadeCleared}
-      hasSixthBerth={hasSixthBerth}
-      throneCleared={throneCleared}
-      hasArmoryExpansion={profile?.has_armory_expansion === true}
-      hasSixthMount={profile?.finn_spoil_free === 'nav' || profile?.finn_spoil_paid === 'nav'}
-      isAdmin={profile?.is_admin === true}
-      navRenownAlloc={(profile?.nav_renown_alloc as Record<string, number> | null) ?? null}
-      seenNavRenownIntro={profile?.seen_nav_renown_intro === true}
-    />
-  )
-}
 
 // DailyVoyageSection removed — the panel now lives inside the Voyages
 // hub-card modal in HubCards.tsx. ExpeditionHub fetches the data once
