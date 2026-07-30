@@ -13,6 +13,8 @@ import { getRaidItem } from '@/lib/raidItems'
 import { getRaidConfigById } from '@/lib/raidRegistry'
 import { isUniqueLoot } from '@/lib/bossRaids'
 import { getShipSkin } from '@/lib/shipSkins'
+import { SPECIAL_ITEMS } from '@/lib/specialItems'
+import { FINN_ITEMS, type FinnItemId } from '@/lib/finnItems'
 import { claimMilestoneNode, markStoryNodeRead, claimScoutDebt, claimQuartermasterChoice, solvePuzzleNode, pickShipClass, markChapterUnlockSeen, pickRaidEventChoice, pickForkRoute, standForMuster } from './raidMapActions'
 import { LegendaryUnlockOverlay } from './LegendaryUnlockOverlay'
 import type { UnlockedLegendary } from '@/lib/legendaryUnlocks'
@@ -2078,11 +2080,13 @@ function NodeDetailSheet({
                   // readable.
                   const full = !!d.sublabel || detail.drops!.length === 1
                   return (
-                    <div key={d.label} style={{
+                    <button key={d.label} type="button" onClick={() => setSelectedDrop(d)} aria-label={`${d.label}, details`} style={{
                       gridColumn: full ? '1 / -1' : undefined,
                       display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0,
                       background: 'rgba(255,255,255,0.03)', border: `1px solid ${rc}26`,
                       borderRadius: 9, padding: '0.4rem 0.5rem',
+                      textAlign: 'left', cursor: 'pointer', font: 'inherit', color: 'inherit',
+                      touchAction: 'manipulation',
                     }}>
                       <div style={{
                         width: 26, height: 26, borderRadius: 6, flexShrink: 0,
@@ -2109,7 +2113,7 @@ function NodeDetailSheet({
                           {d.chance}
                         </span>
                       )}
-                    </div>
+                    </button>
                   )
                 })}
               </div>
@@ -2210,12 +2214,19 @@ function DropDetailModal({ drop, owned, onClose }: { drop: RaidNodeDrop; owned: 
   const rarityColor = drop.rarity ? RARITY_COLOR[drop.rarity] : '#9ca3af'
   const raidItem    = drop.raidItemId ? getRaidItem(drop.raidItemId)   : undefined
   const shipSkin    = drop.shipSkinId ? getShipSkin(drop.shipSkinId)   : undefined
+  const special     = drop.specialItemId ? SPECIAL_ITEMS.find(x => x.id === drop.specialItemId) : undefined
+  // Finn's two spoils have no fixed effect line to print: what they DO is the
+  // charge ladder. Show the whole ladder here so the drop sells itself before
+  // you have ever held it.
+  const finn = (drop.id === 'anglers_patience' || drop.id === 'borrowed_jaw')
+    ? FINN_ITEMS[drop.id as FinnItemId]
+    : undefined
   // What kind of drop is this — drives the "type" label + body copy.
-  const dropKind = raidItem ? 'Raid Item' : shipSkin ? 'Ship Skin' : 'Drop'
+  const dropKind = raidItem ? 'Raid Item' : shipSkin ? 'Ship Skin' : special ? 'Fishing Special' : 'Drop'
   // Description: prefer the raid item's full description; fall back to
   // the drop's sublabel (already preformatted by lootDrops).
-  const description = raidItem?.description
-    ?? (drop.sublabel ?? '').replace(/^Raid item\.\s*|^Ship skin\.\s*/, '')
+  const description = raidItem?.description ?? special?.description
+    ?? (drop.sublabel ?? '').replace(/^Raid item\.\s*|^Ship skin\.\s*|^Fishing special\.\s*/, '')
 
   return (
     <motion.div
@@ -2301,6 +2312,29 @@ function DropDetailModal({ drop, owned, onClose }: { drop: RaidNodeDrop; owned: 
           <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(240,237,232,0.78)', lineHeight: 1.55, marginBottom: 14 }}>
             {description}
           </p>
+        )}
+
+        {/* Finn's charge ladder. Every tier listed, none of them marked as
+            unlocked, because this is a preview of what the thing becomes. */}
+        {finn && (
+          <div style={{ marginBottom: 14 }}>
+            <p className="font-karla font-800 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: finn.color, marginBottom: 6 }}>
+              Charges on {finn.chargedBy === 'navigation' ? 'Navigation' : 'Fishing'} XP
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {finn.milestones.map(m => (
+                <div key={m.level} style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 7,
+                  padding: '4px 7px', borderRadius: 7,
+                  background: 'rgba(255,255,255,0.03)',
+                  border: `1px solid ${finn.color}22`,
+                }}>
+                  <span className="font-cinzel font-700" style={{ flexShrink: 0, width: 12, textAlign: 'center', fontSize: '0.58rem', color: finn.color, fontVariantNumeric: 'tabular-nums' }}>{m.level}</span>
+                  <span className="font-karla" style={{ fontSize: '0.6rem', lineHeight: 1.4, color: 'rgba(240,237,232,0.72)' }}>{m.unlock}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
 
         {/* Source line for raid items (tells you where it drops) */}
@@ -3049,6 +3083,11 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
   onRepairBlocked: () => void
   onClose: () => void
 }) {
+  // Tapping a drop opens the same DropDetailModal the map nodes use, so an item
+  // reads identically wherever you meet it. Local state: this modal is portaled
+  // and rendered from two call sites, and neither should have to own this.
+  const [dropDetail, setDropDetail] = useState<RaidNodeDrop | null>(null)
+  const onDropTap = (d: RaidNodeDrop) => setDropDetail(d)
   const node = boss.node
   const bossName = bossNameOf(node)
   const cleared = boss.status === 'cleared'   // beat the boss NORMALLY → art revealed
@@ -3089,7 +3128,10 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
     if (totalW <= 0) return undefined
     return `${Math.round(share * (row.weight / totalW) * 100)}%`
   }
-  const drops = (activeNode.detail?.drops ?? []).filter(d => (d.rarity === 'epic' || d.rarity === 'legendary') && (d.raidItemId || d.shipSkinId)).slice(0, 4)
+  // specialItemId is in here because Finn's Eye is a FISHING special: without it
+  // the headline drop off the final boss never rendered on his own card. The cap
+  // is 6 rather than 4 for the same reason, since he alone drops five.
+  const drops = (activeNode.detail?.drops ?? []).filter(d => (d.rarity === 'epic' || d.rarity === 'legendary') && (d.raidItemId || d.shipSkinId || d.specialItemId)).slice(0, 6)
 
   // Header status pill reflects the active mode.
   const pillCleared = isChallenge ? chCleared : cleared
@@ -3165,7 +3207,7 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
                   const owned = dropOwned(d)
                   const chance = owned ? undefined : (liveChance(d) ?? d.chance)
                   return (
-                    <span key={d.id ?? d.label} title={owned ? 'Owned' : undefined} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.72rem', color: owned ? '#a2d9b6' : '#e7dcc4', background: owned ? 'rgba(74,222,128,0.1)' : 'rgba(255,255,255,0.06)', border: `1px solid ${owned ? 'rgba(74,222,128,0.4)' : `${rc}44`}`, borderRadius: 999, padding: '0.24rem 0.7rem 0.24rem 0.34rem' }}>
+                    <button key={d.id ?? d.label} type="button" onClick={() => onDropTap(d)} aria-label={`${d.label}, details`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.72rem', color: owned ? '#a2d9b6' : '#e7dcc4', background: owned ? 'rgba(74,222,128,0.1)' : 'rgba(255,255,255,0.06)', border: `1px solid ${owned ? 'rgba(74,222,128,0.4)' : `${rc}44`}`, borderRadius: 999, padding: '0.24rem 0.7rem 0.24rem 0.34rem', cursor: 'pointer', font: 'inherit', touchAction: 'manipulation' }}>
                       {d.image ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={d.image} alt="" style={{ width: 20, height: 20, objectFit: 'contain', borderRadius: 4, opacity: owned ? 0.85 : 1 }} />
@@ -3176,7 +3218,7 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
                       {owned
                         ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 1 }}><path d="M5 12l4 4 10-10" /></svg>
                         : chance && <span className="font-karla font-800" style={{ marginLeft: 1, fontSize: '0.64rem', color: rc, fontVariantNumeric: 'tabular-nums' }}>{chance}</span>}
-                    </span>
+                    </button>
                   )
                 })}
               </div>
@@ -3217,6 +3259,18 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
           )}
         </div>
       </motion.div>
+      {/* Sits INSIDE the boss modal's portal so it stacks above it. Its own
+          click-stop keeps a tap inside the detail from closing the sheet
+          underneath it. */}
+      {dropDetail && (
+        <div onClick={e => e.stopPropagation()}>
+          <DropDetailModal
+            drop={dropDetail}
+            owned={(!!dropDetail.id && ownedRaidItems.includes(dropDetail.id)) || (!!dropDetail.shipSkinId && ownedShipSkins.includes(dropDetail.shipSkinId))}
+            onClose={() => setDropDetail(null)}
+          />
+        </div>
+      )}
     </motion.div>,
     document.body,
   )

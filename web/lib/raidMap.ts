@@ -15,6 +15,7 @@ import { SIXTH_BERTH_COST, ARMORY_EXPANSION_COST, SPOILS_PRICE } from '@/lib/shi
 import type { RaidMuster, MusterReport } from '@/lib/crewMuster'
 import { CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE, THE_CARTOGRAPHER_CHALLENGE, THE_TOLLMASTER_CHALLENGE, THE_COFFERS_FLEET_CHALLENGE, THE_QUARTERMASTER_CHALLENGE, THE_BLOCKADE_CHALLENGE, THE_THRONE_CHALLENGE, THE_SUNKEN_HAND_CHALLENGE } from '@/lib/raidChallenge'
 import { getShipSkin } from '@/lib/shipSkins'
+import { SPECIAL_ITEMS } from '@/lib/specialItems'
 import { getRaidItem } from '@/lib/raidItems'
 
 // Legendary-crew card art, reused as a StoryScene bust so the chapter guides
@@ -407,6 +408,10 @@ export interface RaidNodeDrop {
   /** If this drop is a raid item, its id (so the detail modal can pull
    *  the full RaidItemDef. Effects, description, source). */
   raidItemId?: string
+  /** If this drop is a FISHING special (Finn's Eye), its id. Specials live in
+   *  their own registry, so without this the detail modal has nothing to read
+   *  and renders a nameless, effectless card. */
+  specialItemId?: string
   /** If this drop is a ship skin, its id (so the detail modal can
    *  pull the full ShipSkin. Name, filter, lore). */
   shipSkinId?: string
@@ -615,6 +620,15 @@ function lootDrops(loot: RaidLootItem[]): RaidNodeDrop[] {
     if (item) {
       drop.sublabel = `Raid item. ${item.description}`
       drop.raidItemId = item.id
+    }
+    // Fishing special (The Primeval Eye). Neither a raid item nor a skin, so
+    // without this branch it falls through both and reads as a bare label with
+    // no effect text at all.
+    const special = SPECIAL_ITEMS.find(x => x.id === l.id)
+    if (special) {
+      drop.label = special.name
+      drop.sublabel = `Fishing special. ${special.description}`
+      drop.specialItemId = special.id
     }
     return drop
   })
