@@ -1391,10 +1391,34 @@ export default function ShipHero({
               <div style={{
                 flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '0.25rem 1rem 0.7rem',
+                padding: focus ? '1.1rem 1rem 0.85rem' : '0.25rem 1rem 0.7rem',
                 borderBottom: '1px solid rgba(255,255,255,0.08)',
               }}>
-                <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.72rem', color: '#a8a39c' }}>{loadoutMode !== null ? 'Loadout' : loadoutTab === 'forge' ? 'Forge' : loadoutTab === 'ship' ? 'Ship' : 'Items'}</p>
+                {/* On a ROUTE this is a page header, so it matches Crew
+                    Management: a font-pirata title with a status chip beside
+                    it. In the drawer it stays the small section label, which is
+                    all a sheet needs. */}
+                {focus ? (
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.7rem', flexWrap: 'wrap', minWidth: 0 }}>
+                    <h1 className="font-pirata" style={{ fontSize: '1.7rem', letterSpacing: '0.03em', color: '#f0ede8' }}>
+                      {focus === 'ship' ? 'Ship Management' : focus === 'forge' ? 'The Forge' : 'Battle Loadout'}
+                    </h1>
+                    {(() => {
+                      const chip = focus === 'items' ? `${slotsFilled} / ${slotsTotal} mounted`
+                        : focus === 'ship' ? (shipName ?? shipStats.name)
+                        : abyssalUnlocked ? 'Abyssal open' : forgeUnlocked ? 'Recipes open' : 'Locked'
+                      const warn = focus === 'items' ? slotsFilled >= slotsTotal : focus === 'forge' && !forgeUnlocked
+                      return (
+                        <span className="font-karla font-700" style={{
+                          fontSize: '0.7rem', letterSpacing: '0.08em', textTransform: 'uppercase',
+                          color: warn ? '#f2b0b0' : '#c8b890',
+                        }}>{chip}</span>
+                      )
+                    })()}
+                  </div>
+                ) : (
+                  <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.72rem', color: '#a8a39c' }}>{loadoutMode !== null ? 'Loadout' : loadoutTab === 'forge' ? 'Forge' : loadoutTab === 'ship' ? 'Ship' : 'Items'}</p>
+                )}
                 {focus ? (
                   <Link href="/expeditions" aria-label="Back to expeditions" style={{ color: '#e0ddd8', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: '50%', width: 32, height: 32, textDecoration: 'none' }}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M15 18l-6-6 6-6" /></svg>
@@ -1465,7 +1489,7 @@ export default function ShipHero({
               {/* Hero — ship portrait + name (inline rename). Upgrade, class,
                   and repair all moved into the Ship tab so the header is a clean
                   identity strip and each concern has its own home. */}
-              {(() => {
+              {(loadoutTab === 'ship' || loadoutMode !== null) && (() => {
                 return (
                   <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
                     <div style={{ position: 'relative', display: 'inline-block', width: '78%', maxWidth: 230 }}>
@@ -1577,11 +1601,14 @@ export default function ShipHero({
                   slots, so what's equipped reads at a glance. Tap a filled slot
                   to remove it; equip from the Inventory below. Effects stack —
                   any item in any slot — so the slots are just capacity. */}
+              {/* The route header already says this, with the same count. */}
+              {!focus && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.8rem' }}>
                 <span className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.22em', color: '#8794a6' }}>Battle Loadout</span>
                 <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
                 <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.56rem', color: '#c4b078' }}>{slotsFilled}/{slotsTotal} slots</span>
               </div>
+              )}
               {/* At-a-glance summary of every active item + what it does. */}
               {equippedItems.length > 0 && (
                 <button
@@ -1813,7 +1840,7 @@ export default function ShipHero({
                 <div style={{ position: 'relative', width: 60, height: 60, margin: '0 auto 8px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', ...(abyssalUnlocked ? abyssalEmberBorder('rgba(10,6,10,0.92)') : forgeUnlocked ? prismaticBorder('rgba(12,16,24,0.9)') : { background: 'rgba(18,28,40,0.6)', border: '1px solid rgba(125,176,208,0.3)' }) }}>
                   <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={abyssalUnlocked ? '#ff7a5c' : forgeUnlocked ? '#ffce8a' : '#8fb6d6'} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M4 10h9l3-3 4 1-2 4h-5" /><path d="M7 10v3a3 3 0 0 0 3 3h1" /><path d="M8 21h6" /><path d="M11 16v5" /></svg>
                 </div>
-                <p className="font-cinzel font-800" style={{ fontSize: '1.5rem', lineHeight: 1.05, ...(abyssalUnlocked ? ABYSSAL_EMBER_TEXT : forgeUnlocked ? PRISMATIC_TEXT : { color: '#d4ba78' }) }}>{abyssalUnlocked ? 'The Abyssal Forge' : 'The Forge'}</p>
+                {!focus && (<p className="font-cinzel font-800" style={{ fontSize: '1.5rem', lineHeight: 1.05, ...(abyssalUnlocked ? ABYSSAL_EMBER_TEXT : forgeUnlocked ? PRISMATIC_TEXT : { color: '#d4ba78' }) }}>{abyssalUnlocked ? 'The Abyssal Forge' : 'The Forge'}</p>)}
                 <p className="font-karla" style={{ fontSize: '0.72rem', color: '#9a948a', marginTop: 3, lineHeight: 1.4, maxWidth: 320, marginInline: 'auto' }}>{abyssalUnlocked ? 'Fuse forged relics into Abyssal mounts — both effect sets, a single slot.' : 'Fuse two relics into one — both effects, a single slot.'}</p>
                 {forgeUnlocked && (
                   <button type="button" onClick={() => setShowForgeHelp(true)} className="font-karla font-700 uppercase tracking-[0.12em] tap"
