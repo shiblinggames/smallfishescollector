@@ -1563,7 +1563,6 @@ export default function RaidCombat({
   const bossWardRef        = useRef(0)        // turns he refuses a killing blow
   const bossWardSavedRef   = useRef(false)    // it just caught a killing blow
   const bossWardBuffRef    = useRef(0)        // and he hits harder for it, rest of phase
-  const bossMarkRef        = useRef({ turns: 0, mult: 0 })  // you take extra damage
   // Did the enemy ADVANCE its pattern slot this turn? pickEnemyAction leaves the
   // index put when it can't perform the slotted move (fire with no charges →
   // substitute reload, retry the SAME slot next turn). Foresight's revealed-move
@@ -3932,7 +3931,6 @@ export default function RaidCombat({
         if (bossForesightRef.current > 0) bossForesightRef.current--
         if (bossWardRef.current > 0) bossWardRef.current--
         setWardUp(bossWardRef.current > 0)
-        if (bossMarkRef.current.turns > 0) bossMarkRef.current = { ...bossMarkRef.current, turns: bossMarkRef.current.turns - 1 }
       }
       // ── HIS CREW ABILITY. Fires BEFORE his action and does not replace it,
       // which is the whole point: a player fires an ability and still takes
@@ -3999,10 +3997,16 @@ export default function RaidCombat({
               setWardUp(true)
               lines.push(`${ab.name}: cannot be killed for ${bossWardRef.current} turns.`)
             } else if (ab.kind === 'requiem') {
-              // MIRA: marked. Everything he throws lands harder.
-              bossMarkRef.current = { turns: ab.turns ?? 3, mult: ab.value ?? 0.3 }
+              // MIRA: marked for death. Uses the REAL `marked` status rather than
+              // a private ref, which is what the player's own Requiem applies. That
+              // buys the chip on your hull, the tooltip, the aura and the "wears
+              // off you" line for free, and it means the mark raises damage from
+              // ALL sources the way hers does, not just his own guns.
+              const mTurns = ab.turns ?? 3
+              const mMag = ab.value ?? 0.3
+              applyPlayerStatus('marked', mMag, mTurns)
               aSplatTarget = 'player'; aSplatText = 'Marked'
-              lines.push(`${ab.name}: you are marked, +${Math.round(bossMarkRef.current.mult * 100)}% damage taken for ${bossMarkRef.current.turns} turns.`)
+              lines.push(`${ab.name}: you are marked. +${Math.round(mMag * 100)}% damage taken from everything for ${mTurns} turns.`)
             }
             pushStep({
               who, action: 'reload', pHp, eHp, pCharges, eCharges,
@@ -4452,9 +4456,6 @@ export default function RaidCombat({
           // Post-ward surge: he hits harder for the rest of the phase.
           if (who === 'enemy' && bossWardBuffRef.current > 0) {
             dmg = Math.max(1, Math.floor(dmg * (1 + bossWardBuffRef.current)))
-          }
-          if (who === 'enemy' && bossMarkRef.current.turns > 0) {
-            dmg = Math.max(1, Math.floor(dmg * (1 + bossMarkRef.current.mult)))
           }
           // Enemy crit — flat chance per enemy, applied after the volley
           // multiplier. Players crit through aim-bar skill; enemies don't
