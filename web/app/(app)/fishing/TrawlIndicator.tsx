@@ -598,45 +598,67 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setPicking(null)}
           style={{ position: 'fixed', inset: 0, zIndex: 9200, background: 'rgba(4,8,14,0.88)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
           <motion.div initial={{ y: 40 }} animate={{ y: 0 }} exit={{ y: 40, opacity: 0 }} transition={{ type: 'spring', stiffness: 340, damping: 30 }} onClick={e => e.stopPropagation()}
-            style={{ width: '100%', maxWidth: 470, maxHeight: '84vh', overflowY: 'auto', background: 'linear-gradient(180deg, #1b1813 0%, #100c07 100%)', borderTopLeftRadius: 22, borderTopRightRadius: 22, border: '1px solid rgba(196,169,106,0.34)', padding: '1.2rem 1.1rem calc(1.5rem + env(safe-area-inset-bottom))' }}>
+            style={{ width: '100%', maxWidth: 470, maxHeight: '84vh', overflowY: 'auto', background: 'linear-gradient(180deg, #16130f 0%, #0c0906 100%)', borderTopLeftRadius: 22, borderTopRightRadius: 22, border: '1px solid rgba(196,169,106,0.34)', padding: '1.2rem 1.1rem calc(1.5rem + env(safe-area-inset-bottom))' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
               <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: '#f4ecd8' }}>Send a crew to the {pickZone?.label}</p>
               <CloseBtn onClick={() => setPicking(null)} label="Back" />
             </div>
-            <p className="font-karla" style={{ fontSize: '0.78rem', color: '#bcb29a', lineHeight: 1.45, margin: '4px 0 4px' }}>
-              Locked at sea for the full <span style={{ color: '#e6dcc2' }}>{picking ? fmtTrawlDuration(picking) : ''}</span> cycle (can&apos;t raid or voyage). <span style={{ color: BLUE }}>Savvy</span> earns fishing XP, <span style={{ color: GOLD }}>Fortune</span> earns doubloons — the estimates show what each crew hauls per run here.
+            <p className="font-karla" style={{ fontSize: '0.76rem', color: '#bcb29a', lineHeight: 1.45, margin: '4px 0 10px' }}>
+              Locked at sea for the full <span style={{ color: '#e6dcc2' }}>{picking ? fmtTrawlDuration(picking) : ''}</span> cycle. <span style={{ color: BLUE }}>Savvy</span> earns fishing XP, <span style={{ color: GOLD }}>Fortune</span> earns doubloons.
             </p>
             {orderedCrew.length === 0 && <p className="font-karla" style={{ fontSize: '0.84rem', color: '#a89e86', textAlign: 'center', padding: '2rem 0' }}>No free crew — they&apos;re all at sea, raiding, or voyaging. Recruit more in the Crew Hall.</p>}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginTop: 8 }}>
+            {/* Three across, art first — same language as the raid and voyage
+                assign pickers, so choosing a hand feels the same everywhere. */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
               {orderedCrew.map((c, i) => {
                 const est = picking ? expectedTrawlHaul(picking, c.savvy, c.fortune) : { xp: 0, doubloons: 0 }
                 const sending = sendingId === c.id
+                const raid = c.inRaidParty === true
                 return (
                   <motion.button key={c.id} disabled={busy} onClick={() => picking && doDeploy(picking, c.id)}
-                    initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: Math.min(0.3, 0.035 * i), type: 'spring', stiffness: 460, damping: 32 }}
-                    whileTap={{ scale: 0.97 }}
-                    style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '0.55rem 0.65rem', borderRadius: 13, background: sending ? `${GREEN}22` : c.id === lastId ? 'rgba(159,192,239,0.1)' : 'rgba(255,255,255,0.03)', border: `1px solid ${sending ? `${GREEN}88` : c.id === lastId ? 'rgba(159,192,239,0.4)' : 'rgba(255,255,255,0.08)'}`, boxShadow: sending ? `0 0 14px ${GREEN}55` : 'none', cursor: 'pointer', textAlign: 'left', opacity: busy && !sending ? 0.5 : 1 }}>
-                    <Portrait crew={c} size={46} glow={sending ? GREEN : undefined} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p className="font-karla font-700" style={{ fontSize: '0.9rem', color: '#f4ecd8' }}>
-                        {c.name}{c.id === lastId && <span style={{ color: BLUE, fontSize: '0.62rem', marginLeft: 6 }}>last used</span>}
-                      </p>
-                      <p className="font-karla" style={{ fontSize: '0.72rem', color: '#a89e86' }}>
-                        {sending ? 'Sending to sea…' : <>Lv {c.level} · <span style={{ color: BLUE }}>{c.savvy} Savvy</span> · <span style={{ color: GOLD }}>{c.fortune} Fortune</span></>}
-                      </p>
-                    </div>
-                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                      <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: GREEN, lineHeight: 1.25 }}>
+                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(0.3, 0.03 * i), type: 'spring', stiffness: 460, damping: 32 }}
+                    whileTap={{ scale: 0.96 }}
+                    style={{
+                      position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                      padding: '0.5rem 0.35rem 0.5rem', borderRadius: 13, textAlign: 'center',
+                      background: sending ? `${GREEN}22` : 'rgba(28,24,19,0.96)',
+                      border: `1px solid ${sending ? `${GREEN}88` : raid ? 'rgba(224,124,124,0.55)' : c.id === lastId ? 'rgba(159,192,239,0.45)' : 'rgba(255,255,255,0.1)'}`,
+                      boxShadow: sending ? `0 0 14px ${GREEN}55` : 'none',
+                      cursor: 'pointer', opacity: busy && !sending ? 0.5 : 1,
+                    }}>
+                    <Portrait crew={c} size={54} glow={sending ? GREEN : undefined} />
+                    <span className="font-karla font-700" style={{ display: 'block', width: '100%', fontSize: '0.72rem', lineHeight: 1.15, color: '#f4ecd8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {sending ? 'Sending…' : c.name}
+                    </span>
+                    <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#a89e86', whiteSpace: 'nowrap' }}>
+                      Lv {c.level} · <span style={{ color: BLUE }}>{c.savvy}</span> · <span style={{ color: GOLD }}>{c.fortune}</span>
+                    </span>
+                    {/* The haul, which is the whole reason you are choosing. */}
+                    <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, marginTop: 2, paddingTop: 4, borderTop: '1px solid rgba(255,255,255,0.07)', width: '86%' }}>
+                      <span className="font-cinzel font-700" style={{ fontSize: '0.68rem', color: GREEN, lineHeight: 1.2, whiteSpace: 'nowrap' }}>
                         {c.id === bestXpId && <BestTag color={GREEN} />}~{est.xp.toLocaleString()} xp
-                      </p>
-                      <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: GOLD, lineHeight: 1.25 }}>
+                      </span>
+                      <span className="font-cinzel font-700" style={{ fontSize: '0.68rem', color: GOLD, lineHeight: 1.2, whiteSpace: 'nowrap' }}>
                         {c.id === bestDblId && <BestTag color={GOLD} />}~{est.doubloons.toLocaleString()} ⟡
-                      </p>
-                    </div>
+                      </span>
+                    </span>
+                    {/* A raid hand sent trawling is locked out of the raid for the
+                        whole cycle. The list used to include them with no sign. */}
+                    {raid && !sending && (
+                      <span className="font-karla font-800 uppercase" style={{ position: 'absolute', top: 4, right: 4, fontSize: '0.44rem', letterSpacing: '0.08em', color: '#1a0c0c', background: '#e07c7c', borderRadius: 4, padding: '0.08rem 0.24rem' }}>Raid</span>
+                    )}
+                    {c.id === lastId && !raid && !sending && (
+                      <span className="font-karla font-700 uppercase" style={{ position: 'absolute', top: 4, right: 4, fontSize: '0.44rem', letterSpacing: '0.06em', color: BLUE }}>Last</span>
+                    )}
                   </motion.button>
                 )
               })}
             </div>
+            {orderedCrew.some(c => c.inRaidParty) && (
+              <p className="font-karla" style={{ fontSize: '0.68rem', color: '#e0a0a0', lineHeight: 1.45, marginTop: 12, textAlign: 'center' }}>
+                A hand marked <span style={{ color: '#e07c7c' }}>Raid</span> is in your raid party. Trawling locks them at sea for the whole cycle, so they will not be aboard for a raid until they are back.
+              </p>
+            )}
           </motion.div>
         </motion.div>
       )}

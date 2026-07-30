@@ -35,7 +35,7 @@ interface CrewRow {
   cards: { name?: string | null; filename?: string | null; slug?: string | null } | null
 }
 
-const CREW_COLS = 'id, power, dodge, fortune, xp, effects, nickname, cards(name, filename, slug)'
+const CREW_COLS = 'id, power, dodge, fortune, xp, effects, nickname, raid_slot, cards(name, filename, slug)'
 
 function crewView(row: CrewRow): TrawlCrewView {
   const xp = row.xp ?? 0
@@ -49,6 +49,7 @@ function crewView(row: CrewRow): TrawlCrewView {
     savvy: Math.max(1, Math.round(leveled.dodge + t.dodge)),
     fortune: Math.max(1, Math.round(leveled.fortune + t.fortune)),
     level: crewLevelFromXP(xp),
+    inRaidParty: (row as { raid_slot?: number | null }).raid_slot != null,
   }
 }
 

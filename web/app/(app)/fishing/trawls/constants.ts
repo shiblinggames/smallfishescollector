@@ -255,6 +255,9 @@ export interface TrawlCrewView {
   savvy: number
   fortune: number
   level: number
+  /** Seated in the RAID party. Trawling locks them at sea for the cycle, so
+   *  the picker warns rather than silently pulling them off the raid. */
+  inRaidParty?: boolean
 }
 
 export interface ActiveTrawlView {
