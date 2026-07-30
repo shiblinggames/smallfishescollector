@@ -1450,8 +1450,7 @@ export default function RaidCombat({
   // On the dial the ZONES are an SVG group inside DialSVG, rotated by its
   // transform ATTRIBUTE (same as the fishing drift mechanic), and the ship
   // marker orbits on its own layer at the same bearing.
-  const dialZonesRef = useRef<SVGGElement | null>(null)
-  const dialShipRef  = useRef<HTMLDivElement | null>(null)
+  const dialZonesRef = useRef<SVGGElement | null>(null)
   const paintNeedle = useCallback((el: HTMLDivElement | null, pos: number) => {
     if (!el) return
     if (onDial) el.style.transform = `rotate(${pos * 360}deg)`
@@ -1470,8 +1469,7 @@ export default function RaidCombat({
       // Bands are built centred on 180 degrees so no arc wraps past 0/360; the
       // whole group just rotates onto the enemy's current bearing.
       const deg = center * 360 - 180
-      dialZonesRef.current?.setAttribute('transform', `rotate(${deg}, ${CX}, ${CY})`)
-      if (dialShipRef.current) dialShipRef.current.style.transform = `rotate(${deg}deg)`
+      dialZonesRef.current?.setAttribute('transform', `rotate(${deg}, ${CX}, ${CY})`)
       return
     }
     if (!el) return
@@ -7000,14 +6998,11 @@ export default function RaidCombat({
             <div style={{ position: 'relative', width: '86%', maxWidth: 300 }}>
               <DialAimInline
                 indicatorRef={indicatorRef}
-                zonesGroupRef={dialZonesRef}
-                shipRef={dialShipRef}
+                zonesGroupRef={dialZonesRef}
                 flashRef={barFlashRef}
                 critW={critFreeze ? lockedCritWRef.current : liveCritW}
                 hitW={aimHitW}
-                grazeW={aimGrazeW}
-                enemyImage={enemy.image}
-                enemyFilter={enemyArtFilter}
+                grazeW={aimGrazeW}
                 afflictionLabel={aimAffliction?.name ?? null}
                 hardenedArmed={hardenedArmed}
                 firePos={firePosRef.current}
@@ -10667,16 +10662,13 @@ const DIAL_ZONE_OPACITY = (z: ZoneDef) =>
   z.type === 'perfect' ? 0.95 : z.type === 'catch' ? 0.8 : z.type === 'penalty' ? 0.45 : 0
 
 function DialAimInline({
-  indicatorRef, zonesGroupRef, shipRef, flashRef, critW, enemyImage, enemyFilter,
+  indicatorRef, zonesGroupRef, flashRef, critW,
   afflictionLabel, hardenedArmed, hitW, grazeW, firePos, zoneCenter, snapKey, perfectBurstKey,
 }: {
   indicatorRef:  React.RefObject<HTMLDivElement | null>
-  zonesGroupRef: React.RefObject<SVGGElement | null>
-  shipRef:       React.RefObject<HTMLDivElement | null>
+  zonesGroupRef: React.RefObject<SVGGElement | null>
   flashRef:      React.RefObject<HTMLDivElement | null>
-  critW: number
-  enemyImage: string
-  enemyFilter?: string
+  critW: number
   afflictionLabel?: string | null
   hardenedArmed?: boolean
   /** The band half-widths this fight judges at (gear bonus + dial scale
@@ -10694,8 +10686,7 @@ function DialAimInline({
   perfectBurstKey: number
 }) {
   const zones = useMemo(() => buildDialZones(critW, hitW, grazeW), [critW, hitW, grazeW])
-  // Finn orbits at the middle of the band's radius.
-  const orbitPct = ((OUTER_R + INNER_R) / 2 / 220) * 100
+  // Finn orbits at the middle of the band's radius.
 
   return (
     <div style={{ position: 'relative', width: '100%', maxWidth: 300, margin: '0 auto' }}>
@@ -10720,21 +10711,6 @@ function DialAimInline({
         perfectBurstKey={perfectBurstKey}
       />
 
-      {/* FINN, riding the band. Own layer, rotated to the same bearing as the
-          zones group so he always sits on the target the player is chasing. */}
-      <div ref={shipRef} aria-hidden style={{
-        position: 'absolute', inset: 0, pointerEvents: 'none', willChange: 'transform',
-        transform: `rotate(${zoneCenter * 360 - 180}deg)`,
-      }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={enemyImage} alt="" aria-hidden decoding="async"
-          style={{
-            position: 'absolute', left: '50%', top: `${orbitPct}%`,
-            width: '17%', aspectRatio: '1', transform: 'translate(-50%, -50%)',
-            objectFit: 'contain',
-            filter: `${enemyFilter && enemyFilter !== 'none' ? enemyFilter + ' ' : ''}drop-shadow(0 2px 8px rgba(0,0,0,0.8))`,
-          }} />
-      </div>
 
       {afflictionLabel && (
         <div className="font-karla font-800 uppercase" style={{
