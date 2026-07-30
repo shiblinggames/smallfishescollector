@@ -1304,7 +1304,7 @@ export default function ShipHero({
                 label: 'Forge',
                 sub: forgeUnlocked ? `${forgeStock} component${forgeStock === 1 ? '' : 's'} held` : 'Locked',
                 nudge: false,
-                art: null,
+                art: abyssalUnlocked ? '/forge/abyssal_forge.png' : '/forge/forge.png',
                 icon: (
                   <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={forgeUnlocked ? '#8b97a8' : '#5c6470'} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                     <path d="M4 10h9l3-3 4 1-2 4h-5" /><path d="M7 10v3a3 3 0 0 0 3 3h1" /><path d="M8 21h6" /><path d="M11 16v5" />
@@ -1319,8 +1319,8 @@ export default function ShipHero({
                     {row.art
                       // eslint-disable-next-line @next/next/no-img-element
                       ? <img src={row.art} alt="" aria-hidden loading="lazy" decoding="async" style={row.key === 'ship'
-                          ? { width: '108%', maxWidth: 'none', height: 'auto', objectFit: 'contain' }
-                          : { maxWidth: '92%', maxHeight: '92%', objectFit: 'contain' }} />
+                          ? { width: '108%', maxWidth: 'none', height: 'auto', objectFit: 'contain', filter: row.locked ? 'grayscale(0.9) brightness(0.7)' : undefined }
+                          : { maxWidth: '92%', maxHeight: '92%', objectFit: 'contain', filter: row.locked ? 'grayscale(0.9) brightness(0.7)' : undefined }} />
                       : row.icon}
                     {row.locked && (
                       <span aria-hidden style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(8,12,18,0.62)' }}>
