@@ -5901,6 +5901,21 @@ export default function FishingGame({
         return [...trimmed, { fish_id: res.fish.id, quantity: res.qty, fish_species: res.fish }]
       })
       if (res.isPB && res.sizeIn > 0) setPersonalBests(prev => ({ ...prev, [res.fish.id]: res.sizeIn }))
+      // Credit the fish that actually surfaced. Without this the Logbook kept
+      // reading it at its old count — zero for a brand-new species, so it
+      // rendered as still undiscovered until a zone switch re-seeded from the
+      // server. The original stays counted, mirroring the server: it was
+      // genuinely landed before the wormhole took it.
+      setCatchCounts(prev => ({ ...prev, [res.fish.id]: (prev[res.fish.id] ?? 0) + res.qty }))
+      // A new species off the wormhole deserves the same Logbook flash a new
+      // species off the line gets.
+      if (res.isNewSpecies) {
+        setFreshCatchHook('new-species')
+        setLatestCatchHabitat(res.fish.habitat)
+      } else if (res.isPB) {
+        setFreshCatchHook('pb')
+        setLatestCatchHabitat(res.fish.habitat)
+      }
       setCatchResult(prev => prev ? {
         ...prev,
         fish: res.fish,
