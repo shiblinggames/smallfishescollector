@@ -77,6 +77,7 @@ const RARITY_ITEM_COLOR: Record<string, string> = {
   epic:      '#a78bfa',
   legendary: '#f0c040',
   ancient:   '#e0455a',
+  cosmetic:  '#2dd4bf',
 }
 
 // Crew picker row — a compact, scannable list entry: small portrait + name +
@@ -277,6 +278,7 @@ function kitRarityColor(rarity: string): string {
     case 'epic':      return '#c084fc'
     case 'legendary': return '#fbbf24'
     case 'ancient':   return '#e0455a'
+    case 'cosmetic':  return '#2dd4bf'
     default:          return '#9ca3af'
   }
 }

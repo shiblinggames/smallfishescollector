@@ -3138,7 +3138,7 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
   // specialItemId is in here because Finn's Eye is a FISHING special: without it
   // the headline drop off the final boss never rendered on his own card. The cap
   // is 6 rather than 4 for the same reason, since he alone drops five.
-  const drops = (activeNode.detail?.drops ?? []).filter(d => (d.rarity === 'epic' || d.rarity === 'legendary' || d.rarity === 'ancient') && (d.raidItemId || d.shipSkinId || d.specialItemId)).slice(0, 6)
+  const drops = (activeNode.detail?.drops ?? []).filter(d => (d.rarity === 'epic' || d.rarity === 'legendary' || d.rarity === 'ancient' || d.rarity === 'cosmetic') && (d.raidItemId || d.shipSkinId || d.specialItemId)).slice(0, 6)
 
   // Header status pill reflects the active mode.
   const pillCleared = isChallenge ? chCleared : cleared

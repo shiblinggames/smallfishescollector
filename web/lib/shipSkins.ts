@@ -101,23 +101,25 @@ export const SHIP_SKINS: ShipSkinDef[] = [
   },
   {
     id: 'drowned_giant_hull',
-    name: 'Drowned Giant Hull',
-    description: 'Bleached to the colour of the six he emptied. A hull that looks like something that has already been dead a long while.',
-    filter: 'grayscale(0.75) brightness(1.15)',
-    color: '#c9c4b4',
+    name: 'Tundra Hull',
+    description: 'Rimed white and cold to the touch, cut for water that closes behind you. Nothing that sails it has ever been in a hurry.',
+    // Real art, so no filter. The old grayscale tint existed only to fake a
+    // second skin out of Finn's sprite.
+    filter: 'none',
+    color: '#bcd8e4',
     source: 'The Sunken Hand',
     requiresShipTier: 4,
-    imageByTier: { 4: '/enemy_finnship.png', 5: '/enemy_finnship.png', 6: '/enemy_finnship.png' },
+    imageByTier: { 4: '/tundrahull.png', 5: '/tundrahull.png', 6: '/tundrahull.png' },
   },
   {
     id: 'last_cast_hull',
-    name: 'Last Cast Hull',
-    description: 'Ember-dark, lit from underneath, the way the water looked when the morning finally came back.',
-    filter: 'hue-rotate(-24deg) saturate(1.35) brightness(0.9)',
-    color: '#d1663a',
+    name: 'Volcanic Hull',
+    description: 'Black glass and a seam of fire that never quite goes out. It steams where the sea touches it.',
+    filter: 'none',
+    color: '#e05a2b',
     source: 'The Sunken Hand',
     requiresShipTier: 4,
-    imageByTier: { 4: '/enemy_finnship.png', 5: '/enemy_finnship.png', 6: '/enemy_finnship.png' },
+    imageByTier: { 4: '/volcanichull.png', 5: '/volcanichull.png', 6: '/volcanichull.png' },
   },
 
   {

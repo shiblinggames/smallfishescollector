@@ -379,7 +379,7 @@ export interface RaidLootItem {
   label: string
   image: string | null
   emoji: string
-  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'ancient'
+  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'ancient' | 'cosmetic'
   weight: number
   shipSkinId?: string  // if set, render player's ship with this skin applied
 }
@@ -557,6 +557,10 @@ export const RARITY_COLOR: Record<RaidLootItem['rarity'], string> = {
   // treatments own salmon and lavender, so crimson is the one register left,
   // and it reads as older and angrier than gold.
   ancient:   '#e0455a',
+  // COSMETIC is not a rung on the ladder, it is a different KIND of drop: a
+  // hull skin changes nothing about how you fight. Reading them as epic put
+  // them in the same purple as real power, so they get their own register.
+  cosmetic:  '#2dd4bf',
 }
 
 /** Zone → fishing-background JPG (files live in /public, shared with the fishing
@@ -707,7 +711,7 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
     { id: 'pack',                 label: '100 Gems',                image: null,                     emoji: GEM_GLYPH,  rarity: 'epic',      weight: 5  },
     // 30% special drops. Finndicate Hull is the chapter-1 shared trophy
     // skin (also drops from Krust at a higher rate).
-    { id: 'finndicate_hull',      label: 'Finndicate Hull',         image: null,                     emoji: '🚢',       rarity: 'epic',      weight: 3,  shipSkinId: 'finndicate_hull' },
+    { id: 'finndicate_hull',      label: 'Finndicate Hull',         image: null,                     emoji: '🚢',       rarity: 'cosmetic',      weight: 3,  shipSkinId: 'finndicate_hull' },
     { id: 'corsair_cannon',       label: 'Corsair Cannon',          image: '/corsaircannon-v2.png',     emoji: '💣',       rarity: 'epic',      weight: 20 },
     { id: 'corsair_prime_cannon', label: "Corsair's Prime Cannon",  image: '/corsairsprimecannon.png',emoji: '💣',       rarity: 'legendary', weight: 5  },
   ],
@@ -841,7 +845,7 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
     // 3%. The 4 weight points freed by normalizing the carapace from 24% went
     // back into currency so the table still totals 100. Challenge variant
     // doubles the special rates in raidChallenge.ts.
-    { id: 'finndicate_hull',   label: 'Finndicate Hull',        image: null,                      emoji: '🚢',       rarity: 'epic',      weight: 3,  shipSkinId: 'finndicate_hull' },
+    { id: 'finndicate_hull',   label: 'Finndicate Hull',        image: null,                      emoji: '🚢',       rarity: 'cosmetic',      weight: 3,  shipSkinId: 'finndicate_hull' },
     { id: 'krusts_carapace',   label: "Krust's Carapace",       image: '/captainshull.png',       emoji: '🛡️',      rarity: 'epic',      weight: 20 },
     { id: 'captains_carapace', label: "Captain's Carapace",     image: '/captainscarapace.png',   emoji: '🛡️',      rarity: 'legendary', weight: 5  },
   ],
@@ -1036,7 +1040,7 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
     { id: 'gems_50',                label: '50 Gems',                  image: null,                      emoji: GEM_GLYPH,  rarity: 'rare',      weight: 15 },
     { id: 'pack_2',                 label: '200 Gems',                 image: null,                      emoji: GEM_GLYPH,  rarity: 'epic',      weight: 5  },
     // 30% special drops
-    { id: 'chartmaker_hull',         label: 'Chartmaker Hull',          image: null,                          emoji: '🚢',       rarity: 'epic',      weight: 5,  shipSkinId: 'chartmaker_hull' },
+    { id: 'chartmaker_hull',         label: 'Chartmaker Hull',          image: null,                          emoji: '🚢',       rarity: 'cosmetic',      weight: 5,  shipSkinId: 'chartmaker_hull' },
     { id: 'cartographers_astrolabe', label: "Cartographer's Astrolabe", image: '/cartographersastrolabe.png', emoji: '🧭',       rarity: 'epic',      weight: 20 },
     { id: 'captains_astrolabe',      label: 'Mastercraft Astrolabe',    image: '/mastercraftastrolabe.png',   emoji: '🧭',       rarity: 'legendary', weight: 5  },
   ],
@@ -1168,7 +1172,7 @@ export const THE_TOLLMASTER: BossRaidConfig = {
     { id: 'gems_50',               label: '50 Gems',    image: null,              emoji: GEM_GLYPH, rarity: 'rare',      weight: 15 },
     { id: 'pack_2',                label: '200 Gems',   image: null,              emoji: GEM_GLYPH, rarity: 'epic',      weight: 5  },
     // ~30% special drops
-    { id: 'chartmaker_hull',       label: 'Chartmaker Hull',       image: null, emoji: '🚢',  rarity: 'epic',      weight: 9,  shipSkinId: 'chartmaker_hull' },
+    { id: 'chartmaker_hull',       label: 'Chartmaker Hull',       image: null, emoji: '🚢',  rarity: 'cosmetic',      weight: 9,  shipSkinId: 'chartmaker_hull' },
     { id: 'spets_primer',        label: "Spet's Primer",      image: '/spetsprimer.png',       emoji: '🧨',  rarity: 'epic',      weight: 20 },
     { id: 'tollmasters_primer',  label: "Tollmaster's Primer", image: '/tollmastersprimer.png', emoji: '🧨',  rarity: 'legendary', weight: 5  },
   ],
@@ -1281,7 +1285,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
   // Chapter-III trophy skin (Coffers Hull) drops from BOTH Ch3 raids, lower rate
   // here than the finale. Rest is currency (signature special drops TBD in step 4).
   loot: [
-    { id: 'coffers_hull',   label: 'Coffers Hull', image: null,          emoji: '🚢',      rarity: 'epic',     weight: 5,  shipSkinId: 'coffers_hull' },
+    { id: 'coffers_hull',   label: 'Coffers Hull', image: null,          emoji: '🚢',      rarity: 'cosmetic',     weight: 5,  shipSkinId: 'coffers_hull' },
     // Signature deception-fleet drops. The anti-evasion Tell-Tale Glass (epic)
     // + Admiral's Eye (legendary chase). Challenge variant lifts the rare rate.
     { id: 'tell_tale_glass', label: 'Tell-Tale Glass', image: '/telltaleglass.png', emoji: '🔭',  rarity: 'epic',      weight: 20 },
@@ -1588,7 +1592,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
   // Chapter-III trophy skin (Coffers Hull) drops here at the higher finale rate.
   // Rest is currency (signature finale special drops TBD in step 4).
   loot: [
-    { id: 'coffers_hull',   label: 'Coffers Hull', image: null,          emoji: '🚢',      rarity: 'epic',     weight: 8,  shipSkinId: 'coffers_hull' },
+    { id: 'coffers_hull',   label: 'Coffers Hull', image: null,          emoji: '🚢',      rarity: 'cosmetic',     weight: 8,  shipSkinId: 'coffers_hull' },
     // Signature finale drops. The activatable War Drum (epic) + guaranteed
     // Thunder Drum (legendary chase). Challenge variant lifts the legendary rate.
     { id: 'war_drum',       label: 'War Drum',     image: '/wardrum.png',     emoji: '🥁',      rarity: 'epic',      weight: 20 },
@@ -1810,7 +1814,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
   bossId: 'saltie',
   tides: { slots: [3, 6], maxTier: 2 },
   loot: [
-    { id: 'last_fathom_hull', label: 'Last Fathom Hull', image: null, emoji: '🚢', rarity: 'epic', weight: 8, shipSkinId: 'last_fathom_hull' },
+    { id: 'last_fathom_hull', label: 'Last Fathom Hull', image: null, emoji: '🚢', rarity: 'cosmetic', weight: 8, shipSkinId: 'last_fathom_hull' },
     // Signature: the Chain-Shot Rack, the first player-applied STATUS item, and
     // the Brackwater Rack as its legendary chase. Rare here; buildChallengeLoot lifts
     // every legendary to a flat 10% in the challenge table, so the challenge run is
@@ -2056,7 +2060,7 @@ export const THE_THRONE: BossRaidConfig = {
   tides: { slots: [2, 5], maxTier: 2 },
   preBossReprieve: true,   // one breath before the Don: heal / +damage / refresh a crew ability
   loot: [
-    { id: 'last_fathom_hull', label: 'Last Fathom Hull', image: null, emoji: '🚢', rarity: 'epic', weight: 8, shipSkinId: 'last_fathom_hull' },
+    { id: 'last_fathom_hull', label: 'Last Fathom Hull', image: null, emoji: '🚢', rarity: 'cosmetic', weight: 8, shipSkinId: 'last_fathom_hull' },
     // The court's own bite, turned back: a CRIT strips an enemy cannonball (epic
     // 20% chance / legendary 50%). Same 'court_bite' family. They don't stack.
     { id: 'court_fang',     label: "The Court's Fang", image: '/thecourtsfang.png', emoji: '🦈', rarity: 'epic',      weight: 20 },
@@ -2282,9 +2286,9 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
   loot: [
     { id: 'anglers_patience', label: "The Primeval Eye", image: '/primevileye.png', emoji: '🎣', rarity: 'ancient', weight: 8 },
     { id: 'borrowed_jaw',     label: 'The Primeval Maw',      image: '/primevilmaw.png', emoji: '🦈', rarity: 'ancient', weight: 8 },
-    { id: 'sunken_hand_hull',   label: 'Sunken Hand Hull',   image: null, emoji: '🚢', rarity: 'epic', weight: 10, shipSkinId: 'sunken_hand_hull' },
-    { id: 'drowned_giant_hull', label: 'Drowned Giant Hull', image: null, emoji: '🚢', rarity: 'epic', weight: 10, shipSkinId: 'drowned_giant_hull' },
-    { id: 'last_cast_hull',     label: 'Last Cast Hull',     image: null, emoji: '🚢', rarity: 'epic', weight: 10, shipSkinId: 'last_cast_hull' },
+    { id: 'sunken_hand_hull',   label: 'Sunken Hand Hull',   image: null, emoji: '🚢', rarity: 'cosmetic', weight: 10, shipSkinId: 'sunken_hand_hull' },
+    { id: 'drowned_giant_hull', label: 'Tundra Hull',        image: null, emoji: '🚢', rarity: 'cosmetic', weight: 10, shipSkinId: 'drowned_giant_hull' },
+    { id: 'last_cast_hull',     label: 'Volcanic Hull',      image: null, emoji: '🚢', rarity: 'cosmetic', weight: 10, shipSkinId: 'last_cast_hull' },
   ],
   killRewards: {
     finn: { gold: 12000, xp: 12000 },
