@@ -3113,7 +3113,7 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
         <div style={{ position: 'relative', height: 230 }}>
           {backdrop && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={backdrop} alt="" aria-hidden style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: cleared ? 0.5 : 0.3, filter: cleared ? undefined : 'grayscale(1) brightness(0.55)' }} />
+            <img src={backdrop} alt="" aria-hidden style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: shown ? 0.5 : 0.3, filter: shown ? undefined : 'grayscale(1) brightness(0.55)' }} />
           )}
           {node.image && (
             // eslint-disable-next-line @next/next/no-img-element

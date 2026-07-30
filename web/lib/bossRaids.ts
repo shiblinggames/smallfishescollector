@@ -597,7 +597,11 @@ export const RAID_BOSS_BG: Record<string, string> = {
   the_quartermaster:  '/raid-quartermaster-boss.jpg',
   the_blockade:       '/raid-blockade-boss.jpg',
   the_throne:         '/raid-throne-boss.jpg',
-  the_sunken_hand:    '/finn_bg6.jpg',                // Finn's throne: the gateway of jaws
+  // bg2 (the drowned armour cathedral), not bg6 (his throne). The card shows a
+  // 230px CENTRE SLICE at partial opacity, and bg6's middle is the dark inside
+  // of the jaws: it measured luma 50 and rendered as a black smear. bg2 is 75
+  // through the middle with hard structure, so it actually reads at card size.
+  the_sunken_hand:    '/finn_bg2.jpg',
 }
 
 export const CORSAIRS_RECKONING: BossRaidConfig = {
