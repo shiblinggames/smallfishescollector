@@ -148,6 +148,7 @@ async function ShipHeroSection() {
       hasSixthBerth={hasSixthBerth}
       throneCleared={throneCleared}
       hasArmoryExpansion={profile?.has_armory_expansion === true}
+      hasSixthMount={profile?.finn_spoil_free === 'nav' || profile?.finn_spoil_paid === 'nav'}
       isAdmin={profile?.is_admin === true}
       navRenownAlloc={(profile?.nav_renown_alloc as Record<string, number> | null) ?? null}
       seenNavRenownIntro={profile?.seen_nav_renown_intro === true}

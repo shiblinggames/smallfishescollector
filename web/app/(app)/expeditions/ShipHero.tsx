@@ -246,6 +246,9 @@ interface Props {
   throneCleared?: boolean
   /** Owns the Expanded Armory (extra raid-item mount). */
   hasArmoryExpansion?: boolean
+  /** THE SIXTH MOUNT (Finn spoil). An EXTRA mount that takes exactly one
+   *  item, his jaw, so it is deliberately not folded into raidItemSlots. */
+  hasSixthMount?: boolean
   isAdmin?: boolean
   /** Persisted Navigation Renown allocations ({} when none). Renown LEVEL
    *  derives live from expeditionXP. */
@@ -357,6 +360,7 @@ export default function ShipHero({
   hasSixthBerth = false,
   throneCleared = false,
   hasArmoryExpansion = false,
+  hasSixthMount = false,
   isAdmin = false,
   navRenownAlloc = null,
   seenNavRenownIntro = true,
@@ -517,6 +521,13 @@ export default function ShipHero({
   // Hull cap + the Ch4 Expanded Armory refit's extra mount (purchased flag),
   // plus any legacy class-pick itemSlots (none in production).
   const raidItemSlots = raidItemSlotsForTier(shipTierForSlots) + (aggregateShipClasses(shipClasses).itemSlots) + (hasArmoryExpansion ? 1 : 0)
+  // THE SIXTH MOUNT is kept OUT of raidItemSlots on purpose, mirroring the
+  // server: his item is not competing for a hull slot, it has its own bay.
+  // So the grid below counts and shows only ordinary gear.
+  const mountIds = new Set(RAID_ITEMS.filter(i => i.finaleSlotOnly).map(i => i.id))
+  const mountedFinale = equippedItems.find(id => mountIds.has(id)) ?? null
+  const hullItems = equippedItems.filter(id => !mountIds.has(id))
+  const ownedFinale = ownedRaidItems.filter(id => mountIds.has(id))
 
   // Ultimate weapon (Man-o-War Mega) — the end-of-Chapter-3 build. Its four-gate
   // checklist, previews, 24h build clock, and re-pick flow all live inside
@@ -780,7 +791,8 @@ export default function ShipHero({
       // they add up).
       const conflicts = conflictingRaidItems(itemId, equippedItems)
       const base = conflicts.length ? equippedItems.filter(id => !conflicts.includes(id)) : equippedItems
-      if (base.length >= raidItemSlots) return // hull full — no-op
+      // His jaw goes to its own mount and never fills a hull slot.
+      if (!mountIds.has(itemId) && base.filter(id => !mountIds.has(id)).length >= raidItemSlots) return // hull full — no-op
       next = [...base, itemId]
     }
     setEquippedItems(next)
@@ -1404,7 +1416,7 @@ export default function ShipHero({
                 color: newRaidItems.size > 0 ? '#ffd96a' : 'rgba(230,225,215,0.82)',
                 textShadow: '0 1px 4px rgba(0,0,0,0.9)',
               }}>
-                {newRaidItems.size > 0 ? 'New gear to mount' : `${shipStats.name} · ${equippedItems.length}/${raidItemSlots} mounted`}
+                {newRaidItems.size > 0 ? 'New gear to mount' : `${shipStats.name} · ${hullItems.length}/${raidItemSlots} mounted`}
               </p>
             </button>
           </div>
@@ -1642,7 +1654,7 @@ export default function ShipHero({
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.8rem' }}>
                 <span className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.22em', color: '#8794a6' }}>Battle Loadout</span>
                 <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
-                <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.56rem', color: '#c4b078' }}>{equippedItems.length}/{raidItemSlots} slots</span>
+                <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.56rem', color: '#c4b078' }}>{hullItems.length}/{raidItemSlots} slots</span>
               </div>
               {/* At-a-glance summary of every active item + what it does. */}
               {equippedItems.length > 0 && (
@@ -1678,6 +1690,52 @@ export default function ShipHero({
                             ? <img src={def.image} alt="" loading="lazy" decoding="async" className={abyssal ? 'rod-glow-abyssal' : undefined} style={{ width: 30, height: 30, objectFit: 'contain' }} />
                             : <span style={{ fontSize: '1.4rem', lineHeight: 1, color, display: 'flex' }}><IconCrate size={22} /></span>}
                         </div>
+              {/* ── THE SIXTH MOUNT ───────────────────────────────────────
+                  Its own bay under the hull grid, not a sixth cell in it. The
+                  distinction is the whole point: it does not consume a hull
+                  slot and it accepts exactly one item, so showing it inline
+                  would read as "you got another slot" and invite the player to
+                  try mounting ordinary gear there. Mirrors how the server
+                  attaches it (see getRaidPlayerStats). */}
+              {hasSixthMount && (
+                <div style={{ marginBottom: '1.6rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#e0a44a' }}>The Sixth Mount</span>
+                    <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.54rem', color: mountedFinale ? '#e0a44a' : '#6d6a66' }}>
+                      {mountedFinale ? 'Mounted' : 'Empty'}
+                    </span>
+                  </div>
+                  {ownedFinale.length ? ownedFinale.map(id => {
+                    const def = RAID_ITEMS.find(r => r.id === id)
+                    if (!def) return null
+                    const on = mountedFinale === id
+                    return (
+                      <button key={id}
+                        onClick={() => toggleItem(id)}
+                        style={{
+                          width: '100%', textAlign: 'left', cursor: 'pointer',
+                          padding: '0.65rem 0.7rem', borderRadius: 12,
+                          background: on ? 'rgba(224,164,74,0.12)' : 'rgba(255,255,255,0.03)',
+                          border: `1px solid ${on ? 'rgba(224,164,74,0.5)' : 'rgba(255,255,255,0.10)'}`,
+                          boxShadow: on ? '0 0 16px rgba(224,164,74,0.22)' : 'none',
+                          touchAction: 'manipulation',
+                        }}>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 7 }}>
+                          <span className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: '#e8e4de' }}>{def.name}</span>
+                          <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: on ? '#e0a44a' : '#6d6a66' }}>{on ? 'Tap to unmount' : 'Tap to mount'}</span>
+                        </div>
+                        <p className="font-karla" style={{ margin: '3px 0 0', fontSize: '0.65rem', lineHeight: 1.4, color: '#9a958c' }}>{def.description}</p>
+                      </button>
+                    )
+                  }) : (
+                    <div style={{ padding: '0.7rem', borderRadius: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.09)' }}>
+                      <p className="font-karla" style={{ margin: 0, fontSize: '0.66rem', lineHeight: 1.45, color: '#7a7875', textAlign: 'center' }}>
+                        Empty. Only The Borrowed Jaw mounts here, and it comes off Finn.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.8rem', ...(forged ? forgedTextSoft(abyssal) : { color }) }}>{def.name}</p>
                           <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: '#9a948a' }}>Tap for details</span>
