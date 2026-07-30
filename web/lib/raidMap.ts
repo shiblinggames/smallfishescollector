@@ -385,6 +385,7 @@ export type SceneInsert =
   | { kind: 'finn-becoming' }            // the WARP: he shudders, drains to a silhouette, swells past his old size, cracks open with light and blows out to white. Hands off to finn-sinister
   | { kind: 'finn-sinister' }            // THE turn: the dock-hand costume comes off and his true form stands up. Uses bespoke art (FINN_SINISTER_ART); falls back to his darkened sprite until that art lands
   | { kind: 'finn-undone' }              // THE END: his hull goes over, the swell collapses, the light runs OUT through the cracks and the six leave as ash. The mirror of finn-becoming
+  | { kind: 'finn-remains' }             // AFTER the undoing: the borrowed power gone, the dock angler back in his little boat, fading out where the monster shattered
   | { kind: 'dial-demo' }                // a live catch-dial demo (needle landing green→gold). Rendered by a caller's renderInsert override (the fishing intro), not the shared InsertShot.
 
 /** One row in a node's "possible drops" panel. */
@@ -2804,7 +2805,21 @@ export const RAID_MAP: RaidNode[] = [
       { text: 'He looks at you the way he did on the dock, every morning, for years.', pause: 950, closeup: true },
       { ...GUIDE.finnFinal, text: "...you were never supposed to be better than me at this." },
       { text: 'And then there is nothing there to look back at.', pause: 1200, fx: 'flash', closeup: true },
-      { text: 'What is left of him goes up rather than down, grey and weightless, and the wind takes it apart before it clears the mast.', pause: 1100 },
+      { text: 'What is left of him goes up rather than down, grey and weightless, and the wind takes it apart before it clears the mast.', pause: 1000 },
+
+      // THE COSTUME COMES OFF LAST. He does not die as the thing he became.
+      { text: 'And then the water is quiet, and there is a small boat sitting on it.', pause: 1000, insert: { kind: 'finn-remains' } },
+      { text: 'Someone is in the stern, the way someone was the first morning you came alongside. No colour to him. No weight to him either.', pause: 1000, closeup: true },
+      { ...GUIDE.finn, text: 'Heh.' },
+      { ...GUIDE.finn, text: "Would you look at that. All of it gone, and this is what's left underneath." },
+      { text: 'It is just Finn. The loudmouth off your dock, sat in his own little boat with no line in the water.', pause: 1000, closeup: true },
+      { ...GUIDE.mako, text: 'Captain... he looks like he used to.' },
+      { ...GUIDE.finn, text: "I was, once. Same as you." },
+      { ...GUIDE.finn, text: "I too was just an angler at first..." },
+      { text: 'He is going. You can see the light through him now.', pause: 1000, closeup: true },
+      { ...GUIDE.finn, text: "...don't let it get to you too..." },
+      { text: 'Nobody asks him what he means. There is nobody left in the boat to ask.', pause: 1200, closeup: true },
+      { text: 'It rides there empty for a moment, level and unhurried, and then the sea takes that as well.', pause: 1100 },
       { text: 'The sea comes back in. One long swell rolls through where he was, and the ocean is just an ocean again.', pause: 1000 },
       // The crew, coming down. Nobody makes a speech.
       { text: 'For a while your crew just stand there, still braced.', pause: 900 },

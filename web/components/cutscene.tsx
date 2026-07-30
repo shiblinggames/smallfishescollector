@@ -247,6 +247,7 @@ export function InsertShot({ kind, wax, accent, reduced }: { kind: string; wax?:
   if (kind === 'ancient-harvest') return <AncientHarvestInsert accent={accent} reduced={reduced} />
   if (kind === 'finn-becoming') return <FinnBecomingInsert accent={accent} reduced={reduced} />
   if (kind === 'finn-undone') return <FinnUndoneInsert accent={accent} reduced={reduced} />
+  if (kind === 'finn-remains') return <FinnRemainsInsert accent={accent} reduced={reduced} />
   return null
 }
 
@@ -696,6 +697,93 @@ function FinnUndoneInsert({ accent, reduced }: { accent: string; reduced?: boole
     </div>
   )
 }
+
+/*  WHAT WAS LEFT — the beat after finn-undone. The borrowed power is gone, and
+ *  underneath it is just the angler off your dock, sitting in the little boat
+ *  he was in the first time you pulled alongside.
+ *
+ *  Deliberately the SOFTEST shot in the sequence: no cracks, no shake, no
+ *  flare. He fades where the monster shattered, because the monster was the
+ *  costume and this is the thing that was wearing it. Same art as the reveal
+ *  (FINN_PORTRAIT) and the same rowboat, so the frame is a visual rhyme with
+ *  the morning you met him.  */
+const REMAINS_TOTAL = 6.4
+
+function FinnRemainsInsert({ accent, reduced }: { accent: string; reduced?: boolean }) {
+  if (reduced) {
+    return (
+      <div style={{ position: 'relative', width: 'min(78vw, 320px)', aspectRatio: '1 / 1', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', overflow: 'hidden' }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={FINN_PORTRAIT} alt="" aria-hidden decoding="async"
+          style={{ height: '62%', width: 'auto', objectFit: 'contain', opacity: 0.45, filter: 'grayscale(0.8)' }} />
+      </div>
+    )
+  }
+  return (
+    <div style={{ position: 'relative', width: 'min(78vw, 320px)', aspectRatio: '1 / 1', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', overflow: 'hidden' }}>
+      {/* The morning light coming back up. The undoing ended on darkness; this
+          opens on the same soft dawn the reveal did. */}
+      <motion.div aria-hidden
+        initial={{ opacity: 0 }}
+        animate={{ opacity: [0, 0.5, 0.34] }}
+        transition={{ duration: 3.2, ease: 'easeOut' }}
+        style={{ position: 'absolute', left: '50%', top: '38%', width: '108%', aspectRatio: '1', transform: 'translate(-50%, -50%)', borderRadius: '50%', background: `radial-gradient(circle at 50% 46%, ${accent}44 0%, ${accent}14 46%, transparent 72%)` }} />
+
+      {/* His little boat, riding level. It never capsizes — it is simply empty
+          by the end. */}
+      <motion.img
+        src="/enemychapter1rowboat_v2.png" alt="" aria-hidden decoding="async"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: [0, 0.9, 0.9, 0.72], y: [12, 0, 0, 0], rotate: [0, -1.2, 1.2, -0.6] }}
+        transition={{ duration: REMAINS_TOTAL, ease: 'easeOut', times: [0, 0.18, 0.7, 1], rotate: { duration: 4.5, repeat: Infinity, ease: 'easeInOut' } }}
+        style={{ position: 'absolute', bottom: '16%', width: '72%', height: 'auto', objectFit: 'contain', zIndex: 2, filter: 'brightness(0.82) saturate(0.85)' }} />
+
+      {/* HIM. The dock angler again, faded back in over where the other thing
+          was standing, then going out slowly. No violence in it. */}
+      <motion.img
+        src={FINN_PORTRAIT} alt="" aria-hidden decoding="async"
+        initial={{ opacity: 0, scale: 0.94 }}
+        animate={{
+          opacity: [0, 0.95, 0.95, 0.5, 0],
+          scale: [0.94, 1, 1, 1, 1],
+          filter: [
+            'grayscale(0.15) brightness(0.95)',
+            'grayscale(0.15) brightness(1)',
+            'grayscale(0.4) brightness(0.92)',
+            'grayscale(0.85) brightness(0.8)',
+            'grayscale(1) brightness(0.7)',
+          ],
+        }}
+        transition={{ duration: REMAINS_TOTAL, ease: 'easeInOut', times: [0, 0.16, 0.56, 0.82, 1] }}
+        style={{ position: 'absolute', bottom: '30%', height: '52%', width: 'auto', objectFit: 'contain', zIndex: 3 }} />
+
+      {/* The last of him, going up the same way the borrowed power did — fewer,
+          slower, and plain grey. Whatever he took has already left; this is
+          only the angler. */}
+      {Array.from({ length: 10 }, (_, i) => {
+        const left = 30 + (i * 4.4) % 42
+        const delay = REMAINS_TOTAL * 0.56 + (i % 5) * 0.3
+        const drift = i % 2 === 0 ? 9 : -8
+        return (
+          <motion.div key={i} aria-hidden
+            initial={{ opacity: 0, y: 0 }}
+            animate={{ opacity: [0, 0.6, 0], y: [-2, -54 - (i % 3) * 16], x: [0, drift] }}
+            transition={{ duration: 3.4 + (i % 3) * 0.4, delay, ease: 'easeOut' }}
+            style={{ position: 'absolute', left: `${left}%`, bottom: `${34 + (i % 4) * 6}%`, width: 2 + (i % 2), height: 2 + (i % 2), borderRadius: '50%', background: '#cfc7b6', boxShadow: '0 0 6px rgba(207,199,182,0.7)', zIndex: 4 }} />
+        )
+      })}
+
+      {/* The empty boat, held a beat longer than he is, so the frame ends on
+          the thing he was sitting in rather than on him. */}
+      <motion.div aria-hidden
+        initial={{ opacity: 0 }}
+        animate={{ opacity: [0, 0, 0.3] }}
+        transition={{ duration: REMAINS_TOTAL, times: [0, 0.8, 1], ease: 'easeOut' }}
+        style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '26%', background: 'linear-gradient(180deg, transparent, rgba(8,12,20,0.7))', zIndex: 5 }} />
+    </div>
+  )
+}
+
 
 
 
