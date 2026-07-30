@@ -3302,8 +3302,14 @@ export default function RaidCombat({
         bossWardBuffRef.current = 0
         bossWardRef.current = 0; setWardUp(false)
         bossForesightRef.current = 0; setForeseeUp(false)
-        enemyShieldRef.current = enemyShieldMax
-        setEnemyShieldHp(enemyShieldMax)
+        // Per-phase plate: a phase can name its own shieldPct so armour
+        // ESCALATES across the fight instead of every phase reopening at
+        // the same wall. Unset falls back to the enemy's flat pool.
+        const phaseShield = nextCfg.shieldPct != null
+          ? Math.round(enemyHpMaxRef.current * nextCfg.shieldPct)
+          : enemyShieldMax
+        enemyShieldRef.current = phaseShield
+        setEnemyShieldHp(phaseShield)
         const n = enemyPhaseRef.current
         setEnemyPhase(n)
         setPhaseCallout(nextCfg.badge ?? `Phase ${n}`)
@@ -5426,8 +5432,14 @@ export default function RaidCombat({
             bossWardBuffRef.current = 0
             bossWardRef.current = 0; setWardUp(false)
             bossForesightRef.current = 0; setForeseeUp(false)
-            enemyShieldRef.current = enemyShieldMax
-            setEnemyShieldHp(enemyShieldMax)
+            // Per-phase plate: a phase can name its own shieldPct so armour
+            // ESCALATES across the fight instead of every phase reopening at
+            // the same wall. Unset falls back to the enemy's flat pool.
+            const phaseShield = nextCfg.shieldPct != null
+              ? Math.round(enemyHpMaxRef.current * nextCfg.shieldPct)
+              : enemyShieldMax
+            enemyShieldRef.current = phaseShield
+            setEnemyShieldHp(phaseShield)
             const n = enemyPhaseRef.current
             setEnemyPhase(n)
             setPhaseCallout(nextCfg.badge ?? `Phase ${n}`)

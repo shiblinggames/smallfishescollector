@@ -327,27 +327,50 @@ const SUNKEN_HAND_CHALLENGE_LOOT: RaidLootItem[] = [
 
 // The challenge finale turns his PLATE into the fight. Normal Finn wears 22%
 // of his hull in armour (194 on 880) — enough that the Perfect Streak pierce at
-// 5 is a nice bonus, not a demand: holding the chain all six phases only saves
-// about a fifth of the total damage. Here it is 90% of a hull that challenge
-// has already scaled to 1320, so he stands behind 1,188 plate that comes back
-// in full on every phase revive, with Old Armour still stacking +264 on top in
-// phase 2.
+// 5 is a nice bonus rather than a demand: holding the chain all six phases only
+// saves about a fifth of the total damage.
 //
-// That is the whole point. Brute-forcing him means chewing ~15,000 damage
-// across six phases; holding the streak to 5 ignores every point of plate and
-// cuts it to 7,920. The mechanic stops being a reward for good play and
-// becomes the only sane route through, which is what separates this from the
-// normal clear the player has already earned.
+// Here his armour ESCALATES instead of sitting flat. A flat wall would have him
+// open phase 1 behind 1,188 plate while the player's streak is still 0 — the
+// one stretch of the fight where the pierce is guaranteed to be unavailable —
+// so their first six turns would land on armour and teach "my shots do nothing"
+// before they ever learn "hold the chain". Opening light and closing heavy
+// teaches it in the right order: you can hurt him early while you build the
+// rhythm, and by the time the wall is real you know what answers it.
+//
+//   phase 1  From the Wrong Water   0.25   330 plate
+//   phase 2  Old Armour             0.50   660  (+264 from the ability itself)
+//   phase 3  Wake of the Drowned    0.65   858
+//   phase 4  Still Going            0.65   858
+//   phase 5  All That Tonnage       0.90  1,188
+//   phase 6  The Primeval Maw       0.90  1,188
+//
+// That is 5,082 of ramped plate, plus the 264 Old Armour puts up itself, over
+// 7,920 of hull. Brute-forcing every point of it is 13,266 damage across the
+// six phases; holding the streak to 5 ignores all 5,346 of the armour and
+// leaves 7,920 — a 40% cut. The mechanic stops being a reward for good play
+// and becomes the route through, which is what separates this from the normal
+// clear the player has already earned.
 //
 // Only the boss is re-plated — the scaled mobs keep buildChallengeRaid's
 // numbers, so the pressure lands on the fight that owns the mechanic.
+const FINN_CHALLENGE_PLATE = [0.50, 0.65, 0.65, 0.90, 0.90] as const
+
 export const THE_SUNKEN_HAND_CHALLENGE: BossRaidConfig = (() => {
   const base = buildChallengeRaid(THE_SUNKEN_HAND, SUNKEN_HAND_CHALLENGE_LOOT)
   const finn = base.enemies.finn
   if (!finn) return base
   return {
     ...base,
-    enemies: { ...base.enemies, finn: { ...finn, shieldPct: 0.90 } },
+    enemies: {
+      ...base.enemies,
+      finn: {
+        ...finn,
+        // Phase 1 opens here; phases[] carries the revives into 2–6.
+        shieldPct: 0.25,
+        phases: (finn.phases ?? []).map((p, i) => ({ ...p, shieldPct: FINN_CHALLENGE_PLATE[i] ?? p.shieldPct })),
+      },
+    },
   }
 })()
 

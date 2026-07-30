@@ -129,6 +129,11 @@ export interface BossPhase {
   /** Optional center-screen callout label for the transition (e.g. 'RESERVE
    *  DECK'). Falls back to "PHASE N" when unset. */
   badge?: string
+  /** Plate this phase revives behind, as a fraction of the boss's max HP.
+   *  Overrides the enemy's flat `shieldPct` for THIS phase only, so armour can
+   *  escalate across a fight instead of every phase reopening at the same wall.
+   *  Unset = the enemy's own shieldPct, i.e. exactly the old behaviour. */
+  shieldPct?: number
   /** Optional telegraphed mechanic check that ARMS the instant this phase
    *  begins (answer it with the right crew play or eat the consequence). */
   check?: BossMechanicCheck
