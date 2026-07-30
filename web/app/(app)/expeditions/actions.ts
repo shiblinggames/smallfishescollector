@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { RARITY_TIERS } from '@/lib/variants'
 import { applyVariantBoosts, raidItemSlotsForTier } from '@/lib/expeditions'
-import { getForgeRecipe, dedupeRaidItems, legendaryForEpic } from '@/lib/raidItems'
+import { getForgeRecipe, dedupeRaidItems, legendaryForEpic, RAID_ITEMS } from '@/lib/raidItems'
 import { ABYSSAL_ACCEL_MS, ABYSSAL_ACCEL_GEM_COST, parseAbyssalConversion, isConversionReady, type AbyssalConversion } from '@/lib/abyssalAccelerator'
 import { classSlotBonuses } from '@/lib/shipClasses'
 import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
@@ -134,10 +134,20 @@ export async function saveEquippedRaidItems(itemIds: string[]): Promise<void> {
   const slots = raidItemSlotsForTier((profile?.ship_tier as number | null) ?? 0)
     + classSlotBonuses(profile?.ship_classes as Record<string, string> | null).itemSlots
     + ((profile as { has_armory_expansion?: boolean } | null)?.has_armory_expansion === true ? 1 : 0)
+  // THE SUNKEN HAND MOUNT rides in the same array but is NOT a hull slot, so it
+  // has to come out before the cap and go back after. Slicing it together with
+  // the rest meant a mounted Primeval Maw silently ate a hull slot: with the
+  // mount plus a full hull, the newly equipped item is last in the array and got
+  // truncated straight back off, so equipping looked like it did nothing.
+  // Mirrors the same split in getRaidPlayerStats.
+  const ownedOnly = itemIds.filter(id => owned.includes(id))
+  const finaleIds = new Set(RAID_ITEMS.filter(i => i.finaleSlotOnly).map(i => i.id))
+  const mounted = ownedOnly.filter(id => finaleIds.has(id)).slice(0, 1)
+  const normal  = ownedOnly.filter(id => !finaleIds.has(id))
   // Owned + can-coexist (one-per-tier-family, and no fusion beside its own forge
   // ingredients) + capped to the hull's slots. dedupe runs before the slice so a
   // conflicting pair can't waste a slot apiece.
-  const valid = dedupeRaidItems(itemIds.filter(id => owned.includes(id))).slice(0, slots)
+  const valid = [...dedupeRaidItems(normal).slice(0, slots), ...mounted]
   await admin.from('profiles').update({ equipped_raid_items: valid }).eq('id', user.id)
 }
 
