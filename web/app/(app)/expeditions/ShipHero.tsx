@@ -1039,6 +1039,17 @@ export default function ShipHero({
   const skinFilter  = skinDef?.filter ?? 'none'
   const shipImgSrc  = skinDef?.imageByTier?.[shipTierForSlots] ?? shipStats.image
 
+  // Each screen gets its own backdrop now that Items and Forge are their own
+  // routes rather than tabs on the ship sheet. Same scrim over all three, so
+  // the dense UI stays legible whatever sits behind it. The drawer (launch
+  // prep, which still shows every section) keeps the shipyard.
+  const SECTION_BG: Record<'loadout' | 'ship' | 'forge', string> = {
+    loadout: '/items-bg.jpg',
+    forge:   '/forge-bg.jpg',
+    ship:    '/ship-loadout-bg.jpg',
+  }
+  const sectionBg = focus ? SECTION_BG[loadoutTab] : '/ship-loadout-bg.jpg'
+
   // Crew available to assign: any roster member not already in another slot
   // (the one already in this slot stays selectable). Sorted by effective stats.
   const effStats = (c: RosterCrew) => applyCrewEffects({ power: c.power, dodge: c.dodge, fortune: c.fortune }, c.effects, c.xp)
@@ -1378,7 +1389,7 @@ export default function ShipHero({
                 // scrim so the dense loadout UI stays legible over the light dawn
                 // sky. Solid colour fallback while the image loads.
                 backgroundColor: '#060c14',
-                backgroundImage: 'linear-gradient(180deg, rgba(6,10,18,0.74) 0%, rgba(5,8,14,0.85) 46%, rgba(3,5,9,0.95) 100%), url(/ship-loadout-bg.jpg)',
+                backgroundImage: `linear-gradient(180deg, rgba(6,10,18,0.74) 0%, rgba(5,8,14,0.85) 46%, rgba(3,5,9,0.95) 100%), url(${sectionBg})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center top',
                 backgroundRepeat: 'no-repeat',
