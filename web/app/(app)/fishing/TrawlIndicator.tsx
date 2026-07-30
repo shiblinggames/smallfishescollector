@@ -230,7 +230,12 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
       const n = Date.now()
       setNow(n)
       const soonest = Math.min(...activeTrawls.map(t => new Date(t.endsAt).getTime() - n))
-      const fine = open || (soonest > 0 && soonest < 60_000)
+      // Nothing left to count down: every trawl is ready and its card is
+      // static. Stop ticking rather than re-rendering the whole panel once a
+      // second for no change — which is exactly the state the panel is in
+      // when you open it to collect.
+      if (soonest <= 0) return
+      const fine = open || soonest < 60_000
       id = setTimeout(tick, fine ? 1000 : 10_000)
     }
     // Stamp fresh on open so a just-opened panel's countdowns/bars aren't stale
@@ -493,18 +498,18 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                 const scrim = inert
                   ? 'linear-gradient(180deg, rgba(40,42,46,0.62) 0%, rgba(20,22,26,0.86) 55%, rgba(11,12,15,0.96) 100%)'
                   : ready
-                    // Near-opaque gold so a ready card is a wall of warm light —
-                    // the zone water no longer bleeds through, so it can't be
-                    // mistaken for a still-fishing card.
-                    ? 'linear-gradient(180deg, rgba(248,200,72,0.92) 0%, rgba(206,150,44,0.9) 46%, rgba(86,58,14,0.97) 100%)'
+                    // A warm gold pass over the zone water rather than a plate on
+                    // top of it: still unmistakably the odd one out, without
+                    // shouting over every other card on the screen.
+                    ? 'linear-gradient(180deg, rgba(240,192,64,0.34) 0%, rgba(176,124,32,0.42) 48%, rgba(28,22,10,0.92) 100%)'
                     : `linear-gradient(180deg, ${topBand} 0%, ${theme.mid} 54%, ${theme.deep} 100%)`
                 const cardStyle: React.CSSProperties = {
                   position: 'relative',
                   borderRadius: 14, overflow: 'hidden', cursor: actionable ? 'pointer' : 'default',
                   backgroundColor: '#0c1018',
                   background: zoneArt ? `${scrim}, url(${zoneArt}) center / cover` : scrim,
-                  border: `${ready ? 2 : 1.5}px solid ${flashing ? `${theme.accent}cc` : ready ? GOLD : running ? `${theme.accent}88` : sendable ? `${theme.accent}99` : 'rgba(255,255,255,0.1)'}`,
-                  boxShadow: flashing ? `0 0 18px ${theme.accent}66` : sendable ? `0 0 10px ${theme.accent}33` : running ? `0 0 12px ${theme.accent}22` : 'none',
+                  border: `1.5px solid ${flashing ? `${theme.accent}cc` : ready ? `${GOLD}c0` : running ? `${theme.accent}88` : sendable ? `${theme.accent}99` : 'rgba(255,255,255,0.1)'}`,
+                  boxShadow: ready ? `0 0 16px ${GOLD}3d` : flashing ? `0 0 18px ${theme.accent}66` : sendable ? `0 0 10px ${theme.accent}33` : running ? `0 0 12px ${theme.accent}22` : 'none',
                   // …and desaturate the whole card (art + gradient) to gray + dim,
                   // so they read as plainly unavailable, not just a dark zone.
                   filter: inert ? 'grayscale(1) brightness(0.82)' : undefined,
@@ -516,13 +521,14 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                   animate: flashing
                     ? { opacity: 1, y: 0, scale: [1, 1.04, 1] }
                     : ready
-                      // Ready cards keep a strong breathing gold glow so "come collect me" is unmissable.
-                      ? { opacity: 1, y: 0, scale: [1, 1.012, 1], boxShadow: [`0 0 16px ${GOLD}66`, `0 0 38px ${GOLD}`, `0 0 16px ${GOLD}66`] }
+                      // Breathing is a TRANSFORM now. The old version animated
+                      // boxShadow every frame, which repaints the whole card.
+                      ? { opacity: 1, y: 0, scale: [1, 1.014, 1] }
                       : { opacity: 1, y: 0, scale: 1 },
                   transition: flashing
                     ? { duration: 0.5, ease: 'easeOut' as const }
                     : ready
-                      ? { boxShadow: { duration: 1.5, repeat: Infinity, ease: 'easeInOut' as const }, scale: { duration: 1.5, repeat: Infinity, ease: 'easeInOut' as const } }
+                      ? { scale: { duration: 2.4, repeat: Infinity, ease: 'easeInOut' as const } }
                       : { delay: 0.04 * i, type: 'spring' as const, stiffness: 420, damping: 30 },
                   ...(actionable ? { whileTap: { scale: 0.96 } } : {}),
                   onClick: onTapCard,
