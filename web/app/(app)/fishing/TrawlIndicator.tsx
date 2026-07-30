@@ -498,18 +498,22 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                 const scrim = inert
                   ? 'linear-gradient(180deg, rgba(40,42,46,0.62) 0%, rgba(20,22,26,0.86) 55%, rgba(11,12,15,0.96) 100%)'
                   : ready
-                    // A warm gold pass over the zone water rather than a plate on
-                    // top of it: still unmistakably the odd one out, without
-                    // shouting over every other card on the screen.
-                    ? 'linear-gradient(180deg, rgba(240,192,64,0.34) 0%, rgba(176,124,32,0.42) 48%, rgba(28,22,10,0.92) 100%)'
+                    // Ready DROPS the zone art (see background below) and stands
+                    // on its own warm base instead. Gold laid over the water was
+                    // fighting the art for contrast and losing — the busier the
+                    // zone, the less "collect me" read. With nothing behind it
+                    // the same restrained gold carries the whole card.
+                    ? 'linear-gradient(180deg, rgba(246,201,84,0.30) 0%, rgba(170,120,30,0.20) 52%, rgba(22,16,6,0.42) 100%)'
                     : `linear-gradient(180deg, ${topBand} 0%, ${theme.mid} 54%, ${theme.deep} 100%)`
                 const cardStyle: React.CSSProperties = {
                   position: 'relative',
                   borderRadius: 14, overflow: 'hidden', cursor: actionable ? 'pointer' : 'default',
-                  backgroundColor: '#0c1018',
-                  background: zoneArt ? `${scrim}, url(${zoneArt}) center / cover` : scrim,
-                  border: `1.5px solid ${flashing ? `${theme.accent}cc` : ready ? `${GOLD}c0` : running ? `${theme.accent}88` : sendable ? `${theme.accent}99` : 'rgba(255,255,255,0.1)'}`,
-                  boxShadow: ready ? `0 0 16px ${GOLD}3d` : flashing ? `0 0 18px ${theme.accent}66` : sendable ? `0 0 10px ${theme.accent}33` : running ? `0 0 12px ${theme.accent}22` : 'none',
+                  // Opaque base under the tint, never the tint as the surface.
+                  // Ready gets a warm one so the gold has somewhere to sit.
+                  backgroundColor: ready ? '#150e04' : '#0c1018',
+                  background: ready || !zoneArt ? scrim : `${scrim}, url(${zoneArt}) center / cover`,
+                  border: `1.5px solid ${flashing ? `${theme.accent}cc` : ready ? `${GOLD}d8` : running ? `${theme.accent}88` : sendable ? `${theme.accent}99` : 'rgba(255,255,255,0.1)'}`,
+                  boxShadow: ready ? `0 0 18px ${GOLD}4a` : flashing ? `0 0 18px ${theme.accent}66` : sendable ? `0 0 10px ${theme.accent}33` : running ? `0 0 12px ${theme.accent}22` : 'none',
                   // …and desaturate the whole card (art + gradient) to gray + dim,
                   // so they read as plainly unavailable, not just a dark zone.
                   filter: inert ? 'grayscale(1) brightness(0.82)' : undefined,
