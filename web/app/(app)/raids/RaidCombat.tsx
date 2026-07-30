@@ -6835,7 +6835,7 @@ export default function RaidCombat({
                       color: '#1a1204', background: `rgba(${col},0.97)`, border: '1px solid rgba(255,255,255,0.55)',
                       boxShadow: `0 0 12px rgba(${col},0.85)`, whiteSpace: 'nowrap',
                     }}>
-                    {maxed ? 'Cannonade Max' : `Cannonade ×${cannonadeStacks}`}
+                    {maxed ? `${streakLabel} Max` : `${streakLabel} ×${cannonadeStacks}`}
                   </motion.div>
                 )
               })()}
@@ -7047,6 +7047,9 @@ export default function RaidCombat({
                 snapKey={dialSnapKey}
                 perfectBurstKey={dialBurstKey}
                 streakFire={cannonadeStacks >= 3 ? 2 : cannonadeStacks === 2 ? 1 : 0}
+                streakCount={cannonadeStacks}
+                streakLabel={streakLabel}
+                streakPct={Math.round(tide.critStreakPerStack * cannonadeStacks * 100)}
               />
             </div>
           </div>,
@@ -10701,7 +10704,7 @@ const DIAL_ZONE_OPACITY = (z: ZoneDef) =>
 
 function DialAimInline({
   indicatorRef, zonesGroupRef, flashRef, critW,
-  afflictionLabel, hardenedArmed, hitW, grazeW, firePos, zoneCenter, snapKey, perfectBurstKey, streakFire,
+  afflictionLabel, hardenedArmed, hitW, grazeW, firePos, zoneCenter, snapKey, perfectBurstKey, streakFire, streakCount, streakLabel, streakPct,
 }: {
   indicatorRef:  React.RefObject<HTMLDivElement | null>
   zonesGroupRef: React.RefObject<SVGGElement | null>
@@ -10725,12 +10728,34 @@ function DialAimInline({
   /** The dial CATCHES FIRE on a crit streak: the same halos and rings the
    *  fishing dial lights with on a perfect streak, at the same thresholds. */
   streakFire: 0 | 1 | 2
+  /** Live streak readout. The hull badge that normally carries this sits
+   *  BEHIND the dial scrim while aiming, which is the one moment the player
+   *  is actually deciding whether to protect the chain, so the dial carries
+   *  its own copy. */
+  streakCount: number
+  streakLabel: string
+  streakPct: number
 }) {
   const zones = useMemo(() => buildDialZones(critW, hitW, grazeW), [critW, hitW, grazeW])
   // Finn orbits at the middle of the band's radius.
 
   return (
     <div style={{ position: 'relative', width: '100%', maxWidth: 300, margin: '0 auto' }}>
+      {streakCount >= 1 && (
+        <div className="font-cinzel font-700 uppercase" style={{
+          position: 'absolute', top: -34, left: 0, right: 0, textAlign: 'center',
+          pointerEvents: 'none', letterSpacing: '0.06em', whiteSpace: 'nowrap',
+          fontSize: streakCount >= 3 ? '0.92rem' : '0.78rem',
+          color: streakCount >= 3 ? '#fbbf24' : '#fb923c',
+          textShadow: streakCount >= 3
+            ? '0 0 16px rgba(251,191,36,0.85), 0 0 34px rgba(249,115,22,0.5)'
+            : '0 0 10px rgba(251,146,60,0.7)',
+          transition: 'font-size 0.2s ease-out, color 0.2s ease-out',
+        }}>
+          {streakLabel} ×{streakCount}
+          <span style={{ opacity: 0.85, marginLeft: 8, fontSize: '0.72em' }}>+{streakPct}%</span>
+        </div>
+      )}
       {/* result flash, same element the bar uses */}
       <div ref={flashRef} aria-hidden style={{
         position: 'absolute', inset: '3.6%', borderRadius: '50%', opacity: 0,
