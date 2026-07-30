@@ -17,6 +17,7 @@ import { hallTierDef, nextHallTier, CREW_HALL_MAX_TIER } from '@/lib/crewHall'
 import { crewAssignment } from '@/lib/crewAssignment'
 import { RARITY_NAMES, RARITY_COLORS, groupForSlug, crewDisplayName, GEM_WEIGHTS, type CrewRarity } from '@/lib/crewGen'
 import { applyCrewEffects, netTraitStats, traitLabel, traitKind } from '@/lib/crewEffects'
+import AssignBoard from './AssignBoard'
 import { useReveal, BoardReveal, RevealFlash, RevealBanner } from './boardReveal'
 import { ROUTE_CONFIGS, type VoyageRoute } from '@/lib/voyageRoutes'
 import { crewLevelFromXP, crewXPProgress, levelStatBonuses, CREW_MAX_LEVEL } from '@/lib/crewLevel'
@@ -1021,9 +1022,9 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
     const t = searchParams?.get('tab')
     // A saved ?tab=blood link lands on Recruit now, which is where the
     // blood-charged reroll lives.
-    return t === 'recruits' || t === 'graveyard' || t === 'roster' || t === 'wardrobe' ? t : 'roster'
-  })() as 'roster' | 'recruits' | 'graveyard' | 'wardrobe'
-  const [activeTab, setActiveTab] = useState<'roster' | 'recruits' | 'graveyard' | 'wardrobe'>(initialTab)
+    return t === 'assign' || t === 'recruits' || t === 'graveyard' || t === 'roster' || t === 'wardrobe' ? t : 'roster'
+  })() as 'assign' | 'roster' | 'recruits' | 'graveyard' | 'wardrobe'
+  const [activeTab, setActiveTab] = useState<'assign' | 'roster' | 'recruits' | 'graveyard' | 'wardrobe'>(initialTab)
 
   // First-time Crew Hall guide: step through the core tabs, switching to and
   // flashing each one. Marked seen at the end.
@@ -1082,6 +1083,11 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
   /** Pick the lowest empty slot on the target track. Returns 0 (captain
    *  slot — server will bench the previous occupant) if all slots are
    *  already filled, so the toggle never blocks on a full party. */
+  // Crew free to be assigned. Lives at the root because BOTH the assign sheet
+  // and the Roster read it; it used to be computed inside the Roster block.
+  const benched = state.roster.filter(c =>
+    c.raidSlot == null && c.voyageSlot == null && !state.trawlingCrewIds.includes(c.id))
+
   function nextOpenSlot(track: 'voyage' | 'raid'): number {
     const taken = new Set<number>()
     for (const c of state.roster) {
@@ -1375,19 +1381,21 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             full-width slot in the main nav). Counts stay as dim "· N"
             suffixes on the two text tabs. */}
         {(() => {
+          // Seats filled across BOTH parties — the number the Assign tab is about.
+          const assignedCount = state.roster.filter(c => c.raidSlot != null || c.voyageSlot != null).length
           const boardCount = state.board.filter(c => !c.recruited).length
           const iconProps = { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.9, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true }
           // Uniform icon + label tabs so every destination is self-explanatory
           // (the old icon-only Blood/Wardrobe/Graveyard tabs weren't obvious).
           const tabs: { id: typeof activeTab; label: string; accent: string; count?: number; icon: ReactNode }[] = [
+            { id: 'assign',   label: 'Assign',  accent: ASSIGN_RAID, count: assignedCount || undefined,
+              icon: <svg {...iconProps}><path d="M9 11l3 3 8-8" /><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9" /></svg> },
             { id: 'roster',   label: 'Roster',  accent: SECTION_ROSTER, count: state.roster.length || undefined,
               icon: <svg {...iconProps}><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="3.2" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg> },
             { id: 'recruits', label: 'Recruit', accent: '#f0d696', count: boardCount || undefined,
               icon: <svg {...iconProps}><path d="M15 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="8.5" cy="7" r="3.2" /><path d="M19 8v6M22 11h-6" /></svg> },
             { id: 'wardrobe', label: 'Skins',  accent: '#5ec8e8',
               icon: <svg {...iconProps}><path d="M12 3a2 2 0 0 0-2 2c0 1 1 1.6 2 2M3 20l9-7 9 7M3 20l9-4 9 4M3 20v-1l9-6 9 6v1" /></svg> },
-            { id: 'graveyard', label: 'Fallen', accent: '#c8ab7d',
-              icon: <svg {...iconProps}><path d="M6 21V10a6 6 0 0 1 12 0v11" /><path d="M4 21h16" /><path d="M12 7.5v5M9.5 10h5" /></svg> },
           ]
           return (
             <div role="tablist" className="flex items-stretch" style={{ gap: 5, marginBottom: '1.2rem' }}>
@@ -1423,6 +1431,22 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             upgrade with the building, so paying for a new hall visibly
             changes the room the recruits stand in. Hall header carries
             the name + tier pips + start-level perk + the Upgrade CTA. */}
+        {/* ── ASSIGN ── the first tab, because deciding who sails is the job
+            you open this page to do. Art-forward seats rather than cards. */}
+        {activeTab === 'assign' && (
+          <AssignBoard
+            roster={state.roster}
+            shipCrewSlots={state.shipCrewSlots}
+            lockedCrewIds={state.lockedCrewIds}
+            trawlingCrewIds={state.trawlingCrewIds}
+            artSrc={artSrc}
+            onFillSeat={track => setAssignTrack(track)}
+            onTapCrew={m => setDetail({ kind: 'roster', item: m })}
+            raidAccent={ASSIGN_RAID}
+            voyageAccent={ASSIGN_VOYAGE}
+          />
+        )}
+
         {activeTab === 'recruits' && (() => {
           const hall = hallTierDef(state.hallTier)
           const nextTier = nextHallTier(state.hallTier)
@@ -1714,6 +1738,72 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
         </>
           )
         })()}
+
+        {assignTrack && typeof document !== 'undefined' && createPortal((() => {
+          const accent = assignTrack === 'raid' ? ASSIGN_RAID : ASSIGN_VOYAGE
+          const HeaderIcon = assignTrack === 'raid' ? CrossedSwordsIconSvg : AnchorIconSvg
+          const label = assignTrack === 'raid' ? 'Raid Party' : 'Voyage Party'
+          return (
+            <div onClick={() => setAssignTrack(null)} style={{ position: 'fixed', inset: 0, zIndex: 100000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(2,6,12,0.7)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}>
+              <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 480, maxHeight: '82vh', display: 'flex', flexDirection: 'column', background: 'rgba(8,14,22,0.99)', borderTop: `2px solid ${accent}`, borderRadius: '18px 18px 0 0', boxShadow: '0 -12px 44px rgba(0,0,0,0.6)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '1rem 1rem 0.75rem' }}>
+                  <span style={{ display: 'inline-flex', width: 30, height: 30, borderRadius: 9, alignItems: 'center', justifyContent: 'center', background: `${accent}22`, border: `1px solid ${accent}66`, flexShrink: 0 }}>
+                    <HeaderIcon size={16} color={accent} />
+                  </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.52rem', color: accent }}>Fill an open seat</p>
+                    <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0ede8', lineHeight: 1.1 }}>Assign to {label}</p>
+                  </div>
+                  <button onClick={() => setAssignTrack(null)} aria-label="Close" className="tap" style={{ flexShrink: 0, width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e0ddd8', cursor: 'pointer' }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                  </button>
+                </div>
+                <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain', padding: '0 1rem 1.4rem' }}>
+                  {benched.length === 0 ? (
+                    <p className="font-karla text-center" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.55, padding: '1.4rem 0.5rem' }}>
+                      No crew on the bench. Free someone from another post, or recruit more hands.
+                    </p>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                      {benched.map(m => {
+                        const busy = busyId === m.id
+                        const rColor = RARITY_COLORS[(m.rarity as CrewRarity)] ?? 'rgba(255,255,255,0.12)'
+                        const art = m.filename ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/${m.filename}` : ''
+                        return (
+                          <button
+                            key={m.id}
+                            disabled={pending}
+                            onClick={() => {
+                              const slot = nextOpenSlot(assignTrack)
+                              run(() => (assignTrack === 'raid' ? assignToRaid(m.id, slot) : assignToVoyage(m.id, slot)), m.id, () => setAssignTrack(null))
+                            }}
+                            className="tap"
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 11,
+                              padding: '0.55rem 0.65rem', borderRadius: 12, textAlign: 'left',
+                              background: busy ? `${accent}1e` : 'rgba(255,255,255,0.04)',
+                              border: `1px solid ${busy ? accent + '99' : 'rgba(255,255,255,0.1)'}`,
+                              cursor: pending ? 'default' : 'pointer', opacity: pending && !busy ? 0.5 : 1,
+                            }}
+                          >
+                            <div style={{ width: 42, height: 42, borderRadius: 10, overflow: 'hidden', flexShrink: 0, background: 'rgba(0,0,0,0.3)', border: `1px solid ${rColor}` }}>
+                              {art ? <img src={art} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : null}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <p className="font-pirata" style={{ fontSize: '0.98rem', color: '#f0ede8', lineHeight: 1.1 }}>{m.name}</p>
+                              <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.5)' }}>PWR {m.power} · AGI {m.dodge} · FTN {m.fortune}</p>
+                            </div>
+                            <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.62rem', color: accent, flexShrink: 0 }}>{busy ? '…' : 'Assign'}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )
+        })(), document.body)}
 
         {/* Hall upgrade confirm modal — fixed overlay (CrewClient mounts at
             page level, not inside Nav, so no portal needed). Recomputes the
@@ -2080,31 +2170,25 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
 
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    <PartySection accent={ASSIGN_RAID} Icon={CrossedSwordsIconSvg} label="Raid Party" sub="fights at your side" count={raidParty.length} max={maxSlots} members={raidParty} collapsed={collapsed.has('raid')} onToggle={() => toggleCollapse('raid')}>
-                      {grid(raidParty, maxSlots - raidParty.length, ASSIGN_RAID, () => setAssignTrack('raid'))}
+                    {/* ONE flat manifest. The old page split the roster four
+                        ways by what each hand happened to be doing, which meant
+                        scanning four lists to answer "who do I have". Assigning
+                        is its own tab now, so this is just the list. */}
+                    <PartySection accent={SECTION_ROSTER} Icon={BenchIconSvg} label="All Crew" sub="your whole manifest" count={state.roster.length} members={state.roster} collapsed={false} onToggle={() => {}}>
+                      {state.roster.length === 0 ? (
+                        <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', padding: '0.1rem 0 0.3rem' }}>
+                          No crew yet. Sign some hands on in the Recruit tab.
+                        </p>
+                      ) : grid(state.roster, 0, SECTION_ROSTER)}
                     </PartySection>
 
-                    <PartySection accent={ASSIGN_VOYAGE} Icon={AnchorIconSvg} label="Voyage Party" sub={voyageAtSea ? 'at sea now' : 'sails for loot'} count={voyageParty.length} max={maxSlots} members={voyageParty} collapsed={collapsed.has('voyage')} onToggle={() => toggleCollapse('voyage')}>
-                      {grid(voyageParty, maxSlots - voyageParty.length, ASSIGN_VOYAGE, () => setAssignTrack('voyage'))}
-                    </PartySection>
-
-                    {trawling.length > 0 && (
-                      <PartySection accent="#3fc8aa" Icon={NetIconSvg} label="Out Trawling" sub="fishing — back soon" count={trawling.length} members={trawling} collapsed={collapsed.has('trawling')} onToggle={() => toggleCollapse('trawling')}>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '0.7rem' }}>
-                          {trawling.map(card)}
-                        </div>
-                      </PartySection>
-                    )}
-
-                    <div ref={availableRef} style={{ scrollMarginTop: 80 }}>
-                      <PartySection accent={SECTION_ROSTER} Icon={BenchIconSvg} label="Available" sub="ready to assign" count={available.length} members={available} collapsed={collapsed.has('available')} onToggle={() => toggleCollapse('available')}>
-                        {available.length === 0 ? (
-                          <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', padding: '0.1rem 0 0.3rem' }}>
-                            Every crew has a post. Recruit more to grow your fleet.
-                          </p>
-                        ) : grid(available, 0, SECTION_ROSTER)}
-                      </PartySection>
-                    </div>
+                    {/* The Fallen lost its tab: it is a memorial you visit, not
+                        a place you work, so it hangs off the manifest instead. */}
+                    <button onClick={() => setActiveTab('graveyard')} className="font-cinzel font-700 uppercase tracking-[0.1em]"
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '0.7rem', borderRadius: 12, background: 'rgba(200,171,125,0.10)', border: '1px solid rgba(200,171,125,0.32)', color: '#c8ab7d', fontSize: '0.68rem', cursor: 'pointer' }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M6 21V10a6 6 0 0 1 12 0v11" /><path d="M4 21h16" /><path d="M12 7.5v5M9.5 10h5" /></svg>
+                      Those We Have Lost
+                    </button>
 
                     {/* The "Recruit New Crew" button lived here and did nothing
                         the Recruit TAB does not already do, one tap away and
@@ -2112,71 +2196,8 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
 
                     {/* Assign modal — fill an open Raid/Voyage seat from the bench
                         without scrolling. Bottom sheet, accent-coded to the track. */}
-                    {assignTrack && typeof document !== 'undefined' && createPortal((() => {
-                      const accent = assignTrack === 'raid' ? ASSIGN_RAID : ASSIGN_VOYAGE
-                      const HeaderIcon = assignTrack === 'raid' ? CrossedSwordsIconSvg : AnchorIconSvg
-                      const label = assignTrack === 'raid' ? 'Raid Party' : 'Voyage Party'
-                      return (
-                        <div onClick={() => setAssignTrack(null)} style={{ position: 'fixed', inset: 0, zIndex: 100000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(2,6,12,0.7)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}>
-                          <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 480, maxHeight: '82vh', display: 'flex', flexDirection: 'column', background: 'rgba(8,14,22,0.99)', borderTop: `2px solid ${accent}`, borderRadius: '18px 18px 0 0', boxShadow: '0 -12px 44px rgba(0,0,0,0.6)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '1rem 1rem 0.75rem' }}>
-                              <span style={{ display: 'inline-flex', width: 30, height: 30, borderRadius: 9, alignItems: 'center', justifyContent: 'center', background: `${accent}22`, border: `1px solid ${accent}66`, flexShrink: 0 }}>
-                                <HeaderIcon size={16} color={accent} />
-                              </span>
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.52rem', color: accent }}>Fill an open seat</p>
-                                <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0ede8', lineHeight: 1.1 }}>Assign to {label}</p>
-                              </div>
-                              <button onClick={() => setAssignTrack(null)} aria-label="Close" className="tap" style={{ flexShrink: 0, width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e0ddd8', cursor: 'pointer' }}>
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
-                              </button>
-                            </div>
-                            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain', padding: '0 1rem 1.4rem' }}>
-                              {available.length === 0 ? (
-                                <p className="font-karla text-center" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.55, padding: '1.4rem 0.5rem' }}>
-                                  No crew on the bench. Free someone from another post, or recruit more hands.
-                                </p>
-                              ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                                  {available.map(m => {
-                                    const busy = busyId === m.id
-                                    const rColor = RARITY_COLORS[(m.rarity as CrewRarity)] ?? 'rgba(255,255,255,0.12)'
-                                    const art = m.filename ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/${m.filename}` : ''
-                                    return (
-                                      <button
-                                        key={m.id}
-                                        disabled={pending}
-                                        onClick={() => {
-                                          const slot = nextOpenSlot(assignTrack)
-                                          run(() => (assignTrack === 'raid' ? assignToRaid(m.id, slot) : assignToVoyage(m.id, slot)), m.id, () => setAssignTrack(null))
-                                        }}
-                                        className="tap"
-                                        style={{
-                                          display: 'flex', alignItems: 'center', gap: 11,
-                                          padding: '0.55rem 0.65rem', borderRadius: 12, textAlign: 'left',
-                                          background: busy ? `${accent}1e` : 'rgba(255,255,255,0.04)',
-                                          border: `1px solid ${busy ? accent + '99' : 'rgba(255,255,255,0.1)'}`,
-                                          cursor: pending ? 'default' : 'pointer', opacity: pending && !busy ? 0.5 : 1,
-                                        }}
-                                      >
-                                        <div style={{ width: 42, height: 42, borderRadius: 10, overflow: 'hidden', flexShrink: 0, background: 'rgba(0,0,0,0.3)', border: `1px solid ${rColor}` }}>
-                                          {art ? <img src={art} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : null}
-                                        </div>
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                          <p className="font-pirata" style={{ fontSize: '0.98rem', color: '#f0ede8', lineHeight: 1.1 }}>{m.name}</p>
-                                          <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.5)' }}>PWR {m.power} · AGI {m.dodge} · FTN {m.fortune}</p>
-                                        </div>
-                                        <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.62rem', color: accent, flexShrink: 0 }}>{busy ? '…' : 'Assign'}</span>
-                                      </button>
-                                    )
-                                  })}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })(), document.body)}
+                    {/* The assign sheet moved to the component root so the new
+                        Assign tab can open it too. It was scoped to the Roster. */}
                   </div>
                 )
               })()}
