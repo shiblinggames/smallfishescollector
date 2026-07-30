@@ -3712,6 +3712,10 @@ export default function RaidCombat({
       /** A flurry, broken into its individual hits so playback can stagger
        *  them. One lump number does not read as "four fast hits". */
       blitzHits?: number[]
+      /** A single heavy ability strike (his Borrowed Jaw). Plays the enemy
+       *  cannon + a crit impact, so an ability that hits for 149 does not
+       *  land in silence with only the summon splash to show for it. */
+      heavyStrike?: boolean
       /** Press-Gang ripped a loaded shot off the enemy onto your rack. */
       stoleCharge?: boolean
       /** Cutlass Guard turned an incoming blow aside (0 damage taken). */
@@ -3959,6 +3963,7 @@ export default function RaidCombat({
             let aSplatTarget: Actor | null = null
             let aSplatText = ''
             let blitzOut: number[] | undefined
+            let heavyOut = false
             const aColor = ab.summonColor ?? '#c084fc'
             if (ab.kind === 'leviathan') {
               // DOBY: one heavy shot that always lands a full crit.
@@ -3967,6 +3972,7 @@ export default function RaidCombat({
               // damage. Bypassing it meant the player's own Stormward / Tidecaller
               // buffer did nothing against his two biggest abilities.
               const dmgLeft = soakPlayerShield(dmg, lines)
+              heavyOut = true
               onStat?.({ dmgTaken: dmgLeft })
               pHp = Math.max(0, pHp - dmgLeft)
               aSplatTarget = 'player'; aSplatText = `-${dmg}`
@@ -4026,6 +4032,7 @@ export default function RaidCombat({
               splatTarget: aSplatTarget, splatText: aSplatText, splatColor: aColor,
               summon: { name: ab.name, label: 'He calls on it', color: aColor, image: ab.summonImage },
               blitzHits: blitzOut,
+              heavyStrike: heavyOut,
               logLines: lines,
             })
             if (pHp <= 0 || eHp <= 0) break
@@ -5457,10 +5464,27 @@ export default function RaidCombat({
       // but four fast hits shown as a single splat reads as one heavy shot, so
       // the per-shot list is replayed as staggered splats on the player hull.
       // Purely presentational: the hull total already moved with the step.
+      // A HEAVY ABILITY STRIKE. His guns actually fire and the hull actually
+      // takes it: without this the Borrowed Jaw hit for 149 with nothing on
+      // screen but the summon splash and a number.
+      if (step.heavyStrike) {
+        setEnemyMuzzle({ key: Date.now(), kind: 'crit' })
+        playStepChainRef.current.push(setTimeout(() => setEnemyMuzzle(null), 700))
+        playStepChainRef.current.push(setTimeout(() => {
+          setPlayerImpact({ key: Date.now() + 3, kind: 'crit' })
+          cameraShake('crit')
+          vibrate([0, 30, 24, 60])
+          playStepChainRef.current.push(setTimeout(() => setPlayerImpact(null), 700))
+        }, 180))
+      }
       if (step.blitzHits && step.blitzHits.length) {
         step.blitzHits.forEach((h, k) => {
           playStepChainRef.current.push(setTimeout(() => {
             setPHitsplat({ key: Date.now() + k, text: `-${h}`, color: '#fb923c' })
+            setEnemyMuzzle({ key: Date.now() + k + 700, kind: 'normal' })
+            playStepChainRef.current.push(setTimeout(() => setEnemyMuzzle(null), 200))
+            setPlayerImpact({ key: Date.now() + k + 900, kind: 'normal' })
+            playStepChainRef.current.push(setTimeout(() => setPlayerImpact(null), 260))
             vibrate(8)
             if (k === 0) cameraShake('hit')
           }, k * 110))
