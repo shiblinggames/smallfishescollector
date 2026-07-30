@@ -1055,10 +1055,10 @@ export default function ShipHero({
   const [forgeTab, setForgeTab] = useState<ForgeTab>(2)
   const forgeMolten = forgeTab === 3 || forgeTab === 'accel'
   const forgeHero = forgeTab === 'accel'
-    ? { icon: '/forge/accelerator.png', title: 'The Abyssal Accelerator', blurb: 'Feed it one epic relic and 24 hours. It gives back the legendary.' }
+    ? { icon: '/forge/accelerator.png', title: 'The Accelerator', blurb: 'Give it one epic relic and a day. It hands back the legendary.' }
     : forgeTab === 3
-      ? { icon: '/forge/abyssal_forge.png', title: 'The Abyssal Forge', blurb: 'Fuse forged relics into Abyssal mounts. Both effect sets, a single slot.' }
-      : { icon: '/forge/forge.png', title: 'The Forge', blurb: 'Fuse two relics into one. Both effects, a single slot.' }
+      ? { icon: '/forge/abyssal_forge.png', title: 'The Abyssal Forge', blurb: 'Fuse forged relics into Abyssal mounts. One slot, both sets.' }
+      : { icon: '/forge/forge.png', title: 'The Forge', blurb: 'Fuse two relics into one. One slot, both sets of effects.' }
 
   // How much forge STOCK you hold: owned items that actually feed a recipe.
   // A count you can act on beats a state word (open) that never changes.
@@ -1455,8 +1455,8 @@ export default function ShipHero({
                     it. In the drawer it stays the small section label, which is
                     all a sheet needs. */}
                 {focus ? (
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.7rem', flexWrap: 'wrap', minWidth: 0 }}>
-                    <h1 className="font-pirata" style={{ fontSize: '1.7rem', letterSpacing: '0.03em', color: '#f0ede8' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}>
+                    <h1 className="font-pirata" style={{ fontSize: '1.7rem', letterSpacing: '0.03em', color: '#f0ede8', whiteSpace: 'nowrap' }}>
                       {focus === 'ship' ? 'Ship Management' : focus === 'forge' ? forgeHero.title : 'Battle Loadout'}
                     </h1>
                     {(() => {
@@ -1910,7 +1910,7 @@ export default function ShipHero({
                   />
                 </div>
                 {!focus && (<p className="font-cinzel font-800" style={{ fontSize: '1.5rem', lineHeight: 1.05, ...(forgeMolten ? ABYSSAL_EMBER_TEXT : forgeUnlocked ? PRISMATIC_TEXT : { color: '#d4ba78' }) }}>{forgeHero.title}</p>)}
-                <p className="font-karla" style={{ fontSize: '0.72rem', color: '#9a948a', marginTop: 3, lineHeight: 1.4, maxWidth: 320, marginInline: 'auto' }}>{forgeHero.blurb}</p>
+                <p className="font-karla" style={{ fontSize: '0.72rem', color: '#9a948a', marginTop: 3, lineHeight: 1.4, maxWidth: 320, marginInline: 'auto', minHeight: '2.05rem' }}>{forgeHero.blurb}</p>
                 {forgeUnlocked && (
                   <button type="button" onClick={() => setShowForgeHelp(true)} className="font-karla font-700 uppercase tracking-[0.12em] tap"
                     style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.32rem 0.7rem', borderRadius: 999, fontSize: '0.54rem', color: abyssalUnlocked ? '#ff9a7c' : '#c9a7ff', background: abyssalUnlocked ? 'rgba(255,90,60,0.09)' : 'rgba(197,139,255,0.08)', border: `1px solid ${abyssalUnlocked ? 'rgba(255,90,60,0.32)' : 'rgba(197,139,255,0.3)'}`, cursor: 'pointer' }}>
