@@ -3892,6 +3892,16 @@ export default function RaidCombat({
 
     for (const who of order) {
       if (pHp <= 0 || eHp <= 0) break
+      // ── HIS LASTING EFFECTS LAPSE HERE, at the very top of his turn and
+      // ABOVE every early-return below (frozen, countered). Their durations are
+      // counted in HIS turns, and a turn he loses to ice is still a turn: with
+      // the tick further down, freezing him skipped the decrement and EXTENDED
+      // his evasion and his death ward, so a freeze was quietly a reward FOR HIM.
+      if (who === 'enemy') {
+        if (bossForesightRef.current > 0) bossForesightRef.current--
+        if (bossWardRef.current > 0) bossWardRef.current--
+        if (bossMarkRef.current.turns > 0) bossMarkRef.current = { ...bossMarkRef.current, turns: bossMarkRef.current.turns - 1 }
+      }
       // ── HIS CREW ABILITY. Fires BEFORE his action and does not replace it,
       // which is the whole point: a player fires an ability and still takes
       // their shot, and now so does he. Cadence is per phase.
@@ -3899,11 +3909,6 @@ export default function RaidCombat({
         const ab = enemyPhaseRef.current >= 2
           ? phaseList[enemyPhaseRef.current - 2]?.ability
           : enemy.phaseAbility
-        // Lasting effects lapse on his own turns, so their stated duration is
-        // counted in HIS actions, the same way a player's buff counts in theirs.
-        if (bossForesightRef.current > 0) bossForesightRef.current--
-        if (bossWardRef.current > 0) bossWardRef.current--
-        if (bossMarkRef.current.turns > 0) bossMarkRef.current = { ...bossMarkRef.current, turns: bossMarkRef.current.turns - 1 }
         if (ab) {
           const bossPhaseDmgMult = enemyPhaseRef.current >= 2 && phaseList[enemyPhaseRef.current - 2]
             ? phaseList[enemyPhaseRef.current - 2].damageMult : 1
@@ -3948,7 +3953,7 @@ export default function RaidCombat({
             } else if (ab.kind === 'foresight') {
               // DOLE: he reads you, and slips what is coming.
               bossForesightRef.current = ab.turns ?? 2
-              lines.push(`${ab.name}: he dodges your next ${bossForesightRef.current} shots.`)
+              lines.push(`${ab.name}: he dodges everything you fire for ${bossForesightRef.current} turns.`)
             } else if (ab.kind === 'vengeance') {
               // LAZ: he will not die to the next killing blow.
               bossWardRef.current = ab.turns ?? 4
