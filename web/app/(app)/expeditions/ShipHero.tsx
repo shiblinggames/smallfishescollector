@@ -897,8 +897,8 @@ export default function ShipHero({
   // unlocked. Marked seen the moment it starts.
   const shipGuideSteps = useMemo(() => {
     const steps: { tab: 'loadout' | 'ship' | 'forge'; portrait: string; speaker: string; text: string }[] = [
-      { tab: 'loadout', portrait: GUIDES.doby.portrait, speaker: 'Doby', text: "The *Loadout* tab is your battle setup. Assign crew and equip raid items before a fight." },
-      { tab: 'ship',    portrait: GUIDES.kat.portrait,  speaker: 'Kat',  text: "The *Ship* tab is where you buy and upgrade your ship. A bigger ship means more crew slots and firepower." },
+      { tab: 'loadout', portrait: GUIDES.doby.portrait, speaker: 'Doby', text: "*Items* is your battle setup. Equip raid items here before a fight, and tap an empty slot to fill it." },
+      { tab: 'ship',    portrait: GUIDES.kat.portrait,  speaker: 'Kat',  text: "*Ship* is where you buy and upgrade your hull. A bigger ship means more crew slots and firepower." },
     ]
     if (forgeUnlocked) steps.push({ tab: 'forge', portrait: GUIDES.doby.portrait, speaker: 'Doby', text: "The *Forge* fuses two raid items into a single stronger one." })
     return steps
@@ -1192,74 +1192,126 @@ export default function ShipHero({
           {/* ── Manage row ── deliberately NOT a hub card.
               Campaign / Voyages / the Gauntlet are things you go and DO, and
               they earn the cinematic treatment: full-bleed art, an accent glow,
-              a display-font title. These two only take you to a screen where
-              you arrange what you already own, so they read as settings rows
-              instead: a flat surface with no art behind it, a small label in
-              the body font rather than Cinzel, a neutral border with no glow,
-              and a chevron. Your crew and hull still show as thumbnails,
-              because which crew and which ship is the useful part. */}
+              a display-font title. These four only take you to a screen where
+              you arrange what you already own, so they read as settings rows:
+              a SOLID surface (the page sits on a painted backdrop, and a
+              translucent card disappeared into it), a neutral border with no
+              glow, and a chevron. Each is its own destination, which is why the
+              drawer drops its tab bar on direct entry. */}
           <div style={{
             display: 'grid', gridTemplateColumns: '1fr 1fr',
             gap: 8, marginTop: '0.9rem',
           }}>
-            {[
+            {([
               {
-                key: 'crew' as const,
-                href: '/crew',
+                key: 'crew',
                 label: 'Crew',
                 sub: crewLevelUpNudge ? 'A hand leveled up' : `${roster.length} aboard`,
                 nudge: crewLevelUpNudge,
                 art: featuredCrewTrio[0] ? IMG_BASE + featuredCrewTrio[0].filename : null,
-                fallback: (
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7f8b9c" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                icon: (
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#8b97a8" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                     <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" />
                   </svg>
                 ),
+                locked: false,
               },
               {
-                key: 'ship' as const,
-                href: null,
+                key: 'ship',
                 label: 'Ship',
+                sub: shipName ?? shipStats.name,
+                nudge: false,
+                art: shipImgSrc,
+                icon: null,
+                locked: false,
+              },
+              {
+                key: 'items',
+                label: 'Items',
                 sub: newRaidItems.size > 0 ? 'New gear to mount' : `${slotsFilled}/${slotsTotal} mounted`,
                 nudge: newRaidItems.size > 0,
-                art: shipImgSrc,
-                fallback: null,
+                art: null,
+                icon: (
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#8b97a8" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M12 2l8 4.5v9L12 20l-8-4.5v-9L12 2z" /><path d="M12 20v-9" /><path d="M20 6.5L12 11 4 6.5" />
+                  </svg>
+                ),
+                locked: false,
               },
-            ].map(row => {
+              {
+                key: 'forge',
+                label: 'Forge',
+                sub: forgeUnlocked ? (abyssalUnlocked ? 'Abyssal open' : 'Fuse your drops') : 'Locked',
+                nudge: false,
+                art: null,
+                icon: (
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={forgeUnlocked ? '#8b97a8' : '#5c6470'} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M4 10h9l3-3 4 1-2 4h-5" /><path d="M7 10v3a3 3 0 0 0 3 3h1" /><path d="M8 21h6" /><path d="M11 16v5" />
+                  </svg>
+                ),
+                locked: !forgeUnlocked,
+              },
+            ] as const).map(row => {
               const inner = (
                 <>
-                  <div style={{ position: 'relative', flexShrink: 0, width: 38, height: 38, borderRadius: 9, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                  <div style={{ position: 'relative', flexShrink: 0, width: 42, height: 42, borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                     {row.art
                       // eslint-disable-next-line @next/next/no-img-element
                       ? <img src={row.art} alt="" aria-hidden loading="lazy" decoding="async" style={{ maxWidth: '92%', maxHeight: '92%', objectFit: 'contain' }} />
-                      : row.fallback}
+                      : row.icon}
+                    {row.locked && (
+                      <span aria-hidden style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(8,12,18,0.62)' }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8b97a8" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                      </span>
+                    )}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <p className="font-karla font-800 uppercase tracking-[0.14em]" style={{ fontSize: '0.62rem', color: '#dfe4ea', display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', lineHeight: 1.15, color: row.locked ? '#79828f' : '#f0ede8', display: 'flex', alignItems: 'center', gap: 5 }}>
                       {row.label}
-                      {row.nudge && <span aria-hidden className="crew-levelup-dot" style={{ width: 7, height: 7, borderRadius: '50%', background: '#ffd96a', border: '1px solid rgba(0,0,0,0.55)' }} />}
+                      {row.nudge && <span aria-hidden className="crew-levelup-dot" style={{ width: 7, height: 7, borderRadius: '50%', background: '#ffd96a', border: '1px solid rgba(0,0,0,0.55)', flexShrink: 0 }} />}
                     </p>
-                    <p className="font-karla font-600" style={{ fontSize: '0.6rem', lineHeight: 1.3, marginTop: 1, color: row.nudge ? '#ffd96a' : '#8b93a0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <p className="font-karla font-600" style={{ fontSize: '0.68rem', lineHeight: 1.3, marginTop: 2, color: row.nudge ? '#ffd96a' : '#9aa3b1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {row.sub}
                     </p>
                   </div>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6d7684" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0 }}>
-                    <path d="M9 18l6-6-6-6" />
-                  </svg>
+                  {!row.locked && (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6d7684" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0 }}>
+                      <path d="M9 18l6-6-6-6" />
+                    </svg>
+                  )}
                 </>
               )
+              // SOLID, not translucent: this sits on a painted page backdrop and
+              // a see-through card washed straight into it.
               const style = {
-                display: 'flex', alignItems: 'center', gap: 9,
-                padding: '0.6rem 0.65rem', borderRadius: 12,
-                background: 'rgba(255,255,255,0.035)',
-                border: '1px solid rgba(255,255,255,0.10)',
-                textDecoration: 'none', cursor: 'pointer', textAlign: 'left' as const,
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '0.65rem 0.7rem', borderRadius: 13,
+                background: row.locked ? 'rgba(15,20,29,0.96)' : 'rgba(19,25,35,0.97)',
+                border: `1px solid ${row.locked ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.13)'}`,
+                boxShadow: '0 2px 10px rgba(0,0,0,0.35)',
+                textDecoration: 'none', cursor: row.locked ? 'default' : 'pointer', textAlign: 'left' as const,
+                opacity: row.locked ? 0.72 : 1,
                 WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation' as const,
                 width: '100%', font: 'inherit',
               }
-              return row.href
-                ? <Link key={row.key} href={row.href} className="hub-manage-tap" data-coach="crew" style={style}>{inner}</Link>
-                : <button key={row.key} type="button" onClick={() => setLoadoutOpen(true)} className="hub-manage-tap" data-coach="ship" style={style}>{inner}</button>
+              if (row.key === 'crew') {
+                return <Link key={row.key} href="/crew" className="hub-manage-tap" data-coach="crew" style={style}>{inner}</Link>
+              }
+              const tab = row.key === 'items' ? 'loadout' : row.key === 'forge' ? 'forge' : 'ship'
+              return (
+                <button
+                  key={row.key}
+                  type="button"
+                  disabled={row.locked}
+                  onClick={row.locked ? undefined : () => { setLoadoutTab(tab); setLoadoutOpen(true) }}
+                  className={row.locked ? undefined : 'hub-manage-tap'}
+                  data-coach={row.key === 'ship' ? 'ship' : undefined}
+                  aria-label={row.locked ? 'Forge. Locked until you unlock it in the Gauntlet.' : undefined}
+                  style={style}
+                >
+                  {inner}
+                </button>
+              )
             })}
           </div>
         </div>
@@ -1325,7 +1377,7 @@ export default function ShipHero({
                 padding: '0.25rem 1rem 0.7rem',
                 borderBottom: '1px solid rgba(255,255,255,0.08)',
               }}>
-                <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.72rem', color: '#a8a39c' }}>Loadout</p>
+                <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.72rem', color: '#a8a39c' }}>{loadoutMode !== null ? 'Loadout' : loadoutTab === 'forge' ? 'Forge' : loadoutTab === 'ship' ? 'Ship' : 'Items'}</p>
                 <button
                   onClick={closeLoadout}
                   aria-label="Close loadout"
@@ -1443,8 +1495,12 @@ export default function ShipHero({
                 )
               })()}
 
-              {/* ── Section tabs ── Items first (the key loadout call),
-                  cosmetics (Skins) last. Subtle styling, no loud fill. */}
+              {/* ── Section tabs ── ONLY for launch prep, where the player is
+                  reviewing everything before committing and genuinely moves
+                  between items and ship. Entering from a manage row is a
+                  single destination, so it shows no tabs: that row IS the
+                  navigation. */}
+              {loadoutMode !== null && (
               <div
                 role="tablist"
                 aria-label="Loadout sections"
@@ -1487,6 +1543,7 @@ export default function ShipHero({
                   )
                 })}
               </div>
+              )}
 
               {/* Ship Skins moved to the BOTTOM of the Ship tab (cosmetic, least
                   important) and condensed into a single scrollable row — see the
