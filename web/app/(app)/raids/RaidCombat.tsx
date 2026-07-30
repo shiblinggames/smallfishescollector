@@ -1011,6 +1011,12 @@ export default function RaidCombat({
   // Result: gold 7.8 deg, green shoulder ~3.5 deg either side, grey graze out
   // to 24 deg. Precision is rewarded and a sloppy lock barely scratches him.
   // Applied to PAINT and JUDGMENT alike, so the picture cannot disagree.
+  // How much of the reel's fishing slowdown carries into the finale. The reel
+  // halves the needle speed when fishing (1.00 -> 0.50); carrying that whole
+  // range over would drop a maxed angler to a 7.7s sweep, which is not a final
+  // boss. Compressed to ~0.32 so the SPREAD is meaningful without the top end
+  // going slack: a bad reel sweeps in 2.8s and a maxed one in 3.3s.
+  const DIAL_REEL_RELIEF = 0.32
   const DIAL_HIT_SCALE  = 0.34
   const DIAL_CRIT_SCALE = 0.90
   const hitScale  = aimStyle === 'dial' ? DIAL_HIT_SCALE  : 1
@@ -2325,7 +2331,17 @@ export default function RaidCombat({
     const ZONE_SPEED = enemy.shipSpeed * 0.0008 * (1 / (1 + totalNavigation * 0.015)) * tide.zoneSpeedMult * (enemy.zoneSpeedMult ?? 1) * (affix?.zoneSpeedMult ?? 1)
     // Needle sweep, with the curse multiplier (Racing Tide etc.) AND any
     // per-enemy needle multiplier (rarely used — prefer zoneSpeedMult).
-    const NEEDLE_SPEED = INDICATOR_SPEED * tide.aimSpeedMult * (enemy.aimSpeedMult ?? 1)
+    // NEEDLE SPEED. On the dial the same normalised speed reads far faster than
+    // on the bar, because 0..1 is a whole revolution and the eye tracks ANGLE:
+    // at the bare global constant it sweeps ~129 deg/sec. Turn up with a bad
+    // REEL and you get exactly that, which is punishing on purpose; the reel is
+    // the stat that slows the needle when fishing, so it is the stat that buys
+    // you room here. Deliberately NO baseline slowdown: a poor reel should be
+    // fast. Every other fight is untouched (dialSpeedScale is 1 off the dial).
+    const dialSpeedScale = aimStyle === 'dial'
+      ? 1 - (1 - (dialAim?.needleSpeedMult ?? 1)) * DIAL_REEL_RELIEF
+      : 1
+    const NEEDLE_SPEED = INDICATOR_SPEED * tide.aimSpeedMult * (enemy.aimSpeedMult ?? 1) * dialSpeedScale
 
     // Raid-8 aim affliction — read the live one for THIS pass, then burn a
     // pass. The banner chip stays up through the final afflicted pass and

@@ -1,4 +1,5 @@
 import { getEffectiveRod } from './rods'
+import { getReel } from './reels'
 
 /** Widening the aim bands on the Finn dial from the player's FISHING gear.
  *
@@ -7,8 +8,10 @@ import { getEffectiveRod } from './rods'
  *  fishing zone widths are already authored in DEGREES, so a bonus worth +8° on
  *  the fishing dial is worth exactly +8° here. No re-tuning, no fudge factor.
  *
- *  Mapping:
+ *  Mapping. With the reel in, every piece of fishing gear that has a raid
+ *  analogue now has one, which is the point of the convergence:
  *    catch zone   <- hook tier + rod.catchZoneBonus    -> the HIT band
+ *    needle speed <- reel.needleSpeedMultiplier        -> the NEEDLE SWEEP
  *
  *  The CRIT band is deliberately NOT gear-widened. Its fishing counterpart is
  *  the perfect zone, which no gear is allowed to touch (see RodDef), and the
@@ -21,9 +24,13 @@ import { getEffectiveRod } from './rods'
  */
 export interface DialAimBonus {
   hitBonus: number
+  /** Multiplier on the needle's sweep speed. Straight from the equipped reel,
+   *  which is the exact stat that slows the needle when fishing (1.00 on the
+   *  Basic Reel down to 0.50 on the Tidecaller's). Lower is slower. */
+  needleSpeedMult: number
 }
 
-export const NO_DIAL_AIM_BONUS: DialAimBonus = { hitBonus: 0 }
+export const NO_DIAL_AIM_BONUS: DialAimBonus = { hitBonus: 0, needleSpeedMult: 1 }
 
 // Mirrors CATCH_BONUS_PER_TIER in app/(app)/fishing/depths.ts.
 const CATCH_BONUS_PER_TIER = 3
@@ -40,8 +47,12 @@ export function dialAimBonus(
   rodTier: number,
   hookTier: number,
   completionistEffects: number[] | null | undefined,
+  reelTier: number,
 ): DialAimBonus {
   const rod = getEffectiveRod(rodTier ?? 0, completionistEffects)
   const catchDeg = Math.max(0, Math.min(8, hookTier ?? 0)) * CATCH_BONUS_PER_TIER + (rod.catchZoneBonus ?? 0)
-  return { hitBonus: Math.min(MAX_HIT_BONUS, degToHalfWidth(catchDeg)) }
+  return {
+    hitBonus: Math.min(MAX_HIT_BONUS, degToHalfWidth(catchDeg)),
+    needleSpeedMult: getReel(reelTier ?? 0).needleSpeedMultiplier ?? 1,
+  }
 }

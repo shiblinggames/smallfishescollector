@@ -95,7 +95,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('ship_tier, saved_crew, ship_name, username, character_color, equipped_hat, avatar_bg_color, avatar_border_color, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, equipped_repair_kit, has_seen_raid_tutorial, expedition_xp, nav_renown_alloc, ship_classes, gauntlet_upgrades, dons_gauntlet_upgrades, manowar_augment, manowar_augment_build, has_sixth_berth, has_armory_expansion, rod_tier, hook_tier, completionist_effects')
+    .select('ship_tier, saved_crew, ship_name, username, character_color, equipped_hat, avatar_bg_color, avatar_border_color, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, equipped_repair_kit, has_seen_raid_tutorial, expedition_xp, nav_renown_alloc, ship_classes, gauntlet_upgrades, dons_gauntlet_upgrades, manowar_augment, manowar_augment_build, has_sixth_berth, has_armory_expansion, rod_tier, hook_tier, reel_tier, completionist_effects')
     .eq('id', userId)
     .single()
 
@@ -181,6 +181,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
     (profile as { rod_tier?: number } | null)?.rod_tier ?? 0,
     (profile as { hook_tier?: number } | null)?.hook_tier ?? 0,
     (profile as { completionist_effects?: number[] } | null)?.completionist_effects ?? null,
+    (profile as { reel_tier?: number } | null)?.reel_tier ?? 0,
   )
 
   return {
