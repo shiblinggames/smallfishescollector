@@ -26,9 +26,9 @@ export type SpecialItemDef = {
 export const SPECIAL_ITEMS: SpecialItemDef[] = [
   {
     id: 'anglers_patience',
-    name: "The Angler's Patience",
+    name: "The Primeval Line",
     color: '#c4a96a',
-    description: 'The line he waited a lifetime on, off his own hull. It CHARGES on Navigation XP while seated, and every level it gains buys back the patience it costs you.',
+    description: 'The line he waited a lifetime on, cut off his own wreck. Older water than yours runs through it. Charges on Navigation XP while seated, and every level buys back the patience it costs you.',
     effectLabel: 'Rarer fish on every bite, at the cost of a slower wait',
     obtainedFrom: 'The Sunken Hand',
     finaleSlotOnly: true,

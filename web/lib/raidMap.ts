@@ -2764,7 +2764,7 @@ export const RAID_MAP: RaidNode[] = [
     sceneAccent: '#c4a96a',
     detail: {
       description:
-        "He went down with two things worth taking, and they answer to the two halves of your life out here.\n\nTHE DEEP REEL opens a SECOND special slot on your fishing rig, and only The Angler's Patience will seat in it.\n\nTHE SIXTH MOUNT frames one more raid item onto your hull, and only The Borrowed Jaw will mount there.\n\nTake one now. The other keeps, and it keeps expensive.",
+        "He went down with two things worth taking, and they answer to the two halves of your life out here.\n\nTHE DEEP REEL opens a SECOND special slot on your fishing rig, and only The Primeval Line will seat in it.\n\nTHE SIXTH MOUNT frames one more raid item onto your hull, and only The Primeval Maw will mount there.\n\nTake one now. The other keeps, and it keeps expensive.",
       ctaLabel: 'Coming Soon',
       summary: 'Choose one of his two spoils. The other costs 2,500,000 doubloons.',
       dropsNote: 'Each slot fits exactly one item, and that item only ever drops from him.',

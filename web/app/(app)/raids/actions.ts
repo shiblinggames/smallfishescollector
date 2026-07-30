@@ -542,7 +542,7 @@ export async function claimRaidLoot(
       }
     }
     // Special (fishing) items are stored one boolean column per item, the same
-    // convention as has_tide_turner. Without this branch The Angler's Patience
+    // convention as has_tide_turner. Without this branch The Primeval Line
     // would roll, be reported as looted, and grant absolutely nothing.
     if (grant.specialItem === 'anglers_patience') {
       grantedSpecial = 'has_anglers_patience'

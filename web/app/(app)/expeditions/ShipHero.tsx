@@ -207,7 +207,7 @@ interface Props {
   /** Crew ids currently out on a trawl — hidden from the crew picker. */
   trawlingCrewIds?: number[]
   ownedRaidItems: string[]
-  /** Charge on The Borrowed Jaw. Read-only; the server owns it. */
+  /** Charge on The Primeval Maw. Read-only; the server owns it. */
   borrowedJawXp?: number
   equippedRaidItems: string[]
   equippedRepairKit: string
@@ -1759,7 +1759,7 @@ export default function ShipHero({
                         <rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" />
                       </svg>
                       {mountNote
-                        ? <span className="font-karla" style={{ fontSize: '0.52rem', lineHeight: 1.35, color: '#9a948a', textAlign: 'center' }}>Takes only The Borrowed Jaw, off Finn</span>
+                        ? <span className="font-karla" style={{ fontSize: '0.52rem', lineHeight: 1.35, color: '#9a948a', textAlign: 'center' }}>Takes only The Primeval Maw, off Finn</span>
                         : <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.54rem', color: BRASS }}>Locked</span>}
                     </button>
                   )

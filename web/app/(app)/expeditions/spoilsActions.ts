@@ -10,8 +10,8 @@ import { SPOILS_PRICE } from '@/lib/shipBerth'
  *  bought later for SPOILS_PRICE. Each slot accepts exactly one item, and that
  *  item only ever drops from him, so neither side is a general expansion.
  *
- *    'fishing' -> a SECOND fishing special slot   (The Angler's Patience)
- *    'nav'     -> an extra raid item mount        (The Borrowed Jaw)
+ *    'fishing' -> a SECOND fishing special slot   (The Primeval Line)
+ *    'nav'     -> an extra raid item mount        (The Primeval Maw)
  *
  *  The two are stored as separate columns (free / paid) rather than a pair of
  *  booleans, precisely so the free pick can never be spent twice.
@@ -89,7 +89,7 @@ export async function buySpoil(side: unknown): Promise<{ ok: boolean; error?: st
   return { ok: true, doubloons: newDoubloons }
 }
 
-/** Seat (or clear) The Angler's Patience in the SECOND fishing special slot.
+/** Seat (or clear) The Primeval Line in the SECOND fishing special slot.
  *  Validated server-side: the slot must be unlocked, the item must be owned,
  *  and nothing else is allowed in there. */
 export async function equipSecondSpecial(itemId: unknown): Promise<{ ok: boolean; error?: string }> {
@@ -113,7 +113,7 @@ export async function equipSecondSpecial(itemId: unknown): Promise<{ ok: boolean
   // The slot takes exactly ONE item, by design. This is the enforcement point:
   // without it the column is advisory and any special could be seated here.
   if (itemId !== 'anglers_patience') return { ok: false, error: 'Only his reel seats in that slot.' }
-  if (profile.has_anglers_patience !== true) return { ok: false, error: "You do not carry The Angler's Patience." }
+  if (profile.has_anglers_patience !== true) return { ok: false, error: "You do not carry The Primeval Line." }
 
   await admin.from('profiles').update({ equipped_special_2: 'anglers_patience' }).eq('id', user.id)
   return { ok: true }

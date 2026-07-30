@@ -4,8 +4,8 @@
  *  CHARGED BY THE OPPOSITE SKILL and levels up, unlocking milestone effects the
  *  way a crew ability does:
  *
- *    The Angler's Patience  a FISHING item, charged by NAVIGATION xp
- *    The Borrowed Jaw       a RAID item,    charged by FISHING xp
+ *    The Primeval Line  a FISHING item, charged by NAVIGATION xp
+ *    The Primeval Maw   a RAID item,    charged by FISHING xp
  *
  *  That crossing is the whole point, and it is the mechanical form of the
  *  story: he became what he is by making the two halves of your life feed each
@@ -32,11 +32,11 @@ export type FinnItemId = 'anglers_patience' | 'borrowed_jaw'
 export interface FinnMilestone {
   level: number
   desc: string
-  /** Fishing side (The Angler's Patience). */
+  /** Fishing side (The Primeval Line). */
   rarityBonus?: number
   waitMult?: number
   fishingXpMult?: number
-  /** Raid side (The Borrowed Jaw). */
+  /** Raid side (The Primeval Maw). */
   bossDamageMult?: number
   critDamageMult?: number
   critUpgradeChance?: number
@@ -56,32 +56,34 @@ export interface FinnItemDef {
 export const FINN_ITEMS: Record<FinnItemId, FinnItemDef> = {
   anglers_patience: {
     id: 'anglers_patience',
-    name: "The Angler's Patience",
+    name: 'The Primeval Line',
     chargedBy: 'navigation',
     wornIn: 'fishing',
     color: '#6fd3c7',
-    flavor: 'He waited a lifetime with a line in the water. The waiting was never the cost, it was the method.',
+    flavor: 'He waited a lifetime with a line in the water and the deep gave up everything it was hiding. The waiting was never the price. It was the method.',
     milestones: [
       { level: 1, rarityBonus: 0.10, waitMult: 1.30, desc: 'Bites take 30% longer, and roll 10% rarer.' },
-      { level: 2, rarityBonus: 0.18, waitMult: 1.24, desc: 'Rarity to 18%, and the wait eases to 24%.' },
-      { level: 3, rarityBonus: 0.26, waitMult: 1.16, fishingXpMult: 1.08, desc: 'Rarity to 26%, wait to 16%, and +8% fishing XP.' },
-      { level: 4, rarityBonus: 0.34, waitMult: 1.08, fishingXpMult: 1.14, desc: 'Rarity to 34%, wait to 8%, and +14% fishing XP.' },
-      { level: 5, rarityBonus: 0.45, waitMult: 1.00, fishingXpMult: 1.20, desc: 'Rarity to 45%, the wait is GONE, and +20% fishing XP.' },
+      { level: 2, rarityBonus: 0.16, waitMult: 1.25, desc: 'Rarity to 16%, and the wait eases to 25%.' },
+      { level: 3, rarityBonus: 0.24, waitMult: 1.18, fishingXpMult: 1.06, desc: 'Rarity to 24%, wait to 18%, and +6% fishing XP.' },
+      { level: 4, rarityBonus: 0.31, waitMult: 1.12, fishingXpMult: 1.11, desc: 'Rarity to 31%, wait to 12%, and +11% fishing XP.' },
+      { level: 5, rarityBonus: 0.38, waitMult: 1.06, fishingXpMult: 1.15, desc: 'Rarity to 38%, wait to 6%, and +15% fishing XP.' },
+      { level: 6, rarityBonus: 0.45, waitMult: 1.00, fishingXpMult: 1.20, desc: 'Rarity to 45%, the wait is GONE, and +20% fishing XP.' },
     ],
   },
   borrowed_jaw: {
     id: 'borrowed_jaw',
-    name: 'The Borrowed Jaw',
+    name: 'The Primeval Maw',
     chargedBy: 'fishing',
     wornIn: 'raids',
     color: '#e0a44a',
-    flavor: 'Megalodon teeth in someone else’s iron. It remembers what it was for.',
+    flavor: 'Torn out of the oldest mouth in the sea and bolted into iron that never earned it. It has forgiven neither of you.',
     milestones: [
       { level: 1, bossDamageMult: 1.06, desc: '+6% damage on boss rounds.' },
-      { level: 2, bossDamageMult: 1.10, critDamageMult: 1.06, desc: '+10% boss damage, +6% critical damage.' },
-      { level: 3, bossDamageMult: 1.14, critDamageMult: 1.12, desc: '+14% boss damage, +12% critical damage.' },
-      { level: 4, bossDamageMult: 1.18, critDamageMult: 1.18, critUpgradeChance: 0.08, desc: '+18% boss damage, +18% critical damage, 8% of hits come up critical.' },
-      { level: 5, bossDamageMult: 1.24, critDamageMult: 1.25, critUpgradeChance: 0.15, desc: '+24% boss damage, +25% critical damage, 15% of hits come up critical.' },
+      { level: 2, bossDamageMult: 1.09, critDamageMult: 1.05, desc: '+9% boss damage, +5% critical damage.' },
+      { level: 3, bossDamageMult: 1.12, critDamageMult: 1.10, desc: '+12% boss damage, +10% critical damage.' },
+      { level: 4, bossDamageMult: 1.16, critDamageMult: 1.15, desc: '+16% boss damage, +15% critical damage.' },
+      { level: 5, bossDamageMult: 1.20, critDamageMult: 1.20, critUpgradeChance: 0.08, desc: '+20% boss damage, +20% critical damage, 8% of hits come up critical.' },
+      { level: 6, bossDamageMult: 1.24, critDamageMult: 1.25, critUpgradeChance: 0.15, desc: '+24% boss damage, +25% critical damage, 15% of hits come up critical.' },
     ],
   },
 }

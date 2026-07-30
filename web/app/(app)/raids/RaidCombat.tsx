@@ -3722,7 +3722,7 @@ export default function RaidCombat({
       /** A flurry, broken into its individual hits so playback can stagger
        *  them. One lump number does not read as "four fast hits". */
       blitzHits?: number[]
-      /** A single heavy ability strike (his Borrowed Jaw). Plays the enemy
+      /** A single heavy ability strike (his Primeval Maw). Plays the enemy
        *  cannon + a crit impact, so an ability that hits for 149 does not
        *  land in silence with only the summon splash to show for it. */
       heavyStrike?: boolean
@@ -5497,7 +5497,7 @@ export default function RaidCombat({
       // the per-shot list is replayed as staggered splats on the player hull.
       // Purely presentational: the hull total already moved with the step.
       // A HEAVY ABILITY STRIKE. His guns actually fire and the hull actually
-      // takes it: without this the Borrowed Jaw hit for 149 with nothing on
+      // takes it: without this the Primeval Maw hit for 149 with nothing on
       // screen but the summon splash and a number.
       if (step.heavyStrike) {
         setEnemyMuzzle({ key: Date.now(), kind: 'crit' })

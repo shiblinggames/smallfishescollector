@@ -332,8 +332,8 @@ export const RAID_ITEMS: RaidItemDef[] = [
     // and that mount takes nothing else. It never competes for a normal slot.
     finaleSlotOnly: true,
     id: 'borrowed_jaw',
-    name: 'The Borrowed Jaw',
-    description: "Megalodon teeth in someone else's iron. It CHARGES on fishing XP while mounted, and its bite grows with every level.",
+    name: 'The Primeval Maw',
+    description: 'The oldest teeth in the sea, cut back out of Finn and bolted to your hull. It charges on Fishing XP while mounted, and every level wakes more of what it used to be.',
     image: '/raidlog.png',
     emoji: '🦈',
     rarity: 'legendary',
@@ -1233,7 +1233,7 @@ export const DAVY_FORGE = getForgeRecipe('davys_grand_cannon')!
 
 /** CHARGED ITEMS carry their level on the id, as "borrowed_jaw#4".
  *
- *  Finn's spoils are not fixed stat sticks: what The Borrowed Jaw does depends
+ *  Finn's spoils are not fixed stat sticks: what The Primeval Maw does depends
  *  on how far it has been charged, and combat is spread across two engines and
  *  twenty-odd routes that all already receive the equipped list. Riding the id
  *  means the charge reaches every one of them without a new prop, and every

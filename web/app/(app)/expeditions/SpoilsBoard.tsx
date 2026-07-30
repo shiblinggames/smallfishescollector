@@ -33,17 +33,17 @@ const SIDES: Side[] = [
   {
     id: 'fishing',
     title: 'The Deep Reel',
-    item: "The Angler's Patience",
+    item: 'The Primeval Line',
     art: '/finn_final.png',
-    blurb: 'A second special slot on your rig. His reel is the only thing that seats in it, and it CHARGES on Navigation XP: raid hard, and it fishes harder.',
+    blurb: 'A second special slot on your rig, and his line is the only thing that seats in it. It charges on Navigation XP, and the further you charge it the rarer the water answers.',
     accent: REEL,
   },
   {
     id: 'nav',
     title: 'The Sixth Mount',
-    item: 'The Borrowed Jaw',
+    item: 'The Primeval Maw',
     art: '/finn_final.png',
-    blurb: 'One more raid item framed onto your hull. His jaw is the only thing that mounts there, and it CHARGES on Fishing XP: cast all week, and it bites for it.',
+    blurb: 'One more mount framed onto your hull, and his maw is the only thing that fits it. It charges on Fishing XP, and it bites for every hour you spend on the water.',
     accent: MOUNT,
   },
 ]

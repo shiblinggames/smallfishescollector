@@ -2171,7 +2171,7 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
       //   phase 3  Wake of the Drowned   mosasaurus    <- Mako,    blitz
       //   phase 4  Still Going           basilosaurus  <- Laz,     vengeance
       //   phase 5  All That Tonnage      shastasaurus  <- Mira,    requiem
-      //   phase 6  The Borrowed Jaw      megalodon     <- Doby,    leviathan
+      //   phase 6  The Primeval Maw      megalodon     <- Doby,    leviathan
       //
       // Megalodon lands LAST on purpose: it is the player's final catch of the
       // six, so it is also the last thing he throws.
@@ -2247,12 +2247,12 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
             turns: 3, value: 0.3,
           } },
         // ── PHASE 6 — DOBY. The jaw. The last thing he has, and the biggest. ─
-        { revivePct: 1.0, damageMult: 1.42, badge: 'The Borrowed Jaw',
+        { revivePct: 1.0, damageMult: 1.42, badge: 'The Primeval Maw',
           bgImage: '/finn_bg6.jpg',
           pattern: ['fire', 'reload', 'fire', 'reload', 'reload', 'reload', 'ultimate', 'reload', 'fire', 'reload', 'fire', 'reload', 'reload', 'reload', 'fire'],
           dialogueLine: 'One last ride, captain. You landed this one yourself. Let us see you do it twice.',
           ability: {
-            kind: 'leviathan', name: 'The Borrowed Jaw',
+            kind: 'leviathan', name: 'The Primeval Maw',
             summonImage: '/fish/megalodon.png', summonColor: '#f87171',
             // The biggest single ABILITY in the fight, but sized against the
             // PLAYER, not against his own ultimate. An endgame hull is roughly
@@ -2270,13 +2270,13 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
   bossId: 'finn',
   // HIS SPOILS ARE DELIBERATELY NOT A NORMAL TABLE. Exactly TWO real items, one
   // for each half of the game, and each is the ONLY thing its new slot accepts:
-  //   The Angler's Patience -> the second fishing special slot
-  //   The Borrowed Jaw      -> the extra raid mount
+  //   The Primeval Line -> the second fishing special slot
+  //   The Primeval Maw      -> the extra raid mount
   // Everything else he drops is cosmetic, so the fight cannot be farmed for
   // power. See the 'spoils_of_the_hand' node for how the slots are opened.
   loot: [
-    { id: 'anglers_patience', label: "The Angler's Patience", image: null, emoji: '🎣', rarity: 'legendary', weight: 8 },
-    { id: 'borrowed_jaw',     label: 'The Borrowed Jaw',      image: null, emoji: '🦈', rarity: 'legendary', weight: 8 },
+    { id: 'anglers_patience', label: "The Primeval Line", image: null, emoji: '🎣', rarity: 'legendary', weight: 8 },
+    { id: 'borrowed_jaw',     label: 'The Primeval Maw',      image: null, emoji: '🦈', rarity: 'legendary', weight: 8 },
     { id: 'sunken_hand_hull',   label: 'Sunken Hand Hull',   image: null, emoji: '🚢', rarity: 'epic', weight: 10, shipSkinId: 'sunken_hand_hull' },
     { id: 'drowned_giant_hull', label: 'Drowned Giant Hull', image: null, emoji: '🚢', rarity: 'epic', weight: 10, shipSkinId: 'drowned_giant_hull' },
     { id: 'last_cast_hull',     label: 'Last Cast Hull',     image: null, emoji: '🚢', rarity: 'epic', weight: 10, shipSkinId: 'last_cast_hull' },
