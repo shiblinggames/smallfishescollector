@@ -466,7 +466,16 @@ export interface BossRaidConfig {
    *  a phased boss is one enemy, so it runs the WHOLE fight across every phase.
    *  Built for the finale: hold your rhythm all the way through and you are
    *  paid for it, which is the fishing perfect-streak feel brought into combat. */
-  critStreak?: { perStack: number; maxStacks: number; label?: string }
+  critStreak?: {
+    perStack: number
+    maxStacks: number
+    label?: string
+    /** At this streak or higher, the player's shots IGNORE the enemy shield
+     *  entirely. Turns a long chain into the answer to an armoured boss: the
+     *  plate stops mattering as long as you keep the rhythm, and breaking the
+     *  chain hands it straight back to him. */
+    pierceAt?: number
+  }
   enemies: Record<string, BroadsideEnemy>
   sequence: string[]   // non-boss enemy IDs in order; boss fires every sequence.length+1 rounds
   bossId: string
@@ -2111,7 +2120,10 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
   // run). Deliberately generous at the top: it has to survive six phases of a
   // boss with a full health bar each, so a player holding the rhythm the whole
   // way should feel the fight bend under them.
-  critStreak: { perStack: 0.07, maxStacks: 14, label: 'Perfect Streak' },
+  // At 5+ the chain starts going THROUGH his armour, which is the answer to
+  // a boss who re-plates every phase: hold the rhythm and the plate is a
+  // formality, drop it and he is behind 194 again.
+  critStreak: { perStack: 0.07, maxStacks: 14, label: 'Perfect Streak', pierceAt: 5 },
   atmosphere: 'vault',
   zone: 'ancient_deep',
   enemies: {

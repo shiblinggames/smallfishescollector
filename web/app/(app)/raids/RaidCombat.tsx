@@ -482,7 +482,7 @@ export interface RaidCombatProps {
   aimStyle?: 'bar' | 'dial'
   /** Crit-streak ramp baked into the raid (BossRaidConfig.critStreak). Runs
    *  through the same path as the Cannonade boon. */
-  critStreakCfg?: { perStack: number; maxStacks: number; label?: string }
+  critStreakCfg?: { perStack: number; maxStacks: number; label?: string; pierceAt?: number }
   /** The player's FISHING gear, widening the dial's hit + crit bands by the
    *  same degrees it widens the fishing dial. Ignored unless aimStyle 'dial'. */
   dialAim?: DialAimBonus
@@ -4621,9 +4621,20 @@ export default function RaidCombat({
             dmg = 0
             stepLines.push(`The ${enemy.name} turns your shot aside — parried.`)
           }
-          const piercing = (isMega && !!megaAug?.pierce) || markPierceTurnsRef.current > 0
+          // STREAK PIERCE. Hold the chain to the raid's pierceAt and your shots
+          // stop caring about his plate. Read from the streak BEFORE this shot
+          // commits, so the shot that takes you to 5 is not itself piercing:
+          // you earn it first, then you spend it.
+          const streakPiercing = !!critStreakCfg?.pierceAt
+            && critStreakRef.current >= critStreakCfg.pierceAt
+          const piercing = (isMega && !!megaAug?.pierce) || markPierceTurnsRef.current > 0 || streakPiercing
           const preShield = enemyShieldRef.current
           const toHull = soakEnemyShield(dmg, piercing, tide.shieldPierceFrac)
+          // Only say it when there was actually plate to ignore, or every shot
+          // in a shieldless phase would claim to be piercing something.
+          if (streakPiercing && preShield > 0 && dmg > 0) {
+            stepLines.push(`${streakLabel} x${critStreakRef.current}. The chain goes straight through his plate.`)
+          }
           shieldAbsorbedOut = preShield - enemyShieldRef.current
           // Overkill = the slice of this hull-hit that lands PAST the enemy's
           // remaining HP (wasted damage). Don's overkill-heal boon reclaims some
@@ -6853,6 +6864,9 @@ export default function RaidCombat({
                       boxShadow: `0 0 12px rgba(${col},0.85)`, whiteSpace: 'nowrap',
                     }}>
                     {maxed ? `${streakLabel} Max` : `${streakLabel} ×${cannonadeStacks}`}
+                    {!!critStreakCfg?.pierceAt && cannonadeStacks >= critStreakCfg.pierceAt && (
+                      <span style={{ marginLeft: 4, opacity: 0.9 }}>· PIERCING</span>
+                    )}
                   </motion.div>
                 )
               })()}
@@ -7068,6 +7082,7 @@ export default function RaidCombat({
                 streakCount={cannonadeStacks}
                 streakLabel={streakLabel}
                 streakPct={Math.round(tide.critStreakPerStack * cannonadeStacks * 100)}
+                piercing={!!critStreakCfg?.pierceAt && cannonadeStacks >= critStreakCfg.pierceAt}
               />
             </div>
           </div>,
@@ -10722,7 +10737,7 @@ const DIAL_ZONE_OPACITY = (z: ZoneDef) =>
 
 function DialAimInline({
   indicatorRef, zonesGroupRef, flashRef, critW,
-  afflictionLabel, hardenedArmed, hitW, grazeW, firePos, zoneCenter, snapKey, perfectBurstKey, streakFire, streakCount, streakLabel, streakPct,
+  afflictionLabel, hardenedArmed, hitW, grazeW, firePos, zoneCenter, snapKey, perfectBurstKey, streakFire, streakCount, streakLabel, streakPct, piercing,
 }: {
   indicatorRef:  React.RefObject<HTMLDivElement | null>
   zonesGroupRef: React.RefObject<SVGGElement | null>
@@ -10753,6 +10768,10 @@ function DialAimInline({
   streakCount: number
   streakLabel: string
   streakPct: number
+  /** The streak is high enough to ignore his shield. Called out separately
+   *  because it is a THRESHOLD, not a gradient: the number alone does not
+   *  tell you that you crossed it. */
+  piercing: boolean
 }) {
   const zones = useMemo(() => buildDialZones(critW, hitW, grazeW), [critW, hitW, grazeW])
   // Finn orbits at the middle of the band's radius.
@@ -10772,6 +10791,14 @@ function DialAimInline({
         }}>
           {streakLabel} ×{streakCount}
           <span style={{ opacity: 0.85, marginLeft: 8, fontSize: '0.72em' }}>+{streakPct}%</span>
+          {piercing && (
+            <div style={{
+              marginTop: 2, fontSize: '0.6rem', letterSpacing: '0.16em',
+              color: '#e9d5ff', textShadow: '0 0 12px rgba(192,132,252,0.9)',
+            }}>
+              Through the plate
+            </div>
+          )}
         </div>
       )}
       {/* result flash, same element the bar uses */}
