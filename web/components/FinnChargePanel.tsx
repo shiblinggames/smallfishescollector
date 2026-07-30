@@ -49,7 +49,7 @@ export default function FinnChargePanel({ id, xp, equipped }: {
         </div>
         <p className="font-karla" style={{ margin: '5px 0 0', fontSize: '0.6rem', lineHeight: 1.45, color: equipped ? '#9a958c' : '#7d786f' }}>
           {equipped
-            ? `Charges on ${source}. It only draws while it is equipped.`
+            ? `Charges on ${source}. It only draws while it is equipped, and every tier KEEPS what came before it.`
             : `Dormant. Equip it and it starts drawing ${source}.`}
         </p>
       </div>
@@ -72,7 +72,7 @@ export default function FinnChargePanel({ id, xp, equipped }: {
               <span className="font-karla" style={{
                 fontSize: '0.62rem', lineHeight: 1.4,
                 color: on ? '#cfc9c0' : '#6d685f',
-              }}>{m.desc}</span>
+              }}>{m.unlock}</span>
             </div>
           )
         })}

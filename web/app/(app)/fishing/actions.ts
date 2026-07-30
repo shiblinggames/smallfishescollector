@@ -311,7 +311,7 @@ export async function castLine(baitType: string, habitat: string): Promise<
   // Crate encounter: 2% chance (× rod.crateChanceMult — Treasure Rod = 2×).
   // Rolled up-front so the in-flight flag below can skip crates — they're
   // streak-neutral, so bailing on a crate cast never breaks a streak.
-  const isCrate = habitat !== 'ancient_deep' && Math.random() < 0.02 * (rod.crateChanceMult ?? 1)
+  const isCrate = habitat !== 'ancient_deep' && Math.random() < 0.02 * (rod.crateChanceMult ?? 1) * patience.crateChanceMult
 
   // Remember this bait so the fishing UI auto-selects it on next open
   // (FishingGame.tsx seeds selectedBait from profile.last_used_bait). Also mark
@@ -401,8 +401,9 @@ export async function castLine(baitType: string, habitat: string): Promise<
   const zoneJackpotChance = isAncientTrophyRoll ? 0 : jackpotChanceForZone(rod, habitat)
   const jackpotHit = zoneJackpotChance > 0 && Math.random() < zoneJackpotChance
   const rolledJackpotMult = jackpotHit ? (rod.jackpotMultiplier ?? 1) : 1
+  const doubleChance = (rod.doubleCatchChance ?? 0) + patience.doubleCatchChance
   const rolledDoubleCatch = !jackpotHit && !isAncientTrophyRoll && canDoubleHere
-    && (rod.doubleCatchChance ?? 0) > 0 && Math.random() < (rod.doubleCatchChance ?? 0)
+    && doubleChance > 0 && Math.random() < doubleChance
 
   const lockedQty = locked.catchQty > 1 ? locked.catchQty : undefined
   const token: PendingCast = { fishId: fish.id, habitat, baitType, jackpotMult: rolledJackpotMult, doubleCatch: rolledDoubleCatch, catchQty: lockedQty, castAt: Date.now() }
@@ -528,6 +529,16 @@ export async function reelIn(
   ])
 
   if (!profile) return { error: 'Data not found' }
+
+  // THE PRIMEVAL EYE. Resolved HERE, at the top of the grant, because its
+  // tiers touch three different things further down (the golden roll, the XP,
+  // and nothing below may read it before it exists). Identity when the slot is
+  // shut or the eye is elsewhere.
+  const eye = anglersPatienceEffects(
+    profile.equipped_special_2 === 'anglers_patience' && profile.has_anglers_patience === true
+    && (profile.finn_spoil_free === 'fishing' || profile.finn_spoil_paid === 'fishing'),
+    Number(profile.anglers_patience_xp ?? 0),
+  )
 
   // ── Bind to the server-rolled cast token (anti-forgery) ──────────────────
   // castLine wrote pending_cast with the TRUE fish id + haul multipliers. Claim
@@ -676,7 +687,7 @@ export async function reelIn(
   const forcedShinyAlways = !!profile.force_shiny_always
   // Golden boost: extra golden odds earned by wiping this zone past Max Prestige.
   const goldenWipes = ((profile.zone_golden_boost as Record<string, number> | null) ?? {})[fish.habitat] ?? 0
-  const isShiny = forcedShinyOnce || forcedShinyAlways || rollShiny({ isPerfect, habitat: fish.habitat, sellValue: fish.sell_value ?? 0, oddsMult: goldenBoostMult(goldenWipes) })
+  const isShiny = forcedShinyOnce || forcedShinyAlways || rollShiny({ isPerfect, habitat: fish.habitat, sellValue: fish.sell_value ?? 0, oddsMult: goldenBoostMult(goldenWipes) * eye.goldenOddsMult })
 
   // Check if new species for bestiary
   const { data: existing } = await admin
@@ -801,17 +812,7 @@ export async function reelIn(
   const STREAK_XP_CAP = 10
   const streakForXp = Math.min(newPerfectStreak, STREAK_XP_CAP)
   const serverStreakBonus = streakForXp * streakForXp * 3 // 1=+3, 2=+12, … 10=+300, then flat (0 when not perfect)
-  // THE ANGLER'S PATIENCE again, on the grant side. castLine reads it for the
-  // bite wait and the rarity roll; here we only want its XP milestone, which
-  // does not exist until the reel is charged past level 2.
-  const reelXpMult = anglersPatienceEffects(
-    profile.equipped_special_2 === 'anglers_patience' && profile.has_anglers_patience === true
-    // The reel seats itself the moment Finn drops it, but the SLOT only opens at
-    // the choice node after him. Until it does, the reel is aboard and inert.
-    && (profile.finn_spoil_free === 'fishing' || profile.finn_spoil_paid === 'fishing'),
-    Number(profile.anglers_patience_xp ?? 0),
-  ).fishingXpMult
-  const xpGained = Math.round((catchXP(fish.catch_difficulty, fish.habitat, result === 'perfect') + serverStreakBonus) * prestigeXPMult * perfectXpMult * renownXpMult * reelXpMult)
+  const xpGained = Math.round((catchXP(fish.catch_difficulty, fish.habitat, result === 'perfect') + serverStreakBonus) * prestigeXPMult * perfectXpMult * renownXpMult * eye.fishingXpMult)
   // THE BORROWED JAW charges on FISHING xp, and only while it is mounted.
   // The mirror of the reel: his raid item is fed by the fishing half of the
   // game, so wearing it is a standing reason to keep casting.

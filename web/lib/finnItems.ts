@@ -29,17 +29,37 @@ export const FINN_ITEM_MAX_LEVEL = FINN_ITEM_THRESHOLDS.length
 
 export type FinnItemId = 'anglers_patience' | 'borrowed_jaw'
 
+/** A rung on the ladder.
+ *
+ *  These STACK, in the Locked-In Rod's shape: every tier keeps everything the
+ *  tiers below it gave you and adds one new power on top, so a maxed spoil is
+ *  six effects running at once rather than one number that got bigger. The
+ *  fields below are therefore TOTALS in force at that level, not deltas, which
+ *  keeps the resolvers a plain table lookup with nothing to accumulate wrong.
+ *  `unlock` is the one NEW thing this tier buys, and it is what the ladder in
+ *  the charge panel actually shows. */
 export interface FinnMilestone {
   level: number
-  desc: string
-  /** Fishing side (The Primeval Eye). */
+  unlock: string
+  /** ── Fishing side (The Primeval Eye) ── */
+  /** Added to the rod's rarity bias. The through-line: it climbs every rung. */
   rarityBonus?: number
+  /** Bite wait multiplier. Under 1 is FASTER. */
   waitMult?: number
   fishingXpMult?: number
-  /** Raid side (The Primeval Maw). */
+  /** Multiplier on golden (shiny) odds, on top of the Max Prestige boost. */
+  goldenOddsMult?: number
+  /** Multiplier on the 2% base crate encounter chance. */
+  crateChanceMult?: number
+  /** Flat chance ADDED to the rod's double-catch roll. */
+  doubleCatchChance?: number
+  /** ── Raid side (The Primeval Maw) ── */
   bossDamageMult?: number
+  nonBossDamageMult?: number
   critDamageMult?: number
   critUpgradeChance?: number
+  lifestealPct?: number
+  startChargeChance?: number
 }
 
 export interface FinnItemDef {
@@ -62,12 +82,12 @@ export const FINN_ITEMS: Record<FinnItemId, FinnItemDef> = {
     color: '#6fd3c7',
     flavor: 'He watched that water for a lifetime until it gave up everything it was hiding. The waiting was never the price. It was the method.',
     milestones: [
-      { level: 1, rarityBonus: 0.10, waitMult: 1.30, desc: 'Bites take 30% longer, and roll 10% rarer.' },
-      { level: 2, rarityBonus: 0.16, waitMult: 1.25, desc: 'Rarity to 16%, and the wait eases to 25%.' },
-      { level: 3, rarityBonus: 0.24, waitMult: 1.18, fishingXpMult: 1.06, desc: 'Rarity to 24%, wait to 18%, and +6% fishing XP.' },
-      { level: 4, rarityBonus: 0.31, waitMult: 1.12, fishingXpMult: 1.11, desc: 'Rarity to 31%, wait to 12%, and +11% fishing XP.' },
-      { level: 5, rarityBonus: 0.38, waitMult: 1.06, fishingXpMult: 1.15, desc: 'Rarity to 38%, wait to 6%, and +15% fishing XP.' },
-      { level: 6, rarityBonus: 0.45, waitMult: 1.00, fishingXpMult: 1.20, desc: 'Rarity to 45%, the wait is GONE, and +20% fishing XP.' },
+      { level: 1, unlock: 'It looks deeper. Rare fish bias +0.30.', rarityBonus: 0.30 },
+      { level: 2, unlock: 'It reads what it finds. +12% fishing XP.', rarityBonus: 0.45, fishingXpMult: 1.12 },
+      { level: 3, unlock: 'It catches the shine. Golden odds x1.8.', rarityBonus: 0.60, fishingXpMult: 1.12, goldenOddsMult: 1.8 },
+      { level: 4, unlock: 'It sees them coming. Bites arrive 12% sooner.', rarityBonus: 0.75, fishingXpMult: 1.12, goldenOddsMult: 1.8, waitMult: 0.88 },
+      { level: 5, unlock: 'It sees the bottom too. Triple crate odds.', rarityBonus: 0.95, fishingXpMult: 1.12, goldenOddsMult: 1.8, waitMult: 0.88, crateChanceMult: 3 },
+      { level: 6, unlock: 'It takes two at a time. A 25% chance any catch hauls double.', rarityBonus: 1.20, fishingXpMult: 1.12, goldenOddsMult: 1.8, waitMult: 0.88, crateChanceMult: 3, doubleCatchChance: 0.25 },
     ],
   },
   borrowed_jaw: {
@@ -78,12 +98,12 @@ export const FINN_ITEMS: Record<FinnItemId, FinnItemDef> = {
     color: '#e0a44a',
     flavor: 'Torn out of the oldest mouth in the sea and bolted into iron that never earned it. It has forgiven neither of you.',
     milestones: [
-      { level: 1, bossDamageMult: 1.06, desc: '+6% damage on boss rounds.' },
-      { level: 2, bossDamageMult: 1.09, critDamageMult: 1.05, desc: '+9% boss damage, +5% critical damage.' },
-      { level: 3, bossDamageMult: 1.12, critDamageMult: 1.10, desc: '+12% boss damage, +10% critical damage.' },
-      { level: 4, bossDamageMult: 1.16, critDamageMult: 1.15, desc: '+16% boss damage, +15% critical damage.' },
-      { level: 5, bossDamageMult: 1.20, critDamageMult: 1.20, critUpgradeChance: 0.08, desc: '+20% boss damage, +20% critical damage, 8% of hits come up critical.' },
-      { level: 6, bossDamageMult: 1.24, critDamageMult: 1.25, critUpgradeChance: 0.15, desc: '+24% boss damage, +25% critical damage, 15% of hits come up critical.' },
+      { level: 1, unlock: 'It knows what a boss is. +10% damage on boss rounds.', bossDamageMult: 1.10 },
+      { level: 2, unlock: 'It bites where the plating ends. +15% critical damage.', bossDamageMult: 1.13, critDamageMult: 1.15 },
+      { level: 3, unlock: 'It finds the gap itself. 10% of clean hits come up critical.', bossDamageMult: 1.16, critDamageMult: 1.15, critUpgradeChance: 0.10 },
+      { level: 4, unlock: 'It feeds. 8% of the damage you deal comes back as hull.', bossDamageMult: 1.19, critDamageMult: 1.15, critUpgradeChance: 0.10, lifestealPct: 0.08 },
+      { level: 5, unlock: 'It never sleeps. A 50% chance to open every fight already loaded.', bossDamageMult: 1.22, critDamageMult: 1.15, critUpgradeChance: 0.10, lifestealPct: 0.08, startChargeChance: 0.50 },
+      { level: 6, unlock: 'Nothing swims above it. +20% damage to everything else too.', bossDamageMult: 1.25, nonBossDamageMult: 1.20, critDamageMult: 1.20, critUpgradeChance: 0.12, lifestealPct: 0.10, startChargeChance: 0.50 },
     ],
   },
 }
@@ -116,16 +136,27 @@ export function finnItemMilestone(id: FinnItemId, xp: number): FinnMilestone {
   return def.milestones[Math.min(lvl, def.milestones.length) - 1]
 }
 
-/** Fishing-side effects, or identity when the reel is not seated. */
-export function anglersPatienceEffects(seated: boolean, xp: number): {
-  rarityBonus: number; waitMult: number; fishingXpMult: number
-} {
-  if (!seated) return { rarityBonus: 0, waitMult: 1, fishingXpMult: 1 }
+export interface EyeEffects {
+  rarityBonus: number
+  waitMult: number
+  fishingXpMult: number
+  goldenOddsMult: number
+  crateChanceMult: number
+  doubleCatchChance: number
+}
+
+/** Fishing-side effects, or identity when the eye is not seated. */
+export function anglersPatienceEffects(seated: boolean, xp: number): EyeEffects {
+  const idle: EyeEffects = { rarityBonus: 0, waitMult: 1, fishingXpMult: 1, goldenOddsMult: 1, crateChanceMult: 1, doubleCatchChance: 0 }
+  if (!seated) return idle
   const m = finnItemMilestone('anglers_patience', xp)
   return {
     rarityBonus: m.rarityBonus ?? 0,
     waitMult: m.waitMult ?? 1,
     fishingXpMult: m.fishingXpMult ?? 1,
+    goldenOddsMult: m.goldenOddsMult ?? 1,
+    crateChanceMult: m.crateChanceMult ?? 1,
+    doubleCatchChance: m.doubleCatchChance ?? 0,
   }
 }
 
@@ -136,21 +167,31 @@ export function anglersPatienceEffects(seated: boolean, xp: number): {
 export function borrowedJawRaidEffects(level: number): RaidEffect[] {
   const m = FINN_ITEMS.borrowed_jaw.milestones[Math.min(Math.max(level, 1), FINN_ITEM_MAX_LEVEL) - 1]
   const out: RaidEffect[] = []
+  // ONE entry per type. Combat folds same-type effects together (multiplying the
+  // mults, maxing the chances), so emitting a rung's value twice would silently
+  // square it. The milestone rows hold totals precisely so this stays a copy.
   if (m.bossDamageMult) out.push({ type: 'boss_damage_mult', value: m.bossDamageMult })
+  if (m.nonBossDamageMult) out.push({ type: 'nonboss_damage_mult', value: m.nonBossDamageMult })
   if (m.critDamageMult) out.push({ type: 'crit_damage_mult', value: m.critDamageMult })
   if (m.critUpgradeChance) out.push({ type: 'crit_upgrade_chance', value: m.critUpgradeChance })
+  if (m.lifestealPct) out.push({ type: 'lifesteal_pct', value: m.lifestealPct })
+  if (m.startChargeChance) out.push({ type: 'start_charge_chance', value: m.startChargeChance })
   return out
 }
 
-/** Raid-side effects, or identity when the jaw is not mounted. */
-export function borrowedJawEffects(mounted: boolean, xp: number): {
-  bossDamageMult: number; critDamageMult: number; critUpgradeChance: number
-} {
-  if (!mounted) return { bossDamageMult: 1, critDamageMult: 1, critUpgradeChance: 0 }
+/** Raid-side effects as plain numbers, or identity when the maw is not mounted.
+ *  Combat does NOT read this (it goes through borrowedJawRaidEffects and the
+ *  normal item pipeline); this is for anything that wants the values directly. */
+export function borrowedJawEffects(mounted: boolean, xp: number) {
+  const idle = { bossDamageMult: 1, nonBossDamageMult: 1, critDamageMult: 1, critUpgradeChance: 0, lifestealPct: 0, startChargeChance: 0 }
+  if (!mounted) return idle
   const m = finnItemMilestone('borrowed_jaw', xp)
   return {
     bossDamageMult: m.bossDamageMult ?? 1,
+    nonBossDamageMult: m.nonBossDamageMult ?? 1,
     critDamageMult: m.critDamageMult ?? 1,
     critUpgradeChance: m.critUpgradeChance ?? 0,
+    lifestealPct: m.lifestealPct ?? 0,
+    startChargeChance: m.startChargeChance ?? 0,
   }
 }
