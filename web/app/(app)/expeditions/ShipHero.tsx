@@ -1670,7 +1670,7 @@ export default function ShipHero({
               )}
               <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(raidItemSlots, 2)}, minmax(0, 1fr))`, gap: 8, marginBottom: '1.6rem' }}>
                 {Array.from({ length: raidItemSlots }, (_, i) => {
-                  const itemId = equippedItems[i]
+                  const itemId = hullItems[i]
                   const def = itemId ? getRaidItem(itemId) : null
                   if (def && itemId) {
                     const color = RARITY_ITEM_COLOR[def.rarity]
@@ -1690,52 +1690,6 @@ export default function ShipHero({
                             ? <img src={def.image} alt="" loading="lazy" decoding="async" className={abyssal ? 'rod-glow-abyssal' : undefined} style={{ width: 30, height: 30, objectFit: 'contain' }} />
                             : <span style={{ fontSize: '1.4rem', lineHeight: 1, color, display: 'flex' }}><IconCrate size={22} /></span>}
                         </div>
-              {/* ── THE SIXTH MOUNT ───────────────────────────────────────
-                  Its own bay under the hull grid, not a sixth cell in it. The
-                  distinction is the whole point: it does not consume a hull
-                  slot and it accepts exactly one item, so showing it inline
-                  would read as "you got another slot" and invite the player to
-                  try mounting ordinary gear there. Mirrors how the server
-                  attaches it (see getRaidPlayerStats). */}
-              {hasSixthMount && (
-                <div style={{ marginBottom: '1.6rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#e0a44a' }}>The Sixth Mount</span>
-                    <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.54rem', color: mountedFinale ? '#e0a44a' : '#6d6a66' }}>
-                      {mountedFinale ? 'Mounted' : 'Empty'}
-                    </span>
-                  </div>
-                  {ownedFinale.length ? ownedFinale.map(id => {
-                    const def = RAID_ITEMS.find(r => r.id === id)
-                    if (!def) return null
-                    const on = mountedFinale === id
-                    return (
-                      <button key={id}
-                        onClick={() => toggleItem(id)}
-                        style={{
-                          width: '100%', textAlign: 'left', cursor: 'pointer',
-                          padding: '0.65rem 0.7rem', borderRadius: 12,
-                          background: on ? 'rgba(224,164,74,0.12)' : 'rgba(255,255,255,0.03)',
-                          border: `1px solid ${on ? 'rgba(224,164,74,0.5)' : 'rgba(255,255,255,0.10)'}`,
-                          boxShadow: on ? '0 0 16px rgba(224,164,74,0.22)' : 'none',
-                          touchAction: 'manipulation',
-                        }}>
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 7 }}>
-                          <span className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: '#e8e4de' }}>{def.name}</span>
-                          <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: on ? '#e0a44a' : '#6d6a66' }}>{on ? 'Tap to unmount' : 'Tap to mount'}</span>
-                        </div>
-                        <p className="font-karla" style={{ margin: '3px 0 0', fontSize: '0.65rem', lineHeight: 1.4, color: '#9a958c' }}>{def.description}</p>
-                      </button>
-                    )
-                  }) : (
-                    <div style={{ padding: '0.7rem', borderRadius: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.09)' }}>
-                      <p className="font-karla" style={{ margin: 0, fontSize: '0.66rem', lineHeight: 1.45, color: '#7a7875', textAlign: 'center' }}>
-                        Empty. Only The Borrowed Jaw mounts here, and it comes off Finn.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.8rem', ...(forged ? forgedTextSoft(abyssal) : { color }) }}>{def.name}</p>
                           <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: '#9a948a' }}>Tap for details</span>
@@ -1749,12 +1703,58 @@ export default function ShipHero({
                     </div>
                   )
                 })}
+                {/* HIS MOUNT. A real slot in the same grid, so it sits with the
+                    others instead of floating in its own panel, but brass-lined
+                    and restricted: only Finn's drop goes in it, and it never
+                    counts against the hull (see raidItemSlots above). */}
+                {hasSixthMount && (() => {
+                  const jaw = ownedFinale[0] ?? null
+                  const def = jaw ? getRaidItem(jaw) : null
+                  const on = !!mountedFinale
+                  const BRASS = '#e0a44a'
+                  if (def && on) {
+                    return (
+                      <button type="button" onClick={() => setItemDetail(mountedFinale!)}
+                        aria-label={`${def.name}, mounted. Tap for its effect and an unmount option.`}
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, padding: '0.6rem 0.7rem', borderRadius: 12, textAlign: 'left', cursor: 'pointer', background: `${BRASS}1c`, border: `1.5px solid ${BRASS}88`, boxShadow: `0 0 14px ${BRASS}1f` }}>
+                        <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', background: `${BRASS}12`, border: `1px solid ${BRASS}40` }}>
+                          <span style={{ fontSize: '1.3rem', lineHeight: 1 }}>{def.emoji}</span>
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.8rem', color: BRASS }}>{def.name}</p>
+                          <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: '#9a948a' }}>His mount · tap for details</span>
+                        </div>
+                      </button>
+                    )
+                  }
+                  if (def) {
+                    return (
+                      <button type="button" onClick={() => toggleItem(def.id)}
+                        aria-label={`Mount ${def.name}`}
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, padding: '0.6rem 0.7rem', borderRadius: 12, textAlign: 'left', cursor: 'pointer', background: 'rgba(255,255,255,0.02)', border: `1.5px dashed ${BRASS}66` }}>
+                        <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${BRASS}0f`, border: `1px solid ${BRASS}33` }}>
+                          <span style={{ fontSize: '1.3rem', lineHeight: 1, opacity: 0.7 }}>{def.emoji}</span>
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.78rem', color: BRASS }}>Mount {def.name}</p>
+                          <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: '#9a948a' }}>His mount</span>
+                        </div>
+                      </button>
+                    )
+                  }
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, minHeight: 64, padding: '0.6rem', borderRadius: 12, border: `1.5px dashed ${BRASS}44`, background: 'rgba(255,255,255,0.02)' }}>
+                      <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.56rem', color: BRASS }}>His mount</span>
+                      <span className="font-karla" style={{ fontSize: '0.5rem', color: '#6a6764' }}>Takes only his gear</span>
+                    </div>
+                  )
+                })()}
               </div>
 
               {/* ── Inventory ── owned items you HAVEN'T equipped; tap to slot one. */}
               {(() => {
-                const unequipped = ownedRaidItems.filter(id => !equippedItems.includes(id))
-                const full = equippedItems.length >= raidItemSlots
+                const unequipped = ownedRaidItems.filter(id => !equippedItems.includes(id) && !mountIds.has(id))
+                const full = hullItems.length >= raidItemSlots
                 return (
                   <>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.6rem' }}>
