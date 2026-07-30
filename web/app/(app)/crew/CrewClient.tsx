@@ -1455,7 +1455,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
           const nextTier = nextHallTier(state.hallTier)
           return (
         <>
-        <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 12, border: `1px solid ${hall.accent}44`, background: `linear-gradient(180deg, ${hall.accent}16 0%, rgba(0,0,0,0) 55%)`, boxShadow: hall.glow ? `0 0 26px ${hall.glow}` : undefined, padding: '0.85rem 0.85rem 1rem', marginBottom: '1.4rem' }}>
+        <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 12, border: `1px solid ${hall.accent}66`, background: `linear-gradient(180deg, ${hall.accent}22 0%, rgba(255,255,255,0.02) 55%, rgba(0,0,0,0.10) 100%), rgba(14,19,28,0.96)`, boxShadow: hall.glow ? `0 0 26px ${hall.glow}` : undefined, padding: '0.85rem 0.85rem 1rem', marginBottom: '1.4rem' }}>
           {/* Hall header — building identity row. Name + tier pips on
               the left, Upgrade CTA (or MAX chip) on the right, perk +
               flavor caption underneath. */}
@@ -1558,7 +1558,9 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                         style={{
                           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
                           minWidth: 0, padding: '0.55rem 0.35rem 0.5rem', borderRadius: 12,
-                          background: r.cannot ? `${accent}10` : `linear-gradient(180deg, ${accent}2e, ${accent}14)`,
+                          background: r.cannot
+                            ? `linear-gradient(180deg, ${accent}14, ${accent}0a), rgba(16,21,30,0.96)`
+                            : `linear-gradient(180deg, ${accent}3a, ${accent}1c), rgba(18,24,34,0.97)`,
                           border: `1px solid ${accent}80`,
                           opacity: r.cannot ? 0.5 : 1,
                           cursor: r.cannot ? 'not-allowed' : 'pointer',
@@ -1574,7 +1576,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                             {r.boost}
                           </span>
                         )}
-                        <span className="font-karla font-600" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.58rem', color: 'rgba(255,255,255,0.62)', whiteSpace: 'nowrap' }}>
+                        <span className="font-karla font-600" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.6rem', color: 'rgba(255,255,255,0.78)', whiteSpace: 'nowrap' }}>
                           {r.cost}
                         </span>
                       </button>
