@@ -32,7 +32,7 @@ import { assignToVoyage, benchCrew } from '@/app/(app)/crew/actions'
 import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
 import { applyCrewEffects, resolveEffects, effectSummary, SCOPE_META } from '@/lib/crewEffects'
 import { RARITY_COLORS as CREW_RARITY_COLORS, RARITY_NAMES } from '@/lib/crewGen'
-import { RAID_ITEMS, getRaidItem, FORGE_RECIPES, conflictingRaidItems, isForgedRaidItem, isAbyssalForgedItem, isConvertibleEpic, legendaryForEpic } from '@/lib/raidItems'
+import { RAID_ITEMS, getRaidItem, FORGE_RECIPES, forgeComponentIds, conflictingRaidItems, isForgedRaidItem, isAbyssalForgedItem, isConvertibleEpic, legendaryForEpic } from '@/lib/raidItems'
 import { PRISMATIC_TEXT, prismaticBorder, forgedBorderSoft, forgedTextSoft, ABYSSAL_EMBER_TEXT, abyssalEmberBorder, primevalBorder, PRIMEVAL_TEXT } from '@/lib/prismatic'
 import ForgeBoard from './ForgeBoard'
 import { renameShip, buyShip } from '@/app/shipyard/actions'
@@ -1050,6 +1050,28 @@ export default function ShipHero({
   }
   const sectionBg = focus ? SECTION_BG[loadoutTab] : '/ship-loadout-bg.jpg'
 
+  // How much forge STOCK you hold: owned items that actually feed a recipe.
+  // A count you can act on beats a state word (open) that never changes.
+  const forgeStock = useMemo(() => {
+    const parts = new Set(forgeComponentIds())
+    return ownedRaidItems.filter(id => parts.has(id)).length
+  }, [ownedRaidItems])
+
+  // The Items row cycles through the art of what you own, so the tile shows
+  // your actual collection rather than a generic crate. Paused when the list
+  // is short enough that there is nothing to cycle through.
+  const itemsArt = useMemo(
+    () => ownedRaidItems.map(id => getRaidItem(id)?.image).filter((s): s is string => !!s),
+    [ownedRaidItems],
+  )
+  const [itemsCycle, setItemsCycle] = useState(0)
+  useEffect(() => {
+    if (itemsArt.length < 2) return
+    const t = setInterval(() => setItemsCycle(n => (n + 1) % itemsArt.length), 2600)
+    return () => clearInterval(t)
+  }, [itemsArt.length])
+  const itemsCycleArt = itemsArt.length > 0 ? itemsArt[itemsCycle % itemsArt.length] : null
+
   // Crew available to assign: any roster member not already in another slot
   // (the one already in this slot stays selectable). Sorted by effective stats.
   const effStats = (c: RosterCrew) => applyCrewEffects({ power: c.power, dodge: c.dodge, fortune: c.fortune }, c.effects, c.xp)
@@ -1242,7 +1264,7 @@ export default function ShipHero({
               {
                 key: 'ship',
                 label: 'Ship',
-                sub: shipName ?? shipStats.name,
+                sub: 'Manage upgrades',
                 nudge: false,
                 art: shipImgSrc,
                 icon: null,
@@ -1253,7 +1275,7 @@ export default function ShipHero({
                 label: 'Items',
                 sub: newRaidItems.size > 0 ? 'New gear to mount' : `${slotsFilled}/${slotsTotal} mounted`,
                 nudge: newRaidItems.size > 0,
-                art: null,
+                art: itemsCycleArt,
                 icon: (
                   <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#8b97a8" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                     <path d="M12 2l8 4.5v9L12 20l-8-4.5v-9L12 2z" /><path d="M12 20v-9" /><path d="M20 6.5L12 11 4 6.5" />
@@ -1264,7 +1286,7 @@ export default function ShipHero({
               {
                 key: 'forge',
                 label: 'Forge',
-                sub: forgeUnlocked ? (abyssalUnlocked ? 'Abyssal open' : 'Fuse your drops') : 'Locked',
+                sub: forgeUnlocked ? `${forgeStock} component${forgeStock === 1 ? '' : 's'} held` : 'Locked',
                 nudge: false,
                 art: null,
                 icon: (
@@ -1406,7 +1428,7 @@ export default function ShipHero({
                 flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: focus ? '1.1rem 1rem 0.85rem' : '0.25rem 1rem 0.7rem',
-                borderBottom: '1px solid rgba(255,255,255,0.08)',
+                borderBottom: focus ? 'none' : '1px solid rgba(255,255,255,0.08)',
               }}>
                 {/* On a ROUTE this is a page header, so it matches Crew
                     Management: a font-pirata title with a status chip beside
@@ -1420,7 +1442,7 @@ export default function ShipHero({
                     {(() => {
                       const chip = focus === 'items' ? `${slotsFilled} / ${slotsTotal} mounted`
                         : focus === 'ship' ? (shipName ?? shipStats.name)
-                        : abyssalUnlocked ? 'Abyssal open' : forgeUnlocked ? 'Recipes open' : 'Locked'
+                        : forgeUnlocked ? `${forgeStock} component${forgeStock === 1 ? '' : 's'} held` : 'Locked'
                       const warn = focus === 'items' ? slotsFilled >= slotsTotal : focus === 'forge' && !forgeUnlocked
                       return (
                         <span className="font-karla font-700" style={{
