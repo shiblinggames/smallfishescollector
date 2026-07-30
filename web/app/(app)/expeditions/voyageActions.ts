@@ -17,6 +17,7 @@ import { RARITY_NAMES, crewDisplayName, type CrewRarity } from '@/lib/crewGen'
 import { grantXPToCrewIds, type CrewXPGrant } from '@/lib/crewXPGrant'
 import { hasSafeVoyages, gauntletVoyageSpeedMult } from '@/lib/gauntletUpgrades'
 import { BASE_VOYAGE_MS, computeVoyageDurationMs } from '@/lib/voyage'
+import { eyeCharge } from '@/lib/finnItems'
 
 function today(): string {
   return new Date().toISOString().split('T')[0]
@@ -248,7 +249,7 @@ export async function revealVoyageResults(voyageId: number): Promise<
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, gems, expedition_xp, has_tide_turner, has_phantom_hook, has_perfected_sigil, unlocked_character_colors')
+    .select('doubloons, gems, expedition_xp, has_tide_turner, has_phantom_hook, has_perfected_sigil, unlocked_character_colors, equipped_special_2, has_anglers_patience, anglers_patience_xp, finn_spoil_free, finn_spoil_paid')
     .eq('id', user.id)
     .single()
 
@@ -291,7 +292,12 @@ export async function revealVoyageResults(voyageId: number): Promise<
   const newTideTurner = !!(voyage.tide_turner_drop && !profile.has_tide_turner)
   const newPhantomHook = !!(voyage.phantom_hook_drop && !profile.has_phantom_hook)
   const newPerfectedSigil = !!(voyage.perfected_sigil_drop && !profile.has_perfected_sigil)
-  const profileUpdate: Record<string, unknown> = { doubloons: newDoubloons, gems: newGems, expedition_xp: newExpeditionXP }
+  // A voyage is Navigation XP, so it charges The Primeval Eye like a raid kill.
+  const reelCharge = eyeCharge(profile as Parameters<typeof eyeCharge>[0], xpEarned)
+  const profileUpdate: Record<string, unknown> = {
+    doubloons: newDoubloons, gems: newGems, expedition_xp: newExpeditionXP,
+    ...(reelCharge !== null ? { anglers_patience_xp: reelCharge } : {}),
+  }
   if (newTideTurner) profileUpdate.has_tide_turner = true
   if (newPhantomHook) profileUpdate.has_phantom_hook = true
   if (newPerfectedSigil) profileUpdate.has_perfected_sigil = true

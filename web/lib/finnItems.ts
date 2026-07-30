@@ -203,6 +203,37 @@ export function borrowedJawEffects(mounted: boolean, xp: number) {
  *  cast, the grant, and all three sell lanes), and every one has to apply the
  *  same three conditions: owned, seated, and its SLOT actually unlocked at the
  *  spoils node. Kept here so a new caller cannot forget one of them. */
+interface FinnChargeProfile {
+  equipped_special_2?: string | null
+  has_anglers_patience?: boolean | null
+  anglers_patience_xp?: number | null
+  equipped_raid_items?: string[] | null
+  borrowed_jaw_xp?: number | null
+  finn_spoil_free?: string | null
+  finn_spoil_paid?: string | null
+}
+
+/** New charge total for THE PRIMEVAL EYE after earning `navXp`, or null when it
+ *  is not accruing (not owned, not seated, or its slot never opened).
+ *
+ *  Every source of Navigation XP calls this: raid kills, voyages, the Gauntlet,
+ *  puzzle nodes, fork routes. "Charges on Navigation XP" has to mean ALL of it,
+ *  or the bar sits still on the half the player actually plays and reads broken. */
+export function eyeCharge(p: FinnChargeProfile | null, navXp: number): number | null {
+  const accruing = p?.equipped_special_2 === 'anglers_patience'
+    && p?.has_anglers_patience === true
+    && (p?.finn_spoil_free === 'fishing' || p?.finn_spoil_paid === 'fishing')
+  return accruing ? Number(p?.anglers_patience_xp ?? 0) + navXp : null
+}
+
+/** New charge total for THE PRIMEVAL MAW after earning `fishingXp`, or null when
+ *  it is not accruing. Called by every source of Fishing XP: catches and trawls. */
+export function mawCharge(p: FinnChargeProfile | null, fishingXp: number): number | null {
+  const accruing = (p?.equipped_raid_items ?? []).includes('borrowed_jaw')
+    && (p?.finn_spoil_free === 'nav' || p?.finn_spoil_paid === 'nav')
+  return accruing ? Number(p?.borrowed_jaw_xp ?? 0) + fishingXp : null
+}
+
 export function eyeFromProfile(p: {
   equipped_special_2?: string | null
   has_anglers_patience?: boolean | null

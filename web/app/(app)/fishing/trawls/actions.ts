@@ -19,6 +19,7 @@ import {
   unlockedTrawlSlots, nextTrawlSlot, rollTrawlHaul, expectedTrawlHaul,
   type TrawlZoneKey, type TrawlState, type TrawlCrewView, type ActiveTrawlView, type CollectTrawlResult,
 } from './constants'
+import { mawCharge } from '@/lib/finnItems'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -56,7 +57,7 @@ const isZone = (z: string): z is TrawlZoneKey => z in TRAWL_ZONE_BY_KEY
 // Build the full client state from the player's profile + roster + active trawls.
 async function buildTrawlState(admin: Admin, userId: string): Promise<TrawlState> {
   const [{ data: profile }, { data: trawlRows }, { data: crewRows }, { data: pendingVoyage }, { data: ch3Row }] = await Promise.all([
-    admin.from('profiles').select('fishing_xp, expedition_xp, has_ancient_deep_access').eq('id', userId).single(),
+    admin.from('profiles').select('fishing_xp, expedition_xp, has_ancient_deep_access, equipped_raid_items, borrowed_jaw_xp, finn_spoil_free, finn_spoil_paid').eq('id', userId).single(),
     admin.from('trawls').select('zone, crew_id, ends_at').eq('user_id', userId),
     admin.from('user_crew').select(CREW_COLS).eq('user_id', userId).is('died_at', null),
     // Crew on a pending voyage are also unavailable — exclude from the picker.
@@ -207,7 +208,12 @@ export async function collectTrawl(zone: string): Promise<CollectTrawlResult | {
   // but we DON'T grant it here — the color shows unlocked live via the earned
   // union, and the fishing screen's skin-unlock watcher grants + announces it
   // on the next visit (so a trawl crossing gets the same toast a catch does).
-  const profileUpdate: Record<string, unknown> = { fishing_xp: newFishingXP, doubloons: newDoubloons }
+  // A trawl is still fishing XP, so it charges The Primeval Maw like a catch.
+  const jawCharge = mawCharge(profile as Parameters<typeof mawCharge>[0], haul.xp)
+  const profileUpdate: Record<string, unknown> = {
+    fishing_xp: newFishingXP, doubloons: newDoubloons,
+    ...(jawCharge !== null ? { borrowed_jaw_xp: jawCharge } : {}),
+  }
 
   const z = TRAWL_ZONE_BY_KEY[zone]
   await Promise.all([

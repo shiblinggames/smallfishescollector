@@ -8,6 +8,7 @@ import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
 import { maxLegitKillGrant } from '@/lib/raidRegistry'
 import { flagAnomaly } from '@/lib/anomaly'
 import { countRaidKill } from '@/lib/runToken'
+import { eyeCharge } from '@/lib/finnItems'
 
 export async function awardRaidKill(
   xpIn: number,
@@ -48,7 +49,7 @@ export async function awardRaidKill(
   }
   const { data: profile } = await admin
     .from('profiles')
-    .select('expedition_xp, doubloons, ship_classes, nav_renown_alloc, equipped_special_2, anglers_patience_xp, finn_spoil_free, finn_spoil_paid')
+    .select('expedition_xp, doubloons, ship_classes, nav_renown_alloc, equipped_special_2, has_anglers_patience, anglers_patience_xp, finn_spoil_free, finn_spoil_paid')
     .eq('id', user.id)
     .single()
 
@@ -64,12 +65,9 @@ export async function awardRaidKill(
   const crewXP_amount = Math.round(xp * navRenown.crewXpMult)
 
   const newExpeditionXP  = (profile?.expedition_xp ?? 0) + xp
-  // THE ANGLER'S PATIENCE charges on NAVIGATION xp, and only while it is
-  // seated. The crossing is the point: his eye is fed by the raiding half
-  // of the game, so wearing it is a reason to keep coming back out here.
-  const reelSeated = profile?.equipped_special_2 === 'anglers_patience'
-    && (profile?.finn_spoil_free === 'fishing' || profile?.finn_spoil_paid === 'fishing')
-  const reelCharge = reelSeated ? Number(profile?.anglers_patience_xp ?? 0) + xp : null
+  // Raid kills are Navigation XP, so they charge The Primeval Eye. Gate lives
+  // in lib/finnItems so every nav source applies the same three conditions.
+  const reelCharge = eyeCharge(profile as Parameters<typeof eyeCharge>[0], xp)
   const newDoubloonTotal = (profile?.doubloons ?? 0) + scaledDoubloons
 
   // Crew earn the per-kill XP the player just earned, nudged by nav Renown

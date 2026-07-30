@@ -27,6 +27,7 @@ import {
 import { GAUNTLET_DEEPEST_CONTEST_ENDS_AT } from '@/lib/contests'
 import { getBait } from '@/lib/bait'
 import { merchantPrice } from '@/lib/gauntletMerchant'
+import { eyeCharge } from '@/lib/finnItems'
 
 // Golden Gauntlet Hull — a rare Man-o-War-only cosmetic that drops only from the
 // top chest tier (Davy Jones' Locker, chest tier 5 / depth 18+). Tunable here.
@@ -712,7 +713,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_run_open, gauntlet_run_variant, gauntlet_deepest, gauntlet_last_run_at, gauntlet_best_depth, gauntlet_best_depth_ms, gauntlet_contest_depth, gauntlet_fathoms, gauntlet_fathoms_earned, gauntlet_runs_completed, gauntlet_upgrades, gauntlet_upgrades_off, dons_gauntlet_deepest, dons_gauntlet_best_depth, dons_gauntlet_best_depth_ms, dons_gauntlet_deepest_run, dons_gauntlet_upgrades, dons_gauntlet_upgrades_off, expedition_xp, doubloons, gems, ship_classes, nav_renown_alloc, raid_items, ship_skins, gauntlet_run_hardcore, gauntlet_hc_deepest, gauntlet_hc_best_depth, gauntlet_hc_best_depth_ms, blood_gems, blood_gems_earned, gauntlet_run_terms, gauntlet_hc_best_pressure, gauntlet_run_offer')
+    .select('gauntlet_run_open, gauntlet_run_variant, gauntlet_deepest, gauntlet_last_run_at, gauntlet_best_depth, gauntlet_best_depth_ms, gauntlet_contest_depth, gauntlet_fathoms, gauntlet_fathoms_earned, gauntlet_runs_completed, gauntlet_upgrades, gauntlet_upgrades_off, dons_gauntlet_deepest, dons_gauntlet_best_depth, dons_gauntlet_best_depth_ms, dons_gauntlet_deepest_run, dons_gauntlet_upgrades, dons_gauntlet_upgrades_off, expedition_xp, doubloons, gems, ship_classes, nav_renown_alloc, raid_items, ship_skins, gauntlet_run_hardcore, gauntlet_hc_deepest, gauntlet_hc_best_depth, gauntlet_hc_best_depth_ms, blood_gems, blood_gems_earned, gauntlet_run_terms, gauntlet_hc_best_pressure, gauntlet_run_offer, equipped_special_2, has_anglers_patience, anglers_patience_xp, finn_spoil_free, finn_spoil_paid')
     .eq('id', user.id)
     .single()
 
@@ -887,6 +888,8 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   const newDoubloons     = (profile.doubloons ?? 0) + bankedDoubloons
   const newGems          = (profile.gems ?? 0) + gems
   const newExpeditionXP  = (profile.expedition_xp ?? 0) + bankedXp
+  // A cash-out is Navigation XP, so it charges The Primeval Eye too.
+  const reelCharge = eyeCharge(profile as Parameters<typeof eyeCharge>[0], bankedXp)
   const prevDeepest      = ((isDon ? profile.dons_gauntlet_deepest : profile.gauntlet_deepest) as number | null) ?? 0
   // The mode's own depth record (return value): hardcore → Drowned Ledger depth.
   const deepest          = hc ? hcDeepest : Math.max(prevDeepest, cd)
@@ -959,6 +962,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
       doubloons: newDoubloons,
       gems: newGems,
       expedition_xp: newExpeditionXP,
+      ...(reelCharge !== null ? { anglers_patience_xp: reelCharge } : {}),
       gauntlet_run_open: false,
       gauntlet_run_state: null,
       gauntlet_resumes_used: 0,

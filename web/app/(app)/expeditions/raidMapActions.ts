@@ -14,6 +14,7 @@ import { musterCrewFrom, musterReport, type MusterCrew } from '@/lib/crewMuster'
 import { EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { GATE_NODE_TO_LEGENDARY, slugToCardKey, type UnlockedLegendary } from '@/lib/legendaryUnlocks'
+import { eyeCharge } from '@/lib/finnItems'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -243,7 +244,7 @@ export async function solvePuzzleNode(
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('expedition_xp, has_completed_practice_raid, raid_node_progress, is_admin')
+    .select('expedition_xp, has_completed_practice_raid, raid_node_progress, is_admin, equipped_special_2, has_anglers_patience, anglers_patience_xp, finn_spoil_free, finn_spoil_paid')
     .eq('id', user.id)
     .single()
   if (!profile) return { error: 'Profile not found' }
@@ -258,12 +259,16 @@ export async function solvePuzzleNode(
     if (navLevel < node.requiresNavLevel) return { error: 'Locked' }
   }
 
-  const newExpeditionXp = expeditionXp + (node.puzzle.rewardNavXp ?? 0)
+  const puzzleXp = node.puzzle.rewardNavXp ?? 0
+  const newExpeditionXp = expeditionXp + puzzleXp
+  // Node Navigation XP charges The Primeval Eye like any other nav source.
+  const reelCharge = eyeCharge(profile as Parameters<typeof eyeCharge>[0], puzzleXp)
   const prog = (profile.raid_node_progress as { cleared?: string[] } | null) ?? {}
   const newCleared = [...new Set([...(prog.cleared ?? []), nodeId])]
 
   await admin.from('profiles').update({
     expedition_xp: newExpeditionXp,
+    ...(reelCharge !== null ? { anglers_patience_xp: reelCharge } : {}),
     raid_node_progress: { ...prog, cleared: newCleared },
   }).eq('id', user.id)
 
@@ -473,7 +478,7 @@ export async function pickForkRoute(
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('expedition_xp, has_completed_practice_raid, raid_node_progress, is_admin')
+    .select('expedition_xp, has_completed_practice_raid, raid_node_progress, is_admin, equipped_special_2, has_anglers_patience, anglers_patience_xp, finn_spoil_free, finn_spoil_paid')
     .eq('id', user.id)
     .single()
   if (!profile) return { error: 'Profile not found' }
@@ -491,9 +496,11 @@ export async function pickForkRoute(
   const newCleared = [...new Set([...(prog.cleared ?? []), nodeId])]
   const newChoices = { ...(prog.choices ?? {}), [nodeId]: routeId }
   const newExpeditionXp = ((profile.expedition_xp as number | null) ?? 0) + node.fork.rewardNavXp
+  const forkReelCharge = eyeCharge(profile as Parameters<typeof eyeCharge>[0], node.fork.rewardNavXp)
 
   await admin.from('profiles').update({
     expedition_xp: newExpeditionXp,
+    ...(forkReelCharge !== null ? { anglers_patience_xp: forkReelCharge } : {}),
     raid_node_progress: { ...prog, cleared: newCleared, choices: newChoices },
   }).eq('id', user.id)
 

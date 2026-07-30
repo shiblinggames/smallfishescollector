@@ -37,6 +37,10 @@ export async function awardPracticeKill(
     .eq('id', user.id)
     .single()
 
+  // DELIBERATELY does not charge The Primeval Eye, unlike every other source of
+  // Navigation XP (raid kills, voyages, the Gauntlet, puzzle nodes, fork routes).
+  // The skirmish is a free sandbox with no repair risk and no cooldown, so
+  // charging here would be a grindable loop that costs nothing to run.
   const newExpeditionXP  = (profile?.expedition_xp ?? 0) + xp
   const newDoubloonTotal = (profile?.doubloons ?? 0) + doubloons
 
