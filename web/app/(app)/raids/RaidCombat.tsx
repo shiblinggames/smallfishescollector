@@ -1663,6 +1663,9 @@ export default function RaidCombat({
   // Ref mirror for the death ward, so his hull can show it. The ref is the
   // source of truth (the resolver reads it); this only drives the chip.
   const [wardUp, setWardUp] = useState(false)
+  // Same for his Foresight. Invisible, it reads as the player being unlucky
+  // twice in a row rather than as him reading them.
+  const [foreseeUp, setForeseeUp] = useState(false)
 
   // ── First-time mechanic-check tutorial ─────────────────────────────────
   // The first telegraphed boss check blindsided players — especially Don's
@@ -3280,6 +3283,7 @@ export default function RaidCombat({
         // what makes armour a running theme he can then reinforce (Old Armour).
         bossWardBuffRef.current = 0
         bossWardRef.current = 0; setWardUp(false)
+        bossForesightRef.current = 0; setForeseeUp(false)
         enemyShieldRef.current = enemyShieldMax
         setEnemyShieldHp(enemyShieldMax)
         const n = enemyPhaseRef.current
@@ -3929,6 +3933,7 @@ export default function RaidCombat({
       // his evasion and his death ward, so a freeze was quietly a reward FOR HIM.
       if (who === 'enemy') {
         if (bossForesightRef.current > 0) bossForesightRef.current--
+        setForeseeUp(bossForesightRef.current > 0)
         if (bossWardRef.current > 0) bossWardRef.current--
         setWardUp(bossWardRef.current > 0)
       }
@@ -3990,6 +3995,7 @@ export default function RaidCombat({
             } else if (ab.kind === 'foresight') {
               // DOLE: he reads you, and slips what is coming.
               bossForesightRef.current = ab.turns ?? 2
+              setForeseeUp(true)
               lines.push(`${ab.name}: he dodges everything you fire for ${bossForesightRef.current} turns.`)
             } else if (ab.kind === 'vengeance') {
               // LAZ: he will not die to the next killing blow.
@@ -4552,7 +4558,12 @@ export default function RaidCombat({
             }
           }
           if (dodged) {
-            stepLines.push(isAttackerPlayer ? `Enemy weaves aside — dodged!` : `You weave aside — dodged!`)
+            // A shot slipped by Foresight must not read as ordinary bad luck, or the
+            // ability is indistinguishable from losing the dodge roll twice.
+            stepLines.push(
+              isAttackerPlayer && bossForesightRef.current > 0
+                ? `He read that one before you fired it. Slipped.`
+                : isAttackerPlayer ? `Enemy weaves aside — dodged!` : `You weave aside — dodged!`)
             splatText = 'Dodged'
             splatColor = '#38bdf8'
             // Telemetry: enemy dodged YOUR shot (still a shot fired) vs YOU
@@ -5363,6 +5374,7 @@ export default function RaidCombat({
             // what makes armour a running theme he can then reinforce (Old Armour).
             bossWardBuffRef.current = 0
             bossWardRef.current = 0; setWardUp(false)
+            bossForesightRef.current = 0; setForeseeUp(false)
             enemyShieldRef.current = enemyShieldMax
             setEnemyShieldHp(enemyShieldMax)
             const n = enemyPhaseRef.current
@@ -6738,6 +6750,7 @@ export default function RaidCombat({
               // your burst, you never get to read his. Seeing it up is what lets
               // you hold the killing blow until it lapses.
               ...(wardUp ? [{ key: 'ward', color: '#d1495b', title: 'Death ward — the killing blow will not land while this holds' }] : []),
+              ...(foreseeUp ? [{ key: 'foresee', color: '#8b7bf0', title: 'Reading you — he slips everything you fire while this holds' }] : []),
               ...(snareDodgeTurns > 0 ? [{ key: 'snare', color: '#d9b066', turns: snareDodgeTurns, title: 'Snared — dodges can be fouled' }] : []),
             ]} />
           </div>
