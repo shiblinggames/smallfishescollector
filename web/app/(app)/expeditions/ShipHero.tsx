@@ -1668,18 +1668,17 @@ export default function ShipHero({
                   slots, so what's equipped reads at a glance. Tap a filled slot
                   to remove it; equip from the Inventory below. Effects stack —
                   any item in any slot — so the slots are just capacity. */}
-              {/* The route header already says this, with the same count. */}
-              {!focus && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.8rem' }}>
-                <span className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.22em', color: '#8794a6' }}>Battle Loadout</span>
-                <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
-                <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.56rem', color: '#c4b078' }}>{slotsFilled}/{slotsTotal} slots</span>
-              </div>
-              )}
               {/* The hero: what everything mounted actually adds up to. The slots
                   below say WHAT you carry; this says what it comes to, which is
                   the question you opened the page with. */}
               <LoadoutSummary equippedIds={chargedEquippedIds} onOpenEffects={() => setEffectsOpen(true)} />
+              {/* Names the SECTION, matching the Inventory divider below, so the
+                  two halves of the page read as a pair. */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.8rem' }}>
+                <span className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.22em', color: '#8794a6' }}>Equipped</span>
+                <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
+                <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.56rem', color: '#c4b078' }}>{slotsFilled}/{slotsTotal} slots</span>
+              </div>
               {/* THREE across, so the full six read as two tidy rows instead of
                   a tall stack of wide rows. Same art-first language as the
                   inventory rail and the boss cards: the piece IS the tile, the

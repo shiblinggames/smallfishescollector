@@ -16,6 +16,7 @@
  *  the engine is worse than none, because it reads as authoritative.
  */
 
+import { useState } from 'react'
 import { getActiveEffects, type RaidEffectType } from '@/lib/raidItems'
 
 type Group = 'offense' | 'defense' | 'special'
@@ -75,6 +76,9 @@ export default function LoadoutSummary({ equippedIds, accent = '#c4b078', onOpen
   accent?: string
   onOpenEffects?: () => void
 }) {
+  // Open by default: the totals are the point of the hero. Collapsing is for
+  // when you are working the slots below and want them closer to the top.
+  const [open, setOpen] = useState(true)
   const fx = getActiveEffects(equippedIds)
 
   const active = ROWS.map(r => {
@@ -98,9 +102,27 @@ export default function LoadoutSummary({ equippedIds, accent = '#c4b078', onOpen
     }}>
       {/* Title and the breakdown link share a row: the link is a footnote to
           this total, and putting it here costs no vertical space at all. */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: active.length ? 11 : 6 }}>
-        <p className="font-cinzel font-800" style={{ fontSize: '0.95rem', color: '#f0ede8', lineHeight: 1.1 }}>Equipment Stats</p>
-        {onOpenEffects && active.length > 0 && (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: open && active.length ? 11 : 0 }}>
+        {/* The title IS the toggle, so the whole row is a comfortable tap
+            target rather than a chevron you have to hit precisely. */}
+        <button
+          type="button"
+          onClick={() => setOpen(v => !v)}
+          aria-expanded={open}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, padding: 0, background: 'none', border: 'none', cursor: 'pointer', font: 'inherit', textAlign: 'left', touchAction: 'manipulation' }}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8a8480" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden
+            style={{ flexShrink: 0, transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 0.18s' }}>
+            <path d="M9 18l6-6-6-6" />
+          </svg>
+          <p className="font-cinzel font-800" style={{ fontSize: '0.95rem', color: '#f0ede8', lineHeight: 1.1 }}>Equipment Stats</p>
+          {!open && active.length > 0 && (
+            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.54rem', color: '#8a8480', whiteSpace: 'nowrap' }}>
+              {active.length} active
+            </span>
+          )}
+        </button>
+        {onOpenEffects && active.length > 0 && open && (
           <button
             type="button"
             onClick={onOpenEffects}
@@ -113,7 +135,7 @@ export default function LoadoutSummary({ equippedIds, accent = '#c4b078', onOpen
         )}
       </div>
 
-      {active.length === 0 ? (
+      {open && (active.length === 0 ? (
         <p className="font-karla" style={{ fontSize: '0.78rem', color: '#8a8480', lineHeight: 1.45 }}>
           Nothing mounted yet. Fill a slot below and its effects total up here.
         </p>
@@ -142,7 +164,7 @@ export default function LoadoutSummary({ equippedIds, accent = '#c4b078', onOpen
             )
           })}
         </div>
-      )}
+      ))}
     </div>
   )
 }
