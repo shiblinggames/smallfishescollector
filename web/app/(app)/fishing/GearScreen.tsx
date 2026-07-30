@@ -23,7 +23,7 @@ import { SPECIAL_ITEMS } from '@/lib/specialItems'
 import { PETS, getPet, getPetOverlay } from '@/lib/pets'
 
 type BaitItem = { bait_type: string; quantity: number }
-type SlotKey = 'rod' | 'reel' | 'hook' | 'line' | 'special' | 'appearance' | 'badge'
+type SlotKey = 'rod' | 'reel' | 'hook' | 'line' | 'special' | 'special2' | 'appearance' | 'badge'
 // Sub-tab inside the unified Appearance picker. Skin / Hat / Boat ship
 // today; Pet is reserved here so the tab strip's render list is the
 // only place to touch when the pet system lands.
@@ -1077,7 +1077,7 @@ export default function GearScreen({
       </div>
 
       {/* Bottom row: Special | Badges (Boat moved into Appearance). */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 1fr', gap: 6 }}>
         {(() => {
           const equippedDef = SPECIAL_ITEMS.find(s => s.id === equippedSpecial)
           return (
@@ -1118,6 +1118,28 @@ export default function GearScreen({
                     </div>
                   )
               }
+            />
+          )
+        })()}
+        {/* THE SECOND SPECIAL. Mirrors the first, on the far side of Badges, so
+            the pair reads as two slots of one kind rather than a slot and a
+            bolt-on. The row is 1fr 1.4fr 1fr to match the gear grid above, so
+            Badges lands directly under Appearance. Locked until Finn's spoil
+            opens it; the panel behind it says what it accepts. */}
+        {(() => {
+          const seated = equippedSpecial2 ? SPECIAL_ITEMS.find(s => s.id === equippedSpecial2) : undefined
+          const REEL = '#6fd3c7'
+          return (
+            <GearSlot
+              label="Special"
+              image={seated?.image ?? null}
+              icon={hasDeepReel
+                ? <SpecialIcon color={seated ? seated.color : REEL} />
+                : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4a4742" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>}
+              itemName={hasDeepReel ? (seated ? seated.name : 'None') : 'Locked'}
+              color={hasDeepReel ? (seated ? seated.color : REEL) : '#4a4742'}
+              onClick={() => setOpenSlot('special2')}
+              empty={!seated}
             />
           )
         })()}
@@ -2388,48 +2410,6 @@ export default function GearScreen({
                         />
                       )
                     })}
-                  {/* ── THE DEEP REEL ─────────────────────────────────────
-                      A SECOND special slot, and the only thing it takes is his
-                      reel. Rendered as its own bordered bay rather than another
-                      row in the list above, so it reads as a different kind of
-                      thing: you cannot shuffle your normal specials into it. */}
-                  {hasDeepReel && (
-                    <div style={{ marginTop: 12 }}>
-                      <p className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: '#6fd3c7', marginBottom: 6 }}>The Deep Reel</p>
-                      <div style={{
-                        padding: '0.7rem 0.75rem', borderRadius: 12,
-                        background: equippedSpecial2 ? 'rgba(111,211,199,0.09)' : 'rgba(255,255,255,0.03)',
-                        border: `1px solid ${equippedSpecial2 ? 'rgba(111,211,199,0.45)' : 'rgba(255,255,255,0.10)'}`,
-                      }}>
-                        {hasAnglersPatience ? (
-                          <>
-                            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-                              <span className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#e8e4de' }}>The Angler&apos;s Patience</span>
-                              {equippedSpecial2 && <span className="font-karla font-800 uppercase tracking-[0.12em]" style={{ fontSize: '0.5rem', color: '#6fd3c7' }}>Seated</span>}
-                            </div>
-                            <p className="font-karla" style={{ margin: '3px 0 8px', fontSize: '0.66rem', lineHeight: 1.4, color: '#9a958c' }}>
-                              Bites take half again as long to come, and what surfaces is markedly rarer for the wait.
-                            </p>
-                            <button
-                              onClick={() => onEquipSpecial2?.(equippedSpecial2 ? null : 'anglers_patience')}
-                              className="font-karla font-700 uppercase tracking-[0.1em]"
-                              style={{
-                                width: '100%', height: 34, borderRadius: 9, cursor: 'pointer',
-                                background: equippedSpecial2 ? 'rgba(255,255,255,0.06)' : 'rgba(111,211,199,0.18)',
-                                border: `1px solid ${equippedSpecial2 ? 'rgba(255,255,255,0.14)' : 'rgba(111,211,199,0.5)'}`,
-                                color: equippedSpecial2 ? '#9a958c' : '#6fd3c7', fontSize: '0.62rem', touchAction: 'manipulation',
-                              }}>
-                              {equippedSpecial2 ? 'Unseat' : 'Seat it'}
-                            </button>
-                          </>
-                        ) : (
-                          <p className="font-karla" style={{ margin: 0, fontSize: '0.68rem', lineHeight: 1.45, color: '#7a7875', textAlign: 'center' }}>
-                            Empty. Only The Angler&apos;s Patience seats here, and it comes off Finn.
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
                   </div>
                 </div>
               )}
@@ -2439,6 +2419,43 @@ export default function GearScreen({
                     Tabs let the player swap cosmetic axes without
                     bouncing back to the gear grid; one toast at the
                     top serves all purchases inside this panel. ── */}
+              {/* ── Special (second slot) ── */}
+              {openSlot === 'special2' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#6fd3c7' }}>The Deep Reel</p>
+                  {!hasDeepReel ? (
+                    <div style={{ padding: '1rem 0.85rem', borderRadius: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.09)' }}>
+                      <p className="font-karla" style={{ margin: 0, fontSize: '0.72rem', lineHeight: 1.5, color: '#9a958c', textAlign: 'center' }}>
+                        A second special slot, still shut. It opens with the spoils of the Sunken Hand, and it takes one thing only.
+                      </p>
+                    </div>
+                  ) : !hasAnglersPatience ? (
+                    <div style={{ padding: '1rem 0.85rem', borderRadius: 12, background: 'rgba(111,211,199,0.06)', border: '1px solid rgba(111,211,199,0.28)' }}>
+                      <p className="font-karla" style={{ margin: 0, fontSize: '0.72rem', lineHeight: 1.5, color: '#9a958c', textAlign: 'center' }}>
+                        Open, and empty. Only The Angler&apos;s Patience seats here, and it comes off Finn.
+                      </p>
+                    </div>
+                  ) : (
+                    <div style={{ padding: '0.8rem 0.85rem', borderRadius: 12, background: equippedSpecial2 ? 'rgba(111,211,199,0.1)' : 'rgba(255,255,255,0.03)', border: equippedSpecial2 ? '1px solid rgba(111,211,199,0.45)' : '1px solid rgba(255,255,255,0.10)' }}>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+                        <span className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#e8e4de' }}>The Angler&apos;s Patience</span>
+                        {equippedSpecial2 && <span className="font-karla font-800 uppercase tracking-[0.12em]" style={{ fontSize: '0.5rem', color: '#6fd3c7' }}>Equipped</span>}
+                      </div>
+                      <p className="font-karla" style={{ margin: '4px 0 10px', fontSize: '0.7rem', lineHeight: 1.45, color: '#9a958c' }}>
+                        Bites take half again as long to come, and what surfaces is markedly rarer for the wait.
+                      </p>
+                      <button
+                        onClick={() => onEquipSpecial2?.(equippedSpecial2 ? null : 'anglers_patience')}
+                        className="font-karla font-700 uppercase tracking-[0.1em]"
+                        style={{ width: '100%', height: 36, borderRadius: 10, cursor: 'pointer', background: equippedSpecial2 ? 'rgba(255,255,255,0.06)' : 'rgba(111,211,199,0.18)', border: equippedSpecial2 ? '1px solid rgba(255,255,255,0.14)' : '1px solid rgba(111,211,199,0.5)', color: equippedSpecial2 ? '#9a958c' : '#6fd3c7', fontSize: '0.64rem', touchAction: 'manipulation' }}>
+                        {equippedSpecial2 ? 'Unequip' : 'Equip'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+
               {openSlot === 'appearance' && (
                 // min-height keeps the sheet a stable size as the
                 // player swaps between Skin / Hat / Boat / Pet — each
