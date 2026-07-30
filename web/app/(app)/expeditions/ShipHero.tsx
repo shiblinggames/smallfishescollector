@@ -35,6 +35,7 @@ import { RARITY_COLORS as CREW_RARITY_COLORS, RARITY_NAMES } from '@/lib/crewGen
 import { RAID_ITEMS, getRaidItem, FORGE_RECIPES, forgeComponentIds, conflictingRaidItems, isForgedRaidItem, isAbyssalForgedItem, isConvertibleEpic, legendaryForEpic } from '@/lib/raidItems'
 import { PRISMATIC_TEXT, prismaticBorder, forgedBorderSoft, forgedTextSoft, ABYSSAL_EMBER_TEXT, abyssalEmberBorder, primevalBorder, PRIMEVAL_TEXT } from '@/lib/prismatic'
 import ForgeBoard, { type ForgeTab } from './ForgeBoard'
+import LoadoutSummary from './LoadoutSummary'
 import { renameShip, buyShip } from '@/app/shipyard/actions'
 import { getXPProgress, navLevelBonuses, MAX_LEVEL, getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import { renownLevel, renownProgress, spentPoints, type RenownAlloc } from '@/lib/renown'
@@ -539,6 +540,11 @@ export default function ShipHero({
   const mountIds = new Set(RAID_ITEMS.filter(i => i.finaleSlotOnly).map(i => i.id))
   const mountedFinale = equippedItems.find(id => mountIds.has(id)) ?? null
   const hullItems = equippedItems.filter(id => !mountIds.has(id))
+  // The Maw carries its power on its CHARGE, which only reaches getActiveEffects
+  // through the id tag the server adds. Without tagging here the summary would
+  // quietly total it as zero (its def deliberately has no flat effects).
+  const chargedEquippedIds = equippedItems.map(id =>
+    id === 'borrowed_jaw' ? `borrowed_jaw#${finnItemLevel(borrowedJawXp)}` : id)
   const ownedFinale = ownedRaidItems.filter(id => mountIds.has(id))
   // DISPLAY ONLY. The mount is not a hull slot and must stay out of every cap
   // check (toggleItem, saveEquippedRaidItems, getRaidPlayerStats all split it
@@ -1670,17 +1676,24 @@ export default function ShipHero({
                 <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.56rem', color: '#c4b078' }}>{slotsFilled}/{slotsTotal} slots</span>
               </div>
               )}
-              {/* At-a-glance summary of every active item + what it does. */}
+              {/* The hero: what everything mounted actually adds up to. The slots
+                  below say WHAT you carry; this says what it comes to, which is
+                  the question you opened the page with. */}
+              <LoadoutSummary equippedIds={chargedEquippedIds} />
+              {/* The per-item breakdown is now a footnote to that total rather
+                  than a full-width call to action. */}
               {equippedItems.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setEffectsOpen(true)}
-                  className="font-karla font-700 uppercase tracking-[0.12em]"
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, width: '100%', padding: '0.55rem', marginBottom: '1rem', borderRadius: 10, fontSize: '0.56rem', color: '#c8d2e0', background: 'rgba(120,140,170,0.1)', border: '1px solid rgba(120,140,170,0.28)', cursor: 'pointer' }}
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" /></svg>
-                  Active effects summary
-                </button>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.15rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => setEffectsOpen(true)}
+                    className="font-karla font-700 uppercase tracking-[0.12em]"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.34rem 0.72rem', borderRadius: 999, fontSize: '0.52rem', color: '#c8d2e0', background: 'rgba(120,140,170,0.1)', border: '1px solid rgba(120,140,170,0.28)', cursor: 'pointer', touchAction: 'manipulation' }}
+                  >
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" /></svg>
+                    All equipment effects
+                  </button>
+                </div>
               )}
               {/* THREE across, so the full six read as two tidy rows instead of
                   a tall stack of wide rows. Same art-first language as the
