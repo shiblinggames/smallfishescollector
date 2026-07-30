@@ -567,6 +567,8 @@ export default function ShipHero({
   // Tapped an EQUIPPED loadout slot: open a detail modal (effect + Unequip)
   // instead of removing it outright. Holds the equipped item id being viewed.
   const [itemDetail, setItemDetail] = useState<string | null>(null)
+  /** The equip picker, opened by tapping an empty hull slot. */
+  const [pickerOpen, setPickerOpen] = useState(false)
   // The locked mount explains itself on tap rather than wearing a label. A
   // permanent caption on a slot most players will never fill is clutter.
   const [mountNote, setMountNote] = useState(false)
@@ -1708,10 +1710,21 @@ export default function ShipHero({
                       </button>
                     )
                   }
+                  // An empty slot is the obvious place to tap when you want to
+                  // fill it, so it opens the picker. It used to be an inert div,
+                  // which meant the ONLY way to equip was to scroll past the
+                  // slots to a list further down the drawer.
                   return (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 64, padding: '0.6rem', borderRadius: 12, border: '1.5px dashed rgba(255,255,255,0.16)', background: 'rgba(255,255,255,0.02)' }}>
-                      <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.56rem', color: '#6a6764' }}>Empty slot</span>
-                    </div>
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setPickerOpen(true)}
+                      aria-label="Empty slot. Tap to choose an item to equip."
+                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 64, padding: '0.6rem', borderRadius: 12, border: '1.5px dashed rgba(255,255,255,0.16)', background: 'rgba(255,255,255,0.02)', cursor: 'pointer', font: 'inherit', touchAction: 'manipulation' }}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7d8894" strokeWidth="2.2" strokeLinecap="round" aria-hidden><path d="M12 5v14M5 12h14" /></svg>
+                      <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.54rem', color: '#7d8894' }}>Equip</span>
+                    </button>
                   )
                 })}
                 {/* THE EXTRA MOUNT. Drawn as a real cell in the same grid so it
@@ -1776,83 +1789,100 @@ export default function ShipHero({
                 })()}
               </div>
 
-              {/* ── Inventory ── owned items you HAVEN'T equipped; tap to slot one. */}
+              {/* ── Inventory ── everything you own, art first, on ONE rail that
+                  scrolls sideways. It used to be a vertical stack of wide rows
+                  carrying a two-line description each, which pushed a modest
+                  collection well past the fold. Tap a tile for the full detail
+                  and its equip action. */}
               {(() => {
-                const unequipped = ownedRaidItems.filter(id => !equippedItems.includes(id) && !mountIds.has(id))
+                const owned = ownedRaidItems.filter(id => !mountIds.has(id))
                 const full = hullItems.length >= raidItemSlots
+                if (ownedRaidItems.length === 0) {
+                  return (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.6rem' }}>
+                        <span className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.22em', color: '#8794a6' }}>Inventory</span>
+                        <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
+                      </div>
+                      <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.14)', borderRadius: 14, padding: '1.7rem 1rem', margin: '0.7rem 0 1.6rem' }}>
+                        <p className="font-karla text-center" style={{ fontSize: '0.8rem', color: '#7a7470', lineHeight: 1.55 }}>No items yet.<br />Clear raids to earn them.</p>
+                      </div>
+                    </>
+                  )
+                }
                 return (
                   <>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.6rem' }}>
                       <span className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.22em', color: '#8794a6' }}>Inventory</span>
                       <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
-                      {unequipped.length > 0 && <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.56rem', color: '#8a8480' }}>{unequipped.length} owned</span>}
+                      <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.56rem', color: '#8a8480' }}>{owned.length} owned</span>
                     </div>
-                    {ownedRaidItems.length === 0 ? (
-                      <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.14)', borderRadius: 14, padding: '1.7rem 1rem', margin: '0.7rem 0 1.6rem' }}>
-                        <p className="font-karla text-center" style={{ fontSize: '0.8rem', color: '#7a7470', lineHeight: 1.55 }}>No items yet.<br />Clear raids to earn them.</p>
-                      </div>
-                    ) : unequipped.length === 0 ? (
-                      <p className="font-karla" style={{ fontSize: '0.74rem', color: '#7a7470', textAlign: 'center', padding: '1rem 0 1.6rem', fontStyle: 'italic' }}>Everything you own is equipped.</p>
-                    ) : (
-                      <>
-                        <p className="font-karla" style={{ fontSize: '0.74rem', color: full ? '#d8a14a' : '#8a8480', marginBottom: '0.85rem', lineHeight: 1.45 }}>
-                          {full ? 'Hull full — remove a slot above to swap something in.' : 'Tap an item to equip it.'}
-                        </p>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.6rem' }}>
-                          {unequipped.map(itemId => {
-                            const def = getRaidItem(itemId)
-                            if (!def) return null
-                            const color = RARITY_ITEM_COLOR[def.rarity]
-                            const forged = isForgedRaidItem(itemId)
-                            const abyssal = isAbyssalForgedItem(itemId)
-                            const isNew = newRaidItems.has(itemId)
-                            // A conflicting item currently equipped (same-family
-                            // grade, or the ingredients this fusion was forged
-                            // from): tapping this SWAPS for it (they don't stack),
-                            // so it costs no net slot and stays tappable even on a
-                            // full hull.
-                            const swapNames = conflictingRaidItems(itemId, equippedItems)
-                              .map(id => getRaidItem(id)?.name).filter(Boolean) as string[]
-                            const wouldSwap = swapNames.length > 0
-                            const blocked = full && !wouldSwap
-                            return (
-                              <button
-                                key={itemId}
-                                type="button"
-                                onClick={blocked ? undefined : () => toggleItem(itemId)}
-                                disabled={blocked}
-                                aria-label={blocked ? `${def.name}. Hull full, free a slot first.` : wouldSwap ? `${def.name}. Tap to swap for ${swapNames.join(', ')}.` : `${def.name}. Tap to equip.`}
-                                style={{ borderRadius: 12, padding: '0.7rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.8rem', cursor: blocked ? 'not-allowed' : 'pointer', width: '100%', textAlign: 'left', opacity: blocked ? 0.42 : 1, transition: 'opacity 0.15s', ...(forged ? { ...forgedBorderSoft('rgba(14,18,26,0.9)', abyssal), boxShadow: abyssal ? '0 0 13px rgba(255,90,60,0.24)' : '0 0 11px rgba(150,140,180,0.16)' } : { background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.1)' }) }}
-                              >
-                                <div style={{ flexShrink: 0, width: 46, height: 46, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', ...(forged ? forgedBorderSoft('rgba(20,24,32,0.9)', abyssal) : { background: `${color}12`, border: `1px solid ${color}40` }) }}>
-                                  {def.image ? (
-                                    /* eslint-disable-next-line @next/next/no-img-element */
-                                    <img src={def.image} alt="" loading="lazy" decoding="async" className={abyssal ? 'rod-glow-abyssal' : undefined} style={{ width: 33, height: 33, objectFit: 'contain' }} />
-                                  ) : (
-                                    <span style={{ fontSize: '1.55rem', lineHeight: 1, color, display: 'flex' }}><IconCrate size={25} /></span>
-                                  )}
-                                </div>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', marginBottom: 2, ...(forged ? forgedTextSoft(abyssal) : { color: '#f0ede8' }) }}>
-                                    {def.name}
-                                    {isNew && <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.08em', color: '#1a1206', background: '#ffd96a', borderRadius: 4, padding: '0.12rem 0.32rem', marginLeft: 7, verticalAlign: 'middle' }}>New</span>}
-                                  </p>
-                                  <p className="font-karla" style={{ fontSize: '0.72rem', color: '#8a8480', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{def.description}</p>
-                                  {wouldSwap && (
-                                    <p className="font-karla font-700" style={{ fontSize: '0.64rem', color: '#d8a14a', lineHeight: 1.35, marginTop: 3 }}>
-                                      Same gear as {swapNames.join(', ')} — equipping swaps it in (they don&apos;t stack).
-                                    </p>
-                                  )}
-                                </div>
-                                <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.58rem', color: blocked ? '#6a6764' : wouldSwap ? '#d8a14a' : '#9ae6b4', padding: '0.24rem 0.55rem', borderRadius: 999, background: blocked ? 'rgba(255,255,255,0.04)' : wouldSwap ? 'rgba(216,161,74,0.12)' : 'rgba(154,230,180,0.10)', border: `1px solid ${blocked ? 'rgba(255,255,255,0.1)' : wouldSwap ? 'rgba(216,161,74,0.34)' : 'rgba(154,230,180,0.32)'}`, flexShrink: 0, whiteSpace: 'nowrap' }}>
-                                  {blocked ? 'Full' : wouldSwap ? 'Swap' : 'Equip'}
+                    <p className="font-karla" style={{ fontSize: '0.7rem', color: full ? '#d8a14a' : '#8a8480', marginBottom: '0.7rem', lineHeight: 1.45 }}>
+                      {full ? 'Hull full. Tap an equipped item to free its slot.' : 'Tap an item for its effect and to equip it.'}
+                    </p>
+                    <div
+                      className="scrollbar-hide"
+                      style={{
+                        display: 'flex', gap: 8, overflowX: 'auto', overflowY: 'hidden',
+                        scrollSnapType: 'x proximity', WebkitOverflowScrolling: 'touch',
+                        margin: '0 -1.1rem 1.6rem', padding: '0 1.1rem',
+                      }}
+                    >
+                      {owned.map(itemId => {
+                        const def = getRaidItem(itemId)
+                        if (!def) return null
+                        const color = RARITY_ITEM_COLOR[def.rarity] ?? '#9ca3af'
+                        const abyssal = isAbyssalForgedItem(itemId)
+                        const forged = isForgedRaidItem(itemId)
+                        const isNew = newRaidItems.has(itemId)
+                        const on = equippedItems.includes(itemId)
+                        // Same-family grades and a fusion's own ingredients do not
+                        // stack, so equipping one SWAPS rather than costing a slot.
+                        // That stays available on a full hull, and the tile says so.
+                        const wouldSwap = !on && conflictingRaidItems(itemId, equippedItems).length > 0
+                        const blocked = !on && full && !wouldSwap
+                        return (
+                          <button
+                            key={itemId}
+                            type="button"
+                            onClick={() => setItemDetail(itemId)}
+                            aria-label={`${def.name}${on ? ', equipped' : blocked ? ', hull full' : ''}. Tap for details.`}
+                            style={{
+                              flex: '0 0 auto', width: 104, scrollSnapAlign: 'start',
+                              display: 'flex', flexDirection: 'column', gap: 4,
+                              padding: 0, background: 'none', border: 'none',
+                              cursor: 'pointer', font: 'inherit',
+                              opacity: blocked ? 0.45 : 1, transition: 'opacity 0.15s',
+                              touchAction: 'manipulation',
+                            }}
+                          >
+                            <div style={{
+                              position: 'relative', width: '100%', height: 78,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}>
+                              {def.image
+                                // eslint-disable-next-line @next/next/no-img-element
+                                ? <img src={def.image} alt="" loading="lazy" decoding="async" className={abyssal ? 'rod-glow-abyssal' : undefined} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', filter: `drop-shadow(0 3px 10px ${color}66)` }} />
+                                : <span style={{ color, display: 'flex' }}><IconCrate size={34} /></span>}
+                              {on && (
+                                <span style={{ position: 'absolute', top: 2, right: 2, width: 17, height: 17, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(10,20,14,0.86)', border: '1px solid rgba(74,222,128,0.65)' }}>
+                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l4 4 10-10" /></svg>
                                 </span>
-                              </button>
-                            )
-                          })}
-                        </div>
-                      </>
-                    )}
+                              )}
+                              {isNew && !on && (
+                                <span className="font-karla font-700 uppercase" style={{ position: 'absolute', top: 2, left: 2, fontSize: '0.44rem', letterSpacing: '0.08em', color: '#1a1206', background: '#ffd96a', borderRadius: 4, padding: '0.1rem 0.26rem' }}>New</span>
+                              )}
+                            </div>
+                            <span className="font-karla font-800 uppercase tracking-[0.08em]" style={{ fontSize: '0.54rem', textAlign: 'center', color: on ? '#7fd49a' : wouldSwap ? '#d8a14a' : blocked ? '#6a6764' : color }}>
+                              {on ? 'Equipped' : wouldSwap ? 'Swap' : blocked ? 'Full' : 'Equip'}
+                            </span>
+                            <span className="font-karla font-600" style={{ display: 'block', width: '100%', fontSize: '0.6rem', lineHeight: 1.25, textAlign: 'center', color: forged ? '#c9c0e4' : '#b9b3a8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {def.name}
+                            </span>
+                          </button>
+                        )
+                      })}
+                    </div>
                   </>
                 )
               })()}
@@ -2474,6 +2504,79 @@ export default function ShipHero({
 
       {/* Equipped raid-item detail — tap a Battle Loadout slot to read its
           effect, then Close or Unequip (no more one-tap removal). */}
+      {/* ── Equip picker ── opened from an empty hull slot. Deliberately a
+          COMMIT-AND-CLOSE list rather than another detail view: you tapped a
+          hole, so the fast thing is to fill it. Anything that cannot go in is
+          still listed, greyed, with the reason, so the collection reads whole
+          instead of hiding items that look missing. */}
+      <PopupShell open={pickerOpen} onClose={() => setPickerOpen(false)}>
+        {(() => {
+          const choices = ownedRaidItems.filter(id => !mountIds.has(id) && !equippedItems.includes(id))
+          return (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 4 }} transition={{ duration: 0.18 }}
+              style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 400, background: 'rgba(8,14,24,0.98)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 18, padding: '1.3rem 1rem 1rem', maxHeight: '82vh', display: 'flex', flexDirection: 'column' }}
+            >
+              <button onClick={() => setPickerOpen(false)} aria-label="Close" style={{ position: 'absolute', top: 6, right: 8, zIndex: 6, color: 'rgba(255,255,255,0.55)', fontSize: '1.2rem', lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem 0.4rem' }}>✕</button>
+              <p className="font-cinzel font-800" style={{ fontSize: '1rem', color: '#f0ede8', marginBottom: 3 }}>Equip an item</p>
+              <p className="font-karla" style={{ fontSize: '0.68rem', color: '#8a8480', marginBottom: 12 }}>
+                {hullItems.length}/{raidItemSlots} slots filled. Effects stack no matter which slot.
+              </p>
+              {choices.length === 0 ? (
+                <p className="font-karla" style={{ fontSize: '0.76rem', color: '#7a7470', textAlign: 'center', padding: '1.6rem 0', fontStyle: 'italic' }}>
+                  {ownedRaidItems.length === 0 ? 'No items yet. Clear raids to earn them.' : 'Everything you own is already equipped.'}
+                </p>
+              ) : (
+                <div className="scrollbar-hide" style={{ display: 'flex', flexDirection: 'column', gap: 6, overflowY: 'auto', minHeight: 0, overscrollBehavior: 'contain' }}>
+                  {choices.map(itemId => {
+                    const def = getRaidItem(itemId)
+                    if (!def) return null
+                    const color = RARITY_ITEM_COLOR[def.rarity] ?? '#9ca3af'
+                    const abyssal = isAbyssalForgedItem(itemId)
+                    const swapNames = conflictingRaidItems(itemId, equippedItems)
+                      .map(id => getRaidItem(id)?.name).filter(Boolean) as string[]
+                    const wouldSwap = swapNames.length > 0
+                    const full = hullItems.length >= raidItemSlots
+                    const blocked = full && !wouldSwap
+                    return (
+                      <button
+                        key={itemId}
+                        type="button"
+                        disabled={blocked}
+                        onClick={blocked ? undefined : () => { toggleItem(itemId); setPickerOpen(false) }}
+                        aria-label={blocked ? `${def.name}. Hull full, free a slot first.` : wouldSwap ? `${def.name}. Tap to swap for ${swapNames.join(', ')}.` : `${def.name}. Tap to equip.`}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left',
+                          padding: '0.55rem 0.6rem', borderRadius: 11,
+                          background: 'rgba(255,255,255,0.035)', border: `1px solid ${blocked ? 'rgba(255,255,255,0.08)' : `${color}3a`}`,
+                          cursor: blocked ? 'not-allowed' : 'pointer', font: 'inherit',
+                          opacity: blocked ? 0.45 : 1, touchAction: 'manipulation',
+                        }}
+                      >
+                        <div style={{ flexShrink: 0, width: 44, height: 44, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', background: `${color}12`, border: `1px solid ${color}33` }}>
+                          {def.image
+                            // eslint-disable-next-line @next/next/no-img-element
+                            ? <img src={def.image} alt="" loading="lazy" decoding="async" className={abyssal ? 'rod-glow-abyssal' : undefined} style={{ width: 34, height: 34, objectFit: 'contain' }} />
+                            : <span style={{ color, display: 'flex' }}><IconCrate size={24} /></span>}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.82rem', color: '#f0ede8' }}>{def.name}</p>
+                          <p className="font-karla" style={{ fontSize: '0.64rem', color: '#8a8480', lineHeight: 1.35, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                            {wouldSwap ? `Replaces ${swapNames.join(', ')}. They do not stack.` : def.description}
+                          </p>
+                        </div>
+                        <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ flexShrink: 0, whiteSpace: 'nowrap', fontSize: '0.56rem', padding: '0.24rem 0.5rem', borderRadius: 999, color: blocked ? '#6a6764' : wouldSwap ? '#d8a14a' : '#9ae6b4', background: blocked ? 'rgba(255,255,255,0.04)' : wouldSwap ? 'rgba(216,161,74,0.12)' : 'rgba(154,230,180,0.1)', border: `1px solid ${blocked ? 'rgba(255,255,255,0.1)' : wouldSwap ? 'rgba(216,161,74,0.34)' : 'rgba(154,230,180,0.32)'}` }}>
+                          {blocked ? 'Full' : wouldSwap ? 'Swap' : 'Equip'}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </motion.div>
+          )
+        })()}
+      </PopupShell>
       <PopupShell open={!!itemDetail} onClose={() => setItemDetail(null)}>
         {itemDetail && (() => {
           const def = getRaidItem(itemDetail)
@@ -2508,7 +2611,36 @@ export default function ShipHero({
               )}
               <div style={{ display: 'flex', gap: 8, marginTop: '1.3rem' }}>
                 <button type="button" onClick={() => setItemDetail(null)} className="font-cinzel font-700 uppercase tracking-[0.06em]" style={{ flex: 1, padding: '0.72rem', borderRadius: 11, fontSize: '0.8rem', color: '#c8d2e0', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', cursor: 'pointer' }}>Close</button>
-                <button type="button" onClick={() => { toggleItem(itemDetail); setItemDetail(null) }} className="font-cinzel font-700 uppercase tracking-[0.06em]" style={{ flex: 1, padding: '0.72rem', borderRadius: 11, fontSize: '0.8rem', color: '#e0c078', background: 'rgba(196,176,120,0.14)', border: '1px solid rgba(196,176,120,0.42)', cursor: 'pointer' }}>Unequip</button>
+                {/* The action reads the item's ACTUAL state. This modal is now
+                    reached from the inventory rail as well as from a filled
+                    slot, so a hardcoded "Unequip" would have offered to remove
+                    something the player does not have on. */}
+                {(() => {
+                  const on = equippedItems.includes(itemDetail)
+                  const swaps = on ? [] : conflictingRaidItems(itemDetail, equippedItems)
+                    .map(id => getRaidItem(id)?.name).filter(Boolean) as string[]
+                  const isMount = mountIds.has(itemDetail)
+                  const hullFull = !isMount && hullItems.length >= raidItemSlots
+                  const blocked = !on && hullFull && swaps.length === 0
+                  const label = on ? (isMount ? 'Unmount' : 'Unequip') : swaps.length ? 'Swap in' : isMount ? 'Mount' : 'Equip'
+                  return (
+                    <button
+                      type="button"
+                      disabled={blocked}
+                      onClick={blocked ? undefined : () => { toggleItem(itemDetail); setItemDetail(null) }}
+                      className="font-cinzel font-700 uppercase tracking-[0.06em]"
+                      style={{
+                        flex: 1, padding: '0.72rem', borderRadius: 11, fontSize: '0.8rem',
+                        color: blocked ? '#6a6764' : '#e0c078',
+                        background: blocked ? 'rgba(255,255,255,0.04)' : 'rgba(196,176,120,0.14)',
+                        border: `1px solid ${blocked ? 'rgba(255,255,255,0.1)' : 'rgba(196,176,120,0.42)'}`,
+                        cursor: blocked ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      {blocked ? 'Hull full' : label}
+                    </button>
+                  )
+                })()}
               </div>
             </motion.div>
           )
