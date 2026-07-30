@@ -2232,12 +2232,13 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
           ability: {
             kind: 'leviathan', name: 'The Borrowed Jaw',
             summonImage: '/fish/megalodon.png', summonColor: '#f87171',
-            // THE BIGGEST SINGLE HIT IN THE FIGHT, which is what the last of the
-            // six should be. At 1.0 it landed for 107 against his own ultimate's
-            // 199, so his final stolen giant hit for half a routine pattern slot.
-            // 2.4 puts it above the ultimate, and it is the player's own last
-            // catch being thrown back at them.
-            value: 2.4,
+            // The biggest single ABILITY in the fight, but sized against the
+            // PLAYER, not against his own ultimate. An endgame hull is roughly
+            // 260 (Man-o-War 125 + nav 100, times hull mults), so 2.4 landed at
+            // 256: a near one-shot from a move with no telegraph. 1.4 puts it at
+            // ~149, about 57% of hull. Still the hardest thing he throws that is
+            // not his telegraphed ultimate, and survivable from full.
+            value: 1.4,
           } },
       ],
     },
