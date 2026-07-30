@@ -1679,22 +1679,7 @@ export default function ShipHero({
               {/* The hero: what everything mounted actually adds up to. The slots
                   below say WHAT you carry; this says what it comes to, which is
                   the question you opened the page with. */}
-              <LoadoutSummary equippedIds={chargedEquippedIds} />
-              {/* The per-item breakdown is now a footnote to that total rather
-                  than a full-width call to action. */}
-              {equippedItems.length > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.15rem' }}>
-                  <button
-                    type="button"
-                    onClick={() => setEffectsOpen(true)}
-                    className="font-karla font-700 uppercase tracking-[0.12em]"
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.34rem 0.72rem', borderRadius: 999, fontSize: '0.52rem', color: '#c8d2e0', background: 'rgba(120,140,170,0.1)', border: '1px solid rgba(120,140,170,0.28)', cursor: 'pointer', touchAction: 'manipulation' }}
-                  >
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" /></svg>
-                    All equipment effects
-                  </button>
-                </div>
-              )}
+              <LoadoutSummary equippedIds={chargedEquippedIds} onOpenEffects={() => setEffectsOpen(true)} />
               {/* THREE across, so the full six read as two tidy rows instead of
                   a tall stack of wide rows. Same art-first language as the
                   inventory rail and the boss cards: the piece IS the tile, the
