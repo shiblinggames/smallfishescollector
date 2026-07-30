@@ -5885,7 +5885,13 @@ export default function FishingGame({
     const oldId = catchResult.fish.id
     try {
       const res = await rerollWormhole()
-      if ('error' in res) return
+      // The token is one-shot and already spent server-side, so a failure means
+      // there is nothing left to reroll (usually the catch was sold out of the
+      // hold first). Retire the affordance rather than leaving a dead button.
+      if ('error' in res) {
+        setCatchResult(prev => prev ? { ...prev, wormhole: false } : prev)
+        return
+      }
       setInventory(prev => {
         const trimmed = prev
           .map(i => i.fish_id === oldId ? { ...i, quantity: i.quantity - res.qty } : i)

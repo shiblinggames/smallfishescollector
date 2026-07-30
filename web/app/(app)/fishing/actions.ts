@@ -1080,11 +1080,22 @@ export async function rerollWormhole(): Promise<
   const pending = (profile?.pending_reroll ?? null) as { fishId: number; qty: number; habitat: string } | null
   if (!pending) return { error: 'No catch to reroll.' }
 
-  // Clear the token immediately so this is strictly one-shot even if the player
-  // double-taps — the swap below is keyed off the captured `pending` values.
-  await admin.from('profiles').update({ pending_reroll: null }).eq('id', user.id)
+  // Claim the token ATOMICALLY so this is strictly one-shot. A plain update
+  // here let a double-tap through: both calls read the same `pending` and both
+  // reached the grant below. The conditional update means exactly one caller
+  // ever sees a row back.
+  const { data: rerollClaimed } = await admin
+    .from('profiles')
+    .update({ pending_reroll: null })
+    .eq('id', user.id)
+    .not('pending_reroll', 'is', null)
+    .select('id')
+  if (!rerollClaimed || rerollClaimed.length === 0) return { error: 'No catch to reroll.' }
 
   const { fishId: origId, qty, habitat } = pending
+
+  // Pick where the wormhole comes out FIRST. This is all read-only, so the
+  // failure paths below bail before the player's hold has been touched.
   const { data: candidates } = await admin
     .from('fish_species')
     .select('id, catch_difficulty, catch_score, bite_rarity, sell_value')
@@ -1100,14 +1111,29 @@ export async function rerollWormhole(): Promise<
   const { data: newFish } = await admin.from('fish_species').select('*').eq('id', picked.id).single()
   if (!newFish) return { error: 'The wormhole collapsed.' }
 
-  // Hold swap — remove the original stack, add the new one (qty-neutral).
-  const { data: origRow } = await admin.from('fish_inventory').select('quantity').eq('user_id', user.id).eq('fish_id', origId).single()
-  if (origRow) {
-    const left = Math.max(0, origRow.quantity - qty)
-    if (left === 0) await admin.from('fish_inventory').delete().eq('user_id', user.id).eq('fish_id', origId)
-    else await admin.from('fish_inventory').update({ quantity: left }).eq('user_id', user.id).eq('fish_id', origId)
-  }
-  const { data: newRow } = await admin.from('fish_inventory').select('quantity').eq('user_id', user.id).eq('fish_id', newFish.id).single()
+  // ── CONSUME THE ORIGINAL, THEN GRANT ───────────────────────────────────────
+  // A wormhole swaps one stack for another; it does not conjure a second one.
+  // Selling the catch and THEN opening the wormhole used to skip the removal
+  // (missing row, or Math.max clamping at 0) while the grant still ran — a
+  // clean duplication faucet, worst on a ×100 jackpot haul. So the removal
+  // happens BEFORE the grant, and it doubles as the guard: the write carries
+  // the quantity it read, so a sale landing in between matches zero rows and
+  // the reroll refuses instead of minting fish.
+  const HOLD_GONE = { error: 'That catch is already out of your hold. The wormhole needs something to send.' }
+  const { data: origRow } = await admin.from('fish_inventory')
+    .select('quantity').eq('user_id', user.id).eq('fish_id', origId).maybeSingle()
+  if (!origRow || origRow.quantity < qty) return HOLD_GONE
+
+  const left = origRow.quantity - qty
+  const consume = left === 0
+    ? admin.from('fish_inventory').delete()
+        .eq('user_id', user.id).eq('fish_id', origId).eq('quantity', origRow.quantity).select('fish_id')
+    : admin.from('fish_inventory').update({ quantity: left })
+        .eq('user_id', user.id).eq('fish_id', origId).eq('quantity', origRow.quantity).select('fish_id')
+  const { data: consumed } = await consume
+  if (!consumed || consumed.length === 0) return HOLD_GONE
+
+  const { data: newRow } = await admin.from('fish_inventory').select('quantity').eq('user_id', user.id).eq('fish_id', newFish.id).maybeSingle()
   if (newRow) await admin.from('fish_inventory').update({ quantity: newRow.quantity + qty }).eq('user_id', user.id).eq('fish_id', newFish.id)
   else await admin.from('fish_inventory').insert({ user_id: user.id, fish_id: newFish.id, quantity: qty })
 
