@@ -7,7 +7,7 @@ import { EXPEDITION_SHIP_STATS, raidRepairCost, raidItemSlotsForTier, raidDamage
 import { getLevelFromXP, navLevelBonuses } from '@/lib/expeditionLevel'
 import { loadDeployedParty } from '@/lib/crewData'
 import { resolveDeployedCrew } from '@/lib/crewResolve'
-import { getActiveEffects, dedupeRaidItems } from '@/lib/raidItems'
+import { getActiveEffects, dedupeRaidItems, RAID_ITEMS } from '@/lib/raidItems'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { navRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { getShipSkin } from '@/lib/shipSkins'
@@ -95,7 +95,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('ship_tier, saved_crew, ship_name, username, character_color, equipped_hat, avatar_bg_color, avatar_border_color, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, equipped_repair_kit, has_seen_raid_tutorial, expedition_xp, nav_renown_alloc, ship_classes, gauntlet_upgrades, dons_gauntlet_upgrades, manowar_augment, manowar_augment_build, has_sixth_berth, has_armory_expansion, rod_tier, hook_tier, reel_tier, completionist_effects')
+    .select('ship_tier, saved_crew, ship_name, username, character_color, equipped_hat, avatar_bg_color, avatar_border_color, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, equipped_repair_kit, has_seen_raid_tutorial, expedition_xp, nav_renown_alloc, ship_classes, gauntlet_upgrades, dons_gauntlet_upgrades, manowar_augment, manowar_augment_build, has_sixth_berth, has_armory_expansion, finn_spoil_free, finn_spoil_paid, rod_tier, hook_tier, reel_tier, completionist_effects')
     .eq('id', userId)
     .single()
 
@@ -165,7 +165,19 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
   // Drop items that can't coexist (tier-family grades + a fusion beside its own
   // forge ingredients) so a legacy/stale loadout can't double-apply a stat that
   // was never meant to stack, then cap to the hull's slots.
-  const equippedItems = dedupeRaidItems(rawEquipped).slice(0, slotCap)
+  // THE SUNKEN HAND MOUNT. Not a general slot: it exists only while you hold
+  // the nav spoil, and it accepts only the item that spoil is for. So rather
+  // than widening slotCap for everyone, his item is pulled OUT of the normal
+  // loadout, checked against the unlock, and re-attached beside it. That way
+  // it never competes for a hull slot and it can never be worn without the
+  // unlock, however the array got saved.
+  const spoilFree = (profile as { finn_spoil_free?: string | null } | null)?.finn_spoil_free ?? null
+  const spoilPaid = (profile as { finn_spoil_paid?: string | null } | null)?.finn_spoil_paid ?? null
+  const hasMount  = spoilFree === 'nav' || spoilPaid === 'nav'
+  const finaleIds = new Set(RAID_ITEMS.filter(i => i.finaleSlotOnly).map(i => i.id))
+  const mounted   = hasMount ? rawEquipped.filter(id => finaleIds.has(id)).slice(0, 1) : []
+  const normal    = rawEquipped.filter(id => !finaleIds.has(id))
+  const equippedItems = [...dedupeRaidItems(normal).slice(0, slotCap), ...mounted]
   const hpMaxMult = getActiveEffects(equippedItems)
     .filter(e => e.type === 'max_hp_mult')
     .reduce((a, e) => a * e.value, 1)

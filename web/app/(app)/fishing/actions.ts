@@ -184,7 +184,7 @@ export async function castLine(baitType: string, habitat: string): Promise<
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('rod_tier, completionist_effects, hook_tier, fishing_xp, fish_hold_tier, ancient_catches, active_event, catch_pending, fishing_renown_alloc, has_ancient_deep_access, current_perfect_streak, current_streak_zone')
+    .select('rod_tier, completionist_effects, hook_tier, fishing_xp, fish_hold_tier, ancient_catches, active_event, catch_pending, fishing_renown_alloc, has_ancient_deep_access, current_perfect_streak, current_streak_zone, equipped_special_2, has_anglers_patience')
     .eq('id', user.id)
     .single()
 
@@ -294,6 +294,14 @@ export async function castLine(baitType: string, habitat: string): Promise<
   // is the server's own current_perfect_streak, never a client value.
   const castStreak = (profile.catch_pending || zoneChanged) ? 0 : prevStreak
   const locked = lockedInState(rod, castStreak)
+  // THE ANGLER'S PATIENCE (Finn's drop, second special slot only). His whole
+  // method in one item: it does not hurry. Bites take half again as long to
+  // come, and what surfaces is meaningfully rarer for the wait. Gated on the
+  // slot AND ownership, both read from the profile, so it cannot apply to a
+  // player who never beat him.
+  const patienceOn = profile.equipped_special_2 === 'anglers_patience' && profile.has_anglers_patience === true
+  const patienceWaitMult   = patienceOn ? 1.5 : 1
+  const patienceRarityBonus = patienceOn ? 0.35 : 0
 
   // Crate encounter: 2% chance (× rod.crateChanceMult — Treasure Rod = 2×).
   // Rolled up-front so the in-flight flag below can skip crates — they're
@@ -348,7 +356,7 @@ export async function castLine(baitType: string, habitat: string): Promise<
     const trophyPool  = pool.filter(f => (f.sell_value ?? 0) === 0)   // uncaught trophies (lure casts only)
     const regularPool = pool.filter(f => (f.sell_value ?? 0) > 0)
     const baseTrophyChance = baitType === 'golden' ? 0.20 : baitType === 'luminous' ? 0.15 : 0
-    const trophyChance = Math.min(0.95, baseTrophyChance * (1 + (rod.rarityBonus + eventRarityBonus + locked.rarityBonus) * 4))
+    const trophyChance = Math.min(0.95, baseTrophyChance * (1 + (rod.rarityBonus + eventRarityBonus + locked.rarityBonus + patienceRarityBonus) * 4))
     if (ALWAYS_ANCIENT_TROPHY && trophyPool.length > 0) {
       // Test account: always the lowest-id uncaught giant, so they surface in a
       // predictable order (144→148, then Megalodon once the gate opens).
@@ -356,17 +364,17 @@ export async function castLine(baitType: string, habitat: string): Promise<
     } else if (trophyPool.length > 0 && Math.random() < trophyChance) {
       fish = trophyPool[Math.floor(Math.random() * trophyPool.length)]
     } else if (regularPool.length > 0) {
-      fish = tierWeightedPick(regularPool, habitat, rod.rarityBonus + eventRarityBonus + locked.rarityBonus)
+      fish = tierWeightedPick(regularPool, habitat, rod.rarityBonus + eventRarityBonus + locked.rarityBonus + patienceRarityBonus)
     } else {
       // Regulars somehow exhausted — hand back a trophy so the cast still lands.
       fish = trophyPool[Math.floor(Math.random() * trophyPool.length)]
     }
   } else {
-    fish = tierWeightedPick(pool, habitat, rod.rarityBonus + eventRarityBonus + locked.rarityBonus)
+    fish = tierWeightedPick(pool, habitat, rod.rarityBonus + eventRarityBonus + locked.rarityBonus + patienceRarityBonus)
   }
   // Locked-In quickens bites at streak 3+ (−20%) / 10+ (−35%); take the faster of
   // the rod's base speed and the streak stage.
-  let waitMs = fishWaitMs(fish.catch_score, habitat, baitType, fishingLevel, renownWaitMult, Math.min(rodWaitMult(rod), locked.waitMult))
+  let waitMs = fishWaitMs(fish.catch_score, habitat, baitType, fishingLevel, renownWaitMult, Math.min(rodWaitMult(rod), locked.waitMult) * patienceWaitMult)
 
   // Lightsaber Rod — "Lightspeed": a chance the bite is near-instant. This is
   // the only rod stat that actually changes the bite wait (biteIntervalMs is
@@ -510,7 +518,7 @@ export async function reelIn(
   }
 
   const [{ data: profile }, { data: holdRows }] = await Promise.all([
-    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, rod_tier, completionist_effects, fish_hold_tier, has_phantom_hook, has_perfected_sigil, equipped_special, line_tier, prestige_levels, ancient_catches, unlocked_character_colors, total_perfects, current_perfect_streak, highest_perfect_streak, force_shiny_next_perfect, force_shiny_always, fishing_renown_alloc, pending_cast, zone_golden_boost, lifetime_species').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, rod_tier, completionist_effects, fish_hold_tier, has_phantom_hook, has_perfected_sigil, equipped_special, equipped_special_2, has_anglers_patience, line_tier, prestige_levels, ancient_catches, unlocked_character_colors, total_perfects, current_perfect_streak, highest_perfect_streak, force_shiny_next_perfect, force_shiny_always, fishing_renown_alloc, pending_cast, zone_golden_boost, lifetime_species').eq('id', user.id).single(),
     admin.from('fish_inventory').select('quantity').eq('user_id', user.id),
   ])
 
