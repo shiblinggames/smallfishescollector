@@ -2952,6 +2952,8 @@ function BossTile({ view, isNext, challengeCleared, onOpen }: { view: RaidNodeVi
   const node = view.node
   const bossName = bossNameOf(node)
   const cleared = view.status === 'cleared'
+  // See the note in the boss panel below: revealed-by-story bosses are not masked.
+  const shown = cleared || node.revealBoss === true
   const locked = view.status === 'locked'
   const accent = locked ? '#4f4a42' : isNext ? '#5eead4' : '#c4a96a'
   return (
@@ -2962,9 +2964,9 @@ function BossTile({ view, isNext, challengeCleared, onOpen }: { view: RaidNodeVi
         boxShadow: isNext ? `0 0 0 1px ${accent}40, 0 0 22px ${accent}22` : '0 6px 18px rgba(0,0,0,0.42)' }}>
       {node.image && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={node.image} alt={cleared ? bossName : 'Undiscovered boss'} loading="lazy" decoding="async"
+        <img src={node.image} alt={shown ? bossName : 'Undiscovered boss'} loading="lazy" decoding="async"
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: '50% 16%',
-            filter: cleared ? 'grayscale(0.28) brightness(0.82)' : 'brightness(0)' }} />
+            filter: shown ? 'grayscale(0.28) brightness(0.82)' : 'brightness(0)' }} />
       )}
       <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(6,10,16,0) 42%, rgba(6,10,16,0.9) 100%)' }} />
       {cleared && (
@@ -2985,7 +2987,7 @@ function BossTile({ view, isNext, challengeCleared, onOpen }: { view: RaidNodeVi
       )}
       {locked && <span aria-hidden style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}><IconLock size={26} /></span>}
       <span style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '0.45rem 0.55rem 0.55rem' }}>
-        <span className="font-cinzel font-700" style={{ display: 'block', fontSize: '0.98rem', lineHeight: 1.06, color: cleared ? '#fff' : '#8f887c', letterSpacing: cleared ? undefined : '0.15em', textShadow: '0 2px 7px rgba(0,0,0,0.95)' }}>{cleared ? bossName : '???'}</span>
+        <span className="font-cinzel font-700" style={{ display: 'block', fontSize: '0.98rem', lineHeight: 1.06, color: shown ? '#fff' : '#8f887c', letterSpacing: shown ? undefined : '0.15em', textShadow: '0 2px 7px rgba(0,0,0,0.95)' }}>{shown ? bossName : '???'}</span>
       </span>
     </button>
   )
@@ -3009,6 +3011,9 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
   const node = boss.node
   const bossName = bossNameOf(node)
   const cleared = boss.status === 'cleared'   // beat the boss NORMALLY → art revealed
+  // Identity masking is separate from CLEARED: a boss the story has already
+  // introduced should not be a silhouette just because you have not beaten them.
+  const shown = cleared || boss.node.revealBoss === true
   const locked = boss.status === 'locked'
   const blocked = repairOwed > 0
   const chAvailable = !!challenge && (challenge.status === 'available' || challenge.status === 'cleared')
@@ -3092,14 +3097,14 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
           )}
           {node.image && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={node.image} alt={cleared ? bossName : 'Undiscovered boss'} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 28%', filter: cleared ? 'drop-shadow(0 8px 22px rgba(0,0,0,0.6))' : 'brightness(0) drop-shadow(0 8px 22px rgba(0,0,0,0.6))' }} />
+            <img src={node.image} alt={shown ? bossName : 'Undiscovered boss'} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 28%', filter: shown ? 'drop-shadow(0 8px 22px rgba(0,0,0,0.6))' : 'brightness(0) drop-shadow(0 8px 22px rgba(0,0,0,0.6))' }} />
           )}
           <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(6,10,16,0.2) 0%, rgba(6,10,16,0.12) 52%, rgba(10,17,25,0.98) 100%)' }} />
           <button type="button" onClick={onClose} aria-label="Close" style={{ position: 'absolute', top: 12, right: 12, width: 32, height: 32, borderRadius: '50%', padding: 0, background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.18)', color: '#e6e0d4', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
           </button>
           <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '0 1.1rem 0.6rem', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10 }}>
-            <p className="font-cinzel font-800" style={{ fontSize: '1.55rem', lineHeight: 1.05, color: cleared ? '#fff' : '#c8c1b3', letterSpacing: cleared ? undefined : '0.14em', textShadow: `0 2px 10px rgba(0,0,0,0.9), 0 0 20px ${accent}30` }}>{cleared ? bossName : '???'}</p>
+            <p className="font-cinzel font-800" style={{ fontSize: '1.55rem', lineHeight: 1.05, color: shown ? '#fff' : '#c8c1b3', letterSpacing: shown ? undefined : '0.14em', textShadow: `0 2px 10px rgba(0,0,0,0.9), 0 0 20px ${accent}30` }}>{shown ? bossName : '???'}</p>
             <span className="font-karla font-700 uppercase" style={{ flexShrink: 0, fontSize: '0.5rem', letterSpacing: '0.12em', padding: '0.26rem 0.6rem', borderRadius: 999, marginBottom: 5,
               ...(pillCleared ? { color: '#8ff0c0', background: 'rgba(74,222,128,0.14)', border: '1px solid rgba(74,222,128,0.45)' }
                 : pillNext ? { color: '#08120f', background: 'rgba(94,234,212,0.92)' }

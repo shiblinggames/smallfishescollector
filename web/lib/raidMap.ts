@@ -459,6 +459,12 @@ export interface RaidNode {
    *  Entering is still refused (the CTA reads Locked, and the route re-checks the
    *  gate server-side). */
   previewWhenLocked?: boolean
+  /** Show this boss's face and NAME before they are beaten. Bosses are masked
+   *  (silhouette + "???") until cleared, which is right when the fight is the
+   *  introduction. It is wrong when the STORY has already introduced them: for
+   *  Finn the node right before this one is the reveal, so masking him after it
+   *  un-tells the twist the player just watched. */
+  revealBoss?: boolean
   /** Optional extra gate: minimum Navigation level. */
   requiresNavLevel?: number
   /** Optional extra gate: how many Ancient Deep giants you must have landed
@@ -2720,7 +2726,11 @@ export const RAID_MAP: RaidNode[] = [
     route: '/raids/sunken-hand',
     previewWhenLocked: true,
     comingSoon: true,
-    image: '/finn_final.png',
+    // The node card paints its art into a SQUARE box under a circular mask, so
+    // the full-body piece rendered him tiny with his head clipped by the mask.
+    // finn_node.png is a face crop sized for that circle.
+    image: '/finn_node.png',
+    revealBoss: true,   // the_hand_that_sharpens already showed the player exactly who he is
     sceneAccent: '#a78bfa',
     detail: {
       description:
