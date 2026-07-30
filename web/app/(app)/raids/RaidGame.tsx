@@ -1616,6 +1616,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 aimStyle={config.aimStyle}
                 critStreakCfg={config.critStreak}
                 defeatSequence={config.defeatSequence}
+                bossDefeatedText={config.bossDefeatedText}
                 dialAim={dialAim}
                 onPhaseBg={setPhaseBg}
                 shipImageUrl={shipImageUrl}
@@ -1788,7 +1789,6 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
           {bossDialoguePending && config.preFightDialogue && (
             <BossDialogueModal
               boss={config.enemies[config.bossId]}
-              bossDefeatedText={config.bossDefeatedText}
               raidTitle={config.raidTitle}
               lines={config.preFightDialogue}
               accent={config.dialogueAccent}

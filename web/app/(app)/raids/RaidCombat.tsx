@@ -485,6 +485,10 @@ export interface RaidCombatProps {
   critStreakCfg?: { perStack: number; maxStacks: number; label?: string; pierceAt?: number }
   /** Bespoke defeat beat for this boss (BossRaidConfig.defeatSequence). */
   defeatSequence?: { lines: string[] }
+  /** Callout shown when the BOSS goes down ("Barnacle Pete Defeated"). Every
+   *  boss authored one and it rendered nowhere: it was being handed to the
+   *  PRE-fight dialogue modal, which never used it. */
+  bossDefeatedText?: string
   /** The player's FISHING gear, widening the dial's hit + crit bands by the
    *  same degrees it widens the fishing dial. Ignored unless aimStyle 'dial'. */
   dialAim?: DialAimBonus
@@ -620,6 +624,7 @@ export default function RaidCombat({
   onPhaseBg,
   critStreakCfg,
   defeatSequence,
+  bossDefeatedText,
   runBoons, runCurses,
   anchorSaveAvailable = false, onAnchorSave,
   raidMods, riskyFlee = false, fleeSignal, fleeNav,
@@ -5415,6 +5420,14 @@ export default function RaidCombat({
             // No white kill-flash — the explosion burst + sink animation
             // carry the kill (the flash read as a jarring whiteout on the sink).
             setEnemySinking(true)
+            // THE DEFEAT CALLOUT, reusing the phase-change banner. Skipped when
+            // this boss has a bespoke defeat sequence, since that carries the
+            // moment itself and a banner on top of it would just collide.
+            if (isBoss && bossDefeatedText && !defeatSequence?.lines?.length) {
+              setPhaseCallout(bossDefeatedText)
+              setPhaseFlash(true)
+              setTimeout(() => setPhaseFlash(false), 2200)
+            }
             // THE FINALE gets its own ending. The ordinary sink still plays
             // underneath (his hull still goes down), but the hand-off to loot
             // waits for the beat, and the overlay carries the moment.

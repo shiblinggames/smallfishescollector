@@ -27,7 +27,6 @@ import type { BossDialogueLine, BroadsideEnemy } from '@/lib/bossRaids'
 
 interface Props {
   boss: BroadsideEnemy
-  bossDefeatedText: string
   raidTitle: string
   lines: BossDialogueLine[]
   playerLabel: string
