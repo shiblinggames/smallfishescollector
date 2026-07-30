@@ -370,14 +370,14 @@ const INDICATOR_SPEED = 0.006
 // static-zone restructure) all read wrong or changed the game. The
 // frozen frame IS the judgment; if it shows gold, the badge says gold.
 
-function getShotResult(pos: number, zoneCenter: number, critW: number = CRIT_W, hitW: number = HIT_W, grazeW: number = GRAZE_W, wrap = false): ShotResult {
-  // Distance from the band's centre. Identical to the old L/R bound tests on a
-  // bar, but expressed as a distance so the DIAL can measure it the short way
-  // round: there, 0.99 and 0.01 are neighbours, and a linear compare would call
-  // a dead-centre shot across the seam a miss.
-  let d = pos - zoneCenter
-  if (wrap) d = ((d + 0.5) % 1 + 1) % 1 - 0.5
-  const a = Math.abs(d)
+function getShotResult(pos: number, zoneCenter: number, critW: number = CRIT_W, hitW: number = HIT_W, grazeW: number = GRAZE_W): ShotResult {
+  // Distance from the band's centre. Measured LINEARLY along the sweep, on the
+  // dial as well as the bar: both the needle AND the band now turn back at the
+  // marked line, so neither ever crosses it and 0..1 is a straight path in both
+  // instruments. (If the band is ever allowed to wrap through the line again,
+  // this must become a shortest-way-round measure, or a shot on one side of the
+  // line will score against a band on the other.)
+  const a = Math.abs(pos - zoneCenter)
   if (a <= critW)          return 'critical'
   if (a <= hitW)           return 'hit'
   if (a <= hitW + grazeW)  return 'graze'
@@ -2405,14 +2405,17 @@ export default function RaidCombat({
       if (firePosRef.current <= 0) { firePosRef.current = 0; fireDirRef.current = 1 }
 
       zonePosRef.current += ZONE_SPEED * frames * zoneDirRef.current
-      if (onDial) {
-        // A circle has no ends, so Finn ORBITS: 0..1 wraps instead of bouncing
-        // off the bar's edges. Without this he would patrol an arc and never
-        // cross the top of the dial, which reads as him avoiding a dead spot.
-        zonePosRef.current = (zonePosRef.current % 1 + 1) % 1
-      } else {
-        if (zonePosRef.current >= 1 - HIT_W - GRAZE_W) { zonePosRef.current = 1 - HIT_W - GRAZE_W; zoneDirRef.current = -1 }
-        if (zonePosRef.current <= HIT_W + GRAZE_W)     { zonePosRef.current = HIT_W + GRAZE_W;     zoneDirRef.current = 1 }
+      // THE BAND BOUNCES TOO, off the same marked line the needle turns on,
+      // exactly as the aim bar's target bounces off its two ends. Clamped by
+      // the band's OWN half-width so its outer edge just kisses the line
+      // instead of half the band disappearing past it.
+      //
+      // One clamp for both instruments: off the dial aimHitW/aimGrazeW ARE
+      // HIT_W/GRAZE_W (scale 1, no gear bonus), so the bar is unchanged.
+      {
+        const edge = aimHitWRef.current + aimGrazeWRef.current
+        if (zonePosRef.current >= 1 - edge) { zonePosRef.current = 1 - edge; zoneDirRef.current = -1 }
+        if (zonePosRef.current <= edge)     { zonePosRef.current = edge;     zoneDirRef.current = 1 }
       }
 
       // Rolling Plate: walk the seam inside the hit band, bouncing at the
@@ -2447,7 +2450,7 @@ export default function RaidCombat({
 
       if (indicatorRef.current) {
         paintNeedle(indicatorRef.current, firePosRef.current)
-        let zone = getShotResult(firePosRef.current, zonePosRef.current, liveCritWRef.current, aimHitWRef.current, aimGrazeWRef.current, onDial)
+        let zone = getShotResult(firePosRef.current, zonePosRef.current, liveCritWRef.current, aimHitWRef.current, aimGrazeWRef.current)
         // Rolling Plate: the gold tell tracks the SEAM, not the zone center.
         if (seamDrift > 0) {
           const seamC = zonePosRef.current + critSeamOffsetRef.current

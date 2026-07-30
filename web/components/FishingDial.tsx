@@ -192,19 +192,14 @@ export function DialSVG({
         </g>
 
         {/* THE TURNAROUND. Drawn OUTSIDE the rotating zones group so it stays
-            fixed on the face while the band travels past it. Doubled chevrons
-            either side read as "the needle turns back here". */}
+            fixed on the face while the band travels past it. Both the needle
+            AND the band turn back here. */}
         {turnMark && (
           <g>
             <line x1={CX} y1={CY - OUTER_R - 7} x2={CX} y2={CY - INNER_R + 3}
               stroke="#f8fafc" strokeWidth="2" strokeOpacity="0.85" strokeLinecap="round" />
             <line x1={CX} y1={CY - OUTER_R - 7} x2={CX} y2={CY - INNER_R + 3}
               stroke="#f8fafc" strokeWidth="6" strokeOpacity="0.18" strokeLinecap="round" />
-            {/* opposing chevrons: the sweep arrives, stops, goes back */}
-            <path d={`M ${CX - 11} ${CY - OUTER_R - 13} l 5 5 l -5 5`} fill="none"
-              stroke="#f8fafc" strokeWidth="1.6" strokeOpacity="0.8" strokeLinecap="round" strokeLinejoin="round" />
-            <path d={`M ${CX + 11} ${CY - OUTER_R - 13} l -5 5 l 5 5`} fill="none"
-              stroke="#f8fafc" strokeWidth="1.6" strokeOpacity="0.8" strokeLinecap="round" strokeLinejoin="round" />
           </g>
         )}
         <circle cx={CX} cy={CY} r={INNER_R - 2} fill="url(#innerGrad)" />
