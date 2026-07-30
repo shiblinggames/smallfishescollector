@@ -13,7 +13,7 @@
 import { CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER, THE_COFFERS_FLEET, THE_QUARTERMASTER, THE_QUARTERMASTERS_GHOST, THE_BLOCKADE, THE_THRONE, THE_SUNKEN_HAND, GEM_GLYPH, raidCompletionBonusXp, type RaidLootItem, type BossRaidConfig } from '@/lib/bossRaids'
 import { SIXTH_BERTH_COST, ARMORY_EXPANSION_COST } from '@/lib/shipBerth'
 import type { RaidMuster, MusterReport } from '@/lib/crewMuster'
-import { CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE, THE_CARTOGRAPHER_CHALLENGE, THE_TOLLMASTER_CHALLENGE, THE_COFFERS_FLEET_CHALLENGE, THE_QUARTERMASTER_CHALLENGE, THE_BLOCKADE_CHALLENGE, THE_THRONE_CHALLENGE } from '@/lib/raidChallenge'
+import { CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE, THE_CARTOGRAPHER_CHALLENGE, THE_TOLLMASTER_CHALLENGE, THE_COFFERS_FLEET_CHALLENGE, THE_QUARTERMASTER_CHALLENGE, THE_BLOCKADE_CHALLENGE, THE_THRONE_CHALLENGE, THE_SUNKEN_HAND_CHALLENGE } from '@/lib/raidChallenge'
 import { getShipSkin } from '@/lib/shipSkins'
 import { getRaidItem } from '@/lib/raidItems'
 
@@ -2726,10 +2726,7 @@ export const RAID_MAP: RaidNode[] = [
     route: '/raids/sunken-hand',
     previewWhenLocked: true,
     comingSoon: true,
-    // The node card paints its art into a SQUARE box under a circular mask, so
-    // the full-body piece rendered him tiny with his head clipped by the mask.
-    // finn_node.png is a face crop sized for that circle.
-    image: '/finn_node.png',
+    image: '/finn_final.png',
     revealBoss: true,   // the_hand_that_sharpens already showed the player exactly who he is
     sceneAccent: '#a78bfa',
     detail: {
@@ -2738,6 +2735,32 @@ export const RAID_MAP: RaidNode[] = [
       dropsNote: 'The end of the Sunken Hand.',
       ctaLabel: 'Coming Soon',
       summary: 'The last fight. Read The Hand That Sharpens It first.',
+    },
+  },
+  {
+    // CHALLENGE: only opens once he is already dead. There is no story past
+    // this, so it is pure post-game: the same six phases with everything turned
+    // up, for players who want the fight again on worse terms.
+    id: 'one_last_ride_challenge',
+    type: 'raid',
+    label: 'Challenge: One Last Ride',
+    flavor: 'He is still down there, and the water still remembers the shape of him. Go again, with none of the mercy.',
+    requiresNode: 'one_last_ride',
+    route: '/raids/sunken-hand/challenge',
+    raidId: THE_SUNKEN_HAND_CHALLENGE.raidId,
+    sideBranch: { parentId: 'one_last_ride' },
+    previewWhenLocked: true,
+    comingSoon: true,
+    image: '/finn_final.png',
+    revealBoss: true,
+    sceneAccent: '#a78bfa',
+    detail: {
+      description:
+        'Six phases, six stolen giants, and a chain you cannot afford to drop. Everything he does hits harder and his own rhythm is tighter, so the Perfect Streak stops being a reward and starts being the requirement.',
+      enemies: ['Finn (six phases)'],
+      drops: lootDrops(THE_SUNKEN_HAND_CHALLENGE.loot),
+      clearReward: clearPayout(THE_SUNKEN_HAND_CHALLENGE),
+      dropsNote: 'His uniques roll at double the normal rate.',
     },
   },
   // The Davy Jones Gauntlet used to sit here as a chapter-2 side branch.

@@ -580,6 +580,7 @@ export const RAID_LOCATION_BG: Record<string, string> = {
   the_quartermaster:  '/raid-quartermaster.jpg',      // The Quartermaster — storm fortress-vault
   the_blockade:       '/raid-blockade.jpg',           // Sal Brackwater — the brackish estuary
   the_throne:         '/raid-throne.jpg',             // Don Finleone — the Ancient Deep throne
+  the_sunken_hand:    '/finn_bg1.jpg',                  // Finn — the ring of drowned giants at a wrong dawn
 }
 
 // The BOSS-fight variant of each location — the same place escalated for the
@@ -596,6 +597,7 @@ export const RAID_BOSS_BG: Record<string, string> = {
   the_quartermaster:  '/raid-quartermaster-boss.jpg',
   the_blockade:       '/raid-blockade-boss.jpg',
   the_throne:         '/raid-throne-boss.jpg',
+  the_sunken_hand:    '/finn_bg6.jpg',                // Finn's throne: the gateway of jaws
 }
 
 export const CORSAIRS_RECKONING: BossRaidConfig = {
@@ -2262,7 +2264,16 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
   // NO mob sequence. It is him from the first shot to the last.
   sequence: [],
   bossId: 'finn',
-  loot: [],
+  // The six giants, given back as gear. PLACEHOLDER ART on every one: they all
+  // point at /raidlog.png until the real pieces land, so the table is wired end
+  // to end and no grant silently fails. Swap the image paths only.
+  loot: [
+    { id: 'anglers_patience', label: "The Angler's Patience", image: '/raidlog.png', emoji: '🎣', rarity: 'legendary', weight: 6 },
+    { id: 'borrowed_jaw',     label: 'The Borrowed Jaw',      image: '/raidlog.png', emoji: '🦈', rarity: 'legendary', weight: 6 },
+    { id: 'drowned_plate',    label: 'Drowned Plate',         image: '/raidlog.png', emoji: '🛡️', rarity: 'epic',      weight: 12 },
+    { id: 'long_line',        label: 'The Long Line',         image: '/raidlog.png', emoji: '⚓', rarity: 'epic',      weight: 12 },
+    { id: 'finns_ledger',     label: "Finn's Ledger",         image: '/raidlog.png', emoji: '📕', rarity: 'epic',      weight: 12 },
+  ],
   killRewards: {
     finn: { gold: 12000, xp: 12000 },
   },

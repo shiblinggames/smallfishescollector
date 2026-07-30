@@ -14,18 +14,18 @@
 import {
   CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER,
   THE_COFFERS_FLEET, THE_QUARTERMASTER, THE_QUARTERMASTERS_GHOST,
-  THE_BLOCKADE, THE_THRONE, type BossRaidConfig,
+  THE_BLOCKADE, THE_THRONE, THE_SUNKEN_HAND, type BossRaidConfig,
 } from './bossRaids'
 import {
   CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE, THE_CARTOGRAPHER_CHALLENGE,
   THE_TOLLMASTER_CHALLENGE, THE_COFFERS_FLEET_CHALLENGE, THE_QUARTERMASTER_CHALLENGE,
-  THE_BLOCKADE_CHALLENGE, THE_THRONE_CHALLENGE,
+  THE_BLOCKADE_CHALLENGE, THE_THRONE_CHALLENGE, THE_SUNKEN_HAND_CHALLENGE,
 } from './raidChallenge'
 
 export const ALL_RAIDS: BossRaidConfig[] = [
   CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER,
   THE_COFFERS_FLEET, THE_QUARTERMASTER, THE_QUARTERMASTERS_GHOST,
-  THE_BLOCKADE, THE_THRONE,
+  THE_BLOCKADE, THE_THRONE, THE_SUNKEN_HAND,
   CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE, THE_CARTOGRAPHER_CHALLENGE,
   THE_TOLLMASTER_CHALLENGE, THE_COFFERS_FLEET_CHALLENGE, THE_QUARTERMASTER_CHALLENGE,
   THE_BLOCKADE_CHALLENGE, THE_THRONE_CHALLENGE,
@@ -98,6 +98,12 @@ export const ITEM_GRANTS: Record<string, { doubloons?: number; gems?: number; sh
   // Legacy "pack" loot ids now pay gems (packs are retired): 100 gems per pack.
   pack:            { gems: 100 },
   pack_2:          { gems: 200 },
+  // The Sunken Hand. Every loot id needs an entry here or the grant is skipped.
+  anglers_patience:        { raidItem: 'anglers_patience' },
+  borrowed_jaw:            { raidItem: 'borrowed_jaw' },
+  drowned_plate:           { raidItem: 'drowned_plate' },
+  long_line:               { raidItem: 'long_line' },
+  finns_ledger:            { raidItem: 'finns_ledger' },
   corsair_cannon:          { raidItem: 'corsair_cannon' },
   corsair_prime_cannon:    { raidItem: 'corsair_prime_cannon' },
   krusts_carapace:         { raidItem: 'krusts_carapace' },

@@ -318,6 +318,61 @@ export const RAID_ITEMS: RaidItemDef[] = [
   // chest ladder (see lib/gauntlet chestCannonDropChance). Collect BOTH and the
   // forge (in the Manage Ship loadout drawer) sacrifices them for the Grand
   // Cannon — recipe in DAVY_FORGE below. Art is a cannon placeholder for now.
+  // ── THE SUNKEN HAND (Finn) ────────────────────────────────────────────────
+  // The six giants he drained, given back as gear. PLACEHOLDER ART: every one
+  // points at /raidlog.png until the real pieces land, so the drop table is
+  // wired end to end and nothing silently fails a grant. Swap `image` only.
+  {
+    id: 'anglers_patience',
+    name: "The Angler's Patience",
+    description: 'He waited a lifetime for one cast. A normal hit has a 22% chance to come up critical instead.',
+    image: '/raidlog.png',
+    emoji: '🎣',
+    rarity: 'legendary',
+    effects: [{ type: 'crit_upgrade_chance', value: 0.22 }],
+    source: 'The Sunken Hand',
+  },
+  {
+    id: 'borrowed_jaw',
+    name: 'The Borrowed Jaw',
+    description: "Megalodon teeth, set in someone else's iron. +16% damage on boss rounds.",
+    image: '/raidlog.png',
+    emoji: '🦈',
+    rarity: 'legendary',
+    effects: [{ type: 'boss_damage_mult', value: 1.16 }],
+    source: 'The Sunken Hand',
+  },
+  {
+    id: 'drowned_plate',
+    name: 'Drowned Plate',
+    description: 'Fossil armour off a giant that outlived its own bones. You take 12% less damage from everything.',
+    image: '/raidlog.png',
+    emoji: '🛡️',
+    rarity: 'epic',
+    effects: [{ type: 'incoming_damage_mult', value: 0.88 }],
+    source: 'The Sunken Hand',
+  },
+  {
+    id: 'long_line',
+    name: 'The Long Line',
+    description: 'All that patience, paid out at once. +20% damage on critical shots.',
+    image: '/raidlog.png',
+    emoji: '⚓',
+    rarity: 'epic',
+    effects: [{ type: 'crit_damage_mult', value: 1.20 }],
+    source: 'The Sunken Hand',
+  },
+  {
+    id: 'finns_ledger',
+    name: "Finn's Ledger",
+    description: 'Every name he ever bought, in his own hand. +14% max hull.',
+    image: '/raidlog.png',
+    emoji: '📕',
+    rarity: 'epic',
+    effects: [{ type: 'max_hp_mult', value: 1.14 }],
+    source: 'The Sunken Hand',
+  },
+
   {
     id: 'davys_heavy_cannon',
     name: "Davy's Heavy Cannon",
