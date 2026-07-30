@@ -1614,6 +1614,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 // 'dial' on the Finn finale: the whole fight is aimed on the
                 // fishing dial instead of the bar (see BossRaidConfig.aimStyle).
                 aimStyle={config.aimStyle}
+                critStreakCfg={config.critStreak}
                 dialAim={dialAim}
                 onPhaseBg={setPhaseBg}
                 shipImageUrl={shipImageUrl}

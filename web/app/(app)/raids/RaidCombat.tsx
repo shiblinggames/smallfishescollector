@@ -480,6 +480,9 @@ export interface RaidCombatProps {
    *  0..1 drivers, same judgment, wrapped onto a circle, with the enemy ship
    *  orbiting as the band. Only the Finn finale uses it. */
   aimStyle?: 'bar' | 'dial'
+  /** Crit-streak ramp baked into the raid (BossRaidConfig.critStreak). Runs
+   *  through the same path as the Cannonade boon. */
+  critStreakCfg?: { perStack: number; maxStacks: number; label?: string }
   /** The player's FISHING gear, widening the dial's hit + crit bands by the
    *  same degrees it widens the fishing dial. Ignored unless aimStyle 'dial'. */
   dialAim?: DialAimBonus
@@ -613,6 +616,7 @@ export default function RaidCombat({
   aimStyle = 'bar',
   dialAim,
   onPhaseBg,
+  critStreakCfg,
   runBoons, runCurses,
   anchorSaveAvailable = false, onAnchorSave,
   raidMods, riskyFlee = false, fleeSignal, fleeNav,
@@ -724,8 +728,11 @@ export default function RaidCombat({
     // this just carries the per-stack/cap tuning), Counter-Battery (chance to
     // negate an enemy shot you fire into). Rising Tide / Abyssal Bounty resolve
     // straight into dmgMult below using the live run tally.
-    let critStreakPerStack = 0
-    let critStreakMaxStacks = 0
+    // A raid can BAKE the ramp in (Finn) rather than it arriving as a drafted
+    // boon. Folded in here so every downstream consumer works unchanged: the
+    // damage multiplier, the commit-on-landed-shot, the log line, the hull rim.
+    let critStreakPerStack  = critStreakCfg?.perStack  ?? 0
+    let critStreakMaxStacks = critStreakCfg?.maxStacks ?? 0
     let counterFireChance   = 0
     // Confluences on the momentum boons: Broadside Duel (counters fire more +
     // feed the streak + refund), Return to Sender (counter reflects their shell),
@@ -1149,6 +1156,10 @@ export default function RaidCombat({
   // any non-crit shot resets it to 0. Fresh per fight (RaidCombat remounts per
   // enemy), so no manual reset needed.
   const critStreakRef = useRef(0)
+  // What the streak is CALLED in the log. Cannonade when it is the drafted
+  // Gauntlet boon; a raid that bakes the ramp in names its own (Finn calls it
+  // Perfect Streak, borrowing the fishing language on purpose).
+  const streakLabel = critStreakCfg?.label ?? 'Cannonade'
   // Cleanse Mender flag — Lv 100 Mender heals AND strips one enemy debuff
   // from the player. There's no in-fight debuff system yet, so this is a
   // hook for future expansion; for now it's tracked but does nothing.
@@ -5089,14 +5100,14 @@ export default function RaidCombat({
           // Broadside Duel: a counter also stacks the streak harder.
           const inc = 1 + (counterProc ? tide.counterBonusStack : 0)
           critStreakRef.current = Math.min(tide.critStreakMaxStacks, prior + inc)
-          if (critStreakRef.current >= 2) stepLines.push(`Cannonade! ${critStreakRef.current} crits running — +${Math.round(tide.critStreakPerStack * critStreakRef.current * 100)}% damage.`)
+          if (critStreakRef.current >= 2) stepLines.push(`${streakLabel} x${critStreakRef.current}. +${Math.round(tide.critStreakPerStack * critStreakRef.current * 100)}% damage while you hold it.`)
         } else if (counterProc && tide.counterBonusStack > 0) {
           // Broadside Duel: winning the exchange holds your rhythm even on a
           // non-crit — the chain doesn't break, and the win still stacks it.
           critStreakRef.current = Math.min(tide.critStreakMaxStacks, prior + tide.counterBonusStack)
           stepLines.push(`Broadside Duel — you win the exchange and the guns keep their rhythm (${critStreakRef.current} stack${critStreakRef.current === 1 ? '' : 's'}).`)
         } else {
-          if (prior >= 2) stepLines.push(`Cannonade fades — the chain of crits breaks.`)
+          if (prior >= 2) stepLines.push(`${streakLabel} broken. Back to zero.`)
           critStreakRef.current = 0
         }
         cannonadeStep = critStreakRef.current
@@ -7035,6 +7046,7 @@ export default function RaidCombat({
                 zoneCenter={zonePosRef.current}
                 snapKey={dialSnapKey}
                 perfectBurstKey={dialBurstKey}
+                streakFire={cannonadeStacks >= 3 ? 2 : cannonadeStacks === 2 ? 1 : 0}
               />
             </div>
           </div>,
@@ -10689,7 +10701,7 @@ const DIAL_ZONE_OPACITY = (z: ZoneDef) =>
 
 function DialAimInline({
   indicatorRef, zonesGroupRef, flashRef, critW,
-  afflictionLabel, hardenedArmed, hitW, grazeW, firePos, zoneCenter, snapKey, perfectBurstKey,
+  afflictionLabel, hardenedArmed, hitW, grazeW, firePos, zoneCenter, snapKey, perfectBurstKey, streakFire,
 }: {
   indicatorRef:  React.RefObject<HTMLDivElement | null>
   zonesGroupRef: React.RefObject<SVGGElement | null>
@@ -10710,6 +10722,9 @@ function DialAimInline({
    *  burst on a crit. */
   snapKey: number
   perfectBurstKey: number
+  /** The dial CATCHES FIRE on a crit streak: the same halos and rings the
+   *  fishing dial lights with on a perfect streak, at the same thresholds. */
+  streakFire: 0 | 1 | 2
 }) {
   const zones = useMemo(() => buildDialZones(critW, hitW, grazeW), [critW, hitW, grazeW])
   // Finn orbits at the middle of the band's radius.
@@ -10734,6 +10749,7 @@ function DialAimInline({
         zoneOpacityFn={DIAL_ZONE_OPACITY}
         needleStyle="marker"
         turnMark
+        fireLevel={streakFire}
         snapKey={snapKey}
         perfectBurstKey={perfectBurstKey}
       />

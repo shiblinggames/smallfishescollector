@@ -457,6 +457,13 @@ export interface BossRaidConfig {
    *  EQUIPPED ROD/HOOK/LINE widen the bands exactly as they do when fishing.
    *  Every fishing hour the player has put in shows up here as a wider shot. */
   aimStyle?: 'bar' | 'dial'
+  /** A crit STREAK ramp baked into the raid itself, rather than drafted as a
+   *  Gauntlet boon. Same machinery as Cannonade: consecutive landed CRITS ramp
+   *  your damage, any landed non-crit resets it. The streak is per-ENEMY, and
+   *  a phased boss is one enemy, so it runs the WHOLE fight across every phase.
+   *  Built for the finale: hold your rhythm all the way through and you are
+   *  paid for it, which is the fishing perfect-streak feel brought into combat. */
+  critStreak?: { perStack: number; maxStacks: number; label?: string }
   enemies: Record<string, BroadsideEnemy>
   sequence: string[]   // non-boss enemy IDs in order; boss fires every sequence.length+1 rounds
   bossId: string
@@ -2097,6 +2104,11 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
   bossDefeatedText: 'Finn Defeated',
   // THE convergence: the entire fight is fought on the fishing dial.
   aimStyle: 'dial',
+  // THE STREAK. +7% damage per consecutive crit, up to 14 (so +98% at a perfect
+  // run). Deliberately generous at the top: it has to survive six phases of a
+  // boss with a full health bar each, so a player holding the rhythm the whole
+  // way should feel the fight bend under them.
+  critStreak: { perStack: 0.07, maxStacks: 14, label: 'Perfect Streak' },
   atmosphere: 'vault',
   zone: 'ancient_deep',
   enemies: {
