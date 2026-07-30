@@ -54,7 +54,7 @@ export default function FishingPageClient({
   initialDoubloons, initialGems, initialFathoms, initialFishingXP, initialBait, initialLastUsedBait, initialInventory, uniqueSpeciesCaught, zoneStats, ancientDeepUnlocked,
   fishHoldTier, ownedRods, initialCompletionistEffects, initialHasForgedBefore, allFishSpecies, caughtFishIds, mountedFishIds, initialPersonalBests, initialCatchCounts, initialHighestPerfectStreak, initialPerfectStreak, initialStreakZone,
   hasSeenFishingTour, hasSeenFishingCatchTour, hasSeenFirstCatchCelebration, initialShowWaitTimer, activeSession, username, zoneRewardsClaimed,
-  initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, gauntletUpgrades, hasPerfectedSigil, prestigeLevels, goldenBoosts, ancientCatches, characterColor, unlockedCharacterColors, newlyUnlockedSkins, equippedBadges, unlockedBadges, marketMultipliers, isPremium, equippedBoat, unlockedBoats, newlyUnlockedBoats, equippedHat, unlockedHats, equippedPet, unlockedPets,
+  initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, initialEquippedSpecial2, hasDeepReel, hasAnglersPatience, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, gauntletUpgrades, hasPerfectedSigil, prestigeLevels, goldenBoosts, ancientCatches, characterColor, unlockedCharacterColors, newlyUnlockedSkins, equippedBadges, unlockedBadges, marketMultipliers, isPremium, equippedBoat, unlockedBoats, newlyUnlockedBoats, equippedHat, unlockedHats, equippedPet, unlockedPets,
   initialFinnEncounters, initialFinnWins, initialFinnSeenBeats, initialFinnRevealed, initialFinnLastOutcome,
   initialFishingRenownAlloc, seenFishingRenownIntro,
 }: {
@@ -95,6 +95,10 @@ export default function FishingPageClient({
   hasTideTurner: boolean
   initialTideTurnerSkipsLeft: number
   initialEquippedSpecial: string | null
+  /** THE DEEP REEL: the second special slot and its one legal occupant. */
+  initialEquippedSpecial2?: string | null
+  hasDeepReel?: boolean
+  hasAnglersPatience?: boolean
   hasPhantomHook: boolean
   hasAutoCaster: boolean
   hasAutoCatcher: boolean
@@ -312,6 +316,9 @@ export default function FishingPageClient({
       hasTideTurner={hasTideTurner}
       initialTideTurnerSkipsLeft={initialTideTurnerSkipsLeft}
       initialEquippedSpecial={initialEquippedSpecial}
+      initialEquippedSpecial2={initialEquippedSpecial2}
+      hasDeepReel={hasDeepReel}
+      hasAnglersPatience={hasAnglersPatience}
       hasPhantomHook={hasPhantomHook}
       hasAutoCaster={hasAutoCaster}
       hasAutoCatcher={hasAutoCatcher}

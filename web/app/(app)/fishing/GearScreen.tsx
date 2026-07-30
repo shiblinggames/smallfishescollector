@@ -733,7 +733,7 @@ export default function GearScreen({
   equippedHat, unlockedHats, onEquipHat, onBuyHat,
   equippedPet, unlockedPets, onEquipPet,
   hasTideTurner, tideTurnerSkipsLeft, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, hasPerfectedSigil,
-  equippedSpecial, onEquipSpecial, onBuySpecialItem,
+  equippedSpecial, onEquipSpecial, onBuySpecialItem, equippedSpecial2, onEquipSpecial2, hasDeepReel = false, hasAnglersPatience = false,
   fishingLevel,
   zoneGoldenBoostPct = 0,
   isPremium,
@@ -802,6 +802,13 @@ export default function GearScreen({
   hasPerfectedSigil: boolean
   equippedSpecial: string | null
   onEquipSpecial: (itemId: string | null) => void
+  /** THE DEEP REEL, the second special slot. Opened by beating Finn (see the
+   *  spoils node) and it accepts ONE item, his reel. Kept separate from the
+   *  first slot rather than widening it, because it is not a general slot. */
+  equippedSpecial2?: string | null
+  onEquipSpecial2?: (itemId: string | null) => void
+  hasDeepReel?: boolean
+  hasAnglersPatience?: boolean
   onBuySpecialItem: (itemId: string) => Promise<void>
   fishingLevel: number
   isPremium: boolean
@@ -2381,6 +2388,48 @@ export default function GearScreen({
                         />
                       )
                     })}
+                  {/* ── THE DEEP REEL ─────────────────────────────────────
+                      A SECOND special slot, and the only thing it takes is his
+                      reel. Rendered as its own bordered bay rather than another
+                      row in the list above, so it reads as a different kind of
+                      thing: you cannot shuffle your normal specials into it. */}
+                  {hasDeepReel && (
+                    <div style={{ marginTop: 12 }}>
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: '#6fd3c7', marginBottom: 6 }}>The Deep Reel</p>
+                      <div style={{
+                        padding: '0.7rem 0.75rem', borderRadius: 12,
+                        background: equippedSpecial2 ? 'rgba(111,211,199,0.09)' : 'rgba(255,255,255,0.03)',
+                        border: `1px solid ${equippedSpecial2 ? 'rgba(111,211,199,0.45)' : 'rgba(255,255,255,0.10)'}`,
+                      }}>
+                        {hasAnglersPatience ? (
+                          <>
+                            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+                              <span className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#e8e4de' }}>The Angler&apos;s Patience</span>
+                              {equippedSpecial2 && <span className="font-karla font-800 uppercase tracking-[0.12em]" style={{ fontSize: '0.5rem', color: '#6fd3c7' }}>Seated</span>}
+                            </div>
+                            <p className="font-karla" style={{ margin: '3px 0 8px', fontSize: '0.66rem', lineHeight: 1.4, color: '#9a958c' }}>
+                              Bites take half again as long to come, and what surfaces is markedly rarer for the wait.
+                            </p>
+                            <button
+                              onClick={() => onEquipSpecial2?.(equippedSpecial2 ? null : 'anglers_patience')}
+                              className="font-karla font-700 uppercase tracking-[0.1em]"
+                              style={{
+                                width: '100%', height: 34, borderRadius: 9, cursor: 'pointer',
+                                background: equippedSpecial2 ? 'rgba(255,255,255,0.06)' : 'rgba(111,211,199,0.18)',
+                                border: `1px solid ${equippedSpecial2 ? 'rgba(255,255,255,0.14)' : 'rgba(111,211,199,0.5)'}`,
+                                color: equippedSpecial2 ? '#9a958c' : '#6fd3c7', fontSize: '0.62rem', touchAction: 'manipulation',
+                              }}>
+                              {equippedSpecial2 ? 'Unseat' : 'Seat it'}
+                            </button>
+                          </>
+                        ) : (
+                          <p className="font-karla" style={{ margin: 0, fontSize: '0.68rem', lineHeight: 1.45, color: '#7a7875', textAlign: 'center' }}>
+                            Empty. Only The Angler&apos;s Patience seats here, and it comes off Finn.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   </div>
                 </div>
               )}

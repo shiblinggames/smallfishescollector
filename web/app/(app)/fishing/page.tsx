@@ -254,6 +254,9 @@ export default async function FishingPage() {
           hasTideTurner={hasTideTurner}
           initialTideTurnerSkipsLeft={tideTurnerSkipsLeft}
           initialEquippedSpecial={(profile?.equipped_special as string | null) ?? null}
+          initialEquippedSpecial2={(profile?.equipped_special_2 as string | null) ?? null}
+          hasDeepReel={profile?.finn_spoil_free === 'fishing' || profile?.finn_spoil_paid === 'fishing'}
+          hasAnglersPatience={profile?.has_anglers_patience === true}
           hasPhantomHook={hasPhantomHook}
           hasAutoCaster={hasAutoCaster}
           hasAutoCatcher={hasAutoCatcher}

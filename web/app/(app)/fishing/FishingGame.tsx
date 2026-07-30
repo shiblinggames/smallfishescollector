@@ -6,6 +6,7 @@ import { motion, AnimatePresence, useDragControls, type MotionStyle } from 'fram
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { castLine, reelIn, reelCrate, rerollWormhole, quickSellAllFish, markFishingTourSeen, markFishingCatchTourSeen, markFirstCatchCelebrationSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipPet, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, sellGoldenTrophy, mountGoldenTrophy, setCompletionistEffects as saveCompletionistEffects, setShowWaitTimer as persistShowWaitTimer, claimFishingLevelRewards, type FishSpecies } from './actions'
+import { equipSecondSpecial } from '../expeditions/spoilsActions'
 import { recordFinnEncounter, settleFinnChallenge, recordFinnPass, markFinnRevealSeen } from './finnActions'
 import { buyBaitWithFathoms } from '@/app/(app)/raids/gauntlet/actions'
 import FinnEncounter from './FinnEncounter'
@@ -3172,6 +3173,9 @@ export default function FishingGame({
   selectedZone: initialZone, onBack, activeSession, zoneRewardsClaimed,
   initialDailyChallenge, onDailyChallengeChange,
   hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, gauntletUpgrades, hasPerfectedSigil,
+  initialEquippedSpecial2,
+  hasDeepReel = false,
+  hasAnglersPatience = false,
   initialPrestigeLevels, initialGoldenBoosts, initialAncientCatches, characterColor, unlockedCharacterColors, newlyUnlockedSkins, newlyUnlockedBoats, equippedBadges, unlockedBadges,
   marketMultipliers, isPremium, initialEquippedBoat, initialUnlockedBoats, onBoatStateChange,
   initialEquippedHat, initialUnlockedHats, onHatStateChange,
@@ -3227,6 +3231,10 @@ export default function FishingGame({
   hasTideTurner: boolean
   initialTideTurnerSkipsLeft: number
   initialEquippedSpecial: string | null
+  /** THE DEEP REEL: second special slot (Finn spoil). */
+  initialEquippedSpecial2?: string | null
+  hasDeepReel?: boolean
+  hasAnglersPatience?: boolean
   hasPhantomHook: boolean
   hasAutoCaster: boolean
   hasAutoCatcher: boolean
@@ -3909,6 +3917,9 @@ export default function FishingGame({
   const [castNotice, setCastNotice] = useState<string | null>(null)
   const [tideTurnerSkipsLeft, setTideTurnerSkipsLeft] = useState(initialTideTurnerSkipsLeft)
   const [equippedSpecial, setEquippedSpecial] = useState<string | null>(initialEquippedSpecial)
+  // THE DEEP REEL: the second special slot, opened by beating Finn. Separate
+  // state from slot one because it is a different slot with one legal item.
+  const [equippedSpecial2, setEquippedSpecial2] = useState<string | null>(initialEquippedSpecial2 ?? null)
   const [ownedAutoCaster, setOwnedAutoCaster] = useState(hasAutoCaster)
   const [ownedAutoCatcher, setOwnedAutoCatcher] = useState(hasAutoCatcher)
   // Quick on/off for the equipped auto item, toggled from a chip under the XP
@@ -9641,6 +9652,17 @@ export default function FishingGame({
               zoneGoldenBoostPct={goldenBoostPct(goldenBoosts[initialZone] ?? 0)}
               isPremium={isPremium}
               equippedSpecial={equippedSpecial}
+              equippedSpecial2={equippedSpecial2}
+              hasDeepReel={hasDeepReel}
+              hasAnglersPatience={hasAnglersPatience}
+              onEquipSpecial2={async (id) => {
+                // Optimistic, then reconciled: the server is the authority on
+                // whether the slot is open and whether this item may sit in it.
+                const prev = equippedSpecial2
+                setEquippedSpecial2(id)
+                const res = await equipSecondSpecial(id)
+                if (!res.ok) setEquippedSpecial2(prev)
+              }}
               onEquipSpecial={async (itemId) => {
                 setEquippedSpecial(itemId)
                 await equipSpecialItem(itemId)
