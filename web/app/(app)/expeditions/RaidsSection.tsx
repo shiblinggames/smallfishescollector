@@ -3138,7 +3138,7 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
   // specialItemId is in here because Finn's Eye is a FISHING special: without it
   // the headline drop off the final boss never rendered on his own card. The cap
   // is 6 rather than 4 for the same reason, since he alone drops five.
-  const drops = (activeNode.detail?.drops ?? []).filter(d => (d.rarity === 'epic' || d.rarity === 'legendary') && (d.raidItemId || d.shipSkinId || d.specialItemId)).slice(0, 6)
+  const drops = (activeNode.detail?.drops ?? []).filter(d => (d.rarity === 'epic' || d.rarity === 'legendary' || d.rarity === 'ancient') && (d.raidItemId || d.shipSkinId || d.specialItemId)).slice(0, 6)
 
   // Header status pill reflects the active mode.
   const pillCleared = isChallenge ? chCleared : cleared
@@ -3241,21 +3241,20 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
                       aria-label={`${d.label}${chance ? `, ${chance}` : ', owned'}, details`}
                       style={{
                         flex: '0 0 auto', width: 126, scrollSnapAlign: 'start',
-                        display: 'flex', flexDirection: 'column', gap: 5,
+                        display: 'flex', flexDirection: 'column', gap: 3,
                         padding: 0, background: 'none', border: 'none',
                         cursor: 'pointer', font: 'inherit', touchAction: 'manipulation',
                       }}
                     >
+                      {/* No plate behind the art: the piece sits on the sheet
+                          itself. A drop shadow tinted to its rarity does the
+                          work the border used to, without boxing it in. */}
                       <div style={{
                         position: 'relative', width: '100%', height: 84,
-                        borderRadius: 11, overflow: 'hidden',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        background: `linear-gradient(160deg, ${rc}1f 0%, rgba(8,13,20,0.85) 100%)`,
-                        border: `1px solid ${owned ? 'rgba(74,222,128,0.5)' : `${rc}55`}`,
-                        boxShadow: `inset 0 0 18px ${rc}14`,
                       }}>
                         {d.swatch
-                          ? <div style={{ width: '100%', height: '100%', background: d.swatch, filter: d.swatchFilter }} />
+                          ? <div style={{ width: '100%', height: '100%', borderRadius: 10, background: d.swatch, filter: d.swatchFilter }} />
                           : d.image
                             // eslint-disable-next-line @next/next/no-img-element
                             ? <img
@@ -3268,7 +3267,7 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
                                   height: isHull ? 'auto' : '100%',
                                   maxWidth: '100%', maxHeight: '100%',
                                   objectFit: 'contain',
-                                  filter: d.imageFilter,
+                                  filter: [d.imageFilter, `drop-shadow(0 3px 10px ${rc}66)`].filter(Boolean).join(' '),
                                   opacity: owned ? 0.9 : 1,
                                 }}
                               />
@@ -3290,6 +3289,17 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
                         fontVariantNumeric: 'tabular-nums',
                       }}>
                         {owned ? 'Owned' : (chance ?? 'Drop')}
+                      </span>
+                      {/* Name never wraps: a two-line name would make one tile
+                          taller than its neighbours and break the rail's line.
+                          It clips, and the full name is in the detail modal. */}
+                      <span className="font-karla font-600" style={{
+                        display: 'block', width: '100%',
+                        fontSize: '0.62rem', lineHeight: 1.25, textAlign: 'center',
+                        color: '#b9b3a8',
+                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                      }}>
+                        {d.label}
                       </span>
                     </button>
                   )

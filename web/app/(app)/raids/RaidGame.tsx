@@ -43,7 +43,7 @@ function rollLootIndex(loot: RaidLootItem[], excludedIds: Set<string> = new Set(
   // Kingpin's Cut (Don's account perk): legendary-rarity rows carry extra weight,
   // so they surface `legendaryMult`× more often within the unique pick. Applied to
   // BOTH roll paths below. Non-legendary rows keep weight 1×.
-  const wt = (l: RaidLootItem): number => l.weight * (l.rarity === 'legendary' ? legendaryMult : 1)
+  const wt = (l: RaidLootItem): number => l.weight * (l.rarity === 'legendary' || l.rarity === 'ancient' ? legendaryMult : 1)
   // FIXED-SHARE crates (BossRaidConfig.uniqueShare). Two-stage: `uniqueShare` of the
   // time you get one of the uniques you're still missing, otherwise currency. Without
   // this, dropping owned uniques out of the pool shrinks their share as you complete

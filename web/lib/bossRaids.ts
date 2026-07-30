@@ -379,7 +379,7 @@ export interface RaidLootItem {
   label: string
   image: string | null
   emoji: string
-  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary'
+  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'ancient'
   weight: number
   shipSkinId?: string  // if set, render player's ship with this skin applied
 }
@@ -552,6 +552,11 @@ export const RARITY_COLOR: Record<RaidLootItem['rarity'], string> = {
   rare:      '#60a5fa',
   epic:      '#a78bfa',
   legendary: '#f0c040',
+  // ANCIENT sits ABOVE legendary and belongs to Finn's two spoils alone. The
+  // ladder already spends grey, green, blue, violet and gold, and the forge
+  // treatments own salmon and lavender, so crimson is the one register left,
+  // and it reads as older and angrier than gold.
+  ancient:   '#e0455a',
 }
 
 /** Zone → fishing-background JPG (files live in /public, shared with the fishing
@@ -2275,8 +2280,8 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
   // Everything else he drops is cosmetic, so the fight cannot be farmed for
   // power. See the 'spoils_of_the_hand' node for how the slots are opened.
   loot: [
-    { id: 'anglers_patience', label: "The Primeval Eye", image: '/primevileye.png', emoji: '🎣', rarity: 'legendary', weight: 8 },
-    { id: 'borrowed_jaw',     label: 'The Primeval Maw',      image: '/primevilmaw.png', emoji: '🦈', rarity: 'legendary', weight: 8 },
+    { id: 'anglers_patience', label: "The Primeval Eye", image: '/primevileye.png', emoji: '🎣', rarity: 'ancient', weight: 8 },
+    { id: 'borrowed_jaw',     label: 'The Primeval Maw',      image: '/primevilmaw.png', emoji: '🦈', rarity: 'ancient', weight: 8 },
     { id: 'sunken_hand_hull',   label: 'Sunken Hand Hull',   image: null, emoji: '🚢', rarity: 'epic', weight: 10, shipSkinId: 'sunken_hand_hull' },
     { id: 'drowned_giant_hull', label: 'Drowned Giant Hull', image: null, emoji: '🚢', rarity: 'epic', weight: 10, shipSkinId: 'drowned_giant_hull' },
     { id: 'last_cast_hull',     label: 'Last Cast Hull',     image: null, emoji: '🚢', rarity: 'epic', weight: 10, shipSkinId: 'last_cast_hull' },

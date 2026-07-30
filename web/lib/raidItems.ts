@@ -54,7 +54,7 @@ export interface RaidItemDef {
   description: string
   image: string | null
   emoji: string
-  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary'
+  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'ancient'
   effects: RaidEffect[]
   /** THE SUNKEN HAND. Fits ONLY the extra mount that opens by beating Finn,
    *  and that mount accepts nothing else, so it never competes for a normal
@@ -345,7 +345,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     description: 'The oldest teeth in the sea, cut back out of Finn and bolted to your hull. It charges on Fishing XP while mounted, and each tier keeps everything the tier below it woke. Fully charged, it is six things at once.',
     image: '/primevilmaw.png',
     emoji: '🦈',
-    rarity: 'legendary',
+    rarity: 'ancient',
     // No flat effects: everything it does comes from its CHARGE level (see
     // lib/finnItems). Leaving a static bonus here would stack on top of the
     // milestone and quietly double-count it.
