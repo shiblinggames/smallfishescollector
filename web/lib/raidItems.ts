@@ -342,7 +342,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     finaleSlotOnly: true,
     id: 'borrowed_jaw',
     name: 'The Primeval Maw',
-    description: 'The oldest teeth in the sea, cut back out of Finn and bolted to your hull. It charges on Fishing XP while mounted, and each tier keeps everything the tier below it woke. Fully charged, it is six things at once.',
+    description: 'The oldest teeth in the sea, cut back out of Finn and bolted to your hull. It gains a TIER for every stretch of Fishing XP you earn while it is mounted, and each tier keeps everything the tiers below it unlocked. Six in all.',
     image: '/primevilmaw.png',
     emoji: '🦈',
     rarity: 'ancient',

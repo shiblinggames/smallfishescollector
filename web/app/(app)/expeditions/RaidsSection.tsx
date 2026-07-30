@@ -14,7 +14,7 @@ import { getRaidConfigById } from '@/lib/raidRegistry'
 import { isUniqueLoot } from '@/lib/bossRaids'
 import { getShipSkin } from '@/lib/shipSkins'
 import { SPECIAL_ITEMS } from '@/lib/specialItems'
-import { FINN_ITEMS, type FinnItemId } from '@/lib/finnItems'
+import { FINN_ITEMS, finnTierNumeral, type FinnItemId } from '@/lib/finnItems'
 import { claimMilestoneNode, markStoryNodeRead, claimScoutDebt, claimQuartermasterChoice, solvePuzzleNode, pickShipClass, markChapterUnlockSeen, pickRaidEventChoice, pickForkRoute, standForMuster } from './raidMapActions'
 import { LegendaryUnlockOverlay } from './LegendaryUnlockOverlay'
 import type { UnlockedLegendary } from '@/lib/legendaryUnlocks'
@@ -2326,7 +2326,7 @@ function DropDetailModal({ drop, owned, onClose }: { drop: RaidNodeDrop; owned: 
         {finn && (
           <div style={{ marginBottom: 14 }}>
             <p className="font-karla font-800 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: finn.color, marginBottom: 6 }}>
-              Charges on {finn.chargedBy === 'navigation' ? 'Navigation' : 'Fishing'} XP
+              Tiers up on {finn.chargedBy === 'navigation' ? 'Navigation' : 'Fishing'} XP
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               {finn.milestones.map(m => (
@@ -2336,7 +2336,7 @@ function DropDetailModal({ drop, owned, onClose }: { drop: RaidNodeDrop; owned: 
                   background: 'rgba(255,255,255,0.03)',
                   border: `1px solid ${finn.color}22`,
                 }}>
-                  <span className="font-cinzel font-700" style={{ flexShrink: 0, width: 12, textAlign: 'center', fontSize: '0.58rem', color: finn.color, fontVariantNumeric: 'tabular-nums' }}>{m.level}</span>
+                  <span className="font-cinzel font-700" style={{ flexShrink: 0, width: 22, textAlign: 'right', fontSize: '0.57rem', color: finn.color, letterSpacing: '0.04em' }}>{finnTierNumeral(m.level)}</span>
                   <span className="font-karla" style={{ fontSize: '0.6rem', lineHeight: 1.4, color: 'rgba(240,237,232,0.72)' }}>{m.unlock}</span>
                 </div>
               ))}

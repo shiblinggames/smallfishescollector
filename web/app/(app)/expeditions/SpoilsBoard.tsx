@@ -35,7 +35,7 @@ const SIDES: Side[] = [
     title: 'The Deep Reel',
     item: 'The Primeval Eye',
     art: '/primevileye.png',
-    blurb: 'A second special slot on your rig, and his eye is the only thing that seats in it. It charges on Navigation XP, and the further you charge it the rarer the water answers.',
+    blurb: 'A second special slot on your rig, and his eye is the only thing that seats in it. It tiers up on Navigation XP, and every tier keeps the one below it.',
     accent: REEL,
   },
   {
@@ -43,7 +43,7 @@ const SIDES: Side[] = [
     title: 'The Sixth Mount',
     item: 'The Primeval Maw',
     art: '/primevilmaw.png',
-    blurb: 'One more mount framed onto your hull, and his maw is the only thing that fits it. It charges on Fishing XP, and it bites for every hour you spend on the water.',
+    blurb: 'One more mount framed onto your hull, and his maw is the only thing that fits it. It tiers up on Fishing XP, and every tier keeps the one below it.',
     accent: MOUNT,
   },
 ]

@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect, useRef, useMemo, Fragment, type CSSProperties } from 'react'
 import FinnChargePanel from '@/components/FinnChargePanel'
-import { finnItemLevel, FINN_ITEM_MAX_LEVEL } from '@/lib/finnItems'
+import { finnItemLevel, finnTierNumeral, FINN_ITEM_MAX_LEVEL } from '@/lib/finnItems'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -1737,7 +1737,7 @@ export default function ShipHero({
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.8rem', color: BRASS }}>{def.name}</p>
                           <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: '#9a948a' }}>
-                            Charge {finnItemLevel(borrowedJawXp)} / {FINN_ITEM_MAX_LEVEL}
+                            Tier {finnTierNumeral(finnItemLevel(borrowedJawXp))} / {finnTierNumeral(FINN_ITEM_MAX_LEVEL)}
                           </span>
                         </div>
                       </button>

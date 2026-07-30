@@ -85,12 +85,12 @@ export const FINN_ITEMS: Record<FinnItemId, FinnItemDef> = {
     color: '#6fd3c7',
     flavor: 'He watched that water for a lifetime until it gave up everything it was hiding. The waiting was never the price. It was the method.',
     milestones: [
-      { level: 1, unlock: 'It knows what a thing is worth. +15% doubloons on every fish you sell.', sellMult: 1.15 },
-      { level: 2, unlock: 'It reads what it finds. +12% fishing XP.', sellMult: 1.15, fishingXpMult: 1.12 },
-      { level: 3, unlock: 'It sees them coming. Bites arrive 10% sooner.', sellMult: 1.15, fishingXpMult: 1.12, waitMult: 0.90 },
-      { level: 4, unlock: 'It sees the bottom too. Double crate odds.', sellMult: 1.15, fishingXpMult: 1.12, waitMult: 0.90, crateChanceMult: 2 },
-      { level: 5, unlock: 'It catches the shine. Golden odds x1.8.', sellMult: 1.15, fishingXpMult: 1.12, waitMult: 0.90, crateChanceMult: 2, goldenOddsMult: 1.8 },
-      { level: 6, unlock: 'It never wastes a thing. A perfect catch NEVER consumes bait.', sellMult: 1.15, fishingXpMult: 1.12, waitMult: 0.90, crateChanceMult: 2, goldenOddsMult: 1.8, perfectBaitSave: true },
+      { level: 1, unlock: '+15% doubloons from selling fish', sellMult: 1.15 },
+      { level: 2, unlock: '+12% fishing XP', sellMult: 1.15, fishingXpMult: 1.12 },
+      { level: 3, unlock: 'Bites arrive 10% sooner', sellMult: 1.15, fishingXpMult: 1.12, waitMult: 0.90 },
+      { level: 4, unlock: 'Double the chance of hooking a crate', sellMult: 1.15, fishingXpMult: 1.12, waitMult: 0.90, crateChanceMult: 2 },
+      { level: 5, unlock: '1.8x golden fish odds', sellMult: 1.15, fishingXpMult: 1.12, waitMult: 0.90, crateChanceMult: 2, goldenOddsMult: 1.8 },
+      { level: 6, unlock: 'Perfect catches never consume bait', sellMult: 1.15, fishingXpMult: 1.12, waitMult: 0.90, crateChanceMult: 2, goldenOddsMult: 1.8, perfectBaitSave: true },
     ],
   },
   borrowed_jaw: {
@@ -101,12 +101,12 @@ export const FINN_ITEMS: Record<FinnItemId, FinnItemDef> = {
     color: '#e0a44a',
     flavor: 'Torn out of the oldest mouth in the sea and bolted into iron that never earned it. It has forgiven neither of you.',
     milestones: [
-      { level: 1, unlock: 'It knows what a boss is. +10% damage on boss rounds.', bossDamageMult: 1.10 },
-      { level: 2, unlock: 'It steadies your aim. +10% damage on a single shot.', bossDamageMult: 1.13, fireDamageMult: 1.10 },
-      { level: 3, unlock: 'It puts its weight behind the big one. +10% ultimate damage.', bossDamageMult: 1.16, fireDamageMult: 1.10, megaDamageMult: 1.10 },
-      { level: 4, unlock: 'It opens both jaws. +10% volley damage.', bossDamageMult: 1.19, fireDamageMult: 1.10, megaDamageMult: 1.10, volleyDamageMult: 1.10 },
-      { level: 5, unlock: 'It never sleeps. A 50% chance to open every fight with one more chambered, on top of any primer you run.', bossDamageMult: 1.22, fireDamageMult: 1.10, megaDamageMult: 1.10, volleyDamageMult: 1.10, extraStartChargeChance: 0.50 },
-      { level: 6, unlock: 'It bites for free. A critical has a 50% chance to cost NO cannonballs, whether you fired, volleyed or opened up.', bossDamageMult: 1.25, fireDamageMult: 1.10, megaDamageMult: 1.10, volleyDamageMult: 1.10, extraStartChargeChance: 0.50, critChargeRefundChance: 0.50 },
+      { level: 1, unlock: '+10% damage to bosses', bossDamageMult: 1.10 },
+      { level: 2, unlock: '+10% normal fire damage', bossDamageMult: 1.13, fireDamageMult: 1.10 },
+      { level: 3, unlock: '+10% ultimate damage', bossDamageMult: 1.16, fireDamageMult: 1.10, megaDamageMult: 1.10 },
+      { level: 4, unlock: '+10% volley damage', bossDamageMult: 1.19, fireDamageMult: 1.10, megaDamageMult: 1.10, volleyDamageMult: 1.10 },
+      { level: 5, unlock: '50% chance to start each fight with an extra cannonball, on top of any primer', bossDamageMult: 1.22, fireDamageMult: 1.10, megaDamageMult: 1.10, volleyDamageMult: 1.10, extraStartChargeChance: 0.50 },
+      { level: 6, unlock: 'Criticals have a 50% chance to cost no cannonballs (works on normal, volleys, and ultimates)', bossDamageMult: 1.25, fireDamageMult: 1.10, megaDamageMult: 1.10, volleyDamageMult: 1.10, extraStartChargeChance: 0.50, critChargeRefundChance: 0.50 },
     ],
   },
 }
@@ -245,4 +245,10 @@ export function eyeFromProfile(p: {
     && p?.has_anglers_patience === true
     && (p?.finn_spoil_free === 'fishing' || p?.finn_spoil_paid === 'fishing')
   return anglersPatienceEffects(seated, Number(p?.anglers_patience_xp ?? 0))
+}
+
+/** Tier labels are ROMAN. Six of them, so a table beats arithmetic. */
+const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI'] as const
+export function finnTierNumeral(level: number): string {
+  return ROMAN[Math.min(Math.max(level, 1), ROMAN.length) - 1]
 }

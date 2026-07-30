@@ -12,7 +12,7 @@
  *  XP; nothing here can move a number.
  */
 
-import { FINN_ITEMS, FINN_ITEM_MAX_LEVEL, finnItemProgress, type FinnItemId } from '@/lib/finnItems'
+import { FINN_ITEMS, FINN_ITEM_MAX_LEVEL, finnItemProgress, finnTierNumeral, type FinnItemId } from '@/lib/finnItems'
 
 export default function FinnChargePanel({ id, xp, equipped }: {
   id: FinnItemId
@@ -31,10 +31,10 @@ export default function FinnChargePanel({ id, xp, equipped }: {
       <div>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 5 }}>
           <span className="font-karla font-800 uppercase tracking-[0.12em]" style={{ fontSize: '0.53rem', color: def.color }}>
-            Charge {level} / {FINN_ITEM_MAX_LEVEL}
+            Tier {finnTierNumeral(level)} / {finnTierNumeral(FINN_ITEM_MAX_LEVEL)}
           </span>
           <span className="font-karla" style={{ fontSize: '0.56rem', color: '#7d786f', fontVariantNumeric: 'tabular-nums' }}>
-            {maxed ? 'Fully charged' : `${into.toLocaleString()} / ${next.toLocaleString()}`}
+            {maxed ? 'Fully tiered' : `${into.toLocaleString()} / ${next.toLocaleString()}`}
           </span>
         </div>
         <div style={{ height: 7, borderRadius: 4, background: 'rgba(0,0,0,0.34)', border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }}>
@@ -49,8 +49,8 @@ export default function FinnChargePanel({ id, xp, equipped }: {
         </div>
         <p className="font-karla" style={{ margin: '5px 0 0', fontSize: '0.6rem', lineHeight: 1.45, color: equipped ? '#9a958c' : '#7d786f' }}>
           {equipped
-            ? `Charges on ${source}. It only draws while it is equipped, and every tier KEEPS what came before it.`
-            : `Dormant. Equip it and it starts drawing ${source}.`}
+            ? `Gains ${source} only while equipped. Every tier KEEPS what the tiers below it unlocked.`
+            : `Dormant. Equip it and it starts gaining ${source}.`}
         </p>
       </div>
 
@@ -66,9 +66,9 @@ export default function FinnChargePanel({ id, xp, equipped }: {
               border: `1px solid ${on ? `${def.color}3d` : 'rgba(255,255,255,0.06)'}`,
             }}>
               <span className="font-cinzel font-700" style={{
-                flexShrink: 0, width: 15, textAlign: 'center', fontSize: '0.62rem',
-                color: on ? def.color : '#5a564f', fontVariantNumeric: 'tabular-nums',
-              }}>{m.level}</span>
+                flexShrink: 0, width: 24, textAlign: 'right', fontSize: '0.6rem',
+                color: on ? def.color : '#5a564f', letterSpacing: '0.04em',
+              }}>{finnTierNumeral(m.level)}</span>
               <span className="font-karla" style={{
                 fontSize: '0.62rem', lineHeight: 1.4,
                 color: on ? '#cfc9c0' : '#6d685f',
