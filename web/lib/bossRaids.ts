@@ -2275,8 +2275,8 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
   // Everything else he drops is cosmetic, so the fight cannot be farmed for
   // power. See the 'spoils_of_the_hand' node for how the slots are opened.
   loot: [
-    { id: 'anglers_patience', label: "The Primeval Eye", image: null, emoji: '🎣', rarity: 'legendary', weight: 8 },
-    { id: 'borrowed_jaw',     label: 'The Primeval Maw',      image: null, emoji: '🦈', rarity: 'legendary', weight: 8 },
+    { id: 'anglers_patience', label: "The Primeval Eye", image: '/primevileye.png', emoji: '🎣', rarity: 'legendary', weight: 8 },
+    { id: 'borrowed_jaw',     label: 'The Primeval Maw',      image: '/primevilmaw.png', emoji: '🦈', rarity: 'legendary', weight: 8 },
     { id: 'sunken_hand_hull',   label: 'Sunken Hand Hull',   image: null, emoji: '🚢', rarity: 'epic', weight: 10, shipSkinId: 'sunken_hand_hull' },
     { id: 'drowned_giant_hull', label: 'Drowned Giant Hull', image: null, emoji: '🚢', rarity: 'epic', weight: 10, shipSkinId: 'drowned_giant_hull' },
     { id: 'last_cast_hull',     label: 'Last Cast Hull',     image: null, emoji: '🚢', rarity: 'epic', weight: 10, shipSkinId: 'last_cast_hull' },

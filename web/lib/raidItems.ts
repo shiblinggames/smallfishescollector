@@ -333,9 +333,9 @@ export const RAID_ITEMS: RaidItemDef[] = [
   // forge (in the Manage Ship loadout drawer) sacrifices them for the Grand
   // Cannon — recipe in DAVY_FORGE below. Art is a cannon placeholder for now.
   // ── THE SUNKEN HAND (Finn) ────────────────────────────────────────────────
-  // The six giants he drained, given back as gear. PLACEHOLDER ART: every one
-  // points at /raidlog.png until the real pieces land, so the drop table is
-  // wired end to end and nothing silently fails a grant. Swap `image` only.
+  // What he drained, given back as gear. His two real drops split across the
+  // two halves of the game: the Maw below mounts on your hull, and its opposite
+  // number (The Primeval Eye) is a FISHING special and lives in specialItems.
   {
     // THE SUNKEN HAND. Fits ONLY the extra mount that opens by beating Finn,
     // and that mount takes nothing else. It never competes for a normal slot.
@@ -343,7 +343,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'borrowed_jaw',
     name: 'The Primeval Maw',
     description: 'The oldest teeth in the sea, cut back out of Finn and bolted to your hull. It charges on Fishing XP while mounted, and each tier keeps everything the tier below it woke. Fully charged, it is six things at once.',
-    image: '/raidlog.png',
+    image: '/primevilmaw.png',
     emoji: '🦈',
     rarity: 'legendary',
     // No flat effects: everything it does comes from its CHARGE level (see

@@ -1725,7 +1725,10 @@ export default function ShipHero({
                         aria-label={`${def.name}, mounted. Tap for its effect and an unmount option.`}
                         style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, padding: '0.6rem 0.7rem', borderRadius: 12, textAlign: 'left', cursor: 'pointer', background: `${BRASS}1c`, border: `1.5px solid ${BRASS}88`, boxShadow: `0 0 14px ${BRASS}1f` }}>
                         <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${BRASS}12`, border: `1px solid ${BRASS}40` }}>
-                          <span style={{ fontSize: '1.3rem', lineHeight: 1 }}>{def.emoji}</span>
+                          {def.image
+                            // eslint-disable-next-line @next/next/no-img-element
+                            ? <img src={def.image} alt="" decoding="async" style={{ width: 32, height: 32, objectFit: 'contain' }} />
+                            : <span style={{ fontSize: '1.3rem', lineHeight: 1 }}>{def.emoji}</span>}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.8rem', color: BRASS }}>{def.name}</p>
@@ -1742,7 +1745,10 @@ export default function ShipHero({
                         aria-label={`Mount ${def.name}`}
                         style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, padding: '0.6rem 0.7rem', borderRadius: 12, textAlign: 'left', cursor: 'pointer', background: 'rgba(255,255,255,0.02)', border: `1.5px dashed ${BRASS}66` }}>
                         <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${BRASS}0f`, border: `1px solid ${BRASS}33` }}>
-                          <span style={{ fontSize: '1.3rem', lineHeight: 1, opacity: 0.7 }}>{def.emoji}</span>
+                          {def.image
+                            // eslint-disable-next-line @next/next/no-img-element
+                            ? <img src={def.image} alt="" decoding="async" style={{ width: 32, height: 32, objectFit: 'contain', opacity: 0.75 }} />
+                            : <span style={{ fontSize: '1.3rem', lineHeight: 1, opacity: 0.7 }}>{def.emoji}</span>}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.78rem', color: BRASS }}>Mount {def.name}</p>

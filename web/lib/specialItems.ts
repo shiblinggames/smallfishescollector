@@ -28,6 +28,7 @@ export const SPECIAL_ITEMS: SpecialItemDef[] = [
     id: 'anglers_patience',
     name: 'The Primeval Eye',
     color: '#c4a96a',
+    image: '/primevileye.png',
     description: 'Cut out of him still open, and still looking. It charges on Navigation XP while seated, and each tier keeps everything the tier below it gave you. Fully charged, it barely misses.',
     effectLabel: 'Six stacking powers, one per charge tier',
     obtainedFrom: 'The Sunken Hand',

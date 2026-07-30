@@ -629,6 +629,7 @@ function lootDrops(loot: RaidLootItem[]): RaidNodeDrop[] {
       drop.label = special.name
       drop.sublabel = `Fishing special. ${special.description}`
       drop.specialItemId = special.id
+      drop.image = drop.image ?? special.image ?? null
     }
     return drop
   })
