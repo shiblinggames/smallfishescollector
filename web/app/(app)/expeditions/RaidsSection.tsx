@@ -2863,8 +2863,8 @@ function RepairBlockedModal({
 // your best clear time. Built for finished players farming specific fights.
 function ViewToggle({ view, onChange }: { view: 'journey' | 'bosses'; onChange: (v: 'journey' | 'bosses') => void }) {
   const opts = [
-    { id: 'journey' as const, label: 'Journey', sub: 'the story arc' },
-    { id: 'bosses' as const, label: 'Bosses', sub: 'chase the drops' },
+    { id: 'journey' as const, label: 'Campaign' },
+    { id: 'bosses' as const, label: 'Bosses' },
   ]
   return (
     <div style={{ display: 'flex', gap: 4, marginBottom: '1rem', padding: 4, borderRadius: 14, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
@@ -2877,7 +2877,6 @@ function ViewToggle({ view, onChange }: { view: 'journey' | 'bosses'; onChange: 
               background: on ? 'rgba(196,169,106,0.14)' : 'transparent',
               boxShadow: on ? '0 0 16px rgba(196,169,106,0.12)' : 'none' }}>
             <span className="font-cinzel font-700 uppercase" style={{ display: 'block', fontSize: '0.95rem', letterSpacing: '0.1em', color: on ? '#f0ede8' : '#8a857c' }}>{o.label}</span>
-            <span className="font-karla font-600 uppercase" style={{ display: 'block', fontSize: '0.58rem', letterSpacing: '0.06em', marginTop: 2, color: on ? '#c4a96a' : '#615e5a' }}>{o.sub}</span>
           </button>
         )
       })}
@@ -2912,13 +2911,21 @@ function BossesView({ views, raidRecords, ownedRaidItems, ownedShipSkins, repair
   }
   return (
     <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 10 }}>
-      {chapterOrder.map(cid => (
-        <div key={cid} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+      {chapterOrder.map(cid => {
+        // A chapter with a single boss is the CODA: Finn, alone, at the end.
+        // Half a row makes the last fight in the game look like a side branch,
+        // so he takes the row on his own and sits centred.
+        const solo = byChapter.get(cid)!.length === 1
+        return (
+        <div key={cid} style={solo
+          ? { display: 'grid', gridTemplateColumns: 'minmax(0, 72%)', justifyContent: 'center', gap: 10 }
+          : { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           {byChapter.get(cid)!.map(v => (
             <BossTile key={v.node.id} view={v} isNext={v.node.id === nextUpId} challengeCleared={challengeOf(v)?.status === 'cleared'} onOpen={() => { vibrate([0, 12]); setModalBoss(v) }} />
           ))}
         </div>
-      ))}
+        )
+      })}
       {modalBoss && (
         <BossFightModal
           key={modalBoss.node.id}
