@@ -2268,15 +2268,18 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
   // NO mob sequence. It is him from the first shot to the last.
   sequence: [],
   bossId: 'finn',
-  // The six giants, given back as gear. PLACEHOLDER ART on every one: they all
-  // point at /raidlog.png until the real pieces land, so the table is wired end
-  // to end and no grant silently fails. Swap the image paths only.
+  // HIS SPOILS ARE DELIBERATELY NOT A NORMAL TABLE. Exactly TWO real items, one
+  // for each half of the game, and each is the ONLY thing its new slot accepts:
+  //   The Angler's Patience -> the second fishing special slot
+  //   The Borrowed Jaw      -> the extra raid mount
+  // Everything else he drops is cosmetic, so the fight cannot be farmed for
+  // power. See the 'spoils_of_the_hand' node for how the slots are opened.
   loot: [
-    { id: 'anglers_patience', label: "The Angler's Patience", image: '/raidlog.png', emoji: '🎣', rarity: 'legendary', weight: 6 },
-    { id: 'borrowed_jaw',     label: 'The Borrowed Jaw',      image: '/raidlog.png', emoji: '🦈', rarity: 'legendary', weight: 6 },
-    { id: 'drowned_plate',    label: 'Drowned Plate',         image: '/raidlog.png', emoji: '🛡️', rarity: 'epic',      weight: 12 },
-    { id: 'long_line',        label: 'The Long Line',         image: '/raidlog.png', emoji: '⚓', rarity: 'epic',      weight: 12 },
-    { id: 'finns_ledger',     label: "Finn's Ledger",         image: '/raidlog.png', emoji: '📕', rarity: 'epic',      weight: 12 },
+    { id: 'anglers_patience', label: "The Angler's Patience", image: null, emoji: '🎣', rarity: 'legendary', weight: 8 },
+    { id: 'borrowed_jaw',     label: 'The Borrowed Jaw',      image: null, emoji: '🦈', rarity: 'legendary', weight: 8 },
+    { id: 'sunken_hand_hull',   label: 'Sunken Hand Hull',   image: null, emoji: '🚢', rarity: 'epic', weight: 10, shipSkinId: 'sunken_hand_hull' },
+    { id: 'drowned_giant_hull', label: 'Drowned Giant Hull', image: null, emoji: '🚢', rarity: 'epic', weight: 10, shipSkinId: 'drowned_giant_hull' },
+    { id: 'last_cast_hull',     label: 'Last Cast Hull',     image: null, emoji: '🚢', rarity: 'epic', weight: 10, shipSkinId: 'last_cast_hull' },
   ],
   killRewards: {
     finn: { gold: 12000, xp: 12000 },

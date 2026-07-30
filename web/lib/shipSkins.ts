@@ -84,6 +84,42 @@ export const SHIP_SKINS: ShipSkinDef[] = [
       6: '/enemychapter3man-o-war.png',
     },
   },
+  // ── THE SUNKEN HAND ───────────────────────────────────────────────────────
+  // Three hulls taken off Finn's own ship. PLACEHOLDER ART: all three point at
+  // enemy_finnship.png and are told apart by FILTER, which is the house pattern
+  // for one sprite serving several variants. Drop real art in imageByTier when
+  // it exists; nothing else needs to change.
+  {
+    id: 'sunken_hand_hull',
+    name: 'Sunken Hand Hull',
+    description: "His own colours, crimson and unhurried. The ship that was waiting at the end of every line you ever cast.",
+    filter: 'none',
+    color: '#a33b4a',
+    source: 'The Sunken Hand',
+    requiresShipTier: 4,
+    imageByTier: { 4: '/enemy_finnship.png', 5: '/enemy_finnship.png', 6: '/enemy_finnship.png' },
+  },
+  {
+    id: 'drowned_giant_hull',
+    name: 'Drowned Giant Hull',
+    description: 'Bleached to the colour of the six he emptied. A hull that looks like something that has already been dead a long while.',
+    filter: 'grayscale(0.75) brightness(1.15)',
+    color: '#c9c4b4',
+    source: 'The Sunken Hand',
+    requiresShipTier: 4,
+    imageByTier: { 4: '/enemy_finnship.png', 5: '/enemy_finnship.png', 6: '/enemy_finnship.png' },
+  },
+  {
+    id: 'last_cast_hull',
+    name: 'Last Cast Hull',
+    description: 'Ember-dark, lit from underneath, the way the water looked when the morning finally came back.',
+    filter: 'hue-rotate(-24deg) saturate(1.35) brightness(0.9)',
+    color: '#d1663a',
+    source: 'The Sunken Hand',
+    requiresShipTier: 4,
+    imageByTier: { 4: '/enemy_finnship.png', 5: '/enemy_finnship.png', 6: '/enemy_finnship.png' },
+  },
+
   {
     // Chapter 4 shared trophy skin. Drops from BOTH The Blockade (raid 7) and The
     // Throne (raid 8), the same way the Coffers Hull drops from raids 5 and 6.

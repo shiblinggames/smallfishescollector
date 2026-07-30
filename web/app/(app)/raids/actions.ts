@@ -498,6 +498,7 @@ export async function claimRaidLoot(
   let gems            = profile?.gems ?? 0
   const ownedSkins    = (profile?.ship_skins as string[] | null) ?? []
   let equippedSkin    = (profile?.equipped_ship_skin as string | null) ?? null
+  let grantedSpecial: string | null = null   // a has_* column to flip, if a special item dropped
   const newSkins      = [...ownedSkins]
   const ownedRaidItems = (profile?.raid_items as string[] | null) ?? []
   const newRaidItems   = [...ownedRaidItems]
@@ -513,6 +514,10 @@ export async function claimRaidLoot(
     }
     if (grant.raidItem && !newRaidItems.includes(grant.raidItem)) {
       newRaidItems.push(grant.raidItem)
+    // Special (fishing) items are stored one boolean column per item, the same
+    // convention as has_tide_turner. Without this branch The Angler's Patience
+    // would roll, be reported as looted, and grant absolutely nothing.
+    if (grant.specialItem === 'anglers_patience') grantedSpecial = 'has_anglers_patience'
     }
   }
 
@@ -522,7 +527,7 @@ export async function claimRaidLoot(
   // doesn't strand the player on a still-locked next node.
   await admin
     .from('profiles')
-    .update({ doubloons, gems, ship_skins: newSkins, equipped_ship_skin: equippedSkin, raid_items: newRaidItems })
+    .update({ doubloons, gems, ship_skins: newSkins, equipped_ship_skin: equippedSkin, raid_items: newRaidItems, ...(grantedSpecial ? { [grantedSpecial]: true } : {}) })
     .eq('id', user.id)
 
   return {

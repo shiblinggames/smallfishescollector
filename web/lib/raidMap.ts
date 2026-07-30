@@ -11,7 +11,7 @@
 // stays farmable.
 
 import { CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER, THE_COFFERS_FLEET, THE_QUARTERMASTER, THE_QUARTERMASTERS_GHOST, THE_BLOCKADE, THE_THRONE, THE_SUNKEN_HAND, GEM_GLYPH, raidCompletionBonusXp, type RaidLootItem, type BossRaidConfig } from '@/lib/bossRaids'
-import { SIXTH_BERTH_COST, ARMORY_EXPANSION_COST } from '@/lib/shipBerth'
+import { SIXTH_BERTH_COST, ARMORY_EXPANSION_COST, SPOILS_PRICE } from '@/lib/shipBerth'
 import type { RaidMuster, MusterReport } from '@/lib/crewMuster'
 import { CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE, THE_CARTOGRAPHER_CHALLENGE, THE_TOLLMASTER_CHALLENGE, THE_COFFERS_FLEET_CHALLENGE, THE_QUARTERMASTER_CHALLENGE, THE_BLOCKADE_CHALLENGE, THE_THRONE_CHALLENGE, THE_SUNKEN_HAND_CHALLENGE } from '@/lib/raidChallenge'
 import { getShipSkin } from '@/lib/shipSkins'
@@ -118,7 +118,7 @@ export function musterSceneLines(nodeId: string, report: MusterReport): SceneLin
 //  - milestone : a "collect / hold X" goal (no fight)
 //  - shop      : a contraband stall (future)
 //  - story     : an overarching-story beat (future)
-export type RaidNodeType = 'skirmish' | 'raid' | 'milestone' | 'shop' | 'story' | 'puzzle' | 'class_pick' | 'event' | 'dice' | 'gauntlet' | 'fork' | 'dps_check' | 'berth' | 'muster'
+export type RaidNodeType = 'skirmish' | 'raid' | 'milestone' | 'shop' | 'story' | 'puzzle' | 'class_pick' | 'event' | 'dice' | 'gauntlet' | 'fork' | 'dps_check' | 'berth' | 'muster' | 'spoils'
 
 // Branching event nodes (lib/raidMap RaidNode.event). One-time, the
 // player picks ONE option which fires its outcome and clears the node;
@@ -542,6 +542,12 @@ export interface RaidNode {
    *  zigzag slot, and renders smaller + with the challenge glyph. The main
    *  chain skips it entirely when drawing the route line. */
   sideBranch?: { parentId: string }
+  /** THE SPOILS OF THE SUNKEN HAND. A two-way choice where you take ONE side
+   *  free and may buy the other later. Both sides open a slot that accepts
+   *  exactly ONE item, Finn's matching drop, so neither is a general-purpose
+   *  expansion and neither can be farmed. `price` is the cost of the side you
+   *  did NOT take. */
+  spoils?: { price: number }
   /** Tap-through dialogue scene. On story nodes the Continue CTA plays
    *  it and the final tap marks the node read. On milestone/event nodes
    *  it's an INTRO cutscene: the sheet gates the interactive bits (pay
@@ -2738,6 +2744,30 @@ export const RAID_MAP: RaidNode[] = [
       dropsNote: 'Everything the six giants gave him, taken back off his hull.',
       ctaLabel: 'Coming Soon',
       summary: 'The last fight. Read The Hand That Sharpens It first.',
+    },
+  },
+  {
+    // THE SPOILS. Sits between the kill and the challenge: you beat him, you
+    // take one of the two things he was carrying, and the other stays on the
+    // table at a price. Deliberately NOT a power node in the normal sense, since
+    // each slot fits exactly one item and that item only drops from him.
+    id: 'spoils_of_the_hand',
+    type: 'spoils',
+    label: 'The Spoils of the Hand',
+    flavor: 'Two things came up off his wreck, and only one of them will fit aboard today. The other keeps.',
+    bridge: 'One is a reel. One is a mount. Both were his, and neither was meant for you.',
+    requiresNode: 'one_last_ride',
+    spoils: { price: SPOILS_PRICE },
+    previewWhenLocked: true,
+    comingSoon: true,
+    image: '/finn_final.png',
+    sceneAccent: '#c4a96a',
+    detail: {
+      description:
+        "He went down with two things worth taking, and they answer to the two halves of your life out here.\n\nTHE DEEP REEL opens a SECOND special slot on your fishing rig, and only The Angler's Patience will seat in it.\n\nTHE SIXTH MOUNT frames one more raid item onto your hull, and only The Borrowed Jaw will mount there.\n\nTake one now. The other keeps, and it keeps expensive.",
+      ctaLabel: 'Coming Soon',
+      summary: 'Choose one of his two spoils. The other costs 2,500,000 doubloons.',
+      dropsNote: 'Each slot fits exactly one item, and that item only ever drops from him.',
     },
   },
   {

@@ -1,4 +1,4 @@
-export type SpecialItemId = 'tide_turner' | 'phantom_hook' | 'auto_caster' | 'auto_catcher' | 'perfected_sigil'
+export type SpecialItemId = 'tide_turner' | 'phantom_hook' | 'auto_caster' | 'auto_catcher' | 'perfected_sigil' | 'anglers_patience'
 
 export type SpecialItemDef = {
   id: SpecialItemId
@@ -17,9 +17,22 @@ export type SpecialItemDef = {
   requiresItem?: SpecialItemId
   /** Minimum Davy Jones' Gauntlet depth required to unlock the purchase. */
   requiresGauntletDepth?: number
+  /** THE SUNKEN HAND. Only fits the SECOND special slot, which only opens by
+   *  beating Finn. Never buyable and never valid in slot one, so it cannot be
+   *  farmed or shuffled into an ordinary loadout. */
+  finaleSlotOnly?: boolean
 }
 
 export const SPECIAL_ITEMS: SpecialItemDef[] = [
+  {
+    id: 'anglers_patience',
+    name: "The Angler's Patience",
+    color: '#c4a96a',
+    description: 'The line he waited a lifetime on, off his own hull. It does not hurry, and neither do you: bites take longer to come, and when they do the fish is worth the wait.',
+    effectLabel: 'Rarer fish on every bite, at the cost of a slower wait',
+    obtainedFrom: 'The Sunken Hand',
+    finaleSlotOnly: true,
+  },
   {
     id: 'tide_turner',
     name: 'Tide Turner',

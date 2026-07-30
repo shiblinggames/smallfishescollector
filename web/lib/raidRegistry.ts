@@ -87,7 +87,7 @@ export function maxLegitKillGrant(): { xp: number; gold: number } {
 //
 // It lives here now so verify-loot.ts can prove, for every raid, that every id in
 // its table grants something.
-export const ITEM_GRANTS: Record<string, { doubloons?: number; gems?: number; shipSkin?: string; raidItem?: string }> = {
+export const ITEM_GRANTS: Record<string, { doubloons?: number; gems?: number; shipSkin?: string; raidItem?: string; specialItem?: string }> = {
   doubloons_300:   { doubloons: 300 },
   doubloons_600:   { doubloons: 600 },
   doubloons_800:   { doubloons: 800 },
@@ -98,12 +98,12 @@ export const ITEM_GRANTS: Record<string, { doubloons?: number; gems?: number; sh
   // Legacy "pack" loot ids now pay gems (packs are retired): 100 gems per pack.
   pack:            { gems: 100 },
   pack_2:          { gems: 200 },
-  // The Sunken Hand. Every loot id needs an entry here or the grant is skipped.
-  anglers_patience:        { raidItem: 'anglers_patience' },
+  // The Sunken Hand. A loot id with no entry here grants NOTHING, silently.
+  anglers_patience:        { specialItem: 'anglers_patience' },
   borrowed_jaw:            { raidItem: 'borrowed_jaw' },
-  drowned_plate:           { raidItem: 'drowned_plate' },
-  long_line:               { raidItem: 'long_line' },
-  finns_ledger:            { raidItem: 'finns_ledger' },
+  sunken_hand_hull:        { shipSkin: 'sunken_hand_hull' },
+  drowned_giant_hull:      { shipSkin: 'drowned_giant_hull' },
+  last_cast_hull:          { shipSkin: 'last_cast_hull' },
   corsair_cannon:          { raidItem: 'corsair_cannon' },
   corsair_prime_cannon:    { raidItem: 'corsair_prime_cannon' },
   krusts_carapace:         { raidItem: 'krusts_carapace' },

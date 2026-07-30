@@ -7,3 +7,8 @@ export const SIXTH_BERTH_COST = 1_000_000
 // shipwright), unlocked by beating Raid 8 (the Throne). Same power-spike price
 // as the berth: one more piece of gear working every fight, bought once.
 export const ARMORY_EXPANSION_COST = 1_000_000
+
+/** The price of the Sunken Hand spoil you did NOT take for free. Deliberately
+ *  steep: beating Finn hands you ONE of the two, and the other is a long-term
+ *  goal rather than a same-day purchase. */
+export const SPOILS_PRICE = 2_500_000
