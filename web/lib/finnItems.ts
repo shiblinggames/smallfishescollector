@@ -42,8 +42,8 @@ export interface FinnMilestone {
   level: number
   unlock: string
   /** ── Fishing side (The Primeval Eye) ── */
-  /** Added to the rod's rarity bias. The through-line: it climbs every rung. */
-  rarityBonus?: number
+  /** Multiplier on doubloons from selling fish. Both lanes, same as Renown. */
+  sellMult?: number
   /** Bite wait multiplier. Under 1 is FASTER. */
   waitMult?: number
   fishingXpMult?: number
@@ -85,12 +85,12 @@ export const FINN_ITEMS: Record<FinnItemId, FinnItemDef> = {
     color: '#6fd3c7',
     flavor: 'He watched that water for a lifetime until it gave up everything it was hiding. The waiting was never the price. It was the method.',
     milestones: [
-      { level: 1, unlock: 'It looks deeper. Rare fish bias +0.30.', rarityBonus: 0.30 },
-      { level: 2, unlock: 'It reads what it finds. +12% fishing XP.', rarityBonus: 0.45, fishingXpMult: 1.12 },
-      { level: 3, unlock: 'It sees them coming. Bites arrive 10% sooner.', rarityBonus: 0.60, fishingXpMult: 1.12, waitMult: 0.90 },
-      { level: 4, unlock: 'It sees the bottom too. Double crate odds.', rarityBonus: 0.75, fishingXpMult: 1.12, waitMult: 0.90, crateChanceMult: 2 },
-      { level: 5, unlock: 'It catches the shine. Golden odds x1.8.', rarityBonus: 0.95, fishingXpMult: 1.12, waitMult: 0.90, crateChanceMult: 2, goldenOddsMult: 1.8 },
-      { level: 6, unlock: 'It never wastes a thing. A perfect catch NEVER consumes bait.', rarityBonus: 1.20, fishingXpMult: 1.12, waitMult: 0.90, crateChanceMult: 2, goldenOddsMult: 1.8, perfectBaitSave: true },
+      { level: 1, unlock: 'It knows what a thing is worth. +15% doubloons on every fish you sell.', sellMult: 1.15 },
+      { level: 2, unlock: 'It reads what it finds. +12% fishing XP.', sellMult: 1.15, fishingXpMult: 1.12 },
+      { level: 3, unlock: 'It sees them coming. Bites arrive 10% sooner.', sellMult: 1.15, fishingXpMult: 1.12, waitMult: 0.90 },
+      { level: 4, unlock: 'It sees the bottom too. Double crate odds.', sellMult: 1.15, fishingXpMult: 1.12, waitMult: 0.90, crateChanceMult: 2 },
+      { level: 5, unlock: 'It catches the shine. Golden odds x1.8.', sellMult: 1.15, fishingXpMult: 1.12, waitMult: 0.90, crateChanceMult: 2, goldenOddsMult: 1.8 },
+      { level: 6, unlock: 'It never wastes a thing. A perfect catch NEVER consumes bait.', sellMult: 1.15, fishingXpMult: 1.12, waitMult: 0.90, crateChanceMult: 2, goldenOddsMult: 1.8, perfectBaitSave: true },
     ],
   },
   borrowed_jaw: {
@@ -140,7 +140,7 @@ export function finnItemMilestone(id: FinnItemId, xp: number): FinnMilestone {
 }
 
 export interface EyeEffects {
-  rarityBonus: number
+  sellMult: number
   waitMult: number
   fishingXpMult: number
   goldenOddsMult: number
@@ -150,11 +150,11 @@ export interface EyeEffects {
 
 /** Fishing-side effects, or identity when the eye is not seated. */
 export function anglersPatienceEffects(seated: boolean, xp: number): EyeEffects {
-  const idle: EyeEffects = { rarityBonus: 0, waitMult: 1, fishingXpMult: 1, goldenOddsMult: 1, crateChanceMult: 1, perfectBaitSave: false }
+  const idle: EyeEffects = { sellMult: 1, waitMult: 1, fishingXpMult: 1, goldenOddsMult: 1, crateChanceMult: 1, perfectBaitSave: false }
   if (!seated) return idle
   const m = finnItemMilestone('anglers_patience', xp)
   return {
-    rarityBonus: m.rarityBonus ?? 0,
+    sellMult: m.sellMult ?? 1,
     waitMult: m.waitMult ?? 1,
     fishingXpMult: m.fishingXpMult ?? 1,
     goldenOddsMult: m.goldenOddsMult ?? 1,
@@ -197,4 +197,21 @@ export function borrowedJawEffects(mounted: boolean, xp: number) {
     extraStartChargeChance: m.extraStartChargeChance ?? 0,
     critChargeRefundChance: m.critChargeRefundChance ?? 0,
   }
+}
+
+/** THE EYE off a profile row. Five different fishing paths need it now (the
+ *  cast, the grant, and all three sell lanes), and every one has to apply the
+ *  same three conditions: owned, seated, and its SLOT actually unlocked at the
+ *  spoils node. Kept here so a new caller cannot forget one of them. */
+export function eyeFromProfile(p: {
+  equipped_special_2?: string | null
+  has_anglers_patience?: boolean | null
+  anglers_patience_xp?: number | null
+  finn_spoil_free?: string | null
+  finn_spoil_paid?: string | null
+} | null): EyeEffects {
+  const seated = p?.equipped_special_2 === 'anglers_patience'
+    && p?.has_anglers_patience === true
+    && (p?.finn_spoil_free === 'fishing' || p?.finn_spoil_paid === 'fishing')
+  return anglersPatienceEffects(seated, Number(p?.anglers_patience_xp ?? 0))
 }

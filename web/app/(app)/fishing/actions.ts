@@ -1,6 +1,6 @@
 'use server'
 
-import { anglersPatienceEffects, finnItemLevel } from '@/lib/finnItems'
+import { eyeFromProfile } from '@/lib/finnItems'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getBait } from '@/lib/bait'
@@ -298,15 +298,8 @@ export async function castLine(baitType: string, habitat: string): Promise<
   // THE ANGLER'S PATIENCE. Its strength is its CHARGE, not a fixed bonus: it
   // levels on NAVIGATION xp while seated, so a fresh one barely helps and a
   // maxed one is transformative. Identity when it is not seated.
-  const patience = anglersPatienceEffects(
-    profile.equipped_special_2 === 'anglers_patience' && profile.has_anglers_patience === true
-    // The reel seats itself the moment Finn drops it, but the SLOT only opens at
-    // the choice node after him. Until it does, the reel is aboard and inert.
-    && (profile.finn_spoil_free === 'fishing' || profile.finn_spoil_paid === 'fishing'),
-    Number(profile.anglers_patience_xp ?? 0),
-  )
+  const patience = eyeFromProfile(profile)
   const patienceWaitMult = patience.waitMult
-  const patienceRarityBonus = patience.rarityBonus
 
   // Crate encounter: 2% chance (× rod.crateChanceMult — Treasure Rod = 2×).
   // Rolled up-front so the in-flight flag below can skip crates — they're
@@ -361,7 +354,7 @@ export async function castLine(baitType: string, habitat: string): Promise<
     const trophyPool  = pool.filter(f => (f.sell_value ?? 0) === 0)   // uncaught trophies (lure casts only)
     const regularPool = pool.filter(f => (f.sell_value ?? 0) > 0)
     const baseTrophyChance = baitType === 'golden' ? 0.20 : baitType === 'luminous' ? 0.15 : 0
-    const trophyChance = Math.min(0.95, baseTrophyChance * (1 + (rod.rarityBonus + eventRarityBonus + locked.rarityBonus + patienceRarityBonus) * 4))
+    const trophyChance = Math.min(0.95, baseTrophyChance * (1 + (rod.rarityBonus + eventRarityBonus + locked.rarityBonus) * 4))
     if (ALWAYS_ANCIENT_TROPHY && trophyPool.length > 0) {
       // Test account: always the lowest-id uncaught giant, so they surface in a
       // predictable order (144→148, then Megalodon once the gate opens).
@@ -369,13 +362,13 @@ export async function castLine(baitType: string, habitat: string): Promise<
     } else if (trophyPool.length > 0 && Math.random() < trophyChance) {
       fish = trophyPool[Math.floor(Math.random() * trophyPool.length)]
     } else if (regularPool.length > 0) {
-      fish = tierWeightedPick(regularPool, habitat, rod.rarityBonus + eventRarityBonus + locked.rarityBonus + patienceRarityBonus)
+      fish = tierWeightedPick(regularPool, habitat, rod.rarityBonus + eventRarityBonus + locked.rarityBonus)
     } else {
       // Regulars somehow exhausted — hand back a trophy so the cast still lands.
       fish = trophyPool[Math.floor(Math.random() * trophyPool.length)]
     }
   } else {
-    fish = tierWeightedPick(pool, habitat, rod.rarityBonus + eventRarityBonus + locked.rarityBonus + patienceRarityBonus)
+    fish = tierWeightedPick(pool, habitat, rod.rarityBonus + eventRarityBonus + locked.rarityBonus)
   }
   // Locked-In quickens bites at streak 3+ (−20%) / 10+ (−35%); take the faster of
   // the rod's base speed and the streak stage.
@@ -533,11 +526,7 @@ export async function reelIn(
   // tiers touch three different things further down (the golden roll, the XP,
   // and nothing below may read it before it exists). Identity when the slot is
   // shut or the eye is elsewhere.
-  const eye = anglersPatienceEffects(
-    profile.equipped_special_2 === 'anglers_patience' && profile.has_anglers_patience === true
-    && (profile.finn_spoil_free === 'fishing' || profile.finn_spoil_paid === 'fishing'),
-    Number(profile.anglers_patience_xp ?? 0),
-  )
+  const eye = eyeFromProfile(profile)
 
   // ── Bind to the server-rolled cast token (anti-forgery) ──────────────────
   // castLine wrote pending_cast with the TRUE fish id + haul multipliers. Claim
@@ -1242,14 +1231,14 @@ export async function sellFish(
   const [{ data: invRow }, { data: fish }, { data: profile }] = await Promise.all([
     admin.from('fish_inventory').select('quantity').eq('user_id', user.id).eq('fish_id', fishId).single(),
     admin.from('fish_species').select('sell_value').eq('id', fishId).single(),
-    admin.from('profiles').select('doubloons, active_event, fishing_renown_alloc').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, active_event, fishing_renown_alloc, equipped_special_2, has_anglers_patience, anglers_patience_xp, finn_spoil_free, finn_spoil_paid').eq('id', user.id).single(),
   ])
 
   if (!invRow || !fish || !profile) return { error: 'Data not found' }
   if (invRow.quantity < quantity) return { error: 'Not enough fish' }
 
   const fullPrice = getActiveEvent(profile.active_event)?.type === 'fullmoon'
-  const renownSellMult = fishingRenownEffects(profile.fishing_renown_alloc as RenownAlloc | null).sellMult
+  const renownSellMult = fishingRenownEffects(profile.fishing_renown_alloc as RenownAlloc | null).sellMult * eyeFromProfile(profile).sellMult
   // Quick-sell at 75% (was 65%) — gives new players a softer floor so
   // one bad early sell doesn't lock them out of their next rod tier.
   // The two-lane design is unchanged: market still pays full price,
@@ -1292,7 +1281,7 @@ export async function quickSellAllFish(): Promise<
       .select('fish_id, quantity, fish_species(sell_value)')
       .eq('user_id', user.id)
       .gt('quantity', 0),
-    admin.from('profiles').select('doubloons, active_event, fishing_renown_alloc').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, active_event, fishing_renown_alloc, equipped_special_2, has_anglers_patience, anglers_patience_xp, finn_spoil_free, finn_spoil_paid').eq('id', user.id).single(),
   ])
 
   if (!profile) return { error: 'Profile not found' }
@@ -1302,7 +1291,7 @@ export async function quickSellAllFish(): Promise<
   if (inventory.length === 0) return { error: 'Nothing to sell' }
 
   const fullPrice = getActiveEvent(profile.active_event)?.type === 'fullmoon'
-  const renownSellMult = fishingRenownEffects(profile.fishing_renown_alloc as RenownAlloc | null).sellMult
+  const renownSellMult = fishingRenownEffects(profile.fishing_renown_alloc as RenownAlloc | null).sellMult * eyeFromProfile(profile).sellMult
   const rate = (fullPrice ? 1.0 : 0.75) * renownSellMult
 
   let totalEarned = 0
@@ -1795,10 +1784,10 @@ export async function sellGoldenTrophy(
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, fishing_renown_alloc')
+    .select('doubloons, fishing_renown_alloc, equipped_special_2, has_anglers_patience, anglers_patience_xp, finn_spoil_free, finn_spoil_paid')
     .eq('id', user.id)
     .single()
-  const renownSellMult = fishingRenownEffects(profile?.fishing_renown_alloc as RenownAlloc | null).sellMult
+  const renownSellMult = fishingRenownEffects(profile?.fishing_renown_alloc as RenownAlloc | null).sellMult * eyeFromProfile(profile).sellMult
   const earned = Math.floor((trophy.fish_species.sell_value ?? 0) * SHINY_SELL_MULT * renownSellMult)
   if (earned <= 0) return { error: 'Trophy has no value' }
 
