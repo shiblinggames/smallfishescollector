@@ -51,15 +51,18 @@ export interface FinnMilestone {
   goldenOddsMult?: number
   /** Multiplier on the 2% base crate encounter chance. */
   crateChanceMult?: number
-  /** Flat chance ADDED to the rod's double-catch roll. */
-  doubleCatchChance?: number
+  /** Tier 6: a PERFECT catch never consumes bait. Absolute, not a chance. */
+  perfectBaitSave?: boolean
   /** ── Raid side (The Primeval Maw) ── */
   bossDamageMult?: number
-  nonBossDamageMult?: number
-  critDamageMult?: number
-  critUpgradeChance?: number
-  lifestealPct?: number
-  startChargeChance?: number
+  /** Per-action damage lanes. Each rides only its own action. */
+  fireDamageMult?: number
+  volleyDamageMult?: number
+  megaDamageMult?: number
+  /** Rolled SEPARATELY from Spet's primers so it stacks on top of them. */
+  extraStartChargeChance?: number
+  /** On a CRITICAL, the shot costs no cannonballs. Fire, volley and mega alike. */
+  critChargeRefundChance?: number
 }
 
 export interface FinnItemDef {
@@ -84,10 +87,10 @@ export const FINN_ITEMS: Record<FinnItemId, FinnItemDef> = {
     milestones: [
       { level: 1, unlock: 'It looks deeper. Rare fish bias +0.30.', rarityBonus: 0.30 },
       { level: 2, unlock: 'It reads what it finds. +12% fishing XP.', rarityBonus: 0.45, fishingXpMult: 1.12 },
-      { level: 3, unlock: 'It catches the shine. Golden odds x1.8.', rarityBonus: 0.60, fishingXpMult: 1.12, goldenOddsMult: 1.8 },
-      { level: 4, unlock: 'It sees them coming. Bites arrive 12% sooner.', rarityBonus: 0.75, fishingXpMult: 1.12, goldenOddsMult: 1.8, waitMult: 0.88 },
-      { level: 5, unlock: 'It sees the bottom too. Triple crate odds.', rarityBonus: 0.95, fishingXpMult: 1.12, goldenOddsMult: 1.8, waitMult: 0.88, crateChanceMult: 3 },
-      { level: 6, unlock: 'It takes two at a time. A 25% chance any catch hauls double.', rarityBonus: 1.20, fishingXpMult: 1.12, goldenOddsMult: 1.8, waitMult: 0.88, crateChanceMult: 3, doubleCatchChance: 0.25 },
+      { level: 3, unlock: 'It sees them coming. Bites arrive 10% sooner.', rarityBonus: 0.60, fishingXpMult: 1.12, waitMult: 0.90 },
+      { level: 4, unlock: 'It sees the bottom too. Double crate odds.', rarityBonus: 0.75, fishingXpMult: 1.12, waitMult: 0.90, crateChanceMult: 2 },
+      { level: 5, unlock: 'It catches the shine. Golden odds x1.8.', rarityBonus: 0.95, fishingXpMult: 1.12, waitMult: 0.90, crateChanceMult: 2, goldenOddsMult: 1.8 },
+      { level: 6, unlock: 'It never wastes a thing. A perfect catch NEVER consumes bait.', rarityBonus: 1.20, fishingXpMult: 1.12, waitMult: 0.90, crateChanceMult: 2, goldenOddsMult: 1.8, perfectBaitSave: true },
     ],
   },
   borrowed_jaw: {
@@ -99,11 +102,11 @@ export const FINN_ITEMS: Record<FinnItemId, FinnItemDef> = {
     flavor: 'Torn out of the oldest mouth in the sea and bolted into iron that never earned it. It has forgiven neither of you.',
     milestones: [
       { level: 1, unlock: 'It knows what a boss is. +10% damage on boss rounds.', bossDamageMult: 1.10 },
-      { level: 2, unlock: 'It bites where the plating ends. +15% critical damage.', bossDamageMult: 1.13, critDamageMult: 1.15 },
-      { level: 3, unlock: 'It finds the gap itself. 10% of clean hits come up critical.', bossDamageMult: 1.16, critDamageMult: 1.15, critUpgradeChance: 0.10 },
-      { level: 4, unlock: 'It feeds. 8% of the damage you deal comes back as hull.', bossDamageMult: 1.19, critDamageMult: 1.15, critUpgradeChance: 0.10, lifestealPct: 0.08 },
-      { level: 5, unlock: 'It never sleeps. A 50% chance to open every fight already loaded.', bossDamageMult: 1.22, critDamageMult: 1.15, critUpgradeChance: 0.10, lifestealPct: 0.08, startChargeChance: 0.50 },
-      { level: 6, unlock: 'Nothing swims above it. +20% damage to everything else too.', bossDamageMult: 1.25, nonBossDamageMult: 1.20, critDamageMult: 1.20, critUpgradeChance: 0.12, lifestealPct: 0.10, startChargeChance: 0.50 },
+      { level: 2, unlock: 'It steadies your aim. +10% damage on a single shot.', bossDamageMult: 1.13, fireDamageMult: 1.10 },
+      { level: 3, unlock: 'It puts its weight behind the big one. +10% ultimate damage.', bossDamageMult: 1.16, fireDamageMult: 1.10, megaDamageMult: 1.10 },
+      { level: 4, unlock: 'It opens both jaws. +10% volley damage.', bossDamageMult: 1.19, fireDamageMult: 1.10, megaDamageMult: 1.10, volleyDamageMult: 1.10 },
+      { level: 5, unlock: 'It never sleeps. A 50% chance to open every fight with one more chambered, on top of any primer you run.', bossDamageMult: 1.22, fireDamageMult: 1.10, megaDamageMult: 1.10, volleyDamageMult: 1.10, extraStartChargeChance: 0.50 },
+      { level: 6, unlock: 'It bites for free. A critical has a 50% chance to cost NO cannonballs, whether you fired, volleyed or opened up.', bossDamageMult: 1.25, fireDamageMult: 1.10, megaDamageMult: 1.10, volleyDamageMult: 1.10, extraStartChargeChance: 0.50, critChargeRefundChance: 0.50 },
     ],
   },
 }
@@ -142,12 +145,12 @@ export interface EyeEffects {
   fishingXpMult: number
   goldenOddsMult: number
   crateChanceMult: number
-  doubleCatchChance: number
+  perfectBaitSave: boolean
 }
 
 /** Fishing-side effects, or identity when the eye is not seated. */
 export function anglersPatienceEffects(seated: boolean, xp: number): EyeEffects {
-  const idle: EyeEffects = { rarityBonus: 0, waitMult: 1, fishingXpMult: 1, goldenOddsMult: 1, crateChanceMult: 1, doubleCatchChance: 0 }
+  const idle: EyeEffects = { rarityBonus: 0, waitMult: 1, fishingXpMult: 1, goldenOddsMult: 1, crateChanceMult: 1, perfectBaitSave: false }
   if (!seated) return idle
   const m = finnItemMilestone('anglers_patience', xp)
   return {
@@ -156,7 +159,7 @@ export function anglersPatienceEffects(seated: boolean, xp: number): EyeEffects 
     fishingXpMult: m.fishingXpMult ?? 1,
     goldenOddsMult: m.goldenOddsMult ?? 1,
     crateChanceMult: m.crateChanceMult ?? 1,
-    doubleCatchChance: m.doubleCatchChance ?? 0,
+    perfectBaitSave: m.perfectBaitSave === true,
   }
 }
 
@@ -171,11 +174,11 @@ export function borrowedJawRaidEffects(level: number): RaidEffect[] {
   // mults, maxing the chances), so emitting a rung's value twice would silently
   // square it. The milestone rows hold totals precisely so this stays a copy.
   if (m.bossDamageMult) out.push({ type: 'boss_damage_mult', value: m.bossDamageMult })
-  if (m.nonBossDamageMult) out.push({ type: 'nonboss_damage_mult', value: m.nonBossDamageMult })
-  if (m.critDamageMult) out.push({ type: 'crit_damage_mult', value: m.critDamageMult })
-  if (m.critUpgradeChance) out.push({ type: 'crit_upgrade_chance', value: m.critUpgradeChance })
-  if (m.lifestealPct) out.push({ type: 'lifesteal_pct', value: m.lifestealPct })
-  if (m.startChargeChance) out.push({ type: 'start_charge_chance', value: m.startChargeChance })
+  if (m.fireDamageMult) out.push({ type: 'fire_damage_mult', value: m.fireDamageMult })
+  if (m.volleyDamageMult) out.push({ type: 'volley_damage_mult', value: m.volleyDamageMult })
+  if (m.megaDamageMult) out.push({ type: 'mega_damage_mult', value: m.megaDamageMult })
+  if (m.extraStartChargeChance) out.push({ type: 'extra_start_charge_chance', value: m.extraStartChargeChance })
+  if (m.critChargeRefundChance) out.push({ type: 'crit_charge_refund_chance', value: m.critChargeRefundChance })
   return out
 }
 
@@ -183,15 +186,15 @@ export function borrowedJawRaidEffects(level: number): RaidEffect[] {
  *  Combat does NOT read this (it goes through borrowedJawRaidEffects and the
  *  normal item pipeline); this is for anything that wants the values directly. */
 export function borrowedJawEffects(mounted: boolean, xp: number) {
-  const idle = { bossDamageMult: 1, nonBossDamageMult: 1, critDamageMult: 1, critUpgradeChance: 0, lifestealPct: 0, startChargeChance: 0 }
+  const idle = { bossDamageMult: 1, fireDamageMult: 1, volleyDamageMult: 1, megaDamageMult: 1, extraStartChargeChance: 0, critChargeRefundChance: 0 }
   if (!mounted) return idle
   const m = finnItemMilestone('borrowed_jaw', xp)
   return {
     bossDamageMult: m.bossDamageMult ?? 1,
-    nonBossDamageMult: m.nonBossDamageMult ?? 1,
-    critDamageMult: m.critDamageMult ?? 1,
-    critUpgradeChance: m.critUpgradeChance ?? 0,
-    lifestealPct: m.lifestealPct ?? 0,
-    startChargeChance: m.startChargeChance ?? 0,
+    fireDamageMult: m.fireDamageMult ?? 1,
+    volleyDamageMult: m.volleyDamageMult ?? 1,
+    megaDamageMult: m.megaDamageMult ?? 1,
+    extraStartChargeChance: m.extraStartChargeChance ?? 0,
+    critChargeRefundChance: m.critChargeRefundChance ?? 0,
   }
 }

@@ -401,9 +401,8 @@ export async function castLine(baitType: string, habitat: string): Promise<
   const zoneJackpotChance = isAncientTrophyRoll ? 0 : jackpotChanceForZone(rod, habitat)
   const jackpotHit = zoneJackpotChance > 0 && Math.random() < zoneJackpotChance
   const rolledJackpotMult = jackpotHit ? (rod.jackpotMultiplier ?? 1) : 1
-  const doubleChance = (rod.doubleCatchChance ?? 0) + patience.doubleCatchChance
   const rolledDoubleCatch = !jackpotHit && !isAncientTrophyRoll && canDoubleHere
-    && doubleChance > 0 && Math.random() < doubleChance
+    && (rod.doubleCatchChance ?? 0) > 0 && Math.random() < (rod.doubleCatchChance ?? 0)
 
   const lockedQty = locked.catchQty > 1 ? locked.catchQty : undefined
   const token: PendingCast = { fishId: fish.id, habitat, baitType, jackpotMult: rolledJackpotMult, doubleCatch: rolledDoubleCatch, catchQty: lockedQty, castAt: Date.now() }
@@ -671,6 +670,9 @@ export async function reelIn(
   // Perfect: 50% chance to return the bait used for this cast; Phantom Hook: additional 25% on any catch
   let baitSaved = result === 'perfect' && Math.random() < PERFECT_BAIT_SAVE_CHANCE
   if (!baitSaved && profile.has_phantom_hook) baitSaved = Math.random() < 0.25
+  // THE PRIMEVAL EYE, tier 6: a perfect catch never costs bait. Absolute, so it
+  // overrides both rolls above rather than adding another chance on top.
+  if (!baitSaved && eye.perfectBaitSave && result === 'perfect') baitSaved = true
 
   // ── Shiny gate (computed early so the inventory + size logic can branch on it) ──
   // Shinies are gated on Perfect + a 1/SHINY_ODDS roll, with two admin

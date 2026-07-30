@@ -1482,7 +1482,7 @@ export default function RaidCombat({
   // On the dial the ZONES are an SVG group inside DialSVG, rotated by its
   // transform ATTRIBUTE (same as the fishing drift mechanic), and the ship
   // marker orbits on its own layer at the same bearing.
-  const dialZonesRef = useRef<SVGGElement | null>(null)
+  const dialZonesRef = useRef<SVGGElement | null>(null)
   const paintNeedle = useCallback((el: HTMLDivElement | null, pos: number) => {
     if (!el) return
     if (onDial) el.style.transform = `rotate(${pos * 360}deg)`
@@ -1501,7 +1501,7 @@ export default function RaidCombat({
       // Bands are built centred on 180 degrees so no arc wraps past 0/360; the
       // whole group just rotates onto the enemy's current bearing.
       const deg = center * 360 - 180
-      dialZonesRef.current?.setAttribute('transform', `rotate(${deg}, ${CX}, ${CY})`)
+      dialZonesRef.current?.setAttribute('transform', `rotate(${deg}, ${CX}, ${CY})`)
       return
     }
     if (!el) return
@@ -2181,7 +2181,15 @@ export default function RaidCombat({
     const startChargeChance = getActiveEffects(equippedRaidItems)
       .filter(e => e.type === 'start_charge_chance')
       .reduce((a, e) => Math.max(a, e.value), 0)
-    const playerStartCharges = startChargeChance > 0 && Math.random() < startChargeChance ? 1 : 0
+    // The Primeval Maw's opener is deliberately NOT a start_charge_chance: that
+    // pool takes the best-of, so the Maw would be swallowed whole by a primer
+    // (Tollmaster's is 100%) and do nothing. Its own type gets its own roll and
+    // ADDS, so running a primer AND the Maw can open you on two.
+    const extraStartChance = getActiveEffects(equippedRaidItems)
+      .filter(e => e.type === 'extra_start_charge_chance')
+      .reduce((a, e) => Math.max(a, e.value), 0)
+    const playerStartCharges = (startChargeChance > 0 && Math.random() < startChargeChance ? 1 : 0)
+      + (extraStartChance > 0 && Math.random() < extraStartChance ? 1 : 0)
     // Fold in the start-charge TIDE (e.g. "+2 cannonballs next fight"). The
     // NO_CHARGES sentinel (-99) drives the total below 0 → clamps to 0 ("start
     // with 0"). Without this the reset wiped the tide's opening cannonballs.
@@ -4291,7 +4299,19 @@ export default function RaidCombat({
           stepLines.push(who === 'player' ? `You brace, ready to dodge.` : `Enemy braces, ready to dodge.`)
         }
       } else if (action === 'fire' || action === 'volley' || action === 'mega' || action === 'ultimate') {
-        if (who === 'player') pCharges -= (action === 'mega' ? effMegaCost : action === 'volley' ? effVolleyCost : 1)
+        // THE PRIMEVAL MAW, tier 6: a CRITICAL has a chance to cost nothing. It
+        // refunds whatever this action was about to spend, so it is worth the
+        // most on the shots that cost the most (a volley, or the Mega). Read off
+        // lockedAimResult, which already carries any crit upgrade.
+        let critRefunded = false
+        if (who === 'player') {
+          const cost = action === 'mega' ? effMegaCost : action === 'volley' ? effVolleyCost : 1
+          const refundChance = getActiveEffects(equippedRaidItems.filter(id => id !== repossessedItemRef.current))
+            .filter(e => e.type === 'crit_charge_refund_chance')
+            .reduce((a, e) => Math.max(a, e.value), 0)
+          critRefunded = lockedAimResult === 'critical' && refundChance > 0 && Math.random() < refundChance
+          if (!critRefunded) pCharges -= cost
+        }
         else                  eCharges = Math.max(0, eCharges - (action === 'ultimate' ? enemyMagazine : action === 'volley' ? VOLLEY_COST : 1))
 
         const isAttackerPlayer = who === 'player'
@@ -4343,6 +4363,11 @@ export default function RaidCombat({
           // Wrath boon) so a volley-damage boon doesn't leak onto it and its own
           // boon doesn't leak onto volleys. Volley uses volleyDmgMult, fire fire.
           const tideActionMult = isMega ? tide.megaDmgMult : isVolley ? tide.volleyDmgMult : tide.fireDmgMult
+          // The ITEM-side mirror of the same three lanes (The Primeval Maw).
+          // Same split, so a volley bonus never leaks onto a single shot.
+          const itemLaneType = isMega ? 'mega_damage_mult' : isVolley ? 'volley_damage_mult' : 'fire_damage_mult'
+          const itemActionMult = getActiveEffects(liveItems)
+            .filter(e => e.type === itemLaneType).reduce((a, e) => a * e.value, 1)
           const tideBossMult = isBoss
             ? tide.bossDmgMult * (isVolleyLike ? tide.bossVolMult : 1)
             : 1
@@ -4411,8 +4436,10 @@ export default function RaidCombat({
             && tide.doubleStrikeChance > 0 && Math.random() < tide.doubleStrikeChance
           const doubleStrikeMult = doubleStruck ? 2 : 1
           const mult = actionBaseMult * bossMult * nonbossMult * rampMult * aimItemMult * classDamageMult
-                       * tide.dmgMult * tideActionMult * tideBossMult * critTideMult * lowHpMult * noncritTideMult * frozenMult * volleyRampMult * critStreakMult * vengeanceMult * statusOutMult * firstShotMult * afflictedMult * doubleStrikeMult
+                       * tide.dmgMult * tideActionMult * itemActionMult * tideBossMult * critTideMult * lowHpMult * noncritTideMult * frozenMult * volleyRampMult * critStreakMult * vengeanceMult * statusOutMult * firstShotMult * afflictedMult * doubleStrikeMult
           if (doubleStruck) stepLines.push(`Weather Gauge! You take the opening and the shot lands twice.`)
+          // Say it out loud, or a refunded volley just looks like a bookkeeping bug.
+          if (critRefunded) stepLines.push(`The Primeval Maw bites for free. That shot cost you nothing. (${pCharges}/${playerMaxCharges})`)
           dmg = Math.floor(rollShotDamage(lockedAimResult ?? 'miss', shipMinDamage, totalPower, mods.damagePct) * mult)
           if (isVolley) volleyCountRef.current += 1   // this volley is now "fired" — the next ramps further
           // Enemy themed defense: crustacean carapace soaks a flat % off every
@@ -7212,11 +7239,11 @@ export default function RaidCombat({
             <div style={{ position: 'relative', width: '86%', maxWidth: 300 }}>
               <DialAimInline
                 indicatorRef={indicatorRef}
-                zonesGroupRef={dialZonesRef}
+                zonesGroupRef={dialZonesRef}
                 flashRef={barFlashRef}
                 critW={critFreeze ? lockedCritWRef.current : liveCritW}
                 hitW={aimHitW}
-                grazeW={aimGrazeW}
+                grazeW={aimGrazeW}
                 afflictionLabel={aimAffliction?.name ?? null}
                 hardenedArmed={hardenedArmed}
                 firePos={firePosRef.current}
@@ -10952,7 +10979,7 @@ function buildDialZones(critW: number, hitW: number, grazeW: number): ZoneDef[] 
     { from: C - hit,     to: C - crit,   type: 'catch',   label: 'Hit',      color: '#4ade80' },
     { from: C - crit,    to: C + crit,   type: 'perfect', label: 'Critical', color: '#fbbf24' },
     { from: C + crit,    to: C + hit,    type: 'catch',   label: 'Hit',      color: '#4ade80' },
-    { from: C + hit,     to: C + graze,  type: 'penalty', label: 'Graze',    color: '#94a3b8' },
+    { from: C + hit,     to: C + graze,  type: 'penalty', label: 'Graze',    color: '#94a3b8' },
   ]
 }
 
@@ -10966,9 +10993,9 @@ function DialAimInline({
   afflictionLabel, hardenedArmed, hitW, grazeW, firePos, zoneCenter, snapKey, perfectBurstKey, streakFire, streakCount, streakLabel, streakPct, piercing,
 }: {
   indicatorRef:  React.RefObject<HTMLDivElement | null>
-  zonesGroupRef: React.RefObject<SVGGElement | null>
+  zonesGroupRef: React.RefObject<SVGGElement | null>
   flashRef:      React.RefObject<HTMLDivElement | null>
-  critW: number
+  critW: number
   afflictionLabel?: string | null
   hardenedArmed?: boolean
   /** The band half-widths this fight judges at (gear bonus + dial scale
@@ -11000,7 +11027,7 @@ function DialAimInline({
   piercing: boolean
 }) {
   const zones = useMemo(() => buildDialZones(critW, hitW, grazeW), [critW, hitW, grazeW])
-  // Finn orbits at the middle of the band's radius.
+  // Finn orbits at the middle of the band's radius.
 
   return (
     <div style={{ position: 'relative', width: '100%', maxWidth: 300, margin: '0 auto' }}>

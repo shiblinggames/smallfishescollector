@@ -32,6 +32,15 @@ export type RaidEffectType =
   | 'first_shot_mult'       // value = damage multiplier applied ONLY to the FIRST shot you fire each fight (Opening Statement). Nothing else rewards the opener. Multiplies onto the normal shot math.
   | 'max_hit_pct'           // value = 0-1 cap: a single incoming hit exceeding this fraction of your MAX HP CAN be knocked down to it (Made Man). A per-hit ceiling, not a flat reduction. Paired with max_hit_chance for the proc odds; multiple caps take the LOWEST (tightest).
   | 'max_hit_chance'        // value = 0-1 chance the max_hit_pct cap actually triggers on a hit that exceeds it. Absent = always (1). Made Man rolls this so a big blow only SOMETIMES gets capped.
+  // ── Per-action damage lanes (The Primeval Maw) ────────────────────────────
+  // Boons already split damage by action (tide.fireDmgMult / volleyDmgMult /
+  // megaDmgMult); these are the ITEM-side mirror, so a lane bonus lands on that
+  // action and leaks onto neither of the others.
+  | 'fire_damage_mult'      // value = multiplier on a single FIRE shot only
+  | 'volley_damage_mult'    // value = multiplier on VOLLEYS only
+  | 'mega_damage_mult'      // value = multiplier on the MEGA (the player's ultimate) only
+  | 'extra_start_charge_chance' // value = 0-1 chance for ONE MORE opening cannonball, rolled SEPARATELY from start_charge_chance and ADDED to it. Spet's primers are a tier family and take the best-of among themselves; this deliberately sits outside that so it stacks on top of them instead of being swallowed by the max.
+  | 'crit_charge_refund_chance' // value = 0-1 chance, on a CRITICAL shot, that the shot costs NOTHING. Applies to fire, volley and mega alike, so it refunds whatever that action was about to spend.
   | 'afflicted_damage_mult' // value = damage multiplier vs an enemy that ALREADY carries any status/affliction (burning, frozen, weakened, corroded, feeble, slowed, marked…) at the moment you hit (The Shakedown). The proc that FIRST applies a status lands after this hit, so the bonus kicks in from the next hit on. Rewards a status/elemental build.
 
 export interface RaidEffect {
