@@ -1031,11 +1031,11 @@ export default function GearScreen({
             <button key={key} type="button" onClick={() => setTab(key)}
               className="font-karla font-800 uppercase tracking-[0.1em] tap"
               style={{
-                flex: 1, padding: '0.5rem 0', borderRadius: 9, fontSize: '0.62rem', cursor: 'pointer', border: 'none',
-                color: on ? '#1a1206' : 'rgba(255,255,255,0.55)',
-                background: on ? 'linear-gradient(180deg, #f0c877, #e0a82e)' : 'transparent',
-                boxShadow: on ? '0 1px 6px rgba(224,168,46,0.35)' : 'none',
-                transition: 'color 0.15s',
+                flex: 1, padding: '0.72rem 0', borderRadius: 10, fontSize: '0.76rem', cursor: 'pointer',
+                border: on ? '1px solid rgba(240,192,64,0.55)' : '1px solid transparent',
+                color: on ? '#f5d98a' : 'rgba(255,255,255,0.6)',
+                background: on ? 'linear-gradient(180deg, rgba(240,192,64,0.22), rgba(224,168,46,0.10))' : 'transparent',
+                boxShadow: on ? 'inset 0 0 14px rgba(240,192,64,0.12)' : 'none',
               }}>
               {label}
             </button>
@@ -1058,7 +1058,7 @@ export default function GearScreen({
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 1fr', gridTemplateRows: 'auto auto', gap: 6 }}>
 
         <div style={{ gridColumn: '1', gridRow: '1' }}>
-          <GearSlot label="Rod" image={rod.slug ? `/${rod.slug}_thumb.png` : (rod.imageUrl ?? '/rod_bamboo_thumb.png')} itemName={rod.name} color={rod.color} glowClass={rodGlowClass(rod)} notify={rodHasAffordable} pulseKey={pulseKeys.rod} onClick={() => setOpenSlot('rod')} />
+          <GearSlot label="Rod" image={rod.slug ? `/${rod.slug}_thumb.png` : (rod.imageUrl ?? '/rod_bamboo_thumb.png')} itemName={rod.name} color={rod.color} glowClass={rodGlowClass(rod)} notify={rodHasAffordable} pulseKey={pulseKeys.rod} onClick={() => { setRodView('owned'); setOpenSlot('rod') }} />
         </div>
         <div style={{ gridColumn: '1', gridRow: '2' }}>
           <GearSlot label="Hook" image={hook.imageUrl ? hook.imageUrl.replace(/\.png$/, '_thumb.png') : null} itemName={hook.name} color={hook.color} glowClass={hookGlowClass(hook)} notify={hookHasAffordable} pulseKey={pulseKeys.hook} onClick={() => setOpenSlot('hook')} />
@@ -1163,6 +1163,25 @@ export default function GearScreen({
           opens it and flags whether an upgrade is affordable. */}
       {tab === 'shop' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {/* The full catalogue leads. It was a footnote under four rows that
+              each open a single slot, when it is the bigger destination. */}
+          <Link href="/marketplace/tackle-shop" onClick={onClose} className="tap"
+            style={{ position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', gap: 12, padding: '0.85rem 0.9rem', borderRadius: 16, textDecoration: 'none', background: 'linear-gradient(140deg, rgba(240,192,64,0.22) 0%, rgba(120,84,20,0.12) 60%, rgba(14,19,28,0.96) 100%), rgba(14,19,28,0.96)', border: '1px solid rgba(240,192,64,0.5)', boxShadow: '0 0 20px rgba(240,192,64,0.12)' }}>
+            <span style={{ flexShrink: 0, width: 46, height: 46, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(240,192,64,0.14)', border: '1px solid rgba(240,192,64,0.45)' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f0c040" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M3 9l1.5-5h15L21 9" /><path d="M4 9h16v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9z" /><path d="M9 13h6" /></svg>
+            </span>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span className="font-cinzel font-800" style={{ display: 'block', fontSize: '1.02rem', color: '#f7e2a8', lineHeight: 1.15 }}>The Tackle Shop</span>
+              <span className="font-karla" style={{ display: 'block', fontSize: '0.72rem', color: '#b8ae96', lineHeight: 1.35, marginTop: 2 }}>The full catalogue. Every rod, reel, hook, line and bait.</span>
+            </span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f0c040" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }} aria-hidden><path d="M9 6l6 6-6 6" /></svg>
+          </Link>
+
+          {/* Quick buy — one slot at a time, for when you know what you want. */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+            <span className="font-karla font-800 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.22em', color: '#8794a6' }}>Quick Buy</span>
+            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
+          </div>
           {([
             // Every row opens its slot's buy sheet. The rod row opens that sheet straight
             // to the Buy view (rodView 'shop'); the rest have a single view.
@@ -1186,10 +1205,10 @@ export default function GearScreen({
                   )}
                 </span>
                 <span style={{ flex: 1, minWidth: 0 }}>
-                  <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ display: 'block', fontSize: '0.56rem', color: 'rgba(255,255,255,0.4)' }}>{row.label}</span>
-                  <span className="font-cinzel font-700 truncate" style={{ display: 'block', fontSize: '0.86rem', color: '#f0ede8' }}>{row.name}</span>
+                  <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ display: 'block', fontSize: '0.66rem', color: 'rgba(255,255,255,0.5)' }}>{row.label}</span>
+                  <span className="font-cinzel font-700 truncate" style={{ display: 'block', fontSize: '0.98rem', color: '#f0ede8' }}>{row.name}</span>
                 </span>
-                <span className="font-karla font-800 uppercase tracking-[0.06em]" style={{ flexShrink: 0, fontSize: '0.56rem', color: row.ready ? '#f0c040' : 'rgba(255,255,255,0.35)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span className="font-karla font-800 uppercase tracking-[0.06em]" style={{ flexShrink: 0, fontSize: '0.64rem', color: row.ready ? '#f0c040' : 'rgba(255,255,255,0.45)', display: 'flex', alignItems: 'center', gap: 4 }}>
                   {row.ready ? 'Upgrade ready' : 'Browse'}
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
                 </span>
@@ -1205,7 +1224,6 @@ export default function GearScreen({
               >{inner}</button>
             )
           })}
-          <ShopLink href="/marketplace/tackle-shop" label="The Tackle Shop" sub="The full catalogue — every rod, reel, hook, line and bait" color="#f0c040" onClick={onClose} />
         </div>
       )}
 
@@ -1416,7 +1434,7 @@ export default function GearScreen({
                         reconfigurable, non-destructive. Tapping a rod toggles it
                         in/out of the loadout (capped at COMPLETIONIST_MAX_EFFECTS)
                         and persists via onCompletionistEffectsChange. */}
-                    {completionistEquipped && (() => {
+                    {completionistEquipped && rodView === 'owned' && (() => {
                       const filled = stagedEffects.length
                       const auraT = filled / COMPLETIONIST_MAX_EFFECTS // 0..1 power level
                       return (

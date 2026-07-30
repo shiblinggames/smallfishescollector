@@ -1368,7 +1368,7 @@ export default function ShipHero({
               // All four go to a real route now. Crew already had one; Ship,
               // Items and Forge got theirs so the row behaves the same wherever
               // it points, back button included.
-              const href = row.key === 'crew' ? '/crew' : `/expeditions/${row.key}`
+              const href = row.key === 'crew' ? '/crew?tab=assign' : `/expeditions/${row.key}`
               if (row.locked) {
                 return (
                   <div key={row.key} aria-label="Forge. Locked until you unlock it in the Gauntlet." style={style}>{inner}</div>
