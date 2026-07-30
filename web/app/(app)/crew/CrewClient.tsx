@@ -267,8 +267,8 @@ function PartySection({ accent, Icon, label, sub, count, max, members, collapsed
   return (
     <div style={{
       borderRadius: 16,
-      border: `1px solid ${accent}40`,
-      background: `linear-gradient(180deg, ${accent}12 0%, rgba(255,255,255,0.012) 55%, rgba(0,0,0,0.05) 100%)`,
+      border: `1px solid ${accent}5c`,
+      background: `linear-gradient(180deg, ${accent}1c 0%, rgba(255,255,255,0.02) 55%, rgba(0,0,0,0.10) 100%), rgba(12,17,25,0.91)`,
       overflow: 'hidden',
     }}>
       <button
@@ -319,7 +319,7 @@ function EmptySlotTile({ color, onClick }: { color: string; onClick: () => void 
     <button onClick={onClick} className="font-karla font-700" style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 7,
       minHeight: 92, borderRadius: 14, cursor: 'pointer', width: '100%',
-      background: `linear-gradient(180deg, ${color}24 0%, ${color}0d 100%)`,
+      background: `linear-gradient(180deg, ${color}30 0%, ${color}14 100%), rgba(12,17,25,0.88)`,
       border: `2px dashed ${color}b0`,
       boxShadow: `inset 0 0 22px ${color}24, 0 0 14px ${color}22`,
       color,
@@ -1400,9 +1400,9 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                       flex: '1 1 0', minWidth: 0, position: 'relative',
                       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
                       padding: '0.5rem 0.15rem', borderRadius: 10,
-                      background: active ? `${t.accent}22` : 'rgba(0,0,0,0.25)',
-                      border: `1px solid ${active ? `${t.accent}99` : 'rgba(255,255,255,0.1)'}`,
-                      color: active ? t.accent : 'rgba(255,255,255,0.55)',
+                      background: active ? `linear-gradient(${t.accent}33, ${t.accent}33), rgba(14,19,28,0.93)` : 'rgba(14,19,28,0.88)',
+                      border: `1px solid ${active ? `${t.accent}99` : 'rgba(255,255,255,0.16)'}`,
+                      color: active ? t.accent : 'rgba(255,255,255,0.72)',
                       cursor: 'pointer', transition: 'all 0.18s',
                     }}>
                     {t.icon}
@@ -2118,10 +2118,9 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                       </PartySection>
                     </div>
 
-                    <button onClick={() => setActiveTab('recruits')} className="font-cinzel font-700 uppercase tracking-[0.1em]"
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '0.8rem', borderRadius: 12, background: 'linear-gradient(180deg, rgba(76,196,131,0.16), rgba(46,154,92,0.08))', border: '1px solid rgba(76,196,131,0.4)', color: '#7fdca6', fontSize: '0.72rem', cursor: 'pointer' }}>
-                      <AnchorIcon /> Recruit New Crew
-                    </button>
+                    {/* The "Recruit New Crew" button lived here and did nothing
+                        the Recruit TAB does not already do, one tap away and
+                        permanently on screen. A second door to the same room. */}
 
                     {/* Assign modal — fill an open Raid/Voyage seat from the bench
                         without scrolling. Bottom sheet, accent-coded to the track. */}
