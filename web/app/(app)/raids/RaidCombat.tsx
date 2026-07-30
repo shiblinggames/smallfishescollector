@@ -2396,15 +2396,13 @@ export default function RaidCombat({
       // top of The Gorge's 2.6x zone speed).
       const gust = squallActive ? 1 + 0.38 * Math.sin(now / 440 + squallPhaseRef.current) : 1
       firePosRef.current += NEEDLE_SPEED * gust * frames * fireDirRef.current
-      if (onDial) {
-        // A circle has no ends to bounce off. Bouncing here read as the needle
-        // REVERSING at 12 o'clock, which is exactly the thing the fishing dial
-        // never does. Wrap instead, so it orbits continuously like a reel.
-        firePosRef.current = (firePosRef.current % 1 + 1) % 1
-      } else {
-        if (firePosRef.current >= 1) { firePosRef.current = 1; fireDirRef.current = -1 }
-        if (firePosRef.current <= 0) { firePosRef.current = 0; fireDirRef.current = 1 }
-      }
+      // BOUNCE, on the dial too. The needle sweeps a full revolution and then
+      // REVERSES, mirroring the aim bar hitting its end, and 0/1 are the same
+      // point on a circle so both ends land on one line at 12 o'clock. That
+      // line is drawn on the face (see turnMark) so the reversal is a read the
+      // player can make, not a surprise.
+      if (firePosRef.current >= 1) { firePosRef.current = 1; fireDirRef.current = -1 }
+      if (firePosRef.current <= 0) { firePosRef.current = 0; fireDirRef.current = 1 }
 
       zonePosRef.current += ZONE_SPEED * frames * zoneDirRef.current
       if (onDial) {
@@ -10714,6 +10712,7 @@ function DialAimInline({
         needleColor="currentColor"
         zoneOpacityFn={DIAL_ZONE_OPACITY}
         needleStyle="marker"
+        turnMark
         snapKey={snapKey}
         perfectBurstKey={perfectBurstKey}
       />
