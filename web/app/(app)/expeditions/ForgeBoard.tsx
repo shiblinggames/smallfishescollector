@@ -557,6 +557,11 @@ function AbyssalAcceleratorPanel({ unlocked, ownedRaidItems, conversion, gemsNow
 
   const Header = (
     <div style={{ textAlign: 'center', marginBottom: 12 }}>
+      {/* The bench itself, painted in the same idiom as the boons. AccelCore
+          below still carries the live state; this just gives the panel a face. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/forge/accelerator.png" alt="" aria-hidden decoding="async"
+        style={{ width: 52, height: 52, objectFit: 'contain', display: 'block', margin: '0 auto 4px', opacity: unlocked ? 1 : 0.55, filter: unlocked ? undefined : 'grayscale(0.8)' }} />
       <p className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.28em', color: `${EMBER}cc` }}>Tier III · Transmutation</p>
       <p className="font-cinzel font-800" style={{ fontSize: '1.15rem', lineHeight: 1.1, marginTop: 3, ...ABYSSAL_EMBER_TEXT }}>The Abyssal Accelerator</p>
     </div>

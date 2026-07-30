@@ -1057,20 +1057,26 @@ export default function ShipHero({
     return ownedRaidItems.filter(id => parts.has(id)).length
   }, [ownedRaidItems])
 
-  // The Items row cycles through the art of what you own, so the tile shows
-  // your actual collection rather than a generic crate. Paused when the list
-  // is short enough that there is nothing to cycle through.
+  // Crew and Items both cycle their thumbnail through what you own, off ONE
+  // timer so the two tiles turn together instead of drifting into a flicker.
+  // 2.6s read as a strobe; this is slow enough to actually look at.
+  const CYCLE_MS = 5200
+  const crewArt = useMemo(
+    () => roster.map(c => IMG_BASE + c.filename).filter(Boolean),
+    [roster],
+  )
   const itemsArt = useMemo(
     () => ownedRaidItems.map(id => getRaidItem(id)?.image).filter((s): s is string => !!s),
     [ownedRaidItems],
   )
-  const [itemsCycle, setItemsCycle] = useState(0)
+  const [cycleTick, setCycleTick] = useState(0)
   useEffect(() => {
-    if (itemsArt.length < 2) return
-    const t = setInterval(() => setItemsCycle(n => (n + 1) % itemsArt.length), 2600)
+    if (Math.max(crewArt.length, itemsArt.length) < 2) return
+    const t = setInterval(() => setCycleTick(n => n + 1), CYCLE_MS)
     return () => clearInterval(t)
-  }, [itemsArt.length])
-  const itemsCycleArt = itemsArt.length > 0 ? itemsArt[itemsCycle % itemsArt.length] : null
+  }, [crewArt.length, itemsArt.length])
+  const crewCycleArt  = crewArt.length  > 0 ? crewArt[cycleTick % crewArt.length]   : null
+  const itemsCycleArt = itemsArt.length > 0 ? itemsArt[cycleTick % itemsArt.length] : null
 
   // Crew available to assign: any roster member not already in another slot
   // (the one already in this slot stays selectable). Sorted by effective stats.
@@ -1253,7 +1259,7 @@ export default function ShipHero({
                 label: 'Crew',
                 sub: crewLevelUpNudge ? 'A hand leveled up' : `${roster.length} aboard`,
                 nudge: crewLevelUpNudge,
-                art: featuredCrewTrio[0] ? IMG_BASE + featuredCrewTrio[0].filename : null,
+                art: crewCycleArt,
                 icon: (
                   <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#8b97a8" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                     <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" />
@@ -1302,7 +1308,9 @@ export default function ShipHero({
                   <div style={{ position: 'relative', flexShrink: 0, width: 42, height: 42, borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                     {row.art
                       // eslint-disable-next-line @next/next/no-img-element
-                      ? <img src={row.art} alt="" aria-hidden loading="lazy" decoding="async" style={{ maxWidth: '92%', maxHeight: '92%', objectFit: 'contain' }} />
+                      ? <img src={row.art} alt="" aria-hidden loading="lazy" decoding="async" style={row.key === 'ship'
+                          ? { width: '108%', maxWidth: 'none', height: 'auto', objectFit: 'contain' }
+                          : { maxWidth: '92%', maxHeight: '92%', objectFit: 'contain' }} />
                       : row.icon}
                     {row.locked && (
                       <span aria-hidden style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(8,12,18,0.62)' }}>
@@ -1331,7 +1339,9 @@ export default function ShipHero({
               const style = {
                 display: 'flex', alignItems: 'center', gap: 10,
                 padding: '0.65rem 0.7rem', borderRadius: 13,
-                background: row.locked ? 'rgba(15,20,29,0.96)' : 'rgba(19,25,35,0.97)',
+                background: row.locked ? 'rgba(15,20,29,0.72)' : 'rgba(19,25,35,0.74)',
+                backdropFilter: 'blur(7px)',
+                WebkitBackdropFilter: 'blur(7px)',
                 border: `1px solid ${row.locked ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.13)'}`,
                 boxShadow: '0 2px 10px rgba(0,0,0,0.35)',
                 textDecoration: 'none', cursor: row.locked ? 'default' : 'pointer', textAlign: 'left' as const,
@@ -1879,7 +1889,15 @@ export default function ShipHero({
               <div style={{ position: 'relative', textAlign: 'center', marginBottom: '1.15rem', paddingTop: 2 }}>
                 <div aria-hidden style={{ position: 'absolute', left: '50%', top: 8, width: 160, height: 104, transform: 'translateX(-50%)', background: abyssalUnlocked ? 'radial-gradient(ellipse at center, rgba(255,60,50,0.26), rgba(180,20,50,0.12) 44%, transparent 72%)' : forgeUnlocked ? 'radial-gradient(ellipse at center, rgba(255,140,60,0.2), rgba(197,139,255,0.1) 45%, transparent 72%)' : 'radial-gradient(ellipse at center, rgba(125,176,208,0.13), transparent 70%)', filter: 'blur(2px)', pointerEvents: 'none' }} />
                 <div style={{ position: 'relative', width: 60, height: 60, margin: '0 auto 8px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', ...(abyssalUnlocked ? abyssalEmberBorder('rgba(10,6,10,0.92)') : forgeUnlocked ? prismaticBorder('rgba(12,16,24,0.9)') : { background: 'rgba(18,28,40,0.6)', border: '1px solid rgba(125,176,208,0.3)' }) }}>
-                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={abyssalUnlocked ? '#ff7a5c' : forgeUnlocked ? '#ffce8a' : '#8fb6d6'} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M4 10h9l3-3 4 1-2 4h-5" /><path d="M7 10v3a3 3 0 0 0 3 3h1" /><path d="M8 21h6" /><path d="M11 16v5" /></svg>
+                  {/* Painted icon rather than a line glyph, matching the boons.
+                      The Abyssal tier gets its own molten anvil; locked reads as
+                      the plain forge, drained. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={abyssalUnlocked ? '/forge/abyssal_forge.png' : '/forge/forge.png'}
+                    alt="" aria-hidden decoding="async"
+                    style={{ width: 46, height: 46, objectFit: 'contain', filter: forgeUnlocked ? undefined : 'grayscale(0.85) brightness(0.62)' }}
+                  />
                 </div>
                 {!focus && (<p className="font-cinzel font-800" style={{ fontSize: '1.5rem', lineHeight: 1.05, ...(abyssalUnlocked ? ABYSSAL_EMBER_TEXT : forgeUnlocked ? PRISMATIC_TEXT : { color: '#d4ba78' }) }}>{abyssalUnlocked ? 'The Abyssal Forge' : 'The Forge'}</p>)}
                 <p className="font-karla" style={{ fontSize: '0.72rem', color: '#9a948a', marginTop: 3, lineHeight: 1.4, maxWidth: 320, marginInline: 'auto' }}>{abyssalUnlocked ? 'Fuse forged relics into Abyssal mounts — both effect sets, a single slot.' : 'Fuse two relics into one — both effects, a single slot.'}</p>
