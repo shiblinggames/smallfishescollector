@@ -1615,6 +1615,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 // fishing dial instead of the bar (see BossRaidConfig.aimStyle).
                 aimStyle={config.aimStyle}
                 critStreakCfg={config.critStreak}
+                defeatSequence={config.defeatSequence}
                 dialAim={dialAim}
                 onPhaseBg={setPhaseBg}
                 shipImageUrl={shipImageUrl}

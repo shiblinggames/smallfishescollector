@@ -483,6 +483,8 @@ export interface RaidCombatProps {
   /** Crit-streak ramp baked into the raid (BossRaidConfig.critStreak). Runs
    *  through the same path as the Cannonade boon. */
   critStreakCfg?: { perStack: number; maxStacks: number; label?: string; pierceAt?: number }
+  /** Bespoke defeat beat for this boss (BossRaidConfig.defeatSequence). */
+  defeatSequence?: { lines: string[] }
   /** The player's FISHING gear, widening the dial's hit + crit bands by the
    *  same degrees it widens the fishing dial. Ignored unless aimStyle 'dial'. */
   dialAim?: DialAimBonus
@@ -617,6 +619,7 @@ export default function RaidCombat({
   dialAim,
   onPhaseBg,
   critStreakCfg,
+  defeatSequence,
   runBoons, runCurses,
   anchorSaveAvailable = false, onAnchorSave,
   raidMods, riskyFlee = false, fleeSignal, fleeNav,
@@ -1663,6 +1666,8 @@ export default function RaidCombat({
   // Ref mirror for the death ward, so his hull can show it. The ref is the
   // source of truth (the resolver reads it); this only drives the chip.
   const [wardUp, setWardUp] = useState(false)
+  const [finaleDefeat, setFinaleDefeat] = useState<string[] | null>(null)
+  const finaleDoneRef = useRef<null | (() => void)>(null)
   // Same for his Foresight. Invisible, it reads as the player being unlucky
   // twice in a row rather than as him reading them.
   const [foreseeUp, setForeseeUp] = useState(false)
@@ -5410,6 +5415,14 @@ export default function RaidCombat({
             // No white kill-flash — the explosion burst + sink animation
             // carry the kill (the flash read as a jarring whiteout on the sink).
             setEnemySinking(true)
+            // THE FINALE gets its own ending. The ordinary sink still plays
+            // underneath (his hull still goes down), but the hand-off to loot
+            // waits for the beat, and the overlay carries the moment.
+            if (defeatSequence?.lines?.length) {
+              setFinaleDefeat(defeatSequence.lines)
+              cameraShake('nuke')
+              vibrate([0, 80, 60, 140])
+            }
             setTimeout(() => setResolveLog(prev => [...prev, `You sank the ${enemy.name}!`]), 200)
             let cbDelay = 1000
             if (killReward?.gold) {
@@ -5423,7 +5436,13 @@ export default function RaidCombat({
             // Sank without firing a shot this fight (riposte / crew ability / DoT).
             if (shotsThisFightRef.current === 0) onNoShotKill?.()
             emitContractFacts()
-            setTimeout(() => onEnemyDefeated(pHp, pCharges), cbDelay)
+            // The finale overlay runs ~3s + 1s per line and calls back when it
+            // is done, so the loot screen never lands on top of his last words.
+            if (defeatSequence?.lines?.length) {
+              finaleDoneRef.current = () => onEnemyDefeated(pHp, pCharges)
+            } else {
+              setTimeout(() => onEnemyDefeated(pHp, pCharges), cbDelay)
+            }
             return
           }
           turnRef.current++; setTurn(turnRef.current)
@@ -7160,6 +7179,9 @@ export default function RaidCombat({
             purely the instrument; the real Lock Shot button stays live in its
             own slot underneath, so the tap target the player already knows
             (and all its iOS hit-testing fixes) is untouched. */}
+        {finaleDefeat && typeof document !== 'undefined' && createPortal(
+          <FinnDefeatFx lines={finaleDefeat} onDone={() => { setFinaleDefeat(null); finaleDoneRef.current?.(); finaleDoneRef.current = null }} />,
+          document.body)}
         {onDial && subPhase === 'aiming' && typeof document !== 'undefined' && createPortal(
           <div style={{
             position: 'fixed', inset: 0, zIndex: 1200, pointerEvents: 'none',
@@ -9907,6 +9929,87 @@ function ShipStatusAura({ burning, frozen, paused }: { burning: boolean; frozen:
 
 // Lethal-save burst (Quartermaster's Anchor item) — a cyan shield ring + flash
 // + a held "ANCHOR HELD" beat on the player hull when a killing blow is caught.
+/** THE END OF THE SUNKEN HAND.
+ *
+ *  Every other kill in the game is a 1.3s sink: the hull drops, tilts and
+ *  fades. That is right for a mob and wrong for the last thing in a four
+ *  chapter campaign, where the PHASE TRANSITIONS were louder than the death.
+ *
+ *  So the finale gets its own beat, and it is built to mirror the reveal
+ *  cutscene in reverse. There, the morning went dark from him outward. Here it
+ *  comes back the same way:
+ *
+ *    0.0s  the blow lands and time stops. White, held, silent.
+ *    0.5s  he goes up rather than quietly under: a bloom and two rings.
+ *    1.3s  his last words, one line at a time.
+ *    3.0s  the dark lifts. The overlay warms through dawn and clears.
+ *    4.4s  hand back to the loot beat.
+ *
+ *  Config-gated (BossRaidConfig.defeatSequence), so no other boss is touched.
+ */
+function FinnDefeatFx({ lines, onDone }: { lines: string[]; onDone: () => void }) {
+  const [beat, setBeat] = useState(0)
+  useEffect(() => {
+    const t: ReturnType<typeof setTimeout>[] = []
+    lines.forEach((_, i) => t.push(setTimeout(() => setBeat(i + 1), 1300 + i * 1000)))
+    t.push(setTimeout(onDone, 3000 + lines.length * 1000))
+    return () => t.forEach(clearTimeout)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  return (
+    <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 1400, pointerEvents: 'none', overflow: 'hidden' }}>
+      {/* THE BLOW. A white hold, then it bleeds off into gold: the hit-stop the
+          rest of the fight gets on a crit, stretched to the size of the moment. */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: [0, 1, 0.92, 0.55, 0.3, 0] }}
+        transition={{ duration: 4.2, times: [0, 0.03, 0.12, 0.35, 0.62, 1], ease: 'easeOut' }}
+        style={{
+          position: 'absolute', inset: 0,
+          background: 'radial-gradient(ellipse at 50% 44%, #ffffff 0%, #ffe9b5 22%, rgba(255,190,90,0.55) 46%, rgba(6,10,18,0.86) 78%)',
+        }} />
+
+      {/* HE GOES UP. Two rings out of where he was standing, not a quiet sink. */}
+      {[0, 1].map(n => (
+        <motion.div key={n}
+          initial={{ opacity: 0, scale: 0.05 }}
+          animate={{ opacity: [0, 0.85, 0], scale: [0.05, 1.7 + n * 0.9, 2.4 + n * 1.2] }}
+          transition={{ duration: 1.5 + n * 0.5, delay: 0.35 + n * 0.22, ease: 'easeOut' }}
+          style={{
+            position: 'absolute', left: '50%', top: '44%', width: '58vw', maxWidth: 520,
+            aspectRatio: '1', transform: 'translate(-50%, -50%)', borderRadius: '50%',
+            border: `${n ? 2 : 4}px solid rgba(255,224,160,0.9)`,
+          }} />
+      ))}
+
+      {/* HIS LAST WORDS. */}
+      <div style={{
+        position: 'absolute', left: 0, right: 0, top: '52%', padding: '0 2rem',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+      }}>
+        {lines.map((l, i) => (
+          <motion.p key={i} className="font-cinzel font-700"
+            initial={{ opacity: 0, y: 8 }}
+            animate={beat > i ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
+            transition={{ duration: 0.6, ease: 'easeOut' }}
+            style={{
+              margin: 0, textAlign: 'center', maxWidth: 460,
+              fontSize: i === lines.length - 1 ? '0.86rem' : '1.05rem',
+              lineHeight: 1.45,
+              color: i === lines.length - 1 ? '#cbd5e1' : '#1a1206',
+              fontStyle: i === lines.length - 1 ? 'italic' : 'normal',
+              textShadow: i === lines.length - 1 ? 'none' : '0 1px 0 rgba(255,255,255,0.5)',
+            }}>
+            {l}
+          </motion.p>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+
 function AnchorSaveBurst() {
   return (
     <>

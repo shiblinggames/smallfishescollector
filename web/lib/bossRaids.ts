@@ -460,6 +460,11 @@ export interface BossRaidConfig {
    *  EQUIPPED ROD/HOOK/LINE widen the bands exactly as they do when fishing.
    *  Every fishing hour the player has put in shows up here as a wider shot. */
   aimStyle?: 'bar' | 'dial'
+  /** A bespoke DEFEAT beat for this boss, instead of the ordinary 1.3s sink.
+   *  Only worth it where the kill is the end of something: the sink that reads
+   *  fine on a mob is the weakest moment in a six-phase finale. Lines are shown
+   *  one at a time; the LAST one is styled as narration, not speech. */
+  defeatSequence?: { lines: string[] }
   /** A crit STREAK ramp baked into the raid itself, rather than drafted as a
    *  Gauntlet boon. Same machinery as Cannonade: consecutive landed CRITS ramp
    *  your damage, any landed non-crit resets it. The streak is per-ENEMY, and
@@ -2116,6 +2121,17 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
   bossDefeatedText: 'Finn Defeated',
   // THE convergence: the entire fight is fought on the fishing dial.
   aimStyle: 'dial',
+  // His own ending. "Heh" is the sound he makes at the reveal, so he goes out
+  // on it. The patience line answers his ultimate ("all that patience, paid out
+  // at once") and his whole reason for using the player. The closer mirrors the
+  // cutscene exactly: there, the morning went dark from him outward.
+  defeatSequence: {
+    lines: [
+      'Heh.',
+      'All that patience. And it was you at the end of the line.',
+      'The dark goes out of the water. The morning comes back the way it left, from him outward.',
+    ],
+  },
   // THE STREAK. +7% damage per consecutive crit, up to 14 (so +98% at a perfect
   // run). Deliberately generous at the top: it has to survive six phases of a
   // boss with a full health bar each, so a player holding the rhythm the whole
