@@ -214,8 +214,9 @@ export default function ForgeBoard({
   return (
     <>
       {/* ── The pulse: how far along the whole collection is ─────────────── */}
-      {/* Recipe progress: meaningless on the Accelerator, which forges nothing. */}
-      {!accelTab && (<>
+      {/* Shown on EVERY bench, the Accelerator included. It tracks the whole
+          forged collection rather than the tab you happen to be on, and
+          hiding it on one tab made the header height jump as you switched. */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
         <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.72rem', color: '#b9b2a6' }}>
           Forged <span style={{ color: '#ffce8a' }}>{forgedCount}</span> / {rows.length}
@@ -229,7 +230,6 @@ export default function ForgeBoard({
           transition={{ type: 'spring', stiffness: 200, damping: 30 }}
           style={{ height: '100%', borderRadius: 999, background: abyssalUnlocked ? ABYSSAL_EMBER : PRISMATIC }} />
       </div>
-      </>)}
 
       {/* ── The two benches, as tabs. Tier II (gold) and the Abyssal Tier III
              (molten ember). The Abyssal tab is a dimmed, locked teaser until you
