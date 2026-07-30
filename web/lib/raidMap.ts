@@ -384,6 +384,7 @@ export type SceneInsert =
   | { kind: 'ancient-harvest' }          // the six Ancient Deep giants arrayed and DRAINED, their power pulled to the middle. The engine of Finn's transformation (existing catalogue art)
   | { kind: 'finn-becoming' }            // the WARP: he shudders, drains to a silhouette, swells past his old size, cracks open with light and blows out to white. Hands off to finn-sinister
   | { kind: 'finn-sinister' }            // THE turn: the dock-hand costume comes off and his true form stands up. Uses bespoke art (FINN_SINISTER_ART); falls back to his darkened sprite until that art lands
+  | { kind: 'finn-undone' }              // THE END: his hull goes over, the swell collapses, the light runs OUT through the cracks and the six leave as ash. The mirror of finn-becoming
   | { kind: 'dial-demo' }                // a live catch-dial demo (needle landing green→gold). Rendered by a caller's renderInsert override (the fishing intro), not the shared InsertShot.
 
 /** One row in a node's "possible drops" panel. */
@@ -2769,6 +2770,77 @@ export const RAID_MAP: RaidNode[] = [
       summary: 'The last fight. Read The Hand That Sharpens It first.',
     },
   },
+  // THE CLOSER. The kill happens in the raid; this is the only place the saga
+  // gets to LAND. Deliberately short after the fight and deliberately quiet at
+  // the end: four chapters of escalation earn a scene that stops escalating.
+  //
+  // The foreshadow is one line from Doby, buried mid-conversation and never
+  // answered. It has to be missable on a first read — a promise here would
+  // cheapen an ending the player just spent a campaign earning.
+  {
+    id: 'the_long_quiet',
+    type: 'story',
+    label: 'The Long Quiet',
+    flavor:
+      'The water where he stood will not hold a wave. Your crew are still braced for a fight that is already over, and nobody has said anything yet.',
+    bridge:
+      'Six giants went into him. They are coming back out, and the sea is taking them home.',
+    requiresNode: 'one_last_ride',
+    previewWhenLocked: false,
+    comingSoon: true,
+    image: '/finn_final.png',
+    sceneAccent: '#a78bfa',
+    scene: [
+      { text: 'The last shot lands, and nothing happens for a moment.', pause: 900 },
+      { text: 'Then his hull gives. Not split, not burned. It simply stops arguing with the sea.', pause: 800, insert: { kind: 'finn-undone' } },
+      { text: 'It goes over slow, the way a big thing goes over, and the water closes on it without a sound.', pause: 900, fx: 'shake' },
+      { ...GUIDE.finnFinal, text: "...impossible." },
+      { text: 'He is still standing. He is standing on nothing at all, and he has not noticed.', pause: 900, closeup: true },
+      { ...GUIDE.finnFinal, text: "How could you defeat me...?" },
+      { text: 'The light that was running under his skin turns and starts going the other way.', pause: 850, fx: 'flash', closeup: true },
+      { text: 'It leaves through the same cracks it opened. Six of them, one at a time, in the order you caught them.', pause: 1000, closeup: true },
+      { ...GUIDE.finnFinal, text: "I had all of it. Every cold thing at the bottom of this ocean. I had it in my *hands*." },
+      { ...GUIDE.finnFinal, text: "A lifetime. I gave a whole lifetime to the waiting..." },
+      { text: 'He looks at you the way he did on the dock, every morning, for years.', pause: 950, closeup: true },
+      { ...GUIDE.finnFinal, text: "...you were never supposed to be better than me at this." },
+      { text: 'And then there is nothing there to look back at.', pause: 1200, fx: 'flash', closeup: true },
+      { text: 'What is left of him goes up rather than down, grey and weightless, and the wind takes it apart before it clears the mast.', pause: 1100 },
+      { text: 'The sea comes back in. One long swell rolls through where he was, and the ocean is just an ocean again.', pause: 1000 },
+      // The crew, coming down. Nobody makes a speech.
+      { text: 'For a while your crew just stand there, still braced.', pause: 900 },
+      { ...GUIDE.kat, text: "...Is that it? Is it done?" },
+      { ...GUIDE.mira, text: "The ledger's shut. Every page of it traced back to one name, and that name is not in the water any more." },
+      { ...GUIDE.mako, text: "He sat on that dock. He watched us leave every single morning. He waved." },
+      { ...GUIDE.laz, text: "He waved at me too. I always thought he was being friendly." },
+      { ...GUIDE.kat, text: "He was. That was the worst part of him." },
+      { text: 'Somebody laughs. It is not a good laugh, but it is a real one, and it lets the rest of them breathe.', pause: 800 },
+      { ...GUIDE.mira, text: "Captain. The six are gone from the hold. Properly gone, this time." },
+      { ...GUIDE.doby, text: "Not gone. Home." },
+      { text: 'Doby is looking down, past the boat, at water that has no bottom worth speaking of.', pause: 900, closeup: true },
+      { ...GUIDE.doby, text: "The deep gave them up for him because he asked with your hands. It has them back now." },
+      // ── THE FORESHADOW. One line, unanswered, and the scene moves on. ──
+      { ...GUIDE.doby, text: "Something down there let go of them twice, captain. Once for him, and once just now." },
+      { ...GUIDE.doby, text: "I would not call that an empty ocean." },
+      { text: 'Nobody picks it up. The light is good and the water is flat and everyone is very tired.', pause: 1000 },
+      { ...GUIDE.kat, text: "Then we go home. That's the whole plan. We go home." },
+      { ...GUIDE.mako, text: "I could sleep for a week." },
+      { ...GUIDE.laz, text: "You have slept for a week. Twice." },
+      { text: 'The crew turn the boat around without being told, the way they have a hundred times.', pause: 850 },
+      { text: 'Behind you the water lies down flat and stays that way, all the way to the horizon.', pause: 900 },
+      { text: 'You came out here for the last name on the board. There is nothing written on it now.', pause: 1000 },
+      { text: 'It is a long quiet ride back, and every hour of it is yours.', pause: 900 },
+    ],
+    detail: {
+      description:
+        'The Sunken Hand is closed. The name at the top of it is not in this ocean any more, and the six he took have gone back down where you found them.\n\nWhat he left behind is still on the water, and it will still fit a captain who knows what to do with it.',
+      drops: [
+        { emoji: '📜', label: "Captain's Logbook, Final Entry", sublabel: '"Fair weather the whole way home. Crew asleep on the deck, all of them, in the sun. Nothing on the horizon. Writing it down so I remember that it happened."', rarity: 'ancient' },
+      ],
+      dropsNote: 'The end of the Sunken Hand, and the last page of the log.',
+      ctaLabel: 'Let It Go Quiet →',
+      summary: 'The end of it. Then take what he left behind.',
+    },
+  },
   {
     // THE SPOILS. Sits between the kill and the challenge: you beat him, you
     // take one of the two things he was carrying, and the other stays on the
@@ -2779,7 +2851,7 @@ export const RAID_MAP: RaidNode[] = [
     label: 'The Spoils of the Hand',
     flavor: 'Two things came up off his wreck, and only one of them will fit aboard today. The other keeps.',
     bridge: 'One is a reel. One is a mount. Both were his, and neither was meant for you.',
-    requiresNode: 'one_last_ride',
+    requiresNode: 'the_long_quiet',
     spoils: { price: SPOILS_PRICE },
     previewWhenLocked: true,
     comingSoon: true,

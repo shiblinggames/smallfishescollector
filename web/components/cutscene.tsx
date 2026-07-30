@@ -246,6 +246,7 @@ export function InsertShot({ kind, wax, accent, reduced }: { kind: string; wax?:
   if (kind === 'finn-sinister') return <FinnSinisterInsert accent={accent} reduced={reduced} />
   if (kind === 'ancient-harvest') return <AncientHarvestInsert accent={accent} reduced={reduced} />
   if (kind === 'finn-becoming') return <FinnBecomingInsert accent={accent} reduced={reduced} />
+  if (kind === 'finn-undone') return <FinnUndoneInsert accent={accent} reduced={reduced} />
   return null
 }
 
@@ -590,6 +591,112 @@ function FinnBecomingInsert({ accent, reduced }: { accent: string; reduced?: boo
     </div>
   )
 }
+
+/*  FINN UNDONE — the mirror of FinnBecomingInsert, played backwards.
+ *
+ *  Becoming was: colour drains, shape swells, cracks open with light, blows out
+ *  to white. Undoing is the same grammar in reverse — the cracks open again but
+ *  the light LEAVES through them, the swell collapses instead of growing, and
+ *  what is left goes to ash rather than to white. Deliberately quiet at the
+ *  end: he took six giants to build and he comes apart without a sound.
+ *
+ *  No new art. His final form, taken to pieces. */
+const UNDONE_TOTAL = 5.6
+
+function FinnUndoneInsert({ accent, reduced }: { accent: string; reduced?: boolean }) {
+  if (reduced) {
+    return (
+      <div style={{ position: 'relative', width: 'min(78vw, 320px)', aspectRatio: '1 / 1', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', overflow: 'hidden' }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={FINN_SINISTER_ART} alt="" aria-hidden decoding="async"
+          style={{ height: '90%', width: 'auto', objectFit: 'contain', opacity: 0.3, filter: 'grayscale(1) brightness(0.6)' }} />
+      </div>
+    )
+  }
+  return (
+    <div style={{ position: 'relative', width: 'min(78vw, 320px)', aspectRatio: '1 / 1', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', overflow: 'hidden' }}>
+      {/* THE HULL — his ship goes over first. A slow rotation past the point of
+          recovery, sliding down and out of frame. It leads him by a beat: the
+          boat is lost before he admits he is. */}
+      <motion.img
+        src="/enemy_finnship.png" alt="" aria-hidden decoding="async"
+        initial={{ opacity: 0.85, rotate: 0, y: 0, x: 0 }}
+        animate={{ opacity: [0.85, 0.8, 0.5, 0], rotate: [0, -14, -52, -96], y: [0, 8, 54, 150], x: [0, -6, -14, -26] }}
+        transition={{ duration: UNDONE_TOTAL * 0.55, ease: 'easeIn', times: [0, 0.3, 0.7, 1] }}
+        style={{ position: 'absolute', bottom: '6%', width: '86%', height: 'auto', objectFit: 'contain', zIndex: 1, filter: 'brightness(0.55) saturate(0.7)' }} />
+
+      {/* THE WATER LINE — the sea closing over where the boat was. */}
+      <motion.div aria-hidden
+        initial={{ opacity: 0, scaleX: 0.2 }}
+        animate={{ opacity: [0, 0.55, 0], scaleX: [0.2, 1.15, 1.4] }}
+        transition={{ duration: 2.4, delay: UNDONE_TOTAL * 0.4, ease: 'easeOut' }}
+        style={{ position: 'absolute', left: '50%', bottom: '16%', width: '90%', height: 3, transform: 'translateX(-50%)', borderRadius: 999, background: `linear-gradient(90deg, transparent, ${accent}aa, transparent)`, zIndex: 2 }} />
+
+      {/* HIM — the swell collapsing. He does not fall over; he loses cohesion,
+          shrinking and greying while the shake gets finer, then thins to
+          nothing. */}
+      <motion.img
+        src={FINN_SINISTER_ART} alt="" aria-hidden decoding="async"
+        initial={{ opacity: 1, scale: 1.06, x: 0 }}
+        animate={{
+          opacity: [1, 1, 0.75, 0],
+          scale: [1.06, 1.02, 0.9, 0.76],
+          x: [0, -2, 2, -1.4, 1.4, -0.7, 0.7, 0],
+          filter: [
+            'brightness(1) saturate(1)',
+            'brightness(0.86) saturate(0.7) contrast(1.15)',
+            'brightness(0.6) saturate(0.25)',
+            'brightness(0.35) saturate(0)',
+          ],
+        }}
+        transition={{
+          duration: UNDONE_TOTAL, ease: 'easeInOut',
+          opacity: { duration: UNDONE_TOTAL, times: [0, 0.42, 0.74, 1] },
+          filter:  { duration: UNDONE_TOTAL, times: [0, 0.36, 0.7, 1] },
+          scale:   { duration: UNDONE_TOTAL, times: [0, 0.34, 0.72, 1] },
+          x:       { duration: 0.26, repeat: 14, ease: 'linear' },
+        }}
+        style={{ position: 'absolute', bottom: '4%', height: '92%', width: 'auto', objectFit: 'contain', zIndex: 3 }} />
+
+      {/* THE CRACKS, RUNNING OUT. Becoming opened these and light poured IN;
+          here they open and the light leaves, each one fading as it travels. */}
+      {[24, 68, 132, 196, 250, 312].map((deg, i) => (
+        <div key={deg} aria-hidden style={{ position: 'absolute', left: '50%', top: '50%', width: '48%', height: 2, transformOrigin: '0% 50%', transform: `rotate(${deg}deg)`, zIndex: 4 }}>
+          <motion.div
+            initial={{ opacity: 0, scaleX: 0 }}
+            animate={{ opacity: [0, 0.85, 0], scaleX: [0, 0.55, 1] }}
+            transition={{ duration: 1.5, delay: UNDONE_TOTAL * 0.3 + i * 0.13, ease: 'easeOut' }}
+            style={{ width: '100%', height: '100%', transformOrigin: '0% 50%', background: `linear-gradient(90deg, ${accent}, transparent)`, filter: 'blur(0.4px)' }} />
+        </div>
+      ))}
+
+      {/* THE ASH — what is actually left of him, drifting UP and going out.
+          Rising rather than falling, because the six he swallowed are leaving
+          the way they came. */}
+      {Array.from({ length: 16 }, (_, i) => {
+        const left = 16 + (i * 4.6) % 68
+        const delay = UNDONE_TOTAL * 0.42 + (i % 6) * 0.22
+        const drift = i % 2 === 0 ? 14 : -12
+        return (
+          <motion.div key={i} aria-hidden
+            initial={{ opacity: 0, y: 0, x: 0 }}
+            animate={{ opacity: [0, 0.8, 0], y: [-4, -70 - (i % 4) * 22], x: [0, drift] }}
+            transition={{ duration: 2.8 + (i % 3) * 0.5, delay, ease: 'easeOut' }}
+            style={{ position: 'absolute', left: `${left}%`, bottom: `${22 + (i % 5) * 7}%`, width: 3 + (i % 3), height: 3 + (i % 3), borderRadius: '50%', background: i % 3 === 0 ? '#e8dcc0' : accent, boxShadow: `0 0 7px ${accent}aa`, zIndex: 5 }} />
+        )
+      })}
+
+      {/* THE SEA, TAKING IT BACK. One last dark swell across the bottom once he
+          is gone, so the frame ends on water rather than on him. */}
+      <motion.div aria-hidden
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: [0, 0.9], y: [30, 0] }}
+        transition={{ duration: 2.2, delay: UNDONE_TOTAL * 0.72, ease: 'easeOut' }}
+        style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '34%', background: 'linear-gradient(180deg, transparent, rgba(6,10,18,0.9) 60%, rgba(4,7,12,1))', zIndex: 6 }} />
+    </div>
+  )
+}
+
 
 
 function LedgerFInsert({ accent, reduced }: { accent: string; reduced?: boolean }) {
