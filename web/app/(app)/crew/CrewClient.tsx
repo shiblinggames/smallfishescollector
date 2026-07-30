@@ -18,6 +18,7 @@ import { crewAssignment } from '@/lib/crewAssignment'
 import { RARITY_NAMES, RARITY_COLORS, groupForSlug, crewDisplayName, GEM_WEIGHTS, type CrewRarity } from '@/lib/crewGen'
 import { applyCrewEffects, netTraitStats, traitLabel, traitKind } from '@/lib/crewEffects'
 import AssignBoard from './AssignBoard'
+import AssignPicker from './AssignPicker'
 import { useReveal, BoardReveal, RevealFlash, RevealBanner } from './boardReveal'
 import { ROUTE_CONFIGS, type VoyageRoute } from '@/lib/voyageRoutes'
 import { crewLevelFromXP, crewXPProgress, levelStatBonuses, CREW_MAX_LEVEL } from '@/lib/crewLevel'
@@ -66,6 +67,7 @@ const STAT_LABEL = { power: 'PWR', dodge: 'SAV', fortune: 'FTN' }
 
 // Section accents so the two boards read as visually distinct regions.
 const SECTION_ROSTER = '#6fa8c9'  // cool steel "your manifest"
+const SECTION_NEUTRAL = '#9aa3b1'  // a plain manifest, not a track
 
 // Panel tones: warm brown wood for the board, cool slate for your own crew, so
 // the two are obviously different at a glance.
@@ -1083,11 +1085,6 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
   /** Pick the lowest empty slot on the target track. Returns 0 (captain
    *  slot — server will bench the previous occupant) if all slots are
    *  already filled, so the toggle never blocks on a full party. */
-  // Crew free to be assigned. Lives at the root because BOTH the assign sheet
-  // and the Roster read it; it used to be computed inside the Roster block.
-  const benched = state.roster.filter(c =>
-    c.raidSlot == null && c.voyageSlot == null && !state.trawlingCrewIds.includes(c.id))
-
   function nextOpenSlot(track: 'voyage' | 'raid'): number {
     const taken = new Set<number>()
     for (const c of state.roster) {
@@ -1739,71 +1736,26 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
           )
         })()}
 
-        {assignTrack && typeof document !== 'undefined' && createPortal((() => {
-          const accent = assignTrack === 'raid' ? ASSIGN_RAID : ASSIGN_VOYAGE
-          const HeaderIcon = assignTrack === 'raid' ? CrossedSwordsIconSvg : AnchorIconSvg
-          const label = assignTrack === 'raid' ? 'Raid Party' : 'Voyage Party'
-          return (
-            <div onClick={() => setAssignTrack(null)} style={{ position: 'fixed', inset: 0, zIndex: 100000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(2,6,12,0.7)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}>
-              <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 480, maxHeight: '82vh', display: 'flex', flexDirection: 'column', background: 'rgba(8,14,22,0.99)', borderTop: `2px solid ${accent}`, borderRadius: '18px 18px 0 0', boxShadow: '0 -12px 44px rgba(0,0,0,0.6)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '1rem 1rem 0.75rem' }}>
-                  <span style={{ display: 'inline-flex', width: 30, height: 30, borderRadius: 9, alignItems: 'center', justifyContent: 'center', background: `${accent}22`, border: `1px solid ${accent}66`, flexShrink: 0 }}>
-                    <HeaderIcon size={16} color={accent} />
-                  </span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.52rem', color: accent }}>Fill an open seat</p>
-                    <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0ede8', lineHeight: 1.1 }}>Assign to {label}</p>
-                  </div>
-                  <button onClick={() => setAssignTrack(null)} aria-label="Close" className="tap" style={{ flexShrink: 0, width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e0ddd8', cursor: 'pointer' }}>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
-                  </button>
-                </div>
-                <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain', padding: '0 1rem 1.4rem' }}>
-                  {benched.length === 0 ? (
-                    <p className="font-karla text-center" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.55, padding: '1.4rem 0.5rem' }}>
-                      No crew on the bench. Free someone from another post, or recruit more hands.
-                    </p>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                      {benched.map(m => {
-                        const busy = busyId === m.id
-                        const rColor = RARITY_COLORS[(m.rarity as CrewRarity)] ?? 'rgba(255,255,255,0.12)'
-                        const art = m.filename ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/${m.filename}` : ''
-                        return (
-                          <button
-                            key={m.id}
-                            disabled={pending}
-                            onClick={() => {
-                              const slot = nextOpenSlot(assignTrack)
-                              run(() => (assignTrack === 'raid' ? assignToRaid(m.id, slot) : assignToVoyage(m.id, slot)), m.id, () => setAssignTrack(null))
-                            }}
-                            className="tap"
-                            style={{
-                              display: 'flex', alignItems: 'center', gap: 11,
-                              padding: '0.55rem 0.65rem', borderRadius: 12, textAlign: 'left',
-                              background: busy ? `${accent}1e` : 'rgba(255,255,255,0.04)',
-                              border: `1px solid ${busy ? accent + '99' : 'rgba(255,255,255,0.1)'}`,
-                              cursor: pending ? 'default' : 'pointer', opacity: pending && !busy ? 0.5 : 1,
-                            }}
-                          >
-                            <div style={{ width: 42, height: 42, borderRadius: 10, overflow: 'hidden', flexShrink: 0, background: 'rgba(0,0,0,0.3)', border: `1px solid ${rColor}` }}>
-                              {art ? <img src={art} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : null}
-                            </div>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <p className="font-pirata" style={{ fontSize: '0.98rem', color: '#f0ede8', lineHeight: 1.1 }}>{m.name}</p>
-                              <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.5)' }}>PWR {m.power} · AGI {m.dodge} · FTN {m.fortune}</p>
-                            </div>
-                            <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.62rem', color: accent, flexShrink: 0 }}>{busy ? '…' : 'Assign'}</span>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )
-        })(), document.body)}
+        {/* Fill-a-seat picker. Art-forward and three across, matching the
+            board it opens from. */}
+        {assignTrack && typeof document !== 'undefined' && createPortal(
+          <AssignPicker
+            track={assignTrack}
+            label={assignTrack === 'raid' ? 'Raid Party' : 'Voyage Party'}
+            roster={state.roster}
+            lockedCrewIds={state.lockedCrewIds}
+            trawlingCrewIds={state.trawlingCrewIds}
+            artSrc={artSrc}
+            pending={pending}
+            busyId={busyId}
+            accent={assignTrack === 'raid' ? ASSIGN_RAID : ASSIGN_VOYAGE}
+            rarityColor={r => RARITY_COLORS[(r as CrewRarity)] ?? 'rgba(255,255,255,0.14)'}
+            onPick={m => {
+              const slot = nextOpenSlot(assignTrack)
+              run(() => (assignTrack === 'raid' ? assignToRaid(m.id, slot) : assignToVoyage(m.id, slot)), m.id, () => setAssignTrack(null))
+            }}
+            onClose={() => setAssignTrack(null)}
+          />, document.body)}
 
         {/* Hall upgrade confirm modal — fixed overlay (CrewClient mounts at
             page level, not inside Nav, so no portal needed). Recomputes the
@@ -2174,12 +2126,12 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                         ways by what each hand happened to be doing, which meant
                         scanning four lists to answer "who do I have". Assigning
                         is its own tab now, so this is just the list. */}
-                    <PartySection accent={SECTION_ROSTER} Icon={BenchIconSvg} label="All Crew" sub="your whole manifest" count={state.roster.length} members={state.roster} collapsed={false} onToggle={() => {}}>
+                    <PartySection accent={SECTION_NEUTRAL} Icon={BenchIconSvg} label="All Crew" sub="your whole manifest" count={state.roster.length} members={state.roster} collapsed={collapsed.has('roster')} onToggle={() => toggleCollapse('roster')}>
                       {state.roster.length === 0 ? (
                         <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', padding: '0.1rem 0 0.3rem' }}>
                           No crew yet. Sign some hands on in the Recruit tab.
                         </p>
-                      ) : grid(state.roster, 0, SECTION_ROSTER)}
+                      ) : grid(state.roster, 0, SECTION_NEUTRAL)}
                     </PartySection>
 
                     {/* The Fallen lost its tab: it is a memorial you visit, not

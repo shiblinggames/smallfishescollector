@@ -115,16 +115,16 @@ export default function AssignBoard({
           <div key={t.key} style={{
             borderRadius: 16,
             border: `1px solid ${t.accent}55`,
-            background: `linear-gradient(180deg, ${t.accent}18 0%, rgba(255,255,255,0.02) 55%, rgba(0,0,0,0.10) 100%), rgba(12,17,25,0.91)`,
+            background: `linear-gradient(180deg, ${t.accent}18 0%, rgba(255,255,255,0.02) 55%, rgba(0,0,0,0.10) 100%), rgba(13,18,27,0.97)`,
             overflow: 'hidden',
           }}>
             {/* Header: who this party is, and what it comes to. */}
             <div style={{ padding: '0.8rem 0.85rem 0.7rem', borderBottom: `1px solid ${t.accent}2a` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
                 <span style={{ color: t.accent, display: 'flex' }}>{t.icon}</span>
-                <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0ede8', lineHeight: 1.1 }}>{t.label}</p>
-                <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#8a8480' }}>{t.sub}</span>
-                <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ marginLeft: 'auto', fontSize: '0.56rem', color: t.accent }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0ede8', lineHeight: 1.1 }}>{t.label}</p>
+                <span className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#9aa3b1' }}>{t.sub}</span>
+                <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ marginLeft: 'auto', fontSize: '0.66rem', color: t.accent }}>
                   {t.party.length}/{shipCrewSlots}
                 </span>
               </div>
@@ -135,8 +135,8 @@ export default function AssignBoard({
                     padding: '0.35rem 0.3rem', borderRadius: 9,
                     background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
                   }}>
-                    <span className="font-cinzel font-800" style={{ fontSize: '1rem', lineHeight: 1, color: STAT_COLOR[k], fontVariantNumeric: 'tabular-nums' }}>{totals[k]}</span>
-                    <span className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.12em', color: '#8a8480' }}>{label}</span>
+                    <span className="font-cinzel font-800" style={{ fontSize: '1.2rem', lineHeight: 1, color: STAT_COLOR[k], fontVariantNumeric: 'tabular-nums' }}>{totals[k]}</span>
+                    <span className="font-karla font-800 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.12em', color: '#9aa3b1' }}>{label}</span>
                   </div>
                 ))}
               </div>
@@ -159,7 +159,7 @@ export default function AssignBoard({
                       background: 'rgba(255,255,255,0.02)',
                     }}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5c6470" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-                      <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.48rem', color: '#5c6470', textAlign: 'center', lineHeight: 1.3 }}>Bigger<br />ship</span>
+                      <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.56rem', color: '#6b7482', textAlign: 'center', lineHeight: 1.3 }}>Bigger<br />ship</span>
                     </div>
                   )
                 }
@@ -172,7 +172,7 @@ export default function AssignBoard({
                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,
                         minHeight: 104, borderRadius: 12, cursor: 'pointer', font: 'inherit',
                         border: `1.5px dashed ${t.accent}80`,
-                        background: `linear-gradient(180deg, ${t.accent}1a 0%, ${t.accent}08 100%), rgba(12,17,25,0.7)`,
+                        background: `linear-gradient(180deg, ${t.accent}1c 0%, ${t.accent}0a 100%), rgba(14,19,28,0.93)`,
                         touchAction: 'manipulation',
                       }}>
                       <span style={{
@@ -181,7 +181,7 @@ export default function AssignBoard({
                         background: `${t.accent}2e`, border: `1.5px solid ${t.accent}`,
                         color: t.accent, fontSize: '1.1rem', lineHeight: 1,
                       }}>+</span>
-                      <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.48rem', color: t.accent }}>
+                      <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: t.accent }}>
                         {captain ? 'Captain' : 'Open seat'}
                       </span>
                     </button>
@@ -197,7 +197,7 @@ export default function AssignBoard({
                       minHeight: 104, padding: '0.4rem 0.3rem 0.45rem', borderRadius: 12,
                       cursor: 'pointer', font: 'inherit', textAlign: 'center',
                       border: `1.5px solid ${t.accent}88`,
-                      background: `linear-gradient(180deg, ${t.accent}1f 0%, rgba(0,0,0,0.18) 100%), rgba(12,17,25,0.86)`,
+                      background: `linear-gradient(180deg, ${t.accent}22 0%, rgba(0,0,0,0.20) 100%), rgba(16,22,32,0.97)`,
                       touchAction: 'manipulation',
                     }}>
                     {/* The art is the tile. */}
@@ -206,17 +206,19 @@ export default function AssignBoard({
                       <img src={artSrc(crew.filename)} alt="" aria-hidden loading="lazy" decoding="async"
                         style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', filter: `drop-shadow(0 3px 8px ${t.accent}55)` }} />
                     </div>
-                    <span className="font-karla font-700" style={{ display: 'block', width: '100%', fontSize: '0.58rem', lineHeight: 1.15, color: '#e8e2d8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <span className="font-karla font-700" style={{ display: 'block', width: '100%', fontSize: '0.7rem', lineHeight: 1.15, color: '#eee8de', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {crew.name}
                     </span>
-                    <span className="font-karla font-600" style={{ fontSize: '0.48rem', color: '#9a948a', fontVariantNumeric: 'tabular-nums' }}>
+                    <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#a9a29a', fontVariantNumeric: 'tabular-nums' }}>
                       {e.power} · {e.dodge} · {e.fortune}
                     </span>
                     {captain && (
-                      <span className="font-karla font-800 uppercase" style={{ position: 'absolute', top: 3, left: 4, fontSize: '0.42rem', letterSpacing: '0.1em', color: '#1a1206', background: '#e0c47a', borderRadius: 4, padding: '0.06rem 0.22rem' }}>Cpt</span>
+                      <span aria-label="Captain" title="Captain" style={{ position: 'absolute', top: 3, left: 4, display: 'flex', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.85))' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="#e8c46a" stroke="#7a5c1c" strokeWidth="1" strokeLinejoin="round" aria-hidden><path d="M3 8l4 3.5L12 5l5 6.5L21 8l-1.6 10.2a1 1 0 0 1-1 .8H5.6a1 1 0 0 1-1-.8L3 8z" /></svg>
+                      </span>
                     )}
                     {held && (
-                      <span className="font-karla font-800 uppercase" style={{ position: 'absolute', top: 3, right: 4, fontSize: '0.42rem', letterSpacing: '0.08em', color: '#0b1016', background: 'rgba(200,214,230,0.85)', borderRadius: 4, padding: '0.06rem 0.22rem' }}>{held}</span>
+                      <span className="font-karla font-800 uppercase" style={{ position: 'absolute', top: 3, right: 4, fontSize: '0.5rem', letterSpacing: '0.08em', color: '#0b1016', background: 'rgba(206,218,232,0.9)', borderRadius: 4, padding: '0.06rem 0.22rem' }}>{held}</span>
                     )}
                   </button>
                 )

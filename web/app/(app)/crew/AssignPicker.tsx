@@ -1,0 +1,144 @@
+'use client'
+
+/** FILL AN OPEN SEAT.
+ *
+ *  Art-forward, three across, in the same language as the assign board it opens
+ *  from. It shows the WHOLE roster rather than only the bench, because "why
+ *  isn't so-and-so in this list" is a worse question than "why is so-and-so
+ *  greyed out" — the second one answers itself.
+ *
+ *  Two things it refuses to let you do quietly:
+ *
+ *  - Crew out on a trawl or at sea on a live voyage are locked. They cannot be
+ *    reassigned server-side either, so offering the tap would just produce an
+ *    error after the fact.
+ *  - Assigning a SECOND copy of a card already on this track benches the first
+ *    (applyAssignment does this deliberately), which spends your tap and leaves
+ *    the seat you were filling still open. That is occasionally what you want,
+ *    so it is a warning rather than a block.
+ */
+
+import type { CrewMember } from './actions'
+
+const RARITY_DIM = 'rgba(255,255,255,0.14)'
+
+export default function AssignPicker({
+  track, label, roster, lockedCrewIds, trawlingCrewIds, artSrc,
+  pending, busyId, accent, rarityColor, onPick, onClose,
+}: {
+  track: 'raid' | 'voyage'
+  label: string
+  roster: CrewMember[]
+  lockedCrewIds: number[]
+  trawlingCrewIds: number[]
+  artSrc: (filename: string) => string
+  pending: boolean
+  busyId: number | string | null
+  accent: string
+  rarityColor: (rarity: number) => string
+  onPick: (crew: CrewMember) => void
+  onClose: () => void
+}) {
+  const atSea = new Set(lockedCrewIds)
+  const trawling = new Set(trawlingCrewIds)
+  const slotOf = (c: CrewMember) => (track === 'raid' ? c.raidSlot : c.voyageSlot)
+  const otherSlotOf = (c: CrewMember) => (track === 'raid' ? c.voyageSlot : c.raidSlot)
+  const otherLabel = track === 'raid' ? 'On voyage duty' : 'In raid party'
+
+  // Already seated on THIS track — nothing to pick, they are the seats.
+  const seatedHere = roster.filter(c => slotOf(c) != null)
+  const seatedCardIds = new Map(seatedHere.map(c => [c.cardId, c]))
+  const choices = roster.filter(c => slotOf(c) == null)
+
+  const rows = choices.map(c => {
+    const locked = trawling.has(c.id) ? 'Out trawling' : atSea.has(c.id) ? 'At sea' : null
+    const dupe = seatedCardIds.get(c.cardId) ?? null
+    const elsewhere = otherSlotOf(c) != null
+    return { crew: c, locked, dupe, elsewhere }
+  })
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 100000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(2,6,12,0.72)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}>
+      <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 480, maxHeight: '84vh', display: 'flex', flexDirection: 'column', background: 'rgba(10,15,23,0.99)', borderTop: `2px solid ${accent}`, borderRadius: '18px 18px 0 0', boxShadow: '0 -12px 44px rgba(0,0,0,0.6)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '1rem 1rem 0.8rem' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.56rem', color: accent }}>Fill an open seat</p>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#f0ede8', lineHeight: 1.1 }}>Assign to {label}</p>
+          </div>
+          <button onClick={onClose} aria-label="Close" className="tap" style={{ flexShrink: 0, width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e0ddd8', cursor: 'pointer' }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        <div className="scrollbar-hide" style={{ flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain', padding: '0 1rem 1.4rem' }}>
+          {rows.length === 0 ? (
+            <p className="font-karla text-center" style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.55, padding: '1.6rem 0.5rem' }}>
+              Every hand you own is already on this party. Recruit more to grow your fleet.
+            </p>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
+              {rows.map(({ crew: m, locked, dupe, elsewhere }) => {
+                const busy = busyId === m.id
+                const rc = rarityColor(m.rarity) || RARITY_DIM
+                const disabled = !!locked || pending
+                // The note under the name, in the order that matters: a hard
+                // block first, then the thing that costs you a seat, then a
+                // simple move.
+                const note = locked ?? (dupe ? `Replaces ${dupe.name}` : elsewhere ? otherLabel : null)
+                const noteColor = locked ? '#8b93a0' : dupe ? '#e0b062' : elsewhere ? '#9aa3b1' : null
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => onPick(m)}
+                    aria-label={`${m.name}${note ? `, ${note}` : ''}${locked ? '' : '. Tap to assign.'}`}
+                    className="tap"
+                    style={{
+                      position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                      padding: '0.5rem 0.35rem 0.5rem', borderRadius: 12, textAlign: 'center',
+                      background: busy ? `${accent}26` : 'rgba(20,27,38,0.96)',
+                      border: `1px solid ${busy ? accent : dupe ? 'rgba(224,176,98,0.5)' : `${rc}66`}`,
+                      cursor: disabled ? 'not-allowed' : 'pointer', font: 'inherit',
+                      opacity: locked ? 0.42 : pending && !busy ? 0.55 : 1,
+                      touchAction: 'manipulation',
+                    }}
+                  >
+                    <div style={{ width: '100%', height: 56, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={artSrc(m.filename)} alt="" aria-hidden loading="lazy" decoding="async"
+                        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', filter: locked ? 'grayscale(0.85) brightness(0.75)' : `drop-shadow(0 3px 8px ${rc}55)` }} />
+                      {locked && (
+                        <span aria-hidden style={{ position: 'absolute', top: 6, right: 6, display: 'flex' }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#c3cad6" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                        </span>
+                      )}
+                    </div>
+                    <span className="font-karla font-700" style={{ display: 'block', width: '100%', fontSize: '0.7rem', lineHeight: 1.15, color: '#eee8de', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {busy ? '…' : m.name}
+                    </span>
+                    <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#a9a29a', fontVariantNumeric: 'tabular-nums' }}>
+                      {m.power} · {m.dodge} · {m.fortune}
+                    </span>
+                    {note && (
+                      <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ display: 'block', width: '100%', fontSize: '0.5rem', lineHeight: 1.2, color: noteColor ?? '#9aa3b1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {note}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Said once, under the grid, rather than repeated on every tile. */}
+          {rows.some(r => r.dupe) && (
+            <p className="font-karla" style={{ fontSize: '0.64rem', color: '#c9a05e', lineHeight: 1.45, marginTop: 12, textAlign: 'center' }}>
+              A crew marked <span style={{ color: '#e0b062' }}>Replaces</span> is already on this party as another copy. Assigning them benches the one aboard, so the seat stays open.
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
