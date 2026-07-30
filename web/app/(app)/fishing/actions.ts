@@ -185,11 +185,17 @@ export async function castLine(baitType: string, habitat: string): Promise<
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('rod_tier, completionist_effects, hook_tier, fishing_xp, fish_hold_tier, ancient_catches, active_event, catch_pending, fishing_renown_alloc, has_ancient_deep_access, current_perfect_streak, current_streak_zone, equipped_special_2, has_anglers_patience, anglers_patience_xp, borrowed_jaw_xp, equipped_raid_items, finn_spoil_free, finn_spoil_paid')
+    .select('rod_tier, completionist_effects, hook_tier, fishing_xp, fish_hold_tier, ancient_catches, active_event, catch_pending, fishing_renown_alloc, has_ancient_deep_access, current_perfect_streak, current_streak_zone, equipped_special_2, has_anglers_patience, anglers_patience_xp, borrowed_jaw_xp, equipped_raid_items, finn_spoil_free, finn_spoil_paid, pending_reroll, lifetime_species, line_tier, prestige_levels')
     .eq('id', user.id)
     .single()
 
   if (!profile) return { error: 'Profile not found' }
+
+  // Casting again is how a player declines a live wormhole reroll, so this is
+  // where a deferred species credit lands. Runs before the early returns below
+  // (hold full, no bait) — the catch card is already gone either way, so the
+  // reroll is forfeit and the fish they actually kept has to be logged.
+  await settleDeferredSpeciesCredit(admin, user.id, profile)
 
   const bait = getBait(baitType)
   const renownWaitMult = fishingRenownEffects(profile.fishing_renown_alloc as RenownAlloc | null).biteWaitMult
@@ -407,6 +413,50 @@ export async function castLine(baitType: string, habitat: string): Promise<
 const CRATE_FISH_ID = -1
 
 const PERFECT_BAIT_SAVE_CHANCE = 0.5
+
+/** Log one catch of `fishId` in the bestiary. Counts CASTS, not fish: a ×100
+ *  jackpot haul is a single catch of that species, so catch_count moves by 1
+ *  however many fish came aboard. Returns whether this was a first sighting. */
+async function logCatchToBestiary(
+  admin: ReturnType<typeof createAdminClient>,
+  userId: string,
+  fishId: number,
+): Promise<boolean> {
+  const { data: existing } = await admin
+    .from('fish_collection').select('catch_count')
+    .eq('user_id', userId).eq('fish_id', fishId).maybeSingle()
+  if (!existing) {
+    await admin.from('fish_collection').insert({ user_id: userId, fish_id: fishId, catch_count: 1 })
+    return true
+  }
+  await admin.from('fish_collection').update({
+    catch_count: existing.catch_count + 1,
+    last_caught_at: new Date().toISOString(),
+  }).eq('user_id', userId).eq('fish_id', fishId)
+  return false
+}
+
+/** Settle a species credit that reelIn deferred because a wormhole reroll was
+ *  live. Called when the player declines the reroll — by casting again, which
+ *  is the only way out of the catch card that does not go through
+ *  rerollWormhole. Rerolling consumes the same token instead, so the original
+ *  is never credited and the wormhole stops logging two species per cast.
+ *
+ *  Clears the token whatever happens, so a catch can only ever settle once. */
+async function settleDeferredSpeciesCredit(
+  admin: ReturnType<typeof createAdminClient>,
+  userId: string,
+  profile: { pending_reroll?: unknown; lifetime_species?: unknown; line_tier?: number | null; prestige_levels?: unknown } | null,
+) {
+  const pending = (profile?.pending_reroll ?? null) as { fishId: number } | null
+  if (!pending) return
+  const { data: claimed } = await admin
+    .from('profiles').update({ pending_reroll: null })
+    .eq('id', userId).not('pending_reroll', 'is', null).select('id')
+  if (!claimed || claimed.length === 0) return
+  const wasNew = await logCatchToBestiary(admin, userId, pending.fishId)
+  if (wasNew) await creditNewSpecies(admin, userId, pending.fishId, profile)
+}
 
 /** Everything that has to happen the first time a species is landed, shared by
  *  reelIn and rerollWormhole. A species that arrives through the wormhole was
@@ -721,25 +771,16 @@ export async function reelIn(
   const goldenWipes = ((profile.zone_golden_boost as Record<string, number> | null) ?? {})[fish.habitat] ?? 0
   const isShiny = forcedShinyOnce || forcedShinyAlways || rollShiny({ isPerfect, habitat: fish.habitat, sellValue: fish.sell_value ?? 0, oddsMult: goldenBoostMult(goldenWipes) * eye.goldenOddsMult })
 
-  // Check if new species for bestiary
+  // Check if new species for bestiary. The WRITE is deferred until we know
+  // whether a wormhole reroll is live — see the credit block further down.
   const { data: existing } = await admin
     .from('fish_collection')
     .select('catch_count')
     .eq('user_id', user.id)
     .eq('fish_id', fishId)
-    .single()
+    .maybeSingle()
 
   const isNewSpecies = !existing
-
-  // Upsert bestiary log
-  if (isNewSpecies) {
-    await admin.from('fish_collection').insert({ user_id: user.id, fish_id: fishId, catch_count: 1 })
-  } else {
-    await admin.from('fish_collection').update({
-      catch_count: existing.catch_count + 1,
-      last_caught_at: new Date().toISOString(),
-    }).eq('user_id', user.id).eq('fish_id', fishId)
-  }
 
   // Upsert sellable inventory — cap at hold capacity.
   // Shinies collapse the cast to a single catch (the trophy), so any
@@ -791,10 +832,6 @@ export async function reelIn(
     }
   }
 
-  // Auto-upgrade line tier on new species unlock
-  if (isNewSpecies) {
-    await creditNewSpecies(admin, user.id, fish.id, profile)
-  }
 
   // Track abyss streak for achievements
   const isAbyssPerfect = result === 'perfect' && fish.habitat === 'abyss'
@@ -848,6 +885,17 @@ export async function reelIn(
   // guard. Non-wormhole catches clear any stale pending reroll.
   const rodDef = reelRod
   const wormholeAvail = !!rodDef.wormhole && !isShiny && catchQty > 0
+
+  // ── BESTIARY CREDIT, DEFERRED WHEN A REROLL IS LIVE ────────────────────────
+  // Crediting the species here unconditionally made the wormhole log TWO
+  // species per cast: this fish, then the one it turned into. So when a reroll
+  // is available the credit is held on pending_reroll and settled by whichever
+  // comes first — rerollWormhole (which credits the NEW fish only) or the next
+  // castLine (the player declined, so this fish is credited after all).
+  if (!wormholeAvail) {
+    await logCatchToBestiary(admin, user.id, fishId)
+    if (isNewSpecies) await creditNewSpecies(admin, user.id, fish.id, profile)
+  }
 
   // Fishing-level skin unlocks: Forest @ 50, Ice @ 75
   const profileUpdates: Record<string, unknown> = {
@@ -1108,6 +1156,17 @@ export async function rerollWormhole(): Promise<
 
   const { fishId: origId, qty, habitat } = pending
 
+  // reelIn deferred this catch's bestiary credit to whichever settles the
+  // token, and that is now us. So every bail-out below has to log the fish the
+  // player actually landed on the way out — otherwise a failed reroll would
+  // quietly erase the catch from their log. Only the success path skips it,
+  // because there the original stopped being what they landed.
+  const abortWithCredit = async (error: string): Promise<{ error: string }> => {
+    const wasNew = await logCatchToBestiary(admin, user.id, origId)
+    if (wasNew) await creditNewSpecies(admin, user.id, origId, profile)
+    return { error }
+  }
+
   // Pick where the wormhole comes out FIRST. This is all read-only, so the
   // failure paths below bail before the player's hold has been touched.
   const { data: candidates } = await admin
@@ -1118,12 +1177,12 @@ export async function rerollWormhole(): Promise<
   // always lands on a different fish. Trophies (sell_value 0) never apply here
   // since ancient_deep is ineligible for the wormhole.
   const pool = (candidates ?? []).filter(f => f.id !== origId)
-  if (pool.length === 0) return { error: 'The wormhole found nothing new.' }
+  if (pool.length === 0) return abortWithCredit('The wormhole found nothing new.')
 
   const rod = getEffectiveRod(profile?.rod_tier ?? 0, profile?.completionist_effects as number[] | null)
   const picked = tierWeightedPick(pool, habitat, rod.rarityBonus)
   const { data: newFish } = await admin.from('fish_species').select('*').eq('id', picked.id).single()
-  if (!newFish) return { error: 'The wormhole collapsed.' }
+  if (!newFish) return abortWithCredit('The wormhole collapsed.')
 
   // ── CONSUME THE ORIGINAL, THEN GRANT ───────────────────────────────────────
   // A wormhole swaps one stack for another; it does not conjure a second one.
@@ -1133,10 +1192,10 @@ export async function rerollWormhole(): Promise<
   // happens BEFORE the grant, and it doubles as the guard: the write carries
   // the quantity it read, so a sale landing in between matches zero rows and
   // the reroll refuses instead of minting fish.
-  const HOLD_GONE = { error: 'That catch is already out of your hold. The wormhole needs something to send.' }
+  const HOLD_GONE = () => abortWithCredit('That catch is already out of your hold. The wormhole needs something to send.')
   const { data: origRow } = await admin.from('fish_inventory')
     .select('quantity').eq('user_id', user.id).eq('fish_id', origId).maybeSingle()
-  if (!origRow || origRow.quantity < qty) return HOLD_GONE
+  if (!origRow || origRow.quantity < qty) return HOLD_GONE()
 
   const left = origRow.quantity - qty
   const consume = left === 0
@@ -1145,17 +1204,16 @@ export async function rerollWormhole(): Promise<
     : admin.from('fish_inventory').update({ quantity: left })
         .eq('user_id', user.id).eq('fish_id', origId).eq('quantity', origRow.quantity).select('fish_id')
   const { data: consumed } = await consume
-  if (!consumed || consumed.length === 0) return HOLD_GONE
+  if (!consumed || consumed.length === 0) return HOLD_GONE()
 
   const { data: newRow } = await admin.from('fish_inventory').select('quantity').eq('user_id', user.id).eq('fish_id', newFish.id).maybeSingle()
   if (newRow) await admin.from('fish_inventory').update({ quantity: newRow.quantity + qty }).eq('user_id', user.id).eq('fish_id', newFish.id)
   else await admin.from('fish_inventory').insert({ user_id: user.id, fish_id: newFish.id, quantity: qty })
 
-  // Bestiary — the new fish counts as discovered/caught (you did pull it in).
-  const { data: collRow } = await admin.from('fish_collection').select('catch_count').eq('user_id', user.id).eq('fish_id', newFish.id).maybeSingle()
-  const isNewSpecies = !collRow
-  if (isNewSpecies) await admin.from('fish_collection').insert({ user_id: user.id, fish_id: newFish.id, catch_count: qty })
-  else await admin.from('fish_collection').update({ catch_count: collRow.catch_count + qty, last_caught_at: new Date().toISOString() }).eq('user_id', user.id).eq('fish_id', newFish.id)
+  // Bestiary — this fish is what the cast actually landed, so it takes the
+  // credit reelIn deferred. Counts the CAST, not the fish, matching reelIn: a
+  // rerolled ×100 haul is one catch of the species, not a hundred.
+  const isNewSpecies = await logCatchToBestiary(admin, user.id, newFish.id)
 
   // A species landed through the wormhole counts exactly as one landed on the
   // line: lifetime set, line tier and the Full Collection badge all move.
