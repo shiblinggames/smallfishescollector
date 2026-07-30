@@ -3963,7 +3963,12 @@ export default function RaidCombat({
             if (ab.kind === 'leviathan') {
               // DOBY: one heavy shot that always lands a full crit.
               const dmg = Math.max(1, Math.round(enemy.maxDmg * 1.5 * (ab.value ?? 1) * bossPhaseDmgMult))
-              pHp = Math.max(0, pHp - dmg)
+              // Through the shield pool like every other source of incoming
+              // damage. Bypassing it meant the player's own Stormward / Tidecaller
+              // buffer did nothing against his two biggest abilities.
+              const dmgLeft = soakPlayerShield(dmg, lines)
+              onStat?.({ dmgTaken: dmgLeft })
+              pHp = Math.max(0, pHp - dmgLeft)
               aSplatTarget = 'player'; aSplatText = `-${dmg}`
               lines.push(`${ab.name}: guaranteed crit, ${dmg} damage.`)
             } else if (ab.kind === 'blitz') {
@@ -3979,7 +3984,9 @@ export default function RaidCombat({
                 per.push(one)
                 total += one
               }
-              pHp = Math.max(0, pHp - total)
+              const blitzLeft = soakPlayerShield(total, lines)
+              onStat?.({ dmgTaken: blitzLeft })
+              pHp = Math.max(0, pHp - blitzLeft)
               aSplatTarget = 'player'; aSplatText = `-${total}`
               blitzOut = per
               lines.push(`${ab.name}: ${shots} fast hits, ${total} damage.`)

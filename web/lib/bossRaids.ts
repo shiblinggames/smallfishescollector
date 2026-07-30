@@ -2232,7 +2232,12 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
           ability: {
             kind: 'leviathan', name: 'The Borrowed Jaw',
             summonImage: '/fish/megalodon.png', summonColor: '#f87171',
-            value: 1.0,
+            // THE BIGGEST SINGLE HIT IN THE FIGHT, which is what the last of the
+            // six should be. At 1.0 it landed for 107 against his own ultimate's
+            // 199, so his final stolen giant hit for half a routine pattern slot.
+            // 2.4 puts it above the ultimate, and it is the player's own last
+            // catch being thrown back at them.
+            value: 2.4,
           } },
       ],
     },
