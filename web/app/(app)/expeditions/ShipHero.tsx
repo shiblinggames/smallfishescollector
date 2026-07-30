@@ -536,6 +536,12 @@ export default function ShipHero({
   const mountedFinale = equippedItems.find(id => mountIds.has(id)) ?? null
   const hullItems = equippedItems.filter(id => !mountIds.has(id))
   const ownedFinale = ownedRaidItems.filter(id => mountIds.has(id))
+  // DISPLAY ONLY. The mount is not a hull slot and must stay out of every cap
+  // check (toggleItem, saveEquippedRaidItems, getRaidPlayerStats all split it
+  // off), but to the player it is plainly a sixth slot sitting in the same
+  // grid, so the counter says 6/6 rather than 5/5 with a stray cell beside it.
+  const slotsTotal  = raidItemSlots + (hasSixthMount ? 1 : 0)
+  const slotsFilled = hullItems.length + (mountedFinale ? 1 : 0)
 
   // Ultimate weapon (Man-o-War Mega) — the end-of-Chapter-3 build. Its four-gate
   // checklist, previews, 24h build clock, and re-pick flow all live inside
@@ -1429,7 +1435,7 @@ export default function ShipHero({
                 color: newRaidItems.size > 0 ? '#ffd96a' : 'rgba(230,225,215,0.82)',
                 textShadow: '0 1px 4px rgba(0,0,0,0.9)',
               }}>
-                {newRaidItems.size > 0 ? 'New gear to mount' : `${shipStats.name} · ${hullItems.length}/${raidItemSlots} mounted`}
+                {newRaidItems.size > 0 ? 'New gear to mount' : `${shipStats.name} · ${slotsFilled}/${slotsTotal} mounted`}
               </p>
             </button>
           </div>
@@ -1667,7 +1673,7 @@ export default function ShipHero({
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.8rem' }}>
                 <span className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.22em', color: '#8794a6' }}>Battle Loadout</span>
                 <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
-                <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.56rem', color: '#c4b078' }}>{hullItems.length}/{raidItemSlots} slots</span>
+                <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.56rem', color: '#c4b078' }}>{slotsFilled}/{slotsTotal} slots</span>
               </div>
               {/* At-a-glance summary of every active item + what it does. */}
               {equippedItems.length > 0 && (
@@ -2515,7 +2521,7 @@ export default function ShipHero({
               <button onClick={() => setPickerOpen(false)} aria-label="Close" style={{ position: 'absolute', top: 6, right: 8, zIndex: 6, color: 'rgba(255,255,255,0.55)', fontSize: '1.2rem', lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem 0.4rem' }}>✕</button>
               <p className="font-cinzel font-800" style={{ fontSize: '1rem', color: '#f0ede8', marginBottom: 3 }}>Equip an item</p>
               <p className="font-karla" style={{ fontSize: '0.68rem', color: '#8a8480', marginBottom: 12 }}>
-                {hullItems.length}/{raidItemSlots} slots filled. Effects stack no matter which slot.
+                {slotsFilled}/{slotsTotal} slots filled. Effects stack no matter which slot.
               </p>
               {choices.length === 0 ? (
                 <p className="font-karla" style={{ fontSize: '0.76rem', color: '#7a7470', textAlign: 'center', padding: '1.6rem 0', fontStyle: 'italic' }}>
@@ -2655,7 +2661,9 @@ export default function ShipHero({
               <button onClick={() => setEffectsOpen(false)} aria-label="Close" style={{ position: 'absolute', top: 6, right: 8, zIndex: 6, color: 'rgba(255,255,255,0.55)', fontSize: '1.2rem', lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem 0.4rem' }}>✕</button>
               <div style={{ textAlign: 'center', marginBottom: '1.1rem' }}>
                 <p className="font-cinzel font-800" style={{ fontSize: '1.1rem', color: '#f0ede8' }}>Active Loadout</p>
-                <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.5rem', color: '#8794a6', marginTop: 3 }}>{items.length} of {raidItemSlots} mount{raidItemSlots === 1 ? '' : 's'} in use</p>
+                {/* items INCLUDES the mount, so this has to count against the
+                    display total or a full loadout reads "6 of 5". */}
+                <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.5rem', color: '#8794a6', marginTop: 3 }}>{items.length} of {slotsTotal} mount{slotsTotal === 1 ? '' : 's'} in use</p>
               </div>
               {items.length === 0 ? (
                 <p className="font-karla text-center" style={{ fontSize: '0.8rem', color: '#7a7470', fontStyle: 'italic', padding: '1rem 0' }}>Nothing equipped yet.</p>
