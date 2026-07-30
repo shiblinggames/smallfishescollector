@@ -219,7 +219,10 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
   // The picker opens SHORT. Deep rosters turned choosing a hand into scanning
   // a wall of near-identical cards; the rest are one tap away.
   const [showAllCrew, setShowAllCrew] = useState(false)
-  const [trawlWho, setTrawlWho] = useState<'all' | 'free' | 'raid'>('all')
+  // Defaults to FREE: a hand sent trawling is locked out of raids for the whole
+  // cycle, so raid-party crew are the one group you usually do NOT want offered.
+  // Switch to All / In raid to pull them in deliberately.
+  const [trawlWho, setTrawlWho] = useState<'all' | 'free' | 'raid'>('free')
   const [slotUnlock, setSlotUnlock] = useState<number | null>(null)
   const [slotInfo, setSlotInfo] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -642,17 +645,22 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
   const recentIds = picking ? readRecentCrew(picking) : []
   const lastId = recentIds.length > 0 ? recentIds[0] : NaN
   const pickZone = picking ? state.zones.find(z => z.key === picking) : null
+  // ONE rule for who is offerable, so Quick Send can never surface a hand the
+  // grid is currently filtering out — otherwise the default "free" filter would
+  // hide raid crew from the list while still pushing one at the top of the sheet.
+  const matchesWho = (c: TrawlCrewView) =>
+    trawlWho === 'all' || (trawlWho === 'raid' ? c.inRaidParty === true : c.inRaidParty !== true)
   // QUICK SEND — the last hand you sent to THIS zone, if they're free again.
   // Most trawl sends are the same crew to the same water, and that round trip
   // was costing a scroll through the whole roster every cycle.
-  const quickCrew = picking ? state.freeCrew.find(c => c.id === lastId) ?? null : null
+  const quickCrew = picking ? state.freeCrew.find(c => c.id === lastId && matchesWho(c)) ?? null : null
   const quickEst = quickCrew && picking ? expectedTrawlHaul(picking, quickCrew.savvy, quickCrew.fortune) : null
   // Sorted by what the run actually PAYS, not by raw stats. Savvy and Fortune
   // convert at different rates per zone, so a stat sum never matched the
   // estimate printed on the tile and the top card was often not the best one.
   const rankedCrew = picking
     ? state.freeCrew
-        .filter(c => trawlWho === 'all' || (trawlWho === 'raid' ? c.inRaidParty === true : c.inRaidParty !== true))
+        .filter(matchesWho)
         .map(c => ({ c, est: expectedTrawlHaul(picking, c.savvy, c.fortune) }))
         .sort((a, b) => {
           if (trawlSort === 'recent') {
@@ -763,7 +771,11 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
             )}
             {allOrderedCrew.length === 0 && !quickCrew && (state.freeCrew.length === 0
               ? <p className="font-karla" style={{ fontSize: '0.84rem', color: '#a89e86', textAlign: 'center', padding: '2rem 0' }}>No free crew — they&apos;re all at sea, raiding, or voyaging. Recruit more in the Crew Hall.</p>
-              : <p className="font-karla" style={{ fontSize: '0.84rem', color: '#a89e86', textAlign: 'center', padding: '1.6rem 0' }}>No crew match that filter.</p>)}
+              : trawlWho === 'free' && state.freeCrew.some(c => c.inRaidParty)
+                // The default filter hides raid hands, so say WHY the list is
+                // empty rather than blaming an invisible filter.
+                ? <p className="font-karla" style={{ fontSize: '0.84rem', color: '#a89e86', textAlign: 'center', padding: '1.6rem 0', lineHeight: 1.5 }}>Every hand you have left is in your raid party. Tap <span style={{ color: '#e07c7c' }}>In raid</span> above to send one anyway — they&apos;ll be locked out of the raid for the whole cycle.</p>
+                : <p className="font-karla" style={{ fontSize: '0.84rem', color: '#a89e86', textAlign: 'center', padding: '1.6rem 0' }}>No crew match that filter.</p>)}
             {/* Three across, art first — same language as the raid and voyage
                 assign pickers, so choosing a hand feels the same everywhere. */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
