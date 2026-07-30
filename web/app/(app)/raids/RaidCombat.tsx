@@ -7012,12 +7012,14 @@ export default function RaidCombat({
             position: 'fixed', inset: 0, zIndex: 1200, pointerEvents: 'none',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            {/* The scrim FADES OUT low on the screen so it never dims the Lock
-                Shot button sitting underneath it. The button is the one thing
-                the player has to see and hit while the dial is up. */}
+            {/* The scrim is TOP-ANCHORED and ends above the action row, so the
+                Lock Shot button is never dimmed by it. A centred radial was
+                still ~0.9 opaque past mid-screen and laid a shadow straight
+                over the button, which is the one thing the player has to see
+                and hit while the dial is up. Bottom third is left clean. */}
             <div aria-hidden style={{
-              position: 'absolute', inset: 0,
-              background: 'radial-gradient(ellipse at 50% 44%, rgba(6,12,22,0.78) 0%, rgba(2,5,10,0.9) 55%, rgba(2,5,10,0) 88%)',
+              position: 'absolute', top: 0, left: 0, right: 0, height: '68%',
+              background: 'linear-gradient(180deg, rgba(2,5,10,0.88) 0%, rgba(2,5,10,0.86) 46%, rgba(2,5,10,0.55) 78%, rgba(2,5,10,0) 100%)',
             }} />
             <div style={{ position: 'relative', width: '86%', maxWidth: 300 }}>
               <DialAimInline
