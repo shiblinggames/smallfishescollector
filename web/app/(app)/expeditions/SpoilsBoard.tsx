@@ -35,7 +35,7 @@ const SIDES: Side[] = [
     title: 'The Deep Reel',
     item: "The Angler's Patience",
     art: '/finn_final.png',
-    blurb: 'A second special slot on your rig. His reel is the only thing that seats in it: bites come slower, and what comes up is rarer for the wait.',
+    blurb: 'A second special slot on your rig. His reel is the only thing that seats in it, and it CHARGES on Navigation XP: raid hard, and it fishes harder.',
     accent: REEL,
   },
   {
@@ -43,7 +43,7 @@ const SIDES: Side[] = [
     title: 'The Sixth Mount',
     item: 'The Borrowed Jaw',
     art: '/finn_final.png',
-    blurb: 'One more raid item framed onto your hull. His jaw is the only thing that mounts there, and it bites hardest on the things that fight back.',
+    blurb: 'One more raid item framed onto your hull. His jaw is the only thing that mounts there, and it CHARGES on Fishing XP: cast all week, and it bites for it.',
     accent: MOUNT,
   },
 ]

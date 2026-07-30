@@ -8,6 +8,7 @@ import { getLevelFromXP, navLevelBonuses } from '@/lib/expeditionLevel'
 import { loadDeployedParty } from '@/lib/crewData'
 import { resolveDeployedCrew } from '@/lib/crewResolve'
 import { getActiveEffects, dedupeRaidItems, RAID_ITEMS } from '@/lib/raidItems'
+import { finnItemLevel } from '@/lib/finnItems'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { navRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { getShipSkin } from '@/lib/shipSkins'
@@ -95,7 +96,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('ship_tier, saved_crew, ship_name, username, character_color, equipped_hat, avatar_bg_color, avatar_border_color, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, equipped_repair_kit, has_seen_raid_tutorial, expedition_xp, nav_renown_alloc, ship_classes, gauntlet_upgrades, dons_gauntlet_upgrades, manowar_augment, manowar_augment_build, has_sixth_berth, has_armory_expansion, finn_spoil_free, finn_spoil_paid, rod_tier, hook_tier, reel_tier, completionist_effects')
+    .select('ship_tier, saved_crew, ship_name, username, character_color, equipped_hat, avatar_bg_color, avatar_border_color, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, equipped_repair_kit, has_seen_raid_tutorial, expedition_xp, nav_renown_alloc, ship_classes, gauntlet_upgrades, dons_gauntlet_upgrades, manowar_augment, manowar_augment_build, has_sixth_berth, has_armory_expansion, finn_spoil_free, finn_spoil_paid, borrowed_jaw_xp, rod_tier, hook_tier, reel_tier, completionist_effects')
     .eq('id', userId)
     .single()
 
@@ -178,6 +179,11 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
   const mounted   = hasMount ? rawEquipped.filter(id => finaleIds.has(id)).slice(0, 1) : []
   const normal    = rawEquipped.filter(id => !finaleIds.has(id))
   const equippedItems = [...dedupeRaidItems(normal).slice(0, slotCap), ...mounted]
+  // THE BORROWED JAW pays out by CHARGE. Tag its id with the level it has
+  // reached so combat resolves the right milestone (see baseItemId). Only the
+  // copy handed to the client is tagged; the database keeps the plain id.
+  const jawLevel = finnItemLevel(Number((profile as { borrowed_jaw_xp?: number } | null)?.borrowed_jaw_xp ?? 0))
+  const chargedItems = equippedItems.map(id => (id === 'borrowed_jaw' ? `borrowed_jaw#${jawLevel}` : id))
   const hpMaxMult = getActiveEffects(equippedItems)
     .filter(e => e.type === 'max_hp_mult')
     .reduce((a, e) => a * e.value, 1)
@@ -217,7 +223,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
     crewMembers,
     equippedShipSkin:     (profile?.equipped_ship_skin as string | null) ?? null,
     shipSkins:            (profile?.ship_skins as string[] | null) ?? [],
-    equippedRaidItems:    equippedItems,
+    equippedRaidItems:    chargedItems,
     ownedRaidItems:       (profile?.raid_items as string[] | null) ?? [],
     classDamageMult:      classEffects.damageMult * navRenown.damageMult,
     legendaryLootMult:    donsLegendaryLootMult(accountUpgrades),
@@ -467,7 +473,7 @@ export async function claimRaidLoot(
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, gems, ship_skins, equipped_ship_skin, raid_items, ship_classes, has_completed_practice_raid, raid_node_progress, is_admin, expedition_xp, ancient_catches')
+    .select('doubloons, gems, ship_skins, equipped_ship_skin, raid_items, equipped_raid_items, ship_classes, has_completed_practice_raid, raid_node_progress, is_admin, expedition_xp, ancient_catches')
     .eq('id', user.id)
     .single()
   if (!profile) return { newShipSkins: [], newDoubloonTotal: 0, newRaidItems: [] }
@@ -511,6 +517,8 @@ export async function claimRaidLoot(
   const ownedSkins    = (profile?.ship_skins as string[] | null) ?? []
   let equippedSkin    = (profile?.equipped_ship_skin as string | null) ?? null
   let grantedSpecial: string | null = null   // a has_* column to flip, if a special item dropped
+  let equippedSpecial2: string | null = null // Finn's fishing spoil seats itself on drop
+  const newEquippedItems = [...((profile?.equipped_raid_items as string[] | null) ?? [])]
   const newSkins      = [...ownedSkins]
   const ownedRaidItems = (profile?.raid_items as string[] | null) ?? []
   const newRaidItems   = [...ownedRaidItems]
@@ -526,10 +534,19 @@ export async function claimRaidLoot(
     }
     if (grant.raidItem && !newRaidItems.includes(grant.raidItem)) {
       newRaidItems.push(grant.raidItem)
+      // Finn's spoils SEAT THEMSELVES. They only charge while equipped, and
+      // they fit nowhere but their own dedicated slot, so leaving one in the
+      // hold does nothing for anybody. Straight onto the ship.
+      if (grant.raidItem === 'borrowed_jaw' && !newEquippedItems.includes('borrowed_jaw')) {
+        newEquippedItems.push('borrowed_jaw')
+      }
+    }
     // Special (fishing) items are stored one boolean column per item, the same
     // convention as has_tide_turner. Without this branch The Angler's Patience
     // would roll, be reported as looted, and grant absolutely nothing.
-    if (grant.specialItem === 'anglers_patience') grantedSpecial = 'has_anglers_patience'
+    if (grant.specialItem === 'anglers_patience') {
+      grantedSpecial = 'has_anglers_patience'
+      equippedSpecial2 = 'anglers_patience'
     }
   }
 
@@ -539,7 +556,7 @@ export async function claimRaidLoot(
   // doesn't strand the player on a still-locked next node.
   await admin
     .from('profiles')
-    .update({ doubloons, gems, ship_skins: newSkins, equipped_ship_skin: equippedSkin, raid_items: newRaidItems, ...(grantedSpecial ? { [grantedSpecial]: true } : {}) })
+    .update({ doubloons, gems, ship_skins: newSkins, equipped_ship_skin: equippedSkin, raid_items: newRaidItems, ...(grantedSpecial ? { [grantedSpecial]: true } : {}), ...(equippedSpecial2 ? { equipped_special_2: equippedSpecial2 } : {}), ...(newEquippedItems.includes('borrowed_jaw') ? { equipped_raid_items: newEquippedItems } : {}) })
     .eq('id', user.id)
 
   return {

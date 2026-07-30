@@ -1,3 +1,4 @@
+import { borrowedJawRaidEffects } from './finnItems'
 export type RaidEffectType =
   | 'boss_damage_mult'      // value = damage multiplier on boss rounds
   | 'lethal_save'           // value = uses per raid run (raids only, not skirmishes)
@@ -332,11 +333,14 @@ export const RAID_ITEMS: RaidItemDef[] = [
     finaleSlotOnly: true,
     id: 'borrowed_jaw',
     name: 'The Borrowed Jaw',
-    description: "Megalodon teeth, set in someone else's iron. +16% damage on boss rounds.",
+    description: "Megalodon teeth in someone else's iron. It CHARGES on fishing XP while mounted, and its bite grows with every level.",
     image: '/raidlog.png',
     emoji: '🦈',
     rarity: 'legendary',
-    effects: [{ type: 'boss_damage_mult', value: 1.16 }],
+    // No flat effects: everything it does comes from its CHARGE level (see
+    // lib/finnItems). Leaving a static bonus here would stack on top of the
+    // milestone and quietly double-count it.
+    effects: [],
     source: 'The Sunken Hand',
   },
 
@@ -1227,12 +1231,42 @@ export function effectiveOwnedItems(ownedItems: string[]): Set<string> {
 /** The Davy recipe — its components double as the Gauntlet chest drop pool. */
 export const DAVY_FORGE = getForgeRecipe('davys_grand_cannon')!
 
+/** CHARGED ITEMS carry their level on the id, as "borrowed_jaw#4".
+ *
+ *  Finn's spoils are not fixed stat sticks: what The Borrowed Jaw does depends
+ *  on how far it has been charged, and combat is spread across two engines and
+ *  twenty-odd routes that all already receive the equipped list. Riding the id
+ *  means the charge reaches every one of them without a new prop, and every
+ *  lookup below strips the tag, so a tagged id names the same item everywhere:
+ *  same name, same art, same rarity. Only its EFFECTS differ.
+ *
+ *  The tag is added at the server boundary (getRaidPlayerStats). Nothing writes
+ *  a tagged id back to the database. */
+export function baseItemId(id: string): string {
+  const cut = id.indexOf('#')
+  return cut < 0 ? id : id.slice(0, cut)
+}
+
+/** The charge level riding an id, or null if it carries none. */
+export function itemChargeLevel(id: string): number | null {
+  const cut = id.indexOf('#')
+  if (cut < 0) return null
+  const n = Number(id.slice(cut + 1))
+  return Number.isFinite(n) ? n : null
+}
+
 export function getRaidItem(id: string): RaidItemDef | undefined {
-  return RAID_ITEMS.find(i => i.id === id)
+  const base = baseItemId(id)
+  return RAID_ITEMS.find(i => i.id === base)
 }
 
 export function getActiveEffects(equippedItemIds: string[]): RaidEffect[] {
-  return equippedItemIds.flatMap(id => getRaidItem(id)?.effects ?? [])
+  return equippedItemIds.flatMap(id => {
+    // A charged item's effects come from its milestone, never from the def.
+    const lvl = itemChargeLevel(id)
+    if (lvl !== null && baseItemId(id) === 'borrowed_jaw') return borrowedJawRaidEffects(lvl)
+    return getRaidItem(id)?.effects ?? []
+  })
 }
 
 /** The first equipped item that can be ACTIVATED (War Drum / Thunder Drum). One

@@ -1,5 +1,6 @@
 'use server'
 
+import { anglersPatienceEffects, finnItemLevel } from '@/lib/finnItems'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getBait } from '@/lib/bait'
@@ -184,7 +185,7 @@ export async function castLine(baitType: string, habitat: string): Promise<
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('rod_tier, completionist_effects, hook_tier, fishing_xp, fish_hold_tier, ancient_catches, active_event, catch_pending, fishing_renown_alloc, has_ancient_deep_access, current_perfect_streak, current_streak_zone, equipped_special_2, has_anglers_patience')
+    .select('rod_tier, completionist_effects, hook_tier, fishing_xp, fish_hold_tier, ancient_catches, active_event, catch_pending, fishing_renown_alloc, has_ancient_deep_access, current_perfect_streak, current_streak_zone, equipped_special_2, has_anglers_patience, anglers_patience_xp, borrowed_jaw_xp, equipped_raid_items, finn_spoil_free, finn_spoil_paid')
     .eq('id', user.id)
     .single()
 
@@ -294,14 +295,18 @@ export async function castLine(baitType: string, habitat: string): Promise<
   // is the server's own current_perfect_streak, never a client value.
   const castStreak = (profile.catch_pending || zoneChanged) ? 0 : prevStreak
   const locked = lockedInState(rod, castStreak)
-  // THE ANGLER'S PATIENCE (Finn's drop, second special slot only). His whole
-  // method in one item: it does not hurry. Bites take half again as long to
-  // come, and what surfaces is meaningfully rarer for the wait. Gated on the
-  // slot AND ownership, both read from the profile, so it cannot apply to a
-  // player who never beat him.
-  const patienceOn = profile.equipped_special_2 === 'anglers_patience' && profile.has_anglers_patience === true
-  const patienceWaitMult   = patienceOn ? 1.5 : 1
-  const patienceRarityBonus = patienceOn ? 0.35 : 0
+  // THE ANGLER'S PATIENCE. Its strength is its CHARGE, not a fixed bonus: it
+  // levels on NAVIGATION xp while seated, so a fresh one barely helps and a
+  // maxed one is transformative. Identity when it is not seated.
+  const patience = anglersPatienceEffects(
+    profile.equipped_special_2 === 'anglers_patience' && profile.has_anglers_patience === true
+    // The reel seats itself the moment Finn drops it, but the SLOT only opens at
+    // the choice node after him. Until it does, the reel is aboard and inert.
+    && (profile.finn_spoil_free === 'fishing' || profile.finn_spoil_paid === 'fishing'),
+    Number(profile.anglers_patience_xp ?? 0),
+  )
+  const patienceWaitMult = patience.waitMult
+  const patienceRarityBonus = patience.rarityBonus
 
   // Crate encounter: 2% chance (× rod.crateChanceMult — Treasure Rod = 2×).
   // Rolled up-front so the in-flight flag below can skip crates — they're
@@ -518,7 +523,7 @@ export async function reelIn(
   }
 
   const [{ data: profile }, { data: holdRows }] = await Promise.all([
-    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, rod_tier, completionist_effects, fish_hold_tier, has_phantom_hook, has_perfected_sigil, equipped_special, equipped_special_2, has_anglers_patience, line_tier, prestige_levels, ancient_catches, unlocked_character_colors, total_perfects, current_perfect_streak, highest_perfect_streak, force_shiny_next_perfect, force_shiny_always, fishing_renown_alloc, pending_cast, zone_golden_boost, lifetime_species').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, rod_tier, completionist_effects, fish_hold_tier, has_phantom_hook, has_perfected_sigil, equipped_special, equipped_special_2, has_anglers_patience, anglers_patience_xp, borrowed_jaw_xp, equipped_raid_items, finn_spoil_free, finn_spoil_paid, line_tier, prestige_levels, ancient_catches, unlocked_character_colors, total_perfects, current_perfect_streak, highest_perfect_streak, force_shiny_next_perfect, force_shiny_always, fishing_renown_alloc, pending_cast, zone_golden_boost, lifetime_species').eq('id', user.id).single(),
     admin.from('fish_inventory').select('quantity').eq('user_id', user.id),
   ])
 
@@ -564,11 +569,21 @@ export async function reelIn(
     const existing = ((profile.ancient_catches as number[] | null) ?? [])
     const isNewTrophy = !existing.includes(fishId)
     const xpGained = Math.round(catchXP(fish.catch_difficulty, fish.habitat, result === 'perfect') * 3 * renownXpMult)
+    // THE BORROWED JAW charges on FISHING xp, and only while it is mounted.
+    // The mirror of the reel: his raid item is fed by the fishing half of the
+    // game, so wearing it is a standing reason to keep casting.
+    const jawMounted = ((profile as { equipped_raid_items?: string[] } | null)?.equipped_raid_items ?? []).includes('borrowed_jaw')
+      && (profile.finn_spoil_free === 'nav' || profile.finn_spoil_paid === 'nav')
+    const jawCharge = jawMounted ? Number((profile as { borrowed_jaw_xp?: number } | null)?.borrowed_jaw_xp ?? 0) + xpGained : null
     const newXP = (profile.fishing_xp ?? 0) + xpGained
     // Perfect streak counts in ancient too (it grants no streak XP bonus here,
     // by design), tracked server-side so it can't be spoofed.
     const aStreak = result === 'perfect' ? (profile.current_perfect_streak ?? 0) + 1 : 0
-    const updates: Record<string, unknown> = { fishing_xp: newXP, current_perfect_streak: aStreak, catch_pending: false }
+    // THE BORROWED JAW charges on FISHING xp while it is mounted. Same
+    // crossing in the other direction: the raid item is fed by fishing.
+    // Computed here rather than in a helper so it rides the SAME update
+    // as the xp that earned it and cannot drift out of sync.
+    const updates: Record<string, unknown> = { fishing_xp: newXP, current_perfect_streak: aStreak, catch_pending: false, ...(jawCharge !== null ? { borrowed_jaw_xp: jawCharge } : {}) }
     if (result === 'perfect') updates.total_perfects = (profile.total_perfects ?? 0) + 1
     if (aStreak > (profile.highest_perfect_streak ?? 0)) {
       updates.highest_perfect_streak = aStreak
@@ -786,7 +801,23 @@ export async function reelIn(
   const STREAK_XP_CAP = 10
   const streakForXp = Math.min(newPerfectStreak, STREAK_XP_CAP)
   const serverStreakBonus = streakForXp * streakForXp * 3 // 1=+3, 2=+12, … 10=+300, then flat (0 when not perfect)
-  const xpGained = Math.round((catchXP(fish.catch_difficulty, fish.habitat, result === 'perfect') + serverStreakBonus) * prestigeXPMult * perfectXpMult * renownXpMult)
+  // THE ANGLER'S PATIENCE again, on the grant side. castLine reads it for the
+  // bite wait and the rarity roll; here we only want its XP milestone, which
+  // does not exist until the reel is charged past level 2.
+  const reelXpMult = anglersPatienceEffects(
+    profile.equipped_special_2 === 'anglers_patience' && profile.has_anglers_patience === true
+    // The reel seats itself the moment Finn drops it, but the SLOT only opens at
+    // the choice node after him. Until it does, the reel is aboard and inert.
+    && (profile.finn_spoil_free === 'fishing' || profile.finn_spoil_paid === 'fishing'),
+    Number(profile.anglers_patience_xp ?? 0),
+  ).fishingXpMult
+  const xpGained = Math.round((catchXP(fish.catch_difficulty, fish.habitat, result === 'perfect') + serverStreakBonus) * prestigeXPMult * perfectXpMult * renownXpMult * reelXpMult)
+  // THE BORROWED JAW charges on FISHING xp, and only while it is mounted.
+  // The mirror of the reel: his raid item is fed by the fishing half of the
+  // game, so wearing it is a standing reason to keep casting.
+  const jawMounted = ((profile as { equipped_raid_items?: string[] } | null)?.equipped_raid_items ?? []).includes('borrowed_jaw')
+      && (profile.finn_spoil_free === 'nav' || profile.finn_spoil_paid === 'nav')
+  const jawCharge = jawMounted ? Number((profile as { borrowed_jaw_xp?: number } | null)?.borrowed_jaw_xp ?? 0) + xpGained : null
   const newXP = (profile.fishing_xp ?? 0) + xpGained
 
   // Perfected Sigil — equipped Shrouded Reach drop pays a streak-scaling
@@ -814,7 +845,12 @@ export async function reelIn(
 
   // Fishing-level skin unlocks: Forest @ 50, Ice @ 75
   const profileUpdates: Record<string, unknown> = {
+    // THE BORROWED JAW charges on FISHING xp while it is mounted. Same
+    // crossing in the other direction: the raid item is fed by fishing.
+    // Computed here rather than in a helper so it rides the SAME update
+    // as the xp that earned it and cannot drift out of sync.
     fishing_abyss_streak: newAbyssStreak, fishing_xp: newXP, current_perfect_streak: newPerfectStreak, catch_pending: false,
+    ...(jawCharge !== null ? { borrowed_jaw_xp: jawCharge } : {}),
     pending_reroll: wormholeAvail ? { fishId, qty: catchQty, habitat: fish.habitat } : null,
   }
   if (sigilBonus > 0) profileUpdates.doubloons = newDoubloons

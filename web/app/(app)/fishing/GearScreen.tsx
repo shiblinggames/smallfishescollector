@@ -1,6 +1,8 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import FinnChargePanel from '@/components/FinnChargePanel'
+import { FINN_ITEMS } from '@/lib/finnItems'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -733,7 +735,7 @@ export default function GearScreen({
   equippedHat, unlockedHats, onEquipHat, onBuyHat,
   equippedPet, unlockedPets, onEquipPet,
   hasTideTurner, tideTurnerSkipsLeft, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, hasPerfectedSigil,
-  equippedSpecial, onEquipSpecial, onBuySpecialItem, equippedSpecial2, onEquipSpecial2, hasDeepReel = false, hasAnglersPatience = false,
+  equippedSpecial, onEquipSpecial, onBuySpecialItem, equippedSpecial2, onEquipSpecial2, hasDeepReel = false, hasAnglersPatience = false, anglersPatienceXp = 0,
   fishingLevel,
   zoneGoldenBoostPct = 0,
   isPremium,
@@ -809,6 +811,8 @@ export default function GearScreen({
   onEquipSpecial2?: (itemId: string | null) => void
   hasDeepReel?: boolean
   hasAnglersPatience?: boolean
+  /** Charge on The Angler's Patience. Read-only here; the server owns it. */
+  anglersPatienceXp?: number
   onBuySpecialItem: (itemId: string) => Promise<void>
   fishingLevel: number
   isPremium: boolean
@@ -2442,8 +2446,11 @@ export default function GearScreen({
                         {equippedSpecial2 && <span className="font-karla font-800 uppercase tracking-[0.12em]" style={{ fontSize: '0.5rem', color: '#6fd3c7' }}>Equipped</span>}
                       </div>
                       <p className="font-karla" style={{ margin: '4px 0 10px', fontSize: '0.7rem', lineHeight: 1.45, color: '#9a958c' }}>
-                        Bites take half again as long to come, and what surfaces is markedly rarer for the wait.
+                        {FINN_ITEMS.anglers_patience.flavor}
                       </p>
+                      <div style={{ marginBottom: 10 }}>
+                        <FinnChargePanel id="anglers_patience" xp={anglersPatienceXp} equipped={!!equippedSpecial2} />
+                      </div>
                       <button
                         onClick={() => onEquipSpecial2?.(equippedSpecial2 ? null : 'anglers_patience')}
                         className="font-karla font-700 uppercase tracking-[0.1em]"

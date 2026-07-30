@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useTransition, useEffect, useRef, useMemo, Fragment, type CSSProperties } from 'react'
+import FinnChargePanel from '@/components/FinnChargePanel'
+import { finnItemLevel, FINN_ITEM_MAX_LEVEL } from '@/lib/finnItems'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -205,6 +207,8 @@ interface Props {
   /** Crew ids currently out on a trawl — hidden from the crew picker. */
   trawlingCrewIds?: number[]
   ownedRaidItems: string[]
+  /** Charge on The Borrowed Jaw. Read-only; the server owns it. */
+  borrowedJawXp?: number
   equippedRaidItems: string[]
   equippedRepairKit: string
   ownedRepairKits: string[]
@@ -340,7 +344,7 @@ export default function ShipHero({
   equippedShipSkin: initialEquippedSkin, shipSkins: ownedSkins,
   roster,
   trawlingCrewIds = [],
-  ownedRaidItems, equippedRaidItems: initialEquippedRaidItems,
+  ownedRaidItems, equippedRaidItems: initialEquippedRaidItems, borrowedJawXp = 0,
   equippedRepairKit: initialEquippedRepairKit,
   ownedRepairKits: initialOwnedRepairKits,
   raidRepairOwed, doubloons,
@@ -1725,7 +1729,9 @@ export default function ShipHero({
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.8rem', color: BRASS }}>{def.name}</p>
-                          <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: '#9a948a' }}>Tap for details</span>
+                          <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: '#9a948a' }}>
+                            Charge {finnItemLevel(borrowedJawXp)} / {FINN_ITEM_MAX_LEVEL}
+                          </span>
                         </div>
                       </button>
                     )
@@ -2482,6 +2488,14 @@ export default function ShipHero({
                 <p className="font-cinzel font-800" style={{ fontSize: '1.15rem', lineHeight: 1.1, ...(forged ? forgedTextSoft(abyssal) : { color: '#f0ede8' }) }}>{def.name}</p>
                 <p className="font-karla" style={{ fontSize: '0.82rem', color: '#c8c2b8', lineHeight: 1.5, marginTop: 2 }}>{def.description}</p>
               </div>
+              {/* Finn's spoil has no fixed effect line to print, so it shows its
+                  CHARGE instead: the level it has reached and the ladder still
+                  ahead of it. */}
+              {def.id === 'borrowed_jaw' && (
+                <div style={{ marginTop: '1.1rem', textAlign: 'left' }}>
+                  <FinnChargePanel id="borrowed_jaw" xp={borrowedJawXp} equipped={equippedItems.includes('borrowed_jaw')} />
+                </div>
+              )}
               <div style={{ display: 'flex', gap: 8, marginTop: '1.3rem' }}>
                 <button type="button" onClick={() => setItemDetail(null)} className="font-cinzel font-700 uppercase tracking-[0.06em]" style={{ flex: 1, padding: '0.72rem', borderRadius: 11, fontSize: '0.8rem', color: '#c8d2e0', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', cursor: 'pointer' }}>Close</button>
                 <button type="button" onClick={() => { toggleItem(itemDetail); setItemDetail(null) }} className="font-cinzel font-700 uppercase tracking-[0.06em]" style={{ flex: 1, padding: '0.72rem', borderRadius: 11, fontSize: '0.8rem', color: '#e0c078', background: 'rgba(196,176,120,0.14)', border: '1px solid rgba(196,176,120,0.42)', cursor: 'pointer' }}>Unequip</button>

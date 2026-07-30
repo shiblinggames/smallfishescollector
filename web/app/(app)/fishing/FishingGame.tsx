@@ -3176,6 +3176,7 @@ export default function FishingGame({
   initialEquippedSpecial2,
   hasDeepReel = false,
   hasAnglersPatience = false,
+  anglersPatienceXp = 0,
   initialPrestigeLevels, initialGoldenBoosts, initialAncientCatches, characterColor, unlockedCharacterColors, newlyUnlockedSkins, newlyUnlockedBoats, equippedBadges, unlockedBadges,
   marketMultipliers, isPremium, initialEquippedBoat, initialUnlockedBoats, onBoatStateChange,
   initialEquippedHat, initialUnlockedHats, onHatStateChange,
@@ -3235,6 +3236,7 @@ export default function FishingGame({
   initialEquippedSpecial2?: string | null
   hasDeepReel?: boolean
   hasAnglersPatience?: boolean
+  anglersPatienceXp?: number
   hasPhantomHook: boolean
   hasAutoCaster: boolean
   hasAutoCatcher: boolean
@@ -9655,6 +9657,7 @@ export default function FishingGame({
               equippedSpecial2={equippedSpecial2}
               hasDeepReel={hasDeepReel}
               hasAnglersPatience={hasAnglersPatience}
+              anglersPatienceXp={anglersPatienceXp}
               onEquipSpecial2={async (id) => {
                 // Optimistic, then reconciled: the server is the authority on
                 // whether the slot is open and whether this item may sit in it.

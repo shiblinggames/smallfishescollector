@@ -124,6 +124,7 @@ async function ShipHeroSection() {
       roster={roster}
       trawlingCrewIds={trawlingCrewIds}
       ownedRaidItems={(profile?.raid_items as string[] | null) ?? []}
+      borrowedJawXp={Number(profile?.borrowed_jaw_xp ?? 0)}
       equippedRaidItems={(profile?.equipped_raid_items as string[] | null) ?? []}
       equippedRepairKit={(profile?.equipped_repair_kit as string | null) ?? 'basic_repair_kit'}
       ownedRepairKits={(profile?.owned_repair_kits as string[] | null) ?? ['basic_repair_kit']}

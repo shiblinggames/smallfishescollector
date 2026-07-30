@@ -28,7 +28,7 @@ export const SPECIAL_ITEMS: SpecialItemDef[] = [
     id: 'anglers_patience',
     name: "The Angler's Patience",
     color: '#c4a96a',
-    description: 'The line he waited a lifetime on, off his own hull. It does not hurry, and neither do you: bites take longer to come, and when they do the fish is worth the wait.',
+    description: 'The line he waited a lifetime on, off his own hull. It CHARGES on Navigation XP while seated, and every level it gains buys back the patience it costs you.',
     effectLabel: 'Rarer fish on every bite, at the cost of a slower wait',
     obtainedFrom: 'The Sunken Hand',
     finaleSlotOnly: true,

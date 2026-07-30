@@ -48,7 +48,7 @@ export async function awardRaidKill(
   }
   const { data: profile } = await admin
     .from('profiles')
-    .select('expedition_xp, doubloons, ship_classes, nav_renown_alloc')
+    .select('expedition_xp, doubloons, ship_classes, nav_renown_alloc, equipped_special_2, anglers_patience_xp, finn_spoil_free, finn_spoil_paid')
     .eq('id', user.id)
     .single()
 
@@ -64,6 +64,12 @@ export async function awardRaidKill(
   const crewXP_amount = Math.round(xp * navRenown.crewXpMult)
 
   const newExpeditionXP  = (profile?.expedition_xp ?? 0) + xp
+  // THE ANGLER'S PATIENCE charges on NAVIGATION xp, and only while it is
+  // seated. The crossing is the point: his reel is fed by the raiding half
+  // of the game, so wearing it is a reason to keep coming back out here.
+  const reelSeated = profile?.equipped_special_2 === 'anglers_patience'
+    && (profile?.finn_spoil_free === 'fishing' || profile?.finn_spoil_paid === 'fishing')
+  const reelCharge = reelSeated ? Number(profile?.anglers_patience_xp ?? 0) + xp : null
   const newDoubloonTotal = (profile?.doubloons ?? 0) + scaledDoubloons
 
   // Crew earn the per-kill XP the player just earned, nudged by nav Renown
@@ -73,6 +79,7 @@ export async function awardRaidKill(
   const [, crewXP] = await Promise.all([
     admin.from('profiles').update({
       expedition_xp: newExpeditionXP,
+      ...(reelCharge !== null ? { anglers_patience_xp: reelCharge } : {}),
       doubloons: newDoubloonTotal,
     }).eq('id', user.id),
     grantXPToAssignedCrew(admin, user.id, crewXP_amount),
