@@ -28,6 +28,7 @@ import SwipeAction from '@/components/SwipeAction'
 import { playChestSfx } from '@/lib/fishingMusic'
 import GuideCoach from '@/components/GuideCoach'
 import { GUIDES } from '@/lib/onboardingScenes'
+import Link from 'next/link'
 
 // First-time Crew Hall guide — flashes each core tab and says plainly what it's
 // for (advanced tabs like Blood / Fallen are left to discover).
@@ -1327,7 +1328,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             keeps butting up against (Recruit gates, Roster Full pills).
             Goes red when full so the player notices the wall before they
             try to claim another recruit and get bounced. */}
-        <div style={{ marginBottom: '1.1rem', display: 'flex', alignItems: 'baseline', gap: '0.7rem', flexWrap: 'wrap' }}>
+        <div style={{ marginBottom: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.7rem' }}>
           <h1 className="font-pirata" style={{ fontSize: '1.7rem', letterSpacing: '0.03em' }}>Crew Management</h1>
           {(() => {
             const filled = state.roster.length
@@ -1346,6 +1347,11 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
               </span>
             )
           })()}
+          {/* Back to the hub — matches the Ship / Items / Forge routes. */}
+          <Link href="/expeditions" aria-label="Back to expeditions"
+            style={{ marginLeft: 'auto', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: '50%', color: '#e0ddd8', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.14)', textDecoration: 'none' }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M15 18l-6-6 6-6" /></svg>
+          </Link>
         </div>
 
         {err && (
@@ -1449,59 +1455,6 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
           const nextTier = nextHallTier(state.hallTier)
           return (
         <>
-        {/* BLOOD-CHARGED REROLL. It rerolls THIS board, so it belongs on the
-            board rather than in a market two tabs away that then bounced you
-            back here to see the result. Hidden until Blood Gems exist. */}
-        {bloodMarketShown && (
-          <div style={{ marginBottom: '1.4rem' }}>
-              {/* Offering 1 — Blood-charged reroll */}
-              <div className="app-card" style={{ padding: '0.95rem', marginBottom: '0.9rem', borderRadius: 14, border: `1px solid ${BLOOD}3a`, background: 'linear-gradient(160deg, rgba(48,10,16,0.5), rgba(16,6,9,0.45))' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                  <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${BLOOD}1e`, border: `1px solid ${BLOOD}55` }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f3c0c6" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M3 12a9 9 0 0 1 15-6.7L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-15 6.7L3 16" /><path d="M3 21v-5h5" /></svg>
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: '#f5ecd6' }}>Blood-Charged Reroll</p>
-                    <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#c98a92', marginTop: 2 }}>Sway the recruit board</p>
-                  </div>
-                </div>
-                <p className="font-karla" style={{ fontSize: '0.7rem', color: '#b0aaa0', lineHeight: 1.42, marginBottom: 10 }}>
-                  Add Blood Gems to a reroll for a much better shot at Epic and Legendary crew.
-                </p>
-                <div className="flex" style={{ gap: 8 }}>
-                  {BLOOD_REROLL_TIERS.map(t => {
-                    const cannot = pending || reveal.revealing || state.gems < state.rerollCost || state.bloodGems < t.bloodCost
-                    const busy = busyId === `reroll:${t.id}`
-                    const epicMult = rerollMult(t.weights, 2, GEM_WEIGHTS)
-                    const legMult = rerollMult(t.weights, 3, GEM_WEIGHTS)
-                    const boost = '#7ee0a3' // green = "this is better"
-                    return (
-                      <button key={t.id} onClick={() => setBloodConfirm({ kind: 'reroll', tierId: t.id })} disabled={cannot}
-                        className="active:scale-95"
-                        style={{ flex: '1 1 0', minWidth: 0, padding: '0.75rem 0.4rem 0.65rem', borderRadius: 12, background: cannot ? `${BLOOD}12` : `linear-gradient(180deg, ${BLOOD}30, ${BLOOD}18)`, border: `1px solid ${BLOOD}80`, opacity: cannot ? 0.55 : 1, cursor: cannot ? 'not-allowed' : 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, transition: 'transform 0.08s, opacity 0.18s' }}>
-                        <span className="font-cinzel font-800 uppercase" style={{ fontSize: '0.82rem', letterSpacing: '0.04em', color: cannot ? 'rgba(243,192,198,0.5)' : '#f7d0d5' }}>{busy ? '…' : t.name}</span>
-                        {/* The glanceable benefit: big up-arrow + multiplier = "way better odds". */}
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                          <span className="font-cinzel font-800" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.98rem', color: boost, lineHeight: 1 }}>
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={boost} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 19V5" /><path d="M5 12l7-7 7 7" /></svg>
-                            {epicMult}× Epic
-                          </span>
-                          <span className="font-cinzel font-800" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.98rem', color: boost, lineHeight: 1 }}>
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={boost} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 19V5" /><path d="M5 12l7-7 7 7" /></svg>
-                            {legMult}× Legendary
-                          </span>
-                        </div>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.54rem', color: 'rgba(255,255,255,0.6)', marginTop: 2, paddingTop: 5, borderTop: `1px solid ${BLOOD}33`, width: '78%', justifyContent: 'center' }}>
-                          {t.bloodCost}<BloodDrop size={8} /> + {state.rerollCost}<span style={{ color: '#a78bfa' }}>◆</span>
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-          </div>
-        )}
         <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 12, border: `1px solid ${hall.accent}44`, background: `linear-gradient(180deg, ${hall.accent}16 0%, rgba(0,0,0,0) 55%)`, boxShadow: hall.glow ? `0 0 26px ${hall.glow}` : undefined, padding: '0.85rem 0.85rem 1rem', marginBottom: '1.4rem' }}>
           {/* Hall header — building identity row. Name + tier pips on
               the left, Upgrade CTA (or MAX chip) on the right, perk +
@@ -1557,47 +1510,81 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
               {hall.flavor}
             </p>
           </div>
-          {/* Reroll row — fills the left of a single row, free-roll
-              countdown in the space to its right. Styled to MATCH the hall
-              header's Upgrade pill (blue tint, karla uppercase, pill
-              radius) so the panel's two actions read as one family — the
-              old gold-gradient version clashed with everything around it. */}
+          {/* Reroll row — every way to reroll this board, side by side. The
+              blood-charged tiers used to be a separate panel above the hall
+              with its own header, balance strip and description, which pushed
+              the board itself off the screen to sell an option that is really
+              just a pricier version of the button already here. They are the
+              same shape now, and cost is the only thing that differs. */}
           {(() => {
-            const cannot = pending || reveal.revealing || state.gems < state.rerollCost
+            const gemsShort = state.gems < state.rerollCost
+            const baseCannot = pending || reveal.revealing || gemsShort
+            const rolls: {
+              key: string; name: string; busy: boolean; cannot: boolean
+              onTap: () => void; boost: string | null; cost: ReactNode
+            }[] = [
+              {
+                key: 'gem', name: 'Reroll',
+                busy: busyId === 'reroll' || reveal.revealing,
+                cannot: baseCannot,
+                onTap: () => handleReroll(),
+                boost: null,
+                cost: <>{state.rerollCost}<span style={{ color: '#a78bfa' }}>◆</span></>,
+              },
+              ...(bloodMarketShown ? BLOOD_REROLL_TIERS.map(t => ({
+                key: t.id,
+                name: t.name,
+                busy: busyId === `reroll:${t.id}`,
+                cannot: baseCannot || state.bloodGems < t.bloodCost,
+                onTap: () => setBloodConfirm({ kind: 'reroll', tierId: t.id }),
+                // The one number worth the space: how much likelier a Legendary is.
+                boost: `${rerollMult(t.weights, 3, GEM_WEIGHTS)}× Legendary`,
+                cost: <>{t.bloodCost}<BloodDrop size={9} /> + {state.rerollCost}<span style={{ color: '#a78bfa' }}>◆</span></>,
+              })) : []),
+            ]
             return (
-              <div className="flex items-center" style={{ gap: 12, marginBottom: '1.1rem' }}>
-                <button
-                  onClick={() => handleReroll()}
-                  disabled={cannot}
-                  title="Spend gems for 3 brand-new recruits"
-                  className="font-karla font-700 uppercase active:scale-95"
-                  style={{
-                    flex: '1 1 auto', minWidth: 0,
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-                    padding: '0.55rem 1rem', borderRadius: 999,
-                    fontSize: '0.7rem', letterSpacing: '0.08em',
-                    background: 'rgba(96,165,250,0.14)',
-                    border: '1px solid rgba(96,165,250,0.45)',
-                    color: '#cfe2ff',
-                    opacity: cannot ? 0.45 : 1,
-                    cursor: cannot ? 'not-allowed' : 'pointer',
-                    transition: 'transform 0.08s, opacity 0.18s',
-                  }}
-                >
-                  <RefreshIcon />
-                  <span>{busyId === 'reroll' || reveal.revealing ? 'Rerolling…' : 'Reroll'}</span>
-                  <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 4, letterSpacing: 0 }}>{state.rerollCost}<span style={{ color: '#a78bfa' }}>◆</span></span>
-                </button>
-                <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-                  <span className="font-karla font-700 uppercase" style={{ fontSize: '0.54rem', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.4)' }}>
-                    Free reroll
-                  </span>
-                  <span className="font-karla font-600" style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 4,
-                    fontSize: '0.68rem', color: 'rgba(255,255,255,0.6)',
-                  }}>
-                    <ClockIcon /> <FreeRollCountdown />
-                  </span>
+              <div style={{ marginBottom: '1.1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${rolls.length}, minmax(0, 1fr))`, gap: 7 }}>
+                  {rolls.map(r => {
+                    const blood = r.key !== 'gem'
+                    const accent = blood ? BLOOD : '#60a5fa'
+                    return (
+                      <button
+                        key={r.key}
+                        onClick={r.onTap}
+                        disabled={r.cannot}
+                        className="active:scale-95"
+                        title={blood ? 'Spend Blood Gems for far better odds' : 'Spend gems for 3 brand-new recruits'}
+                        style={{
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
+                          minWidth: 0, padding: '0.55rem 0.35rem 0.5rem', borderRadius: 12,
+                          background: r.cannot ? `${accent}10` : `linear-gradient(180deg, ${accent}2e, ${accent}14)`,
+                          border: `1px solid ${accent}80`,
+                          opacity: r.cannot ? 0.5 : 1,
+                          cursor: r.cannot ? 'not-allowed' : 'pointer',
+                          transition: 'transform 0.08s, opacity 0.18s',
+                        }}
+                      >
+                        <span className="font-cinzel font-800 uppercase" style={{ fontSize: '0.8rem', letterSpacing: '0.03em', lineHeight: 1.1, color: blood ? '#f7d0d5' : '#cfe2ff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>
+                          {r.busy ? '…' : r.name}
+                        </span>
+                        {r.boost && (
+                          <span className="font-cinzel font-800" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.64rem', color: '#7ee0a3', lineHeight: 1, whiteSpace: 'nowrap' }}>
+                            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#7ee0a3" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 19V5" /><path d="M5 12l7-7 7 7" /></svg>
+                            {r.boost}
+                          </span>
+                        )}
+                        <span className="font-karla font-600" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.58rem', color: 'rgba(255,255,255,0.62)', whiteSpace: 'nowrap' }}>
+                          {r.cost}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+                {/* The countdown keeps its clock but loses the "Free reroll"
+                    label: the clock already says what it is. */}
+                <div className="font-karla font-600" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: 7, fontSize: '0.64rem', color: 'rgba(255,255,255,0.5)' }}>
+                  <ClockIcon /> <FreeRollCountdown />
                 </div>
               </div>
             )
@@ -1883,40 +1870,6 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             const sel = opts.find(o => o.key === current) ?? opts[0]
             return (
               <div style={{ position: 'relative', flex: 1, maxWidth: 172 }}>
-              {/* SKIN GAMBLE. It pays out a skin, so it lives with the skins
-                  instead of in a market that then told you to come here. */}
-              {bloodMarketShown && (
-                <div style={{ marginBottom: '1.2rem' }}>
-              {/* Offering 2 — Skin gamble */}
-              <div className="app-card" style={{ padding: '0.95rem', borderRadius: 14, border: `1px solid ${BLOOD}3a`, background: 'linear-gradient(160deg, rgba(48,10,16,0.5), rgba(16,6,9,0.45))' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 8 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                    <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${BLOOD}1e`, border: `1px solid ${BLOOD}55` }}>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f3c0c6" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="8.5" cy="8.5" r="1.4" fill="#f3c0c6" stroke="none" /><circle cx="15.5" cy="15.5" r="1.4" fill="#f3c0c6" stroke="none" /><circle cx="15.5" cy="8.5" r="1.4" fill="#f3c0c6" stroke="none" /><circle cx="8.5" cy="15.5" r="1.4" fill="#f3c0c6" stroke="none" /></svg>
-                    </div>
-                    <div style={{ minWidth: 0 }}>
-                      <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: '#f5ecd6' }}>Skin Gamble</p>
-                      <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#c98a92', marginTop: 2 }}>Collect them all</p>
-                    </div>
-                  </div>
-                  <span className="font-cinzel font-700" style={{ flexShrink: 0, fontSize: '0.7rem', color: '#c98a92' }}>{ownedNonLeg}<span style={{ opacity: 0.6 }}> / {totalNonLeg}</span></span>
-                </div>
-                <p className="font-karla" style={{ fontSize: '0.7rem', color: '#b0aaa0', lineHeight: 1.42, marginBottom: 9 }}>
-                  Wager Blood Gems for a random crew skin you don&apos;t own yet. Every roll lands a skin you&apos;re missing.
-                </p>
-                <div style={{ height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden', marginBottom: 11 }}>
-                  <div style={{ height: '100%', width: `${totalNonLeg ? Math.round((ownedNonLeg / totalNonLeg) * 100) : 0}%`, borderRadius: 999, background: `linear-gradient(90deg, ${BLOOD}, #f2536a)`, transition: 'width 0.4s ease' }} />
-                </div>
-                <button onClick={() => setBloodConfirm({ kind: 'gamble' })} disabled={!canGamble}
-                  className="font-karla font-700 uppercase active:scale-95 w-full"
-                  style={{ padding: '0.7rem', borderRadius: 12, fontSize: '0.68rem', letterSpacing: '0.08em', background: !canGamble ? `${BLOOD}12` : `linear-gradient(180deg, ${BLOOD}4d, rgba(140,20,32,0.55))`, border: `1px solid ${BLOOD}99`, color: !canGamble ? 'rgba(243,192,198,0.5)' : '#fce3e6', cursor: !canGamble ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: canGamble ? `0 0 20px ${BLOOD}40` : 'none' }}>
-                  {skinPoolEmpty
-                    ? 'Every skin collected'
-                    : <><BloodDrop size={14} /> Gamble a Skin <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, letterSpacing: 0 }}>{BLOOD_SKIN_GAMBLE_COST}<BloodDrop size={12} /></span></>}
-                </button>
-              </div>
-                </div>
-              )}
                 <button type="button" onClick={() => setTrunkMenu(open ? null : id)} className="tap"
                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 7, width: '100%', padding: '0.42rem 0.72rem', borderRadius: 10,
                     background: 'rgba(255,255,255,0.05)', border: `1px solid ${open ? 'rgba(94,200,232,0.6)' : 'rgba(255,255,255,0.12)'}`, cursor: 'pointer' }}>
@@ -1955,6 +1908,25 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                 <p className="font-cinzel font-800" style={{ fontSize: '1.15rem', color: '#e8f2f5' }}>The Trunk</p>
                 <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#8fd7ea', marginTop: 4 }}>{ownedCount} / {CREW_SKINS.length} collected</p>
               </div>
+              {/* Skin gamble. One row rather than the panel it used to be: the
+                  trunk is the point of this tab, so the gamble sits beside it
+                  instead of pushing it below the fold. */}
+              {bloodMarketShown && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, padding: '0.55rem 0.6rem 0.55rem 0.75rem', borderRadius: 12, background: `linear-gradient(180deg, ${BLOOD}1c, rgba(20,6,9,0.55))`, border: `1px solid ${BLOOD}4d` }}>
+                  <BloodDrop size={17} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#f3c0c6', lineHeight: 1.1 }}>Skin Gamble</p>
+                    <p className="font-karla" style={{ fontSize: '0.6rem', color: '#c08a90', lineHeight: 1.25 }}>
+                      {skinPoolEmpty ? 'Every skin collected' : `One random skin you do not own · ${totalNonLeg - ownedNonLeg} left`}
+                    </p>
+                  </div>
+                  <button onClick={() => setBloodConfirm({ kind: 'gamble' })} disabled={!canGamble}
+                    className="font-karla font-700 uppercase tracking-[0.08em] active:scale-95"
+                    style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.45rem 0.7rem', borderRadius: 10, fontSize: '0.6rem', background: !canGamble ? `${BLOOD}12` : `linear-gradient(180deg, ${BLOOD}55, rgba(140,20,32,0.6))`, border: `1px solid ${BLOOD}99`, color: !canGamble ? 'rgba(243,192,198,0.5)' : '#fce3e6', cursor: !canGamble ? 'not-allowed' : 'pointer' }}>
+                    {BLOOD_SKIN_GAMBLE_COST}<BloodDrop size={11} />
+                  </button>
+                </div>
+              )}
               {/* Filters — two compact dropdowns on ONE row. */}
               <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 16 }}>
                 {renderDropdown('rarity', String(trunkRarity), [
