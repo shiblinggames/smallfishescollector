@@ -86,6 +86,13 @@ export default function StoryScene({ title, lines, ctaLabel, pending, accent, ba
   const reduced = useMemo(() => prefersReducedMotion(), [])
 
   const line = lines[idx]
+  // The backdrop can CHANGE mid-scene. Walk back from the current line to the
+  // most recent one that set it, so the world stays changed after the beat
+  // that changed it, and fall back to the node-level backdrop before that.
+  const activeBackdrop = (() => {
+    for (let k = idx; k >= 0; k--) { const b = lines[k]?.backdrop; if (b) return b }
+    return background
+  })()
   const last = idx === lines.length - 1
 
   // Shared typewriter (kit) — the beat/haptic/flash fire from onBegin so story
@@ -196,7 +203,7 @@ export default function StoryScene({ title, lines, ctaLabel, pending, accent, ba
     >
       {/* Painterly establishing backdrop (when the node sets one), sitting at the
           very back below the frame and cast. */}
-      {background && <SceneBackdrop src={background} reduced={reduced} />}
+      {activeBackdrop && <SceneBackdrop key={activeBackdrop} src={activeBackdrop} reduced={reduced} />}
 
       {/* The frame is alive (push-in + motes + breathing vignette), the flash on
           an earned beat, and the letterbox — all from the shared cutscene kit so

@@ -372,6 +372,13 @@ export interface SceneLine {
    *  steps aside). For the marquee reveals. The F in the margin, a sealed
    *  letter. The narrator text still rides the plate below it. */
   insert?: SceneInsert
+  /** BACKDROP CHANGE from this line on. A node normally paints one backdrop for
+   *  its whole scene (SCENE_BACKDROPS), which is right for a scene that stays
+   *  in one place. The two Finn scenes do not: the morning is calm, then it is
+   *  a harvest, then it is dark, and the closer goes from wreckage to flat
+   *  water. Set this on the line where the world changes and it holds until
+   *  another line changes it again. */
+  backdrop?: string
 }
 
 /** A stylized object beat (rendered in CSS, no art). Extend the union +
@@ -821,6 +828,10 @@ export const SCENE_BACKDROPS: Record<string, string> = {
   the_last_muster: '/scenes/drowned-court.jpg',
   within_hail: '/scenes/the-throne.jpg',         // Don's flagship looming close
   chapter_4_close: '/scenes/deck-night.jpg',
+  // The finale. Both scenes CHANGE backdrop partway through (see SceneLine.backdrop);
+  // these are only where each one opens.
+  the_hand_that_sharpens: '/scenes/quiet-water.jpg',  // a morning too still to trust
+  the_long_quiet: '/scenes/hull-under.jpg',           // his keel rolling clear of the water
 }
 
 export const RAID_MAP: RaidNode[] = [
@@ -2699,7 +2710,7 @@ export const RAID_MAP: RaidNode[] = [
       { ...GUIDE.finn, text: "So I let you run. Every door you kicked down, I left unlocked. You cleared out my own house and called it a campaign, and you got sharper every time you did it." },
       { ...GUIDE.kat, text: "Captain. Whatever he wants, he is not getting it." },
       { ...GUIDE.finn, text: "You're carrying them right now. Did you never wonder why they never rotted?" },
-      { text: 'He lifts one hand, and the six of them come up out of your hold on their own.', pause: 800, insert: { kind: 'ancient-harvest' } },
+      { text: 'He lifts one hand, and the six of them come up out of your hold on their own.', backdrop: '/scenes/harvest-ring.jpg', pause: 800, insert: { kind: 'ancient-harvest' } },
       { text: 'They hang in a ring around him, turning slow, the way they must have turned down in the dark.', pause: 850 },
       { text: 'Then, one at a time, in the order you caught them, the power goes out of them and into him.', pause: 900, fx: 'shake' },
       { ...GUIDE.doby, text: "He's ABSORBING them. Those slept down there before there were charts to leave them off, and he is taking every last thing they had." },
@@ -2712,7 +2723,7 @@ export const RAID_MAP: RaidNode[] = [
       { text: 'The colour drains out of him first. Then the shape starts to go, and what is left of it will not hold still.', pause: 1100, fx: 'shake', closeup: true },
       { text: 'He gets bigger. Not all at once. The way a swell gets bigger, when you already know it is going to break over you.', pause: 1100, closeup: true },
       { text: 'Light opens along him in cracks, like something inside is too big for the shell it borrowed.', pause: 1000, fx: 'flash', closeup: true },
-      { text: 'The morning goes white, and then it goes dark from him outward.', pause: 1000, fx: 'flash', insert: { kind: 'finn-sinister' }, closeup: true },
+      { text: 'The morning goes white, and then it goes dark from him outward.', backdrop: '/scenes/morning-undone.jpg', pause: 1000, fx: 'flash', insert: { kind: 'finn-sinister' }, closeup: true },
       { text: 'A lifetime of dockside angler was a costume. This is what was wearing it.', pause: 1000, closeup: true },
       { ...GUIDE.mako, text: "No... no, it can't be..." },
       { ...GUIDE.mira, text: "All this time we thought we had wiped the Finndicate off the sea. Every captain, every cache, every ledger. It was him. It was only ever him." },
@@ -2820,7 +2831,7 @@ export const RAID_MAP: RaidNode[] = [
       { ...GUIDE.finn, text: "...don't let it get to you too..." },
       { text: 'Nobody asks him what he means. There is nobody left in the boat to ask.', pause: 1200, closeup: true },
       { text: 'It rides there empty for a moment, level and unhurried, and then the sea takes that as well.', pause: 1100 },
-      { text: 'The sea comes back in. One long swell rolls through where he was, and the ocean is just an ocean again.', pause: 1000 },
+      { text: 'The sea comes back in. One long swell rolls through where he was, and the ocean is just an ocean again.', backdrop: '/scenes/long-quiet.jpg', pause: 1000 },
       // The crew, coming down. Nobody makes a speech.
       { text: 'For a while your crew just stand there, still braced.', pause: 900 },
       { ...GUIDE.kat, text: "...Is that it? Is it done?" },
