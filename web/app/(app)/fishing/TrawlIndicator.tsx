@@ -181,6 +181,9 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
   const [coins, setCoins] = useState<{ id: number }[]>([])
   const [flashZone, setFlashZone] = useState<TrawlZoneKey | null>(null)
   const [sendingId, setSendingId] = useState<number | null>(null)
+  // Picker controls. XP leads because a trawl's headline reward is fishing XP.
+  const [trawlSort, setTrawlSort] = useState<'xp' | 'doubloons'>('xp')
+  const [trawlWho, setTrawlWho] = useState<'all' | 'free' | 'raid'>('all')
   const [slotUnlock, setSlotUnlock] = useState<number | null>(null)
   const [slotInfo, setSlotInfo] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -584,14 +587,23 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
   // ── Crew picker — shows each crew's estimated yield FOR THIS ZONE ─────────
   const lastId = picking ? Number((typeof localStorage !== 'undefined' && localStorage.getItem(lastCrewKey(picking))) || NaN) : NaN
   const pickZone = picking ? state.zones.find(z => z.key === picking) : null
-  const orderedCrew = picking
-    ? [...state.freeCrew].sort((a, b) => (a.id === lastId ? -1 : b.id === lastId ? 1 : (b.savvy + b.fortune) - (a.savvy + a.fortune)))
+  // Sorted by what the run actually PAYS, not by raw stats. Savvy and Fortune
+  // convert at different rates per zone, so a stat sum never matched the
+  // estimate printed on the tile and the top card was often not the best one.
+  const rankedCrew = picking
+    ? state.freeCrew
+        .filter(c => trawlWho === 'all' || (trawlWho === 'raid' ? c.inRaidParty === true : c.inRaidParty !== true))
+        .map(c => ({ c, est: expectedTrawlHaul(picking, c.savvy, c.fortune) }))
+        .sort((a, b) => (trawlSort === 'doubloons' ? b.est.doubloons - a.est.doubloons : b.est.xp - a.est.xp))
     : []
+  const orderedCrew = rankedCrew.map(r => r.c)
   // Tag the strongest crew for each goal (Savvy → XP, Fortune → doubloons) so a
   // min-maxer can pick at a glance. Only when there's an actual choice to make.
-  const ests = picking ? orderedCrew.map(c => ({ id: c.id, ...expectedTrawlHaul(picking, c.savvy, c.fortune) })) : []
-  const bestXpId = orderedCrew.length > 1 && ests.length ? ests.reduce((a, b) => (b.xp > a.xp ? b : a)).id : -1
-  const bestDblId = orderedCrew.length > 1 && ests.length ? ests.reduce((a, b) => (b.doubloons > a.doubloons ? b : a)).id : -1
+  // Best-of tags rank the whole free crew, so filtering the list does not
+  // move the crown onto a weaker hand.
+  const ests = picking ? state.freeCrew.map(c => ({ id: c.id, ...expectedTrawlHaul(picking, c.savvy, c.fortune) })) : []
+  const bestXpId = state.freeCrew.length > 1 && ests.length ? ests.reduce((a, b) => (b.xp > a.xp ? b : a)).id : -1
+  const bestDblId = state.freeCrew.length > 1 && ests.length ? ests.reduce((a, b) => (b.doubloons > a.doubloons ? b : a)).id : -1
   const picker = (
     <AnimatePresence>
       {picking && (
@@ -606,7 +618,46 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
             <p className="font-karla" style={{ fontSize: '0.76rem', color: '#bcb29a', lineHeight: 1.45, margin: '4px 0 10px' }}>
               Locked at sea for the full <span style={{ color: '#e6dcc2' }}>{picking ? fmtTrawlDuration(picking) : ''}</span> cycle. <span style={{ color: BLUE }}>Savvy</span> earns fishing XP, <span style={{ color: GOLD }}>Fortune</span> earns doubloons.
             </p>
-            {orderedCrew.length === 0 && <p className="font-karla" style={{ fontSize: '0.84rem', color: '#a89e86', textAlign: 'center', padding: '2rem 0' }}>No free crew — they&apos;re all at sea, raiding, or voyaging. Recruit more in the Crew Hall.</p>}
+            {/* Controls. Sort by what you actually want out of the run, and
+                filter on the one thing that costs you something elsewhere. */}
+            {state.freeCrew.length > 1 && (
+              <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
+                {([
+                  { key: 'sort' as const, value: trawlSort, set: setTrawlSort as (v: string) => void, opts: [
+                    { k: 'xp', label: 'Best XP', color: GREEN },
+                    { k: 'doubloons', label: 'Best ⟡', color: GOLD },
+                  ] },
+                  { key: 'who' as const, value: trawlWho, set: setTrawlWho as (v: string) => void, opts: [
+                    { k: 'all', label: 'All', color: '#bcb29a' },
+                    { k: 'free', label: 'Free', color: '#bcb29a' },
+                    { k: 'raid', label: 'In raid', color: '#e07c7c' },
+                  ] },
+                ]).map(group => (
+                  <div key={group.key} style={{ display: 'flex', gap: 3, padding: 3, borderRadius: 999, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)' }}>
+                    {group.opts.map(o => {
+                      const on = group.value === o.k
+                      return (
+                        <button key={o.k} type="button" onClick={() => group.set(o.k)}
+                          className="font-karla font-700 uppercase tracking-[0.06em]"
+                          aria-pressed={on}
+                          style={{
+                            padding: '0.28rem 0.6rem', borderRadius: 999, fontSize: '0.56rem',
+                            background: on ? `${o.color}26` : 'transparent',
+                            border: `1px solid ${on ? `${o.color}88` : 'transparent'}`,
+                            color: on ? o.color : 'rgba(255,255,255,0.5)',
+                            cursor: 'pointer', whiteSpace: 'nowrap', touchAction: 'manipulation',
+                          }}>
+                          {o.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                ))}
+              </div>
+            )}
+            {orderedCrew.length === 0 && (state.freeCrew.length === 0
+              ? <p className="font-karla" style={{ fontSize: '0.84rem', color: '#a89e86', textAlign: 'center', padding: '2rem 0' }}>No free crew — they&apos;re all at sea, raiding, or voyaging. Recruit more in the Crew Hall.</p>
+              : <p className="font-karla" style={{ fontSize: '0.84rem', color: '#a89e86', textAlign: 'center', padding: '1.6rem 0' }}>No crew match that filter.</p>)}
             {/* Three across, art first — same language as the raid and voyage
                 assign pickers, so choosing a hand feels the same everywhere. */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
