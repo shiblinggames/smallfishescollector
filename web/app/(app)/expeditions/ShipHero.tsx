@@ -1189,255 +1189,78 @@ export default function ShipHero({
             )
           })()}
 
-          {/* Two-column row — left links to /crew, right opens the
-              Manage Ship drawer. Each column IS the tap target now:
-              clicking anywhere on the image OR the label fires the
-              navigation. Wrapper height (56) is sized to the VISIBLE
-              art, not the img boxes: the crew front portrait renders
-              54px tall and the ship PNG bakes in ~20% transparent
-              top/bottom padding, so its 85px img shows only ~51px of
-              hull. The previous 85px wrappers held that bottom-anchored
-              art under ~30px of invisible headroom, which read as a
-              dead band between the Lv pill and the images. Both imgs
-              keep their render sizes and overflow the tighter wrapper
-              with transparent pixels only. Grid alignItems:end keeps
-              the labels flush at the bottom. */}
+          {/* ── Manage row ── deliberately NOT a hub card.
+              Campaign / Voyages / the Gauntlet are things you go and DO, and
+              they earn the cinematic treatment: full-bleed art, an accent glow,
+              a display-font title. These two only take you to a screen where
+              you arrange what you already own, so they read as settings rows
+              instead: a flat surface with no art behind it, a small label in
+              the body font rather than Cinzel, a neutral border with no glow,
+              and a chevron. Your crew and hull still show as thumbnails,
+              because which crew and which ship is the useful part. */}
           <div style={{
-            position: 'relative',
             display: 'grid', gridTemplateColumns: '1fr 1fr',
-            alignItems: 'stretch',
-            gap: 12, marginTop: '0.9rem',
+            gap: 8, marginTop: '0.9rem',
           }}>
-            {/* Left col — crew lineup. Up to 3 roster members posed
-                in a V: front[0] anchors bottom-center, back[1] peeks
-                from upper-left, back[2] from upper-right. Back members
-                render smaller + dimmer + slightly blurred so they read
-                as "behind" the front one without an actual 3D camera.
-                Empty roster falls back to a silhouette placeholder.
-                Wrapper 56 = front portrait (54) + 2px headroom; the
-                back row tops out at 38 so nothing clips — grid
-                alignItems:end keeps the bottom flush with the ship
-                column. */}
-            <Link href="/crew" className="hub-manage-tap" data-coach="crew" style={{
-              position: 'relative', overflow: 'hidden',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 8,
-              height: 144, borderRadius: 16,
-              border: '1px solid rgba(125,160,216,0.4)', borderTop: '1px solid rgba(125,160,216,0.7)',
-              padding: '0 0.5rem 0.7rem',
-              textDecoration: 'none',
-              cursor: 'pointer',
-              WebkitTapHighlightColor: 'transparent',
-            }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/manage-crew-bg.jpg" alt="" aria-hidden loading="lazy" decoding="async" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }} />
-              <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 0, background: 'linear-gradient(180deg, rgba(6,10,18,0.32) 0%, rgba(6,10,18,0.22) 42%, rgba(6,10,18,0.9) 100%)' }} />
-              <div style={{
-                height: 56, width: '100%',
-                position: 'relative', zIndex: 1,
-              }}>
-                {featuredCrewTrio.length === 0 ? (
-                  // Empty roster — silhouette placeholder centered in
-                  // the wrapper. Same shape as the old single-portrait
-                  // empty state.
-                  <div style={{
-                    position: 'absolute', left: '50%', bottom: 0,
-                    transform: 'translateX(-50%)',
-                    width: 42, height: 50,
-                    borderRadius: '12% 12% 30% 30%',
-                    background: 'radial-gradient(ellipse at 50% 28%, rgba(110,140,180,0.18) 0%, rgba(20,28,42,0) 70%)',
-                    border: '1.5px dashed rgba(125,160,216,0.35)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(125,160,216,0.55)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="8" r="4" />
-                      <path d="M4 21v-2a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v2" />
-                    </svg>
+            {[
+              {
+                key: 'crew' as const,
+                href: '/crew',
+                label: 'Crew',
+                sub: crewLevelUpNudge ? 'A hand leveled up' : `${roster.length} aboard`,
+                nudge: crewLevelUpNudge,
+                art: featuredCrewTrio[0] ? IMG_BASE + featuredCrewTrio[0].filename : null,
+                fallback: (
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7f8b9c" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                  </svg>
+                ),
+              },
+              {
+                key: 'ship' as const,
+                href: null,
+                label: 'Ship',
+                sub: newRaidItems.size > 0 ? 'New gear to mount' : `${slotsFilled}/${slotsTotal} mounted`,
+                nudge: newRaidItems.size > 0,
+                art: shipImgSrc,
+                fallback: null,
+              },
+            ].map(row => {
+              const inner = (
+                <>
+                  <div style={{ position: 'relative', flexShrink: 0, width: 38, height: 38, borderRadius: 9, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                    {row.art
+                      // eslint-disable-next-line @next/next/no-img-element
+                      ? <img src={row.art} alt="" aria-hidden loading="lazy" decoding="async" style={{ maxWidth: '92%', maxHeight: '92%', objectFit: 'contain' }} />
+                      : row.fallback}
                   </div>
-                ) : (
-                  <>
-                    {/* Back-left — smaller, dimmer, same baseline as
-                        the front so it reads as "standing behind and
-                        to the left" rather than floating in the upper
-                        corner. Inset to ~20% from the left so the
-                        right edge slips behind the front portrait. */}
-                    {featuredCrewTrio[1] && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={IMG_BASE + featuredCrewTrio[1].filename}
-                        alt={featuredCrewTrio[1].name}
-                        loading="lazy"
-                        decoding="async"
-                        style={{
-                          position: 'absolute', left: '18%', bottom: 0,
-                          height: 46, width: 'auto', maxWidth: '42%',
-                          objectFit: 'contain',
-                          opacity: 0.72,
-                          filter: 'brightness(0.78) saturate(0.85) drop-shadow(0 2px 6px rgba(0,0,0,0.5))',
-                          zIndex: 1,
-                          pointerEvents: 'none',
-                        }}
-                      />
-                    )}
-                    {/* Back-right — mirror of back-left. */}
-                    {featuredCrewTrio[2] && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={IMG_BASE + featuredCrewTrio[2].filename}
-                        alt={featuredCrewTrio[2].name}
-                        loading="lazy"
-                        decoding="async"
-                        style={{
-                          position: 'absolute', right: '18%', bottom: 0,
-                          height: 46, width: 'auto', maxWidth: '42%',
-                          objectFit: 'contain',
-                          opacity: 0.72,
-                          filter: 'brightness(0.78) saturate(0.85) drop-shadow(0 2px 6px rgba(0,0,0,0.5))',
-                          zIndex: 1,
-                          pointerEvents: 'none',
-                        }}
-                      />
-                    )}
-                    {/* Front-center — always present when roster > 0 */}
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={IMG_BASE + featuredCrewTrio[0].filename}
-                      alt={featuredCrewTrio[0].name}
-                      loading="lazy"
-                      decoding="async"
-                      style={{
-                        position: 'absolute', left: '50%', bottom: 0,
-                        transform: 'translateX(-50%)',
-                        height: 62, width: 'auto', maxWidth: '58%',
-                        objectFit: 'contain',
-                        filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.6))',
-                        zIndex: 2,
-                      }}
-                    />
-                  </>
-                )}
-              </div>
-              {/* Label pill — bordered + chevroned so it reads as a
-                  BUTTON, not a caption. Brightens on hover/press via
-                  .hub-manage-pill (see globals.css). */}
-              <p className="font-cinzel font-700" style={{
-                position: 'relative', zIndex: 1,
-                fontSize: '1.15rem', color: '#ffffff', lineHeight: 1.1,
-                textShadow: '0 2px 6px rgba(0,0,0,0.85), 0 0 14px rgba(125,160,216,0.3)',
-                display: 'inline-flex', alignItems: 'center', gap: 5,
-              }}>
-                Manage Crew
-                {/* Level-up nudge — gold pulsing dot at the title's top-right. */}
-                {crewLevelUpNudge && (
-                  <span
-                    aria-label="A crew member leveled up"
-                    title="A crew member leveled up"
-                    className="crew-levelup-dot"
-                    style={{
-                      position: 'absolute', right: -3, top: -3,
-                      width: 8, height: 8, borderRadius: '50%',
-                      background: '#ffd96a',
-                      border: '1px solid rgba(0,0,0,0.55)',
-                    }}
-                  />
-                )}
-              </p>
-              {/* Subtext — roster fill, or a nudge when a hand has leveled up.
-                  Reads like the hub tiles' status line, updates live. */}
-              <p className="font-karla font-600" style={{
-                position: 'relative', zIndex: 1, marginTop: 2, textAlign: 'center',
-                fontSize: '0.62rem', lineHeight: 1.3,
-                color: crewLevelUpNudge ? '#ffd96a' : 'rgba(230,225,215,0.82)',
-                textShadow: '0 1px 4px rgba(0,0,0,0.9)',
-              }}>
-                {crewLevelUpNudge ? 'A hand leveled up' : `${roster.length} crew aboard`}
-              </p>
-            </Link>
-
-            {/* Right col — ship image + Manage Ship label. Whole
-                column is a button that opens the loadout drawer.
-                Ship PNG bakes in ~20% top/bottom transparent padding;
-                at img height 85 that's ~17px of empty space ABOVE and
-                BELOW the visible ship (~51px of hull). The img keeps
-                its 85px render size but the wrapper is 56 with
-                flex-end alignment: the img's bottom edge sits on the
-                wrapper bottom and translateY(17px) drops it so the
-                VISIBLE ship's bottom kisses the wrapper edge —
-                matching how the crew column anchors its front portrait
-                at bottom:0. The transparent top/bottom overflow the
-                wrapper, which is invisible and harmless. */}
-            <button
-              onClick={() => setLoadoutOpen(true)}
-              className="hub-manage-tap"
-              data-coach="ship"
-              style={{
-                position: 'relative', overflow: 'hidden',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 8,
-                height: 144, borderRadius: 16,
-                border: '1px solid rgba(125,160,216,0.4)', borderTop: '1px solid rgba(125,160,216,0.7)',
-                padding: '0 0.5rem 0.7rem',
-                background: 'transparent',
-                cursor: 'pointer',
-                WebkitTapHighlightColor: 'transparent',
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/manage-ship-bg.jpg" alt="" aria-hidden loading="lazy" decoding="async" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }} />
-              <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 0, background: 'linear-gradient(180deg, rgba(6,10,18,0.32) 0%, rgba(6,10,18,0.22) 42%, rgba(6,10,18,0.9) 100%)' }} />
-              <div style={{
-                height: 56, width: '100%',
-                position: 'relative', zIndex: 1,
-                display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-              }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={shipImgSrc}
-                  alt={shipName ?? shipStats.name}
-                  loading="lazy"
-                  decoding="async"
-                  style={{
-                    height: 74, width: 'auto', maxWidth: '100%',
-                    objectFit: 'contain',
-                    transform: 'translateY(15px)',
-                    filter: skinFilter,
-                    transition: 'filter 0.3s ease',
-                  }}
-                />
-              </div>
-              {/* Label pill — matches the Manage Crew pill so both
-                  columns read as buttons. */}
-              <p className="font-cinzel font-700" style={{
-                position: 'relative', zIndex: 1,
-                fontSize: '1.15rem', color: '#ffffff', lineHeight: 1.1,
-                textShadow: '0 2px 6px rgba(0,0,0,0.85), 0 0 14px rgba(125,160,216,0.3)',
-                display: 'inline-flex', alignItems: 'center', gap: 5,
-              }}>
-                Manage Ship
-                {/* New-raid-item nudge — gold pulsing dot at the title's top-right. */}
-                {newRaidItems.size > 0 && (
-                  <span
-                    aria-label="New raid item ready to equip"
-                    title="New raid item ready to equip"
-                    className="crew-levelup-dot"
-                    style={{
-                      position: 'absolute', right: -3, top: -3,
-                      width: 8, height: 8, borderRadius: '50%',
-                      background: '#ffd96a',
-                      border: '1px solid rgba(0,0,0,0.55)',
-                    }}
-                  />
-                )}
-              </p>
-              {/* Subtext — hull + loadout fill, or a nudge when there's
-                  unequipped gear to mount. Updates live as you equip. */}
-              <p className="font-karla font-600" style={{
-                position: 'relative', zIndex: 1, marginTop: 2, textAlign: 'center',
-                fontSize: '0.62rem', lineHeight: 1.3,
-                color: newRaidItems.size > 0 ? '#ffd96a' : 'rgba(230,225,215,0.82)',
-                textShadow: '0 1px 4px rgba(0,0,0,0.9)',
-              }}>
-                {newRaidItems.size > 0 ? 'New gear to mount' : `${shipStats.name} · ${slotsFilled}/${slotsTotal} mounted`}
-              </p>
-            </button>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p className="font-karla font-800 uppercase tracking-[0.14em]" style={{ fontSize: '0.62rem', color: '#dfe4ea', display: 'flex', alignItems: 'center', gap: 5 }}>
+                      {row.label}
+                      {row.nudge && <span aria-hidden className="crew-levelup-dot" style={{ width: 7, height: 7, borderRadius: '50%', background: '#ffd96a', border: '1px solid rgba(0,0,0,0.55)' }} />}
+                    </p>
+                    <p className="font-karla font-600" style={{ fontSize: '0.6rem', lineHeight: 1.3, marginTop: 1, color: row.nudge ? '#ffd96a' : '#8b93a0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {row.sub}
+                    </p>
+                  </div>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6d7684" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0 }}>
+                    <path d="M9 18l6-6-6-6" />
+                  </svg>
+                </>
+              )
+              const style = {
+                display: 'flex', alignItems: 'center', gap: 9,
+                padding: '0.6rem 0.65rem', borderRadius: 12,
+                background: 'rgba(255,255,255,0.035)',
+                border: '1px solid rgba(255,255,255,0.10)',
+                textDecoration: 'none', cursor: 'pointer', textAlign: 'left' as const,
+                WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation' as const,
+                width: '100%', font: 'inherit',
+              }
+              return row.href
+                ? <Link key={row.key} href={row.href} className="hub-manage-tap" data-coach="crew" style={style}>{inner}</Link>
+                : <button key={row.key} type="button" onClick={() => setLoadoutOpen(true)} className="hub-manage-tap" data-coach="ship" style={style}>{inner}</button>
+            })}
           </div>
         </div>
 
