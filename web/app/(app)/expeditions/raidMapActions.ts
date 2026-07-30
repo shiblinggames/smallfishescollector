@@ -51,15 +51,15 @@ async function loadRaidRecords(
   return result
 }
 
-export async function getRaidMapView(): Promise<{ views: RaidNodeView[]; doubloons: number; navLevel: number; raidRecords: Record<string, RaidRecords>; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; seenUltimateUnlock: boolean; raidNodeChoices: Record<string, string>; musterParty: MusterCrew[] }> {
+export async function getRaidMapView(): Promise<{ views: RaidNodeView[]; doubloons: number; spoilFree: string | null; spoilPaid: string | null; navLevel: number; raidRecords: Record<string, RaidRecords>; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; seenUltimateUnlock: boolean; raidNodeChoices: Record<string, string>; musterParty: MusterCrew[] }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { views: [], doubloons: 0, navLevel: 1, raidRecords: {}, shipClasses: {}, seenChapterUnlocks: [], seenUltimateUnlock: false, raidNodeChoices: {}, musterParty: [] }
+  if (!user) return { views: [], doubloons: 0, spoilFree: null, spoilPaid: null, navLevel: 1, raidRecords: {}, shipClasses: {}, seenChapterUnlocks: [], seenUltimateUnlock: false, raidNodeChoices: {}, musterParty: [] }
 
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress, ship_classes, seen_chapter_unlocks, seen_ultimate_unlock, is_admin, ancient_catches')
+    .select('finn_spoil_free, finn_spoil_paid, doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress, ship_classes, seen_chapter_unlocks, seen_ultimate_unlock, is_admin, ancient_catches')
     .eq('id', user.id)
     .single()
 
@@ -81,7 +81,7 @@ export async function getRaidMapView(): Promise<{ views: RaidNodeView[]; doubloo
   ])
   // Ancient Deep giants landed — feeds the One Last Ride gate (requiresAncients).
   const ancientsCaught = ((profile?.ancient_catches as number[] | null) ?? []).length
-  return { views: computeRaidMap(cleared, doubloons, navLevel, isAdmin, ancientsCaught), doubloons, navLevel, raidRecords, shipClasses, seenChapterUnlocks, seenUltimateUnlock, raidNodeChoices, musterParty }
+  return { views: computeRaidMap(cleared, doubloons, navLevel, isAdmin, ancientsCaught), doubloons, spoilFree: (profile?.finn_spoil_free as string | null) ?? null, spoilPaid: (profile?.finn_spoil_paid as string | null) ?? null, navLevel, raidRecords, shipClasses, seenChapterUnlocks, seenUltimateUnlock, raidNodeChoices, musterParty }
 }
 
 /** First-time celebration dismiss — appends the chapter id to

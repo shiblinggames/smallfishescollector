@@ -374,6 +374,8 @@ async function RaidsMapSection() {
     <RaidsSection
       views={raidMap.views}
       doubloons={raidMap.doubloons}
+      spoilFree={raidMap.spoilFree}
+      spoilPaid={raidMap.spoilPaid}
       navLevel={raidMap.navLevel}
       playerShipImage={playerShipImage}
       raidRecords={raidMap.raidRecords}

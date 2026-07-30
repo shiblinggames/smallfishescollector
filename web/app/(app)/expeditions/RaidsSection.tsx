@@ -1,5 +1,6 @@
 'use client'
 
+import SpoilsBoard from './SpoilsBoard'
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
@@ -187,6 +188,8 @@ const REVEAL_AHEAD = 2
 function RaidMap({
   views,
   doubloons,
+  spoilFree,
+  spoilPaid,
   playerShipImage,
   onSelect,
   onRepairBlocked,
@@ -194,6 +197,8 @@ function RaidMap({
 }: {
   views: RaidNodeView[]
   doubloons: number
+  spoilFree: string | null
+  spoilPaid: string | null
   /** The player's current boat sprite — shown on class_pick ("Captain's
    *  Choice") nodes in place of the generic glyph. */
   playerShipImage?: string
@@ -665,6 +670,8 @@ function NodeDetailSheet({
   view,
   backdrop,
   doubloons,
+  spoilFree,
+  spoilPaid,
   navLevel,
   ownedRaidItems,
   ownedShipSkins,
@@ -684,6 +691,8 @@ function NodeDetailSheet({
    *  its chapter's location). Layered under a dark scrim so content stays legible. */
   backdrop?: string
   doubloons: number
+  spoilFree: string | null
+  spoilPaid: string | null
   navLevel: number
   ownedRaidItems: string[]
   ownedShipSkins: string[]
@@ -1507,6 +1516,18 @@ function NodeDetailSheet({
         {/* The Sixth Berth: the crew refit. Shown once the yard has been
             spoken to (cleared) and stays buyable on every revisit until bought.
             Server (buySixthBerth) re-checks Sal Brackwater clear + the price. */}
+        {/* THE SPOILS OF THE SUNKEN HAND. Its own bench rather than a price
+            row: this is a permanent CHOICE first and a purchase second, so it
+            gets the Accelerator treatment (living cores, arm-then-confirm). */}
+        {node.spoils && (
+          <SpoilsBoard
+            freeSide={spoilFree === 'fishing' || spoilFree === 'nav' ? spoilFree : null}
+            paidSide={spoilPaid === 'fishing' || spoilPaid === 'nav' ? spoilPaid : null}
+            doubloons={doubloons}
+            onDone={() => router.refresh()}
+          />
+        )}
+
         {node.berth && cleared && (() => {
           const price = node.berth.price
           const BERTH = '#e0a44a'
@@ -3304,7 +3325,7 @@ function JourneyChapter({ views, onSelect }: { views: RaidNodeView[]; onSelect: 
   )
 }
 
-export default function RaidsSection({ views, doubloons, navLevel, playerShipImage, raidRecords, repairOwed, ownedRaidItems, ownedShipSkins = [], equippedRaidItems, shipClasses, seenChapterUnlocks, seenUltimateUnlock, raidNodeChoices, topRaidProgress, hasSixthBerth = false, hasArmoryExpansion = false, musterParty = [] }: { views: RaidNodeView[]; doubloons: number; navLevel: number; playerShipImage?: string; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[]; ownedShipSkins?: string[]; equippedRaidItems: string[]; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; seenUltimateUnlock: boolean; raidNodeChoices: Record<string, string>; topRaidProgress: { username: string; score: number } | null; hasSixthBerth?: boolean; hasArmoryExpansion?: boolean; musterParty?: MusterCrew[] }) {
+export default function RaidsSection({ views, doubloons, spoilFree = null, spoilPaid = null, navLevel, playerShipImage, raidRecords, repairOwed, ownedRaidItems, ownedShipSkins = [], equippedRaidItems, shipClasses, seenChapterUnlocks, seenUltimateUnlock, raidNodeChoices, topRaidProgress, hasSixthBerth = false, hasArmoryExpansion = false, musterParty = [] }: { views: RaidNodeView[]; doubloons: number; spoilFree?: string | null; spoilPaid?: string | null; navLevel: number; playerShipImage?: string; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[]; ownedShipSkins?: string[]; equippedRaidItems: string[]; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; seenUltimateUnlock: boolean; raidNodeChoices: Record<string, string>; topRaidProgress: { username: string; score: number } | null; hasSixthBerth?: boolean; hasArmoryExpansion?: boolean; musterParty?: MusterCrew[] }) {
   const [open, setOpen] = useState(true)
   const router = useRouter()
   // Journey (the story map) vs Bosses (a farm deck — every boss with Fight +
@@ -3624,6 +3645,8 @@ export default function RaidsSection({ views, doubloons, navLevel, playerShipIma
             view={selected}
             backdrop={SCENE_BACKDROPS[selected.node.id] ?? sheetChapterBg(selected.node.id, views)}
             doubloons={doubloons}
+            spoilFree={spoilFree}
+            spoilPaid={spoilPaid}
             navLevel={navLevel}
             ownedRaidItems={ownedRaidItems}
             ownedShipSkins={ownedShipSkins}
