@@ -309,7 +309,23 @@ export const THE_BLOCKADE_CHALLENGE: BossRaidConfig = buildChallengeRaid(THE_BLO
 // Raid 8's challenge — the scaled court. Ultimates / aim-bar attacks / the
 // don's three phases all carry through scaleEnemy's spread automatically.
 export const THE_THRONE_CHALLENGE: BossRaidConfig = buildChallengeRaid(THE_THRONE)
-export const THE_SUNKEN_HAND_CHALLENGE: BossRaidConfig = buildChallengeRaid(THE_SUNKEN_HAND)
+// The finale's challenge loot is PINNED rather than derived. buildChallengeLoot
+// works off multiples of the base table, and Finn's normal rates (2.5 / 3 / 2)
+// no longer sit at a clean multiple of the rates his challenge is meant to pay.
+// Same contract as everywhere else: weights are percentages, summing to 100.
+const SUNKEN_HAND_CHALLENGE_LOOT: RaidLootItem[] = [
+  { id: 'anglers_patience', label: "The Primeval Eye", image: '/primevileye.png', emoji: '🎣', rarity: 'ancient', weight: 10 },
+  { id: 'borrowed_jaw',     label: 'The Primeval Maw', image: '/primevilmaw.png', emoji: '🦈', rarity: 'ancient', weight: 10 },
+  { id: 'sunken_hand_hull',   label: 'Sunken Hand Hull', image: null, emoji: '🚢', rarity: 'cosmetic', weight: 6, shipSkinId: 'sunken_hand_hull' },
+  { id: 'drowned_giant_hull', label: 'Tundra Hull',      image: null, emoji: '🚢', rarity: 'cosmetic', weight: 6, shipSkinId: 'drowned_giant_hull' },
+  { id: 'last_cast_hull',     label: 'Volcanic Hull',    image: null, emoji: '🚢', rarity: 'cosmetic', weight: 6, shipSkinId: 'last_cast_hull' },
+  { id: 'doubloons_1500', label: '+1,500 ⟡', image: '/dailybonus.png', emoji: '💰', rarity: 'uncommon', weight: 20 },
+  { id: 'doubloons_1200', label: '+1,200 ⟡', image: '/smallpile.png',  emoji: '🪙', rarity: 'common',   weight: 17 },
+  { id: 'gems_50',        label: '50 Gems',  image: null,              emoji: '◆',  rarity: 'rare',     weight: 14 },
+  { id: 'pack_2',         label: '200 Gems', image: null,              emoji: '◆',  rarity: 'epic',     weight: 11 },
+]
+
+export const THE_SUNKEN_HAND_CHALLENGE: BossRaidConfig = buildChallengeRaid(THE_SUNKEN_HAND, SUNKEN_HAND_CHALLENGE_LOOT)
 
 export const THE_QUARTERMASTER_CHALLENGE: BossRaidConfig = (() => {
   const base = buildChallengeRaid(THE_QUARTERMASTER)

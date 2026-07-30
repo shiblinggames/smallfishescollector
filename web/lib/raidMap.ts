@@ -583,6 +583,14 @@ const SHIP_SKIN_PREVIEW_IMG = '/models/brigantine_v2.png'
  *  currency and only really tells the player "you'll probably get gold",
  *  which they already assume. The chip stays on items / skins / packs
  *  where the rarity actually matters to the player's chase decision. */
+/** Format a 0-1 share as a drop-chance label. Whole numbers print whole; a
+ *  fractional rate keeps ONE decimal, because Math.round turns a genuine 2.5%
+ *  into a printed 3% and the card would be quoting odds the roll never uses. */
+export function formatDropChance(share: number): string {
+  const pct = share * 100
+  const rounded = Math.round(pct * 10) / 10
+  return Number.isInteger(rounded) ? rounded + '%' : rounded.toFixed(1) + '%'
+}
 function lootDrops(loot: RaidLootItem[]): RaidNodeDrop[] {
   const total = loot.reduce((s, l) => s + l.weight, 0)
   const drops = loot.map(l => {
@@ -597,7 +605,7 @@ function lootDrops(loot: RaidLootItem[]): RaidNodeDrop[] {
       // The item registry is the one source of truth; the loot row only overrides it.
       image: l.image ?? getRaidItem(l.id)?.image ?? null,
       rarity: l.rarity,
-      ...(isDoubloons ? {} : { chance: `${Math.round((l.weight / total) * 100)}%` }),
+      ...(isDoubloons ? {} : { chance: formatDropChance(l.weight / total) }),
     }
     // Ship skin → preview the skin on a ship sprite (recolored brigantine) so
     // the player sees what it actually looks like, not just a flat color.

@@ -6,7 +6,7 @@ import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { vibrate } from '@/lib/haptics'
-import { isCombatNode, chapterForNode, RAID_CHAPTERS, musterSceneLines, SCENE_BACKDROPS, type RaidChapter, type RaidNodeDrop, type RaidNodeView } from '@/lib/raidMap'
+import { formatDropChance, isCombatNode, chapterForNode, RAID_CHAPTERS, musterSceneLines, SCENE_BACKDROPS, type RaidChapter, type RaidNodeDrop, type RaidNodeView } from '@/lib/raidMap'
 import type { RaidRecords } from './raidMapActions'
 import { RARITY_COLOR, GEM_GLYPH, GEM_COLOR, RAID_LOCATION_BG, RAID_BOSS_BG } from '@/lib/bossRaids'
 import { getRaidItem } from '@/lib/raidItems'
@@ -1984,7 +1984,7 @@ function NodeDetailSheet({
                 const missing = cfg.loot.filter(l => isUniqueLoot(l) && !lootOwned(l))
                 const totalW = missing.reduce((a, l) => a + l.weight, 0)
                 if (totalW <= 0) return undefined
-                return `${Math.round(share * (row.weight / totalW) * 100)}%`
+                return formatDropChance(share * (row.weight / totalW))
               }
 
               const gemDrop = drops.find(d => d.emoji === GEM_GLYPH)
@@ -3133,7 +3133,7 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
     const missing = cfg.loot.filter(l => isUniqueLoot(l) && !lootOwned(l))
     const totalW = missing.reduce((a, l) => a + l.weight, 0)
     if (totalW <= 0) return undefined
-    return `${Math.round(share * (row.weight / totalW) * 100)}%`
+    return formatDropChance(share * (row.weight / totalW))
   }
   // specialItemId is in here because Finn's Eye is a FISHING special: without it
   // the headline drop off the final boss never rendered on his own card. The cap

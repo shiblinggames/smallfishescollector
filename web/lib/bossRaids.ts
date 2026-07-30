@@ -2283,21 +2283,22 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
   //   The Primeval Maw      -> the extra raid mount
   // Everything else he drops is cosmetic, so the fight cannot be farmed for
   // power. See the 'spoils_of_the_hand' node for how the slots are opened.
-  // WEIGHTS ARE PERCENTAGES here: the table sums to exactly 100, so 5 means a
-  // true 5% and the odds printed on his card are the odds. His two spoils are
-  // meant to be the rarest thing in the game, and without the currency rows
-  // below a kill ALWAYS handed one over. Challenge doubles both bands (see
-  // buildChallengeLoot) to 10% and 6%.
+  // WEIGHTS ARE PERCENTAGES here: the table sums to exactly 100, so 2.5 means a
+  // true 2.5% and the odds printed on his card are the odds. His two spoils are
+  // the rarest thing in the game, and without the currency rows below a kill
+  // ALWAYS handed one over. Challenge does NOT derive from these: its rates are
+  // pinned in SUNKEN_HAND_CHALLENGE_LOOT (lib/raidChallenge), because the normal
+  // rates no longer sit at a clean multiple of them.
   loot: [
-    { id: 'anglers_patience', label: "The Primeval Eye", image: '/primevileye.png', emoji: '🎣', rarity: 'ancient', weight: 5 },
-    { id: 'borrowed_jaw',     label: 'The Primeval Maw',      image: '/primevilmaw.png', emoji: '🦈', rarity: 'ancient', weight: 5 },
+    { id: 'anglers_patience', label: "The Primeval Eye", image: '/primevileye.png', emoji: '🎣', rarity: 'ancient', weight: 2.5 },
+    { id: 'borrowed_jaw',     label: 'The Primeval Maw',      image: '/primevilmaw.png', emoji: '🦈', rarity: 'ancient', weight: 2.5 },
     { id: 'sunken_hand_hull',   label: 'Sunken Hand Hull',   image: null, emoji: '🚢', rarity: 'cosmetic', weight: 3, shipSkinId: 'sunken_hand_hull' },
-    { id: 'drowned_giant_hull', label: 'Tundra Hull',        image: null, emoji: '🚢', rarity: 'cosmetic', weight: 3, shipSkinId: 'drowned_giant_hull' },
-    { id: 'last_cast_hull',     label: 'Volcanic Hull',      image: null, emoji: '🚢', rarity: 'cosmetic', weight: 3, shipSkinId: 'last_cast_hull' },
-    { id: 'doubloons_1500', label: '+1,500 ⟡', image: '/dailybonus.png', emoji: '💰',      rarity: 'uncommon', weight: 26 },
-    { id: 'doubloons_1200', label: '+1,200 ⟡', image: '/smallpile.png',  emoji: '🪙',      rarity: 'common',   weight: 22 },
-    { id: 'gems_50',        label: '50 Gems',  image: null,              emoji: GEM_GLYPH, rarity: 'rare',     weight: 18 },
-    { id: 'pack_2',         label: '200 Gems', image: null,              emoji: GEM_GLYPH, rarity: 'epic',     weight: 15 },
+    { id: 'drowned_giant_hull', label: 'Tundra Hull',        image: null, emoji: '🚢', rarity: 'cosmetic', weight: 2, shipSkinId: 'drowned_giant_hull' },
+    { id: 'last_cast_hull',     label: 'Volcanic Hull',      image: null, emoji: '🚢', rarity: 'cosmetic', weight: 2, shipSkinId: 'last_cast_hull' },
+    { id: 'doubloons_1500', label: '+1,500 ⟡', image: '/dailybonus.png', emoji: '💰',      rarity: 'uncommon', weight: 28 },
+    { id: 'doubloons_1200', label: '+1,200 ⟡', image: '/smallpile.png',  emoji: '🪙',      rarity: 'common',   weight: 24 },
+    { id: 'gems_50',        label: '50 Gems',  image: null,              emoji: GEM_GLYPH, rarity: 'rare',     weight: 20 },
+    { id: 'pack_2',         label: '200 Gems', image: null,              emoji: GEM_GLYPH, rarity: 'epic',     weight: 16 },
   ],
   killRewards: {
     finn: { gold: 12000, xp: 12000 },
