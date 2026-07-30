@@ -3684,6 +3684,9 @@ export default function RaidCombat({
       /** An enemy special that CALLS ON something, played back through the
        *  same splash the player crew abilities use. */
       summon?: { name: string; label: string; color: string; image: string }
+      /** A flurry, broken into its individual hits so playback can stagger
+       *  them. One lump number does not read as "four fast hits". */
+      blitzHits?: number[]
       /** Press-Gang ripped a loaded shot off the enemy onto your rack. */
       stoleCharge?: boolean
       /** Cutlass Guard turned an incoming blow aside (0 damage taken). */
@@ -3929,6 +3932,7 @@ export default function RaidCombat({
             const lines: string[] = []
             let aSplatTarget: Actor | null = null
             let aSplatText = ''
+            let blitzOut: number[] | undefined
             const aColor = ab.summonColor ?? '#c084fc'
             if (ab.kind === 'leviathan') {
               // DOBY: one heavy shot that always lands a full crit.
@@ -3939,13 +3943,19 @@ export default function RaidCombat({
             } else if (ab.kind === 'blitz') {
               // MAKO: a barrage that bites harder the more wounded you are.
               const shots = ab.shots ?? 4
+              // Frenzy reads your CURRENT hull, before the flurry lands, so the
+              // whole volley is priced at the health you brought into it.
               const frenzy = 1 + (1 - pHp / Math.max(1, playerHpMax)) * (ab.value ?? 0.3)
+              const per: number[] = []
               let total = 0
               for (let k = 0; k < shots; k++) {
-                total += Math.max(1, Math.round(enemy.minDmg * 0.42 * frenzy * bossPhaseDmgMult))
+                const one = Math.max(1, Math.round(enemy.minDmg * 0.42 * frenzy * bossPhaseDmgMult))
+                per.push(one)
+                total += one
               }
               pHp = Math.max(0, pHp - total)
               aSplatTarget = 'player'; aSplatText = `-${total}`
+              blitzOut = per
               lines.push(`${ab.name}: ${shots} fast hits, ${total} damage.`)
             } else if (ab.kind === 'abyssal_tide') {
               // CATFISH: he heals and puts plate up.
@@ -3974,6 +3984,7 @@ export default function RaidCombat({
               who, action: 'reload', pHp, eHp, pCharges, eCharges,
               splatTarget: aSplatTarget, splatText: aSplatText, splatColor: aColor,
               summon: { name: ab.name, label: 'He calls on it', color: aColor, image: ab.summonImage },
+              blitzHits: blitzOut,
               logLines: lines,
             })
             if (pHp <= 0 || eHp <= 0) break
@@ -5386,6 +5397,20 @@ export default function RaidCombat({
       // THE SUMMON. Unconditional and FIRST, because an ability step is shaped
       // like a reload (no splat target, no attack FX) and so never reaches the
       // attack-FX branches further down. Any step carrying a summon plays it.
+      // A FLURRY LANDS AS A FLURRY. The blitz resolves as one damage number,
+      // but four fast hits shown as a single splat reads as one heavy shot, so
+      // the per-shot list is replayed as staggered splats on the player hull.
+      // Purely presentational: the hull total already moved with the step.
+      if (step.blitzHits && step.blitzHits.length) {
+        step.blitzHits.forEach((h, k) => {
+          playStepChainRef.current.push(setTimeout(() => {
+            setPHitsplat({ key: Date.now() + k, text: `-${h}`, color: '#fb923c' })
+            vibrate(8)
+            if (k === 0) cameraShake('hit')
+          }, k * 110))
+        })
+        playStepChainRef.current.push(setTimeout(() => setPHitsplat(null), step.blitzHits.length * 110 + 420))
+      }
       if (step.summon) {
         setAbilitySummon({
           key: Date.now(), label: step.summon.label, name: step.summon.name,

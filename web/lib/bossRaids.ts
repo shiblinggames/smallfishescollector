@@ -2197,7 +2197,12 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
           ability: {
             kind: 'blitz', name: 'Wake of the Drowned',
             summonImage: '/fish/mosasaurus.png', summonColor: '#67e8f9',
-            shots: 4, value: 0.3,
+            // Base damage stays where it is (player HP does not scale, so 60 on
+            // a fresh hull is already the right size). The RAMP is what changes:
+            // value is the frenzy, and at 1.0 the flurry DOUBLES as you die.
+            // Mako's own Lv100 caps at +60%; his is steeper because he is the
+            // last thing in the game and this is his execute.
+            shots: 4, value: 1.0,
           } },
         // ── PHASE 4 — LAZ. He simply refuses to go down. ─────────────────────
         { revivePct: 1.0, damageMult: 1.24, badge: 'Still Going',
