@@ -33,9 +33,9 @@ const SIDES: Side[] = [
   {
     id: 'fishing',
     title: 'The Deep Reel',
-    item: 'The Primeval Line',
+    item: 'The Primeval Eye',
     art: '/finn_final.png',
-    blurb: 'A second special slot on your rig, and his line is the only thing that seats in it. It charges on Navigation XP, and the further you charge it the rarer the water answers.',
+    blurb: 'A second special slot on your rig, and his eye is the only thing that seats in it. It charges on Navigation XP, and the further you charge it the rarer the water answers.',
     accent: REEL,
   },
   {

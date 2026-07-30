@@ -26,9 +26,9 @@ export type SpecialItemDef = {
 export const SPECIAL_ITEMS: SpecialItemDef[] = [
   {
     id: 'anglers_patience',
-    name: "The Primeval Line",
+    name: 'The Primeval Eye',
     color: '#c4a96a',
-    description: 'The line he waited a lifetime on, cut off his own wreck. Older water than yours runs through it. Charges on Navigation XP while seated, and every level buys back the patience it costs you.',
+    description: 'Cut out of him still open, and still looking. It reads water the way you read a chart and it has never once been in a hurry. Charges on Navigation XP while seated, and every level buys back the patience it costs you.',
     effectLabel: 'Rarer fish on every bite, at the cost of a slower wait',
     obtainedFrom: 'The Sunken Hand',
     finaleSlotOnly: true,

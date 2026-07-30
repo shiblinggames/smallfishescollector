@@ -4,7 +4,7 @@
  *  CHARGED BY THE OPPOSITE SKILL and levels up, unlocking milestone effects the
  *  way a crew ability does:
  *
- *    The Primeval Line  a FISHING item, charged by NAVIGATION xp
+ *    The Primeval Eye  a FISHING item, charged by NAVIGATION xp
  *    The Primeval Maw   a RAID item,    charged by FISHING xp
  *
  *  That crossing is the whole point, and it is the mechanical form of the
@@ -32,7 +32,7 @@ export type FinnItemId = 'anglers_patience' | 'borrowed_jaw'
 export interface FinnMilestone {
   level: number
   desc: string
-  /** Fishing side (The Primeval Line). */
+  /** Fishing side (The Primeval Eye). */
   rarityBonus?: number
   waitMult?: number
   fishingXpMult?: number
@@ -56,11 +56,11 @@ export interface FinnItemDef {
 export const FINN_ITEMS: Record<FinnItemId, FinnItemDef> = {
   anglers_patience: {
     id: 'anglers_patience',
-    name: 'The Primeval Line',
+    name: 'The Primeval Eye',
     chargedBy: 'navigation',
     wornIn: 'fishing',
     color: '#6fd3c7',
-    flavor: 'He waited a lifetime with a line in the water and the deep gave up everything it was hiding. The waiting was never the price. It was the method.',
+    flavor: 'He watched that water for a lifetime until it gave up everything it was hiding. The waiting was never the price. It was the method.',
     milestones: [
       { level: 1, rarityBonus: 0.10, waitMult: 1.30, desc: 'Bites take 30% longer, and roll 10% rarer.' },
       { level: 2, rarityBonus: 0.16, waitMult: 1.25, desc: 'Rarity to 16%, and the wait eases to 25%.' },

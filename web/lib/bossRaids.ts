@@ -2270,12 +2270,12 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
   bossId: 'finn',
   // HIS SPOILS ARE DELIBERATELY NOT A NORMAL TABLE. Exactly TWO real items, one
   // for each half of the game, and each is the ONLY thing its new slot accepts:
-  //   The Primeval Line -> the second fishing special slot
+  //   The Primeval Eye -> the second fishing special slot
   //   The Primeval Maw      -> the extra raid mount
   // Everything else he drops is cosmetic, so the fight cannot be farmed for
   // power. See the 'spoils_of_the_hand' node for how the slots are opened.
   loot: [
-    { id: 'anglers_patience', label: "The Primeval Line", image: null, emoji: '🎣', rarity: 'legendary', weight: 8 },
+    { id: 'anglers_patience', label: "The Primeval Eye", image: null, emoji: '🎣', rarity: 'legendary', weight: 8 },
     { id: 'borrowed_jaw',     label: 'The Primeval Maw',      image: null, emoji: '🦈', rarity: 'legendary', weight: 8 },
     { id: 'sunken_hand_hull',   label: 'Sunken Hand Hull',   image: null, emoji: '🚢', rarity: 'epic', weight: 10, shipSkinId: 'sunken_hand_hull' },
     { id: 'drowned_giant_hull', label: 'Drowned Giant Hull', image: null, emoji: '🚢', rarity: 'epic', weight: 10, shipSkinId: 'drowned_giant_hull' },

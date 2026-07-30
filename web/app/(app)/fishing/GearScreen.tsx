@@ -805,13 +805,13 @@ export default function GearScreen({
   equippedSpecial: string | null
   onEquipSpecial: (itemId: string | null) => void
   /** THE DEEP REEL, the second special slot. Opened by beating Finn (see the
-   *  spoils node) and it accepts ONE item, his reel. Kept separate from the
+   *  spoils node) and it accepts ONE item, his eye. Kept separate from the
    *  first slot rather than widening it, because it is not a general slot. */
   equippedSpecial2?: string | null
   onEquipSpecial2?: (itemId: string | null) => void
   hasDeepReel?: boolean
   hasAnglersPatience?: boolean
-  /** Charge on The Primeval Line. Read-only here; the server owns it. */
+  /** Charge on The Primeval Eye. Read-only here; the server owns it. */
   anglersPatienceXp?: number
   onBuySpecialItem: (itemId: string) => Promise<void>
   fishingLevel: number
@@ -2436,13 +2436,13 @@ export default function GearScreen({
                   ) : !hasAnglersPatience ? (
                     <div style={{ padding: '1rem 0.85rem', borderRadius: 12, background: 'rgba(111,211,199,0.06)', border: '1px solid rgba(111,211,199,0.28)' }}>
                       <p className="font-karla" style={{ margin: 0, fontSize: '0.72rem', lineHeight: 1.5, color: '#9a958c', textAlign: 'center' }}>
-                        Open, and empty. Only The Primeval Line seats here, and it comes off Finn.
+                        Open, and empty. Only The Primeval Eye seats here, and it comes off Finn.
                       </p>
                     </div>
                   ) : (
                     <div style={{ padding: '0.8rem 0.85rem', borderRadius: 12, background: equippedSpecial2 ? 'rgba(111,211,199,0.1)' : 'rgba(255,255,255,0.03)', border: equippedSpecial2 ? '1px solid rgba(111,211,199,0.45)' : '1px solid rgba(255,255,255,0.10)' }}>
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-                        <span className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#e8e4de' }}>The Primeval Line</span>
+                        <span className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#e8e4de' }}>The Primeval Eye</span>
                         {equippedSpecial2 && <span className="font-karla font-800 uppercase tracking-[0.12em]" style={{ fontSize: '0.5rem', color: '#6fd3c7' }}>Equipped</span>}
                       </div>
                       <p className="font-karla" style={{ margin: '4px 0 10px', fontSize: '0.7rem', lineHeight: 1.45, color: '#9a958c' }}>

@@ -65,7 +65,7 @@ export async function awardRaidKill(
 
   const newExpeditionXP  = (profile?.expedition_xp ?? 0) + xp
   // THE ANGLER'S PATIENCE charges on NAVIGATION xp, and only while it is
-  // seated. The crossing is the point: his reel is fed by the raiding half
+  // seated. The crossing is the point: his eye is fed by the raiding half
   // of the game, so wearing it is a reason to keep coming back out here.
   const reelSeated = profile?.equipped_special_2 === 'anglers_patience'
     && (profile?.finn_spoil_free === 'fishing' || profile?.finn_spoil_paid === 'fishing')
