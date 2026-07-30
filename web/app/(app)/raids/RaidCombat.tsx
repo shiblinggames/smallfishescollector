@@ -1561,6 +1561,8 @@ export default function RaidCombat({
   const bossAbilityOnRef   = useRef(0)        // which turn of the phase he casts
   const bossForesightRef   = useRef(0)        // turns he slips your shots
   const bossWardRef        = useRef(0)        // turns he refuses a killing blow
+  const bossWardSavedRef   = useRef(false)    // it just caught a killing blow
+  const bossWardBuffRef    = useRef(0)        // and he hits harder for it, rest of phase
   const bossMarkRef        = useRef({ turns: 0, mult: 0 })  // you take extra damage
   // Did the enemy ADVANCE its pattern slot this turn? pickEnemyAction leaves the
   // index put when it can't perform the slotted move (fire with no charges →
@@ -1659,6 +1661,9 @@ export default function RaidCombat({
   // Cannonade (boon): the live crit streak, mirrored to state (off the step,
   // in playStep) so the heat rim + badge on the player hull track it.
   const [cannonadeStacks, setCannonadeStacks] = useState(0)
+  // Ref mirror for the death ward, so his hull can show it. The ref is the
+  // source of truth (the resolver reads it); this only drives the chip.
+  const [wardUp, setWardUp] = useState(false)
 
   // ── First-time mechanic-check tutorial ─────────────────────────────────
   // The first telegraphed boss check blindsided players — especially Don's
@@ -2503,9 +2508,24 @@ export default function RaidCombat({
 
   // LAZ'S WARD, his side of it. While it holds he cannot be put below 1 HP, so
   // a killing blow becomes a survived one. Mirrors the player's Vengeance ward.
+  // LAZ'S WARD, his side of it, and it works the way the player's does: it is
+  // a WINDOW, not a guarantee. He arms it and it lapses; if no killing blow
+  // lands inside it, it was wasted, exactly as a mistimed Vengeance is.
+  //
+  // But when it DOES catch one he comes BACK, because Laz is about returning,
+  // not about clinging on at 1 HP. He surges to a fifth of the bar and hits
+  // harder for the rest of the phase, and it is spent on the save.
+  const WARD_SURGE_PCT = 0.20
+  const WARD_BUFF = 0.25
   const wardFloor = useCallback((hp: number): number => {
     if (hp > 0) return Math.max(0, hp)
-    if (bossWardRef.current > 0) return 1
+    if (bossWardRef.current > 0) {
+      bossWardRef.current = 0
+      bossWardSavedRef.current = true
+      setWardUp(false)
+      bossWardBuffRef.current = WARD_BUFF
+      return Math.max(1, Math.round(enemyHpMaxRef.current * WARD_SURGE_PCT))
+    }
     return 0
   }, [])
 
@@ -3259,6 +3279,8 @@ export default function RaidCombat({
         // mount, so across a six-phase boss he got one shield for the whole
         // fight and every later phase opened bare. Restoring it per phase is
         // what makes armour a running theme he can then reinforce (Old Armour).
+        bossWardBuffRef.current = 0
+        bossWardRef.current = 0; setWardUp(false)
         enemyShieldRef.current = enemyShieldMax
         setEnemyShieldHp(enemyShieldMax)
         const n = enemyPhaseRef.current
@@ -3909,6 +3931,7 @@ export default function RaidCombat({
       if (who === 'enemy') {
         if (bossForesightRef.current > 0) bossForesightRef.current--
         if (bossWardRef.current > 0) bossWardRef.current--
+        setWardUp(bossWardRef.current > 0)
         if (bossMarkRef.current.turns > 0) bossMarkRef.current = { ...bossMarkRef.current, turns: bossMarkRef.current.turns - 1 }
       }
       // ── HIS CREW ABILITY. Fires BEFORE his action and does not replace it,
@@ -3973,6 +3996,7 @@ export default function RaidCombat({
             } else if (ab.kind === 'vengeance') {
               // LAZ: he will not die to the next killing blow.
               bossWardRef.current = ab.turns ?? 4
+              setWardUp(true)
               lines.push(`${ab.name}: cannot be killed for ${bossWardRef.current} turns.`)
             } else if (ab.kind === 'requiem') {
               // MIRA: marked. Everything he throws lands harder.
@@ -4425,6 +4449,10 @@ export default function RaidCombat({
           // MARKED (his Mira ability). While it holds, everything he throws
           // lands harder. Applied after the phase bump so it reads as a clean
           // extra multiplier on an already-scaled shot.
+          // Post-ward surge: he hits harder for the rest of the phase.
+          if (who === 'enemy' && bossWardBuffRef.current > 0) {
+            dmg = Math.max(1, Math.floor(dmg * (1 + bossWardBuffRef.current)))
+          }
           if (who === 'enemy' && bossMarkRef.current.turns > 0) {
             dmg = Math.max(1, Math.floor(dmg * (1 + bossMarkRef.current.mult)))
           }
@@ -4641,6 +4669,12 @@ export default function RaidCombat({
           const piercing = (isMega && !!megaAug?.pierce) || markPierceTurnsRef.current > 0 || streakPiercing
           const preShield = enemyShieldRef.current
           const toHull = soakEnemyShield(dmg, piercing, tide.shieldPierceFrac)
+          // The one moment this ability exists for. Without a line here his HP
+          // simply stops at a fifth and the player is never told why.
+          if (bossWardSavedRef.current) {
+            bossWardSavedRef.current = false
+            stepLines.push(`It should have finished him. ${enemy.name} comes back up, and hits ${Math.round(WARD_BUFF * 100)}% harder for the rest of the phase.`)
+          }
           // Only say it when there was actually plate to ignore, or every shot
           // in a shieldless phase would claim to be piercing something.
           if (streakPiercing && preShield > 0 && dmg > 0) {
@@ -5326,6 +5360,8 @@ export default function RaidCombat({
             // mount, so across a six-phase boss he got one shield for the whole
             // fight and every later phase opened bare. Restoring it per phase is
             // what makes armour a running theme he can then reinforce (Old Armour).
+            bossWardBuffRef.current = 0
+            bossWardRef.current = 0; setWardUp(false)
             enemyShieldRef.current = enemyShieldMax
             setEnemyShieldHp(enemyShieldMax)
             const n = enemyPhaseRef.current
@@ -6697,6 +6733,10 @@ export default function RaidCombat({
               ...(aegisVis ? [{ key: 'aegis', color: '#e8d8a8', title: `${aegisVis.name} — a wall drinks every shot whole` }] : []),
               ...(enemyBurning ? [{ key: 'burn', color: '#fb923c', title: 'Ablaze — burning each turn' }] : []),
               ...(enemyFrozen ? [{ key: 'freeze', color: '#7dd3fc', title: 'Frozen — its turn is skipped' }] : []),
+              // The ward has to be VISIBLE or the timing is one-sided: he reads
+              // your burst, you never get to read his. Seeing it up is what lets
+              // you hold the killing blow until it lapses.
+              ...(wardUp ? [{ key: 'ward', color: '#d1495b', title: 'Death ward — the killing blow will not land while this holds' }] : []),
               ...(snareDodgeTurns > 0 ? [{ key: 'snare', color: '#d9b066', turns: snareDodgeTurns, title: 'Snared — dodges can be fouled' }] : []),
             ]} />
           </div>
