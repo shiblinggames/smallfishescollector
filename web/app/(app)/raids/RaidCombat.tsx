@@ -10492,60 +10492,72 @@ function AbilityCastFx({ label, name, color, image, emoji }: { label: string; na
 
 // SVG glyphs for the circular action buttons (stroke = currentColor).
 // ── Action icons ─────────────────────────────────────────────────────────────
-// Hand-drawn in the game's nautical idiom rather than generic UI glyphs. The
-// old set was off-message in two places that mattered: FIRE was a flame (the
-// verb "discharge a cannon" drawn as the noun "combustion" — in a game whose
-// Ablaze status is literally rendered with flames), and RELOAD was the
-// universal browser-refresh arrow. These stay inline SVG on `currentColor` so
-// the per-state tinting (enabled / disabled / highlighted) still works, and
-// they're drawn chunky so they hold up at the 22px they render at.
+// Combat icons. These are read in a fraction of a second under turn pressure,
+// so legibility beats cleverness: SOLID silhouettes at 30px inside the 58px
+// button (the old set was 2px strokes at 22px — barely a third of the button,
+// and thin strokes mush together at that size). Each one is a filled mass with
+// at most a couple of stroked accents. Still inline SVG on `currentColor` so
+// the per-state tinting (enabled / disabled / highlighted) keeps working.
+//
+// Two of the old drawings failed outright at size: DODGE was a serpentine wake
+// that read as a squiggle, and SPECIAL was a bosun's whistle that read as a
+// magnifying glass. Those are redrawn around what the action DOES.
 const ACTION_ICON: Record<'dodge' | 'special' | 'reload' | 'fire' | 'volley', React.ReactNode> = {
-  // Swerve — a hull cutting a serpentine wake away from the shot.
+  // Slipping the shot — a heavy arc sweeping up and away over the incoming
+  // ball. The dimmed ball is what you're evading, so the verb is in the frame.
   dodge: (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3.5 19.5c3.5 0 4-6.5 8-6.5s4.5-5.5 8-5.5" />
-      <path d="M16.6 4.4 20 7.4l-3.2 2.8" />
-      <path d="M3 15.2c2 0 2.6-2.6 4.4-3.4" opacity="0.55" />
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+      <circle cx="12.6" cy="19" r="2.7" fill="currentColor" opacity="0.4" />
+      <path d="M3.4 19.4c0-6.6 4.3-10.4 10-10.4" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" />
+      <path d="M11.4 4.4l5 4.6-5 4.6z" fill="currentColor" />
     </svg>
   ),
-  // Bosun's whistle — you pipe the crew to action; this menu IS the crew.
+  // Special — a solid burst. Generic on purpose: this slot holds crew
+  // abilities, repair kits and items, so a literal drawing of any one of them
+  // misleads. A star is the one shape every player already reads as "ability".
   special: (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M2.8 12.2h7.6" />
-      <path d="M2.8 10v4.4" />
-      <circle cx="13.2" cy="14" r="3.1" />
-      <path d="M15.9 6.6a5.4 5.4 0 0 1 2.4 3.1" opacity="0.75" />
-      <path d="M17.6 3.6a8.8 8.8 0 0 1 3.6 4.9" opacity="0.5" />
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 1.4l2.6 6.6 6.6 2.6-6.6 2.6L12 19.8l-2.6-6.6L2.8 10.6l6.6-2.6z" />
+      <circle cx="19.8" cy="4.2" r="1.8" opacity="0.75" />
+      <circle cx="4.6" cy="18.2" r="1.4" opacity="0.5" />
     </svg>
   ),
-  // Shot pyramid — a stack of cannonballs on the deck. Unmistakably "ammo".
+  // Shot pyramid on the deck — a stack of cannonballs. Unmistakably "ammo",
+  // and filled it reads as weight rather than three empty rings.
   reload: (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="7.4" r="2.6" />
-      <circle cx="7.6" cy="14.2" r="2.6" />
-      <circle cx="16.4" cy="14.2" r="2.6" />
-      <path d="M3.6 19.4h16.8" />
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor">
+      <circle cx="12" cy="6.4" r="3.2" />
+      <circle cx="7.2" cy="13.4" r="3.2" />
+      <circle cx="16.8" cy="13.4" r="3.2" />
+      <rect x="2.4" y="18.2" width="19.2" height="2.8" rx="1.4" />
     </svg>
   ),
-  // Cannon firing — barrel, carriage wheel, muzzle blast. The ACT, not flame.
+  // Cannon firing — solid barrel, muzzle band, carriage wheel, and the blast
+  // leaving it. The ACT of discharging, not a flame (Ablaze already owns fire).
   fire: (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3.2 14.6h11.2" strokeWidth="3.4" />
-      <circle cx="6" cy="18.6" r="2.1" />
-      <path d="M17.4 14.6h3.4" />
-      <path d="M16.9 11.6l2.9-1.9" />
-      <path d="M16.9 17.6l2.9 1.9" />
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor">
+      <rect x="2.2" y="9.6" width="11.4" height="4.8" rx="1.6" />
+      <rect x="13" y="8.6" width="2.6" height="6.8" rx="1" />
+      <circle cx="5.8" cy="18.4" r="2.9" />
+      <g stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" fill="none">
+        <path d="M17.8 12h3.8" />
+        <path d="M17.4 8.6l3-2" />
+        <path d="M17.4 15.4l3 2" />
+      </g>
     </svg>
   ),
-  // Volley — three shot in flight, speed trails behind them.
+  // Volley — three shot away at once, speed trails behind. Same cannonball
+  // mass as Reload so the two read as the same ammunition.
   volley: (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="17.2" cy="6.2" r="2.2" />
-      <circle cx="17.2" cy="12" r="2.2" />
-      <circle cx="17.2" cy="17.8" r="2.2" />
-      <path d="M3.4 6.2h9.4" />
-      <path d="M6.2 12h6.6" />
-      <path d="M3.4 17.8h9.4" />
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor">
+      <circle cx="17.6" cy="5.6" r="2.9" />
+      <circle cx="17.6" cy="12" r="2.9" />
+      <circle cx="17.6" cy="18.4" r="2.9" />
+      <g stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" fill="none">
+        <path d="M2.6 5.6h8" />
+        <path d="M5.2 12h5.4" />
+        <path d="M2.6 18.4h8" />
+      </g>
     </svg>
   ),
 }
@@ -10608,7 +10620,7 @@ function CircleBtn({ icon, label, color, enabled, highlighted, onClick, readyPul
         )}
       </div>
       <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{
-        fontSize: '0.56rem', color: lit ? color : '#4a5468',
+        fontSize: '0.62rem', color: lit ? color : '#4a5468',
       }}>
         {label}
       </span>
@@ -11289,7 +11301,7 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, aimBlack
 // Single full-width Lock button that occupies the ActionMenu's slot
 // during aiming. Mirrors ActionMenu's CircleBtn column structure EXACTLY
 // — flex column with the same 58px button slot, same 5px gap, same
-// 0.56rem caption span below — so the browser computes the same
+// 0.62rem caption span below — so the browser computes the same
 // natural height across devices. A hardcoded `height: 72` was close on
 // most devices but off by a few pixels wherever default line-height
 // differs from 1.2; flex: 1 on the battle stage then ate or surrendered
@@ -11333,7 +11345,7 @@ function InlineLockButton({ onLock }: { onLock: () => void }) {
           {/* Invisible caption — matches CircleBtn's label slot so the
               column's natural height equals an ActionMenu column's. */}
           <span aria-hidden className="font-karla font-700 uppercase tracking-[0.06em]" style={{
-            fontSize: '0.56rem', color: 'transparent', userSelect: 'none',
+            fontSize: '0.62rem', color: 'transparent', userSelect: 'none',
           }}>
             Lock
           </span>
