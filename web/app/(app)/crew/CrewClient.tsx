@@ -88,6 +88,12 @@ function BloodDrop({ size = 12 }: { size?: number }) {
 // peg full, which is fine: "maxed" is useful for a bar to say, and the printed
 // number beside it still separates one maxed crew from another.
 const STAT_BAR_MAX = 30
+const STAT_ABOUT: Record<'power' | 'dodge' | 'fortune', string> = {
+  power:   'Damage your shots deal in raids. Drives encounter events on voyages.',
+  dodge:   'Dodge chance against enemy hits in raids. Slips past danger events on voyages.',
+  fortune: 'Better loot and repair-kit rolls in raids. Drives discovery payouts on voyages.',
+}
+
 const STAT_COLOR = { power: '#f87171', dodge: '#60a5fa', fortune: '#f0c040' }
 const STAT_LABEL = { power: 'PWR', dodge: 'SAV', fortune: 'FTN' }
 
@@ -124,16 +130,6 @@ const BTN_RECRUIT: React.CSSProperties = {
   ...BTN_BASE,
   background: 'linear-gradient(180deg, rgba(74,200,130,0.36) 0%, rgba(46,140,92,0.2) 100%)',
   border: '1px solid rgba(122,226,162,0.6)', color: '#dcf8e7', textShadow: '0 1px 2px rgba(0,0,0,0.5)',
-}
-const BTN_DISMISS: React.CSSProperties = {
-  ...BTN_BASE,
-  background: 'linear-gradient(180deg, rgba(212,84,84,0.3) 0%, rgba(150,46,46,0.16) 100%)',
-  border: '1px solid rgba(228,114,114,0.55)', color: '#f8d2d2', textShadow: '0 1px 2px rgba(0,0,0,0.5)',
-}
-const BTN_NEUTRAL: React.CSSProperties = {
-  ...BTN_BASE,
-  background: 'linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.035) 100%)',
-  border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.78)',
 }
 const BTN_STATIC: React.CSSProperties = { ...BTN_BASE, cursor: 'default', boxShadow: 'none' }
 
@@ -748,11 +744,15 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
   const [bloodConfirm, setBloodConfirm] = useState<{ kind: 'reroll'; tierId: string } | { kind: 'gamble' } | null>(null)
   const [pending, startTransition] = useTransition()
   const [busyId, setBusyId] = useState<number | string | null>(null)
-  const [confirmDismiss, setConfirmDismiss] = useState<number | null>(null)
   // Inline glossary toggle on the crew detail modal — explains what
   // each stat actually does in raids + voyages. Reset when the modal
   // closes so it starts collapsed for the next card.
-  const [statsGlossaryOpen, setStatsGlossaryOpen] = useState(false)
+  // Which stat's explainer sheet is open. Replaces the old shared "?" glossary
+  // - each stat now carries its own numbers AND its own description.
+  const [statDetail, setStatDetail] = useState<'power' | 'dodge' | 'fortune' | null>(null)
+  // Which footer action is awaiting confirmation. Every one of them states
+  // exactly what it is about to do before it does it.
+  const [confirmAct, setConfirmAct] = useState<'swap' | 'promote' | 'remove' | 'dismiss' | null>(null)
   // expandedTrait state used to exist for the old per-trait description
   // expander; the simplified one-row Trait section doesn't need it.
 
@@ -1034,7 +1034,6 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
       if ('error' in res) setErr(res.error)
       else setState(res.state)
       setBusyId(null)
-      setConfirmDismiss(null)
       onDone?.()
     })
   }
@@ -1118,47 +1117,20 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
     })
   }
 
-  // Recruit / Dismiss action for the DETAIL MODAL. Neither card type carries a
-  // footer action any more (assignment moved to the Assign tab, and recruiting
-  // is the swipe), so the old compact `round` variant has no caller left.
-  function renderAction(kind: 'board' | 'roster', item: BoardCandidate | CrewMember, opts?: { onDone?: () => void }) {
-    const onDone = opts?.onDone
-
-    if (kind === 'board') {
-      const c = item as BoardCandidate
-      const recruit = (e: React.MouseEvent) => {
-        e.stopPropagation()
-        vibrate(14)
-        run(() => recruitCrew(c.id), c.id, onDone)
-      }
-      if (c.recruited) return <div className="font-karla font-700" style={{ ...BTN_STATIC, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.55)' }}>Recruited ✓</div>
-      if (rosterFull) return <div className="font-karla font-700" style={{ ...BTN_STATIC, background: 'rgba(220,90,90,0.1)', border: '1px solid rgba(220,90,90,0.35)', color: '#f2b0b0' }}>Roster Full</div>
-      return (
-        <button onClick={recruit} disabled={pending} className="font-karla font-700" style={{ ...BTN_RECRUIT, cursor: pending ? 'not-allowed' : 'pointer', opacity: pending && busyId === c.id ? 0.6 : 1 }}>
-          <AnchorIcon /><span>{busyId === c.id ? 'Recruiting…' : 'Recruit'}</span>
-        </button>
-      )
+  // Recruit button for the DETAIL MODAL. Board items only: roster crew get the
+  // Swap / Promote / Remove / Dismiss row instead, which owns its own confirm
+  // step, so nothing reaches this with a CrewMember any more.
+  function renderRecruitAction(c: BoardCandidate, onDone?: () => void) {
+    const recruit = (e: React.MouseEvent) => {
+      e.stopPropagation()
+      vibrate(14)
+      run(() => recruitCrew(c.id), c.id, onDone)
     }
-
-    const m = item as CrewMember
-    const arm = (e: React.MouseEvent) => { e.stopPropagation(); setConfirmDismiss(m.id) }
-    const confirm = (e: React.MouseEvent) => { e.stopPropagation(); run(() => dismissCrew(m.id), m.id, onDone) }
-    const cancel = (e: React.MouseEvent) => { e.stopPropagation(); setConfirmDismiss(null) }
-    const armed = confirmDismiss === m.id
-
-    // Detail-modal action — Dismiss stays here as the primary
-    // destructive action. Assignment lives on the card itself.
-    if (armed) {
-      return (
-        <div className="flex gap-1.5">
-          <button onClick={confirm} disabled={pending} className="font-karla font-700" style={{ ...BTN_DISMISS, flex: 1, padding: '0.55rem' }}>{busyId === m.id ? '…' : 'Confirm'}</button>
-          <button onClick={cancel} disabled={pending} className="font-karla font-700" style={{ ...BTN_NEUTRAL, flex: 1, padding: '0.55rem' }}>Cancel</button>
-        </div>
-      )
-    }
+    if (c.recruited) return <div className="font-karla font-700" style={{ ...BTN_STATIC, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.55)' }}>Recruited ✓</div>
+    if (rosterFull) return <div className="font-karla font-700" style={{ ...BTN_STATIC, background: 'rgba(220,90,90,0.1)', border: '1px solid rgba(220,90,90,0.35)', color: '#f2b0b0' }}>Roster Full</div>
     return (
-      <button onClick={arm} disabled={pending} className="font-karla font-700" style={BTN_DISMISS}>
-        <XIcon /><span>Dismiss</span>
+      <button onClick={recruit} disabled={pending} className="font-karla font-700" style={{ ...BTN_RECRUIT, cursor: pending ? 'not-allowed' : 'pointer', opacity: pending && busyId === c.id ? 0.6 : 1 }}>
+        <AnchorIcon /><span>{busyId === c.id ? 'Recruiting…' : 'Recruit'}</span>
       </button>
     )
   }
@@ -2079,7 +2051,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
           const dTrait = netTraitStats(it.effects)
           const dTraitLabel = traitLabel(dTrait)
           const dTraitKind = traitKind(dTrait)
-          const close = () => { setConfirmDismiss(null); setDetail(null); setStatsGlossaryOpen(false); setClassExpanded(false); setRenameOpen(false); setRenameErr(null); setPreviewSkin(undefined); setDetailTab('stats') }
+          const close = () => { setConfirmAct(null); setStatDetail(null); setDetail(null); setClassExpanded(false); setRenameOpen(false); setRenameErr(null); setPreviewSkin(undefined); setDetailTab('stats') }
           return (
             <motion.div key="crew-detail-bg" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
               onClick={close}
@@ -2087,14 +2059,23 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
               <motion.div key="crew-detail" initial={{ opacity: 0, scale: 0.96, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97, y: 8 }} transition={{ duration: 0.18, ease: 'easeOut' }}
                 onClick={e => e.stopPropagation()}
                 style={{
-                  width: '100%', maxWidth: 360, maxHeight: '85vh', overflowY: 'auto', borderRadius: 14,
+                  // FIXED height, not max-height. The card used to grow and
+                  // shrink as you moved between Stats / Ability / Skins, which
+                  // made the tabs feel like they were resizing the sheet. Now
+                  // the shell is constant and the body between the header and
+                  // the action row is the only thing that scrolls.
+                  width: '100%', maxWidth: 360, height: 'min(86vh, 620px)',
+                  position: 'relative',
+                  display: 'flex', flexDirection: 'column', overflow: 'hidden',
+                  borderRadius: 14,
                   background: detail.kind === 'board' ? RECRUIT_PANEL_BG : ROSTER_PANEL_BG,
                   border: `1.5px solid ${dColor}`, boxShadow: `0 20px 50px rgba(0,0,0,0.6), 0 0 24px ${dColor}33`,
-                  padding: '1rem 1.1rem 1.1rem',
                 }}>
-                <div className="flex justify-end" style={{ marginBottom: '-0.4rem' }}>
+                <div className="flex justify-end" style={{ flexShrink: 0, padding: '0.5rem 0.6rem 0' }}>
                   <button onClick={close} aria-label="Close" style={{ color: 'rgba(255,255,255,0.45)', fontSize: '1.2rem', lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', padding: '0.1rem 0.3rem' }}>✕</button>
                 </div>
+                {/* minHeight:0 or this never scrolls - it just grows the shell. */}
+                <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '0.2rem 1.1rem 0.4rem' }}>
 
                 {/* Portrait — rarity frame; a shown skin makes the ART itself glow
                     in its color (drop-shadow aura on the image). clip-path keeps
@@ -2220,7 +2201,9 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                     </div>
                   )
                 })()}
-                <p className="font-cinzel font-700" style={{ textAlign: 'center', fontSize: '0.8rem', letterSpacing: '0.16em', textTransform: 'uppercase', color: dColor }}>{RARITY_NAMES[(it.rarity as CrewRarity)] ?? 'Common'}</p>
+                {!('xp' in it) && (
+                  <p className="font-cinzel font-700" style={{ textAlign: 'center', fontSize: '0.8rem', letterSpacing: '0.16em', textTransform: 'uppercase', color: dColor }}>{RARITY_NAMES[(it.rarity as CrewRarity)] ?? 'Common'}</p>
+                )}
 
                 {/* Level + XP bar — only shown for roster crew (board recruits
                     are pre-XP so the bar would be meaningless). Hidden when
@@ -2234,11 +2217,18 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   return (
                     <div style={{ marginTop: '0.7rem' }}>
                       <div className="flex items-baseline justify-between" style={{ marginBottom: 4 }}>
+                        {/* Rarity rides here instead of owning a row above.
+                            The old "Master" / "Fully trained" titles are gone -
+                            Lv 100 with a full bar already says it. */}
                         <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#f0c040', letterSpacing: '0.06em' }}>
-                          {atMax ? 'Lv 100 · Master' : `Lv ${prog.level}`}
+                          Lv {prog.level}
+                          <span style={{ color: 'rgba(255,255,255,0.25)', margin: '0 6px' }}>·</span>
+                          <span style={{ color: dColor, textTransform: 'uppercase', letterSpacing: '0.12em', fontSize: '0.72rem' }}>
+                            {RARITY_NAMES[(it.rarity as CrewRarity)] ?? 'Common'}
+                          </span>
                         </span>
-                        <span className="font-karla" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.5)' }}>
-                          {atMax ? 'Fully trained' : `${prog.xpInLevel.toLocaleString()} / ${prog.xpForLevel.toLocaleString()} XP`}
+                        <span className="font-karla" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.5)', fontVariantNumeric: 'tabular-nums' }}>
+                          {atMax ? 'Max' : `${prog.xpInLevel.toLocaleString()} / ${prog.xpForLevel.toLocaleString()} XP`}
                         </span>
                       </div>
                       <div style={{ width: '100%', height: 6, background: 'rgba(0,0,0,0.4)', borderRadius: 3, overflow: 'hidden', border: '1px solid rgba(240,192,64,0.18)' }}>
@@ -2478,239 +2468,207 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                 {/* ── STATS tab — stat grid, trained-from breakdown, glossary, trait. */}
                 {activeTab === 'stats' && (
                 <motion.div key="tab-stats" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18, ease: 'easeOut' }} style={{ marginTop: '0.7rem' }}>
-                {/* Stats header + ? toggle. Inline glossary below
-                    explains what each stat actually does in raids +
-                    voyages — match the Traits header styling above. */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <p className="font-cinzel font-700 uppercase" style={{ fontSize: '0.74rem', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.62)' }}>Stats</p>
-                  <button
-                    type="button"
-                    onClick={() => setStatsGlossaryOpen(v => !v)}
-                    aria-label={statsGlossaryOpen ? 'Hide stat glossary' : 'What do these mean?'}
-                    aria-expanded={statsGlossaryOpen}
-                    style={{
-                      width: 22, height: 22, borderRadius: '50%',
-                      background: statsGlossaryOpen ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.04)',
-                      border: '1px solid rgba(255,255,255,0.16)',
-                      color: 'rgba(255,255,255,0.65)',
-                      fontFamily: 'serif', fontSize: '0.8rem', lineHeight: 1,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      cursor: 'pointer', padding: 0,
-                    }}
-                  >?</button>
-                </div>
-
-                {/* Stats. Same bar and the same STAT_BAR_MAX ceiling as the
-                    roster card, so a stat looks identical wherever you meet it.
-                    Type is up across the block: the old 0.52rem label with the
-                    base value folded into it was the smallest text in the modal
-                    and carried real information. */}
-                <div style={{ display: 'flex', gap: 8, marginBottom: '0.6rem' }}>
-                  {(['power', 'dodge', 'fortune'] as const).map((k, i) => {
+                {/* Symbol + number, nothing else. Everything the old block
+                    spelled out inline - base value, the trained-from-levels
+                    row, and the shared "?" glossary - now lives in each stat's
+                    own sheet, so this stops being the tallest thing here. */}
+                <div style={{ display: 'flex', gap: 8, marginBottom: '0.7rem' }}>
+                  {(['power', 'dodge', 'fortune'] as const).map(k => {
                     const ch = dEff[k] - dBase[k]
                     return (
-                      <div key={k} style={{ flex: 1, textAlign: 'center', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 9, padding: '0.6rem 0.35rem 0.55rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 5 }}><StatIcon k={k} color={STAT_COLOR[k]} /></div>
-                        <p className="font-cinzel font-700" style={{ fontSize: '1.55rem', lineHeight: 1, color: ch > 0 ? '#7fdfa3' : ch < 0 ? '#f08a8a' : '#ecdcbd' }}>{dEff[k]}</p>
-                        <span aria-hidden style={{ display: 'block', width: '100%', height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.09)', overflow: 'hidden', margin: '7px 0 6px' }}>
-                          <span className="crew-stat-fill" style={{
-                            display: 'block', width: '100%', height: '100%', borderRadius: 2,
-                            background: STAT_COLOR[k],
-                            transform: `scaleX(${Math.min(1, Math.max(0.02, dEff[k] / STAT_BAR_MAX))})`,
-                            animationDelay: `${0.06 * i}s`,
-                          }} />
-                        </span>
-                        <p className="font-karla font-700 uppercase" style={{ fontSize: '0.64rem', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.6)' }}>{STAT_LABEL[k]}</p>
-                        {/* Base was crammed onto the label line. It is its own
-                            row now, and only when levelling has moved the stat. */}
-                        {ch !== 0 && (
-                          <p className="font-karla" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.42)', marginTop: 2 }}>base {dBase[k]}</p>
-                        )}
-                      </div>
+                      <button key={k} type="button" onClick={() => { vibrate(5); setStatDetail(k) }}
+                        aria-label={`${STAT_LABEL[k]} ${dEff[k]}. Tap for detail.`}
+                        title={`What ${STAT_LABEL[k]} does`}
+                        style={{
+                          flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                          background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)',
+                          borderRadius: 9, padding: '0.6rem 0.3rem', cursor: 'pointer', font: 'inherit',
+                          touchAction: 'manipulation',
+                        }}>
+                        <StatIcon k={k} color={STAT_COLOR[k]} />
+                        <span className="font-cinzel font-700" style={{ fontSize: '1.4rem', lineHeight: 1, fontVariantNumeric: 'tabular-nums', color: ch > 0 ? '#7fdfa3' : ch < 0 ? '#f08a8a' : '#ecdcbd' }}>{dEff[k]}</span>
+                      </button>
                     )
                   })}
                 </div>
 
-                {/* Trained-from-levels breakdown — shown only when there's
-                    something to show (the crew has crossed at least one stat
-                    milestone). Players can see exactly which stats their
-                    leveling has invested in, mirroring the graveyard
-                    eulogy format so the same shape appears in life + death. */}
-                {(() => {
-                  if (!('xp' in it) || dXp <= 0) return null
-                  const bonus = levelStatBonuses(crewLevelFromXP(dXp), dBase)
-                  const total = bonus.power + bonus.dodge + bonus.fortune
-                  if (total <= 0) return null
-                  return (
-                    <p className="font-karla italic" style={{
-                      fontSize: '0.78rem', color: 'rgba(240,192,64,0.85)',
-                      background: 'rgba(240,192,64,0.05)',
-                      border: '1px solid rgba(240,192,64,0.2)',
-                      borderRadius: 7, padding: '0.42rem 0.6rem',
-                      marginBottom: '0.9rem', lineHeight: 1.4,
-                    }}>
-                      <span style={{ color: 'rgba(255,255,255,0.55)', fontStyle: 'normal', textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: '0.64rem', marginRight: 8 }}>Trained</span>
-                      <span style={{ color: STAT_COLOR.power }}>+{bonus.power} PWR</span>
-                      {' · '}<span style={{ color: STAT_COLOR.dodge }}>+{bonus.dodge} SAV</span>
-                      {' · '}<span style={{ color: STAT_COLOR.fortune }}>+{bonus.fortune} FTN</span>
-                    </p>
-                  )
-                })()}
-
-                {/* Inline glossary — collapsed by default. One sentence
-                    per stat covering raid + voyage usage. Colors match
-                    the stat-tile icons above so the eye links them. */}
-                <AnimatePresence initial={false}>
-                  {statsGlossaryOpen && (
-                    <motion.div
-                      key="stats-glossary"
-                      initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-                      animate={{ opacity: 1, height: 'auto', marginBottom: '0.9rem' }}
-                      exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                      transition={{ duration: 0.22, ease: 'easeOut' }}
-                      style={{ overflow: 'hidden' }}
-                    >
-                      <div style={{
-                        padding: '0.6rem 0.7rem',
-                        background: 'rgba(255,255,255,0.025)',
-                        border: '1px solid rgba(255,255,255,0.08)',
-                        borderRadius: 9,
-                        display: 'flex', flexDirection: 'column', gap: 6,
-                      }}>
-                        {([
-                          { k: 'power' as const,   text: 'Damage your shots deal in raids. Drives encounter events on voyages.' },
-                          { k: 'dodge' as const,   text: 'Dodge chance against enemy hits in raids. Slips past danger events on voyages.' },
-                          { k: 'fortune' as const, text: 'Better loot and repair-kit rolls in raids. Drives discovery payouts on voyages.' },
-                        ]).map(({ k, text }) => (
-                          <p key={k} className="font-karla" style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>
-                            <span className="font-cinzel font-700" style={{ color: STAT_COLOR[k], letterSpacing: '0.06em', marginRight: 6 }}>{STAT_LABEL[k]}</span>
-                            {text}
-                          </p>
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* Trait — under the new system each crew has at most one
-                    stat-only trait (a {power,dodge,fortune} delta with
-                    each value in [-3,+3]). Show the generated label as
-                    the row title and a compact stat line ('+2 PWR · -1
-                    SAV') as the summary; buff/flaw/neutral color tracks
-                    the net direction. No description to expand any more
-                    — the line IS the description. */}
+                {/* Trait: name and effect, one row, no heading over it. */}
                 {dTraitLabel && (
-                  <>
-                    <p className="font-cinzel font-700 uppercase" style={{ fontSize: '0.74rem', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.58)', marginBottom: '0.3rem' }}>Trait</p>
-                    <div style={{
-                      display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
-                      gap: 8, padding: '0.4rem 0', marginBottom: '0.6rem',
-                    }}>
-                      <span className="font-cinzel font-700" style={{
-                        fontSize: '0.86rem', fontStyle: 'italic',
-                        color: dTraitKind === 'buff' ? '#9fd9b1' : dTraitKind === 'flaw' ? '#e09a9a' : 'rgba(255,255,255,0.6)',
-                      }}>
-                        {dTraitLabel}
-                      </span>
-                      <span className="font-karla font-700" style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end', fontSize: '0.7rem' }}>
-                        {(['power','dodge','fortune'] as const).map(k => {
-                          const v = dTrait[k]
-                          if (v === 0) return null
-                          return (
-                            <span key={k} style={{ color: v > 0 ? '#7fdfa3' : '#f08a8a', whiteSpace: 'nowrap' }}>
-                              {v > 0 ? '+' : ''}{v} {STAT_LABEL[k]}
-                            </span>
-                          )
-                        })}
-                      </span>
-                    </div>
-                  </>
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, padding: '0.15rem 0' }}>
+                    <span className="font-cinzel font-700" style={{ fontSize: '0.86rem', fontStyle: 'italic', color: dTraitKind === 'buff' ? '#9fd9b1' : dTraitKind === 'flaw' ? '#e09a9a' : 'rgba(255,255,255,0.6)' }}>
+                      {dTraitLabel}
+                    </span>
+                    <span className="font-karla font-700" style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end', fontSize: '0.7rem' }}>
+                      {(['power','dodge','fortune'] as const).map(k => {
+                        const v = dTrait[k]
+                        if (v === 0) return null
+                        return (
+                          <span key={k} style={{ color: v > 0 ? '#7fdfa3' : '#f08a8a', whiteSpace: 'nowrap' }}>
+                            {v > 0 ? '+' : ''}{v} {STAT_LABEL[k]}
+                          </span>
+                        )
+                      })}
+                    </span>
+                  </div>
                 )}
                 </motion.div>
                 )}
 
-                </div>{/* end fixed-min-height tab body */}
+                </div>{/* end tab body */}
+                </div>{/* end scroll region */}
 
-                {/* ── Actions (below the tabs). Board recruits keep the Recruit
-                    button; roster crew get a single compact footer row — a quiet
-                    tinted Make Captain (only when on a track) beside a low-emphasis
-                    ghost Dismiss, so this rarely-touched pair stops eating space
-                    and shouting for attention. */}
+                {/* Actions. Pinned under the scroll region so they never move
+                    with the tab content. One row: Swap / Promote / Remove /
+                    Dismiss, each stating exactly what it does before doing it
+                    rather than firing on the first tap. */}
+                <div style={{ flexShrink: 0, padding: '0.7rem 1.1rem 1rem', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
                 {detail.kind === 'board' ? (
-                  <div style={{ marginTop: 12 }}>{renderAction(detail.kind, it, { onDone: close })}</div>
-                ) : activeTab === 'stats' ? (
-                  <div style={{ marginTop: 12 }}>{(() => {
+                  renderRecruitAction(it as BoardCandidate, close)
+                ) : (() => {
                   const m = it as CrewMember
                   const isCap = m.voyageSlot === 0 || m.raidSlot === 0
-                  const canPromote = !isCap && (m.voyageSlot !== null || m.raidSlot !== null)
-                  const accent = m.voyageSlot !== null ? ASSIGN_VOYAGE : ASSIGN_RAID
-                  // Locked crew (at sea / on a trawl) can't be dismissed in any way.
-                  const isLockedM = state.lockedCrewIds.includes(m.id) || state.trawlingCrewIds.includes(m.id)
-                  const armed = confirmDismiss === m.id && !isLockedM
-                  if (armed) {
-                    return (
-                      <div className="flex items-center" style={{ gap: 8 }}>
-                        <span className="font-karla font-600" style={{ flex: 1, minWidth: 0, fontSize: '0.68rem', color: 'rgba(255,255,255,0.55)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Dismiss {it.name}?</span>
-                        <button type="button" disabled={pending} onClick={() => run(() => dismissCrew(m.id), m.id, close)}
-                          className="font-karla font-700 uppercase" style={{ padding: '0.42rem 0.8rem', borderRadius: 8, fontSize: '0.66rem', letterSpacing: '0.04em', background: 'rgba(212,84,84,0.24)', border: '1px solid rgba(228,114,114,0.55)', color: '#f8d2d2', cursor: pending ? 'not-allowed' : 'pointer' }}>{busyId === m.id ? '…' : 'Dismiss'}</button>
-                        <button type="button" disabled={pending} onClick={() => setConfirmDismiss(null)}
-                          className="font-karla font-700 uppercase" style={{ padding: '0.42rem 0.8rem', borderRadius: 8, fontSize: '0.66rem', letterSpacing: '0.04em', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.72)', cursor: 'pointer' }}>Cancel</button>
-                      </div>
-                    )
-                  }
-                  // Which party they're in, if any. Swap and Remove are the two
-                  // things the Assign tab could not do at all: tapping a seat
-                  // landed here and dead-ended on stats.
                   const track: 'raid' | 'voyage' | null =
                     m.raidSlot !== null ? 'raid' : m.voyageSlot !== null ? 'voyage' : null
                   const seat = track === 'raid' ? m.raidSlot : m.voyageSlot
-                  const partyName = track === 'raid' ? 'Raid Party' : 'Voyage Party'
-                  return (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {track !== null && seat !== null && !isLockedM && (
-                      <div className="flex items-center" style={{ gap: 8 }}>
-                        <button type="button" disabled={pending}
-                          onClick={() => { close(); setAssignSeat({ track, slot: seat }) }}
-                          className="font-karla font-700 uppercase"
-                          style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '0.62rem 0.7rem', borderRadius: 9, fontSize: '0.72rem', letterSpacing: '0.05em', background: `${accent}1f`, border: `1px solid ${accent}66`, color: accent, cursor: pending ? 'not-allowed' : 'pointer', opacity: pending ? 0.6 : 1 }}>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M4 8h13l-3.5-3.5M20 16H7l3.5 3.5" /></svg>
-                          Swap Out
-                        </button>
-                        <button type="button" disabled={pending}
-                          onClick={() => run(() => benchCrew(m.id), m.id, close)}
-                          title={`Take ${m.name} out of the ${partyName.toLowerCase()}`}
-                          className="font-karla font-700 uppercase"
-                          style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '0.62rem 0.7rem', borderRadius: 9, fontSize: '0.72rem', letterSpacing: '0.05em', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(240,236,228,0.85)', cursor: pending ? 'not-allowed' : 'pointer', opacity: pending ? 0.6 : 1 }}>
-                          {busyId === m.id ? '…' : `Leave the ${partyName}`}
-                        </button>
+                  const party = track === 'raid' ? 'Raid Party' : 'Voyage Party'
+                  const accent = track === 'voyage' ? ASSIGN_VOYAGE : ASSIGN_RAID
+                  // At sea or trawling: the server rejects all of these
+                  // (assertCanReassign), so offer none of them.
+                  const isLockedM = state.lockedCrewIds.includes(m.id) || state.trawlingCrewIds.includes(m.id)
+                  if (isLockedM) {
+                    return (
+                      <p className="font-karla font-600 italic" style={{ textAlign: 'center', fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)' }}>
+                        {state.trawlingCrewIds.includes(m.id) ? 'Out on a trawl.' : 'At sea.'} Bring them home before giving new orders.
+                      </p>
+                    )
+                  }
+
+                  if (confirmAct) {
+                    const copy = {
+                      swap:    { line: 'Take ' + m.name + ' out of the ' + party + ' and pick their replacement next. ' + m.name + ' stays in your roster.', cta: 'Swap', stark: false },
+                      promote: { line: 'Make ' + m.name + ' captain of the ' + party + '. They take the lead seat, and only the captain counts at full strength.', cta: 'Promote', stark: false },
+                      remove:  { line: 'Take ' + m.name + ' out of the ' + party + '. They stay in your roster and can be assigned again whenever you like.', cta: 'Remove', stark: false },
+                      dismiss: { line: 'Dismiss ' + m.name + ' for good. They leave your roster permanently, and every level, stat and trait they have earned goes with them. This cannot be undone.', cta: 'Dismiss Forever', stark: true },
+                    }[confirmAct]
+                    const go = () => {
+                      if (confirmAct === 'swap') { close(); if (track && seat !== null) setAssignSeat({ track, slot: seat }); return }
+                      if (confirmAct === 'promote') return run(() => promoteToCaptain(m.id), m.id, close)
+                      if (confirmAct === 'remove')  return run(() => benchCrew(m.id), m.id, close)
+                      return run(() => dismissCrew(m.id), m.id, close)
+                    }
+                    return (
+                      <div style={{
+                        display: 'flex', flexDirection: 'column', gap: 9,
+                        padding: copy.stark ? '0.7rem 0.75rem' : 0,
+                        borderRadius: 10,
+                        background: copy.stark ? 'rgba(150,32,32,0.16)' : undefined,
+                        border: copy.stark ? '1px solid rgba(228,90,90,0.55)' : undefined,
+                      }}>
+                        {copy.stark && (
+                          <p className="font-cinzel font-700 uppercase" style={{ fontSize: '0.68rem', letterSpacing: '0.14em', color: '#ff9a9a' }}>
+                            This is permanent
+                          </p>
+                        )}
+                        <p className="font-karla" style={{ fontSize: '0.74rem', lineHeight: 1.5, color: copy.stark ? '#f6d5d5' : 'rgba(255,255,255,0.72)' }}>
+                          {copy.line}
+                        </p>
+                        <div className="flex items-center" style={{ gap: 8 }}>
+                          <button type="button" disabled={pending} onClick={() => setConfirmAct(null)}
+                            className="font-karla font-700 uppercase"
+                            style={{ flex: 1, padding: '0.6rem', borderRadius: 9, fontSize: '0.7rem', letterSpacing: '0.05em', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.75)', cursor: 'pointer' }}>
+                            Cancel
+                          </button>
+                          <button type="button" disabled={pending} onClick={go}
+                            className="font-karla font-700 uppercase"
+                            style={{ flex: 1, padding: '0.6rem', borderRadius: 9, fontSize: '0.7rem', letterSpacing: '0.05em', cursor: pending ? 'not-allowed' : 'pointer', opacity: pending ? 0.6 : 1,
+                              background: copy.stark ? 'rgba(200,48,48,0.5)' : accent + '26',
+                              border: '1px solid ' + (copy.stark ? 'rgba(255,120,120,0.8)' : accent + '77'),
+                              color: copy.stark ? '#fff0f0' : accent }}>
+                            {busyId === m.id ? '...' : copy.cta}
+                          </button>
+                        </div>
                       </div>
-                    )}
-                    <div className="flex items-center" style={{ gap: 8 }}>
-                      {canPromote && (
-                        <button type="button" disabled={pending} onClick={() => run(() => promoteToCaptain(m.id), m.id, close)}
-                          className="font-karla font-700 uppercase"
-                          style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '0.52rem 0.7rem', borderRadius: 9, fontSize: '0.72rem', letterSpacing: '0.05em', background: `${accent}1f`, border: `1px solid ${accent}66`, color: accent, cursor: pending ? 'not-allowed' : 'pointer', opacity: pending ? 0.6 : 1 }}>
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="#f0c040" stroke="none"><path d="M5 17h14l1-9-5 3.5L12 5 9 11.5 4 8z" /></svg>
-                          Make Captain
-                        </button>
-                      )}
-                      {isLockedM ? (
-                        <span className="font-karla font-600 italic" title="At sea — collect them first to dismiss"
-                          style={{ marginLeft: canPromote ? undefined : 'auto', display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.64rem', color: 'rgba(255,255,255,0.38)', whiteSpace: 'nowrap' }}>
-                          {state.trawlingCrewIds.includes(m.id) ? 'On a trawl' : 'At sea'} — can’t dismiss
-                        </span>
-                      ) : (
-                        <button type="button" disabled={pending} onClick={() => setConfirmDismiss(m.id)}
-                          className="font-karla font-700 uppercase"
-                          style={{ marginLeft: canPromote ? undefined : 'auto', display: 'flex', alignItems: 'center', gap: 5, padding: '0.52rem 0.7rem', borderRadius: 9, fontSize: '0.68rem', letterSpacing: '0.04em', background: 'transparent', border: '1px solid rgba(228,114,114,0.26)', color: 'rgba(232,150,150,0.82)', cursor: pending ? 'not-allowed' : 'pointer' }}>
-                          <XIcon /> Dismiss
-                        </button>
-                      )}
-                    </div>
+                    )
+                  }
+
+                  const btn = (label: string, act: 'swap' | 'promote' | 'remove' | 'dismiss', danger = false) => (
+                    <button key={label} type="button" disabled={pending} onClick={() => setConfirmAct(act)}
+                      className="font-karla font-700 uppercase"
+                      style={{
+                        flex: 1, minWidth: 0, padding: '0.6rem 0.25rem', borderRadius: 9,
+                        fontSize: '0.68rem', letterSpacing: '0.04em', whiteSpace: 'nowrap',
+                        background: danger ? 'transparent' : 'rgba(255,255,255,0.05)',
+                        border: '1px solid ' + (danger ? 'rgba(228,114,114,0.4)' : 'rgba(255,255,255,0.18)'),
+                        color: danger ? 'rgba(232,150,150,0.9)' : 'rgba(240,236,228,0.88)',
+                        cursor: pending ? 'not-allowed' : 'pointer', opacity: pending ? 0.6 : 1,
+                      }}>
+                      {label}
+                    </button>
+                  )
+                  return (
+                    <div className="flex items-center" style={{ gap: 6 }}>
+                      {track !== null && btn('Swap', 'swap')}
+                      {track !== null && !isCap && btn('Promote', 'promote')}
+                      {track !== null && btn('Remove', 'remove')}
+                      {btn('Dismiss', 'dismiss', true)}
                     </div>
                   )
-                })()}</div>
-                ) : null}
+                })()}
+                </div>
+
+                {/* Per-stat sheet. Slides over the card rather than pushing it
+                    taller, and carries everything the Stats tab used to print
+                    inline for all three at once: where the number came from,
+                    and what the stat actually does. */}
+                <AnimatePresence>
+                {statDetail && (() => {
+                  const k = statDetail
+                  const trained = ('xp' in it && dXp > 0) ? levelStatBonuses(crewLevelFromXP(dXp), dBase)[k] : 0
+                  const fromTrait = dTrait[k]
+                  const rows: [string, number | string][] = [
+                    ['Base', dBase[k]],
+                    ...(trained !== 0 ? [['Trained', (trained > 0 ? '+' : '') + trained] as [string, string]] : []),
+                    ...(fromTrait !== 0 ? [[dTraitLabel || 'Trait', (fromTrait > 0 ? '+' : '') + fromTrait] as [string, string]] : []),
+                  ]
+                  return (
+                    <motion.div key="stat-sheet"
+                      initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
+                      transition={{ duration: 0.16, ease: 'easeOut' }}
+                      style={{
+                        position: 'absolute', inset: 0, zIndex: 5,
+                        background: detail.kind === 'board' ? RECRUIT_PANEL_BG : ROSTER_PANEL_BG,
+                        display: 'flex', flexDirection: 'column',
+                      }}>
+                      <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 9, padding: '0.85rem 1.1rem 0.7rem', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                        <StatIcon k={k} color={STAT_COLOR[k]} />
+                        <p className="font-cinzel font-700 uppercase" style={{ fontSize: '0.86rem', letterSpacing: '0.12em', color: STAT_COLOR[k] }}>{STAT_LABEL[k]}</p>
+                        <button type="button" onClick={() => setStatDetail(null)} aria-label="Back"
+                          className="font-karla font-700 uppercase"
+                          style={{ marginLeft: 'auto', padding: '0.35rem 0.7rem', borderRadius: 8, fontSize: '0.64rem', letterSpacing: '0.06em', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.75)', cursor: 'pointer' }}>
+                          Back
+                        </button>
+                      </div>
+                      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '1rem 1.1rem 1.1rem' }}>
+                        <p className="font-cinzel font-700" style={{ fontSize: '3rem', lineHeight: 1, textAlign: 'center', color: '#ecdcbd', fontVariantNumeric: 'tabular-nums' }}>{dEff[k]}</p>
+                        <p className="font-karla font-700 uppercase" style={{ textAlign: 'center', fontSize: '0.6rem', letterSpacing: '0.14em', color: 'rgba(255,255,255,0.42)', marginTop: 4, marginBottom: '1.1rem' }}>Total</p>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 1, marginBottom: '1.1rem' }}>
+                          {rows.map(([label, val]) => (
+                            <div key={label} className="flex items-baseline justify-between" style={{ padding: '0.45rem 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                              <span className="font-karla" style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.6)' }}>{label}</span>
+                              <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#ecdcbd', fontVariantNumeric: 'tabular-nums' }}>{val}</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        <p className="font-karla" style={{ fontSize: '0.78rem', lineHeight: 1.55, color: 'rgba(255,255,255,0.72)' }}>
+                          {STAT_ABOUT[k]}
+                        </p>
+                      </div>
+                    </motion.div>
+                  )
+                })()}
+                </AnimatePresence>
               </motion.div>
             </motion.div>
           )
