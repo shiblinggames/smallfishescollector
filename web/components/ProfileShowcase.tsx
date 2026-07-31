@@ -7,8 +7,12 @@
 //  - RarestCatchesByZone: your top-3 rarest catches in EACH zone, laid out as a
 //    trophy room organized by depth on quiet uniform cards (the #1 catch mounted
 //    biggest). Sorted within a zone by rarity, then sell value.
-//  - FeaturedCrew: your flagship crew large up top, the rest as a gallery grid
-//    (no more cramped horizontal scroll strip).
+//  - FeaturedCrew / RaidArsenal / GoldenMounts: art-forward ShowcaseRails —
+//    one sideways-scrolling row of big images each. These were grids, which
+//    meant every image shrank to fit three or four across and the column grew
+//    taller with every relic; a rail keeps one row and lets the art be seen.
+//    (An older strip was scrapped for being cramped — the fix was bigger tiles,
+//    not going back to grids.)
 
 import { CrewPortrait, type ShowcaseCrew } from '@/components/CrewShowcase'
 import { getRaidItem, isAbyssalForgedItem, type RaidItemDef } from '@/lib/raidItems'
@@ -166,7 +170,9 @@ const GOLD_DEEP = SHINY_THEME.secondary // #f0a020
 /** A player's MOUNTED golden catches, shown off as a gilded trophy wall. Capped
  *  to the biggest `cap`, with a "+N" tile for the rest. Renders nothing when
  *  the player has mounted no goldens. Same gold chrome as the catch moment. */
-export function GoldenMounts({ fish, cap = 9 }: { fish: GoldenMount[]; cap?: number }) {
+// Cap raised with the move to a rail: a grid had to stop at 9 or it grew into
+// a wall, but a rail just gets longer, so a real trophy collection can show.
+export function GoldenMounts({ fish, cap = 24 }: { fish: GoldenMount[]; cap?: number }) {
   if (!fish || fish.length === 0) return null
   const shown = fish.slice(0, cap)
   const more = fish.length - shown.length
@@ -183,21 +189,28 @@ export function GoldenMounts({ fish, cap = 9 }: { fish: GoldenMount[]; cap?: num
         <span className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.2em', color: GOLD }}>Golden Catch</span>
         <span className="font-karla font-700" style={{ fontSize: '0.56rem', color: `${GOLD_DEEP}cc` }}>· {fish.length}</span>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(94px, 1fr))', gap: 9 }}>
+      <ShowcaseRail>
         {shown.map(f => (
           <div key={f.id} style={{
+            flex: '0 0 auto', width: 118, scrollSnapAlign: 'start',
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
             padding: '0.7rem 0.4rem 0.6rem', borderRadius: 13, textAlign: 'center',
             background: `linear-gradient(180deg, ${GOLD}18, rgba(0,0,0,0.3))`,
             border: `1px solid ${GOLD}44`, boxShadow: `inset 0 1px 0 ${GOLD}33`,
           }}>
-            <div style={{ height: 52, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {/* A golden is a one-in-a-thousand catch; the auto-fill grid was
+                rendering it at 50px. On a rail it gets to be a trophy. */}
+            <div style={{ height: 84, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={fishImageUrl(f.name)} alt={`Golden ${f.name}`} loading="lazy" decoding="async"
-                style={{ maxWidth: 58, maxHeight: 50, objectFit: 'contain', filter: SHINY_FISH_FILTER }}
+                style={{ maxWidth: 104, maxHeight: 82, objectFit: 'contain', filter: SHINY_FISH_FILTER }}
                 onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
             </div>
-            <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: SHINY_THEME.text, lineHeight: 1.15 }}>{f.name}</p>
+            <p className="font-cinzel font-700" style={{
+              display: 'block', width: '100%',
+              fontSize: '0.66rem', color: SHINY_THEME.text, lineHeight: 1.15,
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+            }}>{f.name}</p>
             {f.size_in != null && f.size_in > 0 && (
               <span className="font-karla font-700" style={{ fontSize: '0.56rem', color: GOLD_DEEP, fontVariantNumeric: 'tabular-nums' }}>{f.size_in.toFixed(1)} in</span>
             )}
@@ -205,13 +218,37 @@ export function GoldenMounts({ fish, cap = 9 }: { fish: GoldenMount[]; cap?: num
         ))}
         {more > 0 && (
           <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 96,
+            flex: '0 0 auto', width: 118, scrollSnapAlign: 'start',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
             borderRadius: 13, background: `${GOLD}0f`, border: `1px dashed ${GOLD}4a`,
           }}>
             <span className="font-karla font-800" style={{ fontSize: '0.85rem', color: GOLD }}>+{more}</span>
           </div>
         )}
-      </div>
+      </ShowcaseRail>
+    </div>
+  )
+}
+
+/** THE SHOWCASE RAIL. One fixed-height row that scrolls sideways, shared by
+ *  every showcase section so they read as one language: a player with two
+ *  relics and a player with twenty get the same shape, and neither reflows the
+ *  column into a taller and taller wall of small tiles. Art leads; the grids
+ *  these replaced had to shrink every image to fit three or four across.
+ *
+ *  No negative-margin bleed here, unlike the boss-drop rail: these sit inside a
+ *  centred 540px column whose padding lives on the page, so a fixed bleed would
+ *  hang the rail outside the column on wide screens. */
+function ShowcaseRail({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="scrollbar-hide" style={{
+      display: 'flex', gap: 10,
+      overflowX: 'auto', overflowY: 'hidden',
+      scrollSnapType: 'x proximity',
+      WebkitOverflowScrolling: 'touch',
+      paddingBottom: 2,
+    }}>
+      {children}
     </div>
   )
 }
@@ -257,7 +294,7 @@ export function RaidArsenal({ items }: { items: string[] }) {
     .sort((a, b) => rankOf(b) - rankOf(a))
   if (defs.length === 0) return null
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+    <ShowcaseRail>
       {defs.map(it => {
         const ancient = it.rarity === 'ancient'
         const abyssal = !ancient && isAbyssalForgedItem(it.id)
@@ -266,22 +303,31 @@ export function RaidArsenal({ items }: { items: string[] }) {
         const c = ITEM_RARITY_COLOR[it.rarity] ?? '#94a3b8'
         return (
           <div key={it.id} style={{
+            flex: '0 0 auto', width: 124, scrollSnapAlign: 'start',
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
             padding: '0.75rem 0.5rem 0.6rem', borderRadius: 13, textAlign: 'center',
             background: ancient ? ANCIENT_BG : abyssal ? ABYSSAL_BG : forged ? FORGED_BG : `${c}0e`,
             border: `1px solid ${ancient ? ANCIENT_BORDER : abyssal ? ABYSSAL_BORDER : forged ? FORGED_BORDER : `${c}33`}`,
             boxShadow: ancient ? '0 0 20px rgba(224,69,90,0.20)' : abyssal ? '0 0 16px rgba(255,90,60,0.14)' : 'none',
           }}>
-            <div style={{ height: 46, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {/* Roughly double the old 46px box — the grid had to shrink every
+                relic to fit three across; a rail can let them be seen. */}
+            <div style={{ height: 88, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {it.image
                 // eslint-disable-next-line @next/next/no-img-element
                 ? <img src={it.image} alt={it.name} loading="lazy" decoding="async"
                     className={glowClass}
-                    style={{ maxWidth: 44, maxHeight: 44, objectFit: 'contain', ...(glowClass ? {} : { filter: `drop-shadow(0 2px 7px ${c}66)` }) }}
+                    style={{ maxWidth: 86, maxHeight: 86, objectFit: 'contain', ...(glowClass ? {} : { filter: `drop-shadow(0 3px 10px ${c}66)` }) }}
                     onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                : <span aria-hidden className={glowClass} style={{ fontSize: '1.7rem', ...(glowClass ? {} : { filter: `drop-shadow(0 2px 6px ${c}55)` }) }}>{it.emoji}</span>}
+                : <span aria-hidden className={glowClass} style={{ fontSize: '3rem', ...(glowClass ? {} : { filter: `drop-shadow(0 3px 9px ${c}55)` }) }}>{it.emoji}</span>}
             </div>
-            <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#e8e4dc', lineHeight: 1.15 }}>{it.name}</p>
+            {/* Clipped, never wrapped: a two-line name would make one tile
+                taller than its neighbours and break the rail's line. */}
+            <p className="font-karla font-600" style={{
+              display: 'block', width: '100%',
+              fontSize: '0.66rem', color: '#e8e4dc', lineHeight: 1.15,
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+            }}>{it.name}</p>
             {ancient
               ? <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.16em', backgroundImage: ANCIENT_GRADIENT, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>Ancient</span>
               : abyssal
@@ -292,7 +338,7 @@ export function RaidArsenal({ items }: { items: string[] }) {
           </div>
         )
       })}
-    </div>
+    </ShowcaseRail>
   )
 }
 
@@ -311,23 +357,19 @@ export function FeaturedCrew({ crew, onEdit, emptyHint }: { crew: ShowcaseCrew[]
       </div>
     )
   }
-  const [flag, ...rest] = crew
   return (
     <div>
-      {/* Flagship — one bigger poster on its own... */}
-      <div style={{ display: 'flex', justifyContent: 'center' }}>
-        <div style={{ width: 220, maxWidth: '72%' }}>
-          <CrewPortrait crew={flag} fill hideStats />
-        </div>
-      </div>
-      {/* ...then the rest in a tidy 2-up grid beneath (a full showcase reads as
-          1 on top + a 2x2). Constrained so the grid cards stay smaller than
-          the flagship. */}
-      {rest.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, maxWidth: 320, margin: '14px auto 0' }}>
-          {rest.map(c => <CrewPortrait key={c.id} crew={c} fill hideStats />)}
-        </div>
-      )}
+      {/* One rail rather than a flagship over a 2-up grid. The old split made
+          every hand after the first read as a runner-up at roughly half the
+          size; on a rail they are all posters at the same scale, and the
+          showcase stays one row however many are featured. */}
+      <ShowcaseRail>
+        {crew.map(c => (
+          <div key={c.id} style={{ flex: '0 0 auto', width: 172, scrollSnapAlign: 'start' }}>
+            <CrewPortrait crew={c} fill hideStats />
+          </div>
+        ))}
+      </ShowcaseRail>
       {onEdit && (
         <button onClick={onEdit} className="font-karla font-700 tap" style={{
           marginTop: 14, fontSize: '0.68rem', padding: '0.4rem 0.85rem', borderRadius: 8,
