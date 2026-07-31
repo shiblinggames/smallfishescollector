@@ -5531,10 +5531,12 @@ export default function FishingGame({
         if (res.isPB && res.sizeIn > 0) {
           setPersonalBests(prev => ({ ...prev, [fish.id]: res.sizeIn }))
         }
-        // Bump the live total-caught lookup (mirrors fish_collection.catch_count,
-        // which reelIn already incremented server-side) so the collection
-        // detail modal shows the updated tally without a refresh.
-        setCatchCounts(prev => ({ ...prev, [fish.id]: (prev[fish.id] ?? 0) + actualQty }))
+        // Bump the live total-caught lookup so the collection detail modal
+        // updates without a refresh. By ONE, not by actualQty:
+        // fish_collection.catch_count counts CASTS, so a x100 jackpot is a
+        // single catch of that species. Bumping by quantity made the tally
+        // read 100 until the next refetch snapped it back to 1.
+        setCatchCounts(prev => ({ ...prev, [fish.id]: (prev[fish.id] ?? 0) + 1 }))
         // Stage the Logbook header-button flash for noteworthy catches.
         // New species wins over PB so the gold treatment lands on
         // first-time catches that also set a PB. Cleared on next cast
@@ -5901,12 +5903,19 @@ export default function FishingGame({
         return [...trimmed, { fish_id: res.fish.id, quantity: res.qty, fish_species: res.fish }]
       })
       if (res.isPB && res.sizeIn > 0) setPersonalBests(prev => ({ ...prev, [res.fish.id]: res.sizeIn }))
-      // Credit the fish that actually surfaced. Without this the Logbook kept
-      // reading it at its old count — zero for a brand-new species, so it
-      // rendered as still undiscovered until a zone switch re-seeded from the
-      // server. The original stays counted, mirroring the server: it was
-      // genuinely landed before the wormhole took it.
-      setCatchCounts(prev => ({ ...prev, [res.fish.id]: (prev[res.fish.id] ?? 0) + res.qty }))
+      // MOVE the credit from the fish that was caught to the one that
+      // surfaced. reelIn optimistically counted the original a moment ago,
+      // but the server defers that credit while a reroll is live and then
+      // gives it to the NEW fish only (one species per cast). Leaving the
+      // original counted here is why the tally changed on a zone switch: the
+      // refetch replaced the optimistic number with the server's.
+      setCatchCounts(prev => {
+        const next = { ...prev, [res.fish.id]: (prev[res.fish.id] ?? 0) + 1 }
+        const rolledBack = (next[oldId] ?? 0) - 1
+        if (rolledBack > 0) next[oldId] = rolledBack
+        else delete next[oldId]
+        return next
+      })
       // A new species off the wormhole deserves the same Logbook flash a new
       // species off the line gets.
       if (res.isNewSpecies) {
