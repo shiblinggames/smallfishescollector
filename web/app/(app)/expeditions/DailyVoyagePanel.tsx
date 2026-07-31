@@ -358,23 +358,9 @@ export default function DailyVoyagePanel({
             </p>
           ) : (
             <>
-              {/* ── Always-visible: description + info ── */}
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                <p className="font-karla" style={{ fontSize: '0.72rem', color: '#8a7860', lineHeight: 1.55, flex: 1 }}>
-                  Send your crew on a daily voyage. They return with doubloons, rare drops, and stories — but risky routes can cost you crew permanently.
-                </p>
-                <button
-                  onClick={() => setInfoOpen(true)}
-                  style={{
-                    flexShrink: 0, width: 22, height: 22, borderRadius: '50%',
-                    background: 'rgba(200,170,100,0.10)', border: '1px solid rgba(200,170,100,0.25)',
-                    color: '#a08860', fontSize: '0.72rem', fontWeight: 700,
-                    cursor: 'pointer', lineHeight: 1,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}
-                  aria-label="How voyages work"
-                >?</button>
-              </div>
+              {/* The blurb that used to sit here is gone — the map says "pick a
+                  route" better than a paragraph did, and everything it explained
+                  is in the "?" (now pinned to the map's top corner). */}
 
               {/* Info modal */}
               {infoOpen && (
@@ -426,9 +412,31 @@ export default function DailyVoyagePanel({
               )}
 
               {/* ── Voyage map ── */}
-              <div style={{ position: 'relative', width: '100%', borderRadius: 10, overflow: 'hidden', marginBottom: '0.75rem' }}>
+              <div style={{
+                position: 'relative', width: '100%', borderRadius: 10, overflow: 'hidden', marginBottom: '0.75rem',
+                // The chart is a torn parchment with alpha all round its deckled
+                // edge, so SOMETHING always shows through it. That used to be the
+                // modal's tint, which is ~0.9 opaque this far down the panel and
+                // read as flat blue. Same dusk-sea plate the claim modal uses,
+                // under a light tint so the sea reads without fighting the chart.
+                background: `linear-gradient(180deg, rgba(6,12,22,0.30) 0%, rgba(5,9,16,0.45) 100%), url(/voyages-modal-bg.jpg) center / cover no-repeat`,
+              }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/voyagemap.png" alt="Voyage map" loading="lazy" decoding="async" style={{ width: '100%', display: 'block' }} />
+
+                <button
+                  onClick={() => setInfoOpen(true)}
+                  style={{
+                    position: 'absolute', top: 8, right: 8, zIndex: 5,
+                    width: 24, height: 24, borderRadius: '50%',
+                    // Opaque-ish base: this one sits on painted art, not a panel.
+                    background: 'rgba(10,7,3,0.72)', border: '1px solid rgba(200,170,100,0.35)',
+                    color: '#c8aa6a', fontSize: '0.74rem', fontWeight: 700,
+                    cursor: 'pointer', lineHeight: 1, touchAction: 'manipulation',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                  aria-label="How voyages work"
+                >?</button>
 
                 {/* Clickable route nodes */}
                 {(() => {
