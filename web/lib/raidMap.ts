@@ -2751,7 +2751,13 @@ export const RAID_MAP: RaidNode[] = [
       description:
         'The last stop is not on any chart the Finndicate kept. It opens for a captain who has been down where the old things sleep, and it opens for nobody else.\n\nThat was always the point.',
       drops: [
-        { emoji: '📜', label: "Captain's Logbook, Fragment XV", sublabel: '"Finn-dicate. Say it out loud once and tell me you never heard it. Everyone hears it eventually, and never once before it is too late to matter."', rarity: 'legendary' },
+        // NO PUN HERE. This node previews while locked, so its drop tiles are
+        // readable before the scene plays — and this sublabel used to spell out
+        // "Finn-dicate", which is the exact beat the cutscene builds to (Mira
+        // lands it after the unmask). The tile was telling the twist to anyone
+        // who tapped a node they had not unlocked. Keeps the menace, drops the
+        // reveal; the scene still delivers it.
+        { emoji: '📜', label: "Captain's Logbook, Fragment XV", sublabel: '"Everyone hears the name eventually. Never once before it is too late to matter."', rarity: 'legendary' },
       ],
       dropsNote: 'The name at the top of the Sunken Hand, and what your six giants were really for.',
       ctaLabel: 'Pull Alongside →',
@@ -2781,7 +2787,7 @@ export const RAID_MAP: RaidNode[] = [
     detail: {
       description:
         'One last ride, captain. Everything the Sunken Hand ever took, and everything it opened for you, comes down to this water.',
-      enemies: ['Finn (six phases)'],
+      enemies: ['The Hand itself (six phases)'],
       drops: lootDrops(THE_SUNKEN_HAND.loot),
       clearReward: clearPayout(THE_SUNKEN_HAND),
       dropsNote: 'Everything the six giants gave him, taken back off his hull.',
@@ -2890,7 +2896,7 @@ export const RAID_MAP: RaidNode[] = [
     sceneAccent: '#c4a96a',
     detail: {
       description:
-        "He went down with two things worth taking, and they answer to the two halves of your life out here.\n\nTHE DEEP REEL opens a SECOND special slot on your fishing rig, and only The Primeval Eye will seat in it.\n\nTHE SIXTH MOUNT frames one more raid item onto your hull, and only The Primeval Maw will mount there.\n\nNeither tool is in your hold yet. This opens the berth. Finn still has to give the piece up.\n\nTake one now. The other keeps, and it keeps expensive.",
+        "He went down with two things worth taking, and they answer to the two halves of your life out here.\n\nTHE DEEP REEL opens a SECOND special slot on your fishing rig, and only The Primeval Eye will seat in it.\n\nTHE SIXTH MOUNT frames one more raid item onto your hull, and only The Primeval Maw will mount there.\n\nNeither tool is in your hold yet. This opens the berth. The wreck still has to give the piece up.\n\nTake one now. The other keeps, and it keeps expensive.",
       ctaLabel: 'Coming Soon',
       summary: 'Choose one of his two spoils. The other costs 2,500,000 doubloons.',
       dropsNote: 'Each slot fits exactly one item, and that item only ever drops from him.',
@@ -2916,7 +2922,7 @@ export const RAID_MAP: RaidNode[] = [
     detail: {
       description:
         'Six phases, six stolen giants, and a chain you cannot afford to drop. Everything he does hits harder and his own rhythm is tighter, so the Perfect Streak stops being a reward and starts being the requirement.',
-      enemies: ['Finn (six phases)'],
+      enemies: ['The Hand itself (six phases)'],
       drops: lootDrops(THE_SUNKEN_HAND_CHALLENGE.loot),
       clearReward: clearPayout(THE_SUNKEN_HAND_CHALLENGE),
       dropsNote: 'His uniques roll at double the normal rate.',

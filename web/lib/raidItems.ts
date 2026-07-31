@@ -342,7 +342,11 @@ export const RAID_ITEMS: RaidItemDef[] = [
     finaleSlotOnly: true,
     id: 'borrowed_jaw',
     name: 'The Primeval Maw',
-    description: 'The oldest teeth in the sea, cut back out of Finn and bolted to your hull. It gains a TIER for every stretch of Fishing XP you earn while it is mounted, and each tier keeps everything the tiers below it unlocked. Six in all.',
+    // Does NOT name him. This description is reachable BEFORE the reveal: the
+    // finale node previews while locked, its sheet opens, and its drop rail
+    // opens DropDetailModal, which renders this string. Naming him here told
+    // the twist to anyone who tapped the item they were working toward.
+    description: 'The oldest teeth in the sea, cut back out of what wore them and bolted to your hull. It gains a TIER for every stretch of Fishing XP you earn while it is mounted, and each tier keeps everything the tiers below it unlocked. Six in all.',
     image: '/primevilmaw.png',
     emoji: '🦈',
     rarity: 'ancient',
