@@ -90,39 +90,6 @@ const PANEL_BG     = 'linear-gradient(157deg, #201a10 0%, #100c07 100%)'
 const PANEL_BORDER = '#3a3122'
 // Aliases kept so existing prop default + detail-modal references compile
 // unchanged. Both point at the same neutral now.
-// ── RARITY AS MATERIAL ───────────────────────────────────────────────────────
-// Every card used the same slab whatever the rarity, so a Legendary and a
-// Common were the same object in different coloured trim, and the reveal built
-// to a payoff the card never cashed.
-//
-// Each tier is now a PAINTED PLATE rather than a CSS gradient. A generated
-// surface carries material (grain, rivets, mineral, gold leaf) that a two-stop
-// gradient cannot fake, and it makes the tiers read as genuinely different
-// objects instead of the same object recoloured:
-//
-//   Common      bare salt-bleached pine
-//   Rare        oiled oak banded in blued iron
-//   Epic        black slate veined with amethyst
-//   Legendary   blackwood with inlaid gold filigree
-//
-// Every plate is deliberately PLAIN THROUGH THE MIDDLE with its detail in bands
-// at the top and bottom edges, because card content sits on top of it: the
-// arched portrait on the left, name and stats on the right. A surface with a
-// focal point would fight them.
-//
-// Drawn at 100% 100%, NOT cover. The detail lives in those edge bands, and the
-// card runs from about 2.2:1 up to nearly 4:1 as the grid stretches — cover
-// would crop the top and bottom off and throw away the whole point. Stretching
-// is invisible horizontally (the bands repeat) and merely tightens them
-// vertically at 134px tall.
-const RARITY_MATERIAL: Record<number, { art: string; border: string; topEdge: string; sheen: boolean }> = {
-  1: { art: '/crew_card_common.webp', border: '#3a3122', topEdge: 'rgba(255,255,255,0.05)', sheen: false },
-  2: { art: '/crew_card_rare.webp',   border: '#2f4667', topEdge: 'rgba(120,170,240,0.22)', sheen: false },
-  3: { art: '/crew_card_epic.webp',   border: '#453361', topEdge: 'rgba(190,150,255,0.30)', sheen: false },
-  // Legendary is the only tier that moves — see the sheen in CrewPanel.
-  4: { art: '/crew_card_legend.webp', border: '#6b5320', topEdge: 'rgba(255,214,120,0.42)', sheen: true },
-}
-
 const RECRUIT_PANEL_BG = PANEL_BG
 const RECRUIT_PANEL_BORDER = PANEL_BORDER
 const ROSTER_PANEL_BG = PANEL_BG
@@ -465,8 +432,6 @@ function CrewPanel({
   const skinChase = !!skinDef?.chase
   const skinGlowFilter = skinGlow ? skinArtGlow(skinGlow, rarity, false) : undefined
   const eff = applyCrewEffects(base, effects, xp)
-  // Bars scale to this crew's OWN best stat (see the stat block below).
-  const statMax = Math.max(eff.power, eff.dodge, eff.fortune)
 
   const corner = (pos: React.CSSProperties): React.CSSProperties => ({
     position: 'absolute', width: 9, height: 9, opacity: 0.6, pointerEvents: 'none', ...pos,
@@ -478,14 +443,7 @@ function CrewPanel({
   // styling regardless of tier. (Previously the whole card carried a
   // tinted wash + tinted border + outer glow that grew with tier, which
   // made the roster look visually loud once five rarities were on screen.)
-  const mat = RARITY_MATERIAL[rarity] ?? RARITY_MATERIAL[1]
-  // Callers can still force a surface (the reveal placeholder does); when they
-  // pass the shared default we use the rarity's material instead.
-  const surfaceBg = bg === PANEL_BG ? undefined : bg
-  const surfaceBorder = border === PANEL_BORDER ? mat.border : border
-  // The top edge is where light lands on a raised object, so it carries the
-  // rarity without ringing the card.
-  const cardShadow = `inset 0 0 0 1px ${frameAccent}22, inset 0 1px 0 ${mat.topEdge}, 0 6px 16px rgba(0,0,0,0.55)`
+  const cardShadow = `inset 0 0 0 1px ${frameAccent}22, inset 0 1px 0 rgba(255,255,255,0.05), 0 6px 16px rgba(0,0,0,0.55)`
 
   return (
     <motion.div
@@ -496,33 +454,13 @@ function CrewPanel({
       style={{
         position: 'relative', display: 'flex', gap: '0.7rem', padding: '0.7rem',
         borderRadius: 7,
-        // An opaque base under the plate, never the plate alone: a webp that
-        // has not decoded yet would otherwise flash the page through the card.
-        backgroundColor: '#100c07',
-        ...(surfaceBg
-          ? { background: surfaceBg }
-          : { backgroundImage: `url(${mat.art})`, backgroundSize: '100% 100%', backgroundRepeat: 'no-repeat' }),
-        border: `1px solid ${surfaceBorder}`,
+        background: bg,
+        border: `1px solid ${border}`,
         boxShadow: cardShadow,
         opacity: dimmed ? 0.5 : locked ? 0.55 : 1,
         cursor: onClick ? 'pointer' : 'default',
         filter: locked ? 'grayscale(0.65) brightness(0.85)' : undefined,
       }}>
-      {/* LEGENDARY SHEEN. A single band of light crossing the card every few
-          seconds. Pure transform on one absolutely-positioned child, so it
-          composites and never touches paint — no animated box-shadow, no
-          filter. Legendary only: see RARITY_MATERIAL. */}
-      {mat.sheen && !locked && !dimmed && (
-        // The sheen gets its OWN clipping wrapper. Putting overflow:hidden on
-        // the card itself would have cut the level-up halo, which deliberately
-        // sits at inset:-1 to read as a ring around the card.
-        <span aria-hidden style={{ position: 'absolute', inset: 0, borderRadius: 7, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
-          <span className="crew-sheen" style={{
-            position: 'absolute', top: 0, bottom: 0, left: 0, width: '38%',
-            background: 'linear-gradient(100deg, transparent, rgba(255,226,150,0.16) 45%, rgba(255,240,200,0.26) 55%, transparent)',
-          }} />
-        </span>
-      )}
       {/* The "has traits — tap to view" halo glow was removed entirely.
           Players asked for a quieter card silhouette with no glow around
           the whole card. Trait count is still readable on the rarity
@@ -711,35 +649,14 @@ function CrewPanel({
           </p>
         </div>
 
-        {/* Engraved stats — icon + number, each over a bar.
-            The NUMBER is absolute; the BAR is shape. Bars scale to this crew's
-            own best stat rather than a global ceiling, because the ceiling is
-            useless as a scale: a hyper-specialised legendary reaches ~62 in one
-            stat at level 100 while a balanced one sits around 25, so a fixed
-            max renders almost every card as three slivers. Scaled to self, the
-            bar answers the question you actually ask when comparing recruits -
-            what is this one FOR - and the printed number still carries how
-            strong they are. */}
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, padding: '0.15rem 0' }}>
-          {(['power', 'dodge', 'fortune'] as const).map((k, i) => (
-            <div key={k} title={STAT_LABEL[k]} style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        {/* Engraved stats — three stat blocks left-aligned. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.15rem 0' }}>
+          {(['power', 'dodge', 'fortune'] as const).map(k => (
+            <div key={k} title={STAT_LABEL[k]} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <StatIcon k={k} color={STAT_COLOR[k]} />
               <span className="font-cinzel font-700" style={{ fontSize: '0.98rem', lineHeight: 1, color: '#ecdcbd' }}>
                 {eff[k]}
               </span>
-            </div>
-            {/* The bar. scaleX on a solid fill, never width: width is layout,
-                and a roster can hold dozens of cards. Staggered so the three
-                read left to right rather than snapping together. */}
-            <span aria-hidden style={{ display: 'block', width: 44, height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
-              <span className="crew-stat-fill" style={{
-                display: 'block', width: '100%', height: '100%', borderRadius: 2,
-                background: STAT_COLOR[k],
-                transform: `scaleX(${statMax > 0 ? Math.max(0.06, eff[k] / statMax) : 0})`,
-                animationDelay: `${0.06 * i}s`,
-              }} />
-            </span>
             </div>
           ))}
         </div>
