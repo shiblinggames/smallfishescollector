@@ -12,8 +12,10 @@ import { hasPrestigedAllZones } from '@/lib/collection'
 import { crewLevelFromXP, CREW_MAX_LEVEL } from '@/lib/crewLevel'
 import { CREW_HALL_MAX_TIER } from '@/lib/crewHall'
 import { GAUNTLET_UPGRADES } from '@/lib/gauntletUpgrades'
-import { FORGE_RECIPES, isForgedRaidItem, isAbyssalForgedItem, GAUNTLET2_BASE_ITEM_IDS } from '@/lib/raidItems'
-import { LEGENDARY_SLUGS_ALL, BASE_LEGENDARY_SLUGS, CONFLUENCE_COUNT, CHASE_SKIN_IDS, LEGENDARY_SKIN_SETS, CHALLENGE_RAID_IDS_ALL } from '@/lib/badgeConditions'
+import { FORGE_RECIPES, isForgedRaidItem, isAbyssalForgedItem, GAUNTLET2_BASE_ITEM_IDS, RAID_ITEMS, baseItemId } from '@/lib/raidItems'
+import { finnItemLevel, FINN_ITEM_MAX_LEVEL } from '@/lib/finnItems'
+import { raidItemSlotsForTier } from '@/lib/expeditions'
+import { LEGENDARY_SLUGS_ALL, BASE_LEGENDARY_SLUGS, CONFLUENCE_COUNT, CHASE_SKIN_IDS, LEGENDARY_SKIN_SETS, CHALLENGE_RAID_IDS_ALL, SUNKEN_HAND_HULLS } from '@/lib/badgeConditions'
 import { BUYABLE_ROD_TIERS } from '@/lib/rods'
 import { SHIP_SKINS } from '@/lib/shipSkins'
 
@@ -140,6 +142,29 @@ export default async function BadgesPage() {
   const finnWins = Number(profile?.finn_wins ?? 0)
   const fishSold = Number(profile?.fish_sold_doubloons ?? 0)
   const boatSkinsOwned = ((profile?.ship_skins as string[] | null) ?? []).length
+
+  // ── The Sunken Hand + its two Primeval spoils ────────────────────────────
+  // Mirrors lib/badgeConditions exactly; this page only draws the progress
+  // bars, the grant itself is reconcileBadges'. Charge tags ("borrowed_jaw#4")
+  // are stripped before matching, same as there.
+  const clearedNodes = ((profile?.raid_node_progress as { cleared?: string[] } | null)?.cleared) ?? []
+  const spoilFree = (profile?.finn_spoil_free as string | null) ?? null
+  const spoilPaid = (profile?.finn_spoil_paid as string | null) ?? null
+  const berthsOpen = (spoilFree ? 1 : 0) + (spoilPaid ? 1 : 0)
+  const ownsEye = profile?.has_anglers_patience === true
+  const ownsMaw = raidItems.some(id => baseItemId(id) === 'borrowed_jaw')
+  const spoilsOwned = (ownsEye ? 1 : 0) + (ownsMaw ? 1 : 0)
+  const spoilTier = Math.max(
+    ownsEye ? finnItemLevel(Number(profile?.anglers_patience_xp ?? 0)) : 0,
+    ownsMaw ? finnItemLevel(Number(profile?.borrowed_jaw_xp ?? 0)) : 0,
+  )
+  const equippedItemIds = ((profile?.equipped_raid_items as string[] | null) ?? []).map(baseItemId)
+  const finaleItemIds = new Set(RAID_ITEMS.filter(i => i.finaleSlotOnly).map(i => i.id))
+  const mountFilled = (spoilFree === 'nav' || spoilPaid === 'nav') && equippedItemIds.some(id => finaleItemIds.has(id))
+  const hullSlotsFilled = equippedItemIds.filter(id => !finaleItemIds.has(id)).length
+  const hullSlotCap = raidItemSlotsForTier(shipTier) + (hasArmoryExpansion ? 1 : 0)
+  const mountsFilled = Math.min(hullSlotsFilled, hullSlotCap) + (mountFilled ? 1 : 0)
+  const handHullsOwned = SUNKEN_HAND_HULLS.filter(id => shipSkinsOwned.includes(id)).length
   const ownsAllBoatSkins = SHIP_SKINS.every(s => ((profile?.ship_skins as string[] | null) ?? []).includes(s.id))
 
   const ancientsCaught = ((profile?.ancient_catches as number[] | null) ?? []).length
@@ -334,6 +359,35 @@ export default async function BadgesPage() {
         badgeGoal('iron_ruse', 'Iron Ruse', 'Beat the Admiral Ruse raid taking no damage', has('iron_ruse') ? 1 : 0, 1, '/raids', { binary: true }),
         badgeGoal('tight_quarters', 'Tight Quarters', 'Beat the Quartermaster raid using no crew abilities', has('tight_quarters') ? 1 : 0, 1, '/raids', { binary: true }),
         badgeGoal('dead_reckoning', 'Dead Reckoning', 'Clear the Cartographer raid missing no critical hits', has('dead_reckoning') ? 1 : 0, 1, '/raids', { binary: true }),
+      ],
+    },
+    {
+      // SPOILER RULE: nothing in this group may name the captain behind the
+      // Hand or suggest the Hand is a person. The Captain's Log is read long
+      // before the raid is.
+      title: 'The Sunken Hand',
+      flavor: 'The last name on the board, and the wreck it left behind.',
+      accent: '#e0455a',
+      goals: [
+        badgeGoal('one_last_ride', 'One Last Ride', 'Clear The Sunken Hand', raidIds.has('the_sunken_hand') ? 1 : 0, 1, '/expeditions', { binary: true }),
+        badgeGoal('cut_off_at_the_wrist', 'Cut Off at the Wrist', 'Clear The Sunken Hand on Challenge', raidIds.has('the_sunken_hand_challenge') ? 1 : 0, 1, '/expeditions', { binary: true }),
+        badgeGoal('the_long_quiet', 'The Long Quiet', 'See the Sunken Hand through to its end', clearedNodes.includes('the_long_quiet') ? 1 : 0, 1, '/expeditions', { binary: true }),
+        badgeGoal('ancient_tackle', 'Ancient Tackle', 'Earn your first Ancient-rarity item', spoilsOwned >= 1 ? 1 : 0, 1, '/expeditions', { binary: true }),
+        badgeGoal('salvors_claim', "Salvor's Claim", 'Open a berth from the wreck', berthsOpen, 1, '/expeditions'),
+        badgeGoal('both_hands', 'Both Hands', 'Open both berths from the wreck', berthsOpen, 2, '/expeditions'),
+      ],
+    },
+    {
+      title: 'The Primeval Spoils',
+      flavor: 'What the wreck gave up, and the long road to waking it.',
+      accent: '#e0455a',
+      goals: [
+        badgeGoal('something_old', 'Something Old', 'Carry your first Primeval spoil', spoilsOwned, 1, '/expeditions'),
+        badgeGoal('both_in_hand', 'Both in Hand', 'Own both Primeval spoils', spoilsOwned, 2, '/expeditions'),
+        badgeGoal('waking_it', 'Waking It', 'Take a Primeval spoil to Tier III', spoilTier, 3, '/expeditions'),
+        badgeGoal('fully_attuned', 'Fully Attuned', 'Take a Primeval spoil to Tier VI', spoilTier, FINN_ITEM_MAX_LEVEL, '/expeditions'),
+        badgeGoal('the_sixth_mount', 'The Sixth Mount', 'Sail with all six item slots filled', mountsFilled, 6, '/expeditions'),
+        badgeGoal('colours_of_the_hand', 'Colours of the Hand', 'Own all three hulls off The Sunken Hand', handHullsOwned, SUNKEN_HAND_HULLS.length, '/expeditions'),
       ],
     },
     {
