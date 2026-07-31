@@ -304,7 +304,12 @@ export interface BroadsideEnemy {
   /** The Blockade (Ch4, Raid 7). "Rolling Plate." The gold CRIT
    *  band drifts WITHIN the moving target zone (a target inside the target):
    *  the crew rolls its armor plating, so the seam never sits still. Value is
-   *  the seam's drift speed (0.5 gentle, 1.2 fast). The seam roams the WHOLE
+   *  the seam's drift speed (0.25 gentle, 0.9 fast). The whole ladder was
+   *  retuned DOWN in 2026-07: it opened at 0.4 and topped out at 1.0, so the
+   *  first ship you met was already near the old 'gentle' mark and the
+   *  mechanic never had a rung that taught it. Eased hardest at the bottom
+   *  (-40%) and least at the top (-12%), so the boss is still a real test.
+   *  The seam roams the WHOLE
    *  zone including the graze fringe. Hitting the seam always crits, but
    *  chasing it into the fringe is a wager (a near miss out there only
    *  grazes). Hit/graze still judge off the zone center. Undefined = the seam
@@ -1661,7 +1666,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       id: 'picket', name: 'The Scute', hpBase: 275, minDmg: 20, maxDmg: 34,
       shipSpeed: 9, actionMs: 3400,
       magazineSize: 4, shieldPct: 0.10,
-      critDrift: 0.4, critDriftName: 'Rolling Plate',
+      critDrift: 0.24, critDriftName: 'Rolling Plate',
       pattern: ['fire', 'reload', 'dodge', 'fire', 'reload', 'fire', 'dodge', 'reload'],
       critChance: 0.12,
       zoneSpeedMult: 2.2,
@@ -1676,7 +1681,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       id: 'bosun', name: 'The Bank', hpBase: 305, minDmg: 21, maxDmg: 35,
       shipSpeed: 6, actionMs: 3600,
       magazineSize: 4, shieldPct: 0.11,
-      critDrift: 0.5, critDriftName: 'Rolling Plate',
+      critDrift: 0.32, critDriftName: 'Rolling Plate',
       special: { name: 'Dig In', status: 'fortify', magnitude: 0.25, turns: 2, target: 'self', line: 'The Bank drops his weight into the silt and settles, and the shot just thumps into mud.' },
       pattern: ['reload', 'fire', 'special', 'reload', 'volley', 'reload', 'fire', 'dodge'],
       critChance: 0.11,
@@ -1693,7 +1698,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       shipSpeed: 6, actionMs: 3800,
       magazineSize: 4, shieldPct: 0.13,
       special: { name: 'Deadwood', status: 'slowed', magnitude: 3, turns: 2, target: 'player', line: 'Root and deadwood come up under the hull and wrap the rudder, and the wheel goes dead in your hands.' },
-      critDrift: 0.55, critDriftName: 'Rolling Plate',
+      critDrift: 0.38, critDriftName: 'Rolling Plate',
       pattern: ['reload', 'special', 'fire', 'reload', 'volley', 'dodge', 'reload', 'fire'],
       critChance: 0.10,
       zoneSpeedMult: 2.4,
@@ -1709,7 +1714,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       shipSpeed: 7, actionMs: 3600,
       magazineSize: 4, shieldPct: 0.15,
       special: { name: 'Chain-Shot', status: 'weaken', magnitude: 0.20, turns: 2, target: 'player', line: 'Chain-shot screams through your powder line and your guns cough where they roared.' },
-      critDrift: 0.7, critDriftName: 'Rolling Plate',
+      critDrift: 0.5, critDriftName: 'Rolling Plate',
       pattern: ['reload', 'fire', 'special', 'reload', 'fire', 'volley', 'dodge', 'reload'],
       critChance: 0.12,
       zoneSpeedMult: 2.5,
@@ -1724,7 +1729,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       shipSpeed: 5, actionMs: 4200,
       magazineSize: 4, shieldPct: 0.15,
       special: { name: 'Hull-Cracker', status: 'feeble', magnitude: 0.22, turns: 2, target: 'player', line: 'A cracker round splits your seams wide open, and every blow after it will find the gap.' },
-      critDrift: 0.7, critDriftName: 'Rolling Plate',
+      critDrift: 0.5, critDriftName: 'Rolling Plate',
       pattern: ['reload', 'reload', 'special', 'volley', 'reload', 'fire', 'volley', 'dodge'],
       critChance: 0.10,
       zoneSpeedMult: 2.6,
@@ -1739,7 +1744,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       id: 'purser', name: 'Old Scar', hpBase: 380, minDmg: 25, maxDmg: 39,
       shipSpeed: 7, actionMs: 3800,
       magazineSize: 4, shieldPct: 0.17,
-      critDrift: 0.8, critDriftName: 'Rolling Plate',
+      critDrift: 0.62, critDriftName: 'Rolling Plate',
       special: { name: 'Old Wounds', status: 'regen', magnitude: 16, turns: 3, target: 'self', line: 'Old Scar takes the hit the way he has taken every other one, and the hole closes while you watch.' },
       pattern: ['special', 'reload', 'fire', 'reload', 'fire', 'volley', 'reload', 'dodge'],
       critChance: 0.12,
@@ -1756,7 +1761,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       shipSpeed: 8, actionMs: 3600,
       magazineSize: 4, shieldPct: 0.17,
       special: { name: 'Gag Order', status: 'silence', magnitude: 1, turns: 2, target: 'player', line: 'The gag order comes down, and your crew go quiet mid-shout.' },
-      critDrift: 0.85, critDriftName: 'Rolling Plate',
+      critDrift: 0.7, critDriftName: 'Rolling Plate',
       pattern: ['reload', 'special', 'fire', 'reload', 'fire', 'volley', 'reload', 'dodge'],
       critChance: 0.14,
       zoneSpeedMult: 2.7,
@@ -1784,7 +1789,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       shipSpeed: 8, actionMs: 4000,
       magazineSize: 4, shieldPct: 0.20,
       special: { name: 'Still Water', status: 'enrage', magnitude: 0.25, turns: 2, target: 'self', line: 'Sal stops moving. The chop goes flat around him, and every gun on the line goes quiet.' },
-      critDrift: 1.0, critDriftName: 'Rolling Plate',
+      critDrift: 0.88, critDriftName: 'Rolling Plate',
       pattern: ['reload', 'special', 'fire', 'reload', 'volley', 'dodge', 'fire', 'reload', 'fire'],
       critChance: 0.14,
       phases: [
