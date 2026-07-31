@@ -8,7 +8,7 @@ import { CrewPortrait } from '@/components/CrewShowcase'
 import { RarestCatchesByZone, FeaturedCrew, RaidArsenal, GoldenMounts, type GoldenMount } from '@/components/ProfileShowcase'
 import type { CrewMember } from '@/app/(app)/crew/actions'
 import type { BorderStyle, ArtEffect } from '@/lib/types'
-import { updateUsername, updateShowcaseCrew, updateCharacterColor, updateAvatarColors, purchaseCharacterColor, purchaseAvatarSpecial, updateProfileBg } from '@/app/(app)/u/actions'
+import { updateUsername, updateCharacterColor, updateAvatarColors, purchaseCharacterColor, purchaseAvatarSpecial, updateProfileBg } from '@/app/(app)/u/actions'
 import { PROFILE_BACKGROUNDS, getProfileBackground } from '@/lib/profileBackgrounds'
 import AncientBgEffect from '@/components/AncientBgEffect'
 import { StatTile, CoinAmount } from '@/components/ProfileStats'
@@ -35,7 +35,6 @@ interface Props {
   email: string
   username: string
   usernameChanged: boolean
-  showcaseCrewIds: number[]
   crewRoster: CrewMember[]
   isPremium: boolean
   level: number
@@ -363,7 +362,6 @@ export default function ProfileClient({
   email,
   username: initialUsername,
   usernameChanged: initialChanged,
-  showcaseCrewIds: initialShowcase,
   crewRoster,
   isPremium,
   level,
@@ -405,8 +403,6 @@ export default function ProfileClient({
   const [usernameInput, setUsernameInput] = useState('')
   const [usernameError, setUsernameError] = useState('')
 
-  const [selectedShowcase, setSelectedShowcase] = useState<number[]>(initialShowcase)
-  const [modalOpen, setModalOpen] = useState(false)
   const [characterColor, setCharacterColor] = useState(initialCharacterColor)
   const [colorSaving, setColorSaving] = useState(false)
   const [skinDetail, setSkinDetail] = useState<string | null>(null) // tapped skin id → detail modal
@@ -529,14 +525,15 @@ export default function ProfileClient({
   // track (the public-facing roster, sorted captain → crew). Means the
   // section is informative on day one instead of just begging the player
   // to configure it.
-  const featuredCrew = selectedShowcase
-    .map(id => crewRoster.find(c => c.id === id))
-    .filter((c): c is CrewMember => !!c)
-  const showcaseCrew = featuredCrew.length > 0
-    ? featuredCrew
-    : crewRoster
-        .filter(c => c.voyageSlot != null)
-        .sort((a, b) => (a.voyageSlot as number) - (b.voyageSlot as number))
+  // THE RAID CREW, not a curated pick. This section used to be a manual
+  // showcase (showcase_crew_ids) that fell back to the voyage track — so it
+  // showed whoever you last chose to brag about, or whoever happened to be out
+  // earning doubloons, neither of which is the crew you actually fight with.
+  // It now mirrors the raid party straight off raid_slot, in seat order, so it
+  // is always current and there is nothing to configure.
+  const showcaseCrew = crewRoster
+    .filter(c => c.raidSlot != null)
+    .sort((a, b) => (a.raidSlot as number) - (b.raidSlot as number))
 
   function handleSaveUsername(e: React.FormEvent) {
     e.preventDefault()
@@ -551,21 +548,6 @@ export default function ProfileClient({
         setShowUsernameForm(false)
         setUsernameInput('')
       }
-    })
-  }
-
-  function handleSaveShowcase() {
-    startTransition(async () => {
-      await updateShowcaseCrew(selectedShowcase)
-      setModalOpen(false)
-    })
-  }
-
-  function toggleCard(id: number) {
-    setSelectedShowcase(prev => {
-      if (prev.includes(id)) return prev.filter(x => x !== id)
-      if (prev.length >= 5) return prev
-      return [...prev, id]
     })
   }
 
@@ -1170,11 +1152,11 @@ export default function ProfileClient({
           </div>
           </div>
 
-          {/* Showcase — falls back to the live ship roster when the
-              player hasn't featured anyone yet (see showcaseCrew above). */}
+          {/* The raid party, in seat order. No editor: this mirrors whoever is
+              assigned to raids, so it is changed in the Crew Hall, not here. */}
           <div>
-            <SectionLabel color="#c084fc">{featuredCrew.length > 0 ? 'Featured Crew' : 'Active Crew'}</SectionLabel>
-            <FeaturedCrew crew={showcaseCrew} onEdit={() => setModalOpen(true)} emptyHint="Assign crew to your ship, or feature your favorites here" />
+            <SectionLabel color="#c084fc">Raid Crew</SectionLabel>
+            <FeaturedCrew crew={showcaseCrew} emptyHint="No raid crew assigned yet. Set your party in the Crew Hall." />
           </div>
 
           {/* Arsenal — collected raid + forge items */}
@@ -1217,72 +1199,6 @@ export default function ProfileClient({
       </div>
 
       {/* ── Showcase picker modal ── */}
-      <PopupShell open={modalOpen} onClose={() => setModalOpen(false)} zIndex={80} backdropColor="rgba(2,5,10,0.85)">
-        <div
-          onClick={e => e.stopPropagation()}
-          style={{
-            margin: 'auto', width: '100%', maxWidth: 480,
-            maxHeight: '100%', display: 'flex', flexDirection: 'column',
-            background: 'linear-gradient(180deg, #0c1626 0%, #06101c 100%)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: CARD_RADIUS,
-            boxShadow: '0 18px 60px rgba(0,0,0,0.55)',
-          }}
-        >
-          <div style={{ padding: '1rem 1.1rem 0.75rem', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, flexShrink: 0 }}>
-            <div>
-              <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.5rem', color: 'rgba(96,165,250,0.75)', marginBottom: 2 }}>Profile showcase</p>
-              <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0ede8', lineHeight: 1.1 }}>Feature Crew</p>
-              <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#aaa49c', marginTop: 3 }}>
-                {selectedShowcase.length} / 5 selected
-                {selectedShowcase.length > 0 && (
-                  <button onClick={() => setSelectedShowcase([])} style={{ marginLeft: 8, color: '#bbb5ad', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.62rem', fontFamily: 'inherit', textDecoration: 'underline' }}>
-                    Clear all
-                  </button>
-                )}
-              </p>
-            </div>
-            <ModalCloseButton onClick={() => setModalOpen(false)} />
-          </div>
-
-          <div style={{ overflowY: 'auto', minHeight: 0, padding: '0.5rem 1.1rem 1rem', flex: 1 }}>
-            {crewRoster.length === 0 ? (
-              <p className="font-karla font-300 text-center" style={{ fontSize: '0.72rem', color: '#aaa49c', padding: '2rem 0' }}>
-                Recruit some crew first!
-              </p>
-            ) : (
-              <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 12 }}>
-                {crewRoster.map(crew => {
-                  const idx = selectedShowcase.indexOf(crew.id)
-                  const isSelected = idx !== -1
-                  const disabled = !isSelected && selectedShowcase.length >= 5
-                  return (
-                    <div key={crew.id} style={{ position: 'relative', opacity: disabled ? 0.3 : 1 }}>
-                      <div
-                        style={isSelected ? { outline: '2px solid #f0c040', outlineOffset: 4, borderRadius: 12, cursor: 'pointer' } : { cursor: disabled ? 'default' : 'pointer' }}
-                        onClick={() => !disabled && toggleCard(crew.id)}
-                      >
-                        <CrewPortrait crew={crew} w={92} />
-                      </div>
-                      {isSelected && (
-                        <div style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: '50%', background: '#f0c040', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', boxShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
-                          <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: '#000' }}>{idx + 1}</span>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-
-          <div style={{ padding: '0.9rem 1.1rem', borderTop: '1px solid rgba(255,255,255,0.09)', flexShrink: 0 }}>
-            <button onClick={handleSaveShowcase} disabled={pending} className="font-karla font-700 uppercase tracking-[0.08em] w-full" style={{ padding: '0.75rem', borderRadius: 12, fontSize: '0.74rem', background: 'rgba(96,165,250,0.16)', border: '1px solid rgba(96,165,250,0.55)', color: '#cfe2ff', cursor: 'pointer', opacity: pending ? 0.5 : 1 }}>
-              {pending ? 'Saving…' : 'Save Showcase'}
-            </button>
-          </div>
-        </div>
-      </PopupShell>
 
       {/* ── Profile Look picker ── */}
       <PopupShell open={avatarPickerOpen} onClose={() => setAvatarPickerOpen(false)} zIndex={90} backdropColor="rgba(2,5,10,0.82)">

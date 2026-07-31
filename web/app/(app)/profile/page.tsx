@@ -97,7 +97,6 @@ export default async function ProfilePage() {
           email={user.email ?? ''}
           username={profile?.username ?? ''}
           usernameChanged={profile?.username_changed ?? false}
-          showcaseCrewIds={(profile?.showcase_crew_ids as number[] | null) ?? []}
           crewRoster={crewRoster}
           isPremium={isPremium}
           level={level}

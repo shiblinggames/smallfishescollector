@@ -548,10 +548,10 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
           </div>
           </div>
 
-          {/* Crew — flagship + gallery showcase */}
+          {/* The player's raid party, in seat order. */}
           {showcaseCrew.length > 0 && (
             <div>
-              <SectionLabel color="#c084fc">Featured Crew</SectionLabel>
+              <SectionLabel color="#c084fc">Raid Crew</SectionLabel>
               <FeaturedCrew crew={showcaseCrew} />
             </div>
           )}

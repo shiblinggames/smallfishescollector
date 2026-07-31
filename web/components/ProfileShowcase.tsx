@@ -347,7 +347,9 @@ export function RaidArsenal({ items }: { items: string[] }) {
   )
 }
 
-/** Featured crew — flagship poster up top, the rest as a gallery grid. */
+/** The player's RAID PARTY, in seat order, as a rail of posters. Both profiles
+ *  feed this straight off user_crew.raid_slot — there is no curated pick any
+ *  more, so it is always the crew they actually fight with. */
 export function FeaturedCrew({ crew, onEdit, emptyHint }: { crew: ShowcaseCrew[]; onEdit?: () => void; emptyHint?: string }) {
   if (!crew || crew.length === 0) {
     return (

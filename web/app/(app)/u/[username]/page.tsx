@@ -33,8 +33,6 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
 
   if (!profile) notFound()
 
-  const showcaseCrewIds: number[] = (profile.showcase_crew_ids as number[] | null) ?? []
-
   const [
     showcaseData,
     { count: uniqueSpecies },
@@ -45,30 +43,20 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     { data: careerAgg },
     { data: goldenRows },
   ] = await Promise.all([
-    // Featured crew first; if the player hasn't picked anyone, fall
-    // back to whoever's currently on the ship so the section is
-    // informative by default instead of just hiding.
+    // THE RAID CREW, in seat order. This used to be a curated pick
+    // (showcase_crew_ids) with a "best three by XP" fallback, which meant a
+    // visitor saw whoever the player last chose to brag about rather than the
+    // party they actually fight with. raid_slot is the live answer and needs
+    // no configuring, so the section is never stale and never empty-by-neglect.
     // Public profile shows the LIVE roster only — fallen crew are
     // memorialized privately in the player's own Crew Hall, not on
     // their visit-by-anyone profile.
-    showcaseCrewIds.length > 0
-      ? admin.from('user_crew')
-          .select('id, rarity, power, dodge, fortune, effects, xp, nickname, cards(name, filename, slug)')
-          .eq('user_id', profile.id)
-          .is('died_at', null)
-          .in('id', showcaseCrewIds)
-      : admin.from('user_crew')
-          .select('id, rarity, power, dodge, fortune, effects, xp, nickname, cards(name, filename, slug)')
-          .eq('user_id', profile.id)
-          .is('died_at', null)
-          // Public showcase fallback when the player hasn't picked one:
-          // top 3 live crew sorted by XP (≈ level) desc, then rarity
-          // desc as tiebreaker. Reads as "their best three" — a far
-          // better bragging surface than whoever happens to be on the
-          // voyage track right now.
-          .order('xp', { ascending: false })
-          .order('rarity', { ascending: false })
-          .limit(3),
+    admin.from('user_crew')
+      .select('id, rarity, power, dodge, fortune, effects, xp, nickname, raid_slot, cards(name, filename, slug)')
+      .eq('user_id', profile.id)
+      .is('died_at', null)
+      .not('raid_slot', 'is', null)
+      .order('raid_slot', { ascending: true }),
 
     admin.from('fish_collection').select('fish_id', { count: 'exact', head: true }).eq('user_id', profile.id),
 
@@ -107,13 +95,8 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     .map(r => r.fish_species)
     .filter(Boolean) as { id: number; name: string; bite_rarity: number; habitat?: string }[]
 
-  // Build the crew showcase. Player's explicit pick preserves their
-  // saved order; the fallback (assigned crew) is already ordered by
-  // voyage_slot ASC from the query.
-  const rawCrew = (showcaseData.data ?? []) as any[]
-  const orderedCrew = showcaseCrewIds.length > 0
-    ? showcaseCrewIds.map(id => rawCrew.find(r => r.id === id)).filter(Boolean)
-    : rawCrew
+  // Already ordered by raid_slot ASC from the query — seat order is the order.
+  const orderedCrew = (showcaseData.data ?? []) as any[]
   const viewedEquippedSkins = (profile.equipped_crew_skins as EquippedCrewSkins | null) ?? {}
   const showcaseCrew: ShowcaseCrew[] = orderedCrew.map((r: any) => ({
     id: r.id,
