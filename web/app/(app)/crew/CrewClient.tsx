@@ -1033,8 +1033,12 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
   const searchParams = useSearchParams()
   const initialTab    = (() => {
     const t = searchParams?.get('tab')
-    // A saved ?tab=blood link lands on Recruit now, which is where the
-    // blood-charged reroll lives.
+    // LEGACY: ?tab=blood was the Blood Market, folded into Recruit (the
+    // blood-charged reroll) and Skins (the gamble). This comment used to
+    // claim it landed on Recruit, but 'blood' was not in the allow-set, so
+    // it silently fell through to Roster. Map it for real - old links and
+    // bookmarks still exist.
+    if (t === 'blood') return 'recruits'
     return t === 'assign' || t === 'recruits' || t === 'graveyard' || t === 'roster' || t === 'wardrobe' ? t : 'roster'
   })() as 'assign' | 'roster' | 'recruits' | 'graveyard' | 'wardrobe'
   const [activeTab, setActiveTab] = useState<'assign' | 'roster' | 'recruits' | 'graveyard' | 'wardrobe'>(initialTab)

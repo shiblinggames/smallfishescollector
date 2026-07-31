@@ -5929,9 +5929,10 @@ function CurrencyInfoModal({ kind, don, onClose }: { kind: 'fathoms' | 'blood'; 
             </div>
           ))}
         </div>
-        {/* Both uses live in the Crew Hall's Blood Market — a one-tap jump there. */}
+        {/* Blood Market is gone: the reroll lives in Recruit, the gamble in
+            Skins. Point at Recruit, which is the primary use. */}
         {blood && (
-          <Link href="/crew?tab=blood" onClick={onClose} className="font-cinzel font-800 uppercase tracking-[0.05em] tap"
+          <Link href="/crew?tab=recruits" onClick={onClose} className="font-cinzel font-800 uppercase tracking-[0.05em] tap"
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12, padding: '0.85rem', borderRadius: 12, fontSize: '0.9rem', color: '#ffe6e9', textDecoration: 'none', background: `linear-gradient(180deg, ${accent}3a, ${accent}16)`, border: `1px solid ${accent}88`, boxShadow: `0 0 20px ${accent}22` }}>
             Open the Blood Market
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>

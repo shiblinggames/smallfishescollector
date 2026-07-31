@@ -431,10 +431,10 @@ export default async function BadgesPage() {
         badgeGoal('not_a_drop', 'Not a Drop', 'Cash out from depth 20 under Iron Rations II', has('not_a_drop') ? 1 : 0, 1, '/raids/gauntlet', { binary: true }),
         badgeGoal('paid_in_full', 'Paid in Full', 'Cash out from depth 35 with 40+ Pressure', has('paid_in_full') ? 1 : 0, 1, '/raids/gauntlet', { binary: true }),
         badgeGoal('for_glory_alone', 'For Glory Alone', 'Cash out from depth 15 with every term signed', has('for_glory_alone') ? 1 : 0, 1, '/raids/gauntlet', { binary: true }),
-        badgeGoal('blood_charged', 'Blood-Charged', 'Boost a recruit reroll with Blood Gems', has('blood_charged') ? 1 : 0, 1, '/crew?tab=blood', { binary: true }),
+        badgeGoal('blood_charged', 'Blood-Charged', 'Boost a recruit reroll with Blood Gems', has('blood_charged') ? 1 : 0, 1, '/crew?tab=recruits', { binary: true }),
         badgeGoal('blood_rich', 'Blood-Rich', 'Earn 500 Blood Gems all-time', bloodGemsEarned, 500, '/raids/gauntlet'),
         badgeGoal('bloodhoard', 'Bloodhoard', 'Earn 2,000 Blood Gems all-time', bloodGemsEarned, 2000, '/raids/gauntlet'),
-        badgeGoal('crimson_fortune', 'Crimson Fortune', 'Win a crew skin from the blood gamble', has('crimson_fortune') ? 1 : 0, 1, '/crew?tab=blood', { binary: true }),
+        badgeGoal('crimson_fortune', 'Crimson Fortune', 'Win a crew skin from the blood gamble', has('crimson_fortune') ? 1 : 0, 1, '/crew?tab=wardrobe', { binary: true }),
       ],
     },
     {
