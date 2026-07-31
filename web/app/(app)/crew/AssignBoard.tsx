@@ -85,9 +85,19 @@ export default function AssignBoard({
   // reads, not the outline. Each track now gets its own opaque ramp pulled
   // toward its accent: warm near-black for the raid, cool for the voyage.
   // Fully opaque hex, no alpha - nothing behind these needs to show through.
+  // `art` is the panel backdrop; `wash` / `washDeep` are the tint over it.
+  // Lighter at the top so the header and totals sit on visible art, heavier
+  // below where the seat tiles are dense. The tiles keep their own opaque
+  // colours, so the art reads around them rather than under the text.
   const RAMP = {
-    raid:   { panel: '#180f13', stat: '#241a1f', locked: '#1e1418', open: '#1b1115', seat: '#21161b' },
-    voyage: { panel: '#0c151f', stat: '#16222e', locked: '#131d27', open: '#0f1822', seat: '#142029' },
+    raid: {
+      panel: '#180f13', stat: '#241a1f', locked: '#1e1418', open: '#1b1115', seat: '#21161b',
+      art: '/exp-campaign.jpg', wash: 'rgba(24,15,19,0.56)', washDeep: 'rgba(24,15,19,0.90)',
+    },
+    voyage: {
+      panel: '#0c151f', stat: '#16222e', locked: '#131d27', open: '#0f1822', seat: '#142029',
+      art: '/voyages-modal-bg.jpg', wash: 'rgba(12,21,31,0.56)', washDeep: 'rgba(12,21,31,0.90)',
+    },
   }
 
   const tracks = [
@@ -130,9 +140,13 @@ export default function AssignBoard({
           <div key={t.key} style={{
             borderRadius: 16,
             border: `1px solid ${t.accent}55`,
-            // Accent carries further down now (it died at 62% before, leaving
-            // the bottom two thirds pure base).
-            background: `linear-gradient(180deg, ${t.accent}20 0%, ${t.accent}0a 58%, transparent 100%), ${t.ramp.panel}`,
+            // Three layers, front to back: the accent tint that gives each
+            // track its identity, a dark wash so the content reads, then the
+            // art. The flat ramp colour stays as the base under the jpg for
+            // the moment before it loads.
+            background: `linear-gradient(180deg, ${t.accent}20 0%, ${t.accent}0a 58%, transparent 100%), `
+              + `linear-gradient(180deg, ${t.ramp.wash} 0%, ${t.ramp.washDeep} 58%, ${t.ramp.washDeep} 100%), `
+              + `url(${t.ramp.art}) center top / cover no-repeat, ${t.ramp.panel}`,
             overflow: 'hidden',
           }}>
             {/* Header: who this party is, and what it comes to. */}
