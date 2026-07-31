@@ -1295,8 +1295,6 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             artSrc={artSrc}
             onPickSeat={(track, slot) => setAssignSeat({ track, slot })}
             onTapCrew={m => setDetail({ kind: 'roster', item: m })}
-            onRemoveCrew={m => run(() => benchCrew(m.id), m.id)}
-            pending={pending}
             raidAccent={ASSIGN_RAID}
             voyageAccent={ASSIGN_VOYAGE}
           />
@@ -2660,7 +2658,33 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                       </div>
                     )
                   }
+                  // Which party they're in, if any. Swap and Remove are the two
+                  // things the Assign tab could not do at all: tapping a seat
+                  // landed here and dead-ended on stats.
+                  const track: 'raid' | 'voyage' | null =
+                    m.raidSlot !== null ? 'raid' : m.voyageSlot !== null ? 'voyage' : null
+                  const seat = track === 'raid' ? m.raidSlot : m.voyageSlot
+                  const partyName = track === 'raid' ? 'Raid Party' : 'Voyage Party'
                   return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {track !== null && seat !== null && !isLockedM && (
+                      <div className="flex items-center" style={{ gap: 8 }}>
+                        <button type="button" disabled={pending}
+                          onClick={() => { close(); setAssignSeat({ track, slot: seat }) }}
+                          className="font-karla font-700 uppercase"
+                          style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '0.62rem 0.7rem', borderRadius: 9, fontSize: '0.72rem', letterSpacing: '0.05em', background: `${accent}1f`, border: `1px solid ${accent}66`, color: accent, cursor: pending ? 'not-allowed' : 'pointer', opacity: pending ? 0.6 : 1 }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M4 8h13l-3.5-3.5M20 16H7l3.5 3.5" /></svg>
+                          Swap Out
+                        </button>
+                        <button type="button" disabled={pending}
+                          onClick={() => run(() => benchCrew(m.id), m.id, close)}
+                          title={`Take ${m.name} out of the ${partyName.toLowerCase()}`}
+                          className="font-karla font-700 uppercase"
+                          style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '0.62rem 0.7rem', borderRadius: 9, fontSize: '0.72rem', letterSpacing: '0.05em', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(240,236,228,0.85)', cursor: pending ? 'not-allowed' : 'pointer', opacity: pending ? 0.6 : 1 }}>
+                          {busyId === m.id ? '…' : `Leave the ${partyName}`}
+                        </button>
+                      </div>
+                    )}
                     <div className="flex items-center" style={{ gap: 8 }}>
                       {canPromote && (
                         <button type="button" disabled={pending} onClick={() => run(() => promoteToCaptain(m.id), m.id, close)}
@@ -2682,6 +2706,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                           <XIcon /> Dismiss
                         </button>
                       )}
+                    </div>
                     </div>
                   )
                 })()}</div>
