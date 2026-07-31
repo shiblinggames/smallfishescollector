@@ -161,14 +161,38 @@ export function BoardReveal({ card, phase, onTap, children, bloodied }: {
               // Blood-charged reroll = a bloodied dossier (crimson wrap + blood
               // seal) so the whole board reads as blood-summoned, not gold.
               style={{
-                width: '100%', height: '100%', borderRadius: 7,
-                background: bloodied ? 'linear-gradient(157deg, #3a0f14 0%, #180608 100%)' : 'linear-gradient(157deg, #271d12 0%, #150e08 100%)',
+                position: 'relative',
+                width: '100%', height: '100%', borderRadius: 7, overflow: 'hidden',
+                // PAINTED DOSSIER. This was a flat CSS gradient — the one surface
+                // the player stares at for the whole anticipation beat, and the
+                // least designed thing in the flow. The art is the WRAP only: no
+                // seal is painted on it, because the seal below is DOM and has to
+                // keep carrying the rarity tint and the charging rattle.
+                backgroundColor: '#150e08',
+                backgroundImage: 'url(/crew_dossier.png)',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
                 border: `1px solid ${bloodied ? '#7a2129' : '#46341f'}`,
                 boxShadow: bloodied ? 'inset 0 0 0 1px rgba(209,57,75,0.22), 0 6px 16px rgba(0,0,0,0.55)' : 'inset 0 0 0 1px rgba(176,141,79,0.18), 0 6px 16px rgba(0,0,0,0.55)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
             >
+              {/* Bloodied reroll tints the same leather rather than shipping a
+                  second 168KB plate. A flat overlay div, not a CSS filter: the
+                  cover is mid-rattle when this is visible, and a filter on a
+                  transforming element re-rasterises every frame. */}
+              {bloodied && (
+                <span aria-hidden style={{
+                  position: 'absolute', inset: 0, pointerEvents: 'none',
+                  background: 'linear-gradient(157deg, rgba(150,24,38,0.62) 0%, rgba(60,6,14,0.72) 100%)',
+                  mixBlendMode: 'multiply',
+                }} />
+              )}
               <div className={charging ? 'crew-seal-charging' : ''} style={{
+                // Above the bloodied tint. An absolutely-positioned sibling paints
+                // over non-positioned ones whatever the DOM order, so without this
+                // the overlay sat on the seal and muddied its rarity glow.
+                position: 'relative', zIndex: 1,
                 width: 54, height: 54, borderRadius: '50%',
                 background: bloodied ? 'radial-gradient(circle at 38% 32%, #d1394b 0%, #6b0f1a 70%)' : 'radial-gradient(circle at 38% 32%, #9a3b34 0%, #5e211c 70%)',
                 border: '2px solid rgba(0,0,0,0.35)',
