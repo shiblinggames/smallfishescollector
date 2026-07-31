@@ -246,7 +246,7 @@ function StatIcon({ k, color }: { k: 'power' | 'dodge' | 'fortune'; color: strin
 // manifest line: arched portrait in a carved frame, name + class + quirks
 // laid out beside it on aged wood.
 function CrewPanel({
-  name, filename, rarity, base, effects, xp = 0, slug = '', assignment, isCaptain = false, locked = false, lockKind = 'voyage', lockLabel = 'This crew is currently at sea on a voyage.', hasLevelUp = false, dimmed, hint, frameAccent = '#5c5c63',
+  name, filename, rarity, base, effects, xp = 0, slug = '', assignment, isCaptain = false, locked = false, lockKind = 'voyage', lockLabel = 'This crew is currently at sea on a voyage.', hasLevelUp = false, aboard = false, dimmed, hint, frameAccent = '#5c5c63',
   bg = RECRUIT_PANEL_BG, border = RECRUIT_PANEL_BORDER, onClick, children,
 }: {
   name: string
@@ -276,6 +276,10 @@ function CrewPanel({
   lockKind?: 'voyage' | 'trawl'
   /** Tooltip on the lock badge — distinguishes voyage vs trawl. */
   lockLabel?: string
+  /** Board candidate already signed on. Reads as a pip on the portrait, the
+   *  same corner language the roster uses for at-sea / trawling, rather than
+   *  a footer pill - board and roster cards have to read identically. */
+  aboard?: boolean
   /** True when the crew has leveled up since the player last opened it.
    *  Drives a whole-card gold breathing halo + brightened Lv chip + small
    *  NEW dot so the player knows to tap in and see what stat/ability tier
@@ -430,6 +434,23 @@ function CrewPanel({
             }}
           >
             <NetIconSvg size={14} color="#0a0a0a" />
+          </div>
+        )}
+        {aboard && (
+          <div
+            title="Already signed on to your crew"
+            aria-label="Aboard"
+            style={{
+              position: 'absolute', top: -6, right: -6,
+              width: 26, height: 26, borderRadius: '50%',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'radial-gradient(circle at 35% 30%, #4cc483 0%, #2e9a5cd0 70%)',
+              border: '1.5px solid #4cc483',
+              boxShadow: '0 2px 7px rgba(0,0,0,0.6), 0 0 12px #4cc48366, inset 0 1px 0 rgba(255,255,255,0.3)',
+              color: '#06341a', pointerEvents: 'none', zIndex: 2,
+            }}
+          >
+            <CheckIcon />
           </div>
         )}
         {locked && (
@@ -1111,11 +1132,11 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
     })
   }
 
-  // Recruit / Dismiss action. `round` = compact icon button for the card stats
-  // row; otherwise a full labelled button for the detail modal.
-  function renderAction(kind: 'board' | 'roster', item: BoardCandidate | CrewMember, opts?: { onDone?: () => void; round?: boolean }) {
+  // Recruit / Dismiss action for the DETAIL MODAL. Neither card type carries a
+  // footer action any more (assignment moved to the Assign tab, and recruiting
+  // is the swipe), so the old compact `round` variant has no caller left.
+  function renderAction(kind: 'board' | 'roster', item: BoardCandidate | CrewMember, opts?: { onDone?: () => void }) {
     const onDone = opts?.onDone
-    const round = opts?.round
 
     if (kind === 'board') {
       const c = item as BoardCandidate
@@ -1123,27 +1144,6 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
         e.stopPropagation()
         vibrate(14)
         run(() => recruitCrew(c.id), c.id, onDone)
-      }
-      if (round) {
-        const STATIC_PILL: React.CSSProperties = {
-          display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0.36rem 0.72rem',
-          borderRadius: 999, fontSize: '0.66rem', letterSpacing: '0.07em', textTransform: 'uppercase', whiteSpace: 'nowrap',
-        }
-        if (c.recruited) return <span className="font-karla font-700" style={{ ...STATIC_PILL, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', color: 'rgba(220,248,231,0.72)' }}><CheckIcon /> Aboard</span>
-        if (rosterFull) return <span className="font-karla font-700" style={{ ...STATIC_PILL, background: 'rgba(220,90,90,0.1)', border: '1px solid rgba(220,90,90,0.32)', color: '#f2b0b0' }}>Roster Full</span>
-        // The on-card Recruit BUTTON is replaced by swipe-left-to-recruit (the
-        // SwipeAction wrapper on the board card). A pulsing yellow arrow points
-        // the swipe direction so the gesture stays discoverable; recruiting from
-        // the detail modal still works.
-        return (
-          <motion.span aria-hidden title="Swipe left to recruit"
-            animate={{ x: [0, -9, 0], opacity: [0.45, 1, 0.45] }}
-            transition={{ duration: 1.15, repeat: Infinity, ease: 'easeInOut' }}
-            style={{ display: 'inline-flex', alignItems: 'center', color: '#ffcc33', filter: 'drop-shadow(0 0 7px rgba(255,204,51,0.6))' }}>
-            {/* double chevron reads as "swipe this way" more than a lone arrow */}
-            <svg width="40" height="26" viewBox="0 0 34 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><path d="M16 5l-7 7 7 7" /><path d="M25 5l-7 7 7 7" /></svg>
-          </motion.span>
-        )
       }
       if (c.recruited) return <div className="font-karla font-700" style={{ ...BTN_STATIC, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.55)' }}>Recruited ✓</div>
       if (rosterFull) return <div className="font-karla font-700" style={{ ...BTN_STATIC, background: 'rgba(220,90,90,0.1)', border: '1px solid rgba(220,90,90,0.35)', color: '#f2b0b0' }}>Roster Full</div>
@@ -1160,7 +1160,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
     const cancel = (e: React.MouseEvent) => { e.stopPropagation(); setConfirmDismiss(null) }
     const armed = confirmDismiss === m.id
 
-    // Detail-modal action (round=false) — Dismiss stays here as the primary
+    // Detail-modal action — Dismiss stays here as the primary
     // destructive action. Assignment lives on the card itself.
     if (armed) {
       return (
@@ -1543,6 +1543,19 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
               </span>
             </div>
           )}
+          {/* Said once, not stamped on all three cards. The per-card pill went
+              with the footer, and without it a full roster silently disables
+              the swipe with no reason given. */}
+          {rosterFull && (
+            <div className="font-karla" style={{
+              display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.7rem',
+              padding: '0.5rem 0.7rem', borderRadius: 10,
+              background: 'rgba(220,90,90,0.10)', border: '1px solid rgba(220,90,90,0.32)',
+              fontSize: '0.72rem', color: '#f2b0b0', lineHeight: 1.45,
+            }}>
+              Your roster is full. Dismiss a hand from the Roster tab, or upgrade your ship, before signing anyone new.
+            </div>
+          )}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '0.8rem' }}>
             {state.board.map((c: BoardCandidate) => {
               const panel = (
@@ -1554,9 +1567,8 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   // mid-board doesn't touch these; only the next roll does.
                   xp={c.startXp}
                   hint={c.effects.length > 0 && !c.recruited && !viewed.has(`board:${c.id}`)}
-                  onClick={() => openDetail('board', c)}>
-                  {renderAction('board', c, { round: true })}
-                </CrewPanel>
+                  aboard={c.recruited}
+                  onClick={() => openDetail('board', c)} />
               )
               const phase = reveal.phases[c.id]
               // Climax: dim/desaturate the rest of the board and spotlight the
