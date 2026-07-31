@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useTransition, type ReactNode } from 'react'
+import { useState, useEffect, useMemo, useRef, useTransition, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -95,6 +95,19 @@ const STAT_ABOUT: Record<'power' | 'dodge' | 'fortune', string> = {
 }
 
 const STAT_COLOR = { power: '#f87171', dodge: '#60a5fa', fortune: '#f0c040' }
+
+/** Roster orderings. 'recent' is the order the server already returns
+ *  (recruited_at desc), so it is the default and picking it changes nothing. */
+const ROSTER_SORTS = [
+  { k: 'recent'  as const, label: 'Recent',  color: '#bcb29a' },
+  { k: 'level'   as const, label: 'Level',   color: '#f0c040' },
+  { k: 'name'    as const, label: 'Name',    color: '#bcb29a' },
+  { k: 'rarity'  as const, label: 'Rarity',  color: '#a78bfa' },
+  { k: 'power'   as const, label: 'Power',   color: '#f87171' },
+  { k: 'dodge'   as const, label: 'Savvy',   color: '#60a5fa' },
+  { k: 'fortune' as const, label: 'Fortune', color: '#f0c040' },
+]
+type RosterSort = typeof ROSTER_SORTS[number]['k']
 const STAT_LABEL = { power: 'PWR', dodge: 'SAV', fortune: 'FTN' }
 
 // Section accents so the two boards read as visually distinct regions.
@@ -766,6 +779,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
   // active tab isn't available for the viewed crew (e.g. Skins on a non-skin
   // crew). Reset on modal close.
   const [detailTab, setDetailTab] = useState<'stats' | 'ability' | 'skins'>('stats')
+  const [rosterSort, setRosterSort] = useState<RosterSort>('recent')
 
   // Crew skins (legendary-only) — the tile the player is previewing in the
   // detail modal's Skins tab. undefined = show the currently equipped skin;
@@ -1000,6 +1014,21 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
   }, [activeTab, graveyard, graveyardLoading])
 
   const rosterFull = state.roster.length >= state.capacity
+
+  // Sorted roster for the Roster tab. Stats sort on EFFECTIVE values, the same
+  // applyCrewEffects the cards print, so the order always matches the numbers
+  // on screen. Name breaks every tie so equal-ranked crew hold a stable order
+  // instead of shuffling between renders.
+  const sortedRoster = useMemo(() => {
+    const byName = (a: CrewMember, b: CrewMember) => a.name.localeCompare(b.name)
+    if (rosterSort === 'recent') return state.roster
+    const r = [...state.roster]
+    if (rosterSort === 'name') return r.sort(byName)
+    if (rosterSort === 'level') return r.sort((a, b) => crewLevelFromXP(b.xp) - crewLevelFromXP(a.xp) || byName(a, b))
+    if (rosterSort === 'rarity') return r.sort((a, b) => b.rarity - a.rarity || byName(a, b))
+    const eff = (c: CrewMember) => applyCrewEffects({ power: c.power, dodge: c.dodge, fortune: c.fortune }, c.effects, c.xp)
+    return r.sort((a, b) => eff(b)[rosterSort] - eff(a)[rosterSort] || byName(a, b))
+  }, [state.roster, rosterSort])
   // Swipe-to-recruit teaser: auto-peek the first recruitable card ONCE per visit
   // to show the gesture, then rely on the persistent arrow. Ref (not state) so
   // flipping it never re-renders; firstRecruitHintId re-reads it each render.
@@ -1960,7 +1989,35 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                       <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)', padding: '0.6rem 0.1rem' }}>
                         No crew yet. Sign some hands on in the Recruit tab.
                       </p>
-                    ) : grid(state.roster, 0, SECTION_NEUTRAL)}
+                    ) : (
+                      <>
+                        {/* Same chip language as the trawl sheet and the assign
+                            picker. Wraps rather than scrolls, and only appears
+                            once there is more than one hand to order. */}
+                        {state.roster.length > 1 && (
+                          <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', padding: 3, marginBottom: 10, borderRadius: 999, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)' }}>
+                            {ROSTER_SORTS.map(o => {
+                              const on = rosterSort === o.k
+                              return (
+                                <button key={o.k} type="button" onClick={() => setRosterSort(o.k)}
+                                  className="font-karla font-700 uppercase tracking-[0.06em]"
+                                  aria-pressed={on}
+                                  style={{
+                                    padding: '0.3rem 0.6rem', borderRadius: 999, fontSize: '0.56rem',
+                                    background: on ? `${o.color}26` : 'transparent',
+                                    border: `1px solid ${on ? `${o.color}88` : 'transparent'}`,
+                                    color: on ? o.color : 'rgba(255,255,255,0.5)',
+                                    cursor: 'pointer', whiteSpace: 'nowrap', touchAction: 'manipulation',
+                                  }}>
+                                  {o.label}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        )}
+                        {grid(sortedRoster, 0, SECTION_NEUTRAL)}
+                      </>
+                    )}
 
                     {/* The Fallen lost its tab: it is a memorial you visit, not
                         a place you work, so it hangs off the manifest instead. */}
