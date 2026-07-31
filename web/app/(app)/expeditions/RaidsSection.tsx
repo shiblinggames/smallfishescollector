@@ -6,7 +6,7 @@ import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { vibrate } from '@/lib/haptics'
-import { bossIdentityRevealed, formatDropChance, isCombatNode, chapterForNode, RAID_CHAPTERS, musterSceneLines, SCENE_BACKDROPS, type RaidChapter, type RaidNodeDrop, type RaidNodeView } from '@/lib/raidMap'
+import { bossIdentityRevealed, bossListedInRoster, nodeArtRevealed, formatDropChance, isCombatNode, chapterForNode, RAID_CHAPTERS, musterSceneLines, SCENE_BACKDROPS, type RaidChapter, type RaidNodeDrop, type RaidNodeView } from '@/lib/raidMap'
 import type { RaidRecords } from './raidMapActions'
 import { RARITY_COLOR, GEM_GLYPH, GEM_COLOR, RAID_LOCATION_BG, RAID_BOSS_BG } from '@/lib/bossRaids'
 import { getRaidItem } from '@/lib/raidItems'
@@ -212,6 +212,9 @@ function RaidMap({
   onRepairBlocked?: () => void
   repairOwed: number
 }) {
+  // Story-gated boss art (Finn) reads from this: the node keeps its place on
+  // the spine, but wears the generic glyph until the reveal is cleared.
+  const mapClearedIds = useMemo(() => new Set(views.filter(v => v.status === 'cleared').map(v => v.node.id)), [views])
   // Side-branch layout: nodes flagged sideBranch don't consume a zigzag row
   // — they share their parent's row and sit on the opposite horizontal side.
   // Pre-compute (rowIdx, colPct) per view in one pass so cx/cy lookups stay
@@ -417,7 +420,9 @@ function RaidMap({
         const accent = isSide ? SIDE_BRANCH_ACCENT : MAIN_ACCENT
         // class_pick ("Captain's Choice") nodes show the player's actual boat
         // sprite instead of the generic glyph — it's a decision about YOUR ship.
-        const img = node.image ?? (node.type === 'class_pick' ? playerShipImage : undefined) ?? TYPE_IMAGE[node.type]
+        // A story-gated boss keeps its place on the spine but not its face.
+        const artOk = nodeArtRevealed(node, mapClearedIds)
+        const img = (artOk ? node.image : undefined) ?? (node.type === 'class_pick' ? playerShipImage : undefined) ?? TYPE_IMAGE[node.type]
         const size = isSide ? SIDE_BRANCH_SIZE : nodeSizeFor(node.type)
         const glyph = Math.round(size * 0.42)
         const badge = Math.max(15, Math.round(size * 0.34))
@@ -753,7 +758,7 @@ function NodeDetailSheet({
   }, [node.type])
   // Single accent now: matches the unified map palette.
   const accent = MAIN_ACCENT
-  const img = node.image ?? TYPE_IMAGE[node.type]
+  const img = (nodeArtRevealed(node, clearedNodeIds) ? node.image : undefined) ?? TYPE_IMAGE[node.type]
   const locked = status === 'locked'
   const cleared = status === 'cleared' || locallyCleared
   const detail = node.detail
@@ -2976,10 +2981,10 @@ function BossesView({ views, raidRecords, ownedRaidItems, ownedShipSkins, repair
   const router = useRouter()
   const [modalBoss, setModalBoss] = useState<RaidNodeView | null>(null)
   // Boss raids grouped by chapter so each grid ROW pairs a chapter's two bosses.
-  const bosses = views.filter(v => v.node.type === 'raid' && !v.node.sideBranch)
   // Story-gated boss identities (Finn) read from this, so the tab cannot
-  // unmask someone the player has not met.
+  // unmask - or even list - someone the player has not met.
   const clearedNodeIds = useMemo(() => new Set(views.filter(v => v.status === 'cleared').map(v => v.node.id)), [views])
+  const bosses = views.filter(v => v.node.type === 'raid' && !v.node.sideBranch && bossListedInRoster(v.node, clearedNodeIds))
   const byChapter = new Map<string, RaidNodeView[]>()
   const chapterOrder: string[] = []
   for (const v of bosses) {

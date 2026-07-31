@@ -2951,6 +2951,28 @@ export function bossIdentityRevealed(node: RaidNode, clearedNodeIds: Set<string>
   return false
 }
 
+/** Should this boss appear in the Bosses roster at all?
+ *
+ *  Ordinary bosses DO show while locked, as a masked silhouette — that is the
+ *  point of the tab, a wall of who is still ahead of you. But a boss gated by
+ *  `revealBossAfter` is one whose EXISTENCE is the spoiler: a "???" tile in the
+ *  ninth slot still tells you there is a ninth boss and that the campaign is
+ *  not over. Those are omitted outright until the story introduces them. */
+export function bossListedInRoster(node: RaidNode, clearedNodeIds: Set<string>): boolean {
+  if (!node.revealBossAfter) return true
+  return clearedNodeIds.has(node.revealBossAfter)
+}
+
+/** Is this node's own art safe to show? A `revealBossAfter` node keeps its map
+ *  position (it is the goal that motivates the run-up, so hiding it would hide
+ *  the reason to go land the giants) but NOT its portrait — node.image is the
+ *  boss's face, and on the finale that face is the twist. Callers fall back to
+ *  the generic type glyph when this is false. */
+export function nodeArtRevealed(node: RaidNode, clearedNodeIds: Set<string>): boolean {
+  if (!node.revealBossAfter) return true
+  return clearedNodeIds.has(node.revealBossAfter)
+}
+
 export function computeRaidMap(
   cleared: Set<string>,
   doubloons: number,
