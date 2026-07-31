@@ -266,7 +266,9 @@ const ITEM_RARITY_RANK: Record<string, number> = { common: 1, uncommon: 2, rare:
 // slower too (4.2s vs 2.6s) — old and patient rather than hot.
 const ANCIENT_BG = 'rgba(224,69,90,0.08)'
 const ANCIENT_BORDER = 'rgba(224,69,90,0.5)'
-const ANCIENT_GRADIENT = 'linear-gradient(90deg, #f4e3c4, #e0455a, #ffb37a, #c0203c)'
+// No orange stop in here: #ffb37a came straight out of abyssal's palette and
+// pulled the label back toward looking like one. Bone -> crimson -> bone.
+const ANCIENT_GRADIENT = 'linear-gradient(90deg, #f4e3c4, #e0455a, #ded3b4, #c0203c)'
 // Forge-crafted items — flagged by their `source` ("Forged from …") — display
 // distinctly (a step above legendary): animated rainbow glow on the art + a
 // "Forged" label in the Aurora-border spectrum. Neutral tile (NOT a purple fill).
@@ -308,7 +310,10 @@ export function RaidArsenal({ items }: { items: string[] }) {
             padding: '0.75rem 0.5rem 0.6rem', borderRadius: 13, textAlign: 'center',
             background: ancient ? ANCIENT_BG : abyssal ? ABYSSAL_BG : forged ? FORGED_BG : `${c}0e`,
             border: `1px solid ${ancient ? ANCIENT_BORDER : abyssal ? ABYSSAL_BORDER : forged ? FORGED_BORDER : `${c}33`}`,
-            boxShadow: ancient ? '0 0 20px rgba(224,69,90,0.20)' : abyssal ? '0 0 16px rgba(255,90,60,0.14)' : 'none',
+            // Ancient's tile halo is BONE, not red. The crimson border stays (that is the
+            // rarity's identity, and it matches the drop tiles), but a red outer glow
+            // beside abyssal's red outer glow was half of why the two blurred together.
+            boxShadow: ancient ? '0 0 22px rgba(236,227,205,0.16)' : abyssal ? '0 0 16px rgba(255,90,60,0.14)' : 'none',
           }}>
             {/* Roughly double the old 46px box — the grid had to shrink every
                 relic to fit three across; a rail can let them be seen. */}

@@ -810,16 +810,21 @@ html, body {
 .rod-glow-abyssal { animation: rod-glow-abyssal 2.6s ease-in-out infinite; }
 
 /* Ancient (the Primeval spoils off The Sunken Hand) — the only tier above
-   Abyssal. Deliberately NOT abyssal's molten orange: a BONE-white core over a
-   crimson bloom, so the two top tiers never read as the same thing sitting side
-   by side. Breathes slower than everything else (4.2s) — old and patient rather
-   than hot, with a deep blood halo that lags behind the core. */
+   Abyssal. The first attempt at this was crimson-over-bone and read as another
+   abyssal: BOTH blooms were red, and a pale core is not enough separation when
+   the halo — the part you actually see across a rail — is the same hue.
+   So ancient is off red entirely. It is the only UNSATURATED glow in the game:
+   a bone-white core over a pale fossil-sage halo, no fire in it anywhere. Every
+   other glow is a colour (molten red, prismatic, gold, arcane); this one reads
+   as bleached, which is exactly what the oldest thing in the sea should look
+   like. Breathes at 5s, the slowest of the set — old and patient, against
+   abyssal's 2.6s pulse. */
 @keyframes rod-glow-ancient {
-  0%   { filter: drop-shadow(0 0 6px #f4e3c4) drop-shadow(0 0 22px #e0455a99); }
-  50%  { filter: brightness(1.1) drop-shadow(0 0 14px #fff6e2) drop-shadow(0 0 38px #e0455acc) drop-shadow(0 0 62px #7a103088); }
-  100% { filter: drop-shadow(0 0 6px #f4e3c4) drop-shadow(0 0 22px #e0455a99); }
+  0%   { filter: drop-shadow(0 0 6px #ece3cd) drop-shadow(0 0 20px #b9c4ab55); }
+  50%  { filter: brightness(1.16) drop-shadow(0 0 16px #fffdf6) drop-shadow(0 0 40px #ded3b4aa) drop-shadow(0 0 68px #8fa38c55); }
+  100% { filter: drop-shadow(0 0 6px #ece3cd) drop-shadow(0 0 20px #b9c4ab55); }
 }
-.rod-glow-ancient { animation: rod-glow-ancient 4.2s ease-in-out infinite; }
+.rod-glow-ancient { animation: rod-glow-ancient 5s ease-in-out infinite; }
 
 /* ── Hardcore Gauntlet dread ──
    A blood vignette hung over the whole viewport while a hardcore run is live
