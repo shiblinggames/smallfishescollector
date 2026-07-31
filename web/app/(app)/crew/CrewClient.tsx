@@ -90,6 +90,31 @@ const PANEL_BG     = 'linear-gradient(157deg, #201a10 0%, #100c07 100%)'
 const PANEL_BORDER = '#3a3122'
 // Aliases kept so existing prop default + detail-modal references compile
 // unchanged. Both point at the same neutral now.
+// ── RARITY AS MATERIAL ───────────────────────────────────────────────────────
+// Every card used the same slab and the same border, so a Legendary and a
+// Common were the same object in different trim — and the reveal built to a
+// payoff the card never cashed.
+//
+// The difference is in the SURFACE, not a halo. A perimeter glow was tried
+// before and pulled: players asked for a quieter silhouette (see the note in
+// CrewPanel). So rarity reads as the material the card is made of — how the
+// light sits in it and catches its top edge — which is legible across a grid
+// without ringing every card in colour.
+//
+// Only Legendary animates. Sheen is a transform on one child, so it composites;
+// but a roster can hold dozens of cards and animating every Rare+ would put
+// dozens of loops on screen at once. Rare and Epic are static by design.
+const RARITY_MATERIAL: Record<number, { bg: string; border: string; topEdge: string; sheen: boolean }> = {
+  // Plain stock. Deliberately identical to the old card so nothing regresses.
+  1: { bg: PANEL_BG, border: PANEL_BORDER, topEdge: 'rgba(255,255,255,0.05)', sheen: false },
+  // Cold steel — a blue cast pooling toward the bottom.
+  2: { bg: 'linear-gradient(157deg, #1b2231 0%, #0d1017 100%)', border: '#2f4667', topEdge: 'rgba(120,170,240,0.22)', sheen: false },
+  // Violet, with the light catching harder along the top edge.
+  3: { bg: 'linear-gradient(157deg, #241d33 0%, #100c18 100%)', border: '#453361', topEdge: 'rgba(190,150,255,0.30)', sheen: false },
+  // Gilded, and the only one that moves.
+  4: { bg: 'linear-gradient(157deg, #2b2210 0%, #140f06 100%)', border: '#6b5320', topEdge: 'rgba(255,214,120,0.42)', sheen: true },
+}
+
 const RECRUIT_PANEL_BG = PANEL_BG
 const RECRUIT_PANEL_BORDER = PANEL_BORDER
 const ROSTER_PANEL_BG = PANEL_BG
@@ -443,7 +468,14 @@ function CrewPanel({
   // styling regardless of tier. (Previously the whole card carried a
   // tinted wash + tinted border + outer glow that grew with tier, which
   // made the roster look visually loud once five rarities were on screen.)
-  const cardShadow = `inset 0 0 0 1px ${frameAccent}22, inset 0 1px 0 rgba(255,255,255,0.05), 0 6px 16px rgba(0,0,0,0.55)`
+  const mat = RARITY_MATERIAL[rarity] ?? RARITY_MATERIAL[1]
+  // Callers can still force a surface (the reveal placeholder does); when they
+  // pass the shared default we use the rarity's material instead.
+  const surfaceBg = bg === PANEL_BG ? mat.bg : bg
+  const surfaceBorder = border === PANEL_BORDER ? mat.border : border
+  // The top edge is where light lands on a raised object, so it carries the
+  // rarity without ringing the card.
+  const cardShadow = `inset 0 0 0 1px ${frameAccent}22, inset 0 1px 0 ${mat.topEdge}, 0 6px 16px rgba(0,0,0,0.55)`
 
   return (
     <motion.div
@@ -454,13 +486,28 @@ function CrewPanel({
       style={{
         position: 'relative', display: 'flex', gap: '0.7rem', padding: '0.7rem',
         borderRadius: 7,
-        background: bg,
-        border: `1px solid ${border}`,
+        background: surfaceBg,
+        border: `1px solid ${surfaceBorder}`,
         boxShadow: cardShadow,
         opacity: dimmed ? 0.5 : locked ? 0.55 : 1,
         cursor: onClick ? 'pointer' : 'default',
         filter: locked ? 'grayscale(0.65) brightness(0.85)' : undefined,
       }}>
+      {/* LEGENDARY SHEEN. A single band of light crossing the card every few
+          seconds. Pure transform on one absolutely-positioned child, so it
+          composites and never touches paint — no animated box-shadow, no
+          filter. Legendary only: see RARITY_MATERIAL. */}
+      {mat.sheen && !locked && !dimmed && (
+        // The sheen gets its OWN clipping wrapper. Putting overflow:hidden on
+        // the card itself would have cut the level-up halo, which deliberately
+        // sits at inset:-1 to read as a ring around the card.
+        <span aria-hidden style={{ position: 'absolute', inset: 0, borderRadius: 7, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
+          <span className="crew-sheen" style={{
+            position: 'absolute', top: 0, bottom: 0, left: 0, width: '38%',
+            background: 'linear-gradient(100deg, transparent, rgba(255,226,150,0.16) 45%, rgba(255,240,200,0.26) 55%, transparent)',
+          }} />
+        </span>
+      )}
       {/* The "has traits — tap to view" halo glow was removed entirely.
           Players asked for a quieter card silhouette with no glow around
           the whole card. Trait count is still readable on the rarity

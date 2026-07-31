@@ -826,6 +826,17 @@ html, body {
 }
 .rod-glow-ancient { animation: rod-glow-ancient 5s ease-in-out infinite; }
 
+/* Legendary crew card sheen — one band of light crossing the card, then a long
+   pause. TRANSFORM ONLY so it composites: a roster can hold dozens of cards and
+   anything touching paint here would be the trawl/forge lag all over again. The
+   90% hold is what keeps it from reading as a nervous shimmer. */
+@keyframes crew-sheen {
+  0%   { transform: translateX(-120%) skewX(-14deg); }
+  10%  { transform: translateX(360%)  skewX(-14deg); }
+  100% { transform: translateX(360%)  skewX(-14deg); }
+}
+.crew-sheen { animation: crew-sheen 6.5s cubic-bezier(0.4, 0, 0.5, 1) infinite; will-change: transform; }
+
 /* ── Hardcore Gauntlet dread ──
    A blood vignette hung over the whole viewport while a hardcore run is live
    (toggled by GauntletGame via the .hardcore-gauntlet body class). Edge-only
@@ -994,6 +1005,7 @@ body.hardcore-gauntlet::after {
 .pause-glows .rod-glow-prismatic,
 .pause-glows .rod-glow-abyssal,
 .pause-glows .rod-glow-ancient,
+.pause-glows .crew-sheen,
 .pause-glows .hook-glow-chrome,
 .pause-glows .hook-glow-gilded,
 .pause-glows .hook-glow-arcane,
