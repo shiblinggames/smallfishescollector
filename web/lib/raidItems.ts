@@ -1194,24 +1194,71 @@ export interface AbyssalPlan {
   fathomCost: number
   baseTotal: number
   forgeTotal: number
+  /** Of `baseTotal`, how many are already aboard. `baseTotal - baseHave` is the
+   *  number the player still has to go and get. */
+  baseHave: number
+  /** Per-id slice of the above: id → how many of that drop are already aboard.
+   *  Capped at the quantity the plan actually needs. */
+  baseHaveQty: Record<string, number>
+}
+
+/** Walk a target's tree, stopping wherever the player ALREADY holds the node.
+ *  An owned intermediate means everything beneath it is done, so descending
+ *  past it would bill the player for parts they have already spent.
+ *
+ *  `owned` should be raw ownership, not effectiveOwnedItems — a component that
+ *  was consumed into a fusion is gone from the hold and has to be re-farmed if
+ *  another target needs its own copy. */
+function walkRemaining(
+  resultId: string,
+  owned: Set<string>,
+  baseQty: Record<string, number>,
+  forgeCount: Record<string, number>,
+  haveQty: Record<string, number>,
+  used: Record<string, number>,
+) {
+  // raid_items is a SET — you hold at most one copy of anything, and the forge
+  // consumes what it fuses. So an owned id only settles the FIRST place the
+  // plan needs it; a second occurrence has to be farmed or forged from scratch,
+  // exactly like the shared-parent warning says.
+  const spent = used[resultId] ?? 0
+  if (owned.has(resultId) && spent === 0) {
+    used[resultId] = spent + 1
+    baseQty[resultId] = (baseQty[resultId] || 0) + 1
+    haveQty[resultId] = (haveQty[resultId] || 0) + 1
+    return
+  }
+  const r = getForgeRecipe(resultId)
+  // A base drop with no recipe behind it: straight onto the farm list.
+  if (!r) {
+    baseQty[resultId] = (baseQty[resultId] || 0) + 1
+    return
+  }
+  forgeCount[resultId] = (forgeCount[resultId] || 0) + 1
+  for (const c of r.components) walkRemaining(c, owned, baseQty, forgeCount, haveQty, used)
 }
 
 /** Aggregate the full farm for a set of target results. `learnedRecipes` bills
  *  the Fathom cost only for recipes the player still needs to learn. */
-export function planAbyssalBuild(targetIds: string[], learnedRecipes: string[] = []): AbyssalPlan {
+export function planAbyssalBuild(
+  targetIds: string[],
+  learnedRecipes: string[] = [],
+  ownedItems: string[] = [],
+): AbyssalPlan {
   const baseQty: Record<string, number> = {}
   const forgeCount: Record<string, number> = {}
-  for (const t of targetIds) {
-    for (const b of forgeBaseLeaves(t)) baseQty[b] = (baseQty[b] || 0) + 1
-    for (const f of forgeSubRecipeIds(t)) forgeCount[f] = (forgeCount[f] || 0) + 1
-  }
+  const baseHaveQty: Record<string, number> = {}
+  const owned = new Set(ownedItems)
+  const used: Record<string, number> = {}
+  for (const t of targetIds) walkRemaining(t, owned, baseQty, forgeCount, baseHaveQty, used)
   const learned = new Set(learnedRecipes)
   const learnRecipeIds = Object.keys(forgeCount).filter(id => !learned.has(id))
   const fathomCost = learnRecipeIds.reduce((s, id) => s + (getForgeRecipe(id)?.fathomCost ?? 0), 0)
   return {
-    targets: targetIds, baseQty, forgeCount, learnRecipeIds, fathomCost,
+    targets: targetIds, baseQty, forgeCount, learnRecipeIds, fathomCost, baseHaveQty,
     baseTotal: Object.values(baseQty).reduce((a, b) => a + b, 0),
     forgeTotal: Object.values(forgeCount).reduce((a, b) => a + b, 0),
+    baseHave: Object.values(baseHaveQty).reduce((a, b) => a + b, 0),
   }
 }
 
