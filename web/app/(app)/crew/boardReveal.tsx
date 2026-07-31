@@ -169,9 +169,11 @@ export function BoardReveal({ card, phase, onTap, children, bloodied }: {
                 // seal is painted on it, because the seal below is DOM and has to
                 // keep carrying the rarity tint and the charging rattle.
                 backgroundColor: '#150e08',
-                backgroundImage: 'url(/crew_dossier.png)',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
+                backgroundImage: 'url(/crew_dossier.webp)',
+                // 100% 100%, not cover: the cord and the corner brackets live at
+                // the edges, and cover would crop them off as the card stretches.
+                backgroundSize: '100% 100%',
+                backgroundRepeat: 'no-repeat',
                 border: `1px solid ${bloodied ? '#7a2129' : '#46341f'}`,
                 boxShadow: bloodied ? 'inset 0 0 0 1px rgba(209,57,75,0.22), 0 6px 16px rgba(0,0,0,0.55)' : 'inset 0 0 0 1px rgba(176,141,79,0.18), 0 6px 16px rgba(0,0,0,0.55)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
