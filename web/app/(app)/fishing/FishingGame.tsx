@@ -70,7 +70,7 @@ import GuideCoach from '@/components/GuideCoach'
 import { GUIDES, FISHING_ACCENT } from '@/lib/onboardingScenes'
 import { fishingGearUnlockedBetween } from '@/lib/gearUnlocks'
 import GearUnlockRow from '@/components/GearUnlockRow'
-import { formatFishLength, tierForLength, TIER_COLOR, type FishSizeTier } from '@/lib/fishSize'
+import { formatFishLength, tierForLength, tierShowsPill, TIER_COLOR, TIER_LABEL, type FishSizeTier } from '@/lib/fishSize'
 import { SHINY_FISH_FILTER, SHINY_THEME, SHINY_SELL_MULT, pickShinyMessage } from '@/lib/shiny'
 import { getHook, HOOKS, hookGlowClass } from '@/lib/hooks'
 import { getRod, getEffectiveRod, RODS, rodGlowClass, rodSpeedPct, rodStatSplit, COMPLETIONIST_TIER, lockedInState, type RodDef } from '@/lib/rods'
@@ -1217,7 +1217,7 @@ function WaitTimer() {
   )
 }
 
-function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, doubleCatch, gemEarned, perfectStreak = 1, streakBonusXP = 0, jackpotMultiplier, perfectXpMult = 1, lockedStage = 0, catchQty = 1, ancientCount = 0, ancientTotal = 6, sizeIn, sizeMin, sizeMax, isPB, previousBest, isShiny = false, deepStirs = false }: {
+function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, doubleCatch, gemEarned, perfectStreak = 1, streakBonusXP = 0, jackpotMultiplier, perfectXpMult = 1, lockedStage = 0, catchQty = 1, ancientCount = 0, ancientTotal = 6, sizeIn, sizeMin, sizeMax, sizeTier, isPB, previousBest, isShiny = false, deepStirs = false }: {
   fish: FishSpecies
   baitSaved: boolean
   isNewSpecies: boolean
@@ -1293,6 +1293,15 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
   }, [sizeIn, hasSize])
   const sizePercentile = showRange ? Math.max(0, Math.min(1, (sizeIn - sizeMin!) / (sizeMax! - sizeMin!))) : 0.5
   const isPBMoment = !isAncient && !isShiny && isPB
+  // LARGE / TROPHY pill. tierShowsPill has always said these two earn a
+  // callout and the card comments have always claimed one renders, but none
+  // ever did: sizeTier was destructured and never read, so a 3%-roll Trophy
+  // looked exactly like a 47% Average except for where the needle sat.
+  // Gated on showRange because a tier is meaningless without the species
+  // range behind it, and off shinies (always Trophy by design, and the gold
+  // fish is already the celebration).
+  const tierPill = !isShiny && !isAncient && showRange && sizeTier && tierShowsPill(sizeTier) ? sizeTier : null
+  const isTrophyCatch = tierPill === 'trophy'
   // Shiny copy — picked once per catch (memoised on fish.id) so it
   // doesn't reshuffle on every re-render. Empty string when not shiny.
   const shinyMessage = useMemo(
@@ -1431,8 +1440,45 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
           accent chrome as before, just at ~32px tall instead of ~80px.
           Size-tier pills (Trophy / Large) and the PB pill render first so
           they catch the eye on the dopamine moments. */}
-      {(isPerfect || (jackpotMultiplier && jackpotMultiplier > 1) || doubleCatch || gemEarned || lockedStage > 0 || catchQty > 1) && (
+      {(tierPill || isPerfect || (jackpotMultiplier && jackpotMultiplier > 1) || doubleCatch || gemEarned || lockedStage > 0 || catchQty > 1) && (
         <div className="mb-2 flex flex-wrap items-center justify-center gap-1.5">
+          {/* Size tier leads the row — it is the rarest thing on most cards. */}
+          {tierPill && (() => {
+            const tc = TIER_COLOR[tierPill]
+            const rgb = isTrophyCatch ? '251,191,36' : '96,165,250'
+            return (
+              <div style={{ position: 'relative', display: 'inline-flex' }}>
+                {/* Trophy alone gets the burst. Large is common enough (15%)
+                    that ringing it every time would cheapen both. */}
+                {isTrophyCatch && [0, 0.1, 0.2].map((delay, i) => (
+                  <motion.div key={i}
+                    initial={{ scale: 0.85, opacity: 0.75 - i * 0.2 }}
+                    animate={{ scale: 2.3 - i * 0.25, opacity: 0 }}
+                    transition={{ duration: 0.6, ease: 'easeOut', delay }}
+                    style={{ position: 'absolute', inset: 0, borderRadius: 999,
+                      border: `${1.5 - i * 0.3}px solid rgba(${rgb},${0.75 - i * 0.2})`, pointerEvents: 'none' }} />
+                ))}
+                <motion.div
+                  initial={{ opacity: 0, y: -6, scale: 0.92 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 22 }}
+                  className="font-karla font-700 uppercase"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    background: `linear-gradient(180deg, rgba(${rgb},0.22) 0%, rgba(${rgb},0.06) 100%), #0d1320`,
+                    border: `1px solid rgba(${rgb},0.5)`,
+                    borderTop: `1px solid rgba(${rgb},0.8)`,
+                    borderRadius: 999,
+                    boxShadow: isTrophyCatch ? `0 0 16px rgba(${rgb},0.4)` : `0 0 9px rgba(${rgb},0.24)`,
+                    padding: '0.36rem 0.72rem',
+                    fontSize: '0.62rem', letterSpacing: '0.14em', color: tc,
+                  }}>
+                  {isTrophyCatch && <TrophyMark size={11} color={tc} />}
+                  {TIER_LABEL[tierPill]}
+                </motion.div>
+              </div>
+            )
+          })()}
           {isPerfect && (() => {
             const isOnFire = perfectStreak >= 3
             const isIgnition = perfectStreak === 3
@@ -2208,8 +2254,8 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
 
           {/* ── Size readout — the new hero of the card ──
               Big counter that ticks up from 0 over ~700ms; range bar below
-              shows where this catch landed in the species's range. Trophy
-              tier picks up a sparkle filter for extra fanfare. Ancients
+              shows where this catch landed in the species's range. Large and
+              Trophy tint the bar, the needle and the length itself. Ancients
               get just the canonical number — no range bar (single defined
               catch, nothing to compare to). */}
           {hasSize && !isShiny && (
@@ -2269,7 +2315,11 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
                     <div style={{
                       position: 'absolute', left: 0, top: 0, bottom: 0,
                       width: `${sizePercentile * 100}%`,
-                      background: 'linear-gradient(90deg, rgba(176,141,79,0.12) 0%, rgba(176,141,79,0.55) 100%)',
+                      // The bar carries the tier too, so the cue is where the
+                      // player is already looking to judge the catch.
+                      background: tierPill
+                        ? `linear-gradient(90deg, ${TIER_COLOR[tierPill]}22 0%, ${TIER_COLOR[tierPill]} 100%)`
+                        : 'linear-gradient(90deg, rgba(176,141,79,0.12) 0%, rgba(176,141,79,0.55) 100%)',
                       borderRadius: 3,
                     }} />
                     {/* Needle */}
@@ -2282,8 +2332,10 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
                         width: 3, height: 14,
                         marginLeft: -1.5, marginTop: -7,
                         borderRadius: 2,
-                        background: '#f0ede8',
-                        boxShadow: '0 0 6px rgba(255,255,255,0.35)',
+                        background: tierPill ? TIER_COLOR[tierPill] : '#f0ede8',
+                        boxShadow: tierPill
+                          ? `0 0 ${isTrophyCatch ? 12 : 8}px ${TIER_COLOR[tierPill]}`
+                          : '0 0 6px rgba(255,255,255,0.35)',
                       }}
                     />
                   </div>
@@ -2292,7 +2344,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
                       the needle, reads in context of where it landed. */}
                   <div className="flex justify-between items-baseline" style={{ marginTop: 9 }}>
                     <span style={{ fontSize: '0.5rem', color: '#5a5856', letterSpacing: '0.18em', textTransform: 'uppercase' }}>{formatFishLength(sizeMin!)}</span>
-                    <span className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0ede8', lineHeight: 1, textShadow: '0 0 10px rgba(255,255,255,0.18)', fontFeatureSettings: '"tnum"' }}>{formatFishLength(displaySize)}</span>
+                    <span className="font-cinzel font-700" style={{ fontSize: isTrophyCatch ? '1.25rem' : '1.05rem', color: tierPill ? TIER_COLOR[tierPill] : '#f0ede8', lineHeight: 1, textShadow: tierPill ? `0 0 12px ${TIER_COLOR[tierPill]}88` : '0 0 10px rgba(255,255,255,0.18)', fontFeatureSettings: '"tnum"' }}>{formatFishLength(displaySize)}</span>
                     <span style={{ fontSize: '0.5rem', color: '#5a5856', letterSpacing: '0.18em', textTransform: 'uppercase' }}>{formatFishLength(sizeMax!)}</span>
                   </div>
                 </div>
