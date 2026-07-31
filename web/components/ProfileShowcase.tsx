@@ -219,8 +219,17 @@ export function GoldenMounts({ fish, cap = 9 }: { fish: GoldenMount[]; cap?: num
 // Raid-item rarity → accent + sort rank.
 const ITEM_RARITY_COLOR: Record<string, string> = {
   common: '#94a3b8', uncommon: '#4ade80', rare: '#60a5fa', epic: '#c084fc', legendary: '#f0c040',
+  ancient: '#e0455a', cosmetic: '#2dd4bf',
 }
 const ITEM_RARITY_RANK: Record<string, number> = { common: 1, uncommon: 2, rare: 3, epic: 4, legendary: 5 }
+// ANCIENT — the two Primeval spoils off The Sunken Hand, and the only things in
+// the game that rank above an Abyssal fusion. They sort FIRST and wear a bone
+// core over a crimson bloom: deliberately NOT abyssal's molten orange, because
+// two red-ish top tiers side by side would read as the same thing. The pulse is
+// slower too (4.2s vs 2.6s) — old and patient rather than hot.
+const ANCIENT_BG = 'rgba(224,69,90,0.08)'
+const ANCIENT_BORDER = 'rgba(224,69,90,0.5)'
+const ANCIENT_GRADIENT = 'linear-gradient(90deg, #f4e3c4, #e0455a, #ffb37a, #c0203c)'
 // Forge-crafted items — flagged by their `source` ("Forged from …") — display
 // distinctly (a step above legendary): animated rainbow glow on the art + a
 // "Forged" label in the Aurora-border spectrum. Neutral tile (NOT a purple fill).
@@ -238,7 +247,10 @@ const ABYSSAL_GRADIENT = 'linear-gradient(90deg, #ff9a6a, #ff5a6a, #ffb15c, #ff4
  *  grid of relic tiles (Abyssal first, then forged/prismatic, then rarest). Uses
  *  the raid_items ids already on the profile; unknown ids are dropped. */
 export function RaidArsenal({ items }: { items: string[] }) {
-  const rankOf = (d: RaidItemDef) => (isAbyssalForgedItem(d.id) ? 7 : isForged(d) ? 6 : (ITEM_RARITY_RANK[d.rarity] ?? 0))
+  // Ancient outranks everything, including an Abyssal fusion. (Only the Maw
+  // reaches here — the Eye is a fishing special, not a raid item.)
+  const rankOf = (d: RaidItemDef) =>
+    (d.rarity === 'ancient' ? 8 : isAbyssalForgedItem(d.id) ? 7 : isForged(d) ? 6 : (ITEM_RARITY_RANK[d.rarity] ?? 0))
   const defs = [...new Set(items)]
     .map(id => getRaidItem(id))
     .filter((d): d is RaidItemDef => !!d)
@@ -247,17 +259,18 @@ export function RaidArsenal({ items }: { items: string[] }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
       {defs.map(it => {
-        const abyssal = isAbyssalForgedItem(it.id)
-        const forged = !abyssal && isForged(it)
-        const glowClass = abyssal ? 'rod-glow-abyssal' : forged ? 'rod-glow-prismatic' : undefined
+        const ancient = it.rarity === 'ancient'
+        const abyssal = !ancient && isAbyssalForgedItem(it.id)
+        const forged = !ancient && !abyssal && isForged(it)
+        const glowClass = ancient ? 'rod-glow-ancient' : abyssal ? 'rod-glow-abyssal' : forged ? 'rod-glow-prismatic' : undefined
         const c = ITEM_RARITY_COLOR[it.rarity] ?? '#94a3b8'
         return (
           <div key={it.id} style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
             padding: '0.75rem 0.5rem 0.6rem', borderRadius: 13, textAlign: 'center',
-            background: abyssal ? ABYSSAL_BG : forged ? FORGED_BG : `${c}0e`,
-            border: `1px solid ${abyssal ? ABYSSAL_BORDER : forged ? FORGED_BORDER : `${c}33`}`,
-            boxShadow: abyssal ? '0 0 16px rgba(255,90,60,0.14)' : 'none',
+            background: ancient ? ANCIENT_BG : abyssal ? ABYSSAL_BG : forged ? FORGED_BG : `${c}0e`,
+            border: `1px solid ${ancient ? ANCIENT_BORDER : abyssal ? ABYSSAL_BORDER : forged ? FORGED_BORDER : `${c}33`}`,
+            boxShadow: ancient ? '0 0 20px rgba(224,69,90,0.20)' : abyssal ? '0 0 16px rgba(255,90,60,0.14)' : 'none',
           }}>
             <div style={{ height: 46, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {it.image
@@ -269,7 +282,9 @@ export function RaidArsenal({ items }: { items: string[] }) {
                 : <span aria-hidden className={glowClass} style={{ fontSize: '1.7rem', ...(glowClass ? {} : { filter: `drop-shadow(0 2px 6px ${c}55)` }) }}>{it.emoji}</span>}
             </div>
             <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#e8e4dc', lineHeight: 1.15 }}>{it.name}</p>
-            {abyssal
+            {ancient
+              ? <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.16em', backgroundImage: ANCIENT_GRADIENT, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>Ancient</span>
+              : abyssal
               ? <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.14em', backgroundImage: ABYSSAL_GRADIENT, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>Abyssal</span>
               : forged
               ? <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.12em', backgroundImage: FORGED_GRADIENT, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>Forged</span>

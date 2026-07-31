@@ -809,6 +809,18 @@ html, body {
 }
 .rod-glow-abyssal { animation: rod-glow-abyssal 2.6s ease-in-out infinite; }
 
+/* Ancient (the Primeval spoils off The Sunken Hand) — the only tier above
+   Abyssal. Deliberately NOT abyssal's molten orange: a BONE-white core over a
+   crimson bloom, so the two top tiers never read as the same thing sitting side
+   by side. Breathes slower than everything else (4.2s) — old and patient rather
+   than hot, with a deep blood halo that lags behind the core. */
+@keyframes rod-glow-ancient {
+  0%   { filter: drop-shadow(0 0 6px #f4e3c4) drop-shadow(0 0 22px #e0455a99); }
+  50%  { filter: brightness(1.1) drop-shadow(0 0 14px #fff6e2) drop-shadow(0 0 38px #e0455acc) drop-shadow(0 0 62px #7a103088); }
+  100% { filter: drop-shadow(0 0 6px #f4e3c4) drop-shadow(0 0 22px #e0455a99); }
+}
+.rod-glow-ancient { animation: rod-glow-ancient 4.2s ease-in-out infinite; }
+
 /* ── Hardcore Gauntlet dread ──
    A blood vignette hung over the whole viewport while a hardcore run is live
    (toggled by GauntletGame via the .hardcore-gauntlet body class). Edge-only
@@ -976,6 +988,7 @@ body.hardcore-gauntlet::after {
 .pause-glows .rod-glow-forge,
 .pause-glows .rod-glow-prismatic,
 .pause-glows .rod-glow-abyssal,
+.pause-glows .rod-glow-ancient,
 .pause-glows .hook-glow-chrome,
 .pause-glows .hook-glow-gilded,
 .pause-glows .hook-glow-arcane,
