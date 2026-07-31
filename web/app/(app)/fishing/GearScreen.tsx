@@ -933,9 +933,16 @@ export default function GearScreen({
   function toggleStaged(tier: number, color: string) {
     if (forgeBusy) return
     const selected = stagedEffects.includes(tier)
+    // FULL BENCH SWAPS rather than refusing. It used to grey every other rod out
+    // at 3/3, so changing your mind meant scrolling up to find the one you
+    // wanted gone, removing it, then scrolling back down to the one you wanted.
+    // Tapping a new rod now pushes out the OLDEST staged effect, which is the
+    // one you picked longest ago and are least likely to be defending.
     const next = selected
       ? stagedEffects.filter(t => t !== tier)
-      : [...stagedEffects, tier]
+      : stagedEffects.length >= COMPLETIONIST_MAX_EFFECTS
+        ? [...stagedEffects.slice(1), tier]
+        : [...stagedEffects, tier]
     const dir: 'in' | 'out' = selected ? 'out' : 'in'
     setForgeBurst({ id: Date.now(), color, dir })
     setForgePulse(p => p + 1)
@@ -1439,7 +1446,11 @@ export default function GearScreen({
                       const auraT = filled / COMPLETIONIST_MAX_EFFECTS // 0..1 power level
                       return (
                       <div style={{
-                        position: 'relative', overflow: 'hidden',
+                        // NO overflow:hidden here. It clipped the aura's bleed,
+                        // but it also makes this a scroll container, which kills
+                        // position:sticky on the commit row below. The aura gets
+                        // its own clipping wrapper instead.
+                        position: 'relative',
                         borderRadius: 12,
                         border: `1px solid rgba(232,200,74,${0.4 + auraT * 0.4})`,
                         background: 'linear-gradient(180deg, rgba(232,200,74,0.10) 0%, rgba(232,200,74,0.03) 100%)',
@@ -1449,16 +1460,23 @@ export default function GearScreen({
                       }}>
                         {/* Aura — a soft gold bloom behind the sockets that
                             intensifies as the rod fills up. Visible power growth. */}
-                        <motion.div aria-hidden
-                          animate={{ opacity: 0.18 + auraT * 0.5 }}
-                          transition={{ duration: 0.5 }}
-                          style={{
-                            position: 'absolute', top: -30, left: '50%', width: 220, height: 120,
-                            transform: 'translateX(-50%)', pointerEvents: 'none',
-                            background: 'radial-gradient(ellipse at center, rgba(245,210,110,0.9) 0%, transparent 70%)',
-                            filter: 'blur(8px)',
-                          }}
-                        />
+                        {/* Aura. Plain div, no blur: this was a framer-animated
+                            opacity on a filter:blur() layer, which is the worst
+                            pairing available — every frame of the fade
+                            re-rasterised the blur. Gradient falloff gives the
+                            same softness, and a CSS transition fades it without
+                            React in the loop. */}
+                        <div aria-hidden style={{ position: 'absolute', inset: 0, borderRadius: 12, overflow: 'hidden', pointerEvents: 'none' }}>
+                          <div
+                            style={{
+                              position: 'absolute', top: -30, left: '50%', width: 220, height: 120,
+                              transform: 'translateX(-50%)',
+                              background: 'radial-gradient(ellipse at center, rgba(245,210,110,0.85) 0%, rgba(245,210,110,0.32) 40%, transparent 72%)',
+                              opacity: 0.18 + auraT * 0.5,
+                              transition: 'opacity 0.5s ease',
+                            }}
+                          />
+                        </div>
 
                         <div style={{ position: 'relative', display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
                           <span className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#f3d98a', letterSpacing: '0.02em', textShadow: `0 0 ${6 + auraT * 12}px rgba(240,200,90,${0.3 + auraT * 0.4})` }}>Completionist Forge</span>
@@ -1573,26 +1591,29 @@ export default function GearScreen({
                           <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 5 }}>
                             {forgeableRods.map(fr => {
                               const selected = stagedEffects.includes(fr.tier)
-                              const full = !selected && stagedEffects.length >= COMPLETIONIST_MAX_EFFECTS
+                              // At 3/3 an unselected rod now SWAPS in (see
+                              // toggleStaged), so it reads "Swap in" instead of
+                              // dead-ending on a disabled "Full".
+                              const swaps = !selected && stagedEffects.length >= COMPLETIONIST_MAX_EFFECTS
                               return (
                                 <motion.button
                                   key={fr.tier}
-                                  disabled={full || forgeBusy}
-                                  whileTap={full ? undefined : { scale: 0.97 }}
+                                  disabled={forgeBusy}
+                                  whileTap={{ scale: 0.97 }}
                                   onClick={() => toggleStaged(fr.tier, fr.color)}
-                                  animate={{
-                                    background: selected ? `${fr.color}24` : 'rgba(255,255,255,0.03)',
-                                    borderColor: selected ? `${fr.color}cc` : 'rgba(255,255,255,0.08)',
-                                    opacity: full ? 0.4 : 1,
-                                  }}
-                                  transition={{ duration: 0.25 }}
                                   style={{
                                     display: 'flex', alignItems: 'center', gap: 9,
                                     padding: '0.5rem 0.6rem', borderRadius: 9,
                                     textAlign: 'left', width: '100%',
-                                    cursor: full ? 'default' : 'pointer',
-                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    cursor: 'pointer',
+                                    // Colours ride a CSS transition rather than a framer
+                                    // `animate`. Every row had its own animation driving
+                                    // three PAINT properties, so one tap kicked off a
+                                    // dozen simultaneous background/border tweens.
+                                    background: selected ? `${fr.color}24` : 'rgba(255,255,255,0.03)',
+                                    border: `1px solid ${selected ? `${fr.color}cc` : 'rgba(255,255,255,0.1)'}`,
                                     boxShadow: selected ? `0 0 12px ${fr.color}33` : 'none',
+                                    transition: 'background-color 0.22s ease, border-color 0.22s ease',
                                   }}
                                 >
                                   <span style={{ width: 9, height: 9, borderRadius: '50%', background: fr.color, boxShadow: `0 0 7px ${fr.color}99`, flexShrink: 0 }} />
@@ -1601,10 +1622,10 @@ export default function GearScreen({
                                     <div className="font-karla" style={{ fontSize: '0.64rem', color: fr.color }}>{rodEffectLabel(fr)}</div>
                                   </div>
                                   <span className="font-karla font-700" style={{
-                                    fontSize: '0.7rem', flexShrink: 0,
-                                    color: selected ? fr.color : full ? '#4a5562' : '#7a8aa0',
+                                    fontSize: '0.7rem', flexShrink: 0, whiteSpace: 'nowrap',
+                                    color: selected ? fr.color : '#7a8aa0',
                                   }}>
-                                    {selected ? '− Remove' : full ? 'Full' : '+ Add'}
+                                    {selected ? '− Remove' : swaps ? 'Swap in' : '+ Add'}
                                   </span>
                                 </motion.button>
                               )
@@ -1616,7 +1637,23 @@ export default function GearScreen({
                             bench differs from the saved loadout. Free first time,
                             REFORGE_COST after. */}
                         {forgeDirty && (
-                          <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 6, marginTop: 2 }}>
+                          // STICKY. The donor list runs to a dozen rods, so the
+                          // commit row sat below the fold: you staged an effect at
+                          // the top, then had to scroll the whole list to find
+                          // Forge. It now rides the bottom of the panel the moment
+                          // the bench differs from what is saved.
+                          <div style={{
+                            position: 'sticky', bottom: 0, zIndex: 2,
+                            display: 'flex', flexDirection: 'column', gap: 6,
+                            marginTop: 2, paddingTop: 8,
+                            // Opaque base under the tint, so the buttons never sit
+                            // on top of a rod row showing through.
+                            backgroundColor: '#141a24',
+                            backgroundImage: 'linear-gradient(180deg, rgba(232,200,74,0.10), rgba(232,200,74,0.04))',
+                            marginLeft: '-0.8rem', marginRight: '-0.8rem', paddingLeft: '0.8rem', paddingRight: '0.8rem',
+                            marginBottom: '-0.75rem', paddingBottom: '0.75rem',
+                            borderTop: '1px solid rgba(232,200,74,0.28)',
+                          }}>
                             {forgeErr && <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#f2a0a0', textAlign: 'center' }}>{forgeErr}</p>}
                             <div style={{ display: 'flex', gap: 8 }}>
                               <button

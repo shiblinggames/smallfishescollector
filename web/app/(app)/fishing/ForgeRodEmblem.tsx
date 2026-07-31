@@ -23,15 +23,19 @@ export default function ForgeRodEmblem({
           prismatic shimmer carries the color, not a green cast. */}
       <div aria-hidden style={{
         position: 'absolute', inset: '-16%',
-        background: `radial-gradient(ellipse at 50% 46%, rgba(245,228,190,${0.12 + power * 0.42}) 0%, transparent 66%)`,
-        filter: 'blur(9px)', pointerEvents: 'none',
+        // Gradient falloff instead of filter: blur(). A blurred layer has to be
+        // rasterised again every time `power` changes (every fuse), and this
+        // panel stacks three of them. The extra stops give the same soft edge
+        // for free.
+        background: `radial-gradient(ellipse at 50% 46%, rgba(245,228,190,${0.12 + power * 0.42}) 0%, rgba(245,228,190,${0.06 + power * 0.2}) 38%, transparent 70%)`,
+        pointerEvents: 'none',
       }} />
       {/* Accent bloom — tinted by the effect just forged (panel passes accent);
           scales + brightens with power so socketing an effect reads as a surge. */}
       <div aria-hidden style={{
         position: 'absolute', width: `${40 + power * 34}%`, height: `${40 + power * 34}%`,
-        borderRadius: '50%', background: `radial-gradient(circle, ${accent} 0%, transparent 62%)`,
-        opacity: glow * 0.45, filter: 'blur(12px)', pointerEvents: 'none',
+        borderRadius: '50%', background: `radial-gradient(circle, ${accent} 0%, ${accent}55 34%, transparent 68%)`,
+        opacity: glow * 0.45, pointerEvents: 'none',
       }} />
       {/* The real rod sprite — prismatic shimmer via the shared class. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
