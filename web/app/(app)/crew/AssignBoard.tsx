@@ -101,18 +101,22 @@ export default function AssignBoard({
   // enough that the sea and smoke still come through.
   const RAMP = {
     raid: {
-      // Storm water off the campaign's own /raids backdrop, cropped to the
-      // horizon band and sized for a panel (1000x824, 61KB, vs the 1536x2752
-      // 237KB page plate). Simpler than the fleet-battle art it replaced: open
-      // water and one lightning strike, nothing competing with the seats.
-      // Wash is near-neutral so the storm keeps its own colour instead of
-      // being pulled brown.
-      base: '#161016', art: '/crew-raid-panel.jpg', fade: '18,14,18',
+      // Deep water from the campaign's own /raids backdrop, taken from the
+      // calmest band of it (below the cliffs, the lightning and the breaking
+      // crests) and softened. Two passes at this were still too busy: the
+      // fleet-battle plate, then the horizon crop, both of which had landmarks
+      // fighting the seats. This is texture, not a scene - dark swells and
+      // nothing to look AT. 7KB.
+      //
+      // Its wash is lighter than the voyage panel's for the same reason: the
+      // plate is already dark and low-contrast, so a heavier tint left it
+      // indistinguishable from flat colour.
+      base: '#101418', art: '/crew-raid-panel.jpg', fade: '14,18,22', wash: [0.20, 0.28, 0.38],
       stat: 'rgba(10,5,8,0.52)', locked: 'rgba(10,5,8,0.46)',
       open: 'rgba(10,5,8,0.36)', seat: 'rgba(10,5,8,0.44)',
     },
     voyage: {
-      base: '#0c151f', art: '/voyages-modal-bg.jpg', fade: '12,21,31',
+      base: '#0c151f', art: '/voyages-modal-bg.jpg', fade: '12,21,31', wash: [0.34, 0.46, 0.58],
       stat: 'rgba(4,10,18,0.52)', locked: 'rgba(4,10,18,0.46)',
       open: 'rgba(4,10,18,0.36)', seat: 'rgba(4,10,18,0.44)',
     },
@@ -166,7 +170,7 @@ export default function AssignBoard({
             // full-bleed wants. Base colour is space-joined onto the last
             // layer rather than added as a bare comma layer.
             background: `linear-gradient(180deg, ${t.accent}1c 0%, ${t.accent}0a 55%, transparent 100%), `
-              + `linear-gradient(180deg, rgba(${t.ramp.fade},0.34) 0%, rgba(${t.ramp.fade},0.46) 45%, rgba(${t.ramp.fade},0.58) 100%), `
+              + `linear-gradient(180deg, rgba(${t.ramp.fade},${t.ramp.wash[0]}) 0%, rgba(${t.ramp.fade},${t.ramp.wash[1]}) 45%, rgba(${t.ramp.fade},${t.ramp.wash[2]}) 100%), `
               + `url(${t.ramp.art}) center / cover no-repeat ${t.ramp.base}`,
             overflow: 'hidden',
           }}>
