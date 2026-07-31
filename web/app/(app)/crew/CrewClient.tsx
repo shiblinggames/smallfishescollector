@@ -91,28 +91,36 @@ const PANEL_BORDER = '#3a3122'
 // Aliases kept so existing prop default + detail-modal references compile
 // unchanged. Both point at the same neutral now.
 // ── RARITY AS MATERIAL ───────────────────────────────────────────────────────
-// Every card used the same slab and the same border, so a Legendary and a
-// Common were the same object in different trim — and the reveal built to a
-// payoff the card never cashed.
+// Every card used the same slab whatever the rarity, so a Legendary and a
+// Common were the same object in different coloured trim, and the reveal built
+// to a payoff the card never cashed.
 //
-// The difference is in the SURFACE, not a halo. A perimeter glow was tried
-// before and pulled: players asked for a quieter silhouette (see the note in
-// CrewPanel). So rarity reads as the material the card is made of — how the
-// light sits in it and catches its top edge — which is legible across a grid
-// without ringing every card in colour.
+// Each tier is now a PAINTED PLATE rather than a CSS gradient. A generated
+// surface carries material (grain, rivets, mineral, gold leaf) that a two-stop
+// gradient cannot fake, and it makes the tiers read as genuinely different
+// objects instead of the same object recoloured:
 //
-// Only Legendary animates. Sheen is a transform on one child, so it composites;
-// but a roster can hold dozens of cards and animating every Rare+ would put
-// dozens of loops on screen at once. Rare and Epic are static by design.
-const RARITY_MATERIAL: Record<number, { bg: string; border: string; topEdge: string; sheen: boolean }> = {
-  // Plain stock. Deliberately identical to the old card so nothing regresses.
-  1: { bg: PANEL_BG, border: PANEL_BORDER, topEdge: 'rgba(255,255,255,0.05)', sheen: false },
-  // Cold steel — a blue cast pooling toward the bottom.
-  2: { bg: 'linear-gradient(157deg, #1b2231 0%, #0d1017 100%)', border: '#2f4667', topEdge: 'rgba(120,170,240,0.22)', sheen: false },
-  // Violet, with the light catching harder along the top edge.
-  3: { bg: 'linear-gradient(157deg, #241d33 0%, #100c18 100%)', border: '#453361', topEdge: 'rgba(190,150,255,0.30)', sheen: false },
-  // Gilded, and the only one that moves.
-  4: { bg: 'linear-gradient(157deg, #2b2210 0%, #140f06 100%)', border: '#6b5320', topEdge: 'rgba(255,214,120,0.42)', sheen: true },
+//   Common      bare salt-bleached pine
+//   Rare        oiled oak banded in blued iron
+//   Epic        black slate veined with amethyst
+//   Legendary   blackwood with inlaid gold filigree
+//
+// Every plate is deliberately PLAIN THROUGH THE MIDDLE with its detail in bands
+// at the top and bottom edges, because card content sits on top of it: the
+// arched portrait on the left, name and stats on the right. A surface with a
+// focal point would fight them.
+//
+// Drawn at 100% 100%, NOT cover. The detail lives in those edge bands, and the
+// card runs from about 2.2:1 up to nearly 4:1 as the grid stretches — cover
+// would crop the top and bottom off and throw away the whole point. Stretching
+// is invisible horizontally (the bands repeat) and merely tightens them
+// vertically at 134px tall.
+const RARITY_MATERIAL: Record<number, { art: string; border: string; topEdge: string; sheen: boolean }> = {
+  1: { art: '/crew_card_common.webp', border: '#3a3122', topEdge: 'rgba(255,255,255,0.05)', sheen: false },
+  2: { art: '/crew_card_rare.webp',   border: '#2f4667', topEdge: 'rgba(120,170,240,0.22)', sheen: false },
+  3: { art: '/crew_card_epic.webp',   border: '#453361', topEdge: 'rgba(190,150,255,0.30)', sheen: false },
+  // Legendary is the only tier that moves — see the sheen in CrewPanel.
+  4: { art: '/crew_card_legend.webp', border: '#6b5320', topEdge: 'rgba(255,214,120,0.42)', sheen: true },
 }
 
 const RECRUIT_PANEL_BG = PANEL_BG
@@ -473,7 +481,7 @@ function CrewPanel({
   const mat = RARITY_MATERIAL[rarity] ?? RARITY_MATERIAL[1]
   // Callers can still force a surface (the reveal placeholder does); when they
   // pass the shared default we use the rarity's material instead.
-  const surfaceBg = bg === PANEL_BG ? mat.bg : bg
+  const surfaceBg = bg === PANEL_BG ? undefined : bg
   const surfaceBorder = border === PANEL_BORDER ? mat.border : border
   // The top edge is where light lands on a raised object, so it carries the
   // rarity without ringing the card.
@@ -488,7 +496,12 @@ function CrewPanel({
       style={{
         position: 'relative', display: 'flex', gap: '0.7rem', padding: '0.7rem',
         borderRadius: 7,
-        background: surfaceBg,
+        // An opaque base under the plate, never the plate alone: a webp that
+        // has not decoded yet would otherwise flash the page through the card.
+        backgroundColor: '#100c07',
+        ...(surfaceBg
+          ? { background: surfaceBg }
+          : { backgroundImage: `url(${mat.art})`, backgroundSize: '100% 100%', backgroundRepeat: 'no-repeat' }),
         border: `1px solid ${surfaceBorder}`,
         boxShadow: cardShadow,
         opacity: dimmed ? 0.5 : locked ? 0.55 : 1,
