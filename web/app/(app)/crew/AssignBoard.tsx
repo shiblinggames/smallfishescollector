@@ -85,26 +85,23 @@ export default function AssignBoard({
   // reads, not the outline. Each track now gets its own opaque ramp pulled
   // toward its accent: warm near-black for the raid, cool for the voyage.
   // Fully opaque hex, no alpha - nothing behind these needs to show through.
-  // `art` is a BAND across the panel header, not a full-panel backdrop, and
-  // `fade` is the panel's base colour as raw rgb channels so the band can
-  // dissolve into it.
+  // Full-bleed art per track, with every tile on top of it TRANSLUCENT so the
+  // plate reads through them rather than only in the gaps.
   //
-  // Full-bleed did not work: every stat and seat tile on this panel is opaque,
-  // so the art could only ever peek through gaps, and `cover` on a portrait
-  // panel fits a square plate vertically EXACTLY - no overflow to position
-  // against, so the panel top always landed on the plate's empty sky. A fixed
-  // band gets a chosen crop, at full strength, in the one region that has no
-  // tiles over it.
+  // `base` is the flat colour under the jpg (it shows for the moment before
+  // the image lands, and through the wash). The tile values are deliberately
+  // dark and semi-opaque: enough contrast for a name and three numbers, little
+  // enough that the sea and smoke still come through.
   const RAMP = {
     raid: {
-      panel: '#180f13', stat: '#241a1f', locked: '#1e1418', open: '#1b1115', seat: '#21161b',
-      art: '/exp-campaign.jpg', pos: 'center 42%',
-      fade: '24,15,19',
+      base: '#180f13', art: '/exp-campaign.jpg', fade: '24,15,19',
+      stat: 'rgba(10,5,8,0.52)', locked: 'rgba(10,5,8,0.46)',
+      open: 'rgba(10,5,8,0.36)', seat: 'rgba(10,5,8,0.44)',
     },
     voyage: {
-      panel: '#0c151f', stat: '#16222e', locked: '#131d27', open: '#0f1822', seat: '#142029',
-      art: '/voyages-modal-bg.jpg', pos: 'center 38%',
-      fade: '12,21,31',
+      base: '#0c151f', art: '/voyages-modal-bg.jpg', fade: '12,21,31',
+      stat: 'rgba(4,10,18,0.52)', locked: 'rgba(4,10,18,0.46)',
+      open: 'rgba(4,10,18,0.36)', seat: 'rgba(4,10,18,0.44)',
     },
   }
 
@@ -149,20 +146,17 @@ export default function AssignBoard({
             borderRadius: 16,
             border: `1px solid ${t.accent}55`,
             position: 'relative',
-            background: `linear-gradient(180deg, ${t.accent}20 0%, ${t.accent}0a 58%, transparent 100%), ${t.ramp.panel}`,
+            // Front to back: the track's accent tint, a light wash so text
+            // holds up, the plate, then the flat base. `cover` fits a square
+            // plate to a portrait panel by height, so the whole image runs top
+            // to bottom - sky, then the ship, then open water - which is what
+            // full-bleed wants. Base colour is space-joined onto the last
+            // layer rather than added as a bare comma layer.
+            background: `linear-gradient(180deg, ${t.accent}1c 0%, ${t.accent}0a 55%, transparent 100%), `
+              + `linear-gradient(180deg, rgba(${t.ramp.fade},0.34) 0%, rgba(${t.ramp.fade},0.46) 45%, rgba(${t.ramp.fade},0.58) 100%), `
+              + `url(${t.ramp.art}) center / cover no-repeat ${t.ramp.base}`,
             overflow: 'hidden',
           }}>
-            {/* Art band behind the header. Sized in px so it always covers the
-                title row and the totals regardless of how the panel grows, and
-                faded to the panel's own colour at the bottom so it ends without
-                an edge. Behind the content, never over it. */}
-            <div aria-hidden style={{
-              position: 'absolute', top: 0, left: 0, right: 0, height: 118, zIndex: 0,
-              pointerEvents: 'none',
-              background: `linear-gradient(180deg, rgba(${t.ramp.fade},0.18) 0%, rgba(${t.ramp.fade},0.55) 55%, rgba(${t.ramp.fade},0.94) 88%, ${t.ramp.panel} 100%), `
-                + `url(${t.ramp.art}) ${t.ramp.pos} / cover no-repeat`,
-            }} />
-
             {/* Header: who this party is, and what it comes to. */}
             <div style={{ position: 'relative', zIndex: 1, padding: '0.8rem 0.85rem 0.7rem', borderBottom: `1px solid ${t.accent}2a` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
