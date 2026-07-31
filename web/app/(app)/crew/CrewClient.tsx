@@ -1419,7 +1419,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
           const nextTier = nextHallTier(state.hallTier)
           return (
         <>
-        <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 12, border: `1px solid ${hall.accent}66`, background: `linear-gradient(180deg, ${hall.accent}22 0%, transparent 62%), rgba(14,19,28,0.97)`, boxShadow: hall.glow ? `0 0 26px ${hall.glow}` : undefined, padding: '0.8rem', marginBottom: '0.9rem' }}>
+        <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 12, border: `1px solid ${hall.accent}66`, background: `linear-gradient(180deg, ${hall.accent}24 0%, ${hall.accent}0c 58%, transparent 100%), ${hall.base}`, boxShadow: hall.glow ? `0 0 26px ${hall.glow}` : undefined, padding: '0.8rem', marginBottom: '0.9rem' }}>
           {/* Picture and identity SIDE BY SIDE. Stacked, this hero was tall and
               its picture was small at the same time - the two complaints were
               the same problem. Beside each other the building gets bigger and
@@ -1599,9 +1599,12 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                         style={{
                           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
                           minWidth: 0, padding: '0.55rem 0.35rem 0.5rem', borderRadius: 12,
+                          // Warm opaque base, matching the hall above and the
+                          // crew cards below (both already #201a10-ish). These
+                          // two were the last navy left in the recruit tab.
                           background: r.cannot
-                            ? `linear-gradient(180deg, ${accent}14, ${accent}0a), rgba(16,21,30,0.96)`
-                            : `linear-gradient(180deg, ${accent}3a, ${accent}1c), rgba(18,24,34,0.97)`,
+                            ? `linear-gradient(180deg, ${accent}14, ${accent}0a), #17120c`
+                            : `linear-gradient(180deg, ${accent}3a, ${accent}1c), #1c1610`,
                           border: `1px solid ${accent}80`,
                           opacity: r.cannot ? 0.5 : 1,
                           cursor: r.cannot ? 'not-allowed' : 'pointer',
