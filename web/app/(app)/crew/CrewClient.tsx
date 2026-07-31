@@ -456,8 +456,14 @@ function CrewPanel({
         )}
       </div>{/* end portrait wrapper */}
 
-      {/* Manifest detail */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+      {/* Manifest detail. Centred, not top-aligned: the portrait sets the card
+          height, and with the quick-assign row gone this column is ~69px of
+          content (name/rarity + stats) beside a 112px portrait, so top-aligning
+          left a ~43px void under the stats. Board cards are unaffected - their
+          footer carries marginTop:auto, and an auto margin eats the free space
+          before justify-content can distribute it, so they still read
+          content-top / action-bottom. */}
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.45rem' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
             <p className="font-pirata" style={{ fontSize: '1.18rem', color: '#ecdcbd', lineHeight: 1, letterSpacing: '0.02em', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
