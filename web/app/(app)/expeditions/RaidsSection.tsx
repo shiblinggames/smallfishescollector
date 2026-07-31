@@ -2165,9 +2165,10 @@ function NodeDetailSheet({
   const dropModal = selectedDrop ? <DropDetailModal drop={selectedDrop} owned={(!!selectedDrop.id && ownedRaidItems.includes(selectedDrop.id)) || (!!selectedDrop.shipSkinId && ownedShipSkins.includes(selectedDrop.shipSkinId))} onClose={() => setSelectedDrop(null)} /> : null
 
   // Dialogue scene — StoryScene portals itself to <body> (z-1100, above
-  // the sheet). Story nodes, first read: final CTA fires the mark-read
-  // action, and Skip ALSO marks it read (story must never gate harder
-  // than the old one-button flow — skippers can Read Again anytime).
+  // the sheet). Story nodes, first read: the final CTA fires the mark-read
+  // action, and there is NO Skip (see allowSkip below) — the first watch is
+  // the one that has to be watched. On a replay Skip is back and it ALSO
+  // marks read, so a re-read never gates harder than the old one-button flow.
   // Milestone/event intro scenes: finishing OR skipping just records
   // the watch locally and returns to the sheet, where the pay bar /
   // choice cards are now revealed — no server write here.
@@ -2200,6 +2201,11 @@ function NodeDetailSheet({
       background={SCENE_BACKDROPS[node.id]}
       onComplete={finishScene}
       onSkip={finishScene}
+      // No Skip on a FIRST watch. Cleared nodes (a replay from the map) and
+      // intro scenes already seen this session keep it, so re-reading is
+      // still one tap; it is only the first time through that has to be
+      // watched. Skip still marks read when it IS shown, unchanged.
+      allowSkip={cleared || seenIntroScenes.has(node.id)}
     />
   ) : null
 

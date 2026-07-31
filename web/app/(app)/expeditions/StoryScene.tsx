@@ -64,7 +64,7 @@ function stageAt(lines: SceneLine[], idx: number): { left: StageChar | null; rig
   return { left, right }
 }
 
-export default function StoryScene({ title, lines, ctaLabel, pending, accent, background, renderInsert, onComplete, onSkip }: {
+export default function StoryScene({ title, lines, ctaLabel, pending, accent, background, renderInsert, onComplete, onSkip, allowSkip = true }: {
   title: string
   lines: SceneLine[]
   ctaLabel: string
@@ -79,6 +79,12 @@ export default function StoryScene({ title, lines, ctaLabel, pending, accent, ba
   renderInsert?: (insert: SceneInsert) => ReactNode
   onComplete: () => void
   onSkip: () => void
+  /** Show the Skip button. FALSE on a first watch: the beat is the payoff for
+   *  everything that led to it, and a one-tap Skip sitting in the top bar from
+   *  line one is very easy to hit by accident and impossible to undo in the
+   *  moment. Once the scene has been seen through, Skip comes back for replays
+   *  and for anyone re-reading from the map. */
+  allowSkip?: boolean
 }) {
   const ACCENT = accent ?? GOLD
   const [idx, setIdx] = useState(0)
@@ -218,11 +224,13 @@ export default function StoryScene({ title, lines, ctaLabel, pending, accent, ba
         <span className="font-karla font-700 uppercase truncate" style={{ fontSize: '0.55rem', letterSpacing: '0.18em', color: 'rgba(240,237,232,0.42)' }}>
           {title}
         </span>
-        <button onClick={e => { e.stopPropagation(); onSkip() }} className="font-karla font-700 uppercase tap"
-          style={{ flexShrink: 0, fontSize: '0.55rem', letterSpacing: '0.14em', padding: '0.3rem 0.6rem', borderRadius: 7,
-            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(240,237,232,0.5)', cursor: 'pointer' }}>
-          Skip
-        </button>
+        {allowSkip && (
+          <button onClick={e => { e.stopPropagation(); onSkip() }} className="font-karla font-700 uppercase tap"
+            style={{ flexShrink: 0, fontSize: '0.55rem', letterSpacing: '0.14em', padding: '0.3rem 0.6rem', borderRadius: 7,
+              background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(240,237,232,0.5)', cursor: 'pointer' }}>
+            Skip
+          </button>
+        )}
       </div>
 
       {/* ── THE SHOT: stage + dialogue, rocked together when a line hits. ────── */}
