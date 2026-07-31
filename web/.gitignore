@@ -42,7 +42,12 @@ next-env.d.ts
 
 .vercel
 card-art-uploads/
-scripts/
+# Local asset tooling (slicers, uploaders) stays out of the repo, but the
+# campaign checker runs in prebuild and MUST ship. Note the glob: `scripts/`
+# would ignore the directory itself, and git will not descend into an ignored
+# directory, so a `!scripts/...` negation under it does nothing.
+scripts/*
+!scripts/check-campaign.mts
 
 # Badge slicer source sheets (dev-only input for slice-badges.mjs; sliced output in public/badges/ is committed)
 public/badgebatch*.png
