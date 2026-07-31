@@ -219,6 +219,16 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
   // The picker opens SHORT. Deep rosters turned choosing a hand into scanning
   // a wall of near-identical cards; the rest are one tap away.
   const [showAllCrew, setShowAllCrew] = useState(false)
+  // GHOST-CLICK GUARD. The indicator opens the panel from framer's onTap,
+  // which fires on POINTERUP — then the browser synthesizes a click ~100-300ms
+  // later at the same coordinates. By then this bottom sheet has mounted under
+  // the finger, so that phantom click landed on whatever zone card happened to
+  // be there: usually the Shallows (first card), which shot straight into its
+  // send-a-crew picker. Worse on a READY card, where it silently collected the
+  // haul. Zone cards ignore taps for a beat after the panel opens.
+  const openedAtRef = useRef(0)
+  const openPanel = () => { openedAtRef.current = Date.now(); setOpen(true) }
+  const settled = () => Date.now() - openedAtRef.current > 350
   // Defaults to FREE: a hand sent trawling is locked out of raids for the whole
   // cycle, so raid-party crew are the one group you usually do NOT want offered.
   // Switch to All / In raid to pull them in deliberately.
@@ -428,7 +438,7 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
           try { localStorage.setItem('trawl_indicator_pos', JSON.stringify({ x: dragX.get(), y: dragY.get() })) } catch { /* no-op */ }
           setTimeout(() => { draggingRef.current = false }, 150)
         }}
-        onTap={() => { if (!draggingRef.current) { setOpen(true); haptic(12) } }}
+        onTap={() => { if (!draggingRef.current) { openPanel(); haptic(12) } }}
         whileTap={{ scale: 0.9 }}
         whileDrag={{ scale: 1.08 }}
         aria-label="Trawls — tap to open, drag to move"
@@ -517,7 +527,11 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                 const wide = i === state.zones.length - 1 && state.zones.length % 2 === 1
                 const sendable = z.unlocked && !t && freeSlots > 0
                 const actionable = ready || sendable
-                const onTapCard = ready ? () => doCollect(z.key) : sendable ? () => { haptic(10); setShowAllCrew(false); setPicking(z.key) } : undefined
+                const onTapCard = ready
+                  ? () => { if (settled()) doCollect(z.key) }
+                  : sendable
+                    ? () => { if (!settled()) return; haptic(10); setShowAllCrew(false); setPicking(z.key) }
+                    : undefined
                 const theme = DEPTH_THEMES[z.key]
                 const glow = ready ? GOLD : running ? theme.accent : flashing ? theme.accent : undefined
                 const cardState: 'locked' | 'ready' | 'running' | 'sendable' | 'noslot' =
@@ -982,7 +996,7 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                 : 'More slots means more zones fishing for you at the same time. Pick another zone to crew.'}
             </p>
             <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
-              <motion.button whileTap={{ scale: 0.93 }} onClick={() => { setSlotUnlock(null); setOpen(true) }} className="font-cinzel font-700" style={{ flex: 1, padding: '0.65rem', borderRadius: 11, fontSize: '0.84rem', background: `${GOLD}22`, border: `1px solid ${GOLD}88`, color: '#f4ecd8', cursor: 'pointer' }}>Open Trawls</motion.button>
+              <motion.button whileTap={{ scale: 0.93 }} onClick={() => { setSlotUnlock(null); openPanel() }} className="font-cinzel font-700" style={{ flex: 1, padding: '0.65rem', borderRadius: 11, fontSize: '0.84rem', background: `${GOLD}22`, border: `1px solid ${GOLD}88`, color: '#f4ecd8', cursor: 'pointer' }}>Open Trawls</motion.button>
               <motion.button whileTap={{ scale: 0.93 }} onClick={() => setSlotUnlock(null)} className="font-karla font-700 uppercase" style={{ padding: '0.65rem 1.2rem', borderRadius: 11, letterSpacing: '0.08em', fontSize: '0.68rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.16)', color: '#cdd3db', cursor: 'pointer' }}>Later</motion.button>
             </div>
           </motion.div>
