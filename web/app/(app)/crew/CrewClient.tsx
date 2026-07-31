@@ -457,12 +457,13 @@ function CrewPanel({
       </div>{/* end portrait wrapper */}
 
       {/* Manifest detail. Centred, not top-aligned: the portrait sets the card
-          height, and with the quick-assign row gone this column is ~69px of
-          content (name/rarity + stats) beside a 112px portrait, so top-aligning
-          left a ~43px void under the stats. Board cards are unaffected - their
-          footer carries marginTop:auto, and an auto margin eats the free space
-          before justify-content can distribute it, so they still read
-          content-top / action-bottom. */}
+          height, and this column is shorter than it, so top-aligning left a
+          void underneath (~43px on a roster card, which carries no footer at
+          all since assignment moved to the Assign tab).
+          The footer below deliberately does NOT carry marginTop:auto - an auto
+          margin eats the free space before justify-content can distribute it,
+          which would pin recruit-card actions to the bottom and make the two
+          card types read differently. Everything centres as one cluster. */}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.45rem' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
@@ -552,7 +553,7 @@ function CrewPanel({
             and the action gets full breathing room so it can't spill off
             the edge regardless of label length ("Roster Full" / "Aboard"). */}
         {children && (
-          <div style={{ marginTop: 'auto', paddingTop: '0.4rem', display: 'flex', justifyContent: 'flex-end' }}>
+          <div style={{ paddingTop: '0.4rem', display: 'flex', justifyContent: 'flex-end' }}>
             <div style={{ display: 'flex', alignItems: 'center' }}>{children}</div>
           </div>
         )}
