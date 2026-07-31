@@ -15,7 +15,7 @@
  *  out about after they launch.
  */
 
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { applyLevelBonuses } from '@/lib/crewLevel'
 import { netTraitStats } from '@/lib/crewEffects'
 import type { CrewMember } from './actions'
@@ -58,19 +58,36 @@ const STAT_COLOR = { power: '#e08a7a', dodge: '#7fc4a8', fortune: '#e0c47a' }
  *  into and the ceiling is legible before you pay for it. */
 const MAX_SEATS = 6
 
+/** Corner control on a filled seat. Sits on the tile's edge so it never covers
+ *  the art or the name, and is opaque enough to read against either. */
+const SEAT_PIP: CSSProperties = {
+  position: 'absolute', width: 22, height: 22, borderRadius: '50%', padding: 0,
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  background: '#141018', border: '1px solid rgba(255,255,255,0.28)',
+  boxShadow: '0 2px 6px rgba(0,0,0,0.7)',
+  cursor: 'pointer', zIndex: 3, touchAction: 'manipulation',
+}
+
 export default function AssignBoard({
   roster, shipCrewSlots, lockedCrewIds, trawlingCrewIds, artSrc,
-  onFillSeat, onTapCrew, raidAccent, voyageAccent,
+  onPickSeat, onTapCrew, onRemoveCrew, pending = false, raidAccent, voyageAccent,
 }: {
   roster: CrewMember[]
   shipCrewSlots: number
   lockedCrewIds: number[]
   trawlingCrewIds: number[]
   artSrc: (filename: string) => string
-  /** Tapping an empty, unlocked seat. */
-  onFillSeat: (track: 'raid' | 'voyage') => void
-  /** Tapping a seated crew — opens their detail, where they can be pulled. */
+  /** Open the picker for ONE specific seat. Used by empty seats and by the
+   *  swap pip on a filled one - assigning to an occupied slot already benches
+   *  whoever holds it (applyAssignment step 1), so picking IS the swap. */
+  onPickSeat: (track: 'raid' | 'voyage', slot: number) => void
+  /** Tapping a seated crew - opens their detail. */
   onTapCrew: (crew: CrewMember) => void
+  /** Pull a crew off both tracks. */
+  onRemoveCrew: (crew: CrewMember) => void
+  /** Server round-trip in flight. run() has no re-entry guard, so the seat
+   *  controls have to stop themselves double-firing. */
+  pending?: boolean
   raidAccent: string
   voyageAccent: string
 }) {
@@ -181,7 +198,7 @@ export default function AssignBoard({
 
                 if (!crew) {
                   return (
-                    <button key={i} type="button" onClick={() => onFillSeat(t.key)}
+                    <button key={i} type="button" onClick={() => onPickSeat(t.key, i)}
                       aria-label={`Open seat ${i + 1} on the ${t.label}. Tap to assign a crew.`}
                       style={{
                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,
@@ -204,11 +221,15 @@ export default function AssignBoard({
                 }
 
                 const e = effectiveStats(crew)
+                // Wrapper, because the tile is a <button> and the remove/swap
+                // controls are buttons too - nesting them would be invalid HTML
+                // and swallow their clicks.
                 return (
-                  <button key={i} type="button" onClick={() => onTapCrew(crew)}
+                  <div key={i} style={{ position: 'relative' }}>
+                  <button type="button" onClick={() => onTapCrew(crew)}
                     aria-label={`${crew.name}, seat ${i + 1}. Tap for details.`}
                     style={{
-                      position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                      position: 'relative', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
                       minHeight: 104, padding: '0.4rem 0.3rem 0.45rem', borderRadius: 12,
                       cursor: 'pointer', font: 'inherit', textAlign: 'center',
                       border: `1.5px solid ${t.accent}88`,
@@ -232,10 +253,30 @@ export default function AssignBoard({
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="#e8c46a" stroke="#7a5c1c" strokeWidth="1" strokeLinejoin="round" aria-hidden><path d="M3 8l4 3.5L12 5l5 6.5L21 8l-1.6 10.2a1 1 0 0 1-1 .8H5.6a1 1 0 0 1-1-.8L3 8z" /></svg>
                       </span>
                     )}
-                    {held && (
-                      <span className="font-karla font-800 uppercase" style={{ position: 'absolute', top: 3, right: 4, fontSize: '0.5rem', letterSpacing: '0.08em', color: '#0b1016', background: 'rgba(206,218,232,0.9)', borderRadius: 4, padding: '0.06rem 0.22rem' }}>{held}</span>
-                    )}
                   </button>
+                    {/* Held crew are hard-locked server-side (assertCanReassign),
+                        so they get the status flag instead of the controls. */}
+                    {held ? (
+                      <span className="font-karla font-800 uppercase" style={{ position: 'absolute', top: 3, right: 4, fontSize: '0.5rem', letterSpacing: '0.08em', color: '#0b1016', background: 'rgba(206,218,232,0.9)', borderRadius: 4, padding: '0.06rem 0.22rem' }}>{held}</span>
+                    ) : (
+                      <>
+                        <button type="button" disabled={pending}
+                          onClick={() => onRemoveCrew(crew)}
+                          title={`Take ${crew.name} out of the ${t.label.toLowerCase()}`}
+                          aria-label={`Remove ${crew.name} from the ${t.label}`}
+                          style={{ ...SEAT_PIP, top: -6, right: -6, opacity: pending ? 0.4 : 1 }}>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#f0b4b4" strokeWidth="3" strokeLinecap="round" aria-hidden><path d="M18 6L6 18M6 6l12 12" /></svg>
+                        </button>
+                        <button type="button" disabled={pending}
+                          onClick={() => onPickSeat(t.key, i)}
+                          title={`Swap ${crew.name} for another hand`}
+                          aria-label={`Swap ${crew.name} out of seat ${i + 1}`}
+                          style={{ ...SEAT_PIP, bottom: -6, right: -6, opacity: pending ? 0.4 : 1 }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={t.accent} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M4 8h13l-3.5-3.5M20 16H7l3.5 3.5" /></svg>
+                        </button>
+                      </>
+                    )}
+                  </div>
                 )
               })}
             </div>

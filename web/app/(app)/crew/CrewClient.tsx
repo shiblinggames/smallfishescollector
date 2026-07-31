@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   rerollBoard, recruitCrew, dismissCrew, getCrewGraveyard,
-  assignToVoyage, assignToRaid, promoteToCaptain, renameCrew,
+  assignToVoyage, assignToRaid, benchCrew, promoteToCaptain, renameCrew,
   upgradeCrewHall, buyCrewSkin, equipCrewSkin, gambleBloodSkin, markCrewGuideSeen,
   type CrewState, type BoardCandidate, type CrewMember, type CrewActionResult, type FallenCrew,
 } from './actions'
@@ -989,7 +989,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
     })
   }
   // Which open seat the assign modal is filling (the track), or null.
-  const [assignTrack, setAssignTrack] = useState<'raid' | 'voyage' | null>(null)
+  const [assignSeat, setAssignSeat] = useState<{ track: 'raid' | 'voyage'; slot: number } | null>(null)
 
   useEffect(() => {
     if (activeTab !== 'graveyard' || graveyard !== null || graveyardLoading) return
@@ -1008,20 +1008,6 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
     ? (state.board.find(c => !c.recruited)?.id ?? null)
     : null
 
-  /** Pick the lowest empty slot on the target track. Returns 0 (captain
-   *  slot — server will bench the previous occupant) if all slots are
-   *  already filled, so the toggle never blocks on a full party. */
-  function nextOpenSlot(track: 'voyage' | 'raid'): number {
-    const taken = new Set<number>()
-    for (const c of state.roster) {
-      const s = track === 'voyage' ? c.voyageSlot : c.raidSlot
-      if (s !== null) taken.add(s)
-    }
-    for (let i = 0; i < state.shipCrewSlots; i++) {
-      if (!taken.has(i)) return i
-    }
-    return 0
-  }
 
   const scrollToCrew = () => crewSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 
@@ -1307,8 +1293,10 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             lockedCrewIds={state.lockedCrewIds}
             trawlingCrewIds={state.trawlingCrewIds}
             artSrc={artSrc}
-            onFillSeat={track => setAssignTrack(track)}
+            onPickSeat={(track, slot) => setAssignSeat({ track, slot })}
             onTapCrew={m => setDetail({ kind: 'roster', item: m })}
+            onRemoveCrew={m => run(() => benchCrew(m.id), m.id)}
+            pending={pending}
             raidAccent={ASSIGN_RAID}
             voyageAccent={ASSIGN_VOYAGE}
           />
@@ -1614,23 +1602,32 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
 
         {/* Fill-a-seat picker. Art-forward and three across, matching the
             board it opens from. */}
-        {assignTrack && typeof document !== 'undefined' && createPortal(
+        {assignSeat && typeof document !== 'undefined' && createPortal(
           <AssignPicker
-            track={assignTrack}
-            label={assignTrack === 'raid' ? 'Raid Party' : 'Voyage Party'}
+            track={assignSeat.track}
+            // Says which it is, because the same picker now both fills an
+            // empty seat and replaces an occupied one.
+            label={(() => {
+              const track = assignSeat.track
+              const party = track === 'raid' ? 'Raid Party' : 'Voyage Party'
+              const holder = state.roster.find(c => (track === 'raid' ? c.raidSlot : c.voyageSlot) === assignSeat.slot)
+              return holder ? `Replace ${holder.name}` : party
+            })()}
             roster={state.roster}
             lockedCrewIds={state.lockedCrewIds}
             trawlingCrewIds={state.trawlingCrewIds}
             artSrc={artSrc}
             pending={pending}
             busyId={busyId}
-            accent={assignTrack === 'raid' ? ASSIGN_RAID : ASSIGN_VOYAGE}
+            accent={assignSeat.track === 'raid' ? ASSIGN_RAID : ASSIGN_VOYAGE}
             rarityColor={r => RARITY_COLORS[(r as CrewRarity)] ?? 'rgba(255,255,255,0.14)'}
             onPick={m => {
-              const slot = nextOpenSlot(assignTrack)
-              run(() => (assignTrack === 'raid' ? assignToRaid(m.id, slot) : assignToVoyage(m.id, slot)), m.id, () => setAssignTrack(null))
+              // Explicit slot, not "next open one". applyAssignment benches
+              // whoever holds the target slot first, so this doubles as swap.
+              const { track, slot } = assignSeat
+              run(() => (track === 'raid' ? assignToRaid(m.id, slot) : assignToVoyage(m.id, slot)), m.id, () => setAssignSeat(null))
             }}
-            onClose={() => setAssignTrack(null)}
+            onClose={() => setAssignSeat(null)}
           />, document.body)}
 
         {/* Hall upgrade confirm modal — fixed overlay (CrewClient mounts at
