@@ -427,7 +427,13 @@ function CrewPanel({
           arched niche below (which needs overflow:hidden for image
           clipping). Niche keeps its own clip mask; badges sit on top. */}
       <div style={{
-        position: 'relative', width: 102, height: 112,
+        // 102x112 -> 124x130. The art is square-ish (content aspect across all
+        // 41 files: median 1.05, range 0.87-1.28), so `contain` in a portrait
+        // niche fitted by WIDTH and the extra height was dead space. Width is
+        // the only dimension that makes the portrait bigger, and at the roster
+        // grid's worst case (minmax(300px)) it has to be bought from the stat
+        // column - hence the narrower bars below. ~+50% art area.
+        position: 'relative', width: 124, height: 130,
         flexShrink: 0, alignSelf: 'flex-start',
       }}>
         {/* Arched portrait niche. clip-path (not just overflow:hidden) so an
@@ -435,23 +441,26 @@ function CrewPanel({
             bleeding past the rounded top. */}
         <div style={{
           position: 'absolute', inset: 0,
-          borderRadius: '46px 46px 5px 5px', overflow: 'hidden',
-          clipPath: 'inset(0 round 46px 46px 5px 5px)',
+          borderRadius: '56px 56px 5px 5px', overflow: 'hidden',
+          clipPath: 'inset(0 round 56px 56px 5px 5px)',
           border: `2px solid ${color}`,
           boxShadow: `inset 0 -12px 20px rgba(0,0,0,0.65), 0 0 10px ${color}33`,
-          background: `radial-gradient(ellipse at 50% 30%, ${color}26 0%, #070504 74%)`,
+          // Was ${color}26 (15% rarity) over #070504, which is essentially black -
+          // the portrait floated in a void. Rarity now actually lights the
+          // alcove, over a base that is lifted rather than pure black.
+          background: `radial-gradient(ellipse at 50% 26%, ${color}4d 0%, ${color}1a 44%, #0c0a08 80%)`,
         }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={artSrc(filename)} alt={name} loading="lazy" decoding="async"
             className={skinChase ? 'chase-skin-glow' : undefined}
             style={{
             position: 'absolute', inset: 0, width: '100%', height: '100%',
-            objectFit: 'contain', objectPosition: 'center 20%', padding: 2,
+            objectFit: 'contain', objectPosition: 'center 22%',
             ...(skinChase ? { ['--chase-c']: skinGlow } : { filter: skinGlowFilter }),
           } as React.CSSProperties} />
           {skinChase && skinGlow && <ChaseSkinFx skinId={skinDef?.id} color={skinGlow} />}
           {/* inner frame line */}
-          <div style={{ position: 'absolute', inset: 3, borderRadius: '44px 44px 4px 4px', border: '1px solid rgba(255,225,170,0.18)', pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', inset: 3, borderRadius: '54px 54px 4px 4px', border: '1px solid rgba(255,225,170,0.18)', pointerEvents: 'none' }} />
         {/* Class nameplate — replaces the old trait teaser. Class is now the
             bigger identity decision (species-locked, drives the raid Special
             ability), so the portrait reads as the role at a glance: "Mender",
@@ -587,7 +596,7 @@ function CrewPanel({
 
         {/* Engraved stats — icon + number over a bar, drawn against a fixed
             ceiling (STAT_BAR_MAX) so bars are comparable card to card. */}
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, padding: '0.15rem 0' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, padding: '0.15rem 0' }}>
           {(['power', 'dodge', 'fortune'] as const).map((k, i) => (
             <div key={k} title={STAT_LABEL[k]} style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -599,7 +608,7 @@ function CrewPanel({
               {/* scaleX on a solid fill, never width: width is layout and a
                   roster renders dozens of cards at once. Staggered so the three
                   read left to right instead of snapping together. */}
-              <span aria-hidden style={{ display: 'block', width: 44, height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+              <span aria-hidden style={{ display: 'block', width: 36, height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
                 <span className="crew-stat-fill" style={{
                   display: 'block', width: '100%', height: '100%', borderRadius: 2,
                   background: STAT_COLOR[k],
