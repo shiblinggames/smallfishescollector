@@ -479,6 +479,12 @@ export interface RaidNode {
    *  Finn the node right before this one is the reveal, so masking him after it
    *  un-tells the twist the player just watched. */
   revealBoss?: boolean
+  /** Reveal this boss's face + name ONLY once `revealBossAfter` (a node id) is
+   *  cleared. The unconditional `revealBoss` is wrong for a boss whose identity
+   *  IS the twist: previewWhenLocked shows the node long before the reveal
+   *  scene, and the Bosses tab lists it regardless, so a flat `true` showed
+   *  Finn's face and name to players who had not met him yet. */
+  revealBossAfter?: string
   /** Optional extra gate: minimum Navigation level. */
   requiresNavLevel?: number
   /** Optional extra gate: how many Ancient Deep giants you must have landed
@@ -2765,7 +2771,12 @@ export const RAID_MAP: RaidNode[] = [
     route: '/raids/sunken-hand',
     previewWhenLocked: true,
     image: '/finn_final.png',
-    revealBoss: true,   // the_hand_that_sharpens already showed the player exactly who he is
+    // Revealed only AFTER the reveal scene. This was an unconditional
+    // `revealBoss: true` on the reasoning that the previous node is the
+    // reveal — true for someone who cleared it, but the node previews
+    // while locked and the Bosses tab lists it either way, so it was
+    // un-telling the twist to everyone who had not got there yet.
+    revealBossAfter: 'the_hand_that_sharpens',
     sceneAccent: '#a78bfa',
     detail: {
       description:
@@ -2899,7 +2910,8 @@ export const RAID_MAP: RaidNode[] = [
     sideBranch: { parentId: 'one_last_ride' },
     previewWhenLocked: true,
     image: '/finn_final.png',
-    revealBoss: true,
+    // Same gate: this previews while locked too.
+    revealBossAfter: 'the_hand_that_sharpens',
     sceneAccent: '#a78bfa',
     detail: {
       description:
@@ -2930,6 +2942,15 @@ export interface RaidNodeView {
 /** Pure status resolver. `cleared` is the set of node ids already done
  *  (combat beaten ≥1 / milestone claimed). Combat clears are derived by the
  *  caller from existing data; one-time clears come from raid_node_progress. */
+/** Is this boss's identity known to the player? Cleared bosses always are; the
+ *  rest depend on whether the story has introduced them yet. Kept here so the
+ *  Bosses tab and the fight modal cannot answer it differently. */
+export function bossIdentityRevealed(node: RaidNode, clearedNodeIds: Set<string>): boolean {
+  if (node.revealBoss === true) return true
+  if (node.revealBossAfter) return clearedNodeIds.has(node.revealBossAfter)
+  return false
+}
+
 export function computeRaidMap(
   cleared: Set<string>,
   doubloons: number,

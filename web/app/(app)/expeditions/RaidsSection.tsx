@@ -1,12 +1,12 @@
 'use client'
 
 import SpoilsBoard from './SpoilsBoard'
-import { useEffect, useRef, useState, useTransition } from 'react'
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { vibrate } from '@/lib/haptics'
-import { formatDropChance, isCombatNode, chapterForNode, RAID_CHAPTERS, musterSceneLines, SCENE_BACKDROPS, type RaidChapter, type RaidNodeDrop, type RaidNodeView } from '@/lib/raidMap'
+import { bossIdentityRevealed, formatDropChance, isCombatNode, chapterForNode, RAID_CHAPTERS, musterSceneLines, SCENE_BACKDROPS, type RaidChapter, type RaidNodeDrop, type RaidNodeView } from '@/lib/raidMap'
 import type { RaidRecords } from './raidMapActions'
 import { RARITY_COLOR, GEM_GLYPH, GEM_COLOR, RAID_LOCATION_BG, RAID_BOSS_BG } from '@/lib/bossRaids'
 import { getRaidItem } from '@/lib/raidItems'
@@ -2977,6 +2977,9 @@ function BossesView({ views, raidRecords, ownedRaidItems, ownedShipSkins, repair
   const [modalBoss, setModalBoss] = useState<RaidNodeView | null>(null)
   // Boss raids grouped by chapter so each grid ROW pairs a chapter's two bosses.
   const bosses = views.filter(v => v.node.type === 'raid' && !v.node.sideBranch)
+  // Story-gated boss identities (Finn) read from this, so the tab cannot
+  // unmask someone the player has not met.
+  const clearedNodeIds = useMemo(() => new Set(views.filter(v => v.status === 'cleared').map(v => v.node.id)), [views])
   const byChapter = new Map<string, RaidNodeView[]>()
   const chapterOrder: string[] = []
   for (const v of bosses) {
@@ -3002,7 +3005,7 @@ function BossesView({ views, raidRecords, ownedRaidItems, ownedShipSkins, repair
           ? { display: 'grid', gridTemplateColumns: 'minmax(0, 72%)', justifyContent: 'center', gap: 10 }
           : { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           {byChapter.get(cid)!.map(v => (
-            <BossTile key={v.node.id} view={v} isNext={v.node.id === nextUpId} challengeCleared={challengeOf(v)?.status === 'cleared'} onOpen={() => { vibrate([0, 12]); setModalBoss(v) }} />
+            <BossTile key={v.node.id} view={v} isNext={v.node.id === nextUpId} challengeCleared={challengeOf(v)?.status === 'cleared'} clearedNodeIds={clearedNodeIds} onOpen={() => { vibrate([0, 12]); setModalBoss(v) }} />
           ))}
         </div>
         )
@@ -3010,6 +3013,7 @@ function BossesView({ views, raidRecords, ownedRaidItems, ownedShipSkins, repair
       {modalBoss && (
         <BossFightModal
           key={modalBoss.node.id}
+          clearedNodeIds={clearedNodeIds}
           boss={modalBoss}
           challenge={challengeOf(modalBoss)}
           rec={modalBoss.node.raidId ? raidRecords[modalBoss.node.raidId] ?? null : null}
@@ -3036,12 +3040,12 @@ function bossNameOf(node: { raidId?: string; label: string }): string {
 
 // A single art-forward boss tile — a large portrait with the name over a bottom
 // scrim + a status marker. Tapping opens the BossFightModal.
-function BossTile({ view, isNext, challengeCleared, onOpen }: { view: RaidNodeView; isNext: boolean; challengeCleared: boolean; onOpen: () => void }) {
+function BossTile({ view, isNext, challengeCleared, clearedNodeIds, onOpen }: { view: RaidNodeView; isNext: boolean; challengeCleared: boolean; clearedNodeIds: Set<string>; onOpen: () => void }) {
   const node = view.node
   const bossName = bossNameOf(node)
   const cleared = view.status === 'cleared'
   // See the note in the boss panel below: revealed-by-story bosses are not masked.
-  const shown = cleared || node.revealBoss === true
+  const shown = cleared || bossIdentityRevealed(node, clearedNodeIds)
   const locked = view.status === 'locked'
   const accent = locked ? '#4f4a42' : isNext ? '#5eead4' : '#c4a96a'
   return (
@@ -3083,7 +3087,7 @@ function BossTile({ view, isNext, challengeCleared, onOpen }: { view: RaidNodeVi
 
 // The boss fight modal — opens on a tile tap. Shows the big portrait, the drops,
 // and the choice of Fight (normal) vs Challenge. Portaled + backdrop-dismissable.
-function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ownedShipSkins, isNext, repairOwed, onEnter, onRepairBlocked, onClose }: {
+function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ownedShipSkins, isNext, repairOwed, onEnter, onRepairBlocked, onClose, clearedNodeIds }: {
   boss: RaidNodeView
   challenge: RaidNodeView | null
   rec: RaidRecords | null
@@ -3095,6 +3099,8 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
   onEnter: (route: string) => void
   onRepairBlocked: () => void
   onClose: () => void
+  /** Cleared node ids — decides whether a story-gated boss is unmasked. */
+  clearedNodeIds: Set<string>
 }) {
   // Tapping a drop opens the same DropDetailModal the map nodes use, so an item
   // reads identically wherever you meet it. Local state: this modal is portaled
@@ -3106,7 +3112,8 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
   const cleared = boss.status === 'cleared'   // beat the boss NORMALLY → art revealed
   // Identity masking is separate from CLEARED: a boss the story has already
   // introduced should not be a silhouette just because you have not beaten them.
-  const shown = cleared || boss.node.revealBoss === true
+  // But "already introduced" has to MEAN it — see bossIdentityRevealed.
+  const shown = cleared || bossIdentityRevealed(boss.node, clearedNodeIds)
   const locked = boss.status === 'locked'
   const blocked = repairOwed > 0
   const chAvailable = !!challenge && (challenge.status === 'available' || challenge.status === 'cleared')
@@ -3780,6 +3787,7 @@ export default function RaidsSection({ views, doubloons, spoilFree = null, spoil
               onEnter={r => router.push(r)}
               onRepairBlocked={() => setRepairPromptOpen(true)}
               onClose={() => setSelected(null)}
+              clearedNodeIds={new Set(views.filter(v => v.status === 'cleared').map(v => v.node.id))}
             />
           )
         })() : (
