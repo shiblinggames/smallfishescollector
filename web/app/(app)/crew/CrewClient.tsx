@@ -457,6 +457,8 @@ function CrewPanel({
   const skinChase = !!skinDef?.chase
   const skinGlowFilter = skinGlow ? skinArtGlow(skinGlow, rarity, false) : undefined
   const eff = applyCrewEffects(base, effects, xp)
+  // Bars scale to this crew's OWN best stat (see the stat block below).
+  const statMax = Math.max(eff.power, eff.dodge, eff.fortune)
 
   const corner = (pos: React.CSSProperties): React.CSSProperties => ({
     position: 'absolute', width: 9, height: 9, opacity: 0.6, pointerEvents: 'none', ...pos,
@@ -696,14 +698,35 @@ function CrewPanel({
           </p>
         </div>
 
-        {/* Engraved stats — three stat blocks left-aligned. */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.15rem 0' }}>
-          {(['power', 'dodge', 'fortune'] as const).map(k => (
-            <div key={k} title={STAT_LABEL[k]} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        {/* Engraved stats — icon + number, each over a bar.
+            The NUMBER is absolute; the BAR is shape. Bars scale to this crew's
+            own best stat rather than a global ceiling, because the ceiling is
+            useless as a scale: a hyper-specialised legendary reaches ~62 in one
+            stat at level 100 while a balanced one sits around 25, so a fixed
+            max renders almost every card as three slivers. Scaled to self, the
+            bar answers the question you actually ask when comparing recruits -
+            what is this one FOR - and the printed number still carries how
+            strong they are. */}
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, padding: '0.15rem 0' }}>
+          {(['power', 'dodge', 'fortune'] as const).map((k, i) => (
+            <div key={k} title={STAT_LABEL[k]} style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <StatIcon k={k} color={STAT_COLOR[k]} />
               <span className="font-cinzel font-700" style={{ fontSize: '0.98rem', lineHeight: 1, color: '#ecdcbd' }}>
                 {eff[k]}
               </span>
+            </div>
+            {/* The bar. scaleX on a solid fill, never width: width is layout,
+                and a roster can hold dozens of cards. Staggered so the three
+                read left to right rather than snapping together. */}
+            <span aria-hidden style={{ display: 'block', width: 44, height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+              <span className="crew-stat-fill" style={{
+                display: 'block', width: '100%', height: '100%', borderRadius: 2,
+                background: STAT_COLOR[k],
+                transform: `scaleX(${statMax > 0 ? Math.max(0.06, eff[k] / statMax) : 0})`,
+                animationDelay: `${0.06 * i}s`,
+              }} />
+            </span>
             </div>
           ))}
         </div>
