@@ -101,7 +101,13 @@ export default function AssignBoard({
   // enough that the sea and smoke still come through.
   const RAMP = {
     raid: {
-      base: '#180f13', art: '/exp-campaign.jpg', fade: '24,15,19',
+      // Storm water off the campaign's own /raids backdrop, cropped to the
+      // horizon band and sized for a panel (1000x824, 61KB, vs the 1536x2752
+      // 237KB page plate). Simpler than the fleet-battle art it replaced: open
+      // water and one lightning strike, nothing competing with the seats.
+      // Wash is near-neutral so the storm keeps its own colour instead of
+      // being pulled brown.
+      base: '#161016', art: '/crew-raid-panel.jpg', fade: '18,14,18',
       stat: 'rgba(10,5,8,0.52)', locked: 'rgba(10,5,8,0.46)',
       open: 'rgba(10,5,8,0.36)', seat: 'rgba(10,5,8,0.44)',
     },
