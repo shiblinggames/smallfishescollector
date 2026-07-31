@@ -16,6 +16,7 @@
 
 import { CrewPortrait, type ShowcaseCrew } from '@/components/CrewShowcase'
 import { getRaidItem, isAbyssalForgedItem, type RaidItemDef } from '@/lib/raidItems'
+import { SPECIAL_ITEMS, type SpecialItemDef } from '@/lib/specialItems'
 import { SHINY_THEME, SHINY_FISH_FILTER } from '@/lib/shiny'
 import { PRESTIGE_MAX } from '@/lib/zoneRewards'
 
@@ -340,6 +341,71 @@ export function RaidArsenal({ items }: { items: string[] }) {
               : forged
               ? <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.12em', backgroundImage: FORGED_GRADIENT, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>Forged</span>
               : <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.1em', color: c }}>{it.rarity}</span>}
+          </div>
+        )
+      })}
+    </ShowcaseRail>
+  )
+}
+
+/** THE TACKLE — fishing special items, the fishing-side twin of the Arsenal.
+ *  Same rail, same tile, so the two tabs read as one collection split across
+ *  two trades rather than two unrelated designs. Owned ids in, art out; the
+ *  equipped one wears a marker since only one can be seated at a time.
+ *
+ *  The Primeval Eye lands here rather than in the Arsenal: it is a fishing
+ *  special, and this is where fishing gear lives. It gets the ancient
+ *  treatment, same as the Maw does on the raid side. */
+export function SpecialTackle({ items, equippedIds = [] }: { items: string[]; equippedIds?: (string | null)[] }) {
+  // Two slots can be seated at once (the ordinary special, plus the Sunken
+  // Hand's second slot), so this is a set, not one id.
+  const seated = new Set(equippedIds.filter(Boolean) as string[])
+  const defs = [...new Set(items)]
+    .map(id => SPECIAL_ITEMS.find(s => s.id === id))
+    .filter((s): s is SpecialItemDef => !!s)
+    // Ancient first, mirroring the Arsenal's ranking; then the seated one, so
+    // what you are actually fishing with is never buried.
+    .sort((a, b) =>
+      Number(!!b.finaleSlotOnly) - Number(!!a.finaleSlotOnly)
+      || Number(seated.has(b.id)) - Number(seated.has(a.id)))
+  if (defs.length === 0) return null
+  return (
+    <ShowcaseRail>
+      {defs.map(it => {
+        // finaleSlotOnly is the Sunken Hand spoil — the one ancient in the set.
+        const ancient = !!it.finaleSlotOnly
+        const equipped = seated.has(it.id)
+        const c = ancient ? ITEM_RARITY_COLOR.ancient : it.color
+        return (
+          <div key={it.id} style={{
+            flex: '0 0 auto', width: 124, scrollSnapAlign: 'start',
+            position: 'relative',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+            padding: '0.75rem 0.5rem 0.6rem', borderRadius: 13, textAlign: 'center',
+            background: ancient ? ANCIENT_BG : `${c}0e`,
+            border: `1px solid ${ancient ? ANCIENT_BORDER : `${c}33`}`,
+            boxShadow: ancient ? '0 0 22px rgba(236,227,205,0.16)' : 'none',
+          }}>
+            <div style={{ height: 88, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {it.image
+                // eslint-disable-next-line @next/next/no-img-element
+                ? <img src={it.image} alt={it.name} loading="lazy" decoding="async"
+                    className={ancient ? 'rod-glow-ancient' : undefined}
+                    style={{ maxWidth: 86, maxHeight: 86, objectFit: 'contain', ...(ancient ? {} : { filter: `drop-shadow(0 3px 10px ${c}66)` }) }}
+                    onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                : <span aria-hidden style={{ width: 56, height: 56, borderRadius: 12, background: `${c}22`, border: `1px solid ${c}44` }} />}
+            </div>
+            <p className="font-karla font-600" style={{
+              display: 'block', width: '100%',
+              fontSize: '0.66rem', color: '#e8e4dc', lineHeight: 1.15,
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+            }}>{it.name}</p>
+            {ancient
+              ? <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.16em', backgroundImage: ANCIENT_GRADIENT, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>Ancient</span>
+              : <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.1em', color: equipped ? '#7fd49a' : `${c}bb` }}>{equipped ? 'Equipped' : 'Special'}</span>}
+            {equipped && ancient && (
+              <span className="font-karla font-700 uppercase" style={{ position: 'absolute', top: 6, right: 7, fontSize: '0.44rem', letterSpacing: '0.08em', color: '#7fd49a' }}>Seated</span>
+            )}
           </div>
         )
       })}

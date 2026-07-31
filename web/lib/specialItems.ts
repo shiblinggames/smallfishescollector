@@ -86,3 +86,21 @@ export const SPECIAL_ITEMS: SpecialItemDef[] = [
 export function getSpecialItem(id: string): SpecialItemDef | undefined {
   return SPECIAL_ITEMS.find(s => s.id === id)
 }
+
+/** Ownership for each special lives in its own boolean column. Kept here so a
+ *  caller can never miss one (the profile Tackle rail reads all six). */
+export const SPECIAL_OWNED_COLUMN: Record<SpecialItemId, string> = {
+  tide_turner:      'has_tide_turner',
+  phantom_hook:     'has_phantom_hook',
+  auto_caster:      'has_auto_caster',
+  auto_catcher:     'has_auto_catcher',
+  perfected_sigil:  'has_perfected_sigil',
+  anglers_patience: 'has_anglers_patience',
+}
+
+/** Every special the player owns, from a profile row. */
+export function ownedSpecialIds(p: Record<string, unknown> | null | undefined): SpecialItemId[] {
+  if (!p) return []
+  return (Object.keys(SPECIAL_OWNED_COLUMN) as SpecialItemId[])
+    .filter(id => p[SPECIAL_OWNED_COLUMN[id]] === true)
+}

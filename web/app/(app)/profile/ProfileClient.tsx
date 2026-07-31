@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { CrewPortrait } from '@/components/CrewShowcase'
-import { RarestCatchesByZone, FeaturedCrew, RaidArsenal, GoldenMounts, type GoldenMount } from '@/components/ProfileShowcase'
+import { RarestCatchesByZone, FeaturedCrew, RaidArsenal, GoldenMounts, SpecialTackle, type GoldenMount } from '@/components/ProfileShowcase'
 import type { CrewMember } from '@/app/(app)/crew/actions'
 import type { BorderStyle, ArtEffect } from '@/lib/types'
 import { updateUsername, updateCharacterColor, updateAvatarColors, purchaseCharacterColor, purchaseAvatarSpecial, updateProfileBg } from '@/app/(app)/u/actions'
@@ -49,6 +49,10 @@ interface Props {
   reelTier: number
   hookTier: number
   equippedSpecialId: string | null
+  /** Every fishing special owned, + whichever are seated (slot 1 and the
+   *  Sunken Hand's second slot). Drives the Tackle rail. */
+  ownedSpecialIds: string[]
+  equippedSpecial2Id: string | null
   rarestFish: { id: number; name: string; bite_rarity: number; habitat?: string; sell_value?: number }[]
   prestigeLevels: Record<string, number>
   goldenMounts: GoldenMount[]
@@ -84,8 +88,9 @@ function fishImageUrl(name: string) {
 // The trophy case for the 6 Ancient Deep giants. Once the first is landed, ALL six
 // niches show: caught giants stand lit on their own signature-colored pedestal;
 // the rest are sealed — a near-black silhouette behind a rune, so you can just make
-// out the shape of what is still down there. Megalodon is the crimson APEX plinth,
-// locked until the other five are sealed; land it and the whole vault awakens.
+// out the shape of what is still down there. Megalodon is the sixth niche, wearing
+// the crimson accent and the VI numeral; land it and the whole vault awakens.
+// (It had its own full-width apex plinth under the grid — one row too many.)
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI']
 const ANCIENT_GIANTS: { id: number; name: string; epithet: string; accent: string }[] = [
   { id: 144, name: 'Plesiosaurus', epithet: 'The Long Neck',      accent: '#22d3ee' },
@@ -95,6 +100,8 @@ const ANCIENT_GIANTS: { id: number; name: string; epithet: string; accent: strin
   { id: 148, name: 'Shastasaurus', epithet: 'The Colossus',       accent: '#34d399' },
 ]
 const MEGALODON_GIANT = { id: 143, name: 'Megalodon', epithet: 'The Apex', accent: '#f43f5e' }
+// The wall is one list now: five lesser giants, then the apex, three per row.
+const ALL_GIANTS = [...ANCIENT_GIANTS, MEGALODON_GIANT]
 
 const VAULT_CSS = `
 @keyframes vaultFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
@@ -190,7 +197,6 @@ function VaultOfAncients({ trophies }: { trophies: { id: number; name: string }[
   const fiveSealed = ANCIENT_GIANTS.every(g => caughtIds.has(g.id))
   const megaCaught = caughtIds.has(MEGALODON_GIANT.id)
   const complete = megaCaught // Megalodon is always last, so this === all six
-  const m = MEGALODON_GIANT
 
   return (
     <div style={{
@@ -205,6 +211,16 @@ function VaultOfAncients({ trophies }: { trophies: { id: number; name: string }[
       boxShadow: `inset 0 1px 0 rgba(253,230,138,0.08), inset 0 0 40px rgba(99,102,241,0.05), 0 0 30px ${complete ? 'rgba(253,230,138,0.14)' : 'rgba(124,58,237,0.14)'}`,
     }}>
       <style dangerouslySetInnerHTML={{ __html: VAULT_CSS }} />
+
+      {/* Completion halo — used to live on the apex plinth; it belongs to the
+          whole wall now that the wall is one grid. */}
+      {complete && (
+        <span aria-hidden style={{
+          position: 'absolute', top: '50%', left: '50%', width: 320, height: 320, borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(253,230,138,0.14) 0%, transparent 62%)',
+          animation: 'vaultAwaken 4.5s ease-in-out infinite', pointerEvents: 'none',
+        }} />
+      )}
 
       {/* drifting motes */}
       <div aria-hidden style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
@@ -229,77 +245,31 @@ function VaultOfAncients({ trophies }: { trophies: { id: number; name: string }[
         </span>
       </div>
 
-      {/* the five lesser giants — centered flex wrap so the second row (2 niches)
-          sits centered under the first (3), instead of a grid leaving a lonely
-          empty cell that reads as a missing seventh giant */}
+      {/* ALL SIX niches in one grid, three per row — two clean rows. Megalodon
+          used to sit under them on its own full-width apex plinth; it is simply
+          the sixth niche now, sharing row two with IV and V. Its crimson accent
+          and the VI numeral are all the apex distinction the wall needs. */}
       <div style={{ position: 'relative', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 9 }}>
-        {ANCIENT_GIANTS.map((g, i) => (
+        {ALL_GIANTS.map((g, i) => (
           <div key={g.id} style={{ flex: '0 0 calc(33.333% - 6px)', minWidth: 92 }}>
             <AncientNiche giant={g} index={i + 1} caught={caughtIds.has(g.id)} />
           </div>
         ))}
       </div>
 
-      {/* Megalodon — the apex plinth */}
-      <div style={{
-        position: 'relative', overflow: 'hidden', marginTop: 10,
-        borderRadius: 14,
-        background: megaCaught
-          ? `radial-gradient(ellipse at 50% 130%, ${m.accent}3a 0%, rgba(30,6,14,0.82) 52%, rgba(8,3,6,0.97) 100%)`
-          : `radial-gradient(ellipse at 50% 130%, ${m.accent}18 0%, rgba(16,6,10,0.9) 62%)`,
-        border: `1px solid ${megaCaught ? m.accent + '77' : fiveSealed ? m.accent + '55' : 'rgba(244,63,94,0.22)'}`,
-        borderTop: `1px solid ${megaCaught ? m.accent + 'cc' : m.accent + '55'}`,
-        boxShadow: megaCaught ? `inset 0 1px 0 ${m.accent}44, 0 0 26px ${m.accent}30` : 'inset 0 1px 0 rgba(255,255,255,0.04)',
-        display: 'flex', alignItems: 'center', gap: 14, padding: '0.85rem 1rem',
+      {/* The payoff the apex plinth used to carry — kept, because finishing the
+          wall deserves a line, and the grid alone says nothing. */}
+      <p className="font-karla font-400 italic" style={{
+        position: 'relative', textAlign: 'center', marginTop: 12,
+        fontSize: '0.64rem', lineHeight: 1.4,
+        color: complete ? '#fde68a' : 'rgba(254,205,211,0.68)',
       }}>
-        {/* completion halo */}
-        {complete && (
-          <span aria-hidden style={{
-            position: 'absolute', top: '50%', left: '50%', width: 260, height: 260, borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(253,230,138,0.16) 0%, transparent 62%)',
-            animation: 'vaultAwaken 4.5s ease-in-out infinite', pointerEvents: 'none',
-          }} />
-        )}
-        {megaCaught && (
-          <span aria-hidden style={{ position: 'absolute', top: 0, bottom: 0, width: '30%', left: 0, background: `linear-gradient(90deg, transparent, ${m.accent}26, transparent)`, animation: 'vaultShimmer 6s ease-in-out infinite', pointerEvents: 'none' }} />
-        )}
-
-        {/* specimen */}
-        <div style={{ position: 'relative', width: 96, height: 78, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div aria-hidden style={{ position: 'absolute', bottom: 4, left: '50%', transform: 'translateX(-50%)', width: 80, height: 22, borderRadius: '50%', background: `radial-gradient(ellipse, ${m.accent}55 0%, transparent 70%)`, filter: 'blur(3px)' }} />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={fishImageUrl(m.name)} alt={megaCaught ? m.name : 'The sealed apex'} loading="lazy" decoding="async"
-            style={megaCaught
-              ? { position: 'relative', maxWidth: 94, maxHeight: 76, objectFit: 'contain', filter: `drop-shadow(0 3px 16px ${m.accent}aa)`, animation: 'vaultFloat 4.6s ease-in-out infinite' }
-              : { position: 'relative', maxWidth: 88, maxHeight: 70, objectFit: 'contain', filter: 'brightness(0) opacity(0.7)', animation: 'vaultPulse 3.8s ease-in-out infinite' }}
-            onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-          />
-        </div>
-
-        <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
-          <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.22em', color: m.accent, marginBottom: 3 }}>
-            {complete ? 'The Wall Is Complete' : megaCaught ? 'The Apex' : fiveSealed ? 'The Final Hunt' : 'The Apex Sleeps'}
-          </p>
-          <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: megaCaught ? '#fff1f2' : 'rgba(254,205,211,0.62)', lineHeight: 1.05, textShadow: megaCaught ? `0 0 12px ${m.accent}77` : 'none' }}>
-            {megaCaught ? m.name : 'Megalodon'}
-          </p>
-          <p className="font-karla font-400 italic" style={{ fontSize: '0.62rem', color: 'rgba(254,205,211,0.7)', marginTop: 4, lineHeight: 1.3 }}>
-            {complete
-              ? '“Every giant, sealed. The deep keeps nothing back from you now.”'
-              : megaCaught
-                ? '“The oldest hunger in the sea, and it is yours.”'
-                : fiveSealed
-                  ? 'The other five are sealed. The black water will open for you now. Go and take it.'
-                  : 'Seal the other five giants, and the deep will surrender its oldest.'}
-          </p>
-        </div>
-
-        {/* lock badge when it cannot yet be drawn up */}
-        {!megaCaught && !fiveSealed && (
-          <div style={{ position: 'relative', flexShrink: 0, color: 'rgba(244,63,94,0.6)' }}><LockRune color="rgba(244,63,94,0.6)" /></div>
-        )}
-      </div>
+        {complete
+          ? '“Every giant, sealed. The deep keeps nothing back from you now.”'
+          : fiveSealed
+            ? 'The other five are sealed. The black water will open for you now. Go and take it.'
+            : 'Seal the other five giants, and the deep will surrender its oldest.'}
+      </p>
     </div>
   )
 }
@@ -375,6 +345,8 @@ export default function ProfileClient({
   reelTier,
   hookTier,
   equippedSpecialId,
+  ownedSpecialIds,
+  equippedSpecial2Id,
   rarestFish,
   prestigeLevels,
   goldenMounts,
@@ -1063,6 +1035,14 @@ export default function ProfileClient({
             </div>
           )}
           </div>
+
+          {/* Tackle — the fishing-side twin of the Arsenal, same rail. */}
+          {ownedSpecialIds.length > 0 && (
+            <div>
+              <SectionLabel color="#60a5fa" flavor="The odd gear you have talked out of the sea.">Tackle</SectionLabel>
+              <SpecialTackle items={ownedSpecialIds} equippedIds={[equippedSpecialId, equippedSpecial2Id]} />
+            </div>
+          )}
 
           {/* Vault of the Ancients */}
           {ancientTrophies.length > 0 && (

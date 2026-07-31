@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { ownedSpecialIds } from '@/lib/specialItems'
 import { redirect } from 'next/navigation'
 import ProfileClient from './ProfileClient'
 import { getCrewRoster } from '@/app/(app)/crew/actions'
@@ -111,6 +112,8 @@ export default async function ProfilePage() {
           reelTier={profile?.reel_tier ?? 0}
           hookTier={profile?.hook_tier ?? 0}
           equippedSpecialId={(profile?.equipped_special as string | null) ?? null}
+          ownedSpecialIds={ownedSpecialIds(profile as Record<string, unknown> | null)}
+          equippedSpecial2Id={(profile?.equipped_special_2 as string | null) ?? null}
           rarestFish={rarestFish}
           prestigeLevels={(profile?.prestige_levels as Record<string, number> | null) ?? {}}
           goldenMounts={goldenMounts}

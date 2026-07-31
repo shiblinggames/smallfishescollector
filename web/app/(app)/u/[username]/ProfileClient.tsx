@@ -22,7 +22,7 @@ import { DEFAULT_AVATAR_BG_COLOR, DEFAULT_AVATAR_BORDER_COLOR } from '@/lib/avat
 import { getProfileBackground } from '@/lib/profileBackgrounds'
 import AncientBgEffect from '@/components/AncientBgEffect'
 import { StatTile, CoinAmount } from '@/components/ProfileStats'
-import { RarestCatchesByZone, FeaturedCrew, RaidArsenal, GoldenMounts, type GoldenMount } from '@/components/ProfileShowcase'
+import { RarestCatchesByZone, FeaturedCrew, RaidArsenal, GoldenMounts, SpecialTackle, type GoldenMount } from '@/components/ProfileShowcase'
 import type { CareerStats } from '@/lib/careerStats'
 
 export interface VoyageEntry {
@@ -64,7 +64,6 @@ interface Props {
   equippedBoat?: string | null
   equippedHat?: string | null
   equippedPet?: string | null
-  ownedSpecialIds?: string[]
   raidItemIds?: string[]
   equippedShipSkin?: string | null
   voyages?: VoyageEntry[]
@@ -73,6 +72,8 @@ interface Props {
   isInCrew?: boolean
   characterColor?: string
   equippedSpecialId?: string | null
+  ownedSpecialIds?: string[]
+  equippedSpecial2Id?: string | null
   equippedBadges?: string[]
   /** Saved portrait colors — match the avatar on /profile. */
   avatarBg?: string | null
@@ -118,7 +119,7 @@ function LevelChip({ color, label, value }: { color: string; label: string; valu
   )
 }
 
-export default function ProfileClient({ username, showcaseCrew, voyages, stats, gear, rarestFish, prestigeLevels, goldenMounts, raidItemIds = [], equippedShipSkin, isPremium, isOwnProfile, isInCrew: initialIsInCrew, characterColor = 'default', equippedSpecialId, equippedBadges = [], equippedBoat = null, equippedHat = null, equippedPet = null, avatarBg = null, avatarBorder = null, profileBg = null, career }: Props) {
+export default function ProfileClient({ username, showcaseCrew, voyages, stats, gear, rarestFish, prestigeLevels, goldenMounts, raidItemIds = [], equippedShipSkin, isPremium, isOwnProfile, isInCrew: initialIsInCrew, characterColor = 'default', equippedSpecialId, ownedSpecialIds = [], equippedSpecial2Id = null, equippedBadges = [], equippedBoat = null, equippedHat = null, equippedPet = null, avatarBg = null, avatarBorder = null, profileBg = null, career }: Props) {
   const [inCrew, setInCrew] = useState(initialIsInCrew ?? false)
   const [crewPending, startCrewTransition] = useTransition()
   const [expandedVoyage, setExpandedVoyage] = useState<number | null>(null)
@@ -471,6 +472,14 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
             <div>
               <SectionLabel flavor="The three rarest trophies from every water they've fished.">Rarest Catches</SectionLabel>
               <RarestCatchesByZone fish={rarestFish} prestige={prestigeLevels} />
+            </div>
+          )}
+
+          {/* Tackle — the fishing-side twin of the Arsenal, same rail. */}
+          {ownedSpecialIds.length > 0 && (
+            <div>
+              <SectionLabel color="#60a5fa" flavor="The odd gear they have talked out of the sea.">Tackle</SectionLabel>
+              <SpecialTackle items={ownedSpecialIds} equippedIds={[equippedSpecialId ?? null, equippedSpecial2Id]} />
             </div>
           )}
 
