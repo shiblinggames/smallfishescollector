@@ -257,95 +257,7 @@ function NetIconSvg({ size = 14, color = 'currentColor' }: { size?: number; colo
   )
 }
 
-// ── Station group header — the labelled "who's where" sections that replaced
-//    the old All/Raid/Voyage/Bench filter chips. Icon + name + count so a
-//    casual player reads the whole picture without tab-switching. ─────────────
-function StationHeader({ Icon, label, color, count, max, sub }: {
-  Icon: (p: { size?: number; color?: string }) => React.JSX.Element
-  label: string; color: string; count: number; max?: number; sub?: string
-}) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 9 }}>
-      <span style={{ display: 'inline-flex', width: 26, height: 26, borderRadius: 8, alignItems: 'center', justifyContent: 'center', background: `${color}22`, border: `1px solid ${color}59`, flexShrink: 0 }}>
-        <Icon size={14} color={color} />
-      </span>
-      <span className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: '#f0ede8' }}>{label}</span>
-      <span className="font-karla font-700" style={{ fontSize: '0.74rem', color }}>{max != null ? `${count}/${max}` : count}</span>
-      {sub && <span className="font-karla font-500" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)', marginLeft: 'auto', textAlign: 'right' }}>{sub}</span>}
-    </div>
-  )
-}
 
-// Collapsible, accent-coded party card. Each station (Raid / Voyage / etc.)
-// gets its own bordered card tinted to its color so you instantly read which
-// group is which. The whole header toggles collapse (chevron + tap), and the
-// collapsed state shows just the crew names + open-seat count — the important
-// info at a glance.
-function PartySection({ accent, Icon, label, sub, count, max, members, collapsed, onToggle, children }: {
-  accent: string
-  Icon: (p: { size?: number; color?: string }) => React.JSX.Element
-  label: string
-  sub?: string
-  count: number
-  max?: number
-  members: CrewMember[]
-  collapsed: boolean
-  onToggle: () => void
-  children: ReactNode
-}) {
-  return (
-    <div style={{
-      borderRadius: 16,
-      border: `1px solid ${accent}5c`,
-      // ALMOST fully opaque — 0.97, leaving a whisper of the page art so the
-      // panel still sits ON the background rather than looking cut out of it.
-      // It was 0.91, and 9% of the art coming through every panel at once,
-      // plus the gradient's rgba(255,255,255,0.02) mid-stop (a grey film in
-      // its own right), read as a sheet of film over the whole page. The white
-      // stop is gone; the accent just fades out. Tints go OVER the surface,
-      // never act as it.
-      background: `linear-gradient(180deg, ${accent}1c 0%, transparent 62%), rgba(12,17,25,0.97)`,
-      overflow: 'hidden',
-    }}>
-      <button
-        onClick={onToggle}
-        className="tap"
-        style={{
-          width: '100%', display: 'flex', alignItems: 'center', gap: 9,
-          padding: '0.72rem 0.85rem', background: `${accent}10`, textAlign: 'left',
-          border: 'none', borderBottom: collapsed ? 'none' : `1px solid ${accent}22`, cursor: 'pointer',
-        }}
-      >
-        <span style={{ display: 'inline-flex', width: 26, height: 26, borderRadius: 8, alignItems: 'center', justifyContent: 'center', background: `${accent}26`, border: `1px solid ${accent}66`, flexShrink: 0 }}>
-          <Icon size={14} color={accent} />
-        </span>
-        <span className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: '#f0ede8' }}>{label}</span>
-        <span className="font-karla font-700" style={{ fontSize: '0.74rem', color: accent }}>{max != null ? `${count}/${max}` : count}</span>
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 9 }}>
-          {sub && <span className="font-karla font-500" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)' }}>{sub}</span>}
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" style={{ transform: collapsed ? 'rotate(-90deg)' : 'none', transition: 'transform 0.18s', flexShrink: 0 }} aria-hidden><path d="M6 9l6 6 6-6" /></svg>
-        </div>
-      </button>
-      {collapsed ? (
-        <div style={{ padding: '0.55rem 0.85rem 0.7rem', display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-          {members.length === 0 ? (
-            <span className="font-karla font-500" style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.42)', fontStyle: 'italic' }}>
-              No crew posted{max != null ? ` · ${max} open seat${max === 1 ? '' : 's'}` : ''}
-            </span>
-          ) : (
-            members.map(m => (
-              <span key={m.id} className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#e0dccc', background: `${accent}1c`, border: `1px solid ${accent}3a`, borderRadius: 999, padding: '0.16rem 0.55rem' }}>
-                {m.name}
-              </span>
-            ))
-          )}
-        </div>
-      ) : (
-        <div style={{ padding: '0.75rem 0.85rem 0.9rem' }}>{children}</div>
-      )}
-    </div>
-  )
-}
 
 // Bright dashed "open seat" tile in the Raid / Voyage parties so capacity (and
 // the way to fill it) reads at a glance. A gentle pulse draws the eye; tapping
@@ -1508,6 +1420,18 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
           return (
         <>
         <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 12, border: `1px solid ${hall.accent}66`, background: `linear-gradient(180deg, ${hall.accent}22 0%, transparent 62%), rgba(14,19,28,0.97)`, boxShadow: hall.glow ? `0 0 26px ${hall.glow}` : undefined, padding: '0.85rem 0.85rem 1rem', marginBottom: '1.4rem' }}>
+          {/* THE HALL, as a hero rather than a container.
+              It used to WRAP the whole recruit tab - reroll row, board, every
+              card - so the cards lived inside a tinted box inside the page.
+              Now it is just the building at the top, and its picture changes
+              as you upgrade, the way the Forge does. The board below stands on
+              the page on its own. */}
+          <div style={{ position: 'relative', width: 116, height: 116, margin: '0 auto 8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={`/crew/hall_${hall.tier}.png`} alt="" aria-hidden decoding="async"
+              style={{ width: 100, height: 100, objectFit: 'contain', filter: `drop-shadow(0 4px 14px ${hall.accent}55)` }}
+              onError={e => { (e.target as HTMLImageElement).style.visibility = 'hidden' }} />
+          </div>
           {/* Hall header — building identity row. Name + tier pips on
               the left, Upgrade CTA (or MAX chip) on the right, perk +
               flavor caption underneath. */}
@@ -1562,6 +1486,75 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
               {hall.flavor}
             </p>
           </div>
+          {/* Upgrade celebration — fires once after a confirmed purchase.
+              Lives INSIDE the hall panel (position:relative + overflow:
+              hidden above) so the effect stays localized to the room that
+              changed, per juice-subtlety: an expanding accent ring + the
+              new hall's name over a brief dark veil. Tap or 3s timeout
+              dismisses (auto-dismiss effect lives next to the state). */}
+          <AnimatePresence>
+            {hallCelebrate && (
+              <motion.div
+                key="hall-celebrate"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                onClick={() => setHallCelebrate(null)}
+                style={{
+                  position: 'absolute', inset: 0, zIndex: 5,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  gap: 6, background: 'rgba(8,6,3,0.82)', borderRadius: 12,
+                  cursor: 'pointer',
+                }}
+              >
+                {/* Expanding ring in the new tier's accent — the "something
+                    just leveled up" beat without any screen-wide flash. */}
+                <motion.span
+                  aria-hidden
+                  initial={{ scale: 0.2, opacity: 0.9 }}
+                  animate={{ scale: 3.4, opacity: 0 }}
+                  transition={{ duration: 1.1, ease: 'easeOut' }}
+                  style={{
+                    position: 'absolute', width: 90, height: 90, borderRadius: 999,
+                    border: `2px solid ${hallCelebrate.accent}`,
+                    boxShadow: `0 0 24px ${hallCelebrate.accent}66`,
+                  }}
+                />
+                <motion.p
+                  className="font-karla font-700 uppercase"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15, duration: 0.35 }}
+                  style={{ fontSize: '0.6rem', letterSpacing: '0.22em', color: 'rgba(255,255,255,0.55)' }}
+                >
+                  Hall Upgraded
+                </motion.p>
+                <motion.p
+                  className="font-cinzel font-700"
+                  initial={{ opacity: 0, scale: 0.82 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.25, type: 'spring', stiffness: 320, damping: 20 }}
+                  style={{
+                    fontSize: '1.25rem', color: hallCelebrate.accent, textAlign: 'center',
+                    textShadow: `0 0 18px ${hallCelebrate.accent}55`, padding: '0 1rem',
+                  }}
+                >
+                  {hallCelebrate.name}
+                </motion.p>
+                <motion.p
+                  className="font-karla font-600"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.5, duration: 0.4 }}
+                  style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.7)' }}
+                >
+                  Recruits now start at <span style={{ color: hallCelebrate.accent }}>Lv {hallCelebrate.startLevel}</span>
+                </motion.p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
           {/* Reroll row — every way to reroll this board, side by side. The
               blood-charged tiers used to be a separate panel above the hall
               with its own header, balance strip and description, which pushed
@@ -1704,75 +1697,6 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             )}
           </div>
 
-          {/* Upgrade celebration — fires once after a confirmed purchase.
-              Lives INSIDE the hall panel (position:relative + overflow:
-              hidden above) so the effect stays localized to the room that
-              changed, per juice-subtlety: an expanding accent ring + the
-              new hall's name over a brief dark veil. Tap or 3s timeout
-              dismisses (auto-dismiss effect lives next to the state). */}
-          <AnimatePresence>
-            {hallCelebrate && (
-              <motion.div
-                key="hall-celebrate"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.3 }}
-                onClick={() => setHallCelebrate(null)}
-                style={{
-                  position: 'absolute', inset: 0, zIndex: 5,
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  gap: 6, background: 'rgba(8,6,3,0.82)', borderRadius: 12,
-                  cursor: 'pointer',
-                }}
-              >
-                {/* Expanding ring in the new tier's accent — the "something
-                    just leveled up" beat without any screen-wide flash. */}
-                <motion.span
-                  aria-hidden
-                  initial={{ scale: 0.2, opacity: 0.9 }}
-                  animate={{ scale: 3.4, opacity: 0 }}
-                  transition={{ duration: 1.1, ease: 'easeOut' }}
-                  style={{
-                    position: 'absolute', width: 90, height: 90, borderRadius: 999,
-                    border: `2px solid ${hallCelebrate.accent}`,
-                    boxShadow: `0 0 24px ${hallCelebrate.accent}66`,
-                  }}
-                />
-                <motion.p
-                  className="font-karla font-700 uppercase"
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.15, duration: 0.35 }}
-                  style={{ fontSize: '0.6rem', letterSpacing: '0.22em', color: 'rgba(255,255,255,0.55)' }}
-                >
-                  Hall Upgraded
-                </motion.p>
-                <motion.p
-                  className="font-cinzel font-700"
-                  initial={{ opacity: 0, scale: 0.82 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.25, type: 'spring', stiffness: 320, damping: 20 }}
-                  style={{
-                    fontSize: '1.25rem', color: hallCelebrate.accent, textAlign: 'center',
-                    textShadow: `0 0 18px ${hallCelebrate.accent}55`, padding: '0 1rem',
-                  }}
-                >
-                  {hallCelebrate.name}
-                </motion.p>
-                <motion.p
-                  className="font-karla font-600"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.5, duration: 0.4 }}
-                  style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.7)' }}
-                >
-                  Recruits now start at <span style={{ color: hallCelebrate.accent }}>Lv {hallCelebrate.startLevel}</span>
-                </motion.p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
         </>
           )
         })()}
@@ -2152,13 +2076,15 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                         ways by what each hand happened to be doing, which meant
                         scanning four lists to answer "who do I have". Assigning
                         is its own tab now, so this is just the list. */}
-                    <PartySection accent={SECTION_NEUTRAL} Icon={BenchIconSvg} label="All Crew" sub="your whole manifest" count={state.roster.length} members={state.roster} collapsed={collapsed.has('roster')} onToggle={() => toggleCollapse('roster')}>
-                      {state.roster.length === 0 ? (
-                        <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', padding: '0.1rem 0 0.3rem' }}>
-                          No crew yet. Sign some hands on in the Recruit tab.
-                        </p>
-                      ) : grid(state.roster, 0, SECTION_NEUTRAL)}
-                    </PartySection>
+                    {/* No container. The tab IS the roster, so wrapping it in a
+                        collapsible "All Crew" panel was a box around the only
+                        thing on the screen. The cards stand on the page, matching
+                        the recruit board now that the hall is a hero, not a box. */}
+                    {state.roster.length === 0 ? (
+                      <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)', padding: '0.6rem 0.1rem' }}>
+                        No crew yet. Sign some hands on in the Recruit tab.
+                      </p>
+                    ) : grid(state.roster, 0, SECTION_NEUTRAL)}
 
                     {/* The Fallen lost its tab: it is a memorial you visit, not
                         a place you work, so it hangs off the manifest instead. */}
