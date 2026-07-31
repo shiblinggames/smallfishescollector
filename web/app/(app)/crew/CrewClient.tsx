@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   rerollBoard, recruitCrew, dismissCrew, getCrewGraveyard,
-  assignToVoyage, assignToRaid, benchCrew, promoteToCaptain, renameCrew,
+  assignToVoyage, assignToRaid, promoteToCaptain, renameCrew,
   upgradeCrewHall, buyCrewSkin, equipCrewSkin, gambleBloodSkin, markCrewGuideSeen,
   type CrewState, type BoardCandidate, type CrewMember, type CrewActionResult, type FallenCrew,
 } from './actions'
@@ -168,84 +168,13 @@ const ROUND_DISMISS: React.CSSProperties = { ...ROUND_BTN, background: 'linear-g
 const ROUND_CONFIRM: React.CSSProperties = { ...ROUND_BTN, width: 30, height: 30, background: 'linear-gradient(180deg, rgba(74,200,130,0.46), rgba(46,140,92,0.28))', border: '1px solid rgba(122,226,162,0.72)', color: '#dcf8e7' }
 const ROUND_CANCEL: React.CSSProperties = { ...ROUND_BTN, width: 30, height: 30, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.22)', color: 'rgba(255,255,255,0.7)' }
 
-// Assignment toggle palette — Voyage = teal anchor, Raid = crimson swords,
-// Bench = muted slate. Active state fills; inactive is a thin outline so the
-// 3-button row reads as a segmented control at a glance.
+// Raid / Voyage accents, handed to AssignBoard. The third (Bench) went with
+// the roster cards' quick-assign toggles, as did AssignToggleBtn and the
+// anchor/swords/bench icons that only that control used - assignment is the
+// Assign tab's job now.
 const ASSIGN_VOYAGE = '#5fa8c9'
 const ASSIGN_RAID   = '#e07c7c'
-const ASSIGN_BENCH  = '#7a7a7a'
 
-function AssignToggleBtn({
-  label, Icon, active, accent, disabled, onClick,
-}: {
-  label: string
-  Icon: React.FC<{ size?: number; color?: string }>
-  active: boolean
-  accent: string
-  disabled: boolean
-  onClick: (e: React.MouseEvent) => void
-}) {
-  const fg = active ? '#0a0a0a' : accent
-  const canPress = !disabled && !active
-  return (
-    <motion.button
-      title={active ? `${label} (current)` : `Assign to ${label}`}
-      whileTap={canPress ? { scale: 0.82 } : undefined}
-      transition={{ type: 'spring', stiffness: 600, damping: 20 }}
-      onPointerDown={canPress ? () => hapticTap() : undefined}
-      onClick={onClick}
-      disabled={disabled || active}
-      style={{
-        width: 34, height: 34, borderRadius: '50%', flexShrink: 0, padding: 0,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        cursor: active ? 'default' : 'pointer',
-        background: active ? accent : 'rgba(255,255,255,0.04)',
-        border: `1.5px solid ${accent}${active ? '' : '88'}`,
-        boxShadow: active
-          ? `0 2px 8px ${accent}44, inset 0 1px 0 rgba(255,255,255,0.25)`
-          : 'inset 0 1px 0 rgba(255,255,255,0.05)',
-        opacity: disabled ? 0.5 : 1,
-      }}
-    >
-      <Icon size={15} color={fg} />
-    </motion.button>
-  )
-}
-
-// ── Assignment icons — simple inline SVGs so the badges look like part of
-// the UI rather than emoji. Sized to fit the 22-26px corner pips. Anchor
-// for Voyage, crossed swords for Raid, horizontal line for Bench.
-function AnchorIconSvg({ size = 14, color = 'currentColor' }: { size?: number; color?: string }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <circle cx="12" cy="5" r="2.2" />
-      <line x1="12" y1="22" x2="12" y2="7.2" />
-      <path d="M5 12H3a9 9 0 0 0 18 0h-2" />
-      <line x1="8" y1="9.5" x2="16" y2="9.5" />
-    </svg>
-  )
-}
-function CrossedSwordsIconSvg({ size = 14, color = 'currentColor' }: { size?: number; color?: string }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M14.5 17.5 3 6V3h3l11.5 11.5" />
-      <path d="m13 19 6-6" />
-      <path d="m16 16 4 4" />
-      <path d="m19 21 2-2" />
-      <path d="M9.5 17.5 21 6V3h-3L6.5 14.5" />
-      <path d="m11 19-6-6" />
-      <path d="m8 16-4 4" />
-      <path d="m5 21-2-2" />
-    </svg>
-  )
-}
-function BenchIconSvg({ size = 14, color = 'currentColor' }: { size?: number; color?: string }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.4" strokeLinecap="round" aria-hidden>
-      <line x1="5" y1="12" x2="19" y2="12" />
-    </svg>
-  )
-}
 // Trawl net / creel — used on the assignment pip when a crew is away on a
 // trawl (so it reads as a net, not the voyage anchor or raid swords).
 function NetIconSvg({ size = 14, color = 'currentColor' }: { size?: number; color?: string }) {
@@ -1220,46 +1149,6 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
     const cancel = (e: React.MouseEvent) => { e.stopPropagation(); setConfirmDismiss(null) }
     const armed = confirmDismiss === m.id
 
-    if (round) {
-      // Roster card inline action — 3-way Voyage / Raid / Bench toggle.
-      // Dismiss moved into the detail modal so the card's primary affordance
-      // is "where does this crew sail?" not "are they fired?".
-      // Picking voyage/raid finds the lowest empty slot on that track and
-      // assigns; tapping the currently-active option no-ops. Crew currently
-      // at sea (in a pending voyage) are locked — toggle disabled.
-      const assignment = crewAssignment(m)
-      const isLocked = state.lockedCrewIds.includes(m.id) || state.trawlingCrewIds.includes(m.id)
-      const onPickVoyage = (e: React.MouseEvent) => {
-        e.stopPropagation()
-        if (assignment === 'voyage' || isLocked) return
-        const slot = nextOpenSlot('voyage')
-        if (slot === null) return
-        run(() => assignToVoyage(m.id, slot), m.id, onDone)
-      }
-      const onPickRaid = (e: React.MouseEvent) => {
-        e.stopPropagation()
-        if (assignment === 'raid' || isLocked) return
-        const slot = nextOpenSlot('raid')
-        if (slot === null) return
-        run(() => assignToRaid(m.id, slot), m.id, onDone)
-      }
-      const onPickBench = (e: React.MouseEvent) => {
-        e.stopPropagation()
-        if (assignment === 'bench' || isLocked) return
-        run(() => benchCrew(m.id), m.id, onDone)
-      }
-      // Order: Raid → Voyage → Bench. Raid leads because raids take
-      // precedence over voyages in the player's loadout decisions, and
-      // the order mirrors the Full / Raid / Voyage / Bench sub-filter above.
-      return (
-        <div className="flex" style={{ gap: 5 }}>
-          <AssignToggleBtn label="Raid"   Icon={CrossedSwordsIconSvg} active={assignment === 'raid'}   accent={ASSIGN_RAID}   disabled={pending || isLocked} onClick={onPickRaid} />
-          <AssignToggleBtn label="Voyage" Icon={AnchorIconSvg}        active={assignment === 'voyage'} accent={ASSIGN_VOYAGE} disabled={pending || isLocked} onClick={onPickVoyage} />
-          <AssignToggleBtn label="Bench"  Icon={BenchIconSvg}         active={assignment === 'bench'}  accent={ASSIGN_BENCH}  disabled={pending || isLocked} onClick={onPickBench} />
-        </div>
-      )
-    }
-
     // Detail-modal action (round=false) — Dismiss stays here as the primary
     // destructive action. Assignment lives on the card itself.
     if (armed) {
@@ -2054,9 +1943,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                         lockLabel={trawlSet.has(m.id) ? 'This crew is out on a trawl. Collect it to free them up.' : 'This crew is currently at sea on a voyage.'}
                         hasLevelUp={(seenLevels[m.id] ?? crewLevelFromXP(m.xp)) < crewLevelFromXP(m.xp)}
                         hint={m.effects.length > 0 && !viewed.has(`roster:${m.id}`)}
-                        onClick={() => openDetail('roster', m)}>
-                        {renderAction('roster', m, { round: true })}
-                      </CrewPanel>
+                        onClick={() => openDetail('roster', m)} />
                     </SwipeAction>
                   )
                 }
