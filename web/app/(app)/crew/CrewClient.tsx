@@ -2080,14 +2080,17 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                 {/* Portrait — rarity frame; a shown skin makes the ART itself glow
                     in its color (drop-shadow aura on the image). clip-path keeps
                     the glow inside the arch so it never spills past the frame.
-                    On the Skins tab it's a pure skin preview (no trait pill below
-                    it), so the art centers + fills the frame to close the dead
-                    space; other tabs keep the top-anchored framing. */}
-                <div style={{ position: 'relative', width: 186, height: activeTab === 'skins' ? 186 : 196, margin: '0 auto', borderRadius: '86px 86px 7px 7px', overflow: 'hidden', clipPath: 'inset(0 round 86px 86px 7px 7px)', border: `2px solid ${dColor}`, boxShadow: `inset 0 -14px 24px rgba(0,0,0,0.65), 0 0 14px ${dColor}33`, background: `radial-gradient(ellipse at 50% ${activeTab === 'skins' ? 40 : 30}%, ${(portraitSkin ?? dColor)}26 0%, #070504 74%)` }}>
+                    Geometry is IDENTICAL on every tab. The Skins tab used to
+                    shrink the frame 196 -> 186, recentre the art, repad it and
+                    move the gradient, which read as the portrait jumping when
+                    you tapped the tab. That was there to close dead space under
+                    a shorter tab; the shell is a fixed height now, so there is
+                    no dead space to close. */}
+                <div style={{ position: 'relative', width: 186, height: 196, margin: '0 auto', borderRadius: '86px 86px 7px 7px', overflow: 'hidden', clipPath: 'inset(0 round 86px 86px 7px 7px)', border: `2px solid ${dColor}`, boxShadow: `inset 0 -14px 24px rgba(0,0,0,0.65), 0 0 14px ${dColor}33`, background: `radial-gradient(ellipse at 50% 30%, ${(portraitSkin ?? dColor)}26 0%, #070504 74%)` }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={artSrc(portraitFilename)} alt={it.name}
                     className={portraitChase ? 'chase-skin-glow' : undefined}
-                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: activeTab === 'skins' ? 'center' : 'center 20%', padding: activeTab === 'skins' ? 8 : 6, transition: 'filter 0.25s', ...(portraitChase ? { ['--chase-c']: portraitSkin } : { filter: portraitSkin ? skinArtGlow(portraitSkin, it.rarity, true) : undefined }) } as React.CSSProperties} />
+                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 20%', padding: 6, transition: 'filter 0.25s', ...(portraitChase ? { ['--chase-c']: portraitSkin } : { filter: portraitSkin ? skinArtGlow(portraitSkin, it.rarity, true) : undefined }) } as React.CSSProperties} />
                   {portraitChase && portraitSkin && <ChaseSkinFx skinId={shownSkinId} color={portraitSkin} />}
                   {/* Equip flash + light sweep — a tactile beat the moment a skin
                       is equipped. Clipped to the arch by the portrait's overflow. */}
