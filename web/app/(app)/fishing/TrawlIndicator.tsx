@@ -9,7 +9,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { motion, AnimatePresence, useMotionValue } from 'framer-motion'
+import { motion, AnimatePresence, useMotionValue, useDragControls } from 'framer-motion'
 import { getTrawlState, deployTrawl, collectTrawl } from './trawls/actions'
 import {
   TRAWL_MAX_SLOTS, expectedTrawlHaul, fmtTrawlDuration, trawlDurationMs, TRAWL_BUMPERS, pickTrawlEvent,
@@ -29,6 +29,9 @@ const lastCrewKey = (z: string) => `trawl_last_crew_${z}`
  *  3-across grid — enough to choose from without the wall of every hand you own,
  *  which is what made the picker feel like homework once rosters got deep. */
 const CREW_PREVIEW = 6
+/** Press-and-hold before the trawl indicator comes loose. Long enough that a
+ *  swipe starting on it never moves it, short enough to feel intentional. */
+const HOLD_TO_DRAG_MS = 320
 /** Per-zone most-recently-sent list, newest first. */
 const RECENT_MAX = 8
 
@@ -226,6 +229,13 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
   // be there: usually the Shallows (first card), which shot straight into its
   // send-a-crew picker. Worse on a READY card, where it silently collected the
   // haul. Zone cards ignore taps for a beat after the panel opens.
+  // HOLD TO MOVE. The indicator sits over the fishing screen, so a plain
+  // `drag` meant any downward swipe that started on it dragged it somewhere new
+  // — it moved when players were only trying to tap it. Dragging is now armed
+  // by a deliberate press-and-hold: dragListener is off, and only the hold
+  // timer below hands the gesture to framer.
+  const dragControls = useDragControls()
+  const holdRef = useRef<{ timer: ReturnType<typeof setTimeout> | null; x: number; y: number }>({ timer: null, x: 0, y: 0 })
   const openedAtRef = useRef(0)
   const openPanel = () => { openedAtRef.current = Date.now(); setOpen(true) }
   const settled = () => Date.now() - openedAtRef.current > 350
@@ -427,9 +437,32 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
     <div ref={dragBoundsRef} style={{ position: 'absolute', inset: 0, zIndex: 15, pointerEvents: 'none' }}>
       <motion.div
         drag
+        dragListener={false}
+        dragControls={dragControls}
         dragConstraints={dragBoundsRef}
         dragMomentum={false}
         dragElastic={0.1}
+        onPointerDown={e => {
+          holdRef.current.x = e.clientX; holdRef.current.y = e.clientY
+          // Hand the gesture to framer only once the hold lands. Passing the
+          // original event keeps the drag origin under the finger, so it does
+          // not jump when it arms.
+          holdRef.current.timer = setTimeout(() => {
+            holdRef.current.timer = null
+            haptic(18)           // "it's loose now"; whileDrag supplies the lift
+            dragControls.start(e)
+          }, HOLD_TO_DRAG_MS)
+        }}
+        onPointerMove={e => {
+          // Moved before the hold landed? That was a swipe across the screen,
+          // not an intent to reposition. Cancel the arm and leave it put.
+          const h = holdRef.current
+          if (h.timer && (Math.abs(e.clientX - h.x) > 8 || Math.abs(e.clientY - h.y) > 8)) {
+            clearTimeout(h.timer); h.timer = null
+          }
+        }}
+        onPointerUp={() => { if (holdRef.current.timer) { clearTimeout(holdRef.current.timer); holdRef.current.timer = null } }}
+        onPointerCancel={() => { if (holdRef.current.timer) { clearTimeout(holdRef.current.timer); holdRef.current.timer = null } }}
         onDragStart={() => { draggingRef.current = true }}
         onDragEnd={() => {
           // Keep the guard up briefly — framer fires onDragEnd BEFORE the
@@ -441,7 +474,7 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
         onTap={() => { if (!draggingRef.current) { openPanel(); haptic(12) } }}
         whileTap={{ scale: 0.9 }}
         whileDrag={{ scale: 1.08 }}
-        aria-label="Trawls — tap to open, drag to move"
+        aria-label="Trawls — tap to open, press and hold to move"
         style={{
           // Default spot: left edge, just above the music/SFX chips (which sit
           // at bottom:110, ~34px tall each). Players can drag it elsewhere; the
