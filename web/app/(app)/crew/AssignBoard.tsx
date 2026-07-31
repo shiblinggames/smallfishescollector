@@ -18,6 +18,7 @@
 import type { ReactNode } from 'react'
 import { applyLevelBonuses } from '@/lib/crewLevel'
 import { netTraitStats } from '@/lib/crewEffects'
+import { RARITY_COLORS, type CrewRarity } from '@/lib/crewGen'
 import type { CrewMember } from './actions'
 
 /** Mirrors lib/crewResolve: the captain's seat pulls full weight, the rest 80%. */
@@ -57,6 +58,12 @@ const STAT_COLOR = { power: '#e08a7a', dodge: '#7fc4a8', fortune: '#e0c47a' }
  *  locked rather than vanishing, so the ship upgrade has something to unlock
  *  into and the ceiling is legible before you pay for it. */
 const MAX_SEATS = 6
+
+/** Empty seats have no crew, so they have no rarity to inherit. Warm neutral
+ *  rather than the track accent: with the panel art carrying the party's
+ *  identity, an empty seat glowing red or blue was the last thing making the
+ *  seat row look track-coloured. Translucent tints only, never a solid fill. */
+const OPEN_SEAT = '#c3b291'
 
 export default function AssignBoard({
   roster, shipCrewSlots, lockedCrewIds, trawlingCrewIds, artSrc,
@@ -210,17 +217,17 @@ export default function AssignBoard({
                       style={{
                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,
                         minHeight: 104, borderRadius: 12, cursor: 'pointer', font: 'inherit',
-                        border: `1.5px dashed ${t.accent}80`,
-                        background: `linear-gradient(180deg, ${t.accent}1c 0%, ${t.accent}0a 100%), ${t.ramp.open}`,
+                        border: `1.5px dashed ${OPEN_SEAT}66`,
+                        background: `linear-gradient(180deg, ${OPEN_SEAT}14 0%, ${OPEN_SEAT}08 100%), ${t.ramp.open}`,
                         touchAction: 'manipulation',
                       }}>
                       <span style={{
                         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                         width: 26, height: 26, borderRadius: '50%',
-                        background: `${t.accent}2e`, border: `1.5px solid ${t.accent}`,
-                        color: t.accent, fontSize: '1.1rem', lineHeight: 1,
+                        background: `${OPEN_SEAT}22`, border: `1.5px solid ${OPEN_SEAT}aa`,
+                        color: OPEN_SEAT, fontSize: '1.1rem', lineHeight: 1,
                       }}>+</span>
-                      <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: t.accent }}>
+                      <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: OPEN_SEAT }}>
                         {captain ? 'Captain' : 'Open seat'}
                       </span>
                     </button>
@@ -228,6 +235,7 @@ export default function AssignBoard({
                 }
 
                 const e = effectiveStats(crew)
+                const rc = RARITY_COLORS[crew.rarity as CrewRarity] ?? '#8a857c'
                 return (
                   <button key={i} type="button" onClick={() => onTapCrew(crew)}
                     aria-label={`${crew.name}, seat ${i + 1}. Tap to view, swap or remove them.`}
@@ -235,15 +243,18 @@ export default function AssignBoard({
                       position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
                       minHeight: 104, padding: '0.4rem 0.3rem 0.45rem', borderRadius: 12,
                       cursor: 'pointer', font: 'inherit', textAlign: 'center',
-                      border: `1.5px solid ${t.accent}88`,
-                      background: `linear-gradient(180deg, ${t.accent}22 0%, rgba(0,0,0,0.20) 100%), ${t.ramp.seat}`,
+                      // Rarity, not the track accent. The panel art already
+                      // says which party this is; the seat is the only place
+                      // that can say WHO is sitting in it at a glance.
+                      border: `1.5px solid ${rc}99`,
+                      background: `linear-gradient(180deg, ${rc}26 0%, rgba(0,0,0,0.22) 100%), ${t.ramp.seat}`,
                       touchAction: 'manipulation',
                     }}>
                     {/* The art is the tile. */}
                     <div style={{ width: '100%', height: 52, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={artSrc(crew.filename)} alt="" aria-hidden loading="lazy" decoding="async"
-                        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', filter: `drop-shadow(0 3px 8px ${t.accent}55)` }} />
+                        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', filter: `drop-shadow(0 3px 8px ${rc}66)` }} />
                     </div>
                     <span className="font-karla font-700" style={{ display: 'block', width: '100%', fontSize: '0.7rem', lineHeight: 1.15, color: '#eee8de', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {crew.name}
