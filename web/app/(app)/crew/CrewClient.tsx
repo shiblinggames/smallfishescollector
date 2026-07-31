@@ -2265,7 +2265,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                     On the Skins tab it's a pure skin preview (no trait pill below
                     it), so the art centers + fills the frame to close the dead
                     space; other tabs keep the top-anchored framing. */}
-                <div style={{ position: 'relative', width: 150, height: activeTab === 'skins' ? 150 : 158, margin: '0 auto', borderRadius: '70px 70px 6px 6px', overflow: 'hidden', clipPath: 'inset(0 round 70px 70px 6px 6px)', border: `2px solid ${dColor}`, boxShadow: `inset 0 -14px 24px rgba(0,0,0,0.65), 0 0 14px ${dColor}33`, background: `radial-gradient(ellipse at 50% ${activeTab === 'skins' ? 40 : 30}%, ${(portraitSkin ?? dColor)}26 0%, #070504 74%)` }}>
+                <div style={{ position: 'relative', width: 186, height: activeTab === 'skins' ? 186 : 196, margin: '0 auto', borderRadius: '86px 86px 7px 7px', overflow: 'hidden', clipPath: 'inset(0 round 86px 86px 7px 7px)', border: `2px solid ${dColor}`, boxShadow: `inset 0 -14px 24px rgba(0,0,0,0.65), 0 0 14px ${dColor}33`, background: `radial-gradient(ellipse at 50% ${activeTab === 'skins' ? 40 : 30}%, ${(portraitSkin ?? dColor)}26 0%, #070504 74%)` }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={artSrc(portraitFilename)} alt={it.name}
                     className={portraitChase ? 'chase-skin-glow' : undefined}
@@ -2383,7 +2383,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                     </div>
                   )
                 })()}
-                <p className="font-cinzel font-700" style={{ textAlign: 'center', fontSize: '0.7rem', letterSpacing: '0.16em', textTransform: 'uppercase', color: dColor }}>{RARITY_NAMES[(it.rarity as CrewRarity)] ?? 'Common'}</p>
+                <p className="font-cinzel font-700" style={{ textAlign: 'center', fontSize: '0.8rem', letterSpacing: '0.16em', textTransform: 'uppercase', color: dColor }}>{RARITY_NAMES[(it.rarity as CrewRarity)] ?? 'Common'}</p>
 
                 {/* Level + XP bar — only shown for roster crew (board recruits
                     are pre-XP so the bar would be meaningless). Hidden when
@@ -2427,8 +2427,8 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                           onClick={() => { vibrate(5); setDetailTab(t.id) }}
                           className="font-karla font-700 uppercase"
                           style={{
-                            flex: 1, padding: '0.5rem 0.3rem', borderRadius: 8,
-                            fontSize: '0.62rem', letterSpacing: '0.09em',
+                            flex: 1, padding: '0.62rem 0.3rem', borderRadius: 8,
+                            fontSize: '0.74rem', letterSpacing: '0.09em',
                             background: on ? `${dColor}26` : 'transparent',
                             border: `1px solid ${on ? dColor + '88' : 'transparent'}`,
                             color: on ? '#f4ecd8' : 'rgba(255,255,255,0.5)',
@@ -2484,7 +2484,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                           <p className="font-cinzel font-700 uppercase" style={{ fontSize: '0.7rem', letterSpacing: '0.1em', color: accent, lineHeight: 1 }}>{def.name}</p>
                         </div>
                         <div className="flex items-baseline" style={{ gap: 6 }}>
-                          <p className="font-karla font-700" style={{ fontSize: '0.56rem', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)' }}>
+                          <p className="font-karla font-700" style={{ fontSize: '0.66rem', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.58)' }}>
                             Active · once per raid
                           </p>
                           <span aria-hidden style={{
@@ -2512,7 +2512,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                               <span style={{ color: 'rgba(255,255,255,0.5)' }}>Next at Lv {next.unlockLevel}:</span> {next.desc}
                             </p>
                           )}
-                          <p className="font-karla font-600" style={{ fontSize: '0.56rem', letterSpacing: '0.06em', textTransform: 'uppercase', color: `${accent}99`, marginTop: 6 }}>
+                          <p className="font-karla font-600" style={{ fontSize: '0.66rem', letterSpacing: '0.06em', textTransform: 'uppercase', color: `${accent}99`, marginTop: 6 }}>
                             Tap to see all milestones →
                           </p>
                         </>
@@ -2548,14 +2548,14 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                                 {isCurrent && (
                                   <span aria-hidden className="font-karla font-700" style={{
                                     flexShrink: 0,
-                                    fontSize: '0.46rem', letterSpacing: '0.1em', textTransform: 'uppercase',
+                                    fontSize: '0.55rem', letterSpacing: '0.1em', textTransform: 'uppercase',
                                     color: accent, marginLeft: 'auto',
                                   }}>Now</span>
                                 )}
                               </div>
                             )
                           })}
-                          <p className="font-karla font-600" style={{ fontSize: '0.56rem', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
+                          <p className="font-karla font-600" style={{ fontSize: '0.66rem', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.58)', marginTop: 2 }}>
                             Tap to collapse ▲
                           </p>
                         </div>
@@ -2581,7 +2581,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                     <div>
                       <div className="flex items-baseline justify-between" style={{ marginBottom: 8 }}>
                         <p className="font-cinzel font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.5)' }}>Skins</p>
-                        <p className="font-karla font-400" style={{ fontSize: '0.54rem', color: 'rgba(255,255,255,0.32)' }}>tap to equip or unlock</p>
+                        <p className="font-karla font-400" style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.5)' }}>tap to equip or unlock</p>
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 7 }}>
                         {tiles.map(t => {
@@ -2645,7 +2645,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                     explains what each stat actually does in raids +
                     voyages — match the Traits header styling above. */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <p className="font-cinzel font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.5)' }}>Stats</p>
+                  <p className="font-cinzel font-700 uppercase" style={{ fontSize: '0.74rem', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.62)' }}>Stats</p>
                   <button
                     type="button"
                     onClick={() => setStatsGlossaryOpen(v => !v)}
@@ -2663,15 +2663,32 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   >?</button>
                 </div>
 
-                {/* Stats */}
+                {/* Stats. Same bar and the same STAT_BAR_MAX ceiling as the
+                    roster card, so a stat looks identical wherever you meet it.
+                    Type is up across the block: the old 0.52rem label with the
+                    base value folded into it was the smallest text in the modal
+                    and carried real information. */}
                 <div style={{ display: 'flex', gap: 8, marginBottom: '0.6rem' }}>
-                  {(['power', 'dodge', 'fortune'] as const).map(k => {
+                  {(['power', 'dodge', 'fortune'] as const).map((k, i) => {
                     const ch = dEff[k] - dBase[k]
                     return (
-                      <div key={k} style={{ flex: 1, textAlign: 'center', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 9, padding: '0.5rem 0.2rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}><StatIcon k={k} color={STAT_COLOR[k]} /></div>
-                        <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', lineHeight: 1, color: ch > 0 ? '#7fdfa3' : ch < 0 ? '#f08a8a' : '#ecdcbd' }}>{dEff[k]}</p>
-                        <p className="font-karla font-700" style={{ fontSize: '0.52rem', letterSpacing: '0.06em', color: 'rgba(255,255,255,0.45)', marginTop: 3 }}>{STAT_LABEL[k]}{ch !== 0 ? ` · base ${dBase[k]}` : ''}</p>
+                      <div key={k} style={{ flex: 1, textAlign: 'center', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 9, padding: '0.6rem 0.35rem 0.55rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 5 }}><StatIcon k={k} color={STAT_COLOR[k]} /></div>
+                        <p className="font-cinzel font-700" style={{ fontSize: '1.55rem', lineHeight: 1, color: ch > 0 ? '#7fdfa3' : ch < 0 ? '#f08a8a' : '#ecdcbd' }}>{dEff[k]}</p>
+                        <span aria-hidden style={{ display: 'block', width: '100%', height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.09)', overflow: 'hidden', margin: '7px 0 6px' }}>
+                          <span className="crew-stat-fill" style={{
+                            display: 'block', width: '100%', height: '100%', borderRadius: 2,
+                            background: STAT_COLOR[k],
+                            transform: `scaleX(${Math.min(1, Math.max(0.02, dEff[k] / STAT_BAR_MAX))})`,
+                            animationDelay: `${0.06 * i}s`,
+                          }} />
+                        </span>
+                        <p className="font-karla font-700 uppercase" style={{ fontSize: '0.64rem', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.6)' }}>{STAT_LABEL[k]}</p>
+                        {/* Base was crammed onto the label line. It is its own
+                            row now, and only when levelling has moved the stat. */}
+                        {ch !== 0 && (
+                          <p className="font-karla" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.42)', marginTop: 2 }}>base {dBase[k]}</p>
+                        )}
                       </div>
                     )
                   })}
@@ -2689,13 +2706,13 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   if (total <= 0) return null
                   return (
                     <p className="font-karla italic" style={{
-                      fontSize: '0.7rem', color: 'rgba(240,192,64,0.78)',
+                      fontSize: '0.78rem', color: 'rgba(240,192,64,0.85)',
                       background: 'rgba(240,192,64,0.05)',
                       border: '1px solid rgba(240,192,64,0.2)',
                       borderRadius: 7, padding: '0.42rem 0.6rem',
                       marginBottom: '0.9rem', lineHeight: 1.4,
                     }}>
-                      <span style={{ color: 'rgba(255,255,255,0.45)', fontStyle: 'normal', textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: '0.56rem', marginRight: 8 }}>Trained</span>
+                      <span style={{ color: 'rgba(255,255,255,0.55)', fontStyle: 'normal', textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: '0.64rem', marginRight: 8 }}>Trained</span>
                       <span style={{ color: STAT_COLOR.power }}>+{bonus.power} PWR</span>
                       {' · '}<span style={{ color: STAT_COLOR.dodge }}>+{bonus.dodge} SAV</span>
                       {' · '}<span style={{ color: STAT_COLOR.fortune }}>+{bonus.fortune} FTN</span>
@@ -2747,7 +2764,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                     — the line IS the description. */}
                 {dTraitLabel && (
                   <>
-                    <p className="font-cinzel font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.4)', marginBottom: '0.3rem' }}>Trait</p>
+                    <p className="font-cinzel font-700 uppercase" style={{ fontSize: '0.74rem', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.58)', marginBottom: '0.3rem' }}>Trait</p>
                     <div style={{
                       display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
                       gap: 8, padding: '0.4rem 0', marginBottom: '0.6rem',
