@@ -108,8 +108,13 @@ export interface AffixDef {
   //    hull becomes genuinely slippery. This is the aim-pressure affix: it
   //    attacks your read of WHERE to shoot, not your reaction speed, which is
   //    why it can be strong without becoming a coin flip the way a faster
-  //    needle does (see the Racing Tide retune). ────────────────────────
-  zoneSpeedMult?:      number  // 1.7
+  //    needle does (see the Racing Tide retune).
+  //
+  //    Was 1.7, eased to 1.35. It MULTIPLIES a base that is already 1.6-3.0 on
+  //    an evasive hull, so 1.7 was landing on top of a band that was fast to
+  //    begin with. RaidCombat also clamps the stacked total (see ZONE_SPEED) -
+  //    tide x enemy x affix had no ceiling at all. ───────────────────────
+  zoneSpeedMult?:      number  // 1.35
 }
 
 export const AFFIXES: Record<AffixId, AffixDef> = {
@@ -204,8 +209,8 @@ export const AFFIXES: Record<AffixId, AffixDef> = {
   },
   yawing: {
     id: 'yawing', name: 'Yawing',
-    description: 'Never holds a line. Your target band slides across the aim bar far faster.',
-    zoneSpeedMult: 1.7,
+    description: 'Never holds a line. Your target band slides across the aim bar much faster.',
+    zoneSpeedMult: 1.35,
   },
   warded: {
     id: 'warded', name: 'Warded',

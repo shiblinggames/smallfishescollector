@@ -2364,7 +2364,15 @@ export default function RaidCombat({
     // elite affix all lurch it — these are how an evasive target denies clean
     // crits (a faster TARGET rather than a faster needle, which is the fair way
     // to pressure aim; see the Racing Tide retune).
-    const ZONE_SPEED = enemy.shipSpeed * 0.0008 * (1 / (1 + totalNavigation * 0.015)) * tide.zoneSpeedMult * (enemy.zoneSpeedMult ?? 1) * (affix?.zoneSpeedMult ?? 1)
+    // CAP THE STACK. These three multiply, and nothing bounded the product:
+    // a 2.6 tide on a 3.0 hull wearing Yawing came out at 13x the base pace,
+    // against 3.0 for the hardest unmodified enemy in the game. That is not
+    // hard, it is unreadable. 4.0 leaves every intended combination alone
+    // (the toughest hull alone is 3.0, and a normal hull plus Yawing is ~3.2)
+    // and only bites where three sources pile onto the same fight.
+    const ZONE_STACK_CAP = 4
+    const zoneStack = Math.min(ZONE_STACK_CAP, tide.zoneSpeedMult * (enemy.zoneSpeedMult ?? 1) * (affix?.zoneSpeedMult ?? 1))
+    const ZONE_SPEED = enemy.shipSpeed * 0.0008 * (1 / (1 + totalNavigation * 0.015)) * zoneStack
     // Needle sweep, with the curse multiplier (Racing Tide etc.) AND any
     // per-enemy needle multiplier (rarely used — prefer zoneSpeedMult).
     // NEEDLE SPEED. On the dial the same normalised speed reads far faster than
