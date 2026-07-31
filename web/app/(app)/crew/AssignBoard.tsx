@@ -115,7 +115,10 @@ export default function AssignBoard({
           <div key={t.key} style={{
             borderRadius: 16,
             border: `1px solid ${t.accent}55`,
-            background: `linear-gradient(180deg, ${t.accent}18 0%, rgba(255,255,255,0.02) 55%, rgba(0,0,0,0.10) 100%), rgba(13,18,27,0.97)`,
+            // The base was already 0.97; the FILM was the gradient's white
+            // mid-stop, rgba(255,255,255,0.02) painted straight across the
+            // panel. Accent now just fades to transparent.
+            background: `linear-gradient(180deg, ${t.accent}18 0%, transparent 62%), rgba(13,18,27,0.97)`,
             overflow: 'hidden',
           }}>
             {/* Header: who this party is, and what it comes to. */}
@@ -133,7 +136,7 @@ export default function AssignBoard({
                   <div key={k} style={{
                     display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 5,
                     padding: '0.35rem 0.3rem', borderRadius: 9,
-                    background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+                    background: 'rgba(22,29,40,0.97)', border: '1px solid rgba(255,255,255,0.10)',
                   }}>
                     <span className="font-cinzel font-800" style={{ fontSize: '1.2rem', lineHeight: 1, color: STAT_COLOR[k], fontVariantNumeric: 'tabular-nums' }}>{totals[k]}</span>
                     <span className="font-karla font-800 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.12em', color: '#9aa3b1' }}>{label}</span>
@@ -156,7 +159,9 @@ export default function AssignBoard({
                       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
                       minHeight: 104, borderRadius: 12,
                       border: '1px dashed rgba(255,255,255,0.1)',
-                      background: 'rgba(255,255,255,0.02)',
+                      // Was rgba(255,255,255,0.02) — a white film with nothing
+                      // under it, so the page art came through at 98%.
+                      background: 'rgba(20,26,36,0.97)',
                     }}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5c6470" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
                       <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.56rem', color: '#6b7482', textAlign: 'center', lineHeight: 1.3 }}>Bigger<br />ship</span>
@@ -172,7 +177,7 @@ export default function AssignBoard({
                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,
                         minHeight: 104, borderRadius: 12, cursor: 'pointer', font: 'inherit',
                         border: `1.5px dashed ${t.accent}80`,
-                        background: `linear-gradient(180deg, ${t.accent}1c 0%, ${t.accent}0a 100%), rgba(14,19,28,0.93)`,
+                        background: `linear-gradient(180deg, ${t.accent}1c 0%, ${t.accent}0a 100%), rgba(14,19,28,0.97)`,
                         touchAction: 'manipulation',
                       }}>
                       <span style={{
