@@ -101,22 +101,21 @@ export default function AssignBoard({
   // enough that the sea and smoke still come through.
   const RAMP = {
     raid: {
-      // Deep water from the campaign's own /raids backdrop, taken from the
-      // calmest band of it (below the cliffs, the lightning and the breaking
-      // crests) and softened. Two passes at this were still too busy: the
-      // fleet-battle plate, then the horizon crop, both of which had landmarks
-      // fighting the seats. This is texture, not a scene - dark swells and
-      // nothing to look AT. 7KB.
+      // Open sea below the cloudbank of the expeditions plate: misty horizon,
+      // a distant fleet, smooth swells, no landmarks. Sharp and full-res - the
+      // previous pass fixed "too busy" by blurring, which just made it mushy
+      // and small. Simple has to come from the COMPOSITION, not from softening
+      // a busy one.
       //
-      // Its wash is lighter than the voyage panel's for the same reason: the
-      // plate is already dark and low-contrast, so a heavier tint left it
-      // indistinguishable from flat colour.
-      base: '#101418', art: '/crew-raid-panel.jpg', fade: '14,18,22', wash: [0.20, 0.28, 0.38],
-      stat: 'rgba(10,5,8,0.52)', locked: 'rgba(10,5,8,0.46)',
-      open: 'rgba(10,5,8,0.36)', seat: 'rgba(10,5,8,0.44)',
+      // Wash is heavier at the TOP here, unlike the voyage panel: this plate is
+      // bright along the horizon where the title and totals sit, and dark in
+      // the water below where the seats are.
+      base: '#0f171d', art: '/crew-raid-panel.jpg', fade: '15,23,29', wash: [0.46, 0.32, 0.34], pos: 'center 20%',
+      stat: 'rgba(6,12,17,0.54)', locked: 'rgba(6,12,17,0.48)',
+      open: 'rgba(6,12,17,0.36)', seat: 'rgba(6,12,17,0.44)',
     },
     voyage: {
-      base: '#0c151f', art: '/voyages-modal-bg.jpg', fade: '12,21,31', wash: [0.34, 0.46, 0.58],
+      base: '#0c151f', art: '/voyages-modal-bg.jpg', fade: '12,21,31', wash: [0.34, 0.46, 0.58], pos: 'center',
       stat: 'rgba(4,10,18,0.52)', locked: 'rgba(4,10,18,0.46)',
       open: 'rgba(4,10,18,0.36)', seat: 'rgba(4,10,18,0.44)',
     },
@@ -171,7 +170,7 @@ export default function AssignBoard({
             // layer rather than added as a bare comma layer.
             background: `linear-gradient(180deg, ${t.accent}1c 0%, ${t.accent}0a 55%, transparent 100%), `
               + `linear-gradient(180deg, rgba(${t.ramp.fade},${t.ramp.wash[0]}) 0%, rgba(${t.ramp.fade},${t.ramp.wash[1]}) 45%, rgba(${t.ramp.fade},${t.ramp.wash[2]}) 100%), `
-              + `url(${t.ramp.art}) center / cover no-repeat ${t.ramp.base}`,
+              + `url(${t.ramp.art}) ${t.ramp.pos} / cover no-repeat ${t.ramp.base}`,
             overflow: 'hidden',
           }}>
             {/* Header: who this party is, and what it comes to. */}
