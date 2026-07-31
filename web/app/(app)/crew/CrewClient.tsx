@@ -467,7 +467,11 @@ function CrewPanel({
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.45rem' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-            <p className="font-pirata" style={{ fontSize: '1.18rem', color: '#ecdcbd', lineHeight: 1, letterSpacing: '0.02em', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {/* 1.18 -> 1.45rem, using the height the centred column freed up.
+                lineHeight goes 1 -> 1.12 with it: the name clips to an ellipsis
+                via overflow:hidden, and at 1 that box is exactly the cap height,
+                so pirata's descenders (Jelly, Doby, Gar) were being shaved. */}
+            <p className="font-pirata" style={{ fontSize: '1.45rem', color: '#ecdcbd', lineHeight: 1.12, letterSpacing: '0.02em', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {name}
             </p>
             {/* Captain crown — party captain (slot 0), now beside the name. */}
