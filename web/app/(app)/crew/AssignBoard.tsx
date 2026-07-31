@@ -85,18 +85,26 @@ export default function AssignBoard({
   // reads, not the outline. Each track now gets its own opaque ramp pulled
   // toward its accent: warm near-black for the raid, cool for the voyage.
   // Fully opaque hex, no alpha - nothing behind these needs to show through.
-  // `art` is the panel backdrop; `wash` / `washDeep` are the tint over it.
-  // Lighter at the top so the header and totals sit on visible art, heavier
-  // below where the seat tiles are dense. The tiles keep their own opaque
-  // colours, so the art reads around them rather than under the text.
+  // `art` is a BAND across the panel header, not a full-panel backdrop, and
+  // `fade` is the panel's base colour as raw rgb channels so the band can
+  // dissolve into it.
+  //
+  // Full-bleed did not work: every stat and seat tile on this panel is opaque,
+  // so the art could only ever peek through gaps, and `cover` on a portrait
+  // panel fits a square plate vertically EXACTLY - no overflow to position
+  // against, so the panel top always landed on the plate's empty sky. A fixed
+  // band gets a chosen crop, at full strength, in the one region that has no
+  // tiles over it.
   const RAMP = {
     raid: {
       panel: '#180f13', stat: '#241a1f', locked: '#1e1418', open: '#1b1115', seat: '#21161b',
-      art: '/exp-campaign.jpg', wash: 'rgba(24,15,19,0.56)', washDeep: 'rgba(24,15,19,0.90)',
+      art: '/exp-campaign.jpg', pos: 'center 42%',
+      fade: '24,15,19',
     },
     voyage: {
       panel: '#0c151f', stat: '#16222e', locked: '#131d27', open: '#0f1822', seat: '#142029',
-      art: '/voyages-modal-bg.jpg', wash: 'rgba(12,21,31,0.56)', washDeep: 'rgba(12,21,31,0.90)',
+      art: '/voyages-modal-bg.jpg', pos: 'center 38%',
+      fade: '12,21,31',
     },
   }
 
@@ -140,17 +148,23 @@ export default function AssignBoard({
           <div key={t.key} style={{
             borderRadius: 16,
             border: `1px solid ${t.accent}55`,
-            // Three layers, front to back: the accent tint that gives each
-            // track its identity, a dark wash so the content reads, then the
-            // art. The flat ramp colour stays as the base under the jpg for
-            // the moment before it loads.
-            background: `linear-gradient(180deg, ${t.accent}20 0%, ${t.accent}0a 58%, transparent 100%), `
-              + `linear-gradient(180deg, ${t.ramp.wash} 0%, ${t.ramp.washDeep} 58%, ${t.ramp.washDeep} 100%), `
-              + `url(${t.ramp.art}) center top / cover no-repeat, ${t.ramp.panel}`,
+            position: 'relative',
+            background: `linear-gradient(180deg, ${t.accent}20 0%, ${t.accent}0a 58%, transparent 100%), ${t.ramp.panel}`,
             overflow: 'hidden',
           }}>
+            {/* Art band behind the header. Sized in px so it always covers the
+                title row and the totals regardless of how the panel grows, and
+                faded to the panel's own colour at the bottom so it ends without
+                an edge. Behind the content, never over it. */}
+            <div aria-hidden style={{
+              position: 'absolute', top: 0, left: 0, right: 0, height: 118, zIndex: 0,
+              pointerEvents: 'none',
+              background: `linear-gradient(180deg, rgba(${t.ramp.fade},0.18) 0%, rgba(${t.ramp.fade},0.55) 55%, rgba(${t.ramp.fade},0.94) 88%, ${t.ramp.panel} 100%), `
+                + `url(${t.ramp.art}) ${t.ramp.pos} / cover no-repeat`,
+            }} />
+
             {/* Header: who this party is, and what it comes to. */}
-            <div style={{ padding: '0.8rem 0.85rem 0.7rem', borderBottom: `1px solid ${t.accent}2a` }}>
+            <div style={{ position: 'relative', zIndex: 1, padding: '0.8rem 0.85rem 0.7rem', borderBottom: `1px solid ${t.accent}2a` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
                 <span style={{ color: t.accent, display: 'flex' }}>{t.icon}</span>
                 <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0ede8', lineHeight: 1.1 }}>{t.label}</p>
@@ -174,7 +188,7 @@ export default function AssignBoard({
             </div>
 
             {/* Seats. Always six: filled, open, or locked behind the hull. */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 7, padding: '0.75rem 0.85rem 0.9rem' }}>
+            <div style={{ position: 'relative', zIndex: 1, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 7, padding: '0.75rem 0.85rem 0.9rem' }}>
               {Array.from({ length: MAX_SEATS }, (_, i) => {
                 const crew = seated.get(i)
                 const locked = i >= shipCrewSlots
