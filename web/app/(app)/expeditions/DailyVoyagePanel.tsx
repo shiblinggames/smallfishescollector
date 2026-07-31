@@ -452,9 +452,19 @@ export default function DailyVoyagePanel({
                           transform: 'translate(-50%, -50%)',
                           background: 'none', border: 'none',
                           cursor: 'pointer',
-                          padding: 0, zIndex: 3,
+                          // The dot used to BE the button, so the tap target was
+                          // 16px. Padding makes the hit area ~48px without
+                          // changing what is drawn; touchAction stops a tap on
+                          // the map being read as the start of a scroll.
+                          // Selected sits above its siblings so the bigger dot and
+                          // its label are never painted over by a later node.
+                          padding: 13, zIndex: isSelected ? 4 : 3, touchAction: 'manipulation',
                         }}
                       >
+                        {/* Ping and dot share a wrapper sized to the DOT. Without
+                            it the ping's inset:-5 would resolve against the
+                            button's padding box and bloom to ~58px. */}
+                        <span style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         {!isSelected && !locked && (
                           <span className="animate-ping" style={{
                             position: 'absolute', inset: -5, borderRadius: '50%',
@@ -463,7 +473,7 @@ export default function DailyVoyagePanel({
                         )}
                         <span style={{
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          width: isSelected ? 22 : 16, height: isSelected ? 22 : 16,
+                          width: isSelected ? 28 : 22, height: isSelected ? 28 : 22,
                           borderRadius: '50%',
                           background: locked ? 'rgba(30,22,14,0.85)' : isSelected ? rco.color : `${rco.color}cc`,
                           border: locked ? '2px solid rgba(160,120,60,0.45)' : isSelected ? '2.5px solid rgba(255,255,255,0.95)' : '2px solid rgba(255,255,255,0.55)',
@@ -474,11 +484,14 @@ export default function DailyVoyagePanel({
                           position: 'relative',
                           fontSize: locked ? '0.44rem' : undefined,
                         }}>
-                          {locked && <span style={{ color: '#c8a060', display: 'flex' }}><IconLock size={8} /></span>}
+                          {locked && <span style={{ color: '#c8a060', display: 'flex' }}><IconLock size={10} /></span>}
+                        </span>
                         </span>
                         <span style={{
                           position: 'absolute', top: '100%', left: '50%',
-                          transform: 'translateX(-50%)', marginTop: 6,
+                          // -7 cancels the button's new 13px padding and keeps the
+                          // label the same 6px under the dot it always sat at.
+                          transform: 'translateX(-50%)', marginTop: -7,
                           whiteSpace: 'nowrap', pointerEvents: 'none',
                           background: locked ? 'rgba(8,4,2,0.92)' : isSelected ? 'rgba(4,2,0,0.92)' : 'rgba(4,2,0,0.80)',
                           borderRadius: 6,
