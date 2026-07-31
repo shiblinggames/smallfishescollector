@@ -2120,7 +2120,16 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   // made the tabs feel like they were resizing the sheet. Now
                   // the shell is constant and the body between the header and
                   // the action row is the only thing that scrolls.
-                  width: '100%', maxWidth: 360, height: 'min(86vh, 620px)',
+                  //
+                  // 620 -> 500. The Stats tab is short since the per-stat sheet
+                  // took the base values, the trained row and the glossary out
+                  // of it: close row ~28 + portrait 196 + name ~29 + level bar
+                  // ~35 + tabs ~55 + body ~75 + actions ~61 lands near 500, and
+                  // a crew with no Ability or Skins tab hides the strip and
+                  // comes in ~55 shorter still. At 620 that was 120-175px of
+                  // dead space under the stats on the tab you open by default.
+                  // Taller tabs scroll, which is what the scroll region is for.
+                  width: '100%', maxWidth: 360, height: 'min(82vh, 500px)',
                   position: 'relative',
                   display: 'flex', flexDirection: 'column', overflow: 'hidden',
                   borderRadius: 14,
