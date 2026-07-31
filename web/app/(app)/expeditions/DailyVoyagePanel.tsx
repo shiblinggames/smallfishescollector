@@ -980,17 +980,28 @@ export default function DailyVoyagePanel({
               <p className="font-karla" style={{ fontSize: '0.66rem', color: doneRoute.color, marginTop: 3 }}>{doneRoute.name}</p>
             )}
             <div style={{ height: 1, margin: '0.7rem 0 0.85rem', background: 'linear-gradient(90deg, transparent, rgba(240,192,64,0.28), transparent)' }} />
-            {earned > 0 || activeVoyage.total_gems > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+            {/* ── 1. THE HAUL ── The two numbers every voyage pays, together
+                   at the top. Gems used to sit up here beside the doubloons,
+                   which put a 3-gem trickle next to a five-figure payout as if
+                   they were the same kind of reward; Nav XP was buried in a
+                   list below with the crew's. Doubloons and XP are what the
+                   run was FOR, so they lead. */}
+            {earned > 0 || xpEarned > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                 {earned > 0 && (
                   <p className="font-cinzel font-700" style={{ fontSize: '2rem', color: '#f0c040', lineHeight: 1, textShadow: '0 0 26px rgba(240,192,64,0.35)' }}>
                     +{earned.toLocaleString()} ⟡
                   </p>
                 )}
-                {activeVoyage.total_gems > 0 && (
-                  <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#a78bfa', lineHeight: 1 }}>
-                    +{activeVoyage.total_gems} gem{activeVoyage.total_gems !== 1 ? 's' : ''}
+                {xpEarned > 0 && (
+                  <p className="font-cinzel font-700" style={{ fontSize: '1.25rem', color: '#7fa0d0', lineHeight: 1 }}>
+                    +{xpEarned.toLocaleString()} XP
                   </p>
+                )}
+                {levelUp && (
+                  <span className="font-karla font-700 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.14em', color: '#f0c040' }}>
+                    Navigation Lv {levelUp.from} → {levelUp.to}
+                  </span>
                 )}
               </div>
             ) : (
@@ -998,73 +1009,88 @@ export default function DailyVoyagePanel({
             )}
           </div>
 
-          {/* Rewards summary — Nav XP, crew XP, and recovered bait as one
-              consistent label↔value list. Replaces the old trio of separate,
-              differently-styled blocks so the screen reads at a glance. */}
-          {(xpEarned > 0 || crewXP.length > 0 || claimedBait.length > 0) && (
-            <div className="app-card" style={{ padding: '0.5rem 0.9rem' }}>
-              {xpEarned > 0 && (
-                <VoyageSummaryRow
-                  label="Navigation"
-                  value={`+${xpEarned.toLocaleString()} XP`}
-                  sub={levelUp ? `Lv ${levelUp.from} → ${levelUp.to}` : undefined}
-                  valueColor="#7fa0d0"
-                  strong={!!levelUp}
-                />
+          {/* ── 2. SPOILS ── Gems and anything else that dropped, in one place:
+                 gems, recovered bait, and the special items. These were
+                 scattered across the hero, the summary list and a run of loose
+                 unlabelled rows. */}
+          {(activeVoyage.total_gems > 0 || claimedBait.length > 0 || claimedTideTurner || claimedPhantomHook || claimedPerfectedSigil || claimedSkinId) && (
+            <div>
+              <VoyageGroupLabel color="#a78bfa">Spoils</VoyageGroupLabel>
+              {(activeVoyage.total_gems > 0 || claimedBait.length > 0) && (
+                <div className="app-card" style={{ padding: '0.5rem 0.9rem' }}>
+                  {activeVoyage.total_gems > 0 && (
+                    <VoyageSummaryRow
+                      label="Gems"
+                      value={`+${activeVoyage.total_gems}`}
+                      valueColor="#a78bfa"
+                    />
+                  )}
+                  {claimedBait.map(({ type, qty }) => (
+                    <VoyageSummaryRow
+                      key={type}
+                      label="Bait recovered"
+                      value={`${type === 'golden' ? 'Golden Lure' : 'Luminous Lure'} ×${qty}`}
+                      valueColor={type === 'golden' ? '#fde68a' : '#7bdca0'}
+                    />
+                  ))}
+                </div>
               )}
-              {crewXP.map(c => {
-                const leveled = c.newLevel > c.oldLevel
+
+              {claimedTideTurner && (
+                <VoyageItemRow img="/tideturner.png" accent="#a78bfa" name="Tide Turner" desc="Skip a hooked fish without breaking your perfect streak. 3 a day." />
+              )}
+
+              {claimedPhantomHook && (
+                <VoyageItemRow img="/phantomhook.png" accent="#5eead4" name="Phantom Hook" desc="25% chance to save your bait on every cast." />
+              )}
+
+              {claimedPerfectedSigil && (
+                <VoyageItemRow img="/perfectedsigil.png" accent="#cbd5e1" name="Perfected Sigil" desc="A bonus +10 ⟡ on every Perfect catch." />
+              )}
+
+              {claimedSkinId && (() => {
+                const SKIN_NAMES: Record<string, string> = { default: 'Green', gray: 'Gray', blue: 'Blue', pink: 'Pink', sand: 'Sand', sky: 'Sky', golden: 'Golden', forest: 'Forest', mint: 'Mint' }
+                const skinName = SKIN_NAMES[claimedSkinId] ?? claimedSkinId
+                const prefix = claimedSkinId === 'default' ? 'fishing' : `fishing_${claimedSkinId}`
                 return (
-                  <VoyageSummaryRow
-                    key={c.id}
-                    label={c.name}
-                    value={`+${(c.newXP - c.oldXP).toLocaleString()} XP`}
-                    sub={leveled ? `Lv ${c.oldLevel} → ${c.newLevel}` : undefined}
-                    valueColor={leveled ? '#f0c040' : '#a78a5a'}
-                    strong={leveled}
+                  <VoyageItemRow
+                    spriteBg={`url(/${prefix}_rest.png)`}
+                    accent="#4ade80"
+                    name={`${skinName} skin`}
+                    desc="New character color unlocked."
+                    tag="Skin unlocked · equip from profile"
                   />
                 )
-              })}
-              {claimedBait.map(({ type, qty }) => (
-                <VoyageSummaryRow
-                  key={type}
-                  label="Bait recovered"
-                  value={`${type === 'golden' ? 'Golden Lure' : 'Luminous Lure'} ×${qty}`}
-                  valueColor={type === 'golden' ? '#fde68a' : '#7bdca0'}
-                />
-              ))}
+              })()}
             </div>
           )}
 
-          {claimedTideTurner && (
-            <VoyageItemRow img="/tideturner.png" accent="#a78bfa" name="Tide Turner" desc="Skip a hooked fish without breaking your perfect streak. 3 a day." />
+          {/* ── 3. CREW ── Their XP, on its own. It was interleaved with the
+                 captain's Nav XP and the bait, so a six-hand crew buried
+                 everything else in the card. */}
+          {crewXP.length > 0 && (
+            <div>
+              <VoyageGroupLabel color="#c8aa6a">Crew</VoyageGroupLabel>
+              <div className="app-card" style={{ padding: '0.5rem 0.9rem' }}>
+                {crewXP.map(c => {
+                  const leveled = c.newLevel > c.oldLevel
+                  return (
+                    <VoyageSummaryRow
+                      key={c.id}
+                      label={c.name}
+                      value={`+${(c.newXP - c.oldXP).toLocaleString()} XP`}
+                      sub={leveled ? `Lv ${c.oldLevel} → ${c.newLevel}` : undefined}
+                      valueColor={leveled ? '#f0c040' : '#a78a5a'}
+                      strong={leveled}
+                    />
+                  )
+                })}
+              </div>
+            </div>
           )}
 
-          {claimedPhantomHook && (
-            <VoyageItemRow img="/phantomhook.png" accent="#5eead4" name="Phantom Hook" desc="25% chance to save your bait on every cast." />
-          )}
-
-          {claimedPerfectedSigil && (
-            <VoyageItemRow img="/perfectedsigil.png" accent="#cbd5e1" name="Perfected Sigil" desc="A bonus +10 ⟡ on every Perfect catch." />
-          )}
-
-          {claimedSkinId && (() => {
-            const SKIN_NAMES: Record<string, string> = { default: 'Green', gray: 'Gray', blue: 'Blue', pink: 'Pink', sand: 'Sand', sky: 'Sky', golden: 'Golden', forest: 'Forest', mint: 'Mint' }
-            const skinName = SKIN_NAMES[claimedSkinId] ?? claimedSkinId
-            const prefix = claimedSkinId === 'default' ? 'fishing' : `fishing_${claimedSkinId}`
-            return (
-              <VoyageItemRow
-                spriteBg={`url(/${prefix}_rest.png)`}
-                accent="#4ade80"
-                name={`${skinName} skin`}
-                desc="New character color unlocked."
-                tag="Skin unlocked · equip from profile"
-              />
-            )
-          })()}
-
-          {/* Crew lost — clear red callout (Nav XP now lives in the summary
-              card above, so the old standalone XP block is gone). */}
+          {/* Crew lost — clear red callout, deliberately outside the three
+              reward groups: it is not a reward. */}
           {lostCards.length > 0 && (
             <div style={{
               background: 'rgba(30,12,12,0.55)',
@@ -1106,6 +1132,17 @@ export default function DailyVoyagePanel({
 }
 
 // ── Voyage-result helpers ─────────────────────────────────────────────────────
+// Group heading for the result screen's three sections (Haul / Spoils / Crew).
+// The screen used to be one undifferentiated list, so a long crew roster buried
+// the bait and the gems sat up in the hero pretending to be the payout.
+function VoyageGroupLabel({ children, color }: { children: React.ReactNode; color: string }) {
+  return (
+    <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{
+      fontSize: '0.52rem', color, marginBottom: '0.4rem', paddingLeft: '0.1rem',
+    }}>{children}</p>
+  )
+}
+
 // One consistent label↔value row for the rewards summary (Nav XP, crew XP,
 // bait) so the result screen reads at a glance instead of as a stack of
 // differently-styled blocks.
