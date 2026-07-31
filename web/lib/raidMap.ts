@@ -2645,9 +2645,7 @@ export const RAID_MAP: RaidNode[] = [
   //
   // Gated on `requiresAncients: 6` — the FIRST raid node in the game that reads
   // the fishing track. That is the point: it cannot be reached from this map
-  // alone. Kept comingSoon while the reveal cutscene + Finn's boss config are
-  // built, so it reads as a promise on the horizon rather than a dead end
-  // (see [[finn-finndicate-twist]] — the convergence trilogy).
+  // alone (see [[finn-finndicate-twist]] — the convergence trilogy).
   // THE REVEAL. Its own story node, and the one the ancients gate hangs on —
   // landing the sixth giant should pay off with the TRUTH, not with a health
   // bar. Label is Finleone's own dying line ("I only ever held the knife. You've
@@ -2668,7 +2666,6 @@ export const RAID_MAP: RaidNode[] = [
     // Visible as a GOAL while locked — hiding it would hide the reason to go
     // and land the giants in the first place.
     previewWhenLocked: true,
-    comingSoon: true,
     image: '/raidlog.png',
     sceneAccent: '#a78bfa',
     scene: [
@@ -2767,7 +2764,6 @@ export const RAID_MAP: RaidNode[] = [
     raidId: THE_SUNKEN_HAND.raidId,
     route: '/raids/sunken-hand',
     previewWhenLocked: true,
-    comingSoon: true,
     image: '/finn_final.png',
     revealBoss: true,   // the_hand_that_sharpens already showed the player exactly who he is
     sceneAccent: '#a78bfa',
@@ -2799,7 +2795,6 @@ export const RAID_MAP: RaidNode[] = [
       'Six giants went into him. They are coming back out, and the sea is taking them home.',
     requiresNode: 'one_last_ride',
     previewWhenLocked: false,
-    comingSoon: true,
     image: '/finn_final.png',
     sceneAccent: '#a78bfa',
     scene: [
@@ -2880,7 +2875,6 @@ export const RAID_MAP: RaidNode[] = [
     requiresNode: 'the_long_quiet',
     spoils: { price: SPOILS_PRICE },
     previewWhenLocked: true,
-    comingSoon: true,
     image: '/finn_final.png',
     sceneAccent: '#c4a96a',
     detail: {
@@ -2904,7 +2898,6 @@ export const RAID_MAP: RaidNode[] = [
     raidId: THE_SUNKEN_HAND_CHALLENGE.raidId,
     sideBranch: { parentId: 'one_last_ride' },
     previewWhenLocked: true,
-    comingSoon: true,
     image: '/finn_final.png',
     revealBoss: true,
     sceneAccent: '#a78bfa',

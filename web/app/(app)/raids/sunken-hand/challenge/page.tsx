@@ -1,18 +1,26 @@
-// THE SUNKEN HAND — the finale. Finn, at the end of the line he has been
-// reeling since the first cast.
+// CHALLENGE: THE SUNKEN HAND — the finale again, on worse terms.
 //
-// This is the only raid fought on the DIAL rather than the aim bar, and the
-// only one that reads the FISHING track twice over: the six Ancient Deep giants
-// gate entry, and the player's equipped rod + hook widen the dial's bands. The
-// campaign and the fishing loop settle up here.
+// Same RaidGame engine, same dial, same player stats loader; the only
+// difference is the config fed in. THE_SUNKEN_HAND_CHALLENGE scales his hull
+// and damage, pins its own loot table, and carries a suffixed raid_id so clears
+// land in their own raid_completions bucket (which is what the Cut Off at the
+// Wrist badge reads).
+//
+// The plate is the point here: his armour ramps 330 → 1,188 across the six
+// phases, and the Perfect Streak pierce at 5 is the only sane way through it.
+//
+// Gating: the six Ancient Deep giants, same as the normal fight, because it is
+// the same fight. Whether the CHALLENGE is open at all (needs the normal clear)
+// lives on the raid-map node, matching every other challenge route — landing on
+// this URL directly is allowed, exactly as it is for /raids/challenge.
 
 import { redirect } from 'next/navigation'
-import RaidGame from '../RaidGame'
-import { getRaidPlayerStats } from '../actions'
-import { THE_SUNKEN_HAND } from '@/lib/bossRaids'
+import RaidGame from '../../RaidGame'
+import { getRaidPlayerStats } from '../../actions'
+import { THE_SUNKEN_HAND_CHALLENGE } from '@/lib/raidChallenge'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 
-export default async function SunkenHandRaidPage() {
+export default async function SunkenHandChallengeRaidPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
 
@@ -32,7 +40,7 @@ export default async function SunkenHandRaidPage() {
       <main className="min-h-screen pt-6">
         <div className="px-3 pb-12 max-w-xl mx-auto">
           <RaidGame
-            config={THE_SUNKEN_HAND}
+            config={THE_SUNKEN_HAND_CHALLENGE}
             shipImageUrl={stats.shipImageUrl}
             shipName={stats.shipName}
             username={stats.username}
