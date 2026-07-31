@@ -77,7 +77,9 @@ const ORDERS: Order[] = [
     // the whole page in one breath, not just name a button.
     why: () => 'Expeditions are two loops, and both run on crew. The CAMPAIGN is the story: you sail in and fight every battle yourself. VOYAGES are passive: your crew sail without you and bring back doubloons and Nav XP while you are gone. Your first recruit is free.',
     cta: () => 'Go to the Crew Hall',
-    href: () => '/crew',
+    // Straight to Recruit. Bare /crew defaults to Roster, so the one order
+    // aimed at a captain with NO crew landed them on an empty list.
+    href: () => '/crew?tab=recruits',
     done: s => s.crewOwned > 0,
   },
   {
@@ -86,7 +88,12 @@ const ORDERS: Order[] = [
     // The single concept the game was failing to teach, and the reason players stalled.
     why: () => 'Raid crew and voyage crew are SEPARATE rosters, and a crew sails one or the other, never both. Crew you put on voyages will not fight for you.',
     cta: () => 'Assign raid crew',
-    href: () => '/crew?tab=roster&filter=raid',
+    // ASSIGN, not roster. This pointed at ?tab=roster&filter=raid, which was
+    // right before the Crew Hall overhaul split assignment into its own tab.
+    // `roster` is still a valid param so it did not error - it just dropped
+    // the player on a flat list with no way to seat anyone, which is the one
+    // thing this order exists to teach. (`filter` is read by nothing now.)
+    href: () => '/crew?tab=assign',
     done: s => s.raidCrew > 0,
   },
   {
@@ -117,7 +124,7 @@ const ORDERS: Order[] = [
       ? 'Voyages are passive. You do not play them: your crew sail off on their own and come back with doubloons, gems and Nav XP whether you are here or not. They go with the crew you did NOT take into raids.'
       : 'Every crew you own is in a raid slot, and a crew sails one track or the other. Recruit a few more for the voyage track, and you will be earning passively while you fight the campaign.'),
     cta: s => (canVoyage(s) ? 'Send a voyage' : 'Recruit more crew'),
-    href: s => (canVoyage(s) ? undefined : '/crew'),
+    href: s => (canVoyage(s) ? undefined : '/crew?tab=recruits'),
     action: s => (canVoyage(s) ? 'voyages' : undefined),
     done: s => s.voyagesRun > 0,
   },

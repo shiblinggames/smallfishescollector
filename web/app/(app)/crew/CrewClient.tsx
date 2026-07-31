@@ -1024,10 +1024,12 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
   // stays as the memorial tab. The graveyard fetch is lazy (first time the
   // tab is opened) so the page-load cost stays the same for players who
   // never click it.
-  // Deep-link support — Expedition hub cards link to /crew?tab=roster
-  // &filter=raid|voyage so tapping a crew portrait there lands the player
-  // on the right view. Read once on mount; any value not in the allow-set
-  // falls back to the default.
+  // Deep-link support — Captain's Orders and the hub cards link to
+  // /crew?tab=assign|recruits so a player lands on the view that can
+  // actually do the thing they were sent for. Read once on mount; any value
+  // not in the allow-set falls back to the default.
+  // (There used to be a &filter=raid|voyage companion param. Nothing reads
+  //  it any more, so callers should not pass it.)
   const searchParams = useSearchParams()
   const initialTab    = (() => {
     const t = searchParams?.get('tab')
