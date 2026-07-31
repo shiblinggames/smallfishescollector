@@ -73,11 +73,21 @@ function BloodDrop({ size = 12 }: { size?: number }) {
 
 // Bars are drawn against a FIXED ceiling, not each crew's own best stat, so a
 // bar means the same thing on every card and two recruits can be compared by
-// glancing at them. 60 is the real top: simulating the live generator, a
-// legendary peaks at 58 in one stat at level 100 (median 50, and 23 at level 1)
-// while a starter common sits around 4. So a common IS a sliver next to a
-// maxed legendary, which is the honest picture.
-const STAT_BAR_MAX = 60
+// glancing at them.
+//
+// The ceiling is the BASE-ROLL top, not the level-100 top. The bar's job is
+// "how good is this one", and the surface where that is an actual decision is
+// the recruit board: three candidates, always level 1. Against a level-100
+// ceiling (58) every fresh card landed between 5% and 40%, squashing the whole
+// comparison into the bottom third of the track. Against the base ceiling each
+// rarity gets its own band - measured over 20k rolls of the live generator,
+// median peak stat by rarity is 6 / 10 / 15 / 22, with legendary topping out
+// at 28.
+//
+// 30 leaves headroom for trait bonuses on top of the roll. Levelled crew simply
+// peg full, which is fine: "maxed" is useful for a bar to say, and the printed
+// number beside it still separates one maxed crew from another.
+const STAT_BAR_MAX = 30
 const STAT_COLOR = { power: '#f87171', dodge: '#60a5fa', fortune: '#f0c040' }
 const STAT_LABEL = { power: 'PWR', dodge: 'SAV', fortune: 'FTN' }
 
