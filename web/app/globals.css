@@ -826,6 +826,18 @@ html, body {
 }
 .rod-glow-ancient { animation: rod-glow-ancient 5s ease-in-out infinite; }
 
+/* Crew stat bars — fill once on mount, then hold. The element carries its final
+   scaleX inline, so this animates FROM zero and `both` leaves the inline value
+   in place at the end. scaleX, never width: width is layout, and a roster
+   renders dozens of cards at once. */
+@keyframes crew-stat-fill {
+  from { transform: scaleX(0); }
+}
+.crew-stat-fill {
+  transform-origin: left center;
+  animation: crew-stat-fill 0.5s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
 /* ── Hardcore Gauntlet dread ──
    A blood vignette hung over the whole viewport while a hardcore run is live
    (toggled by GauntletGame via the .hardcore-gauntlet body class). Edge-only

@@ -71,6 +71,13 @@ function BloodDrop({ size = 12 }: { size?: number }) {
   )
 }
 
+// Bars are drawn against a FIXED ceiling, not each crew's own best stat, so a
+// bar means the same thing on every card and two recruits can be compared by
+// glancing at them. 60 is the real top: simulating the live generator, a
+// legendary peaks at 58 in one stat at level 100 (median 50, and 23 at level 1)
+// while a starter common sits around 4. So a common IS a sliver next to a
+// maxed legendary, which is the honest picture.
+const STAT_BAR_MAX = 60
 const STAT_COLOR = { power: '#f87171', dodge: '#60a5fa', fortune: '#f0c040' }
 const STAT_LABEL = { power: 'PWR', dodge: 'SAV', fortune: 'FTN' }
 
@@ -649,13 +656,27 @@ function CrewPanel({
           </p>
         </div>
 
-        {/* Engraved stats — three stat blocks left-aligned. */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.15rem 0' }}>
-          {(['power', 'dodge', 'fortune'] as const).map(k => (
-            <div key={k} title={STAT_LABEL[k]} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <StatIcon k={k} color={STAT_COLOR[k]} />
-              <span className="font-cinzel font-700" style={{ fontSize: '0.98rem', lineHeight: 1, color: '#ecdcbd' }}>
-                {eff[k]}
+        {/* Engraved stats — icon + number over a bar, drawn against a fixed
+            ceiling (STAT_BAR_MAX) so bars are comparable card to card. */}
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, padding: '0.15rem 0' }}>
+          {(['power', 'dodge', 'fortune'] as const).map((k, i) => (
+            <div key={k} title={STAT_LABEL[k]} style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <StatIcon k={k} color={STAT_COLOR[k]} />
+                <span className="font-cinzel font-700" style={{ fontSize: '0.98rem', lineHeight: 1, color: '#ecdcbd' }}>
+                  {eff[k]}
+                </span>
+              </div>
+              {/* scaleX on a solid fill, never width: width is layout and a
+                  roster renders dozens of cards at once. Staggered so the three
+                  read left to right instead of snapping together. */}
+              <span aria-hidden style={{ display: 'block', width: 44, height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                <span className="crew-stat-fill" style={{
+                  display: 'block', width: '100%', height: '100%', borderRadius: 2,
+                  background: STAT_COLOR[k],
+                  transform: `scaleX(${Math.min(1, Math.max(0.02, eff[k] / STAT_BAR_MAX))})`,
+                  animationDelay: `${0.06 * i}s`,
+                }} />
               </span>
             </div>
           ))}
