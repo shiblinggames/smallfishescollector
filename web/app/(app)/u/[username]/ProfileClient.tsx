@@ -467,19 +467,19 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
           )}
           </div>
 
-          {/* Rarest Catches — top 3 per zone, a trophy room by depth */}
-          {rarestFish.length > 0 && (
-            <div>
-              <SectionLabel flavor="The three rarest trophies from every water they've fished.">Rarest Catches</SectionLabel>
-              <RarestCatchesByZone fish={rarestFish} prestige={prestigeLevels} />
-            </div>
-          )}
-
           {/* Tackle — the fishing-side twin of the Arsenal, same rail. */}
           {ownedSpecialIds.length > 0 && (
             <div>
               <SectionLabel color="#60a5fa" flavor="The odd gear they have talked out of the sea.">Tackle</SectionLabel>
               <SpecialTackle items={ownedSpecialIds} equippedIds={[equippedSpecialId ?? null, equippedSpecial2Id]} />
+            </div>
+          )}
+
+          {/* Rarest Catches — top 3 per zone, a trophy room by depth */}
+          {rarestFish.length > 0 && (
+            <div>
+              <SectionLabel flavor="The three rarest trophies from every water they've fished.">Rarest Catches</SectionLabel>
+              <RarestCatchesByZone fish={rarestFish} prestige={prestigeLevels} />
             </div>
           )}
 
