@@ -1419,23 +1419,18 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
           const nextTier = nextHallTier(state.hallTier)
           return (
         <>
-        <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 12, border: `1px solid ${hall.accent}66`, background: `linear-gradient(180deg, ${hall.accent}22 0%, transparent 62%), rgba(14,19,28,0.97)`, boxShadow: hall.glow ? `0 0 26px ${hall.glow}` : undefined, padding: '0.85rem 0.85rem 1rem', marginBottom: '1.4rem' }}>
-          {/* THE HALL, as a hero rather than a container.
-              It used to WRAP the whole recruit tab - reroll row, board, every
-              card - so the cards lived inside a tinted box inside the page.
-              Now it is just the building at the top, and its picture changes
-              as you upgrade, the way the Forge does. The board below stands on
-              the page on its own. */}
-          <div style={{ position: 'relative', width: 116, height: 116, margin: '0 auto 8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 12, border: `1px solid ${hall.accent}66`, background: `linear-gradient(180deg, ${hall.accent}22 0%, transparent 62%), rgba(14,19,28,0.97)`, boxShadow: hall.glow ? `0 0 26px ${hall.glow}` : undefined, padding: '0.8rem', marginBottom: '0.9rem' }}>
+          {/* Picture and identity SIDE BY SIDE. Stacked, this hero was tall and
+              its picture was small at the same time - the two complaints were
+              the same problem. Beside each other the building gets bigger and
+              the whole block gets shorter, so more of the board is on screen
+              after a reroll. */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: '0.85rem' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={`/crew/hall_${hall.tier}.png`} alt="" aria-hidden decoding="async"
-              style={{ width: 100, height: 100, objectFit: 'contain', filter: `drop-shadow(0 4px 14px ${hall.accent}55)` }}
+              style={{ width: 132, height: 132, flexShrink: 0, objectFit: 'contain', filter: `drop-shadow(0 4px 14px ${hall.accent}55)` }}
               onError={e => { (e.target as HTMLImageElement).style.visibility = 'hidden' }} />
-          </div>
-          {/* Hall header — building identity row. Name + tier pips on
-              the left, Upgrade CTA (or MAX chip) on the right, perk +
-              flavor caption underneath. */}
-          <div style={{ marginBottom: '1rem' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
                 <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: hall.accent, lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -1485,6 +1480,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             <p className="font-karla" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic', marginTop: 2 }}>
               {hall.flavor}
             </p>
+            </div>
           </div>
           {/* Upgrade celebration — fires once after a confirmed purchase.
               Lives INSIDE the hall panel (position:relative + overflow:
