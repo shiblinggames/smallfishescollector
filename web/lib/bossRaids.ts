@@ -865,7 +865,7 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
   preFightDialogue: [
     { speaker: 'narrator', text: "Past the Bilge Strait the water turns cold and the fog thins to a hard gray line. A long iron-sided carrack waits there, riding low under more cargo than any honest captain could explain. The wax on Pete's letter and the seal on her hull match." },
     { speaker: 'boss', text: "C.K. So you're the little hook that's been snagging my freight. I wondered who kept making my couriers late." },
-    { speaker: 'crew', ...CREW_SPEAKER.mira, text: "Captain Krust. Pete kept your letters but not his life. You run the Finndicate's cargo." },
+    { speaker: 'crew', ...CREW_SPEAKER.doby, text: "Captain Krust. Pete kept your letters but not his life. You run the Finndicate's cargo." },
     { speaker: 'boss', text: "I move what I'm told to move and I don't ask whose name is on the manifest. That's why I've lasted, and that's why captains like Pete are fodder and captains like me aren't." },
     { speaker: 'crew', ...CREW_SPEAKER.mako, text: "A hauler who is proud he never looks in his own crates. I have eaten braver fish than you for breakfast, Krust." },
     { speaker: 'boss', text: "But you've cost the Finndicate a season's haul, captain, and someone above me will want that back out of you. *I'll just take it out first.*", pause: 500 },
@@ -1192,7 +1192,7 @@ export const THE_TOLLMASTER: BossRaidConfig = {
   preFightDialogue: [
     { speaker: 'narrator', text: "The fog peels back and the Gullet opens its throat. Ranks of low barracuda hulls sit waiting, guns already run out, hot and loaded." },
     { speaker: 'boss', text: "You came a long way down my channel, captain. Everything that swims this deep pays the toll. Coin, cargo, hull, crew. *I take my cut of all of it*.", pause: 500 },
-    { speaker: 'crew', ...CREW_SPEAKER.mira, text: "Tollmaster Spet. You're the one the whole Finndicate funnels its plunder to." },
+    { speaker: 'crew', ...CREW_SPEAKER.dole, text: "Tollmaster Spet. You're the one the whole Finndicate funnels its plunder to." },
     { speaker: 'boss', text: "I'm the one who counts it. Krust shipped it, the Cartographer charted it, and it all comes down my throat to be weighed. You sank two of mine. That's a debt." },
     { speaker: 'crew', ...CREW_SPEAKER.doby, text: "Everything down here pays the toll. I have heard that from bigger things than you, collector, and I am still in the water. They are not." },
     { speaker: 'boss', text: "And out here, captain, I always collect first." },
