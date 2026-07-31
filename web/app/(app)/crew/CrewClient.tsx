@@ -184,17 +184,6 @@ const ROUND_CANCEL: React.CSSProperties = { ...ROUND_BTN, width: 30, height: 30,
 const ASSIGN_VOYAGE = '#5fa8c9'
 const ASSIGN_RAID   = '#e07c7c'
 
-// Trawl net / creel — used on the assignment pip when a crew is away on a
-// trawl (so it reads as a net, not the voyage anchor or raid swords).
-function NetIconSvg({ size = 14, color = 'currentColor' }: { size?: number; color?: string }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M4 5h16l-2.3 13a3 3 0 0 1-3 2.5H9.3a3 3 0 0 1-3-2.5L4 5Z" />
-      <path d="M9 5l.8 15M15 5l-.8 15M4.7 11h14.6M5.6 16h12.8" />
-    </svg>
-  )
-}
-
 
 
 // Bright dashed "open seat" tile in the Raid / Voyage parties so capacity (and
@@ -323,6 +312,20 @@ function CrewPanel({
   // made the roster look visually loud once five rarities were on screen.)
   const cardShadow = `inset 0 0 0 1px ${frameAccent}22, inset 0 1px 0 rgba(255,255,255,0.05), 0 6px 16px rgba(0,0,0,0.55)`
 
+  // What this hand is currently DOING. `assignment` has been passed on every
+  // roster card since the party sections were removed but nothing rendered it,
+  // so a crew's duty was invisible on the roster.
+  //
+  // Priority is where they physically are first, then what they are rostered
+  // for: a raid-party hand who is out on a trawl reads "Trawling", because that
+  // is the thing stopping you using them right now.
+  const duty =
+    locked && lockKind === 'trawl' ? { label: 'Trawling', color: '#3fc8aa' }
+    : locked ? { label: 'At sea', color: '#ffb45a' }
+    : assignment === 'raid' ? { label: 'Raid party', color: '#e07c7c' }
+    : assignment === 'voyage' ? { label: 'Voyage party', color: '#5fa8c9' }
+    : null
+
   return (
     <motion.div
       onClick={onClick}
@@ -423,28 +426,9 @@ function CrewPanel({
         })()}
         </div>{/* end arched niche */}
 
-        {/* Only the "out on a trawl" pip lives on the portrait now — raid/voyage
-            assignment reads in the dedicated party sections, so those tags were
-            removed from the card. A trawl is NOT a party (the crew's away
-            fishing), so its pip stays. Captain crown moved next to the name. */}
-        {lockKind === 'trawl' && (
-          <div
-            title="Out on a trawl"
-            aria-label="Out on a trawl"
-            style={{
-              position: 'absolute', top: -6, right: -6,
-              width: 26, height: 26, borderRadius: '50%',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'radial-gradient(circle at 35% 30%, #3fc8aaff 0%, #3fc8aad0 70%)',
-              border: '1.5px solid #3fc8aa',
-              boxShadow: '0 2px 7px rgba(0,0,0,0.6), 0 0 12px #3fc8aa66, inset 0 1px 0 rgba(255,255,255,0.3)',
-              pointerEvents: 'none',
-              zIndex: 2,
-            }}
-          >
-            <NetIconSvg size={14} color="#0a0a0a" />
-          </div>
-        )}
+        {/* The net pip that used to sit here is gone: the duty tag below the
+            name says "Trawling" in words, and the lock badge already covers
+            "cannot be reassigned". Three marks for one fact was too many. */}
         {aboard && (
           <div
             title="Already signed on to your crew"
@@ -554,6 +538,22 @@ function CrewPanel({
             )}
           </p>
         </div>
+
+        {/* Duty tag. Its own row rather than crowded onto the rarity line,
+            which already carries "LEGENDARY · 2 traits" and has no width to
+            spare on a 300px card. Costs no height: the column was centred
+            precisely because it had ~43px of slack under the stats. */}
+        {duty && (
+          <span className="font-karla font-700 uppercase" style={{
+            alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 5,
+            padding: '0.14rem 0.44rem', borderRadius: 5,
+            fontSize: '0.56rem', letterSpacing: '0.09em',
+            background: `${duty.color}1c`, border: `1px solid ${duty.color}55`, color: duty.color,
+          }}>
+            <span aria-hidden style={{ width: 5, height: 5, borderRadius: '50%', background: duty.color, flexShrink: 0 }} />
+            {duty.label}
+          </span>
+        )}
 
         {/* Engraved stats — icon + number over a bar, drawn against a fixed
             ceiling (STAT_BAR_MAX) so bars are comparable card to card. */}
