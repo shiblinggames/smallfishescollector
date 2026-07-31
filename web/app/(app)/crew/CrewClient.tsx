@@ -96,10 +96,10 @@ const STAT_ABOUT: Record<'power' | 'dodge' | 'fortune', string> = {
 
 const STAT_COLOR = { power: '#f87171', dodge: '#60a5fa', fortune: '#f0c040' }
 
-/** Roster orderings. 'recent' is the order the server already returns
- *  (recruited_at desc), so it is the default and picking it changes nothing. */
+/** Roster orderings. Level leads and is the default; the server's own
+ *  recruited_at order is no longer offered, so newly signed hands sort by
+ *  merit like everyone else rather than sitting at the top. */
 const ROSTER_SORTS = [
-  { k: 'recent'  as const, label: 'Recent',  color: '#bcb29a' },
   { k: 'level'   as const, label: 'Level',   color: '#f0c040' },
   { k: 'name'    as const, label: 'Name',    color: '#bcb29a' },
   { k: 'rarity'  as const, label: 'Rarity',  color: '#a78bfa' },
@@ -779,7 +779,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
   // active tab isn't available for the viewed crew (e.g. Skins on a non-skin
   // crew). Reset on modal close.
   const [detailTab, setDetailTab] = useState<'stats' | 'ability' | 'skins'>('stats')
-  const [rosterSort, setRosterSort] = useState<RosterSort>('recent')
+  const [rosterSort, setRosterSort] = useState<RosterSort>('level')
 
   // Crew skins (legendary-only) — the tile the player is previewing in the
   // detail modal's Skins tab. undefined = show the currently equipped skin;
@@ -1021,7 +1021,6 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
   // instead of shuffling between renders.
   const sortedRoster = useMemo(() => {
     const byName = (a: CrewMember, b: CrewMember) => a.name.localeCompare(b.name)
-    if (rosterSort === 'recent') return state.roster
     const r = [...state.roster]
     if (rosterSort === 'name') return r.sort(byName)
     if (rosterSort === 'level') return r.sort((a, b) => crewLevelFromXP(b.xp) - crewLevelFromXP(a.xp) || byName(a, b))
@@ -2003,7 +2002,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                                   className="font-karla font-700 uppercase tracking-[0.06em]"
                                   aria-pressed={on}
                                   style={{
-                                    padding: '0.3rem 0.6rem', borderRadius: 999, fontSize: '0.56rem',
+                                    padding: '0.3rem 0.5rem', borderRadius: 999, fontSize: '0.56rem',
                                     background: on ? `${o.color}26` : 'transparent',
                                     border: `1px solid ${on ? `${o.color}88` : 'transparent'}`,
                                     color: on ? o.color : 'rgba(255,255,255,0.5)',
