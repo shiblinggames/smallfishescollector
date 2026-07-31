@@ -77,9 +77,21 @@ export default function AssignBoard({
   const atSea = new Set(lockedCrewIds)
   const trawling = new Set(trawlingCrewIds)
 
+  // Every surface in here used to share ONE navy ramp (13,18,27 / 22,29,40 /
+  // 20,26,36 / ...), so the red track was a red BORDER around a blue panel and
+  // the accent wash (9%, gone by 62%) never changed that. The base hue is what
+  // reads, not the outline. Each track now gets its own opaque ramp pulled
+  // toward its accent: warm near-black for the raid, cool for the voyage.
+  // Fully opaque hex, no alpha - nothing behind these needs to show through.
+  const RAMP = {
+    raid:   { panel: '#180f13', stat: '#241a1f', locked: '#1e1418', open: '#1b1115', seat: '#21161b' },
+    voyage: { panel: '#0c151f', stat: '#16222e', locked: '#131d27', open: '#0f1822', seat: '#142029' },
+  }
+
   const tracks = [
     {
       key: 'raid' as const,
+      ramp: RAMP.raid,
       label: 'Raid Party',
       sub: 'who fights',
       accent: raidAccent,
@@ -93,6 +105,7 @@ export default function AssignBoard({
     },
     {
       key: 'voyage' as const,
+      ramp: RAMP.voyage,
       label: 'Voyage Party',
       sub: 'who sails',
       accent: voyageAccent,
@@ -115,10 +128,9 @@ export default function AssignBoard({
           <div key={t.key} style={{
             borderRadius: 16,
             border: `1px solid ${t.accent}55`,
-            // The base was already 0.97; the FILM was the gradient's white
-            // mid-stop, rgba(255,255,255,0.02) painted straight across the
-            // panel. Accent now just fades to transparent.
-            background: `linear-gradient(180deg, ${t.accent}18 0%, transparent 62%), rgba(13,18,27,0.97)`,
+            // Accent carries further down now (it died at 62% before, leaving
+            // the bottom two thirds pure base).
+            background: `linear-gradient(180deg, ${t.accent}20 0%, ${t.accent}0a 58%, transparent 100%), ${t.ramp.panel}`,
             overflow: 'hidden',
           }}>
             {/* Header: who this party is, and what it comes to. */}
@@ -136,7 +148,7 @@ export default function AssignBoard({
                   <div key={k} style={{
                     display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 5,
                     padding: '0.35rem 0.3rem', borderRadius: 9,
-                    background: 'rgba(22,29,40,0.97)', border: '1px solid rgba(255,255,255,0.10)',
+                    background: t.ramp.stat, border: '1px solid rgba(255,255,255,0.10)',
                   }}>
                     <span className="font-cinzel font-800" style={{ fontSize: '1.2rem', lineHeight: 1, color: STAT_COLOR[k], fontVariantNumeric: 'tabular-nums' }}>{totals[k]}</span>
                     <span className="font-karla font-800 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.12em', color: '#9aa3b1' }}>{label}</span>
@@ -159,9 +171,7 @@ export default function AssignBoard({
                       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
                       minHeight: 104, borderRadius: 12,
                       border: '1px dashed rgba(255,255,255,0.1)',
-                      // Was rgba(255,255,255,0.02) — a white film with nothing
-                      // under it, so the page art came through at 98%.
-                      background: 'rgba(20,26,36,0.97)',
+                      background: t.ramp.locked,
                     }}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5c6470" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
                       <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.56rem', color: '#6b7482', textAlign: 'center', lineHeight: 1.3 }}>Bigger<br />ship</span>
@@ -177,7 +187,7 @@ export default function AssignBoard({
                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,
                         minHeight: 104, borderRadius: 12, cursor: 'pointer', font: 'inherit',
                         border: `1.5px dashed ${t.accent}80`,
-                        background: `linear-gradient(180deg, ${t.accent}1c 0%, ${t.accent}0a 100%), rgba(14,19,28,0.97)`,
+                        background: `linear-gradient(180deg, ${t.accent}1c 0%, ${t.accent}0a 100%), ${t.ramp.open}`,
                         touchAction: 'manipulation',
                       }}>
                       <span style={{
@@ -202,7 +212,7 @@ export default function AssignBoard({
                       minHeight: 104, padding: '0.4rem 0.3rem 0.45rem', borderRadius: 12,
                       cursor: 'pointer', font: 'inherit', textAlign: 'center',
                       border: `1.5px solid ${t.accent}88`,
-                      background: `linear-gradient(180deg, ${t.accent}22 0%, rgba(0,0,0,0.20) 100%), rgba(16,22,32,0.97)`,
+                      background: `linear-gradient(180deg, ${t.accent}22 0%, rgba(0,0,0,0.20) 100%), ${t.ramp.seat}`,
                       touchAction: 'manipulation',
                     }}>
                     {/* The art is the tile. */}
