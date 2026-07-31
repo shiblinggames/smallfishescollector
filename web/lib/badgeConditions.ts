@@ -15,7 +15,9 @@ import { getLevelFromXP as navLevelFromXP } from './expeditionLevel'
 import { crewLevelFromXP, CREW_MAX_LEVEL } from './crewLevel'
 import { CREW_HALL_MAX_TIER } from './crewHall'
 import { GAUNTLET_UPGRADES } from './gauntletUpgrades'
-import { FORGE_RECIPES, isForgedRaidItem, isAbyssalForgedItem, GAUNTLET2_BASE_ITEM_IDS } from './raidItems'
+import { FORGE_RECIPES, isForgedRaidItem, isAbyssalForgedItem, GAUNTLET2_BASE_ITEM_IDS, RAID_ITEMS, baseItemId } from './raidItems'
+import { finnItemLevel, FINN_ITEM_MAX_LEVEL } from './finnItems'
+import { raidItemSlotsForTier } from './expeditions'
 import { CREW_SKINS } from './crewSkins'
 import { BUYABLE_ROD_TIERS } from './rods'
 import { SHIP_SKINS } from './shipSkins'
@@ -60,6 +62,9 @@ export const BASE_LEGENDARY_SLUGS = new Set(['catfish', 'doby_mick', 'mako', 'do
 // 19 Davy (untagged) + 11 Don's ('don'-tagged) = 30 as of 2026-07-23. Discovery is
 // shared across both gauntlets, so "discover every confluence" spans both.
 export const CONFLUENCE_COUNT = 30
+// The three hulls The Sunken Hand can drop (ids are historical — two were
+// renamed to Tundra Hull / Volcanic Hull when their art landed).
+export const SUNKEN_HAND_HULLS = ['sunken_hand_hull', 'drowned_giant_hull', 'last_cast_hull']
 
 export interface BadgeProfileFields {
   fishing_xp?: number | null
@@ -115,6 +120,14 @@ export interface BadgeProfileFields {
   // Chapter IV ship refits.
   has_sixth_berth?: boolean | null
   has_armory_expansion?: boolean | null
+  // ── The Sunken Hand finale + its two Primeval spoils ──
+  raid_node_progress?: { cleared?: string[] } | null
+  equipped_raid_items?: string[] | null
+  finn_spoil_free?: string | null
+  finn_spoil_paid?: string | null
+  has_anglers_patience?: boolean | null
+  anglers_patience_xp?: number | null
+  borrowed_jaw_xp?: number | null
   // Don's Gauntlet (dormant until live).
   dons_gauntlet_deepest?: number | null
   // Lifetime distinct species ever caught — auto-maintained count, immune to
@@ -150,6 +163,28 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
   const confluencesSeen = (p.gauntlet_confluences_seen ?? []).length
   const shipClasses = p.ship_classes ?? {}
   const raidItems = p.raid_items ?? []
+  // ── The Sunken Hand's two Primeval spoils ──────────────────────────────────
+  // The Eye is a FISHING special (its own boolean); the Maw is a raid item, so
+  // it lives in raid_items. Charged ids carry their tier as "borrowed_jaw#4",
+  // so strip the tag before matching or an upgraded Maw stops being recognised.
+  const ownsEye = p.has_anglers_patience === true
+  const ownsMaw = raidItems.some(id => baseItemId(id) === 'borrowed_jaw')
+  // Highest tier reached on a spoil the player ACTUALLY holds — a leftover xp
+  // value from an item since lost is not a tier they can show off.
+  const spoilTier = Math.max(
+    ownsEye ? finnItemLevel(Number(p.anglers_patience_xp ?? 0)) : 0,
+    ownsMaw ? finnItemLevel(Number(p.borrowed_jaw_xp ?? 0)) : 0,
+  )
+  // The wreck's mount sits BESIDE the hull slots rather than inside them, so
+  // "all six filled" is every hull slot plus the mount. Mirrors the split in
+  // getRaidPlayerStats; class item-slots are none in production, so hull tier
+  // plus the Expanded Armory refit is the whole cap.
+  const equippedIds = (p.equipped_raid_items ?? []).map(baseItemId)
+  const finaleIds = new Set(RAID_ITEMS.filter(i => i.finaleSlotOnly).map(i => i.id))
+  const hasMountBerth = p.finn_spoil_free === 'nav' || p.finn_spoil_paid === 'nav'
+  const mountFilled = hasMountBerth && equippedIds.some(id => finaleIds.has(id))
+  const normalEquipped = equippedIds.filter(id => !finaleIds.has(id)).length
+  const hullSlots = raidItemSlotsForTier(Number(p.ship_tier ?? 0)) + (p.has_armory_expansion === true ? 1 : 0)
   const fishLvl = fishLevelFromXP(Number(p.fishing_xp ?? 0))
   const hasLostCrew = j.crew.some(c => c.died_at != null)
   const prestige = p.prestige_levels ?? {}
@@ -353,6 +388,35 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
     dons_doorstep:   Number(p.dons_gauntlet_deepest ?? 0) >= 50,
     dons_reckoning:  Number(p.dons_gauntlet_deepest ?? 0) >= 75,
     dons_ghost_hull_won: (p.ship_skins ?? []).includes('dons_ghost_hull'),
+    // ── The Sunken Hand finale ──
+    // The raid ids are the CONFIG ids (the_sunken_hand / _challenge), not the
+    // raid-map node ids (one_last_ride) the story uses. raid_completions stores
+    // the former; keying off the node id here would silently never fire.
+    one_last_ride:        raidIds.has('the_sunken_hand'),
+    cut_off_at_the_wrist: raidIds.has('the_sunken_hand_challenge'),
+    the_long_quiet:       (p.raid_node_progress?.cleared ?? []).includes('the_long_quiet'),
+    // A berth is a spoils SLOT opened at the wreck; the item that fills it is a
+    // separate drop. finn_spoil_free is the one you pick, _paid the one you buy.
+    salvors_claim:        !!p.finn_spoil_free || !!p.finn_spoil_paid,
+    both_hands:           !!p.finn_spoil_free && !!p.finn_spoil_paid,
+    // ── The Primeval Spoils ──
+    // Ancient rarity is exactly these two today, so ancient_tackle and
+    // something_old currently fire together. Kept separate deliberately:
+    // ancient_tackle is written against the RARITY so it keeps meaning if more
+    // Ancient items ever ship.
+    ancient_tackle:       ownsEye || ownsMaw,
+    something_old:        ownsEye || ownsMaw,
+    both_in_hand:         ownsEye && ownsMaw,
+    // Tier is charge XP against FINN_ITEM_THRESHOLDS, and only counts on a
+    // spoil actually owned — an orphan xp value from a since-lost item is not a
+    // tier. Either spoil qualifies; the badge asks for one taken far, not both.
+    waking_it:            spoilTier >= 3,
+    fully_attuned:        spoilTier >= FINN_ITEM_MAX_LEVEL,
+    // Every hull slot full AND the wreck's mount filled beside them. The mount
+    // is not a general slot (see getRaidPlayerStats): it exists only with the
+    // nav berth and only takes that berth's item, so it is counted separately.
+    the_sixth_mount:      mountFilled && normalEquipped >= hullSlots && normalEquipped + 1 >= 6,
+    colours_of_the_hand:  SUNKEN_HAND_HULLS.every(id => (p.ship_skins ?? []).includes(id)),
     // first_convergence / ultimate_only / weight_of_green / untouched are HOOKS
     // (GauntletGame draft + cashOutGauntlet) — not derivable, so not listed here.
   }
@@ -367,4 +431,4 @@ export function earnedBadgeIds(p: BadgeProfileFields, j: BadgeJoinData): string[
 
 /** Columns a query must select to feed badgeConditions(). */
 export const BADGE_PROFILE_COLUMNS =
-  'fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, charting_landmarks_claimed, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, ancient_catches, trophy_size_catches, prestige_levels, finn_wins, fish_sold_doubloons, fishing_casts, fishing_double_catches, fishing_crates_opened, fishing_snags, fishing_jackpots, tide_run_beacons_smashed, tide_run_total_distance, is_premium, ship_tier, trawls_collected, unlocked_pets, gauntlet_upgrades, gauntlet_confluences_seen, gauntlet_runs_completed, gauntlet_fathoms_earned, gauntlet_max_hit, gauntlet_deepest_died, gauntlet_hc_deepest, gauntlet_hc_deepest_died, blood_gems_earned, completionist_effects, manowar_augment, ship_classes, forge_recipes_learned, raid_items, ship_skins, owned_crew_skins, equipped_crew_skins, has_sixth_berth, has_armory_expansion, dons_gauntlet_deepest, parlor_best_streak, parlor_points, lifetime_species_count'
+  'fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, charting_landmarks_claimed, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, ancient_catches, trophy_size_catches, prestige_levels, finn_wins, fish_sold_doubloons, fishing_casts, fishing_double_catches, fishing_crates_opened, fishing_snags, fishing_jackpots, tide_run_beacons_smashed, tide_run_total_distance, is_premium, ship_tier, trawls_collected, unlocked_pets, gauntlet_upgrades, gauntlet_confluences_seen, gauntlet_runs_completed, gauntlet_fathoms_earned, gauntlet_max_hit, gauntlet_deepest_died, gauntlet_hc_deepest, gauntlet_hc_deepest_died, blood_gems_earned, completionist_effects, manowar_augment, ship_classes, forge_recipes_learned, raid_items, ship_skins, owned_crew_skins, equipped_crew_skins, has_sixth_berth, has_armory_expansion, dons_gauntlet_deepest, parlor_best_streak, parlor_points, lifetime_species_count, raid_node_progress, equipped_raid_items, finn_spoil_free, finn_spoil_paid, has_anglers_patience, anglers_patience_xp, borrowed_jaw_xp'

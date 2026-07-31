@@ -282,6 +282,27 @@ export const BADGES: Badge[] = [
   { id: 'ultimate_only',   name: 'The Long Reload',    description: "Reach depth 10 in Don's Gauntlet firing only your Mega", imageUrl: '/badges/ultimate_only.png', difficulty: 'master'  },
   { id: 'weight_of_green', name: 'The Weight of the Green', description: "Bank from depth 30 in Don's Gauntlet carrying 5+ curses", imageUrl: '/badges/weight_of_green.png', difficulty: 'master' },
   { id: 'untouched',       name: 'Untouched',          description: "Bank a Don's Gauntlet run from depth 5 without taking a hit", imageUrl: '/badges/untouched.png', difficulty: 'veteran' },
+  // ── Sheet 25 — The Sunken Hand. The finale itself, and the wreck it leaves.
+  //
+  // SPOILER RULE: not one of these may name the captain behind the Hand, or
+  // hint that "the Hand" is a person rather than the organisation players have
+  // chased since Chapter I. A badge list is read long before the raid is, and
+  // it is the easiest place in the game to give the twist away. Everything here
+  // talks about the WRECK and the SPOILS, never about who was steering.
+  { id: 'one_last_ride',   name: 'One Last Ride',      description: 'Clear The Sunken Hand',                           imageUrl: '/badges/one_last_ride.png',   difficulty: 'master'      },
+  { id: 'cut_off_at_the_wrist', name: 'Cut Off at the Wrist', description: 'Clear The Sunken Hand on Challenge',       imageUrl: '/badges/cut_off_at_the_wrist.png', difficulty: 'master'  },
+  { id: 'the_long_quiet',  name: 'The Long Quiet',     description: 'See the Sunken Hand through to its end',          imageUrl: '/badges/the_long_quiet.png',  difficulty: 'seasoned'    },
+  { id: 'ancient_tackle',  name: 'Ancient Tackle',     description: 'Earn your first Ancient-rarity item',             imageUrl: '/badges/ancient_tackle.png',  difficulty: 'veteran'     },
+  { id: 'salvors_claim',   name: "Salvor's Claim",     description: 'Open a berth from the wreck',                     imageUrl: '/badges/salvors_claim.png',   difficulty: 'seasoned'    },
+  { id: 'both_hands',      name: 'Both Hands',         description: 'Open both berths from the wreck',                 imageUrl: '/badges/both_hands.png',      difficulty: 'master'      },
+  // ── Sheet 26 — The Primeval Spoils. What the wreck gives up, and the very
+  //    long road to charging it all the way.
+  { id: 'something_old',   name: 'Something Old',      description: 'Carry your first Primeval spoil',                 imageUrl: '/badges/something_old.png',   difficulty: 'veteran'     },
+  { id: 'both_in_hand',    name: 'Both in Hand',       description: 'Own both Primeval spoils',                        imageUrl: '/badges/both_in_hand.png',    difficulty: 'master'      },
+  { id: 'waking_it',       name: 'Waking It',          description: 'Take a Primeval spoil to Tier III',               imageUrl: '/badges/waking_it.png',       difficulty: 'veteran'     },
+  { id: 'fully_attuned',   name: 'Fully Attuned',      description: 'Take a Primeval spoil to Tier VI',                imageUrl: '/badges/fully_attuned.png',   difficulty: 'grandmaster' },
+  { id: 'the_sixth_mount', name: 'The Sixth Mount',    description: 'Sail with all six item slots filled',             imageUrl: '/badges/the_sixth_mount.png', difficulty: 'veteran'     },
+  { id: 'colours_of_the_hand', name: 'Colours of the Hand', description: 'Own all three hulls off The Sunken Hand',    imageUrl: '/badges/colours_of_the_hand.png', difficulty: 'master'  },
 ]
 
 export const BADGE_MAP: Record<string, Badge> = Object.fromEntries(
