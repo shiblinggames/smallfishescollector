@@ -18,9 +18,23 @@
  *    so it is a warning rather than a block.
  */
 
+import { useState } from 'react'
+import { crewLevelFromXP } from '@/lib/crewLevel'
+import { effectiveStats } from './AssignBoard'
 import type { CrewMember } from './actions'
 
 const RARITY_DIM = 'rgba(255,255,255,0.14)'
+
+/** Sorts, in the order a raid actually cares about them. Power first because
+ *  it is the damage stat; Savvy is the dodge roll; Fortune drives loot. Level
+ *  is here because the class Special does not unlock until Lv 10, so "who is
+ *  furthest along" is a real question when filling a seat. */
+const SORTS = [
+  { k: 'power'   as const, label: 'Power',   color: '#e08a7a' },
+  { k: 'dodge'   as const, label: 'Savvy',   color: '#7fc4a8' },
+  { k: 'fortune' as const, label: 'Fortune', color: '#e0c47a' },
+  { k: 'level'   as const, label: 'Level',   color: '#e0b062' },
+]
 
 export default function AssignPicker({
   track, label, roster, lockedCrewIds, trawlingCrewIds, artSrc,
@@ -39,23 +53,36 @@ export default function AssignPicker({
   onPick: (crew: CrewMember) => void
   onClose: () => void
 }) {
+  // Default sort is the stat the TRACK cares about: damage for a raid seat,
+  // payout for a voyage one.
+  const [sort, setSort] = useState<'power' | 'dodge' | 'fortune' | 'level'>(track === 'raid' ? 'power' : 'fortune')
+  const [who, setWho] = useState<'all' | 'free' | 'other'>('all')
+
   const atSea = new Set(lockedCrewIds)
   const trawling = new Set(trawlingCrewIds)
   const slotOf = (c: CrewMember) => (track === 'raid' ? c.raidSlot : c.voyageSlot)
   const otherSlotOf = (c: CrewMember) => (track === 'raid' ? c.voyageSlot : c.raidSlot)
   const otherLabel = track === 'raid' ? 'On voyage duty' : 'In raid party'
+  const otherChip  = track === 'raid' ? 'On voyage' : 'In raid'
 
   // Already seated on THIS track — nothing to pick, they are the seats.
   const seatedHere = roster.filter(c => slotOf(c) != null)
   const seatedCardIds = new Map(seatedHere.map(c => [c.cardId, c]))
   const choices = roster.filter(c => slotOf(c) == null)
 
-  const rows = choices.map(c => {
+  const allRows = choices.map(c => {
     const locked = trawling.has(c.id) ? 'Out trawling' : atSea.has(c.id) ? 'At sea' : null
     const dupe = seatedCardIds.get(c.cardId) ?? null
     const elsewhere = otherSlotOf(c) != null
-    return { crew: c, locked, dupe, elsewhere }
+    // The SAME numbers the assign board prints on its seats: level bonuses and
+    // the crew's trait folded in. Sorting on anything else would rank the grid
+    // by figures it isn't showing.
+    return { crew: c, locked, dupe, elsewhere, eff: effectiveStats(c), level: crewLevelFromXP(c.xp) }
   })
+
+  const rows = allRows
+    .filter(r => who === 'all' ? true : who === 'other' ? r.elsewhere : !r.elsewhere && !r.locked)
+    .sort((a, b) => (sort === 'level' ? b.level - a.level : b.eff[sort] - a.eff[sort]))
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 100000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(2,6,12,0.72)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}>
@@ -70,14 +97,52 @@ export default function AssignPicker({
           </button>
         </div>
 
+        {/* Sort + filter, same chip language as the trawl sheet so picking a
+            hand feels identical wherever you do it. Hidden when there is
+            nothing to sort. */}
+        {allRows.length > 1 && (
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', padding: '0 1rem 0.7rem' }}>
+            {([
+              { key: 'sort' as const, value: sort, set: setSort as (v: string) => void, opts: SORTS },
+              { key: 'who' as const, value: who, set: setWho as (v: string) => void, opts: [
+                { k: 'all', label: 'All', color: '#bcb29a' },
+                { k: 'free', label: 'Free', color: '#bcb29a' },
+                { k: 'other', label: otherChip, color: track === 'raid' ? '#5fa8c9' : '#e07c7c' },
+              ] },
+            ]).map(group => (
+              <div key={group.key} style={{ display: 'flex', gap: 3, padding: 3, borderRadius: 999, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)' }}>
+                {group.opts.map(o => {
+                  const on = group.value === o.k
+                  return (
+                    <button key={o.k} type="button" onClick={() => group.set(o.k)}
+                      className="font-karla font-700 uppercase tracking-[0.06em]"
+                      aria-pressed={on}
+                      style={{
+                        padding: '0.28rem 0.55rem', borderRadius: 999, fontSize: '0.56rem',
+                        background: on ? `${o.color}26` : 'transparent',
+                        border: `1px solid ${on ? `${o.color}88` : 'transparent'}`,
+                        color: on ? o.color : 'rgba(255,255,255,0.5)',
+                        cursor: 'pointer', whiteSpace: 'nowrap', touchAction: 'manipulation',
+                      }}>
+                      {o.label}
+                    </button>
+                  )
+                })}
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="scrollbar-hide" style={{ flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain', padding: '0 1rem 1.4rem' }}>
           {rows.length === 0 ? (
             <p className="font-karla text-center" style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.55, padding: '1.6rem 0.5rem' }}>
-              Every hand you own is already on this party. Recruit more to grow your fleet.
+              {allRows.length === 0
+                ? 'Every hand you own is already on this party. Recruit more to grow your fleet.'
+                : 'No crew match that filter.'}
             </p>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
-              {rows.map(({ crew: m, locked, dupe, elsewhere }) => {
+              {rows.map(({ crew: m, locked, dupe, elsewhere, eff, level }) => {
                 const busy = busyId === m.id
                 const rc = rarityColor(m.rarity) || RARITY_DIM
                 const disabled = !!locked || pending
@@ -118,7 +183,15 @@ export default function AssignPicker({
                       {busy ? '…' : m.name}
                     </span>
                     <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#a9a29a', fontVariantNumeric: 'tabular-nums' }}>
-                      {m.power} · {m.dodge} · {m.fortune}
+                      {/* Effective, so the grid agrees with what it is sorted
+                          by and with the seats on the board behind it. The
+                          sorted stat is picked out so the order is legible. */}
+                      {(['power', 'dodge', 'fortune'] as const).map((k, i) => (
+                        <span key={k} style={{ color: sort === k ? SORTS.find(x => x.k === k)!.color : undefined }}>
+                          {i > 0 ? ' · ' : ''}{eff[k]}
+                        </span>
+                      ))}
+                      <span style={{ marginLeft: 6, color: sort === 'level' ? '#e0b062' : 'rgba(255,255,255,0.35)' }}>Lv {level}</span>
                     </span>
                     {note && (
                       <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ display: 'block', width: '100%', fontSize: '0.5rem', lineHeight: 1.2, color: noteColor ?? '#9aa3b1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
