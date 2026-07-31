@@ -313,10 +313,15 @@ export default function HubCards({
             // baked into PopupShell's paddingBottom, so the bottom of
             // the modal always lands above the tab bar.
             margin: 'auto', width: '100%', maxWidth: 480,
-            // Custom voyage backdrop — a ship crossing the dusk sea — under a
-            // tint that stays light behind the header and darkens for the dense
-            // route/crew panel below so it reads.
-            background: `linear-gradient(180deg, rgba(6,12,22,0.5) 0%, rgba(6,11,20,0.72) 32%, rgba(5,9,16,0.9) 100%), url(/voyages-modal-bg.jpg) center / cover no-repeat`,
+            // Custom voyage backdrop — a ship crossing the dusk sea. `cover`
+            // stretches the plate over the WHOLE modal however tall it grows,
+            // so the art reaches the header and the past-voyages footer too.
+            // The tint used to ramp to 0.9 down there, which buried it under
+            // flat navy; it is near-even now, and light, so the sea reads the
+            // whole way down. Almost nothing inside the modal is opaque (the
+            // route card and the "?" explainer are the two exceptions), so the
+            // content still sits on the art rather than hiding it.
+            background: `linear-gradient(180deg, rgba(6,12,22,0.34) 0%, rgba(6,11,20,0.48) 45%, rgba(5,9,16,0.44) 100%), url(/voyages-modal-bg.jpg) center / cover no-repeat`,
             border: `1px solid ${vAcc.bd}`,
             borderRadius: 20,
             boxShadow: '0 20px 60px rgba(0,0,0,0.7)',

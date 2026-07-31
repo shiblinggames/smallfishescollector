@@ -412,15 +412,12 @@ export default function DailyVoyagePanel({
               )}
 
               {/* ── Voyage map ── */}
-              <div style={{
-                position: 'relative', width: '100%', borderRadius: 10, overflow: 'hidden', marginBottom: '0.75rem',
-                // The chart is a torn parchment with alpha all round its deckled
-                // edge, so SOMETHING always shows through it. That used to be the
-                // modal's tint, which is ~0.9 opaque this far down the panel and
-                // read as flat blue. Same dusk-sea plate the claim modal uses,
-                // under a light tint so the sea reads without fighting the chart.
-                background: `linear-gradient(180deg, rgba(6,12,22,0.30) 0%, rgba(5,9,16,0.45) 100%), url(/voyages-modal-bg.jpg) center / cover no-repeat`,
-              }}>
+              {/* No background of its own. The chart is a torn parchment with
+                  alpha all round its deckled edge, and what shows through is the
+                  MODAL's dusk-sea plate. Giving this box its own copy would put a
+                  second, differently-scaled crop of the same art right up against
+                  the first and seam along the tear. */}
+              <div style={{ position: 'relative', width: '100%', borderRadius: 10, overflow: 'hidden', marginBottom: '0.75rem' }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/voyagemap.png" alt="Voyage map" loading="lazy" decoding="async" style={{ width: '100%', display: 'block' }} />
 
