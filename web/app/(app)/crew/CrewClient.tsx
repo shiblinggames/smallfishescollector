@@ -30,11 +30,19 @@ import GuideCoach from '@/components/GuideCoach'
 import { GUIDES } from '@/lib/onboardingScenes'
 import Link from 'next/link'
 
-// First-time Crew Hall guide — flashes each core tab and says plainly what it's
-// for (advanced tabs like Blood / Fallen are left to discover).
-const CREW_GUIDE: { tab: 'recruits' | 'roster' | 'wardrobe'; portrait: string; speaker: string; text: string }[] = [
-  { tab: 'recruits', portrait: GUIDES.doby.portrait, speaker: 'Doby', text: "This is your Crew Hall. Sign on new hands in the *Recruit* tab. You get free picks that refresh over time." },
-  { tab: 'roster',   portrait: GUIDES.kat.portrait,  speaker: 'Kat',  text: "Your *Roster* is every crew member you own. They level up from expeditions, and you assign them to fights here." },
+// First-time Crew Hall guide — flashes each tab in the order the tab bar shows
+// them and says plainly what it's for. Blood offerings live inside Recruit and
+// Skins now, and the fallen are a button inside Roster, so neither needs a step.
+//
+// ASSIGN LEADS, because it is the first tab and the one that actually changes
+// how you perform: a full roster does nothing until somebody is in a seat. The
+// guide used to open on Recruit and tell players they assign crew from the
+// Roster, which has not been true since Assign was split out.
+const CREW_GUIDE: { tab: 'assign' | 'recruits' | 'roster' | 'wardrobe'; portrait: string; speaker: string; text: string }[] = [
+  { tab: 'assign',   portrait: GUIDES.kat.portrait,  speaker: 'Kat',  text: "This is your Crew Hall. *Assign* is where you seat your crew: a raid party and a voyage party. Empty seats are wasted crew, so fill them." },
+  { tab: 'assign',   portrait: GUIDES.doby.portrait, speaker: 'Doby', text: "Each party totals up the power, savvy and fortune of everyone seated. A hand can only be in one place at a time, so choose." },
+  { tab: 'recruits', portrait: GUIDES.doby.portrait, speaker: 'Doby', text: "Sign on new hands in the *Recruit* tab. You get free picks that refresh over time." },
+  { tab: 'roster',   portrait: GUIDES.kat.portrait,  speaker: 'Kat',  text: "Your *Roster* is every hand you own. They level up from raids and voyages, and this is where you check what you have got." },
   { tab: 'wardrobe', portrait: GUIDES.doby.portrait, speaker: 'Doby', text: "The *Skins* tab has cosmetic looks for your legendary crew. Purely for style." },
 ]
 // TickingNumber + the local Stat helper were used by the removed
