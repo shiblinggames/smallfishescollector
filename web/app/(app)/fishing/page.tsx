@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import FishingPageClient from './FishingPageClient'
 import { getActiveChallengeSession } from '@/app/(app)/social/challengeActions'
 import { getDailyChallenge } from './dailyChallengeActions'
+import { settlePendingCatchCredit } from './actions'
 import { isPremiumActive } from '@/lib/premium'
 import { getCharacterSprites, earnedLevelColors, earnedAchievementColors } from '@/lib/characters'
 import { getUserAchievementPoints } from '@/lib/achievementPoints'
@@ -23,6 +24,21 @@ export default async function FishingPage() {
   if (!user) redirect('/login')
 
   const admin = createAdminClient()
+
+  // A Wormhole catch holds its species credit until the player either rerolls
+  // or casts again. Backing out of a zone calls router.refresh(), so without
+  // this the Logbook below would re-seed from a fish_collection that has not
+  // been written yet and the fish they just caught would read one lower (or
+  // missing, if it was a new species) until their next cast. Awaited, not
+  // fired-and-forgotten, so the reads further down see the settled row.
+  // Costs no extra query: it reads the same request-cached profile this page
+  // already loads, and only writes when a credit is actually pending. The
+  // trade for that is that the cached profile below is the PRE-settle
+  // snapshot, so a settle that happens to cross a line-tier boundary shows
+  // the old tier for this one render. fish_collection is queried after this
+  // await, so the Logbook counts (the thing players noticed) are correct.
+  await settlePendingCatchCredit()
+
   // Kicked off now so it overlaps the page's other queries (this page is hot).
   // Gates the achievement-earned skins (Galaxy/Ethereal) in the picker.
   const achievementPointsPromise = getUserAchievementPoints(user.id)

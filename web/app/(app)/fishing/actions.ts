@@ -8,6 +8,7 @@ import { getRod, getEffectiveRod, COMPLETIONIST_TIER, COMPLETIONIST_MAX_EFFECTS,
 import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
 import { rewardsOwed, type LevelReward } from '@/lib/levelRewards'
 import { grantBadgeDirect } from '@/lib/badgeGrant'
+import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { recordChallengeScore } from '@/app/(app)/social/challengeActions'
 import { catchXP, getLevelFromXP } from '@/lib/fishingLevel'
 import { fishingRenownEffects, type RenownAlloc } from '@/lib/renown'
@@ -456,6 +457,29 @@ async function settleDeferredSpeciesCredit(
   if (!claimed || claimed.length === 0) return
   const wasNew = await logCatchToBestiary(admin, userId, pending.fishId)
   if (wasNew) await creditNewSpecies(admin, userId, pending.fishId, profile)
+}
+
+/** Settle a deferred credit from OUTSIDE the cast loop — specifically the
+ *  fishing page load.
+ *
+ *  castLine settles on the player's next cast, which covers the common path but
+ *  leaves a visible window: backing out of a zone calls router.refresh(), the
+ *  page re-renders, and the Logbook re-seeds from fish_collection where the
+ *  catch has not landed yet. The player sees the fish they just caught reading
+ *  one lower, or missing entirely if it was a new species, until they cast
+ *  again. Settling here closes that, and it is the right call semantically too:
+ *  a page load has already destroyed the catch card, so the reroll is forfeit.
+ *
+ *  Takes NO arguments (it is an exported server action, so it must derive the
+ *  user from auth rather than trust a caller) and reads the profile through the
+ *  request-cached loader, so calling it from a page that already loaded the
+ *  profile costs no extra query. */
+export async function settlePendingCatchCredit(): Promise<void> {
+  const user = await getCurrentUser()
+  if (!user) return
+  const profile = await getCurrentProfile()
+  if (!profile?.pending_reroll) return
+  await settleDeferredSpeciesCredit(createAdminClient(), user.id, profile)
 }
 
 /** Everything that has to happen the first time a species is landed, shared by
