@@ -10,7 +10,9 @@ import type { createAdminClient } from './supabase/admin'
 import { getLevelFromXP } from './expeditionLevel'
 import { clampHallTier } from './crewHall'
 import { grantXPPairs, type CrewXPGrant } from './crewXPGrant'
-import { bunkCount, bunkRatePerHour, hallBunksOpen, canBunk, stintDone, stintXP, storesCapHours } from './crewBunks'
+import { bunkCount, bunkRatePerHour, hallBunksOpen, canBunk, isLeviathanSlot, stintDone, stintXP, storesCapHours, traitScore, LEVIATHAN_REROLL_CHANCE } from './crewBunks'
+import { rollTrait, encodeTraitId, type CrewRarity } from './crewGen'
+import { netTraitStats, traitLabel } from './crewEffects'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -20,12 +22,23 @@ type Admin = ReturnType<typeof createAdminClient>
  * running bunk. `rate`/`cap` are null only on rows that predate the columns,
  * which fall back to the live values.
  */
+/** What a Leviathan bunk did to a hand's trait, for the reveal. */
+export type TraitRecut = {
+  crewId: number
+  fromLabel: string
+  toLabel: string
+  from: { power: number; dodge: number; fortune: number }
+  to: { power: number; dodge: number; fortune: number }
+}
+
 export type BunkRow = {
   id: number
   crew_id: number
   since: string
   rate: number | null
   cap: number | null
+  /** 0-5. Slot 5 is the Leviathan bunk. */
+  slot: number | null
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -59,10 +72,10 @@ export async function bunkContext(admin: Admin, userId: string) {
 /** Every bunk this player holds. */
 export async function loadBunks(admin: Admin, userId: string): Promise<BunkRow[]> {
   const { data } = await admin
-    .from('crew_hall_bunks').select('id, crew_id, since, rate_per_hour, cap_hours').eq('user_id', userId)
+    .from('crew_hall_bunks').select('id, crew_id, since, rate_per_hour, cap_hours, slot').eq('user_id', userId)
   return ((data ?? []) as any[]).map(r => ({
     id: r.id, crew_id: r.crew_id, since: r.since,
-    rate: r.rate_per_hour ?? null, cap: r.cap_hours ?? null,
+    rate: r.rate_per_hour ?? null, cap: r.cap_hours ?? null, slot: r.slot ?? null,
   }))
 }
 
@@ -91,6 +104,8 @@ export function bunkTerms(row: BunkRow, liveRate: number, liveCap: number) {
  */
 export type BunkSettlement = {
   grants: CrewXPGrant[]
+  /** Traits the Leviathan bunk re-cut this collect. Never a downgrade. */
+  recuts: TraitRecut[]
   /** Crew whose stint ended and who got their bunk back. A hand at the level
    *  ceiling appears HERE but not in `grants` — they are freed and paid
    *  nothing, and the UI has to be able to say so rather than fall silent. */
@@ -104,7 +119,7 @@ export async function settleBunks(
   rate: number,
   capHours: number,
 ): Promise<BunkSettlement> {
-  const EMPTY: BunkSettlement = { grants: [], freed: [] }
+  const EMPTY: BunkSettlement = { grants: [], freed: [], recuts: [] }
   if (rows.length === 0) return EMPTY
   const nowMs = Date.now()
 
@@ -138,7 +153,58 @@ export async function settleBunks(
       const t = bunkTerms(r, rate, capHours)
       return { id: r.crew_id, xp: stintXP(t.rate, t.cap) }
     })
-  return { grants: await grantXPPairs(admin, userId, pairs), freed: claimed.map(r => r.crew_id) }
+  const grants = await grantXPPairs(admin, userId, pairs)
+  const recuts = await recutLeviathanTraits(admin, userId, claimed)
+  return { grants, freed: claimed.map(r => r.crew_id), recuts }
+}
+
+/**
+ * The Leviathan bunk's ability: a finished stint in slot 5 has a chance to
+ * re-cut the hand's trait.
+ *
+ * Rolls on the crew's OWN rarity, exactly as a recruit rolls, so the top hall
+ * does not quietly hand Commons legendary-grade traits. Keeps the new trait
+ * only if it scores strictly higher, so a hand can never come out of the
+ * special slot worse than they went in.
+ */
+async function recutLeviathanTraits(
+  admin: Admin,
+  userId: string,
+  claimed: BunkRow[],
+): Promise<TraitRecut[]> {
+  const eligible = claimed.filter(r => isLeviathanSlot(r.slot) && Math.random() < LEVIATHAN_REROLL_CHANCE)
+  if (eligible.length === 0) return []
+
+  const { data: crew } = await admin
+    .from('user_crew').select('id, rarity, effects').in('id', eligible.map(r => r.crew_id))
+
+  const out: TraitRecut[] = []
+  for (const c of ((crew ?? []) as any[])) {
+    const effects = (c.effects ?? []) as string[]
+    // Only re-cut modern stat traits. A legacy id can carry behavior that
+    // decodeTraitStats cannot read (auras, raid-conditional, percent buffs),
+    // so the comparison would not see it and the overwrite would silently
+    // delete it. Those hands keep what they have.
+    if (effects.some(id => !id.startsWith('s:'))) continue
+    const current = netTraitStats(effects)
+    const rolled = rollTrait((c.rarity ?? 1) as CrewRarity)
+    // Strictly better, or nothing happens. A tie is not an upgrade.
+    if (traitScore(rolled) <= traitScore(current)) continue
+    const id = encodeTraitId(rolled)
+    if (!id) continue
+    const { data: updated } = await admin
+      .from('user_crew').update({ effects: [id] })
+      .eq('id', c.id).eq('user_id', userId).select('id')
+    if (!(updated ?? []).length) continue
+    out.push({
+      crewId: c.id,
+      fromLabel: traitLabel(current) || 'no trait',
+      toLabel: traitLabel(rolled) || 'no trait',
+      from: current,
+      to: rolled,
+    })
+  }
+  return out
 }
 
 /**
@@ -148,13 +214,14 @@ export async function settleBunks(
  */
 export async function releaseBunk(admin: Admin, userId: string, crewId: number): Promise<BunkSettlement> {
   const { data } = await admin
-    .from('crew_hall_bunks').select('id, crew_id, since, rate_per_hour, cap_hours')
+    .from('crew_hall_bunks').select('id, crew_id, since, rate_per_hour, cap_hours, slot')
     .eq('user_id', userId).eq('crew_id', crewId).maybeSingle()
-  if (!data) return { grants: [], freed: [] }
+  if (!data) return { grants: [], freed: [], recuts: [] }
   const ctx = await bunkContext(admin, userId)
   const row: BunkRow = {
     id: (data as any).id, crew_id: (data as any).crew_id, since: (data as any).since,
     rate: (data as any).rate_per_hour ?? null, cap: (data as any).cap_hours ?? null,
+    slot: (data as any).slot ?? null,
   }
   return settleBunks(admin, userId, [row], ctx.rate, ctx.capHours)
 }

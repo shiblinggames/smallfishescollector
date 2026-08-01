@@ -14,12 +14,12 @@ import { BLOOD_REROLL_TIERS, BLOOD_SKIN_GAMBLE_COST } from '@/lib/gauntlet'
 import { crewSkinsForSlug, getCrewSkin, getCrewSkinByFilename, skinArtGlow, CREW_SKINS } from '@/lib/crewSkins'
 import { ChaseSkinFx } from '@/components/ChaseSkinFx'
 import { hallTierDef, nextHallTier, hallUpgradeBlocker, CREW_HALL_MAX_TIER } from '@/lib/crewHall'
-import { bunkRatePerHour, storesCapHours, stintDone, tierNumeral, nextDrillCost, nextStoresCost, ladderHallLocked, DRILL_MAX_LEVEL } from '@/lib/crewBunks'
+import { bunkRatePerHour, storesCapHours, stintDone, tierNumeral, nextDrillCost, nextStoresCost, ladderHallLocked, isLeviathanSlot, DRILL_MAX_LEVEL, LEVIATHAN_COLOR, LEVIATHAN_REROLL_CHANCE } from '@/lib/crewBunks'
 import { crewAssignment } from '@/lib/crewAssignment'
 import HallBunks from './HallBunks'
 import { bunkCrew, collectBunk, buyDrill, buyStores } from './bunkActions'
 import { RARITY_NAMES, RARITY_COLORS, groupForSlug, crewDisplayName, GEM_WEIGHTS, type CrewRarity } from '@/lib/crewGen'
-import { applyCrewEffects, netTraitStats, traitLabel, traitKind } from '@/lib/crewEffects'
+import { applyCrewEffects, netTraitStats, traitLabel, traitKind, type TraitStats } from '@/lib/crewEffects'
 import AssignBoard from './AssignBoard'
 import AssignPicker from './AssignPicker'
 import { useReveal, BoardReveal, RevealFlash, RevealBanner } from './boardReveal'
@@ -774,6 +774,16 @@ function FallenPanel({ crew }: { crew: FallenCrew }) {
   )
 }
 
+/** A trait's three stats as one compact line ("+2 PWR / -1 DGE"). Zeroes are
+ *  dropped, so a single-stat trait reads as one number rather than two blanks
+ *  padding it out. Returns "even" for a fully neutral trait. */
+function statLine(t: TraitStats): string {
+  const parts = ([['PWR', t.power], ['DGE', t.dodge], ['FTN', t.fortune]] as const)
+    .filter(([, v]) => v !== 0)
+    .map(([k, v]) => `${v > 0 ? '+' : ''}${v} ${k}`)
+  return parts.length ? parts.join(' / ') : 'even'
+}
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function CrewClient({ initial, hasSeenGuide = true }: { initial: CrewState; hasSeenGuide?: boolean }) {
   const [state, setState] = useState<CrewState>(initial)
@@ -923,6 +933,9 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
     name: string; filename: string; rarity: number
     xp: number; oldXP: number; newXP: number
     from: number; to: number
+    /** Set when the Leviathan bunk re-cut their trait. Rare, so it is the
+     *  headline when it happens rather than a footnote under the XP. */
+    recut?: { fromLabel: string; toLabel: string; from: TraitStats; to: TraitStats }
   } | null>(null)
   // What the upgrade changed, in words. Shares the bunk-claim toast's slot:
   // fixed to the viewport, pointer-events none, so it can neither be clipped
@@ -958,8 +971,10 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
       const crew = res.state.roster.find(c => c.id === id)
       if (!crew) return
       const gained = g ? g.newXP - g.oldXP : 0
-      // Scaled to the moment: a plain collect ticks, a level-up gets a beat.
-      vibrate(g && g.newLevel > g.oldLevel ? [18, 60, 30] : 14)
+      const recut = res.recuts.find(r => r.crewId === id)
+      // A re-cut is the rarest thing that can come out of a bunk, so it gets
+      // the longer buzz even when the level did not move.
+      vibrate(recut ? [22, 50, 22, 50, 40] : g && g.newLevel > g.oldLevel ? [18, 60, 30] : 14)
       setBunkReveal({
         name: g?.name ?? crew.name,
         filename: crew.filename,
@@ -969,6 +984,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
         newXP: g?.newXP ?? crew.xp,
         from: g?.oldLevel ?? crewLevelFromXP(crew.xp),
         to: g?.newLevel ?? crewLevelFromXP(crew.xp),
+        recut: recut && { fromLabel: recut.fromLabel, toLabel: recut.toLabel, from: recut.from, to: recut.to },
       })
     })
   }
@@ -1563,10 +1579,18 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                     Build the {nextTier.name}
                   </span>
                   {/* The reason to buy it, said plainly. "Build the Gilded Hall"
-                      is a name; "opens a 4th bunk" is what you get. */}
+                      is a name; "opens a 4th bunk" is what you get. The last
+                      one opens a bunk that is not like the others, so it says
+                      so here rather than letting the surprise sit behind a
+                      1,000,000 price tag. */}
                   <span className="font-karla font-700 uppercase" style={{ fontSize: '0.66rem', letterSpacing: '0.08em', color: nextTier.accent }}>
                     + Opens bunk {nextTier.bunks}
                   </span>
+                  {isLeviathanSlot(nextTier.bunks - 1) && (
+                    <span className="font-karla font-700 uppercase" style={{ fontSize: '0.66rem', letterSpacing: '0.08em', color: LEVIATHAN_COLOR }}>
+                      + The Leviathan bunk re-cuts traits
+                    </span>
+                  )}
                 </span>
                 <span className="font-cinzel font-700" style={{
                   fontSize: '0.82rem', color: nextTier.accent, fontVariantNumeric: 'tabular-nums',
@@ -1607,7 +1631,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
               accent={hall.accent}
               pending={pending}
               pop={pop?.what === 'drill' || pop?.what === 'stores' ? pop.what : null}
-              onBunk={id => run(() => bunkCrew(id), id)}
+              onBunk={(id, slot) => run(() => bunkCrew(id, slot), id)}
               onCollectOne={id => runBunkClaim(() => collectBunk(id))}
               onBuyDrill={() => setLadderConfirm('drill')}
               onBuyStores={() => setLadderConfirm('stores')}
@@ -1827,7 +1851,13 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
           {bunkReveal && (() => {
             const r = bunkReveal
             const levelled = r.to > r.from
-            const accent = levelled ? '#7fdfa3' : '#f0c040'
+            // A re-cut trait outranks a level-up for the card's identity: it is
+            // far rarer, it only happens in one bunk, and the teal is the same
+            // teal that bunk wears, so the payoff is visibly tied to the choice
+            // that earned it.
+            const recut = r.recut
+            const accent = recut ? LEVIATHAN_COLOR : levelled ? '#7fdfa3' : '#f0c040'
+            const burst = levelled || !!recut
             const prog = crewXPProgress(r.newXP)
             const atMax = r.to >= CREW_MAX_LEVEL
             // Where the bar STARTS. On a level-up it starts empty, because you
@@ -1847,13 +1877,13 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   style={{
                     maxWidth: 350, width: '100%', textAlign: 'center', padding: '1.7rem 1.5rem', borderRadius: 18,
                     background: [`radial-gradient(ellipse 85% 62% at 50% 18%, ${accent}26 0%, transparent 70%)`, 'linear-gradient(180deg, rgba(40,32,16,0.97) 0%, rgba(20,14,7,0.98) 100%)'].join(', '),
-                    border: `1px solid ${accent}${levelled ? '9a' : '5e'}`,
-                    boxShadow: levelled ? `0 0 40px ${accent}33, inset 0 0 28px rgba(0,0,0,0.5)` : 'inset 0 0 28px rgba(0,0,0,0.5)',
+                    border: `1px solid ${accent}${burst ? '9a' : '5e'}`,
+                    boxShadow: burst ? `0 0 40px ${accent}33, inset 0 0 28px rgba(0,0,0,0.5)` : 'inset 0 0 28px rgba(0,0,0,0.5)',
                   }}>
                   {/* The hand who did the work. A ring bursts behind them on a
                       level-up, so the big moment is felt before it is read. */}
                   <div style={{ position: 'relative', width: 96, height: 96, margin: '0 auto' }}>
-                    {levelled && (
+                    {burst && (
                       <motion.span aria-hidden
                         initial={{ scale: 0.4, opacity: 0.9 }} animate={{ scale: 2.4, opacity: 0 }}
                         transition={{ duration: 1, ease: 'easeOut', delay: 0.25 }}
@@ -1865,8 +1895,8 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                       style={{
                         width: 96, height: 96, borderRadius: '50%', display: 'grid', placeItems: 'center', overflow: 'hidden',
                         background: `radial-gradient(circle at 50% 32%, ${accent}3a, rgba(0,0,0,0.45))`,
-                        border: `2px solid ${accent}${levelled ? 'cc' : '88'}`,
-                        boxShadow: levelled ? `0 0 26px ${accent}66, inset 0 0 14px rgba(0,0,0,0.4)` : `0 0 12px ${accent}33, inset 0 0 14px rgba(0,0,0,0.4)`,
+                        border: `2px solid ${accent}${burst ? 'cc' : '88'}`,
+                        boxShadow: burst ? `0 0 26px ${accent}66, inset 0 0 14px rgba(0,0,0,0.4)` : `0 0 12px ${accent}33, inset 0 0 14px rgba(0,0,0,0.4)`,
                       }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={artSrc(r.filename)} alt="" aria-hidden decoding="async"
@@ -1875,12 +1905,47 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   </div>
 
                   <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.35 }}
-                    className="font-cinzel font-700" style={{ fontSize: '1.25rem', color: accent, marginTop: 12, textShadow: levelled ? `0 0 12px ${accent}44` : 'none' }}>
-                    {levelled ? `${r.name} levelled up!` : `${r.name} is back`}
+                    className="font-cinzel font-700" style={{ fontSize: '1.25rem', color: accent, marginTop: 12, textShadow: burst ? `0 0 12px ${accent}44` : 'none' }}>
+                    {recut ? `The deep re-cut ${r.name}!` : levelled ? `${r.name} levelled up!` : `${r.name} is back`}
                   </motion.p>
                   <p className="font-karla" style={{ fontSize: '0.78rem', color: '#9c917a', marginTop: 6 }}>
-                    Off the bunk, drilled and rested
+                    {recut
+                      ? 'Something down there took a liking to them'
+                      : 'Off the bunk, drilled and rested'}
                   </p>
+
+                  {/* THE RE-CUT. Above the XP block, because when this fires it
+                      is the reason the card is worth reading. Both traits are
+                      named and both stat lines are shown, so the upgrade is
+                      provable rather than asserted. */}
+                  {recut && (
+                    <motion.div initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.28, type: 'spring', stiffness: 300, damping: 20 }}
+                      style={{ marginTop: 14, borderRadius: 14, background: `${LEVIATHAN_COLOR}12`, border: `1px solid ${LEVIATHAN_COLOR}55`, padding: '0.85rem 0.9rem' }}>
+                      <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.16em', color: LEVIATHAN_COLOR }}>
+                        Trait re-cut
+                      </p>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, marginTop: 8 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p className="font-karla font-700" style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.45)', textDecoration: 'line-through' }}>
+                            {recut.fromLabel}
+                          </p>
+                          <p className="font-karla" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.34)', fontVariantNumeric: 'tabular-nums' }}>
+                            {statLine(recut.from)}
+                          </p>
+                        </div>
+                        <span aria-hidden style={{ color: LEVIATHAN_COLOR, fontSize: '1rem', lineHeight: 1 }}>&rarr;</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: LEVIATHAN_COLOR }}>
+                            {recut.toLabel}
+                          </p>
+                          <p className="font-karla" style={{ fontSize: '0.62rem', color: '#c6e8e2', fontVariantNumeric: 'tabular-nums' }}>
+                            {statLine(recut.to)}
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
 
                   <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16, duration: 0.4 }}
                     style={{ marginTop: 16, borderRadius: 14, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(196,169,106,0.2)', padding: '0.9rem 1rem', textAlign: 'left' }}>
@@ -2096,6 +2161,22 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                 <p className="font-karla font-600" style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.8)', marginBottom: 14, lineHeight: 1.45 }}>
                   Opens bunk <span style={{ color: next.accent }}>{next.bunks}</span>, so {next.bunks} hands can train at once
                 </p>
+                {/* The top hall's second effect. Six figures deserves to know
+                    exactly what it buys, so the odds and the never-worse rule
+                    are both stated before the confirm, not discovered after. */}
+                {isLeviathanSlot(next.bunks - 1) && (
+                  <div style={{ marginBottom: 14, padding: '0.75rem 0.85rem', borderRadius: 11, background: `${LEVIATHAN_COLOR}12`, border: `1px solid ${LEVIATHAN_COLOR}4d`, textAlign: 'left' }}>
+                    <p className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.14em', color: LEVIATHAN_COLOR, marginBottom: 5 }}>
+                      And the bunk itself is different
+                    </p>
+                    <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.78)', lineHeight: 1.5 }}>
+                      Bunk {next.bunks} sits deepest in the hall. Every stint finished there has a{' '}
+                      <span style={{ color: LEVIATHAN_COLOR, fontWeight: 700 }}>{Math.round(LEVIATHAN_REROLL_CHANCE * 100)}% chance</span>{' '}
+                      to re-cut that hand&apos;s trait. The new one is kept only if it beats the old, so a hand never
+                      comes back worse than they went in.
+                    </p>
+                  </div>
+                )}
                 <div className="flex items-center justify-between" style={{
                   padding: '0.55rem 0.75rem', borderRadius: 9,
                   background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)',

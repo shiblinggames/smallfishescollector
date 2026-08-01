@@ -72,6 +72,40 @@ export function storesMaxed(level: number): boolean {
 }
 
 /**
+ * THE LEVIATHAN BUNK.
+ *
+ * The sixth bunk, opened only by the top hall, does something the other five
+ * do not: when a stint finishes there, it can re-cut the hand's trait.
+ *
+ * It NEVER makes them worse. A fresh trait is rolled on the crew's own rarity
+ * and kept only if it beats what they had, so putting a good hand in the
+ * special slot is never a risk — which matters, because a gamble here would
+ * mean nobody ever used it on the crew it would help most.
+ */
+export const LEVIATHAN_SLOT = 5
+
+/**
+ * The Leviathan bunk's colour, shared by the bunk tile and the claim reveal so
+ * the special slot and its payoff are visibly the same thing. Deliberately
+ * outside the hall's palette (driftwood grey up to pale gold) and not gold,
+ * which already means "collect me".
+ */
+export const LEVIATHAN_COLOR = '#3fd6c4'
+
+/** Chance a finished Leviathan stint re-cuts the hand's trait. */
+export const LEVIATHAN_REROLL_CHANCE = 0.20
+
+export function isLeviathanSlot(slot: number | null | undefined): boolean {
+  return slot === LEVIATHAN_SLOT
+}
+
+/** How good a trait is, as one number: the sum of its three stats. What the
+ *  reroll compares, and what "better" means on the reveal. */
+export function traitScore(t: { power: number; dodge: number; fortune: number }): number {
+  return t.power + t.dodge + t.fortune
+}
+
+/**
  * Drill levels multiply the Nav-scaled base. Six tiers and it STOPS, matching
  * the hall and Stores — every ladder in the hall is six long, so "six of six"
  * means the same thing wherever you read it, and there is one art set per tier

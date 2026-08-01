@@ -28,14 +28,21 @@ import { crewLevelFromXP } from '@/lib/crewLevel'
 import { CREW_HALL_MAX_TIER, hallTierDef } from '@/lib/crewHall'
 import {
   bunkCount, bunkRatePerHour, canBunk, drillsMaxed, hallTierRequiredFor,
-  ladderHallLocked, msUntilDone, stintDone, stintProgress, stintXP,
-  nextDrillCost, nextStoresCost, storesCapHours, storesMaxed, tierNumeral,
+  isLeviathanSlot, ladderHallLocked, msUntilDone, stintDone, stintProgress,
+  stintXP, nextDrillCost, nextStoresCost, storesCapHours, storesMaxed,
+  tierNumeral, LEVIATHAN_COLOR, LEVIATHAN_REROLL_CHANCE,
 } from '@/lib/crewBunks'
 import type { CrewMember, CrewState } from './actions'
 
 const GOLD = '#f0c040'
 /** Every bunk the hall can ever hold, drawn whether or not it is unlocked. */
 const MAX_BUNKS = 6
+
+/** The Leviathan bunk's colour, shared with the claim reveal. */
+const LEVIATHAN = LEVIATHAN_COLOR
+
+/** The odds, stated as a percentage, wherever the ability is described. */
+const REROLL_PCT = Math.round(LEVIATHAN_REROLL_CHANCE * 100)
 
 /** One picture per Drills tier, matching DRILL_MAX_LEVEL. Kept as its own
  *  constant so a mismatch between "tiers that exist" and "tiers we drew" shows
@@ -64,7 +71,7 @@ export default function HallBunks({
   /** Which tree just went up, so its art can pop IN PLACE rather than behind
    *  an overlay the hero's overflow:hidden would clip. */
   pop: 'drill' | 'stores' | null
-  onBunk: (crewId: number) => void
+  onBunk: (crewId: number, slot: number) => void
   /** Collect one hand's finished stint. The only way to collect: the reward
    *  belongs to a face, not to a header button. */
   onCollectOne: (crewId: number) => void
@@ -78,24 +85,40 @@ export default function HallBunks({
   const rate = bunkRatePerHour(state.drillLevel)
   const cap = state.capHours
 
-  // Stable order, so a claim never reshuffles the grid under your finger.
-  const bunked = useMemo(() => {
-    const byId = new Map(state.roster.map(c => [c.id, c]))
-    return state.bunkedCrewIds
-      .map(id => byId.get(id))
-      .filter((c): c is CrewMember => !!c)
-      .sort((a, b) => a.id - b.id)
-  }, [state.roster, state.bunkedCrewIds])
-
   // Per-bunk terms. A tile shows what ITS hand agreed to, which after an
   // upgrade is not what the hall now offers.
   const termsById = state.bunkTerms ?? {}
 
+  // WHO IS IN WHICH BUNK, by the slot stored on their row. This used to be id
+  // order against the grid, which meant a hand's bunk could silently move when
+  // a different one was collected. It has to be a stored fact now that bunk 6
+  // does something the other five do not.
+  const bySlot = useMemo(() => {
+    const byId = new Map(state.roster.map(c => [c.id, c]))
+    const out: (CrewMember | undefined)[] = new Array(MAX_BUNKS).fill(undefined)
+    const strays: CrewMember[] = []
+    for (const id of state.bunkedCrewIds) {
+      const crew = byId.get(id)
+      if (!crew) continue
+      const slot = termsById[id]?.slot
+      if (slot != null && slot >= 0 && slot < MAX_BUNKS && !out[slot]) out[slot] = crew
+      else strays.push(crew)
+    }
+    // A row with no slot predates the column. Drop them into the first free
+    // bunk so they are still visible and still collectable, rather than
+    // vanishing from a grid that is now keyed on a column they lack.
+    for (const crew of strays.sort((a, b) => a.id - b.id)) {
+      const free = out.findIndex(x => !x)
+      if (free >= 0) out[free] = crew
+    }
+    return out
+  }, [state.roster, state.bunkedCrewIds, termsById])
+
   // What a NEW stint would be worth, for the header line.
   const payout = stintXP(rate, cap)
 
-  const anyRunning = bunked.some(c => {
-    const t = termsById[c.id]
+  const anyRunning = bySlot.some(c => {
+    const t = c ? termsById[c.id] : null
     return !!t && !stintDone(t.since, now, t.cap)
   })
 
@@ -133,7 +156,12 @@ export default function HallBunks({
           the hull has not opened yet. */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 7 }}>
         {Array.from({ length: MAX_BUNKS }, (_, i) => {
-          const crew = bunked[i]
+          const crew = bySlot[i]
+          // Bunk 6 is the Leviathan bunk. It wears its own colour in every
+          // state it can be in — locked, empty and occupied — so it never
+          // looks like the other five with a note attached.
+          const lev = isLeviathanSlot(i)
+          const tint = lev ? LEVIATHAN : accent
           if (i >= slots) {
             // Which hall opens THIS one, so the lock names its own key.
             // i is 0-BASED, so slot i is bunk i+1, and tier N opens bunk N —
@@ -141,17 +169,21 @@ export default function HallBunks({
             // bunk, so every lock was one tier short.
             const opensAt = hallTierDef(Math.min(CREW_HALL_MAX_TIER, i + 1))
             return (
-              <div key={`locked-${i}`} title={`${opensAt.name} opens this bunk`}
-                aria-label={`Locked bunk. ${opensAt.name} opens it.`}
+              <div key={`locked-${i}`}
+                title={lev ? `${opensAt.name} opens the Leviathan bunk, which can re-cut a trait` : `${opensAt.name} opens this bunk`}
+                aria-label={lev
+                  ? `Locked. ${opensAt.name} opens the Leviathan bunk, which can re-cut a hand's trait.`
+                  : `Locked bunk. ${opensAt.name} opens it.`}
                 style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,
                   minHeight: 100, borderRadius: 11,
-                  border: '1px dashed rgba(255,255,255,0.12)', background: 'rgba(0,0,0,0.22)',
+                  border: lev ? `1px dashed ${LEVIATHAN}55` : '1px dashed rgba(255,255,255,0.12)',
+                  background: lev ? `linear-gradient(180deg, ${LEVIATHAN}12 0%, rgba(0,0,0,0.3) 100%)` : 'rgba(0,0,0,0.22)',
                 }}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.32)" strokeWidth="2.2" strokeLinecap="round" aria-hidden>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={lev ? `${LEVIATHAN}99` : 'rgba(255,255,255,0.32)'} strokeWidth="2.2" strokeLinecap="round" aria-hidden>
                   <rect x="4.5" y="11" width="15" height="9.5" rx="1.5" /><path d="M7.5 11V7.5a4.5 4.5 0 0 1 9 0V11" />
                 </svg>
-                <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.4)', textAlign: 'center', lineHeight: 1.35, padding: '0 0.2rem' }}>
+                <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.56rem', color: lev ? `${LEVIATHAN}cc` : 'rgba(255,255,255,0.4)', textAlign: 'center', lineHeight: 1.35, padding: '0 0.2rem' }}>
                   {opensAt.name.replace(' Hall', '')}
                 </span>
               </div>
@@ -161,22 +193,37 @@ export default function HallBunks({
             return (
               <button key={`empty-${i}`} type="button" disabled={pending}
                 onClick={() => setPicking(i)}
-                aria-label={`Empty bunk ${i + 1}. Tap to put a crew in it.`}
+                title={lev ? `The Leviathan bunk. ${REROLL_PCT}% chance to re-cut a trait, never for the worse.` : undefined}
+                aria-label={lev
+                  ? `Empty Leviathan bunk. Tap to put a crew in it. It can re-cut their trait.`
+                  : `Empty bunk ${i + 1}. Tap to put a crew in it.`}
                 style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,
                   minHeight: 100, borderRadius: 11, cursor: 'pointer', font: 'inherit',
-                  border: `1.5px dashed ${accent}55`, background: 'rgba(0,0,0,0.28)',
+                  border: `1.5px dashed ${tint}${lev ? '99' : '55'}`,
+                  background: lev
+                    ? `linear-gradient(180deg, ${LEVIATHAN}1c 0%, rgba(0,0,0,0.3) 100%)`
+                    : 'rgba(0,0,0,0.28)',
                   touchAction: 'manipulation',
                 }}>
-                <span style={{
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  width: 24, height: 24, borderRadius: '50%',
-                  background: `${accent}1f`, border: `1.5px solid ${accent}99`,
-                  color: accent, fontSize: '1rem', lineHeight: 1,
-                }}>+</span>
-                <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.62rem', color: `${accent}dd` }}>
-                  Empty bunk
+                {lev
+                  ? <LeviathanMark />
+                  : (
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      width: 24, height: 24, borderRadius: '50%',
+                      background: `${accent}1f`, border: `1.5px solid ${accent}99`,
+                      color: accent, fontSize: '1rem', lineHeight: 1,
+                    }}>+</span>
+                  )}
+                <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.62rem', color: `${tint}dd` }}>
+                  {lev ? 'Leviathan' : 'Empty bunk'}
                 </span>
+                {lev && (
+                  <span className="font-karla" style={{ fontSize: '0.55rem', color: `${LEVIATHAN}99`, textAlign: 'center', lineHeight: 1.3, padding: '0 0.2rem' }}>
+                    Re-cuts traits
+                  </span>
+                )}
               </button>
             )
           }
@@ -199,10 +246,18 @@ export default function HallBunks({
                 position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
                 minHeight: 100, padding: '0.4rem 0.25rem 0.45rem', borderRadius: 11,
                 cursor: 'pointer', font: 'inherit', textAlign: 'center',
-                border: `1.5px solid ${done ? `${GOLD}aa` : 'rgba(255,255,255,0.16)'}`,
-                background: `linear-gradient(180deg, ${done ? `${GOLD}1f` : 'rgba(255,255,255,0.04)'} 0%, rgba(0,0,0,0.25) 100%)`,
+                // Done still reads gold, because that is the collect cue
+                // everywhere. A running Leviathan stint keeps the teal, so you
+                // can see at a glance that this one has a chance riding on it.
+                border: `1.5px solid ${done ? `${GOLD}aa` : lev ? `${LEVIATHAN}66` : 'rgba(255,255,255,0.16)'}`,
+                background: `linear-gradient(180deg, ${done ? `${GOLD}1f` : lev ? `${LEVIATHAN}14` : 'rgba(255,255,255,0.04)'} 0%, rgba(0,0,0,0.25) 100%)`,
                 touchAction: 'manipulation',
               }}>
+              {lev && (
+                <span aria-hidden style={{ position: 'absolute', top: 4, right: 4, lineHeight: 0, opacity: 0.9 }}>
+                  <LeviathanMark size={13} />
+                </span>
+              )}
               <div style={{ width: '100%', height: 38, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={artSrc(crew.filename)} alt="" aria-hidden loading="lazy" decoding="async"
@@ -274,10 +329,24 @@ export default function HallBunks({
         <BunkPicker
           eligible={eligible} artSrc={artSrc} accent={accent} pending={pending}
           stint={fmtStint(cap)} payout={payout}
-          onPick={id => { onBunk(id); setPicking(null) }}
+          leviathan={isLeviathanSlot(picking)}
+          onPick={id => { onBunk(id, picking); setPicking(null) }}
           onClose={() => setPicking(null)}
         />, document.body)}
     </div>
+  )
+}
+
+/** The Leviathan bunk's sigil: a coiled deep-sea eye. Drawn rather than
+ *  lettered so the special slot is recognisable at 13px on a tile corner,
+ *  where any text would be unreadable. */
+function LeviathanMark({ size = 24 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden
+      stroke={LEVIATHAN} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2.5 12s3.6-5.5 9.5-5.5S21.5 12 21.5 12s-3.6 5.5-9.5 5.5S2.5 12 2.5 12Z" />
+      <circle cx="12" cy="12" r="2.4" fill={`${LEVIATHAN}44`} />
+    </svg>
   )
 }
 
@@ -394,7 +463,7 @@ function MaxedCard({ art, label, sub, accent, popping }: { art: string; label: s
 
 /** One sheet for both jobs: fill an empty bunk, or swap/remove the occupant. */
 function BunkPicker({
-  eligible, artSrc, accent, pending, stint, payout, onPick, onClose,
+  eligible, artSrc, accent: hallAccent, pending, stint, payout, leviathan, onPick, onClose,
 }: {
   eligible: CrewMember[]
   artSrc: (f: string) => string
@@ -402,17 +471,24 @@ function BunkPicker({
   pending: boolean
   stint: string
   payout: number
+  /** Filling the sixth bunk, which can re-cut a trait. */
+  leviathan: boolean
   onPick: (crewId: number) => void
   onClose: () => void
 }) {
+  // The sheet takes the bunk's colour, so you can tell which one you are
+  // filling from the sheet alone without reading back to the grid.
+  const accent = leviathan ? LEVIATHAN : hallAccent
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 100000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(2,6,12,0.72)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}>
       <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 480, maxHeight: '84vh', display: 'flex', flexDirection: 'column', background: 'rgba(14,11,7,0.99)', borderTop: `2px solid ${accent}`, borderRadius: '18px 18px 0 0', boxShadow: '0 -12px 44px rgba(0,0,0,0.6)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '1rem 1rem 0.8rem' }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.66rem', color: accent }}>Crew Hall</p>
+            <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.66rem', color: accent }}>
+              {leviathan ? 'The Leviathan Bunk' : 'Crew Hall'}
+            </p>
             <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#f0ede8', lineHeight: 1.1 }}>
-              Who trains?
+              {leviathan ? 'Who goes below?' : 'Who trains?'}
             </p>
           </div>
           <button onClick={onClose} aria-label="Close" style={{ flexShrink: 0, width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e0ddd8', cursor: 'pointer' }}>
@@ -427,6 +503,22 @@ function BunkPicker({
           trawl or be dismissed until the stint ends.
         </p>
 
+        {/* The whole reason to choose this bunk over the other five, said
+            plainly. "Never worse" is the important half: a hand with a good
+            trait is exactly who this is for, and nobody risks one on a coin
+            flip they might lose. */}
+        {leviathan && (
+          <div style={{ margin: '0 1rem 0.9rem', padding: '0.7rem 0.85rem', borderRadius: 12, background: `${LEVIATHAN}14`, border: `1px solid ${LEVIATHAN}4d` }}>
+            <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: LEVIATHAN, marginBottom: 4 }}>
+              Deep water changes a hand
+            </p>
+            <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.78)', lineHeight: 1.5 }}>
+              When the stint ends there is a <span style={{ color: LEVIATHAN, fontWeight: 700 }}>{REROLL_PCT}% chance</span> the
+              deep re-cuts their trait. It is kept only if it beats what they had, so nobody comes back worse than they went in.
+            </p>
+          </div>
+        )}
+
         <div className="scrollbar-hide" style={{ flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain', padding: '0 1rem 1.4rem' }}>
           {eligible.length === 0 ? (
             <p className="font-karla text-center" style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.55, padding: '1.6rem 0.5rem' }}>
@@ -436,7 +528,7 @@ function BunkPicker({
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
               {eligible.map(m => (
                 <button key={m.id} type="button" disabled={pending} onClick={() => onPick(m.id)}
-                  aria-label={`Put ${m.name} in a bunk`}
+                  aria-label={leviathan ? `Send ${m.name} to the Leviathan bunk` : `Put ${m.name} in a bunk`}
                   style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
                     padding: '0.5rem 0.35rem', borderRadius: 12, textAlign: 'center',

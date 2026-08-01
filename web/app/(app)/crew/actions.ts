@@ -115,7 +115,8 @@ export type CrewState = {
    *  agreed at entry and the stint length agreed at entry. Per-bunk rather than
    *  global, because buying Drills or Stores must not change a stint already
    *  under way. */
-  bunkTerms: Record<number, { since: string; rate: number; cap: number }>
+  /** Per-crew stint terms plus WHICH bunk they are in (0-5; 5 is Leviathan). */
+  bunkTerms: Record<number, { since: string; rate: number; cap: number; slot: number | null }>
   /** Drill level — multiplies the Nav-scaled training rate (XP per hour). */
   drillLevel: number
   /** Stores level — sets how long a bunk accrues before it fills. */
@@ -322,7 +323,7 @@ export async function getCrewState(): Promise<CrewState | null> {
   const [{ data: pendingVoyage }, { data: trawlRows }, { data: bunkRows }] = await Promise.all([
     admin.from('daily_voyages').select('crew_variant_ids').eq('user_id', user.id).eq('status', 'pending').maybeSingle(),
     admin.from('trawls').select('crew_id').eq('user_id', user.id),
-    admin.from('crew_hall_bunks').select('crew_id, since, rate_per_hour, cap_hours').eq('user_id', user.id),
+    admin.from('crew_hall_bunks').select('crew_id, since, rate_per_hour, cap_hours, slot').eq('user_id', user.id),
   ])
   const lockedCrewIds: number[] = (pendingVoyage as any)?.crew_variant_ids ?? []
   const trawlingCrewIds: number[] = ((trawlRows ?? []) as any[]).map(r => r.crew_id as number)
@@ -331,11 +332,12 @@ export async function getCrewState(): Promise<CrewState | null> {
   const liveCap = storesCapHours((prof as any).crew_stores_level ?? 1)
   // Each bunk on ITS OWN terms. rate_per_hour / cap_hours are null only on rows
   // that predate the columns, which fall back to the live values.
-  const bunkTerms: Record<number, { since: string; rate: number; cap: number }> = Object.fromEntries(
+  const bunkTerms: Record<number, { since: string; rate: number; cap: number; slot: number | null }> = Object.fromEntries(
     ((bunkRows ?? []) as any[]).map(r => [r.crew_id as number, {
       since: r.since as string,
       rate: (r.rate_per_hour as number | null) ?? liveRate,
       cap: (r.cap_hours as number | null) ?? liveCap,
+      slot: (r.slot as number | null) ?? null,
     }]))
   // Still mid-stint: hard-locked out of parties, trawls and dismissal. Split
   // from bunkedCrewIds because a FINISHED stint is only waiting to be

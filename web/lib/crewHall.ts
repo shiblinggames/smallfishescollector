@@ -11,9 +11,9 @@
 // the crew you already have and keeps landing forever. Recruits arrive at Lv 1
 // for everyone.
 //
-// Cost ladder is exponential (×3 steps, ~200k total) — deliberately the
-// same lifetime investment as the endgame ship (22k→80k→200k), so the
-// hall is the parallel long-term doubloon sink for crew-focused players.
+// Cost ladder is exponential, ~3x a step, ending at 1,000,000 — the same
+// shape and the same ceiling as Drills and Stores, so all three ladders in
+// the hall pace together instead of the building lurching 7x at the top.
 //
 // Each tier also carries a visual THEME for the recruit board region —
 // the hall should visibly improve as it's upgraded (weathered driftwood
@@ -34,9 +34,9 @@ export type CrewHallTierDef = {
   /**
    * Navigation level needed to buy this tier. Same reason gear buys are level
    * gated (lib/gearGating): without it, casino and voyage gold lets a low-Nav
-   * captain jump straight to six bunks. It matters double here because the
-   * training rate itself scales on Nav, so the hall and the level that feeds
-   * it advance together.
+   * captain jump straight to six bunks. Nav is the ONLY brake on the hall now
+   * that it is out of the training rate (see BUNK_BASE): one stat gates how
+   * big the hall can get, Drills alone decides how fast it trains.
    */
   minNav: number
   /** Theme accent for the recruit-board region + upgrade UI. */
@@ -54,23 +54,23 @@ export const CREW_HALL_TIERS: Record<CrewHallTierNum, CrewHallTierDef> = {
     flavor: 'Salvaged planks, a leaky roof, and one bunk in the corner.',
   },
   2: {
-    tier: 2, name: 'Oakhewn Hall', bunks: 2, cost: 5_000, minNav: 8,
+    tier: 2, name: 'Oakhewn Hall', bunks: 2, cost: 12_000, minNav: 8,
     accent: '#b3814a',
     flavor: 'Solid oak beams and room to drill. Word spreads.',
   },
   3: {
-    tier: 3, name: 'Brassbound Hall', bunks: 3, cost: 15_000, minNav: 20,
+    tier: 3, name: 'Brassbound Hall', bunks: 3, cost: 36_000, minNav: 20,
     accent: '#d9a83a',
     flavor: 'Brass fittings, a proper bar, and bunks that see real use.',
   },
   4: {
-    tier: 4, name: 'Gilded Hall', bunks: 4, cost: 45_000, minNav: 35,
+    tier: 4, name: 'Gilded Hall', bunks: 4, cost: 110_000, minNav: 35,
     accent: '#f0c040',
     flavor: 'Gold leaf on the rafters, and drillmasters who know their trade.',
     glow: 'rgba(240,192,64,0.10)',
   },
   5: {
-    tier: 5, name: 'Hall of Legends', bunks: 5, cost: 135_000, minNav: 55,
+    tier: 5, name: 'Hall of Legends', bunks: 5, cost: 330_000, minNav: 55,
     accent: '#ffd966',
     flavor: 'Names sung in every port. Every hand who bunks here leaves it sharper.',
     glow: 'rgba(255,217,102,0.16)',
@@ -78,7 +78,9 @@ export const CREW_HALL_TIERS: Record<CrewHallTierNum, CrewHallTierDef> = {
   6: {
     tier: 6, name: 'Leviathan Hall', bunks: 6, cost: 1_000_000, minNav: 75,
     accent: '#fff0c4',
-    flavor: 'Rafters cut from something that used to swim. Six bunks, and a queue for them.',
+    // The sixth bunk is not just a sixth bunk (see LEVIATHAN_SLOT in
+    // crewBunks), so the flavor points at the deep rather than the count.
+    flavor: 'Rafters cut from something that used to swim. The deepest bunk still remembers it.',
     glow: 'rgba(255,240,196,0.20)',
   },
 }

@@ -15,7 +15,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { clampHallTier } from '@/lib/crewHall'
 import { canBunk, drillsMaxed, hallTierRequiredFor, ladderHallLocked, nextDrillCost, nextStoresCost, storesMaxed, tierNumeral } from '@/lib/crewBunks'
-import { bunkContext, loadBunks, releaseBunk } from '@/lib/crewBunkSettle'
+import { bunkContext, loadBunks, releaseBunk, type TraitRecut } from '@/lib/crewBunkSettle'
 import type { CrewXPGrant } from '@/lib/crewXPGrant'
 import { getCrewState, type CrewActionResult, type CrewState } from './actions'
 
@@ -29,10 +29,10 @@ const CLOSED = 'The hall is not taking bunks yet.'
  *  level ceiling — without it a claim of only maxed crew would look like
  *  nothing happened. */
 export type BunkClaimResult =
-  | { state: CrewState; grants: CrewXPGrant[]; freed: number[] }
+  | { state: CrewState; grants: CrewXPGrant[]; freed: number[]; recuts: TraitRecut[] }
   | { error: string }
 
-export async function bunkCrew(crewId: number): Promise<CrewActionResult> {
+export async function bunkCrew(crewId: number, slot: number): Promise<CrewActionResult> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not signed in' }
@@ -61,12 +61,22 @@ export async function bunkCrew(crewId: number): Promise<CrewActionResult> {
   if (bunks.some(b => b.crew_id === crewId)) return { error: 'They already have a bunk.' }
   if (bunks.length >= ctx.slots) return { error: 'Every bunk is taken. Build another.' }
 
+  // WHICH bunk matters now that the sixth one can re-cut a trait, so the slot
+  // comes from the tile you tapped rather than being picked for you.
+  const want = Math.floor(slot)
+  if (!Number.isFinite(want) || want < 0 || want >= ctx.slots) {
+    return { error: 'That bunk is not open yet.' }
+  }
+  if (bunks.some(b => b.slot === want)) return { error: 'That bunk is taken.' }
+
   // Stamp the TERMS on the row. This is the deal: this rate, this long. Buying
   // Drills or Stores afterwards changes what the NEXT hand gets, never this one.
-  // The unique index on crew_id is the real guard against a double tap.
+  // The unique indexes on crew_id and (user_id, slot) are the real guard against
+  // a double tap putting one hand in two bunks, or two hands in one bunk.
   const { error } = await admin.from('crew_hall_bunks').insert({
     user_id: user.id,
     crew_id: crewId,
+    slot: want,
     rate_per_hour: ctx.rate,
     cap_hours: ctx.capHours,
   })
@@ -88,10 +98,10 @@ export async function collectBunk(crewId: number): Promise<BunkClaimResult> {
   if (!user) return { error: 'Not signed in' }
   const admin = createAdminClient()
 
-  const { grants, freed } = await releaseBunk(admin, user.id, crewId)
+  const { grants, freed, recuts } = await releaseBunk(admin, user.id, crewId)
 
   const state = await getCrewState()
-  return state ? { state, grants, freed } : { error: 'Failed to load crew' }
+  return state ? { state, grants, freed, recuts } : { error: 'Failed to load crew' }
 }
 
 /** Drills buy XP PER HOUR. */
