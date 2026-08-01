@@ -585,19 +585,33 @@ function BunkPicker({
           trawl or be dismissed until the stint ends.
         </p>
 
-        {/* The whole reason to choose this bunk over the other five, said
-            plainly. "Never worse" is the important half: a hand with a good
-            trait is exactly who this is for, and nobody risks one on a coin
-            flip they might lose. */}
+        {/* The whole reason to pick this bunk over the other five, and the
+            goal at the end of it. Two short sentences carry the rules and the
+            target line does the rest, because "+4 +4 +4 = Divine" is
+            understood at a glance in a way a paragraph about magnitude
+            ceilings never is. The old copy explained the mechanic accurately
+            and never once said what you were aiming AT. */}
         {leviathan && (
-          <div style={{ margin: '0 1rem 0.9rem', padding: '0.7rem 0.85rem', borderRadius: 12, background: `${LEVIATHAN}14`, border: `1px solid ${LEVIATHAN}4d` }}>
-            <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: LEVIATHAN, marginBottom: 4 }}>
-              Deep water changes a hand
+          <div style={{ margin: '0 1rem 0.9rem', padding: '0.8rem 0.85rem', borderRadius: 12, background: `${LEVIATHAN}14`, border: `1px solid ${LEVIATHAN}4d` }}>
+            <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: LEVIATHAN, marginBottom: 5 }}>
+              The chase for Divine
             </p>
-            <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.78)', lineHeight: 1.5 }}>
-              When the stint ends they are rolled a <span style={{ color: LEVIATHAN, fontWeight: 700 }}>brand new trait</span>, shown
-              beside the one they already have. Keep it <span style={{ color: LEVIATHAN, fontWeight: 700 }}>stat by stat</span>, so a good
-              number is locked in while you keep rolling for the rest. Only here can a stat reach 4.
+            <p className="font-karla" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.82)', lineHeight: 1.5 }}>
+              Every stint rolls them a new trait. Keep the stats you want, roll again for the rest.
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 5, marginTop: 10 }}>
+              {['+4 PWR', '+4 DGE', '+4 FTN'].map(t => (
+                <span key={t} className="font-karla font-700" style={{
+                  fontSize: '0.63rem', padding: '0.22rem 0.45rem', borderRadius: 6,
+                  background: 'rgba(0,0,0,0.32)', border: `1px solid ${LEVIATHAN}55`,
+                  color: '#c6e8e2', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap',
+                }}>{t}</span>
+              ))}
+              <span aria-hidden style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.72rem' }}>=</span>
+              <span className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: LEVIATHAN, whiteSpace: 'nowrap' }}>Divine</span>
+            </div>
+            <p className="font-karla" style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: 7, lineHeight: 1.4 }}>
+              No other bunk ever rolls a 4.
             </p>
           </div>
         )}
