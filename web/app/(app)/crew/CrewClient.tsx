@@ -1503,7 +1503,15 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             />
           )}
         </div>
+        </>
+          )
+        })()}
 
+        {/* RECRUIT. Just the board and the ways to reroll it. The hall used to
+            sit on top of this; it is its own tab now. */}
+        {activeTab === 'recruits' && (() => {
+          return (
+        <>
           {/* Reroll row — every way to reroll this board, side by side. The
               blood-charged tiers used to be a separate panel above the hall
               with its own header, balance strip and description, which pushed
