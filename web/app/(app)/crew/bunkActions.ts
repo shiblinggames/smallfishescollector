@@ -13,7 +13,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { canBunk, nextDrillCost, nextStoresCost, tierNumeral } from '@/lib/crewBunks'
+import { canBunk, nextDrillCost, nextStoresCost, storesMaxed, tierNumeral } from '@/lib/crewBunks'
 import { bunkContext, loadBunks, settleBunks } from '@/lib/crewBunkSettle'
 import type { CrewXPGrant } from '@/lib/crewXPGrant'
 import { getCrewState, type CrewActionResult, type CrewState } from './actions'
@@ -111,7 +111,11 @@ async function buyUpgrade(kind: 'drill' | 'stores'): Promise<CrewActionResult> {
   const isDrill = kind === 'drill'
   const from = isDrill ? ctx.drillLevel : ctx.storesLevel
   const col = isDrill ? 'crew_drill_level' : 'crew_stores_level'
+  // Stores is a finite ladder (six hours is the ceiling); Drills is not.
+  if (!isDrill && storesMaxed(from)) return { error: 'Stores are already full.' }
+
   const cost = isDrill ? nextDrillCost(from) : nextStoresCost(from)
+  if (cost <= 0) return { error: 'Nothing left to buy.' }
   if (ctx.doubloons < cost) return { error: `Need ${cost.toLocaleString()} \u27e1` }
 
   const { data: newBalance } = await admin.rpc('deduct_doubloons', { uid: user.id, amount: cost })

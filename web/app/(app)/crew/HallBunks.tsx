@@ -26,7 +26,7 @@ import { createPortal } from 'react-dom'
 import { crewLevelFromXP } from '@/lib/crewLevel'
 import {
   bunkCount, bunkRatePerHour, canBunk, msUntilDone, stintDone, stintProgress,
-  stintXP, nextDrillCost, nextStoresCost, storesCapHours, tierNumeral,
+  stintXP, nextDrillCost, nextStoresCost, storesCapHours, storesMaxed, tierNumeral,
 } from '@/lib/crewBunks'
 import type { CrewMember, CrewState } from './actions'
 
@@ -204,8 +204,10 @@ export default function HallBunks({
         })}
       </div>
 
-      {/* The two trees. Neither caps, and they buy different things: one is XP
-          per hour, the other is how many hours. */}
+      {/* Two trees doing different jobs. Drills is the only one that raises
+          throughput (a stint pays rate x hours and takes hours, so XP per DAY
+          is rate x 24 whatever the stint length). Stores buys fewer trips back
+          to collect, which is why it is cheap and stops at six hours. */}
       <div style={{ display: 'flex', gap: 7, marginTop: '0.65rem' }}>
         <UpgradeButton
           label={`Drills ${tierNumeral(state.drillLevel + 1)}`}
@@ -213,12 +215,25 @@ export default function HallBunks({
           next={`${bunkRatePerHour(state.navLevel, state.drillLevel + 1).toLocaleString()} XP/hr`}
           cost={nextDrillCost(state.drillLevel)} balance={state.doubloons}
           accent={GOLD} disabled={pending} onClick={onBuyDrill} />
-        <UpgradeButton
-          label={`Stores ${tierNumeral(state.storesLevel + 1)}`}
-          now={`${cap}h of training`}
-          next={`${storesCapHours(state.storesLevel + 1)}h of training`}
-          cost={nextStoresCost(state.storesLevel)} balance={state.doubloons}
-          accent="#7fc4a8" disabled={pending} onClick={onBuyStores} />
+        {storesMaxed(state.storesLevel) ? (
+          <div className="font-karla" style={{
+            flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center',
+            justifyContent: 'center', gap: 1, padding: '0.5rem 0.35rem', borderRadius: 9,
+            background: 'rgba(127,196,168,0.08)', border: '1px solid rgba(127,196,168,0.28)',
+          }}>
+            <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.6rem', color: '#7fc4a8' }}>
+              Stores full
+            </span>
+            <span style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.42)' }}>{cap}h stints</span>
+          </div>
+        ) : (
+          <UpgradeButton
+            label={`Stores ${tierNumeral(state.storesLevel + 1)}`}
+            now={`${cap}h stints`}
+            next={`${storesCapHours(state.storesLevel + 1)}h stints`}
+            cost={nextStoresCost(state.storesLevel)} balance={state.doubloons}
+            accent="#7fc4a8" disabled={pending} onClick={onBuyStores} />
+        )}
       </div>
 
       {picking !== null && typeof document !== 'undefined' && createPortal(

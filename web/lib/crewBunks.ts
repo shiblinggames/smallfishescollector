@@ -43,24 +43,28 @@ export const BUNK_BASE = 40
 /** Added to the hourly rate per Navigation level. Nav 1 = 44/hr, Nav 100 = 440/hr. */
 export const BUNK_PER_NAV = 4
 /**
- * How long a stint LASTS, by Stores tier. This is both the lock-in and the
- * payout window: a hand is stuck in the bunk for exactly this long, and earns
- * exactly this many hours of XP for it.
+ * How long a stint LASTS, by Stores tier: one hour up to six, and it STOPS
+ * there. This is both the lock-in and the payout window — a hand is stuck in
+ * the bunk for exactly this long and earns exactly this many hours of XP.
  *
- * Starts at ONE hour, so an early hall asks for very little commitment and pays
- * accordingly. Raising it is the second upgrade tree — Drills buy XP PER HOUR,
- * Stores buy HOW MANY HOURS. Both multiply, so a late stint is worth many times
- * an early one.
- *
- * Past the listed tiers it is +12h a level, forever, so it never dead-ends.
+ * Capped, unlike Drills, because of what Stores actually does. A stint pays
+ * `rate x hours` and TAKES `hours`, so XP per day is `rate x 24` no matter how
+ * long a stint is: six 1-hour stints and one 6-hour stint pay identically.
+ * Stores does not raise the ceiling, it lowers how often you have to come back
+ * to reach it. That is worth paying for, but it is not an endgame sink, so it
+ * is a short finite ladder and Drills stays the uncapped one.
  */
-const STORES_HOURS = [1, 3, 6, 12, 24]
-const STORES_HOURS_STEP = 12
+const STORES_HOURS = [1, 2, 3, 4, 5, 6]
+
+export const STORES_MAX_LEVEL = STORES_HOURS.length
 
 export function storesCapHours(level: number): number {
-  const l = Math.max(1, Math.floor(level))
-  if (l <= STORES_HOURS.length) return STORES_HOURS[l - 1]
-  return STORES_HOURS[STORES_HOURS.length - 1] + (l - STORES_HOURS.length) * STORES_HOURS_STEP
+  const l = Math.min(STORES_MAX_LEVEL, Math.max(1, Math.floor(level)))
+  return STORES_HOURS[l - 1]
+}
+
+export function storesMaxed(level: number): boolean {
+  return Math.floor(level) >= STORES_MAX_LEVEL
 }
 
 /**
@@ -98,7 +102,6 @@ export function bunkCount(hallTier: number): number {
 }
 
 const DRILL_COST_BASE = 100_000
-const STORES_COST_BASE = 120_000
 const COST_GROWTH = 2.5
 
 /** Doubloons to go from `level` to `level + 1`. Drill I is free. */
@@ -106,11 +109,15 @@ export function nextDrillCost(level: number): number {
   return Math.round(DRILL_COST_BASE * Math.pow(COST_GROWTH, Math.max(1, Math.floor(level)) - 1))
 }
 
-/** Doubloons for the next Stores tier. Stores I is free. Priced a touch above
- *  Drills at the same step, because more hours is the safer buy of the two:
- *  it pays off even on the days you forget to check in. */
+/**
+ * Doubloons to reach each Stores tier. Hand-set rather than a curve: the ladder
+ * is only five steps long and it buys convenience, not power, so it is priced
+ * well under Drills. 0 means there is nothing left to buy.
+ */
+const STORES_COSTS = [0, 40_000, 90_000, 200_000, 450_000, 1_000_000]
+
 export function nextStoresCost(level: number): number {
-  return Math.round(STORES_COST_BASE * Math.pow(COST_GROWTH, Math.max(1, Math.floor(level)) - 1))
+  return storesMaxed(level) ? 0 : STORES_COSTS[Math.max(1, Math.floor(level))]
 }
 
 /** Roman numeral for an upgrade tier, for display. Falls back to the number. */
