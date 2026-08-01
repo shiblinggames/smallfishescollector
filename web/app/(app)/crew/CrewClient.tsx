@@ -17,7 +17,7 @@ import { hallTierDef, nextHallTier, hallUpgradeBlocker, CREW_HALL_MAX_TIER } fro
 import { bunkRatePerHour, storesCapHours, stintDone, tierNumeral, nextDrillCost, nextStoresCost, ladderHallLocked, isLeviathanSlot, DRILL_MAX_LEVEL, LEVIATHAN_COLOR } from '@/lib/crewBunks'
 import { crewAssignment } from '@/lib/crewAssignment'
 import HallBunks from './HallBunks'
-import { bunkCrew, collectBunk, buyDrill, buyStores, acceptTraitOffer, declineTraitOffer } from './bunkActions'
+import { bunkCrew, collectBunk, buyDrill, buyStores, acceptTraitOffer, declineTraitOffer, type TraitPicks } from './bunkActions'
 import { RARITY_NAMES, RARITY_COLORS, groupForSlug, crewDisplayName, GEM_WEIGHTS, type CrewRarity } from '@/lib/crewGen'
 import { applyCrewEffects, decodeTraitStats, netTraitStats, traitLabel, traitKind, type TraitStats } from '@/lib/crewEffects'
 import AssignBoard from './AssignBoard'
@@ -774,40 +774,6 @@ function FallenPanel({ crew }: { crew: FallenCrew }) {
   )
 }
 
-/** One side of the offer: what a trait is called and exactly what it does.
- *  Per-stat rows rather than a single summed line, because the sum is the one
- *  number that cannot answer "is this better for THIS hand". */
-function TraitFace({ label, name, stats, accent }: {
-  label: string; name: string; stats: TraitStats; accent?: string
-}) {
-  const tint = accent ?? 'rgba(255,255,255,0.5)'
-  return (
-    <div style={{
-      borderRadius: 12, padding: '0.7rem 0.6rem', textAlign: 'left',
-      background: accent ? `${accent}12` : 'rgba(255,255,255,0.04)',
-      border: `1px solid ${accent ? `${accent}55` : 'rgba(255,255,255,0.12)'}`,
-    }}>
-      <p className="font-karla font-700 uppercase" style={{ fontSize: '0.53rem', letterSpacing: '0.12em', color: tint }}>
-        {label}
-      </p>
-      <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', lineHeight: 1.2, marginTop: 3, color: accent ?? '#e6dcc2' }}>
-        {name}
-      </p>
-      <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 1 }}>
-        {([['PWR', stats.power], ['DGE', stats.dodge], ['FTN', stats.fortune]] as const).map(([k, v]) => (
-          <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 6 }}>
-            <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)' }}>{k}</span>
-            <span className="font-karla font-700" style={{
-              fontSize: '0.68rem', fontVariantNumeric: 'tabular-nums',
-              color: v > 0 ? '#7fdfa3' : v < 0 ? '#e08c8c' : 'rgba(255,255,255,0.3)',
-            }}>{v > 0 ? `+${v}` : v}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 /** A trait's three stats as one compact line ("+2 PWR / -1 DGE"). Zeroes are
  *  dropped, so a single-stat trait reads as one number rather than two blanks
  *  padding it out. Returns "even" for a fully neutral trait. */
@@ -978,6 +944,11 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
   /** Which side of the offer is being submitted, so the two buttons can show
    *  their own pending state instead of both greying out together. */
   const [offerBusy, setOfferBusy] = useState<'take' | 'keep' | null>(null)
+  /** Which of the three stats the captain is taking off the current offer.
+   *  Seeded to every stat that would improve, so the common case is one tap,
+   *  but every one of them can be turned off: a hand who only ever sails wants
+   *  the Fortune and may not care what happens to Power. */
+  const [picks, setPicks] = useState<TraitPicks>({ power: false, dodge: false, fortune: false })
   // What the upgrade changed, in words. Shares the bunk-claim toast's slot:
   // fixed to the viewport, pointer-events none, so it can neither be clipped
   // by an ancestor nor eat a tap.
@@ -1034,6 +1005,19 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
     })
   }
 
+  // Seed the ticks from the offer itself: anything that would go up starts
+  // ticked. Runs on the offer's identity, not on every render, so a captain who
+  // unticks something does not have it silently re-ticked underneath them.
+  useEffect(() => {
+    const o = bunkReveal?.offer
+    if (!o) return
+    setPicks({
+      power:   o.offered.power   > o.current.power,
+      dodge:   o.offered.dodge   > o.current.dodge,
+      fortune: o.offered.fortune > o.current.fortune,
+    })
+  }, [bunkReveal?.offer?.crewId, bunkReveal?.offer?.offered])
+
   /**
    * Put a parked offer back on screen. An offer outlives the reveal that
    * produced it (it is stored on the crew row), so closing the tab mid-decision
@@ -1066,7 +1050,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
     if (offerBusy) return
     setOfferBusy(take ? 'take' : 'keep')
     startTransition(async () => {
-      const res = take ? await acceptTraitOffer(crewId) : await declineTraitOffer(crewId)
+      const res = take ? await acceptTraitOffer(crewId, picks) : await declineTraitOffer(crewId)
       setOfferBusy(null)
       if ('error' in res) { setErr(res.error); return }
       setState(res.state)
@@ -1954,6 +1938,17 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             // throw away a six hour stint's payoff, so the card only closes
             // through one of the two buttons while one is on the table.
             const dismissable = !offer
+            // What the hand ends up with given the current ticks. The same
+            // merge the server performs, so the preview cannot promise
+            // something the action would not produce.
+            const merged = offer
+              ? {
+                  power:   picks.power   ? offer.offered.power   : offer.current.power,
+                  dodge:   picks.dodge   ? offer.offered.dodge   : offer.current.dodge,
+                  fortune: picks.fortune ? offer.offered.fortune : offer.current.fortune,
+                }
+              : { power: 0, dodge: 0, fortune: 0 }
+            const anyPicked = picks.power || picks.dodge || picks.fortune
             const prog = crewXPProgress(r.newXP)
             const atMax = r.to >= CREW_MAX_LEVEL
             // Where the bar STARTS. On a level-up it starts empty, because you
@@ -2006,7 +2001,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   </motion.p>
                   <p className="font-karla" style={{ fontSize: '0.78rem', color: '#9c917a', marginTop: 6 }}>
                     {offer
-                      ? 'Take it or leave it. Nothing changes unless you say so.'
+                      ? 'Keep what you like of it. Nothing changes unless you say so.'
                       : 'Off the bunk, drilled and rested'}
                   </p>
 
@@ -2020,9 +2015,60 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                     <motion.div initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: 0.28, type: 'spring', stiffness: 300, damping: 20 }}
                       style={{ marginTop: 14 }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                        <TraitFace label="They carry" name={offer.currentLabel} stats={offer.current} />
-                        <TraitFace label="The deep offers" name={offer.offeredLabel} stats={offer.offered} accent={LEVIATHAN_COLOR} />
+                      {/* STAT BY STAT, because that is what makes this a chase.
+                          Taking the whole trait or none of it meant a +4 you
+                          landed could not be banked while you hunted the other
+                          two, so the odds never moved however long you played.
+                          Ticking one stat keeps it and leaves the rest hunting. */}
+                      <div style={{ borderRadius: 12, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(196,169,106,0.2)', padding: '0.7rem 0.75rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '2.4rem 1fr 1fr', gap: 6, marginBottom: 5 }}>
+                          <span />
+                          <span className="font-karla font-700 uppercase" style={{ fontSize: '0.52rem', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>Carries</span>
+                          <span className="font-karla font-700 uppercase" style={{ fontSize: '0.52rem', letterSpacing: '0.1em', color: LEVIATHAN_COLOR, textAlign: 'center' }}>Offered</span>
+                        </div>
+                        {(['power', 'dodge', 'fortune'] as const).map(k => {
+                          const label = k === 'power' ? 'PWR' : k === 'dodge' ? 'DGE' : 'FTN'
+                          const cur = offer.current[k], off = offer.offered[k]
+                          const taken = picks[k]
+                          const same = cur === off
+                          return (
+                            <button key={k} type="button"
+                              onClick={() => setPicks(p => ({ ...p, [k]: !p[k] }))}
+                              disabled={offerBusy !== null}
+                              aria-pressed={taken}
+                              aria-label={`${label}: carries ${cur}, offered ${off}. ${taken ? 'Taking the offer' : 'Keeping what they carry'}.`}
+                              style={{
+                                width: '100%', display: 'grid', gridTemplateColumns: '2.4rem 1fr 1fr', gap: 6,
+                                alignItems: 'center', padding: '0.32rem 0.2rem', borderRadius: 8, font: 'inherit',
+                                background: taken ? `${LEVIATHAN_COLOR}1c` : 'transparent',
+                                border: `1px solid ${taken ? `${LEVIATHAN_COLOR}66` : 'transparent'}`,
+                                cursor: offerBusy ? 'not-allowed' : 'pointer', touchAction: 'manipulation',
+                              }}>
+                              <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)', textAlign: 'left' }}>{label}</span>
+                              <span className="font-karla font-700" style={{
+                                fontSize: '0.82rem', fontVariantNumeric: 'tabular-nums', textAlign: 'center',
+                                color: taken ? 'rgba(255,255,255,0.28)' : '#e6dcc2',
+                                textDecoration: taken && !same ? 'line-through' : 'none',
+                              }}>{cur > 0 ? `+${cur}` : cur}</span>
+                              <span className="font-karla font-700" style={{
+                                fontSize: '0.82rem', fontVariantNumeric: 'tabular-nums', textAlign: 'center',
+                                color: taken ? (off > cur ? '#7fdfa3' : off < cur ? '#e08c8c' : '#e6dcc2') : 'rgba(255,255,255,0.28)',
+                              }}>{off > 0 ? `+${off}` : off}</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+
+                      {/* What they walk away as. Shown live so the trade is
+                          settled before the tap, not discovered after it. */}
+                      <div style={{ marginTop: 8, padding: '0.55rem 0.7rem', borderRadius: 11, background: `${LEVIATHAN_COLOR}12`, border: `1px solid ${LEVIATHAN_COLOR}4d`, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+                        <span className="font-karla font-700 uppercase" style={{ fontSize: '0.55rem', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.45)' }}>Result</span>
+                        <span className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: LEVIATHAN_COLOR }}>
+                          {traitLabel(merged) || 'No trait'}
+                        </span>
+                        <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#c6e8e2', fontVariantNumeric: 'tabular-nums' }}>
+                          {statLine(merged)}
+                        </span>
                       </div>
                     </motion.div>
                   )}
@@ -2062,13 +2108,15 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                         disabled={offerBusy !== null} whileTap={{ scale: 0.94 }}
                         className="font-cinzel font-700 uppercase"
                         style={{ padding: '0.72rem 0.5rem', borderRadius: 12, letterSpacing: '0.06em', fontSize: '0.75rem', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.78)', cursor: offerBusy ? 'not-allowed' : 'pointer' }}>
-                        {offerBusy === 'keep' ? 'Keeping…' : 'Keep theirs'}
+                        {offerBusy === 'keep' ? 'Keeping…' : 'Keep all'}
                       </motion.button>
-                      <motion.button onClick={() => resolveOffer(offer.crewId, true)}
+                      <motion.button onClick={() => resolveOffer(offer.crewId, anyPicked)}
                         disabled={offerBusy !== null} whileTap={{ scale: 0.94 }}
                         className="font-cinzel font-700 uppercase"
                         style={{ padding: '0.72rem 0.5rem', borderRadius: 12, letterSpacing: '0.06em', fontSize: '0.75rem', background: `${LEVIATHAN_COLOR}26`, border: `1px solid ${LEVIATHAN_COLOR}8a`, color: '#eafaf7', boxShadow: `0 0 14px ${LEVIATHAN_COLOR}22`, cursor: offerBusy ? 'not-allowed' : 'pointer' }}>
-                        {offerBusy === 'take' ? 'Taking…' : 'Take the cut'}
+                        {offerBusy === 'take' ? 'Taking…'
+                          : anyPicked ? `Take ${[picks.power && 'PWR', picks.dodge && 'DGE', picks.fortune && 'FTN'].filter(Boolean).join(' ')}`
+                          : 'Take nothing'}
                       </motion.button>
                     </div>
                   ) : (
@@ -2269,8 +2317,9 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                     <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.78)', lineHeight: 1.5 }}>
                       Bunk {next.bunks} sits deepest in the hall. Every stint finished there cuts that hand a{' '}
                       <span style={{ color: LEVIATHAN_COLOR, fontWeight: 700 }}>fresh trait</span> and offers it beside
-                      the one they carry. Nothing changes unless you take it, and it is the only place a trait can
-                      reach 4, which is the only way to a Divine hand.
+                      the one they carry, taken <span style={{ color: LEVIATHAN_COLOR, fontWeight: 700 }}>one stat at a
+                      time</span> so nothing good is ever thrown back with the bad. It is the only place a stat can
+                      reach 4, and the only road to a Divine hand.
                     </p>
                   </div>
                 )}

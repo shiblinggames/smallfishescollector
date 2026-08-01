@@ -596,7 +596,8 @@ function BunkPicker({
             </p>
             <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.78)', lineHeight: 1.5 }}>
               When the stint ends the deep cuts them a <span style={{ color: LEVIATHAN, fontWeight: 700 }}>fresh trait</span> and
-              shows it to you beside the one they carry. Nothing changes unless you take it, and only here can a trait reach 4.
+              shows it beside the one they carry. Take it <span style={{ color: LEVIATHAN, fontWeight: 700 }}>stat by stat</span>, so a
+              good one is banked while you keep hunting the rest. Only here can a stat reach 4.
             </p>
           </div>
         )}

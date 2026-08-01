@@ -15,7 +15,9 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { clampHallTier } from '@/lib/crewHall'
 import { canBunk, drillsMaxed, hallTierRequiredFor, ladderHallLocked, nextDrillCost, nextStoresCost, storesMaxed, tierNumeral } from '@/lib/crewBunks'
-import { bunkContext, loadBunks, releaseBunk, NEUTRAL_TRAIT, type TraitOffer } from '@/lib/crewBunkSettle'
+import { bunkContext, loadBunks, releaseBunk, type TraitOffer } from '@/lib/crewBunkSettle'
+import { decodeTraitStats, netTraitStats } from '@/lib/crewEffects'
+import { encodeTraitId } from '@/lib/crewGen'
 import type { CrewXPGrant } from '@/lib/crewXPGrant'
 import { getCrewState, type CrewActionResult, type CrewState } from './actions'
 
@@ -104,31 +106,55 @@ export async function collectBunk(crewId: number): Promise<BunkClaimResult> {
   return state ? { state, grants, freed, offers } : { error: 'Failed to load crew' }
 }
 
+/** Which of the three stats to take off the offer. */
+export type TraitPicks = { power: boolean; dodge: boolean; fortune: boolean }
+
 /**
- * Take the trait the deep offered. The id is read back off the CREW ROW, never
- * from the caller, so a hand-rolled request cannot mint a trait: the only thing
- * the client gets to say is which crew, and yes.
+ * Take an offered trait, STAT BY STAT. Anything not picked keeps its current
+ * value, so a good stat is banked and the hunt continues on the other two.
+ *
+ * This is the ratchet, and it is the whole reason the Leviathan bunk is a
+ * chase rather than a slot machine. Every offer used to be all or nothing,
+ * which meant Divine could only ever arrive as one exact simultaneous roll of
+ * three 4s: about 1 in 743, and no amount of accepting ever moved it, because
+ * the roll never reads what the hand is carrying. Banking stats one at a time
+ * turns that into roughly 16 offers. The brake is the bunk itself, which is
+ * one slot producing four offers a day for the entire roster.
+ *
+ * The VALUES are read off the crew row, never from the caller. All the client
+ * gets to say is which crew and which of three stats, so the worst a forged
+ * request can do is pick a different subset of a trait the server itself
+ * rolled.
  */
-export async function acceptTraitOffer(crewId: number): Promise<CrewActionResult> {
+export async function acceptTraitOffer(crewId: number, picks: TraitPicks): Promise<CrewActionResult> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not signed in' }
   const admin = createAdminClient()
 
   const { data: crew } = await admin
-    .from('user_crew').select('id, trait_offer, died_at')
+    .from('user_crew').select('id, effects, trait_offer, died_at')
     .eq('id', crewId).eq('user_id', user.id).maybeSingle()
   if (!crew) return { error: 'Crew not found' }
   if ((crew as any).died_at) return { error: 'That hand is gone.' }
 
   const offer = (crew as any).trait_offer as string | null
   if (!offer) return { error: 'There is no offer to take.' }
+  const offered = decodeTraitStats(offer)
+  if (!offered) return { error: 'That offer could not be read.' }
 
-  // A neutral offer means "no trait at all", which is stored as [] rather than
-  // an all-zero id so the roster reads it the same as a hand who never had one.
-  const effects = offer === NEUTRAL_TRAIT ? [] : [offer]
+  const current = netTraitStats(((crew as any).effects ?? []) as string[])
+  const merged = {
+    power:   picks?.power   ? offered.power   : current.power,
+    dodge:   picks?.dodge   ? offered.dodge   : current.dodge,
+    fortune: picks?.fortune ? offered.fortune : current.fortune,
+  }
+  // An all-zero result is stored as [] rather than an all-zero id, so the
+  // roster reads it the same as a hand who never had a trait.
+  const id = encodeTraitId(merged)
+  const effects = id ? [id] : []
 
-  // Guarded on the exact offer we priced against, so a double tap cannot apply
+  // Guarded on the exact offer we merged against, so a double tap cannot apply
   // one offer and then a newer one that arrived in between.
   const { data: applied } = await admin
     .from('user_crew').update({ effects, trait_offer: null })
