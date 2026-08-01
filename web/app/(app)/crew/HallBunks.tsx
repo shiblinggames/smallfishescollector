@@ -149,7 +149,10 @@ export default function HallBunks({
           const crew = bunked[i]
           if (i >= slots) {
             // Which hall opens THIS one, so the lock names its own key.
-            const opensAt = hallTierDef(Math.min(CREW_HALL_MAX_TIER, i))
+            // i is 0-BASED, so slot i is bunk i+1, and tier N opens bunk N —
+            // hence i + 1. Passing i named the tier that opens the PREVIOUS
+            // bunk, so every lock was one tier short.
+            const opensAt = hallTierDef(Math.min(CREW_HALL_MAX_TIER, i + 1))
             return (
               <div key={`locked-${i}`} title={`${opensAt.name} opens this bunk`}
                 aria-label={`Locked bunk. ${opensAt.name} opens it.`}
