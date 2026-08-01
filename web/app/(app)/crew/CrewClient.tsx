@@ -1662,7 +1662,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   </span>
                   {isLeviathanSlot(nextTier.bunks - 1) && (
                     <span className="font-karla font-700 uppercase" style={{ fontSize: '0.66rem', letterSpacing: '0.08em', color: LEVIATHAN_COLOR }}>
-                      + The Leviathan bunk cuts new traits
+                      + The Leviathan bunk rerolls traits
                     </span>
                   )}
                 </span>
@@ -1997,7 +1997,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
 
                   <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.35 }}
                     className="font-cinzel font-700" style={{ fontSize: '1.25rem', color: accent, marginTop: 12, textShadow: burst ? `0 0 12px ${accent}44` : 'none' }}>
-                    {offer ? `The deep cut ${r.name} a new trait` : levelled ? `${r.name} levelled up!` : `${r.name} is back`}
+                    {offer ? `A new trait for ${r.name}` : levelled ? `${r.name} levelled up!` : `${r.name} is back`}
                   </motion.p>
                   <p className="font-karla" style={{ fontSize: '0.78rem', color: '#9c917a', marginTop: 6 }}>
                     {offer
@@ -2108,15 +2108,22 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                         disabled={offerBusy !== null} whileTap={{ scale: 0.94 }}
                         className="font-cinzel font-700 uppercase"
                         style={{ padding: '0.72rem 0.5rem', borderRadius: 12, letterSpacing: '0.06em', fontSize: '0.75rem', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.78)', cursor: offerBusy ? 'not-allowed' : 'pointer' }}>
-                        {offerBusy === 'keep' ? 'Keeping…' : 'Keep all'}
+                        {offerBusy === 'keep' ? 'Keeping…' : 'Keep current'}
                       </motion.button>
-                      <motion.button onClick={() => resolveOffer(offer.crewId, anyPicked)}
-                        disabled={offerBusy !== null} whileTap={{ scale: 0.94 }}
+                      <motion.button onClick={() => resolveOffer(offer.crewId, true)}
+                        disabled={offerBusy !== null || !anyPicked} whileTap={{ scale: 0.94 }}
                         className="font-cinzel font-700 uppercase"
-                        style={{ padding: '0.72rem 0.5rem', borderRadius: 12, letterSpacing: '0.06em', fontSize: '0.75rem', background: `${LEVIATHAN_COLOR}26`, border: `1px solid ${LEVIATHAN_COLOR}8a`, color: '#eafaf7', boxShadow: `0 0 14px ${LEVIATHAN_COLOR}22`, cursor: offerBusy ? 'not-allowed' : 'pointer' }}>
+                        style={{
+                          padding: '0.72rem 0.5rem', borderRadius: 12, letterSpacing: '0.06em', fontSize: '0.75rem',
+                          background: anyPicked ? `${LEVIATHAN_COLOR}26` : 'rgba(255,255,255,0.04)',
+                          border: `1px solid ${anyPicked ? `${LEVIATHAN_COLOR}8a` : 'rgba(255,255,255,0.12)'}`,
+                          color: anyPicked ? '#eafaf7' : 'rgba(255,255,255,0.35)',
+                          boxShadow: anyPicked ? `0 0 14px ${LEVIATHAN_COLOR}22` : undefined,
+                          cursor: offerBusy || !anyPicked ? 'not-allowed' : 'pointer',
+                        }}>
                         {offerBusy === 'take' ? 'Taking…'
                           : anyPicked ? `Take ${[picks.power && 'PWR', picks.dodge && 'DGE', picks.fortune && 'FTN'].filter(Boolean).join(' ')}`
-                          : 'Take nothing'}
+                          : 'Pick a stat'}
                       </motion.button>
                     </div>
                   ) : (
@@ -2315,11 +2322,11 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                       And the bunk itself is different
                     </p>
                     <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.78)', lineHeight: 1.5 }}>
-                      Bunk {next.bunks} sits deepest in the hall. Every stint finished there cuts that hand a{' '}
-                      <span style={{ color: LEVIATHAN_COLOR, fontWeight: 700 }}>fresh trait</span> and offers it beside
-                      the one they carry, taken <span style={{ color: LEVIATHAN_COLOR, fontWeight: 700 }}>one stat at a
-                      time</span> so nothing good is ever thrown back with the bad. It is the only place a stat can
-                      reach 4, and the only road to a Divine hand.
+                      Bunk {next.bunks} sits deepest in the hall. Every stint finished there rolls that hand a{' '}
+                      <span style={{ color: LEVIATHAN_COLOR, fontWeight: 700 }}>brand new trait</span> and shows it beside
+                      the one they already have. Keep it <span style={{ color: LEVIATHAN_COLOR, fontWeight: 700 }}>one stat
+                      at a time</span>, so a good number is never thrown back with a bad one. It is the only place a stat
+                      can reach 4, and the only road to a Divine hand.
                     </p>
                   </div>
                 )}

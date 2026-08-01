@@ -75,7 +75,7 @@ export function storesMaxed(level: number): boolean {
  * THE LEVIATHAN BUNK.
  *
  * The sixth bunk, opened only by the top hall, does something the other five
- * do not: every stint that finishes there cuts a fresh trait and OFFERS it.
+ * do not: every stint that finishes there rolls a new trait and OFFERS it.
  *
  * Offers, not applies. It used to keep the roll automatically when it beat the
  * old one on a flat stat sum, which sounds generous and was actually the thing

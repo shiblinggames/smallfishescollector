@@ -80,9 +80,9 @@ export const BADGES: Badge[] = [
   // ── Crew Hall, batch 31 — the bunks and the deep ──
   { id: 'leviathan_hall',   name: 'Leviathan Hall',    description: 'Build the Crew Hall to its final tier',           imageUrl: '/badges/leviathan_hall.png',   difficulty: 'veteran'  },
   { id: 'fully_outfitted',  name: 'Fully Outfitted',   description: 'Max both Drills and Stores',                     imageUrl: '/badges/fully_outfitted.png',  difficulty: 'veteran'  },
-  { id: 'deep_cut',         name: 'Deep Cut',          description: 'Take a trait with a stat the deep alone can cut', imageUrl: '/badges/deep_cut.png',         difficulty: 'seasoned' },
+  { id: 'deep_cut',         name: 'Deep Cut',          description: 'Carry a stat only the Leviathan bunk can roll',   imageUrl: '/badges/deep_cut.png',         difficulty: 'seasoned' },
   { id: 'full_complement',  name: 'Full Complement',   description: 'Level 10 crew to 100',                           imageUrl: '/badges/full_complement.png',  difficulty: 'master'   },
-  { id: 'divine_hand',      name: 'Divine Hand',       description: 'Cut a crew a Divine trait',                      imageUrl: '/badges/divine_hand.png',      difficulty: 'master'   },
+  { id: 'divine_hand',      name: 'Divine Hand',       description: 'Land a Divine trait on a crew',                  imageUrl: '/badges/divine_hand.png',      difficulty: 'master'   },
   { id: 'six_divine',       name: 'Choir of the Deep', description: 'Hold six crew with Divine traits at once',       imageUrl: '/badges/six_divine.png',       difficulty: 'grandmaster' },
 
   // ── Expeditions & combat ─────────────────────────────────────────────────
@@ -359,8 +359,8 @@ export const BADGE_DETAIL: Record<string, string> = {
   fully_outfitted:  'Buy Drills VI and Stores VI. The hall trains as fast and as long as it ever will.',
   deep_cut:         'Carry a trait with a stat at 4. No recruit board rolls that high, so there is only one place it can have come from.',
   full_complement:  'Level ten separate crew to 100. A whole watch of them, every one finished.',
-  divine_hand:      'Cut a crew the Divine trait: +4 Power, +4 Savvy and +4 Fortune, the ceiling of the encoding and the rarest thing the deep gives up.',
-  six_divine:       'Hold six Divine crew at the same time. Six perfect hands, cut one stat at a time out of the Leviathan bunk.',
+  divine_hand:      'Land the Divine trait on a crew: +4 Power, +4 Savvy and +4 Fortune, the ceiling of the encoding and the rarest thing the deep gives up.',
+  six_divine:       'Hold six Divine crew at the same time. Six perfect hands, built one stat at a time out of the Leviathan bunk.',
   navigator:        'Reach Navigation Level 50, earned steadily on raids and voyages.',
   fleet_admiral:    'Complete 100 voyages. Pure patience and a fleet that keeps sailing.',
   opening_salvo:    'Land a single raid cannon hit for 50 or more damage. Your guns are finding their range.',

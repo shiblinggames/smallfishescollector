@@ -184,7 +184,7 @@ export default function HallBunks({
           background: `${LEVIATHAN}12`, border: `1px solid ${LEVIATHAN}55`,
         }}>
           <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.58rem', color: LEVIATHAN, marginBottom: 6 }}>
-            {waitingOffers.length === 1 ? 'A cut awaits your word' : `${waitingOffers.length} cuts await your word`}
+            {waitingOffers.length === 1 ? 'A trait offer awaits your word' : `${waitingOffers.length} trait offers await your word`}
           </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {waitingOffers.map(crew => (
@@ -228,9 +228,9 @@ export default function HallBunks({
             const opensAt = hallTierDef(Math.min(CREW_HALL_MAX_TIER, i + 1))
             return (
               <div key={`locked-${i}`}
-                title={lev ? `${opensAt.name} opens the Leviathan bunk, which offers a fresh trait every stint` : `${opensAt.name} opens this bunk`}
+                title={lev ? `${opensAt.name} opens the Leviathan bunk, which rolls a new trait every stint` : `${opensAt.name} opens this bunk`}
                 aria-label={lev
-                  ? `Locked. ${opensAt.name} opens the Leviathan bunk, which offers a fresh trait every stint.`
+                  ? `Locked. ${opensAt.name} opens the Leviathan bunk, which rolls a new trait every stint.`
                   : `Locked bunk. ${opensAt.name} opens it.`}
                 style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,
@@ -251,9 +251,9 @@ export default function HallBunks({
             return (
               <button key={`empty-${i}`} type="button" disabled={pending}
                 onClick={() => setPicking(i)}
-                title={lev ? 'The Leviathan bunk. Every stint here cuts a fresh trait and offers it to you.' : undefined}
+                title={lev ? 'The Leviathan bunk. Every stint here rolls a new trait and offers it to you.' : undefined}
                 aria-label={lev
-                  ? 'Empty Leviathan bunk. Tap to put a crew in it. Every stint offers them a fresh trait.'
+                  ? 'Empty Leviathan bunk. Tap to put a crew in it. Every stint rolls them a new trait.'
                   : `Empty bunk ${i + 1}. Tap to put a crew in it.`}
                 style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,
@@ -279,7 +279,7 @@ export default function HallBunks({
                 </span>
                 {lev && (
                   <span className="font-karla" style={{ fontSize: '0.55rem', color: `${LEVIATHAN}99`, textAlign: 'center', lineHeight: 1.3, padding: '0 0.2rem' }}>
-                    Cuts new traits
+                    Rolls new traits
                   </span>
                 )}
               </button>
@@ -553,7 +553,7 @@ function BunkPicker({
   pending: boolean
   stint: string
   payout: number
-  /** Filling the sixth bunk, which offers a fresh trait every stint. */
+  /** Filling the sixth bunk, which rolls a new trait every stint. */
   leviathan: boolean
   onPick: (crewId: number) => void
   onClose: () => void
@@ -595,9 +595,9 @@ function BunkPicker({
               Deep water changes a hand
             </p>
             <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.78)', lineHeight: 1.5 }}>
-              When the stint ends the deep cuts them a <span style={{ color: LEVIATHAN, fontWeight: 700 }}>fresh trait</span> and
-              shows it beside the one they carry. Take it <span style={{ color: LEVIATHAN, fontWeight: 700 }}>stat by stat</span>, so a
-              good one is banked while you keep hunting the rest. Only here can a stat reach 4.
+              When the stint ends they are rolled a <span style={{ color: LEVIATHAN, fontWeight: 700 }}>brand new trait</span>, shown
+              beside the one they already have. Keep it <span style={{ color: LEVIATHAN, fontWeight: 700 }}>stat by stat</span>, so a good
+              number is locked in while you keep rolling for the rest. Only here can a stat reach 4.
             </p>
           </div>
         )}
