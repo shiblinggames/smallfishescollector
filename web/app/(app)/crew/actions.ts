@@ -11,7 +11,7 @@ import {
   groupForSlug, rollRarity, rollCrew, crewDisplayName,
   FREE_WEIGHTS, GEM_WEIGHTS, type CrewRarity,
 } from '@/lib/crewGen'
-import { clampHallTier, nextHallTier, type CrewHallTierNum } from '@/lib/crewHall'
+import { clampHallTier, nextHallTier, hallUpgradeBlocker, type CrewHallTierNum } from '@/lib/crewHall'
 import { bunkContext, loadBunks } from '@/lib/crewBunkSettle'
 import { hallBunksOpen, stintDone, storesCapHours } from '@/lib/crewBunks'
 import { crewLevelFromXP } from '@/lib/crewLevel'
@@ -541,7 +541,7 @@ export async function upgradeCrewHall(): Promise<CrewActionResult> {
 
   const { data: prof } = await admin
     .from('profiles')
-    .select('doubloons, crew_hall_tier')
+    .select('doubloons, crew_hall_tier, expedition_xp')
     .eq('id', user.id)
     .single()
   const current = clampHallTier((prof as any)?.crew_hall_tier)
@@ -549,7 +549,11 @@ export async function upgradeCrewHall(): Promise<CrewActionResult> {
   if (!next) return { error: 'Crew Hall is fully upgraded' }
 
   const doubloons = (prof as any)?.doubloons ?? 0
-  if (doubloons < next.cost) return { error: 'Not enough doubloons' }
+  // Server-side gate, not just a disabled button — the action is callable
+  // directly. Same shape as the gear buys in lib/gearGating.
+  const blocker = hallUpgradeBlocker(current, getLevelFromXP((prof as any)?.expedition_xp ?? 0), doubloons)
+  if (blocker === 'nav') return { error: `Reach Navigation ${next.minNav} first.` }
+  if (blocker === 'doubloons') return { error: 'Not enough doubloons' }
 
   // Guarded update: gte() stops concurrent taps from overdrawing, and the
   // eq() on the current tier stops a double-submit from buying two tiers

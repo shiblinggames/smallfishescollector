@@ -31,6 +31,14 @@ export type CrewHallTierDef = {
   bunks: number
   /** Doubloon cost to UPGRADE TO this tier (0 for the base tier). */
   cost: number
+  /**
+   * Navigation level needed to buy this tier. Same reason gear buys are level
+   * gated (lib/gearGating): without it, casino and voyage gold lets a low-Nav
+   * captain jump straight to six bunks. It matters double here because the
+   * training rate itself scales on Nav, so the hall and the level that feeds
+   * it advance together.
+   */
+  minNav: number
   /** Theme accent for the recruit-board region + upgrade UI. */
   accent: string
   /** Short flavor line shown on the hall panel + upgrade modal. */
@@ -41,34 +49,34 @@ export type CrewHallTierDef = {
 
 export const CREW_HALL_TIERS: Record<CrewHallTierNum, CrewHallTierDef> = {
   1: {
-    tier: 1, name: 'Driftwood Hall', bunks: 1, cost: 0,
+    tier: 1, name: 'Driftwood Hall', bunks: 1, cost: 0, minNav: 1,
     accent: '#97836a',
     flavor: 'Salvaged planks, a leaky roof, and one bunk in the corner.',
   },
   2: {
-    tier: 2, name: 'Oakhewn Hall', bunks: 2, cost: 5_000,
+    tier: 2, name: 'Oakhewn Hall', bunks: 2, cost: 5_000, minNav: 8,
     accent: '#b3814a',
     flavor: 'Solid oak beams and room to drill. Word spreads.',
   },
   3: {
-    tier: 3, name: 'Brassbound Hall', bunks: 3, cost: 15_000,
+    tier: 3, name: 'Brassbound Hall', bunks: 3, cost: 15_000, minNav: 20,
     accent: '#d9a83a',
     flavor: 'Brass fittings, a proper bar, and bunks that see real use.',
   },
   4: {
-    tier: 4, name: 'Gilded Hall', bunks: 4, cost: 45_000,
+    tier: 4, name: 'Gilded Hall', bunks: 4, cost: 45_000, minNav: 35,
     accent: '#f0c040',
     flavor: 'Gold leaf on the rafters, and drillmasters who know their trade.',
     glow: 'rgba(240,192,64,0.10)',
   },
   5: {
-    tier: 5, name: 'Hall of Legends', bunks: 5, cost: 135_000,
+    tier: 5, name: 'Hall of Legends', bunks: 5, cost: 135_000, minNav: 55,
     accent: '#ffd966',
     flavor: 'Names sung in every port. Every hand who bunks here leaves it sharper.',
     glow: 'rgba(255,217,102,0.16)',
   },
   6: {
-    tier: 6, name: 'Leviathan Hall', bunks: 6, cost: 405_000,
+    tier: 6, name: 'Leviathan Hall', bunks: 6, cost: 405_000, minNav: 75,
     accent: '#fff0c4',
     flavor: 'Rafters cut from something that used to swim. Six bunks, and a queue for them.',
     glow: 'rgba(255,240,196,0.20)',
@@ -86,8 +94,25 @@ export function hallTierDef(t: number | null | undefined): CrewHallTierDef {
   return CREW_HALL_TIERS[clampHallTier(t)]
 }
 
-/** The tier above the given one, or null when the hall is maxed. */
+/** The tier above the given one, or null when the hall is maxed. Deliberately
+ *  ignores the Nav gate: the next tier is still shown when it is out of reach,
+ *  with the requirement on it, so the ladder is legible before you can climb
+ *  it. Use `canUpgradeHall` for whether it can actually be bought. */
 export function nextHallTier(t: number | null | undefined): CrewHallTierDef | null {
   const cur = clampHallTier(t)
   return cur >= CREW_HALL_MAX_TIER ? null : CREW_HALL_TIERS[(cur + 1) as CrewHallTierNum]
+}
+
+/** Why this upgrade cannot be bought yet, or null if it can. One source of
+ *  truth for the button, the confirm sheet and the server action. */
+export function hallUpgradeBlocker(
+  tier: number | null | undefined,
+  navLevel: number,
+  doubloons: number,
+): 'maxed' | 'nav' | 'doubloons' | null {
+  const next = nextHallTier(tier)
+  if (!next) return 'maxed'
+  if (navLevel < next.minNav) return 'nav'
+  if (doubloons < next.cost) return 'doubloons'
+  return null
 }

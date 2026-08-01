@@ -13,7 +13,7 @@ import {
 import { BLOOD_REROLL_TIERS, BLOOD_SKIN_GAMBLE_COST } from '@/lib/gauntlet'
 import { crewSkinsForSlug, getCrewSkin, getCrewSkinByFilename, skinArtGlow, CREW_SKINS } from '@/lib/crewSkins'
 import { ChaseSkinFx } from '@/components/ChaseSkinFx'
-import { hallTierDef, nextHallTier, CREW_HALL_MAX_TIER } from '@/lib/crewHall'
+import { hallTierDef, nextHallTier, hallUpgradeBlocker, CREW_HALL_MAX_TIER } from '@/lib/crewHall'
 import { crewAssignment } from '@/lib/crewAssignment'
 import HallBunks from './HallBunks'
 import { bunkCrew, claimBunks, buyDrill, buyStores } from './bunkActions'
@@ -1346,6 +1346,10 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
         {activeTab === 'hall' && (() => {
           const hall = hallTierDef(state.hallTier)
           const nextTier = nextHallTier(state.hallTier)
+          // One source of truth for why the next tier is out of reach, shared
+          // with the confirm sheet and the server action.
+          const blocked = hallUpgradeBlocker(state.hallTier, state.navLevel, state.doubloons)
+          const navShort = blocked === 'nav'
           return (
         <>
         {/* EXACTLY the roster card's background, not a tinted one of its own.
@@ -1388,7 +1392,17 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   ))}
                 </div>
               </div>
-              {nextTier ? (
+              {nextTier && navShort ? (
+                <span className="font-karla font-700 uppercase" title={`The next hall needs Navigation ${nextTier.minNav}`} style={{
+                  flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5,
+                  padding: '0.34rem 0.7rem', borderRadius: 999,
+                  fontSize: '0.72rem', letterSpacing: '0.08em',
+                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.2)',
+                  color: 'rgba(255,255,255,0.6)', whiteSpace: 'nowrap',
+                }}>
+                  Nav {nextTier.minNav}
+                </span>
+              ) : nextTier ? (
                 <button
                   onClick={() => setHallUpgradeOpen(true)}
                   className="font-karla font-700 uppercase active:scale-95"
@@ -1419,6 +1433,11 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             <p className="font-karla font-600" style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.78)', marginTop: 5, lineHeight: 1.45 }}>
               <span style={{ color: hall.accent }}>{hall.bunks} bunks</span> for training idle crew
             </p>
+            {navShort && nextTier && (
+              <p className="font-karla font-600" style={{ fontSize: '0.76rem', color: '#9fc4e8', marginTop: 4, lineHeight: 1.45 }}>
+                {nextTier.name} opens at Navigation {nextTier.minNav}
+              </p>
+            )}
             <p className="font-karla" style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.55)', fontStyle: 'italic', marginTop: 4, lineHeight: 1.45 }}>
               {hall.flavor}
             </p>
@@ -1743,7 +1762,10 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
         {hallUpgradeOpen && (() => {
           const next = nextHallTier(state.hallTier)
           if (!next) return null
-          const canAfford = state.doubloons >= next.cost
+          const navShortHere = state.navLevel < next.minNav
+          // canAfford now means "can actually buy": the sheet must not offer a
+          // confirm the server would reject.
+          const canAfford = state.doubloons >= next.cost && !navShortHere
           return (
             <div
               onClick={() => { if (!hallBusy) setHallUpgradeOpen(false) }}
@@ -1785,6 +1807,11 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                     {next.cost.toLocaleString()} <span style={{ color: '#e8c87a' }}>⟡</span>
                   </span>
                 </div>
+                {navShortHere && (
+                  <p className="font-karla font-600" style={{ fontSize: '0.76rem', color: '#9fc4e8', marginBottom: 8, lineHeight: 1.45 }}>
+                    Needs Navigation {next.minNav}. You are Navigation {state.navLevel}.
+                  </p>
+                )}
                 <p className="font-karla" style={{ fontSize: '0.64rem', color: canAfford ? 'rgba(255,255,255,0.4)' : '#f2b0b0', marginBottom: 12 }}>
                   Your doubloons: {state.doubloons.toLocaleString()} ⟡
                 </p>
