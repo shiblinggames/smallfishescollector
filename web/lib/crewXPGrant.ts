@@ -76,3 +76,21 @@ export async function grantXPToCrewIds(admin: Admin, userId: string, crewIds: nu
   const names = await resolveNames(admin, rows.map(r => Number(r.id)))
   return shape(rows, names)
 }
+
+/** Grant a DIFFERENT amount to each crew. The two helpers above both apply one
+ *  flat amount to a whole set, which is right for a raid (the party shares the
+ *  kill) but wrong for the Bunkhouse: every bunk has its own `since`, so a
+ *  single claim owes each crew a different number. */
+export async function grantXPPairs(
+  admin: Admin,
+  userId: string,
+  pairs: { id: number; xp: number }[],
+): Promise<CrewXPGrant[]> {
+  const live = pairs.filter(p => p.xp > 0)
+  if (live.length === 0) return []
+  const { data } = await admin.rpc('grant_crew_xp_pairs', { uid: userId, pairs: live })
+  const rows = (data ?? []) as any[]
+  if (rows.length === 0) return []
+  const names = await resolveNames(admin, rows.map(r => Number(r.id)))
+  return shape(rows, names)
+}

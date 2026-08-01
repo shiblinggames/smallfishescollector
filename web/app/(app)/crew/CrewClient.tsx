@@ -874,7 +874,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
   // an event rather than a silent restyle).
   const [hallUpgradeOpen, setHallUpgradeOpen] = useState(false)
   const [hallBusy, setHallBusy] = useState(false)
-  const [hallCelebrate, setHallCelebrate] = useState<{ name: string; startLevel: number; accent: string } | null>(null)
+  const [hallCelebrate, setHallCelebrate] = useState<{ name: string; bunks: number; accent: string } | null>(null)
   useEffect(() => {
     if (!hallCelebrate) return
     const id = setTimeout(() => setHallCelebrate(null), 3000)
@@ -896,7 +896,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
         // Keep the Nav-bar doubloon total in sync (same pattern as repair).
         window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.state.doubloons }))
         vibrate([18, 50, 26])
-        setHallCelebrate({ name: def.name, startLevel: def.startLevel, accent: def.accent })
+        setHallCelebrate({ name: def.name, bunks: def.bunks, accent: def.accent })
       }
       setHallBusy(false)
     })
@@ -1361,7 +1361,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
               )}
             </div>
             <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.62)', marginTop: 4 }}>
-              Recruits start at <span style={{ color: hall.accent }}>Lv {hall.startLevel}</span>
+              <span style={{ color: hall.accent }}>{hall.bunks} bunks</span> for training idle crew
             </p>
             <p className="font-karla" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic', marginTop: 2 }}>
               {hall.flavor}
@@ -1431,7 +1431,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   transition={{ delay: 0.5, duration: 0.4 }}
                   style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.7)' }}
                 >
-                  Recruits now start at <span style={{ color: hallCelebrate.accent }}>Lv {hallCelebrate.startLevel}</span>
+                  Room for <span style={{ color: hallCelebrate.accent }}>{hallCelebrate.bunks}</span> in the bunks now
                 </motion.p>
               </motion.div>
             )}
@@ -1665,7 +1665,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   {next.flavor}
                 </p>
                 <p className="font-karla font-600" style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.78)', marginBottom: 14 }}>
-                  New recruits will start at <span style={{ color: next.accent }}>Lv {next.startLevel}</span>
+                  Opens a bunk, taking the Bunkhouse to <span style={{ color: next.accent }}>{next.bunks}</span>
                 </p>
                 <div className="flex items-center justify-between" style={{
                   padding: '0.55rem 0.75rem', borderRadius: 9,

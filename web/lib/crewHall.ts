@@ -1,15 +1,15 @@
 // Crew Hall upgrade ladder — Darkest Dungeon-style building progression.
-// The hall itself levels up (paid in doubloons, profiles.crew_hall_tier);
-// each tier raises the level NEW recruits arrive at. Existing crew are
-// untouched — this is about the quality of sailor a famous hall attracts,
-// not retroactive training.
+// The hall itself levels up (paid in doubloons, profiles.crew_hall_tier).
 //
-// Why start LEVELS instead of stat bonuses: level is derived from XP
-// (lib/crewLevel.ts), so granting a starting level is just inserting the
-// matching XP — every downstream system (stat ticks at Lv 3/6/9...,
-// ability unlock at Lv 10 via crewClasses, Lv chips, XP bars) works with
-// zero extra wiring. Max tier means recruits arrive raid-ready: ability
-// already unlocked + 3 stat ticks banked.
+// WHAT A TIER BUYS: bunks. The hall used to raise the LEVEL NEW RECRUITS
+// ARRIVED AT (hallStartXP), which was its only mechanical effect and its fatal
+// flaw — it could only ever help crew you did not own yet, so at a full roster
+// the whole 200k ladder did nothing. Only 13 of 67 players ever bought a tier.
+//
+// It now opens bunks in the Bunkhouse (lib/crewBunks.ts), where benched crew
+// train passively. Same prices, same art progression, but the value lands on
+// the crew you already have and keeps landing forever. Recruits arrive at Lv 1
+// for everyone.
 //
 // Cost ladder is exponential (×3 steps, ~200k total) — deliberately the
 // same lifetime investment as the endgame ship (22k→80k→200k), so the
@@ -20,15 +20,14 @@
 // → oak → brass → gold → radiant). Consumed by CrewClient's recruit tab
 // panel + the upgrade modal.
 
-import { XP_TABLE } from './crewLevel'
-
 export type CrewHallTierNum = 1 | 2 | 3 | 4 | 5
 
 export type CrewHallTierDef = {
   tier: CrewHallTierNum
   name: string
-  /** Level new recruits start at while the hall is at this tier. */
-  startLevel: number
+  /** Bunks this tier opens in the Bunkhouse. Beyond these, bunks are bought
+   *  outright (nextBunkCost in lib/crewBunks.ts). */
+  bunks: number
   /** Doubloon cost to UPGRADE TO this tier (0 for the base tier). */
   cost: number
   /** Theme accent for the recruit-board region + upgrade UI. */
@@ -49,35 +48,35 @@ export type CrewHallTierDef = {
 
 export const CREW_HALL_TIERS: Record<CrewHallTierNum, CrewHallTierDef> = {
   1: {
-    tier: 1, name: 'Driftwood Hall', startLevel: 1, cost: 0,
+    tier: 1, name: 'Driftwood Hall', bunks: 2, cost: 0,
     accent: '#97836a',
     base: '#16130f',
-    flavor: 'Salvaged planks and a leaky roof. Greenhorns only.',
+    flavor: 'Salvaged planks and a leaky roof. Two bunks, if you can call them that.',
   },
   2: {
-    tier: 2, name: 'Oakhewn Hall', startLevel: 3, cost: 5_000,
+    tier: 2, name: 'Oakhewn Hall', bunks: 3, cost: 5_000,
     accent: '#b3814a',
     base: '#1a130c',
-    flavor: 'Solid oak beams. Word spreads, and sailors with sea legs sign on.',
+    flavor: 'Solid oak beams and room to drill. Word spreads.',
   },
   3: {
-    tier: 3, name: 'Brassbound Hall', startLevel: 5, cost: 15_000,
+    tier: 3, name: 'Brassbound Hall', bunks: 4, cost: 15_000,
     accent: '#d9a83a',
     base: '#1e170c',
-    flavor: 'Brass fittings and a proper bar. Seasoned crews ask about you.',
+    flavor: 'Brass fittings, a proper bar, and bunks that see real use.',
   },
   4: {
-    tier: 4, name: 'Gilded Hall', startLevel: 7, cost: 45_000,
+    tier: 4, name: 'Gilded Hall', bunks: 5, cost: 45_000,
     accent: '#f0c040',
     base: '#231a0b',
-    flavor: 'Gold leaf on the rafters. Veterans queue at the door.',
+    flavor: 'Gold leaf on the rafters, and drillmasters who know their trade.',
     glow: 'rgba(240,192,64,0.10)',
   },
   5: {
-    tier: 5, name: 'Hall of Legends', startLevel: 10, cost: 135_000,
+    tier: 5, name: 'Hall of Legends', bunks: 6, cost: 135_000,
     accent: '#ffd966',
     base: '#281f0d',
-    flavor: 'Names sung in every port. Recruits arrive with their craft already honed.',
+    flavor: 'Names sung in every port. Every hand who bunks here leaves it sharper.',
     glow: 'rgba(255,217,102,0.16)',
   },
 }
@@ -97,11 +96,4 @@ export function hallTierDef(t: number | null | undefined): CrewHallTierDef {
 export function nextHallTier(t: number | null | undefined): CrewHallTierDef | null {
   const cur = clampHallTier(t)
   return cur >= CREW_HALL_MAX_TIER ? null : CREW_HALL_TIERS[(cur + 1) as CrewHallTierNum]
-}
-
-/** XP a fresh recruit is inserted with at this hall tier. XP_TABLE[n] is
- *  the total XP needed to reach level n+1, so startLevel L = XP_TABLE[L-1]
- *  (0 for Lv 1 — identical to the pre-hall behavior). */
-export function hallStartXP(t: number | null | undefined): number {
-  return XP_TABLE[hallTierDef(t).startLevel - 1] ?? 0
 }

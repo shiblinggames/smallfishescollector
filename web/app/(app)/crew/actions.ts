@@ -11,7 +11,8 @@ import {
   groupForSlug, rollRarity, rollCrew, crewDisplayName,
   FREE_WEIGHTS, GEM_WEIGHTS, type CrewRarity,
 } from '@/lib/crewGen'
-import { clampHallTier, nextHallTier, hallStartXP, type CrewHallTierNum } from '@/lib/crewHall'
+import { clampHallTier, nextHallTier, type CrewHallTierNum } from '@/lib/crewHall'
+import { releaseBunk } from '@/lib/crewBunkSettle'
 import { crewLevelFromXP } from '@/lib/crewLevel'
 import { getCrewSkin, resolveCrewFilename, CREW_SKINS, type EquippedCrewSkins } from '@/lib/crewSkins'
 import { bloodRerollTier, BLOOD_SKIN_GAMBLE_COST, hardcoreUnlocked } from '@/lib/gauntlet'
@@ -97,8 +98,16 @@ export type CrewState = {
   /** user_crew ids currently OUT ON A TRAWL — also locked from reassignment
    *  (they're hard-locked at sea for the hour), with a distinct badge. */
   trawlingCrewIds: number[]
-  /** Crew Hall building tier (1..5). Drives the recruit board's visual
-   *  theme + the level fresh recruits start at (lib/crewHall.ts). */
+  /** user_crew ids currently holding a bunk in the Crew Hall. Unlike the two
+   *  lists above this is NOT a lock: a bunked crew can be assigned freely and
+   *  is evicted automatically (their XP banked) when they are. */
+  bunkedCrewIds: number[]
+  /** Bunks bought outright, on top of the ones the hall tier opens. */
+  bunksBought: number
+  /** Drill level — multiplies the Nav-scaled training rate. */
+  drillLevel: number
+  /** Crew Hall building tier (1..5). Drives the recruit board's visual theme
+   *  and how many bunks the Bunkhouse has (lib/crewHall.ts). */
   hallTier: CrewHallTierNum
   /** Doubloon balance — the hall upgrade currency. */
   doubloons: number
@@ -247,7 +256,7 @@ export async function getCrewState(): Promise<CrewState | null> {
 
   const { data: prof } = await admin
     .from('profiles')
-    .select('gems, is_premium, premium_expires_at, expedition_xp, last_free_recruit_date, ship_tier, crew_hall_tier, doubloons, blood_gems, owned_crew_skins, equipped_crew_skins, is_admin, gauntlet_deepest, raid_node_progress, ship_classes, has_sixth_berth, legendary_unlocks')
+    .select('gems, is_premium, premium_expires_at, expedition_xp, last_free_recruit_date, ship_tier, crew_hall_tier, crew_bunks_bought, crew_drill_level, doubloons, blood_gems, owned_crew_skins, equipped_crew_skins, is_admin, gauntlet_deepest, raid_node_progress, ship_classes, has_sixth_berth, legendary_unlocks')
     .eq('id', user.id)
     .single()
   if (!prof) return null
@@ -270,7 +279,7 @@ export async function getCrewState(): Promise<CrewState | null> {
   // won't be clobbered by this.
   if ((prof as any).last_free_recruit_date !== today) {
     await admin.from('daily_recruits').delete().eq('user_id', user.id)
-    const rows = generateBoardRows(user.id, premium ? 3 : 2, 'free', FREE_WEIGHTS, byGroup, meta, hallStartXP((prof as any).crew_hall_tier), legendaryUnlocks)
+    const rows = generateBoardRows(user.id, premium ? 3 : 2, 'free', FREE_WEIGHTS, byGroup, meta, 0, legendaryUnlocks)
     if (rows.length) await admin.from('daily_recruits').insert(rows)
     await admin.from('profiles').update({ last_free_recruit_date: today }).eq('id', user.id)
   }
@@ -294,12 +303,14 @@ export async function getCrewState(): Promise<CrewState | null> {
   // Surface those ids so the UI can gray out + disable the toggle.
   // Crew out on a Trawl are likewise locked from reassignment (hard-locked
   // at sea for the hour). Surfaced separately so the UI can label them.
-  const [{ data: pendingVoyage }, { data: trawlRows }] = await Promise.all([
+  const [{ data: pendingVoyage }, { data: trawlRows }, { data: bunkRows }] = await Promise.all([
     admin.from('daily_voyages').select('crew_variant_ids').eq('user_id', user.id).eq('status', 'pending').maybeSingle(),
     admin.from('trawls').select('crew_id').eq('user_id', user.id),
+    admin.from('crew_hall_bunks').select('crew_id').eq('user_id', user.id),
   ])
   const lockedCrewIds: number[] = (pendingVoyage as any)?.crew_variant_ids ?? []
   const trawlingCrewIds: number[] = ((trawlRows ?? []) as any[]).map(r => r.crew_id as number)
+  const bunkedCrewIds: number[] = ((bunkRows ?? []) as any[]).map(r => r.crew_id as number)
 
   const ownedCrewSkins = ((prof as any).owned_crew_skins as string[] | null) ?? []
   const equippedCrewSkins = ((prof as any).equipped_crew_skins as EquippedCrewSkins | null) ?? {}
@@ -308,7 +319,9 @@ export async function getCrewState(): Promise<CrewState | null> {
     board: ((boardRows ?? []) as any[]).map(r => toCandidate(r, meta)),
     roster: ((rosterRows ?? []) as any[]).map(r => toMember(r, meta, equippedCrewSkins)).sort(rosterSort),
     capacity, navLevel, gems, isPremium: premium, rerollCost: REROLL_COST,
-    shipCrewSlots, lockedCrewIds, trawlingCrewIds,
+    shipCrewSlots, lockedCrewIds, trawlingCrewIds, bunkedCrewIds,
+    bunksBought: (prof as any).crew_bunks_bought ?? 0,
+    drillLevel: (prof as any).crew_drill_level ?? 1,
     hallTier: clampHallTier((prof as any).crew_hall_tier),
     doubloons: (prof as any).doubloons ?? 0,
     bloodGems: ((prof as any).blood_gems as number | null) ?? 0,
@@ -387,7 +400,7 @@ export async function rerollBoard(bloodTierId?: string | null): Promise<CrewActi
   await admin.from('daily_recruits').delete().eq('user_id', user.id)
   const weights = tier ? tier.weights : GEM_WEIGHTS
   const legendaryUnlocks = ((prof as any)?.legendary_unlocks as string[] | null) ?? []
-  const rows = generateBoardRows(user.id, 3, 'gem', weights, byGroup, meta, hallStartXP((prof as any)?.crew_hall_tier), legendaryUnlocks)
+  const rows = generateBoardRows(user.id, 3, 'gem', weights, byGroup, meta, 0, legendaryUnlocks)
   if (rows.length) await admin.from('daily_recruits').insert(rows)
 
   const state = await getCrewState()
@@ -609,10 +622,18 @@ async function applyAssignment(
   const { crew } = guard
 
   if (target === null || slot === null) {
-    // Bench — clear both columns.
+    // Bench — clear both columns. A bunk is kept deliberately: benched IS the
+    // state a bunked crew lives in, so benching them changes nothing.
     await admin.from('user_crew').update({ voyage_slot: null, raid_slot: null })
       .eq('id', crewId).eq('user_id', userId)
   } else {
+    // AUTO-EVICT. A bunked crew sent to a party gives up their bunk, and
+    // releaseBunk banks what they had already earned first, so XP is never
+    // lost by leaving the bunkhouse. No-op (one indexed lookup) if they were
+    // not bunked. Deliberately not a guard in assertCanReassign: bunking must
+    // never be a thing you have to undo before you can use a crew.
+    await releaseBunk(admin, userId, crewId)
+
     const { data: prof } = await admin.from('profiles').select('ship_tier, ship_classes, has_sixth_berth').eq('id', userId).single()
     const tier = (prof as any)?.ship_tier ?? 0
     // Hull berths + the Ch4 Expanded Quarters augment.
