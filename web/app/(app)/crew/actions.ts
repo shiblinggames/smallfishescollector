@@ -111,11 +111,16 @@ export type CrewState = {
    *  (HALL_BUNKS_LIVE in lib/crewBunks.ts). Hides the UI; the actions enforce
    *  it independently. */
   hallBunksOpen: boolean
+  /**
+   * Crew with an untaken trait offer from the deep, and the trait on the table.
+   * Survives a reload on purpose: the offer is the payoff of a six hour stint,
+   * so closing the tab mid-decision must not throw it away.
+   */
+  traitOffers: Record<number, string>
   /** crew id -> the terms that bunk is running on: when it started, the XP/hour
-   *  agreed at entry and the stint length agreed at entry. Per-bunk rather than
-   *  global, because buying Drills or Stores must not change a stint already
-   *  under way. */
-  /** Per-crew stint terms plus WHICH bunk they are in (0-5; 5 is Leviathan). */
+   *  agreed at entry, the stint length agreed at entry, and WHICH bunk they are
+   *  in (0-5; 5 is the Leviathan bunk). Per-bunk rather than global, because
+   *  buying Drills or Stores must not change a stint already under way. */
   bunkTerms: Record<number, { since: string; rate: number; cap: number; slot: number | null }>
   /** Drill level — multiplies the Nav-scaled training rate (XP per hour). */
   drillLevel: number
@@ -310,7 +315,7 @@ export async function getCrewState(): Promise<CrewState | null> {
   // Crew Hall Graveyard tab, not the active roster.
   const { data: rosterRows } = await admin
     .from('user_crew')
-    .select('id, card_id, rarity, power, dodge, fortune, effects, voyage_slot, raid_slot, xp, nickname')
+    .select('id, card_id, rarity, power, dodge, fortune, effects, voyage_slot, raid_slot, xp, nickname, trait_offer')
     .eq('user_id', user.id)
     .is('died_at', null)
     .order('recruited_at', { ascending: false })
@@ -346,6 +351,13 @@ export async function getCrewState(): Promise<CrewState | null> {
     .filter(r => !stintDone(r.since as string, Date.now(), (r.cap_hours as number | null) ?? liveCap))
     .map(r => r.crew_id as number)
 
+  // Offers the deep has on the table. Read off the roster rows already
+  // fetched, so a pending decision costs no extra round trip.
+  const traitOffers: Record<number, string> = Object.fromEntries(
+    ((rosterRows ?? []) as any[])
+      .filter(r => r.trait_offer)
+      .map(r => [r.id as number, r.trait_offer as string]))
+
   const ownedCrewSkins = ((prof as any).owned_crew_skins as string[] | null) ?? []
   const equippedCrewSkins = ((prof as any).equipped_crew_skins as EquippedCrewSkins | null) ?? {}
 
@@ -353,7 +365,7 @@ export async function getCrewState(): Promise<CrewState | null> {
     board: ((boardRows ?? []) as any[]).map(r => toCandidate(r, meta)),
     roster: ((rosterRows ?? []) as any[]).map(r => toMember(r, meta, equippedCrewSkins)).sort(rosterSort),
     capacity, navLevel, gems, isPremium: premium, rerollCost: REROLL_COST,
-    shipCrewSlots, lockedCrewIds, trawlingCrewIds, bunkedCrewIds, bunkLockedCrewIds, bunkTerms,
+    shipCrewSlots, lockedCrewIds, trawlingCrewIds, bunkedCrewIds, bunkLockedCrewIds, bunkTerms, traitOffers,
     hallBunksOpen: hallBunksOpen((prof as any).is_admin),
     drillLevel: (prof as any).crew_drill_level ?? 1,
     storesLevel: (prof as any).crew_stores_level ?? 1,
@@ -384,7 +396,7 @@ export async function getCrewRoster(): Promise<CrewMember[]> {
   const equippedCrewSkins = ((prof as any)?.equipped_crew_skins as EquippedCrewSkins | null) ?? {}
   const { data: rosterRows } = await admin
     .from('user_crew')
-    .select('id, card_id, rarity, power, dodge, fortune, effects, voyage_slot, raid_slot, xp, nickname')
+    .select('id, card_id, rarity, power, dodge, fortune, effects, voyage_slot, raid_slot, xp, nickname, trait_offer')
     .eq('user_id', user.id)
     .is('died_at', null)
     .order('recruited_at', { ascending: false })

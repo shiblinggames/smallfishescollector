@@ -135,11 +135,35 @@ const MAG_WEIGHTS: Record<CrewRarity, [number, number, number, number]> = {
   4: [10, 20, 30, 40],   // Legendary
 }
 
-function rollMagnitude(rarity: CrewRarity): number {
-  const w = MAG_WEIGHTS[rarity]
-  const total = w[0] + w[1] + w[2] + w[3]
+/** The hard ceiling on a normally-rolled stat. Recruits never exceed this. */
+export const TRAIT_MAX = 3
+
+/**
+ * THE DEEP ROLL. Only the Leviathan bunk rolls on this table, and it is the
+ * only way a 4 ever enters the game.
+ *
+ * Keeping it off the recruit board matters twice over. It means nothing about
+ * the existing balance moves - every crew you can buy still tops out at 3 -
+ * and it means the best trait in the game is something you EARNED out of the
+ * top hall rather than something you got lucky with on a board. A Divine hand
+ * is proof of the chase, not proof of a good draw.
+ */
+const DEEP_MAG_WEIGHTS: Record<CrewRarity, [number, number, number, number, number]> = {
+  1: [58, 25, 11,  5,  1],   // Common:     P(0,1,2,3,4) magnitude
+  2: [37, 29, 20, 10,  4],   // Rare
+  3: [22, 24, 28, 18,  8],   // Epic
+  4: [ 8, 16, 24, 30, 22],   // Legendary
+}
+
+/** The ceiling on a deep roll. */
+export const DEEP_TRAIT_MAX = 4
+
+function rollMagnitude(rarity: CrewRarity, deep = false): number {
+  const w: readonly number[] = deep ? DEEP_MAG_WEIGHTS[rarity] : MAG_WEIGHTS[rarity]
+  let total = 0
+  for (const n of w) total += n
   let r = Math.random() * total
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < w.length; i++) {
     if (r < w[i]) return i
     r -= w[i]
   }
@@ -152,14 +176,20 @@ export interface RolledTrait {
   fortune: number
 }
 
-/** Roll one stat-only trait for a crew of the given rarity. Each stat is
- *  rolled independently — magnitude from the rarity-weighted table, sign
- *  50/50 — so a single trait can land anywhere from (-3,-3,-3) to (+3,+3,+3). */
-export function rollTrait(rarity: CrewRarity): RolledTrait {
+/**
+ * Roll one stat-only trait for a crew of the given rarity. Each stat is rolled
+ * independently: magnitude from the rarity-weighted table, sign 50/50, so a
+ * single trait can land anywhere from (-3,-3,-3) to (+3,+3,+3).
+ *
+ * `deep` swaps in the Leviathan table, which reaches 4. Nothing but the top
+ * hall's re-cut passes it.
+ */
+export function rollTrait(rarity: CrewRarity, deep = false): RolledTrait {
+  const sign = () => (Math.random() < 0.5 ? -1 : 1)
   return {
-    power:   rollMagnitude(rarity) * (Math.random() < 0.5 ? -1 : 1),
-    dodge:   rollMagnitude(rarity) * (Math.random() < 0.5 ? -1 : 1),
-    fortune: rollMagnitude(rarity) * (Math.random() < 0.5 ? -1 : 1),
+    power:   rollMagnitude(rarity, deep) * sign(),
+    dodge:   rollMagnitude(rarity, deep) * sign(),
+    fortune: rollMagnitude(rarity, deep) * sign(),
   }
 }
 

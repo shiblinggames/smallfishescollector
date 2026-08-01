@@ -14,12 +14,12 @@ import { BLOOD_REROLL_TIERS, BLOOD_SKIN_GAMBLE_COST } from '@/lib/gauntlet'
 import { crewSkinsForSlug, getCrewSkin, getCrewSkinByFilename, skinArtGlow, CREW_SKINS } from '@/lib/crewSkins'
 import { ChaseSkinFx } from '@/components/ChaseSkinFx'
 import { hallTierDef, nextHallTier, hallUpgradeBlocker, CREW_HALL_MAX_TIER } from '@/lib/crewHall'
-import { bunkRatePerHour, storesCapHours, stintDone, tierNumeral, nextDrillCost, nextStoresCost, ladderHallLocked, isLeviathanSlot, DRILL_MAX_LEVEL, LEVIATHAN_COLOR, LEVIATHAN_REROLL_CHANCE } from '@/lib/crewBunks'
+import { bunkRatePerHour, storesCapHours, stintDone, tierNumeral, nextDrillCost, nextStoresCost, ladderHallLocked, isLeviathanSlot, DRILL_MAX_LEVEL, LEVIATHAN_COLOR } from '@/lib/crewBunks'
 import { crewAssignment } from '@/lib/crewAssignment'
 import HallBunks from './HallBunks'
-import { bunkCrew, collectBunk, buyDrill, buyStores } from './bunkActions'
+import { bunkCrew, collectBunk, buyDrill, buyStores, acceptTraitOffer, declineTraitOffer } from './bunkActions'
 import { RARITY_NAMES, RARITY_COLORS, groupForSlug, crewDisplayName, GEM_WEIGHTS, type CrewRarity } from '@/lib/crewGen'
-import { applyCrewEffects, netTraitStats, traitLabel, traitKind, type TraitStats } from '@/lib/crewEffects'
+import { applyCrewEffects, decodeTraitStats, netTraitStats, resolveEffects, traitLabel, traitKind, type TraitStats } from '@/lib/crewEffects'
 import AssignBoard from './AssignBoard'
 import AssignPicker from './AssignPicker'
 import { useReveal, BoardReveal, RevealFlash, RevealBanner } from './boardReveal'
@@ -774,6 +774,40 @@ function FallenPanel({ crew }: { crew: FallenCrew }) {
   )
 }
 
+/** One side of the offer: what a trait is called and exactly what it does.
+ *  Per-stat rows rather than a single summed line, because the sum is the one
+ *  number that cannot answer "is this better for THIS hand". */
+function TraitFace({ label, name, stats, accent }: {
+  label: string; name: string; stats: TraitStats; accent?: string
+}) {
+  const tint = accent ?? 'rgba(255,255,255,0.5)'
+  return (
+    <div style={{
+      borderRadius: 12, padding: '0.7rem 0.6rem', textAlign: 'left',
+      background: accent ? `${accent}12` : 'rgba(255,255,255,0.04)',
+      border: `1px solid ${accent ? `${accent}55` : 'rgba(255,255,255,0.12)'}`,
+    }}>
+      <p className="font-karla font-700 uppercase" style={{ fontSize: '0.53rem', letterSpacing: '0.12em', color: tint }}>
+        {label}
+      </p>
+      <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', lineHeight: 1.2, marginTop: 3, color: accent ?? '#e6dcc2' }}>
+        {name}
+      </p>
+      <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 1 }}>
+        {([['PWR', stats.power], ['DGE', stats.dodge], ['FTN', stats.fortune]] as const).map(([k, v]) => (
+          <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 6 }}>
+            <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)' }}>{k}</span>
+            <span className="font-karla font-700" style={{
+              fontSize: '0.68rem', fontVariantNumeric: 'tabular-nums',
+              color: v > 0 ? '#7fdfa3' : v < 0 ? '#e08c8c' : 'rgba(255,255,255,0.3)',
+            }}>{v > 0 ? `+${v}` : v}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 /** A trait's three stats as one compact line ("+2 PWR / -1 DGE"). Zeroes are
  *  dropped, so a single-stat trait reads as one number rather than two blanks
  *  padding it out. Returns "even" for a fully neutral trait. */
@@ -933,10 +967,18 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
     name: string; filename: string; rarity: number
     xp: number; oldXP: number; newXP: number
     from: number; to: number
-    /** Set when the Leviathan bunk re-cut their trait. Rare, so it is the
-     *  headline when it happens rather than a footnote under the XP. */
-    recut?: { fromLabel: string; toLabel: string; from: TraitStats; to: TraitStats }
+    /** The trait the deep is offering. Present on every Leviathan collect;
+     *  the card will not dismiss until it is taken or thrown back. */
+    offer?: {
+      crewId: number
+      offered: TraitStats; offeredLabel: string
+      current: TraitStats; currentLabel: string
+      replaces: string[]
+    }
   } | null>(null)
+  /** Which side of the offer is being submitted, so the two buttons can show
+   *  their own pending state instead of both greying out together. */
+  const [offerBusy, setOfferBusy] = useState<'take' | 'keep' | null>(null)
   // What the upgrade changed, in words. Shares the bunk-claim toast's slot:
   // fixed to the viewport, pointer-events none, so it can neither be clipped
   // by an ancestor nor eat a tap.
@@ -971,10 +1013,10 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
       const crew = res.state.roster.find(c => c.id === id)
       if (!crew) return
       const gained = g ? g.newXP - g.oldXP : 0
-      const recut = res.recuts.find(r => r.crewId === id)
-      // A re-cut is the rarest thing that can come out of a bunk, so it gets
-      // the longer buzz even when the level did not move.
-      vibrate(recut ? [22, 50, 22, 50, 40] : g && g.newLevel > g.oldLevel ? [18, 60, 30] : 14)
+      const offer = res.offers.find(o => o.crewId === id)
+      // An offer is a decision, not a notification, so it gets the longer
+      // buzz even when the level did not move.
+      vibrate(offer ? [22, 50, 22, 50, 40] : g && g.newLevel > g.oldLevel ? [18, 60, 30] : 14)
       setBunkReveal({
         name: g?.name ?? crew.name,
         filename: crew.filename,
@@ -984,8 +1026,55 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
         newXP: g?.newXP ?? crew.xp,
         from: g?.oldLevel ?? crewLevelFromXP(crew.xp),
         to: g?.newLevel ?? crewLevelFromXP(crew.xp),
-        recut: recut && { fromLabel: recut.fromLabel, toLabel: recut.toLabel, from: recut.from, to: recut.to },
+        offer: offer && {
+          crewId: offer.crewId,
+          offered: offer.offered, offeredLabel: offer.offeredLabel,
+          current: offer.current, currentLabel: offer.currentLabel,
+          replaces: offer.replaces,
+        },
       })
+    })
+  }
+
+  /**
+   * Put a parked offer back on screen. An offer outlives the reveal that
+   * produced it (it is stored on the crew row), so closing the tab mid-decision
+   * is recoverable rather than a six hour stint thrown away. Everything the
+   * card needs is derivable from state, so this costs no round trip.
+   */
+  function openOffer(crewId: number) {
+    const traitId = state.traitOffers?.[crewId]
+    const crew = state.roster.find(c => c.id === crewId)
+    if (!traitId || !crew) return
+    const offered = decodeTraitStats(traitId) ?? { power: 0, dodge: 0, fortune: 0 }
+    const current = netTraitStats(crew.effects)
+    setBunkReveal({
+      name: crew.name, filename: crew.filename, rarity: crew.rarity,
+      // Reopened, not just collected: the XP was banked at collect time and is
+      // not owed again, so the card shows the decision and no payout.
+      xp: 0, oldXP: crew.xp, newXP: crew.xp,
+      from: crewLevelFromXP(crew.xp), to: crewLevelFromXP(crew.xp),
+      offer: {
+        crewId,
+        offered, offeredLabel: traitLabel(offered) || 'No trait',
+        current, currentLabel: traitLabel(current) || 'No trait',
+        replaces: resolveEffects(crew.effects.filter(id => !id.startsWith('s:'))).map(e => e.name),
+      },
+    })
+  }
+
+  /** Take the offered trait or throw it back. Either way the card closes and
+   *  the roster reflects the decision. */
+  function resolveOffer(crewId: number, take: boolean) {
+    if (offerBusy) return
+    setOfferBusy(take ? 'take' : 'keep')
+    startTransition(async () => {
+      const res = take ? await acceptTraitOffer(crewId) : await declineTraitOffer(crewId)
+      setOfferBusy(null)
+      if ('error' in res) { setErr(res.error); return }
+      setState(res.state)
+      if (take) vibrate([18, 50, 30])
+      setBunkReveal(null)
     })
   }
 
@@ -1380,6 +1469,10 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
           // rather than stored, so it stays right as stints tick over.
           const readyBunks = Object.values(state.bunkTerms ?? {})
             .filter(t => stintDone(t.since, Date.now(), t.cap)).length
+          // An untaken offer is as much a reason to open the Hall as a finished
+          // stint, and unlike a stint it never resolves itself.
+          const pendingOffers = Object.keys(state.traitOffers ?? {}).length
+          const hallWaiting = readyBunks + pendingOffers
           const iconProps = { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.9, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true }
           // Uniform icon + label tabs so every destination is self-explanatory
           // (the old icon-only Blood/Wardrobe/Graveyard tabs weren't obvious).
@@ -1390,7 +1483,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
               icon: <svg {...iconProps}><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="3.2" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg> },
             { id: 'recruits', label: 'Recruit', accent: '#f0d696', count: boardCount || undefined,
               icon: <svg {...iconProps}><path d="M15 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="8.5" cy="7" r="3.2" /><path d="M19 8v6M22 11h-6" /></svg> },
-            { id: 'hall',     label: 'Hall',    accent: '#f0c040', count: readyBunks || undefined, pulse: readyBunks > 0,
+            { id: 'hall',     label: 'Hall',    accent: '#f0c040', count: hallWaiting || undefined, pulse: hallWaiting > 0,
               icon: <svg {...iconProps}><path d="M3 21h18" /><path d="M5 21V10l7-5 7 5v11" /><path d="M10 21v-5h4v5" /></svg> },
             { id: 'wardrobe', label: 'Skins',  accent: '#5ec8e8',
               icon: <svg {...iconProps}><path d="M12 3a2 2 0 0 0-2 2c0 1 1 1.6 2 2M3 20l9-7 9 7M3 20l9-4 9 4M3 20v-1l9-6 9 6v1" /></svg> },
@@ -1588,7 +1681,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   </span>
                   {isLeviathanSlot(nextTier.bunks - 1) && (
                     <span className="font-karla font-700 uppercase" style={{ fontSize: '0.66rem', letterSpacing: '0.08em', color: LEVIATHAN_COLOR }}>
-                      + The Leviathan bunk re-cuts traits
+                      + The Leviathan bunk cuts new traits
                     </span>
                   )}
                 </span>
@@ -1631,6 +1724,8 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
               accent={hall.accent}
               pending={pending}
               pop={pop?.what === 'drill' || pop?.what === 'stores' ? pop.what : null}
+              offers={state.traitOffers ?? {}}
+              onOpenOffer={openOffer}
               onBunk={(id, slot) => run(() => bunkCrew(id, slot), id)}
               onCollectOne={id => runBunkClaim(() => collectBunk(id))}
               onBuyDrill={() => setLadderConfirm('drill')}
@@ -1851,13 +1946,17 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
           {bunkReveal && (() => {
             const r = bunkReveal
             const levelled = r.to > r.from
-            // A re-cut trait outranks a level-up for the card's identity: it is
-            // far rarer, it only happens in one bunk, and the teal is the same
-            // teal that bunk wears, so the payoff is visibly tied to the choice
-            // that earned it.
-            const recut = r.recut
-            const accent = recut ? LEVIATHAN_COLOR : levelled ? '#7fdfa3' : '#f0c040'
-            const burst = levelled || !!recut
+            // An offer outranks a level-up for the card's identity: it is a
+            // decision rather than a notification, it only happens in one bunk,
+            // and the teal is the same teal that bunk wears, so the moment is
+            // visibly tied to the choice that earned it.
+            const offer = r.offer
+            const accent = offer ? LEVIATHAN_COLOR : levelled ? '#7fdfa3' : '#f0c040'
+            const burst = levelled || !!offer
+            // An offer is a decision. Tapping the backdrop must not silently
+            // throw away a six hour stint's payoff, so the card only closes
+            // through one of the two buttons while one is on the table.
+            const dismissable = !offer
             const prog = crewXPProgress(r.newXP)
             const atMax = r.to >= CREW_MAX_LEVEL
             // Where the bar STARTS. On a level-up it starts empty, because you
@@ -1868,8 +1967,8 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             return (
               <motion.div key="bunk-reveal"
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                onClick={() => setBunkReveal(null)}
-                style={{ position: 'fixed', inset: 0, zIndex: 9400, background: 'rgba(4,8,14,0.86)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+                onClick={() => { if (dismissable) setBunkReveal(null) }}
+                style={{ position: 'fixed', inset: 0, zIndex: 9400, background: 'rgba(4,8,14,0.86)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem' }}>
                 <motion.div
                   initial={{ scale: 0.85, y: 16 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0 }}
                   transition={{ type: 'spring', stiffness: 360, damping: 24 }}
@@ -1906,44 +2005,38 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
 
                   <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.35 }}
                     className="font-cinzel font-700" style={{ fontSize: '1.25rem', color: accent, marginTop: 12, textShadow: burst ? `0 0 12px ${accent}44` : 'none' }}>
-                    {recut ? `The deep re-cut ${r.name}!` : levelled ? `${r.name} levelled up!` : `${r.name} is back`}
+                    {offer ? `The deep cut ${r.name} a new trait` : levelled ? `${r.name} levelled up!` : `${r.name} is back`}
                   </motion.p>
                   <p className="font-karla" style={{ fontSize: '0.78rem', color: '#9c917a', marginTop: 6 }}>
-                    {recut
-                      ? 'Something down there took a liking to them'
+                    {offer
+                      ? 'Take it or leave it. Nothing changes unless you say so.'
                       : 'Off the bunk, drilled and rested'}
                   </p>
 
-                  {/* THE RE-CUT. Above the XP block, because when this fires it
-                      is the reason the card is worth reading. Both traits are
-                      named and both stat lines are shown, so the upgrade is
-                      provable rather than asserted. */}
-                  {recut && (
+                  {/* THE OFFER. Side by side, both fully spelled out, no verdict
+                      attached. There is deliberately no "better" marker: which
+                      one wins depends on the job this hand does, and the game
+                      does not know that. A raider wants Power and Dodge, a
+                      voyage hand wants Fortune, and a flat sum would call both
+                      of those the same thing. */}
+                  {offer && (
                     <motion.div initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: 0.28, type: 'spring', stiffness: 300, damping: 20 }}
-                      style={{ marginTop: 14, borderRadius: 14, background: `${LEVIATHAN_COLOR}12`, border: `1px solid ${LEVIATHAN_COLOR}55`, padding: '0.85rem 0.9rem' }}>
-                      <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.16em', color: LEVIATHAN_COLOR }}>
-                        Trait re-cut
-                      </p>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, marginTop: 8 }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p className="font-karla font-700" style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.45)', textDecoration: 'line-through' }}>
-                            {recut.fromLabel}
-                          </p>
-                          <p className="font-karla" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.34)', fontVariantNumeric: 'tabular-nums' }}>
-                            {statLine(recut.from)}
-                          </p>
-                        </div>
-                        <span aria-hidden style={{ color: LEVIATHAN_COLOR, fontSize: '1rem', lineHeight: 1 }}>&rarr;</span>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: LEVIATHAN_COLOR }}>
-                            {recut.toLabel}
-                          </p>
-                          <p className="font-karla" style={{ fontSize: '0.62rem', color: '#c6e8e2', fontVariantNumeric: 'tabular-nums' }}>
-                            {statLine(recut.to)}
-                          </p>
-                        </div>
+                      style={{ marginTop: 14 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                        <TraitFace label="They carry" name={offer.currentLabel} stats={offer.current} />
+                        <TraitFace label="The deep offers" name={offer.offeredLabel} stats={offer.offered} accent={LEVIATHAN_COLOR} />
                       </div>
+                      {/* Said only when there is something unquantifiable to
+                          lose. These old ids carry aura and raid behaviour the
+                          stat lines above cannot show, so the player has to be
+                          told by name what taking the offer gives up. */}
+                      {offer.replaces.length > 0 && (
+                        <p className="font-karla" style={{ marginTop: 8, fontSize: '0.7rem', color: '#e8b98a', lineHeight: 1.45, textAlign: 'left' }}>
+                          Taking this replaces{' '}
+                          <span style={{ fontWeight: 700 }}>{offer.replaces.join(', ')}</span>, whose effects go beyond raw stats.
+                        </p>
+                      )}
                     </motion.div>
                   )}
 
@@ -1976,11 +2069,28 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                     </div>
                   </motion.div>
 
-                  <motion.button onClick={() => setBunkReveal(null)} whileTap={{ scale: 0.92 }}
-                    className="font-cinzel font-700 uppercase"
-                    style={{ marginTop: 18, padding: '0.7rem 2rem', borderRadius: 12, letterSpacing: '0.1em', fontSize: '0.8rem', background: '#f0c04022', border: '1px solid #f0c0407a', color: '#f4ecd8', boxShadow: '0 0 14px #f0c04022', cursor: 'pointer' }}>
-                    Back to work
-                  </motion.button>
+                  {offer ? (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 16 }}>
+                      <motion.button onClick={() => resolveOffer(offer.crewId, false)}
+                        disabled={offerBusy !== null} whileTap={{ scale: 0.94 }}
+                        className="font-cinzel font-700 uppercase"
+                        style={{ padding: '0.72rem 0.5rem', borderRadius: 12, letterSpacing: '0.06em', fontSize: '0.75rem', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.78)', cursor: offerBusy ? 'not-allowed' : 'pointer' }}>
+                        {offerBusy === 'keep' ? 'Keeping…' : 'Keep theirs'}
+                      </motion.button>
+                      <motion.button onClick={() => resolveOffer(offer.crewId, true)}
+                        disabled={offerBusy !== null} whileTap={{ scale: 0.94 }}
+                        className="font-cinzel font-700 uppercase"
+                        style={{ padding: '0.72rem 0.5rem', borderRadius: 12, letterSpacing: '0.06em', fontSize: '0.75rem', background: `${LEVIATHAN_COLOR}26`, border: `1px solid ${LEVIATHAN_COLOR}8a`, color: '#eafaf7', boxShadow: `0 0 14px ${LEVIATHAN_COLOR}22`, cursor: offerBusy ? 'not-allowed' : 'pointer' }}>
+                        {offerBusy === 'take' ? 'Taking…' : 'Take the cut'}
+                      </motion.button>
+                    </div>
+                  ) : (
+                    <motion.button onClick={() => setBunkReveal(null)} whileTap={{ scale: 0.92 }}
+                      className="font-cinzel font-700 uppercase"
+                      style={{ marginTop: 18, padding: '0.7rem 2rem', borderRadius: 12, letterSpacing: '0.1em', fontSize: '0.8rem', background: '#f0c04022', border: '1px solid #f0c0407a', color: '#f4ecd8', boxShadow: '0 0 14px #f0c04022', cursor: 'pointer' }}>
+                      Back to work
+                    </motion.button>
+                  )}
                 </motion.div>
               </motion.div>
             )
@@ -2170,10 +2280,10 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                       And the bunk itself is different
                     </p>
                     <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.78)', lineHeight: 1.5 }}>
-                      Bunk {next.bunks} sits deepest in the hall. Every stint finished there has a{' '}
-                      <span style={{ color: LEVIATHAN_COLOR, fontWeight: 700 }}>{Math.round(LEVIATHAN_REROLL_CHANCE * 100)}% chance</span>{' '}
-                      to re-cut that hand&apos;s trait. The new one is kept only if it beats the old, so a hand never
-                      comes back worse than they went in.
+                      Bunk {next.bunks} sits deepest in the hall. Every stint finished there cuts that hand a{' '}
+                      <span style={{ color: LEVIATHAN_COLOR, fontWeight: 700 }}>fresh trait</span> and offers it beside
+                      the one they carry. Nothing changes unless you take it, and it is the only place a trait can
+                      reach 4, which is the only way to a Divine hand.
                     </p>
                   </div>
                 )}

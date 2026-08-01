@@ -166,7 +166,11 @@ export interface TraitStats {
 export function decodeTraitStats(id: string): TraitStats | null {
   if (id.startsWith('s:')) {
     const parts = id.slice(2).split(',').map(Number)
-    if (parts.length === 3 && parts.every(n => Number.isInteger(n) && n >= -3 && n <= 3)) {
+    // Range is -4..4, NOT -3..3. Recruits still cap at 3, but the Leviathan
+    // bunk rolls to 4, and a decode that rejected those would not fail loudly:
+    // it returns null, the trait reads as absent, and the best roll in the game
+    // silently evaporates on the next read.
+    if (parts.length === 3 && parts.every(n => Number.isInteger(n) && n >= -4 && n <= 4)) {
       return { power: parts[0], dodge: parts[1], fortune: parts[2] }
     }
     return null
@@ -205,10 +209,12 @@ export function netTraitStats(ids: string[] | null | undefined): TraitStats {
 // players see the exact stat deltas next to it on the detail modal — so the
 // pool is small enough to memorize but big enough to feel fresh.
 
-const SINGLE_LABELS: Record<'power'|'dodge'|'fortune', { pos: [string, string, string]; neg: [string, string, string] }> = {
-  power:   { pos: ['Brawler',   'Strong',     'Titan'   ], neg: ['Soft',      'Weak',       'Feeble'  ] },
-  dodge:   { pos: ['Quick',     'Nimble',     'Phantom' ], neg: ['Sluggish',  'Lumbering',  'Anchored'] },
-  fortune: { pos: ['Lucky',     'Fortunate',  'Charmed' ], neg: ['Unlucky',   'Hexed',      'Doomed'  ] },
+// Four tiers now, the last reachable only from the Leviathan bunk, so a
+// single-stat 4 reads as its own thing rather than sharing a name with a 3.
+const SINGLE_LABELS: Record<'power'|'dodge'|'fortune', { pos: [string, string, string, string]; neg: [string, string, string, string] }> = {
+  power:   { pos: ['Brawler', 'Strong',    'Titan',   'Colossus'   ], neg: ['Soft',     'Weak',      'Feeble',   'Broken'  ] },
+  dodge:   { pos: ['Quick',   'Nimble',    'Phantom', 'Untouchable'], neg: ['Sluggish', 'Lumbering', 'Anchored', 'Leaden'  ] },
+  fortune: { pos: ['Lucky',   'Fortunate', 'Charmed', 'Blessed'    ], neg: ['Unlucky',  'Hexed',     'Doomed',   'Accursed'] },
 }
 
 /** Generate an evocative label for a trait. Empty string when the trait is
@@ -223,7 +229,7 @@ export function traitLabel(s: TraitStats): string {
   if (nonZero.length === 1) {
     const k = nonZero[0]
     const v = s[k]
-    const tier = Math.min(3, Math.abs(v)) - 1     // 0..2
+    const tier = Math.min(4, Math.abs(v)) - 1     // 0..3
     return v > 0 ? SINGLE_LABELS[k].pos[tier] : SINGLE_LABELS[k].neg[tier]
   }
 
@@ -248,11 +254,22 @@ export function traitLabel(s: TraitStats): string {
   const allPos = stats.every(k => s[k] > 0)
   const allNeg = stats.every(k => s[k] < 0)
   if (allPos) {
+    // Divine is the perfect roll and NOTHING else: +4 in all three, the hard
+    // ceiling of the deep roll and unreachable from a recruit board. Demigod
+    // used to cover the top two nets together, which meant the best trait in
+    // the game shared a name with a near-miss and the only way to tell them
+    // apart was to read the numbers. A trophy needs its own word.
+    //
+    // Every band below is UNCHANGED, deliberately: nets 9 to 11 were
+    // impossible before the deep roll existed, so not one crew already out
+    // there gets silently relabelled by this.
+    if (net === 12) return 'Divine'
     if (net >= 8) return 'Demigod'
     if (net >= 5) return 'Champion'
     return 'Versatile'
   }
   if (allNeg) {
+    if (net === -12) return 'Blighted'
     if (net <= -8) return 'Damned'
     if (net <= -5) return 'Plagued'
     return 'Burdened'

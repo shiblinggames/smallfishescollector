@@ -10,9 +10,9 @@ import type { createAdminClient } from './supabase/admin'
 import { getLevelFromXP } from './expeditionLevel'
 import { clampHallTier } from './crewHall'
 import { grantXPPairs, type CrewXPGrant } from './crewXPGrant'
-import { bunkCount, bunkRatePerHour, hallBunksOpen, canBunk, isLeviathanSlot, stintDone, stintXP, storesCapHours, traitScore, LEVIATHAN_REROLL_CHANCE } from './crewBunks'
+import { bunkCount, bunkRatePerHour, hallBunksOpen, canBunk, isLeviathanSlot, stintDone, stintXP, storesCapHours } from './crewBunks'
 import { rollTrait, encodeTraitId, type CrewRarity } from './crewGen'
-import { netTraitStats, traitLabel } from './crewEffects'
+import { netTraitStats, resolveEffects, traitLabel } from './crewEffects'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -22,13 +22,36 @@ type Admin = ReturnType<typeof createAdminClient>
  * running bunk. `rate`/`cap` are null only on rows that predate the columns,
  * which fall back to the live values.
  */
-/** What a Leviathan bunk did to a hand's trait, for the reveal. */
-export type TraitRecut = {
+/** The encoded 'no trait at all' offer. Stored rather than null so a pending
+ *  offer is always one column read, never an absence that means two things. */
+export const NEUTRAL_TRAIT = 's:0,0,0'
+
+/**
+ * A trait the deep is OFFERING a hand. Not applied: the player looks at it
+ * beside what they have and decides.
+ *
+ * That is the whole difference between a chase and a ratchet. The old
+ * auto-keep-if-higher compared on a flat stat sum, which made "better" mean
+ * the same thing for every crew in the game, so every hand converged on one
+ * trait and nobody was optimising anything. A voyage hand wants Fortune, a
+ * raider wants Power and Dodge, and only the player knows which this one is.
+ */
+export type TraitOffer = {
   crewId: number
-  fromLabel: string
-  toLabel: string
-  from: { power: number; dodge: number; fortune: number }
-  to: { power: number; dodge: number; fortune: number }
+  /** The offered trait, encoded as it will be stored. */
+  traitId: string
+  offered: { power: number; dodge: number; fortune: number }
+  offeredLabel: string
+  /** What they carry now, for the side by side. */
+  current: { power: number; dodge: number; fortune: number }
+  currentLabel: string
+  /**
+   * Named legacy effects the offer would REPLACE. Old ids can carry aura or
+   * raid-conditional behavior the stat maths cannot read, so rather than
+   * locking those hands out of the chase entirely, the choice names exactly
+   * what is being given up and lets the player weigh it.
+   */
+  replaces: string[]
 }
 
 export type BunkRow = {
@@ -104,8 +127,8 @@ export function bunkTerms(row: BunkRow, liveRate: number, liveCap: number) {
  */
 export type BunkSettlement = {
   grants: CrewXPGrant[]
-  /** Traits the Leviathan bunk re-cut this collect. Never a downgrade. */
-  recuts: TraitRecut[]
+  /** Traits the Leviathan bunk is offering after this collect. Not applied. */
+  offers: TraitOffer[]
   /** Crew whose stint ended and who got their bunk back. A hand at the level
    *  ceiling appears HERE but not in `grants` — they are freed and paid
    *  nothing, and the UI has to be able to say so rather than fall silent. */
@@ -119,7 +142,7 @@ export async function settleBunks(
   rate: number,
   capHours: number,
 ): Promise<BunkSettlement> {
-  const EMPTY: BunkSettlement = { grants: [], freed: [], recuts: [] }
+  const EMPTY: BunkSettlement = { grants: [], freed: [], offers: [] }
   if (rows.length === 0) return EMPTY
   const nowMs = Date.now()
 
@@ -154,54 +177,59 @@ export async function settleBunks(
       return { id: r.crew_id, xp: stintXP(t.rate, t.cap) }
     })
   const grants = await grantXPPairs(admin, userId, pairs)
-  const recuts = await recutLeviathanTraits(admin, userId, claimed)
-  return { grants, freed: claimed.map(r => r.crew_id), recuts }
+  const offers = await offerLeviathanTraits(admin, userId, claimed)
+  return { grants, freed: claimed.map(r => r.crew_id), offers }
 }
 
 /**
- * The Leviathan bunk's ability: a finished stint in slot 5 has a chance to
- * re-cut the hand's trait.
+ * The Leviathan bunk's ability: EVERY finished stint in slot 5 cuts a fresh
+ * trait and offers it.
  *
- * Rolls on the crew's OWN rarity, exactly as a recruit rolls, so the top hall
- * does not quietly hand Commons legendary-grade traits. Keeps the new trait
- * only if it scores strictly higher, so a hand can never come out of the
- * special slot worse than they went in.
+ * Every stint, not one in five. The old gate made sense while the result was
+ * applied for you and cost nothing to receive; once the player has to look at
+ * it and decide, a gate only means waiting five stints to be shown one thing
+ * you might not even want. The cost of an offer is the bunk slot and the
+ * hours, which is a real cost already.
+ *
+ * Rolls DEEP, the only table in the game that reaches 4, and on the crew's own
+ * rarity so the top hall does not quietly hand Commons legendary-grade stats.
+ * Nothing is written to `effects` here: the offer parks on the crew until it is
+ * taken or thrown back.
  */
-async function recutLeviathanTraits(
+async function offerLeviathanTraits(
   admin: Admin,
   userId: string,
   claimed: BunkRow[],
-): Promise<TraitRecut[]> {
-  const eligible = claimed.filter(r => isLeviathanSlot(r.slot) && Math.random() < LEVIATHAN_REROLL_CHANCE)
+): Promise<TraitOffer[]> {
+  const eligible = claimed.filter(r => isLeviathanSlot(r.slot))
   if (eligible.length === 0) return []
 
   const { data: crew } = await admin
     .from('user_crew').select('id, rarity, effects').in('id', eligible.map(r => r.crew_id))
 
-  const out: TraitRecut[] = []
+  const out: TraitOffer[] = []
   for (const c of ((crew ?? []) as any[])) {
     const effects = (c.effects ?? []) as string[]
-    // Only re-cut modern stat traits. A legacy id can carry behavior that
-    // decodeTraitStats cannot read (auras, raid-conditional, percent buffs),
-    // so the comparison would not see it and the overwrite would silently
-    // delete it. Those hands keep what they have.
-    if (effects.some(id => !id.startsWith('s:'))) continue
-    const current = netTraitStats(effects)
-    const rolled = rollTrait((c.rarity ?? 1) as CrewRarity)
-    // Strictly better, or nothing happens. A tie is not an upgrade.
-    if (traitScore(rolled) <= traitScore(current)) continue
-    const id = encodeTraitId(rolled)
-    if (!id) continue
-    const { data: updated } = await admin
-      .from('user_crew').update({ effects: [id] })
+    const rolled = rollTrait((c.rarity ?? 1) as CrewRarity, true)
+    // A fully neutral roll is a real offer, not a dud: to a hand carrying a
+    // curse, a clean slate IS the upgrade. Encoded rather than dropped so it
+    // can be presented like any other.
+    const traitId = encodeTraitId(rolled) ?? NEUTRAL_TRAIT
+
+    const { data: written } = await admin
+      .from('user_crew').update({ trait_offer: traitId })
       .eq('id', c.id).eq('user_id', userId).select('id')
-    if (!(updated ?? []).length) continue
+    if (!(written ?? []).length) continue
+
+    const current = netTraitStats(effects)
     out.push({
       crewId: c.id,
-      fromLabel: traitLabel(current) || 'no trait',
-      toLabel: traitLabel(rolled) || 'no trait',
-      from: current,
-      to: rolled,
+      traitId,
+      offered: rolled,
+      offeredLabel: traitLabel(rolled) || 'No trait',
+      current,
+      currentLabel: traitLabel(current) || 'No trait',
+      replaces: resolveEffects(effects.filter(id => !id.startsWith('s:'))).map(e => e.name),
     })
   }
   return out
@@ -216,7 +244,7 @@ export async function releaseBunk(admin: Admin, userId: string, crewId: number):
   const { data } = await admin
     .from('crew_hall_bunks').select('id, crew_id, since, rate_per_hour, cap_hours, slot')
     .eq('user_id', userId).eq('crew_id', crewId).maybeSingle()
-  if (!data) return { grants: [], freed: [], recuts: [] }
+  if (!data) return { grants: [], freed: [], offers: [] }
   const ctx = await bunkContext(admin, userId)
   const row: BunkRow = {
     id: (data as any).id, crew_id: (data as any).crew_id, since: (data as any).since,

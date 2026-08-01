@@ -15,7 +15,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { clampHallTier } from '@/lib/crewHall'
 import { canBunk, drillsMaxed, hallTierRequiredFor, ladderHallLocked, nextDrillCost, nextStoresCost, storesMaxed, tierNumeral } from '@/lib/crewBunks'
-import { bunkContext, loadBunks, releaseBunk, type TraitRecut } from '@/lib/crewBunkSettle'
+import { bunkContext, loadBunks, releaseBunk, NEUTRAL_TRAIT, type TraitOffer } from '@/lib/crewBunkSettle'
 import type { CrewXPGrant } from '@/lib/crewXPGrant'
 import { getCrewState, type CrewActionResult, type CrewState } from './actions'
 
@@ -29,7 +29,7 @@ const CLOSED = 'The hall is not taking bunks yet.'
  *  level ceiling — without it a claim of only maxed crew would look like
  *  nothing happened. */
 export type BunkClaimResult =
-  | { state: CrewState; grants: CrewXPGrant[]; freed: number[]; recuts: TraitRecut[] }
+  | { state: CrewState; grants: CrewXPGrant[]; freed: number[]; offers: TraitOffer[] }
   | { error: string }
 
 export async function bunkCrew(crewId: number, slot: number): Promise<CrewActionResult> {
@@ -98,10 +98,59 @@ export async function collectBunk(crewId: number): Promise<BunkClaimResult> {
   if (!user) return { error: 'Not signed in' }
   const admin = createAdminClient()
 
-  const { grants, freed, recuts } = await releaseBunk(admin, user.id, crewId)
+  const { grants, freed, offers } = await releaseBunk(admin, user.id, crewId)
 
   const state = await getCrewState()
-  return state ? { state, grants, freed, recuts } : { error: 'Failed to load crew' }
+  return state ? { state, grants, freed, offers } : { error: 'Failed to load crew' }
+}
+
+/**
+ * Take the trait the deep offered. The id is read back off the CREW ROW, never
+ * from the caller, so a hand-rolled request cannot mint a trait: the only thing
+ * the client gets to say is which crew, and yes.
+ */
+export async function acceptTraitOffer(crewId: number): Promise<CrewActionResult> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not signed in' }
+  const admin = createAdminClient()
+
+  const { data: crew } = await admin
+    .from('user_crew').select('id, trait_offer, died_at')
+    .eq('id', crewId).eq('user_id', user.id).maybeSingle()
+  if (!crew) return { error: 'Crew not found' }
+  if ((crew as any).died_at) return { error: 'That hand is gone.' }
+
+  const offer = (crew as any).trait_offer as string | null
+  if (!offer) return { error: 'There is no offer to take.' }
+
+  // A neutral offer means "no trait at all", which is stored as [] rather than
+  // an all-zero id so the roster reads it the same as a hand who never had one.
+  const effects = offer === NEUTRAL_TRAIT ? [] : [offer]
+
+  // Guarded on the exact offer we priced against, so a double tap cannot apply
+  // one offer and then a newer one that arrived in between.
+  const { data: applied } = await admin
+    .from('user_crew').update({ effects, trait_offer: null })
+    .eq('id', crewId).eq('user_id', user.id).eq('trait_offer', offer).select('id')
+  if (!(applied ?? []).length) return { error: 'That offer is no longer on the table.' }
+
+  const state = await getCrewState()
+  return state ? { state } : { error: 'Failed to load crew' }
+}
+
+/** Throw the offer back. Their current trait stands. */
+export async function declineTraitOffer(crewId: number): Promise<CrewActionResult> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not signed in' }
+  const admin = createAdminClient()
+
+  await admin.from('user_crew').update({ trait_offer: null })
+    .eq('id', crewId).eq('user_id', user.id)
+
+  const state = await getCrewState()
+  return state ? { state } : { error: 'Failed to load crew' }
 }
 
 /** Drills buy XP PER HOUR. */

@@ -30,7 +30,7 @@ import {
   bunkCount, bunkRatePerHour, canBunk, drillsMaxed, hallTierRequiredFor,
   isLeviathanSlot, ladderHallLocked, msUntilDone, stintDone, stintProgress,
   stintXP, nextDrillCost, nextStoresCost, storesCapHours, storesMaxed,
-  tierNumeral, LEVIATHAN_COLOR, LEVIATHAN_REROLL_CHANCE,
+  tierNumeral, LEVIATHAN_COLOR,
 } from '@/lib/crewBunks'
 import type { CrewMember, CrewState } from './actions'
 
@@ -40,9 +40,6 @@ const MAX_BUNKS = 6
 
 /** The Leviathan bunk's colour, shared with the claim reveal. */
 const LEVIATHAN = LEVIATHAN_COLOR
-
-/** The odds, stated as a percentage, wherever the ability is described. */
-const REROLL_PCT = Math.round(LEVIATHAN_REROLL_CHANCE * 100)
 
 /** One picture per Drills tier, matching DRILL_MAX_LEVEL. Kept as its own
  *  constant so a mismatch between "tiers that exist" and "tiers we drew" shows
@@ -66,7 +63,8 @@ function fmtStintShort(h: number): string {
 }
 
 export default function HallBunks({
-  state, artSrc, accent, pending, pop, onBunk, onCollectOne, onBuyDrill, onBuyStores,
+  state, artSrc, accent, pending, pop, offers, onOpenOffer, onBunk, onCollectOne,
+  onBuyDrill, onBuyStores,
 }: {
   state: CrewState
   artSrc: (filename: string) => string
@@ -76,6 +74,9 @@ export default function HallBunks({
   /** Which tree just went up, so its art can pop IN PLACE rather than behind
    *  an overlay the hero's overflow:hidden would clip. */
   pop: 'drill' | 'stores' | null
+  /** crew id -> the trait the deep is offering them, still undecided. */
+  offers: Record<number, string>
+  onOpenOffer: (crewId: number) => void
   onBunk: (crewId: number, slot: number) => void
   /** Collect one hand's finished stint. The only way to collect: the reward
    *  belongs to a face, not to a header button. */
@@ -135,6 +136,12 @@ export default function HallBunks({
     return () => clearInterval(id)
   }, [anyRunning])
 
+  // Hands with an untaken offer. Ordered by roster position rather than by id
+  // so the row does not reshuffle as decisions are made.
+  const waitingOffers = useMemo(
+    () => state.roster.filter(c => offers[c.id]),
+    [state.roster, offers])
+
   const eligible = useMemo(() => state.roster.filter(c =>
     c.voyageSlot === null && c.raidSlot === null
     && !state.bunkedCrewIds.includes(c.id)
@@ -167,6 +174,40 @@ export default function HallBunks({
         <SumTerm value={`${payout.toLocaleString()} XP`} label="per stint" accent={accent} />
       </div>
 
+      {/* DECISIONS WAITING. An offer survives the reveal that produced it, so
+          a captain who closed the tab mid-choice finds it here rather than
+          losing the whole stint. Above the grid because it is the only thing
+          on this panel that is waiting on the player. */}
+      {waitingOffers.length > 0 && (
+        <div style={{
+          marginBottom: '0.6rem', padding: '0.6rem 0.65rem', borderRadius: 11,
+          background: `${LEVIATHAN}12`, border: `1px solid ${LEVIATHAN}55`,
+        }}>
+          <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.58rem', color: LEVIATHAN, marginBottom: 6 }}>
+            {waitingOffers.length === 1 ? 'A cut awaits your word' : `${waitingOffers.length} cuts await your word`}
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {waitingOffers.map(crew => (
+              <button key={crew.id} type="button" disabled={pending}
+                onClick={() => onOpenOffer(crew.id)}
+                aria-label={`Decide ${crew.name}'s offered trait`}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6, padding: '0.3rem 0.6rem 0.3rem 0.3rem',
+                  borderRadius: 999, font: 'inherit', cursor: pending ? 'not-allowed' : 'pointer',
+                  background: 'rgba(0,0,0,0.32)', border: `1px solid ${LEVIATHAN}66`,
+                  touchAction: 'manipulation',
+                }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={artSrc(crew.filename)} alt="" aria-hidden loading="lazy" decoding="async"
+                  style={{ width: 24, height: 24, objectFit: 'contain' }} />
+                <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#eee8de' }}>{crew.name}</span>
+                <span className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.08em', color: LEVIATHAN }}>Decide</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ALL SIX slots, always. A new captain sees the whole hall and what it
           will hold, with the ones past their tier locked rather than missing —
           the same reason the assign board draws six seats and locks the ones
@@ -187,9 +228,9 @@ export default function HallBunks({
             const opensAt = hallTierDef(Math.min(CREW_HALL_MAX_TIER, i + 1))
             return (
               <div key={`locked-${i}`}
-                title={lev ? `${opensAt.name} opens the Leviathan bunk, which can re-cut a trait` : `${opensAt.name} opens this bunk`}
+                title={lev ? `${opensAt.name} opens the Leviathan bunk, which offers a fresh trait every stint` : `${opensAt.name} opens this bunk`}
                 aria-label={lev
-                  ? `Locked. ${opensAt.name} opens the Leviathan bunk, which can re-cut a hand's trait.`
+                  ? `Locked. ${opensAt.name} opens the Leviathan bunk, which offers a fresh trait every stint.`
                   : `Locked bunk. ${opensAt.name} opens it.`}
                 style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,
@@ -210,9 +251,9 @@ export default function HallBunks({
             return (
               <button key={`empty-${i}`} type="button" disabled={pending}
                 onClick={() => setPicking(i)}
-                title={lev ? `The Leviathan bunk. ${REROLL_PCT}% chance to re-cut a trait, never for the worse.` : undefined}
+                title={lev ? 'The Leviathan bunk. Every stint here cuts a fresh trait and offers it to you.' : undefined}
                 aria-label={lev
-                  ? `Empty Leviathan bunk. Tap to put a crew in it. It can re-cut their trait.`
+                  ? 'Empty Leviathan bunk. Tap to put a crew in it. Every stint offers them a fresh trait.'
                   : `Empty bunk ${i + 1}. Tap to put a crew in it.`}
                 style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,
@@ -238,7 +279,7 @@ export default function HallBunks({
                 </span>
                 {lev && (
                   <span className="font-karla" style={{ fontSize: '0.55rem', color: `${LEVIATHAN}99`, textAlign: 'center', lineHeight: 1.3, padding: '0 0.2rem' }}>
-                    Re-cuts traits
+                    Cuts new traits
                   </span>
                 )}
               </button>
@@ -512,7 +553,7 @@ function BunkPicker({
   pending: boolean
   stint: string
   payout: number
-  /** Filling the sixth bunk, which can re-cut a trait. */
+  /** Filling the sixth bunk, which offers a fresh trait every stint. */
   leviathan: boolean
   onPick: (crewId: number) => void
   onClose: () => void
@@ -554,8 +595,8 @@ function BunkPicker({
               Deep water changes a hand
             </p>
             <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.78)', lineHeight: 1.5 }}>
-              When the stint ends there is a <span style={{ color: LEVIATHAN, fontWeight: 700 }}>{REROLL_PCT}% chance</span> the
-              deep re-cuts their trait. It is kept only if it beats what they had, so nobody comes back worse than they went in.
+              When the stint ends the deep cuts them a <span style={{ color: LEVIATHAN, fontWeight: 700 }}>fresh trait</span> and
+              shows it to you beside the one they carry. Nothing changes unless you take it, and only here can a trait reach 4.
             </p>
           </div>
         )}

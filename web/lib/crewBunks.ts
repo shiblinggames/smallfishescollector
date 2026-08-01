@@ -75,12 +75,18 @@ export function storesMaxed(level: number): boolean {
  * THE LEVIATHAN BUNK.
  *
  * The sixth bunk, opened only by the top hall, does something the other five
- * do not: when a stint finishes there, it can re-cut the hand's trait.
+ * do not: every stint that finishes there cuts a fresh trait and OFFERS it.
  *
- * It NEVER makes them worse. A fresh trait is rolled on the crew's own rarity
- * and kept only if it beats what they had, so putting a good hand in the
- * special slot is never a risk — which matters, because a gamble here would
- * mean nobody ever used it on the crew it would help most.
+ * Offers, not applies. It used to keep the roll automatically when it beat the
+ * old one on a flat stat sum, which sounds generous and was actually the thing
+ * stopping traits from ever being a chase: one comparator meant "better" was
+ * identical for every hand in the game, so every crew converged on the same
+ * trait and the player never made a decision. A voyage hand wants Fortune, a
+ * raider wants Power and Dodge, and only the captain knows which this one is.
+ *
+ * Nothing changes unless the offer is taken, so a good trait is never at risk.
+ * It also rolls DEEP (see DEEP_MAG_WEIGHTS): the only table in the game that
+ * reaches 4, which is why Divine can only come out of this bunk.
  */
 export const LEVIATHAN_SLOT = 5
 
@@ -92,15 +98,17 @@ export const LEVIATHAN_SLOT = 5
  */
 export const LEVIATHAN_COLOR = '#3fd6c4'
 
-/** Chance a finished Leviathan stint re-cuts the hand's trait. */
-export const LEVIATHAN_REROLL_CHANCE = 0.20
-
 export function isLeviathanSlot(slot: number | null | undefined): boolean {
   return slot === LEVIATHAN_SLOT
 }
 
-/** How good a trait is, as one number: the sum of its three stats. What the
- *  reroll compares, and what "better" means on the reveal. */
+/**
+ * A trait as one number: the sum of its three stats.
+ *
+ * Kept for sorting and display ONLY. It deliberately does not decide anything
+ * any more: judging an offer on this is exactly what made every hand chase the
+ * same trait, since it cannot tell a Fortune-hungry voyage hand from a raider.
+ */
 export function traitScore(t: { power: number; dodge: number; fortune: number }): number {
   return t.power + t.dodge + t.fortune
 }
