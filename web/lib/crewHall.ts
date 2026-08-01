@@ -6,7 +6,7 @@
 // flaw — it could only ever help crew you did not own yet, so at a full roster
 // the whole 200k ladder did nothing. Only 13 of 67 players ever bought a tier.
 //
-// It now opens bunks in the Bunkhouse (lib/crewBunks.ts), where benched crew
+// It now opens bunks in the hall itself (lib/crewBunks.ts), where benched crew
 // train passively. Same prices, same art progression, but the value lands on
 // the crew you already have and keeps landing forever. Recruits arrive at Lv 1
 // for everyone.
@@ -25,7 +25,7 @@ export type CrewHallTierNum = 1 | 2 | 3 | 4 | 5 | 6
 export type CrewHallTierDef = {
   tier: CrewHallTierNum
   name: string
-  /** Bunks this tier opens in the Bunkhouse. The ONLY source of bunks — there
+  /** Bunks this tier opens in the hall. The ONLY source of bunks — there
    *  is no way to buy one separately, so upgrading the hall is the only way to
    *  train more crew at once. */
   bunks: number

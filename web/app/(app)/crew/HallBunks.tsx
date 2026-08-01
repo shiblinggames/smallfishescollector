@@ -1,27 +1,29 @@
 'use client'
 
-/** THE BUNKHOUSE.
+/** THE HALL'S BUNKS.
  *
- *  The Crew Hall's reason to exist. Benched crew take a bunk and train
- *  passively; the doubloons buy more bunks and a faster drill.
+ *  Renders INSIDE the hall hero, not as a panel of its own. There is no
+ *  separate "Bunkhouse": the hall is the building, the bunks are what is in it,
+ *  and one thing with one border reads better than a box inside a box.
  *
- *  Two things the layout is built around:
+ *  Three upgrades, deliberately non-overlapping so no two buttons ever mean the
+ *  same thing:
  *
- *  - The XP number TICKS. It is the whole feedback loop, so it updates live
- *    rather than only on load, and the clock stops entirely once every bunk has
- *    hit its cap so an idle Crew tab isn't re-rendering for nothing.
- *  - Tapping a bunk, full or empty, opens ONE sheet. Filled bunks offer the
- *    occupant plus the roster to swap them for; no controls are stacked on top
- *    of the crew art.
+ *    hall tier  ->  HOW MANY bunks      (the hero's own upgrade button, above)
+ *    Drills     ->  XP PER HOUR
+ *    Stores     ->  HOW MANY HOURS before a bunk fills
+ *
+ *  The XP figure TICKS: it is the whole feedback loop, so it updates live off
+ *  the same accruedXP the server pays with, and the clock stops dead once every
+ *  bunk is full so an idle tab is not re-rendering for nothing.
  */
 
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { crewLevelFromXP } from '@/lib/crewLevel'
-import { hallTierDef } from '@/lib/crewHall'
 import {
-  accruedXP, bunkCount, bunkRatePerHour, canBunk, drillName,
-  msUntilFull, nextDrillCost, BUNK_CAP_HOURS,
+  accruedXP, bunkCount, bunkRatePerHour, canBunk, msUntilFull,
+  nextDrillCost, nextStoresCost, storesCapHours, tierNumeral,
 } from '@/lib/crewBunks'
 import type { CrewMember, CrewState } from './actions'
 
@@ -30,31 +32,33 @@ const GOLD = '#f0c040'
 function fmtLeft(ms: number): string {
   if (ms <= 0) return 'Full'
   const m = Math.ceil(ms / 60_000)
-  if (m < 60) return `${m}m to full`
+  if (m < 60) return `${m}m left`
   const h = Math.floor(m / 60)
-  return `${h}h ${m % 60}m to full`
+  return `${h}h ${m % 60}m left`
 }
 
-export default function BunkhousePanel({
-  state, artSrc, pending, onBunk, onUnbunk, onClaim, onBuyDrill,
+export default function HallBunks({
+  state, artSrc, accent, pending, onBunk, onUnbunk, onClaim, onBuyDrill, onBuyStores,
 }: {
   state: CrewState
   artSrc: (filename: string) => string
+  /** The hall tier's accent, so the bunks read as part of the building. */
+  accent: string
   pending: boolean
   onBunk: (crewId: number) => void
   onUnbunk: (crewId: number) => void
   onClaim: () => void
   onBuyDrill: () => void
+  onBuyStores: () => void
 }) {
-  // Which bunk index the sheet is open for, or null.
   const [picking, setPicking] = useState<number | null>(null)
   const [now, setNow] = useState(() => Date.now())
 
-  const hall = hallTierDef(state.hallTier)
   const slots = bunkCount(state.hallTier)
   const rate = bunkRatePerHour(state.navLevel, state.drillLevel)
+  const cap = state.capHours
 
-  // Bunked crew, in a stable order so a claim doesn't shuffle the grid.
+  // Stable order, so a claim never reshuffles the grid under your finger.
   const bunked = useMemo(() => {
     const byId = new Map(state.roster.map(c => [c.id, c]))
     return state.bunkedCrewIds
@@ -63,30 +67,23 @@ export default function BunkhousePanel({
       .sort((a, b) => a.id - b.id)
   }, [state.roster, state.bunkedCrewIds])
 
-  // Per-crew accrual anchors, straight from the server. The panel recomputes
-  // the owed XP from these on every tick, using the SAME accruedXP the claim
-  // uses, so the number counting up is exactly the number that gets paid.
   const sinceById = state.bunkSince ?? {}
 
   const owed = bunked.reduce((sum, c) => {
     const since = sinceById[c.id]
-    return sum + (since && canBunk(c.xp) ? accruedXP(since, now, rate) : 0)
+    return sum + (since && canBunk(c.xp) ? accruedXP(since, now, rate, cap) : 0)
   }, 0)
 
-  const soonestFull = bunked.reduce((min, c) => {
+  const anyFilling = bunked.some(c => {
     const since = sinceById[c.id]
-    if (!since || !canBunk(c.xp)) return min
-    const left = msUntilFull(since, now)
-    return left > 0 ? Math.min(min, left) : min
-  }, Infinity)
+    return !!since && canBunk(c.xp) && msUntilFull(since, now, cap) > 0
+  })
 
-  // Adaptive clock, borrowed from the trawl indicator: tick while something is
-  // still filling, then stop dead. Nothing to animate once every bunk is full.
   useEffect(() => {
-    if (!Number.isFinite(soonestFull)) return
+    if (!anyFilling) return
     const id = setInterval(() => setNow(Date.now()), 10_000)
     return () => clearInterval(id)
-  }, [soonestFull])
+  }, [anyFilling])
 
   const eligible = useMemo(() => state.roster.filter(c =>
     c.voyageSlot === null && c.raidSlot === null
@@ -96,28 +93,17 @@ export default function BunkhousePanel({
     && canBunk(c.xp),
   ), [state.roster, state.bunkedCrewIds, state.trawlingCrewIds, state.lockedCrewIds])
 
-  const drillCost = nextDrillCost(state.drillLevel)
-
   const occupant = picking === null ? null : bunked[picking] ?? null
 
   return (
-    <div style={{
-      borderRadius: 12, overflow: 'hidden', marginBottom: '0.9rem',
-      border: `1px solid ${hall.accent}44`,
-      background: `linear-gradient(180deg, ${hall.accent}12 0%, transparent 60%), ${hall.base}`,
-    }}>
-      {/* Header: what it is, what it pays, and the one button that matters. */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.75rem 0.8rem 0.6rem' }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#f0ede8', lineHeight: 1.1 }}>Bunkhouse</p>
-          <p className="font-karla" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>
-            {rate.toLocaleString()} XP an hour each, up to {BUNK_CAP_HOURS}h
-          </p>
-        </div>
-        <button
-          type="button"
-          disabled={pending || owed <= 0}
-          onClick={onClaim}
+    <div style={{ marginTop: '0.85rem', paddingTop: '0.75rem', borderTop: `1px solid ${accent}2e` }}>
+      {/* What the bunks pay, and the one button that matters. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '0.6rem' }}>
+        <p className="font-karla" style={{ flex: 1, minWidth: 0, fontSize: '0.64rem', color: 'rgba(255,255,255,0.55)', lineHeight: 1.4 }}>
+          <span style={{ color: '#f0ede8', fontWeight: 700 }}>{rate.toLocaleString()} XP</span> an hour per bunk,
+          for <span style={{ color: '#f0ede8', fontWeight: 700 }}>{cap}h</span>
+        </p>
+        <button type="button" disabled={pending || owed <= 0} onClick={onClaim}
           className="font-karla font-700 uppercase"
           style={{
             flexShrink: 0, padding: '0.5rem 0.85rem', borderRadius: 9,
@@ -128,12 +114,12 @@ export default function BunkhousePanel({
             cursor: pending || owed <= 0 ? 'default' : 'pointer',
             opacity: pending ? 0.6 : 1, touchAction: 'manipulation',
           }}>
-          {owed > 0 ? `Collect ${owed.toLocaleString()} XP` : 'Nothing owed'}
+          {owed > 0 ? `Collect ${owed.toLocaleString()}` : 'Nothing owed'}
         </button>
       </div>
 
       {/* Bunks. Same three-across tile language as the assign board's seats. */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 7, padding: '0 0.8rem 0.7rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 7 }}>
         {Array.from({ length: slots }, (_, i) => {
           const crew = bunked[i]
           if (!crew) {
@@ -143,18 +129,17 @@ export default function BunkhousePanel({
                 aria-label={`Empty bunk ${i + 1}. Tap to put a crew in it.`}
                 style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,
-                  minHeight: 92, borderRadius: 11, cursor: 'pointer', font: 'inherit',
-                  border: `1.5px dashed ${hall.accent}55`,
-                  background: 'rgba(0,0,0,0.26)',
+                  minHeight: 88, borderRadius: 11, cursor: 'pointer', font: 'inherit',
+                  border: `1.5px dashed ${accent}55`, background: 'rgba(0,0,0,0.28)',
                   touchAction: 'manipulation',
                 }}>
                 <span style={{
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                   width: 24, height: 24, borderRadius: '50%',
-                  background: `${hall.accent}1f`, border: `1.5px solid ${hall.accent}99`,
-                  color: hall.accent, fontSize: '1rem', lineHeight: 1,
+                  background: `${accent}1f`, border: `1.5px solid ${accent}99`,
+                  color: accent, fontSize: '1rem', lineHeight: 1,
                 }}>+</span>
-                <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.54rem', color: `${hall.accent}cc` }}>
+                <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.54rem', color: `${accent}cc` }}>
                   Empty bunk
                 </span>
               </button>
@@ -162,21 +147,21 @@ export default function BunkhousePanel({
           }
           const since = sinceById[crew.id]
           const maxed = !canBunk(crew.xp)
-          const earned = since && !maxed ? accruedXP(since, now, rate) : 0
-          const left = since && !maxed ? msUntilFull(since, now) : 0
+          const earned = since && !maxed ? accruedXP(since, now, rate, cap) : 0
+          const left = since && !maxed ? msUntilFull(since, now, cap) : 0
           return (
             <button key={crew.id} type="button" disabled={pending}
               onClick={() => setPicking(i)}
               aria-label={`${crew.name} in bunk ${i + 1}, ${earned} XP earned. Tap to swap or take them out.`}
               style={{
                 position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-                minHeight: 92, padding: '0.35rem 0.25rem 0.4rem', borderRadius: 11,
+                minHeight: 88, padding: '0.35rem 0.25rem 0.4rem', borderRadius: 11,
                 cursor: 'pointer', font: 'inherit', textAlign: 'center',
                 border: `1.5px solid ${maxed ? 'rgba(255,255,255,0.18)' : `${GOLD}66`}`,
                 background: `linear-gradient(180deg, ${maxed ? 'rgba(255,255,255,0.05)' : `${GOLD}14`} 0%, rgba(0,0,0,0.25) 100%)`,
                 touchAction: 'manipulation',
               }}>
-              <div style={{ width: '100%', height: 40, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+              <div style={{ width: '100%', height: 38, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={artSrc(crew.filename)} alt="" aria-hidden loading="lazy" decoding="async"
                   style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', opacity: maxed ? 0.5 : 1 }} />
@@ -203,26 +188,26 @@ export default function BunkhousePanel({
         })}
       </div>
 
-      {/* Drills are the only thing bought HERE. Bunk count comes from the hall
-          tier alone, so the two upgrades never compete for the same tap: you
-          upgrade the building for room, and drill for speed. */}
-      <div style={{ padding: '0 0.8rem 0.8rem' }}>
+      {/* The two trees. Neither caps, and they buy different things: one is XP
+          per hour, the other is how many hours. */}
+      <div style={{ display: 'flex', gap: 7, marginTop: '0.65rem' }}>
         <UpgradeButton
-          label={`Drill ${drillName(state.drillLevel + 1)}`} sub="Every bunk trains faster"
-          cost={drillCost} balance={state.doubloons} accent={GOLD}
-          disabled={pending} onClick={onBuyDrill} />
-        <p className="font-karla" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.38)', textAlign: 'center', marginTop: 6, lineHeight: 1.4 }}>
-          Upgrade the hall above for more bunks.
-        </p>
+          label={`Drills ${tierNumeral(state.drillLevel + 1)}`}
+          now={`${rate.toLocaleString()} XP/hr`}
+          next={`${bunkRatePerHour(state.navLevel, state.drillLevel + 1).toLocaleString()} XP/hr`}
+          cost={nextDrillCost(state.drillLevel)} balance={state.doubloons}
+          accent={GOLD} disabled={pending} onClick={onBuyDrill} />
+        <UpgradeButton
+          label={`Stores ${tierNumeral(state.storesLevel + 1)}`}
+          now={`${cap}h of training`}
+          next={`${storesCapHours(state.storesLevel + 1)}h of training`}
+          cost={nextStoresCost(state.storesLevel)} balance={state.doubloons}
+          accent="#7fc4a8" disabled={pending} onClick={onBuyStores} />
       </div>
 
       {picking !== null && typeof document !== 'undefined' && createPortal(
         <BunkPicker
-          occupant={occupant}
-          eligible={eligible}
-          artSrc={artSrc}
-          accent={hall.accent}
-          pending={pending}
+          occupant={occupant} eligible={eligible} artSrc={artSrc} accent={accent} pending={pending}
           onPick={id => { onBunk(id); setPicking(null) }}
           onTakeOut={id => { onUnbunk(id); setPicking(null) }}
           onClose={() => setPicking(null)}
@@ -231,10 +216,12 @@ export default function BunkhousePanel({
   )
 }
 
+/** Shows what you have and what you would get, not just a price — the whole
+ *  question with an upgrade tree is "is this worth it". */
 function UpgradeButton({
-  label, sub, cost, balance, accent, disabled, onClick,
+  label, now, next, cost, balance, accent, disabled, onClick,
 }: {
-  label: string; sub: string; cost: number; balance: number
+  label: string; now: string; next: string; cost: number; balance: number
   accent: string; disabled: boolean; onClick: () => void
 }) {
   const afford = balance >= cost
@@ -252,7 +239,9 @@ function UpgradeButton({
       <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.6rem', color: afford ? '#f0ede8' : 'rgba(255,255,255,0.45)' }}>
         {label}
       </span>
-      <span className="font-karla" style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.38)' }}>{sub}</span>
+      <span className="font-karla" style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.42)', whiteSpace: 'nowrap' }}>
+        {now} <span style={{ color: afford ? accent : 'rgba(255,255,255,0.3)' }}>&rarr; {next}</span>
+      </span>
       <span className="font-cinzel font-700" style={{ fontSize: '0.72rem', marginTop: 2, color: afford ? accent : 'rgba(255,255,255,0.3)', fontVariantNumeric: 'tabular-nums' }}>
         {cost.toLocaleString()} ⟡
       </span>
@@ -278,7 +267,7 @@ function BunkPicker({
       <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 480, maxHeight: '84vh', display: 'flex', flexDirection: 'column', background: 'rgba(14,11,7,0.99)', borderTop: `2px solid ${accent}`, borderRadius: '18px 18px 0 0', boxShadow: '0 -12px 44px rgba(0,0,0,0.6)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '1rem 1rem 0.8rem' }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.56rem', color: accent }}>Bunkhouse</p>
+            <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.56rem', color: accent }}>Crew Hall</p>
             <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#f0ede8', lineHeight: 1.1 }}>
               {occupant ? `Swap out ${occupant.name}` : 'Who trains?'}
             </p>

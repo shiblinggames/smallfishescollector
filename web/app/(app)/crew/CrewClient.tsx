@@ -15,8 +15,8 @@ import { crewSkinsForSlug, getCrewSkin, getCrewSkinByFilename, skinArtGlow, CREW
 import { ChaseSkinFx } from '@/components/ChaseSkinFx'
 import { hallTierDef, nextHallTier, CREW_HALL_MAX_TIER } from '@/lib/crewHall'
 import { crewAssignment } from '@/lib/crewAssignment'
-import BunkhousePanel from './BunkhousePanel'
-import { bunkCrew, unbunkCrew, claimBunks, buyDrill } from './bunkActions'
+import HallBunks from './HallBunks'
+import { bunkCrew, unbunkCrew, claimBunks, buyDrill, buyStores } from './bunkActions'
 import { RARITY_NAMES, RARITY_COLORS, groupForSlug, crewDisplayName, GEM_WEIGHTS, type CrewRarity } from '@/lib/crewGen'
 import { applyCrewEffects, netTraitStats, traitLabel, traitKind } from '@/lib/crewEffects'
 import AssignBoard from './AssignBoard'
@@ -327,7 +327,7 @@ function CrewPanel({
   const duty =
     locked && lockKind === 'trawl' ? { label: 'Trawling', color: '#3fc8aa' }
     : locked ? { label: 'At sea', color: '#ffb45a' }
-    : bunked ? { label: 'In the bunkhouse', color: '#f0c040' }
+    : bunked ? { label: 'Training', color: '#f0c040' }
     : assignment === 'raid' ? { label: 'Raid party', color: '#e07c7c' }
     : assignment === 'voyage' ? { label: 'Voyage party', color: '#5fa8c9' }
     : null
@@ -1336,7 +1336,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
         )}
 
         {/* THE HALL. Its own tab as of this change: the building and the
-            Bunkhouse inside it are a place you invest in over months, while
+            bunks inside it are a place you invest in over months, while
             Recruit is a daily board you clear in ten seconds. Sharing a tab
             meant the thing you visit most pushed the thing you spend most on
             off the screen. */}
@@ -1485,28 +1485,25 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* The bunks live INSIDE the hero. The hall IS the building that
+              houses them, so a bordered panel under a bordered panel was two
+              boxes describing one place. */}
+          {state.hallBunksOpen && (
+            <HallBunks
+              state={state}
+              artSrc={artSrc}
+              accent={hall.accent}
+              pending={pending}
+              onBunk={id => run(() => bunkCrew(id), id)}
+              onUnbunk={id => runBunkClaim(() => unbunkCrew(id))}
+              onClaim={() => runBunkClaim(() => claimBunks())}
+              onBuyDrill={() => run(() => buyDrill(), 'reroll')}
+              onBuyStores={() => run(() => buyStores(), 'reroll')}
+            />
+          )}
         </div>
 
-        {/* The building, then what is inside it. Sits above the reroll row and
-            the board because bunks are the hall's actual purpose now — the
-            board is a daily, the Bunkhouse is the thing you keep investing in. */}
-        {state.bunkhouseOpen && <BunkhousePanel
-          state={state}
-          artSrc={artSrc}
-          pending={pending}
-          onBunk={id => run(() => bunkCrew(id), id)}
-          onUnbunk={id => runBunkClaim(() => unbunkCrew(id))}
-          onClaim={() => runBunkClaim(() => claimBunks())}
-          onBuyDrill={() => run(() => buyDrill(), 'reroll')}
-        />}
-
-        </>
-          )
-        })()}
-
-        {activeTab === 'recruits' && (() => {
-          return (
-        <>
           {/* Reroll row — every way to reroll this board, side by side. The
               blood-charged tiers used to be a separate panel above the hall
               with its own header, balance strip and description, which pushed
@@ -1721,7 +1718,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                 <p className="font-karla" style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.6)', marginTop: 2, lineHeight: 1.4 }}>
                   {bunkPaid.levelled.length > 0
                     ? `${bunkPaid.levelled.join(', ')} levelled up in the bunks.`
-                    : 'Collected from the bunkhouse.'}
+                    : 'Collected from the hall.'}
                 </p>
               </div>
             </motion.div>
@@ -1761,7 +1758,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   {next.flavor}
                 </p>
                 <p className="font-karla font-600" style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.78)', marginBottom: 14 }}>
-                  Opens a bunk, taking the Bunkhouse to <span style={{ color: next.accent }}>{next.bunks}</span>
+                  Opens a bunk, taking the hall to <span style={{ color: next.accent }}>{next.bunks}</span>
                 </p>
                 <div className="flex items-center justify-between" style={{
                   padding: '0.55rem 0.75rem', borderRadius: 9,

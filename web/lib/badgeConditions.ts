@@ -235,7 +235,7 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
     fully_rigged:   ((p.completionist_effects as number[] | null)?.length ?? 0) >= 3,
     ancient_ones:   ancientsCaught >= 6,
     // Pinned to 5, NOT CREW_HALL_MAX_TIER. The ladder grew to 6 for the
-    // Bunkhouse, and following the max would have silently un-earned this for
+    // hall's bunks, and following the max would have silently un-earned this for
     // everyone already holding it. Its own description names the Hall of
     // Legends, which is tier 5, so 5 is what it has always meant.
     crewmaster:     Number(p.crew_hall_tier ?? 0) >= 5,

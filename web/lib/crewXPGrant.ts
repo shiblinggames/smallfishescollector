@@ -79,7 +79,7 @@ export async function grantXPToCrewIds(admin: Admin, userId: string, crewIds: nu
 
 /** Grant a DIFFERENT amount to each crew. The two helpers above both apply one
  *  flat amount to a whole set, which is right for a raid (the party shares the
- *  kill) but wrong for the Bunkhouse: every bunk has its own `since`, so a
+ *  kill) but wrong for the hall's bunks: every bunk has its own `since`, so a
  *  single claim owes each crew a different number. */
 export async function grantXPPairs(
   admin: Admin,

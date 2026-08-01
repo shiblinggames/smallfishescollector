@@ -1,4 +1,4 @@
-// THE BUNKHOUSE — the Crew Hall's training rates, costs and accrual math.
+// THE CREW HALL'S BUNKS — training rates, upgrade costs and accrual math.
 //
 // The hall used to pre-level RECRUITS (hallStartXP). That only ever helped crew
 // you did not own yet, so at a full roster it did nothing at all — which is why
@@ -12,25 +12,25 @@
 //
 // PLAIN MODULE, deliberately not 'use server' — a 'use server' file silently
 // drops every non-async export, which would strip all of this at build time.
-// Both bunkActions.ts and BunkhousePanel.tsx import it, so the number the panel
+// Both bunkActions.ts and HallBunks.tsx import it, so the number the panel
 // previews and the number the server grants cannot drift.
 
 import { crewLevelFromXP, CREW_MAX_LEVEL } from './crewLevel'
 import { hallTierDef } from './crewHall'
 
 /**
- * Release gate. FALSE while the Bunkhouse is admin-only: the panel is hidden
+ * Release gate. FALSE while the hall's bunks are admin-only: they are hidden
  * for everyone else and every bunk action refuses server-side, so hiding the UI
  * is not the only thing standing between a player and a free XP faucet.
  *
  * Flip to true to open it to everyone. Nothing else needs to change — the
  * tables, columns and RPC are already live and inert for non-admins.
  */
-export const BUNKHOUSE_LIVE = false
+export const HALL_BUNKS_LIVE = false
 
-/** Can this player use the Bunkhouse at all? */
-export function bunkhouseOpen(isAdmin: boolean | null | undefined): boolean {
-  return BUNKHOUSE_LIVE || isAdmin === true
+/** Can this player use the hall's bunks at all? */
+export function hallBunksOpen(isAdmin: boolean | null | undefined): boolean {
+  return HALL_BUNKS_LIVE || isAdmin === true
 }
 
 /** Flat floor on the hourly rate, before Nav scaling. */
@@ -38,11 +38,21 @@ export const BUNK_BASE = 40
 /** Added to the hourly rate per Navigation level. Nav 1 = 44/hr, Nav 100 = 440/hr. */
 export const BUNK_PER_NAV = 4
 /**
- * Accrual stops after this many hours. The whole point of the cap: you can
- * never lose more than one window by not logging in, and there is no reason to
- * set an alarm.
+ * Hours a bunk accrues before it fills, by Stores tier. The whole point of a
+ * cap: you can never lose more than one window by not logging in, and there is
+ * no reason to set an alarm. Raising it is the second upgrade tree — Drills buy
+ * XP PER HOUR, Stores buy HOW MANY HOURS.
+ *
+ * Past the listed tiers it is +12h a level, forever, so it never dead-ends.
  */
-export const BUNK_CAP_HOURS = 12
+const STORES_HOURS = [12, 18, 24, 36, 48]
+const STORES_HOURS_STEP = 12
+
+export function storesCapHours(level: number): number {
+  const l = Math.max(1, Math.floor(level))
+  if (l <= STORES_HOURS.length) return STORES_HOURS[l - 1]
+  return STORES_HOURS[STORES_HOURS.length - 1] + (l - STORES_HOURS.length) * STORES_HOURS_STEP
+}
 
 /**
  * Drill levels multiply the Nav-scaled base. Hand-set for the first five so the
@@ -73,12 +83,13 @@ export function bunkRatePerHour(navLevel: number, drillLevel: number): number {
 /** Bunks come from the hall tier and NOTHING else. There was briefly a second
  *  ladder of bunks bought with doubloons; it competed with the hall upgrade for
  *  the same decision, so the hall is the only way to get room. Drills are the
- *  only thing bought inside the Bunkhouse. */
+ *  only things bought inside the hall panel. */
 export function bunkCount(hallTier: number): number {
   return hallTierDef(hallTier).bunks
 }
 
 const DRILL_COST_BASE = 100_000
+const STORES_COST_BASE = 120_000
 const COST_GROWTH = 2.5
 
 /** Doubloons to go from `level` to `level + 1`. Drill I is free. */
@@ -86,8 +97,15 @@ export function nextDrillCost(level: number): number {
   return Math.round(DRILL_COST_BASE * Math.pow(COST_GROWTH, Math.max(1, Math.floor(level)) - 1))
 }
 
-/** Roman numeral for a drill level, for display. Falls back to the number. */
-export function drillName(level: number): string {
+/** Doubloons for the next Stores tier. Stores I is free. Priced a touch above
+ *  Drills at the same step, because more hours is the safer buy of the two:
+ *  it pays off even on the days you forget to check in. */
+export function nextStoresCost(level: number): number {
+  return Math.round(STORES_COST_BASE * Math.pow(COST_GROWTH, Math.max(1, Math.floor(level)) - 1))
+}
+
+/** Roman numeral for an upgrade tier, for display. Falls back to the number. */
+export function tierNumeral(level: number): string {
   return ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'][level - 1] ?? String(level)
 }
 
@@ -96,18 +114,18 @@ export function drillName(level: number): string {
  * Shared by the panel's live preview and the claim itself so the number the
  * player watches tick up is exactly the number they get.
  */
-export function accruedXP(since: string | Date, nowMs: number, ratePerHour: number): number {
+export function accruedXP(since: string | Date, nowMs: number, ratePerHour: number, capHours: number): number {
   const start = since instanceof Date ? since.getTime() : new Date(since).getTime()
   if (!Number.isFinite(start)) return 0
-  const hours = Math.min(BUNK_CAP_HOURS, Math.max(0, (nowMs - start) / 3_600_000))
+  const hours = Math.min(capHours, Math.max(0, (nowMs - start) / 3_600_000))
   return Math.floor(hours * ratePerHour)
 }
 
 /** Milliseconds until this bunk stops accruing, or 0 if it already has. */
-export function msUntilFull(since: string | Date, nowMs: number): number {
+export function msUntilFull(since: string | Date, nowMs: number, capHours: number): number {
   const start = since instanceof Date ? since.getTime() : new Date(since).getTime()
   if (!Number.isFinite(start)) return 0
-  return Math.max(0, start + BUNK_CAP_HOURS * 3_600_000 - nowMs)
+  return Math.max(0, start + capHours * 3_600_000 - nowMs)
 }
 
 /**

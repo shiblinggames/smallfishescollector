@@ -13,7 +13,7 @@ import {
 } from '@/lib/crewGen'
 import { clampHallTier, nextHallTier, type CrewHallTierNum } from '@/lib/crewHall'
 import { releaseBunk } from '@/lib/crewBunkSettle'
-import { bunkhouseOpen } from '@/lib/crewBunks'
+import { hallBunksOpen, storesCapHours } from '@/lib/crewBunks'
 import { crewLevelFromXP } from '@/lib/crewLevel'
 import { getCrewSkin, resolveCrewFilename, CREW_SKINS, type EquippedCrewSkins } from '@/lib/crewSkins'
 import { bloodRerollTier, BLOOD_SKIN_GAMBLE_COST, hardcoreUnlocked } from '@/lib/gauntlet'
@@ -103,18 +103,22 @@ export type CrewState = {
    *  lists above this is NOT a lock: a bunked crew can be assigned freely and
    *  is evicted automatically (their XP banked) when they are. */
   bunkedCrewIds: number[]
-  /** Is the Bunkhouse open to this player? Admin-only for now
-   *  (BUNKHOUSE_LIVE in lib/crewBunks.ts). Hides the panel; the actions
-   *  enforce it independently. */
-  bunkhouseOpen: boolean
+  /** Are the hall's bunks open to this player? Admin-only for now
+   *  (HALL_BUNKS_LIVE in lib/crewBunks.ts). Hides the UI; the actions enforce
+   *  it independently. */
+  hallBunksOpen: boolean
   /** crew id -> when their bunk last started accruing (ISO). The panel needs
    *  this to tick the earned XP live; ids alone would only show a static
    *  count. */
   bunkSince: Record<number, string>
-  /** Drill level — multiplies the Nav-scaled training rate. */
+  /** Drill level — multiplies the Nav-scaled training rate (XP per hour). */
   drillLevel: number
+  /** Stores level — sets how long a bunk accrues before it fills. */
+  storesLevel: number
+  /** Hours a bunk accrues before capping, resolved from storesLevel. */
+  capHours: number
   /** Crew Hall building tier (1..5). Drives the recruit board's visual theme
-   *  and how many bunks the Bunkhouse has (lib/crewHall.ts). */
+   *  and how many bunks the hall has (lib/crewHall.ts). */
   hallTier: CrewHallTierNum
   /** Doubloon balance — the hall upgrade currency. */
   doubloons: number
@@ -263,7 +267,7 @@ export async function getCrewState(): Promise<CrewState | null> {
 
   const { data: prof } = await admin
     .from('profiles')
-    .select('gems, is_premium, premium_expires_at, expedition_xp, last_free_recruit_date, ship_tier, crew_hall_tier, crew_drill_level, doubloons, blood_gems, owned_crew_skins, equipped_crew_skins, is_admin, gauntlet_deepest, raid_node_progress, ship_classes, has_sixth_berth, legendary_unlocks')
+    .select('gems, is_premium, premium_expires_at, expedition_xp, last_free_recruit_date, ship_tier, crew_hall_tier, crew_drill_level, crew_stores_level, doubloons, blood_gems, owned_crew_skins, equipped_crew_skins, is_admin, gauntlet_deepest, raid_node_progress, ship_classes, has_sixth_berth, legendary_unlocks')
     .eq('id', user.id)
     .single()
   if (!prof) return null
@@ -329,8 +333,10 @@ export async function getCrewState(): Promise<CrewState | null> {
     roster: ((rosterRows ?? []) as any[]).map(r => toMember(r, meta, equippedCrewSkins)).sort(rosterSort),
     capacity, navLevel, gems, isPremium: premium, rerollCost: REROLL_COST,
     shipCrewSlots, lockedCrewIds, trawlingCrewIds, bunkedCrewIds, bunkSince,
-    bunkhouseOpen: bunkhouseOpen((prof as any).is_admin),
+    hallBunksOpen: hallBunksOpen((prof as any).is_admin),
     drillLevel: (prof as any).crew_drill_level ?? 1,
+    storesLevel: (prof as any).crew_stores_level ?? 1,
+    capHours: storesCapHours((prof as any).crew_stores_level ?? 1),
     hallTier: clampHallTier((prof as any).crew_hall_tier),
     doubloons: (prof as any).doubloons ?? 0,
     bloodGems: ((prof as any).blood_gems as number | null) ?? 0,
@@ -638,7 +644,7 @@ async function applyAssignment(
   } else {
     // AUTO-EVICT. A bunked crew sent to a party gives up their bunk, and
     // releaseBunk banks what they had already earned first, so XP is never
-    // lost by leaving the bunkhouse. No-op (one indexed lookup) if they were
+    // lost by leaving a bunk. No-op (one indexed lookup) if they were
     // not bunked. Deliberately not a guard in assertCanReassign: bunking must
     // never be a thing you have to undo before you can use a crew.
     await releaseBunk(admin, userId, crewId)
