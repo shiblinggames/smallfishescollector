@@ -20,7 +20,7 @@
 // → oak → brass → gold → radiant). Consumed by CrewClient's recruit tab
 // panel + the upgrade modal.
 
-export type CrewHallTierNum = 1 | 2 | 3 | 4 | 5
+export type CrewHallTierNum = 1 | 2 | 3 | 4 | 5 | 6
 
 export type CrewHallTierDef = {
   tier: CrewHallTierNum
@@ -80,9 +80,16 @@ export const CREW_HALL_TIERS: Record<CrewHallTierNum, CrewHallTierDef> = {
     flavor: 'Names sung in every port. Every hand who bunks here leaves it sharper.',
     glow: 'rgba(255,217,102,0.16)',
   },
+  6: {
+    tier: 6, name: 'Leviathan Hall', bunks: 6, cost: 405_000,
+    accent: '#fff0c4',
+    base: '#332715',
+    flavor: 'Rafters cut from something that used to swim. Six bunks, and a queue for them.',
+    glow: 'rgba(255,240,196,0.20)',
+  },
 }
 
-export const CREW_HALL_MAX_TIER: CrewHallTierNum = 5
+export const CREW_HALL_MAX_TIER: CrewHallTierNum = 6
 
 export function clampHallTier(t: number | null | undefined): CrewHallTierNum {
   const n = Math.max(1, Math.min(CREW_HALL_MAX_TIER, Math.floor(t ?? 1)))

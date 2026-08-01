@@ -1353,9 +1353,18 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
               after a reroll. */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: '0.85rem' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
+            {/* ART PENDING for tier 6 (Leviathan Hall) — hall_1..5 exist, hall_6
+                does not yet. Fall back to the tier below rather than hiding,
+                which left an empty 132px hole beside the text. Self-healing:
+                drop hall_6.png in and this stops firing. */}
             <img src={`/crew/hall_${hall.tier}.png`} alt="" aria-hidden decoding="async"
               style={{ width: 132, height: 132, flexShrink: 0, objectFit: 'contain', filter: `drop-shadow(0 4px 14px ${hall.accent}55)` }}
-              onError={e => { (e.target as HTMLImageElement).style.visibility = 'hidden' }} />
+              onError={e => {
+                const img = e.target as HTMLImageElement
+                if (img.dataset.fellBack) { img.style.visibility = 'hidden'; return }
+                img.dataset.fellBack = '1'
+                img.src = `/crew/hall_${Math.max(1, hall.tier - 1)}.png`
+              }} />
             <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>

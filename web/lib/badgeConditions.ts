@@ -234,7 +234,11 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
     // Rigged derives off the forged loadout (only non-empty once you own it).
     fully_rigged:   ((p.completionist_effects as number[] | null)?.length ?? 0) >= 3,
     ancient_ones:   ancientsCaught >= 6,
-    crewmaster:     Number(p.crew_hall_tier ?? 0) >= CREW_HALL_MAX_TIER,
+    // Pinned to 5, NOT CREW_HALL_MAX_TIER. The ladder grew to 6 for the
+    // Bunkhouse, and following the max would have silently un-earned this for
+    // everyone already holding it. Its own description names the Hall of
+    // Legends, which is tier 5, so 5 is what it has always meant.
+    crewmaster:     Number(p.crew_hall_tier ?? 0) >= 5,
     growing_crew:   recruits >= 25,
     full_muster:    recruits >= 100,
     legendary_recruit: hasLegendaryCrew,
