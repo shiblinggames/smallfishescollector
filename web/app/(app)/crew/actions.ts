@@ -13,6 +13,7 @@ import {
 } from '@/lib/crewGen'
 import { clampHallTier, nextHallTier, type CrewHallTierNum } from '@/lib/crewHall'
 import { releaseBunk } from '@/lib/crewBunkSettle'
+import { bunkhouseOpen } from '@/lib/crewBunks'
 import { crewLevelFromXP } from '@/lib/crewLevel'
 import { getCrewSkin, resolveCrewFilename, CREW_SKINS, type EquippedCrewSkins } from '@/lib/crewSkins'
 import { bloodRerollTier, BLOOD_SKIN_GAMBLE_COST, hardcoreUnlocked } from '@/lib/gauntlet'
@@ -102,6 +103,10 @@ export type CrewState = {
    *  lists above this is NOT a lock: a bunked crew can be assigned freely and
    *  is evicted automatically (their XP banked) when they are. */
   bunkedCrewIds: number[]
+  /** Is the Bunkhouse open to this player? Admin-only for now
+   *  (BUNKHOUSE_LIVE in lib/crewBunks.ts). Hides the panel; the actions
+   *  enforce it independently. */
+  bunkhouseOpen: boolean
   /** crew id -> when their bunk last started accruing (ISO). The panel needs
    *  this to tick the earned XP live; ids alone would only show a static
    *  count. */
@@ -326,6 +331,7 @@ export async function getCrewState(): Promise<CrewState | null> {
     roster: ((rosterRows ?? []) as any[]).map(r => toMember(r, meta, equippedCrewSkins)).sort(rosterSort),
     capacity, navLevel, gems, isPremium: premium, rerollCost: REROLL_COST,
     shipCrewSlots, lockedCrewIds, trawlingCrewIds, bunkedCrewIds, bunkSince,
+    bunkhouseOpen: bunkhouseOpen((prof as any).is_admin),
     bunksBought: (prof as any).crew_bunks_bought ?? 0,
     drillLevel: (prof as any).crew_drill_level ?? 1,
     hallTier: clampHallTier((prof as any).crew_hall_tier),

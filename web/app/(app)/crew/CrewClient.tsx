@@ -1474,7 +1474,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
         {/* The building, then what is inside it. Sits above the reroll row and
             the board because bunks are the hall's actual purpose now — the
             board is a daily, the Bunkhouse is the thing you keep investing in. */}
-        <BunkhousePanel
+        {state.bunkhouseOpen && <BunkhousePanel
           state={state}
           artSrc={artSrc}
           pending={pending}
@@ -1483,7 +1483,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
           onClaim={() => runBunkClaim(() => claimBunks())}
           onBuyBunk={() => run(() => buyBunk(), 'reroll')}
           onBuyDrill={() => run(() => buyDrill(), 'reroll')}
-        />
+        />}
 
           {/* Reroll row — every way to reroll this board, side by side. The
               blood-charged tiers used to be a separate panel above the hall

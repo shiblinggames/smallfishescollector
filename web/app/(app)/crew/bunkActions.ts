@@ -19,6 +19,8 @@ import { getCrewState, type CrewActionResult, type CrewState } from './actions'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+const CLOSED = 'The Bunkhouse is not open yet.'
+
 /** A claim also reports what each crew earned, so the panel can flash level-ups
  *  without a second round trip — CrewXPGrant already carries old/new level. */
 export type BunkClaimResult = { state: CrewState; grants: CrewXPGrant[] } | { error: string }
@@ -47,6 +49,7 @@ export async function bunkCrew(crewId: number): Promise<CrewActionResult> {
   if (onTrawl) return { error: 'They are out on a trawl. Collect it first.' }
 
   const ctx = await bunkContext(admin, user.id)
+  if (!ctx.open) return { error: CLOSED }
   const bunks = await loadBunks(admin, user.id)
   if (bunks.some(b => b.crew_id === crewId)) return { error: 'They already have a bunk.' }
   if (bunks.length >= ctx.slots) return { error: 'Every bunk is taken. Build another.' }
@@ -77,6 +80,8 @@ export async function claimBunks(): Promise<BunkClaimResult> {
   const admin = createAdminClient()
 
   const ctx = await bunkContext(admin, user.id)
+  // Deliberately NOT gated: if the flag is ever switched back off, whatever a
+  // crew already earned must still be collectable rather than stranded.
   const grants = await settleBunks(admin, user.id, await loadBunks(admin, user.id), ctx.rate)
 
   const state = await getCrewState()
@@ -105,6 +110,7 @@ async function buyUpgrade(kind: 'bunk' | 'drill'): Promise<CrewActionResult> {
   const admin = createAdminClient()
 
   const ctx = await bunkContext(admin, user.id)
+  if (!ctx.open) return { error: CLOSED }
   const cost = kind === 'bunk' ? nextBunkCost(ctx.bought) : nextDrillCost(ctx.drillLevel)
   if (ctx.doubloons < cost) return { error: `Need ${cost.toLocaleString()} ⟡` }
 

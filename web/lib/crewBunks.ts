@@ -18,6 +18,21 @@
 import { crewLevelFromXP, CREW_MAX_LEVEL } from './crewLevel'
 import { hallTierDef } from './crewHall'
 
+/**
+ * Release gate. FALSE while the Bunkhouse is admin-only: the panel is hidden
+ * for everyone else and every bunk action refuses server-side, so hiding the UI
+ * is not the only thing standing between a player and a free XP faucet.
+ *
+ * Flip to true to open it to everyone. Nothing else needs to change — the
+ * tables, columns and RPC are already live and inert for non-admins.
+ */
+export const BUNKHOUSE_LIVE = false
+
+/** Can this player use the Bunkhouse at all? */
+export function bunkhouseOpen(isAdmin: boolean | null | undefined): boolean {
+  return BUNKHOUSE_LIVE || isAdmin === true
+}
+
 /** Flat floor on the hourly rate, before Nav scaling. */
 export const BUNK_BASE = 40
 /** Added to the hourly rate per Navigation level. Nav 1 = 44/hr, Nav 100 = 440/hr. */

@@ -48,32 +48,32 @@ export type CrewHallTierDef = {
 
 export const CREW_HALL_TIERS: Record<CrewHallTierNum, CrewHallTierDef> = {
   1: {
-    tier: 1, name: 'Driftwood Hall', bunks: 2, cost: 0,
+    tier: 1, name: 'Driftwood Hall', bunks: 1, cost: 0,
     accent: '#97836a',
     base: '#16130f',
-    flavor: 'Salvaged planks and a leaky roof. Two bunks, if you can call them that.',
+    flavor: 'Salvaged planks, a leaky roof, and one bunk in the corner.',
   },
   2: {
-    tier: 2, name: 'Oakhewn Hall', bunks: 3, cost: 5_000,
+    tier: 2, name: 'Oakhewn Hall', bunks: 2, cost: 5_000,
     accent: '#b3814a',
     base: '#1a130c',
     flavor: 'Solid oak beams and room to drill. Word spreads.',
   },
   3: {
-    tier: 3, name: 'Brassbound Hall', bunks: 4, cost: 15_000,
+    tier: 3, name: 'Brassbound Hall', bunks: 3, cost: 15_000,
     accent: '#d9a83a',
     base: '#1e170c',
     flavor: 'Brass fittings, a proper bar, and bunks that see real use.',
   },
   4: {
-    tier: 4, name: 'Gilded Hall', bunks: 5, cost: 45_000,
+    tier: 4, name: 'Gilded Hall', bunks: 4, cost: 45_000,
     accent: '#f0c040',
     base: '#231a0b',
     flavor: 'Gold leaf on the rafters, and drillmasters who know their trade.',
     glow: 'rgba(240,192,64,0.10)',
   },
   5: {
-    tier: 5, name: 'Hall of Legends', bunks: 6, cost: 135_000,
+    tier: 5, name: 'Hall of Legends', bunks: 5, cost: 135_000,
     accent: '#ffd966',
     base: '#281f0d',
     flavor: 'Names sung in every port. Every hand who bunks here leaves it sharper.',
