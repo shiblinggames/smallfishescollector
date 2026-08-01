@@ -120,7 +120,7 @@ const STAT_COLOR = { power: '#f87171', dodge: '#60a5fa', fortune: '#f0c040' }
  *  recruited_at order is no longer offered, so newly signed hands sort by
  *  merit like everyone else rather than sitting at the top. */
 const ROSTER_SORTS = [
-  { k: 'level'   as const, label: 'Level',   color: '#f0c040' },
+  { k: 'level'   as const, label: 'Level',   color: '#7fdfa3' },
   { k: 'name'    as const, label: 'Name',    color: '#bcb29a' },
   { k: 'rarity'  as const, label: 'Rarity',  color: '#a78bfa' },
   { k: 'power'   as const, label: 'Power',   color: '#f87171' },
@@ -2803,8 +2803,16 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                         {/* Same chip language as the trawl sheet and the assign
                             picker. Wraps rather than scrolls, and only appears
                             once there is more than one hand to order. */}
+                        {/* fit-content, not the block default. A div fills its
+                            parent, so this fully-rounded pill was stretching the
+                            whole card width with the chips crammed into the left
+                            third and a long empty stadium trailing off to the
+                            right. It hugs its chips now, matching AssignPicker,
+                            whose groups only looked right because they sit in a
+                            flex parent that shrinks them. maxWidth keeps the
+                            wrap behaviour on a narrow phone. */}
                         {state.roster.length > 1 && (
-                          <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', padding: 3, marginBottom: 10, borderRadius: 999, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)' }}>
+                          <div style={{ display: 'inline-flex', gap: 3, flexWrap: 'wrap', width: 'fit-content', maxWidth: '100%', padding: 3, marginBottom: 10, borderRadius: 999, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)' }}>
                             {ROSTER_SORTS.map(o => {
                               const on = rosterSort === o.k
                               return (
