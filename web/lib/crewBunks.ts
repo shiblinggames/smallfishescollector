@@ -38,10 +38,15 @@ export function hallBunksOpen(isAdmin: boolean | null | undefined): boolean {
   return HALL_BUNKS_LIVE || isAdmin === true
 }
 
-/** Flat floor on the hourly rate, before Nav scaling. */
-export const BUNK_BASE = 40
-/** Added to the hourly rate per Navigation level. Nav 1 = 44/hr, Nav 100 = 440/hr. */
-export const BUNK_PER_NAV = 4
+/**
+ * Base XP an hour, before Drills. FLAT — Navigation is deliberately not in this
+ * formula. Nav already gates which hall tiers you can buy, so it already
+ * governs how many bunks you have; having it scale the rate too meant one stat
+ * doing the same job twice, and it dominated the low end (Nav 1 paid 44/hr
+ * against Nav 100's 440, a 10x swing from a stat that is not on this screen).
+ * Drills is the sole multiplier now.
+ */
+export const BUNK_BASE = 250
 /**
  * How long a stint LASTS, by Stores tier: one hour up to six, and it STOPS
  * there. This is both the lock-in and the payout window — a hand is stuck in
@@ -72,7 +77,11 @@ export function storesMaxed(level: number): boolean {
  * means the same thing wherever you read it, and there is one art set per tier
  * rather than an open-ended one nobody can draw.
  */
-const DRILL_MULTS = [1.0, 1.4, 1.9, 2.5, 3.2, 4.1]
+// Exponential. The old curve stepped +0.4, +0.5, +0.6, +0.7, +0.9 while the
+// price roughly doubled each tier, so value per doubloon collapsed 11x from II
+// to VI and the expensive upgrades were genuinely bad buys. Each step is now
+// ~1.75x the last, so a tier always buys visibly more than the one before it.
+const DRILL_MULTS = [1.0, 1.75, 3.1, 5.4, 9.4, 16.4]
 
 export const DRILL_MAX_LEVEL = DRILL_MULTS.length
 
@@ -85,15 +94,14 @@ export function drillsMaxed(level: number): boolean {
 }
 
 /**
- * XP per hour for ONE bunked crew. Nav is the trainer quality (a famous captain
- * attracts better drillmasters), Drills are what you buy.
+ * XP per hour for ONE bunked crew. Drills is the only thing that moves it.
  *
  * Sanity: crew Lv 100 is ~1.0M XP total and a depth-20 Gauntlet run pays 3,000
- * to the whole party. Maxed out this is ~1,400/hr, so a bunk alone takes about
- * five weeks to carry one crew to 100. Active play stays the fast path.
+ * to the whole party. 250/hr at Drills I is ~167 days to carry one crew to 100;
+ * 4,100/hr at Drills VI is ~10. The ladder is worth 16x, which is the point.
  */
-export function bunkRatePerHour(navLevel: number, drillLevel: number): number {
-  return Math.round((BUNK_BASE + Math.max(0, navLevel) * BUNK_PER_NAV) * drillMult(drillLevel))
+export function bunkRatePerHour(drillLevel: number): number {
+  return Math.round(BUNK_BASE * drillMult(drillLevel))
 }
 
 /** Bunks come from the hall tier and NOTHING else. There was briefly a second
@@ -105,12 +113,12 @@ export function bunkCount(hallTier: number): number {
 }
 
 /**
- * Doubloons to reach each tier. Both ladders are hand-set rather than a curve,
- * now that both are only five steps long: a geometric curve was throwing out
- * numbers like 3,906,250 for the top Drill, which is neither a round price nor
- * one anybody was going to reach. Drills tops out at 1.5M, Stores at 1M.
+ * Doubloons to reach each tier. Hand-set rather than a curve, and deliberately
+ * cheap at the bottom: each step is roughly 3x the last, so the first upgrade
+ * lands the day you find the feature and the last one is a real endgame
+ * purchase. Both ladders top out at 1,000,000.
  */
-const DRILL_COSTS = [0, 60_000, 150_000, 350_000, 750_000, 1_500_000]
+const DRILL_COSTS = [0, 15_000, 40_000, 120_000, 350_000, 1_000_000]
 
 export function nextDrillCost(level: number): number {
   return drillsMaxed(level) ? 0 : DRILL_COSTS[Math.max(1, Math.floor(level))]
@@ -119,10 +127,28 @@ export function nextDrillCost(level: number): number {
 /** Stores is priced under Drills because it buys convenience, not power: it
  *  does not raise XP per day, only how often you have to come back for it.
  *  0 means there is nothing left to buy. */
-const STORES_COSTS = [0, 40_000, 90_000, 200_000, 450_000, 1_000_000]
+const STORES_COSTS = [0, 15_000, 45_000, 130_000, 380_000, 1_000_000]
 
 export function nextStoresCost(level: number): number {
   return storesMaxed(level) ? 0 : STORES_COSTS[Math.max(1, Math.floor(level))]
+}
+
+/**
+ * The hall tier needed to buy a given Drills or Stores tier: the SAME number.
+ * Drills II needs Oakhewn (hall II), Drills VI needs Leviathan (hall VI).
+ *
+ * The hall is the building; Drills and Stores are what is inside it. Without
+ * this you could pour everything into the two cheap ladders and leave the hall
+ * at Driftwood, which reads backwards and skips the thing the Nav gates are
+ * pacing. Now the building leads and its contents follow.
+ */
+export function hallTierRequiredFor(ladderLevel: number): number {
+  return Math.max(1, Math.floor(ladderLevel))
+}
+
+/** True when the hall is too low to buy the next tier of a ladder. */
+export function ladderHallLocked(currentLevel: number, hallTier: number): boolean {
+  return hallTier < hallTierRequiredFor(currentLevel + 1)
 }
 
 /** Roman numeral for an upgrade tier, for display. Falls back to the number. */

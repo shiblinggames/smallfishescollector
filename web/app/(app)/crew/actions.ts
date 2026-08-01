@@ -327,7 +327,7 @@ export async function getCrewState(): Promise<CrewState | null> {
   const lockedCrewIds: number[] = (pendingVoyage as any)?.crew_variant_ids ?? []
   const trawlingCrewIds: number[] = ((trawlRows ?? []) as any[]).map(r => r.crew_id as number)
   const bunkedCrewIds: number[] = ((bunkRows ?? []) as any[]).map(r => r.crew_id as number)
-  const liveRate = bunkRatePerHour(navLevel, (prof as any).crew_drill_level ?? 1)
+  const liveRate = bunkRatePerHour((prof as any).crew_drill_level ?? 1)
   const liveCap = storesCapHours((prof as any).crew_stores_level ?? 1)
   // Each bunk on ITS OWN terms. rate_per_hour / cap_hours are null only on rows
   // that predate the columns, which fall back to the live values.

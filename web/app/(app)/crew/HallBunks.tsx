@@ -27,9 +27,9 @@ import { createPortal } from 'react-dom'
 import { crewLevelFromXP } from '@/lib/crewLevel'
 import { CREW_HALL_MAX_TIER, hallTierDef } from '@/lib/crewHall'
 import {
-  bunkCount, bunkRatePerHour, canBunk, drillsMaxed, msUntilDone, stintDone,
-  stintProgress, stintXP, nextDrillCost, nextStoresCost, storesCapHours,
-  storesMaxed, tierNumeral,
+  bunkCount, bunkRatePerHour, canBunk, drillsMaxed, hallTierRequiredFor,
+  ladderHallLocked, msUntilDone, stintDone, stintProgress, stintXP,
+  nextDrillCost, nextStoresCost, storesCapHours, storesMaxed, tierNumeral,
 } from '@/lib/crewBunks'
 import type { CrewMember, CrewState } from './actions'
 
@@ -75,7 +75,7 @@ export default function HallBunks({
   const [now, setNow] = useState(() => Date.now())
 
   const slots = bunkCount(state.hallTier)
-  const rate = bunkRatePerHour(state.navLevel, state.drillLevel)
+  const rate = bunkRatePerHour(state.drillLevel)
   const cap = state.capHours
 
   // Stable order, so a claim never reshuffles the grid under your finger.
@@ -239,18 +239,26 @@ export default function HallBunks({
         {drillsMaxed(state.drillLevel) ? (
           <MaxedCard art={`/crew/drill_${DRILL_ART_MAX}.png`} label="Drills mastered"
             sub={`${rate.toLocaleString()} XP/hr`} accent={GOLD} popping={pop === 'drill'} />
+        ) : ladderHallLocked(state.drillLevel, state.hallTier) ? (
+          <LockedCard art={`/crew/drill_${Math.min(state.drillLevel + 1, DRILL_ART_MAX)}.png`}
+            label={`Drills ${tierNumeral(state.drillLevel + 1)}`}
+            hall={hallTierDef(hallTierRequiredFor(state.drillLevel + 1))} />
         ) : (
           <UpgradeButton
             label={`Drills ${tierNumeral(state.drillLevel + 1)}`}
             art="/crew/drill_" tier={Math.min(state.drillLevel, DRILL_ART_MAX)} popping={pop === 'drill'}
             now={`${rate.toLocaleString()} XP/hr`}
-            next={`${bunkRatePerHour(state.navLevel, state.drillLevel + 1).toLocaleString()} XP/hr`}
+            next={`${bunkRatePerHour(state.drillLevel + 1).toLocaleString()} XP/hr`}
             cost={nextDrillCost(state.drillLevel)} balance={state.doubloons}
             accent={GOLD} disabled={pending} onClick={onBuyDrill} />
         )}
         {storesMaxed(state.storesLevel) ? (
           <MaxedCard art={`/crew/stores_${state.storesLevel}.png`} label="Stores full"
             sub={`${cap}h stints`} accent="#7fc4a8" popping={pop === 'stores'} />
+        ) : ladderHallLocked(state.storesLevel, state.hallTier) ? (
+          <LockedCard art={`/crew/stores_${state.storesLevel + 1}.png`}
+            label={`Stores ${tierNumeral(state.storesLevel + 1)}`}
+            hall={hallTierDef(hallTierRequiredFor(state.storesLevel + 1))} />
         ) : (
           <UpgradeButton
             label={`Stores ${tierNumeral(state.storesLevel + 1)}`}
@@ -331,6 +339,32 @@ function UpgradeButton({
         {cost.toLocaleString()} ⟡
       </span>
     </button>
+  )
+}
+
+/**
+ * A ladder the hall has not caught up with. Shows the tier you are reaching for
+ * and the building that opens it, rather than a price you cannot pay — the
+ * blocker is the hall, so naming the hall is the useful thing to say.
+ */
+function LockedCard({ art, label, hall }: { art: string; label: string; hall: { name: string; accent: string } }) {
+  return (
+    <div className="font-karla" style={{
+      flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center',
+      justifyContent: 'center', gap: 2, padding: '0.55rem 0.35rem 0.6rem', borderRadius: 11,
+      background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.16)',
+    }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={art} alt="" aria-hidden decoding="async"
+        style={{ width: 54, height: 54, objectFit: 'contain', filter: 'grayscale(0.85) brightness(0.55)' }}
+        onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+      <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)' }}>
+        {label}
+      </span>
+      <span style={{ fontSize: '0.62rem', color: hall.accent, textAlign: 'center', lineHeight: 1.3 }}>
+        Needs {hall.name}
+      </span>
+    </div>
   )
 }
 

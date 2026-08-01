@@ -44,13 +44,15 @@ export async function bunkContext(admin: Admin, userId: string) {
     // Admin-only for now (HALL_BUNKS_LIVE). Every action checks this, not just
     // the panel — a hidden button is not a gate.
     open: hallBunksOpen((prof as any)?.is_admin),
+    /** Drives the hall gate on the two in-panel ladders. */
+    hallTier: clampHallTier((prof as any)?.crew_hall_tier),
     navLevel,
     drillLevel,
     storesLevel,
     capHours: storesCapHours(storesLevel),
     doubloons: (prof as any)?.doubloons ?? 0,
     slots: bunkCount(clampHallTier((prof as any)?.crew_hall_tier)),
-    rate: bunkRatePerHour(navLevel, drillLevel),
+    rate: bunkRatePerHour(drillLevel),
   }
 }
 

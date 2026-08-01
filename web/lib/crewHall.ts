@@ -76,7 +76,7 @@ export const CREW_HALL_TIERS: Record<CrewHallTierNum, CrewHallTierDef> = {
     glow: 'rgba(255,217,102,0.16)',
   },
   6: {
-    tier: 6, name: 'Leviathan Hall', bunks: 6, cost: 405_000, minNav: 75,
+    tier: 6, name: 'Leviathan Hall', bunks: 6, cost: 1_000_000, minNav: 75,
     accent: '#fff0c4',
     flavor: 'Rafters cut from something that used to swim. Six bunks, and a queue for them.',
     glow: 'rgba(255,240,196,0.20)',

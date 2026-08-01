@@ -13,7 +13,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { canBunk, drillsMaxed, nextDrillCost, nextStoresCost, storesMaxed, tierNumeral } from '@/lib/crewBunks'
+import { clampHallTier } from '@/lib/crewHall'
+import { canBunk, drillsMaxed, hallTierRequiredFor, ladderHallLocked, nextDrillCost, nextStoresCost, storesMaxed, tierNumeral } from '@/lib/crewBunks'
 import { bunkContext, loadBunks, releaseBunk } from '@/lib/crewBunkSettle'
 import type { CrewXPGrant } from '@/lib/crewXPGrant'
 import { getCrewState, type CrewActionResult, type CrewState } from './actions'
@@ -129,6 +130,13 @@ async function buyUpgrade(kind: 'drill' | 'stores'): Promise<CrewActionResult> {
   // Both ladders stop at six.
   if (isDrill && drillsMaxed(from)) return { error: 'The drills are as sharp as they get.' }
   if (!isDrill && storesMaxed(from)) return { error: 'Stores are already full.' }
+
+  // The hall leads and its contents follow: tier N of either ladder needs hall
+  // tier N. Enforced here and not only on the button, since the action is
+  // callable directly.
+  if (ladderHallLocked(from, clampHallTier(ctx.hallTier))) {
+    return { error: `Upgrade the hall to tier ${hallTierRequiredFor(from + 1)} first.` }
+  }
 
   const cost = isDrill ? nextDrillCost(from) : nextStoresCost(from)
   if (cost <= 0) return { error: 'Nothing left to buy.' }

@@ -14,7 +14,7 @@ import { BLOOD_REROLL_TIERS, BLOOD_SKIN_GAMBLE_COST } from '@/lib/gauntlet'
 import { crewSkinsForSlug, getCrewSkin, getCrewSkinByFilename, skinArtGlow, CREW_SKINS } from '@/lib/crewSkins'
 import { ChaseSkinFx } from '@/components/ChaseSkinFx'
 import { hallTierDef, nextHallTier, hallUpgradeBlocker, CREW_HALL_MAX_TIER } from '@/lib/crewHall'
-import { bunkRatePerHour, storesCapHours, stintDone, tierNumeral, nextDrillCost, nextStoresCost, DRILL_MAX_LEVEL } from '@/lib/crewBunks'
+import { bunkRatePerHour, storesCapHours, stintDone, tierNumeral, nextDrillCost, nextStoresCost, ladderHallLocked, DRILL_MAX_LEVEL } from '@/lib/crewBunks'
 import { crewAssignment } from '@/lib/crewAssignment'
 import HallBunks from './HallBunks'
 import { bunkCrew, collectBunk, buyDrill, buyStores } from './bunkActions'
@@ -991,7 +991,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
       setUpgradeSaid(kind === 'drill'
         ? {
             title: `Drills ${tierNumeral(res.state.drillLevel)}`,
-            sub: `${bunkRatePerHour(res.state.navLevel, res.state.drillLevel).toLocaleString()} XP an hour, every bunk`,
+            sub: `${bunkRatePerHour(res.state.drillLevel).toLocaleString()} XP an hour, every bunk`,
             accent,
           }
         : {
@@ -1951,17 +1951,20 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
           const isDrill = ladderConfirm === 'drill'
           const level = isDrill ? state.drillLevel : state.storesLevel
           const cost = isDrill ? nextDrillCost(level) : nextStoresCost(level)
-          if (cost <= 0) return null
+          // Belt and braces: the button is a LockedCard when the hall is short,
+          // so this should be unreachable — but the sheet re-derives from live
+          // state and must never offer a buy the server would refuse.
+          if (cost <= 0 || ladderHallLocked(level, state.hallTier)) return null
           const accent = isDrill ? '#f0c040' : '#7fc4a8'
           const art = isDrill
             ? `/crew/drill_${Math.min(level + 1, DRILL_MAX_LEVEL)}.png`
             : `/crew/stores_${level + 1}.png`
           const title = `${isDrill ? 'Drills' : 'Stores'} ${tierNumeral(level + 1)}`
           const now = isDrill
-            ? `${bunkRatePerHour(state.navLevel, level).toLocaleString()} XP an hour`
+            ? `${bunkRatePerHour(level).toLocaleString()} XP an hour`
             : `${storesCapHours(level)}h stints`
           const next = isDrill
-            ? `${bunkRatePerHour(state.navLevel, level + 1).toLocaleString()} XP an hour`
+            ? `${bunkRatePerHour(level + 1).toLocaleString()} XP an hour`
             : `${storesCapHours(level + 1)}h stints`
           const blurb = isDrill
             ? 'Every bunk trains faster, on every stint, for good.'
