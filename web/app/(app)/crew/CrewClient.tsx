@@ -556,18 +556,54 @@ function CrewPanel({
               )}
             </span>
           </div>
-          <p className="font-cinzel font-700" style={{ fontSize: '0.68rem', letterSpacing: '0.12em', textTransform: 'uppercase', color, marginTop: 3, textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}>
-            {RARITY_NAMES[(rarity as CrewRarity)] ?? 'Common'}
-            {effects.length > 0 && (
-              <span style={{ color: 'rgba(255,255,255,0.4)', marginLeft: 6, letterSpacing: '0.08em' }}>
-                · {effects.length} trait{effects.length === 1 ? '' : 's'}
-              </span>
-            )}
-          </p>
+          {/* Rarity, then the trait BY NAME. This line used to read
+              "EPIC · 1 trait", which spent the width on a number that is
+              always 1 under the current system and told you nothing about
+              the crew. The name is the fact worth showing, and it is what
+              players compare cards on.
+
+              Flex rather than inline text so the rarity never truncates: only
+              the trait ellipsises, and only when a long one like GLASS CANNON
+              genuinely runs out of room on a 300px card. */}
+          {(() => {
+            const t = netTraitStats(effects)
+            const label = traitLabel(t)
+            const divine = isDivine(t)
+            const kind = traitKind(t)
+            return (
+              <p className="font-cinzel font-700" style={{
+                display: 'flex', alignItems: 'baseline', gap: 5, minWidth: 0,
+                fontSize: '0.68rem', letterSpacing: '0.12em', textTransform: 'uppercase',
+                color, marginTop: 3, textShadow: '0 1px 2px rgba(0,0,0,0.6)', whiteSpace: 'nowrap',
+              }}>
+                <span style={{ flexShrink: 0 }}>{RARITY_NAMES[(rarity as CrewRarity)] ?? 'Common'}</span>
+                {label && (
+                  <>
+                    <span aria-hidden style={{ flexShrink: 0, color: 'rgba(255,255,255,0.28)' }}>·</span>
+                    <span
+                      className={divine ? 'trait-divine' : undefined}
+                      title={label}
+                      style={{
+                        minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', letterSpacing: '0.08em',
+                        // Divine paints itself through .trait-divine, so it must
+                        // not be handed a colour to override the clipped gradient.
+                        ...(divine ? {} : {
+                          color: kind === 'buff' ? 'rgba(159,217,177,0.85)'
+                            : kind === 'flaw' ? 'rgba(224,154,154,0.85)'
+                            : 'rgba(255,255,255,0.45)',
+                        }),
+                      }}>
+                      {label}
+                    </span>
+                  </>
+                )}
+              </p>
+            )
+          })()}
         </div>
 
         {/* Duty tag. Its own row rather than crowded onto the rarity line,
-            which already carries "LEGENDARY · 2 traits" and has no width to
+            which already carries "LEGENDARY · GLASS CANNON" and has no width to
             spare on a 300px card. Costs no height: the column was centred
             precisely because it had ~43px of slack under the stats. */}
         {duty && (
