@@ -211,6 +211,7 @@ export default function HallBunks({
       <div style={{ display: 'flex', gap: 7, marginTop: '0.65rem' }}>
         <UpgradeButton
           label={`Drills ${tierNumeral(state.drillLevel + 1)}`}
+          art="/crew/drill_" tier={state.drillLevel}
           now={`${rate.toLocaleString()} XP/hr`}
           next={`${bunkRatePerHour(state.navLevel, state.drillLevel + 1).toLocaleString()} XP/hr`}
           cost={nextDrillCost(state.drillLevel)} balance={state.doubloons}
@@ -218,9 +219,13 @@ export default function HallBunks({
         {storesMaxed(state.storesLevel) ? (
           <div className="font-karla" style={{
             flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center',
-            justifyContent: 'center', gap: 1, padding: '0.5rem 0.35rem', borderRadius: 9,
-            background: 'rgba(127,196,168,0.08)', border: '1px solid rgba(127,196,168,0.28)',
+            justifyContent: 'center', gap: 2, padding: '0.55rem 0.35rem 0.6rem', borderRadius: 11,
+            background: 'rgba(127,196,168,0.10)', border: '1px solid rgba(127,196,168,0.34)',
           }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={`/crew/stores_${state.storesLevel}.png`} alt="" aria-hidden decoding="async"
+              style={{ width: 54, height: 54, objectFit: 'contain', filter: 'drop-shadow(0 3px 8px rgba(127,196,168,0.4))' }}
+              onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
             <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.7rem', color: '#7fc4a8' }}>
               Stores full
             </span>
@@ -229,6 +234,7 @@ export default function HallBunks({
         ) : (
           <UpgradeButton
             label={`Stores ${tierNumeral(state.storesLevel + 1)}`}
+            art="/crew/stores_" tier={state.storesLevel}
             now={`${cap}h stints`}
             next={`${storesCapHours(state.storesLevel + 1)}h stints`}
             cost={nextStoresCost(state.storesLevel)} balance={state.doubloons}
@@ -250,23 +256,45 @@ export default function HallBunks({
 /** Shows what you have and what you would get, not just a price — the whole
  *  question with an upgrade tree is "is this worth it". */
 function UpgradeButton({
-  label, now, next, cost, balance, accent, disabled, onClick,
+  label, art, tier, now, next, cost, balance, accent, disabled, onClick,
 }: {
-  label: string; now: string; next: string; cost: number; balance: number
+  label: string
+  /** '/crew/drill_' or '/crew/stores_'; the CURRENT tier is appended, so the
+   *  picture improves as the tree is bought, like the hall building above. */
+  art: string
+  tier: number
+  now: string; next: string; cost: number; balance: number
   accent: string; disabled: boolean; onClick: () => void
 }) {
   const afford = balance >= cost
   return (
     <button type="button" disabled={disabled || !afford} onClick={onClick}
       title={afford ? `${cost.toLocaleString()} doubloons` : `Need ${(cost - balance).toLocaleString()} more`}
+      className="active:scale-95"
       style={{
-        flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
-        padding: '0.5rem 0.35rem', borderRadius: 9, font: 'inherit',
-        background: afford ? `${accent}14` : 'rgba(255,255,255,0.03)',
-        border: `1px solid ${afford ? `${accent}55` : 'rgba(255,255,255,0.1)'}`,
+        flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+        padding: '0.55rem 0.35rem 0.6rem', borderRadius: 11, font: 'inherit',
+        background: afford
+          ? `linear-gradient(180deg, ${accent}22 0%, ${accent}0b 100%)`
+          : 'rgba(255,255,255,0.03)',
+        border: `1px solid ${afford ? `${accent}66` : 'rgba(255,255,255,0.1)'}`,
+        boxShadow: afford ? `inset 0 1px 0 ${accent}33` : undefined,
         cursor: disabled || !afford ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.6 : 1, touchAction: 'manipulation',
+        transition: 'transform 0.08s',
       }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      {/* ART PENDING: /crew/drill_*.png and /crew/stores_*.png do not exist
+          yet. Falls back one tier, then hides entirely, so this is a clean
+          text button until the art lands and gains the picture the moment it
+          does. Never a broken-image box. */}
+      <img src={`${art}${tier}.png`} alt="" aria-hidden decoding="async"
+        style={{ width: 54, height: 54, objectFit: 'contain', filter: afford ? `drop-shadow(0 3px 8px ${accent}55)` : 'grayscale(0.7) brightness(0.7)' }}
+        onError={e => {
+          const img = e.target as HTMLImageElement
+          if (!img.dataset.step && tier > 1) { img.dataset.step = '1'; img.src = `${art}${tier - 1}.png`; return }
+          img.style.display = 'none'
+        }} />
       <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.7rem', color: afford ? '#f0ede8' : 'rgba(255,255,255,0.45)' }}>
         {label}
       </span>

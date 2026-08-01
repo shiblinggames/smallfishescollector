@@ -1357,79 +1357,42 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             translucent wash rather than a solid card. The tier still shows in
             the art, the name, the pips and the border. */}
         <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 12, border: `1px solid ${hall.accent}66`, background: ROSTER_PANEL_BG, boxShadow: hall.glow ? `0 0 26px ${hall.glow}` : undefined, padding: '0.8rem', marginBottom: '0.9rem' }}>
-          {/* Picture and identity SIDE BY SIDE. Stacked, this hero was tall and
-              its picture was small at the same time - the two complaints were
-              the same problem. Beside each other the building gets bigger and
-              the whole block gets shorter, so more of the board is on screen
-              after a reroll. */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: '0.85rem' }}>
+          {/* STACKED again. It was side by side to keep the block short while
+              the hall shared the Recruit tab; the hall has its own tab now, so
+              the building gets to be the building. The name also stops being
+              truncated - it had `nowrap + ellipsis` because it was sharing a
+              row with the pips and the button, and "Brassbound Hall" does not
+              fit next to both. */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             {/* ART PENDING for tier 6 (Leviathan Hall) — hall_1..5 exist, hall_6
                 does not yet. Fall back to the tier below rather than hiding,
-                which left an empty 132px hole beside the text. Self-healing:
-                drop hall_6.png in and this stops firing. */}
+                which left an empty hole. Self-healing: drop hall_6.png in and
+                this stops firing. */}
             <img src={`/crew/hall_${hall.tier}.png`} alt="" aria-hidden decoding="async"
-              style={{ width: 132, height: 132, flexShrink: 0, objectFit: 'contain', filter: `drop-shadow(0 4px 14px ${hall.accent}55)` }}
+              style={{ width: 176, height: 176, objectFit: 'contain', filter: `drop-shadow(0 6px 18px ${hall.accent}66)` }}
               onError={e => {
                 const img = e.target as HTMLImageElement
                 if (img.dataset.fellBack) { img.style.visibility = 'hidden'; return }
                 img.dataset.fellBack = '1'
                 img.src = `/crew/hall_${Math.max(1, hall.tier - 1)}.png`
               }} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: hall.accent, lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {hall.name}
-                </p>
-                <div style={{ display: 'flex', gap: 3, flexShrink: 0 }} aria-label={`Crew Hall tier ${state.hallTier} of ${CREW_HALL_MAX_TIER}`}>
-                  {Array.from({ length: CREW_HALL_MAX_TIER }, (_, i) => (
-                    <span key={i} aria-hidden style={{
-                      width: 6, height: 6, borderRadius: 6,
-                      background: i < state.hallTier ? hall.accent : 'rgba(255,255,255,0.14)',
-                      boxShadow: i < state.hallTier ? `0 0 5px ${hall.accent}88` : undefined,
-                    }} />
-                  ))}
-                </div>
-              </div>
-              {nextTier && navShort ? (
-                <span className="font-karla font-700 uppercase" title={`The next hall needs Navigation ${nextTier.minNav}`} style={{
-                  flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5,
-                  padding: '0.34rem 0.7rem', borderRadius: 999,
-                  fontSize: '0.72rem', letterSpacing: '0.08em',
-                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.2)',
-                  color: 'rgba(255,255,255,0.6)', whiteSpace: 'nowrap',
-                }}>
-                  Nav {nextTier.minNav}
-                </span>
-              ) : nextTier ? (
-                <button
-                  onClick={() => setHallUpgradeOpen(true)}
-                  className="font-karla font-700 uppercase active:scale-95"
-                  style={{
-                    flexShrink: 0,
-                    display: 'inline-flex', alignItems: 'center', gap: 5,
-                    padding: '0.34rem 0.7rem', borderRadius: 999,
-                    fontSize: '0.72rem', letterSpacing: '0.08em',
-                    background: 'rgba(96,165,250,0.14)',
-                    border: '1px solid rgba(96,165,250,0.45)',
-                    color: '#cfe2ff', cursor: 'pointer',
-                    transition: 'transform 0.08s',
-                  }}
-                >
-                  Upgrade
-                </button>
-              ) : (
-                <span className="font-karla font-700 uppercase" style={{
-                  flexShrink: 0, padding: '0.34rem 0.7rem', borderRadius: 999,
-                  fontSize: '0.72rem', letterSpacing: '0.08em',
-                  background: `${hall.accent}1a`, border: `1px solid ${hall.accent}55`,
-                  color: hall.accent,
-                }}>
-                  Max
-                </span>
-              )}
+
+            {/* Its own row, full width, no truncation. */}
+            <p className="font-cinzel font-700" style={{ fontSize: '1.35rem', color: hall.accent, lineHeight: 1.2, marginTop: 2 }}>
+              {hall.name}
+            </p>
+
+            <div style={{ display: 'flex', gap: 4, marginTop: 7 }} aria-label={`Crew Hall tier ${state.hallTier} of ${CREW_HALL_MAX_TIER}`}>
+              {Array.from({ length: CREW_HALL_MAX_TIER }, (_, i) => (
+                <span key={i} aria-hidden style={{
+                  width: 7, height: 7, borderRadius: 7,
+                  background: i < state.hallTier ? hall.accent : 'rgba(255,255,255,0.14)',
+                  boxShadow: i < state.hallTier ? `0 0 6px ${hall.accent}88` : undefined,
+                }} />
+              ))}
             </div>
+            <div style={{ width: '100%' }}>
             <p className="font-karla font-600" style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.78)', marginTop: 5, lineHeight: 1.45 }}>
               <span style={{ color: hall.accent }}>{hall.bunks} bunks</span> for training idle crew
             </p>
@@ -1438,9 +1401,65 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                 {nextTier.name} opens at Navigation {nextTier.minNav}
               </p>
             )}
-            <p className="font-karla" style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.55)', fontStyle: 'italic', marginTop: 4, lineHeight: 1.45 }}>
+            <p className="font-karla" style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.55)', fontStyle: 'italic', marginTop: 4, lineHeight: 1.45, marginBottom: '0.85rem' }}>
               {hall.flavor}
             </p>
+
+            {/* Its own full-width row. It was a small pill squeezed onto the
+                name's line, which is both the least satisfying shape for the
+                one big purchase on the page and what forced the name to
+                truncate. It states what it buys and what it costs, so the
+                confirm sheet is a confirmation rather than the first time you
+                see the price. */}
+            {nextTier && navShort ? (
+              <div className="font-karla font-700 uppercase" style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                width: '100%', padding: '0.7rem', borderRadius: 11,
+                fontSize: '0.78rem', letterSpacing: '0.06em',
+                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.16)',
+                color: 'rgba(255,255,255,0.55)',
+              }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden>
+                  <rect x="4.5" y="11" width="15" height="9.5" rx="1.5" /><path d="M7.5 11V7.5a4.5 4.5 0 0 1 9 0V11" />
+                </svg>
+                Navigation {nextTier.minNav}
+              </div>
+            ) : nextTier ? (
+              <button
+                onClick={() => setHallUpgradeOpen(true)}
+                className="active:scale-95"
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                  width: '100%', padding: '0.75rem 0.9rem', borderRadius: 11,
+                  cursor: 'pointer', font: 'inherit',
+                  // Tinted gradient with a lit top edge, never a solid fill.
+                  background: `linear-gradient(180deg, ${nextTier.accent}2e 0%, ${nextTier.accent}12 100%)`,
+                  border: `1px solid ${nextTier.accent}77`,
+                  boxShadow: `inset 0 1px 0 ${nextTier.accent}44, 0 3px 12px rgba(0,0,0,0.35)`,
+                  transition: 'transform 0.08s, box-shadow 0.15s',
+                }}
+              >
+                <span className="font-cinzel font-700 uppercase" style={{ fontSize: '0.86rem', letterSpacing: '0.08em', color: '#f4ecd8' }}>
+                  Build the {nextTier.name}
+                </span>
+                <span className="font-cinzel font-700" style={{
+                  fontSize: '0.82rem', color: nextTier.accent, fontVariantNumeric: 'tabular-nums',
+                  paddingLeft: 10, borderLeft: `1px solid ${nextTier.accent}44`,
+                }}>
+                  {nextTier.cost.toLocaleString()} ⟡
+                </span>
+              </button>
+            ) : (
+              <div className="font-cinzel font-700 uppercase" style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                width: '100%', padding: '0.7rem', borderRadius: 11,
+                fontSize: '0.82rem', letterSpacing: '0.14em',
+                background: `${hall.accent}12`, border: `1px solid ${hall.accent}55`,
+                color: hall.accent,
+              }}>
+                The finest hall afloat
+              </div>
+            )}
             </div>
           </div>
           {/* Upgrade celebration — fires once after a confirmed purchase.
