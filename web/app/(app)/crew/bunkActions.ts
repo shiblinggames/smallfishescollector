@@ -14,7 +14,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { canBunk, drillsMaxed, nextDrillCost, nextStoresCost, storesMaxed, tierNumeral } from '@/lib/crewBunks'
-import { bunkContext, loadBunks, settleBunks, releaseBunk } from '@/lib/crewBunkSettle'
+import { bunkContext, loadBunks, releaseBunk } from '@/lib/crewBunkSettle'
 import type { CrewXPGrant } from '@/lib/crewXPGrant'
 import { getCrewState, type CrewActionResult, type CrewState } from './actions'
 
@@ -73,22 +73,6 @@ export async function bunkCrew(crewId: number): Promise<CrewActionResult> {
 
   const state = await getCrewState()
   return state ? { state } : { error: 'Failed to load crew' }
-}
-
-/** Collect every finished stint. */
-export async function claimBunks(): Promise<BunkClaimResult> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not signed in' }
-  const admin = createAdminClient()
-
-  const ctx = await bunkContext(admin, user.id)
-  // Deliberately NOT gated: if the flag is ever switched back off, whatever a
-  // crew already earned must still be collectable rather than stranded.
-  const { grants, freed } = await settleBunks(admin, user.id, await loadBunks(admin, user.id), ctx.rate, ctx.capHours)
-
-  const state = await getCrewState()
-  return state ? { state, grants, freed } : { error: 'Failed to load crew' }
 }
 
 /**

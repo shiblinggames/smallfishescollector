@@ -17,7 +17,7 @@ import { hallTierDef, nextHallTier, hallUpgradeBlocker, CREW_HALL_MAX_TIER } fro
 import { bunkRatePerHour, storesCapHours, stintDone, tierNumeral, nextDrillCost, nextStoresCost, DRILL_MAX_LEVEL } from '@/lib/crewBunks'
 import { crewAssignment } from '@/lib/crewAssignment'
 import HallBunks from './HallBunks'
-import { bunkCrew, claimBunks, collectBunk, buyDrill, buyStores } from './bunkActions'
+import { bunkCrew, collectBunk, buyDrill, buyStores } from './bunkActions'
 import { RARITY_NAMES, RARITY_COLORS, groupForSlug, crewDisplayName, GEM_WEIGHTS, type CrewRarity } from '@/lib/crewGen'
 import { applyCrewEffects, netTraitStats, traitLabel, traitKind } from '@/lib/crewEffects'
 import AssignBoard from './AssignBoard'
@@ -65,6 +65,23 @@ const rerollLegOdds = (w: readonly number[]) => Math.max(1, Math.round(1 / perRe
 // "How many times better than a plain reroll" — the noob-friendly benefit (e.g.
 // 5× Epic). idx 2 = Epic, 3 = Legendary. Base = GEM_WEIGHTS.
 const rerollMult = (w: readonly number[], idx: 2 | 3, base: readonly number[]) => Math.max(2, Math.round(perRerollPct(w[idx]) / perRerollPct(base[idx])))
+/** Counts a number up on collect. Same curve and duration as the trawl haul
+ *  reveal's, so a payout animates identically wherever it lands. */
+function CountUp({ to, prefix = '', className, style }: { to: number; prefix?: string; className?: string; style?: React.CSSProperties }) {
+  const [v, setV] = useState(0)
+  useEffect(() => {
+    let raf = 0; const start = performance.now(); const dur = 700
+    const tick = (t: number) => {
+      const p = Math.min(1, (t - start) / dur)
+      setV(Math.round(to * (1 - Math.pow(1 - p, 3))))
+      if (p < 1) raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [to])
+  return <span className={className} style={style}>{prefix}{v.toLocaleString()}</span>
+}
+
 function BloodDrop({ size = 12 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden style={{ filter: `drop-shadow(0 0 2.5px ${BLOOD}99)`, flexShrink: 0 }}>
@@ -896,24 +913,21 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
   const [pop, setPop] = useState<{ what: 'hall' | 'drill' | 'stores'; accent: string; n: number } | null>(null)
   // What the last bunk claim paid, for the toast. Level-ups come free of a
   // second round trip: CrewXPGrant already carries old/new level.
-  // Per-crew, not a lump sum: which hands came back, what each earned, and who
-  // levelled. `xp: 0` is a real case — a hand at the ceiling comes home having
-  // learned nothing — and it still has to be reported rather than falling
-  // silent, which is what the old total-only toast did.
-  const [bunkPaid, setBunkPaid] = useState<{
-    lines: { name: string; xp: number; from: number; to: number }[]
-    total: number
+  // The claim reveal. A hand coming off a bunk is the payoff of the whole
+  // feature, so it gets a card with their face on it rather than a line of
+  // text sliding along the bottom. Mirrors the trawl haul reveal.
+  //
+  // `xp: 0` is a real case — a hand at the ceiling comes home having learned
+  // nothing — and it still shows, rather than falling silent.
+  const [bunkReveal, setBunkReveal] = useState<{
+    name: string; filename: string; rarity: number
+    xp: number; oldXP: number; newXP: number
+    from: number; to: number
   } | null>(null)
   // What the upgrade changed, in words. Shares the bunk-claim toast's slot:
   // fixed to the viewport, pointer-events none, so it can neither be clipped
   // by an ancestor nor eat a tap.
   const [upgradeSaid, setUpgradeSaid] = useState<{ title: string; sub: string; accent: string } | null>(null)
-  useEffect(() => {
-    if (!bunkPaid) return
-    const id = setTimeout(() => setBunkPaid(null), 3200 + bunkPaid.lines.length * 700)
-    return () => clearTimeout(id)
-  }, [bunkPaid])
-
   useEffect(() => {
     if (!upgradeSaid) return
     const id = setTimeout(() => setUpgradeSaid(null), 3000)
@@ -928,32 +942,34 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
   /** Bunk claims and unbunks return { state, grants }, so they cannot go
    *  through `run` (which only knows { state } | { error }). Both surface what
    *  was paid; both are safe to call when nothing is owed. */
-  function runBunkClaim(action: () => Promise<Awaited<ReturnType<typeof claimBunks>>>) {
+  function runBunkClaim(action: () => Promise<Awaited<ReturnType<typeof collectBunk>>>) {
     if (pending) return
     setErr(null)
     startTransition(async () => {
       const res = await action()
       if ('error' in res) { setErr(res.error); return }
       setState(res.state)
-      // Build a line per hand who came home. `freed` drives it, not `grants`,
-      // so a maxed crew still gets a line saying they are back with nothing
-      // learned instead of vanishing from the report.
-      const byId = new Map(res.grants.map(g => [g.id, g]))
-      const roster = new Map(res.state.roster.map(c => [c.id, c]))
-      const lines = res.freed.map(id => {
-        const g = byId.get(id)
-        return {
-          name: g?.name ?? roster.get(id)?.name ?? 'Crew',
-          xp: g ? g.newXP - g.oldXP : 0,
-          from: g?.oldLevel ?? 0,
-          to: g?.newLevel ?? 0,
-        }
-      })
-      if (lines.length === 0) return
-      const total = lines.reduce((n, l) => n + l.xp, 0)
+      // One hand at a time now, so the reveal is about THEM. `freed` drives it
+      // rather than `grants`: a crew at the ceiling still comes home and still
+      // gets a card, they just learned nothing.
+      const id = res.freed[0]
+      if (id == null) return
+      const g = res.grants.find(x => x.id === id)
+      const crew = res.state.roster.find(c => c.id === id)
+      if (!crew) return
+      const gained = g ? g.newXP - g.oldXP : 0
       // Scaled to the moment: a plain collect ticks, a level-up gets a beat.
-      vibrate(lines.some(l => l.to > l.from) ? [16, 60, 28] : 12)
-      setBunkPaid({ lines, total })
+      vibrate(g && g.newLevel > g.oldLevel ? [18, 60, 30] : 14)
+      setBunkReveal({
+        name: g?.name ?? crew.name,
+        filename: crew.filename,
+        rarity: crew.rarity,
+        xp: gained,
+        oldXP: g?.oldXP ?? crew.xp,
+        newXP: g?.newXP ?? crew.xp,
+        from: g?.oldLevel ?? crewLevelFromXP(crew.xp),
+        to: g?.newLevel ?? crewLevelFromXP(crew.xp),
+      })
     })
   }
 
@@ -1592,7 +1608,6 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
               pending={pending}
               pop={pop?.what === 'drill' || pop?.what === 'stores' ? pop.what : null}
               onBunk={id => run(() => bunkCrew(id), id)}
-              onClaim={() => runBunkClaim(() => claimBunks())}
               onCollectOne={id => runBunkClaim(() => collectBunk(id))}
               onBuyDrill={() => setLadderConfirm('drill')}
               onBuyStores={() => setLadderConfirm('stores')}
@@ -1804,8 +1819,109 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             page level, not inside Nav, so no portal needed). Recomputes the
             next tier from state so it always reflects the live tier even if
             the panel's IIFE consts are stale. */}
-        {/* Bunk claim toast. Non-blocking on purpose: pointerEvents none on the
-            container so it can never eat a tap on the panel underneath. */}
+        {/* THE CLAIM REVEAL. The payoff of the whole feature, so it is a card
+            with the hand's face on it: their XP counting up, their level bar
+            filling from where it was, and a burst if it tipped a level.
+            Fixed to the viewport at its own z-layer, so nothing can clip it. */}
+        <AnimatePresence>
+          {bunkReveal && (() => {
+            const r = bunkReveal
+            const levelled = r.to > r.from
+            const accent = levelled ? '#7fdfa3' : '#f0c040'
+            const prog = crewXPProgress(r.newXP)
+            const atMax = r.to >= CREW_MAX_LEVEL
+            // Where the bar STARTS. On a level-up it starts empty, because you
+            // genuinely entered a fresh level; otherwise from where they were,
+            // so the gain visibly pushes it along instead of animating from 0
+            // and reading as if the collect reset their progress.
+            const fromPct = levelled ? 0 : crewXPProgress(r.oldXP).progress
+            return (
+              <motion.div key="bunk-reveal"
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                onClick={() => setBunkReveal(null)}
+                style={{ position: 'fixed', inset: 0, zIndex: 9400, background: 'rgba(4,8,14,0.86)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+                <motion.div
+                  initial={{ scale: 0.85, y: 16 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0 }}
+                  transition={{ type: 'spring', stiffness: 360, damping: 24 }}
+                  onClick={e => e.stopPropagation()}
+                  style={{
+                    maxWidth: 350, width: '100%', textAlign: 'center', padding: '1.7rem 1.5rem', borderRadius: 18,
+                    background: [`radial-gradient(ellipse 85% 62% at 50% 18%, ${accent}26 0%, transparent 70%)`, 'linear-gradient(180deg, rgba(40,32,16,0.97) 0%, rgba(20,14,7,0.98) 100%)'].join(', '),
+                    border: `1px solid ${accent}${levelled ? '9a' : '5e'}`,
+                    boxShadow: levelled ? `0 0 40px ${accent}33, inset 0 0 28px rgba(0,0,0,0.5)` : 'inset 0 0 28px rgba(0,0,0,0.5)',
+                  }}>
+                  {/* The hand who did the work. A ring bursts behind them on a
+                      level-up, so the big moment is felt before it is read. */}
+                  <div style={{ position: 'relative', width: 96, height: 96, margin: '0 auto' }}>
+                    {levelled && (
+                      <motion.span aria-hidden
+                        initial={{ scale: 0.4, opacity: 0.9 }} animate={{ scale: 2.4, opacity: 0 }}
+                        transition={{ duration: 1, ease: 'easeOut', delay: 0.25 }}
+                        style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: `2px solid ${accent}`, pointerEvents: 'none' }} />
+                    )}
+                    <motion.div
+                      initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                      transition={{ type: 'spring', stiffness: 300, damping: 17 }}
+                      style={{
+                        width: 96, height: 96, borderRadius: '50%', display: 'grid', placeItems: 'center', overflow: 'hidden',
+                        background: `radial-gradient(circle at 50% 32%, ${accent}3a, rgba(0,0,0,0.45))`,
+                        border: `2px solid ${accent}${levelled ? 'cc' : '88'}`,
+                        boxShadow: levelled ? `0 0 26px ${accent}66, inset 0 0 14px rgba(0,0,0,0.4)` : `0 0 12px ${accent}33, inset 0 0 14px rgba(0,0,0,0.4)`,
+                      }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={artSrc(r.filename)} alt="" aria-hidden decoding="async"
+                        style={{ width: 88, height: 88, objectFit: 'contain' }} />
+                    </motion.div>
+                  </div>
+
+                  <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.35 }}
+                    className="font-cinzel font-700" style={{ fontSize: '1.25rem', color: accent, marginTop: 12, textShadow: levelled ? `0 0 12px ${accent}44` : 'none' }}>
+                    {levelled ? `${r.name} levelled up!` : `${r.name} is back`}
+                  </motion.p>
+                  <p className="font-karla" style={{ fontSize: '0.78rem', color: '#9c917a', marginTop: 6 }}>
+                    Off the bunk, drilled and rested
+                  </p>
+
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16, duration: 0.4 }}
+                    style={{ marginTop: 16, borderRadius: 14, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(196,169,106,0.2)', padding: '0.9rem 1rem', textAlign: 'left' }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                      <span className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.16em', color: '#7fae8f' }}>Crew XP</span>
+                      {r.xp > 0
+                        ? <CountUp to={r.xp} prefix="+" className="font-cinzel font-800" style={{ fontSize: '1.55rem', color: '#7fdfa3', lineHeight: 1 }} />
+                        : <span className="font-karla font-600" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.45)' }}>Nothing left to learn</span>}
+                    </div>
+
+                    <div style={{ marginTop: 10 }}>
+                      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#e6dcc2' }}>
+                          Lv {r.to}
+                          {levelled && <span style={{ color: accent, marginLeft: 6, fontSize: '0.68rem' }}>up from {r.from}</span>}
+                        </span>
+                        <span className="font-karla" style={{ fontSize: '0.62rem', color: '#8a8068' }}>
+                          {atMax ? 'Max level' : `${Math.round(prog.progress * 100)}% to ${r.to + 1}`}
+                        </span>
+                      </div>
+                      <div style={{ height: 7, borderRadius: 4, background: 'rgba(0,0,0,0.45)', overflow: 'hidden' }}>
+                        <motion.div
+                          initial={{ width: `${Math.round(fromPct * 100)}%` }}
+                          animate={{ width: `${Math.round((atMax ? 1 : prog.progress) * 100)}%` }}
+                          transition={{ delay: 0.35, duration: 0.7 }}
+                          style={{ height: '100%', background: 'linear-gradient(90deg, #3fae78, #7fdfa3)' }} />
+                      </div>
+                    </div>
+                  </motion.div>
+
+                  <motion.button onClick={() => setBunkReveal(null)} whileTap={{ scale: 0.92 }}
+                    className="font-cinzel font-700 uppercase"
+                    style={{ marginTop: 18, padding: '0.7rem 2rem', borderRadius: 12, letterSpacing: '0.1em', fontSize: '0.8rem', background: '#f0c04022', border: '1px solid #f0c0407a', color: '#f4ecd8', boxShadow: '0 0 14px #f0c04022', cursor: 'pointer' }}>
+                    Back to work
+                  </motion.button>
+                </motion.div>
+              </motion.div>
+            )
+          })()}
+        </AnimatePresence>
+
         <AnimatePresence>
           {upgradeSaid && (
             <motion.div key="upgrade-said"
@@ -1823,63 +1939,6 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                 <p className="font-karla" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.68)', marginTop: 2 }}>
                   {upgradeSaid.sub}
                 </p>
-              </div>
-            </motion.div>
-          )}
-          {bunkPaid && (
-            <motion.div key="bunk-paid"
-              initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-              transition={{ duration: 0.22, ease: 'easeOut' }}
-              style={{ position: 'fixed', left: 0, right: 0, bottom: 92, zIndex: 300, display: 'flex', justifyContent: 'center', pointerEvents: 'none', padding: '0 1rem' }}>
-              <div style={{
-                width: '100%', maxWidth: 340, padding: '0.7rem 0.85rem 0.75rem', borderRadius: 12,
-                background: 'rgba(20,15,6,0.98)', border: '1px solid rgba(240,192,64,0.5)',
-                boxShadow: '0 12px 34px rgba(0,0,0,0.65)',
-              }}>
-                <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.18em', color: 'rgba(255,255,255,0.45)', textAlign: 'center' }}>
-                  {bunkPaid.lines.length === 1 ? 'Off the bunk' : `${bunkPaid.lines.length} off the bunks`}
-                </p>
-
-                {/* A line per hand, staggered so they read one at a time
-                    rather than all appearing as a block. */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 7 }}>
-                  {bunkPaid.lines.map((l, i) => {
-                    const levelled = l.to > l.from
-                    return (
-                      <motion.div key={`${l.name}-${i}`}
-                        initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.12 + i * 0.09, duration: 0.22 }}
-                        className="flex items-baseline" style={{ gap: 8 }}>
-                        <span className="font-karla font-700" style={{ flex: 1, minWidth: 0, fontSize: '0.76rem', color: '#eee8de', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {l.name}
-                        </span>
-                        {levelled && (
-                          <motion.span className="font-cinzel font-700"
-                            initial={{ scale: 0.6, opacity: 0 }}
-                            animate={{ scale: [0.6, 1.18, 1], opacity: 1 }}
-                            transition={{ delay: 0.3 + i * 0.09, duration: 0.42 }}
-                            style={{
-                              flexShrink: 0, fontSize: '0.64rem', letterSpacing: '0.04em',
-                              padding: '0.06rem 0.32rem', borderRadius: 5,
-                              background: 'rgba(127,223,163,0.16)', border: '1px solid rgba(127,223,163,0.5)',
-                              color: '#9fe8bb',
-                            }}>
-                            Lv {l.from} &rarr; {l.to}
-                          </motion.span>
-                        )}
-                        <span className="font-cinzel font-700" style={{ flexShrink: 0, fontSize: '0.8rem', color: l.xp > 0 ? '#f0c040' : 'rgba(255,255,255,0.35)', fontVariantNumeric: 'tabular-nums' }}>
-                          {l.xp > 0 ? `+${l.xp.toLocaleString()}` : 'Nothing left to learn'}
-                        </span>
-                      </motion.div>
-                    )
-                  })}
-                </div>
-
-                {bunkPaid.lines.length > 1 && bunkPaid.total > 0 && (
-                  <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.6)', textAlign: 'right', marginTop: 6, paddingTop: 5, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-                    {bunkPaid.total.toLocaleString()} crew XP
-                  </p>
-                )}
               </div>
             </motion.div>
           )}
