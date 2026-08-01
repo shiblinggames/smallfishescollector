@@ -19,7 +19,7 @@ import { crewAssignment } from '@/lib/crewAssignment'
 import HallBunks from './HallBunks'
 import { bunkCrew, collectBunk, buyDrill, buyStores, acceptTraitOffer, declineTraitOffer } from './bunkActions'
 import { RARITY_NAMES, RARITY_COLORS, groupForSlug, crewDisplayName, GEM_WEIGHTS, type CrewRarity } from '@/lib/crewGen'
-import { applyCrewEffects, decodeTraitStats, netTraitStats, resolveEffects, traitLabel, traitKind, type TraitStats } from '@/lib/crewEffects'
+import { applyCrewEffects, decodeTraitStats, netTraitStats, traitLabel, traitKind, type TraitStats } from '@/lib/crewEffects'
 import AssignBoard from './AssignBoard'
 import AssignPicker from './AssignPicker'
 import { useReveal, BoardReveal, RevealFlash, RevealBanner } from './boardReveal'
@@ -973,7 +973,6 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
       crewId: number
       offered: TraitStats; offeredLabel: string
       current: TraitStats; currentLabel: string
-      replaces: string[]
     }
   } | null>(null)
   /** Which side of the offer is being submitted, so the two buttons can show
@@ -1030,7 +1029,6 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
           crewId: offer.crewId,
           offered: offer.offered, offeredLabel: offer.offeredLabel,
           current: offer.current, currentLabel: offer.currentLabel,
-          replaces: offer.replaces,
         },
       })
     })
@@ -1058,7 +1056,6 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
         crewId,
         offered, offeredLabel: traitLabel(offered) || 'No trait',
         current, currentLabel: traitLabel(current) || 'No trait',
-        replaces: resolveEffects(crew.effects.filter(id => decodeTraitStats(id) === null)).map(e => e.name),
       },
     })
   }
@@ -2027,16 +2024,6 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                         <TraitFace label="They carry" name={offer.currentLabel} stats={offer.current} />
                         <TraitFace label="The deep offers" name={offer.offeredLabel} stats={offer.offered} accent={LEVIATHAN_COLOR} />
                       </div>
-                      {/* Said only when there is something unquantifiable to
-                          lose. These old ids carry aura and raid behaviour the
-                          stat lines above cannot show, so the player has to be
-                          told by name what taking the offer gives up. */}
-                      {offer.replaces.length > 0 && (
-                        <p className="font-karla" style={{ marginTop: 8, fontSize: '0.7rem', color: '#e8b98a', lineHeight: 1.45, textAlign: 'left' }}>
-                          Taking this replaces{' '}
-                          <span style={{ fontWeight: 700 }}>{offer.replaces.join(', ')}</span>, whose effects go beyond raw stats.
-                        </p>
-                      )}
                     </motion.div>
                   )}
 

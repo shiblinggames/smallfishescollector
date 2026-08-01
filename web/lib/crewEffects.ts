@@ -217,6 +217,37 @@ const SINGLE_LABELS: Record<'power'|'dodge'|'fortune', { pos: [string, string, s
   fortune: { pos: ['Lucky',   'Fortunate', 'Charmed', 'Blessed'    ], neg: ['Unlucky',  'Hexed',     'Doomed',   'Accursed'] },
 }
 
+// Two-stat names, four tiers deep like the single-stat ones. Tiered on the
+// COMBINED magnitude (2 through 8), so only a (+4,+4) lands the top word and
+// it stays the trophy it should be.
+//
+// Keyed by the sorted stat pair. The middle entry of each row is the name that
+// pair carried before tiers existed, kept in place so the most common results
+// still read the way players already know them.
+const PAIR_POS: Record<string, [string, string, string, string]> = {
+  'dodge+power':   ['Scrapper', 'Warrior',  'Warlord',   'Warmaster'  ],
+  'fortune+power': ['Hunter',   'Raider',   'Marauder',  'Scourge'    ],
+  'dodge+fortune': ['Scout',    'Ranger',   'Outrider',  'Windrunner' ],
+}
+const PAIR_NEG: Record<string, [string, string, string, string]> = {
+  'dodge+power':   ['Bruised',  'Battered', 'Mauled',    'Ruined'     ],
+  'fortune+power': ['Hapless',  'Forsaken', 'Wretched',  'Damnable'   ],
+  'dodge+fortune': ['Idle',     'Listless', 'Adrift',    'Becalmed'   ],
+}
+const PAIR_MIXED: Record<string, [string, string, string, string]> = {
+  'dodge+power':   ['Uneven',   'Glass Cannon', 'Powder Keg', 'Shipbreaker'],
+  'fortune+power': ['Rash',     'Reckless',     'Headlong',   'Hellbent'   ],
+  'dodge+fortune': ['Shifty',   'Slippery',     'Quicksilver','Wisp'       ],
+}
+
+/** Combined magnitude (2..8) to a 0..3 tier. Only a double 4 reaches the top. */
+function pairTier(total: number): 0 | 1 | 2 | 3 {
+  if (total >= 8) return 3
+  if (total >= 6) return 2
+  if (total >= 4) return 1
+  return 0
+}
+
 /** Generate an evocative label for a trait. Empty string when the trait is
  *  fully neutral (caller renders no row). */
 export function traitLabel(s: TraitStats): string {
@@ -233,20 +264,19 @@ export function traitLabel(s: TraitStats): string {
     return v > 0 ? SINGLE_LABELS[k].pos[tier] : SINGLE_LABELS[k].neg[tier]
   }
 
-  // Two-stat trait → name by the pair of stats moved and their dominant sign.
+  // Two-stat trait → named by WHICH pair moved, their dominant sign, and how
+  // far. The magnitude tier is the part that used to be missing: every pair had
+  // exactly one name, so a (+4,+4,0) — one of the best rolls in the game —
+  // read as plain "Warrior", the same word as a (+1,+1,0). Single-stat traits
+  // had four tiers each while the pairs, which are what you actually end up
+  // comparing, had none.
   if (nonZero.length === 2) {
     const positive = nonZero.filter(k => s[k] > 0)
     const negative = nonZero.filter(k => s[k] < 0)
     const pair = nonZero.map(k => k).sort().join('+')
-    // All same sign — combo names per pair.
-    if (positive.length === 2) {
-      return ({ 'dodge+power': 'Warrior', 'fortune+power': 'Hunter', 'dodge+fortune': 'Scout' } as Record<string, string>)[pair] ?? 'Gifted'
-    }
-    if (negative.length === 2) {
-      return ({ 'dodge+power': 'Battered', 'fortune+power': 'Forsaken', 'dodge+fortune': 'Listless' } as Record<string, string>)[pair] ?? 'Cursed'
-    }
-    // Mixed signs — opportunistic combo.
-    return ({ 'dodge+power': 'Glass Cannon', 'fortune+power': 'Reckless', 'dodge+fortune': 'Slippery' } as Record<string, string>)[pair] ?? 'Quirky'
+    const tier = pairTier(nonZero.reduce((n, k) => n + Math.abs(s[k]), 0))
+    const table = positive.length === 2 ? PAIR_POS : negative.length === 2 ? PAIR_NEG : PAIR_MIXED
+    return (table[pair] ?? table['dodge+power'])[tier]
   }
 
   // Three-stat trait → broad labels by net direction.
