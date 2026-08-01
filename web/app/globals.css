@@ -1312,6 +1312,20 @@ body.hardcore-gauntlet::after {
   .crew-levelup-halo { animation: none; box-shadow: 0 0 10px rgba(255,217,106,0.35); }
 }
 
+/* A bunk whose stint has finished. TRANSFORM AND OPACITY ONLY: up to six of
+   these sit on screen together, and animating a box-shadow or a filter would
+   re-rasterize every one of them on every frame for as long as the tab is
+   open. The two properties here are composited, so the whole row costs
+   nothing. */
+@keyframes bunk-claim-pulse {
+  0%, 100% { transform: scale(1);    opacity: 0.9; }
+  50%      { transform: scale(1.07); opacity: 1;   }
+}
+.bunk-claim-pulse { animation: bunk-claim-pulse 1.5s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .bunk-claim-pulse { animation: none; opacity: 1; }
+}
+
 /* ── Chase-skin aura: the top-tier legendary skins get a living, breathing
    glow so they stand apart from the regular skins. Colour is passed in per
    skin via the --chase-c custom property, so one keyframe serves every chase

@@ -314,9 +314,9 @@ export default function HallBunks({
           return (
             <button key={crew.id} type="button" disabled={pending || !done}
               onClick={() => { if (done) onCollectOne(crew.id) }}
-              title={done ? `Collect ${crew.name} and free the bunk` : `Locked in for another ${fmtLeft(left)}`}
+              title={done ? `Claim ${crew.name} and free the bunk` : `Locked in for another ${fmtLeft(left)}`}
               aria-label={done
-                ? `${crew.name} has finished training. Collect to free the bunk.`
+                ? `${crew.name} has finished training. Claim to free the bunk.`
                 : `${crew.name} is training, ${fmtLeft(left)}.`}
               style={{
                 position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
@@ -343,9 +343,27 @@ export default function HallBunks({
                 {crew.name}
               </span>
               {done ? (
-                <span className="font-cinzel font-700" style={{ fontSize: '0.92rem', lineHeight: 1, color: GOLD, fontVariantNumeric: 'tabular-nums' }}>
-                  {maxed ? 'Done' : `+${tilePay.toLocaleString()}`}
-                </span>
+                <>
+                  {/* The word, not just a gold number. A bare "+11,750" reads
+                      as a stat on the card rather than as something waiting on
+                      you, so the tile now says what to do and moves while it
+                      waits. The pulse is on the pill alone, not the whole
+                      tile: six of them breathing at once would be a light
+                      show, one small thing per finished bunk is a nudge. */}
+                  <span className="bunk-claim-pulse font-karla font-800 uppercase" style={{
+                    display: 'inline-block', padding: '0.14rem 0.55rem', borderRadius: 999,
+                    fontSize: '0.6rem', letterSpacing: '0.1em', lineHeight: 1.45,
+                    background: `${GOLD}26`, border: `1px solid ${GOLD}99`, color: '#f6e6b4',
+                  }}>
+                    Claim
+                  </span>
+                  <span className={maxed ? 'font-karla font-600' : 'font-cinzel font-700'} style={{
+                    fontSize: maxed ? '0.6rem' : '0.82rem', lineHeight: 1.1,
+                    color: maxed ? 'rgba(255,255,255,0.5)' : GOLD, fontVariantNumeric: 'tabular-nums',
+                  }}>
+                    {maxed ? 'No XP left' : `+${tilePay.toLocaleString()}`}
+                  </span>
+                </>
               ) : (
                 <>
                   <span className="font-karla font-600" style={{ fontSize: '0.64rem', color: 'rgba(255,255,255,0.72)', fontVariantNumeric: 'tabular-nums' }}>
