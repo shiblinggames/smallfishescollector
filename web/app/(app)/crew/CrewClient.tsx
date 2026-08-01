@@ -1058,7 +1058,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
         crewId,
         offered, offeredLabel: traitLabel(offered) || 'No trait',
         current, currentLabel: traitLabel(current) || 'No trait',
-        replaces: resolveEffects(crew.effects.filter(id => !id.startsWith('s:'))).map(e => e.name),
+        replaces: resolveEffects(crew.effects.filter(id => decodeTraitStats(id) === null)).map(e => e.name),
       },
     })
   }

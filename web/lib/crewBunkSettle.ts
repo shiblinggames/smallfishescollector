@@ -12,16 +12,10 @@ import { clampHallTier } from './crewHall'
 import { grantXPPairs, type CrewXPGrant } from './crewXPGrant'
 import { bunkCount, bunkRatePerHour, hallBunksOpen, canBunk, isLeviathanSlot, stintDone, stintXP, storesCapHours } from './crewBunks'
 import { rollTrait, encodeTraitId, type CrewRarity } from './crewGen'
-import { netTraitStats, resolveEffects, traitLabel } from './crewEffects'
+import { decodeTraitStats, netTraitStats, resolveEffects, traitLabel } from './crewEffects'
 
 type Admin = ReturnType<typeof createAdminClient>
 
-/**
- * A bunk carries the TERMS it was struck on: the XP/hour and the stint length
- * agreed when the hand went in. Later Drills or Stores upgrades do not touch a
- * running bunk. `rate`/`cap` are null only on rows that predate the columns,
- * which fall back to the live values.
- */
 /** The encoded 'no trait at all' offer. Stored rather than null so a pending
  *  offer is always one column read, never an absence that means two things. */
 export const NEUTRAL_TRAIT = 's:0,0,0'
@@ -46,10 +40,11 @@ export type TraitOffer = {
   current: { power: number; dodge: number; fortune: number }
   currentLabel: string
   /**
-   * Named legacy effects the offer would REPLACE. Old ids can carry aura or
-   * raid-conditional behavior the stat maths cannot read, so rather than
-   * locking those hands out of the chase entirely, the choice names exactly
-   * what is being given up and lets the player weigh it.
+   * Named effects the offer would replace that the stat lines CANNOT show:
+   * legacy ids carrying aura, percent or raid-conditional behaviour. Rather
+   * than locking those hands out of the chase, the choice names exactly what
+   * is being given up. Empty for anything the stat lines already cover, so the
+   * warning only ever fires when something really is invisible.
    */
   replaces: string[]
 }
@@ -229,7 +224,13 @@ async function offerLeviathanTraits(
       offeredLabel: traitLabel(rolled) || 'No trait',
       current,
       currentLabel: traitLabel(current) || 'No trait',
-      replaces: resolveEffects(effects.filter(id => !id.startsWith('s:'))).map(e => e.name),
+      // Only effects the stat lines CANNOT account for. A legacy id is not
+      // automatically opaque: a flat-only 'always' quirk like Dead Eye decodes
+      // cleanly and is already shown in full above, so warning about it would
+      // be telling the player they are losing something invisible when they
+      // are not. decodeTraitStats returning null is the actual test, since
+      // that is exactly the case where behaviour exists that we cannot show.
+      replaces: resolveEffects(effects.filter(id => decodeTraitStats(id) === null)).map(e => e.name),
     })
   }
   return out
