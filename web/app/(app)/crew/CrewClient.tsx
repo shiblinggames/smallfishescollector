@@ -14,7 +14,7 @@ import { BLOOD_REROLL_TIERS, BLOOD_SKIN_GAMBLE_COST } from '@/lib/gauntlet'
 import { crewSkinsForSlug, getCrewSkin, getCrewSkinByFilename, skinArtGlow, CREW_SKINS } from '@/lib/crewSkins'
 import { ChaseSkinFx } from '@/components/ChaseSkinFx'
 import { hallTierDef, nextHallTier, hallUpgradeBlocker, CREW_HALL_MAX_TIER } from '@/lib/crewHall'
-import { bunkRatePerHour, storesCapHours, tierNumeral, DRILL_MAX_LEVEL } from '@/lib/crewBunks'
+import { bunkRatePerHour, storesCapHours, tierNumeral, nextDrillCost, nextStoresCost, DRILL_MAX_LEVEL } from '@/lib/crewBunks'
 import { crewAssignment } from '@/lib/crewAssignment'
 import HallBunks from './HallBunks'
 import { bunkCrew, claimBunks, buyDrill, buyStores } from './bunkActions'
@@ -883,6 +883,10 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
   // (the board's theme swaps underneath it, so the moment of change is
   // an event rather than a silent restyle).
   const [hallUpgradeOpen, setHallUpgradeOpen] = useState(false)
+  // Drills and Stores confirm the same way the hall does. They are the same
+  // shape of decision — six figures, irreversible — so it would be odd for one
+  // to ask and the others to fire on the first tap.
+  const [ladderConfirm, setLadderConfirm] = useState<'drill' | 'stores' | null>(null)
   const [hallBusy, setHallBusy] = useState(false)
   // Which ladder just went up, so its ART can pop IN PLACE. This used to be a
   // full-panel overlay, but the hero has overflow:hidden and the overlay's
@@ -940,6 +944,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
     setErr(null)
     startTransition(async () => {
       const res = await (kind === 'drill' ? buyDrill() : buyStores())
+      setLadderConfirm(null)
       if ('error' in res) { setErr(res.error); return }
       setState(res.state)
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.state.doubloons }))
@@ -1561,8 +1566,8 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
               pop={pop?.what === 'drill' || pop?.what === 'stores' ? pop.what : null}
               onBunk={id => run(() => bunkCrew(id), id)}
               onClaim={() => runBunkClaim(() => claimBunks())}
-              onBuyDrill={() => runLadderUpgrade('drill')}
-              onBuyStores={() => runLadderUpgrade('stores')}
+              onBuyDrill={() => setLadderConfirm('drill')}
+              onBuyStores={() => setLadderConfirm('stores')}
             />
           )}
         </div>
@@ -1815,6 +1820,109 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Drills / Stores confirm. Same shape as the hall's sheet below, and
+            like it, re-derives everything from LIVE state so it can never
+            confirm a purchase the server would then refuse. */}
+        {ladderConfirm && (() => {
+          const isDrill = ladderConfirm === 'drill'
+          const level = isDrill ? state.drillLevel : state.storesLevel
+          const cost = isDrill ? nextDrillCost(level) : nextStoresCost(level)
+          if (cost <= 0) return null
+          const accent = isDrill ? '#f0c040' : '#7fc4a8'
+          const art = isDrill
+            ? `/crew/drill_${Math.min(level + 1, DRILL_MAX_LEVEL)}.png`
+            : `/crew/stores_${level + 1}.png`
+          const title = `${isDrill ? 'Drills' : 'Stores'} ${tierNumeral(level + 1)}`
+          const now = isDrill
+            ? `${bunkRatePerHour(state.navLevel, level).toLocaleString()} XP an hour`
+            : `${storesCapHours(level)}h stints`
+          const next = isDrill
+            ? `${bunkRatePerHour(state.navLevel, level + 1).toLocaleString()} XP an hour`
+            : `${storesCapHours(level + 1)}h stints`
+          const blurb = isDrill
+            ? 'Every bunk trains faster, on every stint, for good.'
+            : 'Longer stints, so a hand earns more before you have to come back for them.'
+          const canAfford = state.doubloons >= cost
+          return (
+            <div
+              onClick={() => { if (!pending) setLadderConfirm(null) }}
+              style={{
+                position: 'fixed', inset: 0, zIndex: 80,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'rgba(0,0,0,0.62)', padding: '1.2rem',
+              }}
+            >
+              <div onClick={e => e.stopPropagation()} style={{
+                width: '100%', maxWidth: 380,
+                background: 'linear-gradient(180deg, #1c1610 0%, #120d08 100%)',
+                border: `1px solid ${accent}55`, borderRadius: 14,
+                padding: '1.2rem 1.1rem 1.05rem',
+                boxShadow: `0 10px 40px rgba(0,0,0,0.6), 0 0 30px ${accent}22`,
+                textAlign: 'center',
+              }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={art} alt="" aria-hidden decoding="async"
+                  style={{ width: 92, height: 92, objectFit: 'contain', filter: `drop-shadow(0 4px 14px ${accent}66)` }}
+                  onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.2em', color: 'rgba(255,255,255,0.45)', marginBottom: 4 }}>
+                  Crew Hall
+                </p>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: accent, marginBottom: 6 }}>
+                  {title}
+                </p>
+                <p className="font-karla" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.55)', fontStyle: 'italic', marginBottom: 12, lineHeight: 1.45 }}>
+                  {blurb}
+                </p>
+                <div className="flex items-center justify-center" style={{
+                  gap: 10, padding: '0.55rem 0.75rem', borderRadius: 9,
+                  background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', marginBottom: 12,
+                }}>
+                  <span className="font-karla font-600" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.55)' }}>{now}</span>
+                  <span style={{ color: accent }}>&rarr;</span>
+                  <span className="font-karla font-700" style={{ fontSize: '0.82rem', color: accent }}>{next}</span>
+                </div>
+                <div className="flex items-center justify-between" style={{
+                  padding: '0.55rem 0.75rem', borderRadius: 9,
+                  background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', marginBottom: 12,
+                }}>
+                  <span className="font-karla font-600" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.55)' }}>Cost</span>
+                  <span className="font-karla font-700" style={{ fontSize: '0.82rem', color: canAfford ? '#e8c87a' : '#f2b0b0' }}>
+                    {cost.toLocaleString()} <span style={{ color: '#e8c87a' }}>⟡</span>
+                  </span>
+                </div>
+                <p className="font-karla" style={{ fontSize: '0.64rem', color: canAfford ? 'rgba(255,255,255,0.4)' : '#f2b0b0', marginBottom: 12 }}>
+                  Your doubloons: {state.doubloons.toLocaleString()} ⟡
+                </p>
+                <div className="flex" style={{ gap: 8 }}>
+                  <button onClick={() => setLadderConfirm(null)} disabled={pending}
+                    className="font-karla font-700"
+                    style={{
+                      flex: 1, padding: '0.6rem', borderRadius: 9, fontSize: '0.78rem',
+                      background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)',
+                      color: 'rgba(255,255,255,0.7)', cursor: pending ? 'not-allowed' : 'pointer',
+                    }}>
+                    Cancel
+                  </button>
+                  <button onClick={() => runLadderUpgrade(ladderConfirm)} disabled={!canAfford || pending}
+                    className="font-karla font-700 active:scale-95"
+                    style={{
+                      flex: 1.4, padding: '0.6rem', borderRadius: 9, fontSize: '0.78rem',
+                      background: `linear-gradient(180deg, ${accent}2e 0%, ${accent}12 100%)`,
+                      border: `1px solid ${accent}77`,
+                      boxShadow: `inset 0 1px 0 ${accent}44`,
+                      color: '#f4ecd8',
+                      opacity: (!canAfford || pending) ? 0.45 : 1,
+                      cursor: (!canAfford || pending) ? 'not-allowed' : 'pointer',
+                      transition: 'transform 0.08s',
+                    }}>
+                    {pending ? 'Buying…' : canAfford ? 'Upgrade' : 'Not enough'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
 
         {hallUpgradeOpen && (() => {
           const next = nextHallTier(state.hallTier)
