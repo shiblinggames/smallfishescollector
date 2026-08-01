@@ -14,7 +14,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { canBunk, drillsMaxed, nextDrillCost, nextStoresCost, storesMaxed, tierNumeral } from '@/lib/crewBunks'
-import { bunkContext, loadBunks, settleBunks } from '@/lib/crewBunkSettle'
+import { bunkContext, loadBunks, settleBunks, releaseBunk } from '@/lib/crewBunkSettle'
 import type { CrewXPGrant } from '@/lib/crewXPGrant'
 import { getCrewState, type CrewActionResult, type CrewState } from './actions'
 
@@ -22,9 +22,14 @@ import { getCrewState, type CrewActionResult, type CrewState } from './actions'
 
 const CLOSED = 'The hall is not taking bunks yet.'
 
-/** A claim also reports what each crew earned, so the panel can flash level-ups
- *  without a second round trip — CrewXPGrant already carries old/new level. */
-export type BunkClaimResult = { state: CrewState; grants: CrewXPGrant[] } | { error: string }
+/** A claim reports what each crew earned AND who came back, so the panel can
+ *  name every hand and flash level-ups without a second round trip.
+ *  `freed` includes hands who earned nothing because they are already at the
+ *  level ceiling — without it a claim of only maxed crew would look like
+ *  nothing happened. */
+export type BunkClaimResult =
+  | { state: CrewState; grants: CrewXPGrant[]; freed: number[] }
+  | { error: string }
 
 export async function bunkCrew(crewId: number): Promise<CrewActionResult> {
   const supabase = await createClient()
@@ -70,6 +75,7 @@ export async function bunkCrew(crewId: number): Promise<CrewActionResult> {
   return state ? { state } : { error: 'Failed to load crew' }
 }
 
+/** Collect every finished stint. */
 export async function claimBunks(): Promise<BunkClaimResult> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -79,10 +85,28 @@ export async function claimBunks(): Promise<BunkClaimResult> {
   const ctx = await bunkContext(admin, user.id)
   // Deliberately NOT gated: if the flag is ever switched back off, whatever a
   // crew already earned must still be collectable rather than stranded.
-  const grants = await settleBunks(admin, user.id, await loadBunks(admin, user.id), ctx.rate, ctx.capHours)
+  const { grants, freed } = await settleBunks(admin, user.id, await loadBunks(admin, user.id), ctx.rate, ctx.capHours)
 
   const state = await getCrewState()
-  return state ? { state, grants } : { error: 'Failed to load crew' }
+  return state ? { state, grants, freed } : { error: 'Failed to load crew' }
+}
+
+/**
+ * Collect ONE finished stint. Tapping a single hand used to collect every
+ * finished bunk at once, which is a surprising amount to happen from one tap
+ * on one crew. Does nothing if that stint is still running, so it is safe
+ * against a stale tile.
+ */
+export async function collectBunk(crewId: number): Promise<BunkClaimResult> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not signed in' }
+  const admin = createAdminClient()
+
+  const { grants, freed } = await releaseBunk(admin, user.id, crewId)
+
+  const state = await getCrewState()
+  return state ? { state, grants, freed } : { error: 'Failed to load crew' }
 }
 
 /** Drills buy XP PER HOUR. */

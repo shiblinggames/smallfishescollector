@@ -54,7 +54,7 @@ function fmtStint(h: number): string {
 }
 
 export default function HallBunks({
-  state, artSrc, accent, pending, pop, onBunk, onClaim, onBuyDrill, onBuyStores,
+  state, artSrc, accent, pending, pop, onBunk, onClaim, onCollectOne, onBuyDrill, onBuyStores,
 }: {
   state: CrewState
   artSrc: (filename: string) => string
@@ -65,7 +65,10 @@ export default function HallBunks({
    *  an overlay the hero's overflow:hidden would clip. */
   pop: 'drill' | 'stores' | null
   onBunk: (crewId: number) => void
+  /** Collect every finished stint. */
   onClaim: () => void
+  /** Collect just this one. Tapping a single hand used to collect them all. */
+  onCollectOne: (crewId: number) => void
   onBuyDrill: () => void
   onBuyStores: () => void
 }) {
@@ -134,18 +137,22 @@ export default function HallBunks({
           <span style={{ color: '#f0ede8', fontWeight: 700 }}>{payout.toLocaleString()} XP</span>.
           They cannot leave until it ends.
         </p>
-        <button type="button" disabled={pending || owed <= 0} onClick={onClaim}
+        <button type="button" disabled={pending || readyCount === 0} onClick={onClaim}
           className="font-karla font-700 uppercase"
           style={{
             flexShrink: 0, padding: '0.5rem 0.85rem', borderRadius: 9,
             fontSize: '0.78rem', letterSpacing: '0.06em', whiteSpace: 'nowrap',
-            background: owed > 0 ? `${GOLD}26` : 'rgba(255,255,255,0.04)',
-            border: `1px solid ${owed > 0 ? `${GOLD}88` : 'rgba(255,255,255,0.14)'}`,
-            color: owed > 0 ? GOLD : 'rgba(255,255,255,0.35)',
-            cursor: pending || owed <= 0 ? 'default' : 'pointer',
+            background: readyCount > 0 ? `${GOLD}26` : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${readyCount > 0 ? `${GOLD}88` : 'rgba(255,255,255,0.14)'}`,
+            color: readyCount > 0 ? GOLD : 'rgba(255,255,255,0.35)',
+            cursor: pending || readyCount === 0 ? 'default' : 'pointer',
             opacity: pending ? 0.6 : 1, touchAction: 'manipulation',
           }}>
-          {owed > 0 ? `Collect ${owed.toLocaleString()}` : readyCount > 0 ? 'Collect' : 'None ready'}
+          {readyCount === 0
+            ? 'None ready'
+            : readyCount === 1
+              ? `Collect ${owed.toLocaleString()}`
+              : `Collect all ${readyCount}`}
         </button>
       </div>
 
@@ -212,8 +219,8 @@ export default function HallBunks({
           const tilePay = t ? stintXP(t.rate, t.cap) : payout
           return (
             <button key={crew.id} type="button" disabled={pending || !done}
-              onClick={() => { if (done) onClaim() }}
-              title={done ? 'Collect and free the bunk' : `Locked in for another ${fmtLeft(left)}`}
+              onClick={() => { if (done) onCollectOne(crew.id) }}
+              title={done ? `Collect ${crew.name} and free the bunk` : `Locked in for another ${fmtLeft(left)}`}
               aria-label={done
                 ? `${crew.name} has finished training. Collect to free the bunk.`
                 : `${crew.name} is training, ${fmtLeft(left)}.`}

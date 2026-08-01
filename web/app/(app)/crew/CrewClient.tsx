@@ -17,7 +17,7 @@ import { hallTierDef, nextHallTier, hallUpgradeBlocker, CREW_HALL_MAX_TIER } fro
 import { bunkRatePerHour, storesCapHours, tierNumeral, nextDrillCost, nextStoresCost, DRILL_MAX_LEVEL } from '@/lib/crewBunks'
 import { crewAssignment } from '@/lib/crewAssignment'
 import HallBunks from './HallBunks'
-import { bunkCrew, claimBunks, buyDrill, buyStores } from './bunkActions'
+import { bunkCrew, claimBunks, collectBunk, buyDrill, buyStores } from './bunkActions'
 import { RARITY_NAMES, RARITY_COLORS, groupForSlug, crewDisplayName, GEM_WEIGHTS, type CrewRarity } from '@/lib/crewGen'
 import { applyCrewEffects, netTraitStats, traitLabel, traitKind } from '@/lib/crewEffects'
 import AssignBoard from './AssignBoard'
@@ -896,14 +896,21 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
   const [pop, setPop] = useState<{ what: 'hall' | 'drill' | 'stores'; accent: string; n: number } | null>(null)
   // What the last bunk claim paid, for the toast. Level-ups come free of a
   // second round trip: CrewXPGrant already carries old/new level.
-  const [bunkPaid, setBunkPaid] = useState<{ xp: number; levelled: string[] } | null>(null)
+  // Per-crew, not a lump sum: which hands came back, what each earned, and who
+  // levelled. `xp: 0` is a real case — a hand at the ceiling comes home having
+  // learned nothing — and it still has to be reported rather than falling
+  // silent, which is what the old total-only toast did.
+  const [bunkPaid, setBunkPaid] = useState<{
+    lines: { name: string; xp: number; from: number; to: number }[]
+    total: number
+  } | null>(null)
   // What the upgrade changed, in words. Shares the bunk-claim toast's slot:
   // fixed to the viewport, pointer-events none, so it can neither be clipped
   // by an ancestor nor eat a tap.
   const [upgradeSaid, setUpgradeSaid] = useState<{ title: string; sub: string; accent: string } | null>(null)
   useEffect(() => {
     if (!bunkPaid) return
-    const id = setTimeout(() => setBunkPaid(null), 3400)
+    const id = setTimeout(() => setBunkPaid(null), 3200 + bunkPaid.lines.length * 700)
     return () => clearTimeout(id)
   }, [bunkPaid])
 
@@ -928,11 +935,25 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
       const res = await action()
       if ('error' in res) { setErr(res.error); return }
       setState(res.state)
-      const xp = res.grants.reduce((n, g) => n + (g.newXP - g.oldXP), 0)
-      if (xp > 0) {
-        vibrate(12)
-        setBunkPaid({ xp, levelled: res.grants.filter(g => g.newLevel > g.oldLevel).map(g => g.name) })
-      }
+      // Build a line per hand who came home. `freed` drives it, not `grants`,
+      // so a maxed crew still gets a line saying they are back with nothing
+      // learned instead of vanishing from the report.
+      const byId = new Map(res.grants.map(g => [g.id, g]))
+      const roster = new Map(res.state.roster.map(c => [c.id, c]))
+      const lines = res.freed.map(id => {
+        const g = byId.get(id)
+        return {
+          name: g?.name ?? roster.get(id)?.name ?? 'Crew',
+          xp: g ? g.newXP - g.oldXP : 0,
+          from: g?.oldLevel ?? 0,
+          to: g?.newLevel ?? 0,
+        }
+      })
+      if (lines.length === 0) return
+      const total = lines.reduce((n, l) => n + l.xp, 0)
+      // Scaled to the moment: a plain collect ticks, a level-up gets a beat.
+      vibrate(lines.some(l => l.to > l.from) ? [16, 60, 28] : 12)
+      setBunkPaid({ lines, total })
     })
   }
 
@@ -1566,6 +1587,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
               pop={pop?.what === 'drill' || pop?.what === 'stores' ? pop.what : null}
               onBunk={id => run(() => bunkCrew(id), id)}
               onClaim={() => runBunkClaim(() => claimBunks())}
+              onCollectOne={id => runBunkClaim(() => collectBunk(id))}
               onBuyDrill={() => setLadderConfirm('drill')}
               onBuyStores={() => setLadderConfirm('stores')}
             />
@@ -1800,22 +1822,58 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
           )}
           {bunkPaid && (
             <motion.div key="bunk-paid"
-              initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-              transition={{ duration: 0.2, ease: 'easeOut' }}
+              initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
               style={{ position: 'fixed', left: 0, right: 0, bottom: 92, zIndex: 300, display: 'flex', justifyContent: 'center', pointerEvents: 'none', padding: '0 1rem' }}>
               <div style={{
-                maxWidth: 360, padding: '0.6rem 0.9rem', borderRadius: 11, textAlign: 'center',
-                background: 'rgba(20,15,6,0.97)', border: '1px solid rgba(240,192,64,0.5)',
-                boxShadow: '0 10px 30px rgba(0,0,0,0.6)',
+                width: '100%', maxWidth: 340, padding: '0.7rem 0.85rem 0.75rem', borderRadius: 12,
+                background: 'rgba(20,15,6,0.98)', border: '1px solid rgba(240,192,64,0.5)',
+                boxShadow: '0 12px 34px rgba(0,0,0,0.65)',
               }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#f0c040' }}>
-                  +{bunkPaid.xp.toLocaleString()} crew XP
+                <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.18em', color: 'rgba(255,255,255,0.45)', textAlign: 'center' }}>
+                  {bunkPaid.lines.length === 1 ? 'Off the bunk' : `${bunkPaid.lines.length} off the bunks`}
                 </p>
-                <p className="font-karla" style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.6)', marginTop: 2, lineHeight: 1.4 }}>
-                  {bunkPaid.levelled.length > 0
-                    ? `${bunkPaid.levelled.join(', ')} levelled up in the bunks.`
-                    : 'Collected from the hall.'}
-                </p>
+
+                {/* A line per hand, staggered so they read one at a time
+                    rather than all appearing as a block. */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 7 }}>
+                  {bunkPaid.lines.map((l, i) => {
+                    const levelled = l.to > l.from
+                    return (
+                      <motion.div key={`${l.name}-${i}`}
+                        initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.12 + i * 0.09, duration: 0.22 }}
+                        className="flex items-baseline" style={{ gap: 8 }}>
+                        <span className="font-karla font-700" style={{ flex: 1, minWidth: 0, fontSize: '0.76rem', color: '#eee8de', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {l.name}
+                        </span>
+                        {levelled && (
+                          <motion.span className="font-cinzel font-700"
+                            initial={{ scale: 0.6, opacity: 0 }}
+                            animate={{ scale: [0.6, 1.18, 1], opacity: 1 }}
+                            transition={{ delay: 0.3 + i * 0.09, duration: 0.42 }}
+                            style={{
+                              flexShrink: 0, fontSize: '0.64rem', letterSpacing: '0.04em',
+                              padding: '0.06rem 0.32rem', borderRadius: 5,
+                              background: 'rgba(127,223,163,0.16)', border: '1px solid rgba(127,223,163,0.5)',
+                              color: '#9fe8bb',
+                            }}>
+                            Lv {l.from} &rarr; {l.to}
+                          </motion.span>
+                        )}
+                        <span className="font-cinzel font-700" style={{ flexShrink: 0, fontSize: '0.8rem', color: l.xp > 0 ? '#f0c040' : 'rgba(255,255,255,0.35)', fontVariantNumeric: 'tabular-nums' }}>
+                          {l.xp > 0 ? `+${l.xp.toLocaleString()}` : 'Nothing left to learn'}
+                        </span>
+                      </motion.div>
+                    )
+                  })}
+                </div>
+
+                {bunkPaid.lines.length > 1 && bunkPaid.total > 0 && (
+                  <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.6)', textAlign: 'right', marginTop: 6, paddingTop: 5, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                    {bunkPaid.total.toLocaleString()} crew XP
+                  </p>
+                )}
               </div>
             </motion.div>
           )}

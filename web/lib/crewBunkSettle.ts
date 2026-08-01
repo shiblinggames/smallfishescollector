@@ -87,14 +87,23 @@ export function bunkTerms(row: BunkRow, liveRate: number, liveCap: number) {
  * `collectTrawl` does read-check-then-delete without inspecting the rowcount
  * and can double-grant; this deliberately does not copy it.
  */
+export type BunkSettlement = {
+  grants: CrewXPGrant[]
+  /** Crew whose stint ended and who got their bunk back. A hand at the level
+   *  ceiling appears HERE but not in `grants` — they are freed and paid
+   *  nothing, and the UI has to be able to say so rather than fall silent. */
+  freed: number[]
+}
+
 export async function settleBunks(
   admin: Admin,
   userId: string,
   rows: BunkRow[],
   rate: number,
   capHours: number,
-): Promise<CrewXPGrant[]> {
-  if (rows.length === 0) return []
+): Promise<BunkSettlement> {
+  const EMPTY: BunkSettlement = { grants: [], freed: [] }
+  if (rows.length === 0) return EMPTY
   const nowMs = Date.now()
 
   // Each row on its own terms, not the hall's current ones.
@@ -102,7 +111,7 @@ export async function settleBunks(
     const t = bunkTerms(r, rate, capHours)
     return stintDone(r.since, nowMs, t.cap)
   })
-  if (done.length === 0) return []
+  if (done.length === 0) return EMPTY
 
   // A hand who hit the level ceiling mid-stint still gets their bunk back; they
   // just have nothing left to learn, so the grant is skipped for them.
@@ -120,14 +129,14 @@ export async function settleBunks(
     return (data ?? []).length > 0 ? r : null
   }))
 
-  const pairs = won
-    .filter((r): r is BunkRow => r !== null)
+  const claimed = won.filter((r): r is BunkRow => r !== null)
+  const pairs = claimed
     .filter(r => canBunk(xpById.get(r.crew_id) ?? 0))
     .map(r => {
       const t = bunkTerms(r, rate, capHours)
       return { id: r.crew_id, xp: stintXP(t.rate, t.cap) }
     })
-  return grantXPPairs(admin, userId, pairs)
+  return { grants: await grantXPPairs(admin, userId, pairs), freed: claimed.map(r => r.crew_id) }
 }
 
 /**
@@ -135,13 +144,17 @@ export async function settleBunks(
  * running — there is no early exit, so this can never yank a hand out and is
  * safe to call speculatively.
  */
-export async function releaseBunk(admin: Admin, userId: string, crewId: number): Promise<CrewXPGrant[]> {
+export async function releaseBunk(admin: Admin, userId: string, crewId: number): Promise<BunkSettlement> {
   const { data } = await admin
-    .from('crew_hall_bunks').select('id, crew_id, since')
+    .from('crew_hall_bunks').select('id, crew_id, since, rate_per_hour, cap_hours')
     .eq('user_id', userId).eq('crew_id', crewId).maybeSingle()
-  if (!data) return []
+  if (!data) return { grants: [], freed: [] }
   const ctx = await bunkContext(admin, userId)
-  return settleBunks(admin, userId, [data as unknown as BunkRow], ctx.rate, ctx.capHours)
+  const row: BunkRow = {
+    id: (data as any).id, crew_id: (data as any).crew_id, since: (data as any).since,
+    rate: (data as any).rate_per_hour ?? null, cap: (data as any).cap_hours ?? null,
+  }
+  return settleBunks(admin, userId, [row], ctx.rate, ctx.capHours)
 }
 
 /** Crew ids whose stint is STILL RUNNING. Hard-locked: no reassigning, no
