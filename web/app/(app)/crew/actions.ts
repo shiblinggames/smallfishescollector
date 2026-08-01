@@ -111,8 +111,6 @@ export type CrewState = {
    *  this to tick the earned XP live; ids alone would only show a static
    *  count. */
   bunkSince: Record<number, string>
-  /** Bunks bought outright, on top of the ones the hall tier opens. */
-  bunksBought: number
   /** Drill level — multiplies the Nav-scaled training rate. */
   drillLevel: number
   /** Crew Hall building tier (1..5). Drives the recruit board's visual theme
@@ -265,7 +263,7 @@ export async function getCrewState(): Promise<CrewState | null> {
 
   const { data: prof } = await admin
     .from('profiles')
-    .select('gems, is_premium, premium_expires_at, expedition_xp, last_free_recruit_date, ship_tier, crew_hall_tier, crew_bunks_bought, crew_drill_level, doubloons, blood_gems, owned_crew_skins, equipped_crew_skins, is_admin, gauntlet_deepest, raid_node_progress, ship_classes, has_sixth_berth, legendary_unlocks')
+    .select('gems, is_premium, premium_expires_at, expedition_xp, last_free_recruit_date, ship_tier, crew_hall_tier, crew_drill_level, doubloons, blood_gems, owned_crew_skins, equipped_crew_skins, is_admin, gauntlet_deepest, raid_node_progress, ship_classes, has_sixth_berth, legendary_unlocks')
     .eq('id', user.id)
     .single()
   if (!prof) return null
@@ -332,7 +330,6 @@ export async function getCrewState(): Promise<CrewState | null> {
     capacity, navLevel, gems, isPremium: premium, rerollCost: REROLL_COST,
     shipCrewSlots, lockedCrewIds, trawlingCrewIds, bunkedCrewIds, bunkSince,
     bunkhouseOpen: bunkhouseOpen((prof as any).is_admin),
-    bunksBought: (prof as any).crew_bunks_bought ?? 0,
     drillLevel: (prof as any).crew_drill_level ?? 1,
     hallTier: clampHallTier((prof as any).crew_hall_tier),
     doubloons: (prof as any).doubloons ?? 0,

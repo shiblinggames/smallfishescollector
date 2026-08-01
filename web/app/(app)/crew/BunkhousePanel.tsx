@@ -21,7 +21,7 @@ import { crewLevelFromXP } from '@/lib/crewLevel'
 import { hallTierDef } from '@/lib/crewHall'
 import {
   accruedXP, bunkCount, bunkRatePerHour, canBunk, drillName,
-  msUntilFull, nextBunkCost, nextDrillCost, BUNK_CAP_HOURS,
+  msUntilFull, nextDrillCost, BUNK_CAP_HOURS,
 } from '@/lib/crewBunks'
 import type { CrewMember, CrewState } from './actions'
 
@@ -36,7 +36,7 @@ function fmtLeft(ms: number): string {
 }
 
 export default function BunkhousePanel({
-  state, artSrc, pending, onBunk, onUnbunk, onClaim, onBuyBunk, onBuyDrill,
+  state, artSrc, pending, onBunk, onUnbunk, onClaim, onBuyDrill,
 }: {
   state: CrewState
   artSrc: (filename: string) => string
@@ -44,7 +44,6 @@ export default function BunkhousePanel({
   onBunk: (crewId: number) => void
   onUnbunk: (crewId: number) => void
   onClaim: () => void
-  onBuyBunk: () => void
   onBuyDrill: () => void
 }) {
   // Which bunk index the sheet is open for, or null.
@@ -52,7 +51,7 @@ export default function BunkhousePanel({
   const [now, setNow] = useState(() => Date.now())
 
   const hall = hallTierDef(state.hallTier)
-  const slots = bunkCount(state.hallTier, state.bunksBought)
+  const slots = bunkCount(state.hallTier)
   const rate = bunkRatePerHour(state.navLevel, state.drillLevel)
 
   // Bunked crew, in a stable order so a claim doesn't shuffle the grid.
@@ -97,7 +96,6 @@ export default function BunkhousePanel({
     && canBunk(c.xp),
   ), [state.roster, state.bunkedCrewIds, state.trawlingCrewIds, state.lockedCrewIds])
 
-  const bunkCost = nextBunkCost(state.bunksBought)
   const drillCost = nextDrillCost(state.drillLevel)
 
   const occupant = picking === null ? null : bunked[picking] ?? null
@@ -205,16 +203,17 @@ export default function BunkhousePanel({
         })}
       </div>
 
-      {/* The two ladders. Neither ever caps. */}
-      <div style={{ display: 'flex', gap: 7, padding: '0 0.8rem 0.8rem' }}>
+      {/* Drills are the only thing bought HERE. Bunk count comes from the hall
+          tier alone, so the two upgrades never compete for the same tap: you
+          upgrade the building for room, and drill for speed. */}
+      <div style={{ padding: '0 0.8rem 0.8rem' }}>
         <UpgradeButton
-          label={`Bunk ${slots + 1}`} sub="One more at once"
-          cost={bunkCost} balance={state.doubloons} accent={hall.accent}
-          disabled={pending} onClick={onBuyBunk} />
-        <UpgradeButton
-          label={`Drill ${drillName(state.drillLevel + 1)}`} sub="Everyone trains faster"
+          label={`Drill ${drillName(state.drillLevel + 1)}`} sub="Every bunk trains faster"
           cost={drillCost} balance={state.doubloons} accent={GOLD}
           disabled={pending} onClick={onBuyDrill} />
+        <p className="font-karla" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.38)', textAlign: 'center', marginTop: 6, lineHeight: 1.4 }}>
+          Upgrade the hall above for more bunks.
+        </p>
       </div>
 
       {picking !== null && typeof document !== 'undefined' && createPortal(

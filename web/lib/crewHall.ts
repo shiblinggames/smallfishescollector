@@ -25,8 +25,9 @@ export type CrewHallTierNum = 1 | 2 | 3 | 4 | 5
 export type CrewHallTierDef = {
   tier: CrewHallTierNum
   name: string
-  /** Bunks this tier opens in the Bunkhouse. Beyond these, bunks are bought
-   *  outright (nextBunkCost in lib/crewBunks.ts). */
+  /** Bunks this tier opens in the Bunkhouse. The ONLY source of bunks — there
+   *  is no way to buy one separately, so upgrading the hall is the only way to
+   *  train more crew at once. */
   bunks: number
   /** Doubloon cost to UPGRADE TO this tier (0 for the base tier). */
   cost: number

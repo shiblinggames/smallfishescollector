@@ -70,20 +70,16 @@ export function bunkRatePerHour(navLevel: number, drillLevel: number): number {
   return Math.round((BUNK_BASE + Math.max(0, navLevel) * BUNK_PER_NAV) * drillMult(drillLevel))
 }
 
-/** Hall tier 1 opens 2 bunks, each tier one more, then bought bunks on top.
- *  The per-tier counts live on the tier defs so the ladder is stated once. */
-export function bunkCount(hallTier: number, bought: number): number {
-  return hallTierDef(hallTier).bunks + Math.max(0, Math.floor(bought))
+/** Bunks come from the hall tier and NOTHING else. There was briefly a second
+ *  ladder of bunks bought with doubloons; it competed with the hall upgrade for
+ *  the same decision, so the hall is the only way to get room. Drills are the
+ *  only thing bought inside the Bunkhouse. */
+export function bunkCount(hallTier: number): number {
+  return hallTierDef(hallTier).bunks
 }
 
-const BUNK_COST_BASE = 150_000
 const DRILL_COST_BASE = 100_000
 const COST_GROWTH = 2.5
-
-/** Doubloons for the NEXT bunk beyond what the hall tier grants. */
-export function nextBunkCost(bought: number): number {
-  return Math.round(BUNK_COST_BASE * Math.pow(COST_GROWTH, Math.max(0, Math.floor(bought))))
-}
 
 /** Doubloons to go from `level` to `level + 1`. Drill I is free. */
 export function nextDrillCost(level: number): number {

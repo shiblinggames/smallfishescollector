@@ -16,7 +16,7 @@ import { ChaseSkinFx } from '@/components/ChaseSkinFx'
 import { hallTierDef, nextHallTier, CREW_HALL_MAX_TIER } from '@/lib/crewHall'
 import { crewAssignment } from '@/lib/crewAssignment'
 import BunkhousePanel from './BunkhousePanel'
-import { bunkCrew, unbunkCrew, claimBunks, buyBunk, buyDrill } from './bunkActions'
+import { bunkCrew, unbunkCrew, claimBunks, buyDrill } from './bunkActions'
 import { RARITY_NAMES, RARITY_COLORS, groupForSlug, crewDisplayName, GEM_WEIGHTS, type CrewRarity } from '@/lib/crewGen'
 import { applyCrewEffects, netTraitStats, traitLabel, traitKind } from '@/lib/crewEffects'
 import AssignBoard from './AssignBoard'
@@ -997,9 +997,9 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
     // it silently fell through to Roster. Map it for real - old links and
     // bookmarks still exist.
     if (t === 'blood') return 'recruits'
-    return t === 'assign' || t === 'recruits' || t === 'graveyard' || t === 'roster' || t === 'wardrobe' ? t : 'roster'
-  })() as 'assign' | 'roster' | 'recruits' | 'graveyard' | 'wardrobe'
-  const [activeTab, setActiveTab] = useState<'assign' | 'roster' | 'recruits' | 'graveyard' | 'wardrobe'>(initialTab)
+    return t === 'assign' || t === 'recruits' || t === 'graveyard' || t === 'roster' || t === 'wardrobe' || t === 'hall' ? t : 'roster'
+  })() as 'assign' | 'roster' | 'recruits' | 'graveyard' | 'wardrobe' | 'hall'
+  const [activeTab, setActiveTab] = useState<'assign' | 'roster' | 'recruits' | 'graveyard' | 'wardrobe' | 'hall'>(initialTab)
 
   // First-time Crew Hall guide: step through the core tabs, switching to and
   // flashing each one. Marked seen at the end.
@@ -1280,6 +1280,8 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
               icon: <svg {...iconProps}><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="3.2" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg> },
             { id: 'recruits', label: 'Recruit', accent: '#f0d696', count: boardCount || undefined,
               icon: <svg {...iconProps}><path d="M15 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="8.5" cy="7" r="3.2" /><path d="M19 8v6M22 11h-6" /></svg> },
+            { id: 'hall',     label: 'Hall',    accent: '#f0c040',
+              icon: <svg {...iconProps}><path d="M3 21h18" /><path d="M5 21V10l7-5 7 5v11" /><path d="M10 21v-5h4v5" /></svg> },
             { id: 'wardrobe', label: 'Skins',  accent: '#5ec8e8',
               icon: <svg {...iconProps}><path d="M12 3a2 2 0 0 0-2 2c0 1 1 1.6 2 2M3 20l9-7 9 7M3 20l9-4 9 4M3 20v-1l9-6 9 6v1" /></svg> },
           ]
@@ -1333,7 +1335,12 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
           />
         )}
 
-        {activeTab === 'recruits' && (() => {
+        {/* THE HALL. Its own tab as of this change: the building and the
+            Bunkhouse inside it are a place you invest in over months, while
+            Recruit is a daily board you clear in ten seconds. Sharing a tab
+            meant the thing you visit most pushed the thing you spend most on
+            off the screen. */}
+        {activeTab === 'hall' && (() => {
           const hall = hallTierDef(state.hallTier)
           const nextTier = nextHallTier(state.hallTier)
           return (
@@ -1481,10 +1488,16 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
           onBunk={id => run(() => bunkCrew(id), id)}
           onUnbunk={id => runBunkClaim(() => unbunkCrew(id))}
           onClaim={() => runBunkClaim(() => claimBunks())}
-          onBuyBunk={() => run(() => buyBunk(), 'reroll')}
           onBuyDrill={() => run(() => buyDrill(), 'reroll')}
         />}
 
+        </>
+          )
+        })()}
+
+        {activeTab === 'recruits' && (() => {
+          return (
+        <>
           {/* Reroll row — every way to reroll this board, side by side. The
               blood-charged tiers used to be a separate panel above the hall
               with its own header, balance strip and description, which pushed

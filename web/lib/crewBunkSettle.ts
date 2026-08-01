@@ -22,21 +22,19 @@ export type BunkRow = { id: number; crew_id: number; since: string }
 export async function bunkContext(admin: Admin, userId: string) {
   const { data: prof } = await admin
     .from('profiles')
-    .select('expedition_xp, crew_hall_tier, crew_bunks_bought, crew_drill_level, doubloons, is_admin')
+    .select('expedition_xp, crew_hall_tier, crew_drill_level, doubloons, is_admin')
     .eq('id', userId)
     .single()
   const navLevel = getLevelFromXP((prof as any)?.expedition_xp ?? 0)
   const drillLevel = (prof as any)?.crew_drill_level ?? 1
-  const bought = (prof as any)?.crew_bunks_bought ?? 0
   return {
     // Admin-only for now (BUNKHOUSE_LIVE). Every action checks this, not just
     // the panel — a hidden button is not a gate.
     open: bunkhouseOpen((prof as any)?.is_admin),
     navLevel,
     drillLevel,
-    bought,
     doubloons: (prof as any)?.doubloons ?? 0,
-    slots: bunkCount(clampHallTier((prof as any)?.crew_hall_tier), bought),
+    slots: bunkCount(clampHallTier((prof as any)?.crew_hall_tier)),
     rate: bunkRatePerHour(navLevel, drillLevel),
   }
 }

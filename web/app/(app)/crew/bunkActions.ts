@@ -12,7 +12,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { canBunk, nextBunkCost, nextDrillCost, drillName } from '@/lib/crewBunks'
+import { canBunk, nextDrillCost, drillName } from '@/lib/crewBunks'
 import { bunkContext, loadBunks, settleBunks, releaseBunk } from '@/lib/crewBunkSettle'
 import type { CrewXPGrant } from '@/lib/crewXPGrant'
 import { getCrewState, type CrewActionResult, type CrewState } from './actions'
@@ -88,22 +88,18 @@ export async function claimBunks(): Promise<BunkClaimResult> {
   return state ? { state, grants } : { error: 'Failed to load crew' }
 }
 
-export async function buyBunk(): Promise<CrewActionResult> {
-  return buyUpgrade('bunk')
-}
-
-export async function buyDrill(): Promise<CrewActionResult> {
-  return buyUpgrade('drill')
-}
-
 /**
- * Both purchases, sharing the canonical doubloon flow: the atomic
- * `deduct_doubloons` RPC first (a relative debit guarded on the live balance,
- * so two concurrent buys cannot both read the same balance and pay once), then
- * the grant and a ledger row. `upgradeCrewHall` predates this and uses an
- * absolute overwrite with no ledger row — follow this, not that.
+ * Buy the next Drill level. The ONLY doubloon purchase in the Bunkhouse: bunk
+ * count comes from the hall tier alone, so there is exactly one thing to buy
+ * here and one thing to buy on the hall above.
+ *
+ * Canonical doubloon flow: the atomic `deduct_doubloons` RPC first (a relative
+ * debit guarded on the live balance, so two concurrent buys cannot both read
+ * the same balance and pay once), then the grant and a ledger row.
+ * `upgradeCrewHall` predates this and uses an absolute overwrite with no ledger
+ * row - follow this, not that.
  */
-async function buyUpgrade(kind: 'bunk' | 'drill'): Promise<CrewActionResult> {
+export async function buyDrill(): Promise<CrewActionResult> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not signed in' }
@@ -111,18 +107,17 @@ async function buyUpgrade(kind: 'bunk' | 'drill'): Promise<CrewActionResult> {
 
   const ctx = await bunkContext(admin, user.id)
   if (!ctx.open) return { error: CLOSED }
-  const cost = kind === 'bunk' ? nextBunkCost(ctx.bought) : nextDrillCost(ctx.drillLevel)
+  const cost = nextDrillCost(ctx.drillLevel)
   if (ctx.doubloons < cost) return { error: `Need ${cost.toLocaleString()} ⟡` }
 
   const { data: newBalance } = await admin.rpc('deduct_doubloons', { uid: user.id, amount: cost })
   if (newBalance == null) return { error: `Need ${cost.toLocaleString()} ⟡` }
 
-  // Guarded on the value we priced against, so a double submit cannot buy two
+  // Guarded on the level we priced against, so a double submit cannot buy two
   // levels for one payment.
-  const col = kind === 'bunk' ? 'crew_bunks_bought' : 'crew_drill_level'
-  const from = kind === 'bunk' ? ctx.bought : ctx.drillLevel
   const { data: bumped } = await admin
-    .from('profiles').update({ [col]: from + 1 }).eq('id', user.id).eq(col, from).select('id')
+    .from('profiles').update({ crew_drill_level: ctx.drillLevel + 1 })
+    .eq('id', user.id).eq('crew_drill_level', ctx.drillLevel).select('id')
 
   if (!(bumped ?? []).length) {
     // Lost the race. Refund rather than charging for nothing.
@@ -131,9 +126,8 @@ async function buyUpgrade(kind: 'bunk' | 'drill'): Promise<CrewActionResult> {
   }
 
   await admin.from('doubloon_transactions').insert({
-    user_id: user.id,
-    amount: -cost,
-    reason: kind === 'bunk' ? `Bunkhouse: bunk ${ctx.slots + 1}` : `Bunkhouse: Drill ${drillName(from + 1)}`,
+    user_id: user.id, amount: -cost,
+    reason: `Bunkhouse: Drill ${drillName(ctx.drillLevel + 1)}`,
   })
 
   const state = await getCrewState()
