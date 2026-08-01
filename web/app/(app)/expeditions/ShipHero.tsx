@@ -209,6 +209,9 @@ interface Props {
   roster: RosterCrew[]
   /** Crew ids currently out on a trawl — hidden from the crew picker. */
   trawlingCrewIds?: number[]
+  /** Hands who have finished a stint in the hall and are waiting to be
+   *  collected. Badges the Crew column so it is visible from the hub. */
+  readyBunks?: number
   ownedRaidItems: string[]
   /** Charge on The Primeval Maw. Read-only; the server owns it. */
   borrowedJawXp?: number
@@ -352,6 +355,7 @@ export default function ShipHero({
   equippedShipSkin: initialEquippedSkin, shipSkins: ownedSkins,
   roster,
   trawlingCrewIds = [],
+  readyBunks = 0,
   ownedRaidItems, equippedRaidItems: initialEquippedRaidItems, borrowedJawXp = 0,
   equippedRepairKit: initialEquippedRepairKit,
   ownedRepairKits: initialOwnedRepairKits,
@@ -1273,8 +1277,11 @@ export default function ShipHero({
               {
                 key: 'crew',
                 label: 'Crew',
-                sub: crewLevelUpNudge ? 'A hand leveled up' : `${roster.length} aboard`,
-                nudge: crewLevelUpNudge,
+                sub: readyBunks > 0
+                  ? (readyBunks === 1 ? 'A hand is done training' : `${readyBunks} hands done training`)
+                  : crewLevelUpNudge ? 'A hand leveled up' : `${roster.length} aboard`,
+                nudge: crewLevelUpNudge || readyBunks > 0,
+                count: readyBunks,
                 art: crewCycleArt,
                 icon: (
                   <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#8b97a8" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -1287,7 +1294,7 @@ export default function ShipHero({
                 key: 'ship',
                 label: 'Ship',
                 sub: 'Manage upgrades',
-                nudge: false,
+                nudge: false, count: 0,
                 art: shipImgSrc,
                 icon: null,
                 locked: false,
@@ -1296,7 +1303,7 @@ export default function ShipHero({
                 key: 'items',
                 label: 'Items',
                 sub: newRaidItems.size > 0 ? 'New gear to mount' : `${slotsFilled}/${slotsTotal} mounted`,
-                nudge: newRaidItems.size > 0,
+                nudge: newRaidItems.size > 0, count: 0,
                 art: itemsCycleArt,
                 icon: (
                   <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#8b97a8" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -1309,7 +1316,7 @@ export default function ShipHero({
                 key: 'forge',
                 label: 'Forge',
                 sub: forgeUnlocked ? `${forgeStock} component${forgeStock === 1 ? '' : 's'} held` : 'Locked',
-                nudge: false,
+                nudge: false, count: 0,
                 art: abyssalUnlocked ? '/forge/abyssal_forge.png' : '/forge/forge.png',
                 icon: (
                   <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={forgeUnlocked ? '#8b97a8' : '#5c6470'} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -1337,7 +1344,18 @@ export default function ShipHero({
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', lineHeight: 1.15, color: row.locked ? '#79828f' : '#f0ede8', display: 'flex', alignItems: 'center', gap: 5 }}>
                       {row.label}
-                      {row.nudge && <span aria-hidden className="crew-levelup-dot" style={{ width: 7, height: 7, borderRadius: '50%', background: '#ffd96a', border: '1px solid rgba(0,0,0,0.55)', flexShrink: 0 }} />}
+                      {/* A count reads louder than a bare dot and says HOW
+                          MANY are waiting; the dot stays for nudges that have
+                          no number behind them. */}
+                      {row.count > 0 ? (
+                        <span aria-label={`${row.count} ready to collect`} className="crew-levelup-dot font-karla font-800" style={{
+                          minWidth: 16, height: 16, padding: '0 4px', borderRadius: 999,
+                          background: '#ffd96a', border: '1px solid rgba(0,0,0,0.55)',
+                          color: '#231a06', fontSize: '0.6rem', lineHeight: '15px', textAlign: 'center', flexShrink: 0,
+                        }}>{row.count}</span>
+                      ) : row.nudge ? (
+                        <span aria-hidden className="crew-levelup-dot" style={{ width: 7, height: 7, borderRadius: '50%', background: '#ffd96a', border: '1px solid rgba(0,0,0,0.55)', flexShrink: 0 }} />
+                      ) : null}
                     </p>
                     <p className="font-karla font-600" style={{ fontSize: '0.68rem', lineHeight: 1.3, marginTop: 2, color: row.nudge ? '#ffd96a' : '#9aa3b1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {row.sub}

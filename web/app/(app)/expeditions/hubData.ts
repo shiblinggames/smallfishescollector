@@ -2,6 +2,7 @@ import { cache } from 'react'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUser } from '@/lib/userData'
 import { getCrewRoster } from '@/app/(app)/crew/actions'
+import { stintDone, storesCapHours } from '@/lib/crewBunks'
 
 // Shared per-request loaders for the expeditions hub AND the standalone
 // Ship / Items / Forge routes.
@@ -22,6 +23,30 @@ export const cachedTrawlingCrewIds = cache(async (): Promise<number[]> => {
   const admin = createAdminClient()
   const { data } = await admin.from('trawls').select('crew_id').eq('user_id', user.id)
   return ((data ?? []) as { crew_id: number }[]).map(r => r.crew_id)
+})
+
+/**
+ * How many hands have finished a stint in the Crew Hall and are waiting to be
+ * collected. Drives the nudge on the hub's Crew column, so a finished stint is
+ * visible without opening the crew page.
+ *
+ * Readiness is computed from the row's OWN cap_hours, not the player's current
+ * Stores tier, for the same reason the payout is: a stint runs on the terms it
+ * was struck on. `cap_hours` is null only on rows predating the column, which
+ * fall back to the live tier.
+ */
+export const cachedReadyBunkCount = cache(async (): Promise<number> => {
+  const user = await getCurrentUser()
+  if (!user) return 0
+  const admin = createAdminClient()
+  const [{ data: rows }, { data: prof }] = await Promise.all([
+    admin.from('crew_hall_bunks').select('since, cap_hours').eq('user_id', user.id),
+    admin.from('profiles').select('crew_stores_level').eq('id', user.id).single(),
+  ])
+  const liveCap = storesCapHours((prof as { crew_stores_level?: number } | null)?.crew_stores_level ?? 1)
+  const now = Date.now()
+  return ((rows ?? []) as { since: string; cap_hours: number | null }[])
+    .filter(r => stintDone(r.since, now, r.cap_hours ?? liveCap)).length
 })
 
 /** The three ship-screen reveal gates (Ch3 Quartermaster → ultimate build; Raid 7
