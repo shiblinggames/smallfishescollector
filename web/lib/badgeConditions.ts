@@ -14,6 +14,9 @@ import { getLevelFromXP as fishLevelFromXP } from './fishingLevel'
 import { getLevelFromXP as navLevelFromXP } from './expeditionLevel'
 import { crewLevelFromXP, CREW_MAX_LEVEL } from './crewLevel'
 import { CREW_HALL_MAX_TIER } from './crewHall'
+import { DRILL_MAX_LEVEL, STORES_MAX_LEVEL } from './crewBunks'
+import { netTraitStats, traitLabel } from './crewEffects'
+import { DEEP_TRAIT_MAX } from './crewGen'
 import { GAUNTLET_UPGRADES } from './gauntletUpgrades'
 import { FORGE_RECIPES, isForgedRaidItem, isAbyssalForgedItem, GAUNTLET2_BASE_ITEM_IDS, RAID_ITEMS, baseItemId } from './raidItems'
 import { finnItemLevel, FINN_ITEM_MAX_LEVEL } from './finnItems'
@@ -73,6 +76,8 @@ export interface BadgeProfileFields {
   total_perfects?: number | null
   doubloons?: number | null
   crew_hall_tier?: number | null
+  crew_drill_level?: number | null
+  crew_stores_level?: number | null
   lifetime_recruits?: number | null
   highest_raid_damage?: number | null
   parlor_best_streak?: number | null
@@ -138,7 +143,7 @@ export interface BadgeProfileFields {
 
 export interface BadgeJoinData {
   raids: { raid_id: string; elapsed_ms: number | null }[]
-  crew: { xp: number | null; died_at: string | null; slug: string | null }[]
+  crew: { xp: number | null; died_at: string | null; slug: string | null; effects?: string[] | null }[]
   voyageCount: number       // revealed daily_voyages
   collectionCount: number   // lifetime distinct species (prestige-proof)
   rodTiers: number[]        // rod_inventory rod_tier values (owned rods)
@@ -151,6 +156,14 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
   const fastestCorsairs = Math.min(Infinity, ...j.raids.filter(r => r.raid_id === 'corsairs_reckoning').map(r => r.elapsed_ms ?? Infinity))
   const fastestAnyRaid = Math.min(Infinity, ...j.raids.map(r => r.elapsed_ms ?? Infinity))
   const maxCrewLevel = j.crew.reduce((mx, c) => Math.max(mx, crewLevelFromXP(c.xp ?? 0)), 0)
+  const livingCrew = j.crew.filter(c => c.died_at == null)
+  const maxedCrew = livingCrew.filter(c => crewLevelFromXP(c.xp ?? 0) >= CREW_MAX_LEVEL).length
+  // Trait milestones. Living crew only: a Divine hand lost on a voyage should
+  // not keep propping up a badge from the graveyard.
+  const crewTraits = livingCrew.map(c => netTraitStats(c.effects ?? null))
+  const divineCrew = crewTraits.filter(t => traitLabel(t) === 'Divine').length
+  const deepCutCrew = crewTraits.filter(t =>
+    t.power === DEEP_TRAIT_MAX || t.dodge === DEEP_TRAIT_MAX || t.fortune === DEEP_TRAIT_MAX).length
   // cards.slug is Title_Case ('Catfish', 'Doby_Mick'); the LEGENDARY sets are
   // lowercase — normalise before comparing or the legendary checks never match.
   const ownedSlugsLc = j.crew.map(c => c.slug?.toLowerCase()).filter((s): s is string => !!s)
@@ -239,6 +252,18 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
     // everyone already holding it. Its own description names the Hall of
     // Legends, which is tier 5, so 5 is what it has always meant.
     crewmaster:     Number(p.crew_hall_tier ?? 0) >= 5,
+    // The hall grew a sixth tier for the bunks, so reaching the TOP is its own
+    // badge rather than a silent redefinition of Crewmaster (see the note
+    // above: following the max would have un-earned that one for everybody).
+    leviathan_hall: Number(p.crew_hall_tier ?? 0) >= CREW_HALL_MAX_TIER,
+    fully_outfitted: Number(p.crew_drill_level ?? 1) >= DRILL_MAX_LEVEL
+                  && Number(p.crew_stores_level ?? 1) >= STORES_MAX_LEVEL,
+    // A 4 in any stat can only come from the Leviathan bunk: the recruit table
+    // stops at 3, so carrying one is proof of the top hall rather than luck.
+    deep_cut:       deepCutCrew >= 1,
+    divine_hand:    divineCrew >= 1,
+    six_divine:     divineCrew >= 6,
+    full_complement: maxedCrew >= 10,
     growing_crew:   recruits >= 25,
     full_muster:    recruits >= 100,
     legendary_recruit: hasLegendaryCrew,
@@ -435,4 +460,4 @@ export function earnedBadgeIds(p: BadgeProfileFields, j: BadgeJoinData): string[
 
 /** Columns a query must select to feed badgeConditions(). */
 export const BADGE_PROFILE_COLUMNS =
-  'fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, charting_landmarks_claimed, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, ancient_catches, trophy_size_catches, prestige_levels, finn_wins, fish_sold_doubloons, fishing_casts, fishing_double_catches, fishing_crates_opened, fishing_snags, fishing_jackpots, tide_run_beacons_smashed, tide_run_total_distance, is_premium, ship_tier, trawls_collected, unlocked_pets, gauntlet_upgrades, gauntlet_confluences_seen, gauntlet_runs_completed, gauntlet_fathoms_earned, gauntlet_max_hit, gauntlet_deepest_died, gauntlet_hc_deepest, gauntlet_hc_deepest_died, blood_gems_earned, completionist_effects, manowar_augment, ship_classes, forge_recipes_learned, raid_items, ship_skins, owned_crew_skins, equipped_crew_skins, has_sixth_berth, has_armory_expansion, dons_gauntlet_deepest, parlor_best_streak, parlor_points, lifetime_species_count, raid_node_progress, equipped_raid_items, finn_spoil_free, finn_spoil_paid, has_anglers_patience, anglers_patience_xp, borrowed_jaw_xp'
+  'fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, crew_drill_level, crew_stores_level, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, charting_landmarks_claimed, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, ancient_catches, trophy_size_catches, prestige_levels, finn_wins, fish_sold_doubloons, fishing_casts, fishing_double_catches, fishing_crates_opened, fishing_snags, fishing_jackpots, tide_run_beacons_smashed, tide_run_total_distance, is_premium, ship_tier, trawls_collected, unlocked_pets, gauntlet_upgrades, gauntlet_confluences_seen, gauntlet_runs_completed, gauntlet_fathoms_earned, gauntlet_max_hit, gauntlet_deepest_died, gauntlet_hc_deepest, gauntlet_hc_deepest_died, blood_gems_earned, completionist_effects, manowar_augment, ship_classes, forge_recipes_learned, raid_items, ship_skins, owned_crew_skins, equipped_crew_skins, has_sixth_berth, has_armory_expansion, dons_gauntlet_deepest, parlor_best_streak, parlor_points, lifetime_species_count, raid_node_progress, equipped_raid_items, finn_spoil_free, finn_spoil_paid, has_anglers_patience, anglers_patience_xp, borrowed_jaw_xp'

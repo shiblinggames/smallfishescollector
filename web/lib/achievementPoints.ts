@@ -41,7 +41,7 @@ const getCachedAchievementRows = unstable_cache(
     const [{ data: profiles }, { data: raidRows }, { data: crewRows }, { data: voyageRows }, { data: collectionRows }, { data: rodRows }, { data: goldenRows }] = await Promise.all([
       admin.from('profiles').select(`id, username, unlocked_badges, ${BADGE_PROFILE_COLUMNS}`).eq('is_admin', false),
       admin.from('raid_completions').select('user_id, raid_id, elapsed_ms'),
-      admin.from('user_crew').select('user_id, xp, died_at, cards(slug)'),
+      admin.from('user_crew').select('user_id, xp, died_at, effects, cards(slug)'),
       admin.from('daily_voyages').select('user_id').eq('status', 'revealed'),
       admin.from('fish_collection').select('user_id'),
       admin.from('rod_inventory').select('user_id, rod_tier'),
@@ -116,7 +116,7 @@ const getCachedUserPoints = unstable_cache(
     const [{ data: profile }, { data: raidRows }, { data: crewRows }, { count: voyageCount }, { count: collectionCount }, { data: rodRows }, { count: goldenCount }] = await Promise.all([
       admin.from('profiles').select(`unlocked_badges, ${BADGE_PROFILE_COLUMNS}`).eq('id', userId).single(),
       admin.from('raid_completions').select('raid_id, elapsed_ms').eq('user_id', userId),
-      admin.from('user_crew').select('xp, died_at, cards(slug)').eq('user_id', userId),
+      admin.from('user_crew').select('xp, died_at, effects, cards(slug)').eq('user_id', userId),
       admin.from('daily_voyages').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('status', 'revealed'),
       admin.from('fish_collection').select('id', { count: 'exact', head: true }).eq('user_id', userId),
       admin.from('rod_inventory').select('rod_tier').eq('user_id', userId),

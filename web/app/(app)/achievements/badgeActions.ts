@@ -21,7 +21,7 @@ export async function reconcileBadges(): Promise<string[]> {
   const [{ data: profile }, { data: raidRows }, { data: crewRows }, { count: voyageCount }, { count: collectionCount }, { data: rodRows }, { count: goldenCount }] = await Promise.all([
     admin.from('profiles').select(`unlocked_badges, ${BADGE_PROFILE_COLUMNS}`).eq('id', user.id).single(),
     admin.from('raid_completions').select('raid_id, elapsed_ms').eq('user_id', user.id),
-    admin.from('user_crew').select('xp, died_at, cards(slug)').eq('user_id', user.id),
+    admin.from('user_crew').select('xp, died_at, effects, cards(slug)').eq('user_id', user.id),
     admin.from('daily_voyages').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'revealed'),
     admin.from('fish_collection').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
     admin.from('rod_inventory').select('rod_tier').eq('user_id', user.id),

@@ -212,6 +212,13 @@ const PLAN = [
   [30, 1, 0, 'parlor_cardsharp'],
   [30, 1, 1, 'parlor_kingpin'],
   [30, 1, 2, 'parlor_legend'],
+  // ── batch 31 — Crew Hall: the bunks, the deep, and Divine ──
+  [31, 0, 0, 'leviathan_hall'],
+  [31, 0, 1, 'fully_outfitted'],
+  [31, 0, 2, 'deep_cut'],
+  [31, 1, 0, 'full_complement'],
+  [31, 1, 1, 'divine_hand'],
+  [31, 1, 2, 'six_divine'],
 ]
 
 // Optional: `ONLY=30 node slice-badges.mjs` slices just that sheet (so re-running

@@ -11,6 +11,9 @@ import { grantBadgeDirect } from '@/lib/badgeGrant'
 import { hasPrestigedAllZones } from '@/lib/collection'
 import { crewLevelFromXP, CREW_MAX_LEVEL } from '@/lib/crewLevel'
 import { CREW_HALL_MAX_TIER } from '@/lib/crewHall'
+import { DRILL_MAX_LEVEL, STORES_MAX_LEVEL, tierNumeral } from '@/lib/crewBunks'
+import { netTraitStats, traitLabel } from '@/lib/crewEffects'
+import { DEEP_TRAIT_MAX } from '@/lib/crewGen'
 import { GAUNTLET_UPGRADES } from '@/lib/gauntletUpgrades'
 import { FORGE_RECIPES, isForgedRaidItem, isAbyssalForgedItem, GAUNTLET2_BASE_ITEM_IDS, RAID_ITEMS, baseItemId } from '@/lib/raidItems'
 import { finnItemLevel, FINN_ITEM_MAX_LEVEL } from '@/lib/finnItems'
@@ -39,7 +42,7 @@ export default async function BadgesPage() {
     admin.from('daily_voyages').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'revealed'),
     reconcileBadges(),
     admin.from('raid_completions').select('raid_id, elapsed_ms').eq('user_id', user.id),
-    admin.from('user_crew').select('xp, died_at, cards(slug)').eq('user_id', user.id),
+    admin.from('user_crew').select('xp, died_at, effects, cards(slug)').eq('user_id', user.id),
     admin.from('rod_inventory').select('rod_tier').eq('user_id', user.id),
     // Global badge rarity (Steam-style % of players who've unlocked each badge).
     admin.rpc('get_badge_rarity'),
@@ -58,6 +61,19 @@ export default async function BadgesPage() {
   const fastestCorsairs = Math.min(Infinity, ...raids.filter(r => r.raid_id === 'corsairs_reckoning').map(r => r.elapsed_ms ?? Infinity))
   const crew = (crewRes.data ?? []) as unknown as { xp: number | null; died_at: string | null; cards: { slug: string | null } | null }[]
   const maxCrewLevel = crew.reduce((mx, c) => Math.max(mx, crewLevelFromXP(c.xp ?? 0)), 0)
+  // Crew Hall / trait milestones (batch 31). Living crew only, matching
+  // badgeConditions — a Divine hand lost on a voyage must not hold the badge up
+  // from the graveyard, and the two surfaces have to agree or the bar and the
+  // earned state disagree.
+  const livingCrew = crew.filter(c => c.died_at == null)
+  const maxedCrewCount = livingCrew.filter(c => crewLevelFromXP(c.xp ?? 0) >= CREW_MAX_LEVEL).length
+  const crewTraits = livingCrew.map(c => netTraitStats((c as { effects?: string[] | null }).effects ?? null))
+  const divineCrew = crewTraits.filter(t => traitLabel(t) === 'Divine').length
+  const deepCutCrew = crewTraits.filter(t =>
+    t.power === DEEP_TRAIT_MAX || t.dodge === DEEP_TRAIT_MAX || t.fortune === DEEP_TRAIT_MAX).length
+  const drillLevel = Number(profile?.crew_drill_level ?? 1)
+  const storesLevel = Number(profile?.crew_stores_level ?? 1)
+  const ladderSteps = Math.min(drillLevel, DRILL_MAX_LEVEL) + Math.min(storesLevel, STORES_MAX_LEVEL)
   // cards.slug is Title_Case; the LEGENDARY sets are lowercase — normalise.
   const ownedCrewSlugsLc = crew.map(c => c.cards?.slug?.toLowerCase()).filter((s): s is string => !!s)
   const hasLegendaryCrew = ownedCrewSlugsLc.some(s => LEGENDARY_SLUGS.has(s))
@@ -307,9 +323,20 @@ export default async function BadgesPage() {
         badgeGoal('legendary_recruit', 'Legendary Recruit', 'Recruit a legendary crew', hasLegendaryCrew ? 1 : 0, 1, '/crew', { binary: true }),
         badgeGoal('three_legends', 'The Three Legends', 'Own 3 legendary crew at once', legendsOwnedAll, 3, '/crew'),
         badgeGoal('six_legends', 'The Avengers', 'Own all 5 base legendary crew', baseLegendsOwned, BASE_LEGENDARY_SLUGS.size, '/crew'),
-        badgeGoal('crewmaster', 'Crewmaster', 'Reach the top Crew Hall tier', crewHallTier, CREW_HALL_MAX_TIER, '/crew'),
+        // Target 5, not CREW_HALL_MAX_TIER. The condition has always been
+        // tier 5 (the Hall of Legends, which the description names); when the
+        // ladder grew a sixth tier for the bunks the BAR started targeting 6,
+        // so everyone holding this badge saw it sitting at 5/6, earned but
+        // apparently unfinished. Leviathan Hall below is the tier-6 badge.
+        badgeGoal('crewmaster', 'Crewmaster', 'Reach the Hall of Legends', Math.min(crewHallTier, 5), 5, '/crew'),
+        badgeGoal('leviathan_hall', 'Leviathan Hall', 'Build the hall to its final tier', crewHallTier, CREW_HALL_MAX_TIER, '/crew'),
+        badgeGoal('fully_outfitted', 'Fully Outfitted', `Buy Drills ${tierNumeral(DRILL_MAX_LEVEL)} and Stores ${tierNumeral(STORES_MAX_LEVEL)}`, ladderSteps, DRILL_MAX_LEVEL + STORES_MAX_LEVEL, '/crew'),
         badgeGoal('full_muster', 'Full Muster', 'Recruit 100 crew', recruits, 100, '/crew'),
         badgeGoal('old_salt', 'Old Salt', 'Level a crew to 100', maxCrewLevel, CREW_MAX_LEVEL, '/crew'),
+        badgeGoal('full_complement', 'Full Complement', 'Level 10 crew to 100', maxedCrewCount, 10, '/crew'),
+        badgeGoal('deep_cut', 'Deep Cut', `Carry a trait with a stat at ${DEEP_TRAIT_MAX}`, deepCutCrew >= 1 ? 1 : 0, 1, '/crew', { binary: true }),
+        badgeGoal('divine_hand', 'Divine Hand', 'Cut a crew a Divine trait', divineCrew >= 1 ? 1 : 0, 1, '/crew', { binary: true }),
+        badgeGoal('six_divine', 'Choir of the Deep', 'Hold 6 Divine crew at once', divineCrew, 6, '/crew'),
         badgeGoal('colors_raised', 'Colors Raised', 'Own your first crew skin', ownedSkins.size >= 1 ? 1 : 0, 1, '/crew', { binary: true }),
         badgeGoal('the_chase', 'The Chase', 'Own a chase skin', hasChaseSkin ? 1 : 0, 1, '/crew', { binary: true }),
         badgeGoal('fashionista', 'Fashionista', 'Have a skin equipped on 5 crew at once', equippedSkinCount, 5, '/crew'),
