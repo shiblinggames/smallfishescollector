@@ -884,13 +884,19 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
   // an event rather than a silent restyle).
   const [hallUpgradeOpen, setHallUpgradeOpen] = useState(false)
   const [hallBusy, setHallBusy] = useState(false)
-  // ONE tier-up overlay for all three ladders. The art is the point of it: the
-  // building, the drill rig and the stores all have a picture per tier, so
-  // upgrading should SHOW you the new one rather than just tick a number.
-  const [tierUp, setTierUp] = useState<{ art: string; title: string; sub: string; accent: string } | null>(null)
+  // Which ladder just went up, so its ART can pop IN PLACE. This used to be a
+  // full-panel overlay, but the hero has overflow:hidden and the overlay's
+  // image plus three lines of text did not fit inside it, so it was clipped.
+  // Animating the thing you are already looking at is both seamless and
+  // impossible to cut off. The words go in the existing fixed-position toast.
+  const [pop, setPop] = useState<{ what: 'hall' | 'drill' | 'stores'; accent: string; n: number } | null>(null)
   // What the last bunk claim paid, for the toast. Level-ups come free of a
   // second round trip: CrewXPGrant already carries old/new level.
   const [bunkPaid, setBunkPaid] = useState<{ xp: number; levelled: string[] } | null>(null)
+  // What the upgrade changed, in words. Shares the bunk-claim toast's slot:
+  // fixed to the viewport, pointer-events none, so it can neither be clipped
+  // by an ancestor nor eat a tap.
+  const [upgradeSaid, setUpgradeSaid] = useState<{ title: string; sub: string; accent: string } | null>(null)
   useEffect(() => {
     if (!bunkPaid) return
     const id = setTimeout(() => setBunkPaid(null), 3400)
@@ -898,10 +904,16 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
   }, [bunkPaid])
 
   useEffect(() => {
-    if (!tierUp) return
-    const id = setTimeout(() => setTierUp(null), 3600)
+    if (!upgradeSaid) return
+    const id = setTimeout(() => setUpgradeSaid(null), 3000)
     return () => clearTimeout(id)
-  }, [tierUp])
+  }, [upgradeSaid])
+
+  useEffect(() => {
+    if (!pop) return
+    const id = setTimeout(() => setPop(null), 1200)
+    return () => clearTimeout(id)
+  }, [pop])
   /** Bunk claims and unbunks return { state, grants }, so they cannot go
    *  through `run` (which only knows { state } | { error }). Both surface what
    *  was paid; both are safe to call when nothing is owed. */
@@ -932,18 +944,18 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
       setState(res.state)
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.state.doubloons }))
       vibrate([18, 50, 26])
-      setTierUp(kind === 'drill'
+      const accent = kind === 'drill' ? '#f0c040' : '#7fc4a8'
+      setPop({ what: kind, accent, n: Date.now() })
+      setUpgradeSaid(kind === 'drill'
         ? {
-            art: `/crew/drill_${Math.min(res.state.drillLevel, DRILL_MAX_LEVEL)}.png`,
             title: `Drills ${tierNumeral(res.state.drillLevel)}`,
             sub: `${bunkRatePerHour(res.state.navLevel, res.state.drillLevel).toLocaleString()} XP an hour, every bunk`,
-            accent: '#f0c040',
+            accent,
           }
         : {
-            art: `/crew/stores_${res.state.storesLevel}.png`,
             title: `Stores ${tierNumeral(res.state.storesLevel)}`,
             sub: `${storesCapHours(res.state.storesLevel)}h stints`,
-            accent: '#7fc4a8',
+            accent,
           })
     })
   }
@@ -964,12 +976,8 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
         // Keep the Nav-bar doubloon total in sync (same pattern as repair).
         window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.state.doubloons }))
         vibrate([18, 50, 26])
-        setTierUp({
-          art: `/crew/hall_${def.tier}.png`,
-          title: def.name,
-          sub: `${def.bunks} bunks, ${def.bunks === 1 ? 'one hand' : `${def.bunks} hands`} in training`,
-          accent: def.accent,
-        })
+        setPop({ what: 'hall', accent: def.accent, n: Date.now() })
+        setUpgradeSaid({ title: def.name, sub: `Bunk ${def.bunks} is open`, accent: def.accent })
       }
       setHallBusy(false)
     })
@@ -1406,7 +1414,17 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                 does not yet. Fall back to the tier below rather than hiding,
                 which left an empty hole. Self-healing: drop hall_6.png in and
                 this stops firing. */}
-            <img src={`/crew/hall_${hall.tier}.png`} alt="" aria-hidden decoding="async"
+            <motion.img src={`/crew/hall_${hall.tier}.png`} alt="" aria-hidden decoding="async"
+              // Keyed on the tier so a purchase REMOUNTS it: the old building
+              // leaves and the new one lands, in the same spot, with no layer
+              // over the top. `pop` gates the overshoot so opening the tab is
+              // a plain fade rather than a bounce.
+              key={hall.tier}
+              initial={pop?.what === 'hall' ? { scale: 0.62, opacity: 0, rotate: -6 } : { opacity: 0 }}
+              animate={pop?.what === 'hall' ? { scale: [0.62, 1.14, 1], opacity: 1, rotate: 0 } : { opacity: 1 }}
+              transition={pop?.what === 'hall'
+                ? { duration: 0.66, times: [0, 0.66, 1], ease: 'easeOut' }
+                : { duration: 0.25 }}
               style={{ width: 176, height: 176, objectFit: 'contain', filter: `drop-shadow(0 6px 18px ${hall.accent}66)` }}
               onError={e => {
                 const img = e.target as HTMLImageElement
@@ -1415,10 +1433,26 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                 img.src = `/crew/hall_${Math.max(1, hall.tier - 1)}.png`
               }} />
 
+            <AnimatePresence>
+              {pop?.what === 'hall' && (
+                <motion.span key={pop.n} aria-hidden
+                  initial={{ scale: 0.3, opacity: 0.85 }}
+                  animate={{ scale: 2.2, opacity: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.9, ease: 'easeOut' }}
+                  style={{
+                    position: 'absolute', top: 88, width: 150, height: 150, borderRadius: '50%',
+                    border: `2px solid ${hall.accent}`, pointerEvents: 'none',
+                  }} />
+              )}
+            </AnimatePresence>
+
             {/* Its own row, full width, no truncation. */}
-            <p className="font-cinzel font-700" style={{ fontSize: '1.35rem', color: hall.accent, lineHeight: 1.2, marginTop: 2 }}>
+            <motion.p key={`name-${hall.tier}`} className="font-cinzel font-700"
+              initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: pop?.what === 'hall' ? 0.3 : 0 }}
+              style={{ fontSize: '1.35rem', color: hall.accent, lineHeight: 1.2, marginTop: 2 }}>
               {hall.name}
-            </p>
+            </motion.p>
 
             <div style={{ display: 'flex', gap: 4, marginTop: 7 }} aria-label={`Crew Hall tier ${state.hallTier} of ${CREW_HALL_MAX_TIER}`}>
               {Array.from({ length: CREW_HALL_MAX_TIER }, (_, i) => (
@@ -1513,82 +1547,6 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
               new hall's name over a brief dark veil. Tap or 3s timeout
               dismisses (auto-dismiss effect lives next to the state). */}
           <AnimatePresence>
-            {tierUp && (
-              <motion.div
-                key="tier-up"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.25 }}
-                onClick={() => setTierUp(null)}
-                style={{
-                  position: 'absolute', inset: 0, zIndex: 6, cursor: 'pointer',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  gap: 4, background: 'rgba(8,6,3,0.9)',
-                }}
-              >
-                {/* Expanding ring, behind everything. Transform + opacity only
-                    (no animated box-shadow or filter — this sits over a page
-                    that renders dozens of cards). */}
-                <motion.span
-                  aria-hidden
-                  initial={{ scale: 0.2, opacity: 0.9 }}
-                  animate={{ scale: 3.4, opacity: 0 }}
-                  transition={{ duration: 1.1, ease: 'easeOut' }}
-                  style={{
-                    position: 'absolute', width: 130, height: 130, borderRadius: '50%',
-                    border: `2px solid ${tierUp.accent}`, pointerEvents: 'none',
-                  }}
-                />
-
-                {/* THE ART. The whole reason for the overlay: you should see the
-                    thing you just bought, not read that you bought it. Lands
-                    with a spring overshoot, then breathes once. */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <motion.img
-                  src={tierUp.art} alt="" aria-hidden decoding="async"
-                  initial={{ scale: 0.35, opacity: 0, rotate: -8 }}
-                  animate={{ scale: [0.35, 1.12, 1], opacity: 1, rotate: 0 }}
-                  transition={{ duration: 0.62, times: [0, 0.68, 1], ease: 'easeOut' }}
-                  style={{
-                    width: 132, height: 132, objectFit: 'contain',
-                    filter: `drop-shadow(0 0 26px ${tierUp.accent}aa)`,
-                  }}
-                  onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-                />
-
-                <motion.p
-                  className="font-karla font-700 uppercase"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.42, duration: 0.3 }}
-                  style={{ fontSize: '0.72rem', letterSpacing: '0.22em', color: 'rgba(255,255,255,0.7)' }}
-                >
-                  Upgraded
-                </motion.p>
-                <motion.p
-                  className="font-cinzel font-700"
-                  initial={{ opacity: 0, scale: 0.86 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.5, type: 'spring', stiffness: 320, damping: 20 }}
-                  style={{
-                    fontSize: '1.35rem', color: tierUp.accent, textAlign: 'center',
-                    textShadow: `0 0 18px ${tierUp.accent}55`, padding: '0 1rem', lineHeight: 1.2,
-                  }}
-                >
-                  {tierUp.title}
-                </motion.p>
-                <motion.p
-                  className="font-karla font-600"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.72, duration: 0.4 }}
-                  style={{ fontSize: '0.86rem', color: 'rgba(255,255,255,0.8)', textAlign: 'center', padding: '0 1rem' }}
-                >
-                  {tierUp.sub}
-                </motion.p>
-              </motion.div>
-            )}
           </AnimatePresence>
 
           {/* The bunks live INSIDE the hero. The hall IS the building that
@@ -1600,6 +1558,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
               artSrc={artSrc}
               accent={hall.accent}
               pending={pending}
+              pop={pop?.what === 'drill' || pop?.what === 'stores' ? pop.what : null}
               onBunk={id => run(() => bunkCrew(id), id)}
               onClaim={() => runBunkClaim(() => claimBunks())}
               onBuyDrill={() => runLadderUpgrade('drill')}
@@ -1815,6 +1774,25 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
         {/* Bunk claim toast. Non-blocking on purpose: pointerEvents none on the
             container so it can never eat a tap on the panel underneath. */}
         <AnimatePresence>
+          {upgradeSaid && (
+            <motion.div key="upgrade-said"
+              initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              style={{ position: 'fixed', left: 0, right: 0, bottom: 92, zIndex: 300, display: 'flex', justifyContent: 'center', pointerEvents: 'none', padding: '0 1rem' }}>
+              <div style={{
+                maxWidth: 360, padding: '0.6rem 0.9rem', borderRadius: 11, textAlign: 'center',
+                background: 'rgba(16,12,7,0.97)', border: `1px solid ${upgradeSaid.accent}88`,
+                boxShadow: '0 10px 30px rgba(0,0,0,0.6)',
+              }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: upgradeSaid.accent }}>
+                  {upgradeSaid.title}
+                </p>
+                <p className="font-karla" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.68)', marginTop: 2 }}>
+                  {upgradeSaid.sub}
+                </p>
+              </div>
+            </motion.div>
+          )}
           {bunkPaid && (
             <motion.div key="bunk-paid"
               initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}

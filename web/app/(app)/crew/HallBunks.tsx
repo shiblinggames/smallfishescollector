@@ -22,9 +22,10 @@
  */
 
 import { useEffect, useMemo, useState } from 'react'
+import { motion } from 'framer-motion'
 import { createPortal } from 'react-dom'
 import { crewLevelFromXP } from '@/lib/crewLevel'
-import { CREW_HALL_MAX_TIER, hallTierDef, nextHallTier } from '@/lib/crewHall'
+import { CREW_HALL_MAX_TIER, hallTierDef } from '@/lib/crewHall'
 import {
   bunkCount, bunkRatePerHour, canBunk, drillsMaxed, msUntilDone, stintDone,
   stintProgress, stintXP, nextDrillCost, nextStoresCost, storesCapHours,
@@ -36,12 +37,10 @@ const GOLD = '#f0c040'
 /** Every bunk the hall can ever hold, drawn whether or not it is unlocked. */
 const MAX_BUNKS = 6
 
-/** Highest tier we have art for. Drills is an UNCAPPED ladder, so without this
- *  a Drill VII would ask for drill_7.png, fall back once to drill_6.png (also
- *  missing) and then hide — the picture would vanish exactly for the players
- *  who paid the most. Stores is capped at its own max, so it needs no clamp
- *  beyond matching. Raise DRILL_ART_MAX when more art lands. */
-const DRILL_ART_MAX = 5
+/** One picture per Drills tier, matching DRILL_MAX_LEVEL. Kept as its own
+ *  constant so a mismatch between "tiers that exist" and "tiers we drew" shows
+ *  up here rather than as a silently missing image on the top upgrade. */
+const DRILL_ART_MAX = 6
 
 function fmtLeft(ms: number): string {
   const m = Math.ceil(ms / 60_000)
@@ -55,13 +54,16 @@ function fmtStint(h: number): string {
 }
 
 export default function HallBunks({
-  state, artSrc, accent, pending, onBunk, onClaim, onBuyDrill, onBuyStores,
+  state, artSrc, accent, pending, pop, onBunk, onClaim, onBuyDrill, onBuyStores,
 }: {
   state: CrewState
   artSrc: (filename: string) => string
   /** The hall tier's accent, so the bunks read as part of the building. */
   accent: string
   pending: boolean
+  /** Which tree just went up, so its art can pop IN PLACE rather than behind
+   *  an overlay the hero's overflow:hidden would clip. */
+  pop: 'drill' | 'stores' | null
   onBunk: (crewId: number) => void
   onClaim: () => void
   onBuyDrill: () => void
@@ -248,11 +250,11 @@ export default function HallBunks({
       <div style={{ display: 'flex', gap: 7, marginTop: '0.65rem' }}>
         {drillsMaxed(state.drillLevel) ? (
           <MaxedCard art={`/crew/drill_${DRILL_ART_MAX}.png`} label="Drills mastered"
-            sub={`${rate.toLocaleString()} XP/hr`} accent={GOLD} />
+            sub={`${rate.toLocaleString()} XP/hr`} accent={GOLD} popping={pop === 'drill'} />
         ) : (
           <UpgradeButton
             label={`Drills ${tierNumeral(state.drillLevel + 1)}`}
-            art="/crew/drill_" tier={Math.min(state.drillLevel, DRILL_ART_MAX)}
+            art="/crew/drill_" tier={Math.min(state.drillLevel, DRILL_ART_MAX)} popping={pop === 'drill'}
             now={`${rate.toLocaleString()} XP/hr`}
             next={`${bunkRatePerHour(state.navLevel, state.drillLevel + 1).toLocaleString()} XP/hr`}
             cost={nextDrillCost(state.drillLevel)} balance={state.doubloons}
@@ -260,11 +262,11 @@ export default function HallBunks({
         )}
         {storesMaxed(state.storesLevel) ? (
           <MaxedCard art={`/crew/stores_${state.storesLevel}.png`} label="Stores full"
-            sub={`${cap}h stints`} accent="#7fc4a8" />
+            sub={`${cap}h stints`} accent="#7fc4a8" popping={pop === 'stores'} />
         ) : (
           <UpgradeButton
             label={`Stores ${tierNumeral(state.storesLevel + 1)}`}
-            art="/crew/stores_" tier={state.storesLevel}
+            art="/crew/stores_" tier={state.storesLevel} popping={pop === 'stores'}
             now={`${cap}h stints`}
             next={`${storesCapHours(state.storesLevel + 1)}h stints`}
             cost={nextStoresCost(state.storesLevel)} balance={state.doubloons}
@@ -286,8 +288,9 @@ export default function HallBunks({
 /** Shows what you have and what you would get, not just a price — the whole
  *  question with an upgrade tree is "is this worth it". */
 function UpgradeButton({
-  label, art, tier, now, next, cost, balance, accent, disabled, onClick,
+  label, art, tier, popping, now, next, cost, balance, accent, disabled, onClick,
 }: {
+  popping?: boolean
   label: string
   /** '/crew/drill_' or '/crew/stores_'; the CURRENT tier is appended, so the
    *  picture improves as the tree is bought, like the hall building above. */
@@ -318,7 +321,12 @@ function UpgradeButton({
           yet. Falls back one tier, then hides entirely, so this is a clean
           text button until the art lands and gains the picture the moment it
           does. Never a broken-image box. */}
-      <img src={`${art}${tier}.png`} alt="" aria-hidden decoding="async"
+      <motion.img src={`${art}${tier}.png`} alt="" aria-hidden decoding="async"
+        // Keyed on the tier so buying one REMOUNTS the picture in place.
+        key={tier}
+        initial={popping ? { scale: 0.5, opacity: 0, rotate: -8 } : { opacity: 0 }}
+        animate={popping ? { scale: [0.5, 1.18, 1], opacity: 1, rotate: 0 } : { opacity: 1 }}
+        transition={popping ? { duration: 0.6, times: [0, 0.66, 1], ease: 'easeOut' } : { duration: 0.2 }}
         style={{ width: 54, height: 54, objectFit: 'contain', filter: afford ? `drop-shadow(0 3px 8px ${accent}55)` : 'grayscale(0.7) brightness(0.7)' }}
         onError={e => {
           const img = e.target as HTMLImageElement
@@ -340,7 +348,7 @@ function UpgradeButton({
 
 /** A finished ladder. Keeps its picture, so a tree does not lose its art at
  *  the exact moment you finish paying for it. */
-function MaxedCard({ art, label, sub, accent }: { art: string; label: string; sub: string; accent: string }) {
+function MaxedCard({ art, label, sub, accent, popping }: { art: string; label: string; sub: string; accent: string; popping?: boolean }) {
   return (
     <div className="font-karla" style={{
       flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center',
@@ -348,7 +356,10 @@ function MaxedCard({ art, label, sub, accent }: { art: string; label: string; su
       background: `${accent}18`, border: `1px solid ${accent}55`,
     }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={art} alt="" aria-hidden decoding="async"
+      <motion.img src={art} alt="" aria-hidden decoding="async"
+        initial={popping ? { scale: 0.5, opacity: 0, rotate: -8 } : false}
+        animate={popping ? { scale: [0.5, 1.18, 1], opacity: 1, rotate: 0 } : {}}
+        transition={{ duration: 0.6, times: [0, 0.66, 1], ease: 'easeOut' }}
         style={{ width: 54, height: 54, objectFit: 'contain', filter: `drop-shadow(0 3px 8px ${accent}66)` }}
         onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
       <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.7rem', color: accent }}>
