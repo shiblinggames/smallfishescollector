@@ -1348,7 +1348,11 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
           const nextTier = nextHallTier(state.hallTier)
           return (
         <>
-        <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 12, border: `1px solid ${hall.accent}66`, background: `linear-gradient(180deg, ${hall.accent}24 0%, ${hall.accent}0c 58%, transparent 100%), ${hall.base}`, boxShadow: hall.glow ? `0 0 26px ${hall.glow}` : undefined, padding: '0.8rem', marginBottom: '0.9rem' }}>
+        {/* EXACTLY the roster card's background, not a tinted one of its own.
+            The accent gradient over hall.base was gold on gold, which read as a
+            translucent wash rather than a solid card. The tier still shows in
+            the art, the name, the pips and the border. */}
+        <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 12, border: `1px solid ${hall.accent}66`, background: ROSTER_PANEL_BG, boxShadow: hall.glow ? `0 0 26px ${hall.glow}` : undefined, padding: '0.8rem', marginBottom: '0.9rem' }}>
           {/* Picture and identity SIDE BY SIDE. Stacked, this hero was tall and
               its picture was small at the same time - the two complaints were
               the same problem. Beside each other the building gets bigger and

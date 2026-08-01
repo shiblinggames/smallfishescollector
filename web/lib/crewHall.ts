@@ -33,14 +33,6 @@ export type CrewHallTierDef = {
   cost: number
   /** Theme accent for the recruit-board region + upgrade UI. */
   accent: string
-  /**
-   * Opaque base the hero paints on. Every accent here is warm gold or brown,
-   * and the hero used to sit them on a navy `rgba(14,19,28,0.97)` shared with
-   * the rest of the page - gold over navy is what read as a muddy yellow wash.
-   * The base carries the tier as much as the accent does: driftwood is nearly
-   * colourless, the Hall of Legends is rich.
-   */
-  base: string
   /** Short flavor line shown on the hall panel + upgrade modal. */
   flavor: string
   /** Soft outer glow on the board region — only the top tiers earn one. */
@@ -51,39 +43,33 @@ export const CREW_HALL_TIERS: Record<CrewHallTierNum, CrewHallTierDef> = {
   1: {
     tier: 1, name: 'Driftwood Hall', bunks: 1, cost: 0,
     accent: '#97836a',
-    base: '#16130f',
     flavor: 'Salvaged planks, a leaky roof, and one bunk in the corner.',
   },
   2: {
     tier: 2, name: 'Oakhewn Hall', bunks: 2, cost: 5_000,
     accent: '#b3814a',
-    base: '#1a130c',
     flavor: 'Solid oak beams and room to drill. Word spreads.',
   },
   3: {
     tier: 3, name: 'Brassbound Hall', bunks: 3, cost: 15_000,
     accent: '#d9a83a',
-    base: '#1e170c',
     flavor: 'Brass fittings, a proper bar, and bunks that see real use.',
   },
   4: {
     tier: 4, name: 'Gilded Hall', bunks: 4, cost: 45_000,
     accent: '#f0c040',
-    base: '#231a0b',
     flavor: 'Gold leaf on the rafters, and drillmasters who know their trade.',
     glow: 'rgba(240,192,64,0.10)',
   },
   5: {
     tier: 5, name: 'Hall of Legends', bunks: 5, cost: 135_000,
     accent: '#ffd966',
-    base: '#281f0d',
     flavor: 'Names sung in every port. Every hand who bunks here leaves it sharper.',
     glow: 'rgba(255,217,102,0.16)',
   },
   6: {
     tier: 6, name: 'Leviathan Hall', bunks: 6, cost: 405_000,
     accent: '#fff0c4',
-    base: '#332715',
     flavor: 'Rafters cut from something that used to swim. Six bunks, and a queue for them.',
     glow: 'rgba(255,240,196,0.20)',
   },
