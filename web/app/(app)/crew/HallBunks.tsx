@@ -21,7 +21,7 @@
  *  an idle tab is not re-rendering for nothing.
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import { createPortal } from 'react-dom'
 import { crewLevelFromXP } from '@/lib/crewLevel'
@@ -58,6 +58,11 @@ function fmtLeft(ms: number): string {
 
 function fmtStint(h: number): string {
   return h === 1 ? '1 hour' : `${h} hours`
+}
+
+/** The same length, short enough to sit in a three-term sum on a phone. */
+function fmtStintShort(h: number): string {
+  return `${h}h`
 }
 
 export default function HallBunks({
@@ -140,15 +145,27 @@ export default function HallBunks({
 
   return (
     <div style={{ marginTop: '0.85rem', paddingTop: '0.75rem', borderTop: `1px solid ${accent}2e` }}>
-      {/* No collect-all button. A hand comes off their own bunk by tapping
-          THEM, which is the only place the reward is attached to a face — a
-          header button that swept them all up made the good bit anonymous.
-          The line just states the current deal. */}
-      <p className="font-karla" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.72)', lineHeight: 1.5, marginBottom: '0.6rem' }}>
-        A stint is <span style={{ color: '#f0ede8', fontWeight: 700 }}>{fmtStint(cap)}</span> for{' '}
-        <span style={{ color: '#f0ede8', fontWeight: 700 }}>{payout.toLocaleString()} XP</span>.
-        They cannot leave until it ends.
-      </p>
+      {/* THE SUM, not a sentence. What a stint pays is stint length x rate,
+          and both halves are things you buy, so showing the working with each
+          term labelled by the ladder that set it makes the two upgrade buttons
+          below self-explanatory. A prose version hid which number moved when
+          you bought something.
+
+          No collect-all button either. A hand comes off their own bunk by
+          tapping THEM, which is the only place the reward is attached to a
+          face; a header button that swept them all up made the good bit
+          anonymous. */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+        padding: '0.6rem 0.5rem', borderRadius: 11, marginBottom: '0.6rem',
+        background: 'rgba(0,0,0,0.26)', border: `1px solid ${accent}33`,
+      }}>
+        <SumTerm value={fmtStintShort(cap)} label={`Stores ${tierNumeral(state.storesLevel)}`} />
+        <SumOp>&times;</SumOp>
+        <SumTerm value={`${rate.toLocaleString()}/hr`} label={`Drills ${tierNumeral(state.drillLevel)}`} />
+        <SumOp>=</SumOp>
+        <SumTerm value={`${payout.toLocaleString()} XP`} label="per stint" accent={accent} />
+      </div>
 
       {/* ALL SIX slots, always. A new captain sees the whole hall and what it
           will hold, with the ones past their tier locked rather than missing —
@@ -334,6 +351,30 @@ export default function HallBunks({
           onClose={() => setPicking(null)}
         />, document.body)}
     </div>
+  )
+}
+
+/** One term of the training sum. The label under each number names the ladder
+ *  that set it, so it is obvious which button to press to move which half. */
+function SumTerm({ value, label, accent }: { value: string; label: string; accent?: string }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, minWidth: 0 }}>
+      <span className="font-cinzel font-700" style={{
+        fontSize: accent ? '0.92rem' : '0.85rem', lineHeight: 1.1, whiteSpace: 'nowrap',
+        color: accent ?? '#f0ede8', fontVariantNumeric: 'tabular-nums',
+      }}>{value}</span>
+      <span className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.53rem', color: 'rgba(255,255,255,0.42)', whiteSpace: 'nowrap' }}>
+        {label}
+      </span>
+    </div>
+  )
+}
+
+function SumOp({ children }: { children: ReactNode }) {
+  return (
+    <span aria-hidden className="font-karla" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.3)', marginBottom: '0.55rem' }}>
+      {children}
+    </span>
   )
 }
 

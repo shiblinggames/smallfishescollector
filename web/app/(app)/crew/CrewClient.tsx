@@ -1607,7 +1607,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                 background: `${hall.accent}12`, border: `1px solid ${hall.accent}55`,
                 color: hall.accent,
               }}>
-                The finest hall afloat
+                Hall complete
               </div>
             )}
             </div>
@@ -2054,7 +2054,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
               }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={art} alt="" aria-hidden decoding="async"
-                  style={{ width: 118, height: 118, objectFit: 'contain', filter: `drop-shadow(0 4px 16px ${accent}66)` }}
+                  style={{ display: 'block', width: 118, height: 118, margin: '0 auto 0.35rem', objectFit: 'contain', filter: `drop-shadow(0 4px 16px ${accent}66)` }}
                   onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
                 <p className="font-karla font-700 uppercase" style={{ fontSize: '0.66rem', letterSpacing: '0.2em', color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>
                   Crew Hall
@@ -2147,7 +2147,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                     the three, was the one asking for six figures sight unseen. */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={`/crew/hall_${next.tier}.png`} alt="" aria-hidden decoding="async"
-                  style={{ width: 118, height: 118, objectFit: 'contain', filter: `drop-shadow(0 4px 16px ${next.accent}66)` }}
+                  style={{ display: 'block', width: 118, height: 118, margin: '0 auto 0.35rem', objectFit: 'contain', filter: `drop-shadow(0 4px 16px ${next.accent}66)` }}
                   onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
                 <p className="font-karla font-700 uppercase" style={{ fontSize: '0.66rem', letterSpacing: '0.2em', color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>
                   Upgrade Crew Hall
