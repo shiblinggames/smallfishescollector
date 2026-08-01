@@ -32,6 +32,13 @@ import type { CrewMember, CrewState } from './actions'
 
 const GOLD = '#f0c040'
 
+/** Highest tier we have art for. Drills is an UNCAPPED ladder, so without this
+ *  a Drill VII would ask for drill_7.png, fall back once to drill_6.png (also
+ *  missing) and then hide — the picture would vanish exactly for the players
+ *  who paid the most. Stores is capped at its own max, so it needs no clamp
+ *  beyond matching. Raise DRILL_ART_MAX when more art lands. */
+const DRILL_ART_MAX = 5
+
 function fmtLeft(ms: number): string {
   const m = Math.ceil(ms / 60_000)
   if (m < 60) return `${m}m left`
@@ -211,7 +218,7 @@ export default function HallBunks({
       <div style={{ display: 'flex', gap: 7, marginTop: '0.65rem' }}>
         <UpgradeButton
           label={`Drills ${tierNumeral(state.drillLevel + 1)}`}
-          art="/crew/drill_" tier={state.drillLevel}
+          art="/crew/drill_" tier={Math.min(state.drillLevel, DRILL_ART_MAX)}
           now={`${rate.toLocaleString()} XP/hr`}
           next={`${bunkRatePerHour(state.navLevel, state.drillLevel + 1).toLocaleString()} XP/hr`}
           cost={nextDrillCost(state.drillLevel)} balance={state.doubloons}
