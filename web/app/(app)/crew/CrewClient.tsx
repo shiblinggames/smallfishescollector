@@ -15,6 +15,8 @@ import { crewSkinsForSlug, getCrewSkin, getCrewSkinByFilename, skinArtGlow, CREW
 import { ChaseSkinFx } from '@/components/ChaseSkinFx'
 import { hallTierDef, nextHallTier, CREW_HALL_MAX_TIER } from '@/lib/crewHall'
 import { crewAssignment } from '@/lib/crewAssignment'
+import BunkhousePanel from './BunkhousePanel'
+import { bunkCrew, unbunkCrew, claimBunks, buyBunk, buyDrill } from './bunkActions'
 import { RARITY_NAMES, RARITY_COLORS, groupForSlug, crewDisplayName, GEM_WEIGHTS, type CrewRarity } from '@/lib/crewGen'
 import { applyCrewEffects, netTraitStats, traitLabel, traitKind } from '@/lib/crewEffects'
 import AssignBoard from './AssignBoard'
@@ -244,7 +246,7 @@ function StatIcon({ k, color }: { k: 'power' | 'dodge' | 'fortune'; color: strin
 // manifest line: arched portrait in a carved frame, name + class + quirks
 // laid out beside it on aged wood.
 function CrewPanel({
-  name, filename, rarity, base, effects, xp = 0, slug = '', assignment, isCaptain = false, locked = false, lockKind = 'voyage', lockLabel = 'This crew is currently at sea on a voyage.', hasLevelUp = false, aboard = false, dimmed, hint, frameAccent = '#5c5c63',
+  name, filename, rarity, base, effects, xp = 0, slug = '', assignment, isCaptain = false, locked = false, lockKind = 'voyage', lockLabel = 'This crew is currently at sea on a voyage.', hasLevelUp = false, aboard = false, bunked = false, dimmed, hint, frameAccent = '#5c5c63',
   bg = RECRUIT_PANEL_BG, border = RECRUIT_PANEL_BORDER, onClick, children,
 }: {
   name: string
@@ -274,6 +276,9 @@ function CrewPanel({
   lockKind?: 'voyage' | 'trawl'
   /** Tooltip on the lock badge — distinguishes voyage vs trawl. */
   lockLabel?: string
+  /** Holding a bunk in the Crew Hall, training. Not a lock - assigning them
+   *  evicts them automatically - so it reads as a duty, not a restriction. */
+  bunked?: boolean
   /** Board candidate already signed on. Reads as a pip on the portrait, the
    *  same corner language the roster uses for at-sea / trawling, rather than
    *  a footer pill - board and roster cards have to read identically. */
@@ -322,6 +327,7 @@ function CrewPanel({
   const duty =
     locked && lockKind === 'trawl' ? { label: 'Trawling', color: '#3fc8aa' }
     : locked ? { label: 'At sea', color: '#ffb45a' }
+    : bunked ? { label: 'In the bunkhouse', color: '#f0c040' }
     : assignment === 'raid' ? { label: 'Raid party', color: '#e07c7c' }
     : assignment === 'voyage' ? { label: 'Voyage party', color: '#5fa8c9' }
     : null
@@ -875,11 +881,38 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
   const [hallUpgradeOpen, setHallUpgradeOpen] = useState(false)
   const [hallBusy, setHallBusy] = useState(false)
   const [hallCelebrate, setHallCelebrate] = useState<{ name: string; bunks: number; accent: string } | null>(null)
+  // What the last bunk claim paid, for the toast. Level-ups come free of a
+  // second round trip: CrewXPGrant already carries old/new level.
+  const [bunkPaid, setBunkPaid] = useState<{ xp: number; levelled: string[] } | null>(null)
+  useEffect(() => {
+    if (!bunkPaid) return
+    const id = setTimeout(() => setBunkPaid(null), 3400)
+    return () => clearTimeout(id)
+  }, [bunkPaid])
+
   useEffect(() => {
     if (!hallCelebrate) return
     const id = setTimeout(() => setHallCelebrate(null), 3000)
     return () => clearTimeout(id)
   }, [hallCelebrate])
+  /** Bunk claims and unbunks return { state, grants }, so they cannot go
+   *  through `run` (which only knows { state } | { error }). Both surface what
+   *  was paid; both are safe to call when nothing is owed. */
+  function runBunkClaim(action: () => Promise<Awaited<ReturnType<typeof claimBunks>>>) {
+    if (pending) return
+    setErr(null)
+    startTransition(async () => {
+      const res = await action()
+      if ('error' in res) { setErr(res.error); return }
+      setState(res.state)
+      const xp = res.grants.reduce((n, g) => n + (g.newXP - g.oldXP), 0)
+      if (xp > 0) {
+        vibrate(12)
+        setBunkPaid({ xp, levelled: res.grants.filter(g => g.newLevel > g.oldLevel).map(g => g.name) })
+      }
+    })
+  }
+
   function handleHallUpgrade() {
     if (hallBusy || pending) return
     setErr(null)
@@ -1437,6 +1470,21 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             )}
           </AnimatePresence>
         </div>
+
+        {/* The building, then what is inside it. Sits above the reroll row and
+            the board because bunks are the hall's actual purpose now — the
+            board is a daily, the Bunkhouse is the thing you keep investing in. */}
+        <BunkhousePanel
+          state={state}
+          artSrc={artSrc}
+          pending={pending}
+          onBunk={id => run(() => bunkCrew(id), id)}
+          onUnbunk={id => runBunkClaim(() => unbunkCrew(id))}
+          onClaim={() => runBunkClaim(() => claimBunks())}
+          onBuyBunk={() => run(() => buyBunk(), 'reroll')}
+          onBuyDrill={() => run(() => buyDrill(), 'reroll')}
+        />
+
           {/* Reroll row — every way to reroll this board, side by side. The
               blood-charged tiers used to be a separate panel above the hall
               with its own header, balance strip and description, which pushed
@@ -1632,6 +1680,32 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             page level, not inside Nav, so no portal needed). Recomputes the
             next tier from state so it always reflects the live tier even if
             the panel's IIFE consts are stale. */}
+        {/* Bunk claim toast. Non-blocking on purpose: pointerEvents none on the
+            container so it can never eat a tap on the panel underneath. */}
+        <AnimatePresence>
+          {bunkPaid && (
+            <motion.div key="bunk-paid"
+              initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              style={{ position: 'fixed', left: 0, right: 0, bottom: 92, zIndex: 300, display: 'flex', justifyContent: 'center', pointerEvents: 'none', padding: '0 1rem' }}>
+              <div style={{
+                maxWidth: 360, padding: '0.6rem 0.9rem', borderRadius: 11, textAlign: 'center',
+                background: 'rgba(20,15,6,0.97)', border: '1px solid rgba(240,192,64,0.5)',
+                boxShadow: '0 10px 30px rgba(0,0,0,0.6)',
+              }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#f0c040' }}>
+                  +{bunkPaid.xp.toLocaleString()} crew XP
+                </p>
+                <p className="font-karla" style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.6)', marginTop: 2, lineHeight: 1.4 }}>
+                  {bunkPaid.levelled.length > 0
+                    ? `${bunkPaid.levelled.join(', ')} levelled up in the bunks.`
+                    : 'Collected from the bunkhouse.'}
+                </p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {hallUpgradeOpen && (() => {
           const next = nextHallTier(state.hallTier)
           if (!next) return null
@@ -1959,6 +2033,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                         locked={isLocked}
                         lockKind={trawlSet.has(m.id) ? 'trawl' : 'voyage'}
                         lockLabel={trawlSet.has(m.id) ? 'This crew is out on a trawl. Collect it to free them up.' : 'This crew is currently at sea on a voyage.'}
+                        bunked={state.bunkedCrewIds.includes(m.id)}
                         hasLevelUp={(seenLevels[m.id] ?? crewLevelFromXP(m.xp)) < crewLevelFromXP(m.xp)}
                         hint={m.effects.length > 0 && !viewed.has(`roster:${m.id}`)}
                         onClick={() => openDetail('roster', m)} />

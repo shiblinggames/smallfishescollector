@@ -102,6 +102,10 @@ export type CrewState = {
    *  lists above this is NOT a lock: a bunked crew can be assigned freely and
    *  is evicted automatically (their XP banked) when they are. */
   bunkedCrewIds: number[]
+  /** crew id -> when their bunk last started accruing (ISO). The panel needs
+   *  this to tick the earned XP live; ids alone would only show a static
+   *  count. */
+  bunkSince: Record<number, string>
   /** Bunks bought outright, on top of the ones the hall tier opens. */
   bunksBought: number
   /** Drill level — multiplies the Nav-scaled training rate. */
@@ -306,11 +310,13 @@ export async function getCrewState(): Promise<CrewState | null> {
   const [{ data: pendingVoyage }, { data: trawlRows }, { data: bunkRows }] = await Promise.all([
     admin.from('daily_voyages').select('crew_variant_ids').eq('user_id', user.id).eq('status', 'pending').maybeSingle(),
     admin.from('trawls').select('crew_id').eq('user_id', user.id),
-    admin.from('crew_hall_bunks').select('crew_id').eq('user_id', user.id),
+    admin.from('crew_hall_bunks').select('crew_id, since').eq('user_id', user.id),
   ])
   const lockedCrewIds: number[] = (pendingVoyage as any)?.crew_variant_ids ?? []
   const trawlingCrewIds: number[] = ((trawlRows ?? []) as any[]).map(r => r.crew_id as number)
   const bunkedCrewIds: number[] = ((bunkRows ?? []) as any[]).map(r => r.crew_id as number)
+  const bunkSince: Record<number, string> = Object.fromEntries(
+    ((bunkRows ?? []) as any[]).map(r => [r.crew_id as number, r.since as string]))
 
   const ownedCrewSkins = ((prof as any).owned_crew_skins as string[] | null) ?? []
   const equippedCrewSkins = ((prof as any).equipped_crew_skins as EquippedCrewSkins | null) ?? {}
@@ -319,7 +325,7 @@ export async function getCrewState(): Promise<CrewState | null> {
     board: ((boardRows ?? []) as any[]).map(r => toCandidate(r, meta)),
     roster: ((rosterRows ?? []) as any[]).map(r => toMember(r, meta, equippedCrewSkins)).sort(rosterSort),
     capacity, navLevel, gems, isPremium: premium, rerollCost: REROLL_COST,
-    shipCrewSlots, lockedCrewIds, trawlingCrewIds, bunkedCrewIds,
+    shipCrewSlots, lockedCrewIds, trawlingCrewIds, bunkedCrewIds, bunkSince,
     bunksBought: (prof as any).crew_bunks_bought ?? 0,
     drillLevel: (prof as any).crew_drill_level ?? 1,
     hallTier: clampHallTier((prof as any).crew_hall_tier),
