@@ -109,7 +109,7 @@ export default function HallBunks({
     <div style={{ marginTop: '0.85rem', paddingTop: '0.75rem', borderTop: `1px solid ${accent}2e` }}>
       {/* What the bunks pay, and the one button that matters. */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '0.6rem' }}>
-        <p className="font-karla" style={{ flex: 1, minWidth: 0, fontSize: '0.64rem', color: 'rgba(255,255,255,0.55)', lineHeight: 1.4 }}>
+        <p className="font-karla" style={{ flex: 1, minWidth: 0, fontSize: '0.8rem', color: 'rgba(255,255,255,0.72)', lineHeight: 1.5 }}>
           A stint is <span style={{ color: '#f0ede8', fontWeight: 700 }}>{fmtStint(cap)}</span> for{' '}
           <span style={{ color: '#f0ede8', fontWeight: 700 }}>{payout.toLocaleString()} XP</span>.
           They cannot leave until it ends.
@@ -118,7 +118,7 @@ export default function HallBunks({
           className="font-karla font-700 uppercase"
           style={{
             flexShrink: 0, padding: '0.5rem 0.85rem', borderRadius: 9,
-            fontSize: '0.68rem', letterSpacing: '0.06em', whiteSpace: 'nowrap',
+            fontSize: '0.78rem', letterSpacing: '0.06em', whiteSpace: 'nowrap',
             background: owed > 0 ? `${GOLD}26` : 'rgba(255,255,255,0.04)',
             border: `1px solid ${owed > 0 ? `${GOLD}88` : 'rgba(255,255,255,0.14)'}`,
             color: owed > 0 ? GOLD : 'rgba(255,255,255,0.35)',
@@ -140,7 +140,7 @@ export default function HallBunks({
                 aria-label={`Empty bunk ${i + 1}. Tap to put a crew in it.`}
                 style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,
-                  minHeight: 88, borderRadius: 11, cursor: 'pointer', font: 'inherit',
+                  minHeight: 100, borderRadius: 11, cursor: 'pointer', font: 'inherit',
                   border: `1.5px dashed ${accent}55`, background: 'rgba(0,0,0,0.28)',
                   touchAction: 'manipulation',
                 }}>
@@ -150,7 +150,7 @@ export default function HallBunks({
                   background: `${accent}1f`, border: `1.5px solid ${accent}99`,
                   color: accent, fontSize: '1rem', lineHeight: 1,
                 }}>+</span>
-                <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.54rem', color: `${accent}cc` }}>
+                <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.62rem', color: `${accent}dd` }}>
                   Empty bunk
                 </span>
               </button>
@@ -170,7 +170,7 @@ export default function HallBunks({
                 : `${crew.name} is training, ${fmtLeft(left)}.`}
               style={{
                 position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-                minHeight: 88, padding: '0.35rem 0.25rem 0.4rem', borderRadius: 11,
+                minHeight: 100, padding: '0.4rem 0.25rem 0.45rem', borderRadius: 11,
                 cursor: 'pointer', font: 'inherit', textAlign: 'center',
                 border: `1.5px solid ${done ? `${GOLD}aa` : 'rgba(255,255,255,0.16)'}`,
                 background: `linear-gradient(180deg, ${done ? `${GOLD}1f` : 'rgba(255,255,255,0.04)'} 0%, rgba(0,0,0,0.25) 100%)`,
@@ -181,16 +181,16 @@ export default function HallBunks({
                 <img src={artSrc(crew.filename)} alt="" aria-hidden loading="lazy" decoding="async"
                   style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', opacity: done ? 1 : 0.75 }} />
               </div>
-              <span className="font-karla font-700" style={{ display: 'block', width: '100%', fontSize: '0.62rem', lineHeight: 1.15, color: '#eee8de', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <span className="font-karla font-700" style={{ display: 'block', width: '100%', fontSize: '0.72rem', lineHeight: 1.15, color: '#eee8de', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {crew.name}
               </span>
               {done ? (
-                <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', lineHeight: 1, color: GOLD, fontVariantNumeric: 'tabular-nums' }}>
+                <span className="font-cinzel font-700" style={{ fontSize: '0.92rem', lineHeight: 1, color: GOLD, fontVariantNumeric: 'tabular-nums' }}>
                   {maxed ? 'Done' : `+${payout.toLocaleString()}`}
                 </span>
               ) : (
                 <>
-                  <span className="font-karla font-600" style={{ fontSize: '0.54rem', color: 'rgba(255,255,255,0.6)', fontVariantNumeric: 'tabular-nums' }}>
+                  <span className="font-karla font-600" style={{ fontSize: '0.64rem', color: 'rgba(255,255,255,0.72)', fontVariantNumeric: 'tabular-nums' }}>
                     {fmtLeft(left)}
                   </span>
                   {/* scaleX on a solid fill, never width — width is layout. */}
@@ -221,10 +221,10 @@ export default function HallBunks({
             justifyContent: 'center', gap: 1, padding: '0.5rem 0.35rem', borderRadius: 9,
             background: 'rgba(127,196,168,0.08)', border: '1px solid rgba(127,196,168,0.28)',
           }}>
-            <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.6rem', color: '#7fc4a8' }}>
+            <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.7rem', color: '#7fc4a8' }}>
               Stores full
             </span>
-            <span style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.42)' }}>{cap}h stints</span>
+            <span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.58)' }}>{cap}h stints</span>
           </div>
         ) : (
           <UpgradeButton
@@ -267,13 +267,13 @@ function UpgradeButton({
         cursor: disabled || !afford ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.6 : 1, touchAction: 'manipulation',
       }}>
-      <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.6rem', color: afford ? '#f0ede8' : 'rgba(255,255,255,0.45)' }}>
+      <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.7rem', color: afford ? '#f0ede8' : 'rgba(255,255,255,0.45)' }}>
         {label}
       </span>
-      <span className="font-karla" style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.42)', whiteSpace: 'nowrap' }}>
+      <span className="font-karla" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.58)', whiteSpace: 'nowrap' }}>
         {now} <span style={{ color: afford ? accent : 'rgba(255,255,255,0.3)' }}>&rarr; {next}</span>
       </span>
-      <span className="font-cinzel font-700" style={{ fontSize: '0.72rem', marginTop: 2, color: afford ? accent : 'rgba(255,255,255,0.3)', fontVariantNumeric: 'tabular-nums' }}>
+      <span className="font-cinzel font-700" style={{ fontSize: '0.84rem', marginTop: 3, color: afford ? accent : 'rgba(255,255,255,0.3)', fontVariantNumeric: 'tabular-nums' }}>
         {cost.toLocaleString()} ⟡
       </span>
     </button>
@@ -298,7 +298,7 @@ function BunkPicker({
       <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 480, maxHeight: '84vh', display: 'flex', flexDirection: 'column', background: 'rgba(14,11,7,0.99)', borderTop: `2px solid ${accent}`, borderRadius: '18px 18px 0 0', boxShadow: '0 -12px 44px rgba(0,0,0,0.6)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '1rem 1rem 0.8rem' }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.56rem', color: accent }}>Crew Hall</p>
+            <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.66rem', color: accent }}>Crew Hall</p>
             <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#f0ede8', lineHeight: 1.1 }}>
               Who trains?
             </p>
@@ -309,7 +309,7 @@ function BunkPicker({
         </div>
 
         {/* Said before the tap, not after. Whoever goes in is committed. */}
-        <p className="font-karla" style={{ padding: '0 1rem 0.8rem', fontSize: '0.68rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.45 }}>
+        <p className="font-karla" style={{ padding: '0 1rem 0.8rem', fontSize: '0.8rem', color: 'rgba(255,255,255,0.62)', lineHeight: 1.5 }}>
           Whoever you pick is in for <span style={{ color: accent }}>{stint}</span> and earns{' '}
           <span style={{ color: accent }}>{payout.toLocaleString()} XP</span>. They cannot raid, sail,
           trawl or be dismissed until the stint ends.
@@ -337,10 +337,10 @@ function BunkPicker({
                     <img src={artSrc(m.filename)} alt="" aria-hidden loading="lazy" decoding="async"
                       style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
                   </div>
-                  <span className="font-karla font-700" style={{ display: 'block', width: '100%', fontSize: '0.7rem', lineHeight: 1.15, color: '#eee8de', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <span className="font-karla font-700" style={{ display: 'block', width: '100%', fontSize: '0.78rem', lineHeight: 1.15, color: '#eee8de', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {m.name}
                   </span>
-                  <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#a9a29a', fontVariantNumeric: 'tabular-nums' }}>
+                  <span className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#b8b1a8', fontVariantNumeric: 'tabular-nums' }}>
                     Lv {crewLevelFromXP(m.xp)}
                   </span>
                 </button>

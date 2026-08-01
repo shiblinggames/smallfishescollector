@@ -1375,7 +1375,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: hall.accent, lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: hall.accent, lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {hall.name}
                 </p>
                 <div style={{ display: 'flex', gap: 3, flexShrink: 0 }} aria-label={`Crew Hall tier ${state.hallTier} of ${CREW_HALL_MAX_TIER}`}>
@@ -1396,7 +1396,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                     flexShrink: 0,
                     display: 'inline-flex', alignItems: 'center', gap: 5,
                     padding: '0.34rem 0.7rem', borderRadius: 999,
-                    fontSize: '0.62rem', letterSpacing: '0.08em',
+                    fontSize: '0.72rem', letterSpacing: '0.08em',
                     background: 'rgba(96,165,250,0.14)',
                     border: '1px solid rgba(96,165,250,0.45)',
                     color: '#cfe2ff', cursor: 'pointer',
@@ -1408,7 +1408,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
               ) : (
                 <span className="font-karla font-700 uppercase" style={{
                   flexShrink: 0, padding: '0.34rem 0.7rem', borderRadius: 999,
-                  fontSize: '0.62rem', letterSpacing: '0.08em',
+                  fontSize: '0.72rem', letterSpacing: '0.08em',
                   background: `${hall.accent}1a`, border: `1px solid ${hall.accent}55`,
                   color: hall.accent,
                 }}>
@@ -1416,10 +1416,10 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                 </span>
               )}
             </div>
-            <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.62)', marginTop: 4 }}>
+            <p className="font-karla font-600" style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.78)', marginTop: 5, lineHeight: 1.45 }}>
               <span style={{ color: hall.accent }}>{hall.bunks} bunks</span> for training idle crew
             </p>
-            <p className="font-karla" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic', marginTop: 2 }}>
+            <p className="font-karla" style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.55)', fontStyle: 'italic', marginTop: 4, lineHeight: 1.45 }}>
               {hall.flavor}
             </p>
             </div>
@@ -1464,7 +1464,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.15, duration: 0.35 }}
-                  style={{ fontSize: '0.6rem', letterSpacing: '0.22em', color: 'rgba(255,255,255,0.55)' }}
+                  style={{ fontSize: '0.72rem', letterSpacing: '0.22em', color: 'rgba(255,255,255,0.7)' }}
                 >
                   Hall Upgraded
                 </motion.p>
@@ -1485,7 +1485,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.5, duration: 0.4 }}
-                  style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.7)' }}
+                  style={{ fontSize: '0.86rem', color: 'rgba(255,255,255,0.8)' }}
                 >
                   Room for <span style={{ color: hallCelebrate.accent }}>{hallCelebrate.bunks}</span> in the bunks now
                 </motion.p>
