@@ -24,14 +24,13 @@ import { crewLevelFromXP, CREW_MAX_LEVEL } from './crewLevel'
 import { hallTierDef } from './crewHall'
 
 /**
- * Release gate. FALSE while the hall's bunks are admin-only: they are hidden
- * for everyone else and every bunk action refuses server-side, so hiding the UI
- * is not the only thing standing between a player and a free XP faucet.
+ * Release gate. PUBLIC since 2026-08-01.
  *
- * Flip to true to open it to everyone. Nothing else needs to change — the
- * tables, columns and RPC are already live and inert for non-admins.
+ * Kept as a flag rather than deleted: it is the one switch that takes the whole
+ * feature back to admin-only if the economy needs a second look, and every bunk
+ * action checks it server-side rather than trusting a hidden button.
  */
-export const HALL_BUNKS_LIVE = false
+export const HALL_BUNKS_LIVE = true
 
 /** Can this player use the hall's bunks at all? */
 export function hallBunksOpen(isAdmin: boolean | null | undefined): boolean {

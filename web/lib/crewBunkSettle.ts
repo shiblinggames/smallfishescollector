@@ -69,8 +69,8 @@ export async function bunkContext(admin: Admin, userId: string) {
   const drillLevel = (prof as any)?.crew_drill_level ?? 1
   const storesLevel = (prof as any)?.crew_stores_level ?? 1
   return {
-    // Admin-only for now (HALL_BUNKS_LIVE). Every action checks this, not just
-    // the panel — a hidden button is not a gate.
+    // Public (HALL_BUNKS_LIVE). Still checked on every action, not just the
+    // panel — a hidden button is not a gate, and this is the switch back.
     open: hallBunksOpen((prof as any)?.is_admin),
     /** Drives the hall gate on the two in-panel ladders. */
     hallTier: clampHallTier((prof as any)?.crew_hall_tier),

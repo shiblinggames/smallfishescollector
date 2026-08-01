@@ -99,15 +99,17 @@ export type CrewState = {
   /** user_crew ids currently OUT ON A TRAWL — also locked from reassignment
    *  (they're hard-locked at sea for the hour), with a distinct badge. */
   trawlingCrewIds: number[]
-  /** user_crew ids currently holding a bunk in the Crew Hall. Unlike the two
-   *  lists above this is NOT a lock: a bunked crew can be assigned freely and
-   *  is evicted automatically (their XP banked) when they are. */
+  /** user_crew ids currently holding a bunk in the Crew Hall, running or
+   *  finished. This USED to be a soft state that auto-evicted on assignment;
+   *  it is a real commitment now, so see bunkLockedCrewIds for the subset that
+   *  actually blocks orders. A finished stint keeps its row until collected,
+   *  which is why a hand can hold a seat and a bunk at the same time. */
   bunkedCrewIds: number[]
   /** Subset of the above whose stint is STILL RUNNING. Hard-locked: they
    *  cannot be assigned, trawled or dismissed until it finishes. A finished
    *  stint is merely waiting to be collected, so it is not in here. */
   bunkLockedCrewIds: number[]
-  /** Are the hall's bunks open to this player? Admin-only for now
+  /** Are the hall's bunks open to this player? Public since 2026-08-01
    *  (HALL_BUNKS_LIVE in lib/crewBunks.ts). Hides the UI; the actions enforce
    *  it independently. */
   hallBunksOpen: boolean
@@ -128,7 +130,7 @@ export type CrewState = {
   storesLevel: number
   /** Hours a bunk accrues before capping, resolved from storesLevel. */
   capHours: number
-  /** Crew Hall building tier (1..5). Drives the recruit board's visual theme
+  /** Crew Hall building tier (1..6). Drives the recruit board's visual theme
    *  and how many bunks the hall has (lib/crewHall.ts). */
   hallTier: CrewHallTierNum
   /** Doubloon balance — the hall upgrade currency. */
