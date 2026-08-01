@@ -47,12 +47,11 @@ export const BUNK_PER_NAV = 4
  * there. This is both the lock-in and the payout window — a hand is stuck in
  * the bunk for exactly this long and earns exactly this many hours of XP.
  *
- * Capped, unlike Drills, because of what Stores actually does. A stint pays
- * `rate x hours` and TAKES `hours`, so XP per day is `rate x 24` no matter how
- * long a stint is: six 1-hour stints and one 6-hour stint pay identically.
- * Stores does not raise the ceiling, it lowers how often you have to come back
- * to reach it. That is worth paying for, but it is not an endgame sink, so it
- * is a short finite ladder and Drills stays the uncapped one.
+ * Worth knowing what Stores does and does not do: a stint pays `rate x hours`
+ * and TAKES `hours`, so XP per day is `rate x 24` no matter how long a stint
+ * is — six 1-hour stints and one 6-hour stint pay identically. Stores does not
+ * raise the ceiling, it lowers how often you have to come back to reach it.
+ * That is why it is priced under Drills, which is the only throughput lever.
  */
 const STORES_HOURS = [1, 2, 3, 4, 5, 6]
 
@@ -68,17 +67,21 @@ export function storesMaxed(level: number): boolean {
 }
 
 /**
- * Drill levels multiply the Nav-scaled base. Hand-set for the first five so the
- * early buys feel distinct, then a flat 1.28x per level forever — the ladder is
- * uncapped on purpose, it is the endgame doubloon sink.
+ * Drill levels multiply the Nav-scaled base. Six tiers and it STOPS, matching
+ * the hall and Stores — every ladder in the hall is six long, so "six of six"
+ * means the same thing wherever you read it, and there is one art set per tier
+ * rather than an open-ended one nobody can draw.
  */
-const DRILL_MULTS = [1.0, 1.4, 1.9, 2.5, 3.2]
-const DRILL_MULT_GROWTH = 1.28
+const DRILL_MULTS = [1.0, 1.4, 1.9, 2.5, 3.2, 4.1]
+
+export const DRILL_MAX_LEVEL = DRILL_MULTS.length
 
 export function drillMult(level: number): number {
-  const l = Math.max(1, Math.floor(level))
-  if (l <= DRILL_MULTS.length) return DRILL_MULTS[l - 1]
-  return DRILL_MULTS[DRILL_MULTS.length - 1] * Math.pow(DRILL_MULT_GROWTH, l - DRILL_MULTS.length)
+  return DRILL_MULTS[Math.min(DRILL_MAX_LEVEL, Math.max(1, Math.floor(level))) - 1]
+}
+
+export function drillsMaxed(level: number): boolean {
+  return Math.floor(level) >= DRILL_MAX_LEVEL
 }
 
 /**
@@ -101,19 +104,21 @@ export function bunkCount(hallTier: number): number {
   return hallTierDef(hallTier).bunks
 }
 
-const DRILL_COST_BASE = 100_000
-const COST_GROWTH = 2.5
+/**
+ * Doubloons to reach each tier. Both ladders are hand-set rather than a curve,
+ * now that both are only five steps long: a geometric curve was throwing out
+ * numbers like 3,906,250 for the top Drill, which is neither a round price nor
+ * one anybody was going to reach. Drills tops out at 1.5M, Stores at 1M.
+ */
+const DRILL_COSTS = [0, 60_000, 150_000, 350_000, 750_000, 1_500_000]
 
-/** Doubloons to go from `level` to `level + 1`. Drill I is free. */
 export function nextDrillCost(level: number): number {
-  return Math.round(DRILL_COST_BASE * Math.pow(COST_GROWTH, Math.max(1, Math.floor(level)) - 1))
+  return drillsMaxed(level) ? 0 : DRILL_COSTS[Math.max(1, Math.floor(level))]
 }
 
-/**
- * Doubloons to reach each Stores tier. Hand-set rather than a curve: the ladder
- * is only five steps long and it buys convenience, not power, so it is priced
- * well under Drills. 0 means there is nothing left to buy.
- */
+/** Stores is priced under Drills because it buys convenience, not power: it
+ *  does not raise XP per day, only how often you have to come back for it.
+ *  0 means there is nothing left to buy. */
 const STORES_COSTS = [0, 40_000, 90_000, 200_000, 450_000, 1_000_000]
 
 export function nextStoresCost(level: number): number {

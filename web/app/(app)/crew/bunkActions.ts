@@ -13,7 +13,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { canBunk, nextDrillCost, nextStoresCost, storesMaxed, tierNumeral } from '@/lib/crewBunks'
+import { canBunk, drillsMaxed, nextDrillCost, nextStoresCost, storesMaxed, tierNumeral } from '@/lib/crewBunks'
 import { bunkContext, loadBunks, settleBunks } from '@/lib/crewBunkSettle'
 import type { CrewXPGrant } from '@/lib/crewXPGrant'
 import { getCrewState, type CrewActionResult, type CrewState } from './actions'
@@ -111,7 +111,8 @@ async function buyUpgrade(kind: 'drill' | 'stores'): Promise<CrewActionResult> {
   const isDrill = kind === 'drill'
   const from = isDrill ? ctx.drillLevel : ctx.storesLevel
   const col = isDrill ? 'crew_drill_level' : 'crew_stores_level'
-  // Stores is a finite ladder (six hours is the ceiling); Drills is not.
+  // Both ladders stop at six.
+  if (isDrill && drillsMaxed(from)) return { error: 'The drills are as sharp as they get.' }
   if (!isDrill && storesMaxed(from)) return { error: 'Stores are already full.' }
 
   const cost = isDrill ? nextDrillCost(from) : nextStoresCost(from)

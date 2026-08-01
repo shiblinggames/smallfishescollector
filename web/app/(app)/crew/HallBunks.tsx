@@ -24,13 +24,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { crewLevelFromXP } from '@/lib/crewLevel'
+import { CREW_HALL_MAX_TIER, hallTierDef, nextHallTier } from '@/lib/crewHall'
 import {
-  bunkCount, bunkRatePerHour, canBunk, msUntilDone, stintDone, stintProgress,
-  stintXP, nextDrillCost, nextStoresCost, storesCapHours, storesMaxed, tierNumeral,
+  bunkCount, bunkRatePerHour, canBunk, drillsMaxed, msUntilDone, stintDone,
+  stintProgress, stintXP, nextDrillCost, nextStoresCost, storesCapHours,
+  storesMaxed, tierNumeral,
 } from '@/lib/crewBunks'
 import type { CrewMember, CrewState } from './actions'
 
 const GOLD = '#f0c040'
+/** Every bunk the hall can ever hold, drawn whether or not it is unlocked. */
+const MAX_BUNKS = 6
 
 /** Highest tier we have art for. Drills is an UNCAPPED ladder, so without this
  *  a Drill VII would ask for drill_7.png, fall back once to drill_6.png (also
@@ -136,10 +140,33 @@ export default function HallBunks({
         </button>
       </div>
 
-      {/* Bunks. Same three-across tile language as the assign board's seats. */}
+      {/* ALL SIX slots, always. A new captain sees the whole hall and what it
+          will hold, with the ones past their tier locked rather than missing —
+          the same reason the assign board draws six seats and locks the ones
+          the hull has not opened yet. */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 7 }}>
-        {Array.from({ length: slots }, (_, i) => {
+        {Array.from({ length: MAX_BUNKS }, (_, i) => {
           const crew = bunked[i]
+          if (i >= slots) {
+            // Which hall opens THIS one, so the lock names its own key.
+            const opensAt = hallTierDef(Math.min(CREW_HALL_MAX_TIER, i))
+            return (
+              <div key={`locked-${i}`} title={`${opensAt.name} opens this bunk`}
+                aria-label={`Locked bunk. ${opensAt.name} opens it.`}
+                style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,
+                  minHeight: 100, borderRadius: 11,
+                  border: '1px dashed rgba(255,255,255,0.12)', background: 'rgba(0,0,0,0.22)',
+                }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.32)" strokeWidth="2.2" strokeLinecap="round" aria-hidden>
+                  <rect x="4.5" y="11" width="15" height="9.5" rx="1.5" /><path d="M7.5 11V7.5a4.5 4.5 0 0 1 9 0V11" />
+                </svg>
+                <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.4)', textAlign: 'center', lineHeight: 1.35, padding: '0 0.2rem' }}>
+                  {opensAt.name.replace(' Hall', '')}
+                </span>
+              </div>
+            )
+          }
           if (!crew) {
             return (
               <button key={`empty-${i}`} type="button" disabled={pending}
@@ -216,28 +243,21 @@ export default function HallBunks({
           is rate x 24 whatever the stint length). Stores buys fewer trips back
           to collect, which is why it is cheap and stops at six hours. */}
       <div style={{ display: 'flex', gap: 7, marginTop: '0.65rem' }}>
-        <UpgradeButton
-          label={`Drills ${tierNumeral(state.drillLevel + 1)}`}
-          art="/crew/drill_" tier={Math.min(state.drillLevel, DRILL_ART_MAX)}
-          now={`${rate.toLocaleString()} XP/hr`}
-          next={`${bunkRatePerHour(state.navLevel, state.drillLevel + 1).toLocaleString()} XP/hr`}
-          cost={nextDrillCost(state.drillLevel)} balance={state.doubloons}
-          accent={GOLD} disabled={pending} onClick={onBuyDrill} />
+        {drillsMaxed(state.drillLevel) ? (
+          <MaxedCard art={`/crew/drill_${DRILL_ART_MAX}.png`} label="Drills mastered"
+            sub={`${rate.toLocaleString()} XP/hr`} accent={GOLD} />
+        ) : (
+          <UpgradeButton
+            label={`Drills ${tierNumeral(state.drillLevel + 1)}`}
+            art="/crew/drill_" tier={Math.min(state.drillLevel, DRILL_ART_MAX)}
+            now={`${rate.toLocaleString()} XP/hr`}
+            next={`${bunkRatePerHour(state.navLevel, state.drillLevel + 1).toLocaleString()} XP/hr`}
+            cost={nextDrillCost(state.drillLevel)} balance={state.doubloons}
+            accent={GOLD} disabled={pending} onClick={onBuyDrill} />
+        )}
         {storesMaxed(state.storesLevel) ? (
-          <div className="font-karla" style={{
-            flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center',
-            justifyContent: 'center', gap: 2, padding: '0.55rem 0.35rem 0.6rem', borderRadius: 11,
-            background: 'rgba(127,196,168,0.10)', border: '1px solid rgba(127,196,168,0.34)',
-          }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={`/crew/stores_${state.storesLevel}.png`} alt="" aria-hidden decoding="async"
-              style={{ width: 54, height: 54, objectFit: 'contain', filter: 'drop-shadow(0 3px 8px rgba(127,196,168,0.4))' }}
-              onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
-            <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.7rem', color: '#7fc4a8' }}>
-              Stores full
-            </span>
-            <span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.58)' }}>{cap}h stints</span>
-          </div>
+          <MaxedCard art={`/crew/stores_${state.storesLevel}.png`} label="Stores full"
+            sub={`${cap}h stints`} accent="#7fc4a8" />
         ) : (
           <UpgradeButton
             label={`Stores ${tierNumeral(state.storesLevel + 1)}`}
@@ -312,6 +332,27 @@ function UpgradeButton({
         {cost.toLocaleString()} ⟡
       </span>
     </button>
+  )
+}
+
+/** A finished ladder. Keeps its picture, so a tree does not lose its art at
+ *  the exact moment you finish paying for it. */
+function MaxedCard({ art, label, sub, accent }: { art: string; label: string; sub: string; accent: string }) {
+  return (
+    <div className="font-karla" style={{
+      flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center',
+      justifyContent: 'center', gap: 2, padding: '0.55rem 0.35rem 0.6rem', borderRadius: 11,
+      background: `${accent}18`, border: `1px solid ${accent}55`,
+    }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={art} alt="" aria-hidden decoding="async"
+        style={{ width: 54, height: 54, objectFit: 'contain', filter: `drop-shadow(0 3px 8px ${accent}66)` }}
+        onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+      <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.7rem', color: accent }}>
+        {label}
+      </span>
+      <span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.58)' }}>{sub}</span>
+    </div>
   )
 }
 

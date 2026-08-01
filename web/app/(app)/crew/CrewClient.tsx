@@ -14,6 +14,7 @@ import { BLOOD_REROLL_TIERS, BLOOD_SKIN_GAMBLE_COST } from '@/lib/gauntlet'
 import { crewSkinsForSlug, getCrewSkin, getCrewSkinByFilename, skinArtGlow, CREW_SKINS } from '@/lib/crewSkins'
 import { ChaseSkinFx } from '@/components/ChaseSkinFx'
 import { hallTierDef, nextHallTier, hallUpgradeBlocker, CREW_HALL_MAX_TIER } from '@/lib/crewHall'
+import { bunkRatePerHour, storesCapHours, tierNumeral, DRILL_MAX_LEVEL } from '@/lib/crewBunks'
 import { crewAssignment } from '@/lib/crewAssignment'
 import HallBunks from './HallBunks'
 import { bunkCrew, claimBunks, buyDrill, buyStores } from './bunkActions'
@@ -883,7 +884,10 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
   // an event rather than a silent restyle).
   const [hallUpgradeOpen, setHallUpgradeOpen] = useState(false)
   const [hallBusy, setHallBusy] = useState(false)
-  const [hallCelebrate, setHallCelebrate] = useState<{ name: string; bunks: number; accent: string } | null>(null)
+  // ONE tier-up overlay for all three ladders. The art is the point of it: the
+  // building, the drill rig and the stores all have a picture per tier, so
+  // upgrading should SHOW you the new one rather than just tick a number.
+  const [tierUp, setTierUp] = useState<{ art: string; title: string; sub: string; accent: string } | null>(null)
   // What the last bunk claim paid, for the toast. Level-ups come free of a
   // second round trip: CrewXPGrant already carries old/new level.
   const [bunkPaid, setBunkPaid] = useState<{ xp: number; levelled: string[] } | null>(null)
@@ -894,10 +898,10 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
   }, [bunkPaid])
 
   useEffect(() => {
-    if (!hallCelebrate) return
-    const id = setTimeout(() => setHallCelebrate(null), 3000)
+    if (!tierUp) return
+    const id = setTimeout(() => setTierUp(null), 3600)
     return () => clearTimeout(id)
-  }, [hallCelebrate])
+  }, [tierUp])
   /** Bunk claims and unbunks return { state, grants }, so they cannot go
    *  through `run` (which only knows { state } | { error }). Both surface what
    *  was paid; both are safe to call when nothing is owed. */
@@ -913,6 +917,34 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
         vibrate(12)
         setBunkPaid({ xp, levelled: res.grants.filter(g => g.newLevel > g.oldLevel).map(g => g.name) })
       }
+    })
+  }
+
+  /** Buy a Drills or Stores tier and show the new art. Reads the level back
+   *  off the RETURNED state rather than the current one, so the overlay shows
+   *  what you just bought and not what you had. */
+  function runLadderUpgrade(kind: 'drill' | 'stores') {
+    if (pending) return
+    setErr(null)
+    startTransition(async () => {
+      const res = await (kind === 'drill' ? buyDrill() : buyStores())
+      if ('error' in res) { setErr(res.error); return }
+      setState(res.state)
+      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.state.doubloons }))
+      vibrate([18, 50, 26])
+      setTierUp(kind === 'drill'
+        ? {
+            art: `/crew/drill_${Math.min(res.state.drillLevel, DRILL_MAX_LEVEL)}.png`,
+            title: `Drills ${tierNumeral(res.state.drillLevel)}`,
+            sub: `${bunkRatePerHour(res.state.navLevel, res.state.drillLevel).toLocaleString()} XP an hour, every bunk`,
+            accent: '#f0c040',
+          }
+        : {
+            art: `/crew/stores_${res.state.storesLevel}.png`,
+            title: `Stores ${tierNumeral(res.state.storesLevel)}`,
+            sub: `${storesCapHours(res.state.storesLevel)}h stints`,
+            accent: '#7fc4a8',
+          })
     })
   }
 
@@ -932,7 +964,12 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
         // Keep the Nav-bar doubloon total in sync (same pattern as repair).
         window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.state.doubloons }))
         vibrate([18, 50, 26])
-        setHallCelebrate({ name: def.name, bunks: def.bunks, accent: def.accent })
+        setTierUp({
+          art: `/crew/hall_${def.tier}.png`,
+          title: def.name,
+          sub: `${def.bunks} bunks, ${def.bunks === 1 ? 'one hand' : `${def.bunks} hands`} in training`,
+          accent: def.accent,
+        })
       }
       setHallBusy(false)
     })
@@ -1422,7 +1459,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden>
                   <rect x="4.5" y="11" width="15" height="9.5" rx="1.5" /><path d="M7.5 11V7.5a4.5 4.5 0 0 1 9 0V11" />
                 </svg>
-                Navigation {nextTier.minNav}
+                Bunk {nextTier.bunks} at Navigation {nextTier.minNav}
               </div>
             ) : nextTier ? (
               <button
@@ -1439,12 +1476,19 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   transition: 'transform 0.08s, box-shadow 0.15s',
                 }}
               >
-                <span className="font-cinzel font-700 uppercase" style={{ fontSize: '0.86rem', letterSpacing: '0.08em', color: '#f4ecd8' }}>
-                  Build the {nextTier.name}
+                <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1, minWidth: 0 }}>
+                  <span className="font-cinzel font-700 uppercase" style={{ fontSize: '0.86rem', letterSpacing: '0.08em', color: '#f4ecd8' }}>
+                    Build the {nextTier.name}
+                  </span>
+                  {/* The reason to buy it, said plainly. "Build the Gilded Hall"
+                      is a name; "opens a 4th bunk" is what you get. */}
+                  <span className="font-karla font-700 uppercase" style={{ fontSize: '0.66rem', letterSpacing: '0.08em', color: nextTier.accent }}>
+                    + Opens bunk {nextTier.bunks}
+                  </span>
                 </span>
                 <span className="font-cinzel font-700" style={{
                   fontSize: '0.82rem', color: nextTier.accent, fontVariantNumeric: 'tabular-nums',
-                  paddingLeft: 10, borderLeft: `1px solid ${nextTier.accent}44`,
+                  paddingLeft: 10, borderLeft: `1px solid ${nextTier.accent}44`, marginLeft: 'auto',
                 }}>
                   {nextTier.cost.toLocaleString()} ⟡
                 </span>
@@ -1469,63 +1513,79 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
               new hall's name over a brief dark veil. Tap or 3s timeout
               dismisses (auto-dismiss effect lives next to the state). */}
           <AnimatePresence>
-            {hallCelebrate && (
+            {tierUp && (
               <motion.div
-                key="hall-celebrate"
+                key="tier-up"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.3 }}
-                onClick={() => setHallCelebrate(null)}
+                transition={{ duration: 0.25 }}
+                onClick={() => setTierUp(null)}
                 style={{
-                  position: 'absolute', inset: 0, zIndex: 5,
+                  position: 'absolute', inset: 0, zIndex: 6, cursor: 'pointer',
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  gap: 6, background: 'rgba(8,6,3,0.82)', borderRadius: 12,
-                  cursor: 'pointer',
+                  gap: 4, background: 'rgba(8,6,3,0.9)',
                 }}
               >
-                {/* Expanding ring in the new tier's accent — the "something
-                    just leveled up" beat without any screen-wide flash. */}
+                {/* Expanding ring, behind everything. Transform + opacity only
+                    (no animated box-shadow or filter — this sits over a page
+                    that renders dozens of cards). */}
                 <motion.span
                   aria-hidden
                   initial={{ scale: 0.2, opacity: 0.9 }}
                   animate={{ scale: 3.4, opacity: 0 }}
                   transition={{ duration: 1.1, ease: 'easeOut' }}
                   style={{
-                    position: 'absolute', width: 90, height: 90, borderRadius: 999,
-                    border: `2px solid ${hallCelebrate.accent}`,
-                    boxShadow: `0 0 24px ${hallCelebrate.accent}66`,
+                    position: 'absolute', width: 130, height: 130, borderRadius: '50%',
+                    border: `2px solid ${tierUp.accent}`, pointerEvents: 'none',
                   }}
                 />
+
+                {/* THE ART. The whole reason for the overlay: you should see the
+                    thing you just bought, not read that you bought it. Lands
+                    with a spring overshoot, then breathes once. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <motion.img
+                  src={tierUp.art} alt="" aria-hidden decoding="async"
+                  initial={{ scale: 0.35, opacity: 0, rotate: -8 }}
+                  animate={{ scale: [0.35, 1.12, 1], opacity: 1, rotate: 0 }}
+                  transition={{ duration: 0.62, times: [0, 0.68, 1], ease: 'easeOut' }}
+                  style={{
+                    width: 132, height: 132, objectFit: 'contain',
+                    filter: `drop-shadow(0 0 26px ${tierUp.accent}aa)`,
+                  }}
+                  onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+                />
+
                 <motion.p
                   className="font-karla font-700 uppercase"
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.15, duration: 0.35 }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.42, duration: 0.3 }}
                   style={{ fontSize: '0.72rem', letterSpacing: '0.22em', color: 'rgba(255,255,255,0.7)' }}
                 >
-                  Hall Upgraded
+                  Upgraded
                 </motion.p>
                 <motion.p
                   className="font-cinzel font-700"
-                  initial={{ opacity: 0, scale: 0.82 }}
+                  initial={{ opacity: 0, scale: 0.86 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.25, type: 'spring', stiffness: 320, damping: 20 }}
+                  transition={{ delay: 0.5, type: 'spring', stiffness: 320, damping: 20 }}
                   style={{
-                    fontSize: '1.25rem', color: hallCelebrate.accent, textAlign: 'center',
-                    textShadow: `0 0 18px ${hallCelebrate.accent}55`, padding: '0 1rem',
+                    fontSize: '1.35rem', color: tierUp.accent, textAlign: 'center',
+                    textShadow: `0 0 18px ${tierUp.accent}55`, padding: '0 1rem', lineHeight: 1.2,
                   }}
                 >
-                  {hallCelebrate.name}
+                  {tierUp.title}
                 </motion.p>
                 <motion.p
                   className="font-karla font-600"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ delay: 0.5, duration: 0.4 }}
-                  style={{ fontSize: '0.86rem', color: 'rgba(255,255,255,0.8)' }}
+                  transition={{ delay: 0.72, duration: 0.4 }}
+                  style={{ fontSize: '0.86rem', color: 'rgba(255,255,255,0.8)', textAlign: 'center', padding: '0 1rem' }}
                 >
-                  Room for <span style={{ color: hallCelebrate.accent }}>{hallCelebrate.bunks}</span> in the bunks now
+                  {tierUp.sub}
                 </motion.p>
               </motion.div>
             )}
@@ -1542,8 +1602,8 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
               pending={pending}
               onBunk={id => run(() => bunkCrew(id), id)}
               onClaim={() => runBunkClaim(() => claimBunks())}
-              onBuyDrill={() => run(() => buyDrill(), 'reroll')}
-              onBuyStores={() => run(() => buyStores(), 'reroll')}
+              onBuyDrill={() => runLadderUpgrade('drill')}
+              onBuyStores={() => runLadderUpgrade('stores')}
             />
           )}
         </div>
@@ -1814,7 +1874,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   {next.flavor}
                 </p>
                 <p className="font-karla font-600" style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.78)', marginBottom: 14 }}>
-                  Opens a bunk, taking the hall to <span style={{ color: next.accent }}>{next.bunks}</span>
+                  Opens bunk <span style={{ color: next.accent }}>{next.bunks}</span>, so {next.bunks} hands can train at once
                 </p>
                 <div className="flex items-center justify-between" style={{
                   padding: '0.55rem 0.75rem', borderRadius: 9,
