@@ -2,9 +2,10 @@
 
 // THE CREW HALL'S BUNKS — server actions.
 //
-// A benched crew takes a bunk in the Crew Hall and accrues crew XP from the
-// row's `since`, capped by the hall's Stores tier. Claiming banks it and resets
-// `since`; the crew STAYS bunked, so there is no redeploy cycle.
+// A benched crew takes a bunk and is LOCKED there for a full stint (the hall's
+// Stores tier sets how long). Collecting pays the whole stint and frees the
+// bunk. There is no early exit, so there is no unbunk action: the only way out
+// is to finish.
 //
 // The settlement helpers live in lib/crewBunkSettle.ts rather than here: they
 // take an admin client, and every async export from a 'use server' file becomes
@@ -13,7 +14,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { canBunk, nextDrillCost, nextStoresCost, tierNumeral } from '@/lib/crewBunks'
-import { bunkContext, loadBunks, settleBunks, releaseBunk } from '@/lib/crewBunkSettle'
+import { bunkContext, loadBunks, settleBunks } from '@/lib/crewBunkSettle'
 import type { CrewXPGrant } from '@/lib/crewXPGrant'
 import { getCrewState, type CrewActionResult, type CrewState } from './actions'
 
@@ -60,17 +61,6 @@ export async function bunkCrew(crewId: number): Promise<CrewActionResult> {
 
   const state = await getCrewState()
   return state ? { state } : { error: 'Failed to load crew' }
-}
-
-export async function unbunkCrew(crewId: number): Promise<BunkClaimResult> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not signed in' }
-  const admin = createAdminClient()
-
-  const grants = await releaseBunk(admin, user.id, crewId)
-  const state = await getCrewState()
-  return state ? { state, grants } : { error: 'Failed to load crew' }
 }
 
 export async function claimBunks(): Promise<BunkClaimResult> {

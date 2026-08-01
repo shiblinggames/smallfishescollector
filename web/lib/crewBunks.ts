@@ -5,10 +5,15 @@
 // only 13 of 67 players had ever upgraded it. It trains the crew you HAVE now:
 // a benched crew sits in a bunk and accrues crew XP continuously.
 //
-// Continuous, not deploy/collect: the crew stays bunked through a claim, so
-// eight bunks never becomes a redeploy chore. Accrual is capped at
-// BUNK_CAP_HOURS, so checking in twice a day collects everything and a week
-// away costs at most one window. No FOMO, no streaks.
+// A bunk is a COMMITMENT. Put a hand in and they are locked there for the full
+// stint: you cannot pull them out, reassign them or dismiss them until it ends.
+// That is the cost of the XP, and it is why the payout is the whole stint
+// rather than whatever has accrued so far - there is no partial claim, because
+// there is no partial stay.
+//
+// When the stint ends the hand is free: collecting pays the XP AND empties the
+// bunk. If a claim left them in it, the clock would restart and they would be
+// locked forever.
 //
 // PLAIN MODULE, deliberately not 'use server' — a 'use server' file silently
 // drops every non-async export, which would strip all of this at build time.
@@ -38,14 +43,18 @@ export const BUNK_BASE = 40
 /** Added to the hourly rate per Navigation level. Nav 1 = 44/hr, Nav 100 = 440/hr. */
 export const BUNK_PER_NAV = 4
 /**
- * Hours a bunk accrues before it fills, by Stores tier. The whole point of a
- * cap: you can never lose more than one window by not logging in, and there is
- * no reason to set an alarm. Raising it is the second upgrade tree — Drills buy
- * XP PER HOUR, Stores buy HOW MANY HOURS.
+ * How long a stint LASTS, by Stores tier. This is both the lock-in and the
+ * payout window: a hand is stuck in the bunk for exactly this long, and earns
+ * exactly this many hours of XP for it.
+ *
+ * Starts at ONE hour, so an early hall asks for very little commitment and pays
+ * accordingly. Raising it is the second upgrade tree — Drills buy XP PER HOUR,
+ * Stores buy HOW MANY HOURS. Both multiply, so a late stint is worth many times
+ * an early one.
  *
  * Past the listed tiers it is +12h a level, forever, so it never dead-ends.
  */
-const STORES_HOURS = [12, 18, 24, 36, 48]
+const STORES_HOURS = [1, 3, 6, 12, 24]
 const STORES_HOURS_STEP = 12
 
 export function storesCapHours(level: number): number {
@@ -110,19 +119,28 @@ export function tierNumeral(level: number): string {
 }
 
 /**
- * XP owed to one bunked crew, from `since` up to `nowMs`, clamped to the cap.
- * Shared by the panel's live preview and the claim itself so the number the
- * player watches tick up is exactly the number they get.
+ * What a finished stint pays. Flat: the full window at the full rate. There is
+ * no partial payout because there is no partial stay — a hand is locked in for
+ * the whole stint, so they earn the whole stint.
  */
-export function accruedXP(since: string | Date, nowMs: number, ratePerHour: number, capHours: number): number {
-  const start = since instanceof Date ? since.getTime() : new Date(since).getTime()
-  if (!Number.isFinite(start)) return 0
-  const hours = Math.min(capHours, Math.max(0, (nowMs - start) / 3_600_000))
-  return Math.floor(hours * ratePerHour)
+export function stintXP(ratePerHour: number, capHours: number): number {
+  return Math.floor(ratePerHour * capHours)
 }
 
-/** Milliseconds until this bunk stops accruing, or 0 if it already has. */
-export function msUntilFull(since: string | Date, nowMs: number, capHours: number): number {
+/** Has this stint finished? The only condition under which it pays out. */
+export function stintDone(since: string | Date, nowMs: number, capHours: number): boolean {
+  return msUntilDone(since, nowMs, capHours) <= 0
+}
+
+/** 0..1 through the stint, for the tile's progress bar. */
+export function stintProgress(since: string | Date, nowMs: number, capHours: number): number {
+  const start = since instanceof Date ? since.getTime() : new Date(since).getTime()
+  if (!Number.isFinite(start) || capHours <= 0) return 0
+  return Math.min(1, Math.max(0, (nowMs - start) / (capHours * 3_600_000)))
+}
+
+/** Milliseconds left on this stint, or 0 if it is done. */
+export function msUntilDone(since: string | Date, nowMs: number, capHours: number): number {
   const start = since instanceof Date ? since.getTime() : new Date(since).getTime()
   if (!Number.isFinite(start)) return 0
   return Math.max(0, start + capHours * 3_600_000 - nowMs)

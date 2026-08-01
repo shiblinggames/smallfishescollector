@@ -37,7 +37,7 @@ const SORTS = [
 ]
 
 export default function AssignPicker({
-  track, label, roster, lockedCrewIds, trawlingCrewIds, artSrc,
+  track, label, roster, lockedCrewIds, trawlingCrewIds, bunkedCrewIds, artSrc,
   pending, busyId, accent, rarityColor, onPick, onClose,
 }: {
   track: 'raid' | 'voyage'
@@ -45,6 +45,8 @@ export default function AssignPicker({
   roster: CrewMember[]
   lockedCrewIds: number[]
   trawlingCrewIds: number[]
+  /** Mid-stint in the Crew Hall. Locked the same way a trawl locks. */
+  bunkedCrewIds: number[]
   artSrc: (filename: string) => string
   pending: boolean
   busyId: number | string | null
@@ -60,6 +62,7 @@ export default function AssignPicker({
 
   const atSea = new Set(lockedCrewIds)
   const trawling = new Set(trawlingCrewIds)
+  const training = new Set(bunkedCrewIds)
   const slotOf = (c: CrewMember) => (track === 'raid' ? c.raidSlot : c.voyageSlot)
   const otherSlotOf = (c: CrewMember) => (track === 'raid' ? c.voyageSlot : c.raidSlot)
   const otherLabel = track === 'raid' ? 'On voyage duty' : 'In raid party'
@@ -71,7 +74,7 @@ export default function AssignPicker({
   const choices = roster.filter(c => slotOf(c) == null)
 
   const allRows = choices.map(c => {
-    const locked = trawling.has(c.id) ? 'Out trawling' : atSea.has(c.id) ? 'At sea' : null
+    const locked = trawling.has(c.id) ? 'Out trawling' : atSea.has(c.id) ? 'At sea' : training.has(c.id) ? 'Training' : null
     const dupe = seatedCardIds.get(c.cardId) ?? null
     const elsewhere = otherSlotOf(c) != null
     // The SAME numbers the assign board prints on its seats: level bonuses and

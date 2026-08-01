@@ -13,32 +13,38 @@
  *    Drills     ->  XP PER HOUR
  *    Stores     ->  HOW MANY HOURS before a bunk fills
  *
- *  The XP figure TICKS: it is the whole feedback loop, so it updates live off
- *  the same accruedXP the server pays with, and the clock stops dead once every
- *  bunk is full so an idle tab is not re-rendering for nothing.
+ *  A bunk is a COMMITMENT: a hand put in is locked there for the whole stint,
+ *  so the tile is a countdown, not a running total. There is no take-them-out
+ *  button while it runs, because there is no early exit to offer.
+ *
+ *  The clock ticks only while something is still running, then stops dead, so
+ *  an idle tab is not re-rendering for nothing.
  */
 
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { crewLevelFromXP } from '@/lib/crewLevel'
 import {
-  accruedXP, bunkCount, bunkRatePerHour, canBunk, msUntilFull,
-  nextDrillCost, nextStoresCost, storesCapHours, tierNumeral,
+  bunkCount, bunkRatePerHour, canBunk, msUntilDone, stintDone, stintProgress,
+  stintXP, nextDrillCost, nextStoresCost, storesCapHours, tierNumeral,
 } from '@/lib/crewBunks'
 import type { CrewMember, CrewState } from './actions'
 
 const GOLD = '#f0c040'
 
 function fmtLeft(ms: number): string {
-  if (ms <= 0) return 'Full'
   const m = Math.ceil(ms / 60_000)
   if (m < 60) return `${m}m left`
   const h = Math.floor(m / 60)
   return `${h}h ${m % 60}m left`
 }
 
+function fmtStint(h: number): string {
+  return h === 1 ? '1 hour' : `${h} hours`
+}
+
 export default function HallBunks({
-  state, artSrc, accent, pending, onBunk, onUnbunk, onClaim, onBuyDrill, onBuyStores,
+  state, artSrc, accent, pending, onBunk, onClaim, onBuyDrill, onBuyStores,
 }: {
   state: CrewState
   artSrc: (filename: string) => string
@@ -46,7 +52,6 @@ export default function HallBunks({
   accent: string
   pending: boolean
   onBunk: (crewId: number) => void
-  onUnbunk: (crewId: number) => void
   onClaim: () => void
   onBuyDrill: () => void
   onBuyStores: () => void
@@ -69,21 +74,28 @@ export default function HallBunks({
 
   const sinceById = state.bunkSince ?? {}
 
-  const owed = bunked.reduce((sum, c) => {
+  const payout = stintXP(rate, cap)
+  const readyCount = bunked.filter(c => {
     const since = sinceById[c.id]
-    return sum + (since && canBunk(c.xp) ? accruedXP(since, now, rate, cap) : 0)
-  }, 0)
+    return !!since && stintDone(since, now, cap)
+  }).length
+  const owed = bunked.filter(c => {
+    const since = sinceById[c.id]
+    return !!since && stintDone(since, now, cap) && canBunk(c.xp)
+  }).length * payout
 
-  const anyFilling = bunked.some(c => {
+  const anyRunning = bunked.some(c => {
     const since = sinceById[c.id]
-    return !!since && canBunk(c.xp) && msUntilFull(since, now, cap) > 0
+    return !!since && !stintDone(since, now, cap)
   })
 
+  // Tick every 10s while a stint is running, then stop. A minute's granularity
+  // is all the countdown shows, so anything finer is wasted renders.
   useEffect(() => {
-    if (!anyFilling) return
+    if (!anyRunning) return
     const id = setInterval(() => setNow(Date.now()), 10_000)
     return () => clearInterval(id)
-  }, [anyFilling])
+  }, [anyRunning])
 
   const eligible = useMemo(() => state.roster.filter(c =>
     c.voyageSlot === null && c.raidSlot === null
@@ -93,15 +105,14 @@ export default function HallBunks({
     && canBunk(c.xp),
   ), [state.roster, state.bunkedCrewIds, state.trawlingCrewIds, state.lockedCrewIds])
 
-  const occupant = picking === null ? null : bunked[picking] ?? null
-
   return (
     <div style={{ marginTop: '0.85rem', paddingTop: '0.75rem', borderTop: `1px solid ${accent}2e` }}>
       {/* What the bunks pay, and the one button that matters. */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '0.6rem' }}>
         <p className="font-karla" style={{ flex: 1, minWidth: 0, fontSize: '0.64rem', color: 'rgba(255,255,255,0.55)', lineHeight: 1.4 }}>
-          <span style={{ color: '#f0ede8', fontWeight: 700 }}>{rate.toLocaleString()} XP</span> an hour per bunk,
-          for <span style={{ color: '#f0ede8', fontWeight: 700 }}>{cap}h</span>
+          A stint is <span style={{ color: '#f0ede8', fontWeight: 700 }}>{fmtStint(cap)}</span> for{' '}
+          <span style={{ color: '#f0ede8', fontWeight: 700 }}>{payout.toLocaleString()} XP</span>.
+          They cannot leave until it ends.
         </p>
         <button type="button" disabled={pending || owed <= 0} onClick={onClaim}
           className="font-karla font-700 uppercase"
@@ -114,7 +125,7 @@ export default function HallBunks({
             cursor: pending || owed <= 0 ? 'default' : 'pointer',
             opacity: pending ? 0.6 : 1, touchAction: 'manipulation',
           }}>
-          {owed > 0 ? `Collect ${owed.toLocaleString()}` : 'Nothing owed'}
+          {owed > 0 ? `Collect ${owed.toLocaleString()}` : readyCount > 0 ? 'Collect' : 'None ready'}
         </button>
       </div>
 
@@ -147,39 +158,44 @@ export default function HallBunks({
           }
           const since = sinceById[crew.id]
           const maxed = !canBunk(crew.xp)
-          const earned = since && !maxed ? accruedXP(since, now, rate, cap) : 0
-          const left = since && !maxed ? msUntilFull(since, now, cap) : 0
+          const done = !since || stintDone(since, now, cap)
+          const left = since ? msUntilDone(since, now, cap) : 0
+          const pct = since ? stintProgress(since, now, cap) : 1
           return (
-            <button key={crew.id} type="button" disabled={pending}
-              onClick={() => setPicking(i)}
-              aria-label={`${crew.name} in bunk ${i + 1}, ${earned} XP earned. Tap to swap or take them out.`}
+            <button key={crew.id} type="button" disabled={pending || !done}
+              onClick={() => { if (done) onClaim() }}
+              title={done ? 'Collect and free the bunk' : `Locked in for another ${fmtLeft(left)}`}
+              aria-label={done
+                ? `${crew.name} has finished training. Collect to free the bunk.`
+                : `${crew.name} is training, ${fmtLeft(left)}.`}
               style={{
                 position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
                 minHeight: 88, padding: '0.35rem 0.25rem 0.4rem', borderRadius: 11,
                 cursor: 'pointer', font: 'inherit', textAlign: 'center',
-                border: `1.5px solid ${maxed ? 'rgba(255,255,255,0.18)' : `${GOLD}66`}`,
-                background: `linear-gradient(180deg, ${maxed ? 'rgba(255,255,255,0.05)' : `${GOLD}14`} 0%, rgba(0,0,0,0.25) 100%)`,
+                border: `1.5px solid ${done ? `${GOLD}aa` : 'rgba(255,255,255,0.16)'}`,
+                background: `linear-gradient(180deg, ${done ? `${GOLD}1f` : 'rgba(255,255,255,0.04)'} 0%, rgba(0,0,0,0.25) 100%)`,
                 touchAction: 'manipulation',
               }}>
               <div style={{ width: '100%', height: 38, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={artSrc(crew.filename)} alt="" aria-hidden loading="lazy" decoding="async"
-                  style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', opacity: maxed ? 0.5 : 1 }} />
+                  style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', opacity: done ? 1 : 0.75 }} />
               </div>
               <span className="font-karla font-700" style={{ display: 'block', width: '100%', fontSize: '0.62rem', lineHeight: 1.15, color: '#eee8de', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {crew.name}
               </span>
-              {maxed ? (
-                <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.06em', color: 'rgba(255,255,255,0.45)' }}>
-                  Fully trained
+              {done ? (
+                <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', lineHeight: 1, color: GOLD, fontVariantNumeric: 'tabular-nums' }}>
+                  {maxed ? 'Done' : `+${payout.toLocaleString()}`}
                 </span>
               ) : (
                 <>
-                  <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', lineHeight: 1, color: GOLD, fontVariantNumeric: 'tabular-nums' }}>
-                    +{earned.toLocaleString()}
-                  </span>
-                  <span className="font-karla" style={{ fontSize: '0.48rem', color: 'rgba(255,255,255,0.4)' }}>
+                  <span className="font-karla font-600" style={{ fontSize: '0.54rem', color: 'rgba(255,255,255,0.6)', fontVariantNumeric: 'tabular-nums' }}>
                     {fmtLeft(left)}
+                  </span>
+                  {/* scaleX on a solid fill, never width — width is layout. */}
+                  <span aria-hidden style={{ display: 'block', width: '80%', height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.1)', overflow: 'hidden', marginTop: 2 }}>
+                    <span style={{ display: 'block', width: '100%', height: '100%', borderRadius: 2, background: GOLD, transformOrigin: 'left', transform: `scaleX(${pct})`, transition: 'transform 0.4s linear' }} />
                   </span>
                 </>
               )}
@@ -207,9 +223,9 @@ export default function HallBunks({
 
       {picking !== null && typeof document !== 'undefined' && createPortal(
         <BunkPicker
-          occupant={occupant} eligible={eligible} artSrc={artSrc} accent={accent} pending={pending}
+          eligible={eligible} artSrc={artSrc} accent={accent} pending={pending}
+          stint={fmtStint(cap)} payout={payout}
           onPick={id => { onBunk(id); setPicking(null) }}
-          onTakeOut={id => { onUnbunk(id); setPicking(null) }}
           onClose={() => setPicking(null)}
         />, document.body)}
     </div>
@@ -251,15 +267,15 @@ function UpgradeButton({
 
 /** One sheet for both jobs: fill an empty bunk, or swap/remove the occupant. */
 function BunkPicker({
-  occupant, eligible, artSrc, accent, pending, onPick, onTakeOut, onClose,
+  eligible, artSrc, accent, pending, stint, payout, onPick, onClose,
 }: {
-  occupant: CrewMember | null
   eligible: CrewMember[]
   artSrc: (f: string) => string
   accent: string
   pending: boolean
+  stint: string
+  payout: number
   onPick: (crewId: number) => void
-  onTakeOut: (crewId: number) => void
   onClose: () => void
 }) {
   return (
@@ -269,7 +285,7 @@ function BunkPicker({
           <div style={{ flex: 1, minWidth: 0 }}>
             <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.56rem', color: accent }}>Crew Hall</p>
             <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#f0ede8', lineHeight: 1.1 }}>
-              {occupant ? `Swap out ${occupant.name}` : 'Who trains?'}
+              Who trains?
             </p>
           </div>
           <button onClick={onClose} aria-label="Close" style={{ flexShrink: 0, width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e0ddd8', cursor: 'pointer' }}>
@@ -277,18 +293,12 @@ function BunkPicker({
           </button>
         </div>
 
-        {occupant && (
-          <div style={{ padding: '0 1rem 0.8rem' }}>
-            <button type="button" disabled={pending} onClick={() => onTakeOut(occupant.id)}
-              className="font-karla font-700 uppercase"
-              style={{ width: '100%', padding: '0.62rem', borderRadius: 9, fontSize: '0.7rem', letterSpacing: '0.05em', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(240,236,228,0.88)', cursor: pending ? 'not-allowed' : 'pointer' }}>
-              Take {occupant.name} out
-            </button>
-            <p className="font-karla" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)', textAlign: 'center', marginTop: 6, lineHeight: 1.4 }}>
-              Whatever they have earned is collected either way.
-            </p>
-          </div>
-        )}
+        {/* Said before the tap, not after. Whoever goes in is committed. */}
+        <p className="font-karla" style={{ padding: '0 1rem 0.8rem', fontSize: '0.68rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.45 }}>
+          Whoever you pick is in for <span style={{ color: accent }}>{stint}</span> and earns{' '}
+          <span style={{ color: accent }}>{payout.toLocaleString()} XP</span>. They cannot raid, sail,
+          trawl or be dismissed until the stint ends.
+        </p>
 
         <div className="scrollbar-hide" style={{ flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain', padding: '0 1rem 1.4rem' }}>
           {eligible.length === 0 ? (

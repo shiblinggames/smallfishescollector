@@ -16,7 +16,7 @@ import { ChaseSkinFx } from '@/components/ChaseSkinFx'
 import { hallTierDef, nextHallTier, CREW_HALL_MAX_TIER } from '@/lib/crewHall'
 import { crewAssignment } from '@/lib/crewAssignment'
 import HallBunks from './HallBunks'
-import { bunkCrew, unbunkCrew, claimBunks, buyDrill, buyStores } from './bunkActions'
+import { bunkCrew, claimBunks, buyDrill, buyStores } from './bunkActions'
 import { RARITY_NAMES, RARITY_COLORS, groupForSlug, crewDisplayName, GEM_WEIGHTS, type CrewRarity } from '@/lib/crewGen'
 import { applyCrewEffects, netTraitStats, traitLabel, traitKind } from '@/lib/crewEffects'
 import AssignBoard from './AssignBoard'
@@ -246,7 +246,7 @@ function StatIcon({ k, color }: { k: 'power' | 'dodge' | 'fortune'; color: strin
 // manifest line: arched portrait in a carved frame, name + class + quirks
 // laid out beside it on aged wood.
 function CrewPanel({
-  name, filename, rarity, base, effects, xp = 0, slug = '', assignment, isCaptain = false, locked = false, lockKind = 'voyage', lockLabel = 'This crew is currently at sea on a voyage.', hasLevelUp = false, aboard = false, bunked = false, dimmed, hint, frameAccent = '#5c5c63',
+  name, filename, rarity, base, effects, xp = 0, slug = '', assignment, isCaptain = false, locked = false, lockKind = 'voyage', lockLabel = 'This crew is currently at sea on a voyage.', hasLevelUp = false, aboard = false, bunked = false, bunkLocked = false, dimmed, hint, frameAccent = '#5c5c63',
   bg = RECRUIT_PANEL_BG, border = RECRUIT_PANEL_BORDER, onClick, children,
 }: {
   name: string
@@ -276,9 +276,11 @@ function CrewPanel({
   lockKind?: 'voyage' | 'trawl'
   /** Tooltip on the lock badge — distinguishes voyage vs trawl. */
   lockLabel?: string
-  /** Holding a bunk in the Crew Hall, training. Not a lock - assigning them
-   *  evicts them automatically - so it reads as a duty, not a restriction. */
+  /** Holding a bunk in the Crew Hall. */
   bunked?: boolean
+  /** Mid-stint, so hard-locked: cannot be assigned, trawled or dismissed until
+   *  it finishes. A finished stint is only waiting to be collected. */
+  bunkLocked?: boolean
   /** Board candidate already signed on. Reads as a pip on the portrait, the
    *  same corner language the roster uses for at-sea / trawling, rather than
    *  a footer pill - board and roster cards have to read identically. */
@@ -327,7 +329,8 @@ function CrewPanel({
   const duty =
     locked && lockKind === 'trawl' ? { label: 'Trawling', color: '#3fc8aa' }
     : locked ? { label: 'At sea', color: '#ffb45a' }
-    : bunked ? { label: 'Training', color: '#f0c040' }
+    : bunkLocked ? { label: 'Training', color: '#f0c040' }
+    : bunked ? { label: 'Stint done', color: '#7fdfa3' }
     : assignment === 'raid' ? { label: 'Raid party', color: '#e07c7c' }
     : assignment === 'voyage' ? { label: 'Voyage party', color: '#5fa8c9' }
     : null
@@ -1496,7 +1499,6 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
               accent={hall.accent}
               pending={pending}
               onBunk={id => run(() => bunkCrew(id), id)}
-              onUnbunk={id => runBunkClaim(() => unbunkCrew(id))}
               onClaim={() => runBunkClaim(() => claimBunks())}
               onBuyDrill={() => run(() => buyDrill(), 'reroll')}
               onBuyStores={() => run(() => buyStores(), 'reroll')}
@@ -1689,6 +1691,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             roster={state.roster}
             lockedCrewIds={state.lockedCrewIds}
             trawlingCrewIds={state.trawlingCrewIds}
+            bunkedCrewIds={state.bunkLockedCrewIds}
             artSrc={artSrc}
             pending={pending}
             busyId={busyId}
@@ -2061,6 +2064,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                         lockKind={trawlSet.has(m.id) ? 'trawl' : 'voyage'}
                         lockLabel={trawlSet.has(m.id) ? 'This crew is out on a trawl. Collect it to free them up.' : 'This crew is currently at sea on a voyage.'}
                         bunked={state.bunkedCrewIds.includes(m.id)}
+                        bunkLocked={state.bunkLockedCrewIds.includes(m.id)}
                         hasLevelUp={(seenLevels[m.id] ?? crewLevelFromXP(m.xp)) < crewLevelFromXP(m.xp)}
                         hint={m.effects.length > 0 && !viewed.has(`roster:${m.id}`)}
                         onClick={() => openDetail('roster', m)} />

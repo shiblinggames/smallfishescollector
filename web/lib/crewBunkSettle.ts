@@ -10,7 +10,7 @@ import type { createAdminClient } from './supabase/admin'
 import { getLevelFromXP } from './expeditionLevel'
 import { clampHallTier } from './crewHall'
 import { grantXPPairs, type CrewXPGrant } from './crewXPGrant'
-import { accruedXP, bunkCount, bunkRatePerHour, hallBunksOpen, canBunk, storesCapHours } from './crewBunks'
+import { bunkCount, bunkRatePerHour, hallBunksOpen, canBunk, stintDone, stintXP, storesCapHours } from './crewBunks'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -50,14 +50,20 @@ export async function loadBunks(admin: Admin, userId: string): Promise<BunkRow[]
 }
 
 /**
- * Bank what these bunks have earned and reset their clocks.
+ * Pay out every FINISHED stint and free those bunks.
  *
- * Concurrency: each row is reset with a compare-and-swap on the exact `since`
- * we read (`.eq('since', row.since)`), and XP is granted ONLY for rows the
- * update actually matched. Two simultaneous claims cannot both pay out — the
- * loser matches zero rows and grants nothing. `collectTrawl` does
- * read-check-then-delete without inspecting the rowcount and can double-grant;
- * this deliberately does not copy it.
+ * Only finished ones: a hand is locked in for the whole stint, so there is no
+ * partial payout and no early exit. Unfinished bunks are left exactly as they
+ * are.
+ *
+ * The row is DELETED, not reset. Leaving them in would restart the clock and
+ * lock the hand in again immediately, so they could never come out.
+ *
+ * Concurrency: the delete IS the claim. It is conditional on the exact `since`
+ * that was read, and XP is granted only for rows the delete actually removed,
+ * so two simultaneous claims cannot both pay - the loser removes nothing.
+ * `collectTrawl` does read-check-then-delete without inspecting the rowcount
+ * and can double-grant; this deliberately does not copy it.
  */
 export async function settleBunks(
   admin: Admin,
@@ -67,39 +73,38 @@ export async function settleBunks(
   capHours: number,
 ): Promise<CrewXPGrant[]> {
   if (rows.length === 0) return []
-  const nowIso = new Date().toISOString()
   const nowMs = Date.now()
 
-  // A maxed crew earns nothing, so leave their clock alone rather than quietly
-  // resetting it — they may be swapped for someone who can still learn.
+  const done = rows.filter(r => stintDone(r.since, nowMs, capHours))
+  if (done.length === 0) return []
+
+  // A hand who hit the level ceiling mid-stint still gets their bunk back; they
+  // just have nothing left to learn, so the grant is skipped for them.
   const { data: xpRows } = await admin
-    .from('user_crew').select('id, xp').in('id', rows.map(r => r.crew_id))
+    .from('user_crew').select('id, xp').in('id', done.map(r => r.crew_id))
   const xpById = new Map<number, number>(((xpRows ?? []) as any[]).map(r => [Number(r.id), r.xp ?? 0]))
 
-  const claimable = rows
-    .map(r => ({ row: r, xp: canBunk(xpById.get(r.crew_id) ?? 0) ? accruedXP(r.since, nowMs, rate, capHours) : 0 }))
-    .filter(c => c.xp > 0)
-  if (claimable.length === 0) return []
-
-  const won = await Promise.all(claimable.map(async c => {
+  const won = await Promise.all(done.map(async r => {
     const { data } = await admin
       .from('crew_hall_bunks')
-      .update({ since: nowIso })
-      .eq('id', c.row.id)
-      .eq('since', c.row.since)
+      .delete()
+      .eq('id', r.id)
+      .eq('since', r.since)
       .select('id')
-    return (data ?? []).length > 0 ? c : null
+    return (data ?? []).length > 0 ? r : null
   }))
 
-  const pairs = won.filter((c): c is NonNullable<typeof c> => c !== null)
-    .map(c => ({ id: c.row.crew_id, xp: c.xp }))
+  const pairs = won
+    .filter((r): r is BunkRow => r !== null)
+    .filter(r => canBunk(xpById.get(r.crew_id) ?? 0))
+    .map(r => ({ id: r.crew_id, xp: stintXP(rate, capHours) }))
   return grantXPPairs(admin, userId, pairs)
 }
 
 /**
- * Bank everything owed and free this crew's bunk. Called when they are
- * unbunked by hand, assigned to a party, or dismissed — so XP can never be
- * lost by leaving a bunk through any door.
+ * Collect ONE crew's finished stint. Does nothing while the stint is still
+ * running — there is no early exit, so this can never yank a hand out and is
+ * safe to call speculatively.
  */
 export async function releaseBunk(admin: Admin, userId: string, crewId: number): Promise<CrewXPGrant[]> {
   const { data } = await admin
@@ -107,7 +112,13 @@ export async function releaseBunk(admin: Admin, userId: string, crewId: number):
     .eq('user_id', userId).eq('crew_id', crewId).maybeSingle()
   if (!data) return []
   const ctx = await bunkContext(admin, userId)
-  const grants = await settleBunks(admin, userId, [data as unknown as BunkRow], ctx.rate, ctx.capHours)
-  await admin.from('crew_hall_bunks').delete().eq('id', (data as any).id).eq('user_id', userId)
-  return grants
+  return settleBunks(admin, userId, [data as unknown as BunkRow], ctx.rate, ctx.capHours)
+}
+
+/** Crew ids whose stint is STILL RUNNING. Hard-locked: no reassigning, no
+ *  dismissing, no pulling them out early. */
+export async function lockedBunkCrewIds(admin: Admin, userId: string, capHours: number): Promise<number[]> {
+  const nowMs = Date.now()
+  const rows = await loadBunks(admin, userId)
+  return rows.filter(r => !stintDone(r.since, nowMs, capHours)).map(r => r.crew_id)
 }

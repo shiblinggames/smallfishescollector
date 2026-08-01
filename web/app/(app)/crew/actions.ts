@@ -12,8 +12,8 @@ import {
   FREE_WEIGHTS, GEM_WEIGHTS, type CrewRarity,
 } from '@/lib/crewGen'
 import { clampHallTier, nextHallTier, type CrewHallTierNum } from '@/lib/crewHall'
-import { releaseBunk } from '@/lib/crewBunkSettle'
-import { hallBunksOpen, storesCapHours } from '@/lib/crewBunks'
+import { bunkContext, loadBunks } from '@/lib/crewBunkSettle'
+import { hallBunksOpen, stintDone, storesCapHours } from '@/lib/crewBunks'
 import { crewLevelFromXP } from '@/lib/crewLevel'
 import { getCrewSkin, resolveCrewFilename, CREW_SKINS, type EquippedCrewSkins } from '@/lib/crewSkins'
 import { bloodRerollTier, BLOOD_SKIN_GAMBLE_COST, hardcoreUnlocked } from '@/lib/gauntlet'
@@ -103,6 +103,10 @@ export type CrewState = {
    *  lists above this is NOT a lock: a bunked crew can be assigned freely and
    *  is evicted automatically (their XP banked) when they are. */
   bunkedCrewIds: number[]
+  /** Subset of the above whose stint is STILL RUNNING. Hard-locked: they
+   *  cannot be assigned, trawled or dismissed until it finishes. A finished
+   *  stint is merely waiting to be collected, so it is not in here. */
+  bunkLockedCrewIds: number[]
   /** Are the hall's bunks open to this player? Admin-only for now
    *  (HALL_BUNKS_LIVE in lib/crewBunks.ts). Hides the UI; the actions enforce
    *  it independently. */
@@ -324,6 +328,13 @@ export async function getCrewState(): Promise<CrewState | null> {
   const bunkedCrewIds: number[] = ((bunkRows ?? []) as any[]).map(r => r.crew_id as number)
   const bunkSince: Record<number, string> = Object.fromEntries(
     ((bunkRows ?? []) as any[]).map(r => [r.crew_id as number, r.since as string]))
+  // Still mid-stint: hard-locked out of parties, trawls and dismissal. Split
+  // from bunkedCrewIds because a FINISHED stint is only waiting to be
+  // collected and should not read as locked.
+  const capHoursNow = storesCapHours((prof as any).crew_stores_level ?? 1)
+  const bunkLockedCrewIds: number[] = ((bunkRows ?? []) as any[])
+    .filter(r => !stintDone(r.since as string, Date.now(), capHoursNow))
+    .map(r => r.crew_id as number)
 
   const ownedCrewSkins = ((prof as any).owned_crew_skins as string[] | null) ?? []
   const equippedCrewSkins = ((prof as any).equipped_crew_skins as EquippedCrewSkins | null) ?? {}
@@ -332,7 +343,7 @@ export async function getCrewState(): Promise<CrewState | null> {
     board: ((boardRows ?? []) as any[]).map(r => toCandidate(r, meta)),
     roster: ((rosterRows ?? []) as any[]).map(r => toMember(r, meta, equippedCrewSkins)).sort(rosterSort),
     capacity, navLevel, gems, isPremium: premium, rerollCost: REROLL_COST,
-    shipCrewSlots, lockedCrewIds, trawlingCrewIds, bunkedCrewIds, bunkSince,
+    shipCrewSlots, lockedCrewIds, trawlingCrewIds, bunkedCrewIds, bunkLockedCrewIds, bunkSince,
     hallBunksOpen: hallBunksOpen((prof as any).is_admin),
     drillLevel: (prof as any).crew_drill_level ?? 1,
     storesLevel: (prof as any).crew_stores_level ?? 1,
@@ -622,6 +633,20 @@ async function assertCanReassign(
     .from('trawls').select('id').eq('user_id', userId).eq('crew_id', crewId).maybeSingle()
   if (onTrawl) return { error: 'This crew is out on a trawl. Collect it first to free them up.' }
 
+  // Bunk lock — a hand in the hall is committed for the whole stint. This
+  // USED to auto-evict them and bank the XP, which made bunking free; the
+  // commitment is the price of the training, so it is a refusal now. Covers
+  // dismissal too, since dismissCrew runs the same guard.
+  const { data: onBunk } = await admin
+    .from('crew_hall_bunks').select('since').eq('user_id', userId).eq('crew_id', crewId).maybeSingle()
+  if (onBunk) {
+    const { data: prof } = await admin.from('profiles').select('crew_stores_level').eq('id', userId).single()
+    const cap = storesCapHours((prof as any)?.crew_stores_level ?? 1)
+    if (!stintDone((onBunk as any).since, Date.now(), cap)) {
+      return { error: 'This crew is training in the hall. Their stint has to finish first.' }
+    }
+  }
+
   return { ok: true, crew: crew as any }
 }
 
@@ -642,12 +667,6 @@ async function applyAssignment(
     await admin.from('user_crew').update({ voyage_slot: null, raid_slot: null })
       .eq('id', crewId).eq('user_id', userId)
   } else {
-    // AUTO-EVICT. A bunked crew sent to a party gives up their bunk, and
-    // releaseBunk banks what they had already earned first, so XP is never
-    // lost by leaving a bunk. No-op (one indexed lookup) if they were
-    // not bunked. Deliberately not a guard in assertCanReassign: bunking must
-    // never be a thing you have to undo before you can use a crew.
-    await releaseBunk(admin, userId, crewId)
 
     const { data: prof } = await admin.from('profiles').select('ship_tier, ship_classes, has_sixth_berth').eq('id', userId).single()
     const tier = (prof as any)?.ship_tier ?? 0
