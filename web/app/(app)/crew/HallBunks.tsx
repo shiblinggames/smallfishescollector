@@ -669,26 +669,13 @@ function BunkPicker({
             ceilings never is. The old copy explained the mechanic accurately
             and never once said what you were aiming AT. */}
         {leviathan && (
-          <div style={{ margin: '0 1rem 0.9rem', padding: '0.8rem 0.85rem', borderRadius: 12, background: `${LEVIATHAN}14`, border: `1px solid ${LEVIATHAN}4d` }}>
-            <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: LEVIATHAN, marginBottom: 5 }}>
-              The chase for Divine
-            </p>
-            <p className="font-karla" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.82)', lineHeight: 1.5 }}>
+          <div style={{ margin: '0 1rem 0.85rem', paddingTop: '0.7rem', borderTop: `1px solid ${LEVIATHAN}2e` }}>
+            <p className="font-karla" style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>
               Every stint rolls them a new trait. Keep the stats you want, roll again for the rest.
             </p>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 5, marginTop: 10 }}>
-              {['+4 PWR', '+4 DGE', '+4 FTN'].map(t => (
-                <span key={t} className="font-karla font-700" style={{
-                  fontSize: '0.63rem', padding: '0.22rem 0.45rem', borderRadius: 6,
-                  background: 'rgba(0,0,0,0.32)', border: `1px solid ${LEVIATHAN}55`,
-                  color: '#c6e8e2', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap',
-                }}>{t}</span>
-              ))}
-              <span aria-hidden style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.72rem' }}>=</span>
-              <span className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: LEVIATHAN, whiteSpace: 'nowrap' }}>Divine</span>
-            </div>
-            <p className="font-karla" style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: 7, lineHeight: 1.4 }}>
-              No other bunk ever rolls a 4.
+            <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.42)', lineHeight: 1.5, marginTop: 5 }}>
+              <span style={{ color: `${LEVIATHAN}cc`, fontVariantNumeric: 'tabular-nums' }}>+4 / +4 / +4</span>
+              {' '}makes a <span className="trait-divine font-700">Divine</span> hand. No other bunk rolls a 4.
             </p>
           </div>
         )}

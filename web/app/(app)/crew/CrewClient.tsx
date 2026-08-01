@@ -757,13 +757,17 @@ function FallenPanel({ crew }: { crew: FallenCrew }) {
           if (!label) return null
           const kind = traitKind(t)
           const buff = kind === 'buff'
+          const divine = isDivine(t)
           return (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 2 }}>
-              <span className="font-karla font-700" style={{
+              <span className={`font-karla font-700${divine ? ' trait-divine' : ''}`} style={{
                 fontSize: '0.5rem', letterSpacing: '0.06em', textTransform: 'uppercase',
-                color: buff ? '#9cc7a8' : '#c79c9c',
-                background: buff ? 'rgba(60,120,80,0.18)' : 'rgba(140,60,60,0.18)',
-                border: `1px solid ${buff ? 'rgba(120,180,140,0.4)' : 'rgba(180,110,110,0.4)'}`,
+                // Divine takes its own colour from .trait-divine (a clipped
+                // gradient), so leave `color` off it or the class has nothing
+                // to show through.
+                ...(divine ? {} : { color: buff ? '#9cc7a8' : '#c79c9c' }),
+                background: divine ? 'rgba(63,214,196,0.14)' : buff ? 'rgba(60,120,80,0.18)' : 'rgba(140,60,60,0.18)',
+                border: `1px solid ${divine ? 'rgba(63,214,196,0.55)' : buff ? 'rgba(120,180,140,0.4)' : 'rgba(180,110,110,0.4)'}`,
                 borderRadius: 3, padding: '0.12rem 0.4rem',
               }}>{label}</span>
             </div>
@@ -772,6 +776,14 @@ function FallenPanel({ crew }: { crew: FallenCrew }) {
       </div>
     </motion.div>
   )
+}
+
+/** THE top trait: +4 in all three. Compared by label rather than by summing
+ *  to 12, so this and traitLabel can never drift apart about what earns the
+ *  treatment. Divine is the only 12 there is, but the label is the thing
+ *  players actually see. */
+function isDivine(t: TraitStats): boolean {
+  return traitLabel(t) === 'Divine'
 }
 
 /** A trait's three stats as one compact line ("+2 PWR / -1 DGE"). Zeroes are
@@ -944,6 +956,10 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
   /** Which side of the offer is being submitted, so the two buttons can show
    *  their own pending state instead of both greying out together. */
   const [offerBusy, setOfferBusy] = useState<'take' | 'keep' | null>(null)
+  /** A hand who just came out Divine. The rarest outcome the game has, so it
+   *  gets its own screen rather than closing the offer card and leaving a chip
+   *  on the roster to be noticed later. */
+  const [divineMoment, setDivineMoment] = useState<{ name: string; filename: string } | null>(null)
   /** Which of the three stats the captain is taking off the current offer.
    *  Seeded to every stat that would improve, so the common case is one tap,
    *  but every one of them can be turned off: a hand who only ever sails wants
@@ -1053,9 +1069,15 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
       const res = take ? await acceptTraitOffer(crewId, picks) : await declineTraitOffer(crewId)
       setOfferBusy(null)
       if ('error' in res) { setErr(res.error); return }
+      // Read the trait back off the RETURNED state, not off the preview. The
+      // server does the merge, and a moment this big should fire on what
+      // actually landed rather than on what the card predicted.
+      const landed = res.state.roster.find(c => c.id === crewId)
+      const nowDivine = take && !!landed && isDivine(netTraitStats(landed.effects))
       setState(res.state)
-      if (take) vibrate([18, 50, 30])
+      vibrate(nowDivine ? [30, 60, 30, 60, 90] : take ? [18, 50, 30] : 10)
       setBunkReveal(null)
+      if (nowDivine && landed) setDivineMoment({ name: landed.name, filename: landed.filename })
     })
   }
 
@@ -1920,6 +1942,86 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             page level, not inside Nav, so no portal needed). Recomputes the
             next tier from state so it always reflects the live tier even if
             the panel's IIFE consts are stale. */}
+        {/* THE DIVINE MOMENT. Its own layer ABOVE the claim reveal, because it
+            fires as that card closes and the two must not cross-fade into each
+            other. Dismissed only by the button: this is the rarest thing in
+            the game and a stray tap on the backdrop should not skip it. */}
+        <AnimatePresence>
+          {divineMoment && (
+            <motion.div key="divine-moment"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              style={{ position: 'fixed', inset: 0, zIndex: 9600, background: 'radial-gradient(ellipse 70% 50% at 50% 42%, rgba(24,72,68,0.65) 0%, rgba(3,7,11,0.94) 70%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
+              <motion.div
+                initial={{ scale: 0.8, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.92, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 22 }}
+                style={{ width: '100%', maxWidth: 360, textAlign: 'center' }}>
+
+                {/* Three rings, staggered, so the burst reads as something
+                    rising out of deep water rather than one flat pop. */}
+                <div style={{ position: 'relative', width: 132, height: 132, margin: '0 auto' }}>
+                  {[0, 0.22, 0.44].map((d, i) => (
+                    <motion.span key={i} aria-hidden
+                      initial={{ scale: 0.35, opacity: 0.85 }} animate={{ scale: 2.6, opacity: 0 }}
+                      transition={{ duration: 1.6, ease: 'easeOut', delay: 0.15 + d, repeat: Infinity, repeatDelay: 0.9 }}
+                      style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: `2px solid ${LEVIATHAN_COLOR}`, pointerEvents: 'none' }} />
+                  ))}
+                  <motion.div
+                    initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: 'spring', stiffness: 280, damping: 16, delay: 0.1 }}
+                    style={{
+                      position: 'relative', width: 132, height: 132, borderRadius: '50%',
+                      display: 'grid', placeItems: 'center', overflow: 'hidden',
+                      background: `radial-gradient(circle at 50% 30%, ${LEVIATHAN_COLOR}55, rgba(0,0,0,0.5))`,
+                      border: `2px solid ${LEVIATHAN_COLOR}`,
+                      boxShadow: `0 0 46px ${LEVIATHAN_COLOR}66, inset 0 0 22px rgba(0,0,0,0.45)`,
+                    }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={artSrc(divineMoment.filename)} alt="" aria-hidden decoding="async"
+                      style={{ width: 120, height: 120, objectFit: 'contain' }} />
+                  </motion.div>
+                </div>
+
+                <motion.p initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.4 }}
+                  className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.28em', color: 'rgba(255,255,255,0.5)', marginTop: 20 }}>
+                  The deep gives up its best
+                </motion.p>
+                <motion.p initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.38, type: 'spring', stiffness: 260, damping: 18 }}
+                  className="trait-divine font-cinzel font-800" style={{ fontSize: '2.6rem', lineHeight: 1.1, letterSpacing: '0.06em', marginTop: 4 }}>
+                  DIVINE
+                </motion.p>
+                <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5, duration: 0.4 }}
+                  className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#eafaf7', marginTop: 6 }}>
+                  {divineMoment.name}
+                </motion.p>
+
+                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.58, duration: 0.4 }}
+                  style={{ display: 'flex', justifyContent: 'center', gap: 7, marginTop: 14 }}>
+                  {['+4 PWR', '+4 DGE', '+4 FTN'].map(t => (
+                    <span key={t} className="font-karla font-700" style={{
+                      fontSize: '0.7rem', padding: '0.3rem 0.6rem', borderRadius: 8,
+                      background: `${LEVIATHAN_COLOR}1c`, border: `1px solid ${LEVIATHAN_COLOR}77`,
+                      color: '#c6e8e2', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap',
+                    }}>{t}</span>
+                  ))}
+                </motion.div>
+
+                <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.68, duration: 0.4 }}
+                  className="font-karla" style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.5, marginTop: 12 }}>
+                  Every stat at the ceiling. There is nothing left to roll for on this hand.
+                </motion.p>
+
+                <motion.button onClick={() => setDivineMoment(null)} whileTap={{ scale: 0.94 }}
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8, duration: 0.3 }}
+                  className="font-cinzel font-700 uppercase"
+                  style={{ marginTop: 20, padding: '0.75rem 2.2rem', borderRadius: 12, letterSpacing: '0.12em', fontSize: '0.82rem', background: `${LEVIATHAN_COLOR}26`, border: `1px solid ${LEVIATHAN_COLOR}9a`, color: '#eafaf7', boxShadow: `0 0 20px ${LEVIATHAN_COLOR}33`, cursor: 'pointer' }}>
+                  Magnificent
+                </motion.button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* THE CLAIM REVEAL. The payoff of the whole feature, so it is a card
             with the hand's face on it: their XP counting up, their level bar
             filling from where it was, and a burst if it tipped a level.
@@ -2064,7 +2166,8 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                           settled before the tap, not discovered after it. */}
                       <div style={{ marginTop: 8, padding: '0.55rem 0.7rem', borderRadius: 11, background: `${LEVIATHAN_COLOR}12`, border: `1px solid ${LEVIATHAN_COLOR}4d`, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
                         <span className="font-karla font-700 uppercase" style={{ fontSize: '0.55rem', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.45)' }}>Result</span>
-                        <span className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: LEVIATHAN_COLOR }}>
+                        <span className={`font-cinzel font-700${isDivine(merged) ? ' trait-divine' : ''}`}
+                          style={{ fontSize: isDivine(merged) ? '1.02rem' : '0.92rem', ...(isDivine(merged) ? {} : { color: LEVIATHAN_COLOR }) }}>
                           {traitLabel(merged) || 'No trait'}
                         </span>
                         <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#c6e8e2', fontVariantNumeric: 'tabular-nums' }}>
@@ -3234,7 +3337,10 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                 {/* Trait: name and effect, one row, no heading over it. */}
                 {dTraitLabel && (
                   <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, padding: '0.15rem 0' }}>
-                    <span className="font-cinzel font-700" style={{ fontSize: '0.86rem', fontStyle: 'italic', color: dTraitKind === 'buff' ? '#9fd9b1' : dTraitKind === 'flaw' ? '#e09a9a' : 'rgba(255,255,255,0.6)' }}>
+                    <span className={`font-cinzel font-700${isDivine(dTrait) ? ' trait-divine' : ''}`} style={{
+                      fontSize: isDivine(dTrait) ? '0.95rem' : '0.86rem', fontStyle: 'italic',
+                      ...(isDivine(dTrait) ? {} : { color: dTraitKind === 'buff' ? '#9fd9b1' : dTraitKind === 'flaw' ? '#e09a9a' : 'rgba(255,255,255,0.6)' }),
+                    }}>
                       {dTraitLabel}
                     </span>
                     <span className="font-karla font-700" style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end', fontSize: '0.7rem' }}>

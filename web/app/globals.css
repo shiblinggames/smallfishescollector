@@ -1312,6 +1312,32 @@ body.hardcore-gauntlet::after {
   .crew-levelup-halo { animation: none; box-shadow: 0 0 10px rgba(255,217,106,0.35); }
 }
 
+/* THE DIVINE TRAIT. +4 in all three stats, reachable only out of the
+   Leviathan bunk and about 1 in 743 offers on a Legendary, so it gets a
+   treatment nothing else in the game wears and no other label can be mistaken
+   for. Abyssal teal through white through pale gold, sheening slowly.
+
+   Unlike the pulses below this animates background-position, which repaints
+   rather than composites. That is affordable HERE and nowhere else: a roster
+   holds at most a handful of these, where the chase-skin glow had to cover
+   every card at once and got demoted to a static filter for exactly this
+   reason. Keep it off anything common. */
+@keyframes trait-divine-sheen {
+  0%   { background-position:   0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+.trait-divine {
+  background: linear-gradient(100deg, #7fe6d6 0%, #ffffff 18%, #3fd6c4 38%, #fff0c4 55%, #3fd6c4 74%, #7fe6d6 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: trait-divine-sheen 4.5s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .trait-divine { animation: none; background-position: 40% 50%; }
+}
+
 /* A bunk whose stint has finished. TRANSFORM AND OPACITY ONLY: up to six of
    these sit on screen together, and animating a box-shadow or a filter would
    re-rasterize every one of them on every frame for as long as the tab is
