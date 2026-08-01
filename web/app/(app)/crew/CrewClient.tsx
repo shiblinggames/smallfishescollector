@@ -1921,42 +1921,42 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
               }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={art} alt="" aria-hidden decoding="async"
-                  style={{ width: 92, height: 92, objectFit: 'contain', filter: `drop-shadow(0 4px 14px ${accent}66)` }}
+                  style={{ width: 118, height: 118, objectFit: 'contain', filter: `drop-shadow(0 4px 16px ${accent}66)` }}
                   onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.2em', color: 'rgba(255,255,255,0.45)', marginBottom: 4 }}>
+                <p className="font-karla font-700 uppercase" style={{ fontSize: '0.66rem', letterSpacing: '0.2em', color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>
                   Crew Hall
                 </p>
-                <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: accent, marginBottom: 6 }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: accent, marginBottom: 6 }}>
                   {title}
                 </p>
-                <p className="font-karla" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.55)', fontStyle: 'italic', marginBottom: 12, lineHeight: 1.45 }}>
+                <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.62)', fontStyle: 'italic', marginBottom: 14, lineHeight: 1.5 }}>
                   {blurb}
                 </p>
                 <div className="flex items-center justify-center" style={{
                   gap: 10, padding: '0.55rem 0.75rem', borderRadius: 9,
                   background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', marginBottom: 12,
                 }}>
-                  <span className="font-karla font-600" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.55)' }}>{now}</span>
+                  <span className="font-karla font-600" style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.6)' }}>{now}</span>
                   <span style={{ color: accent }}>&rarr;</span>
-                  <span className="font-karla font-700" style={{ fontSize: '0.82rem', color: accent }}>{next}</span>
+                  <span className="font-karla font-700" style={{ fontSize: '0.92rem', color: accent }}>{next}</span>
                 </div>
                 <div className="flex items-center justify-between" style={{
                   padding: '0.55rem 0.75rem', borderRadius: 9,
                   background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', marginBottom: 12,
                 }}>
-                  <span className="font-karla font-600" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.55)' }}>Cost</span>
-                  <span className="font-karla font-700" style={{ fontSize: '0.82rem', color: canAfford ? '#e8c87a' : '#f2b0b0' }}>
+                  <span className="font-karla font-600" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)' }}>Cost</span>
+                  <span className="font-karla font-700" style={{ fontSize: '0.95rem', color: canAfford ? '#e8c87a' : '#f2b0b0' }}>
                     {cost.toLocaleString()} <span style={{ color: '#e8c87a' }}>⟡</span>
                   </span>
                 </div>
-                <p className="font-karla" style={{ fontSize: '0.64rem', color: canAfford ? 'rgba(255,255,255,0.4)' : '#f2b0b0', marginBottom: 12 }}>
+                <p className="font-karla" style={{ fontSize: '0.74rem', color: canAfford ? 'rgba(255,255,255,0.45)' : '#f2b0b0', marginBottom: 12 }}>
                   Your doubloons: {state.doubloons.toLocaleString()} ⟡
                 </p>
                 <div className="flex" style={{ gap: 8 }}>
                   <button onClick={() => setLadderConfirm(null)} disabled={pending}
                     className="font-karla font-700"
                     style={{
-                      flex: 1, padding: '0.6rem', borderRadius: 9, fontSize: '0.78rem',
+                      flex: 1, padding: '0.7rem', borderRadius: 9, fontSize: '0.88rem',
                       background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)',
                       color: 'rgba(255,255,255,0.7)', cursor: pending ? 'not-allowed' : 'pointer',
                     }}>
@@ -1965,7 +1965,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   <button onClick={() => runLadderUpgrade(ladderConfirm)} disabled={!canAfford || pending}
                     className="font-karla font-700 active:scale-95"
                     style={{
-                      flex: 1.4, padding: '0.6rem', borderRadius: 9, fontSize: '0.78rem',
+                      flex: 1.4, padding: '0.7rem', borderRadius: 9, fontSize: '0.88rem',
                       background: `linear-gradient(180deg, ${accent}2e 0%, ${accent}12 100%)`,
                       border: `1px solid ${accent}77`,
                       boxShadow: `inset 0 1px 0 ${accent}44`,
@@ -2006,18 +2006,26 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   border: `1px solid ${next.accent}55`,
                   borderRadius: 14, padding: '1.2rem 1.1rem 1.05rem',
                   boxShadow: `0 10px 40px rgba(0,0,0,0.6), 0 0 30px ${next.accent}22`,
+                  textAlign: 'center',
                 }}
               >
-                <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.2em', color: 'rgba(255,255,255,0.45)', marginBottom: 4 }}>
+                {/* The building you are buying. The two ladder sheets already
+                    showed their art; the hall, which is the biggest purchase of
+                    the three, was the one asking for six figures sight unseen. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={`/crew/hall_${next.tier}.png`} alt="" aria-hidden decoding="async"
+                  style={{ width: 118, height: 118, objectFit: 'contain', filter: `drop-shadow(0 4px 16px ${next.accent}66)` }}
+                  onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                <p className="font-karla font-700 uppercase" style={{ fontSize: '0.66rem', letterSpacing: '0.2em', color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>
                   Upgrade Crew Hall
                 </p>
-                <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: next.accent, marginBottom: 6 }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: next.accent, marginBottom: 6 }}>
                   {next.name}
                 </p>
-                <p className="font-karla" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.55)', fontStyle: 'italic', marginBottom: 10, lineHeight: 1.45 }}>
+                <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.62)', fontStyle: 'italic', marginBottom: 12, lineHeight: 1.5 }}>
                   {next.flavor}
                 </p>
-                <p className="font-karla font-600" style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.78)', marginBottom: 14 }}>
+                <p className="font-karla font-600" style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.8)', marginBottom: 14, lineHeight: 1.45 }}>
                   Opens bunk <span style={{ color: next.accent }}>{next.bunks}</span>, so {next.bunks} hands can train at once
                 </p>
                 <div className="flex items-center justify-between" style={{
@@ -2025,17 +2033,17 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)',
                   marginBottom: 14,
                 }}>
-                  <span className="font-karla font-600" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.55)' }}>Cost</span>
-                  <span className="font-karla font-700" style={{ fontSize: '0.82rem', color: canAfford ? '#e8c87a' : '#f2b0b0' }}>
+                  <span className="font-karla font-600" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)' }}>Cost</span>
+                  <span className="font-karla font-700" style={{ fontSize: '0.95rem', color: canAfford ? '#e8c87a' : '#f2b0b0' }}>
                     {next.cost.toLocaleString()} <span style={{ color: '#e8c87a' }}>⟡</span>
                   </span>
                 </div>
                 {navShortHere && (
-                  <p className="font-karla font-600" style={{ fontSize: '0.76rem', color: '#9fc4e8', marginBottom: 8, lineHeight: 1.45 }}>
+                  <p className="font-karla font-600" style={{ fontSize: '0.86rem', color: '#9fc4e8', marginBottom: 10, lineHeight: 1.45 }}>
                     Needs Navigation {next.minNav}. You are Navigation {state.navLevel}.
                   </p>
                 )}
-                <p className="font-karla" style={{ fontSize: '0.64rem', color: canAfford ? 'rgba(255,255,255,0.4)' : '#f2b0b0', marginBottom: 12 }}>
+                <p className="font-karla" style={{ fontSize: '0.74rem', color: canAfford ? 'rgba(255,255,255,0.45)' : '#f2b0b0', marginBottom: 12 }}>
                   Your doubloons: {state.doubloons.toLocaleString()} ⟡
                 </p>
                 <div className="flex" style={{ gap: 8 }}>
@@ -2044,7 +2052,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                     disabled={hallBusy}
                     className="font-karla font-700"
                     style={{
-                      flex: 1, padding: '0.6rem', borderRadius: 9, fontSize: '0.78rem',
+                      flex: 1, padding: '0.7rem', borderRadius: 9, fontSize: '0.88rem',
                       background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)',
                       color: 'rgba(255,255,255,0.7)', cursor: hallBusy ? 'not-allowed' : 'pointer',
                     }}
@@ -2056,7 +2064,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                     disabled={!canAfford || hallBusy}
                     className="font-karla font-700 active:scale-95"
                     style={{
-                      flex: 1.4, padding: '0.6rem', borderRadius: 9, fontSize: '0.78rem',
+                      flex: 1.4, padding: '0.7rem', borderRadius: 9, fontSize: '0.88rem',
                       background: 'rgba(96,165,250,0.16)',
                       border: '1px solid rgba(96,165,250,0.5)',
                       color: '#cfe2ff',
