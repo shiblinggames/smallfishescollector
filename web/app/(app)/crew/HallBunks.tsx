@@ -85,21 +85,28 @@ export default function HallBunks({
       .sort((a, b) => a.id - b.id)
   }, [state.roster, state.bunkedCrewIds])
 
-  const sinceById = state.bunkSince ?? {}
+  // Per-bunk terms. A tile shows what ITS hand agreed to, which after an
+  // upgrade is not what the hall now offers.
+  const termsById = state.bunkTerms ?? {}
 
+  // What a NEW stint would be worth, for the header line.
   const payout = stintXP(rate, cap)
+
+  // Owed is summed per bunk on its own terms, so a stint struck before an
+  // upgrade still pays exactly what it promised.
+  const owed = bunked.reduce((sum, c) => {
+    const t = termsById[c.id]
+    if (!t || !stintDone(t.since, now, t.cap) || !canBunk(c.xp)) return sum
+    return sum + stintXP(t.rate, t.cap)
+  }, 0)
   const readyCount = bunked.filter(c => {
-    const since = sinceById[c.id]
-    return !!since && stintDone(since, now, cap)
+    const t = termsById[c.id]
+    return !!t && stintDone(t.since, now, t.cap)
   }).length
-  const owed = bunked.filter(c => {
-    const since = sinceById[c.id]
-    return !!since && stintDone(since, now, cap) && canBunk(c.xp)
-  }).length * payout
 
   const anyRunning = bunked.some(c => {
-    const since = sinceById[c.id]
-    return !!since && !stintDone(since, now, cap)
+    const t = termsById[c.id]
+    return !!t && !stintDone(t.since, now, t.cap)
   })
 
   // Tick every 10s while a stint is running, then stop. A minute's granularity
@@ -195,11 +202,14 @@ export default function HallBunks({
               </button>
             )
           }
-          const since = sinceById[crew.id]
+          const t = termsById[crew.id]
           const maxed = !canBunk(crew.xp)
-          const done = !since || stintDone(since, now, cap)
-          const left = since ? msUntilDone(since, now, cap) : 0
-          const pct = since ? stintProgress(since, now, cap) : 1
+          const done = !t || stintDone(t.since, now, t.cap)
+          const left = t ? msUntilDone(t.since, now, t.cap) : 0
+          const pct = t ? stintProgress(t.since, now, t.cap) : 1
+          // What THIS hand is owed, which after an upgrade differs from what a
+          // fresh stint would pay.
+          const tilePay = t ? stintXP(t.rate, t.cap) : payout
           return (
             <button key={crew.id} type="button" disabled={pending || !done}
               onClick={() => { if (done) onClaim() }}
@@ -225,7 +235,7 @@ export default function HallBunks({
               </span>
               {done ? (
                 <span className="font-cinzel font-700" style={{ fontSize: '0.92rem', lineHeight: 1, color: GOLD, fontVariantNumeric: 'tabular-nums' }}>
-                  {maxed ? 'Done' : `+${payout.toLocaleString()}`}
+                  {maxed ? 'Done' : `+${tilePay.toLocaleString()}`}
                 </span>
               ) : (
                 <>

@@ -55,8 +55,15 @@ export async function bunkCrew(crewId: number): Promise<CrewActionResult> {
   if (bunks.some(b => b.crew_id === crewId)) return { error: 'They already have a bunk.' }
   if (bunks.length >= ctx.slots) return { error: 'Every bunk is taken. Build another.' }
 
+  // Stamp the TERMS on the row. This is the deal: this rate, this long. Buying
+  // Drills or Stores afterwards changes what the NEXT hand gets, never this one.
   // The unique index on crew_id is the real guard against a double tap.
-  const { error } = await admin.from('crew_hall_bunks').insert({ user_id: user.id, crew_id: crewId })
+  const { error } = await admin.from('crew_hall_bunks').insert({
+    user_id: user.id,
+    crew_id: crewId,
+    rate_per_hour: ctx.rate,
+    cap_hours: ctx.capHours,
+  })
   if (error) return { error: 'Could not bunk that hand.' }
 
   const state = await getCrewState()

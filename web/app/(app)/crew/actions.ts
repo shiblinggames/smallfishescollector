@@ -13,7 +13,7 @@ import {
 } from '@/lib/crewGen'
 import { clampHallTier, nextHallTier, hallUpgradeBlocker, type CrewHallTierNum } from '@/lib/crewHall'
 import { bunkContext, loadBunks } from '@/lib/crewBunkSettle'
-import { hallBunksOpen, stintDone, storesCapHours } from '@/lib/crewBunks'
+import { bunkRatePerHour, hallBunksOpen, stintDone, storesCapHours } from '@/lib/crewBunks'
 import { crewLevelFromXP } from '@/lib/crewLevel'
 import { getCrewSkin, resolveCrewFilename, CREW_SKINS, type EquippedCrewSkins } from '@/lib/crewSkins'
 import { bloodRerollTier, BLOOD_SKIN_GAMBLE_COST, hardcoreUnlocked } from '@/lib/gauntlet'
@@ -111,10 +111,11 @@ export type CrewState = {
    *  (HALL_BUNKS_LIVE in lib/crewBunks.ts). Hides the UI; the actions enforce
    *  it independently. */
   hallBunksOpen: boolean
-  /** crew id -> when their bunk last started accruing (ISO). The panel needs
-   *  this to tick the earned XP live; ids alone would only show a static
-   *  count. */
-  bunkSince: Record<number, string>
+  /** crew id -> the terms that bunk is running on: when it started, the XP/hour
+   *  agreed at entry and the stint length agreed at entry. Per-bunk rather than
+   *  global, because buying Drills or Stores must not change a stint already
+   *  under way. */
+  bunkTerms: Record<number, { since: string; rate: number; cap: number }>
   /** Drill level — multiplies the Nav-scaled training rate (XP per hour). */
   drillLevel: number
   /** Stores level — sets how long a bunk accrues before it fills. */
@@ -321,19 +322,26 @@ export async function getCrewState(): Promise<CrewState | null> {
   const [{ data: pendingVoyage }, { data: trawlRows }, { data: bunkRows }] = await Promise.all([
     admin.from('daily_voyages').select('crew_variant_ids').eq('user_id', user.id).eq('status', 'pending').maybeSingle(),
     admin.from('trawls').select('crew_id').eq('user_id', user.id),
-    admin.from('crew_hall_bunks').select('crew_id, since').eq('user_id', user.id),
+    admin.from('crew_hall_bunks').select('crew_id, since, rate_per_hour, cap_hours').eq('user_id', user.id),
   ])
   const lockedCrewIds: number[] = (pendingVoyage as any)?.crew_variant_ids ?? []
   const trawlingCrewIds: number[] = ((trawlRows ?? []) as any[]).map(r => r.crew_id as number)
   const bunkedCrewIds: number[] = ((bunkRows ?? []) as any[]).map(r => r.crew_id as number)
-  const bunkSince: Record<number, string> = Object.fromEntries(
-    ((bunkRows ?? []) as any[]).map(r => [r.crew_id as number, r.since as string]))
+  const liveRate = bunkRatePerHour(navLevel, (prof as any).crew_drill_level ?? 1)
+  const liveCap = storesCapHours((prof as any).crew_stores_level ?? 1)
+  // Each bunk on ITS OWN terms. rate_per_hour / cap_hours are null only on rows
+  // that predate the columns, which fall back to the live values.
+  const bunkTerms: Record<number, { since: string; rate: number; cap: number }> = Object.fromEntries(
+    ((bunkRows ?? []) as any[]).map(r => [r.crew_id as number, {
+      since: r.since as string,
+      rate: (r.rate_per_hour as number | null) ?? liveRate,
+      cap: (r.cap_hours as number | null) ?? liveCap,
+    }]))
   // Still mid-stint: hard-locked out of parties, trawls and dismissal. Split
   // from bunkedCrewIds because a FINISHED stint is only waiting to be
   // collected and should not read as locked.
-  const capHoursNow = storesCapHours((prof as any).crew_stores_level ?? 1)
   const bunkLockedCrewIds: number[] = ((bunkRows ?? []) as any[])
-    .filter(r => !stintDone(r.since as string, Date.now(), capHoursNow))
+    .filter(r => !stintDone(r.since as string, Date.now(), (r.cap_hours as number | null) ?? liveCap))
     .map(r => r.crew_id as number)
 
   const ownedCrewSkins = ((prof as any).owned_crew_skins as string[] | null) ?? []
@@ -343,7 +351,7 @@ export async function getCrewState(): Promise<CrewState | null> {
     board: ((boardRows ?? []) as any[]).map(r => toCandidate(r, meta)),
     roster: ((rosterRows ?? []) as any[]).map(r => toMember(r, meta, equippedCrewSkins)).sort(rosterSort),
     capacity, navLevel, gems, isPremium: premium, rerollCost: REROLL_COST,
-    shipCrewSlots, lockedCrewIds, trawlingCrewIds, bunkedCrewIds, bunkLockedCrewIds, bunkSince,
+    shipCrewSlots, lockedCrewIds, trawlingCrewIds, bunkedCrewIds, bunkLockedCrewIds, bunkTerms,
     hallBunksOpen: hallBunksOpen((prof as any).is_admin),
     drillLevel: (prof as any).crew_drill_level ?? 1,
     storesLevel: (prof as any).crew_stores_level ?? 1,
@@ -642,10 +650,16 @@ async function assertCanReassign(
   // commitment is the price of the training, so it is a refusal now. Covers
   // dismissal too, since dismissCrew runs the same guard.
   const { data: onBunk } = await admin
-    .from('crew_hall_bunks').select('since').eq('user_id', userId).eq('crew_id', crewId).maybeSingle()
+    .from('crew_hall_bunks').select('since, cap_hours').eq('user_id', userId).eq('crew_id', crewId).maybeSingle()
   if (onBunk) {
-    const { data: prof } = await admin.from('profiles').select('crew_stores_level').eq('id', userId).single()
-    const cap = storesCapHours((prof as any)?.crew_stores_level ?? 1)
+    // The length AGREED when they went in, not the current Stores tier. Reading
+    // the live tier would let a Stores purchase extend a hand's sentence after
+    // the fact, or cut it short.
+    let cap = (onBunk as any).cap_hours as number | null
+    if (cap == null) {
+      const { data: prof } = await admin.from('profiles').select('crew_stores_level').eq('id', userId).single()
+      cap = storesCapHours((prof as any)?.crew_stores_level ?? 1)
+    }
     if (!stintDone((onBunk as any).since, Date.now(), cap)) {
       return { error: 'This crew is training in the hall. Their stint has to finish first.' }
     }

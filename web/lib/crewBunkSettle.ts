@@ -14,7 +14,19 @@ import { bunkCount, bunkRatePerHour, hallBunksOpen, canBunk, stintDone, stintXP,
 
 type Admin = ReturnType<typeof createAdminClient>
 
-export type BunkRow = { id: number; crew_id: number; since: string }
+/**
+ * A bunk carries the TERMS it was struck on: the XP/hour and the stint length
+ * agreed when the hand went in. Later Drills or Stores upgrades do not touch a
+ * running bunk. `rate`/`cap` are null only on rows that predate the columns,
+ * which fall back to the live values.
+ */
+export type BunkRow = {
+  id: number
+  crew_id: number
+  since: string
+  rate: number | null
+  cap: number | null
+}
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -45,8 +57,18 @@ export async function bunkContext(admin: Admin, userId: string) {
 /** Every bunk this player holds. */
 export async function loadBunks(admin: Admin, userId: string): Promise<BunkRow[]> {
   const { data } = await admin
-    .from('crew_hall_bunks').select('id, crew_id, since').eq('user_id', userId)
-  return ((data ?? []) as any[]).map(r => ({ id: r.id, crew_id: r.crew_id, since: r.since }))
+    .from('crew_hall_bunks').select('id, crew_id, since, rate_per_hour, cap_hours').eq('user_id', userId)
+  return ((data ?? []) as any[]).map(r => ({
+    id: r.id, crew_id: r.crew_id, since: r.since,
+    rate: r.rate_per_hour ?? null, cap: r.cap_hours ?? null,
+  }))
+}
+
+/** The terms this bunk actually runs on: what was agreed, or the live values
+ *  for a row that predates the columns. One helper so display, locking and
+ *  payout can never disagree about a given bunk. */
+export function bunkTerms(row: BunkRow, liveRate: number, liveCap: number) {
+  return { rate: row.rate ?? liveRate, cap: row.cap ?? liveCap }
 }
 
 /**
@@ -75,7 +97,11 @@ export async function settleBunks(
   if (rows.length === 0) return []
   const nowMs = Date.now()
 
-  const done = rows.filter(r => stintDone(r.since, nowMs, capHours))
+  // Each row on its own terms, not the hall's current ones.
+  const done = rows.filter(r => {
+    const t = bunkTerms(r, rate, capHours)
+    return stintDone(r.since, nowMs, t.cap)
+  })
   if (done.length === 0) return []
 
   // A hand who hit the level ceiling mid-stint still gets their bunk back; they
@@ -97,7 +123,10 @@ export async function settleBunks(
   const pairs = won
     .filter((r): r is BunkRow => r !== null)
     .filter(r => canBunk(xpById.get(r.crew_id) ?? 0))
-    .map(r => ({ id: r.crew_id, xp: stintXP(rate, capHours) }))
+    .map(r => {
+      const t = bunkTerms(r, rate, capHours)
+      return { id: r.crew_id, xp: stintXP(t.rate, t.cap) }
+    })
   return grantXPPairs(admin, userId, pairs)
 }
 
@@ -117,8 +146,10 @@ export async function releaseBunk(admin: Admin, userId: string, crewId: number):
 
 /** Crew ids whose stint is STILL RUNNING. Hard-locked: no reassigning, no
  *  dismissing, no pulling them out early. */
-export async function lockedBunkCrewIds(admin: Admin, userId: string, capHours: number): Promise<number[]> {
+export async function lockedBunkCrewIds(admin: Admin, userId: string, liveCap: number): Promise<number[]> {
   const nowMs = Date.now()
   const rows = await loadBunks(admin, userId)
-  return rows.filter(r => !stintDone(r.since, nowMs, capHours)).map(r => r.crew_id)
+  return rows
+    .filter(r => !stintDone(r.since, nowMs, r.cap ?? liveCap))
+    .map(r => r.crew_id)
 }
