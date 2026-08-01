@@ -66,13 +66,17 @@ const MAX_SEATS = 6
 const OPEN_SEAT = '#c3b291'
 
 export default function AssignBoard({
-  roster, shipCrewSlots, lockedCrewIds, trawlingCrewIds, artSrc,
+  roster, shipCrewSlots, lockedCrewIds, trawlingCrewIds, bunkedCrewIds = [], artSrc,
   onPickSeat, onTapCrew, raidAccent, voyageAccent,
 }: {
   roster: CrewMember[]
   shipCrewSlots: number
   lockedCrewIds: number[]
   trawlingCrewIds: number[]
+  /** Holding a Crew Hall bunk. A seat and a bunk CAN overlap: a finished stint
+   *  no longer blocks reassignment, so a hand can be seated while still owed
+   *  their training. The seat has to say so or the hall looks like it lost them. */
+  bunkedCrewIds?: number[]
   artSrc: (filename: string) => string
   /** Open the picker for ONE specific seat. Used by empty seats and by the
    *  swap pip on a filled one - assigning to an occupied slot already benches
@@ -85,6 +89,7 @@ export default function AssignBoard({
 }) {
   const atSea = new Set(lockedCrewIds)
   const trawling = new Set(trawlingCrewIds)
+  const training = new Set(bunkedCrewIds)
 
   // Every surface in here used to share ONE navy ramp (13,18,27 / 22,29,40 /
   // 20,26,36 / ...), so the red track was a red BORDER around a blue panel and
@@ -203,7 +208,12 @@ export default function AssignBoard({
                 const crew = seated.get(i)
                 const locked = i >= shipCrewSlots
                 const captain = i === 0
-                const held = crew ? (atSea.has(crew.id) ? 'At sea' : trawling.has(crew.id) ? 'Trawling' : null) : null
+                const held = crew
+                  ? atSea.has(crew.id) ? 'At sea'
+                  : trawling.has(crew.id) ? 'Trawling'
+                  : training.has(crew.id) ? 'Training'
+                  : null
+                  : null
 
                 if (locked) {
                   return (

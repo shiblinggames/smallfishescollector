@@ -209,6 +209,9 @@ interface Props {
   roster: RosterCrew[]
   /** Crew ids currently out on a trawl — hidden from the crew picker. */
   trawlingCrewIds?: number[]
+  /** Crew mid-stint in a Crew Hall bunk. Committed for the whole stint, so they
+   *  are kept out of the picker exactly like a crew already at sea. */
+  bunkLockedCrewIds?: number[]
   /** Hands who have finished a stint in the hall and are waiting to be
    *  collected. Badges the Crew column so it is visible from the hub. */
   readyBunks?: number
@@ -355,6 +358,7 @@ export default function ShipHero({
   equippedShipSkin: initialEquippedSkin, shipSkins: ownedSkins,
   roster,
   trawlingCrewIds = [],
+  bunkLockedCrewIds = [],
   readyBunks = 0,
   ownedRaidItems, equippedRaidItems: initialEquippedRaidItems, borrowedJawXp = 0,
   equippedRepairKit: initialEquippedRepairKit,
@@ -1107,8 +1111,11 @@ export default function ShipHero({
     // Cards already aboard in OTHER slots — block picking a second of the same.
     const otherCardIds = new Set(slots.filter((c, idx) => c && idx !== pickerSlot).map(c => c!.cardId))
     // Crew out on a trawl are reserved at sea — keep them out of the picker.
+    // Same for a hand mid-stint in a hall bunk: the server refuses the seat
+    // (assertCanReassign), so offering them was offering a guaranteed error.
     const trawlingSet = new Set(trawlingCrewIds)
-    const list = roster.filter(c => (!assignedIds.has(c.id) || c.id === inThisSlot) && !otherCardIds.has(c.cardId) && !trawlingSet.has(c.id))
+    const bunkedSet = new Set(bunkLockedCrewIds)
+    const list = roster.filter(c => (!assignedIds.has(c.id) || c.id === inThisSlot) && !otherCardIds.has(c.cardId) && !trawlingSet.has(c.id) && !bunkedSet.has(c.id))
     const score = (c: RosterCrew) => {
       const e = effStats(c)
       return sortBy ? e[sortBy] : e.power + e.dodge + e.fortune

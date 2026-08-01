@@ -6,17 +6,18 @@ import { settleUltimateBuild } from '@/lib/ultimateBuild'
 import { CREW_SKINS } from '@/lib/crewSkins'
 import { parseAbyssalConversion } from '@/lib/abyssalAccelerator'
 import ShipHero from './ShipHero'
-import { cachedCrewRoster, cachedTrawlingCrewIds, cachedReadyBunkCount, cachedChapter3Cleared, cachedBlockadeCleared, cachedThroneCleared } from './hubData'
+import { cachedCrewRoster, cachedTrawlingCrewIds, cachedReadyBunkCount, cachedBunkLockedCrewIds, cachedChapter3Cleared, cachedBlockadeCleared, cachedThroneCleared } from './hubData'
 
 /** The ship screen. Rendered as a SECTION of the expeditions hub, and as the
  *  whole page on /expeditions/ship, /items and /forge, which pass a focus so
  *  ShipHero drops the hub and shows only that one screen. One fetch either
  *  way, so a route and the hub can never drift apart. */
 export default async function ShipHeroSection({ focus }: { focus?: 'ship' | 'items' | 'forge' }) {
-  const [profile, roster, trawlingCrewIds, readyBunks, chapter3Cleared, blockadeCleared, throneCleared] = await Promise.all([
+  const [profile, roster, trawlingCrewIds, bunkLockedCrewIds, readyBunks, chapter3Cleared, blockadeCleared, throneCleared] = await Promise.all([
     getCurrentProfile(),
     cachedCrewRoster(),
     cachedTrawlingCrewIds(),
+    cachedBunkLockedCrewIds(),
     cachedReadyBunkCount(),
     cachedChapter3Cleared(),
     cachedBlockadeCleared(),
@@ -44,6 +45,7 @@ export default async function ShipHeroSection({ focus }: { focus?: 'ship' | 'ite
       shipSkins={(profile?.ship_skins as string[] | null) ?? []}
       roster={roster}
       trawlingCrewIds={trawlingCrewIds}
+      bunkLockedCrewIds={bunkLockedCrewIds}
       readyBunks={readyBunks}
       ownedRaidItems={(profile?.raid_items as string[] | null) ?? []}
       borrowedJawXp={Number(profile?.borrowed_jaw_xp ?? 0)}

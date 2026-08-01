@@ -142,13 +142,31 @@ export default function HallBunks({
     () => state.roster.filter(c => offers[c.id]),
     [state.roster, offers])
 
-  const eligible = useMemo(() => state.roster.filter(c =>
-    c.voyageSlot === null && c.raidSlot === null
-    && !state.bunkedCrewIds.includes(c.id)
-    && !state.trawlingCrewIds.includes(c.id)
-    && !state.lockedCrewIds.includes(c.id)
-    && canBunk(c.xp),
-  ), [state.roster, state.bunkedCrewIds, state.trawlingCrewIds, state.lockedCrewIds])
+  // ONE source for who can go in and why not. The picker draws both lists off
+  // this, so the Available tab and a blocked hand's label can never disagree
+  // about the same crew.
+  const blockers = useMemo(() => {
+    const out: Record<number, string> = {}
+    const trawling = new Set(state.trawlingCrewIds)
+    const atSea = new Set(state.lockedCrewIds)
+    const bunked = new Set(state.bunkedCrewIds)
+    for (const c of state.roster) {
+      const why =
+        bunked.has(c.id) ? 'In a bunk'
+        : atSea.has(c.id) ? 'At sea'
+        : trawling.has(c.id) ? 'On a trawl'
+        : c.raidSlot !== null ? 'Raid party'
+        : c.voyageSlot !== null ? 'Voyage party'
+        : !canBunk(c.xp) ? 'Fully trained'
+        : null
+      if (why) out[c.id] = why
+    }
+    return out
+  }, [state.roster, state.bunkedCrewIds, state.trawlingCrewIds, state.lockedCrewIds])
+
+  const eligible = useMemo(
+    () => state.roster.filter(c => !blockers[c.id]),
+    [state.roster, blockers])
 
   return (
     <div style={{ marginTop: '0.85rem', paddingTop: '0.75rem', borderTop: `1px solid ${accent}2e` }}>
@@ -385,7 +403,8 @@ export default function HallBunks({
 
       {picking !== null && typeof document !== 'undefined' && createPortal(
         <BunkPicker
-          eligible={eligible} artSrc={artSrc} accent={accent} pending={pending}
+          eligible={eligible} roster={state.roster} blockers={blockers}
+          artSrc={artSrc} accent={accent} pending={pending}
           stint={fmtStint(cap)} payout={payout}
           leviathan={isLeviathanSlot(picking)}
           onPick={id => { onBunk(id, picking); setPicking(null) }}
@@ -545,9 +564,13 @@ function MaxedCard({ art, label, sub, accent, popping }: { art: string; label: s
 
 /** One sheet for both jobs: fill an empty bunk, or swap/remove the occupant. */
 function BunkPicker({
-  eligible, artSrc, accent: hallAccent, pending, stint, payout, leviathan, onPick, onClose,
+  eligible, roster, blockers, artSrc, accent: hallAccent, pending, stint, payout, leviathan, onPick, onClose,
 }: {
   eligible: CrewMember[]
+  /** Everyone alive, for the All tab. */
+  roster: CrewMember[]
+  /** crew id -> why they cannot be bunked, absent when they can. */
+  blockers: Record<number, string>
   artSrc: (f: string) => string
   accent: string
   pending: boolean
@@ -561,6 +584,13 @@ function BunkPicker({
   // The sheet takes the bunk's colour, so you can tell which one you are
   // filling from the sheet alone without reading back to the grid.
   const accent = leviathan ? LEVIATHAN : hallAccent
+  // Available by default, because that is the list you almost always want.
+  // All exists so the sheet can answer "where IS everyone" without sending you
+  // to another tab to find out: an empty picker used to look like a bug rather
+  // than like a roster that is busy.
+  const [who, setWho] = useState<'available' | 'all'>('available')
+  const shown = who === 'available' ? eligible : roster
+  const blockedCount = roster.length - eligible.length
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 100000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(2,6,12,0.72)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}>
       <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 480, maxHeight: '84vh', display: 'flex', flexDirection: 'column', background: 'rgba(14,11,7,0.99)', borderTop: `2px solid ${accent}`, borderRadius: '18px 18px 0 0', boxShadow: '0 -12px 44px rgba(0,0,0,0.6)' }}>
@@ -584,6 +614,35 @@ function BunkPicker({
           <span style={{ color: accent }}>{payout.toLocaleString()} XP</span>. They cannot raid, sail,
           trawl or be dismissed until the stint ends.
         </p>
+
+        {/* Available / All. Only worth drawing when somebody is actually
+            blocked, otherwise the two tabs show the same list. */}
+        {blockedCount > 0 && (
+          <div style={{ display: 'flex', gap: 6, padding: '0 1rem 0.7rem' }}>
+            {([['available', `Available (${eligible.length})`], ['all', `All (${roster.length})`]] as const).map(([k, label]) => (
+              <button key={k} type="button" onClick={() => setWho(k)}
+                aria-pressed={who === k}
+                className="font-karla font-700 uppercase tracking-[0.08em]"
+                style={{
+                  flex: 1, padding: '0.42rem 0.5rem', borderRadius: 9, fontSize: '0.63rem', font: 'inherit',
+                  background: who === k ? `${accent}22` : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${who === k ? `${accent}88` : 'rgba(255,255,255,0.12)'}`,
+                  color: who === k ? '#f0ede8' : 'rgba(255,255,255,0.5)',
+                  cursor: 'pointer', touchAction: 'manipulation',
+                }}>
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Says the ONE thing the All tab exists to explain: those greyed hands
+            are not broken, they are busy, and you free them somewhere else. */}
+        {who === 'all' && blockedCount > 0 && (
+          <p className="font-karla" style={{ padding: '0 1rem 0.8rem', fontSize: '0.74rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.45 }}>
+            Greyed hands are already busy. Take them out of their raid party, voyage party or trawl first and they can take a bunk.
+          </p>
+        )}
 
         {/* The whole reason to pick this bunk over the other five, and the
             goal at the end of it. Two short sentences carry the rules and the
@@ -617,35 +676,53 @@ function BunkPicker({
         )}
 
         <div className="scrollbar-hide" style={{ flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain', padding: '0 1rem 1.4rem' }}>
-          {eligible.length === 0 ? (
+          {shown.length === 0 ? (
             <p className="font-karla text-center" style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.55, padding: '1.6rem 0.5rem' }}>
-              Every hand you have is either sailing, trawling, already in a bunk, or fully trained. Only benched crew can train.
+              {who === 'available' && roster.length > 0
+                ? 'Every hand you have is busy or fully trained. Switch to All to see where they are.'
+                : 'No crew yet. Recruit some hands and they can train here.'}
             </p>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
-              {eligible.map(m => (
-                <button key={m.id} type="button" disabled={pending} onClick={() => onPick(m.id)}
-                  aria-label={leviathan ? `Send ${m.name} to the Leviathan bunk` : `Put ${m.name} in a bunk`}
-                  style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-                    padding: '0.5rem 0.35rem', borderRadius: 12, textAlign: 'center',
-                    background: 'rgba(24,20,14,0.96)', border: `1px solid ${accent}44`,
-                    cursor: pending ? 'not-allowed' : 'pointer', font: 'inherit',
-                    opacity: pending ? 0.55 : 1, touchAction: 'manipulation',
-                  }}>
-                  <div style={{ width: '100%', height: 52, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={artSrc(m.filename)} alt="" aria-hidden loading="lazy" decoding="async"
-                      style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-                  </div>
-                  <span className="font-karla font-700" style={{ display: 'block', width: '100%', fontSize: '0.78rem', lineHeight: 1.15, color: '#eee8de', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {m.name}
-                  </span>
-                  <span className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#b8b1a8', fontVariantNumeric: 'tabular-nums' }}>
-                    Lv {crewLevelFromXP(m.xp)}
-                  </span>
-                </button>
-              ))}
+              {shown.map(m => {
+                const blocked = blockers[m.id]
+                return (
+                  <button key={m.id} type="button" disabled={pending || !!blocked}
+                    onClick={() => { if (!blocked) onPick(m.id) }}
+                    title={blocked ?? undefined}
+                    aria-label={blocked
+                      ? `${m.name} cannot take a bunk: ${blocked}`
+                      : leviathan ? `Send ${m.name} to the Leviathan bunk` : `Put ${m.name} in a bunk`}
+                    style={{
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                      padding: '0.5rem 0.35rem', borderRadius: 12, textAlign: 'center',
+                      background: 'rgba(24,20,14,0.96)',
+                      border: `1px solid ${blocked ? 'rgba(255,255,255,0.1)' : `${accent}44`}`,
+                      cursor: pending || blocked ? 'not-allowed' : 'pointer', font: 'inherit',
+                      opacity: blocked ? 0.45 : pending ? 0.55 : 1, touchAction: 'manipulation',
+                    }}>
+                    <div style={{ width: '100%', height: 52, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={artSrc(m.filename)} alt="" aria-hidden loading="lazy" decoding="async"
+                        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', filter: blocked ? 'grayscale(0.8)' : undefined }} />
+                    </div>
+                    <span className="font-karla font-700" style={{ display: 'block', width: '100%', fontSize: '0.78rem', lineHeight: 1.15, color: '#eee8de', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {m.name}
+                    </span>
+                    {/* The reason REPLACES the level on a blocked hand. Their
+                        level is not the useful fact when they cannot go in. */}
+                    {blocked ? (
+                      <span className="font-karla font-700 uppercase tracking-[0.05em]" style={{ display: 'block', width: '100%', fontSize: '0.55rem', color: 'rgba(255,255,255,0.5)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {blocked}
+                      </span>
+                    ) : (
+                      <span className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#b8b1a8', fontVariantNumeric: 'tabular-nums' }}>
+                        Lv {crewLevelFromXP(m.xp)}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
             </div>
           )}
         </div>

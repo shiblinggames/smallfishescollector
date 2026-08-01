@@ -1513,6 +1513,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             shipCrewSlots={state.shipCrewSlots}
             lockedCrewIds={state.lockedCrewIds}
             trawlingCrewIds={state.trawlingCrewIds}
+            bunkedCrewIds={state.bunkedCrewIds}
             artSrc={artSrc}
             onPickSeat={(track, slot) => setAssignSeat({ track, slot })}
             onTapCrew={m => setDetail({ kind: 'roster', item: m })}
@@ -3270,13 +3271,19 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   const seat = track === 'raid' ? m.raidSlot : m.voyageSlot
                   const party = track === 'raid' ? 'Raid Party' : 'Voyage Party'
                   const accent = track === 'voyage' ? ASSIGN_VOYAGE : ASSIGN_RAID
-                  // At sea or trawling: the server rejects all of these
-                  // (assertCanReassign), so offer none of them.
-                  const isLockedM = state.lockedCrewIds.includes(m.id) || state.trawlingCrewIds.includes(m.id)
+                  // At sea, trawling, or mid-stint in a bunk: assertCanReassign
+                  // refuses every one of these, so offer none of them. The bunk
+                  // case was missing, which meant swap / remove / dismiss were
+                  // all live buttons that came back with a server error.
+                  const isTrawlingM = state.trawlingCrewIds.includes(m.id)
+                  const isBunkedM = state.bunkLockedCrewIds.includes(m.id)
+                  const isLockedM = state.lockedCrewIds.includes(m.id) || isTrawlingM || isBunkedM
                   if (isLockedM) {
                     return (
                       <p className="font-karla font-600 italic" style={{ textAlign: 'center', fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)' }}>
-                        {state.trawlingCrewIds.includes(m.id) ? 'Out on a trawl.' : 'At sea.'} Bring them home before giving new orders.
+                        {isBunkedM
+                          ? 'Training in the hall. Their stint has to finish before they can take new orders.'
+                          : `${isTrawlingM ? 'Out on a trawl.' : 'At sea.'} Bring them home before giving new orders.`}
                       </p>
                     )
                   }

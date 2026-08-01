@@ -20,6 +20,8 @@ import {
   type TrawlZoneKey, type TrawlState, type TrawlCrewView, type ActiveTrawlView, type CollectTrawlResult,
 } from './constants'
 import { mawCharge } from '@/lib/finnItems'
+import { lockedBunkCrewIds } from '@/lib/crewBunkSettle'
+import { storesCapHours } from '@/lib/crewBunks'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -58,7 +60,7 @@ const isZone = (z: string): z is TrawlZoneKey => z in TRAWL_ZONE_BY_KEY
 // Build the full client state from the player's profile + roster + active trawls.
 async function buildTrawlState(admin: Admin, userId: string): Promise<TrawlState> {
   const [{ data: profile }, { data: trawlRows }, { data: crewRows }, { data: pendingVoyage }, { data: ch3Row }] = await Promise.all([
-    admin.from('profiles').select('fishing_xp, expedition_xp, has_ancient_deep_access, equipped_raid_items, borrowed_jaw_xp, finn_spoil_free, finn_spoil_paid').eq('id', userId).single(),
+    admin.from('profiles').select('fishing_xp, expedition_xp, has_ancient_deep_access, equipped_raid_items, borrowed_jaw_xp, finn_spoil_free, finn_spoil_paid, crew_stores_level').eq('id', userId).single(),
     admin.from('trawls').select('zone, crew_id, ends_at').eq('user_id', userId),
     admin.from('user_crew').select(CREW_COLS).eq('user_id', userId).is('died_at', null),
     // Crew on a pending voyage are also unavailable — exclude from the picker.
@@ -94,8 +96,14 @@ async function buildTrawlState(admin: Admin, userId: string): Promise<TrawlState
     })
   }
 
+  // A hand mid-stint in a Crew Hall bunk is committed for the whole stint, the
+  // same as one already at sea. They were showing up here as free, and sending
+  // one left them holding a bunk AND a trawl at once.
+  const inBunk = new Set(await lockedBunkCrewIds(
+    admin, userId, storesCapHours((profile as { crew_stores_level?: number } | null)?.crew_stores_level ?? 1)))
+
   const freeCrew: TrawlCrewView[] = ((crewRows ?? []) as any[])
-    .filter(r => !atSea.has(r.id) && !onVoyage.has(r.id))
+    .filter(r => !atSea.has(r.id) && !onVoyage.has(r.id) && !inBunk.has(r.id))
     .map(r => crewView(r as CrewRow))
     .sort((a, b) => b.savvy + b.fortune - (a.savvy + a.fortune))
 
@@ -131,7 +139,7 @@ export async function deployTrawl(zone: string, crewId: number): Promise<TrawlSt
 
   const admin = createAdminClient()
   const [{ data: profile }, { data: trawlRows }, { data: crewRow }, { data: pendingVoyage }] = await Promise.all([
-    admin.from('profiles').select('fishing_xp, expedition_xp, has_ancient_deep_access').eq('id', user.id).single(),
+    admin.from('profiles').select('fishing_xp, expedition_xp, has_ancient_deep_access, crew_stores_level').eq('id', user.id).single(),
     admin.from('trawls').select('zone, crew_id').eq('user_id', user.id),
     admin.from('user_crew').select('id, died_at').eq('id', crewId).eq('user_id', user.id).maybeSingle(),
     admin.from('daily_voyages').select('id').eq('user_id', user.id).eq('status', 'pending').contains('crew_variant_ids', [crewId]).maybeSingle(),
@@ -155,6 +163,17 @@ export async function deployTrawl(zone: string, crewId: number): Promise<TrawlSt
   if (active.some(t => t.crew_id === crewId)) return { error: 'That crew is already at sea' }
   if (!crewRow || (crewRow as any).died_at) return { error: 'Crew not available' }
   if (pendingVoyage) return { error: 'That crew is away on a voyage' }
+
+  // BUNK LOCK. Without this a hand could be sent trawling straight out of a
+  // running stint: the bunk row survives (nothing here clears it), the update
+  // below frees their party slot, and they end up serving a trawl and a stint
+  // at the same time and collecting both. Mirrors assertCanReassign in
+  // crew/actions.ts, which refuses the same move on the party tracks.
+  const bunkLocked = await lockedBunkCrewIds(
+    admin, user.id, storesCapHours((profile as { crew_stores_level?: number } | null)?.crew_stores_level ?? 1))
+  if (bunkLocked.includes(crewId)) {
+    return { error: 'That crew is training in the hall. Their stint has to finish first.' }
+  }
 
   const { error } = await admin.from('trawls').insert({
     user_id: user.id, zone, crew_id: crewId,

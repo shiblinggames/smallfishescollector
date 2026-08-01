@@ -35,6 +35,24 @@ export const cachedTrawlingCrewIds = cache(async (): Promise<number[]> => {
  * was struck on. `cap_hours` is null only on rows predating the column, which
  * fall back to the live tier.
  */
+/** Crew whose bunk stint is STILL RUNNING. Hard-locked out of raid seats,
+ *  voyage seats and trawls, so the ship picker has to know about them or it
+ *  offers hands the server will refuse. */
+export const cachedBunkLockedCrewIds = cache(async (): Promise<number[]> => {
+  const user = await getCurrentUser()
+  if (!user) return []
+  const admin = createAdminClient()
+  const [{ data: rows }, { data: prof }] = await Promise.all([
+    admin.from('crew_hall_bunks').select('crew_id, since, cap_hours').eq('user_id', user.id),
+    admin.from('profiles').select('crew_stores_level').eq('id', user.id).single(),
+  ])
+  const liveCap = storesCapHours((prof as { crew_stores_level?: number } | null)?.crew_stores_level ?? 1)
+  const now = Date.now()
+  return ((rows ?? []) as { crew_id: number; since: string; cap_hours: number | null }[])
+    .filter(r => !stintDone(r.since, now, r.cap_hours ?? liveCap))
+    .map(r => r.crew_id)
+})
+
 export const cachedReadyBunkCount = cache(async (): Promise<number> => {
   const user = await getCurrentUser()
   if (!user) return 0
