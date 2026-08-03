@@ -930,6 +930,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       {termsOpen && (
         <GauntletTermsPanel
           signed={signedTerms}
+          variant={props.variant}
           onChange={setSignedTerms}
           onDone={() => setTermsOpen(false)}
         />

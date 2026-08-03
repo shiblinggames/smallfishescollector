@@ -17,9 +17,10 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, useMotionValue } from 'framer-motion'
 import { createPortal } from 'react-dom'
 import { vibrate } from '@/lib/haptics'
+import type { GauntletVariant } from '@/lib/gauntlet'
 import {
-  GAUNTLET_TERMS, TERM_GROUP_META, termPressure, pressureGemMult,
-  MAX_AVAILABLE_PRESSURE, PRESSURE_CAP, PRESSURE_DEPTH_FLOOR, PRESSURE_DEPTH_FULL,
+  termPressure, pressureGemMult,
+  maxAvailablePressure, termsFor, termGroupMeta, PRESSURE_CAP, PRESSURE_DEPTH_FLOOR, PRESSURE_DEPTH_FULL,
   PRESSURE_SKIN_THRESHOLD, PRESSURE_SKIN_DEPTH, type SignedTerms, type TermGroup,
 } from '@/lib/gauntletTerms'
 
@@ -29,9 +30,12 @@ const DANGER = '#e0555a'
 const ROMAN = ['', 'I', 'II', 'III']
 
 export default function GauntletTermsPanel({
-  signed, onChange, onDone,
+  signed, onChange, onDone, variant = 'davy',
 }: {
   signed: SignedTerms
+  /** Which descent's board this is. Don's carries five terms Davy's does not,
+   *  built on the Ch3/Ch4 kit only his pool fights with. */
+  variant?: GauntletVariant
   onChange: (next: SignedTerms) => void
   /** Close the board and hand control back to the dive modal, which is where the
    *  signing is confirmed and the descent actually happens. */
@@ -76,10 +80,13 @@ export default function GauntletTermsPanel({
 
   // Max Pressure — sign EVERY term at its top tier in one tap. The heavy end of
   // the board (glory / a Pitch Black Hull roll) without scrolling the whole thing.
-  const atMax = useMemo(() => GAUNTLET_TERMS.every(t => (signed[t.id] ?? 0) >= t.tiers.length), [signed])
+  const BOARD = useMemo(() => termsFor(variant), [variant])
+  const GROUPS = useMemo(() => termGroupMeta(variant), [variant])
+  const MAX_PRESSURE = useMemo(() => maxAvailablePressure(variant), [variant])
+  const atMax = useMemo(() => BOARD.every(t => (signed[t.id] ?? 0) >= t.tiers.length), [signed, BOARD])
   function maxAll() {
     const next: SignedTerms = {}
-    for (const t of GAUNTLET_TERMS) next[t.id] = t.tiers.length
+    for (const t of BOARD) next[t.id] = t.tiers.length
     vibrate([0, 22, 26, 48])
     onChange(next)
   }
@@ -162,7 +169,7 @@ export default function GauntletTermsPanel({
         {/* Pressure track: how far along the whole board you are. */}
         <div style={{ marginTop: 10, height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
           <motion.div
-            animate={{ width: `${Math.min(100, (pressure / MAX_AVAILABLE_PRESSURE) * 100)}%` }}
+            animate={{ width: `${Math.min(100, (pressure / MAX_PRESSURE) * 100)}%` }}
             transition={{ type: 'spring', stiffness: 260, damping: 30 }}
             style={{ height: '100%', borderRadius: 999, background: `linear-gradient(90deg, ${DANGER}, ${GOLD})`, boxShadow: `0 0 8px ${DANGER}88` }}
           />
@@ -218,8 +225,8 @@ export default function GauntletTermsPanel({
         </motion.div>
 
         {groups.map(g => {
-          const meta = TERM_GROUP_META[g]
-          const terms = GAUNTLET_TERMS.filter(t => t.group === g)
+          const meta = GROUPS[g]
+          const terms = BOARD.filter(t => t.group === g)
           return (
             <div key={g} style={{ marginBottom: '1.5rem' }}>
               <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: meta.accent, letterSpacing: '0.03em' }}>{meta.label}</p>

@@ -25,6 +25,7 @@
 // rewarding in the first place.
 
 import type { TideEffect } from './tides'
+import { inGauntletPool, type GauntletTag, type GauntletVariant } from './gauntlet'
 
 export interface GauntletTermTier {
   /** One-line, plain: what changes. Reads on the card. */
@@ -47,10 +48,41 @@ export type TermGroup = 'opposition' | 'gunnery' | 'crew' | 'build' | 'safety'
 export interface GauntletTerm {
   id: string
   name: string
-  /** Davy's voice — one line, on the card. */
+  /** The host's voice — one line, on the card. */
   flavor: string
   group: TermGroup
+  /** Which descent offers this term. Omitted = BOTH, which is the honest default:
+   *  almost every term is structural (elite rates, boon drafts, curse cadence,
+   *  safety nets) and cares nothing about who is sending the ships up.
+   *
+   *  Tag it only when a term needs a mechanic one pool has and the other does
+   *  not. Don's runs Ch3/Ch4 enemies, so barriers, ultimates, aim attacks and
+   *  Contracts are his; a term built on those has nothing to bite on in Davy's.
+   *
+   *  Same shape and the same helper as the confluence pools, deliberately. */
+  gauntlet?: GauntletTag
   tiers: GauntletTermTier[]
+}
+
+/** The terms a given descent offers. Everything downstream (pressure totals, the
+ *  board, the signed list) reads this rather than GAUNTLET_TERMS, so a term
+ *  tagged to one gauntlet can never be signed in, priced into, or displayed by
+ *  the other. */
+export function termsFor(variant: GauntletVariant): GauntletTerm[] {
+  return GAUNTLET_TERMS.filter(t => inGauntletPool(t.gauntlet, variant))
+}
+
+/** The group blurbs NAME the host, so they cannot be one fixed string. Davy
+ *  sends ships up out of the deep; the Don sends his Family. Same five groups,
+ *  same accents, different mouth. */
+export function termGroupMeta(variant: GauntletVariant): Record<TermGroup, { label: string; blurb: string; accent: string }> {
+  if (variant !== 'don') return TERM_GROUP_META
+  return {
+    ...TERM_GROUP_META,
+    opposition: { ...TERM_GROUP_META.opposition, label: 'The Family', blurb: 'Who the Don sits across from you.' },
+    crew:       { ...TERM_GROUP_META.crew,       blurb: 'The hands that answer his people.' },
+    build:      { ...TERM_GROUP_META.build,      blurb: 'What the descent offers you on the way down.' },
+  }
 }
 
 export const TERM_GROUP_META: Record<TermGroup, { label: string; blurb: string; accent: string }> = {
@@ -61,7 +93,107 @@ export const TERM_GROUP_META: Record<TermGroup, { label: string; blurb: string; 
   safety:     { label: 'Your Safety Net', blurb: 'Everything that would have caught you.', accent: '#5eead4' },
 }
 
+// ── DON'S OWN TERMS ─────────────────────────────────────────────────────────
+// Everything else on this board is structural and works in either descent, which
+// is why it carries over untagged. These five are built on the Ch3/Ch4 kit that
+// only Don's pool fights with: barriers, ultimates, statuses landed on YOU, the
+// aim attacks, and his Contracts. Signed in Davy's they would have nothing to
+// bite on, so they are tagged to him.
+const DONS_TERMS: GauntletTerm[] = [
+  {
+    id: 'smoke_and_mirrors',
+    name: 'Smoke and Mirrors',
+    flavor: 'You will not be shown the shot. Take it anyway.',
+    group: 'gunnery',
+    gauntlet: 'don',
+    tiers: [
+      {
+        desc: 'Every fight is fought through aim fog',
+        detail: 'The Mist Veil hangs over EVERY fight, not just the enemies that bring it. Your aim bar is fogged the whole descent, so the gold band is harder to read and harder to hit. Nothing about the enemy changes, only what you can see of your own shot.',
+        pressure: 4,
+      },
+      {
+        desc: 'The fog is heavier, and it never lifts',
+        detail: 'As above, but thicker. On a run this long you will be shooting on rhythm and memory rather than sight for most of it.',
+        pressure: 7,
+      },
+    ],
+  },
+  {
+    id: 'made_men',
+    name: 'Made Men',
+    flavor: 'Every one of them is somebody. Go through, or go around.',
+    group: 'opposition',
+    gauntlet: 'don',
+    tiers: [
+      {
+        desc: 'Every elite arrives behind a barrier',
+        detail: 'Each elite opens the fight with a shield pool that soaks damage before its hull takes any. You have to break the wall before a single shot counts, which changes what you open with and makes Corrode worth carrying.',
+        pressure: 3,
+      },
+      {
+        desc: 'Bosses are walled too, and the walls are thicker',
+        detail: 'The barrier lands on bosses as well, and every barrier is bigger. A slow chip build will not get through one before it is back up.',
+        pressure: 6,
+      },
+    ],
+  },
+  {
+    id: 'the_long_count',
+    name: 'The Long Count',
+    flavor: 'He has been adding it up since you sat down.',
+    group: 'opposition',
+    gauntlet: 'don',
+    tiers: [
+      {
+        desc: 'Enemy ultimates charge faster',
+        detail: "The Don's people load toward their ultimate quicker, so the big authored blow lands sooner and more often. Burning their charges down with a crit strip stops being a luxury.",
+        pressure: 3,
+      },
+      {
+        desc: 'They open part-loaded as well',
+        detail: 'As above, and they start each fight with cannonballs already in the rack. The first ultimate can land before you have found your rhythm.',
+        pressure: 5,
+      },
+    ],
+  },
+  {
+    id: 'bad_blood',
+    name: 'Bad Blood',
+    flavor: 'It gets in the water and it stays there.',
+    group: 'safety',
+    gauntlet: 'don',
+    tiers: [
+      {
+        desc: 'Statuses landed on you last twice as long',
+        detail: "Burn, freeze, weaken and everything else the Don's crews put on you runs for double its normal duration. His is the pool that fights with afflictions, so this is the term that makes them bite.",
+        pressure: 3,
+      },
+      {
+        desc: 'And nothing you have will wash them off',
+        detail: 'As above, and no cleanse works for the whole run. Whatever lands on you stays until it times out on its own.',
+        pressure: 6,
+      },
+    ],
+  },
+  {
+    id: 'every_job',
+    name: 'Every Job',
+    flavor: 'You do not get to pick which ones you take.',
+    group: 'build',
+    gauntlet: 'don',
+    tiers: [
+      {
+        desc: 'You cannot turn down a Contract',
+        detail: 'Every Contract the Don offers is accepted for you, penalty and all. You are still paid for the ones you finish, but a job you would have walked away from is now yours. The only term on the board that is a wager stacked on a wager.',
+        pressure: 4,
+      },
+    ],
+  },
+]
+
 export const GAUNTLET_TERMS: GauntletTerm[] = [
+  ...DONS_TERMS,
   // ── The opposition ────────────────────────────────────────────────────────
   {
     id: 'press_ganged', name: 'Press-Ganged', group: 'opposition',
@@ -307,7 +439,15 @@ export function termPressure(signed: SignedTerms | null | undefined): number {
 }
 
 /** Every point of Pressure available if you signed the whole board at max tier.
- *  Used by the UI to show how far along the board you are. */
+ *  Used by the UI to show how far along the board you are.
+ *
+ *  Per-variant, because the boards are no longer the same size: the progress bar
+ *  has to fill against the board you are actually looking at, or Don's would sit
+ *  permanently short of full for having more terms on it. */
+export function maxAvailablePressure(variant: GauntletVariant): number {
+  return termsFor(variant).reduce((a, t) => a + (t.tiers[t.tiers.length - 1]?.pressure ?? 0), 0)
+}
+/** The shared board's total. Kept for callers that predate the split. */
 export const MAX_AVAILABLE_PRESSURE = GAUNTLET_TERMS
   .reduce((a, t) => a + (t.tiers[t.tiers.length - 1]?.pressure ?? 0), 0)
 
@@ -411,9 +551,32 @@ export interface TermEffects {
    *  reprieve patch-up) sit outside that pipeline, so they read this. Keep the
    *  two in step: both are driven by the one term. */
   healMult: number
+  // ── Don's-only levers. Inert at their defaults, so a Davy run, which can
+  //    never sign the terms that set them, behaves exactly as it always has. ──
+  /** Smoke and Mirrors: aim fog on every fight (0 = none). */
+  aimFogAlways: number
+  /** Made Men: barrier as a fraction of max HP on every elite, and on bosses at t2. */
+  eliteBarrierPct: number
+  bossBarrier: boolean
+  /** The Long Count: multiplies enemy ultimate charge gain, and opens them part-loaded. */
+  enemyUltChargeMult: number
+  enemyStartCharges: number
+  /** Bad Blood: multiplies the duration of statuses landed on YOU, and kills cleanses. */
+  playerStatusDurationMult: number
+  noCleanse: boolean
+  /** Every Job: Contracts are accepted for you. */
+  forceContracts: boolean
 }
 
 export const NO_TERM_EFFECTS: TermEffects = {
+  aimFogAlways: 0,
+  eliteBarrierPct: 0,
+  bossBarrier: false,
+  enemyUltChargeMult: 1,
+  enemyStartCharges: 0,
+  playerStatusDurationMult: 1,
+  noCleanse: false,
+  forceContracts: false,
   eliteChanceMult: 1,
   affixPairFromStart: false,
   tripleAffixChance: 0,
@@ -532,6 +695,30 @@ export function resolveTerms(signed: SignedTerms | null | undefined): TermEffect
     const term = getTerm(id)
     return term ? Math.min(t, term.tiers.length) : 0
   }
+
+  // ── Don's own five ──────────────────────────────────────────────────────
+  const smoke = tierOf('smoke_and_mirrors')
+  if (smoke) e.aimFogAlways = smoke === 1 ? 0.45 : 0.7
+
+  const made = tierOf('made_men')
+  if (made) {
+    e.eliteBarrierPct = made === 1 ? 0.18 : 0.28
+    if (made >= 2) e.bossBarrier = true
+  }
+
+  const count = tierOf('the_long_count')
+  if (count) {
+    e.enemyUltChargeMult = count === 1 ? 1.5 : 1.8
+    if (count >= 2) e.enemyStartCharges = 1
+  }
+
+  const blood = tierOf('bad_blood')
+  if (blood) {
+    e.playerStatusDurationMult = 2
+    if (blood >= 2) e.noCleanse = true
+  }
+
+  if (tierOf('every_job')) e.forceContracts = true
 
   const press = tierOf('press_ganged')
   if (press) e.eliteChanceMult = press === 1 ? 1.8 : 2.6
