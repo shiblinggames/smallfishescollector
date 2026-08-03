@@ -6841,25 +6841,17 @@ export default function RaidCombat({
                 ))}
               </span>
             )}
-            {/* PLATE, AS A NUMBER. The barrier folds into the HP bar below as a
-                violet segment, but that strip is drawn in the bar's EMPTY hull
-                space — so while plate is soaking hits the hull never drops, the
-                empty space stays zero, and the segment renders at zero width.
-                The armour is invisible for exactly as long as it matters. Fine
-                when a barrier was a chip off a Ch4 mob; not fine on the
-                challenge finale, where Finn stands behind most of a second
-                health bar and the player needs to see why their shots are not
-                moving the hull. */}
-            {!enemyHpHidden && enemyShieldHp > 0 && (
-              <span className="font-karla font-700 uppercase" style={{
-                display: 'inline-flex', alignItems: 'center', gap: 4, marginBottom: 3,
-                padding: '1px 6px', borderRadius: 999, fontSize: '0.46rem', letterSpacing: '0.1em',
-                color: '#ddd0ff', background: 'rgba(192,132,252,0.16)', border: '1px solid rgba(192,132,252,0.5)',
-              }}>
-                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2.6l7.4 3v6.1c0 4.4-3 8.1-7.4 9.7-4.4-1.6-7.4-5.3-7.4-9.7V5.6z" /></svg>
-                Plate {enemyShieldHp}
-              </span>
-            )}
+            {/* The "Plate N" pill that used to sit here is gone. It existed
+                because the barrier only ever showed as a segment INSIDE the HP
+                bar, drawn in the bar's empty hull space: while plate was doing
+                its job the hull never dropped, so the empty space stayed zero
+                and the segment rendered at zero width. The armour was invisible
+                for exactly as long as it mattered.
+
+                Folding every shield into one pool fixed that properly. HPBar's
+                compact mode now draws a shield chip UNDER the bar carrying the
+                same number, on the same rules, and it does not care what the
+                hull is doing. Two marks for one number, three inches apart. */}
             {/* Enemy barrier (Warded affix / The Warding curse) folds into the
                 HP bar as a violet segment so it reads as the enemy's, not your
                 cyan shield. */}

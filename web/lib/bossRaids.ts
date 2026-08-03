@@ -615,6 +615,11 @@ export const RAID_LOCATION_BG: Record<string, string> = {
   the_blockade:       '/raid-blockade.jpg',           // Sal Brackwater — the brackish estuary
   the_throne:         '/raid-throne.jpg',             // Don Finleone — the Ancient Deep throne
   the_sunken_hand:    '/finn_bg1.jpg',                  // Finn — the ring of drowned giants at a wrong dawn
+  // The Ghost has no mob rounds at all, so his location scene and his boss
+  // scene are the same place. Listed in both maps anyway: RAID_BOSS_BG only
+  // applies on `isBoss`, and anything that frames the fight before that round
+  // resolves would otherwise drop through to the generic abyss photo.
+  the_quartermasters_ghost: '/raid-quartermasters-ghost-boss.jpg',
 }
 
 // The BOSS-fight variant of each location — the same place escalated for the
@@ -636,6 +641,11 @@ export const RAID_BOSS_BG: Record<string, string> = {
   // of the jaws: it measured luma 50 and rendered as a black smear. bg2 is 75
   // through the middle with hard structure, so it actually reads at card size.
   the_sunken_hand:    '/finn_bg2.jpg',
+  // The Quartermaster's own fortress-vault, drowned: the storm gone, the sea
+  // dead flat, and the gun ports burning cold violet instead of lamp-gold. It
+  // is deliberately the SAME building as raid-quartermaster-boss.jpg, because
+  // the whole of him is that he never left and never closed the counter.
+  the_quartermasters_ghost: '/raid-quartermasters-ghost-boss.jpg',
 }
 
 export const CORSAIRS_RECKONING: BossRaidConfig = {
