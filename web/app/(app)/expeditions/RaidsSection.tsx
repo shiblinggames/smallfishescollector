@@ -3045,7 +3045,10 @@ function BossesView({ views, raidRecords, ownedRaidItems, ownedShipSkins, totalF
   // Story-gated boss identities (Finn) read from this, so the tab cannot
   // unmask - or even list - someone the player has not met.
   const clearedNodeIds = useMemo(() => new Set(views.filter(v => v.status === 'cleared').map(v => v.node.id)), [views])
-  const bosses = views.filter(v => v.node.type === 'raid' && !v.node.sideBranch && bossListedInRoster(v.node, clearedNodeIds))
+  // Challenge variants stay out, because the boss's own card carries them behind
+  // its Normal/Challenge toggle. Every OTHER side branch is a fight in its own
+  // right with no second door, which today means the Quartermaster's Ghost.
+  const bosses = views.filter(v => v.node.type === 'raid' && !isChallengeVariant(v.node.id) && bossListedInRoster(v.node, clearedNodeIds))
   const byChapter = new Map<string, RaidNodeView[]>()
   const chapterOrder: string[] = []
   for (const v of bosses) {
@@ -3062,17 +3065,34 @@ function BossesView({ views, raidRecords, ownedRaidItems, ownedShipSkins, totalF
   return (
     <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 10 }}>
       {chapterOrder.map(cid => {
-        // A chapter with a single boss is the CODA: Finn, alone, at the end.
+        const all = byChapter.get(cid)!
+        // A chapter's MAIN pair keeps the two-up grid. A side branch is a mini
+        // boss: a one-bar detour off the chapter, not one of its pillars, so it
+        // drops to its own centred row at well under half the width. Sizing is
+        // the whole signal, which is why it needs no badge saying "optional".
+        const main = all.filter(v => !v.node.sideBranch)
+        const mini = all.filter(v => !!v.node.sideBranch)
+        // A chapter with a single MAIN boss is the CODA: Finn, alone, at the end.
         // Half a row makes the last fight in the game look like a side branch,
         // so he takes the row on his own and sits centred.
-        const solo = byChapter.get(cid)!.length === 1
+        const solo = main.length === 1
+        const tile = (v: RaidNodeView) => (
+          <BossTile key={v.node.id} view={v} isNext={v.node.id === nextUpId} challengeCleared={challengeOf(v)?.status === 'cleared'} clearedNodeIds={clearedNodeIds} onOpen={() => { vibrate([0, 12]); setModalBoss(v) }} />
+        )
         return (
-        <div key={cid} style={solo
-          ? { display: 'grid', gridTemplateColumns: 'minmax(0, 72%)', justifyContent: 'center', gap: 10 }
-          : { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          {byChapter.get(cid)!.map(v => (
-            <BossTile key={v.node.id} view={v} isNext={v.node.id === nextUpId} challengeCleared={challengeOf(v)?.status === 'cleared'} clearedNodeIds={clearedNodeIds} onOpen={() => { vibrate([0, 12]); setModalBoss(v) }} />
-          ))}
+        <div key={cid} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {main.length > 0 && (
+            <div style={solo
+              ? { display: 'grid', gridTemplateColumns: 'minmax(0, 72%)', justifyContent: 'center', gap: 10 }
+              : { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              {main.map(tile)}
+            </div>
+          )}
+          {mini.length > 0 && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(0, 38%))', justifyContent: 'center', gap: 10 }}>
+              {mini.map(tile)}
+            </div>
+          )}
         </div>
         )
       })}
@@ -3117,7 +3137,9 @@ function BossTile({ view, isNext, challengeCleared, clearedNodeIds, onOpen }: { 
   const accent = locked ? '#4f4a42' : isNext ? '#5eead4' : '#c4a96a'
   return (
     <button type="button" onClick={onOpen} className="tap"
-      style={{ position: 'relative', aspectRatio: '4 / 5', borderRadius: 16, overflow: 'hidden', cursor: 'pointer', padding: 0,
+      // 4:5 -> 4:4.4. A chapter can now stack a mini-boss row under its pair,
+      // so every card gives back a little height to pay for it.
+      style={{ position: 'relative', aspectRatio: '4 / 4.4', borderRadius: 16, overflow: 'hidden', cursor: 'pointer', padding: 0,
         border: `1px solid ${accent}${locked ? '3a' : '99'}`,
         background: cleared ? '#0c1119' : 'radial-gradient(circle at 50% 34%, #1a2636 0%, #0a0f16 72%)',
         boxShadow: isNext ? `0 0 0 1px ${accent}40, 0 0 22px ${accent}22` : '0 6px 18px rgba(0,0,0,0.42)' }}>
