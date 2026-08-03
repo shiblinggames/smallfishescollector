@@ -73,8 +73,7 @@ function fmtStintShort(h: number): string {
 }
 
 export default function HallBunks({
-  state, artSrc, accent, pending, pop, offers, onOpenOffer, onBunk, onCollectOne,
-  onBuyDrill, onBuyStores,
+  state, artSrc, accent, pending, pop, onBunk, onCollectOne, onBuyDrill, onBuyStores,
 }: {
   state: CrewState
   artSrc: (filename: string) => string
@@ -84,9 +83,6 @@ export default function HallBunks({
   /** Which tree just went up, so its art can pop IN PLACE rather than behind
    *  an overlay the hero's overflow:hidden would clip. */
   pop: 'drill' | 'stores' | null
-  /** crew id -> the trait the deep is offering them, still undecided. */
-  offers: Record<number, string>
-  onOpenOffer: (crewId: number) => void
   onBunk: (crewId: number, slot: number) => void
   /** Collect one hand's finished stint. The only way to collect: the reward
    *  belongs to a face, not to a header button. */
@@ -146,12 +142,6 @@ export default function HallBunks({
     return () => clearInterval(id)
   }, [anyRunning])
 
-  // Hands with an untaken offer. Ordered by roster position rather than by id
-  // so the row does not reshuffle as decisions are made.
-  const waitingOffers = useMemo(
-    () => state.roster.filter(c => offers[c.id]),
-    [state.roster, offers])
-
   // ONE source for who can go in and why not. The picker draws both lists off
   // this, so the Available tab and a blocked hand's label can never disagree
   // about the same crew.
@@ -201,40 +191,6 @@ export default function HallBunks({
         <SumOp>=</SumOp>
         <SumTerm value={`${payout.toLocaleString()} XP`} label="per stint" accent={accent} />
       </div>
-
-      {/* DECISIONS WAITING. An offer survives the reveal that produced it, so
-          a captain who closed the tab mid-choice finds it here rather than
-          losing the whole stint. Above the grid because it is the only thing
-          on this panel that is waiting on the player. */}
-      {waitingOffers.length > 0 && (
-        <div style={{
-          marginBottom: '0.6rem', padding: '0.6rem 0.65rem', borderRadius: 11,
-          background: `${LEVIATHAN}12`, border: `1px solid ${LEVIATHAN}55`,
-        }}>
-          <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.58rem', color: LEVIATHAN, marginBottom: 6 }}>
-            {waitingOffers.length === 1 ? 'A trait offer awaits your word' : `${waitingOffers.length} trait offers await your word`}
-          </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {waitingOffers.map(crew => (
-              <button key={crew.id} type="button" disabled={pending}
-                onClick={() => onOpenOffer(crew.id)}
-                aria-label={`Decide ${crew.name}'s offered trait`}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 6, padding: '0.3rem 0.6rem 0.3rem 0.3rem',
-                  borderRadius: 999, font: 'inherit', cursor: pending ? 'not-allowed' : 'pointer',
-                  background: 'rgba(0,0,0,0.32)', border: `1px solid ${LEVIATHAN}66`,
-                  touchAction: 'manipulation',
-                }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={artSrc(crew.filename)} alt="" aria-hidden loading="lazy" decoding="async"
-                  style={{ width: 24, height: 24, objectFit: 'contain' }} />
-                <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#eee8de' }}>{crew.name}</span>
-                <span className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.08em', color: LEVIATHAN }}>Decide</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* ALL SIX slots, always. A new captain sees the whole hall and what it
           will hold, with the ones past their tier locked rather than missing —

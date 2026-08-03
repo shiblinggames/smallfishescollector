@@ -16,34 +16,28 @@ import { netTraitStats, traitLabel } from './crewEffects'
 
 type Admin = ReturnType<typeof createAdminClient>
 
-/** The encoded 'no trait at all' offer. Stored rather than null so a pending
- *  offer is always one column read, never an absence that means two things. */
-export const NEUTRAL_TRAIT = 's:0,0,0'
-
 /**
- * A trait the deep is OFFERING a hand. Not applied: the player looks at it
- * beside what they have and decides.
+ * What the deep did to a hand's trait, per stat, APPLIED.
  *
- * That is the whole difference between a chase and a ratchet. The old
- * auto-keep-if-higher compared on a flat stat sum, which made "better" mean
- * the same thing for every crew in the game, so every hand converged on one
- * trait and nobody was optimising anything. A voyage hand wants Fortune, a
- * raider wants Power and Dodge, and only the player knows which this one is.
+ * It used to be an offer the player accepted stat by stat. That was one
+ * refactor too many: per-stat granularity was added so a Fortune-hungry voyage
+ * hand and a raider would not be judged by one global "better", and it worked
+ * so completely that it deleted the decision. Once stats are taken
+ * individually, every increase is strictly good for every crew — nothing in the
+ * game rewards a low stat — so the improving stats were always pre-ticked, the
+ * default was always optimal, and the buttons were ceremony.
  *
- * There is no "and here is what you would lose" clause, because `effects` now
- * holds nothing but 's:P,D,F'. The old ids that carried aura and raid
- * behaviour were migrated out (migrate-legacy-traits.mts), so the two stat
- * lines are the whole story and a warning would be warning about nothing.
+ * The result is `max(current, rolled)` per stat, which can only go up or stay
+ * put. The reveal reports it rather than asking about it.
  */
-export type TraitOffer = {
+export type TraitUpgrade = {
   crewId: number
-  /** The offered trait, encoded as it will be stored. */
-  traitId: string
-  offered: { power: number; dodge: number; fortune: number }
-  offeredLabel: string
-  /** What they carry now, for the side by side. */
-  current: { power: number; dodge: number; fortune: number }
-  currentLabel: string
+  before: { power: number; dodge: number; fortune: number }
+  after: { power: number; dodge: number; fortune: number }
+  beforeLabel: string
+  afterLabel: string
+  /** Which stats actually moved, for the reveal to highlight. */
+  gained: { power: boolean; dodge: boolean; fortune: boolean }
 }
 
 export type BunkRow = {
@@ -119,8 +113,8 @@ export function bunkTerms(row: BunkRow, liveRate: number, liveCap: number) {
  */
 export type BunkSettlement = {
   grants: CrewXPGrant[]
-  /** Traits the Leviathan bunk is offering after this collect. Not applied. */
-  offers: TraitOffer[]
+  /** Traits the Leviathan bunk improved on this collect. Already applied. */
+  upgrades: TraitUpgrade[]
   /** Crew whose stint ended and who got their bunk back. A hand at the level
    *  ceiling appears HERE but not in `grants` — they are freed and paid
    *  nothing, and the UI has to be able to say so rather than fall silent. */
@@ -134,7 +128,7 @@ export async function settleBunks(
   rate: number,
   capHours: number,
 ): Promise<BunkSettlement> {
-  const EMPTY: BunkSettlement = { grants: [], freed: [], offers: [] }
+  const EMPTY: BunkSettlement = { grants: [], freed: [], upgrades: [] }
   if (rows.length === 0) return EMPTY
   const nowMs = Date.now()
 
@@ -169,58 +163,60 @@ export async function settleBunks(
       return { id: r.crew_id, xp: stintXP(t.rate, t.cap) }
     })
   const grants = await grantXPPairs(admin, userId, pairs)
-  const offers = await offerLeviathanTraits(admin, userId, claimed)
-  return { grants, freed: claimed.map(r => r.crew_id), offers }
+  const upgrades = await recutLeviathanTraits(admin, userId, claimed)
+  return { grants, freed: claimed.map(r => r.crew_id), upgrades }
 }
 
 /**
- * The Leviathan bunk's ability: EVERY finished stint in slot 5 cuts a fresh
- * trait and offers it.
+ * The Leviathan bunk's ability: EVERY finished stint in slot 5 rolls a fresh
+ * trait and keeps whatever it improves, stat by stat.
  *
- * Every stint, not one in five. The old gate made sense while the result was
- * applied for you and cost nothing to receive; once the player has to look at
- * it and decide, a gate only means waiting five stints to be shown one thing
- * you might not even want. The cost of an offer is the bunk slot and the
- * hours, which is a real cost already.
+ * Every stint, not one in five, and applied rather than offered. The gate made
+ * sense while the result was free to receive; the offer made sense while
+ * "better" was ambiguous. Per-stat merging removed both: `max` can only raise a
+ * number, so there is nothing to gate and nothing to ask.
  *
  * Rolls DEEP, the only table in the game that reaches 4, and on the crew's own
  * rarity so the top hall does not quietly hand Commons legendary-grade stats.
- * Nothing is written to `effects` here: the offer parks on the crew until it is
- * taken or thrown back.
  */
-async function offerLeviathanTraits(
+async function recutLeviathanTraits(
   admin: Admin,
   userId: string,
   claimed: BunkRow[],
-): Promise<TraitOffer[]> {
+): Promise<TraitUpgrade[]> {
   const eligible = claimed.filter(r => isLeviathanSlot(r.slot))
   if (eligible.length === 0) return []
 
   const { data: crew } = await admin
     .from('user_crew').select('id, rarity, effects').in('id', eligible.map(r => r.crew_id))
 
-  const out: TraitOffer[] = []
+  const out: TraitUpgrade[] = []
   for (const c of ((crew ?? []) as any[])) {
-    const effects = (c.effects ?? []) as string[]
+    const before = netTraitStats((c.effects ?? []) as string[])
     const rolled = rollTrait((c.rarity ?? 1) as CrewRarity, true)
-    // A fully neutral roll is a real offer, not a dud: to a hand carrying a
-    // curse, a clean slate IS the upgrade. Encoded rather than dropped so it
-    // can be presented like any other.
-    const traitId = encodeTraitId(rolled) ?? NEUTRAL_TRAIT
+    const after = {
+      power:   Math.max(before.power,   rolled.power),
+      dodge:   Math.max(before.dodge,   rolled.dodge),
+      fortune: Math.max(before.fortune, rolled.fortune),
+    }
+    const gained = {
+      power:   after.power   > before.power,
+      dodge:   after.dodge   > before.dodge,
+      fortune: after.fortune > before.fortune,
+    }
+    // A roll that beat nothing is not worth a write or a line in the reveal.
+    if (!gained.power && !gained.dodge && !gained.fortune) continue
 
+    const id = encodeTraitId(after)
     const { data: written } = await admin
-      .from('user_crew').update({ trait_offer: traitId })
+      .from('user_crew').update({ effects: id ? [id] : [] })
       .eq('id', c.id).eq('user_id', userId).select('id')
     if (!(written ?? []).length) continue
 
-    const current = netTraitStats(effects)
     out.push({
-      crewId: c.id,
-      traitId,
-      offered: rolled,
-      offeredLabel: traitLabel(rolled) || 'No trait',
-      current,
-      currentLabel: traitLabel(current) || 'No trait',
+      crewId: c.id, before, after, gained,
+      beforeLabel: traitLabel(before) || 'No trait',
+      afterLabel: traitLabel(after) || 'No trait',
     })
   }
   return out
@@ -235,7 +231,7 @@ export async function releaseBunk(admin: Admin, userId: string, crewId: number):
   const { data } = await admin
     .from('crew_hall_bunks').select('id, crew_id, since, rate_per_hour, cap_hours, slot')
     .eq('user_id', userId).eq('crew_id', crewId).maybeSingle()
-  if (!data) return { grants: [], freed: [], offers: [] }
+  if (!data) return { grants: [], freed: [], upgrades: [] }
   const ctx = await bunkContext(admin, userId)
   const row: BunkRow = {
     id: (data as any).id, crew_id: (data as any).crew_id, since: (data as any).since,
