@@ -795,13 +795,17 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'tempest_chronometer',
     name: 'Tempest Chronometer',
     image: '/forge_tempestchronometer.png',
-    description: 'Adds a fifth of your Savvy to your turn-order roll, opens every fight with TWO cannonballs already loaded, and on a successful dodge a 50% chance to deflect 75% of the shot back. Strike first, strike twice, and answer everything.',
+    description: 'Adds a fifth of your Savvy to your turn-order roll, opens every fight with a cannonball loaded and an even chance at a second, and on a successful dodge a 50% chance to deflect 75% of the shot back. Strike first, and answer everything.',
     emoji: '🌀',
     rarity: 'legendary',
     effects: [
       { type: 'speed_roll_nav_pct',  value: 0.20 },
       { type: 'start_charge_chance', value: 1.00 },
-      // THE SECOND BALL, and the whole reason to forge this.
+      // THE SECOND BALL, and the whole reason to forge this. A COIN FLIP for
+      // it rather than a guarantee: opening at 2 of a 3-round magazine every
+      // single fight was too much certainty to hand out, and half the time is
+      // plenty to make the fusion feel like it did something without making the
+      // opening turn identical every fight.
       //
       // Both components already grant start_charge_chance 1, and the primers are
       // a tier family that takes best-of among themselves, so 1 and 1 folded to
@@ -817,10 +821,10 @@ export const RAID_ITEMS: RaidItemDef[] = [
       // loaded fusing into one that opens with two is legible without reading a
       // stat line.
       //
-      // Checked for degeneracy: the magazine is 3 and a volley costs 3, so this
-      // does NOT buy a turn-one volley. It buys about a turn of tempo, which is
-      // modest beside Leviathan's permanent +30% boss damage.
-      { type: 'extra_start_charge_chance', value: 1.00 },
+      // The magazine is 3 and a volley costs 3, so even when it lands this
+      // does NOT buy a turn-one volley. It buys about a turn of tempo, half the
+      // time, which is modest beside Leviathan's permanent +30% boss damage.
+      { type: 'extra_start_charge_chance', value: 0.50 },
       { type: 'parry_chance',        value: 0.50 },
       { type: 'parry_reflect_pct',   value: 0.75 },
     ],
