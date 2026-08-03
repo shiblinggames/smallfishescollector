@@ -4514,6 +4514,11 @@ type RewardOk = Extract<CashResult, { ok: true }>
 // apart by the reveal EFFECTS, not the art — `color` tints the glow/rays and
 // the tier number drives how big the burst gets (see ChestOpenFx).
 const DAVY_CHEST = { closed: '/davychestclosed.png', open: '/davychestopen.png' }
+// Don's Gauntlet keeps its own coffer: verdigris brass and sea-worn green
+// against Davy's gold. Only the SPRITE swaps, never the tier colour, so a
+// tier-5 Don chest still bursts violet exactly like a tier-5 Davy one and the
+// ladder reads the same in both descents.
+const DONS_CHEST = { closed: '/donschestclosed.png', open: '/donschestopen.png' }
 const CHEST_ART: Record<number, { closed: string; open: string; color: string }> = {
   1: { ...DAVY_CHEST, color: '#c08a4e' },
   2: { ...DAVY_CHEST, color: '#9fb0bf' },
@@ -4716,7 +4721,8 @@ function GauntletReward({ r, recap, onBack, don }: { r: RewardOk; recap: { ships
   // Hardcore recolors the coffer red/black + renames it; the tier sprite is
   // shared, so we just swap the accent color (all glows/rays read it) and
   // prepend a tint filter to the chest art.
-  const baseArt = CHEST_ART[r.chest.tier] ?? CHEST_ART[1]
+  const baseTier = CHEST_ART[r.chest.tier] ?? CHEST_ART[1]
+  const baseArt = don ? { ...baseTier, ...DONS_CHEST } : baseTier
   const art = r.hardcore ? { ...baseArt, color: HARDCORE_CHEST_ACCENT } : baseArt
   const chestFilter = r.hardcore ? `${HARDCORE_CHEST_FILTER} ` : ''
   const chestLabel = r.hardcore ? HARDCORE_CHEST_LABEL : r.chest.label
