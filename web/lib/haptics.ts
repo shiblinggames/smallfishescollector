@@ -49,12 +49,19 @@ export function vibrate(pattern: number | number[]): void {
   const h = nativeHaptics()
   if (h) {
     // iOS has no arbitrary buzz patterns, only three impact weights. Total
-    // ON-time is what a player perceives as "how big was that", so sum the odd
-    // indices of an [off, on, off, on] pattern and map that onto a weight.
+    // ON-time is what a player perceives as "how big was that", so sum that and
+    // map it onto a weight.
+    //
+    // navigator.vibrate alternates ON, OFF, ON, … starting with ON, so the ON
+    // times are the EVEN indices. Worth stating because it is easy to get
+    // backwards, and backwards is silently wrong rather than broken: the
+    // perfect-reel buzz [40, 60, 80] is 120ms of vibration, not 60.
     const ms = Array.isArray(pattern)
-      ? (pattern.filter((_, i) => i % 2 === 1).reduce((a, b) => a + b, 0) || pattern.reduce((a, b) => a + b, 0))
+      ? pattern.filter((_, i) => i % 2 === 0).reduce((a, b) => a + b, 0)
       : pattern
-    fire(h.impact?.({ style: ms >= 20 ? 'HEAVY' : ms >= 10 ? 'MEDIUM' : 'LIGHT' }))
+    // Thresholds are set against real ON-times in the game: a normal reel or
+    // button tap is 6, a fired shot is ~18-26, the perfect reel is 120.
+    fire(h.impact?.({ style: ms >= 60 ? 'HEAVY' : ms >= 20 ? 'MEDIUM' : 'LIGHT' }))
     return
   }
   try {
