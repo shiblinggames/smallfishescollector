@@ -6,7 +6,7 @@ import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { vibrate } from '@/lib/haptics'
-import { bossIdentityRevealed, bossListedInRoster, nodeArtRevealed, formatDropChance, isCombatNode, chapterForNode, RAID_CHAPTERS, musterSceneLines, SCENE_BACKDROPS, type RaidChapter, type RaidNodeDrop, type RaidNodeView } from '@/lib/raidMap'
+import { bossIdentityRevealed, bossListedInRoster, nodeArtRevealed, formatDropChance, isCombatNode, isChallengeVariant, chapterForNode, RAID_CHAPTERS, musterSceneLines, SCENE_BACKDROPS, type RaidChapter, type RaidNodeDrop, type RaidNodeView } from '@/lib/raidMap'
 import type { RaidRecords } from './raidMapActions'
 import { RARITY_COLOR, GEM_GLYPH, GEM_COLOR, RAID_LOCATION_BG, RAID_BOSS_BG, type BossRaidConfig} from '@/lib/bossRaids'
 import { getRaidItem } from '@/lib/raidItems'
@@ -3437,19 +3437,6 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
 // progressive reveal (fog nodes far past the current one; the chapter's last
 // node shows as a faded beacon). Every tap opens the shared NodeDetailSheet.
 function JourneyChapter({ views, onSelect }: { views: RaidNodeView[]; onSelect: (v: RaidNodeView) => void }) {
-  // A side branch off a BOSS is a challenge variant, and that boss's own banner
-  // offers Normal/Challenge inside its modal, so drawing it here as well would
-  // be a second door to the same fight. A side branch off anything ELSE has no
-  // such door, and dropping those too is how the Quartermaster's Ghost went
-  // missing: he hangs off a MUSTER, computeRaidMap reports him available, and
-  // then nothing on the page drew him. The Bosses tab excludes side branches
-  // outright and re-attaches them by boss, so it did not catch him either. A
-  // node reachable by the rules and by no pixel is worse than a locked one.
-  const isChallengeBranch = (v: RaidNodeView): boolean => {
-    if (!v.node.sideBranch) return false
-    const parent = views.find(x => x.node.id === v.node.sideBranch!.parentId)
-    return !!parent && isCombatNode(parent.node.type)
-  }
   const chainIdx = views.map((v, i) => (v.node.sideBranch ? -1 : i)).filter(i => i >= 0)
   const currentIdx = views.findIndex(v => v.status === 'available' && !v.node.sideBranch)
   const currentChainPos = currentIdx >= 0 ? chainIdx.indexOf(currentIdx) : -1
@@ -3473,12 +3460,13 @@ function JourneyChapter({ views, onSelect }: { views: RaidNodeView[]; onSelect: 
     if (!v.node.sideBranch && pos === lastChainPos) return 'beacon'
     return 'fogged'
   }
-  // Drop CHALLENGE branches only. See isChallengeBranch: they are the ones the
-  // boss banner's Normal/Challenge modal already covers. Every other side
-  // branch keeps its place on the spine, because nothing else is drawing it.
+  // Drop CHALLENGE variants only: they are the ones the boss banner's own
+  // Normal/Challenge modal already covers, so a banner here would be a second
+  // door to the same fight. Every other side branch keeps its place on the
+  // spine, because nothing else on the page is drawing it.
   const rows = views.map((v, i) => ({ v, vis: visOf(i) }))
     .filter(r => r.vis !== 'fogged')
-    .filter(r => !isChallengeBranch(r.v))
+    .filter(r => !isChallengeVariant(r.v.node.id))
   const anyFogged = views.some((_, i) => visOf(i) === 'fogged')
 
   return (
@@ -3531,7 +3519,7 @@ function JourneyChapter({ views, onSelect }: { views: RaidNodeView[]; onSelect: 
                     {/* Hardcoding "Challenge" was safe while challenges were the
                         only branches that could reach here. They are now the only
                         ones that CANNOT, so the label has to come from the node. */}
-                    {isSide && <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.1em', color: '#fff', background: `${SIDE_BRANCH_ACCENT}cc`, borderRadius: 999, padding: '2px 7px' }}>{isChallengeBranch(v) ? 'Challenge' : 'Side Raid'}</span>}
+                    {isSide && <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.1em', color: '#fff', background: `${SIDE_BRANCH_ACCENT}cc`, borderRadius: 999, padding: '2px 7px' }}>{isChallengeVariant(node.id) ? 'Challenge' : 'Side Raid'}</span>}
                   </span>
                   <span className="font-karla" style={{ display: 'block', fontSize: '0.76rem', color: 'rgba(233,226,214,0.82)', marginTop: 3, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>{node.flavor}</span>
                 </span>
@@ -3847,9 +3835,16 @@ export default function RaidsSection({ views, doubloons, totalFortune = 0, spoil
       <AnimatePresence>
         {selected && (selected.node.type === 'raid' ? (() => {
           // Boss raid node → the same art-forward fight modal as the Bosses tab
-          // (portrait + backdrop + drops + Normal/Challenge). A challenge
-          // side-node opens its parent boss's modal (which carries both modes).
-          const mainBoss = selected.node.sideBranch
+          // (portrait + backdrop + drops + Normal/Challenge). A CHALLENGE opens
+          // its parent boss's modal, which carries both modes.
+          //
+          // Only a challenge, though. This used to hop to the parent for any
+          // side branch, which sent the Quartermaster's Ghost to the MUSTER he
+          // hangs off: a boss card whose Normal mode was an inspection with no
+          // art, no drops and no fight, and whose Challenge mode was the actual
+          // raid. He is nobody's harder version, so he opens as himself, and
+          // with no toggle at all since nothing branches off him.
+          const mainBoss = isChallengeVariant(selected.node.id)
             ? (views.find(v => v.node.id === selected.node.sideBranch!.parentId) ?? selected)
             : selected
           const challenge = views.find(c => c.node.sideBranch?.parentId === mainBoss.node.id) ?? null

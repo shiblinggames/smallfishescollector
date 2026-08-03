@@ -2964,6 +2964,28 @@ export function bossIdentityRevealed(node: RaidNode, clearedNodeIds: Set<string>
  *  `revealBossAfter` is one whose EXISTENCE is the spoiler: a "???" tile in the
  *  ninth slot still tells you there is a ninth boss and that the campaign is
  *  not over. Those are omitted outright until the story introduces them. */
+/** Is this node a CHALLENGE VARIANT: a side branch hanging off a boss?
+ *
+ *  Every UI that special-cases challenges was testing `node.sideBranch` on its
+ *  own, which reads as "is this a challenge" and is not. A side branch means
+ *  "draw me beside my parent instead of below it", nothing more. What makes a
+ *  node a challenge is that its parent is the FIGHT it is a harder version of.
+ *
+ *  The Quartermaster's Ghost is the node that tells them apart. He is a side
+ *  branch off a MUSTER, because that is where he unlocks, not because he is a
+ *  harder muster. Every surface that assumed otherwise got him wrong: the
+ *  journey spine dropped him as a duplicate of a boss banner that does not
+ *  exist, and the fight modal opened his parent, drawing a boss card whose
+ *  "Normal" mode was an inspection with no art, no drops and no fight.
+ *
+ *  Static, because it asks about the SHAPE of the map, which no player changes. */
+export function isChallengeVariant(nodeId: string): boolean {
+  const node = RAID_MAP.find(n => n.id === nodeId)
+  if (!node?.sideBranch) return false
+  const parent = RAID_MAP.find(n => n.id === node.sideBranch!.parentId)
+  return !!parent && isCombatNode(parent.type)
+}
+
 export function bossListedInRoster(node: RaidNode, clearedNodeIds: Set<string>): boolean {
   if (!node.revealBossAfter) return true
   return clearedNodeIds.has(node.revealBossAfter)
