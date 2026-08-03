@@ -219,6 +219,20 @@ const PLAN = [
   [31, 1, 0, 'full_complement'],
   [31, 1, 1, 'divine_hand'],
   [31, 1, 2, 'six_divine'],
+  // ── batch 32 — The Sunken Hand: the finale and the wreck it left ──
+  [32, 0, 0, 'one_last_ride'],
+  [32, 0, 1, 'cut_off_at_the_wrist'],
+  [32, 0, 2, 'the_long_quiet'],
+  [32, 1, 0, 'colours_of_the_hand'],
+  [32, 1, 1, 'salvors_claim'],
+  [32, 1, 2, 'both_hands'],
+  // ── batch 33 — The Spoils: Primeval relics and the mounts that carry them ──
+  [33, 0, 0, 'ancient_tackle'],
+  [33, 0, 1, 'something_old'],
+  [33, 0, 2, 'waking_it'],
+  [33, 1, 0, 'fully_attuned'],
+  [33, 1, 1, 'both_in_hand'],
+  [33, 1, 2, 'the_sixth_mount'],
 ]
 
 // Optional: `ONLY=30 node slice-badges.mjs` slices just that sheet (so re-running

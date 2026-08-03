@@ -1,0 +1,16 @@
+{
+  "prompt": "A 3x2 GRID of SIX separate circular achievement medallions for a pirate fishing game, evenly spaced, each medallion its own self-contained round emblem, all six drawn in one consistent style. Soft painterly watercolour storybook illustration, warm hand-painted gouache feel, gentle soft-edged brushwork, subtle paper grain, no harsh outlines, no cel shading. Each medallion is a filled circular disc with a raised decorative rim and a single clearly readable subject centred inside it, painted as a small scene on the disc face. The set theme is THE SPOILS: ancient relics taken off the drowned finale and the ship fittings that carry them. Palette is aged brass and gunmetal with bone white and fossil grey, lit by an eerie crimson inner glow that grows stronger across the set. IMPORTANT: the background BEHIND and BETWEEN all six medallions is a completely FLAT PURE MAGENTA field, RGB 255,0,255, absolutely uniform, no shading, no gradient, no texture, no checkerboard, no drop shadows onto it. Each medallion must be fully separated from its neighbours by magenta on all sides. TOP-LEFT: a heavy fishing hook forged from black ancient bone, barbed and pitted with age, a faint crimson light bleeding along its inner curve, resting on dark oiled timber. TOP-CENTRE: a single fossilised tooth-shard the size of a dagger, grey and cracked, seated in a plain brass mount, inert and cold, no light in it yet. TOP-RIGHT: the same fossilised tooth-shard in its brass mount, now split by a hairline fracture with crimson light spilling out of the crack, the first waking. BOTTOM-LEFT: the tooth-shard relic fully awake and blazing crimson-white in its brass mount, six concentric rings of light expanding outward around it, the metal glowing with the heat of it. BOTTOM-CENTRE: two ancient relics crossed over one another on a brass rack, one a bone hook, one a tooth-shard, both lit with the same low crimson glow. BOTTOM-RIGHT: a curved section of a ship's gun rail seen from above with six mounting cradles set into it, every cradle filled with a different piece of ancient kit, the sixth and last one glowing brightest. No lettering, no numbers, no words, no runes that read as text anywhere in the image.",
+  "negative_prompt": "no text, no letters, no numerals, no words, no typography, no watermark, no signature, no UI, no frame around the whole image, no border, no checkerboard, no transparency checker pattern, no gradient background, no white background, no black background, no drop shadow on the background, no photorealism, no 3d render, no cgi, no anime, no cel shading, no harsh black outlines, no neon, no oversaturated colours, no recognisable character faces, no emoji, no clip art, no vector flat design, medallions must not overlap or touch each other",
+  "api_parameters": {
+    "resolution": "2K",
+    "output_format": "png",
+    "aspect_ratio": "3:2"
+  },
+  "settings": {
+    "style": "soft painterly watercolour storybook game icon, hand-painted gouache",
+    "lighting": "cold ambient light with a single warm or crimson source inside each scene",
+    "camera_angle": "flat-on, straight at the medallion faces",
+    "depth_of_field": "none, everything in focus",
+    "quality": "high detail, clean silhouettes, readable at small size"
+  }
+}
