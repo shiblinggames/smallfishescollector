@@ -12,6 +12,8 @@ import { RARITY_COLOR, GEM_GLYPH, GEM_COLOR, RAID_LOCATION_BG, RAID_BOSS_BG } fr
 import { getRaidItem } from '@/lib/raidItems'
 import { getRaidConfigById } from '@/lib/raidRegistry'
 import { isUniqueLoot } from '@/lib/bossRaids'
+import { crateItemChances } from '@/lib/raidLoot'
+import { fortuneLootMult } from '@/lib/expeditions'
 import { getShipSkin } from '@/lib/shipSkins'
 import { SPECIAL_ITEMS } from '@/lib/specialItems'
 import { FINN_ITEMS, finnTierNumeral, type FinnItemId } from '@/lib/finnItems'
@@ -681,7 +683,7 @@ function NodeDetailSheet({
   spoilPaid,
   navLevel,
   ownedRaidItems,
-  ownedShipSkins,
+  ownedShipSkins, totalFortune = 0,
   equippedRaidItems,
   shipClasses,
   raidRecords,
@@ -703,6 +705,8 @@ function NodeDetailSheet({
   navLevel: number
   ownedRaidItems: string[]
   ownedShipSkins: string[]
+  /** Crew Fortune, so the drop chances on this sheet match the roll. */
+  totalFortune?: number
   equippedRaidItems: string[]
   shipClasses: Record<string, string>
   raidRecords: RaidRecords | null
@@ -1973,7 +1977,6 @@ function NodeDetailSheet({
               //
               // The sheet knows what the player owns, so it can just tell the truth.
               const cfg = node.raidId ? getRaidConfigById(node.raidId) : undefined
-              const share = cfg?.uniqueShare
               // Ownership spans BOTH raid_items AND ship_skins — a hull drop is
               // "owned" via profiles.ship_skins (its shipSkinId), never raid_items,
               // so an items-only check silently missed every ship-skin drop.
@@ -1981,15 +1984,22 @@ function NodeDetailSheet({
                 (!!d.id && ownedRaidItems.includes(d.id)) || (!!d.shipSkinId && ownedShipSkins.includes(d.shipSkinId))
               const lootOwned = (l: { id: string; shipSkinId?: string }): boolean =>
                 ownedRaidItems.includes(l.id) || (!!l.shipSkinId && ownedShipSkins.includes(l.shipSkinId))
+              // ODDS COME FROM THE ROLL ITSELF (lib/raidLoot.crateItemChances), not from a
+              // formula copied next to the card. This recomputed `share * weight/total` by
+              // hand, which had three problems: it was the pre-independent-rolls maths, it
+              // only ran when a raid set `uniqueShare` (one raid in eighteen, so every
+              // other boss card showed no chance at all), and it knew nothing about crew
+              // Fortune. A number shown beside a boss should be the number that boss rolls
+              // against.
               const liveChance = (d: RaidNodeDrop): string | undefined => {
-                if (share == null || !cfg || !d.id) return undefined
+                if (!cfg || !d.id) return undefined
                 const row = cfg.loot.find(l => l.id === d.id)
                 if (!row || !isUniqueLoot(row)) return undefined
                 if (dropOwned(d)) return 'Owned'
-                const missing = cfg.loot.filter(l => isUniqueLoot(l) && !lootOwned(l))
-                const totalW = missing.reduce((a, l) => a + l.weight, 0)
-                if (totalW <= 0) return undefined
-                return formatDropChance(share * (row.weight / totalW))
+                const owned = new Set(cfg.loot.filter(lootOwned).map(l => l.id))
+                const hit = crateItemChances(cfg.loot, owned, cfg.uniqueShare, 1, fortuneLootMult(totalFortune))
+                  .find(c => c.id === d.id)
+                return hit ? formatDropChance(hit.chance) : undefined
               }
 
               const gemDrop = drops.find(d => d.emoji === GEM_GLYPH)
@@ -2970,11 +2980,12 @@ function ViewToggle({ view, onChange }: { view: 'journey' | 'bosses'; onChange: 
   )
 }
 
-function BossesView({ views, raidRecords, ownedRaidItems, ownedShipSkins, repairOwed, onRepairBlocked }: {
+function BossesView({ views, raidRecords, ownedRaidItems, ownedShipSkins, totalFortune = 0, repairOwed, onRepairBlocked }: {
   views: RaidNodeView[]
   raidRecords: Record<string, RaidRecords>
   ownedRaidItems: string[]
   ownedShipSkins: string[]
+  totalFortune?: number
   repairOwed: number
   onRepairBlocked: () => void
 }) {
@@ -3025,6 +3036,7 @@ function BossesView({ views, raidRecords, ownedRaidItems, ownedShipSkins, repair
           challengeRec={challengeOf(modalBoss)?.node.raidId ? raidRecords[challengeOf(modalBoss)!.node.raidId!] ?? null : null}
           ownedRaidItems={ownedRaidItems}
           ownedShipSkins={ownedShipSkins}
+            totalFortune={totalFortune}
           isNext={modalBoss.node.id === nextUpId}
           repairOwed={repairOwed}
           onEnter={r => router.push(r)}
@@ -3092,13 +3104,14 @@ function BossTile({ view, isNext, challengeCleared, clearedNodeIds, onOpen }: { 
 
 // The boss fight modal — opens on a tile tap. Shows the big portrait, the drops,
 // and the choice of Fight (normal) vs Challenge. Portaled + backdrop-dismissable.
-function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ownedShipSkins, isNext, repairOwed, onEnter, onRepairBlocked, onClose, clearedNodeIds }: {
+function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ownedShipSkins, totalFortune = 0, isNext, repairOwed, onEnter, onRepairBlocked, onClose, clearedNodeIds }: {
   boss: RaidNodeView
   challenge: RaidNodeView | null
   rec: RaidRecords | null
   challengeRec: RaidRecords | null
   ownedRaidItems: string[]
   ownedShipSkins: string[]
+  totalFortune?: number
   isNext: boolean
   repairOwed: number
   onEnter: (route: string) => void
@@ -3138,20 +3151,20 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
   // slice of the crate split across the uniques you still need, so a static "8%"
   // is really 50% when only one is left — recompute against what you own.
   const cfg = activeNode.raidId ? getRaidConfigById(activeNode.raidId) : undefined
-  const share = cfg?.uniqueShare
   const dropOwned = (d: RaidNodeDrop): boolean =>
     (!!d.id && ownedRaidItems.includes(d.id)) || (!!d.shipSkinId && ownedShipSkins.includes(d.shipSkinId))
   const lootOwned = (l: { id: string; shipSkinId?: string }): boolean =>
     ownedRaidItems.includes(l.id) || (!!l.shipSkinId && ownedShipSkins.includes(l.shipSkinId))
+  // Same as above: the roll's own maths, so the card and the crate agree.
   const liveChance = (d: RaidNodeDrop): string | undefined => {
-    if (share == null || !cfg || !d.id) return undefined
+    if (!cfg || !d.id) return undefined
     const row = cfg.loot.find(l => l.id === d.id)
     if (!row || !isUniqueLoot(row)) return undefined
     if (dropOwned(d)) return 'Owned'
-    const missing = cfg.loot.filter(l => isUniqueLoot(l) && !lootOwned(l))
-    const totalW = missing.reduce((a, l) => a + l.weight, 0)
-    if (totalW <= 0) return undefined
-    return formatDropChance(share * (row.weight / totalW))
+    const owned = new Set(cfg.loot.filter(lootOwned).map(l => l.id))
+    const hit = crateItemChances(cfg.loot, owned, cfg.uniqueShare, 1, fortuneLootMult(totalFortune))
+      .find(c => c.id === d.id)
+    return hit ? formatDropChance(hit.chance) : undefined
   }
   // specialItemId is in here because Finn's Eye is a FISHING special: without it
   // the headline drop off the final boss never rendered on his own card. The cap
@@ -3480,7 +3493,7 @@ function JourneyChapter({ views, onSelect }: { views: RaidNodeView[]; onSelect: 
   )
 }
 
-export default function RaidsSection({ views, doubloons, spoilFree = null, spoilPaid = null, navLevel, playerShipImage, raidRecords, repairOwed, ownedRaidItems, ownedShipSkins = [], equippedRaidItems, shipClasses, seenChapterUnlocks, seenUltimateUnlock, raidNodeChoices, topRaidProgress, hasSixthBerth = false, hasArmoryExpansion = false, musterParty = [] }: { views: RaidNodeView[]; doubloons: number; spoilFree?: string | null; spoilPaid?: string | null; navLevel: number; playerShipImage?: string; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[]; ownedShipSkins?: string[]; equippedRaidItems: string[]; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; seenUltimateUnlock: boolean; raidNodeChoices: Record<string, string>; topRaidProgress: { username: string; score: number } | null; hasSixthBerth?: boolean; hasArmoryExpansion?: boolean; musterParty?: MusterCrew[] }) {
+export default function RaidsSection({ views, doubloons, totalFortune = 0, spoilFree = null, spoilPaid = null, navLevel, playerShipImage, raidRecords, repairOwed, ownedRaidItems, ownedShipSkins = [], equippedRaidItems, shipClasses, seenChapterUnlocks, seenUltimateUnlock, raidNodeChoices, topRaidProgress, hasSixthBerth = false, hasArmoryExpansion = false, musterParty = [] }: { views: RaidNodeView[]; doubloons: number; /** Crew Fortune, so a boss card quotes the odds that boss actually rolls. */ totalFortune?: number; spoilFree?: string | null; spoilPaid?: string | null; navLevel: number; playerShipImage?: string; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[]; ownedShipSkins?: string[]; equippedRaidItems: string[]; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; seenUltimateUnlock: boolean; raidNodeChoices: Record<string, string>; topRaidProgress: { username: string; score: number } | null; hasSixthBerth?: boolean; hasArmoryExpansion?: boolean; musterParty?: MusterCrew[] }) {
   const [open, setOpen] = useState(true)
   const router = useRouter()
   // Journey (the story map) vs Bosses (a farm deck — every boss with Fight +
@@ -3615,7 +3628,8 @@ export default function RaidsSection({ views, doubloons, spoilFree = null, spoil
               tap away, its drops, and your best clear time. */}
           <ViewToggle view={view} onChange={setView} />
           {view === 'bosses' ? (
-            <BossesView views={views} raidRecords={raidRecords} ownedRaidItems={ownedRaidItems} ownedShipSkins={ownedShipSkins} repairOwed={repairOwed} onRepairBlocked={() => setRepairPromptOpen(true)} />
+            <BossesView views={views} raidRecords={raidRecords} ownedRaidItems={ownedRaidItems} ownedShipSkins={ownedShipSkins}
+            totalFortune={totalFortune} repairOwed={repairOwed} onRepairBlocked={() => setRepairPromptOpen(true)} />
           ) : (() => {
             const groups = new Map<string, { chapter: RaidChapter; views: RaidNodeView[] }>()
             for (const v of views) {
@@ -3787,6 +3801,7 @@ export default function RaidsSection({ views, doubloons, spoilFree = null, spoil
               challengeRec={challenge?.node.raidId ? raidRecords[challenge.node.raidId] ?? null : null}
               ownedRaidItems={ownedRaidItems}
               ownedShipSkins={ownedShipSkins}
+            totalFortune={totalFortune}
               isNext={mainBoss.node.id === nextBossId}
               repairOwed={repairOwed}
               onEnter={r => router.push(r)}
@@ -3806,6 +3821,7 @@ export default function RaidsSection({ views, doubloons, spoilFree = null, spoil
             navLevel={navLevel}
             ownedRaidItems={ownedRaidItems}
             ownedShipSkins={ownedShipSkins}
+            totalFortune={totalFortune}
             equippedRaidItems={equippedRaidItems}
             shipClasses={shipClasses}
             raidRecords={null}

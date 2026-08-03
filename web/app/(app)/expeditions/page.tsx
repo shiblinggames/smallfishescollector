@@ -286,6 +286,10 @@ async function RaidsMapSection() {
     cachedRaidMap(),
     fetchTopRaidProgress(),
   ])
+  // Crew Fortune, so the drop chances printed on boss cards are the ones those
+  // bosses actually roll against. getRaidPlayerStats is the same loader the
+  // fight itself uses, and it is request-cached, so this is not a second trip.
+  const raidStats = await getRaidPlayerStats(profile!.id as string)
   // The player's current boat sprite (skin-aware, same derivation as the raid
   // pages) — class-pick nodes show this instead of a generic glyph.
   const shipTier = (profile?.ship_tier as number | null) ?? 0
@@ -312,7 +316,8 @@ async function RaidsMapSection() {
       topRaidProgress={topRaidProgress}
       hasSixthBerth={profile?.has_sixth_berth === true}
       hasArmoryExpansion={profile?.has_armory_expansion === true}
-    />
+      totalFortune={raidStats.totalFortune}
+          />
   )
 }
 
