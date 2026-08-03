@@ -16,6 +16,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import RaidCombat from '../RaidCombat'
 import { getShipSkin } from '@/lib/shipSkins'
 import type { RaidMods } from '@/lib/expeditions'
+import { fortuneLootMult } from '@/lib/expeditions'
 import type { RaidCrewMember } from '../actions'
 import { classForSlug, CLASSES, currentMilestone } from '@/lib/crewClasses'
 import { crewLevelFromXP } from '@/lib/crewLevel'
@@ -3244,6 +3245,10 @@ export default function GauntletGame(props: GauntletGameProps) {
               // A chest offer multiplies these on the spot, so the rows the player is
               // staring at visibly jump the moment Davy leans over the rail.
               oddsMult: offerChest,
+              // Crew Fortune, the same 1x to 2x the server folds into every
+              // chase roll at cash-out. Shown here or the panel would be
+              // quoting odds the payout does not use.
+              fortuneMult: fortuneLootMult(props.totalFortune),
             })
             const sweetened = offerChest > 1
             // Fathoms this dive would bank (the Fence tab already spent comes off

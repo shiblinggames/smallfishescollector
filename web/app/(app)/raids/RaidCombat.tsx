@@ -8154,7 +8154,7 @@ function PlayerStatsPopup({
     { label: 'Crit Damage', value: `${critMin}–${critMax}`,        hint: 'damage on a critical lock',           color: '#fbbf24' },
     { label: 'Initiative',  value: String(shipSpeed),              hint: 'fire first · flee',                    color: '#60a5fa' },
     { label: 'Evasion',     value: String(totalNavigation),        hint: 'dodge · land on dodgers · steadier aim', color: '#5eead4' },
-    { label: 'Fortune',     value: String(totalFortune),           hint: 'better odds at rare loot',            color: '#f0c040' },
+    { label: 'Fortune',     value: String(totalFortune),           hint: 'rarer drops · more doubloons · bigger repairs', color: '#f0c040' },
   ]
 
   // Equipped Items — every raid item the player has on, surfaced as its own

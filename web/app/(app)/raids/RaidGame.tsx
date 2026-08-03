@@ -10,7 +10,7 @@ import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
 import { getShipSkin } from '@/lib/shipSkins'
 import { getActiveEffects } from '@/lib/raidItems'
 import { getXPProgress, getLevelFromXP, MAX_LEVEL } from '@/lib/expeditionLevel'
-import { raidDamageProfile, type RaidMods } from '@/lib/expeditions'
+import { raidDamageProfile, fortuneLootMult, type RaidMods } from '@/lib/expeditions'
 import { crewLevelFromXP, CREW_MAX_LEVEL } from '@/lib/crewLevel'
 import { type ShipAugment } from '@/lib/shipAugments'
 import {
@@ -34,60 +34,61 @@ import { lockBodyScroll } from '@/lib/bodyScrollLock'
 type GamePhase  = 'idle' | 'ready' | 'playing' | 'clear' | 'dead' | 'loot'
 type ShotResult = 'miss' | 'graze' | 'hit' | 'critical' | null
 
-/** Weighted random roll over the loot table, with duplicate
- *  protection: any slot whose id is in `excludedIds` is removed from
- *  the weight pool before rolling. Used to skip ship skins + raid
- *  items the player already owns so they always get something new
- *  (or fall through to a currency slot if every unique is owned). */
-function rollLootIndex(loot: RaidLootItem[], excludedIds: Set<string> = new Set(), uniqueShare?: number, legendaryMult = 1): number {
-  // Kingpin's Cut (Don's account perk): legendary-rarity rows carry extra weight,
-  // so they surface `legendaryMult`× more often within the unique pick. Applied to
-  // BOTH roll paths below. Non-legendary rows keep weight 1×.
-  const wt = (l: RaidLootItem): number => l.weight * (l.rarity === 'legendary' || l.rarity === 'ancient' ? legendaryMult : 1)
-  // FIXED-SHARE crates (BossRaidConfig.uniqueShare). Two-stage: `uniqueShare` of the
-  // time you get one of the uniques you're still missing, otherwise currency. Without
-  // this, dropping owned uniques out of the pool shrinks their share as you complete
-  // the set, so the LAST item you need is the hardest to get. See the field's doc.
-  if (uniqueShare != null && uniqueShare > 0) {
-    const pick = (rows: { idx: number; weight: number }[]): number => {
-      const total = rows.reduce((s, r) => s + r.weight, 0)
-      let r = Math.random() * total
-      for (const row of rows) { r -= row.weight; if (r <= 0) return row.idx }
-      return rows[rows.length - 1].idx
-    }
-    const uniques: { idx: number; weight: number }[] = []
-    const currency: { idx: number; weight: number }[] = []
-    loot.forEach((l, idx) => {
-      if (isUniqueLoot(l)) { if (!excludedIds.has(l.id)) uniques.push({ idx, weight: wt(l) }) }
-      else currency.push({ idx, weight: l.weight })
-    })
-    // Own everything already, or a table with no currency: fall through to whichever
-    // side actually has rows, so a crate is never empty.
-    if (uniques.length === 0) return currency.length ? pick(currency) : 0
-    if (currency.length === 0) return pick(uniques)
-    return Math.random() < uniqueShare ? pick(uniques) : pick(currency)
+/**
+ * Roll one row of a raid's loot table.
+ *
+ * TWO STAGE, always: first "an item or a pile of coins", then "which one".
+ * A single weighted pick over every row is the same thing at rest, but it
+ * cannot be multiplied. Fortune is meant to be able to DOUBLE the chance of an
+ * item, and against one shared bag doubling the item rows only moves Corsair's
+ * from 28/100 to 56/128, which is 1.56x. You cannot double a share by doubling
+ * one side of a ratio. Splitting the decision out makes the item chance a real
+ * probability that a multiplier can act on.
+ *
+ * Duplicate protection: any unique already owned is dropped from the pool, so
+ * you always get something new, or fall through to currency once you own them
+ * all.
+ */
+function rollLootIndex(loot: RaidLootItem[], excludedIds: Set<string> = new Set(), uniqueShare?: number, legendaryMult = 1, fortuneMult = 1): number {
+  // Kingpin's Cut (Don's account perk): legendary rows carry extra weight, so
+  // they surface `legendaryMult`x more often WITHIN the item pick. Fortune is
+  // deliberately not here. It decides whether you get an item at all, not which
+  // one, so it multiplies the share below instead.
+  const wt = (l: RaidLootItem): number =>
+    l.weight * (l.rarity === 'legendary' || l.rarity === 'ancient' ? legendaryMult : 1)
+
+  const pick = (rows: { idx: number; weight: number }[]): number => {
+    const total = rows.reduce((s, r) => s + r.weight, 0)
+    let r = Math.random() * total
+    for (const row of rows) { r -= row.weight; if (r <= 0) return row.idx }
+    return rows[rows.length - 1].idx
   }
 
-  // Build the eligible pool, preserving original indices.
-  const pool: { idx: number; weight: number }[] = []
-  for (let i = 0; i < loot.length; i++) {
-    if (excludedIds.has(loot[i].id)) continue
-    pool.push({ idx: i, weight: wt(loot[i]) })
-  }
-  // Edge case: every slot excluded (shouldn't happen in practice since
-  // currency slots are never excluded). Fall back to a plain roll.
-  if (pool.length === 0) {
-    for (let i = 0; i < loot.length; i++) {
-      pool.push({ idx: i, weight: loot[i].weight })
-    }
-  }
-  const total = pool.reduce((s, p) => s + p.weight, 0)
-  let r = Math.random() * total
-  for (const p of pool) {
-    r -= p.weight
-    if (r <= 0) return p.idx
-  }
-  return pool[pool.length - 1].idx
+  const uniques: { idx: number; weight: number }[] = []
+  const currency: { idx: number; weight: number }[] = []
+  loot.forEach((l, idx) => {
+    if (isUniqueLoot(l)) { if (!excludedIds.has(l.id)) uniques.push({ idx, weight: wt(l) }) }
+    else currency.push({ idx, weight: l.weight })
+  })
+
+  // Own every unique already, or a table with only one kind of row: fall through
+  // to whichever side has rows, so a crate is never empty.
+  if (uniques.length === 0) return currency.length ? pick(currency) : 0
+  if (currency.length === 0) return pick(uniques)
+
+  // The base chance of an item. Hand-set per raid where the config says so
+  // (BossRaidConfig.uniqueShare, which also stops the share shrinking as you
+  // complete a set), otherwise DERIVED from the table's own weights. The derived
+  // number is exactly what a single weighted roll over the whole pool used to
+  // produce, so no raid's balance moves at Fortune 0.
+  const uw = uniques.reduce((s, r) => s + r.weight, 0)
+  const cw = currency.reduce((s, r) => s + r.weight, 0)
+  const baseShare = uniqueShare != null && uniqueShare > 0 ? uniqueShare : uw / (uw + cw)
+
+  // Capped just under certain, so even a maxed Fortune crew on a heavily
+  // weighted challenge table is never guaranteed an item.
+  const share = Math.min(0.95, baseShare * fortuneMult)
+  return Math.random() < share ? pick(uniques) : pick(currency)
 }
 
 function isBossRound(round: number, seqLen: number): boolean {
@@ -428,7 +429,11 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     ...ownedRaidItems,
   ])
   const dodgeBonus        = totalDodge * 5
-  const fortuneMult       = 1 + totalFortune / 75   // 2× at max crew luck (~75)
+  // Two different jobs, two different curves. Coin scales uncapped because a
+  // richer haul is harmless; ITEM odds are capped at 2x by fortuneLootMult
+  // because a chase item that becomes common stops being a chase.
+  const fortuneMult       = 1 + totalFortune / 75   // doubloons, uncapped
+  const lootFortuneMult   = fortuneLootMult(totalFortune)   // item odds, hard 2x
   const playerActionMs    = Math.max(700, 2000 - shipSpeed * 100)
   const dodgeCooldownUse  = Math.max(500, 1600 - dodgeBonus)
 
@@ -1192,7 +1197,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
         setWinGold(gold); setWinXP(xp)
         // Roll loot + dollar amount up front so the stage can pre-position
         // the slot before the player taps Loot Chest.
-        const final = rollLootIndex(config.loot, ownedUniqueIds, config.uniqueShare, legendaryLootMult)
+        const final = rollLootIndex(config.loot, ownedUniqueIds, config.uniqueShare, legendaryLootMult, lootFortuneMult)
         const base  = Math.floor(Math.random() * 301 + 300)
         // Tide doubloonsAtRaidEnd: sum all run-active deltas onto the
         // raw base BEFORE fortune scales it. Net result lands in the
@@ -1928,6 +1933,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
             slotFinal={slotFinal}
             lootAmount={lootAmount}
             fortuneMult={fortuneMult}
+            lootFortuneMult={lootFortuneMult}
             shipImageUrl={shipImageUrl}
             shipFilter={shipFilter}
             shipName={shipName}

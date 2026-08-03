@@ -26,6 +26,9 @@ interface Props {
   slotFinal: number
   lootAmount: number
   fortuneMult: number
+  /** Fortune's pull on ITEM odds. A different curve from the doubloon one
+   *  (hard 2x cap), so it is shown as its own figure rather than folded in. */
+  lootFortuneMult?: number
   /** Full-raid-clear bonus Nav XP. Undefined / 0 when this isn't the final boss. */
   clearBonusXp?: number
   /** Player nameplate fields — kept for parity with the battle scene. */
@@ -143,7 +146,7 @@ export default function RaidLootStage(props: Props) {
   const {
     boss, killGold, killXP,
     clearTimeMs, clearTimes,
-    loot, slotFinal, lootAmount, fortuneMult, clearBonusXp = 0,
+    loot, slotFinal, lootAmount, fortuneMult, lootFortuneMult = 1, clearBonusXp = 0,
     shipImageUrl,
     onClaim, claiming = false,
     crewXP = [],
@@ -278,10 +281,12 @@ export default function RaidLootStage(props: Props) {
                 className="font-cinzel font-800" style={{ fontSize: '1.3rem', color: accent, lineHeight: 1.12, marginTop: 6, textShadow: `0 0 22px ${accent}44` }}>
                 {finalItem.label}
               </motion.p>
-              {fortuneMult > 1 && (
+              {(fortuneMult > 1 || lootFortuneMult > 1) && (
                 <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
                   className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#f0c040aa', marginTop: 4 }}>
-                  {fortuneMult.toFixed(2)}× luck
+                  {lootFortuneMult > 1 && `${lootFortuneMult.toFixed(2)}× drop odds`}
+                  {lootFortuneMult > 1 && fortuneMult > 1 && ' · '}
+                  {fortuneMult > 1 && `${fortuneMult.toFixed(2)}× doubloons`}
                 </motion.p>
               )}
 

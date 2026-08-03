@@ -28,6 +28,8 @@ import { GAUNTLET_DEEPEST_CONTEST_ENDS_AT } from '@/lib/contests'
 import { getBait } from '@/lib/bait'
 import { merchantPrice } from '@/lib/gauntletMerchant'
 import { eyeCharge } from '@/lib/finnItems'
+import { fortuneLootMult } from '@/lib/expeditions'
+import { getRaidPlayerStats } from '../actions'
 
 // Golden Gauntlet Hull — a rare Man-o-War-only cosmetic that drops only from the
 // top chest tier (Davy Jones' Locker, chest tier 5 / depth 18+). Tunable here.
@@ -773,7 +775,12 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   // Item drops are Davy's-Gauntlet-only — the Davy cannons never roll in a Don's
   // run. Don's has its own chase (the hull skins below); it drops no cannons.
   const ownedItems = (profile.raid_items as string[] | null) ?? []
-  const chestDrop = (c: number) => Math.min(CHEST_ODDS_CAP, c * offerChest)
+  // CREW FORTUNE. Read server-side from the deployed party, never taken from
+  // the client, and folded into the same chestDrop() every chase roll below
+  // runs through. getRaidPlayerStats is the exact loader the gauntlet page uses
+  // for the stat panel, so the number here is the number the player was shown.
+  const fortuneOdds = fortuneLootMult((await getRaidPlayerStats(user.id)).totalFortune)
+  const chestDrop = (c: number) => Math.min(CHEST_ODDS_CAP, c * offerChest * fortuneOdds)
   const dropChance = chestDrop(chestCannonDropChance(cd))
   const droppedItems: string[] = []
   if (!isDon && !ownedItems.includes(DAVY_FORGE.result)) {

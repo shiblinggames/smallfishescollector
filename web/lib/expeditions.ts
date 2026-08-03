@@ -174,6 +174,28 @@ export function computeTotalCrewStats(crew: CrewCard[]): TotalCrewStats {
 // (Routes weight these event types differently — coastal leans fortune, triangle
 // leans power+dodge — so this is a generic readiness gauge, not per-route.)
 
+/**
+ * FORTUNE'S PULL ON ITEM DROPS. Caps at 2x.
+ *
+ * Fortune used to do nothing at all for drops, in either mode, while the raid
+ * stat panel told players it meant "better odds at rare loot". It scaled the
+ * doubloon payout and nothing else. This is the number that makes the promise
+ * true, and it is deliberately a HARD 2x rather than the uncapped 1 + f/75 the
+ * doubloon multiplier uses: coin inflating is survivable, chase-item odds
+ * running away is not.
+ *
+ * 150 is set from live parties, not picked round. Across 20 deployed raid
+ * parties the median is 15 fortune, p75 is 47, p90 is 113 and the best today is
+ * 136; six Lv100 Legendaries with +4 Fortune traits reach 204. So a casual
+ * party gets ~1.1x and barely notices, a deliberate fortune build lands near
+ * 1.9x, and the full 2x is a real target that nobody has hit yet.
+ */
+export const FORTUNE_LOOT_FULL = 150
+
+export function fortuneLootMult(totalFortune: number): number {
+  return 1 + Math.min(1, Math.max(0, totalFortune) / FORTUNE_LOOT_FULL)
+}
+
 export function computeVoyageScore(power: number, dodge: number, fortune: number): number {
   const powerRate   = Math.min(power   / 55, 0.80)
   const fortuneRate = Math.min(fortune / 45, 1)

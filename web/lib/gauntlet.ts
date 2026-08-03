@@ -1078,12 +1078,18 @@ export function chestOdds(opts: {
   /** Davy's Offer, when he has offered a heavier chest. Multiplies every drop
    *  chance below (capped), and the cash-out rolls against the very same number. */
   oddsMult?: number
+  /** Crew Fortune's pull on drops, from fortuneLootMult (1x to 2x). Passed in
+   *  rather than derived so this stays a pure function, and REQUIRED wherever
+   *  the number is shown: the breather prints these odds and the cash-out rolls
+   *  against them, so anything applied to one must be applied to the other or
+   *  the panel is quietly lying. */
+  fortuneMult?: number
 }): ChestOdd[] {
   const { depth, hardcore, pressure, ownedItems, ownedSkins, davyForge } = opts
   const isDon = opts.variant === 'don'
   const payDepth = Math.min(depth, GAUNTLET_REWARD_DEPTH_CAP)
   const tier = chestForDepth(payDepth).tier
-  const m = (c: number) => Math.min(CHEST_ODDS_CAP, c * (opts.oddsMult ?? 1))
+  const m = (c: number) => Math.min(CHEST_ODDS_CAP, c * (opts.oddsMult ?? 1) * (opts.fortuneMult ?? 1))
   const cannon = m(chestCannonDropChance(payDepth))
   const skin = m(chestSkinDropChance(payDepth))
   const out: ChestOdd[] = []
