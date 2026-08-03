@@ -795,7 +795,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'tempest_chronometer',
     name: 'Tempest Chronometer',
     image: '/forge_tempestchronometer.png',
-    description: 'Adds a fifth of your Savvy to your turn-order roll, opens every fight with a cannonball loaded and an even chance at a second, and on a successful dodge a 50% chance to deflect 75% of the shot back. Strike first, and answer everything.',
+    description: 'Adds a fifth of your Savvy to your turn-order roll, opens every fight with a cannonball loaded and a 50% chance of loading a second, and on a successful dodge a 50% chance to deflect 75% of the shot back. Strike first, and answer everything.',
     emoji: '🌀',
     rarity: 'legendary',
     effects: [
