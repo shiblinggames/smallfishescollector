@@ -736,7 +736,12 @@ export default function DailyVoyagePanel({
                     const color   = specialDef ? specialDef.color : getBait((drop as { type: string }).type).color
                     const name    = specialDef ? specialDef.name : getBait((drop as { type: string }).type).name
                     const image   = specialDef?.image ?? (drop.kind === 'bait' ? getBait((drop as { type: string }).type).imageUrl ?? null : null)
-                    const label   = specialDef ? `Special item · ${specialDef.effectLabel}` : 'Fishing bait'
+                    // One word. The pill says what KIND of drop this is and
+                    // nothing more: the name is already on the row above it and
+                    // the effect is spelled out in the detail line beside it, so
+                    // "Special item · Doubles your next catch" was saying the
+                    // same thing twice at twice the width.
+                    const label   = specialDef ? 'Special' : 'Bait'
                     const detail  = specialDef
                       ? specialDef.description
                       : (() => {
