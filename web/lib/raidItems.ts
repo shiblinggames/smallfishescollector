@@ -795,12 +795,32 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'tempest_chronometer',
     name: 'Tempest Chronometer',
     image: '/forge_tempestchronometer.png',
-    description: 'Adds a fifth of your Savvy to your turn-order roll, always opens each fight with a cannonball already loaded, and on a successful dodge a 50% chance to deflect 75% of the shot back. Strike first, and answer everything.',
+    description: 'Adds a fifth of your Savvy to your turn-order roll, opens every fight with TWO cannonballs already loaded, and on a successful dodge a 50% chance to deflect 75% of the shot back. Strike first, strike twice, and answer everything.',
     emoji: '🌀',
     rarity: 'legendary',
     effects: [
       { type: 'speed_roll_nav_pct',  value: 0.20 },
       { type: 'start_charge_chance', value: 1.00 },
+      // THE SECOND BALL, and the whole reason to forge this.
+      //
+      // Both components already grant start_charge_chance 1, and the primers are
+      // a tier family that takes best-of among themselves, so 1 and 1 folded to
+      // 1. That left the fusion differing from a Riposte Chronometer by nothing
+      // but the speed roll, while costing two legendaries destroyed, four base
+      // drops, three forges and 250 Fathoms. Six of the eight Abyssals pay
+      // something over the union of their parts; this was one of the two that
+      // did not.
+      //
+      // extra_start_charge_chance is the right lever rather than a bigger number
+      // somewhere: it is documented as sitting OUTSIDE the primer best-of family
+      // precisely so it stacks on top of them, and two parts that each open
+      // loaded fusing into one that opens with two is legible without reading a
+      // stat line.
+      //
+      // Checked for degeneracy: the magazine is 3 and a volley costs 3, so this
+      // does NOT buy a turn-one volley. It buys about a turn of tempo, which is
+      // modest beside Leviathan's permanent +30% boss damage.
+      { type: 'extra_start_charge_chance', value: 1.00 },
       { type: 'parry_chance',        value: 0.50 },
       { type: 'parry_reflect_pct',   value: 0.75 },
     ],
