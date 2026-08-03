@@ -184,8 +184,33 @@ export function rollCrate(
     for (const c of currency) { r -= c.weight; if (r <= 0) { currencyIdx = c.idx; break } }
   }
 
-  // ── The tertiary rolls ──
+  // ── The unique roll ──
   const itemIdxs: number[] = []
+
+  // A uniqueShare raid is ONE two-stage roll, which is what the field's own doc
+  // on BossRaidConfig has always described: `uniqueShare` of the time you get one
+  // of the uniques you are missing, picked among them by weight, otherwise
+  // currency.
+  //
+  // It was implemented as N INDEPENDENT rolls at share/N instead, which is a
+  // different thing wearing the same number. That makes `share` an expected
+  // COUNT rather than a probability: at 0.5 with eight missing it was eight
+  // rolls at 6.25%, so the chance of actually getting something was 1 - 0.9375^8
+  // = 40%, not 50, and it could pay two or three items out of one crate. The
+  // shortfall also moved as you completed the set, which is precisely the
+  // rot uniqueShare exists to prevent.
+  if (uniqueShare != null && uniqueShare > 0 && uniques.length > 0) {
+    const p = Math.min(MAX_ITEM_CHANCE, uniqueShare * fortuneMult)
+    if (rng() < p) {
+      const total = uniques.reduce((s, u) => s + u.row.weight, 0)
+      let r = rng() * total
+      let pick = uniques[uniques.length - 1]
+      for (const u of uniques) { r -= u.row.weight; if (r <= 0) { pick = u; break } }
+      itemIdxs.push(pick.idx)
+    }
+    return { currencyIdx, itemIdxs }
+  }
+
   for (const u of uniques) {
     const isLegendary = u.row.rarity === 'legendary' || u.row.rarity === 'ancient'
     const p = Math.min(

@@ -2260,12 +2260,12 @@ export const RAID_MAP: RaidNode[] = [
     image: THE_QUARTERMASTERS_GHOST.enemies.ghost.portrait,
     detail: {
       description:
-        "He is holding every Cache item you left behind, and every one you forged away.\n\n17.5% DROP CHANCE EVERY CLEAR, near enough one run in six. It is split evenly across the items you still need, so the last one is exactly as likely as the first was. Crew Fortune raises it, up to double. Run him as often as you like.\n\nHE FIGHTS WITH THEM. Your fire, your ice, your sights, your plating, your bearings, all turned on you. Every item you take back is one he can never use again.\n\nFOUR BARS, THREE CHECKS. He patches his hull with your plating, lights your fire-shot, and calls a shot down your own sights. Answer each with a CREW ABILITY.",
+        "He is holding every Cache item you left behind, and every one you forged away.\n\n50% DROP CHANCE EVERY CLEAR. Half your runs pay a Cache item, and it is split evenly across the ones you still need, so the last one is exactly as likely as the first was. Crew Fortune raises it, up to double. Run him as often as you like.\n\nHE FIGHTS WITH THEM. Your fire, your ice, your sights, your plating, your bearings, all turned on you. Every item you take back is one he can never use again.\n\nFOUR BARS, THREE CHECKS. He patches his hull with your plating, lights your fire-shot, and calls a shot down your own sights. Answer each with a CREW ABILITY.",
       enemies: ["The Quartermaster's Ghost"],
       drops: lootDrops(THE_QUARTERMASTERS_GHOST.loot),
       clearReward: clearPayout(THE_QUARTERMASTERS_GHOST),
-      dropsNote: '17.5% chance of a Cache item every clear, near enough one run in six, spread evenly over the ones you do not currently have. Crew Fortune raises it.',
-      summary: "The Quartermaster died still holding every Cache item you passed up, and he collects the ones you forge away too. Roughly one run in six he hands one back, and you can run him as often as you like.",
+      dropsNote: '50% chance of a Cache item every clear, spread evenly over the ones you do not currently have. Crew Fortune raises it.',
+      summary: "The Quartermaster died still holding every Cache item you passed up, and he collects the ones you forge away too. Half your runs he hands one back, and you can run him as often as you like.",
     },
   },
   {

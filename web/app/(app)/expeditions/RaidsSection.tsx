@@ -3321,8 +3321,11 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
                       {/* No plate behind the art: the piece sits on the sheet
                           itself. A drop shadow tinted to its rarity does the
                           work the border used to, without boxing it in. */}
+                      {/* 84 -> 60. Two stacked rows cost the sheet a whole extra
+                          band of height, and the art was sized for a single rail
+                          where vertical space was free. */}
                       <div style={{
-                        position: 'relative', width: '100%', height: 84,
+                        position: 'relative', width: '100%', height: 60,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}>
                         {d.swatch
@@ -3385,10 +3388,17 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
                 )
                 return (
                   <div style={{ marginBottom: 16 }}>
+                    {/* FIXED tracks, not minmax(_, 1fr). With 1fr the cells
+                        stretch to fill the row, so two items and one hull skin
+                        ended up at completely different widths and the two rows
+                        no longer started from the same edge. Fixed widths keep
+                        every cell the size its art wants and let both rows pack
+                        from the left, wrapping when they run out of room.
+                        Skins get the wider cell because hull art is 16:9. */}
                     {dropItems.length > 0 && (
                       <div style={{ marginBottom: dropSkins.length > 0 ? 12 : 0 }}>
                         {split && sub('Items')}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(84px, 1fr))', gap: 8 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, 80px)', justifyContent: 'start', gap: 8 }}>
                           {dropItems.map(tile)}
                         </div>
                       </div>
@@ -3396,7 +3406,7 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
                     {dropSkins.length > 0 && (
                       <div>
                         {split && sub('Ship Skins')}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(126px, 1fr))', gap: 8 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, 116px)', justifyContent: 'start', gap: 8 }}>
                           {dropSkins.map(tile)}
                         </div>
                       </div>

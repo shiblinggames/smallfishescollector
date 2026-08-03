@@ -1399,18 +1399,20 @@ export const THE_QUARTERMASTERS_GHOST: BossRaidConfig = {
   raidId: 'the_quartermasters_ghost',
   // How often this crate pays a Cache item AT ALL, split evenly across the ones
   // you still need, so the rate never rots as you complete the set. The wall
-  // this was added to fix was brutal: under a plain weighted roll his six items
+  // this was added to fix was brutal: under a plain weighted roll his items
   // started at 50% of the crate and decayed to 14% for the LAST one, making the
   // single item you were actually farming for the rarest thing he had.
   //
-  // 0.175, not 0.5. He carries six epics where every other campaign boss
-  // carries one epic, one legendary and one hull; at the flat per-rarity rate
-  // that made him pay 0.60 items a crate against everyone else's 0.175, more
-  // than triple, purely because his table is long. This is the same throughput
-  // as any other boss, just spread over six specific things. It still beats the
-  // wall, and better than before: with one item left it pays 17.5% for exactly
-  // the thing you want.
-  uniqueShare: 0.175,
+  // HALF. Deliberately well above the 0.175 a normal campaign boss pays, and it
+  // is not an oversight: he is not a campaign boss. He is the RECOVERY node, the
+  // only answer to a Cache you chose once and a forge that eats what it fuses,
+  // and the things he holds cannot be got anywhere else at any rate. A one-bar
+  // duel you are told to run over and over should pay like one.
+  //
+  // Flat, so it does not rot: eight still missing is 6.25% each and 50% overall,
+  // and down to your last one the whole 50% rides on exactly the thing you came
+  // for. Crew fortune multiplies on top, to a hard 2x.
+  uniqueShare: 0.5,
   enemyAccuracy: 30,
   raidTitle: "The Quartermaster's Ghost",
   bossDefeatedText: 'The Ghost Dispersed',
@@ -1519,9 +1521,9 @@ export const THE_QUARTERMASTERS_GHOST: BossRaidConfig = {
   bossId: 'ghost',
   // Everything he ever made you choose between. The crate drops whatever is already
   // in your raid_items out of the pool, so it narrows to exactly what you are still
-  // missing. uniqueShare above is what sets the RATE, and it is flat: 17.5% of clears
-  // pay a Cache item whether you are missing all eight (2.2% each) or down to your
-  // last one (the whole 17.5% riding on it). Crew fortune multiplies that, to a hard
+  // missing. uniqueShare above is what sets the RATE, and it is flat: 50% of clears
+  // pay a Cache item whether you are missing all eight (6.25% each) or down to your
+  // last one (the whole 50% riding on it). Crew fortune multiplies that, to a hard
   // 2x. The currency slots keep a clear from ever feeling wasted.
   //
   // If these numbers move, three player-facing strings on the raidMap node move with
