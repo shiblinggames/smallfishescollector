@@ -10,7 +10,7 @@ import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
 import { getShipSkin } from '@/lib/shipSkins'
 import { getActiveEffects } from '@/lib/raidItems'
 import { getXPProgress, getLevelFromXP, MAX_LEVEL } from '@/lib/expeditionLevel'
-import { raidDamageProfile, fortuneLootMult, type RaidMods } from '@/lib/expeditions'
+import { raidDamageProfile, fortuneLootMult, fortuneDoubloonMult, type RaidMods } from '@/lib/expeditions'
 import { rollCrate, crateItemChances, LOOT_RARITY_TIER } from '@/lib/raidLoot'
 import { crewLevelFromXP, CREW_MAX_LEVEL } from '@/lib/crewLevel'
 import { type ShipAugment } from '@/lib/shipAugments'
@@ -376,7 +376,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   // Two different jobs, two different curves. Coin scales uncapped because a
   // richer haul is harmless; ITEM odds are capped at 2x by fortuneLootMult
   // because a chase item that becomes common stops being a chase.
-  const fortuneMult       = 1 + totalFortune / 75   // doubloons, uncapped
+  const fortuneMult       = fortuneDoubloonMult(totalFortune)   // doubloons, uncapped
   const lootFortuneMult   = fortuneLootMult(totalFortune)   // item odds, hard 2x
   // What this crate can still drop and how likely each one is. Computed HERE
   // because this is the only place that holds the table, the owned set and both

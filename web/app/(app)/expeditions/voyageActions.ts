@@ -12,7 +12,7 @@ import { generateAndSaveVoyageLog, type VoyageCrewMember } from '@/lib/captains-
 import type { CrewCard } from '@/lib/expeditions'
 import { voyageXP, getLevelFromXP } from '@/lib/expeditionLevel'
 import { loadDeployedParty } from '@/lib/crewData'
-import { resolveDeployedCrew } from '@/lib/crewResolve'
+import { resolveDeployedCrew, slotMult} from '@/lib/crewResolve'
 import { RARITY_NAMES, crewDisplayName, type CrewRarity } from '@/lib/crewGen'
 import { grantXPToCrewIds, type CrewXPGrant } from '@/lib/crewXPGrant'
 import { hasSafeVoyages, gauntletVoyageSpeedMult } from '@/lib/gauntletUpgrades'
@@ -185,7 +185,9 @@ export async function sendDailyVoyage(route: VoyageRoute = 'open'): Promise<
   const totalDoubloons = Math.round(result.totalDoubloons * (1 + resolved.voyage.doubloonPct / 100))
 
   const expeditionLevel = getLevelFromXP(profile.expedition_xp ?? 0)
-  const totalNav = crew.reduce((s, c, i) => s + Math.round(c.dodge * (i === 0 ? 1 : 0.8)), 0)
+  // slotMult, not an inline 0.8: this is the same captain weighting raids use,
+  // and a copy here would silently diverge the moment it is retuned.
+  const totalNav = crew.reduce((s, c, i) => s + Math.round(c.dodge * slotMult(i)), 0)
   // Swift Sails (Locker Upgrade) shortens the wait.
   const duration_ms = Math.round(computeVoyageDurationMs(expeditionLevel, totalNav) * gauntletVoyageSpeedMult(gauntletUpgrades))
   const crewIds = party.map(p => p.id)

@@ -68,7 +68,15 @@ export interface ResolvedParty {
 const CAPTAIN_MULT = 1
 const CREW_MULT = 0.8
 
-function slotMult(slot: number): number {
+/**
+ * What a hand in this seat contributes. The captain counts at full strength and
+ * everyone else at CREW_MULT.
+ *
+ * EXPORTED because it was private, so callers who needed it wrote
+ * `i === 0 ? 1 : 0.8` inline instead (voyageActions' Nav total, the raid stat
+ * panel). Retuning CREW_MULT would have moved raids and left those behind.
+ */
+export function slotMult(slot: number): number {
   return slot === 0 ? CAPTAIN_MULT : CREW_MULT
 }
 

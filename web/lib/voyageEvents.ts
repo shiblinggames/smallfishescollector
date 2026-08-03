@@ -243,14 +243,45 @@ function rollLureDrop(route: VoyageRoute): 'luminous' | 'golden' | null {
   return Math.random() < GOLDEN_SHARE ? 'golden' : 'luminous'
 }
 
+// ── The voyage stat curves, in ONE place ────────────────────────────────────
+//
+// These were written inline here and hand-copied into DailyVoyagePanel's
+// expected-payout preview, where one of them had already drifted: the preview
+// used min(1, power/30) for an encounter win while the roll below uses
+// min(0.80, power/55), so at 30 Power the panel promised a certain win against
+// a real 54.5%. Exported as functions so the preview and the roll cannot
+// disagree again.
+
+/** Scales every payout a voyage brings home. fortune 22 = 1.4x, 55 = 2x. */
+export function voyageFortuneScale(fortune: number): number {
+  return 1 + fortune / 55
+}
+/** Scales payouts on encounters specifically. power 20 = 1.33x, 30 = 1.5x. */
+export function voyagePowerScale(power: number): number {
+  return 1 + power / 60
+}
+/** Chance a discovery event pays out. Guaranteed at 45 fortune. */
+export function voyageDiscoveryChance(fortune: number): number {
+  return Math.min(1, fortune / 45)
+}
+/** Chance of winning an encounter. HARD capped at 80%, so a voyage is never a
+ *  certainty however much Power is aboard. */
+export function voyageEncounterWinChance(power: number): number {
+  return Math.min(0.80, power / 55)
+}
+/** Chance of dodging a danger event outright. Certain at 28 savvy. */
+export function voyageDodgeChance(dodge: number): number {
+  return Math.min(1, dodge / 28)
+}
+
 export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: VoyageRoute = 'open', noCrewRisk = false): VoyageResult {
   const rc = ROUTE_CONFIGS[route]
   const stats = computeTotalCrewStats(crew)
   const { power, dodge, fortune } = stats
   const crewCount = crew.length
   const captain = crew[0]
-  const fortuneScale = 1 + fortune / 55  // fortune=22 → 1.4×, fortune=40 → 1.73×, fortune=55 → 2×
-  const powerScale   = 1 + power   / 60  // power=20  → 1.33×, power=30  → 1.5×
+  const fortuneScale = voyageFortuneScale(fortune)
+  const powerScale   = voyagePowerScale(power)
   const payout = (min: number, max: number, usePower = false) =>
     Math.round(rand(min, max) * fortuneScale * (usePower ? powerScale : 1) * rc.payoutScale)
 
@@ -261,9 +292,9 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
   }
 
   // Stat rolls — power capped at 80% max so encounters are never guaranteed wins
-  const rollFortune  = () => Math.random() * 45 < fortune        // fortune 22 ≈ 49%, fortune 45 = guaranteed
-  const rollPower    = () => Math.random() < Math.min(0.80, power / 55)  // power 28 ≈ 50%, hard cap 80%
-  const rollDodge    = () => Math.random() * 28 < dodge          // dodge 12 ≈ 43%
+  const rollFortune  = () => Math.random() < voyageDiscoveryChance(fortune)
+  const rollPower    = () => Math.random() < voyageEncounterWinChance(power)
+  const rollDodge    = () => Math.random() < voyageDodgeChance(dodge)
   const rollWeather  = () => Math.random() < 0.30 + shipTier * 0.10  // tier 0=30%, tier 7=100%
 
   const events: VoyageEvent[] = []

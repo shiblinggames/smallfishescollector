@@ -192,6 +192,15 @@ export function computeTotalCrewStats(crew: CrewCard[]): TotalCrewStats {
  */
 export const FORTUNE_LOOT_FULL = 150
 
+/**
+ * Fortune's pull on crate DOUBLOONS. Uncapped, unlike the loot curve: more coin
+ * is harmless, a chase item becoming common is not. Lived inline in RaidGame,
+ * which is the wrong home for a number the loot stage also prints.
+ */
+export function fortuneDoubloonMult(totalFortune: number): number {
+  return 1 + Math.max(0, totalFortune) / 75
+}
+
 export function fortuneLootMult(totalFortune: number): number {
   return 1 + Math.min(1, Math.max(0, totalFortune) / FORTUNE_LOOT_FULL)
 }

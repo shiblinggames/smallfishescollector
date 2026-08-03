@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition, useCallback, useEffect, useRef, useMemo, type ReactNode } from 'react'
+import { voyageFortuneScale, voyagePowerScale, voyageDiscoveryChance, voyageEncounterWinChance } from '@/lib/voyageEvents'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
@@ -115,10 +116,14 @@ function computeRouteEstimate(
   safeVoyages = false,
 ) {
   const rc = ROUTE_CONFIGS[route]
-  const fortuneScale = 1 + stats.fortune / 55
-  const powerScale   = 1 + stats.power   / 60
-  const pDiscovery   = Math.min(1, stats.fortune / 45)
-  const pWin         = Math.min(1, stats.power   / 30)
+  // Straight from the resolver (lib/voyageEvents), not copied. pWin used to be
+  // min(1, power/30) here against the roll's min(0.80, power/55), so at 30 Power
+  // this panel promised a certain encounter win where the voyage rolled 54.5%,
+  // and every expected-doubloon figure below inherited the error.
+  const fortuneScale = voyageFortuneScale(stats.fortune)
+  const powerScale   = voyagePowerScale(stats.power)
+  const pDiscovery   = voyageDiscoveryChance(stats.fortune)
+  const pWin         = voyageEncounterWinChance(stats.power)
 
   const enc = route === 'shroud' ? 4 : route === 'triangle' ? 3 : route === 'deep' ? (crewCount >= 2 ? 5 : 4) : route === 'open' ? 2 : 0
   const dng = route === 'shroud' ? 4 : route === 'triangle' ? 3 : route === 'deep' ? 2 : route === 'open' ? (crewCount >= 2 ? 2 : 1) : 0
