@@ -25,6 +25,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import { createPortal } from 'react-dom'
 import { crewLevelFromXP } from '@/lib/crewLevel'
+import { isDivineTrait, netTraitStats, traitLabel, traitKind, type TraitStats } from '@/lib/crewEffects'
 import { CREW_HALL_MAX_TIER, hallTierDef } from '@/lib/crewHall'
 import {
   bunkCount, bunkRatePerHour, canBunk, drillsMaxed, hallTierRequiredFor,
@@ -51,6 +52,15 @@ function fmtLeft(ms: number): string {
   if (m < 60) return `${m}m left`
   const h = Math.floor(m / 60)
   return `${h}h ${m % 60}m left`
+}
+
+/** A trait's three stats as one line, for the tile's tooltip. The label alone
+ *  says the shape; the numbers say how much. */
+function statLine(t: TraitStats): string {
+  const parts = ([['PWR', t.power], ['DGE', t.dodge], ['FTN', t.fortune]] as const)
+    .filter(([, v]) => v !== 0)
+    .map(([k, v]) => `${v > 0 ? '+' : ''}${v} ${k}`)
+  return parts.length ? parts.join(' / ') : 'no effect'
 }
 
 function fmtStint(h: number): string {
@@ -721,9 +731,42 @@ function BunkPicker({
                         {blocked}
                       </span>
                     ) : (
-                      <span className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#b8b1a8', fontVariantNumeric: 'tabular-nums' }}>
-                        Lv {crewLevelFromXP(m.xp)}
-                      </span>
+                      <>
+                        <span className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#b8b1a8', fontVariantNumeric: 'tabular-nums' }}>
+                          Lv {crewLevelFromXP(m.xp)}
+                        </span>
+                        {/* THE TRAIT THEY ALREADY CARRY. This is the fact the
+                            choice actually turns on, most of all at the
+                            Leviathan bunk: you send the hand whose trait you
+                            want changed, or the one whose good trait you are
+                            trying to finish. Picking blind and checking the
+                            roster afterwards was the only way to know.
+                            Coloured by kind, so a flaw reads as a flaw without
+                            reading the word. */}
+                        {(() => {
+                          const t = netTraitStats(m.effects)
+                          const label = traitLabel(t)
+                          if (!label) return (
+                            <span className="font-karla" style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.3)' }}>No trait</span>
+                          )
+                          const divine = isDivineTrait(t)
+                          const kind = traitKind(t)
+                          return (
+                            <span
+                              className={`font-karla font-700 uppercase tracking-[0.04em]${divine ? ' trait-divine' : ''}`}
+                              title={statLine(t)}
+                              style={{
+                                display: 'block', width: '100%', fontSize: '0.55rem', lineHeight: 1.25,
+                                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                ...(divine ? {} : {
+                                  color: kind === 'buff' ? '#9cc7a8' : kind === 'flaw' ? '#c79c9c' : 'rgba(255,255,255,0.45)',
+                                }),
+                              }}>
+                              {label}
+                            </span>
+                          )
+                        })()}
+                      </>
                     )}
                   </button>
                 )

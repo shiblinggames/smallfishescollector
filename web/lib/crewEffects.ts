@@ -308,6 +308,16 @@ export function traitLabel(s: TraitStats): string {
   return net >= 0 ? 'Mercurial' : 'Errant'
 }
 
+/** THE top trait: +4 in all three, the ceiling of the deep roll.
+ *
+ *  Compared by LABEL rather than by summing to 12, so this and traitLabel can
+ *  never disagree about what earns the sheen. Lives here because three surfaces
+ *  need it (roster card, detail modal, bunk picker) and a local copy in each is
+ *  how the drop-rate maths drifted. */
+export function isDivineTrait(t: TraitStats): boolean {
+  return traitLabel(t) === 'Divine'
+}
+
 /** Whether a trait is a net buff, flaw, or neutral — drives the color
  *  treatment in the detail modal. */
 export function traitKind(s: TraitStats): 'buff' | 'flaw' | 'neutral' {

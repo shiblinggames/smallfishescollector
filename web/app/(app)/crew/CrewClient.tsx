@@ -19,7 +19,7 @@ import { crewAssignment } from '@/lib/crewAssignment'
 import HallBunks from './HallBunks'
 import { bunkCrew, collectBunk, buyDrill, buyStores, acceptTraitOffer, declineTraitOffer, type TraitPicks } from './bunkActions'
 import { RARITY_NAMES, RARITY_COLORS, groupForSlug, crewDisplayName, GEM_WEIGHTS, type CrewRarity } from '@/lib/crewGen'
-import { applyCrewEffects, decodeTraitStats, netTraitStats, traitLabel, traitKind, type TraitStats } from '@/lib/crewEffects'
+import { applyCrewEffects, decodeTraitStats, isDivineTrait, netTraitStats, traitLabel, traitKind, type TraitStats } from '@/lib/crewEffects'
 import AssignBoard from './AssignBoard'
 import AssignPicker from './AssignPicker'
 import { useReveal, BoardReveal, RevealFlash, RevealBanner } from './boardReveal'
@@ -568,7 +568,7 @@ function CrewPanel({
           {(() => {
             const t = netTraitStats(effects)
             const label = traitLabel(t)
-            const divine = isDivine(t)
+            const divine = isDivineTrait(t)
             const kind = traitKind(t)
             return (
               <p className="font-cinzel font-700" style={{
@@ -793,7 +793,7 @@ function FallenPanel({ crew }: { crew: FallenCrew }) {
           if (!label) return null
           const kind = traitKind(t)
           const buff = kind === 'buff'
-          const divine = isDivine(t)
+          const divine = isDivineTrait(t)
           return (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 2 }}>
               <span className={`font-karla font-700${divine ? ' trait-divine' : ''}`} style={{
@@ -812,14 +812,6 @@ function FallenPanel({ crew }: { crew: FallenCrew }) {
       </div>
     </motion.div>
   )
-}
-
-/** THE top trait: +4 in all three. Compared by label rather than by summing
- *  to 12, so this and traitLabel can never drift apart about what earns the
- *  treatment. Divine is the only 12 there is, but the label is the thing
- *  players actually see. */
-function isDivine(t: TraitStats): boolean {
-  return traitLabel(t) === 'Divine'
 }
 
 /** A trait's three stats as one compact line ("+2 PWR / -1 DGE"). Zeroes are
@@ -1109,7 +1101,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
       // server does the merge, and a moment this big should fire on what
       // actually landed rather than on what the card predicted.
       const landed = res.state.roster.find(c => c.id === crewId)
-      const nowDivine = take && !!landed && isDivine(netTraitStats(landed.effects))
+      const nowDivine = take && !!landed && isDivineTrait(netTraitStats(landed.effects))
       setState(res.state)
       vibrate(nowDivine ? [30, 60, 30, 60, 90] : take ? [18, 50, 30] : 10)
       setBunkReveal(null)
@@ -2202,8 +2194,8 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                           settled before the tap, not discovered after it. */}
                       <div style={{ marginTop: 8, padding: '0.55rem 0.7rem', borderRadius: 11, background: `${LEVIATHAN_COLOR}12`, border: `1px solid ${LEVIATHAN_COLOR}4d`, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
                         <span className="font-karla font-700 uppercase" style={{ fontSize: '0.55rem', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.45)' }}>Result</span>
-                        <span className={`font-cinzel font-700${isDivine(merged) ? ' trait-divine' : ''}`}
-                          style={{ fontSize: isDivine(merged) ? '1.02rem' : '0.92rem', ...(isDivine(merged) ? {} : { color: LEVIATHAN_COLOR }) }}>
+                        <span className={`font-cinzel font-700${isDivineTrait(merged) ? ' trait-divine' : ''}`}
+                          style={{ fontSize: isDivineTrait(merged) ? '1.02rem' : '0.92rem', ...(isDivineTrait(merged) ? {} : { color: LEVIATHAN_COLOR }) }}>
                           {traitLabel(merged) || 'No trait'}
                         </span>
                         <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#c6e8e2', fontVariantNumeric: 'tabular-nums' }}>
@@ -3381,9 +3373,9 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                 {/* Trait: name and effect, one row, no heading over it. */}
                 {dTraitLabel && (
                   <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, padding: '0.15rem 0' }}>
-                    <span className={`font-cinzel font-700${isDivine(dTrait) ? ' trait-divine' : ''}`} style={{
-                      fontSize: isDivine(dTrait) ? '0.95rem' : '0.86rem', fontStyle: 'italic',
-                      ...(isDivine(dTrait) ? {} : { color: dTraitKind === 'buff' ? '#9fd9b1' : dTraitKind === 'flaw' ? '#e09a9a' : 'rgba(255,255,255,0.6)' }),
+                    <span className={`font-cinzel font-700${isDivineTrait(dTrait) ? ' trait-divine' : ''}`} style={{
+                      fontSize: isDivineTrait(dTrait) ? '0.95rem' : '0.86rem', fontStyle: 'italic',
+                      ...(isDivineTrait(dTrait) ? {} : { color: dTraitKind === 'buff' ? '#9fd9b1' : dTraitKind === 'flaw' ? '#e09a9a' : 'rgba(255,255,255,0.6)' }),
                     }}>
                       {dTraitLabel}
                     </span>
