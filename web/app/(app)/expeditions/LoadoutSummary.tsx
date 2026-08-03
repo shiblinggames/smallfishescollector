@@ -25,6 +25,10 @@ type Fold = 'product' | 'sum' | 'max'
 const pctOf = (mult: number) => `${mult >= 1 ? '+' : ''}${Math.round((mult - 1) * 100)}%`
 const rate = (n: number) => `${Math.round(n * 100)}%`
 const plus = (n: number) => `+${Math.round(n * 100)}%`
+/** Flag effects carry no number worth printing (the value is always 1), so the
+ *  row exists to say the mechanic is ON rather than to total anything. */
+const flag = () => 'Yes'
+const turns = (n: number) => `+${n} turn${n === 1 ? '' : 's'}`
 
 /** Every effect an item can grant, where it belongs, and how combat folds it. */
 const ROWS: { type: RaidEffectType; label: string; group: Group; fold: Fold; fmt: (n: number) => string }[] = [
@@ -40,6 +44,7 @@ const ROWS: { type: RaidEffectType; label: string; group: Group; fold: Fold; fmt
   { type: 'mega_damage_mult',        label: 'Ultimate damage',  group: 'offense', fold: 'product', fmt: pctOf },
   { type: 'afflicted_damage_mult',   label: 'Vs afflicted',     group: 'offense', fold: 'product', fmt: pctOf },
   { type: 'lifesteal_pct',           label: 'Lifesteal',        group: 'offense', fold: 'sum',     fmt: plus },
+  { type: 'avenge_elite_mult',       label: 'Avenged vs elites', group: 'offense', fold: 'product', fmt: pctOf },
   // ── Defense ──
   { type: 'incoming_damage_mult',    label: 'Damage taken',     group: 'defense', fold: 'product', fmt: pctOf },
   { type: 'max_hp_mult',             label: 'Max hull',         group: 'defense', fold: 'product', fmt: pctOf },
@@ -52,6 +57,8 @@ const ROWS: { type: RaidEffectType; label: string; group: Group; fold: Fold; fmt
   // rate takes the best, matching how combat folds them.
   { type: 'ward_pct',                label: 'Ward',             group: 'defense', fold: 'sum',     fmt: plus },
   { type: 'ward_refill_pct',         label: 'Braced on reload', group: 'defense', fold: 'max',     fmt: rate },
+  { type: 'ward_refill_on_save',     label: 'Ward back on save', group: 'defense', fold: 'max',     fmt: flag },
+  { type: 'first_blow_parry_chance', label: 'Brace first blow', group: 'defense', fold: 'max',     fmt: rate },
   // ── Special ── the procs and mechanics, which is most of what makes a build
   { type: 'burn_chance',             label: 'Set ablaze',       group: 'special', fold: 'max',     fmt: rate },
   { type: 'freeze_chance',           label: 'Freeze',           group: 'special', fold: 'max',     fmt: rate },
@@ -66,6 +73,11 @@ const ROWS: { type: RaidEffectType; label: string; group: Group; fold: Fold; fmt
   { type: 'corrode_on_hit',          label: 'Corrode',          group: 'special', fold: 'max',     fmt: rate },
   { type: 'feeble_on_hit',           label: 'Feeble',           group: 'special', fold: 'max',     fmt: rate },
   { type: 'speed_roll_nav_pct',      label: 'Turn order',       group: 'special', fold: 'sum',     fmt: plus },
+  { type: 'pierce_crit',             label: 'Pierce lands crit', group: 'special', fold: 'max',     fmt: flag },
+  { type: 'crit_spread_chance',      label: 'Spread on crit',   group: 'special', fold: 'max',     fmt: rate },
+  { type: 'crit_ramp_turns',         label: 'Crit stokes ramp', group: 'special', fold: 'max',     fmt: turns },
+  { type: 'ambush_each_phase',       label: 'Ambush each phase', group: 'special', fold: 'max',     fmt: flag },
+  { type: 'charge_on_hit_chance',    label: 'Load when hit',    group: 'special', fold: 'max',     fmt: rate },
 ]
 
 const GROUPS: { key: Group; title: string; hue: string }[] = [

@@ -22,11 +22,16 @@
 import { RAID_ITEMS, getForgeRecipe, type RaidEffectType } from './lib/raidItems'
 
 /** Effects whose value is a count, not a rate. Nothing to spell as a %. */
-const COUNT_EFFECTS = new Set<RaidEffectType>(['lethal_save'])
+const COUNT_EFFECTS = new Set<RaidEffectType>(['lethal_save', 'crit_ramp_turns'])
+
+/** Effects whose value is a FLAG (always 1 = "this item does the thing"). The
+ *  behaviour still has to be described, but there is no number to print, and
+ *  letting these fall through would demand a meaningless "100%" on the card. */
+const FLAG_EFFECTS = new Set<RaidEffectType>(['pierce_crit', 'ambush_each_phase', 'ward_refill_on_save'])
 
 /** The percentage a player should be able to read straight off the card. */
 function expectedPct(type: RaidEffectType, v: number): number | null {
-  if (COUNT_EFFECTS.has(type)) return null
+  if (COUNT_EFFECTS.has(type) || FLAG_EFFECTS.has(type)) return null
   const pct = type.endsWith('_mult') ? Math.round(Math.abs(1 - v) * 100) : Math.round(v * 100)
   return pct === 0 ? null : pct
 }

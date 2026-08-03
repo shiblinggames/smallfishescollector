@@ -1183,8 +1183,49 @@ export default function RaidCombat({
       setPlayerFrozen(false)
       cleansePlayerStatuses() // Ch4 statuses lift with the ward too
     }
+    onCheatedDeath()
     return { hp: reviveHp, buffPct }
   }
+
+  // ── ABYSSAL TWISTS — the per-fight state the tier-3 fusions hang off ────────
+  // Each Abyssal carries one conditional its two parents cannot produce between
+  // them (see the effect-type block in lib/raidItems). All of it is CURRENT-FIGHT
+  // only and cleared in the fresh-enemy reset below, same as the vengeance ward.
+  //
+  /** Drowned Crown: a killing blow has been cheated this fight, so the crown's
+   *  bite vs elites is live for the rest of it. */
+  const avengeArmedRef = useRef(false)
+  /** Leviathan's Cannon: extra turns of damage ramp bought by landed crits. Added
+   *  to the turn clock, so the ramp runs ahead of the fight. */
+  const critRampBonusRef = useRef(0)
+  /** Warlord's Reckoning: the shot count at the start of the current boss phase.
+   *  The opener is "the next shot after this", so a phase change re-arms it. */
+  const shotsAtPhaseStartRef = useRef(0)
+  /** Aegis of the Deep: enemy attacks that have landed on you this fight. The
+   *  first-blow brace only looks at 0. */
+  const enemyAttacksThisFightRef = useRef(0)
+
+  /** Every rider that fires when a killing blow is CHEATED, from any source — an
+   *  item lethal save or Laz's vengeance ward. Two Abyssals hang off this moment
+   *  and both should read it the same way, so it lives in one place rather than
+   *  being copy-pasted across the (currently four) lethal gates. */
+  function onCheatedDeath(): void {
+    const fx = getActiveEffects(equippedRaidItems.filter(id => id !== repossessedItemRef.current))
+    // Drowned Crown — arm the avenging bite.
+    if (fx.some(e => e.type === 'avenge_elite_mult')) avengeArmedRef.current = true
+    // The Standing Wall — the barrier comes straight back up. Restored to the
+    // pool's OPENING size, never past it, exactly like the Reload brace.
+    if (
+      fx.some(e => e.type === 'ward_refill_on_save')
+      && shieldOpenMaxRef.current > 0
+      && abyssalShieldRef.current < shieldOpenMaxRef.current
+    ) {
+      abyssalShieldRef.current = shieldOpenMaxRef.current
+      setAbyssalShieldHp(shieldOpenMaxRef.current)
+      setResolveLog(prev => [...prev, 'The Standing Wall goes straight back up.'])
+    }
+  }
+
   // Hull Render confluence: how many Volleys the player has fired THIS fight, so
   // each one ramps harder than the last. Reset on every fight start.
   const volleyCountRef = useRef(0)
@@ -1857,6 +1898,7 @@ export default function RaidCombat({
         anchorUsedRef.current = true; onAnchorSave?.()
         playerHpRef.current = 1; setPlayerHp(1)
         setAnchorSaveFx(k => k + 1)
+        onCheatedDeath()
         setResolveLog(prev => [...prev, `It should have sunk you — the anchor holds at 1 HP.`])
       } else {
         playerHpRef.current = 0; setPlayerHp(0)
@@ -2361,6 +2403,12 @@ export default function RaidCombat({
     vengeanceBuffPctRef.current = 0
     vengeanceCleanseRef.current = false
     vengeanceDmgBuffRef.current = 0
+    // Abyssal twists are per-fight too — a fresh hull clears the avenging bite,
+    // the crit-bought ramp, the phase ambush and the first-blow brace.
+    avengeArmedRef.current = false
+    critRampBonusRef.current = 0
+    shotsAtPhaseStartRef.current = 0
+    enemyAttacksThisFightRef.current = 0
     enemyPhaseRef.current = 1
     setEnemyPhase(1)
     aegisRef.current = null; aegisHitsRef.current = 0
@@ -2777,6 +2825,7 @@ export default function RaidCombat({
         anchorUsedRef.current = true; onAnchorSave?.()
         playerHpRef.current = 1; setPlayerHp(1)
         setAnchorSaveFx(k => k + 1)
+        onCheatedDeath()
         setResolveLog(prev => [...prev, `You ${what} — it should have sunk you, but the anchor holds at 1 HP.`])
         setSubPhase('await_input')
       } else {
@@ -3356,6 +3405,9 @@ export default function RaidCombat({
         setEnemyShieldHp(phaseShield)
         const n = enemyPhaseRef.current
         setEnemyPhase(n)
+        // Warlord's Reckoning: a phase change is the fight resetting its stance,
+        // so the NEXT shot counts as an opening shot again.
+        shotsAtPhaseStartRef.current = shotsThisFightRef.current
         setPhaseCallout(nextCfg.badge ?? `Phase ${n}`)
         setPhaseFlash(true)
         setTimeout(() => setPhaseFlash(false), 2400)
@@ -4161,6 +4213,9 @@ export default function RaidCombat({
       let splatColor = '#ef4444'
       let enemyCrit = false
       let playerCritShot = false   // this step is a player CRITICAL (for crit_strip_charge items)
+      // Oracle's Eye: this shot rolled as a CRITICAL instead, banked while the
+      // damage multipliers were in scope and swapped in only if the pierce fires.
+      let pierceCritDmg: number | null = null
       let procStatus: 'burn' | 'freeze' | 'stun' | undefined
       let stoleChargeOut = false
       let parriedHitOut = false
@@ -4430,7 +4485,11 @@ export default function RaidCombat({
           // (turn 1 = base; resets per enemy via turnRef reset in the encounter
           // effect). Sums if multiple ramp items are somehow equipped.
           const rampPerTurn = getActiveEffects(liveItems).filter(e => e.type === 'ramp_damage_per_turn').reduce((a, e) => a + e.value, 0)
-          const rampMult = 1 + Math.min(DAMAGE_RAMP_CAP, rampPerTurn * Math.max(0, turnRef.current - 1))
+          // Leviathan's Cannon: landed crits have bought extra turns of ramp, so
+          // the climb runs ahead of the clock. Same DAMAGE_RAMP_CAP ceiling — this
+          // reaches it sooner, it does not raise it.
+          const rampTurns = Math.max(0, turnRef.current - 1) + critRampBonusRef.current
+          const rampMult = 1 + Math.min(DAMAGE_RAMP_CAP, rampPerTurn * rampTurns)
           // Cold Fury (boon): crit hits hit harder. Only on a crit shot.
           const critTideMult = isCritShot ? tide.critDmgMult : 1
           // Wounded Fury (boon): bonus damage scaling with MISSING HP — 0 at full
@@ -4461,15 +4520,37 @@ export default function RaidCombat({
           // Vengeance rage — after Laz's ward cheats a killing blow, every shot
           // for the rest of the fight hits harder (capped +35% at the def level).
           const vengeanceMult = vengeanceDmgBuffRef.current > 0 ? 1 + vengeanceDmgBuffRef.current : 1
+          // Drowned Crown — the avenging bite. Live only once a killing blow has
+          // been cheated this fight, and only against ELITE hulls: the tier-5
+          // enemy in a raid sequence, or any non-boss wearing a challenge affix
+          // (both read as "the dangerous one in the room"). Its own factor in the
+          // chain, so when Laz's ward is what saved you, his rage and the crown's
+          // bite both apply rather than one swallowing the other.
+          const isEliteEnemy = enemy.id === 'elite' || !!affix
+          const avengeMult = avengeArmedRef.current && isEliteEnemy
+            ? getActiveEffects(liveItems).filter(e => e.type === 'avenge_elite_mult').reduce((a, e) => a * e.value, 1)
+            : 1
           // Statuses: what YOU deal (weaken ↓ / enrage ↑) × what the ENEMY
           // takes (feeble ↑ / fortify ↓) — the Ch4 pipeline's damage hooks.
           const statusOutMult = pStatus.dmgDealtMult * eStatus.dmgTakenMult
           // Vanguard Battery (item, id opening_statement): the FIRST shot of the fight lands harder.
           // shotsThisFightRef was already bumped for this shot at aim-lock, so the
           // opener reads as === 1. Every later shot is untouched.
-          const firstShotMult = shotsThisFightRef.current === 1
+          //
+          // Warlord's Reckoning widens that window: with ambush_each_phase equipped
+          // the FIRST shot of every boss phase counts as an opener too, since
+          // shotsAtPhaseStartRef is stamped at each phase change. Without the
+          // effect the condition is unchanged (=== 1), so Ambush Signet and every
+          // other first_shot_mult item behave exactly as before.
+          const phaseAmbush = getActiveEffects(liveItems).some(e => e.type === 'ambush_each_phase')
+          const isOpeningShot = shotsThisFightRef.current === 1
+            || (phaseAmbush && shotsThisFightRef.current === shotsAtPhaseStartRef.current + 1)
+          const firstShotMult = isOpeningShot
             ? getActiveEffects(liveItems).filter(e => e.type === 'first_shot_mult').reduce((a, e) => a * e.value, 1)
             : 1
+          if (isOpeningShot && phaseAmbush && shotsThisFightRef.current > 1 && firstShotMult > 1) {
+            stepLines.push(`The Reckoning re-arms — a new phase is a new opening.`)
+          }
           // Carrion Sight (item, id the_shakedown): +% vs an enemy that ALREADY carries any status —
           // a Ch4 status (weaken/feeble/corrode/slowed/marked), a burn, or a
           // freeze. This hit's own on-hit proc lands later, so a fresh affliction
@@ -4487,11 +4568,31 @@ export default function RaidCombat({
             && tide.doubleStrikeChance > 0 && Math.random() < tide.doubleStrikeChance
           const doubleStrikeMult = doubleStruck ? 2 : 1
           const mult = actionBaseMult * bossMult * nonbossMult * rampMult * aimItemMult * classDamageMult
-                       * tide.dmgMult * tideActionMult * itemActionMult * tideBossMult * critTideMult * lowHpMult * noncritTideMult * frozenMult * volleyRampMult * critStreakMult * vengeanceMult * statusOutMult * firstShotMult * afflictedMult * doubleStrikeMult
+                       * tide.dmgMult * tideActionMult * itemActionMult * tideBossMult * critTideMult * lowHpMult * noncritTideMult * frozenMult * volleyRampMult * critStreakMult * vengeanceMult * avengeMult * statusOutMult * firstShotMult * afflictedMult * doubleStrikeMult
           if (doubleStruck) stepLines.push(`Weather Gauge! You take the opening and the shot lands twice.`)
           // Say it out loud, or a refunded volley just looks like a bookkeeping bug.
           if (critRefunded) stepLines.push(`The Primeval Maw bites for free. That shot cost you nothing. (${pCharges}/${playerMaxCharges})`)
           dmg = Math.floor(rollShotDamage(lockedAimResult ?? 'miss', shipMinDamage, totalPower, mods.damagePct) * mult)
+          // ── Oracle's Eye: bank the CRITICAL version of this shot ────────────
+          // The pierce roll lives in the dodge resolver further down, but the dodge
+          // is only resolved AFTER damage is rolled, by which point every
+          // multiplier above is out of scope. So roll the critical here, while it
+          // still is, and the pierce swaps it in if it fires.
+          //
+          // The swap covers the two layers a player would notice: the item
+          // crit/non-crit mults and the matching tide ones. It deliberately does
+          // NOT retro-apply the crit-only boons (Cannonade's streak, Permafrost's
+          // brittle bonus) — those are rewards for a crit you AIMED, and a pierced
+          // shot did not roll gold on the bar. Dividing the two layers back out is
+          // safe: both default to 1 and neither is ever 0.
+          if (
+            (lockedAimResult ?? 'miss') !== 'miss' && !isCritShot
+            && getActiveEffects(liveItems).some(e => e.type === 'pierce_crit')
+          ) {
+            const critItemMult = getActiveEffects(liveItems).filter(e => e.type === 'crit_damage_mult').reduce((a, e) => a * e.value, 1)
+            const swapped = mult / (aimItemMult || 1) / (noncritTideMult || 1) * critItemMult * tide.critDmgMult
+            pierceCritDmg = Math.floor(rollShotDamage('critical', shipMinDamage, totalPower, mods.damagePct) * swapped)
+          }
           if (isVolley) volleyCountRef.current += 1   // this volley is now "fired" — the next ramps further
           // Enemy themed defense: crustacean carapace soaks a flat % off every
           // hit the player lands (Krust's crew). Applied to the rolled damage so
@@ -4649,7 +4750,15 @@ export default function RaidCombat({
                 .reduce((a, e) => Math.max(a, e.value), 0)
               if (pierce > 0 && Math.random() < pierce) {
                 dodged = false
-                stepLines.push(`You read the feint — the shot slips through the dodge.`)
+                // Oracle's Eye: reading the weave IS the perfect shot, so the
+                // pierced hit arrives as a critical (banked up at the damage roll).
+                if (pierceCritDmg != null) {
+                  dmg = pierceCritDmg
+                  playerCritShot = true
+                  stepLines.push(`You read the feint — the shot slips through the dodge and lands clean as a critical.`)
+                } else {
+                  stepLines.push(`You read the feint — the shot slips through the dodge.`)
+                }
               }
             }
             // dodgeBonus: flat % shift on the player's dodge outcome.
@@ -4971,7 +5080,15 @@ export default function RaidCombat({
             const rackCorrode = onHitEffects.filter(e => e.type === 'corrode_on_hit').reduce((a, e) => Math.max(a, e.value), 0)
             const rackFeeble  = onHitEffects.filter(e => e.type === 'feeble_on_hit').reduce((a, e) => Math.max(a, e.value), 0)
             const rackChance  = Math.max(rackWeaken, rackCorrode, rackFeeble)
-            if (rackChance > 0 && procRoll(rackChance)) {
+            // Plague Cannon: a landed CRITICAL gets its own shot at the spread,
+            // rolled after the rack's own roll misses, so the two are independent
+            // chances at the same payload rather than one replacing the other.
+            const critSpread = playerCritShot
+              ? onHitEffects.filter(e => e.type === 'crit_spread_chance').reduce((a, e) => Math.max(a, e.value), 0)
+              : 0
+            const spreadFired = (rackChance > 0 && procRoll(rackChance))
+              || (rackChance > 0 && critSpread > 0 && Math.random() < critSpread)
+            if (spreadFired) {
               const landed: string[] = []
               if (rackWeaken > 0) {
                 applyEnemyStatus('weaken', CHAIN_SHOT_WEAKEN_PCT, CHAIN_SHOT_WEAKEN_TURNS)
@@ -4987,6 +5104,16 @@ export default function RaidCombat({
               }
               debuffApplied = 'marked'
               stepLines.push(`The rack fires! Scrap iron rips through the ${enemy.name} — ${landed.join(', ')}, ${CHAIN_SHOT_WEAKEN_TURNS} rounds.`)
+            }
+            // Leviathan's Cannon: a LANDED crit stokes the siege, advancing the
+            // damage ramp by an extra turn. Counted here, past the dodge, so a
+            // crit that got weaved aside buys nothing.
+            if (playerCritShot) {
+              const rampTurnsPerCrit = onHitEffects.filter(e => e.type === 'crit_ramp_turns').reduce((a, e) => Math.max(a, e.value), 0)
+              if (rampTurnsPerCrit > 0) {
+                critRampBonusRef.current += rampTurnsPerCrit
+                stepLines.push(`The Leviathan stokes — that crit advances the siege a turn.`)
+              }
             }
           }
           // Confluence "Thermal Shock" (Permafrost + Wildfire) — placed AFTER the
@@ -5124,6 +5251,31 @@ export default function RaidCombat({
               stepLines.push(`Cutlass Guard! You turn the ${enemy.name}'s blow clean aside.`)
             }
           }
+          // Aegis of the Deep: the FIRST enemy blow to reach you each fight has a
+          // chance to be braced outright, with no dodge involved — the one thing
+          // ordinary parry_chance cannot do, since it only ever fires on a dodge
+          // you already won. A blow the player DODGED never gets here (that branch
+          // continues above), so this is genuinely "the first one that connects".
+          // Skipped when Cutlass Guard already turned it: one parry per blow.
+          if (rawIncoming > 0) enemyAttacksThisFightRef.current += 1
+          if (!parried && rawIncoming > 0 && enemyAttacksThisFightRef.current === 1) {
+            const firstBlowChance = getActiveEffects(liveItems)
+              .filter(e => e.type === 'first_blow_parry_chance').reduce((a, e) => Math.max(a, e.value), 0)
+            if (firstBlowChance > 0 && Math.random() < firstBlowChance) {
+              parried = true
+              parriedHitOut = true
+              dmg = 0
+              const reflectPct = getActiveEffects(liveItems)
+                .filter(e => e.type === 'parry_reflect_pct').reduce((a, e) => Math.max(a, e.value), 0)
+              if (reflectPct > 0 && eHp > 0) {
+                const reflect = Math.max(1, Math.round(rawIncoming * reflectPct))
+                eHp = wardFloor(eHp - soakEnemyShield(reflect))
+                stepLines.push(`The Aegis braces for the opening blow and throws ${reflect} straight back.`)
+              } else {
+                stepLines.push(`The Aegis braces — the opening blow glances clean off the hull.`)
+              }
+            }
+          }
           // Hull plating (raid items) + crew survivability effects (Bulwark
           // cuts, Soft Shell adds) both scale incoming damage here.
           // Tide layer: tide.inDmgMult folds in incomingDmgMult tide
@@ -5171,6 +5323,18 @@ export default function RaidCombat({
           shieldChanged = true
           if (dmg > 0) onStat?.({ dmgTaken: dmg })
           pHp = Math.max(0, pHp - dmg)
+          // Warden of the Deep: a hit that gets through to the hull can rattle a
+          // cannonball loose into the breech. Rolled on damage that reached HP
+          // (not on a blow the ward or shield ate whole), so the warden is paid
+          // for what he actually absorbs. Silent when the magazine is already full.
+          if (dmg > 0) {
+            const chargeOnHit = getActiveEffects(liveItems)
+              .filter(e => e.type === 'charge_on_hit_chance').reduce((a, e) => Math.max(a, e.value), 0)
+            if (chargeOnHit > 0 && pCharges < playerMaxCharges && Math.random() < chargeOnHit) {
+              pCharges += 1
+              stepLines.push(`The Warden answers the blow — a cannonball rolls into the breech. (${pCharges}/${playerMaxCharges})`)
+            }
+          }
           // Contract facts (Not a Scratch): only a NORMAL offensive shot that
           // lands damage counts — telegraphed specials/ultimates are excepted.
           if (dmg > 0 && (action === 'fire' || action === 'volley' || action === 'mega')) {
@@ -5448,6 +5612,7 @@ export default function RaidCombat({
               // sinking. Once per mount; parent spends the run charge.
               anchorUsedRef.current = true
               onAnchorSave?.()
+              onCheatedDeath()
               pHp = 1
               setPlayerHp(1)
               setAnchorSaveFx(k => k + 1)
@@ -5487,6 +5652,7 @@ export default function RaidCombat({
             setEnemyShieldHp(phaseShield)
             const n = enemyPhaseRef.current
             setEnemyPhase(n)
+            shotsAtPhaseStartRef.current = shotsThisFightRef.current
             setPhaseCallout(nextCfg.badge ?? `Phase ${n}`)
             setPhaseFlash(true); setTimeout(() => setPhaseFlash(false), 2400)
             setTimeout(() => setResolveLog(prev => [...prev, `${enemy.name}: "${nextCfg.dialogueLine}"`]), 300)

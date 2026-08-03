@@ -54,6 +54,22 @@ export type RaidEffectType =
   | 'ward_pct'              // value = 0-1 fraction of your MAX HP held as a barrier that soaks damage before the hull. Sources SUM.
   | 'ward_refill_pct'       // value = 0-1 fraction of the ward's capacity braced back on each RELOAD, never past the pool's opening size. Sources take the BEST.
   | 'afflicted_damage_mult' // value = damage multiplier vs an enemy that ALREADY carries any status/affliction (burning, frozen, weakened, corroded, feeble, slowed, marked…) at the moment you hit (The Shakedown). The proc that FIRST applies a status lands after this hit, so the bonus kicks in from the next hit on. Rewards a status/elemental build.
+  // ── THE ABYSSAL TWISTS ────────────────────────────────────────────────────
+  // One per Abyssal fusion, and found ONLY on the fusion. Everything else a
+  // tier-3 carries is inherited from its two parents, which left most of them
+  // reading as four base items in a trenchcoat rather than as a thing in their
+  // own right. Each of these is a CONDITIONAL neither parent can produce alone —
+  // the two halves finally talking to each other, the way a Gauntlet synergy
+  // does. Deliberately small: an Abyssal's power still comes from slot
+  // efficiency, not from these.
+  | 'avenge_elite_mult'     // value = damage multiplier vs ELITE hulls, live only AFTER a killing blow has been cheated this fight (an item lethal save OR Laz's vengeance ward). Its own factor in the damage chain, so it stacks on top of Laz's rage buff when both fire.
+  | 'pierce_crit'           // value = 1 (flag). A shot that lands through a would-be dodge (see dodge_pierce_chance) arrives as a CRITICAL rather than a plain hit. Dead weight without dodge_pierce_chance beside it.
+  | 'crit_spread_chance'    // value = 0-1 chance, on a landed CRITICAL, to fire the rack's full spread even when the rack's own roll missed. Dead weight without weaken/corrode/feeble_on_hit beside it.
+  | 'crit_ramp_turns'       // value = extra turns of ramp_damage_per_turn awarded by each landed CRITICAL this fight. Rides the same DAMAGE_RAMP_CAP, so it reaches the existing ceiling sooner rather than lifting it.
+  | 'ambush_each_phase'     // value = 1 (flag). Re-arms first_shot_mult on every boss PHASE change, so each phase gets its own opening shot. Does nothing against an enemy without phases. Dead weight without first_shot_mult beside it.
+  | 'charge_on_hit_chance'  // value = 0-1 chance, each time an enemy hit gets through to your hull, to load a cannonball. Being hit feeds the guns.
+  | 'ward_refill_on_save'   // value = 1 (flag). When a killing blow is cheated, the shield pool is restored to its opening size. Dead weight without ward_pct beside it.
+  | 'first_blow_parry_chance' // value = 0-1 chance that the FIRST enemy attack of each fight is turned aside outright: no damage, and parry_reflect_pct of it thrown back. Ordinary parry_chance only fires on a dodge you already won; this one needs no dodge at all.
 
 export interface RaidEffect {
   type: RaidEffectType
@@ -762,12 +778,17 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'leviathans_cannon',
     name: "Leviathan's Cannon",
     image: '/forge_leviathanscannon.png',
-    description: '+30% damage to bosses, your damage climbs +4% every turn of a fight, and +13% critical damage at the cost of 10% off your non-crits. The siege gun and the warlord’s piece welded into one barrel.',
+    description: '+30% damage to bosses, your damage climbs +4% every turn of a fight, every critical hit advances that climb by one more turn, and +13% critical damage at the cost of 10% off your non-crits. The siege gun and the warlord’s piece welded into one barrel.',
     emoji: '🐋',
     rarity: 'legendary',
     effects: [
       { type: 'boss_damage_mult',     value: 1.30 },
       { type: 'ramp_damage_per_turn', value: 0.04 },
+      // THE TWIST. The Siege Cannon brought the ramp and the Warlord's brought the
+      // crit bias, and on the fusion they sat in separate columns doing separate
+      // jobs. Now a crit STOKES the siege: the ramp is normally on the clock alone,
+      // so this is the only way to make it run ahead of the turn count.
+      { type: 'crit_ramp_turns',      value: 1 },
       { type: 'crit_damage_mult',     value: 1.13 },
       { type: 'noncrit_damage_mult',  value: 0.90 },
     ],
@@ -777,7 +798,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'aegis_of_the_deep',
     name: 'Aegis of the Deep',
     image: '/forge_aegisofthedeep.png',
-    description: '+15% max HP, cuts incoming enemy fire by 25%, and on a successful dodge a 50% chance to deflect 75% of the shot back at the attacker. Nothing the deep throws reaches the hull clean.',
+    description: '+15% max HP, cuts incoming enemy fire by 25%, on a successful dodge a 50% chance to deflect 75% of the shot back at the attacker, and a 35% chance the first blow of every fight is turned aside outright. Nothing the deep throws reaches the hull clean.',
     emoji: '🛡️',
     rarity: 'legendary',
     effects: [
@@ -785,6 +806,11 @@ export const RAID_ITEMS: RaidItemDef[] = [
       { type: 'incoming_damage_mult', value: 0.75 },
       { type: 'parry_chance',         value: 0.50 },
       { type: 'parry_reflect_pct',    value: 0.75 },
+      // THE TWIST. The Deflector Plate's parry only ever fires on a dodge you
+      // already won, which means the hull's own bulk (the Ironclad half) does
+      // nothing to help it land. Bracing the OPENING blow needs no dodge at all,
+      // so for one shot a fight the two halves are the same mechanic.
+      { type: 'first_blow_parry_chance', value: 0.35 },
     ],
     source: 'Abyssal Forge: Ironclad Bulwark + Deflector Plate',
   },
@@ -792,7 +818,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'drowned_crown',
     name: 'Drowned Crown',
     image: '/forge_drownedcrown.png',
-    description: '+17% damage to bosses AND non-boss enemies, +15% max HP, and once per raid a killing blow leaves you at 1 HP instead of sinking. The crown that will not be taken.',
+    description: '+17% damage to bosses AND non-boss enemies, +15% max HP, and once per raid a killing blow leaves you at 1 HP instead of sinking. Cheat death that way and you deal a further +10% to elite hulls for the rest of the fight. The crown that will not be taken.',
     emoji: '👑',
     rarity: 'legendary',
     effects: [
@@ -800,6 +826,14 @@ export const RAID_ITEMS: RaidItemDef[] = [
       { type: 'nonboss_damage_mult', value: 1.17 },
       { type: 'max_hp_mult',         value: 1.15 },
       { type: 'lethal_save',         value: 1 },
+      // THE TWIST, and the one this fusion needed most: before it, the Crown added
+      // literally nothing its two parents did not already give. Marauder's brought
+      // the damage and Last Bastion brought the save, and they never once touched.
+      // Now the save ARMS the damage. Elites only, so it stays a spike rather than
+      // a flat buff, and it deliberately reads off ANY cheated death — including
+      // Laz's vengeance ward, where it stacks on top of his rage rather than
+      // replacing it.
+      { type: 'avenge_elite_mult',   value: 1.10 },
     ],
     source: "Abyssal Forge: Marauder's Cannon + Last Bastion",
   },
@@ -929,7 +963,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
   {
     id: 'plague_cannon',
     name: 'Plague Cannon',
-    description: '35% chance each hit to Weaken, Corrode and make the enemy Feeble, you deal +25% damage to anything afflicted, and your criticals hit +15% harder. A rotting hull dies screaming.',
+    description: '35% chance each hit to Weaken, Corrode and make the enemy Feeble, with a further 25% chance a critical hit lands all three on its own. You deal +25% damage to anything afflicted, and your criticals hit +15% harder. A rotting hull dies screaming.',
     image: '/forge_plaguecannon.png',
     emoji: '☠️',
     rarity: 'legendary',
@@ -937,6 +971,11 @@ export const RAID_ITEMS: RaidItemDef[] = [
       { type: 'weaken_on_hit',        value: 0.35 },
       { type: 'corrode_on_hit',       value: 0.35 },
       { type: 'feeble_on_hit',        value: 0.35 },
+      // THE TWIST. The Carrion Rack brought the spread and the Sharpshooter's
+      // brought the crit, and the fusion let you roll them as two unrelated dice.
+      // Tying the second to the first means aiming well now spreads the rot, which
+      // is the only thing on this weapon that rewards the shot itself.
+      { type: 'crit_spread_chance',   value: 0.25 },
       { type: 'afflicted_damage_mult', value: 1.25 },
       { type: 'crit_damage_mult',     value: 1.15 },
     ],
@@ -945,7 +984,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
   {
     id: 'warden_of_the_deep',
     name: 'Warden of the Deep',
-    description: 'A big hit has a 60% chance to be dampened to 25% of your hull, the first killing blow each raid leaves you standing, 20% of your Savvy joins your turn-order roll, and once per raid you rally a spent ability. The deep does not let you fall.',
+    description: 'A big hit has a 60% chance to be dampened to 25% of your hull, every hit that does reach you has a 20% chance to load a cannonball, the first killing blow each raid leaves you standing, 25% of your Savvy joins your turn-order roll, and once per raid you rally a spent ability. The deep does not let you fall.',
     image: '/forge_wardenofthedeep.png',
     emoji: '🛡️',
     rarity: 'legendary',
@@ -954,6 +993,11 @@ export const RAID_ITEMS: RaidItemDef[] = [
       { type: 'max_hit_chance',     value: 0.6 },
       { type: 'lethal_save',        value: 1 },
       { type: 'speed_roll_nav_pct', value: 0.25 },
+      // THE TWIST. Bastion Drum blunts the blow, Deadman's Bearing buys tempo, and
+      // on the fusion the two were strangers: soaking a hit never once helped you
+      // act. Now the hits that DO land pay you back in the one currency the warden
+      // otherwise has no way to generate, so being ground down still arms the guns.
+      { type: 'charge_on_hit_chance', value: 0.20 },
     ],
     activated: { kind: 'refresh_ability', chance: 1.0 },
     source: 'Abyssal Forge: Bastion Drum + Deadman’s Bearing',
@@ -961,12 +1005,17 @@ export const RAID_ITEMS: RaidItemDef[] = [
   {
     id: 'oracles_eye',
     name: "Oracle's Eye",
-    description: 'A 35% chance to see through a feint, an 18% chance a clean hit becomes a crit, criticals hit +20% harder, and +12% max hull. You see the shot before it is taken.',
+    description: 'A 35% chance to see through a feint, and a shot that slips through one lands as a critical. An 18% chance a clean hit becomes a crit, criticals hit +20% harder, and +12% max hull. You see the shot before it is taken.',
     image: '/forge_oracleseye.png',
     emoji: '👁️',
     rarity: 'legendary',
     effects: [
       { type: 'dodge_pierce_chance', value: 0.35 },
+      // THE TWIST. Hawkeye Glass reads the feint and Heavy Gunner's Sight punishes
+      // a crit, and the fusion never joined them: piercing a dodge landed an
+      // ordinary hit like any other. Reading the enemy's weave IS the perfect shot,
+      // so it should pay like one.
+      { type: 'pierce_crit',         value: 1 },
       { type: 'crit_upgrade_chance', value: 0.18 },
       { type: 'crit_damage_mult',    value: 1.20 },
       { type: 'max_hp_mult',         value: 1.12 },
@@ -976,12 +1025,17 @@ export const RAID_ITEMS: RaidItemDef[] = [
   {
     id: 'warlords_reckoning',
     name: "Warlord's Reckoning",
-    description: 'Your first shot each fight lands +35% harder, a crit has a 50% chance to strip a loaded cannonball, and you deal +22% to bosses AND non-bosses alike. When you open, the account is already settled.',
+    description: 'Your first shot each fight lands +35% harder, and against a boss every new phase counts as a fresh opening shot. A crit has a 50% chance to strip a loaded cannonball, and you deal +22% to bosses AND non-bosses alike. When you open, the account is already settled.',
     image: '/forge_warlordsreckoning.png',
     emoji: '⚔️',
     rarity: 'legendary',
     effects: [
       { type: 'first_shot_mult',   value: 1.35 },
+      // THE TWIST. Ambush Signet pays the opener and Marauder's pays the boss, and
+      // against a boss the two pulled apart: the longest fights in the game are
+      // exactly the ones where a single opening shot matters least. A phase change
+      // is the fight resetting its stance, so it re-arms the ambush.
+      { type: 'ambush_each_phase', value: 1 },
       { type: 'crit_strip_charge', value: 0.50 },
       { type: 'boss_damage_mult',  value: 1.22 },
       { type: 'nonboss_damage_mult', value: 1.22 },
@@ -1031,7 +1085,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'the_standing_wall',
     name: 'The Standing Wall',
     image: '/forge_thelastwall.png',
-    description: 'Opens every fight behind a barrier worth 22% of your hull and braces 60% of it back on every Reload, a single hit over 25% of your max hull has a 50% chance to be dampened back to it, +15% max hull, and once per raid a killing blow leaves you at 1 HP instead of sinking.',
+    description: 'Opens every fight behind a barrier worth 22% of your hull and braces 60% of it back on every Reload, a single hit over 25% of your max hull has a 50% chance to be dampened back to it, +15% max hull, and once per raid a killing blow leaves you at 1 HP instead of sinking with the barrier restored to full.',
     emoji: '\u{1F6E1}',
     rarity: 'legendary',
     effects: [
@@ -1041,6 +1095,13 @@ export const RAID_ITEMS: RaidItemDef[] = [
       { type: 'max_hit_chance',  value: 0.50 },
       { type: 'max_hp_mult',     value: 1.15 },
       { type: 'lethal_save',     value: 1 },
+      // THE TWIST. Palisade Bulwark brought the ward and Last Bastion brought the
+      // save, and the fusion spent them in sequence: the ward drains, then much
+      // later the save catches you at 1 HP with nothing left standing between you
+      // and the next blow — the worst possible moment to have no barrier. Cheating
+      // death now puts the wall back up, so the save buys a real second wind
+      // instead of one turn of borrowed time.
+      { type: 'ward_refill_on_save', value: 1 },
     ],
     source: 'Abyssal Forge: Palisade Bulwark + Last Bastion',
   },
