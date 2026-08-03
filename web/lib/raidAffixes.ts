@@ -121,7 +121,7 @@ export const AFFIXES: Record<AffixId, AffixDef> = {
   // ── THE LEDGER — the Quartermaster's Ghost, and his alone ────────────────
   // He is a dead quartermaster who never stopped holding what you left in the
   // Caches and what you melted down in the forge. So he FIGHTS WITH IT. Every
-  // number below is one of the six Cache items he drops, turned around on you:
+  // number below is one of the Cache items he drops, turned around on you:
   //
   //   Incendiary Cannonball   -> burnChance     (he sets you alight)
   //   Frozen Cannonball       -> freezeChance   (he freezes you out of a turn)
@@ -129,7 +129,7 @@ export const AFFIXES: Record<AffixId, AffixDef> = {
   //   Reinforced Hull         -> shieldPctMaxHp (he comes in behind a barrier)
   //   Navigator's Compass     -> speedBonus     (he takes the first turn)
   //
-  // The sixth, the Quartermaster's Anchor, is not an affix: it is his phase.
+  // The Quartermaster's Anchor is not an affix: it is his phase.
   // He takes a killing blow and refuses to sink, exactly like the item does for
   // you (see THE_QUARTERMASTERS_GHOST.phases in lib/bossRaids).
   //

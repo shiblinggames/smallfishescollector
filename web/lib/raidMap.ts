@@ -2232,7 +2232,7 @@ export const RAID_MAP: RaidNode[] = [
     id: 'the_quartermasters_ghost',   type: 'raid',
     label: "The Quartermaster's Ghost",
     flavor: "The gun-deck is exactly as he left it, and so is he. The drowned keep better books than the living, and he never did stop counting what you owe.",
-    bridge: "The ghost keeps his counter open. Whatever you left in the Caches, and whatever you have melted down since, he still has it, and he will hand it over as many times as you can put him down.",
+    bridge: "The ghost keeps his counter open. Whatever you left in the Caches, and whatever you have melted down since, he still has it, and he will keep handing it back for as long as you keep putting him down.",
     // He opens once the CLERK has passed you. The muster is where the game finally
     // says out loud that checks are answered with crew abilities, and the Ghost is
     // three more checks in a row. Hanging him off the inspection puts him exactly
@@ -2241,21 +2241,21 @@ export const RAID_MAP: RaidNode[] = [
     requiresClearedNode: 'the_quartermaster_challenge',
     sideBranch: { parentId: 'blockade_muster' },
     // He is a GOAL, not a wall. A captain who has not yet beaten the Quartermaster's
-    // challenge should still be able to open him up and see the six Cache items he is
-    // holding, because that is the entire reason to go and beat it. Sealing him shut
-    // would hide the carrot behind the stick.
+    // challenge should still be able to open him up and see the eight Cache items he
+    // is holding, because that is the entire reason to go and beat it. Sealing him
+    // shut would hide the carrot behind the stick.
     previewWhenLocked: true,
     route: '/raids/ghost',
     raidId: THE_QUARTERMASTERS_GHOST.raidId,
     image: THE_QUARTERMASTERS_GHOST.enemies.ghost.portrait,
     detail: {
       description:
-        "He is holding every Cache item you left behind, and every one you forged away.\n\n50% DROP CHANCE EVERY CLEAR. It can be any item you do not currently have. Run him as often as you like.\n\nHE FIGHTS WITH THEM. Your fire, your ice, your sights, your plating, your bearings, all turned on you. Every item you take back is one he can never use again.\n\nFOUR BARS, THREE CHECKS. He patches his hull with your plating, lights your fire-shot, and calls a shot down your own sights. Answer each with a CREW ABILITY.",
+        "He is holding every Cache item you left behind, and every one you forged away.\n\n17.5% DROP CHANCE EVERY CLEAR, near enough one run in six. It is split evenly across the items you still need, so the last one is exactly as likely as the first was. Crew Fortune raises it, up to double. Run him as often as you like.\n\nHE FIGHTS WITH THEM. Your fire, your ice, your sights, your plating, your bearings, all turned on you. Every item you take back is one he can never use again.\n\nFOUR BARS, THREE CHECKS. He patches his hull with your plating, lights your fire-shot, and calls a shot down your own sights. Answer each with a CREW ABILITY.",
       enemies: ["The Quartermaster's Ghost"],
       drops: lootDrops(THE_QUARTERMASTERS_GHOST.loot),
       clearReward: clearPayout(THE_QUARTERMASTERS_GHOST),
-      dropsNote: '50% chance of a Cache item every clear. It can be any of the ones you do not currently have.',
-      summary: "The Quartermaster died still holding every Cache item you passed up, and he collects the ones you forge away too. He hands one back for every time you put him down.",
+      dropsNote: '17.5% chance of a Cache item every clear, near enough one run in six, spread evenly over the ones you do not currently have. Crew Fortune raises it.',
+      summary: "The Quartermaster died still holding every Cache item you passed up, and he collects the ones you forge away too. Roughly one run in six he hands one back, and you can run him as often as you like.",
     },
   },
   {

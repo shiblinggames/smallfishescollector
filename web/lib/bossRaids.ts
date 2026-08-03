@@ -454,9 +454,9 @@ export interface BossRaidConfig {
    *
    *  Without it, the crate is one weighted roll and owned uniques are simply REMOVED
    *  from the pool. Which quietly shrinks the uniques' share as you complete a set.
-   *  The Quartermaster's Ghost showed how bad that gets: his six Cache items start at
-   *  50% of the crate and decay to 14% for the LAST one, so the item you specifically
-   *  need is by far the hardest to get, and everyone hits that wall. That is an
+   *  The Quartermaster's Ghost showed how bad that gets: his Cache items started at
+   *  50% of the crate and decayed to 14% for the LAST one, so the item you specifically
+   *  needed was by far the hardest to get, and everyone hit that wall. That is an
    *  artifact of the roll, not a decision anyone made.
    *
    *  Set it and the roll becomes two-stage: `uniqueShare` of the time you get one of
@@ -1485,11 +1485,17 @@ export const THE_QUARTERMASTERS_GHOST: BossRaidConfig = {
   },
   sequence: [],          // BOSS ONLY. Round 0 is him.
   bossId: 'ghost',
-  // Everything he ever made you choose between. rollLootIndex removes whatever is
-  // already in your raid_items, so the pool narrows to exactly what you are still
-  // missing: miss all six and roughly a third of clears pay a component; down to
-  // your last one it is about 1 in 7. The currency slots keep a clear from ever
-  // feeling wasted.
+  // Everything he ever made you choose between. The crate drops whatever is already
+  // in your raid_items out of the pool, so it narrows to exactly what you are still
+  // missing. uniqueShare above is what sets the RATE, and it is flat: 17.5% of clears
+  // pay a Cache item whether you are missing all eight (2.2% each) or down to your
+  // last one (the whole 17.5% riding on it). Crew fortune multiplies that, to a hard
+  // 2x. The currency slots keep a clear from ever feeling wasted.
+  //
+  // If these numbers move, three player-facing strings on the raidMap node move with
+  // them: `description`, `dropsNote` and `summary`. They went on promising 50% after
+  // this dropped to 0.175, which is worse than a wrong rate being wrong: a player who
+  // does the arithmetic on the number you showed them concludes the drop is broken.
   loot: [
     { id: 'quartermasters_anchor', label: "Quartermaster's Anchor", image: '/quartermastersanchor.png', emoji: '⚓', rarity: 'epic', weight: 10 },
     { id: 'navigators_compass',    label: "Navigator's Compass",    image: '/navigatorscompass.png',    emoji: '🧭', rarity: 'epic', weight: 10 },
@@ -1510,7 +1516,7 @@ export const THE_QUARTERMASTERS_GHOST: BossRaidConfig = {
     // deliberately thin: a crate is a single roll no matter how long a raid is, which
     // made him pay the same crate as an 8-fight raid for an eighth of the time. He
     // was the best gem farm in the game by 3.4x, and worse, his rate DOUBLED once you
-    // owned all six Cache items (the unique pool empties and rollLootIndex falls
+    // owned every Cache item (the unique pool empties and rollLootIndex falls
     // through to 100% currency), so the boss you had finished with quietly became an
     // infinite gem printer. He pays doubloons and the Cache now. Gems are earned by
     // raids you actually have to fight through.
