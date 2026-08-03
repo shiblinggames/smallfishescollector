@@ -162,22 +162,45 @@ function ExpeditionTile({
       {dot && !tag && (
         <span aria-hidden style={{ position: 'absolute', top: 10, right: 10, width: 9, height: 9, borderRadius: 9, background: dot === 'returned' ? '#4ade80' : accent, boxShadow: dot === 'returned' ? '0 0 8px rgba(74,222,128,0.75)' : `0 0 8px ${accent}b0`, animation: 'shop-pulse 1.6s ease-in-out infinite' }} />
       )}
+      {/* The caption block is pinned to the BOTTOM, so it used to grow upward:
+          a tile whose status wrapped, or that carried a `sub` line, pushed its
+          own title higher than its neighbours and the four titles across the
+          2x2 sat at different heights. The tiles were always the same size (the
+          grid is 1fr 1fr and the height is a fixed 200) — it was the text
+          moving inside them that read as misalignment.
+
+          So the caption area is a FIXED box now and the meta lines live in a
+          fixed-height slot under the title. The title lands on the same
+          baseline on every tile whether it has one status line, a status and a
+          sub, or a lock. Each line is one line: long copy ellipsises rather
+          than wrapping and shoving everything up. */}
       <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '0 0.85rem 0.8rem' }}>
-        <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#ffffff', lineHeight: 1.1, textShadow: `0 2px 6px rgba(0,0,0,0.8), 0 0 14px ${accent}44` }}>{title}</p>
-        {locked ? (
-          <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.58rem', color: '#cfcac2', marginTop: 4, textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>
-            <IconLock size={10} /> {lockLabel}
-          </p>
-        ) : (
-          <>
-            <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: statusColor ?? accent, lineHeight: 1.3, marginTop: 3, textShadow: '0 1px 4px rgba(0,0,0,0.95)' }}>{status}</p>
-            {sub && (
-              <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#c2beb6', lineHeight: 1.3, marginTop: 1, textShadow: '0 1px 3px rgba(0,0,0,0.95)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                {subLock && <IconLock size={9} />}{sub}
-              </p>
-            )}
-          </>
-        )}
+        <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#ffffff', lineHeight: 1.1, textShadow: `0 2px 6px rgba(0,0,0,0.8), 0 0 14px ${accent}44`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</p>
+        <div style={{ height: 32, marginTop: 3, overflow: 'hidden' }}>
+          {locked ? (
+            <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.58rem', color: '#cfcac2', marginTop: 1, textShadow: '0 1px 4px rgba(0,0,0,0.9)', whiteSpace: 'nowrap', overflow: 'hidden' }}>
+              <IconLock size={10} /> <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{lockLabel}</span>
+            </p>
+          ) : (
+            <>
+              {/* Two lines when it has the slot to itself, one when a sub is
+                  sharing it. Either way it stays inside the 32px box, so the
+                  title never moves — but a long node name ("Next: The
+                  Quartermaster's Ghost") gets to wrap instead of being cut. */}
+              <p className="font-karla font-700" style={{
+                fontSize: '0.7rem', color: statusColor ?? accent, lineHeight: 1.3,
+                textShadow: '0 1px 4px rgba(0,0,0,0.95)',
+                display: '-webkit-box', WebkitBoxOrient: 'vertical',
+                WebkitLineClamp: sub ? 1 : 2, overflow: 'hidden',
+              }}>{status}</p>
+              {sub && (
+                <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#c2beb6', lineHeight: 1.3, marginTop: 1, textShadow: '0 1px 3px rgba(0,0,0,0.95)', display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap', overflow: 'hidden' }}>
+                  {subLock && <IconLock size={9} />}<span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</span>
+                </p>
+              )}
+            </>
+          )}
+        </div>
       </div>
       {progress != null && (
         <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 3, background: 'rgba(0,0,0,0.5)' }}>
