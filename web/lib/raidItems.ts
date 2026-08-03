@@ -1002,7 +1002,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
   {
     id: 'dons_palisade',
     name: "Don's Palisade",
-    image: null,
+    image: '/donspalisade.png',
     description: 'Opens every fight behind a barrier worth 12% of your hull, and every Reload braces 50% of it back. The Don does not need to be there for it to hold.',
     emoji: '\u{1F6E1}',
     rarity: 'rare',
