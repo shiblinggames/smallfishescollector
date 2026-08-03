@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { vibrate } from '@/lib/haptics'
 import { bossIdentityRevealed, bossListedInRoster, nodeArtRevealed, formatDropChance, isCombatNode, chapterForNode, RAID_CHAPTERS, musterSceneLines, SCENE_BACKDROPS, type RaidChapter, type RaidNodeDrop, type RaidNodeView } from '@/lib/raidMap'
 import type { RaidRecords } from './raidMapActions'
-import { RARITY_COLOR, GEM_GLYPH, GEM_COLOR, RAID_LOCATION_BG, RAID_BOSS_BG } from '@/lib/bossRaids'
+import { RARITY_COLOR, GEM_GLYPH, GEM_COLOR, RAID_LOCATION_BG, RAID_BOSS_BG, type BossRaidConfig} from '@/lib/bossRaids'
 import { getRaidItem } from '@/lib/raidItems'
 import { getRaidConfigById } from '@/lib/raidRegistry'
 import { isUniqueLoot } from '@/lib/bossRaids'
@@ -675,6 +675,42 @@ function sheetChapterBg(nodeId: string, views: RaidNodeView[]): string | undefin
   return boss?.node.raidId ? (RAID_LOCATION_BG[boss.node.raidId] ?? RAID_BOSS_BG[boss.node.raidId]) : undefined
 }
 
+
+/**
+ * The live drop chance for one row of a boss's crate, as a display string.
+ *
+ * ONE definition, used by the node sheet, the Bosses tab and the drop-detail
+ * modal. It existed as two hand-written copies inside render callbacks, which
+ * is how the modal ended up quoting RaidNodeDrop.chance (baked at map-build
+ * time from `weight / total`, i.e. the pre-rarity-rule, pre-Fortune model)
+ * while the chip that opened it showed the real number.
+ *
+ * Reads crateItemChances, the same function rollCrate uses, so a rate on screen
+ * is a rate the boss rolls against.
+ */
+function makeLiveChance(
+  cfg: BossRaidConfig | undefined,
+  ownedRaidItems: string[],
+  ownedShipSkins: string[],
+  totalFortune: number,
+) {
+  const dropOwned = (d: RaidNodeDrop): boolean =>
+    (!!d.id && ownedRaidItems.includes(d.id)) || (!!d.shipSkinId && ownedShipSkins.includes(d.shipSkinId))
+  const lootOwned = (l: { id: string; shipSkinId?: string }): boolean =>
+    ownedRaidItems.includes(l.id) || (!!l.shipSkinId && ownedShipSkins.includes(l.shipSkinId))
+  const liveChance = (d: RaidNodeDrop): string | undefined => {
+    if (!cfg || !d.id) return undefined
+    const row = cfg.loot.find(l => l.id === d.id)
+    if (!row || !isUniqueLoot(row)) return undefined
+    if (dropOwned(d)) return 'Owned'
+    const owned = new Set(cfg.loot.filter(lootOwned).map(l => l.id))
+    const hit = crateItemChances(cfg.loot, owned, cfg.uniqueShare, 1, fortuneLootMult(totalFortune), isChallengeRaid(cfg.raidId))
+      .find(c => c.id === d.id)
+    return hit ? formatDropChance(hit.chance) : undefined
+  }
+  return { liveChance, dropOwned, lootOwned }
+}
+
 function NodeDetailSheet({
   view,
   backdrop,
@@ -744,6 +780,10 @@ function NodeDetailSheet({
   // effect breakdown for raid items, drop chance). Cleared by tapping
   // outside the popup or its close button.
   const [selectedDrop, setSelectedDrop] = useState<RaidNodeDrop | null>(null)
+  // Component level, because the drop-detail modal below is rendered here and
+  // needs the same number the chips inside the drops block show.
+  const nodeCfg = view.node.raidId ? getRaidConfigById(view.node.raidId) : undefined
+  const { liveChance } = makeLiveChance(nodeCfg, ownedRaidItems, ownedShipSkins, totalFortune)
   // Dialogue scene overlay (any node with node.scene). Story nodes:
   // first read plays the scene and its final CTA marks the node read.
   // Milestone/event nodes: the scene is an intro cutscene — finishing
@@ -1984,23 +2024,6 @@ function NodeDetailSheet({
                 (!!d.id && ownedRaidItems.includes(d.id)) || (!!d.shipSkinId && ownedShipSkins.includes(d.shipSkinId))
               const lootOwned = (l: { id: string; shipSkinId?: string }): boolean =>
                 ownedRaidItems.includes(l.id) || (!!l.shipSkinId && ownedShipSkins.includes(l.shipSkinId))
-              // ODDS COME FROM THE ROLL ITSELF (lib/raidLoot.crateItemChances), not from a
-              // formula copied next to the card. This recomputed `share * weight/total` by
-              // hand, which had three problems: it was the pre-independent-rolls maths, it
-              // only ran when a raid set `uniqueShare` (one raid in eighteen, so every
-              // other boss card showed no chance at all), and it knew nothing about crew
-              // Fortune. A number shown beside a boss should be the number that boss rolls
-              // against.
-              const liveChance = (d: RaidNodeDrop): string | undefined => {
-                if (!cfg || !d.id) return undefined
-                const row = cfg.loot.find(l => l.id === d.id)
-                if (!row || !isUniqueLoot(row)) return undefined
-                if (dropOwned(d)) return 'Owned'
-                const owned = new Set(cfg.loot.filter(lootOwned).map(l => l.id))
-                const hit = crateItemChances(cfg.loot, owned, cfg.uniqueShare, 1, fortuneLootMult(totalFortune), isChallengeRaid(cfg.raidId))
-                  .find(c => c.id === d.id)
-                return hit ? formatDropChance(hit.chance) : undefined
-              }
 
               const gemDrop = drops.find(d => d.emoji === GEM_GLYPH)
               const gemAmount = gemDrop?.label.replace(/\s*Gems$/i, '')
@@ -2177,7 +2200,7 @@ function NodeDetailSheet({
   // tapping a unique-drop chip inside the sheet opens this card without
   // closing the sheet itself. Both portal to <body> so they escape any
   // ancestor stacking context.
-  const dropModal = selectedDrop ? <DropDetailModal drop={selectedDrop} owned={(!!selectedDrop.id && ownedRaidItems.includes(selectedDrop.id)) || (!!selectedDrop.shipSkinId && ownedShipSkins.includes(selectedDrop.shipSkinId))} onClose={() => setSelectedDrop(null)} /> : null
+  const dropModal = selectedDrop ? <DropDetailModal drop={selectedDrop} chance={liveChance(selectedDrop)} owned={(!!selectedDrop.id && ownedRaidItems.includes(selectedDrop.id)) || (!!selectedDrop.shipSkinId && ownedShipSkins.includes(selectedDrop.shipSkinId))} onClose={() => setSelectedDrop(null)} /> : null
 
   // Dialogue scene — StoryScene portals itself to <body> (z-1100, above
   // the sheet). Story nodes, first read: the final CTA fires the mark-read
@@ -2235,7 +2258,19 @@ function NodeDetailSheet({
 // addition to whatever the drop chip already had. Sits ABOVE the node
 // detail sheet (z-2000 vs sheet's z-1000); tapping the backdrop or the
 // X closes it without closing the underlying sheet.
-function DropDetailModal({ drop, owned, onClose }: { drop: RaidNodeDrop; owned: boolean; onClose: () => void }) {
+function DropDetailModal({ drop, owned, chance, onClose }: {
+  drop: RaidNodeDrop
+  owned: boolean
+  /**
+   * The LIVE chance, from crateItemChances. RaidNodeDrop.chance is baked at
+   * map-build time from `weight / total`, which was the old model and knows
+   * nothing about the rarity rule or crew Fortune. The chip that opens this
+   * modal has shown the live figure since the boss-card fix, so the modal was
+   * quoting a different number for the same item.
+   */
+  chance?: string
+  onClose: () => void
+}) {
   const rarityColor = drop.rarity ? RARITY_COLOR[drop.rarity] : '#9ca3af'
   const raidItem    = drop.raidItemId ? getRaidItem(drop.raidItemId)   : undefined
   const shipSkin    = drop.shipSkinId ? getShipSkin(drop.shipSkinId)   : undefined
@@ -2386,7 +2421,7 @@ function DropDetailModal({ drop, owned, onClose }: { drop: RaidNodeDrop; owned: 
               Owned · in your hold
             </span>
           </div>
-        ) : drop.chance ? (
+        ) : (chance ?? drop.chance) ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <span className="font-karla font-700 uppercase tracking-[0.1em]"
               style={{
@@ -2394,7 +2429,7 @@ function DropDetailModal({ drop, owned, onClose }: { drop: RaidNodeDrop; owned: 
                 background: `${rarityColor}1c`, border: `1px solid ${rarityColor}50`,
                 borderRadius: 999, padding: '0.32rem 0.85rem',
               }}>
-              {drop.chance} drop chance
+              {chance ?? drop.chance} drop chance
             </span>
           </div>
         ) : null}
@@ -3155,17 +3190,7 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
     (!!d.id && ownedRaidItems.includes(d.id)) || (!!d.shipSkinId && ownedShipSkins.includes(d.shipSkinId))
   const lootOwned = (l: { id: string; shipSkinId?: string }): boolean =>
     ownedRaidItems.includes(l.id) || (!!l.shipSkinId && ownedShipSkins.includes(l.shipSkinId))
-  // Same as above: the roll's own maths, so the card and the crate agree.
-  const liveChance = (d: RaidNodeDrop): string | undefined => {
-    if (!cfg || !d.id) return undefined
-    const row = cfg.loot.find(l => l.id === d.id)
-    if (!row || !isUniqueLoot(row)) return undefined
-    if (dropOwned(d)) return 'Owned'
-    const owned = new Set(cfg.loot.filter(lootOwned).map(l => l.id))
-    const hit = crateItemChances(cfg.loot, owned, cfg.uniqueShare, 1, fortuneLootMult(totalFortune), isChallengeRaid(cfg.raidId))
-      .find(c => c.id === d.id)
-    return hit ? formatDropChance(hit.chance) : undefined
-  }
+  const { liveChance } = makeLiveChance(cfg, ownedRaidItems, ownedShipSkins, totalFortune)
   // specialItemId is in here because Finn's Eye is a FISHING special: without it
   // the headline drop off the final boss never rendered on his own card. The cap
   // is 6 rather than 4 for the same reason, since he alone drops five.
@@ -3380,6 +3405,7 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
         <div onClick={e => e.stopPropagation()}>
           <DropDetailModal
             drop={dropDetail}
+            chance={liveChance(dropDetail)}
             owned={(!!dropDetail.id && ownedRaidItems.includes(dropDetail.id)) || (!!dropDetail.shipSkinId && ownedShipSkins.includes(dropDetail.shipSkinId))}
             onClose={() => setDropDetail(null)}
           />
