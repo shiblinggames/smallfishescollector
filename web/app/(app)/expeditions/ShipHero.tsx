@@ -3806,6 +3806,27 @@ function RaidScoreBreakdown({
         <p className="font-karla" style={{ fontSize: '0.66rem', color: '#7a6a60', marginTop: 6 }}>
           <span style={{ color: '#aebfd4', fontWeight: 600 }}>{rating.defense}</span> effective HP buffer.
         </p>
+
+        {/* Fortune's own line. This panel is where a captain comes to learn what
+            their raid stats DO, and it mentioned Fortune only as a footnote on
+            repair kits, because for a long time that was all it did in a raid.
+            It now moves drop odds and crate doubloons too, and a stat's biggest
+            effect should not be missing from the page that explains the stats.
+            Deliberately no live multiplier here: this panel takes no crew totals,
+            and a number that could not update would be worse than none. The
+            pre-fight sheet prints the live figure. */}
+        <div style={{ marginTop: '0.85rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(240,192,64,0.18)' }}>
+          <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.74rem', color: '#f0c040', marginBottom: '0.4rem' }}>Fortune</p>
+          <p className="font-karla" style={{ fontSize: '0.84rem', color: '#dccaa4', lineHeight: 1.5 }}>
+            Your crew&apos;s luck, and it pays three ways in a raid. It raises the odds on every{' '}
+            <span style={{ color: '#f0ede8', fontWeight: 600 }}>item drop</span>, up to double at high crew Fortune,
+            scales the <span style={{ color: '#f0ede8', fontWeight: 600 }}>doubloons</span> in the crate, and lifts
+            what your <span style={{ color: '#f0ede8', fontWeight: 600 }}>repair kits</span> heal.
+          </p>
+          <p className="font-karla" style={{ fontSize: '0.66rem', color: '#7a6a60', marginTop: 6 }}>
+            The exact drop odds for a raid are listed on its stats sheet before the fight.
+          </p>
+        </div>
       </div>
 
       <p className="font-karla" style={{ fontSize: '0.7rem', color: '#7a6a60', lineHeight: 1.45, textAlign: 'center', marginBottom: '1rem' }}>
