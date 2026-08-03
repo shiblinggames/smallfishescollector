@@ -1126,15 +1126,23 @@ export function chestOdds(opts: {
     }
     return out
   }
-  // The two Davy cannons roll INDEPENDENTLY, and stop once you have forged the Grand.
-  if (!ownedItems.includes(davyForge.result)) {
-    for (const id of davyForge.components) {
-      if (!ownedItems.includes(id)) out.push({ id, name: CHEST_DROP_NAMES[id] ?? id, kind: 'item', chance: cannon, chanceBeforeFortune: cannon0 })
-    }
+  // The two Davy cannons roll INDEPENDENTLY, purely on whether you hold them.
+  //
+  // They used to stop the moment you owned the Grand Cannon, which sounds right
+  // and was not: the forge is DESTRUCTIVE (see forgeRaidItem, which filters the
+  // components out of raid_items), so forging leaves you owning neither
+  // component AND unable to ever roll one again. They were extinct, and Davy's
+  // chase table emptied out for exactly the players who had engaged with it
+  // most. Owning the result is not a reason to stop dropping a component you no
+  // longer have; forgeRaidItem's own `Already forged` guard is what stops a
+  // second Grand being built.
+  for (const id of davyForge.components) {
+    if (!ownedItems.includes(id)) out.push({ id, name: CHEST_DROP_NAMES[id] ?? id, kind: 'item', chance: cannon, chanceBeforeFortune: cannon0 })
   }
-  // Hardcore: the Blood Cannon. Gone once forged into either of its fusions.
-  const bloodForged = ['bloodletter', 'reavers_cannon'].some(id => ownedItems.includes(id))
-  if (hardcore && tier >= BLOOD_CANNON_CHEST_TIER && !ownedItems.includes(BLOOD_CANNON_ITEM_ID) && !bloodForged) {
+  // Hardcore: the Blood Cannon, on the same rule. Fusing it into the Bloodletter
+  // or the Reaver's Cannon consumes it too, so it becomes droppable again rather
+  // than vanishing from the game.
+  if (hardcore && tier >= BLOOD_CANNON_CHEST_TIER && !ownedItems.includes(BLOOD_CANNON_ITEM_ID)) {
     out.push({ id: BLOOD_CANNON_ITEM_ID, name: "Davy's Blood Cannon", kind: 'item', chance: cannon, chanceBeforeFortune: cannon0 })
   }
   if (!ownedSkins.includes(GOLD_HULL_SKIN_ID)) {

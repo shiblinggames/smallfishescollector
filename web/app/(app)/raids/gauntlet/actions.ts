@@ -785,7 +785,12 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   const chestDrop = (c: number) => Math.min(CHEST_ODDS_CAP, c * offerChest * fortuneOdds)
   const dropChance = chestDrop(chestCannonDropChance(cd))
   const droppedItems: string[] = []
-  if (!isDon && !ownedItems.includes(DAVY_FORGE.result)) {
+  // Purely "do you hold this one", NOT "have you built the Grand". The forge is
+  // destructive, so building it CONSUMES both components; gating on the result
+  // meant a forged captain owned neither cannon and could never roll one again.
+  // Re-forging is blocked by forgeRaidItem's own `Already forged` check, so a
+  // recovered component can be equipped but never turned into a second Grand.
+  if (!isDon) {
     for (const cannon of DAVY_FORGE.components) {
       if (!ownedItems.includes(cannon) && Math.random() < dropChance) droppedItems.push(cannon)
     }
@@ -797,10 +802,10 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
     }
   }
   // Davy's Blood Cannon — HARDCORE-only chase (the first lifesteal item), from
-  // the deeper hardcore chests. Stops dropping once you own it OR have forged it
-  // into one of its fusions (mirrors the Grand Cannon).
-  const bloodForged = ['bloodletter', 'reavers_cannon'].some(id => ownedItems.includes(id))
-  if (!isDon && hc && chest.tier >= BLOOD_CANNON_CHEST_TIER && !ownedItems.includes(BLOOD_CANNON_ITEM_ID) && !bloodForged && Math.random() < chestDrop(chestCannonDropChance(cd))) {
+  // the deeper hardcore chests. Stops only while you HOLD it: fusing it into the
+  // Bloodletter or the Reaver's Cannon consumes it, so it becomes farmable again
+  // rather than leaving the slot permanently empty.
+  if (!isDon && hc && chest.tier >= BLOOD_CANNON_CHEST_TIER && !ownedItems.includes(BLOOD_CANNON_ITEM_ID) && Math.random() < chestDrop(chestCannonDropChance(cd))) {
     droppedItems.push(BLOOD_CANNON_ITEM_ID)
   }
   const newRaidItems = droppedItems.length > 0 ? [...new Set([...ownedItems, ...droppedItems])] : ownedItems
