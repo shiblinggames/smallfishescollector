@@ -3209,7 +3209,16 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
   // specialItemId is in here because Finn's Eye is a FISHING special: without it
   // the headline drop off the final boss never rendered on his own card. The cap
   // is 6 rather than 4 for the same reason, since he alone drops five.
-  const drops = (activeNode.detail?.drops ?? []).filter(d => (d.rarity === 'epic' || d.rarity === 'legendary' || d.rarity === 'ancient' || d.rarity === 'cosmetic') && (d.raidItemId || d.shipSkinId || d.specialItemId)).slice(0, 6)
+  // No slice. It used to cap at 6, which was invisible on every boss in the game
+  // except the Quartermaster's Ghost: he carries EIGHT Cache items and the card
+  // silently hid two of them, so the one boss whose entire purpose is showing you
+  // what he still holds was the one boss lying about it.
+  const drops = (activeNode.detail?.drops ?? []).filter(d => (d.rarity === 'epic' || d.rarity === 'legendary' || d.rarity === 'ancient' || d.rarity === 'cosmetic') && (d.raidItemId || d.shipSkinId || d.specialItemId))
+  // Gear and hull skins are different KINDS of prize: one changes how you fight,
+  // the other changes how you look, and they were sharing a rail with the skin
+  // usually sitting first. Split, so each row answers one question.
+  const dropItems = drops.filter(d => !d.shipSkinId)
+  const dropSkins = drops.filter(d => !!d.shipSkinId)
 
   // Header status pill reflects the active mode.
   const pillCleared = isChallenge ? chCleared : cleared
@@ -3279,23 +3288,15 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
           {drops.length > 0 && (
             <>
               <p className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.18em', color: '#8a857c', marginBottom: 8 }}>Drops</p>
-              {/* One fixed-height rail that scrolls sideways, so a boss with two
-                  drops and a boss with eight both read the same and neither
-                  reflows the sheet. The art is the tile; the name lives in the
-                  detail modal a tap away. */}
-              <div
-                className="scrollbar-hide"
-                style={{
-                  display: 'flex', gap: 8, marginBottom: 16,
-                  overflowX: 'auto', overflowY: 'hidden',
-                  scrollSnapType: 'x proximity',
-                  WebkitOverflowScrolling: 'touch',
-                  // Bleed to the sheet's edges so a scrollable rail visibly runs
-                  // off the side instead of stopping dead in the padding.
-                  margin: '0 -1.1rem 16px', padding: '0 1.1rem',
-                }}
-              >
-                {drops.map(d => {
+              {/* WRAPPING GRIDS, not a sideways rail. The rail kept every boss to
+                  one line, but it also meant most of a long table lived off the
+                  right edge where you had to know to swipe for it. These sheets
+                  scroll vertically anyway, so the grid just uses that: the
+                  Ghost's eight items land as two rows of four, all visible.
+                  Skins get wider cells because hull art is 16:9 and a square
+                  cell strands it in dead space. */}
+              {(() => {
+                const tile = (d: RaidNodeDrop) => {
                   const rc = (d.rarity && RARITY_COLOR[d.rarity]) || '#c4a96a'
                   const owned = dropOwned(d)
                   const chance = owned ? undefined : (liveChance(d) ?? d.chance)
@@ -3311,7 +3312,7 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
                       onClick={() => onDropTap(d)}
                       aria-label={`${d.label}${chance ? `, ${chance}` : ', owned'}, details`}
                       style={{
-                        flex: '0 0 auto', width: 126, scrollSnapAlign: 'start',
+                        width: '100%', minWidth: 0,
                         display: 'flex', flexDirection: 'column', gap: 3,
                         padding: 0, background: 'none', border: 'none',
                         cursor: 'pointer', font: 'inherit', touchAction: 'manipulation',
@@ -3374,8 +3375,35 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
                       </span>
                     </button>
                   )
-                })}
-              </div>
+                }
+                // Sub-labels only when there is something to tell apart. On a
+                // boss with no skin, "Items" under "Drops" is a heading for the
+                // sake of having one.
+                const split = dropItems.length > 0 && dropSkins.length > 0
+                const sub = (t: string) => (
+                  <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.16em', color: '#6f6a63', marginBottom: 6 }}>{t}</p>
+                )
+                return (
+                  <div style={{ marginBottom: 16 }}>
+                    {dropItems.length > 0 && (
+                      <div style={{ marginBottom: dropSkins.length > 0 ? 12 : 0 }}>
+                        {split && sub('Items')}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(84px, 1fr))', gap: 8 }}>
+                          {dropItems.map(tile)}
+                        </div>
+                      </div>
+                    )}
+                    {dropSkins.length > 0 && (
+                      <div>
+                        {split && sub('Ship Skins')}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(126px, 1fr))', gap: 8 }}>
+                          {dropSkins.map(tile)}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
             </>
           )}
           {activeRec && (
