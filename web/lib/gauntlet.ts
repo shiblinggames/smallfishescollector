@@ -1060,6 +1060,9 @@ export interface ChestOdd {
   kind: 'item' | 'skin'
   /** 0-1. Already accounts for tier gates and for what the player owns. */
   chance: number
+  /** The same chance WITHOUT crew Fortune, so a panel can show what the crew is
+   *  adding rather than only the total. Equal to `chance` when Fortune is 1x. */
+  chanceBeforeFortune: number
 }
 
 /** Everything this player could still pull out of a chest banked at `depth`, and how
@@ -1090,43 +1093,48 @@ export function chestOdds(opts: {
   const payDepth = Math.min(depth, GAUNTLET_REWARD_DEPTH_CAP)
   const tier = chestForDepth(payDepth).tier
   const m = (c: number) => Math.min(CHEST_ODDS_CAP, c * (opts.oddsMult ?? 1) * (opts.fortuneMult ?? 1))
+  /** Same maths, Fortune held at 1x. The cap is applied identically so the two
+   *  numbers stay comparable even when the boosted one is clipped. */
+  const m0 = (c: number) => Math.min(CHEST_ODDS_CAP, c * (opts.oddsMult ?? 1))
   const cannon = m(chestCannonDropChance(payDepth))
   const skin = m(chestSkinDropChance(payDepth))
+  const cannon0 = m0(chestCannonDropChance(payDepth))
+  const skin0 = m0(chestSkinDropChance(payDepth))
   const out: ChestOdd[] = []
 
   if (isDon) {
     // Don's Gauntlet: its own two items + two hulls, both NORMAL drops. No Davy loot.
     for (const id of DONS_GAUNTLET_ITEM_IDS) {
-      if (!ownedItems.includes(id)) out.push({ id, name: CHEST_DROP_NAMES[id] ?? id, kind: 'item', chance: cannon })
+      if (!ownedItems.includes(id)) out.push({ id, name: CHEST_DROP_NAMES[id] ?? id, kind: 'item', chance: cannon, chanceBeforeFortune: cannon0 })
     }
     if (tier >= GALAXY_HULL_CHEST_TIER && !ownedSkins.includes(GALAXY_HULL_SKIN_ID)) {
-      out.push({ id: GALAXY_HULL_SKIN_ID, name: 'Galaxy Hull', kind: 'skin', chance: skin })
+      out.push({ id: GALAXY_HULL_SKIN_ID, name: 'Galaxy Hull', kind: 'skin', chance: skin, chanceBeforeFortune: skin0 })
     }
     if (tier >= GHOST_HULL_CHEST_TIER && !ownedSkins.includes(GHOST_HULL_SKIN_ID)) {
-      out.push({ id: GHOST_HULL_SKIN_ID, name: "Don's Ghost Hull", kind: 'skin', chance: m(chestSkinDropChance(payDepth) * GHOST_HULL_DROP_MULT) })
+      out.push({ id: GHOST_HULL_SKIN_ID, name: "Don's Ghost Hull", kind: 'skin', chance: m(chestSkinDropChance(payDepth) * GHOST_HULL_DROP_MULT), chanceBeforeFortune: m0(chestSkinDropChance(payDepth) * GHOST_HULL_DROP_MULT) })
     }
     return out
   }
   // The two Davy cannons roll INDEPENDENTLY, and stop once you have forged the Grand.
   if (!ownedItems.includes(davyForge.result)) {
     for (const id of davyForge.components) {
-      if (!ownedItems.includes(id)) out.push({ id, name: CHEST_DROP_NAMES[id] ?? id, kind: 'item', chance: cannon })
+      if (!ownedItems.includes(id)) out.push({ id, name: CHEST_DROP_NAMES[id] ?? id, kind: 'item', chance: cannon, chanceBeforeFortune: cannon0 })
     }
   }
   // Hardcore: the Blood Cannon. Gone once forged into either of its fusions.
   const bloodForged = ['bloodletter', 'reavers_cannon'].some(id => ownedItems.includes(id))
   if (hardcore && tier >= BLOOD_CANNON_CHEST_TIER && !ownedItems.includes(BLOOD_CANNON_ITEM_ID) && !bloodForged) {
-    out.push({ id: BLOOD_CANNON_ITEM_ID, name: "Davy's Blood Cannon", kind: 'item', chance: cannon })
+    out.push({ id: BLOOD_CANNON_ITEM_ID, name: "Davy's Blood Cannon", kind: 'item', chance: cannon, chanceBeforeFortune: cannon0 })
   }
   if (tier >= GOLD_HULL_CHEST_TIER && !ownedSkins.includes(GOLD_HULL_SKIN_ID)) {
-    out.push({ id: GOLD_HULL_SKIN_ID, name: 'Golden Gauntlet Hull', kind: 'skin', chance: skin })
+    out.push({ id: GOLD_HULL_SKIN_ID, name: 'Golden Gauntlet Hull', kind: 'skin', chance: skin, chanceBeforeFortune: skin0 })
   }
   if (hardcore && tier >= BLOOD_HULL_CHEST_TIER && !ownedSkins.includes(BLOOD_HULL_SKIN_ID)) {
-    out.push({ id: BLOOD_HULL_SKIN_ID, name: 'Bad Blood Hull', kind: 'skin', chance: skin })
+    out.push({ id: BLOOD_HULL_SKIN_ID, name: 'Bad Blood Hull', kind: 'skin', chance: skin, chanceBeforeFortune: skin0 })
   }
   if (hardcore && !ownedSkins.includes(PRESSURE_SKIN_ID)) {
     const c = pressureSkinDropChance(pressure, payDepth)
-    if (c > 0) out.push({ id: PRESSURE_SKIN_ID, name: 'Pitch Black Hull', kind: 'skin', chance: m(c) })
+    if (c > 0) out.push({ id: PRESSURE_SKIN_ID, name: 'Pitch Black Hull', kind: 'skin', chance: m(c), chanceBeforeFortune: m0(c) })
   }
   return out
 }

@@ -3298,9 +3298,20 @@ export default function GauntletGame(props: GauntletGameProps) {
                                 ? <img src={img} alt="" loading="lazy" decoding="async" style={{ maxWidth: 28, maxHeight: 30, objectFit: 'contain', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.55))' }} />
                                 : <span style={{ fontSize: '1rem', color: GOLD }}>◆</span>}
                             </div>
-                            <p className="font-cinzel font-800" style={{ fontSize: '0.72rem', color: sweetened ? '#c9a7ff' : '#e8e1d2', lineHeight: 1, marginTop: 3 }}>
+                            {/* The BOOSTED chance is the headline, because it is
+                                the player's actual chance. The pre-Fortune number
+                                sits under it struck through, which says "was"
+                                without making anyone add two percentages
+                                together or work out whether a "+5%" meant points
+                                or a proportion. */}
+                            <p className="font-cinzel font-800" style={{ fontSize: '0.72rem', color: o.chance > o.chanceBeforeFortune ? GOLD : sweetened ? '#c9a7ff' : '#e8e1d2', lineHeight: 1, marginTop: 3 }}>
                               {(o.chance * 100).toFixed(o.chance < 0.1 ? 1 : 0)}%
                             </p>
+                            {o.chance > o.chanceBeforeFortune && (
+                              <p className="font-karla font-600" style={{ fontSize: '0.5rem', color: '#8f8a80', lineHeight: 1, marginTop: 1, textDecoration: 'line-through', opacity: 0.75 }}>
+                                {(o.chanceBeforeFortune * 100).toFixed(o.chanceBeforeFortune < 0.1 ? 1 : 0)}%
+                              </p>
+                            )}
                             <p className="font-karla font-600 truncate" style={{ fontSize: '0.44rem', color: '#8f8a80', lineHeight: 1.2, marginTop: 2 }}>{o.name}</p>
                           </div>
                         )
