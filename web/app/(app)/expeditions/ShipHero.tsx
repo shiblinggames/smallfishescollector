@@ -1857,7 +1857,15 @@ export default function ShipHero({
                   collection well past the fold. Tap a tile for the full detail
                   and its equip action. */}
               {(() => {
-                const owned = ownedRaidItems.filter(id => !mountIds.has(id))
+                // EVERYTHING you own, the finale mount piece included. It used
+                // to be filtered out because it goes to its own cell rather than
+                // a hull slot, which was fine while the list was one flat grid
+                // and nothing claimed otherwise. Grouping by tier made the
+                // omission load-bearing: The Primeval Maw is the ONLY ancient in
+                // the game, so filtering it left an Ancient shelf that could
+                // never fill and an inventory that quietly disowned the rarest
+                // thing a captain can hold.
+                const owned = ownedRaidItems
                 const full = hullItems.length >= raidItemSlots
                 if (ownedRaidItems.length === 0) {
                   return (
@@ -1904,8 +1912,12 @@ export default function ShipHero({
                         // Same-family grades and a fusion's own ingredients do not
                         // stack, so equipping one SWAPS rather than costing a slot.
                         // That stays available on a full hull, and the tile says so.
-                        const wouldSwap = !on && conflictingRaidItems(itemId, equippedItems).length > 0
-                        const blocked = !on && full && !wouldSwap
+                        // A mount piece never occupies a hull slot, so a full
+                        // hull cannot block it and it has nothing to swap with.
+                        // What CAN stop it is not owning the mount yet.
+                        const isMount = mountIds.has(itemId)
+                        const wouldSwap = !on && !isMount && conflictingRaidItems(itemId, equippedItems).length > 0
+                        const blocked = !on && (isMount ? !hasSixthMount : full && !wouldSwap)
                         return (
                           <button
                             key={itemId}
@@ -1939,7 +1951,7 @@ export default function ShipHero({
                               )}
                             </div>
                             <span className="font-karla font-800 uppercase tracking-[0.08em]" style={{ fontSize: '0.54rem', textAlign: 'center', color: on ? '#7fd49a' : wouldSwap ? '#d8a14a' : blocked ? '#6a6764' : color }}>
-                              {on ? 'Equipped' : wouldSwap ? 'Swap' : blocked ? 'Full' : 'Equip'}
+                              {on ? 'Equipped' : wouldSwap ? 'Swap' : blocked ? (isMount ? 'No mount' : 'Full') : isMount ? 'Mount' : 'Equip'}
                             </span>
                             <span className="font-karla font-600" style={{ display: 'block', width: '100%', fontSize: '0.6rem', lineHeight: 1.25, textAlign: 'center', color: forged ? '#c9c0e4' : '#b9b3a8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {def.name}
