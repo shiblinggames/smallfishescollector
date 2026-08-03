@@ -1565,92 +1565,121 @@ export function itemFlavor(def: RaidItemDef): string | null {
   return /\d/.test(last) ? null : last
 }
 
+/** The effect types a forged item has that NEITHER of its components carries:
+ *  its SIGNATURE, the thing the fusion does that the sum of its parts cannot.
+ *  Derived from the recipe, so an item earns the callout by actually having one
+ *  rather than by sitting on a list somebody has to remember to update.
+ *
+ *  Today only the tier-3 Abyssals have any (every tier-2 fusion is exactly its
+ *  parents added together), which is precisely why the Abyssals needed one. */
+export function signatureEffectTypes(def: RaidItemDef): Set<RaidEffectType> {
+  const recipe = getForgeRecipe(def.id)
+  if (!recipe) return new Set()
+  const fromParents = new Set(recipe.components.flatMap(c => getRaidItem(c)?.effects.map(e => e.type) ?? []))
+  return new Set(def.effects.map(e => e.type).filter(t => !fromParents.has(t)))
+}
+
+export interface ItemEffectLine {
+  text: string
+  /** This line describes the item's signature. Called out on the card, because
+   *  otherwise the one mechanic that makes the fusion worth forging reads as
+   *  just another bullet among six. */
+  signature: boolean
+}
+
 /** One player-facing line per mechanic, in reading order: what you do to them,
  *  then what they cannot do to you, then the procs. Every effect type must be
- *  handled here or it is silently invisible on every card in the game. */
-export function effectLines(def: RaidItemDef): string[] {
+ *  handled here or it is silently invisible on every card in the game.
+ *
+ *  Signature lines are hoisted to the TOP. A signature effect is deliberately
+ *  given its OWN line even where it would read naturally folded into the one
+ *  above it (the crit-bought ramp, the phase ambush, the pierced critical), so
+ *  that it can be lifted out and coloured on its own. */
+export function effectLines(def: RaidItemDef): ItemEffectLine[] {
   const val = (t: RaidEffectType) => def.effects.find(e => e.type === t)?.value
   const has = (t: RaidEffectType) => def.effects.some(e => e.type === t)
-  const out: string[] = []
+  const sig = signatureEffectTypes(def)
+  const out: ItemEffectLine[] = []
+  /** Push a line, tagging it as the signature when any effect it describes is
+   *  one that neither component could supply. */
+  const add = (text: string, ...types: RaidEffectType[]) => {
+    out.push({ text, signature: types.some(t => sig.has(t)) })
+  }
 
-  // ── Damage ──
+  // -- Damage --
   const boss = val('boss_damage_mult')
   const mob = val('nonboss_damage_mult')
   if (boss != null && mob != null && boss === mob) {
     // Equal on both is one mechanic ("+22% damage"), not two lines that a
     // player has to notice are the same number.
-    out.push(`${asDelta(boss)} damage to everything, bosses and mobs alike`)
+    add(`${asDelta(boss)} damage to everything, bosses and mobs alike`, 'boss_damage_mult', 'nonboss_damage_mult')
   } else {
-    if (boss != null) out.push(`${asDelta(boss)} damage to bosses`)
-    if (mob != null) out.push(`${asDelta(mob)} damage to mobs and elites`)
+    if (boss != null) add(`${asDelta(boss)} damage to bosses`, 'boss_damage_mult')
+    if (mob != null) add(`${asDelta(mob)} damage to mobs and elites`, 'nonboss_damage_mult')
   }
   const ramp = val('ramp_damage_per_turn')
-  if (ramp != null) {
-    const critTurns = val('crit_ramp_turns')
-    out.push(critTurns != null
-      ? `Your damage climbs ${asDelta(1 + ramp)} every turn of a fight, and each critical hit advances that climb by another turn`
-      : `Your damage climbs ${asDelta(1 + ramp)} every turn of a fight`)
+  if (ramp != null) add(`Your damage climbs ${asDelta(1 + ramp)} every turn of a fight`, 'ramp_damage_per_turn')
+  const critRamp = val('crit_ramp_turns')
+  if (critRamp != null) {
+    add(critRamp === 1
+      ? `Each critical hit advances your damage climb by an extra turn`
+      : `Each critical hit advances your damage climb by an extra ${critRamp} turns`, 'crit_ramp_turns')
   }
   const firstShot = val('first_shot_mult')
-  if (firstShot != null) {
-    out.push(has('ambush_each_phase')
-      ? `Your first shot each fight lands ${asDelta(firstShot)} harder, and against a boss every new phase counts as a fresh opening shot`
-      : `Your first shot each fight lands ${asDelta(firstShot)} harder`)
-  }
+  if (firstShot != null) add(`Your first shot each fight lands ${asDelta(firstShot)} harder`, 'first_shot_mult')
+  if (has('ambush_each_phase')) add(`Against a boss, every new phase counts as a fresh opening shot`, 'ambush_each_phase')
   const critDmg = val('crit_damage_mult')
-  if (critDmg != null) out.push(`${asDelta(critDmg)} critical damage`)
+  if (critDmg != null) add(`${asDelta(critDmg)} critical damage`, 'crit_damage_mult')
   const noncrit = val('noncrit_damage_mult')
-  if (noncrit != null) out.push(`${asCut(noncrit)} off your non-critical damage`)
+  if (noncrit != null) add(`${asCut(noncrit)} off your non-critical damage`, 'noncrit_damage_mult')
   const critUp = val('crit_upgrade_chance')
-  if (critUp != null) out.push(`${asPct(critUp)} chance a clean hit becomes a critical`)
+  if (critUp != null) add(`${asPct(critUp)} chance a clean hit becomes a critical`, 'crit_upgrade_chance')
   const fire = val('fire_damage_mult')
-  if (fire != null) out.push(`${asDelta(fire)} damage on a single shot`)
+  if (fire != null) add(`${asDelta(fire)} damage on a single shot`, 'fire_damage_mult')
   const volley = val('volley_damage_mult')
-  if (volley != null) out.push(`${asDelta(volley)} volley damage`)
+  if (volley != null) add(`${asDelta(volley)} volley damage`, 'volley_damage_mult')
   const mega = val('mega_damage_mult')
-  if (mega != null) out.push(`${asDelta(mega)} ultimate damage`)
+  if (mega != null) add(`${asDelta(mega)} ultimate damage`, 'mega_damage_mult')
   const afflicted = val('afflicted_damage_mult')
-  if (afflicted != null) out.push(`${asDelta(afflicted)} damage to an enemy that already carries an affliction`)
+  if (afflicted != null) add(`${asDelta(afflicted)} damage to an enemy that already carries an affliction`, 'afflicted_damage_mult')
   const avenge = val('avenge_elite_mult')
-  if (avenge != null) out.push(`Cheat a killing blow and you deal ${asDelta(avenge)} to elite hulls for the rest of that fight`)
+  if (avenge != null) add(`Cheat a killing blow and you deal ${asDelta(avenge)} to elite hulls for the rest of that fight`, 'avenge_elite_mult')
   const steal = val('lifesteal_pct')
-  if (steal != null) out.push(`Heals you for ${asPct(steal)} of the damage you deal`)
+  if (steal != null) add(`Heals you for ${asPct(steal)} of the damage you deal`, 'lifesteal_pct')
 
-  // ── Staying afloat ──
+  // -- Staying afloat --
   const hp = val('max_hp_mult')
-  if (hp != null) out.push(`${asDelta(hp)} max hull`)
+  if (hp != null) add(`${asDelta(hp)} max hull`, 'max_hp_mult')
   const incoming = val('incoming_damage_mult')
-  if (incoming != null) out.push(`Cuts incoming enemy fire by ${asCut(incoming)}`)
+  if (incoming != null) add(`Cuts incoming enemy fire by ${asCut(incoming)}`, 'incoming_damage_mult')
   const ward = val('ward_pct')
   if (ward != null) {
     const refill = val('ward_refill_pct')
-    out.push(refill != null
+    add(refill != null
       ? `Opens every fight behind a barrier worth ${asPct(ward)} of your hull, and braces ${asPct(refill)} of it back on every Reload`
-      : `Opens every fight behind a barrier worth ${asPct(ward)} of your hull`)
+      : `Opens every fight behind a barrier worth ${asPct(ward)} of your hull`, 'ward_pct', 'ward_refill_pct')
   }
   const cap = val('max_hit_pct')
   if (cap != null) {
     const odds = val('max_hit_chance') ?? 1
-    out.push(odds >= 1
+    add(odds >= 1
       ? `A single hit bigger than ${asPct(cap)} of your max hull is knocked back down to it`
-      : `A single hit bigger than ${asPct(cap)} of your max hull has a ${asPct(odds)} chance to be knocked back down to it`)
+      : `A single hit bigger than ${asPct(cap)} of your max hull has a ${asPct(odds)} chance to be knocked back down to it`,
+      'max_hit_pct', 'max_hit_chance')
   }
   const parry = val('parry_chance')
   if (parry != null) {
     const reflect = val('parry_reflect_pct')
-    out.push(reflect != null
+    add(reflect != null
       ? `On a successful dodge, ${asPct(parry)} chance to throw ${asPct(reflect)} of the shot back at them`
-      : `On a successful dodge, ${asPct(parry)} chance to turn the shot aside`)
+      : `On a successful dodge, ${asPct(parry)} chance to turn the shot aside`, 'parry_chance', 'parry_reflect_pct')
   }
   const firstBlow = val('first_blow_parry_chance')
-  if (firstBlow != null) out.push(`${asPct(firstBlow)} chance the first blow of every fight is turned aside outright, with no dodge needed`)
-  if (has('lethal_save')) {
-    out.push(has('ward_refill_on_save')
-      ? `Once per raid a killing blow leaves you at 1 HP instead of sinking, and the barrier comes straight back to full`
-      : `Once per raid a killing blow leaves you at 1 HP instead of sinking`)
-  }
+  if (firstBlow != null) add(`${asPct(firstBlow)} chance the first blow of every fight is turned aside outright, with no dodge needed`, 'first_blow_parry_chance')
+  if (has('lethal_save')) add(`Once per raid a killing blow leaves you at 1 HP instead of sinking`, 'lethal_save')
+  if (has('ward_refill_on_save')) add(`Cheat a killing blow and your barrier comes straight back to full`, 'ward_refill_on_save')
 
-  // ── Procs and tempo ──
+  // -- Procs and tempo --
   const rack = val('weaken_on_hit') ?? val('corrode_on_hit') ?? val('feeble_on_hit')
   if (rack != null) {
     const parts = [
@@ -1659,42 +1688,47 @@ export function effectLines(def: RaidItemDef): string[] {
       has('feeble_on_hit') ? 'make it Feeble' : null,
     ].filter(Boolean) as string[]
     const list = parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}` : parts[0]
-    out.push(`${asPct(rack)} chance each hit to ${list}, all together`)
-    const spread = val('crit_spread_chance')
-    if (spread != null) out.push(`A critical hit gets its own ${asPct(spread)} chance to land that same spread`)
+    add(`${asPct(rack)} chance each hit to ${list}, all together`, 'weaken_on_hit', 'corrode_on_hit', 'feeble_on_hit')
   }
+  const spread = val('crit_spread_chance')
+  if (spread != null) add(`A critical hit gets its own ${asPct(spread)} chance to land that same spread`, 'crit_spread_chance')
   const burn = val('burn_chance')
-  if (burn != null) out.push(`${asPct(burn)} chance each hit to set the enemy ablaze`)
+  if (burn != null) add(`${asPct(burn)} chance each hit to set the enemy ablaze`, 'burn_chance')
   const freeze = val('freeze_chance')
-  if (freeze != null) out.push(`${asPct(freeze)} chance each hit to freeze the enemy for a turn`)
+  if (freeze != null) add(`${asPct(freeze)} chance each hit to freeze the enemy for a turn`, 'freeze_chance')
   const pierce = val('dodge_pierce_chance')
-  if (pierce != null) {
-    out.push(has('pierce_crit')
-      ? `${asPct(pierce)} chance to see through a feint, and a shot that slips through one lands as a critical`
-      : `${asPct(pierce)} chance to see through a feint and land the shot anyway`)
-  }
+  if (pierce != null) add(`${asPct(pierce)} chance to see through a feint and land the shot anyway`, 'dodge_pierce_chance')
+  if (has('pierce_crit')) add(`A shot that slips through a feint lands as a critical`, 'pierce_crit')
   const strip = val('crit_strip_charge')
-  if (strip != null) out.push(`${asPct(strip)} chance on a critical to tear a loaded cannonball off them`)
+  if (strip != null) add(`${asPct(strip)} chance on a critical to tear a loaded cannonball off them`, 'crit_strip_charge')
   const refund = val('crit_charge_refund_chance')
-  if (refund != null) out.push(`${asPct(refund)} chance a critical costs you nothing at all`)
+  if (refund != null) add(`${asPct(refund)} chance a critical costs you nothing at all`, 'crit_charge_refund_chance')
   const openLoaded = val('start_charge_chance')
   if (openLoaded != null) {
-    const extra = val('extra_start_charge_chance')
-    const base = openLoaded >= 1 ? 'Opens every fight with a cannonball already loaded' : `${asPct(openLoaded)} chance to open a fight with a cannonball already loaded`
-    out.push(extra != null ? `${base}, and a ${asPct(extra)} chance of a second` : base)
+    add(openLoaded >= 1
+      ? `Opens every fight with a cannonball already loaded`
+      : `${asPct(openLoaded)} chance to open a fight with a cannonball already loaded`, 'start_charge_chance')
   }
+  const extraOpen = val('extra_start_charge_chance')
+  if (extraOpen != null) add(`${asPct(extraOpen)} chance to open a fight with a SECOND cannonball loaded as well`, 'extra_start_charge_chance')
   const reload = val('reload_charge_chance')
-  if (reload != null) out.push(`${asPct(reload)} chance a Reload loads a second cannonball`)
+  if (reload != null) add(`${asPct(reload)} chance a Reload loads a second cannonball`, 'reload_charge_chance')
   const chargeOnHit = val('charge_on_hit_chance')
-  if (chargeOnHit != null) out.push(`${asPct(chargeOnHit)} chance that a hit reaching your hull loads a cannonball`)
+  if (chargeOnHit != null) add(`${asPct(chargeOnHit)} chance that a hit reaching your hull loads a cannonball`, 'charge_on_hit_chance')
   const speed = val('speed_roll_nav_pct')
-  if (speed != null) out.push(`Adds ${asPct(speed)} of your Savvy to your turn-order roll`)
+  if (speed != null) add(`Adds ${asPct(speed)} of your Savvy to your turn-order roll`, 'speed_roll_nav_pct')
   if (def.activated?.kind === 'refresh_ability') {
-    out.push(def.activated.chance >= 1
-      ? `Once per raid, rally a spent crew ability back for another use`
-      : `Once per raid, a ${asPct(def.activated.chance)} chance to rally a spent crew ability`)
+    out.push({
+      text: def.activated.chance >= 1
+        ? `Once per raid, rally a spent crew ability back for another use`
+        : `Once per raid, a ${asPct(def.activated.chance)} chance to rally a spent crew ability`,
+      signature: false,
+    })
   }
-  return out
+
+  // Signature first. Stable within each group, so the reading order above still
+  // holds for everything that is not called out.
+  return [...out.filter(l => l.signature), ...out.filter(l => !l.signature)]
 }
 
 export function getActiveEffects(equippedItemIds: string[]): RaidEffect[] {
