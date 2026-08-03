@@ -52,20 +52,27 @@ export const LOOT_RARITY_TIER: Record<string, number> = {
  * and legendaries 4.1% to 5.0% across the campaign, with no decision behind
  * the spread. These are the decision.
  *
- * Only epic and legendary are set. Cosmetic hulls and the two ancients keep
- * their weight-derived rates, which carry a deliberate spread (2.0% for the
- * Tundra and Volcanic hulls against 8.7% for the Chartmaker) that a flat rule
- * would erase.
+ * Cosmetics sit BELOW legendaries: a hull is a flex, not a power item, and it
+ * stays in the pool forever once you have the raid open. Their old
+ * weight-derived rates ran 2.0% to 18% with no decision behind the spread, and
+ * the same hull dropped at two different rates depending on which of the two
+ * bosses carrying it you happened to farm.
+ *
+ * Ancients are the one rarity still left on weights: only the Sunken Hand's two
+ * drop at all, they already sit at 2.5%, and they are the rarest thing in the
+ * campaign by design.
  */
 export const BASE_RARITY_CHANCE: Partial<Record<RaidLootItem['rarity'], number>> = {
   epic: 0.10,
   legendary: 0.05,
+  cosmetic: 0.025,
 }
 
 /** The same ladder on challenge tables: double, because the fight is. */
 export const CHALLENGE_RARITY_CHANCE: Partial<Record<RaidLootItem['rarity'], number>> = {
   epic: 0.20,
   legendary: 0.10,
+  cosmetic: 0.05,
 }
 
 /** Challenge variants are identified by their id suffix, the same convention
