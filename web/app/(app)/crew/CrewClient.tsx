@@ -2668,14 +2668,13 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                             minmax(0, 1fr) because a bare 1fr carries an implicit
                             auto minimum and cannot shrink below its text.
 
-                            The label earns its line: "Sort by" is the one thing
-                            six colour-coded words do not say on their own, and
-                            this row has been read as a filter more than once. */}
+                            No label. It read as a filter when the chips were a
+                            pill marooned in the corner; filling the row fixed
+                            that, and a caption on top of six plain words was
+                            just a line of chrome above the only control there
+                            is. */}
                         {state.roster.length > 1 && (
                           <div style={{ marginBottom: 10 }}>
-                            <p className="font-karla font-800 uppercase" style={{ fontSize: '0.54rem', letterSpacing: '0.16em', color: 'rgba(255,255,255,0.38)', marginBottom: 6 }}>
-                              Sort by
-                            </p>
                             <div style={{ display: 'grid', gridTemplateColumns: `repeat(${ROSTER_SORTS.length}, minmax(0, 1fr))`, gap: 3, padding: 3, borderRadius: 999, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)' }}>
                               {ROSTER_SORTS.map(o => {
                                 const on = rosterSort === o.k
