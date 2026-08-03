@@ -3308,19 +3308,29 @@ export default function RaidCombat({
         const revivedHp = Math.max(1, Math.floor(enemyHpMaxRef.current * nextCfg.revivePct))
         setEnemyHp(revivedHp)
         enemyHpRef.current = revivedHp
-        // HIS PLATE COMES BACK WITH HIM. enemy.shieldPct was applied ONCE at
-        // mount, so across a six-phase boss he got one shield for the whole
-        // fight and every later phase opened bare. Restoring it per phase is
-        // what makes armour a running theme he can then reinforce (Old Armour).
+        // ARMOUR ON A REVIVE IS OPT-IN, per phase.
+        //
+        // This used to fall back to the enemy's flat shieldPct, which was added
+        // to give Challenge Finn escalating plate across a six-phase fight. It
+        // worked for him, and then leaked: this is the shared revive path, so
+        // EVERY phased boss started re-walling at full strength on every phase.
+        // Davy's Gauntlet felt it worst, since it inherits phase2 from challenge
+        // configs past depth 20 and hands you the same hull repeatedly with
+        // whatever boons the run happened to offer — a fresh 20-30% barrier per
+        // phase is a very different tax there than in a raid you loadout for.
+        //
+        // A phase that WANTS plate names it (Challenge Finn does, via
+        // FINN_CHALLENGE_PLATE in raidChallenge). A phase that does not opens
+        // bare, which is what every boss did before that change.
         bossWardBuffRef.current = 0
         bossWardRef.current = 0; setWardUp(false)
         bossForesightRef.current = 0; setForeseeUp(false)
-        // Per-phase plate: a phase can name its own shieldPct so armour
-        // ESCALATES across the fight instead of every phase reopening at
-        // the same wall. Unset falls back to the enemy's flat pool.
+        // Per-phase plate: a phase names its own shieldPct to carry armour into
+        // that phase, so it can ESCALATE across a fight. Unset means no plate,
+        // NOT the enemy's opening pool, which is applied once at mount.
         const phaseShield = nextCfg.shieldPct != null
           ? Math.round(enemyHpMaxRef.current * nextCfg.shieldPct)
-          : enemyShieldMax
+          : 0
         enemyShieldRef.current = phaseShield
         setEnemyShieldHp(phaseShield)
         const n = enemyPhaseRef.current

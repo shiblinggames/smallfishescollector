@@ -130,9 +130,11 @@ export interface BossPhase {
    *  DECK'). Falls back to "PHASE N" when unset. */
   badge?: string
   /** Plate this phase revives behind, as a fraction of the boss's max HP.
-   *  Overrides the enemy's flat `shieldPct` for THIS phase only, so armour can
+   *  Sets the plate this phase opens behind, so armour can
    *  escalate across a fight instead of every phase reopening at the same wall.
-   *  Unset = the enemy's own shieldPct, i.e. exactly the old behaviour. */
+   *  UNSET = no plate on this phase. The enemy's own `shieldPct` is its OPENING
+   *  armour, applied once at mount; it does not silently reappear on every
+   *  revive, which is what made a Gauntlet boss re-wall at each phase. */
   shieldPct?: number
   /** Optional telegraphed mechanic check that ARMS the instant this phase
    *  begins (answer it with the right crew play or eat the consequence). */
