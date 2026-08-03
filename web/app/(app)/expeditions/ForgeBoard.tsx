@@ -36,6 +36,7 @@ import {
   planForgeBuild, buildForgeTrees, isConvertibleEpic, legendaryForEpic, type ForgeRecipe, type ForgeTreeNode,
 } from '@/lib/raidItems'
 import LoadoutSummary from './LoadoutSummary'
+import ItemEffectLines from '@/components/ItemEffectLines'
 import { raidSourceForItem } from '@/lib/raidMap'
 import { PRISMATIC, forgedBorderSoft, forgedTextSoft, ABYSSAL_EMBER, ABYSSAL_EMBER_TEXT, abyssalEmberBorder } from '@/lib/prismatic'
 import { ABYSSAL_ACCEL_MS, ABYSSAL_ACCEL_GEM_COST, isConversionReady, type AbyssalConversion } from '@/lib/abyssalAccelerator'
@@ -846,7 +847,7 @@ function RecipeSheet({
                 </div>
               </div>
 
-              <p className="font-karla" style={{ fontSize: '0.92rem', color: '#c8c2b8', lineHeight: 1.5, marginTop: 12 }}>{result.description}</p>
+              <div style={{ marginTop: 12 }}><ItemEffectLines def={result} size={0.86} /></div>
 
               {/* The parts, and where to get the ones you lack. */}
               {state !== 'forged' && (

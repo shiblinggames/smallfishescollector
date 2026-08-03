@@ -69,6 +69,7 @@ import type { ContractFightFacts } from '@/lib/gauntletContracts'
 import { applyStatus, statusMods, tickStatuses, cleanseStatuses, STATUS_DEFS, type ActiveStatus, type StatusId } from '@/lib/statuses'
 import { CannonShotBurst, ImpactBurst, RailgunBeam, NukeMissile, NukeBlast } from './megaFx'
 import { getActiveEffects, getRaidItem, getActivatableItem } from '@/lib/raidItems'
+import ItemEffectLines from '@/components/ItemEffectLines'
 import { describeEffect, effectTone, type TideEffect } from '@/lib/tides'
 import { getRepairKit, rollRepairKitHeal, repairKitRange } from '@/lib/repairKits'
 import { classForSlug, CLASSES, currentMilestone, type AnyClassDef } from '@/lib/crewClasses'
@@ -8725,7 +8726,7 @@ function PlayerStatsPopup({
                       <p className="font-karla font-700" style={{ minWidth: 0, fontSize: '0.85rem', color: c, lineHeight: 1.15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</p>
                       <span className="font-karla font-800 uppercase" style={{ flexShrink: 0, fontSize: '0.46rem', letterSpacing: '0.09em', color: c, opacity: 0.85 }}>{item.rarity}</span>
                     </div>
-                    <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.68)', lineHeight: 1.35 }}>{item.description}</p>
+                    <ItemEffectLines def={item} size={0.7} color="rgba(240,237,232,0.68)" gap={3} showFlavor={false} />
                   </div>
                 </div>
                 )

@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useEffect, useRef, useMemo, Fragment, type CSSProperties } from 'react'
 import FinnChargePanel from '@/components/FinnChargePanel'
+import ItemEffectLines from '@/components/ItemEffectLines'
 import { finnItemLevel, finnTierNumeral, FINN_ITEM_MAX_LEVEL } from '@/lib/finnItems'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
@@ -2716,7 +2717,11 @@ export default function ShipHero({
                 </div>
                 <span className="font-karla font-800 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: forged ? (abyssal ? '#ff8a6a' : '#b7ace0') : color }}>{abyssal ? 'Abyssal Relic' : forged ? 'Forged Relic' : def.rarity}</span>
                 <p className="font-cinzel font-800" style={{ fontSize: '1.15rem', lineHeight: 1.1, ...(forged ? forgedTextSoft(abyssal) : { color: '#f0ede8' }) }}>{def.name}</p>
-                <p className="font-karla" style={{ fontSize: '0.82rem', color: '#c8c2b8', lineHeight: 1.5, marginTop: 2 }}>{def.description}</p>
+              </div>
+              {/* Left-aligned on purpose: a centred bullet list has no edge to
+                  scan down, which is the entire reason for listing them. */}
+              <div style={{ textAlign: 'left', marginTop: 10 }}>
+                <ItemEffectLines def={def} size={0.82} />
               </div>
               {/* Finn's spoil has no fixed effect line to print, so it shows its
                   CHARGE instead: the level it has reached and the ladder still
@@ -2799,7 +2804,7 @@ export default function ShipHero({
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p className="font-cinzel font-700" style={{ fontSize: '0.86rem', lineHeight: 1.2, ...(forged ? forgedTextSoft(abyssal) : { color }) }}>{def.name}</p>
-                          <p className="font-karla" style={{ fontSize: '0.76rem', color: '#b8b2a8', lineHeight: 1.5, marginTop: 2 }}>{def.description}</p>
+                          <div style={{ marginTop: 3 }}><ItemEffectLines def={def} size={0.74} color="#b8b2a8" /></div>
                         </div>
                       </div>
                     )

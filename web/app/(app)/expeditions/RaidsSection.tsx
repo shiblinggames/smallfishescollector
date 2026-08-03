@@ -10,6 +10,7 @@ import { bossIdentityRevealed, bossListedInRoster, nodeArtRevealed, formatDropCh
 import type { RaidRecords } from './raidMapActions'
 import { RARITY_COLOR, GEM_GLYPH, GEM_COLOR, RAID_LOCATION_BG, RAID_BOSS_BG, type BossRaidConfig} from '@/lib/bossRaids'
 import { getRaidItem } from '@/lib/raidItems'
+import ItemEffectLines from '@/components/ItemEffectLines'
 import { getRaidConfigById } from '@/lib/raidRegistry'
 import { isUniqueLoot } from '@/lib/bossRaids'
 import { crateItemChances, isChallengeRaid } from '@/lib/raidLoot'
@@ -1882,12 +1883,19 @@ function DropDetailModal({ drop, owned, chance, onClose }: {
           </div>
         </div>
 
-        {/* Description */}
-        {description && (
+        {/* Description. A raid item lists its mechanics one per line — these
+            cards carry the forged and Abyssal drops, which are the longest in
+            the game. Anything else (a skin, a fishing special) is one sentence
+            and stays prose. */}
+        {raidItem ? (
+          <div style={{ marginBottom: 14 }}>
+            <ItemEffectLines def={raidItem} size={0.78} color="rgba(240,237,232,0.78)" />
+          </div>
+        ) : description ? (
           <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(240,237,232,0.78)', lineHeight: 1.55, marginBottom: 14 }}>
             {description}
           </p>
-        )}
+        ) : null}
 
         {/* Finn's charge ladder. Every tier listed, none of them marked as
             unlocked, because this is a preview of what the thing becomes. */}
