@@ -151,23 +151,37 @@ export function rollCrate(
  * Reads the same path the roll does, so a number shown to a player cannot drift
  * from the number rolled against.
  */
+export type CrateItemChance = {
+  id: string
+  label: string
+  image: string | null
+  rarity: RaidLootItem['rarity']
+  /** The real chance, everything applied. */
+  chance: number
+  /** The same chance with Fortune held at 1x, so a panel can show what the crew
+   *  is adding instead of only the total. Equal to `chance` when Fortune is 1x. */
+  chanceBeforeFortune: number
+}
+
 export function crateItemChances(
   loot: RaidLootItem[],
   excludedIds: Set<string> = new Set(),
   uniqueShare?: number,
   legendaryMult = 1,
   fortuneMult = 1,
-): { id: string; label: string; chance: number }[] {
+): CrateItemChance[] {
   const totalWeight = loot.reduce((s, l) => s + l.weight, 0)
   const missing = loot.filter(l => isUniqueLoot(l) && !excludedIds.has(l.id))
-  return missing.map(l => ({
-    id: l.id,
-    label: l.label,
-    chance: Math.min(
-      MAX_ITEM_CHANCE,
-      baseChance(l, totalWeight, uniqueShare, missing.length)
-        * (l.rarity === 'legendary' || l.rarity === 'ancient' ? legendaryMult : 1)
-        * fortuneMult,
-    ),
-  }))
+  return missing.map(l => {
+    const raw = baseChance(l, totalWeight, uniqueShare, missing.length)
+      * (l.rarity === 'legendary' || l.rarity === 'ancient' ? legendaryMult : 1)
+    return {
+      id: l.id,
+      label: l.label,
+      image: l.image,
+      rarity: l.rarity,
+      chance: Math.min(MAX_ITEM_CHANCE, raw * fortuneMult),
+      chanceBeforeFortune: Math.min(MAX_ITEM_CHANCE, raw),
+    }
+  })
 }

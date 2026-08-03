@@ -61,6 +61,7 @@ import type { ZoneDef } from '@/app/(app)/fishing/depths'
 import { motion, AnimatePresence, useAnimation } from 'framer-motion'
 import { BroadsideEnemy, EnemyAction, RARITY_COLOR, type AimAttackId, type BossMechanicCheck, type MechanicResponse } from '@/lib/bossRaids'
 import { raidDamageProfile, fortuneLootMult, type RaidMods } from '@/lib/expeditions'
+import type { CrateItemChance } from '@/lib/raidLoot'
 import { MEGA_CHARGE_COST, RAILGUN_GRAZE_PCT, type ShipAugment } from '@/lib/shipAugments'
 import { getCheckTutorialSeen, markCheckTutorialSeen } from './checkTutorialActions'
 import { GUIDES } from '@/lib/onboardingScenes'
@@ -439,6 +440,9 @@ export interface RaidCombatProps {
   /** Loot-luck stat. Doesn't affect combat math but shown in the
    *  player-stats breakdown popup (tap the player nameplate). */
   totalFortune?: number
+  /** What the boss crate can still drop, with Fortune applied. Computed in
+   *  RaidGame and passed through, so combat never has to know a loot table. */
+  crateOdds?: CrateItemChance[]
   equippedRaidItems: string[]
   /** Aggregated ship-class damage multiplier (Master Gunner, Ironside,
    *  Buccaneer all touch this — Master Gunner +15%, Ironside -10%,
@@ -609,6 +613,7 @@ export default function RaidCombat({
   playerHpMax, playerHp: initialPlayerHp,
   shipMinDamage, shipSpeed, totalPower, totalNavigation,
   totalFortune = 0,
+  crateOdds = [],
   equippedRaidItems,
   classDamageMult = 1,
   shipClasses = {},
@@ -7932,6 +7937,7 @@ export default function RaidCombat({
             totalPower={totalPower}
             totalNavigation={totalNavigation}
             totalFortune={totalFortune}
+            crateOdds={crateOdds}
             isBoss={isBoss}
             equippedRaidItems={equippedRaidItems}
             shipClasses={shipClasses}
@@ -8085,7 +8091,7 @@ export default function RaidCombat({
 function PlayerStatsPopup({
   shipName, shipImageUrl, shipFilter, playerHp, playerHpMax,
   shipMinDamage, shipSpeed, totalPower, totalNavigation, totalFortune,
-  isBoss, equippedRaidItems, shipClasses = {}, damagePct = 0,
+  isBoss, equippedRaidItems, crateOdds = [], shipClasses = {}, damagePct = 0,
   megaAugment = null, megaCost = MEGA_CHARGE_COST,
   tideEffects = [],
   effectLabels = { good: 'Buffs', bad: 'Penalties' },
@@ -8107,6 +8113,8 @@ function PlayerStatsPopup({
   totalFortune: number
   isBoss: boolean
   equippedRaidItems: string[]
+  /** Every unique this raid's crate can still pay, and how likely each is. */
+  crateOdds?: CrateItemChance[]
   /** chapter -> classId picks. Surfaces under the stat grid so the
    *  player can see which classes are buffing them mid-fight. */
   shipClasses?: Record<string, string>
@@ -8443,6 +8451,48 @@ function PlayerStatsPopup({
               <p className="font-karla" style={{ fontSize: '0.76rem', color: 'rgba(240,237,232,0.72)', lineHeight: 1.4, marginTop: 6 }}>
                 {megaAugment.identity} {megaAugment.tagline}
               </p>
+            </div>
+          </div>
+        )}
+
+        {/* IN THE CRATE. Raids never stated a drop rate anywhere: the reveal
+            said what you got and the pre-fight screen said nothing about what
+            you were farming. Now that uniques roll independently those are real
+            numbers, so they can simply be printed. Boosted figure leads, the
+            pre-Fortune one is struck under it, matching the Gauntlet breather. */}
+        {crateOdds.length > 0 && (
+          <div style={{ marginTop: 16 }}>
+            {sectionHeading(isBoss ? 'In the Crate' : 'Boss Crate', '#f0c040')}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {crateOdds.map(o => {
+                const boosted = o.chance > o.chanceBeforeFortune
+                const pct = (v: number) => `${(v * 100).toFixed(v < 0.1 ? 1 : 0)}%`
+                return (
+                  <div key={o.id} style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '0.35rem 0.5rem', borderRadius: 9,
+                    background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.08)',
+                  }}>
+                    <span style={{ flexShrink: 0, width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {o.image
+                        // eslint-disable-next-line @next/next/no-img-element
+                        ? <img src={o.image} alt="" loading="lazy" decoding="async" style={{ maxWidth: 22, maxHeight: 22, objectFit: 'contain' }} />
+                        : <span style={{ fontSize: '0.8rem', color: '#f0c040' }}>◆</span>}
+                    </span>
+                    <span className="font-karla font-600 truncate" style={{ flex: 1, minWidth: 0, fontSize: '0.72rem', color: '#d8d2c6' }}>
+                      {o.label}
+                    </span>
+                    {boosted && (
+                      <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#8f8a80', textDecoration: 'line-through', opacity: 0.8, fontVariantNumeric: 'tabular-nums' }}>
+                        {pct(o.chanceBeforeFortune)}
+                      </span>
+                    )}
+                    <span className="font-cinzel font-800" style={{ fontSize: '0.82rem', color: boosted ? '#f0c040' : '#e8e1d2', fontVariantNumeric: 'tabular-nums' }}>
+                      {pct(o.chance)}
+                    </span>
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}

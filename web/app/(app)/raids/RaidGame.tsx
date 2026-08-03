@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo} from 'react'
 import type { DialAimBonus } from '@/lib/dialAim'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -11,7 +11,7 @@ import { getShipSkin } from '@/lib/shipSkins'
 import { getActiveEffects } from '@/lib/raidItems'
 import { getXPProgress, getLevelFromXP, MAX_LEVEL } from '@/lib/expeditionLevel'
 import { raidDamageProfile, fortuneLootMult, type RaidMods } from '@/lib/expeditions'
-import { rollCrate, LOOT_RARITY_TIER } from '@/lib/raidLoot'
+import { rollCrate, crateItemChances, LOOT_RARITY_TIER } from '@/lib/raidLoot'
 import { crewLevelFromXP, CREW_MAX_LEVEL } from '@/lib/crewLevel'
 import { type ShipAugment } from '@/lib/shipAugments'
 import {
@@ -378,6 +378,14 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   // because a chase item that becomes common stops being a chase.
   const fortuneMult       = 1 + totalFortune / 75   // doubloons, uncapped
   const lootFortuneMult   = fortuneLootMult(totalFortune)   // item odds, hard 2x
+  // What this crate can still drop and how likely each one is. Computed HERE
+  // because this is the only place that holds the table, the owned set and both
+  // multipliers at once; the combat sheet just renders what it is given, so the
+  // odds it shows cannot drift from the odds rollCrate uses.
+  const crateOdds = useMemo(
+    () => crateItemChances(config.loot, ownedUniqueIds, config.uniqueShare, legendaryLootMult, lootFortuneMult),
+    [config.loot, config.uniqueShare, ownedUniqueIds, legendaryLootMult, lootFortuneMult],
+  )
   const playerActionMs    = Math.max(700, 2000 - shipSpeed * 100)
   const dodgeCooldownUse  = Math.max(500, 1600 - dodgeBonus)
 
@@ -1595,6 +1603,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 totalPower={totalPower}
                 totalNavigation={totalDodge}
                 totalFortune={totalFortune}
+                crateOdds={crateOdds}
                 equippedRaidItems={equippedItems}
                 classDamageMult={classDamageMult}
                 shipClasses={shipClasses}
