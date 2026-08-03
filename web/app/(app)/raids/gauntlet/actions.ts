@@ -420,6 +420,7 @@ export async function getGauntletDailyState(variant: GauntletVariant = 'davy'): 
   const hcSameUtcDay = !!hcLastAt && hcLastAt.toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10)
   const hcUsedToday = hcSameUtcDay ? Number(profile?.[HC.runsToday] ?? 0) : 0
   const hcRunsLeft = isAdmin ? HARDCORE_RUNS_PER_DAY : Math.max(0, HARDCORE_RUNS_PER_DAY - hcUsedToday)
+  const donsDeepest = (profile?.dons_gauntlet_deepest as number | null) ?? 0
   const throneCleared = clearedNodes.includes('the_throne')
   return {
     available,
@@ -436,7 +437,7 @@ export async function getGauntletDailyState(variant: GauntletVariant = 'davy'): 
     // in HIS water: reaching depth 10 of Davy's says nothing about surviving the
     // Ch3/Ch4 pool.
     hardcoreUnlocked: isDon
-      ? donsHardcoreUnlocked({ isAdmin, throneCleared })
+      ? donsHardcoreUnlocked({ isAdmin, throneCleared, donsDeepest })
       : hardcoreUnlocked({ isAdmin, clearedNodes, deepest }),
     hardcoreLive: HARDCORE_LIVE,
     hcDeepest: (profile?.[HC.deepest] as number | null) ?? 0,
@@ -579,7 +580,7 @@ export async function startGauntletRun(hardcore = false, terms?: SignedTerms, va
     // Server-enforced gate — admin-only until HARDCORE_LIVE (so the action can't
     // be forced from the client), then unlock + that descent's own depth floor.
     const gateOk = isDon
-      ? donsHardcoreUnlocked({ isAdmin, throneCleared: clearedNodes.includes('the_throne') })
+      ? donsHardcoreUnlocked({ isAdmin, throneCleared: clearedNodes.includes('the_throne'), donsDeepest: (profile?.dons_gauntlet_deepest as number | null) ?? 0 })
       : hardcoreUnlocked({ isAdmin, clearedNodes, deepest })
     if (!gateOk) {
       return { started: false, reason: 'locked', deepest }
