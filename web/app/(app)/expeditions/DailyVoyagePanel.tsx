@@ -3,6 +3,8 @@
 import { useState, useTransition, useCallback, useEffect, useRef, useMemo, type ReactNode } from 'react'
 import { voyageFortuneScale, voyagePowerScale, voyageDiscoveryChance, voyageEncounterWinChance } from '@/lib/voyageEvents'
 import { motion } from 'framer-motion'
+import { createPortal } from 'react-dom'
+import { lockBodyScroll } from '@/lib/bodyScrollLock'
 import { useRouter } from 'next/navigation'
 import { EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
 import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
@@ -195,6 +197,18 @@ export default function DailyVoyagePanel({
   const [activeVoyage, setActiveVoyage] = useState<DailyVoyage | null>(readyVoyage ?? todayVoyage)
   const [error, setError] = useState<string | null>(null)
   const [selectedRoute, setSelectedRoute] = useState<VoyageRoute | null>(null)
+  // The route sheet portals to document.body, which does not exist during the
+  // server render. Gate on a mount flag rather than a bare `typeof document`
+  // check so the first client render matches the server's and React does not
+  // report a hydration mismatch.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
+  // iOS treats overflow:hidden on body as a suggestion, so the sheet uses the
+  // shared lock (see lib/bodyScrollLock) or the page scrolls behind it.
+  useEffect(() => {
+    if (!selectedRoute) return
+    return lockBodyScroll()
+  }, [selectedRoute])
   const [claimedBait, setClaimedBait] = useState<{ type: string; qty: number }[]>([])
   const [crewXP, setCrewXP] = useState<{ id: number; name: string; oldXP: number; newXP: number; oldLevel: number; newLevel: number }[]>([])
   const [claimedTideTurner, setClaimedTideTurner] = useState(false)
@@ -523,232 +537,306 @@ export default function DailyVoyagePanel({
                   })
                 })()}
 
-                {/* Overlay panel — fades up from the bottom when a route is selected */}
-                {selectedRoute && (() => {
-                  const expeditionLevel = getLevelFromXP(expeditionXP)
-                  const rco = ROUTE_CONFIGS[selectedRoute]
-                  const minLevel = rco.minLevel
-                  const levelLockedRoute = expeditionLevel < minLevel
-                  const shipLockedRoute  = shipTier < rco.minShipTier
-                  const comingSoonRoute  = COMING_SOON_ROUTES.has(selectedRoute)
-                  const routeLocked = levelLockedRoute || shipLockedRoute || comingSoonRoute
-                  const est = stats ? computeRouteEstimate(stats, savedCrew.length, selectedRoute, safeVoyages) : null
-                  return (
-                    <div style={{
-                      position: 'absolute', bottom: 0, left: 0, right: 0,
-                      background: 'linear-gradient(to bottom, transparent 0%, rgba(6,4,2,0.97) 18%)',
-                      zIndex: 4,
-                      maxHeight: '72%',
-                      display: 'flex', flexDirection: 'column',
-                    }}>
-                      {/* Scrollable content */}
-                      <div style={{ overflowY: 'auto', flex: 1, padding: '2.5rem 0.9rem 0.5rem' }}>
-                      {/* Header */}
-                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.5rem', gap: '0.5rem' }}>
-                        <div>
-                          <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: rco.color, lineHeight: 1.2 }}>
-                            {rco.name}
-                          </p>
-                          <p className="font-karla" style={{ fontSize: '0.76rem', color: '#8a7860', lineHeight: 1.4, marginTop: 3 }}>
-                            {rco.tagline}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => setSelectedRoute(null)}
-                          style={{
-                            flexShrink: 0, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.14)',
-                            borderRadius: 6, width: 26, height: 26, cursor: 'pointer',
-                            color: '#a09070', fontSize: '0.8rem', lineHeight: 1,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            marginTop: 2,
-                          }}
-                          aria-label="Close"
-                        >✕</button>
-                      </div>
+                {/* The route sheet is a PORTAL modal, rendered below rather than
+                    an overlay inside this box. It used to live in the chart,
+                    clamped to 72% of the map's height, and that ceiling was what
+                    forced every number on it down to 0.7rem. Out here it takes
+                    the raid boss card's shape instead: a painted header band,
+                    the route name at a size you can read across a room, and a
+                    body with room to breathe. */}
 
-                      {/* Stats row */}
-                      {stats && (() => {
-                        const expLevel = getLevelFromXP(expeditionXP)
-                        // Swift Sails (Locker Upgrade) shortens the actual voyage,
-                        // so the preview reflects it too.
-                        const estMs = Math.round(computeVoyageDurationMs(expLevel, stats.dodge) * voyageSpeedMult)
-                        const riskPct = est?.crewRiskPct ?? 0
-                        const riskColor = riskPct >= 15 ? '#f87171' : riskPct >= 8 ? '#f0c040' : '#6a8a6a'
-                        return (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginBottom: '0.6rem' }}>
-                            {/* Payout + time */}
-                            {est && (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                                <span className="font-karla font-700" style={{ fontSize: '0.8rem', color: '#c8aa6a' }}>
-                                  ~{est.lootMin}–{est.lootMax} ⟡
-                                </span>
-                                <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '0.7rem' }}>·</span>
-                                <span className="font-karla" style={{ fontSize: '0.76rem', color: '#5a7aaa' }}>
-                                  {est.xpMin}–{est.xpMax} XP
-                                </span>
-                                <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '0.7rem' }}>·</span>
-                                <span className="font-karla" style={{ fontSize: '0.76rem', color: '#7a6848' }}>
-                                  <IconHourglass size={11} /> {formatDuration(estMs)}
-                                </span>
-                                {voyageSpeedMult < 1 && (
-                                  <span className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#46c0a0' }}>
-                                    Swift Sails
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                            {/* A slotted crew that's away on a trawl can't sail —
-                                say so explicitly so Set Sail never feels broken. */}
-                            {trawlingAssigned.length > 0 && (
-                              <span className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#46c0a0', lineHeight: 1.4 }}>
-                                {trawlingAssigned.map(c => c.name).join(', ')} {trawlingAssigned.length === 1 ? 'is' : 'are'} out on a trawl and can&apos;t sail until {trawlingAssigned.length === 1 ? 'it returns' : 'they return'}. Swap in another crew or collect the trawl first.
-                              </span>
-                            )}
-                            {/* Crew risk / crew count */}
-                            {savedCrew.length < minCrew ? (
-                              <span className="font-karla font-600" style={{ fontSize: '0.74rem', color: '#c87a4a' }}>
-                                <IconWarning size={12} /> {minCrew === 1 ? 'Need at least 1 crew to set sail' : `Need at least ${minCrew} crew to set sail`}
-                              </span>
-                            ) : safeVoyages ? (
-                              <span className="font-karla font-600" style={{ fontSize: '0.74rem', color: '#4ade80' }}>
-                                <IconCheck size={12} /> No crew risk — Safe Passage keeps your crew safe on every route.
-                              </span>
-                            ) : riskPct > 0 ? (
-                              <>
-                                <span className="font-karla font-600" style={{ fontSize: '0.74rem', color: riskColor }}>
-                                  {riskPct >= 15 ? <IconSkull size={12} /> : <IconWarning size={12} />} {riskPct}% chance crew is lost permanently
-                                </span>
-                                {/* Teach the mitigation: noobs should know Fortune is the
-                                    survival stat, and vets should see what theirs is doing. */}
-                                <span className="font-karla" style={{ fontSize: '0.66rem', color: '#7a6f5a' }}>
-                                  {stats.fortune > 0
-                                    ? `Your crew's ${stats.fortune} Fortune trimmed this from ${Math.round(rco.baseCrewLossChance * 100)}%. Risk-free at ${rco.minLevel} Fortune.`
-                                    : `Crew Fortune trims this risk. Risk-free at ${rco.minLevel} total Fortune.`}
-                                </span>
-                              </>
-                            ) : rco.baseCrewLossChance > 0 && savedCrew.length >= 2 ? (
-                              <span className="font-karla font-600" style={{ fontSize: '0.74rem', color: '#4ade80' }}>
-                                <IconCheck size={12} /> No crew risk. Your crew&apos;s {stats.fortune} Fortune covers these waters.
-                              </span>
-                            ) : (
-                              <span className="font-karla" style={{ fontSize: '0.74rem', color: '#5a7a5a' }}>No crew risk</span>
-                            )}
-                          </div>
-                        )
-                      })()}
-
-                      {/* Drops */}
-                      {(() => {
-                        const drops = est?.drops ?? ROUTE_DROPS[selectedRoute]
-                        if (!drops.length) return null
-                        return (
-                          <div style={{ borderTop: `0.5px solid ${rco.color}22`, paddingTop: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.32rem', marginBottom: '0.65rem' }}>
-                            <span className="font-karla uppercase tracking-[0.06em]" style={{ fontSize: '0.60rem', color: '#5a5248' }}>
-                              possible drops
-                            </span>
-                            {drops.map(drop => {
-                              const specialDef = drop.kind === 'special' ? getSpecialItem(drop.id) : null
-                              const dropKey = drop.kind === 'bait' ? drop.type : drop.id
-                              const color   = specialDef ? specialDef.color : getBait((drop as { type: string }).type).color
-                              const name    = specialDef ? specialDef.name : getBait((drop as { type: string }).type).name
-                              const image   = specialDef?.image ?? (drop.kind === 'bait' ? getBait((drop as { type: string }).type).imageUrl ?? null : null)
-                              const label   = specialDef ? `Special item · ${specialDef.effectLabel}` : 'Fishing bait'
-                              const detail  = specialDef
-                                ? specialDef.description
-                                : (() => {
-                                    const b = getBait((drop as { type: string }).type) as import('@/lib/bait').BaitDef
-                                    const parts: string[] = []
-                                    if (b.waitMult < 1) parts.push(`${Math.round((1 - b.waitMult) * 100)}% faster bite`)
-                                    if (b.catchZoneBonus > 0) parts.push(`+${b.catchZoneBonus}° catch zone`)
-                                    return parts.join(' · ')
-                                  })()
-                              const isExpanded = expandedDropKey === dropKey
-                              return (
-                                <div key={dropKey}>
-                                  <button
-                                    onClick={() => setExpandedDropKey(isExpanded ? null : dropKey)}
-                                    style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.45rem' }}
-                                  >
-                                    {image
-                                      ? <img src={image} alt={name} loading="lazy" decoding="async" style={{ width: 22, height: 22, objectFit: 'contain', flexShrink: 0, filter: `drop-shadow(0 1px 4px ${color}66)` }} />
-                                      : <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: drop.kind === 'bait' ? '2px' : '50%', background: color, flexShrink: 0, boxShadow: `0 0 4px ${color}88` }} />
-                                    }
-                                    <span className="font-karla font-700" style={{ fontSize: '0.80rem', color, flex: 1 }}>{name}</span>
-                                    <span className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#a89878' }}>{drop.rate}</span>
-                                    <span style={{ fontSize: '0.52rem', color: '#5a4a30', transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', flexShrink: 0 }}>▼</span>
-                                  </button>
-                                  {isExpanded && (
-                                    <div style={{ paddingLeft: image ? '1.8rem' : '1.1rem', marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                                      <span className="font-karla uppercase tracking-[0.05em]" style={{ fontSize: '0.58rem', color: `${color}99`, background: `${color}18`, borderRadius: 3, padding: '0.08rem 0.28rem' }}>
-                                        {label}
-                                      </span>
-                                      <span className="font-karla" style={{ fontSize: '0.70rem', color: '#6a5a40', lineHeight: 1.3 }}>
-                                        {detail}
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>
-                              )
-                            })}
-                          </div>
-                        )
-                      })()}
-
-                      {/* Error */}
-                      {error && (
-                        <p className="font-karla" style={{ fontSize: '0.78rem', color: '#f87171', marginBottom: '0.45rem' }}>{error}</p>
-                      )}
-                      </div>{/* end scrollable content */}
-
-                      {/* Set Sail / Lock — always visible at bottom */}
-                      <div style={{ padding: '0.4rem 0.9rem 0.75rem', flexShrink: 0 }}>
-                        {routeLocked ? (
-                          <div style={{
-                            width: '100%', background: 'rgba(160,120,60,0.06)',
-                            border: '1px solid rgba(160,120,60,0.22)', borderRadius: 8,
-                            padding: '0.45rem 1rem', textAlign: 'center',
-                          }}>
-                            <span className="font-cinzel font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.78rem', color: '#a08858' }}>
-                              <IconLock size={12} /> {comingSoonRoute ? 'Coming soon' : shipLockedRoute ? 'Requires a Sloop or better' : `Unlocks at Expedition Lv ${minLevel}`}
-                            </span>
-                          </div>
-                        ) : (() => {
-                          // Three clearly-distinct states so a READY button never
-                          // reads as disabled: a bold filled CTA when you can sail,
-                          // a dimmed "working" fill while sending, a muted slab only
-                          // when the crew genuinely can't go.
-                          const ready = !isPending && savedCrew.length >= minCrew
-                          return (
-                            <motion.button
-                              onClick={handleSend}
-                              disabled={isPending || savedCrew.length < minCrew}
-                              whileTap={ready ? { scale: 0.96 } : undefined}
-                              animate={ready ? { boxShadow: [
-                                `0 3px 13px ${rco.color}3d, inset 0 1px 0 rgba(255,255,255,0.35)`,
-                                `0 4px 22px ${rco.color}82, inset 0 1px 0 rgba(255,255,255,0.35)`,
-                                `0 3px 13px ${rco.color}3d, inset 0 1px 0 rgba(255,255,255,0.35)`,
-                              ] } : {}}
-                              transition={ready ? { duration: 2.4, repeat: Infinity, ease: 'easeInOut' } : {}}
-                              style={{
-                                width: '100%', borderRadius: 10, padding: '0.62rem 1rem',
-                                transition: 'background 0.15s, opacity 0.15s, border-color 0.15s',
-                                ...(ready
-                                  ? { background: `linear-gradient(180deg, ${rco.color} 0%, ${rco.color}d0 100%)`, border: `1px solid ${rco.color}`, color: '#0d1410', cursor: 'pointer' }
-                                  : isPending
-                                    ? { background: `linear-gradient(180deg, ${rco.color}aa 0%, ${rco.color}70 100%)`, border: `1px solid ${rco.color}88`, color: 'rgba(13,20,16,0.72)', cursor: 'default', boxShadow: 'none' }
-                                    : { background: 'rgba(80,100,120,0.10)', border: '1px solid rgba(255,255,255,0.09)', color: 'rgba(255,255,255,0.34)', cursor: 'default', boxShadow: 'none' }),
-                              }}
-                              className="font-cinzel font-800 uppercase tracking-[0.12em]"
-                            >
-                              <span style={{ fontSize: '0.85rem' }}>{isPending ? 'Sending…' : 'Set Sail'}</span>
-                            </motion.button>
-                          )
-                        })()}
-                      </div>
-                    </div>
-                  )
-                })()}
               </div>
+      {/* ── ROUTE SHEET ───────────────────────────────────────────────────
+          Shaped after the raid boss card, which is the treatment that works on
+          this screen: a painted band you read the place off, the name over it
+          at size, then the numbers. Portalled to the body because the chart box
+          is `overflow: hidden` and would clip it, and because a fixed sheet is
+          not bound by how tall the map happens to render. */}
+      {/* No AnimatePresence: it cannot see through a portal boundary to run an
+          exit, and every other sheet on this screen (see RaidsSection) portals
+          bare for the same reason. The sheet animates IN and closes at once. */}
+      {selectedRoute && mounted && createPortal(
+          (() => {
+            const expeditionLevel = getLevelFromXP(expeditionXP)
+            const rco = ROUTE_CONFIGS[selectedRoute]
+            const minLevel = rco.minLevel
+            const levelLockedRoute = expeditionLevel < minLevel
+            const shipLockedRoute  = shipTier < rco.minShipTier
+            const comingSoonRoute  = COMING_SOON_ROUTES.has(selectedRoute)
+            const routeLocked = levelLockedRoute || shipLockedRoute || comingSoonRoute
+            const est = stats ? computeRouteEstimate(stats, savedCrew.length, selectedRoute, safeVoyages) : null
+            return (
+              <motion.div
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                transition={{ duration: 0.16 }}
+                onClick={() => setSelectedRoute(null)}
+                style={{
+                  position: 'fixed', inset: 0, zIndex: 2200,
+                  background: 'rgba(0,0,0,0.62)',
+                  backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  padding: '1.1rem',
+                }}
+              >
+                <motion.div
+                  onClick={e => e.stopPropagation()}
+                  initial={{ opacity: 0, scale: 0.96, y: 12 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  transition={{ duration: 0.2, ease: [0.2, 0.8, 0.3, 1] }}
+                  style={{
+                    width: '100%', maxWidth: 430, maxHeight: '88vh',
+                    display: 'flex', flexDirection: 'column',
+                    // Solid base, not a tint: this sheet floats over painted art
+                    // and a translucent panel would read as a grey film.
+                    background: '#0a0704',
+                    borderRadius: 16, overflow: 'hidden',
+                    border: `1px solid ${rco.color}44`,
+                    boxShadow: `0 26px 64px rgba(0,0,0,0.72), 0 0 44px ${rco.color}1c`,
+                  }}
+                >
+                  {/* ── The band ──
+                      The art is 9:16 PORTRAIT, painted to the campaign's own
+                      format (820x1468, horizon high, near-black foot), so a wide
+                      band shows a horizontal slice of it. Position at 24% to
+                      land on the part that carries the place: the horizon, its
+                      focal landmark and the tops of the framing rocks. */}
+                  <div style={{ position: 'relative', height: 220, flexShrink: 0 }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={rco.image} alt="" aria-hidden
+                      style={{
+                        position: 'absolute', inset: 0, width: '100%', height: '100%',
+                        objectFit: 'cover', objectPosition: 'center 24%',
+                        filter: routeLocked ? 'grayscale(0.85) brightness(0.5)' : undefined,
+                      }}
+                    />
+                    {/* Scrim to the sheet's own base, so the band has no seam
+                        where it meets the body. */}
+                    <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(10,7,4,0.12) 0%, rgba(10,7,4,0.10) 46%, rgba(10,7,4,0.86) 82%, #0a0704 100%)' }} />
+                    <button
+                      type="button" onClick={() => setSelectedRoute(null)} aria-label="Close"
+                      style={{
+                        position: 'absolute', top: 11, right: 11, width: 32, height: 32,
+                        borderRadius: '50%', padding: 0, cursor: 'pointer',
+                        background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.2)',
+                        color: '#e6e0d4', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        touchAction: 'manipulation',
+                      }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                    </button>
+                    <span
+                      className="font-karla font-800 uppercase tracking-[0.12em]"
+                      style={{
+                        position: 'absolute', top: 14, left: 14,
+                        fontSize: '0.56rem', padding: '0.3rem 0.62rem', borderRadius: 999,
+                        color: routeLocked ? '#c8b28a' : rco.color,
+                        background: routeLocked ? 'rgba(0,0,0,0.5)' : `${rco.color}22`,
+                        border: `1px solid ${routeLocked ? 'rgba(200,178,138,0.4)' : `${rco.color}77`}`,
+                        backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)',
+                      }}
+                    >
+                      {comingSoonRoute ? 'Coming soon' : routeLocked ? 'Locked' : rco.riskLabel}
+                    </span>
+                    <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '0 1.15rem 0.75rem' }}>
+                      <p className="font-cinzel font-800" style={{ fontSize: '1.5rem', lineHeight: 1.08, color: '#fff', textShadow: `0 2px 12px rgba(0,0,0,0.92), 0 0 22px ${rco.color}33` }}>
+                        {rco.name}
+                      </p>
+                      <p className="font-karla" style={{ fontSize: '0.9rem', color: '#b0a08a', lineHeight: 1.4, marginTop: 4 }}>
+                        {rco.tagline}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* ── The numbers (scrolls) ── */}
+                  <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, padding: '0.95rem 1.15rem 0.6rem' }}>
+            {/* Stats row */}
+            {stats && (() => {
+              const expLevel = getLevelFromXP(expeditionXP)
+              // Swift Sails (Locker Upgrade) shortens the actual voyage,
+              // so the preview reflects it too.
+              const estMs = Math.round(computeVoyageDurationMs(expLevel, stats.dodge) * voyageSpeedMult)
+              const riskPct = est?.crewRiskPct ?? 0
+              const riskColor = riskPct >= 15 ? '#f87171' : riskPct >= 8 ? '#f0c040' : '#6a8a6a'
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.42rem', marginBottom: '0.85rem' }}>
+                  {/* Payout + time */}
+                  {est && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <span className="font-karla font-700" style={{ fontSize: '1.05rem', color: '#c8aa6a' }}>
+                        ~{est.lootMin}–{est.lootMax} ⟡
+                      </span>
+                      <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '0.7rem' }}>·</span>
+                      <span className="font-karla" style={{ fontSize: '0.92rem', color: '#5a7aaa' }}>
+                        {est.xpMin}–{est.xpMax} XP
+                      </span>
+                      <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '0.7rem' }}>·</span>
+                      <span className="font-karla" style={{ fontSize: '0.92rem', color: '#7a6848' }}>
+                        <IconHourglass size={11} /> {formatDuration(estMs)}
+                      </span>
+                      {voyageSpeedMult < 1 && (
+                        <span className="font-karla font-600" style={{ fontSize: '0.8rem', color: '#46c0a0' }}>
+                          Swift Sails
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {/* A slotted crew that's away on a trawl can't sail —
+                      say so explicitly so Set Sail never feels broken. */}
+                  {trawlingAssigned.length > 0 && (
+                    <span className="font-karla font-600" style={{ fontSize: '0.88rem', color: '#46c0a0', lineHeight: 1.4 }}>
+                      {trawlingAssigned.map(c => c.name).join(', ')} {trawlingAssigned.length === 1 ? 'is' : 'are'} out on a trawl and can&apos;t sail until {trawlingAssigned.length === 1 ? 'it returns' : 'they return'}. Swap in another crew or collect the trawl first.
+                    </span>
+                  )}
+                  {/* Crew risk / crew count */}
+                  {savedCrew.length < minCrew ? (
+                    <span className="font-karla font-600" style={{ fontSize: '0.92rem', color: '#c87a4a' }}>
+                      <IconWarning size={12} /> {minCrew === 1 ? 'Need at least 1 crew to set sail' : `Need at least ${minCrew} crew to set sail`}
+                    </span>
+                  ) : safeVoyages ? (
+                    <span className="font-karla font-600" style={{ fontSize: '0.92rem', color: '#4ade80' }}>
+                      <IconCheck size={12} /> No crew risk — Safe Passage keeps your crew safe on every route.
+                    </span>
+                  ) : riskPct > 0 ? (
+                    <>
+                      <span className="font-karla font-600" style={{ fontSize: '0.92rem', color: riskColor }}>
+                        {riskPct >= 15 ? <IconSkull size={12} /> : <IconWarning size={12} />} {riskPct}% chance crew is lost permanently
+                      </span>
+                      {/* Teach the mitigation: noobs should know Fortune is the
+                          survival stat, and vets should see what theirs is doing. */}
+                      <span className="font-karla" style={{ fontSize: '0.82rem', color: '#7a6f5a' }}>
+                        {stats.fortune > 0
+                          ? `Your crew's ${stats.fortune} Fortune trimmed this from ${Math.round(rco.baseCrewLossChance * 100)}%. Risk-free at ${rco.minLevel} Fortune.`
+                          : `Crew Fortune trims this risk. Risk-free at ${rco.minLevel} total Fortune.`}
+                      </span>
+                    </>
+                  ) : rco.baseCrewLossChance > 0 && savedCrew.length >= 2 ? (
+                    <span className="font-karla font-600" style={{ fontSize: '0.92rem', color: '#4ade80' }}>
+                      <IconCheck size={12} /> No crew risk. Your crew&apos;s {stats.fortune} Fortune covers these waters.
+                    </span>
+                  ) : (
+                    <span className="font-karla" style={{ fontSize: '0.92rem', color: '#5a7a5a' }}>No crew risk</span>
+                  )}
+                </div>
+              )
+            })()}
+
+            {/* Drops */}
+            {(() => {
+              const drops = est?.drops ?? ROUTE_DROPS[selectedRoute]
+              if (!drops.length) return null
+              return (
+                <div style={{ borderTop: `0.5px solid ${rco.color}22`, paddingTop: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.55rem', marginBottom: '0.7rem' }}>
+                  <span className="font-karla uppercase tracking-[0.06em]" style={{ fontSize: '0.68rem', color: '#5a5248' }}>
+                    possible drops
+                  </span>
+                  {drops.map(drop => {
+                    const specialDef = drop.kind === 'special' ? getSpecialItem(drop.id) : null
+                    const dropKey = drop.kind === 'bait' ? drop.type : drop.id
+                    const color   = specialDef ? specialDef.color : getBait((drop as { type: string }).type).color
+                    const name    = specialDef ? specialDef.name : getBait((drop as { type: string }).type).name
+                    const image   = specialDef?.image ?? (drop.kind === 'bait' ? getBait((drop as { type: string }).type).imageUrl ?? null : null)
+                    const label   = specialDef ? `Special item · ${specialDef.effectLabel}` : 'Fishing bait'
+                    const detail  = specialDef
+                      ? specialDef.description
+                      : (() => {
+                          const b = getBait((drop as { type: string }).type) as import('@/lib/bait').BaitDef
+                          const parts: string[] = []
+                          if (b.waitMult < 1) parts.push(`${Math.round((1 - b.waitMult) * 100)}% faster bite`)
+                          if (b.catchZoneBonus > 0) parts.push(`+${b.catchZoneBonus}° catch zone`)
+                          return parts.join(' · ')
+                        })()
+                    const isExpanded = expandedDropKey === dropKey
+                    return (
+                      <div key={dropKey}>
+                        <button
+                          onClick={() => setExpandedDropKey(isExpanded ? null : dropKey)}
+                          style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.45rem' }}
+                        >
+                          {image
+                            ? <img src={image} alt={name} loading="lazy" decoding="async" style={{ width: 30, height: 30, objectFit: 'contain', flexShrink: 0, filter: `drop-shadow(0 1px 4px ${color}66)` }} />
+                            : <span style={{ display: 'inline-block', width: 11, height: 11, borderRadius: drop.kind === 'bait' ? '2px' : '50%', background: color, flexShrink: 0, boxShadow: `0 0 4px ${color}88` }} />
+                          }
+                          <span className="font-karla font-700" style={{ fontSize: '0.98rem', color, flex: 1 }}>{name}</span>
+                          <span className="font-karla font-700" style={{ fontSize: '0.86rem', color: '#a89878' }}>{drop.rate}</span>
+                          <span style={{ fontSize: '0.62rem', color: '#5a4a30', transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', flexShrink: 0 }}>▼</span>
+                        </button>
+                        {isExpanded && (
+                          <div style={{ paddingLeft: image ? '1.8rem' : '1.1rem', marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                            <span className="font-karla uppercase tracking-[0.05em]" style={{ fontSize: '0.68rem', color: `${color}99`, background: `${color}18`, borderRadius: 3, padding: '0.08rem 0.28rem' }}>
+                              {label}
+                            </span>
+                            <span className="font-karla" style={{ fontSize: '0.84rem', color: '#6a5a40', lineHeight: 1.4 }}>
+                              {detail}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            })()}
+
+            {/* Error */}
+            {error && (
+              <p className="font-karla" style={{ fontSize: '0.9rem', color: '#f87171', marginBottom: '0.45rem' }}>{error}</p>
+            )}
+                  </div>
+
+
+            {/* Set Sail / Lock — always visible at bottom */}
+            <div style={{ padding: '0.75rem 1.15rem 1rem', flexShrink: 0, borderTop: '1px solid rgba(255,255,255,0.07)', background: 'rgba(8,6,3,0.96)' }}>
+              {routeLocked ? (
+                <div style={{
+                  width: '100%', background: 'rgba(160,120,60,0.06)',
+                  border: '1px solid rgba(160,120,60,0.22)', borderRadius: 8,
+                  padding: '0.62rem 1rem', textAlign: 'center',
+                }}>
+                  <span className="font-cinzel font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.9rem', color: '#a08858' }}>
+                    <IconLock size={12} /> {comingSoonRoute ? 'Coming soon' : shipLockedRoute ? 'Requires a Sloop or better' : `Unlocks at Expedition Lv ${minLevel}`}
+                  </span>
+                </div>
+              ) : (() => {
+                // Three clearly-distinct states so a READY button never
+                // reads as disabled: a bold filled CTA when you can sail,
+                // a dimmed "working" fill while sending, a muted slab only
+                // when the crew genuinely can't go.
+                const ready = !isPending && savedCrew.length >= minCrew
+                return (
+                  <motion.button
+                    onClick={handleSend}
+                    disabled={isPending || savedCrew.length < minCrew}
+                    whileTap={ready ? { scale: 0.96 } : undefined}
+                    animate={ready ? { boxShadow: [
+                      `0 3px 13px ${rco.color}3d, inset 0 1px 0 rgba(255,255,255,0.35)`,
+                      `0 4px 22px ${rco.color}82, inset 0 1px 0 rgba(255,255,255,0.35)`,
+                      `0 3px 13px ${rco.color}3d, inset 0 1px 0 rgba(255,255,255,0.35)`,
+                    ] } : {}}
+                    transition={ready ? { duration: 2.4, repeat: Infinity, ease: 'easeInOut' } : {}}
+                    style={{
+                      width: '100%', borderRadius: 10, padding: '0.78rem 1rem',
+                      transition: 'background 0.15s, opacity 0.15s, border-color 0.15s',
+                      ...(ready
+                        ? { background: `linear-gradient(180deg, ${rco.color} 0%, ${rco.color}d0 100%)`, border: `1px solid ${rco.color}`, color: '#0d1410', cursor: 'pointer' }
+                        : isPending
+                          ? { background: `linear-gradient(180deg, ${rco.color}aa 0%, ${rco.color}70 100%)`, border: `1px solid ${rco.color}88`, color: 'rgba(13,20,16,0.72)', cursor: 'default', boxShadow: 'none' }
+                          : { background: 'rgba(80,100,120,0.10)', border: '1px solid rgba(255,255,255,0.09)', color: 'rgba(255,255,255,0.34)', cursor: 'default', boxShadow: 'none' }),
+                    }}
+                    className="font-cinzel font-800 uppercase tracking-[0.12em]"
+                  >
+                    <span style={{ fontSize: '1rem' }}>{isPending ? 'Sending…' : 'Set Sail'}</span>
+                  </motion.button>
+                )
+              })()}
+      </div>
+                </motion.div>
+              </motion.div>
+            )
+          })(),
+        document.body,
+      )}
+
             </>
           )}
           <VoyageHistory voyages={voyages} />

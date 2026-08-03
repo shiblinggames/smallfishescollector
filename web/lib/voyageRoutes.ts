@@ -10,6 +10,11 @@ export const COMING_SOON_ROUTES: Set<VoyageRoute> = new Set()
 export interface RouteConfig {
   name: string
   tagline: string
+  /** The route's own painted seascape, shown as the header band on its node
+   *  sheet. Painted to the same rule as the raid backdrops: horizon high, open
+   *  water filling the frame, and near-black at the foot so the route name laid
+   *  over it stays readable without needing a heavier scrim. */
+  image: string
   riskLabel: string
   color: string
   payoutScale: number
@@ -38,6 +43,7 @@ export interface RouteConfig {
 export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
   coastal: {
     name: 'The Inner Sea',
+    image: '/voyage_coastal.jpg',
     tagline: 'Familiar waters. Light risk, modest reward.',
     riskLabel: 'Safe',
     color: '#4ade80',
@@ -50,6 +56,7 @@ export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
   },
   open: {
     name: 'The Crossing',
+    image: '/voyage_open.jpg',
     tagline: 'Open water. Some risk, decent reward.',
     riskLabel: 'Low Risk',
     color: '#f0c040',
@@ -63,6 +70,7 @@ export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
   },
   deep: {
     name: 'The Howling Deep',
+    image: '/voyage_deep.jpg',
     tagline: 'Hostile open water. Real risk, real reward.',
     riskLabel: 'Risky',
     color: '#c084fc',
@@ -76,6 +84,7 @@ export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
   },
   triangle: {
     name: 'The Bertuna Triangle',
+    image: '/voyage_triangle.jpg',
     tagline: 'Ships go missing here. Few come back the same.',
     riskLabel: 'Dangerous',
     color: '#f43f5e',
@@ -96,6 +105,7 @@ export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
   // farther out" than the Triangle's crimson danger.
   shroud: {
     name: 'The Shrouded Reach',
+    image: '/voyage_shroud.jpg',
     tagline: 'Beyond the maps. Half a crew gets back.',
     riskLabel: 'Treacherous',
     color: '#7c8aa8',
