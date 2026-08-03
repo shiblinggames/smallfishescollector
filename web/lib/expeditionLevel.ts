@@ -101,6 +101,24 @@ const EVENT_XP: Record<string, Record<string, number>> = {
 // One knob so it's easy to retune.
 export const VOYAGE_XP_MULT = 2.75
 
+/** What share of a voyage's XP its surviving CREW earn, on top of the captain.
+ *
+ *  Crew used to take the payout at full value, which was fine while a voyage was
+ *  the only passive way to train them. The Crew Hall is that now, by design: it
+ *  is the building you spend doubloons on specifically to level hands, and it
+ *  should be the one paying the most for it.
+ *
+ *  Deliberately SEPARATE from VOYAGE_XP_MULT rather than a cut to it. That
+ *  multiplier is the captain's Nav XP, which was raised to 2.75 on purpose to
+ *  make voyages a worthwhile Nav trickle. Trimming it would quietly nerf Nav
+ *  levelling to solve a crew-training problem, and nobody would connect the two
+ *  a month from now.
+ *
+ *  0.75, not something harsher: voyages still carry real crew XP, because a crew
+ *  that sailed and survived should learn something from it. The hall just out-earns
+ *  them now instead of trailing them. */
+export const VOYAGE_CREW_XP_MULT = 0.75
+
 export function voyageXP(
   route: string,
   crewCount: number,

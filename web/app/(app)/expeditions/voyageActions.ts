@@ -10,7 +10,7 @@ import { generateVoyageEvents, type VoyageEvent, type VoyageRoute } from '@/lib/
 import { ROUTE_CONFIGS, COMING_SOON_ROUTES } from '@/lib/voyageRoutes'
 import { generateAndSaveVoyageLog, type VoyageCrewMember } from '@/lib/captains-log'
 import type { CrewCard } from '@/lib/expeditions'
-import { voyageXP, getLevelFromXP } from '@/lib/expeditionLevel'
+import { voyageXP, getLevelFromXP, VOYAGE_CREW_XP_MULT } from '@/lib/expeditionLevel'
 import { loadDeployedParty } from '@/lib/crewData'
 import { resolveDeployedCrew, slotMult} from '@/lib/crewResolve'
 import { RARITY_NAMES, crewDisplayName, type CrewRarity } from '@/lib/crewGen'
@@ -326,9 +326,13 @@ export async function revealVoyageResults(voyageId: number): Promise<
     .eq('status', 'revealed')
   if ((completedVoyages ?? 0) + 1 >= 100) await grantBadgeDirect(user.id, 'fleet_admiral')
 
-  // Crew XP: surviving crew earn the player's full voyage XP payout. Lost
-  // crew earn nothing (the soft-delete that follows will skip them anyway
-  // because grant_crew_xp_to_ids gates on died_at IS NULL — belt + braces).
+  // Crew XP: surviving crew earn a SHARE of the player's voyage XP payout, not
+  // all of it. See VOYAGE_CREW_XP_MULT: the Crew Hall is the building you pay to
+  // train hands, so it should out-earn the thing you sail for loot. The captain's
+  // own Nav XP is untouched. Lost crew earn nothing (the soft-delete that follows
+  // will skip them anyway because grant_crew_xp_to_ids gates on died_at IS NULL,
+  // belt and braces).
+  const crewXpEarned = Math.round(xpEarned * VOYAGE_CREW_XP_MULT)
   const survivorIds = (voyage.crew_variant_ids as number[]).filter(id => !voyage.crew_lost.includes(id))
 
   const [, , , crewXP] = await Promise.all([
@@ -346,7 +350,7 @@ export async function revealVoyageResults(voyageId: number): Promise<
           .eq('user_id', user.id)
           .in('id', voyage.crew_lost)
       : Promise.resolve(null),
-    grantXPToCrewIds(admin, user.id, survivorIds, xpEarned),
+    grantXPToCrewIds(admin, user.id, survivorIds, crewXpEarned),
     ...(voyage.total_doubloons > 0
       ? [admin.from('doubloon_transactions').insert({ user_id: user.id, amount: voyage.total_doubloons, reason: 'Daily crew voyage' })]
       : []),
