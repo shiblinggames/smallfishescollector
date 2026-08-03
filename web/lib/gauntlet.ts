@@ -176,15 +176,22 @@ export function hardcoreUnlocked(opts: { isAdmin?: boolean | null; clearedNodes?
   return gauntletUnlocked({ isAdmin: false, clearedNodes: opts.clearedNodes }) && (opts.deepest ?? 0) >= HC_UNLOCK_DEPTH
 }
 
-/** Can this player start a DON'S hardcore run? Mirrors hardcoreUnlocked, but
- *  against Don's own gate and Don's own depth: you have to have opened his
- *  descent (the Throne cleared) and pushed HC_UNLOCK_DEPTH into it. Reaching
- *  depth 10 of Davy's says nothing about whether you can survive the Don's
- *  Ch3/Ch4 pool, so his hardcore asks for it in HIS water. */
-export function donsHardcoreUnlocked(opts: { isAdmin?: boolean | null; throneCleared?: boolean | null; donsDeepest?: number | null }): boolean {
+/** Can this player start a DON'S hardcore run? The Throne, and nothing else.
+ *
+ *  It briefly also asked for HC_UNLOCK_DEPTH in Don's water, mirroring the way
+ *  Davy's asks for depth in his. That reads sensible and is not: Davy's gauntlet
+ *  opens back in Chapter 2.5, so a depth floor there is a real second hurdle
+ *  that stops a new captain permadeath-diving on day one. Don's opens only once
+ *  you have beaten Don Finleone and finished the campaign, so the floor asked
+ *  someone who had cleared the whole game to prove themselves twice, and five
+ *  depths into a descent they have already unlocked proves nothing.
+ *
+ *  The Throne clear IS the gate. Anyone who can reach his gauntlet has earned
+ *  the right to lose their crew in it. */
+export function donsHardcoreUnlocked(opts: { isAdmin?: boolean | null; throneCleared?: boolean | null }): boolean {
   if (opts.isAdmin) return true
   if (!HARDCORE_LIVE) return false
-  return donsGauntletUnlocked({ isAdmin: false, throneCleared: opts.throneCleared }) && (opts.donsDeepest ?? 0) >= HC_UNLOCK_DEPTH
+  return donsGauntletUnlocked({ isAdmin: false, throneCleared: opts.throneCleared })
 }
 
 /** The profile columns each descent keeps its hardcore state in. Don's runs are
