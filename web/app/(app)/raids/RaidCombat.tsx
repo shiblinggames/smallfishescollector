@@ -1088,15 +1088,12 @@ export default function RaidCombat({
   // split as the anchor.
   const [abyssalShieldHp, setAbyssalShieldHp] = useState(0)
   const abyssalShieldRef = useRef(0)
-  // Typed breakdown of the SAME shield pool, so the bar can show WHERE the shield
-  // came from: the amber opening-BOON layer (Stormward/Deep Fortress/Last Bastion)
-  // vs the cyan CREW-ability layer (Abyssal Tide). boon + crew always == the total
-  // abyssalShieldRef; mirrored at the same grant/soak sites. Display only — the
-  // damage math still reads abyssalShieldRef.
-  const [boonShieldHp, setBoonShieldHp] = useState(0)
-  const boonShieldRef = useRef(0)
-  const [crewShieldHp, setCrewShieldHp] = useState(0)
-  const crewShieldRef = useRef(0)
+  // ONE POOL, ONE READOUT. There used to be a typed breakdown mirrored beside
+  // this — an amber "opening boon" layer and a cyan "crew ability" layer — and
+  // the bar drew a coloured segment and its own icon for each. It was only ever
+  // a display split: every one of them soaks from abyssalShieldRef, so a player
+  // reading two shield numbers had to add them to know what they actually had,
+  // and the colours implied a distinction the damage maths has never made.
   // Shield soak flare + the PLAYBACK-time shield value it's diffed against (the
   // refs above are already fully depleted by the resolve pass, so playback needs
   // its own tracker to spot the drop as it paints).
@@ -2210,8 +2207,6 @@ export default function RaidCombat({
       setAbyssalShieldHp(fightShieldMaxRef.current)
       // Reforms the opening boon layer each fight (overwrites the total), so the
       // crew layer resets to 0 to keep boon + crew == the total.
-      boonShieldRef.current = fightShieldMaxRef.current; setBoonShieldHp(fightShieldMaxRef.current)
-      crewShieldRef.current = 0; setCrewShieldHp(0)
       // Opening Bulwark — the opening-shield synergies (Stormward / Last Bastion /
       // Deep Fortress / Iron Tempest) reform your soak pool each fight. A gold
       // bulwark ring snaps out as the fight opens so the defense is felt, not just
@@ -2948,7 +2943,6 @@ export default function RaidCombat({
         const shield = Math.round(playerHpMax * at.shieldPctMaxHp)
         setAbyssalShieldHp(prev => prev + shield)
         abyssalShieldRef.current += shield
-        crewShieldRef.current += shield; setCrewShieldHp(prev => prev + shield)   // crew-ability (cyan) layer
         if (at.cleanseDebuff) { setCleanseDebuffPending(true); cleansePlayerStatuses() }
         noteCheckResponse('heal'); noteCheckResponse('shield'); noteCheckResponse('brace'); dousePlayerBurnFromHeal()   // legendary breadth: the abyss answers heal, shield AND brace checks
         // Galaxy (Catfish's chase skin): a cosmic surge blooms over your hull as
@@ -3803,8 +3797,6 @@ export default function RaidCombat({
       // bars deplete in lockstep with the animation, not the instant the turn
       // resolves (which spoiled the incoming hit before it landed).
       pShield?: number
-      pBoonShield?: number
-      pCrewShield?: number
       eShield?: number
     }
 
@@ -3858,7 +3850,7 @@ export default function RaidCombat({
     // Snapshot both shield pools onto every step as it's pushed, so the display
     // can deplete them in lockstep with the animation (see syncPHp/syncEHp)
     // instead of the whole turn's soak landing the instant it resolves.
-    const pushStep = (s: Step) => { steps.push({ ...s, pShield: abyssalShieldRef.current, pBoonShield: boonShieldRef.current, pCrewShield: crewShieldRef.current, eShield: enemyShieldRef.current }) }
+    const pushStep = (s: Step) => { steps.push({ ...s, pShield: abyssalShieldRef.current, eShield: enemyShieldRef.current }) }
     // Barrier Regrowth curse: the enemy barrier reknits a slice of its full value
     // at the top of each round, BEFORE the player's shot lands — so a slow chip
     // never breaks through and the hull only takes damage once you burst the wall
@@ -3881,8 +3873,6 @@ export default function RaidCombat({
         playedShieldRef.current = step.pShield
         setAbyssalShieldHp(step.pShield)
       }
-      if (step.pBoonShield != null) setBoonShieldHp(step.pBoonShield)
-      if (step.pCrewShield != null) setCrewShieldHp(step.pCrewShield)
     }
     const syncEHp = (step: Step) => { setEnemyHp(step.eHp); if (step.eShield != null) setEnemyShieldHp(step.eShield) }
     // ── Player shield soak, one place ────────────────────────────────────────
@@ -3896,11 +3886,6 @@ export default function RaidCombat({
       if (abyssalShieldRef.current > 0 && amount > 0) {
         const soaked = Math.min(abyssalShieldRef.current, amount)
         abyssalShieldRef.current -= soaked
-        // Deplete the crew (cyan) layer first, the opening boon (amber) layer
-        // last, so the two coloured bar segments shrink in a readable order.
-        const fromCrew = Math.min(crewShieldRef.current, soaked)
-        crewShieldRef.current -= fromCrew
-        boonShieldRef.current = Math.max(0, boonShieldRef.current - (soaked - fromCrew))
         onStat?.({ dmgAbsorbed: soaked })
         lines.push(abyssalShieldRef.current > 0 ? `Your shield soaks ${soaked}.` : `Your shield soaks ${soaked} and shatters.`)
         return amount - soaked
@@ -7683,7 +7668,7 @@ export default function RaidCombat({
             </p>
             {/* Absorb shield (Abyssal Tide / Stormward) folds into the HP bar
                 as a cyan segment — one row, no stacked bar. */}
-            <HPBar current={playerHp} max={playerHpMax} accent={PLAYER_COLOR} compact shieldSegments={[{ hp: boonShieldHp, color: '#f5b94a', gradTo: '#e0972f' }, { hp: crewShieldHp, color: '#7dd3fc', gradTo: '#5eead4' }]} />
+            <HPBar current={playerHp} max={playerHpMax} accent={PLAYER_COLOR} compact shield={abyssalShieldHp} />
             <ChargesRow charges={playerCharges} max={playerMaxCharges} small readyGlow={canMega ? (megaAugment?.color ?? null) : null} />
             {/* Ch4 statuses + bespoke effect chips on YOUR hull. */}
             <StatusBadgesRow statuses={playerStatuses} bespoke={[
@@ -9422,11 +9407,14 @@ function CarapaceDeflect() {
 // barrier) renders as a distinct-colored segment filling the gap just past
 // the HP fill (reads as temporary bonus HP), plus a small inline chip on the
 // number line. No separate stacked bar — keeps the nameplate to one row.
-function HPBar({ current, max, accent, compact, shield = 0, shieldColor = '#7dd3fc', shieldGradTo = '#5eead4', shieldSegments, hidden = false }: { current: number; max: number; accent: string; compact?: boolean; shield?: number; shieldColor?: string; shieldGradTo?: string; shieldSegments?: { hp: number; color: string; gradTo: string }[]; hidden?: boolean }) {
+// One shield, one colour, one number. The multi-segment variant is gone with
+// the typed player layers it existed for: both bars now carry a single pool,
+// the player's in cyan and the enemy's barrier in purple.
+function HPBar({ current, max, accent, compact, shield = 0, shieldColor = '#7dd3fc', shieldGradTo = '#5eead4', hidden = false }: { current: number; max: number; accent: string; compact?: boolean; shield?: number; shieldColor?: string; shieldGradTo?: string; hidden?: boolean }) {
   const pct = hidden ? 0 : (max > 0 ? Math.max(0, Math.min(100, (current / max) * 100)) : 0)
   // Shield can be a single pool (enemy barrier) OR typed segments (the player's
   // amber boon layer + cyan crew-ability layer), so each source reads distinctly.
-  const segs = (shieldSegments ?? (shield > 0 ? [{ hp: shield, color: shieldColor, gradTo: shieldGradTo }] : [])).filter(s => s.hp > 0)
+  const segs = (shield > 0 ? [{ hp: shield, color: shieldColor, gradTo: shieldGradTo }] : [])
   const totalShield = segs.reduce((s, x) => s + x.hp, 0)
   // Cap the whole shield strip to the empty hull space (scaling the segments
   // together) so the bar never overflows; the chips still show the true amounts.
