@@ -2245,6 +2245,14 @@ export const RAID_MAP: RaidNode[] = [
     // is holding, because that is the entire reason to go and beat it. Sealing him
     // shut would hide the carrot behind the stick.
     previewWhenLocked: true,
+    // His identity is not a reveal to protect. Bosses are masked until beaten
+    // because the FIGHT is the introduction, and that is simply not true here:
+    // you cannot open him without having beaten the Quartermaster alive in his
+    // challenge, so you have fought this character twice before you ever see
+    // this card. Masking him also fought previewWhenLocked directly, whose
+    // whole job is to show a locked goal's wares, and showed a "???" for the
+    // one boss on the map you are meant to recognise on sight.
+    revealBoss: true,
     route: '/raids/ghost',
     raidId: THE_QUARTERMASTERS_GHOST.raidId,
     image: THE_QUARTERMASTERS_GHOST.enemies.ghost.portrait,
@@ -2957,13 +2965,6 @@ export function bossIdentityRevealed(node: RaidNode, clearedNodeIds: Set<string>
   return false
 }
 
-/** Should this boss appear in the Bosses roster at all?
- *
- *  Ordinary bosses DO show while locked, as a masked silhouette — that is the
- *  point of the tab, a wall of who is still ahead of you. But a boss gated by
- *  `revealBossAfter` is one whose EXISTENCE is the spoiler: a "???" tile in the
- *  ninth slot still tells you there is a ninth boss and that the campaign is
- *  not over. Those are omitted outright until the story introduces them. */
 /** Is this node a CHALLENGE VARIANT: a side branch hanging off a boss?
  *
  *  Every UI that special-cases challenges was testing `node.sideBranch` on its
@@ -2986,6 +2987,13 @@ export function isChallengeVariant(nodeId: string): boolean {
   return !!parent && isCombatNode(parent.type)
 }
 
+/** Should this boss appear in the Bosses roster at all?
+ *
+ *  Ordinary bosses DO show while locked, as a masked silhouette — that is the
+ *  point of the tab, a wall of who is still ahead of you. But a boss gated by
+ *  `revealBossAfter` is one whose EXISTENCE is the spoiler: a "???" tile in the
+ *  ninth slot still tells you there is a ninth boss and that the campaign is
+ *  not over. Those are omitted outright until the story introduces them. */
 export function bossListedInRoster(node: RaidNode, clearedNodeIds: Set<string>): boolean {
   if (!node.revealBossAfter) return true
   return clearedNodeIds.has(node.revealBossAfter)

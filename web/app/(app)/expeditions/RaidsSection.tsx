@@ -3489,7 +3489,7 @@ function JourneyChapter({ views, onSelect }: { views: RaidNodeView[]; onSelect: 
               {combat ? (
                 // Combat nodes carry their art in the banner to the right, so the
                 // spine gets a small diamond waypoint instead of a duplicate thumb.
-                <span aria-hidden style={{ width: isSide ? 15 : 18, height: isSide ? 15 : 18, transform: 'rotate(45deg)', borderRadius: 4, background: cleared ? '#2dd4aa' : isCurrent ? '#5eead4' : '#0c1119', border: `2px solid ${accent}`, boxShadow: isCurrent ? `0 0 12px ${accent}` : '0 2px 6px rgba(0,0,0,0.5)' }} />
+                <span aria-hidden style={{ width: 18, height: 18, transform: 'rotate(45deg)', borderRadius: 4, background: cleared ? '#2dd4aa' : isCurrent ? '#5eead4' : '#0c1119', border: `2px solid ${accent}`, boxShadow: isCurrent ? `0 0 12px ${accent}` : '0 2px 6px rgba(0,0,0,0.5)' }} />
               ) : (
                 <span style={{ width: 22, height: 22, borderRadius: '50%', display: 'grid', placeItems: 'center', background: cleared ? 'radial-gradient(circle,#2dd4aa,#0c3a30)' : '#0c1119', border: `2px solid ${cleared ? '#2dd4aa' : accent}` }}>
                   {cleared
@@ -3501,7 +3501,12 @@ function JourneyChapter({ views, onSelect }: { views: RaidNodeView[]; onSelect: 
             {combat ? (
               // Art-forward banner: the boss portrait fills the card, name +
               // flavor ride a left-to-right scrim so the art stays the hero.
-              <span style={{ flex: 1, minWidth: 0, position: 'relative', display: 'block', borderRadius: 14, overflow: 'hidden', height: isSide ? 66 : 84, background: '#0c141d', border: `1px solid ${accent}${locked ? '2a' : '55'}`, boxShadow: isCurrent ? `0 0 20px ${accent}22` : '0 5px 16px rgba(0,0,0,0.45)' }}>
+              // Full height for every combat banner. The 66px variant was built
+              // for challenge detours, which no longer reach the spine, so the
+              // only thing it shrank was a real boss: the caption block is
+              // bottom-anchored and grows UP, so a long name that wrapped ran
+              // straight out of the top of the box and got clipped.
+              <span style={{ flex: 1, minWidth: 0, position: 'relative', display: 'block', borderRadius: 14, overflow: 'hidden', height: 84, background: '#0c141d', border: `1px solid ${accent}${locked ? '2a' : '55'}`, boxShadow: isCurrent ? `0 0 20px ${accent}22` : '0 5px 16px rgba(0,0,0,0.45)' }}>
                 {node.image && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={node.image} alt="" loading="lazy" decoding="async" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 26%', filter: locked ? 'grayscale(1) brightness(0.5)' : cleared ? 'grayscale(0.4) brightness(0.66)' : 'brightness(0.82)' }} />
@@ -3515,7 +3520,7 @@ function JourneyChapter({ views, onSelect }: { views: RaidNodeView[]; onSelect: 
                 )}
                 <span style={{ position: 'absolute', left: 13, right: 12, bottom: 9, zIndex: 1 }}>
                   <span style={{ display: 'flex', alignItems: 'baseline', gap: 7, flexWrap: 'wrap' }}>
-                    <span className="font-cinzel font-700" style={{ fontSize: isSide ? '1rem' : '1.16rem', color: locked ? '#b8b1a5' : '#fff', lineHeight: 1.05, textShadow: '0 2px 8px rgba(0,0,0,0.9)' }}>{node.label}</span>
+                    <span className="font-cinzel font-700" style={{ fontSize: '1.16rem', color: locked ? '#b8b1a5' : '#fff', lineHeight: 1.05, textShadow: '0 2px 8px rgba(0,0,0,0.9)' }}>{node.label}</span>
                     {/* Hardcoding "Challenge" was safe while challenges were the
                         only branches that could reach here. They are now the only
                         ones that CANNOT, so the label has to come from the node. */}
