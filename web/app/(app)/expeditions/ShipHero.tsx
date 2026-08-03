@@ -81,6 +81,35 @@ const RARITY_ITEM_COLOR: Record<string, string> = {
   cosmetic:  '#2dd4bf',
 }
 
+/** INVENTORY TIERS, best first.
+ *
+ *  FORGING OUTRANKS RARITY, which is why the two forge tiers sit above the
+ *  rarity ladder rather than inside it. An Abyssal is a fusion of fusions, four
+ *  boss drops and three forges deep; sorting it under "epic" because that is
+ *  the rarity on its def would bury the rarest thing you own among the parts it
+ *  was made from.
+ *
+ *  Below that it is just the rarity ladder, which is the order every other
+ *  surface in the game already shows these in. */
+const ITEM_TIERS = [
+  { key: 'abyssal',   label: 'Abyssal',   color: '#ff7a5c' },
+  { key: 'forged',    label: 'Forged',    color: '#c9c0e4' },
+  { key: 'ancient',   label: 'Ancient',   color: RARITY_ITEM_COLOR.ancient },
+  { key: 'legendary', label: 'Legendary', color: RARITY_ITEM_COLOR.legendary },
+  { key: 'epic',      label: 'Epic',      color: RARITY_ITEM_COLOR.epic },
+  { key: 'rare',      label: 'Rare',      color: RARITY_ITEM_COLOR.rare },
+  { key: 'uncommon',  label: 'Uncommon',  color: RARITY_ITEM_COLOR.uncommon },
+  { key: 'common',    label: 'Common',    color: RARITY_ITEM_COLOR.common },
+] as const
+
+/** Which shelf an item belongs on. Forge state is checked FIRST and in tier
+ *  order, since a tier-3 Abyssal also passes isForgedRaidItem. */
+function itemTierKey(id: string): string {
+  if (isAbyssalForgedItem(id)) return 'abyssal'
+  if (isForgedRaidItem(id)) return 'forged'
+  return getRaidItem(id)?.rarity ?? 'common'
+}
+
 // Crew picker row — a compact, scannable list entry: small portrait + name +
 // rarity + the three effective stats on one line, with trait/ability chips on a
 // second line. Dense so the player sees the whole roster at a glance. Whole row
@@ -1853,20 +1882,18 @@ export default function ShipHero({
                     <p className="font-karla" style={{ fontSize: '0.7rem', color: full ? '#d8a14a' : '#8a8480', marginBottom: '0.7rem', lineHeight: 1.45 }}>
                       {full ? 'Hull full. Tap an equipped item to free its slot.' : 'Tap an item for its effect and to equip it.'}
                     </p>
-                    {/* THREE COLUMNS, growing DOWN. This was a horizontal
-                        scroller, which hides most of an inventory off the right
-                        edge and makes comparing two items a swipe apart. The
-                        page already scrolls vertically, so the grid just extends
-                        into it and everything you own is on one surface. Same
-                        reason the puzzle boards grow in rows rather than
-                        columns on a phone. */}
-                    <div
-                      style={{
-                        display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8,
-                        marginBottom: '1.6rem',
-                      }}
-                    >
-                      {owned.map(itemId => {
+                    {/* GROUPED BY TIER, best shelf first, then THREE COLUMNS
+                        growing DOWN within each.
+
+                        The columns replaced a horizontal scroller, which hid
+                        most of an inventory off the right edge and put two
+                        items you wanted to compare a swipe apart. The grouping
+                        is the same argument one level up: a flat grid in
+                        acquisition order scattered the pieces that matter among
+                        the commons, so the only way to find your Abyssal was to
+                        recognise its art. Now the shelf says what it is. */}
+                    {(() => {
+                      const tile = (itemId: string) => {
                         const def = getRaidItem(itemId)
                         if (!def) return null
                         const color = RARITY_ITEM_COLOR[def.rarity] ?? '#9ca3af'
@@ -1919,8 +1946,39 @@ export default function ShipHero({
                             </span>
                           </button>
                         )
-                      })}
-                    </div>
+                      }
+                      // Alphabetical inside a shelf: acquisition order means
+                      // nothing once the shelf has already answered "how good is
+                      // it", and a stable order means an item does not move
+                      // under your thumb when you equip it.
+                      const groups = ITEM_TIERS
+                        .map(t => ({
+                          ...t,
+                          items: owned
+                            .filter(id => itemTierKey(id) === t.key)
+                            .sort((a, b) => (getRaidItem(a)?.name ?? '').localeCompare(getRaidItem(b)?.name ?? '')),
+                        }))
+                        .filter(g => g.items.length > 0)
+                      return (
+                        <div style={{ marginBottom: '1.6rem' }}>
+                          {groups.map(g => (
+                            <div key={g.key} style={{ marginBottom: '1.05rem' }}>
+                              {/* Quieter than the Equipped/Inventory dividers on
+                                  purpose: this sits INSIDE Inventory, so it must
+                                  not read as a third section of the page. */}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}>
+                                <span className="font-karla font-800 uppercase" style={{ fontSize: '0.52rem', letterSpacing: '0.18em', color: g.color }}>{g.label}</span>
+                                <div style={{ flex: 1, height: 1, background: `${g.color}2e` }} />
+                                <span className="font-karla font-700" style={{ fontSize: '0.54rem', color: '#6f6a63', fontVariantNumeric: 'tabular-nums' }}>{g.items.length}</span>
+                              </div>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
+                                {g.items.map(tile)}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )
+                    })()}
                   </>
                 )
               })()}
