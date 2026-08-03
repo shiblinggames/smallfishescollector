@@ -1063,6 +1063,17 @@ export interface ChestOdd {
   /** The same chance WITHOUT crew Fortune, so a panel can show what the crew is
    *  adding rather than only the total. Equal to `chance` when Fortune is 1x. */
   chanceBeforeFortune: number
+  /**
+   * Set when this drop exists but the current depth has not reached its chest
+   * tier: the depth it opens at, with `chance` 0.
+   *
+   * Davy's Gauntlet needed this. Once the Grand Cannon is forged its two
+   * components stop dropping, correctly, and the only chase left is the Golden
+   * Hull at tier 5 — so a shallow run had NOTHING to list and the whole panel
+   * vanished, while Don's, whose items carry no tier gate, always showed one.
+   * The honest fix is to name what is still coming rather than show a blank.
+   */
+  lockedUntilDepth?: number
 }
 
 /** Everything this player could still pull out of a chest banked at `depth`, and how
@@ -1126,8 +1137,11 @@ export function chestOdds(opts: {
   if (hardcore && tier >= BLOOD_CANNON_CHEST_TIER && !ownedItems.includes(BLOOD_CANNON_ITEM_ID) && !bloodForged) {
     out.push({ id: BLOOD_CANNON_ITEM_ID, name: "Davy's Blood Cannon", kind: 'item', chance: cannon, chanceBeforeFortune: cannon0 })
   }
-  if (tier >= GOLD_HULL_CHEST_TIER && !ownedSkins.includes(GOLD_HULL_SKIN_ID)) {
-    out.push({ id: GOLD_HULL_SKIN_ID, name: 'Golden Gauntlet Hull', kind: 'skin', chance: skin, chanceBeforeFortune: skin0 })
+  if (!ownedSkins.includes(GOLD_HULL_SKIN_ID)) {
+    const gate = CHEST_TIERS.find(c => c.tier === GOLD_HULL_CHEST_TIER)?.minDepth ?? 0
+    out.push(tier >= GOLD_HULL_CHEST_TIER
+      ? { id: GOLD_HULL_SKIN_ID, name: 'Golden Gauntlet Hull', kind: 'skin', chance: skin, chanceBeforeFortune: skin0 }
+      : { id: GOLD_HULL_SKIN_ID, name: 'Golden Gauntlet Hull', kind: 'skin', chance: 0, chanceBeforeFortune: 0, lockedUntilDepth: gate })
   }
   if (hardcore && tier >= BLOOD_HULL_CHEST_TIER && !ownedSkins.includes(BLOOD_HULL_SKIN_ID)) {
     out.push({ id: BLOOD_HULL_SKIN_ID, name: 'Bad Blood Hull', kind: 'skin', chance: skin, chanceBeforeFortune: skin0 })

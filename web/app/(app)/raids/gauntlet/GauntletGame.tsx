@@ -3291,7 +3291,12 @@ export default function GauntletGame(props: GauntletGameProps) {
                           ? getShipSkin(o.id)?.imageByTier?.[6]
                           : getRaidItem(o.id)?.image
                         return (
-                          <div key={o.id} title={o.name} style={{ flexShrink: 0, width: 62, padding: '0.4rem 0.2rem 0.35rem', borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: `1px solid ${sweetened ? 'rgba(201,167,255,0.4)' : 'rgba(255,255,255,0.1)'}`, textAlign: 'center' }}>
+                          <div key={o.id} title={o.lockedUntilDepth ? `${o.name} — opens at depth ${o.lockedUntilDepth}` : o.name} style={{
+                            flexShrink: 0, width: 62, padding: '0.4rem 0.2rem 0.35rem', borderRadius: 10,
+                            background: 'rgba(255,255,255,0.04)',
+                            border: `1px solid ${o.lockedUntilDepth ? 'rgba(255,255,255,0.08)' : sweetened ? 'rgba(201,167,255,0.4)' : 'rgba(255,255,255,0.1)'}`,
+                            textAlign: 'center', opacity: o.lockedUntilDepth ? 0.5 : 1,
+                          }}>
                             <div style={{ height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               {img
                                 // eslint-disable-next-line @next/next/no-img-element
@@ -3304,10 +3309,13 @@ export default function GauntletGame(props: GauntletGameProps) {
                                 without making anyone add two percentages
                                 together or work out whether a "+5%" meant points
                                 or a proportion. */}
-                            <p className="font-cinzel font-800" style={{ fontSize: '0.72rem', color: o.chance > o.chanceBeforeFortune ? GOLD : sweetened ? '#c9a7ff' : '#e8e1d2', lineHeight: 1, marginTop: 3 }}>
-                              {(o.chance * 100).toFixed(o.chance < 0.1 ? 1 : 0)}%
+                            <p className="font-cinzel font-800" style={{
+                              fontSize: o.lockedUntilDepth ? '0.6rem' : '0.72rem', lineHeight: 1, marginTop: 3,
+                              color: o.lockedUntilDepth ? '#8f8a80' : o.chance > o.chanceBeforeFortune ? GOLD : sweetened ? '#c9a7ff' : '#e8e1d2',
+                            }}>
+                              {o.lockedUntilDepth ? `Depth ${o.lockedUntilDepth}` : `${(o.chance * 100).toFixed(o.chance < 0.1 ? 1 : 0)}%`}
                             </p>
-                            {o.chance > o.chanceBeforeFortune && (
+                            {!o.lockedUntilDepth && o.chance > o.chanceBeforeFortune && (
                               <p className="font-karla font-600" style={{ fontSize: '0.5rem', color: '#8f8a80', lineHeight: 1, marginTop: 1, textDecoration: 'line-through', opacity: 0.75 }}>
                                 {(o.chanceBeforeFortune * 100).toFixed(o.chanceBeforeFortune < 0.1 ? 1 : 0)}%
                               </p>

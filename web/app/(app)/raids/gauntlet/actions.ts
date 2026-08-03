@@ -651,7 +651,9 @@ export async function rollDavyOffer(hpPct: number): Promise<{ offer: DavyOffer |
     ownedSkins: (profile.ship_skins as string[] | null) ?? [],
     davyForge: DAVY_FORGE,
     variant,
-  }).length > 0
+    // A locked row (chance 0, still depth-gated) is not something a heavier
+    // chest can pay, so it must not make an offer look worthwhile.
+  }).some(o => o.chance > 0)
 
   const next = rollOffer({
     prev,
