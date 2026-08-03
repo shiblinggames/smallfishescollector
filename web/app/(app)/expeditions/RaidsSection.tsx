@@ -12,7 +12,7 @@ import { RARITY_COLOR, GEM_GLYPH, GEM_COLOR, RAID_LOCATION_BG, RAID_BOSS_BG } fr
 import { getRaidItem } from '@/lib/raidItems'
 import { getRaidConfigById } from '@/lib/raidRegistry'
 import { isUniqueLoot } from '@/lib/bossRaids'
-import { crateItemChances } from '@/lib/raidLoot'
+import { crateItemChances, isChallengeRaid } from '@/lib/raidLoot'
 import { fortuneLootMult } from '@/lib/expeditions'
 import { getShipSkin } from '@/lib/shipSkins'
 import { SPECIAL_ITEMS } from '@/lib/specialItems'
@@ -1997,7 +1997,7 @@ function NodeDetailSheet({
                 if (!row || !isUniqueLoot(row)) return undefined
                 if (dropOwned(d)) return 'Owned'
                 const owned = new Set(cfg.loot.filter(lootOwned).map(l => l.id))
-                const hit = crateItemChances(cfg.loot, owned, cfg.uniqueShare, 1, fortuneLootMult(totalFortune))
+                const hit = crateItemChances(cfg.loot, owned, cfg.uniqueShare, 1, fortuneLootMult(totalFortune), isChallengeRaid(cfg.raidId))
                   .find(c => c.id === d.id)
                 return hit ? formatDropChance(hit.chance) : undefined
               }
@@ -3162,7 +3162,7 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
     if (!row || !isUniqueLoot(row)) return undefined
     if (dropOwned(d)) return 'Owned'
     const owned = new Set(cfg.loot.filter(lootOwned).map(l => l.id))
-    const hit = crateItemChances(cfg.loot, owned, cfg.uniqueShare, 1, fortuneLootMult(totalFortune))
+    const hit = crateItemChances(cfg.loot, owned, cfg.uniqueShare, 1, fortuneLootMult(totalFortune), isChallengeRaid(cfg.raidId))
       .find(c => c.id === d.id)
     return hit ? formatDropChance(hit.chance) : undefined
   }

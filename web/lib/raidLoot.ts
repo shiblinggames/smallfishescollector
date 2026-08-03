@@ -44,6 +44,36 @@ export const LOOT_RARITY_TIER: Record<string, number> = {
   common: 1, uncommon: 2, rare: 3, cosmetic: 3, epic: 4, legendary: 5, ancient: 5,
 }
 
+/**
+ * BASE DROP RATES BY RARITY, per crate, before Fortune.
+ *
+ * The headline tuning knob. Rates used to fall out of each table's weights,
+ * which meant they drifted with the size of the table: epics ran 8.3% to 20%
+ * and legendaries 4.1% to 5.0% across the campaign, with no decision behind
+ * the spread. These are the decision.
+ *
+ * Only epic and legendary are set. Cosmetic hulls and the two ancients keep
+ * their weight-derived rates, which carry a deliberate spread (2.0% for the
+ * Tundra and Volcanic hulls against 8.7% for the Chartmaker) that a flat rule
+ * would erase.
+ */
+export const BASE_RARITY_CHANCE: Partial<Record<RaidLootItem['rarity'], number>> = {
+  epic: 0.10,
+  legendary: 0.05,
+}
+
+/** The same ladder on challenge tables: double, because the fight is. */
+export const CHALLENGE_RARITY_CHANCE: Partial<Record<RaidLootItem['rarity'], number>> = {
+  epic: 0.20,
+  legendary: 0.10,
+}
+
+/** Challenge variants are identified by their id suffix, the same convention
+ *  the badge conditions use. */
+export function isChallengeRaid(raidId: string | undefined): boolean {
+  return !!raidId && raidId.endsWith('_challenge')
+}
+
 /** Never let a unique become a certainty, however much Fortune is stacked. */
 export const MAX_ITEM_CHANCE = 0.95
 
@@ -85,11 +115,21 @@ function baseChance(
   totalWeight: number,
   uniqueShare: number | undefined,
   missingCount: number,
+  challenge: boolean,
 ): number {
+  // 1. An explicit rate on the row always wins, so one item can be tuned
+  //    without touching the rule or anything else in its table.
   if (l.chance != null) return l.chance
+  // 2. The rarity rule. This is what makes an epic an epic across every raid
+  //    rather than a function of how many rows happen to share its table.
+  const byRarity = (challenge ? CHALLENGE_RARITY_CHANCE : BASE_RARITY_CHANCE)[l.rarity]
+  if (byRarity != null) return byRarity
+  // 3. uniqueShare, for tables that declare a total item rate instead of
+  //    per-item ones. Now only reaches rarities the rule does not cover.
   if (uniqueShare != null && uniqueShare > 0 && missingCount > 0) {
     return Math.min(1, uniqueShare) / missingCount
   }
+  // 4. Weight-derived, which is what every rate was before the rule existed.
   return totalWeight > 0 ? l.weight / totalWeight : 0
 }
 
@@ -110,6 +150,7 @@ export function rollCrate(
   uniqueShare?: number,
   legendaryMult = 1,
   fortuneMult = 1,
+  challenge = false,
   rng: () => number = Math.random,
 ): CrateRoll {
   const totalWeight = loot.reduce((s, l) => s + l.weight, 0)
@@ -136,7 +177,7 @@ export function rollCrate(
     const isLegendary = u.row.rarity === 'legendary' || u.row.rarity === 'ancient'
     const p = Math.min(
       MAX_ITEM_CHANCE,
-      baseChance(u.row, totalWeight, uniqueShare, uniques.length)
+      baseChance(u.row, totalWeight, uniqueShare, uniques.length, challenge)
         * (isLegendary ? legendaryMult : 1)
         * fortuneMult,
     )
@@ -169,11 +210,12 @@ export function crateItemChances(
   uniqueShare?: number,
   legendaryMult = 1,
   fortuneMult = 1,
+  challenge = false,
 ): CrateItemChance[] {
   const totalWeight = loot.reduce((s, l) => s + l.weight, 0)
   const missing = loot.filter(l => isUniqueLoot(l) && !excludedIds.has(l.id))
   return missing.map(l => {
-    const raw = baseChance(l, totalWeight, uniqueShare, missing.length)
+    const raw = baseChance(l, totalWeight, uniqueShare, missing.length, challenge)
       * (l.rarity === 'legendary' || l.rarity === 'ancient' ? legendaryMult : 1)
     return {
       id: l.id,

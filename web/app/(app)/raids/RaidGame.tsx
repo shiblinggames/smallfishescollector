@@ -11,7 +11,7 @@ import { getShipSkin } from '@/lib/shipSkins'
 import { getActiveEffects } from '@/lib/raidItems'
 import { getXPProgress, getLevelFromXP, MAX_LEVEL } from '@/lib/expeditionLevel'
 import { raidDamageProfile, fortuneLootMult, fortuneDoubloonMult, type RaidMods } from '@/lib/expeditions'
-import { rollCrate, crateItemChances, LOOT_RARITY_TIER } from '@/lib/raidLoot'
+import { rollCrate, crateItemChances, isChallengeRaid, LOOT_RARITY_TIER } from '@/lib/raidLoot'
 import { crewLevelFromXP, CREW_MAX_LEVEL } from '@/lib/crewLevel'
 import { type ShipAugment } from '@/lib/shipAugments'
 import {
@@ -383,8 +383,8 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   // multipliers at once; the combat sheet just renders what it is given, so the
   // odds it shows cannot drift from the odds rollCrate uses.
   const crateOdds = useMemo(
-    () => crateItemChances(config.loot, ownedUniqueIds, config.uniqueShare, legendaryLootMult, lootFortuneMult),
-    [config.loot, config.uniqueShare, ownedUniqueIds, legendaryLootMult, lootFortuneMult],
+    () => crateItemChances(config.loot, ownedUniqueIds, config.uniqueShare, legendaryLootMult, lootFortuneMult, isChallengeRaid(config.raidId)),
+    [config.loot, config.uniqueShare, config.raidId, ownedUniqueIds, legendaryLootMult, lootFortuneMult],
   )
   const playerActionMs    = Math.max(700, 2000 - shipSpeed * 100)
   const dodgeCooldownUse  = Math.max(500, 1600 - dodgeBonus)
@@ -1153,7 +1153,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
         setWinGold(gold); setWinXP(xp)
         // Roll loot + dollar amount up front so the stage can pre-position
         // the slot before the player taps Loot Chest.
-        const crate = rollCrate(config.loot, ownedUniqueIds, config.uniqueShare, legendaryLootMult, lootFortuneMult)
+        const crate = rollCrate(config.loot, ownedUniqueIds, config.uniqueShare, legendaryLootMult, lootFortuneMult, isChallengeRaid(config.raidId))
         // The reel lands on the RAREST item that dropped, so the headline is the
         // best thing in the crate rather than whichever index happened to sort
         // first. With no items it lands on the currency, which now always pays.
