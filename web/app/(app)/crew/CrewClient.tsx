@@ -871,9 +871,13 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
   const [skinBuyConfirm, setSkinBuyConfirm] = useState<string | null>(null)
   // Skin id whose full-detail splash is open (from the Trunk gallery).
   const [skinDetail, setSkinDetail] = useState<string | null>(null)
-  // The Trunk filters — rarity (per-crew) + ownership (per-skin); two dropdowns.
+  // Skins filters — rarity (per-crew) + ownership (per-skin) as dropdowns, and
+  // CHASE as a toggle rather than a third dropdown: it is a yes/no cutting
+  // across both of the others, and six chase skins in seventy-five is the one
+  // thing a collector actually hunts for in here.
   const [trunkRarity, setTrunkRarity] = useState<CrewRarity | 'all'>('all')
   const [trunkOwned, setTrunkOwned] = useState<'all' | 'owned' | 'missing'>('all')
+  const [trunkChase, setTrunkChase] = useState(false)
   const [trunkMenu, setTrunkMenu] = useState<'rarity' | 'owned' | null>(null)
   // Buy / equip a crew skin, then sync state + the Nav-bar gem total. A BUY also
   // fires the unlock reveal so earning a new skin feels like a real moment.
@@ -2400,7 +2404,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             // Rarity filter is per-crew (a crew's skins share its rarity); ownership
             // filter is per-skin, so drop any crew left with nothing to show.
             .filter(g => trunkRarity === 'all' || g.rarity === trunkRarity)
-            .map(g => ({ ...g, skins: g.skins.filter(s => matchOwned(s.id)) }))
+            .map(g => ({ ...g, skins: g.skins.filter(s => matchOwned(s.id) && (!trunkChase || !!s.chase)) }))
             .filter(g => g.skins.length > 0)
           // One compact dropdown for a filter — a labelled trigger + a popover of
           // options, so both filters fit on a single tidy row.
@@ -2414,9 +2418,12 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             const sel = opts.find(o => o.key === current) ?? opts[0]
             return (
               <div style={{ position: 'relative', flex: 1, maxWidth: 172 }}>
+                {/* Near-opaque base and a border you can actually find. A 5%
+                    white wash over a dark timber panel is invisible until you
+                    already know the control is there. */}
                 <button type="button" onClick={() => setTrunkMenu(open ? null : id)} className="tap"
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 7, width: '100%', padding: '0.42rem 0.72rem', borderRadius: 10,
-                    background: 'rgba(255,255,255,0.05)', border: `1px solid ${open ? 'rgba(94,200,232,0.6)' : 'rgba(255,255,255,0.12)'}`, cursor: 'pointer' }}>
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 7, width: '100%', padding: '0.5rem 0.72rem', borderRadius: 10,
+                    background: open ? 'rgba(20,38,50,0.96)' : 'rgba(13,22,30,0.94)', border: `1px solid ${open ? 'rgba(94,200,232,0.75)' : 'rgba(143,215,234,0.34)'}`, cursor: 'pointer' }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                     {sel.color && <span style={{ width: 8, height: 8, borderRadius: '50%', background: sel.color, flexShrink: 0 }} />}
                     <span className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#dbeef4', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sel.label}</span>
@@ -2448,19 +2455,27 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
           }
           return (
             <div>
+              {/* No "The Trunk" title. The tab is already called Skins, so the
+                  name was a second label for the same room. The count stays,
+                  because a collection screen's first job is to say how far
+                  along the collection is. */}
               <div style={{ textAlign: 'center', marginBottom: 12 }}>
-                <p className="font-cinzel font-800" style={{ fontSize: '1.15rem', color: '#e8f2f5' }}>The Trunk</p>
-                <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#8fd7ea', marginTop: 4 }}>{ownedCount} / {CREW_SKINS.length} collected</p>
+                <p className="font-cinzel font-800" style={{ fontSize: '1.05rem', color: '#8fd7ea' }}>{ownedCount} / {CREW_SKINS.length} collected</p>
               </div>
               {/* Skin gamble. One row rather than the panel it used to be: the
-                  trunk is the point of this tab, so the gamble sits beside it
-                  instead of pushing it below the fold. */}
+                  gallery is the point of this tab, so the gamble sits beside it
+                  instead of pushing it below the fold.
+
+                  OPAQUE BASE. It was an 11%-alpha blood tint fading into a
+                  55%-alpha near-black, laid over the panel's dark timber, which
+                  left a row you had to hunt for. Solid dark base now, a blood
+                  tint with some weight on it, and a border at nearly double. */}
               {bloodMarketShown && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, padding: '0.55rem 0.6rem 0.55rem 0.75rem', borderRadius: 12, background: `linear-gradient(180deg, ${BLOOD}1c, rgba(20,6,9,0.55))`, border: `1px solid ${BLOOD}4d` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, padding: '0.6rem 0.6rem 0.6rem 0.75rem', borderRadius: 12, background: `linear-gradient(180deg, ${BLOOD}3d, rgba(26,9,13,0.97))`, border: `1px solid ${BLOOD}8c` }}>
                   <BloodDrop size={17} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#f3c0c6', lineHeight: 1.1 }}>Skin Gamble</p>
-                    <p className="font-karla" style={{ fontSize: '0.6rem', color: '#c08a90', lineHeight: 1.25 }}>
+                    <p className="font-karla" style={{ fontSize: '0.6rem', color: '#d9a7ad', lineHeight: 1.25 }}>
                       {skinPoolEmpty ? 'Every skin collected' : `One random skin you do not own · ${totalNonLeg - ownedNonLeg} left`}
                     </p>
                   </div>
@@ -2471,8 +2486,8 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   </button>
                 </div>
               )}
-              {/* Filters — two compact dropdowns on ONE row. */}
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 16 }}>
+              {/* Filters — two dropdowns and the chase toggle, one row. */}
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'stretch', marginBottom: 16 }}>
                 {renderDropdown('rarity', String(trunkRarity), [
                   { key: 'all', label: 'All rarities' },
                   { key: '2', label: RARITY_NAMES[2], color: RARITY_COLORS[2] },
@@ -2484,6 +2499,19 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   { key: 'owned', label: 'Owned' },
                   { key: 'missing', label: 'Missing' },
                 ], (k) => setTrunkOwned(k as 'all' | 'owned' | 'missing'))}
+                {/* CHASE. A toggle, not a third dropdown: it is one yes/no that
+                    cuts across both of the others, and a dropdown whose two
+                    options are "on" and "off" is a switch wearing a costume.
+                    Wears the chase glow when lit so it says what it filters. */}
+                <button type="button" onClick={() => setTrunkChase(v => !v)} aria-pressed={trunkChase} className="tap"
+                  style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.5rem 0.7rem', borderRadius: 10, cursor: 'pointer',
+                    background: trunkChase ? 'rgba(88,52,120,0.9)' : 'rgba(13,22,30,0.94)',
+                    border: `1px solid ${trunkChase ? 'rgba(201,167,255,0.85)' : 'rgba(201,167,255,0.34)'}` }}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill={trunkChase ? '#e6d4ff' : 'none'} stroke={trunkChase ? '#e6d4ff' : '#c9a7ff'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M12 3l2.4 5.4 5.6.6-4.2 3.9 1.2 5.6L12 15.8 6.9 18.5l1.2-5.6L3.9 9l5.6-.6z" />
+                  </svg>
+                  <span className="font-karla font-700" style={{ fontSize: '0.68rem', color: trunkChase ? '#f0e6ff' : '#c9a7ff', whiteSpace: 'nowrap' }}>Chase</span>
+                </button>
               </div>
               {groups.map(({ slug, skins, rarity }) => {
                 const color = RARITY_COLORS[(rarity as CrewRarity)] ?? '#8a857c'
