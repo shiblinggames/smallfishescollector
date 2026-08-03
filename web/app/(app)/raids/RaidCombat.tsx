@@ -60,7 +60,7 @@ import { DialSVG, CX, CY, OUTER_R, INNER_R } from '@/components/FishingDial'
 import type { ZoneDef } from '@/app/(app)/fishing/depths'
 import { motion, AnimatePresence, useAnimation } from 'framer-motion'
 import { BroadsideEnemy, EnemyAction, RARITY_COLOR, type AimAttackId, type BossMechanicCheck, type MechanicResponse } from '@/lib/bossRaids'
-import { raidDamageProfile, type RaidMods } from '@/lib/expeditions'
+import { raidDamageProfile, fortuneLootMult, type RaidMods } from '@/lib/expeditions'
 import { MEGA_CHARGE_COST, RAILGUN_GRAZE_PCT, type ShipAugment } from '@/lib/shipAugments'
 import { getCheckTutorialSeen, markCheckTutorialSeen } from './checkTutorialActions'
 import { GUIDES } from '@/lib/onboardingScenes'
@@ -8154,7 +8154,13 @@ function PlayerStatsPopup({
     { label: 'Crit Damage', value: `${critMin}–${critMax}`,        hint: 'damage on a critical lock',           color: '#fbbf24' },
     { label: 'Initiative',  value: String(shipSpeed),              hint: 'fire first · flee',                    color: '#60a5fa' },
     { label: 'Evasion',     value: String(totalNavigation),        hint: 'dodge · land on dodgers · steadier aim', color: '#5eead4' },
-    { label: 'Fortune',     value: String(totalFortune),           hint: 'rarer drops · more doubloons · bigger repairs', color: '#f0c040' },
+    // The MULTIPLIER, not just a promise. Fortune's whole problem was that its
+    // effect was invisible: the panel claimed "better odds at rare loot" while
+    // the stat did nothing for drops, and there was no number to check it
+    // against. Printing the live figure means a captain can watch it move as
+    // they build the party, which is the only way the stat reads as a build
+    // choice rather than a stat that happens to exist.
+    { label: 'Fortune',     value: String(totalFortune),           hint: `${fortuneLootMult(totalFortune).toFixed(2)}× drop odds · more doubloons · bigger repairs`, color: '#f0c040' },
   ]
 
   // Equipped Items — every raid item the player has on, surfaced as its own

@@ -3251,6 +3251,10 @@ export default function GauntletGame(props: GauntletGameProps) {
               fortuneMult: fortuneLootMult(props.totalFortune),
             })
             const sweetened = offerChest > 1
+            // These odds are already Fortune-boosted (passed in above), but the
+            // label only ever credited Davy, so a captain saw bigger numbers and
+            // had no way to know their crew earned them.
+            const ftnMult = fortuneLootMult(props.totalFortune)
             // Fathoms this dive would bank (the Fence tab already spent comes off
             // it, mirroring the cash-out settle).
             const previewFathoms = Math.max(0, Math.round(fathomsForDepth(cleared, props.variant ?? 'davy') * gauntletFathomsMult(activeUpgrades)) - fenceSpent)
@@ -3279,7 +3283,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                 {odds.length > 0 && (
                   <div style={{ marginTop: 10, paddingTop: 9, borderTop: `1px solid ${GOLD}22` }}>
                     <p className="font-karla font-800 uppercase tracking-[0.16em]" style={{ fontSize: '0.46rem', color: sweetened ? '#c9a7ff' : '#8f8a80', marginBottom: 6, textAlign: 'left' }}>
-                      In the Chest{sweetened ? ` · Davy's ${offerChest}x` : ''}
+                      In the Chest{sweetened ? ` · Davy's ${offerChest}x` : ''}{ftnMult > 1 ? ` · Fortune ${ftnMult.toFixed(2)}x` : ''}
                     </p>
                     <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2, scrollbarWidth: 'none' }}>
                       {odds.map(o => {
