@@ -1047,6 +1047,37 @@ export const CHEST_TIERS: ChestTier[] = [
   { tier: 4, label: "Leviathan's Cache",  minDepth: 14, potMult: 1.35, gems: 50 },
   { tier: 5, label: "Davy Jones' Locker", minDepth: 18, potMult: 1.5,  gems: 90 },
 ]
+// ── WHAT THE CHEST IS CALLED ─────────────────────────────────────────────────
+// The tiers, depths, pot multipliers and gem bonuses are SHARED between the two
+// descents, and should stay that way: the ladder is the same ladder. The NAMES
+// are not, and were the last piece of Davy's still showing up on Don's screen —
+// banking a deep Don's run opened something the game called "Davy Jones'
+// Locker", in a descent Davy has nothing to do with. Same class of thing as
+// Don's board once printing "Davy's Terms".
+//
+// Davy's ladder drowns: waterlogged, barnacled, drowned, then the Locker itself.
+// Don's launders: what you skim, what you are kicked back, what gets washed,
+// what gets written down, and finally the vault with his name on it.
+const DONS_CHEST_LABELS: Record<number, string> = {
+  1: 'Skimmed Purse',
+  2: 'Kickback Crate',
+  3: 'Laundered Hoard',
+  4: 'The Ledger Vault',
+  5: "Finleone's Vault",
+}
+
+/** The chest's name for this descent. Falls back to Davy's label, so a new tier
+ *  added to CHEST_TIERS without a Don's name shows something rather than blank. */
+export function chestLabelFor(chest: ChestTier, variant?: GauntletVariant): string {
+  return variant === 'don' ? (DONS_CHEST_LABELS[chest.tier] ?? chest.label) : chest.label
+}
+
+/** Hardcore renames the coffer outright — one name for every tier, since on a
+ *  permadeath run the tier matters far less than what you just survived. */
+export function hardcoreChestLabel(variant?: GauntletVariant): string {
+  return variant === 'don' ? 'The Bone Vault' : 'The Blood Coffer'
+}
+
 export function chestForDepth(depth: number, tierDrop = 0): ChestTier {
   let chest = CHEST_TIERS[0]
   for (const c of CHEST_TIERS) if (depth >= c.minDepth) chest = c

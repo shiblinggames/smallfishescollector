@@ -21,7 +21,7 @@ import type { RaidCrewMember } from '../actions'
 import { classForSlug, CLASSES, currentMilestone } from '@/lib/crewClasses'
 import { crewLevelFromXP } from '@/lib/crewLevel'
 import {
-  generateFight, advanceRollState, chestForDepth, gauntletXpForDepth,
+  generateFight, advanceRollState, chestForDepth, hardcoreChestLabel, gauntletXpForDepth,
   isCurseDepth, drawCurse, curseEffects, curseHpDrain, curseSilenceCount, curseTierLabel, GAUNTLET_CURSES,
   isBoonDepth, drawBoons, boonEffects, hpBoonMult, boonTierLabel, GAUNTLET_BOONS, BOON_RARITY_META, boonRarity, pickBloodOathBoon,
   confluenceEffects, activeConfluences, eligibleConfluences, drawConfluenceOffer, confluenceLevel, confluenceDescAt, confluenceHintsFor, CONFLUENCES, inGauntletPool, type Confluence, type ConfluenceOffer,
@@ -4547,7 +4547,6 @@ const CHEST_ART: Record<number, { closed: string; open: string; color: string }>
 // Hardcore cash-out chest — same Davy sprite, but a blood-dark coffer: a
 // dark, muted red CSS tint over the art + a matching accent driving every
 // glow/ray, and its own name (the tier still sets the pot mult + haul).
-const HARDCORE_CHEST_LABEL  = 'The Blood Coffer'
 const HARDCORE_CHEST_ACCENT = '#b83a3a'
 const HARDCORE_CHEST_FILTER = 'grayscale(0.4) sepia(1) saturate(2.4) hue-rotate(-30deg) brightness(0.62) contrast(1.1)'
 
@@ -4742,7 +4741,9 @@ function GauntletReward({ r, recap, onBack, don }: { r: RewardOk; recap: { ships
   const baseArt = don ? { ...baseTier, ...DONS_CHEST } : baseTier
   const art = r.hardcore ? { ...baseArt, color: HARDCORE_CHEST_ACCENT } : baseArt
   const chestFilter = r.hardcore ? `${HARDCORE_CHEST_FILTER} ` : ''
-  const chestLabel = r.hardcore ? HARDCORE_CHEST_LABEL : r.chest.label
+  // r.chest.label already arrives named for the descent (see chestLabelFor on
+  // the server). Hardcore overrides it with its own single name.
+  const chestLabel = r.hardcore ? hardcoreChestLabel(don ? 'don' : 'davy') : r.chest.label
   const newBest = r.depth >= r.deepest
 
   // Nav level + XP bar — the banked XP visibly flows into the bar as the chest
