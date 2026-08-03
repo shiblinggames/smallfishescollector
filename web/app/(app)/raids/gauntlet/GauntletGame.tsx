@@ -2465,7 +2465,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           <BackLink router={router} label="Not today" />
         </div>
         {introOpen && <GauntletIntroModal variant={props.variant} onClose={dismissIntro} firstTime={!props.hasSeenIntro} />}
-        {lootMode && <LootModal mode={lootMode} don={isDonG} onClose={() => setLootMode(null)} />}
+        {lootMode && <LootModal mode={lootMode} don={isDonG} totalFortune={props.totalFortune} onClose={() => setLootMode(null)} />}
         {infoCurrency && <CurrencyInfoModal kind={infoCurrency} don={isDonG} onClose={() => setInfoCurrency(null)} />}
         {/* Home: no active run, so Codex-only (no "This Run" tab). */}
         {synergiesOpen && <SynergiesModal owned={boonTiers} seen={seenConfluences} taken={confluencesTaken} takenConv={convergencesTaken} variant={props.variant ?? 'davy'} activeRun={false} onClose={() => setSynergiesOpen(false)} />}
@@ -5988,7 +5988,14 @@ interface HaulDrop {
   hardcoreOnly?: boolean
 }
 
-function LootModal({ mode, don, onClose }: { mode: 'normal' | 'hardcore'; don?: boolean; onClose: () => void }) {
+function LootModal({ mode, don, totalFortune = 0, onClose }: {
+  mode: 'normal' | 'hardcore'
+  don?: boolean
+  /** Crew Fortune. The guide quoted the base curve while the cash-out rolled a
+   *  boosted one, so a captain reading it was reading the wrong table. */
+  totalFortune?: number
+  onClose: () => void
+}) {
   // One entry, both modes: the Rewards card opens this and you flip Normal /
   // Hardcore inside (Hardcore-only drops are still shown greyed on Normal).
   const [viewMode, setViewMode] = useState<'normal' | 'hardcore'>(mode)
@@ -6008,6 +6015,7 @@ function LootModal({ mode, don, onClose }: { mode: 'normal' | 'hardcore'; don?: 
   }
   // The depth→odds reference for one chase drop: its range up top, the unlock
   // gate if any, and the rate at the depths where it climbs (it maxes at 50).
+  const ftnMult = fortuneLootMult(totalFortune)
   const OddsBlock = ({ info }: { info: DropOddsInfo }) => {
     const startD = info.unlockDepth > 1 ? info.unlockDepth : 10
     const rows = Array.from(new Set([startD, 20, 30, 40, 50].filter(d => d >= startD))).sort((a, b) => a - b)
@@ -6028,13 +6036,23 @@ function LootModal({ mode, don, onClose }: { mode: 'normal' | 'hardcore'; don?: 
             return (
               <div key={d} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
                 <span className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#9a948a' }}>{isMax ? `Depth ${d}+` : `Depth ${d}`}</span>
-                <span className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: isMax ? GOLD : '#e8e1d2' }}>{fmtPct(info.chanceAt(d))}{isMax ? ' · max' : ''}</span>
+                <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6 }}>
+                  {info.chanceAt(d) > info.baseChanceAt(d) && (
+                    <span className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#8f8a80', textDecoration: 'line-through', opacity: 0.8 }}>
+                      {fmtPct(info.baseChanceAt(d))}
+                    </span>
+                  )}
+                  <span className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: info.chanceAt(d) > info.baseChanceAt(d) ? GOLD : isMax ? GOLD : '#e8e1d2' }}>{fmtPct(info.chanceAt(d))}{isMax ? ' · max' : ''}</span>
+                </span>
               </div>
             )
           })}
         </div>
         <p className="font-karla" style={{ fontSize: '0.64rem', color: '#8f8a80', lineHeight: 1.45, marginTop: 8 }}>
-          Each rolls on its own, only while unowned — the deeper you bank, the better the odds, maxing out at depth 50. Davy&apos;s Offer can raise them on the spot.
+          Each rolls on its own, only while unowned — the deeper you bank, the better the odds, maxing out at depth 50.
+          {ftnMult > 1
+            ? <> Your crew&apos;s Fortune is already worth <span style={{ color: GOLD, fontWeight: 700 }}>{ftnMult.toFixed(2)}×</span> on every line above, and Davy&apos;s Offer can raise them further on the spot.</>
+            : <> Crew Fortune raises them, up to double, and Davy&apos;s Offer can raise them further on the spot.</>}
         </p>
       </div>
     )
@@ -6140,7 +6158,7 @@ function LootModal({ mode, don, onClose }: { mode: 'normal' | 'hardcore'; don?: 
         </p>
         {/* Drop-rate range for the chase items/skins (banked currencies have none). */}
         {(() => {
-          const o = dropOddsInfo(d.id)
+          const o = dropOddsInfo(d.id, ftnMult)
           return o ? (
             <span className="font-karla font-800" style={{ marginTop: 1, fontSize: '0.5rem', color: `${GOLD}dd`, background: `${GOLD}16`, border: `1px solid ${GOLD}40`, borderRadius: 999, padding: '0.08rem 0.4rem' }}>
               {fmtPct(o.min)}–{fmtPct(o.max)}
@@ -6185,7 +6203,7 @@ function LootModal({ mode, don, onClose }: { mode: 'normal' | 'hardcore'; don?: 
             </div>
             {/* Depth→odds table for the chase drops (banked currencies have none). */}
             {(() => {
-              const o = dropOddsInfo(detail.id)
+              const o = dropOddsInfo(detail.id, ftnMult)
               return o ? <OddsBlock info={o} /> : null
             })()}
           </motion.div>

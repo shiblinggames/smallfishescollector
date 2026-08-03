@@ -1173,8 +1173,12 @@ export interface DropOddsInfo {
   kind: 'item' | 'skin'
   /** The cash-out depth this drop first becomes possible (its chest-tier gate). */
   unlockDepth: number
-  /** Drop chance (0-1) at a given cash-out depth — 0 below the gate. */
+  /** Drop chance (0-1) at a given cash-out depth — 0 below the gate. Includes
+   *  crew Fortune when dropOddsInfo was given a multiplier. */
   chanceAt: (depth: number) => number
+  /** The same curve with Fortune held at 1x, so a panel can show what the crew
+   *  is adding rather than only the total. */
+  baseChanceAt: (depth: number) => number
   /** Range across the whole descent: at the unlock/floor, and at the depth cap. */
   min: number
   max: number
@@ -1182,7 +1186,15 @@ export interface DropOddsInfo {
 
 /** The depth→odds reference curve for a chase drop (item or skin), or null if the
  *  id isn't a chase drop. Used by the Haul guide to show ranges + a depth table. */
-export function dropOddsInfo(id: string): DropOddsInfo | null {
+/**
+ * The depth-to-odds reference for one chase drop, for the Rewards guide.
+ *
+ * `fortuneMult` is crew Fortune (1x to 2x, from fortuneLootMult). It runs
+ * through the SAME cap the cash-out applies, so the guide cannot promise odds
+ * the payout will not honour. Default 1 leaves the base curve, which is what a
+ * caller with no crew context should show.
+ */
+export function dropOddsInfo(id: string, fortuneMult = 1): DropOddsInfo | null {
   const meta = DROP_ODDS_META[id]
   if (!meta) return null
   const unlockDepth = CHEST_TIERS.find(c => c.tier === meta.tierGate)?.minDepth ?? 0
@@ -1190,12 +1202,21 @@ export function dropOddsInfo(id: string): DropOddsInfo | null {
     const pd = Math.min(Math.max(0, depth), GAUNTLET_REWARD_DEPTH_CAP)
     if (chestForDepth(pd).tier < meta.tierGate) return 0
     const base = meta.kind === 'item' ? chestCannonDropChance(pd) : chestSkinDropChance(pd)
-    return base * meta.mult
+    return Math.min(CHEST_ODDS_CAP, base * meta.mult * fortuneMult)
+  }
+  /** The same curve with Fortune held at 1x, so the guide can show what the
+   *  crew is adding rather than only the total. */
+  const baseChanceAt = (depth: number): number => {
+    const pd = Math.min(Math.max(0, depth), GAUNTLET_REWARD_DEPTH_CAP)
+    if (chestForDepth(pd).tier < meta.tierGate) return 0
+    const base = meta.kind === 'item' ? chestCannonDropChance(pd) : chestSkinDropChance(pd)
+    return Math.min(CHEST_ODDS_CAP, base * meta.mult)
   }
   return {
     kind: meta.kind,
     unlockDepth,
     chanceAt,
+    baseChanceAt,
     min: chanceAt(Math.max(1, unlockDepth)),
     max: chanceAt(GAUNTLET_REWARD_DEPTH_CAP),
   }
