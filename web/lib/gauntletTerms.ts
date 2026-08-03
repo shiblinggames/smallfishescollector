@@ -64,6 +64,12 @@ export interface GauntletTerm {
   tiers: GauntletTermTier[]
 }
 
+/** Whose terms you are signing. The board is named for the host in the fiction,
+ *  so it cannot be one fixed string once both descents have one. */
+export function termsTitle(variant: GauntletVariant): string {
+  return variant === 'don' ? "Don's Terms" : "Davy's Terms"
+}
+
 /** The terms a given descent offers. Everything downstream (pressure totals, the
  *  board, the signed list) reads this rather than GAUNTLET_TERMS, so a term
  *  tagged to one gauntlet can never be signed in, priced into, or displayed by

@@ -33,7 +33,7 @@ import {
   emptyRunStats, addRunStats, coerceRunStats,
   dropOddsInfo, type DropOddsInfo,
   type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot, type GauntletRunState, type GauntletRunStats, chestOdds, type GauntletVariant } from '@/lib/gauntlet'
-import { GAUNTLET_TERMS, TERM_GROUP_META, resolveTerms, termPressure, termTideEffects, pressureGemMult, pressureDepthFactor, NO_TERM_EFFECTS, PRESSURE_CAP, PRESSURE_DEPTH_FLOOR, PRESSURE_DEPTH_FULL, PRESSURE_SKIN_THRESHOLD, PRESSURE_SKIN_DEPTH, PRESSURE_SKIN_ID, MAX_AVAILABLE_PRESSURE, type SignedTerms } from '@/lib/gauntletTerms'
+import { GAUNTLET_TERMS, TERM_GROUP_META, termsTitle, resolveTerms, termPressure, termTideEffects, pressureGemMult, pressureDepthFactor, NO_TERM_EFFECTS, PRESSURE_CAP, PRESSURE_DEPTH_FLOOR, PRESSURE_DEPTH_FULL, PRESSURE_SKIN_THRESHOLD, PRESSURE_SKIN_DEPTH, PRESSURE_SKIN_ID, MAX_AVAILABLE_PRESSURE, type SignedTerms } from '@/lib/gauntletTerms'
 import GauntletTermsPanel from './GauntletTermsPanel'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, setGauntletUpgradeActive, markGauntletIntroSeen, recordGauntletHit, wagerGauntletFathoms, markConfluencesSeen, checkpointGauntletRun, pauseGauntletRun, resumeGauntletRun, buyBaitWithFathoms, rollDavyOffer, buyMerchantItem, claimDailyTribute } from './actions'
 import { rollContractOffer, buildContractOffer, checkContract, CONTRACTS, STAKE_LABEL, describeReward, describePenalty, type ContractKind, type ContractOffer, type ContractStake, type ContractFightFacts } from '@/lib/gauntletContracts'
@@ -970,11 +970,18 @@ export default function GauntletGame(props: GauntletGameProps) {
               <p className="font-karla font-800 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#c48a8a', marginBottom: 5 }}>
                 Drops Only on Hardcore
               </p>
-              {[
-                { name: "Davy's Blood Cannon", note: 'the only lifesteal in the game' },
-                { name: 'Bad Blood Hull', note: 'Man-o-War skin' },
-                { name: 'Pitch Black Hull', note: `Man-o-War skin · needs ${PRESSURE_SKIN_THRESHOLD}+ Pressure, banked from depth ${PRESSURE_SKIN_DEPTH}` },
-              ].map(d => (
+              {/* Per descent, because the lists share nothing. Davy's hardcore
+                  holds three; the Don's holds one, since his two hulls are NORMAL
+                  drops and the Pitch Black Hull is Davy-only (see cashOut's
+                  `!isDon` gate). Listing Davy's on a Don's dive promised a cannon
+                  and two skins that cannot drop there. */}
+              {(isDonG
+                ? [{ name: "Don's Palisade", note: 'the only regenerating ward in the game' }]
+                : [
+                  { name: "Davy's Blood Cannon", note: 'the only lifesteal in the game' },
+                  { name: 'Bad Blood Hull', note: 'Man-o-War skin' },
+                  { name: 'Pitch Black Hull', note: `Man-o-War skin · needs ${PRESSURE_SKIN_THRESHOLD}+ Pressure, banked from depth ${PRESSURE_SKIN_DEPTH}` },
+                ]).map(d => (
                 <div key={d.name} style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 3 }}>
                   <span aria-hidden style={{ flexShrink: 0, width: 3, height: 3, borderRadius: 999, background: '#fca5a5', transform: 'translateY(-2px)' }} />
                   <p className="font-karla" style={{ fontSize: '0.7rem', color: '#f0cfcf', lineHeight: 1.35 }}>
@@ -997,7 +1004,7 @@ export default function GauntletGame(props: GauntletGameProps) {
               }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p className="font-cinzel font-700" style={{ fontSize: '1.02rem', color: pressure > 0 ? '#f0c040' : '#e0d6d6' }}>
-                  Davy&rsquo;s Terms
+                  {termsTitle(isDonG ? 'don' : 'davy')}
                 </p>
                 <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(240,220,220,0.62)', marginTop: 2, lineHeight: 1.35 }}>
                   {pressure > 0
@@ -3461,7 +3468,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                 border: `1px solid ${GOLD}3a` }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
                   <p className="font-karla font-800 uppercase tracking-[0.2em]" style={{ fontSize: '0.56rem', color: `${GOLD}cc` }}>
-                    Davy&rsquo;s Terms
+                    {termsTitle(isDonG ? 'don' : 'davy')}
                   </p>
                   <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#c48a8a' }}>
                     {pressure} Pressure
@@ -7233,7 +7240,7 @@ function DepthBar({ depth, pot, isBoss, isElite, affixName, curses, isHardcore, 
             {pressure > 0 && (
               <div style={{ marginTop: 4, paddingTop: 7, borderTop: '1px solid rgba(240,192,64,0.22)' }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: GOLD }}>Davy&rsquo;s Terms</p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: GOLD }}>Terms Signed</p>
                   <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: GOLD, whiteSpace: 'nowrap' }}>
                     {pressure} Pressure, ×{pressureGemMult(pressure, PRESSURE_DEPTH_FULL).toFixed(2)} gems
                   </p>

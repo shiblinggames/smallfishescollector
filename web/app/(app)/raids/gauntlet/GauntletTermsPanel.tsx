@@ -1,6 +1,6 @@
 'use client'
 
-// ── SIGN DAVY'S TERMS ────────────────────────────────────────────────────────
+// ── SIGN THE TERMS ───────────────────────────────────────────────────────────
 // The hardcore pre-dive difficulty selector (the ToA-invocation model). You sign
 // terms, each adds Pressure, Pressure multiplies your Blood Gems on cash-out.
 //
@@ -20,7 +20,7 @@ import { vibrate } from '@/lib/haptics'
 import type { GauntletVariant } from '@/lib/gauntlet'
 import {
   termPressure, pressureGemMult,
-  maxAvailablePressure, termsFor, termGroupMeta, PRESSURE_CAP, PRESSURE_DEPTH_FLOOR, PRESSURE_DEPTH_FULL,
+  maxAvailablePressure, termsFor, termGroupMeta, termsTitle, PRESSURE_CAP, PRESSURE_DEPTH_FLOOR, PRESSURE_DEPTH_FULL,
   PRESSURE_SKIN_THRESHOLD, PRESSURE_SKIN_DEPTH, type SignedTerms, type TermGroup,
 } from '@/lib/gauntletTerms'
 
@@ -124,7 +124,7 @@ export default function GauntletTermsPanel({
             position: 'absolute', left: 0, right: 0, textAlign: 'center', pointerEvents: 'none',
             fontSize: '1rem', color: '#f3d7d7', letterSpacing: '0.1em', textIndent: '0.1em',
           }}>
-            Davy&rsquo;s Terms
+            {termsTitle(variant)}
           </p>
           {/* Max Pressure (crank the whole board up) + Clear (tear it all up) — the
               two "all at once" actions, paired on the right. */}
