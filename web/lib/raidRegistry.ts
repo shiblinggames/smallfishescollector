@@ -1,3 +1,4 @@
+import { isUniqueLoot } from './bossRaids'
 // Every raid config, keyed by raidId.
 //
 // This exists so the SERVER can answer "what could this raid actually have
@@ -41,6 +42,18 @@ export function getRaidConfigById(raidId: string): BossRaidConfig | undefined {
 /** The ids a given raid's crate can legitimately contain. */
 export function raidLootIds(raidId: string): Set<string> {
   return new Set((RAID_BY_ID[raidId]?.loot ?? []).map(l => l.id))
+}
+
+/**
+ * A raid's UNIQUE ids: everything its crate can drop that is not currency.
+ *
+ * claimRaidLoot validates against THIS, not the full table. Crate currency
+ * reaches the server as a clamped doubloon amount, never as an id, so a request
+ * naming a `doubloons_*` or `gems_*` row is either a bug or someone trying to
+ * mint coins by listing every currency row at once.
+ */
+export function raidUniqueLootIds(raidId: string): Set<string> {
+  return new Set((RAID_BY_ID[raidId]?.loot ?? []).filter(isUniqueLoot).map(l => l.id))
 }
 
 /** The most doubloons a crate can HONESTLY be worth, used to clamp the amount the

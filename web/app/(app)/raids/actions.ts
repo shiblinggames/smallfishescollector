@@ -14,7 +14,7 @@ import { navRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { getShipSkin } from '@/lib/shipSkins'
 import { computeRaidMap } from '@/lib/raidMap'
 import { buildClearedSet } from '@/lib/raidProgress'
-import { getRaidConfigById, raidLootIds, ITEM_GRANTS, MAX_CRATE_BASE_DOUBLOONS } from '@/lib/raidRegistry'
+import { getRaidConfigById, raidUniqueLootIds, ITEM_GRANTS, MAX_CRATE_BASE_DOUBLOONS } from '@/lib/raidRegistry'
 import { bonusChargeSlots, gauntletRepairHealMult, donsRaidHpMult, donsLegendaryLootMult } from '@/lib/gauntletUpgrades'
 import { getShipAugment, MANOWAR_TIER, type ShipAugment } from '@/lib/shipAugments'
 import { settleUltimateBuild } from '@/lib/ultimateBuild'
@@ -495,11 +495,21 @@ export async function claimRaidLoot(
   }
 
   // 2. FROM THIS RAID? The ids used to be looked up in the global ITEM_GRANTS map,
-  //    so any raid could claim any item in the game. Now a crate can only contain
-  //    what that raid's own table lists, and only ONE of them: the client rolls a
-  //    single index (rollLootIndex), so a claim of two is already a lie.
-  const table = raidLootIds(raidId)
-  const safeItemIds = rolledItemIds.filter(id => table.has(id)).slice(0, 1)
+  //    so any raid could claim any item in the game. A crate can only contain what
+  //    that raid's own table lists.
+  //
+  //    The cap used to be ONE, because the client rolled a single index. Uniques
+  //    roll independently now (lib/raidLoot), so two landing in one crate is a
+  //    real outcome and slicing to one would silently eat the second. The bound
+  //    is instead the number of DISTINCT ids that raid could ever drop, which is
+  //    the true maximum an honest roll can produce. Deduped, because the same id
+  //    repeated is the one shape a real roll cannot make.
+  //    Validated against the raid's UNIQUE ids, never the full table: crate
+  //    currency arrives as a clamped doubloon amount, so an id naming a coin or
+  //    gem row is a forgery attempt, and bounding by the full table size would
+  //    have let one request claim every currency row at once.
+  const table = raidUniqueLootIds(raidId)
+  const safeItemIds = [...new Set(rolledItemIds.filter(id => table.has(id)))].slice(0, table.size)
 
   // 3. WORTH THAT MUCH? The exact figure can't be recomputed (tides are rolled
   //    mid-run on the client), but it can be bounded. See MAX_CRATE_BASE_DOUBLOONS.

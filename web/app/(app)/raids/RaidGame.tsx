@@ -11,6 +11,7 @@ import { getShipSkin } from '@/lib/shipSkins'
 import { getActiveEffects } from '@/lib/raidItems'
 import { getXPProgress, getLevelFromXP, MAX_LEVEL } from '@/lib/expeditionLevel'
 import { raidDamageProfile, fortuneLootMult, type RaidMods } from '@/lib/expeditions'
+import { rollCrate, LOOT_RARITY_TIER } from '@/lib/raidLoot'
 import { crewLevelFromXP, CREW_MAX_LEVEL } from '@/lib/crewLevel'
 import { type ShipAugment } from '@/lib/shipAugments'
 import {
@@ -33,63 +34,6 @@ import { lockBodyScroll } from '@/lib/bodyScrollLock'
 
 type GamePhase  = 'idle' | 'ready' | 'playing' | 'clear' | 'dead' | 'loot'
 type ShotResult = 'miss' | 'graze' | 'hit' | 'critical' | null
-
-/**
- * Roll one row of a raid's loot table.
- *
- * TWO STAGE, always: first "an item or a pile of coins", then "which one".
- * A single weighted pick over every row is the same thing at rest, but it
- * cannot be multiplied. Fortune is meant to be able to DOUBLE the chance of an
- * item, and against one shared bag doubling the item rows only moves Corsair's
- * from 28/100 to 56/128, which is 1.56x. You cannot double a share by doubling
- * one side of a ratio. Splitting the decision out makes the item chance a real
- * probability that a multiplier can act on.
- *
- * Duplicate protection: any unique already owned is dropped from the pool, so
- * you always get something new, or fall through to currency once you own them
- * all.
- */
-function rollLootIndex(loot: RaidLootItem[], excludedIds: Set<string> = new Set(), uniqueShare?: number, legendaryMult = 1, fortuneMult = 1): number {
-  // Kingpin's Cut (Don's account perk): legendary rows carry extra weight, so
-  // they surface `legendaryMult`x more often WITHIN the item pick. Fortune is
-  // deliberately not here. It decides whether you get an item at all, not which
-  // one, so it multiplies the share below instead.
-  const wt = (l: RaidLootItem): number =>
-    l.weight * (l.rarity === 'legendary' || l.rarity === 'ancient' ? legendaryMult : 1)
-
-  const pick = (rows: { idx: number; weight: number }[]): number => {
-    const total = rows.reduce((s, r) => s + r.weight, 0)
-    let r = Math.random() * total
-    for (const row of rows) { r -= row.weight; if (r <= 0) return row.idx }
-    return rows[rows.length - 1].idx
-  }
-
-  const uniques: { idx: number; weight: number }[] = []
-  const currency: { idx: number; weight: number }[] = []
-  loot.forEach((l, idx) => {
-    if (isUniqueLoot(l)) { if (!excludedIds.has(l.id)) uniques.push({ idx, weight: wt(l) }) }
-    else currency.push({ idx, weight: l.weight })
-  })
-
-  // Own every unique already, or a table with only one kind of row: fall through
-  // to whichever side has rows, so a crate is never empty.
-  if (uniques.length === 0) return currency.length ? pick(currency) : 0
-  if (currency.length === 0) return pick(uniques)
-
-  // The base chance of an item. Hand-set per raid where the config says so
-  // (BossRaidConfig.uniqueShare, which also stops the share shrinking as you
-  // complete a set), otherwise DERIVED from the table's own weights. The derived
-  // number is exactly what a single weighted roll over the whole pool used to
-  // produce, so no raid's balance moves at Fortune 0.
-  const uw = uniques.reduce((s, r) => s + r.weight, 0)
-  const cw = currency.reduce((s, r) => s + r.weight, 0)
-  const baseShare = uniqueShare != null && uniqueShare > 0 ? uniqueShare : uw / (uw + cw)
-
-  // Capped just under certain, so even a maxed Fortune crew on a heavily
-  // weighted challenge table is never guaranteed an item.
-  const share = Math.min(0.95, baseShare * fortuneMult)
-  return Math.random() < share ? pick(uniques) : pick(currency)
-}
 
 function isBossRound(round: number, seqLen: number): boolean {
   return round % (seqLen + 1) === seqLen
@@ -606,7 +550,11 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   const [clearTimeMs, setClearTimeMs]   = useState<number | null>(null)
   const [clearTimes, setClearTimes]     = useState<RaidClearTimes | null>(null)
   // Pre-rolled loot index (set at boss kill), shown directly by RaidLootStage.
+  // The crate is no longer one winning row. Currency always pays, and each
+  // unique rolled its own independent chance, so a crate can carry none, one or
+  // several items. `slotFinal` stays as the headline the reel lands on.
   const [slotFinal, setSlotFinal]     = useState(0)
+  const [lootItemIdxs, setLootItemIdxs] = useState<number[]>([])
   const [pHitsplat, setPHitsplat]       = useState({ key: 0, text: '', color: '', big: false })
   const [eHitsplat, setEHitsplat]       = useState({ key: 0, text: '', color: '', big: false })
   const [enemyMinDmg, setEnemyMinDmg]   = useState(2)
@@ -1197,7 +1145,14 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
         setWinGold(gold); setWinXP(xp)
         // Roll loot + dollar amount up front so the stage can pre-position
         // the slot before the player taps Loot Chest.
-        const final = rollLootIndex(config.loot, ownedUniqueIds, config.uniqueShare, legendaryLootMult, lootFortuneMult)
+        const crate = rollCrate(config.loot, ownedUniqueIds, config.uniqueShare, legendaryLootMult, lootFortuneMult)
+        // The reel lands on the RAREST item that dropped, so the headline is the
+        // best thing in the crate rather than whichever index happened to sort
+        // first. With no items it lands on the currency, which now always pays.
+        const rarityRank = (i: number) => LOOT_RARITY_TIER[config.loot[i].rarity] ?? 1
+        const final = crate.itemIdxs.length
+          ? [...crate.itemIdxs].sort((a, b) => rarityRank(b) - rarityRank(a))[0]
+          : Math.max(0, crate.currencyIdx)
         const base  = Math.floor(Math.random() * 301 + 300)
         // Tide doubloonsAtRaidEnd: sum all run-active deltas onto the
         // raw base BEFORE fortune scales it. Net result lands in the
@@ -1207,6 +1162,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
           .reduce((s, e) => s + e.n, 0)
         const total = Math.max(0, Math.floor(base * fortuneMult) + tideDoubloons)
         setSlotFinal(final)
+        setLootItemIdxs(crate.itemIdxs)
         setLootBase(base)
         setLootAmount(total)
         setWinIsBoss(true)
@@ -1274,7 +1230,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
         if (!lootGrantedRef.current) {
           lootGrantedRef.current = true
           const lootElapsedMs = performance.now() - raidStartTimeRef.current
-          claimRaidLoot(total, [config.loot[final].id], lootElapsedMs, playerHPMax - playerHP, config.raidId)
+          claimRaidLoot(total, crate.itemIdxs.map(i => config.loot[i].id), lootElapsedMs, playerHPMax - playerHP, config.raidId)
             .then(res => { lootResultRef.current = res })
             .catch(() => { lootGrantedRef.current = false })
         }
@@ -1931,6 +1887,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
             crewXP={Array.from(crewXPAccumRef.current.values())}
             loot={config.loot}
             slotFinal={slotFinal}
+            itemIdxs={lootItemIdxs}
             lootAmount={lootAmount}
             fortuneMult={fortuneMult}
             lootFortuneMult={lootFortuneMult}
@@ -1968,7 +1925,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 lootGrantedRef.current = true
                 try {
                   const res = await Promise.race([
-                    claimRaidLoot(lootAmount, [config.loot[slotFinal].id], elapsedMs, playerHPMax - playerHP, config.raidId),
+                    claimRaidLoot(lootAmount, lootItemIdxs.map(i => config.loot[i].id), elapsedMs, playerHPMax - playerHP, config.raidId),
                     new Promise<null>(resolve => setTimeout(() => resolve(null), 4000)),
                   ])
                   if (res) lootResultRef.current = res

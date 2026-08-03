@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { LOOT_RARITY_TIER } from '@/lib/raidLoot'
 import { motion } from 'framer-motion'
 import { type BroadsideEnemy, type RaidLootItem, RARITY_COLOR, GEM_GLYPH, GEM_COLOR } from '@/lib/bossRaids'
 import type { RaidClearTimes } from './actions'
@@ -23,7 +24,12 @@ interface Props {
   /** Pre-rolled loot pick + display amount (computed in RaidGame). The reveal
    *  shows this entry directly — no slot spin. */
   loot: RaidLootItem[]
+  /** The row the reel lands on: the rarest item that dropped, or the currency
+   *  row when the crate carried no items. */
   slotFinal: number
+  /** Every unique that dropped. Empty on a currency-only crate, and can hold
+   *  more than one now that uniques roll independently of each other. */
+  itemIdxs?: number[]
   lootAmount: number
   fortuneMult: number
   /** Fortune's pull on ITEM odds. A different curve from the doubloon one
@@ -55,8 +61,10 @@ const RARITY_LABEL: Record<string, string> = {
   common: 'Common', uncommon: 'Uncommon', rare: 'Rare', epic: 'Epic', legendary: 'Legendary',
 }
 // Rarity → a 1-5 "chest tier" so the open-burst scales like the Gauntlet's:
-// commoner hauls pop quietly, epics/legendaries detonate.
-const RARITY_TIER: Record<string, number> = { common: 1, uncommon: 2, rare: 3, epic: 4, legendary: 5 }
+// commoner hauls pop quietly, epics/legendaries detonate. Shared with the roll
+// (lib/raidLoot) so the headline pick and the burst agree, and so ancient stops
+// falling through to the quietest tier.
+const RARITY_TIER = LOOT_RARITY_TIER
 
 function fmtGold(n: number): string {
   return n.toLocaleString()
@@ -146,7 +154,7 @@ export default function RaidLootStage(props: Props) {
   const {
     boss, killGold, killXP,
     clearTimeMs, clearTimes,
-    loot, slotFinal, lootAmount, fortuneMult, lootFortuneMult = 1, clearBonusXp = 0,
+    loot, slotFinal, itemIdxs = [], lootAmount, fortuneMult, lootFortuneMult = 1, clearBonusXp = 0,
     shipImageUrl,
     onClaim, claiming = false,
     crewXP = [],
@@ -157,6 +165,9 @@ export default function RaidLootStage(props: Props) {
   const [counting, setCounting] = useState(false)
 
   const finalItem = loot[slotFinal]
+  // Anything beyond the headline. A crate used to hold exactly one row, so this
+  // is always empty until two uniques land in the same crate.
+  const extraItems = itemIdxs.filter(i => i !== slotFinal).map(i => loot[i])
   const accent = RARITY_COLOR[finalItem.rarity]
   const tier = RARITY_TIER[finalItem.rarity] ?? 1
   const grand = tier >= 4
@@ -281,6 +292,30 @@ export default function RaidLootStage(props: Props) {
                 className="font-cinzel font-800" style={{ fontSize: '1.3rem', color: accent, lineHeight: 1.12, marginTop: 6, textShadow: `0 0 22px ${accent}44` }}>
                 {finalItem.label}
               </motion.p>
+              {/* THE REST OF THE CRATE. Independent rolls mean a second item
+                  can land beside the headline, which the single-draw model
+                  could not produce at all. Listed rather than given their own
+                  reveal, so the big moment stays on one drop. */}
+              {extraItems.length > 0 && (
+                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45, duration: 0.4 }}
+                  style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 6, marginTop: 10 }}>
+                  {extraItems.map(it => {
+                    const c = RARITY_COLOR[it.rarity]
+                    return (
+                      <span key={it.id} className="font-karla font-700" style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 5,
+                        padding: '0.22rem 0.5rem 0.22rem 0.28rem', borderRadius: 999,
+                        fontSize: '0.62rem', color: c,
+                        background: `${c}1c`, border: `1px solid ${c}66`,
+                      }}>
+                        <span style={{ display: 'inline-flex', width: 18, height: 18 }}>{lootArt(it, 18)}</span>
+                        {it.label}
+                      </span>
+                    )
+                  })}
+                </motion.div>
+              )}
+
               {(fortuneMult > 1 || lootFortuneMult > 1) && (
                 <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
                   className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#f0c040aa', marginTop: 4 }}>

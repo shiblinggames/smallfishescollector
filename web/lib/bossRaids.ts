@@ -390,7 +390,20 @@ export interface RaidLootItem {
   image: string | null
   emoji: string
   rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'ancient' | 'cosmetic'
+  /** Share of the crate's weighted CURRENCY draw. Only meaningful on currency
+   *  rows now: uniques roll independently (see lib/raidLoot), and their weight
+   *  survives purely as the source of the derived `chance` below. */
   weight: number
+  /**
+   * A unique's INDEPENDENT per-crate drop chance, 0 to 1. Set this to state a
+   * real, publishable rate for one item.
+   *
+   * Leave it off and the chance is derived from `weight` over the table total,
+   * which is exactly the share that row had under the old single-bag roll. That
+   * default is why the move to independent rolls rebalanced nothing: opt in per
+   * item, when you actually want to tune one.
+   */
+  chance?: number
   shipSkinId?: string  // if set, render player's ship with this skin applied
 }
 
