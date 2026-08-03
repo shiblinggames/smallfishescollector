@@ -92,7 +92,11 @@ export default function ItemEffectLines({
         >
           {showSignatureLabel && (
             <p className="font-karla font-800 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: SIG, margin: 0 }}>
-              {signature.length > 1 ? 'Abyssal Signatures' : 'Abyssal Signature'}
+              {/* Not "Abyssal Signature": only Abyssals have one today, but the
+                  callout is earned from the recipe (see signatureEffectTypes),
+                  so any future fusion with a genuinely novel effect gets it
+                  without the label turning into a lie. */}
+              {signature.length > 1 ? 'Signatures' : 'Signature'}
             </p>
           )}
           <ul style={{ display: 'flex', flexDirection: 'column', gap: 4, listStyle: 'none', margin: 0, padding: 0 }}>
