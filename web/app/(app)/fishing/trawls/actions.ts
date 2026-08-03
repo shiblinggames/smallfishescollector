@@ -8,7 +8,6 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { revalidatePath } from 'next/cache'
 import { getLevelFromXP as fishingLevelFromXP } from '@/lib/fishingLevel'
 import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import { applyLevelBonuses, crewLevelFromXP } from '@/lib/crewLevel'
@@ -194,9 +193,17 @@ export async function deployTrawl(zone: string, crewId: number): Promise<TrawlSt
   // spot while at sea (and don't linger in the bench). The slot reopens for
   // someone else; the trawl row is what reserves them now.
   await admin.from('user_crew').update({ voyage_slot: null, raid_slot: null }).eq('id', crewId).eq('user_id', user.id)
-  revalidatePath('/crew')
-  revalidatePath('/expeditions')
 
+  // NO revalidatePath HERE, deliberately.
+  //
+  // It used to revalidate /crew and /expeditions, and bought nothing on either:
+  // both are per-user and auth-gated (/crew is force-dynamic outright), so
+  // neither is ever in the full route cache and both refetch on navigation
+  // regardless. What it DID do was cost the player. A Server Action that
+  // revalidates makes the Next router refetch the RSC payload for the route
+  // they are ON — which for a trawl is /fishing, the heaviest page in the game
+  // — so every send paid a full re-render of the fishing screen, landing right
+  // after the optimistic update and undoing the point of it.
   return buildTrawlState(admin, user.id)
 }
 
