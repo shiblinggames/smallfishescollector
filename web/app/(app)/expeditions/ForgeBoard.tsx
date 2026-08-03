@@ -1120,27 +1120,6 @@ function ForgePlanner({
   const plan = useMemo(() => planForgeBuild(chosen, learnedRecipes, ownedRaidItems), [chosen, learnedRecipes, ownedRaidItems])
   const baseLeft = plan.baseTotal - plan.baseHave
 
-  // Base drops grouped by where they drop. Key normalises "The X" / "X" so a
-  // single source doesn't split into two headers.
-  const norm = (str: string) => str.replace(/^the\s+/i, '').toLowerCase()
-  const groups = useMemo(() => {
-    const g: Record<string, { label: string; items: { id: string; qty: number; have: number; need: number }[] }> = {}
-    for (const [id, qty] of Object.entries(plan.baseQty)) {
-      const rawSrc = getRaidItem(id)?.source ?? 'Unknown source'
-      const k = norm(rawSrc)
-      if (!g[k]) g[k] = { label: rawSrc, items: [] }
-      const have = Math.min(qty, plan.baseHaveQty[id] ?? 0)
-      g[k].items.push({ id, qty, have, need: qty - have })
-    }
-    // Sort and total on what is STILL NEEDED, so the sources with real work left
-    // rise to the top and a fully-satisfied source sinks to the bottom.
-    const total = (o: { items: { need: number }[] }) => o.items.reduce((a, b) => a + b.need, 0)
-    return Object.values(g)
-      .map(o => ({ ...o, total: total(o), items: o.items.sort((a, b) => b.need - a.need || (getRaidItem(a.id)?.name ?? '').localeCompare(getRaidItem(b.id)?.name ?? '')) }))
-      .sort((a, b) => b.total - a.total || a.label.localeCompare(b.label))
-  }, [plan])
-
-  const maxQ = Math.max(1, ...groups.flatMap(g => g.items.map(i => i.need)))
   const abyssalCount = chosen.filter(id => getForgeRecipe(id)?.tier === 3).length
   const t2 = plan.forgeTotal - abyssalCount
   const shared = Object.entries(plan.forgeCount)
@@ -1288,56 +1267,6 @@ function ForgePlanner({
               </div>
             </>
           )}
-
-          {/* ── WHERE TO GO. The same leaves, re-cut by source, because a farm
-                 run is planned by destination and a tree is not. ─────────── */}
-          {plan.baseTotal > 0 && (<>
-            <p className="font-karla font-800 uppercase tracking-[0.14em]" style={{ fontSize: '0.68rem', color: EMBER, marginBottom: 11 }}>
-              {baseLeft === 0 ? 'Every part aboard — go forge' : `Still to find — ${baseLeft} of ${plan.baseTotal}`}
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
-              {groups.map(g => (
-                <div key={g.label}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8, paddingBottom: 5, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                    <span className="font-karla font-700" style={{ fontSize: '0.76rem', color: '#a9d0dd' }}>{g.label}</span>
-                    <span className="font-karla" style={{ fontSize: '0.62rem', color: '#6f6a63', marginLeft: 'auto' }}>
-                      {g.total === 0 ? 'all aboard' : `${g.total} to find`}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {g.items.map(({ id, qty, have, need }) => {
-                      const def = getRaidItem(id)
-                      const done = need === 0
-                      return (
-                        // A satisfied part stays listed but recedes — it is proof
-                        // of progress, not another job.
-                        <div key={id} style={{ display: 'flex', alignItems: 'center', gap: 10, opacity: done ? 0.5 : 1 }}>
-                          <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: done ? GREEN : '#ffce8a', background: done ? `${GREEN}14` : 'rgba(232,200,121,0.1)', border: `1px solid ${done ? `${GREEN}55` : `${GOLD}44`}`, borderRadius: 7, padding: '2px 8px', minWidth: 36, textAlign: 'center' }}>
-                            {done ? '✓' : `×${need}`}
-                          </span>
-                          <span style={{ flexShrink: 0, width: 26, height: 26, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.25)' }}>
-                            <ItemArt id={id} size={20} dim={done} />
-                          </span>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: '#e6e1d6', display: 'flex', alignItems: 'baseline', gap: 7 }}>
-                              {def?.name}
-                              {/* Only worth saying when the plan needs MORE than one
-                                  and you are partway — "1 of 2 aboard" is progress,
-                                  a bare "aboard" on a done row is noise. */}
-                              {have > 0 && !done && <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.56rem', color: GREEN }}>{have} of {qty} aboard</span>}
-                            </p>
-                            <div style={{ height: 4, borderRadius: 3, background: 'rgba(0,0,0,0.4)', overflow: 'hidden', marginTop: 4 }}>
-                              <div style={{ height: '100%', width: `${done ? 100 : Math.round(need / maxQ * 100)}%`, borderRadius: 3, background: done ? GREEN : `linear-gradient(90deg, ${GOLD}88, ${GOLD})` }} />
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>)}
 
           <button type="button" onClick={onClear} className="font-karla font-700 tap"
             style={{ width: '100%', marginTop: 18, padding: '0.6rem', background: 'none', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, color: '#8a8480', fontSize: '0.82rem', cursor: 'pointer' }}>
