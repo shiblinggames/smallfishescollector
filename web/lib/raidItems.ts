@@ -1015,7 +1015,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
   {
     id: 'palisade_bulwark',
     name: 'Palisade Bulwark',
-    image: null,
+    image: '/forge_palisadebulwark.png',
     description: 'Opens every fight behind a barrier worth 16% of your hull and braces 50% of it back on every Reload, and a single hit over 25% of your max hull has a 50% chance to be dampened back to it. The chip and the haymaker, both answered.',
     emoji: '\u{1F6E1}',
     rarity: 'epic',
