@@ -1277,7 +1277,16 @@ export default function ShipHero({
               glow, and a chevron. Each is its own destination, which is why the
               drawer drops its tab bar on direct entry. */}
           <div style={{
-            display: 'grid', gridTemplateColumns: '1fr 1fr',
+            // minmax(0, 1fr), NOT 1fr. A bare `1fr` track has an implicit
+            // `auto` MINIMUM, so it can never shrink below its content's
+            // min-content width — and `whiteSpace: nowrap` on the sub line
+            // makes that min-content the whole untruncated string. So the card
+            // with the longest sub quietly widened its own column and squeezed
+            // the one beside it, which is why Crew and Items sat wider than
+            // Ship and Forge and pushed them over. minmax(0, ...) lets the
+            // tracks actually be equal and hands the overflow back to the
+            // ellipsis that was already there waiting for it.
+            display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
             gap: 8, marginTop: '0.9rem',
           }}>
             {([
@@ -1349,7 +1358,7 @@ export default function ShipHero({
                     )}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', lineHeight: 1.15, color: row.locked ? '#79828f' : '#f0ede8', display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', lineHeight: 1.15, color: row.locked ? '#79828f' : '#f0ede8', display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
                       {row.label}
                       {/* A count reads louder than a bare dot and says HOW
                           MANY are waiting; the dot stays for nudges that have
