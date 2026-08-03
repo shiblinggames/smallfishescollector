@@ -1084,9 +1084,11 @@ export default function ShipHero({
   const shipImgSrc  = skinDef?.imageByTier?.[shipTierForSlots] ?? shipStats.image
 
   // Each screen gets its own backdrop now that Items and Forge are their own
-  // routes rather than tabs on the ship sheet. Same scrim over all three, so
-  // the dense UI stays legible whatever sits behind it. The drawer (launch
-  // prep, which still shows every section) keeps the shipyard.
+  // routes rather than tabs on the ship sheet. All three are lamplit INTERIORS
+  // in the same key — the berth, the arms locker, the smithy — so they read as
+  // three doors off one deck rather than two rooms and a postcard, and so one
+  // scrim can suit all of them. The drawer (launch prep, which still shows
+  // every section) keeps the berth.
   const SECTION_BG: Record<'loadout' | 'ship' | 'forge', string> = {
     loadout: '/items-bg.jpg',
     forge:   '/forge-bg.jpg',
@@ -1497,11 +1499,25 @@ export default function ShipHero({
                       left: 'max(0px, calc(50% - 240px))',
                       right: 'max(0px, calc(50% - 240px))',
                       zIndex: 101 }),
-                // Painted shipyard backdrop (fixed behind the drawer) under a dark
-                // scrim so the dense loadout UI stays legible over the light dawn
-                // sky. Solid colour fallback while the image loads.
+                // Painted backdrop (fixed behind the drawer) under a scrim that
+                // OPENS AT THE TOP and closes toward the foot.
+                //
+                // It used to be a flat 0.74 -> 0.95 wash, set that heavy for one
+                // reason: the ship plate was a pale dawn exterior and needed
+                // crushing. The same scrim then applied to the arms locker and
+                // the smithy, which are already dark, so two good plates were
+                // buried to solve a third plate's problem. The ship plate is now
+                // a lamplit berth in the same key as the other two, so the wash
+                // no longer has to fight the art.
+                //
+                // It stays graded rather than uniformly light because the cards
+                // further down are only rgba(255,255,255,0.03-0.08) — barely
+                // there — and need a dark, even ground to read as cards at all.
+                // So: open at the top where the ship hero sits and the painting
+                // is worth seeing, near-opaque by the time the dense lists start.
+                // Solid colour fallback while the image loads.
                 backgroundColor: '#060c14',
-                backgroundImage: `linear-gradient(180deg, rgba(6,10,18,0.74) 0%, rgba(5,8,14,0.85) 46%, rgba(3,5,9,0.95) 100%), url(${sectionBg})`,
+                backgroundImage: `linear-gradient(180deg, rgba(6,10,18,0.28) 0%, rgba(5,8,14,0.72) 42%, rgba(3,5,9,0.93) 100%), url(${sectionBg})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center top',
                 backgroundRepeat: 'no-repeat',
