@@ -1891,7 +1891,16 @@ export default function GauntletGame(props: GauntletGameProps) {
       const cd = rollStateRef.current.cleared + skipOffset + 1
       const kind = rollContractOffer(cd)
       if (kind) {
-        setContractOffer({ kind, offers: ([1, 2, 3] as ContractStake[]).map(s => buildContractOffer(kind, s, cd)) })
+        const offers = ([1, 2, 3] as ContractStake[]).map(s => buildContractOffer(kind, s, cd))
+        // EVERY JOB (Don's term): the choice is taken away, not just the refusal.
+        // It signs you to the MIDDLE stake rather than the safest or the
+        // greediest, so the term is a genuine coin-flip on every job rather than
+        // a quiet buff (all low stakes) or an instant run-ender (all high ones).
+        if (termFxRef.current.forceContracts) {
+          takeContract(offers[1])
+          return
+        }
+        setContractOffer({ kind, offers })
         setPhase('contract')
         return
       }

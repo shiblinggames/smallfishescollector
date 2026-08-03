@@ -679,6 +679,8 @@ export default function RaidCombat({
     // Aim-bar disruptors (Gauntlet curses): fog density + needle/zone speed +
     // random blackout intensity.
     let aimFog        = 0
+    let playerStatusDuration = 1
+    let noCleanse     = false
     let aimSpeedMult  = 1
     let zoneSpeedMult = 1
     let aimBlackout   = 0
@@ -834,6 +836,8 @@ export default function RaidCombat({
         case 'enemyHpScale':          enemyHpScaleMult *= e.mult; break
         case 'enemyStartChargesDelta':enemyChargesDelta += e.n; break
         case 'aimFog':                aimFog = Math.min(0.92, aimFog + e.density); break
+        case 'playerStatusDuration':  playerStatusDuration *= e.mult; break
+        case 'noCleanse':             noCleanse = true; break
         case 'aimSpeedMult':          aimSpeedMult *= e.mult; break
         case 'zoneSpeedMult':         zoneSpeedMult *= e.mult; break
         case 'aimBlackout':           aimBlackout = Math.min(0.95, Math.max(aimBlackout, e.intensity)); break
@@ -913,7 +917,7 @@ export default function RaidCombat({
       chargesStart, hpStartDelta, hpStartPct, everyFightHeal, everyFightHealPct,
       reloadProc, guaranteedDodgeBank,
       enemyHpScaleMult, enemyChargesDelta,
-      aimFog, aimSpeedMult, zoneSpeedMult, aimBlackout, aimDecoys, confuseChance, hideEnemyHpChance, hideEnemyChargesChance, noncritDmgMult, healMult,
+      aimFog, playerStatusDuration, noCleanse, aimSpeedMult, zoneSpeedMult, aimBlackout, aimDecoys, confuseChance, hideEnemyHpChance, hideEnemyChargesChance, noncritDmgMult, healMult,
       freezeChanceBoon, frozenDmgMult, deepFreeze, brittle,
       burnChanceBoon, burnTurnsBonus, burnTickMult, reignite, backdraft, thermalShockMult,
       critExecutePct, volleyRampPct,
@@ -950,7 +954,10 @@ export default function RaidCombat({
   const playerStatusesRef = useRef<ActiveStatus[]>([])
   const enemyStatusesRef = useRef<ActiveStatus[]>([])
   const applyPlayerStatus = (id: StatusId, magnitude: number, turns: number) => {
-    playerStatusesRef.current = applyStatus(playerStatusesRef.current, id, magnitude, turns)
+    // Bad Blood stretches whatever lands on you. Rounded up, so a 1-turn status
+    // at 2x is 2 rather than disappearing into a floor.
+    const t = Math.ceil(turns * tide.playerStatusDuration)
+    playerStatusesRef.current = applyStatus(playerStatusesRef.current, id, magnitude, t)
     setPlayerStatuses(playerStatusesRef.current)
   }
   const applyEnemyStatus = (id: StatusId, magnitude: number, turns: number) => {
@@ -960,6 +967,10 @@ export default function RaidCombat({
   // Cleanse (Mender / Abyssal Tide / Laz's ward): strip every player DEBUFF
   // status, keep buffs. Logs what lifted so the cleanse is felt.
   const cleansePlayerStatuses = () => {
+    // Bad Blood tier 2: nothing lifts. Silent rather than logged, because the
+    // term already told you, and a "your cleanse did nothing" line every time a
+    // Mender fires would be noise on a run you signed up for.
+    if (tide.noCleanse) return
     const { next, removed } = cleanseStatuses(playerStatusesRef.current)
     if (removed.length === 0) return
     playerStatusesRef.current = next

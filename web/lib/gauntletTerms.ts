@@ -111,11 +111,13 @@ const DONS_TERMS: GauntletTerm[] = [
         desc: 'Every fight is fought through aim fog',
         detail: 'The Mist Veil hangs over EVERY fight, not just the enemies that bring it. Your aim bar is fogged the whole descent, so the gold band is harder to read and harder to hit. Nothing about the enemy changes, only what you can see of your own shot.',
         pressure: 4,
+        effects: [{ kind: 'aimFog', density: 0.45 }],
       },
       {
         desc: 'The fog is heavier, and it never lifts',
         detail: 'As above, but thicker. On a run this long you will be shooting on rhythm and memory rather than sight for most of it.',
         pressure: 7,
+        effects: [{ kind: 'aimFog', density: 0.7 }],
       },
     ],
   },
@@ -127,14 +129,16 @@ const DONS_TERMS: GauntletTerm[] = [
     gauntlet: 'don',
     tiers: [
       {
-        desc: 'Every elite arrives behind a barrier',
-        detail: 'Each elite opens the fight with a shield pool that soaks damage before its hull takes any. You have to break the wall before a single shot counts, which changes what you open with and makes Corrode worth carrying.',
+        desc: 'Everything you meet arrives behind a barrier',
+        detail: 'Every ship down there opens the fight with a shield pool that soaks damage before its hull takes any. You have to break the wall before a single shot counts, which changes what you open with and finally makes Corrode worth carrying.',
         pressure: 3,
+        effects: [{ kind: 'enemyShield', pctMax: 0.18 }],
       },
       {
-        desc: 'Bosses are walled too, and the walls are thicker',
-        detail: 'The barrier lands on bosses as well, and every barrier is bigger. A slow chip build will not get through one before it is back up.',
+        desc: 'The walls are thicker, and they reknit every round',
+        detail: 'Bigger barriers, and each one grows a slice of itself back at the top of every round. A slow chip build will never get through one before it is back up, so you need to open it in a single burst.',
         pressure: 6,
+        effects: [{ kind: 'enemyShield', pctMax: 0.28 }, { kind: 'barrierRegrow', pctMax: 0.12 }],
       },
     ],
   },
@@ -149,11 +153,16 @@ const DONS_TERMS: GauntletTerm[] = [
         desc: 'Enemy ultimates charge faster',
         detail: "The Don's people load toward their ultimate quicker, so the big authored blow lands sooner and more often. Burning their charges down with a crit strip stops being a luxury.",
         pressure: 3,
+        effects: [{ kind: 'enemyUltimateBoost', dmgMult: 1, chargeChance: 0.35 }],
       },
       {
-        desc: 'They open part-loaded as well',
-        detail: 'As above, and they start each fight with cannonballs already in the rack. The first ultimate can land before you have found your rhythm.',
+        desc: 'They open part-loaded, and it hits harder',
+        detail: 'As above, and they start every fight with a cannonball already in the rack, with the ultimate itself landing heavier. The first one can arrive before you have found your rhythm.',
         pressure: 5,
+        effects: [
+          { kind: 'enemyUltimateBoost', dmgMult: 1.2, chargeChance: 0.5 },
+          { kind: 'enemyStartChargesDelta', n: 1, scope: 'allRemaining' },
+        ],
       },
     ],
   },
@@ -168,11 +177,13 @@ const DONS_TERMS: GauntletTerm[] = [
         desc: 'Statuses landed on you last twice as long',
         detail: "Burn, freeze, weaken and everything else the Don's crews put on you runs for double its normal duration. His is the pool that fights with afflictions, so this is the term that makes them bite.",
         pressure: 3,
+        effects: [{ kind: 'playerStatusDuration', mult: 2 }],
       },
       {
         desc: 'And nothing you have will wash them off',
-        detail: 'As above, and no cleanse works for the whole run. Whatever lands on you stays until it times out on its own.',
+        detail: 'As above, and no cleanse works for the whole run. Whatever lands on you stays until it times out on its own, so a Mender stops being an answer to affliction.',
         pressure: 6,
+        effects: [{ kind: 'playerStatusDuration', mult: 2 }, { kind: 'noCleanse' }],
       },
     ],
   },
@@ -551,31 +562,20 @@ export interface TermEffects {
    *  reprieve patch-up) sit outside that pipeline, so they read this. Keep the
    *  two in step: both are driven by the one term. */
   healMult: number
-  // ── Don's-only levers. Inert at their defaults, so a Davy run, which can
-  //    never sign the terms that set them, behaves exactly as it always has. ──
-  /** Smoke and Mirrors: aim fog on every fight (0 = none). */
-  aimFogAlways: number
-  /** Made Men: barrier as a fraction of max HP on every elite, and on bosses at t2. */
-  eliteBarrierPct: number
-  bossBarrier: boolean
-  /** The Long Count: multiplies enemy ultimate charge gain, and opens them part-loaded. */
-  enemyUltChargeMult: number
-  enemyStartCharges: number
-  /** Bad Blood: multiplies the duration of statuses landed on YOU, and kills cleanses. */
-  playerStatusDurationMult: number
-  noCleanse: boolean
-  /** Every Job: Contracts are accepted for you. */
+  // ── Don's-only levers ────────────────────────────────────────────────────
+  // Only the two that have no TideEffect to ride. Smoke and Mirrors, Made Men
+  // and The Long Count are all honest COMBAT modifiers, so they go down the
+  // same TideEffect pipeline as every boon and curse (aimFog, enemyShield,
+  // barrierRegrow, enemyUltimateBoost, enemyStartChargesDelta) rather than
+  // growing this interface for effects the engine already reads.
+  //
+  // Both default to inert, so a Davy run, which can never sign the terms that
+  // set them, behaves exactly as it always has.
+  /** Every Job: Contracts are accepted for you, penalty and all. */
   forceContracts: boolean
 }
 
 export const NO_TERM_EFFECTS: TermEffects = {
-  aimFogAlways: 0,
-  eliteBarrierPct: 0,
-  bossBarrier: false,
-  enemyUltChargeMult: 1,
-  enemyStartCharges: 0,
-  playerStatusDurationMult: 1,
-  noCleanse: false,
   forceContracts: false,
   eliteChanceMult: 1,
   affixPairFromStart: false,
@@ -697,27 +697,10 @@ export function resolveTerms(signed: SignedTerms | null | undefined): TermEffect
   }
 
   // ── Don's own five ──────────────────────────────────────────────────────
-  const smoke = tierOf('smoke_and_mirrors')
-  if (smoke) e.aimFogAlways = smoke === 1 ? 0.45 : 0.7
-
-  const made = tierOf('made_men')
-  if (made) {
-    e.eliteBarrierPct = made === 1 ? 0.18 : 0.28
-    if (made >= 2) e.bossBarrier = true
-  }
-
-  const count = tierOf('the_long_count')
-  if (count) {
-    e.enemyUltChargeMult = count === 1 ? 1.5 : 1.8
-    if (count >= 2) e.enemyStartCharges = 1
-  }
-
-  const blood = tierOf('bad_blood')
-  if (blood) {
-    e.playerStatusDurationMult = 2
-    if (blood >= 2) e.noCleanse = true
-  }
-
+  // Smoke and Mirrors, Made Men, The Long Count and Bad Blood are all honest
+  // combat modifiers, so they resolve entirely through termTideEffects. Every
+  // Job is the only one of the five that reshapes the RUN rather than a fight,
+  // which is exactly the line between a tide effect and a term effect.
   if (tierOf('every_job')) e.forceContracts = true
 
   const press = tierOf('press_ganged')

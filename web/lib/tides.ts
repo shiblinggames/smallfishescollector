@@ -57,6 +57,11 @@ export type TideEffect =
   // ── Aim-bar disruptors (visual + feel). Gauntlet curses lean on these.
   /** Drifting fog band over the aim bar (0-1 density), like the Mist Veil. */
   | { kind: 'aimFog'; density: number }
+  // Bad Blood (Don's term). Statuses landed on YOU run longer, and at tier 2
+  // nothing lifts them. His pool is the one that fights with afflictions, so
+  // these only ever have anything to do in his descent.
+  | { kind: 'playerStatusDuration'; mult: number }
+  | { kind: 'noCleanse' }
   /** Multiplier on the aim NEEDLE sweep speed (>1 = faster, harder to time). */
   | { kind: 'aimSpeedMult'; mult: number }
   /** Multiplier on the target-ZONE drift speed (>1 = the band lurches more). */
@@ -373,6 +378,8 @@ export function effectTone(e: TideEffect): 'good' | 'bad' | 'neutral' {
     case 'enemyStartChargesDelta':
       return e.n < 0 ? 'good' : e.n > 0 ? 'bad' : 'neutral'
     case 'aimFog':       return e.density > 0 ? 'bad' : 'neutral'
+    case 'playerStatusDuration': return e.mult > 1 ? 'bad' : 'good'
+    case 'noCleanse':    return 'bad'
     case 'aimDecoys':    return e.n > 0 ? 'bad' : 'neutral'
     case 'statusOnHit':       return 'good'  // debuffs the ENEMY
     case 'playerStartStatus': return 'bad'   // debuffs YOU
@@ -1067,6 +1074,8 @@ export function describeEffect(e: TideEffect): string {
     case 'iceAffinity':           return `${Math.round(e.freezeChance * 100)}% freeze + ${Math.round((e.frozenDmgMult - 1) * 100)}% vs frozen`
     case 'fireAffinity':          return `${Math.round(e.burnChance * 100)}% burn, longer + hotter`
     case 'aimFog':                return 'Fog drifts over your aim bar'
+    case 'playerStatusDuration':  return `Statuses on you last ${e.mult}x as long`
+    case 'noCleanse':             return 'Nothing lifts a status off you'
     case 'healMult':              return e.mult <= 0 ? 'Nothing heals you' : e.mult < 1 ? `All healing ${pct(1 - e.mult)} weaker` : `All healing ${pct(e.mult - 1)} stronger`
     case 'aimSpeedMult':          return e.mult > 1 ? `Aim needle ${pct(e.mult - 1)} faster` : `Aim needle ${pct(1 - e.mult)} slower`
     case 'zoneSpeedMult':         return e.mult > 1 ? `Target band lurches ${pct(e.mult - 1)} faster` : `Target band ${pct(1 - e.mult)} steadier`
