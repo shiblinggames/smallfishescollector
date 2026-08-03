@@ -103,8 +103,25 @@ export default function LoadoutSummary({
       : mine.reduce((a, e) => a + e.value, 0)
     // A multiplier of exactly 1 is no effect at all; a rate of 0 likewise.
     if (r.fold === 'product' ? v === 1 : v === 0) return null
-    return { ...r, text: r.fmt(v) }
-  }).filter(Boolean) as ({ label: string; group: Group; text: string })[]
+    // HOW it combined, said out loud, but only when more than one item feeds it.
+    //
+    // Three items at "+17% damage to bosses" read +60% here, and nothing on the
+    // screen explained that multipliers COMPOUND rather than add. A player who
+    // does the obvious arithmetic gets 51, sees 60, and concludes one of the two
+    // numbers is lying.
+    //
+    // The best-of case matters more and is completely invisible without this:
+    // two items both granting a 30% burn show a single 30%, so the second item
+    // silently does nothing and the card gives no hint. That is a real build
+    // decision being hidden, and it is exactly what the Tempest Chronometer's
+    // two primers did to each other.
+    const n = mine.length
+    const note = n < 2 ? undefined
+      : r.fold === 'product' ? `${n} items, compounded`
+      : r.fold === 'sum'     ? `${n} items, added`
+      :                        `best of ${n}, not added`
+    return { ...r, text: r.fmt(v), note }
+  }).filter(Boolean) as ({ label: string; group: Group; text: string; note?: string })[]
 
   return (
     <div style={{
@@ -164,13 +181,18 @@ export default function LoadoutSummary({
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 6 }}>
                   {stats.map(s => (
                     <div key={s.label} style={{
-                      display: 'flex', alignItems: 'baseline', gap: 7, minWidth: 0,
+                      display: 'flex', alignItems: 'center', gap: 7, minWidth: 0,
                       padding: '0.45rem 0.55rem', borderRadius: 9,
                       background: 'rgba(255,255,255,0.04)',
                       border: '1px solid rgba(255,255,255,0.08)',
                     }}>
                       <span className="font-cinzel font-800" style={{ flexShrink: 0, fontSize: '1rem', lineHeight: 1, color: g.hue, fontVariantNumeric: 'tabular-nums' }}>{s.text}</span>
-                      <span className="font-karla font-600" style={{ minWidth: 0, fontSize: '0.68rem', lineHeight: 1.2, color: '#d8d3ca', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</span>
+                      <span style={{ minWidth: 0 }}>
+                        <span className="font-karla font-600" style={{ display: 'block', fontSize: '0.68rem', lineHeight: 1.2, color: '#d8d3ca', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</span>
+                        {s.note && (
+                          <span className="font-karla" style={{ display: 'block', fontSize: '0.53rem', lineHeight: 1.3, color: '#7d8794', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.note}</span>
+                        )}
+                      </span>
                     </div>
                   ))}
                 </div>
