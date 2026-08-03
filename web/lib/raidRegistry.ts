@@ -142,6 +142,8 @@ export const ITEM_GRANTS: Record<string, { doubloons?: number; gems?: number; sh
   reinforced_hull:         { raidItem: 'reinforced_hull' },
   incendiary_cannonball:   { raidItem: 'incendiary_cannonball' },
   frozen_cannonball:       { raidItem: 'frozen_cannonball' },
+  crows_nest_rigging:      { raidItem: 'crows_nest_rigging' },
+  trade_wind_sails:        { raidItem: 'trade_wind_sails' },
   thunder_drum:            { raidItem: 'thunder_drum' },
   finndicate_hull:         { shipSkin:  'finndicate_hull' },
   chartmaker_hull:         { shipSkin:  'chartmaker_hull' },

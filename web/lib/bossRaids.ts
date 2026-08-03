@@ -1495,6 +1495,15 @@ export const THE_QUARTERMASTERS_GHOST: BossRaidConfig = {
     { id: 'reinforced_hull',       label: 'Reinforced Hull',        image: '/reinforcedhull.png',       emoji: '🛠️', rarity: 'epic', weight: 10 },
     { id: 'incendiary_cannonball', label: 'Incendiary Cannonball',  image: '/incendiarycannonball.png', emoji: '🔥', rarity: 'epic', weight: 10 },
     { id: 'frozen_cannonball',     label: 'Frozen Cannonball',      image: '/frozencannonball.png',     emoji: '❄️', rarity: 'epic', weight: 10 },
+    // The Coffers pair, from The Last Cache (coffers_cache). Missed when he was
+    // built, which quietly made them the only either/or Cache items in the game
+    // you could lose forever: their node is one-shot, and the forge eats them
+    // (hawkeye_glass and rally_rigging both consume one). That left three
+    // recipes unrebuildable, hawkeye_glass, rally_rigging and oracles_eye above
+    // them, against a boss whose entire stated purpose is holding "every
+    // either/or Cache item you left behind, and now every one you spent".
+    { id: 'crows_nest_rigging',    label: "Crow's-Nest Rigging",    image: '/crowsnestrigging.png',     emoji: '🗼', rarity: 'epic', weight: 10 },
+    { id: 'trade_wind_sails',      label: 'Trade-Wind Sails',       image: '/tradewindsails.png',       emoji: '⛵', rarity: 'epic', weight: 10 },
     // CURRENCY. He is ONE fight with no mobs and no cooldown, so his gem slots are
     // deliberately thin: a crate is a single roll no matter how long a raid is, which
     // made him pay the same crate as an 8-fight raid for an eighth of the time. He
