@@ -23,7 +23,7 @@
 //                      trophy shelf instead of entries buried down a list.
 //   4. THE COST      — open a recipe and it tells you, plainly, what forging it
 //                      spends and what that closes off.
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createPortal } from 'react-dom'
 import { vibrate } from '@/lib/haptics'
@@ -32,8 +32,9 @@ import {
   FORGE_RECIPES, getRaidItem, getForgeRecipe, cacheComponentsMissing,
   forgeComponentIds, recipesUsingComponent, forgeOpportunityCost,
   recipeNeedsGauntlet2, GAUNTLET2_BASE_ITEM_IDS, isAbyssalForgedItem,
-  planAbyssalBuild, isConvertibleEpic, legendaryForEpic, type ForgeRecipe,
+  planForgeBuild, buildForgeTrees, isConvertibleEpic, legendaryForEpic, type ForgeRecipe, type ForgeTreeNode,
 } from '@/lib/raidItems'
+import LoadoutSummary from './LoadoutSummary'
 import { PRISMATIC, forgedBorderSoft, forgedTextSoft, ABYSSAL_EMBER, ABYSSAL_EMBER_TEXT, abyssalEmberBorder } from '@/lib/prismatic'
 import { ABYSSAL_ACCEL_MS, ABYSSAL_ACCEL_GEM_COST, isConversionReady, type AbyssalConversion } from '@/lib/abyssalAccelerator'
 
@@ -124,9 +125,8 @@ export default function ForgeBoard({
   const [tab, setTab] = useState<ForgeTab>(2)
   // Tapping a part you hold filters the board to what it can become.
   const [filterPart, setFilterPart] = useState<string | null>(null)
-  // Abyssal tab only: "Plan a Build" mode. Pick target Abyssals and see the
-  // whole recursive farm (base drops by source, forges, Fathoms, mount check)
-  // instead of the recipe-by-recipe bench.
+  // "Plan a Build" mode. Pick the pieces you are chasing — from EITHER bench —
+  // and see the whole recursive farm instead of the recipe-by-recipe view.
   const [planning, setPlanning] = useState(false)
   const [planTargets, setPlanTargets] = useState<Set<string>>(new Set())
   // Remember the last plan between visits — a build plan is a long-horizon farm,
@@ -152,8 +152,7 @@ export default function ForgeBoard({
   useEffect(() => { onTabChange?.(tab) }, [tab, onTabChange])
 
   // A part selected on one tab means nothing on the other — clear it on switch.
-  // Plan mode is Abyssal-only, so drop it when you leave that bench.
-  useEffect(() => { setFilterPart(null); if (tab !== 3) setPlanning(false) }, [tab])
+  useEffect(() => { setFilterPart(null) }, [tab])
 
   const owned = useMemo(() => new Set(ownedRaidItems), [ownedRaidItems])
   const learned = useMemo(() => new Set(learnedRecipes), [learnedRecipes])
@@ -231,10 +230,36 @@ export default function ForgeBoard({
           style={{ height: '100%', borderRadius: 999, background: abyssalUnlocked ? ABYSSAL_EMBER : PRISMATIC }} />
       </div>
 
+      {/* ── "Plan a Build". It used to be a toggle buried on the Abyssal tab,
+             which put a tool that spans BOTH benches inside one of them, and
+             read as a mode you fell into rather than a place you went. It sits
+             above the bench picker now because that is what it is: a step back
+             from the benches, not a third one. ─────────────────────────────── */}
+      <button type="button"
+        onClick={() => { vibrate([0, 14]); setPlanning(p => !p) }}
+        className="tap"
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          width: '100%', marginBottom: '1.15rem', padding: '0.7rem', borderRadius: 12, cursor: 'pointer',
+          background: planning ? 'rgba(255,255,255,0.04)' : 'linear-gradient(180deg, rgba(255,90,60,0.16), rgba(120,20,40,0.05))',
+          border: `1px solid ${planning ? 'rgba(255,255,255,0.16)' : `${EMBER}77`}`,
+          color: planning ? '#c8c2b8' : '#ffcdb8',
+        }}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          {planning
+            ? <path d="M19 12H5M12 19l-7-7 7-7" />
+            : <><path d="M9 3H5a2 2 0 0 0-2 2v4M15 3h4a2 2 0 0 1 2 2v4M9 21H5a2 2 0 0 1-2-2v-4M15 21h4a2 2 0 0 0 2-2v-4" /><path d="M12 8v8M8 12h8" /></>}
+        </svg>
+        <span className="font-cinzel font-700" style={{ fontSize: '0.92rem' }}>
+          {planning ? 'Back to the benches' : 'Plan a Build'}
+        </span>
+      </button>
+
       {/* ── The two benches, as tabs. Tier II (gold) and the Abyssal Tier III
              (molten ember). The Abyssal tab is a dimmed, locked teaser until you
              own the Abyssal Forge — so a player always knows the endgame bench
              exists, and knows at a glance whether it's theirs yet. ──────────── */}
+      {!planning && (
       <div style={{ display: 'flex', gap: 6, padding: 4, borderRadius: 15, background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.08)', marginBottom: '1.15rem' }}>
         {TABS.map(t => {
             const active = tab === t.tier
@@ -270,35 +295,11 @@ export default function ForgeBoard({
           )
         })}
       </div>
-
-      {/* ── Abyssal-only: the "Plan a Build" toggle. The bench answers "what
-             can I forge now?"; the planner answers "what does building THESE
-             Abyssals actually take?" ─────────────────────────────────────── */}
-      {abyssalTab && (
-        <button type="button"
-          onClick={() => { vibrate([0, 14]); setPlanning(p => !p) }}
-          className="tap"
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            width: '100%', marginBottom: '1.15rem', padding: '0.7rem', borderRadius: 12, cursor: 'pointer',
-            background: planning ? 'rgba(255,255,255,0.04)' : 'linear-gradient(180deg, rgba(255,90,60,0.16), rgba(120,20,40,0.05))',
-            border: `1px solid ${planning ? 'rgba(255,255,255,0.16)' : `${EMBER}77`}`,
-            color: planning ? '#c8c2b8' : '#ffcdb8',
-          }}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            {planning
-              ? <path d="M19 12H5M12 19l-7-7 7-7" />
-              : <><path d="M9 3H5a2 2 0 0 0-2 2v4M15 3h4a2 2 0 0 1 2 2v4M9 21H5a2 2 0 0 1-2-2v-4M15 21h4a2 2 0 0 0 2-2v-4" /><path d="M12 8v8M8 12h8" /></>}
-          </svg>
-          <span className="font-cinzel font-700" style={{ fontSize: '0.92rem' }}>
-            {planning ? 'Back to the bench' : 'Plan a Build'}
-          </span>
-        </button>
       )}
 
-      {abyssalTab && planning ? (
-        <AbyssalPlanner
-          recipes={tierRows.map(r => r.recipe)}
+      {planning ? (
+        <ForgePlanner
+          recipes={rows.map(r => r.recipe)}
           ownedRaidItems={ownedRaidItems}
           learnedRecipes={learnedRecipes}
           fathomsNow={fathomsNow}
@@ -481,6 +482,7 @@ export default function ForgeBoard({
         forging={forging} forgeArmed={forgeArmed}
         learning={learning} learnArmed={learnArmed}
         onForgeTap={onForgeTap} onLearnTap={onLearnTap}
+        onOpenRecipe={id => setOpen(id)}
       />
     </>
   )
@@ -698,13 +700,55 @@ function AbyssalAcceleratorPanel({ unlocked, ownedRaidItems, conversion, gemsNow
   )
 }
 
+/** THE FULL BREAKDOWN — everything under a recipe, not just the two things it
+ *  fuses. A tier-3 Abyssal is two tier-2 fusions of two drops each, so "Fused
+ *  From" naming two items you also do not have was, for the recipes that matter
+ *  most, an answer that only raised the same question one level down.
+ *
+ *  Its own component because the sheet body is an IIFE, which cannot hold state. */
+function FullBreakdown({ resultId, ownedRaidItems, onOpenRecipe }: {
+  resultId: string
+  ownedRaidItems: string[]
+  onOpenRecipe?: (id: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const tree = useMemo(() => buildForgeTrees([resultId], ownedRaidItems)[0], [resultId, ownedRaidItems])
+  // Nothing to expand when every component is a base drop — the list above
+  // already IS the whole tree.
+  const deep = tree.children.some(c => c.children.length > 0)
+  if (!deep) return null
+  const st = treeStats(tree)
+  return (
+    <div style={{ marginTop: 11 }}>
+      <button type="button" onClick={() => { vibrate([0, 12]); setOpen(v => !v) }} aria-expanded={open} className="tap"
+        style={{ display: 'flex', alignItems: 'center', gap: 7, width: '100%', padding: '0.5rem 0.55rem', borderRadius: 10, background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.09)', font: 'inherit', textAlign: 'left', cursor: 'pointer', touchAction: 'manipulation' }}>
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8a8480" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden
+          style={{ flexShrink: 0, transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 0.18s' }}><path d="M9 18l6-6-6-6" /></svg>
+        <span className="font-karla font-700" style={{ flex: 1, minWidth: 0, fontSize: '0.8rem', color: '#c8c2b8' }}>Full breakdown</span>
+        <span className="font-karla" style={{ flexShrink: 0, fontSize: '0.62rem', color: '#6f6a63' }}>
+          {st.find > 0 ? `${st.find} to find · ` : ''}{st.forge} forge{st.forge === 1 ? '' : 's'}
+        </span>
+      </button>
+      {open && (
+        <div style={{ marginLeft: 10, paddingLeft: 11, borderLeft: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: 3, marginTop: 6 }}>
+          {tree.children.map((c, k) => (
+            <TreeBranch key={`${c.id}-${k}`} node={c} onOpenRecipe={id => onOpenRecipe?.(id)} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function RecipeSheet({
   resultId, onClose, ownedRaidItems, state, fathomsNow,
-  forging, forgeArmed, learning, learnArmed, onForgeTap, onLearnTap,
+  forging, forgeArmed, learning, learnArmed, onForgeTap, onLearnTap, onOpenRecipe,
 }: {
   resultId: string | null
   onClose: () => void
   ownedRaidItems: string[]
+  /** Drill into a sub-recipe from the breakdown, swapping the sheet's subject. */
+  onOpenRecipe?: (id: string) => void
   state: State
   fathomsNow: number
   forging: string | null
@@ -812,6 +856,7 @@ function RecipeSheet({
                       </div>
                     ))}
                   </div>
+                  <FullBreakdown resultId={resultId} ownedRaidItems={ownedRaidItems} onOpenRecipe={onOpenRecipe} />
                 </div>
               )}
 
@@ -898,10 +943,153 @@ function RecipeSheet({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// THE ABYSSAL PLANNER — target-first, not recipe-first. Pick the Abyssals you're
-// chasing; it expands each one down to its four base drops and totals the whole
-// farm (grouped by where the drops come from), the forges, and the Fathoms.
-function AbyssalPlanner({
+// THE BUILD PLANNER — target-first, not recipe-first.
+//
+// The bench answers "what can I forge right now?" one recipe at a time. This
+// answers the question a bench can never answer: "I want THESE pieces, so what
+// is actually standing between me and all of them?"
+//
+// Three things it has to do, in this order, because it is the order you think
+// in: what would I END UP with, what does it COST, and how is each one MADE.
+// The old version only ever did the middle one, which is why a screen full of
+// correct numbers still read as noise — it quoted a price without ever showing
+// the thing being bought.
+//
+// It spans BOTH benches. A tier-2 fusion is a perfectly reasonable thing to
+// chase, and chasing one alongside an Abyssal that eats it is the single case
+// where the destructive-forge maths actually bites you.
+
+/** An omitted tier means the ordinary forge — normalise once so sorting and
+ *  grouping cannot quietly drop the recipes that leave it off. */
+const tierOf = (r: ForgeRecipe) => r.tier ?? 2
+
+/** What one branch still costs, folded the same way the plan folds it. */
+function treeStats(n: ForgeTreeNode): { find: number; forge: number; have: number } {
+  if (n.status === 'have') return { find: 0, forge: 0, have: 1 }
+  if (n.status === 'find') return { find: 1, forge: 0, have: 0 }
+  return n.children.reduce((a, c) => {
+    const t = treeStats(c)
+    return { find: a.find + t.find, forge: a.forge + t.forge, have: a.have + t.have }
+  }, { find: 0, forge: 1, have: 0 })
+}
+
+const NODE_META = {
+  have:  { label: 'Aboard', color: GREEN },
+  forge: { label: 'Forge',  color: EMBER },
+  find:  { label: 'Find',   color: GOLD },
+} as const
+
+/** One node and everything beneath it. Recursive, so a future fusion-of-fusion
+ *  tier draws itself with no changes here. */
+function TreeBranch({ node, onOpenRecipe }: {
+  node: ForgeTreeNode
+  onOpenRecipe: (id: string) => void
+}) {
+  const def = getRaidItem(node.id)
+  const meta = NODE_META[node.status]
+  // Only a recipe has a sheet to open. A base drop has nothing behind it.
+  const canOpen = !!getForgeRecipe(node.id)
+  return (
+    <div>
+      {canOpen ? (
+        <button type="button" onClick={() => { vibrate([0, 12]); onOpenRecipe(node.id) }} className="tap"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8, width: '100%', minWidth: 0,
+            padding: '0.32rem 0.4rem', borderRadius: 8, textAlign: 'left', font: 'inherit',
+            background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)',
+            cursor: 'pointer', touchAction: 'manipulation',
+            opacity: node.status === 'have' ? 0.72 : 1,
+          }}>
+          <ItemArt id={node.id} size={20} dim={node.status === 'have'} />
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span className="font-karla font-700" style={{ display: 'block', fontSize: '0.78rem', color: '#e6e1d6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {def?.name ?? node.id}
+            </span>
+          </span>
+          <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ flexShrink: 0, fontSize: '0.53rem', color: meta.color }}>
+            {meta.label}
+          </span>
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#6f6a63" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0 }}><path d="M9 18l6-6-6-6" /></svg>
+        </button>
+      ) : (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8, width: '100%', minWidth: 0,
+          padding: '0.32rem 0.4rem', opacity: node.status === 'have' ? 0.72 : 1,
+        }}>
+          <ItemArt id={node.id} size={20} dim={node.status === 'have'} />
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span className="font-karla font-700" style={{ display: 'block', fontSize: '0.78rem', color: '#e6e1d6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {def?.name ?? node.id}
+            </span>
+            {/* Where it drops, on the leaves only. It is the one thing you need
+                to know about a part you do not have, and hunting for it in a
+                separate list was most of why that list felt like homework. */}
+            {node.status === 'find' && node.source && (
+              <span className="font-karla" style={{ display: 'block', fontSize: '0.6rem', color: '#8fa9b6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {node.source}
+              </span>
+            )}
+          </span>
+          <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ flexShrink: 0, fontSize: '0.53rem', color: meta.color }}>
+            {meta.label}
+          </span>
+        </div>
+      )}
+      {node.children.length > 0 && (
+        <div style={{ marginLeft: 10, paddingLeft: 11, borderLeft: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: 3, marginTop: 3 }}>
+          {node.children.map((c, k) => (
+            <TreeBranch key={`${c.id}-${k}`} node={c} onOpenRecipe={onOpenRecipe} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** One target, its cost line, and its tree behind a chevron. */
+function TreeCard({ node, startOpen, onOpenRecipe }: {
+  node: ForgeTreeNode
+  startOpen: boolean
+  onOpenRecipe: (id: string) => void
+}) {
+  const [open, setOpen] = useState(startOpen)
+  const def = getRaidItem(node.id)
+  const st = treeStats(node)
+  const abyssal = getForgeRecipe(node.id)?.tier === 3
+  return (
+    <div style={{
+      borderRadius: 12, overflow: 'hidden',
+      background: 'rgba(0,0,0,0.22)',
+      border: `1px solid ${abyssal ? `${EMBER}33` : 'rgba(255,255,255,0.09)'}`,
+    }}>
+      <button type="button" onClick={() => { vibrate([0, 12]); setOpen(v => !v) }} aria-expanded={open} className="tap"
+        style={{ display: 'flex', alignItems: 'center', gap: 9, width: '100%', padding: '0.6rem 0.65rem', background: 'none', border: 'none', font: 'inherit', textAlign: 'left', cursor: 'pointer', touchAction: 'manipulation' }}>
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8a8480" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden
+          style={{ flexShrink: 0, transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 0.18s' }}><path d="M9 18l6-6-6-6" /></svg>
+        <ItemArt id={node.id} size={28} />
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span className="font-cinzel font-700" style={{ display: 'block', fontSize: '0.86rem', lineHeight: 1.15, color: abyssal ? '#ffcdb8' : '#f0ede8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {def?.name ?? node.id}
+          </span>
+          <span className="font-karla" style={{ display: 'block', fontSize: '0.63rem', color: '#8a8480', marginTop: 2 }}>
+            {st.find > 0 ? `${st.find} to find · ` : ''}{st.forge} forge{st.forge === 1 ? '' : 's'}{st.have > 0 ? ` · ${st.have} aboard` : ''}
+          </span>
+        </span>
+      </button>
+      {open && (
+        <div style={{ padding: '0 0.65rem 0.6rem' }}>
+          <div style={{ marginLeft: 10, paddingLeft: 11, borderLeft: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {node.children.map((c, k) => (
+              <TreeBranch key={`${c.id}-${k}`} node={c} onOpenRecipe={onOpenRecipe} />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ForgePlanner({
   recipes, ownedRaidItems, learnedRecipes, fathomsNow, raidItemSlots,
   targets, onToggleTarget, onClear, onOpenRecipe,
 }: {
@@ -916,38 +1104,31 @@ function AbyssalPlanner({
   onOpenRecipe: (id: string) => void
 }) {
   const owned = useMemo(() => new Set(ownedRaidItems), [ownedRaidItems])
-  // A forged Abyssal is already yours, so it drops out of the farm even if it
-  // lingered in a saved plan — the totals only count what you still have to build.
-  const chosen = useMemo(() => recipes.filter(r => targets.has(r.result) && !owned.has(r.result)).map(r => r.result), [recipes, targets, owned])
+  // Tier ascending, so a fusion you already hold settles the SIMPLER goal first
+  // and the Abyssal that eats it is the one told to farm another. A fixed order
+  // also means the plan cannot change because of the order you tapped things in.
+  const ordered = useMemo(() => [...recipes].sort((a, b) => tierOf(a) - tierOf(b)), [recipes])
+  /** Everything you are chasing, forged or not. This is the BUILD. */
+  const targeted = useMemo(() => ordered.filter(r => targets.has(r.result)).map(r => r.result), [ordered, targets])
+  /** The subset still to build. Anything already aboard is off the farm list. */
+  const chosen = useMemo(() => targeted.filter(id => !owned.has(id)), [targeted, owned])
 
-  // Long-press a medallion to open its full recipe sheet; a short tap toggles it
-  // into the plan (or, for a forged one, just opens the sheet). Tracked on a ref
-  // so the press timer and the "fired" guard survive re-renders.
-  const press = useRef<{ timer: ReturnType<typeof setTimeout> | null; fired: boolean; x: number; y: number }>({ timer: null, fired: false, x: 0, y: 0 })
-  const endPress = () => { if (press.current.timer) { clearTimeout(press.current.timer); press.current.timer = null } }
-  const startPress = (id: string, e: React.PointerEvent) => {
-    press.current.fired = false; press.current.x = e.clientX; press.current.y = e.clientY
-    press.current.timer = setTimeout(() => { press.current.fired = true; vibrate([0, 24]); onOpenRecipe(id) }, 450)
-  }
-  const movePress = (e: React.PointerEvent) => {
-    if (press.current.timer && (Math.abs(e.clientX - press.current.x) > 10 || Math.abs(e.clientY - press.current.y) > 10)) endPress()
-  }
   // Ownership-aware: the plan prunes any branch already aboard, so the numbers
   // answer "what is LEFT" rather than "what would this cost from zero". Without
   // it a half-built player was quoted the full farm every visit, parts in hand
   // included, which is the single biggest reason this panel read as noise.
-  const plan = useMemo(() => planAbyssalBuild(chosen, learnedRecipes, ownedRaidItems), [chosen, learnedRecipes, ownedRaidItems])
+  const plan = useMemo(() => planForgeBuild(chosen, learnedRecipes, ownedRaidItems), [chosen, learnedRecipes, ownedRaidItems])
   const baseLeft = plan.baseTotal - plan.baseHave
 
   // Base drops grouped by where they drop. Key normalises "The X" / "X" so a
   // single source doesn't split into two headers.
-  const norm = (s: string) => s.replace(/^the\s+/i, '').toLowerCase()
+  const norm = (str: string) => str.replace(/^the\s+/i, '').toLowerCase()
   const groups = useMemo(() => {
     const g: Record<string, { label: string; items: { id: string; qty: number; have: number; need: number }[] }> = {}
     for (const [id, qty] of Object.entries(plan.baseQty)) {
-      const raw = getRaidItem(id)?.source ?? 'Unknown source'
-      const k = norm(raw)
-      if (!g[k]) g[k] = { label: raw, items: [] }
+      const rawSrc = getRaidItem(id)?.source ?? 'Unknown source'
+      const k = norm(rawSrc)
+      if (!g[k]) g[k] = { label: rawSrc, items: [] }
       const have = Math.min(qty, plan.baseHaveQty[id] ?? 0)
       g[k].items.push({ id, qty, have, need: qty - have })
     }
@@ -960,76 +1141,97 @@ function AbyssalPlanner({
   }, [plan])
 
   const maxQ = Math.max(1, ...groups.flatMap(g => g.items.map(i => i.need)))
-  const t3 = chosen.length
-  const t2 = plan.forgeTotal - t3
+  const abyssalCount = chosen.filter(id => getForgeRecipe(id)?.tier === 3).length
+  const t2 = plan.forgeTotal - abyssalCount
   const shared = Object.entries(plan.forgeCount)
     .filter(([, c]) => c > 1)
     .map(([id, c]) => `${getRaidItem(id)?.name} ×${c}`)
-  const overMount = t3 > raidItemSlots
+  const overMount = targeted.length > raidItemSlots
+
+  // The picker, split by bench. Two labelled groups read faster than one grid of
+  // seventeen medallions where the tier is something you have to already know.
+  const tierGroups = [
+    { tier: 2, label: 'The Forge', sub: 'Tier II', hue: GOLD },
+    { tier: 3, label: 'The Abyssal Forge', sub: 'Tier III', hue: EMBER },
+  ].map(t => ({ ...t, items: ordered.filter(r => tierOf(r) === t.tier) })).filter(t => t.items.length > 0)
 
   return (
     <div>
       <p className="font-karla" style={{ fontSize: '0.86rem', color: '#b4ada2', lineHeight: 1.5, marginBottom: 12 }}>
-        Pick the Abyssals you&apos;re chasing and this totals everything still standing between you and all of them. Parts already aboard are counted off. <span style={{ color: '#8a8480' }}>Tap to add or remove. Press and hold one to read its recipe.</span>
+        Pick the pieces you&apos;re chasing, from either bench, and this totals everything still standing between you and all of them. Parts already aboard are counted off.
       </p>
 
-      {/* Selectable Abyssal medallions */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: '1.1rem' }}>
-        {recipes.map(r => {
-          const def = getRaidItem(r.result)!
-          const forged = owned.has(r.result)
-          const on = targets.has(r.result) && !forged
-          return (
-            <motion.button key={r.result} type="button"
-              onPointerDown={e => startPress(r.result, e)}
-              onPointerUp={endPress}
-              onPointerLeave={endPress}
-              onPointerCancel={endPress}
-              onPointerMove={movePress}
-              onClick={() => {
-                // A long-press already fired — swallow the trailing click so it
-                // doesn't also toggle the target.
-                if (press.current.fired) { press.current.fired = false; return }
-                if (forged) { onOpenRecipe(r.result); return }
-                onToggleTarget(r.result)
-              }}
-              whileTap={{ scale: 0.95 }}
-              className="tap"
-              aria-pressed={on}
-              style={{
-                position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
-                padding: '0.6rem 0.35rem 0.5rem', borderRadius: 13, minWidth: 0,
-                cursor: 'pointer', opacity: forged ? 0.62 : 1, touchAction: 'manipulation',
-                background: on ? 'rgba(255,90,60,0.14)' : 'rgba(255,255,255,0.035)',
-                border: `1px solid ${on ? `${EMBER}aa` : 'rgba(255,255,255,0.1)'}`,
-                transition: 'background 0.14s, border-color 0.14s',
-              }}>
-              <ItemArt id={r.result} size={40} dim={forged && !on} />
-              <span className="font-cinzel font-700" style={{ fontSize: '0.72rem', lineHeight: 1.18, textAlign: 'center', minHeight: '1.7rem', color: on ? '#ffcdb8' : '#e9e4da' }}>
-                {def.name}
-              </span>
-              {forged ? (
-                <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.55rem', color: '#7be0a3' }}>Forged</span>
-              ) : (
-                <span aria-hidden style={{
-                  width: 17, height: 17, borderRadius: '50%', display: 'grid', placeItems: 'center',
-                  border: `1.5px solid ${on ? EMBER : 'rgba(255,255,255,0.18)'}`,
-                  background: on ? EMBER : 'transparent', color: on ? '#2a0d08' : 'transparent',
-                }}>
-                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
-                </span>
-              )}
-            </motion.button>
-          )
-        })}
+      {/* Selectable medallions, grouped by bench */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 13, marginBottom: '1.15rem' }}>
+        {tierGroups.map(g => (
+          <div key={g.tier}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 7, marginBottom: 8 }}>
+              <span className="font-karla font-800 uppercase tracking-[0.14em]" style={{ fontSize: '0.6rem', color: g.hue }}>{g.label}</span>
+              <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#6f6a63' }}>{g.sub}</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
+              {g.items.map(r => {
+                const def = getRaidItem(r.result)!
+                const forged = owned.has(r.result)
+                const on = targets.has(r.result)
+                return (
+                  <motion.button key={r.result} type="button"
+                    onClick={() => { vibrate([0, 12]); onToggleTarget(r.result) }}
+                    whileTap={{ scale: 0.95 }}
+                    className="tap"
+                    aria-pressed={on}
+                    style={{
+                      position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+                      padding: '0.6rem 0.35rem 0.5rem', borderRadius: 13, minWidth: 0,
+                      cursor: 'pointer', touchAction: 'manipulation',
+                      background: on ? `${g.hue}22` : 'rgba(255,255,255,0.035)',
+                      border: `1px solid ${on ? `${g.hue}aa` : 'rgba(255,255,255,0.1)'}`,
+                      transition: 'background 0.14s, border-color 0.14s',
+                    }}>
+                    <ItemArt id={r.result} size={40} dim={forged && !on} />
+                    <span className="font-cinzel font-700" style={{ fontSize: '0.72rem', lineHeight: 1.18, textAlign: 'center', minHeight: '1.7rem', color: on ? '#f4ecd8' : '#e9e4da' }}>
+                      {def.name}
+                    </span>
+                    {/* A forged piece stays pickable: it still counts toward what
+                        the build FLIES, it just costs nothing more to get. */}
+                    {forged ? (
+                      <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.55rem', color: GREEN }}>Forged</span>
+                    ) : (
+                      <span aria-hidden style={{
+                        width: 17, height: 17, borderRadius: '50%', display: 'grid', placeItems: 'center',
+                        border: `1.5px solid ${on ? g.hue : 'rgba(255,255,255,0.18)'}`,
+                        background: on ? g.hue : 'transparent', color: on ? '#1a1410' : 'transparent',
+                      }}>
+                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+                      </span>
+                    )}
+                  </motion.button>
+                )
+              })}
+            </div>
+          </div>
+        ))}
       </div>
 
-      {chosen.length === 0 ? (
+      {targeted.length === 0 ? (
         <p className="font-karla" style={{ fontSize: '0.84rem', color: '#8a8480', lineHeight: 1.5, textAlign: 'center', padding: '1.2rem 0.5rem' }}>
-          Tap an Abyssal above to see exactly what it takes to forge.
+          Tap a piece above to see what it takes to forge, and what it flies once you have it.
         </p>
       ) : (
         <>
+          {/* ── WHAT YOU END UP WITH. The payoff goes first: every other number
+                 on this screen is a price, and a price means nothing until you
+                 have seen the thing it buys. Same fold as the battle loadout,
+                 because a build that reads one way here and another way in the
+                 hold is worse than no summary at all. ────────────────────── */}
+          <LoadoutSummary
+            equippedIds={targeted}
+            accent={EMBER}
+            title="What This Build Flies"
+            emptyText="These pieces grant no combat effects on their own."
+            defaultOpen
+          />
+
           {/* Summary tiles */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
             {[
@@ -1037,80 +1239,105 @@ function AbyssalPlanner({
               // "Tier-2 + Abyssal forges", which read as arithmetic nobody could
               // resolve — it is now one number with the split spelled out under it.
               { v: `${baseLeft}`, l: 'Drops still to find', sub: plan.baseHave > 0 ? `${plan.baseHave} of ${plan.baseTotal} aboard` : undefined },
-              { v: `${plan.forgeTotal}`, l: 'Forges to run', sub: t2 > 0 ? `${t2} tier-2, then ${t3} abyssal` : `${t3} abyssal` },
+              { v: `${plan.forgeTotal}`, l: 'Forges to run', sub: abyssalCount > 0 && t2 > 0 ? `${t2} tier-2, then ${abyssalCount} abyssal` : abyssalCount > 0 ? `${abyssalCount} abyssal` : `${t2} tier-2` },
               { v: `${plan.fathomCost}`, l: 'Fathoms to spend', sub: plan.learnRecipeIds.length > 0 ? `${plan.learnRecipeIds.length} recipe${plan.learnRecipeIds.length > 1 ? 's' : ''} to learn` : 'all learned' },
-            ].map(s => (
-              <div key={s.l} style={{ flex: '1 1 108px', background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 11, padding: '0.6rem 0.7rem' }}>
-                <p className="font-cinzel font-800" style={{ fontSize: '1.4rem', lineHeight: 1, color: '#ffcdb8' }}>{s.v}</p>
-                <p className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.54rem', color: '#8a8480', marginTop: 5 }}>{s.l}</p>
-                {s.sub && <p className="font-karla" style={{ fontSize: '0.58rem', color: '#6f6a63', marginTop: 3 }}>{s.sub}</p>}
+            ].map(st => (
+              <div key={st.l} style={{ flex: '1 1 108px', background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 11, padding: '0.6rem 0.7rem' }}>
+                <p className="font-cinzel font-800" style={{ fontSize: '1.4rem', lineHeight: 1, color: '#ffcdb8' }}>{st.v}</p>
+                <p className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.54rem', color: '#8a8480', marginTop: 5 }}>{st.l}</p>
+                {st.sub && <p className="font-karla" style={{ fontSize: '0.58rem', color: '#6f6a63', marginTop: 3 }}>{st.sub}</p>}
               </div>
             ))}
           </div>
 
           {/* Fathom affordability + mount check */}
-          <p className="font-karla" style={{ fontSize: '0.76rem', color: fathomsNow >= plan.fathomCost ? GREEN : AMBER, marginBottom: overMount || shared.length ? 8 : 14 }}>
-            {plan.fathomCost === 0 ? 'Every recipe already learned — just the drops to go.'
-              : fathomsNow >= plan.fathomCost ? `You hold ${fathomsNow} Fathoms — enough to learn all ${plan.learnRecipeIds.length} recipe${plan.learnRecipeIds.length > 1 ? 's' : ''}.`
-              : `Learning the ${plan.learnRecipeIds.length} recipe${plan.learnRecipeIds.length > 1 ? 's' : ''} costs ${plan.fathomCost} Fathoms; you have ${fathomsNow}.`}
-          </p>
-          <p className="font-karla" style={{ fontSize: '0.78rem', lineHeight: 1.5, color: overMount ? AMBER : '#7be0a3', marginBottom: shared.length ? 8 : 14 }}>
+          {chosen.length > 0 && (
+            <p className="font-karla" style={{ fontSize: '0.76rem', color: fathomsNow >= plan.fathomCost ? GREEN : AMBER, marginBottom: 8 }}>
+              {plan.fathomCost === 0 ? 'Every recipe already learned — just the drops to go.'
+                : fathomsNow >= plan.fathomCost ? `You hold ${fathomsNow} Fathoms — enough to learn all ${plan.learnRecipeIds.length} recipe${plan.learnRecipeIds.length > 1 ? 's' : ''}.`
+                : `Learning the ${plan.learnRecipeIds.length} recipe${plan.learnRecipeIds.length > 1 ? 's' : ''} costs ${plan.fathomCost} Fathoms; you have ${fathomsNow}.`}
+            </p>
+          )}
+          <p className="font-karla" style={{ fontSize: '0.78rem', lineHeight: 1.5, color: overMount ? AMBER : GREEN, marginBottom: shared.length ? 8 : 14 }}>
             {overMount
-              ? `⚑ ${t3} Abyssals but only ${raidItemSlots} mounts — build them all, you'll just swap which ${raidItemSlots} you fly per fight.`
-              : `✓ All ${t3} fit your ${raidItemSlots} mounts — the whole set can ride at once.`}
+              ? `⚑ ${targeted.length} pieces but only ${raidItemSlots} mounts — build them all, you'll just swap which ${raidItemSlots} you fly per fight.`
+              : `✓ All ${targeted.length} fit your ${raidItemSlots} mounts — the whole set can ride at once.`}
           </p>
           {shared.length > 0 && (
             <p className="font-karla" style={{ fontSize: '0.78rem', lineHeight: 1.5, color: AMBER, background: `${AMBER}12`, border: `1px solid ${AMBER}3a`, borderRadius: 9, padding: '0.55rem 0.7rem', marginBottom: 14 }}>
-              ⚑ Two of your picks want the same part. You&apos;ll need to build {shared.join(' and ')} — the forge consumes what it fuses, so each Abyssal needs its own copy, farmed separately.
+              ⚑ Two of your picks want the same part. You&apos;ll need to build {shared.join(' and ')} — the forge consumes what it fuses, so each one needs its own copy, farmed separately.
             </p>
           )}
 
-          {/* Drops to farm, grouped by source */}
-          <p className="font-karla font-800 uppercase tracking-[0.14em]" style={{ fontSize: '0.68rem', color: EMBER, marginBottom: 11 }}>
-            {baseLeft === 0 ? 'Every part aboard — go forge' : `Still to find — ${baseLeft} of ${plan.baseTotal}`}
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
-            {groups.map(g => (
-              <div key={g.label}>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8, paddingBottom: 5, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                  <span className="font-karla font-700" style={{ fontSize: '0.76rem', color: '#a9d0dd' }}>{g.label}</span>
-                  <span className="font-karla" style={{ fontSize: '0.62rem', color: '#6f6a63', marginLeft: 'auto' }}>
-                    {g.total === 0 ? 'all aboard' : `${g.total} to find`}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {g.items.map(({ id, qty, have, need }) => {
-                    const def = getRaidItem(id)
-                    const done = need === 0
-                    return (
-                      // A satisfied part stays listed but recedes — it is proof
-                      // of progress, not another job.
-                      <div key={id} style={{ display: 'flex', alignItems: 'center', gap: 10, opacity: done ? 0.5 : 1 }}>
-                        <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: done ? GREEN : '#ffce8a', background: done ? `${GREEN}14` : 'rgba(232,200,121,0.1)', border: `1px solid ${done ? `${GREEN}55` : `${GOLD}44`}`, borderRadius: 7, padding: '2px 8px', minWidth: 36, textAlign: 'center' }}>
-                          {done ? '✓' : `×${need}`}
-                        </span>
-                        <span style={{ flexShrink: 0, width: 26, height: 26, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.25)' }}>
-                          <ItemArt id={id} size={20} dim={done} />
-                        </span>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: '#e6e1d6', display: 'flex', alignItems: 'baseline', gap: 7 }}>
-                            {def?.name}
-                            {/* Only worth saying when the plan needs MORE than one
-                                and you are partway — "1 of 2 aboard" is progress,
-                                a bare "aboard" on a done row is noise. */}
-                            {have > 0 && !done && <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.56rem', color: GREEN }}>{have} of {qty} aboard</span>}
-                          </p>
-                          <div style={{ height: 4, borderRadius: 3, background: 'rgba(0,0,0,0.4)', overflow: 'hidden', marginTop: 4 }}>
-                            <div style={{ height: '100%', width: `${done ? 100 : Math.round(need / maxQ * 100)}%`, borderRadius: 3, background: done ? GREEN : `linear-gradient(90deg, ${GOLD}88, ${GOLD})` }} />
+          {/* ── HOW EACH ONE IS MADE. The recipe on the bench names two
+                 components and stops, so an Abyssal never once admitted to the
+                 four drops actually behind it. Open a branch to walk it all the
+                 way down to the sea floor. ──────────────────────────────── */}
+          {plan.trees.length > 0 && (
+            <>
+              <p className="font-karla font-800 uppercase tracking-[0.14em]" style={{ fontSize: '0.68rem', color: EMBER, marginBottom: 4 }}>
+                How they&apos;re made
+              </p>
+              <p className="font-karla" style={{ fontSize: '0.72rem', color: '#8a8480', lineHeight: 1.45, marginBottom: 11 }}>
+                Open one to walk its parts down to the drops. Tap any fusion to read its recipe.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18 }}>
+                {plan.trees.map((t, k) => (
+                  <TreeCard key={`${t.id}-${k}`} node={t} startOpen={plan.trees.length === 1} onOpenRecipe={onOpenRecipe} />
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* ── WHERE TO GO. The same leaves, re-cut by source, because a farm
+                 run is planned by destination and a tree is not. ─────────── */}
+          {plan.baseTotal > 0 && (<>
+            <p className="font-karla font-800 uppercase tracking-[0.14em]" style={{ fontSize: '0.68rem', color: EMBER, marginBottom: 11 }}>
+              {baseLeft === 0 ? 'Every part aboard — go forge' : `Still to find — ${baseLeft} of ${plan.baseTotal}`}
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
+              {groups.map(g => (
+                <div key={g.label}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8, paddingBottom: 5, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                    <span className="font-karla font-700" style={{ fontSize: '0.76rem', color: '#a9d0dd' }}>{g.label}</span>
+                    <span className="font-karla" style={{ fontSize: '0.62rem', color: '#6f6a63', marginLeft: 'auto' }}>
+                      {g.total === 0 ? 'all aboard' : `${g.total} to find`}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {g.items.map(({ id, qty, have, need }) => {
+                      const def = getRaidItem(id)
+                      const done = need === 0
+                      return (
+                        // A satisfied part stays listed but recedes — it is proof
+                        // of progress, not another job.
+                        <div key={id} style={{ display: 'flex', alignItems: 'center', gap: 10, opacity: done ? 0.5 : 1 }}>
+                          <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: done ? GREEN : '#ffce8a', background: done ? `${GREEN}14` : 'rgba(232,200,121,0.1)', border: `1px solid ${done ? `${GREEN}55` : `${GOLD}44`}`, borderRadius: 7, padding: '2px 8px', minWidth: 36, textAlign: 'center' }}>
+                            {done ? '✓' : `×${need}`}
+                          </span>
+                          <span style={{ flexShrink: 0, width: 26, height: 26, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.25)' }}>
+                            <ItemArt id={id} size={20} dim={done} />
+                          </span>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: '#e6e1d6', display: 'flex', alignItems: 'baseline', gap: 7 }}>
+                              {def?.name}
+                              {/* Only worth saying when the plan needs MORE than one
+                                  and you are partway — "1 of 2 aboard" is progress,
+                                  a bare "aboard" on a done row is noise. */}
+                              {have > 0 && !done && <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.56rem', color: GREEN }}>{have} of {qty} aboard</span>}
+                            </p>
+                            <div style={{ height: 4, borderRadius: 3, background: 'rgba(0,0,0,0.4)', overflow: 'hidden', marginTop: 4 }}>
+                              <div style={{ height: '100%', width: `${done ? 100 : Math.round(need / maxQ * 100)}%`, borderRadius: 3, background: done ? GREEN : `linear-gradient(90deg, ${GOLD}88, ${GOLD})` }} />
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )
-                  })}
+                      )
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </>)}
 
           <button type="button" onClick={onClear} className="font-karla font-700 tap"
             style={{ width: '100%', marginTop: 18, padding: '0.6rem', background: 'none', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, color: '#8a8480', fontSize: '0.82rem', cursor: 'pointer' }}>

@@ -1162,12 +1162,16 @@ export function isConvertibleEpic(id: string): boolean {
 
 // ── ABYSSAL BUILD PLANNER ───────────────────────────────────────────────────
 // The forge board answers "what can I forge right now?", one recipe at a time.
-// The planner answers the OTHER question: "I want THESE Abyssals — what does the
+// The planner answers the OTHER question: "I want THESE pieces — what does the
 // whole farm look like?" A tier-3 Abyssal is two tier-2 fusions, each two base
 // drops, so the flat recipe never shows the four drops actually behind it. These
 // pure helpers expand a set of targets all the way down to base drops (with
 // multiplicity — forging is destructive, so two builds sharing a part each need
 // their own copy).
+//
+// Targets span BOTH benches. A tier-2 fusion is a perfectly good thing to plan
+// toward, and planning one alongside an Abyssal that eats it is the case the
+// multiplicity accounting exists for.
 
 /** Every BASE item consumed to forge `resultId` from scratch, with multiplicity.
  *  Recurses through intermediate fusions until it hits items that aren't
@@ -1187,7 +1191,19 @@ export function forgeSubRecipeIds(resultId: string): string[] {
   return [resultId, ...r.components.flatMap(forgeSubRecipeIds)]
 }
 
-export interface AbyssalPlan {
+/** ONE node of a build tree: an item, what still has to happen to it, and what
+ *  sits under it. `find` is a base drop to go and get, `forge` is a fusion to
+ *  run, `have` is already aboard (so its subtree is pruned — descending past it
+ *  would bill you for parts you already spent). */
+export interface ForgeTreeNode {
+  id: string
+  status: 'have' | 'forge' | 'find'
+  /** Where a `find` node drops. Only set for base drops. */
+  source?: string
+  children: ForgeTreeNode[]
+}
+
+export interface ForgePlan {
   targets: string[]
   /** Base drops to farm: id → total quantity across all targets. */
   baseQty: Record<string, number>
@@ -1204,7 +1220,13 @@ export interface AbyssalPlan {
   /** Per-id slice of the above: id → how many of that drop are already aboard.
    *  Capped at the quantity the plan actually needs. */
   baseHaveQty: Record<string, number>
+  /** One tree per target, in the order given. The totals above are folded FROM
+   *  these, so what the tree draws and what the tiles count are the same walk. */
+  trees: ForgeTreeNode[]
 }
+
+/** Kept so older call sites naming the Abyssal-only shape still compile. */
+export type AbyssalPlan = ForgePlan
 
 /** Walk a target's tree, stopping wherever the player ALREADY holds the node.
  *  An owned intermediate means everything beneath it is done, so descending
@@ -1212,59 +1234,83 @@ export interface AbyssalPlan {
  *
  *  `owned` should be raw ownership, not effectiveOwnedItems — a component that
  *  was consumed into a fusion is gone from the hold and has to be re-farmed if
- *  another target needs its own copy. */
-function walkRemaining(
-  resultId: string,
-  owned: Set<string>,
-  baseQty: Record<string, number>,
-  forgeCount: Record<string, number>,
-  haveQty: Record<string, number>,
-  used: Record<string, number>,
-) {
-  // raid_items is a SET — you hold at most one copy of anything, and the forge
-  // consumes what it fuses. So an owned id only settles the FIRST place the
-  // plan needs it; a second occurrence has to be farmed or forged from scratch,
-  // exactly like the shared-parent warning says.
+ *  another target needs its own copy.
+ *
+ *  `used` is threaded across every target in the plan, which is what makes the
+ *  shared-part problem legible: raid_items is a SET, so an owned id settles the
+ *  FIRST place the plan needs it and every later occurrence has to be farmed or
+ *  forged from scratch. The tree shows that second copy as real work instead of
+ *  quietly counting the same item twice. */
+function walkTree(resultId: string, owned: Set<string>, used: Record<string, number>): ForgeTreeNode {
   const spent = used[resultId] ?? 0
   if (owned.has(resultId) && spent === 0) {
     used[resultId] = spent + 1
-    baseQty[resultId] = (baseQty[resultId] || 0) + 1
-    haveQty[resultId] = (haveQty[resultId] || 0) + 1
-    return
+    return { id: resultId, status: 'have', children: [] }
   }
   const r = getForgeRecipe(resultId)
-  // A base drop with no recipe behind it: straight onto the farm list.
-  if (!r) {
-    baseQty[resultId] = (baseQty[resultId] || 0) + 1
+  // A base drop with no recipe behind it: something to go and find.
+  if (!r) return { id: resultId, status: 'find', source: getRaidItem(resultId)?.source, children: [] }
+  return { id: resultId, status: 'forge', children: r.components.map(c => walkTree(c, owned, used)) }
+}
+
+/** The full component tree for each target, expanded to base drops. Exported so
+ *  the planner can let you traverse a build rather than only read its totals. */
+export function buildForgeTrees(targetIds: string[], ownedItems: string[] = []): ForgeTreeNode[] {
+  const owned = new Set(ownedItems)
+  const used: Record<string, number> = {}
+  return targetIds.map(t => walkTree(t, owned, used))
+}
+
+/** Fold a tree into the running totals. An owned node counts as one part that is
+ *  both NEEDED and ABOARD, so "3 of 12 aboard" stays honest for a build whose
+ *  finished intermediates are the progress. */
+function foldTree(
+  n: ForgeTreeNode,
+  baseQty: Record<string, number>,
+  forgeCount: Record<string, number>,
+  haveQty: Record<string, number>,
+) {
+  if (n.status === 'have') {
+    baseQty[n.id] = (baseQty[n.id] || 0) + 1
+    haveQty[n.id] = (haveQty[n.id] || 0) + 1
     return
   }
-  forgeCount[resultId] = (forgeCount[resultId] || 0) + 1
-  for (const c of r.components) walkRemaining(c, owned, baseQty, forgeCount, haveQty, used)
+  if (n.status === 'find') {
+    baseQty[n.id] = (baseQty[n.id] || 0) + 1
+    return
+  }
+  forgeCount[n.id] = (forgeCount[n.id] || 0) + 1
+  for (const c of n.children) foldTree(c, baseQty, forgeCount, haveQty)
 }
 
 /** Aggregate the full farm for a set of target results. `learnedRecipes` bills
  *  the Fathom cost only for recipes the player still needs to learn. */
-export function planAbyssalBuild(
+export function planForgeBuild(
   targetIds: string[],
   learnedRecipes: string[] = [],
   ownedItems: string[] = [],
-): AbyssalPlan {
+): ForgePlan {
   const baseQty: Record<string, number> = {}
   const forgeCount: Record<string, number> = {}
   const baseHaveQty: Record<string, number> = {}
-  const owned = new Set(ownedItems)
-  const used: Record<string, number> = {}
-  for (const t of targetIds) walkRemaining(t, owned, baseQty, forgeCount, baseHaveQty, used)
+  // ONE traversal feeds both the drawn tree and the counted totals. They used to
+  // be the same walk written twice, which is exactly how a summary starts
+  // disagreeing with the thing it summarises.
+  const trees = buildForgeTrees(targetIds, ownedItems)
+  for (const t of trees) foldTree(t, baseQty, forgeCount, baseHaveQty)
   const learned = new Set(learnedRecipes)
   const learnRecipeIds = Object.keys(forgeCount).filter(id => !learned.has(id))
   const fathomCost = learnRecipeIds.reduce((s, id) => s + (getForgeRecipe(id)?.fathomCost ?? 0), 0)
   return {
-    targets: targetIds, baseQty, forgeCount, learnRecipeIds, fathomCost, baseHaveQty,
+    targets: targetIds, baseQty, forgeCount, learnRecipeIds, fathomCost, baseHaveQty, trees,
     baseTotal: Object.values(baseQty).reduce((a, b) => a + b, 0),
     forgeTotal: Object.values(forgeCount).reduce((a, b) => a + b, 0),
     baseHave: Object.values(baseHaveQty).reduce((a, b) => a + b, 0),
   }
 }
+
+/** Previous name, from when the planner only handled tier-3 Abyssals. */
+export const planAbyssalBuild = planForgeBuild
 
 /** Ownership EXPANDED through the forge: everything in raid_items, plus every
  *  component that was CONSUMED into a fusion the player owns (recursively, so

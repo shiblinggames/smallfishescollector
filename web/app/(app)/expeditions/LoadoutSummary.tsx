@@ -70,18 +70,29 @@ const GROUPS: { key: Group; title: string; hue: string }[] = [
   { key: 'special', title: 'Special', hue: '#b79ae0' },
 ]
 
-export default function LoadoutSummary({ equippedIds, accent = '#c4b078', onOpenEffects }: {
+export default function LoadoutSummary({
+  equippedIds, accent = '#c4b078', onOpenEffects,
+  title = 'Equipment Stats', emptyText = 'Nothing mounted yet. Fill a slot below and its effects total up here.',
+  defaultOpen = false,
+}: {
   /** Already charge-tagged, so a levelled spoil counts for what it currently is. */
   equippedIds: string[]
   accent?: string
   onOpenEffects?: () => void
+  /** The forge planner totals a build you have not made yet, so it needs to say
+   *  so — same fold, same table, different question being asked. */
+  title?: string
+  emptyText?: string
+  /** Open on arrival where the total IS the reason you are looking (the planner),
+   *  closed where it is a reference beside the real work (the loadout page). */
+  defaultOpen?: boolean
 }) {
   // CLOSED by default. The totals are a reference you check, not the reason you
   // opened this page: what you came to do is move items between the slots and
   // the inventory below, and an expanded hero pushed both down the screen every
   // single visit. The collapsed header still carries an "N active" count, so
   // nothing is hidden, only folded.
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(defaultOpen)
   const fx = getActiveEffects(equippedIds)
 
   const active = ROWS.map(r => {
@@ -118,7 +129,7 @@ export default function LoadoutSummary({ equippedIds, accent = '#c4b078', onOpen
             style={{ flexShrink: 0, transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 0.18s' }}>
             <path d="M9 18l6-6-6-6" />
           </svg>
-          <p className="font-cinzel font-800" style={{ fontSize: '0.95rem', color: '#f0ede8', lineHeight: 1.1 }}>Equipment Stats</p>
+          <p className="font-cinzel font-800" style={{ fontSize: '0.95rem', color: '#f0ede8', lineHeight: 1.1 }}>{title}</p>
           {!open && active.length > 0 && (
             <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.54rem', color: '#8a8480', whiteSpace: 'nowrap' }}>
               {active.length} active
@@ -140,7 +151,7 @@ export default function LoadoutSummary({ equippedIds, accent = '#c4b078', onOpen
 
       {open && (active.length === 0 ? (
         <p className="font-karla" style={{ fontSize: '0.78rem', color: '#8a8480', lineHeight: 1.45 }}>
-          Nothing mounted yet. Fill a slot below and its effects total up here.
+          {emptyText}
         </p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
