@@ -270,13 +270,9 @@ export default function HallBunks({
             )
           }
           const t = termsById[crew.id]
-          const maxed = !canBunk(crew.xp)
           const done = !t || stintDone(t.since, now, t.cap)
           const left = t ? msUntilDone(t.since, now, t.cap) : 0
           const pct = t ? stintProgress(t.since, now, t.cap) : 1
-          // What THIS hand is owed, which after an upgrade differs from what a
-          // fresh stint would pay.
-          const tilePay = t ? stintXP(t.rate, t.cap) : payout
           return (
             <button key={crew.id} type="button" disabled={pending || !done}
               onClick={() => { if (done) onCollectOne(crew.id) }}
@@ -308,28 +304,23 @@ export default function HallBunks({
               <span className="font-karla font-700" style={{ display: 'block', width: '100%', fontSize: '0.72rem', lineHeight: 1.15, color: '#eee8de', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {crew.name}
               </span>
+              {/* A finished bunk shows JUST the word. The XP used to sit under
+                  it and said nothing the header did not: the sum row at the top
+                  of the panel already states what a stint pays, and it is the
+                  same figure for every bunk. On a tile the only useful fact is
+                  that this hand is waiting on you.
+
+                  The pulse is on the pill alone, not the whole tile: six of them
+                  breathing at once would be a light show, one small moving thing
+                  per finished bunk is a nudge. */}
               {done ? (
-                <>
-                  {/* The word, not just a gold number. A bare "+11,750" reads
-                      as a stat on the card rather than as something waiting on
-                      you, so the tile now says what to do and moves while it
-                      waits. The pulse is on the pill alone, not the whole
-                      tile: six of them breathing at once would be a light
-                      show, one small thing per finished bunk is a nudge. */}
-                  <span className="bunk-claim-pulse font-karla font-800 uppercase" style={{
-                    display: 'inline-block', padding: '0.14rem 0.55rem', borderRadius: 999,
-                    fontSize: '0.6rem', letterSpacing: '0.1em', lineHeight: 1.45,
-                    background: `${GOLD}26`, border: `1px solid ${GOLD}99`, color: '#f6e6b4',
-                  }}>
-                    Claim
-                  </span>
-                  <span className={maxed ? 'font-karla font-600' : 'font-cinzel font-700'} style={{
-                    fontSize: maxed ? '0.6rem' : '0.82rem', lineHeight: 1.1,
-                    color: maxed ? 'rgba(255,255,255,0.5)' : GOLD, fontVariantNumeric: 'tabular-nums',
-                  }}>
-                    {maxed ? 'No XP left' : `+${tilePay.toLocaleString()}`}
-                  </span>
-                </>
+                <span className="bunk-claim-pulse font-karla font-800 uppercase" style={{
+                  display: 'inline-block', padding: '0.2rem 0.7rem', borderRadius: 999,
+                  fontSize: '0.66rem', letterSpacing: '0.1em', lineHeight: 1.45,
+                  background: `${GOLD}26`, border: `1px solid ${GOLD}99`, color: '#f6e6b4',
+                }}>
+                  Claim
+                </span>
               ) : (
                 <>
                   <span className="font-karla font-600" style={{ fontSize: '0.64rem', color: 'rgba(255,255,255,0.72)', fontVariantNumeric: 'tabular-nums' }}>
