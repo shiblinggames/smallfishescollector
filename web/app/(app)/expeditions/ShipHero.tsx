@@ -1844,12 +1844,17 @@ export default function ShipHero({
                     <p className="font-karla" style={{ fontSize: '0.7rem', color: full ? '#d8a14a' : '#8a8480', marginBottom: '0.7rem', lineHeight: 1.45 }}>
                       {full ? 'Hull full. Tap an equipped item to free its slot.' : 'Tap an item for its effect and to equip it.'}
                     </p>
+                    {/* THREE COLUMNS, growing DOWN. This was a horizontal
+                        scroller, which hides most of an inventory off the right
+                        edge and makes comparing two items a swipe apart. The
+                        page already scrolls vertically, so the grid just extends
+                        into it and everything you own is on one surface. Same
+                        reason the puzzle boards grow in rows rather than
+                        columns on a phone. */}
                     <div
-                      className="scrollbar-hide"
                       style={{
-                        display: 'flex', gap: 8, overflowX: 'auto', overflowY: 'hidden',
-                        scrollSnapType: 'x proximity', WebkitOverflowScrolling: 'touch',
-                        ...(focus ? { marginBottom: '1.6rem' } : { margin: '0 -1rem 1.6rem', padding: '0 1rem' }),
+                        display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8,
+                        marginBottom: '1.6rem',
                       }}
                     >
                       {owned.map(itemId => {
@@ -1872,7 +1877,7 @@ export default function ShipHero({
                             onClick={() => setItemDetail(itemId)}
                             aria-label={`${def.name}${on ? ', equipped' : blocked ? ', hull full' : ''}. Tap for details.`}
                             style={{
-                              flex: '0 0 auto', width: 104, scrollSnapAlign: 'start',
+                              width: '100%', minWidth: 0,
                               display: 'flex', flexDirection: 'column', gap: 4,
                               padding: 0, background: 'none', border: 'none',
                               cursor: 'pointer', font: 'inherit',

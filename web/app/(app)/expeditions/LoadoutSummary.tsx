@@ -76,9 +76,12 @@ export default function LoadoutSummary({ equippedIds, accent = '#c4b078', onOpen
   accent?: string
   onOpenEffects?: () => void
 }) {
-  // Open by default: the totals are the point of the hero. Collapsing is for
-  // when you are working the slots below and want them closer to the top.
-  const [open, setOpen] = useState(true)
+  // CLOSED by default. The totals are a reference you check, not the reason you
+  // opened this page: what you came to do is move items between the slots and
+  // the inventory below, and an expanded hero pushed both down the screen every
+  // single visit. The collapsed header still carries an "N active" count, so
+  // nothing is hidden, only folded.
+  const [open, setOpen] = useState(false)
   const fx = getActiveEffects(equippedIds)
 
   const active = ROWS.map(r => {
