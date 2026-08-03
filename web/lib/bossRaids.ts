@@ -599,6 +599,28 @@ export const RAID_ZONE_BG: Record<NonNullable<BossRaidConfig['zone']>, string> =
   ancient_deep: '/ancient.jpg',
 }
 
+// ── COMPOSITION RULE FOR EVERY BACKDROP BELOW ───────────────────────────────
+// THE HORIZON MUST SIT ABOVE 42% OF THE IMAGE HEIGHT.
+//
+// Not a style note, a hard constraint. The enemy ship is absolutely positioned
+// at `top: 42%` (RaidCombat, "sits in the water (below the horizon)") and runs
+// about 16% of the screen from there, on the right-hand side. Put the waterline
+// any lower and the ship is drawn against sky, or against whatever building is
+// standing there, and it reads as floating in mid-air.
+//
+// So: subject up top, waterline high, and the whole lower two thirds open water.
+// A cliff or a distant structure BEHIND the ship is fine, since the ship is
+// still sitting on a sea surface that starts above it. What is not fine is the
+// sea surface itself starting below 42%.
+//
+// The first pass at the Ghost's plate put a fortress across the middle of the
+// frame with the waterline at 52%, which is exactly the failure this describes.
+//
+// Also: near-black and uncluttered at the very bottom, where the player's ship,
+// the action buttons and the log sit. RaidGame lays a 0.4 → 0.82 dark gradient
+// over the whole thing, so a plate that is already dark at the foot stays
+// readable rather than turning to mud.
+//
 // Per-raid campaign battle backdrop, keyed to each boss's story LOCATION, so
 // every campaign raid reads as its own place (Pete's sunset cove, the Tollmaster's
 // strait, Ruse's black-market harbor, the Don's abyssal throne, etc.) instead of
