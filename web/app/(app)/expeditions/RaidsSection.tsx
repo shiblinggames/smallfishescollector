@@ -3079,20 +3079,27 @@ function BossesView({ views, raidRecords, ownedRaidItems, ownedShipSkins, totalF
         const tile = (v: RaidNodeView) => (
           <BossTile key={v.node.id} view={v} isNext={v.node.id === nextUpId} challengeCleared={challengeOf(v)?.status === 'cleared'} clearedNodeIds={clearedNodeIds} onOpen={() => { vibrate([0, 12]); setModalBoss(v) }} />
         )
+        // The two rows sit in MAP ORDER, not main-then-mini. The Ghost unlocks
+        // off the Muster and is fought before Sal Brackwater and Don Finleone,
+        // so parking him beneath them would have this tab telling a different
+        // story from the campaign. `all` is already in RAID_MAP order, so the
+        // question is only which kind comes first in it.
+        const miniFirst = mini.length > 0 && main.length > 0 && all.indexOf(mini[0]) < all.indexOf(main[0])
+        const mainRow = main.length > 0 ? (
+          <div key="main" style={solo
+            ? { display: 'grid', gridTemplateColumns: 'minmax(0, 72%)', justifyContent: 'center', gap: 10 }
+            : { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            {main.map(tile)}
+          </div>
+        ) : null
+        const miniRow = mini.length > 0 ? (
+          <div key="mini" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(0, 38%))', justifyContent: 'center', gap: 10 }}>
+            {mini.map(tile)}
+          </div>
+        ) : null
         return (
         <div key={cid} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {main.length > 0 && (
-            <div style={solo
-              ? { display: 'grid', gridTemplateColumns: 'minmax(0, 72%)', justifyContent: 'center', gap: 10 }
-              : { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              {main.map(tile)}
-            </div>
-          )}
-          {mini.length > 0 && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(0, 38%))', justifyContent: 'center', gap: 10 }}>
-              {mini.map(tile)}
-            </div>
-          )}
+          {miniFirst ? <>{miniRow}{mainRow}</> : <>{mainRow}{miniRow}</>}
         </div>
         )
       })}
