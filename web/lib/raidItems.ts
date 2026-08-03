@@ -1030,7 +1030,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
   {
     id: 'the_standing_wall',
     name: 'The Standing Wall',
-    image: null,
+    image: '/forge_thelastwall.png',
     description: 'Opens every fight behind a barrier worth 22% of your hull and braces 60% of it back on every Reload, a single hit over 25% of your max hull has a 50% chance to be dampened back to it, +15% max hull, and once per raid a killing blow leaves you at 1 HP instead of sinking.',
     emoji: '\u{1F6E1}',
     rarity: 'legendary',
