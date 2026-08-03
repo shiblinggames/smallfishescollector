@@ -15,6 +15,8 @@ import { SIXTH_BERTH_COST, ARMORY_EXPANSION_COST, SPOILS_PRICE } from '@/lib/shi
 import type { RaidMuster, MusterReport } from '@/lib/crewMuster'
 import { CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE, THE_CARTOGRAPHER_CHALLENGE, THE_TOLLMASTER_CHALLENGE, THE_COFFERS_FLEET_CHALLENGE, THE_QUARTERMASTER_CHALLENGE, THE_BLOCKADE_CHALLENGE, THE_THRONE_CHALLENGE, THE_SUNKEN_HAND_CHALLENGE } from '@/lib/raidChallenge'
 import { getShipSkin } from '@/lib/shipSkins'
+import { ALL_RAIDS } from '@/lib/raidRegistry'
+import { RAID_ITEMS } from '@/lib/raidItems'
 import { SPECIAL_ITEMS } from '@/lib/specialItems'
 import { getRaidItem } from '@/lib/raidItems'
 
@@ -2963,6 +2965,50 @@ export function bossIdentityRevealed(node: RaidNode, clearedNodeIds: Set<string>
   if (node.revealBoss === true) return true
   if (node.revealBossAfter) return clearedNodeIds.has(node.revealBossAfter)
   return false
+}
+
+/** WHERE A DROP COMES FROM, as somewhere you can actually go.
+ *
+ *  The forge planner walks a build down to its base drops and, until now, could
+ *  only name the source in words: "Barnacle Pete's Raid". Knowing the name and
+ *  then having to go find the fight yourself is the boring half of the answer.
+ *
+ *  Two kinds of destination, because the sources genuinely differ:
+ *    'boss'    — a campaign raid, so open its boss card and let the player read
+ *                the drops and records before committing to the fight.
+ *    'route'   — a Gauntlet. There is no boss card for a run you descend, so it
+ *                goes straight to the entrance.
+ *
+ *  ALL_RAIDS is exhaustive by construction (raidRegistry exists precisely so the
+ *  server can answer "could this raid have dropped this?"), so the loot lookup
+ *  cannot silently miss a campaign item. The Gauntlet fallback keys off the def's
+ *  own `source` string rather than a hand-written item list, so a new Gauntlet
+ *  drop links itself with no change here. */
+export interface ItemSourceLink {
+  kind: 'boss' | 'route'
+  /** For 'boss': the RAID_MAP node whose card should open. */
+  nodeId?: string
+  /** For 'route': where to send them directly. */
+  route?: string
+  /** What to call the destination on the button. */
+  label: string
+}
+
+export function raidSourceForItem(itemId: string): ItemSourceLink | null {
+  // A campaign raid first. Prefer the NORMAL variant: a challenge drops the same
+  // things but is the harder door, and nobody farming a component wants to be
+  // pointed at the hard version of a fight they may not have cleared.
+  const dropping = ALL_RAIDS.filter(r => r.loot.some(l => l.id === itemId))
+  const normal = dropping.find(r => !r.raidId.endsWith('_challenge')) ?? dropping[0]
+  if (normal) {
+    const node = RAID_MAP.find(n => n.raidId === normal.raidId)
+    if (node) return { kind: 'boss', nodeId: node.id, label: node.label }
+  }
+  // Otherwise a Gauntlet, read off the item's stated source.
+  const src = RAID_ITEMS.find(i => i.id === itemId)?.source ?? ''
+  if (/don'?s gauntlet/i.test(src))       return { kind: 'route', route: '/raids/dons-gauntlet', label: "Don's Gauntlet" }
+  if (/davy jones gauntlet/i.test(src))   return { kind: 'route', route: '/raids/gauntlet', label: 'The Davy Jones Gauntlet' }
+  return null
 }
 
 /** Is this node a CHALLENGE VARIANT: a side branch hanging off a boss?

@@ -24,6 +24,7 @@
 //   4. THE COST      — open a recipe and it tells you, plainly, what forging it
 //                      spends and what that closes off.
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createPortal } from 'react-dom'
 import { vibrate } from '@/lib/haptics'
@@ -35,6 +36,7 @@ import {
   planForgeBuild, buildForgeTrees, isConvertibleEpic, legendaryForEpic, type ForgeRecipe, type ForgeTreeNode,
 } from '@/lib/raidItems'
 import LoadoutSummary from './LoadoutSummary'
+import { raidSourceForItem } from '@/lib/raidMap'
 import { PRISMATIC, forgedBorderSoft, forgedTextSoft, ABYSSAL_EMBER, ABYSSAL_EMBER_TEXT, abyssalEmberBorder } from '@/lib/prismatic'
 import { ABYSSAL_ACCEL_MS, ABYSSAL_ACCEL_GEM_COST, isConversionReady, type AbyssalConversion } from '@/lib/abyssalAccelerator'
 
@@ -120,6 +122,20 @@ export default function ForgeBoard({
   /** Reports which bench is showing so the page hero can match it. */
   onTabChange?: (tab: ForgeTab) => void
 }) {
+  const router = useRouter()
+  // GO AND GET IT. A leaf of a build tree names where it drops; this makes that
+  // name somewhere you can actually go. A campaign drop opens its boss card on
+  // the hub (so you read the odds and records before committing), a Gauntlet
+  // drop goes straight to the descent, since a run has no boss card to open.
+  //
+  // The forge is its own route, so this is a plain navigation. No handoff to
+  // the raid section, no drawer to close.
+  const goToSource = (itemId: string) => {
+    const link = raidSourceForItem(itemId)
+    if (!link) return
+    vibrate([0, 14])
+    router.push(link.kind === 'boss' ? `/expeditions?boss=${link.nodeId}` : link.route!)
+  }
   // Which forge you're looking at. The Abyssal (tier-3) tab only becomes a real
   // destination once you own the Abyssal Forge; before that it's a locked teaser.
   const [tab, setTab] = useState<ForgeTab>(2)
@@ -308,6 +324,7 @@ export default function ForgeBoard({
           onToggleTarget={id => { vibrate([0, 12]); setPlanTargets(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n }) }}
           onClear={() => { vibrate([0, 10]); setPlanTargets(new Set()) }}
           onOpenRecipe={id => setOpen(id)}
+          onGoToSource={goToSource}
         />
       ) : (<>
       {/* ── The Abyssal Accelerator — its OWN bench now, not a panel bolted
@@ -483,6 +500,7 @@ export default function ForgeBoard({
         learning={learning} learnArmed={learnArmed}
         onForgeTap={onForgeTap} onLearnTap={onLearnTap}
         onOpenRecipe={id => setOpen(id)}
+        onGoToSource={goToSource}
       />
     </>
   )
@@ -706,10 +724,11 @@ function AbyssalAcceleratorPanel({ unlocked, ownedRaidItems, conversion, gemsNow
  *  most, an answer that only raised the same question one level down.
  *
  *  Its own component because the sheet body is an IIFE, which cannot hold state. */
-function FullBreakdown({ resultId, ownedRaidItems, onOpenRecipe }: {
+function FullBreakdown({ resultId, ownedRaidItems, onOpenRecipe, onGoToSource }: {
   resultId: string
   ownedRaidItems: string[]
   onOpenRecipe?: (id: string) => void
+  onGoToSource?: (id: string) => void
 }) {
   const [open, setOpen] = useState(false)
   const tree = useMemo(() => buildForgeTrees([resultId], ownedRaidItems)[0], [resultId, ownedRaidItems])
@@ -732,7 +751,7 @@ function FullBreakdown({ resultId, ownedRaidItems, onOpenRecipe }: {
       {open && (
         <div style={{ marginLeft: 10, paddingLeft: 11, borderLeft: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: 3, marginTop: 6 }}>
           {tree.children.map((c, k) => (
-            <TreeBranch key={`${c.id}-${k}`} node={c} onOpenRecipe={id => onOpenRecipe?.(id)} />
+            <TreeBranch key={`${c.id}-${k}`} node={c} onOpenRecipe={id => onOpenRecipe?.(id)} onGoToSource={onGoToSource} />
           ))}
         </div>
       )}
@@ -742,13 +761,14 @@ function FullBreakdown({ resultId, ownedRaidItems, onOpenRecipe }: {
 
 function RecipeSheet({
   resultId, onClose, ownedRaidItems, state, fathomsNow,
-  forging, forgeArmed, learning, learnArmed, onForgeTap, onLearnTap, onOpenRecipe,
+  forging, forgeArmed, learning, learnArmed, onForgeTap, onLearnTap, onOpenRecipe, onGoToSource,
 }: {
   resultId: string | null
   onClose: () => void
   ownedRaidItems: string[]
   /** Drill into a sub-recipe from the breakdown, swapping the sheet's subject. */
   onOpenRecipe?: (id: string) => void
+  onGoToSource?: (id: string) => void
   state: State
   fathomsNow: number
   forging: string | null
@@ -856,7 +876,7 @@ function RecipeSheet({
                       </div>
                     ))}
                   </div>
-                  <FullBreakdown resultId={resultId} ownedRaidItems={ownedRaidItems} onOpenRecipe={onOpenRecipe} />
+                  <FullBreakdown resultId={resultId} ownedRaidItems={ownedRaidItems} onOpenRecipe={onOpenRecipe} onGoToSource={onGoToSource} />
                 </div>
               )}
 
@@ -981,14 +1001,18 @@ const NODE_META = {
 
 /** One node and everything beneath it. Recursive, so a future fusion-of-fusion
  *  tier draws itself with no changes here. */
-function TreeBranch({ node, onOpenRecipe }: {
+function TreeBranch({ node, onOpenRecipe, onGoToSource }: {
   node: ForgeTreeNode
   onOpenRecipe: (id: string) => void
+  /** Take me to where this drops. Only ever offered on a leaf. */
+  onGoToSource?: (id: string) => void
 }) {
   const def = getRaidItem(node.id)
   const meta = NODE_META[node.status]
   // Only a recipe has a sheet to open. A base drop has nothing behind it.
   const canOpen = !!getForgeRecipe(node.id)
+  // A leaf you still have to find, and somewhere to go for it.
+  const source = node.status === 'find' && onGoToSource ? raidSourceForItem(node.id) : null
   return (
     <div>
       {canOpen ? (
@@ -1007,6 +1031,32 @@ function TreeBranch({ node, onOpenRecipe }: {
             </span>
           </span>
           <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ flexShrink: 0, fontSize: '0.53rem', color: meta.color }}>
+            {meta.label}
+          </span>
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#6f6a63" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0 }}><path d="M9 18l6-6-6-6" /></svg>
+        </button>
+      ) : source ? (
+        <button type="button" onClick={() => onGoToSource!(node.id)} className="tap"
+          aria-label={`${def?.name ?? node.id}, drops from ${source.label}. Tap to go there.`}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8, width: '100%', minWidth: 0,
+            padding: '0.32rem 0.4rem', borderRadius: 8, textAlign: 'left', font: 'inherit',
+            background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)',
+            cursor: 'pointer', touchAction: 'manipulation',
+          }}>
+          <ItemArt id={node.id} size={20} />
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span className="font-karla font-700" style={{ display: 'block', fontSize: '0.78rem', color: '#e6e1d6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {def?.name ?? node.id}
+            </span>
+            {/* The source doubles as the button's label: the row says where it
+                drops AND is the way there, rather than naming a place and
+                leaving you to go find it. */}
+            <span className="font-karla" style={{ display: 'block', fontSize: '0.6rem', color: '#8fa9b6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {source.label}
+            </span>
+          </span>
+          <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ flexShrink: 0, fontSize: '0.53rem', color: NODE_META.find.color }}>
             {meta.label}
           </span>
           <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#6f6a63" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0 }}><path d="M9 18l6-6-6-6" /></svg>
@@ -1038,7 +1088,7 @@ function TreeBranch({ node, onOpenRecipe }: {
       {node.children.length > 0 && (
         <div style={{ marginLeft: 10, paddingLeft: 11, borderLeft: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: 3, marginTop: 3 }}>
           {node.children.map((c, k) => (
-            <TreeBranch key={`${c.id}-${k}`} node={c} onOpenRecipe={onOpenRecipe} />
+            <TreeBranch key={`${c.id}-${k}`} node={c} onOpenRecipe={onOpenRecipe} onGoToSource={onGoToSource} />
           ))}
         </div>
       )}
@@ -1047,10 +1097,11 @@ function TreeBranch({ node, onOpenRecipe }: {
 }
 
 /** One target, its cost line, and its tree behind a chevron. */
-function TreeCard({ node, startOpen, onOpenRecipe }: {
+function TreeCard({ node, startOpen, onOpenRecipe, onGoToSource }: {
   node: ForgeTreeNode
   startOpen: boolean
   onOpenRecipe: (id: string) => void
+  onGoToSource?: (id: string) => void
 }) {
   const [open, setOpen] = useState(startOpen)
   const def = getRaidItem(node.id)
@@ -1080,7 +1131,7 @@ function TreeCard({ node, startOpen, onOpenRecipe }: {
         <div style={{ padding: '0 0.65rem 0.6rem' }}>
           <div style={{ marginLeft: 10, paddingLeft: 11, borderLeft: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: 3 }}>
             {node.children.map((c, k) => (
-              <TreeBranch key={`${c.id}-${k}`} node={c} onOpenRecipe={onOpenRecipe} />
+              <TreeBranch key={`${c.id}-${k}`} node={c} onOpenRecipe={onOpenRecipe} onGoToSource={onGoToSource} />
             ))}
           </div>
         </div>
@@ -1091,7 +1142,7 @@ function TreeCard({ node, startOpen, onOpenRecipe }: {
 
 function ForgePlanner({
   recipes, ownedRaidItems, learnedRecipes, fathomsNow, raidItemSlots,
-  targets, onToggleTarget, onClear, onOpenRecipe,
+  targets, onToggleTarget, onClear, onOpenRecipe, onGoToSource,
 }: {
   recipes: ForgeRecipe[]
   ownedRaidItems: string[]
@@ -1102,6 +1153,7 @@ function ForgePlanner({
   onToggleTarget: (id: string) => void
   onClear: () => void
   onOpenRecipe: (id: string) => void
+  onGoToSource?: (id: string) => void
 }) {
   const owned = useMemo(() => new Set(ownedRaidItems), [ownedRaidItems])
   // Tier ascending, so a fusion you already hold settles the SIMPLER goal first
@@ -1258,11 +1310,11 @@ function ForgePlanner({
                 How they&apos;re made
               </p>
               <p className="font-karla" style={{ fontSize: '0.72rem', color: '#8a8480', lineHeight: 1.45, marginBottom: 11 }}>
-                Open one to walk its parts down to the drops. Tap any fusion to read its recipe.
+                Open one to walk its parts down to the drops. Tap a fusion to read its recipe, or a drop to go where it falls.
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18 }}>
                 {plan.trees.map((t, k) => (
-                  <TreeCard key={`${t.id}-${k}`} node={t} startOpen={plan.trees.length === 1} onOpenRecipe={onOpenRecipe} />
+                  <TreeCard key={`${t.id}-${k}`} node={t} startOpen={plan.trees.length === 1} onOpenRecipe={onOpenRecipe} onGoToSource={onGoToSource} />
                 ))}
               </div>
             </>

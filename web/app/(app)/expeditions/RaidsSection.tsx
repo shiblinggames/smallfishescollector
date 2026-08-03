@@ -3556,6 +3556,32 @@ export default function RaidsSection({ views, doubloons, totalFortune = 0, spoil
   // Challenge one tap away). Journey stays the default for the narrative.
   const [view, setView] = useState<'journey' | 'bosses'>('journey')
   const [selected, setSelected] = useState<RaidNodeView | null>(null)
+
+  // ?boss=<nodeId> opens that boss's card on arrival. The forge's build planner
+  // uses it: a drop in a recipe tree names where it falls, and tapping it lands
+  // you here on the fight that drops it. A query param rather than shared state
+  // because the forge is a SEPARATE ROUTE (/expeditions/forge), so the two never
+  // exist at once and there is nothing to hand off between them.
+  //
+  // The param is stripped once consumed, so a refresh or a back-navigation does
+  // not keep reopening a sheet the player already dismissed.
+  //
+  // Read straight off the URL rather than through useSearchParams: that hook
+  // forces a Suspense boundary on any route Next statically analyses, and
+  // /expeditions is not force-dynamic the way /crew is. This runs once on mount
+  // and strips the param immediately, so the reactive hook bought nothing and
+  // cost a build constraint.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const bossParam = new URLSearchParams(window.location.search).get('boss')
+    if (!bossParam) return
+    const target = views.find(v => v.node.id === bossParam)
+    if (target) setSelected(target)
+    router.replace('/expeditions', { scroll: false })
+    // Mount only: the param is consumed and cleared, so re-running on `views`
+    // would just re-read an empty query.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   // Per-chapter manual toggle overrides. Membership means the player
   // has flipped the default open/closed state for that chapter — works
   // in both directions: open a fully-cleared chapter back up, OR close
