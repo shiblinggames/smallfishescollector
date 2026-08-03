@@ -3521,10 +3521,11 @@ function JourneyChapter({ views, onSelect }: { views: RaidNodeView[]; onSelect: 
                 <span style={{ position: 'absolute', left: 13, right: 12, bottom: 9, zIndex: 1 }}>
                   <span style={{ display: 'flex', alignItems: 'baseline', gap: 7, flexWrap: 'wrap' }}>
                     <span className="font-cinzel font-700" style={{ fontSize: '1.16rem', color: locked ? '#b8b1a5' : '#fff', lineHeight: 1.05, textShadow: '0 2px 8px rgba(0,0,0,0.9)' }}>{node.label}</span>
-                    {/* Hardcoding "Challenge" was safe while challenges were the
-                        only branches that could reach here. They are now the only
-                        ones that CANNOT, so the label has to come from the node. */}
-                    {isSide && <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.1em', color: '#fff', background: `${SIDE_BRANCH_ACCENT}cc`, borderRadius: 999, padding: '2px 7px' }}>{isChallengeVariant(node.id) ? 'Challenge' : 'Side Raid'}</span>}
+                    {/* No branch tag. It said "Challenge" back when challenges
+                        were the only side branches drawn here, and they are now
+                        the only ones that are NOT. Relabelling it just put a
+                        word on the card that the indent and the crimson accent
+                        already say, beside a name that needs the room. */}
                   </span>
                   <span className="font-karla" style={{ display: 'block', fontSize: '0.76rem', color: 'rgba(233,226,214,0.82)', marginTop: 3, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>{node.flavor}</span>
                 </span>
