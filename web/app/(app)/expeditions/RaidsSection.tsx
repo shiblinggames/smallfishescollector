@@ -1570,14 +1570,29 @@ function NodeDetailSheet({
         {/* THE SPOILS OF THE SUNKEN HAND. Its own bench rather than a price
             row: this is a permanent CHOICE first and a purchase second, so it
             gets the Accelerator treatment (living cores, arm-then-confirm). */}
-        {node.spoils && (
+        {/* GATED ON THE NODE BEING UNLOCKED. The berth block below always checked
+            its status and this one never did, so on a node carrying
+            previewWhenLocked (which opens the sheet long before the fight, on
+            purpose, to tease what is down there) the live board rendered to
+            players who had not put Finn down. chooseSpoil refuses server-side,
+            so nothing could actually be taken, but the game was offering a
+            post-game choice to someone with no way to make it.
+
+            Not gated on `cleared`: nothing ever marks a spoils node cleared, so
+            that would hide the board forever, including from the players it is
+            for. */}
+        {node.spoils && (status === 'locked' ? (
+          <p className="font-karla" style={{ marginTop: '1.1rem', fontSize: '0.76rem', color: '#8a8880', lineHeight: 1.5, fontStyle: 'italic' }}>
+            Nothing to divide yet. Put him down, let it go quiet, and the wreck will give up what it is holding.
+          </p>
+        ) : (
           <SpoilsBoard
             freeSide={spoilFree === 'fishing' || spoilFree === 'nav' ? spoilFree : null}
             paidSide={spoilPaid === 'fishing' || spoilPaid === 'nav' ? spoilPaid : null}
             doubloons={doubloons}
             onDone={() => router.refresh()}
           />
-        )}
+        ))}
 
         {node.berth && cleared && (() => {
           const price = node.berth.price
