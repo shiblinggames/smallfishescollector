@@ -48,6 +48,10 @@ const ROWS: { type: RaidEffectType; label: string; group: Group; fold: Fold; fmt
   { type: 'max_hit_pct',             label: 'Hit cap',          group: 'defense', fold: 'max',     fmt: rate },
   { type: 'max_hit_chance',          label: 'Hit cap odds',     group: 'defense', fold: 'max',     fmt: rate },
   { type: 'lethal_save',             label: 'Lethal saves',     group: 'defense', fold: 'sum',     fmt: n => `${n}` },
+  // The ward SUMS (two sources should add up to a bigger wall) while its brace
+  // rate takes the best, matching how combat folds them.
+  { type: 'ward_pct',                label: 'Ward',             group: 'defense', fold: 'sum',     fmt: plus },
+  { type: 'ward_refill_pct',         label: 'Braced on reload', group: 'defense', fold: 'max',     fmt: rate },
   // ── Special ── the procs and mechanics, which is most of what makes a build
   { type: 'burn_chance',             label: 'Set ablaze',       group: 'special', fold: 'max',     fmt: rate },
   { type: 'freeze_chance',           label: 'Freeze',           group: 'special', fold: 'max',     fmt: rate },

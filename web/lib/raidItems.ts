@@ -41,6 +41,18 @@ export type RaidEffectType =
   | 'mega_damage_mult'      // value = multiplier on the MEGA (the player's ultimate) only
   | 'extra_start_charge_chance' // value = 0-1 chance for ONE MORE opening cannonball, rolled SEPARATELY from start_charge_chance and ADDED to it. Spet's primers are a tier family and take the best-of among themselves; this deliberately sits outside that so it stacks on top of them instead of being swallowed by the max.
   | 'crit_charge_refund_chance' // value = 0-1 chance, on a CRITICAL shot, that the shot costs NOTHING. Applies to fire, volley and mega alike, so it refunds whatever that action was about to spend.
+  // ── THE WARD (Don's Palisade) ─────────────────────────────────────────────
+  // A player BARRIER, which no item has ever granted. Every defensive item to
+  // date either scales a percentage (incoming_damage_mult), raises the pool
+  // (max_hp_mult) or caps one blow (max_hit_pct); a flat absorb that refills is
+  // the inverse of all three, strongest against a stream of small hits and
+  // weakest against a single enormous one. Stormward proves the fantasy but is
+  // a Gauntlet BOON, so it does not exist in raids at all.
+  //
+  // It soaks from the same pool every other shield uses, so it shows in the one
+  // combined shield chip on the HP bar rather than inventing a second bar.
+  | 'ward_pct'              // value = 0-1 fraction of your MAX HP held as a barrier that soaks damage before the hull. Sources SUM.
+  | 'ward_refill_pct'       // value = 0-1 fraction of the ward's capacity braced back on each RELOAD, never past the pool's opening size. Sources take the BEST.
   | 'afflicted_damage_mult' // value = damage multiplier vs an enemy that ALREADY carries any status/affliction (burning, frozen, weakened, corroded, feeble, slowed, marked…) at the moment you hit (The Shakedown). The proc that FIRST applies a status lands after this hit, so the bonus kicks in from the next hit on. Rewards a status/elemental build.
 
 export interface RaidEffect {
@@ -976,6 +988,62 @@ export const RAID_ITEMS: RaidItemDef[] = [
     ],
     source: "Abyssal Forge: Ambush Signet + Marauder's Cannon",
   },
+  // ── DON'S HARDCORE CHASE ────────────────────────────────────────────────────
+  // The mirror of Davy's Blood Cannon: one mechanic, held by one item, dropped by
+  // one place. Davy's pays you for aggression (heal by dealing damage); the Don's
+  // pays you for the pause, since the ward braces on the turn you RELOAD rather
+  // than the turn you shoot. Two hardcore chases that oppose each other in the
+  // loop they reward, not just in the stat they carry.
+  //
+  // Rarity `rare` and modest numbers, exactly like the Blood Cannon at 8%
+  // lifesteal. A hardcore chase is not a big number, it is the ONLY source of its
+  // mechanic.
+
+  {
+    id: 'dons_palisade',
+    name: "Don's Palisade",
+    image: null,
+    description: 'Opens every fight behind a barrier worth 12% of your hull, and every Reload braces 50% of it back. The Don does not need to be there for it to hold.',
+    emoji: '\u{1F6E1}',
+    rarity: 'rare',
+    effects: [
+      { type: 'ward_pct',        value: 0.12 },
+      { type: 'ward_refill_pct', value: 0.50 },
+    ],
+    source: "Hardcore \u00B7 Don's Gauntlet",
+  },
+  {
+    id: 'palisade_bulwark',
+    name: 'Palisade Bulwark',
+    image: null,
+    description: 'Opens every fight behind a barrier worth 16% of your hull and braces 50% of it back on every Reload, and a single hit over 25% of your max hull has a 50% chance to be dampened back to it. The chip and the haymaker, both answered.',
+    emoji: '\u{1F6E1}',
+    rarity: 'epic',
+    effects: [
+      { type: 'ward_pct',        value: 0.16 },
+      { type: 'ward_refill_pct', value: 0.50 },
+      { type: 'max_hit_pct',     value: 0.25 },
+      { type: 'max_hit_chance',  value: 0.50 },
+    ],
+    source: "Forged from Don's Palisade + Dampener Plate",
+  },
+  {
+    id: 'the_standing_wall',
+    name: 'The Standing Wall',
+    image: null,
+    description: 'Opens every fight behind a barrier worth 22% of your hull and braces 60% of it back on every Reload, a single hit over 25% of your max hull has a 50% chance to be dampened back to it, +15% max hull, and once per raid a killing blow leaves you at 1 HP instead of sinking.',
+    emoji: '\u{1F6E1}',
+    rarity: 'legendary',
+    effects: [
+      { type: 'ward_pct',        value: 0.22 },
+      { type: 'ward_refill_pct', value: 0.60 },
+      { type: 'max_hit_pct',     value: 0.25 },
+      { type: 'max_hit_chance',  value: 0.50 },
+      { type: 'max_hp_mult',     value: 1.15 },
+      { type: 'lethal_save',     value: 1 },
+    ],
+    source: 'Abyssal Forge: Palisade Bulwark + Last Bastion',
+  },
 ]
 
 // ── Forge recipes ─────────────────────────────────────────────────────────────
@@ -1033,6 +1101,12 @@ export const FORGE_RECIPES: ForgeRecipe[] = [
   //    the ordinary `forge`). Components are themselves tier-2 fusions, so each
   //    one consumes four base items' worth of forging. Parents are DISJOINT
   //    across the four recipes, so each Abyssal is its own build identity. ──────
+  // The Palisade's line. Like Davy's Blood Cannon feeding the Bloodletter and
+  // the Reaver's Cannon, the hardcore mechanic PROPAGATES rather than being
+  // spent: every child keeps the ward, so forging your chase away never costs
+  // you the only thing that grants it.
+  { components: ['dons_palisade', 'made_man'],                          result: 'palisade_bulwark',    fathomCost: 150 },
+  { components: ['palisade_bulwark', 'last_bastion'],                   result: 'the_standing_wall',   fathomCost: 250, tier: 3 },
   { components: ['siege_cannon', 'warlords_cannon'],                    result: 'leviathans_cannon',   fathomCost: 250, tier: 3 },
   { components: ['ironclad_bulwark', 'deflector_plate'],                result: 'aegis_of_the_deep',   fathomCost: 250, tier: 3 },
   { components: ['marauders_cannon', 'last_bastion'],                   result: 'drowned_crown',       fathomCost: 250, tier: 3 },

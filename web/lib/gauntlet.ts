@@ -1053,6 +1053,10 @@ export const GHOST_HULL_DROP_MULT = 0.5
 export const DONS_GAUNTLET_ITEM_IDS = ['opening_statement', 'made_man', 'the_shakedown']
 export const BLOOD_CANNON_ITEM_ID = 'davys_blood_cannon'
 export const BLOOD_CANNON_CHEST_TIER = 3
+// Don's hardcore chase, the mirror of the Blood Cannon: same chest-tier gate,
+// same curve, same "drops again once you forge it away" rule.
+export const PALISADE_ITEM_ID = 'dons_palisade'
+export const PALISADE_CHEST_TIER = 3
 
 export interface ChestOdd {
   id: string
@@ -1124,6 +1128,12 @@ export function chestOdds(opts: {
     if (tier >= GHOST_HULL_CHEST_TIER && !ownedSkins.includes(GHOST_HULL_SKIN_ID)) {
       out.push({ id: GHOST_HULL_SKIN_ID, name: "Don's Ghost Hull", kind: 'skin', chance: m(chestSkinDropChance(payDepth) * GHOST_HULL_DROP_MULT), chanceBeforeFortune: m0(chestSkinDropChance(payDepth) * GHOST_HULL_DROP_MULT) })
     }
+    // Hardcore only: Don's Palisade, on the Blood Cannon's exact rule. Fusing it
+    // into the Palisade Bulwark consumes it, so it becomes droppable again
+    // rather than going extinct for the players who engaged with it most.
+    if (hardcore && tier >= PALISADE_CHEST_TIER && !ownedItems.includes(PALISADE_ITEM_ID)) {
+      out.push({ id: PALISADE_ITEM_ID, name: "Don's Palisade", kind: 'item', chance: cannon, chanceBeforeFortune: cannon0 })
+    }
     return out
   }
   // The two Davy cannons roll INDEPENDENTLY, purely on whether you hold them.
@@ -1187,6 +1197,7 @@ const DROP_ODDS_META: Record<string, { kind: 'item' | 'skin'; tierGate: number; 
   opening_statement:    { kind: 'item', tierGate: 1,                       mult: 1 },
   made_man:             { kind: 'item', tierGate: 1,                       mult: 1 },
   the_shakedown:        { kind: 'item', tierGate: 1,                       mult: 1 },
+  dons_palisade:        { kind: 'item', tierGate: PALISADE_CHEST_TIER,    mult: 1 },
   galaxy_hull:          { kind: 'skin', tierGate: GALAXY_HULL_CHEST_TIER,  mult: 1 },
   dons_ghost_hull:      { kind: 'skin', tierGate: GHOST_HULL_CHEST_TIER,   mult: GHOST_HULL_DROP_MULT },
 }

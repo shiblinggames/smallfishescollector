@@ -991,6 +991,21 @@ export default function RaidCombat({
   // regular raids without boons are untouched.
   const fightShieldMaxRef = useRef(Math.round(tide.fightShieldPct * playerHpMax))
   fightShieldMaxRef.current = Math.round(tide.fightShieldPct * playerHpMax)
+  // THE WARD (Don's Palisade). A player barrier off an ITEM rather than a boon,
+  // so it exists in raids where Stormward never has. It soaks from the same pool
+  // as every other shield, so it shows in the one combined chip on the HP bar.
+  //
+  // ward_pct SUMS across sources (a fusion carrying its parent's ward should add
+  // up), while ward_refill_pct takes the BEST, since two different brace rates
+  // on one reload has no sensible reading.
+  const wardFx = getActiveEffects(equippedRaidItems)
+  const wardMaxRef = useRef(0)
+  wardMaxRef.current = Math.round(wardFx.filter(e => e.type === 'ward_pct').reduce((a, e) => a + e.value, 0) * playerHpMax)
+  const wardRefillRef = useRef(0)
+  wardRefillRef.current = Math.round(wardMaxRef.current * wardFx.filter(e => e.type === 'ward_refill_pct').reduce((a, e) => Math.max(a, e.value), 0))
+  // The pool's opening size, so a Reload brace can top it back up without ever
+  // pushing it past what the fight started with.
+  const shieldOpenMaxRef = useRef(0)
   // Guaranteed-dodge tide (one-shot "next fight" token). Mirror the bank size
   // so the tight-deps reset effect can refill it per fight, and track how many
   // are LEFT this fight in a separate ref the dodge resolver decrements.
@@ -2202,9 +2217,10 @@ export default function RaidCombat({
     guaranteedDodgeLeftRef.current = guaranteedDodgeBankRef.current
     // Stormward: reform the fight shield into the soak pool. Only when active,
     // so non-boon raids never touch the Abyssal Tide pool here.
-    if (fightShieldMaxRef.current > 0) {
-      abyssalShieldRef.current = fightShieldMaxRef.current
-      setAbyssalShieldHp(fightShieldMaxRef.current)
+    shieldOpenMaxRef.current = fightShieldMaxRef.current + wardMaxRef.current
+    if (shieldOpenMaxRef.current > 0) {
+      abyssalShieldRef.current = shieldOpenMaxRef.current
+      setAbyssalShieldHp(shieldOpenMaxRef.current)
       // Reforms the opening boon layer each fight (overwrites the total), so the
       // crew layer resets to 0 to keep boon + crew == the total.
       // Opening Bulwark — the opening-shield synergies (Stormward / Last Bastion /
@@ -4207,6 +4223,16 @@ export default function RaidCombat({
             stepLines.push(`${label}! +${procGain} extra cannonball${procGain === 1 ? '' : 's'}. (${pCharges}/${playerMaxCharges})`)
           } else {
             stepLines.push(`You load a cannonball. (${pCharges}/${playerMaxCharges})`)
+          }
+          // THE PALISADE BRACES. The turn you are not shooting buys something
+          // back, which is the whole point of putting the refill on Reload
+          // rather than on a timer: it makes the defensive beat a decision.
+          // Capped to the pool's opening size so repeated reloads top up rather
+          // than stack a bigger and bigger wall.
+          if (wardRefillRef.current > 0 && abyssalShieldRef.current < shieldOpenMaxRef.current) {
+            const braced = Math.min(wardRefillRef.current, shieldOpenMaxRef.current - abyssalShieldRef.current)
+            abyssalShieldRef.current += braced
+            stepLines.push(`The Palisade braces. +${braced} shield.`)
           }
         }
         else                  {
