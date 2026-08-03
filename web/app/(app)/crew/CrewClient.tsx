@@ -2652,36 +2652,50 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                       </p>
                     ) : (
                       <>
-                        {/* Same chip language as the trawl sheet and the assign
-                            picker. Wraps rather than scrolls, and only appears
-                            once there is more than one hand to order. */}
-                        {/* fit-content, not the block default. A div fills its
-                            parent, so this fully-rounded pill was stretching the
-                            whole card width with the chips crammed into the left
-                            third and a long empty stadium trailing off to the
-                            right. It hugs its chips now, matching AssignPicker,
-                            whose groups only looked right because they sit in a
-                            flex parent that shrinks them. maxWidth keeps the
-                            wrap behaviour on a narrow phone. */}
+                        {/* SORT. Two failed shapes before this one, and both
+                            failures were the same mistake: treating a full-width
+                            row as a place to put a hugging pill.
+
+                            First it was a block div, so the stadium stretched the
+                            whole width with the chips crammed into the left third
+                            and a long empty tail. Then fit-content, which fixed
+                            the tail and produced a small pill marooned in the
+                            top-left corner of a wide screen instead.
+
+                            It is a segmented control now: equal tracks across the
+                            full width, so the row is FULL rather than hugging or
+                            stretched, and every option is the same size target.
+                            minmax(0, 1fr) because a bare 1fr carries an implicit
+                            auto minimum and cannot shrink below its text.
+
+                            The label earns its line: "Sort by" is the one thing
+                            six colour-coded words do not say on their own, and
+                            this row has been read as a filter more than once. */}
                         {state.roster.length > 1 && (
-                          <div style={{ display: 'inline-flex', gap: 3, flexWrap: 'wrap', width: 'fit-content', maxWidth: '100%', padding: 3, marginBottom: 10, borderRadius: 999, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)' }}>
-                            {ROSTER_SORTS.map(o => {
-                              const on = rosterSort === o.k
-                              return (
-                                <button key={o.k} type="button" onClick={() => setRosterSort(o.k)}
-                                  className="font-karla font-700 uppercase tracking-[0.06em]"
-                                  aria-pressed={on}
-                                  style={{
-                                    padding: '0.3rem 0.5rem', borderRadius: 999, fontSize: '0.56rem',
-                                    background: on ? `${o.color}26` : 'transparent',
-                                    border: `1px solid ${on ? `${o.color}88` : 'transparent'}`,
-                                    color: on ? o.color : 'rgba(255,255,255,0.5)',
-                                    cursor: 'pointer', whiteSpace: 'nowrap', touchAction: 'manipulation',
-                                  }}>
-                                  {o.label}
-                                </button>
-                              )
-                            })}
+                          <div style={{ marginBottom: 10 }}>
+                            <p className="font-karla font-800 uppercase" style={{ fontSize: '0.54rem', letterSpacing: '0.16em', color: 'rgba(255,255,255,0.38)', marginBottom: 6 }}>
+                              Sort by
+                            </p>
+                            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${ROSTER_SORTS.length}, minmax(0, 1fr))`, gap: 3, padding: 3, borderRadius: 999, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)' }}>
+                              {ROSTER_SORTS.map(o => {
+                                const on = rosterSort === o.k
+                                return (
+                                  <button key={o.k} type="button" onClick={() => setRosterSort(o.k)}
+                                    className="font-karla font-700 uppercase tracking-[0.04em]"
+                                    aria-pressed={on}
+                                    style={{
+                                      minWidth: 0, padding: '0.34rem 0.25rem', borderRadius: 999, fontSize: '0.55rem',
+                                      background: on ? `${o.color}26` : 'transparent',
+                                      border: `1px solid ${on ? `${o.color}88` : 'transparent'}`,
+                                      color: on ? o.color : 'rgba(255,255,255,0.5)',
+                                      cursor: 'pointer', textAlign: 'center', touchAction: 'manipulation',
+                                      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                    }}>
+                                    {o.label}
+                                  </button>
+                                )
+                              })}
+                            </div>
                           </div>
                         )}
                         {grid(sortedRoster, 0, SECTION_NEUTRAL)}
