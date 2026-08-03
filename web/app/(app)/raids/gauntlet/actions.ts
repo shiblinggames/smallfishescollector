@@ -17,7 +17,7 @@ import { navRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
 import { termPressure, pressureGemMult, pressureFeats, pressureSkinDropChance, resolveTerms, PRESSURE_SKIN_ID, getTerm, type SignedTerms } from '@/lib/gauntletTerms'
 import { grantBadgeDirect } from '@/lib/badgeGrant'
-import { GOLD_HULL_SKIN_ID, GOLD_HULL_CHEST_TIER, BLOOD_HULL_SKIN_ID, BLOOD_HULL_CHEST_TIER, GALAXY_HULL_SKIN_ID, GALAXY_HULL_CHEST_TIER, GHOST_HULL_SKIN_ID, GHOST_HULL_CHEST_TIER, GHOST_HULL_DROP_MULT, DONS_GAUNTLET_ITEM_IDS, BLOOD_CANNON_ITEM_ID, BLOOD_CANNON_CHEST_TIER, maxPotForDepth, chestForDepth, chestCannonDropChance, chestSkinDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_REWARD_DEPTH_CAP, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, gauntletXpForDepth, gauntletCrewXp, DONS_CHEST_GEM_MULT, CONFLUENCES, hardcoreUnlocked, HARDCORE_LIVE, HARDCORE_UNLOCKS, HARDCORE_RUNS_PER_DAY, HC_FATHOMS_MULT, HC_SURVIVOR_XP_MULT, bloodGemsForDepth, coerceRunStats, chestOdds, type GauntletRunSnapshot, type GauntletRunState, type GauntletVariant } from '@/lib/gauntlet'
+import { GOLD_HULL_SKIN_ID, GOLD_HULL_CHEST_TIER, BLOOD_HULL_SKIN_ID, BLOOD_HULL_CHEST_TIER, GALAXY_HULL_SKIN_ID, GALAXY_HULL_CHEST_TIER, GHOST_HULL_SKIN_ID, GHOST_HULL_CHEST_TIER, GHOST_HULL_DROP_MULT, DONS_GAUNTLET_ITEM_IDS, BLOOD_CANNON_ITEM_ID, BLOOD_CANNON_CHEST_TIER, maxPotForDepth, chestForDepth, chestCannonDropChance, chestSkinDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_REWARD_DEPTH_CAP, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, gauntletXpForDepth, gauntletCrewXp, DONS_CHEST_GEM_MULT, CONFLUENCES, hardcoreUnlocked, donsHardcoreUnlocked, hcCols, HARDCORE_LIVE, HARDCORE_UNLOCKS, HARDCORE_RUNS_PER_DAY, HC_FATHOMS_MULT, HC_SURVIVOR_XP_MULT, bloodGemsForDepth, coerceRunStats, chestOdds, type GauntletRunSnapshot, type GauntletRunState, type GauntletVariant } from '@/lib/gauntlet'
 import { getGauntletUpgrade, isUpgradeComingSoon, isToggleableUpgrade, activeGauntletUpgrades, gauntletHaulMult, gauntletXpMult, gauntletFathomsMult, donsBloodGemMult, DONS_DAILY_TRIBUTE_ID, DONS_DAILY_TRIBUTE_AMOUNT } from '@/lib/gauntletUpgrades'
 import { DAVY_FORGE } from '@/lib/raidItems'
 import {
@@ -324,7 +324,7 @@ export async function getGauntletLeaderboard(variant: GauntletVariant = 'davy'):
   top: { name: string; depth: number } | null
   mine: number
   /** #1 on the hardcore-only Drowned Ledger + this player's hardcore best.
-   *  Don's Gauntlet has no hardcore board yet (fast-follow), so both stay null/0. */
+   *  Each descent has its OWN ledger, so this is whichever one you are looking at. */
   hardcoreTop: { name: string; depth: number } | null
   hardcoreMine: number
 }> {
@@ -346,7 +346,7 @@ export async function getGauntletLeaderboard(variant: GauntletVariant = 'davy'):
     .maybeSingle()
   const [{ data: top }, hc] = await Promise.all([
     topQuery(isDon ? 'leaderboard_dons_gauntlet' : 'leaderboard_gauntlet'),
-    isDon ? null : topQuery('leaderboard_gauntlet_hardcore'),
+    topQuery(hcCols(variant).ledger),
   ])
   const hcTop = hc?.data ?? null
 
@@ -355,11 +355,11 @@ export async function getGauntletLeaderboard(variant: GauntletVariant = 'davy'):
   if (user) {
     const { data: me } = await admin
       .from('profiles')
-      .select('gauntlet_deepest, gauntlet_hc_deepest, dons_gauntlet_deepest')
+      .select('gauntlet_deepest, gauntlet_hc_deepest, dons_gauntlet_deepest, dons_gauntlet_hc_deepest')
       .eq('id', user.id)
       .single()
     mine = ((isDon ? me?.dons_gauntlet_deepest : me?.gauntlet_deepest) as number | null) ?? 0
-    hardcoreMine = isDon ? 0 : ((me?.gauntlet_hc_deepest as number | null) ?? 0)
+    hardcoreMine = (me?.[hcCols(variant).deepest] as number | null) ?? 0
   }
 
   const asTop = (row: { username?: string | null; score?: number | string } | null) =>
@@ -383,7 +383,7 @@ export async function getGauntletDailyState(variant: GauntletVariant = 'davy'): 
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_last_run_at, gauntlet_deepest, gauntlet_fathoms, gauntlet_deepest_run, gauntlet_hc_deepest_run, gauntlet_last_run, gauntlet_hc_last_run, dons_gauntlet_last_run, is_admin, gauntlet_run_open, gauntlet_run_state, gauntlet_resumes_used, gauntlet_run_paused, gauntlet_hc_deepest, gauntlet_run_hardcore, gauntlet_hc_last_run_at, gauntlet_hc_runs_today, raid_node_progress, gauntlet_run_terms, gauntlet_run_variant, dons_gauntlet_deepest, dons_gauntlet_deepest_run')
+    .select('gauntlet_last_run_at, gauntlet_deepest, gauntlet_fathoms, gauntlet_deepest_run, gauntlet_hc_deepest_run, gauntlet_last_run, gauntlet_hc_last_run, dons_gauntlet_last_run, is_admin, gauntlet_run_open, gauntlet_run_state, gauntlet_resumes_used, gauntlet_run_paused, gauntlet_hc_deepest, gauntlet_run_hardcore, gauntlet_hc_last_run_at, gauntlet_hc_runs_today, raid_node_progress, gauntlet_run_terms, gauntlet_run_variant, dons_gauntlet_deepest, dons_gauntlet_deepest_run, dons_gauntlet_hc_deepest, dons_gauntlet_hc_deepest_run, dons_gauntlet_hc_last_run, dons_gauntlet_hc_last_run_at, dons_gauntlet_hc_runs_today')
     .eq('id', user.id)
     .single()
   // "One run at a time": a resume only belongs to THIS gauntlet if the open run's
@@ -412,28 +412,37 @@ export async function getGauntletDailyState(variant: GauntletVariant = 'davy'): 
   const clearedNodes = (profile?.raid_node_progress as { cleared?: string[] } | null)?.cleared ?? []
   // Hardcore runs remaining in the current UTC day (resets when the date rolls;
   // admins bypass the cap, so they always read full). Mirrors startGauntletRun.
-  const hcLastAt = profile?.gauntlet_hc_last_run_at ? new Date(profile.gauntlet_hc_last_run_at as string) : null
+  // Each descent counts its OWN daily budget: three Davy runs and three Don's,
+  // not three shared between them. The columns are picked by variant, so the two
+  // counters can never see each other.
+  const HC = hcCols(variant)
+  const hcLastAt = profile?.[HC.lastRunAt] ? new Date(profile[HC.lastRunAt] as string) : null
   const hcSameUtcDay = !!hcLastAt && hcLastAt.toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10)
-  const hcUsedToday = hcSameUtcDay ? Number(profile?.gauntlet_hc_runs_today ?? 0) : 0
+  const hcUsedToday = hcSameUtcDay ? Number(profile?.[HC.runsToday] ?? 0) : 0
   const hcRunsLeft = isAdmin ? HARDCORE_RUNS_PER_DAY : Math.max(0, HARDCORE_RUNS_PER_DAY - hcUsedToday)
+  const donsDeepest = (profile?.dons_gauntlet_deepest as number | null) ?? 0
+  const throneCleared = clearedNodes.includes('the_throne')
   return {
     available,
     deepest,
     fathoms: (profile?.gauntlet_fathoms as number | null) ?? 0,   // shared purse
     nextAt: available ? null : new Date(nextMs).toISOString(),
     deepestRun: (isDon ? (profile?.dons_gauntlet_deepest_run as GauntletRunSnapshot | null) : (profile?.gauntlet_deepest_run as GauntletRunSnapshot | null)) ?? null,
-    hcDeepestRun: (profile?.gauntlet_hc_deepest_run as GauntletRunSnapshot | null) ?? null,
+    hcDeepestRun: (profile?.[HC.deepestRun] as GauntletRunSnapshot | null) ?? null,
     lastRun: (isDon ? (profile?.dons_gauntlet_last_run as GauntletRunSnapshot | null) : (profile?.gauntlet_last_run as GauntletRunSnapshot | null)) ?? null,
-    hcLastRun: (profile?.gauntlet_hc_last_run as GauntletRunSnapshot | null) ?? null,
+    hcLastRun: (profile?.[HC.lastRun] as GauntletRunSnapshot | null) ?? null,
     resumeState,
     resumePaused,
-    // Hardcore is a DON'S fast-follow — not built yet, so force it off on the
-    // Don's screen (Davy's hardcore state stays as-is on Davy's).
-    hardcoreUnlocked: isDon ? false : hardcoreUnlocked({ isAdmin, clearedNodes, deepest }),
-    hardcoreLive: isDon ? false : HARDCORE_LIVE,
-    hcDeepest: isDon ? 0 : ((profile?.gauntlet_hc_deepest as number | null) ?? 0),
+    // Each descent gates its own hardcore. Don's asks for the Throne plus depth
+    // in HIS water: reaching depth 10 of Davy's says nothing about surviving the
+    // Ch3/Ch4 pool.
+    hardcoreUnlocked: isDon
+      ? donsHardcoreUnlocked({ isAdmin, throneCleared, donsDeepest })
+      : hardcoreUnlocked({ isAdmin, clearedNodes, deepest }),
+    hardcoreLive: HARDCORE_LIVE,
+    hcDeepest: (profile?.[HC.deepest] as number | null) ?? 0,
     // Hardcore runs left today (of HARDCORE_RUNS_PER_DAY) for the mode-choice card.
-    hcRunsLeft: isDon ? 0 : hcRunsLeft,
+    hcRunsLeft,
     // Is the currently OPEN (resumable) run a hardcore one? Lets a resumed run
     // keep its hardcore end-beats + abandon warning. Only if it's THIS variant's run.
     runHardcore: openVariant === variant && profile?.gauntlet_run_hardcore === true,
@@ -526,12 +535,13 @@ export async function startGauntletRun(hardcore = false, terms?: SignedTerms, va
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_last_run_at, gauntlet_deepest, is_admin, raid_node_progress, gauntlet_hc_last_run_at, gauntlet_hc_runs_today, gauntlet_run_open, gauntlet_run_variant, dons_gauntlet_deepest')
+    .select('gauntlet_last_run_at, gauntlet_deepest, is_admin, raid_node_progress, gauntlet_hc_last_run_at, gauntlet_hc_runs_today, gauntlet_run_open, gauntlet_run_variant, dons_gauntlet_deepest, dons_gauntlet_hc_last_run_at, dons_gauntlet_hc_runs_today')
     .eq('id', user.id)
     .single()
 
   if (variant === 'don') hardcore = false   // Don's Gauntlet hardcore is a later fast-follow
   const isDon = variant === 'don'
+  const HC = hcCols(variant)
   const deepest = ((isDon ? (profile?.dons_gauntlet_deepest as number | null) : (profile?.gauntlet_deepest as number | null)) ?? 0)
   const isAdmin = profile?.is_admin === true
   // One run at a time: block starting THIS gauntlet while a DIFFERENT gauntlet's
@@ -568,17 +578,23 @@ export async function startGauntletRun(hardcore = false, terms?: SignedTerms, va
   if (hardcore) {
     const clearedNodes = (profile?.raid_node_progress as { cleared?: string[] } | null)?.cleared ?? []
     // Server-enforced gate — admin-only until HARDCORE_LIVE (so the action can't
-    // be forced from the client), then unlock + normal-Gauntlet depth floor.
-    if (!hardcoreUnlocked({ isAdmin, clearedNodes, deepest })) {
+    // be forced from the client), then unlock + that descent's own depth floor.
+    const gateOk = isDon
+      ? donsHardcoreUnlocked({ isAdmin, throneCleared: clearedNodes.includes('the_throne'), donsDeepest: (profile?.dons_gauntlet_deepest as number | null) ?? 0 })
+      : hardcoreUnlocked({ isAdmin, clearedNodes, deepest })
+    if (!gateOk) {
       return { started: false, reason: 'locked', deepest }
     }
     // Hardcore is capped at HARDCORE_RUNS_PER_DAY per UTC day (admins bypass so
     // they can test). The count resets when the UTC date of the last run differs
     // from today's; when capped, the run reopens at the next UTC midnight.
+    // THREE PER DESCENT, not three shared: Davy's budget and the Don's are
+    // counted in different columns, so spending your Davy runs leaves his three
+    // untouched.
     const now = new Date()
-    const hcLastAt = profile?.gauntlet_hc_last_run_at ? new Date(profile.gauntlet_hc_last_run_at as string) : null
+    const hcLastAt = profile?.[HC.lastRunAt] ? new Date(profile[HC.lastRunAt] as string) : null
     const sameUtcDay = !!hcLastAt && hcLastAt.toISOString().slice(0, 10) === now.toISOString().slice(0, 10)
-    const runsToday = sameUtcDay ? Number(profile?.gauntlet_hc_runs_today ?? 0) : 0
+    const runsToday = sameUtcDay ? Number(profile?.[HC.runsToday] ?? 0) : 0
     if (!isAdmin && runsToday >= HARDCORE_RUNS_PER_DAY) {
       const nextMidnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1))
       return { started: false, reason: 'cooldown', deepest, nextAt: nextMidnight.toISOString() }
@@ -594,7 +610,9 @@ export async function startGauntletRun(hardcore = false, terms?: SignedTerms, va
       .is('died_at', null)
     const squad = (squadRows ?? []).map(r => r.id as number)
     if (squad.length === 0) return { started: false, reason: 'no_squad', deepest }
-    hcFields = { gauntlet_run_hardcore: true, gauntlet_hc_squad: squad, gauntlet_hc_last_run_at: new Date().toISOString(), gauntlet_hc_runs_today: hcRunsToday, gauntlet_run_terms: signedTerms }
+    // The squad column stays SHARED on purpose: only one run is ever open, so
+    // only one squad is ever at risk. The date and the counter are per-descent.
+    hcFields = { gauntlet_run_hardcore: true, gauntlet_hc_squad: squad, [HC.lastRunAt]: new Date().toISOString(), [HC.runsToday]: hcRunsToday, gauntlet_run_terms: signedTerms }
   }
 
   await admin
@@ -717,7 +735,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_run_open, gauntlet_run_variant, gauntlet_deepest, gauntlet_last_run_at, gauntlet_best_depth, gauntlet_best_depth_ms, gauntlet_contest_depth, gauntlet_fathoms, gauntlet_fathoms_earned, gauntlet_runs_completed, gauntlet_upgrades, gauntlet_upgrades_off, dons_gauntlet_deepest, dons_gauntlet_best_depth, dons_gauntlet_best_depth_ms, dons_gauntlet_deepest_run, dons_gauntlet_upgrades, dons_gauntlet_upgrades_off, expedition_xp, doubloons, gems, ship_classes, nav_renown_alloc, raid_items, ship_skins, gauntlet_run_hardcore, gauntlet_hc_deepest, gauntlet_hc_best_depth, gauntlet_hc_best_depth_ms, blood_gems, blood_gems_earned, gauntlet_run_terms, gauntlet_hc_best_pressure, gauntlet_run_offer, equipped_special_2, has_anglers_patience, anglers_patience_xp, finn_spoil_free, finn_spoil_paid')
+    .select('gauntlet_run_open, gauntlet_run_variant, gauntlet_deepest, gauntlet_last_run_at, gauntlet_best_depth, gauntlet_best_depth_ms, gauntlet_contest_depth, gauntlet_fathoms, gauntlet_fathoms_earned, gauntlet_runs_completed, gauntlet_upgrades, gauntlet_upgrades_off, dons_gauntlet_deepest, dons_gauntlet_best_depth, dons_gauntlet_best_depth_ms, dons_gauntlet_deepest_run, dons_gauntlet_upgrades, dons_gauntlet_upgrades_off, expedition_xp, doubloons, gems, ship_classes, nav_renown_alloc, raid_items, ship_skins, gauntlet_run_hardcore, gauntlet_hc_deepest, gauntlet_hc_best_depth, gauntlet_hc_best_depth_ms, dons_gauntlet_hc_deepest, dons_gauntlet_hc_best_depth, dons_gauntlet_hc_best_depth_ms, dons_gauntlet_hc_best_pressure, blood_gems, blood_gems_earned, gauntlet_run_terms, gauntlet_hc_best_pressure, gauntlet_run_offer, equipped_special_2, has_anglers_patience, anglers_patience_xp, finn_spoil_free, finn_spoil_paid')
     .eq('id', user.id)
     .single()
 
@@ -846,7 +864,8 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   }
   // Hardcore Drowned Fleet skins — granted the first time you cash out past a
   // hardcore-depth milestone (mirrors GAUNTLET_DEPTH_UNLOCKS but for cosmetics).
-  const prevHcDeepest = (profile.gauntlet_hc_deepest as number | null) ?? 0
+  const HC = hcCols(isDon ? 'don' : 'davy')
+  const prevHcDeepest = (profile[HC.deepest] as number | null) ?? 0
   const hcDeepest = hc ? Math.max(prevHcDeepest, cd) : prevHcDeepest
   const hcUnlocks = hc ? HARDCORE_UNLOCKS.filter(u => prevHcDeepest < u.depth && u.depth <= hcDeepest) : []
   const hcSkinIds = hcUnlocks.map(u => u.skinId).filter(id => !ownedSkins.includes(id))
@@ -918,22 +937,22 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   // squad (crew survived). NORMAL advances the normal deepest/best/contest/recap.
   let recordFields: Record<string, unknown>
   if (hc) {
-    const prevHcBestDep = (profile.gauntlet_hc_best_depth as number | null) ?? 0
-    const prevHcBestMs  = (profile.gauntlet_hc_best_depth_ms as number | null) ?? null
+    const prevHcBestDep = (profile[HC.bestDepth] as number | null) ?? 0
+    const prevHcBestMs  = (profile[HC.bestMs] as number | null) ?? null
     // First-to-depth wins board ties, so `_at` is the CLAIM time: stamped only
     // when the depth strictly increases. A faster re-run at the SAME depth
     // still improves the shown run time but keeps the original claim.
     const hcNewDepth    = runMs != null && cd > prevHcBestDep
     const hcFasterSame  = runMs != null && cd === prevHcBestDep && (prevHcBestMs == null || runMs < prevHcBestMs)
     recordFields = {
-      gauntlet_hc_deepest: hcDeepest,
+      [HC.deepest]: hcDeepest,
       gauntlet_run_hardcore: false,
       gauntlet_hc_squad: null,
       ...(hcNewDepth
-        ? { gauntlet_hc_best_depth: cd, gauntlet_hc_best_depth_ms: runMs, gauntlet_hc_best_depth_at: new Date().toISOString() }
+        ? { [HC.bestDepth]: cd, [HC.bestMs]: runMs, [HC.bestAt]: new Date().toISOString() }
         : hcFasterSame ? { gauntlet_hc_best_depth_ms: runMs } : {}),
-      ...(cd > prevHcDeepest ? { gauntlet_hc_deepest_run: sanitizeRunSnapshot(runSnapshot, cd) } : {}),
-      ...(runSnapshot ? { gauntlet_hc_last_run: sanitizeRunSnapshot(runSnapshot, cd) } : {}),   // most recent cash-out, always
+      ...(cd > prevHcDeepest ? { [HC.deepestRun]: sanitizeRunSnapshot(runSnapshot, cd) } : {}),
+      ...(runSnapshot ? { [HC.lastRun]: sanitizeRunSnapshot(runSnapshot, cd) } : {}),   // most recent cash-out, always
     }
   } else if (isDon) {
     // Don's Gauntlet — its OWN records / leaderboard (never touches Davy's, and
@@ -987,7 +1006,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
       // Pressure is a very different run to a clean 45, and the Ledger should
       // eventually be able to say so.
       ...(hc && cd >= ((profile.gauntlet_hc_best_depth as number | null) ?? 0)
-        ? { gauntlet_hc_best_pressure: runPressure } : {}),
+        ? { [HC.bestPressure]: runPressure } : {}),
       gauntlet_fathoms: newFathoms,
       blood_gems: newBloodGems,
       // Lifetime Blood Gems earned (never decremented on spend) — backs the
@@ -1085,7 +1104,7 @@ export async function resolveGauntletDeath(rewardDepth: number, combatDepth: num
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_run_open, gauntlet_run_variant, gauntlet_deepest, gauntlet_fathoms, gauntlet_fathoms_earned, gauntlet_runs_completed, gauntlet_deepest_died, gauntlet_upgrades, gauntlet_upgrades_off, dons_gauntlet_deepest, dons_gauntlet_deepest_died, dons_gauntlet_upgrades, dons_gauntlet_upgrades_off, gauntlet_run_hardcore, gauntlet_hc_squad, gauntlet_hc_deepest_died')
+    .select('gauntlet_run_open, gauntlet_run_variant, gauntlet_deepest, gauntlet_fathoms, gauntlet_fathoms_earned, gauntlet_runs_completed, gauntlet_deepest_died, gauntlet_upgrades, gauntlet_upgrades_off, dons_gauntlet_deepest, dons_gauntlet_deepest_died, dons_gauntlet_upgrades, dons_gauntlet_upgrades_off, gauntlet_run_hardcore, gauntlet_hc_squad, gauntlet_hc_deepest_died, dons_gauntlet_hc_deepest_died')
     .eq('id', user.id)
     .single()
 
@@ -1133,7 +1152,7 @@ export async function resolveGauntletDeath(rewardDepth: number, combatDepth: num
   // grim Ferryman's Toll badge); normal deaths advance the normal one (Greed's
   // Price). Kept apart so the two modes' badges don't cross-contaminate.
   const deathFields = hardcore
-    ? { gauntlet_hc_deepest_died: Math.max((profile.gauntlet_hc_deepest_died as number | null) ?? 0, cd), gauntlet_run_hardcore: false, gauntlet_hc_squad: null }
+    ? { [hcCols(isDon ? 'don' : 'davy').deepestDied]: Math.max((profile[hcCols(isDon ? 'don' : 'davy').deepestDied] as number | null) ?? 0, cd), gauntlet_run_hardcore: false, gauntlet_hc_squad: null }
     : isDon
       ? { dons_gauntlet_deepest_died: Math.max((profile.dons_gauntlet_deepest_died as number | null) ?? 0, cd) }
       : { gauntlet_deepest_died: Math.max((profile.gauntlet_deepest_died as number | null) ?? 0, cd) }

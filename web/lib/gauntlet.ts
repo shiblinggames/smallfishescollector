@@ -176,6 +176,49 @@ export function hardcoreUnlocked(opts: { isAdmin?: boolean | null; clearedNodes?
   return gauntletUnlocked({ isAdmin: false, clearedNodes: opts.clearedNodes }) && (opts.deepest ?? 0) >= HC_UNLOCK_DEPTH
 }
 
+/** Can this player start a DON'S hardcore run? Mirrors hardcoreUnlocked, but
+ *  against Don's own gate and Don's own depth: you have to have opened his
+ *  descent (the Throne cleared) and pushed HC_UNLOCK_DEPTH into it. Reaching
+ *  depth 10 of Davy's says nothing about whether you can survive the Don's
+ *  Ch3/Ch4 pool, so his hardcore asks for it in HIS water. */
+export function donsHardcoreUnlocked(opts: { isAdmin?: boolean | null; throneCleared?: boolean | null; donsDeepest?: number | null }): boolean {
+  if (opts.isAdmin) return true
+  if (!HARDCORE_LIVE) return false
+  return donsGauntletUnlocked({ isAdmin: false, throneCleared: opts.throneCleared }) && (opts.donsDeepest ?? 0) >= HC_UNLOCK_DEPTH
+}
+
+/** The profile columns each descent keeps its hardcore state in. Don's runs are
+ *  SEPARATE from Davy's end to end: its own deepest, its own daily budget of
+ *  HARDCORE_RUNS_PER_DAY, its own Drowned Ledger. Two descents that scale
+ *  differently, drop different chases and sign different terms have no business
+ *  sharing a record.
+ *
+ *  gauntlet_hc_squad is deliberately NOT in here. Only one run is ever open at a
+ *  time (gauntlet_run_open / gauntlet_run_variant are singular), so the squad
+ *  currently at risk is singular too. */
+export const HC_COLUMNS = {
+  davy: {
+    deepest: 'gauntlet_hc_deepest', deepestDied: 'gauntlet_hc_deepest_died',
+    deepestRun: 'gauntlet_hc_deepest_run', lastRun: 'gauntlet_hc_last_run',
+    lastRunAt: 'gauntlet_hc_last_run_at', runsToday: 'gauntlet_hc_runs_today',
+    bestDepth: 'gauntlet_hc_best_depth', bestMs: 'gauntlet_hc_best_depth_ms',
+    bestAt: 'gauntlet_hc_best_depth_at', bestPressure: 'gauntlet_hc_best_pressure',
+    ledger: 'leaderboard_gauntlet_hardcore',
+  },
+  don: {
+    deepest: 'dons_gauntlet_hc_deepest', deepestDied: 'dons_gauntlet_hc_deepest_died',
+    deepestRun: 'dons_gauntlet_hc_deepest_run', lastRun: 'dons_gauntlet_hc_last_run',
+    lastRunAt: 'dons_gauntlet_hc_last_run_at', runsToday: 'dons_gauntlet_hc_runs_today',
+    bestDepth: 'dons_gauntlet_hc_best_depth', bestMs: 'dons_gauntlet_hc_best_depth_ms',
+    bestAt: 'dons_gauntlet_hc_best_depth_at', bestPressure: 'dons_gauntlet_hc_best_pressure',
+    ledger: 'leaderboard_dons_gauntlet_hardcore',
+  },
+} as const
+
+export function hcCols(variant: GauntletVariant) {
+  return HC_COLUMNS[variant === 'don' ? 'don' : 'davy']
+}
+
 // Hardcore-only cosmetic unlocks — reaching these HARDCORE depths (on cash-out)
 // would permanently grant a Drowned Fleet ship skin. EMPTIED 2026-07-08: the
 // hull skins aren't ready (placeholder art), so nothing is granted for now. The

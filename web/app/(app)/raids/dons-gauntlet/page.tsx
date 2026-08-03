@@ -85,12 +85,14 @@ export default async function DonsGauntletPage() {
           // once here independently of whether Davy's was ever seen.
           hasSeenIntro={profile?.has_seen_dons_gauntlet_intro === true}
           topDescender={leaderboard.top}
-          // Hardcore is a Don's fast-follow — off for now.
-          hardcoreUnlocked={false}
-          hardcoreLive={false}
-          hcDeepest={0}
-          hcRunsLeft={0}
-          hardcoreTop={null}
+          // Don's Hardcore, live. Its own everything: unlock (the Throne plus
+          // depth in HIS water), its own three runs a day, its own deepest and
+          // its own Drowned Ledger. Davy's budget is untouched by spending these.
+          hardcoreUnlocked={daily.hardcoreUnlocked}
+          hardcoreLive={daily.hardcoreLive}
+          hcDeepest={daily.hcDeepest}
+          hcRunsLeft={daily.hcRunsLeft}
+          hardcoreTop={leaderboard.hardcoreTop}
           runHardcore={daily.runHardcore}
           runTerms={daily.runTerms}
           bloodGems={(profile?.blood_gems as number | null) ?? 0}
