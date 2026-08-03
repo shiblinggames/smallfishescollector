@@ -152,6 +152,15 @@ export default function HallBunks({
     return out
   }, [state.roster, state.bunkedCrewIds, termsById])
 
+  // Seed the per-slot memory from whoever is IN each bunk right now, so the
+  // hint works for hands bunked before it existed (and on a fresh device)
+  // rather than staying blank until a full cycle has been completed since.
+  // The current occupant IS the most recent for that slot, so this can only
+  // ever agree with what a claim would write.
+  useEffect(() => {
+    bySlot.forEach((crew, slot) => { if (crew) writeLastBunkCrew(slot, crew.id) })
+  }, [bySlot])
+
   // What a NEW stint would be worth, for the header line.
   const payout = stintXP(rate, cap)
 
@@ -301,7 +310,12 @@ export default function HallBunks({
           const pct = t ? stintProgress(t.since, now, t.cap) : 1
           return (
             <button key={crew.id} type="button" disabled={pending || !done}
-              onClick={() => { if (done) onCollectOne(crew.id) }}
+              // Remember them on the way OUT as well as on the way in. Recording
+              // only at bunk-time meant the hint stayed invisible until you had
+              // completed a whole cycle since it shipped — and the claim is the
+              // better moment anyway: the instant a hand comes off a bunk is
+              // exactly when you decide whether to send them straight back.
+              onClick={() => { if (done) { writeLastBunkCrew(i, crew.id); onCollectOne(crew.id) } }}
               title={done ? `Claim ${crew.name} and free the bunk` : `Locked in for another ${fmtLeft(left)}`}
               aria-label={done
                 ? `${crew.name} has finished training. Claim to free the bunk.`
