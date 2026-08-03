@@ -1363,11 +1363,20 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
 // A one-bar duel on purpose. He is meant to be run over and over.
 export const THE_QUARTERMASTERS_GHOST: BossRaidConfig = {
   raidId: 'the_quartermasters_ghost',
-  // A flat 50% for a Cache item, no matter how many you still need. Under the normal
-  // weighted roll his six items start at 50% of the crate and rot to 14% for the last
-  // one, so the single item you are actually farming for is the rarest thing he has.
-  // Everybody would hit that wall, and it is the worst-feeling part of the whole loop.
-  uniqueShare: 0.5,
+  // How often this crate pays a Cache item AT ALL, split evenly across the ones
+  // you still need, so the rate never rots as you complete the set. The wall
+  // this was added to fix was brutal: under a plain weighted roll his six items
+  // started at 50% of the crate and decayed to 14% for the LAST one, making the
+  // single item you were actually farming for the rarest thing he had.
+  //
+  // 0.175, not 0.5. He carries six epics where every other campaign boss
+  // carries one epic, one legendary and one hull; at the flat per-rarity rate
+  // that made him pay 0.60 items a crate against everyone else's 0.175, more
+  // than triple, purely because his table is long. This is the same throughput
+  // as any other boss, just spread over six specific things. It still beats the
+  // wall, and better than before: with one item left it pays 17.5% for exactly
+  // the thing you want.
+  uniqueShare: 0.175,
   enemyAccuracy: 30,
   raidTitle: "The Quartermaster's Ghost",
   bossDefeatedText: 'The Ghost Dispersed',

@@ -58,14 +58,16 @@ export const LOOT_RARITY_TIER: Record<string, number> = {
  * the same hull dropped at two different rates depending on which of the two
  * bosses carrying it you happened to farm.
  *
- * Ancients are the one rarity still left on weights: only the Sunken Hand's two
- * drop at all, they already sit at 2.5%, and they are the rarest thing in the
- * campaign by design.
+ * Ancients sit level with legendaries. Only the Sunken Hand's two exist, and
+ * they are the campaign's final drops, so they are worth a raid legendary
+ * rather than being rarer than a hull, which is where the old weights had left
+ * them.
  */
 export const BASE_RARITY_CHANCE: Partial<Record<RaidLootItem['rarity'], number>> = {
   epic: 0.10,
   legendary: 0.05,
   cosmetic: 0.025,
+  ancient: 0.05,
 }
 
 /** The same ladder on challenge tables: double, because the fight is. */
@@ -73,6 +75,7 @@ export const CHALLENGE_RARITY_CHANCE: Partial<Record<RaidLootItem['rarity'], num
   epic: 0.20,
   legendary: 0.10,
   cosmetic: 0.05,
+  ancient: 0.10,
 }
 
 /** Challenge variants are identified by their id suffix, the same convention
@@ -127,15 +130,18 @@ function baseChance(
   // 1. An explicit rate on the row always wins, so one item can be tuned
   //    without touching the rule or anything else in its table.
   if (l.chance != null) return l.chance
-  // 2. The rarity rule. This is what makes an epic an epic across every raid
-  //    rather than a function of how many rows happen to share its table.
-  const byRarity = (challenge ? CHALLENGE_RARITY_CHANCE : BASE_RARITY_CHANCE)[l.rarity]
-  if (byRarity != null) return byRarity
-  // 3. uniqueShare, for tables that declare a total item rate instead of
-  //    per-item ones. Now only reaches rarities the rule does not cover.
+  // 2. A raid's OWN uniqueShare. More specific than a global rarity default, so
+  //    it outranks one: a table that declares "this crate pays an item X% of the
+  //    time, split across what you still need" has made a decision about itself
+  //    that a per-rarity fallback should not overrule. This is what keeps the
+  //    Quartermaster's six-item cache paying like one boss rather than six.
   if (uniqueShare != null && uniqueShare > 0 && missingCount > 0) {
     return Math.min(1, uniqueShare) / missingCount
   }
+  // 3. The rarity rule. This is what makes an epic an epic across every raid
+  //    rather than a function of how many rows happen to share its table.
+  const byRarity = (challenge ? CHALLENGE_RARITY_CHANCE : BASE_RARITY_CHANCE)[l.rarity]
+  if (byRarity != null) return byRarity
   // 4. Weight-derived, which is what every rate was before the rule existed.
   return totalWeight > 0 ? l.weight / totalWeight : 0
 }
