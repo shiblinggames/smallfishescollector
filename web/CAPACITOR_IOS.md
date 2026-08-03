@@ -83,6 +83,40 @@ LOOK identical to the PWA. You are testing feel, not appearance.
   than a nicety.
 - **Deep links / redirects.** The site redirects apex to www; the config points
   at www so cold start does not pay a redirect.
-- **Auth.** Supabase sessions live in the webview's storage. Logging in inside
-  the shell is a separate session from mobile Safari, which is expected but
-  will surprise you the first time.
+## Data: it is the same game, not a copy
+
+The shell loads production, so there is nothing to sync and nothing to keep in
+step. Same Supabase project, same tables, same leaderboards, same crew, same
+doubloons. A raid cleared in the app is cleared on the website a second later
+because it is the same row. There is no separate "mobile" anything.
+
+## Auth is the one thing that will block a first test
+
+Login is a Supabase magic LINK (`signInWithOtp` with `emailRedirectTo`
+`/auth/callback`). In a webview shell that breaks at the last step:
+
+1. You request the link inside the app.
+2. The email arrives and you tap it on your phone.
+3. It opens in SAFARI, not the app, because nothing tells iOS the link belongs
+   to the app.
+4. The session lands in Safari's storage. The app is still logged out, since a
+   webview has its own cookie and localStorage jar.
+
+Two ways to fix it, and the second is much easier:
+
+**Universal Links** — serve `/.well-known/apple-app-site-association` on
+seasthebooty.com naming the app's team + bundle id, and add the Associated
+Domains capability in Xcode. Tapping the emailed link then opens the app
+directly. This is the proper fix, and it needs the paid Apple Developer Program
+for the team id.
+
+**Email OTP CODE instead of a link** — switch the Supabase email template from
+`{{ .ConfirmationURL }}` to `{{ .Token }}` and verify with
+`supabase.auth.verifyOtp({ email, token, type: 'email' })`. The player types six
+digits in the app and never leaves it. No redirect, no deep link, no developer
+account, and it works identically in the browser, the PWA and any future
+Android shell. If the shell becomes a real channel, this is probably the right
+login flow regardless.
+
+For a throwaway test on a free account, the code flow is an hour of work and the
+Universal Link is a day plus $99.
