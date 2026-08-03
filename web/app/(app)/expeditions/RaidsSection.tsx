@@ -3437,6 +3437,19 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
 // progressive reveal (fog nodes far past the current one; the chapter's last
 // node shows as a faded beacon). Every tap opens the shared NodeDetailSheet.
 function JourneyChapter({ views, onSelect }: { views: RaidNodeView[]; onSelect: (v: RaidNodeView) => void }) {
+  // A side branch off a BOSS is a challenge variant, and that boss's own banner
+  // offers Normal/Challenge inside its modal, so drawing it here as well would
+  // be a second door to the same fight. A side branch off anything ELSE has no
+  // such door, and dropping those too is how the Quartermaster's Ghost went
+  // missing: he hangs off a MUSTER, computeRaidMap reports him available, and
+  // then nothing on the page drew him. The Bosses tab excludes side branches
+  // outright and re-attaches them by boss, so it did not catch him either. A
+  // node reachable by the rules and by no pixel is worse than a locked one.
+  const isChallengeBranch = (v: RaidNodeView): boolean => {
+    if (!v.node.sideBranch) return false
+    const parent = views.find(x => x.node.id === v.node.sideBranch!.parentId)
+    return !!parent && isCombatNode(parent.node.type)
+  }
   const chainIdx = views.map((v, i) => (v.node.sideBranch ? -1 : i)).filter(i => i >= 0)
   const currentIdx = views.findIndex(v => v.status === 'available' && !v.node.sideBranch)
   const currentChainPos = currentIdx >= 0 ? chainIdx.indexOf(currentIdx) : -1
@@ -3450,17 +3463,22 @@ function JourneyChapter({ views, onSelect }: { views: RaidNodeView[]; onSelect: 
   const visOf = (i: number): 'revealed' | 'fogged' | 'beacon' => {
     const v = views[i]
     if (v.status === 'cleared' || v.status === 'available') return 'revealed'
+    // previewWhenLocked marks a node whose whole job is to be a GOAL. Fogging
+    // one hides the reason to go and earn it, which is the entire point of the
+    // flag. The old serpentine map read it; this spine never did.
+    if (v.node.previewWhenLocked) return 'revealed'
     if (currentChainPos < 0) return 'revealed'
     const pos = chainPosOf(i)
     if (pos <= currentChainPos + REVEAL_AHEAD) return 'revealed'
     if (!v.node.sideBranch && pos === lastChainPos) return 'beacon'
     return 'fogged'
   }
-  // Challenge nodes are side-branches off a boss — no longer their own banner;
-  // the boss banner's modal offers Normal/Challenge, so drop them from the spine.
+  // Drop CHALLENGE branches only. See isChallengeBranch: they are the ones the
+  // boss banner's Normal/Challenge modal already covers. Every other side
+  // branch keeps its place on the spine, because nothing else is drawing it.
   const rows = views.map((v, i) => ({ v, vis: visOf(i) }))
     .filter(r => r.vis !== 'fogged')
-    .filter(r => !(r.v.node.sideBranch && isCombatNode(r.v.node.type)))
+    .filter(r => !isChallengeBranch(r.v))
   const anyFogged = views.some((_, i) => visOf(i) === 'fogged')
 
   return (
@@ -3510,7 +3528,10 @@ function JourneyChapter({ views, onSelect }: { views: RaidNodeView[]; onSelect: 
                 <span style={{ position: 'absolute', left: 13, right: 12, bottom: 9, zIndex: 1 }}>
                   <span style={{ display: 'flex', alignItems: 'baseline', gap: 7, flexWrap: 'wrap' }}>
                     <span className="font-cinzel font-700" style={{ fontSize: isSide ? '1rem' : '1.16rem', color: locked ? '#b8b1a5' : '#fff', lineHeight: 1.05, textShadow: '0 2px 8px rgba(0,0,0,0.9)' }}>{node.label}</span>
-                    {isSide && <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.1em', color: '#fff', background: `${SIDE_BRANCH_ACCENT}cc`, borderRadius: 999, padding: '2px 7px' }}>Challenge</span>}
+                    {/* Hardcoding "Challenge" was safe while challenges were the
+                        only branches that could reach here. They are now the only
+                        ones that CANNOT, so the label has to come from the node. */}
+                    {isSide && <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.1em', color: '#fff', background: `${SIDE_BRANCH_ACCENT}cc`, borderRadius: 999, padding: '2px 7px' }}>{isChallengeBranch(v) ? 'Challenge' : 'Side Raid'}</span>}
                   </span>
                   <span className="font-karla" style={{ display: 'block', fontSize: '0.76rem', color: 'rgba(233,226,214,0.82)', marginTop: 3, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>{node.flavor}</span>
                 </span>
