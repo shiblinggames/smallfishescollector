@@ -6145,6 +6145,12 @@ function LootModal({ mode, don, totalFortune = 0, onClose }: {
           "Only rolls from the deepest Don's Gauntlet chest. Man-o-War hulls only."),
         skinDrop('dons_ghost_hull', 'Rare from any chest',
           "A rare roll from the deeper Don's chests, one tier below the Galaxy Hull. Man-o-War hulls only."),
+        // The Don's hardcore chase, mirroring the Blood Cannon's entry on Davy's
+        // side. This guide keeps its OWN hand-written list per descent rather
+        // than reading chestOdds, so adding a drop to the roll does not add it
+        // here: the Palisade was rolling and going unlisted.
+        itemDrop('dons_palisade', 'Rare from deeper chests',
+          'A rare roll from the deeper Hardcore chests. The only regenerating ward in the game.', true),
       ]
     : (() => {
         const heavy   = getRaidItem('davys_heavy_cannon')
