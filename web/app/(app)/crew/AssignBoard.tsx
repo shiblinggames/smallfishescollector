@@ -19,6 +19,7 @@ import type { ReactNode } from 'react'
 import { applyLevelBonuses } from '@/lib/crewLevel'
 import { netTraitStats } from '@/lib/crewEffects'
 import { RARITY_COLORS, type CrewRarity } from '@/lib/crewGen'
+import { CREW_PANEL_BG } from '@/lib/crewPanel'
 import type { CrewMember } from './actions'
 
 /** Mirrors lib/crewResolve: the captain's seat pulls full weight, the rest 80%. */
@@ -60,9 +61,9 @@ const STAT_COLOR = { power: '#e08a7a', dodge: '#7fc4a8', fortune: '#e0c47a' }
 const MAX_SEATS = 6
 
 /** Empty seats have no crew, so they have no rarity to inherit. Warm neutral
- *  rather than the track accent: with the panel art carrying the party's
- *  identity, an empty seat glowing red or blue was the last thing making the
- *  seat row look track-coloured. Translucent tints only, never a solid fill. */
+ *  rather than the track accent: the header art carries the party's identity,
+ *  so an empty seat glowing red or blue was the last thing making the seat row
+ *  look track-coloured. Translucent tints only, never a solid fill. */
 const OPEN_SEAT = '#c3b291'
 
 export default function AssignBoard({
@@ -91,38 +92,32 @@ export default function AssignBoard({
   const trawling = new Set(trawlingCrewIds)
   const training = new Set(bunkedCrewIds)
 
-  // Every surface in here used to share ONE navy ramp (13,18,27 / 22,29,40 /
-  // 20,26,36 / ...), so the red track was a red BORDER around a blue panel and
-  // the accent wash (9%, gone by 62%) never changed that. The base hue is what
-  // reads, not the outline. Each track now gets its own opaque ramp pulled
-  // toward its accent: warm near-black for the raid, cool for the voyage.
-  // Fully opaque hex, no alpha - nothing behind these needs to show through.
-  // Full-bleed art per track, with every tile on top of it TRANSLUCENT so the
-  // plate reads through them rather than only in the gaps.
+  // The art used to run FULL BLEED behind the whole panel, seats included, with
+  // every tile translucent so the plate read through them. It made the part you
+  // actually operate — six tiles, each already carrying a portrait, a rarity
+  // border, a name, three numbers and up to two badges — sit on top of a moving
+  // sea. Too much competing for the same square inch.
   //
-  // `base` is the flat colour under the jpg (it shows for the moment before
-  // the image lands, and through the wash). The tile values are deliberately
-  // dark and semi-opaque: enough contrast for a name and three numbers, little
-  // enough that the sea and smoke still come through.
+  // So the art is now a HEADER plate only: it identifies the party and backs the
+  // totals, which is the job it was doing well. Below the divider the seats sit
+  // on the plain crew plate, the same one the roster cards use, because they are
+  // the same kind of object and the roster reads calm for exactly this reason.
+  //
+  // `base` is the flat colour under the jpg (it shows for the moment before the
+  // image lands, and through the wash). `hdr` is the scrim over it: top value
+  // where the title sits, bottom where the stat tiles do.
   const RAMP = {
     raid: {
       // Open sea below the cloudbank of the expeditions plate: misty horizon,
-      // a distant fleet, smooth swells, no landmarks. Sharp and full-res - the
-      // previous pass fixed "too busy" by blurring, which just made it mushy
-      // and small. Simple has to come from the COMPOSITION, not from softening
-      // a busy one.
-      //
-      // Wash is heavier at the TOP here, unlike the voyage panel: this plate is
-      // bright along the horizon where the title and totals sit, and dark in
-      // the water below where the seats are.
-      base: '#0f171d', art: '/crew-raid-panel.jpg', fade: '15,23,29', wash: [0.46, 0.32, 0.34], pos: 'center 20%',
-      stat: 'rgba(6,12,17,0.54)', locked: 'rgba(6,12,17,0.48)',
-      open: 'rgba(6,12,17,0.36)', seat: 'rgba(6,12,17,0.44)',
+      // a distant fleet, smooth swells, no landmarks. Sharp and full-res - an
+      // earlier pass fixed "too busy" by blurring, which just made it mushy.
+      // Simple has to come from the COMPOSITION, not from softening a busy one.
+      base: '#0f171d', art: '/crew-raid-panel.jpg', fade: '15,23,29', hdr: [0.44, 0.56], pos: 'center 20%',
+      stat: 'rgba(6,12,17,0.54)',
     },
     voyage: {
-      base: '#0c151f', art: '/voyages-modal-bg.jpg', fade: '12,21,31', wash: [0.34, 0.46, 0.58], pos: 'center',
-      stat: 'rgba(4,10,18,0.52)', locked: 'rgba(4,10,18,0.46)',
-      open: 'rgba(4,10,18,0.36)', seat: 'rgba(4,10,18,0.44)',
+      base: '#0c151f', art: '/voyages-modal-bg.jpg', fade: '12,21,31', hdr: [0.34, 0.5], pos: 'center',
+      stat: 'rgba(4,10,18,0.52)',
     },
   }
 
@@ -167,19 +162,20 @@ export default function AssignBoard({
             borderRadius: 16,
             border: `1px solid ${t.accent}55`,
             position: 'relative',
-            // Front to back: the track's accent tint, a light wash so text
-            // holds up, the plate, then the flat base. `cover` fits a square
-            // plate to a portrait panel by height, so the whole image runs top
-            // to bottom - sky, then the ship, then open water - which is what
-            // full-bleed wants. Base colour is space-joined onto the last
-            // layer rather than added as a bare comma layer.
-            background: `linear-gradient(180deg, ${t.accent}1c 0%, ${t.accent}0a 55%, transparent 100%), `
-              + `linear-gradient(180deg, rgba(${t.ramp.fade},${t.ramp.wash[0]}) 0%, rgba(${t.ramp.fade},${t.ramp.wash[1]}) 45%, rgba(${t.ramp.fade},${t.ramp.wash[2]}) 100%), `
-              + `url(${t.ramp.art}) ${t.ramp.pos} / cover no-repeat ${t.ramp.base}`,
+            background: CREW_PANEL_BG,
             overflow: 'hidden',
           }}>
-            {/* Header: who this party is, and what it comes to. */}
-            <div style={{ position: 'relative', zIndex: 1, padding: '0.8rem 0.85rem 0.7rem', borderBottom: `1px solid ${t.accent}2a` }}>
+            {/* Header: who this party is, and what it comes to. The art lives
+                HERE and nowhere else. Front to back: the track's accent tint, a
+                wash so the title and totals hold up, the plate, then the flat
+                base under it. */}
+            <div style={{
+              position: 'relative', zIndex: 1, padding: '0.8rem 0.85rem 0.7rem',
+              borderBottom: `1px solid ${t.accent}2a`,
+              background: `linear-gradient(180deg, ${t.accent}1c 0%, ${t.accent}0a 100%), `
+                + `linear-gradient(180deg, rgba(${t.ramp.fade},${t.ramp.hdr[0]}) 0%, rgba(${t.ramp.fade},${t.ramp.hdr[1]}) 100%), `
+                + `url(${t.ramp.art}) ${t.ramp.pos} / cover no-repeat ${t.ramp.base}`,
+            }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
                 <span style={{ color: t.accent, display: 'flex' }}>{t.icon}</span>
                 <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0ede8', lineHeight: 1.1 }}>{t.label}</p>
@@ -221,7 +217,7 @@ export default function AssignBoard({
                       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
                       minHeight: 104, borderRadius: 12,
                       border: '1px dashed rgba(255,255,255,0.1)',
-                      background: t.ramp.locked,
+                      background: 'rgba(255,255,255,0.028)',
                     }}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5c6470" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
                       <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.56rem', color: '#6b7482', textAlign: 'center', lineHeight: 1.3 }}>Bigger<br />ship</span>
@@ -237,7 +233,7 @@ export default function AssignBoard({
                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,
                         minHeight: 104, borderRadius: 12, cursor: 'pointer', font: 'inherit',
                         border: `1.5px dashed ${OPEN_SEAT}66`,
-                        background: `linear-gradient(180deg, ${OPEN_SEAT}14 0%, ${OPEN_SEAT}08 100%), ${t.ramp.open}`,
+                        background: `linear-gradient(180deg, ${OPEN_SEAT}12 0%, ${OPEN_SEAT}05 100%), rgba(255,255,255,0.03)`,
                         touchAction: 'manipulation',
                       }}>
                       <span style={{
@@ -262,11 +258,11 @@ export default function AssignBoard({
                       position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
                       minHeight: 104, padding: '0.4rem 0.3rem 0.45rem', borderRadius: 12,
                       cursor: 'pointer', font: 'inherit', textAlign: 'center',
-                      // Rarity, not the track accent. The panel art already
+                      // Rarity, not the track accent. The header art already
                       // says which party this is; the seat is the only place
                       // that can say WHO is sitting in it at a glance.
                       border: `1.5px solid ${rc}99`,
-                      background: `linear-gradient(180deg, ${rc}26 0%, rgba(0,0,0,0.22) 100%), ${t.ramp.seat}`,
+                      background: `linear-gradient(180deg, ${rc}22 0%, rgba(0,0,0,0.28) 100%), rgba(255,255,255,0.035)`,
                       touchAction: 'manipulation',
                     }}>
                     {/* The art is the tile. */}
