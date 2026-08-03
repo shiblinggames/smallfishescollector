@@ -35,6 +35,32 @@ import {
 } from '@/lib/crewBunks'
 import type { CrewMember, CrewState } from './actions'
 
+/**
+ * WHO LAST TRAINED IN THIS BUNK, per slot.
+ *
+ * Mirrors the trawl sheet's per-zone "Send again", which exists for the same
+ * reason: most sends are the same hand back into the same place, and hunting
+ * them out of a roster of thirty every cycle is the whole friction. localStorage
+ * rather than a column because it is a convenience hint, not state the server
+ * needs to be right about — a wrong or missing value just means the normal
+ * picker, which is where you were going anyway.
+ */
+const LAST_BUNK_KEY = (slot: number) => `hall:lastBunk:${slot}`
+
+function readLastBunkCrew(slot: number): number | null {
+  if (typeof localStorage === 'undefined') return null
+  try {
+    const raw = localStorage.getItem(LAST_BUNK_KEY(slot))
+    const n = raw ? Number(raw) : NaN
+    return Number.isFinite(n) ? n : null
+  } catch { return null }
+}
+
+function writeLastBunkCrew(slot: number, crewId: number) {
+  if (typeof localStorage === 'undefined') return
+  try { localStorage.setItem(LAST_BUNK_KEY(slot), String(crewId)) } catch { /* no-op */ }
+}
+
 const GOLD = '#f0c040'
 /** Every bunk the hall can ever hold, drawn whether or not it is unlocked. */
 const MAX_BUNKS = 6
@@ -382,7 +408,11 @@ export default function HallBunks({
           artSrc={artSrc} accent={accent} pending={pending}
           stint={fmtStint(cap)} payout={payout}
           leviathan={isLeviathanSlot(picking)}
-          onPick={id => { onBunk(id, picking); setPicking(null) }}
+          lastCrew={(() => {
+            const id = readLastBunkCrew(picking)
+            return id == null ? null : eligible.find(c => c.id === id) ?? null
+          })()}
+          onPick={id => { writeLastBunkCrew(picking, id); onBunk(id, picking); setPicking(null) }}
           onClose={() => setPicking(null)}
         />, document.body)}
     </div>
@@ -539,7 +569,7 @@ function MaxedCard({ art, label, sub, accent, popping }: { art: string; label: s
 
 /** One sheet for both jobs: fill an empty bunk, or swap/remove the occupant. */
 function BunkPicker({
-  eligible, roster, blockers, artSrc, accent: hallAccent, pending, stint, payout, leviathan, onPick, onClose,
+  eligible, roster, blockers, artSrc, accent: hallAccent, pending, stint, payout, leviathan, lastCrew, onPick, onClose,
 }: {
   eligible: CrewMember[]
   /** Everyone alive, for the All tab. */
@@ -553,6 +583,8 @@ function BunkPicker({
   payout: number
   /** Filling the sixth bunk, which rolls a new trait every stint. */
   leviathan: boolean
+  /** The hand who last trained in THIS bunk, if they are free to go back in. */
+  lastCrew: CrewMember | null
   onPick: (crewId: number) => void
   onClose: () => void
 }) {
@@ -589,6 +621,38 @@ function BunkPicker({
           <span style={{ color: accent }}>{payout.toLocaleString()} XP</span>. They cannot raid, sail,
           trawl or be dismissed until the stint ends.
         </p>
+
+        {/* TRAIN AGAIN. The same hand back into the same bunk is the common
+            case by a distance, and finding them again in a roster of thirty was
+            the whole cost of a cycle. Only shown while they are actually free
+            to go back in, so it can never be a dead button. */}
+        {lastCrew && (
+          <button type="button" disabled={pending} onClick={() => onPick(lastCrew.id)}
+            aria-label={`Train ${lastCrew.name} again`}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 10, width: 'calc(100% - 2rem)',
+              margin: '0 1rem 0.8rem', padding: '0.5rem 0.7rem 0.5rem 0.5rem', borderRadius: 12,
+              background: `${accent}1a`, border: `1px solid ${accent}66`, font: 'inherit',
+              cursor: pending ? 'not-allowed' : 'pointer', textAlign: 'left',
+              touchAction: 'manipulation',
+            }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={artSrc(lastCrew.filename)} alt="" aria-hidden loading="lazy" decoding="async"
+              style={{ width: 40, height: 40, objectFit: 'contain', flexShrink: 0 }} />
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span className="font-karla font-800 uppercase tracking-[0.1em]" style={{ display: 'block', fontSize: '0.52rem', color: accent }}>
+                Train again
+              </span>
+              <span className="font-cinzel font-700" style={{ display: 'block', fontSize: '0.92rem', color: '#f4ecd8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {lastCrew.name}
+              </span>
+              <span className="font-karla font-600" style={{ display: 'block', fontSize: '0.62rem', color: '#a89e86' }}>
+                Lv {crewLevelFromXP(lastCrew.xp)} · {traitLabel(netTraitStats(lastCrew.effects)) || 'No trait'}
+              </span>
+            </span>
+            <span aria-hidden className="font-cinzel font-700" style={{ flexShrink: 0, fontSize: '1rem', color: accent }}>›</span>
+          </button>
+        )}
 
         {/* Available / All. Only worth drawing when somebody is actually
             blocked, otherwise the two tabs show the same list. */}
