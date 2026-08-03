@@ -120,7 +120,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     // Combined with the d20 → d30 speed roll, the build still earns
     // first strike a clear majority of the time but late-game
     // determinism is meaningfully flatter than before.
-    description: 'Adds a fifth of your Savvy to your turn-order roll, so you strike first more often.',
+    description: 'Adds 20% of your Savvy to your turn-order roll, so you strike first more often.',
     image: '/navigatorscompass.png',
     emoji: '🧭',
     rarity: 'epic',
@@ -236,7 +236,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
   {
     id: 'cartographers_astrolabe',
     name: "Cartographer's Astrolabe",
-    description: 'On a successful dodge, 30% chance to deflect half the incoming shot back at the attacker.',
+    description: 'On a successful dodge, 30% chance to deflect 50% of the incoming shot back at the attacker.',
     image: '/cartographersastrolabe.png',
     emoji: '🧭',
     rarity: 'epic',
@@ -317,7 +317,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
   {
     id: 'dons_signet',
     name: "The Don's Signet",
-    description: 'The ring every captain in the Finndicate answered to — and every gun in his court. On a CRITICAL hit, the command turns against them: 50% chance to tear a loaded cannonball off the enemy’s rack, delaying its next shot.',
+    description: 'The ring every captain in the Finndicate answered to, and every gun in his court. On a CRITICAL hit, the command turns against them: 50% chance to tear a loaded cannonball off the enemy’s rack, delaying its next shot.',
     image: '/thedonssignet.png',
     emoji: '💍',
     rarity: 'legendary',
@@ -395,7 +395,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     // lifesteal stacks additively with the Leviathan's Hunger boon.
     id: 'davys_blood_cannon',
     name: "Davy's Blood Cannon",
-    description: 'The gun drinks every wound it opens — you heal 8% of the damage you deal. The deep gives nothing back but what you take by force.',
+    description: 'The gun drinks every wound it opens: you heal 8% of the damage you deal. The deep gives nothing back but what you take by force.',
     image: '/davysbloodcannon.png',
     emoji: '🩸',
     rarity: 'rare',
@@ -429,7 +429,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
   {
     id: 'opening_statement',   // display: Vanguard Battery
     name: 'Vanguard Battery',
-    description: 'Your FIRST shot of every fight lands for +30% damage — every shot after is normal. The vanguard gun runs hot off the first pull, so lead with a loaded volley or Mega and open heavy.',
+    description: 'Your FIRST shot of every fight lands for +30% damage, and every shot after is normal. The vanguard gun runs hot off the first pull, so lead with a loaded volley or Mega and open heavy.',
     image: '/vanguardbattery.png',
     emoji: '🎯',
     rarity: 'legendary',
@@ -439,7 +439,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
   {
     id: 'made_man',            // display: Dampener Plate
     name: 'Dampener Plate',
-    description: 'When a single hit would take more than 25% of your max hull, there is a 50% chance the plating dampens it back down to 25% — a coin-flip that blunts the heaviest blows. The slow bleed still gets through.',
+    description: 'When a single hit would take more than 25% of your max hull, there is a 50% chance the plating dampens it back down to 25%. It blunts the heaviest blows, but the slow bleed still gets through.',
     image: '/dampenerplate.png',
     emoji: '🕴️',
     rarity: 'legendary',
@@ -449,7 +449,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
   {
     id: 'the_shakedown',       // display: Carrion Sight
     name: 'Carrion Sight',
-    description: 'You deal +25% damage to any enemy already suffering a status — burning, frozen, weakened, corroded, or any hex you laid on it. The glass finds the crack in a hull that is already breaking.',
+    description: 'You deal +25% damage to any enemy already suffering a status: burning, frozen, weakened, corroded, or any hex you laid on it. The glass finds the crack in a hull that is already breaking.',
     image: '/carrionsight.png',
     emoji: '💢',
     rarity: 'legendary',
@@ -543,7 +543,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
   {
     id: 'vanguards_chronometer',
     name: "Vanguard's Chronometer",
-    description: 'Adds a fifth of your Savvy to your turn-order roll so you strike first more often, AND always open each fight with a cannonball already loaded.',
+    description: 'Adds 20% of your Savvy to your turn-order roll so you strike first more often, AND always opens each fight with a cannonball already loaded.',
     image: '/forge_vanguardchronometer.png',
     emoji: '🧭',
     rarity: 'legendary',
@@ -574,7 +574,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
   {
     id: 'dreadnought_cannon',
     name: 'Dreadnought Cannon',
-    description: '+17% damage to bosses AND cuts incoming enemy fire by 15%. A heavy gun on a heavier hull — trade blows with a captain and walk away.',
+    description: '+17% damage to bosses AND cuts incoming enemy fire by 15%. A heavy gun on a heavier hull, so trade blows with a captain and walk away.',
     image: '/forge_dreadnoughtcannon.png',
     emoji: '🛡️',
     rarity: 'legendary',
@@ -716,7 +716,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'deadmans_bearing',
     name: "Deadman's Bearing",
     image: '/forge_deadmansbearing.png',
-    description: 'Adds a quarter of your Savvy to your turn-order roll, and once per raid a killing blow leaves you at 1 HP instead of sinking. Strike first, and refuse to go down.',
+    description: 'Adds 25% of your Savvy to your turn-order roll, and once per raid a killing blow leaves you at 1 HP instead of sinking. Strike first, and refuse to go down.',
     emoji: '⚓',
     rarity: 'legendary',
     effects: [
@@ -750,7 +750,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'leviathans_cannon',
     name: "Leviathan's Cannon",
     image: '/forge_leviathanscannon.png',
-    description: '+30% damage to bosses, your damage climbs +4% every turn of a fight, and +13% critical damage with a softened non-crit penalty. The siege gun and the warlord’s piece welded into one barrel.',
+    description: '+30% damage to bosses, your damage climbs +4% every turn of a fight, and +13% critical damage at the cost of 10% off your non-crits. The siege gun and the warlord’s piece welded into one barrel.',
     emoji: '🐋',
     rarity: 'legendary',
     effects: [
@@ -795,7 +795,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'tempest_chronometer',
     name: 'Tempest Chronometer',
     image: '/forge_tempestchronometer.png',
-    description: 'Adds a fifth of your Savvy to your turn-order roll, opens every fight with a cannonball loaded and a 50% chance of loading a second, and on a successful dodge a 50% chance to deflect 75% of the shot back. Strike first, and answer everything.',
+    description: 'Adds 20% of your Savvy to your turn-order roll, opens every fight with a cannonball loaded and a 50% chance of loading a second, and on a successful dodge a 50% chance to deflect 75% of the shot back. Strike first, and answer everything.',
     emoji: '🌀',
     rarity: 'legendary',
     effects: [
@@ -835,7 +835,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
   {
     id: 'carrion_rack',
     name: 'Carrion Rack',
-    description: 'A chance each hit to Weaken, Corrode and make the enemy Feeble — and you deal +21% damage to anything already suffering a status. It opens the wound and twists it.',
+    description: '30% chance each hit to Weaken, Corrode and make the enemy Feeble, and you deal +21% damage to anything already suffering a status. It opens the wound and twists it.',
     image: '/forge_carrionrack.png',
     emoji: '☠️',
     rarity: 'legendary',
@@ -863,7 +863,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
   {
     id: 'bastion_drum',
     name: 'Bastion Drum',
-    description: 'A single hit over 25% of your max hull has a 50% chance to be dampened back to it — and once per raid, beat the drum to bring a spent crew ability back. Hold the line, then rally.',
+    description: 'A single hit over 25% of your max hull has a 50% chance to be dampened back to it, and once per raid you can beat the drum to bring a spent crew ability back. Hold the line, then rally.',
     image: '/forge_bastiondrum.png',
     emoji: '🥁',
     rarity: 'legendary',
@@ -917,7 +917,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
   {
     id: 'plague_cannon',
     name: 'Plague Cannon',
-    description: 'Every hit can Weaken, Corrode and make the enemy Feeble, you deal +25% to anything afflicted, and your criticals hit +15% harder. A rotting hull dies screaming.',
+    description: '35% chance each hit to Weaken, Corrode and make the enemy Feeble, you deal +25% damage to anything afflicted, and your criticals hit +15% harder. A rotting hull dies screaming.',
     image: '/forge_plaguecannon.png',
     emoji: '☠️',
     rarity: 'legendary',
@@ -933,7 +933,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
   {
     id: 'warden_of_the_deep',
     name: 'Warden of the Deep',
-    description: 'A big hit has a 60% chance to be dampened to 25% of your hull, the first killing blow each raid leaves you standing, a fifth of your Savvy joins your turn-order roll, and once per raid you rally a spent ability. The deep does not let you fall.',
+    description: 'A big hit has a 60% chance to be dampened to 25% of your hull, the first killing blow each raid leaves you standing, 20% of your Savvy joins your turn-order roll, and once per raid you rally a spent ability. The deep does not let you fall.',
     image: '/forge_wardenofthedeep.png',
     emoji: '🛡️',
     rarity: 'legendary',
