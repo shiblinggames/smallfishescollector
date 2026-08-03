@@ -20,8 +20,7 @@ import {
   type TrawlZoneKey, type TrawlState, type TrawlCrewView, type ActiveTrawlView, type CollectTrawlResult,
 } from './constants'
 import { mawCharge } from '@/lib/finnItems'
-import { lockedBunkCrewIds } from '@/lib/crewBunkSettle'
-import { storesCapHours } from '@/lib/crewBunks'
+import { storesCapHours, stintDone } from '@/lib/crewBunks'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -59,7 +58,7 @@ const isZone = (z: string): z is TrawlZoneKey => z in TRAWL_ZONE_BY_KEY
 
 // Build the full client state from the player's profile + roster + active trawls.
 async function buildTrawlState(admin: Admin, userId: string): Promise<TrawlState> {
-  const [{ data: profile }, { data: trawlRows }, { data: crewRows }, { data: pendingVoyage }, { data: ch3Row }] = await Promise.all([
+  const [{ data: profile }, { data: trawlRows }, { data: crewRows }, { data: pendingVoyage }, { data: ch3Row }, { data: bunkRows }] = await Promise.all([
     admin.from('profiles').select('fishing_xp, expedition_xp, has_ancient_deep_access, equipped_raid_items, borrowed_jaw_xp, finn_spoil_free, finn_spoil_paid, crew_stores_level').eq('id', userId).single(),
     admin.from('trawls').select('zone, crew_id, ends_at').eq('user_id', userId),
     admin.from('user_crew').select(CREW_COLS).eq('user_id', userId).is('died_at', null),
@@ -67,6 +66,10 @@ async function buildTrawlState(admin: Admin, userId: string): Promise<TrawlState
     admin.from('daily_voyages').select('crew_variant_ids').eq('user_id', userId).eq('status', 'pending').maybeSingle(),
     // Ancient Deep trawls carry the same Chapter 3 gate as fishing it directly.
     admin.from('raid_completions').select('id').eq('user_id', userId).eq('raid_id', 'the_quartermaster').limit(1).maybeSingle(),
+    // IN THIS BATCH, not after it. Read via lockedBunkCrewIds at first, which
+    // awaits its own query, so every trawl screen and every claim paid a whole
+    // extra serial round trip for one small list.
+    admin.from('crew_hall_bunks').select('crew_id, since, cap_hours').eq('user_id', userId),
   ])
   const ancientDeepUnlocked = (profile as { has_ancient_deep_access?: boolean } | null)?.has_ancient_deep_access === true || !!ch3Row
   const onVoyage = new Set<number>(((pendingVoyage as { crew_variant_ids?: number[] } | null)?.crew_variant_ids ?? []))
@@ -99,8 +102,10 @@ async function buildTrawlState(admin: Admin, userId: string): Promise<TrawlState
   // A hand mid-stint in a Crew Hall bunk is committed for the whole stint, the
   // same as one already at sea. They were showing up here as free, and sending
   // one left them holding a bunk AND a trawl at once.
-  const inBunk = new Set(await lockedBunkCrewIds(
-    admin, userId, storesCapHours((profile as { crew_stores_level?: number } | null)?.crew_stores_level ?? 1)))
+  const liveCap = storesCapHours((profile as { crew_stores_level?: number } | null)?.crew_stores_level ?? 1)
+  const inBunk = new Set(((bunkRows ?? []) as { crew_id: number; since: string; cap_hours: number | null }[])
+    .filter(r => !stintDone(r.since, now, r.cap_hours ?? liveCap))
+    .map(r => r.crew_id))
 
   const freeCrew: TrawlCrewView[] = ((crewRows ?? []) as any[])
     .filter(r => !atSea.has(r.id) && !onVoyage.has(r.id) && !inBunk.has(r.id))
@@ -138,11 +143,15 @@ export async function deployTrawl(zone: string, crewId: number): Promise<TrawlSt
   if (!isZone(zone)) return { error: 'Unknown zone' }
 
   const admin = createAdminClient()
-  const [{ data: profile }, { data: trawlRows }, { data: crewRow }, { data: pendingVoyage }] = await Promise.all([
+  const [{ data: profile }, { data: trawlRows }, { data: crewRow }, { data: pendingVoyage }, { data: bunkRow }] = await Promise.all([
     admin.from('profiles').select('fishing_xp, expedition_xp, has_ancient_deep_access, crew_stores_level').eq('id', user.id).single(),
     admin.from('trawls').select('zone, crew_id').eq('user_id', user.id),
     admin.from('user_crew').select('id, died_at').eq('id', crewId).eq('user_id', user.id).maybeSingle(),
     admin.from('daily_voyages').select('id').eq('user_id', user.id).eq('status', 'pending').contains('crew_variant_ids', [crewId]).maybeSingle(),
+    // Just THIS crew's bunk, in the same batch. The guard below only asks about
+    // one hand, so loading the whole hall and doing it serially was two costs
+    // for no reason.
+    admin.from('crew_hall_bunks').select('since, cap_hours').eq('user_id', user.id).eq('crew_id', crewId).maybeSingle(),
   ])
 
   const fishingLevel = fishingLevelFromXP((profile?.fishing_xp as number | null) ?? 0)
@@ -169,9 +178,9 @@ export async function deployTrawl(zone: string, crewId: number): Promise<TrawlSt
   // below frees their party slot, and they end up serving a trawl and a stint
   // at the same time and collecting both. Mirrors assertCanReassign in
   // crew/actions.ts, which refuses the same move on the party tracks.
-  const bunkLocked = await lockedBunkCrewIds(
-    admin, user.id, storesCapHours((profile as { crew_stores_level?: number } | null)?.crew_stores_level ?? 1))
-  if (bunkLocked.includes(crewId)) {
+  const bunk = bunkRow as { since: string; cap_hours: number | null } | null
+  if (bunk && !stintDone(bunk.since, Date.now(),
+      bunk.cap_hours ?? storesCapHours((profile as { crew_stores_level?: number } | null)?.crew_stores_level ?? 1))) {
     return { error: 'That crew is training in the hall. Their stint has to finish first.' }
   }
 

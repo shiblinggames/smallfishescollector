@@ -373,14 +373,49 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
 
   async function doDeploy(zone: TrawlZoneKey, crewId: number) {
     if (busy) return
-    setBusy(true); setSendingId(crewId); haptic([0, 12, 30, 18]) // immediate "thunk" on tap
+    haptic([0, 12, 30, 18]) // immediate "thunk" on tap
+
+    // OPTIMISTIC. A deploy costs an auth check, a five-query guard, two writes
+    // and a full state rebuild, so the honest round trip is well over half a
+    // second — and the panel used to sit there, picker open, for all of it.
+    // Everything the UI needs to show the crew at sea is already on the client,
+    // so show it now and let the server confirm.
+    //
+    // The server is still the authority: its response replaces this wholesale a
+    // moment later, and a refusal rolls the snapshot straight back.
+    // `state` is non-null wherever this can be called (the picker only renders
+    // inside a loaded panel), but narrow it so the snapshot below is a real
+    // TrawlState rather than a partial.
+    const before = state
+    const crew = before?.freeCrew.find(c => c.id === crewId)
+    if (before && crew) {
+      const est = expectedTrawlHaul(zone, crew.savvy, crew.fortune)
+      setState({
+        ...before,
+        freeCrew: before.freeCrew.filter(c => c.id !== crewId),
+        zones: before.zones.map(z => z.key !== zone ? z : {
+          ...z,
+          trawl: {
+            zone, crew, endsAt: new Date(Date.now() + trawlDurationMs(zone)).toISOString(),
+            ready: false, expectedXp: est.xp, expectedDoubloons: est.doubloons,
+          },
+        }),
+      })
+      setPicking(null); setNow(Date.now())
+      setFlashZone(zone); setTimeout(() => setFlashZone(null), 850)
+    }
+
+    setBusy(true); setSendingId(crewId)
     const r = await deployTrawl(zone, crewId)
     setBusy(false); setSendingId(null)
-    if ('error' in r) { haptic([10, 40, 10]); return }
+    if ('error' in r) {
+      // Put it back exactly as it was. Nothing was persisted, so the snapshot
+      // is still correct.
+      setState(before); haptic([10, 40, 10]); return
+    }
     pushRecentCrew(zone, crewId)
     setState(r); setPicking(null); setNow(Date.now())
-    // Pop-flash the zone that just got a crew so the change reads.
-    setFlashZone(zone); setTimeout(() => setFlashZone(null), 850)
+    if (!crew) { setFlashZone(zone); setTimeout(() => setFlashZone(null), 850) }
   }
 
   async function doCollect(zone: TrawlZoneKey) {
