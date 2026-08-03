@@ -374,6 +374,28 @@ export async function getGauntletLeaderboard(variant: GauntletVariant = 'davy'):
 
 /** Whether the player can start a run now (cooldown elapsed) + their lifetime
  *  deepest + when the next run unlocks (ISO, null when available now). */
+/** Has this captain actually put Don Finleone down?
+ *
+ *  raid_node_progress.cleared is NOT the answer on its own. A raid clear is
+ *  recorded in raid_completions (see buildClearedSet, which unions the two), and
+ *  a player can hold the completion without the node ever landing in the jsonb.
+ *  shortbus_vip is exactly that: the Throne beaten, nine depths into Don's
+ *  Gauntlet, and no 'the_throne' in raid_node_progress.
+ *
+ *  The Don's Gauntlet PAGE has always gated on raid_completions, so gating
+ *  hardcore on the jsonb meant the two disagreed: the descent let you in and its
+ *  hardcore said you had never met the man. One source, the same one. */
+async function throneCleared(admin: ReturnType<typeof createAdminClient>, userId: string): Promise<boolean> {
+  const { data } = await admin
+    .from('raid_completions')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('raid_id', 'the_throne')
+    .limit(1)
+    .maybeSingle()
+  return !!data
+}
+
 export async function getGauntletDailyState(variant: GauntletVariant = 'davy'): Promise<{ available: boolean; deepest: number; fathoms: number; nextAt: string | null; deepestRun: GauntletRunSnapshot | null; hcDeepestRun: GauntletRunSnapshot | null; lastRun: GauntletRunSnapshot | null; hcLastRun: GauntletRunSnapshot | null; resumeState: GauntletRunState | null; resumePaused: boolean; hardcoreUnlocked: boolean; hardcoreLive: boolean; hcDeepest: number; hcRunsLeft: number; runHardcore: boolean; runTerms: SignedTerms | null }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -421,7 +443,7 @@ export async function getGauntletDailyState(variant: GauntletVariant = 'davy'): 
   const hcUsedToday = hcSameUtcDay ? Number(profile?.[HC.runsToday] ?? 0) : 0
   const hcRunsLeft = isAdmin ? HARDCORE_RUNS_PER_DAY : Math.max(0, HARDCORE_RUNS_PER_DAY - hcUsedToday)
   const donsDeepest = (profile?.dons_gauntlet_deepest as number | null) ?? 0
-  const throneCleared = clearedNodes.includes('the_throne')
+  const throne = isDon ? await throneCleared(admin, user.id) : false
   return {
     available,
     deepest,
@@ -437,7 +459,7 @@ export async function getGauntletDailyState(variant: GauntletVariant = 'davy'): 
     // in HIS water: reaching depth 10 of Davy's says nothing about surviving the
     // Ch3/Ch4 pool.
     hardcoreUnlocked: isDon
-      ? donsHardcoreUnlocked({ isAdmin, throneCleared, donsDeepest })
+      ? donsHardcoreUnlocked({ isAdmin, throneCleared: throne, donsDeepest })
       : hardcoreUnlocked({ isAdmin, clearedNodes, deepest }),
     hardcoreLive: HARDCORE_LIVE,
     hcDeepest: (profile?.[HC.deepest] as number | null) ?? 0,
@@ -580,7 +602,7 @@ export async function startGauntletRun(hardcore = false, terms?: SignedTerms, va
     // Server-enforced gate — admin-only until HARDCORE_LIVE (so the action can't
     // be forced from the client), then unlock + that descent's own depth floor.
     const gateOk = isDon
-      ? donsHardcoreUnlocked({ isAdmin, throneCleared: clearedNodes.includes('the_throne'), donsDeepest: (profile?.dons_gauntlet_deepest as number | null) ?? 0 })
+      ? donsHardcoreUnlocked({ isAdmin, throneCleared: await throneCleared(admin, user.id), donsDeepest: (profile?.dons_gauntlet_deepest as number | null) ?? 0 })
       : hardcoreUnlocked({ isAdmin, clearedNodes, deepest })
     if (!gateOk) {
       return { started: false, reason: 'locked', deepest }
