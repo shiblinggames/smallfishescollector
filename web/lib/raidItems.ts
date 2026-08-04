@@ -300,7 +300,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
       { type: 'weaken_on_hit',  value: 0.25 },
       { type: 'corrode_on_hit', value: 0.25 },
     ],
-    source: 'The Blockade — Sal Brackwater',
+    source: 'The Blockade: Sal Brackwater',
     family: 'chainshot',
   },
   {
@@ -322,7 +322,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
       { type: 'corrode_on_hit', value: 0.35 },
       { type: 'feeble_on_hit',  value: 0.35 },
     ],
-    source: 'The Blockade — Sal Brackwater',
+    source: 'The Blockade: Sal Brackwater',
     family: 'chainshot',
   },
   {
@@ -339,7 +339,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     effects: [
       { type: 'crit_strip_charge', value: 0.2 },
     ],
-    source: 'The Throne — Don Finleone',
+    source: 'The Throne: Don Finleone',
     family: 'court_bite',
   },
   {
@@ -352,7 +352,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     effects: [
       { type: 'crit_strip_charge', value: 0.5 },
     ],
-    source: 'The Throne — Don Finleone',
+    source: 'The Throne: Don Finleone',
     family: 'court_bite',
   },
   // ── Davy Jones Gauntlet chest cannons ──────────────────────────────────────

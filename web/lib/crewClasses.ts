@@ -311,7 +311,7 @@ export const SHARPSHOT: ClassDef<SharpshotMilestone> = {
     { unlockLevel: 25,  critZoneMultiplier: 1.75, shotsBuffed: 1, desc: 'Next shot crit zone nearly tripled.' },
     { unlockLevel: 40,  critZoneMultiplier: 2.5,  shotsBuffed: 2, desc: 'Next 2 shots crit zone 3.5× wider.' },
     { unlockLevel: 75,  critZoneMultiplier: 3.0,  shotsBuffed: 2, desc: 'Next 2 shots crit zone 4× wider.' },
-    { unlockLevel: 100, critZoneMultiplier: 3.5,  shotsBuffed: 3, desc: 'Next 3 shots crit zone 4.5× wider — a clean hit almost always crits.' },
+    { unlockLevel: 100, critZoneMultiplier: 3.5,  shotsBuffed: 3, desc: 'Next 3 shots crit zone 4.5× wider. A clean hit almost always crits.' },
   ],
 }
 
@@ -382,7 +382,7 @@ export const ABYSSAL_TIDE: ClassDef<AbyssalTideMilestone> = {
 
 export const LEVIATHAN: ClassDef<LeviathanMilestone> = {
   id: 'leviathan', name: 'Leviathan', shortLabel: 'Salvo',
-  blurb: 'Fires one massive extra cannon shot — a single, ship-shaking crit that ALWAYS lands the full crit amount. Made for big prey: the heavy shell is largely wasted on regular hulls, but it hits far harder against bosses and elites.',
+  blurb: 'Fires one massive extra cannon shot. A single, ship-shaking crit that ALWAYS lands the full crit amount. Made for big prey: the heavy shell is largely wasted on regular hulls, but it hits far harder against bosses and elites.',
   color: '#a3b1c6', emoji: '➤',
   // The apex hunter of BIG prey: ONE reliable heavy shell that always lands a
   // full crit (deterministic crit ceiling in RaidCombat, never a compressed
@@ -405,7 +405,7 @@ export const LEVIATHAN: ClassDef<LeviathanMilestone> = {
 
 export const BLITZ: ClassDef<BlitzMilestone> = {
   id: 'blitz', name: 'Apex', shortLabel: 'Frenzy',
-  blurb: 'A feeding frenzy of light shots — a fixed barrage that never whiffs and BITES HARDER the more wounded the target is. Middling on a fresh hull, devastating as a finisher.',
+  blurb: 'A feeding frenzy of light shots. A fixed barrage that never whiffs and BITES HARDER the more wounded the target is. Middling on a fresh hull, devastating as a finisher.',
   color: '#f87171', emoji: '⇶',
   // MANY SMALL hits — the opposite of Leviathan's one big knock. A GUARANTEED
   // shot count (no RNG chain) with a low per-shot mult, PLUS the feeding-frenzy
@@ -416,11 +416,11 @@ export const BLITZ: ClassDef<BlitzMilestone> = {
   // 4×.28=1.12, 5×.28=1.40, 6×.30=1.80, 8×.30=2.40 — at/just under Leviathan's
   // regular-hull damage; the frenzy pushes it above only as the target dies.
   milestones: [
-    { unlockLevel: 10,  shots: 3, shotDmgMult: 0.28, frenzyMaxPct: 0.20, desc: 'Fire a 3-shot barrage at 28% damage each — up to +20% per shot as the target weakens.' },
-    { unlockLevel: 25,  shots: 4, shotDmgMult: 0.28, frenzyMaxPct: 0.25, desc: 'Fire a 4-shot barrage at 28% each — up to +25% as the target weakens.' },
-    { unlockLevel: 40,  shots: 5, shotDmgMult: 0.28, frenzyMaxPct: 0.35, desc: 'Fire a 5-shot barrage at 28% each — up to +35% as the target weakens.' },
-    { unlockLevel: 75,  shots: 6, shotDmgMult: 0.30, frenzyMaxPct: 0.45, desc: 'Fire a 6-shot barrage at 30% each — up to +45% as the target weakens.' },
-    { unlockLevel: 100, shots: 8, shotDmgMult: 0.30, frenzyMaxPct: 0.60, desc: 'Fire an 8-shot barrage at 30% each — up to +60% per shot as the target weakens.' },
+    { unlockLevel: 10,  shots: 3, shotDmgMult: 0.28, frenzyMaxPct: 0.20, desc: 'Fire a 3-shot barrage at 28% damage each. Up to +20% per shot as the target weakens.' },
+    { unlockLevel: 25,  shots: 4, shotDmgMult: 0.28, frenzyMaxPct: 0.25, desc: 'Fire a 4-shot barrage at 28% each. Up to +25% as the target weakens.' },
+    { unlockLevel: 40,  shots: 5, shotDmgMult: 0.28, frenzyMaxPct: 0.35, desc: 'Fire a 5-shot barrage at 28% each. Up to +35% as the target weakens.' },
+    { unlockLevel: 75,  shots: 6, shotDmgMult: 0.30, frenzyMaxPct: 0.45, desc: 'Fire a 6-shot barrage at 30% each. Up to +45% as the target weakens.' },
+    { unlockLevel: 100, shots: 8, shotDmgMult: 0.30, frenzyMaxPct: 0.60, desc: 'Fire an 8-shot barrage at 30% each. Up to +60% per shot as the target weakens.' },
   ],
 }
 
@@ -475,14 +475,14 @@ export const VENGEANCE: ClassDef<VengeanceMilestone> = {
 // counterpart to the heal (Tidecaller) and info (Oracle) legendaries.
 export const REQUIEM: ClassDef<RequiemMilestone> = {
   id: 'requiem', name: 'Requiem', shortLabel: 'Mark',
-  blurb: 'Marks the enemy for death. While the mark burns, that target takes bonus damage from everything — your shots and every crew ability. She deals no damage herself; the whole crew collects. At the cap, a marked enemy\'s shield is ignored.',
+  blurb: 'Marks the enemy for death. While the mark burns, that target takes bonus damage from everything. Your shots and every crew ability. She deals no damage herself; the whole crew collects. At the cap, a marked enemy\'s shield is ignored.',
   color: '#f43f5e', emoji: '◎',
   milestones: [
-    { unlockLevel: 10,  markMag: 0.15, markTurns: 2, desc: 'Mark the enemy for 2 turns — it takes +15% damage from all sources.' },
-    { unlockLevel: 25,  markMag: 0.18, markTurns: 2, desc: 'Mark the enemy for 2 turns — it takes +18% damage from all sources.' },
-    { unlockLevel: 40,  markMag: 0.22, markTurns: 3, desc: 'Mark the enemy for 3 turns — it takes +22% damage from all sources.' },
-    { unlockLevel: 75,  markMag: 0.25, markTurns: 3, desc: 'Mark the enemy for 3 turns — it takes +25% damage from all sources.' },
-    { unlockLevel: 100, markMag: 0.25, markTurns: 3, pierceShield: true, desc: 'Mark the enemy for 3 turns — it takes +25% damage from all sources, and its shield is ignored while marked.' },
+    { unlockLevel: 10,  markMag: 0.15, markTurns: 2, desc: 'Mark the enemy for 2 turns. It takes +15% damage from all sources.' },
+    { unlockLevel: 25,  markMag: 0.18, markTurns: 2, desc: 'Mark the enemy for 2 turns. It takes +18% damage from all sources.' },
+    { unlockLevel: 40,  markMag: 0.22, markTurns: 3, desc: 'Mark the enemy for 3 turns. It takes +22% damage from all sources.' },
+    { unlockLevel: 75,  markMag: 0.25, markTurns: 3, desc: 'Mark the enemy for 3 turns. It takes +25% damage from all sources.' },
+    { unlockLevel: 100, markMag: 0.25, markTurns: 3, pierceShield: true, desc: 'Mark the enemy for 3 turns. It takes +25% damage from all sources, and its shield is ignored while marked.' },
   ],
 }
 

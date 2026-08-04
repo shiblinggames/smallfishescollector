@@ -80,7 +80,7 @@ export const CREW_SKINS: CrewSkin[] = [
   { id: 'blue_marlin_royalty',    slug: 'blue_marlin', name: 'Royalty',    filename: 'Blue_Marlin_royalty.png',    gemCost: 1000, blurb: 'Crowned by the current, bowed to by the reef.', color: '#f0c040' },
   // ── Lionfish (Linus) — Rare ──
   { id: 'lionfish_potionmaster',    slug: 'lionfish', name: 'Potion Master',    filename: 'Lionfish_potionmaster.png',    gemCost: 1000, blurb: 'A different brew on every spine.', color: '#7fd88f' },
-  { id: 'lionfish_crimsoncavalier', slug: 'lionfish', name: 'Crimson Cavalier', filename: 'Lionfish_crimsoncavalier.png', gemCost: 1000, blurb: 'En garde — venom on every point.', color: '#dc2626' },
+  { id: 'lionfish_crimsoncavalier', slug: 'lionfish', name: 'Crimson Cavalier', filename: 'Lionfish_crimsoncavalier.png', gemCost: 1000, blurb: 'En garde. Venom on every point.', color: '#dc2626' },
   // ── Manta Ray (Manny) — Rare ──
   { id: 'manta_ray_mannyjones', slug: 'manta_ray', name: 'Manny Jones', filename: 'Manta_Ray_mannyjones.png', gemCost: 1000, blurb: "Keeper of the reef's own locker.", color: '#5eead4' },
   { id: 'manta_ray_spectral',   slug: 'manta_ray', name: 'Spectral',    filename: 'Manta_Ray_spectral.png',   gemCost: 1000, blurb: 'A shadow gliding just past the light.', color: '#a5b4fc' },
@@ -129,7 +129,7 @@ export const CREW_SKINS: CrewSkin[] = [
   { id: 'great_white_shark_blackout',   slug: 'great_white_shark', name: 'Blackout',    filename: 'Great_White_blackout.png',   gemCost: 1250, blurb: 'A shadow with teeth. You never see it coming.', color: '#475569' },
   // ── Angelfish (Ang) — Epic (promoted from Common 2026-07-08) ──
   { id: 'angelfish_archangel',   slug: 'angelfish', name: 'Archangel',    filename: 'Angelfish_archangel.png',   gemCost: 1250, blurb: 'Wings of light, judgment in every feather.', color: '#e6ecff' },
-  { id: 'angelfish_fallenangel', slug: 'angelfish', name: 'Fallen Angel', filename: 'Angelfish_fallenangel.png', gemCost: 1250, blurb: 'Grace turned to grievance — halo swapped for horns.', color: '#b4384f' },
+  { id: 'angelfish_fallenangel', slug: 'angelfish', name: 'Fallen Angel', filename: 'Angelfish_fallenangel.png', gemCost: 1250, blurb: 'Grace turned to grievance. Halo swapped for horns.', color: '#b4384f' },
   { id: 'angelfish_gildedsaint', slug: 'angelfish', name: 'Gilded Saint', filename: 'Angelfish_gildedsaint.png', gemCost: 1250, blurb: 'Haloed in gold, worshipped by the whole reef.', color: '#f0c040' },
   // ── Jellyfish (Jelly) — Epic ──
   { id: 'jellyfish_ancientspirit', slug: 'jellyfish', name: 'Ancient Spirit', filename: 'Jellyfish_ancientspirit.png', gemCost: 1250, blurb: 'A soul adrift since the first tides.', color: '#5eead4' },

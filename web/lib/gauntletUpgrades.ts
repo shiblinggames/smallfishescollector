@@ -100,7 +100,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
   {
     id: 'salt_ward',
     name: 'Salt Ward',
-    description: "Once per curse the Locker lays on you, throw it back and force a different one. The new curse could be milder, or worse — it's a gamble.",
+    description: "Once per curse the Locker lays on you, throw it back and force a different one. The new curse could be milder, or worse. It's a gamble.",
     depthRequired: 0,
     cost: 65,
     scope: 'gauntlet',
@@ -202,7 +202,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
   {
     id: 'swift_sails',
     name: 'Swift Sails',
-    description: 'Your crew voyages return 30% faster — less waiting, more sailing.',
+    description: 'Your crew voyages return 30% faster. Less waiting, more sailing.',
     depthRequired: 12,
     cost: 120,
     scope: 'world',
@@ -237,7 +237,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
   // list by cost at render, so new entries can be appended anywhere.
   // ── Run Upgrades (scope 'gauntlet') ─────────────────────────────────────────
   { id: 'dg_calm',         name: 'Uncursed Descent', description: "The Locker's first curse passes you by. You descend clean until the second.", depthRequired: 0,  cost: 90,  scope: 'gauntlet', gauntlet: 'don' },
-  { id: 'dg_hp',           name: 'Deep Lungs',       description: 'Start every dive with 20% more max HP — a bigger hull for a nastier deep.',      depthRequired: 0,  cost: 140, scope: 'gauntlet', gauntlet: 'don' },
+  { id: 'dg_hp',           name: 'Deep Lungs',       description: 'Start every dive with 20% more max HP. A bigger hull for a nastier deep.',      depthRequired: 0,  cost: 140, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_hp_2',         name: 'Deep Lungs II',    description: 'Deepen your hull: start every dive with 35% more max HP instead.',                depthRequired: 4,  cost: 240, scope: 'gauntlet', gauntlet: 'don', requires: 'dg_hp' },
   { id: 'dg_hp_3',         name: 'Deep Lungs III',   description: 'The deepest hull: start every dive with 50% more max HP.',                         depthRequired: 10, cost: 380, scope: 'gauntlet', gauntlet: 'don', requires: 'dg_hp_2' },
   { id: 'dg_peek',         name: 'Ghostlight',       description: 'Before each dive, read what waits below: a lone hull, an elite and its trick, or a boss.', depthRequired: 0, cost: 140, scope: 'gauntlet', gauntlet: 'don' },
@@ -246,7 +246,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
   { id: 'dg_reroll_boon_2', name: 'Rechamber II',    description: 'Twice per power draft, throw the offered boons back and draw three fresh ones.',  depthRequired: 8,  cost: 300, scope: 'gauntlet', gauntlet: 'don', requires: 'dg_reroll_boon' },
   { id: 'dg_reroll_curse', name: 'Break the Hex',    description: "Once per curse the Locker lays on you, throw it back and force a different one. Could be milder, could be worse.", depthRequired: 0, cost: 190, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_reroll_curse_2', name: 'Break the Hex II', description: 'Twice per curse the Locker lays on you, throw it back and force a different one.', depthRequired: 8, cost: 320, scope: 'gauntlet', gauntlet: 'don', requires: 'dg_reroll_curse' },
-  { id: 'dg_boon_filter',  name: 'Blacklist',        description: 'Once per dive, banish one offered boon for good — mark it on any power draft and it never surfaces again for the rest of the run. Cut the dead weight so the good draws come up more often.', depthRequired: 0, cost: 200, scope: 'gauntlet', gauntlet: 'don' },
+  { id: 'dg_boon_filter',  name: 'Blacklist',        description: 'Once per dive, banish one offered boon for good. Mark it on any power draft and it never surfaces again for the rest of the run. Cut the dead weight so the good draws come up more often.', depthRequired: 0, cost: 200, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_boon_filter_2', name: 'Blacklist II',    description: 'Banish up to two boons per dive instead of one. Shape the pool harder toward the build you want.', depthRequired: 8, cost: 320, scope: 'gauntlet', gauntlet: 'don', requires: 'dg_boon_filter' },
   { id: 'dg_armor',        name: 'Spectral Plate',   description: 'Take 12% less damage from every enemy for the whole dive.',                       depthRequired: 0,  cost: 210, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_armor_2',      name: 'Spectral Plate II', description: 'Thicker plate: take 18% less damage from every enemy for the whole dive.',        depthRequired: 6,  cost: 320, scope: 'gauntlet', gauntlet: 'don', requires: 'dg_armor' },
@@ -257,17 +257,17 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
   { id: 'dg_lifedrain',    name: 'Bloodward',        description: 'Patch up 10% of your max HP each time you sink a ship.',                           depthRequired: 5,  cost: 230, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_lifedrain_2',  name: 'Bloodward II',     description: 'Patch up 15% of your max HP each time you sink a ship.',                           depthRequired: 10, cost: 340, scope: 'gauntlet', gauntlet: 'don', requires: 'dg_lifedrain' },
   { id: 'dg_lifedrain_3',  name: 'Bloodward III',    description: 'Patch up 22% of your max HP each time you sink a ship.',                           depthRequired: 16, cost: 500, scope: 'gauntlet', gauntlet: 'don', requires: 'dg_lifedrain_2' },
-  { id: 'dg_luck',         name: 'Drowned Fortune',  description: 'The deep deals you a better hand — Rare and Legendary boons surface far more often.', depthRequired: 8, cost: 250, scope: 'gauntlet', gauntlet: 'don' },
+  { id: 'dg_luck',         name: 'Drowned Fortune',  description: 'The deep deals you a better hand. Rare and Legendary boons surface far more often.', depthRequired: 8, cost: 250, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_veteran',      name: "Veteran's Start",  description: 'Begin every dive at depth 5: tougher ships, boons and curses sooner. Pot, chests and Fathoms still count only the ships you sink.', depthRequired: 10, cost: 270, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_haul',         name: 'Pieces of Eight',  description: 'Bank 20% more doubloons every time you cash out a dive.',                          depthRequired: 12, cost: 210, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_xp',           name: 'Deep Ledger',      description: 'Earn 25% more Nav XP every time you cash out a dive.',                             depthRequired: 14, cost: 300, scope: 'gauntlet', gauntlet: 'don' },
   // ── Bespoke to Don's — no Davy equivalent. Risk/reward + build-shaping. ──────
   { id: 'dg_loan_shark',   name: 'Loan Shark',       description: 'Sign the Don’s terms: deal 25% MORE damage for the whole dive, but take 18% more from every hit. The debt always comes due. Stacks with your other damage and plate.', depthRequired: 0, cost: 240, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_blood_oath',   name: 'Blood Oath',       description: 'Swear in before you dive: start every run already holding one random boon, a favor from the deep to build on from the first fight.', depthRequired: 4, cost: 280, scope: 'gauntlet', gauntlet: 'don' },
-  { id: 'dg_consigliere',  name: 'Consigliere',      description: 'The Don whispers in your ear. Synergy offers — confluences and convergences — surface on far more of your power drafts, so you actually build toward them.', depthRequired: 6, cost: 300, scope: 'gauntlet', gauntlet: 'don' },
+  { id: 'dg_consigliere',  name: 'Consigliere',      description: 'The Don whispers in your ear. Synergy offers (confluences and convergences) surface on far more of your power drafts, so you actually build toward them.', depthRequired: 6, cost: 300, scope: 'gauntlet', gauntlet: 'don' },
   // ── Ship & Shore (scope 'account'/'world') — permanent topside power. ────────
   { id: 'dg_deep_plating',   name: 'Deep-Sea Plating',   description: 'The Don’s shipwrights re-hull you in pressure-forged plate: 10% more ship max HP in EVERY raid and gauntlet dive, forever.', depthRequired: 10, cost: 320, scope: 'account', category: 'raids', gauntlet: 'don' },
-  { id: 'dg_daily_tribute',  name: 'The Don’s Tribute',  description: 'The family looks after its own. Claim 10 Fathoms free from the Locker, once every day — a standing tribute from the deep.', depthRequired: 20, cost: 220, scope: 'account', category: 'raids', gauntlet: 'don' },
+  { id: 'dg_daily_tribute',  name: 'The Don’s Tribute',  description: 'The family looks after its own. Claim 10 Fathoms free from the Locker, once every day. A standing tribute from the deep.', depthRequired: 20, cost: 220, scope: 'account', category: 'raids', gauntlet: 'don' },
   { id: 'dg_kingpin_cut',    name: 'Kingpin’s Cut',      description: 'The Don marks the finest hauls for you: legendary boss-drop items drop twice as often from every raid crate, forever.', depthRequired: 12, cost: 420, scope: 'account', category: 'raids', gauntlet: 'don' },
   { id: 'dg_crimson_tithe',  name: 'Crimson Tithe',      description: 'The Don takes his cut in blood, and hands you a bigger one: earn 15% more Blood Gems from every Hardcore dive you survive.', depthRequired: 16, cost: 360, scope: 'account', category: 'raids', gauntlet: 'don' },
   { id: 'dg_master_catcher', name: 'Relentless Catcher', description: 'Upgrades your Tireless Catcher: the Auto Catcher now reels in epic fish on its own too, on top of rares. Legendaries and the Ancient Deep still want your hand.', depthRequired: 18, cost: 330, scope: 'world', category: 'fishing', gauntlet: 'don', requires: 'tireless_catcher' },
