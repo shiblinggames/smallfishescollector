@@ -1727,13 +1727,27 @@ export default function ShipHero({
                 return (
                   <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
                     <div style={{ position: 'relative', display: 'inline-block', width: '78%', maxWidth: 230 }}>
+                      {/* A LIGHT BEHIND THE HULL. The backdrop is a lamplit berth
+                          and the ship models are dark timber, so the ship was a
+                          dark shape on a dark shape. This is a lantern pool
+                          behind it: it separates the hull without putting a
+                          plate or a box around it, and it belongs in a boathouse.
+                          Static gradient, no animation, costs nothing. */}
+                      <div aria-hidden style={{
+                        position: 'absolute', left: '-18%', right: '-18%', top: '-10%', bottom: '-16%',
+                        background: 'radial-gradient(ellipse 62% 58% at 50% 52%, rgba(255,214,150,0.20) 0%, rgba(120,160,210,0.10) 42%, transparent 72%)',
+                        pointerEvents: 'none',
+                      }} />
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={shipImgSrc}
                         alt={shipName ?? shipStats.name}
                         loading="lazy"
                         decoding="async"
-                        style={{ width: '100%', height: 'auto', objectFit: 'contain', display: 'block', filter: skinFilter, transition: 'filter 0.3s ease' }}
+                        // Drop-shadow APPENDED to the skin's own filter, never
+                        // replacing it: a skin that recolours the hull still has
+                        // to recolour it. Static, so it rasterises once.
+                        style={{ position: 'relative', width: '100%', height: 'auto', objectFit: 'contain', display: 'block', filter: `${skinFilter === 'none' ? '' : skinFilter + ' '}drop-shadow(0 8px 18px rgba(0,0,0,0.85)) drop-shadow(0 0 3px rgba(0,0,0,0.7))`, transition: 'filter 0.3s ease' }}
                       />
                     </div>
 
@@ -2175,6 +2189,20 @@ export default function ShipHero({
               {(() => {
                 const shipTier = Math.max(0, SHIPS.findIndex(s => s.name === shipStats.name))
                 const nextShip = SHIPS[shipTier + 1]
+                // ONE HEIGHT FOR EVERY TAB. The three tabs hold different numbers
+                // of tiles (Refits up to 3, Armament up to 2, Look 1), so the grid
+                // grew and shrank and the whole page jumped under your thumb as
+                // you switched. Reserve the tallest tab's height for all of them,
+                // computed from what THIS captain has unlocked rather than
+                // hardcoded, so an early player is not staring at reserved space
+                // for refits they cannot buy yet.
+                const tabTileCounts = [
+                  1 + ((blockadeCleared || hasSixthBerth) ? 1 : 0) + ((throneCleared || hasArmoryExpansion) ? 1 : 0),
+                  (showUltimate ? 1 : 0) + 1,
+                  1,
+                ]
+                const tileRows = Math.ceil(Math.max(...tabTileCounts) / 2)
+                const tileGridMinHeight = tileRows * 98 + (tileRows - 1) * 10
                 return (
                   <>
                     {/* ── THE SHIP, AND WHAT YOU HAVE DONE TO IT ──────────────
@@ -2289,7 +2317,7 @@ export default function ShipHero({
                       })}
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10, marginBottom: '1.4rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10, marginBottom: '1.4rem', minHeight: tileGridMinHeight, alignContent: 'start' }}>
                       {/* Ultimate Weapon */}
                       {shipTab === 'armament' && showUltimate && (() => {
                         const activeAug = initialManowarAugment ? getShipAugment(initialManowarAugment) : null
