@@ -10,7 +10,7 @@ import { finnItemLevel, finnTierNumeral, FINN_ITEM_MAX_LEVEL } from '@/lib/finnI
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { vibrate, hapticTap } from '@/lib/haptics'
+import { vibrate, hapticTap, hapticReward } from '@/lib/haptics'
 import { RARITY_COLOR as ITEM_RARITY_COLOR } from '@/lib/bossRaids'
 import { repairShip } from '@/app/(app)/raids/actions'
 import { motion, AnimatePresence, useDragControls, type DragControls } from 'framer-motion'
@@ -354,6 +354,52 @@ function ShipTile({ accent, title, value, sub, cta, icon, onClick }: {
   )
 }
 
+/** The repair kit landing. Deliberately IN the sheet rather than a full-screen
+ *  moment: a kit is a refit, not a new hull, and the Berth and the Armory set
+ *  that precedent already. Transform and opacity only, one pass, no loop. */
+function KitCelebration({ kitId, fortune, onDone }: { kitId: string; fortune: number; onDone: () => void }) {
+  const kit = getRepairKit(kitId)
+  const range = kit ? repairKitRange(kit, fortune) : null
+  const accent = kit ? kitRarityColor(kit.rarity) : '#7fdfa3'
+  useEffect(() => {
+    hapticReward()
+    const t = setTimeout(onDone, 2600)
+    return () => clearTimeout(t)
+  }, [onDone])
+  return (
+    <motion.div
+      onClick={onDone}
+      initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.42, ease: [0.16, 1, 0.3, 1] }}
+      style={{ position: 'relative', textAlign: 'center', padding: '1.4rem 1rem 1.2rem', cursor: 'pointer', overflow: 'hidden' }}
+    >
+      {/* Sparks off the wrench. Nine one-shot elements, gone in under a second. */}
+      {Array.from({ length: 9 }).map((_, i) => (
+        <motion.span key={i} aria-hidden
+          initial={{ opacity: 0, y: 10, scale: 0.6 }}
+          animate={{ opacity: [0, 1, 0], y: -40, x: (i % 2 ? 1 : -1) * (10 + i * 5), scale: 1 }}
+          transition={{ duration: 1.05, delay: 0.1 + i * 0.045, ease: 'easeOut' }}
+          style={{ position: 'absolute', left: '50%', top: 54, width: 4, height: 4, borderRadius: '50%', background: accent, pointerEvents: 'none' }} />
+      ))}
+      <motion.div
+        initial={{ scale: 0.5, rotate: -18 }} animate={{ scale: 1, rotate: 0 }}
+        transition={{ type: 'spring', stiffness: 320, damping: 15, delay: 0.05 }}
+        style={{ width: 62, height: 62, margin: '0 auto', borderRadius: '50%', display: 'grid', placeItems: 'center', background: `${accent}1e`, border: `1px solid ${accent}88` }}
+      >
+        <WrenchGlyph color={accent} />
+      </motion.div>
+      <p className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.2em', color: accent, marginTop: 12 }}>Refit complete</p>
+      <p className="font-cinzel font-800" style={{ fontSize: '1.25rem', lineHeight: 1.1, color: '#f4ecd8', marginTop: 4 }}>{kit?.name ?? 'Repair Kit'}</p>
+      {range && (
+        <p className="font-karla font-700" style={{ fontSize: '0.86rem', color: '#9fd9b1', marginTop: 8 }}>
+          Repairs +{range.min} to +{range.max} HP
+        </p>
+      )}
+      <p className="font-karla uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.16em', color: '#7a7674', marginTop: 14 }}>Tap to continue</p>
+    </motion.div>
+  )
+}
+
 function DrawerHandle({ controls }: { controls: DragControls }) {
   return (
     <div
@@ -559,6 +605,10 @@ export default function ShipHero({
   const [kitOpen, setKitOpen] = useState(false)
   const [kitBusy, setKitBusy] = useState(false)
   const [kitErr, setKitErr] = useState<string | null>(null)
+  // The kit that was just bought, held so the modal can show it landing before
+  // it closes. The Berth and the Armory both already do this (BerthCelebration,
+  // ArmoryCelebration); the kit was the one refit that just shut the sheet.
+  const [kitWon, setKitWon] = useState<string | null>(null)
   async function doBuyKit() {
     setKitBusy(true); setKitErr(null)
     try {
@@ -566,8 +616,9 @@ export default function ShipHero({
       if ('error' in res) { setKitErr(res.error); return }
       setKitEquipped(res.equippedRepairKit); setKitsOwned(res.ownedRepairKits)
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
-      setKitOpen(false)
-      router.refresh()
+      // Show it landing, THEN close. router.refresh() is deferred to the
+      // celebration's own dismiss so the panel does not re-render underneath it.
+      setKitWon(res.equippedRepairKit)
     } finally { setKitBusy(false) }
   }
 
@@ -2726,6 +2777,13 @@ export default function ShipHero({
           transition={{ duration: 0.18 }}
           style={{ margin: 'auto', width: '100%', maxWidth: 380, background: 'rgba(8,14,24,0.98)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 18, padding: '1.1rem 1rem 1.25rem' }}
         >
+          {kitWon ? (
+            <KitCelebration
+              kitId={kitWon}
+              fortune={ratedFortune}
+              onDone={() => { setKitWon(null); setKitOpen(false); router.refresh() }}
+            />
+          ) : (
           <UpgradeRepairKitPanel
             equippedKit={kitEquipped}
             ownedKits={kitsOwned}
@@ -2737,6 +2795,7 @@ export default function ShipHero({
             onBuy={doBuyKit}
             onClose={() => { setKitOpen(false); setKitErr(null) }}
           />
+          )}
         </motion.div>
       </PopupShell>
 

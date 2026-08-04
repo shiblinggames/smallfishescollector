@@ -76,10 +76,25 @@ export default function ModalSheet({
     <PopupShell open={open} onClose={onClose} zIndex={zIndex}>
       {open && (
         <motion.div
-          initial={{ opacity: 0, scale: 0.96, y: 8 }}
+          // A SPRING, not a duration. Every hand-rolled sheet in the app used
+          // `duration: 0.18` linear-ish, which arrives and stops dead: correct,
+          // and completely inert. A spring overshoots a hair and settles, which
+          // is the difference between a panel appearing and a panel ARRIVING.
+          //
+          // Tuned stiff and well damped (no visible bounce) because these open
+          // constantly. The house rule is that frequent actions get subtle
+          // treatment, so this is felt rather than seen.
+          //
+          // Transform + opacity only, so the compositor owns it. Scale starts
+          // slightly nearer 1 than the old 0.96: with a spring, a smaller travel
+          // reads as more confident than a big one settling.
+          initial={{ opacity: 0, scale: 0.975, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.96, y: 4 }}
-          transition={{ duration: 0.18 }}
+          exit={{ opacity: 0, scale: 0.985, y: 4, transition: { duration: 0.13, ease: 'easeIn' } }}
+          transition={{
+            type: 'spring', stiffness: 460, damping: 34, mass: 0.7,
+            opacity: { duration: 0.16, ease: 'easeOut' },
+          }}
           onClick={e => e.stopPropagation()}
           style={{
             position: 'relative', margin: 'auto', width: '100%', maxWidth,
