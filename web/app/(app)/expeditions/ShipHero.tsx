@@ -2222,18 +2222,32 @@ export default function ShipHero({
                              does rather than dumped in one flat grid. */}
                     {(() => {
                       const cls = aggregateShipClasses(shipClasses)
-                      const baseHull  = shipStats.durability
-                      const baseDmg   = shipStats.minDamage
-                      const baseSpeed = shipStats.speed
-                      const baseCrew  = shipStats.crewSlots
+                      // BASE MEANS THE BARE HULL, so read it from the tier table
+                      // rather than from the shipStats prop.
+                      //
+                      // ShipHeroSection hands this component a shipStats whose
+                      // crewSlots ALREADY has the Sixth Berth folded in:
+                      //
+                      //   hasSixthBerth ? { ...baseShip, crewSlots: +1 } : baseShip
+                      //
+                      // so adding the berth here again read the Man-o-War as
+                      // "7, +1" against a real cap of 6. Every row now starts
+                      // from the hull's own number and this component adds the
+                      // refits itself, which is the only way the "+N" can be
+                      // trusted to mean "what your upgrades bought".
+                      const hull = EXPEDITION_SHIP_STATS[shipTierForSlots] ?? shipStats
+                      const baseHull  = hull.durability
+                      const baseDmg   = hull.minDamage
+                      const baseSpeed = hull.speed
+                      const baseCrew  = hull.crewSlots
                       const baseMount = raidItemSlotsForTier(shipTierForSlots)
-                      const hull  = Math.round(baseHull * cls.hpMult)
+                      const hullTotal  = Math.round(baseHull * cls.hpMult)
                       const dmg   = Math.round(baseDmg * cls.damageMult)
                       const speed = baseSpeed + cls.speedFlat
                       const crew  = baseCrew + cls.crewSlots + (hasSixthBerth ? 1 : 0)
                       const mount = baseMount + cls.itemSlots + (hasArmoryExpansion ? 1 : 0)
                       const ROWS: { label: string; base: number; total: number; accent: string }[] = [
-                        { label: 'Hull',   base: baseHull,  total: hull,  accent: '#7fdfa3' },
+                        { label: 'Hull',   base: baseHull,  total: hullTotal, accent: '#7fdfa3' },
                         { label: 'Damage', base: baseDmg,   total: dmg,   accent: '#f08a8a' },
                         { label: 'Speed',  base: baseSpeed, total: speed, accent: '#60a5fa' },
                         { label: 'Crew',   base: baseCrew,  total: crew,  accent: '#e0c47a' },
@@ -2252,11 +2266,19 @@ export default function ShipHero({
                               <div key={r.label} style={{ textAlign: 'center', minWidth: 0 }}>
                                 <p className="font-karla font-800 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.42)' }}>{r.label}</p>
                                 <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', lineHeight: 1.1, color: '#ecdcbd', fontVariantNumeric: 'tabular-nums', marginTop: 2 }}>{r.total}</p>
-                                {/* Only ever shows when a refit actually moved it,
-                                    so a fresh captain sees clean numbers rather
-                                    than a column of +0. */}
-                                <p className="font-karla font-700" style={{ fontSize: '0.56rem', lineHeight: 1.2, color: added > 0 ? r.accent : 'transparent', fontVariantNumeric: 'tabular-nums' }}>
-                                  {added > 0 ? `+${added}` : '+0'}
+                                {/* Shows whenever a refit MOVED it, in either
+                                    direction, and stays invisible at zero so a
+                                    fresh captain sees clean numbers instead of a
+                                    column of +0.
+                                    
+                                    Negatives matter here. Ship classes are
+                                    trade-offs: three Master Gunner picks buy
+                                    +34% damage and cost 20% of the hull, which
+                                    on a Man-o-War is 125 down to 100. Hiding
+                                    that showed a captain "Hull 100" with no
+                                    explanation and no way to find one. */}
+                                <p className="font-karla font-700" style={{ fontSize: '0.56rem', lineHeight: 1.2, color: added > 0 ? r.accent : added < 0 ? '#e08a8a' : 'transparent', fontVariantNumeric: 'tabular-nums' }}>
+                                  {added > 0 ? `+${added}` : added < 0 ? `${added}` : '+0'}
                                 </p>
                               </div>
                             )
