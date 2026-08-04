@@ -1420,7 +1420,7 @@ export const THE_QUARTERMASTERS_GHOST: BossRaidConfig = {
   zone: 'abyss',         // Chapter IV. The Abyss
   enemies: {
     ghost: {
-      id: 'ghost', name: "The Quartermaster's Ghost", hpBase: 1050, minDmg: 26, maxDmg: 44,
+      id: 'ghost', name: "The Quartermaster's Ghost", hpBase: 1250, minDmg: 26, maxDmg: 44,
       shipSpeed: 9, actionMs: 3600,
       pattern: ['reload', 'fire', 'volley', 'dodge', 'reload', 'fire', 'fire', 'dodge', 'reload', 'volley'],
       critChance: 0.16,
@@ -1439,19 +1439,29 @@ export const THE_QUARTERMASTERS_GHOST: BossRaidConfig = {
       // is why he comes back three times without a single revive needing to be
       // explained away, and it is why the loot and the fight are the same object.
       //
-      // HP, sized against the rest of the late game rather than guessed. Effective
-      // hull is hpBase x (1 + the revives) + the barrier, which reforms once per
-      // fight (not per phase):
+      // HP, sized against the rest of the late game rather than guessed. ALL of it
+      // is hull: he carries no barrier (see AFFIXES.ledger, which used to give the
+      // opening bar a 15% shield and no longer does).
       //
-      //     1050 x (1 + 0.60 + 0.48 + 0.38) + 158  =  ~2,740
+      //     1250 + 750 + 600 + 1000  =  3,600
+      //     bar 1        1250   hpBase
+      //     bar 2  60%    750   The Plating
+      //     bar 3  48%    600   The Powder
+      //     bar 4  80%   1000   The Glass
+      //
+      // THE LAST BAR COMES BACK BIGGER. The revive ladder used to decay all the way
+      // down (60 / 48 / 38), so the fight got easier exactly as it got meaner:
+      // damageMult climbs to 1.2 on the final phase and the bar under it was the
+      // shortest in the fight, which made the most dangerous stretch also the one
+      // that ended fastest. 80% makes The Glass the wall it is written as, and the
+      // shape of the fight now reads as he is fading, and then he is not.
       //
       // For scale, the boss BARS around him: the Quartermaster 1,807, Sal Brackwater
-      // 1,575, Don Finleone 3,150. He was built at 997, which was less than half the
-      // Ch3 finale and far too little for captains who now hit for 300-480 a shot. He
-      // sits above both mid bosses and below the don, which is where a post-Sal Brackwater
-      // farm boss belongs. He carries no adds, so this IS the whole encounter: 2,740
-      // against the Quartermaster's full raid at 2,387 and the Blockade's at 4,350.
-      // Long enough to be a fight, short enough to run again.
+      // 1,575, Don Finleone 3,150. He was built at 997, then 1050. At 3,600 his whole
+      // encounter is above the Don's boss bar, but the Don is a full raid with eight
+      // fights in front of him and this is one duel with no adds, so the Don's night
+      // is still much longer. Compare instead to whole raids: the Quartermaster's is
+      // 2,387 and the Blockade's 4,350, which puts this between them.
       //
       // Each phase arms one telegraphed check, and the three of them deliberately
       // demand THREE DIFFERENT crew plays, so no single roster answers the whole
@@ -1499,7 +1509,7 @@ export const THE_QUARTERMASTERS_GHOST: BossRaidConfig = {
         // your own glass, takes the bearing, and calls the shot.
         // ANSWER: stand and take it. A brace or a shield. Nothing else gets between
         // you and a shot that is already aimed.
-        { revivePct: 0.38, damageMult: 1.2, badge: 'The Glass',
+        { revivePct: 0.80, damageMult: 1.2, badge: 'The Glass',
           pattern: ['reload', 'reload', 'fire', 'volley', 'fire', 'dodge', 'reload', 'volley'],
           dialogueLine: 'Every captain I ever armed, I watched sink. I always did keep the good glass back.',
           check: {

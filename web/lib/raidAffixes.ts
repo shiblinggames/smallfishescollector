@@ -140,12 +140,17 @@ export const AFFIXES: Record<AffixId, AffixDef> = {
   // on a random elite. See BESPOKE_AFFIX_IDS below.
   ledger: {
     id: 'ledger', name: 'The Ledger',
-    description: 'He fights with everything he is still holding: your fire, your ice, your sights, your plating, your bearings. Take them back and he cannot use them on you again.',
+    description: 'He fights with everything he is still holding: your fire, your ice, your sights, your bearings. Take them back and he cannot use them on you again.',
     burnChance:      0.15,   // Incendiary Cannonball
     freezeChance:    0.15,   // Frozen Cannonball
     critMult:        2,      // Gunner's Sight
-    shieldPctMaxHp:  0.15,   // Reinforced Hull
     speedBonus:      5,      // Navigator's Compass
+    // NO shield. The Reinforced Hull used to sit here as a 15% barrier, which
+    // meant his opening bar wore armour and none of the other three did. It read
+    // as a chip of HP with an extra colour rather than a mechanic, so the plating
+    // is now purely what it always was in the fiction: the PHASE 2 check, where he
+    // tries to bolt it on and you stop him. His bulk is hull, not a bar in front
+    // of it. (Bespoke to him, so removing this cannot touch a random elite.)
   },
   ironclad: {
     id: 'ironclad', name: 'Ironclad',
