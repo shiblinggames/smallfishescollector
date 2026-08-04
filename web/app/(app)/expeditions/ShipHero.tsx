@@ -5,6 +5,7 @@ import ModalSheet from '@/components/ModalSheet'
 import CloseButton from '@/components/CloseButton'
 import FinnChargePanel from '@/components/FinnChargePanel'
 import ItemEffectLines from '@/components/ItemEffectLines'
+import ShipChristening, { type ChristeningData } from '@/components/ShipChristening'
 import { finnItemLevel, finnTierNumeral, FINN_ITEM_MAX_LEVEL } from '@/lib/finnItems'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
@@ -569,6 +570,11 @@ export default function ShipHero({
       router.refresh()
     } finally { setKitBusy(false) }
   }
+
+  // The Christening plays once on a hull purchase. Captured BEFORE router.refresh
+  // lands the new ship, because by then the old one is gone and there is nothing
+  // to say goodbye to.
+  const [christening, setChristening] = useState<ChristeningData | null>(null)
 
   const shipTierForSlots = Math.max(0, SHIPS.findIndex(s => s.name === shipStats.name))
   // Hull cap + the Ch4 Expanded Armory refit's extra mount (purchased flag),
@@ -2681,6 +2687,26 @@ export default function ShipHero({
                 } else {
                   window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
                   setUpgradeOpen(false)
+                  // Snapshot the before/after while `shipStats` still holds the
+                  // OLD hull. router.refresh() swaps it underneath us.
+                  const oldTier = Math.max(0, SHIPS.findIndex(sh => sh.name === shipStats.name))
+                  const bought = SHIPS[oldTier + 1]
+                  const a = EXPEDITION_SHIP_STATS[oldTier]
+                  const b = EXPEDITION_SHIP_STATS[oldTier + 1]
+                  if (bought && a && b) {
+                    setChristening({
+                      fromName: shipStats.name,
+                      toName: bought.name,
+                      toImage: bought.imageUrl ?? '',
+                      stats: [
+                        { label: 'Hull',   from: a.durability, to: b.durability },
+                        { label: 'Damage', from: a.minDamage,  to: b.minDamage },
+                        { label: 'Speed',  from: a.speed,      to: b.speed },
+                        { label: 'Crew',   from: a.crewSlots,  to: b.crewSlots },
+                        { label: 'Mounts', from: raidItemSlotsForTier(oldTier), to: raidItemSlotsForTier(oldTier + 1) },
+                      ],
+                    })
+                  }
                   router.refresh()
                 }
               } finally {
@@ -2940,6 +2966,8 @@ export default function ShipHero({
           doubloons={doubloons}
         />
       </ModalSheet>
+
+      <ShipChristening data={christening} onDone={() => setChristening(null)} />
 
       {/* Expanded Armory — the raid-item mount refit. Same shell as the berth. */}
       <ModalSheet open={armoryOpen} onClose={() => setArmoryOpen(false)}
