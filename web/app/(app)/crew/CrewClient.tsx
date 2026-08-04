@@ -118,10 +118,41 @@ function BloodDrop({ size = 12 }: { size?: number }) {
 // peg full, which is fine: "maxed" is useful for a bar to say, and the printed
 // number beside it still separates one maxed crew from another.
 const STAT_BAR_MAX = 30
-const STAT_ABOUT: Record<'power' | 'dodge' | 'fortune', string> = {
-  power:   'Damage your shots deal in raids. Drives encounter events on voyages.',
-  dodge:   'Dodge chance against enemy hits in raids. Slips past danger events on voyages.',
-  fortune: 'Better loot and repair-kit rolls in raids. Drives discovery payouts on voyages.',
+// What each stat actually does, per place it does it.
+//
+// A LIST, not a sentence. This is the one screen where a new player asks a
+// direct question ("what is Fortune for?") and it used to answer with a single
+// run-on line covering two systems, which is hard to scan and was quietly
+// wrong: it had not been updated for the Gauntlet, for trawls, or for the fact
+// that Fortune is what keeps crew ALIVE on a voyage.
+//
+// Keep one line per place. If a stat starts doing something new somewhere,
+// it gets a row here or players will never find out.
+const STAT_ABOUT: Record<'power' | 'dodge' | 'fortune', { lead: string; rows: [string, string][] }> = {
+  power: {
+    lead: 'How hard your hands hit.',
+    rows: [
+      ['Raids',   'More damage on every shot you land.'],
+      ['Voyages', 'Wins the fights your crew runs into.'],
+    ],
+  },
+  dodge: {
+    lead: 'How well your hands read trouble coming.',
+    rows: [
+      ['Raids',   'Slip enemy shots, and act first more often.'],
+      ['Voyages', 'Slips past danger out at sea.'],
+      ['Trawls',  'More fishing XP from every haul.'],
+    ],
+  },
+  fortune: {
+    lead: 'Plain luck, and the quietest stat worth stacking.',
+    rows: [
+      ['Voyages',  'Keeps crew alive. Enough of it makes a route risk free.'],
+      ['Raids',    'Better drop odds, and repair kits heal for more.'],
+      ['Gauntlet', 'Better chest odds, up to double at 150 Fortune.'],
+      ['Trawls',   'More doubloons, and a better shot at a bumper haul.'],
+    ],
+  },
 }
 
 const STAT_COLOR = { power: '#f87171', dodge: '#60a5fa', fortune: '#f0c040' }
@@ -3458,9 +3489,17 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                           ))}
                         </div>
 
-                        <p className="font-karla" style={{ fontSize: '0.78rem', lineHeight: 1.55, color: 'rgba(255,255,255,0.72)' }}>
-                          {STAT_ABOUT[k]}
+                        <p className="font-karla font-700" style={{ fontSize: '0.86rem', lineHeight: 1.45, color: '#ecdcbd', marginBottom: 10 }}>
+                          {STAT_ABOUT[k].lead}
                         </p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                          {STAT_ABOUT[k].rows.map(([where, what]) => (
+                            <div key={where} style={{ display: 'grid', gridTemplateColumns: '4.6rem minmax(0, 1fr)', columnGap: 8, alignItems: 'baseline' }}>
+                              <span className="font-karla font-800 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.1em', color: STAT_COLOR[k] }}>{where}</span>
+                              <span className="font-karla" style={{ fontSize: '0.8rem', lineHeight: 1.45, color: 'rgba(255,255,255,0.78)' }}>{what}</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </motion.div>
                   )
