@@ -72,8 +72,11 @@ const DEPTH_THEMES: Record<TrawlZoneKey, { accent: string; top: string; mid: str
 }
 
 // Rising bubbles over a running trawl card — the crew's down there working.
-// memo'd: its only prop (color) is stable across the per-second `now` ticks, so
-// the 4 infinite-animation motion divs don't reconcile every second.
+// CSS keyframes, not framer: with five cards open these were 20 elements
+// animating y AND opacity in JavaScript every frame (see the trawl block in
+// globals.css). They are ambient decoration that never reacts to state, so the
+// compositor can own them and the main thread — which the fishing dial needs —
+// does nothing per frame. Still memo'd so the divs don't reconcile on the tick.
 const Bubbles = memo(function Bubbles({ color }: { color: string }) {
   const seeds = [
     { l: 19, d: 0.0, s: 5,   dur: 3.6 },
@@ -84,11 +87,15 @@ const Bubbles = memo(function Bubbles({ color }: { color: string }) {
   return (
     <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 0, overflow: 'hidden', pointerEvents: 'none', borderRadius: 14 }}>
       {seeds.map((b, i) => (
-        <motion.div key={i}
-          initial={{ y: '70%', opacity: 0 }}
-          animate={{ y: '-180%', opacity: [0, 0.6, 0] }}
-          transition={{ duration: b.dur, delay: b.d, repeat: Infinity, ease: 'easeIn' }}
-          style={{ position: 'absolute', left: `${b.l}%`, bottom: 0, width: b.s, height: b.s, borderRadius: '50%', background: `radial-gradient(circle at 35% 30%, #ffffffcc, ${color}55)`, boxShadow: `0 0 5px ${color}55` }} />
+        <div key={i} className="trawl-bubble"
+          style={{
+            position: 'absolute', left: `${b.l}%`, bottom: 0, width: b.s, height: b.s,
+            borderRadius: '50%', opacity: 0,
+            background: `radial-gradient(circle at 35% 30%, #ffffffcc, ${color}55)`,
+            boxShadow: `0 0 5px ${color}55`,
+            ['--dur' as string]: `${b.dur}s`,
+            ['--delay' as string]: `${b.d}s`,
+          }} />
       ))}
     </div>
   )
@@ -668,13 +675,11 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                 }
                 const body = (portraitSize: number, barMaxW?: number) => (
                   <div style={{ position: 'relative', zIndex: 2, flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '0.85rem 0.55rem 0.9rem', width: '100%' }}>
-                    {/* Crew bobs on the water while at sea / ready to collect. */}
-                    <motion.div
-                      animate={(running || ready) ? { y: [0, -3, 0], rotate: [-1.5, 1.5, -1.5] } : { y: 0, rotate: 0 }}
-                      transition={(running || ready) ? { duration: 2.8, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.2 }}
-                    >
+                    {/* Crew bobs on the water while at sea / ready to collect.
+                        CSS loop, so it costs the main thread nothing per frame. */}
+                    <div className={(running || ready) ? 'trawl-bob' : undefined}>
                       <Portrait crew={t?.crew ?? null} size={portraitSize} glow={glow} />
-                    </motion.div>
+                    </div>
                     <div style={{ width: '100%', minWidth: 0, textAlign: 'center' }}>
                       <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#fbf4e2', textShadow: '0 1px 5px rgba(0,0,0,0.95), 0 0 2px rgba(0,0,0,0.9)', lineHeight: 1.15 }}>{z.label}</p>
                       <p className="font-karla" style={{ fontSize: '0.62rem', color: '#ded5c0', textShadow: '0 1px 4px rgba(0,0,0,0.95)', lineHeight: 1.35, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -689,7 +694,7 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                       border: `1px solid ${status.c}${status.filled ? 'c0' : '55'}`,
                       boxShadow: status.filled ? `0 0 12px ${status.c}66` : 'none',
                     }}>
-                      {status.dot && <motion.span animate={{ opacity: [1, 0.25, 1] }} transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }} style={{ width: 5, height: 5, borderRadius: '50%', background: status.c, boxShadow: `0 0 6px ${status.c}`, flexShrink: 0 }} />}
+                      {status.dot && <span className="trawl-dot" style={{ width: 5, height: 5, borderRadius: '50%', background: status.c, boxShadow: `0 0 6px ${status.c}`, flexShrink: 0 }} />}
                       <span className="font-cinzel font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.07em', color: status.filled ? '#ffe7ad' : status.c, textShadow: '0 1px 2px rgba(0,0,0,0.8)', whiteSpace: 'nowrap' }}>{status.label}</span>
                     </div>
                     {running && (
