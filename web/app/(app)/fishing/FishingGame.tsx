@@ -5355,11 +5355,14 @@ export default function FishingGame({
         return
       }
 
-      // Miss/penalty: streak resets — but only for real fish. reelIn resets it
-      // server-side for real misses; crate fumbles never hit reelIn, so we keep
-      // the client neutral on crates to avoid drift. (Finn perfect challenge is
-      // unaffected by misses — it only fails on a non-perfect CATCH.)
-      if (hookedFishRef.current!.fishId !== CRATE_FISH_ID) setPerfectStreak(0)
+      // Miss/penalty: the streak resets, crates included. A fumbled crate never
+      // calls back to the server, so the server side of this is castLine: the
+      // cast left catch_pending set and the NEXT cast zeroes the streak through
+      // the same path an abandoned fish takes. This is the optimistic half, so
+      // the counter drops the instant you fumble rather than one cast later.
+      // (Finn perfect challenge is unaffected by misses — it only fails on a
+      // non-perfect CATCH.)
+      setPerfectStreak(0)
       setMissResult(effectiveZoneType)
       setCatchResult(null)
       await new Promise(r => setTimeout(r, 200))
@@ -5390,9 +5393,10 @@ export default function FishingGame({
       setPerfectFlash(true)
     }
 
-    // Perfect streak is server-authoritative now (reelIn computes + returns it).
-    // Optimistically reset on a non-perfect REAL catch; crates are streak-neutral.
-    if (!wasPerfect && hookedFishRef.current!.fishId !== CRATE_FISH_ID) setPerfectStreak(0)
+    // Perfect streak is server-authoritative (reelIn and reelCrate both compute
+    // and return it). Optimistically reset on any non-perfect catch, crate or
+    // fish, so the counter answers the tap immediately.
+    if (!wasPerfect) setPerfectStreak(0)
 
     // Twin-Strike rod: 25% chance to catch 2 fish.
     // YOLO Rod: chance to catch 100x fish — odds scale per zone
@@ -5454,8 +5458,13 @@ export default function FishingGame({
       const tier = hookedFishRef.current.crateTier ?? 'wooden'
       startTransition(async () => {
         try {
-          const res = await reelCrate(selectedZone, tier)
-          if (!('error' in res)) setCrateResult(res)
+          const res = await reelCrate(selectedZone, tier, zone.type as 'perfect' | 'catch')
+          if (!('error' in res)) {
+            setCrateResult(res)
+            // Sync to the server's number rather than trusting the optimistic
+            // one above, same as the fish path does.
+            if (typeof res.perfectStreak === 'number') setPerfectStreak(res.perfectStreak)
+          }
         } catch {}
         setCratePhase('closed')
         setCrateStrip(null)

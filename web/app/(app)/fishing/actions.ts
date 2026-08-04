@@ -309,8 +309,10 @@ export async function castLine(baitType: string, habitat: string): Promise<
   const patienceWaitMult = patience.waitMult
 
   // Crate encounter: 2% chance (× rod.crateChanceMult — Treasure Rod = 2×).
-  // Rolled up-front so the in-flight flag below can skip crates — they're
-  // streak-neutral, so bailing on a crate cast never breaks a streak.
+  // Crates COUNT toward the perfect streak now. They always ran the same aim
+  // minigame with the same perfect/miss judgement as a fish; they were simply
+  // excluded from the streak on both sides, which made a crate a free pause in
+  // an otherwise unforgiving run.
   const isCrate = habitat !== 'ancient_deep' && Math.random() < 0.02 * (rod.crateChanceMult ?? 1) * patience.crateChanceMult
 
   // Remember this bait so the fishing UI auto-selects it on next open
@@ -320,7 +322,11 @@ export async function castLine(baitType: string, habitat: string): Promise<
   // breaks the perfect streak just like a miss — no cheesing it by bailing on
   // fish you don't like. Fire-and-forget — the multi-second gap before reelIn
   // means it always commits first; a failure mustn't block the cast result.
-  const castUpdate: Record<string, unknown> = { last_used_bait: baitType, catch_pending: !isCrate, current_streak_zone: habitat }
+  // catch_pending covers crates too now. It is what punishes an ABANDONED cast,
+  // and it is also what catches a crate MISS: a fumbled crate never calls back
+  // to the server, so the flag stays set and the next cast zeroes the streak
+  // through the same path an abandoned fish takes.
+  const castUpdate: Record<string, unknown> = { last_used_bait: baitType, catch_pending: true, current_streak_zone: habitat }
   if (profile.catch_pending || zoneChanged) castUpdate.current_perfect_streak = 0
   void admin.from('profiles').update(castUpdate).eq('id', user.id).then(() => {}, () => {})
 
@@ -1276,14 +1282,18 @@ export async function rerollWormhole(): Promise<
   }
 }
 
-export async function reelCrate(_zone: string, _tier: CrateTier = 'wooden'): Promise<CrateLoot | { error: string }> {
+/** Opens the crate AND moves the perfect streak, which is why it needs the reel
+ *  result. Returns the server's streak so the client syncs to it rather than
+ *  guessing: the streak is server-authoritative everywhere else and a crate is
+ *  no different. */
+export async function reelCrate(_zone: string, _tier: CrateTier = 'wooden', result: 'perfect' | 'catch' = 'catch'): Promise<(CrateLoot & { perfectStreak?: number }) | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
   const admin = createAdminClient()
 
   const { data: profile } = await admin.from('profiles')
-    .select('pending_cast')
+    .select('pending_cast, current_perfect_streak, highest_perfect_streak')
     .eq('id', user.id).single()
 
   // Bind to the server-rolled crate token (anti-forgery). castLine chose the
@@ -1302,8 +1312,28 @@ export async function reelCrate(_zone: string, _tier: CrateTier = 'wooden'): Pro
     return { error: 'No crate to open.' }
   }
 
+  // ── The streak ────────────────────────────────────────────────────────────
+  // Same rule a fish gets: a perfect reel adds one, anything less resets to
+  // zero. Server-authoritative, off the server's own current_perfect_streak,
+  // never a client value. catch_pending clears here because the cast resolved;
+  // a MISSED crate never reaches this function, so its flag stays set and the
+  // next cast zeroes the streak exactly as an abandoned fish does.
+  //
+  // Deliberately NOT bumped here: total_perfects, the shiny rolls and the Finn
+  // perfect challenge. Those are about landing FISH well, and a crate is not a
+  // fish. This moves the streak and nothing else.
+  const streak = result === 'perfect' ? (profile.current_perfect_streak ?? 0) + 1 : 0
+  const streakUpdate: Record<string, unknown> = { current_perfect_streak: streak, catch_pending: false }
+  if (streak > (profile.highest_perfect_streak ?? 0)) {
+    streakUpdate.highest_perfect_streak = streak
+    streakUpdate.highest_streak_set_at = new Date().toISOString()
+    streakUpdate.best_streak_zone = crateToken.habitat
+  }
+  await admin.from('profiles').update(streakUpdate).eq('id', user.id)
+
   // Token validated — hand off to the shared roller (grants + returns the loot).
-  return grantCrateLoot(admin, user.id, crateToken.crateTier)
+  const loot = await grantCrateLoot(admin, user.id, crateToken.crateTier)
+  return 'error' in loot ? loot : { ...loot, perfectStreak: streak }
 }
 
 const QUICK_BUY_WORMS_QTY  = 10
