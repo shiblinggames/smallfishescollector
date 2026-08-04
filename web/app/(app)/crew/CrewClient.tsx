@@ -304,7 +304,7 @@ function StatIcon({ k, color }: { k: 'power' | 'dodge' | 'fortune'; color: strin
 // laid out beside it on aged wood.
 function CrewPanel({
   name, filename, rarity, base, effects, xp = 0, slug = '', assignment, isCaptain = false, locked = false, lockKind = 'voyage', lockLabel = 'This crew is currently at sea on a voyage.', hasLevelUp = false, aboard = false, bunked = false, bunkLocked = false, dimmed, hint, frameAccent = '#5c5c63',
-  bg = RECRUIT_PANEL_BG, border = RECRUIT_PANEL_BORDER, onClick, children,
+  bg = RECRUIT_PANEL_BG, border = RECRUIT_PANEL_BORDER, modern = false, onClick, children,
 }: {
   name: string
   filename: string
@@ -351,6 +351,23 @@ function CrewPanel({
   dimmed?: boolean
   hint?: boolean
   frameAccent?: string
+  /** THE NEW LOOK, behind a switch while it is being judged.
+   *
+   *  Five things dated this card and all five are decorative, so none of this
+   *  moves information: the four L-shaped corner brackets (a HUD-frame device),
+   *  the DOUBLE frame on the portrait (a 2px rarity ring with a second gold
+   *  hairline inset inside it), the tombstone arch the portrait was cut to, the
+   *  three stacked shadows (inset hairline + inset top-highlight bevel + drop),
+   *  and a tight 7px card radius.
+   *
+   *  Rarity colour, duty tag, level chip, level-up halo, class nameplate, stat
+   *  row and every lock state are untouched, so the two variants carry exactly
+   *  the same information and can be compared honestly.
+   *
+   *  Currently ON for the roster only, so the Recruit tab still shows the old
+   *  card to compare against. Flip the call sites (or default this true) once
+   *  it is settled, then delete the branches. */
+  modern?: boolean
   bg?: string
   border?: string
   onClick?: () => void
@@ -374,7 +391,12 @@ function CrewPanel({
   // styling regardless of tier. (Previously the whole card carried a
   // tinted wash + tinted border + outer glow that grew with tier, which
   // made the roster look visually loud once five rarities were on screen.)
-  const cardShadow = `inset 0 0 0 1px ${frameAccent}22, inset 0 1px 0 rgba(255,255,255,0.05), 0 6px 16px rgba(0,0,0,0.55)`
+  const cardShadow = modern
+    // One soft drop and nothing else. The inset hairline doubled the border and
+    // the inset top-highlight was a glossy bevel, which is the single most
+    // dating detail after the corner brackets.
+    ? '0 2px 10px rgba(0,0,0,0.38)'
+    : `inset 0 0 0 1px ${frameAccent}22, inset 0 1px 0 rgba(255,255,255,0.05), 0 6px 16px rgba(0,0,0,0.55)`
 
   // What this hand is currently DOING. `assignment` has been passed on every
   // roster card since the party sections were removed but nothing rendered it,
@@ -399,8 +421,10 @@ function CrewPanel({
       whileHover={onClick && !locked ? { y: -2 } : undefined}
       transition={{ type: 'spring', stiffness: 460, damping: 26 }}
       style={{
-        position: 'relative', display: 'flex', gap: '0.7rem', padding: '0.7rem',
-        borderRadius: 7,
+        position: 'relative', display: 'flex',
+        gap: modern ? '0.85rem' : '0.7rem',
+        padding: modern ? '0.85rem' : '0.7rem',
+        borderRadius: modern ? 14 : 7,
         background: bg,
         border: `1px solid ${border}`,
         boxShadow: cardShadow,
@@ -427,11 +451,15 @@ function CrewPanel({
           pointerEvents: 'none', zIndex: 1,
         }} />
       )}
-      {/* Carved corner brackets */}
-      <span style={corner({ top: 4, left: 4, borderTop: b, borderLeft: b })} />
-      <span style={corner({ top: 4, right: 4, borderTop: b, borderRight: b })} />
-      <span style={corner({ bottom: 4, left: 4, borderBottom: b, borderLeft: b })} />
-      <span style={corner({ bottom: 4, right: 4, borderBottom: b, borderRight: b })} />
+      {/* Carved corner brackets. Dropped in the modern variant: a HUD frame
+          around every card in a grid is noise, and it is the detail that reads
+          oldest. */}
+      {!modern && <>
+        <span style={corner({ top: 4, left: 4, borderTop: b, borderLeft: b })} />
+        <span style={corner({ top: 4, right: 4, borderTop: b, borderRight: b })} />
+        <span style={corner({ bottom: 4, left: 4, borderBottom: b, borderLeft: b })} />
+        <span style={corner({ bottom: 4, right: 4, borderBottom: b, borderRight: b })} />
+      </>}
 
       {/* Portrait wrapper — position:relative + overflow:visible so corner
           badges can hang at the top corners without being clipped by the
@@ -446,11 +474,23 @@ function CrewPanel({
             bleeding past the rounded top. */}
         <div style={{
           position: 'absolute', inset: 0,
-          borderRadius: '46px 46px 5px 5px', overflow: 'hidden',
-          clipPath: 'inset(0 round 46px 46px 5px 5px)',
-          border: `2px solid ${color}`,
-          boxShadow: `inset 0 -12px 20px rgba(0,0,0,0.65), 0 0 10px ${color}33`,
-          background: `radial-gradient(ellipse at 50% 30%, ${color}26 0%, #070504 74%)`,
+          ...(modern
+            // One rounded rect, one ring. The arch plus the 2px-and-hairline
+            // double frame was the portrait reading as an inventory slot.
+            ? {
+                borderRadius: 12, overflow: 'hidden',
+                clipPath: 'inset(0 round 12px)',
+                border: `1px solid ${color}88`,
+                boxShadow: `inset 0 -14px 22px rgba(0,0,0,0.55)`,
+                background: `linear-gradient(180deg, ${color}1f 0%, #070504 78%)`,
+              }
+            : {
+                borderRadius: '46px 46px 5px 5px', overflow: 'hidden',
+                clipPath: 'inset(0 round 46px 46px 5px 5px)',
+                border: `2px solid ${color}`,
+                boxShadow: `inset 0 -12px 20px rgba(0,0,0,0.65), 0 0 10px ${color}33`,
+                background: `radial-gradient(ellipse at 50% 30%, ${color}26 0%, #070504 74%)`,
+              }),
         }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={artSrc(filename)} alt={name} loading="lazy" decoding="async"
@@ -461,8 +501,9 @@ function CrewPanel({
             ...(skinChase ? { ['--chase-c']: skinGlow } : { filter: skinGlowFilter }),
           } as React.CSSProperties} />
           {skinChase && skinGlow && <ChaseSkinFx skinId={skinDef?.id} color={skinGlow} />}
-          {/* inner frame line */}
-          <div style={{ position: 'absolute', inset: 3, borderRadius: '44px 44px 4px 4px', border: '1px solid rgba(255,225,170,0.18)', pointerEvents: 'none' }} />
+          {/* inner frame line — the second of the portrait's two frames, gone
+              in the modern variant. */}
+          {!modern && <div style={{ position: 'absolute', inset: 3, borderRadius: '44px 44px 4px 4px', border: '1px solid rgba(255,225,170,0.18)', pointerEvents: 'none' }} />}
         {/* Class nameplate — replaces the old trait teaser. Class is now the
             bigger identity decision (species-locked, drives the raid Special
             ability), so the portrait reads as the role at a glance: "Mender",
@@ -2680,6 +2721,10 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                       gradient="linear-gradient(180deg, #c6484a 0%, #a5383a 100%)" textColor="#fbe4e4" glow="rgba(224,85,90,0.9)"
                       onAction={() => dismissRoster(m.id)}>
                       <CrewPanel name={m.name} filename={m.filename} rarity={m.rarity}
+                        // THE NEW LOOK, roster only for now, so the Recruit tab
+                        // still shows the old card to judge it against. See the
+                        // `modern` prop on CrewPanel.
+                        modern
                         bg={ROSTER_PANEL_BG} border={ROSTER_PANEL_BORDER}
                         base={{ power: m.power, dodge: m.dodge, fortune: m.fortune }} effects={m.effects} xp={m.xp} slug={m.slug}
                         assignment={crewAssignment(m)}
