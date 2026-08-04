@@ -329,9 +329,15 @@ function CrewPanel({
    *  Grays the card out and disables the toggle buttons. */
   locked?: boolean
   /** Which kind of lock this is — drives the badge color + the visible
-   *  "at sea" / "on a trawl" caption so the two read apart at a glance
-   *  (the tooltip alone is invisible on mobile). */
-  lockKind?: 'voyage' | 'trawl'
+   *  "at sea" / "on a trawl" / "training" caption so they read apart at a
+   *  glance (the tooltip alone is invisible on mobile).
+   *
+   *  `bunk` is a real lock like the other two: a hand mid-stint in the Crew
+   *  Hall cannot be assigned, trawled or dismissed (assertCanReassign refuses
+   *  all three). It used to set only the duty TAG, so a training crew read at
+   *  full brightness beside a greyed-out trawling one and still offered a
+   *  swipe-to-dismiss that the server bounced. */
+  lockKind?: 'voyage' | 'trawl' | 'bunk'
   /** Tooltip on the lock badge — distinguishes voyage vs trawl. */
   lockLabel?: string
   /** Holding a bunk in the Crew Hall. */
@@ -383,8 +389,9 @@ function CrewPanel({
   // is the thing stopping you using them right now.
   const duty =
     locked && lockKind === 'trawl' ? { label: 'Trawling', color: '#3fc8aa' }
+    // Before the generic `locked` branch, or a bunked hand reads "At sea".
+    : (locked && lockKind === 'bunk') || bunkLocked ? { label: 'Training', color: '#f0c040' }
     : locked ? { label: 'At sea', color: '#ffb45a' }
-    : bunkLocked ? { label: 'Training', color: '#f0c040' }
     : bunked ? { label: 'Stint done', color: '#7fdfa3' }
     : assignment === 'raid' ? { label: 'Raid party', color: '#e07c7c' }
     : assignment === 'voyage' ? { label: 'Voyage party', color: '#5fa8c9' }
@@ -520,15 +527,19 @@ function CrewPanel({
               width: 26, height: 26, borderRadius: '50%',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: 'rgba(7,5,3,0.94)',
-              border: `1.5px solid ${lockKind === 'trawl' ? 'rgba(70,200,170,0.78)' : 'rgba(255,180,90,0.7)'}`,
+              // One colour per lock, matching that lock's duty tag below, so the
+              // badge and the tag never say different things.
+              border: `1.5px solid ${lockKind === 'trawl' ? 'rgba(70,200,170,0.78)' : lockKind === 'bunk' ? 'rgba(240,192,64,0.72)' : 'rgba(255,180,90,0.7)'}`,
               boxShadow: lockKind === 'trawl'
                 ? '0 2px 7px rgba(0,0,0,0.6), 0 0 10px rgba(70,200,170,0.42)'
-                : '0 2px 7px rgba(0,0,0,0.6), 0 0 10px rgba(255,180,90,0.4)',
+                : lockKind === 'bunk'
+                  ? '0 2px 7px rgba(0,0,0,0.6), 0 0 10px rgba(240,192,64,0.38)'
+                  : '0 2px 7px rgba(0,0,0,0.6), 0 0 10px rgba(255,180,90,0.4)',
               pointerEvents: 'none',
               zIndex: 2,
             }}
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={lockKind === 'trawl' ? '#9fe6d4' : '#ffd8a3'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={lockKind === 'trawl' ? '#9fe6d4' : lockKind === 'bunk' ? '#ffe7ad' : '#ffd8a3'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <rect x="4.5" y="11" width="15" height="9.5" rx="1.5" />
               <path d="M7.5 11V7.5a4.5 4.5 0 0 1 9 0V11" />
             </svg>
@@ -2668,11 +2679,15 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                 const raidParty   = state.roster.filter(c => c.raidSlot   != null).sort((a, b) => (a.raidSlot!   - b.raidSlot!))
                 const voyageParty = state.roster.filter(c => c.voyageSlot != null).sort((a, b) => (a.voyageSlot! - b.voyageSlot!))
                 const trawling    = state.roster.filter(c => trawlSet.has(c.id) && c.raidSlot == null && c.voyageSlot == null)
-                const available   = state.roster.filter(c => c.raidSlot == null && c.voyageSlot == null && !trawlSet.has(c.id))
                 const voyageAtSea = voyageParty.some(c => voyageLockSet.has(c.id))
 
                 const card = (m: CrewMember) => {
-                  const isLocked = voyageLockSet.has(m.id) || trawlSet.has(m.id)
+                  // A Crew Hall stint locks a hand exactly as hard as a voyage
+                  // or a trawl does, so it belongs in the same flag: it drives
+                  // the grey-out AND disables the swipe-to-dismiss, which was
+                  // live on training crew and came back as a server error.
+                  const isBunkLocked = state.bunkLockedCrewIds.includes(m.id)
+                  const isLocked = voyageLockSet.has(m.id) || trawlSet.has(m.id) || isBunkLocked
                   return (
                     // Swipe-left to dismiss — disabled for locked crew (at sea / trawling).
                     <SwipeAction key={m.id} enabled={!isLocked} side="left" label="Dismiss" icon={<XIcon />}
@@ -2684,8 +2699,11 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                         assignment={crewAssignment(m)}
                         isCaptain={m.voyageSlot === 0 || m.raidSlot === 0}
                         locked={isLocked}
-                        lockKind={trawlSet.has(m.id) ? 'trawl' : 'voyage'}
-                        lockLabel={trawlSet.has(m.id) ? 'This crew is out on a trawl. Collect it to free them up.' : 'This crew is currently at sea on a voyage.'}
+                        lockKind={trawlSet.has(m.id) ? 'trawl' : isBunkLocked ? 'bunk' : 'voyage'}
+                        lockLabel={
+                          trawlSet.has(m.id) ? 'This crew is out on a trawl. Collect it to free them up.'
+                          : isBunkLocked ? 'This crew is training in the Crew Hall. They are in for the whole stint.'
+                          : 'This crew is currently at sea on a voyage.'}
                         bunked={state.bunkedCrewIds.includes(m.id)}
                         bunkLocked={state.bunkLockedCrewIds.includes(m.id)}
                         hasLevelUp={(seenLevels[m.id] ?? crewLevelFromXP(m.xp)) < crewLevelFromXP(m.xp)}
