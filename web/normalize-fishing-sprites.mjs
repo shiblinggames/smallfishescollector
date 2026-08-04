@@ -16,7 +16,13 @@ const OUT = path.join(__dirname, 'public')
 
 const variant = process.argv[2] ?? 'default'
 const srcFile = variant === 'default' ? 'defaultfishing.png' : `newfishing${variant}.png`
-const SRC = path.join(__dirname, 'public', srcFile)
+// Source sheets live in art-src/, NOT public/. They are inputs to this script,
+// never served, and 7.6MB of them were being shipped to every deploy for no
+// reason. `defaultfishing.png` is the exception: it is still referenced at
+// runtime, so it stays in public/.
+const SRC = variant === 'default'
+  ? path.join(__dirname, 'public', srcFile)
+  : path.join(__dirname, 'art-src', srcFile)
 const prefix = variant === 'default' ? 'fishing' : `fishing_${variant}`
 
 const CROPS = [
