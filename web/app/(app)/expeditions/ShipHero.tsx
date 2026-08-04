@@ -615,6 +615,10 @@ export default function ShipHero({
   // (upgrade / class / repair) next; cosmetic Skins last.
   // On a focused route the panel IS the page: it opens on that section and
   // never closes.
+  // Ship screen sub-tabs. The seven refits used to sit in one flat 2-column
+  // grid where the HULL, the upgrade the whole screen exists for, was a tile
+  // like any other. Hull is now its own centred CTA above these.
+  const [shipTab, setShipTab] = useState<'refits' | 'armament' | 'appearance'>('refits')
   const [loadoutTab, setLoadoutTab] = useState<'loadout' | 'ship' | 'forge'>(focus === 'items' ? 'loadout' : focus === 'forge' ? 'forge' : focus === 'ship' ? 'ship' : 'loadout')
 
   // Ship name state
@@ -2092,22 +2096,121 @@ export default function ShipHero({
                 const nextShip = SHIPS[shipTier + 1]
                 return (
                   <>
-                    {/* Ship management as a 2-column tile grid — each tile shows
-                        its live status and opens its detail modal. Replaces the
-                        old tall stack of full-width sections. */}
+                    {/* ── THE SHIP, AND WHAT YOU HAVE DONE TO IT ──────────────
+                        Three things, in the order they matter:
+
+                          1. the STATS HERO, which is the only place the player
+                             can see what their refits have actually bought. Each
+                             row prints the hull's own number and the amount your
+                             upgrades added on top, because "Hull 60" alone tells
+                             you nothing about whether the last 40,000 doubloons
+                             did anything.
+                          2. the HULL upgrade, centred and full width. It is the
+                             upgrade this screen exists for and it used to be a
+                             tile in a grid of seven, indistinguishable from a
+                             skin picker.
+                          3. everything else, behind tabs, grouped by what it
+                             does rather than dumped in one flat grid. */}
+                    {(() => {
+                      const cls = aggregateShipClasses(shipClasses)
+                      const baseHull  = shipStats.durability
+                      const baseDmg   = shipStats.minDamage
+                      const baseSpeed = shipStats.speed
+                      const baseCrew  = shipStats.crewSlots
+                      const baseMount = raidItemSlotsForTier(shipTierForSlots)
+                      const hull  = Math.round(baseHull * cls.hpMult)
+                      const dmg   = Math.round(baseDmg * cls.damageMult)
+                      const speed = baseSpeed + cls.speedFlat
+                      const crew  = baseCrew + cls.crewSlots + (hasSixthBerth ? 1 : 0)
+                      const mount = baseMount + cls.itemSlots + (hasArmoryExpansion ? 1 : 0)
+                      const ROWS: { label: string; base: number; total: number; accent: string }[] = [
+                        { label: 'Hull',   base: baseHull,  total: hull,  accent: '#7fdfa3' },
+                        { label: 'Damage', base: baseDmg,   total: dmg,   accent: '#f08a8a' },
+                        { label: 'Speed',  base: baseSpeed, total: speed, accent: '#60a5fa' },
+                        { label: 'Crew',   base: baseCrew,  total: crew,  accent: '#e0c47a' },
+                        { label: 'Mounts', base: baseMount, total: mount, accent: '#a78bfa' },
+                      ]
+                      return (
+                        <div style={{
+                          display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
+                          gap: 6, marginBottom: '0.9rem',
+                          padding: '0.85rem 0.7rem', borderRadius: 14,
+                          background: 'rgba(0,0,0,0.30)', border: '1px solid rgba(255,255,255,0.08)',
+                        }}>
+                          {ROWS.map(r => {
+                            const added = r.total - r.base
+                            return (
+                              <div key={r.label} style={{ textAlign: 'center', minWidth: 0 }}>
+                                <p className="font-karla font-800 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.42)' }}>{r.label}</p>
+                                <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', lineHeight: 1.1, color: '#ecdcbd', fontVariantNumeric: 'tabular-nums', marginTop: 2 }}>{r.total}</p>
+                                {/* Only ever shows when a refit actually moved it,
+                                    so a fresh captain sees clean numbers rather
+                                    than a column of +0. */}
+                                <p className="font-karla font-700" style={{ fontSize: '0.56rem', lineHeight: 1.2, color: added > 0 ? r.accent : 'transparent', fontVariantNumeric: 'tabular-nums' }}>
+                                  {added > 0 ? `+${added}` : '+0'}
+                                </p>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )
+                    })()}
+
+                    {/* ── THE HULL, centred, the headline upgrade ─────────────── */}
+                    <button
+                      type="button"
+                      onClick={() => { if (nextShip) { setUpgradeError(null); setUpgradeOpen(true) } }}
+                      disabled={!nextShip}
+                      style={{
+                        width: '100%', marginBottom: '1.1rem', padding: '1rem 0.9rem',
+                        borderRadius: 16, cursor: nextShip ? 'pointer' : 'default',
+                        textAlign: 'center', font: 'inherit',
+                        background: nextShip
+                          ? 'linear-gradient(180deg, rgba(240,192,64,0.16) 0%, rgba(240,192,64,0.06) 100%)'
+                          : 'rgba(255,255,255,0.03)',
+                        border: `1px solid ${nextShip ? 'rgba(240,192,64,0.5)' : 'rgba(255,255,255,0.1)'}`,
+                      }}
+                    >
+                      <p className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.16em', color: nextShip ? '#f0c040' : '#8a8480' }}>
+                        {nextShip ? 'Next Hull' : 'Hull'}
+                      </p>
+                      <p className="font-cinzel font-800" style={{ fontSize: '1.3rem', lineHeight: 1.12, color: '#f4ecd8', marginTop: 3 }}>
+                        {nextShip ? nextShip.name : shipStats.name}
+                      </p>
+                      {nextShip ? (
+                        <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: '#c8aa6a', marginTop: 5 }}>
+                          {nextShip.cost.toLocaleString()} ⟡
+                        </p>
+                      ) : (
+                        <p className="font-karla" style={{ fontSize: '0.76rem', color: '#8a8480', marginTop: 5 }}>
+                          The finest hull in the water. Nothing left to buy.
+                        </p>
+                      )}
+                    </button>
+
+                    {/* ── THE REST, TABBED ────────────────────────────────────── */}
+                    <div style={{ display: 'flex', gap: 5, marginBottom: '0.9rem', padding: 4, background: 'rgba(0,0,0,0.28)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)' }}>
+                      {([['refits', 'Refits'], ['armament', 'Armament'], ['appearance', 'Look']] as const).map(([id, label]) => {
+                        const on = shipTab === id
+                        return (
+                          <button key={id} type="button" onClick={() => { vibrate(5); setShipTab(id) }}
+                            className="font-karla font-700 uppercase"
+                            style={{
+                              flex: 1, padding: '0.5rem 0', borderRadius: 9, cursor: 'pointer', font: 'inherit',
+                              fontSize: '0.62rem', letterSpacing: '0.08em',
+                              background: on ? 'rgba(240,192,64,0.16)' : 'transparent',
+                              border: `1px solid ${on ? 'rgba(240,192,64,0.45)' : 'transparent'}`,
+                              color: on ? '#f0c040' : 'rgba(255,255,255,0.5)',
+                            }}>
+                            {label}
+                          </button>
+                        )
+                      })}
+                    </div>
+
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10, marginBottom: '1.4rem' }}>
-                      {/* Hull */}
-                      <ShipTile
-                        accent="#f0c040"
-                        title="Hull"
-                        icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f0c040" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>}
-                        value={nextShip ? nextShip.name : shipStats.name}
-                        sub={nextShip ? `${nextShip.cost.toLocaleString()} ⟡ · bigger hull` : 'Top of the line'}
-                        cta={nextShip ? 'Upgrade ›' : 'Maxed'}
-                        onClick={() => { if (nextShip) { setUpgradeError(null); setUpgradeOpen(true) } }}
-                      />
                       {/* Ultimate Weapon */}
-                      {showUltimate && (() => {
+                      {shipTab === 'armament' && showUltimate && (() => {
                         const activeAug = initialManowarAugment ? getShipAugment(initialManowarAugment) : null
                         const buildAug  = manowarBuild ? getShipAugment(manowarBuild.id) : null
                         const accent    = buildAug?.color ?? activeAug?.color ?? '#f0c040'
@@ -2126,7 +2229,7 @@ export default function ShipHero({
                         )
                       })()}
                       {/* Sixth Berth — same unlock gate as the panel (Raid 7 / owned). */}
-                      {(blockadeCleared || hasSixthBerth) && (
+                      {shipTab === 'refits' && (blockadeCleared || hasSixthBerth) && (
                         <ShipTile
                           accent="#ffd56b"
                           title="Sixth Berth"
@@ -2138,7 +2241,7 @@ export default function ShipHero({
                         />
                       )}
                       {/* Expanded Armory — same unlock gate as the panel (Raid 8 / owned). */}
-                      {(throneCleared || hasArmoryExpansion) && (
+                      {shipTab === 'refits' && (throneCleared || hasArmoryExpansion) && (
                         <ShipTile
                           accent="#a78bfa"
                           title="Expanded Armory"
@@ -2150,7 +2253,7 @@ export default function ShipHero({
                         />
                       )}
                       {/* Captain's Class */}
-                      {(() => {
+                      {shipTab === 'armament' && (() => {
                         const ownedIds = new Set(Object.values(shipClasses))
                         const lines = SHIP_CLASS_LINES
                           .map(line => line.filter(id => ownedIds.has(id)) as ShipClassId[])
@@ -2169,7 +2272,7 @@ export default function ShipHero({
                         )
                       })()}
                       {/* Repair Kit */}
-                      {(() => {
+                      {shipTab === 'refits' && (() => {
                         const kit = getRepairKit(kitEquipped) ?? getRepairKit('basic_repair_kit')!
                         const range = repairKitRange(kit, ratedFortune)
                         const accent = kitRarityColor(kit.rarity)
@@ -2187,7 +2290,7 @@ export default function ShipHero({
                         )
                       })()}
                       {/* Appearance / Ship Skins */}
-                      <ShipTile
+                      {shipTab === 'appearance' && <ShipTile
                         accent="#9cc4ff"
                         title="Appearance"
                         icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9cc4ff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v9"/><path d="M12 5l6 6-6 1"/><path d="M4 14h16l-1.6 4.2a2 2 0 0 1-1.9 1.3H7.5a2 2 0 0 1-1.9-1.3z"/></svg>}
@@ -2195,7 +2298,7 @@ export default function ShipHero({
                         sub="Ship skins"
                         cta="Change ›"
                         onClick={() => setSkinsOpen(true)}
-                      />
+                      />}
                     </div>
 
                   </>
