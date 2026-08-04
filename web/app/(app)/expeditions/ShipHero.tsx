@@ -348,6 +348,53 @@ function WrenchGlyph({ color }: { color: string }) {
  *  So: tint OVER an opaque colour, never tint INSTEAD of one. Two background
  *  layers, the tint first and the solid second, which is the documented
  *  house pattern for panels on custom backgrounds. */
+/** What each ship stat actually does, in the words a new captain would use.
+ *
+ *  The stats hero showed five numbers and five deltas and explained none of
+ *  them, which is worse than showing nothing: a captain could see his hull had
+ *  dropped 25 and had no way to find out why, or even what "Mounts" was. Tapping
+ *  a stat now opens this, plus the arithmetic behind its delta.
+ *
+ *  Same shape as the crew card's STAT_ABOUT, deliberately: a player who has
+ *  learned to tap a stat on one screen should find the same thing on the other. */
+const SHIP_STAT_ABOUT: Record<string, { lead: string; rows: [string, string][] }> = {
+  Hull: {
+    lead: 'How much punishment your ship takes before it sinks.',
+    rows: [
+      ['Raids', 'Your health bar for the whole raid, mobs and boss together.'],
+      ['Note', 'Some captain classes trade hull away for damage. That shows as a red number.'],
+    ],
+  },
+  Damage: {
+    lead: 'The floor on every shot you fire.',
+    rows: [
+      ['Raids', 'Raises the bottom of your damage range, so bad rolls hurt less.'],
+      ['Note', 'Crew Power and raid items stack on top of this.'],
+    ],
+  },
+  Speed: {
+    lead: 'How often you act first.',
+    rows: [
+      ['Raids', 'Feeds the turn-order roll each round. Going first can end a fight before it starts.'],
+      ['Note', 'Crew Savvy adds to the same roll.'],
+    ],
+  },
+  Crew: {
+    lead: 'How many hands you can take to sea.',
+    rows: [
+      ['Raids', 'Seats in your raid party. Every seat is another set of stats and another ability.'],
+      ['Voyages', 'The same seats crew your voyages.'],
+    ],
+  },
+  Mounts: {
+    lead: 'How many raid items you can carry at once.',
+    rows: [
+      ['Raids', 'Each mount holds one item, and their effects all apply together.'],
+      ['Note', "Finn's spoil has its own bay and does not use a mount."],
+    ],
+  },
+}
+
 const SHIP_PANEL = '#0b111b'
 const shipPanelBg = (tint?: string) =>
   tint ? `linear-gradient(${tint}, ${tint}), ${SHIP_PANEL}` : SHIP_PANEL
@@ -641,6 +688,8 @@ export default function ShipHero({
   // lands the new ship, because by then the old one is gone and there is nothing
   // to say goodbye to.
   const [christening, setChristening] = useState<ChristeningData | null>(null)
+  /** Which ship stat's explainer is open. */
+  const [shipStatDetail, setShipStatDetail] = useState<string | null>(null)
 
   const shipTierForSlots = Math.max(0, SHIPS.findIndex(s => s.name === shipStats.name))
   // Hull cap + the Ch4 Expanded Armory refit's extra mount (purchased flag),
@@ -2263,7 +2312,10 @@ export default function ShipHero({
                           {ROWS.map(r => {
                             const added = r.total - r.base
                             return (
-                              <div key={r.label} style={{ textAlign: 'center', minWidth: 0 }}>
+                              <button key={r.label} type="button"
+                                onClick={() => { vibrate(5); setShipStatDetail(r.label) }}
+                                title={`What ${r.label} does`}
+                                style={{ textAlign: 'center', minWidth: 0, background: 'none', border: 'none', padding: 0, font: 'inherit', cursor: 'pointer', touchAction: 'manipulation' }}>
                                 <p className="font-karla font-800 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.42)' }}>{r.label}</p>
                                 <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', lineHeight: 1.1, color: '#ecdcbd', fontVariantNumeric: 'tabular-nums', marginTop: 2 }}>{r.total}</p>
                                 {/* Shows whenever a refit MOVED it, in either
@@ -2280,7 +2332,7 @@ export default function ShipHero({
                                 <p className="font-karla font-700" style={{ fontSize: '0.56rem', lineHeight: 1.2, color: added > 0 ? r.accent : added < 0 ? '#e08a8a' : 'transparent', fontVariantNumeric: 'tabular-nums' }}>
                                   {added > 0 ? `+${added}` : added < 0 ? `${added}` : '+0'}
                                 </p>
-                              </div>
+                              </button>
                             )
                           })}
                         </div>
@@ -3098,6 +3150,72 @@ export default function ShipHero({
           baseCrewSlots={hasSixthBerth ? shipStats.crewSlots - 1 : shipStats.crewSlots}
           doubloons={doubloons}
         />
+      </ModalSheet>
+
+      {/* What a ship stat means, and where every point of its delta came from.
+          The breakdown is the important half: a captain whose hull reads -25
+          can see it was Master Gunner I, II and III that took it. */}
+      <ModalSheet open={!!shipStatDetail} onClose={() => setShipStatDetail(null)} maxWidth={360}>
+        {(() => {
+          const about = shipStatDetail ? SHIP_STAT_ABOUT[shipStatDetail] : null
+          if (!about || !shipStatDetail) return null
+          const cls = aggregateShipClasses(shipClasses)
+          const hull = EXPEDITION_SHIP_STATS[shipTierForSlots] ?? shipStats
+          const baseFor: Record<string, number> = {
+            Hull: hull.durability, Damage: hull.minDamage, Speed: hull.speed,
+            Crew: hull.crewSlots, Mounts: raidItemSlotsForTier(shipTierForSlots),
+          }
+          const totalFor: Record<string, number> = {
+            Hull: Math.round(hull.durability * cls.hpMult),
+            Damage: Math.round(hull.minDamage * cls.damageMult),
+            Speed: hull.speed + cls.speedFlat,
+            Crew: hull.crewSlots + cls.crewSlots + (hasSixthBerth ? 1 : 0),
+            Mounts: raidItemSlotsForTier(shipTierForSlots) + cls.itemSlots + (hasArmoryExpansion ? 1 : 0),
+          }
+          const picked = Object.values(shipClasses).map(id => getShipClass(id)).filter((c): c is NonNullable<typeof c> => !!c)
+          const parts: [string, string][] = [[`${shipStats.name} hull`, `${baseFor[shipStatDetail]}`]]
+          for (const c of picked) {
+            const e = c.effects
+            if (shipStatDetail === 'Hull' && e.hpMult && e.hpMult !== 1) parts.push([c.name, `${e.hpMult > 1 ? '+' : ''}${Math.round((e.hpMult - 1) * 100)}%`])
+            if (shipStatDetail === 'Damage' && e.damageMult && e.damageMult !== 1) parts.push([c.name, `${e.damageMult > 1 ? '+' : ''}${Math.round((e.damageMult - 1) * 100)}%`])
+            if (shipStatDetail === 'Speed' && e.speedFlat) parts.push([c.name, `${e.speedFlat > 0 ? '+' : ''}${e.speedFlat}`])
+            if (shipStatDetail === 'Crew' && e.crewSlots) parts.push([c.name, `${e.crewSlots > 0 ? '+' : ''}${e.crewSlots}`])
+            if (shipStatDetail === 'Mounts' && e.itemSlots) parts.push([c.name, `${e.itemSlots > 0 ? '+' : ''}${e.itemSlots}`])
+          }
+          if (shipStatDetail === 'Crew' && hasSixthBerth) parts.push(['Sixth Berth', '+1'])
+          if (shipStatDetail === 'Mounts' && hasArmoryExpansion) parts.push(['Expanded Armory', '+1'])
+          const total = totalFor[shipStatDetail]
+          const delta = total - baseFor[shipStatDetail]
+          return (
+            <>
+              <p className="font-cinzel font-800 uppercase" style={{ fontSize: '0.86rem', letterSpacing: '0.12em', color: '#f0c040' }}>{shipStatDetail}</p>
+              <p className="font-cinzel font-700" style={{ fontSize: '2.6rem', lineHeight: 1, color: '#ecdcbd', fontVariantNumeric: 'tabular-nums', marginTop: 6 }}>{total}</p>
+              {delta !== 0 && (
+                <p className="font-karla font-700" style={{ fontSize: '0.76rem', color: delta > 0 ? '#7fdfa3' : '#e08a8a', marginTop: 2 }}>
+                  {delta > 0 ? `+${delta}` : delta} from your upgrades
+                </p>
+              )}
+              <p className="font-karla font-700" style={{ fontSize: '0.86rem', lineHeight: 1.45, color: '#ecdcbd', marginTop: 14 }}>{about.lead}</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginTop: 10 }}>
+                {about.rows.map(([where, what]) => (
+                  <div key={where} style={{ display: 'grid', gridTemplateColumns: '4.6rem minmax(0, 1fr)', columnGap: 8, alignItems: 'baseline' }}>
+                    <span className="font-karla font-800 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.1em', color: '#8a96a8' }}>{where}</span>
+                    <span className="font-karla" style={{ fontSize: '0.8rem', lineHeight: 1.45, color: 'rgba(255,255,255,0.78)' }}>{what}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="font-karla font-800 uppercase" style={{ fontSize: '0.52rem', letterSpacing: '0.16em', color: '#6f7887', marginTop: 18, marginBottom: 6 }}>Where it comes from</p>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {parts.map(([label, val], i) => (
+                  <div key={label + i} className="flex items-baseline justify-between" style={{ padding: '0.42rem 0', borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+                    <span className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.62)' }}>{label}</span>
+                    <span className="font-cinzel font-700" style={{ fontSize: '0.86rem', color: '#ecdcbd', fontVariantNumeric: 'tabular-nums' }}>{val}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )
+        })()}
       </ModalSheet>
 
       <ShipChristening data={christening} onDone={() => setChristening(null)} />
