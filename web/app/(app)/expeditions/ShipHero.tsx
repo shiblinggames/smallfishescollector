@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition, useEffect, useRef, useMemo, Fragment, type CSSProperties } from 'react'
+import ModalSheet from '@/components/ModalSheet'
 import CloseButton from '@/components/CloseButton'
 import FinnChargePanel from '@/components/FinnChargePanel'
 import ItemEffectLines from '@/components/ItemEffectLines'
@@ -2613,16 +2614,9 @@ export default function ShipHero({
       {/* Ultimate Weapon — Manage modal. Holds the full build/swap/retool/
           schematics controls AND the looping preview animation, moved off the
           Ship tab so the tab is just a status row. */}
-      <PopupShell open={ultimateOpen} onClose={() => setUltimateOpen(false)}>
-        {ultimateOpen && showUltimate && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.96, y: 8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96, y: 4 }}
-            transition={{ duration: 0.18 }}
-            style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 440, background: 'rgba(8,14,24,0.98)', borderRadius: 18, padding: '0.85rem 0.8rem 1rem', maxHeight: '88vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', boxShadow: '0 0 34px rgba(240,192,64,0.14)' }}
-          >
-            <CloseButton onClick={() => setUltimateOpen(false)} style={{ position: 'absolute', top: 6, right: 8, zIndex: 6 }} />
+      <ModalSheet open={ultimateOpen && showUltimate} onClose={() => setUltimateOpen(false)}
+        maxWidth={440} padding="0.85rem 0.8rem 1rem"
+        boxShadow="0 24px 60px rgba(0,0,0,0.62), 0 0 34px rgba(240,192,64,0.14)">
             <UltimateBuildPanel
               shipTier={shipTierForSlots}
               navLevel={navLevelNow}
@@ -2633,9 +2627,7 @@ export default function ShipHero({
               build={manowarBuild}
               schematics={manowarSchematics}
             />
-          </motion.div>
-        )}
-      </PopupShell>
+      </ModalSheet>
 
       {/* Equipped raid-item detail — tap a Battle Loadout slot to read its
           effect, then Close or Unequip (no more one-tap removal). */}
@@ -2835,36 +2827,28 @@ export default function ShipHero({
       </PopupShell>
 
       {/* Sixth Berth — Manage modal (the buy / installed panel). */}
-      <PopupShell open={sixthBerthOpen} onClose={() => setSixthBerthOpen(false)}>
-        {sixthBerthOpen && (
-          <motion.div initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 4 }} transition={{ duration: 0.18 }}
-            style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 400, background: 'rgba(8,14,24,0.98)', borderRadius: 18, padding: '1.5rem 0.95rem 1rem', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 0 30px rgba(255,213,107,0.16)' }}>
-            <CloseButton onClick={() => setSixthBerthOpen(false)} style={{ position: 'absolute', top: 6, right: 8, zIndex: 6 }} />
-            <SixthBerthPanel
-              blockadeCleared={blockadeCleared}
-              hasSixthBerth={hasSixthBerth}
-              baseCrewSlots={hasSixthBerth ? shipStats.crewSlots - 1 : shipStats.crewSlots}
-              doubloons={doubloons}
-            />
-          </motion.div>
-        )}
-      </PopupShell>
+      <ModalSheet open={sixthBerthOpen} onClose={() => setSixthBerthOpen(false)}
+        maxWidth={400} padding="1.5rem 0.95rem 1rem"
+        boxShadow="0 24px 60px rgba(0,0,0,0.62), 0 0 30px rgba(255,213,107,0.16)">
+        <SixthBerthPanel
+          blockadeCleared={blockadeCleared}
+          hasSixthBerth={hasSixthBerth}
+          baseCrewSlots={hasSixthBerth ? shipStats.crewSlots - 1 : shipStats.crewSlots}
+          doubloons={doubloons}
+        />
+      </ModalSheet>
 
       {/* Expanded Armory — the raid-item mount refit. Same shell as the berth. */}
-      <PopupShell open={armoryOpen} onClose={() => setArmoryOpen(false)}>
-        {armoryOpen && (
-          <motion.div initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 4 }} transition={{ duration: 0.18 }}
-            style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 400, background: 'rgba(8,14,24,0.98)', borderRadius: 18, padding: '1.5rem 0.95rem 1rem', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 0 30px rgba(167,139,250,0.16)' }}>
-            <CloseButton onClick={() => setArmoryOpen(false)} style={{ position: 'absolute', top: 6, right: 8, zIndex: 6 }} />
-            <ArmoryExpansionPanel
-              throneCleared={throneCleared}
-              hasArmoryExpansion={hasArmoryExpansion}
-              baseItemSlots={hasArmoryExpansion ? raidItemSlots - 1 : raidItemSlots}
-              doubloons={doubloons}
-            />
-          </motion.div>
-        )}
-      </PopupShell>
+      <ModalSheet open={armoryOpen} onClose={() => setArmoryOpen(false)}
+        maxWidth={400} padding="1.5rem 0.95rem 1rem"
+        boxShadow="0 24px 60px rgba(0,0,0,0.62), 0 0 30px rgba(167,139,250,0.16)">
+        <ArmoryExpansionPanel
+          throneCleared={throneCleared}
+          hasArmoryExpansion={hasArmoryExpansion}
+          baseItemSlots={hasArmoryExpansion ? raidItemSlots - 1 : raidItemSlots}
+          doubloons={doubloons}
+        />
+      </ModalSheet>
 
       {/* Captain's Class — overview modal: each owned line, tap for its breakdown. */}
       <PopupShell open={classesOpen} onClose={() => setClassesOpen(false)}>
