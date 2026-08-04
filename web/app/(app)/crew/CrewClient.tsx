@@ -754,19 +754,19 @@ function FallenPanel({ crew }: { crew: FallenCrew }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25, ease: 'easeOut' }}
       style={{
-        position: 'relative', display: 'flex', gap: '0.65rem', padding: '0.65rem 0.7rem',
-        borderRadius: 7,
+        position: 'relative', display: 'flex', gap: '0.85rem', padding: '0.85rem',
+        borderRadius: 14,
         background: GRAVE_BG,
         border: `1px solid ${GRAVE_BORDER}`,
-        boxShadow: 'inset 0 1px 0 rgba(255,225,170,0.04), 0 6px 16px rgba(0,0,0,0.55)',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.38)',
       }}>
       {/* Portrait — desaturated sepia */}
       <div style={{
         position: 'relative', width: 86, flexShrink: 0, alignSelf: 'flex-start', height: 96,
-        borderRadius: '40px 40px 4px 4px', overflow: 'hidden',
-        border: `1.5px solid ${color}88`,
-        boxShadow: `inset 0 -12px 20px rgba(0,0,0,0.7), 0 0 8px ${color}22`,
-        background: `radial-gradient(ellipse at 50% 30%, ${color}1c 0%, #050403 74%)`,
+        borderRadius: 12, overflow: 'hidden',
+        border: `1px solid ${color}66`,
+        boxShadow: 'inset 0 -14px 22px rgba(0,0,0,0.6)',
+        background: `linear-gradient(180deg, ${color}18 0%, #050403 78%)`,
         filter: 'sepia(0.45) saturate(0.7)',
       }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -775,7 +775,6 @@ function FallenPanel({ crew }: { crew: FallenCrew }) {
           objectFit: 'contain', objectPosition: 'center 20%', padding: 2,
           opacity: 0.82,
         }} />
-        <div style={{ position: 'absolute', inset: 3, borderRadius: '38px 38px 3px 3px', border: '1px solid rgba(255,225,170,0.12)', pointerEvents: 'none' }} />
       </div>
 
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
@@ -2884,10 +2883,26 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   display: 'flex', flexDirection: 'column', overflow: 'hidden',
                   borderRadius: 14,
                   background: detail.kind === 'board' ? RECRUIT_PANEL_BG : ROSTER_PANEL_BG,
-                  border: `1.5px solid ${dColor}`, boxShadow: `0 20px 50px rgba(0,0,0,0.6), 0 0 24px ${dColor}33`,
+                  // Rarity at the EDGE, not shouting from it. A full-strength
+                  // 1.5px coloured border plus a coloured bloom made the sheet
+                  // read as a rarity announcement; the portrait ring and the
+                  // rarity word already say the tier twice.
+                  border: `1px solid ${dColor}4d`,
+                  boxShadow: `0 24px 60px rgba(0,0,0,0.62), 0 0 30px ${dColor}1c`,
                 }}>
-                <div className="flex justify-end" style={{ flexShrink: 0, padding: '0.5rem 0.6rem 0' }}>
-                  <button onClick={close} aria-label="Close" style={{ color: 'rgba(255,255,255,0.45)', fontSize: '1.2rem', lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', padding: '0.1rem 0.3rem' }}>✕</button>
+                {/* A real 32px target with a plate under it, the same close the
+                    boss sheet and the voyage sheet use. A bare glyph with 5px of
+                    padding is a thumb-sized miss on a phone. */}
+                <div className="flex justify-end" style={{ flexShrink: 0, padding: '0.55rem 0.6rem 0' }}>
+                  <button onClick={close} aria-label="Close" type="button"
+                    style={{
+                      width: 32, height: 32, borderRadius: '50%', padding: 0, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)',
+                      color: 'rgba(255,255,255,0.6)', touchAction: 'manipulation',
+                    }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden><path d="M18 6L6 18M6 6l12 12" /></svg>
+                  </button>
                 </div>
                 {/* minHeight:0 or this never scrolls - it just grows the shell. */}
                 <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '0.2rem 1.1rem 0.4rem' }}>
@@ -2901,7 +2916,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                     you tapped the tab. That was there to close dead space under
                     a shorter tab; the shell is a fixed height now, so there is
                     no dead space to close. */}
-                <div style={{ position: 'relative', width: 186, height: 196, margin: '0 auto', borderRadius: '86px 86px 7px 7px', overflow: 'hidden', clipPath: 'inset(0 round 86px 86px 7px 7px)', border: `2px solid ${dColor}`, boxShadow: `inset 0 -14px 24px rgba(0,0,0,0.65), 0 0 14px ${dColor}33`, background: `radial-gradient(ellipse at 50% 30%, ${(portraitSkin ?? dColor)}26 0%, #070504 74%)` }}>
+                <div style={{ position: 'relative', width: 186, height: 196, margin: '0 auto', borderRadius: 16, overflow: 'hidden', clipPath: 'inset(0 round 16px)', border: `1px solid ${dColor}88`, boxShadow: 'inset 0 -18px 28px rgba(0,0,0,0.55)', background: `linear-gradient(180deg, ${(portraitSkin ?? dColor)}1f 0%, #070504 78%)` }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={artSrc(portraitFilename)} alt={it.name}
                     className={portraitChase ? 'chase-skin-glow' : undefined}
@@ -2967,7 +2982,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                               padding: '0.4rem 1rem', fontSize: '0.66rem', letterSpacing: '0.08em',
                               background: 'linear-gradient(180deg, rgba(74,200,130,0.36), rgba(46,140,92,0.2))',
                               border: '1px solid rgba(122,226,162,0.6)', color: '#dcf8e7',
-                              borderRadius: 7, cursor: renameSaving ? 'not-allowed' : 'pointer',
+                              borderRadius: 10, cursor: renameSaving ? 'not-allowed' : 'pointer',
                               opacity: renameSaving ? 0.6 : 1,
                             }}
                           >{renameSaving ? 'Saving…' : 'Save'}</button>
@@ -2980,7 +2995,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                               padding: '0.4rem 1rem', fontSize: '0.66rem', letterSpacing: '0.08em',
                               background: 'rgba(255,255,255,0.06)',
                               border: '1px solid rgba(255,255,255,0.18)', color: 'rgba(255,255,255,0.7)',
-                              borderRadius: 7, cursor: 'pointer',
+                              borderRadius: 10, cursor: 'pointer',
                             }}
                           >Cancel</button>
                         </div>
