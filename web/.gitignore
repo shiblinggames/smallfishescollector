@@ -42,12 +42,19 @@ next-env.d.ts
 
 .vercel
 card-art-uploads/
-# Local asset tooling (slicers, uploaders) stays out of the repo, but the
-# campaign checker runs in prebuild and MUST ship. Note the glob: `scripts/`
-# would ignore the directory itself, and git will not descend into an ignored
-# directory, so a `!scripts/...` negation under it does nothing.
+# Local asset tooling (slicers, uploaders) stays out of the repo, but ANYTHING
+# prebuild runs MUST ship or every Vercel build dies at
+# ERR_MODULE_NOT_FOUND while passing perfectly well locally, because the file
+# is right there on disk and only missing from the commit.
+#
+# So: add a script to `prebuild` in package.json, add its negation HERE.
+#
+# Note the glob: `scripts/` would ignore the directory itself, and git will not
+# descend into an ignored directory, so a `!scripts/...` negation under it does
+# nothing. It has to be `scripts/*`.
 scripts/*
 !scripts/check-campaign.mts
+!scripts/check-copy.mts
 
 # Badge slicer source sheets (dev-only input for slice-badges.mjs; sliced output in public/badges/ is committed)
 public/badgebatch*.png
