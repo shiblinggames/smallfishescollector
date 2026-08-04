@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback, useMemo} from 'react'
+import CloseButton from '@/components/CloseButton'
 import type { DialAimBonus } from '@/lib/dialAim'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -2168,7 +2169,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.9rem' }}>
               <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#f0ede8' }}>Your Crew</p>
-              <button onClick={() => setShowCrewInfo(false)} style={{ background: 'none', border: 'none', color: '#5a5855', cursor: 'pointer', fontSize: '0.9rem', lineHeight: 1, padding: '2px 4px' }}>✕</button>
+              <CloseButton onClick={() => setShowCrewInfo(false)} size={28} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
               {crewMembers.map((c, i) => (

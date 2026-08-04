@@ -10,6 +10,7 @@
 // for feel, then reconcile with the returned state.
 
 import { useState, useCallback, useEffect } from 'react'
+import CloseButton from '@/components/CloseButton'
 import { motion, AnimatePresence } from 'framer-motion'
 import PopupShell from '@/components/PopupShell'
 import { vibrate } from '@/lib/haptics'
@@ -115,7 +116,7 @@ export default function RenownPanel({ open, onClose, skill, initial, onChange }:
         }}
       >
         {/* Close — X at the top-right, matching the app's other modals. */}
-        <button onClick={onClose} aria-label="Close" style={{ position: 'absolute', top: 8, right: 10, zIndex: 3, color: 'rgba(255,255,255,0.5)', fontSize: '1.2rem', lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem 0.4rem' }}>✕</button>
+        <CloseButton onClick={onClose} style={{ position: 'absolute', top: 8, right: 10, zIndex: 3 }} />
 
         {/* Header — title + a single efficient status line: Renown level on the
             left, a prominent (pulsing) "points to spend" pill on the right. No

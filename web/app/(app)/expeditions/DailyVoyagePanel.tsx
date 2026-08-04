@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition, useCallback, useEffect, useRef, useMemo, type ReactNode } from 'react'
+import CloseButton from '@/components/CloseButton'
 import { voyageFortuneScale, voyagePowerScale, voyageDiscoveryChance, voyageEncounterWinChance } from '@/lib/voyageEvents'
 import { motion } from 'framer-motion'
 import { createPortal } from 'react-dom'
@@ -403,7 +404,7 @@ export default function DailyVoyagePanel({
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
                       <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#c8aa6a' }}>How Voyages Work</p>
-                      <button onClick={() => setInfoOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6a5a40', fontSize: '1rem', lineHeight: 1 }}>✕</button>
+                      <CloseButton onClick={() => setInfoOpen(false)} size={28} />
                     </div>
                     {/* The one thing this explainer never said, and the whole point of the
                         mode: you do not PLAY a voyage. The Campaign is where you fight. */}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition, useEffect, useRef, useMemo, Fragment, type CSSProperties } from 'react'
+import CloseButton from '@/components/CloseButton'
 import FinnChargePanel from '@/components/FinnChargePanel'
 import ItemEffectLines from '@/components/ItemEffectLines'
 import { finnItemLevel, finnTierNumeral, FINN_ITEM_MAX_LEVEL } from '@/lib/finnItems'
@@ -2621,7 +2622,7 @@ export default function ShipHero({
             transition={{ duration: 0.18 }}
             style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 440, background: 'rgba(8,14,24,0.98)', borderRadius: 18, padding: '0.85rem 0.8rem 1rem', maxHeight: '88vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', boxShadow: '0 0 34px rgba(240,192,64,0.14)' }}
           >
-            <button onClick={() => setUltimateOpen(false)} aria-label="Close" style={{ position: 'absolute', top: 6, right: 8, zIndex: 6, color: 'rgba(255,255,255,0.55)', fontSize: '1.2rem', lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem 0.4rem' }}>✕</button>
+            <CloseButton onClick={() => setUltimateOpen(false)} style={{ position: 'absolute', top: 6, right: 8, zIndex: 6 }} />
             <UltimateBuildPanel
               shipTier={shipTierForSlots}
               navLevel={navLevelNow}
@@ -2651,7 +2652,7 @@ export default function ShipHero({
               initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 4 }} transition={{ duration: 0.18 }}
               style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 400, background: 'rgba(8,14,24,0.98)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 18, padding: '1.3rem 1rem 1rem', maxHeight: '82vh', display: 'flex', flexDirection: 'column' }}
             >
-              <button onClick={() => setPickerOpen(false)} aria-label="Close" style={{ position: 'absolute', top: 6, right: 8, zIndex: 6, color: 'rgba(255,255,255,0.55)', fontSize: '1.2rem', lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem 0.4rem' }}>✕</button>
+              <CloseButton onClick={() => setPickerOpen(false)} style={{ position: 'absolute', top: 6, right: 8, zIndex: 6 }} />
               <p className="font-cinzel font-800" style={{ fontSize: '1rem', color: '#f0ede8', marginBottom: 3 }}>Equip an item</p>
               <p className="font-karla" style={{ fontSize: '0.68rem', color: '#8a8480', marginBottom: 12 }}>
                 {slotsFilled}/{slotsTotal} slots filled. Effects stack no matter which slot.
@@ -2723,7 +2724,7 @@ export default function ShipHero({
               initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 4 }} transition={{ duration: 0.18 }}
               style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 380, background: 'rgba(8,14,24,0.98)', borderRadius: 18, padding: '1.5rem 1.1rem 1.1rem', maxHeight: '88vh', overflowY: 'auto', boxShadow: forged ? (abyssal ? '0 0 30px rgba(255,90,60,0.22)' : '0 0 30px rgba(150,140,180,0.2)') : `0 0 30px ${color}22` }}
             >
-              <button onClick={() => setItemDetail(null)} aria-label="Close" style={{ position: 'absolute', top: 6, right: 8, zIndex: 6, color: 'rgba(255,255,255,0.55)', fontSize: '1.2rem', lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem 0.4rem' }}>✕</button>
+              <CloseButton onClick={() => setItemDetail(null)} style={{ position: 'absolute', top: 6, right: 8, zIndex: 6 }} />
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 6 }}>
                 <div style={{ width: 74, height: 74, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', ...(forged ? forgedBorderSoft('rgba(20,24,32,0.9)', abyssal) : { background: `${color}12`, border: `1px solid ${color}40` }) }}>
                   {def.image
@@ -2795,7 +2796,7 @@ export default function ShipHero({
               initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 4 }} transition={{ duration: 0.18 }}
               style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 420, background: 'rgba(8,14,24,0.98)', borderRadius: 18, padding: '1.5rem 1.15rem 1.2rem', maxHeight: '88vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', boxShadow: '0 0 30px rgba(120,140,170,0.16)' }}
             >
-              <button onClick={() => setEffectsOpen(false)} aria-label="Close" style={{ position: 'absolute', top: 6, right: 8, zIndex: 6, color: 'rgba(255,255,255,0.55)', fontSize: '1.2rem', lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem 0.4rem' }}>✕</button>
+              <CloseButton onClick={() => setEffectsOpen(false)} style={{ position: 'absolute', top: 6, right: 8, zIndex: 6 }} />
               <div style={{ textAlign: 'center', marginBottom: '1.1rem' }}>
                 <p className="font-cinzel font-800" style={{ fontSize: '1.1rem', color: '#f0ede8' }}>Active Loadout</p>
                 {/* items INCLUDES the mount, so this has to count against the
@@ -2838,7 +2839,7 @@ export default function ShipHero({
         {sixthBerthOpen && (
           <motion.div initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 4 }} transition={{ duration: 0.18 }}
             style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 400, background: 'rgba(8,14,24,0.98)', borderRadius: 18, padding: '1.5rem 0.95rem 1rem', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 0 30px rgba(255,213,107,0.16)' }}>
-            <button onClick={() => setSixthBerthOpen(false)} aria-label="Close" style={{ position: 'absolute', top: 6, right: 8, zIndex: 6, color: 'rgba(255,255,255,0.55)', fontSize: '1.2rem', lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem 0.4rem' }}>✕</button>
+            <CloseButton onClick={() => setSixthBerthOpen(false)} style={{ position: 'absolute', top: 6, right: 8, zIndex: 6 }} />
             <SixthBerthPanel
               blockadeCleared={blockadeCleared}
               hasSixthBerth={hasSixthBerth}
@@ -2854,7 +2855,7 @@ export default function ShipHero({
         {armoryOpen && (
           <motion.div initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 4 }} transition={{ duration: 0.18 }}
             style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 400, background: 'rgba(8,14,24,0.98)', borderRadius: 18, padding: '1.5rem 0.95rem 1rem', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 0 30px rgba(167,139,250,0.16)' }}>
-            <button onClick={() => setArmoryOpen(false)} aria-label="Close" style={{ position: 'absolute', top: 6, right: 8, zIndex: 6, color: 'rgba(255,255,255,0.55)', fontSize: '1.2rem', lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem 0.4rem' }}>✕</button>
+            <CloseButton onClick={() => setArmoryOpen(false)} style={{ position: 'absolute', top: 6, right: 8, zIndex: 6 }} />
             <ArmoryExpansionPanel
               throneCleared={throneCleared}
               hasArmoryExpansion={hasArmoryExpansion}
@@ -2870,7 +2871,7 @@ export default function ShipHero({
         {classesOpen && (
           <motion.div initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 4 }} transition={{ duration: 0.18 }}
             style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 400, background: 'rgba(8,14,24,0.98)', border: '1px solid rgba(192,132,252,0.4)', borderRadius: 18, padding: '1.1rem 1rem 1.2rem', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 0 30px rgba(192,132,252,0.18)' }}>
-            <button onClick={() => setClassesOpen(false)} aria-label="Close" style={{ position: 'absolute', top: 8, right: 10, zIndex: 6, color: 'rgba(255,255,255,0.5)', fontSize: '1.2rem', lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem 0.4rem' }}>✕</button>
+            <CloseButton onClick={() => setClassesOpen(false)} style={{ position: 'absolute', top: 8, right: 10, zIndex: 6 }} />
             <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#c084fc', marginBottom: 4 }}>Captain&rsquo;s Class</p>
             <p className="font-karla" style={{ fontSize: '0.72rem', color: '#8a8480', marginBottom: 14, lineHeight: 1.45 }}>Permanent buffs you pick at the end of each chapter. They stack. Tap one for its full breakdown.</p>
             {(() => {
@@ -2905,7 +2906,7 @@ export default function ShipHero({
         {skinsOpen && (
           <motion.div initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 4 }} transition={{ duration: 0.18 }}
             style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 420, background: 'rgba(8,14,24,0.98)', border: '1px solid rgba(156,196,255,0.35)', borderRadius: 18, padding: '1.1rem 1rem 1.2rem', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 0 30px rgba(156,196,255,0.16)' }}>
-            <button onClick={() => setSkinsOpen(false)} aria-label="Close" style={{ position: 'absolute', top: 8, right: 10, zIndex: 6, color: 'rgba(255,255,255,0.5)', fontSize: '1.2rem', lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem 0.4rem' }}>✕</button>
+            <CloseButton onClick={() => setSkinsOpen(false)} style={{ position: 'absolute', top: 8, right: 10, zIndex: 6 }} />
             <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#9cc4ff', marginBottom: 12 }}>Ship Skins</p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
               {(() => {
@@ -2970,7 +2971,7 @@ export default function ShipHero({
               transition={{ duration: 0.18 }}
               style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 380, background: 'rgba(8,14,24,0.98)', border: `1px solid ${top.color}55`, borderRadius: 18, padding: '1.1rem 1rem 1.2rem', boxShadow: `0 0 30px ${top.color}22` }}
             >
-              <button onClick={() => setClassDetail(null)} aria-label="Close" style={{ position: 'absolute', top: 8, right: 10, zIndex: 3, color: 'rgba(255,255,255,0.5)', fontSize: '1.2rem', lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem 0.4rem' }}>✕</button>
+              <CloseButton onClick={() => setClassDetail(null)} style={{ position: 'absolute', top: 8, right: 10, zIndex: 3 }} />
               <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: 4 }}>
                 <span style={{ flexShrink: 0, width: 40, height: 40, borderRadius: 10, background: `${top.color}20`, border: `1px solid ${top.color}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', color: top.color }}>{top.emoji}</span>
                 <div style={{ minWidth: 0 }}>
@@ -3527,7 +3528,7 @@ function UpgradeRepairKitPanel({
     <>
       <div className="flex items-center justify-between" style={{ marginBottom: '0.85rem' }}>
         <p className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.95rem', color: '#f0ede8' }}>Upgrade Kit</p>
-        <button type="button" onClick={onClose} className="font-karla font-700" style={{ fontSize: '1.2rem', color: '#7a7674', lineHeight: 1 }} aria-label="Close">✕</button>
+        <CloseButton onClick={onClose} size={28} />
       </div>
 
       {!next || !nextRange ? (

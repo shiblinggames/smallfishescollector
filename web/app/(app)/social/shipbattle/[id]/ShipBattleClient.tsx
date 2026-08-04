@@ -8,6 +8,7 @@
 // feels exactly like a raid fight.
 
 import { useEffect, useRef, useState, useCallback } from 'react'
+import CloseButton from '@/components/CloseButton'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { motion, AnimatePresence, useAnimation } from 'framer-motion'
@@ -384,7 +385,7 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
                   <div className="flex items-center gap-2 flex-1" style={{ minWidth: 0, background: 'rgba(94,234,212,0.1)', border: '1px solid rgba(94,234,212,0.4)', borderRadius: 12, padding: '0.5rem 0.7rem' }}>
                     <span className="font-karla font-700 uppercase" style={{ fontSize: '0.52rem', letterSpacing: '0.1em', color: '#5eead4' }}>Special</span>
                     <span className="font-cinzel font-700 truncate" style={{ fontSize: '0.8rem', color: '#d6fff7' }}>{armed.label}</span>
-                    <button onClick={() => setArmed(null)} className="ml-auto font-karla font-700" style={{ fontSize: '0.9rem', color: '#7fcabb', lineHeight: 1, padding: '0 0.2rem' }} aria-label="Clear special">✕</button>
+                    <CloseButton onClick={() => setArmed(null)} size={26} label="Clear special" style={{ marginLeft: 'auto' }} />
                   </div>
                 ) : (
                   <button onClick={() => setChooserOpen(true)} disabled={busy} className="font-karla font-700 uppercase tracking-[0.1em] flex items-center justify-center gap-1.5 flex-1"
@@ -618,7 +619,7 @@ function SpecialChooser({ crew, repairKit, myFx, onPick, onClose }: {
         style={{ width: '100%', maxWidth: 460, background: 'linear-gradient(180deg, #0c1626 0%, #06101c 100%)', border: '1px solid rgba(94,234,212,0.22)', borderRadius: 20, padding: '1rem', boxShadow: '0 18px 60px rgba(0,0,0,0.6)', maxHeight: 'calc(100dvh - 5rem)', overflowY: 'auto' }}>
         <div className="flex items-center justify-between mb-2.5">
           <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#d6fff7' }}>Crew Specials</p>
-          <button onClick={onClose} className="font-karla font-700" style={{ fontSize: '1.1rem', color: '#7fcabb', lineHeight: 1 }} aria-label="Close">✕</button>
+          <CloseButton onClick={onClose} size={28} />
         </div>
         <p className="font-karla font-400 mb-3" style={{ fontSize: '0.64rem', color: '#7a8aa0', lineHeight: 1.4 }}>One free Special per round, once each per duel. It fires alongside your move.</p>
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useRef, useTransition, type ReactNode } from 'react'
+import CloseButton from '@/components/CloseButton'
 import { createPortal } from 'react-dom'
 import { useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -3630,7 +3631,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                 <motion.div onClick={e => e.stopPropagation()}
                   initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97, y: 6 }} transition={{ duration: 0.18 }}
                   style={{ position: 'relative', width: '100%', maxWidth: 300, borderRadius: 18, padding: '1.1rem 1.05rem 1.15rem', background: 'rgba(10,8,14,0.98)', border: `1px solid ${c}66`, boxShadow: `0 0 40px ${c}22, 0 20px 50px rgba(0,0,0,0.6)` }}>
-                  <button onClick={() => { if (!skinBusy) setSkinBuyConfirm(null) }} aria-label="Close" style={{ position: 'absolute', top: 8, right: 10, zIndex: 3, color: 'rgba(255,255,255,0.5)', fontSize: '1.2rem', lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem 0.4rem' }}>✕</button>
+                  <CloseButton onClick={() => { if (!skinBusy) setSkinBuyConfirm(null) }} style={{ position: 'absolute', top: 8, right: 10, zIndex: 3 }} />
 
                   <p className="font-cinzel font-700 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.2em', color: c, textAlign: 'center', marginBottom: 8 }}>Unlock Skin</p>
                   <div style={{ position: 'relative', width: 118, height: 118, margin: '0 auto', borderRadius: 12, overflow: 'hidden', border: `1px solid ${c}55`, background: `radial-gradient(ellipse at 50% 38%, ${c}22 0%, #060409 74%)` }}>
@@ -3688,7 +3689,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                 <motion.div onClick={e => e.stopPropagation()}
                   initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97, y: 6 }} transition={{ duration: 0.18 }}
                   style={{ position: 'relative', width: '100%', maxWidth: 340, borderRadius: 20, overflow: 'hidden', background: 'rgba(10,8,14,0.99)', border: `1px solid ${c}66`, boxShadow: `0 0 44px ${c}26, 0 22px 55px rgba(0,0,0,0.65)` }}>
-                  <button onClick={close} aria-label="Close" style={{ position: 'absolute', top: 6, right: 12, zIndex: 4, color: 'rgba(255,255,255,0.65)', fontSize: '1.35rem', lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem 0.4rem' }}>✕</button>
+                  <CloseButton onClick={close} style={{ position: 'absolute', top: 6, right: 12, zIndex: 4 }} />
                   <div style={{ position: 'relative', width: '100%', aspectRatio: '1', background: `radial-gradient(ellipse at 50% 34%, ${c}2e 0%, #060409 76%)` }}>
                     {/* Chase FX + animated glow show for the preview even when UNOWNED,
                         so you see exactly what you'd buy (LoL-style). */}

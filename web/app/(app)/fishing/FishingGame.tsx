@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useTransition, useMemo, useCallback } from 'react'
+import CloseButton from '@/components/CloseButton'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence, useDragControls, type MotionStyle } from 'framer-motion'
 import Link from 'next/link'
@@ -9447,19 +9448,7 @@ export default function FishingGame({
                   generic detail card. Pure cosmetic. */}
               <AnchorSeal />
 
-              <button
-                type="button"
-                onClick={() => setTappedFishId(null)}
-                aria-label="Close"
-                style={{
-                  position: 'absolute', top: 8, right: 8,
-                  width: 28, height: 28, borderRadius: '50%',
-                  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
-                  color: 'rgba(255,255,255,0.6)', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '1rem', lineHeight: 1, padding: 0,
-                }}
-              >×</button>
+              <CloseButton onClick={() => setTappedFishId(null)} size={28} style={{ position: 'absolute', top: 8, right: 8 }} />
 
               <div style={{ width: '100%', height: 150, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.6rem' }}>
                 <FishImg name={f.name} style={{ maxWidth: '90%', maxHeight: 150, objectFit: 'contain', filter: `drop-shadow(0 4px 18px ${rarityColor}66)` }} />
