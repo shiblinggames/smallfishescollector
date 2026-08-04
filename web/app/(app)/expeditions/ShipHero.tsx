@@ -337,12 +337,27 @@ function WrenchGlyph({ color }: { color: string }) {
 
 // One cell of the Ship tab's 2-column management grid: icon + section label +
 // current value + a CTA, tapping opens that section's detail modal.
+/** SOLID base for anything sitting on the ship screen's painted backdrop.
+ *
+ *  The backdrop scrim opens to 28% at the top of the page so the berth art can
+ *  be seen at all, which means a panel up there gets almost no help from it. A
+ *  translucent panel over painted art does not read as a panel, it reads as a
+ *  grey film with a boat behind it, and every surface on this screen was a
+ *  4-to-30% wash.
+ *
+ *  So: tint OVER an opaque colour, never tint INSTEAD of one. Two background
+ *  layers, the tint first and the solid second, which is the documented
+ *  house pattern for panels on custom backgrounds. */
+const SHIP_PANEL = '#0b111b'
+const shipPanelBg = (tint?: string) =>
+  tint ? `linear-gradient(${tint}, ${tint}), ${SHIP_PANEL}` : SHIP_PANEL
+
 function ShipTile({ accent, title, value, sub, cta, icon, onClick }: {
   accent: string; title: string; value: string; sub?: string; cta: string; icon: React.ReactNode; onClick: () => void
 }) {
   return (
     <button type="button" onClick={onClick}
-      style={{ display: 'flex', flexDirection: 'column', gap: 3, textAlign: 'left', padding: '0.75rem 0.7rem', borderRadius: 13, background: `${accent}10`, border: `1px solid ${accent}3a`, cursor: 'pointer', minHeight: 98 }}>
+      style={{ display: 'flex', flexDirection: 'column', gap: 3, textAlign: 'left', padding: '0.75rem 0.7rem', borderRadius: 13, background: shipPanelBg(`${accent}1c`), border: `1px solid ${accent}4a`, cursor: 'pointer', minHeight: 98 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginBottom: 3 }}>
         <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 8, background: `${accent}20`, border: `1px solid ${accent}50`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{icon}</span>
         <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: accent, whiteSpace: 'nowrap' }}>{cta}</span>
@@ -1573,14 +1588,23 @@ export default function ShipHero({
                 // a lamplit berth in the same key as the other two, so the wash
                 // no longer has to fight the art.
                 //
-                // It stays graded rather than uniformly light because the cards
-                // further down are only rgba(255,255,255,0.03-0.08) — barely
-                // there — and need a dark, even ground to read as cards at all.
-                // So: open at the top where the ship hero sits and the painting
-                // is worth seeing, near-opaque by the time the dense lists start.
+                // It stays graded rather than uniformly light because most cards
+                // on this screen are still rgba(255,255,255,0.03-0.08) washes and
+                // need a dark ground to read as cards at all.
+                //
+                // 0.28 -> 0.44 at the top. Opening it that far was too far: the
+                // ship screen's content sits high on the page, so panels landed
+                // where the wash was thinnest and the berth read straight
+                // THROUGH them. The Ship tab's own panels are opaque now (see
+                // shipPanelBg), but Loadout and Forge share this backdrop and
+                // their surfaces are still translucent, so the scrim carries
+                // them. 0.44 still shows the hull, the lanterns and the moonlit
+                // opening — that was checked against the plate at 0.74 / 0.46 /
+                // 0.28 / 0.12 before picking.
+                //
                 // Solid colour fallback while the image loads.
                 backgroundColor: '#060c14',
-                backgroundImage: `linear-gradient(180deg, rgba(6,10,18,0.28) 0%, rgba(5,8,14,0.72) 42%, rgba(3,5,9,0.93) 100%), url(${sectionBg})`,
+                backgroundImage: `linear-gradient(180deg, rgba(6,10,18,0.44) 0%, rgba(5,8,14,0.78) 42%, rgba(3,5,9,0.94) 100%), url(${sectionBg})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center top',
                 backgroundRepeat: 'no-repeat',
@@ -2192,7 +2216,7 @@ export default function ShipHero({
                           display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
                           gap: 6, marginBottom: '0.9rem',
                           padding: '0.85rem 0.7rem', borderRadius: 14,
-                          background: 'rgba(0,0,0,0.30)', border: '1px solid rgba(255,255,255,0.08)',
+                          background: shipPanelBg('rgba(255,255,255,0.035)'), border: '1px solid rgba(255,255,255,0.11)',
                         }}>
                           {ROWS.map(r => {
                             const added = r.total - r.base
@@ -2223,8 +2247,8 @@ export default function ShipHero({
                         borderRadius: 16, cursor: nextShip ? 'pointer' : 'default',
                         textAlign: 'center', font: 'inherit',
                         background: nextShip
-                          ? 'linear-gradient(180deg, rgba(240,192,64,0.16) 0%, rgba(240,192,64,0.06) 100%)'
-                          : 'rgba(255,255,255,0.03)',
+                          ? `linear-gradient(180deg, rgba(240,192,64,0.20) 0%, rgba(240,192,64,0.07) 100%), ${SHIP_PANEL}`
+                          : shipPanelBg('rgba(255,255,255,0.04)'),
                         border: `1px solid ${nextShip ? 'rgba(240,192,64,0.5)' : 'rgba(255,255,255,0.1)'}`,
                       }}
                     >
@@ -2246,7 +2270,7 @@ export default function ShipHero({
                     </button>
 
                     {/* ── THE REST, TABBED ────────────────────────────────────── */}
-                    <div style={{ display: 'flex', gap: 5, marginBottom: '0.9rem', padding: 4, background: 'rgba(0,0,0,0.28)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)' }}>
+                    <div style={{ display: 'flex', gap: 5, marginBottom: '0.9rem', padding: 4, background: shipPanelBg('rgba(255,255,255,0.03)'), borderRadius: 12, border: '1px solid rgba(255,255,255,0.09)' }}>
                       {([['refits', 'Refits'], ['armament', 'Armament'], ['appearance', 'Look']] as const).map(([id, label]) => {
                         const on = shipTab === id
                         return (
