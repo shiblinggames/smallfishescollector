@@ -2870,14 +2870,17 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   // the shell is constant and the body between the header and
                   // the action row is the only thing that scrolls.
                   //
-                  // 620 -> 500. The Stats tab is short since the per-stat sheet
-                  // took the base values, the trained row and the glossary out
-                  // of it: close row ~28 + portrait 196 + name ~29 + level bar
-                  // ~35 + tabs ~55 + body ~75 + actions ~61 lands near 500, and
-                  // a crew with no Ability or Skins tab hides the strip and
-                  // comes in ~55 shorter still. At 620 that was 120-175px of
-                  // dead space under the stats on the tab you open by default.
-                  // Taller tabs scroll, which is what the scroll region is for.
+                  // 620 -> 500, and the header then went from stacked to side by
+                  // side, which is where the room for the body actually came
+                  // from. The old budget was close ~28 + portrait 196 + name ~29
+                  // + level bar ~35 + tabs ~55 + actions ~61, leaving the body
+                  // about 84px — too little for the Stats tab's stat row plus its
+                  // trait line, so the trait fell below the fold on a short phone.
+                  //
+                  // Now: close ~44 + header 146 + tabs ~55 + actions ~61 leaves
+                  // the body around 194. The trait is visible without scrolling
+                  // and the Skins grid gets a usable window. Taller tabs still
+                  // scroll, which is what the scroll region is for.
                   width: '100%', maxWidth: 360, height: 'min(82vh, 500px)',
                   position: 'relative',
                   display: 'flex', flexDirection: 'column', overflow: 'hidden',
@@ -2907,6 +2910,15 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                 {/* minHeight:0 or this never scrolls - it just grows the shell. */}
                 <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '0.2rem 1.1rem 0.4rem' }}>
 
+                {/* HEADER ROW: portrait left, identity right.
+                    This used to be a 186x196 portrait CENTRED in a 360 sheet with
+                    the name and level bar stacked under it. That spent 260px of a
+                    500px sheet on the header and left ~87px of dead space down
+                    each side of the picture, which is why the Stats tab's trait
+                    line fell below the fold on a short phone. Side by side the
+                    same information costs ~146px and fills the width. */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.9rem', marginTop: '0.15rem' }}>
+
                 {/* Portrait — rarity frame; a shown skin makes the ART itself glow
                     in its color (drop-shadow aura on the image). clip-path keeps
                     the glow inside the arch so it never spills past the frame.
@@ -2916,7 +2928,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                     you tapped the tab. That was there to close dead space under
                     a shorter tab; the shell is a fixed height now, so there is
                     no dead space to close. */}
-                <div style={{ position: 'relative', width: 186, height: 196, margin: '0 auto', borderRadius: 16, overflow: 'hidden', clipPath: 'inset(0 round 16px)', border: `1px solid ${dColor}88`, boxShadow: 'inset 0 -18px 28px rgba(0,0,0,0.55)', background: `linear-gradient(180deg, ${(portraitSkin ?? dColor)}1f 0%, #070504 78%)` }}>
+                <div style={{ position: 'relative', width: 132, height: 146, flexShrink: 0, borderRadius: 16, overflow: 'hidden', clipPath: 'inset(0 round 16px)', border: `1px solid ${dColor}88`, boxShadow: 'inset 0 -18px 28px rgba(0,0,0,0.55)', background: `linear-gradient(180deg, ${(portraitSkin ?? dColor)}1f 0%, #070504 78%)` }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={artSrc(portraitFilename)} alt={it.name}
                     className={portraitChase ? 'chase-skin-glow' : undefined}
@@ -2935,6 +2947,8 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                     </div>
                   )}
                 </div>
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+
                 {/* Crew name + one-shot rename. Roster crew with no
                     nickname yet get a small pencil next to the name; tap
                     to swap into an inline input. Already-named or board
@@ -2945,7 +2959,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   const canRename = isRoster && m && m.nickname === null
                   if (renameOpen && canRename && m) {
                     return (
-                      <div style={{ marginTop: '0.6rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
                         <input
                           autoFocus
                           value={renameDraft}
@@ -3003,8 +3017,8 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                     )
                   }
                   return (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: '0.6rem' }}>
-                      <p className="font-pirata" style={{ textAlign: 'center', fontSize: '1.7rem', color: '#ecdcbd', lineHeight: 1.05 }}>{it.name}</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <p className="font-pirata" style={{ fontSize: '1.35rem', color: '#ecdcbd', lineHeight: 1.05, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.name}</p>
                       {canRename && (
                         <button
                           type="button"
@@ -3035,7 +3049,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   )
                 })()}
                 {!('xp' in it) && (
-                  <p className="font-cinzel font-700" style={{ textAlign: 'center', fontSize: '0.8rem', letterSpacing: '0.16em', textTransform: 'uppercase', color: dColor }}>{RARITY_NAMES[(it.rarity as CrewRarity)] ?? 'Common'}</p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: dColor }}>{RARITY_NAMES[(it.rarity as CrewRarity)] ?? 'Common'}</p>
                 )}
 
                 {/* Level + XP bar — only shown for roster crew (board recruits
@@ -3048,7 +3062,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   const prog = crewXPProgress(dXp)
                   const atMax = prog.level >= CREW_MAX_LEVEL
                   return (
-                    <div style={{ marginTop: '0.7rem' }}>
+                    <div style={{ marginTop: '0.35rem' }}>
                       <div className="flex items-baseline justify-between" style={{ marginBottom: 4 }}>
                         {/* Rarity rides here instead of owning a row above.
                             The old "Master" / "Fully trained" titles are gone -
@@ -3075,6 +3089,9 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                     </div>
                   )
                 })()}
+
+                </div>{/* end identity column */}
+                </div>{/* end header row */}
 
                 {/* Tab strip — splits the detail into Stats / Ability / Skins so
                     it isn't a wall of info. Only shows tabs that apply. */}
