@@ -1110,6 +1110,10 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
   function runLadderUpgrade(kind: 'drill' | 'stores') {
     if (pending) return
     setErr(null)
+    // Answer the tap NOW, the way TrawlIndicator and the tackle shop already
+    // do. The celebration fires on the way back; this is just the receipt for
+    // the press, so a paid upgrade is not silence followed by a surprise.
+    hapticTap()
     startTransition(async () => {
       const res = await (kind === 'drill' ? buyDrill() : buyStores())
       setLadderConfirm(null)
@@ -1136,6 +1140,10 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
   function handleHallUpgrade() {
     if (hallBusy || pending) return
     setErr(null)
+    // The hall tier is the most expensive thing on this screen, so the press
+    // gets answered first. hallBusy already gives it a visual busy state; this
+    // adds the tactile half.
+    hapticTap()
     setHallBusy(true)
     startTransition(async () => {
       const res = await upgradeCrewHall()
