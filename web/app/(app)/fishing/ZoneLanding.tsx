@@ -476,12 +476,12 @@ export default function ZoneLanding({
                     <DetailStat
                       label={ancientOnly ? 'Chest type' : 'Diamond crate'}
                       value={ancientOnly ? 'Ancient' : `${Math.round(zoneDiamondShare(zone) * 100)}%`}
-                      accent={ancientOnly ? '#8fd8b4' : undefined}
+                      accent={ancientOnly ? '#d8cfbb' : undefined}
                     />
                     <DetailStat
                       label="Pet / crate"
                       value={`${round1(zonePetPerCrate(zone))}%`}
-                      accent={ancientOnly ? '#8fd8b4' : undefined}
+                      accent={ancientOnly ? '#d8cfbb' : undefined}
                     />
                   </div>
                   <p className="font-karla" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.42)', fontStyle: 'italic', marginTop: 12, lineHeight: 1.4 }}>

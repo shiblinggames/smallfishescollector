@@ -67,12 +67,10 @@ export const CRATE_TIERS: Record<CrateTierId, {
   metal:   { label: 'Metal Crate',   accent: '#b8c4d0', rgb: '184,196,208', art: 'metalcrate'   },
   gold:    { label: 'Gold Crate',    accent: '#f0c040', rgb: '240,192,64',  art: 'goldcrate'    },
   diamond: { label: 'Diamond Crate', accent: '#7dd3fc', rgb: '125,211,252', art: 'diamondcrate' },
-  // ART PENDING. Borrowing the diamond sprite so the chest is playable today;
-  // it is the one thing that still makes an Ancient Chest look like a lesser
-  // container. Drop /ancientchestclosed.png + /ancientchestopen.png into
-  // /public and change `art` to 'ancientchest'. Nothing else needs touching,
-  // which is the reason the path moved into this table.
-  ancient: { label: 'Ancient Chest', accent: '#8fd8b4', rgb: '143,216,180',  art: 'diamondcrate' },
+  // Pale carved stone with an eye on the lock. The accent is the warm bone of
+  // the banding rather than the darker stone body, so it still reads as an
+  // accent against the drawer's near-black rather than disappearing into it.
+  ancient: { label: 'Ancient Chest', accent: '#d8cfbb', rgb: '216,207,187', art: 'ancientcrate' },
 }
 
 /** Art lives per-tier in CRATE_TIERS because the filenames are not uniform
