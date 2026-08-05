@@ -38,24 +38,16 @@ import { equipBadge, unequipBadge } from '@/app/(app)/achievements/badgeActions'
 import { BADGES, BADGE_MAP, BADGE_SLOT_POSITIONS } from '@/lib/badges'
 
 const CRATE_FISH_ID = -1
-// Crate slot strip — see handleOpenCrate + the rolling JSX block. The
-// strip is a horizontal row of fixed-width tiles; the LAST tile is the
-// actual reward. The whole strip translates left so the reward lands
-// centered in the window. Duration is shared between the framer-motion
-// transition and the setTimeout that flips the phase to 'revealed'.
-const CRATE_TILE_W = 220
-const CRATE_TILE_H = 64
-const CRATE_SPIN_DURATION_MS = 2200
 import { claimDailyReward } from './dailyChallengeActions'
 import { getDailyChallenges, DAILY_SWEEP_GEMS, type DailyChallengeState, type DailyChallenge } from '@/lib/dailyChallenges'
 import { GEM_GLYPH, GEM_COLOR } from '@/lib/uiTokens'
 import type { CrateLoot } from '@/lib/crateLoot'
+import CrateOpening, { CRATE_TIERS, type CrateTierId, type CrateLootView } from '@/components/CrateOpening'
 import PodiumToast, { type PodiumNotif } from '@/components/PodiumToast'
 import LeaderboardModal from '@/components/LeaderboardModal'
 import AncientBgEffect from '@/components/AncientBgEffect'
 import PopupShell from '@/components/PopupShell'
 import { IconFlame, IconStar, IconTrophy, IconLock } from '@/components/GameIcons'
-import SpinReel from '@/components/SpinReel'
 import { finishSession, type ActiveSession } from '@/app/(app)/social/challengeActions'
 import { equipRod, purchaseRod, sellRod, buyReel, buyBait } from '@/app/(app)/marketplace/tackle-shop/actions'
 import { buyHook } from '@/app/(app)/hooks/actions'
@@ -3109,94 +3101,6 @@ function AncientSlainCinematic({ fish, count, total, isMegalodon, onDone }: {
   )
 }
 
-// ─── Crate slot strip tile ────────────────────────────────────────────────
-// One tile in the decelerating slot strip — icon + label, sized to fill
-// exactly CRATE_TILE_W × CRATE_TILE_H. Each tile uses the same icon/color
-// vocabulary as the revealed-state card (doubloons = gold pile, baits =
-// their bait icon, cosmetics = the actual cosmetic art) so when the strip
-// lands on the reward there's no visual jump between the spin and the
-// reveal — it reads as the same item, just zoomed and centered.
-
-type CrateRollTileShape =
-  | { type: 'doubloons'; amount: number }
-  | { type: 'bait';      baitType: string; baitName: string; quantity?: number }
-  | { type: 'skin';      skinId: string;   skinName: string }
-  | { type: 'hat';       hatName: string;  hatImageUrl: string  }
-  | { type: 'boat';      boatName: string; boatImageUrl: string }
-  | { type: 'pet';       petName: string;  petImageUrl: string; petAccent: string }
-
-function CrateSlotTile({ tile }: { tile: CrateRollTileShape }) {
-  const wrapper: React.CSSProperties = {
-    flex: `0 0 ${CRATE_TILE_W}px`,
-    height: CRATE_TILE_H,
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    gap: 10,
-    padding: '0 14px',
-  }
-  if (tile.type === 'doubloons') {
-    return (
-      <div style={wrapper}>
-        <img src="/smallpile.png" alt="" style={{ height: 36, width: 36, objectFit: 'contain' }} />
-        <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#fbbf24', lineHeight: 1 }}>
-          {tile.amount.toLocaleString()} ⟡
-        </p>
-      </div>
-    )
-  }
-  if (tile.type === 'bait') {
-    return (
-      <div style={wrapper}>
-        <img src={getBait(tile.baitType).imageUrl ?? '/worms.png'} alt="" style={{ height: 36, width: 36, objectFit: 'contain' }} />
-        <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#86efac', lineHeight: 1 }}>
-          {tile.baitName}
-        </p>
-      </div>
-    )
-  }
-  if (tile.type === 'skin') {
-    // Skins don't have a standalone icon — sprite is positioned out of a
-    // larger sheet (see the revealed card). For the slot tile, render a
-    // matching CSS-cropped swatch.
-    return (
-      <div style={wrapper}>
-        <div
-          style={{
-            width: 36, height: 36, borderRadius: 8, overflow: 'hidden',
-            backgroundImage: `url(/fishing_${tile.skinId}_rest.png)`,
-            backgroundSize: '420% auto', backgroundPosition: '60% 68%',
-            backgroundRepeat: 'no-repeat',
-            border: '1px solid rgba(74,222,128,0.35)',
-          }}
-        />
-        <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#4ade80', lineHeight: 1 }}>
-          {tile.skinName}
-        </p>
-      </div>
-    )
-  }
-  if (tile.type === 'pet') {
-    return (
-      <div style={wrapper}>
-        <img src={tile.petImageUrl} alt="" style={{ height: 42, width: 42, objectFit: 'contain', filter: `drop-shadow(0 0 8px ${tile.petAccent}66)` }} />
-        <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: tile.petAccent, lineHeight: 1 }}>
-          {tile.petName}
-        </p>
-      </div>
-    )
-  }
-  // hat / boat — both have an imageUrl
-  const img = tile.type === 'hat' ? tile.hatImageUrl : tile.boatImageUrl
-  const name = tile.type === 'hat' ? tile.hatName : tile.boatName
-  return (
-    <div style={wrapper}>
-      <img src={img} alt="" style={{ height: 36, width: 36, objectFit: 'contain' }} />
-      <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#4ade80', lineHeight: 1 }}>
-        {name}
-      </p>
-    </div>
-  )
-}
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 /** The trophy mark: a drawn cup, so it lives in the same visual language as the rest of
@@ -3889,13 +3793,13 @@ export default function FishingGame({
     | { type: 'pet';       petId: string;    petName: string;  petImageUrl: string; petAccent: string; isDuplicate: boolean }
     | null
   >(null)
+  // Mirrors CrateOpening's internal phase, driven by its onOpened/onSettled
+  // callbacks. The host needs it because the crate's OPEN and CLAIM buttons
+  // live in the bottom action row (same slot as Cast and Reel) rather than
+  // inside the card, so the action never shifts position between phases.
   const [cratePhase, setCratePhase] = useState<'closed' | 'rolling' | 'revealed'>('closed')
-  // Slot strip for the rolling animation. The LAST tile is always the
-  // actual reward, so when the strip decelerates and the last tile lands
-  // centered, the spin visually lands on what the player receives — no
-  // more random ticker that "hard-swaps" to a different reward at the end.
-  // Tile shape is CrateRollTileShape (declared above with CrateSlotTile).
-  const [crateStrip, setCrateStrip] = useState<CrateRollTileShape[] | null>(null)
+  // Bumped by the bottom action row's Open button; CrateOpening watches it.
+  const [crateOpenSignal, setCrateOpenSignal] = useState(false)
   // ── Finn (fishing rival) ────────────────────────────────────────────────
   // Encounter counters mirror the DB columns so we can pick story beats
   // locally without a server round-trip. Updated optimistically; the server
@@ -4167,7 +4071,7 @@ export default function FishingGame({
   // drawer rather than routed through the big reel-in crate reveal, which is
   // welded to the fishing result phase and would fight the open drawer.
   const [masterCrate, setMasterCrate] = useState<
-    { tier: 'wooden' | 'metal' | 'gold' | 'diamond'; text: string } | null
+    { tier: CrateTierId; loot: CrateLootView } | null
   >(null)
   // Push local progress + claimed up to the parent on every change so the
   // state survives a ZoneLanding remount when the player switches zones.
@@ -4793,8 +4697,8 @@ export default function FishingGame({
     // autocaster path) didn't — and a stuck crateResult will hide the
     // Cast Again button on the next regular catch.
     setCrateResult(null)
+    setCrateOpenSignal(false)
     setCratePhase('closed')
-    setCrateStrip(null)
 
     const ev = activeEventRef.current
     const isBloom = ev?.type === 'bloom'
@@ -5481,7 +5385,6 @@ export default function FishingGame({
           }
         } catch {}
         setCratePhase('closed')
-        setCrateStrip(null)
         phaseRef.current = 'result'
         setPhase('result')
       })
@@ -5805,6 +5708,14 @@ export default function FishingGame({
   //   • Golden catch → never auto-anything. The trophy moment needs
   //     the player to consciously claim it; muscle-memory recast
   //     would blow past it.
+  // Hoisted out of the effect below because the crate itself needs it: with
+  // an auto-caster running, CrateOpening pries itself open after a beat so the
+  // player watches the spin instead of chasing a button. 700ms is long enough
+  // to register the closed crate and its tier first.
+  const autoCrateOpenMs = ((equippedSpecial === 'auto_caster' && ownedAutoCaster)
+    || (equippedSpecial === 'auto_catcher' && ownedAutoCatcher)) && autoEnabled
+    ? 700 : undefined
+
   useEffect(() => {
     // Both the Auto Caster and its upgrade (Auto Catcher) auto-cast.
     const autoCastActive = (equippedSpecial === 'auto_caster' && ownedAutoCaster)
@@ -5813,22 +5724,14 @@ export default function FishingGame({
     if (phase !== 'result') return
     if (catchResult?.isShiny) return
 
-    // Crate flow — auto-step through the player's taps so they only
-    // have to enjoy the spin + reveal, not chase the buttons.
+    // Crate flow — the OPEN tap is CrateOpening's job now (autoCrateOpenMs),
+    // so all that is left here is the auto-claim once the reward is up.
     if (crateResult) {
-      if (cratePhase === 'closed') {
-        const t = setTimeout(() => handleOpenCrate(), 700)
-        return () => clearTimeout(t)
-      }
-      if (cratePhase === 'rolling') {
-        // Spin in progress — let it finish; the effect re-runs when
-        // cratePhase flips to 'revealed' below.
-        return
-      }
       if (cratePhase === 'revealed') {
         const t = setTimeout(() => { void handleClaimCrate() }, 1200)
         return () => clearTimeout(t)
       }
+      return
     }
 
     // Regular auto-cast — bait + hold check, then recast (a touch slower than
@@ -5894,8 +5797,8 @@ export default function FishingGame({
     setCatchResult(null)
     setMissResult(null)
     setCrateResult(null)
+    setCrateOpenSignal(false)
     setCratePhase('closed')
-    setCrateStrip(null)
     setHookedFish(null)
     setPerfectFlash(false)
     setLevelUpNotif(null)
@@ -6047,8 +5950,8 @@ export default function FishingGame({
     setCatchResult(null)
     setMissResult(null)
     setCrateResult(null)
+    setCrateOpenSignal(false)
     setCratePhase('closed')
-    setCrateStrip(null)
     setHookedFish(null)
     setPerfectFlash(false)
     setLevelUpNotif(null)
@@ -6056,53 +5959,6 @@ export default function FishingGame({
     setHoldOpen(false)
     setGearOpen(false)
     await doCast()
-  }
-
-  function handleOpenCrate() {
-    if (!crateResult || cratePhase !== 'closed') return
-    const result = crateResult
-    setCratePhase('rolling')
-
-    // Filler pool — what the strip flashes past on its way to the
-    // reward. Doubloons + baits only; cosmetics are too rare to tease
-    // as filler (would feel cheap when the strip lands on something
-    // ordinary). When the real reward IS a cosmetic, it appears as the
-    // final tile, so the spin still lands on it.
-    const fillerPool: CrateRollTileShape[] = [
-      { type: 'doubloons', amount: 75 },
-      { type: 'doubloons', amount: 150 },
-      { type: 'doubloons', amount: 250 },
-      { type: 'doubloons', amount: 350 },
-      { type: 'doubloons', amount: 500 },
-      { type: 'bait', baitType: 'worm',            baitName: 'Worms' },
-      { type: 'bait', baitType: 'minnow',          baitName: 'Minnow' },
-      { type: 'bait', baitType: 'night_crawler',   baitName: 'Night Crawler' },
-      { type: 'bait', baitType: 'chum',            baitName: 'Chum' },
-      { type: 'bait', baitType: 'anglers_formula', baitName: "Angler's Formula" },
-    ]
-    // Build the reward tile so it matches the CrateRollTileShape (the
-    // crateResult shape carries `quantity` for bait + `id` fields we
-    // don't need for rendering).
-    const rewardTile: CrateRollTileShape =
-      result.type === 'doubloons' ? { type: 'doubloons', amount: result.amount }
-      : result.type === 'bait'    ? { type: 'bait', baitType: result.baitType, baitName: result.baitName, quantity: result.quantity }
-      : result.type === 'skin'    ? { type: 'skin', skinId: result.skinId, skinName: result.skinName }
-      : result.type === 'hat'     ? { type: 'hat', hatName: result.hatName, hatImageUrl: result.hatImageUrl }
-      : result.type === 'boat'    ? { type: 'boat', boatName: result.boatName, boatImageUrl: result.boatImageUrl }
-      :                             { type: 'pet', petName: result.petName, petImageUrl: result.petImageUrl, petAccent: result.petAccent }
-
-    // 17 random fillers, then the reward. The strip animates so the
-    // LAST tile lands centered — meaning the spin visibly arrives at
-    // the actual reward, not a random surprise.
-    const fillers: CrateRollTileShape[] = []
-    for (let i = 0; i < 17; i++) {
-      fillers.push(fillerPool[Math.floor(Math.random() * fillerPool.length)])
-    }
-    setCrateStrip([...fillers, rewardTile])
-
-    // Hand off to revealed once the strip's CSS animation has settled.
-    // CRATE_SPIN_DURATION_MS matches the framer-motion transition below.
-    setTimeout(() => setCratePhase('revealed'), CRATE_SPIN_DURATION_MS + 80)
   }
 
   async function handleClaimCrate() {
@@ -6138,11 +5994,11 @@ export default function FishingGame({
       }
     }
     setCratePhase('closed')
-    setCrateStrip(null)
     // Don't auto-cast after the player taps Claim — they should decide
     // when to fish next. Clearing crateResult drops the crate panel and
     // reveals the normal Cast button.
     setCrateResult(null)
+    setCrateOpenSignal(false)
     // Also reset hookedFish + flip phase to 'idle' so the bottom action
     // slot renders the idle Cast button. Without this, the Cast Again
     // render gate (`catchResult || missResult`) is false on a fresh
@@ -6151,19 +6007,6 @@ export default function FishingGame({
     // 2026-06-05.
     setHookedFish(null)
     setPhase('idle')
-  }
-
-  /** One line describing what a crate gave up, for the drawer's result card. */
-  function describeCrateLoot(loot: CrateLoot): string {
-    switch (loot.type) {
-      case 'doubloons': return `${loot.amount.toLocaleString()} \u27E1`
-      case 'bait':      return `${loot.quantity}\u00D7 ${loot.baitName}`
-      case 'skin':      return `${loot.skinName} colorway`
-      case 'hat':       return `${loot.hatName} bandana`
-      case 'boat':      return `${loot.boatName} boat`
-      case 'pet':       return loot.isDuplicate ? `${loot.petName} (already aboard)` : `${loot.petName}, a new pet`
-      default:          return 'Something from the deep'
-    }
   }
 
   async function handleClaimDaily(index: 0 | 1 | 2 | 3) {
@@ -6189,7 +6032,7 @@ export default function FishingGame({
     // moved doubloons, bait, a cosmetic or a pet, so the balance above is
     // already the post-grant figure.
     if (res.crate) {
-      setMasterCrate({ tier: res.crate.tier, text: describeCrateLoot(res.crate.loot) })
+      setMasterCrate({ tier: res.crate.tier, loot: res.crate.loot as CrateLootView })
     }
     // The server only returns gems on the claim that completed the set, so a
     // non-zero value here IS the sweep. It pays exactly once per day.
@@ -7267,208 +7110,29 @@ export default function FishingGame({
                       transition={{ type: 'spring', stiffness: 340, damping: 22 }}
                       style={{
                         background: 'rgba(6,14,22,0.96)',
-                        border: `1px solid ${cratePhase === 'revealed' ? 'rgba(251,191,36,0.35)' : 'rgba(255,255,255,0.1)'}`,
+                        border: `1px solid ${cratePhase === 'revealed' ? `rgba(${CRATE_TIERS[hookedFish?.crateTier ?? 'wooden'].rgb},0.4)` : 'rgba(255,255,255,0.1)'}`,
                         borderRadius: 20,
                         padding: '1.15rem 1.25rem 1.05rem',
-                        boxShadow: cratePhase === 'revealed' ? '0 0 50px rgba(251,191,36,0.18), 0 0 120px rgba(251,191,36,0.08)' : 'none',
                         textAlign: 'center',
                       }}
                     >
-                      {/* Crate image — fixed slot so the image position
-                          doesn't shift between phases. */}
-                      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '0.65rem', height: 88 }}>
-                        <motion.img
-                          src={(() => {
-                            const tier = hookedFish?.crateTier ?? 'wooden'
-                            const state = cratePhase === 'revealed' ? 'open' : 'closed'
-                            return tier === 'wooden' ? `/crate${state}.png` : `/${tier}crate${state}.png`
-                          })()}
-                          alt="crate"
-                          animate={cratePhase === 'rolling'
-                            ? { rotate: [-5, 5, -4, 4, -3, 3, 0], scale: [1, 1.05, 1] }
-                            : cratePhase === 'revealed'
-                            ? { scale: [0.85, 1.1, 1] }
-                            : {}
-                          }
-                          transition={cratePhase === 'rolling'
-                            ? { duration: 0.3, repeat: Infinity, ease: 'easeInOut' }
-                            : cratePhase === 'revealed'
-                            ? { duration: 0.4, ease: [0.34, 1.56, 0.64, 1] }
-                            : {}
-                          }
-                          style={{ height: 88, objectFit: 'contain', cursor: cratePhase === 'closed' ? 'pointer' : 'default' }}
-                          onClick={cratePhase === 'closed' ? handleOpenCrate : undefined}
-                        />
-                      </div>
-
-                      {/* Phase content slot — minHeight (not fixed) keeps the
-                          closed → rolling → common-reward phases the same size
-                          so the crate image doesn't jump, while staying compact:
-                          the old fixed 140 was sized for the rare tall rewards
-                          (pet/skin) and left the common doubloon/bait drop half
-                          empty. Tall rewards just grow the slot past the min. */}
-                      <div style={{ minHeight: 92, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                      {cratePhase === 'closed' && (() => {
-                        const tier = hookedFish?.crateTier ?? 'wooden'
-                        const tierName = tier === 'wooden' ? 'Wooden Crate'
-                                       : tier === 'metal'  ? 'Metal Crate'
-                                       : tier === 'gold'   ? 'Gold Crate'
-                                       :                     'Diamond Crate'
-                        return (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                          <p className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.42)', letterSpacing: '0.18em', marginBottom: 3 }}>
-                            You reeled up a
-                          </p>
-                          <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0ede8', textShadow: '0 0 12px rgba(251,191,36,0.35)' }}>
-                            {tierName}
-                          </p>
-                        </motion.div>
-                        )
-                      })()}
-
-                      {/* Rolling: slot strip that decelerates onto the reward.
-                          One window-width tile is visible at a time. The strip
-                          translates left by (N-1) tile-widths so the LAST tile —
-                          the actual reward — lands centered when the animation
-                          ends. Ease-out cubic-bezier gives the fast-start /
-                          slow-settle slot-machine feel. */}
-                      {cratePhase === 'rolling' && crateStrip && (
-                        <div
-                          style={{
-                            margin: '0 auto',
-                            width: CRATE_TILE_W,
-                            height: CRATE_TILE_H,
-                            overflow: 'hidden',
-                            borderRadius: 12,
-                            border: '1px solid rgba(255,255,255,0.08)',
-                            background: 'rgba(0,0,0,0.35)',
-                            // Side fades so tiles ease in/out of the window
-                            // rather than slamming against the borders.
-                            maskImage: 'linear-gradient(to right, transparent 0%, #000 14%, #000 86%, transparent 100%)',
-                            WebkitMaskImage: 'linear-gradient(to right, transparent 0%, #000 14%, #000 86%, transparent 100%)',
-                          }}
-                        >
-                          {/* Scrolling reel (blur past → ease onto reward), same
-                              feel as Fish Slots. Reward is the strip's last tile. */}
-                          <SpinReel
-                            items={crateStrip}
-                            landedIndex={crateStrip.length - 1}
-                            orientation="horizontal"
-                            tileMain={CRATE_TILE_W}
-                            tileCross={CRATE_TILE_H}
-                            spinMs={1450}
-                            landMs={760}
-                            blurPx={3}
-                            renderItem={(tile) => <CrateSlotTile tile={tile} />}
-                          />
-                        </div>
-                      )}
-
-                      {/* Revealed: reward + claim */}
-                      {cratePhase === 'revealed' && crateResult && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.3, delay: 0.1 }}
-                        >
-                          {crateResult.type === 'skin' ? (
-                            <div style={{ textAlign: 'center', marginBottom: '0.9rem' }}>
-                              <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: '#4ade8099', marginBottom: 6 }}>Rare Drop!</p>
-                              <motion.div
-                                initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                                transition={{ type: 'spring', stiffness: 380, damping: 18, delay: 0.1 }}
-                                style={{
-                                  width: 72, height: 72, borderRadius: 12, overflow: 'hidden',
-                                  backgroundImage: `url(/fishing_${crateResult.skinId}_rest.png)`,
-                                  backgroundSize: '420% auto', backgroundPosition: '60% 68%',
-                                  backgroundRepeat: 'no-repeat', margin: '0 auto 8px',
-                                  border: '2px solid rgba(74,222,128,0.4)',
-                                  boxShadow: '0 0 20px rgba(74,222,128,0.25)',
-                                }}
-                              />
-                              <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#4ade80', textShadow: '0 0 20px rgba(74,222,128,0.5)', lineHeight: 1 }}>
-                                {crateResult.skinName} Skin
-                              </p>
-                              <p className="font-karla" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', marginTop: 4 }}>New character color unlocked</p>
-                            </div>
-                          ) : crateResult.type === 'pet' ? (
-                            <div style={{ textAlign: 'center', marginBottom: '0.9rem' }}>
-                              <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: `${crateResult.petAccent}cc`, marginBottom: 6 }}>
-                                {crateResult.isDuplicate ? 'Duplicate Pet' : 'Pet Unlocked!'}
-                              </p>
-                              <motion.img
-                                src={crateResult.petImageUrl}
-                                alt=""
-                                initial={{ scale: 0.5, opacity: 0, y: 14 }} animate={{ scale: 1, opacity: 1, y: 0 }}
-                                transition={{ type: 'spring', stiffness: 280, damping: 14, delay: 0.1 }}
-                                style={{
-                                  width: 96, height: 96, objectFit: 'contain',
-                                  margin: '0 auto 10px', display: 'block',
-                                  filter: `drop-shadow(0 0 24px ${crateResult.petAccent}80)`,
-                                }}
-                              />
-                              <p className="font-cinzel font-700" style={{
-                                fontSize: '1.2rem', color: crateResult.petAccent, lineHeight: 1,
-                                textShadow: `0 0 22px ${crateResult.petAccent}80`,
-                              }}>
-                                {crateResult.petName}
-                              </p>
-                              <p className="font-karla" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>
-                                {crateResult.isDuplicate ? 'You already own this pet' : 'Equip it from your Appearance loadout'}
-                              </p>
-                            </div>
-                          ) : crateResult.type === 'hat' || crateResult.type === 'boat' ? (
-                            <div style={{ textAlign: 'center', marginBottom: '0.9rem' }}>
-                              <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: '#4ade8099', marginBottom: 6 }}>Rare Drop!</p>
-                              <motion.img
-                                src={crateResult.type === 'hat' ? crateResult.hatImageUrl : crateResult.boatImageUrl}
-                                alt=""
-                                initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                                transition={{ type: 'spring', stiffness: 380, damping: 18, delay: 0.1 }}
-                                style={{
-                                  width: 72, height: 72, objectFit: 'contain',
-                                  margin: '0 auto 8px', display: 'block',
-                                  filter: 'drop-shadow(0 0 18px rgba(74,222,128,0.4))',
-                                }}
-                              />
-                              <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#4ade80', textShadow: '0 0 20px rgba(74,222,128,0.5)', lineHeight: 1 }}>
-                                {crateResult.type === 'hat' ? `${crateResult.hatName} Bandana` : `${crateResult.boatName} Boat`}
-                              </p>
-                              <p className="font-karla" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', marginTop: 4 }}>
-                                {crateResult.type === 'hat' ? 'New bandana color unlocked' : 'New boat color unlocked'}
-                              </p>
-                            </div>
-                          ) : (
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: '0.9rem' }}>
-                              <motion.img
-                                src={crateResult.type === 'doubloons' ? '/smallpile.png' : (getBait(crateResult.baitType).imageUrl ?? '/worms.png')}
-                                initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                                transition={{ type: 'spring', stiffness: 420, damping: 18, delay: 0.15 }}
-                                style={{ height: 48, width: 48, objectFit: 'contain' }}
-                              />
-                              <div style={{ textAlign: 'left' }}>
-                                <p className="font-cinzel font-700" style={{
-                                  fontSize: '1.55rem',
-                                  color: crateResult.type === 'doubloons' ? '#fbbf24' : '#86efac',
-                                  textShadow: crateResult.type === 'doubloons' ? '0 0 28px rgba(251,191,36,0.55)' : '0 0 22px rgba(134,239,172,0.5)',
-                                  lineHeight: 1,
-                                }}>
-                                  {crateResult.type === 'doubloons'
-                                    ? `+${crateResult.amount.toLocaleString()} ⟡`
-                                    : `×${crateResult.quantity}`}
-                                </p>
-                                <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>
-                                  {crateResult.type === 'doubloons' ? 'Doubloons' : crateResult.baitName}
-                                </p>
-                              </div>
-                            </div>
-                          )}
-                          {/* Claim button lives in the bottom action row
-                              now — same screen slot as Cast / Reel — so
-                              the action position is consistent across
-                              every fishing phase. */}
-                        </motion.div>
-                      )}
-                      </div>
+                      {/* The crate moment is shared with the Tavern's weekly
+                          crate and the Master daily challenge crate. See
+                          components/CrateOpening.tsx for why it stopped being
+                          three separate implementations. The Claim button is
+                          NOT passed as the footer: it lives in the bottom
+                          action row, the same screen slot as Cast and Reel, so
+                          the action position stays put across every phase. */}
+                      <CrateOpening
+                        tier={(hookedFish?.crateTier ?? 'wooden') as CrateTierId}
+                        loot={crateResult as CrateLootView}
+                        headline="You reeled up a"
+                        autoOpenMs={autoCrateOpenMs}
+                        hostOwnsOpenButton
+                        openSignal={crateOpenSignal}
+                        onOpened={() => setCratePhase('rolling')}
+                        onSettled={() => setCratePhase('revealed')}
+                      />
                     </motion.div>
                   ) : catchResult ? (
                     <>
@@ -7896,7 +7560,7 @@ export default function FishingGame({
                   position between phases. */}
               {phase === 'result' && crateResult && cratePhase === 'closed' && (
                 <motion.button key="open-crate"
-                  onPointerDown={(e) => { e.preventDefault(); handleOpenCrate() }}
+                  onPointerDown={(e) => { e.preventDefault(); setCrateOpenSignal(true) }}
                   className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
                   style={{
                     width: 88, height: 88, borderRadius: '50%',
@@ -10463,8 +10127,10 @@ export default function FishingGame({
                       </div>
                     </div>
 
-                    {/* What the roll actually gave up. Sits under the card so
-                        the claim resolves where the player was looking. */}
+                    {/* The crate opens right here, using the same moment the
+                        reel-in crate and the Tavern's weekly crate use. This
+                        used to be a line of text naming the drop, which was
+                        the weakest crate in the game by a distance. */}
                     <AnimatePresence>
                       {masterCrate && (
                         <motion.div
@@ -10474,20 +10140,16 @@ export default function FishingGame({
                           exit={{ opacity: 0 }}
                           transition={{ duration: 0.25 }}
                           style={{
-                            marginTop: 6, borderRadius: 10, padding: '0.6rem 0.8rem',
-                            background: '#130f08',
-                            border: '1px solid rgba(201,138,85,0.3)',
+                            marginTop: 8, borderRadius: 12, padding: '0.9rem 0.8rem 0.8rem',
+                            background: '#0d0f14',
+                            border: '1px solid rgba(201,138,85,0.28)',
                           }}
                         >
-                          <p className="font-karla font-800 uppercase" style={{
-                            fontSize: '0.53rem', letterSpacing: '0.18em',
-                            color: 'rgba(201,138,85,0.85)', marginBottom: 3,
-                          }}>
-                            {masterCrate.tier} crate
-                          </p>
-                          <p className="font-karla font-600" style={{ fontSize: '0.85rem', color: '#f0ede8' }}>
-                            {masterCrate.text}
-                          </p>
+                          <CrateOpening
+                            tier={masterCrate.tier}
+                            loot={masterCrate.loot}
+                            headline="The tide paid out a"
+                          />
                         </motion.div>
                       )}
                     </AnimatePresence>
