@@ -126,13 +126,17 @@ export default async function HomePage() {
               }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              {/* Purpose-painted for these tiles, so it can carry more weight
-                  than the borrowed hub art it replaced: opacity 0.42 -> 0.72,
-                  and the scrim only has to protect the LEFT half where the copy
-                  sits. Each plate was generated with its subject left of centre
-                  and mirrored on install, so the subject lands in the clear. */}
+              {/* Purpose-painted ENVIRONMENT plates: water, sky, light and
+                  landforms, no vessels and no creatures. The game has its own
+                  sprites for those, and a generated ship would be a different
+                  ship from the one the player actually sails.
+                  
+                  Empty plates are quieter than subject art, so they run at 0.85
+                  rather than the 0.42 the borrowed hub art used, and each was
+                  composed with its left third deliberately dark so the copy
+                  still lands on solid ground. */}
               <img src={p.art} alt="" aria-hidden loading="lazy" decoding="async"
-                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.72 }} />
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }} />
               <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(100deg, rgba(7,13,22,0.97) 34%, rgba(7,13,22,0.72) 62%, rgba(7,13,22,0.30) 100%)' }} />
               <div style={{ position: 'relative', padding: '1.5rem 1.4rem' }}>
                 <p className="font-karla font-800 uppercase tracking-[0.2em]" style={{ fontSize: '0.54rem', color: '#f0c040' }}>{p.eyebrow}</p>
