@@ -101,23 +101,22 @@ const EVENT_XP: Record<string, Record<string, number>> = {
 // One knob so it's easy to retune.
 export const VOYAGE_XP_MULT = 2.75
 
-/** What share of a voyage's XP its surviving CREW earn, on top of the captain.
+/** Share of a voyage's Navigation XP that its surviving crew earn as CREW XP.
  *
- *  Crew used to take the payout at full value, which was fine while a voyage was
- *  the only passive way to train them. The Crew Hall is that now, by design: it
- *  is the building you spend doubloons on specifically to level hands, and it
- *  should be the one paying the most for it.
+ *  0.25. A voyage is a small top-up to a hand's training, not a way to train
+ *  them: the Crew Hall is the building you pay for that, and it should be the
+ *  obvious place to do it. Was 0.75, which made sailing a serious rival to the
+ *  hall, and briefly a per-route constant while Nav XP was rebalanced (see
+ *  ROUTE_PAYOUTS) before this went back to being a ratio.
  *
- *  Deliberately SEPARATE from VOYAGE_XP_MULT rather than a cut to it. That
- *  multiplier is the captain's Nav XP, which was raised to 2.75 on purpose to
- *  make voyages a worthwhile Nav trickle. Trimming it would quietly nerf Nav
- *  levelling to solve a crew-training problem, and nobody would connect the two
- *  a month from now.
+ *  A RATIO on purpose. It is meant to stay a quarter of the voyage whatever
+ *  happens to Nav XP later, so this cannot silently drift the way it would if
+ *  the two were separate numbers someone had to remember to update together.
  *
- *  0.75, not something harsher: voyages still carry real crew XP, because a crew
- *  that sailed and survived should learn something from it. The hall just out-earns
- *  them now instead of trailing them. */
-export const VOYAGE_CREW_XP_MULT = 0.75
+ *  For scale, at Drills VI a single bunk pays 4,100 crew XP an hour against a
+ *  Shroud voyage's ~707 per surviving hand. The hall wins by roughly 6x, which
+ *  is the point. */
+export const VOYAGE_CREW_XP_MULT = 0.25
 
 export function voyageXP(
   route: string,

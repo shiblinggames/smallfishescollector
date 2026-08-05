@@ -62,24 +62,14 @@ export const ROUTE_PAYOUTS: Record<VoyageRoute, {
   gems: number
   /** NAVIGATION xp for the captain. */
   xp: number
-  /** CREW xp for the hands who came back.
-   *
-   *  Its own number now, NOT a share of the Nav figure above. Crew XP used to
-   *  be `nav x 0.75`, one line in the claim, which meant the two could never
-   *  move independently: buffing Nav levelling silently buffed crew levelling
-   *  by the identical factor, and the Crew Hall exists precisely so that
-   *  training hands is a thing you pay for rather than a side effect of
-   *  sailing. These are pinned to what a voyage paid before the Nav buff, so
-   *  crew progression is exactly where it was. */
-  crewXp: number
   /** Total crew Power for an even shot at `success`. Scales with the route. */
   difficulty: number
 }> = {
-  coastal:  { doubloons: 350,  gems: 2,  xp: 450,  crewXp: 340,  difficulty: 8  },
-  open:     { doubloons: 700,  gems: 5,  xp: 940,  crewXp: 490,  difficulty: 16 },
-  deep:     { doubloons: 1300, gems: 10, xp: 2410, crewXp: 710,  difficulty: 28 },
-  triangle: { doubloons: 2200, gems: 17, xp: 4300, crewXp: 1050, difficulty: 42 },
-  shroud:   { doubloons: 3600, gems: 30, xp: 7210, crewXp: 1500, difficulty: 60 },
+  coastal:  { doubloons: 350,  gems: 2,  xp: 450,  difficulty: 8  },
+  open:     { doubloons: 700,  gems: 5,  xp: 940,  difficulty: 16 },
+  deep:     { doubloons: 1300, gems: 10, xp: 2410,  difficulty: 28 },
+  triangle: { doubloons: 2200, gems: 17, xp: 4300, difficulty: 42 },
+  shroud:   { doubloons: 3600, gems: 30, xp: 7210, difficulty: 60 },
 }
 
 /** Total crew Fortune the ROUTE_PAYOUTS numbers assume. Above this you earn
