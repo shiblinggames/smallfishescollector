@@ -38,17 +38,32 @@ const OUTCOME_MULT: Record<VoyageOutcome, number> = {
  *  trawl's 2,826 Fishing XP/hr, with the shallower routes tracking their own
  *  zone equivalents.
  *
- *  DOUBLOONS AND NAV XP were multiplied by each route's own length factor when
- *  voyages were lengthened (2026-08-05), so the per-hour economics are exactly
- *  where they were: an hour of Shroud is still worth an hour of Abyss trawling.
- *  A voyage takes about 2.7x as long and pays about 2.7x as much. Fewer, bigger
- *  check-ins rather than a nerf.
+ *  RATES WERE CUT ACROSS THE BOARD (2026-08-05, second pass). Voyages were
+ *  paying too well per hour on every route once they had been lengthened and
+ *  their payouts scaled to match. The ceiling is now set by hand: SHROUD tops
+ *  out roughly where TRIANGLE used to, and everything beneath it scales down
+ *  from there.
  *
- *  The factors are measured WITHOUT Swift Sails on purpose. Scaling against the
- *  Swift Sails timeline would have made the upgrade the assumed baseline and
- *  handed everyone without it a 21% better rate than before, which is backwards.
- *  Held to the unbuffed clock, the baseline rate is exactly preserved and Swift
- *  Sails is worth a genuine 18% on top.
+ *  Coastal took the deepest cut, 67% off its Nav rate. It had drifted into
+ *  paying almost exactly what Open did per hour (1,059 against 1,108) while
+ *  being the zero-risk, no-gate, hour-long entry route, so there was no reason
+ *  to ever leave it. An entry route should be a foothold, not a destination.
+ *
+ *  Per-hour targets, at full investment and no Swift Sails:
+ *
+ *    route      nav/hr   ⟡/hr    (was nav/hr)
+ *    coastal       350    300         1,059
+ *    open          650    500         1,108
+ *    deep        1,150    750         1,700
+ *    triangle    1,650    950         2,169
+ *    shroud      2,150  1,110         2,828
+ *
+ *  Crew XP needs no entry here: it is a flat 25% of Nav XP, so it follows.
+ *
+ *  Rates are quoted WITHOUT Swift Sails on purpose. Treating the upgrade as
+ *  the baseline would make the published numbers wrong for everyone who does
+ *  not hold it; held to the unbuffed clock, Swift Sails is worth a real 18%
+ *  on top of these.
  *
  *  GEMS were deliberately NOT scaled. Voyages are the largest gem faucet in the
  *  game and are due to lose gems entirely once a replacement source exists, so
@@ -82,11 +97,11 @@ export const ROUTE_PAYOUTS: Record<VoyageRoute, {
   /** Total crew Power for an even shot at `success`. Scales with the route. */
   difficulty: number
 }> = {
-  coastal:  { doubloons: 930,  gems: 2,  xp: 1200,  difficulty: 8  },
-  open:     { doubloons: 1870,  gems: 5,  xp: 2510,  difficulty: 16 },
-  deep:     { doubloons: 3120, gems: 10, xp: 5780,  difficulty: 28 },
-  triangle: { doubloons: 5450, gems: 17, xp: 10650, difficulty: 42 },
-  shroud:   { doubloons: 9600, gems: 30, xp: 19230, difficulty: 60 },
+  coastal:  { doubloons: 340,  gems: 2,  xp: 400,  difficulty: 8  },
+  open:     { doubloons: 1130,  gems: 5,  xp: 1470,  difficulty: 16 },
+  deep:     { doubloons: 2550, gems: 10, xp: 3910,  difficulty: 28 },
+  triangle: { doubloons: 4660, gems: 17, xp: 8100, difficulty: 42 },
+  shroud:   { doubloons: 7550, gems: 30, xp: 14620, difficulty: 60 },
 }
 
 /** Total crew Fortune the ROUTE_PAYOUTS numbers assume. Above this you earn
