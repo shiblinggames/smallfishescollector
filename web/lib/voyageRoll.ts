@@ -38,6 +38,23 @@ const OUTCOME_MULT: Record<VoyageOutcome, number> = {
  *  trawl's 2,826 Fishing XP/hr, with the shallower routes tracking their own
  *  zone equivalents.
  *
+ *  DOUBLOONS AND NAV XP were multiplied by each route's own length factor when
+ *  voyages were lengthened (2026-08-05), so the per-hour economics are exactly
+ *  where they were: an hour of Shroud is still worth an hour of Abyss trawling.
+ *  A voyage takes about 2.7x as long and pays about 2.7x as much. Fewer, bigger
+ *  check-ins rather than a nerf.
+ *
+ *  The factors are measured WITHOUT Swift Sails on purpose. Scaling against the
+ *  Swift Sails timeline would have made the upgrade the assumed baseline and
+ *  handed everyone without it a 21% better rate than before, which is backwards.
+ *  Held to the unbuffed clock, the baseline rate is exactly preserved and Swift
+ *  Sails is worth a genuine 18% on top.
+ *
+ *  GEMS were deliberately NOT scaled. Voyages are the largest gem faucet in the
+ *  game and are due to lose gems entirely once a replacement source exists, so
+ *  tripling them on the way out would be the wrong direction. Holding them flat
+ *  while the clock triples cuts gems per hour to a third, which is a start.
+ *
  *  This also fixed a curve that ran backwards. Because the duration ladder
  *  makes deep routes take proportionally longer, a flat XP ladder meant
  *  COASTAL had the best Nav XP per hour of any route. Depth now pays better by
@@ -65,11 +82,11 @@ export const ROUTE_PAYOUTS: Record<VoyageRoute, {
   /** Total crew Power for an even shot at `success`. Scales with the route. */
   difficulty: number
 }> = {
-  coastal:  { doubloons: 350,  gems: 2,  xp: 450,  difficulty: 8  },
-  open:     { doubloons: 700,  gems: 5,  xp: 940,  difficulty: 16 },
-  deep:     { doubloons: 1300, gems: 10, xp: 2410,  difficulty: 28 },
-  triangle: { doubloons: 2200, gems: 17, xp: 4300, difficulty: 42 },
-  shroud:   { doubloons: 3600, gems: 30, xp: 7210, difficulty: 60 },
+  coastal:  { doubloons: 930,  gems: 2,  xp: 1200,  difficulty: 8  },
+  open:     { doubloons: 1870,  gems: 5,  xp: 2510,  difficulty: 16 },
+  deep:     { doubloons: 3120, gems: 10, xp: 5780,  difficulty: 28 },
+  triangle: { doubloons: 5450, gems: 17, xp: 10650, difficulty: 42 },
+  shroud:   { doubloons: 9600, gems: 30, xp: 19230, difficulty: 60 },
 }
 
 /** Total crew Fortune the ROUTE_PAYOUTS numbers assume. Above this you earn

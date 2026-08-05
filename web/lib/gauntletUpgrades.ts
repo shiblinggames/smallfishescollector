@@ -410,7 +410,12 @@ export function gauntletRepairHealMult(unlocked: string[] | null | undefined): n
 
 /** Swift Sails: voyage-duration multiplier (lower = faster). */
 export function gauntletVoyageSpeedMult(unlocked: string[] | null | undefined): number {
-  return (unlocked ?? []).includes('swift_sails') ? 0.7 : 1
+  // Weakened 0.7 -> 0.85 (2026-08-05) with the voyage-length rework. At 30% off
+  // it was the single biggest lever on voyage time, bigger than every other
+  // factor combined, which made the published route lengths meaningless for
+  // anyone holding it. Still the best time saver available, just not the only
+  // one that matters.
+  return (unlocked ?? []).includes('swift_sails') ? 0.85 : 1
 }
 
 /** The highest bite-rarity tier the Auto Catcher will reel on its own:
