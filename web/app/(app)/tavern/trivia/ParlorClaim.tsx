@@ -12,7 +12,7 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { createPortal } from 'react-dom'
 import { useState, useCallback, useEffect } from 'react'
-import { GEM_GLYPH } from '@/lib/bossRaids'
+import { GEM_GLYPH } from '@/lib/uiTokens'
 import { CrownIcon } from './ParlorArt'
 import { claimParlorRank } from './actions'
 import { nextClaimableParlorRank, claimableParlorRanks } from './constants'

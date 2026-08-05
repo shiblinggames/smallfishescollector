@@ -9,7 +9,7 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { createPortal } from 'react-dom'
 import { useState, useEffect } from 'react'
-import { GEM_GLYPH } from '@/lib/bossRaids'
+import { GEM_GLYPH } from '@/lib/uiTokens'
 import { PARLOR_RANKS, parlorRank } from './constants'
 
 const GOLD = '#f0c040'

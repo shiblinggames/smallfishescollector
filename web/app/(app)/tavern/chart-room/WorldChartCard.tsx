@@ -7,7 +7,7 @@
 
 import Link from 'next/link'
 import { landmarkViews, gemsBanked, LANDMARKS, WORLD_CHART_FULL_POINTS, WORLD_CHART_GRAND_TOTAL } from '@/lib/worldChart'
-import { GEM_GLYPH } from '@/lib/bossRaids'
+import { GEM_GLYPH } from '@/lib/uiTokens'
 
 const GOLD = '#f0c040'
 const GEM = '#c084fc'

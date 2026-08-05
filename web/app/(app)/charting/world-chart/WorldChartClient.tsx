@@ -9,7 +9,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { GEM_GLYPH } from '@/lib/bossRaids'
+import { GEM_GLYPH } from '@/lib/uiTokens'
 import ChartingNav from '@/components/ChartingNav'
 import {
   landmarkViews, gemsBanked, nextLandmark, LANDMARKS,

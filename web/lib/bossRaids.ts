@@ -565,28 +565,13 @@ export interface BossRaidConfig {
   enemyAccuracy?: number
 }
 
-// The one true gem look: the purple ◆ glyph from the Nav currency display.
-// Use these everywhere gems are shown (loot, drops, references) instead of a
-// 💎 emoji so the gem icon never drifts. Doubloons stay the gold ⟡.
-export const GEM_GLYPH = '◆'
-export const GEM_COLOR = '#a78bfa'
-
-export const RARITY_COLOR: Record<RaidLootItem['rarity'], string> = {
-  common:    '#9ca3af',
-  uncommon:  '#4ade80',
-  rare:      '#60a5fa',
-  epic:      '#a78bfa',
-  legendary: '#f0c040',
-  // ANCIENT sits ABOVE legendary and belongs to Finn's two spoils alone. The
-  // ladder already spends grey, green, blue, violet and gold, and the forge
-  // treatments own salmon and lavender, so crimson is the one register left,
-  // and it reads as older and angrier than gold.
-  ancient:   '#e0455a',
-  // COSMETIC is not a rung on the ladder, it is a different KIND of drop: a
-  // hull skin changes nothing about how you fight. Reading them as epic put
-  // them in the same purple as real power, so they get their own register.
-  cosmetic:  '#2dd4bf',
-}
+// Gem glyph, gem colour and the rarity ladder now live in lib/uiTokens, which
+// has no dependencies. They are re-exported here so every existing import keeps
+// working, but a NEW import should take them from uiTokens directly: pulling
+// them from this file drags 151KB of raid data along with them, which is
+// exactly what four unrelated screens were doing.
+import { GEM_GLYPH, GEM_COLOR, RARITY_COLOR } from './uiTokens'
+export { GEM_GLYPH, GEM_COLOR, RARITY_COLOR }
 
 /** Zone → fishing-background JPG (files live in /public, shared with the fishing
  *  game's ZONE_BG). A raid config's `zone` resolves through this to the image
