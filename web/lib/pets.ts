@@ -110,33 +110,27 @@ export const PET_OVERLAYS: Record<PetSpecies, Record<'rest' | 'wait' | 'cast', {
     wait: { top: 59.3, left: 63.5, width: 41.4, rotate: 0 },
     cast: { top: 62.7, left: 62.4, width: 41.4, rotate: 0 },
   },
-  // ── UNTUNED STARTING POSITIONS ──────────────────────────────────────────
-  // The three below are DERIVED, not eyeballed and not copy-pasted from
-  // another species. Copying a species' numbers does not work: `width` scales
-  // the whole 1024x576 canvas, and each animal sits in a different part of
-  // its own canvas with a different amount of transparent padding, so
-  // identical numbers put two animals at different on-screen sizes and
-  // places. The lizard originally inherited the seal's 41.4 and would have
-  // rendered noticeably small because its subject is narrower in frame.
-  //
-  // So each one is solved to land its VISIBLE subject on the same on-screen
-  // box as an anchor species with a similar silhouette, using the measured
-  // alpha bounding boxes. That puts them in the right neighbourhood; the eye
-  // still has the final say on /fishing-test.
-  lizard: {   // anchored to the seal (low deck-sitter)
-    rest: { top: 63.3, left: 56.6, width: 47.9, rotate: 0 },
-    wait: { top: 59.4, left: 63.2, width: 47.9, rotate: 0 },
-    cast: { top: 62.8, left: 62.1, width: 47.9, rotate: 0 },
+  // Lizard — tuned on /fishing-test. Sits smaller and further right than the
+  // derived starting point, with a degree of counter-rotation so it reads as
+  // resting against the hull rather than floating level on it.
+  lizard: {
+    rest: { top: 68.6, left: 68.1, width: 29, rotate: -1 },
+    wait: { top: 64.4, left: 75.1, width: 29, rotate: -1 },
+    cast: { top: 68.6, left: 74.3, width: 29, rotate: -1 },
   },
-  raccoon: { // anchored to the monkey (stands upright)
-    rest: { top: 65.8, left: 64.6, width: 32.7, rotate: 0 },
-    wait: { top: 62,   left: 71.5, width: 32.7, rotate: 0 },
-    cast: { top: 65.8, left: 70.3, width: 32.7, rotate: 0 },
+  // Raccoon — tuned on /fishing-test. The biggest of the three: it stands
+  // upright, so it carries more height than the low sitters.
+  raccoon: {
+    rest: { top: 59.8, left: 59.3, width: 43.2, rotate: 0 },
+    wait: { top: 55.9, left: 66.4, width: 43.2, rotate: 0 },
+    cast: { top: 59.8, left: 64.8, width: 43.2, rotate: 0 },
   },
-  crab: {    // anchored to the seal (wide and low)
-    rest: { top: 62.5, left: 52,   width: 51.5, rotate: 0 },
-    wait: { top: 58.6, left: 58.6, width: 51.5, rotate: 0 },
-    cast: { top: 62,   left: 57.5, width: 51.5, rotate: 0 },
+  // Crab — tuned on /fishing-test. The smallest and lowest of the lot, tucked
+  // down on the deck.
+  crab: {
+    rest: { top: 70.2, left: 69.5, width: 25, rotate: 0 },
+    wait: { top: 66.3, left: 76.7, width: 25, rotate: 0 },
+    cast: { top: 70.2, left: 75.1, width: 25, rotate: 0 },
   },
 }
 
@@ -149,19 +143,18 @@ export function getPetOverlay(species: PetSpecies, frame: 'rest' | 'wait' | 'cas
  *  species the player gets, then the variant roll picks within that
  *  species's pool. Tune the species mix here; variant rarity stays
  *  in the PETS weights. */
+// Six species, live as of 2026-08-05 (lizard / raccoon / crab joined once
+// their overlay coords were tuned). The parrot stays dominant because it is
+// the one players already associate with the game; the other five split the
+// rest evenly. Sums to 100 for readability, though the picker normalizes
+// against the live sum so these can be changed without doing the math.
 const PET_SPECIES_WEIGHTS: Record<PetSpecies, number> = {
-  parrot: 60,
-  monkey: 20,
-  seal: 20,
-  // NOT IN THE DROP TABLE YET. Weight 0 keeps these out of rollPet while
-  // their art and registry entries are live, so they can be previewed and
-  // positioned on /fishing-test without any chance of a player rolling one
-  // that renders in the wrong spot. Turn each on once its coords above are
-  // confirmed, shaving the three originals to keep the mix sane. Three new
-  // species at ~15 each would want roughly parrot 40 / monkey 12 / seal 13.
-  lizard: 0,
-  raccoon: 0,
-  crab: 0,
+  parrot: 40,
+  monkey: 12,
+  seal: 12,
+  lizard: 12,
+  raccoon: 12,
+  crab: 12,
 }
 
 /** Roll a pet on a successful crate pet-roll. Returns the picked
