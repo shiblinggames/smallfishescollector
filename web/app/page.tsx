@@ -28,19 +28,19 @@ export const metadata: Metadata = {
  */
 const PILLARS: { art: string; eyebrow: string; title: string; body: string }[] = [
   {
-    art: '/fishing-zones-bg.jpg',
+    art: '/lp_cast.jpg',
     eyebrow: 'The cast',
     title: 'It is a game of timing',
     body: 'Every fish is a needle on a dial and a window that shrinks as you go deeper. Land it clean and the streak carries. Miss and it does not.',
   },
   {
-    art: '/exp-campaign.jpg',
+    art: '/lp_campaign.jpg',
     eyebrow: 'The campaign',
     title: 'Something down there is organised',
     body: 'Four chapters of turn-based raids against a syndicate that runs the sea floor. Crew your ship, aim every broadside, and learn what each boss does before it does it.',
   },
   {
-    art: '/exp-gauntlets.jpg',
+    art: '/lp_gauntlet.jpg',
     eyebrow: 'The gauntlet',
     title: 'One dive a day, and it can end',
     body: 'A push-your-luck descent that pays deeper and deeper until you bank it. Hardcore puts your crew on the line for real: lose them down there and they are gone.',
@@ -126,9 +126,14 @@ export default async function HomePage() {
               }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
+              {/* Purpose-painted for these tiles, so it can carry more weight
+                  than the borrowed hub art it replaced: opacity 0.42 -> 0.72,
+                  and the scrim only has to protect the LEFT half where the copy
+                  sits. Each plate was generated with its subject left of centre
+                  and mirrored on install, so the subject lands in the clear. */}
               <img src={p.art} alt="" aria-hidden loading="lazy" decoding="async"
-                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.42 }} />
-              <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(100deg, rgba(7,13,22,0.96) 30%, rgba(7,13,22,0.62) 100%)' }} />
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.72 }} />
+              <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(100deg, rgba(7,13,22,0.97) 34%, rgba(7,13,22,0.72) 62%, rgba(7,13,22,0.30) 100%)' }} />
               <div style={{ position: 'relative', padding: '1.5rem 1.4rem' }}>
                 <p className="font-karla font-800 uppercase tracking-[0.2em]" style={{ fontSize: '0.54rem', color: '#f0c040' }}>{p.eyebrow}</p>
                 <p className="font-cinzel font-800" style={{ fontSize: '1.3rem', lineHeight: 1.15, color: '#f4ecd8', marginTop: 6 }}>{p.title}</p>
