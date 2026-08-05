@@ -11,7 +11,7 @@ import { ROUTE_CONFIGS, COMING_SOON_ROUTES } from '@/lib/voyageRoutes'
 import { generateAndSaveVoyageLog, type VoyageCrewMember } from '@/lib/captains-log'
 import type { CrewCard } from '@/lib/expeditions'
 import { ROUTE_PAYOUTS } from '@/lib/voyageRoll'
-import { voyageXP, getLevelFromXP, VOYAGE_CREW_XP_MULT } from '@/lib/expeditionLevel'
+import { getLevelFromXP } from '@/lib/expeditionLevel'
 import { loadDeployedParty } from '@/lib/crewData'
 import { resolveDeployedCrew, slotMult} from '@/lib/crewResolve'
 import { RARITY_NAMES, crewDisplayName, type CrewRarity } from '@/lib/crewGen'
@@ -337,13 +337,21 @@ export async function revealVoyageResults(voyageId: number): Promise<
     .eq('status', 'revealed')
   if ((completedVoyages ?? 0) + 1 >= 100) await grantBadgeDirect(user.id, 'fleet_admiral')
 
-  // Crew XP: surviving crew earn a SHARE of the player's voyage XP payout, not
-  // all of it. See VOYAGE_CREW_XP_MULT: the Crew Hall is the building you pay to
-  // train hands, so it should out-earn the thing you sail for loot. The captain's
-  // own Nav XP is untouched. Lost crew earn nothing (the soft-delete that follows
-  // will skip them anyway because grant_crew_xp_to_ids gates on died_at IS NULL,
-  // belt and braces).
-  const crewXpEarned = Math.round(xpEarned * VOYAGE_CREW_XP_MULT)
+  // Crew XP has its OWN per-route figure now (ROUTE_PAYOUTS.crewXp) rather than
+  // being a fixed share of the captain's Nav XP. They were the same number until
+  // 2026-08-05, so buffing Nav levelling silently buffed crew levelling by the
+  // identical factor, and the Nav buff that landed with this was 3.6x on Shroud.
+  // The Crew Hall is the building you pay to train hands; sailing should not
+  // out-train it by accident. These figures are pinned to what a voyage paid
+  // before that buff, so crew progression is exactly where it was.
+  //
+  // It still scales with the outcome, as it did before: a voyage that went well
+  // teaches more than one that did not. Lost crew earn nothing (the soft-delete
+  // that follows skips them anyway, since grant_crew_xp_to_ids gates on
+  // died_at IS NULL, belt and braces).
+  const crewXpEarned = Math.round(
+    (ROUTE_PAYOUTS[voyage.route as VoyageRoute]?.crewXp ?? 490) * outcomeMult,
+  )
   const survivorIds = (voyage.crew_variant_ids as number[]).filter(id => !voyage.crew_lost.includes(id))
 
   const [, , , crewXP] = await Promise.all([

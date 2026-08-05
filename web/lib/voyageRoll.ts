@@ -31,6 +31,18 @@ const OUTCOME_MULT: Record<VoyageOutcome, number> = {
 
 /** Per-route payout anchors, for a REFERENCE crew (see FORTUNE_REF).
  *
+ *  NAV XP is anchored to the trawls, route by route, because they are the other
+ *  idle loop and the only honest yardstick: an hour of Shroud should be worth
+ *  about an hour of Abyss trawling, just in Navigation instead of Fishing. At
+ *  full investment that puts Shroud at ~2,826 Nav XP/hr against the Abyss
+ *  trawl's 2,826 Fishing XP/hr, with the shallower routes tracking their own
+ *  zone equivalents.
+ *
+ *  This also fixed a curve that ran backwards. Because the duration ladder
+ *  makes deep routes take proportionally longer, a flat XP ladder meant
+ *  COASTAL had the best Nav XP per hour of any route. Depth now pays better by
+ *  the hour as well as by the trip.
+ *
  *  Retuned 2026-08-05 alongside the single-event rework. Two things were wrong
  *  with the old numbers, and both came out of the live data rather than taste:
  *
@@ -48,15 +60,26 @@ const OUTCOME_MULT: Record<VoyageOutcome, number> = {
 export const ROUTE_PAYOUTS: Record<VoyageRoute, {
   doubloons: number
   gems: number
+  /** NAVIGATION xp for the captain. */
   xp: number
+  /** CREW xp for the hands who came back.
+   *
+   *  Its own number now, NOT a share of the Nav figure above. Crew XP used to
+   *  be `nav x 0.75`, one line in the claim, which meant the two could never
+   *  move independently: buffing Nav levelling silently buffed crew levelling
+   *  by the identical factor, and the Crew Hall exists precisely so that
+   *  training hands is a thing you pay for rather than a side effect of
+   *  sailing. These are pinned to what a voyage paid before the Nav buff, so
+   *  crew progression is exactly where it was. */
+  crewXp: number
   /** Total crew Power for an even shot at `success`. Scales with the route. */
   difficulty: number
 }> = {
-  coastal:  { doubloons: 350,  gems: 2,  xp: 450,  difficulty: 8  },
-  open:     { doubloons: 700,  gems: 5,  xp: 650,  difficulty: 16 },
-  deep:     { doubloons: 1300, gems: 10, xp: 950,  difficulty: 28 },
-  triangle: { doubloons: 2200, gems: 17, xp: 1400, difficulty: 42 },
-  shroud:   { doubloons: 3600, gems: 30, xp: 2000, difficulty: 60 },
+  coastal:  { doubloons: 350,  gems: 2,  xp: 450,  crewXp: 340,  difficulty: 8  },
+  open:     { doubloons: 700,  gems: 5,  xp: 940,  crewXp: 490,  difficulty: 16 },
+  deep:     { doubloons: 1300, gems: 10, xp: 2410, crewXp: 710,  difficulty: 28 },
+  triangle: { doubloons: 2200, gems: 17, xp: 4300, crewXp: 1050, difficulty: 42 },
+  shroud:   { doubloons: 3600, gems: 30, xp: 7210, crewXp: 1500, difficulty: 60 },
 }
 
 /** Total crew Fortune the ROUTE_PAYOUTS numbers assume. Above this you earn
