@@ -23,6 +23,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { motion } from 'framer-motion'
+import { hapticTap } from '@/lib/haptics'
 import { createPortal } from 'react-dom'
 import { crewLevelFromXP } from '@/lib/crewLevel'
 import { isDivineTrait, netTraitStats, traitLabel, traitKind, type TraitStats } from '@/lib/crewEffects'
@@ -117,6 +118,10 @@ export default function HallBunks({
   onBuyStores: () => void
 }) {
   const [picking, setPicking] = useState<number | null>(null)
+  /** The crew whose claim is in flight. Purely so the tapped tile can show it
+   *  is working; cleared when the bunk it belonged to goes away, which is the
+   *  server confirming the claim landed. */
+  const [claiming, setClaiming] = useState<number | null>(null)
   const [now, setNow] = useState(() => Date.now())
 
   const slots = bunkCount(state.hallTier)
@@ -159,6 +164,10 @@ export default function HallBunks({
   // ever agree with what a claim would write.
   useEffect(() => {
     bySlot.forEach((crew, slot) => { if (crew) writeLastBunkCrew(slot, crew.id) })
+    // The claim landed when the hand is no longer in a bunk. Clearing off the
+    // DATA rather than off a timer means the tile holds its busy state for
+    // exactly as long as the round trip actually took.
+    setClaiming(c => (c != null && !bySlot.some(x => x?.id === c) ? null : c))
   }, [bySlot])
 
   // What a NEW stint would be worth, for the header line.
@@ -309,13 +318,28 @@ export default function HallBunks({
           const left = t ? msUntilDone(t.since, now, t.cap) : 0
           const pct = t ? stintProgress(t.since, now, t.cap) : 1
           return (
-            <button key={crew.id} type="button" disabled={pending || !done}
+            <motion.button key={crew.id} type="button" disabled={pending || !done}
+              // THE PRESS HAS TO ANSWER. Claiming used to run straight into a
+              // server round trip with nothing happening: no scale, no haptic,
+              // no busy state, and the vibrate lived AFTER the await. Tap, dead
+              // air, then a card appeared. The card was never the problem.
+              whileTap={done ? { scale: 0.93 } : undefined}
+              transition={{ type: 'spring', stiffness: 620, damping: 26 }}
               // Remember them on the way OUT as well as on the way in. Recording
               // only at bunk-time meant the hint stayed invisible until you had
               // completed a whole cycle since it shipped — and the claim is the
               // better moment anyway: the instant a hand comes off a bunk is
               // exactly when you decide whether to send them straight back.
-              onClick={() => { if (done) { writeLastBunkCrew(i, crew.id); onCollectOne(crew.id) } }}
+              onClick={() => {
+                if (!done) return
+                // Fired SYNCHRONOUSLY, before the action, so the thumb gets its
+                // answer in the same frame as the tap rather than after the
+                // server has had its say.
+                hapticTap()
+                setClaiming(crew.id)
+                writeLastBunkCrew(i, crew.id)
+                onCollectOne(crew.id)
+              }}
               title={done ? `Claim ${crew.name} and free the bunk` : `Locked in for another ${fmtLeft(left)}`}
               aria-label={done
                 ? `${crew.name} has finished training. Claim to free the bunk.`
@@ -330,6 +354,10 @@ export default function HallBunks({
                 border: `1.5px solid ${done ? `${GOLD}aa` : lev ? `${LEVIATHAN}66` : 'rgba(255,255,255,0.16)'}`,
                 background: `linear-gradient(180deg, ${done ? `${GOLD}1f` : lev ? `${LEVIATHAN}14` : 'rgba(255,255,255,0.04)'} 0%, rgba(0,0,0,0.25) 100%)`,
                 touchAction: 'manipulation',
+                // The tapped tile dims and holds while the claim is in flight,
+                // so the wait reads as "working" rather than as "nothing
+                // happened". Only the one you touched: the others stay live.
+                opacity: claiming === crew.id ? 0.55 : 1,
               }}>
               {lev && (
                 <span aria-hidden style={{ position: 'absolute', top: 4, right: 4, lineHeight: 0, opacity: 0.9 }}>
@@ -359,7 +387,7 @@ export default function HallBunks({
                   fontSize: '0.66rem', letterSpacing: '0.1em', lineHeight: 1.45,
                   background: `${GOLD}26`, border: `1px solid ${GOLD}99`, color: '#f6e6b4',
                 }}>
-                  Claim
+                  {claiming === crew.id ? 'Hauling in' : 'Claim'}
                 </span>
               ) : (
                 <>
@@ -372,7 +400,7 @@ export default function HallBunks({
                   </span>
                 </>
               )}
-            </button>
+            </motion.button>
           )
         })}
       </div>
