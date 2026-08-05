@@ -110,27 +110,20 @@ export default async function HomePage() {
           </p>
         </div>
 
-        {/* ── Two plain notes. Deliberately not cards, and deliberately not the
-             same weight as each other or as the showcase. ── */}
+        {/* ── ONE note, not two. The Gauntlet does not need its own pitch here.
+             A visitor needs to know there is fishing, collecting, fighting, a
+             crew and rare gear to chase, and that is one paragraph. Naming every
+             mode turns it back into a features list, which is the thing this
+             page was rewritten to stop being. ── */}
         <div className="landing-rise" style={{ animationDelay: '0.3s', marginTop: '3rem', borderTop: '1px solid rgba(255,255,255,0.11)', paddingTop: '1.6rem' }}>
-          <p className="font-karla font-800 uppercase tracking-[0.2em]" style={{ fontSize: '0.54rem', color: '#f0c040' }}>Then it gets worse</p>
+          <p className="font-karla font-800 uppercase tracking-[0.2em]" style={{ fontSize: '0.54rem', color: '#f0c040' }}>And what it pays for</p>
           <p className="font-karla font-300" style={{ fontSize: '0.96rem', lineHeight: 1.75, color: '#b9c8d6', marginTop: 9 }}>
-            An outfit runs the sea floor and has no use for competition. Eight raids across four
-            chapters, turn-based, every boss telling you what it is about to do a turn before it does
-            it. Crew your ship, aim each broadside yourself, and work out the answer before it lands.
+            You keep what you catch, and the list runs long. The fishing pays for the rest of it: a
+            ship, a crew you sign on one at a time, and a fight with the outfit that runs the sea
+            floor. Turn-based, and you aim every shot yourself. The gear worth having is down there,
+            and it does not drop often.
           </p>
-        </div>
-
-        <div className="landing-rise" style={{ animationDelay: '0.38s', marginTop: '1.8rem', borderTop: '1px solid rgba(255,255,255,0.11)', paddingTop: '1.6rem' }}>
-          <p className="font-karla font-800 uppercase tracking-[0.2em]" style={{ fontSize: '0.54rem', color: '#d1495b' }}>One dive a day</p>
-          <p className="font-karla font-300" style={{ fontSize: '0.96rem', lineHeight: 1.75, color: '#b9c8d6', marginTop: 9 }}>
-            The Gauntlet pays deeper and deeper until you bank it. In Hardcore the crew you take down
-            is the crew you own. Lose them and they are gone.
-          </p>
-          {/* The fight, actual size. This IS a Gauntlet screen (depth and pot in
-              the header), which is why it sits under this note and not the
-              campaign one above it. Same combat engine either way, but the
-              chrome should not claim to be somewhere it is not. */}
+          {/* The fight, actual size. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/lp_shot_fight.jpg" alt="A turn of ship combat against the Drowned Sounding Hand"
             style={{
