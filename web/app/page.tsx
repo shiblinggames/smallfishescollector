@@ -35,12 +35,16 @@ export const metadata: Metadata = {
  * The stats strip is gone. "195 badges" was never a reason to play, it was there
  * to make a fourth number.
  *
- * ART. One plate used properly, rather than three that differed mainly by
- * palette because they came from one prompt run three times. When real
- * screenshots exist (the dial with the needle in the band, a boss card
- * mid-fight, a Gauntlet depth counter) they belong in the showcase below, and
- * they will beat any painted plate because they cannot be mistaken for another
- * game.
+ * ART. Real screenshots, and every painted plate is gone. The plates were three
+ * atmospheric seascapes that differed mainly by palette because they were one
+ * prompt run three times, which is the version of "AI-generated" you can see
+ * rather than read.
+ *
+ * The screenshots also corrected something the paintings had actively got
+ * wrong. Those plates were dark, empty and solemn; the game is a fish in a
+ * rowboat with a parrot on bright turquoise water, and a railgun beam across a
+ * black sea. Warm and funny, then tense. No seascape was ever going to say
+ * that, and the page was selling a grimdark naval sim that does not exist.
  *
  * Stays a SERVER component: the logged-in redirect runs before anything renders,
  * so the arrival is a CSS keyframe rather than framer.
@@ -82,15 +86,20 @@ export default async function HomePage() {
           </p>
         </div>
 
-        {/* ── THE SHOWCASE. One thing, shown properly. Swap this image for a real
-             screenshot of the dial mid-cast the moment one exists. ── */}
+        {/* ── THE SHOWCASE. A real screenshot, at phone proportions.
+             This replaced a painted plate and is better than it in every way that
+             matters: it is unmistakably THIS game, it shows the dial and the
+             PERFECT band doing their job, and it carries the thing no seascape
+             could, which is that the game is warm and funny. A fish in a rowboat
+             with a parrot sells this better than any amount of weather. ── */}
         <div className="landing-rise" style={{ animationDelay: '0.18s', marginTop: '3.2rem' }}>
-          <div style={{ position: 'relative', borderRadius: 18, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.10)', background: '#070d16' }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/lp_cast.jpg" alt="" aria-hidden
-              style={{ display: 'block', width: '100%', height: 200, objectFit: 'cover', opacity: 0.9 }} />
-            <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 110, background: 'linear-gradient(180deg, transparent, #070d16 88%)' }} />
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/lp_shot_cast.jpg" alt="A perfect catch landing on the fishing dial"
+            style={{
+              display: 'block', width: 'min(290px, 80%)', height: 'auto', margin: '0 auto',
+              borderRadius: 20, border: '1px solid rgba(255,255,255,0.14)',
+              boxShadow: '0 26px 60px rgba(0,0,0,0.6)',
+            }} />
           <p className="font-cinzel font-800" style={{ fontSize: '1.5rem', lineHeight: 1.15, color: '#f4ecd8', marginTop: 20 }}>
             A needle turns, and a window opens
           </p>
@@ -118,6 +127,17 @@ export default async function HomePage() {
             The Gauntlet pays deeper and deeper until you bank it. In Hardcore the crew you take down
             is the crew you own. Lose them and they are gone.
           </p>
+          {/* The fight, actual size. This IS a Gauntlet screen (depth and pot in
+              the header), which is why it sits under this note and not the
+              campaign one above it. Same combat engine either way, but the
+              chrome should not claim to be somewhere it is not. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/lp_shot_fight.jpg" alt="A turn of ship combat against the Drowned Sounding Hand"
+            style={{
+              display: 'block', width: 'min(290px, 80%)', height: 'auto', margin: '1.4rem auto 0',
+              borderRadius: 20, border: '1px solid rgba(255,255,255,0.14)',
+              boxShadow: '0 26px 60px rgba(0,0,0,0.6)',
+            }} />
         </div>
 
         {/* ── CTA ── */}
