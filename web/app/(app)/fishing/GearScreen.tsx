@@ -604,18 +604,26 @@ function FisherPreview({
   return (
     <div style={{
       position: 'relative', width: '100%', height: '100%',
-      minHeight: 152,
+      minHeight: 92,
       borderRadius: 20,
       border: '1px solid rgba(167,139,250,0.22)',
       // Solid base under the tint: this sits over the painted gear backdrop.
       background: 'linear-gradient(180deg, rgba(167,139,250,0.10) 0%, rgba(167,139,250,0.02) 100%), #0b1018',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      // No overflow:hidden. The rod, hook and line legitimately extend past
-      // the character's own box, and clipping them is what made the old tile
-      // look wrong.
-      padding: '0.5rem 0.2rem',
+      // MUST clip. FisherPose's overlays are absolutely positioned in
+      // percentages of this box and genuinely run past it: the hook alone is
+      // 204.5% wide at left -10.5%, so the composite spans roughly -11% to
+      // 194%. Without this the widest child sets the modal's scroll width and
+      // the whole sheet slides sideways.
+      //
+      // Clipping was never the old tile's problem. Shoving the character box
+      // LEFT so the rod line got cut off was. Centred, the only things the
+      // edges take are the far tip of the rod line and the hook, which is
+      // exactly what the live scene does too.
+      overflow: 'hidden',
+      padding: '0.35rem 0.2rem',
     }}>
-      <div style={{ width: '112%', filter: 'drop-shadow(0 8px 14px rgba(0,10,25,0.55))' }}>
+      <div style={{ width: '100%', filter: 'drop-shadow(0 8px 14px rgba(0,10,25,0.55))' }}>
         <FisherPose
           characterColor={characterColor}
           equippedHat={equippedHat}
@@ -928,7 +936,11 @@ export default function GearScreen({
   const totalBiteEffect = baitBiteEffect + levelBiteBonus
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, position: 'relative' }}>
+    // overflowX hidden as a backstop, NOT as the fix. The fisher preview clips
+    // its own composite; this is here so that if any future child overruns the
+    // width, the sheet still cannot be dragged sideways. A gear modal should
+    // never scroll horizontally, whatever is inside it.
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, position: 'relative', overflowX: 'hidden' }}>
 
       {/* ── TABS ── one job per screen. */}
       <div style={{ display: 'flex', gap: 3, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: 3 }}>
@@ -971,8 +983,8 @@ export default function GearScreen({
           <GearSlot label="Hook" image={hook.imageUrl ? hook.imageUrl.replace(/\.png$/, '_thumb.png') : null} itemName={hook.name} color={hook.color} glowClass={hookGlowClass(hook)} notify={hookHasAffordable} pulseKey={pulseKeys.hook} onClick={() => setOpenSlot('hook')} />
         </div>
 
-        {/* Center: the fisher themselves, spanning both rows. */}
-        <div style={{ gridColumn: '2', gridRow: '1 / span 2' }}>
+        {/* Center column, top: the fisher themselves. */}
+        <div style={{ gridColumn: '2', gridRow: '1' }}>
           <FisherPreview
             characterColor={characterColor}
             equippedHat={equippedHat}
@@ -984,45 +996,42 @@ export default function GearScreen({
           />
         </div>
 
+        {/* Center column, bottom: Skin. It shares the centre with the fisher
+            rather than owning a full row of its own, which is a whole row
+            saved and puts the figure directly above the thing that changes it. */}
+        <div style={{ gridColumn: '2', gridRow: '2' }}>
+          {(() => {
+            const c = CHARACTER_COLORS.find(x => x.id === characterColor)
+            return (
+              <GearSlot
+                label="Skin"
+                // Full-figure sprite, so it needs the same head crop the skin
+                // picker uses; GearSlot's `image` would letterbox the whole
+                // body into a thumbnail and read as a smudge.
+                icon={
+                  <div style={{
+                    width: 34, height: 34, borderRadius: '50%',
+                    backgroundImage: `url(${getCharacterSprites(characterColor).rest})`,
+                    backgroundSize: '420% auto', backgroundPosition: '60% 68%',
+                    backgroundRepeat: 'no-repeat',
+                    border: '2px solid rgba(96,165,250,0.5)',
+                  }} />
+                }
+                itemName={c?.name ?? characterColor}
+                color="#60a5fa"
+                pulseKey={pulseKeys.skin}
+                onClick={() => setOpenSlot('skin')}
+              />
+            )
+          })()}
+        </div>
+
         <div style={{ gridColumn: '3', gridRow: '1' }}>
           <GearSlot label="Reel" image={reel.imageUrl ? reel.imageUrl.replace(/\.png$/, '_thumb.png') : null} icon={<ReelIcon color={reel.color} />} itemName={reel.name} color={reel.color} notify={reelHasAffordable} pulseKey={pulseKeys.reel} onClick={() => setOpenSlot('reel')} />
         </div>
         <div style={{ gridColumn: '3', gridRow: '2' }}>
           <GearSlot label="Line" image={line.imageUrl ?? null} itemName={line.name} color={line.color} onClick={() => setOpenSlot('line')} />
         </div>
-      </div>
-
-      {/* ── Skin, on its own directly under the fisher ──────────────────────
-          The four cosmetics used to share one tile that opened a four-tab
-          sheet, which buried every one of them a tap and a tab deep and made
-          the loadout unreadable without opening it. Skin sits alone because it
-          is the figure itself; hat, boat and pet are the things you hang on
-          it, so they share the row below.                                 */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr', marginTop: 6 }}>
-        {(() => {
-          const c = CHARACTER_COLORS.find(x => x.id === characterColor)
-          return (
-            <GearSlot
-              label="Skin"
-              // The sprite is a full figure, so it needs the same head crop the
-              // skin picker uses. GearSlot's `image` would letterbox the whole
-              // body into a thumbnail and read as a smudge.
-              icon={
-                <div style={{
-                  width: 34, height: 34, borderRadius: '50%',
-                  backgroundImage: `url(${getCharacterSprites(characterColor).rest})`,
-                  backgroundSize: '420% auto', backgroundPosition: '60% 68%',
-                  backgroundRepeat: 'no-repeat',
-                  border: '2px solid rgba(96,165,250,0.5)',
-                }} />
-              }
-              itemName={c?.name ?? characterColor}
-              color="#60a5fa"
-              pulseKey={pulseKeys.skin}
-              onClick={() => setOpenSlot('skin')}
-            />
-          )
-        })()}
       </div>
 
       {/* Hat | Boat | Pet — the three things worn or carried. */}
