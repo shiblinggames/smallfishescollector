@@ -6,7 +6,7 @@ import { HOOKS, hookGlowClass } from '@/lib/hooks'
 import { BADGES, BADGE_SLOT_POSITIONS, type BadgePos, type BadgeFrame } from '@/lib/badges'
 import { BOATS } from '@/lib/boats'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
-import { PETS } from '@/lib/pets'
+import { PETS, PET_OVERLAYS, type PetSpecies } from '@/lib/pets'
 
 type Frame = 'rest' | 'wait' | 'cast'
 
@@ -87,26 +87,35 @@ const HAT_DEFAULT: Record<Frame, { top: number; left: number; width: number; rot
   cast: { top: 53,   left: 63.8, width: 21.5, rotate: 0 },
 }
 
-// Per-species pet overlay starting positions. Each species gets its
-// own coord set because parrots and monkeys have different silhouettes
-// (parrot perches on the shoulder; monkey sits low on the boat etc.).
-// Tune in the panel below and paste the dump back into lib/pets.
-const PET_DEFAULTS: Record<'parrot' | 'monkey' | 'seal', Record<Frame, { top: number; left: number; width: number; rotate: number }>> = {
-  parrot: {
-    rest: { top: 63.6, left: 62.6, width: 41.4, rotate: 0 },
-    wait: { top: 59.7, left: 69.5, width: 41.4, rotate: 0 },
-    cast: { top: 63.6, left: 68.3, width: 41.4, rotate: 0 },
-  },
-  monkey: {
-    rest: { top: 65.5, left: 62,   width: 41.4, rotate: 0 },
-    wait: { top: 61.7, left: 68.9, width: 41.4, rotate: 0 },
-    cast: { top: 65.5, left: 67.7, width: 41.4, rotate: 0 },
-  },
-  seal: {
-    rest: { top: 63.2, left: 56.9, width: 41.4, rotate: 0 },
-    wait: { top: 59.3, left: 63.5, width: 41.4, rotate: 0 },
-    cast: { top: 62.7, left: 62.4, width: 41.4, rotate: 0 },
-  },
+// Pet overlay starting positions, seeded straight from the LIVE values in
+// lib/pets so this page always opens on what is actually shipping. It used to
+// be a hand-copied duplicate of PET_OVERLAYS, which meant a species added to
+// lib/pets simply did not appear here, and any tuning that never made it back
+// left the two quietly disagreeing.
+//
+// Deep-cloned because the sliders mutate it.
+const PET_DEFAULTS: Record<PetSpecies, Record<Frame, { top: number; left: number; width: number; rotate: number }>> =
+  JSON.parse(JSON.stringify(PET_OVERLAYS))
+
+const PET_SPECIES = Object.keys(PET_DEFAULTS) as PetSpecies[]
+
+/** Renders the tuned coords as a paste-ready PET_OVERLAYS block.
+ *
+ *  Loops over whatever species exist rather than naming three, so adding one
+ *  to lib/pets needs no edit here. The old version hardcoded parrot, monkey
+ *  and seal, which is exactly how a fourth species would have been left out
+ *  of the dump and then out of lib/pets. */
+function dumpPetOverlays(
+  cfg: Record<PetSpecies, Record<Frame, { top: number; left: number; width: number; rotate: number }>>,
+): string {
+  const frames: Frame[] = ['rest', 'wait', 'cast']
+  const body = PET_SPECIES.map(sp => {
+    const rows = frames
+      .map(fr => `    ${fr}: { top: ${cfg[sp][fr].top}, left: ${cfg[sp][fr].left}, width: ${cfg[sp][fr].width}, rotate: ${cfg[sp][fr].rotate} },`)
+      .join('\n')
+    return `  ${sp}: {\n${rows}\n  },`
+  }).join('\n')
+  return `PET_OVERLAYS = {\n${body}\n}`
 }
 
 function Slider({ label, value, min, max, step = 1, onChange }: {
@@ -184,8 +193,8 @@ export default function FishingTestClient() {
   // Sliders bind to whichever species the currently-selected pet
   // belongs to, so switching from a parrot to a monkey swaps the
   // active config without losing either set's tuning.
-  const activePetSpecies: 'parrot' | 'monkey' | 'seal' =
-    (PETS.find(p => p.id === petId)?.species as 'parrot' | 'monkey' | 'seal') ?? 'parrot'
+  const activePetSpecies: PetSpecies =
+    PETS.find(p => p.id === petId)?.species ?? 'parrot'
   const [showLegacyControls, setShowLegacyControls] = useState(false)
   const [characterColor, setCharacterColor] = useState('default')
   const FRAMES = getCharacterSprites(characterColor) as Record<Frame, string>
@@ -377,7 +386,7 @@ export default function FishingTestClient() {
             {petEnabled && (() => {
               const pet = PETS.find(p => p.id === petId) ?? PETS[0]
               if (!pet) return null
-              const cfg = petCfg[pet.species as 'parrot' | 'monkey' | 'seal']?.[frame] ?? petCfg.parrot[frame]
+              const cfg = petCfg[pet.species]?.[frame] ?? petCfg.parrot[frame]
               return (
                 <img
                   src={pet.restImageUrl}
@@ -555,23 +564,7 @@ export default function FishingTestClient() {
             <details style={{ marginTop: 10 }}>
               <summary style={{ cursor: 'pointer', color: '#94a3b8', fontSize: 11 }}>Show config (copy to lib/pets)</summary>
               <pre style={{ fontSize: 10, color: '#cbd5e1', background: '#0b1422', padding: 8, borderRadius: 6, marginTop: 6, whiteSpace: 'pre-wrap' }}>
-{`PET_OVERLAYS = {
-  parrot: {
-    rest: { top: ${petCfg.parrot.rest.top}, left: ${petCfg.parrot.rest.left}, width: ${petCfg.parrot.rest.width}, rotate: ${petCfg.parrot.rest.rotate} },
-    wait: { top: ${petCfg.parrot.wait.top}, left: ${petCfg.parrot.wait.left}, width: ${petCfg.parrot.wait.width}, rotate: ${petCfg.parrot.wait.rotate} },
-    cast: { top: ${petCfg.parrot.cast.top}, left: ${petCfg.parrot.cast.left}, width: ${petCfg.parrot.cast.width}, rotate: ${petCfg.parrot.cast.rotate} },
-  },
-  monkey: {
-    rest: { top: ${petCfg.monkey.rest.top}, left: ${petCfg.monkey.rest.left}, width: ${petCfg.monkey.rest.width}, rotate: ${petCfg.monkey.rest.rotate} },
-    wait: { top: ${petCfg.monkey.wait.top}, left: ${petCfg.monkey.wait.left}, width: ${petCfg.monkey.wait.width}, rotate: ${petCfg.monkey.wait.rotate} },
-    cast: { top: ${petCfg.monkey.cast.top}, left: ${petCfg.monkey.cast.left}, width: ${petCfg.monkey.cast.width}, rotate: ${petCfg.monkey.cast.rotate} },
-  },
-  seal: {
-    rest: { top: ${petCfg.seal.rest.top}, left: ${petCfg.seal.rest.left}, width: ${petCfg.seal.rest.width}, rotate: ${petCfg.seal.rest.rotate} },
-    wait: { top: ${petCfg.seal.wait.top}, left: ${petCfg.seal.wait.left}, width: ${petCfg.seal.wait.width}, rotate: ${petCfg.seal.wait.rotate} },
-    cast: { top: ${petCfg.seal.cast.top}, left: ${petCfg.seal.cast.left}, width: ${petCfg.seal.cast.width}, rotate: ${petCfg.seal.cast.rotate} },
-  },
-}`}
+{dumpPetOverlays(petCfg)}
               </pre>
             </details>
           </>

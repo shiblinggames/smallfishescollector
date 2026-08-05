@@ -13,7 +13,7 @@
 // Pet ids stay stable across releases. Persisted to
 // profiles.unlocked_pets (text[]) + profiles.equipped_pet (text).
 
-export type PetSpecies = 'parrot' | 'monkey' | 'seal'
+export type PetSpecies = 'parrot' | 'monkey' | 'seal' | 'lizard'
 
 export interface PetDef {
   id: string
@@ -48,6 +48,14 @@ export const PETS: PetDef[] = [
   { id: 'seal_brown',      species: 'seal',   name: 'Brown Seal',      weight: 60, restImageUrl: '/seal_brown.png',      accentColor: '#a78a6a' },
   { id: 'seal_gray',       species: 'seal',   name: 'Gray Seal',       weight: 30, restImageUrl: '/seal_gray.png',       accentColor: '#94a3b8' },
   { id: 'seal_gold',       species: 'seal',   name: 'Gold Seal',       weight: 10, restImageUrl: '/seal_gold.png',       accentColor: '#f0c040' },
+  // Lizards — the ship's iguana, tricorn and all. Green is the common
+  // one, indigo mid, white the albino trophy. Long and low with a tail
+  // that trails well behind the body, so its overlay coords will not
+  // match the seal's despite both sitting on the deck. Tune on
+  // /fishing-test before this goes anywhere near the drop table.
+  { id: 'lizard_green',    species: 'lizard', name: 'Green Lizard',    weight: 60, restImageUrl: '/lizard_green.png',    accentColor: '#6cbf5a' },
+  { id: 'lizard_indigo',   species: 'lizard', name: 'Indigo Lizard',   weight: 30, restImageUrl: '/lizard_indigo.png',   accentColor: '#7b6fb0' },
+  { id: 'lizard_white',    species: 'lizard', name: 'White Lizard',    weight: 10, restImageUrl: '/lizard_white.png',    accentColor: '#dfe3e8' },
 ]
 
 export function getPet(id: string | null | undefined): PetDef | undefined {
@@ -93,6 +101,15 @@ export const PET_OVERLAYS: Record<PetSpecies, Record<'rest' | 'wait' | 'cast', {
     wait: { top: 59.3, left: 63.5, width: 41.4, rotate: 0 },
     cast: { top: 62.7, left: 62.4, width: 41.4, rotate: 0 },
   },
+  // Lizard — PLACEHOLDER, seeded from the seal because it is the other
+  // low deck-sitter. NOT yet tuned: the lizard is longer and its tail
+  // trails much further left than a seal's body, so expect these to move.
+  // Tune on /fishing-test and paste the dump back over this block.
+  lizard: {
+    rest: { top: 63.2, left: 56.9, width: 41.4, rotate: 0 },
+    wait: { top: 59.3, left: 63.5, width: 41.4, rotate: 0 },
+    cast: { top: 62.7, left: 62.4, width: 41.4, rotate: 0 },
+  },
 }
 
 /** Convenience for callsites that have a PetDef in hand. */
@@ -108,6 +125,12 @@ const PET_SPECIES_WEIGHTS: Record<PetSpecies, number> = {
   parrot: 60,
   monkey: 20,
   seal: 20,
+  // LIZARD IS NOT IN THE DROP TABLE YET. Weight 0 keeps it out of rollPet
+  // while its art and registry entries are live, so it can be previewed and
+  // positioned on /fishing-test without any chance of a player rolling one
+  // that renders in the wrong spot. Flip this to ~15 (and shave the others
+  // to keep the mix sane) once the overlay coords above are tuned.
+  lizard: 0,
 }
 
 /** Roll a pet on a successful crate pet-roll. Returns the picked
