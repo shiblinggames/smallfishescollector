@@ -1049,22 +1049,23 @@ export default function GearScreen({
       </div>
 
       {tab === 'loadout' && (<>
-      {/* ── Visual gear grid ──
-          Cosmetic slots (Skin / Hat / Boat — and Pet, once it ships)
-          consolidated into a single Appearance tile in the center
-          column that spans both rows. The picker inside has internal
-          tabs, so adding a new cosmetic type is one entry to the
-          tab strip + one summary thumbnail; the gear grid stays a
-          clean 3-col / 2-row read.
-
-          The Appearance tile renders a 2×2 mini-grid of equipped
-          pieces so the loadout is still legible at a glance without
-          tapping in. */}
-      {/* ONE column template for every row on this screen, so the three
-          columns line up all the way down and the centre stays the widest.
-          The rows used to run 1/1.6/1, then 1/1/1, then 1/1.4/1, so nothing
-          below the first grid lined up with anything above it. */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr 1fr', gridTemplateRows: 'auto auto', gap: 6 }}>
+      {/* ── The loadout grid ──
+          ONE grid for all twelve slots rather than three stacked grids. The
+          rows used to be separate containers, which is why the bottom two did
+          not match the top two: each grid sized its own rows from its own
+          content, and the gaps between grids were margins rather than the
+          grid's own gap.
+          
+          gridTemplateRows: repeat(4, 1fr) is what equalises the heights. In an
+          auto-height grid, fr rows all resolve to the tallest row's content,
+          so every card on the screen is the size of the tallest one, and gap
+          handles every space between them identically. */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1.6fr 1fr',
+        gridTemplateRows: 'repeat(4, 1fr)',
+        gap: 6,
+      }}>
 
         <div style={{ gridColumn: '1', gridRow: '1' }}>
           <GearSlot label="Rod" accent={SLOT_FAMILY.gear} image={rod.slug ? `/${rod.slug}_thumb.png` : (rod.imageUrl ?? '/rod_bamboo_thumb.png')} itemName={rod.name} color={rod.color} glowClass={rodGlowClass(rod)} notify={rodHasAffordable} pulseKey={pulseKeys.rod} onClick={() => { setRodView('owned'); setOpenSlot('rod') }} />
@@ -1122,11 +1123,10 @@ export default function GearScreen({
         <div style={{ gridColumn: '3', gridRow: '2' }}>
           <GearSlot label="Line" accent={SLOT_FAMILY.gear} image={line.imageUrl ?? null} itemName={line.name} color={line.color} onClick={() => setOpenSlot('line')} />
         </div>
-      </div>
 
-      {/* Hat | Boat | Pet — the three things worn or carried. */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr 1fr', gap: 6, marginTop: 6 }}>
-        {(() => {
+        {/* Row 3: the things you wear or carry. */}
+        <div style={{ gridColumn: '1', gridRow: '3' }}>
+          {(() => {
           const h = equippedHat ? HATS.find(x => x.id === equippedHat) : null
           return (
             <GearSlot
@@ -1138,9 +1138,10 @@ export default function GearScreen({
               pulseKey={pulseKeys.hat}
               onClick={() => setOpenSlot('hat')}
             />
-          )
-        })()}
-        {(() => {
+          )})()}
+        </div>
+        <div style={{ gridColumn: '2', gridRow: '3' }}>
+          {(() => {
           const b = equippedBoat ? BOATS.find(x => x.id === equippedBoat) : null
           return (
             <GearSlot
@@ -1151,9 +1152,10 @@ export default function GearScreen({
               pulseKey={pulseKeys.boat}
               onClick={() => setOpenSlot('boat')}
             />
-          )
-        })()}
-        {(() => {
+          )})()}
+        </div>
+        <div style={{ gridColumn: '3', gridRow: '3' }}>
+          {(() => {
           const pet = equippedPet ? getPet(equippedPet) : null
           return (
             <GearSlot
@@ -1165,13 +1167,12 @@ export default function GearScreen({
               pulseKey={pulseKeys.pet}
               onClick={() => setOpenSlot('pet')}
             />
-          )
-        })()}
-      </div>
+          )})()}
+        </div>
 
-      {/* Bottom row: Special | Badges | Special. */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr 1fr', gap: 6, marginTop: 6 }}>
-        {(() => {
+        {/* Row 4: the two Special slots either side of Badges. */}
+        <div style={{ gridColumn: '1', gridRow: '4' }}>
+          {(() => {
           const equippedDef = SPECIAL_ITEMS.find(s => s.id === equippedSpecial)
           return (
             <GearSlot
@@ -1184,10 +1185,11 @@ export default function GearScreen({
               onClick={() => setOpenSlot('special')}
               empty={!equippedDef}
             />
-          )
-        })()}
+          )})()}
+        </div>
         {/* Badges */}
-        {(() => {
+        <div style={{ gridColumn: '2', gridRow: '4' }}>
+          {(() => {
           const equipped = equippedBadges.filter(Boolean)
           const itemName = equipped.length === 0 ? 'None' : `${equipped.length} equipped`
           return (
@@ -1212,14 +1214,14 @@ export default function GearScreen({
                   )
               }
             />
-          )
-        })()}
+          )})()}
+        </div>
         {/* THE SECOND SPECIAL. Mirrors the first, on the far side of Badges, so
             the pair reads as two slots of one kind rather than a slot and a
-            bolt-on. The row is 1fr 1.4fr 1fr to match the gear grid above, so
-            Badges lands directly under Appearance. Locked until Finn's spoil
-            opens it; the panel behind it says what it accepts. */}
-        {(() => {
+            bolt-on. Locked until Finn's spoil opens it; the panel behind it
+            says what it accepts. */}
+        <div style={{ gridColumn: '3', gridRow: '4' }}>
+          {(() => {
           const seated = equippedSpecial2 ? SPECIAL_ITEMS.find(s => s.id === equippedSpecial2) : undefined
           const REEL = '#e0455a'   // ancient crimson, matching the hull mount + the rarity
           return (
@@ -1235,8 +1237,8 @@ export default function GearScreen({
               empty={!seated}
               primeval
             />
-          )
-        })()}
+          )})()}
+        </div>
       </div>
       </>)}
 
