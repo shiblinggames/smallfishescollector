@@ -183,7 +183,7 @@ export default function FishingPageClient({
   // sweepClaimed rides along for the same reason: it is paid once a day, so a
   // stale false after a zone switch would show the sweep as still owed.
   const handleDailyChallengeChange = useCallback(
-    (progress: [number, number, number], claimed: [boolean, boolean, boolean], sweepClaimed: boolean) => {
+    (progress: number[], claimed: boolean[], sweepClaimed: boolean) => {
       setPersistedDailyChallenge(prev => prev ? { ...prev, progress, claimed, sweepClaimed } : prev)
     },
     [],

@@ -29,6 +29,7 @@ import { GAUNTLET_UPGRADES } from '../lib/gauntletUpgrades'
 import { CREW_EFFECTS } from '../lib/crewEffects'
 import { ROUTE_CONFIGS } from '../lib/voyageRoutes'
 import { REPAIR_KITS } from '../lib/repairKits'
+import { ALL_DAILY_CHALLENGES } from '../lib/dailyChallenges'
 
 let findings = 0
 const fail = (where: string, why: string, text?: string) => {
@@ -51,6 +52,7 @@ const SOURCES: Src[] = [
   { label: 'crew trait',      strings: Object.values(CREW_EFFECTS).flatMap(e => [(e as { name?: string }).name, (e as { desc?: string }).desc]) },
   { label: 'voyage route',    strings: Object.values(ROUTE_CONFIGS).flatMap(r => [r.name, r.tagline, r.riskLabel]) },
   { label: 'repair kit',      strings: REPAIR_KITS.flatMap(k => [k.name, (k as { description?: string }).description]) },
+  { label: 'daily challenge', strings: ALL_DAILY_CHALLENGES.map(c => c.label) },
 ]
 
 for (const src of SOURCES) {

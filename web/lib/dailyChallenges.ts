@@ -5,18 +5,29 @@ export interface DailyChallenge {
   target: number
   zone?: string
   minRarity?: number
+  /** Doubloons paid on claim. Zero for Master challenges, which pay a crate. */
   reward: number
   label: string
+  /** Master challenges pay a randomly rolled supply crate instead of coin. */
+  crateReward?: boolean
 }
 
 export interface DailyChallengeState {
   date: string
-  challenges: [DailyChallenge, DailyChallenge, DailyChallenge]
-  progress: [number, number, number]
-  claimed: [boolean, boolean, boolean]
+  /** Three, or FOUR once the player is Master-eligible. Never assume three. */
+  challenges: DailyChallenge[]
+  progress: number[]
+  claimed: boolean[]
   /** Has today's all-three sweep bonus already been paid? */
   sweepClaimed: boolean
 }
+
+/** Fishing level that unlocks the optional fourth "Master" challenge.
+ *
+ *  Deliberately the same level that opens the Ancient Deep, so the tier has a
+ *  reason to exist beyond bigger numbers: the day you can reach the oldest
+ *  water is the day the tide starts setting you a fourth task. */
+export const MASTER_MIN_LEVEL = 75
 
 /** Gems paid once a day for claiming ALL THREE challenges.
  *
@@ -78,6 +89,42 @@ const TIER3: DailyChallenge[] = [
   { type: 'earn_value',    target: 6000, reward: 350, label: 'Catch fish worth 6,000 ⟡ total' },
 ]
 
+// ── TIER 4: Master. Optional, unlocked at Fishing 75, pays a crate. ─────────
+//
+// Tuned against live claim rates rather than feel. On days a player fishes at
+// all, Easy is claimed 55% of the time, Medium 44%, Hard 35%. Master is meant
+// to sit near 10-15% for the players who can see it, so targets run roughly
+// 2.5-3x their Hard counterparts.
+//
+// Two ceilings shape these numbers and neither is obvious from the targets:
+//   - Ancient Deep bites take 45-120 SECONDS, so its counts stay low. Ten
+//     catches there is already ~15 minutes of waiting; asking for 25 would be
+//     an afternoon, not a challenge.
+//   - Legendary is 2% even in the Abyss, so counting legendaries past 2 turns
+//     into a 300-cast coin-flip. Epic-or-better (10% in the Abyss) carries the
+//     rarity slot instead.
+//
+// reward is 0 on purpose: Master pays a rolled crate, not coin. See
+// claimDailyReward.
+const TIER4: DailyChallenge[] = [
+  { type: 'catch_any',     target: 120,   reward: 0, crateReward: true, label: 'Catch 120 fish' },
+  { type: 'catch_any',     target: 150,   reward: 0, crateReward: true, label: 'Catch 150 fish' },
+  { type: 'catch_zone',    target: 10,    zone: 'ancient_deep', reward: 0, crateReward: true, label: 'Catch 10 fish in the Ancient Deep' },
+  { type: 'catch_zone',    target: 15,    zone: 'ancient_deep', reward: 0, crateReward: true, label: 'Catch 15 fish in the Ancient Deep' },
+  { type: 'catch_zone',    target: 25,    zone: 'abyss',        reward: 0, crateReward: true, label: 'Catch 25 fish in the Abyss' },
+  { type: 'catch_zone',    target: 35,    zone: 'abyss',        reward: 0, crateReward: true, label: 'Catch 35 fish in the Abyss' },
+  { type: 'land_perfects', target: 60,    reward: 0, crateReward: true, label: 'Land 60 perfect catches' },
+  { type: 'land_perfects', target: 80,    reward: 0, crateReward: true, label: 'Land 80 perfect catches' },
+  { type: 'catch_rarity',  target: 2,     minRarity: 5, reward: 0, crateReward: true, label: 'Catch 2 Legendary fish' },
+  { type: 'catch_rarity',  target: 12,    minRarity: 4, reward: 0, crateReward: true, label: 'Catch 12 Epic or better fish' },
+  { type: 'earn_value',    target: 40000, reward: 0, crateReward: true, label: 'Catch fish worth 40,000 ⟡ total' },
+  { type: 'earn_value',    target: 60000, reward: 0, crateReward: true, label: 'Catch fish worth 60,000 ⟡ total' },
+]
+
+/** Every challenge in every tier, flat. Exists so scripts/check-copy.mts can
+ *  hold these labels to the same house rules as every other systems string. */
+export const ALL_DAILY_CHALLENGES: DailyChallenge[] = [...TIER1, ...TIER2, ...TIER3, ...TIER4]
+
 function dateHash(date: string, salt: number): number {
   let h = (salt * 2654435761) >>> 0
   for (const c of date) h = (((h ^ c.charCodeAt(0)) * 1664525) >>> 0) + 1013904223
@@ -135,12 +182,17 @@ export function getDailyChallenges(
   // Default to "all zones unlocked" so existing client-only fallback
   // paths keep working. Server paths always pass the real level.
   fishingLevel: number = 999,
-): [DailyChallenge, DailyChallenge, DailyChallenge] {
-  return [
+): DailyChallenge[] {
+  const set = [
     pickEligible(date, 1, TIER1, fishingLevel),
     pickEligible(date, 2, TIER2, fishingLevel),
     pickEligible(date, 3, TIER3, fishingLevel),
   ]
+  // The fourth is OPTIONAL and only exists past the gate. Callers must read
+  // the array's length rather than assuming three, which is why the state
+  // type stopped being a 3-tuple.
+  if (fishingLevel >= MASTER_MIN_LEVEL) set.push(pickEligible(date, 4, TIER4, fishingLevel))
+  return set
 }
 
 // Server-side only: checks challenge_overrides first, falls back to
@@ -153,13 +205,21 @@ export async function getEffectiveDailyChallenges(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   admin: any,
   fishingLevel: number,
-): Promise<[DailyChallenge, DailyChallenge, DailyChallenge]> {
+): Promise<DailyChallenge[]> {
   const { data } = await admin
     .from('challenge_overrides')
     .select('tier1, tier2, tier3')
     .eq('date', date)
     .maybeSingle()
-  if (data) return [data.tier1, data.tier2, data.tier3]
+  // An override pins the three coin challenges only. The Master slot keeps
+  // coming from the pool, so pinning an event day cannot accidentally hand
+  // out a crate or silently delete the fourth challenge from under a
+  // high-level player mid-day.
+  if (data) {
+    const set = [data.tier1, data.tier2, data.tier3]
+    if (fishingLevel >= MASTER_MIN_LEVEL) set.push(pickEligible(date, 4, TIER4, fishingLevel))
+    return set
+  }
   return getDailyChallenges(date, fishingLevel)
 }
 

@@ -545,7 +545,7 @@ export async function reelIn(
       isNewSpecies: boolean
       xpGained: number
       newXP: number
-      dailyProgress: [number, number, number]
+      dailyProgress: number[]
       unlockedSkinId?: string
       perfectStreak?: number
       streakBonusXP?: number
@@ -1078,7 +1078,7 @@ export async function reelIn(
 
   const { data: dailyRow } = await admin
     .from('daily_challenge_progress')
-    .select('p1, p2, p3, claimed_1, claimed_2, claimed_3, fishing_level_snapshot')
+    .select('p1, p2, p3, p4, claimed_1, claimed_2, claimed_3, claimed_4, fishing_level_snapshot')
     .eq('user_id', user.id)
     .eq('date', dailyDate)
     .maybeSingle()
@@ -1089,26 +1089,24 @@ export async function reelIn(
   const snapLevel = dailyRow?.fishing_level_snapshot ?? oldFishingLevel
   const dailyChallenges = await getEffectiveDailyChallenges(dailyDate, admin, snapLevel)
 
-  const newP = [
-    Math.min(
-      (dailyRow?.p1 ?? 0) + challengeIncrement(dailyChallenges[0], fish.habitat, fish.bite_rarity, fish.sell_value, catchQty, isPerfect),
-      dailyChallenges[0].target,
-    ),
-    Math.min(
-      (dailyRow?.p2 ?? 0) + challengeIncrement(dailyChallenges[1], fish.habitat, fish.bite_rarity, fish.sell_value, catchQty, isPerfect),
-      dailyChallenges[1].target,
-    ),
-    Math.min(
-      (dailyRow?.p3 ?? 0) + challengeIncrement(dailyChallenges[2], fish.habitat, fish.bite_rarity, fish.sell_value, catchQty, isPerfect),
-      dailyChallenges[2].target,
-    ),
-  ] as [number, number, number]
+  // Three challenges, or FOUR once the player is past the Master gate. Driven
+  // off the array length rather than a hardcoded three so the fourth slot can
+  // never be silently dropped, and so nothing breaks for the ~87% of players
+  // who do not have it.
+  const priorP = [dailyRow?.p1 ?? 0, dailyRow?.p2 ?? 0, dailyRow?.p3 ?? 0, dailyRow?.p4 ?? 0]
+  const newP = dailyChallenges.map((c, i) => Math.min(
+    priorP[i] + challengeIncrement(c, fish.habitat, fish.bite_rarity, fish.sell_value, catchQty, isPerfect),
+    c.target,
+  ))
 
   await admin.from('daily_challenge_progress').upsert(
     {
       user_id: user.id,
       date: dailyDate,
       p1: newP[0], p2: newP[1], p3: newP[2],
+      // Only written when the Master challenge is actually in play. Sending
+      // undefined would blank an existing count on the upsert.
+      ...(newP.length > 3 ? { p4: newP[3] } : {}),
       // Persist the snapshot on first touch (no-op on subsequent
       // upserts since the value won't change).
       fishing_level_snapshot: snapLevel,

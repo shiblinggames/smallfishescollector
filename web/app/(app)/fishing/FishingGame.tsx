@@ -49,6 +49,7 @@ const CRATE_SPIN_DURATION_MS = 2200
 import { claimDailyReward } from './dailyChallengeActions'
 import { getDailyChallenges, DAILY_SWEEP_GEMS, type DailyChallengeState, type DailyChallenge } from '@/lib/dailyChallenges'
 import { GEM_GLYPH, GEM_COLOR } from '@/lib/uiTokens'
+import type { CrateLoot } from '@/lib/crateLoot'
 import PodiumToast, { type PodiumNotif } from '@/components/PodiumToast'
 import LeaderboardModal from '@/components/LeaderboardModal'
 import AncientBgEffect from '@/components/AncientBgEffect'
@@ -3280,8 +3281,8 @@ export default function FishingGame({
   /** Fired whenever local progress/claimed updates so the parent
    *  (FishingPageClient) can preserve the state across zone remounts. */
   onDailyChallengeChange?: (
-    progress: [number, number, number],
-    claimed: [boolean, boolean, boolean],
+    progress: number[],
+    claimed: boolean[],
     sweepClaimed: boolean,
   ) => void
   hasTideTurner: boolean
@@ -4155,13 +4156,19 @@ export default function FishingGame({
   const dailyChallenges = initialDailyChallenge
     ? initialDailyChallenge.challenges
     : getDailyChallenges(new Date().toISOString().slice(0, 10), getLevelFromXP(initialFishingXP))
-  const [dailyProgress, setDailyProgress] = useState<[number, number, number]>(initialDailyChallenge?.progress ?? [0, 0, 0])
-  const [dailyClaimed, setDailyClaimed] = useState<[boolean, boolean, boolean]>(initialDailyChallenge?.claimed ?? [false, false, false])
+  const [dailyProgress, setDailyProgress] = useState<number[]>(initialDailyChallenge?.progress ?? [0, 0, 0])
+  const [dailyClaimed, setDailyClaimed] = useState<boolean[]>(initialDailyChallenge?.claimed ?? [false, false, false])
   // The all-three sweep bonus. `sweepClaimed` is the server's word on whether
   // today's gems are already paid; `sweepAward` is the one-shot celebration
   // that fires on the claim that completed the set.
   const [sweepClaimed, setSweepClaimed] = useState(initialDailyChallenge?.sweepClaimed ?? false)
   const [sweepAward, setSweepAward] = useState(false)
+  // What the Master challenge's crate turned out to be. Shown inline in the
+  // drawer rather than routed through the big reel-in crate reveal, which is
+  // welded to the fishing result phase and would fight the open drawer.
+  const [masterCrate, setMasterCrate] = useState<
+    { tier: 'wooden' | 'metal' | 'gold' | 'diamond'; text: string } | null
+  >(null)
   // Push local progress + claimed up to the parent on every change so the
   // state survives a ZoneLanding remount when the player switches zones.
   // Without this the second zone reads a stale server snapshot and the
@@ -5491,7 +5498,8 @@ export default function FishingGame({
         const { fish, baitSaved, isNewSpecies, xpGained, newXP, dailyProgress: newDailyP } = res
         if (newDailyP) {
           setDailyProgress(prev => {
-            for (let i = 0; i < 3; i++) {
+            // Length-driven: 4 once the player is past the Master gate.
+            for (let i = 0; i < dailyChallenges.length; i++) {
               if (prev[i] < dailyChallenges[i].target && newDailyP[i] >= dailyChallenges[i].target) {
                 setDailyJustCompleted(i)
                 setTimeout(() => setDailyJustCompleted(null), 4000)
@@ -6145,7 +6153,20 @@ export default function FishingGame({
     setPhase('idle')
   }
 
-  async function handleClaimDaily(index: 0 | 1 | 2) {
+  /** One line describing what a crate gave up, for the drawer's result card. */
+  function describeCrateLoot(loot: CrateLoot): string {
+    switch (loot.type) {
+      case 'doubloons': return `${loot.amount.toLocaleString()} \u27E1`
+      case 'bait':      return `${loot.quantity}\u00D7 ${loot.baitName}`
+      case 'skin':      return `${loot.skinName} colorway`
+      case 'hat':       return `${loot.hatName} bandana`
+      case 'boat':      return `${loot.boatName} boat`
+      case 'pet':       return loot.isDuplicate ? `${loot.petName} (already aboard)` : `${loot.petName}, a new pet`
+      default:          return 'Something from the deep'
+    }
+  }
+
+  async function handleClaimDaily(index: 0 | 1 | 2 | 3) {
     if (claimingDaily !== null || dailyClaimed[index]) return
     setClaimingDaily(index)
     const res = await claimDailyReward(index)
@@ -6157,13 +6178,19 @@ export default function FishingGame({
       // button disappears and the player isn't stuck staring at a
       // no-op Collect.
       if (res.error === 'Already claimed') {
-        setDailyClaimed(prev => { const n = [...prev] as [boolean, boolean, boolean]; n[index] = true; return n })
+        setDailyClaimed(prev => { const n = [...prev]; n[index] = true; return n })
       }
       return
     }
-    setDailyClaimed(prev => { const n = [...prev] as [boolean, boolean, boolean]; n[index] = true; return n })
+    setDailyClaimed(prev => { const n = [...prev]; n[index] = true; return n })
     setDoubloons(res.doubloons)
     window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+    // Master pays a rolled crate instead of coin. grantCrateLoot may also have
+    // moved doubloons, bait, a cosmetic or a pet, so the balance above is
+    // already the post-grant figure.
+    if (res.crate) {
+      setMasterCrate({ tier: res.crate.tier, text: describeCrateLoot(res.crate.loot) })
+    }
     // The server only returns gems on the claim that completed the set, so a
     // non-zero value here IS the sweep. It pays exactly once per day.
     if (res.sweepGems > 0) {
@@ -10095,7 +10122,10 @@ export default function FishingGame({
             </div>
 
             <div className="flex flex-col" style={{ gap: 8 }}>
-              {dailyChallenges.map((challenge: DailyChallenge, i) => {
+              {/* The three coin challenges. The Master slot renders BELOW the
+                  sweep strip, because the sweep is what these three add up to
+                  and Master is deliberately outside it. */}
+              {dailyChallenges.slice(0, 3).map((challenge: DailyChallenge, i) => {
                 const progress   = dailyProgress[i]
                 const claimed    = dailyClaimed[i]
                 const done       = progress >= challenge.target
@@ -10315,6 +10345,153 @@ export default function FishingGame({
                       </div>
                     )}
                   </motion.div>
+                )
+              })()}
+
+              {/* ── MASTER ───────────────────────────────────────────────────
+                  The optional fourth task, unlocked at Fishing 75 (the level
+                  that opens the Ancient Deep). It sits BELOW the sweep strip
+                  on purpose: the sweep means the three above it, and a high
+                  level player is never asked to do more work for the same ten
+                  gems. Its own copper accent, because gold already means
+                  doubloons on the cards above and purple means gems on the
+                  strip, and this pays neither.                            */}
+              {dailyChallenges[3] && (() => {
+                const challenge = dailyChallenges[3]
+                const progress  = dailyProgress[3] ?? 0
+                const claimed   = dailyClaimed[3] ?? false
+                const done      = progress >= challenge.target
+                const isClaiming = claimingDaily === 3
+                const pct = Math.min(progress / challenge.target, 1)
+                const COPPER = '#c98a55'
+
+                return (
+                  <div style={{ marginTop: 6 }}>
+                    <div className="flex items-center" style={{ gap: 8, marginBottom: 6 }}>
+                      <span aria-hidden style={{ flex: 1, height: 1, background: 'rgba(196,169,106,0.16)' }} />
+                      <span className="font-karla font-800 uppercase" style={{
+                        fontSize: '0.53rem', letterSpacing: '0.2em', color: 'rgba(201,138,85,0.8)',
+                      }}>
+                        Optional
+                      </span>
+                      <span aria-hidden style={{ flex: 1, height: 1, background: 'rgba(196,169,106,0.16)' }} />
+                    </div>
+
+                    <div style={{
+                      position: 'relative', overflow: 'hidden', borderRadius: 12,
+                      background: claimed ? '#131007' : '#160f09',
+                      border: `1px solid ${claimed ? 'rgba(201,138,85,0.34)' : done ? 'rgba(201,138,85,0.55)' : 'rgba(201,138,85,0.2)'}`,
+                      borderTop: `1px solid ${claimed ? 'rgba(201,138,85,0.5)' : done ? 'rgba(201,138,85,0.8)' : 'rgba(201,138,85,0.34)'}`,
+                    }}>
+                      <div aria-hidden style={{
+                        position: 'absolute', top: 0, bottom: 0, left: 0,
+                        width: `${pct * 100}%`,
+                        background: 'linear-gradient(90deg, rgba(201,138,85,0.22) 0%, rgba(201,138,85,0.06) 100%)',
+                        borderRight: pct > 0 && pct < 1 ? '1px solid rgba(201,138,85,0.55)' : 'none',
+                        transition: 'width 0.45s cubic-bezier(0.32,0.72,0,1)',
+                      }} />
+
+                      <div style={{
+                        position: 'relative', display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '0.7rem 0.75rem 0.7rem 0.85rem',
+                      }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div className="flex items-center" style={{ gap: 6, marginBottom: 3 }}>
+                            <span className="font-cinzel font-700" style={{ fontSize: '0.68rem', lineHeight: 1, color: COPPER }}>IV</span>
+                            <span className="font-karla font-800 uppercase" style={{
+                              fontSize: '0.55rem', letterSpacing: '0.16em', color: 'rgba(201,138,85,0.85)',
+                            }}>
+                              Master
+                            </span>
+                          </div>
+                          <p className="font-karla font-600" style={{
+                            fontSize: '0.92rem', lineHeight: 1.25,
+                            color: claimed ? '#8f8d86' : '#f0ede8', marginBottom: 4,
+                          }}>
+                            {challenge.label}
+                          </p>
+                          <p className="font-karla font-700 tabular-nums" style={{
+                            fontSize: '0.68rem', lineHeight: 1,
+                            color: claimed ? '#6f7566' : done ? COPPER : '#9a9488',
+                          }}>
+                            {claimed
+                              ? 'Crate hauled up'
+                              : done
+                                ? 'Ready to claim'
+                                : `${progress.toLocaleString()} of ${challenge.target.toLocaleString()}`}
+                          </p>
+                        </div>
+
+                        <div style={{ width: 86, flexShrink: 0, display: 'flex', justifyContent: 'flex-end' }}>
+                          {claimed ? (
+                            <span className="font-cinzel font-800 uppercase" style={{
+                              display: 'inline-block', transform: 'rotate(-7deg)',
+                              padding: '0.2rem 0.45rem', borderRadius: 4,
+                              border: `2px solid ${COPPER}`, color: COPPER, opacity: 0.9,
+                              fontSize: '0.54rem', letterSpacing: '0.12em',
+                            }}>
+                              Claimed
+                            </span>
+                          ) : done ? (
+                            <motion.button
+                              whileTap={{ scale: 0.94 }}
+                              transition={{ type: 'spring', stiffness: 620, damping: 26 }}
+                              onClick={() => { hapticTap(); handleClaimDaily(3) }}
+                              disabled={isClaiming}
+                              className="font-karla font-800 uppercase"
+                              style={{
+                                width: '100%', fontSize: '0.68rem', letterSpacing: '0.08em',
+                                padding: '0.5rem 0.2rem', borderRadius: 9,
+                                background: 'rgba(201,138,85,0.2)',
+                                border: `1px solid ${COPPER}`,
+                                color: '#e3a672',
+                                opacity: isClaiming ? 0.5 : 1,
+                                cursor: isClaiming ? 'default' : 'pointer',
+                                touchAction: 'manipulation',
+                              }}
+                            >
+                              {isClaiming ? 'Hauling' : 'Claim'}
+                            </motion.button>
+                          ) : (
+                            <span className="font-cinzel font-700" style={{
+                              fontSize: '0.82rem', lineHeight: 1, color: 'rgba(201,138,85,0.75)',
+                            }}>
+                              Crate
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* What the roll actually gave up. Sits under the card so
+                        the claim resolves where the player was looking. */}
+                    <AnimatePresence>
+                      {masterCrate && (
+                        <motion.div
+                          key="master-crate"
+                          initial={{ opacity: 0, y: -6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.25 }}
+                          style={{
+                            marginTop: 6, borderRadius: 10, padding: '0.6rem 0.8rem',
+                            background: '#130f08',
+                            border: '1px solid rgba(201,138,85,0.3)',
+                          }}
+                        >
+                          <p className="font-karla font-800 uppercase" style={{
+                            fontSize: '0.53rem', letterSpacing: '0.18em',
+                            color: 'rgba(201,138,85,0.85)', marginBottom: 3,
+                          }}>
+                            {masterCrate.tier} crate
+                          </p>
+                          <p className="font-karla font-600" style={{ fontSize: '0.85rem', color: '#f0ede8' }}>
+                            {masterCrate.text}
+                          </p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
                 )
               })()}
             </div>

@@ -4,6 +4,32 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getEffectiveDailyChallenges, getTodayUTC, DAILY_SWEEP_GEMS, type DailyChallengeState } from '@/lib/dailyChallenges'
 import { getLevelFromXP } from '@/lib/fishingLevel'
+import { grantCrateLoot, type CrateTier, type CrateLoot } from '@/lib/crateLoot'
+
+/** Tier weights for the Master challenge's crate.
+ *
+ *  Every tier is reachable, which is the point: the prize is a real roll, not
+ *  a fixed payout wearing a crate's clothes. But it is not uniform either.
+ *  Diamond is 3% of natural crate drops in the Shallows, so handing it out a
+ *  quarter of the time would flatten the tier ladder everywhere else in the
+ *  game. Twelve percent keeps it a genuine event while still being something
+ *  a regular Master clearer sees every couple of weeks. */
+const MASTER_CRATE_WEIGHTS: [CrateTier, number][] = [
+  ['wooden',  25],
+  ['metal',   35],
+  ['gold',    28],
+  ['diamond', 12],
+]
+
+function rollMasterCrateTier(): CrateTier {
+  const total = MASTER_CRATE_WEIGHTS.reduce((sum, [, w]) => sum + w, 0)
+  let roll = Math.random() * total
+  for (const [tier, weight] of MASTER_CRATE_WEIGHTS) {
+    roll -= weight
+    if (roll < 0) return tier
+  }
+  return 'wooden'
+}
 
 // Get-or-create the snapshot of the player's fishing level for the day.
 // The challenges they're served depend on which zones they have unlocked
@@ -51,23 +77,35 @@ export async function getDailyChallenge(): Promise<DailyChallengeState | null> {
 
   const { data: row } = await admin
     .from('daily_challenge_progress')
-    .select('p1, p2, p3, claimed_1, claimed_2, claimed_3, claimed_bonus')
+    .select('p1, p2, p3, p4, claimed_1, claimed_2, claimed_3, claimed_4, claimed_bonus')
     .eq('user_id', user.id)
     .eq('date', date)
     .maybeSingle()
 
+  // Sliced to however many challenges the player actually has. Below the
+  // Master gate that is three, and the p4/claimed_4 columns simply never
+  // surface.
+  const progress = [row?.p1 ?? 0, row?.p2 ?? 0, row?.p3 ?? 0, row?.p4 ?? 0]
+  const claimed = [
+    row?.claimed_1 ?? false, row?.claimed_2 ?? false,
+    row?.claimed_3 ?? false, row?.claimed_4 ?? false,
+  ]
+
   return {
     date,
     challenges,
-    progress: [row?.p1 ?? 0, row?.p2 ?? 0, row?.p3 ?? 0],
-    claimed: [row?.claimed_1 ?? false, row?.claimed_2 ?? false, row?.claimed_3 ?? false],
+    progress: progress.slice(0, challenges.length),
+    claimed: claimed.slice(0, challenges.length),
     sweepClaimed: row?.claimed_bonus ?? false,
   }
 }
 
 export async function claimDailyReward(
-  index: 0 | 1 | 2,
-): Promise<{ doubloons: number; sweepGems: number } | { error: string }> {
+  index: 0 | 1 | 2 | 3,
+): Promise<
+  | { doubloons: number; sweepGems: number; crate?: { tier: CrateTier; loot: CrateLoot } }
+  | { error: string }
+> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
@@ -83,20 +121,28 @@ export async function claimDailyReward(
   const challenges = await getEffectiveDailyChallenges(date, admin, snapLevel)
   const challenge = challenges[index]
 
+  // A client can ask for index 3 whenever it likes, so the gate is here and
+  // not in the UI: below Fishing 75 getEffectiveDailyChallenges returns three
+  // challenges and this read is undefined, which fails closed.
+  if (!challenge) return { error: 'Challenge not available' }
+
   const { data: row } = await admin
     .from('daily_challenge_progress')
-    .select('p1, p2, p3, claimed_1, claimed_2, claimed_3, claimed_bonus')
+    .select('p1, p2, p3, p4, claimed_1, claimed_2, claimed_3, claimed_4, claimed_bonus')
     .eq('user_id', user.id)
     .eq('date', date)
     .maybeSingle()
 
-  const progress = [row?.p1 ?? 0, row?.p2 ?? 0, row?.p3 ?? 0]
-  const claimed = [row?.claimed_1 ?? false, row?.claimed_2 ?? false, row?.claimed_3 ?? false]
+  const progress = [row?.p1 ?? 0, row?.p2 ?? 0, row?.p3 ?? 0, row?.p4 ?? 0]
+  const claimed = [
+    row?.claimed_1 ?? false, row?.claimed_2 ?? false,
+    row?.claimed_3 ?? false, row?.claimed_4 ?? false,
+  ]
 
   if (progress[index] < challenge.target) return { error: 'Challenge not complete' }
   if (claimed[index]) return { error: 'Already claimed' }
 
-  const claimKey = `claimed_${index + 1}` as 'claimed_1' | 'claimed_2' | 'claimed_3'
+  const claimKey = `claimed_${index + 1}` as 'claimed_1' | 'claimed_2' | 'claimed_3' | 'claimed_4'
 
   // Atomic claim: flip this index's flag in one guarded update (matching
   // not-yet-true, i.e. false OR null). Only the winner of a concurrent
@@ -112,15 +158,37 @@ export async function claimDailyReward(
     .maybeSingle()
   if (!claimedRow) return { error: 'Already claimed' }
 
-  const newDoubloons = (profile.doubloons ?? 0) + challenge.reward
+  // ── The payout ────────────────────────────────────────────────────────────
+  // Master pays a rolled crate and no coin; the other three pay coin and no
+  // crate. grantCrateLoot handles the whole grant (doubloons, bait, cosmetic,
+  // pet) and bumps the lifetime crates-opened counter itself, so a Master
+  // clear also feeds the crate badges exactly like a reeled crate would.
+  //
+  // The claim flag above is already flipped, so the crate cannot be rolled
+  // twice even if the loot grant throws.
+  let crate: { tier: CrateTier; loot: CrateLoot } | undefined
+  let newDoubloons = profile.doubloons ?? 0
 
-  await Promise.all([
-    admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
-    admin.from('doubloon_transactions').insert({
-      user_id: user.id, amount: challenge.reward,
-      reason: `Daily challenge (${challenge.label})`,
-    }),
-  ])
+  if (challenge.crateReward) {
+    const tier = rollMasterCrateTier()
+    crate = { tier, loot: await grantCrateLoot(admin, user.id, tier) }
+    // grantCrateLoot may have paid doubloons into the profile, so re-read
+    // rather than returning the stale pre-grant balance to the UI.
+    const { data: after } = await admin
+      .from('profiles').select('doubloons').eq('id', user.id).single()
+    newDoubloons = after?.doubloons ?? newDoubloons
+    void admin.rpc('bump_profile_stat', { uid: user.id, col: 'daily_master_cleared', n: 1 })
+      .then(() => {}, () => {})
+  } else {
+    newDoubloons += challenge.reward
+    await Promise.all([
+      admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
+      admin.from('doubloon_transactions').insert({
+        user_id: user.id, amount: challenge.reward,
+        reason: `Daily challenge (${challenge.label})`,
+      }),
+    ])
+  }
 
   // ── The sweep bonus ───────────────────────────────────────────────────────
   // `claimed` was read BEFORE the flip above, so "the other two were already
@@ -129,8 +197,14 @@ export async function claimDailyReward(
   // Guarded exactly like the individual claim: flip claimed_bonus only where
   // it is not already true, and pay only if this call is the one that won. Two
   // tabs racing to claim the third challenge can both reach here.
+  //
+  // THE SWEEP IS STILL THREE. Master sits outside it deliberately: a level 75
+  // player must never be asked to do strictly more work for the same ten gems
+  // than a level 20 player does. So this only ever looks at indexes 0-2, and
+  // claiming Master alone can never trigger it.
   let sweepGems = 0
-  const othersAlreadyIn = claimed.every((c, i) => i === index || c)
+  const coinClaims = claimed.slice(0, 3)
+  const othersAlreadyIn = index < 3 && coinClaims.every((c, i) => i === index || c)
   if (othersAlreadyIn && !row?.claimed_bonus) {
     const { data: sweptRow } = await admin
       .from('daily_challenge_progress')
@@ -153,5 +227,5 @@ export async function claimDailyReward(
     }
   }
 
-  return { doubloons: newDoubloons, sweepGems }
+  return { doubloons: newDoubloons, sweepGems, crate }
 }
