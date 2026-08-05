@@ -16,6 +16,7 @@ import { getHook, hookGlowClass } from '@/lib/hooks'
 
 export default function FisherPose({
   characterColor, equippedHat, equippedBoat, equippedPet, rodTier, reelTier, hookTier,
+  noGlow = false,
 }: {
   characterColor: string
   equippedHat: string | null
@@ -24,6 +25,17 @@ export default function FisherPose({
   rodTier: number
   reelTier: number
   hookTier: number
+  /** Drop the rod/hook/boat glow classes.
+   *
+   *  Those glows animate `filter: drop-shadow()` on an INFINITE loop, which
+   *  repaints and re-blurs the image every single frame for as long as the
+   *  composite is on screen. That is a fair trade in the live fishing scene,
+   *  where the rod is large and the glow is part of the moment. It is not a
+   *  fair trade in a 150px static preview inside a modal, where it costs one
+   *  to three per-frame blur passes to produce a halo you can barely see.
+   *
+   *  Set this anywhere the pose is decorative rather than the main event. */
+  noGlow?: boolean
 }) {
   const charSprites = getCharacterSprites(characterColor)
   const rod = getRod(rodTier)
@@ -62,7 +74,7 @@ export default function FisherPose({
             transformOrigin: 'center center',
           }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={bd.restImageUrl} alt="" loading="lazy" decoding="async" className={boatGlowClass(bd)} style={{ width: '100%', display: 'block' }} />
+            <img src={bd.restImageUrl} alt="" loading="lazy" decoding="async" className={noGlow ? undefined : boatGlowClass(bd)} style={{ width: '100%', display: 'block' }} />
           </div>
         )
       })()}
@@ -70,14 +82,14 @@ export default function FisherPose({
       {/* Rod — 3-pose rest sprite (coords mirror CHAR_ROD_OVERLAY.rest). */}
       {rod.slug ? (
         /* eslint-disable-next-line @next/next/no-img-element */
-        <img src={`/${rod.slug}_rest.png`} alt="" loading="lazy" decoding="async" className={rodGlowClass(rod)} style={{
+        <img src={`/${rod.slug}_rest.png`} alt="" loading="lazy" decoding="async" className={noGlow ? undefined : rodGlowClass(rod)} style={{
           position: 'absolute', top: '37%', left: '-12%', width: '107.5%',
           transformOrigin: 'center center', maxWidth: 'none',
           ...(rod.glow ? { ['--rod-glow-color' as string]: rod.color } : {}),
         } as React.CSSProperties} />
       ) : rod.imageUrl && (
         /* eslint-disable-next-line @next/next/no-img-element */
-        <img src={rod.imageUrl} alt="" loading="lazy" decoding="async" className={rodGlowClass(rod)} style={{
+        <img src={rod.imageUrl} alt="" loading="lazy" decoding="async" className={noGlow ? undefined : rodGlowClass(rod)} style={{
           position: 'absolute', top: '33%', left: '12%', width: '51%',
           transform: 'rotate(-1deg)', transformOrigin: 'bottom right',
           ...(rod.glow ? { ['--rod-glow-color' as string]: rod.color } : {}),
@@ -96,7 +108,7 @@ export default function FisherPose({
       {/* Hook — mirrors CHAR_HOOK_OVERLAY.rest. */}
       {hook.imageUrl && (
         /* eslint-disable-next-line @next/next/no-img-element */
-        <img src={hook.imageUrl} alt="" loading="lazy" decoding="async" className={hookGlowClass(hook)} style={{
+        <img src={hook.imageUrl} alt="" loading="lazy" decoding="async" className={noGlow ? undefined : hookGlowClass(hook)} style={{
           position: 'absolute', top: '39.5%', left: '-10.5%', width: '204.5%',
           transformOrigin: 'center center', maxWidth: 'none',
           ...(hook.glow ? { ['--rod-glow-color' as string]: hook.color } : {}),

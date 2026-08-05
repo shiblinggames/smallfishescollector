@@ -597,6 +597,8 @@ function GearSlot({
               alt={label}
               loading="lazy"
               decoding="async"
+              width={36}
+              height={36}
               className={glowClass}
               style={{
                 width: 36, height: 36, objectFit: 'contain',
@@ -654,6 +656,9 @@ function FisherPreview({
       borderRadius: 20,
       // Same outline as the cosmetic tiles it sits with.
       border: `1px solid ${SLOT_FAMILY.cosmetic}40`,
+      // Static box-shadow rather than a filter on the composite inside: this
+      // composites, a filter would rasterise.
+      boxShadow: 'inset 0 -18px 26px -18px rgba(0,10,25,0.75)',
       // Solid base under the tint: this sits over the painted gear backdrop.
       background: 'linear-gradient(180deg, rgba(167,139,250,0.10) 0%, rgba(167,139,250,0.02) 100%), #0b1018',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -682,11 +687,15 @@ function FisherPreview({
           above, 2.4% x 0.889 is 2.1% below. Backed off the top figure
           slightly so the hat never touches the border: this lands ~3.9%
           headroom above the head and ~1.3% under the hull. */}
+      {/* NO filter on this wrapper. A filter here would put all seven layered
+          images into one rasterised layer purely for a decorative shadow, and
+          any child animating its own filter would then force that whole layer
+          to re-rasterise every frame. The card's box-shadow does the same job
+          for free, because it composites instead of painting. */}
       <div style={{
         width: '100%',
         marginTop: '-34%',
         marginBottom: '-1%',
-        filter: 'drop-shadow(0 8px 14px rgba(0,10,25,0.55))',
       }}>
         <FisherPose
           characterColor={characterColor}
@@ -696,6 +705,11 @@ function FisherPreview({
           rodTier={rodTier}
           reelTier={reelTier}
           hookTier={hookTier}
+          // The rod, hook and boat glows animate filter: drop-shadow forever.
+          // Three per-frame blur passes for a halo that is a few pixels wide
+          // at this size is not worth it; the slot thumbnails still glow, so
+          // a legendary rod still reads as one.
+          noGlow
         />
       </div>
       {/* Says what it is. Without this it reads as a slot you should be able
