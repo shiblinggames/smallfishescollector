@@ -190,7 +190,7 @@ export async function sendDailyVoyage(route: VoyageRoute = 'open'): Promise<
   // and a copy here would silently diverge the moment it is retuned.
   const totalNav = crew.reduce((s, c, i) => s + Math.round(c.dodge * slotMult(i)), 0)
   // Swift Sails (Locker Upgrade) shortens the wait.
-  const duration_ms = Math.round(computeVoyageDurationMs(expeditionLevel, totalNav) * gauntletVoyageSpeedMult(gauntletUpgrades))
+  const duration_ms = Math.round(computeVoyageDurationMs(expeditionLevel, totalNav, route) * gauntletVoyageSpeedMult(gauntletUpgrades))
   const crewIds = party.map(p => p.id)
 
   const { data: voyage, error } = await admin

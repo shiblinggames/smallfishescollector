@@ -656,7 +656,7 @@ export default function DailyVoyagePanel({
               const expLevel = getLevelFromXP(expeditionXP)
               // Swift Sails (Locker Upgrade) shortens the actual voyage,
               // so the preview reflects it too.
-              const estMs = Math.round(computeVoyageDurationMs(expLevel, stats.dodge) * voyageSpeedMult)
+              const estMs = Math.round(computeVoyageDurationMs(expLevel, stats.dodge, selectedRoute ?? undefined) * voyageSpeedMult)
               const riskPct = est?.crewRiskPct ?? 0
               const riskColor = riskPct >= 15 ? '#f87171' : riskPct >= 8 ? '#f0c040' : '#6a8a6a'
               return (
