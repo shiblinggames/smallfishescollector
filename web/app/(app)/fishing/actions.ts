@@ -41,7 +41,7 @@ export type FishSpecies = {
   length_max_in?: number | null
 }
 
-import { ZONE_RARITY_RATES, ZONE_MIN_LEVEL, ZONE_WAIT_BASE, ZONE_CRATE_TIERS } from './zoneData'
+import { ZONE_RARITY_RATES, ZONE_MIN_LEVEL, ZONE_WAIT_BASE, ZONE_CRATE_TIERS, zoneCrateChance } from './zoneData'
 
 // Wait time: zone sets the range, catch_score positions within it (higher score = longer wait)
 function fishWaitMs(catchScore: number, habitat: string, baitType: string, fishingLevel: number, renownWaitMult = 1, rodMult = 1): number {
@@ -166,12 +166,17 @@ type PendingCast = {
 
 function rollCrateTier(habitat: string): CrateTier {
   const dist = ZONE_CRATE_TIERS[habitat] ?? ZONE_CRATE_TIERS.shallows
-  const total = dist.wooden + dist.metal + dist.gold + dist.diamond
+  // Walks whatever tiers the zone's table actually lists, rather than the four
+  // it used to name inline. That is what lets the Ancient Deep hold exactly one
+  // tier and everywhere else hold four, with no branch here.
+  const entries = Object.entries(dist) as [CrateTier, number][]
+  const total = entries.reduce((s, [, w]) => s + w, 0)
   let r = Math.random() * total
-  if ((r -= dist.wooden)  < 0) return 'wooden'
-  if ((r -= dist.metal)   < 0) return 'metal'
-  if ((r -= dist.gold)    < 0) return 'gold'
-  return 'diamond'
+  for (const [tier, w] of entries) {
+    r -= w
+    if (r < 0) return tier
+  }
+  return entries[entries.length - 1]?.[0] ?? 'wooden'
 }
 
 export async function castLine(baitType: string, habitat: string): Promise<
@@ -313,7 +318,13 @@ export async function castLine(baitType: string, habitat: string): Promise<
   // minigame with the same perfect/miss judgement as a fish; they were simply
   // excluded from the streak on both sides, which made a crate a free pause in
   // an otherwise unforgiving run.
-  const isCrate = habitat !== 'ancient_deep' && Math.random() < 0.02 * (rod.crateChanceMult ?? 1) * patience.crateChanceMult
+  //
+  // The Ancient Deep used to be the one zone with no crates at all. It now has
+  // its own rate (see ANCIENT_CRATE_CHANCE) because its bites take 45-120
+  // seconds, so sharing the shallows' 2% would make a chest an hour-plus event.
+  // The gear multipliers still apply, so a Treasure Rod is worth bringing down
+  // here too.
+  const isCrate = Math.random() < zoneCrateChance(habitat) * (rod.crateChanceMult ?? 1) * patience.crateChanceMult
 
   // Remember this bait so the fishing UI auto-selects it on next open
   // (FishingGame.tsx seeds selectedBait from profile.last_used_bait). Also mark

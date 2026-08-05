@@ -41,7 +41,7 @@ const CRATE_FISH_ID = -1
 import { claimDailyReward } from './dailyChallengeActions'
 import { getDailyChallenges, DAILY_SWEEP_GEMS, type DailyChallengeState, type DailyChallenge } from '@/lib/dailyChallenges'
 import { GEM_GLYPH, GEM_COLOR } from '@/lib/uiTokens'
-import type { CrateLoot } from '@/lib/crateLoot'
+import type { CrateLoot, CrateTier } from '@/lib/crateLoot'
 import CrateOpening, { CRATE_TIERS, type CrateTierId, type CrateLootView } from '@/components/CrateOpening'
 import PodiumToast, { type PodiumNotif } from '@/components/PodiumToast'
 import LeaderboardModal from '@/components/LeaderboardModal'
@@ -483,7 +483,7 @@ const GENERAL_TIPS = [
   "Tip: the Millionaire's Rod catches two fish on every single catch.",
   "Tip: the YOLO Rod has a 10% chance to haul in 100 fish at once.",
   "Tip: the Telescoping Rod draws rarer fish to the surface.",
-  "Tip: sunken crates come in Wooden, Metal, Gold, and Diamond — bigger is better.",
+  "Tip: sunken crates come in Wooden, Metal, Gold, and Diamond. The Ancient Deep hides something older.",
   "Tip: complete a zone's whole collection to claim a one-time doubloon reward.",
   "Tip: daily challenges reset every day — easy doubloons and XP if you keep up.",
   "Tip: badges are earned through milestones. Equip your favorites from your profile.",
@@ -3708,7 +3708,7 @@ export default function FishingGame({
     const t = setTimeout(() => setLowBaitMsg(null), 2500)
     return () => clearTimeout(t)
   }, [lowBaitMsg])
-  const [hookedFish, setHookedFish] = useState<{ fishId: number; catchDifficulty: number; biteRarity: number; crateTier?: 'wooden' | 'metal' | 'gold' | 'diamond'; jackpotMult?: number; doubleCatch?: boolean; catchQty?: number } | null>(null)
+  const [hookedFish, setHookedFish] = useState<{ fishId: number; catchDifficulty: number; biteRarity: number; crateTier?: CrateTier; jackpotMult?: number; doubleCatch?: boolean; catchQty?: number } | null>(null)
   // YOLO Rod jackpot celebration — set when a jackpot resolves, drives the
   // full-screen JackpotBoom overlay. Cleared on auto-dismiss / tap.
   const [jackpotBoom, setJackpotBoom] = useState<{ qty: number } | null>(null)
@@ -4258,7 +4258,7 @@ export default function FishingGame({
   const catchingZonesRef = useRef<ZoneDef[]>([])
   const zoneRotationRef  = useRef(0)
   const lastZoneFromRef  = useRef<number>(NaN)
-  const hookedFishRef   = useRef<{ fishId: number; catchDifficulty: number; crateTier?: 'wooden' | 'metal' | 'gold' | 'diamond'; jackpotMult?: number; doubleCatch?: boolean; catchQty?: number } | null>(null)
+  const hookedFishRef   = useRef<{ fishId: number; catchDifficulty: number; crateTier?: CrateTier; jackpotMult?: number; doubleCatch?: boolean; catchQty?: number } | null>(null)
   const selectedBaitRef = useRef(selectedBait)
   useEffect(() => { phaseRef.current = phase }, [phase])
 

@@ -8,7 +8,10 @@ import { getBait } from '@/lib/bait'
 // crates). Callers that reach it must have already gated the grant — reelCrate
 // via its one-shot pending_cast token, claimWeeklyCrate via the weekly stamp.
 
-export type CrateTier = 'wooden' | 'metal' | 'gold' | 'diamond'
+/** 'ancient' is the Ancient Deep's exclusive chest. It never drops anywhere
+ *  else, and nothing else drops there, so the deepest water has exactly one
+ *  container and it is the best one in the game. */
+export type CrateTier = 'wooden' | 'metal' | 'gold' | 'diamond' | 'ancient'
 
 export type CrateLoot =
   | { type: 'doubloons'; amount: number }
@@ -24,6 +27,7 @@ const CRATE_DOUBLOON_RANGE: Record<CrateTier, [number, number]> = {
   metal:   [250,  1000],
   gold:    [500,  2000],
   diamond: [1000, 4000],
+  ancient: [2500, 8000],
 }
 
 const CRATE_BAIT_POOLS: Record<CrateTier, { type: string; weight: number }[]> = {
@@ -47,6 +51,11 @@ const CRATE_BAIT_POOLS: Record<CrateTier, { type: string; weight: number }[]> = 
     { type: 'chum',            weight: 60 },
     { type: 'anglers_formula', weight: 40 },
   ],
+  // Nothing but the two best baits, which is the point of the deepest chest.
+  ancient: [
+    { type: 'chum',            weight: 45 },
+    { type: 'anglers_formula', weight: 55 },
+  ],
 }
 
 const CRATE_BAIT_QTY: Record<CrateTier, number> = {
@@ -54,6 +63,7 @@ const CRATE_BAIT_QTY: Record<CrateTier, number> = {
   metal:   10,
   gold:    15,
   diamond: 20,
+  ancient: 30,
 }
 
 // Per-tier outcome weights. Wooden/metal have no cosmetic outcome.
@@ -62,6 +72,9 @@ const CRATE_OUTCOME_WEIGHTS: Record<CrateTier, { doubloons: number; bait: number
   metal:   { doubloons: 50, bait: 50, cosmetic: 0  },
   gold:    { doubloons: 55, bait: 35, cosmetic: 10 },
   diamond: { doubloons: 25, bait: 60, cosmetic: 15 },
+  // Ancient leans hardest into cosmetics, since its whole reason to exist is
+  // being the best place to find something you cannot buy.
+  ancient: { doubloons: 20, bait: 55, cosmetic: 25 },
 }
 
 // Crate-exclusive cosmetics that can drop from gold/diamond crates.

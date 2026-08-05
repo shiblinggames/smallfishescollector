@@ -45,7 +45,7 @@ import SpinReel from './SpinReel'
 import { getBait } from '@/lib/bait'
 import { hapticTap, vibrate } from '@/lib/haptics'
 
-export type CrateTierId = 'wooden' | 'metal' | 'gold' | 'diamond'
+export type CrateTierId = 'wooden' | 'metal' | 'gold' | 'diamond' | 'ancient'
 
 /** The loot shapes a crate can produce. Mirrors CrateLoot in lib/crateLoot. */
 export type CrateLootView =
@@ -58,17 +58,27 @@ export type CrateLootView =
 
 /** Tier identity. The accent is the whole point: it is what makes a Diamond
  *  crate feel unlike a Wooden one before a single tile has scrolled. */
-export const CRATE_TIERS: Record<CrateTierId, { label: string; accent: string; rgb: string }> = {
-  wooden:  { label: 'Wooden Crate',  accent: '#c08a5a', rgb: '192,138,90'  },
-  metal:   { label: 'Metal Crate',   accent: '#b8c4d0', rgb: '184,196,208' },
-  gold:    { label: 'Gold Crate',    accent: '#f0c040', rgb: '240,192,64'  },
-  diamond: { label: 'Diamond Crate', accent: '#7dd3fc', rgb: '125,211,252' },
+export const CRATE_TIERS: Record<CrateTierId, {
+  label: string; accent: string; rgb: string
+  /** Filename stem in /public, minus the closed/open suffix. */
+  art: string
+}> = {
+  wooden:  { label: 'Wooden Crate',  accent: '#c08a5a', rgb: '192,138,90',  art: 'crate'        },
+  metal:   { label: 'Metal Crate',   accent: '#b8c4d0', rgb: '184,196,208', art: 'metalcrate'   },
+  gold:    { label: 'Gold Crate',    accent: '#f0c040', rgb: '240,192,64',  art: 'goldcrate'    },
+  diamond: { label: 'Diamond Crate', accent: '#7dd3fc', rgb: '125,211,252', art: 'diamondcrate' },
+  // ART PENDING. Borrowing the diamond sprite so the chest is playable today;
+  // it is the one thing that still makes an Ancient Chest look like a lesser
+  // container. Drop /ancientchestclosed.png + /ancientchestopen.png into
+  // /public and change `art` to 'ancientchest'. Nothing else needs touching,
+  // which is the reason the path moved into this table.
+  ancient: { label: 'Ancient Chest', accent: '#8fd8b4', rgb: '143,216,180',  art: 'diamondcrate' },
 }
 
-/** Wooden is the odd one out in /public: it has no tier prefix. */
+/** Art lives per-tier in CRATE_TIERS because the filenames are not uniform
+ *  (wooden has no prefix) and a pending sprite can be swapped in one place. */
 export function crateArt(tier: CrateTierId, open: boolean): string {
-  const state = open ? 'open' : 'closed'
-  return tier === 'wooden' ? `/crate${state}.png` : `/${tier}crate${state}.png`
+  return `/${CRATE_TIERS[tier].art}${open ? 'open' : 'closed'}.png`
 }
 
 /** Cosmetics and pets are the drops worth an escalated payoff. */

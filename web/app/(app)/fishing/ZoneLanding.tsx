@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ZONE_MIN_LEVEL, ZONE_WAIT_BASE, BASE_CRATE_CHANCE, zoneDiamondShare, zonePetPerCrate } from './zoneData'
+import { ZONE_MIN_LEVEL, ZONE_WAIT_BASE, zoneCrateChance, zoneDiamondShare, zonePetPerCrate } from './zoneData'
 import { updateUsername } from '@/app/(app)/u/actions'
 import FisherPose from '@/components/FisherPose'
 import { LevelSectionHeader } from '@/components/LevelSectionHeader'
@@ -430,7 +430,7 @@ export default function ZoneLanding({
             const perHr = 3600 / cycleSec
             const doubPerHr = Math.round((perHr * dStats.avgValue) / 100) * 100
             const xpPerHr = Math.round((perHr * dStats.avgXp) / 10) * 10
-            const noCrates = zone === 'ancient_deep'
+            const ancientOnly = zone === 'ancient_deep'   // one chest type, and it is the best one
             const goldenOdds = Math.round(SHINY_ODDS / goldenBoostMult(goldenBoosts[zone] ?? 0))
             const round1 = (v: number) => (v * 100).toFixed(1)
             return (
@@ -469,9 +469,20 @@ export default function ZoneLanding({
                     <DetailStat label="XP / hr" value={`~${xpPerHr.toLocaleString()}`} accent="#7dd3fc" />
                     <DetailStat label="Avg catch" value={`${dStats.avgValue.toLocaleString()} ⟡`} />
                     <DetailStat label="Top catch" value={`${dStats.topValue.toLocaleString()} ⟡`} accent="#f59e0b" />
-                    <DetailStat label="Crate / cast" value={noCrates ? 'None' : `~${Math.round(BASE_CRATE_CHANCE * 100)}%`} />
-                    <DetailStat label="Diamond crate" value={noCrates ? '—' : `${Math.round(zoneDiamondShare(zone) * 100)}%`} />
-                    <DetailStat label="Pet / crate" value={noCrates ? 'None' : `${round1(zonePetPerCrate(zone))}%`} />
+                    <DetailStat label="Crate / cast" value={`~${(zoneCrateChance(zone) * 100).toFixed(0)}%`} />
+                    {/* The Ancient Deep has no diamond crates because it has
+                        no crates at all, only Ancient Chests. Naming the chest
+                        says more than a 0% would. */}
+                    <DetailStat
+                      label={ancientOnly ? 'Chest type' : 'Diamond crate'}
+                      value={ancientOnly ? 'Ancient' : `${Math.round(zoneDiamondShare(zone) * 100)}%`}
+                      accent={ancientOnly ? '#8fd8b4' : undefined}
+                    />
+                    <DetailStat
+                      label="Pet / crate"
+                      value={`${round1(zonePetPerCrate(zone))}%`}
+                      accent={ancientOnly ? '#8fd8b4' : undefined}
+                    />
                   </div>
                   <p className="font-karla" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.42)', fontStyle: 'italic', marginTop: 12, lineHeight: 1.4 }}>
                     Rates estimated at base gear. Faster bites and better crates come with your rod, bait, and level.

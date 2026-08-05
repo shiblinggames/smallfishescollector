@@ -76,11 +76,15 @@ export function getPet(id: string | null | undefined): PetDef | undefined {
  *  the normal crate outcome (doubloons/bait/cosmetic). Tune here.
  *  2026-07-02: halved across the board — pets were dropping too easily
  *  (esp. with auto-fishing racking up casts). Was 0.01/0.02/0.04/0.08. */
-export const CRATE_PET_CHANCE: Record<'wooden' | 'metal' | 'gold' | 'diamond', number> = {
+export const CRATE_PET_CHANCE: Record<'wooden' | 'metal' | 'gold' | 'diamond' | 'ancient', number> = {
   wooden:  0.005,
   metal:   0.01,
   gold:    0.02,
   diamond: 0.04,
+  // The Ancient Chest. Two and a half times a diamond crate and the best pet
+  // odds anywhere, which is the entire reason it exists: pets were reachable
+  // only in aggregate before this, and the Ancient Deep had no crates at all.
+  ancient: 0.10,
 }
 
 /** Per-species, per-frame overlay positions in the character container.

@@ -23,6 +23,7 @@ export const ZONE_MIN_LEVEL: Record<string, number> = {
 }
 
 import { CRATE_PET_CHANCE } from '@/lib/pets'
+import type { CrateTier } from '@/lib/crateLoot'
 
 // Base bite-wait band per zone (ms): [fastest common, slowest rare]. The actual
 // wait interpolates within by catch_score and is cut by bait + fishing level +
@@ -39,19 +40,43 @@ export const ZONE_WAIT_BASE: Record<string, [number, number]> = {
 // has none. Mirrors castLine.
 export const BASE_CRATE_CHANCE = 0.02
 
+/** Ancient Chest spawn chance per cast in the Ancient Deep. Its own number,
+ *  not BASE_CRATE_CHANCE, because the two zones run on completely different
+ *  clocks: a bite in the Ancient Deep takes 45-120 SECONDS against the Abyss's
+ *  12-45, so roughly 45 casts an hour against ~144. At 3% that is a chest
+ *  about every 33 casts, call it 45 minutes of fishing, which reads as rare
+ *  while still being the best pet source in the game per hour. Raising this
+ *  is the lever if it feels too thin. */
+export const ANCIENT_CRATE_CHANCE = 0.03
+
 // Per-zone crate-tier distribution (relative weights). Better crates deeper.
-export const ZONE_CRATE_TIERS: Record<string, Record<'wooden' | 'metal' | 'gold' | 'diamond', number>> = {
+export const ZONE_CRATE_TIERS: Record<string, Partial<Record<CrateTier, number>>> = {
   shallows:    { wooden: 80, metal: 10, gold: 7,  diamond: 3  },
   open_waters: { wooden: 60, metal: 20, gold: 12, diamond: 8  },
   deep:        { wooden: 35, metal: 30, gold: 20, diamond: 15 },
   abyss:       { wooden: 15, metal: 25, gold: 35, diamond: 25 },
+  // The Ancient Deep is all-or-nothing: no wooden, no metal, no gold, no
+  // diamond. If a container surfaces down here it is an Ancient Chest.
+  ancient_deep:{ ancient: 100 },
+}
+
+/** Total weight in a zone's tier table, so the helpers below never divide by a
+ *  hardcoded four-tier sum. */
+function tierTotal(d: Partial<Record<CrateTier, number>>): number {
+  return (Object.values(d) as number[]).reduce((s, w) => s + w, 0)
+}
+
+/** Chance per cast that this zone yields a crate at all. */
+export function zoneCrateChance(zone: string): number {
+  return zone === 'ancient_deep' ? ANCIENT_CRATE_CHANCE : BASE_CRATE_CHANCE
 }
 
 /** Diamond-crate share (0-1) for a zone — the headline "crate quality" read. */
 export function zoneDiamondShare(zone: string): number {
   const d = ZONE_CRATE_TIERS[zone]
   if (!d) return 0
-  return d.diamond / (d.wooden + d.metal + d.gold + d.diamond)
+  const total = tierTotal(d)
+  return total ? (d.diamond ?? 0) / total : 0
 }
 
 /** Effective chance (0-1) that a single crate opened in this zone holds a pet,
@@ -59,11 +84,10 @@ export function zoneDiamondShare(zone: string): number {
 export function zonePetPerCrate(zone: string): number {
   const d = ZONE_CRATE_TIERS[zone]
   if (!d) return 0
-  const total = d.wooden + d.metal + d.gold + d.diamond
-  return (
-    d.wooden * CRATE_PET_CHANCE.wooden +
-    d.metal * CRATE_PET_CHANCE.metal +
-    d.gold * CRATE_PET_CHANCE.gold +
-    d.diamond * CRATE_PET_CHANCE.diamond
-  ) / total
+  const total = tierTotal(d)
+  if (!total) return 0
+  // Driven off the table rather than four hardcoded terms, so adding a tier
+  // cannot silently drop out of this number the way it would have before.
+  return (Object.entries(d) as [CrateTier, number][])
+    .reduce((sum, [tier, w]) => sum + w * CRATE_PET_CHANCE[tier], 0) / total
 }
