@@ -13,7 +13,7 @@
 // Pet ids stay stable across releases. Persisted to
 // profiles.unlocked_pets (text[]) + profiles.equipped_pet (text).
 
-export type PetSpecies = 'parrot' | 'monkey' | 'seal' | 'lizard'
+export type PetSpecies = 'parrot' | 'monkey' | 'seal' | 'lizard' | 'raccoon' | 'crab'
 
 export interface PetDef {
   id: string
@@ -56,6 +56,15 @@ export const PETS: PetDef[] = [
   { id: 'lizard_green',    species: 'lizard', name: 'Green Lizard',    weight: 60, restImageUrl: '/lizard_green.png',    accentColor: '#6cbf5a' },
   { id: 'lizard_indigo',   species: 'lizard', name: 'Indigo Lizard',   weight: 30, restImageUrl: '/lizard_indigo.png',   accentColor: '#7b6fb0' },
   { id: 'lizard_white',    species: 'lizard', name: 'White Lizard',    weight: 10, restImageUrl: '/lizard_white.png',    accentColor: '#dfe3e8' },
+  // Raccoons — bandana'd deck thief, stands upright like the monkey. Only two
+  // colorways, so no trophy tier: beige is the common one and black the rarer.
+  { id: 'raccoon_beige',   species: 'raccoon', name: 'Beige Raccoon',  weight: 65, restImageUrl: '/raccoon_beige.png',   accentColor: '#a89076' },
+  { id: 'raccoon_black',   species: 'raccoon', name: 'Black Raccoon',  weight: 35, restImageUrl: '/raccoon_black.png',   accentColor: '#767c85' },
+  // Crabs — wide and low, sits on the deck like the seal. Gold is the trophy,
+  // matching every other species where gold is the rare one.
+  { id: 'crab_orange',     species: 'crab',   name: 'Orange Crab',     weight: 60, restImageUrl: '/crab_orange.png',     accentColor: '#c85a28' },
+  { id: 'crab_blue',       species: 'crab',   name: 'Blue Crab',       weight: 30, restImageUrl: '/crab_blue.png',       accentColor: '#5878a8' },
+  { id: 'crab_gold',       species: 'crab',   name: 'Gold Crab',       weight: 10, restImageUrl: '/crab_gold.png',       accentColor: '#f0c040' },
 ]
 
 export function getPet(id: string | null | undefined): PetDef | undefined {
@@ -101,14 +110,33 @@ export const PET_OVERLAYS: Record<PetSpecies, Record<'rest' | 'wait' | 'cast', {
     wait: { top: 59.3, left: 63.5, width: 41.4, rotate: 0 },
     cast: { top: 62.7, left: 62.4, width: 41.4, rotate: 0 },
   },
-  // Lizard — PLACEHOLDER, seeded from the seal because it is the other
-  // low deck-sitter. NOT yet tuned: the lizard is longer and its tail
-  // trails much further left than a seal's body, so expect these to move.
-  // Tune on /fishing-test and paste the dump back over this block.
-  lizard: {
-    rest: { top: 63.2, left: 56.9, width: 41.4, rotate: 0 },
-    wait: { top: 59.3, left: 63.5, width: 41.4, rotate: 0 },
-    cast: { top: 62.7, left: 62.4, width: 41.4, rotate: 0 },
+  // ── UNTUNED STARTING POSITIONS ──────────────────────────────────────────
+  // The three below are DERIVED, not eyeballed and not copy-pasted from
+  // another species. Copying a species' numbers does not work: `width` scales
+  // the whole 1024x576 canvas, and each animal sits in a different part of
+  // its own canvas with a different amount of transparent padding, so
+  // identical numbers put two animals at different on-screen sizes and
+  // places. The lizard originally inherited the seal's 41.4 and would have
+  // rendered noticeably small because its subject is narrower in frame.
+  //
+  // So each one is solved to land its VISIBLE subject on the same on-screen
+  // box as an anchor species with a similar silhouette, using the measured
+  // alpha bounding boxes. That puts them in the right neighbourhood; the eye
+  // still has the final say on /fishing-test.
+  lizard: {   // anchored to the seal (low deck-sitter)
+    rest: { top: 63.3, left: 56.6, width: 47.9, rotate: 0 },
+    wait: { top: 59.4, left: 63.2, width: 47.9, rotate: 0 },
+    cast: { top: 62.8, left: 62.1, width: 47.9, rotate: 0 },
+  },
+  raccoon: { // anchored to the monkey (stands upright)
+    rest: { top: 65.8, left: 64.6, width: 32.7, rotate: 0 },
+    wait: { top: 62,   left: 71.5, width: 32.7, rotate: 0 },
+    cast: { top: 65.8, left: 70.3, width: 32.7, rotate: 0 },
+  },
+  crab: {    // anchored to the seal (wide and low)
+    rest: { top: 62.5, left: 52,   width: 51.5, rotate: 0 },
+    wait: { top: 58.6, left: 58.6, width: 51.5, rotate: 0 },
+    cast: { top: 62,   left: 57.5, width: 51.5, rotate: 0 },
   },
 }
 
@@ -125,12 +153,15 @@ const PET_SPECIES_WEIGHTS: Record<PetSpecies, number> = {
   parrot: 60,
   monkey: 20,
   seal: 20,
-  // LIZARD IS NOT IN THE DROP TABLE YET. Weight 0 keeps it out of rollPet
-  // while its art and registry entries are live, so it can be previewed and
+  // NOT IN THE DROP TABLE YET. Weight 0 keeps these out of rollPet while
+  // their art and registry entries are live, so they can be previewed and
   // positioned on /fishing-test without any chance of a player rolling one
-  // that renders in the wrong spot. Flip this to ~15 (and shave the others
-  // to keep the mix sane) once the overlay coords above are tuned.
+  // that renders in the wrong spot. Turn each on once its coords above are
+  // confirmed, shaving the three originals to keep the mix sane. Three new
+  // species at ~15 each would want roughly parrot 40 / monkey 12 / seal 13.
   lizard: 0,
+  raccoon: 0,
+  crab: 0,
 }
 
 /** Roll a pet on a successful crate pet-roll. Returns the picked
