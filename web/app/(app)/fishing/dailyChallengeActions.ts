@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getEffectiveDailyChallenges, getTodayUTC, type DailyChallengeState } from '@/lib/dailyChallenges'
+import { getEffectiveDailyChallenges, getTodayUTC, DAILY_SWEEP_GEMS, type DailyChallengeState } from '@/lib/dailyChallenges'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 
 // Get-or-create the snapshot of the player's fishing level for the day.
@@ -51,7 +51,7 @@ export async function getDailyChallenge(): Promise<DailyChallengeState | null> {
 
   const { data: row } = await admin
     .from('daily_challenge_progress')
-    .select('p1, p2, p3, claimed_1, claimed_2, claimed_3')
+    .select('p1, p2, p3, claimed_1, claimed_2, claimed_3, claimed_bonus')
     .eq('user_id', user.id)
     .eq('date', date)
     .maybeSingle()
@@ -61,12 +61,13 @@ export async function getDailyChallenge(): Promise<DailyChallengeState | null> {
     challenges,
     progress: [row?.p1 ?? 0, row?.p2 ?? 0, row?.p3 ?? 0],
     claimed: [row?.claimed_1 ?? false, row?.claimed_2 ?? false, row?.claimed_3 ?? false],
+    sweepClaimed: row?.claimed_bonus ?? false,
   }
 }
 
 export async function claimDailyReward(
   index: 0 | 1 | 2,
-): Promise<{ doubloons: number } | { error: string }> {
+): Promise<{ doubloons: number; sweepGems: number } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
@@ -84,7 +85,7 @@ export async function claimDailyReward(
 
   const { data: row } = await admin
     .from('daily_challenge_progress')
-    .select('p1, p2, p3, claimed_1, claimed_2, claimed_3')
+    .select('p1, p2, p3, claimed_1, claimed_2, claimed_3, claimed_bonus')
     .eq('user_id', user.id)
     .eq('date', date)
     .maybeSingle()
@@ -121,5 +122,36 @@ export async function claimDailyReward(
     }),
   ])
 
-  return { doubloons: newDoubloons }
+  // ── The sweep bonus ───────────────────────────────────────────────────────
+  // `claimed` was read BEFORE the flip above, so "the other two were already
+  // in" plus "this one just landed" means all three are now claimed.
+  //
+  // Guarded exactly like the individual claim: flip claimed_bonus only where
+  // it is not already true, and pay only if this call is the one that won. Two
+  // tabs racing to claim the third challenge can both reach here.
+  let sweepGems = 0
+  const othersAlreadyIn = claimed.every((c, i) => i === index || c)
+  if (othersAlreadyIn && !row?.claimed_bonus) {
+    const { data: sweptRow } = await admin
+      .from('daily_challenge_progress')
+      .update({ claimed_bonus: true })
+      .eq('user_id', user.id)
+      .eq('date', date)
+      .not('claimed_bonus', 'is', true)
+      .select('user_id')
+      .maybeSingle()
+    if (sweptRow) {
+      sweepGems = DAILY_SWEEP_GEMS
+      // Atomic bumps rather than read-add-write: the gem balance is shared
+      // with chest opens and casino payouts, so an absolute overwrite here
+      // could stomp a concurrent grant.
+      await admin.rpc('bump_profile_stat', { uid: user.id, col: 'gems', n: DAILY_SWEEP_GEMS })
+      // Lifetime swept days, for the sweep badges. Fire and forget: a failed
+      // counter must never cost the player the gems they just earned.
+      void admin.rpc('bump_profile_stat', { uid: user.id, col: 'daily_challenge_sweeps', n: 1 })
+        .then(() => {}, () => {})
+    }
+  }
+
+  return { doubloons: newDoubloons, sweepGems }
 }

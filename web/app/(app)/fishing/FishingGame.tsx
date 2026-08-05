@@ -47,7 +47,8 @@ const CRATE_TILE_W = 220
 const CRATE_TILE_H = 64
 const CRATE_SPIN_DURATION_MS = 2200
 import { claimDailyReward } from './dailyChallengeActions'
-import { getDailyChallenges, type DailyChallengeState, type DailyChallenge } from '@/lib/dailyChallenges'
+import { getDailyChallenges, DAILY_SWEEP_GEMS, type DailyChallengeState, type DailyChallenge } from '@/lib/dailyChallenges'
+import { GEM_GLYPH, GEM_COLOR } from '@/lib/uiTokens'
 import PodiumToast, { type PodiumNotif } from '@/components/PodiumToast'
 import LeaderboardModal from '@/components/LeaderboardModal'
 import AncientBgEffect from '@/components/AncientBgEffect'
@@ -3281,6 +3282,7 @@ export default function FishingGame({
   onDailyChallengeChange?: (
     progress: [number, number, number],
     claimed: [boolean, boolean, boolean],
+    sweepClaimed: boolean,
   ) => void
   hasTideTurner: boolean
   initialTideTurnerSkipsLeft: number
@@ -4155,14 +4157,19 @@ export default function FishingGame({
     : getDailyChallenges(new Date().toISOString().slice(0, 10), getLevelFromXP(initialFishingXP))
   const [dailyProgress, setDailyProgress] = useState<[number, number, number]>(initialDailyChallenge?.progress ?? [0, 0, 0])
   const [dailyClaimed, setDailyClaimed] = useState<[boolean, boolean, boolean]>(initialDailyChallenge?.claimed ?? [false, false, false])
+  // The all-three sweep bonus. `sweepClaimed` is the server's word on whether
+  // today's gems are already paid; `sweepAward` is the one-shot celebration
+  // that fires on the claim that completed the set.
+  const [sweepClaimed, setSweepClaimed] = useState(initialDailyChallenge?.sweepClaimed ?? false)
+  const [sweepAward, setSweepAward] = useState(false)
   // Push local progress + claimed up to the parent on every change so the
   // state survives a ZoneLanding remount when the player switches zones.
   // Without this the second zone reads a stale server snapshot and the
   // claim UI reappears for an already-claimed challenge.
   useEffect(() => {
-    onDailyChallengeChange?.(dailyProgress, dailyClaimed)
+    onDailyChallengeChange?.(dailyProgress, dailyClaimed, sweepClaimed)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dailyProgress, dailyClaimed])
+  }, [dailyProgress, dailyClaimed, sweepClaimed])
   const [dailyOpen, setDailyOpen] = useState(false)
   // Tap the active-event chip (docked on the action row under the XP bar) to
   // open a small drawer explaining what the event does.
@@ -6157,6 +6164,15 @@ export default function FishingGame({
     setDailyClaimed(prev => { const n = [...prev] as [boolean, boolean, boolean]; n[index] = true; return n })
     setDoubloons(res.doubloons)
     window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+    // The server only returns gems on the claim that completed the set, so a
+    // non-zero value here IS the sweep. It pays exactly once per day.
+    if (res.sweepGems > 0) {
+      const newGems = gems + res.sweepGems
+      setGems(newGems)
+      window.dispatchEvent(new CustomEvent('gems-changed', { detail: newGems }))
+      setSweepClaimed(true)
+      setSweepAward(true)
+    }
   }
 
   async function handleEquipRod(tier: number) {
@@ -10218,6 +10234,88 @@ export default function FishingGame({
                   </div>
                 )
               })}
+
+              {/* ── The sweep bonus ──────────────────────────────────────────
+                  Clear all three and the gems pay themselves. Deliberately NOT
+                  a fourth claim button: another button would read as a fourth
+                  task, and the whole point is that the set is the task. It sits
+                  below the three so it reads as what they add up to.        */}
+              {(() => {
+                const claimedCount = dailyClaimed.filter(Boolean).length
+                const swept = sweepClaimed
+                return (
+                  <motion.div
+                    // The pop fires only on the claim that completed the set.
+                    animate={sweepAward ? { scale: [1, 1.035, 1] } : { scale: 1 }}
+                    transition={{ duration: 0.45, ease: 'easeOut' }}
+                    onAnimationComplete={() => { if (sweepAward) setSweepAward(false) }}
+                    style={{
+                      // Purple for gems, the way gold means doubloons on the
+                      // cards above, so the different currency reads instantly.
+                      background: swept
+                        ? 'linear-gradient(90deg, rgba(167,139,250,0.16) 0%, rgba(167,139,250,0.04) 60%), #120d07'
+                        : 'linear-gradient(180deg, rgba(167,139,250,0.07) 0%, rgba(167,139,250,0.02) 100%), #120d07',
+                      border: `1px solid ${swept ? 'rgba(167,139,250,0.40)' : 'rgba(167,139,250,0.18)'}`,
+                      borderTop: `1px solid ${swept ? 'rgba(167,139,250,0.62)' : 'rgba(167,139,250,0.30)'}`,
+                      borderRadius: 12,
+                      padding: '0.7rem 0.95rem',
+                      marginTop: 2,
+                    }}
+                  >
+                    <div className="flex items-center justify-between" style={{ gap: 10 }}>
+                      <div style={{ minWidth: 0 }}>
+                        <p className="font-karla font-800 uppercase" style={{
+                          fontSize: '0.58rem', letterSpacing: '0.18em',
+                          color: swept ? GEM_COLOR : 'rgba(167,139,250,0.75)',
+                          marginBottom: 3,
+                        }}>
+                          Clean Sweep
+                        </p>
+                        <p className="font-karla font-600" style={{
+                          fontSize: '0.8rem', color: swept ? '#c9c3d8' : '#c8c4bc', lineHeight: 1.3,
+                        }}>
+                          {swept
+                            ? 'All three cleared. Gems are in the hold.'
+                            : 'Claim all three and the gems are yours.'}
+                        </p>
+                      </div>
+                      <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {/* Three pips: which of the day's claims are in. */}
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          {[0, 1, 2].map(i => (
+                            <span key={i} aria-hidden style={{
+                              width: 7, height: 7, borderRadius: 999,
+                              background: dailyClaimed[i] ? GEM_COLOR : 'rgba(255,255,255,0.13)',
+                              boxShadow: dailyClaimed[i] ? 'none' : 'inset 0 1px 2px rgba(0,0,0,0.5)',
+                            }} />
+                          ))}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 3 }}>
+                          <span className="font-cinzel font-700" style={{
+                            fontSize: '0.95rem', lineHeight: 1,
+                            color: swept ? GEM_COLOR : 'rgba(167,139,250,0.6)',
+                          }}>
+                            +{DAILY_SWEEP_GEMS}
+                          </span>
+                          <span className="font-cinzel font-700" style={{
+                            fontSize: '0.7rem', lineHeight: 1,
+                            color: swept ? GEM_COLOR : 'rgba(167,139,250,0.6)',
+                          }}>
+                            {GEM_GLYPH}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    {!swept && (
+                      <p className="font-karla tabular-nums" style={{
+                        fontSize: '0.66rem', color: '#8d8a96', marginTop: 6,
+                      }}>
+                        {claimedCount} of 3 claimed
+                      </p>
+                    )}
+                  </motion.div>
+                )
+              })()}
             </div>
           </motion.div>
         )}

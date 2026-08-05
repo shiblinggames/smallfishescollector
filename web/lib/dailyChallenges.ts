@@ -14,7 +14,21 @@ export interface DailyChallengeState {
   challenges: [DailyChallenge, DailyChallenge, DailyChallenge]
   progress: [number, number, number]
   claimed: [boolean, boolean, boolean]
+  /** Has today's all-three sweep bonus already been paid? */
+  sweepClaimed: boolean
 }
+
+/** Gems paid once a day for claiming ALL THREE challenges.
+ *
+ *  Deliberately small. The three doubloon rewards are the day's actual pay;
+ *  this is a nudge to finish the hard one instead of pocketing the easy two.
+ *  Ten a day means ten swept days buys one recruit reroll (100), so the number
+ *  is legible without being a faucet. Sweeps run about 18% of played days, so
+ *  it stays a reward for the full set rather than a login stipend.
+ *
+ *  Lives here and not in the action: a 'use server' file silently drops
+ *  non-async exports, so the UI could not import it from there. */
+export const DAILY_SWEEP_GEMS = 10
 
 // Pool sizes are 14, 13, 11 — LCM is 2002 days before the same 3-combo repeats
 const TIER1: DailyChallenge[] = [
