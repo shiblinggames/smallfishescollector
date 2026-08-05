@@ -23,7 +23,7 @@ import { HATS } from '@/lib/hats'
 import { BADGE_MAP, BADGES } from '@/lib/badges'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { SPECIAL_ITEMS } from '@/lib/specialItems'
-import { PETS, getPet, getPetOverlay } from '@/lib/pets'
+import { PETS, getPet, getPetOverlay, PET_SPECIES_ORDER, PET_SPECIES_LABEL } from '@/lib/pets'
 
 type BaitItem = { bait_type: string; quantity: number }
 type SlotKey = 'rod' | 'reel' | 'hook' | 'line' | 'special' | 'special2' | 'appearance' | 'badge'
@@ -2927,11 +2927,11 @@ export default function GearScreen({
                         </button>
                       )
                     }
-                    const species = [
-                      { key: 'parrot', label: 'Parrots' },
-                      { key: 'monkey', label: 'Monkeys' },
-                      { key: 'seal',   label: 'Seals'   },
-                    ] as const
+                    // Derived from the registry, NOT listed here. This was an
+                    // inline parrot/monkey/seal array, so the lizards, raccoons
+                    // and crabs were owned and equippable but never rendered in
+                    // the one screen that equips them.
+                    const species = PET_SPECIES_ORDER.map(key => ({ key, label: PET_SPECIES_LABEL[key] }))
                     const groupLabel = { fontSize: '0.56rem', color: '#8a8272', letterSpacing: '0.12em', marginTop: 2 } as const
                     const rowStyle: React.CSSProperties = { display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4 }
                     const noneEquipped = !equippedPet

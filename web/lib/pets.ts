@@ -72,6 +72,26 @@ export function getPet(id: string | null | undefined): PetDef | undefined {
   return PETS.find(p => p.id === id)
 }
 
+/** Plural group heading for a species, used by the Appearance pet picker.
+ *
+ *  A Record over PetSpecies rather than a loose map on purpose: adding a
+ *  species to the union makes this fail to compile until it has a label, which
+ *  is the guard that was missing. The picker previously carried its own inline
+ *  list of parrot/monkey/seal, so the three species added on 2026-08-05 were
+ *  owned and equippable but invisible in the only UI that equips them. */
+export const PET_SPECIES_LABEL: Record<PetSpecies, string> = {
+  parrot:  'Parrots',
+  monkey:  'Monkeys',
+  seal:    'Seals',
+  lizard:  'Lizards',
+  raccoon: 'Raccoons',
+  crab:    'Crabs',
+}
+
+/** Species in registry order. Derived from PETS, so a new one appears in every
+ *  grouped view without editing that view. */
+export const PET_SPECIES_ORDER: PetSpecies[] = [...new Set(PETS.map(p => p.species))]
+
 /** Crate → pet roll chance, indexed by crate tier. Pet hits override
  *  the normal crate outcome (doubloons/bait/cosmetic). Tune here.
  *  2026-07-02: halved across the board — pets were dropping too easily
