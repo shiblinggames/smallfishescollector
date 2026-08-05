@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { RODS } from '@/lib/rods'
 import { HOOKS, hookGlowClass } from '@/lib/hooks'
 import { BADGES, BADGE_SLOT_POSITIONS, type BadgePos, type BadgeFrame } from '@/lib/badges'
@@ -9,6 +9,20 @@ import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { PETS, PET_OVERLAYS, type PetSpecies } from '@/lib/pets'
 
 type Frame = 'rest' | 'wait' | 'cast'
+
+/** The panel shows ONE of these at a time. Everything used to render stacked,
+ *  which grew the column past the window, pushed the preview off screen and
+ *  forced a scroll between a slider and the thing it moves. */
+type PanelTab = 'scene' | 'boat' | 'hat' | 'pet' | 'rod' | 'badges' | 'legacy'
+const PANEL_TABS: { id: PanelTab; label: string }[] = [
+  { id: 'pet',    label: 'Pet'    },
+  { id: 'boat',   label: 'Boat'   },
+  { id: 'hat',    label: 'Hat'    },
+  { id: 'rod',    label: 'Rod'    },
+  { id: 'badges', label: 'Badges' },
+  { id: 'scene',  label: 'Scene'  },
+  { id: 'legacy', label: 'More'   },
+]
 
 
 const ROD_OVERLAY: Record<Frame, { top: number; left: number; width: number; rotate: number }> = {
@@ -189,6 +203,21 @@ export default function FishingTestClient() {
   // they share the same source dimensions.
   const [petCfg, setPetCfg] = useState(PET_DEFAULTS)
   const [petEnabled, setPetEnabled] = useState(true)
+  // Which tuning section the panel is showing. The panel used to render every
+  // section stacked, which grew past the viewport, pushed the preview off
+  // screen and meant scrolling to a slider you could no longer see the effect
+  // of. One at a time keeps the panel shorter than the window.
+  const [tab, setTab] = useState<PanelTab>('pet')
+  // Shrink the 390x720 phone to fit short windows. On a laptop the browser
+  // chrome alone eats enough height that a 720px preview overflows, which is
+  // the other half of why this page needed scrolling to use.
+  const [fitScale, setFitScale] = useState(1)
+  useEffect(() => {
+    const fit = () => setFitScale(Math.min(1, (window.innerHeight - 32) / 720))
+    fit()
+    window.addEventListener('resize', fit)
+    return () => window.removeEventListener('resize', fit)
+  }, [])
   const [petId, setPetId] = useState<string>(PETS[0]?.id ?? 'parrot_red')
   // Sliders bind to whichever species the currently-selected pet
   // belongs to, so switching from a parrot to a monkey swaps the
@@ -246,11 +275,18 @@ export default function FishingTestClient() {
   const bc = badgeCfg[activeSlot]?.[frame as BadgeFrame] ?? { top: 72, left: 18, width: 18, rotate: 0 }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#08121c', display: 'flex', gap: 0 }}>
+    // height (not minHeight) + overflow hidden is the whole fix for "I have to
+    // scroll up and down": it makes the controls column scroll INSIDE itself
+    // instead of growing the page, so the preview never leaves the viewport.
+    <div style={{ height: '100vh', overflow: 'hidden', background: '#08121c', display: 'flex', gap: 0 }}>
 
       {/* ── Phone preview ── */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ position: 'relative', width: 390, height: 720, overflow: 'hidden', borderRadius: 12, boxShadow: '0 0 0 1px rgba(255,255,255,0.1)' }}>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 0 }}>
+        <div style={{
+          position: 'relative', width: 390, height: 720, overflow: 'hidden', borderRadius: 12,
+          boxShadow: '0 0 0 1px rgba(255,255,255,0.1)',
+          transform: `scale(${fitScale})`, transformOrigin: 'center center',
+        }}>
 
           <img src={ZONE_BG[zone]} alt=""
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }}
@@ -410,8 +446,51 @@ export default function FishingTestClient() {
       </div>
 
       {/* ── Controls ── */}
-      <div style={{ width: 290, background: 'rgba(0,0,0,0.8)', padding: '1.2rem', overflowY: 'auto', fontSize: 12, color: '#ccc' }}>
+      <div style={{
+        width: 310, flexShrink: 0, background: 'rgba(0,0,0,0.8)', padding: '0 1.1rem 1.5rem',
+        height: '100vh', overflowY: 'auto', fontSize: 12, color: '#ccc',
+      }}>
 
+        {/* Sticky so the section you are in, and the frame you are tuning,
+            stay on screen while the sliders scroll under them. */}
+        <div style={{
+          position: 'sticky', top: 0, zIndex: 5, background: '#050a10',
+          margin: '0 -1.1rem', padding: '0.7rem 1.1rem 0.6rem',
+          borderBottom: '1px solid rgba(255,255,255,0.1)',
+        }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 7 }}>
+            {PANEL_TABS.map(t => (
+              <button key={t.id} onClick={() => setTab(t.id)} style={{
+                flex: '1 0 auto', padding: '4px 8px', borderRadius: 6, cursor: 'pointer',
+                background: tab === t.id ? '#7c3aed' : 'rgba(255,255,255,0.07)',
+                border: 'none', color: '#fff', fontWeight: tab === t.id ? 700 : 400, fontSize: 11,
+              }}>{t.label}</button>
+            ))}
+          </div>
+          {/* Frame + play live up here because every section tunes per frame
+              and every section benefits from scrubbing the cast. */}
+          <div style={{ display: 'flex', gap: 4 }}>
+            {(['rest', 'wait', 'cast'] as Frame[]).map(f => (
+              <button key={f} onClick={() => setFrame(f)} style={{
+                flex: 1, padding: '3px 0', borderRadius: 6, cursor: 'pointer',
+                background: frame === f ? '#3b82f6' : 'rgba(255,255,255,0.07)',
+                border: 'none', color: '#fff', fontWeight: frame === f ? 700 : 400, fontSize: 11,
+              }}>{f}</button>
+            ))}
+            {!HOOK_TUNING_MODE && (
+              <button onClick={playAnimation} disabled={animating} title="Play cast sequence" style={{
+                flex: '0 0 34px', padding: '3px 0', borderRadius: 6,
+                cursor: animating ? 'default' : 'pointer',
+                background: animating ? 'rgba(255,255,255,0.04)' : '#16a34a',
+                border: 'none', color: '#fff', fontWeight: 700, fontSize: 11,
+              }}>{animating ? '…' : '▶'}</button>
+            )}
+          </div>
+        </div>
+
+        <div style={{ height: 12 }} />
+
+        {tab === 'scene' && (<>
         {!HOOK_TUNING_MODE && (<>
         {/* Zone picker */}
         <p style={{ fontWeight: 700, marginBottom: 6, color: '#fff' }}>Zone</p>
@@ -438,27 +517,9 @@ export default function FishingTestClient() {
         </select>
         </>)}
 
-        {/* Frame picker (always visible — needed for per-frame tuning) */}
-        <p style={{ fontWeight: 700, marginBottom: 8, color: '#fff' }}>Frame</p>
-        <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
-          {(['rest', 'wait', 'cast'] as Frame[]).map(f => (
-            <button key={f} onClick={() => setFrame(f)} style={{
-              flex: 1, padding: '4px 0', borderRadius: 6, cursor: 'pointer',
-              background: frame === f ? '#3b82f6' : 'rgba(255,255,255,0.08)',
-              border: 'none', color: '#fff', fontWeight: frame === f ? 700 : 400,
-            }}>{f}</button>
-          ))}
-        </div>
+        </>)}
 
-        {!HOOK_TUNING_MODE && (
-          <button onClick={playAnimation} disabled={animating} style={{
-            width: '100%', padding: '6px 0', borderRadius: 6, cursor: animating ? 'default' : 'pointer',
-            background: animating ? 'rgba(255,255,255,0.04)' : '#16a34a',
-            border: 'none', color: '#fff', fontWeight: 700, marginBottom: 16, fontSize: 12,
-          }}>{animating ? 'casting...' : '▶ Play cast sequence'}</button>
-        )}
-
-        {!HOOK_TUNING_MODE && (<>
+        {tab === 'boat' && !HOOK_TUNING_MODE && (<>
         {/* Boat overlay */}
         <p style={{ fontWeight: 700, marginBottom: 6, color: '#fff' }}>
           Boat overlay
@@ -483,6 +544,9 @@ export default function FishingTestClient() {
           </>
         )}
 
+        </>)}
+
+        {tab === 'hat' && !HOOK_TUNING_MODE && (<>
         {/* Hat overlay */}
         <p style={{ fontWeight: 700, marginTop: 16, marginBottom: 6, color: '#fff' }}>
           Hat overlay
@@ -510,7 +574,8 @@ export default function FishingTestClient() {
         )}
         </>)}
 
-        {/* ── Pet overlay (always visible — tuning the parrot now) ── */}
+        {tab === 'pet' && (<>
+        {/* ── Pet overlay ── */}
         <p style={{ fontWeight: 700, marginTop: 16, marginBottom: 6, color: '#fff' }}>
           Pet overlay
           <button onClick={() => setPetEnabled(!petEnabled)} style={{
@@ -571,7 +636,9 @@ export default function FishingTestClient() {
           )
         })()}
 
-        {!HOOK_TUNING_MODE && (<>
+        </>)}
+
+        {tab === 'rod' && !HOOK_TUNING_MODE && (<>
         {/* 3-pose rod tuner — new upload format (top-left rest,
             bottom-left wait, right cast). Picks a fully-baked sprite
             per frame so rotation is only a fine adjustment. */}
@@ -694,7 +761,7 @@ export default function FishingTestClient() {
 
         {/* Toggle for production-tuned controls (legacy character /
             rod / hook / badge controls — hidden during hook tuning) */}
-        {!HOOK_TUNING_MODE && (<>
+        {tab === 'legacy' && !HOOK_TUNING_MODE && (<>
         <button onClick={() => setShowLegacyControls(s => !s)} style={{
           width: '100%', padding: '6px 0', borderRadius: 6, cursor: 'pointer',
           background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
@@ -742,8 +809,10 @@ export default function FishingTestClient() {
         <Slider label="rotate °" value={hc.rotate} min={-180} max={180} step={0.5} onChange={v => setHook('rotate', v)} />
         </>)}
 
-        {/* Badge slots — pulled out of the legacy toggle so badge tuning is
-            always front-and-center (current focus). */}
+        </>)}
+
+        {tab === 'badges' && !HOOK_TUNING_MODE && (<>
+        {/* Badge slots. */}
         <p style={{ fontWeight: 700, marginTop: 18, marginBottom: 6, color: '#fff' }}>Badges</p>
         <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
           {[0, 1, 2].map(s => (
@@ -801,12 +870,14 @@ ${[0, 1, 2].map(slot => `  ${slot}: {
             since rod/reel/hat/boat positions are coming from production
             constants. Outside hook tuning, dump everything that's been
             touched. */}
-        <p style={{ fontWeight: 700, marginTop: 18, marginBottom: 6, color: '#fff' }}>Current config</p>
+        <details style={{ marginTop: 18 }}>
+          <summary style={{ cursor: 'pointer', fontWeight: 700, color: '#fff', marginBottom: 6 }}>Current config (all sections)</summary>
         <pre className="select-text" style={{ fontSize: 9, color: '#94a3b8', background: 'rgba(255,255,255,0.05)', borderRadius: 6, padding: '8px', overflowX: 'auto', whiteSpace: 'pre-wrap', cursor: 'text' }}>
 {HOOK_TUNING_MODE
   ? `HOOK:\n${JSON.stringify(hookCfg, null, 2)}`
   : `HAT:\n${JSON.stringify(hatCfg, null, 2)}\n\nBOAT:\n${JSON.stringify(boatCfg, null, 2)}${rodThreePose ? `\n\nROD (${rodThreePoseName}):\n${JSON.stringify(rodThreePoseCfg, null, 2)}` : ''}${reelEnabled ? `\n\nREEL:\n${JSON.stringify(reelCfg, null, 2)}` : ''}${showLegacyControls ? `\n\nCHAR:\n${JSON.stringify(charCfg, null, 2)}\n\nROD (legacy):\n${JSON.stringify(rodCfg, null, 2)}\n\nHOOK:\n${JSON.stringify(hookCfg, null, 2)}\n\nBADGES:\n${JSON.stringify(badgeCfg, null, 2)}` : ''}`}
         </pre>
+        </details>
       </div>
     </div>
   )
