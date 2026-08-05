@@ -10077,160 +10077,158 @@ export default function FishingGame({
             }}
           >
             <DrawerHandle dragHandleProps={dailyDrawerDrag.handleProps} />
-            <div className="flex items-start justify-between mb-4" style={{ paddingTop: '0.75rem' }}>
+            <div className="flex items-start justify-between mb-3" style={{ paddingTop: '0.75rem' }}>
               <div>
                 <p className="font-karla font-700 uppercase tracking-[0.20em]"
                   style={{ fontSize: '0.6rem', color: '#c4a96a', marginBottom: 4 }}>Captain&rsquo;s Log</p>
-                <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8', lineHeight: 1.1, marginBottom: 3 }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8', lineHeight: 1.1, marginBottom: 5 }}>
                   Daily Challenges
                 </p>
-                <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(230,215,180,0.5)', fontStyle: 'italic', marginBottom: 4 }}>
-                  Three tasks the tide sets each dawn. Clear them before it turns.
-                </p>
+                {/* The italic subtitle used to sit here restating the title in
+                    prettier words. Four lines of chrome over a three item list
+                    is why the drawer read top-heavy, so the countdown now
+                    carries the only fact the header actually owes the player:
+                    how long is left. */}
                 <DailyResetCountdown />
               </div>
               <DrawerClose onClick={() => setDailyOpen(false)} />
             </div>
 
-            <div className="flex flex-col gap-2.5">
+            <div className="flex flex-col" style={{ gap: 8 }}>
               {dailyChallenges.map((challenge: DailyChallenge, i) => {
-                const progress = dailyProgress[i]
-                const claimed = dailyClaimed[i]
-                const done = progress >= challenge.target
+                const progress   = dailyProgress[i]
+                const claimed    = dailyClaimed[i]
+                const done       = progress >= challenge.target
                 const isClaiming = claimingDaily === i
-                const pct = Math.min(progress / challenge.target, 1)
-                // Difficulty palette on the WARM ramp — sand / gold / crimson
-                // (was blue/gold/red; blue was the one cold note in the drawer).
-                const accent    = i === 0 ? '#c9b37c' : i === 1 ? '#f0c040' : '#e0555a'
-                const accentRgb = i === 0 ? '201,179,124' : i === 1 ? '240,192,64' : '224,85,90'
-                const tier      = i === 0 ? 'Easy' : i === 1 ? 'Medium' : 'Hard'
-                // Three visual states on warm timber: in-progress (subtle),
-                // ready-to-claim (glow), claimed (banked green, badges-style).
-                const bg = claimed
-                  ? 'linear-gradient(90deg, rgba(123,191,123,0.14) 0%, rgba(123,191,123,0.04) 60%), #120d07'
-                  : done
-                    ? `linear-gradient(180deg, rgba(${accentRgb},0.20) 0%, rgba(${accentRgb},0.05) 100%), #161008`
-                    : `linear-gradient(180deg, rgba(${accentRgb},0.08) 0%, rgba(${accentRgb},0.02) 100%), #120d07`
-                const borderColor    = claimed ? 'rgba(123,191,123,0.28)' : done ? `rgba(${accentRgb},0.50)` : 'rgba(196,169,106,0.2)'
-                const borderTopColor = claimed ? 'rgba(123,191,123,0.4)' : done ? `rgba(${accentRgb},0.80)` : 'rgba(196,169,106,0.35)'
-                const glow           = done && !claimed ? `0 0 18px rgba(${accentRgb},0.28)` : 'none'
+                const pct        = Math.min(progress / challenge.target, 1)
+                const rank       = ['I', 'II', 'III'][i]
+                const tier       = ['Easy', 'Medium', 'Hard'][i]
+                // ONE accent for the whole drawer. This used to run three
+                // competing accents (sand / gold / crimson) at full card
+                // width, so nothing led and the hard row read as an error
+                // state. Difficulty now survives only in the rank numeral's
+                // tint, which is about a tenth of the surface area, and the
+                // reward figure does the rest of the telling.
+                const rankTint = i === 0 ? 'rgba(206,186,133,0.9)'
+                               : i === 1 ? 'rgba(240,192,64,0.95)'
+                               :           'rgba(226,133,96,0.95)'
 
                 return (
                   <div key={i} style={{
-                    background: bg,
-                    border: `1px solid ${borderColor}`,
-                    borderTop: `1px solid ${borderTopColor}`,
+                    position: 'relative', overflow: 'hidden',
                     borderRadius: 12,
-                    padding: '0.85rem 0.95rem',
-                    boxShadow: glow,
-                    transition: 'box-shadow 0.25s ease',
+                    // Solid base under the tint, never tint alone: this drawer
+                    // sits over the live fishing scene.
+                    background: claimed ? '#101408' : '#150f08',
+                    border: `1px solid ${claimed ? 'rgba(123,191,123,0.30)' : done ? 'rgba(240,192,64,0.42)' : 'rgba(196,169,106,0.18)'}`,
+                    borderTop: `1px solid ${claimed ? 'rgba(123,191,123,0.45)' : done ? 'rgba(240,192,64,0.66)' : 'rgba(196,169,106,0.30)'}`,
                   }}>
-                    {/* Top row — difficulty tag + reward */}
-                    <div className="flex items-center justify-between mb-2" style={{ gap: 10 }}>
-                      <div className="flex items-center" style={{ gap: 7 }}>
-                        <span className="font-karla font-800 uppercase"
-                          style={{
-                            fontSize: '0.58rem',
-                            color: claimed ? 'rgba(240,237,232,0.4)' : accent,
-                            letterSpacing: '0.18em',
-                          }}>
-                          {tier}
-                        </span>
-                        {claimed && (
-                          // Inked rubber stamp, matching the badges page — not a
-                          // text checkmark (no-emoji/glyph-icon rule).
+                    {/* PROGRESS IS THE CARD, not a bar tucked under it. The
+                        whole tile fills left to right as you work, which uses
+                        the width the old row left empty and means a finished
+                        challenge is legible from across the screen without
+                        needing a glow. Absolutely positioned, so animating
+                        its width reflows nothing around it. */}
+                    <div aria-hidden style={{
+                      position: 'absolute', top: 0, bottom: 0, left: 0,
+                      width: `${pct * 100}%`,
+                      background: claimed
+                        ? 'linear-gradient(90deg, rgba(123,191,123,0.20) 0%, rgba(123,191,123,0.07) 100%)'
+                        : 'linear-gradient(90deg, rgba(240,192,64,0.20) 0%, rgba(240,192,64,0.06) 100%)',
+                      borderRight: pct > 0 && pct < 1
+                        ? '1px solid rgba(240,192,64,0.5)'
+                        : 'none',
+                      transition: 'width 0.45s cubic-bezier(0.32,0.72,0,1)',
+                    }} />
+
+                    <div style={{
+                      position: 'relative',
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      padding: '0.7rem 0.75rem 0.7rem 0.85rem',
+                    }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="flex items-center" style={{ gap: 6, marginBottom: 3 }}>
+                          <span className="font-cinzel font-700" style={{
+                            fontSize: '0.68rem', lineHeight: 1, color: rankTint,
+                          }}>{rank}</span>
+                          <span className="font-karla font-800 uppercase" style={{
+                            fontSize: '0.55rem', letterSpacing: '0.16em',
+                            color: claimed ? 'rgba(240,237,232,0.35)' : 'rgba(230,215,180,0.5)',
+                          }}>{tier}</span>
+                        </div>
+                        {/* The task leads now. The reward used to be set at
+                            1.1rem in glowing gold while the thing you had to
+                            DO sat under it at 0.88, so the card announced its
+                            price before its point. */}
+                        <p className="font-karla font-600" style={{
+                          fontSize: '0.92rem', lineHeight: 1.25,
+                          color: claimed ? '#8f8d86' : '#f0ede8',
+                          marginBottom: 4,
+                        }}>
+                          {challenge.label}
+                        </p>
+                        <p className="font-karla font-700 tabular-nums" style={{
+                          fontSize: '0.68rem', lineHeight: 1,
+                          color: claimed ? '#6f7566' : done ? '#f0c040' : '#9a9488',
+                        }}>
+                          {done && !claimed
+                            ? 'Ready to claim'
+                            : `${progress.toLocaleString()} of ${challenge.target.toLocaleString()}`}
+                        </p>
+                      </div>
+
+                      {/* ONE SLOT, THREE STATES. The reward chip, the claim
+                          button and the claimed stamp all live in the same
+                          fixed 86px box, so finishing a challenge never
+                          changes the card's height and never shoves the rows
+                          below it down the drawer. The old layout mounted the
+                          button into flow and animated the reward's font-size,
+                          so the whole list jumped on every claim. */}
+                      <div style={{ width: 86, flexShrink: 0, display: 'flex', justifyContent: 'flex-end' }}>
+                        {claimed ? (
                           <span className="font-cinzel font-800 uppercase" style={{
                             display: 'inline-block', transform: 'rotate(-7deg)',
-                            padding: '0.14rem 0.4rem', borderRadius: 4,
+                            padding: '0.2rem 0.45rem', borderRadius: 4,
                             border: '2px solid #7bbf7b', color: '#7bbf7b', opacity: 0.9,
                             fontSize: '0.54rem', letterSpacing: '0.12em',
-                            boxShadow: 'inset 0 0 6px #7bbf7b22',
                           }}>
                             Claimed
                           </span>
+                        ) : done ? (
+                          <motion.button
+                            whileTap={{ scale: 0.94 }}
+                            transition={{ type: 'spring', stiffness: 620, damping: 26 }}
+                            onClick={() => { hapticTap(); handleClaimDaily(i as 0 | 1 | 2) }}
+                            disabled={isClaiming}
+                            className="font-karla font-800 uppercase"
+                            style={{
+                              width: '100%',
+                              fontSize: '0.68rem', letterSpacing: '0.08em',
+                              padding: '0.5rem 0.2rem', borderRadius: 9,
+                              background: 'rgba(240,192,64,0.18)',
+                              border: '1px solid rgba(240,192,64,0.62)',
+                              color: '#f4cd63',
+                              opacity: isClaiming ? 0.5 : 1,
+                              cursor: isClaiming ? 'default' : 'pointer',
+                              touchAction: 'manipulation',
+                            }}
+                          >
+                            {isClaiming ? 'Claiming' : 'Claim'}
+                          </motion.button>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'baseline', gap: 3 }}>
+                            <span className="font-cinzel font-700 tabular-nums" style={{
+                              fontSize: '1rem', lineHeight: 1, color: '#d9b45a',
+                            }}>
+                              {challenge.reward.toLocaleString()}
+                            </span>
+                            <span className="font-cinzel font-700" style={{
+                              fontSize: '0.68rem', lineHeight: 1, color: '#d9b45a',
+                            }}>&#10209;</span>
+                          </div>
                         )}
                       </div>
-                      <div style={{ textAlign: 'right', flexShrink: 0, display: 'flex', alignItems: 'baseline', gap: 3 }}>
-                        <span className="font-cinzel font-700" style={{
-                          fontSize: done && !claimed ? '1.1rem' : '0.9rem',
-                          color: claimed ? '#7a8090' : '#f0c040',
-                          textShadow: done && !claimed ? '0 0 12px rgba(240,192,64,0.4)' : 'none',
-                          lineHeight: 1,
-                          transition: 'font-size 0.2s ease',
-                        }}>
-                          +{challenge.reward.toLocaleString()}
-                        </span>
-                        <span className="font-cinzel font-700" style={{ fontSize: '0.7rem', color: claimed ? '#7a8090' : '#f0c040', lineHeight: 1 }}>⟡</span>
-                      </div>
                     </div>
-
-                    {/* Challenge label */}
-                    <p className="font-karla font-600"
-                      style={{
-                        fontSize: '0.88rem',
-                        color: claimed ? '#9a9890' : done ? '#f0ede8' : '#c8c4bc',
-                        lineHeight: 1.35,
-                        marginBottom: '0.55rem',
-                      }}>
-                      {challenge.label}
-                    </p>
-
-                    {/* Progress — recessed gauge channel with quarter ticks,
-                        same treatment as the badges page. */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: done && !claimed ? '0.7rem' : 0 }}>
-                      <div style={{
-                        position: 'relative', flex: 1, height: 6, background: 'rgba(0,0,0,0.38)',
-                        boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.5)',
-                        borderRadius: 3, overflow: 'hidden',
-                      }}>
-                        <motion.div
-                          animate={{ width: `${pct * 100}%` }}
-                          transition={{ duration: 0.4, ease: 'easeOut' }}
-                          style={{
-                            height: '100%', borderRadius: 3,
-                            background: claimed
-                              ? 'rgba(123,191,123,0.45)'
-                              : done
-                                ? accent
-                                : `linear-gradient(90deg, ${accent}88, ${accent})`,
-                            boxShadow: done && !claimed ? `0 0 8px ${accent}88` : 'none',
-                          }}
-                        />
-                        {[25, 50, 75].map(t => (
-                          <span key={t} aria-hidden style={{ position: 'absolute', left: `${t}%`, top: 0, bottom: 0, width: 1, background: 'rgba(10,8,4,0.55)' }} />
-                        ))}
-                      </div>
-                      <span className="font-karla font-700 tabular-nums" style={{
-                        fontSize: '0.66rem',
-                        color: claimed ? '#7a8090' : done ? accent : '#9a9488',
-                        whiteSpace: 'nowrap',
-                        flexShrink: 0,
-                      }}>
-                        {progress.toLocaleString()} / {challenge.target.toLocaleString()}
-                      </span>
-                    </div>
-
-                    {/* Claim button — only shows when done & unclaimed */}
-                    {done && !claimed && (
-                      <motion.button
-                        initial={{ opacity: 0, y: -4 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.2 }}
-                        onClick={() => handleClaimDaily(i as 0 | 1 | 2)}
-                        disabled={isClaiming}
-                        className="font-karla font-700 uppercase tracking-[0.1em] w-full"
-                        style={{
-                          fontSize: '0.78rem', padding: '0.6rem', borderRadius: 10,
-                          background: 'rgba(240,192,64,0.16)',
-                          border: '1px solid rgba(240,192,64,0.5)',
-                          color: '#f0c040',
-                          opacity: isClaiming ? 0.5 : 1,
-                          cursor: isClaiming ? 'default' : 'pointer',
-                        }}
-                      >
-                        {isClaiming ? 'Claiming…' : `Claim ${challenge.reward.toLocaleString()} ⟡`}
-                      </motion.button>
-                    )}
                   </div>
                 )
               })}
@@ -10279,7 +10277,26 @@ export default function FishingGame({
                             : 'Claim all three and the gems are yours.'}
                         </p>
                       </div>
-                      <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {/* Same fixed 86px slot as the reward chips above, so the
+                          gem figure lands on the identical right margin and
+                          the drawer keeps one clean vertical edge. */}
+                      <div style={{ width: 86, flexShrink: 0, display: 'flex', justifyContent: 'flex-end', alignItems: 'baseline', gap: 3 }}>
+                        <span className="font-cinzel font-700 tabular-nums" style={{
+                          fontSize: '1rem', lineHeight: 1,
+                          color: swept ? GEM_COLOR : 'rgba(167,139,250,0.6)',
+                        }}>
+                          +{DAILY_SWEEP_GEMS}
+                        </span>
+                        <span className="font-cinzel font-700" style={{
+                          fontSize: '0.68rem', lineHeight: 1,
+                          color: swept ? GEM_COLOR : 'rgba(167,139,250,0.6)',
+                        }}>
+                          {GEM_GLYPH}
+                        </span>
+                      </div>
+                    </div>
+                    {!swept && (
+                      <div className="flex items-center" style={{ gap: 7, marginTop: 7 }}>
                         {/* Three pips: which of the day's claims are in. */}
                         <div style={{ display: 'flex', gap: 4 }}>
                           {[0, 1, 2].map(i => (
@@ -10290,28 +10307,12 @@ export default function FishingGame({
                             }} />
                           ))}
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 3 }}>
-                          <span className="font-cinzel font-700" style={{
-                            fontSize: '0.95rem', lineHeight: 1,
-                            color: swept ? GEM_COLOR : 'rgba(167,139,250,0.6)',
-                          }}>
-                            +{DAILY_SWEEP_GEMS}
-                          </span>
-                          <span className="font-cinzel font-700" style={{
-                            fontSize: '0.7rem', lineHeight: 1,
-                            color: swept ? GEM_COLOR : 'rgba(167,139,250,0.6)',
-                          }}>
-                            {GEM_GLYPH}
-                          </span>
-                        </div>
+                        <p className="font-karla font-700 tabular-nums" style={{
+                          fontSize: '0.66rem', color: '#8d8a96', lineHeight: 1,
+                        }}>
+                          {claimedCount} of 3 claimed
+                        </p>
                       </div>
-                    </div>
-                    {!swept && (
-                      <p className="font-karla tabular-nums" style={{
-                        fontSize: '0.66rem', color: '#8d8a96', marginTop: 6,
-                      }}>
-                        {claimedCount} of 3 claimed
-                      </p>
                     )}
                   </motion.div>
                 )
