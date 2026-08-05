@@ -339,6 +339,7 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
     net_positive:   Number(p.trawls_collected ?? 0) >= 500,
     // Master
     crack_shot:     Number(p.total_perfects ?? 0) >= 2500,
+    wreck_diver:    Number(p.fishing_crates_opened ?? 0) >= 500,
     salvage_rights: Number(p.fishing_crates_opened ?? 0) >= 1000,
     high_water_mark: PRESTIGE_ZONES.some(z => (prestige[z] ?? 0) >= 5),
     fish_baron:     Number(p.fish_sold_doubloons ?? 0) >= 1_000_000,
