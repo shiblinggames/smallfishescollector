@@ -84,6 +84,22 @@ export default async function HomePage() {
           <p className="font-cinzel italic" style={{ fontSize: '1.2rem', color: '#f0c040', textShadow: '0 0 24px rgba(240,192,64,0.5)' }}>
             Seas the Booty.
           </p>
+
+          {/* THE BUTTON, ABOVE THE FOLD. It used to sit at the very bottom,
+              behind two screenshots and a paragraph, which asked a visitor to
+              read the pitch before it would let them play. Most people have
+              decided by the time they have read the title. The copy below is for
+              the ones who want it, not a toll gate for the ones who do not.
+              Wide and centred so it is the obvious thing on the screen. */}
+          <Link href="/login" className="btn-gold" style={{
+            display: 'block', maxWidth: 300, margin: '2rem auto 0',
+            padding: '1rem 2rem', fontSize: '1rem', letterSpacing: '0.1em',
+          }}>
+            Play free
+          </Link>
+          <p className="font-karla" style={{ fontSize: '0.74rem', color: '#8fa3b5', marginTop: 12 }}>
+            In your browser. No download, no cost.
+          </p>
         </div>
 
         {/* ── THE SHOWCASE. A real screenshot, at phone proportions.
@@ -133,13 +149,18 @@ export default async function HomePage() {
             }} />
         </div>
 
-        {/* ── CTA ── */}
+        {/* ── The second ask, for whoever read to the bottom. Same destination,
+             different words: repeating "Play free" verbatim reads like a
+             template rather than an invitation. ── */}
         <div className="landing-rise" style={{ animationDelay: '0.48s', marginTop: '3.2rem', textAlign: 'center' }}>
-          <Link href="/login" className="btn-gold" style={{ padding: '0.9rem 2.6rem', fontSize: '0.92rem' }}>
+          <Link href="/login" className="btn-gold" style={{
+            display: 'block', maxWidth: 300, margin: '0 auto',
+            padding: '1rem 2rem', fontSize: '1rem', letterSpacing: '0.1em',
+          }}>
             Start fishing
           </Link>
           <p className="font-karla mt-4" style={{ fontSize: '0.74rem', color: '#7d90a2' }}>
-            Free, in your browser. Open beta, no download.
+            Open beta. Free to play.
           </p>
         </div>
 
