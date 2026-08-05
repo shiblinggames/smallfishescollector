@@ -193,6 +193,7 @@ export type { VoyageEventType, VoyageEventOutcome, VoyageRoute, RouteConfig, Voy
 export { ROUTE_CONFIGS, effectiveCrewLossChance } from './voyageRoutes'
 import type { VoyageRoute, VoyageEvent, VoyageEventType } from './voyageRoutes'
 import { ROUTE_CONFIGS, effectiveCrewLossChance } from './voyageRoutes'
+import { rollVoyageLoot } from './voyageRoll'
 
 export interface VoyageResult {
   events: VoyageEvent[]
@@ -274,241 +275,83 @@ export function voyageDodgeChance(dodge: number): number {
   return Math.min(1, dodge / 28)
 }
 
-export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: VoyageRoute = 'open', noCrewRisk = false): VoyageResult {
+export function generateVoyageEvents(
+  crew: CrewCard[], shipTier: number, route: VoyageRoute = 'open', noCrewRisk = false,
+): VoyageResult {
   const rc = ROUTE_CONFIGS[route]
-  const stats = computeTotalCrewStats(crew)
-  const { power, dodge, fortune } = stats
-  const crewCount = crew.length
+  const { power, fortune } = computeTotalCrewStats(crew)
   const captain = crew[0]
-  const fortuneScale = voyageFortuneScale(fortune)
-  const powerScale   = voyagePowerScale(power)
-  const payout = (min: number, max: number, usePower = false) =>
-    Math.round(rand(min, max) * fortuneScale * (usePower ? powerScale : 1) * rc.payoutScale)
 
-  const fill = (narrative: string, extra?: Record<string, string>) => {
-    let s = narrative.replace('{captain}', captain.name)
-    if (extra) for (const [k, v] of Object.entries(extra)) s = s.replace(`{${k}}`, v)
-    return s
-  }
+  // ── ONE roll ──────────────────────────────────────────────────────────────
+  // Everything the voyage pays comes out of here. See lib/voyageRoll.ts for why
+  // this replaced six independent event rolls.
+  const loot = rollVoyageLoot(route, power, fortune)
 
-  // Stat rolls — power capped at 80% max so encounters are never guaranteed wins
-  const rollFortune  = () => Math.random() < voyageDiscoveryChance(fortune)
-  const rollPower    = () => Math.random() < voyageEncounterWinChance(power)
-  const rollDodge    = () => Math.random() < voyageDodgeChance(dodge)
-  const rollWeather  = () => Math.random() < 0.30 + shipTier * 0.10  // tier 0=30%, tier 7=100%
-
-  const events: VoyageEvent[] = []
+  // ── Crew loss ─────────────────────────────────────────────────────────────
+  // Already a single flat per-voyage roll before this rework, mitigated by
+  // fortune down to zero at the route's Nav gate. Unchanged, and deliberately
+  // INDEPENDENT of the outcome: a triumph that costs you a hand is a story, and
+  // tying loss to the outcome would make Power a second safety stat on top of
+  // Fortune.
   const crewLost: number[] = []
-
-  // ── Crew loss is now a single flat per-voyage roll, not per-event ──
-  // Pre-roll whether the voyage takes a casualty (route base, scaled down
-  // by total crew fortune — enough fortune zeroes the risk entirely; see
-  // effectiveCrewLossChance). If the roll succeeds, pick a victim from the
-  // available non-captain crew; the casualty narrative attaches to the
-  // first failing encounter or danger event we generate. If the voyage
-  // is clean enough that no fail event ever fires, we append a forced
-  // casualty event at the end so the planned loss still lands.
-  // Safe Passage (Locker Upgrade) zeroes the risk outright — no victim is ever
-  // picked, so no casualty event is generated and the whole crew comes home.
-  const lossEligibleCrew = crew.slice(1)
-  const lossChance = effectiveCrewLossChance(route, fortune)
-  const lossVictim = !noCrewRisk && lossEligibleCrew.length > 0 && Math.random() < lossChance
-    ? pick(lossEligibleCrew)
-    : null
-  let lossApplied = false
-
-  // Route-specific event sequence
-  const sequence: VoyageEventType[] =
-    route === 'coastal'
-      ? ['peaceful', 'discovery', 'discovery', 'weather', 'peaceful']
-      : route === 'deep'
-      ? ['discovery', 'encounter', 'danger', 'discovery', 'encounter', 'danger', 'weather', 'discovery', 'peaceful']
-      : route === 'triangle'
-      ? ['encounter', 'danger', 'discovery', 'encounter', 'danger', 'weather', 'encounter', 'danger', 'discovery', 'discovery']
-      : route === 'shroud'
-      // Shrouded Reach — longer + heavier than the Triangle. More
-      // discoveries (loot density) and more dangers (real attrition).
-      ? ['danger', 'discovery', 'encounter', 'danger', 'discovery', 'encounter', 'weather', 'danger', 'discovery', 'encounter', 'danger', 'discovery']
-      : ['peaceful', 'discovery', 'encounter', 'discovery', 'peaceful', 'discovery', 'weather', 'danger']
-
-  // Light shuffle — swap adjacent pairs randomly
-  for (let i = sequence.length - 1; i > 1; i--) {
-    const j = Math.floor(Math.random() * i)
-    ;[sequence[i], sequence[j]] = [sequence[j], sequence[i]]
-  }
-
-  for (const type of sequence) {
-    let event: VoyageEvent
-
-    switch (type) {
-      case 'discovery': {
-        const success = rollFortune()
-        const gemDrop = success && Math.random() * 55 < fortune ? Math.round(rand(1, 3) * rc.gemScale) : 0
-        const baitDrop = rollLureDrop(route)
-        const template = pick(success ? DISCOVERY_SUCCESS : DISCOVERY_FAIL)
-        const discoveryNarrative = fill(template.narrative)
-        const captainDiscoveryTrait = success && Math.random() < 0.60 ? getCrewTrait(captain) : null
-        event = {
-          type, outcome: success ? 'success' : 'neutral',
-          title: template.title,
-          narrative: captainDiscoveryTrait ? `${discoveryNarrative}\n\n${captainDiscoveryTrait}` : discoveryNarrative,
-          doubloonDelta: success ? payout(50, 140) : 0,
-          gemDelta: gemDrop,
-          crewVariantLost: null,
-          baitDrop,
-        }
-        break
-      }
-
-      case 'encounter': {
-        const win = rollPower()
-        if (win) {
-          const crush = Math.random() < Math.min(0.40, power / 100)
-          const gemDrop = crush
-            ? Math.round(rand(2, 5) * rc.gemScale)
-            : (Math.random() * 55 < power ? Math.round(rand(1, 3) * rc.gemScale) : 0)
-          const baitDrop = rollLureDrop(route)
-          const template = pick(crush ? ENCOUNTER_CRUSH : ENCOUNTER_WIN)
-          const encounterNarrative = fill(template.narrative)
-          const captainEncounterTrait = crush
-            ? (Math.random() < 0.55 ? getCrewTrait(captain) : null)
-            : (Math.random() < 0.30 ? getCrewTrait(captain) : null)
-          event = {
-            type, outcome: 'success',
-            title: template.title,
-            narrative: captainEncounterTrait ? `${encounterNarrative}\n\n${captainEncounterTrait}` : encounterNarrative,
-            doubloonDelta: crush ? payout(80, 160, true) : payout(20, 55, true),
-            gemDelta: gemDrop,
-            crewVariantLost: null,
-            baitDrop,
-          }
-        } else if (lossVictim && !lossApplied) {
-          // Pre-rolled voyage casualty attaches to the first failing
-          // encounter we hit. Single-pass: mark applied so later fail
-          // events fall through to the standard no-casualty narrative.
-          const template = pick(ENCOUNTER_CREW_LOSS)
-          const baseNarrative = fill(template.narrative, { name: lossVictim.name })
-          const victimTrait = getCrewTrait(lossVictim)
-          const narrative = victimTrait ? `${baseNarrative}\n\n${victimTrait}` : baseNarrative
-          crewLost.push(lossVictim.variantId)
-          lossApplied = true
-          event = {
-            type, outcome: 'failure',
-            title: template.title, narrative,
-            doubloonDelta: 0, gemDelta: 0, crewVariantLost: lossVictim.variantId, baitDrop: null,
-          }
-        } else {
-          const template = pick(ENCOUNTER_LOSS)
-          event = {
-            type, outcome: 'failure',
-            title: template.title, narrative: fill(template.narrative),
-            doubloonDelta: 0, gemDelta: 0, crewVariantLost: null,
-            // Salvage from the retreat — keeps per-voyage lure rates
-            // predictable across stat tiers (only crew-loss branch
-            // suppresses the drop, since a positive side-find there
-            // reads as tone-deaf).
-            baitDrop: rollLureDrop(route),
-          }
-        }
-        break
-      }
-
-      case 'danger': {
-        const safe = rollDodge()
-        if (safe) {
-          const template = pick(DANGER_SUCCESS)
-          event = {
-            type, outcome: 'neutral',
-            title: template.title, narrative: template.narrative,
-            doubloonDelta: 0, gemDelta: 0, crewVariantLost: null, baitDrop: null,
-          }
-        } else if (lossVictim && !lossApplied) {
-          const template = pick(DANGER_CREW_LOSS)
-          const baseNarrative = fill(template.narrative, { name: lossVictim.name })
-          const victimTrait = getCrewTrait(lossVictim)
-          const narrative = victimTrait ? `${baseNarrative}\n\n${victimTrait}` : baseNarrative
-          crewLost.push(lossVictim.variantId)
-          lossApplied = true
-          event = {
-            type, outcome: 'failure',
-            title: template.title, narrative,
-            doubloonDelta: 0, gemDelta: 0, crewVariantLost: lossVictim.variantId, baitDrop: null,
-          }
-        } else {
-          const template = pick(DANGER_SETBACK)
-          event = {
-            type, outcome: 'failure',
-            title: template.title, narrative: template.narrative,
-            doubloonDelta: 0, gemDelta: 0, crewVariantLost: null, baitDrop: null,
-          }
-        }
-        break
-      }
-
-      case 'weather': {
-        const safe = rollWeather()
-        const template = pick(safe ? WEATHER_SUCCESS : WEATHER_FAIL)
-        event = {
-          type, outcome: safe ? (Math.random() < 0.35 ? 'success' : 'neutral') : 'neutral',
-          title: template.title, narrative: template.narrative,
-          doubloonDelta: safe && Math.random() < 0.35 ? payout(20, 50) : 0,
-          gemDelta: 0, crewVariantLost: null, baitDrop: null,
-        }
-        break
-      }
-
-      case 'peaceful':
-      default: {
-        const pool = crewCount === 1 ? PEACEFUL_SOLO : PEACEFUL_CREW
-        const template = pick(pool)
-        const peacefulNarrative = fill(template.narrative)
-        const captainPeacefulTrait = Math.random() < 0.45 ? getCrewTrait(captain) : null
-        event = {
-          type, outcome: 'neutral',
-          title: template.title,
-          narrative: captainPeacefulTrait ? `${peacefulNarrative}\n\n${captainPeacefulTrait}` : peacefulNarrative,
-          doubloonDelta: 0, gemDelta: 0, crewVariantLost: null, baitDrop: null,
-        }
-        break
-      }
+  if (!noCrewRisk && crew.length > 1) {
+    const chance = effectiveCrewLossChance(route, fortune)
+    if (Math.random() < chance) {
+      const victim = crew[1 + Math.floor(Math.random() * (crew.length - 1))]
+      if (victim?.variantId != null) crewLost.push(victim.variantId)
     }
-
-    events.push(event)
   }
 
-  // Forced casualty: if the voyage pre-rolled a loss but no failing
-  // encounter / danger event ever fired (high-stat crews can dodge or
-  // win every roll), append a final danger-style casualty event so the
-  // planned loss still lands — "stats can mitigate but never fully
-  // remove crew loss".
-  if (lossVictim && !lossApplied) {
-    const template = pick(DANGER_CREW_LOSS)
-    const baseNarrative = fill(template.narrative, { name: lossVictim.name })
-    const victimTrait = getCrewTrait(lossVictim)
-    const narrative = victimTrait ? `${baseNarrative}\n\n${victimTrait}` : baseNarrative
-    crewLost.push(lossVictim.variantId)
-    events.push({
-      type: 'danger', outcome: 'failure',
-      title: template.title, narrative,
-      doubloonDelta: 0, gemDelta: 0, crewVariantLost: lossVictim.variantId, baitDrop: null,
-    })
+  // {captain} is whoever leads the party; {name} is the hand the sea took, and
+  // only the crew-loss pools use it. Both are filled here rather than at the
+  // template, because the lost hand is not known until the roll above.
+  const lostName = crew.find(c => c.variantId === crewLost[0])?.name
+  // Global: String.replace with a string pattern swaps only the FIRST match, and
+  // a handful of templates name the captain twice.
+  const fill = (t: string) => t
+    .replace(/\{captain\}/g, captain?.name ?? 'The captain')
+    .replace(/\{name\}/g, lostName ?? 'One of the crew')
+
+  // ── The one event ─────────────────────────────────────────────────────────
+  // Drawn from the same written pools as before, chosen to match how the
+  // voyage actually went, so the story and the payout never contradict.
+  const lost = crewLost.length > 0
+  const pool =
+    lost                      ? (Math.random() < 0.5 ? ENCOUNTER_CREW_LOSS : DANGER_CREW_LOSS)
+    : loot.outcome === 'triumph' ? (Math.random() < 0.5 ? DISCOVERY_SUCCESS : ENCOUNTER_CRUSH)
+    : loot.outcome === 'setback' ? (Math.random() < 0.5 ? DANGER_SETBACK : WEATHER_FAIL)
+    :                              (crew.length > 1 ? PEACEFUL_CREW : PEACEFUL_SOLO)
+
+  const template = pool[Math.floor(Math.random() * pool.length)]
+  const type: VoyageEventType =
+    lost ? 'danger' : loot.outcome === 'triumph' ? 'discovery' : loot.outcome === 'setback' ? 'danger' : 'peaceful'
+
+  const baitDrop = rollLureDrop(route)
+
+  const event: VoyageEvent = {
+    type,
+    title: template.title,
+    narrative: fill(template.narrative),
+    outcome: lost ? 'failure' : loot.outcome === 'setback' ? 'failure' : loot.outcome === 'triumph' ? 'success' : 'neutral',
+    // The whole haul rides on the single event, so the panel and the history
+    // can keep reading doubloonDelta/gemDelta without knowing anything changed.
+    doubloonDelta: loot.doubloons,
+    gemDelta: loot.gems,
+    crewVariantLost: crewLost[0] ?? null,
+    baitDrop,
   }
 
-  const totalDoubloons = rc.baseDoubloons + events.reduce((sum, e) => sum + e.doubloonDelta, 0)
-  const totalGems = events.reduce((sum, e) => sum + e.gemDelta, 0)
-  const baitDropMap = new Map<string, number>()
-  for (const e of events) {
-    if (e.baitDrop) baitDropMap.set(e.baitDrop, (baitDropMap.get(e.baitDrop) ?? 0) + 1)
+  return {
+    events: [event],
+    totalDoubloons: loot.doubloons,
+    totalGems: loot.gems,
+    crewLost,
+    baitDrops: baitDrop ? [{ type: baitDrop, qty: 1 }] : [],
+    tideTurnerDrop: false,
+    phantomHookDrop: false,
+    perfectedSigilDrop: false,
   }
-
-  const baitDrops = Array.from(baitDropMap.entries()).map(([type, qty]) => ({ type, qty }))
-  const tideTurnerDrop = route === 'deep' && Math.random() < 0.02
-  const phantomHookDrop = route === 'triangle' && Math.random() < 0.02
-  const perfectedSigilDrop = route === 'shroud' && Math.random() < 0.02
-  return { events, totalDoubloons, totalGems, crewLost, baitDrops, tideTurnerDrop, phantomHookDrop, perfectedSigilDrop }
 }
-
-// ── Event text pools ──────────────────────────────────────────────────────────
 
 const DISCOVERY_SUCCESS = [
   { title: 'Sunken Wreck',       narrative: "{captain} spotted the mast tip above the waterline at first light. The hull was still sealed. Bars of silver gleamed beneath the salt water." },

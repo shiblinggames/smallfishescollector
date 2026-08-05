@@ -858,19 +858,24 @@ export default function DailyVoyagePanel({
     const elapsed = voyageDurationMs - msRemaining
     const isComplete = msRemaining === 0
 
-    const visibleEvents = events.filter((_, i) =>
-      elapsed >= ((i + 1) / events.length) * voyageDurationMs
-    )
+    // A voyage is ONE event now, so this is no longer a drip-feed. The event
+    // surfaces at 60% elapsed as a hook for anyone checking mid-trip; the loot
+    // stays hidden until the crew is actually home. Revealing it at 100% would
+    // mean nothing to look at for the entire voyage, and revealing it at 0%
+    // would give the whole trip away the moment you set sail.
+    const TEASE_AT = 0.6
+    const visibleEvents = events.filter(() => elapsed >= TEASE_AT * voyageDurationMs)
 
-    const nextIdx = visibleEvents.length
-    const msToNext = !isComplete && nextIdx < events.length
-      ? Math.max(0, ((nextIdx + 1) / events.length) * voyageDurationMs - elapsed)
+    const msToNext = !isComplete && visibleEvents.length === 0
+      ? Math.max(0, TEASE_AT * voyageDurationMs - elapsed)
       : null
 
     const awayCrew = activeVoyage.crew_variant_ids
       .map(id => byId.get(id)).filter(Boolean) as CrewMember[]
 
-    const lootSoFar = visibleEvents.reduce((sum, e) => sum + (e.doubloonDelta ?? 0), 0)
+    // The haul is a single roll settled on return, so there is no honest
+    // "so far" to show mid-voyage. It reads as 0 until the crew is home.
+    const lootSoFar = isComplete ? visibleEvents.reduce((sum, e) => sum + (e.doubloonDelta ?? 0), 0) : 0
 
     const routeCfg = activeVoyage.route ? ROUTE_CONFIGS[activeVoyage.route as VoyageRoute] : null
 

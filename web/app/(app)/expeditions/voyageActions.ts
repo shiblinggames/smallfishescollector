@@ -10,6 +10,7 @@ import { generateVoyageEvents, type VoyageEvent, type VoyageRoute } from '@/lib/
 import { ROUTE_CONFIGS, COMING_SOON_ROUTES } from '@/lib/voyageRoutes'
 import { generateAndSaveVoyageLog, type VoyageCrewMember } from '@/lib/captains-log'
 import type { CrewCard } from '@/lib/expeditions'
+import { ROUTE_PAYOUTS } from '@/lib/voyageRoll'
 import { voyageXP, getLevelFromXP, VOYAGE_CREW_XP_MULT } from '@/lib/expeditionLevel'
 import { loadDeployedParty } from '@/lib/crewData'
 import { resolveDeployedCrew, slotMult} from '@/lib/crewResolve'
@@ -260,7 +261,17 @@ export async function revealVoyageResults(voyageId: number): Promise<
   const newDoubloons = (profile.doubloons ?? 0) + voyage.total_doubloons
   const newGems = (profile.gems ?? 0) + voyage.total_gems
 
-  const baseXp = voyageXP(voyage.route, voyage.crew_variant_ids.length, voyage.events as { type: string; outcome: string; crewVariantLost?: number | null }[])
+  // Nav XP comes from the ROUTE and how the voyage went, not from summing an
+  // event list. The old voyageXP() added up six events' worth; with one event
+  // it would have quietly paid about a sixth. ROUTE_PAYOUTS carries the intended
+  // per-voyage figure directly, and the single event's outcome scales it.
+  const voyageEvent = (voyage.events as { outcome?: string }[])?.[0]
+  const outcomeMult = voyageEvent?.outcome === 'success' ? 1.35
+                    : voyageEvent?.outcome === 'failure' ? 0.6
+                    : 1
+  const baseXp = Math.round(
+    (ROUTE_PAYOUTS[voyage.route as VoyageRoute]?.xp ?? 650) * outcomeMult,
+  )
   const xpEarned = Math.round(baseXp * (1 + ((voyage.xp_bonus_pct as number | null) ?? 0) / 100))
   const oldExpeditionXP = profile.expedition_xp ?? 0
   const newExpeditionXP = oldExpeditionXP + xpEarned
