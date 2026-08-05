@@ -2232,3 +2232,19 @@ body.hardcore-gauntlet::after {
   .trawl-bubble, .trawl-bob, .trawl-dot { animation: none; }
   .trawl-bubble { opacity: 0; }
 }
+
+/* ── Landing page: a staged arrival ──────────────────────────────────────────
+   Kept as CSS rather than framer so app/page.tsx stays a SERVER component (it
+   does the logged-in redirect before rendering). Transform and opacity only,
+   one pass, no loop, so it costs nothing after the first ~1.2s. */
+@keyframes landingRise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.landing-rise {
+  opacity: 0;
+  animation: landingRise 0.7s cubic-bezier(0.16, 0.9, 0.28, 1) forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing-rise { animation: none; opacity: 1; }
+}
