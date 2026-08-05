@@ -9329,7 +9329,6 @@ export default function FishingGame({
               }}
               lineTier={lineTier}
               characterColor={localCharacterColor}
-              charSrc={charSrc}
               equippedBadges={localEquippedBadges}
               unlockedCharacterColors={localUnlockedColors}
               unlockedBadges={unlockedBadges}

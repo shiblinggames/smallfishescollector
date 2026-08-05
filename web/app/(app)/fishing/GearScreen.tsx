@@ -24,13 +24,10 @@ import { BADGE_MAP, BADGES } from '@/lib/badges'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { SPECIAL_ITEMS } from '@/lib/specialItems'
 import { PETS, getPet, getPetOverlay, PET_SPECIES_ORDER, PET_SPECIES_LABEL } from '@/lib/pets'
+import FisherPose from '@/components/FisherPose'
 
 type BaitItem = { bait_type: string; quantity: number }
-type SlotKey = 'rod' | 'reel' | 'hook' | 'line' | 'special' | 'special2' | 'appearance' | 'badge'
-// Sub-tab inside the unified Appearance picker. Skin / Hat / Boat ship
-// today; Pet is reserved here so the tab strip's render list is the
-// only place to touch when the pet system lands.
-type AppearanceTab = 'skin' | 'hat' | 'boat' | 'pet'
+type SlotKey = 'rod' | 'reel' | 'hook' | 'line' | 'special' | 'special2' | 'badge' | 'skin' | 'hat' | 'boat' | 'pet'
 
 function ShopLink({ href, label, sub, color, onClick }: { href: string; label: string; sub: string; color: string; onClick: () => void }) {
   return (
@@ -582,151 +579,54 @@ function GearSlot({
   )
 }
 
-// ── Unified Appearance slot ───────────────────────────────────────────
-// Replaces the 3 separate Hat / Skin / Boat tiles in the gear grid
-// with one consolidated tile that opens the tabbed Appearance picker.
-// The 2×2 mini-grid keeps the equipped pieces visible at a glance so
-// the player doesn't lose the "what's on me right now" read that the
-// individual tiles used to give. Pet thumbnail slot is reserved (4th
-// position) for when that system lands — drop it in there.
-function AppearanceSlot({
-  characterColor, charSrc, equippedHat, equippedBoat, equippedPet,
-  pulseKey, onClick,
+// ── The fisher, as they actually look ────────────────────────────────────
+// A full uncropped composite of everything equipped, using the SAME layered
+// stack and coordinates as the live fishing scene and the zone selector.
+//
+// This replaces a tile that squeezed the same composite into a small card with
+// overflow:hidden, deliberately pushing the character box left so the rod's
+// fishing line got clipped off. It read as a cropped, slightly broken version
+// of the boat rather than a preview of your loadout, which is the whole job.
+//
+// Not a button. The pickers are the four rows underneath it now, so the
+// preview has nothing to open and shouldn't invite a tap that goes nowhere.
+function FisherPreview({
+  characterColor, equippedHat, equippedBoat, equippedPet, rodTier, reelTier, hookTier,
 }: {
   characterColor: string
-  charSrc: { rest: string } | Record<string, string>
   equippedHat: string | null
   equippedBoat: string | null
   equippedPet: string | null
-  pulseKey?: number
-  onClick: () => void
+  rodTier: number
+  reelTier: number
+  hookTier: number
 }) {
-  const accent = '#a78bfa'
-  const activeHat  = equippedHat  ? HATS.find(h => h.id === equippedHat)   : null
-  const activeBoat = equippedBoat ? BOATS.find(b => b.id === equippedBoat) : null
-  const activePet  = equippedPet  ? getPet(equippedPet)                    : null
-  const characterName = CHARACTER_COLORS.find(c => c.id === characterColor)?.name ?? characterColor
   return (
-    <motion.button
-      onClick={onClick}
-      animate={pulseKey ? {
-        boxShadow: [`0 0 0 0 ${accent}cc`, `0 0 0 16px ${accent}00`, `0 0 0 0 ${accent}00`],
-        scale: [1, 1.05, 1],
-      } : undefined}
-      transition={pulseKey ? { duration: 0.7, times: [0, 0.45, 1], ease: 'easeOut' } : undefined}
-      key={pulseKey ?? 'static'}
-      style={{
-        position: 'relative',
-        width: '100%', height: '100%',
-        border: `1px solid ${accent}40`,
-        background: 'rgba(255,255,255,0.04)',
-        borderRadius: 20,
-        padding: '0.6rem 0.5rem 0.55rem',
-        cursor: 'pointer',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-        transition: 'border-color 0.15s, background 0.15s',
-        touchAction: 'manipulation',
-      }}
-    >
-      {/* Composite preview — same layered stack the fishing game uses
-          (character → hat → boat → pet). Fills the slot card so the
-          composite isn't dwarfed by empty card space, and the character
-          box is pushed LEFT of the slot frame so the rod's fishing
-          line (drawn into the character sprite, hanging off the left)
-          gets cropped by the slot's overflow:hidden. The character +
-          boat + hat + pet stay centered in the visible area. */}
-      <div style={{
-        position: 'relative', width: '100%', flex: 1, minHeight: 0,
-        overflow: 'hidden',
-      }}>
-        <div style={{
-          position: 'absolute',
-          // Zoomed in (width 138%) and lifted high (translateY(-64%)) so the
-          // composite reads big and sits up top, while the boat — which hangs
-          // off the BOTTOM of the character image (boat rest top ~77%) — still
-          // lands in frame rather than clipping. The character's empty top
-          // (rod tip / sky) is what gets cropped above instead. Left tuned to
-          // keep the rod line clipped off the slot's left edge, the body
-          // centered (~30-81% of slot), and the pet's right edge in-frame.
-          top: '50%', left: '-31%', width: '138%',
-          transform: 'translateY(-64%)',
-        }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={charSrc.rest} alt="" loading="lazy" decoding="async" style={{ width: '100%', display: 'block' }} />
-          {/* Hat — uses the live hat def's rest-frame position so it
-              lands exactly where it does in-game. */}
-          {activeHat && (() => {
-            const hp = activeHat.positions.rest
-            return (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={activeHat.restImageUrl} alt="" loading="lazy" decoding="async" style={{
-                position: 'absolute', top: `${hp.top}%`, left: `${hp.left}%`,
-                width: `${hp.width}%`,
-                transform: `rotate(${hp.rotate}deg)`,
-                transformOrigin: 'center center',
-                pointerEvents: 'none',
-              }} />
-            )
-          })()}
-          {/* Default hat sprite as fallback when no hat equipped */}
-          {!activeHat && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src="/defaulthat_rest.png" alt="" loading="lazy" decoding="async" style={{
-              position: 'absolute', top: '53%', left: '57.1%', width: '21.8%',
-              pointerEvents: 'none',
-            }} />
-          )}
-          {/* Boat — same rest-frame positions the fishing game uses. */}
-          {(() => {
-            const boat = activeBoat ?? BOATS[0]
-            if (!boat) return null
-            const bp = boat.positions.rest
-            return (
-              <div style={{
-                position: 'absolute', top: `${bp.top}%`, left: `${bp.left}%`,
-                width: `${bp.width}%`,
-                transform: `rotate(${bp.rotate}deg)`,
-                transformOrigin: 'center center',
-                pointerEvents: 'none',
-              }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={boat.restImageUrl}
-                  alt=""
-                  loading="lazy"
-                  decoding="async"
-                  className={boatGlowClass(boat)}
-                  style={{
-                    width: '100%', display: 'block',
-                    filter: boat.glowType === 'ash' ? BOAT_ASH_DARKEN : undefined,
-                  }}
-                />
-              </div>
-            )
-          })()}
-          {/* Pet — last child so it sits in the foreground over every
-              other layer, exactly like the in-game render. */}
-          {activePet && (() => {
-            const pp = getPetOverlay(activePet.species, 'rest')
-            return (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={activePet.restImageUrl} alt="" loading="lazy" decoding="async" style={{
-                position: 'absolute', top: `${pp.top}%`, left: `${pp.left}%`,
-                width: `${pp.width}%`,
-                transform: `rotate(${pp.rotate}deg)`,
-                transformOrigin: 'center center',
-                pointerEvents: 'none',
-                filter: `drop-shadow(0 0 4px ${activePet.accentColor}55)`,
-              }} />
-            )
-          })()}
-        </div>
+    <div style={{
+      position: 'relative', width: '100%', height: '100%',
+      minHeight: 152,
+      borderRadius: 20,
+      border: '1px solid rgba(167,139,250,0.22)',
+      // Solid base under the tint: this sits over the painted gear backdrop.
+      background: 'linear-gradient(180deg, rgba(167,139,250,0.10) 0%, rgba(167,139,250,0.02) 100%), #0b1018',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      // No overflow:hidden. The rod, hook and line legitimately extend past
+      // the character's own box, and clipping them is what made the old tile
+      // look wrong.
+      padding: '0.5rem 0.2rem',
+    }}>
+      <div style={{ width: '112%', filter: 'drop-shadow(0 8px 14px rgba(0,10,25,0.55))' }}>
+        <FisherPose
+          characterColor={characterColor}
+          equippedHat={equippedHat}
+          equippedBoat={equippedBoat}
+          equippedPet={equippedPet}
+          rodTier={rodTier}
+          reelTier={reelTier}
+          hookTier={hookTier}
+        />
       </div>
-      <div style={{ textAlign: 'center' }}>
-        <p className="font-karla font-600 uppercase" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.55)', letterSpacing: '0.14em', marginBottom: 1 }}>Appearance</p>
-        <p className="font-cinzel font-700" style={{ fontSize: '0.7rem', color: '#d0cdc8', lineHeight: 1.2 }}>{characterName}</p>
-      </div>
-    </motion.button>
+    </div>
   )
 }
 
@@ -736,7 +636,7 @@ export default function GearScreen({
   completionistEffects, hasForgedBefore, onCompletionistEffectsChange,
   reelTier, hookTier, lineTier, onBuyReel, onBuyHook,
   rodHasAffordable, reelHasAffordable, hookHasAffordable,
-  characterColor, charSrc, equippedBadges, unlockedCharacterColors, unlockedBadges, onUpdateColor, onBuyColor, onEquipBadge,
+  characterColor, equippedBadges, unlockedCharacterColors, unlockedBadges, onUpdateColor, onBuyColor, onEquipBadge,
   equippedBoat, unlockedBoats, onEquipBoat, onBuyBoat, doubloons, gems,
   equippedHat, unlockedHats, onEquipHat, onBuyHat,
   equippedPet, unlockedPets, onEquipPet,
@@ -781,7 +681,6 @@ export default function GearScreen({
   reelHasAffordable: boolean
   hookHasAffordable: boolean
   characterColor: string
-  charSrc: Record<string, string>
   equippedBadges: string[]
   unlockedCharacterColors: string[]
   unlockedBadges: string[]
@@ -837,7 +736,9 @@ export default function GearScreen({
   // parent to drop the flag so re-opening the drawer later doesn't force it again.
   useEffect(() => {
     if (!autoOpenAppearance) return
-    setOpenSlot('appearance')
+    // The mail CTA used to open the tabbed sheet on whatever tab was last
+    // used. With the tabs gone it lands on Skin, the cosmetic those mails grant.
+    setOpenSlot('skin')
     onAppearanceAutoOpened?.()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoOpenAppearance])
@@ -856,7 +757,6 @@ export default function GearScreen({
   const [selectedBadgeSlot, setSelectedBadgeSlot] = useState<0 | 1 | 2 | null>(null)
   useEffect(() => { if (openSlot !== 'badge') setSelectedBadgeSlot(null) }, [openSlot])
   useEffect(() => { if (openSlot !== 'rod') setRodView('owned') }, [openSlot])
-  const [appearanceTab, setAppearanceTab] = useState<AppearanceTab>('skin')
   // Pets no longer use species sub-tabs — each species gets its own
   // horizontal scrollable row, all visible at once.
 
@@ -1062,7 +962,7 @@ export default function GearScreen({
           The Appearance tile renders a 2×2 mini-grid of equipped
           pieces so the loadout is still legible at a glance without
           tapping in. */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 1fr', gridTemplateRows: 'auto auto', gap: 6 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr 1fr', gridTemplateRows: 'auto auto', gap: 6 }}>
 
         <div style={{ gridColumn: '1', gridRow: '1' }}>
           <GearSlot label="Rod" image={rod.slug ? `/${rod.slug}_thumb.png` : (rod.imageUrl ?? '/rod_bamboo_thumb.png')} itemName={rod.name} color={rod.color} glowClass={rodGlowClass(rod)} notify={rodHasAffordable} pulseKey={pulseKeys.rod} onClick={() => { setRodView('owned'); setOpenSlot('rod') }} />
@@ -1071,17 +971,16 @@ export default function GearScreen({
           <GearSlot label="Hook" image={hook.imageUrl ? hook.imageUrl.replace(/\.png$/, '_thumb.png') : null} itemName={hook.name} color={hook.color} glowClass={hookGlowClass(hook)} notify={hookHasAffordable} pulseKey={pulseKeys.hook} onClick={() => setOpenSlot('hook')} />
         </div>
 
-        {/* Center: APPEARANCE — spans both rows so it has room for the
-            multi-thumbnail summary + a richer hit target. */}
+        {/* Center: the fisher themselves, spanning both rows. */}
         <div style={{ gridColumn: '2', gridRow: '1 / span 2' }}>
-          <AppearanceSlot
+          <FisherPreview
             characterColor={characterColor}
-            charSrc={charSrc}
             equippedHat={equippedHat}
             equippedBoat={equippedBoat}
             equippedPet={equippedPet}
-            pulseKey={pulseKeys.appearance}
-            onClick={() => setOpenSlot('appearance')}
+            rodTier={rod.tier}
+            reelTier={reel.tier}
+            hookTier={hook.tier}
           />
         </div>
 
@@ -1093,7 +992,85 @@ export default function GearScreen({
         </div>
       </div>
 
-      {/* Bottom row: Special | Badges (Boat moved into Appearance). */}
+      {/* ── Skin, on its own directly under the fisher ──────────────────────
+          The four cosmetics used to share one tile that opened a four-tab
+          sheet, which buried every one of them a tap and a tab deep and made
+          the loadout unreadable without opening it. Skin sits alone because it
+          is the figure itself; hat, boat and pet are the things you hang on
+          it, so they share the row below.                                 */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', marginTop: 6 }}>
+        {(() => {
+          const c = CHARACTER_COLORS.find(x => x.id === characterColor)
+          return (
+            <GearSlot
+              label="Skin"
+              // The sprite is a full figure, so it needs the same head crop the
+              // skin picker uses. GearSlot's `image` would letterbox the whole
+              // body into a thumbnail and read as a smudge.
+              icon={
+                <div style={{
+                  width: 34, height: 34, borderRadius: '50%',
+                  backgroundImage: `url(${getCharacterSprites(characterColor).rest})`,
+                  backgroundSize: '420% auto', backgroundPosition: '60% 68%',
+                  backgroundRepeat: 'no-repeat',
+                  border: '2px solid rgba(96,165,250,0.5)',
+                }} />
+              }
+              itemName={c?.name ?? characterColor}
+              color="#60a5fa"
+              pulseKey={pulseKeys.skin}
+              onClick={() => setOpenSlot('skin')}
+            />
+          )
+        })()}
+      </div>
+
+      {/* Hat | Boat | Pet — the three things worn or carried. */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginTop: 6 }}>
+        {(() => {
+          const h = equippedHat ? HATS.find(x => x.id === equippedHat) : null
+          return (
+            <GearSlot
+              label="Hat"
+              image={h?.restImageUrl ?? null}
+              itemName={h?.name ?? 'None'}
+              color={h ? '#f0c040' : '#5a5750'}
+              empty={!h}
+              pulseKey={pulseKeys.hat}
+              onClick={() => setOpenSlot('hat')}
+            />
+          )
+        })()}
+        {(() => {
+          const b = equippedBoat ? BOATS.find(x => x.id === equippedBoat) : null
+          return (
+            <GearSlot
+              label="Boat"
+              image={b?.restImageUrl ?? null}
+              itemName={b?.name ?? 'Default'}
+              color="#7dd3fc"
+              pulseKey={pulseKeys.boat}
+              onClick={() => setOpenSlot('boat')}
+            />
+          )
+        })()}
+        {(() => {
+          const pet = equippedPet ? getPet(equippedPet) : null
+          return (
+            <GearSlot
+              label="Pet"
+              image={pet?.restImageUrl ?? null}
+              itemName={pet?.name ?? 'None'}
+              color={pet ? pet.accentColor : '#5a5750'}
+              empty={!pet}
+              pulseKey={pulseKeys.pet}
+              onClick={() => setOpenSlot('pet')}
+            />
+          )
+        })()}
+      </div>
+
+      {/* Bottom row: Special | Badges | Special. */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 1fr', gap: 6 }}>
         {(() => {
           const equippedDef = SPECIAL_ITEMS.find(s => s.id === equippedSpecial)
@@ -2525,15 +2502,14 @@ export default function GearScreen({
               )}
 
 
-              {openSlot === 'appearance' && (
-                // min-height keeps the sheet a stable size as the
-                // player swaps between Skin / Hat / Boat / Pet — each
-                // tab has different content height, so without this
-                // the sheet (which anchors to the viewport bottom)
-                // resizes on every tab tap and the tab strip visibly
-                // jumps. 380px comfortably fits the tallest tab body
-                // (Boat grid) on a typical phone; smaller tabs just
-                // get extra breathing room below.
+              {/* Skin / Hat / Boat / Pet each open their own sheet now. They
+                  used to share one sheet behind a four-tab strip, which cost a
+                  tap and a tab to reach any of them and made the gear grid show
+                  a single "Appearance" tile instead of what was equipped. The
+                  bodies below are unchanged; only what gates them moved. The
+                  toast is still shared because a purchase in any of them is the
+                  same event. */}
+              {(openSlot === 'skin' || openSlot === 'hat' || openSlot === 'boat' || openSlot === 'pet') && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minHeight: 380 }}>
                   <AnimatePresence>
                     {cosmeticToast && (
@@ -2562,48 +2538,13 @@ export default function GearScreen({
                     )}
                   </AnimatePresence>
 
-                  {/* Tab strip — add a 'pet' entry here when pets ship. */}
-                  <div style={{
-                    display: 'flex', gap: 4, padding: 3,
-                    background: 'rgba(0,0,0,0.4)', borderRadius: 10,
-                    border: '1px solid rgba(255,255,255,0.06)',
-                  }}>
-                    {([
-                      { key: 'skin', label: 'Skin' },
-                      { key: 'hat',  label: 'Hat'  },
-                      { key: 'boat', label: 'Boat' },
-                      { key: 'pet',  label: 'Pet'  },
-                    ] as const).map(t => {
-                      const active = appearanceTab === t.key
-                      return (
-                        <button
-                          key={t.key}
-                          onClick={() => setAppearanceTab(t.key)}
-                          className="font-karla font-700 uppercase tracking-[0.12em]"
-                          style={{
-                            flex: 1, padding: '0.55rem 0',
-                            background: active ? 'rgba(167,139,250,0.16)' : 'transparent',
-                            border: `1px solid ${active ? 'rgba(167,139,250,0.55)' : 'transparent'}`,
-                            borderRadius: 8,
-                            color: active ? '#c4b5fd' : 'rgba(255,255,255,0.55)',
-                            fontSize: '0.7rem',
-                            cursor: 'pointer',
-                            transition: 'all 0.14s',
-                          }}
-                        >
-                          {t.label}
-                        </button>
-                      )
-                    })}
-                  </div>
-
-                  {/* Stable-height scroll window: switching Skin/Hat/Boat/Pet no
-                      longer resizes the sheet — all four render in the same box,
-                      and a taller tab just scrolls inside it. */}
+                  {/* Fixed-height scroll window so a long grid scrolls inside
+                      the sheet rather than resizing it against the viewport
+                      bottom. */}
                   <div className="scrollbar-hide" style={{ height: '46vh', overflowY: 'auto', overscrollBehavior: 'contain' }}>
 
                   {/* ── Skin tab body ── */}
-                  {appearanceTab === 'skin' && (() => {
+                  {openSlot === 'skin' && (() => {
                     // Bigger thumbnail; tap opens the detail modal (equip / buy /
                     // how-to-unlock) rather than acting inline.
                     const renderSkinThumb = (c: typeof CHARACTER_COLORS[number]) => {
@@ -2673,7 +2614,7 @@ export default function GearScreen({
                   })()}
 
                   {/* ── Boat tab body ── */}
-                  {appearanceTab === 'boat' && (() => {
+                  {openSlot === 'boat' && (() => {
                     const renderBoatThumb = (b: typeof BOATS[number]) => {
                       const owned = unlockedBoats.includes(b.id)
                       const isEquipped = equippedBoat === b.id
@@ -2779,7 +2720,7 @@ export default function GearScreen({
                   })()}
 
               {/* ── Hat tab body ── */}
-                  {appearanceTab === 'hat' && (() => {
+                  {openSlot === 'hat' && (() => {
                     const renderHatThumb = (h: typeof HATS[number]) => {
                       const owned = unlockedHats.includes(h.id)
                       const isEquipped = equippedHat === h.id
@@ -2882,7 +2823,7 @@ export default function GearScreen({
                   })()}
 
                   {/* ── Pet tab body ── */}
-                  {appearanceTab === 'pet' && (() => {
+                  {openSlot === 'pet' && (() => {
                     // Locked pets render as dark silhouettes so the golden variants
                     // stay a mystery until landed; owned show full colour + green tick.
                     const renderPetThumb = (p: typeof PETS[number]) => {
@@ -3166,12 +3107,12 @@ export default function GearScreen({
               if (!('error' in res)) setCosmeticDetail(null)
             } else if (i.kind === 'hat') {
               onBuyHat(i.id)
-              flashPurchase(i.name, i.accent, i.price!, 'appearance', 'doubloons')
+              flashPurchase(i.name, i.accent, i.price!, 'hat', 'doubloons')
               setDetailBusy(false)
               setCosmeticDetail(null)
             } else {
               onBuyBoat(i.id)
-              flashPurchase(i.name, i.accent, i.price!, 'appearance', i.currency)
+              flashPurchase(i.name, i.accent, i.price!, 'boat', i.currency)
               setDetailBusy(false)
               setCosmeticDetail(null)
             }
