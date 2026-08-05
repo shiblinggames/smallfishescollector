@@ -38,7 +38,7 @@ import { equipBadge, unequipBadge } from '@/app/(app)/achievements/badgeActions'
 import { BADGES, BADGE_MAP, BADGE_SLOT_POSITIONS } from '@/lib/badges'
 
 const CRATE_FISH_ID = -1
-import { claimDailyReward } from './dailyChallengeActions'
+import { claimDailyReward, claimDailySweep } from './dailyChallengeActions'
 import { getDailyChallenges, DAILY_SWEEP_GEMS, type DailyChallengeState, type DailyChallenge } from '@/lib/dailyChallenges'
 import { GEM_GLYPH, GEM_COLOR } from '@/lib/uiTokens'
 import type { CrateLoot, CrateTier } from '@/lib/crateLoot'
@@ -4067,6 +4067,7 @@ export default function FishingGame({
   // that fires on the claim that completed the set.
   const [sweepClaimed, setSweepClaimed] = useState(initialDailyChallenge?.sweepClaimed ?? false)
   const [sweepAward, setSweepAward] = useState(false)
+  const [claimingSweep, setClaimingSweep] = useState(false)
   // What the Master challenge's crate turned out to be. Shown inline in the
   // drawer rather than routed through the big reel-in crate reveal, which is
   // welded to the fishing result phase and would fight the open drawer.
@@ -6034,15 +6035,25 @@ export default function FishingGame({
     if (res.crate) {
       setMasterCrate({ tier: res.crate.tier, loot: res.crate.loot as CrateLootView })
     }
-    // The server only returns gems on the claim that completed the set, so a
-    // non-zero value here IS the sweep. It pays exactly once per day.
-    if (res.sweepGems > 0) {
-      const newGems = gems + res.sweepGems
-      setGems(newGems)
-      window.dispatchEvent(new CustomEvent('gems-changed', { detail: newGems }))
-      setSweepClaimed(true)
-      setSweepAward(true)
+  }
+
+  async function handleClaimSweep() {
+    if (claimingSweep || sweepClaimed) return
+    // Answer the press before the server does.
+    hapticTap()
+    setClaimingSweep(true)
+    const res = await claimDailySweep()
+    setClaimingSweep(false)
+    if ('error' in res) {
+      // Stale local state (another tab claimed it, or a zone remount lost the
+      // flag). Reconcile so the button stops offering something already taken.
+      if (res.error === 'Already claimed') setSweepClaimed(true)
+      return
     }
+    setGems(res.gems)
+    window.dispatchEvent(new CustomEvent('gems-changed', { detail: res.gems }))
+    setSweepClaimed(true)
+    setSweepAward(true)
   }
 
   async function handleEquipRod(tier: number) {
@@ -6681,8 +6692,13 @@ export default function FishingGame({
 
               {/* Daily challenge icon */}
               {(() => {
-                const claimable = dailyChallenges.some((c, i) => dailyProgress[i] >= c.target && !dailyClaimed[i])
-                const allClaimed = dailyClaimed.every(Boolean)
+                // The sweep counts as claimable too now that it has its own
+                // button. Without this the chip would go quiet with ten gems
+                // still sitting unclaimed inside the drawer.
+                const sweepReady = dailyClaimed.slice(0, 3).every(Boolean) && !sweepClaimed
+                const claimable = sweepReady
+                  || dailyChallenges.some((c, i) => dailyProgress[i] >= c.target && !dailyClaimed[i])
+                const allClaimed = dailyClaimed.every(Boolean) && sweepClaimed
                 return (
                   <button
                     onClick={() => setDailyOpen(o => !o)}
@@ -9927,13 +9943,17 @@ export default function FishingGame({
               })}
 
               {/* ── The sweep bonus ──────────────────────────────────────────
-                  Clear all three and the gems pay themselves. Deliberately NOT
-                  a fourth claim button: another button would read as a fourth
-                  task, and the whole point is that the set is the task. It sits
-                  below the three so it reads as what they add up to.        */}
+                  Clear all three, then claim the gems. It sits below the three
+                  so it reads as what they add up to rather than as a fourth
+                  task. The gems used to pay themselves the instant the third
+                  challenge was claimed, which landed them in the same moment as
+                  a doubloon reward and made them easy to miss entirely.    */}
               {(() => {
-                const claimedCount = dailyClaimed.filter(Boolean).length
+                // Only the three coin challenges count. The optional Master
+                // challenge must never gate this.
+                const claimedCount = dailyClaimed.slice(0, 3).filter(Boolean).length
                 const swept = sweepClaimed
+                const ready = claimedCount === 3 && !swept
                 return (
                   <motion.div
                     // The pop fires only on the claim that completed the set.
@@ -9943,11 +9963,11 @@ export default function FishingGame({
                     style={{
                       // Purple for gems, the way gold means doubloons on the
                       // cards above, so the different currency reads instantly.
-                      background: swept
-                        ? 'linear-gradient(90deg, rgba(167,139,250,0.16) 0%, rgba(167,139,250,0.04) 60%), #120d07'
+                      background: swept || ready
+                        ? 'linear-gradient(90deg, rgba(167,139,250,0.18) 0%, rgba(167,139,250,0.05) 60%), #120d07'
                         : 'linear-gradient(180deg, rgba(167,139,250,0.07) 0%, rgba(167,139,250,0.02) 100%), #120d07',
-                      border: `1px solid ${swept ? 'rgba(167,139,250,0.40)' : 'rgba(167,139,250,0.18)'}`,
-                      borderTop: `1px solid ${swept ? 'rgba(167,139,250,0.62)' : 'rgba(167,139,250,0.30)'}`,
+                      border: `1px solid ${swept || ready ? 'rgba(167,139,250,0.45)' : 'rgba(167,139,250,0.18)'}`,
+                      borderTop: `1px solid ${swept || ready ? 'rgba(167,139,250,0.7)' : 'rgba(167,139,250,0.30)'}`,
                       borderRadius: 12,
                       padding: '0.7rem 0.95rem',
                       marginTop: 2,
@@ -9966,26 +9986,56 @@ export default function FishingGame({
                           fontSize: '0.8rem', color: swept ? '#c9c3d8' : '#c8c4bc', lineHeight: 1.3,
                         }}>
                           {swept
-                            ? 'All three cleared. Gems are in the hold.'
-                            : 'Claim all three and the gems are yours.'}
+                            ? 'Gems are in the hold.'
+                            : ready
+                              ? 'All three cleared. Take the gems.'
+                              : 'Clear all three to open this.'}
                         </p>
                       </div>
                       {/* Same fixed 86px slot as the reward chips above, so the
                           gem figure lands on the identical right margin and
                           the drawer keeps one clean vertical edge. */}
-                      <div style={{ width: 86, flexShrink: 0, display: 'flex', justifyContent: 'flex-end', alignItems: 'baseline', gap: 3 }}>
-                        <span className="font-cinzel font-700 tabular-nums" style={{
-                          fontSize: '1rem', lineHeight: 1,
-                          color: swept ? GEM_COLOR : 'rgba(167,139,250,0.6)',
-                        }}>
-                          +{DAILY_SWEEP_GEMS}
-                        </span>
-                        <span className="font-cinzel font-700" style={{
-                          fontSize: '0.68rem', lineHeight: 1,
-                          color: swept ? GEM_COLOR : 'rgba(167,139,250,0.6)',
-                        }}>
-                          {GEM_GLYPH}
-                        </span>
+                      {/* Same fixed 86px slot the reward chips above use, and
+                          the same one-slot-three-states rule: the figure
+                          becomes the Claim button in place, so the strip never
+                          changes height when the set completes. */}
+                      <div style={{ width: 86, flexShrink: 0, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 3 }}>
+                        {ready ? (
+                          <motion.button
+                            whileTap={{ scale: 0.94 }}
+                            transition={{ type: 'spring', stiffness: 620, damping: 26 }}
+                            onClick={handleClaimSweep}
+                            disabled={claimingSweep}
+                            className="font-karla font-800 uppercase"
+                            style={{
+                              width: '100%', fontSize: '0.68rem', letterSpacing: '0.08em',
+                              padding: '0.5rem 0.2rem', borderRadius: 9,
+                              background: 'rgba(167,139,250,0.2)',
+                              border: `1px solid ${GEM_COLOR}`,
+                              color: '#c4b5fd',
+                              opacity: claimingSweep ? 0.5 : 1,
+                              cursor: claimingSweep ? 'default' : 'pointer',
+                              touchAction: 'manipulation',
+                            }}
+                          >
+                            {claimingSweep ? 'Claiming' : 'Claim'}
+                          </motion.button>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'baseline', gap: 3 }}>
+                            <span className="font-cinzel font-700 tabular-nums" style={{
+                              fontSize: '1rem', lineHeight: 1,
+                              color: swept ? GEM_COLOR : 'rgba(167,139,250,0.6)',
+                            }}>
+                              +{DAILY_SWEEP_GEMS}
+                            </span>
+                            <span className="font-cinzel font-700" style={{
+                              fontSize: '0.68rem', lineHeight: 1,
+                              color: swept ? GEM_COLOR : 'rgba(167,139,250,0.6)',
+                            }}>
+                              {GEM_GLYPH}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                     {!swept && (

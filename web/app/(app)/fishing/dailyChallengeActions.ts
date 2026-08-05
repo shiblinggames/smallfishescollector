@@ -103,7 +103,7 @@ export async function getDailyChallenge(): Promise<DailyChallengeState | null> {
 export async function claimDailyReward(
   index: 0 | 1 | 2 | 3,
 ): Promise<
-  | { doubloons: number; sweepGems: number; crate?: { tier: CrateTier; loot: CrateLoot } }
+  | { doubloons: number; crate?: { tier: CrateTier; loot: CrateLoot } }
   | { error: string }
 > {
   const supabase = await createClient()
@@ -190,42 +190,63 @@ export async function claimDailyReward(
     ])
   }
 
-  // ── The sweep bonus ───────────────────────────────────────────────────────
-  // `claimed` was read BEFORE the flip above, so "the other two were already
-  // in" plus "this one just landed" means all three are now claimed.
-  //
-  // Guarded exactly like the individual claim: flip claimed_bonus only where
-  // it is not already true, and pay only if this call is the one that won. Two
-  // tabs racing to claim the third challenge can both reach here.
-  //
-  // THE SWEEP IS STILL THREE. Master sits outside it deliberately: a level 75
-  // player must never be asked to do strictly more work for the same ten gems
-  // than a level 20 player does. So this only ever looks at indexes 0-2, and
-  // claiming Master alone can never trigger it.
-  let sweepGems = 0
-  const coinClaims = claimed.slice(0, 3)
-  const othersAlreadyIn = index < 3 && coinClaims.every((c, i) => i === index || c)
-  if (othersAlreadyIn && !row?.claimed_bonus) {
-    const { data: sweptRow } = await admin
-      .from('daily_challenge_progress')
-      .update({ claimed_bonus: true })
-      .eq('user_id', user.id)
-      .eq('date', date)
-      .not('claimed_bonus', 'is', true)
-      .select('user_id')
-      .maybeSingle()
-    if (sweptRow) {
-      sweepGems = DAILY_SWEEP_GEMS
-      // Atomic bumps rather than read-add-write: the gem balance is shared
-      // with chest opens and casino payouts, so an absolute overwrite here
-      // could stomp a concurrent grant.
-      await admin.rpc('bump_profile_stat', { uid: user.id, col: 'gems', n: DAILY_SWEEP_GEMS })
-      // Lifetime swept days, for the sweep badges. Fire and forget: a failed
-      // counter must never cost the player the gems they just earned.
-      void admin.rpc('bump_profile_stat', { uid: user.id, col: 'daily_challenge_sweeps', n: 1 })
-        .then(() => {}, () => {})
-    }
-  }
+  // The sweep bonus is NOT paid here. It has its own claim, below.
+  return { doubloons: newDoubloons, crate }
+}
 
-  return { doubloons: newDoubloons, sweepGems, crate }
+/** Claim the all-three sweep bonus.
+ *
+ *  Its own action, and its own tap. This used to pay itself the instant the
+ *  third challenge was claimed, which meant the gems arrived in the same
+ *  moment as a doubloon reward and were easy to miss entirely.
+ *
+ *  THE SWEEP IS STILL THREE. It only ever inspects indexes 0-2, so the
+ *  optional Master challenge can neither trigger it nor block it: a level 75
+ *  player must never owe more work than a level 20 player for the same gems. */
+export async function claimDailySweep(): Promise<
+  { gems: number; awarded: number } | { error: string }
+> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const date = getTodayUTC()
+  const admin = createAdminClient()
+
+  const { data: row } = await admin
+    .from('daily_challenge_progress')
+    .select('claimed_1, claimed_2, claimed_3, claimed_bonus')
+    .eq('user_id', user.id)
+    .eq('date', date)
+    .maybeSingle()
+
+  if (!row) return { error: 'Nothing to claim' }
+  if (!(row.claimed_1 && row.claimed_2 && row.claimed_3)) return { error: 'Claim all three first' }
+  if (row.claimed_bonus) return { error: 'Already claimed' }
+
+  // Same guarded flip the individual claims use: only the call that actually
+  // sets the flag pays, so a double tap or two tabs cannot both collect.
+  const { data: swept } = await admin
+    .from('daily_challenge_progress')
+    .update({ claimed_bonus: true })
+    .eq('user_id', user.id)
+    .eq('date', date)
+    .not('claimed_bonus', 'is', true)
+    .select('user_id')
+    .maybeSingle()
+  if (!swept) return { error: 'Already claimed' }
+
+  // Atomic bump rather than read-add-write: the gem balance is shared with
+  // chest opens and casino payouts, so an absolute overwrite could stomp a
+  // concurrent grant.
+  await admin.rpc('bump_profile_stat', { uid: user.id, col: 'gems', n: DAILY_SWEEP_GEMS })
+  // Lifetime swept days, for the sweep badges. Fire and forget: a failed
+  // counter must never cost the player the gems they just earned.
+  void admin.rpc('bump_profile_stat', { uid: user.id, col: 'daily_challenge_sweeps', n: 1 })
+    .then(() => {}, () => {})
+
+  const { data: after } = await admin
+    .from('profiles').select('gems').eq('id', user.id).single()
+
+  return { gems: after?.gems ?? 0, awarded: DAILY_SWEEP_GEMS }
 }
