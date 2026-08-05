@@ -6,53 +6,45 @@ import { redirect } from 'next/navigation'
 export const metadata: Metadata = {
   alternates: { canonical: '/' },
   description:
-    'A free browser game about fishing, and about what is down there. Land 146 species on a timing dial, crew a ship, and sail into a story campaign that fights back.',
+    'A free browser game. You fish with a needle and a shrinking window, sign a crew, and take a ship into eight raids against the outfit that runs the sea floor.',
 }
 
 /**
  * THE LANDING PAGE.
  *
- * The old one said "Fish the depths. Build your collection. Set sail on
- * expeditions and rise through the ranks." Three sentences that would fit any
- * game with a boat in it, no picture of the thing itself, and one button. A
- * visitor could not learn what the game IS, only that it exists.
+ * Rewritten because the previous version, mine, was the default AI landing page
+ * and read like one: eyebrow, badge pill, huge title, one-line pitch, THREE
+ * feature cards of identical shape, a FOUR-NUMBER stats strip, and a closing CTA
+ * under a portentous one-liner. Everything evenly weighted, every card body
+ * exactly two sentences, nothing anywhere a surprise.
  *
- * So this one shows the game. Two pillars, because there are genuinely two core
- * loops (the cast and the campaign) and everything else supports them, then the
- * run that has teeth. Real art from the game, real numbers from the game.
+ * Two things fix that, and neither is decoration.
  *
- * PERFORMANCE. Stays a SERVER component (it does the logged-in redirect before
- * rendering anything), so the arrival is a CSS keyframe rather than framer:
- * transform and opacity, one pass, nothing left running. Art is already in
- * public/ and already compressed.
+ * 1. THE VOICE. The game does not talk like a trailer. Read its own copy:
+ *    "Bleed them slow." "Six in all." "Long fights end ugly for them." "The hull
+ *    that refuses the deep." It is plain, concrete and unsentimental, and it
+ *    never reaches for atmosphere. The old page said "Something down there is
+ *    organised" and "The tide does not wait", which is the opposite: abstract,
+ *    solemn, and equally true of any game with a boat in it.
+ *
+ * 2. THE SHAPE. One thing shown properly, then two plain notes. Not three cards
+ *    in a row. The even three-up is the loudest tell, and it also lies about the
+ *    game: the cast is the thing you do a thousand times, and the campaign and
+ *    the Gauntlet are where it goes.
+ *
+ * The stats strip is gone. "195 badges" was never a reason to play, it was there
+ * to make a fourth number.
+ *
+ * ART. One plate used properly, rather than three that differed mainly by
+ * palette because they came from one prompt run three times. When real
+ * screenshots exist (the dial with the needle in the band, a boss card
+ * mid-fight, a Gauntlet depth counter) they belong in the showcase below, and
+ * they will beat any painted plate because they cannot be mistaken for another
+ * game.
+ *
+ * Stays a SERVER component: the logged-in redirect runs before anything renders,
+ * so the arrival is a CSS keyframe rather than framer.
  */
-const PILLARS: { art: string; eyebrow: string; title: string; body: string }[] = [
-  {
-    art: '/lp_cast.jpg',
-    eyebrow: 'The cast',
-    title: 'It is a game of timing',
-    body: 'Every fish is a needle on a dial and a window that shrinks as you go deeper. Land it clean and the streak carries. Miss and it does not.',
-  },
-  {
-    art: '/lp_campaign.jpg',
-    eyebrow: 'The campaign',
-    title: 'Something down there is organised',
-    body: 'Four chapters of turn-based raids against a syndicate that runs the sea floor. Crew your ship, aim every broadside, and learn what each boss does before it does it.',
-  },
-  {
-    art: '/lp_gauntlet.jpg',
-    eyebrow: 'The gauntlet',
-    title: 'One dive a day, and it can end',
-    body: 'A push-your-luck descent that pays deeper and deeper until you bank it. Hardcore puts your crew on the line for real: lose them down there and they are gone.',
-  },
-]
-
-const FACTS: [string, string][] = [
-  ['146', 'species to land'],
-  ['41', 'crew to sign'],
-  ['65', 'raid items'],
-  ['195', 'badges'],
-]
 
 export default async function HomePage() {
   const supabase = await createClient()
@@ -61,7 +53,6 @@ export default async function HomePage() {
 
   return (
     <main className="min-h-screen relative" style={{ overflowX: 'hidden' }}>
-      {/* Background */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/loginbackground.webp" alt="" aria-hidden style={{
         position: 'fixed', inset: 0, width: '100%', height: '100%',
@@ -69,22 +60,16 @@ export default async function HomePage() {
       }} />
       <div style={{
         position: 'fixed', inset: 0, zIndex: 1, pointerEvents: 'none',
-        background: 'linear-gradient(to bottom, rgba(0,5,20,0.42) 0%, rgba(0,5,20,0.72) 55%, rgba(2,6,14,0.94) 100%)',
+        background: 'linear-gradient(to bottom, rgba(0,5,20,0.40) 0%, rgba(0,5,20,0.74) 55%, rgba(2,6,14,0.95) 100%)',
       }} />
 
-      <div className="relative z-10 mx-auto px-6" style={{ maxWidth: 760, paddingTop: '5rem', paddingBottom: '4rem' }}>
+      <div className="relative z-10 mx-auto px-6" style={{ maxWidth: 620, paddingTop: '5.5rem', paddingBottom: '4rem' }}>
 
-        {/* ── Hero ── */}
+        {/* ── Hero. The pun is the identity, so it leads. ── */}
         <div className="text-center landing-rise" style={{ animationDelay: '0.05s' }}>
-          <p className="font-karla font-600 uppercase tracking-[0.22em] mb-4" style={{ fontSize: '0.72rem', color: '#7ab8cc' }}>
+          <p className="font-karla font-600 uppercase tracking-[0.22em] mb-5" style={{ fontSize: '0.7rem', color: '#7ab8cc' }}>
             Shibling Games
           </p>
-          <span className="font-karla font-700 uppercase tracking-[0.18em] inline-block mb-5 px-3 py-1" style={{
-            fontSize: '0.55rem', color: '#f0c040',
-            background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.30)', borderRadius: 999,
-          }}>
-            Open Beta · Free to play
-          </span>
 
           <h1
             className="font-cinzel font-900 text-[#f0ede8] leading-[0.9] tracking-[-0.01em] mb-3"
@@ -92,87 +77,57 @@ export default async function HomePage() {
           >
             Small Fishes
           </h1>
-          <p className="font-cinzel italic mb-8" style={{ fontSize: '1.15rem', color: '#f0c040', textShadow: '0 0 24px rgba(240,192,64,0.5)' }}>
+          <p className="font-cinzel italic" style={{ fontSize: '1.2rem', color: '#f0c040', textShadow: '0 0 24px rgba(240,192,64,0.5)' }}>
             Seas the Booty.
           </p>
+        </div>
 
-          <p className="font-karla font-300 mx-auto mb-9" style={{ fontSize: '1rem', color: '#c3d2df', lineHeight: 1.75, maxWidth: 460 }}>
-            A game about fishing, and about what is down there.
-            Land them on a timing dial, sign a crew, and sail into a story that fights back.
+        {/* ── THE SHOWCASE. One thing, shown properly. Swap this image for a real
+             screenshot of the dial mid-cast the moment one exists. ── */}
+        <div className="landing-rise" style={{ animationDelay: '0.18s', marginTop: '3.2rem' }}>
+          <div style={{ position: 'relative', borderRadius: 18, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.10)', background: '#070d16' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/lp_cast.jpg" alt="" aria-hidden
+              style={{ display: 'block', width: '100%', height: 200, objectFit: 'cover', opacity: 0.9 }} />
+            <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 110, background: 'linear-gradient(180deg, transparent, #070d16 88%)' }} />
+          </div>
+          <p className="font-cinzel font-800" style={{ fontSize: '1.5rem', lineHeight: 1.15, color: '#f4ecd8', marginTop: 20 }}>
+            A needle turns, and a window opens
           </p>
+          <p className="font-karla font-300" style={{ fontSize: '1rem', lineHeight: 1.75, color: '#b9c8d6', marginTop: 10 }}>
+            Hit the band clean and the fish is yours and the streak holds. Miss and the streak goes
+            back to nothing. The window narrows the deeper you fish. There are 146 species down
+            there and you will not get them quickly.
+          </p>
+        </div>
 
-          <Link href="/login" className="btn-gold" style={{ padding: '0.85rem 2.4rem', fontSize: '0.9rem' }}>
+        {/* ── Two plain notes. Deliberately not cards, and deliberately not the
+             same weight as each other or as the showcase. ── */}
+        <div className="landing-rise" style={{ animationDelay: '0.3s', marginTop: '3rem', borderTop: '1px solid rgba(255,255,255,0.11)', paddingTop: '1.6rem' }}>
+          <p className="font-karla font-800 uppercase tracking-[0.2em]" style={{ fontSize: '0.54rem', color: '#f0c040' }}>Then it gets worse</p>
+          <p className="font-karla font-300" style={{ fontSize: '0.96rem', lineHeight: 1.75, color: '#b9c8d6', marginTop: 9 }}>
+            An outfit runs the sea floor and has no use for competition. Eight raids across four
+            chapters, turn-based, every boss telling you what it is about to do a turn before it does
+            it. Crew your ship, aim each broadside yourself, and work out the answer before it lands.
+          </p>
+        </div>
+
+        <div className="landing-rise" style={{ animationDelay: '0.38s', marginTop: '1.8rem', borderTop: '1px solid rgba(255,255,255,0.11)', paddingTop: '1.6rem' }}>
+          <p className="font-karla font-800 uppercase tracking-[0.2em]" style={{ fontSize: '0.54rem', color: '#d1495b' }}>One dive a day</p>
+          <p className="font-karla font-300" style={{ fontSize: '0.96rem', lineHeight: 1.75, color: '#b9c8d6', marginTop: 9 }}>
+            The Gauntlet pays deeper and deeper until you bank it. In Hardcore the crew you take down
+            is the crew you own. Lose them and they are gone.
+          </p>
+        </div>
+
+        {/* ── CTA ── */}
+        <div className="landing-rise" style={{ animationDelay: '0.48s', marginTop: '3.2rem', textAlign: 'center' }}>
+          <Link href="/login" className="btn-gold" style={{ padding: '0.9rem 2.6rem', fontSize: '0.92rem' }}>
             Start fishing
           </Link>
-          <p className="font-karla mt-4" style={{ fontSize: '0.72rem', color: '#7d90a2' }}>
-            Runs in your browser. No download.
+          <p className="font-karla mt-4" style={{ fontSize: '0.74rem', color: '#7d90a2' }}>
+            Free, in your browser. Open beta, no download.
           </p>
-        </div>
-
-        {/* ── What it actually is ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: '4.5rem' }}>
-          {PILLARS.map((p, i) => (
-            <div
-              key={p.title}
-              className="landing-rise"
-              style={{
-                animationDelay: `${0.2 + i * 0.1}s`,
-                position: 'relative', borderRadius: 18, overflow: 'hidden',
-                border: '1px solid rgba(255,255,255,0.10)',
-                // Solid base under the art, per the house rule for panels over
-                // painted grounds: a translucent card here would show the page
-                // background through the tile art and read as mud.
-                background: '#070d16',
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              {/* Purpose-painted ENVIRONMENT plates: water, sky, light and
-                  landforms, no vessels and no creatures. The game has its own
-                  sprites for those, and a generated ship would be a different
-                  ship from the one the player actually sails.
-                  
-                  Empty plates are quieter than subject art, so they run at 0.85
-                  rather than the 0.42 the borrowed hub art used, and each was
-                  composed with its left third deliberately dark so the copy
-                  still lands on solid ground. */}
-              <img src={p.art} alt="" aria-hidden loading="lazy" decoding="async"
-                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }} />
-              <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(100deg, rgba(7,13,22,0.97) 34%, rgba(7,13,22,0.72) 62%, rgba(7,13,22,0.30) 100%)' }} />
-              <div style={{ position: 'relative', padding: '1.5rem 1.4rem' }}>
-                <p className="font-karla font-800 uppercase tracking-[0.2em]" style={{ fontSize: '0.54rem', color: '#f0c040' }}>{p.eyebrow}</p>
-                <p className="font-cinzel font-800" style={{ fontSize: '1.3rem', lineHeight: 1.15, color: '#f4ecd8', marginTop: 6 }}>{p.title}</p>
-                <p className="font-karla font-300" style={{ fontSize: '0.9rem', lineHeight: 1.7, color: '#b3c2d1', marginTop: 8, maxWidth: 460 }}>{p.body}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* ── How much of it there is ── */}
-        <div
-          className="landing-rise"
-          style={{
-            animationDelay: '0.55s',
-            display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8,
-            marginTop: '2.6rem', padding: '1.15rem 0.8rem', borderRadius: 16,
-            background: 'rgba(7,13,22,0.82)', border: '1px solid rgba(255,255,255,0.09)',
-          }}
-        >
-          {FACTS.map(([n, label]) => (
-            <div key={label} style={{ textAlign: 'center', minWidth: 0 }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '1.5rem', lineHeight: 1, color: '#ecdcbd', fontVariantNumeric: 'tabular-nums' }}>{n}</p>
-              <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#8298ac', marginTop: 5, lineHeight: 1.3 }}>{label}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* ── Closing CTA ── */}
-        <div className="text-center landing-rise" style={{ animationDelay: '0.65s', marginTop: '3rem' }}>
-          <p className="font-cinzel italic" style={{ fontSize: '1.05rem', color: '#c8aa6a', marginBottom: '1.2rem' }}>
-            The tide does not wait.
-          </p>
-          <Link href="/login" className="btn-gold" style={{ padding: '0.85rem 2.4rem', fontSize: '0.9rem' }}>
-            Start fishing
-          </Link>
         </div>
 
         {/* ── Footer ── */}
