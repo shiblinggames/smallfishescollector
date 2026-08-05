@@ -571,9 +571,20 @@ function GearSlot({
           : icon
         }
       </div>
-      <div style={{ textAlign: 'center' }}>
-        <p className="font-karla font-600 uppercase" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.55)', letterSpacing: '0.14em', marginBottom: 1 }}>{label}</p>
-        <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: empty ? '#2e2c2a' : '#d0cdc8', lineHeight: 1.2 }}>{itemName}</p>
+      {/* Both lines truncate. A long name like "Angler's Formula" or
+          "Charcoal Parrot" used to wrap onto a second line, and because the
+          grid rows are auto-height, one long name in one tile grew the whole
+          row and shunted everything below it down. minWidth:0 is the part
+          that actually lets ellipsis happen inside a flex column. */}
+      <div style={{ textAlign: 'center', width: '100%', minWidth: 0 }}>
+        <p className="font-karla font-600 uppercase" style={{
+          fontSize: '0.62rem', color: 'rgba(255,255,255,0.55)', letterSpacing: '0.14em', marginBottom: 1,
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        }} title={label}>{label}</p>
+        <p className="font-cinzel font-700" style={{
+          fontSize: '0.72rem', color: empty ? '#2e2c2a' : '#d0cdc8', lineHeight: 1.2,
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        }} title={itemName}>{itemName}</p>
       </div>
     </motion.button>
   )
@@ -621,9 +632,26 @@ function FisherPreview({
       // edges take are the far tip of the rod line and the hook, which is
       // exactly what the live scene does too.
       overflow: 'hidden',
-      padding: '0.35rem 0.2rem',
+      flexDirection: 'column',
+      padding: '0.3rem 0.2rem 0.35rem',
     }}>
-      <div style={{ width: '100%', filter: 'drop-shadow(0 8px 14px rgba(0,10,25,0.55))' }}>
+      {/* THE DEAD SPACE. The character sprite is 900x800 with the figure
+          occupying only the bottom 55.5% of it, so 42.1% of this box was
+          empty sky above the fisher's head, and the boat/hat/pet overlays are
+          all positioned lower still. Measured, not guessed.
+          Negative margins pull the layout box in to just the content.
+          Percentage margins resolve against the containing block's WIDTH, not
+          its height, so these are the dead space converted: the pose is
+          0.889x as tall as it is wide, and 42.1% x 0.889 is 37.4% of width
+          above, 2.4% x 0.889 is 2.1% below. Backed off the top figure
+          slightly so the hat never touches the border: this lands ~3.9%
+          headroom above the head and ~1.3% under the hull. */}
+      <div style={{
+        width: '100%',
+        marginTop: '-34%',
+        marginBottom: '-1%',
+        filter: 'drop-shadow(0 8px 14px rgba(0,10,25,0.55))',
+      }}>
         <FisherPose
           characterColor={characterColor}
           equippedHat={equippedHat}
@@ -634,6 +662,14 @@ function FisherPreview({
           hookTier={hookTier}
         />
       </div>
+      {/* Says what it is. Without this it reads as a slot you should be able
+          to tap, which it deliberately is not. */}
+      <p className="font-karla font-600 uppercase" style={{
+        fontSize: '0.56rem', letterSpacing: '0.18em',
+        color: 'rgba(196,181,253,0.65)', marginTop: 4,
+      }}>
+        Preview
+      </p>
     </div>
   )
 }
