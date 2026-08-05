@@ -110,7 +110,7 @@ export default async function HomePage() {
              with a parrot sells this better than any amount of weather. ── */}
         <div className="landing-rise" style={{ animationDelay: '0.18s', marginTop: '3.2rem' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/lp_shot_cast.jpg" alt="A perfect catch landing on the fishing dial"
+          <img width={600} height={1245} src="/lp_shot_cast.jpg" alt="A perfect catch landing on the fishing dial"
             style={{
               display: 'block', width: 'min(290px, 80%)', height: 'auto', margin: '0 auto',
               borderRadius: 20, border: '1px solid rgba(255,255,255,0.14)',
@@ -141,7 +141,7 @@ export default async function HomePage() {
           </p>
           {/* The fight, actual size. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/lp_shot_fight.jpg" alt="A turn of ship combat against the Drowned Sounding Hand"
+          <img width={600} height={1245} src="/lp_shot_fight.jpg" alt="A turn of ship combat against the Drowned Sounding Hand"
             style={{
               display: 'block', width: 'min(290px, 80%)', height: 'auto', margin: '1.4rem auto 0',
               borderRadius: 20, border: '1px solid rgba(255,255,255,0.14)',
