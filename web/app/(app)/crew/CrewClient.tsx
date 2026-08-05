@@ -1075,7 +1075,10 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
       const up = res.upgrades.find(u => u.crewId === id)
       // A trait moving is rarer than a level, so it gets the longer buzz even
       // when the level did not move.
-      vibrate(up ? [22, 50, 22, 50, 40] : g && g.newLevel > g.oldLevel ? [18, 60, 30] : 14)
+      // The long trait buzz is for a trait that MOVED. A re-cut that lost is
+      // news, but it is not that kind of news.
+      const upMovedHaptic = !!up && (up.gained.power || up.gained.dodge || up.gained.fortune)
+      vibrate(upMovedHaptic ? [22, 50, 22, 50, 40] : g && g.newLevel > g.oldLevel ? [18, 60, 30] : 14)
       setBunkReveal({
         name: g?.name ?? crew.name,
         filename: crew.filename,
@@ -1091,8 +1094,10 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
           gained: up.gained,
         },
       })
-      // The rarest outcome in the game still gets its own screen.
-      if (up && isDivineTrait(up.after)) {
+      // The rarest outcome in the game still gets its own screen. Gated on
+      // something having MOVED, or a crew who already carries a divine trait
+      // would replay the moment every time the Leviathan rolled and lost.
+      if (upMovedHaptic && up && isDivineTrait(up.after)) {
         const crewNow = res.state.roster.find(c => c.id === id)
         if (crewNow) setDivineMoment({ name: crewNow.name, filename: crewNow.filename })
       }
@@ -2048,6 +2053,10 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             // and the teal is the same teal that bunk wears, so the moment is
             // visibly tied to the choice that earned it.
             const up = r.upgrade
+            // `up` now arrives even when the Leviathan roll lost, so every
+            // downstream test has to ask whether anything MOVED, not merely
+            // whether a re-cut happened.
+            const upMoved = !!up && (up.gained.power || up.gained.dodge || up.gained.fortune)
             const accent = up ? LEVIATHAN_COLOR : levelled ? '#7fdfa3' : '#f0c040'
             const burst = levelled || !!up
             const prog = crewXPProgress(r.newXP)
@@ -2098,10 +2107,19 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
 
                   <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.35 }}
                     className="font-cinzel font-700" style={{ fontSize: '1.25rem', color: accent, marginTop: 12, textShadow: burst ? `0 0 12px ${accent}44` : 'none' }}>
-                    {up ? `The deep sharpened ${r.name}` : levelled ? `${r.name} levelled up!` : `${r.name} is back`}
+                    {/* A Leviathan stint that rolled under your current trait
+                        still reports. `up` present with nothing gained means the
+                        re-cut happened and lost, which is a different thing from
+                        an ordinary bunk and has to read as one. */}
+                    {upMoved ? `The deep sharpened ${r.name}`
+                      : up ? `The deep took its measure of ${r.name}`
+                      : levelled ? `${r.name} levelled up!`
+                      : `${r.name} is back`}
                   </motion.p>
                   <p className="font-karla" style={{ fontSize: '0.78rem', color: '#9c917a', marginTop: 6 }}>
-                    {up ? 'Their trait came back better than it went in' : 'Off the bunk, drilled and rested'}
+                    {upMoved ? 'Their trait came back better than it went in'
+                      : up ? 'Nothing it rolled beat what they already had'
+                      : 'Off the bunk, drilled and rested'}
                   </p>
 
                   {/* WHAT MOVED. This was a set of tick boxes, which implied a

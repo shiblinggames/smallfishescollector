@@ -204,8 +204,24 @@ async function recutLeviathanTraits(
       dodge:   after.dodge   > before.dodge,
       fortune: after.fortune > before.fortune,
     }
-    // A roll that beat nothing is not worth a write or a line in the reveal.
-    if (!gained.power && !gained.dodge && !gained.fortune) continue
+    const moved = gained.power || gained.dodge || gained.fortune
+
+    // A roll that beat nothing still gets REPORTED, it just is not WRITTEN.
+    //
+    // It used to `continue` here, so a Leviathan stint that rolled under your
+    // current trait looked identical to an ordinary bunk: the hand came back,
+    // said "drilled and rested", and the player had no way to know the re-cut
+    // had happened at all. On a bunk whose entire purpose is the re-cut, silence
+    // reads as a bug. The reveal already knows how to draw a stat that held, so
+    // it only needed to be told.
+    if (!moved) {
+      out.push({
+        crewId: c.id, before, after: before, gained,
+        beforeLabel: traitLabel(before) || 'No trait',
+        afterLabel: traitLabel(before) || 'No trait',
+      })
+      continue
+    }
 
     const id = encodeTraitId(after)
     const { data: written } = await admin

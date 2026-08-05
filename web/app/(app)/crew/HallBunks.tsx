@@ -247,9 +247,9 @@ export default function HallBunks({
             const opensAt = hallTierDef(Math.min(CREW_HALL_MAX_TIER, i + 1))
             return (
               <div key={`locked-${i}`}
-                title={lev ? `${opensAt.name} opens the Leviathan bunk, which rolls a new trait every stint` : `${opensAt.name} opens this bunk`}
+                title={lev ? `${opensAt.name} opens the Leviathan bunk, which re-cuts a trait every stint and never makes it worse` : `${opensAt.name} opens this bunk`}
                 aria-label={lev
-                  ? `Locked. ${opensAt.name} opens the Leviathan bunk, which rolls a new trait every stint.`
+                  ? `Locked. ${opensAt.name} opens the Leviathan bunk, which re-cuts a trait every stint and never makes it worse.`
                   : `Locked bunk. ${opensAt.name} opens it.`}
                 style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,
@@ -270,9 +270,9 @@ export default function HallBunks({
             return (
               <button key={`empty-${i}`} type="button" disabled={pending}
                 onClick={() => setPicking(i)}
-                title={lev ? 'The Leviathan bunk. Every stint here rolls a new trait and offers it to you.' : undefined}
+                title={lev ? 'The Leviathan bunk. Every stint rolls against their trait and keeps the better of each stat. It can never make them worse.' : undefined}
                 aria-label={lev
-                  ? 'Empty Leviathan bunk. Tap to put a crew in it. Every stint rolls them a new trait.'
+                  ? 'Empty Leviathan bunk. Tap to put a crew in it. Every stint rolls against their trait and keeps the better of each stat.'
                   : `Empty bunk ${i + 1}. Tap to put a crew in it.`}
                 style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,
@@ -595,7 +595,8 @@ function BunkPicker({
   pending: boolean
   stint: string
   payout: number
-  /** Filling the sixth bunk, which rolls a new trait every stint. */
+  /** Filling the sixth bunk, which re-cuts a trait every stint (per-stat max
+   *  against a fresh roll, so it can only ever improve them). */
   leviathan: boolean
   /** The hand who last trained in THIS bunk, if they are free to go back in. */
   lastCrew: CrewMember | null
