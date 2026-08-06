@@ -396,6 +396,14 @@ const SHIP_STAT_ABOUT: Record<string, { lead: string; rows: [string, string][] }
 }
 
 const SHIP_PANEL = '#0b111b'
+// How big each hull draws in the Ship Management hero, as a fraction of the
+// box. Uniform-width art means a Rowboat and a Man-o-War would otherwise
+// render identically, so the sense of scale that used to come free from
+// uneven canvas margins is made explicit here, where it can be tuned.
+const HERO_TIER_SCALE: Record<number, number> = {
+  0: 0.74, 1: 0.79, 2: 0.85, 3: 0.90, 4: 0.94, 5: 0.97, 6: 1,
+}
+
 const shipPanelBg = (tint?: string) =>
   tint ? `linear-gradient(${tint}, ${tint}), ${SHIP_PANEL}` : SHIP_PANEL
 
@@ -1209,6 +1217,16 @@ export default function ShipHero({
   const skinDef     = equippedSkin ? SHIP_SKINS.find(s => s.id === equippedSkin) : undefined
   const skinFilter  = skinDef?.filter ?? 'none'
   const shipImgSrc  = skinDef?.imageByTier?.[shipTierForSlots] ?? shipStats.image
+  // The Ship Management hero draws from public/ship-hero/, where every hull has
+  // been trimmed to its own edges and re-exported at one width (normalize-ships.mjs).
+  // The originals carry huge, uneven transparent margins baked in (a rowboat
+  // fills 40% of its canvas, a man-o-war 65%) and object-fit: contain fits the
+  // CANVAS, so the screen looked mostly empty and each hull sat somewhere
+  // different. Everything else still points at the originals, which RaidCombat
+  // and the shipyard are laid out against.
+  // Guarded: ShipStats.image falls back to '' for a tier with no art, and an
+  // unguarded basename would ask for /ship-hero/ and 404.
+  const shipHeroSrc = shipImgSrc ? `/ship-hero/${shipImgSrc.split('/').pop()}` : shipImgSrc
 
   // Each screen gets its own backdrop now that Items and Forge are their own
   // routes rather than tabs on the ship sheet. All three are lamplit INTERIORS
@@ -1620,7 +1638,23 @@ export default function ShipHero({
                 //
                 // Solid colour fallback while the image loads.
                 backgroundColor: '#060c14',
-                backgroundImage: `linear-gradient(180deg, rgba(6,10,18,0.44) 0%, rgba(5,8,14,0.78) 42%, rgba(3,5,9,0.94) 100%), url(${sectionBg})`,
+                // The scrim is per-tab now, because these three screens want
+                // different amounts of picture.
+                //
+                // Ship and Loadout are screens you READ: a hull with its stats,
+                // or a grid of relics you are comparing. A painted berth behind
+                // them competed with exactly the thing you came to look at, so
+                // both are now nearly solid, with only enough of the plate left
+                // to say where you are. Loadout goes darkest of the three: it is
+                // the densest grid and its item art is small and often dark.
+                //
+                // Forge keeps the open wash. It is a single object on a plate
+                // rather than a list, so the art is not in the way there.
+                backgroundImage: `linear-gradient(180deg, ${
+                  loadoutTab === 'loadout' ? 'rgba(6,9,15,0.90) 0%, rgba(4,7,12,0.95) 42%, rgba(2,4,8,0.98)'
+                  : loadoutTab === 'ship'  ? 'rgba(6,10,18,0.84) 0%, rgba(5,8,14,0.92) 42%, rgba(3,5,9,0.97)'
+                  : 'rgba(6,10,18,0.44) 0%, rgba(5,8,14,0.78) 42%, rgba(3,5,9,0.94)'
+                } 100%), url(${sectionBg})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center top',
                 backgroundRepeat: 'no-repeat',
@@ -1742,7 +1776,15 @@ export default function ShipHero({
               {(loadoutTab === 'ship' || loadoutMode !== null) && (() => {
                 return (
                   <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-                    <div style={{ position: 'relative', display: 'inline-block', width: '78%', maxWidth: 230 }}>
+                    {/* Was 78% / 230px against art that only filled 40-65% of
+                        its own canvas, so a rowboat drew about 92px wide on a
+                        phone. The art is trimmed now, and the box is the size
+                        the ship deserves on the screen that is about the ship. */}
+                    <div style={{
+                      position: 'relative', display: 'inline-block',
+                      width: `${96 * (HERO_TIER_SCALE[shipTierForSlots] ?? 1)}%`,
+                      maxWidth: 360 * (HERO_TIER_SCALE[shipTierForSlots] ?? 1),
+                    }}>
                       {/* A LIGHT BEHIND THE HULL. The backdrop is a lamplit berth
                           and the ship models are dark timber, so the ship was a
                           dark shape on a dark shape. This is a lantern pool
@@ -1756,7 +1798,7 @@ export default function ShipHero({
                       }} />
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={shipImgSrc}
+                        src={shipHeroSrc}
                         alt={shipName ?? shipStats.name}
                         loading="lazy"
                         decoding="async"
