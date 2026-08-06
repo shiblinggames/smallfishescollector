@@ -1442,7 +1442,7 @@ export default function ShipHero({
                 sub: shipStats.name,
                 nudge: false, count: 0,
                 art: shipImgSrc,
-                fit: 'contain' as const,
+                fit: 'plate' as const,
                 locked: false,
               },
               {
@@ -1469,13 +1469,23 @@ export default function ShipHero({
                   {/* One art box, one size, all four. objectFit differs because
                       a crew PORTRAIT is a framed face and wants cropping, while
                       a hull and an anvil are objects and want containing. */}
-                  <div style={{ position: 'relative', width: '100%', height: 46, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 5 }}>
+                  <div style={{ position: 'relative', width: '100%', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 5 }}>
                     {row.art
                       // eslint-disable-next-line @next/next/no-img-element
                       ? <img src={row.art} alt="" aria-hidden loading="lazy" decoding="async"
-                          style={row.fit === 'cover'
-                            ? { width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', objectPosition: 'top center', border: '1px solid rgba(255,255,255,0.16)', filter: row.locked ? 'grayscale(0.9) brightness(0.7)' : undefined }
-                            : { maxWidth: 52, maxHeight: 44, objectFit: 'contain', filter: row.locked ? 'grayscale(0.9) brightness(0.7)' : 'drop-shadow(0 3px 6px rgba(0,0,0,0.55))' }} />
+                          style={
+                            row.fit === 'cover'
+                              ? { width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', objectPosition: 'top center', border: '1px solid rgba(255,255,255,0.16)', filter: row.locked ? 'grayscale(0.9) brightness(0.7)' : undefined }
+                            : row.fit === 'plate'
+                              // The hull PLATES are 600x335 with the ship
+                              // filling only 52% to 65% of the width, so
+                              // object-fit sizes the empty canvas and a
+                              // Brigantine drew 27x22 next to a 40px crew
+                              // portrait. Size the CANVAS instead: at 92 wide
+                              // the hull lands at 48x38, a Man-o-War at 60x47.
+                              ? { width: 92, maxWidth: 'none', height: 'auto', filter: row.locked ? 'grayscale(0.9) brightness(0.7)' : 'drop-shadow(0 3px 7px rgba(0,0,0,0.6))' }
+                              : { maxWidth: 52, maxHeight: 46, objectFit: 'contain', filter: row.locked ? 'grayscale(0.9) brightness(0.7)' : 'drop-shadow(0 3px 6px rgba(0,0,0,0.55))' }
+                          } />
                       : null}
                     {row.locked && (
                       <span aria-hidden style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
