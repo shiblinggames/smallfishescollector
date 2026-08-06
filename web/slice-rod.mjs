@@ -36,7 +36,7 @@ if (files.length === 0) {
   console.error('Run from the web/ directory.')
   console.error('')
   console.error('Example:')
-  console.error('  node slice-rod.mjs public/rod_bamboo.png')
+  console.error('  node slice-rod.mjs art-source/rod_bamboo.png')
   exit(1)
 }
 

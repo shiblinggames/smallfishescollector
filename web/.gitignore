@@ -57,5 +57,10 @@ scripts/*
 !scripts/check-copy.mts
 
 # Badge slicer source sheets (dev-only input for slice-badges.mjs; sliced output in public/badges/ is committed)
+# Badge SOURCE sheets. Multi-badge plates that slice-badges.mjs cuts into
+# public/badges/. Source art, never served, so they live outside public/ and
+# stay out of the repo. The old public/ path is kept so an existing checkout
+# does not suddenly start tracking 85MB of them.
+art-source/badgebatch*.png
 public/badgebatch*.png
 .git-commit-msg.tmp

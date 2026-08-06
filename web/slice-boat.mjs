@@ -19,7 +19,7 @@ if (files.length === 0) {
   console.error('Run from the web/ directory.')
   console.error('')
   console.error('Example:')
-  console.error('  node slice-boat.mjs public/boat_oak.png')
+  console.error('  node slice-boat.mjs art-source/boat_oak.png')
   exit(1)
 }
 

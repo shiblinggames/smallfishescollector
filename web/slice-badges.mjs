@@ -241,7 +241,8 @@ const ONLY = process.env.ONLY
 let skipped = 0
 for (const [batch, row, col, name] of PLAN) {
   if (ONLY && String(batch) !== ONLY) { skipped++; continue }
-  const src  = `public/badgebatch${batch}.png`
+  // Sheets live OUTSIDE public/: they are source art, not served assets.
+  const src  = `art-source/badgebatch${batch}.png`
   // Skip sheets that haven't been uploaded yet (e.g. doing batches 1–7 first).
   if (!existsSync(src)) { skipped++; continue }
   const meta = await sharp(src).metadata()

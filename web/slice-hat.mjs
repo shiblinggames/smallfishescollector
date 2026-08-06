@@ -20,7 +20,7 @@ if (files.length === 0) {
   console.error('Run from the web/ directory.')
   console.error('')
   console.error('Example:')
-  console.error('  node slice-hat.mjs public/hatblue.png')
+  console.error('  node slice-hat.mjs art-source/hatblue.png')
   exit(1)
 }
 
