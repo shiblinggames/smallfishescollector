@@ -304,7 +304,17 @@ export default function ZoneLanding({
                         gives the rest to water, which is what tells the zones
                         apart. */}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={ZONE_BG[zone]} alt="" className={accessible ? 'zone-art-drift' : undefined} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 8%', filter: accessible ? 'none' : 'grayscale(0.92) brightness(0.4)', ...(accessible ? { animationDuration: `${24 + i * 4}s`, animationDelay: `-${i * 9}s` } : {}) }} />
+                    {/* The wide card crops LOWER into the painting.
+                        
+                        Ancient Deep spans both columns, so at the same 205px
+                        height it shows half as much of the source: 11% of the
+                        image where a narrow card shows 22%. At a shared
+                        'center 8%' that window landed above the waterline, and
+                        the boat drew against open water with the horizon 83%
+                        down the card instead of 45%, which is why it looked
+                        like it was flying. 13% puts the waterline where the
+                        narrow cards put it. */}
+                    <img src={ZONE_BG[zone]} alt="" className={accessible ? 'zone-art-drift' : undefined} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: wide ? 'center 13%' : 'center 8%', filter: accessible ? 'none' : 'grayscale(0.92) brightness(0.4)', ...(accessible ? { animationDuration: `${24 + i * 4}s`, animationDelay: `-${i * 9}s` } : {}) }} />
                     <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(3,9,15,0.05) 0%, rgba(3,8,13,0.20) 34%, rgba(2,6,10,0.80) 74%, rgba(2,6,10,0.96) 100%)' }} />
 
                     {/* Top-right — current tag, enter chevron, or lock. */}
@@ -419,8 +429,25 @@ export default function ZoneLanding({
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 10, scale: 0.97 }}
                   transition={{ duration: 0.22, ease: 'easeOut' }}
-                  style={{ position: 'absolute', left: '1rem', right: '1rem', top: '50%', transform: 'translateY(-50%)', background: 'linear-gradient(180deg, #0b141d 0%, #060b12 100%)', border: `1px solid ${dColor}55`, borderRadius: 18, zIndex: 51, padding: '1.1rem 1.15rem 1.2rem' }}
+                  // Centred by MARGIN inside a flex layer, not by translating
+                  // itself up half its own height. top:50% + translateY(-50%)
+                  // centres perfectly right up until the panel is taller than
+                  // the screen, at which point it hangs its own header off the
+                  // top edge with no way to scroll back to it. Symmetric
+                  // gutters and margin auto centre the same way and simply stop
+                  // when there is no room left.
+                  style={{
+                    position: 'absolute', inset: 0, zIndex: 51,
+                    display: 'flex', padding: '1rem', overflowY: 'auto',
+                    pointerEvents: 'none',
+                  }}
                 >
+                  <div style={{
+                    margin: 'auto', width: '100%', pointerEvents: 'auto',
+                    background: 'linear-gradient(180deg, #0b141d 0%, #060b12 100%)',
+                    border: `1px solid ${dColor}55`, borderRadius: 18,
+                    padding: '1.1rem 1.15rem 1.2rem',
+                  }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 13 }}>
                     <div>
                       <p className="font-cinzel font-800" style={{ fontSize: '1.45rem', color: '#fdf7e8', lineHeight: 1 }}>{HABITAT_LABEL[zone]}</p>
@@ -474,6 +501,7 @@ export default function ZoneLanding({
                   <p className="font-karla" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.45)', marginTop: 13, lineHeight: 1.45 }}>
                     Rough numbers at starting gear. A better rod, better bait and a higher level all beat them.
                   </p>
+                  </div>
                 </motion.div>
               </>
             )
