@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useTransition } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ZONE_MIN_LEVEL, ZONE_WAIT_BASE, ZONE_BG, zoneCrateChance, zoneDiamondShare, zonePetPerCrate } from './zoneData'
 import { updateUsername } from '@/app/(app)/u/actions'
@@ -153,6 +154,13 @@ export default function ZoneLanding({
   }
   useEffect(() => { syncScrollCue() }, [])
 
+  // Escape closes, same as the campaign map overlay.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onBack() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onBack])
+
   const showUsernamePrompt = AUTO_NAME_RE.test(username) && fishingXP >= XP_THRESHOLD
   const [usernamePromptOpen, setUsernamePromptOpen] = useState(false)
   const [usernameInput, setUsernameInput] = useState('')
@@ -186,9 +194,14 @@ export default function ZoneLanding({
     })
   }
 
-  return (
-    <div className="fixed left-0 right-0 top-[44px] bottom-[60px] sm:top-[60px] sm:bottom-0"
-      style={{ background: '#08121c', zIndex: 40, display: 'flex', justifyContent: 'center' }}>
+  // Portal to <body> at the app's modal layer, the same shell the campaign map
+  // uses. Previously this sat INSIDE the nav chrome (top-44/bottom-60, z40),
+  // which made it read as a page rather than as the full-page modal the
+  // Campaign tile opens. Escaping to the body also gets it out from under the
+  // fixed Nav header, which is a root-level z50 sibling.
+  return createPortal(
+    <div role="dialog" aria-modal
+      style={{ position: 'fixed', inset: 0, zIndex: 111, background: '#08121c', display: 'flex', justifyContent: 'center' }}>
       <div className="relative w-full max-w-lg overflow-hidden" style={{ height: '100%' }}>
 
         {/* Deep-water backdrop — a painted water column (sunlit surface + god-rays
@@ -203,28 +216,47 @@ export default function ZoneLanding({
         {/* Content shell. */}
         <div style={{ position: 'relative', zIndex: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
 
-          {/* Fixed header — the way back to the Fishing hub stays reachable
-              even five zones down the descent, so it sits OUTSIDE the scroll
-              area rather than riding away with the first card. The Fishing
-              level bar used to live here; it belongs to the hub now. */}
-          <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10, padding: '0.85rem 0.9rem 0.6rem' }}>
+          {/* Fixed header — mirrors the campaign map overlay's: section
+              eyebrow + destination on the left, close on the right, on an
+              opaque bar with a hairline under it. Outside the scroll area so
+              the close stays reachable five zones down the descent. Palette is
+              fishing's blue where the campaign's is parchment gold. */}
+          <div style={{
+            flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: 'calc(env(safe-area-inset-top, 0px) + 0.7rem) 1rem 0.7rem',
+            background: 'rgba(6,14,22,0.96)',
+            borderBottom: '1px solid rgba(125,160,216,0.18)',
+          }}>
+            <div>
+              <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: 'rgba(125,160,216,0.72)', marginBottom: 1 }}>
+                Fishing
+              </p>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#e6efff' }}>
+                The Waters
+              </p>
+            </div>
             <button
               type="button"
               onClick={onBack}
-              aria-label="Back to Fishing"
-              style={{ width: 34, height: 34, flexShrink: 0, borderRadius: '50%', background: 'rgba(8,18,28,0.72)', border: '1px solid rgba(255,255,255,0.18)', color: '#cfd8e4', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', WebkitTapHighlightColor: 'transparent' }}
+              aria-label="Close"
+              style={{
+                width: 34, height: 34, borderRadius: '50%', padding: 0, flexShrink: 0,
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.18)',
+                color: '#cfcabf', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
             >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
             </button>
-            <div style={{ minWidth: 0 }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#eaf2ff', lineHeight: 1.1, textShadow: '0 2px 8px rgba(0,0,0,0.8)' }}>Pick Your Water</p>
-              <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)', marginTop: 1 }}>Deeper water, better fish, harder fights</p>
-            </div>
           </div>
 
           {/* Scroll area — free scroll (no snap) so the big scene cards glide
               past naturally. */}
-          <div ref={scrollRef} onScroll={syncScrollCue} style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch', padding: '0.4rem 0.9rem 1.5rem' }}>
+          <div ref={scrollRef} onScroll={syncScrollCue} style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', padding: '0.9rem 0.9rem calc(env(safe-area-inset-bottom, 0px) + 2rem)' }}>
 
           {/* The descent — each zone is a large circular node on a path, linked
               to the next one down. Scroll to dive from the bright surface to the
@@ -504,6 +536,7 @@ export default function ZoneLanding({
 
 
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
