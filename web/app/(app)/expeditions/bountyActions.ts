@@ -173,8 +173,34 @@ export async function getBountyBoard(): Promise<BountyBoard> {
   const today = bountyToday()
   const { data: row } = await admin.from('bounty_progress').select('*').eq('user_id', uid).single()
 
-  // A new day, or a captain who has never had a board.
-  if (!row || row.date !== today) {
+  // Does the board on file still match the rung it is supposed to be?
+  //
+  // bounty_ids are frozen the moment a board is handed out and only re-roll
+  // when the DATE turns over, so any change to the tiers or the rung sizes
+  // leaves yesterday's shape sitting in front of whoever already loaded it
+  // today. Re-tiering the catalogue mid-afternoon did exactly that: a board
+  // rolled as standard/standard/hard/elite redrew itself as easy/easy/medium/
+  // elite, because two of those bounties had changed bands underneath it.
+  //
+  // So the composition is checked, not just the date. Compared as a multiset:
+  // the slot ORDER is not meaningful, only how many of each tier.
+  //
+  // Not re-rolled once anything is claimed. Handing someone a fresh board after
+  // they have been paid for part of the old one either takes back work they
+  // finished or pays them twice for it, and neither is worth fixing a cosmetic
+  // mismatch that corrects itself at midnight anyway.
+  const staleShape = row != null && row.date === today && (() => {
+    const tiers = ((row.bounty_ids as string[]) ?? [])
+      .map(id => BOUNTY_BY_ID.get(id)?.tier)
+      .filter((t): t is Bounty['tier'] => t != null)
+      .sort()
+    const anyClaimed = ((row.claimed as boolean[]) ?? []).some(Boolean)
+    return !anyClaimed && tiers.join(',') !== [...rung.slots].sort().join(',')
+  })()
+
+  // A new day, a captain who has never had a board, or a board whose shape no
+  // longer exists.
+  if (!row || row.date !== today || staleShape) {
     const { data: profile } = await admin.from('profiles').select('*').eq('id', uid).single()
     const ranGauntlet = Number((profile as Record<string, unknown> | null)?.gauntlet_runs_completed ?? 0) > 0
     const rolled = rollBounties(uid, today, rung.slots, cleared, ranGauntlet)
