@@ -76,23 +76,21 @@ function WaveMarks({ n, color, dim }: { n: number; color: string; dim?: boolean 
 function PrestigeMark({ level }: { level: number }) {
   const isMax = level >= PRESTIGE_MAX
   const GOLD = '#f0c040'
+  // One star and a count, not five pips. The zone cards are two to a row now
+  // and a five-pip rail plus a "MAX" word ate more of the standing line than
+  // the collection count it sits beside.
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0, whiteSpace: 'nowrap' }}>
-      <span style={{ display: 'inline-flex', gap: 1.5 }}>
-        {Array.from({ length: PRESTIGE_MAX }).map((_, i) => (
-          <svg key={i} width="10" height="10" viewBox="0 0 24 24" aria-hidden
-            fill={i < level ? GOLD : 'rgba(255,255,255,0.24)'}
-            style={{ filter: i < level ? `drop-shadow(0 0 3px ${GOLD}bb)` : 'none' }}>
-            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" />
-          </svg>
-        ))}
-      </span>
-      {isMax && (
-        <span className="font-karla font-800 uppercase" style={{
-          fontSize: '0.58rem', letterSpacing: '0.08em',
+    <span className="font-karla font-800" style={{ display: 'inline-flex', alignItems: 'center', gap: 2, flexShrink: 0, whiteSpace: 'nowrap', fontSize: '0.55rem', letterSpacing: '0.02em' }}>
+      <svg width="10" height="10" viewBox="0 0 24 24" aria-hidden fill={GOLD} style={{ filter: `drop-shadow(0 0 3px ${GOLD}bb)` }}>
+        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" />
+      </svg>
+      {isMax ? (
+        <span className="uppercase" style={{
           backgroundImage: 'linear-gradient(90deg,#fff2c8,#f0c040,#ffe9a8)',
           WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
         }}>Max</span>
+      ) : (
+        <span style={{ color: GOLD }}>{level}</span>
       )}
     </span>
   )
@@ -258,10 +256,13 @@ export default function ZoneLanding({
               past naturally. */}
           <div ref={scrollRef} onScroll={syncScrollCue} style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', padding: '0.9rem 0.9rem calc(env(safe-area-inset-bottom, 0px) + 2rem)' }}>
 
-          {/* The descent — each zone is a large circular node on a path, linked
-              to the next one down. Scroll to dive from the bright surface to the
-              Ancient Deep. */}
-          <div style={{ position: 'relative', paddingTop: 30, paddingBottom: 12 }}>
+          {/* The waters, two to a row. These were one full-bleed scene card per
+              zone at 66vh, which meant one zone on screen at a time and four
+              scrolls to see what you had. At this size the whole descent reads
+              at a glance and picking one is a tap, not an expedition. The odd
+              zone out (the Ancient Deep, last and hardest) spans the row rather
+              than sitting orphaned in a column. */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, paddingTop: 4, paddingBottom: 12 }}>
             {ZONES.map((zone, i) => {
               const minLevel = ZONE_MIN_LEVEL[zone] ?? 1
               // Ancient Deep needs Fishing 75 AND Chapter 3 cleared (or grandfathered).
@@ -272,9 +273,12 @@ export default function ZoneLanding({
               const prestige = prestigeLevels[zone] ?? 0
               const isCurrent = accessible && zone === currentZone
               const enter = () => { if (accessible) onSelect(zone) }
+              // An odd zone count leaves the last card alone on its row. Let it
+              // span instead of sitting in a half-empty row.
+              const wide = i === ZONES.length - 1 && ZONES.length % 2 === 1
 
               return (
-                <div key={zone} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div key={zone} style={wide ? { gridColumn: 'span 2' } : undefined}>
                   {/* Art-forward zone card — the zone's painted scene, full-bleed
                       and tappable, with the name + tagline and your boat riding on
                       it. The whole card is the button; the accent border, press
@@ -286,60 +290,67 @@ export default function ZoneLanding({
                     whileTap={accessible ? { scale: 0.975 } : undefined}
                     onClick={enter}
                     style={{
-                      position: 'relative', width: '100%', height: 'clamp(380px, 66vh, 640px)',
-                      marginTop: i > 0 ? 18 : 2, borderRadius: 20, overflow: 'hidden',
+                      position: 'relative', width: '100%', height: 170,
+                      borderRadius: 16, overflow: 'hidden',
                       cursor: accessible ? 'pointer' : 'default',
                       border: `${isCurrent ? 2 : 1.5}px solid ${accessible ? (isCurrent ? color : `${color}8c`) : 'rgba(255,255,255,0.14)'}`,
-                      boxShadow: isCurrent ? `0 12px 34px rgba(0,0,0,0.5), 0 0 24px ${color}44` : '0 10px 26px rgba(0,0,0,0.45)',
+                      boxShadow: isCurrent ? `0 8px 20px rgba(0,0,0,0.5), 0 0 16px ${color}44` : '0 6px 16px rgba(0,0,0,0.45)',
                       WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation',
                     }}
                   >
-                    {/* The zone's full fishing scene — sky + horizon + water, anchored
-                        to the TOP of the tall scene column so you see it the way the
-                        fishing screen does (surface up top, water below). */}
+                    {/* The zone's fishing scene. These plates are 1024x4128 water
+                        COLUMNS, so how much of one a card shows depends entirely on
+                        how tall the card is. Anchored to the top, a 170px card
+                        showed the top 18% of the plate, which is all sky with the
+                        horizon buried behind the caption scrim: five cards of
+                        empty air. 8% down puts the horizon near the top edge and
+                        gives the rest to water, which is what tells the zones
+                        apart. */}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={ZONE_BG[zone]} alt="" className={accessible ? 'zone-art-drift' : undefined} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', filter: accessible ? 'none' : 'grayscale(0.92) brightness(0.4)', ...(accessible ? { animationDuration: `${24 + i * 4}s`, animationDelay: `-${i * 9}s` } : {}) }} />
-                    <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(3,9,15,0.05) 0%, rgba(3,8,13,0.12) 42%, rgba(2,6,10,0.72) 82%, rgba(2,6,10,0.94) 100%)' }} />
+                    <img src={ZONE_BG[zone]} alt="" className={accessible ? 'zone-art-drift' : undefined} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 8%', filter: accessible ? 'none' : 'grayscale(0.92) brightness(0.4)', ...(accessible ? { animationDuration: `${24 + i * 4}s`, animationDelay: `-${i * 9}s` } : {}) }} />
+                    <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(3,9,15,0.05) 0%, rgba(3,8,13,0.20) 34%, rgba(2,6,10,0.80) 74%, rgba(2,6,10,0.96) 100%)' }} />
 
                     {/* Top-right — current tag, enter chevron, or lock. */}
                     {!accessible ? (
                       <span aria-hidden style={{ position: 'absolute', top: 9, right: 10, display: 'grid', placeItems: 'center' }}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.8" strokeLinecap="round"><rect x="4" y="11" width="16" height="9" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.8" strokeLinecap="round"><rect x="4" y="11" width="16" height="9" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
                       </span>
                     ) : isCurrent ? (
-                      <span className="font-karla font-800 uppercase" style={{ position: 'absolute', top: 9, right: 10, padding: '0.14rem 0.5rem', borderRadius: 999, background: 'rgba(2,6,12,0.72)', border: `1px solid ${color}`, fontSize: '0.48rem', letterSpacing: '0.14em', color: '#fff' }}>You are here</span>
+                      <span className="font-karla font-800 uppercase" style={{ position: 'absolute', top: 7, right: 7, padding: '0.1rem 0.4rem', borderRadius: 999, background: 'rgba(2,6,12,0.72)', border: `1px solid ${color}`, fontSize: '0.42rem', letterSpacing: '0.1em', color: '#fff' }}>You are here</span>
                     ) : (
-                      <span aria-hidden style={{ position: 'absolute', top: 8, right: 8, width: 26, height: 26, borderRadius: '50%', display: 'grid', placeItems: 'center', background: 'rgba(2,6,12,0.5)', border: `1px solid ${color}99` }}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="m9 6 6 6-6 6" /></svg>
+                      <span aria-hidden style={{ position: 'absolute', top: 7, right: 7, width: 21, height: 21, borderRadius: '50%', display: 'grid', placeItems: 'center', background: 'rgba(2,6,12,0.5)', border: `1px solid ${color}99` }}>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="m9 6 6 6-6 6" /></svg>
                       </span>
                     )}
 
                     {/* Your boat — rides on the water, up near the horizon of the
                         scene (current zone). Bigger + higher on the larger card. */}
                     {isCurrent && (
-                      <div aria-hidden style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', bottom: '34%', width: 224, pointerEvents: 'none', filter: 'drop-shadow(0 10px 16px rgba(0,10,25,0.6))', zIndex: 1 }}>
-                        <FisherPose characterColor={characterColor} equippedHat={equippedHat} equippedBoat={equippedBoat} equippedPet={equippedPet} rodTier={rodTier} reelTier={reelTier} hookTier={hookTier} />
+                      <div aria-hidden style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', bottom: '36%', width: '64%', maxWidth: 170, pointerEvents: 'none', filter: 'drop-shadow(0 6px 10px rgba(0,10,25,0.6))', zIndex: 1 }}>
+                        <FisherPose characterColor={characterColor} equippedHat={equippedHat} equippedBoat={equippedBoat} equippedPet={equippedPet} rodTier={rodTier} reelTier={reelTier} hookTier={hookTier} noGlow />
                       </div>
                     )}
 
-                    {/* Standing (collection + prestige + goldens), name, tagline —
-                        bottom-left. Right edge kept clear for the (i) button. */}
-                    <div style={{ position: 'absolute', left: 15, right: 54, bottom: 15, zIndex: 2, pointerEvents: 'none' }}>
+                    {/* Name, tagline and standing, bottom-left. The (i) moved
+                        to the top-left corner: reserving a column of the
+                        caption for it cost more than it was worth once the card
+                        got this narrow. */}
+                    <div style={{ position: 'absolute', left: 10, right: 10, bottom: 9, zIndex: 2, pointerEvents: 'none' }}>
                       {accessible && (
-                        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 9, marginBottom: 8 }}>
-                          <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: colDone ? '#f0c040' : 'rgba(255,255,255,0.9)', whiteSpace: 'nowrap', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>
-                            {colDone ? '✦ all charted' : `${col.caught} of ${col.total} logged`}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden' }}>
+                          <span className="font-karla font-700" style={{ fontSize: '0.55rem', color: colDone ? '#f0c040' : 'rgba(255,255,255,0.86)', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>
+                            {colDone ? '✦ all charted' : `${col.caught}/${col.total} logged`}
                           </span>
                           {prestige > 0 && <PrestigeMark level={prestige} />}
                           {(goldenBoosts[zone] ?? 0) > 0 && (
-                            <span className="font-karla font-800" style={{ fontSize: '0.6rem', color: '#f0c040', letterSpacing: '0.04em', whiteSpace: 'nowrap', textShadow: '0 0 6px rgba(240,192,64,0.5)' }}>
-                              ✦ +{goldenBoostPct(goldenBoosts[zone] ?? 0)}% Goldens
+                            <span className="font-karla font-800" style={{ fontSize: '0.52rem', color: '#f0c040', letterSpacing: '0.03em', textShadow: '0 0 6px rgba(240,192,64,0.5)' }}>
+                              ✦ +{goldenBoostPct(goldenBoosts[zone] ?? 0)}%
                             </span>
                           )}
                         </div>
                       )}
-                      <p className="font-cinzel font-800" style={{ fontSize: '2.15rem', color: accessible ? '#fdf7e8' : 'rgba(253,247,232,0.55)', lineHeight: 1.0, textShadow: `0 2px 8px rgba(0,0,0,0.95), 0 0 20px ${color}66` }}>{HABITAT_LABEL[zone]}</p>
-                      <p className="font-karla font-400 italic" style={{ fontSize: '0.9rem', color: accessible ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.55)', marginTop: 3, textShadow: '0 1px 4px rgba(0,0,0,0.9)', lineHeight: 1.25 }}>
+                      <p className="font-cinzel font-800" style={{ fontSize: '1.02rem', color: accessible ? '#fdf7e8' : 'rgba(253,247,232,0.55)', lineHeight: 1.05, textShadow: `0 2px 6px rgba(0,0,0,0.95), 0 0 14px ${color}66`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{HABITAT_LABEL[zone]}</p>
+                      <p className="font-karla font-400 italic" style={{ fontSize: '0.56rem', color: accessible ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.55)', marginTop: 2, textShadow: '0 1px 4px rgba(0,0,0,0.9)', lineHeight: 1.3, display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden' }}>
                         {accessible ? HABITAT_TAGLINE[zone] : (zone === 'ancient_deep' && fishingLevel >= minLevel ? 'Clear Chapter 3 to enter' : `Unlocks at Level ${minLevel}`)}
                       </p>
                     </div>
@@ -349,9 +360,9 @@ export default function ZoneLanding({
                       <button
                         onClick={(e) => { e.stopPropagation(); setDetailsFor(zone) }}
                         aria-label={`${HABITAT_LABEL[zone]} catch details`}
-                        style={{ position: 'absolute', right: 12, bottom: 14, zIndex: 3, width: 32, height: 32, borderRadius: '50%', display: 'grid', placeItems: 'center', background: 'rgba(2,6,12,0.55)', border: `1px solid ${color}99`, color: '#fff', cursor: 'pointer', pointerEvents: 'auto', WebkitTapHighlightColor: 'transparent' }}
+                        style={{ position: 'absolute', left: 7, top: 7, zIndex: 3, width: 21, height: 21, borderRadius: '50%', display: 'grid', placeItems: 'center', background: 'rgba(2,6,12,0.55)', border: `1px solid ${color}99`, color: '#fff', cursor: 'pointer', pointerEvents: 'auto', WebkitTapHighlightColor: 'transparent', padding: 0 }}
                       >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 11v5" /><path d="M12 7.5h.01" /></svg>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 11v5" /><path d="M12 7.5h.01" /></svg>
                       </button>
                     )}
                   </motion.div>
