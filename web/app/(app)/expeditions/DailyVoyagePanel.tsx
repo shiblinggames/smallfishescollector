@@ -209,9 +209,9 @@ export default function DailyVoyagePanel({
   //   outcome -> how it went, which is what the crew choice earned
   //   haul    -> the numbers
   const [reveal, setReveal] = useState<'sealed' | 'outcome' | 'haul'>('sealed')
-  // The 1-in-100 haul takes over the screen. A caption on the card is not
-  // enough for something a player might see once a month.
-  const [jackpotOverlay, setJackpotOverlay] = useState(false)
+  // MASSIVE BOOTY takes over the screen. A caption on the card is not enough
+  // for something a player might see once a month.
+  const [bootyOverlay, setBootyOverlay] = useState(false)
   // The route sheet portals to document.body, which does not exist during the
   // server render. Gate on a mount flag rather than a bare `typeof document`
   // check so the first client render matches the server's and React does not
@@ -710,6 +710,28 @@ export default function DailyVoyagePanel({
                     </div>
                   )}
 
+                  {/* THE 1-IN-100 IS ADVERTISED.
+                      It used to exist only after it fired, so a player had no
+                      idea it was possible and the first one would have read as
+                      a confusing big number rather than a win. A chance nobody
+                      knows about cannot create any anticipation, which is the
+                      entire point of having one. */}
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '0.3rem 0.5rem', borderRadius: 8,
+                    background: 'rgba(240,192,64,0.07)',
+                    border: '1px solid rgba(240,192,64,0.22)',
+                  }}>
+                    <span className="font-karla font-800 uppercase" style={{
+                      fontSize: '0.5rem', letterSpacing: '0.14em', color: '#f0c040', flexShrink: 0,
+                    }}>
+                      1 in 100
+                    </span>
+                    <span className="font-karla" style={{ fontSize: '0.64rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.35 }}>
+                      Massive Booty: ten times the coin and gems.
+                    </span>
+                  </div>
+
                   {/* WHAT EACH STAT ACTUALLY DOES.
                       Three cause-and-effect lines rather than three bare
                       numbers. A player can read "Power 60 -> 63% triumph" and
@@ -981,15 +1003,16 @@ export default function DailyVoyagePanel({
           {isComplete ? (
             /* Sealed return. Open it, see how it went, THEN see the haul. */
             (() => {
-              const ev = events[0] as (VoyageEvent & { jackpot?: boolean }) | undefined
-              const jackpot = !!ev?.jackpot
+              const ev = events[0] as (VoyageEvent & { booty?: boolean; jackpot?: boolean }) | undefined
+              // `jackpot` is the pre-rename field; rows written before it still pay off.
+              const booty = !!(ev?.booty ?? ev?.jackpot)
               // The single event's outcome IS the voyage's outcome. It is what
               // the crew's Power earned and it swung the haul between 0.6x and
               // 1.35x, so it leads the reveal instead of hiding in the log.
               const won  = ev?.outcome === 'success'
               const lost = ev?.outcome === 'failure'
-              const tone = jackpot ? '#f0c040' : won ? '#7fd49a' : lost ? '#e0888a' : '#c8aa6a'
-              const verdict = jackpot ? 'The hold will not shut'
+              const tone = booty ? '#f0c040' : won ? '#7fd49a' : lost ? '#e0888a' : '#c8aa6a'
+              const verdict = booty ? 'The hold will not shut'
                             : won     ? 'They pulled it off'
                             : lost    ? 'It went badly'
                             :           'They made it back'
@@ -1044,9 +1067,9 @@ export default function DailyVoyagePanel({
                             initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
                             transition={{ type: 'spring', stiffness: 380, damping: 22 }}
                             style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, marginTop: 4 }}>
-                            {jackpot && (
+                            {booty && (
                               <p className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.22em', color: '#f0c040' }}>
-                                Jackpot haul
+                                Massive booty
                               </p>
                             )}
                             {activeVoyage.total_doubloons > 0 && (
@@ -1084,12 +1107,12 @@ export default function DailyVoyagePanel({
                     setReveal('outcome')
                     window.setTimeout(() => {
                       setReveal('haul')
-                      if (jackpot) {
+                      if (booty) {
                         // Longer buzz for the rare one, and the overlay lands
                         // WITH the number rather than before it, so the card
                         // still does its job underneath.
                         hapticTap()
-                        setJackpotOverlay(true)
+                        setBootyOverlay(true)
                       }
                     }, 900)
                     handleClaim(false)
@@ -1272,18 +1295,18 @@ export default function DailyVoyagePanel({
 
     return (
       <>
-      {/* ── JACKPOT ────────────────────────────────────────────────────────
+      {/* ── MASSIVE BOOTY ──────────────────────────────────────────────────
           One voyage in a hundred. Portaled to body because this panel sits
           inside transformed wrappers, and a transform ancestor makes position
           fixed anchor to the ancestor instead of the viewport.
           Transform and opacity only: the rays spin, they do not repaint. */}
       {mounted && createPortal(
         <AnimatePresence>
-          {jackpotOverlay && (
+          {bootyOverlay && (
             <motion.div
-              key="voyage-jackpot"
+              key="voyage-booty"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              onClick={() => setJackpotOverlay(false)}
+              onClick={() => setBootyOverlay(false)}
               style={{
                 position: 'fixed', inset: 0, zIndex: 1300,
                 background: 'rgba(4,3,1,0.88)', backdropFilter: 'blur(4px)',
@@ -1306,7 +1329,7 @@ export default function DailyVoyagePanel({
                 style={{ position: 'relative', width: '100%', maxWidth: 340, textAlign: 'center' }}
               >
                 <p className="font-karla font-800 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.26em', color: '#f0c040', marginBottom: 12 }}>
-                  Jackpot haul
+                  Massive booty
                 </p>
                 <motion.img
                   src="/goldcrateopen.png" alt="" width={150} height={150}
@@ -1324,9 +1347,9 @@ export default function DailyVoyagePanel({
                   </p>
                 )}
                 <p className="font-karla" style={{ fontSize: '0.72rem', color: '#a8a29a', marginTop: 10, lineHeight: 1.5 }}>
-                  Ten times the haul. One voyage in a hundred comes back like this.
+                  Ten times the haul. One voyage in a hundred seas the booty.
                 </p>
-                <button onClick={() => setJackpotOverlay(false)} className="font-cinzel font-700 uppercase tracking-[0.1em]"
+                <button onClick={() => setBootyOverlay(false)} className="font-cinzel font-700 uppercase tracking-[0.1em]"
                   style={{
                     marginTop: 20, padding: '0.7rem 2rem', borderRadius: 12,
                     background: 'rgba(240,192,64,0.16)', border: '1px solid rgba(240,192,64,0.6)',

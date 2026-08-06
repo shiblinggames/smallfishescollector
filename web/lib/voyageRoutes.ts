@@ -143,6 +143,9 @@ export interface VoyageEvent {
   crewVariantLost: number | null
   baitDrop: string | null
   /** The 1-in-100 haul. Persisted on the event because the reveal reads the
-   *  stored voyage row, not the roll that produced it. */
+   *  stored voyage row, not the roll that produced it. `jackpot` is the
+   *  original field name, still read so any row written before the rename
+   *  still pays off. */
+  booty?: boolean
   jackpot?: boolean
 }
