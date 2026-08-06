@@ -102,20 +102,19 @@ export default function FishingHub({
                 so the two skill titles land on the same line when you flick
                 between the tabs. */}
             <div style={{ padding: '1.1rem 0 1rem' }}>
-              <FishingLevelBar fishingXP={fishingXP} initialAlloc={initialFishingRenownAlloc} />
-
-              {/* The board, live, in the slot the Expeditions hub gives its
-                  Crew/Ship/Items/Forge bar: inside the hero block, 0.9rem under
-                  the level. Under the hero rather than over it, so the Fishing
-                  title still lands on the same line as Navigation when you flick
-                  between the two tabs.
+              {/* The board rides INSIDE the hero, the way the quarterdeck rides
+                  inside Navigation's. It was a matching panel 0.9rem below,
+                  which read as two objects that happened to agree rather than
+                  one header.
 
                   Prices read here rather than on the Tavern where they used to
                   live: they decide what a haul is worth and when to sell it.
                   Once the Exchange is open its indexes lead the strip. */}
-              <div style={{ marginTop: '0.9rem' }}>
-                <MarketTicker items={ticker} />
-              </div>
+              <FishingLevelBar
+                fishingXP={fishingXP}
+                initialAlloc={initialFishingRenownAlloc}
+                footer={ticker.length > 0 ? <MarketTicker items={ticker} /> : null}
+              />
             </div>
 
             {/* Market / Tackle Shop / Almanac use purpose-painted 512x512

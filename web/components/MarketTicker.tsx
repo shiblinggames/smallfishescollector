@@ -11,9 +11,11 @@ import { motion } from 'framer-motion'
 // Tavern is where you go to gamble and socialise. It now sits under the fishing
 // level hero, one tap from the Market tile it reports on.
 //
-// It wears the level hero's chrome, because it sits directly under it inside
-// the same block and is read as part of that header rather than as its own
-// panel. Only the rise/fall colours are its own, and those are semantic.
+// It renders INSIDE the level hero's panel, so it carries no chrome of its own
+// at all: no border, no radius, no shadow. It used to wear a copy of the hero's
+// styling 0.9rem below it, which read as two panels that happened to match
+// rather than one header. Only the rise/fall colours are its own, and those are
+// semantic.
 //
 // Two kinds of quote ride the same strip. A fish quotes a PRICE in doubloons,
 // what one sells for right now. An Exchange index quotes a LEVEL, a bare
@@ -92,18 +94,10 @@ export default function MarketTicker({ items }: { items: TickerItem[] }) {
       style={{
         display: 'flex', alignItems: 'center',
         position: 'relative', overflow: 'hidden',
-        // The level hero's exact chrome. The strip sits directly under it in
-        // the same block, so its own sky-blue panel read as a second system
-        // bolted on rather than the hero's sibling: same gradient, same neutral
-        // border with the lit top edge, same radius and lift.
-        background: 'linear-gradient(180deg, rgba(14,19,29,0.94) 0%, rgba(8,11,18,0.97) 100%)',
-        border: '1px solid rgba(255,255,255,0.10)',
-        borderTop: '1px solid rgba(255,255,255,0.17)',
-        borderRadius: 16,
-        height: 44,
+        // No chrome: the hero panel around it supplies all of that.
+        height: 42,
         padding: '0 0.7rem 0 0.95rem',
         cursor: 'pointer', userSelect: 'none', textDecoration: 'none', color: 'inherit',
-        boxShadow: '0 6px 22px rgba(0,0,0,0.45)',
       }}
     >
       <span className="font-karla font-700 uppercase tracking-[0.12em]"

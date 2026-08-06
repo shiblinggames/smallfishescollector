@@ -1392,154 +1392,161 @@ export default function ShipHero({
                     {`${toGo.toLocaleString()} xp`}
                   </span>
                 )}
+                footer={(
+                  <>
+                {/* ── The quarterdeck ── one bar, four stations.
+                    These were four separate translucent cards with their own
+                    borders, blur and shadows, each holding a 42px thumbnail. On a
+                    page that is now a hero panel over a painting with art-forward
+                    tiles under it, that was the last of the old chrome, and five
+                    bordered rectangles stacked down the screen with the tiles below
+                    made the top of the page all frame and no picture.
+
+                    One surface now, and not merely a matching one: it is INSIDE
+                    the level panel, under the same hairline the Fishing hub hangs
+                    its market ticker on. Sitting 0.9rem below with a duplicate of
+                    the hero's border, radius and shadow, it read as two objects
+                    that happened to agree rather than one header.
+
+                    Split by hairlines into four stations. The art is the biggest
+                    thing in each and it is the same size in all four, which the old
+                    thumbnails never were: the ship needed a 140% hack to look level
+                    with a crew portrait, and still did not.
+
+                    Each caption says something TRUE rather than filler. "Manage
+                    upgrades" told you nothing; the hull's name is right there and is
+                    what you actually want to know. */}
+                <div style={{
+                  display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+                  // No chrome of its own: it lives inside the level panel now, and
+                  // that panel owns the background, border, radius and lift.
+                  overflow: 'hidden',
+                }}>
+                  {([
+                    {
+                      key: 'crew',
+                      label: 'Crew',
+                      sub: readyBunks > 0 ? `${readyBunks} trained` : crewLevelUpNudge ? 'Levelled up' : `${roster.length} aboard`,
+                      nudge: crewLevelUpNudge || readyBunks > 0,
+                      count: readyBunks,
+                      art: crewCycleArt,
+                      fit: 'cover' as const,
+                      locked: false,
+                    },
+                    {
+                      key: 'ship',
+                      label: 'Ship',
+                      // The HULL CLASS, not the custom name. A station is ~108px
+                      // wide and "The Salty Revenge" truncates to nothing useful,
+                      // while the class is always short, always changes when you
+                      // upgrade, and is the thing the Ship screen is about.
+                      sub: shipStats.name,
+                      nudge: false, count: 0,
+                      art: shipImgSrc,
+                      fit: 'plate' as const,
+                      locked: false,
+                    },
+                    {
+                      key: 'items',
+                      label: 'Items',
+                      sub: newRaidItems.size > 0 ? 'New gear' : `${slotsFilled}/${slotsTotal} mounted`,
+                      nudge: newRaidItems.size > 0, count: 0,
+                      art: itemsCycleArt,
+                      fit: 'contain' as const,
+                      locked: false,
+                    },
+                    {
+                      key: 'forge',
+                      label: 'Forge',
+                      sub: forgeUnlocked ? `${forgeStock} held` : 'Locked',
+                      nudge: false, count: 0,
+                      art: abyssalUnlocked ? '/forge/abyssal_forge.png' : '/forge/forge.png',
+                      fit: 'contain' as const,
+                      locked: !forgeUnlocked,
+                    },
+                  ] as const).map((row, idx) => {
+                    const inner = (
+                      <>
+                        {/* One art box, one size, all four. objectFit differs because
+                            a crew PORTRAIT is a framed face and wants cropping, while
+                            a hull and an anvil are objects and want containing. */}
+                        <div style={{ position: 'relative', width: '100%', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 5 }}>
+                          {row.art
+                            // eslint-disable-next-line @next/next/no-img-element
+                            ? <img src={row.art} alt="" aria-hidden loading="lazy" decoding="async"
+                                style={
+                                  row.fit === 'cover'
+                                    ? { width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', objectPosition: 'top center', border: '1px solid rgba(255,255,255,0.16)', filter: row.locked ? 'grayscale(0.9) brightness(0.7)' : undefined }
+                                  : row.fit === 'plate'
+                                    // The hull PLATES are 600x335 with the ship
+                                    // filling only 52% to 65% of the width, so
+                                    // object-fit sizes the empty canvas and a
+                                    // Brigantine drew 27x22 next to a 40px crew
+                                    // portrait. Size the CANVAS instead: at 92 wide
+                                    // the hull lands at 48x38, a Man-o-War at 60x47.
+                                    ? { width: 92, maxWidth: 'none', height: 'auto', filter: row.locked ? 'grayscale(0.9) brightness(0.7)' : 'drop-shadow(0 3px 7px rgba(0,0,0,0.6))' }
+                                    : { maxWidth: 52, maxHeight: 46, objectFit: 'contain', filter: row.locked ? 'grayscale(0.9) brightness(0.7)' : 'drop-shadow(0 3px 6px rgba(0,0,0,0.55))' }
+                                } />
+                            : null}
+                          {row.locked && (
+                            <span aria-hidden style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8b97a8" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                            </span>
+                          )}
+                          {/* The nudge rides the ART, not the label: at this width a
+                              badge beside the title would push the title into an
+                              ellipsis. */}
+                          {row.count > 0 ? (
+                            <span aria-label={`${row.count} ready`} className="crew-levelup-dot font-karla font-800" style={{
+                              position: 'absolute', top: -1, right: '18%',
+                              minWidth: 15, height: 15, padding: '0 3px', borderRadius: 999,
+                              background: '#ffd96a', border: '1px solid rgba(0,0,0,0.55)',
+                              color: '#231a06', fontSize: '0.58rem', lineHeight: '14px', textAlign: 'center',
+                            }}>{row.count}</span>
+                          ) : row.nudge ? (
+                            <span aria-hidden className="crew-levelup-dot" style={{ position: 'absolute', top: 1, right: '20%', width: 7, height: 7, borderRadius: '50%', background: '#ffd96a', border: '1px solid rgba(0,0,0,0.55)' }} />
+                          ) : null}
+                        </div>
+
+                        <p className="font-cinzel font-700" style={{ width: '100%', fontSize: '0.8rem', lineHeight: 1.1, color: row.locked ? '#79828f' : '#f0ede8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {row.label}
+                        </p>
+                        <p className="font-karla font-600" style={{ width: '100%', marginTop: 1, fontSize: '0.62rem', lineHeight: 1.25, color: row.nudge ? '#ffd96a' : '#9aa3b1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {row.sub}
+                        </p>
+                      </>
+                    )
+                    const style = {
+                      display: 'flex', flexDirection: 'column' as const, alignItems: 'center',
+                      padding: '0.7rem 0.3rem 0.75rem', textAlign: 'center' as const,
+                      // Hairlines BETWEEN, no border around each: the bar is one
+                      // object, and four outlines inside one outline is the look
+                      // this was trying to get away from.
+                      borderLeft: idx === 0 ? 'none' : '1px solid rgba(255,255,255,0.08)',
+                      textDecoration: 'none', cursor: row.locked ? 'default' : 'pointer',
+                      opacity: row.locked ? 0.66 : 1,
+                      minWidth: 0, width: '100%', font: 'inherit', background: 'none',
+                      WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation' as const,
+                    }
+                    const href = row.key === 'crew' ? '/crew?tab=assign' : `/expeditions/${row.key}`
+                    if (row.locked) {
+                      return <div key={row.key} aria-label="Forge. Locked until you unlock it in the Gauntlet." style={style}>{inner}</div>
+                    }
+                    return (
+                      <Link key={row.key} href={href} className="hub-manage-tap"
+                        data-coach={row.key === 'crew' ? 'crew' : row.key === 'ship' ? 'ship' : undefined}
+                        style={style}>
+                        {inner}
+                      </Link>
+                    )
+                  })}
+                </div>
+                  </>
+                )}
               />
             )
           })()}
 
-          {/* ── The quarterdeck ── one bar, four stations.
-              These were four separate translucent cards with their own
-              borders, blur and shadows, each holding a 42px thumbnail. On a
-              page that is now a hero panel over a painting with art-forward
-              tiles under it, that was the last of the old chrome, and five
-              bordered rectangles stacked down the screen with the tiles below
-              made the top of the page all frame and no picture.
-
-              One surface now, matching the level hero directly above it, split
-              by hairlines into four stations. The art is the biggest thing in
-              each and it is the same size in all four, which the old thumbnails
-              never were: the ship needed a 140% hack to look level with a crew
-              portrait, and still did not.
-
-              Each caption says something TRUE rather than filler. "Manage
-              upgrades" told you nothing; the hull's name is right there and is
-              what you actually want to know. */}
-          <div style={{
-            display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-            marginTop: '0.9rem', borderRadius: 16, overflow: 'hidden',
-            background: 'linear-gradient(180deg, rgba(14,19,29,0.94) 0%, rgba(8,11,18,0.97) 100%)',
-            border: '1px solid rgba(255,255,255,0.10)',
-            borderTop: '1px solid rgba(255,255,255,0.17)',
-            boxShadow: '0 6px 22px rgba(0,0,0,0.45)',
-          }}>
-            {([
-              {
-                key: 'crew',
-                label: 'Crew',
-                sub: readyBunks > 0 ? `${readyBunks} trained` : crewLevelUpNudge ? 'Levelled up' : `${roster.length} aboard`,
-                nudge: crewLevelUpNudge || readyBunks > 0,
-                count: readyBunks,
-                art: crewCycleArt,
-                fit: 'cover' as const,
-                locked: false,
-              },
-              {
-                key: 'ship',
-                label: 'Ship',
-                // The HULL CLASS, not the custom name. A station is ~108px
-                // wide and "The Salty Revenge" truncates to nothing useful,
-                // while the class is always short, always changes when you
-                // upgrade, and is the thing the Ship screen is about.
-                sub: shipStats.name,
-                nudge: false, count: 0,
-                art: shipImgSrc,
-                fit: 'plate' as const,
-                locked: false,
-              },
-              {
-                key: 'items',
-                label: 'Items',
-                sub: newRaidItems.size > 0 ? 'New gear' : `${slotsFilled}/${slotsTotal} mounted`,
-                nudge: newRaidItems.size > 0, count: 0,
-                art: itemsCycleArt,
-                fit: 'contain' as const,
-                locked: false,
-              },
-              {
-                key: 'forge',
-                label: 'Forge',
-                sub: forgeUnlocked ? `${forgeStock} held` : 'Locked',
-                nudge: false, count: 0,
-                art: abyssalUnlocked ? '/forge/abyssal_forge.png' : '/forge/forge.png',
-                fit: 'contain' as const,
-                locked: !forgeUnlocked,
-              },
-            ] as const).map((row, idx) => {
-              const inner = (
-                <>
-                  {/* One art box, one size, all four. objectFit differs because
-                      a crew PORTRAIT is a framed face and wants cropping, while
-                      a hull and an anvil are objects and want containing. */}
-                  <div style={{ position: 'relative', width: '100%', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 5 }}>
-                    {row.art
-                      // eslint-disable-next-line @next/next/no-img-element
-                      ? <img src={row.art} alt="" aria-hidden loading="lazy" decoding="async"
-                          style={
-                            row.fit === 'cover'
-                              ? { width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', objectPosition: 'top center', border: '1px solid rgba(255,255,255,0.16)', filter: row.locked ? 'grayscale(0.9) brightness(0.7)' : undefined }
-                            : row.fit === 'plate'
-                              // The hull PLATES are 600x335 with the ship
-                              // filling only 52% to 65% of the width, so
-                              // object-fit sizes the empty canvas and a
-                              // Brigantine drew 27x22 next to a 40px crew
-                              // portrait. Size the CANVAS instead: at 92 wide
-                              // the hull lands at 48x38, a Man-o-War at 60x47.
-                              ? { width: 92, maxWidth: 'none', height: 'auto', filter: row.locked ? 'grayscale(0.9) brightness(0.7)' : 'drop-shadow(0 3px 7px rgba(0,0,0,0.6))' }
-                              : { maxWidth: 52, maxHeight: 46, objectFit: 'contain', filter: row.locked ? 'grayscale(0.9) brightness(0.7)' : 'drop-shadow(0 3px 6px rgba(0,0,0,0.55))' }
-                          } />
-                      : null}
-                    {row.locked && (
-                      <span aria-hidden style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8b97a8" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-                      </span>
-                    )}
-                    {/* The nudge rides the ART, not the label: at this width a
-                        badge beside the title would push the title into an
-                        ellipsis. */}
-                    {row.count > 0 ? (
-                      <span aria-label={`${row.count} ready`} className="crew-levelup-dot font-karla font-800" style={{
-                        position: 'absolute', top: -1, right: '18%',
-                        minWidth: 15, height: 15, padding: '0 3px', borderRadius: 999,
-                        background: '#ffd96a', border: '1px solid rgba(0,0,0,0.55)',
-                        color: '#231a06', fontSize: '0.58rem', lineHeight: '14px', textAlign: 'center',
-                      }}>{row.count}</span>
-                    ) : row.nudge ? (
-                      <span aria-hidden className="crew-levelup-dot" style={{ position: 'absolute', top: 1, right: '20%', width: 7, height: 7, borderRadius: '50%', background: '#ffd96a', border: '1px solid rgba(0,0,0,0.55)' }} />
-                    ) : null}
-                  </div>
-
-                  <p className="font-cinzel font-700" style={{ width: '100%', fontSize: '0.8rem', lineHeight: 1.1, color: row.locked ? '#79828f' : '#f0ede8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {row.label}
-                  </p>
-                  <p className="font-karla font-600" style={{ width: '100%', marginTop: 1, fontSize: '0.62rem', lineHeight: 1.25, color: row.nudge ? '#ffd96a' : '#9aa3b1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {row.sub}
-                  </p>
-                </>
-              )
-              const style = {
-                display: 'flex', flexDirection: 'column' as const, alignItems: 'center',
-                padding: '0.7rem 0.3rem 0.75rem', textAlign: 'center' as const,
-                // Hairlines BETWEEN, no border around each: the bar is one
-                // object, and four outlines inside one outline is the look
-                // this was trying to get away from.
-                borderLeft: idx === 0 ? 'none' : '1px solid rgba(255,255,255,0.08)',
-                textDecoration: 'none', cursor: row.locked ? 'default' : 'pointer',
-                opacity: row.locked ? 0.66 : 1,
-                minWidth: 0, width: '100%', font: 'inherit', background: 'none',
-                WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation' as const,
-              }
-              const href = row.key === 'crew' ? '/crew?tab=assign' : `/expeditions/${row.key}`
-              if (row.locked) {
-                return <div key={row.key} aria-label="Forge. Locked until you unlock it in the Gauntlet." style={style}>{inner}</div>
-              }
-              return (
-                <Link key={row.key} href={href} className="hub-manage-tap"
-                  data-coach={row.key === 'crew' ? 'crew' : row.key === 'ship' ? 'ship' : undefined}
-                  style={style}>
-                  {inner}
-                </Link>
-              )
-            })}
-          </div>
         </div>
 
         {/* Score badges moved into the Loadout drawer + the hub

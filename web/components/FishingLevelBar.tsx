@@ -7,7 +7,7 @@
 // Expeditions. It was born inline in ZoneLanding; lifting it out is what lets
 // the hub own it without a second copy going stale.
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import SkillLevelHero from '@/components/SkillLevelHero'
 import RenownPanel from '@/components/RenownPanel'
 import { renownLevel, renownProgress, spentPoints, type RenownAlloc } from '@/lib/renown'
@@ -17,10 +17,14 @@ import { getXPProgress } from '@/lib/fishingLevel'
 export default function FishingLevelBar({
   fishingXP,
   initialAlloc,
+  footer,
 }: {
   fishingXP: number
   /** Persisted Fishing Renown allocations ({} when none). */
   initialAlloc?: RenownAlloc | null
+  /** Hung flush inside the hero panel, under a hairline. The hub passes the
+   *  market ticker, mirroring the quarterdeck under Navigation. */
+  footer?: ReactNode
 }) {
   // Alloc mirrors to local state so the board stays in sync if the player
   // spends a point and reopens it.
@@ -56,6 +60,7 @@ export default function FishingLevelBar({
   return (
     <>
       <SkillLevelHero
+        footer={footer}
         label="Fishing"
         level={xp.level}
         progress={atMax ? (rn ? rn.progress : 1) : xp.progress}
