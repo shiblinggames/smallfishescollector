@@ -455,18 +455,31 @@ function PositionSheet({ p, cycle, onClose, onChanged }: {
                   color={toBreakEven > 0 ? '#c8d2e0' : UP} />}
           </div>
 
-          {/* The one comparison worth its own line: what it is WORTH counts the
-              hours it still has to move, what it would PAY counts none of
-              them. Side by side the difference explains itself. */}
+          {/* NOT a comparison. Showing "if it settled this second" beside a
+              larger "sell now" read as a contradiction, and worse, the smaller
+              number described something you cannot actually do: you have no
+              button that settles a contract early at intrinsic.
+
+              They are a sum. The move has earned one part, the hours still to
+              run are the rest, and together they are what selling pays. */}
           {!settled && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '0.55rem 0.7rem', borderRadius: 10, background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.08)', marginBottom: 2 }}>
-              <div style={{ minWidth: 0 }}>
-                <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#8a94a4' }}>If it settled this second</p>
-                <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#6a7482', marginTop: 1 }}>the {remaining}h left is worth the difference</p>
+            <div style={{ padding: '0.6rem 0.75rem', borderRadius: 11, background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.08)', marginBottom: 2 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+                <span className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#8a94a4' }}>The move has earned</span>
+                <span className="font-karla font-700" style={{ fontSize: '0.82rem', color: '#dbe3ee', ...TNUM }}>{ifItSettledNow.toLocaleString()} ⟡</span>
               </div>
-              <span className="font-cinzel font-700" style={{ flexShrink: 0, fontSize: '1.05rem', color: ifItSettledNow > p.stake ? UP : '#c8d2e0', ...TNUM }}>
-                {ifItSettledNow.toLocaleString()} ⟡
-              </span>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginTop: 3 }}>
+                <span className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#8a94a4' }}>
+                  {remaining}h still to run
+                </span>
+                <span className="font-karla font-700" style={{ fontSize: '0.82rem', color: '#dbe3ee', ...TNUM }}>
+                  {value - ifItSettledNow >= 0 ? '+' : ''}{(value - ifItSettledNow).toLocaleString()} ⟡
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginTop: 5, paddingTop: 5, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                <span className="font-karla font-700" style={{ fontSize: '0.74rem', color: '#c8d2e0' }}>Worth now</span>
+                <span className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: value > p.stake ? UP : '#c8d2e0', ...TNUM }}>{value.toLocaleString()} ⟡</span>
+              </div>
             </div>
           )}
 
@@ -495,7 +508,7 @@ function PositionSheet({ p, cycle, onClose, onChanged }: {
               <p className="font-karla font-400" style={{ fontSize: '0.68rem', color: '#7c8696', marginTop: 7, lineHeight: 1.45, textAlign: 'center' }}>
                 {armed
                   ? 'Or leave it, and it settles itself on whatever the market does.'
-                  : `What it is worth today, counting the ${remaining}h it still has to move.`}
+                  : 'Selling hands over exactly that. Leave it and it settles itself.'}
               </p>
               {armed && (
                 <button type="button" onClick={() => setArmed(false)} className="font-karla font-600"
