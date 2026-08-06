@@ -12,7 +12,8 @@
 // a gap reads as a specific missing fish. Name, stats and flavour stay hidden
 // until you land one.
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import PopupShell from '@/components/PopupShell'
 import { ZONE_LABEL, ZONE_COLOR, ZONE_ORDER, ZONE_BG, ZONE_TAGLINE } from './zoneData'
@@ -152,7 +153,10 @@ function SpeciesSheet({ entry, onClose, goldens }: {
   goldens: AlmanacData['goldens']
 }) {
   const mine = useMemo(() => entry ? goldens.filter(g => g.fishId === entry.id) : [], [entry, goldens])
-  if (!entry) return null
+  // The portal target only exists after mount.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+  if (!entry || !mounted) return null
 
   const color = ZONE_COLOR[entry.habitat] ?? '#a78bfa'
   const rc = RARITY_COLOR[entry.rarity]
@@ -162,13 +166,25 @@ function SpeciesSheet({ entry, onClose, goldens }: {
   const pbPct = entry.pbLength != null && entry.lengthMin != null && entry.lengthMax != null && entry.lengthMax > entry.lengthMin
     ? Math.max(0, Math.min(1, (entry.pbLength - entry.lengthMin) / (entry.lengthMax - entry.lengthMin))) : null
 
-  return (
-    <PopupShell open onClose={onClose}>
+  // Portalled to <body>, and NOT because of the usual fixed-positioning
+  // trap. PopupShell renders in place, and this sheet lives inside the
+  // Almanac's scrolling room, which carries zIndex 1 to sit over the backdrop
+  // art. That is a stacking context: everything inside it is pinned below the
+  // header and masthead, which are siblings at zIndex 2, however high the
+  // sheet's own z-index goes. Escaping to the body is the fix; 120 then keeps
+  // it clear of the Almanac shell's own 111.
+  return createPortal(
+    <PopupShell open onClose={onClose} zIndex={120}>
       <motion.div
         initial={{ opacity: 0, y: 18, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ type: 'spring', stiffness: 380, damping: 32 }}
         onClick={e => e.stopPropagation()}
         style={{
+          // PopupShell's wrapper is a flex row, so a child with no height
+          // stretches to fill it and the card grows a tail of empty panel
+          // under the content. Sit at the start and take the height the
+          // content asks for.
+          alignSelf: 'flex-start',
           width: '100%', maxWidth: 460, margin: '0 auto', borderRadius: 18, overflow: 'hidden',
           // Solid base: this sits over the overlay's art.
           background: 'linear-gradient(180deg, #12101c 0%, #0a0913 100%)',
@@ -259,7 +275,8 @@ function SpeciesSheet({ entry, onClose, goldens }: {
           </div>
         </div>
       </motion.div>
-    </PopupShell>
+    </PopupShell>,
+    document.body,
   )
 }
 
