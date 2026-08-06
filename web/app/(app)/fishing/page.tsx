@@ -59,6 +59,8 @@ export default async function FishingPage() {
     marketRows,
     { data: pbRows },
     { data: ch3Row },
+    { data: lifetimeRows },
+    { data: marketState },
   ] = await Promise.all([
     getActiveChallengeSession(),
     getDailyChallenge(),
@@ -94,6 +96,11 @@ export default async function FishingPage() {
     // Ancient Deep, alongside Fishing 75.
     admin.from('raid_completions')
       .select('id').eq('user_id', user.id).eq('raid_id', 'the_quartermaster').limit(1).maybeSingle(),
+    // The Almanac's own numbers. fish_collection is the prestige CYCLE log and
+    // gets wiped; the hub card was reading it and so disagreed with the book it
+    // links to the moment anyone prestiged.
+    admin.from('fish_lifetime').select('fish_id, catches').eq('user_id', user.id),
+    admin.from('market_state').select('mood').eq('id', 1).maybeSingle(),
   ])
 
   const marketMultipliers: Record<number, number> = {}
@@ -101,6 +108,38 @@ export default async function FishingPage() {
     marketMultipliers[row.fish_id] = Number(row.multiplier)
   }
   const isPremium = isPremiumActive(profile)
+  // ── Almanac card numbers ──────────────────────────────────────────────────
+  // These have to match The Angler's Almanac exactly, because the card is the
+  // door to it. Both halves were wrong: it counted fish_collection, which a
+  // prestige deletes, against all 152 species including the six Ancient Deep
+  // trophies that live in the Giants room and never appear in the Collection.
+  //
+  // Same rules as almanacActions.getAlmanacData: lifetime catches, the ancient
+  // ledger, and a prestige, which only happens once a zone is fully collected
+  // and so proves you caught every species in it.
+  const lifetimeCaught = new Set((lifetimeRows ?? [])
+    .filter((r: { catches: number }) => (r.catches ?? 0) > 0)
+    .map((r: { fish_id: number }) => r.fish_id))
+  const ancientSet = new Set((profile?.ancient_catches as number[] | null) ?? [])
+  const prestigeMap = (profile?.prestige_levels as Record<string, number> | null) ?? {}
+  const collectableSpecies = ((allSpecies ?? []) as { id: number; habitat: string; sell_value: number }[])
+    .filter(f => !(f.habitat === 'ancient_deep' && f.sell_value === 0))
+  const speciesTotal = collectableSpecies.length
+  const speciesCaught = collectableSpecies.filter(f =>
+    lifetimeCaught.has(f.id)
+    || caughtSet.has(f.id)
+    || ancientSet.has(f.id)
+    || (prestigeMap[f.habitat] ?? 0) > 0).length
+
+  // ── Market card ───────────────────────────────────────────────────────────
+  // What the hold is WORTH at today's prices, which is the number the market's
+  // own portfolio leads with. "23 fish" told you nothing about whether it was
+  // worth the trip.
+  const holdValue = ((fishInventory ?? []) as unknown as { fish_id: number; quantity: number; fish_species: { sell_value: number } }[])
+    .reduce((n, r) => n + r.quantity * (r.fish_species?.sell_value ?? 0) * (marketMultipliers[r.fish_id] ?? 1), 0)
+  const marketMood = (marketState?.mood as string | null) ?? 'calm'
+
+
 
   // Ancient Deep unlock — Fishing 75 AND Chapter 3 cleared (or grandfathered via
   // has_ancient_deep_access). Drives the zone selector's lock so a player can't
@@ -154,6 +193,7 @@ export default async function FishingPage() {
 
   const ownedRods = (rodRows ?? []).map((r: { rod_tier: number }) => r.rod_tier)
   const caughtFishIds = (collectionRows ?? []).map((r: { fish_id: number; is_golden: boolean }) => r.fish_id)
+  const caughtSet = new Set(caughtFishIds)
   const mountedFishIds = (collectionRows ?? [])
     .filter((r: { fish_id: number; is_golden: boolean }) => r.is_golden)
     .map((r: { fish_id: number; is_golden: boolean }) => r.fish_id)
@@ -254,6 +294,10 @@ export default async function FishingPage() {
           initialHighestPerfectStreak={profile?.highest_perfect_streak ?? 0}
           initialPerfectStreak={profile?.catch_pending ? 0 : (profile?.current_perfect_streak ?? 0)}
           initialStreakZone={(profile?.current_streak_zone as string | null) ?? null}
+          hubSpeciesCaught={speciesCaught}
+          hubSpeciesTotal={speciesTotal}
+          hubHoldValue={Math.round(holdValue)}
+          hubMarketMood={marketMood}
           hasSeenFishingHubTour={profile?.has_seen_fishing_hub_tour ?? false}
           hasSeenFishingTour={profile?.has_seen_fishing_tour ?? false}
           hasSeenFishingCatchTour={profile?.has_seen_fishing_catch_tour ?? false}

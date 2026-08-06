@@ -22,13 +22,14 @@ import FisherPose from '@/components/FisherPose'
 import Almanac from './Almanac'
 import FishingHubTour from './FishingHubTour'
 import { ZONE_MIN_LEVEL, ZONE_BG, ZONE_LABEL, ZONE_COLOR, ZONE_ORDER } from './zoneData'
+import { MOOD_CONFIG } from '@/lib/fishMarket'
 import type { ZoneKey } from './ZoneLanding'
 import type { RenownAlloc } from '@/lib/renown'
 
 
 export default function FishingHub({
   fishingLevel, fishingXP, initialFishingRenownAlloc, ancientDeepUnlocked,
-  currentZone, holdCount, fishHoldTier, baitCount, speciesCaught, speciesTotal, hasSeenHubTour,
+  currentZone, holdCount, fishHoldTier, baitCount, speciesCaught, speciesTotal, holdValue, marketMood, hasSeenHubTour,
   characterColor, equippedHat, equippedBoat, equippedPet, rodTier, reelTier, hookTier,
   onOpenZones,
 }: {
@@ -43,6 +44,9 @@ export default function FishingHub({
   baitCount: number
   speciesCaught: number
   speciesTotal: number
+  /** The hold at today's prices, which is what the market's portfolio leads with. */
+  holdValue: number
+  marketMood: string
   hasSeenHubTour: boolean
   characterColor: string
   equippedHat: string | null
@@ -61,6 +65,7 @@ export default function FishingHub({
   const holdCap = getFishHold(fishHoldTier).capacity
   const holdFull = holdCount >= holdCap
   const holdPct = holdCap > 0 ? Math.min(1, holdCount / holdCap) : 0
+  const mood = MOOD_CONFIG[marketMood] ?? MOOD_CONFIG.calm
 
   return (
     <>
@@ -123,9 +128,15 @@ export default function FishingHub({
                 accent="#f0c040"
                 title="Market"
                 coachId="market"
-                status={holdCount > 0 ? `${holdCount} in the hold` : 'Hold is empty'}
-                statusColor={holdFull ? '#f87171' : holdCount > 0 ? '#f0c040' : undefined}
-                sub={holdFull ? 'Hold is full, sell to keep fishing' : `Room for ${(holdCap - holdCount).toLocaleString()} more`}
+                // What the hold is WORTH today, not how many fish are in it.
+                // A count told you nothing about whether the trip was worth
+                // making; this is the number the market's own portfolio leads
+                // with, and it moves with the mood named underneath it.
+                status={holdCount > 0 ? `${holdValue.toLocaleString()} ⟡ in the hold` : 'Hold is empty'}
+                statusColor={holdCount > 0 ? '#f0c040' : undefined}
+                sub={holdFull
+                  ? 'Hold is full, sell to keep fishing'
+                  : `${mood.label} · ${holdCount}/${holdCap} aboard`}
                 progress={holdPct}
                 dot={holdCount > 0 ? 'returned' : null}
                 onClick={() => router.push('/tavern/market')}

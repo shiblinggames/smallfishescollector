@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation'
 import ShopHeader from '@/components/ShopHeader'
 import { marketSellFish, liquidateAllFish } from './actions'
 import type { MarketFishEntry, MarketState } from './page'
+import { MOOD_CONFIG } from '@/lib/fishMarket'
 import SwipeAction from '@/components/SwipeAction'
 import { hapticReward } from '@/lib/haptics'
 
@@ -34,15 +35,6 @@ const TNUM: React.CSSProperties = { fontVariantNumeric: 'tabular-nums', fontFeat
 
 // Mood copy is the HARBOURMASTER talking, not a weather report (2026-07
 // warmth pass) — the ticker mechanic stays fintech, the voice goes pirate.
-const MOOD_CONFIG: Record<string, { color: string; bg: string; border: string; label: string; desc: string }> = {
-  calm:           { color: '#38bdf8', bg: 'rgba(56,189,248,0.1)',   border: 'rgba(56,189,248,0.25)',  label: 'Calm Market',   desc: 'Flat water. Prices barely breathe.' },
-  storm:          { color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',   border: 'rgba(245,158,11,0.25)',  label: 'Storm',         desc: 'The board jumps with the swell. Could break either way.' },
-  kraken:         { color: '#ef4444', bg: 'rgba(239,68,68,0.1)',    border: 'rgba(239,68,68,0.25)',   label: 'Kraken',        desc: 'Something big is under the hull. Sell brave or sell nothing.' },
-  tide_rising:    { color: '#4ade80', bg: 'rgba(74,222,128,0.1)',   border: 'rgba(74,222,128,0.25)',  label: 'Tide Rising',   desc: 'The tide lifts every price with it. Holding pays.' },
-  bounty_season:  { color: '#f0c040', bg: 'rgba(240,192,64,0.1)',   border: 'rgba(240,192,64,0.25)',  label: 'Bounty Season', desc: 'Buyers flush with coin. Rare fish are climbing fast.' },
-  low_tide:       { color: '#94a3b8', bg: 'rgba(148,163,184,0.1)',  border: 'rgba(148,163,184,0.25)', label: 'Low Tide',      desc: 'Buyers are tight-fisted today. Hold if you can stomach it.' },
-  cursed_waters:  { color: '#c084fc', bg: 'rgba(192,132,252,0.1)',  border: 'rgba(192,132,252,0.25)', label: 'Cursed Waters', desc: 'Bad water. Every price is sinking and picking up speed.' },
-}
 
 const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0)
 const pctOf = (now: number, prev: number) => (prev > 0 ? ((now - prev) / prev) * 100 : 0)

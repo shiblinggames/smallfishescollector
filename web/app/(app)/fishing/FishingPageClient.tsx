@@ -54,6 +54,7 @@ export default function FishingPageClient({
   hookTier, rodTier, reelTier, lineTier,
   initialDoubloons, initialGems, initialFathoms, initialFishingXP, initialBait, initialLastUsedBait, initialInventory, uniqueSpeciesCaught, zoneStats, ancientDeepUnlocked,
   fishHoldTier, ownedRods, initialCompletionistEffects, initialHasForgedBefore, allFishSpecies, caughtFishIds, mountedFishIds, initialPersonalBests, initialCatchCounts, initialHighestPerfectStreak, initialPerfectStreak, initialStreakZone,
+  hubSpeciesCaught, hubSpeciesTotal, hubHoldValue, hubMarketMood,
   hasSeenFishingHubTour, hasSeenFishingTour, hasSeenFishingCatchTour, hasSeenFirstCatchCelebration, initialShowWaitTimer, activeSession, username, zoneRewardsClaimed,
   initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, initialEquippedSpecial2, hasDeepReel, hasAnglersPatience, anglersPatienceXp, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, gauntletUpgrades, hasPerfectedSigil, prestigeLevels, goldenBoosts, ancientCatches, characterColor, unlockedCharacterColors, newlyUnlockedSkins, equippedBadges, unlockedBadges, marketMultipliers, isPremium, equippedBoat, unlockedBoats, newlyUnlockedBoats, equippedHat, unlockedHats, equippedPet, unlockedPets,
   initialFinnEncounters, initialFinnWins, initialFinnSeenBeats, initialFinnRevealed, initialFinnLastOutcome,
@@ -85,6 +86,10 @@ export default function FishingPageClient({
   initialHighestPerfectStreak: number
   initialPerfectStreak: number
   initialStreakZone: string | null
+  hubSpeciesCaught: number
+  hubSpeciesTotal: number
+  hubHoldValue: number
+  hubMarketMood: string
   hasSeenFishingHubTour: boolean
   hasSeenFishingTour: boolean
   hasSeenFishingCatchTour: boolean
@@ -275,8 +280,10 @@ export default function FishingPageClient({
         holdCount={initialInventory.reduce((n, r) => n + r.quantity, 0)}
         fishHoldTier={fishHoldTier}
         baitCount={initialBait.reduce((n, b) => n + b.quantity, 0)}
-        speciesCaught={new Set([...caughtFishIds, ...ancientCatches]).size}
-        speciesTotal={allFishSpecies.length}
+        speciesCaught={hubSpeciesCaught}
+        speciesTotal={hubSpeciesTotal}
+        holdValue={hubHoldValue}
+        marketMood={hubMarketMood}
         hasSeenHubTour={hasSeenFishingHubTour}
         characterColor={characterColor}
         equippedHat={persistedEquippedHat}
