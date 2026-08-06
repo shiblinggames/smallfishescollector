@@ -54,6 +54,97 @@ function marketSignal(e: MarketFishEntry, mode: MarketMode): { up: boolean; pct:
   return { up: pct >= 0, pct }
 }
 
+// ── The two doors ────────────────────────────────────────────────────────
+//
+// These were two identical sky-blue pills reading "The Hold" and "Exchange",
+// which told you nothing except which one was lit. They are two different
+// PLACES that happen to share a screen: one is your own cargo, priced in coin,
+// and one is a contracts board. So they get different colours (the Hold takes
+// doubloon gold, the Exchange the steel blue it uses throughout), a drawn mark
+// each, and a line of live state underneath, which is the part that makes a tab
+// worth pressing rather than furniture.
+
+function HoldMark({ color }: { color: string }) {
+  // A crate, because the Hold is cargo. Braced corners read as a crate at 20px
+  // where a barrel just reads as a circle.
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="3" y="6" width="18" height="14" rx="1.5" />
+      <path d="M3 10.5h18" />
+      <path d="M9 6V3.5h6V6" />
+      <path d="M9 14.5h6" />
+    </svg>
+  )
+}
+
+function ExchangeMark({ color }: { color: string }) {
+  // A line finding its high. The same shape the board draws all over this
+  // screen, which is the point: it says "this is the chart side".
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M3 17.5l5-5.5 3.5 3L20 6" />
+      <path d="M15 6h5v5" />
+    </svg>
+  )
+}
+
+function MarketDoor({ active, accent, title, sub, subAccent, mark, onClick }: {
+  active: boolean
+  accent: string
+  title: string
+  sub: string
+  subAccent?: boolean
+  mark: (color: string) => React.ReactNode
+  onClick: () => void
+}) {
+  return (
+    <button type="button" onClick={onClick} className="tap"
+      style={{
+        flex: 1, minWidth: 0, position: 'relative', overflow: 'hidden',
+        display: 'flex', alignItems: 'center', gap: 9,
+        padding: '0.6rem 0.7rem', borderRadius: 13, textAlign: 'left',
+        // Opaque base either way: this sits on a painted ground.
+        background: active
+          ? 'linear-gradient(180deg, rgba(22,26,34,0.97) 0%, rgba(11,14,19,0.98) 100%)'
+          : 'linear-gradient(180deg, rgba(13,16,21,0.92) 0%, rgba(9,11,15,0.94) 100%)',
+        border: `1px solid ${active ? accent + '66' : 'rgba(255,255,255,0.07)'}`,
+        borderTop: `1px solid ${active ? accent + '99' : 'rgba(255,255,255,0.10)'}`,
+        boxShadow: active ? '0 4px 16px rgba(0,0,0,0.45)' : 'none',
+        cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
+        transition: 'border-color 0.18s, background 0.18s',
+      }}>
+      {/* Lantern wash behind the mark on the open door only. */}
+      {active && (
+        <span aria-hidden style={{
+          position: 'absolute', left: -10, top: '50%', width: 96, height: 96, marginTop: -48,
+          borderRadius: '50%', pointerEvents: 'none',
+          background: `radial-gradient(circle, ${accent}26 0%, transparent 68%)`,
+        }} />
+      )}
+      <span style={{
+        position: 'relative', flexShrink: 0, width: 34, height: 34, borderRadius: 9,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: active ? `${accent}1c` : 'rgba(255,255,255,0.035)',
+        border: `1px solid ${active ? accent + '4d' : 'rgba(255,255,255,0.07)'}`,
+      }}>
+        {mark(active ? accent : '#6c7280')}
+      </span>
+      <span style={{ position: 'relative', minWidth: 0, flex: 1 }}>
+        <span className="font-cinzel font-700" style={{
+          display: 'block', fontSize: '0.88rem', lineHeight: 1.15,
+          color: active ? '#f2ede2' : '#7e8592',
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        }}>{title}</span>
+        <span className="font-karla font-600" style={{
+          display: 'block', fontSize: '0.6rem', marginTop: 1,
+          color: active ? (subAccent ? accent : '#8e8577') : '#5d636e',
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        }}>{sub}</span>
+      </span>
+    </button>
+  )
+}
+
 function ChangeArrow({ up }: { up: boolean }) {
   return (
     <svg width="9" height="9" viewBox="0 0 24 24" fill={up ? UP : DOWN} aria-hidden style={{ transform: up ? 'none' : 'scaleY(-1)' }}>
@@ -393,6 +484,8 @@ export default function MarketClient({
   doubloons: initialDoubloons,
   isPremium,
   exchangeUnveil = false,
+  exchangeOpen = false,
+  openContracts = 0,
 }: {
   portfolio: MarketFishEntry[]
   allMarket: MarketFishEntry[]
@@ -402,6 +495,10 @@ export default function MarketClient({
   /** Fishing 100 is done and the Exchange has never been announced. Opens the
    *  page on that side once so the news is not left behind a tab. */
   exchangeUnveil?: boolean
+  /** Fishing is at the cap, so the contracts board is reachable. */
+  exchangeOpen?: boolean
+  /** Contracts still running, for the Exchange door's sub-line. */
+  openContracts?: number
 }) {
   const [portfolio, setPortfolio] = useState(initialPortfolio)
   const [doubloons, setDoubloons] = useState(initialDoubloons)
@@ -545,7 +642,24 @@ export default function MarketClient({
   return (
     <MarketModeCtx.Provider value={colorMode}>
     <main className="min-h-screen pb-24 sm:pb-0">
-      <div className="px-5 pt-5 max-w-lg mx-auto flex flex-col gap-4 pb-10">
+      {/* THE HARBOURMASTER'S BOARD.
+          A lantern over the top of the page, faint ledger ruling down it, and a
+          warm ink ground instead of the cold slate the panels were floating on.
+
+          All three are CSS gradients: no image to load, nothing animated, and
+          it composites once. The ruling sits at ~1.5% white every 30px, which
+          is under the threshold you would call a stripe and over the one where
+          a surface reads as flat nothing. That gap is the whole difference
+          between "a place" and "a settings screen". */}
+      <div aria-hidden style={{
+        position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none',
+        background: `
+          radial-gradient(120% 55% at 50% -8%, rgba(196,169,106,0.11) 0%, transparent 62%),
+          repeating-linear-gradient(180deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 30px),
+          linear-gradient(180deg, #0c0e13 0%, #090a0e 100%)
+        `,
+      }} />
+      <div className="px-5 pt-5 max-w-lg mx-auto flex flex-col gap-4 pb-10" style={{ position: 'relative', zIndex: 1 }}>
 
         {/* The market had no header and so no way out but the tab bar, which
             got worse once the Fishing hub started sending players here. Same
@@ -555,29 +669,38 @@ export default function MarketClient({
             rather than picking one of the three. */}
         <ShopHeader title="Fish Market" backLabel="Back" onBack={() => router.back()} />
 
-        {/* ── Hold / Exchange ── */}
-        <div style={{ display: 'flex', gap: 6 }}>
-          {([['hold', 'The Hold'], ['exchange', 'Exchange']] as const).map(([k, label]) => {
-            const on = side === k
-            const isNews = k === 'exchange' && exchangeUnveil
-            return (
-              <button key={k} type="button" onClick={() => setSide(k)} className="font-karla font-700"
-                style={{
-                  position: 'relative', flex: 1, padding: '0.5rem', borderRadius: 10, fontSize: '0.76rem',
-                  background: on ? 'rgba(56,189,248,0.14)' : 'rgba(255,255,255,0.04)',
-                  border: `1px solid ${on ? 'rgba(56,189,248,0.5)' : 'rgba(255,255,255,0.09)'}`,
-                  color: on ? '#e6f4ff' : '#8a94a4', cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
-                }}>
-                {label}
-                {isNews && (
-                  <span aria-label="newly opened" style={{
-                    position: 'absolute', top: 6, right: 8, width: 6, height: 6, borderRadius: 999,
-                    background: '#38bdf8', boxShadow: '0 0 7px rgba(56,189,248,0.85)',
-                  }} />
-                )}
-              </button>
-            )
-          })}
+        {/* ── The two doors ── */}
+        <div style={{ display: 'flex', gap: 7, position: 'relative' }}>
+          <MarketDoor
+            active={side === 'hold'}
+            accent={GOLD}
+            title="The Hold"
+            mark={c => <HoldMark color={c} />}
+            sub={portfolio.length === 0
+              ? 'Nothing aboard'
+              : `${totalMarketValue.toLocaleString()} ⟡ aboard`}
+            subAccent={portfolio.length > 0}
+            onClick={() => setSide('hold')}
+          />
+          <MarketDoor
+            active={side === 'exchange'}
+            accent="#38bdf8"
+            title="Exchange"
+            mark={c => <ExchangeMark color={c} />}
+            sub={!exchangeOpen
+              ? 'Opens at Fishing 100'
+              : exchangeUnveil ? 'Open to you now'
+              : openContracts > 0 ? `${openContracts} running`
+              : 'Take a position'}
+            subAccent={exchangeUnveil || openContracts > 0}
+            onClick={() => setSide('exchange')}
+          />
+          {exchangeUnveil && (
+            <span aria-label="newly opened" style={{
+              position: 'absolute', top: -3, right: -3, width: 7, height: 7, borderRadius: 999,
+              background: '#38bdf8', boxShadow: '0 0 8px rgba(56,189,248,0.9)', pointerEvents: 'none',
+            }} />
+          )}
         </div>
 
         {side === 'exchange' && <ExchangeClient onDoubloons={setDoubloons} />}
@@ -639,7 +762,7 @@ export default function MarketClient({
             border: '1px solid rgba(240,192,64,0.22)', borderTop: '1px solid rgba(240,192,64,0.45)',
             borderRadius: 16, padding: '1.1rem 1.15rem 0.95rem', overflow: 'hidden',
           }}>
-            <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.6rem', color: '#9a9488' }}>Hold Value</p>
+            <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.6rem', color: '#b8a06a' }}>Hold Value</p>
             <p className="font-karla font-700" style={{ fontSize: '2.4rem', color: '#fff', lineHeight: 1.05, ...TNUM }}>
               {totalMarketValue.toLocaleString()} <span style={{ fontSize: '1.1rem', color: '#9a9488' }}>⟡</span>
             </p>
@@ -688,7 +811,7 @@ export default function MarketClient({
         {/* ── Pending Sales ── */}
         {pendingSales.length > 0 && (
           <div>
-            <p className="font-karla font-700 uppercase tracking-[0.14em] mb-2" style={{ fontSize: '0.65rem', color: '#bda05a' }}>Pending Sales</p>
+            <p className="font-cinzel font-700 mb-2" style={{ fontSize: '1rem', letterSpacing: '0.02em', color: '#bda05a' }}>Pending Sales</p>
             <div style={{ background: 'rgba(34,27,10,0.95)', border: '1px solid rgba(240,192,64,0.38)', borderRadius: 12, padding: '0.6rem 0.85rem', display: 'flex', flexDirection: 'column', gap: 6 }}>
               {pendingSales.map(p => {
                 const minutes = Math.max(0, Math.ceil((new Date(p.settlesAt).getTime() - pendingNow) / 60_000))
@@ -714,7 +837,7 @@ export default function MarketClient({
 
         {/* ── Holdings ── */}
         <div>
-          <p className="font-karla font-700 uppercase tracking-[0.14em] mb-1" style={{ fontSize: '0.68rem', color: '#ddd6c8' }}>Holdings</p>
+          <p className="font-cinzel font-700 mb-1" style={{ fontSize: '1rem', letterSpacing: '0.02em', color: '#f0e6d2' }}>Holdings</p>
           {portfolio.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '2.5rem 1rem', background: 'rgba(11,13,18,0.96)', border: '1px solid rgba(255,255,255,0.16)', borderRadius: 12 }}>
               <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#6a6764', marginBottom: '0.5rem' }}>No fish in hold</p>
@@ -753,7 +876,7 @@ export default function MarketClient({
         {/* ── Today's Movers ── */}
         {(movers.riser || movers.faller) && (
           <div>
-            <p className="font-karla font-700 uppercase tracking-[0.14em] mb-2" style={{ fontSize: '0.68rem', color: '#ddd6c8' }}>Today&apos;s Movers</p>
+            <p className="font-cinzel font-700 mb-2" style={{ fontSize: '1rem', letterSpacing: '0.02em', color: '#f0e6d2' }}>Today&apos;s Movers</p>
             <div className="flex gap-2.5">
               {movers.riser && <MoverCard entry={movers.riser} label="Top Riser" labelColor={UP} />}
               {movers.faller && <MoverCard entry={movers.faller} label="Top Faller" labelColor={DOWN} />}
@@ -764,7 +887,7 @@ export default function MarketClient({
         {/* ── Market Prices (browse) ── */}
         {allMarket.filter(e => !ownedIds.has(e.fish_id)).length > 0 && (
           <div>
-            <p className="font-karla font-700 uppercase tracking-[0.14em] mb-2" style={{ fontSize: '0.68rem', color: '#ddd6c8' }}>Market Prices</p>
+            <p className="font-cinzel font-700 mb-2" style={{ fontSize: '1rem', letterSpacing: '0.02em', color: '#f0e6d2' }}>Market Prices</p>
 
             {/* sort + filter controls */}
             <div className="flex items-center gap-2 mb-2" style={{ flexWrap: 'wrap' }}>

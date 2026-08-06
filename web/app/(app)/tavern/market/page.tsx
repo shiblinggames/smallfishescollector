@@ -90,9 +90,17 @@ export default async function MarketPage() {
   // The Exchange announcement is worth nothing if it waits behind a tab the
   // captain has no reason to press. Decided here so the page can OPEN on the
   // Exchange the one time there is news, then never again.
-  const exchangeUnveil =
-    getLevelFromXP(Number(profile?.fishing_xp ?? 0)) >= EXCHANGE_FISHING_LEVEL &&
-    profile?.has_seen_exchange_intro !== true
+  const exchangeOpen = getLevelFromXP(Number(profile?.fishing_xp ?? 0)) >= EXCHANGE_FISHING_LEVEL
+  const exchangeUnveil = exchangeOpen && profile?.has_seen_exchange_intro !== true
+
+  // How many contracts are running, for the Exchange door's own sub-line. A tab
+  // that can say "2 running" is worth pressing; one that just says its name is
+  // furniture. Head-only count, and only for captains who can trade at all.
+  const { count: openContracts } = exchangeOpen
+    ? await admin.from('exchange_positions')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id).eq('status', 'open')
+    : { count: 0 }
 
   return (
     <>
@@ -104,6 +112,8 @@ export default async function MarketPage() {
         doubloons={profile?.doubloons ?? 0}
         isPremium={isPremiumActive(profile)}
         exchangeUnveil={exchangeUnveil}
+        exchangeOpen={exchangeOpen}
+        openContracts={openContracts ?? 0}
       />
     </>
   )
