@@ -233,6 +233,13 @@ const PLAN = [
   [33, 1, 0, 'fully_attuned'],
   [33, 1, 1, 'both_in_hand'],
   [33, 1, 2, 'the_sixth_mount'],
+  // ── batch 34 — crates, the daily docket, and the voyage haul ──
+  [34, 0, 0, 'wreck_diver'],
+  [34, 0, 1, 'three_for_three'],
+  [34, 0, 2, 'standing_watch'],
+  [34, 1, 0, 'old_reliable'],
+  [34, 1, 1, 'massive_booty'],
+  [34, 1, 2, 'the_fourth_task'],
 ]
 
 // Optional: `ONLY=30 node slice-badges.mjs` slices just that sheet (so re-running
