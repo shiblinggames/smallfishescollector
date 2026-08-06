@@ -203,6 +203,11 @@ export type BoardPosition = {
   payout: number | null
   exitPrice: number | null
   seen: boolean
+  /** The instrument's own recent prices, so the detail sheet can draw where
+   *  this contract sits on the line rather than describing it in numbers. */
+  history: number[]
+  /** Fish only, for the sheet's subtitle. */
+  habitat: string | null
 }
 export type ExchangeBoard = {
   open: boolean
@@ -261,29 +266,32 @@ export async function getExchangeBoard(): Promise<ExchangeBoard | { error: strin
     }
   })
 
-  const fundPrice = new Map(funds.map(f => [f.id, f.price]))
-  const fishPrice = new Map(fish.map(f => [f.fishId, f.price]))
-  const fishName = new Map(fish.map(f => [f.fishId, f.name]))
+  const fundById = new Map(funds.map(f => [f.id, f]))
+  const fishById = new Map(fish.map(f => [f.fishId, f]))
 
   const positions: BoardPosition[] = (posRes.data ?? []).map(p => {
     const isFund = p.fund_id != null
+    const fu = isFund ? fundById.get(p.fund_id as string) : undefined
+    const fi = !isFund ? fishById.get(p.fish_id as number) : undefined
+    const inst = fu ?? fi
     return {
       id: p.id as number,
-      label: isFund ? (FUND_BY_ID.get(p.fund_id as string)?.name ?? p.fund_id as string) : (fishName.get(p.fish_id as number) ?? 'Unknown'),
-      accent: isFund ? (FUND_BY_ID.get(p.fund_id as string)?.accent ?? '#38bdf8') : '#7dd3fc',
+      label: fu?.name ?? fi?.name ?? 'Unknown',
+      accent: fu?.accent ?? '#7dd3fc',
       direction: p.direction as Direction,
       term: Number(p.term) as Term,
       stake: Number(p.stake),
       leverage: Number(p.leverage),
       entryPrice: Number(p.entry_price),
-      livePrice: isFund ? (fundPrice.get(p.fund_id as string) ?? Number(p.entry_price))
-                        : (fishPrice.get(p.fish_id as number) ?? Number(p.entry_price)),
+      livePrice: inst?.price ?? Number(p.entry_price),
       openCycle: Number(p.open_cycle),
       expiryCycle: Number(p.expiry_cycle),
       status: p.status as 'open' | 'settled' | 'closed_early',
       payout: p.payout == null ? null : Number(p.payout),
       exitPrice: p.exit_price == null ? null : Number(p.exit_price),
       seen: p.seen === true,
+      history: inst?.history ?? [],
+      habitat: fi?.habitat ?? null,
     }
   })
 

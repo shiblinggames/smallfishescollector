@@ -64,6 +64,7 @@ export default function ExchangeClient({ onDoubloons }: { onDoubloons?: (n: numb
   const [err, setErr] = useState('')
   const [tab, setTab] = useState<'funds' | 'fish' | 'positions'>('funds')
   const [ticket, setTicket] = useState<{ kind: 'fund'; f: BoardFund } | { kind: 'fish'; f: BoardFish } | null>(null)
+  const [detail, setDetail] = useState<BoardPosition | null>(null)
   const [, startTransition] = useTransition()
 
   const load = useCallback(() => {
@@ -194,15 +195,23 @@ export default function ExchangeClient({ onDoubloons }: { onDoubloons?: (n: numb
               Nothing open. Pick a fund or a fish and back it one way or the other.
             </p>
           )}
-          {openPos.map(p => <PositionRow key={p.id} p={p} cycle={board.cycle} onChanged={load} />)}
+          {openPos.map(p => <PositionRow key={p.id} p={p} cycle={board.cycle} onOpen={() => setDetail(p)} />)}
           {donePos.length > 0 && (
             <>
               <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.6rem', color: '#6a7482', marginTop: 8 }}>Results</p>
-              {donePos.map(p => <PositionRow key={p.id} p={p} cycle={board.cycle} onChanged={load} />)}
+              {donePos.map(p => <PositionRow key={p.id} p={p} cycle={board.cycle} onOpen={() => setDetail(p)} />)}
             </>
           )}
         </div>
       )}
+
+      <AnimatePresence>
+        {detail && (
+          <PositionSheet p={detail} cycle={board.cycle}
+            onClose={() => setDetail(null)}
+            onChanged={() => { setDetail(null); load() }} />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {ticket && (
@@ -218,110 +227,198 @@ export default function ExchangeClient({ onDoubloons }: { onDoubloons?: (n: numb
   )
 }
 
-function PositionRow({ p, cycle, onChanged }: { p: BoardPosition; cycle: number; onChanged: () => void }) {
-  const [busy, setBusy] = useState(false)
-  const [armed, setArmed] = useState(false)
+function PositionRow({ p, cycle, onOpen }: { p: BoardPosition; cycle: number; onOpen: () => void }) {
   const live = pct(p.livePrice, p.entryPrice)
   const yourWay = p.direction === 'rise' ? live : -live
-  const breakEven = 1 / p.leverage
   const settled = p.status !== 'open'
   const remaining = Math.max(0, p.expiryCycle - cycle)
-  // What it is WORTH now: intrinsic plus the time still on it. NOT
-  // stake x L x move, which is what it would pay if the price froze here, and
-  // which reads as zero on any contract that has not come good yet.
   const value = settled ? (p.payout ?? 0) : liveValue(p.stake, p.leverage, yourWay, remaining, p.term)
-  // Selling pays exactly that. No exit fee: the house edge is already inside
-  // the leverage, so a contract opened and closed on the spot returns the
-  // stake less the edge, which is the correct answer.
-  const earlyValue = value
-  const good = settled ? (p.payout ?? 0) > p.stake : yourWay > breakEven
-  const left = p.expiryCycle - cycle
+  const pl = value - p.stake
+
+  // The ROW is a summary you scan; the detail moved into a sheet. It used to be
+  // three stat cells and a button, which is a lot of furniture per contract
+  // when you are holding six of them.
+  return (
+    <button type="button" onClick={onOpen}
+      style={{
+        width: '100%', textAlign: 'left', padding: '0.6rem 0.7rem', borderRadius: 11, cursor: 'pointer',
+        background: 'rgba(13,17,24,0.92)',
+        border: `1px solid ${settled ? 'rgba(255,255,255,0.08)' : pl >= 0 ? 'rgba(74,222,128,0.28)' : 'rgba(248,113,113,0.24)'}`,
+        opacity: settled ? 0.86 : 1, WebkitTapHighlightColor: 'transparent',
+      }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span aria-hidden style={{ width: 3, height: 32, borderRadius: 2, background: p.accent, flexShrink: 0 }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#e8eef6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.label}</p>
+          <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#7c8696' }}>
+            <span style={{ color: p.direction === 'rise' ? UP : DOWN }}>{p.direction === 'rise' ? 'Rise' : 'Fall'}</span>
+            {' · '}{TERM_LABEL[p.term]}
+            {settled ? ` · ${p.status === 'closed_early' ? 'sold' : 'settled'}` : ` · ${remaining <= 0 ? 'settling' : `${remaining}h left`}`}
+          </p>
+        </div>
+        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+          <p className="font-karla font-700" style={{ fontSize: '0.86rem', color: '#f0f4fa', ...TNUM }}>{value.toLocaleString()} ⟡</p>
+          <p className="font-karla font-700" style={{ fontSize: '0.64rem', color: pl >= 0 ? UP : DOWN, ...TNUM }}>
+            {pl >= 0 ? '+' : ''}{pl.toLocaleString()}
+          </p>
+        </div>
+      </div>
+    </button>
+  )
+}
+
+/** The contract in full: what it is, what it cost, where it stands, what it
+ *  still needs, and how long it has to get there. */
+function PositionSheet({ p, cycle, onClose, onChanged }: {
+  p: BoardPosition; cycle: number; onClose: () => void; onChanged: () => void
+}) {
+  const [busy, setBusy] = useState(false)
+  const [armed, setArmed] = useState(false)
+
+  const live = pct(p.livePrice, p.entryPrice)
+  const yourWay = p.direction === 'rise' ? live : -live
+  const settled = p.status !== 'open'
+  const remaining = Math.max(0, p.expiryCycle - cycle)
+  const breakEven = 1 / p.leverage
+  const value = settled ? (p.payout ?? 0) : liveValue(p.stake, p.leverage, yourWay, remaining, p.term)
+  const pl = value - p.stake
+  const plPct = p.stake > 0 ? (pl / p.stake) * 100 : 0
+  const toBreakEven = breakEven - yourWay
+  const ifItSettledNow = Math.max(0, Math.round(p.stake * p.leverage * Math.max(0, yourWay)))
 
   return (
-    <div style={{ padding: '0.6rem 0.7rem', borderRadius: 11, background: 'rgba(13,17,24,0.92)', border: `1px solid ${settled ? 'rgba(255,255,255,0.08)' : good ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.12)'}`, opacity: settled ? 0.86 : 1 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-        <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#e8eef6', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {p.label}
-        </p>
-        <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: p.direction === 'rise' ? UP : DOWN, flexShrink: 0 }}>
-          {p.direction === 'rise' ? 'Rise' : 'Fall'} · {TERM_LABEL[p.term]}
-        </span>
-      </div>
+    <PopupShell open onClose={onClose} zIndex={120}>
+      <motion.div
+        initial={{ opacity: 0, y: 18, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10 }}
+        transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+        onClick={e => e.stopPropagation()}
+        style={{ margin: 'auto', width: '100%', maxWidth: 440, borderRadius: 18, overflow: 'hidden', background: 'linear-gradient(180deg, #0e131b 0%, #080b11 100%)', border: `1px solid ${p.accent}55` }}>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 6, marginTop: 6 }}>
-        <Cell label="Staked" value={`${p.stake.toLocaleString()} ⟡`} />
-        <Cell label={settled ? 'Moved' : 'Moving'} value={fmtPct(yourWay)} color={yourWay >= 0 ? UP : DOWN} />
-        <Cell label={settled ? 'Paid' : 'Worth now'} value={`${value.toLocaleString()} ⟡`} color={value > p.stake ? UP : value === 0 ? DOWN : '#c8d2e0'} />
-      </div>
-
-      {!settled ? (
-        <>
-          <p className="font-karla font-600" style={{ fontSize: '0.64rem', color: '#7c8696', marginTop: 7 }}>
-            Break-even {fmtPct(breakEven)} · settles on its own in {left <= 0 ? 'moments' : `${left}h`}
+        <div style={{ padding: '0.95rem 1rem 0.8rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 2 }}>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.12rem', color: '#f0f4fa', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.label}</p>
+            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ flexShrink: 0, fontSize: '0.52rem', padding: '0.14rem 0.42rem', borderRadius: 999, color: p.direction === 'rise' ? UP : DOWN, background: p.direction === 'rise' ? 'rgba(74,222,128,0.14)' : 'rgba(248,113,113,0.14)', border: `1px solid ${p.direction === 'rise' ? UP : DOWN}66` }}>
+              {p.direction === 'rise' ? 'Rise' : 'Fall'}
+            </span>
+          </div>
+          <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#7c8696' }}>
+            {TERM_LABEL[p.term]} {'·'} {p.term}h contract{p.habitat ? ` · ${p.habitat.replace(/_/g, ' ')}` : ''}
           </p>
+        </div>
 
-          {/* A REAL BUTTON, saying the actual number. It was 10px of grey in
-              the corner reading "Close for 80%", which does not say 80% of
-              what, and read as no button at all.
+        <div style={{ padding: '0.9rem 1rem 1.1rem' }}>
+          <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.56rem', color: '#6a7482' }}>
+            {settled ? 'Paid out' : 'Worth now'}
+          </p>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, marginBottom: 10, flexWrap: 'wrap' }}>
+            <span className="font-cinzel font-800" style={{ fontSize: '1.85rem', lineHeight: 1, color: '#f0f4fa', ...TNUM }}>{value.toLocaleString()} {'⟡'}</span>
+            <span className="font-karla font-700" style={{ fontSize: '0.82rem', color: pl >= 0 ? UP : DOWN, ...TNUM }}>
+              {pl >= 0 ? '+' : ''}{pl.toLocaleString()} ({fmtPct(plPct)})
+            </span>
+          </div>
 
-              Two taps, because one tap liquidating a position is a mistake
-              nobody can undo, and the haircut makes an accident cost real
-              money. Trading apps do not confirm; they also do not have a
-              thumb-sized tap target next to a scrolling list. */}
-          <button type="button" disabled={busy}
-            onClick={() => {
-              if (!armed) { setArmed(true); return }
-              setBusy(true)
-              closeContractEarly(p.id).then(res => {
-                setBusy(false); setArmed(false)
-                if ('ok' in res) purseChanged(res.doubloons)
-                onChanged()
-              })
-            }}
-            className="font-karla font-700"
-            style={{
-              width: '100%', marginTop: 8, padding: '0.5rem', borderRadius: 9, fontSize: '0.72rem',
-              background: armed ? 'rgba(240,192,64,0.16)' : 'rgba(255,255,255,0.06)',
-              border: `1px solid ${armed ? 'rgba(240,192,64,0.6)' : 'rgba(255,255,255,0.18)'}`,
-              color: armed ? '#f0d89a' : '#d4dce8', cursor: busy ? 'wait' : 'pointer',
-              WebkitTapHighlightColor: 'transparent',
-            }}>
-            {busy ? 'Closing…'
-              : armed ? `Sell for ${earlyValue.toLocaleString()} ⟡. Tap again`
-              : `Sell now for ${earlyValue.toLocaleString()} ⟡`}
-          </button>
-          {armed && !busy && (
-            <button type="button" onClick={() => setArmed(false)} className="font-karla font-600"
-              style={{ width: '100%', marginTop: 4, padding: '0.3rem', background: 'none', border: 'none', color: '#6a7482', fontSize: '0.64rem', cursor: 'pointer' }}>
-              Keep it open
-            </button>
+          {p.history.length > 1 && (
+            <div style={{ marginBottom: 12, padding: '0.55rem 0.6rem', borderRadius: 11, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+              <BigSpark points={p.history} entry={p.entryPrice} color={yourWay >= 0 ? UP : DOWN} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                <span className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#6a7482' }}>last {p.history.length}h</span>
+                <span className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#6a7482' }}>dashed line is your entry</span>
+              </div>
+            </div>
           )}
-          {armed && (
-            <p className="font-karla font-400" style={{ fontSize: '0.6rem', color: '#6a7482', marginTop: 3, lineHeight: 1.4, textAlign: 'center' }}>
-              {remaining > 0
-                ? `Its worth today, counting the ${remaining}h it still has to move. Let it run and it settles on whatever the market does by then.`
-                : 'Settling now.'}
+
+          <Row label="Staked" value={`${p.stake.toLocaleString()} ⟡`} />
+          <Row label="Entry price" value={p.entryPrice.toFixed(3)} />
+          <Row label={settled ? 'Final price' : 'Price now'} value={(settled ? (p.exitPrice ?? p.livePrice) : p.livePrice).toFixed(3)} />
+          <Row label="Moved your way" value={fmtPct(yourWay)} color={yourWay >= 0 ? UP : DOWN} />
+          <Row label="Break-even move" value={fmtPct(breakEven)} />
+          {!settled && (
+            <Row label={toBreakEven > 0 ? 'Still needs' : 'Clear of break-even by'}
+              value={fmtPct(Math.abs(toBreakEven))}
+              color={toBreakEven > 0 ? '#c8d2e0' : UP} />
+          )}
+          <Row label="Every 1% pays" value={`${Math.round(p.stake * p.leverage).toLocaleString()} ⟡`} />
+          {!settled && <Row label="If it settled right now" value={`${ifItSettledNow.toLocaleString()} ⟡`} color={ifItSettledNow > p.stake ? UP : undefined} />}
+          <Row label={settled ? 'Status' : 'Settles in'}
+            value={settled ? (p.status === 'closed_early' ? 'sold early' : 'settled') : remaining <= 0 ? 'moments' : `${remaining}h`} />
+
+          {!settled ? (
+            <>
+              <button type="button" disabled={busy}
+                onClick={() => {
+                  if (!armed) { setArmed(true); return }
+                  setBusy(true)
+                  closeContractEarly(p.id).then(res => {
+                    setBusy(false); setArmed(false)
+                    if ('ok' in res) purseChanged(res.doubloons)
+                    onChanged()
+                  })
+                }}
+                className="font-karla font-700"
+                style={{
+                  width: '100%', marginTop: 12, padding: '0.6rem', borderRadius: 10, fontSize: '0.78rem',
+                  background: armed ? 'rgba(240,192,64,0.16)' : 'rgba(255,255,255,0.06)',
+                  border: `1px solid ${armed ? 'rgba(240,192,64,0.6)' : 'rgba(255,255,255,0.18)'}`,
+                  color: armed ? '#f0d89a' : '#d4dce8', cursor: busy ? 'wait' : 'pointer',
+                  WebkitTapHighlightColor: 'transparent',
+                }}>
+                {busy ? 'Selling…' : armed ? `Sell for ${value.toLocaleString()} ⟡. Tap again` : `Sell now for ${value.toLocaleString()} ⟡`}
+              </button>
+              <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#6a7482', marginTop: 6, lineHeight: 1.45, textAlign: 'center' }}>
+                {armed
+                  ? 'Or leave it, and it settles itself on whatever the market does.'
+                  : `What it is worth today, counting the ${remaining}h it still has to move.`}
+              </p>
+              {armed && (
+                <button type="button" onClick={() => setArmed(false)} className="font-karla font-600"
+                  style={{ width: '100%', marginTop: 4, padding: '0.35rem', background: 'none', border: 'none', color: '#6a7482', fontSize: '0.68rem', cursor: 'pointer' }}>
+                  Keep it open
+                </button>
+              )}
+            </>
+          ) : (
+            <p className="font-karla font-400" style={{ fontSize: '0.7rem', color: '#7c8696', marginTop: 10, lineHeight: 1.45, textAlign: 'center' }}>
+              {p.status === 'closed_early' ? 'You sold this one early.'
+                : (p.payout ?? 0) === 0 ? 'It expired worthless.' : 'It settled at expiry.'}
             </p>
           )}
-        </>
-      ) : (
-        <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#7c8696', marginTop: 6 }}>
-          {p.status === 'closed_early' ? 'Closed early' : 'Settled'} at {p.exitPrice?.toFixed(3)} · entry {p.entryPrice.toFixed(3)}
-          {(p.payout ?? 0) === 0 ? ' · expired worthless' : ''}
-        </p>
-      )}
+
+          <button type="button" onClick={onClose} className="font-karla font-600"
+            style={{ width: '100%', marginTop: 8, padding: '0.45rem', background: 'none', border: 'none', color: '#6a7482', fontSize: '0.72rem', cursor: 'pointer' }}>
+            Close
+          </button>
+        </div>
+      </motion.div>
+    </PopupShell>
+  )
+}
+
+/** The instrument's line with your entry ruled across it, so where you got in
+ *  is a place on the chart rather than a number to hold in your head. */
+function BigSpark({ points, entry, color }: { points: number[]; entry: number; color: string }) {
+  const W = 100, H = 46
+  const all = [...points, entry]
+  const lo = Math.min(...all), hi = Math.max(...all)
+  const span = hi - lo || 1
+  const y = (v: number) => H - ((v - lo) / span) * H
+  const d = points.map((v, i) => `${(i / (points.length - 1)) * W},${y(v)}`).join(' ')
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none" aria-hidden style={{ display: 'block' }}>
+      <line x1="0" y1={y(entry)} x2={W} y2={y(entry)} stroke="rgba(255,255,255,0.3)" strokeWidth="1" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
+      <polyline points={d} fill="none" stroke={color} strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+    </svg>
+  )
+}
+
+function Row({ label, value, color }: { label: string; value: string; color?: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, padding: '0.32rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      <span className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#8a94a4' }}>{label}</span>
+      <span className="font-karla font-700" style={{ fontSize: '0.74rem', color: color ?? '#e8eef6', ...TNUM }}>{value}</span>
     </div>
   )
 }
 
-function Cell({ label, value, color }: { label: string; value: string; color?: string }) {
-  return (
-    <div>
-      <p className="font-karla font-600 uppercase tracking-[0.09em]" style={{ fontSize: '0.54rem', color: '#6a7482' }}>{label}</p>
-      <p className="font-karla font-700" style={{ fontSize: '0.76rem', color: color ?? '#e8eef6', ...TNUM }}>{value}</p>
-    </div>
-  )
-}
 
 function Ticket({ instrument, doubloons, onClose, onDone }: {
   instrument: { kind: 'fund'; f: BoardFund } | { kind: 'fish'; f: BoardFish }
