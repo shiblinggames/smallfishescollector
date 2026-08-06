@@ -296,23 +296,23 @@ function PositionSheet({ p, cycle, onClose, onChanged }: {
 
         <div style={{ padding: '0.95rem 1rem 0.8rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 2 }}>
-            <p className="font-cinzel font-700" style={{ fontSize: '1.12rem', color: '#f0f4fa', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.label}</p>
-            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ flexShrink: 0, fontSize: '0.52rem', padding: '0.14rem 0.42rem', borderRadius: 999, color: p.direction === 'rise' ? UP : DOWN, background: p.direction === 'rise' ? 'rgba(74,222,128,0.14)' : 'rgba(248,113,113,0.14)', border: `1px solid ${p.direction === 'rise' ? UP : DOWN}66` }}>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.24rem', color: '#f0f4fa', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.label}</p>
+            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ flexShrink: 0, fontSize: '0.6rem', padding: '0.16rem 0.48rem', borderRadius: 999, color: p.direction === 'rise' ? UP : DOWN, background: p.direction === 'rise' ? 'rgba(74,222,128,0.14)' : 'rgba(248,113,113,0.14)', border: `1px solid ${p.direction === 'rise' ? UP : DOWN}66` }}>
               {p.direction === 'rise' ? 'Rise' : 'Fall'}
             </span>
           </div>
-          <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#7c8696' }}>
+          <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#8a94a4' }}>
             {TERM_LABEL[p.term]} {'·'} {p.term}h contract{p.habitat ? ` · ${p.habitat.replace(/_/g, ' ')}` : ''}
           </p>
         </div>
 
         <div style={{ padding: '0.9rem 1rem 1.1rem' }}>
-          <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.56rem', color: '#6a7482' }}>
+          <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.64rem', color: '#7c8696' }}>
             {settled ? 'Paid out' : 'Worth now'}
           </p>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, marginBottom: 10, flexWrap: 'wrap' }}>
-            <span className="font-cinzel font-800" style={{ fontSize: '1.85rem', lineHeight: 1, color: '#f0f4fa', ...TNUM }}>{value.toLocaleString()} {'⟡'}</span>
-            <span className="font-karla font-700" style={{ fontSize: '0.82rem', color: pl >= 0 ? UP : DOWN, ...TNUM }}>
+            <span className="font-cinzel font-800" style={{ fontSize: '2.1rem', lineHeight: 1, color: '#f0f4fa', ...TNUM }}>{value.toLocaleString()} {'⟡'}</span>
+            <span className="font-karla font-700" style={{ fontSize: '0.92rem', color: pl >= 0 ? UP : DOWN, ...TNUM }}>
               {pl >= 0 ? '+' : ''}{pl.toLocaleString()} ({fmtPct(plPct)})
             </span>
           </div>
@@ -321,26 +321,49 @@ function PositionSheet({ p, cycle, onClose, onChanged }: {
             <div style={{ marginBottom: 12, padding: '0.55rem 0.6rem', borderRadius: 11, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
               <BigSpark points={p.history} entry={p.entryPrice} color={yourWay >= 0 ? UP : DOWN} />
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                <span className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#6a7482' }}>last {p.history.length}h</span>
-                <span className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#6a7482' }}>dashed line is your entry</span>
+                <span className="font-karla font-600" style={{ fontSize: '0.64rem', color: '#7c8696' }}>last {p.history.length}h</span>
+                <span className="font-karla font-600" style={{ fontSize: '0.64rem', color: '#7c8696' }}>dashed line is your entry</span>
               </div>
             </div>
           )}
 
-          <Row label="Staked" value={`${p.stake.toLocaleString()} ⟡`} />
-          <Row label="Entry price" value={p.entryPrice.toFixed(3)} />
-          <Row label={settled ? 'Final price' : 'Price now'} value={(settled ? (p.exitPrice ?? p.livePrice) : p.livePrice).toFixed(3)} />
-          <Row label="Moved your way" value={fmtPct(yourWay)} color={yourWay >= 0 ? UP : DOWN} />
-          <Row label="Break-even move" value={fmtPct(breakEven)} />
+          {/* A GRID, not nine stacked rows. The sheet is 440px wide and the
+              old list used a third of it for a label, a third for a number and
+              a third for nothing, nine times over. Two columns halves the
+              height and doubles the type. */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 7, marginBottom: 10 }}>
+            <Stat label="Staked" value={`${p.stake.toLocaleString()} ⟡`} />
+            <Stat label={settled ? 'Settled' : 'Settles in'}
+              value={settled ? (p.status === 'closed_early' ? 'sold early' : 'at expiry') : remaining <= 0 ? 'moments' : `${remaining}h`} />
+
+            {/* Entry and now in ONE block. They are the same fact twice
+                otherwise, and the arrow says more than two labels would. */}
+            <Stat label="Price" value={`${p.entryPrice.toFixed(3)} → ${(settled ? (p.exitPrice ?? p.livePrice) : p.livePrice).toFixed(3)}`} />
+            <Stat label="Moved your way" value={fmtPct(yourWay)} color={yourWay >= 0 ? UP : DOWN} />
+
+            <Stat label="Break-even" value={fmtPct(breakEven)} />
+            {settled
+              ? <Stat label="Result" value={(p.payout ?? 0) === 0 ? 'worthless' : (p.payout ?? 0) > p.stake ? 'won' : 'lost'}
+                  color={(p.payout ?? 0) > p.stake ? UP : DOWN} />
+              : <Stat label={toBreakEven > 0 ? 'Still needs' : 'Clear by'}
+                  value={fmtPct(Math.abs(toBreakEven))}
+                  color={toBreakEven > 0 ? '#c8d2e0' : UP} />}
+          </div>
+
+          {/* The one comparison worth its own line: what it is WORTH counts the
+              hours it still has to move, what it would PAY counts none of
+              them. Side by side the difference explains itself. */}
           {!settled && (
-            <Row label={toBreakEven > 0 ? 'Still needs' : 'Clear of break-even by'}
-              value={fmtPct(Math.abs(toBreakEven))}
-              color={toBreakEven > 0 ? '#c8d2e0' : UP} />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '0.55rem 0.7rem', borderRadius: 10, background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.08)', marginBottom: 2 }}>
+              <div style={{ minWidth: 0 }}>
+                <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#8a94a4' }}>If it settled this second</p>
+                <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#6a7482', marginTop: 1 }}>the {remaining}h left is worth the difference</p>
+              </div>
+              <span className="font-cinzel font-700" style={{ flexShrink: 0, fontSize: '1.05rem', color: ifItSettledNow > p.stake ? UP : '#c8d2e0', ...TNUM }}>
+                {ifItSettledNow.toLocaleString()} ⟡
+              </span>
+            </div>
           )}
-          <Row label="Every 1% pays" value={`${Math.round(p.stake * p.leverage).toLocaleString()} ⟡`} />
-          {!settled && <Row label="If it settled right now" value={`${ifItSettledNow.toLocaleString()} ⟡`} color={ifItSettledNow > p.stake ? UP : undefined} />}
-          <Row label={settled ? 'Status' : 'Settles in'}
-            value={settled ? (p.status === 'closed_early' ? 'sold early' : 'settled') : remaining <= 0 ? 'moments' : `${remaining}h`} />
 
           {!settled ? (
             <>
@@ -356,7 +379,7 @@ function PositionSheet({ p, cycle, onClose, onChanged }: {
                 }}
                 className="font-karla font-700"
                 style={{
-                  width: '100%', marginTop: 12, padding: '0.6rem', borderRadius: 10, fontSize: '0.78rem',
+                  width: '100%', marginTop: 12, padding: '0.72rem', borderRadius: 11, fontSize: '0.86rem',
                   background: armed ? 'rgba(240,192,64,0.16)' : 'rgba(255,255,255,0.06)',
                   border: `1px solid ${armed ? 'rgba(240,192,64,0.6)' : 'rgba(255,255,255,0.18)'}`,
                   color: armed ? '#f0d89a' : '#d4dce8', cursor: busy ? 'wait' : 'pointer',
@@ -364,27 +387,27 @@ function PositionSheet({ p, cycle, onClose, onChanged }: {
                 }}>
                 {busy ? 'Selling…' : armed ? `Sell for ${value.toLocaleString()} ⟡. Tap again` : `Sell now for ${value.toLocaleString()} ⟡`}
               </button>
-              <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#6a7482', marginTop: 6, lineHeight: 1.45, textAlign: 'center' }}>
+              <p className="font-karla font-400" style={{ fontSize: '0.68rem', color: '#7c8696', marginTop: 7, lineHeight: 1.45, textAlign: 'center' }}>
                 {armed
                   ? 'Or leave it, and it settles itself on whatever the market does.'
                   : `What it is worth today, counting the ${remaining}h it still has to move.`}
               </p>
               {armed && (
                 <button type="button" onClick={() => setArmed(false)} className="font-karla font-600"
-                  style={{ width: '100%', marginTop: 4, padding: '0.35rem', background: 'none', border: 'none', color: '#6a7482', fontSize: '0.68rem', cursor: 'pointer' }}>
+                  style={{ width: '100%', marginTop: 5, padding: '0.4rem', background: 'none', border: 'none', color: '#8a94a4', fontSize: '0.74rem', cursor: 'pointer' }}>
                   Keep it open
                 </button>
               )}
             </>
           ) : (
-            <p className="font-karla font-400" style={{ fontSize: '0.7rem', color: '#7c8696', marginTop: 10, lineHeight: 1.45, textAlign: 'center' }}>
+            <p className="font-karla font-400" style={{ fontSize: '0.76rem', color: '#8a94a4', marginTop: 12, lineHeight: 1.45, textAlign: 'center' }}>
               {p.status === 'closed_early' ? 'You sold this one early.'
                 : (p.payout ?? 0) === 0 ? 'It expired worthless.' : 'It settled at expiry.'}
             </p>
           )}
 
           <button type="button" onClick={onClose} className="font-karla font-600"
-            style={{ width: '100%', marginTop: 8, padding: '0.45rem', background: 'none', border: 'none', color: '#6a7482', fontSize: '0.72rem', cursor: 'pointer' }}>
+            style={{ width: '100%', marginTop: 10, padding: '0.5rem', background: 'none', border: 'none', color: '#8a94a4', fontSize: '0.78rem', cursor: 'pointer' }}>
             Close
           </button>
         </div>
@@ -396,7 +419,7 @@ function PositionSheet({ p, cycle, onClose, onChanged }: {
 /** The instrument's line with your entry ruled across it, so where you got in
  *  is a place on the chart rather than a number to hold in your head. */
 function BigSpark({ points, entry, color }: { points: number[]; entry: number; color: string }) {
-  const W = 100, H = 46
+  const W = 100, H = 58
   const all = [...points, entry]
   const lo = Math.min(...all), hi = Math.max(...all)
   const span = hi - lo || 1
@@ -410,11 +433,11 @@ function BigSpark({ points, entry, color }: { points: number[]; entry: number; c
   )
 }
 
-function Row({ label, value, color }: { label: string; value: string; color?: string }) {
+function Stat({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, padding: '0.32rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-      <span className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#8a94a4' }}>{label}</span>
-      <span className="font-karla font-700" style={{ fontSize: '0.74rem', color: color ?? '#e8eef6', ...TNUM }}>{value}</span>
+    <div style={{ padding: '0.45rem 0.55rem', borderRadius: 9, background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)', minWidth: 0 }}>
+      <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.6rem', color: '#7c8696', marginBottom: 2 }}>{label}</p>
+      <p className="font-karla font-700" style={{ fontSize: '0.92rem', color: color ?? '#eef3f9', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', ...TNUM }}>{value}</p>
     </div>
   )
 }
