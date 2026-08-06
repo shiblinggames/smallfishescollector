@@ -102,46 +102,58 @@ export default function AlmanacCollection({ data }: { data: AlmanacData }) {
   )
 }
 
-/** A struck seal, 10 bumps, precomputed rather than trig'd per card: this
- *  renders on up to 146 tiles at once and the shape never changes.
- *  scallop(bumps: 10, outer: 11.4, inner: 9.3) on a 24 viewBox. */
-const SEAL_PATH = 'M21.30 12.00Q22.84 15.52 19.52 17.47Q18.70 21.22 14.87 20.84Q12.00 23.40 9.13 20.84Q5.30 21.22 4.48 17.47Q1.16 15.52 2.70 12.00Q1.16 8.48 4.48 6.53Q5.30 2.78 9.13 3.16Q12.00 0.60 14.87 3.16Q18.70 2.78 19.52 6.53Q22.84 8.48 21.30 12.00Z'
-
-/** Struck into the corner of a species you have landed at the top size tier.
+/** ONE mark per species, in one corner, saying the most that is true of it:
  *
- *  The SILHOUETTE carries it, not the detail inside. At 24px a ring of tiny
- *  teeth disappears and this read as the same object as the golden mark, so
- *  the seal is scalloped and the golden is a clean disc: they are told apart
- *  at a glance across a grid, before you have looked at either glyph. */
-function TrophyStamp() {
-  const C = TIER_COLOR.trophy
-  return (
-    <motion.span aria-hidden title="Trophy size landed"
-      initial={{ scale: 0, rotate: -30 }} animate={{ scale: 1, rotate: -12 }}
-      transition={{ type: 'spring', stiffness: 420, damping: 13, delay: 0.12 }}
-      style={{ position: 'absolute', left: 1, top: -1, width: 24, height: 24, pointerEvents: 'none', filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.85))' }}>
-      <svg viewBox="0 0 24 24" width="24" height="24">
-        <path d={SEAL_PATH} fill="rgba(18,12,3,0.9)" stroke={C} strokeWidth="1.5" strokeLinejoin="round" />
-        <path d="M12 6.9l1.62 3.28 3.62.53-2.62 2.55.62 3.6L12 15.16l-3.24 1.7.62-3.6-2.62-2.55 3.62-.53z" fill={C} />
-      </svg>
-    </motion.span>
-  )
-}
+ *    trophy size + golden on the wall  ->  a GOLD trophy
+ *    trophy size                       ->  a pewter trophy
+ *    golden on the wall                ->  a gold dot
+ *    neither                           ->  nothing
+ *
+ *  Two separate stamps in two corners was more furniture than a 150px tile can
+ *  carry, and it made the grid busy exactly where the art is supposed to be
+ *  doing the talking. One symbol that upgrades is the same information in a
+ *  quarter of the ink, and the gold trophy becomes a thing to go and earn.
+ *
+ *  Pewter for the plain trophy on purpose. If the base cup were already gold
+ *  then "gold trophy" would say nothing, and silver-to-gold is the oldest
+ *  legible upgrade there is.
+ */
+function CollectionMark({ trophy, golden }: { trophy: boolean; golden: boolean }) {
+  if (!trophy && !golden) return null
+  const gold = golden
+  const c = trophy ? (gold ? GOLD : '#c8d2e0') : GOLD
 
-/** A golden of this species is on your wall. Deliberately NOT the fish drawn
- *  gold: that treatment belongs to the Goldens room, and painting it into this
- *  grid made the Collection a worse copy of it. A mark, not a costume. */
-function GoldenMark() {
   return (
-    <motion.span aria-hidden title="Golden mounted"
+    <motion.span aria-hidden
+      title={trophy ? (gold ? 'Trophy size, golden mounted' : 'Trophy size landed') : 'Golden mounted'}
       initial={{ scale: 0 }} animate={{ scale: 1 }}
-      transition={{ type: 'spring', stiffness: 460, damping: 14, delay: 0.18 }}
-      style={{ position: 'absolute', right: 1, top: -1, width: 22, height: 22, pointerEvents: 'none', filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.85))' }}>
-      <svg viewBox="0 0 24 24" width="22" height="22">
-        <circle cx="12" cy="12" r="9.8" fill="rgba(24,17,3,0.9)" stroke={GOLD} strokeWidth="1.6" />
-        {/* The game's own four-point spark, drawn rather than typed. */}
-        <path d="M12 4.3c.72 4.3 1.7 5.28 6 6-4.3.72-5.28 1.7-6 6-.72-4.3-1.7-5.28-6-6 4.3-.72 5.28-1.7 6-6z" fill={GOLD} />
-      </svg>
+      transition={{ type: 'spring', stiffness: 460, damping: 14, delay: 0.14 }}
+      style={{
+        position: 'absolute', right: 2, top: 0,
+        width: trophy ? 22 : 14, height: trophy ? 22 : 14, pointerEvents: 'none',
+        // drop-shadow on the wrapper, not an feGaussianBlur inside each SVG:
+        // up to 146 of these mount at once.
+        filter: gold
+          ? `drop-shadow(0 0 4px ${GOLD}cc) drop-shadow(0 1px 3px rgba(0,0,0,0.85))`
+          : 'drop-shadow(0 1px 3px rgba(0,0,0,0.85))',
+      }}>
+      {trophy ? (
+        <svg viewBox="0 0 24 24" width="22" height="22">
+          <g stroke={c} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none">
+            <path d="M8 4h8v4.2c0 2.6-1.8 4.3-4 4.3s-4-1.7-4-4.3z" fill={c} fillOpacity="0.9" />
+            <path d="M8 5.4H5.6c0 2.6 1 3.9 2.6 4.3" />
+            <path d="M16 5.4h2.4c0 2.6-1 3.9-2.6 4.3" />
+            <path d="M12 12.5v3.2" />
+            <path d="M8.6 19h6.8" />
+            <path d="M10 15.7h4l.7 3.3h-5.4z" fill={c} fillOpacity="0.9" />
+          </g>
+        </svg>
+      ) : (
+        <svg viewBox="0 0 24 24" width="14" height="14">
+          <circle cx="12" cy="12" r="4.6" fill={c} />
+          <circle cx="12" cy="12" r="7.2" fill="none" stroke={c} strokeWidth="1.2" opacity="0.45" />
+        </svg>
+      )}
     </motion.span>
   )
 }
@@ -197,11 +209,7 @@ function SpeciesCard({ entry, goldMounted, onOpen }: { entry: AlmanacEntry; gold
           }} />
         )}
 
-        {/* Two different achievements, so two different marks in two different
-            corners: a size record on the left, a golden on your wall on the
-            right. Either can appear without the other. */}
-        {caught && isTrophy && <TrophyStamp />}
-        {caught && goldMounted && <GoldenMark />}
+        {caught && <CollectionMark trophy={isTrophy} golden={goldMounted} />}
       </div>
 
       {/* The name, one line, always. Fixed height so a two-word species and a
