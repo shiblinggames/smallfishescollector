@@ -16,7 +16,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import PopupShell from '@/components/PopupShell'
-import { ZONE_LABEL, ZONE_COLOR, ZONE_ORDER, ZONE_BG, ZONE_TAGLINE } from './zoneData'
+import { ZONE_LABEL, ZONE_COLOR, ZONE_ORDER, ZONE_TAGLINE } from './zoneData'
 import { RARITY_LABEL, RARITY_COLOR, fishArt, isGiant, shortDate } from '@/lib/almanac'
 import { tierForLength, TIER_LABEL, TIER_COLOR, formatFishLength } from '@/lib/fishSize'
 import type { AlmanacData, AlmanacEntry } from './almanacActions'
@@ -51,24 +51,28 @@ export default function AlmanacCollection({ data }: { data: AlmanacData }) {
         return (
           <div key={zone} style={{ marginBottom: '1.5rem' }}>
 
-            {/* ── Habitat banner ── the zone's own water, cropped to a band. */}
-            <div style={{ position: 'relative', height: 74, borderRadius: 13, overflow: 'hidden', marginBottom: 9, border: `1px solid ${color}44` }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={ZONE_BG[zone]} alt="" aria-hidden loading="lazy" decoding="async"
-                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 8%' }} />
-              <div aria-hidden style={{ position: 'absolute', inset: 0, background: `linear-gradient(90deg, rgba(6,6,12,0.88) 0%, rgba(6,6,12,0.55) 55%, rgba(6,6,12,0.30) 100%)` }} />
-              <div style={{ position: 'absolute', inset: 0, padding: '0.55rem 0.75rem', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                  <p className="font-cinzel font-800" style={{ fontSize: '1.15rem', color: '#fdf7e8', lineHeight: 1.1, textShadow: `0 2px 7px rgba(0,0,0,0.95), 0 0 16px ${color}55` }}>{ZONE_LABEL[zone]}</p>
-                  <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: done ? GOLD : color, fontVariantNumeric: 'tabular-nums', textShadow: '0 1px 4px rgba(0,0,0,0.9)', whiteSpace: 'nowrap' }}>
-                    {done ? '✦ all charted' : `${got}/${list.length}`}
-                  </span>
-                </div>
-                <p className="font-karla font-400 italic" style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.62)', marginTop: 1, textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>{ZONE_TAGLINE[zone]}</p>
-                <div style={{ height: 3, borderRadius: 999, background: 'rgba(0,0,0,0.5)', marginTop: 6, maxWidth: 150, overflow: 'hidden' }}>
-                  <motion.div initial={{ width: 0 }} animate={{ width: `${pct * 100}%` }} transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-                    style={{ height: '100%', borderRadius: 999, background: done ? GOLD : color }} />
-                </div>
+            {/* A CHAPTER HEADING, not a picture. The zone's painted plate as
+                a 74px band fought the specimens under it, and it boxed the
+                section back up right after the cards lost their boxes. On
+                paper the right answer is type: the name, the count, and a rule
+                in the water's own colour. */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+                <p className="font-cinzel font-800" style={{ fontSize: '1.24rem', color: '#f2ecdd', lineHeight: 1.1 }}>
+                  {ZONE_LABEL[zone]}
+                </p>
+                <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: done ? GOLD : color, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                  {done ? "✦ all charted" : `${got} / ${list.length}`}
+                </span>
+              </div>
+              <p className="font-karla font-400 italic" style={{ fontSize: '0.68rem', color: '#a49dc0', marginTop: 2 }}>{ZONE_TAGLINE[zone]}</p>
+              {/* The rule doubles as the progress bar: it fills in the zone's
+                  colour as far as you have charted and stays a hairline for the
+                  rest, so one line does two jobs. */}
+              <div style={{ position: 'relative', height: 2, marginTop: 8, background: 'rgba(255,255,255,0.10)', borderRadius: 2, overflow: 'hidden' }}>
+                <motion.span aria-hidden initial={{ width: 0 }} animate={{ width: `${pct * 100}%` }}
+                  transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+                  style={{ position: 'absolute', left: 0, top: 0, bottom: 0, background: done ? GOLD : color, boxShadow: `0 0 8px ${done ? GOLD : color}88` }} />
               </div>
             </div>
 
@@ -211,23 +215,25 @@ function SpeciesSheet({ entry, onClose, goldens }: {
           margin: 'auto',
           width: '100%', maxWidth: 460, borderRadius: 18, overflow: 'hidden',
           // Solid base: this sits over the overlay's art.
-          background: 'linear-gradient(180deg, #12101c 0%, #0a0913 100%)',
+          background: 'linear-gradient(180deg, #16141b 0%, #0c0b10 100%)',
           border: `1px solid ${entry.everGolden ? GOLD + '66' : color + '55'}`,
         }}>
 
-        {/* Plate — the fish over its own water, so the sheet opens on a place. */}
+        {/* Plate — the almanac's own paper, not the zone's water. A painted
+            seascape behind the specimen made the sheet look like it belonged to
+            the fishing screen; this is a page in a book. */}
         <div style={{ position: 'relative', height: 168, overflow: 'hidden' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={ZONE_BG[entry.habitat]} alt="" aria-hidden
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 8%' }} />
-          <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(8,8,16,0.45) 0%, rgba(10,9,19,0.72) 62%, rgba(10,9,19,0.97) 100%)' }} />
-          {entry.everGolden && (
-            <span aria-hidden style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 50% 44%, rgba(240,192,64,0.22), transparent 64%)' }} />
-          )}
+          <img src="/almanac-paper.jpg" alt="" aria-hidden
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+          <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(10,9,13,0.30) 0%, rgba(10,9,13,0.55) 68%, rgba(12,10,18,0.92) 100%)' }} />
+          {/* The specimen's own pool of light on the page, gold once you have
+              taken a golden of it. */}
+          <span aria-hidden style={{ position: 'absolute', left: '50%', top: '46%', transform: 'translate(-50%, -50%)', width: 220, height: 150, borderRadius: '50%', background: `radial-gradient(ellipse, ${entry.everGolden ? 'rgba(240,192,64,0.26)' : color + '2e'} 0%, transparent 68%)` }} />
           <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', padding: '0.6rem' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={fishArt(entry.name)} alt="" aria-hidden
-              style={{ maxWidth: '68%', maxHeight: '92%', objectFit: 'contain', filter: 'drop-shadow(0 6px 16px rgba(0,0,0,0.7))' }} />
+              style={{ position: 'relative', maxWidth: 190, maxHeight: 140, objectFit: 'contain', filter: `drop-shadow(0 7px 14px rgba(0,0,0,0.7)) drop-shadow(0 0 18px ${entry.everGolden ? 'rgba(240,192,64,0.6)' : color + '77'})` }} />
           </div>
           <button type="button" onClick={onClose} aria-label="Close"
             style={{ position: 'absolute', top: 9, right: 9, width: 28, height: 28, borderRadius: '50%', padding: 0, background: 'rgba(6,6,12,0.72)', border: '1px solid rgba(255,255,255,0.2)', color: '#cfcabf', cursor: 'pointer', display: 'grid', placeItems: 'center' }}>

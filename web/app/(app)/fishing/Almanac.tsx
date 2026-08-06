@@ -76,18 +76,21 @@ export default function Almanac({ open, onClose }: { open: boolean; onClose: () 
 
   return createPortal(
     <div role="dialog" aria-modal
-      style={{ position: 'fixed', inset: 0, zIndex: 111, background: '#07080f', display: 'flex', justifyContent: 'center' }}>
+      style={{ position: 'fixed', inset: 0, zIndex: 111, background: '#0a090d', display: 'flex', justifyContent: 'center' }}>
       <div className="relative w-full max-w-lg" style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
-        {/* Backdrop — the logbook plate. It was under an 86% scrim at the top,
-            which is to say it was not there at all and the masthead sat on flat
-            near-black. The rooms scroll over their own opaque cards, so only
-            the masthead band needs the art to stay readable: it opens at 55%
-            and closes fast. */}
+        {/* The page you are writing on. Dark cotton-rag stock: fibre grain,
+            damp bloom, a couple of ring marks, edges gone darker with handling.
+            It is deliberately DARK paper rather than cream, because every
+            colour in this book is set for a dark ground and a light page would
+            mean re-picking all of them.
+
+            Only a light wash over it, since a texture under an 86% scrim is
+            not a texture. */}
         <div aria-hidden style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/fish-bestiary.jpg" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }} />
-          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(7,8,15,0.55) 0%, rgba(7,8,15,0.80) 26%, rgba(5,6,11,0.96) 52%, rgba(5,6,11,0.99) 100%)' }} />
+          <img src="/almanac-paper.jpg" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(8,7,10,0.42) 0%, rgba(8,7,10,0.52) 55%, rgba(6,5,8,0.62) 100%)' }} />
         </div>
 
         {/* ── Header ── matches the zone selector / campaign map shell. */}
@@ -95,8 +98,8 @@ export default function Almanac({ open, onClose }: { open: boolean; onClose: () 
           position: 'relative', zIndex: 2, flexShrink: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: 'calc(env(safe-area-inset-top, 0px) + 0.7rem) 1rem 0.7rem',
-          background: 'rgba(9,8,16,0.96)',
-          borderBottom: `1px solid ${ACCENT}30`,
+          background: 'linear-gradient(180deg, rgba(10,9,13,0.90) 0%, rgba(10,9,13,0.72) 100%)',
+          borderBottom: `1px solid ${ACCENT}2e`,
         }}>
           <div>
             <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.6rem', color: `${ACCENT}b8`, marginBottom: 1 }}>Fishing</p>
@@ -120,7 +123,7 @@ export default function Almanac({ open, onClose }: { open: boolean; onClose: () 
                 number that used to sit above them lives in the Record, where
                 it has the space to be read rather than glanced past on the way
                 to somewhere else. */}
-            <div style={{ position: 'relative', zIndex: 2, flexShrink: 0, display: 'flex', gap: 4, padding: '0.6rem 0.7rem', background: 'linear-gradient(180deg, rgba(9,8,16,0.55) 0%, rgba(9,8,16,0.86) 100%)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+            <div style={{ position: 'relative', zIndex: 2, flexShrink: 0, display: 'flex', gap: 4, padding: '0.6rem 0.7rem', background: 'linear-gradient(180deg, rgba(10,9,13,0.72) 0%, rgba(10,9,13,0.40) 100%)', borderBottom: '1px solid rgba(255,255,255,0.09)' }}>
               {TABS.map(t => {
                 const on = room === t.key
                 return (
