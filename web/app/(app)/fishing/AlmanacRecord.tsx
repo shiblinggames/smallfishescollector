@@ -11,6 +11,7 @@
 import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { ZONE_LABEL, ZONE_COLOR, ZONE_ORDER } from './zoneData'
+const ACCENT = '#a78bfa'
 import { RARITY_LABEL, RARITY_COLOR, fishArt, compact, shortDate } from '@/lib/almanac'
 import { CRATE_TIERS } from '@/components/CrateOpening'
 import { BAITS } from '@/lib/bait'
@@ -52,11 +53,65 @@ export default function AlmanacRecord({ data }: { data: AlmanacData }) {
   const crateCounted = crateRows.reduce((a, r) => a + r.n, 0)
   const baitRows = BAITS.map(b => ({ b, n: data.stats.baitUsed[b.type] ?? 0 })).filter(r => r.n > 0).sort((a, b) => b.n - a.n)
 
+  const charted = caughtOnly.length
+  const total = data.entries.length
+  const totalCatches = useMemo(() => caughtOnly.reduce((a, e) => a + e.count, 0), [caughtOnly])
+
   const zoneMax = Math.max(1, ...byZone.map(r => r.n))
   const rarityMax = Math.max(1, ...byRarity.map(r => r.n))
 
   return (
     <>
+      {/* ── The standing ── moved down out of the header, which is nothing but
+          the tabs now. It gets to be the top of a page here instead of a strip
+          you scroll past on your way somewhere else. */}
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 7 }}>
+          <span className="font-cinzel font-800" style={{ fontSize: '2.1rem', lineHeight: 1, color: '#efe9ff', fontVariantNumeric: 'tabular-nums' }}>{charted}</span>
+          <span className="font-karla font-700" style={{ fontSize: '0.82rem', color: '#a49dc0' }}>of {total} charted</span>
+        </div>
+        <span className="font-karla font-700" style={{ fontSize: '0.78rem', color: ACCENT, fontVariantNumeric: 'tabular-nums' }}>
+          {total > 0 ? Math.round((charted / total) * 100) : 0}%
+        </span>
+      </div>
+      <div style={{ height: 7, borderRadius: 999, background: 'rgba(255,255,255,0.07)', overflow: 'hidden', marginBottom: 11 }}>
+        <motion.div initial={{ width: 0 }} animate={{ width: `${total > 0 ? (charted / total) * 100 : 0}%` }}
+          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          style={{ height: '100%', borderRadius: 999, background: `linear-gradient(90deg, #6d5bb0, ${ACCENT})` }} />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: '1.5rem' }}>
+        <Stat label="Catches" value={compact(totalCatches)} />
+        <Stat label="Casts" value={compact(data.stats.casts)} />
+        <Stat label="Perfects" value={compact(data.stats.perfects)} accent="#7dd3fc" />
+        <Stat label="Trophies" value={compact(data.stats.trophySizeCatches)} accent="#fbbf24" />
+      </div>
+
+      {/* ── The career ── no longer hidden behind a disclosure, because this
+          tab exists to hold exactly this. */}
+      <Section title="The Career" note="Everything the log has kept on you" />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', columnGap: 16, rowGap: 5, marginBottom: '1.5rem' }}>
+        <Line label="Best perfect streak" value={data.stats.bestPerfectStreak.toLocaleString()} accent="#7dd3fc" />
+        <Line label="Crates opened" value={compact(data.stats.cratesOpened)} />
+        <Line label="Double catches" value={compact(data.stats.doubleCatches)} />
+        <Line label="Rod jackpots" value={compact(data.stats.jackpots)} accent="#fbbf24" />
+        <Line label="Snags" value={compact(data.stats.snags)} />
+        <Line label="Fishing XP" value={compact(data.stats.fishingXP)} />
+        <Line label="Goldens landed" value={`${data.goldens.length}`} accent={GOLD} />
+        <Line label="Species met" value={`${charted}`} />
+      </div>
+
+      {ZONE_ORDER.some(z => (data.prestige[z] ?? 0) > 0) && (
+        <>
+          <Section title="Prestige" note="Waters you have cleared and started over" />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', columnGap: 16, rowGap: 5, marginBottom: '1.5rem' }}>
+            {ZONE_ORDER.filter(z => (data.prestige[z] ?? 0) > 0).map(z => (
+              <Line key={z} label={ZONE_LABEL[z]} value={`✦ ${data.prestige[z]}`} accent={GOLD} />
+            ))}
+          </div>
+        </>
+      )}
+
       {/* ── Where you fish ── */}
       <Section title="By Water" note="Every catch, counted from your first cast" />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: '1.4rem' }}>
@@ -161,6 +216,24 @@ export default function AlmanacRecord({ data }: { data: AlmanacData }) {
         </>
       )}
     </>
+  )
+}
+
+function Stat({ label, value, accent }: { label: string; value: string; accent?: string }) {
+  return (
+    <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 9, padding: '0.4rem 0.45rem' }}>
+      <p className="font-karla font-600 uppercase tracking-[0.09em]" style={{ fontSize: '0.56rem', color: '#9a93b8', marginBottom: 2 }}>{label}</p>
+      <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', lineHeight: 1, color: accent ?? '#d8d2ea', fontVariantNumeric: 'tabular-nums' }}>{value}</p>
+    </div>
+  )
+}
+
+function Line({ label, value, accent }: { label: string; value: string; accent?: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+      <span className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#9a93b8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+      <span className="font-karla font-700" style={{ fontSize: '0.68rem', color: accent ?? '#c8c2dc', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{value}</span>
+    </div>
   )
 }
 
