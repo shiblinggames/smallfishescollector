@@ -1506,8 +1506,18 @@ export default function ShipHero({
                   <div style={{ position: 'relative', flexShrink: 0, width: 42, height: 42, borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                     {row.art
                       // eslint-disable-next-line @next/next/no-img-element
+                      // The ship gets its own sizing because its art is not
+                      // shaped like the others'. The hull plates are 600x335
+                      // (1.79:1) with a LOT of transparent margin — the hull
+                      // itself is only 40-65% of the canvas width — so fitting
+                      // the canvas to this square box left a Brigantine
+                      // rendering ~24x19 next to a crew portrait filling 39x39.
+                      // 140% sizes the canvas so the big hulls land at ~38px
+                      // wide, level with the portrait. Going further starts
+                      // eating the Galleon and Man-o-War bowsprits, which
+                      // overhang further left than the rest.
                       ? <img src={row.art} alt="" aria-hidden loading="lazy" decoding="async" style={row.key === 'ship'
-                          ? { width: '108%', maxWidth: 'none', height: 'auto', objectFit: 'contain', filter: row.locked ? 'grayscale(0.9) brightness(0.7)' : undefined }
+                          ? { width: '140%', maxWidth: 'none', height: 'auto', objectFit: 'contain', filter: row.locked ? 'grayscale(0.9) brightness(0.7)' : undefined }
                           : { maxWidth: '92%', maxHeight: '92%', objectFit: 'contain', filter: row.locked ? 'grayscale(0.9) brightness(0.7)' : undefined }} />
                       : row.icon}
                     {row.locked && (
