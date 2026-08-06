@@ -35,6 +35,20 @@ export function fishArt(name: string): string {
   return '/fish-tile/' + name.toLowerCase().replace(/\s+/g, '-') + '.png'
 }
 
+/** Pet art for GRID views, from /public/pet-tile/.
+ *
+ *  Same reason as fishArt. The pet sprites are 1024x576 LANDSCAPE canvases
+ *  holding a small upright animal that fills 22% to 42% of the width, so
+ *  contained into a tile a parrot drew about 18x24 and the room that should be
+ *  the most art-forward in the book was a grid of stamps. normalize-tiles.mjs
+ *  centres each on one 192px square at a fixed fill.
+ *
+ *  Takes the registry's restImageUrl ('/parrot_red.png') and keeps the
+ *  filename, so a new pet needs nothing here. */
+export function petArt(restImageUrl: string): string {
+  return '/pet-tile/' + restImageUrl.replace(/^\//, '')
+}
+
 /** The Ancient Deep giants are the only species worth nothing at market,
  *  because they are mounts rather than stock. That is what makes them the
  *  Giants room instead of six more rows in the Collection. */

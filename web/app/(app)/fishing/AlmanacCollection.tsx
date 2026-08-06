@@ -19,6 +19,7 @@ import PopupShell from '@/components/PopupShell'
 import { ZONE_LABEL, ZONE_COLOR, ZONE_ORDER, ZONE_TAGLINE } from './zoneData'
 import { RARITY_LABEL, RARITY_COLOR, fishArt, isGiant, shortDate } from '@/lib/almanac'
 import { tierForLength, TIER_LABEL, TIER_COLOR, formatFishLength } from '@/lib/fishSize'
+import { SHINY_FISH_FILTER } from '@/lib/shiny'
 import type { AlmanacData, AlmanacEntry } from './almanacActions'
 
 const GOLD = '#f0c040'
@@ -102,63 +103,62 @@ function SpeciesCard({ entry, onOpen }: { entry: AlmanacEntry; onOpen: () => voi
       whileHover={caught ? { y: -3 } : undefined}
       transition={{ type: 'spring', stiffness: 520, damping: 30 }}
       style={{
-        // NO CARD. No panel, no border, no plate. A tinted box around every
-        // fish made 152 identical containers with some art trapped inside
-        // each; the specimen is the thing worth looking at, so it stands on
-        // the room's own ground and light does the work a border was doing.
+        // No card. The specimen stands on the page and light does the work a
+        // border was doing, but QUIETLY: a grid of 152 of these is a lot of
+        // glow, and it was reading as a lightshow rather than as a book.
         position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center',
-        background: 'none', border: 'none', padding: '0.35rem 0.15rem 0.5rem',
+        background: 'none', border: 'none', padding: '0.35rem 0.15rem 0.55rem',
         cursor: caught ? 'pointer' : 'default', textAlign: 'center',
         WebkitTapHighlightColor: 'transparent',
       }}>
 
-      <div style={{ position: 'relative', width: '100%', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {/* Pool of light it stands in. Its own rarity, gold once you have
-            taken a golden. This is what replaces the card: presence without
-            an edge. */}
+      <div style={{ position: 'relative', width: '100%', height: 74, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {caught && (
           <span aria-hidden style={{
             position: 'absolute', left: '50%', top: '48%', transform: 'translate(-50%, -50%)',
-            width: 82, height: 82, borderRadius: '50%', pointerEvents: 'none',
-            background: `radial-gradient(circle, ${c}${entry.everGolden ? '44' : '30'} 0%, ${c}10 42%, transparent 70%)`,
+            width: 76, height: 76, borderRadius: '50%', pointerEvents: 'none',
+            background: `radial-gradient(circle, ${c}${entry.everGolden ? '24' : '16'} 0%, transparent 66%)`,
           }} />
         )}
 
+        {/* A species you have taken a golden of is DRAWN golden, the same
+            SHINY_FISH_FILTER the catch card and the Logbook use, so the book
+            agrees with the moment you landed it. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={fishArt(entry.name)} alt="" aria-hidden loading="lazy" decoding="async"
           style={{
-            position: 'relative', maxWidth: 82, maxHeight: 70, objectFit: 'contain',
-            filter: caught
-              ? `drop-shadow(0 5px 9px rgba(0,0,0,0.6)) drop-shadow(0 0 14px ${c}55)`
-              : 'brightness(0) opacity(0.26)',
+            position: 'relative', maxWidth: 84, maxHeight: 72, objectFit: 'contain',
+            filter: !caught
+              ? 'brightness(0) opacity(0.26)'
+              : entry.everGolden
+                ? SHINY_FISH_FILTER
+                : 'drop-shadow(0 4px 7px rgba(0,0,0,0.55))',
           }} />
 
-        {/* Contact shadow. A specimen with nothing under it floats; this is
-            the cheap trick that makes it sit on a surface instead. */}
         {caught && (
           <span aria-hidden style={{
-            position: 'absolute', left: '50%', bottom: 2, transform: 'translateX(-50%)',
-            width: 46, height: 6, borderRadius: '50%', pointerEvents: 'none',
-            background: 'radial-gradient(ellipse, rgba(0,0,0,0.55) 0%, transparent 72%)',
+            position: 'absolute', left: '50%', bottom: 1, transform: 'translateX(-50%)',
+            width: 44, height: 5, borderRadius: '50%', pointerEvents: 'none',
+            background: 'radial-gradient(ellipse, rgba(0,0,0,0.45) 0%, transparent 72%)',
           }} />
         )}
 
         {big && (
           <span aria-hidden title={TIER_LABEL[tier!]}
-            style={{ position: 'absolute', top: 2, right: 6, width: 4, height: 4, borderRadius: 4, background: TIER_COLOR[tier!], boxShadow: `0 0 6px ${TIER_COLOR[tier!]}` }} />
+            style={{ position: 'absolute', top: 2, right: 6, width: 4, height: 4, borderRadius: 4, background: TIER_COLOR[tier!] }} />
         )}
       </div>
 
-      <p className="font-cinzel font-700" style={{ width: '100%', marginTop: 5, fontSize: '0.64rem', lineHeight: 1.14, color: caught ? (entry.everGolden ? '#f7e6b8' : '#efeaf8') : '#7b7499', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+      {/* The NAME, and nothing else. The count and the rarity were two more
+          lines of small print on a tile you can simply tap; spending that room
+          on the one thing you are scanning for buys it a readable size. */}
+      <p className="font-cinzel font-700" style={{
+        width: '100%', marginTop: 6, fontSize: '0.82rem', lineHeight: 1.16,
+        color: caught ? (entry.everGolden ? '#f4d98a' : '#efeaf8') : '#7b7499',
+        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+      }}>
         {caught ? entry.name : '???'}
       </p>
-
-      {/* One micro-line, and a hairline of the rarity under it instead of a
-          border around everything. */}
-      <span className="font-karla font-700 uppercase" style={{ marginTop: 2, fontSize: '0.56rem', letterSpacing: '0.12em', color: caught ? c : rc + '99' }}>
-        {caught ? `×${entry.count}` : RARITY_LABEL[entry.rarity]}
-      </span>
-      <span aria-hidden style={{ marginTop: 4, width: caught ? 22 : 12, height: 1.5, borderRadius: 2, background: caught ? `linear-gradient(90deg, transparent, ${c}, transparent)` : 'rgba(255,255,255,0.10)' }} />
     </motion.button>
   )
 }
@@ -229,11 +229,11 @@ function SpeciesSheet({ entry, onClose, goldens }: {
           <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(10,9,13,0.30) 0%, rgba(10,9,13,0.55) 68%, rgba(12,10,18,0.92) 100%)' }} />
           {/* The specimen's own pool of light on the page, gold once you have
               taken a golden of it. */}
-          <span aria-hidden style={{ position: 'absolute', left: '50%', top: '46%', transform: 'translate(-50%, -50%)', width: 220, height: 150, borderRadius: '50%', background: `radial-gradient(ellipse, ${entry.everGolden ? 'rgba(240,192,64,0.26)' : color + '2e'} 0%, transparent 68%)` }} />
+          <span aria-hidden style={{ position: 'absolute', left: '50%', top: '46%', transform: 'translate(-50%, -50%)', width: 220, height: 150, borderRadius: '50%', background: `radial-gradient(ellipse, ${entry.everGolden ? 'rgba(240,192,64,0.18)' : color + '20'} 0%, transparent 68%)` }} />
           <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', padding: '0.6rem' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={fishArt(entry.name)} alt="" aria-hidden
-              style={{ position: 'relative', maxWidth: 190, maxHeight: 140, objectFit: 'contain', filter: `drop-shadow(0 7px 14px rgba(0,0,0,0.7)) drop-shadow(0 0 18px ${entry.everGolden ? 'rgba(240,192,64,0.6)' : color + '77'})` }} />
+              style={{ position: 'relative', maxWidth: 190, maxHeight: 140, objectFit: 'contain', filter: entry.everGolden ? SHINY_FISH_FILTER : `drop-shadow(0 6px 12px rgba(0,0,0,0.65))` }} />
           </div>
           <button type="button" onClick={onClose} aria-label="Close"
             style={{ position: 'absolute', top: 9, right: 9, width: 28, height: 28, borderRadius: '50%', padding: 0, background: 'rgba(6,6,12,0.72)', border: '1px solid rgba(255,255,255,0.2)', color: '#cfcabf', cursor: 'pointer', display: 'grid', placeItems: 'center' }}>

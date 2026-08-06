@@ -13,7 +13,7 @@ import { motion } from 'framer-motion'
 import { ZONE_LABEL, ZONE_COLOR } from './zoneData'
 import { fishArt, shortDate, compact } from '@/lib/almanac'
 import { formatFishLength } from '@/lib/fishSize'
-import { SHINY_ODDS } from '@/lib/shiny'
+import { SHINY_ODDS, SHINY_FISH_FILTER } from '@/lib/shiny'
 import type { AlmanacData } from './almanacActions'
 
 const GOLD = '#f0c040'
@@ -90,15 +90,15 @@ export default function AlmanacGoldens({ data }: { data: AlmanacData }) {
                 <span aria-hidden style={{
                   position: 'absolute', left: '50%', top: '46%', transform: 'translate(-50%, -50%)',
                   width: 112, height: 112, borderRadius: '50%', pointerEvents: 'none',
-                  background: 'radial-gradient(circle, rgba(240,192,64,0.32) 0%, rgba(240,192,64,0.10) 40%, transparent 70%)',
+                  background: 'radial-gradient(circle, rgba(240,192,64,0.16) 0%, transparent 66%)',
                 }} />
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={fishArt(g.name)} alt="" aria-hidden loading="lazy" decoding="async"
-                  style={{ position: 'relative', maxWidth: 116, maxHeight: 90, objectFit: 'contain', filter: 'saturate(1.3) drop-shadow(0 6px 12px rgba(0,0,0,0.6)) drop-shadow(0 0 16px rgba(240,192,64,0.7))' }} />
+                  style={{ position: 'relative', maxWidth: 116, maxHeight: 90, objectFit: 'contain', filter: SHINY_FISH_FILTER }} />
                 <span aria-hidden style={{
                   position: 'absolute', left: '50%', bottom: 2, transform: 'translateX(-50%)',
-                  width: 60, height: 7, borderRadius: '50%', pointerEvents: 'none',
-                  background: 'radial-gradient(ellipse, rgba(0,0,0,0.6) 0%, transparent 72%)',
+                  width: 58, height: 6, borderRadius: '50%', pointerEvents: 'none',
+                  background: 'radial-gradient(ellipse, rgba(0,0,0,0.45) 0%, transparent 72%)',
                 }} />
               </div>
 

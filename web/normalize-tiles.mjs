@@ -1,5 +1,6 @@
-// Normalizes every species sprite in public/fish/ into a consistent square
-// tile in public/fish-tile/, for grid views (the Bestiary).
+// Normalizes sprites into consistent square tiles for GRID views (the
+// Angler's Almanac): fish from public/fish/ -> public/fish-tile/, and the pet
+// sprites -> public/pet-tile/.
 //
 // WHY THIS EXISTS. The sprites in public/fish/ were cut from many different
 // sheets over a long time and they agree on nothing:
@@ -23,7 +24,11 @@
 // summons all position public/fish/ art in ways that depend on those exact
 // canvases.
 //
-//   node normalize-fish-tiles.mjs
+// The pets are the same story and worse: 1024x576 LANDSCAPE canvases holding a
+// small upright animal that fills 22% to 42% of the width. Contained into a
+// 76px box a parrot drew about 18x24, which is not art-forward, it is a stamp.
+//
+//   node normalize-tiles.mjs
 
 import sharp from 'sharp'
 import fs from 'fs'
@@ -31,8 +36,20 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const SRC = path.join(__dirname, 'public', 'fish')
-const OUT = path.join(__dirname, 'public', 'fish-tile')
+const PUB = path.join(__dirname, 'public')
+
+/** Each set: where the sprites are, where the tiles go, and how to pick them. */
+const SETS = [
+  { name: 'fish', src: path.join(PUB, 'fish'), out: path.join(PUB, 'fish-tile'), pick: null },
+  // The pets live loose in public/ rather than a folder, so the file list comes
+  // from the registry itself. A seventh species needs no edit here.
+  { name: 'pets', src: PUB, out: path.join(PUB, 'pet-tile'), pick: petFiles },
+]
+
+function petFiles() {
+  const src = fs.readFileSync(path.join(__dirname, 'lib', 'pets.ts'), 'utf8')
+  return [...src.matchAll(/restImageUrl:\s*'\/([^']+)'/g)].map(m => m[1])
+}
 
 /** Output tile edge. 2x the largest place one is drawn (~64px in the species
  *  sheet header) with room to spare on a 3x display. */
@@ -41,13 +58,14 @@ const TILE = 192
  *  uniform across the set, which is the whole point. */
 const FILL = 0.88
 
-fs.mkdirSync(OUT, { recursive: true })
+for (const set of SETS) {
+fs.mkdirSync(set.out, { recursive: true })
 
-const files = fs.readdirSync(SRC).filter(f => f.endsWith('.png'))
+const files = set.pick ? set.pick() : fs.readdirSync(set.src).filter(f => f.endsWith('.png'))
 let done = 0, failed = []
 
 for (const f of files) {
-  const src = path.join(SRC, f)
+  const src = path.join(set.src, f)
   try {
     // Two awaits, never a chained .extract().trim(): sharp resolves a chained
     // pair against the ORIGINAL image, not the intermediate.
@@ -69,15 +87,16 @@ for (const f of files) {
         background: { r: 0, g: 0, b: 0, alpha: 0 },
       })
       .png({ compressionLevel: 9, palette: true })
-      .toFile(path.join(OUT, f))
+      .toFile(path.join(set.out, f))
     done++
   } catch (e) {
     failed.push(`${f}: ${e.message}`)
   }
 }
 
-console.log(`normalized ${done}/${files.length} -> public/fish-tile/ (${TILE}px, fish at ${Math.round(FILL * 100)}%)`)
+console.log(`${set.name}: normalized ${done}/${files.length} -> ${set.out.split(/[\/]/).pop()}/ (${TILE}px, subject at ${Math.round(FILL * 100)}%)`)
 if (failed.length) {
   console.log('FAILED:')
   for (const x of failed) console.log('  ' + x)
+}
 }
