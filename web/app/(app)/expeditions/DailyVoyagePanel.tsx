@@ -749,18 +749,30 @@ export default function DailyVoyagePanel({
                           stat: 'Power', value: stats.power, tint: '#e8a0a0',
                           effect: `${est.triumphPct}% triumph`,
                           detail: `${est.setbackPct}% setback`,
+                          detailTint: undefined,
                           why: 'Decides how the voyage goes. A triumph pays 1.35x, a setback 0.6x.',
                         },
                         {
                           stat: 'Fortune', value: stats.fortune, tint: '#f0c040',
                           effect: `haul ×${fortuneScale(stats.fortune).toFixed(2)}`,
-                          detail: crewRiskPct > 0 ? `${crewRiskPct}% crew risk` : 'no crew risk',
-                          why: 'Scales everything you bring home, and buys down the chance of losing a hand.',
+                          // Carries the crew-risk read AND the target to beat.
+                          // This used to be two more rows further down the panel
+                          // saying the same thing in a sentence.
+                          detail: safeVoyages ? 'Safe Passage'
+                                : crewRiskPct > 0 ? `${crewRiskPct}% risk · safe at ${rco.minLevel}`
+                                : 'no crew risk',
+                          // Permadeath must not read as grey footnote text.
+                          detailTint: safeVoyages ? '#4ade80'
+                                    : crewRiskPct >= 8 ? riskColor
+                                    : crewRiskPct > 0 ? '#c8aa6a'
+                                    : '#6a8a6a',
+                          why: `Scales everything you bring home, and buys down the chance of losing a hand. This route is risk-free at ${rco.minLevel} total Fortune.`,
                         },
                         {
                           stat: 'Nav', value: rawDodge, tint: '#7dd3fc',
                           effect: formatDuration(estMs),
                           detail: `from ${formatDuration(ROUTE_VOYAGE_MS[selectedRoute ?? 'open'])}`,
+                          detailTint: undefined,
                           why: 'Shortens the voyage. Caps at 10% off, and your Nav level takes another 10%.',
                         },
                       ] as const).map(row => (
@@ -787,8 +799,9 @@ export default function DailyVoyagePanel({
                           }}>
                             {row.effect}
                           </span>
-                          <span className="font-karla" style={{
-                            fontSize: '0.62rem', color: 'rgba(255,255,255,0.34)',
+                          <span className="font-karla font-600" style={{
+                            fontSize: '0.62rem',
+                            color: row.detailTint ?? 'rgba(255,255,255,0.34)',
                             marginLeft: 'auto', whiteSpace: 'nowrap',
                           }}>
                             {row.detail}
@@ -805,34 +818,16 @@ export default function DailyVoyagePanel({
                       {trawlingAssigned.map(c => c.name).join(', ')} {trawlingAssigned.length === 1 ? 'is' : 'are'} out on a trawl and can&apos;t sail until {trawlingAssigned.length === 1 ? 'it returns' : 'they return'}. Swap in another crew or collect the trawl first.
                     </span>
                   )}
-                  {/* Crew risk / crew count */}
-                  {savedCrew.length < minCrew ? (
+                  {/* Only the BLOCKER stays. The crew-risk read moved up into
+                      the Fortune row, which already had a slot for it: it used
+                      to spend two full rows here restating a number that was
+                      six pixels away, and a whole sentence teaching a target
+                      that now sits in the same line as the risk itself.
+                      A high risk still shouts, in red, on that row. */}
+                  {savedCrew.length < minCrew && (
                     <span className="font-karla font-600" style={{ fontSize: '0.92rem', color: '#c87a4a' }}>
                       <IconWarning size={12} /> {minCrew === 1 ? 'Need at least 1 crew to set sail' : `Need at least ${minCrew} crew to set sail`}
                     </span>
-                  ) : safeVoyages ? (
-                    <span className="font-karla font-600" style={{ fontSize: '0.92rem', color: '#4ade80' }}>
-                      <IconCheck size={12} /> No crew risk — Safe Passage keeps your crew safe on every route.
-                    </span>
-                  ) : riskPct > 0 ? (
-                    <>
-                      <span className="font-karla font-600" style={{ fontSize: '0.92rem', color: riskColor }}>
-                        {riskPct >= 15 ? <IconSkull size={12} /> : <IconWarning size={12} />} {riskPct}% chance crew is lost permanently
-                      </span>
-                      {/* Teach the mitigation: noobs should know Fortune is the
-                          survival stat, and vets should see what theirs is doing. */}
-                      <span className="font-karla" style={{ fontSize: '0.82rem', color: '#7a6f5a' }}>
-                        {stats.fortune > 0
-                          ? `Your crew's ${stats.fortune} Fortune trimmed this from ${Math.round(rco.baseCrewLossChance * 100)}%. Risk-free at ${rco.minLevel} Fortune.`
-                          : `Crew Fortune trims this risk. Risk-free at ${rco.minLevel} total Fortune.`}
-                      </span>
-                    </>
-                  ) : rco.baseCrewLossChance > 0 && savedCrew.length >= 2 ? (
-                    <span className="font-karla font-600" style={{ fontSize: '0.92rem', color: '#4ade80' }}>
-                      <IconCheck size={12} /> No crew risk. Your crew&apos;s {stats.fortune} Fortune covers these waters.
-                    </span>
-                  ) : (
-                    <span className="font-karla" style={{ fontSize: '0.92rem', color: '#5a7a5a' }}>No crew risk</span>
                   )}
                 </div>
               )
