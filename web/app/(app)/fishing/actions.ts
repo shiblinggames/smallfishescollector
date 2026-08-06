@@ -434,14 +434,29 @@ const CRATE_FISH_ID = -1
 
 const PERFECT_BAIT_SAVE_CHANCE = 0.5
 
-/** Log one catch of `fishId` in the bestiary. Counts CASTS, not fish: a ×100
- *  jackpot haul is a single catch of that species, so catch_count moves by 1
- *  however many fish came aboard. Returns whether this was a first sighting. */
+/** Log one catch of `fishId`. Counts CASTS, not fish: a ×100 jackpot haul is a
+ *  single catch of that species, so the count moves by 1 however many fish came
+ *  aboard. Returns whether this was a first sighting THIS CYCLE.
+ *
+ *  Writes to two places, and the difference matters:
+ *
+ *  fish_collection is the PRESTIGE-CYCLE log. Prestiging a zone deletes its
+ *  non-golden rows on purpose, because re-collecting the zone is the loop and
+ *  the selector's "24 of 31 logged" has to mean this cycle.
+ *
+ *  fish_lifetime is the career, and nothing ever deletes it. The Almanac reads
+ *  that one, so a prestige no longer shortens your record: counts, first and
+ *  last sighting, and every aggregate built on them survive. Fire-and-forget,
+ *  since a lost lifetime tick must never cost the player the catch itself. */
 async function logCatchToBestiary(
   admin: ReturnType<typeof createAdminClient>,
   userId: string,
   fishId: number,
 ): Promise<boolean> {
+  const now = new Date().toISOString()
+  void admin.rpc('bump_fish_lifetime', { uid: userId, fid: fishId, n: 1, at: now })
+    .then(() => {}, () => {})
+
   const { data: existing } = await admin
     .from('fish_collection').select('catch_count')
     .eq('user_id', userId).eq('fish_id', fishId).maybeSingle()
@@ -451,7 +466,7 @@ async function logCatchToBestiary(
   }
   await admin.from('fish_collection').update({
     catch_count: existing.catch_count + 1,
-    last_caught_at: new Date().toISOString(),
+    last_caught_at: now,
   }).eq('user_id', userId).eq('fish_id', fishId)
   return false
 }
@@ -1676,6 +1691,10 @@ export async function prestigeZone(zone: string): Promise<{ prestigeLevel: numbe
   const allZones = ['shallows', 'open_waters', 'deep', 'abyss']
   const allZonesPrestiged = allZones.every(z => (newLevels[z] ?? 0) >= 1)
 
+  // NOTE: this only clears the CYCLE log. fish_lifetime is untouched, so the
+  // Almanac's career numbers survive every prestige. Do not "tidy" this by
+  // deleting there too.
+  //
   // Preserve GOLDEN mounts: a prestige resets the catch log so you re-collect
   // the regular species, but golden fish are permanent trophies (the is_golden
   // flag drives the whole golden display, and the shiny_catches row it pairs

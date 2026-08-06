@@ -31,10 +31,16 @@ export type AlmanacEntry = {
   dietType: string | null
   waterType: string | null
   region: string | null
-  /** ── the player's side ── */
+  /** ── the player's side ──
+   *  All LIFETIME, from fish_lifetime. fish_collection is the prestige-cycle
+   *  log and gets deleted when you prestige a zone; the Almanac is the career
+   *  book and must not shorten because you did what the game asked. */
   count: number
   firstCaughtAt: string | null
   lastCaughtAt: string | null
+  /** Catches in the CURRENT prestige cycle, which is what the zone selector
+   *  counts. Kept so a species can show both if it ever needs to. */
+  cycleCount: number
   /** Has a golden of this species EVER been landed (the row survives selling). */
   everGolden: boolean
   pbLength: number | null
@@ -97,12 +103,15 @@ export async function getAlmanacData(): Promise<AlmanacData | { error: string }>
 
   const admin = createAdminClient()
 
-  const [species, collection, bests, goldens, profile] = await Promise.all([
+  const [species, collection, lifetime, bests, goldens, profile] = await Promise.all([
     admin.from('fish_species')
       .select('id, name, scientific_name, description, fun_fact, habitat, bite_rarity, catch_difficulty, sell_value, length_min_in, length_max_in, size_category, diet_type, water_type, region, sort_order')
       .order('sort_order', { ascending: true }),
     admin.from('fish_collection')
       .select('fish_id, catch_count, first_caught_at, last_caught_at, is_golden')
+      .eq('user_id', uid),
+    admin.from('fish_lifetime')
+      .select('fish_id, catches, first_caught_at, last_caught_at')
       .eq('user_id', uid),
     admin.from('fish_personal_bests')
       .select('fish_id, best_length_in, caught_at')
@@ -120,10 +129,12 @@ export async function getAlmanacData(): Promise<AlmanacData | { error: string }>
   if (species.error) return { error: 'Could not read the species list' }
 
   const col = new Map((collection.data ?? []).map(r => [r.fish_id as number, r]))
+  const life = new Map((lifetime.data ?? []).map(r => [r.fish_id as number, r]))
   const pb = new Map((bests.data ?? []).map(r => [r.fish_id as number, r]))
 
   const entries: AlmanacEntry[] = (species.data ?? []).map(s => {
     const c = col.get(s.id as number)
+    const l = life.get(s.id as number)
     const b = pb.get(s.id as number)
     return {
       id: s.id as number,
@@ -141,9 +152,12 @@ export async function getAlmanacData(): Promise<AlmanacData | { error: string }>
       dietType: (s.diet_type as string | null) ?? null,
       waterType: (s.water_type as string | null) ?? null,
       region: (s.region as string | null) ?? null,
-      count: (c?.catch_count as number | null) ?? 0,
-      firstCaughtAt: (c?.first_caught_at as string | null) ?? null,
-      lastCaughtAt: (c?.last_caught_at as string | null) ?? null,
+      // Lifetime first, falling back to the cycle log for anyone whose catch
+      // landed between the backfill and this deploy.
+      count: (l?.catches as number | null) ?? (c?.catch_count as number | null) ?? 0,
+      firstCaughtAt: (l?.first_caught_at as string | null) ?? (c?.first_caught_at as string | null) ?? null,
+      lastCaughtAt: (l?.last_caught_at as string | null) ?? (c?.last_caught_at as string | null) ?? null,
+      cycleCount: (c?.catch_count as number | null) ?? 0,
       everGolden: c?.is_golden === true,
       pbLength: (b?.best_length_in as number | null) ?? null,
       pbAt: (b?.caught_at as string | null) ?? null,
