@@ -228,7 +228,7 @@ export default function HubCards({
             that corner of the hub. This one actually opens, and for the
             captains who reach it there is nothing else left to unlock. */}
         <HubTile
-          bgImage="/exp-pvp.jpg" accent={bountyAccent} title="Bounties"
+          bgImage="/exp-bounties.jpg" accent={bountyAccent} title="Bounties"
           status={bountiesOpen ? 'Open ›' : 'Endgame'} statusColor={bountyAccent}
           sub={bountiesOpen ? 'Daily orders, paid in gems' : 'Posted once the story is done'}
           locked={!bountiesOpen} lockLabel="Clear the campaign"
