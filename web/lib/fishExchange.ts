@@ -152,6 +152,19 @@ export function settlePayout(stake: number, entry: number, exit: number, dir: Di
   return Math.max(0, Math.round(stake * q.leverage * yourWay))
 }
 
+/** Smallest and largest a single contract can be.
+ *
+ *  The cap is the brake behind all the maths: whatever edge somebody eventually
+ *  finds in the price engine, this is how much they can push through it at a
+ *  time.
+ *
+ *  These live HERE and not in exchangeActions because that file is 'use server'
+ *  and a 'use server' module silently DROPS every non-async export. Importing
+ *  them from there compiled clean and then failed the build with an unreadable
+ *  Ecmascript error. */
+export const MIN_STAKE = 500
+export const MAX_STAKE = 250_000
+
 /** Gate. Both skills at 75, so the Exchange opens to someone who has actually
  *  worked both halves of the game rather than rushed one. */
 export const EXCHANGE_FISHING_LEVEL = 75

@@ -9,6 +9,7 @@ import ShopHeader from '@/components/ShopHeader'
 import { marketSellFish, liquidateAllFish } from './actions'
 import type { MarketFishEntry, MarketState } from './page'
 import { MOOD_CONFIG } from '@/lib/fishMarket'
+import ExchangeClient from './ExchangeClient'
 import SwipeAction from '@/components/SwipeAction'
 import { hapticReward } from '@/lib/haptics'
 
@@ -512,6 +513,10 @@ export default function MarketClient({
   const [sortKey, setSortKey] = useState<'value' | 'change' | 'name'>('value')
   const [habitatFilter, setHabitatFilter] = useState<string | null>(null)
   const router = useRouter()
+  // The Hold is your own fish; the Exchange is contracts on the board. They
+  // share a mood and nothing else, so they are two screens rather than one
+  // long one.
+  const [side, setSide] = useState<'hold' | 'exchange'>('hold')
   const ownedIds = new Set(portfolio.map(e => e.fish_id))
   const browseAll = useMemo(() => {
     let list = allMarket.filter(e => !ownedIds.has(e.fish_id))
@@ -546,6 +551,27 @@ export default function MarketClient({
             rather than picking one of the three. */}
         <ShopHeader title="Fish Market" backLabel="Back" onBack={() => router.back()} />
 
+        {/* ── Hold / Exchange ── */}
+        <div style={{ display: 'flex', gap: 6 }}>
+          {([['hold', 'The Hold'], ['exchange', 'Exchange']] as const).map(([k, label]) => {
+            const on = side === k
+            return (
+              <button key={k} type="button" onClick={() => setSide(k)} className="font-karla font-700"
+                style={{
+                  flex: 1, padding: '0.5rem', borderRadius: 10, fontSize: '0.76rem',
+                  background: on ? 'rgba(56,189,248,0.14)' : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${on ? 'rgba(56,189,248,0.5)' : 'rgba(255,255,255,0.09)'}`,
+                  color: on ? '#e6f4ff' : '#8a94a4', cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
+                }}>
+                {label}
+              </button>
+            )
+          })}
+        </div>
+
+        {side === 'exchange' && <ExchangeClient onDoubloons={setDoubloons} />}
+
+        {side === 'hold' && <>
         {/* ── Market status ticker ── */}
         <div style={{
           background: 'rgba(11,13,18,0.96)', border: `1px solid ${mood.border}`,
@@ -763,7 +789,10 @@ export default function MarketClient({
           </div>
         )}
 
-        {/* Wallet */}
+        </>}
+
+        {/* Wallet — outside the Hold fragment on purpose: your purse is your
+            purse on both sides of the market. */}
         <div style={{ textAlign: 'center', paddingTop: 4 }}>
           <p className="font-karla font-400" style={{ fontSize: '0.65rem', color: '#6a6764' }}>Wallet</p>
           <p className="font-karla font-700" style={{ fontSize: '1.2rem', color: GOLD, ...TNUM }}>{doubloons.toLocaleString()} ⟡</p>

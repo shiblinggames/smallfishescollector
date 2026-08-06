@@ -8,6 +8,7 @@ import {
   TERMS, type Term, type Direction,
   quoteFund, quoteSingle, settlePayout, FUND_BY_ID,
   EARLY_CLOSE_RETURN, EXCHANGE_FISHING_LEVEL, EXCHANGE_NAV_LEVEL,
+  MIN_STAKE, MAX_STAKE,
 } from '@/lib/fishExchange'
 
 // The Exchange's write side. Contracts, not shares: nothing here touches
@@ -24,12 +25,6 @@ export type Instrument =
   | { kind: 'fish'; fishId: number }
 
 export type OpenResult = { ok: true; positionId: number; doubloons: number } | { error: string }
-
-/** Smallest and largest a single contract can be. The cap is the brake on the
- *  whole feature: whatever edge a clever player finds in the price engine, they
- *  can only push this much through it at a time. */
-export const MIN_STAKE = 500
-export const MAX_STAKE = 250_000
 
 type Gate = { open: true } | { open: false; reason: string }
 
@@ -177,4 +172,137 @@ export async function closeContractEarly(positionId: number): Promise<CloseResul
   doubloons = Number(p?.doubloons ?? 0)
 
   return { ok: true, payout, doubloons }
+}
+
+// ── Read side ───────────────────────────────────────────────────────────────
+
+export type BoardFund = {
+  id: string; name: string; blurb: string; accent: string
+  price: number; prevPrice: number; members: number; history: number[]
+}
+export type BoardFish = {
+  fishId: number; name: string; habitat: string; rarity: number
+  price: number; prevPrice: number; history: number[]
+}
+export type BoardPosition = {
+  id: number
+  label: string
+  accent: string
+  direction: Direction
+  term: Term
+  stake: number
+  leverage: number
+  entryPrice: number
+  livePrice: number
+  openCycle: number
+  expiryCycle: number
+  status: 'open' | 'settled' | 'closed_early'
+  payout: number | null
+  exitPrice: number | null
+  seen: boolean
+}
+export type ExchangeBoard = {
+  open: boolean
+  gateReason: string | null
+  cycle: number
+  doubloons: number
+  funds: BoardFund[]
+  fish: BoardFish[]
+  positions: BoardPosition[]
+  unseen: number
+}
+
+export async function getExchangeBoard(): Promise<ExchangeBoard | { error: string }> {
+  const supabase = await createClient()
+  const { data: { session } } = await supabase.auth.getSession()
+  const uid = session?.user?.id
+  if (!uid) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+  const [profileRes, stateRes, fundsRes, fishRes, posRes] = await Promise.all([
+    admin.from('profiles').select('doubloons, fishing_xp, expedition_xp').eq('id', uid).single(),
+    admin.from('market_state').select('exchange_cycle').eq('id', 1).single(),
+    admin.from('exchange_funds').select('fund_id, price, prev_price, members, history'),
+    admin.from('fish_exchange')
+      .select('fish_id, price, prev_price, history, fish_species(name, habitat, bite_rarity)'),
+    admin.from('exchange_positions')
+      .select('id, fund_id, fish_id, direction, term, stake, leverage, entry_price, open_cycle, expiry_cycle, status, payout, exit_price, seen')
+      .eq('user_id', uid)
+      .order('id', { ascending: false })
+      .limit(60),
+  ])
+
+  const gate = await checkGate(profileRes.data)
+  const cycle = Number(stateRes.data?.exchange_cycle ?? 0)
+
+  const funds: BoardFund[] = (fundsRes.data ?? []).map(f => {
+    const def = FUND_BY_ID.get(f.fund_id as string)
+    return {
+      id: f.fund_id as string,
+      name: def?.name ?? (f.fund_id as string),
+      blurb: def?.blurb ?? '',
+      accent: def?.accent ?? '#38bdf8',
+      price: Number(f.price), prevPrice: Number(f.prev_price),
+      members: Number(f.members),
+      history: ((f.history as number[] | null) ?? []).map(Number),
+    }
+  }).sort((a, b) => b.members - a.members)
+
+  const fish: BoardFish[] = (fishRes.data ?? []).map(r => {
+    const s = r.fish_species as unknown as { name: string; habitat: string; bite_rarity: number } | null
+    return {
+      fishId: r.fish_id as number,
+      name: s?.name ?? 'Unknown', habitat: s?.habitat ?? 'shallows', rarity: Number(s?.bite_rarity ?? 3),
+      price: Number(r.price), prevPrice: Number(r.prev_price),
+      history: ((r.history as number[] | null) ?? []).map(Number),
+    }
+  })
+
+  const fundPrice = new Map(funds.map(f => [f.id, f.price]))
+  const fishPrice = new Map(fish.map(f => [f.fishId, f.price]))
+  const fishName = new Map(fish.map(f => [f.fishId, f.name]))
+
+  const positions: BoardPosition[] = (posRes.data ?? []).map(p => {
+    const isFund = p.fund_id != null
+    return {
+      id: p.id as number,
+      label: isFund ? (FUND_BY_ID.get(p.fund_id as string)?.name ?? p.fund_id as string) : (fishName.get(p.fish_id as number) ?? 'Unknown'),
+      accent: isFund ? (FUND_BY_ID.get(p.fund_id as string)?.accent ?? '#38bdf8') : '#7dd3fc',
+      direction: p.direction as Direction,
+      term: Number(p.term) as Term,
+      stake: Number(p.stake),
+      leverage: Number(p.leverage),
+      entryPrice: Number(p.entry_price),
+      livePrice: isFund ? (fundPrice.get(p.fund_id as string) ?? Number(p.entry_price))
+                        : (fishPrice.get(p.fish_id as number) ?? Number(p.entry_price)),
+      openCycle: Number(p.open_cycle),
+      expiryCycle: Number(p.expiry_cycle),
+      status: p.status as 'open' | 'settled' | 'closed_early',
+      payout: p.payout == null ? null : Number(p.payout),
+      exitPrice: p.exit_price == null ? null : Number(p.exit_price),
+      seen: p.seen === true,
+    }
+  })
+
+  return {
+    open: gate.open,
+    gateReason: gate.open ? null : gate.reason,
+    cycle,
+    doubloons: Number(profileRes.data?.doubloons ?? 0),
+    funds, fish, positions,
+    unseen: positions.filter(p => p.status !== 'open' && !p.seen).length,
+  }
+}
+
+/** Clear the "new result" markers once the player has looked at them. */
+export async function markResultsSeen(): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  await createAdminClient()
+    .from('exchange_positions')
+    .update({ seen: true })
+    .eq('user_id', user.id)
+    .neq('status', 'open')
+    .eq('seen', false)
 }

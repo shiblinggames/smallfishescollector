@@ -173,3 +173,11 @@ grant execute on function public.settle_exchange_contracts() to service_role;
 -- order between them.
 --   select cron.schedule('exchange-funds-tick', '0 * * * *', 'SELECT update_exchange_funds()');
 --   select cron.schedule('exchange-settle',     '2 * * * *', 'SELECT settle_exchange_contracts()');
+
+-- A contract settles while you are away, which is the point. Without a flag for
+-- "you have seen this result" the payout is silent. Deliberately NOT mail: a
+-- player holding six contracts would get six letters an hour.
+alter table public.exchange_positions
+  add column if not exists seen boolean not null default false;
+create index if not exists exchange_positions_unseen_idx
+  on public.exchange_positions(user_id) where status <> 'open' and seen = false;
