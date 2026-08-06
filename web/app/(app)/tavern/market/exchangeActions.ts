@@ -67,10 +67,10 @@ export async function openContract(
   if (instrument.kind === 'fund') {
     if (!FUND_BY_ID.has(instrument.fundId)) return { error: 'Unknown fund' }
     const { data: f } = await admin.from('exchange_funds')
-      .select('price, members').eq('fund_id', instrument.fundId).single()
+      .select('price').eq('fund_id', instrument.fundId).single()
     if (!f) return { error: 'Fund not listed' }
     entry = Number(f.price)
-    leverage = quoteFund(Number(f.members), term).leverage
+    leverage = quoteFund(instrument.fundId, term).leverage
   } else {
     const { data: fx } = await admin.from('fish_exchange')
       .select('price, fish_species(bite_rarity)').eq('fish_id', instrument.fishId).single()

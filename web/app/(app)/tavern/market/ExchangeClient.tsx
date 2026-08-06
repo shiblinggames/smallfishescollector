@@ -466,7 +466,7 @@ function Ticket({ instrument, doubloons, onClose, onDone }: {
   const accent = isFund ? instrument.f.accent : '#7dd3fc'
   const price = instrument.f.price
   const q = isFund
-    ? quoteFund(instrument.f.members, term)
+    ? quoteFund(instrument.f.id, term)
     : quoteSingle(instrument.f.rarity, term)
 
   const capped = Math.max(MIN_STAKE, Math.min(MAX_STAKE, Math.min(stake, doubloons)))

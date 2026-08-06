@@ -48,38 +48,39 @@ export const HOUSE_EDGE = 0.08
 // weights ever change, or these silently stop being fair.
 
 /** Single fish, keyed by bite_rarity. A legendary swings hardest, so it needs
- *  the least leverage to reach the same expected payout. */
+ *  the least leverage to reach the same expected payout, and asks the largest
+ *  move to break even. */
 export const SINGLE_LEVERAGE: Record<number, Record<Term, number>> = {
-  1: { 6: 0.495, 24: 0.272, 72: 0.206 },
-  2: { 6: 0.399, 24: 0.219, 72: 0.166 },
-  3: { 6: 0.321, 24: 0.173, 72: 0.130 },
-  4: { 6: 0.257, 24: 0.138, 72: 0.103 },
-  5: { 6: 0.203, 24: 0.108, 72: 0.080 },
+  1: { 6: 0.4940, 24: 0.2735, 72: 0.2074 },   // break-even 3.66% at 24h
+  2: { 6: 0.3988, 24: 0.2194, 72: 0.1656 },   // break-even 4.56% at 24h
+  3: { 6: 0.3197, 24: 0.1742, 72: 0.1298 },   // break-even 5.74% at 24h
+  4: { 6: 0.2540, 24: 0.1367, 72: 0.1020 },   // break-even 7.32% at 24h
+  5: { 6: 0.2037, 24: 0.1080, 72: 0.0796 },   // break-even 9.26% at 24h
 }
 
-/** Funds, keyed by how many fish are in them. A fund is an average, so the
- *  idiosyncratic noise cancels and only the shared market mood survives: a fund
- *  moves a fraction as far as any of its members and therefore needs several
- *  times the leverage. Interpolated between these anchors. */
-const FUND_LEVERAGE_ANCHORS: [members: number, lev: Record<Term, number>][] = [
-  [8,   { 6: 0.771, 24: 0.426, 72: 0.327 }],
-  [20,  { 6: 0.988, 24: 0.542, 72: 0.418 }],
-  [35,  { 6: 1.084, 24: 0.591, 72: 0.462 }],
-  [146, { 6: 1.237, 24: 0.666, 72: 0.520 }],
-]
-
-export function fundLeverage(members: number, term: Term): number {
-  const a = FUND_LEVERAGE_ANCHORS
-  if (members <= a[0][0]) return a[0][1][term]
-  if (members >= a[a.length - 1][0]) return a[a.length - 1][1][term]
-  for (let i = 1; i < a.length; i++) {
-    if (members <= a[i][0]) {
-      const [m0, l0] = a[i - 1], [m1, l1] = a[i]
-      const t = (members - m0) / (m1 - m0)
-      return l0[term] + (l1[term] - l0[term]) * t
-    }
-  }
-  return a[a.length - 1][1][term]
+/** Funds, keyed BY ID rather than by member count.
+ *
+ *  Count alone was wrong twice over. It gave the Legendary Index and the Common
+ *  Index near-identical break-evens (1.67% and 1.66% at 24h) even though
+ *  legendaries are twice as volatile, so the legendary book was strictly the
+ *  better bet and there was a correct answer on the board. And the model behind
+ *  the numbers averaged NOISE into one walk, where update_exchange_funds()
+ *  averages PRICES across members: it understated the movement by about 23%,
+ *  which handed every fund contract a +11% edge over the house instead of the
+ *  intended -8%.
+ *
+ *  Each index now carries its own roster and its own rarity mix, so what it
+ *  asks of you tracks how far it actually travels. */
+export const FUND_LEVERAGE: Record<string, Record<Term, number>> = {
+  sea:          { 6: 1.0345, 24: 0.5032, 72: 0.3641 },  // 146 fish, break-even 1.99% at 24h
+  common:       { 6: 1.1231, 24: 0.5640, 72: 0.4260 },  //  53 fish, break-even 1.77%
+  legendary:    { 6: 0.8088, 24: 0.3780, 72: 0.2650 },  //  47 fish, break-even 2.65%
+  rare:         { 6: 0.9887, 24: 0.4855, 72: 0.3561 },  //  46 fish, break-even 2.06%
+  abyss:        { 6: 0.8372, 24: 0.4142, 72: 0.2961 },  //  35 fish, break-even 2.41%
+  open_waters:  { 6: 0.9902, 24: 0.4877, 72: 0.3548 },  //  34 fish, break-even 2.05%
+  shallows:     { 6: 0.9557, 24: 0.4773, 72: 0.3520 },  //  33 fish, break-even 2.10%
+  deep:         { 6: 0.9382, 24: 0.4522, 72: 0.3318 },  //  32 fish, break-even 2.21%
+  ancient_deep: { 6: 0.7144, 24: 0.3659, 72: 0.2613 },  //  12 fish, break-even 2.73%
 }
 
 // ── Funds ───────────────────────────────────────────────────────────────────
@@ -181,8 +182,8 @@ export type Quote = {
   breakEvenPct: number
 }
 
-export function quoteFund(members: number, term: Term): Quote {
-  const leverage = fundLeverage(members, term)
+export function quoteFund(fundId: string, term: Term): Quote {
+  const leverage = (FUND_LEVERAGE[fundId] ?? FUND_LEVERAGE.sea)[term]
   return { leverage, breakEvenPct: 1 / leverage }
 }
 
