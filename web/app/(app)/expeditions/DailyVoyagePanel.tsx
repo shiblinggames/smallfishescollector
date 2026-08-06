@@ -431,7 +431,7 @@ export default function DailyVoyagePanel({
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
                       {([
                         [<IconMap key="i" size={18} />, 'Pick a route', 'Tap a location on the map. Riskier routes pay more, but your crew might not make it back.'],
-                        [<IconHourglass key="i" size={18} />, 'They sail (up to 3 hours)', 'Events unfold along the way. Higher Nav and expedition level reduce voyage time. Check back to watch the story.'],
+                        [<IconHourglass key="i" size={18} />, 'They sail (up to 9 hours)', 'One thing befalls them along the way. Higher Nav and expedition level cut the time. Check back to see how it went.'],
                         [<IconCrate key="i" size={18} />, 'Claim your loot', 'When they return, collect doubloons, gems, rare drops and Nav XP. All of it earned while you were doing something else.'],
                         [<IconSkull key="i" size={18} />, 'Crew can die', 'On dangerous routes, crew members can be lost at sea — permanently. Crew Fortune cuts the risk, all the way to zero. Deeper routes need more Fortune to sail safe.'],
                       ] as [ReactNode, string, string][]).map(([icon, title, desc]) => (
@@ -973,16 +973,14 @@ export default function DailyVoyagePanel({
     const TEASE_AT = 0.6
     const visibleEvents = events.filter(() => elapsed >= TEASE_AT * voyageDurationMs)
 
-    const msToNext = !isComplete && visibleEvents.length === 0
+    // Time until that single event surfaces, NOT a gap between events. Named
+    // msToNext back when a voyage drip-fed several.
+    const msToTease = !isComplete && visibleEvents.length === 0
       ? Math.max(0, TEASE_AT * voyageDurationMs - elapsed)
       : null
 
     const awayCrew = activeVoyage.crew_variant_ids
       .map(id => byId.get(id)).filter(Boolean) as CrewMember[]
-
-    // The haul is a single roll settled on return, so there is no honest
-    // "so far" to show mid-voyage. It reads as 0 until the crew is home.
-    const lootSoFar = isComplete ? visibleEvents.reduce((sum, e) => sum + (e.doubloonDelta ?? 0), 0) : 0
 
     const routeCfg = activeVoyage.route ? ROUTE_CONFIGS[activeVoyage.route as VoyageRoute] : null
 
@@ -1134,7 +1132,7 @@ export default function DailyVoyagePanel({
                   style={{ background: 'none', border: 'none', padding: 0, marginTop: 12, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
                 >
                   <span className="font-karla" style={{ fontSize: '0.66rem', color: '#6a7890' }}>
-                    {logExpanded ? 'Hide log' : `View log · ${visibleEvents.length} event${visibleEvents.length !== 1 ? 's' : ''}`}
+                    {logExpanded ? 'Hide log' : visibleEvents.length === 1 ? 'View log' : `View log · ${visibleEvents.length} events`}
                   </span>
                   <span style={{ fontSize: '0.55rem', color: '#5a6880', transform: logExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', display: 'inline-block' }}>▼</span>
                 </button>
@@ -1162,19 +1160,11 @@ export default function DailyVoyagePanel({
                       {formatCountdown(msRemaining)}
                     </p>
                   </div>
-                  {msToNext !== null && (
+                  {msToTease !== null && (
                     <div>
-                      <p className="font-karla font-600 uppercase tracking-[0.07em]" style={{ fontSize: '0.44rem', color: '#4a5a7a', marginBottom: 2 }}>Next event</p>
+                      <p className="font-karla font-600 uppercase tracking-[0.07em]" style={{ fontSize: '0.44rem', color: '#4a5a7a', marginBottom: 2 }}>Word in</p>
                       <p className="font-cinzel font-700" style={{ fontSize: '1.0rem', color: '#5a7090', lineHeight: 1 }}>
-                        {formatCountdown(msToNext)}
-                      </p>
-                    </div>
-                  )}
-                  {lootSoFar > 0 && (
-                    <div>
-                      <p className="font-karla font-600 uppercase tracking-[0.07em]" style={{ fontSize: '0.44rem', color: '#4a5a7a', marginBottom: 2 }}>Collected</p>
-                      <p className="font-cinzel font-700" style={{ fontSize: '1.0rem', color: '#c8aa6a', lineHeight: 1 }}>
-                        +{lootSoFar} ⟡
+                        {formatCountdown(msToTease)}
                       </p>
                     </div>
                   )}
@@ -1186,7 +1176,7 @@ export default function DailyVoyagePanel({
                     style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
                   >
                     <span className="font-karla" style={{ fontSize: '0.68rem', color: '#4a5a70' }}>
-                      {logExpanded ? 'Hide log' : `View log · ${visibleEvents.length} event${visibleEvents.length !== 1 ? 's' : ''}`}
+                      {logExpanded ? 'Hide log' : visibleEvents.length === 1 ? 'View log' : `View log · ${visibleEvents.length} events`}
                     </span>
                     <span style={{ fontSize: '0.55rem', color: '#3a4a60', transform: logExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', display: 'inline-block' }}>▼</span>
                   </button>
