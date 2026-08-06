@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { startFishingMusic, fadeOutFishingMusic, setFishingTrack, primeFishingTrack, fishingTrackForZone } from '@/lib/fishingMusic'
 import ZoneLanding, { type ZoneKey, type ZoneStat } from './ZoneLanding'
+import FishingHub from './FishingHub'
 import type { FishSpecies } from './actions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import type { RenownAlloc } from '@/lib/renown'
@@ -227,6 +228,12 @@ export default function FishingPageClient({
     return ok ? saved : null
   })
 
+  // /fishing lands on the HUB now, not the zone selector. The selector is one
+  // of the hub's four rooms, opened in-page (the Campaign tile / story map
+  // relationship on the Expeditions hub). Resuming into a zone on reload skips
+  // straight past both, so a reload mid-session drops you back on the water.
+  const [zonesOpen, setZonesOpen] = useState(false)
+
   function selectZone(zone: ZoneKey) {
     localStorage.setItem(LAST_ZONE_KEY, zone)
     localStorage.setItem(CURRENT_ZONE_KEY, zone)
@@ -237,6 +244,7 @@ export default function FishingPageClient({
   function goBack() {
     localStorage.removeItem(LAST_ZONE_KEY)
     setSelectedZone(null)
+    setZonesOpen(true)
     // CRITICAL: refresh the server component so `initialInventory` (and
     // every other server-rendered prop) reflects the catches made this
     // session. Without this, picking a new zone remounts FishingGame
@@ -254,6 +262,24 @@ export default function FishingPageClient({
   useEffect(() => {
     if (selectedZone) setFishingTrack(fishingTrackForZone(selectedZone))
   }, [selectedZone])
+
+  if (!selectedZone && !zonesOpen) {
+    return (
+      <FishingHub
+        fishingLevel={fishingLevel}
+        fishingXP={initialFishingXP}
+        initialFishingRenownAlloc={initialFishingRenownAlloc}
+        ancientDeepUnlocked={ancientDeepUnlocked}
+        currentZone={currentZone}
+        holdCount={initialInventory.reduce((n, r) => n + r.quantity, 0)}
+        fishHoldTier={fishHoldTier}
+        baitCount={initialBait.reduce((n, b) => n + b.quantity, 0)}
+        speciesCaught={new Set([...caughtFishIds, ...ancientCatches]).size}
+        speciesTotal={allFishSpecies.length}
+        onOpenZones={() => setZonesOpen(true)}
+      />
+    )
+  }
 
   if (!selectedZone) {
     return (
@@ -275,7 +301,7 @@ export default function FishingPageClient({
         rodTier={rodTier}
         reelTier={reelTier}
         hookTier={hookTier}
-        initialFishingRenownAlloc={initialFishingRenownAlloc}
+        onBack={() => setZonesOpen(false)}
       />
     )
   }
