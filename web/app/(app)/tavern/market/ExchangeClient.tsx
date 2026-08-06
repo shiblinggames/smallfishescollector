@@ -285,6 +285,12 @@ function PositionSheet({ p, cycle, onClose, onChanged }: {
   const plPct = p.stake > 0 ? (pl / p.stake) * 100 : 0
   const toBreakEven = breakEven - yourWay
   const ifItSettledNow = Math.max(0, Math.round(p.stake * p.leverage * Math.max(0, yourWay)))
+  // Everything the player reads about MOVEMENT is a price move, signed the way
+  // the price actually has to go. A Fall contract needs the price DOWN, so its
+  // break-even is -1.69%, not +1.69%. The maths underneath still works in
+  // "your way" terms, where both directions are positive; that is an
+  // implementation detail and it was leaking onto the screen.
+  const sign = p.direction === 'rise' ? 1 : -1
 
   return (
     <PopupShell open onClose={onClose} zIndex={120}>
@@ -339,14 +345,14 @@ function PositionSheet({ p, cycle, onClose, onChanged }: {
             {/* Entry and now in ONE block. They are the same fact twice
                 otherwise, and the arrow says more than two labels would. */}
             <Stat label="Price" value={`${p.entryPrice.toFixed(3)} → ${(settled ? (p.exitPrice ?? p.livePrice) : p.livePrice).toFixed(3)}`} />
-            <Stat label="Moved your way" value={fmtPct(yourWay)} color={yourWay >= 0 ? UP : DOWN} />
+            <Stat label="Price moved" value={fmtPct(live)} color={yourWay >= 0 ? UP : DOWN} />
 
-            <Stat label="Break-even" value={fmtPct(breakEven)} />
+            <Stat label="Break-even" value={fmtPct(sign * breakEven)} />
             {settled
               ? <Stat label="Result" value={(p.payout ?? 0) === 0 ? 'worthless' : (p.payout ?? 0) > p.stake ? 'won' : 'lost'}
                   color={(p.payout ?? 0) > p.stake ? UP : DOWN} />
               : <Stat label={toBreakEven > 0 ? 'Still needs' : 'Clear by'}
-                  value={fmtPct(Math.abs(toBreakEven))}
+                  value={fmtPct(sign * Math.abs(toBreakEven))}
                   color={toBreakEven > 0 ? '#c8d2e0' : UP} />}
           </div>
 
@@ -465,6 +471,9 @@ function Ticket({ instrument, doubloons, onClose, onDone }: {
 
   const capped = Math.max(MIN_STAKE, Math.min(MAX_STAKE, Math.min(stake, doubloons)))
   const example = (movePct: number) => Math.round(capped * q.leverage * movePct)
+  // Signed the way the PRICE has to move. Backing a Fall and being told you
+  // break even at +1.69% is the wrong instruction twice over.
+  const sign = dir === 'rise' ? 1 : -1
 
   function submit() {
     setErr(''); setBusy(true)
@@ -539,11 +548,11 @@ function Ticket({ instrument, doubloons, onClose, onDone }: {
           <div style={{ marginTop: 10, padding: '0.7rem 0.8rem', borderRadius: 11, background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.22)' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 6 }}>
               <span className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#8a94a4' }}>Break-even move</span>
-              <span className="font-karla font-800" style={{ fontSize: '0.9rem', color: '#e6f4ff', ...TNUM }}>{fmtPct(q.breakEvenPct)}</span>
+              <span className="font-karla font-800" style={{ fontSize: '0.9rem', color: '#e6f4ff', ...TNUM }}>{fmtPct(sign * q.breakEvenPct)}</span>
             </div>
             {[1, 3, 6].map(m => (
               <div key={m} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-                <span className="font-karla font-500" style={{ fontSize: '0.64rem', color: '#6a7482', ...TNUM }}>at {fmtPct(m)}</span>
+                <span className="font-karla font-500" style={{ fontSize: '0.64rem', color: '#6a7482', ...TNUM }}>at {fmtPct(sign * m)}</span>
                 <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: example(m) > capped ? UP : '#8a94a4', ...TNUM }}>
                   {example(m).toLocaleString()} ⟡
                 </span>
