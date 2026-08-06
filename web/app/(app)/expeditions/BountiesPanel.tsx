@@ -34,10 +34,23 @@ import { hapticReward } from '@/lib/haptics'
 // paper instead of the same stain repeated four times. The aspect distortion
 // 200% x 200% causes is invisible on a texture with no subject in it.
 const PAPER_QUADRANT = ['0% 0%', '100% 0%', '0% 100%', '100% 100%']
+
+// A TORN BOTTOM EDGE. Paper that has been ripped off a board does not end in a
+// straight line, and a straight line with rounded corners is what made these
+// read as sticky notes. Two variants, alternated, so no two neighbours tear the
+// same way. Shallow on purpose: deep enough to be irregular, not so deep that
+// it eats the row of buttons above it.
+const TORN = [
+  'polygon(0% 0%, 100% 0%, 100% 97.4%, 87% 99.3%, 73% 97.0%, 58% 99.4%, 44% 96.9%, 29% 99.2%, 14% 97.2%, 0% 99.0%)',
+  'polygon(0% 0%, 100% 0%, 100% 98.9%, 86% 97.0%, 71% 99.3%, 55% 97.1%, 40% 99.4%, 25% 97.0%, 11% 99.2%, 0% 97.3%)',
+]
 // Under the image while it loads, so a notice is never a translucent hole.
 const PAPER_BASE = '#ded1b5'
-const INK = '#332a20'                     // dark brown, the writing
-const INK_SOFT = '#6b5b45'                // the hand that wrote the small print
+// Ink weights for CREAM paper, not for a dark panel. The soft tone was too
+// pale against parchment and the small print sat at karla 400, which is a
+// hairline at this size. Everything below is a stop darker and a stop heavier.
+const INK = '#2b2118'                     // dark brown, the writing
+const INK_SOFT = '#54452f'                // the hand that wrote the small print
 
 // Tier colours re-cut for paper. The dark-panel set (#7f9bb5 and friends) went
 // invisible on parchment; these are the same hues at ink weight.
@@ -89,22 +102,31 @@ function BountyCard({ b, idx, rerollUsed, busy, wide, onClaim, onSwap }: {
       style={{
         position: 'relative', overflow: 'hidden',
         gridColumn: wide ? '1 / -1' : undefined,
+        // ONE bill nailed to the middle of an empty board, rather than a
+        // full-width banner, when the first rung posts a single order.
+        width: wide ? '62%' : undefined,
+        margin: wide ? '0 auto' : undefined,
         display: 'flex', flexDirection: 'column',
-        minHeight: wide ? 158 : 184,
-        padding: '0.95rem 0.65rem 0.55rem', borderRadius: 3,
+        // PORTRAIT. A posted bill is taller than it is wide; roughly square was
+        // the single thing making these look like sticky notes.
+        aspectRatio: '3 / 4',
+        minHeight: 250,
+        // Paper is cut and torn, never rounded.
+        padding: '0.95rem 0.65rem 0.7rem', borderRadius: 0,
+        clipPath: TORN[idx % TORN.length],
         backgroundColor: PAPER_BASE,
         backgroundImage: 'url(/bounty-paper.jpg)',
         backgroundSize: '200% 200%',
         backgroundPosition: PAPER_QUADRANT[idx % PAPER_QUADRANT.length],
-        // Paper has no glowing border. It has an edge and a shadow, and a
-        // finished order simply sits a little prouder off the board.
-        border: '1px solid rgba(90,68,40,0.45)',
+        // No border at all. A drawn outline on a torn edge is the giveaway that
+        // it is a div; a shadow under the paper is what lifts it off the wood.
+        // A finished order simply sits a little prouder.
         boxShadow: done && !b.claimed
-          ? '0 6px 16px rgba(0,0,0,0.55)'
-          : '0 3px 9px rgba(0,0,0,0.45)',
-        // Two of the four corners lifted, so the wall does not read as a grid
-        // of identical rectangles.
-        transform: idx % 2 === 0 ? 'rotate(-0.5deg)' : 'rotate(0.55deg)',
+          ? '0 7px 18px rgba(0,0,0,0.6)'
+          : '0 3px 10px rgba(0,0,0,0.5)',
+        // Every other notice hung a shade crooked, so the wall does not read as
+        // a grid of identical rectangles.
+        transform: idx % 2 === 0 ? 'rotate(-0.7deg)' : 'rotate(0.8deg)',
       }}
     >
       {/* A settled notice is the SAME paper, greyed. Cheaper than a second
@@ -131,14 +153,14 @@ function BountyCard({ b, idx, rerollUsed, busy, wide, onClaim, onSwap }: {
       <div style={{ position: 'relative', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 6 }}>
         <span className="font-karla font-700 uppercase tracking-[0.16em]"
           style={{
-            fontSize: '0.48rem', paddingTop: 3,
-            color: b.claimed ? '#7d7360' : t.color,
+            fontSize: '0.58rem', paddingTop: 2,
+            color: b.claimed ? '#726852' : t.color,
           }}>
           {t.label}
         </span>
         <span className="font-cinzel font-800" style={{
-          fontSize: '1.05rem', lineHeight: 1, whiteSpace: 'nowrap',
-          color: b.claimed ? '#7d7360' : GEM_INK, ...TNUM,
+          fontSize: '1.3rem', lineHeight: 1, whiteSpace: 'nowrap',
+          color: b.claimed ? '#726852' : GEM_INK, ...TNUM,
         }}>
           {b.gems} {GEM}
         </span>
@@ -146,16 +168,16 @@ function BountyCard({ b, idx, rerollUsed, busy, wide, onClaim, onSwap }: {
 
       <p className="font-cinzel font-700" style={{
         position: 'relative',
-        fontSize: wide ? '1.1rem' : '0.92rem', lineHeight: 1.18, marginTop: 5,
-        color: b.claimed ? '#7d7360' : INK,
+        fontSize: wide ? '1.2rem' : '1.06rem', lineHeight: 1.2, marginTop: 7,
+        color: b.claimed ? '#726852' : INK,
       }}>
         {b.name}
       </p>
-      <p className="font-karla font-400" style={{
+      <p className="font-karla font-500" style={{
         position: 'relative',
-        fontSize: '0.62rem', lineHeight: 1.35, marginTop: 3,
-        color: b.claimed ? '#8b8270' : INK_SOFT,
-        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+        fontSize: '0.75rem', lineHeight: 1.38, marginTop: 5,
+        color: b.claimed ? '#7b7160' : INK_SOFT,
+        display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
       }}>
         {b.desc}
       </p>
@@ -172,7 +194,7 @@ function BountyCard({ b, idx, rerollUsed, busy, wide, onClaim, onSwap }: {
                 style={{ height: '100%', borderRadius: 3, background: `linear-gradient(90deg, ${t.color}88, ${t.color})` }}
               />
             </div>
-            <span className="font-karla font-700" style={{ fontSize: '0.58rem', color: INK_SOFT, ...TNUM }}>
+            <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: INK_SOFT, ...TNUM }}>
               {b.progress}/{b.target}
             </span>
           </div>
@@ -183,7 +205,7 @@ function BountyCard({ b, idx, rerollUsed, busy, wide, onClaim, onSwap }: {
         ) : done ? (
           <button type="button" onClick={onClaim} disabled={busy} className="font-karla font-800 tap"
             style={{
-              width: '100%', padding: '0.44rem', borderRadius: 9, fontSize: '0.72rem',
+              width: '100%', padding: '0.5rem', borderRadius: 8, fontSize: '0.84rem',
               background: `${t.color}1f`, border: `1px solid ${t.color}99`, color: t.color,
               cursor: busy ? 'wait' : 'pointer', WebkitTapHighlightColor: 'transparent',
             }}>
@@ -191,19 +213,19 @@ function BountyCard({ b, idx, rerollUsed, busy, wide, onClaim, onSwap }: {
           </button>
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span className="font-karla font-600" style={{ flex: 1, minWidth: 0, fontSize: '0.6rem', color: INK_SOFT }}>
+            <span className="font-karla font-700" style={{ flex: 1, minWidth: 0, fontSize: '0.72rem', color: INK_SOFT }}>
               Not done yet
             </span>
             {!rerollUsed && (
               <button type="button" onClick={onSwap} disabled={busy} aria-label={`Swap ${b.name}`} className="tap"
                 style={{
                   flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4,
-                  padding: '0.3rem 0.44rem', borderRadius: 8,
+                  padding: '0.34rem 0.5rem', borderRadius: 7,
                   background: 'rgba(60,44,24,0.10)', border: '1px solid rgba(90,68,40,0.4)',
                   color: INK_SOFT, cursor: busy ? 'wait' : 'pointer', WebkitTapHighlightColor: 'transparent',
                 }}>
                 <SwapIcon color={INK_SOFT} />
-                <span className="font-karla font-700" style={{ fontSize: '0.56rem' }}>Swap</span>
+                <span className="font-karla font-700" style={{ fontSize: '0.66rem' }}>Swap</span>
               </button>
             )}
           </div>
@@ -222,7 +244,7 @@ function BountyCard({ b, idx, rerollUsed, busy, wide, onClaim, onSwap }: {
             transition={{ type: 'spring', stiffness: 320, damping: 15 }}
             aria-hidden
             style={{
-              position: 'absolute', left: 0, right: 0, bottom: 12,
+              position: 'absolute', left: 0, right: 0, bottom: 26,
               display: 'flex', justifyContent: 'center', pointerEvents: 'none',
             }}
           >
