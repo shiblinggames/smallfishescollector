@@ -210,7 +210,7 @@ export default function ZoneLanding({
                 Fishing
               </p>
               <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#e6efff' }}>
-                The Waters
+                Select a zone
               </p>
             </div>
             <button
