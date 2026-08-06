@@ -9,7 +9,6 @@ import ChartRoomHubCard from './ChartRoomHubCard'
 import ContestsHubCard from './ContestsHubCard'
 import CasinoHubCard from './CasinoHubCard'
 import TavernLeaderboardsCard from './TavernLeaderboardsCard'
-import TavernPriceTicker from './TavernPriceTicker'
 import WelcomeModal from './WelcomeModal'
 import SetupModal from './SetupModal'
 import SupportStudioCard from '@/components/SupportStudioCard'
@@ -105,11 +104,10 @@ export default async function TavernPage() {
             <TavernLeaderboardsCard />
           </Suspense>
 
-          {/* Fish-market price ticker — a passive stock-ticker strip that
-              replaced the old Market tab. Tap → the full /tavern/market. */}
-          <Suspense fallback={<SkeletonBox height={44} radius={14} />}>
-            <TavernPriceTicker />
-          </Suspense>
+          {/* The fish-price ticker used to sit here. It moved to the top of
+              the fishing hub: prices decide what a haul is worth and when to
+              sell it, which is a fishing concern, and the Tavern is where you
+              come to gamble rather than to check the board. */}
 
           {/* Featured — Daily Bonus + Tide Run as standard compact
               cards. Daily Bonus took Recruit Crew's slot here on

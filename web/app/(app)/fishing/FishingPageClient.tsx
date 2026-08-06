@@ -12,6 +12,7 @@ import type { RenownAlloc } from '@/lib/renown'
 import { ZONE_MIN_LEVEL } from './zoneData'
 import type { ActiveSession } from '@/app/(app)/social/challengeActions'
 import type { DailyChallengeState } from '@/lib/dailyChallenges'
+import type { TickerItem } from '@/components/MarketTicker'
 
 // FishingGame is a ~5,300-line client component. Dynamic-import it so the
 // JS only ships once the player actually picks a zone — not on the first
@@ -54,7 +55,7 @@ export default function FishingPageClient({
   hookTier, rodTier, reelTier, lineTier,
   initialDoubloons, initialGems, initialFathoms, initialFishingXP, initialBait, initialLastUsedBait, initialInventory, uniqueSpeciesCaught, zoneStats, ancientDeepUnlocked,
   fishHoldTier, ownedRods, initialCompletionistEffects, initialHasForgedBefore, allFishSpecies, caughtFishIds, mountedFishIds, initialPersonalBests, initialCatchCounts, initialHighestPerfectStreak, initialPerfectStreak, initialStreakZone,
-  hubSpeciesCaught, hubSpeciesTotal, hubHoldValue, hubMarketMood, hubExchangeUnveil,
+  hubSpeciesCaught, hubSpeciesTotal, hubHoldValue, hubMarketMood, hubExchangeUnveil, hubTicker,
   hasSeenFishingHubTour, hasSeenFishingTour, hasSeenFishingCatchTour, hasSeenFirstCatchCelebration, initialShowWaitTimer, activeSession, username, zoneRewardsClaimed,
   initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, initialEquippedSpecial2, hasDeepReel, hasAnglersPatience, anglersPatienceXp, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, gauntletUpgrades, hasPerfectedSigil, prestigeLevels, goldenBoosts, ancientCatches, characterColor, unlockedCharacterColors, newlyUnlockedSkins, equippedBadges, unlockedBadges, marketMultipliers, isPremium, equippedBoat, unlockedBoats, newlyUnlockedBoats, equippedHat, unlockedHats, equippedPet, unlockedPets,
   initialFinnEncounters, initialFinnWins, initialFinnSeenBeats, initialFinnRevealed, initialFinnLastOutcome,
@@ -91,6 +92,7 @@ export default function FishingPageClient({
   hubHoldValue: number
   hubMarketMood: string
   hubExchangeUnveil: boolean
+  hubTicker: TickerItem[]
   hasSeenFishingHubTour: boolean
   hasSeenFishingTour: boolean
   hasSeenFishingCatchTour: boolean
@@ -286,6 +288,7 @@ export default function FishingPageClient({
         holdValue={hubHoldValue}
         marketMood={hubMarketMood}
         exchangeUnveil={hubExchangeUnveil}
+        ticker={hubTicker}
         hasSeenHubTour={hasSeenFishingHubTour}
         characterColor={characterColor}
         equippedHat={persistedEquippedHat}

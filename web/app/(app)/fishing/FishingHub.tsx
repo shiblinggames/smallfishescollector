@@ -23,13 +23,14 @@ import Almanac from './Almanac'
 import FishingHubTour from './FishingHubTour'
 import { ZONE_MIN_LEVEL, ZONE_BG, ZONE_LABEL, ZONE_COLOR, ZONE_ORDER } from './zoneData'
 import { MOOD_CONFIG } from '@/lib/fishMarket'
+import MarketTicker, { type TickerItem } from '@/components/MarketTicker'
 import type { ZoneKey } from './ZoneLanding'
 import type { RenownAlloc } from '@/lib/renown'
 
 
 export default function FishingHub({
   fishingLevel, fishingXP, initialFishingRenownAlloc, ancientDeepUnlocked,
-  currentZone, holdCount, fishHoldTier, baitCount, speciesCaught, speciesTotal, holdValue, marketMood, exchangeUnveil, hasSeenHubTour,
+  currentZone, holdCount, fishHoldTier, baitCount, speciesCaught, speciesTotal, holdValue, marketMood, exchangeUnveil, ticker, hasSeenHubTour,
   characterColor, equippedHat, equippedBoat, equippedPet, rodTier, reelTier, hookTier,
   onOpenZones,
 }: {
@@ -50,6 +51,9 @@ export default function FishingHub({
   /** Fishing is capped and the Exchange has never been announced. The tile
    *  carries the news, since the market is where it actually opens. */
   exchangeUnveil: boolean
+  /** Live board quotes for the strip at the top. Empty for a captain who has
+   *  not caught anything yet, which hides it entirely. */
+  ticker: TickerItem[]
   hasSeenHubTour: boolean
   characterColor: string
   equippedHat: string | null
@@ -91,6 +95,12 @@ export default function FishingHub({
       <div style={{ position: 'relative', zIndex: 1 }}>
         <main className="min-h-screen pb-24 sm:pb-0">
           <div className="px-5 max-w-lg mx-auto" style={{ paddingTop: '1rem' }}>
+
+            {/* The board, live, at the top of the hub it belongs to. Prices
+                decide what a haul is worth and when to sell it, so they read
+                here rather than on the Tavern where they used to live. Once the
+                Exchange is open its indexes lead the strip. */}
+            <MarketTicker items={ticker} />
 
             {/* Fishing level + Renown, the counterpart to Navigation on the
                 Expeditions hub. Same 1.1rem/1rem block the Ship Hero wraps its

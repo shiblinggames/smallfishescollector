@@ -8,7 +8,8 @@ import { isPremiumActive } from '@/lib/premium'
 import { getCharacterSprites, earnedLevelColors, earnedAchievementColors } from '@/lib/characters'
 import { getUserAchievementPoints } from '@/lib/achievementPoints'
 import { getLevelFromXP as fishLevelFromXP } from '@/lib/fishingLevel'
-import { EXCHANGE_FISHING_LEVEL } from '@/lib/fishExchange'
+import { EXCHANGE_FISHING_LEVEL, FUND_BY_ID } from '@/lib/fishExchange'
+import type { TickerItem } from '@/components/MarketTicker'
 import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import { getBoat, earnedAchievementBoats } from '@/lib/boats'
 import { getHat } from '@/lib/hats'
@@ -157,9 +158,59 @@ export default async function FishingPage() {
   // from here. Without a word on the hub tile a captain can cap the skill and
   // never find out anything changed. Cleared the moment they read the
   // announcement, so it says something new or says nothing.
-  const exchangeUnveil =
-    fishLevelFromXP(profile?.fishing_xp ?? 0) >= EXCHANGE_FISHING_LEVEL &&
-    profile?.has_seen_exchange_intro !== true
+  const exchangeOpen = fishLevelFromXP(profile?.fishing_xp ?? 0) >= EXCHANGE_FISHING_LEVEL
+  const exchangeUnveil = exchangeOpen && profile?.has_seen_exchange_intro !== true
+
+  // ── The market ticker ─────────────────────────────────────────────────────
+  // Costs no extra query for the fish half: marketRows and the collection are
+  // already loaded above for the hold value and the Almanac card.
+  //
+  // Only species you have DISCOVERED, so the strip never spoils a fish you have
+  // not met. Lifetime union cycle, not fish_collection alone: that table is the
+  // prestige cycle log and gets wiped, so the old Tavern strip went quiet for
+  // exactly the players who had fished the most.
+  const tickerSeen = new Set([...lifetimeCaught, ...cycleCaught])
+  const fishTicks: TickerItem[] = ((marketRows ?? []) as unknown as {
+    fish_id: number; multiplier: number; prev_multiplier: number
+    fish_species: { name: string; sell_value: number } | null
+  }[])
+    .filter(r => r.fish_species != null && tickerSeen.has(r.fish_id))
+    .map(r => {
+      const mult = Number(r.multiplier)
+      const prev = Number(r.prev_multiplier)
+      return {
+        name: r.fish_species!.name,
+        price: Math.floor(r.fish_species!.sell_value * mult * 0.97),
+        pct: prev > 0 ? ((mult - prev) / prev) * 100 : 0,
+        kind: 'fish' as const,
+      }
+    })
+    .sort((a, b) => b.price - a.price)
+
+  // The Exchange's indexes ride the same strip once the board is open to you.
+  // One extra read, and only for captains at the Fishing cap.
+  let indexTicks: TickerItem[] = []
+  if (exchangeOpen) {
+    const { data: fundRows } = await admin
+      .from('exchange_funds').select('fund_id, price, prev_price')
+    indexTicks = (fundRows ?? [])
+      .map(f => {
+        const def = FUND_BY_ID.get(f.fund_id as string)
+        const price = Number(f.price)
+        const prev = Number(f.prev_price)
+        return {
+          name: def?.name ?? (f.fund_id as string),
+          price,
+          pct: prev > 0 ? ((price - prev) / prev) * 100 : 0,
+          kind: 'index' as const,
+        }
+      })
+      .sort((a, b) => Math.abs(b.pct) - Math.abs(a.pct))
+  }
+
+  // Indexes lead: they are the summary of the whole board, and a captain who
+  // has them is reading the strip for the market rather than for one fish.
+  const tickerItems: TickerItem[] = [...indexTicks, ...fishTicks]
 
   // Union earned-but-ungranted level colors into the GearScreen picker (e.g.
   // crossed Nav 50 via raids without the voyage grant firing). Equipping one
@@ -311,6 +362,7 @@ export default async function FishingPage() {
           hubHoldValue={Math.round(holdValue)}
           hubMarketMood={marketMood}
           hubExchangeUnveil={exchangeUnveil}
+          hubTicker={tickerItems}
           hasSeenFishingHubTour={profile?.has_seen_fishing_hub_tour ?? false}
           hasSeenFishingTour={profile?.has_seen_fishing_tour ?? false}
           hasSeenFishingCatchTour={profile?.has_seen_fishing_catch_tour ?? false}
