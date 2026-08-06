@@ -103,7 +103,9 @@
       "mcp__supabase__execute_sql",
       "mcp__supabase__apply_migration",
       "Skill(artifact-design)",
-      "Skill(artifact-design:*)"
+      "Skill(artifact-design:*)",
+      "Bash(cp 'C:\\\\Users\\\\Kong/.claude/skills/nano-banana-2/scripts/generate_kie.py' C:/Users/Kong/AppData/Local/Temp/claude/c--Users-Kong-Projects-shiblinggames-smallfishes/4564b114-4a5e-416b-a841-64ce0de03450/scratchpad/art/gen_kie.py)",
+      "Bash(python - C:/Users/Kong/AppData/Local/Temp/claude/c--Users-Kong-Projects-shiblinggames-smallfishes/4564b114-4a5e-416b-a841-64ce0de03450/scratchpad/art/gen_kie.py)"
     ]
   }
 }

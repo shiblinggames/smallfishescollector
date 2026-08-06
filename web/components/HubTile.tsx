@@ -16,7 +16,7 @@ export const HUB_GRID: React.CSSProperties = {
 
 export default function HubTile({
   bgImage, accent, title, status, statusColor, sub, subLock,
-  locked = false, lockLabel = 'Coming Soon', muted = false, tag, onClick, progress, dot, glow, coachId,
+  locked = false, lockLabel = 'Coming Soon', muted = false, tag, onClick, progress, dot, glow, coachId, overlay,
 }: {
   bgImage: string
   accent: string
@@ -40,6 +40,11 @@ export default function HubTile({
   glow?: boolean
   /** Onboarding coach target id (data-coach) so the tour can flash this tile. */
   coachId?: string
+  /** Painted into the scene, above the art and under the bottom scrim — for a
+   *  tile that should show something OF YOURS in the place it depicts (the
+   *  Fishing tile puts your boat on the water). Not interactive: the whole
+   *  tile is one button. */
+  overlay?: React.ReactNode
 }) {
   return (
     <motion.button
@@ -67,6 +72,7 @@ export default function HubTile({
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={bgImage} alt="" aria-hidden loading="lazy" decoding="async"
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: muted ? 'grayscale(0.95) brightness(0.42)' : locked ? 'grayscale(0.5) brightness(0.68)' : undefined }} />
+      {overlay}
       {/* Bottom scrim so the title + status read over the art. */}
       <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 100, background: 'linear-gradient(180deg, transparent 0%, rgba(6,12,20,0.72) 45%, rgba(6,12,20,0.96) 100%)' }} />
       {tag && !locked && (

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ZONE_MIN_LEVEL, ZONE_WAIT_BASE, zoneCrateChance, zoneDiamondShare, zonePetPerCrate } from './zoneData'
+import { ZONE_MIN_LEVEL, ZONE_WAIT_BASE, ZONE_BG, zoneCrateChance, zoneDiamondShare, zonePetPerCrate } from './zoneData'
 import { updateUsername } from '@/app/(app)/u/actions'
 import FisherPose from '@/components/FisherPose'
 import { PRESTIGE_MAX, goldenBoostPct, goldenBoostMult } from '@/lib/zoneRewards'
@@ -57,16 +57,6 @@ const ZONE_DIFFICULTY_LABEL: Record<string, string> = {
 
 /** Per-zone summary stats computed server-side (see fishing/page.tsx). */
 export type ZoneStat = { avgValue: number; avgXp: number; topValue: number; count: number }
-
-// The zone's painted scene, reused as the card background (same art as the
-// fishing scene + the profile backgrounds).
-const ZONE_BG: Record<string, string> = {
-  shallows:    '/shallows.jpg',
-  open_waters: '/openwaters.jpg',
-  deep:        '/deep.jpg',
-  abyss:       '/abyss.jpg',
-  ancient_deep: '/ancient.jpg',
-}
 
 /* Difficulty as drawn wave marks — one hump per point of rough water.
    Replaces the old dot row (dots read as generic app-store rating). */

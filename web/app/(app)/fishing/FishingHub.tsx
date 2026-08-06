@@ -17,7 +17,8 @@ import { useRouter } from 'next/navigation'
 import HubTile, { HUB_GRID } from '@/components/HubTile'
 import FishingLevelBar from '@/components/FishingLevelBar'
 import { getFishHold } from '@/lib/fishHold'
-import { ZONE_MIN_LEVEL } from './zoneData'
+import FisherPose from '@/components/FisherPose'
+import { ZONE_MIN_LEVEL, ZONE_BG } from './zoneData'
 import type { ZoneKey } from './ZoneLanding'
 import type { RenownAlloc } from '@/lib/renown'
 
@@ -28,11 +29,21 @@ const ZONE_LABEL: Record<string, string> = {
   abyss: 'Abyss',
   ancient_deep: 'Ancient Deep',
 }
+// Matches the zone selector's habitat colours so the tile's edge is the
+// water's colour, not a fixed blue.
+const ZONE_COLOR: Record<string, string> = {
+  shallows: '#60a5fa',
+  open_waters: '#34d399',
+  deep: '#a78bfa',
+  abyss: '#f87171',
+  ancient_deep: '#c084fc',
+}
 const ZONE_ORDER: ZoneKey[] = ['shallows', 'open_waters', 'deep', 'abyss', 'ancient_deep']
 
 export default function FishingHub({
   fishingLevel, fishingXP, initialFishingRenownAlloc, ancientDeepUnlocked,
   currentZone, holdCount, fishHoldTier, baitCount, speciesCaught, speciesTotal,
+  characterColor, equippedHat, equippedBoat, equippedPet, rodTier, reelTier, hookTier,
   onOpenZones,
 }: {
   fishingLevel: number
@@ -46,6 +57,13 @@ export default function FishingHub({
   baitCount: number
   speciesCaught: number
   speciesTotal: number
+  characterColor: string
+  equippedHat: string | null
+  equippedBoat: string | null
+  equippedPet: string | null
+  rodTier: number
+  reelTier: number
+  hookTier: number
   onOpenZones: () => void
 }) {
   const router = useRouter()
@@ -76,18 +94,32 @@ export default function FishingHub({
               <FishingLevelBar fishingXP={fishingXP} initialAlloc={initialFishingRenownAlloc} />
             </div>
 
+            {/* Market / Tackle Shop / Bestiary use purpose-painted 512x512
+                plates, the same shape and density as the Expeditions tiles.
+                They were pointed at the full-PAGE backdrops (820x1468 portrait,
+                one of them deliberately blurred) whose centre crop at tile size
+                was busy noise in the wrong aspect. */}
             <div style={HUB_GRID}>
+              {/* The Fishing tile is the water you were last on, with YOU on
+                  it — the same read as the "You are here" card in the zone
+                  selector, so the hub shows your boat rather than stock art.
+                  Falls back to the Shallows before the first cast. */}
               <HubTile
-                bgImage="/openwaters.jpg"
-                accent="#5ec8e8"
+                bgImage={ZONE_BG[currentZone ?? 'shallows']}
+                accent={currentZone ? ZONE_COLOR[currentZone] : '#5ec8e8'}
                 title="Fishing"
                 status={currentZone ? `Last cast: ${ZONE_LABEL[currentZone]}` : 'Start in the Shallows'}
                 sub={`${watersOpen} of ${ZONE_ORDER.length} waters open`}
                 onClick={onOpenZones}
+                overlay={
+                  <div aria-hidden style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', bottom: '38%', width: '78%', pointerEvents: 'none', filter: 'drop-shadow(0 7px 11px rgba(0,10,25,0.6))' }}>
+                    <FisherPose characterColor={characterColor} equippedHat={equippedHat} equippedBoat={equippedBoat} equippedPet={equippedPet} rodTier={rodTier} reelTier={reelTier} hookTier={hookTier} noGlow />
+                  </div>
+                }
               />
 
               <HubTile
-                bgImage="/page-market.jpg"
+                bgImage="/fish-market.jpg"
                 accent="#f0c040"
                 title="Market"
                 status={holdCount > 0 ? `${holdCount} in the hold` : 'Hold is empty'}
@@ -99,7 +131,7 @@ export default function FishingHub({
               />
 
               <HubTile
-                bgImage="/tackle-shop-page-bg.jpg"
+                bgImage="/fish-tackle.jpg"
                 accent="#7dd3fc"
                 title="Tackle Shop"
                 status={baitCount > 0 ? `${baitCount.toLocaleString()} bait aboard` : 'Out of bait'}
@@ -109,7 +141,7 @@ export default function FishingHub({
               />
 
               <HubTile
-                bgImage="/hold-bg.jpg"
+                bgImage="/fish-bestiary.jpg"
                 accent="#a78bfa"
                 title="Bestiary"
                 status=""

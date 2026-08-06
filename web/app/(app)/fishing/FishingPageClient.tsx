@@ -276,6 +276,13 @@ export default function FishingPageClient({
         baitCount={initialBait.reduce((n, b) => n + b.quantity, 0)}
         speciesCaught={new Set([...caughtFishIds, ...ancientCatches]).size}
         speciesTotal={allFishSpecies.length}
+        characterColor={characterColor}
+        equippedHat={persistedEquippedHat}
+        equippedBoat={persistedEquippedBoat}
+        equippedPet={persistedEquippedPet}
+        rodTier={rodTier}
+        reelTier={reelTier}
+        hookTier={hookTier}
         onOpenZones={() => setZonesOpen(true)}
       />
     )

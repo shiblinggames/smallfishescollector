@@ -91,3 +91,15 @@ export function zonePetPerCrate(zone: string): number {
   return (Object.entries(d) as [CrateTier, number][])
     .reduce((sum, [tier, w]) => sum + w * CRATE_PET_CHANCE[tier], 0) / total
 }
+
+// ── Zone art ─────────────────────────────────────────────────────────────────
+// The zone's painted scene. Same plate the fishing screen, the zone selector
+// cards and the profile backgrounds all use, so a zone's look is one entry
+// rather than a map copied into each surface.
+export const ZONE_BG: Record<string, string> = {
+  shallows:    '/shallows.jpg',
+  open_waters: '/openwaters.jpg',
+  deep:        '/deep.jpg',
+  abyss:       '/abyss.jpg',
+  ancient_deep: '/ancient.jpg',
+}
