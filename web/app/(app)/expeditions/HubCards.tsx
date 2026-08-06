@@ -356,14 +356,26 @@ export default function HubCards({
           transition={{ type: 'spring', stiffness: 380, damping: 30 }}
           style={{
             margin: 'auto', width: '100%', maxWidth: 440,
-            background: 'linear-gradient(180deg, #16101f 0%, #0a0808 100%)',
-            border: `1px solid ${bountyAccent}55`,
+            // A TIMBER BOARD, lit from above. Three gradients: a lantern at the
+            // top, plank seams down it, and dark oiled wood under both. No
+            // image, nothing animated, and it composites once.
+            //
+            // The panel was a flat dark rectangle with purple trim, which is
+            // the same rectangle every dashboard ships. The notices pinned to
+            // it are paper now, and paper needs something to be pinned TO.
+            background: `
+              radial-gradient(120% 62% at 50% -6%, rgba(255,208,140,0.13) 0%, transparent 62%),
+              repeating-linear-gradient(90deg, rgba(0,0,0,0.26) 0px, rgba(0,0,0,0.26) 2px, transparent 2px, transparent 92px),
+              linear-gradient(180deg, #291d13 0%, #150e09 100%)
+            `,
+            border: '1px solid rgba(120,88,52,0.55)',
+            borderTop: '1px solid rgba(190,146,92,0.55)',
             borderRadius: 20, padding: '0.4rem 0.4rem 0.6rem',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.7)',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.75)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.55rem 0.7rem 0.5rem' }}>
-            <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f4ecd8' }}>Bounties</p>
+            <p className="font-pirata" style={{ fontSize: '1.5rem', letterSpacing: '0.03em', color: '#f0dcae' }}>Bounties</p>
             <button type="button" onClick={() => setModal(null)} aria-label="Close"
               style={{ width: 30, height: 30, borderRadius: '50%', padding: 0, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>

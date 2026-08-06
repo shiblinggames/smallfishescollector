@@ -24,17 +24,27 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { getBountyBoard, claimBounty, rerollBounty, type BountyBoard, type BountyView } from './bountyActions'
 import { hapticReward } from '@/lib/haptics'
 
-// Four tiers, and the colour climbs with the price. Elite shares the board's
-// own purple because it IS the board at full stretch.
+// PAPER, not dark glass. The same parchment the cutscenes use for a ledger or
+// a sealed letter, so a bounty reads as something written by hand and nailed up
+// rather than a row in an admin table. Everything below is ink on that paper.
+const PARCHMENT = 'linear-gradient(160deg, #e9ddc2 0%, #d9c9a6 55%, #ccb991 100%)'
+const PARCHMENT_SPENT = 'linear-gradient(160deg, #cbc0a8 0%, #b9ad92 55%, #a89d84 100%)'
+const INK = '#332a20'                     // dark brown, the writing
+const INK_SOFT = '#6b5b45'                // the hand that wrote the small print
+
+// Tier colours re-cut for paper. The dark-panel set (#7f9bb5 and friends) went
+// invisible on parchment; these are the same hues at ink weight.
 const TIER: Record<BountyView['tier'], { label: string; color: string }> = {
-  easy:   { label: 'Easy',   color: '#7f9bb5' },
-  medium: { label: 'Medium', color: '#6fb58a' },
-  hard:   { label: 'Hard',   color: '#d0a24a' },
-  elite:  { label: 'Elite',  color: '#c084fc' },
+  easy:   { label: 'Easy',   color: '#40607c' },
+  medium: { label: 'Medium', color: '#2f6b4a' },
+  hard:   { label: 'Hard',   color: '#8a5c14' },
+  elite:  { label: 'Elite',  color: '#5d3a8f' },
 }
 
 const GEM = '◆'
-const GEM_COLOR = '#c084fc'
+const GEM_COLOR = '#c084fc'      // on the dark board
+const GEM_INK = '#5d3a8f'        // on the paper
+const STAMP = '#a3372a'          // oxblood, the harbourmaster's rubber stamp
 const TNUM = { fontVariantNumeric: 'tabular-nums' as const }
 
 function SwapIcon({ color }: { color: string }) {
@@ -46,8 +56,10 @@ function SwapIcon({ color }: { color: string }) {
 }
 
 /** One notice pinned to the board. */
-function BountyCard({ b, rerollUsed, busy, wide, onClaim, onSwap }: {
+function BountyCard({ b, idx, rerollUsed, busy, wide, onClaim, onSwap }: {
   b: BountyView
+  /** Position on the wall, used only to alternate the tilt. */
+  idx: number
   rerollUsed: boolean
   busy: boolean
   /** The first rung posts a single order, and one card in a two-column grid
@@ -71,26 +83,42 @@ function BountyCard({ b, rerollUsed, busy, wide, onClaim, onSwap }: {
         position: 'relative', overflow: 'hidden',
         gridColumn: wide ? '1 / -1' : undefined,
         display: 'flex', flexDirection: 'column',
-        minHeight: wide ? 150 : 176,
-        padding: '0.65rem 0.7rem 0.6rem', borderRadius: 14,
-        background: b.claimed
-          ? 'linear-gradient(180deg, rgba(14,15,19,0.9) 0%, rgba(9,10,13,0.92) 100%)'
-          : 'linear-gradient(180deg, rgba(22,25,33,0.97) 0%, rgba(12,14,19,0.98) 100%)',
-        border: `1px solid ${b.claimed ? 'rgba(255,255,255,0.05)' : done ? `${t.color}66` : 'rgba(255,255,255,0.09)'}`,
-        borderTop: `2px solid ${b.claimed ? 'rgba(255,255,255,0.06)' : t.color + (done ? 'ee' : '99')}`,
-        boxShadow: done && !b.claimed ? `0 4px 20px ${t.color}22` : '0 3px 12px rgba(0,0,0,0.4)',
+        minHeight: wide ? 158 : 184,
+        padding: '0.95rem 0.65rem 0.55rem', borderRadius: 3,
+        background: b.claimed ? PARCHMENT_SPENT : PARCHMENT,
+        // Paper has no glowing border. It has an edge and a shadow, and a
+        // finished order simply sits a little prouder off the board.
+        border: '1px solid rgba(90,68,40,0.45)',
+        boxShadow: done && !b.claimed
+          ? '0 6px 16px rgba(0,0,0,0.55)'
+          : '0 3px 9px rgba(0,0,0,0.45)',
+        // Two of the four corners lifted, so the wall does not read as a grid
+        // of identical rectangles.
+        transform: idx % 2 === 0 ? 'rotate(-0.5deg)' : 'rotate(0.55deg)',
       }}
     >
+      {/* Pinned. A tack through the top of the notice, which is the one detail
+          that makes the whole thing read as a board rather than a list. */}
+      <span aria-hidden style={{
+        position: 'absolute', top: 5, left: '50%', marginLeft: -4,
+        width: 8, height: 8, borderRadius: '50%',
+        background: `radial-gradient(circle at 32% 30%, #d9c9a0 0%, ${t.color} 55%, rgba(0,0,0,0.65) 100%)`,
+        boxShadow: '0 1px 2px rgba(0,0,0,0.55)',
+      }} />
+
       {/* The prize, sealed in the corner. It is the reason to read the card, so
           it is the biggest thing on it after the name. */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 6 }}>
         <span className="font-karla font-700 uppercase tracking-[0.16em]"
-          style={{ fontSize: '0.5rem', color: b.claimed ? '#5f5b56' : t.color, paddingTop: 3 }}>
+          style={{
+            fontSize: '0.48rem', paddingTop: 3,
+            color: b.claimed ? '#7d7360' : t.color,
+          }}>
           {t.label}
         </span>
         <span className="font-cinzel font-800" style={{
           fontSize: '1.05rem', lineHeight: 1, whiteSpace: 'nowrap',
-          color: b.claimed ? '#5f5b56' : GEM_COLOR, ...TNUM,
+          color: b.claimed ? '#7d7360' : GEM_INK, ...TNUM,
         }}>
           {b.gems} {GEM}
         </span>
@@ -98,12 +126,13 @@ function BountyCard({ b, rerollUsed, busy, wide, onClaim, onSwap }: {
 
       <p className="font-cinzel font-700" style={{
         fontSize: wide ? '1.1rem' : '0.92rem', lineHeight: 1.18, marginTop: 5,
-        color: b.claimed ? '#7b766f' : '#f2ede2',
+        color: b.claimed ? '#7d7360' : INK,
       }}>
         {b.name}
       </p>
       <p className="font-karla font-400" style={{
-        fontSize: '0.62rem', lineHeight: 1.35, marginTop: 3, color: '#807a6f',
+        fontSize: '0.62rem', lineHeight: 1.35, marginTop: 3,
+        color: b.claimed ? '#8b8270' : INK_SOFT,
         display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
       }}>
         {b.desc}
@@ -114,14 +143,14 @@ function BountyCard({ b, rerollUsed, busy, wide, onClaim, onSwap }: {
       <div style={{ marginTop: 'auto', paddingTop: 8 }}>
         {b.target > 1 && !b.claimed && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-            <div style={{ flex: 1, height: 4, borderRadius: 3, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+            <div style={{ flex: 1, height: 4, borderRadius: 3, background: 'rgba(60,44,24,0.22)', overflow: 'hidden' }}>
               <motion.div
                 initial={{ width: 0 }} animate={{ width: `${pct * 100}%` }}
                 transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                 style={{ height: '100%', borderRadius: 3, background: `linear-gradient(90deg, ${t.color}88, ${t.color})` }}
               />
             </div>
-            <span className="font-karla font-700" style={{ fontSize: '0.58rem', color: '#8b857b', ...TNUM }}>
+            <span className="font-karla font-700" style={{ fontSize: '0.58rem', color: INK_SOFT, ...TNUM }}>
               {b.progress}/{b.target}
             </span>
           </div>
@@ -133,14 +162,14 @@ function BountyCard({ b, rerollUsed, busy, wide, onClaim, onSwap }: {
           <button type="button" onClick={onClaim} disabled={busy} className="font-karla font-800 tap"
             style={{
               width: '100%', padding: '0.44rem', borderRadius: 9, fontSize: '0.72rem',
-              background: `${t.color}26`, border: `1px solid ${t.color}88`, color: '#f4efe6',
+              background: `${t.color}1f`, border: `1px solid ${t.color}99`, color: t.color,
               cursor: busy ? 'wait' : 'pointer', WebkitTapHighlightColor: 'transparent',
             }}>
             {busy ? '…' : `Claim ${b.gems} ${GEM}`}
           </button>
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span className="font-karla font-600" style={{ flex: 1, minWidth: 0, fontSize: '0.6rem', color: '#6f6a63' }}>
+            <span className="font-karla font-600" style={{ flex: 1, minWidth: 0, fontSize: '0.6rem', color: INK_SOFT }}>
               Not done yet
             </span>
             {!rerollUsed && (
@@ -148,10 +177,10 @@ function BountyCard({ b, rerollUsed, busy, wide, onClaim, onSwap }: {
                 style={{
                   flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4,
                   padding: '0.3rem 0.44rem', borderRadius: 8,
-                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
-                  color: '#8a8577', cursor: busy ? 'wait' : 'pointer', WebkitTapHighlightColor: 'transparent',
+                  background: 'rgba(60,44,24,0.10)', border: '1px solid rgba(90,68,40,0.4)',
+                  color: INK_SOFT, cursor: busy ? 'wait' : 'pointer', WebkitTapHighlightColor: 'transparent',
                 }}>
-                <SwapIcon color="#8a8577" />
+                <SwapIcon color={INK_SOFT} />
                 <span className="font-karla font-700" style={{ fontSize: '0.56rem' }}>Swap</span>
               </button>
             )}
@@ -175,10 +204,12 @@ function BountyCard({ b, rerollUsed, busy, wide, onClaim, onSwap }: {
               display: 'flex', justifyContent: 'center', pointerEvents: 'none',
             }}
           >
+            {/* An oxblood rubber stamp. On paper this is what a settled account
+                looks like; the old purple-on-black read as a UI state. */}
             <span className="font-cinzel font-800" style={{
               fontSize: '1.05rem', letterSpacing: '0.22em', paddingLeft: '0.22em',
-              color: `${GEM_COLOR}cc`,
-              border: `2px solid ${GEM_COLOR}77`, borderRadius: 6,
+              color: `${STAMP}dd`, opacity: 0.85,
+              border: `2.5px solid ${STAMP}aa`, borderRadius: 4,
               padding: '0.08rem 0.5rem 0.12rem',
             }}>PAID</span>
           </motion.div>
@@ -206,7 +237,7 @@ export default function BountiesPanel({ onGems }: { onGems?: (n: number) => void
   if (!board) {
     return (
       <p className="font-karla font-600 uppercase tracking-[0.16em]"
-        style={{ fontSize: '0.66rem', color: '#6f6a63', padding: '2.5rem 0', textAlign: 'center' }}>
+        style={{ fontSize: '0.66rem', color: '#8d7f66', padding: '2.5rem 0', textAlign: 'center' }}>
         Reading the board…
       </p>
     )
@@ -215,10 +246,10 @@ export default function BountiesPanel({ onGems }: { onGems?: (n: number) => void
   if (!board.unlocked) {
     return (
       <div style={{ textAlign: 'center', padding: '2.5rem 1.5rem' }}>
-        <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#c8c2b8', marginBottom: 8 }}>
+        <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#c9b68a', marginBottom: 8 }}>
           The board is empty
         </p>
-        <p className="font-karla font-400" style={{ fontSize: '0.78rem', color: '#8a8577', lineHeight: 1.55, maxWidth: 300, margin: '0 auto' }}>
+        <p className="font-karla font-400" style={{ fontSize: '0.78rem', color: '#8d7f66', lineHeight: 1.55, maxWidth: 300, margin: '0 auto' }}>
           The harbourmaster posts work for captains who have made a name. Put
           Captain Krust on the bottom of the sea and there will be orders here
           every morning after that.
@@ -262,24 +293,24 @@ export default function BountiesPanel({ onGems }: { onGems?: (n: number) => void
         position: 'relative', overflow: 'hidden',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
         padding: '0.7rem 0.85rem', borderRadius: 13, marginBottom: 8,
-        background: 'linear-gradient(180deg, rgba(34,24,48,0.96) 0%, rgba(15,12,21,0.97) 100%)',
-        border: `1px solid ${GEM_COLOR}33`, borderTop: `1px solid ${GEM_COLOR}66`,
+        background: 'linear-gradient(180deg, rgba(38,27,16,0.94) 0%, rgba(20,14,9,0.96) 100%)',
+        border: '1px solid rgba(120,88,52,0.5)', borderTop: '1px solid rgba(190,146,92,0.5)',
       }}>
         <div style={{ minWidth: 0 }}>
-          <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.52rem', color: '#a99cb8' }}>
+          <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.52rem', color: '#b09a76' }}>
             {allDone ? 'Board cleared' : 'Still on the board'}
           </p>
-          <p className="font-cinzel font-800" style={{ fontSize: '1.5rem', lineHeight: 1.1, color: allDone ? '#8b8397' : '#f4ecfb', ...TNUM }}>
+          <p className="font-cinzel font-800" style={{ fontSize: '1.5rem', lineHeight: 1.1, color: allDone ? '#8d7f66' : '#f0dcae', ...TNUM }}>
             {board.remaining} <span style={{ color: GEM_COLOR }}>{GEM}</span>
           </p>
         </div>
         {board.rung && (
           <div style={{ textAlign: 'right', flexShrink: 0, minWidth: 0 }}>
-            <p className="font-karla font-600" style={{ fontSize: '0.56rem', color: '#8b8397' }}>
+            <p className="font-karla font-600" style={{ fontSize: '0.56rem', color: '#8d7f66' }}>
               Chapter {board.rung.chapter} rung
             </p>
             {board.next && (
-              <p className="font-karla font-700" style={{ fontSize: '0.58rem', color: '#b9aec9', marginTop: 1 }}>
+              <p className="font-karla font-700" style={{ fontSize: '0.58rem', color: '#c4ab80', marginTop: 1 }}>
                 Beat {board.next.boss} → {board.next.gems} {GEM}
               </p>
             )}
@@ -308,14 +339,14 @@ export default function BountiesPanel({ onGems }: { onGems?: (n: number) => void
 
       {/* The wall. Two columns, because four orders down one column runs past
           the fold and wastes half the width on short titles. */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 7 }}>
-        {board.bounties.map(b => (
-          <BountyCard key={b.id} b={b} rerollUsed={board.rerollUsed} busy={busy === b.id}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10, padding: '2px 1px' }}>
+        {board.bounties.map((b, i) => (
+          <BountyCard key={b.id} b={b} idx={i} rerollUsed={board.rerollUsed} busy={busy === b.id}
             wide={single} onClaim={() => handleClaim(b)} onSwap={() => handleSwap(b)} />
         ))}
       </div>
 
-      <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#6f6a63', marginTop: 9, textAlign: 'center', lineHeight: 1.45 }}>
+      <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#8d7f66', marginTop: 10, textAlign: 'center', lineHeight: 1.45 }}>
         {board.rerollUsed
           ? 'New orders posted every morning.'
           : 'One swap a day, for an order you cannot take. New orders every morning.'}
