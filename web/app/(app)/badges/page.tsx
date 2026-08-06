@@ -102,6 +102,9 @@ export default async function BadgesPage() {
   const doubleCatches = Number(profile?.fishing_double_catches ?? 0)
   const casts = Number(profile?.fishing_casts ?? 0)
   const cratesOpened = Number(profile?.fishing_crates_opened ?? 0)
+  const dailySweeps  = Number(profile?.daily_challenge_sweeps ?? 0)
+  const masterCleared = Number(profile?.daily_master_cleared ?? 0)
+  const bootyHauls   = Number(profile?.voyage_booty_hauls ?? 0)
   const snags = Number(profile?.fishing_snags ?? 0)
   const jackpots = Number(profile?.fishing_jackpots ?? 0)
   const beacons = Number(profile?.tide_run_beacons_smashed ?? 0)
@@ -293,7 +296,13 @@ export default async function BadgesPage() {
         badgeGoal('crate_digger', 'Crate Digger', 'Open 50 supply crates', cratesOpened, 50, '/fishing'),
         badgeGoal('beginners_luck', "Beginner's Luck", 'Open your first supply crate', cratesOpened, 1, '/fishing', { binary: true }),
         badgeGoal('crate_expectations', 'Crate Expectations', 'Open 250 supply crates', cratesOpened, 250, '/fishing'),
+        badgeGoal('wreck_diver', 'Wreck Diver', 'Open 500 supply crates', cratesOpened, 500, '/fishing'),
         badgeGoal('salvage_rights', 'Salvage Rights', 'Open 1,000 supply crates', cratesOpened, 1000, '/fishing'),
+        badgeGoal('three_for_three', 'Three for Three', 'Clear all three daily challenges, 7 times', dailySweeps, 7, '/fishing'),
+        badgeGoal('standing_watch', 'Standing Watch', 'Clear all three daily challenges, 30 times', dailySweeps, 30, '/fishing'),
+        badgeGoal('old_reliable', 'Old Reliable', 'Clear all three daily challenges, 100 times', dailySweeps, 100, '/fishing'),
+        badgeGoal('the_fourth_task', 'The Fourth Task', 'Clear 25 Master daily challenges', masterCleared, 25, '/fishing'),
+        badgeGoal('massive_booty', 'Massive Booty', 'Land a Massive Booty on a voyage', bootyHauls, 1, '/expeditions', { binary: true }),
         badgeGoal('reel_lucky', 'Reel Lucky', 'Hit a fishing jackpot', jackpots, 1, '/fishing', { binary: true }),
         badgeGoal('friend_at_sea', 'A Friend at Sea', 'Earn your first fishing pet', petsOwned, 1, '/fishing', { binary: true }),
         badgeGoal('full_stringer', 'Full Stringer', 'Keep 3 fishing pets at once', petsOwned, 3, '/fishing'),

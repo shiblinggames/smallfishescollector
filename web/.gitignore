@@ -55,6 +55,7 @@ card-art-uploads/
 scripts/*
 !scripts/check-campaign.mts
 !scripts/check-copy.mts
+!scripts/check-badge-goals.mts
 
 # Badge slicer source sheets (dev-only input for slice-badges.mjs; sliced output in public/badges/ is committed)
 # Badge SOURCE sheets. Multi-badge plates that slice-badges.mjs cuts into
