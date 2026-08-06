@@ -39,14 +39,14 @@ export default function AlmanacPets({ data }: { data: AlmanacData }) {
               </span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem 0.4rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '0.5rem 0.4rem' }}>
               {list.map((p, i) => {
                 const has = owned.has(p.id)
                 return (
                   <motion.div key={p.id}
                     initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.26, delay: Math.min(i * 0.03, 0.3) }}
-                    style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '0.35rem 0.15rem 0.5rem' }}>
+                    style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '0.35rem 0.15rem 0.5rem', minWidth: 0, maxWidth: '100%' }}>
                     <div style={{ position: 'relative', width: '100%', height: 126, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       {has && (
                         <span aria-hidden style={{
@@ -66,7 +66,7 @@ export default function AlmanacPets({ data }: { data: AlmanacData }) {
                         }} />
                       )}
                     </div>
-                    <p className="font-cinzel font-700" style={{ width: '100%', marginTop: 7, fontSize: '0.86rem', lineHeight: 1.16, color: has ? '#efeaf8' : '#7b7499', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <p className="font-cinzel font-700" style={{ width: '100%', minWidth: 0, marginTop: 7, fontSize: '0.86rem', height: '1.1rem', lineHeight: '1.1rem', color: has ? '#efeaf8' : '#7b7499', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {has ? p.name : '???'}
                     </p>
                     <span aria-hidden style={{ marginTop: 5, width: has ? 28 : 14, height: 1.5, borderRadius: 2, background: has ? `linear-gradient(90deg, transparent, ${p.accentColor}, transparent)` : 'rgba(255,255,255,0.10)' }} />

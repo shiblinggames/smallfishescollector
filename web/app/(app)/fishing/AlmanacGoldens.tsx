@@ -57,7 +57,7 @@ export default function AlmanacGoldens({ data }: { data: AlmanacData }) {
       {/* The tally. Held vs sold matters here in a way it does not anywhere
           else: a sold golden still counts as caught, and the doubloons it
           fetched are part of the story. */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', marginBottom: '1.2rem', borderTop: '1px solid rgba(255,255,255,0.09)', borderBottom: '1px solid rgba(255,255,255,0.09)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', marginBottom: '1.2rem', borderTop: '1px solid rgba(255,255,255,0.09)', borderBottom: '1px solid rgba(255,255,255,0.09)' }}>
         <Tally label="Mounted" value={`${mounted.length}`} accent={GOLD} />
         <Tally label="Species" value={`${speciesCount}`} />
         <Tally label="Ever landed" value={`${goldens.length}`} />
@@ -77,14 +77,14 @@ export default function AlmanacGoldens({ data }: { data: AlmanacData }) {
       {/* No frames. A golden is the brightest thing in the book and it was
           sitting in a brown box; it stands in its own light now, with the
           date and the water as fine print under it. */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem 0.3rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '0.5rem 0.3rem' }}>
         {mounted.map((g, i) => {
           const zc = ZONE_COLOR[g.habitat] ?? GOLD
           return (
             <motion.div key={g.id}
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: Math.min(i * 0.02, 0.4) }}
-              style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '0.4rem 0.2rem 0.6rem' }}>
+              style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '0.4rem 0.2rem 0.6rem', minWidth: 0, maxWidth: '100%' }}>
 
               <div style={{ position: 'relative', width: '100%', height: 92, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <span aria-hidden style={{
@@ -102,12 +102,12 @@ export default function AlmanacGoldens({ data }: { data: AlmanacData }) {
                 }} />
               </div>
 
-              <p className="font-cinzel font-700" style={{ width: '100%', marginTop: 5, fontSize: '0.7rem', color: '#f7e6b8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.name}</p>
+              <p className="font-cinzel font-700" style={{ width: '100%', minWidth: 0, marginTop: 5, fontSize: '0.7rem', height: '0.95rem', lineHeight: '0.95rem', color: '#f7e6b8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.name}</p>
               <span className="font-cinzel font-700" style={{ marginTop: 1, fontSize: '0.78rem', color: GOLD, fontVariantNumeric: 'tabular-nums' }}>
                 {g.sizeIn != null ? formatFishLength(g.sizeIn) : 'unmeasured'}
               </span>
               <span aria-hidden style={{ marginTop: 5, width: 26, height: 1.5, borderRadius: 2, background: `linear-gradient(90deg, transparent, ${zc}, transparent)` }} />
-              <span className="font-karla font-600" style={{ marginTop: 4, fontSize: '0.6rem', color: '#b7ac95' }}>
+              <span className="font-karla font-600" style={{ marginTop: 4, fontSize: '0.6rem', color: '#b7ac95', maxWidth: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {ZONE_LABEL[g.habitat] ?? g.habitat} · {shortDate(g.caughtAt)}
               </span>
             </motion.div>

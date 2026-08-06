@@ -29,7 +29,7 @@ export default function AlmanacGiants({ data, giants }: { data: AlmanacData; gia
     .filter(x => tierForLength(x.e.pbLength!, x.e.lengthMin!, x.e.lengthMax!) === 'trophy')
     .sort((a, b) => b.pct - a.pct), [data.entries])
 
-  const got = giants.filter(g => g.count > 0).length
+  const got = giants.filter(g => g.everCaught).length
 
   return (
     <>
@@ -46,7 +46,7 @@ export default function AlmanacGiants({ data, giants }: { data: AlmanacData; gia
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginBottom: '1.6rem' }}>
         {giants.map((g, i) => {
-          const caught = g.count > 0
+          const caught = g.everCaught
           return (
             <motion.div key={g.id}
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}

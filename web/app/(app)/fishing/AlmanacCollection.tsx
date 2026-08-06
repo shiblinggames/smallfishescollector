@@ -19,7 +19,6 @@ import PopupShell from '@/components/PopupShell'
 import { ZONE_LABEL, ZONE_COLOR, ZONE_ORDER, ZONE_TAGLINE } from './zoneData'
 import { RARITY_LABEL, RARITY_COLOR, fishArt, isGiant, shortDate } from '@/lib/almanac'
 import { tierForLength, TIER_LABEL, TIER_COLOR, formatFishLength } from '@/lib/fishSize'
-import { SHINY_FISH_FILTER } from '@/lib/shiny'
 import type { AlmanacData, AlmanacEntry } from './almanacActions'
 
 const GOLD = '#f0c040'
@@ -44,7 +43,7 @@ export default function AlmanacCollection({ data }: { data: AlmanacData }) {
       {ZONE_ORDER.map(zone => {
         const list = byZone.get(zone)
         if (!list?.length) return null
-        const got = list.filter(e => e.count > 0).length
+        const got = list.filter(e => e.everCaught).length
         const color = ZONE_COLOR[zone]
         const done = got === list.length
         const pct = got / list.length
@@ -77,8 +76,15 @@ export default function AlmanacCollection({ data }: { data: AlmanacData }) {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.35rem 0.2rem' }}>
-              {list.map(e => <SpeciesCard key={e.id} entry={e} onOpen={() => e.count > 0 && setDetail(e)} />)}
+            {/* minmax(0, 1fr), NOT 1fr. A 1fr track has an auto MINIMUM, so a
+                child that cannot shrink below its content sets the track
+                width: one "Stoplight Loosejaw" widened its own column and
+                squeezed the two beside it, and the row stopped lining up with
+                every other row. minmax(0, ...) lets the tracks actually be
+                equal and hands the overflow to the ellipsis already waiting
+                for it. */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0.35rem 0.2rem' }}>
+              {list.map(e => <SpeciesCard key={e.id} entry={e} onOpen={() => e.everCaught && setDetail(e)} />)}
             </div>
           </div>
         )
@@ -90,12 +96,14 @@ export default function AlmanacCollection({ data }: { data: AlmanacData }) {
 }
 
 function SpeciesCard({ entry, onOpen }: { entry: AlmanacEntry; onOpen: () => void }) {
-  const caught = entry.count > 0
-  const rc = RARITY_COLOR[entry.rarity]
-  const tier = caught && entry.pbLength != null && entry.lengthMin != null && entry.lengthMax != null
-    ? tierForLength(entry.pbLength, entry.lengthMin, entry.lengthMax) : null
-  const big = tier === 'trophy' || tier === 'large'
-  const c = entry.everGolden ? GOLD : rc
+  // everCaught, not count > 0. A prestiged zone was fully collected to earn
+  // the prestige, so those species are charted even though the log was wiped.
+  const caught = entry.everCaught
+  // NO GOLD HERE. Whether you have taken a golden of a species is the Goldens
+  // room's whole job; painting it into this grid too made the Collection look
+  // like a worse version of that tab. Here a fish is its rarity and nothing
+  // else.
+  const c = RARITY_COLOR[entry.rarity]
 
   return (
     <motion.button type="button" onClick={onOpen} disabled={!caught}
@@ -103,12 +111,12 @@ function SpeciesCard({ entry, onOpen }: { entry: AlmanacEntry; onOpen: () => voi
       whileHover={caught ? { y: -3 } : undefined}
       transition={{ type: 'spring', stiffness: 520, damping: 30 }}
       style={{
-        // No card. The specimen stands on the page and light does the work a
-        // border was doing, but QUIETLY: a grid of 152 of these is a lot of
-        // glow, and it was reading as a lightshow rather than as a book.
         position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center',
         background: 'none', border: 'none', padding: '0.35rem 0.15rem 0.55rem',
         cursor: caught ? 'pointer' : 'default', textAlign: 'center',
+        // minWidth 0 so a long name can actually be clipped rather than
+        // setting this button's min-content width. See the grid comment.
+        minWidth: 0, maxWidth: '100%',
         WebkitTapHighlightColor: 'transparent',
       }}>
 
@@ -117,22 +125,15 @@ function SpeciesCard({ entry, onOpen }: { entry: AlmanacEntry; onOpen: () => voi
           <span aria-hidden style={{
             position: 'absolute', left: '50%', top: '48%', transform: 'translate(-50%, -50%)',
             width: 76, height: 76, borderRadius: '50%', pointerEvents: 'none',
-            background: `radial-gradient(circle, ${c}${entry.everGolden ? '24' : '16'} 0%, transparent 66%)`,
+            background: `radial-gradient(circle, ${c}16 0%, transparent 66%)`,
           }} />
         )}
 
-        {/* A species you have taken a golden of is DRAWN golden, the same
-            SHINY_FISH_FILTER the catch card and the Logbook use, so the book
-            agrees with the moment you landed it. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={fishArt(entry.name)} alt="" aria-hidden loading="lazy" decoding="async"
           style={{
             position: 'relative', maxWidth: 84, maxHeight: 72, objectFit: 'contain',
-            filter: !caught
-              ? 'brightness(0) opacity(0.26)'
-              : entry.everGolden
-                ? SHINY_FISH_FILTER
-                : 'drop-shadow(0 4px 7px rgba(0,0,0,0.55))',
+            filter: caught ? 'drop-shadow(0 4px 7px rgba(0,0,0,0.55))' : 'brightness(0) opacity(0.26)',
           }} />
 
         {caught && (
@@ -142,19 +143,14 @@ function SpeciesCard({ entry, onOpen }: { entry: AlmanacEntry; onOpen: () => voi
             background: 'radial-gradient(ellipse, rgba(0,0,0,0.45) 0%, transparent 72%)',
           }} />
         )}
-
-        {big && (
-          <span aria-hidden title={TIER_LABEL[tier!]}
-            style={{ position: 'absolute', top: 2, right: 6, width: 4, height: 4, borderRadius: 4, background: TIER_COLOR[tier!] }} />
-        )}
       </div>
 
-      {/* The NAME, and nothing else. The count and the rarity were two more
-          lines of small print on a tile you can simply tap; spending that room
-          on the one thing you are scanning for buys it a readable size. */}
+      {/* The name, one line, always. Fixed height so a two-word species and a
+          "Stoplight Loosejaw" leave the tiles exactly the same size. */}
       <p className="font-cinzel font-700" style={{
-        width: '100%', marginTop: 6, fontSize: '0.82rem', lineHeight: 1.16,
-        color: caught ? (entry.everGolden ? '#f4d98a' : '#efeaf8') : '#7b7499',
+        width: '100%', minWidth: 0, marginTop: 6, height: '1.05rem',
+        fontSize: '0.82rem', lineHeight: '1.05rem',
+        color: caught ? '#efeaf8' : '#7b7499',
         whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
       }}>
         {caught ? entry.name : '???'}
@@ -216,7 +212,7 @@ function SpeciesSheet({ entry, onClose, goldens }: {
           width: '100%', maxWidth: 460, borderRadius: 18, overflow: 'hidden',
           // Solid base: this sits over the overlay's art.
           background: 'linear-gradient(180deg, #16141b 0%, #0c0b10 100%)',
-          border: `1px solid ${entry.everGolden ? GOLD + '66' : color + '55'}`,
+          border: `1px solid ${color}55`,
         }}>
 
         {/* Plate — the almanac's own paper, not the zone's water. A painted
@@ -233,7 +229,7 @@ function SpeciesSheet({ entry, onClose, goldens }: {
           <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', padding: '0.6rem' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={fishArt(entry.name)} alt="" aria-hidden
-              style={{ position: 'relative', maxWidth: 190, maxHeight: 140, objectFit: 'contain', filter: entry.everGolden ? SHINY_FISH_FILTER : `drop-shadow(0 6px 12px rgba(0,0,0,0.65))` }} />
+              style={{ position: 'relative', maxWidth: 190, maxHeight: 140, objectFit: 'contain', filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.65))' }} />
           </div>
           <button type="button" onClick={onClose} aria-label="Close"
             style={{ position: 'absolute', top: 9, right: 9, width: 28, height: 28, borderRadius: '50%', padding: 0, background: 'rgba(6,6,12,0.72)', border: '1px solid rgba(255,255,255,0.2)', color: '#cfcabf', cursor: 'pointer', display: 'grid', placeItems: 'center' }}>

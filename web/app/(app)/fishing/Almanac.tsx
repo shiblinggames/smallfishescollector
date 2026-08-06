@@ -61,10 +61,10 @@ export default function Almanac({ open, onClose }: { open: boolean; onClose: () 
 
   if (!open || !mounted) return null
 
-  const caught = data ? data.entries.filter(e => e.count > 0).length : 0
+  const caught = data ? data.entries.filter(e => e.everCaught).length : 0
   const total = data ? data.entries.length : 0
   const giants = data ? data.entries.filter(e => isGiant(e.sellValue, e.habitat)) : []
-  const giantsGot = giants.filter(e => e.count > 0).length
+  const giantsGot = giants.filter(e => e.everCaught).length
 
   const TABS: { key: Room; label: string; badge: string }[] = [
     { key: 'collection', label: 'Collection', badge: data ? `${caught}/${total}` : '' },

@@ -41,6 +41,14 @@ export type AlmanacEntry = {
   /** Catches in the CURRENT prestige cycle, which is what the zone selector
    *  counts. Kept so a species can show both if it ever needs to. */
   cycleCount: number
+  /** Have you EVER landed this, by any evidence we have.
+   *
+   *  Not the same as count > 0. prestigeZone refuses to run unless every
+   *  species in the zone is in your catch log, so a prestige level above zero
+   *  is PROOF you caught all of them, even for the players whose pre-migration
+   *  rows were deleted by that very prestige and cannot be recovered. The
+   *  count stays honest at 0; this says you were here. */
+  everCaught: boolean
   /** Has a golden of this species EVER been landed (the row survives selling). */
   everGolden: boolean
   pbLength: number | null
@@ -133,6 +141,8 @@ export async function getAlmanacData(): Promise<AlmanacData | { error: string }>
   // the fishing page unions the two lists before it counts anything. Reading
   // only the catch log showed a player with all six every one of them missing.
   const ancientIds = new Set(((profile.data?.ancient_catches as number[] | null) ?? []))
+  // A prestiged zone was, by definition, fully collected at least once.
+  const prestige = (profile.data?.prestige_levels as Record<string, number> | null) ?? {}
 
   const col = new Map((collection.data ?? []).map(r => [r.fish_id as number, r]))
   const life = new Map((lifetime.data ?? []).map(r => [r.fish_id as number, r]))
@@ -171,6 +181,9 @@ export async function getAlmanacData(): Promise<AlmanacData | { error: string }>
       firstCaughtAt: (l?.first_caught_at as string | null) ?? (c?.first_caught_at as string | null) ?? null,
       lastCaughtAt: (l?.last_caught_at as string | null) ?? (c?.last_caught_at as string | null) ?? null,
       cycleCount: (c?.catch_count as number | null) ?? 0,
+      everCaught: ((l?.catches as number | null) ?? (c?.catch_count as number | null) ?? 0) > 0
+        || ancientIds.has(s.id as number)
+        || (prestige[s.habitat as string] ?? 0) > 0,
       everGolden: c?.is_golden === true,
       pbLength: (b?.best_length_in as number | null) ?? null,
       pbAt: (b?.caught_at as string | null) ?? null,
