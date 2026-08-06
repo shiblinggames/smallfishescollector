@@ -76,12 +76,20 @@ export default function FishingHub({
 
   return (
     <>
-      {/* Background — the painted water column, same scene the zone selector
-          uses, under a ramp that darkens toward the tiles so they stay legible. */}
+      {/* Background — the painted water column: sunlit surface and the boat's
+          line up top, shoals thinning through the mid water, black by the
+          bottom. Expeditions looks out ACROSS the sea; fishing looks down
+          through it.
+
+          Four stops, not the usual three. A flat ramp strong enough to carry
+          the level bar over that bright surface band crushed the rays and the
+          shoals further down, which is the whole reason this art exists. So
+          the top 16% is a short dark fade for the header alone, then it opens
+          right back up and only closes again toward the tiles. */}
       <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/fishing-zones-bg.jpg" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} />
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(2,8,14,0.4) 0%, rgba(2,8,14,0.74) 46%, rgba(2,6,10,0.93) 100%)' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(2,8,14,0.62) 0%, rgba(2,8,14,0.20) 16%, rgba(2,8,14,0.38) 50%, rgba(2,6,10,0.72) 100%)' }} />
       </div>
 
       <div style={{ position: 'relative', zIndex: 1 }}>
