@@ -114,12 +114,31 @@ export const FUNDS: FundDef[] = [
 
 export const FUND_BY_ID = new Map(FUNDS.map(f => [f.id, f]))
 
-/** Closing before expiry pays this share of what the contract is worth right
- *  now. The leverage was solved so the expected payout AT EXPIRY is fair; being
- *  able to pick your moment instead is worth more than that, the way an
- *  American option is worth more than a European one. The haircut is what that
- *  optionality costs, and it is shown on the button. */
-export const EARLY_CLOSE_RETURN = 0.80
+/** Closing early costs TIME VALUE, not a flat tax.
+ *
+ *  It was a flat 20% haircut, which punished the wrong player. Simulated: being
+ *  able to close at any hour is worth 1.3x to 2.6x to somebody watching every
+ *  tick, and 1.00x to somebody who checks a few times a day. A flat cut takes a
+ *  fifth off the passive player, who gained nothing from the option, to guard
+ *  against a watcher it barely slows down.
+ *
+ *  So the fee scales with how much of the term is LEFT, which is what an option
+ *  actually gives up when you sell it early:
+ *
+ *    close with the whole term to run   keep 85%
+ *    close halfway through              keep 92.5%
+ *    close near expiry                  keep ~100%
+ *
+ *  Waiting it out costs nothing, taking a spike the hour after you opened costs
+ *  something, and the stake cap is still the real backstop against anybody who
+ *  wants to sit on the board refreshing. */
+export const EARLY_EXIT_MAX_FEE = 0.15
+
+/** What closing right now hands over. `remaining` is cycles left of `term`. */
+export function earlyCloseValue(fullValue: number, remaining: number, term: Term): number {
+  const left = Math.max(0, Math.min(1, remaining / term))
+  return Math.max(0, Math.round(fullValue * (1 - EARLY_EXIT_MAX_FEE * left)))
+}
 
 // ── Quoting ─────────────────────────────────────────────────────────────────
 

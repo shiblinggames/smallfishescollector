@@ -7,7 +7,7 @@ import { getXPProgress as navProgress } from '@/lib/expeditionLevel'
 import {
   TERMS, type Term, type Direction,
   quoteFund, quoteSingle, settlePayout, FUND_BY_ID,
-  EARLY_CLOSE_RETURN, EXCHANGE_FISHING_LEVEL, EXCHANGE_NAV_LEVEL,
+  earlyCloseValue, EXCHANGE_FISHING_LEVEL, EXCHANGE_NAV_LEVEL,
   MIN_STAKE, MAX_STAKE,
 } from '@/lib/fishExchange'
 
@@ -116,11 +116,9 @@ export async function openContract(
 
 export type CloseResult = { ok: true; payout: number; doubloons: number } | { error: string }
 
-/** Close before expiry for a share of what the contract is worth right now.
- *
- *  The haircut is not a penalty for impatience, it is the price of optionality:
- *  the leverage was solved so the expected payout AT EXPIRY is fair, and being
- *  able to pick your own moment is worth strictly more than that. */
+/** Close before expiry for what the contract is worth right now, less the time
+ *  value still on it. Sell a winner the moment it spikes, the way you would in
+ *  any trading app; waiting for expiry costs nothing extra. */
 export async function closeContractEarly(positionId: number): Promise<CloseResult> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -154,7 +152,10 @@ export async function closeContractEarly(positionId: number): Promise<CloseResul
     claimed.direction as Direction,
     { leverage: Number(claimed.leverage), breakEvenPct: 1 / Number(claimed.leverage) },
   )
-  const payout = Math.max(0, Math.round(gross * EARLY_CLOSE_RETURN))
+  // Time value: how much of the term is still to run.
+  const { data: st } = await admin.from('market_state').select('exchange_cycle').eq('id', 1).single()
+  const remaining = Math.max(0, Number(claimed.expiry_cycle) - Number(st?.exchange_cycle ?? 0))
+  const payout = earlyCloseValue(gross, remaining, Number(claimed.term) as Term)
 
   await admin.from('exchange_positions')
     .update({ exit_price: exit, payout })
