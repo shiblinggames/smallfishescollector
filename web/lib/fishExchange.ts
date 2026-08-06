@@ -93,26 +93,33 @@ export type FundDef = {
   name: string
   blurb: string
   accent: string
-  /** Which species belong. Given a species row, in or out. */
-  match: (f: { habitat: string; bite_rarity: number; sell_value: number }) => boolean
 }
 
-/** The six Ancient Deep trophies are not stock and are not listed, the same
- *  rule fish_exchange seeds by. */
-const listed = (f: { habitat: string; sell_value: number }) =>
-  !(f.habitat === 'ancient_deep' && f.sell_value === 0)
-
+/** PRESENTATION ONLY. Which species are in a fund is defined once, in SQL, by
+ *  the exchange_fund_members view. It briefly lived here as predicates too, and
+ *  that would have let settlement and the board disagree about what is in an
+ *  index: the one class of bug in a money system that nobody notices until it
+ *  pays somebody the wrong amount. */
 export const FUNDS: FundDef[] = [
-  { id: 'sea',          name: 'The Sea Index',   blurb: 'Every fish on the board, weighted alike.', accent: '#38bdf8', match: listed },
-  { id: 'shallows',     name: 'Shallows Fund',   blurb: 'Bright water. Small, steady, plentiful.',  accent: '#60a5fa', match: f => listed(f) && f.habitat === 'shallows' },
-  { id: 'open_waters',  name: 'Open Waters Fund', blurb: 'The working sea, and most of the trade.', accent: '#34d399', match: f => listed(f) && f.habitat === 'open_waters' },
-  { id: 'deep',         name: 'Deep Fund',       blurb: 'Colder water, better coin.',               accent: '#a78bfa', match: f => listed(f) && f.habitat === 'deep' },
-  { id: 'abyss',        name: 'Abyss Fund',      blurb: 'Far from any light, and priced like it.',  accent: '#f87171', match: f => listed(f) && f.habitat === 'abyss' },
-  { id: 'ancient_deep', name: 'Ancient Fund',    blurb: 'The twelve that still swim down there.',   accent: '#c084fc', match: f => listed(f) && f.habitat === 'ancient_deep' },
-  { id: 'common',       name: 'Common Index',    blurb: 'What everybody lands, every day.',         accent: '#9aa3ad', match: f => listed(f) && f.bite_rarity <= 2 },
-  { id: 'rare',         name: 'Rare Index',      blurb: 'The middle of the book.',                  accent: '#60a5fa', match: f => listed(f) && f.bite_rarity === 3 },
-  { id: 'legendary',    name: 'Legendary Index', blurb: 'The rarest water in the sea. Moves hard.', accent: '#f0c040', match: f => listed(f) && f.bite_rarity >= 4 },
+  { id: 'sea',          name: 'The Sea Index',    blurb: 'Every fish on the board, weighted alike.', accent: '#38bdf8' },
+  { id: 'shallows',     name: 'Shallows Fund',    blurb: 'Bright water. Small, steady, plentiful.',  accent: '#60a5fa' },
+  { id: 'open_waters',  name: 'Open Waters Fund', blurb: 'The working sea, and most of the trade.',  accent: '#34d399' },
+  { id: 'deep',         name: 'Deep Fund',        blurb: 'Colder water, better coin.',               accent: '#a78bfa' },
+  { id: 'abyss',        name: 'Abyss Fund',       blurb: 'Far from any light, and priced like it.',  accent: '#f87171' },
+  { id: 'ancient_deep', name: 'Ancient Fund',     blurb: 'The twelve that still swim down there.',   accent: '#c084fc' },
+  { id: 'common',       name: 'Common Index',     blurb: 'What everybody lands, every day.',         accent: '#9aa3ad' },
+  { id: 'rare',         name: 'Rare Index',       blurb: 'The middle of the book.',                  accent: '#60a5fa' },
+  { id: 'legendary',    name: 'Legendary Index',  blurb: 'The rarest water in the sea. Moves hard.', accent: '#f0c040' },
 ]
+
+export const FUND_BY_ID = new Map(FUNDS.map(f => [f.id, f]))
+
+/** Closing before expiry pays this share of what the contract is worth right
+ *  now. The leverage was solved so the expected payout AT EXPIRY is fair; being
+ *  able to pick your moment instead is worth more than that, the way an
+ *  American option is worth more than a European one. The haircut is what that
+ *  optionality costs, and it is shown on the button. */
+export const EARLY_CLOSE_RETURN = 0.80
 
 // ── Quoting ─────────────────────────────────────────────────────────────────
 
