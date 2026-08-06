@@ -72,16 +72,18 @@ export default function BestiaryGoldens({ data }: { data: BestiaryData }) {
               transition={{ duration: 0.3, delay: Math.min(i * 0.02, 0.4) }}
               style={{
                 position: 'relative', borderRadius: 12, overflow: 'hidden',
-                padding: '0.55rem 0.6rem 0.6rem',
+                padding: '0.6rem 0.6rem 0.65rem',
                 background: 'linear-gradient(180deg, rgba(28,22,10,0.92) 0%, rgba(14,11,6,0.95) 100%)',
                 border: `1px solid ${sold ? 'rgba(240,192,64,0.24)' : 'rgba(240,192,64,0.55)'}`,
                 opacity: sold ? 0.78 : 1,
               }}>
-              <span aria-hidden style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 50% 30%, rgba(240,192,64,0.15), transparent 68%)', pointerEvents: 'none' }} />
-              <div style={{ position: 'relative', height: 48, display: 'grid', placeItems: 'center', marginBottom: 4 }}>
+              <span aria-hidden style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 50% 34%, rgba(240,192,64,0.22), transparent 66%)', pointerEvents: 'none' }} />
+              {/* A hairline of the water it came out of, along the top edge. */}
+              <span aria-hidden style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 2, background: `linear-gradient(90deg, transparent, ${zc}, transparent)` }} />
+              <div style={{ position: 'relative', height: 72, display: 'grid', placeItems: 'center', marginBottom: 5 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={fishArt(g.name)} alt="" aria-hidden loading="lazy" decoding="async"
-                  style={{ maxWidth: '86%', maxHeight: '100%', objectFit: 'contain', filter: 'saturate(1.25) drop-shadow(0 2px 7px rgba(240,192,64,0.4))' }} />
+                  style={{ width: '100%', height: '100%', objectFit: 'contain', filter: sold ? 'saturate(0.75) opacity(0.85)' : 'saturate(1.3) drop-shadow(0 3px 10px rgba(240,192,64,0.55))' }} />
               </div>
               <p className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#f7ecd0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.name}</p>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 6, marginTop: 2 }}>

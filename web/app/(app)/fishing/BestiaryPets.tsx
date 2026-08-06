@@ -52,10 +52,10 @@ export default function BestiaryPets({ data }: { data: BestiaryData }) {
                       border: `1px solid ${has ? p.accentColor + '55' : 'rgba(255,255,255,0.06)'}`,
                     }}>
                     {has && <span aria-hidden style={{ position: 'absolute', inset: 0, background: `radial-gradient(circle at 50% 34%, ${p.accentColor}1f, transparent 70%)`, pointerEvents: 'none' }} />}
-                    <div style={{ position: 'relative', height: 52, display: 'grid', placeItems: 'center', marginBottom: 3 }}>
+                    <div style={{ position: 'relative', height: 68, display: 'grid', placeItems: 'center', marginBottom: 3 }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={p.restImageUrl} alt="" aria-hidden loading="lazy" decoding="async"
-                        style={{ maxWidth: '86%', maxHeight: '100%', objectFit: 'contain', filter: has ? undefined : 'brightness(0) opacity(0.4)' }} />
+                        style={{ maxWidth: '92%', maxHeight: '100%', objectFit: 'contain', filter: has ? `drop-shadow(0 3px 9px ${p.accentColor}55)` : 'brightness(0) opacity(0.4)' }} />
                     </div>
                     <p className="font-karla font-700" style={{ fontSize: '0.54rem', lineHeight: 1.15, color: has ? '#ded8ee' : '#4e4866', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {has ? p.name : '???'}

@@ -20,10 +20,19 @@ export const RARITY_COLOR: Record<number, string> = {
   5: '#f0c040',
 }
 
-/** Species art path. Slicer convention (slice-fish.mjs): lowercase, spaces to
- *  hyphens, under /public/fish/. Same rule blackjackFishArt uses. */
+/** Species art for GRID views, from /public/fish-tile/.
+ *
+ *  Not /public/fish/. Those sprites were cut from many sheets and agree on
+ *  nothing: canvases run 421x424 to 675x1295, and the fish inside fills
+ *  anywhere from 47% to 100% of it. Dropped into a fixed box they each render
+ *  at a different apparent size, off different optical centres, and object-fit
+ *  cannot help because it fits the CANVAS, transparent padding and all.
+ *
+ *  normalize-fish-tiles.mjs trims every sprite to its real pixels and centres
+ *  it on one 192px square at a fixed fill, so a grid of them lines up. Same
+ *  filename rule either way: lowercase, spaces to hyphens. */
 export function fishArt(name: string): string {
-  return '/fish/' + name.toLowerCase().replace(/\s+/g, '-') + '.png'
+  return '/fish-tile/' + name.toLowerCase().replace(/\s+/g, '-') + '.png'
 }
 
 /** The Ancient Deep giants are the only species worth nothing at market,

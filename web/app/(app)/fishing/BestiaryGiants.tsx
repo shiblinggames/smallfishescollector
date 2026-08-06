@@ -13,7 +13,7 @@
 
 import { useMemo } from 'react'
 import { motion } from 'framer-motion'
-import { ZONE_LABEL, ZONE_COLOR } from './zoneData'
+import { ZONE_LABEL, ZONE_COLOR, ZONE_BG } from './zoneData'
 import { fishArt, shortDate, isGiant } from '@/lib/bestiary'
 import { tierForLength, TIER_COLOR, TIER_LABEL, formatFishLength } from '@/lib/fishSize'
 import type { BestiaryData, BestiaryEntry } from './bestiaryActions'
@@ -44,39 +44,49 @@ export default function BestiaryGiants({ data, giants }: { data: BestiaryData; g
         Six things that should not still be down there. They fetch nothing at market because nobody would dare buy one.
       </p>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: '1.5rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginBottom: '1.6rem' }}>
         {giants.map((g, i) => {
           const caught = g.count > 0
           return (
             <motion.div key={g.id}
-              initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.3, delay: i * 0.05 }}
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.34, delay: i * 0.05 }}
               style={{
-                position: 'relative', display: 'flex', alignItems: 'center', gap: 11,
-                borderRadius: 13, padding: '0.6rem 0.75rem', overflow: 'hidden',
-                background: caught
-                  ? 'linear-gradient(180deg, rgba(28,18,40,0.95) 0%, rgba(12,9,20,0.97) 100%)'
-                  : 'rgba(255,255,255,0.022)',
-                border: `1px solid ${caught ? ANCIENT + '66' : 'rgba(255,255,255,0.06)'}`,
+                position: 'relative', height: 118, borderRadius: 14, overflow: 'hidden',
+                border: `1px solid ${caught ? ANCIENT + '77' : 'rgba(255,255,255,0.07)'}`,
+                boxShadow: caught ? `0 6px 22px rgba(0,0,0,0.5), 0 0 20px ${ANCIENT}22` : undefined,
               }}>
-              {caught && <span aria-hidden style={{ position: 'absolute', inset: 0, background: `radial-gradient(circle at 16% 50%, ${ANCIENT}22, transparent 62%)`, pointerEvents: 'none' }} />}
-              <div style={{ position: 'relative', width: 62, height: 50, flexShrink: 0, display: 'grid', placeItems: 'center' }}>
+              {/* The Ancient Deep itself behind each mount. Uncaught slabs keep
+                  the water but lose the colour, so the room reads as six berths
+                  in one place rather than six unrelated cards. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={ZONE_BG.ancient_deep} alt="" aria-hidden loading="lazy" decoding="async"
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: `center ${8 + i * 3}%`, filter: caught ? undefined : 'grayscale(0.9) brightness(0.4)' }} />
+              <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(6,5,12,0.94) 0%, rgba(6,5,12,0.72) 46%, rgba(6,5,12,0.34) 100%)' }} />
+              {caught && <span aria-hidden style={{ position: 'absolute', inset: 0, background: `radial-gradient(circle at 76% 52%, ${ANCIENT}30, transparent 60%)` }} />}
+
+              {/* The beast, given the right half of the slab. */}
+              <div style={{ position: 'absolute', right: -6, top: 0, bottom: 0, width: '54%', display: 'grid', placeItems: 'center', padding: '0.4rem' }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={fishArt(g.name)} alt="" aria-hidden loading="lazy" decoding="async"
-                  style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', filter: caught ? 'drop-shadow(0 2px 8px rgba(192,132,252,0.4))' : 'brightness(0) opacity(0.4)' }} />
+                  style={{ width: '100%', height: '100%', objectFit: 'contain', filter: caught ? `drop-shadow(0 4px 14px ${ANCIENT}77)` : 'brightness(0) opacity(0.42)' }} />
               </div>
-              <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: caught ? '#f0eaff' : '#4e4866', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+
+              <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '62%', padding: '0.7rem 0.85rem', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.42rem', color: caught ? ANCIENT : '#403a58', marginBottom: 2 }}>
+                  {caught ? `Mount ${i + 1} of ${giants.length}` : 'Unraised'}
+                </p>
+                <p className="font-cinzel font-800" style={{ fontSize: '1.08rem', lineHeight: 1.08, color: caught ? '#f2ecff' : '#4e4866', textShadow: caught ? `0 2px 8px rgba(0,0,0,0.9), 0 0 14px ${ANCIENT}44` : undefined }}>
                   {caught ? g.name : '???'}
                 </p>
                 {caught ? (
-                  <p className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#8b83a8', marginTop: 2 }}>
-                    Raised {shortDate(g.firstCaughtAt)}
+                  <p className="font-karla font-600" style={{ fontSize: '0.56rem', color: '#9a92b6', marginTop: 3, lineHeight: 1.35 }}>
+                    {shortDate(g.firstCaughtAt)}
                     {g.pbLength != null ? ` · ${formatFishLength(g.pbLength)}` : ''}
-                    {g.count > 1 ? ` · ×${g.count}` : ''}
+                    {g.count > 1 ? ` · raised ×${g.count}` : ''}
                   </p>
                 ) : (
-                  <p className="font-karla font-400 italic" style={{ fontSize: '0.58rem', color: '#403a58', marginTop: 2 }}>Still down there</p>
+                  <p className="font-karla font-400 italic" style={{ fontSize: '0.56rem', color: '#403a58', marginTop: 3 }}>Still down there</p>
                 )}
               </div>
             </motion.div>

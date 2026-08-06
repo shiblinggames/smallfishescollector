@@ -1,23 +1,31 @@
 'use client'
 
-// The Collection room: every species, grouped by the water it lives in.
+// The Collection room: every species, under the water it comes from.
+//
+// Each habitat opens with a BANNER cut from that zone's painted plate, the
+// same art the zone selector and the fishing screen use. A flat coloured rule
+// and a label made five near-identical grey grids; the banner makes scrolling
+// this feel like descending, and ties a species to a place you have actually
+// been rather than to a word.
 //
 // An uncaught species shows its real silhouette rather than a locked box, so
-// the gaps in a habitat read as specific missing fish instead of a number you
-// are behind on. Name, stats and flavour stay hidden until you land one.
+// a gap reads as a specific missing fish. Name, stats and flavour stay hidden
+// until you land one.
 
 import { useState, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import PopupShell from '@/components/PopupShell'
-import { ZONE_LABEL, ZONE_COLOR, ZONE_ORDER } from './zoneData'
+import { ZONE_LABEL, ZONE_COLOR, ZONE_ORDER, ZONE_BG, ZONE_TAGLINE } from './zoneData'
 import { RARITY_LABEL, RARITY_COLOR, fishArt, isGiant, shortDate } from '@/lib/bestiary'
 import { tierForLength, TIER_LABEL, TIER_COLOR, formatFishLength } from '@/lib/fishSize'
 import type { BestiaryData, BestiaryEntry } from './bestiaryActions'
 
+const GOLD = '#f0c040'
+
 export default function BestiaryCollection({ data }: { data: BestiaryData }) {
   const [detail, setDetail] = useState<BestiaryEntry | null>(null)
 
-  // The six Giants have their own room; showing them here too would make the
+  // The six Giants have their own room; listing them here too would make the
   // Ancient Deep read as 18 species when only 12 are fishable stock.
   const byZone = useMemo(() => {
     const m = new Map<string, BestiaryEntry[]>()
@@ -37,17 +45,34 @@ export default function BestiaryCollection({ data }: { data: BestiaryData }) {
         const got = list.filter(e => e.count > 0).length
         const color = ZONE_COLOR[zone]
         const done = got === list.length
+        const pct = got / list.length
+
         return (
-          <div key={zone} style={{ marginBottom: '1.4rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-              <span aria-hidden style={{ width: 3, height: 15, borderRadius: 2, background: color, flexShrink: 0 }} />
-              <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#e8e3f5', flex: 1, minWidth: 0 }}>{ZONE_LABEL[zone]}</p>
-              <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: done ? '#f0c040' : '#6b6486', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                {done ? '✦ all charted' : `${got}/${list.length}`}
-              </span>
+          <div key={zone} style={{ marginBottom: '1.5rem' }}>
+
+            {/* ── Habitat banner ── the zone's own water, cropped to a band. */}
+            <div style={{ position: 'relative', height: 74, borderRadius: 13, overflow: 'hidden', marginBottom: 9, border: `1px solid ${color}44` }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={ZONE_BG[zone]} alt="" aria-hidden loading="lazy" decoding="async"
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 8%' }} />
+              <div aria-hidden style={{ position: 'absolute', inset: 0, background: `linear-gradient(90deg, rgba(6,6,12,0.88) 0%, rgba(6,6,12,0.55) 55%, rgba(6,6,12,0.30) 100%)` }} />
+              <div style={{ position: 'absolute', inset: 0, padding: '0.55rem 0.75rem', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                  <p className="font-cinzel font-800" style={{ fontSize: '1.15rem', color: '#fdf7e8', lineHeight: 1.1, textShadow: `0 2px 7px rgba(0,0,0,0.95), 0 0 16px ${color}55` }}>{ZONE_LABEL[zone]}</p>
+                  <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: done ? GOLD : color, fontVariantNumeric: 'tabular-nums', textShadow: '0 1px 4px rgba(0,0,0,0.9)', whiteSpace: 'nowrap' }}>
+                    {done ? '✦ all charted' : `${got}/${list.length}`}
+                  </span>
+                </div>
+                <p className="font-karla font-400 italic" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.62)', marginTop: 1, textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>{ZONE_TAGLINE[zone]}</p>
+                <div style={{ height: 3, borderRadius: 999, background: 'rgba(0,0,0,0.5)', marginTop: 6, maxWidth: 150, overflow: 'hidden' }}>
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${pct * 100}%` }} transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+                    style={{ height: '100%', borderRadius: 999, background: done ? GOLD : color }} />
+                </div>
+              </div>
             </div>
+
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 7 }}>
-              {list.map(e => <SpeciesCard key={e.id} entry={e} color={color} onOpen={() => e.count > 0 && setDetail(e)} />)}
+              {list.map(e => <SpeciesCard key={e.id} entry={e} onOpen={() => e.count > 0 && setDetail(e)} />)}
             </div>
           </div>
         )
@@ -58,47 +83,61 @@ export default function BestiaryCollection({ data }: { data: BestiaryData }) {
   )
 }
 
-function SpeciesCard({ entry, color, onOpen }: { entry: BestiaryEntry; color: string; onOpen: () => void }) {
+function SpeciesCard({ entry, onOpen }: { entry: BestiaryEntry; onOpen: () => void }) {
   const caught = entry.count > 0
+  const rc = RARITY_COLOR[entry.rarity]
   const tier = caught && entry.pbLength != null && entry.lengthMin != null && entry.lengthMax != null
     ? tierForLength(entry.pbLength, entry.lengthMin, entry.lengthMax) : null
+  const big = tier === 'trophy' || tier === 'large'
 
   return (
     <motion.button type="button" onClick={onOpen} disabled={!caught}
-      whileTap={caught ? { scale: 0.95 } : undefined}
+      whileTap={caught ? { scale: 0.94 } : undefined}
+      whileHover={caught ? { y: -2 } : undefined}
       transition={{ type: 'spring', stiffness: 520, damping: 30 }}
       style={{
-        position: 'relative', padding: '0.4rem 0.35rem 0.45rem', borderRadius: 11,
-        background: caught ? 'rgba(255,255,255,0.045)' : 'rgba(255,255,255,0.02)',
-        border: `1px solid ${caught ? (entry.everGolden ? '#f0c04066' : color + '3a') : 'rgba(255,255,255,0.06)'}`,
+        position: 'relative', padding: 0, borderRadius: 12, overflow: 'hidden',
+        // Caught cards are lit from the top by their RARITY, so a legendary
+        // reads as one across the grid without a badge on every tile.
+        background: caught
+          ? `linear-gradient(180deg, ${rc}1c 0%, rgba(255,255,255,0.03) 46%, rgba(255,255,255,0.02) 100%)`
+          : 'rgba(255,255,255,0.018)',
+        border: `1px solid ${caught ? (entry.everGolden ? GOLD + '77' : rc + '4a') : 'rgba(255,255,255,0.055)'}`,
         cursor: caught ? 'pointer' : 'default', textAlign: 'center',
-        WebkitTapHighlightColor: 'transparent', overflow: 'hidden',
+        WebkitTapHighlightColor: 'transparent',
       }}>
-      {/* A species you have taken a golden of keeps a permanent warm wash. It
-          is the only per-card state worth carrying at this size. */}
+
+      {/* A species you have taken a golden of keeps a permanent warm wash. */}
       {entry.everGolden && (
-        <span aria-hidden style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 50% 32%, rgba(240,192,64,0.16), transparent 68%)', pointerEvents: 'none' }} />
+        <span aria-hidden style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 50% 30%, rgba(240,192,64,0.2), transparent 68%)', pointerEvents: 'none' }} />
       )}
-      <div style={{ position: 'relative', height: 42, display: 'grid', placeItems: 'center', marginBottom: 3 }}>
+
+      <div style={{ position: 'relative', height: 62, display: 'grid', placeItems: 'center', padding: '0.3rem 0.25rem 0' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={fishArt(entry.name)} alt="" aria-hidden loading="lazy" decoding="async"
           style={{
-            maxWidth: '92%', maxHeight: '100%', objectFit: 'contain',
-            // Silhouette, not a lock: you can see the shape of what is missing.
-            filter: caught ? undefined : 'brightness(0) opacity(0.42)',
+            width: '100%', height: '100%', objectFit: 'contain',
+            // Silhouette, not a lock: the shape of what is missing is the hook.
+            filter: caught
+              ? (entry.everGolden ? 'drop-shadow(0 2px 6px rgba(240,192,64,0.35))' : undefined)
+              : 'brightness(0) opacity(0.4)',
           }} />
+        {big && (
+          <span aria-hidden title={TIER_LABEL[tier!]}
+            style={{ position: 'absolute', top: 4, right: 4, width: 5, height: 5, borderRadius: 5, background: TIER_COLOR[tier!], boxShadow: `0 0 5px ${TIER_COLOR[tier!]}` }} />
+        )}
       </div>
-      <p className="font-karla font-700" style={{ fontSize: '0.53rem', lineHeight: 1.15, color: caught ? '#ded8ee' : '#4e4866', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-        {caught ? entry.name : '???'}
-      </p>
-      <p className="font-karla font-600" style={{ fontSize: '0.47rem', marginTop: 1, color: caught ? '#6b6486' : RARITY_COLOR[entry.rarity] + '99', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', overflow: 'hidden' }}>
-        {caught
-          ? `×${entry.count}${tier && (tier === 'trophy' || tier === 'large') ? '' : ''}`
-          : RARITY_LABEL[entry.rarity]}
-      </p>
-      {caught && tier && (tier === 'trophy' || tier === 'large') && (
-        <span aria-hidden style={{ position: 'absolute', top: 5, right: 5, width: 6, height: 6, borderRadius: 6, background: TIER_COLOR[tier] }} title={TIER_LABEL[tier]} />
-      )}
+
+      {/* Caption plinth — a darker base so the name reads whatever the art
+          behind it is doing. */}
+      <div style={{ position: 'relative', padding: '0.28rem 0.3rem 0.34rem', background: 'rgba(6,6,12,0.5)' }}>
+        <p className="font-karla font-700" style={{ fontSize: '0.54rem', lineHeight: 1.15, color: caught ? '#e8e2f6' : '#4e4866', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {caught ? entry.name : '???'}
+        </p>
+        <p className="font-karla font-600" style={{ fontSize: '0.47rem', marginTop: 1, color: caught ? '#6b6486' : rc + 'aa', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', overflow: 'hidden' }}>
+          {caught ? `×${entry.count}` : RARITY_LABEL[entry.rarity]}
+        </p>
+      </div>
     </motion.button>
   )
 }
@@ -113,6 +152,7 @@ function SpeciesSheet({ entry, onClose, goldens }: {
   if (!entry) return null
 
   const color = ZONE_COLOR[entry.habitat] ?? '#a78bfa'
+  const rc = RARITY_COLOR[entry.rarity]
   const tier = entry.pbLength != null && entry.lengthMin != null && entry.lengthMax != null
     ? tierForLength(entry.pbLength, entry.lengthMin, entry.lengthMax) : null
   // Where your best sits inside the species' possible range.
@@ -129,30 +169,40 @@ function SpeciesSheet({ entry, onClose, goldens }: {
           width: '100%', maxWidth: 460, margin: '0 auto', borderRadius: 18, overflow: 'hidden',
           // Solid base: this sits over the overlay's art.
           background: 'linear-gradient(180deg, #12101c 0%, #0a0913 100%)',
-          border: `1px solid ${color}55`,
+          border: `1px solid ${entry.everGolden ? GOLD + '66' : color + '55'}`,
         }}>
 
-        {/* Plate */}
-        <div style={{ position: 'relative', height: 132, display: 'grid', placeItems: 'center', background: `radial-gradient(circle at 50% 42%, ${color}1f, transparent 70%)` }}>
-          {entry.everGolden && (
-            <span aria-hidden style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 50% 42%, rgba(240,192,64,0.18), transparent 66%)' }} />
-          )}
+        {/* Plate — the fish over its own water, so the sheet opens on a place. */}
+        <div style={{ position: 'relative', height: 168, overflow: 'hidden' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={fishArt(entry.name)} alt="" aria-hidden style={{ maxWidth: '62%', maxHeight: '82%', objectFit: 'contain', position: 'relative' }} />
+          <img src={ZONE_BG[entry.habitat]} alt="" aria-hidden
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 8%' }} />
+          <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(8,8,16,0.45) 0%, rgba(10,9,19,0.72) 62%, rgba(10,9,19,0.97) 100%)' }} />
+          {entry.everGolden && (
+            <span aria-hidden style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 50% 44%, rgba(240,192,64,0.22), transparent 64%)' }} />
+          )}
+          <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', padding: '0.6rem' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={fishArt(entry.name)} alt="" aria-hidden
+              style={{ maxWidth: '68%', maxHeight: '92%', objectFit: 'contain', filter: 'drop-shadow(0 6px 16px rgba(0,0,0,0.7))' }} />
+          </div>
           <button type="button" onClick={onClose} aria-label="Close"
-            style={{ position: 'absolute', top: 9, right: 9, width: 28, height: 28, borderRadius: '50%', padding: 0, background: 'rgba(6,6,12,0.66)', border: '1px solid rgba(255,255,255,0.18)', color: '#cfcabf', cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
+            style={{ position: 'absolute', top: 9, right: 9, width: 28, height: 28, borderRadius: '50%', padding: 0, background: 'rgba(6,6,12,0.72)', border: '1px solid rgba(255,255,255,0.2)', color: '#cfcabf', cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
           </button>
+          <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{ position: 'absolute', left: 12, top: 11, fontSize: '0.46rem', color, textShadow: '0 1px 4px rgba(0,0,0,0.95)' }}>
+            {ZONE_LABEL[entry.habitat] ?? entry.habitat}
+          </span>
         </div>
 
-        <div style={{ padding: '0.9rem 1rem 1.1rem' }}>
+        <div style={{ padding: '0.2rem 1rem 1.1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', marginBottom: 2 }}>
             <p className="font-cinzel font-800" style={{ fontSize: '1.25rem', color: '#f2eeff', lineHeight: 1.1 }}>{entry.name}</p>
-            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.48rem', padding: '0.12rem 0.4rem', borderRadius: 999, color: RARITY_COLOR[entry.rarity], background: RARITY_COLOR[entry.rarity] + '1c', border: `1px solid ${RARITY_COLOR[entry.rarity]}55` }}>
+            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.48rem', padding: '0.12rem 0.4rem', borderRadius: 999, color: rc, background: rc + '1c', border: `1px solid ${rc}55` }}>
               {RARITY_LABEL[entry.rarity]}
             </span>
             {entry.everGolden && (
-              <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.48rem', padding: '0.12rem 0.4rem', borderRadius: 999, color: '#f0c040', background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.5)' }}>
+              <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.48rem', padding: '0.12rem 0.4rem', borderRadius: 999, color: GOLD, background: 'rgba(240,192,64,0.12)', border: `1px solid ${GOLD}88` }}>
                 Golden taken
               </span>
             )}
@@ -164,8 +214,8 @@ function SpeciesSheet({ entry, onClose, goldens }: {
           {/* Your record with this fish. */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 12 }}>
             <Cell label="Caught" value={`${entry.count}`} />
-            <Cell label="Goldens" value={`${mine.length}`} accent={mine.length ? '#f0c040' : undefined} />
-            <Cell label="Worth" value={`${entry.sellValue.toLocaleString()} ⟡`} accent="#f0c040" />
+            <Cell label="Goldens" value={`${mine.length}`} accent={mine.length ? GOLD : undefined} />
+            <Cell label="Worth" value={`${entry.sellValue.toLocaleString()} ⟡`} accent={GOLD} />
           </div>
 
           {/* Personal best against the whole possible range. */}
@@ -196,7 +246,6 @@ function SpeciesSheet({ entry, onClose, goldens }: {
           )}
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 16, rowGap: 5 }}>
-            <Row label="Water" value={ZONE_LABEL[entry.habitat] ?? entry.habitat} accent={color} />
             <Row label="Difficulty" value={`${entry.difficulty}/10`} />
             {entry.sizeCategory && <Row label="Size class" value={cap(entry.sizeCategory)} />}
             {entry.dietType && <Row label="Diet" value={cap(entry.dietType)} />}

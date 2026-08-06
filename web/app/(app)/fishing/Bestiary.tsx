@@ -81,11 +81,15 @@ export default function Bestiary({ open, onClose }: { open: boolean; onClose: ()
       style={{ position: 'fixed', inset: 0, zIndex: 111, background: '#07080f', display: 'flex', justifyContent: 'center' }}>
       <div className="relative w-full max-w-lg" style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
-        {/* Backdrop — the logbook's own plate, heavily damped. A room, not a page. */}
+        {/* Backdrop — the logbook plate. It was under an 86% scrim at the top,
+            which is to say it was not there at all and the masthead sat on flat
+            near-black. The rooms scroll over their own opaque cards, so only
+            the masthead band needs the art to stay readable: it opens at 55%
+            and closes fast. */}
         <div aria-hidden style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/fish-bestiary.jpg" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }} />
-          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(7,8,15,0.86) 0%, rgba(7,8,15,0.95) 40%, rgba(5,6,11,0.99) 100%)' }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(7,8,15,0.55) 0%, rgba(7,8,15,0.80) 26%, rgba(5,6,11,0.96) 52%, rgba(5,6,11,0.99) 100%)' }} />
         </div>
 
         {/* ── Header ── matches the zone selector / campaign map shell. */}
@@ -115,7 +119,7 @@ export default function Bestiary({ open, onClose }: { open: boolean; onClose: ()
         ) : (
           <>
             {/* ── Masthead ── the career, above the rooms, always visible. */}
-            <div style={{ position: 'relative', zIndex: 2, flexShrink: 0, padding: '0.85rem 1rem 0.7rem', background: 'rgba(9,8,16,0.82)' }}>
+            <div style={{ position: 'relative', zIndex: 2, flexShrink: 0, padding: '0.85rem 1rem 0.7rem', background: 'linear-gradient(180deg, rgba(9,8,16,0.55) 0%, rgba(9,8,16,0.86) 100%)' }}>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 6 }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 7 }}>
                   <span className="font-cinzel font-800" style={{ fontSize: '1.9rem', lineHeight: 1, color: '#efe9ff', fontVariantNumeric: 'tabular-nums' }}>{caught}</span>
