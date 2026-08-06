@@ -321,9 +321,9 @@ export const BADGES: Badge[] = [
   // three months the feature has existed. So 7 is a real habit, 30 is past
   // anyone's current record, and 100 is a year-scale haul. The counter is
   // backfilled from history, so nobody's past sweeps are thrown away.
-  { id: 'three_for_three', name: 'Three for Three',    description: 'Clear all three daily challenges on 7 days',      imageUrl: '/badges/three_for_three.png', difficulty: 'seasoned'    },
-  { id: 'standing_watch',  name: 'Standing Watch',     description: 'Clear all three daily challenges on 30 days',     imageUrl: '/badges/standing_watch.png',  difficulty: 'veteran'     },
-  { id: 'old_reliable',    name: 'Old Reliable',       description: 'Clear all three daily challenges on 100 days',    imageUrl: '/badges/old_reliable.png',    difficulty: 'master'      },
+  { id: 'three_for_three', name: 'Three for Three',    description: 'Clear all three daily challenges, 7 times',      imageUrl: '/badges/three_for_three.png', difficulty: 'seasoned'    },
+  { id: 'standing_watch',  name: 'Standing Watch',     description: 'Clear all three daily challenges, 30 times',     imageUrl: '/badges/standing_watch.png',  difficulty: 'veteran'     },
+  { id: 'old_reliable',    name: 'Old Reliable',       description: 'Clear all three daily challenges, 100 times',    imageUrl: '/badges/old_reliable.png',    difficulty: 'master'      },
 
   // ── Sheet 27 continued — the two that finish the plate of six. Both mark
   //    content that shipped 2026-08-05 and had no recognition at all.
@@ -362,7 +362,7 @@ export const BADGE_DETAIL: Record<string, string> = {
   two_for_the_pot:  'Pull up two fish on a single cast. It happens on its own from time to time, more often with the right gear running. Lucky, and a little greedy.',
   saltlung:         'Cast your line a thousand times across your whole career. Pure time on the water, one cast at a time.',
   wreck_diver:      'Five hundred supply crates prised open. Nobody sets out to do this. It is what a few thousand casts leaves behind.',
-  three_for_three:  'The tide sets three tasks at dawn. Seven times over, you have cleared the lot before it turned. Most captains take the easy two and call it a day.',
+  three_for_three:  'The tide sets three tasks at dawn, and clearing the lot before it turns is a full docket. Seven of them. Most captains take the easy two and call it a day.',
   standing_watch:   'Thirty full dockets. Not thirty days of fishing, thirty days of finishing, which is a harder thing and a rarer one.',
   old_reliable:     'A hundred days where every task the tide set got done. No streak to protect and nothing forcing your hand, just a captain who keeps turning up and clearing the board.',
   massive_booty:    'One voyage in a hundred comes back so heavy the hold will not shut. Ten times the coin, ten times the gems, and nothing you did earned it beyond being at sea when the luck landed.',

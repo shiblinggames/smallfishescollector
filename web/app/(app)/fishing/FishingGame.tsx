@@ -9980,7 +9980,7 @@ export default function FishingGame({
                           color: swept ? GEM_COLOR : 'rgba(167,139,250,0.75)',
                           marginBottom: 3,
                         }}>
-                          Clean Sweep
+                          Full Docket
                         </p>
                         <p className="font-karla font-600" style={{
                           fontSize: '0.8rem', color: swept ? '#c9c3d8' : '#c8c4bc', lineHeight: 1.3,
