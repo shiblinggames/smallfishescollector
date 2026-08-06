@@ -33,6 +33,11 @@ export type CampaignCardData = {
   nextNodeKind: string | null
   repairOwed: number
   equippedItemsCount: number
+  /** A boss you have already beaten, wearing the backdrop he was beaten in.
+   *  Barnacle Pete until you have beaten anyone. */
+  bossName: string
+  bossPortrait: string
+  bossBackdrop: string | null
 }
 
 export type VoyageStatus = 'idle' | 'sailing' | 'returned'
@@ -180,14 +185,30 @@ export default function HubCards({
           bottom scrim. Campaign / Voyages are the core loops; PvP +
           Gauntlets sit below at the same size. All open their prep modal. */}
       <div style={HUB_GRID}>
+        {/* The Campaign tile wears a boss you have PUT DOWN, on the backdrop
+            you fought him on, composed the way his node card composes him.
+            The generic seascape said nothing about your campaign; this says
+            how far down the coast you have got, and changes as you go. */}
         <HubTile
           coachId="campaign"
-          bgImage="/exp-campaign.jpg" accent={campaignAccent} title="Campaign"
+          bgImage={campaign.bossBackdrop ?? '/exp-campaign.jpg'}
+          accent={campaignAccent} title="Campaign"
           status={campaign.nextNodeName ? `Next: ${campaign.nextNodeName}` : 'All cleared'}
           statusColor="#f0e0b0"
           sub={campaign.nextNodeLocked ? campaign.nextNodeLockReason : null}
           subLock={campaign.nextNodeLocked}
           onClick={openCampaignMap}
+          overlay={
+            <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={campaign.bossPortrait} alt="" loading="lazy" decoding="async"
+                style={{
+                  position: 'absolute', right: -6, bottom: 26, height: '78%', width: 'auto',
+                  maxWidth: '72%', objectFit: 'contain',
+                  filter: 'drop-shadow(0 6px 14px rgba(0,0,0,0.75))',
+                }} />
+            </div>
+          }
         />
         <HubTile
           coachId="voyages"

@@ -15,6 +15,7 @@ import HubCards from './HubCards'
 import ShipHeroSection from './ShipHeroSection'
 import { cachedCrewRoster, cachedTrawlingCrewIds, cachedChapter3Cleared, cachedBlockadeCleared, cachedThroneCleared } from './hubData'
 import type { CampaignCardData, VoyageCardData, VoyageStatus } from './HubCards'
+import { pickShowcaseBoss } from '@/lib/raidMap'
 import { gauntletUnlocked, donsGauntletUnlocked } from '@/lib/gauntlet'
 import { CREW_SKINS } from '@/lib/crewSkins'
 import { getCrewRoster } from '@/app/(app)/crew/actions'
@@ -202,6 +203,7 @@ async function ExpeditionHub() {
     && (profile?.gauntlet_run_paused === true || ((profile?.gauntlet_resumes_used as number | null) ?? 0) < 1)
   const equippedRaidItems = (profile?.equipped_raid_items as string[] | null) ?? []
   const ownedRaidItems = (profile?.raid_items as string[] | null) ?? []
+  const showcaseBoss = pickShowcaseBoss(raidMap.views)
   const campaign: CampaignCardData = {
     nextNodeId: next?.node.id ?? null,
     nextNodeName: next?.node.label ?? null,
@@ -211,6 +213,11 @@ async function ExpeditionHub() {
     nextNodeKind: next?.node.type ?? null,
     repairOwed: profile?.raid_repair_owed ?? 0,
     equippedItemsCount: equippedRaidItems.length,
+    // Picked HERE, on the server, so the roll is part of the payload rather
+    // than something the client decides after hydration and mismatches on.
+    bossName: showcaseBoss.name,
+    bossPortrait: showcaseBoss.portrait,
+    bossBackdrop: showcaseBoss.backdrop,
   }
   const voyages = describeVoyage(
     'error' in dailyVoyageState ? null : (dailyVoyageState.todayVoyage as { route: string; created_at: string; duration_ms: number | null } | null),

@@ -10,6 +10,7 @@
 // gated by `requiresNode` (+ optional Nav level); a cleared combat node
 // stays farmable.
 
+import { RAID_BOSS_BG, RAID_LOCATION_BG, ENEMY_IMG_BASE } from '@/lib/bossRaids'
 import { CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER, THE_COFFERS_FLEET, THE_QUARTERMASTER, THE_QUARTERMASTERS_GHOST, THE_BLOCKADE, THE_THRONE, THE_SUNKEN_HAND, GEM_GLYPH, raidCompletionBonusXp, type RaidLootItem, type BossRaidConfig } from '@/lib/bossRaids'
 import { SIXTH_BERTH_COST, ARMORY_EXPANSION_COST, SPOILS_PRICE } from '@/lib/shipBerth'
 import type { RaidMuster, MusterReport } from '@/lib/crewMuster'
@@ -3098,4 +3099,60 @@ export function computeRaidMap(
     const claimable = node.type === 'milestone' && !!node.milestone && doubloons >= node.milestone.amount
     return { node, status: 'available' as const, claimable }
   })
+}
+
+
+// ── Campaign card showcase ──────────────────────────────────────────────────
+
+export type ShowcaseBoss = {
+  id: string
+  name: string
+  /** The boss's own portrait, transparent PNG on Supabase storage. */
+  portrait: string
+  /** The location he is fought in, escalated for the showdown. Same lookup the
+   *  boss node card uses, so the hub tile is that card at a glance. */
+  backdrop: string | null
+}
+
+/** The boss the Campaign hub tile wears: one you have already put down,
+ *  picked at random so the card is different on different days.
+ *
+ *  Cleared only. Showing one you have not met would spoil him, and showing one
+ *  you cannot reach would be a boast about somebody else's campaign. Challenge
+ *  reruns are excluded because they are the same boss twice, and a card that
+ *  said "Challenge: The Blockade" would be naming a mode rather than a body.
+ *
+ *  Before your first kill it is Barnacle Pete, who is the whole point of the
+ *  opening chapter and the one boss a brand new captain has actually been told
+ *  about. */
+export function pickShowcaseBoss(views: RaidNodeView[]): ShowcaseBoss {
+  const beaten = views.filter(v =>
+    v.status === 'cleared'
+    && v.node.type === 'raid'
+    && !!v.node.raidId
+    && !!v.node.image
+    && !v.node.label.startsWith('Challenge:'))
+
+  const chosen = beaten.length > 0
+    ? beaten[Math.floor(Math.random() * beaten.length)]
+    : null
+
+  if (chosen) {
+    const raidId = chosen.node.raidId as string
+    return {
+      id: chosen.node.id,
+      name: chosen.node.label,
+      portrait: chosen.node.image as string,
+      backdrop: RAID_BOSS_BG[raidId] ?? RAID_LOCATION_BG[raidId] ?? null,
+    }
+  }
+
+  return {
+    id: 'pete',
+    name: 'Barnacle Pete',
+    // Named outright: BroadsideEnemy.portrait is optional, and the one
+    // fallback in the game must not be able to resolve to undefined.
+    portrait: ENEMY_IMG_BASE + 'barnacle_pete.png',
+    backdrop: RAID_BOSS_BG[CORSAIRS_RECKONING.raidId] ?? null,
+  }
 }
