@@ -315,8 +315,8 @@ export const BADGES: Badge[] = [
   { id: 'first_settle',    name: 'Read the Water',     description: 'Have a contract settle in your favour',           imageUrl: '/badges/first_settle.png',    difficulty: 'seasoned'    },
   { id: 'cut_losses',      name: 'Out Before the Bell', description: 'Sell a contract early rather than ride it out',  imageUrl: '/badges/cut_losses.png',      difficulty: 'seasoned'    },
   { id: 'worthless',       name: 'Not a Doubloon',     description: 'Watch a contract expire worthless',               imageUrl: '/badges/worthless.png',       difficulty: 'seasoned'    },
-  { id: 'big_score',       name: "The Whole Berth",    description: 'Take 250,000 doubloons from a single contract',   imageUrl: '/badges/big_score.png',       difficulty: 'veteran'     },
-  { id: 'market_maker',    name: 'Market Maker',       description: 'Settle 100 contracts',                            imageUrl: '/badges/market_maker.png',    difficulty: 'master'      },
+  { id: 'big_score',       name: "The Whole Berth",    description: 'Clear 200,000 doubloons profit on a single contract', imageUrl: '/badges/big_score.png',   difficulty: 'veteran'     },
+  { id: 'market_maker',    name: 'Market Maker',       description: 'Settle 100 contracts and still be up on the Exchange', imageUrl: '/badges/market_maker.png', difficulty: 'master'     },
 
   // ── BOUNTIES ── the daily orders board. bounty_progress is overwritten every
   // morning, so these read the lifetime counters bumped at claim time.

@@ -165,7 +165,11 @@ export interface BadgeJoinData {
     won: number           // paid back more than it cost
     closedEarly: number
     worthless: number     // expired paying nothing at all
-    bestPayout: number
+    /** The most any single contract paid ABOVE its stake. Payout alone is not
+     *  an achievement: 250,000 back on a 250,000 stake is your money returned. */
+    bestProfit: number
+    staked: number        // lifetime, settled contracts only
+    returned: number      // lifetime, settled contracts only
   }
 }
 
@@ -174,7 +178,8 @@ export type ExchangePositionRow = { status: string; stake: number | null; payout
 
 /** A captain who has never touched the Exchange. */
 export const NO_EXCHANGE: BadgeJoinData['exchange'] = {
-  opened: 0, settled: 0, won: 0, closedEarly: 0, worthless: 0, bestPayout: 0,
+  opened: 0, settled: 0, won: 0, closedEarly: 0, worthless: 0,
+  bestProfit: 0, staked: 0, returned: 0,
 }
 
 /** Fold a captain's contracts into the six numbers the badges ask about.
@@ -195,7 +200,9 @@ export function exchangeStatsFrom(rows: ExchangePositionRow[]): BadgeJoinData['e
     // Worthless means it ran to expiry and paid NOTHING. A contract sold early
     // for less than it cost was a decision, not a wipeout.
     else if (payout <= 0) out.worthless++
-    if (payout > out.bestPayout) out.bestPayout = payout
+    out.staked += stake
+    out.returned += payout
+    if (payout - stake > out.bestProfit) out.bestProfit = payout - stake
   }
   return out
 }
@@ -504,8 +511,15 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
     // thing the whole board is built around, and pretending otherwise would be
     // the one dishonest badge in the set.
     worthless:            j.exchange.worthless >= 1,
-    big_score:            j.exchange.bestPayout >= 250_000,
-    market_maker:         j.exchange.settled >= 100,
+    // PROFIT, not payout. 250,000 back on a 250,000 stake is your own money.
+    big_score:            j.exchange.bestProfit >= 200_000,
+    // Volume alone is buyable: the smallest contract is 500, so a captain
+    // sitting on millions could settle 100 of them for pocket change and call
+    // it a master badge. The house edge is what makes this one honest instead.
+    // Every contract is priced to return 0.92 per 1 staked, so grinding volume
+    // drags you DOWN: being up after a hundred of them means the reads were
+    // real, and no amount of money can buy that.
+    market_maker:         j.exchange.settled >= 100 && j.exchange.returned > j.exchange.staked,
 
     // ── Bounties ──
     first_bounty:         Number(p.bounties_claimed ?? 0) >= 1,
